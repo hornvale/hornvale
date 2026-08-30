@@ -269,6 +269,50 @@ gen_possession_overtime() {
     rm -f "$possess_ot_tmp"
 }
 
+# The custody transcript (The Chattel, Task 13). The campaign shipped six
+# verbs — `open`, `close`, `take`, `drop`, `put`, `carrying` — and NO gallery
+# page typed one of them: `possession-walk.txt` and
+# `possession-over-time-walk.txt` are the only inputs the two seed-42
+# transcripts are generated from, and neither uses any of the six. That
+# absence was already load-bearing before anyone noticed it — decision 0399
+# records `Session::take`'s own doc deferring a defect on the grounds that
+# "their transcripts are in the galleries", which they were not — and it is
+# why "regenerate the galleries" produced an empty diff at the end of two
+# consecutive tasks.
+#
+# SEED 1, NOT 42, and the reason is measured rather than stylistic: seed 42's
+# flagship structure does not draw enough chambers for its possession to reach
+# a `Store` role, so no strongbox and no key stand anywhere it can walk
+# (decision 0398; `windows/vessel/tests/suite/strongbox_reachability.rs` holds
+# the same fact as a test). 8 of 48 swept seeds reach one; 1 is the lowest.
+# This is therefore a NEW script rather than an edit to an existing one — the
+# seed-42 transcripts stay byte-identical.
+#
+# ONE RUN, TWO ARTIFACTS. The same invocation writes the page and, through
+# `--snapshot`, the committed `session-seed-1-carrying.json` fixture — the one
+# artifact of `vessel/session/v2` in which `self.carrying` is NOT empty. Every
+# seed-42 fixture records a possession that never typed `take`, so all of them
+# carry `"carrying":[]`, which is exactly what a broken fold would emit too;
+# a golden can only hold a field it has a non-empty value for. The script
+# deliberately ends WITHOUT `release`, so the snapshot is taken with the key
+# still in hand.
+gen_possession_carry() {
+    local possess_tmp
+    possess_tmp="$(mktemp)"
+    run -p hornvale -- possess --seed 1 --script scripts/possession-carry.txt \
+        --snapshot clients/game/core/tests/fixtures/session-seed-1-carrying.json \
+        > "$possess_tmp"
+    # Retitled at this seam rather than in the command, the same move
+    # `gen_possession_overtime` makes: `possess`'s own H1 is "A Possession of
+    # Seed 1 — day 0", and this page is defined by what it does, not the day
+    # it opens on.
+    printf '# A Possession of Seed 1 — a thing carried\n'
+    # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
+    printf '\n*(This transcript is frozen. It is the only gallery page that types the\ncustody verbs — `take`, `drop`, `put`, `open`, `close`, `carrying`. A key is\nlifted out of a strongbox four chambers into a hamlet dwelling, put back,\nshut in, taken out again, carried out of the building entirely, set down in\nthe front room, and picked up on the NEXT entry: the same ledger entity\nthroughout. Two things the reader should not mistake for bugs. The room\ndescription never names the key once it has been set down — chamber prose\nrenders the pattern grammar composed for the room, and a thing carried in\nfrom elsewhere is composed by nothing there (`PLAY-closed-container-conceals-\nnothing`). And `close` does not re-lock: a lid and a lock are separate\nstates, so the second `open` needs no key (decision 0399).)*\n'
+    tail -n +2 "$possess_tmp"
+    rm -f "$possess_tmp"
+}
+
 # The chart reference fixture (Task 11, the-illumination; spec §5.3): the
 # sim's own ASCII renderer's SHAPE for the seed-42 walk band, generated so
 # `clients/game/core/tests/chart.rs`'s `the_shape_matches_the_sims_own_ascii_render`
@@ -895,6 +939,7 @@ spawn run -p hornvale -- possess --seed 42 --script scripts/possession-chamber.t
 
 spawn gen_chart_reference > clients/game/core/tests/fixtures/chart-reference-seed-42.txt
 
+spawn gen_possession_carry > book/src/gallery/possession-carry-seed-1.md
 spawn gen_possession_overtime > book/src/gallery/possession-over-time-seed-42.md
 spawn gen_history > book/src/gallery/history-seed-42.md
 spawn gen_connections > book/src/gallery/connections-seed-42.md

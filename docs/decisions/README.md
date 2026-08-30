@@ -249,3 +249,6 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0388](0388-the-ladder-is-a-production-instrument-and-parse-robustness-is-a-separate-axis.md) | The ladder is a production instrument; parse-robustness is a separate axis | Accepted |
 | [0396](0396-a-passage-is-a-thing-and-openness-is-its-fold.md) | A passage is a thing, and `openness` is its fold (supersedes 0367) | Accepted |
 | [0397](0397-the-knowledge-gate-denies-a-passage.md) | The knowledge gate denies a passage — re-keying it answers 0369 | Accepted |
+| [0398](0398-a-capability-nothing-can-reach-is-not-a-capability.md) | A capability nothing can reach is not a capability — the strongbox loses its population gate | Accepted |
+| [0399](0399-closing-is-not-locking.md) | Closing is not locking — a lid and a lock are different states | Accepted |
+| [0400](0400-custody-is-an-observable-not-a-vital.md) | Custody is an observable, not a vital — carried things ride the `self` channel | Accepted |

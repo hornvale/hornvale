@@ -1527,6 +1527,29 @@ that a sibling predicate works.
 
 ### Task 13: The wire
 
+> **RESOLVED, AND HALF OF IT WAS CANCELLED ON THIS TASK'S OWN INSTRUCTION**
+> (2026-08-30). Step 2's measurement was run and landed on the STOP row:
+> `Session::snapshot` builds `narration.nouns` from the WALK-band vantage in
+> both bands, so no anchor reaches the wire and `affordances` would serialize
+> `[]` for every entry in every world. **Steps 1 and 2 therefore shipped no
+> field** — the measurement, the mechanism and the named prerequisite (a
+> chamber-band noun catalog) are recorded on `NounEntry`'s own doc in
+> `windows/vessel/src/snapshot.rs` and registered as
+> `CLIENT-noun-catalog-is-walk-band-only`.
+>
+> Step 3 shipped: `self.carrying` on `vessel/session/v2`, additively, under
+> decision **0400**. Step 3's pointer to "The Quire's §6" is wrong — that spec
+> contains the word `inventory` zero times; the rule lives in
+> `clients/game/core/src/endpaper.rs`'s module doc, which 0400 amends.
+>
+> Also shipped, and not in this task as written: the campaign's six verbs had
+> **no gallery transcript at all**, which is why "regenerate the galleries"
+> produced an empty diff in Tasks 11 and 12. `scripts/possession-carry.txt`
+> (seed 1 — seed 42 reaches no strongbox) is now generated into
+> `book/src/gallery/possession-carry-seed-1.md`, and the same run writes
+> `clients/game/core/tests/fixtures/session-seed-1-carrying.json`, the only
+> committed document of this wire whose `self.carrying` is not empty.
+
 **Files:**
 - Modify: `windows/vessel/src/snapshot.rs`
 - Test: `windows/vessel/tests/suite/`, `clients/game/core/`

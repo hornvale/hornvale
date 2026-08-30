@@ -1633,6 +1633,19 @@ impl<'w> Session<'w> {
                     // makes for the identical error type.
                     .map_err(|e| VesselError::Build(format!("{e:?}")))?
                     .0,
+                // The SAME fold `carrying`, `drop` and `put` resolve against
+                // (`Self::carried`), not a second read of the ledger: a pane
+                // that disagreed with the verb about what is in hand would be
+                // a worse defect than an absent field, and there is exactly
+                // one function here to disagree with.
+                carrying: self
+                    .carried()
+                    .into_iter()
+                    .map(|(entity, noun)| crate::snapshot::CarriedEntry {
+                        entity: entity.0.get(),
+                        noun: noun.to_string(),
+                    })
+                    .collect(),
             },
             sensed: SensedChannel {
                 room: vantage.locale.clone(),

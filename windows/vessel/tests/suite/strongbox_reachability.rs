@@ -167,3 +167,108 @@ fn a_possession_walks_to_a_strongbox_and_finds_it_locked() {
         "the lock's refusal is not what a player standing here is told"
     );
 }
+
+/// **The wire carries what the hand holds** — The Chattel's Task 13, driven
+/// through the same walk the test above makes.
+///
+/// It lives in this file rather than in a new one because the world is the
+/// expensive part and this seed is the only one that supplies a thing to
+/// carry: `key` is the sole kind in `affordance::object_registry` marked
+/// `Portable`, a key is composed only inside a strongbox, and seed 42's
+/// flagship structure draws too few chambers to reach a `Store` role. Reusing
+/// `world_at(1)` here costs one more world build (~4 s) and no new fixture.
+///
+/// **Three states, in one session, because the field's whole claim is that it
+/// MOVES**: empty on the opening turn, naming the key once `take` has
+/// committed the custody fact, and empty again after `drop` — with the same
+/// `entity` id read back before and after the walk between rooms, which is
+/// what a client tracks a thing by.
+///
+/// The assertion is on `Session::snapshot`'s own value rather than on the
+/// serialized bytes: `snapshot.rs`'s
+/// `the_envelope_carries_the_schema_tag_and_channel_keys` holds the
+/// decimal-string encoding, so this one is free to hold the FOLD.
+///
+/// MUTATION THIS MUST FAIL AGAINST — that the snapshot reads the same custody
+/// the verbs do: replace the `carrying:` fold in `Session::snapshot` with
+/// `Vec::new()`, which compiles. Confirmed 2026-08-30, unfiltered over the
+/// whole crate (`823/865 tests run: 822 passed, 1 failed, 3 skipped`):
+///
+/// ```text
+/// FAIL suite::strongbox_reachability::the_snapshot_carries_what_the_body_holds
+///
+/// the wire says the body holds 0 things while `carrying` says one
+/// ```
+///
+/// **One failure, and the test that did NOT fail is the reason this one
+/// exists.** `session_snapshot::the_client_fixtures_are_current` compares
+/// three committed byte-goldens of this exact wire and stayed GREEN through
+/// the mutation, because no possession those fixtures record has ever typed
+/// `take` — every one of them carries `"carrying":[]`, which is what a
+/// neutralised fold emits too. A byte-golden can only hold a field it has a
+/// non-empty value for.
+#[test]
+fn the_snapshot_carries_what_the_body_holds() {
+    let world = world_at(1);
+    let (mut session, _) =
+        Session::start(&world, &PossessOpts::default()).expect("seed 1 possesses");
+
+    assert!(
+        session
+            .snapshot()
+            .expect("the opening snapshot builds")
+            .me
+            .carrying
+            .is_empty(),
+        "a possession that has typed nothing is carrying nothing"
+    );
+
+    let per_chamber = nouns_by_depth(&mut session);
+    assert!(
+        per_chamber.iter().any(|c| c.iter().any(|x| x == "a key")),
+        "seed 1's structure no longer composes a key, so nothing below is \
+         tested: {per_chamber:?}"
+    );
+    assert_eq!(out(session.handle("take a key")), "You take the key.");
+
+    let held = session.snapshot().expect("the snapshot builds").me.carrying;
+    assert_eq!(
+        held.len(),
+        1,
+        "the wire says the body holds {} things while `carrying` says one",
+        held.len()
+    );
+    assert_eq!(
+        held[0].noun, "a key",
+        "the wire must name the thing by the same noun `drop` and `put` take"
+    );
+    let key = held[0].entity;
+
+    // Out of the structure entirely and back in through the front door — the
+    // key crosses four chambers and one outdoors room, and the id it comes
+    // back with is the id it left with. That identity is the campaign's own
+    // headline, and nothing else on this wire would carry it.
+    assert!(out(session.handle("out")).starts_with("[room "));
+    assert!(out(session.handle("enter")).starts_with("[chamber "));
+    let still_held = session.snapshot().expect("the snapshot builds").me.carrying;
+    assert_eq!(
+        still_held.len(),
+        1,
+        "custody did not survive leaving the building: {still_held:?}"
+    );
+    assert_eq!(
+        still_held[0].entity, key,
+        "the same key came back with a different id"
+    );
+
+    assert_eq!(out(session.handle("drop a key")), "You set the key down.");
+    assert!(
+        session
+            .snapshot()
+            .expect("the snapshot builds")
+            .me
+            .carrying
+            .is_empty(),
+        "the wire says the body holds nothing while `carrying` says it holds a key"
+    );
+}

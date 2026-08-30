@@ -1,0 +1,21 @@
+enter
+enter further in
+enter further in
+enter further in
+examine a strongbox
+carrying
+take a key
+carrying
+open a strongbox
+put a key in a strongbox
+close a strongbox
+open a strongbox
+take a key
+out
+enter
+drop a key
+carrying
+out
+enter
+take a key
+carrying

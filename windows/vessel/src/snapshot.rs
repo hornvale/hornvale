@@ -99,6 +99,54 @@ pub struct SelfChannel {
     pub population: u32,
     /// The agent's room, as a packed `FacetId`.
     pub room: u64,
+    /// What this body is holding, in [`crate::thing::held_by`]'s `EntityId`
+    /// order — the same fold `carrying`, `drop` and `put` resolve against, so
+    /// a pane and the three verbs cannot disagree about what is in hand.
+    /// Empty for a possession carrying nothing, which is every possession
+    /// that has not typed `take`.
+    ///
+    /// **On `self` rather than in a channel of its own, and the precedent is
+    /// one field up.** `room` already puts the body's own STATE on this
+    /// channel beside its identity, so custody needs no new one: both are
+    /// facts about the body that outlive the room it stands in. Custody is
+    /// not presence-gated (it survives walking out), not knowledge (a body
+    /// needs no inference to know its own hands), and not a standing toward
+    /// anyone, so none of the other four channels is its home.
+    ///
+    /// **This is an observable, not a vital** (decision 0400). The client's
+    /// endpaper draws no hit points, stamina or hunger because the sim
+    /// commits no such quantity and a strip printing one would be inventing
+    /// it. A carried thing is the opposite: `located-in` naming the body as
+    /// its object is a committed fact with an entity on each end, which
+    /// `possess --out` saves and any reader can re-derive. Rendering it
+    /// invents nothing.
+    ///
+    /// Additive on `vessel/session/v2` per the schema discipline: a mirror
+    /// that does not know this key ignores it (serde skips unknown fields),
+    /// so no version moves.
+    pub carrying: Vec<CarriedEntry>,
+}
+
+/// One thing in the driven body's custody.
+///
+/// Two fields, each with a job: `entity` is the thing's identity across
+/// turns — the key that a pane tracks when the same key leaves a storeroom,
+/// crosses four chambers and is set down in another room — and `noun` is the
+/// exact word the verbs take, since `Session::carried_named` matches a
+/// player's word against the full noun, article and all.
+/// type-audit: bare-ok(index: entity), bare-ok(identifier-text: noun)
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct CarriedEntry {
+    /// The thing's ledger entity id. Serializes as a decimal **string**, for
+    /// the third time on this wire and for the same reason `SelfChannel::
+    /// agent` and `PresentEntry::entity` do: since The Signet an `EntityId`
+    /// is a full-width 64-bit derivation of the entity's lineage, and a JS
+    /// `number` cannot hold one losslessly (see `u64_as_decimal_string`).
+    #[serde(serialize_with = "u64_as_decimal_string")]
+    pub entity: u64,
+    /// The noun prose says it by (`"a key"`) — what `drop` and `put` accept,
+    /// matched case-insensitively against the whole of it.
+    pub noun: String,
 }
 
 /// The presence-gated channel: true only while the agent stands here.
@@ -272,6 +320,43 @@ pub enum SpatialChannel {
 }
 
 /// One examinable noun and its datum.
+///
+/// # `affordances` is not here, and this is the measurement rather than the
+/// omission
+///
+/// The Offer specified an `affordances` field beside `kind` and deferred it
+/// on the grounds that nothing would fill it. The Chattel's Task 13 re-ran
+/// that check before adding it, because a deferral's reason is what decays,
+/// and the reason has not:
+///
+/// - **The mechanism.** [`crate::Session::snapshot`] builds this catalog from
+///   `self.focalizer.render(&vantage)`, and `vantage` is `observable(…,
+///   &self.position(), …)` — the WALK-band vantage. The chamber's `Interior`
+///   is never consulted, indoors or out, so no anchor of the room a
+///   possession is actually standing in reaches `narration.nouns` at all.
+/// - **The measurement.** The committed chamber-band fixture
+///   (`clients/game/core/tests/fixtures/session-seed-42-chamber.json`) was
+///   taken one `enter` inside a structure and its `nouns` are the walk band's
+///   six — the biome, the canopy, the settlement, the sky and two moons —
+///   byte-identically the same list the walk-band fixture beside it carries.
+///   The Chattel's own new fixture is a second, independent instance:
+///   `session-seed-1-carrying.json` is a chamber-band snapshot taken on a
+///   different seed, twenty-one turns in, standing in a room whose prose
+///   names a doorway and a screen — and its `nouns` are the biome, the
+///   canopy, the settlement, the sky and two moons.
+/// - **The consequence.** An `affordances` field added today would serialize
+///   `[]` for every entry of every snapshot in every world, which is the
+///   third artifact in this arc that would read as delivered while doing
+///   nothing. Shipping it is refused a second time.
+///
+/// **The prerequisite is named, so a successor gets a task rather than a
+/// hunch: `narration.nouns` must first carry a CHAMBER-band noun catalog.**
+/// That is a real feature — the chamber band builds a `Vec<String>` of nouns
+/// for its prose and constructs no [`crate::Noun`] anywhere — and
+/// it is a producer-side change to the one surface with committed client
+/// fixtures and a schema discipline, so it belongs to its own campaign and
+/// not to the tail of this one. Registered as
+/// `CLIENT-noun-catalog-is-walk-band-only`.
 /// type-audit: bare-ok(identifier-text: noun), bare-ok(prose: datum), bare-ok(identifier-text: kind)
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct NounEntry {
@@ -394,6 +479,7 @@ mod tests {
                 settlement: "X".to_string(),
                 population: 1,
                 room: 1,
+                carrying: Vec::new(),
             },
             sensed: SensedChannel {
                 room: locale(),
@@ -431,6 +517,10 @@ mod tests {
                 settlement: "Vngoashshngaoshshngoogootao".to_string(),
                 population: 118,
                 room: 738918402,
+                carrying: vec![CarriedEntry {
+                    entity: 9223372036854775809,
+                    noun: "a key".to_string(),
+                }],
             },
             sensed: SensedChannel {
                 room: locale(),
@@ -480,6 +570,15 @@ mod tests {
         assert!(
             !json.contains("\"me\":"),
             "the `me` field must serialize as `self`"
+        );
+        // The THIRD id family on this wire, and the one a `carrying` pane
+        // tracks a thing by across turns. `9223372036854775809` is 2^63 + 1:
+        // emitted as a JSON number it would arrive in a browser as
+        // `9223372036854776000`, so the string encoding is what makes the
+        // identity survive the crossing at all.
+        assert!(
+            json.contains(r#""carrying":[{"entity":"9223372036854775809","noun":"a key"}]"#),
+            "a carried thing's id must cross as a decimal string: {json}"
         );
     }
 

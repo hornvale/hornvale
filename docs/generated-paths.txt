@@ -62,3 +62,16 @@ clients/game/core/tests/fixtures/
 docs/audits/underworld-lattice-seed-panel.md
 docs/audits/the-confidant-report.md
 docs/audits/the-reticence-report.md
+
+# Two more FILES declared by name, for the same reason and against the same
+# hazard (The Chattel, Task 13). Both land inside directories this list
+# already declares -- book/src/gallery/ and
+# clients/game/core/tests/fixtures/ -- so the directories' other tracked
+# files would keep the tracked-ness check green while `git diff` could not
+# see either new file at all. They are the campaign's only published evidence
+# that the custody verbs exist (the transcript) and the only committed
+# `vessel/session/v2` document whose `self.carrying` is not empty (the
+# fixture), so an artifact invisible to the drift check is exactly the
+# failure worth refusing here.
+book/src/gallery/possession-carry-seed-1.md
+clients/game/core/tests/fixtures/session-seed-1-carrying.json

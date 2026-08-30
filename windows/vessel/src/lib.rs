@@ -55,8 +55,8 @@ pub use plan::{
 pub use purview::*;
 pub use session::{Session, WorldContext};
 pub use snapshot::{
-    KnownChannel, KnownEntry, Narration, NounEntry, PresentEntry, SESSION_SCHEMA, SelfChannel,
-    SensedChannel, SessionSnapshot, SocialEntry, SpatialChannel, snapshot_json,
+    CarriedEntry, KnownChannel, KnownEntry, Narration, NounEntry, PresentEntry, SESSION_SCHEMA,
+    SelfChannel, SensedChannel, SessionSnapshot, SocialEntry, SpatialChannel, snapshot_json,
 };
 pub use streams::stream_labels;
 pub use structure::{MAX_CHAMBERS, Structure, structure_at};
