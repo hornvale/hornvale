@@ -27,7 +27,6 @@ fn repo_root() -> PathBuf {
 /// actually located, so an AUTHORED verdict is evidence about Hornvale
 /// rather than about the staging.
 #[derive(Debug, Clone)]
-#[allow(dead_code)] // Task 2's `run_at` reads these.
 struct Witness {
     seed: u64,
     target: String,
@@ -162,6 +161,50 @@ fn load(corpus: &str) -> Vec<Scene> {
         .collect()
 }
 
+/// Drive one possession at `witness`, feeding `script` to `--script`, and
+/// return the `vessel/session/v2` snapshot it writes.
+///
+/// The scene's verdict comes from THIS — an actual run — rather than from any
+/// declaration in the corpus file. Measured cost is ~5.4 s per call against a
+/// warm binary.
+fn run_at(witness: &Witness, script: &[String]) -> Value {
+    let dir = std::env::temp_dir().join(format!(
+        "hv-repertory-{}-{}",
+        std::process::id(),
+        witness.seed
+    ));
+    std::fs::create_dir_all(&dir).expect("scratch dir");
+    let script_path = dir.join("script.txt");
+    let snap_path = dir.join("snapshot.json");
+    let mut body = script.join("\n");
+    body.push('\n');
+    std::fs::write(&script_path, body).expect("write script");
+
+    let mut cmd = std::process::Command::new(env!("CARGO_BIN_EXE_hornvale"));
+    cmd.arg("possess")
+        .arg("--seed")
+        .arg(witness.seed.to_string())
+        .arg("--target")
+        .arg(&witness.target)
+        .arg("--script")
+        .arg(&script_path)
+        .arg("--snapshot")
+        .arg(&snap_path);
+    if let Some(day) = &witness.day {
+        cmd.arg("--day").arg(day);
+    }
+    let out = cmd.output().expect("the hornvale binary runs");
+    assert!(
+        out.status.success(),
+        "possess failed at seed {} target {}: {}",
+        witness.seed,
+        witness.target,
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let text = std::fs::read_to_string(&snap_path).expect("--snapshot wrote a file");
+    serde_json::from_str(&text).expect("the snapshot is valid JSON")
+}
+
 /// The founding corpus's frozen scene count. Changing this number is the
 /// deliberate act; changing the corpus without it is the drift (decision
 /// 0016).
@@ -198,4 +241,20 @@ fn every_scene_carries_a_witness_and_at_least_one_beat() {
             s.id
         );
     }
+}
+
+#[test]
+fn the_runner_returns_a_v2_snapshot_from_a_real_possession() {
+    let w = Witness {
+        seed: 42,
+        target: "most-populous-settlement".to_string(),
+        day: None,
+    };
+    let snap = run_at(&w, &["look".to_string()]);
+    assert_eq!(
+        snap.pointer("/schema").and_then(Value::as_str),
+        Some("vessel/session/v2"),
+        "the runner must return the session snapshot the resolver asserts \
+         against; anything else means --snapshot changed shape"
+    );
 }
