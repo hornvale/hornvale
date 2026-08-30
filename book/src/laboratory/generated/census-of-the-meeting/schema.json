@@ -685,6 +685,22 @@
     {
       "buckets": [
         0.0,
+        1.0,
+        2.0,
+        4.0,
+        8.0,
+        16.0
+      ],
+      "doc": "Count of land-vertex vestige LAYERS that are an abandoned delving whose hazard is Numinous — i.e. a working that ended by breaking through (The Winze, spec §4.3). A layer read, never the dread FIELD: `vestige_dread` is a max over a vertex's whole palimpsest, so a field read counts places that read as dreadful (a living working over an old breach, a pre-human gate scar) rather than delvings that ended (spec §E.11.2). Names nothing about what was found, because nothing knows (spec §4.6). 0 where no delving on land broke through",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "breached-delving-count",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
         50000.0,
         150000.0,
         300000.0,
@@ -3196,7 +3212,7 @@
   },
   "rows": {
     "count": 1000,
-    "fnv1a64": "0x8e4d7031a6ef2341"
+    "fnv1a64": "0x73a40b9e76bb8318"
   },
   "schema_version": 1,
   "study": {

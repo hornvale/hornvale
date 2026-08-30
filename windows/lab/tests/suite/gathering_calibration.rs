@@ -429,9 +429,37 @@ fn pop_weighted_abs_latitude_reads_below_the_uniform_sphere_baseline() {
     // ratio 1.89537x -> 1.89559x). The preregistered directional claim
     // asserted above — below the uniform-sphere baseline of 32.7 — is
     // untouched and still clears the baseline by better than 1.8x.
+    //
+    // THE WINZE (2026-08-29, canonical census on lefford at bba2be3efc83,
+    // goldens cherry-picked as 71202ac19): 17.2505 -> 17.2377, a SEVENTH
+    // reading in this sequence and the largest single step since The
+    // Glasshouse (-0.0128 degrees; margin 15.4495 -> 15.4623 degrees; ratio
+    // 1.89559x -> 1.89701x).
+    //
+    // THE STANDING INSTRUCTION FIRES AGAIN AND IS ANSWERED, NOT DEFERRED.
+    // The paragraphs above set the condition that a further narrowing is a
+    // question about the FLOOR OF THE TREND rather than a re-pin to keep
+    // quiet. This refresh is a narrowing, and it is a *decelerating* trend
+    // that has just accelerated: the steps since The Granary read
+    // -0.089, +0.0021, -0.0021, -0.0128. What this refresh actually says
+    // about the floor is NOTHING, and that is the honest answer rather than
+    // an evasive one — the mover here is a settlement-placement change
+    // (mines founded as DAUGHTER settlements on an ore objective), and an
+    // ore objective is a LITHOSPHERIC siting criterion with no latitude term
+    // at all. Nothing in this campaign biases where by latitude a settlement
+    // lands, so this step is a re-roll of the same distribution, not
+    // evidence of a floor being approached or cleared. A floor question
+    // needs an instrument that varies latitude deliberately; seven
+    // opportunistic readings off successive census refreshes cannot answer
+    // it, and this row should stop being read as if they could.
+    //
+    // THE ASSERTED CLAIM IS UNCHANGED AND STILL HOLDS: the preregistered
+    // directional assertion (below the uniform-sphere baseline of 32.7) sits
+    // ABOVE this line and the run reached here, so 17.2377 cleared it by
+    // better than 1.89x.
     assert!(
-        (mean - 17.2505).abs() < 1e-3,
-        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~17.2505)"
+        (mean - 17.2377).abs() < 1e-3,
+        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~17.2377)"
     );
 }
 

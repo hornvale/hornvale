@@ -443,9 +443,22 @@ fn a_frozen_sky_never_heads_a_cyclic_pantheon() {
     // the `other` arm panics loudly on a cyclic head in a locked world, and
     // the run reached this assertion, so it never fired on any of the 1000
     // seeds.
+    //
+    // The Winze's close regen (2026-08-29, canonical census on lefford at
+    // bba2be3efc83, goldens cherry-picked as 71202ac19): mines are now
+    // founded as DAUGHTER settlements on an ore objective rather than by the
+    // generic siting path, so the settlement roster and therefore which
+    // settlements survive to seat a flagship pantheon moves again:
+    // (149, 43) -> (150, 42). The invariant this test exists to guard is
+    // re-checked rather than assumed — the `other` arm above panics loudly
+    // on a cyclic head in a locked world, and the run reached this
+    // assertion, so it never fired on any of the 1000 seeds. The categorical
+    // claim (a frozen sky never heads a cyclic pantheon) holds in kind; only
+    // the eternal/ambient magnitudes moved, by one each and in opposite
+    // directions, i.e. one people's head re-reads.
     assert_eq!(
         (locked_eternal, locked_ambient),
-        (149, 43),
+        (150, 42),
         "locked-world per-people head split (eternal, ambient) drifted"
     );
     // The Demesne (BIO-35 Stage 1) local regen, lefford 2026-07-20: 1 -> 2.
@@ -492,8 +505,17 @@ fn a_frozen_sky_never_heads_a_cyclic_pantheon() {
     // the guarded property is the conjunction asserted above (a frozen sky
     // never heads a cyclic pantheon), which is unmoved; sub-year raid timing
     // re-decides which settlements survive to seat a flagship pantheon.
+    // The Winze's close regen (2026-08-29, canonical census on lefford at
+    // bba2be3efc83, goldens cherry-picked as 71202ac19): 12 -> 10, back to
+    // The Underworld's reading. WITNESS, not claim, as the paragraphs above
+    // say: the guarded property is the conjunction asserted above (a frozen
+    // sky never heads a cyclic pantheon), which is unmoved and re-checked —
+    // the `other` arm in the loop panics loudly on a cyclic head in a locked
+    // world and never fired on any of the 1000 seeds. Mines founded as
+    // DAUGHTER settlements on an ore objective re-decide which settlements
+    // survive to seat a flagship pantheon.
     assert_eq!(
-        spinning_eternal, 12,
+        spinning_eternal, 10,
         "spinning-yet-eternal per-people head count drifted"
     );
 }
@@ -798,8 +820,18 @@ fn goblin_flagship_coastal_split_is_pinned() {
     // coastal, 810 -> 809 inland — reverting exactly to the prior regen's
     // figures, and the two still sum to 999. WITNESS, not claim — nothing
     // here asserts a direction.
-    assert_eq!(coastal, 190, "coastal flagship count drifted");
-    assert_eq!(inland, 809, "inland flagship count drifted");
+    // The Winze's close regen (2026-08-29, canonical census on lefford at
+    // bba2be3efc83, goldens cherry-picked as 71202ac19): mines are founded as
+    // DAUGHTER settlements on an ore objective rather than through the
+    // generic siting path, so the roster competing for every site changes and
+    // goblin's flagship re-seats broadly: 190 -> 183 coastal, 809 -> 817
+    // inland — the largest single step this row has recorded since The
+    // Radiation. The two now sum to 1000 rather than 999: the one world that
+    // reported NEITHER flag under The Granary places a goblin flagship again,
+    // matching goblin's present-row counts elsewhere in this file rising
+    // 999 -> 1000. WITNESS, not claim — nothing here asserts a direction.
+    assert_eq!(coastal, 183, "coastal flagship count drifted");
+    assert_eq!(inland, 817, "inland flagship count drifted");
 }
 
 #[test]
@@ -1239,7 +1271,21 @@ fn blind_attribution_beats_chance_decisively() {
     // 0.75 floor asserted above. The mooned-pair invariant below (perfect
     // attribution among spinning, mooned pairs) never fired either; the run
     // reaches it, and it is an `assert_eq!` that would have.
-    assert_eq!(correct, 889, "blind-attribution count drifted");
+    // The Winze's close regen (2026-08-29, canonical census on lefford at
+    // bba2be3efc83, goldens cherry-picked as 71202ac19): mines founded as
+    // daughters on an ore objective reshape the settlement roster, moving
+    // which side several attributable pairs land on (889 -> 888 correct)
+    // while the attributable-pair DENOMINATOR does not move at all
+    // (980 -> 980); accuracy 0.9071428571428571 -> 0.9061224489795918. The
+    // directional claim this test guards (blind attribution beats chance
+    // decisively) HOLDS, re-checked rather than assumed: the 0.75 floor is
+    // asserted ABOVE this line and the run reached here, so 0.906 cleared it
+    // with 0.156 of margin, and against the ~0.5 binary chance the claim is
+    // really about, nearly double. The mooned-pair invariant below (perfect
+    // attribution among spinning, mooned pairs) never fired either — the run
+    // reaches it, it is an `assert_eq!` that would have, and it reads
+    // 788/788.
+    assert_eq!(correct, 888, "blind-attribution count drifted");
     assert_eq!(total, 980, "attributable-pair count drifted");
     // Pinned calibration row — the anti-reskin claim at the head-domain
     // calibration's own scope: restricted to SPINNING pairs on worlds with
@@ -1510,9 +1556,24 @@ fn epithet_honorific_is_true_for_goblin_and_false_for_kobold() {
     // of the 999 goblin worlds that hold a pantheon, and the inner `assert!`
     // in the loop confirms it still reads false on every one of the 980
     // kobold worlds that do.
+    // The Winze's close regen (2026-08-29, canonical census on lefford at
+    // bba2be3efc83, goldens cherry-picked as 71202ac19): mines founded as
+    // daughters on an ore objective reshape the settlement roster, and THE
+    // GRANARY'S ONE ABSENT GOBLIN WORLD RECOVERS: goblin 999/1 -> 1000/0
+    // true/absent, the same world recovering here as in
+    // `goblin_flagship_coastal_split_is_pinned` (whose two flags sum back to
+    // 1000) and in the name-length and name-syllable present-row counts
+    // below, for the same reason — a goblin flagship places again, so there
+    // is a pantheon to read a honorific from. Kobold's 980/20 false/absent
+    // does not move. The claim this row guards is re-checked, not assumed —
+    // `g_false_seeds` is still exactly empty (the assertion above did not
+    // fire), so the detector reads TRUE on all 1000 goblin worlds, and the
+    // inner `assert!` in the loop confirms it still reads FALSE on every one
+    // of the 980 kobold worlds that hold a pantheon. Only the magnitudes
+    // moved; neither direction did.
     assert_eq!(
         (g_true, g_absent),
-        (999, 1),
+        (1000, 0),
         "goblin epithet-honorific true/absent split drifted"
     );
     assert_eq!(
@@ -2150,7 +2211,21 @@ fn name_collision_rate_is_measured_and_pinned() {
         // directional claim (H4 already failed and is recorded as such
         // above), the tolerance is unchanged at 1e-6, and the rate stays
         // inside the range decision 0024 sanctions (see the note above).
-        (mean - 0.519_030_706_716_999_4).abs() < 1e-6,
+        // The Winze's close regen (2026-08-29, canonical census on lefford
+        // at bba2be3efc83, goldens cherry-picked as 71202ac19): mines are
+        // founded as DAUGHTER settlements on an ore objective rather than
+        // through the generic siting path, so a different set of settlements
+        // is named on every world; zero/nonzero/absent unmoved at 0/1000/0,
+        // checked against this fixture rather than assumed. Mean:
+        // 0.519_030_706_716_999_4 -> 0.518_162_862_567_000_6, a fall of
+        // 8.7e-4 — two orders of magnitude larger than the last five regens'
+        // fifth-decimal wobble, and the first movement here since The
+        // Delvers that is plainly a roster change rather than numerical
+        // drift. This row still carries no directional claim (H4 already
+        // failed and is recorded as such above), the tolerance is unchanged
+        // at 1e-6, and the rate stays inside the range decision 0024
+        // sanctions (see the note above).
+        (mean - 0.518_162_862_567_000_6).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -2408,7 +2483,19 @@ fn name_length_distributions_are_measured_and_pinned() {
         // of 4.6e-4 characters. Still comfortably below the campaign's own
         // <10-character claim (spec §7) — 1.48 characters of margin —
         // re-checked rather than assumed.
-        ("goblin", 999u32, 8.522_193_159_259_256),
+        // The Winze's close regen (2026-08-29, canonical census on lefford
+        // at bba2be3efc83, goldens cherry-picked as 71202ac19): mines are
+        // founded as DAUGHTER settlements on an ore objective rather than
+        // through the generic siting path, re-deciding every settlement
+        // contest. THE GRANARY'S ONE BLOCKED WORLD SEATS A GOBLIN FLAGSHIP
+        // AGAIN — present recovers 999 -> 1000 (the same recovery recorded
+        // at `goblin_flagship_coastal_split_is_pinned`, whose two flags sum
+        // back to 1000, at the epithet-honorific row, and at the
+        // name-syllable row below), mean 8.522_193_159_259_256 ->
+        // 8.545_224_123_300_008. Still comfortably below the campaign's own
+        // <10-character claim (spec 7) — 1.45 characters of margin —
+        // re-checked rather than assumed.
+        ("goblin", 1000u32, 8.545_224_123_300_008),
         // Census regen (2026-07-18, the-chorus close, regen commit
         // fe2332c): kobold re-measured (was 9.857_451_023_312_882) —
         // accumulated lexeme-space drift (the person concept (C2), the
@@ -2560,7 +2647,13 @@ fn name_length_distributions_are_measured_and_pinned() {
         // whose first arm is goblin, so a goblin drift masks it entirely and
         // the failing run above named only goblin. Both means were read off
         // the regenerated `rows.csv` in one duckdb pass.
-        ("kobold", 980u32, 6.864_892_034_999_999),
+        // The Winze's close regen (2026-08-29, same census): kobold's
+        // present count does NOT move (980 -> 980) but the sites its names
+        // compound over do: mean 6.864_892_034_999_999 ->
+        // 6.889_837_276_428_570. Still comfortably below the <10-character
+        // claim — 3.11 characters of margin — re-checked rather than
+        // assumed.
+        ("kobold", 980u32, 6.889_837_276_428_57),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -2784,8 +2877,19 @@ fn name_syllable_distributions_are_measured_and_pinned() {
         // 2.200_726_815_918_366_6 — both reverting to (within float noise)
         // the prior regen's figures. The claim (spec §8 criterion 2, mean in
         // 2-3) still HOLDS at both species — re-checked rather than assumed.
-        ("goblin", 999u32, 2.716_477_110_510_509),
-        ("kobold", 980u32, 2.200_726_815_918_366_6),
+        // The Winze's close regen (2026-08-29, canonical census on lefford
+        // at bba2be3efc83, goldens cherry-picked as 71202ac19): goblin's
+        // present count recovers 999 -> 1000 for the same reason as the
+        // name-length row above (one world seats a goblin flagship again),
+        // and the structural relation this loop asserts row by row — a world
+        // reports a syllable count exactly when it reports a name length —
+        // is re-checked rather than assumed: the per-row `assert_eq!` on the
+        // two Absent patterns never fired. Means:
+        // goblin 2.716_477_110_510_509 -> 2.720_362_562_599_999,
+        // kobold 2.200_726_815_918_366_6 -> 2.209_761_443_265_304_3.
+        // Both stay inside spec 8 criterion 2's 2-3 syllable range.
+        ("goblin", 1000u32, 2.720_362_562_599_999),
+        ("kobold", 980u32, 2.209_761_443_265_304_3),
     ] {
         let syl_i = idx(&format!("name-syllables-{species}"));
         let len_i = idx(&format!("name-length-{species}"));
@@ -3091,7 +3195,19 @@ fn name_transparency_is_measured_and_pinned() {
         // assumed — they are the two assertions this one masks). Mean:
         // 0.714_089_011_470_001_7 -> 0.713_851_012_460_001_4, a fall of
         // 2.4e-4. Still emphatically NOT 1.0 — re-checked, not assumed.
-        (mean - 0.713_851_012_460_001_4).abs() < 1e-9,
+        // The Winze's close regen (2026-08-29, canonical census on lefford
+        // at bba2be3efc83, goldens cherry-picked as 71202ac19): mines are
+        // founded as DAUGHTER settlements on an ore objective, so a
+        // different set of settlements is named on every world and a
+        // different set of names has worn: 0.713_851_012_460_001_4 ->
+        // 0.715_634_070_160_000. Present/absent unmoved at 1000/0. THIS ROSE
+        // AND A RISE IS THE DIRECTION THE COMMENT ABOVE WARNS ABOUT, so it
+        // is stated rather than absorbed: +0.0018 is a fifth of the smallest
+        // step in this row's own history and the reading remains far from
+        // the pre-campaign 1.00 degenerate value, with the min/max spread
+        // below still spanning 0.298 to 0.987. Nothing here licenses reading
+        // it as an improvement; it is a roster change, recorded.
+        (mean - 0.715_634_070_160_000).abs() < 1e-9,
         "mean name-transparency drifted: {mean:.15}"
     );
     // The SPREAD is the point of the row, not just the mean: a mean of 0.827
@@ -3182,7 +3298,10 @@ fn name_transparency_is_measured_and_pinned() {
         // widening the span from below, away from the uniformity defect this
         // row guards. Re-checked against the ceiling assertion below rather
         // than assumed to be the defect returning.
-        (min - 0.284_644_19).abs() < 1e-8,
+        // The Winze's close regen (2026-08-29, same census): the world
+        // holding the most-worn name set changes with the roster —
+        // 0.284_644_19 -> 0.298_181_82. The maximum below does NOT move.
+        (min - 0.298_181_82).abs() < 1e-8,
         "name-transparency minimum drifted: {min:.15}"
     );
     assert!(
@@ -3327,8 +3446,22 @@ fn null_control_blind_attribution_is_at_chance() {
     // a 0.488 split, well inside the ±0.2 chance band above. The
     // directional floors are re-checked, not assumed: 459/500 = 0.918 is
     // still mostly-indistinguishable.
-    assert_eq!(indistinguishable, 459, "indistinguishable count drifted");
-    assert_eq!(decided, 41, "decided count drifted");
+    // The Winze's close regen (2026-08-29, canonical census on lefford at
+    // bba2be3efc83, goldens cherry-picked as 71202ac19): mines founded as
+    // daughters on an ore objective add another path-dependent step to both
+    // solo builds' histories, separating two more pairs: 459 -> 457
+    // indistinguishable, 41 -> 43 decided, and of those 22 pick the twin — a
+    // 0.512 split, well inside the +/-0.2 chance band above. THE NULL
+    // CONTROL HAS NOT MOVED OFF CHANCE, and that is checked rather than
+    // assumed: both directional floors sit ABOVE this line and the run
+    // reached here, so 457/500 = 0.914 still reads mostly-indistinguishable
+    // and 22/43 = 0.512 still reads at chance. This is the matched control
+    // for `blind_attribution_beats_chance_decisively`, which moved by one
+    // hit in the same refresh (889 -> 888, accuracy 0.907 -> 0.906): the
+    // real effect and its control moved independently and in unrelated
+    // magnitudes, which is what the pair exists to show.
+    assert_eq!(indistinguishable, 457, "indistinguishable count drifted");
+    assert_eq!(decided, 43, "decided count drifted");
     // The Tumult (predation) re-pin; lefford regen, 0063: 31 -> 32 of the 64
     // decided pairs pick the twin — an exact 0.500 split, i.e. the null
     // control lands even closer to chance than before (0.484).
@@ -3341,7 +3474,11 @@ fn null_control_blind_attribution_is_at_chance() {
     // 347945b4, 0063/0079): re-measured against the smaller decided pool of
     // 61 — 31 of 61 pick the twin, a 0.508 split, i.e. the null control lands
     // marginally closer to chance than the prior regen's 0.492.
-    assert_eq!(picks_twin, 20, "twin-pick count drifted");
+    // The Winze's close regen (2026-08-29, same census): re-measured against
+    // the larger decided pool of 43 — 22 pick the twin, a 0.512 split, i.e.
+    // the null control lands marginally further from an exact 0.500 than the
+    // prior regen's 0.488 and on the other side of it.
+    assert_eq!(picks_twin, 22, "twin-pick count drifted");
 }
 
 #[test]
@@ -3436,7 +3573,19 @@ fn null_control_distributions_are_within_the_sampling_bound() {
     // 0.004_000_000_000_000_002 (still an order of magnitude inside the
     // ±0.15 bound asserted above, which the run reaches without firing).
     assert!(
-        (cult - 0.004_000_000_000_000_002).abs() < 1e-9,
+        // The Winze's close regen (2026-08-29, canonical census on lefford
+        // at bba2be3efc83, goldens cherry-picked as 71202ac19): the cult-form
+        // TVD falls to EXACTLY ZERO, 0.004_000_000_000_000_002 -> 0.0. The
+        // two solo builds' cult-form distributions are byte-identical again
+        // for the first time since the Living Community epoch — a movement
+        // TOWARD the structural ideal this row's header describes, not away
+        // from it, and comfortably inside the +/-0.15 directional bound
+        // asserted above (which the run reaches without firing). Recorded as
+        // a measurement, not read as a restored invariant: nothing in this
+        // campaign makes the two builds clones again by construction, and
+        // the pantheon-size SMD below is still nonzero, so the
+        // path-dependence the epoch introduced has not gone away.
+        (cult - 0.0).abs() < 1e-9,
         "cult-form TVD drifted: {cult}"
     );
     // The Sundering (moving-sea epoch; lefford regen, 0063):
@@ -3460,7 +3609,10 @@ fn null_control_distributions_are_within_the_sampling_bound() {
     // — -0.005_019_484_555_457_905 -> -0.004_020_397_467_157_86, still two
     // orders of magnitude inside the ±0.2 bound asserted above.
     assert!(
-        (size - -0.004_020_397_467_157_86).abs() < 1e-9,
+        // The Winze's close regen (2026-08-29, same census):
+        // -0.004_020_397_467_157_86 -> -0.003_519_541_289_031_219_7, still
+        // two orders of magnitude inside the +/-0.2 bound asserted above.
+        (size - -0.003_519_541_289_031_219_7).abs() < 1e-9,
         "pantheon-size SMD drifted: {size}"
     );
 }
@@ -3677,7 +3829,15 @@ fn null_control_name_length_smd_is_pinned() {
         // `null_control_distributions_are_within_the_sampling_bound` asserts
         // — the null hypothesis this row exists to witness
         // (INDISTINGUISHABLE FROM ZERO) reads as true as it ever has.
-        (namelen - -0.025_280_277_786_945_245).abs() < 1e-9,
+        // The Winze's close regen (2026-08-29, canonical census on lefford
+        // at bba2be3efc83, goldens cherry-picked as 71202ac19): mines founded
+        // as daughters on an ore objective change which sites each solo build
+        // names, shifting both sides' salts —
+        // -0.025_280_277_786_945_245 -> -0.026_539_960_262_133_25. Still an
+        // order of magnitude inside the +/-0.2 sampling bound, and still
+        // negative, so the sign this row has carried through every regen is
+        // unmoved: only the magnitude did.
+        (namelen - -0.026_539_960_262_133_25).abs() < 1e-9,
         "name-length SMD drifted: {namelen}"
     );
 }

@@ -874,13 +874,24 @@ fn homophony_count_is_measured_and_pinned() {
     // (21.704/6.101) against 3.5597x — both margins narrowed a hair and both
     // stay far above the 3x falsification line, so the warning above stands
     // unspent. Post-unblinding re-measure, declared per decision 0016.
-    assert!((mg - 5.919).abs() < 1e-9, "goblin mean drifted: {mg}");
-    assert!((mh - 6.101).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
-    assert!((mb - 21.704).abs() < 1e-9, "bugbear mean drifted: {mb}");
+    // The Winze's close regen (2026-08-29, canonical census on lefford at
+    // bba2be3efc83, goldens cherry-picked as 71202ac19): mines are founded as
+    // DAUGHTER settlements on an ore objective rather than through the
+    // generic siting path, so a different set of settlements is named on
+    // every world and each daughter language's homophone tally moves with
+    // it: goblin 5.919 -> 5.916, hobgoblin 6.101 -> 6.170, bugbear
+    // 21.704 -> 21.853, kobold 6.360 -> 6.431. The DIRECTIONAL claim this
+    // row carries — bugbear's homophony mean is highest among the goblinoid
+    // daughters — is asserted below and is re-checked rather than assumed:
+    // 21.853 against goblin's 5.916 and hobgoblin's 6.170, a margin that
+    // WIDENED with this refresh. Only magnitudes moved.
+    assert!((mg - 5.916).abs() < 1e-9, "goblin mean drifted: {mg}");
+    assert!((mh - 6.170).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    assert!((mb - 21.853).abs() < 1e-9, "bugbear mean drifted: {mb}");
     // kobold 6.113 -> 6.279 (The Granary's re-pin, same mechanism as above).
     // Unmoved at 6.326 through The Foliot and The Sources' second and third
     // censuses; 6.326 -> 6.36 at The Precedence's, with the other three.
-    assert!((mk - 6.36).abs() < 1e-9, "kobold mean drifted: {mk}");
+    assert!((mk - 6.431).abs() < 1e-9, "kobold mean drifted: {mk}");
     assert!(
         mb > mg && mb > mh,
         "expected bugbear's homophony mean highest among the goblinoid daughters: {mb} vs goblin {mg}, hobgoblin {mh}"

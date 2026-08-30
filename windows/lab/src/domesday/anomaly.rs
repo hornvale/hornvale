@@ -815,7 +815,7 @@ mod tests {
     }
 
     #[test]
-    fn evaluable_columns_measured_surface_on_the_226_column_census() {
+    fn evaluable_columns_measured_surface_on_the_227_column_census() {
         // Pinned so a future census refresh that moves this materially is
         // visible here, not just in prose. See task-4-report.md for the
         // comparison against the spec's original 204-column figure
@@ -868,11 +868,24 @@ mod tests {
         // `granary-raids-in-depleted-half`) plus one further column crossing
         // onto the evaluable side at this epoch. Both granary metrics are
         // Numeric and vary across worlds, so they are real ranker surface.
+        // THE WINZE (2026-08-29, canonical census on lefford at bba2be3efc83,
+        // goldens cherry-picked as 71202ac19): evaluable 117 -> 118, excluded
+        // unchanged at 50, total 227 -> 228 metric columns — the campaign's
+        // one new census column, `breached-delving-count`, and it lands
+        // EVALUABLE, so the asymmetry the paragraphs above call informative
+        // reads the right way for it: an integer column varying across worlds
+        // is real ranker surface, where a new column moving `excluded`
+        // instead would have meant it was degenerate. The test's NAME carries
+        // the census's metric-column count and moves with it (226 -> 227
+        // structural-excluded columns, i.e. 230 CSV columns less `seed`,
+        // `pin_set` and `refusal`); `docs/timings/subfloor-roster.tsv`
+        // selects sub-floor tests by EXACT name and is updated in the same
+        // commit, since a stale id there selects nothing and prints green.
         let c = committed();
         let (evaluable, excluded) = evaluable_columns(&c);
         assert_eq!(
             evaluable.len(),
-            117,
+            118,
             "evaluable count moved — re-measure and update this"
         );
         assert_eq!(
