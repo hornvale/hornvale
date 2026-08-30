@@ -4266,6 +4266,16 @@ measured here.
 | 2026-08-30T16:26:36Z | sluice:gate | 466.602 | 13561.788 | 432.292 | 29.99 | 0 | 2c6b0ea9f |  | lefford | 40 |
 | 2026-08-30T16:35:33Z | sluice:clients | 536.141 | 9717.426 | 123.684 | 18.36 | 0 | 3588e1a39 |  | lefford | 40 |
 | 2026-08-30T16:43:14Z | sluice:heavy | 461.171 | 9652.581 | 153.445 | 21.26 | 0 | e3513454d |  | lefford | 40 |
+| 2026-08-30T17:22:27Z | prewarm | 57.587 | 392.668 | 15.192 | 7.08 | 0 | cd6547134 | campaign/the-repertory | MacBookPro | 10 |
+| 2026-08-30T17:46:56Z | gate-commit | 24.683 | 56.869 | 12.076 | 2.79 | 0 | 4a0944249 | campaign/the-repertory | MacBookPro | 10 |
+| 2026-08-30T17:47:40Z | gate-commit | 26.175 | 46.915 | 12.308 | 2.26 | 0 | 4a0944249 | campaign/the-repertory | MacBookPro | 10 |
+| 2026-08-30T17:48:41Z | gate-commit | 26.312 | 52.566 | 13.745 | 2.52 | 0 | 4a0944249 | campaign/the-repertory | MacBookPro | 10 |
+| 2026-08-30T17:49:46Z | gate-commit | 21.641 | 51.652 | 13.562 | 3.01 | 0 | 7751172f7 | campaign/the-repertory | MacBookPro | 10 |
+| 2026-08-30T17:52:04Z | gate-commit | 22.040 | 52.108 | 13.448 | 2.97 | 0 | 95ffe11ed | campaign/the-repertory | MacBookPro | 10 |
+| 2026-08-30T17:53:38Z | gate-commit | 20.942 | 45.723 | 11.674 | 2.74 | 0 | 6693b5f4e | campaign/the-repertory | MacBookPro | 10 |
+| 2026-08-30T17:55:27Z | gate-commit | 22.881 | 52.732 | 13.807 | 2.91 | 0 | 6693b5f4e | campaign/the-repertory | MacBookPro | 10 |
+| 2026-08-30T17:58:21Z | gate-commit | 22.426 | 52.453 | 13.943 | 2.96 | 0 | 778a7292b | campaign/the-repertory | MacBookPro | 10 |
+| 2026-08-30T18:02:20Z | rebaseline | 49.577 | 271.678 | 14.661 | 5.78 | 0 | b4305dfaa | campaign/the-repertory | MacBookPro | 10 |
 | 2026-08-30T17:23:22Z | gate-commit | 39.335 | 112.675 | 19.636 | 3.36 | 0 | 7280fbd4f | campaign/the-chattel | MacBookPro | 10 |
 | 2026-08-30T17:24:35Z | rebaseline | 67.312 | 288.237 | 14.925 | 4.50 | 0 | ec4e204a3 | campaign/the-chattel | MacBookPro | 10 |
 | 2026-08-30T17:28:38Z | sluice:artifacts | 143.888 | 1387.329 | 67.117 | 10.11 | 0 | 2e7cc4182 |  | lefford | 40 |
@@ -4286,3 +4296,5 @@ measured here.
 | 2026-08-30T18:32:33Z | sluice:gate | 469.889 | 13878.272 | 433.441 | 30.46 | 0 | 0fbfd0f62 |  | lefford | 40 |
 | 2026-08-30T18:41:06Z | sluice:clients | 512.621 | 9631.367 | 94.708 | 18.97 | 0 | 4ccbb803e |  | lefford | 40 |
 | 2026-08-30T18:48:32Z | sluice:heavy | 445.795 | 9642.775 | 148.017 | 21.96 | 0 | d88bbd88c |  | lefford | 40 |
+| 2026-08-30T18:08:23Z | rebaseline | 81.710 | 286.607 | 14.371 | 3.68 | 0 | d99a004ba | campaign/the-repertory | MacBookPro | 10 |
+| 2026-08-30T18:15:06Z | gate-commit | 149.953 | 841.403 | 51.018 | 5.95 | 0 | d2a4731a6 | campaign/the-repertory | MacBookPro | 10 |

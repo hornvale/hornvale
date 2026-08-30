@@ -72,6 +72,8 @@ mod no_entity_id_values_in_prose;
 mod prose_is_not_a_contract;
 #[path = "suite/release_determinism.rs"]
 mod release_determinism;
+#[path = "suite/repertory_corpus.rs"]
+mod repertory_corpus;
 #[path = "suite/repose_byte_identity.rs"]
 mod repose_byte_identity;
 #[path = "suite/retired_gate_signposts.rs"]
