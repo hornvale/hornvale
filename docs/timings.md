@@ -4066,3 +4066,4 @@ measured here.
 | 2026-08-30T12:09:51Z | gate-commit | 20.854 | 50.201 | 12.942 | 3.03 | 0 | 4a4b0ddcc | campaign/the-quoin | MacBookPro | 10 |
 | 2026-08-30T12:35:47Z | sluice:artifacts | 137.746 | 1296.813 | 61.550 | 9.86 | 0 | d104d6819 |  | lefford | 40 |
 | 2026-08-30T12:36:29Z | sluice:outboard | 42.197 | 26.941 | 40.327 | 1.59 | 0 | d3e9db3e2 |  | lefford | 40 |
+| 2026-08-30T12:45:09Z | sluice:gate | 520.193 | 14854.890 | 547.858 | 29.61 | 0 | 3b625646d |  | lefford | 40 |
