@@ -177,6 +177,7 @@ fn cause_label(c: CauseOfEnd) -> &'static str {
         CauseOfEnd::Plague => "plague",
         CauseOfEnd::Fled => "fled",
         CauseOfEnd::Migrated => "migrated",
+        CauseOfEnd::Breached => "breached",
     }
 }
 
@@ -696,6 +697,13 @@ fn parse_cause(label: &str) -> Option<CauseOfEnd> {
         "plague" => CauseOfEnd::Plague,
         "fled" => CauseOfEnd::Fled,
         "migrated" => CauseOfEnd::Migrated,
+        // The Winze, spec §4.3. **This half of the codec is not enumerated
+        // by the compiler** — it matches on a `&str` and falls through to
+        // `None` — so a variant added to `cause_label` above and forgotten
+        // here would encode fine and decode as "never ended", on every
+        // occupation that ended that way. `history_emit`'s round-trip gates
+        // are what actually hold the pair together.
+        "breached" => CauseOfEnd::Breached,
         _ => return None,
     })
 }

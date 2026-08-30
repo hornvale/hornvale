@@ -1150,9 +1150,21 @@ fn the_material_fourth_key_barely_moves_the_stratigraphy() {
     // explanation, and one ring-scan later the same explanation would have
     // predicted the wrong seed. It was a coincidence then too. Three seeds
     // cannot distinguish these readings (decision 0097).
+    //
+    // THE WINZE T4 re-pin (spec §4.3, 2026-08-29): [0, 0, 1] -> [0, 0, 2],
+    // total 1 -> 2. Ninth reading, and the same lever again: the breach hazard
+    // ends some workings before the world otherwise would have, which
+    // re-places settlements a ninth time. Seed 1000 keeps the whole of the
+    // nonzero reading. Recorded, not narrated: 2 is no more "worse" for
+    // `barely moves` than 1 was "better", both are tiny against ~19k land
+    // vertices per world, and three seeds cannot distinguish them (decision
+    // 0097). Seed 42 stays at zero for a reason that is NOT a coincidence
+    // this time and is worth having on the record: none of seed 42's sixteen
+    // workings breached, so this epoch does not move that world at all
+    // (`breach.rs` reports 0 breached on seed 42 across the whole panel).
     assert_eq!(
         measured,
-        vec![(42u64, 0usize), (7, 0), (1000, 1)],
+        vec![(42u64, 0usize), (7, 0), (1000, 2)],
         "the per-seed order-change counts moved"
     );
 }

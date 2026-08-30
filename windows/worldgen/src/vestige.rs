@@ -54,7 +54,16 @@ pub enum HazardKind {
     Pestilent,
     /// Standing or seeping water.
     Flooded,
-    /// A lingering supernatural charge (pre-human sites).
+    /// A lingering supernatural charge: a danger the living cannot account
+    /// for.
+    ///
+    /// **Two producers, not one.** A pre-human gate scar
+    /// ([`prehuman_vestige`]) is the original, and The Winze added the second:
+    /// a delving that ended by [`CauseOfEnd::Breached`], where the model
+    /// itself does not know what came through (spec §4.6) and so has nothing
+    /// more specific to offer. The parenthetical "(pre-human sites)" this doc
+    /// used to carry is therefore retired — a `Numinous` vestige is no longer
+    /// evidence that a site predates people.
     Numinous,
     /// Held to be cursed by those who remember it.
     Cursed,
@@ -109,6 +118,35 @@ pub fn vestige_from_occupation(occ: &OccupationRecord, now: f64) -> Vestige {
     let hazard = match occ.core.cause {
         Some(CauseOfEnd::Plague) => HazardKind::Pestilent,
         Some(CauseOfEnd::Burned) => HazardKind::Cursed,
+        // A BREACH GETS ITS OWN ARM RATHER THAN THE DEFAULT (The Winze, spec
+        // §4.3/§4.5), and the arm is [`HazardKind::Numinous`] rather than a
+        // seventh variant. Three things decided it:
+        //
+        // 1. **`Structural` would be wrong in kind, not merely imprecise.**
+        //    Its own doc says "collapse risk from decayed construction" — a
+        //    danger that accrues after the people leave. A breached working's
+        //    danger arrived while they were still in it, and is the reason
+        //    they are not. Letting it fall through `_` would have been the
+        //    quiet outcome: no compiler error (this match has a wildcard), a
+        //    plausible-looking hazard, and Task 6's three legibility states
+        //    resting on a category error.
+        // 2. **Every other named variant would violate §4.6.** `ToxicGas`,
+        //    `Flooded`, `Pestilent` and `Cursed` each assert a specific,
+        //    knowable danger — which is to say each of them names what came
+        //    through. Nothing knows.
+        // 3. **`Numinous` is the model's existing word for an unaccountable
+        //    danger**, and this is a *derived read*, not a record: a vestige
+        //    is what a later people perceives at a site, so it carries an
+        //    appearance and never a source (decision 0003). "Something here
+        //    is wrong and we cannot say what" is exactly spec §4.5's DECAYED
+        //    state, and it is what `Numinous` already meant.
+        //
+        // The cost, stated: a breached delving now reads identically to a
+        // pre-human gate scar on this axis. That is a property rather than a
+        // collision — a later culture genuinely cannot tell the two apart —
+        // but it means `HazardKind::Numinous` is no longer a sufficient test
+        // for "pre-human", and `prehuman_vestige` is the thing to ask instead.
+        Some(CauseOfEnd::Breached) => HazardKind::Numinous,
         // Every other end leaves structural collapse as the default; per-function
         // hazards (a flooded mine, toxic gas) are a later refinement.
         _ => HazardKind::Structural,

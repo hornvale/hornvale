@@ -447,6 +447,65 @@ pub const WORKING_REACH: u32 = 3;
 /// to reckon with rather than this constant's to remove.
 /// type-audit: bare-ok(diagnostic-value)
 const DELVE_M_PER_PERSON_EPOCH: f64 = 0.5;
+/// The mean distance, in metres of working advanced, that a delving cuts
+/// before it breaks through into something and ends (The Winze, spec §4.3).
+/// The breach hazard is its reciprocal, `1 / this` per metre; a working that
+/// cuts `d` metres in an epoch breaches with probability
+/// `1 - exp(-d / this)`.
+///
+/// # The modelling claim
+///
+/// **Digging is dangerous per metre of rock cut, not per year lived.** That
+/// is the whole content of this constant and it is the half worth arguing
+/// about, ahead of the number. A working does not become likelier to break
+/// through by *existing* another century; it becomes likelier by *advancing*.
+/// So the clock the hazard runs on is the face, not the calendar, and the
+/// per-epoch probability above is a function of the metres that epoch cut —
+/// [`Bake::deepen`]'s `population × tech_weight(tech) ×
+/// DELVE_M_PER_PERSON_EPOCH` — and of nothing else.
+///
+/// # Where 3,000 m comes from, and why it is a read-off rather than a fit
+///
+/// `hornvale_terrain::cave_depth::CAVE_REACH_CEILING_M` is 3,000 m: the
+/// declared range of a cave's depth budget, the window spec §4.0 states the
+/// delve ladder covers, and — measured over 30 worlds — a rail that binds on
+/// 0.077% of 48,316 caves. So essentially every void this world places sits
+/// inside the first 3 km of rock, and 3 km is the vertical extent of the
+/// thing a delving can break into at all.
+///
+/// The claim this constant makes is therefore: **a working that cuts through
+/// the entire depth of the world's void-bearing crust has, on average, found
+/// one.** Survival over that whole window is `1/e ≈ 37%`; a working of
+/// ordinary depth (tens of metres) is at well under 1% risk per its whole
+/// life. That is what "a small probability per increment" means here (§4.3).
+///
+/// **The literal is deliberately not `1.0 / hornvale_terrain::…::
+/// CAVE_REACH_CEILING_M`**, and it is the same choice [`ORE_CUT`] makes one
+/// constant above: that value is read *off* `prospectivity`'s composition and
+/// written as a literal, not computed from it. Binding this arithmetic to a
+/// terrain constant would mean a future recalibration of cave depths silently
+/// re-rolls every world's history through a save-format contract, with
+/// nothing at the edit site saying so. The citation belongs in the doc; the
+/// number belongs in the code.
+///
+/// # What it is NOT
+///
+/// **It is not a depth rule, and this is the campaign's Global Constraint.**
+/// Nothing anywhere compares a delving's accumulated depth against a
+/// threshold. Two workings cutting 100 m this epoch face the same hazard
+/// whether one stands at 50 m and the other at 3,000 m; two workings at the
+/// same depth face different hazards if one is cutting harder. The
+/// survivorship shape spec §5.2 preregisters is an *output* of that — among
+/// delvings that end, the breached ones are enriched for having cut more
+/// metres, which is to say for being deeper — and not a selection on depth.
+///
+/// **It was chosen without reference to how many breaches it would produce**
+/// (spec amendment E.4.2, frozen before this code existed). The count is
+/// Task 5's sample-size problem and E.4.2's panel rule is its remedy; picking
+/// a rate to land a convenient count would launder a tuned constant through a
+/// sample-size argument.
+/// type-audit: bare-ok(diagnostic-value)
+const BREACH_FREE_PATH_M: f64 = 3000.0;
 /// How much a unit of stored wealth is worth as raiding strength, relative to
 /// a head of population. Walls, retainers and granaries are strength the local
 /// land does not have to feed.
@@ -3308,16 +3367,114 @@ impl<'a> Bake<'a> {
     /// see a community in the epoch it was opened (the epoch loop steps a
     /// snapshot taken before any founding), so the two call sites cannot
     /// double-count.
-    fn deepen(&mut self, idx: usize) {
+    ///
+    /// **Returns the metres cut this epoch**, `0.0` for anything that is not a
+    /// working. That return value is the hazard's clock: [`Bake::maybe_breach`]
+    /// takes it and nothing else, because a delving breaks through by
+    /// *advancing*, never by ageing.
+    fn deepen(&mut self, idx: usize) -> f64 {
         let (rec, population, tech) = {
             let c = &self.communities[idx];
             (c.record, c.population, c.tech)
         };
         if self.records[rec].core.function != Function::Mine {
+            return 0.0;
+        }
+        let cut = population * tech_weight(tech) * DELVE_M_PER_PERSON_EPOCH;
+        self.records[rec].core.delve_depth_m += cut;
+        cut
+    }
+
+    /// The campaign's mechanism (The Winze, spec §4.3): `cut` metres of
+    /// working advanced this epoch carry a breach probability of
+    /// `1 - exp(-cut / BREACH_FREE_PATH_M)`, and **a delving that breaches
+    /// stops — and ends**, closing as [`CauseOfEnd::Breached`] by
+    /// [`Ended::Nature`].
+    ///
+    /// # Nothing selects on depth
+    ///
+    /// The only quantity read here is `cut`, the metres this epoch put behind
+    /// the face. The delving's accumulated [`Occupation::delve_depth_m`] is
+    /// never compared against anything, here or anywhere. The survivorship
+    /// shape spec §5.2 asks about is an **output**: a breached delving sits at
+    /// its own maximum because it stopped when it breached, and among the
+    /// delvings that end, the breached ones are the ones that had cut the most
+    /// rock. See [`BREACH_FREE_PATH_M`] for why the hazard's clock is the face
+    /// rather than the calendar, and for the read-off behind the number.
+    ///
+    /// # The fatal increment is kept
+    ///
+    /// [`Bake::deepen`] has already accrued `cut` by the time this runs, so a
+    /// breached working's committed depth **includes the metre that broke
+    /// through**. That is the honest reading of §4.3's "sits at its own
+    /// maximum by construction" — they got that far, and that far is where it
+    /// ended.
+    ///
+    /// # Nothing is named
+    ///
+    /// [`Ended::Nature`], never `Ended::By`. `By` names an agent and the model
+    /// has none to name (spec §4.6); a breach records that a delving broke
+    /// through and stops there. No `thaumic` value is written, no entity is
+    /// minted, and no fact says what came through.
+    ///
+    /// # The draw hangs off its own keyed leg, not the bake stream
+    ///
+    /// [`crate::streams::SETTLEMENT_BREACH`], keyed on the working's own
+    /// `(vertex, band, year)` — the same shape [`Bake::working_stream`] uses,
+    /// and for the reason that label's doc records with a measurement: a
+    /// conditional draw taken sequentially off `history/bake/v3` re-orders
+    /// every world's whole history, so the reshuffle rather than the mechanism
+    /// would be what moved. This draw fires once per living working per epoch,
+    /// far more often than the working draw does, so on the sequential stream
+    /// it would be strictly worse. Off its own leg, consumption order does not
+    /// exist as a concept: each call derives a fresh stream and takes exactly
+    /// one value from it.
+    ///
+    /// The key is unique for the same reason the working leg's is — at most
+    /// one live community occupies a `(vertex, band)`, and a working is
+    /// deepened at most once per epoch — so a `(vertex, band, year)` names
+    /// exactly one increment of digging.
+    ///
+    /// # Callers must not let a close re-order the bake stream
+    ///
+    /// A breach closes a community, and `grow`'s daughter throw one block
+    /// later consumes a `DAUGHTER_PROB` draw from the **sequential** bake
+    /// stream. Returning early from `grow` on a breach would skip that draw
+    /// and re-order every subsequent community's history — the exact failure
+    /// the keyed leg exists to avoid, reintroduced through control flow. So
+    /// `grow` calls this at its END, after the throw: a working that breaks
+    /// through in the same epoch it seeds a daughter does both, and the
+    /// daughter outlives it.
+    fn maybe_breach(&mut self, idx: usize, cut: f64, year: f64) {
+        if cut <= 0.0 {
             return;
         }
-        self.records[rec].core.delve_depth_m +=
-            population * tech_weight(tech) * DELVE_M_PER_PERSON_EPOCH;
+        let (site, rung) = {
+            let c = &self.communities[idx];
+            (c.site, c.rung)
+        };
+        let p = 1.0 - hornvale_kernel::math::exp(-cut / BREACH_FREE_PATH_M);
+        if self.breach_stream(site, rung, year).next_f64() < p {
+            self.close(idx, year, CauseOfEnd::Breached, Ended::Nature);
+        }
+    }
+
+    /// The per-increment breach stream: [`crate::streams::SETTLEMENT_BREACH`]
+    /// derived on the working's own `(vertex, band, year)`. The twin of
+    /// [`Bake::working_stream`], spelling its year through the same
+    /// [`crate::disposition::occupation_draw_key`] so the composition root's
+    /// keyed legs all spell a year identically.
+    fn breach_stream(&self, site: Vertex, rung: Band, year: f64) -> Stream {
+        let leg = format!(
+            "{}/{}/{}",
+            site.0,
+            crate::chamber::rung_name(rung),
+            crate::disposition::occupation_draw_key(year)
+        );
+        self.seed
+            .derive(crate::streams::SETTLEMENT_BREACH)
+            .derive(StreamLabel::dynamic(&leg))
+            .stream()
     }
 
     /// Resolve one community for one epoch (migrate / collapse / grow / raid).
@@ -3888,7 +4045,11 @@ impl<'a> Bake<'a> {
         // epoch's live state into something the record keeps, and the depth
         // must be paid at the population the community actually reached this
         // epoch. Inert for every other function; see [`Bake::deepen`].
-        self.deepen(idx);
+        //
+        // The metres it returns are the breach hazard's clock, and the hazard
+        // is asked at the END of this function rather than here — see the
+        // `maybe_breach` call below for why that placement is load-bearing.
+        let cut = self.deepen(idx);
         self.tally.grew += 1;
 
         if pressure < DAUGHTER_MAX_PRESSURE && self.stream.next_f64() < DAUGHTER_PROB {
@@ -4001,10 +4162,34 @@ impl<'a> Bake<'a> {
                 // of zero, emit no fact, and leave the world unmoved — which
                 // the plan's own Step 6 reads as evidence the field never
                 // reached the ledger.
-                self.deepen(new_idx);
+                //
+                // AND THE FOUNDING EPOCH CAN BREACH, for the same reason: the
+                // first epoch of cutting is cutting. Closing `new_idx` here is
+                // safe where closing `idx` would not be — nothing below this
+                // line reads the new community, and nothing below it draws
+                // from the sequential bake stream, so a breach at a founding
+                // cannot re-order any world. The record keeps its tenure of
+                // zero years honestly: they sank the shaft and broke through
+                // in the same epoch.
+                let founding_cut = self.deepen(new_idx);
+                self.maybe_breach(new_idx, founding_cut, year);
                 self.tally.founded += 1;
             }
         }
+        // THE HAZARD, ASKED LAST (The Winze, spec §4.3). Its placement is
+        // load-bearing rather than tidy: the `DAUGHTER_PROB` test above draws
+        // from `self.stream`, the bake's SEQUENTIAL epoch-dynamics stream, and
+        // a breach that returned early from `grow` would skip that draw and
+        // re-order every subsequent community's history — turning a mechanism
+        // about delving into a world-wide reshuffle, which is precisely what
+        // `streams::SETTLEMENT_WORKING`'s measurement talks this campaign out
+        // of. Asked here, a breach consumes nothing from that stream and
+        // changes nothing about who throws a daughter.
+        //
+        // `cut` is `0.0` for every community that is not a working, and
+        // [`Bake::maybe_breach`] returns immediately on that, so this line is
+        // inert for all but a few dozen occupations in a world.
+        self.maybe_breach(idx, cut, year);
     }
 }
 

@@ -222,6 +222,7 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `religion/deity/v2` | the deity-naming stream, epoch v2 |
 | `settlement/disposition/v1` | the per-settlement disposition draw, keyed on the occupation's (site, founded-year) |
 | `settlement/working/v1` | whether one expansion is a working rather than a farm, keyed on the parent's (vertex, band, year) |
+| `settlement/breach/v1` | whether one epoch's advance of a working breaks through, keyed on the working's (vertex, band, year) |
 | `chamber/v3` | a display-only address formatter; the underworld's real derivation key is RUN_FLOORS and the per-branch legs |
 | `chamber/run-floors/v2` | how many levels one run realizes, keyed on (vertex, branch, band) |
 | `chamber/branch-character/v2` | which character one branch carries, keyed on (vertex, branch, band) |

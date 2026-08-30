@@ -18,6 +18,25 @@ pub enum CauseOfEnd {
     Fled,
     /// The people migrated onward, in an orderly fashion.
     Migrated,
+    /// A working broke through, and the delving ended there (The Winze, spec
+    /// §4.3).
+    ///
+    /// **This variant records that a breach happened and nothing else, and
+    /// the silence is the design** (spec §4.6). No field here, on
+    /// [`Occupation`], or anywhere downstream says what came through, because
+    /// nothing in the model knows: the delving stopped, its people were
+    /// scattered or destroyed, and no observer survived the moment with an
+    /// identification. A later culture reads only an appearance — a delving
+    /// that ends abruptly at its own deepest point — which is decision 0003's
+    /// source-blindness arriving structurally rather than by convention.
+    ///
+    /// **Only a [`Function::Mine`] can end this way**, because only a working
+    /// cuts rock. Every other function ends by one of the five causes above.
+    ///
+    /// The end is [`Ended::Nature`], never `By`: `By` names an
+    /// agent, and naming one here would be the design drifting toward an
+    /// antagonist the spec refuses to author.
+    Breached,
 }
 
 /// What a community at this site was for.

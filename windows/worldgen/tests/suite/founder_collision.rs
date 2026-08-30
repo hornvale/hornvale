@@ -176,6 +176,19 @@ use std::collections::{BTreeMap, BTreeSet};
 
 /// Build one seed to `depth` with every pin at its default — the same
 /// configuration the census sweeps.
+/// The whole positive set of the current 0-2999 sweep: every seed in the range
+/// whose world drops a founder to a handle collision.
+///
+/// **One row as of The Winze T4** (1416.16 s, ten threads, `--release`), down
+/// from T2b's `[1162, 2655]`. It is a NAMED CONST rather than an inline array
+/// literal at each of the two call sites so that clippy's `single_element_loop`
+/// does not force the loop open the moment the set happens to hold one seed —
+/// which would make re-pinning the next epoch a structural edit instead of a
+/// one-line one, and this set has turned over on all eight placement epochs so
+/// far. See `a_dropped_founder_is_not_backfilled` for the sweep and its
+/// harness.
+const POSITIVE_SET: &[u64] = &[2655];
+
 fn build(seed: u64, depth: BuildDepth) -> hornvale_kernel::World {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
     build_world_to(
@@ -230,7 +243,13 @@ fn a_colliding_seed_builds_to_full_depth_instead_of_panicking() {
     // THE WINZE T2b: [1057, 2852] -> [1162, 2655]. Seventh placement epoch,
     // whole set cleared, fresh 0-2999 sweep, rate unmoved at 2 in 3000. See
     // `a_dropped_founder_is_not_backfilled` for the sweep and its harness.
-    for seed in [1162u64, 2655] {
+    //
+    // THE WINZE T4: [1162, 2655] -> [2655]. Eighth placement epoch (the breach
+    // hazard ends some workings early), fresh 0-2999 sweep, rate DOWN to 1 in
+    // 3000. 1162 cleared; 2655 is the first seed to survive an epoch since
+    // 1892's four-epoch run, so this pin is as continuous as the measurement
+    // allows. There is no second positive to build.
+    for &seed in POSITIVE_SET {
         let w = build(seed, BuildDepth::Full);
         let people = w.ledger.find("is-person").count();
         assert!(
@@ -333,8 +352,12 @@ fn the_dropped_founders_are_pinned_per_seed() {
         // and no longer does makes a regression visible rather than silent.
         (1057, 0),
         (2852, 0),
-        // The Winze T2b's fresh 0-2999 sweep. One drop each; rate 2 in 3000.
-        (1162, 1),
+        // Cleared by The Winze T4's breach hazard, and kept at zero for the
+        // reason the module header gives: a seed that used to lose a founder
+        // and no longer does makes a regression visible rather than silent.
+        (1162, 0),
+        // The Winze T4's fresh 0-2999 sweep: the whole positive set is this
+        // one row. Rate 1 in 3000, and 2655 is the survivor of T2b's pair.
         (2655, 1),
         (2634, 0),
         (2793, 0),
@@ -449,12 +472,32 @@ fn the_dropped_founders_are_pinned_per_seed() {
 /// seed rather than chosen for, which is strictly more coverage for one extra
 /// ~3 s build.
 ///
-/// claim: structural(seed: [1162, 2655]) — two named worlds, built once each.
-/// No search: the seeds are the whole of a completed 0-2999 sweep's positive
-/// set, not something this test scans for.
+/// **BACK TO ONE, AND A SEED SURVIVES AN EPOCH FOR THE FIRST TIME SINCE 1892
+/// (The Winze T4).** The breach hazard ends some workings earlier than the
+/// world otherwise would have, so it re-places settlements an EIGHTH time; a
+/// fresh 0–2999 sweep (1416.16 s, ten threads, `--release`) found
+/// `[2655]`, one drop. **The rate falls, 2 in 3000 → 1 in 3000**, which is at
+/// the bottom of the observed range (2 → 6 → 2 → 3 → 6 → 2 → 2 → 1) and is
+/// what the module header's reading predicts: a breach removes occupations
+/// from a world, and fewer occupations are fewer chances that two of them
+/// agree on every material fact `founder_handle` reads.
+///
+/// **The header's usual corroborating quantity is unavailable this time, and
+/// that is said rather than skipped.** Every previous entry quoted seed 42's
+/// occupation count moving with the rate. Seed 42's history does NOT move
+/// under this epoch — none of its sixteen workings breached (measured in
+/// `breach.rs`, which reports 0 for seed 42 across the whole E.4.2 panel) —
+/// so the witness that made the last two readings legible says nothing here.
+/// The reading rests on the mechanism instead: 26 of 196 workings pooled over
+/// twelve seeds end by breaching, and a delving that ends is an occupation
+/// that stops accumulating.
+///
+/// claim: structural(seed: [2655]) — one named world, built once. No search:
+/// the seed is the whole of a completed 0-2999 sweep's positive set, not
+/// something this test scans for.
 #[test]
 fn a_dropped_founder_is_not_backfilled() {
-    for seed in [1162u64, 2655] {
+    for &seed in POSITIVE_SET {
         let w = build(seed, BuildDepth::Settlements);
         let occs = occupation_records(&w);
         let cast = select_founders(&occs);

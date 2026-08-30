@@ -61,6 +61,39 @@ hornvale_kernel::stream_labels! {
     /// reasons unrelated to delving. Off its own leg, a world moves where a
     /// working is founded and nowhere else.
     SETTLEMENT_WORKING = "settlement/working/v1" => "whether one expansion is a working rather than a farm, keyed on the parent's (vertex, band, year)";
+    /// Whether one epoch's advance of a **working** breaks through (The Winze,
+    /// spec §4.3). A flat path, like [`SETTLEMENT_WORKING`] directly above and
+    /// for the same reason: the draw belongs to a composition-root mechanism
+    /// that reads a domain type (`Function::Mine`) against the bake's own live
+    /// state, and no domain crate may host it.
+    ///
+    /// **A NEW LABEL, so nothing is an epoch.** Nothing derived from
+    /// `settlement/breach/*` before this campaign, so no world that exists
+    /// today consumed a draw under it (`domains/CLAUDE.md`: a new label is
+    /// safe, a changed or reused one is an epoch).
+    ///
+    /// **Keyed on the WORKING's own place and the year it digs** — vertex,
+    /// band, and the epoch year, spelled through
+    /// [`crate::disposition::occupation_draw_key`] like the two composition-
+    /// root keys beside it. Unique by construction for the same reason
+    /// [`SETTLEMENT_WORKING`] is: at most one live community occupies a
+    /// `(vertex, band)`, and a working is deepened at most once per epoch, so
+    /// a `(vertex, band, year)` names exactly one increment of digging. It is
+    /// a place in the fixed lattice plus a place in time, never a generation
+    /// ordinal (decision 0102).
+    ///
+    /// **A SEPARATE LEG RATHER THAN A DRAW ON `history/bake/v3`, on the
+    /// measurement [`SETTLEMENT_WORKING`] already paid for.** That label's own
+    /// doc records what happens when a conditional draw is inserted into the
+    /// bake's sequential epoch-dynamics stream: occupation counts across four
+    /// seeds moved 1240→1402, 860→1240, 892→915, 440→284, which is the
+    /// reshuffle and not the mechanism. This draw fires far more often than
+    /// that one — once per living working per epoch rather than once per
+    /// daughter throw — so on the sequential stream it would be strictly
+    /// worse, and spec §5.2's survivorship comparison would be taken on a
+    /// world re-rolled for reasons unrelated to delving. Off its own leg, a
+    /// world moves where a working breaches and nowhere else.
+    SETTLEMENT_BREACH = "settlement/breach/v1" => "whether one epoch's advance of a working breaks through, keyed on the working's (vertex, band, year)";
     /// The underworld chamber derivation (The Deep Realm). Spelled by
     /// `crate::chamber`'s private `chamber_key`, but **`chamber_key` is a
     /// DISPLAY FORMATTER now, not a derivation key** (The Drift, spec

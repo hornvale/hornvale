@@ -550,6 +550,20 @@ mod tests {
                 "room/layout/anchors v1",
                 "room/layout/grown v1",
                 "room/layout/rectilinear v1",
+                // The Winze, Task 4 (spec §4.3): whether one epoch's advance
+                // of a working breaks through. Additive at v1 — a NEW label,
+                // so it perturbs no existing stream and no world that exists
+                // today consumed a draw under it — and versioned from birth
+                // for the same reason `settlement/disposition v1` below is:
+                // the draw shape (`1 - exp(-metres_cut / BREACH_FREE_PATH_M)`,
+                // one draw per living working per epoch) and the
+                // (vertex, band, year) key are both save-format contracts, and
+                // changing either re-rolls which delvings broke through in
+                // every world ever generated. See
+                // `windows/worldgen/src/streams.rs`'s `SETTLEMENT_BREACH` for
+                // why it is a keyed leg rather than a draw on
+                // `history/bake/v3`.
+                "settlement/breach v1",
                 // The Tolerance: the per-settlement disposition draw, a
                 // people's authored mind perturbed by its authored
                 // dispersion. Additive at v1 — a NEW label, so it perturbs

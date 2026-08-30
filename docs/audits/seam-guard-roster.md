@@ -16,13 +16,13 @@ comment.
 
 ## `conquest_victim`
 
-- Defined at `windows/almanac/src/history.rs:714`
+- Defined at `windows/almanac/src/history.rs:731`
 - Operator: `returns(Option::<EntityId>::None)`
 - Test scope: `hornvale`
 - No declaration: a survivor here fails the gate.
 - Call sites:
-  - `windows/almanac/src/history.rs:620`
-  - `windows/almanac/src/history.rs:784`
+  - `windows/almanac/src/history.rs:625`
+  - `windows/almanac/src/history.rs:801`
 
 ## `ledger_day_of_bake_year`
 
@@ -31,10 +31,10 @@ comment.
 - Test scope: `hornvale-worldgen`
 - No declaration: a survivor here fails the gate.
 - Call sites:
-  - `windows/worldgen/src/history_emit.rs:250`
-  - `windows/worldgen/src/history_emit.rs:404`
-  - `windows/worldgen/src/history_emit.rs:431`
-  - `windows/worldgen/src/history_emit.rs:502`
+  - `windows/worldgen/src/history_emit.rs:251`
+  - `windows/worldgen/src/history_emit.rs:405`
+  - `windows/worldgen/src/history_emit.rs:432`
+  - `windows/worldgen/src/history_emit.rs:503`
   - `windows/worldgen/src/person_promote.rs:303`
   - `windows/worldgen/tests/suite/tolerance_draw.rs:99`
 

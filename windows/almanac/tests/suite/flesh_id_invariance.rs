@@ -57,6 +57,7 @@ fn cause_label(c: CauseOfEnd) -> &'static str {
         CauseOfEnd::Plague => "plague",
         CauseOfEnd::Fled => "fled",
         CauseOfEnd::Migrated => "migrated",
+        CauseOfEnd::Breached => "breached",
     }
 }
 
