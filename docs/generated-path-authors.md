@@ -27,6 +27,22 @@ one-off campaign commit?), `grep` across `scripts/`, `cli/tests/`,
 `windows/lab/`, `tools/` for the literal path, and opening the file itself
 when no writer turned up in code.
 
+## What this method can and cannot establish
+
+Every author in this file was assigned by one test: **does anything in the
+tree, today, write this path?** That test can establish that nothing
+currently does. It cannot establish that nothing *ever* did — a directory
+can carry a real history of past automated writers that were later retired,
+and git preserves that history even when the current tree does not. It
+also cannot establish that nothing *should* write a path going forward;
+that is a design question this file does not answer. Read every "no
+current writer" and "one-off" claim below as bounded to the tree as it
+stands at this commit, not as a claim about the path's whole history or
+its correct future. Section 4 below (the nine study directories) is where
+this distinction actually bites: one of the nine was a genuine automated
+writer once, and the difference between "never automated" and "automation
+retired" is this campaign's own subject.
+
 ## Step 1: the measurement reproduces exactly
 
 ```
@@ -172,35 +188,65 @@ and should not be trusted as a authorship source without cross-checking
 the test's own `#[ignore]` reason — this is exactly the kind of prose
 that rotted silently once, per this project's own history.
 
-**4. Nine frozen, one-off studies — 110 files, all authored by a manual
-`cargo run -p hornvale -- lab run studies/<name>.study.json` (or, for one,
-a standalone tool), run once during a specific past campaign and never
-re-run by anything automated since.** Verified two ways per directory:
-(a) no test or script in the tree writes to `generated/<name>/`, and
-(b) the directory's entire git history is a single commit, matching a
-named campaign:
+**4. Nine directories with no current writer — 110 files.** All were
+written, at various points in the past, by a manual `cargo run -p
+hornvale -- lab run studies/<name>.study.json` (or, for one, a standalone
+tool). What is verified for **all nine, equally, in the current tree**:
+no test or script anywhere under `scripts/`, `cli/tests/`, `windows/lab/`
+or `tools/` writes to `generated/<name>/` — checked by literal-path grep
+plus reading every test that references each study by name. That is the
+claim this section actually rests on.
 
-| directory | files | last commit | origin |
-|---|---:|---|---|
-| `branches-family/` | 35 | `cc031f422` 2026-07-13 | frozen deliberately — census-as-data spec §1: "moves to the frozen tier — not deleted"; `fixture_staleness.rs` explicitly excludes it from staleness-checking for this reason |
-| `census-of-coasts/` | 9 | `cc031f422` 2026-07-13 | same commit as branches-family's freeze |
-| `census-of-coasts-tuning/` | 10 | `cc031f422` 2026-07-13 | same commit |
-| `census-of-skies/` | 30 | `cfabfd361` 2026-07-11 | one-time study run, carried in on a merge |
-| `earth-mask-l6/` | 1 | `82c0c70a3` 2026-07-16 | `tools/earth-mask` — a standalone tool outside the workspace, run by hand once ("Fetched once by the campaign controller"), never re-invoked |
-| `the-cascade/` | 5 | `b053fe533` 2026-08-02 | one-time study run alongside a lab fix |
-| `the-contour/` | 6 | `0df4070a8` 2026-07-30 | one-time study run, campaign "The Contour" |
-| `the-granary/` | 5 | `a7cd7fc5e` 2026-08-24 | one-time study run, campaign "The Granary" (T8) |
-| `the-namesake/` | 9 | `47b41b183` 2026-08-02 | one-time study run, campaign "The Namesake" |
+**An earlier version of this file also claimed "the directory's entire
+git history is a single commit" as second, corroborating evidence, for
+all nine. That claim is false for six of them** — `branches-family` (8
+commits), `census-of-coasts` (5), `census-of-coasts-tuning` (3),
+`census-of-skies` (14), `the-cascade` (2), `the-namesake` (2); only
+`earth-mask-l6`, `the-contour`, and `the-granary` are genuinely
+single-commit. The multi-commit six are ordinary iterative development
+history — a study re-run and re-committed several times while its owning
+campaign was still active, then never touched again once that campaign
+closed — not evidence of an ongoing automated writer, and it does no work
+the no-current-writer check above does not already do on its own. It is
+reported here corrected rather than deleted, because silently dropping a
+disproven claim would itself be an absence with no row.
+
+**`census-of-skies` is not the same shape as the other eight, and the
+distinction matters more than the shared "no writer today" conclusion.**
+Its history includes `7b7bec3ef` (2026-07-09, "chore(lab): re-baseline
+census-of-skies + add it to CI's regen list") — at that point it *was*
+wired into an automated regenerator, `.github/workflows/ci.yml`'s regen
+list. That workflow file no longer exists at all (decision 0125 retired
+CI entirely), so this directory's automation did not merely go unused —
+its host was deleted out from under it. "No current writer" is still the
+correct, verified answer for `census-of-skies` today, but its origin is
+*an automated author that existed and was removed*, not *a study that was
+only ever run once by hand* like `the-granary` or `earth-mask-l6`.
+Collapsing those two into one "frozen one-off" bucket, as the earlier
+version of this table did, erases exactly the difference this campaign
+exists to preserve: an author that stops running leaves no trace by
+default, and here git happened to preserve one anyway.
+
+| directory | files | commits | origin |
+|---|---:|---:|---|
+| `branches-family/` | 35 | 8 | iterated through phonology work 2026-07-09→07-13, then frozen deliberately at `cc031f422` — census-as-data spec §1: "moves to the frozen tier — not deleted"; `fixture_staleness.rs` explicitly excludes it from staleness-checking for this reason |
+| `census-of-coasts/` | 9 | 5 | iterated through the Crust terrain campaign 2026-07-09→07-13, frozen at the same `cc031f422` commit as branches-family |
+| `census-of-coasts-tuning/` | 10 | 3 | iterated 2026-07-10→07-11 alongside census-of-coasts, frozen at `cc031f422` |
+| `census-of-skies/` | 30 | 14 | **was wired into the now-deleted CI regen list** (`7b7bec3ef`, 2026-07-09); no writer today because that automation was retired (decision 0125), not because the study was only ever manual — see above |
+| `earth-mask-l6/` | 1 | 1 | `tools/earth-mask` — a standalone tool outside the workspace, run by hand once ("Fetched once by the campaign controller"), never re-invoked |
+| `the-cascade/` | 5 | 2 | two commits during one campaign, 2026-08-02, untouched since |
+| `the-contour/` | 6 | 1 | one commit, campaign "The Contour", 2026-07-30 |
+| `the-granary/` | 5 | 1 | one commit, campaign "The Granary" (T8), 2026-08-24 |
+| `the-namesake/` | 9 | 2 | two commits during one campaign, 2026-08-02, untouched since |
 
 Note on `is_census_study()` (`windows/lab/src/census_guard.rs:37-45`):
 three of these — `census-of-coasts`, `census-of-coasts-tuning`,
 `census-of-skies` — match the *naming* convention that also matches "the
 census," and the canonical-host guard treats them as census-scale for
 **where they may be re-run** (lefford only, if ever). That governs a
-future re-run; it does not change who authored the committed bytes today,
-which is the one-off run named above. Naming convention and current
-authorship diverge here, which is exactly why the brief warns against
-classifying by filename.
+future re-run; it does not change who authored the committed bytes today.
+Naming convention and current authorship diverge here, which is exactly
+why the brief warns against classifying by filename.
 
 **5. Hand-written prose — 17 files.** Every file directly under
 `book/src/laboratory/` (not `generated/`): `overview.md`, `study-001.md`
@@ -300,3 +346,9 @@ the spec's own math did for the census.
    test-authored, opt-in rebaseline flag, not `make rebaseline`.
 4. **The spec's 585 needs correcting to 132** before Task 3 designs the
    author-column schema against it, per the H1 section above.
+5. **`census-of-skies` was once CI-authored, and its author was deleted,
+   not merely stopped.** Six of the nine "no current writer" study
+   directories carry multi-commit histories rather than the single-commit
+   shape an earlier version of this file claimed (corrected in Section 4
+   above); `census-of-skies` is the one where that history changes the
+   classification's meaning — see Section 4 for the full account.
