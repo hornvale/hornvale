@@ -195,7 +195,21 @@
 //! `realize_common_discourse`.** `r007`'s own note states why: "definiteness
 //! is not visible inside one clause," so the token needed an ordered
 //! sequence of clauses tracking referent identity across a sentence
-//! boundary, which nothing before this task built. **It covers TWO rungs,
+//! boundary, which nothing before this task built. **The named backing
+//! test this Step 3 review found missing from this paragraph on first
+//! pass** (Global Constraint 4 requires one per token, and this citation
+//! was absent even though the test itself existed):
+//! `clause.rs::a_referent_is_indefinite_on_first_mention_and_definite_on_second`,
+//! which pins the DERIVED property `realize_common_discourse` computes
+//! (indefinite on first mention, definite on the same referent's second),
+//! with a negative control at
+//! `clause.rs::a_different_referent_is_not_marked_definite_by_position_alone`
+//! ruling out the cheaper "any non-initial clause is definite" rule a
+//! two-clause-only positive test could not distinguish. Common-only, the
+//! same posture `epistemic-hedge` and `verbless-clause` take: no tongue
+//! test is named for `discourse_subject_is_repeat_mention` or
+//! `realize_common_discourse`, and that gap is stated here rather than
+//! left silent. **It covers TWO rungs,
 //! `r007` and `r012`, matching Task 0's preregistered row exactly: 15 → 17.**
 //! `r007` is the token's own rung. `r012` is **not** a reuse/control rung
 //! the way `r067`/`r105`/`r190` are (`introduces: null`) — the corpus gives
@@ -241,7 +255,16 @@
 //! preregistered (not regressive) shape Task 3's shrink already
 //! established — see
 //! [`the_ladder_score_and_frontier_match_the_campaigns_prediction`]'s own
-//! doc for the full account.
+//! doc for the full account. **The named backing test, also absent from
+//! this paragraph until this Step 3 review** (the same omission Task 4's
+//! paragraph had, above — the test itself was never missing, only its
+//! citation here):
+//! `clause.rs::an_existential_fronts_a_locative_and_takes_an_indefinite_pivot`.
+//! **Common-only, the same posture `spatial-adverbial`, `temporal-adverbial`
+//! and `verbless-clause` state explicitly**: `grammar.rs` names no
+//! `existential` construction at all, so `realize_common_existential` has no
+//! tongue counterpart to gap on or render — a stated absence, not a silent
+//! one.
 //!
 //! **The definiteness effect the rung's own note cites is EXPRESSIBLE, not
 //! ENFORCED, and this is a controller-corrected finding, not an oversight.**
@@ -3199,6 +3222,92 @@ fn ladder_construction(id: &str) -> MerchantConstruction {
 /// covered" shape `r012` took in Task 4, one dependency hop shorter. No
 /// other rung's remaining demands bottom out at `existential` alone, so
 /// nothing joins to replace `r104`.
+///
+/// **The Quoin, Task 6 — reconciliation against Task 0's preregistration,
+/// criterion by criterion, independently (spec PREREG-2).** Task 0 derived
+/// five predicted rows by running this same resolver against a scratch
+/// `IMPLEMENTED_DEMANDS` edit, one token at a time, then reverting it — see
+/// `docs/superpowers/plans/2026-08-29-the-quoin.md`'s Preregistration table.
+/// This paragraph compares the FINAL regenerated state, after all five
+/// tokens landed for real, against that table's `+ existential` row.
+///
+/// 1. **Ladder covered count and ID vector: HIT.** Predicted 19,
+///    `r001, r002, r003, r005, r006, r007, r011, r012, r013, r014, r015,
+///    r048, r049, r067, r083, r104, r105, r171, r190`. The assertion two
+///    lines below this doc block checks exactly that vector, currently
+///    green.
+/// 2. **Frontier ID vector: HIT at the cumulative endpoint, non-monotonic
+///    in between, exactly as predicted.** The five-token span moves
+///    20 → 33 net, matching Task 0's row and the controller's PREREG-3
+///    amendment (binds cumulatively only). Per-step, reported rather than
+///    asserted: 20 (baseline) → 20 (`spatial-adverbial`, a swap) → 20
+///    (`temporal-adverbial`, a swap) → **19** (`verbless-clause`, a genuine
+///    shrink — see that task's own paragraph above) → 34
+///    (`definiteness`) → **33** (`existential`, a second shrink — see that
+///    task's own paragraph above). The final vector is asserted below,
+///    currently green.
+/// 3. **Merchant covered count and ids: HIT.** Predicted 8/12 —
+///    `m02, m04, m05, m06, m07, m08, m09, m10`; [`MERCHANT_COVERED`] and
+///    [`MERCHANT_COVERED_IDS`] hold exactly that, and the merchant-moves-
+///    exactly-twice prediction (`temporal-adverbial` → `m02`, `existential`
+///    → `m04`) also held with no other step moving it.
+/// 4. **Flood-watch demand instances: the TOTAL is a HIT, and the
+///    PRODUCE-SIDE figure PREREG-4 actually names is UNAVAILABLE from this
+///    instrument as built — a finding, stated plainly rather than
+///    papered over.** The regenerated `docs/audits/sentence-coverage.md`
+///    reports 393 of 1128 (34.8%), matching Task 0's row exactly. But that
+///    393 is [`demand_instance_coverage`] run over the WHOLE corpus —
+///    parse and produce entries together — and nothing in this file
+///    filters by [`Direction`] before counting demand instances;
+///    [`direction_counts`] tallies ENTRIES by direction, never demand
+///    INSTANCES. PREREG-4 asks for the produce-side count specifically,
+///    with the total quoted beside it, because the composite is exactly
+///    what hides a direction split. Computing it would need a new
+///    function filtering `flood_watch.entries` by `Direction::Produce`
+///    before calling [`demand_instance_coverage`] — genuinely more code
+///    than this regeneration-and-reconciliation task's scope covers, so it
+///    is reported as an open gap rather than built here. **Do not read
+///    "393 of 1128" as PREREG-4's figure**: it is the composite total,
+///    named as such throughout this file and `sentence-coverage.md`, and
+///    the produce-side count PREREG-4 actually binds on has never been
+///    computed by any task in this campaign.
+///
+/// **One honesty point about all four hits above.** Every task in this
+/// campaign matched its preregistered row on first run, and no figure was
+/// ever revised to match after the fact (spec PREREG-2's "three hits and
+/// one miss is a finding, not a failure" clause never had occasion to
+/// apply — this campaign drew four-for-four, cumulatively). That is a real
+/// result: it means the implementation did what Task 0's derivation
+/// predicted it would do. **It is not independent confirmation that the
+/// derivation itself is right about the world**, because Task 0 produced
+/// its predictions by running this identical resolver — same code, same
+/// `entry_covered`, same `ladder_frontier`, same `demand_instance_
+/// coverage` — against the same frozen corpora, just earlier and on a
+/// scratch edit. A resolver bug present at Task 0's derivation time would
+/// reproduce itself identically at Task 6's measurement time, and every
+/// criterion above would still read HIT. The five-for-five match is
+/// evidence the CAMPAIGN'S IMPLEMENTATION tracked the resolver's own
+/// prediction; it is not evidence the resolver correctly scores what the
+/// grammar can say, which is a claim only an independently-constructed
+/// check (a hand-translated sentence, a different tool reading the same
+/// corpus) could support, and none was run here.
+///
+/// **Step 3 — the five-token backing-test check found two undercitations,
+/// now fixed, not five.** `spatial-adverbial`, `temporal-adverbial` and
+/// `verbless-clause` each named their primary construction test on first
+/// pass (see their own paragraphs above). `definiteness` and `existential`
+/// did not: both had a genuinely passing backing test in
+/// `domains/language/src/clause.rs` — `a_referent_is_indefinite_on_first_
+/// mention_and_definite_on_second` and `an_existential_fronts_a_locative_
+/// and_takes_an_indefinite_pivot` respectively — but this file's own
+/// paragraph for each named only a secondary or nuance test
+/// (`a_definite_pivot_renders_rather_than_being_refused`) or no test at
+/// all, which is Global Constraint 4's violation by omission even though
+/// the underlying grammar was never unbacked. Both citations are now
+/// added to those tasks' own paragraphs above, alongside their Common-only
+/// tongue-gap statements (`definiteness`'s discourse machinery and
+/// `existential`'s fronting transformation both have zero presence in
+/// `grammar.rs` — stated there, not silent).
 #[test]
 fn the_ladder_score_and_frontier_match_the_campaigns_prediction() {
     let entries = read_derived(&repo_root().join("sentences/the-ladder.corpus.json"));
