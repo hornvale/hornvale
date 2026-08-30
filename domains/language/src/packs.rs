@@ -159,6 +159,64 @@ pub const OLD: &str = "old";
 /// type-audit: bare-ok(identifier-text)
 pub const UNDER: &str = "under";
 
+/// The `night` concept's id.
+///
+/// Named for the same reason [`EAT`], [`KILL`], [`KNOW`], [`THINK`],
+/// [`SLEEP`], [`OLD`] and [`UNDER`] are: the pack row that REGISTERS the
+/// concept and the site that REALIZES it must not drift apart. Unlike the
+/// others, the realizing site here is not a `clause::PREDICATE_VALENCE`
+/// row — `night` is never a clause's own predicate — it is
+/// `clause::common_role_surface`'s `(NIGHT, Argument::Concept(id))` arm,
+/// r049's `temporal-adverbial`.
+///
+/// **It adds no pack entry.** `night` has been in [`universal_stratum`]
+/// since long before this campaign (`ConceptKind::Celestial`, doc "the dark
+/// half of the day-night cycle"), so this constant names an existing
+/// registration rather than creating one.
+///
+/// **It stands in for the rung's own `until last night`.** `r049`'s
+/// authored text is merchant entry `m02`, *"Everything was fine until last
+/// night."*; `everything`, `fine` and `until` are registered nowhere, and
+/// registering one would move `world-seed-42.json`, a byte-golden `make
+/// rebaseline` cannot write, and Global Constraint 2 forbids it. `night`
+/// alone is the substitution, keeping only the part the rung's token names
+/// — a temporal adjunct on a clause — recorded again at its witness
+/// (`cli/tests/suite/sentence_corpus.rs`'s `ladder_construction`, `"r049"`
+/// arm) the same way `r005`'s witness records `under`/`tree` standing in
+/// for `at`/`gate`.
+///
+/// **It names a TIME, not a RELATION — the opposite asymmetry from
+/// [`UNDER`], and worth recording rather than rediscovering.** `UNDER`'s
+/// role id is the relation word applied to a variable complement (`under
+/// the <X>`); this constant's role id names the temporal RELATION `at`
+/// realizes (there is only one, so the role and the relation happen to
+/// coincide), with the arm supplying the literal `"at"` itself rather than
+/// looking it up, because `at` is not itself a registered concept and
+/// registering it is the same forbidden move `UNDER` already stands in
+/// for. The two arms are therefore not the same shape and are not
+/// collapsed into one (see `common_role_surface`'s `NIGHT` arm doc).
+///
+/// **Review round 1 corrected this constant's OWN doc, not merely the arm
+/// that reads it.** The first version of this constant paired `NIGHT` with
+/// `Argument::Absent` on the theory that the role alone said enough, since
+/// the role already names the concept. That is true for COMMON — Common's
+/// realizer only ever reads `adjunct.role` here, and never touched
+/// `adjunct.argument` on this arm — but `realize_adjuncts` in `grammar.rs`
+/// is the other reader, and it resolves `adjunct.argument` exclusively,
+/// never `adjunct.role`. An absent argument therefore left the TONGUE path
+/// with nothing to render: not a stated Common-only gap, an unforced live
+/// defect (a stray space, no concept word at all — worse than the
+/// `UNDER`-arm gap this crate already accepts). The corrected witness
+/// carries `Argument::Concept(NIGHT.to_string())` — redundant with the
+/// role by name, not by necessity: the role SELECTS this arm, the argument
+/// is what a tongue actually resolves, and nothing forces the two fields to
+/// agree on content merely because they agree on the arm they land in
+/// today. `night` is `ladder_rank: 0` in [`universal_stratum`], exactly
+/// like `tree` — [`UNDER`]'s own complement — so nothing about this
+/// concept made the emptier design necessary.
+/// type-audit: bare-ok(identifier-text)
+pub const NIGHT: &str = "night";
+
 /// One entry in a vocabulary pack: a concept id, its broad category, a doc,
 /// and its rank on whichever acquisition ladder it belongs to (0 for
 /// entries outside any ladder — always in the lexicon once the pack is

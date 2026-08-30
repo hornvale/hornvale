@@ -65,13 +65,13 @@ book/src/laboratory/the-terminator-probe.md	0	1
 book/src/laboratory/census-of-coasts-ii.md	0	1
 book/src/laboratory/census-of-coasts-iii.md	0	1
 book/src/laboratory/census-of-coasts-iv.md	0	1
-docs/audits/	11	16
+docs/audits/	13	18
 docs/audits/heavy-tier-adjudication.md	0	1
 docs/audits/land-elevation-attribution.md	0	1
 docs/audits/the-assay-build-volume-audit.md	0	1
 docs/audits/the-escapement-census-attribution.md	0	1
 docs/audits/lexicon-inventory.tsv	0	1
-docs/digest/	2	3
+docs/digest/	4	5
 docs/digest/facts.jsonl	0	1
 book/src/domesday/	14	14
 clients/game/core/tests/fixtures/	3	3

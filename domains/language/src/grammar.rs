@@ -1749,7 +1749,7 @@ mod tests {
     use crate::etymology::CascadeRegime;
     use crate::lexicon::{ExposureClass, LexEntry, build_lexicon};
     use crate::naming::render_views;
-    use crate::packs::{EAT, KILL, KNOW, OLD, SLEEP, UNDER};
+    use crate::packs::{EAT, KILL, KNOW, NIGHT, OLD, SLEEP, UNDER};
     use crate::phonology::{Envelope, ExoticSeg, draw_phonology};
     use hornvale_kernel::Seed;
     use hornvale_kernel::world::IS_A;
@@ -2307,6 +2307,138 @@ mod tests {
         assert!(
             !out.contains("orbiting"),
             "Common's role surface must not leak into a tongue: {out}"
+        );
+    }
+
+    /// r048 `spatial-adverbial`, tongue side: a spatial adjunct's concept
+    /// renders through the tongue's own lexicon exactly the SHAPE
+    /// [`a_tongue_realizes_an_adjunct_whose_concept_it_knows`] already pins
+    /// for `star-class` — `realize_adjuncts` resolves only the argument, and
+    /// never reads a role at all, so this is not new behavior for a spatial
+    /// role and not a gap: the location concept's own tongue word appears,
+    /// and Common's `"under"` (from `common_role_surface`) never leaks in.
+    /// **Common-only for the RELATION**: no tongue construction states
+    /// *where* the location concept sits relative to the event, only that
+    /// it is present — the `IMPLEMENTED_DEMANDS` doc states this gap
+    /// explicitly, the way `epistemic-hedge` states its own tongue gap.
+    #[test]
+    fn a_tongue_realizes_a_spatial_adjuncts_concept_the_same_shape_as_any_other_role() {
+        let lex = tiny_lexicon_with(&[
+            (KILL, ExposureClass::Steeped),
+            ("person", ExposureClass::Steeped),
+            ("tree", ExposureClass::Steeped),
+        ]);
+        let tree_word = match lex.entry("tree").unwrap() {
+            LexEntry::Root { views, .. } => views.roman.clone(),
+            other => panic!("expected a Root, got {other:?}"),
+        };
+        let clause = Clause {
+            predicate: KILL.to_string(),
+            subject: Subject::Name("Vavako".to_string()),
+            object: Argument::Concept("person".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: vec![Adjunct {
+                role: UNDER.to_string(),
+                argument: Argument::Concept("tree".into()),
+            }],
+        };
+        let g = TongueGrammar {
+            order: ConstituentOrder::Svo,
+            copula: None,
+            copula_segments: None,
+            articles: false,
+            subordinator: None,
+            conjunction: None,
+            interrogative: None,
+        };
+        let out =
+            realize_tongue(&clause, &g, &lex, &no_pronouns()).expect("both concepts are known");
+        assert!(
+            out.contains(&tree_word),
+            "the tongue's own word for the location concept must appear: {out}"
+        );
+        assert!(
+            !out.contains("under"),
+            "Common's role surface must not leak into a tongue: {out}"
+        );
+    }
+
+    /// r049 `temporal-adverbial`, tongue side — the SAME shape
+    /// [`a_tongue_realizes_a_spatial_adjuncts_concept_the_same_shape_as_any_other_role`]
+    /// pins for `r048`, not the total-gap shape an earlier version of this
+    /// test pinned.
+    ///
+    /// **Corrected in review round 1, replacing
+    /// `a_tongue_stray_spaces_a_temporal_adjunct_whose_role_carries_no_argument`.**
+    /// That test pinned a self-inflicted defect: `clause.rs`'s original
+    /// `NIGHT` arm bound the adjunct's `argument` to `Argument::Absent`,
+    /// which is not what the role-naming decision required — only the
+    /// ROLE needed to name the concept, per the brief's own option table —
+    /// and `realize_adjuncts`/`resolve_argument` resolve `adjunct.argument`
+    /// exclusively, never `adjunct.role`. An absent argument left the
+    /// tongue path with nothing to resolve: a live, unforced render defect
+    /// (a stray trailing space, no concept word at all), not a stated gap.
+    /// The corrected arm carries `Argument::Concept(id)`, structurally
+    /// parallel to `UNDER`'s own arm, and `night` is `ladder_rank: 0` in
+    /// `universal_stratum` exactly like `tree` (`UNDER`'s complement) — so
+    /// nothing about the concept itself forced the emptier design.
+    ///
+    /// With the argument corrected, this is now the LESSER gap `r048`
+    /// already established: the temporal CONCEPT'S own tongue word appears
+    /// (`realize_adjuncts` resolves the argument through the lexicon
+    /// regardless of role, the same shape `star-class` and `r048`'s
+    /// location concept already exercise), and Common's `"at"` relation
+    /// word stays Common-only — no tongue construction states *where in
+    /// time* the concept sits relative to the event, only that it is
+    /// present. That is a stated gap in `IMPLEMENTED_DEMANDS`, the same
+    /// posture `epistemic-hedge` and `r048` take for their own gaps, not a
+    /// silent one.
+    #[test]
+    fn a_tongue_realizes_a_temporal_adjuncts_concept_the_same_shape_as_any_other_role() {
+        let lex = tiny_lexicon_with(&[
+            (SLEEP, ExposureClass::Steeped),
+            ("night", ExposureClass::Steeped),
+        ]);
+        let night_word = match lex.entry("night").unwrap() {
+            LexEntry::Root { views, .. } => views.roman.clone(),
+            other => panic!("expected a Root, got {other:?}"),
+        };
+        let clause = Clause {
+            predicate: SLEEP.to_string(),
+            subject: Subject::Name("Vavako".to_string()),
+            object: Argument::Absent,
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: vec![Adjunct {
+                role: NIGHT.to_string(),
+                argument: Argument::Concept(NIGHT.to_string()),
+            }],
+        };
+        let g = TongueGrammar {
+            order: ConstituentOrder::Svo,
+            copula: None,
+            copula_segments: None,
+            articles: false,
+            subordinator: None,
+            conjunction: None,
+            interrogative: None,
+        };
+        let out =
+            realize_tongue(&clause, &g, &lex, &no_pronouns()).expect("both concepts are known");
+        assert!(
+            out.contains(&night_word),
+            "the tongue's own word for the temporal concept must appear: {out}"
+        );
+        assert!(
+            !out.to_lowercase().contains("at "),
+            "Common's role surface (\"at\") must not leak into a tongue: {out}"
         );
     }
 
@@ -4401,6 +4533,62 @@ mod tests {
             gap.reason,
             "no tongue construction for locative predication yet -- no ordering \
              slot carries the adposition"
+        );
+    }
+
+    /// **The Quoin, Task 3, `verbless-clause` (r171) — a FINDING, not a
+    /// build.** A zero-copula tongue already predicates with no verb at all
+    /// for `Valence::Nominal`, and needed no new code: `tongue_verb`'s
+    /// `Nominal` arm has read `grammar.copula.as_ref().map(...)` since
+    /// before this campaign, so `copula: None` was already `Ok(None)`
+    /// there, and `realize_tongue_with_subject` already orders an absent
+    /// verb by simply not placing one (see `realize_tongue_orders_and_
+    /// copula`'s own `zero_copula` case, unchanged by this task). This test
+    /// states that explicitly, for `r171`'s own record, rather than leaving
+    /// it an unremarked side effect of an older task.
+    ///
+    /// **This is NOT the tongue path for `r171`'s own witness.** The witness
+    /// this campaign builds (`ladder_construction`'s `"r171"` arm, in
+    /// `cli/tests/suite/sentence_corpus.rs`) predicates at `Valence::
+    /// Locative` (`UNDER`), and the tongue path GAPS there regardless of
+    /// whether a copula is drawn — `a_tongue_gaps_a_locative_predication`
+    /// already pins that, for the unrelated "only one verb-slot seat"
+    /// reason `tongue_verb`'s own `Locative` arm documents. So
+    /// `verbless-clause` is Common-only for the construction its own
+    /// witness exercises (spec's Common-only posture, the same one
+    /// `property-predication` and `locative-predication` already take) —
+    /// not because zero-copula predication itself is unavailable to a
+    /// tongue; it plainly is, for `Nominal`, and always has been.
+    #[test]
+    fn a_zero_copula_tongue_already_predicates_without_a_verb() {
+        let lex = tiny_lexicon_with(&[("goblin-kind", ExposureClass::Steeped)]);
+        let word = match lex.entry("goblin-kind").unwrap() {
+            LexEntry::Root { views, .. } => views.roman.clone(),
+            other => panic!("goblin-kind should be a root, got {other:?}"),
+        };
+        let clause = Clause {
+            predicate: IS_A.to_string(),
+            subject: Subject::Name("Vavako".to_string()),
+            object: Argument::Concept("goblin-kind".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: vec![],
+        };
+        let zero_copula = TongueGrammar {
+            order: ConstituentOrder::Svo,
+            copula: None,
+            copula_segments: None,
+            articles: false,
+            subordinator: None,
+            conjunction: None,
+            interrogative: None,
+        };
+        assert_eq!(
+            realize_tongue(&clause, &zero_copula, &lex, &no_pronouns()).unwrap(),
+            format!("Vavako {word}.")
         );
     }
 

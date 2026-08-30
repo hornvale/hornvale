@@ -67,7 +67,7 @@ editing:
   today's grammar can produce or parse a demand a real utterance makes. It
   holds **two kinds of corpus, not one**: recorded or authored *dialogue*
   (`the-merchant`, `the-flood-watch`), and a typology-ordered *capability
-  ladder* of graded rungs (`the-ladder`, an unfrozen `.DRAFT`) which is not
+  ladder* of graded rungs (`the-ladder`, frozen by The Rail) which is not
   dialogue at all. A corpus **declares** its demands or **derives** them
   by transitive closure, never both (decision 0386). Same data/code split as
   `tropes/`/`systems/` (decision 0011) — the corpus is data, the resolver is
