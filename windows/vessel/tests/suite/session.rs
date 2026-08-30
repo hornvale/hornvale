@@ -1020,17 +1020,29 @@ fn custody_survives_a_save_and_a_re_possession() {
         say(&mut session, "enter").starts_with("[chamber "),
         "the possession never got indoors, so nothing below is tested"
     );
-    // The THRESHOLD chamber's key, not the storeroom's: since Task 13's fix
-    // round the storeroom key is inside a shut, locked chest and `take` no
-    // longer reaches through a lid. This walks one room in, takes the key
-    // `the-key-by-the-door` composes, and then carries it as far into the
+    // The LOOMROOM's key, not the storeroom's: since Task 13's fix round the
+    // storeroom key is inside a shut, locked chest and `take` no longer
+    // reaches through a lid. This walks in to chamber index 2, takes the key
+    // `the-key-by-the-loom` composes, and then carries it as far into the
     // building as the place goes — so the save below is taken with the key in
-    // hand three rooms from where it was picked up, which is a stronger
-    // starting state for the round trip than the old one, not a weaker.
+    // hand in a room it was not picked up in, which is a stronger starting
+    // state for the round trip than the old one, not a weaker.
+    //
+    // It was ONE `enter` until The Custodian, which moved the key pattern off
+    // `Role::Threshold` — the role every built structure has — so that a key
+    // stopped standing in every dwelling's front room. Seed 1's flagship is
+    // agrarian, so its index-2 chamber is the loomroom the key now stands in.
+    for _ in 0..2 {
+        assert!(
+            say(&mut session, "enter further in").starts_with("[chamber "),
+            "seed 1's structure no longer reaches the loomroom, so nothing \
+             below is tested"
+        );
+    }
     assert_eq!(
         say(&mut session, "take a key"),
         "You take the key.",
-        "precondition: seed 1's threshold chamber must hold a takeable key"
+        "precondition: seed 1's loomroom must hold a takeable key"
     );
     for _ in 0..4 {
         if !say(&mut session, "enter further in").starts_with("[chamber ") {
