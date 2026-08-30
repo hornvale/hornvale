@@ -11,7 +11,7 @@ fn exponent_fit_recovers_a_known_power_law() {
 }
 
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: the Sounding's scaling-exponent sweep over event-coupling delivery (scan vs. index); run by hand (The Sounding answered its question; demoted by The Governor 2026-08-28)"]
 fn run_the_sounding_and_write_the_report() {
     use hornvale_chronicle::sweep::{SweepRow, render_report, sweep_axis, sweep_scan_vs_index};
     use hornvale_chronicle::{SoundingConfig, biography_digest, census, run};

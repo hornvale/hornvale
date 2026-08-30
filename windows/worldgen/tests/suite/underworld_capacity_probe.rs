@@ -81,7 +81,7 @@ fn digest(h: &hornvale_worldgen::History) -> u64 {
 /// the distinct-site count) — the surface-density control the re-key must not
 /// move.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: surface density founded per people (re-key acceptance criteria, spec section 4.2.1/section 4.6); run by hand (The Underworld, Task 8, answered its question; demoted by The Governor 2026-08-28)"]
 fn what_the_bake_founded_per_people() {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
     for seed_value in SEEDS {
@@ -117,7 +117,7 @@ fn what_the_bake_founded_per_people() {
 /// file could not make honestly (a literal re-pinned after the change proves
 /// nothing).
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: surface-invariance control for the realm re-key (byte-identical pinned build before/after); run by hand (The Underworld, Task 8, answered its question; demoted by The Governor 2026-08-28)"]
 fn a_pinned_surface_people_builds_the_same_world() {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
     for people in SURFACE_CONTROL {

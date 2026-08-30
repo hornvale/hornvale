@@ -18,6 +18,7 @@
 //! controlling terminal simply closes (SIGHUP). Confirmed with a pty
 //! harness sending a real `SIGINT` from outside — see the task report.
 
+use crate::boot::TermHandle;
 use crossterm::cursor::{Hide, MoveTo, SetCursorStyle, Show};
 use crossterm::execute;
 use crossterm::queue;
@@ -171,6 +172,25 @@ impl Term {
 impl Drop for Term {
     fn drop(&mut self) {
         let _ = Term::restore();
+    }
+}
+
+impl TermHandle for Term {
+    fn restore(&self) {
+        // `Term::restore()` (the private associated fn) doesn't take
+        // `self` at all — it acts on the global `OPEN` flag and the real
+        // stdout, not on any per-instance state — so this just forwards
+        // to it under the `boot::TermHandle` seam `main.rs`'s `run` drives
+        // through `boot::start_and_report`.
+        let _ = Term::restore();
+    }
+
+    fn report(&self, _message: &str) {
+        // Nothing to do on the real terminal: producing and printing the
+        // text is `main`'s job, once `run` has propagated this `Err` back
+        // up. This method exists so a recording double can observe that
+        // it is called, and that it is called after `restore` — see
+        // `boot::TermHandle`'s doc.
     }
 }
 

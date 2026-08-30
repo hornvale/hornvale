@@ -1034,7 +1034,7 @@ fn p1_desert_dwarf_is_not_elevation_bound() {
 /// preregistered (spec §10.2 P3′, first half) and is asserted on every seed,
 /// not as a fraction of seeds clearing it. Off-gate (heavy:).
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: whether desert-dwarf's climate curves bind (climate-share floor); run by hand (The Delvers section 10.2 P3-prime answered its question; demoted by The Governor 2026-08-28)"]
 fn p3_desert_dwarfs_climate_curves_bind() {
     for seed in SEEDS {
         let profiles = bind_shares(seed, &["desert-dwarf"]);
@@ -1151,7 +1151,7 @@ fn p3_desert_dwarfs_climate_curves_bind() {
 /// is what keeps the refutation distinguishable from a probe that computes
 /// nothing. Off-gate (heavy:).
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: the dwarves' pairwise correlations, pinning P3-prime's refuted second half; run by hand (The Delvers section 5 P4 / section 10.2 P3-prime answered its question; demoted by The Governor 2026-08-28)"]
 fn p4_the_dwarves_pairwise_correlations_and_p3s_refuted_second_half() {
     // Frozen floor, spec §5 P4 / §10.2 P3′. Never move this.
     const FROZEN: f64 = 0.95;

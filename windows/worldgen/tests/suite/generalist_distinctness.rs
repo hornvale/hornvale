@@ -549,7 +549,7 @@ fn substituting_goblins_niche_for_humans_is_detected() {
 /// Tracked as `BIO-gause-distinctness-vacuous`. The repair is a statistic
 /// with power against this world, not a lower floor.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: the collapsed CV-ratio arms of the Gause-distinctness instrument; run by hand (The Generalist, Task 5, BIO-gause-distinctness-vacuous, answered its question; demoted by The Governor 2026-08-28)"]
 fn the_collapsed_cv_ratio_arms_are_pinned_as_witnesses() {
     let ratios = cv_ratios(&[
         None,
@@ -570,9 +570,11 @@ fn the_collapsed_cv_ratio_arms_are_pinned_as_witnesses() {
             "the {name} cv_ratio moved to {got:.4}, outside the pinned witness {want} \
              +/- 0.0005. This is NOT a number to update — re-read whether the arms have \
              SEPARATED again (which would restore the readout) or drifted together \
-             further, then re-state this witness, both #[ignore] reasons above, their \
-             roster entry in cli/tests/heavy_tier.rs and the \
-             BIO-gause-distinctness-vacuous registry row in the SAME commit."
+             further, then re-state this witness, both #[ignore] reasons above and \
+             the BIO-gause-distinctness-vacuous registry row in the SAME commit. \
+             There is no roster entry to restate: The Governor demoted both tests \
+             to probe:, and cli/tests/fixtures/heavy-roster.txt lists heavy: tests \
+             only."
         );
     }
 }

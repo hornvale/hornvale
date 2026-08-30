@@ -33,7 +33,7 @@ needs the canonical box for, and they differ in exactly one respect:
 | | `make sluice-stage BRANCH=… REF=…` | `make sluice BRANCH=… REF=…` |
 |---|---|---|
 | when | every plan-stage boundary | work is complete |
-| phases | `artifacts outboard gate clients` | **the same four** — see below |
+| phases | `artifacts outboard gate clients` | **the same four, PLUS `heavy`** — see below |
 | merges main+branch in the chamber | yes | yes |
 | pushes | **never** | yes, the exact SHA it tested |
 | terminal state | `reported` | `landed` |
@@ -41,27 +41,51 @@ needs the canonical box for, and they differ in exactly one respect:
 
 Everything below applies to both unless it says otherwise.
 
-**THE PHASE SETS ARE IDENTICAL, AND A MERGE DOES NOT RUN `heavy`.** An earlier
-version of this table said a merge runs "all six, `heavy` last." It does not.
-`scripts/sluice-run.sh:360` is unambiguous:
+**THE MERGE RUNS ONE PHASE MORE THAN THE STAGE GATE: `heavy`, last (decision
+0426, 2026-08-28).** This paragraph has now been wrong in two different
+directions, so read the script rather than any prose about it:
 
 ```
-merge_phases="artifacts outboard gate clients"
+merge_phases="artifacts outboard gate clients heavy"
 stage_phases="artifacts outboard gate clients"
 ```
 
-The file says so in its own prose too — the two kinds "run the SAME phases and
-differ only in the push — which was always the design" (`:341`), and a merge
-product is "gated as itself, by four phases" (`:348`). `heavy` is not a chamber
-phase at all: it is a separate dispatch, `make heavy-remote REF=<full-sha>`.
+The history, because it is the reason to distrust a remembered phase list: the
+table once said a merge runs "all six, `heavy` last"; decision 0148 made that
+false by shrinking the merge list down to the stage list; this paragraph then
+said flatly that "`heavy` is not a chamber phase at all", which decision 0426
+made false again after The Governor cut the tier 3.52x. `seam-guard` is the one
+that is genuinely not a chamber phase — it runs only from `make seam-guard`.
 
-**Why this matters when choosing between them.** The difference is the push and
-nothing else, so a green stage gate on an ancestor SHA has already bought a
-merge's entire phase coverage. Do not reason that going straight to merge "adds
-the full suite" — it adds the push. The stage gate's real value is that its
-refusal is free, and it leaves `main` untouched by construction rather than by
-a phase passing. (Learned by The Forebay reasoning from the stale row and
-telling its decider the wrong thing.)
+**`heavy` is a merge phase and NOT a stage-gate phase, and that asymmetry is
+deliberate.** It compares a live probe against the committed census fixtures,
+which are refreshed once per campaign at pre-merge close — so on a stage gate
+it would red predictably for the whole middle of any world-touching campaign.
+It has in fact never been a stage phase; 0426 restores the pre-0148 layout.
+
+**Consequence when choosing between the two: a green stage gate no longer buys
+a merge's ENTIRE phase coverage.** It buys four fifths of it. A merge can still
+red on `heavy` after every stage gate passed. If you want that answer earlier,
+`make heavy-remote REF=<full-sha>` is the by-hand dispatch — it is a
+diagnostic you read, not a gate, so a census-fixture red in it is expected
+mid-campaign and is not a reason to stop.
+
+**A prose-only candidate skips `heavy` (and `clients`).** `scripts/sluice-phases.sh`
+drops them when every changed path is hand-written prose, so a docs-only merge
+does not pay the tier's ~465.8 s (decision 0426 derives that figure next to its
+inputs; nothing else restates it).
+
+**Why this matters when choosing between them.** From 0148 until 0426 the
+difference was the push and nothing else, and this paragraph said so. Since
+0426 the difference is the push **plus `heavy`**: a green stage gate on an
+ancestor SHA buys four of a merge's five phases, not all of them. Do not
+reason that going straight to merge "adds the full suite" — it adds the push
+and the heavy tier, which is a real but bounded increment. The stage gate's
+real value is unchanged: its refusal is free, and it leaves `main` untouched by
+construction rather than by a phase passing. (The original warning here was
+learned by The Forebay reasoning from a stale row and telling its decider the
+wrong thing — which is why this paragraph now names what changed instead of
+being quietly rewritten.)
  A stage gate is
 not a lesser instrument: it gates the same real merge product, which is what
 makes it worth queueing behind an hour of someone else's heavy run. What it
@@ -150,8 +174,25 @@ instrument for a campaign that is *not* finished.
      commit's subject (stripping a `merge(...): ` prefix defensively if
      you added one anyway, so it can never double).
    - It can sit on **any commit in the range** (`origin/main..REF`), not
-     necessarily the last one, and a later commit does not displace it —
-     `git log` reads newest-first and the newest non-empty trailer wins.
+     necessarily the last one. A later commit *without* a trailer does not
+     displace it — which is the whole gain over the old tip-subject rule. A
+     later commit *with* one **does**: `git log` reads newest-first and the
+     newest non-empty trailer wins. (This bullet used to assert both halves at
+     once — "a later commit does not displace it, and the newest wins" — which
+     is self-contradictory and reads as reassurance.)
+   - **Nothing refuses a WRONG headline, only a missing or placeholder one**,
+     and the subject it writes is permanent: `tools/census/history.sh` loads
+     it as a census `epoch_label`. So a stray `Sluice-Headline:` on an early
+     fix commit becomes main's subject unless a later commit overrides it —
+     The Governor nearly landed under one of its own Task 9 fix commits'
+     trailers. **Before submitting a merge, run the helper and read what it
+     returns**, rather than trusting that the last trailer you wrote is the
+     one it finds:
+
+     ```bash
+     . scripts/sluice-headline.sh
+     sluice_headline_of "$PWD" origin/main HEAD
+     ```
    - It **must be in that commit message's last paragraph**. This reads
      git's own trailer parser, which only ever looks at the final block:
 

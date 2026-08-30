@@ -942,7 +942,7 @@ fn sum<F: Fn(&SeedRow) -> usize>(rows: &[SeedRow], f: F) -> usize {
 /// claim: structural(seed: panel) — false-positive seed-loop flag; the loop
 /// binds a census-panel prefix, not a search over seeds.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: which way the account crosses the seam; RED as of 2026-08-28 — the shared BASELINE_ENDINGS_12/FOREIGN_12 live-worldgen pins have drifted again since The Underworld changed settlement placement, and this question (The Undertow, Myth campaign 5) is closed; run by hand; demoted by The Governor"]
 fn which_way_the_account_crosses_the_seam() {
     let components = hornvale_worldgen::WorldComponents::assemble().expect("components assemble");
     let mut rows: Vec<SeedRow> = Vec::new();
@@ -1394,7 +1394,7 @@ type Quantity = (&'static str, fn(&Wide) -> usize);
 /// claim: structural(seed: panel) — false-positive seed-loop flag; the loop
 /// binds a census-panel prefix, not a search over seeds.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: how much the twelve-seed prefix over-reads; RED as of 2026-08-28 — the shared BASELINE_ENDINGS_12/FOREIGN_12 live-worldgen pins have drifted again since The Underworld changed settlement placement, and this question (The Undertow, Myth campaign 5) is closed; run by hand; demoted by The Governor"]
 fn how_much_the_twelve_seed_prefix_over_reads() {
     let components = hornvale_worldgen::WorldComponents::assemble().expect("components assemble");
     let multiplicative = Accumulation::ALL

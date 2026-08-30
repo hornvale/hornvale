@@ -948,6 +948,43 @@ positive-control clause covers an instrument that cannot fire; this adds the
 case where the instrument fires correctly and the number it is compared
 against was never its own.
 
+A seventeenth campaign tests the remedy the sixteenth proposed, on the
+successor campaign it was proposed for. [The Quoin](./chronicle/the-quoin.md)
+(2026-08-29) built its own preregistration the way The Rail's retrospective
+demanded: append the five tokens under measurement, run the two live
+instruments the campaign would later be judged against, record their output,
+revert. All four figures — ladder covered, frontier, merchant coverage,
+flood-watch demand instances — matched on the first run, at every one of five
+tasks, and none was revised. **The remedy generalizes past the campaign that
+discovered the need for it**, and the campaign is explicit about what that
+does and does not prove: Task 0 derived the predictions with the same
+resolver that later scored the outcome, so agreement confirms the
+implementation did what the resolver predicted, not that the resolver is
+right about the world. Three genuine defects still originated in this
+campaign's own plan text — a merchant-coverage step the plan omitted, a
+witness string requiring `sleep` to inflect as `slept` when the grammar's
+past-tense rule is a pinned-on-purpose naive `+ed`, and a witness pairing
+`Definiteness::Indef` with an expected string that needed `Def` — and every
+one is a *different* class from the one PREREG-1 was built to close. All
+three were caught by pre-dispatch brief verification against the tree,
+before an implementer saw them, not by re-reading and not by the mechanism
+under test.
+
+The same campaign supplies a second, independent instance of *complementing
+beats replacing* (the fifteenth campaign's own finding, above): its
+preregistration bound the chronicle to quote a produce-side demand-instance
+figure the resolver, as built through the campaign's own reconciliation
+task, could not compute. Rather than report the composite the instrument
+already had, or loosen what the criterion meant to fit the instrument that
+existed, the campaign built the missing split as its own reviewed task,
+disclosed in the generated artifact itself that the split postdates the
+implementation work it measures, and reported what it found even though the
+result **cuts against the campaign**: the produce-side figure (31.8%) sits
+three points below the composite the report would otherwise have led with
+(34.8%). A preregistration that cannot be satisfied by the instrument that
+exists is a finding about the instrument, not a license to report the number
+that instrument happens to produce.
+
 ## What the world can already check itself on (high confidence)
 
 **The kernel substrate.** Hash-based seeding, coherent noise, append-only
@@ -4301,3 +4338,44 @@ chaos-eviction schedule whose most aggressive form gives the least signal,
 because it replaces the state immediately after every step it is meant to
 stress. Both were green. Both were pinning nothing. Neither would have been
 found by reviewing the tests against their specification.
+
+### A third look at cost, and it found a distribution rather than a pathology (2026-08-29)
+
+[The Overture](./chronicle/the-overture.md) is a client campaign and **no bet
+in the map above moved** — it resolves no open question about the world, and
+nothing it built crosses the determinism boundary. It contributes one thing to
+the accounting immediately above, and only because that accounting counts
+occasions rather than results.
+
+The section before this one observes that cost is scored "when a campaign
+chooses to look", and that on the two occasions anyone had, each found a
+quadratic nobody predicted. This is a third occasion, and it found neither a
+quadratic nor anything else pathological — it found a **distribution**, which
+is a different kind of answer and worth distinguishing from a clean bill of
+health:
+
+```
+  settlements               1840 ms    60.2%
+  WorldContext::build        830 ms    27.2%   (demography report: 480 ms)
+  terrain (genesis)          202 ms     6.6%
+  deep time                  181 ms     5.9%
+  astronomy                    0.4 ms   0.01%
+  ------------------------------------------
+  total                     3054 ms
+```
+
+Two items are **76%** of world generation. The 480 ms demography report is the
+largest single item in the build that has never been profiled by anyone — this
+campaign measured it and deliberately did not touch it. So the base rate the
+paragraph above reports is unchanged in the direction that matters: three
+campaigns have looked at cost, two found an unpredicted quadratic, and the
+third found a concentration it did not investigate. Nothing here is a
+counterexample to "a poor base rate for an unwatched dimension"; it is one more
+observation that the dimension is unwatched.
+
+The measurement is also a reminder of what *this* chapter's floor asks for.
+These figures are five agreeing runs on one machine on one day, and they are
+already load-bearing for a shipped design decision — a progress substrate
+refuses to draw a global percentage *because* one phase is 60% of the whole. A
+number with that much weight on it should be re-measured by whoever next
+depends on it, not inherited.

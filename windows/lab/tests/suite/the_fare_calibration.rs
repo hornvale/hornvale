@@ -44,7 +44,7 @@ use hornvale_worldgen::{
 };
 use std::collections::BTreeSet;
 
-use crate::seed_sweep;
+use hornvale_worldgen::seed_sweep;
 
 /// AUTHORED (spec §5a), **not calibrated**: the floor
 /// `weather_conductance_factor`'s output is clamped to before inversion.

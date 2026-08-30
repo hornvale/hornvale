@@ -60,7 +60,7 @@ use hornvale_species::{BiosphereTraits, HabitatRealm};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
     BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to, climate_of,
-    per_species_suitability, terrain_of,
+    per_species_suitability, seed_sweep, terrain_of,
 };
 
 /// The seed sweep — 25 seeds, above the plan's "at least 20" floor. Kept to
@@ -261,6 +261,8 @@ fn measure_seed(
 
 /// claim: readout(off-gate, heavy:) — blast-radius before/after readout over
 /// SEEDS
+///
+/// nextest: sized-sweep
 #[test]
 #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn the_blast_radius_readout() {
@@ -276,8 +278,14 @@ fn the_blast_radius_readout() {
     let realm_after = realm_slice(&wc_after);
     let realm_before: Vec<HabitatRealm> = vec![HabitatRealm::Surface; bio.len()];
 
-    let mut rows = Vec::new();
-    for raw_seed in SEEDS {
+    // The seed sweep runs across the machine's CPUs (see
+    // `seed_sweep::map_seeds`), but `rows` is byte-identical to the serial
+    // loop this replaced: `measure_seed` (and the smoke-build check ahead of
+    // it) is a pure function of its seed, each worker shares nothing, and
+    // results come back in SEED order rather than completion order — the
+    // same order `for raw_seed in SEEDS { rows.push(...) }` produced. Set
+    // `HV_SEED_SWEEP_THREADS=1` to reproduce that serial loop exactly.
+    let rows: Vec<SeedReadout> = seed_sweep::map_seeds(SEEDS, |raw_seed| {
         // Build once as a smoke check that terrain generation itself is
         // realm-blind (domains/terrain never sees WorldComponents), so a
         // failure here would mean the "before"/"after" pair is not the
@@ -294,7 +302,7 @@ fn the_blast_radius_readout() {
         );
         assert!(smoke.is_ok(), "{seed:?} must build at Terrain depth");
 
-        rows.push(measure_seed(
+        measure_seed(
             seed,
             &wc_after,
             &wc_before,
@@ -302,8 +310,8 @@ fn the_blast_radius_readout() {
             &names,
             &realm_after,
             &realm_before,
-        ));
-    }
+        )
+    });
 
     // --- P1: direction, pooled over every seed --------------------------
     println!("\n=== P1 — direction (mean suitability over cave-bearing land vertices) ===");

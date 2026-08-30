@@ -75,6 +75,14 @@ echo "sluice-census: census-run.sh rc=0 in ${elapsed}s"
 # whole tree: the census worktree is shared, and sweeping untracked debris into
 # a delivery branch would hand the requestor somebody else's files.
 git -C "$wt" add -A -- book/src/laboratory/ 2>/dev/null || true
+# ALSO CARRIES docs/timings.md's census row, and that is load-bearing
+# rather than incidental (The Governor, Task 7). `timed.sh` resolves
+# its ledger with a bare `git rev-parse --show-toplevel`, so inside
+# this worktree the row lands HERE, not in the canonical checkout.
+# This general `add -u` is the only thing that sweeps it up. Narrowing
+# it to the golden paths would silently reopen, for census, exactly
+# the bug Task 7 fixed for heavy: 27 heavy runs between 2026-08-05
+# and 2026-08-28 wrote a row that nothing ever committed.
 git -C "$wt" add -u 2>/dev/null || true
 
 if git -C "$wt" diff --cached --quiet 2>/dev/null; then
