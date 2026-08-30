@@ -4382,6 +4382,12 @@ measured here.
 | 2026-08-30T18:58:48Z | sluice:gate | 480.086 | 14222.320 | 441.391 | 30.54 | 0 | 2cb8861f2 |  | lefford | 40 |
 | 2026-08-30T19:07:26Z | sluice:clients | 517.326 | 9655.083 | 125.237 | 18.91 | 0 | 0c97db183 |  | lefford | 40 |
 | 2026-08-30T19:15:01Z | sluice:heavy | 455.207 | 9646.261 | 151.344 | 21.52 | 0 | 357aa4e95 |  | lefford | 40 |
+| 2026-08-30T20:19:53Z | gate-commit | 4.832 | 5.521 | 0.354 | 1.22 | 0 | f0836c762 | campaign/the-company | MacBookPro | 10 |
+| 2026-08-30T20:22:32Z | rebaseline | 84.454 | 310.881 | 16.183 | 3.87 | 0 | f0836c762 | campaign/the-company | MacBookPro | 10 |
+| 2026-08-30T20:29:06Z | gate-commit | 7.951 | 7.660 | 0.219 | 0.99 | 0 | f0836c762 | campaign/the-company | MacBookPro | 10 |
+| 2026-08-30T20:30:04Z | gate-commit | 19.137 | 19.070 | 2.123 | 1.11 | 0 | f0836c762 | campaign/the-company | MacBookPro | 10 |
+| 2026-08-30T20:31:23Z | rebaseline | 64.794 | 269.001 | 14.383 | 4.37 | 0 | f0836c762 | campaign/the-company | MacBookPro | 10 |
+| 2026-08-30T20:32:57Z | gate-commit | 94.137 | 563.760 | 39.935 | 6.41 | 0 | f0836c762 | campaign/the-company | MacBookPro | 10 |
 | 2026-08-30T18:40:15Z | gate-commit | 40.536 | 123.010 | 33.053 | 3.85 | 0 | d86d0e4ab | campaign/the-gleaning | MacBookPro | 10 |
 | 2026-08-30T18:41:13Z | rebaseline | 57.423 | 273.565 | 14.542 | 5.02 | 0 | d86d0e4ab | campaign/the-gleaning | MacBookPro | 10 |
 | 2026-08-30T19:39:04Z | sluice:artifacts | 131.193 | 1162.615 | 50.611 | 9.25 | 0 | 5e38068e8 |  | lefford | 40 |
@@ -4395,6 +4401,12 @@ measured here.
 | 2026-08-30T20:18:10Z | sluice:gate | 572.583 | 16745.655 | 571.030 | 30.24 | 0 | 0f2d6a0b7 |  | lefford | 40 |
 | 2026-08-30T20:27:18Z | sluice:clients | 548.028 | 10027.053 | 154.731 | 18.58 | 0 | 315067e9c |  | lefford | 40 |
 | 2026-08-30T20:34:53Z | sluice:heavy | 455.000 | 9527.428 | 167.399 | 21.31 | 0 | b53b1d8fb |  | lefford | 40 |
+| 2026-08-30T20:48:16Z | gate-commit | 103.700 | 469.753 | 40.178 | 4.92 | 0 | 6821ba3c4 | campaign/the-company | MacBookPro | 10 |
+| 2026-08-30T20:49:25Z | rebaseline | 68.688 | 268.684 | 13.706 | 4.11 | 0 | 9496e7aec | campaign/the-company | MacBookPro | 10 |
+| 2026-08-30T23:15:04Z | gate-commit | 28.334 | 53.289 | 13.946 | 2.37 | 0 | e54c87eda | campaign/the-company | MacBookPro | 10 |
+| 2026-08-30T23:20:18Z | gate-commit | 21.567 | 52.155 | 13.418 | 3.04 | 0 | 42d2ac7b7 | campaign/the-company | MacBookPro | 10 |
+| 2026-08-30T23:22:51Z | rebaseline | 45.951 | 266.844 | 13.049 | 6.09 | 0 | b4e924941 | campaign/the-company | MacBookPro | 10 |
+| 2026-08-30T23:24:37Z | gate-commit | 21.660 | 52.457 | 13.347 | 3.04 | 0 | efc98f875 | campaign/the-company | MacBookPro | 10 |
 | 2026-08-30T21:10:22Z | rebaseline | 65.704 | 303.943 | 15.237 | 4.86 | 0 | ddab95410 | campaign/the-custodian | MacBookPro | 10 |
 | 2026-08-30T21:12:57Z | gate-commit | 107.487 | 558.776 | 93.522 | 6.07 | 0 | ddab95410 | campaign/the-custodian | MacBookPro | 10 |
 | 2026-08-30T21:26:46Z | gate-commit | 33.401 | 69.541 | 31.334 | 3.02 | 0 | ddab95410 | campaign/the-custodian | MacBookPro | 10 |
@@ -4407,3 +4419,6 @@ measured here.
 | 2026-08-30T21:48:43Z | sluice:gate | 537.099 | 15906.115 | 497.554 | 30.54 | 0 | be7fe3ac5 |  | lefford | 40 |
 | 2026-08-30T21:57:31Z | sluice:clients | 527.948 | 9823.485 | 107.780 | 18.81 | 0 | 5686bb940 |  | lefford | 40 |
 | 2026-08-30T22:05:11Z | sluice:heavy | 459.901 | 9583.135 | 178.631 | 21.23 | 0 | 115aec3da |  | lefford | 40 |
+| 2026-08-30T23:27:20Z | rebaseline | 57.407 | 268.183 | 13.431 | 4.91 | 0 | f1cc95ba6 | campaign/the-company | MacBookPro | 10 |
+| 2026-08-30T23:32:22Z | gate-commit | 27.711 | 62.069 | 17.674 | 2.88 | 0 | f1cc95ba6 | campaign/the-company | MacBookPro | 10 |
+| 2026-08-30T23:32:55Z | gate-commit | 23.339 | 53.959 | 13.584 | 2.89 | 0 | b4d58d0fd | campaign/the-company | MacBookPro | 10 |

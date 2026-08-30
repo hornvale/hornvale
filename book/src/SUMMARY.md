@@ -432,6 +432,7 @@
 - [The Chattel](./chronicle/the-chattel.md)
 - [The Attestation](./chronicle/the-attestation.md)
 - [The Repertory](./chronicle/the-repertory.md)
+- [The Company](./chronicle/the-company.md)
 
 # Appendix: The Frontier
 

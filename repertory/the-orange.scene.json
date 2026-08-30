@@ -8,35 +8,38 @@
       "provenance": "authored",
       "control": 60,
       "beta": true,
-      "declared": "Beats beyond the first need capabilities no campaign has built yet. The Chattel (merged 2026-08-30) put carried things on the wire, so the snapshot DOES now carry an inventory channel -- but only for the possessed body: `/self/carrying` is a list of {entity, noun}, while a `social[]` entry is still exactly {entity, label, grievance, hostile}. Beat 2 therefore asks for the co-located half of what The Chattel shipped for self. Beyond it, no verb in the in-character list addresses another creature: ask asks the body you wear how IT feels, write speaks a line of Common into your OWN margin, and the operator instruments provoke and soothe carry no utterance. Delete this declaration the moment the scene passes -- STALE-DECL will insist.",
-      "witness": {
-        "seed": 42,
-        "target": "most-populous-settlement"
-      },
+      "declared": "Expected UNWITNESSED rather than ABSENT, and the distinction is the point. The capabilities beat 2 needs now EXIST -- The Chattel put carried things on the wire and The Company put the co-located half on sensed.present -- so this scene is no longer blocked on the program. It is blocked on the WORLD: SOC-one-creature-per-settlement records that a settlement holds exactly one derived creature, so the pairs that do share a room are wild concentrations, never a drow and a goblin. Nathan already ruled that changing world population to restore co-location is its own campaign, since The Penstock measured tick cost superlinear in that dimension. What remains beyond the stage is that no verb addresses another creature. Delete this declaration the moment the scene passes -- STALE-DECL will insist.",
       "beats": [
         {
           "id": "b1-co-located",
-          "description": "two creatures share a room, and the possessing will can tell",
+          "description": "a drow and a goblin share a room, and the drow can tell",
           "script": [
             "look"
           ],
           "assertion": {
             "kind": "snapshot_present",
-            "pointer": "/social/0/label"
+            "pointer": "/sensed/present/0/label"
           }
         },
         {
           "id": "b2-holds-an-object",
-          "description": "one of them carries a thing that can change hands, and the possessing will can see it",
+          "description": "the goblin is holding something that can change hands",
           "script": [
             "look"
           ],
           "assertion": {
             "kind": "snapshot_present",
-            "pointer": "/social/0/carrying"
+            "pointer": "/sensed/present/0/carrying"
           }
         }
-      ]
+      ],
+      "witness": {
+        "kind": "co-located",
+        "from_seed": 0,
+        "scan": 3,
+        "self_species": "drow",
+        "other_species": "goblin"
+      }
     }
   ]
 }

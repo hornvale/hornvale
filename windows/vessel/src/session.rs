@@ -1528,6 +1528,14 @@ impl<'w> Session<'w> {
                         entity: npc.entity.0.get(),
                         label: npc.label.clone(),
                         felt: felt_phrase(&affect),
+                        carrying: self
+                            .carried_by(npc.entity)
+                            .into_iter()
+                            .map(|(entity, noun)| crate::snapshot::CarriedEntry {
+                                entity: entity.0.get(),
+                                noun: noun.to_string(),
+                            })
+                            .collect(),
                     },
                 )
             })
@@ -1782,6 +1790,28 @@ impl<'w> Session<'w> {
     /// its own shadowcast — this seam refuses to fabricate an occlusion the
     /// fine layer could not itself produce, the same discipline
     /// [`Self::place_creature_at_me`] applies to a lit one.
+    /// Mint a thing of `kind` here and commit it into `holder`'s hand — the
+    /// custody sibling of [`Self::place_creature_at_me`], and a test seam for
+    /// the same reason: nothing a player can type puts a thing in ANOTHER
+    /// creature's hand, so the positive direction of `sensed.present`'s
+    /// custody has no other way to be exercised.
+    ///
+    /// Returns the thing's id, or `None` if this room's facet cannot pack one.
+    /// type-audit: bare-ok(identifier-text: kind)
+    pub fn place_thing_in_hand(&mut self, holder: EntityId, kind: &str) -> Option<EntityId> {
+        let room = self.position();
+        let thing =
+            crate::thing::promote(&mut self.ledger, &self.registry, &room, kind, 0, self.day)
+                .ok()?;
+        self.ledger
+            .commit(
+                crate::thing::located_in_holder_fact(thing, holder, self.day),
+                &self.registry,
+            )
+            .expect("located-in is registered every session and non-functional");
+        Some(thing)
+    }
+
     /// type-audit: bare-ok(flag: return)
     pub fn place_creature_out_of_my_sight(&mut self, who: EntityId) -> bool {
         let room = self.position();
@@ -2811,7 +2841,20 @@ impl<'w> Session<'w> {
     /// [`crate::thing::held_by`]'s `EntityId` order is preserved, which is
     /// deterministic and never ledger order.
     fn carried(&self) -> Vec<(EntityId, &'static str)> {
-        crate::thing::held_by(&self.ledger, self.agent_entity(), self.day)
+        self.carried_by(self.agent_entity())
+    }
+
+    /// [`Self::carried`] for any holder, which is the whole of that method
+    /// with its holder lifted out (The Company).
+    ///
+    /// The extraction is what keeps `carried`'s own rule true once a SECOND
+    /// caller exists: "a pane that disagreed with the verb about what is in
+    /// hand would be a worse defect than an absent field, and there is
+    /// exactly one function here to disagree with." After this there is still
+    /// exactly one — `sensed.present`'s custody and the driven body's resolve
+    /// through the same fold, differing only in whose hand they ask about.
+    fn carried_by(&self, holder: EntityId) -> Vec<(EntityId, &'static str)> {
+        crate::thing::held_by(&self.ledger, holder, self.day)
             .into_iter()
             .filter_map(|thing| {
                 let noun = crate::chamber_prose::noun_for_label(self.ledger.kind_of(thing)?)?;
