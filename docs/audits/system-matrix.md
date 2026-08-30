@@ -39,6 +39,7 @@ instrument's own bias in its own output; it does not correct for it.
 - `domains/person`
 - `domains/religion`
 - `domains/settlement`
+- `domains/thing`
 - `domains/topology`
 - `windows/almanac`
 - `windows/book`

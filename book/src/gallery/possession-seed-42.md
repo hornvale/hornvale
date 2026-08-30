@@ -36,7 +36,7 @@ Night. The vast moon is a smear of light. The small, distant moon is a smear of 
 A bugbear of Doaba (agent 3286669968037249024), day 0, room 896860167.
 > enter
 [chamber 235106516365287, day 0.01172]
-A small room, holding a doorway and a screen.
+A small room, holding a doorway, a screen and a key.
 Ways on: out, further in.
 > enter further in
 [chamber 235106515360871, day 0.02344]

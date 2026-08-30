@@ -625,3 +625,24 @@ fn appending_the_object_property_cohort_displaces_no_existing_proto_root() {
         "object-property",
     );
 }
+
+/// THE CHATTEL (Task 7): appending the three properties spec §3.8 adds —
+/// `portable`, `openable`, `lockable` (epoch 17) — displaces nothing.
+///
+/// Written with the cohort rather than after it, because the alternative
+/// this test rules out is the one a hurried author actually reaches for:
+/// adding three names to epoch 15's existing object-property cohort, which
+/// re-sorts every concept assigned after it. The helper's anti-vacuity half
+/// is what makes that a measurement — it folds this cohort into epoch 0 and
+/// requires at least one pre-existing root to MOVE, so a green result here
+/// is evidence about the append, not about the roster being insensitive.
+///
+/// claim: invariant(forall-seed) — save-format contract, mirroring
+/// `appending_the_object_property_cohort_displaces_no_existing_proto_root`.
+#[test]
+fn appending_the_chattel_property_cohort_displaces_no_existing_proto_root() {
+    assert_appending_a_cohort_is_additive(
+        &["lockable", "openable", "portable"],
+        "chattel-property",
+    );
+}

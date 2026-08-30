@@ -193,6 +193,10 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `terrain/channel-meander` | channel meander displacement field (hash-noise only; no stream draws) |
 | `terrain/rill-partition` | where a sub-vertex catchment divides between its two branches (hash-noise only; no stream draws) |
 
+### hornvale-thing
+
+*(no seed-derivation streams)*
+
 ### hornvale-vessel
 
 | Label | Meaning |

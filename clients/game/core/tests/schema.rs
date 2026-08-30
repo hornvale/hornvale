@@ -11,6 +11,13 @@ const FIXTURE: &str = include_str!("fixtures/session-seed-42-turn-0.json");
 /// later tasks lean on those types.
 const CHAMBER_FIXTURE: &str = include_str!("fixtures/session-seed-42-chamber.json");
 
+/// A seed-1 snapshot taken with a key in the possession's hand (The Chattel,
+/// Task 13). It is the ONLY committed `vessel/session/v2` document whose
+/// `self.carrying` is non-empty: every seed-42 fixture records a possession
+/// that never typed `take`, and seed 42's flagship structure has no strongbox
+/// to take a key from in the first place (decision 0398).
+const CARRYING_FIXTURE: &str = include_str!("fixtures/session-seed-1-carrying.json");
+
 #[test]
 fn the_fixture_parses() {
     let s = hornvale_game_core::Snapshot::parse(FIXTURE).expect("fixture must parse");
@@ -74,6 +81,19 @@ fn no_id_in_the_fixture_is_a_bare_number_a_javascript_client_would_round() {
     for (name, body) in [
         ("session-seed-42-turn-0.json", FIXTURE),
         ("session-seed-42-chamber.json", CHAMBER_FIXTURE),
+        // The FOURTH id family on this wire arrives with this fixture: a
+        // carried thing's `entity`. It is a lineage-derived `EntityId` like
+        // the three already on it — `self.agent`, `sensed.present[].entity`
+        // and `social[].entity` — so it is subject to the same 2^53
+        // rounding, and this crate's mirror does not model `self.carrying`,
+        // which is exactly why the check is on the raw document.
+        //
+        // This said "third" and named only `sensed`/`social`, dropping
+        // `self.agent`; `snapshot.rs`'s own doc said "third" too and named a
+        // different pair. Corrected together (The Chattel, Task 13 fix
+        // round) against `grep -n u64_as_decimal_string
+        // windows/vessel/src/snapshot.rs`, which lists four.
+        ("session-seed-1-carrying.json", CARRYING_FIXTURE),
     ] {
         let raw: serde_json::Value = serde_json::from_str(body).unwrap();
 
@@ -292,5 +312,43 @@ fn the_client_can_parse_every_band_the_sim_emits() {
         level.you.x,
         level.you.y,
         level.extent
+    );
+}
+
+/// **The wire's custody field is not empty in at least one committed
+/// document**, which is the only thing a fixture can prove about it.
+///
+/// `make game-check` is the one gate that reads these files, and the
+/// workspace gate cannot see them at all — so this is the same
+/// raw-document check `no_id_in_the_fixture_is_a_bare_number_a_javascript_
+/// client_would_round` makes, for the same reason. The mirror deliberately
+/// does not model `self.carrying` (nothing here draws it yet), so the
+/// assertion cannot be made through the parsed type.
+///
+/// Why it is worth a test at all: a field that ships empty in every
+/// committed artifact is indistinguishable from a field nothing fills, and
+/// refusing to ship one of those is what The Offer's deferred
+/// `NounEntry.affordances` is still waiting on.
+#[test]
+fn the_carrying_fixture_names_a_thing_in_hand() {
+    let raw: serde_json::Value = serde_json::from_str(CARRYING_FIXTURE).unwrap();
+    let carrying = raw["self"]["carrying"]
+        .as_array()
+        .expect("self.carrying is an array on vessel/session/v2");
+    assert_eq!(
+        carrying.len(),
+        1,
+        "the seed-1 fixture is taken with exactly one thing in hand: {carrying:?}"
+    );
+    assert_eq!(
+        carrying[0]["noun"].as_str(),
+        Some("a key"),
+        "the fixture must name the thing by the noun the verbs take"
+    );
+    assert!(
+        carrying[0]["entity"]
+            .as_str()
+            .is_some_and(|id| id.parse::<u64>().is_ok()),
+        "a carried thing's id must cross as a decimal string, not a number"
     );
 }

@@ -55,6 +55,7 @@
 - [The Strange Sites of Seed 42](./gallery/strange-sites-seed-42.md)
 - [The Look of the World — Seed 42](./gallery/room-sample-seed-42.md)
 - [A Possession of Seed 42 — over time](./gallery/possession-over-time-seed-42.md)
+- [A Possession of Seed 1 — a thing carried](./gallery/possession-carry-seed-1.md)
 - [A Possession, Live](./gallery/possession-live.md)
 - [The Purview of Seed 42](./gallery/surrounds-seed-42.md)
 
@@ -428,6 +429,7 @@
 - [The Winze](./chronicle/the-winze.md)
 - [The Lodestar](./chronicle/the-lodestar.md)
 - [The Overture](./chronicle/the-overture.md)
+- [The Chattel](./chronicle/the-chattel.md)
 - [The Attestation](./chronicle/the-attestation.md)
 
 # Appendix: The Frontier

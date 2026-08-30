@@ -3838,11 +3838,50 @@ measured here.
 | 2026-08-28T19:28:26Z | sluice:outboard | 41.166 | 26.026 | 39.159 | 1.58 | 0 | 4f29e5039 |  | lefford | 40 |
 | 2026-08-28T19:36:26Z | sluice:gate | 479.377 | 13275.752 | 445.243 | 28.62 | 0 | 7043cca6a |  | lefford | 40 |
 | 2026-08-28T19:45:31Z | sluice:clients | 545.387 | 9490.472 | 90.936 | 17.57 | 0 | 75f8d9857 |  | lefford | 40 |
+| 2026-08-28T20:12:34Z | prewarm | 131.671 | 519.034 | 19.493 | 4.09 | 0 | de497c48f | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-28T21:46:53Z | rebaseline | 138.488 | 282.460 | 12.448 | 2.13 | 0 | 79d02334a | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-28T21:48:41Z | gate-commit | 11.143 | 12.376 | 1.941 | 1.28 | 0 | 79d02334a | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-28T21:51:52Z | gate-commit | 86.528 | 396.564 | 26.366 | 4.89 | 0 | 79d02334a | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-28T21:54:12Z | gate-commit | 29.683 | 97.924 | 15.254 | 3.81 | 0 | 79d02334a | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-28T21:56:50Z | gate-commit | 20.090 | 44.748 | 11.178 | 2.78 | 0 | 79d02334a | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-28T21:58:40Z | gate-commit | 21.715 | 50.371 | 12.604 | 2.90 | 0 | 79d02334a | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-28T21:59:26Z | gate-commit | 21.595 | 50.187 | 13.077 | 2.93 | 0 | 79d02334a | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-28T22:17:18Z | rebaseline | 62.415 | 274.432 | 14.273 | 4.63 | 0 | 34b26321f | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-28T22:22:56Z | gate-commit | 41.726 | 139.827 | 28.005 | 4.02 | 0 | 34b26321f | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-28T22:23:31Z | gate-commit | 21.353 | 49.598 | 12.385 | 2.90 | 0 | 34b26321f | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-28T22:26:12Z | gate-commit | 20.872 | 49.219 | 12.490 | 2.96 | 0 | 34b26321f | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-28T22:55:42Z | rebaseline | 70.640 | 274.191 | 12.374 | 4.06 | 0 | 65cbc84d7 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-28T23:16:35Z | gate-commit | 44.639 | 101.159 | 39.070 | 3.14 | 0 | 65cbc84d7 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-28T23:18:42Z | gate-commit | 20.982 | 49.656 | 12.751 | 2.97 | 0 | 65cbc84d7 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-28T23:53:08Z | gate-commit | 18.376 | 25.363 | 6.551 | 1.74 | 0 | c5caf3359 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-28T23:54:07Z | gate-commit | 37.595 | 70.064 | 29.373 | 2.64 | 0 | c5caf3359 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T00:04:30Z | gate-commit | 27.767 | 69.472 | 26.684 | 3.46 | 0 | c5caf3359 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T00:06:19Z | gate-commit | 20.544 | 49.617 | 12.993 | 3.05 | 0 | c5caf3359 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T00:17:55Z | gate-commit | 33.293 | 79.321 | 38.057 | 3.53 | 0 | 0bea3d115 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T00:59:27Z | rebaseline | 126.778 | 274.764 | 12.162 | 2.26 | 0 | 1fac7402c | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T01:00:41Z | gate-commit | 55.527 | 124.916 | 34.850 | 2.88 | 0 | 1fac7402c | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T01:01:37Z | gate-commit | 31.358 | 53.524 | 13.380 | 2.13 | 0 | 1fac7402c | campaign/the-chattel | MacBookPro | 10 |
 | 2026-08-28T20:17:20Z | rebaseline | 105.461 | 312.052 | 14.827 | 3.10 | 0 | 6755d6f05 | campaign/the-stile | MacBookPro | 10 |
 | 2026-08-28T20:36:29Z | sluice:artifacts | 70.615 | 696.548 | 25.170 | 10.22 | 0 | 5272fd05d |  | lefford | 40 |
 | 2026-08-28T20:37:10Z | sluice:outboard | 41.061 | 25.222 | 38.856 | 1.56 | 0 | 6e7e9fe35 |  | lefford | 40 |
 | 2026-08-28T20:44:38Z | sluice:gate | 447.773 | 13018.949 | 409.363 | 29.99 | 0 | 957994933 |  | lefford | 40 |
 | 2026-08-28T20:53:34Z | sluice:clients | 535.338 | 9403.388 | 93.765 | 17.74 | 0 | 7576c92aa |  | lefford | 40 |
+| 2026-08-29T01:19:07Z | rebaseline | 60.506 | 303.879 | 14.909 | 5.27 | 0 | 1d99e54b7 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T01:19:39Z | gate-commit | 26.412 | 60.013 | 17.789 | 2.95 | 0 | 1d99e54b7 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T01:32:29Z | gate-commit | 27.944 | 62.252 | 22.159 | 3.02 | 0 | c345c8f23 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T01:33:37Z | gate-commit | 21.029 | 51.154 | 12.905 | 3.05 | 0 | c345c8f23 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T01:47:44Z | gate-commit | 15.791 | 17.968 | 3.008 | 1.33 | 0 | 3428f149e | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T01:48:26Z | gate-commit | 24.196 | 49.535 | 13.828 | 2.62 | 0 | 3428f149e | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T01:49:34Z | gate-commit | 44.386 | 72.119 | 22.949 | 2.14 | 0 | 3428f149e | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T01:51:24Z | gate-commit | 42.275 | 66.624 | 22.799 | 2.12 | 0 | 3428f149e | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T02:18:31Z | gate-commit | 24.927 | 40.233 | 22.877 | 2.53 | 0 | 857219e3f | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T02:19:24Z | gate-commit | 37.750 | 100.374 | 38.856 | 3.69 | 0 | 857219e3f | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T02:20:26Z | gate-commit | 25.636 | 53.121 | 13.610 | 2.60 | 0 | 857219e3f | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T02:40:51Z | gate-commit | 15.728 | 17.800 | 3.439 | 1.35 | 0 | 0b34ce4e7 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T02:41:32Z | gate-commit | 27.886 | 65.357 | 20.682 | 3.09 | 0 | 0b34ce4e7 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T02:42:27Z | gate-commit | 20.930 | 50.892 | 12.850 | 3.05 | 0 | 0b34ce4e7 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T03:31:58Z | gate-commit | 97.905 | 510.167 | 78.607 | 6.01 | 0 | 0e0a10c4a | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T03:32:34Z | gate-commit | 21.747 | 51.712 | 13.160 | 2.98 | 0 | 0e0a10c4a | campaign/the-chattel | MacBookPro | 10 |
 | 2026-08-28T22:21:30Z | gate-commit | 253.043 | 606.351 | 75.072 | 2.69 | 0 | 2e3ff148a | campaign/the-overture | ambrose | 12 |
 | 2026-08-28T22:25:19Z | gate-commit | 89.713 | 55.033 | 26.812 | 0.91 | 0 | 2e3ff148a | campaign/the-overture | ambrose | 12 |
 | 2026-08-28T22:27:13Z | gate-commit | 84.600 | 54.119 | 26.251 | 0.95 | 0 | 2e3ff148a | campaign/the-overture | ambrose | 12 |
@@ -4013,6 +4052,16 @@ measured here.
 | 2026-08-29T10:39:28Z | sluice:outboard | 40.667 | 25.472 | 39.293 | 1.59 | 0 | 96f88d73e |  | lefford | 40 |
 | 2026-08-29T10:47:19Z | sluice:gate | 471.001 | 13623.771 | 477.670 | 29.94 | 0 | 1b6701541 |  | lefford | 40 |
 | 2026-08-29T10:56:03Z | sluice:clients | 523.736 | 9499.103 | 89.157 | 18.31 | 0 | 416432745 |  | lefford | 40 |
+| 2026-08-29T13:00:44Z | gate-commit | 77.254 | 404.320 | 49.002 | 5.87 | 0 | b6a996828 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T13:01:55Z | rebaseline | 63.214 | 272.931 | 13.464 | 4.53 | 0 | 385431014 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T13:24:08Z | gate-commit | 27.859 | 59.342 | 27.092 | 3.10 | 0 | 18b590148 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T13:25:18Z | rebaseline | 62.612 | 273.061 | 14.308 | 4.59 | 0 | 18b590148 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T13:28:00Z | gate-commit | 54.203 | 278.114 | 37.852 | 5.83 | 0 | 18b590148 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T13:29:00Z | gate-commit | 21.036 | 50.470 | 13.208 | 3.03 | 0 | 18b590148 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T13:31:51Z | gate-commit | 36.510 | 96.552 | 26.215 | 3.36 | 0 | 23e75a66d | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T13:32:25Z | gate-commit | 20.762 | 50.174 | 13.118 | 3.05 | 0 | 23e75a66d | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T14:02:55Z | gate-commit | 48.453 | 141.314 | 54.615 | 4.04 | 0 | 3ccf007c4 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T14:03:49Z | gate-commit | 20.665 | 50.302 | 13.058 | 3.07 | 0 | 3ccf007c4 | campaign/the-chattel | MacBookPro | 10 |
 | 2026-08-29T12:56:40Z | rebaseline | 73.400 | 300.924 | 15.544 | 4.31 | 0 | f38cd8937 | campaign/the-rail | MacBookPro | 10 |
 | 2026-08-29T12:58:05Z | gate-commit | 57.663 | 288.029 | 38.586 | 5.66 | 0 | f38cd8937 | campaign/the-rail | MacBookPro | 10 |
 | 2026-08-29T13:14:37Z | rebaseline | 57.714 | 271.006 | 12.940 | 4.92 | 0 | 0b364e9f4 | campaign/the-rail | MacBookPro | 10 |
@@ -4022,6 +4071,16 @@ measured here.
 | 2026-08-29T13:29:01Z | sluice:outboard | 40.477 | 25.314 | 38.766 | 1.58 | 0 | 61c7211ca |  | lefford | 40 |
 | 2026-08-29T13:39:08Z | sluice:gate | 606.095 | 14404.998 | 533.969 | 24.65 | 0 | f2f7ca064 |  | lefford | 40 |
 | 2026-08-29T13:47:59Z | sluice:clients | 530.784 | 9563.668 | 92.753 | 18.19 | 0 | 102e2992f |  | lefford | 40 |
+| 2026-08-29T14:06:54Z | gate-commit | 69.454 | 339.395 | 53.686 | 5.66 | 0 | a9a463717 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T14:07:53Z | rebaseline | 58.779 | 278.225 | 13.878 | 4.97 | 0 | c27343a27 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T14:55:24Z | gate-commit | 20.908 | 27.980 | 15.224 | 2.07 | 0 | 531325132 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T14:56:28Z | rebaseline | 59.679 | 274.182 | 14.556 | 4.84 | 0 | 531325132 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T14:57:44Z | gate-commit | 48.761 | 242.075 | 36.965 | 5.72 | 0 | 531325132 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T15:04:36Z | gate-commit | 20.965 | 49.825 | 12.916 | 2.99 | 0 | 531325132 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T15:44:27Z | gate-commit | 5.431 | 6.960 | 3.195 | 1.87 | 0 | bbe1f1ece | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T15:45:08Z | gate-commit | 34.562 | 100.258 | 24.724 | 3.62 | 0 | bbe1f1ece | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T15:46:04Z | gate-commit | 34.948 | 100.603 | 26.894 | 3.65 | 0 | bbe1f1ece | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T15:50:52Z | gate-commit | 20.852 | 49.830 | 13.371 | 3.03 | 0 | bbe1f1ece | campaign/the-chattel | MacBookPro | 10 |
 | 2026-08-29T13:58:17Z | prewarm | 495.319 | 1779.083 | 106.596 | 3.81 | 0 | 430d9541c | campaign/the-lodestar | ambrose | 12 |
 | 2026-08-30T12:56:19Z | gate-commit | 115.970 | 112.476 | 36.303 | 1.28 | 0 | 597c576d2 | campaign/the-lodestar | ambrose | 12 |
 | 2026-08-30T12:58:05Z | gate-commit | 82.249 | 50.507 | 24.115 | 0.91 | 0 | 597c576d2 | campaign/the-lodestar | ambrose | 12 |
@@ -4041,6 +4100,36 @@ measured here.
 | 2026-08-29T14:15:21Z | sluice:outboard | 41.711 | 26.502 | 38.202 | 1.55 | 0 | 7e889366e |  | lefford | 40 |
 | 2026-08-29T14:23:47Z | sluice:gate | 505.752 | 14387.322 | 526.810 | 29.49 | 0 | b8b4b2301 |  | lefford | 40 |
 | 2026-08-29T14:32:43Z | sluice:clients | 535.266 | 9688.309 | 118.598 | 18.32 | 0 | 4e1cbccc1 |  | lefford | 40 |
+| 2026-08-29T15:53:26Z | rebaseline | 81.485 | 302.982 | 14.922 | 3.90 | 0 | b16f7f8a6 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T15:54:56Z | gate-commit | 83.137 | 377.267 | 85.169 | 5.56 | 0 | b16f7f8a6 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T16:16:00Z | gate-commit | 31.277 | 57.388 | 22.345 | 2.55 | 0 | 923ea285c | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T16:16:38Z | gate-commit | 23.043 | 51.983 | 13.765 | 2.85 | 0 | 923ea285c | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T16:17:41Z | rebaseline | 59.350 | 282.940 | 14.964 | 5.02 | 0 | 923ea285c | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T16:18:57Z | gate-commit | 23.587 | 53.477 | 14.997 | 2.90 | 0 | 923ea285c | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T17:30:09Z | gate-commit | 36.538 | 95.090 | 22.829 | 3.23 | 0 | 2d42da477 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T17:31:06Z | rebaseline | 53.353 | 273.815 | 13.107 | 5.38 | 0 | 2d42da477 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T17:31:57Z | gate-commit | 24.634 | 63.030 | 13.468 | 3.11 | 0 | 2d42da477 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T17:32:46Z | gate-commit | 21.347 | 50.781 | 12.923 | 2.98 | 0 | 2d42da477 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T21:19:10Z | gate-commit | 7.295 | 8.757 | 5.096 | 1.90 | 0 | 39815fa12 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T21:20:03Z | gate-commit | 41.671 | 114.403 | 21.434 | 3.26 | 0 | 39815fa12 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T21:21:03Z | rebaseline | 56.124 | 276.481 | 13.850 | 5.17 | 0 | 39815fa12 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T21:21:54Z | gate-commit | 21.673 | 51.304 | 13.482 | 2.99 | 0 | 39815fa12 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T21:49:59Z | gate-commit | 23.602 | 52.740 | 13.676 | 2.81 | 0 | 59fa0b164 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T21:50:48Z | gate-commit | 21.751 | 51.185 | 13.252 | 2.96 | 0 | 59fa0b164 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T23:36:02Z | gate-commit | 18.228 | 20.933 | 6.081 | 1.48 | 0 | a4a8fdc7f | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T23:37:21Z | rebaseline | 74.950 | 282.669 | 14.359 | 3.96 | 0 | a4a8fdc7f | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T23:38:07Z | gate-commit | 25.484 | 54.089 | 16.363 | 2.76 | 0 | a4a8fdc7f | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T23:38:58Z | gate-commit | 23.570 | 52.301 | 13.847 | 2.81 | 0 | a4a8fdc7f | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-30T00:08:40Z | rebaseline | 117.339 | 277.724 | 12.784 | 2.48 | 0 | 4714631f2 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-30T00:12:49Z | rebaseline | 95.946 | 274.361 | 11.769 | 2.98 | 0 | 4714631f2 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-30T00:13:53Z | gate-commit | 54.765 | 60.725 | 20.366 | 1.48 | 0 | 4714631f2 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-30T00:15:56Z | gate-commit | 58.402 | 96.087 | 29.469 | 2.15 | 0 | 4714631f2 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-30T00:36:58Z | rebaseline | 64.728 | 270.255 | 13.731 | 4.39 | 0 | 4714631f2 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-30T00:37:33Z | gate-commit | 32.344 | 61.920 | 21.902 | 2.59 | 0 | 4714631f2 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-30T00:38:35Z | gate-commit | 35.246 | 53.819 | 13.722 | 1.92 | 0 | 4714631f2 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-30T02:09:26Z | gate-commit | 55.785 | 92.928 | 63.606 | 2.81 | 0 | 22100f3d8 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-30T02:11:11Z | rebaseline | 99.066 | 275.971 | 12.540 | 2.91 | 0 | 22100f3d8 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-30T02:12:34Z | gate-commit | 31.763 | 55.919 | 14.009 | 2.20 | 0 | 22100f3d8 | campaign/the-chattel | MacBookPro | 10 |
 | 2026-08-29T15:10:08Z | gate-commit | 122.487 | 598.164 | 104.532 | 5.74 | 0 | 1b9e9fc31 | campaign/the-errata | MacBookPro | 10 |
 | 2026-08-29T15:18:42Z | rebaseline | 101.434 | 276.772 | 12.759 | 2.85 | 0 | 14587acf1 | campaign/the-errata | MacBookPro | 10 |
 | 2026-08-29T15:19:47Z | gate-commit | 29.535 | 54.290 | 13.788 | 2.30 | 0 | 14587acf1 | campaign/the-errata | MacBookPro | 10 |
@@ -4104,6 +4193,29 @@ measured here.
 | 2026-08-29T22:14:47Z | sluice:gate | 516.011 | 14630.253 | 539.434 | 29.40 | 0 | 9b649ba8f |  | lefford | 40 |
 | 2026-08-29T22:23:40Z | sluice:clients | 532.090 | 9832.749 | 148.696 | 18.76 | 0 | 3904660fc |  | lefford | 40 |
 | 2026-08-29T22:31:21Z | sluice:heavy | 460.954 | 9889.954 | 177.306 | 21.84 | 0 | 64d6475cd |  | lefford | 40 |
+| 2026-08-30T02:15:51Z | gate-commit | 123.098 | 397.305 | 57.619 | 3.70 | 0 | 1899ca993 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-30T02:17:36Z | rebaseline | 105.144 | 273.253 | 12.108 | 2.71 | 0 | 1899ca993 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-30T03:37:42Z | gate-commit | 52.980 | 116.634 | 26.420 | 2.70 | 0 | abfafcd28 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-30T03:39:12Z | rebaseline | 83.129 | 278.960 | 13.899 | 3.52 | 0 | abfafcd28 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-30T03:46:53Z | gate-commit | 34.059 | 57.247 | 14.499 | 2.11 | 0 | abfafcd28 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-30T13:04:36Z | rebaseline | 61.039 | 271.800 | 13.571 | 4.68 | 0 | 03d5c37c7 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-30T13:05:28Z | gate-commit | 33.209 | 101.920 | 22.719 | 3.75 | 0 | 03d5c37c7 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-30T13:06:25Z | gate-commit | 21.580 | 50.972 | 13.241 | 2.98 | 0 | 03d5c37c7 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-30T13:57:53Z | rebaseline | 59.649 | 271.738 | 12.561 | 4.77 | 0 | 5e9ef1377 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-30T14:08:31Z | game-check | 603.631 | 3911.752 | 33.014 | 6.54 | 0 | 5e9ef1377 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-30T14:09:26Z | gate-commit | 45.505 | 117.524 | 30.317 | 3.25 | 0 | 5e9ef1377 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-30T14:10:04Z | gate-commit | 24.656 | 51.988 | 13.079 | 2.64 | 0 | 5e9ef1377 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-30T14:11:57Z | gate-commit | 32.708 | 55.782 | 13.940 | 2.13 | 0 | 5e9ef1377 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-30T14:13:34Z | rebaseline | 58.824 | 272.527 | 13.165 | 4.86 | 0 | 2501022cf | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-30T15:31:35Z | rebaseline | 64.434 | 271.204 | 14.171 | 4.43 | 0 | 01da9800a | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-30T15:33:03Z | rebaseline | 54.132 | 267.314 | 11.952 | 5.16 | 0 | 01da9800a | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-30T16:17:54Z | gate-commit | 58.542 | 152.432 | 74.450 | 3.88 | 0 | 01da9800a | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-30T16:20:04Z | rebaseline | 61.093 | 276.818 | 13.665 | 4.75 | 0 | 01da9800a | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-30T16:20:07Z | gate-commit | 3.348 | 2.959 | 0.318 | 0.98 | 0 | 01da9800a | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-30T16:20:42Z | gate-commit | 23.672 | 52.123 | 13.804 | 2.79 | 0 | 01da9800a | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-30T16:29:46Z | game-check | 539.757 | 3885.792 | 30.041 | 7.25 | 0 | 01da9800a | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-30T16:31:09Z | gate-commit | 21.396 | 50.763 | 13.358 | 3.00 | 0 | 01da9800a | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-30T16:32:03Z | rebaseline | 43.466 | 269.762 | 13.473 | 6.52 | 0 | 03b33cd2c | campaign/the-chattel | MacBookPro | 10 |
 | 2026-08-29T23:51:50Z | prewarm | 201.010 | 1214.953 | 45.561 | 6.27 | 0 | ac2adfbbb | campaign/the-attestation | MacBookPro | 10 |
 | 2026-08-30T00:57:55Z | rebaseline | 110.874 | 268.561 | 11.384 | 2.52 | 0 | 14b27322a | campaign/the-attestation | MacBookPro | 10 |
 | 2026-08-30T01:09:27Z | gate-commit | 59.089 | 99.619 | 18.166 | 1.99 | 0 | 14b27322a | campaign/the-attestation | MacBookPro | 10 |
@@ -4208,6 +4320,12 @@ measured here.
 | 2026-08-30T16:17:04Z | rebaseline | 64.559 | 275.787 | 13.066 | 4.47 | 0 | d98d6678b | campaign/the-winze | MacBookPro | 10 |
 | 2026-08-30T16:19:36Z | gate-commit | 26.126 | 53.467 | 13.606 | 2.57 | 0 | d98d6678b | campaign/the-winze | MacBookPro | 10 |
 | 2026-08-30T16:21:13Z | gate-commit | 28.221 | 55.168 | 13.440 | 2.43 | 0 | 55cf217f7 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T16:35:47Z | gate-commit | 104.963 | 538.341 | 77.607 | 5.87 | 0 | 983103106 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-30T16:36:49Z | rebaseline | 60.942 | 276.537 | 13.225 | 4.75 | 0 | ce5692e57 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-30T16:38:54Z | rebaseline | 43.010 | 274.796 | 14.206 | 6.72 | 0 | dfa8fcf3a | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-30T17:01:03Z | gate-commit | 31.537 | 64.426 | 27.890 | 2.93 | 0 | dfa8fcf3a | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-30T17:02:01Z | rebaseline | 54.196 | 272.074 | 13.973 | 5.28 | 0 | dfa8fcf3a | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-30T17:07:26Z | gate-commit | 21.830 | 51.780 | 13.580 | 2.99 | 0 | dfa8fcf3a | campaign/the-chattel | MacBookPro | 10 |
 | 2026-08-30T16:11:22Z | rebaseline | 127.342 | 310.082 | 14.759 | 2.55 | 0 | 3770edbba | campaign/the-attestation | MacBookPro | 10 |
 | 2026-08-30T16:13:38Z | gate-commit | 115.462 | 396.077 | 35.497 | 3.74 | 0 | 3770edbba | campaign/the-attestation | MacBookPro | 10 |
 | 2026-08-30T16:18:07Z | sluice:artifacts | 95.624 | 797.622 | 35.420 | 8.71 | 0 | 06e88f9c4 |  | lefford | 40 |
@@ -4220,3 +4338,11 @@ measured here.
 | 2026-08-30T17:48:38Z | gate-commit | 25.224 | 52.338 | 13.661 | 2.62 | 0 | a4e4e68f2 | campaign/the-winze | MacBookPro | 10 |
 | 2026-08-30T18:08:53Z | gate-commit | 23.132 | 52.744 | 13.629 | 2.87 | 0 | c1488c0b0 | campaign/the-winze | MacBookPro | 10 |
 | 2026-08-30T18:13:59Z | gate-commit | 46.238 | 59.289 | 15.450 | 1.62 | 0 | c1488c0b0 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T17:23:22Z | gate-commit | 39.335 | 112.675 | 19.636 | 3.36 | 0 | 7280fbd4f | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-30T17:24:35Z | rebaseline | 67.312 | 288.237 | 14.925 | 4.50 | 0 | ec4e204a3 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-30T17:28:38Z | sluice:artifacts | 143.888 | 1387.329 | 67.117 | 10.11 | 0 | 2e7cc4182 |  | lefford | 40 |
+| 2026-08-30T17:29:22Z | sluice:outboard | 42.507 | 27.833 | 40.263 | 1.60 | 0 | 3d9c900c4 |  | lefford | 40 |
+| 2026-08-30T17:38:17Z | sluice:gate | 534.758 | 15312.723 | 561.790 | 29.69 | 0 | cc5f358ed |  | lefford | 40 |
+| 2026-08-30T17:47:18Z | sluice:clients | 540.788 | 9865.650 | 123.608 | 18.47 | 0 | b971fc920 |  | lefford | 40 |
+| 2026-08-30T17:54:57Z | sluice:heavy | 459.246 | 9626.625 | 168.308 | 21.33 | 0 | 2a118829d |  | lefford | 40 |
+| 2026-08-30T18:17:40Z | rebaseline | 107.485 | 318.837 | 15.842 | 3.11 | 0 | 76ecbbb44 | campaign/the-winze | MacBookPro | 10 |

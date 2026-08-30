@@ -687,11 +687,29 @@
         "kind": "Quality",
         "doc": "a seam between two rooms a body may pass through"
       },
+      "alcove": {
+        "name": "alcove",
+        "domain": "thing",
+        "kind": "Object",
+        "doc": "a recessed space set into a wall"
+      },
       "alpine": {
         "name": "alpine",
         "domain": "climate",
         "kind": "Terrain",
         "doc": "a biome class"
+      },
+      "altar": {
+        "name": "altar",
+        "domain": "thing",
+        "kind": "Object",
+        "doc": "a raised surface where offerings are made"
+      },
+      "anvil": {
+        "name": "anvil",
+        "domain": "thing",
+        "kind": "Object",
+        "doc": "a heavy iron block a smith hammers metal against"
       },
       "bait-ball": {
         "name": "bait-ball",
@@ -710,6 +728,12 @@
         "domain": "climate",
         "kind": "Terrain",
         "doc": "a biome class"
+      },
+      "bed": {
+        "name": "bed",
+        "domain": "thing",
+        "kind": "Object",
+        "doc": "a place made for lying down and sleeping"
       },
       "black-dragon-kind": {
         "name": "black-dragon-kind",
@@ -770,6 +794,12 @@
         "domain": "species",
         "kind": "Living",
         "doc": "a carrion crawler"
+      },
+      "cave-mouth": {
+        "name": "cave-mouth",
+        "domain": "thing",
+        "kind": "Object",
+        "doc": "the opening where a cave meets the outside"
       },
       "chart": {
         "name": "chart",
@@ -1095,6 +1125,12 @@
         "kind": "Quality",
         "doc": "the color term for green"
       },
+      "ground": {
+        "name": "ground",
+        "domain": "thing",
+        "kind": "Object",
+        "doc": "the bare earth underfoot"
+      },
       "gully-dwarf-kind": {
         "name": "gully-dwarf-kind",
         "domain": "species",
@@ -1154,6 +1190,12 @@
         "domain": "species",
         "kind": "Living",
         "doc": "a high elf"
+      },
+      "high-seat": {
+        "name": "high-seat",
+        "domain": "thing",
+        "kind": "Object",
+        "doc": "the seat of a hall's presiding figure"
       },
       "hill": {
         "name": "hill",
@@ -1239,6 +1281,12 @@
         "kind": "Terrain",
         "doc": "a biome class"
       },
+      "key": {
+        "name": "key",
+        "domain": "thing",
+        "kind": "Object",
+        "doc": "a small tool shaped to work one particular lock"
+      },
       "kill": {
         "name": "kill",
         "domain": "language",
@@ -1299,11 +1347,29 @@
         "kind": "Quality",
         "doc": "small in size or extent"
       },
+      "lockable": {
+        "name": "lockable",
+        "domain": "language",
+        "kind": "Quality",
+        "doc": "a thing whose opening needs the key that matches it"
+      },
+      "log": {
+        "name": "log",
+        "domain": "thing",
+        "kind": "Object",
+        "doc": "a length of felled, unworked timber"
+      },
       "look": {
         "name": "look",
         "domain": "language",
         "kind": "Act",
         "doc": "to visually attend to something, near or far — `look`, `examine`"
+      },
+      "loom": {
+        "name": "loom",
+        "domain": "thing",
+        "kind": "Object",
+        "doc": "a frame for weaving thread into cloth"
       },
       "lost": {
         "name": "lost",
@@ -1455,6 +1521,12 @@
         "kind": "Substance",
         "doc": "Open sunlit water, far from any shore."
       },
+      "openable": {
+        "name": "openable",
+        "domain": "language",
+        "kind": "Quality",
+        "doc": "a thing that can be opened and closed again"
+      },
       "orange-dwarf": {
         "name": "orange-dwarf",
         "domain": "astronomy",
@@ -1508,6 +1580,18 @@
         "domain": "climate",
         "kind": "Substance",
         "doc": "A dry lake bed of salt and cracked clay."
+      },
+      "pool": {
+        "name": "pool",
+        "domain": "thing",
+        "kind": "Object",
+        "doc": "a small standing body of water"
+      },
+      "portable": {
+        "name": "portable",
+        "domain": "language",
+        "kind": "Quality",
+        "doc": "a thing small enough for a body to carry"
       },
       "pressure-ridge": {
         "name": "pressure-ridge",
@@ -1652,6 +1736,12 @@
         "domain": "climate",
         "kind": "Substance",
         "doc": "Ice swept bare and carved by wind."
+      },
+      "screen": {
+        "name": "screen",
+        "domain": "thing",
+        "kind": "Object",
+        "doc": "a partition set up to divide or shield a space"
       },
       "sea": {
         "name": "sea",
@@ -1803,6 +1893,12 @@
         "kind": "Substance",
         "doc": "rock"
       },
+      "strongbox": {
+        "name": "strongbox",
+        "domain": "thing",
+        "kind": "Object",
+        "doc": "a locked chest built to keep valuables safe"
+      },
       "sun": {
         "name": "sun",
         "domain": "astronomy",
@@ -1862,6 +1958,12 @@
         "domain": "climate",
         "kind": "Substance",
         "doc": "Dry scrub of thorned shrubs."
+      },
+      "threshold": {
+        "name": "threshold",
+        "domain": "thing",
+        "kind": "Object",
+        "doc": "the sill marking where one place ends and another begins"
       },
       "tide": {
         "name": "tide",
@@ -1970,6 +2072,12 @@
         "domain": "climate",
         "kind": "Substance",
         "doc": "Shimmering hot water rising from a vent."
+      },
+      "vessel": {
+        "name": "vessel",
+        "domain": "thing",
+        "kind": "Object",
+        "doc": "a container shaped to hold liquid or goods"
       },
       "vine": {
         "name": "vine",
