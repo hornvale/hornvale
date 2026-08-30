@@ -2,7 +2,7 @@
 //!
 //! # DIRECTION EACH CHECK ENFORCES
 //!
-//! All three directions this file names are now LIVE:
+//! All four directions this file names are now LIVE:
 //!
 //! - `every rostered set has a well-formed row` — blind to a set that exists
 //!   in the Makefile and is missing from the roster.
@@ -15,12 +15,21 @@
 //!   see what `HV_SLUICE_PHASES` is overridden with at runtime (that is the
 //!   test harness's business, and the chamber refuses an unrostered phase
 //!   itself at that point, with `no such set '<phase>'`).
+//! - `the_phase_lists_and_the_roster_rungs_agree_both_ways` — the roster's
+//!   `rung` column and the chamber's two phase lists agree as SETS, in both
+//!   directions. `every_phase_the_chamber_runs_is_rostered` only asserts each
+//!   listed token has *a* roster row, which is satisfied by a set sitting in
+//!   the wrong list; this is the check that would have caught `heavy` moving
+//!   between the lists (decisions 0148 and 0426) with no matching rung edit.
 //!
 //! The asymmetry between the first two checks and the third is the reason the
 //! third direction matters at all, not a detail to skim: the first two both
 //! read the *roster* and are blind to a set the chamber invents out of
 //! nowhere; the third reads the *chamber* and is blind to a rostered set
 //! nobody ever runs. Neither implies the other, so both sides are checked.
+//! The fourth is narrower than either: it does not care which side invents or
+//! drops a set, only whether the two sides' claims about rung membership
+//! match once a set is present in both.
 //!
 //! THE THIRD CHECK USED TO READ THE MAKEFILE, for literal
 //! `@bash scripts/lane-dispatch.sh <set>` lines in the `gate-*` targets.
@@ -139,32 +148,31 @@ fn claude_md_names_the_roster_and_does_not_restate_it() {
     }
 }
 
-/// Every phase the chamber runs is drawn from the roster — the direction the
-/// other two checks in this file are structurally blind to.
+/// Scrapes `scripts/sluice-run.sh`'s two literal phase-list assignments.
 ///
-/// `every_rostered_set_is_well_formed` reads the roster and cannot see a set
-/// the chamber invents; this reads the chamber and cannot see a rostered set
-/// nobody runs. Neither implies the other, which is why both exist.
-#[test]
-fn every_phase_the_chamber_runs_is_rostered() {
+/// The chamber declares its two phase lists as plain shell assignments to
+/// string literals, deliberately (see the script's own comment: order is
+/// load-bearing and roster order is not phase order). Both are read here;
+/// finding only one is itself a failure, because a rename that hid one list
+/// from this scraper would leave that list unchecked while a caller still
+/// reported green on the other. Shared by both tests below so there is one
+/// implementation of "what the chamber's phase lists are", not two readings
+/// that could silently disagree.
+fn chamber_phase_lists() -> Vec<(String, Vec<String>)> {
     let chamber = fs::read_to_string(repo_root().join("scripts/sluice-run.sh"))
         .expect("scripts/sluice-run.sh is readable");
-    let rostered: Vec<String> = roster().into_iter().map(|r| r.0).collect();
 
-    // The chamber declares its two phase lists as plain shell assignments to
-    // string literals, deliberately (see the script's own comment: order is
-    // load-bearing and roster order is not phase order). Both are read here;
-    // finding only one is itself a failure, because a rename that hid one
-    // list from this scraper would leave that list unchecked while the test
-    // still reported green on the other.
-    let mut lists: Vec<(&str, Vec<String>)> = Vec::new();
+    let mut lists: Vec<(String, Vec<String>)> = Vec::new();
     for key in ["merge_phases", "stage_phases"] {
         for line in chamber.lines() {
             let t = line.trim();
             if let Some(rest) = t.strip_prefix(&format!("{key}=\""))
                 && let Some(inner) = rest.strip_suffix('"')
             {
-                lists.push((key, inner.split_whitespace().map(str::to_string).collect()));
+                lists.push((
+                    key.to_string(),
+                    inner.split_whitespace().map(str::to_string).collect(),
+                ));
                 break;
             }
         }
@@ -180,6 +188,19 @@ fn every_phase_the_chamber_runs_is_rostered() {
          lines; The Sluice deleted that path and re-pointed it here.)",
         lists.len()
     );
+    lists
+}
+
+/// Every phase the chamber runs is drawn from the roster — the direction the
+/// other two checks in this file are structurally blind to.
+///
+/// `every_rostered_set_is_well_formed` reads the roster and cannot see a set
+/// the chamber invents; this reads the chamber and cannot see a rostered set
+/// nobody runs. Neither implies the other, which is why both exist.
+#[test]
+fn every_phase_the_chamber_runs_is_rostered() {
+    let rostered: Vec<String> = roster().into_iter().map(|r| r.0).collect();
+    let lists = chamber_phase_lists();
     for (key, phases) in &lists {
         assert!(
             !phases.is_empty(),
@@ -196,5 +217,70 @@ fn every_phase_the_chamber_runs_is_rostered() {
                  it, mid-merge, holding the box."
             );
         }
+    }
+}
+
+/// The chamber's two phase lists and the roster's `rung` column agree, as
+/// SETS, in both directions.
+///
+/// # Direction this check enforces
+///
+/// Both. Every `stage`-rung set appears in `stage_phases`; every `stage`- or
+/// `merge`-rung set appears in `merge_phases`; and neither list carries a set
+/// the rungs do not imply. The sibling check beside this one asserts only that
+/// each listed token HAS a roster row, which is satisfied by a set sitting in
+/// the WRONG list — and that is exactly how decisions 0148 and 0426 moved
+/// `heavy` between the lists, in both directions, with nothing objecting.
+///
+/// # What it deliberately does NOT assert
+///
+/// **Order.** The roster is ordered by rung and the chamber by sequence, and
+/// the two are transposed (`gate artifacts outboard` against `artifacts
+/// outboard gate`). Phase order is load-bearing — `artifacts` regenerates and
+/// commits, so `gate` must not precede it — and the roster does not encode it.
+/// The script owns sequence; the roster owns membership; this asserts only the
+/// membership both files actually claim.
+///
+/// `integration` is excluded: it is the `merge`-rung row describing
+/// `sluice-run.sh` itself, so it can never be one of its own phases.
+#[test]
+fn the_phase_lists_and_the_roster_rungs_agree_both_ways() {
+    use std::collections::BTreeSet;
+
+    let roster = roster();
+    let implied = |rungs: &[&str]| -> BTreeSet<String> {
+        roster
+            .iter()
+            .filter(|r| r.0 != "integration")
+            .filter(|r| rungs.contains(&r.1.as_str()))
+            .map(|r| r.0.clone())
+            .collect()
+    };
+
+    let expected: Vec<(&str, BTreeSet<String>)> = vec![
+        ("stage_phases", implied(&["stage"])),
+        ("merge_phases", implied(&["stage", "merge"])),
+    ];
+
+    for (key, want) in expected {
+        let got: BTreeSet<String> = chamber_phase_lists()
+            .into_iter()
+            .find(|(k, _)| k == key)
+            .unwrap_or_else(|| panic!("{key} not found in scripts/sluice-run.sh"))
+            .1
+            .into_iter()
+            .collect();
+
+        let missing: Vec<&String> = want.difference(&got).collect();
+        let extra: Vec<&String> = got.difference(&want).collect();
+        assert!(
+            missing.is_empty() && extra.is_empty(),
+            "{key} disagrees with scripts/lane-sets.tsv's `rung` column.\n  \
+             in the roster's rungs but not in the list: {missing:?}\n  \
+             in the list but not implied by any rung: {extra:?}\n\
+             One of the two files is wrong. Decide which — moving a set between \
+             rungs is a decision (0148 and 0426 each did it), and editing the \
+             list without the rung is how that decision goes unrecorded."
+        );
     }
 }
