@@ -400,7 +400,14 @@ confirmation-gated in the Makefile.
   only the generating code — produces a clean merge no driver can see. The hook
   has its own blind spot to match: a merge carrying code changes alone stales an
   artifact just as thoroughly and says nothing. After any absorption,
-  `make rebaseline` and read the diff.
+  `make rebaseline` and read the diff. **Tested by `scripts/test-post-merge.sh`
+  since The Attestation** — added the same way `test-pre-push.sh` was, after
+  Task 3 of that campaign added a second column to
+  `docs/generated-paths.txt` and this hook's own pathspec array (a quoted
+  `"${generated[@]}"` expansion, unlike every other reader's unquoted
+  `$(...)`) went silent on every merge for all ten declared paths, and
+  nothing exercised the hook to catch it. Confirmed to fail red against the
+  pre-fix hook before being wired into the `outboard` set.
 - **`pre-push` is the third hook in this directory**, added after an
   incident (2026-08-16): a subagent force-pushed campaign WIP over
   `origin/main` while probing bash quote-splitting semantics, and its
