@@ -205,6 +205,43 @@ fn run_at(witness: &Witness, script: &[String]) -> Value {
     serde_json::from_str(&text).expect("the snapshot is valid JSON")
 }
 
+/// The opening state at a witness — the baseline `changes`/`unchanged`
+/// compare against. `look` is the cheapest script that leaves the world where
+/// it found it.
+fn opening_at(witness: &Witness) -> Value {
+    run_at(witness, &["look".to_string()])
+}
+
+/// Run every beat of `scene` in order and return the id of the FIRST that
+/// fails, or `Ok(())` if all hold.
+///
+/// Both `SnapshotChanges` and `SnapshotUnchanged` require the pointer to
+/// RESOLVE on both sides. A pointer that resolves nowhere would otherwise
+/// satisfy `unchanged` vacuously (`None == None`), which is the shape of a
+/// guard that can never fail.
+fn evaluate(scene: &Scene) -> Result<(), String> {
+    let opening = opening_at(&scene.witness);
+    for beat in &scene.beats {
+        let after = run_at(&scene.witness, &beat.script);
+        let held = match &beat.assertion {
+            Assertion::SnapshotEquals { pointer, value } => after.pointer(pointer) == Some(value),
+            Assertion::SnapshotPresent { pointer } => after.pointer(pointer).is_some(),
+            Assertion::SnapshotChanges { pointer } => {
+                let (a, b) = (opening.pointer(pointer), after.pointer(pointer));
+                a.is_some() && b.is_some() && a != b
+            }
+            Assertion::SnapshotUnchanged { pointer } => {
+                let (a, b) = (opening.pointer(pointer), after.pointer(pointer));
+                a.is_some() && a == b
+            }
+        };
+        if !held {
+            return Err(beat.id.clone());
+        }
+    }
+    Ok(())
+}
+
 /// The founding corpus's frozen scene count. Changing this number is the
 /// deliberate act; changing the corpus without it is the drift (decision
 /// 0016).
@@ -257,4 +294,52 @@ fn the_runner_returns_a_v2_snapshot_from_a_real_possession() {
         "the runner must return the session snapshot the resolver asserts \
          against; anything else means --snapshot changed shape"
     );
+}
+
+/// claim: structural(corpus scenes) — false-positive seed-loop flag
+/// (decision 0093): this iterates the committed corpus's scenes, not seeds.
+#[test]
+fn every_founding_scene_passes_every_beat() {
+    for scene in load("the-founding.scene.json") {
+        assert_eq!(
+            evaluate(&scene),
+            Ok(()),
+            "founding scene `{}` ({}) failed. These four are the instrument's \
+             POSITIVE CONTROL: each was run and verified before the resolver \
+             existed. A red here means the resolver is broken, or the world \
+             changed under a scene that used to play — not that the scene was \
+             ever aspirational.",
+            scene.id,
+            scene.title
+        );
+    }
+}
+
+/// A green from an evaluator that has never returned `Err` is a green nothing
+/// earned. This pins the failing direction, using a scene built here rather
+/// than one added to the corpus — the corpus states what the world should do,
+/// not what the resolver should do.
+#[test]
+fn a_beat_whose_assertion_does_not_hold_names_that_beat() {
+    let scene = Scene {
+        id: "control-must-fail".to_string(),
+        title: "A pointer that cannot resolve fails, and says which beat".to_string(),
+        control: 100,
+        beta: false,
+        declared: None,
+        witness: Witness {
+            seed: 42,
+            target: "most-populous-settlement".to_string(),
+            day: None,
+        },
+        beats: vec![Beat {
+            id: "b-impossible".to_string(),
+            description: "a pointer no snapshot carries".to_string(),
+            script: vec!["look".to_string()],
+            assertion: Assertion::SnapshotPresent {
+                pointer: "/no/such/pointer".to_string(),
+            },
+        }],
+    };
+    assert_eq!(evaluate(&scene), Err("b-impossible".to_string()));
 }
