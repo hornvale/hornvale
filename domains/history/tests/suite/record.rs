@@ -26,6 +26,7 @@ fn tenure_and_liveness_read_off_the_span() {
             tongue: None,
             cause: None,
             notability: Notability::Common,
+            delve_depth_m: 0.0,
         },
         id: eid(10),
         ended_by: Ended::Nature,
@@ -69,6 +70,7 @@ fn the_core_carries_the_shared_facts_and_the_record_carries_identity() {
         tongue: None,
         cause: Some(hornvale_history::record::CauseOfEnd::Fled),
         notability: hornvale_history::record::Notability::Common,
+        delve_depth_m: 0.0,
     };
     assert_eq!(
         core.tenure(500.0),
@@ -108,6 +110,7 @@ fn core(site: u32, founded: f64, peak: u32) -> hornvale_history::record::Occupat
         tongue: None,
         cause: Some(hornvale_history::record::CauseOfEnd::Famine),
         notability: hornvale_history::record::Notability::Common,
+        delve_depth_m: 0.0,
     }
 }
 

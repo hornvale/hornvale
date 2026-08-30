@@ -9873,6 +9873,7 @@ mod tests {
                     Ended::Nature => None,
                 },
                 notability: Notability::Common,
+                delve_depth_m: 0.0,
             },
             id: eid(id),
             founded_from: Founding::Genesis(Vertex(0)),

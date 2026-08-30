@@ -259,6 +259,11 @@ fn record_of(world: &World, entity: EntityId) -> Option<OccupationRecord> {
             .ledger
             .text_of(entity, hornvale_history::OCC_NOTABILITY)?,
     )?;
+    // ABSENT MEANS NEVER DUG, not "missing" — the emitter commits
+    // `occ-delve-depth` only for an occupation that actually drove a working
+    // (The Winze, spec §4.2), so this is a defaulting read and never a
+    // `?`-return the way the load-bearing facts above are.
+    let delve_depth_m = number(world, entity, hornvale_history::OCC_DELVE_DEPTH).unwrap_or(0.0);
     let ended_by = match world
         .ledger
         .value_of(entity, hornvale_history::OCC_ENDED_BY)
@@ -288,6 +293,7 @@ fn record_of(world: &World, entity: EntityId) -> Option<OccupationRecord> {
             tongue: None,
             cause,
             notability,
+            delve_depth_m,
         },
         id: entity,
         founded_from,
@@ -1134,6 +1140,7 @@ mod tests {
                 tongue: None,
                 cause: None,
                 notability: Notability::Common,
+                delve_depth_m: 0.0,
             },
             community: bid(community),
             lineage: bid(community),
@@ -1247,6 +1254,7 @@ mod tests {
             tongue: None,
             cause: None,
             notability: Notability::Common,
+            delve_depth_m: 0.0,
         }
     }
 

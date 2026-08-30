@@ -328,6 +328,42 @@ const DAUGHTER_PROB: f64 = 0.06;
 /// percentage points, because almost nothing lives between them.
 /// type-audit: bare-ok(ratio)
 pub const ORE_CUT: f64 = 0.24;
+/// Metres of working **one person at the Neolithic horizon** drives in one
+/// epoch (The Winze, spec §4.2). A working's advance each epoch is
+/// `population × tech_weight(tech) × this`, and the depth on the record is
+/// that sum over the whole tenure.
+///
+/// **Per epoch, not per year**, following this file's own idiom: `GROWTH_RATE`,
+/// `DAUGHTER_PROB` and `STORE_DECAY` are all per-epoch rates and the bake's
+/// step is a world parameter (`BakeConfig::epoch_years`) the epoch loop owns.
+///
+/// **The tech term is [`tech_weight`], not a second table.** That function is
+/// already the engine's word for "what a people can do with the hands and
+/// tools it has" — it is the multiplier on raw population in
+/// [`Bake::strength`] and [`roller_strength`] — and digging is the same
+/// question asked of rock instead of of a neighbour. Minting a
+/// delving-specific horizon table would be a second opinion about the same
+/// thing.
+///
+/// **It is a settlement-wide rate, which is why it looks small.** A mining
+/// camp's population is not a face crew: most of it feeds, hauls, timbers and
+/// smelts. Half a metre per head per epoch at the Neolithic horizon, one and a
+/// half at Classical.
+///
+/// **CHOSEN FOR DYNAMIC RANGE, AND THAT IS AN INSTRUMENT DECISION RATHER THAN
+/// A RESULT ONE.** Nothing in this campaign selects on depth (a Global
+/// Constraint), so this constant cannot bias the survivorship comparison spec
+/// §5.2 preregisters — but it can *erase* it, by putting every delving at the
+/// same depth. Two failure modes bracket it: a rate so slow every working is
+/// centimetres deep, and a rate so fast every working saturates and the
+/// distribution is a spike. It was fixed BEFORE Task 4's hazard exists,
+/// against the tenure and population distributions seed 42 already had —
+/// median tenure 50 years (2 epochs), p90 400 years, median peak population
+/// 14, maximum 84. Measured on the panel after it landed: 16 workings spread
+/// over 8.6 m to 3,632.5 m with no pile-up at either end
+/// (`windows/worldgen/tests/suite/delve_depth.rs` prints the roster).
+/// type-audit: bare-ok(diagnostic-value)
+const DELVE_M_PER_PERSON_EPOCH: f64 = 0.5;
 /// How much a unit of stored wealth is worth as raiding strength, relative to
 /// a head of population. Walls, retainers and granaries are strength the local
 /// land does not have to feed.
@@ -2401,6 +2437,7 @@ impl<'a> Bake<'a> {
                 tongue: None,
                 cause: None,
                 notability: Notability::Common,
+                delve_depth_m: 0.0,
             },
             community: id,
             lineage,
@@ -3098,6 +3135,50 @@ impl<'a> Bake<'a> {
         }
     }
 
+    /// Advance a working by one epoch's digging (The Winze, spec §4.2), and do
+    /// nothing at all for a community that is not one.
+    ///
+    /// **This is the half of "how deep did they get" that the ledger has to
+    /// carry.** The other half — the *seat*, which rung of its column the
+    /// people lives at — is a pure function of `(people, vertex)` through
+    /// [`Bake::seating`] and is deliberately not committed anywhere; see
+    /// [`Community::rung`], whose doc makes that argument, and
+    /// `hornvale_history::record::Occupation::delve_depth_m`, which answers
+    /// it. What accrues here cannot be re-derived from the seed and the
+    /// ledger: the increment reads the community's population and tech horizon
+    /// **as they stand this epoch**, and the ledger keeps only the maximum
+    /// population ever reached and the final horizon, so the trajectory that
+    /// produced the sum is gone once the occupation closes.
+    ///
+    /// **It draws nothing**, and that is deliberate at this task: Task 4's
+    /// breach hazard is the draw, and keeping the depth deterministic means
+    /// this commit adds facts to every world without re-ordering any world's
+    /// history.
+    ///
+    /// **No ceiling.** A working is stopped by the world — famine, a raid, a
+    /// climate eviction, and after Task 4 a breach — never by a depth rule. A
+    /// terminus here would be a threshold in disguise (the campaign's Global
+    /// Constraint) and would flatten exactly the distribution spec §5.2 asks
+    /// about, by piling every long-lived delving onto the same number.
+    ///
+    /// Called from [`Bake::grow`], once per living community per epoch, and
+    /// once more at the moment a working is founded — a shaft is why the camp
+    /// exists, so its first epoch is dug like every later one. `grow` does not
+    /// see a community in the epoch it was opened (the epoch loop steps a
+    /// snapshot taken before any founding), so the two call sites cannot
+    /// double-count.
+    fn deepen(&mut self, idx: usize) {
+        let (rec, population, tech) = {
+            let c = &self.communities[idx];
+            (c.record, c.population, c.tech)
+        };
+        if self.records[rec].core.function != Function::Mine {
+            return;
+        }
+        self.records[rec].core.delve_depth_m +=
+            population * tech_weight(tech) * DELVE_M_PER_PERSON_EPOCH;
+    }
+
     /// Resolve one community for one epoch (migrate / collapse / grow / raid).
     /// Newly opened communities are processed the following epoch.
     ///
@@ -3661,6 +3742,12 @@ impl<'a> Bake<'a> {
         // T4 removes. Decay above still runs first, keeping its per-epoch
         // meaning unchanged.
         self.touch(idx, year);
+        // One epoch of digging, for a working (The Winze, spec §4.2). Placed
+        // beside `touch` and after the growth term because both turn this
+        // epoch's live state into something the record keeps, and the depth
+        // must be paid at the population the community actually reached this
+        // epoch. Inert for every other function; see [`Bake::deepen`].
+        self.deepen(idx);
         self.tally.grew += 1;
 
         if pressure < DAUGHTER_MAX_PRESSURE && self.stream.next_f64() < DAUGHTER_PROB {
@@ -3759,6 +3846,22 @@ impl<'a> Bake<'a> {
                     self.records[record].core.function = function;
                 }
                 self.touch(new_idx, year);
+                // THE FOUNDING EPOCH IS DUG TOO (The Winze, spec §4.2). A
+                // working is not a settlement that later took up mining — the
+                // shaft is why the camp is here at all — so the epoch it is
+                // sunk in counts like every later one. Must come after
+                // `touch`, which is what fixes the new community's tech
+                // horizon, and after the `function` assignment above, which is
+                // the only thing that makes [`Bake::deepen`] non-inert.
+                //
+                // It also matters that this exists rather than leaving the
+                // first epoch to `grow`: a working founded in the bake's LAST
+                // epoch is never stepped again, and seed 42's only mine is
+                // exactly that case. Without this line it would carry a depth
+                // of zero, emit no fact, and leave the world unmoved — which
+                // the plan's own Step 6 reads as evidence the field never
+                // reached the ledger.
+                self.deepen(new_idx);
                 self.tally.founded += 1;
             }
         }

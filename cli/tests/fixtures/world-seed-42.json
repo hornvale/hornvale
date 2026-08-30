@@ -337,6 +337,11 @@
         "functional": true,
         "doc": "why the occupation ended, absent while alive"
       },
+      "occ-delve-depth": {
+        "name": "occ-delve-depth",
+        "functional": true,
+        "doc": "how far below its seat the occupation drove a working, in metres"
+      },
       "occ-ended": {
         "name": "occ-ended",
         "functional": true,
@@ -159237,6 +159242,16 @@
         "predicate": "occ-notability",
         "object": {
           "Text": "common"
+        },
+        "place": 10760661430244476109,
+        "day": 72136875000,
+        "provenance": "history/bake/v3"
+      },
+      {
+        "subject": 10760661430244476109,
+        "predicate": "occ-delve-depth",
+        "object": {
+          "Number": 12.0
         },
         "place": 10760661430244476109,
         "day": 72136875000,

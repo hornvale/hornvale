@@ -47,6 +47,8 @@ mod deep_realm_rehome;
 mod deep_realm_substrate;
 #[path = "suite/defensibility_field.rs"]
 mod defensibility_field;
+#[path = "suite/delve_depth.rs"]
+mod delve_depth;
 #[path = "suite/delver_bind_audit.rs"]
 mod delver_bind_audit;
 #[path = "suite/delver_depth_probe.rs"]
