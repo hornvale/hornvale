@@ -4058,3 +4058,4 @@ measured here.
 | 2026-08-30T12:37:40Z | rebaseline | 99.884 | 273.113 | 14.682 | 2.88 | 0 | be2cd99e2 | campaign/the-attestation | MacBookPro | 10 |
 | 2026-08-30T12:38:40Z | gate-commit | 21.474 | 50.917 | 13.248 | 2.99 | 0 | be2cd99e2 | campaign/the-attestation | MacBookPro | 10 |
 | 2026-08-30T12:59:01Z | gate-commit | 21.319 | 50.689 | 13.276 | 3.00 | 0 | e1881c18f | campaign/the-attestation | MacBookPro | 10 |
+| 2026-08-30T13:01:48Z | gate-commit | 21.176 | 50.463 | 13.137 | 3.00 | 0 | e1881c18f | campaign/the-attestation | MacBookPro | 10 |

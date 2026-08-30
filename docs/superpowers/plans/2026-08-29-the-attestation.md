@@ -529,13 +529,41 @@ mechanically narrows what the drift check covers.
 - Produces: `pub fn attest_report(timings: &str, roster: &str, declared: &str) -> Report`
   — pure over its three inputs, so the tests need no filesystem.
 
+**TASK 5 CHANGED THE AUTHOR VOCABULARY UNDER THIS TASK — read this before
+Step 1.** When this task was written, every author was a roster set name and
+the chain `path -> author -> roster set -> sluice:<set>` joined with no
+translation layer. After Nathan's declare-the-absence ruling, the counts are:
+
+```
+  none(<reason>)   56 rows     NOT a roster set; NO sluice: label exists
+  artifacts        13 rows
+  census            2 rows
+  heavy             1 row
+```
+
+So the no-translation-layer property holds for **16 rows of 72**. A reader
+built to the original assumption would look up `none(…)` in the ledger, find
+nothing, and report **56 paths as "author never ran"** — a confident,
+plausible, entirely wrong report, and precisely the failure this campaign
+exists to remove. It would also be the campaign's instrument committing the
+campaign's defect, which has now nearly happened four times.
+
+**Required handling:** a `none(<reason>)` author means **no author is
+expected**. The reader must never look for a ledger row for it, and must never
+report it as absent. Report the `none` population as its **own category** —
+"56 declared paths have no author, by declaration" is a true and useful line,
+and a growing count there is a real signal a reader would want.
+
 - [ ] **Step 1: Write the failing tests.** Cover, at minimum:
 
   - a job whose rows are missing an owed phase is reported (**owed but absent**);
   - a job carrying a row for a phase no rung implies is reported (**present but
     unowed**) — the mirror direction, which the spec's first draft omitted;
   - an author with no row in the window is reported, with the date of its last;
-  - a well-formed tree reports nothing.
+  - a well-formed tree reports nothing;
+  - **a `none(<reason>)` row is never reported as an absent author**, and is
+    counted in its own category instead. Without this test the reader's first
+    real run produces 56 false positives.
 
   Each test builds its inputs as string literals. **The both-directions pair is
   the point of this task**: a reader that only reported absences would be a
