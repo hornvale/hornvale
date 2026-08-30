@@ -4064,3 +4064,4 @@ measured here.
 | 2026-08-30T02:52:49Z | rebaseline | 163.049 | 277.218 | 11.704 | 1.77 | 0 | e4e50a3d9 | campaign/the-quoin | MacBookPro | 10 |
 | 2026-08-30T02:54:40Z | gate-commit | 42.992 | 72.414 | 26.964 | 2.31 | 0 | e4e50a3d9 | campaign/the-quoin | MacBookPro | 10 |
 | 2026-08-30T12:09:51Z | gate-commit | 20.854 | 50.201 | 12.942 | 3.03 | 0 | 4a4b0ddcc | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-30T12:35:47Z | sluice:artifacts | 137.746 | 1296.813 | 61.550 | 9.86 | 0 | d104d6819 |  | lefford | 40 |
