@@ -289,6 +289,16 @@ fn verdict_of(scene: &Scene) -> Verdict {
     }
 }
 
+/// Every scene the repertory commits, across all corpora. The floor test
+/// iterates THIS rather than one corpus: a new corpus file whose scenes the
+/// ratchet never visits would leave a hole exactly the shape of the newest
+/// work.
+fn every_committed_scene() -> Vec<Scene> {
+    let mut all = load("the-founding.scene.json");
+    all.extend(load("the-orange.scene.json"));
+    all
+}
+
 /// Each scene's floor. A scene may not fall below its floor without a
 /// deliberate edit here in the same commit.
 const FLOORS: &[(&str, &str)] = &[
@@ -296,6 +306,7 @@ const FLOORS: &[(&str, &str)] = &[
     ("waiting-moves-the-day", "AUTHORED"),
     ("waiting-does-not-move-the-body", "AUTHORED"),
     ("co-location-is-observable", "AUTHORED"),
+    ("the-orange", "DECLARED"),
 ];
 
 /// The founding corpus's frozen scene count. Changing this number is the
@@ -321,7 +332,7 @@ fn the_founding_corpus_is_frozen_at_its_authored_size() {
 /// from a run at all.
 #[test]
 fn every_scene_carries_a_witness_and_at_least_one_beat() {
-    for s in load("the-founding.scene.json") {
+    for s in every_committed_scene() {
         assert!(
             !s.beats.is_empty(),
             "scene `{}` has no beats; a scene with nothing to assert cannot \
@@ -404,7 +415,7 @@ fn a_beat_whose_assertion_does_not_hold_names_that_beat() {
 /// (decision 0093): this iterates the committed corpus's scenes, not seeds.
 #[test]
 fn no_scene_has_fallen_below_its_recorded_floor() {
-    for scene in load("the-founding.scene.json") {
+    for scene in every_committed_scene() {
         let floor = FLOORS
             .iter()
             .find(|(id, _)| *id == scene.id)
@@ -429,4 +440,37 @@ fn no_scene_has_fallen_below_its_recorded_floor() {
             floor
         );
     }
+}
+
+/// The orange corpus's frozen scene count.
+const ORANGE_SCENES: usize = 1;
+
+#[test]
+fn the_orange_is_frozen_at_its_authored_size() {
+    assert_eq!(load("the-orange.scene.json").len(), ORANGE_SCENES);
+}
+
+/// The scene the project owner chose, and the reason this instrument exists.
+/// It is expected to stand DECLARED for several campaigns; its beats are the
+/// arc's task list (spec section 12).
+#[test]
+fn the_orange_stands_declared_at_its_first_missing_beat() {
+    let scene = load("the-orange.scene.json")
+        .into_iter()
+        .find(|s| s.id == "the-orange")
+        .expect("the-orange is committed");
+    assert!(
+        scene.declared.is_some(),
+        "the-orange must carry a reason; a reasonless declaration is a parse \
+         error in every sibling instrument and is one here too"
+    );
+    let got = verdict_of(&scene);
+    assert_eq!(
+        got,
+        Verdict::Declared,
+        "the-orange is {}. If it is now AUTHORED, that is the campaign \
+         landing: delete the `declared` field, raise its floor, and say so in \
+         the chronicle.",
+        got.name()
+    );
 }
