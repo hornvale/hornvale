@@ -362,7 +362,7 @@ lane_sets_file="${HV_SLUICE_LANE_SETS:-$repo_root/scripts/lane-sets.tsv}"
 # fixtures by exact equality. The census is refreshed once per campaign, at the
 # pre-merge close (CLAUDE.md's standing rule). So a campaign that moves any
 # census metric would red that test on EVERY stage gate from its first moved
-# value until close — ~475 s of the one serial box each time, for a reason that
+# value until close — ~465.8 s of the one serial box each time, for a reason that
 # is expected, benign and not yet fixable. A gate that reds predictably for a
 # known-benign reason trains people to ignore it, which is precisely the
 # disease this campaign diagnosed in the heavy tier. The merge does not have
@@ -378,9 +378,11 @@ lane_sets_file="${HV_SLUICE_LANE_SETS:-$repo_root/scripts/lane-sets.tsv}"
 # the NEXT campaign to inherit and mis-attribute.
 #
 # WHAT IT COSTS, STATED PLAINLY. A four-phase merge is ~1129.5 s; five is
-# ~1604.5 s (+42%) on the one strictly serial box, paid by every campaign in the
-# queue behind it — about +45 h/month at the landing tempo measured over
-# 2026-08-17..28 (128 non-prose landings in 11.327 days). A prose-only candidate pays none of it: see the
+# ~1595.3 s (+41%) on the one strictly serial box, paid by every campaign in the
+# queue behind it — about +44 h/month at the landing tempo measured over
+# 2026-08-17..28 (128 non-prose landings in 11.327 days). Every one of those
+# figures is derived ONCE, next to its inputs, in decision 0426; this block
+# quotes them and derives nothing. A prose-only candidate pays none of it: see the
 # sluice-phases.sh block below, which already drops `heavy`. Full reasoning,
 # the rejected alternatives (stage-gate-only, conditional on a world-code
 # predicate, scheduled) and the residuals are in

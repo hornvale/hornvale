@@ -163,6 +163,25 @@ pub enum Source {
     /// hint or placeholder, or the label becomes exactly the false claim
     /// `Chrome` is reserved to avoid.
     Look,
+    /// The startup frame's progress substrate: the phase roster, its per-phase
+    /// bar, and the committed-fact count (`bin`'s `overture::progress`).
+    ///
+    /// **Deliberately not [`Source::Chrome`]**, which is reserved for
+    /// genuinely inert decoration and must never become a dumping ground for
+    /// content whose real channel was merely inconvenient to name — the same
+    /// rule that keeps [`Source::Look`] out of it. The substrate is not inert:
+    /// the fact count is read off the partially built world's ledger, and the
+    /// bar's length is read off the previous run's measured duration for that
+    /// phase. The frame's rules, margins and header text ARE `Chrome`, and are
+    /// drawn as such.
+    ///
+    /// Like [`Source::Look`], [`Source::Typed`] and [`Source::Echo`], this is
+    /// **not** a snapshot channel and its provenance is not verifiable by
+    /// construction: startup happens before any `Snapshot` exists, so there is
+    /// no field for this crate to check the label against. Honesty is a caller
+    /// discipline — `bin` must only attribute genuinely world- or
+    /// measurement-derived glyphs here.
+    Overture,
     /// The player's own unsent keystrokes: the command line's buffer text,
     /// drawn by `entry.rs` after the `>` prompt. **Deliberately not
     /// [`Source::Chrome`]**, even though both live on the same command row

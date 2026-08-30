@@ -424,6 +424,7 @@
 - [The Governor](./chronicle/the-governor.md)
 - [The Rail](./chronicle/the-rail.md)
 - [The Gallery](./chronicle/the-gallery.md)
+- [The Overture](./chronicle/the-overture.md)
 
 # Appendix: The Frontier
 
