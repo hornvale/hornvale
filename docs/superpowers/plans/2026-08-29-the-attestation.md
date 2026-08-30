@@ -145,7 +145,10 @@ patching.
   scraper, extracted from the existing test so both tests read one
   implementation. Returns `[("merge_phases", [...]), ("stage_phases", [...])]`.
 - Consumes: the existing `fn roster() -> Vec<(String, String, String, String, String)>`,
-  whose five fields are `(name, rung, where, writes, command)`.
+  whose five fields are **`(name, gate, where, authors, command)`** — the
+  header's own words at `scripts/lane-sets.tsv:51`. The file's prose calls the
+  *values* of field 2 "rungs", so both words are live for that column; field 4
+  is `authors` (yes/no), not `writes`.
 
 - [ ] **Step 1: Extract the scraper.** The existing
   `every_phase_the_chamber_runs_is_rostered` scrapes the two lists inline. Move
@@ -299,7 +302,9 @@ Expected: every check in the file passes, including the pre-existing ones.
 /// output independently of this file.
 #[test]
 fn every_declared_path_names_a_known_author() {
-    const KNOWN: &[&str] = &["rebaseline", "rebaseline+census", "heavy"];
+    // The roster's own set names, NOT invented labels: an author name IS a
+    // roster set name IS the suffix of a `sluice:<set>` ledger label.
+    const KNOWN: &[&str] = &["artifacts", "census", "heavy"];
     let bad: Vec<String> = declared()
         .into_iter()
         .filter(|(_, author)| !KNOWN.contains(&author.as_str()))

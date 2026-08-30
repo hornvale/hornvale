@@ -191,10 +191,31 @@ it. **The column names an INVOCATION, not a program**, and that distinction was
 found during spec self-review rather than assumed: `scripts/regenerate-
 artifacts.sh` authors both the ordinary artifacts *and* the census goldens, and
 which it writes depends on whether the `HV_CENSUS` flag is set. So the
-values are of the shape `rebaseline`, `rebaseline+census`, `heavy` — the command
-a person would have to run to make that file current. A column naming the
-*script* would put the census files and the ordinary ones under one value and
-lose exactly the distinction the campaign exists to draw.
+values must distinguish the two.
+
+**They are the ROSTER'S OWN SET NAMES — `artifacts`, `census`, `heavy` — not
+invented labels like `rebaseline` or `rebaseline+census`**, which is what this
+paragraph proposed until Task 2's pre-dispatch check read the roster's header.
+`scripts/lane-sets.tsv`'s columns are `name / gate / where / authors /
+command`, and it **already carries an `authors` column**: `artifacts`,
+`outboard`, `clients`, `heavy`, `census` and `integration` are `yes`; `style`,
+`subfloor`, `gate` and `seam-guard` are `no`. The set whose command is `bash
+scripts/regenerate-artifacts.sh` is named `artifacts`; the census set is
+`census`; the heavy tier is `heavy`. Every author this campaign needs already
+has a roster name, and inventing a second vocabulary for a thing the repository
+has already named is the defect §1.1 is about — committed by the campaign
+fixing it.
+
+**The consequence is that the whole chain joins with no translation layer:**
+
+```
+  docs/generated-paths.txt   path  -> author (a roster set name)
+  scripts/lane-sets.tsv      set   -> gate rung, authors yes/no
+  docs/timings.md            label  = sluice:<set>
+```
+
+§5's reader therefore needs no mapping table: an author name IS a roster set
+name IS the suffix of a ledger label.
 
 (This also makes §1.3's subtraction sound: a plain `make rebaseline`
 leaves `HV_CENSUS` unset, printed `censuses SKIPPED` on the measured run,
