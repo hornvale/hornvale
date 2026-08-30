@@ -29,8 +29,44 @@ fn repo_root() -> PathBuf {
 #[derive(Debug, Clone)]
 struct Witness {
     seed: u64,
-    target: String,
+    target: Target,
     day: Option<String>,
+}
+
+/// Whose body a witness drives. `possess` selects by NAME or by entity id and
+/// the two are different flags, so one string cannot carry both.
+#[derive(Debug, Clone)]
+enum Target {
+    /// A named selector `--target` understands (`flagship`, ...).
+    Named(String),
+    /// A specific derived roster member, by `--creature`.
+    Creature(u64),
+}
+
+/// How a scene names the world it needs (spec section 4).
+///
+/// **A witness is a QUERY, not a PIN, by default.** A pinned entity id is
+/// lineage-derived, so it moves the first time derivation changes — silently,
+/// resolving to some other creature or to a refusal rather than to an error
+/// that names the cause. The corpus already refuses golden strings in
+/// ASSERTIONS on exactly those grounds; a pinned id is a golden string
+/// wearing a witness's clothes.
+///
+/// [`Selector::Pin`] survives for the case it is right for: a scene whose
+/// point IS a particular world, which is a regression check rather than a
+/// capability one.
+#[derive(Debug, Clone)]
+enum Selector {
+    /// This exact world. Grounded: "does this world still do X".
+    Pin {
+        seed: u64,
+        target: Target,
+        day: Option<String>,
+    },
+    /// Any world, from `from_seed`, within `scan` seeds, in which some
+    /// derived body shares its room with another. Existential: "does SOME
+    /// world do X".
+    CoLocated { from_seed: u64, scan: u64 },
 }
 
 /// What a beat asserts. Structural only -- a golden string would redden on
@@ -79,7 +115,7 @@ struct Scene {
     control: u64,
     beta: bool,
     declared: Option<String>,
-    witness: Witness,
+    selector: Selector,
     beats: Vec<Beat>,
 }
 
@@ -122,11 +158,7 @@ fn parse_scene(v: &Value) -> Scene {
             .get("declared")
             .and_then(Value::as_str)
             .map(str::to_string),
-        witness: Witness {
-            seed: w.get("seed").and_then(Value::as_u64).expect("witness seed"),
-            target: as_str(w, "target"),
-            day: w.get("day").and_then(Value::as_str).map(str::to_string),
-        },
+        selector: parse_selector(w),
         beats: v
             .get("beats")
             .and_then(Value::as_array)
@@ -183,10 +215,12 @@ fn run_at(witness: &Witness, script: &[String]) -> Value {
     let mut cmd = std::process::Command::new(env!("CARGO_BIN_EXE_hornvale"));
     cmd.arg("possess")
         .arg("--seed")
-        .arg(witness.seed.to_string())
-        .arg("--target")
-        .arg(&witness.target)
-        .arg("--script")
+        .arg(witness.seed.to_string());
+    match &witness.target {
+        Target::Named(name) => cmd.arg("--target").arg(name),
+        Target::Creature(id) => cmd.arg("--creature").arg(id.to_string()),
+    };
+    cmd.arg("--script")
         .arg(&script_path)
         .arg("--snapshot")
         .arg(&snap_path);
@@ -196,7 +230,7 @@ fn run_at(witness: &Witness, script: &[String]) -> Value {
     let out = cmd.output().expect("the hornvale binary runs");
     assert!(
         out.status.success(),
-        "possess failed at seed {} target {}: {}",
+        "possess failed at seed {} target {:?}: {}",
         witness.seed,
         witness.target,
         String::from_utf8_lossy(&out.stderr)
@@ -219,10 +253,10 @@ fn opening_at(witness: &Witness) -> Value {
 /// RESOLVE on both sides. A pointer that resolves nowhere would otherwise
 /// satisfy `unchanged` vacuously (`None == None`), which is the shape of a
 /// guard that can never fail.
-fn evaluate(scene: &Scene) -> Result<(), String> {
-    let opening = opening_at(&scene.witness);
+fn evaluate(scene: &Scene, witness: &Witness) -> Result<(), String> {
+    let opening = opening_at(witness);
     for beat in &scene.beats {
-        let after = run_at(&scene.witness, &beat.script);
+        let after = run_at(witness, &beat.script);
         let held = match &beat.assertion {
             Assertion::SnapshotEquals { pointer, value } => after.pointer(pointer) == Some(value),
             Assertion::SnapshotPresent { pointer } => after.pointer(pointer).is_some(),
@@ -281,7 +315,12 @@ impl Verdict {
 
 /// Resolve one scene to its verdict by running it.
 fn verdict_of(scene: &Scene) -> Verdict {
-    match (evaluate(scene), scene.declared.is_some()) {
+    let Some(witness) = resolve(&scene.selector) else {
+        // Task 4 gives this its own verdict; until then no committed scene
+        // carries an unresolvable selector and this path is unreachable.
+        panic!("scene `{}` resolved to no world", scene.id)
+    };
+    match (evaluate(scene, &witness), scene.declared.is_some()) {
         (Ok(()), false) => Verdict::Authored,
         (Ok(()), true) => Verdict::StaleDecl,
         (Err(beat), false) => Verdict::Absent(beat),
@@ -308,6 +347,98 @@ const FLOORS: &[(&str, &str)] = &[
     ("co-location-is-observable", "AUTHORED"),
     ("the-orange", "DECLARED"),
 ];
+
+fn parse_target(v: &Value) -> Target {
+    match v.get("creature").and_then(Value::as_u64) {
+        Some(id) => Target::Creature(id),
+        None => Target::Named(as_str(v, "target")),
+    }
+}
+
+fn parse_selector(w: &Value) -> Selector {
+    match as_str(w, "kind").as_str() {
+        "pin" => Selector::Pin {
+            seed: w
+                .get("seed")
+                .and_then(Value::as_u64)
+                .expect("a pin has a seed"),
+            target: parse_target(w),
+            day: w.get("day").and_then(Value::as_str).map(str::to_string),
+        },
+        "co-located" => Selector::CoLocated {
+            from_seed: w.get("from_seed").and_then(Value::as_u64).unwrap_or(0),
+            scan: w.get("scan").and_then(Value::as_u64).unwrap_or(1),
+        },
+        other => panic!(
+            "unknown selector kind `{other}`. The vocabulary is closed on \
+             purpose, exactly as the assertion vocabulary is."
+        ),
+    }
+}
+
+fn seed_world(seed: u64) -> Option<hornvale_kernel::World> {
+    hornvale_worldgen::build_world(
+        hornvale_kernel::Seed(seed),
+        &hornvale_astronomy::SkyPins::default(),
+        hornvale_worldgen::SkyChoice::Generated,
+        &hornvale_terrain::TerrainPins::default(),
+        &hornvale_worldgen::SettlementPins::default(),
+    )
+    .ok()
+}
+
+/// Resolve a selector to the world it names, or `None` if no world in range
+/// satisfies it — which is a FINDING (spec section 6's `UNWITNESSED`), not an
+/// error.
+///
+/// The search runs IN-PROCESS: a world build dominates the cost (~3.5 s) and
+/// a roster is small, so each world is built ONCE and every roster member is
+/// checked against it without paying a process apiece. The beats still run
+/// out-of-process through [`run_at`], which is the real driving surface.
+///
+/// **A roster member `possess` refuses is not a witness.** It is a miss, and
+/// the search continues past it; propagating it as an error would let one
+/// unrelated refusal mask every world after it.
+fn resolve(selector: &Selector) -> Option<Witness> {
+    match selector {
+        Selector::Pin { seed, target, day } => Some(Witness {
+            seed: *seed,
+            target: target.clone(),
+            day: day.clone(),
+        }),
+        Selector::CoLocated { from_seed, scan } => {
+            for seed in *from_seed..from_seed.saturating_add(*scan) {
+                let Some(world) = seed_world(seed) else {
+                    continue;
+                };
+                let opts = hornvale_vessel::PossessOpts::default();
+                let Ok((roster, _)) = hornvale_vessel::Session::start(&world, &opts) else {
+                    continue;
+                };
+                let bodies: Vec<hornvale_kernel::EntityId> =
+                    roster.bodies().iter().map(|b| b.entity).collect();
+                drop(roster);
+                for entity in bodies {
+                    let opts = hornvale_vessel::PossessOpts {
+                        target: hornvale_vessel::PossessTarget::Creature(entity),
+                        ..hornvale_vessel::PossessOpts::default()
+                    };
+                    let Ok((session, _)) = hornvale_vessel::Session::start(&world, &opts) else {
+                        continue;
+                    };
+                    if !session.colocated_entities().is_empty() {
+                        return Some(Witness {
+                            seed,
+                            target: Target::Creature(entity.0.get()),
+                            day: None,
+                        });
+                    }
+                }
+            }
+            None
+        }
+    }
+}
 
 /// The founding corpus's frozen scene count. Changing this number is the
 /// deliberate act; changing the corpus without it is the drift (decision
@@ -340,8 +471,10 @@ fn every_scene_carries_a_witness_and_at_least_one_beat() {
             s.id
         );
         assert!(
-            !s.witness.target.is_empty(),
-            "scene `{}` has an empty witness target",
+            resolve(&s.selector).is_some(),
+            "scene `{}` names a world nothing can resolve; until \
+             `UNWITNESSED` exists that is a corpus error rather than a \
+             finding",
             s.id
         );
     }
@@ -351,7 +484,7 @@ fn every_scene_carries_a_witness_and_at_least_one_beat() {
 fn the_runner_returns_a_v2_snapshot_from_a_real_possession() {
     let w = Witness {
         seed: 42,
-        target: "most-populous-settlement".to_string(),
+        target: Target::Named("most-populous-settlement".to_string()),
         day: None,
     };
     let snap = run_at(&w, &["look".to_string()]);
@@ -368,8 +501,9 @@ fn the_runner_returns_a_v2_snapshot_from_a_real_possession() {
 #[test]
 fn every_founding_scene_passes_every_beat() {
     for scene in load("the-founding.scene.json") {
+        let witness = resolve(&scene.selector).expect("a founding scene pins its world");
         assert_eq!(
-            evaluate(&scene),
+            evaluate(&scene, &witness),
             Ok(()),
             "founding scene `{}` ({}) failed. These four are the instrument's \
              POSITIVE CONTROL: each was run and verified before the resolver \
@@ -394,9 +528,9 @@ fn a_beat_whose_assertion_does_not_hold_names_that_beat() {
         control: 100,
         beta: false,
         declared: None,
-        witness: Witness {
+        selector: Selector::Pin {
             seed: 42,
-            target: "most-populous-settlement".to_string(),
+            target: Target::Named("most-populous-settlement".to_string()),
             day: None,
         },
         beats: vec![Beat {
@@ -408,7 +542,8 @@ fn a_beat_whose_assertion_does_not_hold_names_that_beat() {
             },
         }],
     };
-    assert_eq!(evaluate(&scene), Err("b-impossible".to_string()));
+    let witness = resolve(&scene.selector).expect("a pin always resolves");
+    assert_eq!(evaluate(&scene, &witness), Err("b-impossible".to_string()));
 }
 
 /// claim: structural(corpus scenes) — false-positive seed-loop flag
@@ -472,5 +607,29 @@ fn the_orange_stands_declared_at_its_first_missing_beat() {
          landing: delete the `declared` field, raise its floor, and say so in \
          the chronicle.",
         got.name()
+    );
+}
+
+#[test]
+fn a_co_located_selector_resolves_to_a_world_where_someone_is_present() {
+    let sel = Selector::CoLocated {
+        from_seed: 42,
+        scan: 1,
+    };
+    let w = resolve(&sel).expect(
+        "seed 42 carries a co-located pair (measured: the otyugh and the \
+         carrion-crawler share room 633110509). If this is now None, the \
+         world stopped assembling a shared room at seed 42 -- which is a \
+         finding about the world, not a broken test.",
+    );
+    let snap = run_at(&w, &["look".to_string()]);
+    let present = snap
+        .pointer("/sensed/present")
+        .and_then(Value::as_array)
+        .expect("a resolved witness snapshots");
+    assert!(
+        !present.is_empty(),
+        "a `co-located` selector must resolve to a world where someone is \
+         actually present; it resolved to one where nobody is"
     );
 }
