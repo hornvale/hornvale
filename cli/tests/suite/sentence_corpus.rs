@@ -185,6 +185,32 @@
 //! ("Twenty-eight instances in the flood-watch corpus") and Task 0's
 //! preregistered row.
 //!
+//! **The Quoin, Task 4 (`definiteness`) is the campaign's only new
+//! STRUCTURE, not merely a new construction on an existing one — see
+//! `domains/language/src/clause.rs`'s `Discourse`/`DiscourseClause`/
+//! `realize_common_discourse`.** `r007`'s own note states why: "definiteness
+//! is not visible inside one clause," so the token needed an ordered
+//! sequence of clauses tracking referent identity across a sentence
+//! boundary, which nothing before this task built. **It covers TWO rungs,
+//! `r007` and `r012`, matching Task 0's preregistered row exactly: 15 → 17.**
+//! `r007` is the token's own rung. `r012` is **not** a reuse/control rung
+//! the way `r067`/`r105`/`r190` are (`introduces: null`) — the corpus gives
+//! `r012.introduces == "pronoun-reference"`, a token The Inquest built two
+//! campaigns ago. No earlier campaign could cover `r012`: it presupposes
+//! `r007` (`definiteness`), which nothing had built until this task.
+//! Covering it here is **coverage debt being paid off** — a capability that
+//! already existed becoming reachable once its own presupposition landed —
+//! not a second instance of the `null`-introduces control-rung shape. The
+//! FRONTIER move is the largest single-token one in this campaign, 19 → 34,
+//! matching Task 0's row: `r007` and `r012` both drop off (now covered),
+//! and fifteen rungs across the ladder's determiner/deixis/interrogative
+//! branches join at once, each because `definiteness` (or the closure it
+//! completes through `r007`/`r012`) was the last demand outstanding for it.
+//! This token moves neither corpus's headline count: the-merchant stays 7
+//! of 12 (no merchant entry demands `definiteness`), and the-flood-watch
+//! moves by exactly 50 demand instances (340 → 390 of 1128), matching Task
+//! 0's preregistered row.
+//!
 //! **The merchant corpus moves for the first time in four campaigns with
 //! that last token, and the entry it moves is the one to read carefully.**
 //! `polar-question` covers `m08`, taking the-merchant from 5 of 12 to
@@ -228,9 +254,10 @@ use hornvale_kernel::ConceptRegistry;
 use hornvale_kernel::world::IS_A;
 use hornvale_language::packs::{KILL, KNOW, NIGHT, OLD, SLEEP, THINK, UNDER};
 use hornvale_language::{
-    Adjunct, Argument, Clause, CommonVocabulary, Coordination, Definiteness, Evidential, Number,
-    Person, Polarity, Subject, Tense, realize_common, realize_common_coordination,
-    realize_common_polar_question, realize_common_verbless,
+    Adjunct, Argument, Clause, CommonVocabulary, Coordination, Definiteness, Discourse,
+    DiscourseClause, Evidential, Number, Person, Polarity, Subject, Tense, realize_common,
+    realize_common_coordination, realize_common_discourse, realize_common_polar_question,
+    realize_common_verbless,
 };
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
@@ -340,6 +367,10 @@ const IMPLEMENTED_DEMANDS: &[&str] = &[
     "spatial-adverbial",
     "temporal-adverbial",
     "verbless-clause",
+    // The Quoin, Task 4 — the discourse seam. See
+    // `domains/language/src/clause.rs`'s `Discourse`/`DiscourseClause`/
+    // `realize_common_discourse`.
+    "definiteness",
 ];
 
 /// Whether a corpus entry states what the grammar must **parse** (a player
@@ -1922,6 +1953,20 @@ fn removing_a_rungs_introduces_token_makes_the_cross_check_notice() {
 /// the witness attest to `verbless-clause` while realizing straight through
 /// [`realize_common`], copula and all — the identical failure this enum
 /// exists to prevent, one shape over.
+///
+/// **The Quoin's Task 4 adds a fifth shape, and it is not a variation on any
+/// of the first four.** Every prior addition kept ONE clause (or a list of
+/// them realized as one sentence, `Coordination`) and varied the FORCE or
+/// STRATEGY it realizes under. `r007`'s own text is TWO sentences on
+/// purpose ("definiteness is not visible inside one clause", the rung's own
+/// note): the first mention of a referent is indefinite, the second
+/// definite, and no earlier shape can even state that, because none of
+/// them tracks a referent ACROSS clause boundaries. Handing `r007` a
+/// hand-baked `Clause` whose subject text already says `"the person"`
+/// would let the witness attest to `definiteness` without ever deriving it
+/// — the identical failure this enum exists to prevent, applied to the one
+/// shape where it would be easiest to miss, since a hard-coded article
+/// looks identical to a derived one in the rendered string.
 enum MerchantConstruction {
     /// A single clause, realized through [`realize_common`].
     Clause(Clause),
@@ -1941,6 +1986,14 @@ enum MerchantConstruction {
     /// under a different STRATEGY, never a different proposition — see that
     /// function's own doc.
     Verbless(Clause),
+    /// An ordered sequence of clauses about a possibly-recurring referent,
+    /// realized through [`realize_common_discourse`] — the one shape here
+    /// whose subject text the caller does NOT supply: `Discourse` computes
+    /// it from referent identity, which is the whole capability `r007`
+    /// demands. See [`Discourse`]'s own doc for why this differs from
+    /// [`MerchantConstruction::Coordination`] (one sentence, shared subject
+    /// slot) rather than duplicating it.
+    Discourse(Discourse),
 }
 
 /// The [`MerchantConstruction`] this campaign builds for a covered merchant
@@ -2178,6 +2231,7 @@ fn realize_construction(construction: MerchantConstruction, vocab: &CommonVocabu
             realize_common_polar_question(&clause, vocab)
         }
         MerchantConstruction::Verbless(clause) => realize_common_verbless(&clause, vocab),
+        MerchantConstruction::Discourse(discourse) => realize_common_discourse(&discourse, vocab),
     }
 }
 
@@ -2320,7 +2374,9 @@ const LADDER_WITNESS: &[(&str, &str)] = &[
     ("r003", "the road is old."),
     ("r005", "the merchant is under the tree."),
     ("r006", "a guard kills a woman."),
+    ("r007", "a person sleeps. the person is a tree."),
     ("r011", "I am a merchant and you are a guard."),
+    ("r012", "the person kills them."),
     ("r013", "the guard does not sleep."),
     ("r014", "the guard sleeped."),
     ("r015", "the guard did not sleep."),
@@ -2422,6 +2478,44 @@ fn ladder_construction(id: &str) -> MerchantConstruction {
             polarity: Polarity::Pos,
             adjuncts: Vec::new(),
         }),
+        // r007's own text is *"A stranger waits at the gate. The stranger
+        // is a soldier."* — `stranger`, `gate`, `wait` and `soldier` are
+        // registered nowhere. `person` stands in for the shared referent
+        // (as it does throughout this campaign's own new witnesses);
+        // `sleep` stands in for `wait` (an intransitive clause, matching
+        // the rung's own first-clause SHAPE, not just its token); `tree`
+        // stands in for `soldier` as the second clause's classify
+        // complement. Two `DiscourseClause`s, same referent, is what makes
+        // this a `Discourse` rather than a `Clause`: the SUBJECT text is
+        // never written here at all — `realize_common_discourse` computes
+        // "a person" for the first mention and "the person" for the
+        // second from `referent` identity alone.
+        "r007" => MerchantConstruction::Discourse(Discourse {
+            clauses: vec![
+                DiscourseClause {
+                    referent: "person".to_string(),
+                    predicate: SLEEP.to_string(),
+                    object: Argument::Absent,
+                    number: Number::Sg,
+                    definiteness: Definiteness::Indef,
+                    evidential: Evidential::Witnessed,
+                    tense: Tense::Present,
+                    polarity: Polarity::Pos,
+                    adjuncts: Vec::new(),
+                },
+                DiscourseClause {
+                    referent: "person".to_string(),
+                    predicate: IS_A.to_string(),
+                    object: Argument::Concept("tree".to_string()),
+                    number: Number::Sg,
+                    definiteness: Definiteness::Indef,
+                    evidential: Evidential::Witnessed,
+                    tense: Tense::Present,
+                    polarity: Polarity::Pos,
+                    adjuncts: Vec::new(),
+                },
+            ],
+        }),
         // "I am a merchant. You are a guard." Two roughnesses, both in the
         // JOINER rather than in the grammar this rung is about.
         //
@@ -2468,6 +2562,27 @@ fn ladder_construction(id: &str) -> MerchantConstruction {
                     adjuncts: Vec::new(),
                 },
             ],
+        }),
+        // r012's own text is *"The reeve questions her."* — `reeve` and
+        // `question` are registered nowhere. `person` stands in for the
+        // subject (definite: a REPEAT-mention pattern like r007's own, but
+        // here hand-baked rather than derived — r012's own token is
+        // `pronoun-reference`, not `definiteness`, and this witness exists
+        // to show `r012` realizes at all, not to re-derive a fact `r007`'s
+        // own witness already proves is derivable). `kill` stands in for
+        // `question` (the same substitution `r006`'s witness takes for
+        // `strike`), and the object is a bare `Argument::Pronoun` — the
+        // token this rung actually introduces.
+        "r012" => MerchantConstruction::Clause(Clause {
+            predicate: KILL.to_string(),
+            subject: Subject::Name("the person".to_string()),
+            object: Argument::Pronoun(Person::Third),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
         }),
         // "The guard does not sleep." Direct: standard negation is
         // periphrastic in Common, so the stem stays bare and the corpus's
@@ -2825,6 +2940,34 @@ fn ladder_construction(id: &str) -> MerchantConstruction {
 /// identically). Per the controller ruling recorded in Task 0's findings,
 /// PREREG-3 binds at the campaign's five-token cumulative endpoint only —
 /// this single-step shrink is reported, not treated as a failure.
+///
+/// **The Quoin, Task 4 (`definiteness`) covers TWO more rungs, `r007` and
+/// `r012`, matching Task 0's preregistered row exactly: 15 → 17.** `r007`
+/// is the token's own rung. `r012` is a DIFFERENT shape from every other
+/// second-rung this campaign has covered so far — see the module doc's own
+/// account of why "coverage debt" (a capability `pronoun-reference` already
+/// gave the grammar, unreachable until `r007` landed) is not the same
+/// finding as a `null`-introduces control rung riding along.
+///
+/// **The FRONTIER move is the largest of this campaign, 19 → 34, and it is
+/// not simply "two off, seventeen on."** `r007` drops off the frontier (now
+/// covered). `r012` does **not** drop off, because it was never ON the
+/// frontier to begin with — `ladder_frontier`'s own rule requires every
+/// demand EXCEPT a rung's own `introduces` token to already be covered, and
+/// `definiteness` is not `r012`'s own token (`pronoun-reference` is), so
+/// `r012` could not even reach the frontier's test until `definiteness`
+/// landed. Once it does, `r012`'s remaining demands are ALL satisfied at
+/// once — including its own `pronoun-reference`, covered since The
+/// Inquest — so it jumps straight from "not on the frontier" to "covered"
+/// in the same step, never passing through frontier membership at all.
+/// Seventeen rungs join, net of the one that drops off: the determiner/
+/// deixis/interrogative sub-tree the campaign's earlier tasks
+/// (`person-deixis`, `polar-question`) had already primed but could not
+/// open, because every one of those rungs' remaining demands bottomed out
+/// at `definiteness` or a token `r007`/`r012` transitively closes.
+/// Structural, the same way Task 8's five-rung frontier opening was: the
+/// cheapest rung on a densely-dependent sub-tree, covered last, opens the
+/// whole sub-tree at once.
 #[test]
 fn the_ladder_score_and_frontier_match_the_campaigns_prediction() {
     let entries = read_derived(&repo_root().join("sentences/the-ladder.corpus.json"));
@@ -2836,16 +2979,18 @@ fn the_ladder_score_and_frontier_match_the_campaigns_prediction() {
     assert_eq!(
         covered,
         vec![
-            "r001", "r002", "r003", "r005", "r006", "r011", "r013", "r014", "r015", "r048", "r049",
-            "r067", "r083", "r171", "r190"
+            "r001", "r002", "r003", "r005", "r006", "r007", "r011", "r012", "r013", "r014", "r015",
+            "r048", "r049", "r067", "r083", "r171", "r190"
         ],
         "the ladder's covered set"
     );
     assert_eq!(
         ladder_frontier(&entries),
         vec![
-            "r004", "r007", "r028", "r044", "r051", "r055", "r060", "r061", "r068", "r072", "r084",
-            "r085", "r095", "r096", "r109", "r113", "r114", "r117", "r196",
+            "r004", "r008", "r010", "r018", "r019", "r028", "r030", "r035", "r037", "r040", "r041",
+            "r042", "r044", "r051", "r055", "r059", "r060", "r061", "r068", "r072", "r084", "r085",
+            "r091", "r095", "r096", "r101", "r104", "r106", "r109", "r113", "r114", "r117", "r121",
+            "r196",
         ],
         "the ladder's frontier"
     );
@@ -2947,12 +3092,23 @@ fn the_ladder_score_and_frontier_match_the_campaigns_prediction() {
 /// earlier task's paragraph here describes: a fragment entry needing
 /// `verbless-clause` almost always needs at least one other still-missing
 /// token too.
+///
+/// **The Quoin, Task 4 (`definiteness`) moves only the-flood-watch, matching
+/// Task 0's preregistered row exactly: 340 → 390 of 1128, +50.**
+/// the-merchant is untouched — no merchant entry demands `definiteness`, so
+/// it holds at 24 of 30 and 7 of 12. the-flood-watch's covered-ENTRY count
+/// stays 0 of 139 for the seventh consecutive task, the same
+/// conjunctive-coverage blindness every earlier paragraph here describes —
+/// even the two rungs this token covers on the LADDER (`r007`, `r012`) do
+/// not move a single flood-watch entry into "covered," because a
+/// flood-watch entry demanding `definiteness` still has other outstanding
+/// demands of its own.
 #[test]
 fn demand_instance_coverage_matches_the_campaigns_prediction() {
     let merchant = read_declared(&repo_root().join("sentences/the-merchant.corpus.json"));
     assert_eq!(demand_instance_coverage(&merchant), (24, 30));
     let flood = read_declared(&repo_root().join("sentences/the-flood-watch.corpus.json"));
-    assert_eq!(demand_instance_coverage(&flood), (340, 1128));
+    assert_eq!(demand_instance_coverage(&flood), (390, 1128));
 }
 
 /// Every ladder rung scored covered realizes in Common, exactly as

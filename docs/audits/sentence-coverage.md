@@ -23,21 +23,21 @@ Whether a corpus states what the grammar must **parse** (a player line) or **pro
 ## the-merchant
 
 - Total entries: 12
-- Covered: 6
-- Not yet: 6
-- Demand instances met: 21 of 30 (70.0%)
+- Covered: 7
+- Not yet: 5
+- Demand instances met: 24 of 30 (80.0%)
 
 **Two honesty limits on the entry-level count, both about `m08` (*"Did you know the woman?"*), which The Rail's `polar-question` moved to covered.**
 
 1. **Its demand tokens under-describe it.** `m08` declares `polar-question` + `past-tense`, and both are built — but the sentence needs a third capability neither token names. English asks a LEXICAL verb with periphrastic *do*-support, not by inversion (*"Knew you the woman?"* is not Common), and the realizer refuses a lexical-verb construction outright rather than emitting it. The witness therefore substitutes a past copula polar question, *"were you a merchant?"*, which exercises exactly the two tokens the entry declares. This is the third entry of twelve whose hand-labelled tokens under-describe it (after `m10`, lexical, and `m02`, adjectival predication) — which is what a frozen corpus is FOR: no care at labelling time would have caught it, and resolving against a real grammar did.
-2. **It is a `parse`-side line scored on a `produce`-side capability.** `m08`'s speaker is the player, so the grammar's job with it is to READ it; `realize_common_polar_question` only WRITES. The corpus states no `direction` on any entry and spec §2.3 forbids inferring one from `speaker`, so the resolver scores it covered on production — the scoring method behaving exactly as specified, and a real limit on what "6 of 12" means.
+2. **It is a `parse`-side line scored on a `produce`-side capability.** `m08`'s speaker is the player, so the grammar's job with it is to READ it; `realize_common_polar_question` only WRITES. The corpus states no `direction` on any entry and spec §2.3 forbids inferring one from `speaker`, so the resolver scores it covered on production — the scoring method behaving exactly as specified, and a real limit on what "7 of 12" means.
 
 ### Per-entry
 
 | id | speaker | text | demands | status |
 |---|---|---|---|---|
 | m01 | player | How's it going? | wh-question | not yet |
-| m02 | merchant | Everything was fine until last night. | past-tense, temporal-adverbial | not yet |
+| m02 | merchant | Everything was fine until last night. | past-tense, temporal-adverbial | covered |
 | m03 | player | What happened last night? | wh-question, temporal-adverbial | not yet |
 | m04 | merchant | Last night, there was a death in the marketplace. | existential, past-tense, temporal-adverbial | not yet |
 | m05 | merchant | A guard killed a woman. | transitive-frame, past-tense | covered |
@@ -55,6 +55,7 @@ Whether a corpus states what the grammar must **parse** (a player line) or **pro
 |---|---|---|
 | classify | 0 | yes |
 | coordination | 1 | yes |
+| definiteness | 0 | yes |
 | embedded-clause | 2 | yes |
 | epistemic-hedge | 2 | yes |
 | existential | 1 | no |
@@ -68,8 +69,9 @@ Whether a corpus states what the grammar must **parse** (a player line) or **pro
 | pronoun-reference | 4 | yes |
 | property-predication | 0 | yes |
 | spatial-adverbial | 0 | yes |
-| temporal-adverbial | 3 | no |
+| temporal-adverbial | 3 | yes |
 | transitive-frame | 1 | yes |
+| verbless-clause | 0 | yes |
 | wh-question | 2 | no |
 | witness-set | 2 | no |
 
@@ -79,16 +81,16 @@ How many demands each entry is SHORT. Distance 0 is the covered set above. **Dis
 
 | distance | entries | which |
 |---|---|---|
-| 0 | 6 | m05; m06; m07; m08; m09; m10 |
-| 1 | 3 | m01 (wh-question); m02 (temporal-adverbial); m11 (witness-set) |
-| 2 | 3 | m03 (wh-question + temporal-adverbial); m04 (existential + temporal-adverbial); m12 (named-entity-list + witness-set) |
+| 0 | 7 | m02; m05; m06; m07; m08; m09; m10 |
+| 1 | 4 | m01 (wh-question); m03 (wh-question); m04 (existential); m11 (witness-set) |
+| 2 | 1 | m12 (named-entity-list + witness-set) |
 
 ## the-flood-watch
 
 - Total entries: 139
 - Direction: 68 parse / 71 produce (see the breakdown above)
 - Covered: 0 of 139 (see below for why zero is expected)
-- Demand instances met: 290 of 1128 (25.7%)
+- Demand instances met: 390 of 1128 (34.6%)
 
 The resolver above DOES run over this corpus — `entry_covered` is generic over `Entry` and `read_declared` produces one for every flood-watch line, the same shape it produces for the-merchant. What it reports is zero, and that is a fact about the corpus's density, not an unwritten resolver: 1128 demand instances across 139 entries is roughly 8 per entry, and `entry_covered`'s ALL-of-its-demands rule fails an entry the moment ANY one of its several tokens is uncovered — which is every entry, for as long as any handful of the corpus's vocabulary stays unimplemented. A zero that never moves is uninformative on its own, which is exactly why the demand-instance statistic above exists beside it (see the-merchant's own line and `demand_instance_coverage_matches_the_campaigns_prediction`'s doc; also `sentences/README.md`, "Frozen is not the same as measured"). What ties this corpus to the grammar's delivered capability otherwise is the vocabulary cross-check below: 147 of its 149 distinct demand tokens name a rung on the ladder.
 
@@ -96,8 +98,8 @@ The resolver above DOES run over this corpus — `entry_covered` is generic over
 
 - Total rungs: 214
 - Direction: 214 produce (see the breakdown above)
-- Covered: 12
-- Frontier: 20
+- Covered: 17
+- Frontier: 34
 
 `the-ladder.corpus.json` is frozen (The Rail): its rung count is pinned by `LADDER_ENTRIES`, the same mechanism `MERCHANT_ENTRIES`/`FLOOD_WATCH_ENTRIES` pin the two dialogue corpora's. `cli/tests/suite/sentence_corpus.rs` also asserts structural properties directly over the ladder's `presupposes` graph (acyclic, ids unique, no token introduced twice, exactly two roots) — the count assertion alone would not catch a corrupted graph that kept the same entry count. See the vocabulary cross-check below.
 
@@ -108,24 +110,38 @@ A rung is on the frontier when every demand it makes, other than its own `introd
 | id | introduces | text | unblocks |
 |---|---|---|---|
 | r004 | attributive-adjective | The long road runs to the shrine. | 0 |
-| r007 | definiteness | A stranger waits at the gate. The stranger is a soldier. | 1 |
+| r008 | proper-name | Tobb keeps the gate. | 0 |
+| r010 | number-marking | The guards keep the gate. | 1 |
+| r018 | demonstrative-deixis | This road leads to the shrine. | 0 |
+| r019 | possession-alienable | The merchant's cart stands in the square. | 0 |
 | r028 | noun-class | The hound is not a person. | 0 |
+| r030 | indefinite-pronoun | Someone waits in the storeroom. | 0 |
+| r035 | nominal-compound | The gate toll is collected at the sluice house. | 0 |
+| r037 | pp-modifier | The man at the gate is a salt-seller. | 0 |
+| r040 | apposition | Gilda, the salt-seller, is dead. | 0 |
+| r041 | vocative | Reeve, the gate stands open. | 0 |
+| r042 | reflexive | The guard cut himself. | 0 |
 | r044 | comparative | The reeve is older than the warden. | 0 |
-| r049 | temporal-adverbial | Everything was fine until last night. | 1 |
 | r051 | present-progressive | The reeve is questioning the merchant now. | 0 |
 | r055 | perfect-aspect | The guard has fled. | 0 |
+| r059 | future-reference | The reeve will hang him. | 0 |
+| r060 | remote-past | Her father died long ago, before the wall went up. | 0 |
 | r061 | inchoative | The crowd began to shout. | 0 |
 | r068 | imperative | Open the cart. | 0 |
 | r072 | ability-modal | He can read a seal. | 1 |
 | r084 | declarative-question | He was at the gate all night? | 0 |
 | r085 | wh-question | Who keeps the gate? | 0 |
+| r091 | tag-question | You saw her, didn't you? | 0 |
 | r095 | negative-question | Didn't anyone see this? | 0 |
 | r096 | answer-particle | Yes. He was there. | 0 |
+| r101 | topicalization | That knife, I had seen before. | 0 |
+| r104 | existential | There is a body in the marketplace. | 1 |
+| r106 | ditransitive-frame | The merchant gave the guard a seal. | 0 |
 | r109 | particle-verb | The reeve wrote down the guard's answer. | 0 |
 | r113 | experiencer-subject | The merchant fears the reeve. | 0 |
 | r114 | passive-agentless | The woman was killed. | 0 |
 | r117 | causative | The reeve made the guard confess. | 0 |
-| r171 | verbless-clause | A dead woman in the marketplace, and the gate open all night. | 0 |
+| r121 | idiom | The guard kept his own counsel. | 0 |
 | r196 | greeting-formula | How's it going? | 0 |
 
 ## Cross-check: ladder vocabulary against the two dialogue corpora

@@ -2214,6 +2214,163 @@ pub fn realize_common_verbless(clause: &Clause, vocab: &CommonVocabulary) -> Str
     emit_parts(&strip_copula(construction.parts), clause, vocab, true)
 }
 
+/// One clause in a [`Discourse`], carrying the concept id its subject
+/// refers to instead of an already-resolved [`Subject`].
+///
+/// **Why not a [`Clause`] directly.** `Subject::Name` already holds
+/// pre-resolved surface text — including any article a caller chose to bake
+/// in (`"the guard"`, `"a person"`; see that variant's own callers). That is
+/// exactly the fact [`realize_common_discourse`] needs to COMPUTE rather
+/// than accept: whether this mention is the first (`"a person"`) or a
+/// repeat (`"the person"`) of `referent`. So this type withholds a resolved
+/// subject and gives the sequence realizer a concept id to track instead.
+///
+/// **Everything else is [`Clause`]'s own fields, unchanged**, because
+/// nothing about tense, polarity, evidential, adjuncts or the OBJECT's own
+/// [`Definiteness`] is discourse-tracked — only the subject is. `r007`'s
+/// text has a second definite article too (*"the gate"*), on the object
+/// slot of an unrelated predicate; that one is [`Clause::definiteness`],
+/// already built, forwarded here unchanged as `definiteness`.
+/// type-audit: bare-ok(identifier-text: referent), bare-ok(identifier-text: predicate)
+#[derive(Clone, Debug, PartialEq)]
+pub struct DiscourseClause {
+    /// The concept id naming this clause's subject referent —
+    /// [`realize_common_discourse`] compares this, mention to mention,
+    /// against every EARLIER clause's `referent` to decide `Indef` vs
+    /// `Def`. Not a display string: it is resolved through `vocab` the same
+    /// way [`Argument::Concept`]'s object slot already is.
+    pub referent: String,
+    /// The relation this clause asserts — [`Clause::predicate`]'s own
+    /// field, unchanged.
+    pub predicate: String,
+    /// What the predicate relates the subject to — [`Clause::object`]'s own
+    /// field, unchanged. Not referent-tracked: only the SUBJECT slot is.
+    pub object: Argument,
+    /// Grammatical number, threaded to both the computed subject phrase and
+    /// the object slot — [`Clause::number`]'s own field, unchanged.
+    pub number: Number,
+    /// The OBJECT's definiteness, forwarded to the built [`Clause`]
+    /// unchanged. Unrelated to the subject-referent tracking this type
+    /// performs — see this struct's own doc.
+    pub definiteness: Definiteness,
+    /// How this clause's content was epistemically grounded —
+    /// [`Clause::evidential`]'s own field, unchanged.
+    pub evidential: Evidential,
+    /// When this clause's content stands relative to the utterance —
+    /// [`Clause::tense`]'s own field, unchanged.
+    pub tense: Tense,
+    /// Whether this clause asserts or denies — [`Clause::polarity`]'s own
+    /// field, unchanged.
+    pub polarity: Polarity,
+    /// Role bindings on this clause — [`Clause::adjuncts`]'s own field,
+    /// unchanged.
+    pub adjuncts: Vec<Adjunct>,
+}
+
+/// An ORDERED sequence of clauses about possibly-recurring referents — the
+/// structure `definiteness` (r007) needed and nothing before this task
+/// supplied. [`Coordination`] is the nearest existing type and is not this:
+/// it joins clauses into ONE sentence with one shared subject slot;
+/// `Discourse` keeps each clause its OWN sentence while tracking, across
+/// the sequence, whether a referent has been mentioned before. r007's own
+/// text is two sentences on purpose (*"definiteness is not visible inside
+/// one clause"*, the rung's note) — this type is what "not inside one
+/// clause" is built out of.
+///
+/// **Minimal on purpose** (spec §3.3's branch-1 finding): an ordered list
+/// plus a referent id per clause is enough. No discourse-representation
+/// theory, no entity-tracking beyond string equality on
+/// [`DiscourseClause::referent`] — see [`realize_common_discourse`]'s own
+/// doc for exactly what "mentioned before" means and why it deliberately
+/// differs from [`elide_coordinated_subjects`]'s "last stated" rule.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Discourse {
+    /// The clauses, in surface (discourse) order. At least one — a
+    /// "discourse" of zero clauses is not a sequence to realize, matching
+    /// the panic-below-two discipline [`realize_common_coordination`] takes
+    /// for its own minimum, at a lower floor: unlike a coordination, a
+    /// discourse of ONE clause is meaningful (it is simply always the first
+    /// mention of its own referent), so only zero is refused.
+    pub clauses: Vec<DiscourseClause>,
+}
+
+/// Whether `clauses[index]`'s referent has been mentioned by ANY earlier
+/// clause in the sequence — string equality on [`DiscourseClause::referent`]
+/// against every clause `0..index`, not merely the immediately preceding
+/// one.
+///
+/// **Deliberately "any earlier mention," not "last stated."**
+/// [`elide_coordinated_subjects`] compares against the LAST stated subject,
+/// because subject elision is genuinely sensitive to what a reader has just
+/// read — that was The Mortise's Task 7 fix, and comparing to clause 0
+/// instead misattributed a re-mention to the wrong referent for `[X, Y, X]`.
+/// Definiteness does not carry that hazard: once a referent has been
+/// introduced into the discourse, EVERY later mention of it is definite
+/// regardless of what was said in between (Chafe 1976; Lambrecht 1994) — an
+/// intervening `tree` between two mentions of `person` does not make the
+/// second `person` indefinite again. So `[X, Y, X]` here gives Indef / Indef
+/// / **Def** (X's second mention is definite no matter that Y intervened),
+/// which is a different answer from what a "last stated" rule would give
+/// were it applied here, and applying that rule to THIS phenomenon would be
+/// importing a fix for a different hazard than the one this type has.
+fn discourse_subject_is_repeat_mention(clauses: &[DiscourseClause], index: usize) -> bool {
+    let referent = &clauses[index].referent;
+    clauses[..index].iter().any(|c| &c.referent == referent)
+}
+
+/// Realize a [`Discourse`] as a sequence of Common sentences, space-joined —
+/// each clause keeps its own subject, verb and full stop, unlike
+/// [`realize_common_coordination`], which joins clauses into ONE sentence.
+///
+/// **The only thing this function computes that [`realize_common`] does
+/// not accept as input: the SUBJECT's definiteness.** For each clause, in
+/// order, [`discourse_subject_is_repeat_mention`] decides `Def` (repeat) vs
+/// `Indef` (first mention); the resolved word
+/// ([`surface_complement`], pluralized by the clause's own [`Number`]) is
+/// then prefixed with `"the "` or an [`indefinite_article`] the same way
+/// [`Part::Determiner`]'s own match arm chooses one for the OBJECT slot —
+/// the identical rule, applied to the subject instead, because Common has
+/// exactly one definiteness-marking convention and this is the second slot
+/// that needs it. The built [`Subject::Name`] then carries that computed
+/// text into an ordinary [`Clause`], realized through [`realize_common`]
+/// unchanged — this function adds no second realizer, only a subject
+/// builder in front of the existing one.
+///
+/// Panics if `discourse.clauses` is empty: a discourse with nothing in it
+/// states a contradiction in its own name, the same class of panic
+/// [`realize_common_coordination`]'s own minimum-length check is.
+/// type-audit: bare-ok(prose)
+pub fn realize_common_discourse(discourse: &Discourse, vocab: &CommonVocabulary) -> String {
+    assert!(
+        !discourse.clauses.is_empty(),
+        "a discourse realizes at least one clause; 0 is not a sequence to \
+         realize"
+    );
+    let mut sentences: Vec<String> = Vec::with_capacity(discourse.clauses.len());
+    for (index, dc) in discourse.clauses.iter().enumerate() {
+        let repeat = discourse_subject_is_repeat_mention(&discourse.clauses, index);
+        let word = surface_complement(vocab, &dc.referent, dc.number);
+        let subject_text = match (repeat, dc.number) {
+            (true, _) => format!("the {word}"),
+            (false, Number::Sg) => format!("{} {word}", indefinite_article(&word)),
+            (false, Number::Pl) => word,
+        };
+        let clause = Clause {
+            predicate: dc.predicate.clone(),
+            subject: Subject::Name(subject_text),
+            object: dc.object.clone(),
+            number: dc.number,
+            definiteness: dc.definiteness,
+            evidential: dc.evidential,
+            tense: dc.tense,
+            polarity: dc.polarity,
+            adjuncts: dc.adjuncts.clone(),
+        };
+        sentences.push(realize_common(&clause, vocab));
+    }
+    sentences.join(" ")
+}
+
 /// Render a small cardinal number as an English word (`0` through `12`);
 /// larger numbers render as plain digits.
 /// type-audit: bare-ok(prose)
@@ -3847,6 +4004,122 @@ mod tests {
         assert_eq!(
             realize_common_verbless(&clause, &vocab),
             "the person under the tree."
+        );
+    }
+
+    /// r007 `definiteness`: first mention indefinite, second mention
+    /// definite. TWO clauses on purpose — the rung's own note says
+    /// definiteness "is not visible inside one clause", which is why this
+    /// is the campaign's only new structure rather than a field that
+    /// already exists.
+    ///
+    /// **Substitution:** the rung's text is *"A stranger waits at the gate.
+    /// The stranger is a soldier."*; `stranger`, `gate`, `wait` and
+    /// `soldier` are registered nowhere. `person` is the shared referent and
+    /// `tree` the second-clause complement, keeping the only thing the
+    /// token names: the SAME referent, indefinite then definite.
+    ///
+    /// **The property under test is DERIVED, not asserted twice.**
+    /// `DiscourseClause` carries no `Definiteness` for its own subject at
+    /// all (see that type's own doc) — there is no field here a caller
+    /// could set by hand in either direction. `realize_common_discourse`
+    /// computes both articles from `referent` identity alone, so this test
+    /// could not pass by stating `Def`/`Indef` twice even if it tried to.
+    #[test]
+    fn a_referent_is_indefinite_on_first_mention_and_definite_on_second() {
+        let vocab = CommonVocabulary::default();
+        let discourse = Discourse {
+            clauses: vec![
+                DiscourseClause {
+                    referent: "person".to_string(),
+                    predicate: SLEEP.to_string(),
+                    object: Argument::Absent,
+                    number: Number::Sg,
+                    definiteness: Definiteness::Indef,
+                    evidential: Evidential::Witnessed,
+                    tense: Tense::Present,
+                    polarity: Polarity::Pos,
+                    adjuncts: Vec::new(),
+                },
+                DiscourseClause {
+                    referent: "person".to_string(),
+                    predicate: UNDER.to_string(),
+                    object: Argument::Concept("tree".to_string()),
+                    number: Number::Sg,
+                    definiteness: Definiteness::Def,
+                    evidential: Evidential::Witnessed,
+                    tense: Tense::Present,
+                    polarity: Polarity::Pos,
+                    adjuncts: Vec::new(),
+                },
+            ],
+        };
+        assert_eq!(
+            realize_common_discourse(&discourse, &vocab),
+            "a person sleeps. the person is under the tree."
+        );
+    }
+
+    /// **Negative control for r007: definiteness must track REFERENT
+    /// IDENTITY, not clause POSITION.** A structure that (wrongly) marked
+    /// every non-initial clause definite would still pass the positive test
+    /// above — it has only two clauses sharing one referent, so "not clause
+    /// 0" and "already mentioned" agree on both rows there. This is the
+    /// same shape of trap `elide_coordinated_subjects`'s fix round 1 was
+    /// written to catch — comparing to clause 0 rather than tracking the
+    /// actual referent, which misattributes a re-mention in a 3+-clause
+    /// sequence — applied here to `Discourse` instead of `Coordination`.
+    ///
+    /// THREE clauses, two referents: `person` (first mention), `tree`
+    /// (first mention, at POSITION 1 — a naive "position > 0 is definite"
+    /// rule would wrongly render this "the tree"), `person` again (a
+    /// genuine repeat, correctly definite). If `discourse_subject_is_
+    /// repeat_mention` ever regresses to comparing position instead of
+    /// `referent`, the middle sentence flips to "the tree sleeps." and this
+    /// assertion objects.
+    #[test]
+    fn a_different_referent_is_not_marked_definite_by_position_alone() {
+        let vocab = CommonVocabulary::default();
+        let discourse = Discourse {
+            clauses: vec![
+                DiscourseClause {
+                    referent: "person".to_string(),
+                    predicate: SLEEP.to_string(),
+                    object: Argument::Absent,
+                    number: Number::Sg,
+                    definiteness: Definiteness::Indef,
+                    evidential: Evidential::Witnessed,
+                    tense: Tense::Present,
+                    polarity: Polarity::Pos,
+                    adjuncts: Vec::new(),
+                },
+                DiscourseClause {
+                    referent: "tree".to_string(),
+                    predicate: SLEEP.to_string(),
+                    object: Argument::Absent,
+                    number: Number::Sg,
+                    definiteness: Definiteness::Indef,
+                    evidential: Evidential::Witnessed,
+                    tense: Tense::Present,
+                    polarity: Polarity::Pos,
+                    adjuncts: Vec::new(),
+                },
+                DiscourseClause {
+                    referent: "person".to_string(),
+                    predicate: UNDER.to_string(),
+                    object: Argument::Concept("tree".to_string()),
+                    number: Number::Sg,
+                    definiteness: Definiteness::Def,
+                    evidential: Evidential::Witnessed,
+                    tense: Tense::Present,
+                    polarity: Polarity::Pos,
+                    adjuncts: Vec::new(),
+                },
+            ],
+        };
+        assert_eq!(
+            realize_common_discourse(&discourse, &vocab),
+            "a person sleeps. a tree sleeps. the person is under the tree."
         );
     }
 
