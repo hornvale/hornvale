@@ -181,6 +181,8 @@ mod species_worlds;
 mod stope_variety_probe;
 #[path = "suite/subterranean_energy_probe.rs"]
 mod subterranean_energy_probe;
+#[path = "suite/survivorship_probe.rs"]
+mod survivorship_probe;
 #[path = "suite/tense_shadow.rs"]
 mod tense_shadow;
 #[path = "suite/termination_probe.rs"]
