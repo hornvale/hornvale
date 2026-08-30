@@ -17,12 +17,12 @@ use hornvale_terrain::{
     CarveParams, Commodity, GlobeSummary, Hydro, MarginPolarity, RockClass, SoilOrder, fertility,
 };
 use hornvale_worldgen::{
-    BuildDepth, BuildError, ChorusVoice, HazardKind, Sky, SkyChoice, Valence, WorldComponents,
-    accounts_from, build_world_from_components, build_world_to_with_artifacts, climate_from,
-    commodity_name, flagship_of, language_of_in, migration_events, observed_phenomena_as_at_from,
-    observed_phenomena_as_in_from, occupation_records, rock_class_name,
-    settlement_site_concepts as worldgen_settlement_site_concepts, sky_of, soil_of,
-    soil_order_name, terrain_of, vestiges_field,
+    BuildDepth, BuildError, ChorusVoice, HazardKind, Sky, SkyChoice, Valence, VestigeKind,
+    WorldComponents, accounts_from, build_world_from_components, build_world_to_with_artifacts,
+    climate_from, commodity_name, flagship_of, language_of_in, migration_events,
+    observed_phenomena_as_at_from, observed_phenomena_as_in_from, occupation_records,
+    rock_class_name, settlement_site_concepts as worldgen_settlement_site_concepts, sky_of,
+    soil_of, soil_order_name, terrain_of, vestiges_field,
 };
 
 use hornvale_astronomy::SkyPins;
@@ -1994,6 +1994,62 @@ pub fn registry() -> Vec<Metric> {
                     }
                 }
                 MetricValue::Number(if count == 0 { 0.0 } else { sum / count as f64 })
+            }),
+        },
+        // --- The Winze (Task 7): the campaign's one census column.
+        //
+        // A LAYER READ, AND THE CHOICE IS THE METRIC'S MEANING (spec
+        // §E.11.2). A breach is visible in two places and they are different
+        // quantities. At the LAYER it is one delving that ended by breaking
+        // through, which is what this column counts. At the FIELD —
+        // `vestige_dread`, a `max` over the vertex's whole palimpsest — it is
+        // a place that *reads* wrong, which is a different population: it
+        // includes vertices whose own top layer is innocent (a living working
+        // standing over an old breach, measured on the panel), and it cannot
+        // separate a breach from a pre-human gate scar, since both are
+        // maximally dreaded and both are `Numinous`. This campaign's quantity
+        // is endings, so the read is the layer.
+        //
+        // Cost: a fifth `vestiges_field` in this block, which is a grouped
+        // ledger scan plus a per-vertex noise probe — not a terrain sweep
+        // (`windows/lab/CLAUDE.md`, "Registering a metric is not a local
+        // act", item 3). The four siblings above each pay the same call
+        // separately; collapsing all five behind one memoised field on
+        // `FullView` (the pattern `TerrainView::band_transects` already
+        // uses) is the fix that doc prescribes, and is not this task's. ---
+        Metric {
+            name: "breached-delving-count",
+            doc: "Count of land-vertex vestige LAYERS that are an abandoned delving \
+                  whose hazard is Numinous — i.e. a working that ended by breaking \
+                  through (The Winze, spec §4.3). A layer read, never the dread \
+                  FIELD: `vestige_dread` is a max over a vertex's whole palimpsest, \
+                  so a field read counts places that read as dreadful (a living \
+                  working over an old breach, a pre-human gate scar) rather than \
+                  delvings that ended (spec §E.11.2). Names nothing about what was \
+                  found, because nothing knows (spec §4.6). 0 where no delving on \
+                  land broke through",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 1.0, 2.0, 4.0, 8.0, 16.0],
+            },
+            domain: Domain::History,
+            role: Role::Descriptor,
+            extract: Extractor::Full(|v: &FullView| {
+                let terrain = v.terrain();
+                let geo = terrain.geosphere();
+                let field = vestiges_field(v.world(), terrain);
+                let mut breached = 0usize;
+                for vertex in geo.vertices() {
+                    if !terrain.is_ocean(vertex) {
+                        for vestige in field.get(vertex) {
+                            if vestige.kind == VestigeKind::AbandonedDelving
+                                && vestige.hazard == HazardKind::Numinous
+                            {
+                                breached += 1;
+                            }
+                        }
+                    }
+                }
+                MetricValue::Number(breached as f64)
             }),
         },
         // --- The Gnomon (Task 1): the first-occurrence index. Each column
@@ -10312,7 +10368,17 @@ mod tests {
         // granary-raids-in-depleted-half) — per-world aggregates over the
         // bake's raid-ending day-of-year stamps; both read committed history
         // records only, so no sweep cost beyond the bake itself.
-        assert_eq!(registry().len(), 226);
+        //
+        // +1 for THE WINZE (Task 7: breached-delving-count) — the campaign's
+        // ONE column, and one and not two deliberately. The obvious second
+        // (a mean or maximum `delve_depth_m` over the breached population)
+        // was refused: nothing in this campaign selects on depth, and a
+        // committed census column pairing "breached" with "how deep" invites
+        // exactly the reading spec §4.3 exists to refuse. The depth
+        // distribution is measured where it belongs, in Task 5's
+        // `survivorship_probe`, which reports both populations and their
+        // overlap rather than one number that looks like a threshold.
+        assert_eq!(registry().len(), 227);
         //
         // THE CONFIDANT (Task 7) registered +45 here — `reportable-
         // fraction-<species>`, `collapse-ratio-<species>`,
@@ -10340,7 +10406,11 @@ mod tests {
         // assertion already counts (granary-raid-phase-concentration,
         // granary-raids-in-depleted-half); the trailing assert here had not
         // caught up with them until now.
-        assert_eq!(registry().len(), 226);
+        // THE WINZE (T7): 226 -> 227 (breached-delving-count). BOTH
+        // assertions in this test pin the same number and they are edited
+        // together — the Granary note above records what happens when only
+        // one of them is, and the pair is what caught this edit.
+        assert_eq!(registry().len(), 227);
     }
 
     // --- The Ford (spec §10): the estimators behind the three channel
@@ -12025,6 +12095,10 @@ mod tests {
             "forgotten-fraction",
             "dominant-hazard",
             "mean-warning-legibility",
+            // The Winze (Task 7), registered into The Vestige's family
+            // because it reads the same `vestiges_field` over the same
+            // land-only population.
+            "breached-delving-count",
         ] {
             assert!(names.contains(&want), "missing metric {want}");
         }
@@ -13151,6 +13225,45 @@ mod tests {
         assert!(
             matches!(m("mean-warning-legibility"), MetricValue::Number(f) if (0.0..=1.0).contains(&f))
         );
+        // The Winze (Task 7): a COUNT, so the shape assertion is "a whole
+        // number, not negative", not a [0,1] range. Seed 42 under the
+        // generated sky carries workings and none of them broke through, so
+        // the column reads 0 here — which is the metric's own quiet case and
+        // is asserted rather than skipped. The non-zero side needs a world
+        // that has one; that is the test below.
+        match m("breached-delving-count") {
+            MetricValue::Number(n) => {
+                assert!(n >= 0.0, "breached-delving-count must not be negative: {n}");
+                assert_eq!(n, n.trunc(), "breached-delving-count is a count: {n}");
+            }
+            other => panic!("breached-delving-count: {other:?}"),
+        }
+    }
+
+    /// The census column is POPULATED, not merely registered.
+    ///
+    /// claim: reachability(seed 3 under the generated sky — the campaign's
+    /// panel reads ten breached workings there, the largest of the twelve, so
+    /// one world is a sufficient witness that the column can be non-zero.
+    /// This is an existence claim about the INSTRUMENT, not a rate: the
+    /// pooled claim about how often a delving breaches lives in
+    /// `windows/worldgen/tests/suite/breach.rs`, over the whole panel.)
+    ///
+    /// A column that only ever reads 0 would satisfy
+    /// `the_vestige_metrics_extract_for_seed_42` above and every schema check
+    /// in the census, and would still be dead. Both sides are asserted.
+    #[test]
+    fn the_breached_delving_count_is_populated_where_a_delving_broke_through() {
+        let view = FullView::build(Seed(3), &SkyPins::default()).unwrap();
+        let built = BuiltView::Full(view);
+        match extract_from(&built, "breached-delving-count") {
+            MetricValue::Number(n) => assert!(
+                n > 0.0,
+                "seed 3 has breached workings, so the census column must read \
+                 above zero; got {n}"
+            ),
+            other => panic!("breached-delving-count: {other:?}"),
+        }
     }
 
     #[test]
