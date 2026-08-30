@@ -64,6 +64,38 @@
 //!     author) — Task 5 closed every gap it MEASURED, not every gap the
 //!     substring check could theoretically miss in the future.
 //!
+//! SIXTH DIRECTION, FOUND BY REVIEW OF TASK 5 ITSELF: precedence — "the
+//! longest matching declared path governs a file's true author" — lived
+//! only in prose (this file's own paragraph above, and
+//! `docs/generated-paths.txt`'s header) until a reviewer proved it
+//! unenforced. Appending
+//! `book/src/laboratory/generated/the-census/rows.csv<TAB>artifacts` — a
+//! factually wrong, MORE SPECIFIC row overlapping the correct
+//! `book/src/laboratory/generated/the-census/<TAB>census` row — passed every
+//! test in this file clean, because `every_declared_generated_path_is_
+//! written_by_its_author` checks each row against its own author's source
+//! in isolation, never against a competing row: `artifacts` and `census`
+//! share ONE source (`source_for_author`), so the added row's claim
+//! "written by artifacts" and the existing row's claim "written by census"
+//! are indistinguishable from source text alone — a direct
+//! consequence of `docs/generated-paths.txt`'s own header ("naming the
+//! *script* here would collapse exactly the distinction this campaign
+//! draws"). `an_overriding_declaration_must_be_measured` and
+//! `no_two_declared_rows_tie_for_precedence_with_different_authors` close
+//! this the only way available without re-deriving Task 1's census/heavy
+//! measurement work inside a test: cross-referencing
+//! `docs/generated-path-writes.tsv`, the committed record of what a REAL
+//! `make rebaseline` run actually touched. A more-specific row that
+//! overrides a less-specific row's author for some file must have its OWN
+//! entry there — proof someone ran the regen after adding it, not merely
+//! asserted the row — or the override is rejected as unverified. WHAT THIS
+//! IS BLIND TO: a TSV entry that EXISTS but does not actually support the
+//! currently-declared author (e.g. an author swapped after the last
+//! measurement, with the path itself untouched) — this test checks
+//! presence, not (again) ground truth; and a same-length tie between two
+//! overlapping rows, which the sibling test below refuses outright rather
+//! than resolving arbitrarily.
+//!
 //! A DECLARED PATH'S AUTHOR MUST ALSO BE ONE THE ROSTER NAMES, OR `none(...)`
 //! (Step 2 below, `every_declared_path_names_a_known_author`) — `artifacts`, `census`, or
 //! `heavy`, the set names `scripts/lane-sets.tsv` already uses for the same
@@ -606,5 +638,201 @@ fn every_declared_generated_path_is_written_by_its_author() {
          Give the path a real author instead of `none(...)`.",
         stale_none.len(),
         stale_none,
+    );
+}
+
+/// The measured write-set, `docs/generated-path-writes.tsv` (Task 4/5), as
+/// `path -> (written, tracked)`. That file's own header excludes itself
+/// (`docs/generated-path-writes.tsv`) from the emitted rows — a
+/// self-referential mtime problem documented there and in
+/// `docs/generated-paths.txt` — so it is never looked up here either; no
+/// declared row needs to find an entry for it.
+fn measured_writes() -> std::collections::BTreeMap<String, (u32, u32)> {
+    let text = std::fs::read_to_string(repo_root().join("docs/generated-path-writes.tsv"))
+        .expect("docs/generated-path-writes.tsv must exist");
+    text.lines()
+        .map(str::trim)
+        .filter(|l| !l.is_empty() && !l.starts_with('#'))
+        .map(|l| {
+            let mut fields = l.splitn(3, '\t');
+            let path = fields
+                .next()
+                .unwrap_or_else(|| panic!("empty docs/generated-path-writes.tsv line"));
+            let written: u32 = fields
+                .next()
+                .unwrap_or_else(|| {
+                    panic!("docs/generated-path-writes.tsv row {path:?} has no written column")
+                })
+                .parse()
+                .unwrap_or_else(|e| {
+                    panic!("docs/generated-path-writes.tsv row {path:?} written column: {e}")
+                });
+            let tracked: u32 = fields
+                .next()
+                .unwrap_or_else(|| {
+                    panic!("docs/generated-path-writes.tsv row {path:?} has no tracked column")
+                })
+                .parse()
+                .unwrap_or_else(|e| {
+                    panic!("docs/generated-path-writes.tsv row {path:?} tracked column: {e}")
+                });
+            (path.to_string(), (written, tracked))
+        })
+        .collect()
+}
+
+/// Every declared row that covers a tracked file (directory prefix, or exact
+/// file match).
+fn covers(declared_path: &str, file: &str) -> bool {
+    match declared_path.strip_suffix('/') {
+        Some(_) => file.starts_with(declared_path),
+        None => file == declared_path,
+    }
+}
+
+/// No two declared rows may TIE for precedence over the same file while
+/// naming different authors.
+///
+/// # Direction this check enforces
+///
+/// Precedence (docs/generated-paths.txt's header, and this file's SIXTH
+/// direction above) is "the LONGEST matching declared path governs a
+/// file's true author" — a rule with no defined answer when two covering
+/// rows are the same length. Today that can only happen if two rows
+/// declare the literal same path twice (a straightforward duplicate) or two
+/// distinct files/directories of coincidentally equal path length both
+/// claim to be the most specific declaration for the same file, which is
+/// not possible for two DIFFERENT paths covering the same file (a shorter
+/// string cannot be a proper prefix of an equal-length string unless the
+/// two are identical) — so in practice this test only ever catches a
+/// literal duplicate declaration. It is kept as its own test, rather than
+/// folded into `an_overriding_declaration_must_be_measured`, because a tie
+/// has no resolvable winner at all: there is nothing to look up in
+/// `docs/generated-path-writes.tsv` for a row that does not exist.
+///
+/// WHAT THIS IS BLIND TO: everything `an_overriding_declaration_must_be_
+/// measured` covers — a clean (non-tied) override with no measurement
+/// behind it — is out of scope here on purpose; the two tests are
+/// complementary, not overlapping.
+#[test]
+fn no_two_declared_rows_tie_for_precedence_with_different_authors() {
+    let root = repo_root();
+    let out = Command::new("git")
+        .arg("-C")
+        .arg(&root)
+        .args(["ls-files"])
+        .output()
+        .expect("git ls-files must run");
+    let files: Vec<String> = String::from_utf8_lossy(&out.stdout)
+        .lines()
+        .map(str::to_string)
+        .collect();
+    let rows = declared();
+
+    let mut ties: Vec<String> = Vec::new();
+    for file in &files {
+        let mut covering: Vec<&(String, String)> =
+            rows.iter().filter(|(path, _)| covers(path, file)).collect();
+        if covering.len() < 2 {
+            continue;
+        }
+        covering.sort_by_key(|(p, _)| std::cmp::Reverse(p.len()));
+        let longest_len = covering[0].0.len();
+        let winners: Vec<&&(String, String)> = covering
+            .iter()
+            .filter(|(p, _)| p.len() == longest_len)
+            .collect();
+        let authors: std::collections::BTreeSet<&str> =
+            winners.iter().map(|(_, a)| a.as_str()).collect();
+        if winners.len() > 1 && authors.len() > 1 {
+            ties.push(format!("{file} -- tied rows: {winners:?}"));
+        }
+    }
+
+    assert!(
+        ties.is_empty(),
+        "these files are covered by two declared rows of EQUAL length naming DIFFERENT \
+         authors -- precedence (longest match wins) has no defined winner when lengths tie:\n  {}",
+        ties.join("\n  ")
+    );
+}
+
+/// A more-specific declared row that OVERRIDES a less-specific row's author
+/// for some file must have been through a real `make rebaseline` measurement
+/// before that override is trusted.
+///
+/// # Direction this check enforces
+///
+/// Resolves, for every tracked file covered by 2+ declared rows, the
+/// governing (longest-match) row. When the covering rows DISAGREE on
+/// author, the governing row must have its own entry in
+/// `docs/generated-path-writes.tsv` — proof a real regen ran with this row
+/// in place, not merely that someone typed a plausible-looking line. This
+/// is the check the SIXTH direction above names: it reproduces and fails on
+/// appending `book/src/laboratory/generated/the-census/rows.csv<TAB>artifacts`,
+/// because that row overrides `book/src/laboratory/generated/the-census/`'s
+/// `census` author for `rows.csv` and has no measurement entry.
+///
+/// WHY THIS AND NOT A GROUND-TRUTH CHECK: `artifacts` and `census` share one
+/// literal source file (`scripts/regenerate-artifacts.sh`, gated by
+/// `HV_CENSUS`), so no source-text check can ever tell which of the two is
+/// true for a given path — that distinction lives in a shell conditional
+/// this file does not parse and should not start parsing. Requiring a real
+/// measurement is the check this project's own idiom prefers: "studies are
+/// data, measurement is code" (decision 0011) applied to this file's own
+/// claims about itself.
+///
+/// WHAT THIS IS BLIND TO, stated once and not repeated per-row: a
+/// `docs/generated-path-writes.tsv` entry that EXISTS for the overriding
+/// row is trusted at face value — this test does not re-derive whether that
+/// entry's `written` count actually supports the CURRENTLY declared author,
+/// only that a real run produced a row for this exact path at some point.
+/// An author changed on an already-measured path, with the path itself
+/// untouched since, would pass here silently. It is also blind to a file
+/// with only ONE covering row (no override in play at all) and to the
+/// same-length-tie case, which
+/// `no_two_declared_rows_tie_for_precedence_with_different_authors` covers
+/// instead.
+#[test]
+fn an_overriding_declaration_must_be_measured() {
+    let root = repo_root();
+    let out = Command::new("git")
+        .arg("-C")
+        .arg(&root)
+        .args(["ls-files"])
+        .output()
+        .expect("git ls-files must run");
+    let files: Vec<String> = String::from_utf8_lossy(&out.stdout)
+        .lines()
+        .map(str::to_string)
+        .collect();
+    let rows = declared();
+    let measured = measured_writes();
+
+    let mut unmeasured_overrides: Vec<String> = Vec::new();
+    for file in &files {
+        let mut covering: Vec<&(String, String)> =
+            rows.iter().filter(|(path, _)| covers(path, file)).collect();
+        if covering.len() < 2 {
+            continue;
+        }
+        covering.sort_by_key(|(p, _)| std::cmp::Reverse(p.len()));
+        let (winning_path, winning_author) = covering[0];
+        let disagreement = covering[1..].iter().any(|(_, a)| a != winning_author);
+        if disagreement && !measured.contains_key(winning_path) {
+            unmeasured_overrides.push(format!(
+                "{file} -- governed by {winning_path:?} (author {winning_author:?}), which overrides \
+                 a less specific row's different author but has no docs/generated-path-writes.tsv entry"
+            ));
+        }
+    }
+
+    assert!(
+        unmeasured_overrides.is_empty(),
+        "{} file(s) are governed by a more-specific declared row that OVERRIDES a less-specific \
+         row's author, with no docs/generated-path-writes.tsv entry backing the override -- run \
+         `make rebaseline` and commit the refreshed write-capture before trusting this declaration:\n  {}",
+        unmeasured_overrides.len(),
+        unmeasured_overrides.join("\n  ")
     );
 }

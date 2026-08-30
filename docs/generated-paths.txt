@@ -27,7 +27,14 @@
 # add`-ed, exactly like any other declared path) while stating, reviewably,
 # that no roster author writes it — the repo's existing ratchet idiom
 # (type-audit's `waiver(<reason>)`, seam-guard's `expect(survives: <why>)`,
-# `tropes check`), not a new invention. THE REASON IS MANDATORY: a bare
+# `tropes check`), not a new invention. `none(...)` SCOPES STRICTLY TO "NO
+# ROSTER AUTHOR" (artifacts/census/heavy), NOT "NO WRITER OF ANY KIND": a
+# handful of `none(...)` rows below (the Casement client build's
+# `vessel.js`/`vessel-worker.js`, the opt-in-flag-rebaselined
+# `lexicon-inventory.tsv`, the byte-golden `layering-generated.md`) DO have a
+# real writer, just not one this schema's three-value roster can name — the
+# reason names that real writer so the fact is declared, not lost. THE
+# REASON IS MANDATORY: a bare
 # `none` or an empty `none()` is a PARSE ERROR, exactly as a reasonless
 # `waiver(...)` or `expect(survives: ...)` is elsewhere — the reason is the
 # whole value of the row, since it is what a future reader acts on.
