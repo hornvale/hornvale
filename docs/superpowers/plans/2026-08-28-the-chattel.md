@@ -1320,7 +1320,7 @@ is likewise **not** serialized by this task; the wire is Task 13.
 - Regenerate: `book/src/gallery/possession-*.md`
 
 **Interfaces:**
-- Consumes: `openness`/`is_open` (Task 5), `Openable`/`Lockable` (Task 7), `promote` (Task 4), `is_latent` (Task 6), `Noun.entity` (Task 10).
+- Consumes: `openness`/`is_open` (Task 5), `Openable`/`Lockable` (Task 7), `promote` (Task 4), `is_latent` (Task 6). **Not `Noun.entity` (Task 10)** — `open_or_close` resolves through `chamber_prose::noun` and `thing::thing_id`, for the reason Task 12's Interfaces line below now states at length; the field has no production consumer.
 - Produces: two verbs, a pattern that places contents, and the `Lockable`
   precondition that reads a second object.
 
@@ -1443,8 +1443,17 @@ The gallery transcripts move if any `examine` or `look` output changed.
 
 **Interfaces:**
 - Consumes: `located_fact`, `location_of`, `room_of` (Task 5), `is_latent`
-  (Task 6), `Portable` (Task 7), `Noun.entity` (Task 10 — `take <thing>`
-  resolves a typed noun to an entity, and cannot without it).
+  (Task 6), `Portable` (Task 7). **NOT `Noun.entity` (Task 10) — this line
+  said "`take <thing>` resolves a typed noun to an entity, and cannot without
+  it", and the shipped verb does not touch it** (corrected in Task 12's fix
+  round 1). `Session::take` resolves through `chamber_prose::noun` against
+  `interior.ids()`, the same matcher `open`/`examine` use, and derives the
+  entity with `thing::thing_id`. `Noun.entity` has **no production consumer
+  at all**: no site in `focalize::render` calls `with_entity`, which
+  `focalize`'s own module doc and
+  `the_focalization_is_deterministic` already state correctly. Wiring it up
+  to make this line true is a later task's call and not a rider on a fix
+  round; the line is corrected instead.
 - Produces: four verbs; custody as a `located-in` fact naming the body.
 
 - [ ] **Step 1: The three-things rule, per verb, without exception**

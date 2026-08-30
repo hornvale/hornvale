@@ -343,7 +343,7 @@ fn h3_refusal_is_selective_not_global() {
 /// 28-verb roster (The Offer added `warm`, The Latch added `clear`, The
 /// Gallery added `down`/`up` for underworld stairs, and The Chattel added
 /// `open`/`close` for lids and then `take`/`drop`/`put`/`carrying` for
-/// custody; none of the eleven resolves a drive, and there is
+/// custody; none of the ten resolves a drive, and there is
 /// still no drink/eat/relief verb — custody moves a THING's `located-in`,
 /// which no drive reads);
 /// the driven body's own

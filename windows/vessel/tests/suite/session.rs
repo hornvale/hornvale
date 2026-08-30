@@ -924,13 +924,19 @@ fn map_renders_the_colour_lens_unless_the_eyes_are_off() {
 /// against a literal spelled here.
 #[test]
 fn a_sessions_registry_carries_the_shared_predicate_docs() {
-    use hornvale_vessel::thing::{LOCATED_IN, LOCATED_IN_DOC, OPENNESS, OPENNESS_DOC};
+    use hornvale_vessel::thing::{
+        LOCATED_IN, LOCATED_IN_DOC, LOCKEDNESS, LOCKEDNESS_DOC, OPENNESS, OPENNESS_DOC,
+    };
 
     let world = seam_world();
     let (s, _) = Session::start(&world, &opts()).unwrap();
     let played = s.into_played_world(Seed(42));
 
-    for (name, doc) in [(LOCATED_IN, LOCATED_IN_DOC), (OPENNESS, OPENNESS_DOC)] {
+    for (name, doc) in [
+        (LOCATED_IN, LOCATED_IN_DOC),
+        (OPENNESS, OPENNESS_DOC),
+        (LOCKEDNESS, LOCKEDNESS_DOC),
+    ] {
         let def = played
             .registry
             .predicate(name)

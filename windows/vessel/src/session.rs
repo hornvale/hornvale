@@ -708,7 +708,7 @@ pub struct Session<'w> {
     /// only by `wait`'s tick (NPC `agent-at` facts). Never written back.
     ledger: Ledger,
     /// A clone of the world's registry, extended with the live-play
-    /// predicates — `AGENT_AT`, `LOCATED_IN` and `OPENNESS` (The Chattel,
+    /// predicates — `AGENT_AT`, `LOCATED_IN`, `OPENNESS` and `LOCKEDNESS` (The Chattel,
     /// which also RETIRED `PASSAGE_CLEARED` from this list), and the
     /// drive/needs predicates beside
     /// them — every one registered per-session, never at genesis (spec §3).
@@ -1125,6 +1125,17 @@ impl<'w> Session<'w> {
         registry
             .register_predicate(crate::thing::OPENNESS, false, crate::thing::OPENNESS_DOC)
             .expect("OPENNESS registers identically every session");
+        // The third, on the same terms (decision 0399). LOCKEDNESS is a
+        // separate state from OPENNESS, not a second spelling of it: `close`
+        // shuts a lid and never turns a key, so a chest a player shut on their
+        // own key can still be opened again.
+        registry
+            .register_predicate(
+                crate::thing::LOCKEDNESS,
+                false,
+                crate::thing::LOCKEDNESS_DOC,
+            )
+            .expect("LOCKEDNESS registers identically every session");
         // Idempotent (same def every session): never conflicts, since DRANK
         // is never registered at genesis either (spec §3).
         registry
@@ -2492,6 +2503,35 @@ impl<'w> Session<'w> {
             .unwrap_or(false)
     }
 
+    /// Whether the thing of `kind` in `room` is locked as of now (decision
+    /// 0399) — [`Self::container_is_open`]'s sibling over
+    /// [`crate::thing::LOCKEDNESS`], and the authored home of THAT fold's
+    /// absent-fact default.
+    ///
+    /// **The default is keyed on the KIND, and that is the difference from
+    /// the openness reader beside it.** A kind carrying
+    /// [`crate::affordance::ObjectProperty::Lockable`] with no fact about it
+    /// is locked — that is what makes a seeded strongbox worth finding a key
+    /// for, and it is the state every world starts in, since no generator
+    /// draws a lockedness any more than it draws an openness. A kind with no
+    /// lock is never locked, at any ordinal, under any fact: an alcove has
+    /// nothing to turn.
+    ///
+    /// **Nothing in this campaign ever writes `true`.** The only writer is
+    /// [`Self::open_or_close`]'s unlock, so the fold has exactly two reachable
+    /// states — the authored default, and unlocked-for-good. Re-locking would
+    /// need the key put IN THE LOCK, which is a location no verb can reach
+    /// (decision 0399, clause 4).
+    fn container_is_locked(&self, room: &Facet, kind: hornvale_kernel::KindId) -> bool {
+        if !crate::affordance::carries(kind, crate::affordance::ObjectProperty::Lockable) {
+            return false;
+        }
+        crate::thing::thing_id(room, kind.0, 0)
+            .ok()
+            .and_then(|id| crate::thing::is_locked(&self.ledger, id, self.day))
+            .unwrap_or(true)
+    }
+
     /// Whether the driven body is carrying anything that carries `property`.
     ///
     /// **The first precondition in Hornvale that reads a SECOND object** (spec
@@ -2548,17 +2588,75 @@ impl<'w> Session<'w> {
     ///    thing-kind carrying `Openable` becomes openable with no edit here
     ///    (acceptance 7), and the knowledge gate stands in front of this verb
     ///    exactly as it stands in front of `warm` and `examine`.
-    /// 5. **The lock**, and only for `open`. `Lockable` extends `open`'s
-    ///    precondition with a read of the body's custody
-    ///    ([`Self::carrying_something_that`]); `close` is unlocked in both
-    ///    senses — you may always shut a lid you could open, and requiring the
-    ///    key to close would mean a player could open a chest, drop the key in
-    ///    it and be unable to shut it.
+    /// 5. **The lock**, and only for `open` — [`Self::container_is_locked`]
+    ///    over the thing's own [`crate::thing::LOCKEDNESS`] fold, and only
+    ///    then a read of the body's custody
+    ///    ([`Self::carrying_something_that`]). `close` never consults either:
+    ///    it shuts a lid and turns nothing (decision 0399).
     /// 6. **The no-op**, before the write. A second `open` on an open thing
     ///    reports the state and commits nothing, which is `clear`'s own
     ///    behaviour at an already-open mouth and is what keeps
     ///    `thing::set_openness`'s across-days `instance-of` duplication
     ///    unreachable through the verb.
+    /// 7. **The charge**, after every refusal and before both writes.
+    ///
+    /// # CLOSED AND LOCKED ARE DIFFERENT STATES (decision 0399, fix round 1)
+    ///
+    /// This verb shipped conflating them, and the conflation was reachable in
+    /// three moves. `openness` was the only state a container had, and the
+    /// lock arm re-derived "locked" from the PLAYER'S POCKETS at every ask —
+    /// so a chest was locked whenever the body happened not to be holding
+    /// something `Portable`, whatever the chest's own history. Shutting a lid
+    /// therefore re-locked it, and shutting it on the very key that opened it
+    /// was a permanent soft-lock: `open` refused for want of a key, and
+    /// `take a key` refused because the key was shut away. Measured through
+    /// the shipped CLI on seed 1, unrecoverable at any day by any verb:
+    ///
+    /// ```text
+    /// > take a key                -> You take the key.
+    /// > open a strongbox          -> You open the strongbox. Within it: a key.
+    /// > put a key in a strongbox  -> You put the key in the strongbox.
+    /// > close a strongbox         -> You close the strongbox.
+    /// > open a strongbox          -> It is locked, and you are carrying nothing that would open it.
+    /// > take a key                -> The key is shut away in something closed.
+    /// ```
+    ///
+    /// **The repair is a second state, not a special case.** `openness` is
+    /// untouched — it is still Task 5's open/shut fold — and lockedness is its
+    /// own predicate with its own authored default (`Lockable` and no fact
+    /// means locked, which is what makes a seeded strongbox worth finding a
+    /// key for). `open` with a key in custody turns the lock ONCE and commits
+    /// the unlocking; nothing re-locks it, because locking needs the key put
+    /// in the lock and this campaign ships no `lock` verb. The dead end
+    /// disappears with no precondition anywhere reading a container's
+    /// contents, which is what made every alternative remedy worse.
+    ///
+    /// # IT CHARGES, AND USED NOT TO (fix round 1)
+    ///
+    /// [`Self::charge_within_room`], the same `Action::MoveWithin` dial
+    /// `take`/`drop`/`put` and the `down`/`up` stairs already read — **no new
+    /// cost model**, which spec §3.4 forbids. `take`'s own doc recorded the
+    /// hazard from the other side while these two verbs still stayed free, and
+    /// understated it: a free verb leaves the clock where it found it, so
+    /// `open`, `close`, `open` in one instant commits `open`, `shut`, and then
+    /// a third fact byte-identical to the first, which `Ledger::commit` dedups
+    /// away. The last posting at that instant is `shut` while every reply was
+    /// computed before its commit. The result was not one wrong reply but a
+    /// STUCK INSTANT: every later `open` said it opened and did not, `close`
+    /// answered "already shut", `put` refused the shut chest, and only `wait`
+    /// escaped. Measured on seed 1 before the fix:
+    ///
+    /// ```text
+    /// > open a strongbox   -> You open the strongbox. Within it: a key.
+    /// > close a strongbox  -> You close the strongbox.
+    /// > open a strongbox   -> You open the strongbox. Within it: a key.
+    /// > open a strongbox   -> You open the strongbox. Within it: a key.
+    /// > close a strongbox  -> The strongbox is already shut.
+    /// > put a key in a strongbox -> The strongbox is shut.
+    /// ```
+    ///
+    /// The no-op arm (clause 6) returns BEFORE the charge, so reporting a
+    /// state still costs nothing — a refusal is not an act.
     ///
     /// # What it does NOT do
     ///
@@ -2613,10 +2711,12 @@ impl<'w> Session<'w> {
             ));
         }
 
-        if open
-            && crate::affordance::carries(thing_kind, crate::affordance::ObjectProperty::Lockable)
-            && !self.carrying_something_that(crate::affordance::ObjectProperty::Portable)
-        {
+        // Locked is a state of the THING, read off its own fold — not a state
+        // of the player's pockets re-derived at every ask (decision 0399).
+        // `close` is absent from this expression by construction: `open` gates
+        // it, so shutting a lid can never turn a key.
+        let locked = open && self.container_is_locked(&room, thing_kind);
+        if locked && !self.carrying_something_that(crate::affordance::ObjectProperty::Portable) {
             return Turn::Out(LOCKED_WITHOUT_A_KEY_REFUSAL.to_string());
         }
 
@@ -2628,6 +2728,36 @@ impl<'w> Session<'w> {
                 "The {bare} is already {}.",
                 if open { "open" } else { "shut" }
             ));
+        }
+
+        // Charged BEFORE the writes and AFTER every refusal, exactly where
+        // `take`/`drop`/`put` charge, and for the representability reason
+        // their docs give rather than for a tariff: two openness facts at one
+        // instant are one fact, and `Ledger::commit`'s dedup of the third
+        // posting in `open`, `close`, `open` used to leave the chest shut
+        // while the reply said it opened. The no-op arm above returns first,
+        // so reporting a state costs nothing.
+        if let Err(e) = self.charge_within_room() {
+            return Turn::Out(e);
+        }
+
+        // The key turns before the lid lifts. One posting, once: `locked` is
+        // false unless the fold said the lock was still shut, so a chest
+        // opened twice writes this once and a chest with no lock never writes
+        // it at all.
+        if locked {
+            crate::thing::set_lockedness(
+                &mut self.ledger,
+                &self.registry,
+                &room,
+                thing_kind.0,
+                0,
+                false,
+                self.day,
+            )
+            .expect(
+                "a chamber facet packs, and LOCKEDNESS/instance-of are registered by Session::start",
+            );
         }
 
         crate::thing::set_openness(
@@ -2699,9 +2829,20 @@ impl<'w> Session<'w> {
     /// the anchor whose identity just matched — not
     /// [`hornvale_kernel::Ledger::kind_of`], which answers `None` for a
     /// container nothing has promoted yet and would send an untouched
-    /// strongbox down [`Self::holder_admits`]'s lidless arm. That is not
-    /// hypothetical: it is the red this signature was written in response to,
-    /// where a shut strongbox accepted a `put`.
+    /// strongbox down [`Self::holder_admits`]'s lidless arm.
+    ///
+    /// **The red that hazard names was a `put`, and `put` does not call this
+    /// function** — the doc said "it is the red this signature was written in
+    /// response to", which credited one verb's defect to the other verb's
+    /// helper (fix round 1). The function BOTH verbs share is
+    /// [`Self::holder_admits`], and what it needs from either caller is a
+    /// kind derived from an ANCHOR rather than from the ledger.
+    /// [`Self::put_in`] gets one inline — it already holds the anchor it
+    /// matched the container's noun against — and [`Self::take`] cannot,
+    /// because it starts from a holder [`crate::thing::location_of`] handed
+    /// it and has to find the anchor again. That search is what this function
+    /// is, and returning the kind rather than a bool is what keeps the ledger
+    /// out of the lid question on the path that has no anchor in hand.
     ///
     /// Derived, never minted: [`crate::thing::thing_id`] is a pure function
     /// of `(room, kind, ordinal)`, so this compares ids for anchors that may
@@ -2825,12 +2966,24 @@ impl<'w> Session<'w> {
     /// ```
     ///
     /// Charging gives each act its own instant, so the fold has an order to
-    /// read. **The same hazard is still live in `open`/`close`, which stayed
-    /// free**: `open`, `close`, `open` at one instant dedups the third fact
-    /// and leaves the chest SHUT while the reply says it opened, because
-    /// every reply in [`Self::open_or_close`] is computed before its commit.
-    /// It is recorded here rather than repaired here — those two verbs are
-    /// Task 11's and their transcripts are in the galleries.
+    /// read. **The same hazard was live in `open`/`close`, which shipped
+    /// free, and fix round 1 closed it there too**: `open`, `close`, `open` at
+    /// one instant dedups the third fact and leaves the chest SHUT while the
+    /// reply says it opened, because every reply in [`Self::open_or_close`] is
+    /// computed before its commit. That verb pair now takes the same
+    /// `MoveWithin` charge, before its writes and after its refusals; see its
+    /// own doc for the measured stuck-instant transcript.
+    ///
+    /// **The sentence this replaces deferred the repair to a witness that
+    /// does not exist**, and that is the part worth keeping. It read: *"those
+    /// two verbs are Task 11's and their transcripts are in the galleries."*
+    /// No gallery contains `open`, `close`, `take`, `drop`, `put` or
+    /// `carrying` at all — `scripts/possession-walk.txt` and
+    /// `scripts/possession-over-time-walk.txt` are the only inputs
+    /// `book/src/gallery/possession-*.md` is generated from, and neither
+    /// types any of the six. A deferral that names a witness nobody checked
+    /// reads as coverage; there was none, and the defect survived a task
+    /// boundary because of it.
     fn take(&mut self, rest: &str) -> Turn {
         let wanted = rest.trim().to_lowercase();
         if wanted.is_empty() {
@@ -2845,7 +2998,7 @@ impl<'w> Session<'w> {
             crate::chamber_prose::noun(interior.anchor(id).kind)
                 .is_some_and(|n| n.to_lowercase() == wanted)
         }) else {
-            return self.take_from_the_floor(&room, &wanted, rest.trim());
+            return self.take_from_the_ledger(&interior, &room, &wanted, rest.trim());
         };
 
         let thing_kind = crate::affordance::thing_kind_of(interior.anchor(id).kind);
@@ -2921,17 +3074,78 @@ impl<'w> Session<'w> {
     /// unmentioned here. Putting the ledger's own things into the narration is
     /// the wire's half of this campaign (Task 13, "carried things on the
     /// snapshot"), not this verb's.
-    fn take_from_the_floor(&mut self, room: &Facet, wanted: &str, typed: &str) -> Turn {
+    ///
+    /// **THE DIVERGENCE RUNS BOTH WAYS, AND ONLY THIS DIRECTION WAS EVER
+    /// WRITTEN DOWN** (fix round 1). The paragraph above says the prose omits
+    /// what the ledger holds. The prose also ASSERTS what the ledger denies:
+    /// after `take a key`, `look` still lists *"a key"* among the room's
+    /// contents, and `open a strongbox` still answers *"Within it: a key"*
+    /// while the key is in the player's hand — because
+    /// [`crate::chamber_prose::contents_of`] reads `nouns_within`, the
+    /// GRAMMAR's containment, with no latency filter and no ledger at all.
+    /// Neither direction is repaired here: both belong to the deferred
+    /// containment work registered as
+    /// `PLAY-closed-container-conceals-nothing`, whose bill (threading day and
+    /// ledger into a pure, published `describe_chamber`) decision 0398 already
+    /// priced.
+    ///
+    /// # A SECOND SOURCE: A CONTAINER STANDING HERE (fix round 1)
+    ///
+    /// The floor is not the only place the grammar cannot see. `put a key in
+    /// an alcove`, in any room whose grammar composes no key of its own, used
+    /// to lose the key **permanently and silently**: [`Self::take`]'s
+    /// container arm sits behind the noun match against `interior.ids()`, and
+    /// a room composing no key anchor never reaches it, so control arrived
+    /// here — and [`crate::thing::lying_in`] is room-keyed and DIRECT, so it
+    /// cannot see a thing whose location is a container entity. Measured
+    /// through the shipped CLI on seed 1, in the alcove room two doors in:
+    ///
+    /// ```text
+    /// > put a key in an alcove  -> You put the key in the alcove.
+    /// > take a key              -> You see no a key here.
+    /// > drop a key              -> You are not carrying a key.
+    /// > look                    -> A small room, holding a doorway and an alcove.
+    /// ```
+    ///
+    /// That is the exact loss [`NOWHERE_TO_SET_DOWN_REFUSAL`] refuses `drop`
+    /// out of doors to prevent ("it would be lost"), arriving through the
+    /// sibling verb with no refusal and no record. So this function asks the
+    /// ledger twice: the floor first, then every container this room's
+    /// grammar stands ([`Self::stowed_in_a_container_here`]). A shut container
+    /// answers with the same sentence `take`'s own container arm gives, since
+    /// it is the same [`Self::holder_admits`] question about the same lid.
+    fn take_from_the_ledger(
+        &mut self,
+        interior: &crate::interior::Interior,
+        room: &Facet,
+        wanted: &str,
+        typed: &str,
+    ) -> Turn {
         let here = crate::thing::lying_in(&self.ledger, room, self.day)
             .expect("a chamber facet packs, or the interior could not have composed");
-        let found = here.into_iter().find_map(|thing| {
+        let on_the_floor = here.into_iter().find_map(|thing| {
             let noun = crate::chamber_prose::noun_for_label(self.ledger.kind_of(thing)?)?;
             (noun.to_lowercase() == wanted).then_some((thing, noun))
         });
-        let Some((thing, noun)) = found else {
+        // The floor first, then the containers standing on it — a thing set
+        // down loose is the commoner case and the cheaper read, and a thing
+        // cannot be in both places at once, so the order is a preference and
+        // never an ambiguity.
+        let found = match on_the_floor {
+            Some((thing, noun)) => Some((thing, noun, None)),
+            None => self
+                .stowed_in_a_container_here(interior, room, wanted)
+                .map(|(thing, noun, kind, holder)| (thing, noun, Some((kind, holder)))),
+        };
+        let Some((thing, noun, stowed)) = found else {
             return Turn::Out(format!("You see no {typed} here."));
         };
         let bare = crate::chamber_prose::without_article(noun);
+        if let Some((holder_kind, holder)) = stowed
+            && !self.holder_admits(holder_kind, holder)
+        {
+            return Turn::Out(format!("The {bare} is shut away in something closed."));
+        }
         if let Err(e) = self.charge_within_room() {
             return Turn::Out(e);
         }
@@ -2940,6 +3154,54 @@ impl<'w> Session<'w> {
             .commit(fact, &self.registry)
             .expect("LOCATED_IN is registered by Session::start and is non-functional");
         Turn::Out(format!("You take the {bare}."))
+    }
+
+    /// The thing named `wanted` sitting inside one of THIS room's containers,
+    /// with the container's kind and entity — [`Self::take_from_the_ledger`]'s
+    /// second source (fix round 1), and the half that closes `put`'s one-way
+    /// trapdoor.
+    ///
+    /// **It starts from the GRAMMAR and asks the LEDGER, which is the only
+    /// order that terminates.** A room's containers are its anchors, so the
+    /// enumeration is `interior.ids()` filtered to
+    /// [`crate::affordance::ObjectProperty::Encloses`]; each one's entity is
+    /// derived by [`crate::thing::thing_id`] (a pure function, so a container
+    /// nothing has ever promoted still resolves) and asked what it holds
+    /// through [`crate::thing::held_by`]. The reverse order — enumerate every
+    /// thing in the ledger and ask where it is — would answer about containers
+    /// in other rooms, which is the question [`Self::holder_anchored_here`]
+    /// exists to say no to.
+    ///
+    /// **DIRECT containment, one level, deliberately.** A chest inside a chest
+    /// is not reachable here, and nothing in this world composes one:
+    /// `Anchor.within` nests exactly one deep and no `Encloses` kind is
+    /// `Within` another. A transitive walk would be a fold nothing could
+    /// exercise, and the honest place for it is the day something nests.
+    ///
+    /// **No openness check**, and that is not an omission: the caller needs
+    /// the pair to ask [`Self::holder_admits`] and give the shut lid its own
+    /// sentence, which a `None` here could not be told apart from "no such
+    /// thing in this room". Deterministic by construction: `interior.ids()`
+    /// and `held_by` both answer in `EntityId` order, never ledger order.
+    fn stowed_in_a_container_here(
+        &self,
+        interior: &crate::interior::Interior,
+        room: &Facet,
+        wanted: &str,
+    ) -> Option<(EntityId, &'static str, hornvale_kernel::KindId, EntityId)> {
+        interior.ids().into_iter().find_map(|id| {
+            let kind = crate::affordance::thing_kind_of(interior.anchor(id).kind);
+            if !crate::affordance::carries(kind, crate::affordance::ObjectProperty::Encloses) {
+                return None;
+            }
+            let holder = crate::thing::thing_id(room, kind.0, 0).ok()?;
+            crate::thing::held_by(&self.ledger, holder, self.day)
+                .into_iter()
+                .find_map(|thing| {
+                    let noun = crate::chamber_prose::noun_for_label(self.ledger.kind_of(thing)?)?;
+                    (noun.to_lowercase() == wanted).then_some((thing, noun, kind, holder))
+                })
+        })
     }
 
     /// `drop <thing>` — custody's other direction: one
@@ -8790,14 +9052,32 @@ mod tests {
     /// It also pins the shut arm from both sides: a closed strongbox refuses
     /// the `put`, and the same strongbox opened accepts it.
     ///
+    /// **IT COVERS ONE ROOM SHAPE OF TWO, AND ITS DOC USED TO CLAIM THE
+    /// HOLE WAS CLOSED** (fix round 1). `take`'s container arm sits behind the
+    /// noun match against `interior.ids()`, so it is reachable only in a room
+    /// whose grammar composes the stowed thing's OWN anchor — which the
+    /// storeroom below does, because the key is `Within(Strongbox)` there. In
+    /// any other room the same `put` used to lose the thing for good;
+    /// `a_thing_put_into_a_container_the_grammar_never_composes_comes_back_out`
+    /// is the other shape, and [`Session::take_from_the_ledger`]'s second
+    /// source is what answers it. Neither test substitutes for the other.
+    ///
     /// MUTATION THIS MUST FAIL AGAINST — the property is *that `take` can
     /// reach into a container standing here*, which is what makes `put`
-    /// reversible rather than a hole: delete the
-    /// `Some(Value::Entity(h)) if self.holder_stands_here(...)` arm from
-    /// `Session::take` (leaving the already-carrying arm above it, so the
-    /// match still compiles and every other take still works). Confirmed
-    /// 2026-08-29, unfiltered, in the same three-mutation run
-    /// `a_dropped_thing_joins_the_room_it_was_dropped_in` cites:
+    /// reversible rather than a hole: in `Session::take`'s container arm,
+    /// replace `Some(Value::Entity(h)) => h,` with
+    /// `Some(Value::Entity(_)) => return Turn::Out(format!("You see no {} here.", rest.trim())),`
+    /// — the already-carrying arm above it survives, so the match still
+    /// compiles and every other take still works.
+    ///
+    /// **The mutation this replaces could not be applied at all.** It named
+    /// `Some(Value::Entity(h)) if self.holder_stands_here(...)`, and there is
+    /// no `holder_stands_here` in the tree and no guard on that arm: the real
+    /// function is [`Session::holder_anchored_here`] and it is called AFTER
+    /// the match, not inside it. A mutation nobody can apply is a claim that
+    /// reads exactly like evidence. Re-taken against the real code, confirmed
+    /// 2026-08-30, unfiltered over the whole crate —
+    /// `864 tests run: 862 passed, 2 failed, 3 skipped`:
     ///
     /// ```text
     /// assertion `left == right` failed: a thing put into a chest standing
@@ -8805,6 +9085,13 @@ mod tests {
     ///   left: "You see no a key here."
     ///  right: "You take the key."
     /// ```
+    ///
+    /// **The second red is `closing_a_container_does_not_lock_it`, and it is
+    /// recorded rather than tidied**: that test ends by taking the key back
+    /// out of the same strongbox in the same room, so it rides this arm too.
+    /// It is a weaker witness for THIS property (it reaches the take through
+    /// four earlier verbs) and a sharper one for its own, which is why both
+    /// exist.
     #[test]
     fn a_thing_put_into_an_open_chest_can_be_taken_back_out() {
         let world = world_at(1).expect("seed 1 builds");
@@ -8838,6 +9125,292 @@ mod tests {
              of it"
         );
         assert_eq!(say(&mut session, "carrying"), "You are carrying a key.");
+    }
+
+    /// **A thing stowed in a container the room's GRAMMAR never composes
+    /// comes back out** — the other room shape, and the one the shipped verb
+    /// lost the thing in permanently (fix round 1).
+    ///
+    /// The sibling test above stows the key in the strongbox of the room that
+    /// composes both, where `take`'s own container arm answers. This one
+    /// carries the key three rooms away into a chamber whose grammar knows
+    /// only a doorway and an alcove, so the noun match at the top of
+    /// [`Session::take`] cannot fire and control reaches
+    /// [`Session::take_from_the_ledger`] — where [`crate::thing::lying_in`] is
+    /// room-keyed and direct and cannot see a thing held by a container
+    /// entity. Before the fix the key was gone from the world for the rest of
+    /// play, with a cheerful reply and no refusal: exactly the loss
+    /// [`NOWHERE_TO_SET_DOWN_REFUSAL`] exists to prevent, through the sibling
+    /// verb.
+    ///
+    /// The `an alcove` precondition is asserted rather than assumed, because
+    /// an alcove carries `Encloses` and NOT `Openable` — it is the lidless
+    /// arm of [`Session::holder_admits`], so this test also pins that a
+    /// container with nothing to shut never refuses.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST — the property is *that the ledger's
+    /// second source is consulted at all*: in
+    /// `Session::take_from_the_ledger`, replace the
+    /// `None => self.stowed_in_a_container_here(interior, room, wanted).map(...)`
+    /// arm with `None => None`. Every floor take still works and the reply
+    /// for a stowed thing reverts to "You see no a key here.". Confirmed
+    /// 2026-08-30, unfiltered over the whole crate —
+    /// `864 tests run: 863 passed, 1 failed, 3 skipped`, this test alone, so
+    /// the second source is held by nothing else in the tree:
+    ///
+    /// ```text
+    /// assertion `left == right` failed: a thing stowed in a container this
+    /// room's grammar never composed must still be reachable, or `put` is a
+    /// one-way trapdoor
+    ///   left: "You see no a key here."
+    ///  right: "You take the key."
+    /// ```
+    #[test]
+    fn a_thing_put_into_a_container_the_grammar_never_composes_comes_back_out() {
+        let world = world_at(1).expect("seed 1 builds");
+        let mut session = in_the_store_room_of_seed_one(&world);
+        let store = session
+            .chamber_facet_here()
+            .expect("the walk above ended in a chamber");
+        assert_eq!(say(&mut session, "take a key"), "You take the key.");
+
+        assert!(say(&mut session, "out").starts_with("[room "));
+        assert!(say(&mut session, "enter").starts_with("[chamber "));
+        assert!(say(&mut session, "enter further in").starts_with("[chamber "));
+        let alcove_room = session
+            .chamber_facet_here()
+            .expect("`enter further in` lands in a chamber");
+        assert_ne!(alcove_room, store, "precondition: a different room");
+        let nouns = session.chamber_nouns_here();
+        assert!(
+            nouns.iter().any(|n| n == "an alcove"),
+            "precondition: this room must stand a lidless container: {nouns:?}"
+        );
+        assert!(
+            !nouns.iter().any(|n| n == "a key"),
+            "precondition: this room's GRAMMAR must not compose a key, or \
+             `take`'s own container arm answers and the ledger's second \
+             source is not what is being tested: {nouns:?}"
+        );
+
+        assert_eq!(
+            say(&mut session, "put a key in an alcove"),
+            "You put the key in the alcove."
+        );
+        assert_eq!(say(&mut session, "carrying"), "You are carrying nothing.");
+        assert_eq!(
+            say(&mut session, "take a key"),
+            "You take the key.",
+            "a thing stowed in a container this room's grammar never composed \
+             must still be reachable, or `put` is a one-way trapdoor"
+        );
+        assert_eq!(say(&mut session, "carrying"), "You are carrying a key.");
+    }
+
+    /// **Closing a container does not lock it** (decision 0399) — the
+    /// permanent soft-lock the shipped verbs could reach in three moves, and
+    /// the model correction that removed it.
+    ///
+    /// The sequence is the reviewer's, verbatim: open the chest with the key,
+    /// put the key inside it, shut the lid. Under the shipped conflation the
+    /// world ended there — `open` refused for want of a key that was inside
+    /// the chest, and `take a key` refused because the key was shut away, at
+    /// any day, by any verb. Under decision 0399 the chest is shut and
+    /// UNLOCKED, so the lid lifts again with empty hands and the key comes
+    /// back out.
+    ///
+    /// **It asserts the recovery, not the absence of a refusal**, which is
+    /// the distinction that makes it a regression test rather than a
+    /// re-spelling of the bug: the last two lines are the two verbs that were
+    /// stuck, each answering the way it would if nothing had ever been locked.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST — the property is *that lockedness is
+    /// a state of the THING and not of the player's pockets*, which is
+    /// decision 0399 itself put back: in `Session::open_or_close`, replace
+    /// `let locked = open && self.container_is_locked(&room, thing_kind);`
+    /// with
+    /// `let locked = open && crate::affordance::carries(thing_kind, crate::affordance::ObjectProperty::Lockable);`
+    /// — the pre-0399 expression. It compiles and every first-open test stays
+    /// green, which is the whole reason the defect shipped. Confirmed
+    /// 2026-08-30, unfiltered over the whole crate —
+    /// `864 tests run: 863 passed, 1 failed, 3 skipped`, this test alone:
+    ///
+    /// ```text
+    /// assertion `left == right` failed: a shut lid is not a turned key: the
+    /// chest a player closed on their own key must open again with empty
+    /// hands
+    ///   left: "It is locked, and you are carrying nothing that would open it."
+    ///  right: "You open the strongbox. Within it: a key."
+    /// ```
+    #[test]
+    fn closing_a_container_does_not_lock_it() {
+        let world = world_at(1).expect("seed 1 builds");
+        let mut session = in_the_store_room_of_seed_one(&world);
+        assert_eq!(say(&mut session, "take a key"), "You take the key.");
+        assert_eq!(
+            say(&mut session, "open a strongbox"),
+            "You open the strongbox. Within it: a key.",
+            "precondition: the key in custody must turn the seeded lock, or \
+             nothing below is about closing"
+        );
+        assert_eq!(
+            say(&mut session, "put a key in a strongbox"),
+            "You put the key in the strongbox."
+        );
+        assert_eq!(
+            say(&mut session, "close a strongbox"),
+            "You close the strongbox."
+        );
+
+        assert_eq!(
+            say(&mut session, "open a strongbox"),
+            "You open the strongbox. Within it: a key.",
+            "a shut lid is not a turned key: the chest a player closed on \
+             their own key must open again with empty hands"
+        );
+        assert_eq!(
+            say(&mut session, "take a key"),
+            "You take the key.",
+            "and the key must come back out, or the soft-lock is only one \
+             verb further along"
+        );
+    }
+
+    /// **A chest that was never unlocked stays locked across a close** — the
+    /// other half of decision 0399, and the half a reader is likeliest to
+    /// suspect the fix of breaking.
+    ///
+    /// Clause 3: a seeded strongbox starts locked, and the default is
+    /// authored on the KIND rather than drawn, so a chest nobody has opened
+    /// refuses empty hands however many times its lid is worked. The walk
+    /// below never takes the key, so `open` never turns the lock, so
+    /// `container_is_locked` reads its absent-fact default every time.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST — the property is *that a REFUSED
+    /// `open` writes nothing*, which is what the last two lines hold and what
+    /// the first line alone could not: in `Session::open_or_close`, hoist the
+    /// `if locked { crate::thing::set_lockedness(…, false, …) }` block ABOVE
+    /// the `LOCKED_WITHOUT_A_KEY_REFUSAL` return, so the lock turns on the
+    /// way to being told it did not. Confirmed 2026-08-30, unfiltered over
+    /// the whole crate — `864 tests run: 863 passed, 1 failed, 3 skipped`,
+    /// this test alone, and it reds on the THIRD assertion rather than the
+    /// precondition:
+    ///
+    /// ```text
+    /// assertion `left == right` failed: and the lock is still a lock
+    ///   left: "You open the strongbox. Within it: a key."
+    ///  right: "It is locked, and you are carrying nothing that would open it."
+    /// ```
+    ///
+    /// **A second, blunter mutation is recorded because its RED IS IN THE
+    /// WRONG PLACE and that is worth knowing before anyone credits it**:
+    /// flipping `Session::container_is_locked`'s `.unwrap_or(true)` to
+    /// `.unwrap_or(false)` reds three tests
+    /// (`864 tests run: 861 passed, 3 failed`) — this one plus
+    /// `a_key_in_custody_opens_the_strongbox_a_player_walked_to` and
+    /// `strongbox_reachability::a_possession_walks_to_a_strongbox_and_finds_
+    /// it_locked` — and all three object at "a seeded strongbox starts
+    /// locked", which was already held before this test existed. It proves
+    /// the default, not the close, so it is not this test's mutation.
+    #[test]
+    fn a_container_nobody_unlocked_is_still_locked_after_a_close() {
+        let world = world_at(1).expect("seed 1 builds");
+        let mut session = in_the_store_room_of_seed_one(&world);
+        assert_eq!(
+            say(&mut session, "open a strongbox"),
+            LOCKED_WITHOUT_A_KEY_REFUSAL,
+            "precondition: a seeded strongbox starts locked"
+        );
+        assert_eq!(
+            say(&mut session, "close a strongbox"),
+            "The strongbox is already shut.",
+            "the refused open must have written nothing"
+        );
+        assert_eq!(
+            say(&mut session, "open a strongbox"),
+            LOCKED_WITHOUT_A_KEY_REFUSAL,
+            "and the lock is still a lock"
+        );
+    }
+
+    /// **`open` and `close` each take an instant, so a chest's state is
+    /// representable** (fix round 1) — the same representability argument
+    /// [`Session::take`]'s doc makes for custody, applied to the verb pair
+    /// that shipped free.
+    ///
+    /// `Ledger::commit` dedups a fact identical to one already held and a
+    /// free verb leaves the clock where it found it, so `open`, `close`,
+    /// `open` at ONE instant committed `open`, `shut`, and then a third fact
+    /// byte-identical to the first — dropped. The last posting at that
+    /// instant was `shut`, every reply having been computed before its
+    /// commit. The result was not one wrong reply but a stuck instant that
+    /// only `wait` escaped.
+    ///
+    /// **The assertion is on the LEDGER's answer and on the next verb, never
+    /// on `open`'s own reply**, because `open`'s reply is exactly what lied:
+    /// a test reading it back would have passed against the defect.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST — the property is *that the charge is
+    /// what makes three acts three instants*: delete the
+    /// `if let Err(e) = self.charge_within_room() { return Turn::Out(e); }`
+    /// block from `Session::open_or_close`. Every reply in the walk below is
+    /// unchanged and the chest silently stays shut. Confirmed 2026-08-30,
+    /// unfiltered over the whole crate —
+    /// `864 tests run: 863 passed, 1 failed, 3 skipped`, this test alone, so
+    /// nothing else in the tree notices `open`/`close` going free again:
+    ///
+    /// ```text
+    /// opening a lid must cost an instant, or the two facts below cannot be
+    /// told apart
+    /// ```
+    ///
+    /// **It reds at the CLOCK assertion, one line in, not at the two
+    /// assertions this test was written for**, and that is recorded rather
+    /// than tidied. The clock line is a precondition — it is what makes the
+    /// three postings distinguishable at all — so the mutation never reaches
+    /// the ledger read or the `put`. Those two are still worth their lines
+    /// (they are what would catch a charge that advanced the clock while the
+    /// commits stayed on the old day), but nothing has demonstrated them, and
+    /// saying otherwise would credit a mutation to the wrong assertion.
+    #[test]
+    fn open_and_close_each_take_an_instant() {
+        let world = world_at(1).expect("seed 1 builds");
+        let mut session = in_the_store_room_of_seed_one(&world);
+        let room = session
+            .chamber_facet_here()
+            .expect("the walk above ended in a chamber");
+        assert_eq!(say(&mut session, "take a key"), "You take the key.");
+
+        let before = session.day;
+        assert_eq!(
+            say(&mut session, "open a strongbox"),
+            "You open the strongbox. Within it: a key."
+        );
+        assert!(
+            session.day > before,
+            "opening a lid must cost an instant, or the two facts below \
+             cannot be told apart"
+        );
+        assert_eq!(
+            say(&mut session, "close a strongbox"),
+            "You close the strongbox."
+        );
+        assert_eq!(
+            say(&mut session, "open a strongbox"),
+            "You open the strongbox. Within it: a key."
+        );
+
+        assert!(
+            session.container_is_open(&room, hornvale_kernel::KindId("strongbox")),
+            "the ledger must agree with the reply: a third posting deduped \
+             away leaves the chest shut while `open` says it opened"
+        );
+        assert_eq!(
+            say(&mut session, "put a key in a strongbox"),
+            "You put the key in the strongbox.",
+            "and the next verb must see the open chest the player is looking \
+             at"
+        );
     }
 
     /// **The lock wants a PROPERTY and exactly one kind supplies it** — the

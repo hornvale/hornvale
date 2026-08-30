@@ -373,6 +373,45 @@ pub const OPENNESS: &str = "openness";
 /// type-audit: bare-ok(prose)
 pub const OPENNESS_DOC: &str = "whether a thing was open on a day";
 
+/// The predicate recording that a thing was locked or unlocked — **a
+/// SEPARATE state from [`OPENNESS`], which is the whole of decision 0399.**
+///
+/// The Chattel shipped with one boolean doing both jobs: a strongbox was
+/// "locked" iff `open_or_close` could not find a key in the body's custody at
+/// the moment of asking, so `close` — which shuts a lid and nothing else —
+/// re-locked the chest. Put the key inside, shut the lid, and the world was
+/// unrecoverable: `open` refused for want of a key, and `take a key` refused
+/// because the key was shut away. Two states with one variable, and the dead
+/// end was where they disagreed.
+///
+/// **Absence means "whatever the seed drew"**, on exactly [`OPENNESS`]'s
+/// terms and for the same reason: [`is_locked`] returns `Option<bool>` and
+/// the authored default lives in the reader that knows what KIND it is
+/// asking about (`Session::container_is_locked`, where a
+/// [`crate::affordance::ObjectProperty::Lockable`] kind defaults to locked
+/// and everything else has no lock at all).
+///
+/// Non-functional, like the two predicates above it: a lock is a thing that
+/// changes, and the answer is the latest posting at or before the day. **No
+/// verb in this campaign writes `true`** — a lock needs the key IN THE LOCK,
+/// which is a location no verb can put a key in (decision 0399, clause 4), so
+/// the only posting anything commits is the `false` that `open` writes when a
+/// key in custody turns a seeded lock. The `true` direction exists in this
+/// fold so a future `lock` verb has one writer to reach for rather than a
+/// second predicate.
+///
+/// Its spelling is a save-format contract on the same terms as
+/// [`LOCATED_IN`]'s.
+/// type-audit: bare-ok(identifier-text)
+pub const LOCKEDNESS: &str = "lockedness";
+
+/// The doc string [`LOCKEDNESS`] is registered with, a constant for exactly
+/// the reason [`LOCATED_IN_DOC`] and [`OPENNESS_DOC`] are: a predicate's doc
+/// is save-format state, and a saved world's registry must agree with a later
+/// session's or `register_predicate` is a `ConflictingDefinition`.
+/// type-audit: bare-ok(prose)
+pub const LOCKEDNESS_DOC: &str = "whether a thing was locked on a day";
+
 /// The fact committed when `thing` comes to rest in `room` on `day`.
 ///
 /// **The room is encoded HERE, from a typed [`Facet`], and that is the whole
@@ -428,6 +467,19 @@ pub fn openness_fact(thing: EntityId, open: bool, day: WorldTime) -> Fact {
         place: None,
         day: Some(day),
         provenance: "the-chattel: a thing was opened or closed".to_string(),
+    }
+}
+
+/// The fact committed when `thing` is locked (`locked == true`) or unlocked.
+/// type-audit: bare-ok(flag: locked)
+pub fn lockedness_fact(thing: EntityId, locked: bool, day: WorldTime) -> Fact {
+    Fact {
+        subject: thing,
+        predicate: LOCKEDNESS.to_string(),
+        object: Value::Flag(locked),
+        place: None,
+        day: Some(day),
+        provenance: "the-chattel: a thing was locked or unlocked".to_string(),
     }
 }
 
@@ -490,6 +542,37 @@ pub(crate) fn set_openness_role(
 ) -> Result<EntityId, ThingError> {
     let id = promote_role(ledger, registry, role, kind, ordinal, day)?;
     ledger.commit(openness_fact(id, open, day), registry)?;
+    Ok(id)
+}
+
+/// Record that the thing of `kind` in `facet` was locked (`locked == true`) or
+/// unlocked, on `day` — [`set_openness`]'s sibling, promoting first for the
+/// same reason and carrying the same across-days caveat.
+///
+/// **There is no `_role` variant and there should not be one until something
+/// needs it.** [`set_openness_role`] exists because a passage's address is a
+/// `ChamberAddr` rather than a [`Facet`]; no passage has a lock, and inventing
+/// the seam before its caller would be a second entry point nothing keeps
+/// honest.
+///
+/// **`Ledger::commit` dedups an identical fact, so a caller that writes the
+/// same value twice on one day writes once** — which is why
+/// `Session::open_or_close` asks [`is_locked`] before reaching here rather
+/// than unlocking unconditionally. That check is not merely thrift: the reply
+/// is computed before the commit, so a caller that stopped asking would be
+/// relying on a write it never verified.
+/// type-audit: bare-ok(identifier-text: kind), bare-ok(count: ordinal), bare-ok(flag: locked)
+pub fn set_lockedness(
+    ledger: &mut Ledger,
+    registry: &ConceptRegistry,
+    facet: &Facet,
+    kind: &str,
+    ordinal: u16,
+    locked: bool,
+    day: WorldTime,
+) -> Result<EntityId, ThingError> {
+    let id = promote(ledger, registry, facet, kind, ordinal, day)?;
+    ledger.commit(lockedness_fact(id, locked, day), registry)?;
     Ok(id)
 }
 
@@ -571,19 +654,31 @@ pub fn location_of(ledger: &Ledger, thing: EntityId, day: WorldTime) -> Option<V
 ///    custody verbs read [`location_of`], [`held_by`] and [`lying_in`]
 ///    directly, because each asks about a DIRECT location and none of them
 ///    wants a transitive one.
-/// 2. **The fallback would answer in a different key space, and nothing in
-///    the answer would say so.** A body's `AGENT_AT` object is its WALK-BAND
-///    locale facet: `Session::commit_agent_at` is reached only from `go` and
-///    `back`, and `Session::enter` commits no position at all, so the fact
-///    does not move while a possession walks from chamber to chamber. A
-///    thing set down indoors is keyed on `Session::chamber_facet_here` — a
-///    chamber facet, twenty-one path digits deep. Measured on seed 1, one
-///    turn apart in one played walk: the body's `agent-at` room key was
-///    `540999680` while the chamber it stood in packed to
-///    `141819825979456`. Both are [`Value::Text`] and [`room_key`] spells
-///    both, so a caller comparing "where is the key I am holding" against
-///    "where is the key I just put down" would read two incomparable numbers
-///    and conclude the key had moved rooms.
+/// 2. **The fallback would answer in a different key space, and on the
+///    commonest walk it would not answer at all.** A body's `AGENT_AT`
+///    object is its WALK-BAND locale facet: `Session::commit_agent_at` is
+///    reached only from `go` and `back`, and `Session::enter` commits no
+///    position at all, so the fact does not move while a possession walks
+///    from chamber to chamber. A thing set down indoors is keyed on
+///    `Session::chamber_facet_here` — a chamber facet, twenty-one path
+///    digits deep. Measured on seed 1, one turn apart in one played walk:
+///    the body's `agent-at` room key was `540999680` while the chamber it
+///    stood in packed to `141819825979456`. Both are [`Value::Text`] and
+///    [`room_key`] spells both, so a caller comparing "where is the key I am
+///    holding" against "where is the key I just put down" would read two
+///    incomparable numbers and conclude the key had moved rooms.
+///
+///    **The weaker half of that is what used to be written here, and the
+///    stronger one is measured** (fix round 1). A mismatched key is the
+///    BEST case — it needs the possession to have used `go` or `back` at
+///    all. A walk that only goes indoors commits **zero** `agent-at` facts
+///    for the body, so the fallback would return `None`: not a wrong room, no
+///    room. Measured through the shipped CLI on seed 1 — `enter`, three
+///    `enter further in`s, `take a key`, `possess --out` — the saved world
+///    holds one `located-in` fact naming the body as holder and
+///    `agent-at` facts about that body: **0**. A `room_of` that fell back to
+///    `AGENT_AT` would answer `None` for a key a player is visibly holding,
+///    which is the same answer it gives for a key nobody ever placed.
 ///
 /// Closing it therefore needs a decision about what a body's room IS while
 /// it is indoors — which is a position-model question, not a fold question.
@@ -700,6 +795,23 @@ pub fn lying_in(
 pub fn is_open(ledger: &Ledger, thing: EntityId, day: WorldTime) -> Option<bool> {
     match latest_object_at_or_before(ledger, thing, OPENNESS, day) {
         Some(Value::Flag(open)) => Some(*open),
+        _ => None,
+    }
+}
+
+/// Whether `thing` was locked as of `day`, or `None` if no [`LOCKEDNESS`] fact
+/// exists at or before it — "whatever the seed drew", never "unlocked". See
+/// [`LOCKEDNESS`], and `Session::container_is_locked` for where the authored
+/// default that resolves the `None` actually lives.
+///
+/// **A locked thing may be open and an unlocked one may be shut**, which is
+/// the point of this fold being separate from [`is_open`]: decision 0399
+/// separates the two states precisely so that shutting a lid cannot turn a
+/// key.
+/// type-audit: bare-ok(flag: return)
+pub fn is_locked(ledger: &Ledger, thing: EntityId, day: WorldTime) -> Option<bool> {
+    match latest_object_at_or_before(ledger, thing, LOCKEDNESS, day) {
+        Some(Value::Flag(locked)) => Some(*locked),
         _ => None,
     }
 }
