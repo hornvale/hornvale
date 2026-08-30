@@ -29,11 +29,13 @@
 
 use hornvale_astronomy::SkyPins;
 use hornvale_history::record::{CauseOfEnd, Ended, Function, OccupationRecord};
-use hornvale_kernel::{Seed, World};
+use hornvale_kernel::{Seed, Vertex, World};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to, occupation_records,
+    BuildDepth, SealState, SettlementPins, SkyChoice, Valence, VestigeKind, WorldComponents,
+    build_world_to, occupation_records, present_year, vestige_dread, vestige_from_occupation,
 };
+use std::collections::BTreeSet;
 
 /// The panel the campaign preregisters on (spec §5.1), extended by
 /// **consecutive** seeds under spec amendment E.4.2's rule.
@@ -323,5 +325,157 @@ fn a_breach_survives_a_save_load_round_trip() {
         breached_pooled > 0,
         "no `Breached` record exists anywhere on {SEEDS:?}, so this round trip \
          proved nothing about the new variant."
+    );
+}
+
+// -------------------------------------------------------------------------
+// WHAT A LATER CULTURE CAN KNOW — Task 6 (spec §4.5).
+//
+// The three states are derived in `windows/worldgen/src/vestige.rs` and
+// asserted there against constructed records, which is where the arithmetic
+// belongs. This is the half that module cannot do: showing that a REAL world
+// reaches each state, off a real ledger, at ages the hazard actually produces.
+// -------------------------------------------------------------------------
+
+/// §4.5's three states, each reached by a breached delving on the panel.
+///
+/// ```text
+/// RECENT   the warning is legible                       max legibility on the panel
+/// DECAYED  legibility -> 0, dread -> high               min legibility on the panel
+/// WARDED   a kept seal reads SAFE, and may be wrong     a living layer over a breach
+/// ```
+///
+/// # THE TWO `Breached`ES ARE DIFFERENT THINGS, AND THIS GATE SEPARATES THEM
+///
+/// `CauseOfEnd::Breached` is why a delving stopped; `SealState::Breached` is
+/// the ward having failed, derived from `ended` alone. The first never implies
+/// the second's absence and neither implies the other's presence — so this
+/// asserts, over every breach on the panel, that a breached delving's OWN
+/// layer is never `SealState::Maintained`. It cannot be: `Maintained` means
+/// `ended.is_none()`, and a breach is an ending. §4.5's WARDED state is
+/// therefore never a property of the breach's own layer, and the gate below
+/// finds where it actually lives.
+///
+/// # WARDED IS PER-LAYER, AND THE FIELD DOES NOT HIDE A REMEMBERED BREACH
+///
+/// Measured on the panel: three vertices carry a LIVING occupation standing
+/// over a delving that broke through, and all three living layers read
+/// `Maintained` / `Venerated` / `dread 0.1` / `legibility 1.0` — byte-identical
+/// to a living layer at a site nothing ever happened at. That is §4.5's
+/// property, and it must not be repaired.
+///
+/// What is asserted alongside it, so the limit is on the record rather than
+/// assumed either way: `vestige_dread` takes the MAX over a vertex's
+/// palimpsest, so at those same three vertices the FIELD still reads the old
+/// layer's dread (0.936..0.998 measured), not the living layer's 0.1. The
+/// model is source-blind at the layer and is not amnesiac at the vertex. A
+/// future change of `vestige_dread`'s aggregation to a most-recent-layer read
+/// would delete the DECAYED state wholesale, and this assertion is what would
+/// object.
+///
+/// claim: invariant(forall over the E.4.2 panel — no breached delving's own
+/// layer reads `SealState::Maintained`, and every living layer standing over
+/// one reads the kept-seal tuple exactly; with the RECENT, DECAYED and WARDED
+/// populations each asserted non-empty so no quantifier is vacuous)
+#[test]
+fn a_later_culture_reads_all_three_states_of_a_breach() {
+    let mut breached_layers = 0usize;
+    let mut most_legible = f64::NEG_INFINITY;
+    let mut least_legible = f64::INFINITY;
+    let mut dread_at_least_legible = f64::NAN;
+    let mut living_over_a_breach = 0usize;
+
+    for seed_value in SEEDS {
+        let world = panel_world(seed_value);
+        let occs = occupation_records(&world);
+        let now = present_year(&world);
+
+        let breach_sites: BTreeSet<Vertex> = occs
+            .iter()
+            .filter(|r| r.core.cause == Some(CauseOfEnd::Breached))
+            .map(|r| r.core.site)
+            .collect();
+
+        for record in occs
+            .iter()
+            .filter(|r| r.core.cause == Some(CauseOfEnd::Breached))
+        {
+            let v = vestige_from_occupation(record, now);
+            assert_ne!(
+                v.seal_state,
+                SealState::Maintained,
+                "seed {seed_value}: a delving that ended by breaching read as a KEPT \
+                 seal — `SealState::Breached` and `CauseOfEnd::Breached` have been \
+                 conflated somewhere"
+            );
+            assert_eq!(
+                v.kind,
+                VestigeKind::AbandonedDelving,
+                "seed {seed_value}: only a working breaches, so every breach layer \
+                 is a delving"
+            );
+            breached_layers += 1;
+            if v.warning_legibility > most_legible {
+                most_legible = v.warning_legibility;
+            }
+            if v.warning_legibility < least_legible {
+                least_legible = v.warning_legibility;
+                dread_at_least_legible = v.dread;
+            }
+        }
+
+        if breach_sites.is_empty() {
+            continue;
+        }
+        let field = vestige_dread(&world).expect("a panel world derives its own dread field");
+        for record in occs
+            .iter()
+            .filter(|r| r.core.ended.is_none() && breach_sites.contains(&r.core.site))
+        {
+            let v = vestige_from_occupation(record, now);
+            assert_eq!(
+                (v.seal_state, v.valence),
+                (SealState::Maintained, Valence::Venerated),
+                "seed {seed_value}: a living occupation over a breach reads as a kept seal"
+            );
+            assert_eq!(
+                (v.dread, v.warning_legibility),
+                (0.1, 1.0),
+                "seed {seed_value}: the living layer carries no trace of what is under \
+                 it — §4.5's WARDED state, and NOT a defect to repair"
+            );
+            assert!(
+                *field.get(record.core.site) > 0.9,
+                "seed {seed_value}: `vestige_dread` is a MAX over the palimpsest, so a \
+                 remembered breach still reads at the vertex even under a living \
+                 community; got {}",
+                field.get(record.core.site)
+            );
+            living_over_a_breach += 1;
+        }
+    }
+
+    assert!(
+        breached_layers > 0,
+        "no delving broke through anywhere on {SEEDS:?}, so every quantifier above \
+         ranged over nothing."
+    );
+    assert!(
+        most_legible > 0.5,
+        "§4.5 RECENT is unreached: the most legible breach on {SEEDS:?} reads \
+         {most_legible}, so no later people on the panel can read what happened \
+         anywhere."
+    );
+    assert!(
+        least_legible < 0.05 && dread_at_least_legible > 0.95,
+        "§4.5 DECAYED is unreached: the least legible breach on {SEEDS:?} reads \
+         legibility {least_legible} at dread {dread_at_least_legible}, so nowhere on \
+         the panel do they know something is wrong and not what."
+    );
+    assert!(
+        living_over_a_breach > 0,
+        "§4.5 WARDED is unreached: nobody on {SEEDS:?} lives over a delving that \
+         broke through, so the kept-seal tuple above was never checked against a \
+         real world."
     );
 }

@@ -89,11 +89,48 @@ pub struct Vestige {
     pub founded_day: Option<f64>,
 }
 
-/// A ruin older than this (days since it ended) has an all-but-lost warning.
-const WARNING_HALF_LIFE_DAYS: f64 = 300.0;
+/// The warning's decay scale, in **bake years** — the single constant behind
+/// both of this module's age readings: the `Lapsing -> Breached` seal
+/// threshold, and the `exp(-age / this)` legibility curve.
+///
+/// **RENAMED FROM `WARNING_HALF_LIFE_DAYS` (The Winze, Task 6), because that
+/// name was wrong twice and the unit half is a determinism trap.** Grep either
+/// half of the old name to land here.
+///
+/// 1. **The unit is YEARS, not days.** Every caller reaches this through
+///    [`vestige_from_occupation`]'s `now`, and every producer of that argument
+///    ([`vestiges_at`], [`vestiges_field`]) passes
+///    [`crate::present_year`] — a bake year, the same unit
+///    `OccupationRecord::founded` and `::ended` carry, which those fields'
+///    own docs state outright. The trap is not cosmetic: `present_frame` sits
+///    beside `present_year` in the same export list and returns ledger DAYS,
+///    so a reader repairing the call to match the old name would have
+///    multiplied every ruin's apparent age by the day/year factor and moved
+///    every world's residue. Measured on the campaign's 12-seed panel: the
+///    ages that actually reach this constant run 25.0 to 1500.0 against a
+///    `present_year` of 2000.0, which is years on its face.
+/// 2. **It is an e-folding time, not a half-life.** `exp(-t/T)` is `1/e`
+///    (0.368) at `t = T`, not one half; the actual half-life is `T ln 2`,
+///    about 208 years at this value. The Vestige's chronicle prose calls it a
+///    half-life and that reading is what the arithmetic never supported.
+///
+/// **The VALUE is untouched and deliberately so.** 300 years is roughly an
+/// order of magnitude longer than `MEM-2`'s ~3-generation floating gap (the
+/// warning is still 77% legible at 80 years and does not fall below 0.1 until
+/// ~690 years, ~23 generations). Whether that is the right scale is a
+/// calibration question this task did not preregister, and moving it would
+/// move the gallery almanacs, the residue lens and four census columns; it is
+/// reported rather than tuned.
+const WARNING_EFOLD_YEARS: f64 = 300.0;
 
-/// Derive a people-made vestige from one occupation, as of `now` (days).
-/// Read backward: no simulation.
+/// Derive a people-made vestige from one occupation, as of `now` — a bake
+/// **year** ([`crate::present_year`]), the same unit `OccupationRecord`'s
+/// `founded`/`ended` carry. Read backward: no simulation.
+///
+/// This doc said "(days)" until The Winze's Task 6, contradicting
+/// [`vestiges_at`]'s own doc sixty lines below, which has always said year.
+/// See this module's `WARNING_EFOLD_YEARS` for why the disagreement was worth
+/// a commit.
 /// type-audit: bare-ok(diagnostic-value: now)
 pub fn vestige_from_occupation(occ: &OccupationRecord, now: f64) -> Vestige {
     let kind = match occ.core.function {
@@ -108,7 +145,7 @@ pub fn vestige_from_occupation(occ: &OccupationRecord, now: f64) -> Vestige {
         None => (SealState::Maintained, Valence::Venerated), // a living keeper
         Some(end) => {
             let age = (now - end).max(0.0);
-            if age < WARNING_HALF_LIFE_DAYS {
+            if age < WARNING_EFOLD_YEARS {
                 (SealState::Lapsing, Valence::Forgotten)
             } else {
                 (SealState::Breached, Valence::Forgotten)
@@ -154,7 +191,7 @@ pub fn vestige_from_occupation(occ: &OccupationRecord, now: f64) -> Vestige {
     // Warning decays fast (the fastest of the three rates); recent = legible.
     let warning_legibility = match occ.core.ended {
         None => 1.0,
-        Some(end) => math::exp(-((now - end).max(0.0)) / WARNING_HALF_LIFE_DAYS),
+        Some(end) => math::exp(-((now - end).max(0.0)) / WARNING_EFOLD_YEARS),
     };
     // Dread: forgotten + breached + hazardous is highest; venerated is low.
     let base = match valence {
@@ -332,6 +369,216 @@ mod tests {
             2000.0,
         );
         assert_eq!(v.hazard, HazardKind::Pestilent);
+    }
+
+    // ---------------------------------------------------------------------
+    // WHAT A LATER CULTURE CAN KNOW — The Winze, Task 6 (spec §4.5).
+    //
+    // Three states, and the finding is that the shipped formulas already
+    // produce all three: nothing in this module's derivation changed for
+    // Task 6 beyond a constant's NAME. These are the assertions that were
+    // missing, plus the live corroboration in
+    // `windows/worldgen/tests/suite/breach.rs` that a real world reaches
+    // each state rather than only a constructed record doing so.
+    //
+    // TWO `Breached`ES, AND THEY ARE DIFFERENT THINGS. `SealState::Breached`
+    // is the WARD having failed — an age reading, derived from `ended` alone.
+    // `CauseOfEnd::Breached` is the DELVING having broken through — why an
+    // occupation stopped. Neither implies the other, and the tests below turn
+    // that on its head deliberately: `a_maintained_ward_reads_as_safe` is
+    // about a seal state with no cause at all, while
+    // `an_ancient_breach_is_dreaded_and_illegible` is a delving whose seal
+    // state happens to share the word.
+    // ---------------------------------------------------------------------
+
+    /// The bake's committed present (`BakeConfig::end_year`), so these fixture
+    /// ages are the ages a real world actually presents to
+    /// [`vestige_from_occupation`] rather than arbitrary numbers.
+    const PRESENT_YEAR: f64 = 2000.0;
+
+    /// The youngest breach age on the campaign's 12-seed panel, measured
+    /// (`26` breaches, ages `25.0 ..= 1500.0`). Using the measured extreme
+    /// rather than `0.0` keeps the RECENT assertion about a state the world
+    /// reaches, not a limit it approaches.
+    const YOUNGEST_PANEL_BREACH_AGE: f64 = 25.0;
+
+    /// The oldest breach age on the same panel.
+    const OLDEST_PANEL_BREACH_AGE: f64 = 1500.0;
+
+    /// §4.5 RECENT — "the warning is legible. A later people can read what
+    /// happened."
+    ///
+    /// What is legible is the SHAPE of the event and not its content: a
+    /// delving (`AbandonedDelving`), founded by people (`founded_day`), whose
+    /// warning is still all but intact. The hazard is `Numinous` even here,
+    /// at full legibility, and that is §4.6 rather than a decay artifact —
+    /// nothing knows what came through, so there is nothing more specific to
+    /// read at any age.
+    #[test]
+    fn a_recent_breach_is_legible() {
+        let v = vestige_from_occupation(
+            &occ(
+                Function::Mine,
+                Some(PRESENT_YEAR - YOUNGEST_PANEL_BREACH_AGE),
+                Some(CauseOfEnd::Breached),
+                Notability::Common,
+            ),
+            PRESENT_YEAR,
+        );
+        assert_eq!(v.kind, VestigeKind::AbandonedDelving);
+        assert!(
+            v.warning_legibility > 0.9,
+            "a breach {YOUNGEST_PANEL_BREACH_AGE} years old is still legible, got {}",
+            v.warning_legibility
+        );
+        assert_eq!(
+            v.seal_state,
+            SealState::Lapsing,
+            "the ward has not had time to fail yet"
+        );
+        assert!(
+            v.founded_day.is_some(),
+            "a people-made vestige carries its founding"
+        );
+        assert_eq!(
+            v.hazard,
+            HazardKind::Numinous,
+            "even fully legible, the model names nothing that came through (§4.6)"
+        );
+    }
+
+    /// §4.5 DECAYED — "warning_legibility -> 0, dread -> high. They know
+    /// SOMETHING is wrong and not what." MEM-2's floating gap.
+    ///
+    /// The second half of that sentence is the assertion worth having, and it
+    /// is Task 4's inherited cost made mechanical: at this age the vestige's
+    /// whole danger reading — hazard, seal state, valence — is the exact
+    /// triple [`prehuman_vestige`] writes for a gate-scar older than any
+    /// people. A later culture holding only these three fields cannot tell a
+    /// working that broke through from a wound that predates them.
+    #[test]
+    fn an_ancient_breach_is_dreaded_and_illegible() {
+        let v = vestige_from_occupation(
+            &occ(
+                Function::Mine,
+                Some(PRESENT_YEAR - OLDEST_PANEL_BREACH_AGE),
+                Some(CauseOfEnd::Breached),
+                Notability::Common,
+            ),
+            PRESENT_YEAR,
+        );
+        assert!(
+            v.warning_legibility < 0.01,
+            "a breach {OLDEST_PANEL_BREACH_AGE} years old has an all-but-lost warning, got {}",
+            v.warning_legibility
+        );
+        assert!(
+            v.dread > 0.99,
+            "forgotten and illegible is the top of the dread range, got {}",
+            v.dread
+        );
+        assert_eq!(v.seal_state, SealState::Breached);
+        assert_eq!(v.valence, Valence::Forgotten);
+        assert_eq!(
+            (v.hazard, v.seal_state, v.valence),
+            (
+                HazardKind::Numinous,
+                SealState::Breached,
+                Valence::Forgotten
+            ),
+            "the danger reading is exactly a pre-human gate-scar's — they know \
+             something is wrong and not what"
+        );
+    }
+
+    /// The cost Task 4 stated and this task pins: **`HazardKind::Numinous` is
+    /// no longer evidence a site predates people.**
+    ///
+    /// The variant's doc used to carry a "(pre-human sites)" parenthetical and
+    /// The Winze retired it, because a breached delving now reaches the same
+    /// arm. Nothing in the tree ever inferred pre-human origin FROM the hazard
+    /// — the three live readers all ask `VestigeKind::GateScar` (the almanac's
+    /// gate-scar count, the residue lens's palette) or `prehuman_vestige`
+    /// itself — and this test is what keeps that true if someone adds a
+    /// fourth.
+    #[test]
+    fn a_numinous_hazard_no_longer_implies_a_prehuman_site() {
+        let v = vestige_from_occupation(
+            &occ(
+                Function::Mine,
+                Some(1500.0),
+                Some(CauseOfEnd::Breached),
+                Notability::Common,
+            ),
+            PRESENT_YEAR,
+        );
+        assert_eq!(v.hazard, HazardKind::Numinous);
+        assert_ne!(
+            v.kind,
+            VestigeKind::GateScar,
+            "the people-made kind is what separates the two producers"
+        );
+        assert!(
+            v.founded_day.is_some(),
+            "a Numinous vestige with a founding day is a people-made one — \
+             founded_day and GateScar are the pre-human tests now, not the hazard"
+        );
+    }
+
+    /// §4.5 WARDED — "`SealState::Maintained` reads SAFE — and may be wrong.
+    /// A ward that is being kept is indistinguishable from a place that was
+    /// never dangerous."
+    ///
+    /// # THIS IS NOT A BUG AND MUST NOT BE FIXED
+    ///
+    /// It is the design's central property (spec §4.5): the model can be
+    /// mistaken in the direction that kills people without anyone authoring a
+    /// deception, and it is decision 0003's source-blindness arriving
+    /// structurally — a later culture receives an appearance (dread), never a
+    /// source (what is behind the wall). Spec amendment C.4 sharpens it:
+    /// 57% of cave systems are multi-entrance (1.87 apertures per system,
+    /// pooled), so a kept ward is *provably* insufficient rather than merely
+    /// fallible. **A term added here that lets a reader separate "warded and
+    /// dangerous" from "never dangerous" deletes the property**, which is why
+    /// the equalities below are asserted field by field rather than left to a
+    /// reviewer to notice.
+    ///
+    /// The one field that DOES separate them is `kind`, and it is asserted
+    /// too: a `SealedVault` says what the site is FOR, never whether it holds
+    /// anything. `dread`, `seal_state`, `valence`, `hazard` and
+    /// `warning_legibility` — every axis danger is read off — agree exactly.
+    #[test]
+    fn a_maintained_ward_reads_as_safe() {
+        let ward = vestige_from_occupation(
+            &occ(Function::Fort, None, None, Notability::Seat),
+            PRESENT_YEAR,
+        );
+        let never_dangerous = vestige_from_occupation(
+            &occ(Function::Agrarian, None, None, Notability::Common),
+            PRESENT_YEAR,
+        );
+
+        assert_eq!(ward.kind, VestigeKind::SealedVault);
+        assert_eq!(ward.seal_state, SealState::Maintained);
+        assert!(
+            ward.dread <= 0.1,
+            "a kept ward radiates the floor of the dread range, got {}",
+            ward.dread
+        );
+
+        assert_eq!(ward.dread, never_dangerous.dread);
+        assert_eq!(ward.seal_state, never_dangerous.seal_state);
+        assert_eq!(ward.valence, never_dangerous.valence);
+        assert_eq!(ward.hazard, never_dangerous.hazard);
+        assert_eq!(
+            ward.warning_legibility, never_dangerous.warning_legibility,
+            "a kept ward and a place that was never dangerous read identically \
+             on every axis a later people reads danger off"
+        );
+        assert_ne!(
+            ward.kind, never_dangerous.kind,
+            "purpose is the only thing that separates them, and purpose is not danger"
+        );
     }
 
     use crate::{SettlementPins, SkyChoice, build_world, occupation_records, terrain_of};
