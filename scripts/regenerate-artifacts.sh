@@ -1040,9 +1040,27 @@ echo "regenerate-artifacts: done." >&2
 # path's git-tracked files carry an mtime newer than the marker stamped at
 # the top of this run, and `tracked` is how many of its files git tracks at
 # all. This is a READ over mtimes and `git ls-files`; it changes no
-# artifact's bytes. `docs/generated-path-writes.tsv` is itself declared in
-# docs/generated-paths.txt with author `artifacts`, so this instrument
-# covers itself the same way every other row does.
+# artifact's bytes.
+#
+# THE OUTPUT FILE CANNOT MEASURE ITSELF, AND MUST NOT PRETEND TO (review
+# finding, The Attestation Task 4). `docs/generated-path-writes.tsv` is
+# itself declared in docs/generated-paths.txt with author `artifacts` — that
+# declaration is correct, the file really is written every run — but a
+# shell output redirect on a compound command (`{ ...; } > file`) truncates
+# and stamps the target's mtime at REDIRECT-OPEN time, before the body
+# inside it runs (confirmed empirically: a body emitting zero bytes still
+# moved the file's mtime to within 0.0002s of a marker set immediately
+# before). So by the time this loop would check its own row, this file's
+# mtime has already moved past the marker — every single run, unconditional
+# on whether anything below actually changed. A "written" value for this
+# row would be guaranteed true by construction, not observed, and Step 3's
+# falsifier ("delete the generator, watch the count drop to zero") cannot
+# apply to it: deleting this very footer deletes the file's only writer, so
+# there is no way to distinguish "not written" from "not generated at all".
+# Presenting a number here would be exactly the failure this instrument
+# exists to catch, so the self-referential path is named and explicitly
+# excluded below rather than given a fabricated row.
+write_capture_self_path="docs/generated-path-writes.tsv"
 #
 # Skipped outside a git checkout: `repo_root` above is deliberately resolved
 # without `git rev-parse` because the (abandoned, decision 0063) AWS path
@@ -1053,7 +1071,13 @@ if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     echo "regenerate-artifacts: capturing the write set -> docs/generated-path-writes.tsv" >&2
     {
         echo "# path<TAB>written<TAB>tracked -- emitted by scripts/regenerate-artifacts.sh; do not hand-edit."
+        echo "# ${write_capture_self_path} is declared but excluded from the rows below: this"
+        echo "# file's own output redirect stamps its mtime before this loop ever runs, so a"
+        echo "# self-observed count would be guaranteed true by construction, not measured."
         while IFS= read -r declared_path; do
+            if [ "$declared_path" = "$write_capture_self_path" ]; then
+                continue
+            fi
             tracked=0
             written=0
             while IFS= read -r tracked_file; do

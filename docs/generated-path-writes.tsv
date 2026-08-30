@@ -1,4 +1,7 @@
 # path<TAB>written<TAB>tracked -- emitted by scripts/regenerate-artifacts.sh; do not hand-edit.
+# docs/generated-path-writes.tsv is declared but excluded from the rows below: this
+# file's own output redirect stamps its mtime before this loop ever runs, so a
+# self-observed count would be guaranteed true by construction, not measured.
 book/src/gallery/	45	56
 book/src/reference/	9	21
 book/src/laboratory/	11	825
@@ -9,4 +12,3 @@ clients/game/core/tests/fixtures/	3	3
 docs/audits/underworld-lattice-seed-panel.md	1	1
 docs/audits/the-confidant-report.md	1	1
 docs/audits/the-reticence-report.md	1	1
-docs/generated-path-writes.tsv	1	1

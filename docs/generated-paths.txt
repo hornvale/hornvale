@@ -79,12 +79,27 @@ docs/audits/the-reticence-report.md	artifacts
 
 # `docs/generated-path-writes.tsv` (Task 4, The Attestation) is Task 1's
 # by-hand write-set measurement made a byproduct of every ordinary run: a
-# footer inside scripts/regenerate-artifacts.sh itself counts, per row
-# above, how many of that row's tracked files carry an mtime newer than a
-# marker stamped at the top of the same run. Self-consistent rather than
-# circular — the record of what an author wrote is written by that author
-# and declared against it, so the campaign's own measurement instrument is
-# covered by the same drift check it feeds.
+# footer inside scripts/regenerate-artifacts.sh counts, per OTHER row above,
+# how many of that row's tracked files carry an mtime newer than a marker
+# stamped at the top of the same run. Self-consistent rather than circular —
+# the record of what an author wrote is written by that author and declared
+# against it, so this row is genuinely tracked and genuinely authored by
+# `artifacts`, and `every_declared_generated_path_is_tracked` covers it
+# exactly the way it covers every other row.
+#
+# IT IS NOT GIVEN A ROW IN ITS OWN OUTPUT, AND THAT IS DELIBERATE (review
+# finding, Task 4). A shell redirect on a compound command
+# (`{ ...; } > docs/generated-path-writes.tsv`) stamps the target's mtime at
+# open time, before anything inside the group runs — so a self-check would
+# read this file's own mtime as "just written" on every single run,
+# unconditionally, whether or not the footer's logic actually changed
+# anything. That is guaranteed true by construction, not an observation, and
+# Step 3's falsifier (delete the generator, watch the count drop to zero)
+# cannot apply to it — deleting the footer deletes the file's only writer,
+# so there is no "not written" state distinguishable from "not generated at
+# all". The footer's own comment (scripts/regenerate-artifacts.sh, next to
+# `write_capture_self_path`) names this path and excludes it from the rows
+# it emits rather than fabricate a number that looks measured but isn't.
 docs/generated-path-writes.tsv	artifacts
 
 # EVERY CURRENT ROW IS `artifacts`, AND THAT IS A FINDING, NOT AN OVERSIGHT
