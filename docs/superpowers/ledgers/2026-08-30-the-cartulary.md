@@ -191,3 +191,41 @@ first two members. Verified not `.gitignore`d
 a path with no leading dot) and not refused by `scripts/hooks/pre-commit`'s
 `.superpowers/` guard (regex `(^|/)\.superpowers/`, which this path does
 not match).
+
+---
+
+## Task 1 — complete (`aaa6f6170..b11b2dfd9`, review clean, no fix rounds)
+
+**This entry is the first one written to the committed ledger rather than to
+scratch.** Everything above it was seeded from the spec and the pre-flight
+scan; everything below it is the campaign using its own deliverable. The
+bootstrap gap — rulings made before the durable home existed — closes here.
+
+Review verdict: spec ✅, quality approved, two Minors, no Critical or
+Important. The reviewer re-ran `git check-ignore` on both new files itself
+(exit 1, not ignored) rather than accepting the implementer's report, and
+cross-checked all four seeded entries against spec §1/§2/§3/§4a and the
+pre-flight scan — verbatim-faithful, including the measurement table
+digit-for-digit.
+
+### Deferred minors
+
+1. **The four seeded entries omit `campaign-autopilot`'s
+   `ideonomy passes / overturns` field.** Defensible — they are backfilled
+   decisions that predate the ledger's existence and had no ideonomy pass to
+   record — but the README does not say that anywhere, so a reader comparing
+   the seeded entries against the documented format finds an unexplained gap.
+   **Carried into Task 4**, which re-points `campaign-autopilot`'s ledger
+   specification and is the natural place to state how a backfilled entry
+   differs from a live one.
+2. `docs/timings.md` moved alongside the two created files — the expected
+   `make gate-commit` byproduct, matching repo convention. Not a defect.
+
+### What the review confirmed that I most wanted confirmed
+
+The README's "what does NOT belong" section states **mechanism and reason**,
+not just a rule, carries the measured numbers inline, and closes with an
+explicit appeal not to widen the tree. The reviewer judged it likely to
+survive a cold read a year out. That was the task's durable half and the
+thing most able to fail quietly — a boundary that is merely asserted gets
+widened by the first campaign that finds it inconvenient.
