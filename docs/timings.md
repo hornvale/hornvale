@@ -4298,3 +4298,4 @@ measured here.
 | 2026-08-30T18:48:32Z | sluice:heavy | 445.795 | 9642.775 | 148.017 | 21.96 | 0 | d88bbd88c |  | lefford | 40 |
 | 2026-08-30T18:08:23Z | rebaseline | 81.710 | 286.607 | 14.371 | 3.68 | 0 | d99a004ba | campaign/the-repertory | MacBookPro | 10 |
 | 2026-08-30T18:15:06Z | gate-commit | 149.953 | 841.403 | 51.018 | 5.95 | 0 | d2a4731a6 | campaign/the-repertory | MacBookPro | 10 |
+| 2026-08-30T18:50:05Z | sluice:artifacts | 72.541 | 696.999 | 25.930 | 9.97 | 0 | 26058532e |  | lefford | 40 |
