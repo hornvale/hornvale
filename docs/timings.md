@@ -4283,3 +4283,4 @@ measured here.
 | 2026-08-30T17:38:17Z | sluice:gate | 534.758 | 15312.723 | 561.790 | 29.69 | 0 | cc5f358ed |  | lefford | 40 |
 | 2026-08-30T17:47:18Z | sluice:clients | 540.788 | 9865.650 | 123.608 | 18.47 | 0 | b971fc920 |  | lefford | 40 |
 | 2026-08-30T17:54:57Z | sluice:heavy | 459.246 | 9626.625 | 168.308 | 21.33 | 0 | 2a118829d |  | lefford | 40 |
+| 2026-08-30T18:08:23Z | rebaseline | 81.710 | 286.607 | 14.371 | 3.68 | 0 | d99a004ba | campaign/the-repertory | MacBookPro | 10 |

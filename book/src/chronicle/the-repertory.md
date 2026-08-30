@@ -150,6 +150,34 @@ verdict `STALE-DECL` exists to delete it: the moment the scene starts working,
 the acknowledgement fails. A one-directional admission can only ever be
 satisfied, so it rots; this one is made to notice.
 
+### The declaration went stale within hours, and the beat could not have noticed
+
+The Chattel merged while this campaign was in its final task, carrying
+*objects that can be held* and putting carried things on the wire. Absorbing
+it changed no verdict — `the-orange` still stands declared — but it falsified
+two things that had already been written down.
+
+The declaration's stated reason claimed the session snapshot *has no inventory
+channel at all*. That had been true when it was written and was false within
+the day: `/self/carrying` now exists, a list of `{entity, noun}`. What does
+**not** exist is the co-located half — a `social[]` entry is still exactly
+`{entity, label, grievance, hostile}` — so the scene is red for a narrower and
+more interesting reason than the one recorded.
+
+The second thing is worse and would have outlived the campaign. Beat 2
+asserted a pointer named `/social/0/holding`, invented before the vocabulary
+existed. The Chattel established `carrying`. A beat asserting a name nobody
+will ever create cannot fail *to notice*: when the co-located half eventually
+lands, the pointer would still resolve nowhere, the scene would still read
+declared, and the ratchet built precisely to catch that moment would sit green
+and silent through it. A beat that can never pass is strictly worse than no
+beat, because it occupies the place where a working check would go.
+
+Both are the same underlying error — a record written from outside the code,
+against a vocabulary the author guessed rather than read — and neither was
+findable by re-reading. Absorbing another campaign's work is what surfaced
+them.
+
 ## What the instrument cannot do
 
 A fully green repertory is entirely compatible with a world nobody wants to

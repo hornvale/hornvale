@@ -89,6 +89,33 @@ its reason — for which precedent already existed in `branches_identity.rs`.
 Anticipating it for the remaining tests cost nothing; discovering it cost one
 failed commit.
 
+## An acknowledgement can go stale in hours, and its check can be blind to that
+
+The Chattel merged during this campaign's final task. Absorbing it changed no
+verdict, and falsified two written records anyway.
+
+`the-orange`'s declaration asserted that the session snapshot *has no
+inventory channel at all*. True when written, false within the day —
+`/self/carrying` exists now. The scene is still red, for the narrower reason
+that a `social[]` entry has no carrying field, which is a better finding than
+the one recorded and would have shipped as a wrong one.
+
+The second defect is the instructive one. Beat 2 asserted `/social/0/holding`,
+a pointer name invented from outside the code; the vocabulary that actually
+landed is `carrying`. **A beat asserting a name nobody will ever create cannot
+notice the capability arriving.** When co-located carrying lands, that pointer
+still resolves nowhere, the scene still reads declared, and `STALE-DECL` —
+built for exactly that moment — stays green and silent through it. A check
+that can never fire is worse than an absent one, because it occupies the place
+a working check would go and reads as coverage.
+
+Both are one error: a record written against a guessed vocabulary rather than
+a read one. Neither was findable by re-reading, and the plan's own decision
+rule for this branch fired correctly (*STOP and tell the campaign owner: the
+scene's premise has changed*) — but it only fired because main was absorbed.
+Had this campaign merged an hour earlier it would have shipped a declaration
+with a false reason and a beat that could never pass.
+
 ## Followups
 
 - **`REACHED`** — recognition of a scene in an *unscripted* run, its rate over
