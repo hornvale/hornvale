@@ -113,7 +113,25 @@ pub struct Pattern {
     pub at_locale: bool,
     /// Whether this pattern is drawn only where the place held more people than
     /// a hamlet ([`crate::brief::Brief::is_populous`]). The `needs_cold` of
-    /// social scale: a hamlet has nothing worth locking up.
+    /// social scale.
+    ///
+    /// **NOTHING IN [`INVENTORY`] SETS THIS TODAY (decision 0398).** The
+    /// Blocking gave it to `the-strongbox` ("a hamlet has nothing worth locking
+    /// up") and The Chattel mirrored it onto `the-key-in-the-strongbox`. That
+    /// was a defensible claim about social scale and a false one about
+    /// reachability: measured across three worlds and a 48-seed sweep, not one
+    /// living occupation clears
+    /// `hornvale_history::flesh::HAMLET_POPULATION_CEILING`, so the gate did not
+    /// make the strongbox rare — it made it impossible, and a capability nothing
+    /// can reach is not a capability. Both patterns were relaxed to `false`.
+    ///
+    /// The FIELD stays, and so does the filter arm in [`draw`], because the
+    /// grammar's ability to gate on social scale is real and the next pattern
+    /// may want it. What keeps that arm honest while no authored pattern
+    /// exercises it is [`draw_from`], the seam a synthetic inventory is fed
+    /// through in `the_populous_gate_still_works_though_no_authored_pattern_
+    /// uses_it`. Setting this to `true` on a real pattern is therefore a
+    /// deliberate act with a working filter under it, not an untested one.
     pub needs_populous: bool,
 }
 
@@ -141,7 +159,7 @@ pub struct Pattern {
 ///
 /// Sized near its intended scale deliberately, all the same: growth is cheap
 /// today and will not stay cheap.
-pub const INVENTORY: [Pattern; 14] = [
+pub const INVENTORY: [Pattern; 16] = [
     // --- built, drawn at BOTH bands ---
     Pattern {
         name: "the-ground",
@@ -261,6 +279,13 @@ pub const INVENTORY: [Pattern; 14] = [
     //
     // Appended, never inserted: each requires a kind an EARLIER pattern
     // contributes, so the append position is also the dependency-correct one.
+    // `needs_populous` WAS `true` here, and is `false` since decision 0398. The
+    // Blocking's reason ("a hamlet has nothing worth locking up") was a good
+    // claim about social scale and a wrong one about this world: no living
+    // occupation in any measured world clears `HAMLET_POPULATION_CEILING`, so
+    // the gate made the strongbox unreachable rather than rare. `roles:
+    // &[Role::Store]` and `requires: Some(Vessel)` still confine it — a
+    // strongbox stands in a room for keeping things, beside the water jar.
     Pattern {
         name: "the-strongbox",
         kind: AnchorKind::Strongbox,
@@ -270,7 +295,7 @@ pub const INVENTORY: [Pattern; 14] = [
         built: true,
         roles: &[Role::Store],
         at_locale: false,
-        needs_populous: true,
+        needs_populous: false,
     },
     Pattern {
         name: "the-high-seat",
@@ -324,6 +349,110 @@ pub const INVENTORY: [Pattern; 14] = [
         at_locale: false,
         needs_populous: false,
     },
+    // --- The Chattel (Task 11): the first authored CONTENTS ---
+    //
+    // Appended, and appended AFTER `the-strongbox`, which is the only position
+    // the admissibility walk permits: `draw` admits a pattern only once its
+    // `requires` kind is present, so a key placed before the strongbox that
+    // holds it would be silently dropped from every composition.
+    //
+    // Its whole reason for existing is that nothing was ever inside anything.
+    // The grammar's only `within` relation anywhere was `{(Alcove, Hearth)}`
+    // (a census over all 60 production gate combinations, The Offer's Task 6,
+    // re-measured on this tree by
+    // `the_grammar_puts_exactly_these_things_inside_other_things` — which
+    // reported exactly that pair the moment before this entry was written).
+    // So `Openable` had nothing to reveal and `Lockable` nothing to lock, and
+    // `open`/`close` would have shipped reporting nothing forever (spec §3.8).
+    //
+    // `at_locale: false` is load-bearing rather than copied: a locale-band
+    // pattern feeds `warmth_at`, which feeds a creature's thermal drive, which
+    // is committed history — appending one there is an EPOCH (see
+    // [`Pattern::at_locale`] and `the_locale_band_draws_exactly_what_it_drew`).
+    // A chamber-only append moves no saved world.
+    //
+    // `needs_populous` was authored `true` here to state the gate the strongbox
+    // already implied, "so that a reader who later relaxes the strongbox's own
+    // scale gate should have to see this one too". That reader arrived
+    // (decision 0398) and the mirror worked exactly as intended: relaxing the
+    // strongbox alone would have left the key gated behind a flag nothing else
+    // set, and the key would have been silently dropped from every strongbox
+    // that composed. Both are `false` now. The key stays confined by
+    // `requires: Some(Strongbox)`, which is the honest gate: a key is inside a
+    // strongbox or it is nowhere.
+    Pattern {
+        name: "the-key-in-the-strongbox",
+        kind: AnchorKind::Key,
+        attach: Attach::Within(AnchorKind::Strongbox),
+        requires: Some(AnchorKind::Strongbox),
+        needs_cold: false,
+        built: true,
+        roles: &[Role::Store],
+        at_locale: false,
+        needs_populous: false,
+    },
+    // --- The Chattel (Task 13, fix round 1): the SECOND key ---
+    //
+    // **The pattern above is the whole reason `take` could reach through a
+    // locked lid, and this one is why closing that hole does not brick the
+    // strongbox.** `the-key-in-the-strongbox` places the only `Portable` kind
+    // in the game inside the only `Lockable` one, so the single key a played
+    // world contained was the key to the box it was sealed in. A `take` that
+    // refused a shut lid — which is what a lid MEANS — would then have made
+    // the strongbox unopenable in every world, reverting decision 0398's
+    // reachability ruling by a different route. The lock is only a lock if
+    // there is a key somewhere else; the two changes are one change.
+    //
+    // **A role a strongbox never occupies, chosen structurally rather than
+    // for flavour.** `role_for` puts `Role::Threshold` at chamber index 0 and
+    // EVERY `Role::Store` at index 2 or deeper. So a structure that composes
+    // a strongbox at all necessarily has a threshold chamber in front of it,
+    // and a possession reaches this key BEFORE it can reach that lock — the
+    // grammar itself carries "a reachable lock implies a reachable key", with
+    // no seed sweep needed to believe it. It also keeps
+    // `no_production_room_composes_two_anchors_of_one_kind` true for free:
+    // `roles` here and on `the-key-in-the-strongbox` are disjoint, so no
+    // composed interior can hold two `Key` anchors and collide their derived
+    // `EntityId`s at ordinal 0.
+    //
+    // **`requires: Some(Screen)` is the world claim, and it is load-bearing
+    // rather than decorative.** A household does not leave its key in the
+    // open part of the room strangers walk into. `the-screen` is the one
+    // furnishing in this grammar whose whole job is to break the sightline
+    // from the doorway ("a screen affords nothing and shapes sightlines",
+    // in its own entry) — so the discreet spot exists exactly where the
+    // screen makes one, and a threshold chamber with no screen draws no key.
+    //
+    // **The hearthroom was the other candidate and was rejected on a
+    // measurement, not a preference.** The alcove is the only lidless
+    // container the grammar composes and it is `roles: &[Role::Hearthroom]`;
+    // putting the key there would leave NO room in the world that stands a
+    // container and composes no key, which is the exact shape
+    // `a_thing_put_into_a_container_the_grammar_never_composes_comes_back_out`
+    // needs to reach `take_from_the_ledger`'s second source. A pattern
+    // placement that makes a regression test unsatisfiable is a placement
+    // that deleted a guard.
+    //
+    // `Attach::Beside`, not `Within`: a hook by a screen is not a container,
+    // so this composes no new (container, contained) pair and
+    // `the_grammar_puts_exactly_these_things_inside_other_things` is
+    // untouched. `at_locale: false` for the reason its sibling states — a
+    // locale-band append feeds `warmth_at` and is an EPOCH. `needs_cold:
+    // false`: a household keeps its key whether or not it keeps a fire.
+    // Appended rather than inserted, and the append position is the only
+    // admissible one anyway: `draw` admits a pattern only once its `requires`
+    // kind is present, and `the-screen` is index 6.
+    Pattern {
+        name: "the-key-by-the-door",
+        kind: AnchorKind::Key,
+        attach: Attach::Beside(AnchorKind::Screen),
+        requires: Some(AnchorKind::Screen),
+        needs_cold: false,
+        built: true,
+        roles: &[Role::Threshold],
+        at_locale: false,
+        needs_populous: false,
+    },
 ];
 
 /// The patterns a room draws, DERIVED from what it already is — never authored
@@ -358,8 +487,8 @@ pub fn selection_for(role: Role, built: bool, cold: bool, populous: bool) -> Vec
     draw(built, cold, populous, |p| p.roles.contains(&role))
 }
 
-/// The one admissibility walk. `admits` is the band's declared vocabulary; every
-/// other gate is a property of the place.
+/// The one admissibility walk over the authored [`INVENTORY`]. `admits` is the
+/// band's declared vocabulary; every other gate is a property of the place.
 ///
 /// Order-sensitive by design, and shared so that the two bands cannot drift into
 /// two different readings of what "completes" means.
@@ -369,9 +498,35 @@ fn draw(
     populous: bool,
     admits: impl Fn(&'static Pattern) -> bool,
 ) -> Vec<&'static Pattern> {
+    draw_from(&INVENTORY, built, cold, populous, admits)
+}
+
+/// [`draw`] over an arbitrary inventory — the seam that keeps a filter arm no
+/// authored pattern exercises from becoming a claim nothing checks.
+///
+/// It exists for exactly one reason (decision 0398): since the strongbox and
+/// its key were relaxed, no [`INVENTORY`] entry sets
+/// [`Pattern::needs_populous`], so the `needs_populous && !populous` arm below
+/// is unreachable from production. Deleting the arm would delete a real grammar
+/// capability; leaving it unexercised would hand the next author who writes
+/// `needs_populous: true` a filter nothing has run since the day it went idle.
+/// Feeding a SYNTHETIC inventory through the same walk keeps the arm live
+/// without putting a pattern in the world to serve a test.
+///
+/// Private, and takes `&'static [Pattern]` rather than a lifetime parameter,
+/// because the two production callers hand it the promoted `&INVENTORY` and the
+/// test hands it a `static` — no third shape exists, and inventing one would be
+/// the abstraction this seam is trying not to become.
+fn draw_from(
+    inventory: &'static [Pattern],
+    built: bool,
+    cold: bool,
+    populous: bool,
+    admits: impl Fn(&'static Pattern) -> bool,
+) -> Vec<&'static Pattern> {
     let mut out: Vec<&'static Pattern> = Vec::new();
     let mut present: std::collections::BTreeSet<AnchorKind> = std::collections::BTreeSet::new();
-    for p in INVENTORY.iter() {
+    for p in inventory.iter() {
         if p.built != built {
             continue;
         }
@@ -681,6 +836,179 @@ mod tests {
         );
     }
 
+    /// **No production room composes two anchors of one kind** — the census
+    /// The Chattel's Task 1 ran once, made permanent.
+    ///
+    /// WHAT A RED HERE MEANS, and it is not "a pattern was added". It means the
+    /// thing that made a pattern addition safe has stopped holding.
+    /// `windows/vessel/src/thing.rs` keys a thing's `EntityId` on
+    /// `(room facet, kind, ordinal)` and every caller hardcodes ordinal `0`,
+    /// which is legitimate ONLY while each `AnchorKind` occurs at most once per
+    /// composed interior. The moment one occurs twice, two distinct things in
+    /// one room derive the SAME entity id: every fact about either keys to the
+    /// other, and no gate in this tree can see it — a derived id has no
+    /// collision assert behind `reuse_or_mint_entity`, and the world still
+    /// saves, loads and renders.
+    ///
+    /// So the response is not to widen this test. It is the STOP row of the
+    /// spec's §3.2 branch table (`docs/superpowers/plans/`'s Task 1, Step 2):
+    /// an ordering rule is needed, and it must be keyed on something a layout
+    /// epoch cannot change — **never** on the interior's `Vec` derivation
+    /// order, which decision 0069 licenses to regenerate differently forever.
+    /// Return to the spec; do not choose a rule here.
+    ///
+    /// Task 1 measured the STRONGER of the table's two green rows: not row 2
+    /// ("duplicates exist, but only of unpromotable kinds") but row 1 —
+    /// `CENSUS_ANY_DUPLICATE false`, every kind's count exactly 1. This test
+    /// asserts row 1, so it fires on a duplicate of ANY kind, promotable or
+    /// not, which is deliberately stricter than `thing.rs` strictly needs: a
+    /// duplicate `Ground` would be a real change to what a room IS, and
+    /// discovering it here beats discovering it when someone makes that kind
+    /// promotable.
+    #[test]
+    fn no_production_room_composes_two_anchors_of_one_kind() {
+        let mut combinations = 0usize;
+
+        let mut census = |label: String, selected: Vec<&'static Pattern>| {
+            combinations += 1;
+            let interior: Interior = compose(&selected);
+            let mut counts: std::collections::BTreeMap<AnchorKind, usize> =
+                std::collections::BTreeMap::new();
+            for id in interior.ids() {
+                *counts.entry(interior.anchor(id).kind).or_insert(0) += 1;
+            }
+            for (kind, n) in &counts {
+                assert_eq!(
+                    *n, 1,
+                    "{label} composes {n} anchors of {kind:?}. thing.rs's \
+                     hardcoded ordinal 0 now collides two things into one \
+                     entity id: an ordering rule is needed, and it must not key \
+                     on derivation order. See spec SS3.2's branch table (STOP \
+                     row) and this test's doc comment."
+                );
+            }
+        };
+
+        // The LOCALE band: no role, never populous.
+        for (built, cold) in [(true, true), (true, false), (false, true), (false, false)] {
+            census(
+                format!("selection(built={built}, cold={cold})"),
+                selection(built, cold),
+            );
+        }
+
+        // The CHAMBER band. `populous` is swept as well as `built`/`cold`
+        // because `the-strongbox` is population-gated, so a sweep that omitted
+        // it would under-cover exactly the pattern this invariant protects.
+        for role in EVERY_ROLE {
+            for built in [true, false] {
+                for cold in [true, false] {
+                    for populous in [true, false] {
+                        census(
+                            format!(
+                                "selection_for({role:?}, built={built}, cold={cold}, \
+                                 populous={populous})"
+                            ),
+                            selection_for(*role, built, cold, populous),
+                        );
+                    }
+                }
+            }
+        }
+
+        // The census's own accounting. Without this, a future edit that dropped
+        // a loop would still pass every assertion above by measuring less —
+        // which is the quietest way an invariant test stops being one.
+        assert_eq!(
+            combinations,
+            4 + EVERY_ROLE.len() * 8,
+            "the census no longer sweeps every production gate combination"
+        );
+        assert_eq!(combinations, 60, "the census swept {combinations}, not 60");
+    }
+
+    /// **What the grammar ever puts INSIDE anything** — The Offer's Task 6
+    /// census re-run as a permanent test, over the same 60 production gate
+    /// combinations `no_production_room_composes_two_anchors_of_one_kind`
+    /// sweeps.
+    ///
+    /// It exists because the campaign's container half is only as real as
+    /// this set is non-empty in the right place. The Offer measured the
+    /// answer as `{(Alcove, Hearth)}` — a fire in a recess, and **nothing
+    /// anywhere inside a strongbox**, which is why The Chattel's spec §3.8
+    /// says outright that "contents must be authored, because nothing is ever
+    /// inside anything today": `Openable`/`Lockable` would have had nothing
+    /// to reveal and `open` would have reported nothing, forever, exactly as
+    /// `Encloses` nearly did one campaign earlier.
+    ///
+    /// So this is an ANTI-VACUITY check, not a freeze for its own sake. A
+    /// pattern authored with `Attach::Within` that no production combination
+    /// selects would leave the feature reporting nothing while looking
+    /// authored; the pair has to show up HERE, in a composition the gates
+    /// actually produce, or it is not in the world.
+    ///
+    /// Frozen as an exact set, so a future `Attach::Within` addition is a
+    /// deliberate edit here rather than a silent widening — the same
+    /// discipline `the_locale_band_draws_exactly_what_it_drew` carries one
+    /// band over.
+    #[test]
+    fn the_grammar_puts_exactly_these_things_inside_other_things() {
+        let mut combinations = 0usize;
+        let mut pairs: std::collections::BTreeSet<(AnchorKind, AnchorKind)> =
+            std::collections::BTreeSet::new();
+
+        let mut census = |selected: Vec<&'static Pattern>| {
+            combinations += 1;
+            let interior: Interior = compose(&selected);
+            for id in interior.ids() {
+                if let Some(container) = interior.anchor(id).within {
+                    pairs.insert((interior.anchor(container).kind, interior.anchor(id).kind));
+                }
+            }
+        };
+
+        for (built, cold) in [(true, true), (true, false), (false, true), (false, false)] {
+            census(selection(built, cold));
+        }
+        for role in EVERY_ROLE {
+            for built in [true, false] {
+                for cold in [true, false] {
+                    for populous in [true, false] {
+                        census(selection_for(*role, built, cold, populous));
+                    }
+                }
+            }
+        }
+
+        // The same accounting the sibling census carries, and for the same
+        // reason: a dropped loop would otherwise satisfy the set assertion
+        // below by measuring less.
+        assert_eq!(
+            combinations,
+            4 + EVERY_ROLE.len() * 8,
+            "the census no longer sweeps every production gate combination"
+        );
+        assert_eq!(combinations, 60, "the census swept {combinations}, not 60");
+
+        let expected: std::collections::BTreeSet<(AnchorKind, AnchorKind)> = [
+            // The Offer's Task 6 finding, unchanged: a fire within an alcove.
+            (AnchorKind::Alcove, AnchorKind::Hearth),
+            // The Chattel's Task 11 addition, and the whole point of it: a
+            // production room that actually holds something inside a
+            // container `open` can open.
+            (AnchorKind::Strongbox, AnchorKind::Key),
+        ]
+        .into_iter()
+        .collect();
+        assert_eq!(
+            pairs, expected,
+            "the set of (container, contained) pairs any production gate \
+             combination composes has moved. An addition here is what makes \
+             the container half of The Chattel non-vacuous; a REMOVAL takes \
+             it back to reporting nothing"
+        );
+    }
+
     #[test]
     fn only_the_hearthroom_can_hold_a_fire_and_no_rule_says_so() {
         // THE CLAIM THAT MAKES THIS A LANGUAGE RATHER THAN A CATALOGUE. Nothing
@@ -818,25 +1146,258 @@ mod tests {
         );
     }
 
+    /// **A hamlet's storeroom holds a strongbox, and the strongbox holds a
+    /// key** — decision 0398, and the inversion of the test this replaces.
+    ///
+    /// The old test asserted the opposite (`!names(&hamlet).contains(
+    /// &"the-strongbox")`) and was correct about the code and wrong about the
+    /// world: no living occupation in any measured world clears the ceiling, so
+    /// what it froze was not "rare in a hamlet" but "absent everywhere". A
+    /// scale gate is a good idea in a world that has towns; this one does not
+    /// yet, and the capability was the thing being spent.
+    ///
+    /// The hamlet is spelled at the CEILING rather than at zero on purpose: the
+    /// old test's own boundary case, kept, so that this is a statement about
+    /// the relaxation rather than about an empty brief.
     #[test]
-    fn the_strongbox_is_gated_by_scale_and_by_the_shared_ceiling() {
-        // `peak_population`'s only reader. The threshold is HOISTED, not
-        // re-typed, so this asserts against the same constant the ruin model
-        // reads — one number, one meaning.
+    fn a_hamlet_composes_a_strongbox_with_a_key_inside_it() {
         let ceiling = hornvale_history::flesh::HAMLET_POPULATION_CEILING;
         let hamlet = crate::brief::Brief::from_parts(None, None, None, None, ceiling, true, false);
-        let town =
-            crate::brief::Brief::from_parts(None, None, None, None, ceiling + 1, true, false);
         assert!(!hamlet.is_populous(), "at the ceiling is still a hamlet");
-        assert!(town.is_populous());
-        let names = |b: &crate::brief::Brief| {
-            selection_for(Role::Store, true, false, b.is_populous())
+        let names = selection_for(Role::Store, true, false, hamlet.is_populous())
+            .iter()
+            .map(|p| p.name)
+            .collect::<Vec<_>>();
+        assert!(
+            names.contains(&"the-strongbox"),
+            "a hamlet's storeroom draws no strongbox, so the capability is \
+             unreachable again: {names:?}"
+        );
+        assert!(
+            names.contains(&"the-key-in-the-strongbox"),
+            "the strongbox composes with nothing in it, so `open` reports \
+             nothing: {names:?}"
+        );
+        // Scale is no longer a gate on this vocabulary AT ALL — asserted in
+        // both directions so that relaxing one pattern and not the other
+        // cannot pass here.
+        let populous = selection_for(Role::Store, true, false, true)
+            .iter()
+            .map(|p| p.name)
+            .collect::<Vec<_>>();
+        assert_eq!(
+            names, populous,
+            "a town's storeroom and a hamlet's differ, so something is still \
+             population-gated"
+        );
+    }
+
+    /// **A key stands somewhere a strongbox cannot** — the grammar half of
+    /// the lock's repair (Task 13, fix round 1).
+    ///
+    /// The lid gate `Session::take` grew in the same change is only safe
+    /// because of this: while `the-key-in-the-strongbox` was the ONLY key
+    /// pattern, refusing to reach through a shut lid made the box unopenable
+    /// in every world. So what has to hold is not merely "a second key
+    /// exists" but the two structural facts that make it reachable from the
+    /// box:
+    ///
+    /// 1. The two key patterns' `roles` are DISJOINT, which is what keeps
+    ///    `no_production_room_composes_two_anchors_of_one_kind` true — two
+    ///    `Key` anchors in one interior would derive one `EntityId` at
+    ///    ordinal 0 and silently fuse two things.
+    /// 2. `role_for` puts every `Role::Store` at chamber index 2 or deeper
+    ///    and `Role::Threshold` at index 0, so a structure holding a
+    ///    strongbox at all holds this key in a shallower room of the same
+    ///    building — and a possession walks THROUGH it to reach the lock.
+    ///    That is a claim about the grammar, provable here, and it is what
+    ///    makes the 48-seed reachability figure a corroboration rather than
+    ///    the argument.
+    /// 3. The threshold chamber stands no container at all, which is why the
+    ///    key went here rather than in the hearthroom: the alcove is the only
+    ///    lidless `Encloses` kind the grammar composes, and a key beside it
+    ///    would leave no room in the world that stands a container and
+    ///    composes no key — the shape
+    ///    `a_thing_put_into_a_container_the_grammar_never_composes_comes_back_out`
+    ///    needs.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST: change `the-key-by-the-door`'s
+    /// `roles` to `&[Role::Store]` — the plausible copy of its sibling, which
+    /// compiles and leaves an `INVENTORY` of the same length. Confirmed
+    /// 2026-08-30, unfiltered over the whole crate: this test plus **nine**
+    /// custody tests that walk to the front door for a key, including
+    /// `a_shut_lid_refuses_take_and_an_open_one_does_not` and
+    /// `custody_survives_a_save_and_a_re_possession`.
+    ///
+    /// **`no_production_room_composes_two_anchors_of_one_kind` stays GREEN
+    /// under it, and this doc predicted otherwise before the mutation was
+    /// run.** The prediction was that a Store-roled key would collide with
+    /// `the-key-in-the-strongbox` at ordinal 0. It does not: `requires:
+    /// Some(Screen)` is unsatisfiable in a `Role::Store` chamber — a screen
+    /// is `roles: &[Role::Threshold]` — so `draw` drops the pattern
+    /// altogether and the second key vanishes from the world instead of
+    /// doubling in one room. Both outcomes are bad and only one of them is
+    /// what the collision census watches for, which is exactly why clause 1
+    /// is asserted HERE, on the roles themselves, rather than left to a
+    /// downstream test that would only fire for a different reason.
+    /// Measured, 19 passed / 1 failed over `interior::pattern`:
+    ///
+    /// ```text
+    /// FAILED interior::pattern::tests::a_key_is_drawn_where_no_strongbox_is
+    /// ok     interior::pattern::tests::no_production_room_composes_two_anchors_of_one_kind
+    /// ```
+    #[test]
+    fn a_key_is_drawn_where_no_strongbox_is() {
+        let key_roles = |name: &str| {
+            INVENTORY
+                .iter()
+                .find(|p| p.name == name)
+                .unwrap_or_else(|| panic!("{name} is an authored pattern"))
+                .roles
+        };
+        let in_box = key_roles("the-key-in-the-strongbox");
+        let by_the_door = key_roles("the-key-by-the-door");
+        assert!(
+            !in_box.iter().any(|r| by_the_door.contains(r)),
+            "the two key patterns share a role, so one room composes two Key \
+             anchors and ordinal 0 fuses them: {in_box:?} vs {by_the_door:?}"
+        );
+
+        // The second key is really drawn, in the band that draws it, with no
+        // container beside it. `built=true, cold=false` is the plainest
+        // production gate; `no_production_room_composes_two_anchors_of_one_kind`
+        // sweeps the rest.
+        let door: Vec<&str> = selection_for(Role::Threshold, true, false, false)
+            .iter()
+            .map(|p| p.name)
+            .collect();
+        assert!(
+            door.contains(&"the-key-by-the-door"),
+            "a threshold chamber draws no key, so closing `take`'s lid bypass \
+             leaves the strongbox unopenable: {door:?}"
+        );
+        let stands_a_container = selection_for(Role::Threshold, true, false, false)
+            .iter()
+            .any(|p| {
+                crate::affordance::carries(
+                    crate::affordance::thing_kind_of(p.kind),
+                    crate::affordance::ObjectProperty::Encloses,
+                )
+            });
+        assert!(
+            !stands_a_container,
+            "the threshold chamber now stands a container, so the room shape \
+             `a_thing_put_into_a_container_the_grammar_never_composes_comes_back_out` \
+             needs may no longer exist: {door:?}"
+        );
+
+        // The depth argument, read off `role_for` rather than restated: the
+        // shallowest Store is deeper than the Threshold, so a walk that
+        // reaches a strongbox has already passed this key.
+        let plain = plain_brief();
+        let first_store = (0..=8)
+            .find(|i| role_for(*i, &plain) == Role::Store)
+            .expect("some chamber index is a store");
+        let threshold = (0..=8)
+            .find(|i| role_for(*i, &plain) == Role::Threshold)
+            .expect("some chamber index is a threshold");
+        assert!(
+            threshold < first_store,
+            "the key's room ({threshold}) is no longer shallower than the \
+             strongbox's ({first_store}), so a possession can reach a lock it \
+             has not passed a key for"
+        );
+    }
+
+    /// **The population filter still works, and no authored pattern proves
+    /// it** — the guard decision 0398 owes the field it left behind.
+    ///
+    /// After the relaxation nothing in [`INVENTORY`] sets
+    /// [`Pattern::needs_populous`], so `draw`'s `needs_populous && !populous`
+    /// arm is unreachable from production. That is the quiet failure this
+    /// test exists to prevent: the arm keeps compiling, the field keeps
+    /// reading as a live capability, and the first author to write
+    /// `needs_populous: true` inherits a filter nothing has run since the day
+    /// it went idle.
+    ///
+    /// So the arm is driven directly, through [`draw_from`], against a
+    /// SYNTHETIC inventory — a pattern authored for a test rather than for the
+    /// world, which is the whole point: proving the mechanism must not cost a
+    /// pattern in the world.
+    #[test]
+    fn the_populous_gate_still_works_though_no_authored_pattern_uses_it() {
+        // The premise, asserted rather than assumed. If this fires, someone
+        // authored a population-gated pattern: good — say so here, and check
+        // that the production censuses in this file sweep both values of
+        // `populous` for the role it belongs to (they do today).
+        let authored = INVENTORY.iter().filter(|p| p.needs_populous).count();
+        assert_eq!(
+            authored, 0,
+            "an INVENTORY pattern is population-gated again, so this test's \
+             synthetic stand-in is no longer the only witness the filter has"
+        );
+
+        static SYNTHETIC: [Pattern; 2] = [
+            Pattern {
+                name: "test-ground",
+                kind: AnchorKind::Ground,
+                attach: Attach::Hub,
+                requires: None,
+                needs_cold: false,
+                built: true,
+                roles: EVERY_ROLE,
+                at_locale: true,
+                needs_populous: false,
+            },
+            Pattern {
+                name: "test-town-only",
+                kind: AnchorKind::Strongbox,
+                attach: Attach::Beside(AnchorKind::Ground),
+                requires: None,
+                needs_cold: false,
+                built: true,
+                roles: EVERY_ROLE,
+                at_locale: true,
+                needs_populous: true,
+            },
+        ];
+        let names = |populous: bool| {
+            draw_from(&SYNTHETIC, true, false, populous, |_| true)
                 .iter()
                 .map(|p| p.name)
                 .collect::<Vec<_>>()
         };
-        assert!(!names(&hamlet).contains(&"the-strongbox"));
-        assert!(names(&town).contains(&"the-strongbox"));
+        assert_eq!(
+            names(false),
+            vec!["test-ground"],
+            "the populous filter admitted a population-gated pattern into a \
+             hamlet, so `needs_populous: true` would silently do nothing"
+        );
+        assert_eq!(
+            names(true),
+            vec!["test-ground", "test-town-only"],
+            "the populous filter withheld a population-gated pattern from a \
+             town, so `needs_populous: true` would silently gate everything"
+        );
+    }
+
+    /// `Brief::is_populous` still reads the HOISTED ceiling rather than a
+    /// re-typed `150` — one number, one meaning, shared with the ruin model.
+    ///
+    /// Kept after decision 0398 relaxed the strongbox, and worth saying why:
+    /// the predicate is still WIRED (`chamber_interior_of` passes it into
+    /// `selection_for` on every chamber derivation) and is simply selecting
+    /// nothing today, so the threshold it reads is still the thing a future
+    /// `needs_populous: true` pattern would be gated on.
+    #[test]
+    fn is_populous_reads_the_shared_hamlet_ceiling() {
+        let ceiling = hornvale_history::flesh::HAMLET_POPULATION_CEILING;
+        let at = |n: u32| crate::brief::Brief::from_parts(None, None, None, None, n, true, false);
+        assert!(
+            !at(ceiling).is_populous(),
+            "at the ceiling is still a hamlet"
+        );
+        assert!(at(ceiling + 1).is_populous(), "one over the ceiling is not");
     }
 
     #[test]

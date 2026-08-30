@@ -37,10 +37,14 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `abyssal` | a biome class | *Tatash | /tataʃ/ |
 | `abyssal-plain` | The flat floor of the deep ocean. | *Nganash | /ŋanaʃ/ |
 | `affords-passage` | a seam between two rooms a body may pass through | *Saxag | /saxag/ |
+| `alcove` | a recessed space set into a wall | *Xaqas | /xaqas/ |
 | `alpine` | a biome class | *Shasaz | /ʃasaz/ |
+| `altar` | a raised surface where offerings are made | *Naqab | /naqab/ |
+| `anvil` | a heavy iron block a smith hammers metal against | *Nasag | /nasag/ |
 | `bait-ball` | A dense turning mass of fish. | *Tajat | /tajat/ |
 | `barley` | a staple crop | *Zajaj | /zajaj/ |
 | `bathypelagic` | a biome class | *Vajan | /vajan/ |
+| `bed` | a place made for lying down and sleeping | *Bajax | /bajax/ |
 | `black-dragon-kind` | a black dragon | *Ngavas | /ŋavas/ |
 | `blood` | the circulating fluid of a body | *Nabad | /nabad/ |
 | `blue` | the color term for blue | *Qanas | /qanas/ |
@@ -50,6 +54,7 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `bugbear-kind` | a bugbear | *Xaqad | /xaqad/ |
 | `burn` | Ground recovering from fire. | *Tavan | /tavan/ |
 | `carrion-crawler-kind` | a carrion crawler | *Nangat | /naŋat/ |
+| `cave-mouth` | the opening where a cave meets the outside | *Xadaz | /xadaz/ |
 | `chart` | to form a picture of the space around oneself — `map` | *Navag | /navag/ |
 | `child` | one's son or daughter | *Sabaj | /sabaj/ |
 | `closed-canopy` | Tall closed-canopy tropical forest. | *Bazag | /bazag/ |
@@ -104,6 +109,7 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `grass-sward` | Open grassland, unbroken by trees. | *Nganax | /ŋanax/ |
 | `great` | large in size or extent | *Gagan | /gagan/ |
 | `green` | the color term for green | *Ganav | /ganav/ |
+| `ground` | the bare earth underfoot | *Sagash | /sagaʃ/ |
 | `gully-dwarf-kind` | a gully dwarf | *Xaxang | /xaxaŋ/ |
 | `hadal-trench` | a biome class | *Ngashat | /ŋaʃat/ |
 | `hamada` | A stony desert pavement of bare rock. | *Davash | /davaʃ/ |
@@ -113,6 +119,7 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `helpless` | negative and persistent: given up despite an active drive | *Qagash | /qagaʃ/ |
 | `high` | far above the ground | *Nganas | /ŋanas/ |
 | `high-elf-kind` | a high elf | *Qaxav | /qaxav/ |
+| `high-seat` | the seat of a hall's presiding figure | *Naqan | /naqan/ |
 | `hill` | ground that rises above what surrounds it | *Shagag | /ʃagag/ |
 | `hill-dwarf-kind` | a hill dwarf | *Ngashax | /ŋaʃax/ |
 | `hobgoblin-kind` | a hobgoblin | *Babaj | /babaj/ |
@@ -126,6 +133,7 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `island` | land the water surrounds | *Ngaqab | /ŋaqab/ |
 | `kelp-canopy` | The floating canopy of a kelp forest. | *Sasax | /sasax/ |
 | `kelp-forest` | a biome class | *Qaqas | /qaqas/ |
+| `key` | a small tool shaped to work one particular lock | *Bazab | /bazab/ |
 | `kill` | to cause to cease living | *Qadag | /qadag/ |
 | `killer-whale-kind` | a killer whale | *Naqash | /naqaʃ/ |
 | `know` | to hold something in memory or understanding — `knows` | *Vavash | /vavaʃ/ |
@@ -135,7 +143,10 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `light` | the color term for white/light hues | *Bangas | /baŋas/ |
 | `lightless-water` | Water below all light. | *Xavab | /xavab/ |
 | `little` | small in size or extent | *Danag | /danag/ |
+| `lockable` | a thing whose opening needs the key that matches it | *Shazax | /ʃazax/ |
+| `log` | a length of felled, unworked timber | *Tadat | /tadat/ |
 | `look` | to visually attend to something, near or far — `look`, `examine` | *Qashad | /qaʃad/ |
+| `loom` | a frame for weaving thread into cloth | *Xazab | /xazab/ |
 | `lost` | negative: blocked with no target to move toward | *Jasab | /jasab/ |
 | `low` | near the ground | *Xasash | /xasaʃ/ |
 | `many` | an indefinitely large count | *Dangang | /daŋaŋ/ |
@@ -161,6 +172,7 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `old-growth` | Mature forest, closed above and open beneath. | *Zajat | /zajat/ |
 | `one` | the cardinal number 1 | *Dashat | /daʃat/ |
 | `open-blue` | Open sunlit water, far from any shore. | *Xanax | /xanax/ |
+| `openable` | a thing that can be opened and closed again | *Ngatang | /ŋataŋ/ |
 | `otyugh-kind` | an otyugh | *Vaxab | /vaxab/ |
 | `over` | above; atop | *Jabang | /jabaŋ/ |
 | `owlbear-kind` | an owlbear | *Vagat | /vagat/ |
@@ -168,6 +180,8 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `person` | a person; a member of a people (the autonym root) | *Vazav | /vazav/ |
 | `plankton-bloom` | Water thick with plankton. | *Xabash | /xabaʃ/ |
 | `playa` | A dry lake bed of salt and cracked clay. | *Jajav | /jajav/ |
+| `pool` | a small standing body of water | *Zaqaz | /zaqaz/ |
+| `portable` | a thing small enough for a body to carry | *Jaqan | /jaqan/ |
 | `pressure-ridge` | Sea ice buckled into a ridge. | *Nanat | /nanat/ |
 | `radiates-heat` | an anchor that emits warmth | *Tashab | /taʃab/ |
 | `rafted-floe` | Ice floes driven over one another. | *Xaxab | /xaxab/ |
@@ -188,6 +202,7 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `scattering-layer` | The daily-rising layer of small sea life. | *Vagaj | /vagaj/ |
 | `sclerophyll-scrub` | Hard-leaved drought-adapted scrub. | *Tabav | /tabav/ |
 | `scoured-ice` | Ice swept bare and carved by wind. | *Vajad | /vajad/ |
+| `screen` | a partition set up to divide or shield a space | *Taqash | /taqaʃ/ |
 | `sea` | a body of salt water | *Shaqash | /ʃaqaʃ/ |
 | `sea-elf-kind` | a sea elf | *Ngatax | /ŋatax/ |
 | `sea-ice` | a biome class | *Vangang | /vaŋaŋ/ |
@@ -212,6 +227,7 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `star` | a fixed point of light in the night sky | *Nashas | /naʃas/ |
 | `starlit` | dark faintly lit by stars | *Javab | /javab/ |
 | `stone` | rock | *Shazaq | /ʃazaq/ |
+| `strongbox` | a locked chest built to keep valuables safe | *Daqang | /daqaŋ/ |
 | `sun` | the sun | *Qashax | /qaʃax/ |
 | `supports-rest` | a place a body may lie down and sleep | *Bashav | /baʃav/ |
 | `taiga` | a biome class | *Nangab | /naŋab/ |
@@ -220,6 +236,7 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `temperate-rainforest` | a biome class | *Qajang | /qajaŋ/ |
 | `think` | to hold an uncertain belief | *Gangav | /gaŋav/ |
 | `thorn-scrub` | Dry scrub of thorned shrubs. | *Qatat | /qatat/ |
+| `threshold` | the sill marking where one place ends and another begins | *Shavaq | /ʃavaq/ |
 | `tide` | the rise and fall of the waters under the moons | *Xangash | /xaŋaʃ/ |
 | `treant-kind` | a treant | *Vajaq | /vajaq/ |
 | `tree` | a woody plant | *Najan | /najan/ |
@@ -238,6 +255,7 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `urchin-barren` | Seabed grazed bare of kelp. | *Najaq | /najaq/ |
 | `valley` | low ground between heights | *Shavax | /ʃavax/ |
 | `vent-plume` | Shimmering hot water rising from a vent. | *Bavad | /bavad/ |
+| `vessel` | a container shaped to hold liquid or goods | *Bashaq | /baʃaq/ |
 | `vine` | a staple crop | *Banang | /banaŋ/ |
 | `wait` | to let time pass without acting — `wait` | *Dashaz | /daʃaz/ |
 | `water` | the drinkable liquid | *Xanab | /xanab/ |

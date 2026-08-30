@@ -904,3 +904,162 @@ fn map_renders_the_colour_lens_unless_the_eyes_are_off() {
     );
     assert!(!bare.contains('\u{1b}'), "and emits no escape sequences");
 }
+
+/// **A predicate's registered DOC is save-format state, and this pins that
+/// `Session::start` registers The Chattel's two from the shared constants.**
+///
+/// `PredicateDef` derives `PartialEq` over `{name, functional, doc}` and
+/// `ConceptRegistry::register_predicate` is idempotent only for an IDENTICAL
+/// definition, so two registrations of `located-in` differing by one word are
+/// a `ConflictingDefinition` — which `Session::start` meets behind an
+/// `.expect`, i.e. as a panic. A world saved by `possess --out` carries its
+/// registry (decision 0368), so the two registrations that must agree are not
+/// even in one process: they are a saved world's and a later session's.
+///
+/// Task 5 shipped exactly that divergence inside one file — `session.rs`
+/// registered "…: a room, a container, or a hand" while `thing.rs`'s test
+/// helper registered "where a thing is on a day" — and nothing red, because
+/// the two registries never met. The constants remove the possibility; this
+/// test is the half that keeps `session.rs` reaching for them, and it reds
+/// against a literal spelled here.
+#[test]
+fn a_sessions_registry_carries_the_shared_predicate_docs() {
+    use hornvale_vessel::thing::{
+        LOCATED_IN, LOCATED_IN_DOC, LOCKEDNESS, LOCKEDNESS_DOC, OPENNESS, OPENNESS_DOC,
+    };
+
+    let world = seam_world();
+    let (s, _) = Session::start(&world, &opts()).unwrap();
+    let played = s.into_played_world(Seed(42));
+
+    for (name, doc) in [
+        (LOCATED_IN, LOCATED_IN_DOC),
+        (OPENNESS, OPENNESS_DOC),
+        (LOCKEDNESS, LOCKEDNESS_DOC),
+    ] {
+        let def = played
+            .registry
+            .predicate(name)
+            .unwrap_or_else(|| panic!("`{name}` is registered per-session"));
+        assert_eq!(
+            def.doc, doc,
+            "`{name}`'s registered doc must BE the shared constant, not a \
+             literal that happens to match it today: a divergence is a \
+             ConflictingDefinition against a world an earlier session saved"
+        );
+    }
+}
+
+/// **A saved played world carries custody** — spec §6 acceptance 1's second
+/// half, and the cheapest real work The Latch left behind (The Chattel, Task
+/// 12).
+///
+/// It drives the ACTUAL round trip and not a sibling predicate: a real
+/// possession walks into seed 1's store chamber, `take`s the key through
+/// `Session::handle`, folds itself into a `World` with `into_played_world`
+/// (which `possess --out` writes verbatim — decision 0368 carries the
+/// per-session registry out with the evolved ledger, and 0171 rules a
+/// player's acts are not filtered on the way), and a SECOND session started
+/// over that world is asked `carrying` through the same verb loop.
+///
+/// # The one thing the save does not carry, and it is not the custody
+///
+/// **The session CLOCK is not persisted, and a naive re-possession therefore
+/// reports empty hands.** `World` is `{seed, registry, ledger, derived_under}`
+/// and holds no instant; `PossessOpts::default()` starts every possession at
+/// noon of day 0. Custody is an as-of-day fold
+/// (`thing::location_of` keeps the latest posting at or before the day
+/// asked about), so a take committed on day 0.55 is invisible to a session
+/// whose own now is 0.5 — the postings are in the file, correctly, and the
+/// question was asked at the wrong instant. Measured, not inferred: the first
+/// draft of this test asserted against `PossessOpts::default()` and read
+/// `You are carrying nothing.` with the two `located-in` facts sitting in the
+/// saved ledger.
+///
+/// So the re-possession names the day, which is exactly what `possess
+/// --world <saved> --day D` already exposes on the command line. That is the
+/// honest round trip rather than a workaround: the saved world is the durable
+/// half and the instant is the reader's, the same way an almanac is rendered
+/// *at* a day.
+///
+/// MUTATION THIS MUST FAIL AGAINST — the property is *that custody crosses
+/// the save*, not that a live session can read its own ledger: make
+/// `Session::into_played_world` filter the outgoing ledger to facts whose
+/// predicate is not `thing::LOCATED_IN`. Every in-session assertion in the
+/// campaign stays green and only this one reddens — `860 tests run: 857
+/// passed, 3 failed`, the other two belonging to two unrelated mutations
+/// carried in the same run. `Ledger` has no `retain`, so the filter is a
+/// rebuild: a fresh `Ledger::default()` re-committing every fact whose
+/// predicate is not `LOCATED_IN`. Confirmed 2026-08-29, unfiltered over the
+/// whole crate:
+///
+/// ```text
+/// assertion `left == right` failed: custody must survive `possess --out`
+///   left: "You are carrying nothing."
+///  right: "You are carrying a key."
+/// ```
+#[test]
+fn custody_survives_a_save_and_a_re_possession() {
+    let world = build_world(
+        Seed(1),
+        &SkyPins::default(),
+        SkyChoice::Generated,
+        &TerrainPins::default(),
+        &SettlementPins::default(),
+    )
+    .expect("seed 1 builds");
+
+    let say = |s: &mut Session<'_>, line: &str| match s.handle(line) {
+        Turn::Out(t) => t,
+        Turn::Released(t) => panic!("`{line}` must not release: {t}"),
+    };
+
+    let (mut session, _) =
+        Session::start(&world, &PossessOpts::default()).expect("seed 1 possesses");
+    assert!(
+        say(&mut session, "enter").starts_with("[chamber "),
+        "the possession never got indoors, so nothing below is tested"
+    );
+    // The THRESHOLD chamber's key, not the storeroom's: since Task 13's fix
+    // round the storeroom key is inside a shut, locked chest and `take` no
+    // longer reaches through a lid. This walks one room in, takes the key
+    // `the-key-by-the-door` composes, and then carries it as far into the
+    // building as the place goes — so the save below is taken with the key in
+    // hand three rooms from where it was picked up, which is a stronger
+    // starting state for the round trip than the old one, not a weaker.
+    assert_eq!(
+        say(&mut session, "take a key"),
+        "You take the key.",
+        "precondition: seed 1's threshold chamber must hold a takeable key"
+    );
+    for _ in 0..4 {
+        if !say(&mut session, "enter further in").starts_with("[chamber ") {
+            break;
+        }
+    }
+    assert_eq!(say(&mut session, "carrying"), "You are carrying a key.");
+
+    let saved_at = session.day();
+    let played = session.into_played_world(Seed(1));
+
+    // The world really did travel as a FILE, not as a struct handed across:
+    // `possess --out` writes JSON and `possess --world` reads it, and a
+    // `located-in` object is a `Value::Entity`, which is the shape most likely
+    // to be lost by a serde round trip.
+    let on_disk = serde_json::to_string(&played).expect("a world always serializes");
+    let reloaded: World = serde_json::from_str(&on_disk).expect("and always reloads");
+
+    let (mut again, _) = Session::start(
+        &reloaded,
+        &PossessOpts {
+            day: saved_at,
+            ..PossessOpts::default()
+        },
+    )
+    .expect("the saved world possesses again");
+    assert_eq!(
+        say(&mut again, "carrying"),
+        "You are carrying a key.",
+        "custody must survive `possess --out`"
+    );
+}

@@ -11,14 +11,22 @@
 //! consequence and no epoch. Seven unread `Option`s would be dead weight that
 //! reads as evidence of intent.
 //!
-//! FOUR fields are read as of The Blocking: `built`, in `structure_at`'s
-//! existence predicate and in `describe_chamber`'s room/hollow word;
+//! THREE fields are read as of decision 0398: `built`, in `structure_at`'s
+//! existence predicate and in `describe_chamber`'s room/hollow word; and
 //! `notability` and `function`, in `pattern::role_for`'s promotion of a deep
-//! chamber; and `peak_population`, added here when the `store` role's strongbox
-//! became its first reader — exactly the "one field, no epoch" this doc licenses.
-//! `cold` is carried but read only by a debug assertion (`chamber_interior_of`
-//! cross-checks it against the terrain), and `tech` and `people` are carried and
-//! not read at all.
+//! chamber. `cold` is carried but read only by a debug assertion
+//! (`chamber_interior_of` cross-checks it against the terrain), and `tech` and
+//! `people` are carried and not read at all.
+//!
+//! `peak_population` was the FOURTH, added here when the `store` role's
+//! strongbox became its first reader — "exactly the one field, no epoch this
+//! doc licenses", as this paragraph used to say. Decision 0398 relaxed that
+//! gate, so the field is now read only by [`Brief::is_populous`], whose value
+//! still reaches `pattern::selection_for` on every chamber derivation and
+//! currently selects nothing. It is kept for the same reason the doc above
+//! gives for keeping the seam thin: removing it would be a second edit to undo
+//! the day a population-gated pattern is written, and unlike the seven absent
+//! `Option`s this one has a live wire behind it.
 
 use hornvale_history::record::{Function, Notability, TechHorizon};
 use hornvale_kernel::{Facet, Geosphere, KindId, NearestVertexIndex, Vertex, World};
@@ -77,8 +85,25 @@ impl Brief {
     /// Reads `hornvale_history::flesh::HAMLET_POPULATION_CEILING` rather than a
     /// literal, and it is the SAME threshold the ruin model reads for whether a
     /// place leaves a child's doll behind — a hamlet is a family place in both
-    /// readings. The vessel's use is [`crate::interior::pattern::Pattern::
-    /// needs_populous`]: the strongbox.
+    /// readings.
+    ///
+    /// **NO VESSEL-SIDE CONSUMER SELECTS ON IT TODAY (decision 0398), and this
+    /// doc used to say otherwise.** It read "the vessel's use is
+    /// [`crate::interior::pattern::Pattern::needs_populous`]: the strongbox",
+    /// which was true when the strongbox was population-gated and false the
+    /// moment that gate was relaxed. The predicate is still WIRED —
+    /// [`crate::interior::chamber_interior_of`] passes it into
+    /// `pattern::selection_for` on every chamber derivation — but no authored
+    /// pattern sets `needs_populous`, so it currently selects nothing. Wired
+    /// and idle, not dead: the wiring is what lets a future population-gated
+    /// pattern work on the day it is written.
+    ///
+    /// The reason the gate came off is worth carrying here rather than only in
+    /// the decision, because this is where the number lives: across three
+    /// worlds and a 48-seed sweep, **not one living occupation clears the
+    /// ceiling** (max alive peak 84–87 against 150). So this predicate is false
+    /// everywhere a session can currently stand, and anything gated on it is
+    /// not rare but absent.
     /// type-audit: bare-ok(flag: return)
     pub fn is_populous(&self) -> bool {
         self.peak_population > hornvale_history::flesh::HAMLET_POPULATION_CEILING

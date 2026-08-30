@@ -504,13 +504,14 @@ fn peopled_components() -> WorldComponents {
         hornvale_language::lexicon_registry(),
         hornvale_language::family_proto(),
         family_of,
-        // deity / culture / material stay EMPTY deliberately, not by oversight:
-        // no build or demography path reads them off `wc`. Their only readers
-        // in the whole workspace are `WorldComponents::kinds_with` and
-        // `kinds` (`windows/worldgen/src/components.rs:206-228`), pure
+        // deity / culture / material / thing stay EMPTY deliberately, not by
+        // oversight: no build or demography path reads them off `wc`. Their
+        // only readers in the whole workspace are `WorldComponents::kinds_with`
+        // and `kinds` (`windows/worldgen/src/components.rs:206-228`), pure
         // reflection over the roster, which this guard never calls. Filling
-        // them would add non-peopled deity/culture/material kinds to
+        // them would add non-peopled deity/culture/material/thing kinds to
         // `wc.kinds()` and widen the roster this test names.
+        ComponentStore::new(),
         ComponentStore::new(),
         ComponentStore::new(),
         ComponentStore::new(),

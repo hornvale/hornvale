@@ -14,7 +14,7 @@ below is for.
 
 ## Columns
 
-All columns resolve against one registry of 376 tokens, built once per run,
+All columns resolve against one registry of 394 tokens, built once per run,
 so a difference between columns is a difference between catalogues and never
 between two worlds.
 
