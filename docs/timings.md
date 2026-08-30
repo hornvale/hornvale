@@ -4278,3 +4278,4 @@ measured here.
 | 2026-08-30T17:34:38Z | gate-commit | 86.487 | 54.501 | 26.862 | 0.94 | 0 | 51f7a5953 | campaign/the-lodestar | ambrose | 12 |
 | 2026-08-30T17:57:28Z | sluice:artifacts | 108.165 | 831.423 | 33.570 | 8.00 | 0 | 50079bbb4 |  | lefford | 40 |
 | 2026-08-30T17:58:10Z | sluice:outboard | 41.224 | 25.293 | 39.325 | 1.57 | 0 | 6f2e379df |  | lefford | 40 |
+| 2026-08-30T18:06:22Z | sluice:gate | 491.695 | 14044.945 | 467.710 | 29.52 | 0 | d349bf32f |  | lefford | 40 |
