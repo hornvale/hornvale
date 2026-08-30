@@ -193,6 +193,19 @@ w42="$work/hv-42.json"       # seed 42, tier-0 constant sun
 wsky="$work/hv-sky.json"     # seed 42, generated sky (default)
 wlocked="$work/hv-locked.json" # seed 42, tidally locked
 
+# THE WRITE-SET CAPTURE (Task 4, The Attestation). Task 1's Step 1 measured
+# how much of each declared generated path an ordinary run actually touches
+# by hand, once, off a marker file and `find -newer`; this makes that
+# measurement a byproduct of every run instead of a by-hand recipe someone
+# has to re-derive. Stamp the marker now, before any generation happens; the
+# footer near the end of this script counts, per declared path, how many of
+# its tracked files carry an mtime newer than it. `sleep 1` guards against a
+# filesystem whose mtime resolution is coarser than the time this script
+# itself takes to reach its first write.
+write_capture_marker="$work/hv-write-capture-marker"
+touch "$write_capture_marker"
+sleep 1
+
 run() { cargo run -q "$@"; }
 run_release() { cargo run -q --release "$@"; }
 
@@ -1021,3 +1034,38 @@ echo "regenerate-artifacts: the anomaly report" >&2
 run -p hornvale -- lab anomalies
 
 echo "regenerate-artifacts: done." >&2
+
+# Emit the write-set capture (Task 4, The Attestation): one row per declared
+# path, `path<TAB>written<TAB>tracked`, where `written` is how many of that
+# path's git-tracked files carry an mtime newer than the marker stamped at
+# the top of this run, and `tracked` is how many of its files git tracks at
+# all. This is a READ over mtimes and `git ls-files`; it changes no
+# artifact's bytes. `docs/generated-path-writes.tsv` is itself declared in
+# docs/generated-paths.txt with author `artifacts`, so this instrument
+# covers itself the same way every other row does.
+#
+# Skipped outside a git checkout: `repo_root` above is deliberately resolved
+# without `git rev-parse` because the (abandoned, decision 0063) AWS path
+# once ran this script against an rsync'd, non-git tree, and `git ls-files`
+# has no answer there. A missing write-set capture must never turn a
+# working regeneration into a failed one.
+if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    echo "regenerate-artifacts: capturing the write set -> docs/generated-path-writes.tsv" >&2
+    {
+        echo "# path<TAB>written<TAB>tracked -- emitted by scripts/regenerate-artifacts.sh; do not hand-edit."
+        while IFS= read -r declared_path; do
+            tracked=0
+            written=0
+            while IFS= read -r tracked_file; do
+                [ -n "$tracked_file" ] || continue
+                tracked=$((tracked + 1))
+                if [ -n "$(find "$tracked_file" -newer "$write_capture_marker" -print 2>/dev/null)" ]; then
+                    written=$((written + 1))
+                fi
+            done < <(git ls-files -- "$declared_path")
+            printf '%s\t%s\t%s\n' "$declared_path" "$written" "$tracked"
+        done < <(grep -v '^#' docs/generated-paths.txt | grep -v '^$' | cut -f1)
+    } > docs/generated-path-writes.tsv
+else
+    echo "regenerate-artifacts: not a git checkout -- skipping the write-set capture" >&2
+fi

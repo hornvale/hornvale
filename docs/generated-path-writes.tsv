@@ -1,0 +1,12 @@
+# path<TAB>written<TAB>tracked -- emitted by scripts/regenerate-artifacts.sh; do not hand-edit.
+book/src/gallery/	45	56
+book/src/reference/	9	21
+book/src/laboratory/	11	825
+docs/audits/	11	16
+docs/digest/	2	3
+book/src/domesday/	14	14
+clients/game/core/tests/fixtures/	3	3
+docs/audits/underworld-lattice-seed-panel.md	1	1
+docs/audits/the-confidant-report.md	1	1
+docs/audits/the-reticence-report.md	1	1
+docs/generated-path-writes.tsv	1	1

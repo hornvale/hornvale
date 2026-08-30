@@ -77,11 +77,26 @@ docs/audits/underworld-lattice-seed-panel.md	artifacts
 docs/audits/the-confidant-report.md	artifacts
 docs/audits/the-reticence-report.md	artifacts
 
+# `docs/generated-path-writes.tsv` (Task 4, The Attestation) is Task 1's
+# by-hand write-set measurement made a byproduct of every ordinary run: a
+# footer inside scripts/regenerate-artifacts.sh itself counts, per row
+# above, how many of that row's tracked files carry an mtime newer than a
+# marker stamped at the top of the same run. Self-consistent rather than
+# circular — the record of what an author wrote is written by that author
+# and declared against it, so the campaign's own measurement instrument is
+# covered by the same drift check it feeds.
+docs/generated-path-writes.tsv	artifacts
+
 # EVERY CURRENT ROW IS `artifacts`, AND THAT IS A FINDING, NOT AN OVERSIGHT
-# (Task 1, docs/generated-path-authors.md). Every one of these ten paths has
-# at least one file `scripts/regenerate-artifacts.sh` writes on a plain
-# `make rebaseline`, which is the file's own declared criterion — so
+# (Task 1, docs/generated-path-authors.md). Every one of the TEN paths Task 1
+# measured has at least one file `scripts/regenerate-artifacts.sh` writes on
+# a plain `make rebaseline`, which is the file's own declared criterion — so
 # `artifacts` is the correct single value for all ten by that criterion.
+# `docs/generated-path-writes.tsv` (Task 4, above) is an eleventh row added
+# after that count was taken; it trivially satisfies the same criterion —
+# regenerate-artifacts.sh's own footer writes it, unconditionally, on every
+# run — so it is not re-included in the "ten" figure below, which is a
+# historical measurement, not a live count of this file's rows.
 # `book/src/laboratory/` is nonetheless NOT purely `artifacts`: 682 of its
 # 825 tracked files (the-census + census-of-the-meeting) are authored only
 # under the `census` invocation, and `generated/the-history/` (2 files) only

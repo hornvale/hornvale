@@ -4047,3 +4047,8 @@ measured here.
 | 2026-08-30T02:01:09Z | gate-commit | 37.257 | 56.502 | 14.349 | 1.90 | 0 | ff54239a0 | campaign/the-attestation | MacBookPro | 10 |
 | 2026-08-30T02:17:56Z | gate-commit | 40.469 | 54.672 | 13.634 | 1.69 | 0 | 377f65ccb | campaign/the-attestation | MacBookPro | 10 |
 | 2026-08-30T02:28:21Z | gate-commit | 20.950 | 50.387 | 12.697 | 3.01 | 0 | e1c549ead | campaign/the-attestation | MacBookPro | 10 |
+| 2026-08-30T02:38:59Z | rebaseline | 66.702 | 276.573 | 13.784 | 4.35 | 0 | 077248ad6 | campaign/the-attestation | MacBookPro | 10 |
+| 2026-08-30T02:39:59Z | rebaseline | 45.710 | 273.457 | 15.056 | 6.31 | 0 | 077248ad6 | campaign/the-attestation | MacBookPro | 10 |
+| 2026-08-30T02:41:04Z | rebaseline | 53.973 | 281.103 | 15.127 | 5.49 | 0 | 077248ad6 | campaign/the-attestation | MacBookPro | 10 |
+| 2026-08-30T02:45:49Z | rebaseline | 97.683 | 275.318 | 13.010 | 2.95 | 0 | 077248ad6 | campaign/the-attestation | MacBookPro | 10 |
+| 2026-08-30T02:46:21Z | gate-commit | 25.492 | 53.795 | 13.398 | 2.64 | 0 | 077248ad6 | campaign/the-attestation | MacBookPro | 10 |
