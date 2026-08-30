@@ -374,6 +374,38 @@ self-check or this was one attentive session is not something one instance
 can answer; it is a hypothesis for the next campaign's data, not a practice
 yet.
 
+**The Attestation (2026-08-29) turns this chapter's own earlier finding — a
+path declared and never written is "silently vacuous no matter how long it
+has sat green" — into a durable structural answer, and produces a further
+instance of the running diagnosis while doing it.** Three committed checks
+were named as verifying a *state* while being structurally blind to an
+*action that did not happen*: a phase roster restated in two places with a
+one-sided agreement test, a ledger nothing diffs against what a job owed, and
+a decision-block reservation nothing compares against the records actually
+minted inside it. The campaign's own headline measurement (H1: the residual
+unaccounted-for files resolve into a small number of authors) was
+**confirmed and its own motivating number falsified in the same breath** —
+the spec's claimed 585 files was arithmetic that missed a second census-gated
+directory on the adjacent line of the same conditional block; the real
+residual was 132. Its payoff hypothesis (H3: the new freshness reader would
+surface an absence nobody already knew about) came back **NULL** on the
+honest second try: the first run reported five confident "owed but absent"
+jobs and called the hypothesis confirmed, and every one was a legitimate
+prose-only narrowing the chamber's own dispatch script already accounts for —
+the same shape as this chapter's recurring diagnosis, a check whose stated
+guarantee exceeds what it actually verifies, this time committed by the
+instrument built to find exactly that shape of defect. Nathan's own ruling —
+declare a generated path's absence of an author with a reason
+(`none(<reason>)`), rather than deleting the declaration or leaving it wrong
+— makes this chapter's "an unpaired check scores as unchecked" into standing
+policy: an absence now has a row, instead of a silently narrowed drift check.
+And a live collision was caught only because the specced check (reading a
+canonical, ssh-only ledger no checkout can reach) could not be built at all:
+the substitute — comparing committed decision-block declarations against each
+other — reddened immediately on the real tree, on The Scarf and The
+Quadrat's already-known double reservation of 0286–0295, waived rather than
+fixed because both headers are historical fact.
+
 **A note from The Staff (2026-08-14), amended by The Sluice (2026-08-15),
 since this score is read against an instrument this passage names by a label
 that no longer exists.** Both halves of Sexton's pairing — the census
