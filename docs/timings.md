@@ -3908,3 +3908,12 @@ measured here.
 | 2026-08-29T13:39:08Z | sluice:gate | 606.095 | 14404.998 | 533.969 | 24.65 | 0 | f2f7ca064 |  | lefford | 40 |
 | 2026-08-29T13:47:59Z | sluice:clients | 530.784 | 9563.668 | 92.753 | 18.19 | 0 | 102e2992f |  | lefford | 40 |
 | 2026-08-29T13:58:17Z | prewarm | 495.319 | 1779.083 | 106.596 | 3.81 | 0 | 430d9541c | campaign/the-lodestar | ambrose | 12 |
+| 2026-08-30T12:56:19Z | gate-commit | 115.970 | 112.476 | 36.303 | 1.28 | 0 | 597c576d2 | campaign/the-lodestar | ambrose | 12 |
+| 2026-08-30T12:58:05Z | gate-commit | 82.249 | 50.507 | 24.115 | 0.91 | 0 | 597c576d2 | campaign/the-lodestar | ambrose | 12 |
+| 2026-08-30T12:58:33Z | game-check | 0.331 | 0.088 | 0.067 | 0.47 | 0 | 597c576d2 | campaign/the-lodestar | ambrose | 12 |
+| 2026-08-30T13:12:25Z | game-check | 820.505 | 3898.181 | 91.721 | 4.86 | 0 | 597c576d2 | campaign/the-lodestar | ambrose | 12 |
+| 2026-08-30T13:13:54Z | gate-commit | 82.869 | 50.331 | 24.337 | 0.90 | 0 | 597c576d2 | campaign/the-lodestar | ambrose | 12 |
+| 2026-08-30T13:17:31Z | gate-commit | 86.099 | 51.398 | 26.075 | 0.90 | 0 | 597c576d2 | campaign/the-lodestar | ambrose | 12 |
+| 2026-08-30T13:19:10Z | gate-commit | 84.328 | 50.800 | 25.190 | 0.90 | 0 | 296a50e01 | campaign/the-lodestar | ambrose | 12 |
+| 2026-08-30T13:21:03Z | gate-commit | 84.095 | 50.889 | 25.281 | 0.91 | 0 | 1ba9cc411 | campaign/the-lodestar | ambrose | 12 |
+| 2026-08-30T13:22:38Z | gate-commit | 83.828 | 50.483 | 24.861 | 0.90 | 0 | aa97325dd | campaign/the-lodestar | ambrose | 12 |
