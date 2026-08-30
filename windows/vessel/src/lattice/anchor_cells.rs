@@ -479,8 +479,40 @@ mod tests {
     /// here to make impossible to do quietly. Removing the scan's filter
     /// entirely doubles it, which is the measurement that shows the filter is
     /// load-bearing.
+    ///
+    /// # 5 → 6 (decision 0398), and the scan did NOT get worse
+    ///
+    /// The paragraph above says raising this number means the scan got worse.
+    /// That is the right default reading and it is the wrong one here, so the
+    /// distinction is written out rather than left to a commit message: **the
+    /// CORPUS got harder, the scan is byte-identical.** 0398 dropped
+    /// `needs_populous` from `the-strongbox` and `the-key-in-the-strongbox`,
+    /// which adds two anchors to every built `Store` chamber — and this
+    /// corpus's `fixture` derives real interiors through
+    /// `chamber_interior_of`, so its Store chambers went from three anchors to
+    /// five without a line of this module changing.
+    ///
+    /// Measured A/B on one tree, flipping only the two `needs_populous`
+    /// literals and rebuilding (2026-08-29):
+    ///
+    /// ```text
+    /// gate ON : unfaithful=5 surplus=3
+    ///   [(3,55,1,14,5), (4,9,1,4,5), (4,22,2,4,3), (4,25,1,7,5), (4,34,2,5,3)]
+    /// gate OFF: unfaithful=6 surplus=4
+    ///   [(3,55,1,14,5), (4,9,1,4,5), (4,10,2,5,5), (4,22,2,4,5), (4,25,1,7,5), (4,34,2,5,5)]
+    /// ```
+    ///
+    /// The last field is the anchor count. Two rows that were already
+    /// unfaithful (`4,22` and `4,34`) simply carry 5 anchors now instead of 3;
+    /// **exactly one case is new**, `(4,10,2,5,5)` — a blob whose floor is
+    /// five squares, which a three-anchor interior fits and a five-anchor one
+    /// does not. Nothing that
+    /// was unfaithful became faithful, which is the direction that would have
+    /// signalled a scan change. The new `surplus` row `(4,22,2,4,5)` is the
+    /// same cause seen from the other side: a chamber with four floor squares
+    /// cannot hold five anchors, and `placed.len() <= floor` still holds.
     /// type-audit: bare-ok(count)
-    const GROWN_RELAXATIONS: usize = 5;
+    const GROWN_RELAXATIONS: usize = 6;
 
     /// The same sweep as [`every_placement_is_faithful`], against the GROWN
     /// embedding — and this is the one where the scan's filter does work.

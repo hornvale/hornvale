@@ -7594,12 +7594,15 @@ mod tests {
     ///
     /// # Why this drives the precondition rather than the sentence
     ///
-    /// **No `Session` in any world can stand in front of a strongbox today,
-    /// and that is a MEASUREMENT rather than an assumption.** `the-strongbox`
-    /// carries `needs_populous: true` (The Blocking: "a hamlet has nothing
-    /// worth locking up"), which reads
-    /// `Brief::is_populous` — `peak_population > hornvale_history::flesh::
-    /// HAMLET_POPULATION_CEILING`, i.e. > 150. Probed on this tree:
+    /// **THE PREMISE BELOW WAS TRUE WHEN WRITTEN AND IS NOW FALSE (decision
+    /// 0398), and the correction is loud rather than a quiet edit because a
+    /// reader reasons FROM a premise.** This paragraph read: *"No `Session` in
+    /// any world can stand in front of a strongbox today, and that is a
+    /// MEASUREMENT rather than an assumption"* — `the-strongbox` carried
+    /// `needs_populous: true` (The Blocking: "a hamlet has nothing worth
+    /// locking up"), which reads `Brief::is_populous`, i.e. `peak_population >
+    /// hornvale_history::flesh::HAMLET_POPULATION_CEILING`, > 150. Probed on
+    /// this tree, and the numbers stand:
     ///
     /// ```text
     /// seed 42: ceiling=150 occupations=1240 alive=389 populous_alive=0 max_alive_peak=84
@@ -7607,15 +7610,22 @@ mod tests {
     /// seed  1: ceiling=150 occupations=1163 alive=310 populous_alive=0 max_alive_peak=85
     /// ```
     ///
-    /// — not one living occupation in three whole worlds clears the ceiling,
-    /// and a 48-seed sweep of the flagship a possession actually starts at
-    /// found `populous=true` zero times. So the joined refusal string
-    /// [`LOCKED_WITHOUT_A_KEY_REFUSAL`] is unreachable through
-    /// `Session::handle`, for a reason that predates this task and is
-    /// recorded in the task report as the campaign's own open question.
+    /// Not one living occupation in three whole worlds clears the ceiling, and
+    /// a 48-seed sweep of the flagship a possession actually starts at found
+    /// `populous = true` zero times. **What changed is the gate, not the
+    /// demography**: 0398 dropped `needs_populous` from the strongbox and its
+    /// key, on the ground that a capability nothing can reach is not a
+    /// capability. The same 48-seed sweep now finds 8 seeds where a possession
+    /// walks into a room holding a strongbox with a key inside it
+    /// (`tests/suite/strongbox_reachability.rs`), so
+    /// [`LOCKED_WITHOUT_A_KEY_REFUSAL`] IS reachable through `Session::handle`
+    /// and is asserted there against a played reply.
     ///
-    /// What IS reachable, and what this therefore drives, is both halves the
-    /// lock joins, each against real state:
+    /// This test is unchanged all the same, and deliberately so. What it
+    /// drives is both halves the lock joins, each against real state — a
+    /// custody FOLD that an end-to-end walk cannot exercise, because the only
+    /// verbs that would put the key in the body's hands (`take`/`drop`) are
+    /// Task 12's:
     ///
     /// 1. **The lock's declaration** — `strongbox` carries `Lockable` and the
     ///    alcove does not, read from `object_registry` through the same
@@ -7725,10 +7735,16 @@ mod tests {
     /// [`crate::thing::set_openness`] and [`Session::container_is_open`], on
     /// a live session's own ledger and registry — the same pair
     /// `Session::open_or_close` calls, one frame in. It is written this way
-    /// for the reason
-    /// `a_lockable_thing_opens_only_with_the_key_in_custody` measures: no
-    /// world composes a strongbox into a chamber a possession can stand in,
-    /// so `handle("open a strongbox")` cannot reach the writer.
+    /// for a reason that has since lapsed and is recorded rather than
+    /// silently dropped: when this was written, no world composed a strongbox
+    /// into a chamber a possession could stand in, so `handle("open a
+    /// strongbox")` could not reach the writer at all. Decision 0398 relaxed
+    /// that gate and eight of 48 swept seeds now do
+    /// (`tests/suite/strongbox_reachability.rs`). The writer-and-fold form is
+    /// kept because it is still the sharper instrument for the FOUR states
+    /// below — a played walk reaches only the first two, since `close` needs
+    /// a chest the session has already opened and the key is behind Task
+    /// 12's `take`.
     ///
     /// Four states, not two, and the third is the deliverable: 0367's latch
     /// was MONOTONE — it short-circuited on any clearing fact ever committed

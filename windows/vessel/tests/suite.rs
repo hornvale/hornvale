@@ -87,6 +87,8 @@ mod session;
 mod session_snapshot;
 #[path = "suite/stance.rs"]
 mod stance;
+#[path = "suite/strongbox_reachability.rs"]
+mod strongbox_reachability;
 #[path = "suite/submerged.rs"]
 mod submerged;
 #[path = "suite/submerged_before_arm.rs"]

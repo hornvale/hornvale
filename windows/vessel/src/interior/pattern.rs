@@ -113,7 +113,25 @@ pub struct Pattern {
     pub at_locale: bool,
     /// Whether this pattern is drawn only where the place held more people than
     /// a hamlet ([`crate::brief::Brief::is_populous`]). The `needs_cold` of
-    /// social scale: a hamlet has nothing worth locking up.
+    /// social scale.
+    ///
+    /// **NOTHING IN [`INVENTORY`] SETS THIS TODAY (decision 0398).** The
+    /// Blocking gave it to `the-strongbox` ("a hamlet has nothing worth locking
+    /// up") and The Chattel mirrored it onto `the-key-in-the-strongbox`. That
+    /// was a defensible claim about social scale and a false one about
+    /// reachability: measured across three worlds and a 48-seed sweep, not one
+    /// living occupation clears
+    /// `hornvale_history::flesh::HAMLET_POPULATION_CEILING`, so the gate did not
+    /// make the strongbox rare — it made it impossible, and a capability nothing
+    /// can reach is not a capability. Both patterns were relaxed to `false`.
+    ///
+    /// The FIELD stays, and so does the filter arm in [`draw`], because the
+    /// grammar's ability to gate on social scale is real and the next pattern
+    /// may want it. What keeps that arm honest while no authored pattern
+    /// exercises it is [`draw_from`], the seam a synthetic inventory is fed
+    /// through in `the_populous_gate_still_works_though_no_authored_pattern_
+    /// uses_it`. Setting this to `true` on a real pattern is therefore a
+    /// deliberate act with a working filter under it, not an untested one.
     pub needs_populous: bool,
 }
 
@@ -261,6 +279,13 @@ pub const INVENTORY: [Pattern; 15] = [
     //
     // Appended, never inserted: each requires a kind an EARLIER pattern
     // contributes, so the append position is also the dependency-correct one.
+    // `needs_populous` WAS `true` here, and is `false` since decision 0398. The
+    // Blocking's reason ("a hamlet has nothing worth locking up") was a good
+    // claim about social scale and a wrong one about this world: no living
+    // occupation in any measured world clears `HAMLET_POPULATION_CEILING`, so
+    // the gate made the strongbox unreachable rather than rare. `roles:
+    // &[Role::Store]` and `requires: Some(Vessel)` still confine it — a
+    // strongbox stands in a room for keeping things, beside the water jar.
     Pattern {
         name: "the-strongbox",
         kind: AnchorKind::Strongbox,
@@ -270,7 +295,7 @@ pub const INVENTORY: [Pattern; 15] = [
         built: true,
         roles: &[Role::Store],
         at_locale: false,
-        needs_populous: true,
+        needs_populous: false,
     },
     Pattern {
         name: "the-high-seat",
@@ -346,10 +371,15 @@ pub const INVENTORY: [Pattern; 15] = [
     // [`Pattern::at_locale`] and `the_locale_band_draws_exactly_what_it_drew`).
     // A chamber-only append moves no saved world.
     //
-    // `needs_populous: true` states the gate the strongbox already implies,
-    // rather than relying on `requires` to carry it: the two travel together
-    // ("a hamlet has nothing worth locking up"), and a reader who later
-    // relaxes the strongbox's own scale gate should have to see this one too.
+    // `needs_populous` was authored `true` here to state the gate the strongbox
+    // already implied, "so that a reader who later relaxes the strongbox's own
+    // scale gate should have to see this one too". That reader arrived
+    // (decision 0398) and the mirror worked exactly as intended: relaxing the
+    // strongbox alone would have left the key gated behind a flag nothing else
+    // set, and the key would have been silently dropped from every strongbox
+    // that composed. Both are `false` now. The key stays confined by
+    // `requires: Some(Strongbox)`, which is the honest gate: a key is inside a
+    // strongbox or it is nowhere.
     Pattern {
         name: "the-key-in-the-strongbox",
         kind: AnchorKind::Key,
@@ -359,7 +389,7 @@ pub const INVENTORY: [Pattern; 15] = [
         built: true,
         roles: &[Role::Store],
         at_locale: false,
-        needs_populous: true,
+        needs_populous: false,
     },
 ];
 
@@ -395,8 +425,8 @@ pub fn selection_for(role: Role, built: bool, cold: bool, populous: bool) -> Vec
     draw(built, cold, populous, |p| p.roles.contains(&role))
 }
 
-/// The one admissibility walk. `admits` is the band's declared vocabulary; every
-/// other gate is a property of the place.
+/// The one admissibility walk over the authored [`INVENTORY`]. `admits` is the
+/// band's declared vocabulary; every other gate is a property of the place.
 ///
 /// Order-sensitive by design, and shared so that the two bands cannot drift into
 /// two different readings of what "completes" means.
@@ -406,9 +436,35 @@ fn draw(
     populous: bool,
     admits: impl Fn(&'static Pattern) -> bool,
 ) -> Vec<&'static Pattern> {
+    draw_from(&INVENTORY, built, cold, populous, admits)
+}
+
+/// [`draw`] over an arbitrary inventory — the seam that keeps a filter arm no
+/// authored pattern exercises from becoming a claim nothing checks.
+///
+/// It exists for exactly one reason (decision 0398): since the strongbox and
+/// its key were relaxed, no [`INVENTORY`] entry sets
+/// [`Pattern::needs_populous`], so the `needs_populous && !populous` arm below
+/// is unreachable from production. Deleting the arm would delete a real grammar
+/// capability; leaving it unexercised would hand the next author who writes
+/// `needs_populous: true` a filter nothing has run since the day it went idle.
+/// Feeding a SYNTHETIC inventory through the same walk keeps the arm live
+/// without putting a pattern in the world to serve a test.
+///
+/// Private, and takes `&'static [Pattern]` rather than a lifetime parameter,
+/// because the two production callers hand it the promoted `&INVENTORY` and the
+/// test hands it a `static` — no third shape exists, and inventing one would be
+/// the abstraction this seam is trying not to become.
+fn draw_from(
+    inventory: &'static [Pattern],
+    built: bool,
+    cold: bool,
+    populous: bool,
+    admits: impl Fn(&'static Pattern) -> bool,
+) -> Vec<&'static Pattern> {
     let mut out: Vec<&'static Pattern> = Vec::new();
     let mut present: std::collections::BTreeSet<AnchorKind> = std::collections::BTreeSet::new();
-    for p in INVENTORY.iter() {
+    for p in inventory.iter() {
         if p.built != built {
             continue;
         }
@@ -1028,25 +1084,141 @@ mod tests {
         );
     }
 
+    /// **A hamlet's storeroom holds a strongbox, and the strongbox holds a
+    /// key** — decision 0398, and the inversion of the test this replaces.
+    ///
+    /// The old test asserted the opposite (`!names(&hamlet).contains(
+    /// &"the-strongbox")`) and was correct about the code and wrong about the
+    /// world: no living occupation in any measured world clears the ceiling, so
+    /// what it froze was not "rare in a hamlet" but "absent everywhere". A
+    /// scale gate is a good idea in a world that has towns; this one does not
+    /// yet, and the capability was the thing being spent.
+    ///
+    /// The hamlet is spelled at the CEILING rather than at zero on purpose: the
+    /// old test's own boundary case, kept, so that this is a statement about
+    /// the relaxation rather than about an empty brief.
     #[test]
-    fn the_strongbox_is_gated_by_scale_and_by_the_shared_ceiling() {
-        // `peak_population`'s only reader. The threshold is HOISTED, not
-        // re-typed, so this asserts against the same constant the ruin model
-        // reads — one number, one meaning.
+    fn a_hamlet_composes_a_strongbox_with_a_key_inside_it() {
         let ceiling = hornvale_history::flesh::HAMLET_POPULATION_CEILING;
         let hamlet = crate::brief::Brief::from_parts(None, None, None, None, ceiling, true, false);
-        let town =
-            crate::brief::Brief::from_parts(None, None, None, None, ceiling + 1, true, false);
         assert!(!hamlet.is_populous(), "at the ceiling is still a hamlet");
-        assert!(town.is_populous());
-        let names = |b: &crate::brief::Brief| {
-            selection_for(Role::Store, true, false, b.is_populous())
+        let names = selection_for(Role::Store, true, false, hamlet.is_populous())
+            .iter()
+            .map(|p| p.name)
+            .collect::<Vec<_>>();
+        assert!(
+            names.contains(&"the-strongbox"),
+            "a hamlet's storeroom draws no strongbox, so the capability is \
+             unreachable again: {names:?}"
+        );
+        assert!(
+            names.contains(&"the-key-in-the-strongbox"),
+            "the strongbox composes with nothing in it, so `open` reports \
+             nothing: {names:?}"
+        );
+        // Scale is no longer a gate on this vocabulary AT ALL — asserted in
+        // both directions so that relaxing one pattern and not the other
+        // cannot pass here.
+        let populous = selection_for(Role::Store, true, false, true)
+            .iter()
+            .map(|p| p.name)
+            .collect::<Vec<_>>();
+        assert_eq!(
+            names, populous,
+            "a town's storeroom and a hamlet's differ, so something is still \
+             population-gated"
+        );
+    }
+
+    /// **The population filter still works, and no authored pattern proves
+    /// it** — the guard decision 0398 owes the field it left behind.
+    ///
+    /// After the relaxation nothing in [`INVENTORY`] sets
+    /// [`Pattern::needs_populous`], so `draw`'s `needs_populous && !populous`
+    /// arm is unreachable from production. That is the quiet failure this
+    /// test exists to prevent: the arm keeps compiling, the field keeps
+    /// reading as a live capability, and the first author to write
+    /// `needs_populous: true` inherits a filter nothing has run since the day
+    /// it went idle.
+    ///
+    /// So the arm is driven directly, through [`draw_from`], against a
+    /// SYNTHETIC inventory — a pattern authored for a test rather than for the
+    /// world, which is the whole point: proving the mechanism must not cost a
+    /// pattern in the world.
+    #[test]
+    fn the_populous_gate_still_works_though_no_authored_pattern_uses_it() {
+        // The premise, asserted rather than assumed. If this fires, someone
+        // authored a population-gated pattern: good — say so here, and check
+        // that the production censuses in this file sweep both values of
+        // `populous` for the role it belongs to (they do today).
+        let authored = INVENTORY.iter().filter(|p| p.needs_populous).count();
+        assert_eq!(
+            authored, 0,
+            "an INVENTORY pattern is population-gated again, so this test's \
+             synthetic stand-in is no longer the only witness the filter has"
+        );
+
+        static SYNTHETIC: [Pattern; 2] = [
+            Pattern {
+                name: "test-ground",
+                kind: AnchorKind::Ground,
+                attach: Attach::Hub,
+                requires: None,
+                needs_cold: false,
+                built: true,
+                roles: EVERY_ROLE,
+                at_locale: true,
+                needs_populous: false,
+            },
+            Pattern {
+                name: "test-town-only",
+                kind: AnchorKind::Strongbox,
+                attach: Attach::Beside(AnchorKind::Ground),
+                requires: None,
+                needs_cold: false,
+                built: true,
+                roles: EVERY_ROLE,
+                at_locale: true,
+                needs_populous: true,
+            },
+        ];
+        let names = |populous: bool| {
+            draw_from(&SYNTHETIC, true, false, populous, |_| true)
                 .iter()
                 .map(|p| p.name)
                 .collect::<Vec<_>>()
         };
-        assert!(!names(&hamlet).contains(&"the-strongbox"));
-        assert!(names(&town).contains(&"the-strongbox"));
+        assert_eq!(
+            names(false),
+            vec!["test-ground"],
+            "the populous filter admitted a population-gated pattern into a \
+             hamlet, so `needs_populous: true` would silently do nothing"
+        );
+        assert_eq!(
+            names(true),
+            vec!["test-ground", "test-town-only"],
+            "the populous filter withheld a population-gated pattern from a \
+             town, so `needs_populous: true` would silently gate everything"
+        );
+    }
+
+    /// `Brief::is_populous` still reads the HOISTED ceiling rather than a
+    /// re-typed `150` — one number, one meaning, shared with the ruin model.
+    ///
+    /// Kept after decision 0398 relaxed the strongbox, and worth saying why:
+    /// the predicate is still WIRED (`chamber_interior_of` passes it into
+    /// `selection_for` on every chamber derivation) and is simply selecting
+    /// nothing today, so the threshold it reads is still the thing a future
+    /// `needs_populous: true` pattern would be gated on.
+    #[test]
+    fn is_populous_reads_the_shared_hamlet_ceiling() {
+        let ceiling = hornvale_history::flesh::HAMLET_POPULATION_CEILING;
+        let at = |n: u32| crate::brief::Brief::from_parts(None, None, None, None, n, true, false);
+        assert!(
+            !at(ceiling).is_populous(),
+            "at the ceiling is still a hamlet"
+        );
+        assert!(at(ceiling + 1).is_populous(), "one over the ceiling is not");
     }
 
     #[test]

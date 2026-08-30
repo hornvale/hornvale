@@ -2529,10 +2529,12 @@ hornvale-vessel::hornvale_vessel$interior::field::tests::warmth_falls_off_with_g
 hornvale-vessel::hornvale_vessel$interior::field::tests::warmth_sums_over_multiple_fires
 hornvale-vessel::hornvale_vessel$interior::pattern::tests::a_composition_is_connected_and_the_validator_says_so
 hornvale-vessel::hornvale_vessel$interior::pattern::tests::a_fort_and_a_farm_draw_different_things_not_more_things
+hornvale-vessel::hornvale_vessel$interior::pattern::tests::a_hamlet_composes_a_strongbox_with_a_key_inside_it
 hornvale-vessel::hornvale_vessel$interior::pattern::tests::a_pattern_whose_requirement_is_absent_is_not_admissible
 hornvale-vessel::hornvale_vessel$interior::pattern::tests::a_permitted_interior_is_routable_between_every_pair
 hornvale-vessel::hornvale_vessel$interior::pattern::tests::composition_is_not_degenerate
 hornvale-vessel::hornvale_vessel$interior::pattern::tests::every_role_composes_something_the_validator_accepts
+hornvale-vessel::hornvale_vessel$interior::pattern::tests::is_populous_reads_the_shared_hamlet_ceiling
 hornvale-vessel::hornvale_vessel$interior::pattern::tests::no_pattern_the_locale_band_declines_can_reach_it_by_any_route
 hornvale-vessel::hornvale_vessel$interior::pattern::tests::no_production_room_composes_two_anchors_of_one_kind
 hornvale-vessel::hornvale_vessel$interior::pattern::tests::only_the_hearthroom_can_hold_a_fire_and_no_rule_says_so
@@ -2540,8 +2542,8 @@ hornvale-vessel::hornvale_vessel$interior::pattern::tests::selection_is_derived_
 hornvale-vessel::hornvale_vessel$interior::pattern::tests::the_grammar_puts_exactly_these_things_inside_other_things
 hornvale-vessel::hornvale_vessel$interior::pattern::tests::the_intended_chain_is_the_deep_one
 hornvale-vessel::hornvale_vessel$interior::pattern::tests::the_locale_band_draws_exactly_what_it_drew
+hornvale-vessel::hornvale_vessel$interior::pattern::tests::the_populous_gate_still_works_though_no_authored_pattern_uses_it
 hornvale-vessel::hornvale_vessel$interior::pattern::tests::the_role_is_derived_from_depth_and_then_from_the_brief
-hornvale-vessel::hornvale_vessel$interior::pattern::tests::the_strongbox_is_gated_by_scale_and_by_the_shared_ceiling
 hornvale-vessel::hornvale_vessel$interior::pattern::tests::the_validator_rejects_a_disconnected_composition
 hornvale-vessel::hornvale_vessel$interior::pattern::tests::wilderness_draws_natural_patterns_and_no_built_ones
 hornvale-vessel::hornvale_vessel$interior::relation::tests::containment_composes_transitively
