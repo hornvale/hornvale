@@ -4204,3 +4204,5 @@ measured here.
 | 2026-08-30T15:12:05Z | sluice:gate | 469.603 | 13586.927 | 456.049 | 29.90 | 0 | bb13856e3 |  | lefford | 40 |
 | 2026-08-30T15:20:39Z | sluice:clients | 512.885 | 9863.714 | 106.644 | 19.44 | 0 | 762c42e09 |  | lefford | 40 |
 | 2026-08-30T15:28:16Z | sluice:heavy | 456.862 | 9591.172 | 160.268 | 21.34 | 0 | 2ff6f2851 |  | lefford | 40 |
+| 2026-08-30T16:35:47Z | gate-commit | 104.963 | 538.341 | 77.607 | 5.87 | 0 | 983103106 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-30T16:36:49Z | rebaseline | 60.942 | 276.537 | 13.225 | 4.75 | 0 | ce5692e57 | campaign/the-chattel | MacBookPro | 10 |
