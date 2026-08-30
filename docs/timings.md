@@ -4131,3 +4131,4 @@ measured here.
 | 2026-08-30T14:10:29Z | gate-commit | 19.937 | 32.661 | 8.115 | 2.05 | 0 | f474fd011 | campaign/the-winze | MacBookPro | 10 |
 | 2026-08-30T14:18:33Z | gate-commit | 26.047 | 30.896 | 5.893 | 1.41 | 0 | f474fd011 | campaign/the-winze | MacBookPro | 10 |
 | 2026-08-30T15:26:01Z | gate-commit | 30.204 | 53.588 | 13.697 | 2.23 | 0 | f474fd011 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T15:40:09Z | gate-commit | 41.409 | 56.729 | 14.461 | 1.72 | 0 | f474fd011 | campaign/the-winze | MacBookPro | 10 |
