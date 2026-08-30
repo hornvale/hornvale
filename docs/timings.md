@@ -4284,3 +4284,5 @@ measured here.
 | 2026-08-30T18:06:22Z | sluice:gate | 491.695 | 14044.945 | 467.710 | 29.52 | 0 | d349bf32f |  | lefford | 40 |
 | 2026-08-30T18:15:04Z | sluice:clients | 521.883 | 9748.579 | 118.596 | 18.91 | 0 | 17f6673d4 |  | lefford | 40 |
 | 2026-08-30T18:22:45Z | sluice:heavy | 460.218 | 9620.929 | 159.169 | 21.25 | 0 | 07fa14264 |  | lefford | 40 |
+| 2026-08-30T18:40:15Z | gate-commit | 40.536 | 123.010 | 33.053 | 3.85 | 0 | d86d0e4ab | campaign/the-gleaning | MacBookPro | 10 |
+| 2026-08-30T18:41:13Z | rebaseline | 57.423 | 273.565 | 14.542 | 5.02 | 0 | d86d0e4ab | campaign/the-gleaning | MacBookPro | 10 |
