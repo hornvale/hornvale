@@ -4131,3 +4131,8 @@ measured here.
 | 2026-08-30T13:04:36Z | rebaseline | 61.039 | 271.800 | 13.571 | 4.68 | 0 | 03d5c37c7 | campaign/the-chattel | MacBookPro | 10 |
 | 2026-08-30T13:05:28Z | gate-commit | 33.209 | 101.920 | 22.719 | 3.75 | 0 | 03d5c37c7 | campaign/the-chattel | MacBookPro | 10 |
 | 2026-08-30T13:06:25Z | gate-commit | 21.580 | 50.972 | 13.241 | 2.98 | 0 | 03d5c37c7 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-30T13:57:53Z | rebaseline | 59.649 | 271.738 | 12.561 | 4.77 | 0 | 5e9ef1377 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-30T14:08:31Z | game-check | 603.631 | 3911.752 | 33.014 | 6.54 | 0 | 5e9ef1377 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-30T14:09:26Z | gate-commit | 45.505 | 117.524 | 30.317 | 3.25 | 0 | 5e9ef1377 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-30T14:10:04Z | gate-commit | 24.656 | 51.988 | 13.079 | 2.64 | 0 | 5e9ef1377 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-30T14:11:57Z | gate-commit | 32.708 | 55.782 | 13.940 | 2.13 | 0 | 5e9ef1377 | campaign/the-chattel | MacBookPro | 10 |
