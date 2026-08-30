@@ -42,7 +42,96 @@
 //!   entirely empty [`Report`] (`declared_none_count` included, since this
 //!   scenario declares none).
 
-use hornvale::attest::{Report, attest_report, render_report};
+use hornvale::attest::{CONDITIONALLY_DROPPABLE, Report, attest_report, render_report};
+use std::collections::BTreeSet;
+use std::fs;
+use std::path::{Path, PathBuf};
+
+fn repo_root() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("cli/ has a parent")
+        .to_path_buf()
+}
+
+/// The phases `scripts/sluice-phases.sh`'s own `sluice_drop_expensive_phases`
+/// drops, extracted from its literal `grep -vxE '<a>|<b>|...'` pattern.
+///
+/// # Direction this reads
+///
+/// One direction only: it reads the SCRIPT and is the ground truth
+/// `the_conditionally_droppable_set_agrees_with_sluice_phases_sh` compares
+/// `CONDITIONALLY_DROPPABLE` against. A token added to or removed from the
+/// script with nobody touching the Rust constant is caught by that
+/// comparison; so is the reverse (an edit to the Rust constant with no
+/// matching script change) -- the comparison itself is symmetric even
+/// though this extractor only ever reads one side.
+///
+/// # What this cannot parse
+///
+/// This looks for the LITERAL substring `grep -vxE '` followed by a
+/// `|`-separated run of bare tokens up to the next `'`. If
+/// `sluice-phases.sh` ever expresses its drop list any other way -- a
+/// character class, an anchor, a capture group, a second `grep` invocation,
+/// a `case` statement, or the pattern spanning more than one line -- this
+/// extraction will not find its anchor and PANICS rather than silently
+/// reporting an empty or partial set. A parse failure here must never read
+/// as agreement; if the script's expression ever grows past what a literal
+/// `-vxE 'a|b|c'` can express, this extractor needs rewriting to match the
+/// new shape, and until then a human editing the drop list will get a loud
+/// failure here rather than a silently-stale Rust constant.
+fn sluice_phases_drop_list() -> BTreeSet<String> {
+    let text = fs::read_to_string(repo_root().join("scripts/sluice-phases.sh"))
+        .expect("scripts/sluice-phases.sh is readable");
+    let anchor = "grep -vxE '";
+    let after = text.find(anchor).unwrap_or_else(|| {
+        panic!(
+            "scripts/sluice-phases.sh no longer contains the literal `{anchor}` this test \
+             extracts its drop list from. Either the script's drop-list expression changed \
+             shape (a character class, an anchor, a second grep call, a case statement, ...) \
+             and this extractor must be rewritten to match it, or the drop mechanism was \
+             removed entirely and CONDITIONALLY_DROPPABLE in cli/src/attest.rs should follow."
+        )
+    }) + anchor.len();
+    let closing = text[after..].find("'").unwrap_or_else(|| {
+        panic!(
+            "found `{anchor}` in scripts/sluice-phases.sh but no closing quote after it -- \
+             the pattern is not the single-quoted literal this extractor assumes."
+        )
+    });
+    text[after..after + closing]
+        .split('|')
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(str::to_string)
+        .collect()
+}
+
+/// THE GUARD FOR `CONDITIONALLY_DROPPABLE`, modelled on
+/// `cli/tests/suite/lane_sets.rs`'s `the_phase_lists_and_the_roster_rungs_agree_both_ways`:
+/// a fact stated once in a shell script and copied by hand into a Rust
+/// constant needs an agreement test, not just a comment claiming they match
+/// (The Attestation §1.1's own thesis, now pointed at this campaign's own
+/// fix). Without this, `CONDITIONALLY_DROPPABLE` going stale is a FALSE
+/// NEGATIVE: a real absence would be silently downgraded to `undetermined`
+/// and a future reader would shrug and move on -- the quiet, worse-shaped
+/// failure direction, and the reason this guard exists rather than being
+/// left for the next session to discover the hard way.
+#[test]
+fn the_conditionally_droppable_set_agrees_with_sluice_phases_sh() {
+    let script = sluice_phases_drop_list();
+    let rust: BTreeSet<String> = CONDITIONALLY_DROPPABLE
+        .iter()
+        .map(|name| name.to_string())
+        .collect();
+    assert_eq!(
+        script, rust,
+        "cli/src/attest.rs's CONDITIONALLY_DROPPABLE and scripts/sluice-phases.sh's own \
+         `grep -vxE '...'` drop list disagree -- one changed without the other. A missing \
+         token here would silently downgrade a real absence to merely `undetermined`, which \
+         is exactly the quiet failure direction this guard exists to catch."
+    );
+}
 
 const ROSTER: &str = "\
 # comment

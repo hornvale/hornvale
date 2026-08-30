@@ -294,7 +294,21 @@ fn group_jobs(rows: &[TimingRow]) -> Vec<Vec<usize>> {
 /// decision (it is the only member that is also `stage`-rung; `heavy` and
 /// `seam-guard` are excluded from the per-job owed set for the separate
 /// reasons blind spots 1 and (implicitly) the merge-only rung already give).
-const CONDITIONALLY_DROPPABLE: &[&str] = &["seam-guard", "clients", "heavy"];
+///
+/// **This is a second, hand-copied statement of a fact `scripts/sluice-
+/// phases.sh` already states once — the exact shape The Attestation's own
+/// Task 2 exists to remove — so it is not left unguarded.**
+/// `cli/tests/suite/attest.rs::the_conditionally_droppable_set_agrees_with_sluice_phases_sh`
+/// reads the script's text and asserts its drop list equals this constant,
+/// as sets, mirroring `cli/tests/suite/lane_sets.rs`'s
+/// `the_phase_lists_and_the_roster_rungs_agree_both_ways` in shape. Without
+/// that guard, this constant going stale would be a **false negative**: a
+/// real absence would be silently downgraded to "undetermined" and a future
+/// reader would shrug and move on — the quieter, worse-shaped failure
+/// direction, and the reason it is called out here rather than left to be
+/// found again.
+/// type-audit: bare-ok(identifier-text)
+pub const CONDITIONALLY_DROPPABLE: &[&str] = &["seam-guard", "clients", "heavy"];
 
 /// A declared path's author, per `docs/generated-paths.txt` (Task 5, The
 /// Attestation): either a roster set name, or a declared absence carrying
