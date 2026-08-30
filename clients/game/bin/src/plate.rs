@@ -208,17 +208,36 @@ const RIVER_GLYPH: char = '"';
 /// doc): ink ASCENDS with the band, so adjacent bands stay tellable apart
 /// by weight alone even in monochrome. This is Task 5's specimen sheet
 /// (`docs/audits/glyph-specimen-sheet.txt`) "stipple" candidate — the only
-/// one of its three ladders with that property — **with one mark re-picked**:
-/// the sheet's own stipple highland glyph was `*`, and Nathan has since
-/// assigned `*` to cave mouths (`.superpowers/sdd/2026-08-28-the-legend/
-/// progress.md`, "Nathan's glyph assignments", 2026-08-30), so highland
-/// here is `{`, one of the sheet's own two listed alternatives at that rung
-/// (the other was `)`). `{` is chosen over `)`: `)` reads as a stray,
-/// unbalanced parenthesis with nothing before it, while `{` keeps the same
-/// "opening" shape-family the semicolon just below it already suggests, so
-/// the ladder still reads as one ascending family rather than an odd
-/// punctuation mark bolted onto four picks from the same set.
-const RELIEF_GLYPHS: [char; 6] = [' ', '`', ',', ';', '{', '%'];
+/// one of its three ladders with that property — **with the highland mark
+/// re-picked twice**:
+///
+/// The sheet's own stipple highland glyph was `*`, and Nathan assigned `*`
+/// to cave mouths (`.superpowers/sdd/2026-08-28-the-legend/progress.md`,
+/// "Nathan's glyph assignments", 2026-08-30), so Task 6 first moved
+/// highland to `{`, one of the sheet's own two listed alternatives at that
+/// rung (the other was `)`) — `{` was chosen over `)` because `)` reads as
+/// a stray, unbalanced parenthesis with nothing before it, while `{` kept
+/// the same "opening" shape-family the semicolon just below it already
+/// suggests.
+///
+/// **Nathan's fix-round-1 review moved it again, to `^`**: "carets work
+/// better for most mountains" — "most", so only this one rung moves; the
+/// other five bands are untouched. This is a deliberate departure from
+/// strict ink-ordinality, not an oversight of it: decision 0389 lets a
+/// glyph carry order OR identity, and while `^` is not obviously heavier
+/// ink than `;` (the upland glyph directly below it), `^` *depicts* a
+/// mountain — the universal roguelike convention for one — which is the
+/// stronger of the two claims. A future reader tempted to "fix" this ladder
+/// back to a pure ink ramp should not; the identity claim is the point.
+///
+/// `^` is not a collision with `windows/scene/src/surrounds_ascii.rs`'s own
+/// `impedance_glyph` (which also emits `^`, for impedance band 4): that is
+/// the sim's own walk-band vocabulary, outside this client's register by
+/// prior ruling, and high/steep ground is the same concept at globe scale
+/// (highland) and walk scale (impedance 4) — a future task porting that
+/// ladder into this crate's register should bind `^` once, to cover both,
+/// rather than mint a second glyph for the same idea.
+const RELIEF_GLYPHS: [char; 6] = [' ', '`', ',', ';', '^', '%'];
 
 /// The colour claim for open ocean, when colour is allowed. An invented
 /// client-side palette, not a wire value: the world plate has no snapshot

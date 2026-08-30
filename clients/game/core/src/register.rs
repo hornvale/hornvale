@@ -105,10 +105,15 @@ pub const REGISTER: &[Binding] = &[
         population: Population::Elevation,
         means: "upland",
     },
+    // `means` is deliberately broad ("high or steep ground", not just
+    // "highland"): globe-scale highland and the sim's own walk-band
+    // impedance-4 mark are the same concept at two scales, and a later
+    // task porting that ladder into this register should claim this row
+    // rather than mint a second glyph for it.
     Binding {
-        glyph: '{',
+        glyph: '^',
         population: Population::Elevation,
-        means: "highland",
+        means: "high or steep ground",
     },
     Binding {
         glyph: '%',
