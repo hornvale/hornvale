@@ -644,6 +644,284 @@ fn a_decision_records_title_matches_its_filename() {
     );
 }
 
+/// A `Decision block: NNNN-MMMM` reservation as it is actually written into a
+/// spec or plan's committed prose
+/// (`docs/superpowers/{specs,plans}/*.md`) — **not** the reservation ledger.
+/// `scripts/decision-block.sh`'s `blocks.tsv` lives under `$HOME`, on the
+/// canonical box, reachable only over ssh, and has never been committed
+/// (Task 7, The Attestation, verified via `git log --all -- '*blocks.tsv'`
+/// returning nothing). This is the closest thing to it a checkout can see:
+/// what a campaign told the repository, in its own words, it had reserved.
+struct DeclaredDecisionBlock {
+    /// The campaign a spec/plan filename names — see [`campaign_slug`]. A
+    /// spec and its own plan restate one reservation, not two, so this is
+    /// what distinguishes "the same campaign said it twice" from "two
+    /// campaigns collided".
+    campaign: String,
+    /// Path relative to the repo root, for error messages.
+    file: String,
+    start: u32,
+    end: u32,
+}
+
+/// Every maximal run of ASCII digits in `s` that is exactly four digits long,
+/// in order, parsed as a number. Runs of other lengths (a year, a lone
+/// "main ceiling NNNN" aside past the two numbers we want) are skipped
+/// rather than mis-parsed.
+fn four_digit_runs(s: &str) -> Vec<u32> {
+    let bytes = s.as_bytes();
+    let mut out = Vec::new();
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i].is_ascii_digit() {
+            let start = i;
+            while i < bytes.len() && bytes[i].is_ascii_digit() {
+                i += 1;
+            }
+            if i - start == 4 {
+                out.push(s[start..i].parse::<u32>().expect("4 ascii digits"));
+            }
+        } else {
+            i += 1;
+        }
+    }
+    out
+}
+
+/// Parse a `Decision block: NNNN-MMMM` declaration out of one line, if
+/// present.
+///
+/// The convention is committed prose, not a fixed field — a census of every
+/// occurrence in `docs/superpowers/{specs,plans}/*.md` (2026-08-30) found
+/// four independent variations: the colon inside or outside the bold run
+/// (`**Decision block:**` vs `**Decision block**:`), a hyphen or an en dash
+/// between the numbers, a doubled bold around the numbers themselves
+/// (`**0436–0445**`), and a trailing `(main ceiling NNNN at reservation)`
+/// aside that itself contains a four-digit number. Rather than encode each
+/// shape, this takes the first two four-digit numbers following the phrase
+/// "decision block" (case-insensitive) on the line and ignores everything
+/// else — which is why the ceiling aside is harmless (it is the *third*
+/// four-digit run, never consulted) and why a line that only *mentions* the
+/// phrase with no numbers attached (prose pointing at `make decision-block`)
+/// correctly yields `None` rather than a bogus match.
+fn parse_decision_block_line(line: &str) -> Option<(u32, u32)> {
+    let lower = line.to_ascii_lowercase();
+    let anchor = lower.find("decision block")?;
+    let after = line.get(anchor + "decision block".len()..)?;
+    let runs = four_digit_runs(after);
+    (runs.len() >= 2).then(|| (runs[0], runs[1]))
+}
+
+/// The campaign a spec/plan filename names: strip the `YYYY-MM-DD-` prefix
+/// every file in both directories carries (11 bytes), then strip a spec's
+/// trailing `-design` — `2026-08-26-the-quadrat-design.md` and
+/// `2026-08-26-the-quadrat.md` (its plan) both name `the-quadrat`.
+fn campaign_slug(filename: &str) -> String {
+    let stem = filename.strip_suffix(".md").unwrap_or(filename);
+    let after_date = stem.get(11..).unwrap_or(stem);
+    after_date
+        .strip_suffix("-design")
+        .unwrap_or(after_date)
+        .to_string()
+}
+
+/// Every `Decision block: NNNN-MMMM` declaration committed anywhere in
+/// `docs/superpowers/specs/` or `docs/superpowers/plans/`, one per file (the
+/// first matching line — a campaign declares its reservation once, at the
+/// top), in directory-then-filename order.
+fn decision_block_declarations() -> Vec<DeclaredDecisionBlock> {
+    let root = repo_root();
+    let mut out = Vec::new();
+    for dir in ["docs/superpowers/specs", "docs/superpowers/plans"] {
+        let full_dir = root.join(dir);
+        let mut names: Vec<String> = fs::read_dir(&full_dir)
+            .unwrap_or_else(|e| panic!("reading {}: {e}", full_dir.display()))
+            .map(|e| {
+                e.expect("dir entry")
+                    .file_name()
+                    .to_string_lossy()
+                    .into_owned()
+            })
+            .filter(|n| n.ends_with(".md"))
+            .collect();
+        names.sort();
+        for name in names {
+            let text = read(&full_dir.join(&name));
+            if let Some((start, end)) = text.lines().find_map(parse_decision_block_line) {
+                out.push(DeclaredDecisionBlock {
+                    campaign: campaign_slug(&name),
+                    file: format!("{dir}/{name}"),
+                    start,
+                    end,
+                });
+            }
+        }
+    }
+    out
+}
+
+/// The number of `Decision block` declarations
+/// [`decision_block_declarations`] found in a full census taken 2026-08-30
+/// (Task 7, The Attestation). This is the ratchet half of the check below,
+/// and it exists for a specific reason: the disjointness assertion can only
+/// object to what the extractor actually sees, so a future spec that
+/// rephrases the convention past what [`parse_decision_block_line`]
+/// recognizes would make disjointness go quiet, not red — coverage silently
+/// shrinking while the check keeps reporting green, which is exactly the
+/// failure this campaign exists to name ("an absence has no row" — spec
+/// `2026-08-29-the-attestation-design.md` §2, "The thesis"). The count only
+/// grows — a campaign is never un-drafted — so a drop always means the
+/// parser stopped recognizing a real declaration, never that fewer campaigns
+/// reserved blocks.
+const EXPECTED_DECISION_BLOCK_DECLARATIONS: usize = 19;
+
+#[test]
+fn decision_block_declaration_count_has_not_dropped() {
+    let found = decision_block_declarations().len();
+    assert!(
+        found >= EXPECTED_DECISION_BLOCK_DECLARATIONS,
+        "found {found} `Decision block` declarations in \
+         docs/superpowers/{{specs,plans}}/*.md, expected at least \
+         {EXPECTED_DECISION_BLOCK_DECLARATIONS}. This list only grows, so a \
+         drop means `parse_decision_block_line` stopped recognizing a real \
+         declaration — a rephrased header, an unfamiliar dash, a moved colon \
+         — not that a campaign un-reserved a block. Read the file that \
+         dropped out and widen the parser; if the count instead rose, raise \
+         this constant to match."
+    );
+}
+
+/// Known, already-resolved overlaps between two campaigns' declared
+/// `Decision block` reservations, append-never — the same shape as
+/// `registry_length_waivers` above. A pair earns a place here only when the
+/// collision already happened and the record of it is the ORIGINAL
+/// reservation each campaign actually made, so correcting either header
+/// would misstate history rather than fix a stale value.
+///
+/// The one entry: The Scarf reserved `0286-0295` and used only `0286`. The
+/// Quadrat's spec, drafted a day later, independently reserved the identical
+/// `0286-0295` — `docs/retrospectives/the-quadrat.md`: "a sibling campaign's
+/// spec reserved the same range, landed first, and took 0286 ... nothing
+/// detected the double reservation at either drafting, and nothing would
+/// have — the specs were written a day apart and neither read the other's
+/// header." The Quadrat shifted its own usage to `0287-0295` once the
+/// collision surfaced, but its spec header still records what it actually
+/// reserved, which is what this test reads. A new pair must never be added
+/// here — the check exists to make sure this is the last one.
+fn known_decision_block_overlaps() -> BTreeSet<(String, String)> {
+    [("the-quadrat", "the-scarf")]
+        .into_iter()
+        .map(|(a, b)| overlap_key(a, b))
+        .collect()
+}
+
+/// A pair of campaign slugs, ordered so `(a, b)` and `(b, a)` produce the
+/// same key regardless of which side the caller happened to name first.
+fn overlap_key(a: &str, b: &str) -> (String, String) {
+    if a <= b {
+        (a.to_string(), b.to_string())
+    } else {
+        (b.to_string(), a.to_string())
+    }
+}
+
+/// No two DIFFERENT campaigns' committed `Decision block` declarations
+/// overlap, apart from the one pair already known and waived above.
+///
+/// **What this defends, and what it deliberately does not.** Spec §5a
+/// records that no check asks whether a decision record's number falls
+/// inside the block its author actually reserved — that reservation lives in
+/// `scripts/decision-block.sh`'s ledger, on the canonical box, readable only
+/// over ssh, which a workspace test must not do (Task 7 report verified this
+/// directly: `HV_BLOCK_DIR` defaults under `$HOME`, both `make
+/// decision-blocks` and `decision-block-request.sh` reach it only by `ssh`,
+/// and `blocks.tsv` has never been committed under any name). This check is a
+/// narrower, repo-only relative: instead of comparing a record against the
+/// real reservation, it compares every campaign's own DECLARATION of its
+/// reservation — the `Decision block: NNNN-MMMM` line a drafted spec (and
+/// often its plan) already commits — against every other campaign's.
+///
+/// **It is a strict subset of the specced check, never a replacement for
+/// it.** It is blind to a record minted with no declared block at all —
+/// `campaign/the-stride` minting `0160` inside `campaign/the-burr`'s reserved
+/// `0156-0165` (2026-08-19): the-stride's spec and plan declare no block
+/// whatsoever, so there is nothing here to compare it against. That is
+/// exactly the shape that most needs the live ledger, and if that ledger is
+/// ever made committable — a separate, infrastructure-scope decision — the
+/// originally specced per-record check is still owed.
+///
+/// **What it does catch, and it already has, once.** See
+/// `known_decision_block_overlaps` above: The Scarf and The Quadrat both
+/// committed `Decision block: 0286–0295` in their own spec headers, drafted a
+/// day apart, and per `docs/retrospectives/the-quadrat.md` "nothing detected
+/// the double reservation at either drafting, and nothing would have ...
+/// neither read the other's header." This test reads both. Run against
+/// either commit once both headers existed, it would have failed before
+/// either campaign minted a single decision record, instead of the collision
+/// being caught by the queue operator by hand after `0286` was already
+/// taken.
+///
+/// **A weaker, honestly-hedged claim about The Overture.** The Overture's
+/// spec committed `Decision block: 0357–0366` (verified directly: `git show
+/// 570ef81d4:docs/superpowers/specs/2026-08-28-the-overture-design.md`),
+/// which nothing had reserved and which by close collided with two other
+/// campaigns' real reservations; it was corrected to `0436–0445` before the
+/// branch closed. Whether this test would have caught it live depends on
+/// merge-ancestry timing this record does not resolve — specifically,
+/// whether the colliding campaigns' own spec commits had already reached the
+/// tree the Overture branch was gating against at 11:24 that morning. Left
+/// as a plausible hedge, not upgraded to a claim.
+#[test]
+fn decision_blocks_do_not_overlap_across_campaigns() {
+    let declared = decision_block_declarations();
+    let waived = known_decision_block_overlaps();
+    let mut offenders = Vec::new();
+    let mut seen_waived: BTreeSet<(String, String)> = BTreeSet::new();
+
+    for (i, a) in declared.iter().enumerate() {
+        for b in declared.iter().skip(i + 1) {
+            if a.campaign == b.campaign {
+                continue; // a campaign's own spec and plan restate one reservation
+            }
+            if a.start > b.end || b.start > a.end {
+                continue; // disjoint
+            }
+            let key = overlap_key(&a.campaign, &b.campaign);
+            if waived.contains(&key) {
+                seen_waived.insert(key);
+                continue;
+            }
+            offenders.push(format!(
+                "{} ({}: {:04}-{:04}) overlaps {} ({}: {:04}-{:04})",
+                a.campaign, a.file, a.start, a.end, b.campaign, b.file, b.start, b.end
+            ));
+        }
+    }
+
+    assert!(
+        offenders.is_empty(),
+        "two campaigns' committed `Decision block` declarations overlap — the \
+         same defect that collided The Scarf and The Quadrat on 0286-0295 \
+         (docs/retrospectives/the-quadrat.md). Read the other campaign's \
+         header before drafting a new one, and if this fires anyway, whoever \
+         committed second must reserve and declare a fresh range:\n  {}",
+        offenders.join("\n  ")
+    );
+
+    let stale_waivers: Vec<String> = waived
+        .iter()
+        .filter(|pair| !seen_waived.contains(*pair))
+        .map(|(a, b)| format!("{a}/{b}"))
+        .collect();
+    assert!(
+        stale_waivers.is_empty(),
+        "waived decision-block overlaps that no longer overlap in the \
+         current declarations — remove from `known_decision_block_overlaps` \
+         so the waiver list stays honest:\n  {}",
+        stale_waivers.join("\n  ")
+    );
+}
+
 #[test]
 fn registry_ids_are_unique() {
     let mut seen = BTreeSet::new();
