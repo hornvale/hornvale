@@ -66,7 +66,18 @@ enum Selector {
     /// Any world, from `from_seed`, within `scan` seeds, in which some
     /// derived body shares its room with another. Existential: "does SOME
     /// world do X".
-    CoLocated { from_seed: u64, scan: u64 },
+    ///
+    /// The species filters narrow WHO must share the room. Both `None` asks
+    /// only for the mechanism; naming them asks for a particular pair, which
+    /// is a far stronger request — see `SOC-one-creature-per-settlement`,
+    /// under which a settlement holds exactly one derived creature, so the
+    /// pairs that DO occur are wild concentrations rather than peoples.
+    CoLocated {
+        from_seed: u64,
+        scan: u64,
+        self_species: Option<String>,
+        other_species: Option<String>,
+    },
 }
 
 /// What a beat asserts. Structural only -- a golden string would redden on
@@ -294,6 +305,12 @@ enum Verdict {
     Authored,
     /// A known-absent scene, declared WITH a reason. Green, printed loudly.
     Declared,
+    /// No world in the selector's range assembles the scene's STAGE. Not the
+    /// same finding as `Absent`: absent says a capability is missing, this
+    /// says the world never puts the participants together, which points at
+    /// different work entirely. The string records the bound searched, so the
+    /// claim is "not within N seeds" rather than an unbounded negative.
+    Unwitnessed(String),
     /// Declared absent, but it now passes — delete the declaration. This is
     /// what keeps a declaration honest: a one-directional acknowledgement can
     /// only ever be satisfied, so it rots; this one fails the moment the
@@ -306,6 +323,7 @@ impl Verdict {
     fn name(&self) -> &'static str {
         match self {
             Verdict::Absent(_) => "ABSENT",
+            Verdict::Unwitnessed(_) => "UNWITNESSED",
             Verdict::Authored => "AUTHORED",
             Verdict::Declared => "DECLARED",
             Verdict::StaleDecl => "STALE-DECL",
@@ -316,9 +334,14 @@ impl Verdict {
 /// Resolve one scene to its verdict by running it.
 fn verdict_of(scene: &Scene) -> Verdict {
     let Some(witness) = resolve(&scene.selector) else {
-        // Task 4 gives this its own verdict; until then no committed scene
-        // carries an unresolvable selector and this path is unreachable.
-        panic!("scene `{}` resolved to no world", scene.id)
+        return Verdict::Unwitnessed(match &scene.selector {
+            Selector::CoLocated {
+                from_seed, scan, ..
+            } => {
+                format!("no world in seeds {from_seed}..{}", from_seed + scan)
+            }
+            Selector::Pin { seed, .. } => format!("seed {seed} did not build"),
+        });
     };
     match (evaluate(scene, &witness), scene.declared.is_some()) {
         (Ok(()), false) => Verdict::Authored,
@@ -334,6 +357,7 @@ fn verdict_of(scene: &Scene) -> Verdict {
 /// work.
 fn every_committed_scene() -> Vec<Scene> {
     let mut all = load("the-founding.scene.json");
+    all.extend(load("two-in-a-room.scene.json"));
     all.extend(load("the-orange.scene.json"));
     all
 }
@@ -345,7 +369,8 @@ const FLOORS: &[(&str, &str)] = &[
     ("waiting-moves-the-day", "AUTHORED"),
     ("waiting-does-not-move-the-body", "AUTHORED"),
     ("co-location-is-observable", "AUTHORED"),
-    ("the-orange", "DECLARED"),
+    ("two-in-a-room", "AUTHORED"),
+    ("the-orange", "UNWITNESSED"),
 ];
 
 fn parse_target(v: &Value) -> Target {
@@ -368,6 +393,14 @@ fn parse_selector(w: &Value) -> Selector {
         "co-located" => Selector::CoLocated {
             from_seed: w.get("from_seed").and_then(Value::as_u64).unwrap_or(0),
             scan: w.get("scan").and_then(Value::as_u64).unwrap_or(1),
+            self_species: w
+                .get("self_species")
+                .and_then(Value::as_str)
+                .map(str::to_string),
+            other_species: w
+                .get("other_species")
+                .and_then(Value::as_str)
+                .map(str::to_string),
         },
         other => panic!(
             "unknown selector kind `{other}`. The vocabulary is closed on \
@@ -406,7 +439,12 @@ fn resolve(selector: &Selector) -> Option<Witness> {
             target: target.clone(),
             day: day.clone(),
         }),
-        Selector::CoLocated { from_seed, scan } => {
+        Selector::CoLocated {
+            from_seed,
+            scan,
+            self_species,
+            other_species,
+        } => {
             for seed in *from_seed..from_seed.saturating_add(*scan) {
                 let Some(world) = seed_world(seed) else {
                     continue;
@@ -415,10 +453,17 @@ fn resolve(selector: &Selector) -> Option<Witness> {
                 let Ok((roster, _)) = hornvale_vessel::Session::start(&world, &opts) else {
                     continue;
                 };
-                let bodies: Vec<hornvale_kernel::EntityId> =
-                    roster.bodies().iter().map(|b| b.entity).collect();
+                let bodies: Vec<(hornvale_kernel::EntityId, String)> = roster
+                    .bodies()
+                    .iter()
+                    .map(|b| (b.entity, b.species.clone()))
+                    .collect();
                 drop(roster);
-                for entity in bodies {
+                for (entity, species) in &bodies {
+                    if self_species.as_ref().is_some_and(|want| want != species) {
+                        continue;
+                    }
+                    let entity = *entity;
                     let opts = hornvale_vessel::PossessOpts {
                         target: hornvale_vessel::PossessTarget::Creature(entity),
                         ..hornvale_vessel::PossessOpts::default()
@@ -426,7 +471,14 @@ fn resolve(selector: &Selector) -> Option<Witness> {
                     let Ok((session, _)) = hornvale_vessel::Session::start(&world, &opts) else {
                         continue;
                     };
-                    if !session.colocated_entities().is_empty() {
+                    let here = session.colocated_entities();
+                    let matches = match other_species {
+                        None => !here.is_empty(),
+                        Some(want) => here
+                            .iter()
+                            .any(|e| bodies.iter().any(|(id, sp)| id == e && sp == want)),
+                    };
+                    if matches {
                         return Some(Witness {
                             seed,
                             target: Target::Creature(entity.0.get()),
@@ -471,12 +523,15 @@ fn every_scene_carries_a_witness_and_at_least_one_beat() {
             s.id
         );
         assert!(
-            resolve(&s.selector).is_some(),
-            "scene `{}` names a world nothing can resolve; until \
-             `UNWITNESSED` exists that is a corpus error rather than a \
-             finding",
-            s.id
+            !s.id.is_empty(),
+            "a scene needs an id: it is what the floor table keys on"
         );
+        // NOT `resolve(...).is_some()`. That assertion lived here while
+        // `UNWITNESSED` did not exist, and its own message said so. A scene
+        // whose selector resolves to nothing is now a FINDING the verdict
+        // reports, not a malformed corpus entry, and asserting otherwise
+        // would make the corpus unable to hold the very state this campaign
+        // added.
     }
 }
 
@@ -601,11 +656,13 @@ fn the_orange_stands_declared_at_its_first_missing_beat() {
     );
     let got = verdict_of(&scene);
     assert_eq!(
-        got,
-        Verdict::Declared,
-        "the-orange is {}. If it is now AUTHORED, that is the campaign \
-         landing: delete the `declared` field, raise its floor, and say so in \
-         the chronicle.",
+        got.name(),
+        "UNWITNESSED",
+        "the-orange is {}. UNWITNESSED is the expected standing: the world \
+         never assembles a drow-and-goblin room, which is a different finding \
+         from a missing capability and points at different work. If it is now \
+         AUTHORED, that is the campaign landing -- delete the `declared` \
+         field, raise its floor, and lead the chronicle with it.",
         got.name()
     );
 }
@@ -615,6 +672,8 @@ fn a_co_located_selector_resolves_to_a_world_where_someone_is_present() {
     let sel = Selector::CoLocated {
         from_seed: 42,
         scan: 1,
+        self_species: None,
+        other_species: None,
     };
     let w = resolve(&sel).expect(
         "seed 42 carries a co-located pair (measured: the otyugh and the \
@@ -631,5 +690,52 @@ fn a_co_located_selector_resolves_to_a_world_where_someone_is_present() {
         !present.is_empty(),
         "a `co-located` selector must resolve to a world where someone is \
          actually present; it resolved to one where nobody is"
+    );
+}
+
+/// The founding corpus's frozen scene count for the mechanism scene.
+const TWO_IN_A_ROOM_SCENES: usize = 1;
+
+#[test]
+fn two_in_a_room_is_frozen_at_its_authored_size() {
+    assert_eq!(load("two-in-a-room.scene.json").len(), TWO_IN_A_ROOM_SCENES);
+}
+
+/// A scene whose stage no world assembles resolves UNWITNESSED, not ABSENT.
+///
+/// Built here rather than committed to the corpus, and BOUNDED: proving a
+/// negative over the whole seed space is not a test, it is a hang. The claim
+/// is "not within this range", and the verdict carries the range it searched.
+#[test]
+fn a_scene_no_world_can_stage_is_unwitnessed_rather_than_absent() {
+    let scene = Scene {
+        id: "control-unstageable".to_string(),
+        title: "A pair no world assembles".to_string(),
+        control: 40,
+        beta: false,
+        declared: None,
+        selector: Selector::CoLocated {
+            from_seed: 0,
+            scan: 2,
+            self_species: Some("no-such-species".to_string()),
+            other_species: Some("no-such-species".to_string()),
+        },
+        beats: vec![Beat {
+            id: "b1".to_string(),
+            description: "never reached — there is no stage to run it on".to_string(),
+            script: vec!["look".to_string()],
+            assertion: Assertion::SnapshotPresent {
+                pointer: "/self/room".to_string(),
+            },
+        }],
+    };
+    let got = verdict_of(&scene);
+    assert_eq!(
+        got.name(),
+        "UNWITNESSED",
+        "a scene with no stage is {}, and the two verdicts mean different \
+         things: ABSENT says a capability is missing, UNWITNESSED says the \
+         world never puts the participants together",
+        got.name()
     );
 }
