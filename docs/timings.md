@@ -4142,3 +4142,4 @@ measured here.
 | 2026-08-30T15:20:39Z | sluice:clients | 512.885 | 9863.714 | 106.644 | 19.44 | 0 | 762c42e09 |  | lefford | 40 |
 | 2026-08-30T15:28:16Z | sluice:heavy | 456.862 | 9591.172 | 160.268 | 21.34 | 0 | 2ff6f2851 |  | lefford | 40 |
 | 2026-08-30T16:11:22Z | rebaseline | 127.342 | 310.082 | 14.759 | 2.55 | 0 | 3770edbba | campaign/the-attestation | MacBookPro | 10 |
+| 2026-08-30T16:13:38Z | gate-commit | 115.462 | 396.077 | 35.497 | 3.74 | 0 | 3770edbba | campaign/the-attestation | MacBookPro | 10 |
