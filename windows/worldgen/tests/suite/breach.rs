@@ -33,7 +33,8 @@ use hornvale_kernel::{Seed, Vertex, World};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
     BuildDepth, SealState, SettlementPins, SkyChoice, Valence, VestigeKind, WorldComponents,
-    build_world_to, occupation_records, present_year, vestige_dread, vestige_from_occupation,
+    build_world_to, build_world_to_with_artifacts, occupation_records, present_year, vestige_dread,
+    vestige_from_occupation, vestige_lines_from,
 };
 use std::collections::BTreeSet;
 
@@ -477,5 +478,118 @@ fn a_later_culture_reads_all_three_states_of_a_breach() {
         "§4.5 WARDED is unreached: nobody on {SEEDS:?} lives over a delving that \
          broke through, so the kept-seal tuple above was never checked against a \
          real world."
+    );
+}
+
+/// The almanac names a breached delving where a world has one, and says
+/// **nothing** where a world has none.
+///
+/// # A LINE THAT ALWAYS APPEARS IS A TEMPLATE, NOT NARRATION
+///
+/// So both directions are gates, and both populations are asserted non-empty:
+/// the panel has to contain a world that renders the line and a world that
+/// does not, or one of the two quantifiers ranged over nothing.
+///
+/// # THE EXPECTED COUNT IS DERIVED FROM THE RECORDS, NOT FROM THE FIELD
+///
+/// `vestige_lines_from` counts vestige LAYERS (`AbandonedDelving` +
+/// `HazardKind::Numinous`). Re-deriving the expectation the same way would
+/// only assert that the code agrees with itself, so this reads the committed
+/// occupations instead — a breach is `CauseOfEnd::Breached` at a land site —
+/// and the two paths meet only if the cause→hazard→kind chain is intact.
+///
+/// # THE SENTENCE IS FROZEN, BECAUSE §4.6 IS A CLAIM ABOUT ITS WORDS
+///
+/// A breach records that a delving ended by breaking through and nothing
+/// about what came through, because nothing in the model knows. That is not
+/// a property of a count, it is a property of a sentence, so the sentence is
+/// pinned verbatim and its disclaiming clause is asserted separately by name.
+/// One evocative noun added here is the whole campaign's constraint broken,
+/// and this is what objects.
+///
+/// claim: invariant(forall over the E.4.2 panel — `vestige_lines_from` emits
+/// the breach line exactly when the world carries a breached delving on land,
+/// carrying that world's own count and no other word; with both the
+/// has-a-breach and the has-none populations asserted non-empty)
+#[test]
+fn the_almanac_names_a_breach_only_where_one_happened() {
+    const TAIL: &str = "of those delvings ended where they broke through — the digging \
+                        stopped there, and no account of what was found survives.";
+    let (mut worlds_with, mut worlds_without) = (0usize, 0usize);
+
+    for seed_value in SEEDS {
+        // The terrain the BUILD already sculpted, not a second sculpt through
+        // `terrain_of` — same bytes, half the work, and it keeps decision
+        // 0092's derivation entry point out of a test that does not need it.
+        let built = build_world_to_with_artifacts(
+            Seed(seed_value),
+            &SkyPins::default(),
+            SkyChoice::Generated,
+            &TerrainPins::default(),
+            &SettlementPins::default(),
+            &WorldComponents::assemble().expect("canonical components assemble"),
+            BuildDepth::Settlements,
+        )
+        .expect("panel seed builds");
+        let world = built.world;
+        let terrain = built
+            .terrain
+            .expect("a Settlements-depth build carries its sculpted terrain");
+        let lines =
+            vestige_lines_from(&world, &terrain).expect("a panel world renders its residue");
+
+        // Independent of the render's own counting path: the committed
+        // records, land-filtered the way the almanac's land-only sections are.
+        let expected = occupation_records(&world)
+            .iter()
+            .filter(|r| r.core.cause == Some(CauseOfEnd::Breached))
+            .filter(|r| !terrain.is_ocean(r.core.site))
+            .count();
+
+        let matched: Vec<&String> = lines.iter().filter(|l| l.contains(TAIL)).collect();
+        println!(
+            "seed {seed_value}: {expected} breached on land, {} line(s)",
+            matched.len()
+        );
+
+        if expected == 0 {
+            assert!(
+                matched.is_empty(),
+                "seed {seed_value} has no breached delving on land, so the almanac must \
+                 say nothing about one; it said {matched:?}"
+            );
+            worlds_without += 1;
+            continue;
+        }
+
+        assert_eq!(
+            matched.len(),
+            1,
+            "seed {seed_value}: exactly one breach line, got {matched:?}"
+        );
+        assert_eq!(
+            matched[0],
+            &format!("{expected} {TAIL}"),
+            "seed {seed_value}: the breach line must carry this world's own count and \
+             the frozen sentence"
+        );
+        assert!(
+            matched[0].contains("no account of what was found survives"),
+            "seed {seed_value}: spec §4.6 — the line must disclaim any account of what \
+             came through, because nothing in the model holds one; got {:?}",
+            matched[0]
+        );
+        worlds_with += 1;
+    }
+
+    assert!(
+        worlds_with > 0,
+        "no world on {SEEDS:?} rendered a breach line, so the positive direction of \
+         this gate ranged over nothing."
+    );
+    assert!(
+        worlds_without > 0,
+        "every world on {SEEDS:?} rendered a breach line, so the gate cannot tell \
+         narration from a template — the negative direction ranged over nothing."
     );
 }

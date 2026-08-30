@@ -4020,3 +4020,9 @@ measured here.
 | 2026-08-30T04:43:27Z | gate-commit | 34.802 | 106.955 | 30.107 | 3.94 | 0 | 8ea840940 | campaign/the-winze | MacBookPro | 10 |
 | 2026-08-30T04:54:21Z | gate-commit | 26.560 | 64.207 | 22.589 | 3.27 | 0 | 8ea840940 | campaign/the-winze | MacBookPro | 10 |
 | 2026-08-30T04:55:42Z | gate-commit | 20.498 | 50.442 | 13.065 | 3.10 | 0 | 8ea840940 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T05:11:49Z | quick | 8.165 | 15.808 | 9.192 | 3.06 | 0 | d93daf4ee | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T05:12:52Z | quick | 24.584 | 40.064 | 22.044 | 2.53 | 0 | d93daf4ee | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T05:17:35Z | rebaseline | 61.431 | 274.949 | 14.535 | 4.71 | 0 | d93daf4ee | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T05:30:16Z | gate-commit | 29.195 | 102.656 | 11.241 | 3.90 | 0 | d93daf4ee | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T05:32:10Z | gate-commit | 16.227 | 27.385 | 5.416 | 2.02 | 0 | d93daf4ee | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T05:33:35Z | gate-commit | 3.730 | 3.960 | 0.393 | 1.17 | 0 | d93daf4ee | campaign/the-winze | MacBookPro | 10 |

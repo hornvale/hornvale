@@ -4644,6 +4644,7 @@ fn hazard_name(hazard: HazardKind) -> &'static str {
 
 /// The Vestige's headline lines for the almanac: notable subsurface residue
 /// across the land — sealed wards, abandoned delvings and buried undercities,
+/// the delvings among those that ended by breaking through (The Winze),
 /// the venerated-vs-forgotten valence split, prominent pre-human gate-scars,
 /// and the residue's dominant hazard (The Vestige). Reads the batched
 /// [`vestiges_field`] once for the whole world (rather than calling
@@ -4661,6 +4662,13 @@ pub fn vestige_lines_from(
     let (mut land, mut residue_vertices) = (0usize, 0usize);
     let (mut sealed, mut delvings, mut buried_ruins, mut gate_scars) =
         (0usize, 0usize, 0usize, 0usize);
+    // The Winze, Task 7. A DELVING THAT ENDED BY BREAKING THROUGH, COUNTED
+    // WITHOUT A NEW FIELD: `vestige_from_occupation` maps
+    // `CauseOfEnd::Breached` — and nothing else — to `HazardKind::Numinous`,
+    // so on an `AbandonedDelving` the hazard *is* the cause. The other
+    // `Numinous` producer is a pre-human gate scar, which carries
+    // `VestigeKind::GateScar` and so cannot reach this counter.
+    let mut breached_delvings = 0usize;
     let (mut venerated, mut forgotten) = (0usize, 0usize);
     let mut hazard_counts = [0usize; 6];
     for vertex in geo.vertices() {
@@ -4676,7 +4684,12 @@ pub fn vestige_lines_from(
         for vestige in stack {
             match vestige.kind {
                 VestigeKind::SealedVault | VestigeKind::NaturalSeal => sealed += 1,
-                VestigeKind::AbandonedDelving => delvings += 1,
+                VestigeKind::AbandonedDelving => {
+                    delvings += 1;
+                    if vestige.hazard == HazardKind::Numinous {
+                        breached_delvings += 1;
+                    }
+                }
                 VestigeKind::BuriedRuin => buried_ruins += 1,
                 VestigeKind::GateScar => gate_scars += 1,
             }
@@ -4711,6 +4724,24 @@ pub fn vestige_lines_from(
     if delvings + buried_ruins > 0 {
         lines.push(format!(
             "{delvings} abandoned delvings and {buried_ruins} buried undercities lie beneath the land."
+        ));
+    }
+    // The Winze, spec §4.3/§4.6. CONDITIONAL, AND THAT IS THE POINT: a line
+    // that renders for every world is a template, not narration, so a world
+    // whose workings all ended ordinarily says nothing here at all.
+    //
+    // THE LINE NAMES NOTHING. A breach records that a delving ended by
+    // breaking through; it does not record what came through, because
+    // nothing in the model knows (§4.6). Nor does it say the ground is
+    // cursed — §4.4 refuses avoidance-as-penalty outright, and a later
+    // people may and does dig the same vertex again. And nothing here
+    // narrates a depth: the hazard is per-metre-cut, nothing selects on
+    // depth, and a sentence implying they dug too far and woke something
+    // would assert a mechanism the campaign deliberately does not have.
+    if breached_delvings > 0 {
+        lines.push(format!(
+            "{breached_delvings} of those delvings ended where they broke through — the digging \
+             stopped there, and no account of what was found survives."
         ));
     }
     lines.push(if forgotten > venerated {

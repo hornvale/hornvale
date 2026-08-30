@@ -494,6 +494,7 @@ Notable ore: copper, gold, lead-zinc, coal, gems, bauxite.
 
 The underworld's residue marks 4% of the land — the buried palimpsest of ages before.
 29 abandoned delvings and 1233 buried undercities lie beneath the land.
+3 of those delvings ended where they broke through — the digging stopped there, and no account of what was found survives.
 427 layers of that residue are still venerated against 835 forgotten — forgetting outpaces memory.
 The residue's dominant hazard is structural collapse — 1259 layers so afflicted.
 
