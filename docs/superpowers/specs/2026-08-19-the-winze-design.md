@@ -718,3 +718,30 @@ and its justification before Task 5 runs.
 - **§4.2–4.6, §7, and amendment C.** Depth, the per-increment hazard, the
   survivorship claim, fallible knowledge, naming nothing, and the permission
   that a breach's consequence may travel — all unchanged.
+
+## E.6 §4.2's "derives from `seat_at`" is INERT under Amendment B — found by Task 3
+
+§4.2 says *"A mine's working depth derives from `seat_at`, deepened over its
+tenure."* The first half no longer does any work, and it is worth recording
+because it is the **third** instance this campaign of a section written before
+Amendment B and never revisited after it — the same shape as the plan's Task 2
+(built on the refuted design) and the plan's compressed branch table.
+
+Under §B.3 a mine is a **surface daughter** founded on ore. `seat_at` returns
+`Band::Surface` for it, so the seat's contribution to a working's depth is
+`0` on every mine that exists. Task 3 therefore threaded no seat depth in at
+all — no composition-root field, no `Seating` change — and the task was small
+for that reason rather than because it cut a corner.
+
+**The half that survives is "deepened over its tenure", and it turned out to be
+the whole justification for committing the field.** The seat is a pure function
+of `(people, vertex)` and is re-derivable, which is exactly what
+`Community.rung`'s doc comment says and why it refuses to commit a rung. The
+working is the integral of a *live* quantity — population and tech horizon as
+they stood in each epoch — and the ledger keeps neither trajectory (`occ-peak`
+is a maximum, `occ-tech` a final value). So `delve_depth_m` commits precisely
+the half nothing can re-derive, and an absolute depth below the surface is the
+sum of the two, which a consumer can form.
+
+Had the design come out a pure function of `(people, vertex)`, the correct
+outcome was **no field**. That it did not is a result, not an assumption.
