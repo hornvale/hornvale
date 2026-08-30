@@ -3299,6 +3299,23 @@ its honest size.
    was validated — which is the one failure mode that would leave every gate
    green while the thesis quietly failed. It moves when a human plays and says
    it moved.
+   **Annotated by [The Company](./chronicle/the-company.md) (2026-08-30), and
+   the annotation is about the WORLD rather than the instrument.** The
+   traversal half gained a second instrument, and the first thing it measured
+   is that a shared room is rare by construction: across twelve seeds and both
+   possession targets, `sensed.present` was empty in **24 of 24** witnesses,
+   and sixty days of waiting produced none. The cause is neither a defect nor
+   new — `SOC-one-creature-per-settlement` records that a settlement holds
+   exactly one derived creature, and the standing ruling is that changing world
+   population to restore an incidental co-location guarantee is its own
+   campaign, tick cost having been measured superlinear in that dimension.
+   **The score does not move, and why it does not is the point.** This is
+   evidence about how often the world assembles a scene, which sits upstream of
+   whether a scene is worth watching and says nothing about it: a market with
+   two people in it can still be dull. What it does change is the honest
+   description of the gap. The taste half is not merely unmeasured — in most
+   worlds it is currently unreachable, because the moment that would be judged
+   does not assemble.
 
 ## The standing horizon
 
