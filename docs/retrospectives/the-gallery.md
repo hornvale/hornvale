@@ -160,7 +160,7 @@ authored input — it says nothing about whether that input is still true.**
   `Subterranean` row with an unexpected `SocialForm` would fall through
   undetected.
 - **New this task: `MAP-underworld-viewport`.** The underground pane has no
-  camera-follow; every rung past the first is wider than the fixed-width
+  camera-follow; EVERY walkable rung is wider than the fixed-width
   plate, and the player's own position can walk off the visible screen with
   nothing on-screen to say so. Registered rather than left to be
   rediscovered the way the campaign's own spec had to name it as a Risk

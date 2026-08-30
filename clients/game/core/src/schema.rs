@@ -359,8 +359,9 @@ pub struct Level {
     pub you: LevelPoint,
     /// The individuals standing on the level. Reuses [`PlanMark`], exactly
     /// as the producer reuses `PlanMark` for this field rather than
-    /// defining a fresh type. **Always `[]` as of Task 9** — spec §3.6's
-    /// placement lands in Task 11; draw nothing for it until then.
+    /// defining a fresh type. Drawn by [`crate::level::draw`]'s marks pass,
+    /// which — unlike [`Plan::marks`]'s — draws a dedicated glyph rather
+    /// than redrawing the cell's own terrain (see that module's doc).
     pub marks: Vec<PlanMark>,
 }
 

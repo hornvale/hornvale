@@ -728,6 +728,19 @@ mod tests {
     /// rather than against `origin`: under a phreatic column, a worked leaf
     /// stays fully drained and at least one natural leaf floods; above the
     /// water table, nothing floods regardless of the worked/natural mix.
+    ///
+    /// **`Seed(4)` is load-bearing, not arbitrary.** The fixture this test
+    /// carried before (`Seed(2)`) partitions this 40x24 extent into exactly
+    /// ONE leaf, and that leaf is natural — so `if style.worked` never ran
+    /// at all, and the whole test degenerated to "some cell somewhere is
+    /// flooded." Deleting the `worked`-skip from the flooding pass left it
+    /// green. `Seed(4)` partitions into two leaves, one of each kind (a
+    /// worked 11x24 strip and a natural 28x24 strip, verified by printing
+    /// `leaves()`/`leaf_styles` directly), so both `if`/`else` arms of the
+    /// loop below actually execute — `any_worked_leaf` and
+    /// `any_natural_leaf_flooded` below assert that they did, so a future
+    /// regression back to a single-leaf-only fixture fails loudly here
+    /// rather than silently passing again.
     #[test]
     fn a_phreatic_level_floods_its_natural_leaves_and_drains_its_worked_ones() {
         use hornvale_terrain::CaveKind;
@@ -748,15 +761,16 @@ mod tests {
             100.0,
             10.0,
             NEUTRAL_WORKED_BIAS,
-            Seed(2),
+            Seed(4),
         );
-        let (tree, _dof) = region::build_region(extent, Seed(2));
+        let (tree, _dof) = region::build_region(extent, Seed(4));
         let leaves = region::leaves(&tree);
         assert_eq!(
             leaves.len(),
             sump.leaf_styles.len(),
             "leaves() and leaf_styles must stay index-aligned"
         );
+        let mut any_worked_leaf = false;
         let mut any_natural_leaf_flooded = false;
         for (rect, style) in leaves.iter().zip(sump.leaf_styles.iter()) {
             let leaf_has_flood = (rect.x..(rect.x + rect.w)).any(|x| {
@@ -764,6 +778,7 @@ mod tests {
                     .any(|y| sump.cells.get(Cell(x, y)) == Some(LevelCellKind::Flooded))
             });
             if style.worked {
+                any_worked_leaf = true;
                 assert!(
                     !leaf_has_flood,
                     "a worked leaf must stay drained even under a phreatic water table"
@@ -772,6 +787,11 @@ mod tests {
                 any_natural_leaf_flooded = true;
             }
         }
+        assert!(
+            any_worked_leaf,
+            "the fixture must carve at least one worked leaf, or the \
+             worked-stays-drained branch above never ran"
+        );
         assert!(
             any_natural_leaf_flooded,
             "a phreatic Found chamber must carve at least one flooded natural leaf"
@@ -785,7 +805,7 @@ mod tests {
             5.0,
             10.0,
             NEUTRAL_WORKED_BIAS,
-            Seed(2),
+            Seed(4),
         );
         assert!(
             dry.cells.iter().all(|(_, k)| k != LevelCellKind::Flooded),
