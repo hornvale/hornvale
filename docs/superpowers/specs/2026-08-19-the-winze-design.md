@@ -1005,3 +1005,85 @@ branch table over outcomes is not the same object as a discriminating test, and
 it is easy to mistake the first for the second because both look like rigour.
 Sibling finding to E.9: there the rule was written about the wrong quantity;
 here it was written about the wrong question.
+
+## E.11 §4.5 ships unchanged — and the WARDED state is subtler than §4.5 says
+
+**Task 6 landed as tests only.** The shipped formulas already produce all three
+of §4.5's states; no derivation changed. Measured over the 12-seed panel before
+any test was written:
+
+```
+RECENT   youngest breach, age   25 y   legibility 0.920   dread 0.632
+DECAYED  oldest   breach, age 1500 y   legibility 0.0067  dread 0.997
+WARDED   a living occupation over a breached delving — 3 vertices
+```
+
+### E.11.1 A breached delving's own layer can never read as a kept ward
+
+The controller's dispatch asserted that *"a delving that ended by breaching may
+leave a vestige whose seal is later `Maintained`"*. **It cannot.**
+`SealState::Maintained` holds exactly when `ended.is_none()`, and
+`CauseOfEnd::Breached` *is* an ending. §4.5's WARDED state therefore lives one
+layer up — **a living occupation standing over the breach** — not on the
+breach's own layer at any age, in any world. Ninth defect in
+controlling-session text this campaign, fifth caught by an implementer; the
+live gate now asserts the impossibility, so conflating the two `Breached`
+enums reddens.
+
+### E.11.2 The indistinguishability is per-LAYER, and the field gives it away
+
+This is the part §4.5 does not say, and the campaign that builds a consumer
+needs it.
+
+All three living layers read **byte-identically** to a living layer where
+nothing ever happened — `Maintained` / `Venerated` / dread 0.1 / legibility
+1.0. That is §4.5's property, and it is asserted field by field and marked
+not-to-be-repaired.
+
+But `vestige_dread` is a **max over the vertex's whole palimpsest**, so those
+same three vertices read **0.936 / 0.997 / 0.998** at the field. The breach's
+own layer is still there underneath.
+
+**So the world can lie to you only if you read the layer.** Read the field and
+the danger is plain. Both halves are now assertions — *source-blind at the
+layer, not amnesiac at the vertex* — and the design's "the model can be
+mistaken in the direction that kills people" is true of a reader of layers and
+false of a reader of the field.
+
+**That is a choice point, not a defect, and it is handed forward deliberately.**
+Nothing consumes `vestige_dread` today (§3.4 — it is a hook whose own doc says
+so). Whichever campaign wires the avoidance or knowledge layer decides, by
+picking a read, whether its cultures can be wrong about what is behind a wall.
+It should decide that on purpose.
+
+### E.11.3 `SealedVault` is still unreachable — §3.2 listed two and this campaign fixed one
+
+Pooled over 12 seeds: **9,394 Agrarian / 196 Mine / 0 Trade / 0 Cult / 0 Fort**
+across 9,590 occupations. `SealedVault` reads off `Fort`/`Cult`, neither of
+which any world produces, so §4.5's *literal* "ward that is being kept" has no
+producer and the reachable form is the living-occupation case measured above.
+Not fixed here: manufacturing one needs a second function derivation, which
+§4.1 excludes by name and argues for excluding.
+
+### E.11.4 Two corrections shipped, one calibration deliberately not
+
+`WARNING_HALF_LIFE_DAYS` is renamed `WARNING_EFOLD_YEARS`, **value untouched at
+300.0**. The old name was wrong twice and one half was a live determinism trap:
+the unit is bake *years* (measured ages 25–1500 against `present_year` 2000),
+while `present_frame` — ledger *days* — sits beside `present_year` in the same
+export list, so **a reader repairing the call to match the name would have
+multiplied every ruin's apparent age by the day/year factor and moved every
+world's residue**, with two doc comments agreeing with each other and with
+neither reality. It is also an e-folding time, not a half-life: `exp(-t/T)` is
+0.368 at `t=T`, and the actual half-life is ~208 years.
+
+The **value** is reported, not tuned: 300 years is ~10x MEM-2's three-generation
+gap (77% legible at 80 years, below 0.1 only at ~690). Whether that is the
+right scale is a calibration question this campaign did not preregister, and
+moving it would move the galleries, the residue lens and four census columns.
+
+### E.11.5 One image for the chronicle
+
+Seed 4, `Vertex(30619)`: a **living Mine** standing over a breached delving —
+digging again where the last lot died. One instance over twelve seeds, too thin
+to gate on, and exactly the thing §4.4 permits by refusing to curse the ground.
