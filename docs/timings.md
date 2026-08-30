@@ -4276,3 +4276,11 @@ measured here.
 | 2026-08-30T18:35:45Z | gate-commit | 114.750 | 345.959 | 81.563 | 3.73 | 0 | 1c9d4e2ce | campaign/the-gleaning | MacBookPro | 10 |
 | 2026-08-30T18:37:09Z | rebaseline | 78.876 | 279.198 | 15.548 | 3.74 | 0 | 1c9d4e2ce | campaign/the-gleaning | MacBookPro | 10 |
 | 2026-08-30T18:38:17Z | gate-commit | 21.999 | 52.363 | 13.868 | 3.01 | 0 | 1c9d4e2ce | campaign/the-gleaning | MacBookPro | 10 |
+| 2026-08-30T17:29:53Z | gate-commit | 93.003 | 64.191 | 33.392 | 1.05 | 0 | cd6547134 | campaign/the-lodestar | ambrose | 12 |
+| 2026-08-30T17:31:33Z | gate-commit | 82.556 | 53.987 | 26.731 | 0.98 | 0 | cd6547134 | campaign/the-lodestar | ambrose | 12 |
+| 2026-08-30T17:34:38Z | gate-commit | 86.487 | 54.501 | 26.862 | 0.94 | 0 | 51f7a5953 | campaign/the-lodestar | ambrose | 12 |
+| 2026-08-30T17:57:28Z | sluice:artifacts | 108.165 | 831.423 | 33.570 | 8.00 | 0 | 50079bbb4 |  | lefford | 40 |
+| 2026-08-30T17:58:10Z | sluice:outboard | 41.224 | 25.293 | 39.325 | 1.57 | 0 | 6f2e379df |  | lefford | 40 |
+| 2026-08-30T18:06:22Z | sluice:gate | 491.695 | 14044.945 | 467.710 | 29.52 | 0 | d349bf32f |  | lefford | 40 |
+| 2026-08-30T18:15:04Z | sluice:clients | 521.883 | 9748.579 | 118.596 | 18.91 | 0 | 17f6673d4 |  | lefford | 40 |
+| 2026-08-30T18:22:45Z | sluice:heavy | 460.218 | 9620.929 | 159.169 | 21.25 | 0 | 07fa14264 |  | lefford | 40 |

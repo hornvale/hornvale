@@ -7879,7 +7879,7 @@ const COMPASS_SQUARE: [Compass; 4] = [Compass::N, Compass::E, Compass::S, Compas
 /// corner where two walls meet is not a way through a building.
 ///
 /// **`pub(crate)`, not private (The Gallery, Task 4):**
-/// [`crate::underground::Underground::step`] reuses this exact table rather
+/// [`crate::underground::Underground::peek`] reuses this exact table rather
 /// than a second copy of it — a diagonal is a diagonal whether the walls
 /// around it are built or natural rock.
 pub(crate) fn cell_delta(c: Compass) -> Option<(i32, i32)> {
@@ -12728,7 +12728,7 @@ mod tests {
 
     /// Rock refuses a lateral step with a PHYSICAL reason: not a parse
     /// complaint, and not a sentence naming a verb or a movement mode.
-    /// Exercised at the `Underground::step` seam directly rather than
+    /// Exercised at the `Underground::peek` seam directly rather than
     /// through `Session::handle` — the entrance cell's own neighbours are
     /// generated content, not guaranteed to include a rock face, so this
     /// scans the level for a standable cell known to sit beside `Wall`
@@ -12769,15 +12769,15 @@ mod tests {
         let (cell, wanted) =
             rock_adjacent.expect("a generated level has at least one standable cell beside rock");
         ug.cell = cell;
-        match ug.step(wanted) {
-            crate::underground::StepOutcome::Blocked(reason) => {
+        match ug.peek(wanted) {
+            Err(reason) => {
                 let lower = reason.to_lowercase();
                 assert!(!lower.contains("verb"), "not a parse complaint: {reason}");
                 assert!(!lower.contains("mode"), "must not name a mode: {reason}");
                 assert!(!lower.contains("wade"), "must not name a mode: {reason}");
                 assert!(!lower.contains("walk"), "must not name a mode: {reason}");
             }
-            other => panic!("expected a Blocked outcome, got {other:?}"),
+            Ok(target) => panic!("expected a refusal, got a move to {target:?}"),
         }
     }
 
@@ -12789,7 +12789,7 @@ mod tests {
     /// cell. `peek_stairs`'s own doc calls it "a real seam a test... can
     /// reach directly" — this is that test, exercised the same way
     /// `rock_refuses_a_step_with_a_physical_reason` (just above) reaches
-    /// `Underground::step`'s own seam: build a real `Underground` via
+    /// `Underground::peek`'s own seam: build a real `Underground` via
     /// `enter`, place it on a scanned, known-non-stairs cell, and call the
     /// method directly rather than through `Session::handle`.
     #[test]
@@ -13194,10 +13194,11 @@ mod tests {
     /// sentence claims ("only ever adds") and the one a dropped-marking
     /// regression would actually violate.
     ///
-    /// Exercised through `Session::handle`, not `Underground::step`
-    /// directly: the wiring under test is `Session::mark_underground_seen`,
-    /// which sits one level above `Underground` and is what a bare
-    /// `Underground::step` call would bypass entirely.
+    /// Exercised through `Session::handle`, not `Underground::peek`/
+    /// `commit_step` directly: the wiring under test is
+    /// `Session::mark_underground_seen`, which sits one level above
+    /// `Underground` and is what a bare `Underground` call would bypass
+    /// entirely.
     #[test]
     fn walking_only_ever_adds_to_what_is_remembered() {
         let world = seam_world();
