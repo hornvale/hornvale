@@ -51,8 +51,10 @@ Key knobs:
   **`docs/generated-paths.txt`** — the single source of truth, which no guide
   restates (`cli/tests/suite/generated_paths.rs` fails on a second copy, because an
   inline list drifts the moment a generated directory is added). Read it:
-  `git diff -- $(grep -v '^#' docs/generated-paths.txt | grep -v '^$')`.
-  The notes that follow explain WHY particular entries are in that file; they
+  `git diff -- $(grep -v '^#' docs/generated-paths.txt | grep -v '^$' | cut -f1)`
+  — `cut -f1` takes the path column; the file's second column is the path's
+  author, not a pathspec. The notes that follow explain WHY particular
+  entries are in that file; they
   are commentary on it, not a duplicate of it — note
   **`docs/audits/`** is in the list, and it now holds TWO drift-checked
   reports: the type-audit report (drifts on any pub-boundary change — a common
@@ -398,7 +400,14 @@ confirmation-gated in the Makefile.
   only the generating code — produces a clean merge no driver can see. The hook
   has its own blind spot to match: a merge carrying code changes alone stales an
   artifact just as thoroughly and says nothing. After any absorption,
-  `make rebaseline` and read the diff.
+  `make rebaseline` and read the diff. **Tested by `scripts/test-post-merge.sh`
+  since The Attestation** — added the same way `test-pre-push.sh` was, after
+  Task 3 of that campaign added a second column to
+  `docs/generated-paths.txt` and this hook's own pathspec array (a quoted
+  `"${generated[@]}"` expansion, unlike every other reader's unquoted
+  `$(...)`) went silent on every merge for all ten declared paths, and
+  nothing exercised the hook to catch it. Confirmed to fail red against the
+  pre-fix hook before being wired into the `outboard` set.
 - **`pre-push` is the third hook in this directory**, added after an
   incident (2026-08-16): a subagent force-pushed campaign WIP over
   `origin/main` while probing bash quote-splitting semantics, and its

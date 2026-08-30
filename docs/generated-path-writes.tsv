@@ -1,0 +1,80 @@
+# path<TAB>written<TAB>tracked -- emitted by scripts/regenerate-artifacts.sh; do not hand-edit.
+# written = how many of this row's git-tracked files carry an mtime newer than
+# the marker stamped at the top of this run. mtime ADVANCED, not content
+# CHANGED -- a file rewritten byte-for-byte identically still counts as written.
+# census-AUTHORED ROWS GET NO LINE HERE (review finding I3): this script's own
+# HV_CENSUS conditional means a census-authored row's true written/tracked shape
+# differs by which invocation ran it, and this file has no way to say which one
+# did. See docs/generated-paths.txt's own comment beside this row for the account.
+# docs/generated-path-writes.tsv is declared but excluded from the rows below: this
+# file's own output redirect stamps its mtime before this loop ever runs, so a
+# self-observed count would be guaranteed true by construction, not measured.
+book/src/gallery/	45	56
+book/src/gallery/almanac.md	0	1
+book/src/gallery/atlas.md	0	1
+book/src/gallery/first-light.md	0	1
+book/src/gallery/possession-live.md	0	1
+book/src/gallery/surrounds-seed-42.md	0	1
+book/src/gallery/the-gods-seed-42.md	0	1
+book/src/gallery/the-meeting-seed-42.md	0	1
+book/src/gallery/the-sky.md	0	1
+book/src/gallery/vessel.js	0	1
+book/src/gallery/vessel-worker.js	0	1
+book/src/gallery/lithology-seed-42.png	0	1
+book/src/reference/	9	21
+book/src/reference/concept-registry.md	0	1
+book/src/reference/layering.md	0	1
+book/src/reference/lexicon-of-place.md	0	1
+book/src/reference/stream-manifest.md	0	1
+book/src/reference/scene-eclipses-v2.md	0	1
+book/src/reference/scene-moons-v1.md	0	1
+book/src/reference/scene-neighbors-v1.md	0	1
+book/src/reference/scene-surrounds-v2.md	0	1
+book/src/reference/scene-system-v1.md	0	1
+book/src/reference/scene-tiles-region-v1.md	0	1
+book/src/reference/scene-tiles-v1.md	0	1
+book/src/reference/layering-generated.md	0	1
+book/src/laboratory/generated/the-chorus/	9	9
+book/src/laboratory/generated/the-census/schema.json	1	1
+book/src/laboratory/generated/census-of-the-meeting/schema.json	1	1
+book/src/laboratory/generated/the-history/	0	2
+book/src/laboratory/generated/the-sounding/	0	3
+book/src/laboratory/generated/branches-family/	0	35
+book/src/laboratory/generated/census-of-coasts/	0	9
+book/src/laboratory/generated/census-of-coasts-tuning/	0	10
+book/src/laboratory/generated/earth-mask-l6/	0	1
+book/src/laboratory/generated/the-cascade/	0	5
+book/src/laboratory/generated/the-contour/	0	6
+book/src/laboratory/generated/the-granary/	0	5
+book/src/laboratory/generated/the-namesake/	0	9
+book/src/laboratory/generated/census-of-skies/	0	30
+book/src/laboratory/overview.md	0	1
+book/src/laboratory/study-001.md	0	1
+book/src/laboratory/study-002.md	0	1
+book/src/laboratory/study-003.md	0	1
+book/src/laboratory/study-004.md	0	1
+book/src/laboratory/study-005.md	0	1
+book/src/laboratory/study-006.md	0	1
+book/src/laboratory/study-007.md	0	1
+book/src/laboratory/study-008.md	0	1
+book/src/laboratory/study-009.md	0	1
+book/src/laboratory/study-010.md	0	1
+book/src/laboratory/study-011.md	0	1
+book/src/laboratory/study-012.md	0	1
+book/src/laboratory/the-terminator-probe.md	0	1
+book/src/laboratory/census-of-coasts-ii.md	0	1
+book/src/laboratory/census-of-coasts-iii.md	0	1
+book/src/laboratory/census-of-coasts-iv.md	0	1
+docs/audits/	13	18
+docs/audits/heavy-tier-adjudication.md	0	1
+docs/audits/land-elevation-attribution.md	0	1
+docs/audits/the-assay-build-volume-audit.md	0	1
+docs/audits/the-escapement-census-attribution.md	0	1
+docs/audits/lexicon-inventory.tsv	0	1
+docs/digest/	4	5
+docs/digest/facts.jsonl	0	1
+book/src/domesday/	14	14
+clients/game/core/tests/fixtures/	3	3
+docs/audits/underworld-lattice-seed-panel.md	1	1
+docs/audits/the-confidant-report.md	1	1
+docs/audits/the-reticence-report.md	1	1
