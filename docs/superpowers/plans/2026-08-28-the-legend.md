@@ -992,6 +992,38 @@ git commit -m "feat(legend): the world map draws elevation and water, not land a
 
 ---
 
+### Task 7 also carries the POI markers
+
+**Nathan's rule (2026-08-30): the top 10-25% of settlements IN FRAME draw
+`O`; everything else draws `o`. Cave mouths draw `*`.**
+
+- **Viewport-relative, not world-relative.** The ranking is over the
+  settlements visible in the current window, so what counts as a major city
+  depends on what you are looking at. That is the intent: the map answers
+  "what is notable *here*".
+- **It costs nothing architecturally**, verified: `draw_feature_layer` takes
+  `win: &Window` and redraws into the grid every frame — only the TERRAIN
+  layer is tile-cached, and The Quadrat split them exactly so discovery could
+  not invalidate terrain tiles. So the feature layer already knows the frame
+  and already re-runs. No cache key widens.
+- **Size is not currently reachable and must be plumbed.** The layer receives
+  `settlements: &BTreeSet<Vertex>` — positions only. `hornvale_settlement::
+  POPULATION` is a predicate constant, and `driver.rs:670` already calls
+  `value_of(fact.subject, LATITUDE)` inside a loop over settlement facts, so
+  this is one more `value_of` in a loop that already runs, plus widening the
+  point-site roster to carry population.
+- **Pick the quantile inside 10-25% by MEASURING**, not by choosing from
+  outside: report seed 42's settlement population distribution and the
+  resulting `O` count at your pick. `O` must stay rare — the tier spike
+  already showed that too many markers is noise rather than invitation.
+- **Known consequence, deliberate:** a settlement can change from `o` to `O`
+  and back as the reader pans, because the comparison set changes. That is
+  the price of "notable in view" and Nathan has accepted it. Keep the
+  quantile a single named constant so switching to a rung-tied or
+  world-relative rule later is a one-line change.
+
+---
+
 ### Task 7: The world map draws landforms
 
 **Files:**
