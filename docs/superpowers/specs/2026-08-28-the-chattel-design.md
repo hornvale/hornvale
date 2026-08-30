@@ -503,3 +503,177 @@ Expected drift, landing in the same commit as its cause:
 
 The drift check reads its path list from `docs/generated-paths.txt` and
 nothing runs it for you.
+
+## 9. Decisions taken during execution
+
+**Why this section exists, and why it is numbered 9.** The plan's Task 14
+called for execution decisions to be promoted into "the spec's §8"; §8 was
+already *What drifts, and why*, so they land here rather than displacing it.
+The source is the campaign's own `.superpowers/sdd/` ledger, which is
+git-ignored and dies with the worktree — everything below was written there
+first and would otherwise be gone. It is transcribed rather than summarised
+wherever a future reader would need the reasoning.
+
+### 9.1 The `#D-*` rulings
+
+Nineteen, all resolved under autopilot gate G5 except `#D-t12-2`, which was
+Nathan's.
+
+| ID | Ruling | Outcome |
+|---|---|---|
+| `#D-t4-1` | `ThingError` does **not** implement `std::error::Error`. The sibling it wraps (`FacetError`) does not either, so `source()` could only chain through one of two arms, and no consumer boxes it. | Deliberately not built. Revisit when a call site needs `Box<dyn Error>`. |
+| `#D-t4-2` | `promote` does **not** validate `kind` against `THING_KINDS` in Task 4 — the dependency would move a byte-golden for a check with nothing to catch. **Tripwire: the first task typing a kind *literal* at a call site reopens this.** | Deliberately not built. |
+| `#D-t5-1` | `room_of` stops at a body (a key in a hand resolves `None`). The fix is a **tripwire test pinning the current `None`** plus a narrowed doc — *not* the `AGENT_AT` fallback. A witness, not a promise. | Built. |
+| `#D-t5-2` | The room-key spelling is fixed **in Task 5**, not deferred: the tree carried three spellings and the window closes at the first production caller. | Built. |
+| `#D-t5-3` | `is_open`'s two-valued `None` is **flagged, not fixed** — a malformed latest openness fact collapses to `None` and hides a valid earlier one. | Deliberately not built. |
+| `#D-t7-1` | The table scanner must widen again: `KindId(pub &'static str)` lets a hardcoded table be written `match kind.0 { "bed" => … }`, blind to both markers. Prefer a **key-agnostic** invariant — no match arm inside the dispatch function's own body may construct `OfferedVerb`s — over a third marker. | Built. |
+| `#D-t7-2` | A retired claim survives in **production**: `offered`'s doc said every carrier "carries exactly one property"; `strongbox` now carries three. | Built. |
+| `#D-t8-1` | Hand-add the two renamed test ids to `docs/timings/subfloor-roster.tsv`. **nextest is green and silent on a filter naming a nonexistent test**, so the commit gate had been running exactly one passage test. | Built. |
+| `#D-t8-2` | **Widen the sweep rather than narrow the sentence**: a test claiming "the nine strings" was measured against sixteen. | Built. |
+| `#D-t9-1` | Route `AnchorKind` roster membership through the compiler's exhaustive-match requirement. The old guard covered **re-points, not additions** — a fifteenth variant left 1,209 tests green. | Built. |
+| `#D-t9-2` | A **filtered**-mutation citation ("41 tests run") survived in the doc claiming to state the honest shape; unfiltered it reds three. | Built. |
+| `#D-t11-1` | `open`'s **success half is unreachable and unasserted** — a vacuous custody read left 850 tests passing. State it as an unmet half with its reason, or pin it now by committing a holding fact directly (`held_by` is a fold, so a test can). | Built. |
+| `#D-t11-2` | The 0398 commit's doc says a played walk reaches "only the first two" of four states; it reaches exactly **one**. | Built. |
+| `#D-t11-3` | The concealment deferral is priced against a fix nobody would write, and its positive-control sentence is **false of the gallery** — `possession-walk.txt` does one `enter further in` and never reaches chamber index ≥ 2, where every `Store` role lives. | Built. |
+| `#D-t11-4` | `LOCKED_WITHOUT_A_KEY_REFUSAL`'s doc is wrong about *why* M+N is preserved: the required property is a literal `ObjectProperty::Portable` inside `open_or_close`. **The day a second thing becomes portable, every portable object opens every lock.** | Doc built; hazard carried into Task 12. |
+| `#D-t12-1` | **Add one appended pattern placing a key in a role a strongbox never occupies**, with a census re-run and a reachability-sweep re-run. | **RULED, LEDGERED, NEVER DISPATCHED.** Built only in Task 13's fix round, after a reviewer found the coupled defect. See the retrospective §1. |
+| `#D-t12-2` | **Nathan.** Closing is not locking: closed and locked are separate states; `close` shuts and never locks; a seeded strongbox still starts locked; "in the lock" is a location distinct from "in the container", constraining a future `lock` verb. | Built; decision 0399. |
+| `#D-t13-1` | Do **not** unblock `NounEntry.affordances` by making the chamber band build `Noun`s — new capability at campaign end, in the surface with committed client fixtures, with no review budget. Record it as the named prerequisite instead. | Deliberately not built; the prerequisite is recorded here and in the retrospective. |
+
+**Two of these were "carried to `followups.md`", which is per-worktree
+scratch that dies with the campaign.** `#D-t4-2`'s tripwire and `#D-t13-1`'s
+prerequisite are therefore written out above; that is their durable home.
+
+### 9.2 The pre-dispatch brief findings
+
+Twenty-six numbered findings (`F1`–`F26`) over Tasks 5–13, plus unnumbered
+verifications on Tasks 1–4. **Every one originated in controller prose.** The
+ones that are durable knowledge rather than campaign trivia:
+
+- **F1** — a false binary in a branch table where the wrong half was the
+  expensive one. An out-of-session reader registers the predicate into its own
+  registry idempotently, so the keystone golden did not need to move again.
+- **F3** — the plan cited `last_fact_day_at_or_before`, which is **private**.
+  It can only be a discipline to copy, never a function to call. (Its
+  unstated tie-break, recovered here: two facts at one instant resolve by
+  commit order, last posting wins.)
+- **F4** — **a signature specified with no possible caller.** The brief's rule
+  was a conjunction and `is_latent`'s signature could implement only its
+  second half: no `Terrain`, no seed, no world.
+- **F5** — a file in `tests/suite/` with no `mod` line **compiles to nothing
+  and reds nothing.**
+- **F6** — a second on-disk room encoding would be self-consistent,
+  round-trip through its own decoder, and red nothing, while the two
+  predicates quietly stopped describing the same place.
+- **F7** — **a task that moves the keystone byte-golden with a step that
+  cannot see it.** The golden's guard is not in the sub-floor roster and
+  `cli/tests/fixtures/` is deliberately not in `docs/generated-paths.txt`:
+  green gate, clean drift check, stale golden.
+- **F8** — two `KindId`-keyed property tables would have disagreed.
+  Resolved by **deleting the unread field**; a field with no consumer is
+  invisible until a second one arrives.
+- **F9** — `BarrierState`'s derived `Ord` is load-bearing for pinned goldens.
+  The change is to the fold, never the enum.
+- **F10** — a brief instructing someone to extend a check that turned out to
+  be **prose rather than code**. (The third time in this campaign.)
+- **F11** — **the plan's warning about a stale citation was itself a stale
+  citation.** Give the implementer the shape, not the line.
+- **F12** — the cheapest repair (deleting a name from the frozen roster) is
+  the wrong one; that is the tripwire working.
+- **F14** — "adding a field breaks every full-literal caller" **predicted an
+  empty compiler list**: exactly one full-literal `Noun { … }` exists, inside
+  `Noun::new` itself.
+- **F15** — the real blast radius was `PartialEq`, which the plan never
+  mentioned.
+- **F16** — "`entity` is not serialized" was true but not via `serde(skip)`:
+  `Noun` derives no `Serialize` at all.
+- **F18** — exclusion figures **3.5× stale** (13.4 s / 12.5 s written; 3.753 s
+  / 3.772 s measured). The conclusion survived, but a wrong number attached to
+  good advice invites a reader to discount both.
+- **F20** — attribution ambiguity between two campaigns' 60-combination
+  censuses. Remedy: **re-run it**, do not adjudicate whose it was.
+- **F21** — the safety net catches **one of two** wrong choices.
+  `session_control_is_never_an_in_character_verb` asserts only one direction,
+  so an act wrongly declared control is silently accepted and **bypasses the
+  body-state gate — a sleeping body could run it.**
+- **F24** — Task 11 armed a tripwire Task 12 could set off, and **its cheapest
+  repair is the wrong one**: the repair is a design act, never deleting the
+  assertion.
+- **F25** — a STOP row firing correctly. The chamber band never builds
+  `Noun`s, corroborated three ways, so the field would have been empty for
+  every entry.
+- **F26** — the rule was misattributed to The Quire's spec (which never
+  mentions inventory); it lives in a client module doc. Smaller obstacle than
+  the plan implied, but still a decision plus a doc correction.
+
+### 9.3 Measurements this campaign owns
+
+- **The gate census (Task 1, §3.2).** All 60 production combinations —
+  `selection(built, cold)` ×4 plus `selection_for(role, built, cold,
+  populous)` over 7 roles × 2×2×2. **Zero duplicate anchor kinds in every
+  row**, which is what licenses `ordinal: 0`. Held permanently by
+  `interior::pattern::tests::no_production_room_composes_two_anchors_of_one_kind`.
+  The harness itself was scratch and was deleted, so these numbers are the
+  surviving record — see the retrospective §4.2.
+- **Slot count (Task 1, §3.4).** Anchors per composed interior: min 2, median
+  2.5, max 7. Bounded by slot count, not world history.
+- **Read cost (Task 1, §3.4).** `Ledger::latest_value_of` ≈ **90 ns/read**
+  (89.88 and 91.97 ns over two release runs, 200,000 iterations) against the
+  busiest single-entity posting list. Played ledger: **22,880 facts**. This
+  corrected *neither* of decision 0366's adjectives — never "a scan", never
+  "free".
+- **Reachability (Task 11 / decision 0398).** 48-seed sweep through the
+  shipped CLI: `with_strongbox=8 with_key=8 played_LOCKED=8`, seeds 1, 4, 8,
+  13, 14, 17, 23, 34; `got_indoors=48` in both arms. Flipping the two literals
+  back gives 0.
+- **Latency, played (Task 14).** Seed 1's structure offers **16 latent slots
+  across 4 rooms**; a play driving every promoting verb at every noun promotes
+  **3** — the door key, the chest, and the chest's key.
+
+### 9.4 Acceptance, as measured
+
+§6's eight criteria, recorded here because nothing else records them:
+
+1. **A thing taken in one room and used in another, carried by `possess
+   --out`** — MET, driven end to end including a JSON round trip.
+2. **A key opens a lockable strongbox and the same body without it cannot** —
+   MET.
+3. **A container opens, closes and re-opens through the passage's fold** —
+   MET; and 0399 split "closed" from "locked", which the criterion had
+   conflated.
+4. **The knowledge gate DENIES something** — MET, and this is 0369's
+   struck-through criterion 5 discharged (decision 0397). **With a residual,
+   named rather than closed:** it cannot deny through a *live* `Session`,
+   because knowledge absorption is unconditional. That half needs a different
+   lever.
+5. **A promoted thing carried away is not re-offered where it came from** —
+   MET.
+6. **Every new verb has a roster entry, a HELP line and a body-state refusal
+   test** — MET; `IN_CHARACTER_VERBS` 24 → 28.
+7. **No verb×object table, held two-way by source scan** — MET, and the scan
+   was widened twice under `#D-t7-1` when a key-agnostic form was found.
+8. **Every regression test names its mutation and pastes the red** — MET, with
+   the campaign's own recurring hazard attached: **a pasted red rots.** Line
+   numbers in pasted mutation output went stale in Tasks 2, 3, 7 and 9. A
+   pasted run is a record of a moment; rewriting it would make it a claim
+   about now.
+
+### 9.5 Still open at the close
+
+1. `subfloor_roster_coverage.rs`'s prose is silent about the fact that not
+   declaring a crate reds `gate-commit` locally until a chamber run — and the
+   **third route** this campaign found out of that dilemma (hand-add the rows
+   the chamber will later reproduce exactly, *and* delete the declaration) is
+   written down nowhere else.
+2. `register_concepts`'s idempotency branch is a no-op rather than re-calling
+   `register_manifest`.
+3. `BORROWED`'s owner→crate-name mapping relies on the `hornvale-<domain>`
+   convention through `format!` rather than a typed link.
+4. Five panic sites now sit in `register_concepts` / `concept_doc` — a
+   panic-density question the implementer raised itself.
+5. A report quoting "N/N sub-floor tests pass" is quoting **one chunk's**
+   summary from `subfloor-run-chunked.sh`, not the tier's ~3,568 entries.
+6. `PLAY-closed-container-conceals-nothing` — the room's prose renders from the
+   grammar with no ledger and no latency filter, in **both** directions: it
+   omits what the ledger holds (a dropped key) and asserts what the ledger
+   denies (a taken key still listed, a shut chest still listing its contents).

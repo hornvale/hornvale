@@ -15250,4 +15250,270 @@ mod tests {
             );
         }
     }
+
+    /// Every `instance-of` fact a played session commits names a thing the
+    /// grammar ALREADY offered at the room it was promoted in — spec §5's
+    /// non-goal ("nothing is created and nothing is destroyed") made
+    /// mechanical, and the only assertion of it in the tree.
+    ///
+    /// # Why the non-goal needed a test at all
+    ///
+    /// §5 states the invariant as a *consequence* of not shipping a
+    /// consumption verb, which is an argument about what the plan omitted
+    /// rather than about what the code does. Tasks 1–13 shipped six verbs and
+    /// two promotion routes; nothing checked that the routes only ever hand
+    /// back identities the room already had. A verb that derived a FRESH id
+    /// for a thing already in the ledger would create a second object out of
+    /// one, silently, and every existing test would stay green — the same
+    /// object would simply be two.
+    ///
+    /// # The two producers, reconciled
+    ///
+    /// "The grammar latently offers it at that room" has two spellings, and
+    /// asserting only one would have left the other unwitnessed:
+    ///
+    /// - **the room producer**, `thing_role(facet, kind)` →
+    ///   `thing@<packed-facet>/<kind>`, reached by [`Session::take`],
+    ///   [`Session::put_in`] and [`Session::open_or_close`]. Its latent set is
+    ///   the anchors a room's own [`crate::interior::Interior`] composes, at
+    ///   ordinal 0. **This test is that half**, and it was the unwitnessed one.
+    /// - **the passage producer**, `passage::cave_mouth_role(addr)` →
+    ///   `thing@passage/<addr>/cave-mouth`, whose address is a `ChamberAddr`
+    ///   and which therefore cannot be spelled by `thing_role` at all. Its
+    ///   latency already has a witness —
+    ///   `suite::passage::cave_mouth_id_derives_the_entity_promotion_mints`
+    ///   derives the id BEFORE any promotion and asserts the promotion mints
+    ///   that same id — so it is cited here rather than duplicated. The two
+    ///   spellings are disjoint by prefix, so a room-keyed assertion can never
+    ///   accidentally cover a cave mouth or vice versa.
+    ///
+    /// # ONE check covers BOTH clauses of the non-goal, and that is measured
+    ///
+    /// The test asserts a single thing: **every `(subject, kind)` pair the
+    /// play adds is one the walk recorded as latent BEFORE touching that
+    /// room, and the kind committed is the kind that derivation used.** The
+    /// latent set is built from `chamber_interior_here()` on arrival, so it
+    /// can only describe what the grammar composes; a promotion at any other
+    /// `(room, kind, ordinal)` lands outside it.
+    ///
+    /// That one check answers "nothing destroyed" as well as "nothing
+    /// created", and the reason is a property of the ledger rather than a
+    /// convenience. **`Ledger` has no removal API at all** — `facts` is
+    /// append-only and nothing retracts — so destruction is not representable
+    /// as a retraction. It has exactly one available spelling:
+    /// `Ledger::change_kind` APPENDS a second `instance-of` and
+    /// `Ledger::kind_of` reads the LATEST, so re-kinding a strongbox into ash
+    /// is how a thing would stop being what it was. That appended fact is a
+    /// new pair, and a new pair whose object disagrees with the derivation is
+    /// exactly what this check refuses. The second mutation below is that
+    /// destroy path, and it dies on this assertion.
+    ///
+    /// **A separate "no thing carries two instance-of objects" assertion was
+    /// written first and then deleted, because running the destroy mutation
+    /// showed it never fired** — the check above reached the same fact one
+    /// line earlier and strictly more of them (it also covers a re-kinding of
+    /// a genesis entity, which a thing-scoped loop filters out). A subsumed
+    /// assertion in a test whose whole subject is a non-goal would read as two
+    /// clauses covered by two guards when it is two clauses covered by one.
+    ///
+    /// # The positive control
+    ///
+    /// The play must actually promote something. Without that assertion a
+    /// walk refused at the front door would satisfy everything above by
+    /// having nothing to check, which is the vacuous-guard shape this project
+    /// has shipped five of in one campaign.
+    ///
+    /// # Coverage, stated rather than implied
+    ///
+    /// Seed 1's structure is walked to its end, which is the only production
+    /// path known to reach a `Role::Store` chamber and therefore the only one
+    /// that composes a strongbox and both key patterns. The floor asserted
+    /// below (three rooms, six distinct latent kinds) is what makes "the walk
+    /// covered several gate settings" a checked claim rather than a hope. It
+    /// is NOT a sweep of every `selection_for(role, built, cold, populous)`
+    /// combination: `cold` and `populous` are seed-drawn, so a sweep would
+    /// cost a world build per combination. The unreached combinations compose
+    /// from the same `INVENTORY` through the same `compose` and are promoted
+    /// through the same two routes, so what they could carry is a new
+    /// *pattern*, never a new *promotion route* — and it is the routes this
+    /// test holds.
+    ///
+    /// MUTATION 1 — the property is *that a verb hands back an identity the
+    /// room already had, rather than minting a fresh one*: in
+    /// [`Session::put_in`], change the `ordinal` argument of its
+    /// `crate::thing::promote` call from `0` to `1`. Every production room
+    /// composes at most one anchor of a kind
+    /// (`interior::pattern::tests::no_production_room_composes_two_anchors_of_one_kind`),
+    /// so ordinal 1 names an object the grammar offers nowhere. Confirmed
+    /// 2026-08-30:
+    ///
+    /// ```text
+    /// the play committed instance-of(EntityId(12700770777358008321), "strongbox")
+    /// for an object no room this walk stood in latently offered — spec §5
+    /// says every object that will ever exist is already latent
+    /// ```
+    ///
+    /// MUTATION 2 — the property is *that nothing is destroyed*: insert
+    /// `self.ledger.change_kind(thing, "ash", Some(self.day), "mutation",
+    /// &self.registry)` before the posting at the end of [`Session::take`],
+    /// which is a taken thing burning in the player's hand. Confirmed
+    /// 2026-08-30:
+    ///
+    /// ```text
+    /// the walk must promote through BOTH routes — a portable through `take`
+    /// and a container through `open`/`unlock` — or the check above ran over
+    /// one verb's output: [(EntityId(14873712364730122240), "ash"),
+    ///                     (EntityId(14873712364730122240), "key")]
+    /// ```
+    ///
+    /// **Read mutation 2's red carefully, because it is not the assertion you
+    /// would predict and the difference is worth keeping.** The destroy
+    /// mutation lands on the POSITIVE CONTROL rather than on the latency
+    /// check, and it lands there for a reason that is behaviour rather than
+    /// accident: a key burned to ash on the way into the hand is no longer
+    /// `Portable`, so the strongbox three rooms later is never unlocked and
+    /// never promoted, and the control's "both routes must have fired" is what
+    /// notices. The destruction is still visible in the failure — `"ash"` is
+    /// printed in the minted set, beside the `"key"` it replaced — and the
+    /// latency check would have caught it on the very next line had the
+    /// control not fired first. What this shows is that in a played session
+    /// the two clauses of §5 are not independently observable: a destroyed
+    /// object stops participating, so its destruction is detected as an
+    /// absence downstream as readily as as a contradiction in place. That is
+    /// a finding about the non-goal, not a weakness in the test, and it is
+    /// recorded here rather than tidied away.
+    #[test]
+    fn a_played_session_promotes_only_what_was_already_latent() {
+        /// Every `(subject, kind)` the ledger states, as a set — `instance-of`
+        /// is non-functional, so a subject may legitimately appear once and
+        /// must never appear twice with different objects.
+        fn instance_of_pairs(ledger: &Ledger) -> std::collections::BTreeSet<(EntityId, String)> {
+            ledger
+                .find(hornvale_kernel::INSTANCE_OF)
+                .filter_map(|f| match &f.object {
+                    Value::Text(t) => Some((f.subject, t.clone())),
+                    _ => None,
+                })
+                .collect()
+        }
+
+        let world = world_at(1).expect("seed 1 builds");
+        let (mut session, _) =
+            Session::start(&world, &PossessOpts::default()).expect("seed 1 possesses");
+        let before = instance_of_pairs(&session.ledger);
+
+        // What the GRAMMAR offers, recorded on arrival in each room and never
+        // afterwards: a set built after the verbs ran could be widened by them.
+        let mut latent: std::collections::BTreeMap<EntityId, String> =
+            std::collections::BTreeMap::new();
+        let mut rooms = 0usize;
+
+        assert!(
+            say(&mut session, "enter").starts_with("[chamber "),
+            "the possession never got indoors, so nothing below is tested"
+        );
+        // `MAX_CHAMBERS` is 4; five steps is one more than any structure has,
+        // and the loop stops on the far-end reply rather than on the count.
+        for _ in 0..5 {
+            let room = session
+                .chamber_facet_here()
+                .expect("the walk is standing in a chamber");
+            let interior = session
+                .chamber_interior_here()
+                .expect("the walk is standing in a chamber");
+            for id in interior.ids() {
+                let kind = crate::affordance::thing_kind_of(interior.anchor(id).kind);
+                let thing = crate::thing::thing_id(&room, kind.0, 0)
+                    .expect("a chamber facet packs, or the interior could not have composed");
+                latent.insert(thing, kind.0.to_string());
+            }
+            rooms += 1;
+
+            // Every promoting verb at every noun, including the pairs — the
+            // point is to reach every route that can commit an `instance-of`,
+            // not to have each line succeed. A refusal is a fine outcome; an
+            // unasked verb is not.
+            //
+            // **The ORDER is load-bearing and was measured.** The first draft
+            // ran `take`, `close`, `lock`, `drop` per noun, which set the door
+            // key down in the room it was found in — so the walk arrived at
+            // the strongbox three rooms later empty-handed, every `unlock`
+            // was refused, and the whole play promoted ONE thing. Each noun is
+            // therefore picked up before anything else is asked of it and
+            // picked up again after each act that could have set it down, so
+            // the key travels with the walk and the lock it opens is reached
+            // holding it.
+            let nouns = session.chamber_nouns_here();
+            for noun in &nouns {
+                for line in [
+                    format!("take {noun}"),
+                    format!("unlock {noun}"),
+                    format!("open {noun}"),
+                    format!("take {noun}"),
+                    format!("close {noun}"),
+                    format!("open {noun}"),
+                    format!("drop {noun}"),
+                    format!("take {noun}"),
+                ] {
+                    let _ = session.handle(&line);
+                }
+            }
+            for noun in &nouns {
+                for holder in &nouns {
+                    let _ = session.handle(&format!("put {noun} in {holder}"));
+                    let _ = session.handle(&format!("take {noun}"));
+                }
+            }
+
+            if !say(&mut session, "enter further in").starts_with("[chamber ") {
+                break;
+            }
+        }
+
+        assert!(
+            rooms >= 3 && latent.len() >= 6,
+            "precondition: the walk must cross several rooms and see several \
+             kinds, or 'over the production gate combinations' is one room — \
+             {rooms} rooms, {} latent kinds",
+            latent.len()
+        );
+
+        let after = instance_of_pairs(&session.ledger);
+        let minted: Vec<(EntityId, String)> = after.difference(&before).cloned().collect();
+
+        // THE POSITIVE CONTROL, first: the check below is satisfiable by a
+        // session that promoted nothing at all, so an empty `minted` would be
+        // a green test over an empty set. Non-emptiness alone is also too
+        // weak — one promotion proves one route — so the control names the
+        // two routes it must have reached. Measured 2026-08-30: 16 latent
+        // slots across 4 rooms, 3 of them promoted, `["key", "strongbox",
+        // "key"]` — two keys from two different rooms and the chest between
+        // them.
+        let promoted_kinds: std::collections::BTreeSet<&str> =
+            minted.iter().map(|(_, k)| k.as_str()).collect();
+        assert!(
+            minted.len() >= 3
+                && promoted_kinds.contains("key")
+                && promoted_kinds.contains("strongbox"),
+            "the walk must promote through BOTH routes — a portable through \
+             `take` and a container through `open`/`unlock` — or the check \
+             below runs over one verb's output: {minted:?}"
+        );
+
+        // 1. Nothing created.
+        for (subject, kind) in &minted {
+            match latent.get(subject) {
+                Some(offered) => assert_eq!(
+                    offered, kind,
+                    "the play committed instance-of({subject:?}, {kind:?}) against \
+                     an id the grammar derived for a {offered:?}"
+                ),
+                None => panic!(
+                    "the play committed instance-of({subject:?}, {kind:?}) for an \
+                     object no room this walk stood in latently offered — spec §5 \
+                     says every object that will ever exist is already latent"
+                ),
+            }
+        }
+    }
 }

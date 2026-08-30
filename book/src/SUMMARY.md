@@ -428,6 +428,7 @@
 - [The Gallery](./chronicle/the-gallery.md)
 - [The Lodestar](./chronicle/the-lodestar.md)
 - [The Overture](./chronicle/the-overture.md)
+- [The Chattel](./chronicle/the-chattel.md)
 
 # Appendix: The Frontier
 
