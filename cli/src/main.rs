@@ -1809,8 +1809,13 @@ fn cmd_lab_anomalies(args: &[String]) -> Result<(), String> {
 /// (`lane-run.sh`) held it; the chamber (`sluice-run.sh`) holds it. So the
 /// `gate` set's `ci-record` refused on every single run, in the one
 /// environment on the one box where nothing else was running at all, and
-/// `docs/timings/subfloor-roster.tsv` has exactly one commit in its history —
-/// authored by hand. The remedy CLAUDE.md described (a copy-out surviving the
+/// `docs/timings/subfloor-roster.tsv` **had, at that moment, exactly one
+/// commit in its entire history** — authored by hand. (Past tense as of The
+/// Gleaning, 2026-08-30: `git log -- docs/timings/subfloor-roster.tsv` counts
+/// **162**. The sentence was written in the present tense and became false
+/// the first time the fix below worked, which is the same shape as the stale
+/// `make gate-stage` line that used to sit in the roster's own header.)
+/// The remedy CLAUDE.md described (a copy-out surviving the
 /// next dispatch) addressed a later step in a pipeline whose first step never
 /// produced a byte. A claim held by our own ancestor is not contention: it is
 /// the job we are part of, and it is the most serialized moment available.
@@ -1904,9 +1909,14 @@ fn cmd_ci_record() -> Result<(), String> {
          # that never author a roster of their own -- see `subfloor_path`'s\n\
          # doc in windows/lab/src/timings.rs for the full reasoning.\n\
          # The commit gate (`make gate-commit`) runs exactly these.\n\
-         # Rewritten by every GREEN `make gate-stage`; a red run leaves it alone.\n\
+         # Rewritten by the chamber's `gate` phase on every GREEN chamber job (a\n\
+         # stage gate or a merge, `scripts/sluice-run.sh`); a red run leaves it\n\
+         # alone, because a red run's `run.json` is truncated and a roster taken\n\
+         # from one would silently DROP tests from the commit gate. `make\n\
+         # gate-stage` used to be named here and is a refusing signpost now\n\
+         # (decisions 0132, 0139) -- submit `make sluice-stage BRANCH=... REF=...`.\n\
          # A test absent from this file is NOT in the commit gate — see the\n\
-         # spec's exclude-unknown rule. It enters on the next green stage gate.\n",
+         # spec's exclude-unknown rule. It enters on the next green chamber job.\n",
     );
     for id in &roster {
         roster_body.push_str(id);

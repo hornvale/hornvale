@@ -6379,6 +6379,56 @@ mod tests {
         reg
     }
 
+    /// [`AGENT_AT`]'s exact on-disk spelling, written out as a literal.
+    ///
+    /// **This test cannot be rebaselined, and that is the entire point of
+    /// writing the string out** — the same reasoning `thing.rs`'s
+    /// `the_location_predicate_spellings_are_permanent_on_disk_keys` and
+    /// `tests/suite/passage.rs`'s
+    /// `the_cave_mouth_role_spelling_is_the_permanent_lineage_key` already
+    /// carry, applied to the predicate that design was modelled on and the
+    /// one that was left without a guard.
+    ///
+    /// A predicate name is written into **every committed `Fact`** and into
+    /// **a saved world's registry** (a world saved by `possess --out` carries
+    /// its session registrations, decision 0368). Every other assertion in
+    /// this file — and there are dozens — reaches the predicate through the
+    /// CONSTANT on both the write side (`agent_at_fact`, `commit_agent_at`)
+    /// and the read side (`Ledger::facts_of(.., AGENT_AT)`), so **any
+    /// spelling whatsoever keeps all of them green**. Meanwhile a rename
+    /// leaves every `agent-at` fact in an already-saved world present in the
+    /// file and invisible to every fold that reads it: `agent_position`
+    /// silently falls back to each NPC's home, `believed_water` forgets every
+    /// room the agent ever stood in, and the sightings/alarm folds see an
+    /// empty history. Silent, and green.
+    ///
+    /// `tests/suite/ledger_query_equivalence.rs` re-declares `"agent-at"` as
+    /// its own local `const`, saying it does so "so this test still fails if
+    /// the constant is repointed". It does not: that test writes AND reads
+    /// through its own local literal, so a rename of the real constant leaves
+    /// it green too. That shape — a literal duplicated on one side of a
+    /// closed loop — is exactly what makes a rename survivable across the
+    /// whole test suite while breaking every saved world, and it is why the
+    /// freeze has to be an assertion against the real constant rather than a
+    /// convention about how tests spell things.
+    ///
+    /// Reddening here is the intended outcome of a rename, not an obstacle to
+    /// one: the legitimate change is an epoch (`agent-at/v2`), never an edit
+    /// (root CLAUDE.md — "deliberate regeneration uses an epoch suffix, never
+    /// a rename").
+    #[test]
+    fn the_agent_at_predicate_spelling_is_a_permanent_on_disk_key() {
+        assert_eq!(
+            AGENT_AT, "agent-at",
+            "AGENT_AT's spelling is a SAVE-FORMAT CONTRACT: it is written \
+             into every committed fact and into a saved world's registry, so \
+             a rename makes every existing agent-at fact unreadable without \
+             failing anything — every NPC silently reverts to its home and \
+             every belief fold sees an empty history. Do not rebaseline this \
+             literal — take an epoch."
+        );
+    }
+
     #[test]
     fn believed_water_is_none_until_the_agent_has_stood_in_water() {
         let reg = agent_at_reg();
