@@ -920,3 +920,88 @@ running the rule's own arithmetic against real data.
 **A preregistered rule should be executed against a dry run before it is
 frozen.** Freezing a rule nobody has run is freezing an untested program, and
 this one had a 7x error in its only conversion.
+
+## E.10 §5.2's verdict, and two ways the criterion was under-specified
+
+**Task 5 landed §5.2's middle row: breached delvings are deeper, with
+substantial overlap in both directions.** Nothing was tuned.
+
+```
+PANEL [42, 7, 1234, 0, 1, 2, 3, 4, 5, 6, 8, 9]
+  196 workings — 26 breached, 96 ordinarily ended, 74 STILL OPEN (excluded)
+               n   at floor      min     q1    median      q3      max
+  breached    26   1 ( 3.8%)    12.0  127.8    398.5  1094.0   2656.2
+  ordinary    96  35 (36.5%)     4.0   12.0     28.5    86.2   1022.5
+  AUC 0.8654   z 5.702
+  OVERLAP  18/26 (69%) breached below the deepest ordinary end
+           56/96 (58%) ordinary above the shallowest breach
+```
+
+Not row one (z 5.702 against a 3.0 boundary fixed by convention, not read off
+the result); not row three (overlap non-empty both ways). The 4-seed control
+E.9 requires agrees in direction and cannot decide (z 1.902) — which is E.9's
+own claim demonstrated rather than asserted.
+
+### E.10.1 The criterion named two populations and the data has three
+
+**74 of 196 workings — 38%, the largest single group — are still open**, and
+§5.2 silently assumes every delving ends. A reader implementing "ordinary" as
+the natural predicate `cause != Breached` pools them in and measures **AUC
+0.6767** instead of 0.8654. Still row two, so the *verdict* is robust; the
+*effect size* is off by a third and nothing in §5.2 flags it.
+
+**An honesty note that must travel with this result.** Excluding the still-open
+group is the principled choice — a working that has not ended has no final
+depth; it is a right-censored observation and treating it as a completed one is
+simply wrong. But it is *also* the choice that shows the larger effect, because
+still-open workings are deep (median 674.9 m, above the breached median). The
+controller's dispatch asserted the opposite — that including them would
+"manufacture separation" — and **that was wrong in both halves**: including
+them raises the ordinary median 28.5 → 99.4 m and *shrinks* AUC to 0.6767. The
+exclusion costs the finding evidence rather than inflating it, and the reason to
+prefer it is censoring, not conservatism. Task 5 measured this rather than
+accepting the brief's reasoning, which is the eighth defect in
+controlling-session text this campaign and the fourth caught by an implementer.
+
+### E.10.2 The prescribed comparison could not separate the claim from a weaker one
+
+This is the more serious gap, and the campaign escaped it by luck.
+
+§5.2 prescribes a **pooled** comparison of two depth distributions. But
+*"breached delvings sit at their own maximum without being selected for depth"*
+and *"breach is a tenure lottery and depth is a bystander"* **produce identical
+pooled distributions**. §5.2 names no statistic that tells them apart, so a
+pooled pass is consistent with the mechanism being decoration in a way row one
+does not describe and row two would have credited.
+
+Breached median tenure is **17.5 epochs against 3.0**, so the weaker reading
+was live and large. What closes it is conditioning on tenure:
+
+```
+by epochs dug     breached           ordinary        stratum AUC
+  1             n= 1 med    12.0   n=20 med   12.0      0.675
+  2-3           n= 2 med    29.9   n=31 med   12.0      0.823
+  4-8           n= 4 med   105.0   n=27 med   61.2      0.731
+  9-20          n= 8 med   210.2   n=12 med  165.9      0.646
+  21+           n=11 med  1274.3   n= 6 med  335.2      0.939
+STRATIFIED  AUC 0.7599  z 3.303 — direction holds in EVERY stratum
+```
+
+The pooled gap attenuates (0.8654 → 0.7599, the honest size of the tenure
+contribution) and **survives**. Under a per-metre hazard both halves are the
+mechanism — the hazard integrates total metres, and total metres is tenure ×
+rate — but only the stratified result rules out the reading in which the hazard
+merely re-labels long-lived workings.
+
+**That statistic is not in §5.2.** It reached the task through the controller's
+dispatch, which named the property without prescribing the statistic. Had the
+stratified result collapsed, §5.2 as written would have reported a pass.
+
+**The general lesson, and it is the campaign's second about preregistration:** a
+frozen criterion must be checked against the *rival* explanations of a pass, not
+only against its own failure mode. §5.2 carefully enumerated three ways the
+comparison could come out and never asked what else could produce row two. A
+branch table over outcomes is not the same object as a discriminating test, and
+it is easy to mistake the first for the second because both look like rigour.
+Sibling finding to E.9: there the rule was written about the wrong quantity;
+here it was written about the wrong question.
