@@ -460,3 +460,114 @@ and the pilot detour is its own small lesson — an off-host fixture set can
 move the tally by three hits, which is exactly why only canonical readings
 enter the list. The registry row's status is unchanged, exactly as it was
 unchanged by each of the four before this one.
+
+## Postscript 5 — the first re-read across a moved instrument (The Winze, 2026-08-29)
+
+Every postscript above opens the same way, and until now the sentence was
+simply true: *the report did not move, only the worlds did.* That sentence is
+what made five readings of one battery a series rather than five unrelated
+numbers. `REPORT_SIZE`, `TAIL_DEPTH_BAR` and the scorer were fixed, and so was
+the set of census columns the scorer ranks over — the *evaluable surface*, the
+117 numeric columns that survive the frozen exclusion tests for being frozen,
+too sparse, or tied at both rails.
+
+The Winze broke that. It registered a new census metric,
+`breached-delving-count`, and the metric is an integer that varies across
+worlds, so it lands on the evaluable side rather than the excluded one. The
+surface grew from 117 columns to 118. A world's report is a fixed-size top-ten
+cut of that surface, so one more candidate column is one more thing that can
+displace the tenth flag; and a *hit* is scored by intersecting a pair's moved
+columns with the surface, so the new column enters the numerator's definition
+as well. Two mechanisms, both live, by which the **instrument** and not the
+world could move the tally.
+
+Re-measured on the refreshed census and the re-authored fixtures:
+**recall@10 = 0.6000, 72 hits over the same 120 pairs.** The bar is 0.60.
+
+So the number moved, from 73 to 72, at exactly the epoch where the honest
+answer might have been "this reading is not comparable to the five before it."
+The pin's own instruction anticipates this case and says to stop: *first ask
+whether your change touched the report; if it did, you have a different and
+larger question than a re-pin.*
+
+### Measuring the confound instead of declaring it
+
+The question turns out to be answerable, cheaply, and the reason is a property
+of how the scorer is written rather than a lucky accident. The evaluable
+surface is *derived* from the census's own column list; the per-column
+percentile indices are built independently of one another; and the function
+that scores an out-of-census world takes the census by reference. Nothing
+about the ranking is baked in ahead of time. Remove one column from a census
+held in memory and the scorer reproduces the older surface against the newer
+worlds — no change to `REPORT_SIZE`, no change to the bar, no change to a line
+of committed code, and therefore none of the second incomparability that
+editing the scorer to study the scorer would have introduced.
+
+Two checks, run in that spirit:
+
+**The surface moved by exactly one column, and only in one direction.**
+Comparing the exclusion pass over the pre-refresh committed census against the
+refreshed one: evaluable 117 → 118, excluded 50 → 50, with the difference set
+`{breached-delving-count}` on the new side and *empty* on the old. Nothing
+else crossed the boundary. That matters more than it first looks: a world
+change can silently push a column onto or off the surface by collapsing its
+spread, which is precisely what happened at The Burr, where a language epoch
+piled a cascade metric onto both rails and dropped it out of the surface
+without anyone adding or removing a metric. Here that did not happen, so the
+new metric is the whole of the instrument delta rather than the visible part
+of it.
+
+**Ablating that column reproduces the tally exactly.** Dropping
+`breached-delving-count` from the loaded census and re-scoring the same
+committed fixtures reads **72/120** — and, more tellingly than the total,
+identically arm for arm: geothermal 20/20, unconformity 4/20, aquifer 20/20,
+karst 2/20, pantheon 7/20, phonology 19/20, the same six numbers the full
+surface produces. The new column contributed zero hits and zero counted pairs.
+
+The instrument's share of the move is therefore **nothing**, and the reading is
+comparable to its five predecessors after all. It repeats The Underworld's
+exactly:
+
+| campaign | hits | recall@10 | distance from the bar |
+|---|---|---|---|
+| The Gnomon (2026-08-13) | 68/120 | 0.5667 | −0.75 SE |
+| The Glasshouse (2026-08-15) | 73/120 | 0.6083 | +0.19 SE |
+| The Underworld (2026-08-17) | 72/120 | 0.6000 | 0.00 SE |
+| The Burr (2026-08-18/19) | 73/120 | 0.6083 | +0.19 SE |
+| The Granary (2026-08-24) | 73/120 | 0.6083 | +0.19 SE |
+| The Winze (2026-08-29) | 72/120 | 0.6000 | 0.00 SE |
+
+Six readings, six census epochs, one report whose definition has never moved,
+every one inside three-quarters of a standard error of the bar. The verdict is
+unchanged and the registry row's status is unchanged: the question is open, the
+instrument is underpowered at `n = 120`, and the fix is more pairs rather than
+a moved bar.
+
+The reading lands *exactly on* the bar, which is worth one sentence and no
+more. A battery that cannot separate 0.5667 from 0.6083 certainly cannot make
+anything of 0.6000 sitting on the line; it is the same null arriving at its
+least legible coordinate, and reading it as "the bar is met" would be the
+retuning-by-repetition the preregistration exists to forbid.
+
+One small piece of reassurance, recorded because a null ablation invites the
+suspicion that the new column simply does nothing. It does something.
+`breached-delving-count` appears in the geothermal arm's own set of moved
+columns, and the chain is physically coherent: perturbing the geothermal
+gradient moves cave depth, which moves how deep a delve reaches, which moves
+how often one breaches. The column is live. It just never displaced anything
+out of a ten-column report in a way that changed whether a pair scored.
+
+### What this postscript is actually for
+
+The finding above is a null, and nulls are cheap to under-record. The durable
+part is not the number but the move: when a campaign changes both the world and
+the instrument at once, "this reading is incomparable" is a *hypothesis*, not a
+conclusion, and it is often testable at a cost far below the cost of accepting
+it. The test here took one in-memory column deletion and one re-score. Had it
+come back non-null, the honest report would have been an incomparable sixth
+reading and a smaller series — but it did not, and the difference between those
+two outcomes was one command nobody had to be talked into running.
+
+The witness assertion that pins this figure now carries both halves: the
+corrected list of the four places the figure lives, and the instruction to
+*measure* an instrument change rather than to stop at it.

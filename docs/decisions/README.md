@@ -255,3 +255,5 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0446](0446-an-existential-fronts-a-locative-clause-a-transformation-not-a-sixth-valence.md) | An existential fronts a locative clause — a transformation, not a sixth `Valence` | Accepted |
 | [0447](0447-definiteness-is-a-discourse-fact-derived-from-referent-recurrence-not-a-clause-field.md) | Definiteness is a discourse fact, derived from referent recurrence — not a clause field | Accepted |
 | [0448](0448-a-produce-side-demand-instance-statistic-complements-the-composite-and-never-replaces-it.md) | A produce-side demand-instance statistic complements the composite, and never replaces it | Accepted |
+| [0466](0466-authored-evidence-is-read-through-its-own-schema.md) | Authored evidence is read through its own schema, not the live registry | Accepted |
+| [0467](0467-a-frozen-criterion-must-discriminate-against-rival-explanations-of-a-pass.md) | A frozen criterion must discriminate against the rival explanations of a pass | Accepted |

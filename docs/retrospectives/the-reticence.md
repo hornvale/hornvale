@@ -78,7 +78,9 @@ right reason now.
 
 **The overstated null.** H4's first framing reported "0 of 70" as though it
 were seventy independent chances for the doctrine prior to move testimony
-and none had. It was not: every one of those seventy points landed on the
+and none had. (The denominator is a property of the worlds the sweep walks
+and has since moved with them — 71 as of The Winze. The account below is of
+the framing, not of the number.) It was not: every one of those seventy points landed on the
 one case — zero accumulated overrides on the asked-about drive — where every
 possible prior agrees by construction, before any simulation runs at all.
 The undiscriminating framing was caught by a reviewer instrumenting the test

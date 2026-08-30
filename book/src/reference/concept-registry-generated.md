@@ -71,6 +71,7 @@
 | `obliquity-amplitude` | yes | obliquity oscillation amplitude, degrees (moon-coupled) |
 | `obliquity-degrees` | yes | axial tilt of the anchor world, in degrees |
 | `occ-cause` | yes | why the occupation ended, absent while alive |
+| `occ-delve-depth` | yes | how far below its seat the occupation drove a working, in metres |
 | `occ-ended` | yes | the standard day the occupation ended, absent while alive |
 | `occ-ended-by` | yes | how the occupation ended: nature, or another entity's hand |
 | `occ-founded` | yes | the standard day the occupation began |

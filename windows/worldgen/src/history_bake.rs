@@ -301,6 +301,211 @@ pub const COLLAPSE_PRESSURE: f64 = 2.0;
 const DAUGHTER_MAX_PRESSURE: f64 = 0.7;
 /// Per-epoch probability a comfortable community founds a daughter.
 const DAUGHTER_PROB: f64 = 0.06;
+/// Prospectivity at or above which ground is worth *working* — the floor a
+/// candidate site must clear before an expansion onto it can be a mine (The
+/// Winze, spec §B.3). `pub` so the gates that hold the mine population
+/// (`windows/worldgen/tests/suite/mines_exist.rs`) express themselves against
+/// the number the siting actually used, rather than a second copy of it.
+///
+/// **Read off the field's own definition, not chosen.**
+/// `hornvale_terrain::prospectivity` is
+/// `0.6·setting + 0.3·unrest + 0.1·metamorphic_grade`, and `setting` is a step
+/// function of the boundary: `0.1` off a plate boundary, `0.4` at a
+/// continental collision, `0.5` at a rift or ridge, `0.7` at an island arc or
+/// coastal range. So `0.06` is the field's absolute floor and `0.6 × 0.4 =
+/// 0.24` is *exactly* where "on a plate boundary" begins.
+///
+/// **And it is where the tie-break stops deciding the siting.** Task 1
+/// measured prospectivity to be a near-constant floor — 75% of seed 42's land
+/// inside a 0.0067-wide band — so a naive `max_by(prospectivity)` over a
+/// settlement's neighbours ties, and the lowest-`Vertex` tie-break silently
+/// becomes the siting rule. Measured over the candidate neighbour sets of
+/// every occupied vertex on the panel (`ore_siting_probe.rs`), the argmax of
+/// the *unfiltered* set is tied on **40.9% / 32.2% / 29.2%** of sites (seeds
+/// 42 / 7 / 1234). Filtered at this cut it is tied on **0.0% / 0.0% / 0.0%**.
+/// The cut also sits on a plateau rather than a knife edge: the share of land
+/// at or above `0.24` and at or above `0.30` differ by 0.00 / 0.08 / 0.00
+/// percentage points, because almost nothing lives between them.
+/// type-audit: bare-ok(ratio)
+pub const ORE_CUT: f64 = 0.24;
+/// How many rings outward from its parent a working may be founded — the
+/// **supply bound** (The Winze, spec amendment E). A working is not sited by
+/// its own neighbourhood the way a farm daughter is; it is sited by where the
+/// ore is, so its search radius is set by the thing it is searching for. This
+/// is what stops that search from running to the horizon. `pub` for the same
+/// reason [`ORE_CUT`] is: the gate that holds the bound
+/// (`windows/worldgen/tests/suite/mines_exist.rs`) expresses itself against
+/// the number the siting used rather than a second copy of it.
+///
+/// **The reach is what gates a working now, and that is the whole of this
+/// amendment's cost.** Under a one-hop scan, "is there ore next door" did
+/// nearly all the gating — 4 of seed 42's 466 daughter throws had any
+/// workable-ore candidate at all — and the draw was almost decoration. Widen
+/// the scan and that filter dissolves: an *unbounded* ring scan finds ore for
+/// 96% of throws, leaving only `draw < prospectivity` (on a site chosen
+/// **because** it clears [`ORE_CUT`], so firing about half the time) between
+/// an expansion and a mine. Measured, uncapped, on the panel:
+///
+/// ```text
+///                        seed 42   seed 7   seed 1234    pooled
+///   mines                    118       74           8       200
+///   occupations              881      456         891      2228
+///   mine share             13.4%    16.2%        0.9%      9.0%
+///   founding ring: median      5        4         3.5
+///                     max     38       22          14
+/// ```
+///
+/// That is a **different world, not a corrected one**, and the mechanism is
+/// visible in the numbers: a working founded on an ore belt is itself
+/// surrounded by ore, so its own daughters are workings, and the settlement
+/// network migrates onto plate-boundary land — which is where capacity is
+/// low. The pooled occupation count falls 2,799 → 2,228, **-20.4%**. The
+/// agrarian objective is the dominant one and Task 1's finding is that it is
+/// *right* to be (spec §B.2); a working must be a specialisation on top of the
+/// settlement pattern, never a second siting objective that re-sites it.
+///
+/// **THREE INDEPENDENT BOUNDS, AND `3` IS INSIDE ALL OF THEM.**
+///
+/// 1. **Supply, physically.** One hop is ~110 km — this repo's own figure
+///    (`domains/terrain/src/channel.rs`, on the Earth-scale reading; no planet
+///    radius exists in the codebase, so it is the best statement available).
+///    Three rings is ~330 km of supply line, which is already the outer edge
+///    of what §B.3's phrase *"from a parent that supplies it"* can mean. This
+///    is a ceiling, never a target.
+/// 2. **The network, measured.** At reach 3 the pooled occupation count is
+///    2,782 against the one-hop world's 2,799 — **-0.6%**, against the
+///    uncapped scan's -20.4%. The settlement pattern is unmoved; the workings
+///    sit on top of it.
+/// 3. **The objective.** Reach 1 is the state this amendment overturns (one
+///    mine in 1,240 settlements on seed 42). Reach 2 does not move it (three
+///    in 1,230, one in 410). Reach 3 is the first reach at which a player
+///    meets the feature at all.
+///
+/// **Bound 3 is post-unblinding and is recorded as such**, the way spec §E.3
+/// records the amendment itself. The amendment exists *because* the count was
+/// too low to mean anything, so a reach chosen without reference to whether
+/// the feature is present would be answering a different question. What it is
+/// not is a reach tuned to the preregistered acceptance range: at 3 the panel
+/// reads 16 / 19 / 4 mines, which straddles spec §5.1's `6-40` row rather than
+/// sitting inside it, and no reach was tried for its count after this one.
+///
+/// **Nothing else about the working moved with it** (spec §E.5): [`ORE_CUT`]
+/// is untouched, the rate is still the site's own prospectivity, and
+/// [`crate::streams::SETTLEMENT_WORKING`] keeps its key and its epoch — a ring
+/// scan changes which vertex is *chosen*, never how the draw is *derived*.
+/// type-audit: bare-ok(count)
+pub const WORKING_REACH: u32 = 3;
+/// Metres of working **one person at the Neolithic horizon** drives in one
+/// epoch (The Winze, spec §4.2). A working's advance each epoch is
+/// `population × tech_weight(tech) × this`, and the depth on the record is
+/// that sum over the whole tenure.
+///
+/// **Per epoch, not per year**, following this file's own idiom: `GROWTH_RATE`,
+/// `DAUGHTER_PROB` and `STORE_DECAY` are all per-epoch rates and the bake's
+/// step is a world parameter (`BakeConfig::epoch_years`) the epoch loop owns.
+///
+/// **The tech term is [`tech_weight`], not a second table.** That function is
+/// already the engine's word for "what a people can do with the hands and
+/// tools it has" — it is the multiplier on raw population in
+/// [`Bake::strength`] and [`roller_strength`] — and digging is the same
+/// question asked of rock instead of of a neighbour. Minting a
+/// delving-specific horizon table would be a second opinion about the same
+/// thing.
+///
+/// **It is a settlement-wide rate, which is why it looks small.** A mining
+/// camp's population is not a face crew: most of it feeds, hauls, timbers and
+/// smelts. Half a metre per head per epoch at the Neolithic horizon, one and a
+/// half at Classical.
+///
+/// **CHOSEN FOR DYNAMIC RANGE, AND THAT IS AN INSTRUMENT DECISION RATHER THAN
+/// A RESULT ONE.** Nothing in this campaign selects on depth (a Global
+/// Constraint), so this constant cannot bias the survivorship comparison spec
+/// §5.2 preregisters — but it can *erase* it, by putting every delving at the
+/// same depth. Two failure modes bracket it: a rate so slow every working is
+/// centimetres deep, and a rate so fast every working saturates and the
+/// distribution is a spike. It was fixed BEFORE Task 4's hazard exists,
+/// against the tenure and population distributions seed 42 already had —
+/// median tenure 50 years (2 epochs), p90 400 years, median peak population
+/// 14, maximum 84.
+///
+/// **RE-MEASURED AFTER THE RING SCAN, WHICH MOVED THE POPULATION IT DESCRIBES**
+/// (spec amendment E; see [`WORKING_REACH`]). Task 3 read 16 workings over
+/// 8.6 m to 3,632.5 m; the panel now carries 39 over **6.0 m to 3,343.3 m**
+/// (`windows/worldgen/tests/suite/delve_depth.rs` prints the roster). The
+/// constant is unchanged and wanted no second look: nothing about it is
+/// calibrated to the count, and the range is if anything wider in relative
+/// terms.
+///
+/// **What the wider population exposes is a mass point at the floor, and it is
+/// arithmetic rather than saturation.** 15 of the 39 sit on exactly 6.0, 9.0
+/// or 12.0 m — the three values a working that dies in its founding epoch can
+/// take, `DAUGHTER_POP × tech_weight × this` = `8 × {1.5, 2.25, 3.0} × 0.5`.
+/// The other 24 spread from 25.8 m to 3,343.3 m with nothing piling up. So the
+/// distribution spec §5.2 asks about is a floor spike plus a long tail, not a
+/// spike alone — which is the shape a per-epoch accrual over a tenure
+/// distribution with a median of two epochs *should* have, and it is Task 5's
+/// to reckon with rather than this constant's to remove.
+/// type-audit: bare-ok(diagnostic-value)
+const DELVE_M_PER_PERSON_EPOCH: f64 = 0.5;
+/// The mean distance, in metres of working advanced, that a delving cuts
+/// before it breaks through into something and ends (The Winze, spec §4.3).
+/// The breach hazard is its reciprocal, `1 / this` per metre; a working that
+/// cuts `d` metres in an epoch breaches with probability
+/// `1 - exp(-d / this)`.
+///
+/// # The modelling claim
+///
+/// **Digging is dangerous per metre of rock cut, not per year lived.** That
+/// is the whole content of this constant and it is the half worth arguing
+/// about, ahead of the number. A working does not become likelier to break
+/// through by *existing* another century; it becomes likelier by *advancing*.
+/// So the clock the hazard runs on is the face, not the calendar, and the
+/// per-epoch probability above is a function of the metres that epoch cut —
+/// [`Bake::deepen`]'s `population × tech_weight(tech) ×
+/// DELVE_M_PER_PERSON_EPOCH` — and of nothing else.
+///
+/// # Where 3,000 m comes from, and why it is a read-off rather than a fit
+///
+/// `hornvale_terrain::cave_depth::CAVE_REACH_CEILING_M` is 3,000 m: the
+/// declared range of a cave's depth budget, the window spec §4.0 states the
+/// delve ladder covers, and — measured over 30 worlds — a rail that binds on
+/// 0.077% of 48,316 caves. So essentially every void this world places sits
+/// inside the first 3 km of rock, and 3 km is the vertical extent of the
+/// thing a delving can break into at all.
+///
+/// The claim this constant makes is therefore: **a working that cuts through
+/// the entire depth of the world's void-bearing crust has, on average, found
+/// one.** Survival over that whole window is `1/e ≈ 37%`; a working of
+/// ordinary depth (tens of metres) is at well under 1% risk per its whole
+/// life. That is what "a small probability per increment" means here (§4.3).
+///
+/// **The literal is deliberately not `1.0 / hornvale_terrain::…::
+/// CAVE_REACH_CEILING_M`**, and it is the same choice [`ORE_CUT`] makes one
+/// constant above: that value is read *off* `prospectivity`'s composition and
+/// written as a literal, not computed from it. Binding this arithmetic to a
+/// terrain constant would mean a future recalibration of cave depths silently
+/// re-rolls every world's history through a save-format contract, with
+/// nothing at the edit site saying so. The citation belongs in the doc; the
+/// number belongs in the code.
+///
+/// # What it is NOT
+///
+/// **It is not a depth rule, and this is the campaign's Global Constraint.**
+/// Nothing anywhere compares a delving's accumulated depth against a
+/// threshold. Two workings cutting 100 m this epoch face the same hazard
+/// whether one stands at 50 m and the other at 3,000 m; two workings at the
+/// same depth face different hazards if one is cutting harder. The
+/// survivorship shape spec §5.2 preregisters is an *output* of that — among
+/// delvings that end, the breached ones are enriched for having cut more
+/// metres, which is to say for being deeper — and not a selection on depth.
+///
+/// **It was chosen without reference to how many breaches it would produce**
+/// (spec amendment E.4.2, frozen before this code existed). The count is
+/// Task 5's sample-size problem and E.4.2's panel rule is its remedy; picking
+/// a rate to land a convenient count would launder a tuned constant through a
+/// sample-size argument.
+/// type-audit: bare-ok(diagnostic-value)
+const BREACH_FREE_PATH_M: f64 = 3000.0;
 /// How much a unit of stored wealth is worth as raiding strength, relative to
 /// a head of population. Walls, retainers and granaries are strength the local
 /// land does not have to feed.
@@ -1197,6 +1402,22 @@ struct Bake<'a> {
     /// ~0 far from one). Biases all three site-picking paths toward water so
     /// settlements condense near rivers (Task 5b, restoring The Confluence).
     river_prox: &'a VertexMap<f64>,
+    /// Per-vertex mineral prospectivity in `[0, 1]`
+    /// (`GeneratedTerrain::prospectivity_at`) — the **second** siting
+    /// objective, and the only thing a working is scored on (The Winze, spec
+    /// §B.3).
+    ///
+    /// Threaded in rather than read, following `caps_by_era`'s shape, because
+    /// the bake has no terrain: it imports nothing at all from
+    /// `hornvale-terrain`, so `prospectivity_at` is not reachable from in
+    /// here. Built once at the composition root, where terrain and the bake's
+    /// other inputs already meet.
+    ///
+    /// **It biases nothing else.** The agrarian objective is untouched — the
+    /// daughter scan still ranks on river-weighted capacity alone, which is
+    /// the finding Task 1 rests on (settlements are *under*-represented in
+    /// high-ore ground, and that is the model being right).
+    prospectivity: &'a VertexMap<f64>,
     /// Vertices habitable through the glacial maximum (migration preference).
     refugia: &'a VertexMap<bool>,
     /// The world's seed, kept so [`Bake::open`] can derive each community's
@@ -1587,6 +1808,64 @@ impl<'a> Bake<'a> {
         })
     }
 
+    /// The site a **working** would be founded on from `from`: the nearest
+    /// vacant, ore-bearing place within [`WORKING_REACH`] rings of the parent,
+    /// and the richest ore in that ring (The Winze, spec §B.3 as amended by
+    /// §E.2). `None` if nothing inside the bound clears [`ORE_CUT`].
+    ///
+    /// **A ring scan, because the objective sets the radius.** A farm daughter
+    /// spreads to the next field and the next field is next, so one hop is the
+    /// right radius for it. A working is founded *because of where the ore is*,
+    /// so its search radius belongs to the ore rather than to the parent's
+    /// doorstep — which is what the two objectives were sharing when they
+    /// shared a candidate set. [`Bake::best_home`] and [`Bake::nearest_dest`]
+    /// already resolve a destination this way; a working is closer in kind to
+    /// a relocation than to a daughter, because in both a people moves to
+    /// reach something specific rather than spilling into adjacent room.
+    ///
+    /// **Nearest-first, not best-in-range.** The walk stops at the first ring
+    /// that holds anything workable, so a parent works the nearest ore it can
+    /// rather than the richest ore it can see. That is the supply relation
+    /// again — [`WORKING_REACH`] is a bound on how far a parent may reach, not
+    /// a radius it is entitled to search exhaustively — and it is the same
+    /// stopping rule the file's other two nearest-first searches use.
+    ///
+    /// **At `WORKING_REACH == 1` this is byte-identical to the pre-amendment
+    /// one-hop scan**, which is what makes the widening a generalisation
+    /// rather than a rewrite: ring 1 *is* `traversable_neighbors(from)`, the
+    /// filters are the same two, and the comparator is the same. Measured:
+    /// building the panel at reach 1 reproduces Task 2's worlds exactly
+    /// (1 / 13 / 2 mines over 1,240 / 661 / 898 occupations).
+    ///
+    /// Tie-broken by lowest `Vertex` under `f64::total_cmp`, total and
+    /// deterministic, and [`Bake::nearest_ring`] hands each ring over in
+    /// ascending `Vertex` order, so neither discovery order nor edge insertion
+    /// order can reach the result.
+    fn working_site(&self, era: &EraClimate, from: Vertex, pidx: usize) -> Option<Vertex> {
+        let mut ring_no: u32 = 0;
+        self.nearest_ring(from, |ring| {
+            ring_no += 1;
+            if ring_no > WORKING_REACH {
+                // Past the supply bound. `Some(None)` stops the walk with a
+                // verdict of "nothing"; a bare `None` would keep widening.
+                return Some(None);
+            }
+            ring.iter()
+                .copied()
+                .filter(|&n| self.vacant_for(era, n, pidx))
+                .filter(|&n| *self.prospectivity.get(n) >= ORE_CUT)
+                .max_by(|a, b| {
+                    let pa = *self.prospectivity.get(*a);
+                    let pb = *self.prospectivity.get(*b);
+                    // Higher prospectivity wins; among equal, lower Vertex wins
+                    // (treated as "greater" for `max_by`).
+                    pa.total_cmp(&pb).then(b.cmp(a))
+                })
+                .map(Some)
+        })
+        .flatten()
+    }
+
     /// The best home a homeless people can take from `from` — spec §4.3's
     /// **one comparison**, and the whole of the roll-downhill's decision. The
     /// scan walks the era graph outward from `from` (which the people has just
@@ -1957,6 +2236,32 @@ impl<'a> Bake<'a> {
             location,
             spread,
         ))
+    }
+
+    /// The stream one expansion's working/farm decision draws from (The Winze,
+    /// spec §B.3). Keyed on the PARENT's place and the year it throws — the
+    /// vertex, the band, and the epoch year — which is a place in the fixed
+    /// lattice plus a place in time, never a generation ordinal (decision
+    /// 0102). See [`crate::streams::SETTLEMENT_WORKING`] for why the draw sits
+    /// on its own leg rather than on [`Bake::stream`].
+    ///
+    /// The key is unique by construction: at most one live community occupies a
+    /// `(vertex, band)` — the node index's own invariant — and `grow` runs at
+    /// most once per community per epoch, so `(vertex, band, year)` names
+    /// exactly one throw. The year goes through
+    /// [`crate::disposition::occupation_draw_key`], the same reduction the
+    /// other composition-root key that spells a year uses.
+    fn working_stream(&self, site: Vertex, rung: Band, year: f64) -> Stream {
+        let leg = format!(
+            "{}/{}/{}",
+            site.0,
+            crate::chamber::rung_name(rung),
+            crate::disposition::occupation_draw_key(year)
+        );
+        self.seed
+            .derive(crate::streams::SETTLEMENT_WORKING)
+            .derive(StreamLabel::dynamic(&leg))
+            .stream()
     }
 
     /// Whether a **community** takes the initiative at all — spec §4.2a's
@@ -2332,6 +2637,7 @@ impl<'a> Bake<'a> {
                 tongue: None,
                 cause: None,
                 notability: Notability::Common,
+                delve_depth_m: 0.0,
             },
             community: id,
             lineage,
@@ -3029,6 +3335,148 @@ impl<'a> Bake<'a> {
         }
     }
 
+    /// Advance a working by one epoch's digging (The Winze, spec §4.2), and do
+    /// nothing at all for a community that is not one.
+    ///
+    /// **This is the half of "how deep did they get" that the ledger has to
+    /// carry.** The other half — the *seat*, which rung of its column the
+    /// people lives at — is a pure function of `(people, vertex)` through
+    /// [`Bake::seating`] and is deliberately not committed anywhere; see
+    /// [`Community::rung`], whose doc makes that argument, and
+    /// `hornvale_history::record::Occupation::delve_depth_m`, which answers
+    /// it. What accrues here cannot be re-derived from the seed and the
+    /// ledger: the increment reads the community's population and tech horizon
+    /// **as they stand this epoch**, and the ledger keeps only the maximum
+    /// population ever reached and the final horizon, so the trajectory that
+    /// produced the sum is gone once the occupation closes.
+    ///
+    /// **It draws nothing**, and that is deliberate at this task: Task 4's
+    /// breach hazard is the draw, and keeping the depth deterministic means
+    /// this commit adds facts to every world without re-ordering any world's
+    /// history.
+    ///
+    /// **No ceiling.** A working is stopped by the world — famine, a raid, a
+    /// climate eviction, and after Task 4 a breach — never by a depth rule. A
+    /// terminus here would be a threshold in disguise (the campaign's Global
+    /// Constraint) and would flatten exactly the distribution spec §5.2 asks
+    /// about, by piling every long-lived delving onto the same number.
+    ///
+    /// Called from [`Bake::grow`], once per living community per epoch, and
+    /// once more at the moment a working is founded — a shaft is why the camp
+    /// exists, so its first epoch is dug like every later one. `grow` does not
+    /// see a community in the epoch it was opened (the epoch loop steps a
+    /// snapshot taken before any founding), so the two call sites cannot
+    /// double-count.
+    ///
+    /// **Returns the metres cut this epoch**, `0.0` for anything that is not a
+    /// working. That return value is the hazard's clock: [`Bake::maybe_breach`]
+    /// takes it and nothing else, because a delving breaks through by
+    /// *advancing*, never by ageing.
+    fn deepen(&mut self, idx: usize) -> f64 {
+        let (rec, population, tech) = {
+            let c = &self.communities[idx];
+            (c.record, c.population, c.tech)
+        };
+        if self.records[rec].core.function != Function::Mine {
+            return 0.0;
+        }
+        let cut = population * tech_weight(tech) * DELVE_M_PER_PERSON_EPOCH;
+        self.records[rec].core.delve_depth_m += cut;
+        cut
+    }
+
+    /// The campaign's mechanism (The Winze, spec §4.3): `cut` metres of
+    /// working advanced this epoch carry a breach probability of
+    /// `1 - exp(-cut / BREACH_FREE_PATH_M)`, and **a delving that breaches
+    /// stops — and ends**, closing as [`CauseOfEnd::Breached`] by
+    /// [`Ended::Nature`].
+    ///
+    /// # Nothing selects on depth
+    ///
+    /// The only quantity read here is `cut`, the metres this epoch put behind
+    /// the face. The delving's accumulated [`Occupation::delve_depth_m`] is
+    /// never compared against anything, here or anywhere. The survivorship
+    /// shape spec §5.2 asks about is an **output**: a breached delving sits at
+    /// its own maximum because it stopped when it breached, and among the
+    /// delvings that end, the breached ones are the ones that had cut the most
+    /// rock. See [`BREACH_FREE_PATH_M`] for why the hazard's clock is the face
+    /// rather than the calendar, and for the read-off behind the number.
+    ///
+    /// # The fatal increment is kept
+    ///
+    /// [`Bake::deepen`] has already accrued `cut` by the time this runs, so a
+    /// breached working's committed depth **includes the metre that broke
+    /// through**. That is the honest reading of §4.3's "sits at its own
+    /// maximum by construction" — they got that far, and that far is where it
+    /// ended.
+    ///
+    /// # Nothing is named
+    ///
+    /// [`Ended::Nature`], never `Ended::By`. `By` names an agent and the model
+    /// has none to name (spec §4.6); a breach records that a delving broke
+    /// through and stops there. No `thaumic` value is written, no entity is
+    /// minted, and no fact says what came through.
+    ///
+    /// # The draw hangs off its own keyed leg, not the bake stream
+    ///
+    /// [`crate::streams::SETTLEMENT_BREACH`], keyed on the working's own
+    /// `(vertex, band, year)` — the same shape [`Bake::working_stream`] uses,
+    /// and for the reason that label's doc records with a measurement: a
+    /// conditional draw taken sequentially off `history/bake/v3` re-orders
+    /// every world's whole history, so the reshuffle rather than the mechanism
+    /// would be what moved. This draw fires once per living working per epoch,
+    /// far more often than the working draw does, so on the sequential stream
+    /// it would be strictly worse. Off its own leg, consumption order does not
+    /// exist as a concept: each call derives a fresh stream and takes exactly
+    /// one value from it.
+    ///
+    /// The key is unique for the same reason the working leg's is — at most
+    /// one live community occupies a `(vertex, band)`, and a working is
+    /// deepened at most once per epoch — so a `(vertex, band, year)` names
+    /// exactly one increment of digging.
+    ///
+    /// # Callers must not let a close re-order the bake stream
+    ///
+    /// A breach closes a community, and `grow`'s daughter throw one block
+    /// later consumes a `DAUGHTER_PROB` draw from the **sequential** bake
+    /// stream. Returning early from `grow` on a breach would skip that draw
+    /// and re-order every subsequent community's history — the exact failure
+    /// the keyed leg exists to avoid, reintroduced through control flow. So
+    /// `grow` calls this at its END, after the throw: a working that breaks
+    /// through in the same epoch it seeds a daughter does both, and the
+    /// daughter outlives it.
+    fn maybe_breach(&mut self, idx: usize, cut: f64, year: f64) {
+        if cut <= 0.0 {
+            return;
+        }
+        let (site, rung) = {
+            let c = &self.communities[idx];
+            (c.site, c.rung)
+        };
+        let p = 1.0 - hornvale_kernel::math::exp(-cut / BREACH_FREE_PATH_M);
+        if self.breach_stream(site, rung, year).next_f64() < p {
+            self.close(idx, year, CauseOfEnd::Breached, Ended::Nature);
+        }
+    }
+
+    /// The per-increment breach stream: [`crate::streams::SETTLEMENT_BREACH`]
+    /// derived on the working's own `(vertex, band, year)`. The twin of
+    /// [`Bake::working_stream`], spelling its year through the same
+    /// [`crate::disposition::occupation_draw_key`] so the composition root's
+    /// keyed legs all spell a year identically.
+    fn breach_stream(&self, site: Vertex, rung: Band, year: f64) -> Stream {
+        let leg = format!(
+            "{}/{}/{}",
+            site.0,
+            crate::chamber::rung_name(rung),
+            crate::disposition::occupation_draw_key(year)
+        );
+        self.seed
+            .derive(crate::streams::SETTLEMENT_BREACH)
+            .derive(StreamLabel::dynamic(&leg))
+            .stream()
+    }
+
     /// Resolve one community for one epoch (migrate / collapse / grow / raid).
     /// Newly opened communities are processed the following epoch.
     ///
@@ -3592,6 +4040,16 @@ impl<'a> Bake<'a> {
         // T4 removes. Decay above still runs first, keeping its per-epoch
         // meaning unchanged.
         self.touch(idx, year);
+        // One epoch of digging, for a working (The Winze, spec §4.2). Placed
+        // beside `touch` and after the growth term because both turn this
+        // epoch's live state into something the record keeps, and the depth
+        // must be paid at the population the community actually reached this
+        // epoch. Inert for every other function; see [`Bake::deepen`].
+        //
+        // The metres it returns are the breach hazard's clock, and the hazard
+        // is asked at the END of this function rather than here — see the
+        // `maybe_breach` call below for why that placement is load-bearing.
+        let cut = self.deepen(idx);
         self.tally.grew += 1;
 
         if pressure < DAUGHTER_MAX_PRESSURE && self.stream.next_f64() < DAUGHTER_PROB {
@@ -3617,7 +4075,54 @@ impl<'a> Bake<'a> {
                     // (treated as "greater" for `max_by`).
                     sa.total_cmp(&sb).then(b.cmp(a))
                 });
-            if let Some(dest) = dest {
+            // THE SECOND OBJECTIVE (The Winze, spec §B.3). The same expansion,
+            // scored the other way: a WORKING goes to the nearest workable ore
+            // within the parent's supply reach, on `prospectivity` alone — no
+            // capacity, no river term. That single-objective scoring is the
+            // point. A mining camp is a daughter founded on ore rather than on
+            // fertility, from a parent that supplies it, which is what a mining
+            // camp is; the reclassification design this replaced could not work
+            // because the agrarian objective had already put every settlement
+            // where ore is not (spec §B.2, measured by Task 1).
+            //
+            // **The two objectives no longer share a candidate set** (spec
+            // §E.2). The agrarian scan above still ranks the parent's direct
+            // neighbours and nothing about it moved; the working scan walks
+            // outward to [`WORKING_REACH`], because a working is sited by where
+            // the ore is and its radius belongs to what it is looking for. See
+            // [`Bake::working_site`] for the walk and `WORKING_REACH` for why
+            // it is bounded at all.
+            //
+            // The [`ORE_CUT`] filter is doing two jobs in there. It is the
+            // honest one — you do not found a working where there is nothing to
+            // work — and it is also what keeps the tie-break out of the siting:
+            // unfiltered, the argmax is tied on ~a third of candidate sets and
+            // the `Vertex` tie-break would silently be the rule. See
+            // `ORE_CUT`'s own doc for the measurement.
+            let working_dest = self.working_site(era, site, dpidx);
+            // Is this expansion a working? A rate, and the rate is the ore
+            // itself: `prospectivity` is documented by its own author as a
+            // probability ("here it is a probability" —
+            // `hornvale_terrain::lithology::prospectivity`), so the chance an
+            // expansion onto a given site is dug rather than farmed is how
+            // promising that site is. Richer ground is worked more often, and
+            // the campaign mints no free constant to say so.
+            //
+            // **NOT A DRAW ON `Bake::stream`.** It hangs off its own keyed leg
+            // ([`crate::streams::SETTLEMENT_WORKING`]), so it consumes nothing
+            // from the bake's sequential epoch-dynamics stream and a world
+            // moves only where a working is actually founded. That label's own
+            // doc carries the measurement that decided it — on the sequential
+            // stream, ~all of the world change was the re-ordering and ~none of
+            // it was the mines.
+            let working = working_dest
+                .filter(|&w| {
+                    self.working_stream(site, self.communities[idx].rung, year)
+                        .next_f64()
+                        < *self.prospectivity.get(w)
+                })
+                .map(|w| (w, Function::Mine));
+            if let Some((dest, function)) = working.or(dest.map(|d| (d, Function::Agrarian))) {
                 let (people, lineage, offset) = {
                     let c = &self.communities[idx];
                     (self.records[c.record].core.people, c.lineage, c.tech_offset)
@@ -3631,10 +4136,60 @@ impl<'a> Bake<'a> {
                     Some(lineage),
                     offset,
                 );
+                // [`Bake::open`] opens every community `Agrarian` — the
+                // engine's default and, before this campaign, its only
+                // reachable value. A working overwrites it here, at the one
+                // site that founds one, rather than by widening `open`'s
+                // already-eight-argument signature for the ~40 call sites that
+                // never found anything but a farm.
+                if function != Function::Agrarian {
+                    let record = self.communities[new_idx].record;
+                    self.records[record].core.function = function;
+                }
                 self.touch(new_idx, year);
+                // THE FOUNDING EPOCH IS DUG TOO (The Winze, spec §4.2). A
+                // working is not a settlement that later took up mining — the
+                // shaft is why the camp is here at all — so the epoch it is
+                // sunk in counts like every later one. Must come after
+                // `touch`, which is what fixes the new community's tech
+                // horizon, and after the `function` assignment above, which is
+                // the only thing that makes [`Bake::deepen`] non-inert.
+                //
+                // It also matters that this exists rather than leaving the
+                // first epoch to `grow`: a working founded in the bake's LAST
+                // epoch is never stepped again, and seed 42's only mine is
+                // exactly that case. Without this line it would carry a depth
+                // of zero, emit no fact, and leave the world unmoved — which
+                // the plan's own Step 6 reads as evidence the field never
+                // reached the ledger.
+                //
+                // AND THE FOUNDING EPOCH CAN BREACH, for the same reason: the
+                // first epoch of cutting is cutting. Closing `new_idx` here is
+                // safe where closing `idx` would not be — nothing below this
+                // line reads the new community, and nothing below it draws
+                // from the sequential bake stream, so a breach at a founding
+                // cannot re-order any world. The record keeps its tenure of
+                // zero years honestly: they sank the shaft and broke through
+                // in the same epoch.
+                let founding_cut = self.deepen(new_idx);
+                self.maybe_breach(new_idx, founding_cut, year);
                 self.tally.founded += 1;
             }
         }
+        // THE HAZARD, ASKED LAST (The Winze, spec §4.3). Its placement is
+        // load-bearing rather than tidy: the `DAUGHTER_PROB` test above draws
+        // from `self.stream`, the bake's SEQUENTIAL epoch-dynamics stream, and
+        // a breach that returned early from `grow` would skip that draw and
+        // re-order every subsequent community's history — turning a mechanism
+        // about delving into a world-wide reshuffle, which is precisely what
+        // `streams::SETTLEMENT_WORKING`'s measurement talks this campaign out
+        // of. Asked here, a breach consumes nothing from that stream and
+        // changes nothing about who throws a daughter.
+        //
+        // `cut` is `0.0` for every community that is not a working, and
+        // [`Bake::maybe_breach`] returns immediately on that, so this line is
+        // inert for all but a few dozen occupations in a world.
+        self.maybe_breach(idx, cut, year);
     }
 }
 
@@ -3645,9 +4200,12 @@ impl<'a> Bake<'a> {
 /// displacement-fires invariant.
 /// `caps` carries one headcount-capacity field per entry of `peoples`, **in the
 /// same order** — the alignment is the caller's contract and is asserted below.
+/// `prospectivity` is the ore field the working objective scores on (The
+/// Winze, spec §B.3) — one value per vertex, species-blind, because ore is a
+/// property of the ground rather than of the pairing.
 /// There is no longer a species-blind capacity field: every site that once read
 /// one now asks the question per-people, including genesis siting.
-/// type-audit: bare-ok(ratio: river_prox), bare-ok(flag: refugia)
+/// type-audit: bare-ok(ratio: river_prox), bare-ok(ratio: prospectivity), bare-ok(flag: refugia)
 // The bake reads several independent composition-root fields (geo, capacity,
 // river proximity, era series, refugia, roster, span); each is a distinct
 // world input with no coherent grouping into a single struct, so they stay
@@ -3659,6 +4217,7 @@ pub fn bake(
     biomes: &VertexMap<hornvale_culture::BiomeClass>,
     caps_by_era: &[Vec<hornvale_kernel::ecology::CapacityMap>],
     river_prox: &VertexMap<f64>,
+    prospectivity: &VertexMap<f64>,
     eras: &[EraClimate],
     refugia: &VertexMap<bool>,
     peoples: &[KindId],
@@ -3700,6 +4259,7 @@ pub fn bake(
         peoples,
         seating,
         river_prox,
+        prospectivity,
         refugia,
         seed,
         disposition: &cfg.disposition,
@@ -3885,6 +4445,125 @@ mod tests {
     use hornvale_topology::{ConnectionGraph, Edge, EdgeKind};
     use std::cmp::Ordering;
 
+    /// **The supply bound, asserted in the unit the siting actually works in**
+    /// (The Winze, spec §E.2). [`Bake::working_site`] walks the era graph
+    /// outward and must stop at [`WORKING_REACH`] rings: ore one ring further
+    /// out is not a site a parent may found a working on.
+    ///
+    /// Asserted here rather than over a built world's ledger because the bound
+    /// is a property of the ERA GRAPH, and the graph is not a subgraph of the
+    /// geosphere adjacency — a `WaterRoute` edge crosses up to twenty vertices
+    /// of ocean in one hop (`graph_derive::add_water_routes`), so a ledger read
+    /// measures a different distance than the walk did. See
+    /// `windows/worldgen/tests/suite/mines_exist.rs` for the consequence that
+    /// IS observable from a world.
+    ///
+    /// Both directions, and the fixture asserts its own preconditions so the
+    /// test cannot pass by quantifying over nothing: a vertex must exist at
+    /// exactly `WORKING_REACH` rings and at exactly `WORKING_REACH + 1`.
+    #[test]
+    fn working_site_never_reaches_past_the_supply_bound() {
+        use hornvale_kernel::ReferenceElevation;
+        let geo = Geosphere::new(1);
+        let graphs = vec![full_land_graph(&geo)];
+        let river_prox = VertexMap::from_fn(&geo, |_| 0.0);
+        let refugia = VertexMap::from_fn(&geo, |_| false);
+        let caps = caps_from_fn(&geo, |_| 100.0);
+        let era = EraClimate {
+            day: 0.0,
+            ice: VertexMap::from_fn(&geo, |_| false),
+            habitable: VertexMap::from_fn(&geo, |_| true),
+            sea_level: ReferenceElevation::new(0.0).unwrap(),
+            ice_fraction: 0.0,
+        };
+        let from = Vertex(0);
+
+        // Ring membership over the SAME graph the walk uses, computed here by
+        // hand so the fixture does not borrow the code under test to build its
+        // own expectation.
+        let mut depth_of: BTreeMap<Vertex, u32> = BTreeMap::new();
+        depth_of.insert(from, 0);
+        let mut frontier = vec![from];
+        let mut depth = 0;
+        while !frontier.is_empty() {
+            depth += 1;
+            let mut next = Vec::new();
+            for c in frontier {
+                for n in traversable_neighbors(&graphs[0], c) {
+                    if let std::collections::btree_map::Entry::Vacant(e) = depth_of.entry(n) {
+                        e.insert(depth);
+                        next.push(n);
+                    }
+                }
+            }
+            frontier = next;
+        }
+        let at = |d: u32| -> Vertex {
+            depth_of
+                .iter()
+                .find(|&(_, &dd)| dd == d)
+                .map(|(&v, _)| v)
+                .unwrap_or_else(|| panic!("the fixture globe has no vertex at ring {d}"))
+        };
+        let inside = at(WORKING_REACH);
+        let outside = at(WORKING_REACH + 1);
+
+        // One ore-bearing vertex at a time, so the answer names the ring.
+        let ore_at = |v: Vertex| VertexMap::from_fn(&geo, |x| if x == v { 1.0 } else { 0.0 });
+        let run = |field: &VertexMap<f64>| {
+            let bake = Bake {
+                geo: fixture_geo(),
+                biomes: grassland_biomes(),
+                graphs: &graphs,
+                cur_graph: 0,
+                caps_by_era: &caps,
+                peoples: all_settlers(),
+                river_prox: &river_prox,
+                prospectivity: field,
+                refugia: &refugia,
+                seed: Seed(1),
+                disposition: no_disposition(),
+                disposition_spread: no_spread(),
+                in_group_radius: no_radius(),
+                time_horizon: strips_to_the_floor(),
+                seating: surface_seating(),
+                records: Vec::new(),
+                communities: Vec::new(),
+                node_index: BTreeMap::new(),
+                next_id: 1,
+                stream: Seed(1).derive(hornvale_history::streams::BAKE).stream(),
+                tribute: BTreeMap::new(),
+                epoch_growth: Vec::new(),
+                tally: BakeCensus::default(),
+            };
+            bake.working_site(&era, from, 0)
+        };
+
+        assert_eq!(
+            run(&ore_at(inside)),
+            Some(inside),
+            "ore at exactly WORKING_REACH ({WORKING_REACH}) rings must be \
+             workable — otherwise the bound is off by one in the tight direction \
+             and the ring scan is narrower than it claims."
+        );
+        assert_eq!(
+            run(&ore_at(outside)),
+            None,
+            "ore at WORKING_REACH + 1 ({}) rings was chosen as a working site. \
+             The walk is not stopping at the supply bound, and spec §B.3's \
+             \"from a parent that supplies it\" has nothing holding it.",
+            WORKING_REACH + 1,
+        );
+        // The negative arm must fail for the RIGHT reason: with no ore
+        // anywhere the answer is also `None`, so without this the assertion
+        // above would pass on a `working_site` that never returns anything.
+        assert_eq!(
+            run(&VertexMap::from_fn(&geo, |_| 0.0)),
+            None,
+            "a barren globe must yield no working site"
+        );
+    }
+
     #[test]
     fn traversable_neighbors_excludes_ocean_includes_lanes() {
         let mut g = ConnectionGraph::new(4);
@@ -4039,6 +4718,7 @@ mod tests {
             caps_by_era: &caps,
             peoples: all_settlers(),
             river_prox: &river_prox,
+            prospectivity: barren_ground(),
             refugia: &refugia,
             seed: Seed(1),
             disposition: no_disposition(),
@@ -4180,6 +4860,7 @@ mod tests {
             caps_by_era: &caps,
             peoples: all_settlers(),
             river_prox: &river_prox,
+            prospectivity: barren_ground(),
             refugia: &refugia,
             seed: Seed(1),
             disposition: no_disposition(),
@@ -4521,6 +5202,7 @@ mod tests {
             caps_by_era: caps,
             peoples: all_settlers(),
             river_prox,
+            prospectivity: barren_ground(),
             refugia,
             seed: Seed(1),
             disposition,
@@ -4574,6 +5256,23 @@ mod tests {
         B.get_or_init(|| {
             let geo = Geosphere::new(1);
             VertexMap::from_fn(&geo, |_| hornvale_culture::BiomeClass::Grassland)
+        })
+    }
+
+    /// The prospectivity field a hand-built [`Bake`] is given: every vertex at
+    /// `0.0`, which is below [`ORE_CUT`] everywhere. No candidate ever
+    /// qualifies as a working, so the ore objective never fires and the
+    /// pre-Winze siting is exactly what these fixtures still see — including
+    /// the draw, which is taken only inside the ore filter.
+    ///
+    /// Deliberately not the real field's own floor (`0.06`): a fixture that
+    /// happened to sit at the floor would read as "ore, just not much", and
+    /// what is meant here is "this fixture is not about ore".
+    fn barren_ground() -> &'static VertexMap<f64> {
+        static P: std::sync::OnceLock<VertexMap<f64>> = std::sync::OnceLock::new();
+        P.get_or_init(|| {
+            let geo = Geosphere::new(1);
+            VertexMap::from_fn(&geo, |_| 0.0)
         })
     }
 
@@ -4666,6 +5365,7 @@ mod tests {
             caps_by_era: &capacity,
             peoples: all_settlers(),
             river_prox: &river_prox,
+            prospectivity: barren_ground(),
             refugia: &refugia,
             seed: Seed(1),
             disposition: no_disposition(),

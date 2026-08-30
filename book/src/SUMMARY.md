@@ -426,6 +426,7 @@
 - [The Rail](./chronicle/the-rail.md)
 - [The Quoin](./chronicle/the-quoin.md)
 - [The Gallery](./chronicle/the-gallery.md)
+- [The Winze](./chronicle/the-winze.md)
 - [The Lodestar](./chronicle/the-lodestar.md)
 - [The Overture](./chronicle/the-overture.md)
 - [The Chattel](./chronicle/the-chattel.md)

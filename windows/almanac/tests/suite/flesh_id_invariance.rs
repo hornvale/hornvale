@@ -57,6 +57,7 @@ fn cause_label(c: CauseOfEnd) -> &'static str {
         CauseOfEnd::Plague => "plague",
         CauseOfEnd::Fled => "fled",
         CauseOfEnd::Migrated => "migrated",
+        CauseOfEnd::Breached => "breached",
     }
 }
 
@@ -155,6 +156,7 @@ fn dead_core() -> Occupation {
         tongue: None,
         cause: Some(CauseOfEnd::Famine),
         notability: Notability::Seat,
+        delve_depth_m: 0.0,
     }
 }
 

@@ -2406,6 +2406,11 @@ measured here.
 | 2026-08-23T00:22:49Z | sluice:artifacts | 63.356 | 551.152 | 22.514 | 9.05 | 0 | 0fb0ed542 |  | lefford | 40 |
 | 2026-08-23T00:23:24Z | sluice:outboard | 35.438 | 22.311 | 36.456 | 1.66 | 0 | ca1fed0ee |  | lefford | 40 |
 | 2026-08-23T00:29:18Z | sluice:gate | 353.502 | 9900.150 | 340.750 | 28.97 | 0 | 7f391d318 |  | lefford | 40 |
+| 2026-08-23T01:29:54Z | rebaseline | 107.541 | 232.833 | 10.485 | 2.26 | 0 | f6fd6b0aa | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-23T01:30:10Z | gate-commit | 8.298 | 22.592 | 3.935 | 3.20 | 0 | f6fd6b0aa | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-23T01:33:28Z | gate-commit | 88.076 | 517.499 | 33.021 | 6.25 | 0 | f6fd6b0aa | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-23T01:35:21Z | gate-commit | 23.276 | 51.239 | 11.484 | 2.69 | 0 | f6fd6b0aa | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-23T01:36:07Z | gate-commit | 22.919 | 50.998 | 11.601 | 2.73 | 0 | f6fd6b0aa | campaign/the-winze | MacBookPro | 10 |
 | 2026-08-23T01:11:00Z | gate-commit | 135.944 | 2441.801 | 207.000 | 19.48 | 0 | 77f2551d5 | fix/sluice-mouth-before-box | lefford | 40 |
 | 2026-08-23T01:26:59Z | sluice:artifacts | 120.906 | 1056.905 | 49.047 | 9.15 | 0 | 3638f50f0 |  | lefford | 40 |
 | 2026-08-23T01:27:36Z | sluice:outboard | 36.724 | 22.929 | 37.083 | 1.63 | 0 | abc9594e3 |  | lefford | 40 |
@@ -2453,6 +2458,10 @@ measured here.
 | 2026-08-23T02:49:55Z | sluice:outboard | 37.454 | 23.240 | 38.057 | 1.64 | 0 | 90b3bccf3 |  | lefford | 40 |
 | 2026-08-23T02:56:14Z | sluice:gate | 378.924 | 10388.836 | 412.945 | 28.51 | 0 | 9a0cad4bf |  | lefford | 40 |
 | 2026-08-23T03:03:26Z | sluice:clients | 431.258 | 1500.872 | 39.941 | 3.57 | 0 | 32c1ea555 |  | lefford | 40 |
+| 2026-08-23T11:18:21Z | rebaseline | 78.808 | 237.968 | 12.758 | 3.18 | 0 | 1f8e96224 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-23T11:19:50Z | gate-commit | 82.260 | 511.614 | 44.604 | 6.76 | 0 | 1f8e96224 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-23T11:37:58Z | gate-commit | 27.040 | 69.023 | 28.528 | 3.61 | 0 | ec57272f9 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-23T11:38:41Z | gate-commit | 18.304 | 46.016 | 11.738 | 3.16 | 0 | ec57272f9 | campaign/the-winze | MacBookPro | 10 |
 | 2026-08-23T03:07:27Z | gate-commit | 90.119 | 497.484 | 62.019 | 6.21 | 0 | 162db1bbe | campaign/the-deed | MacBookPro | 10 |
 | 2026-08-23T11:47:02Z | sluice:artifacts | 62.369 | 551.361 | 22.706 | 9.20 | 0 | e16563b61 |  | lefford | 40 |
 | 2026-08-23T11:47:42Z | sluice:outboard | 39.047 | 23.975 | 37.796 | 1.58 | 0 | eb2e74a20 |  | lefford | 40 |
@@ -2832,6 +2841,10 @@ measured here.
 | 2026-08-24T13:19:24Z | sluice:outboard | 39.476 | 23.297 | 32.213 | 1.41 | 0 | b48505c47 |  | lefford | 40 |
 | 2026-08-24T13:26:34Z | sluice:gate | 429.438 | 11612.714 | 492.426 | 28.19 | 0 | 5220517ee |  | lefford | 40 |
 | 2026-08-24T13:33:38Z | sluice:clients | 423.516 | 4108.800 | 61.388 | 9.85 | 0 | 0b0fb182f |  | lefford | 40 |
+| 2026-08-24T14:50:13Z | gate-commit | 74.312 | 434.819 | 45.088 | 6.46 | 0 | 9552b3e4d | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-24T14:51:20Z | gate-commit | 19.667 | 47.200 | 11.873 | 3.00 | 0 | 9552b3e4d | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-24T14:52:04Z | gate-commit | 19.736 | 47.193 | 12.001 | 3.00 | 0 | 9552b3e4d | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-24T15:48:42Z | gate-commit | 24.863 | 48.408 | 12.659 | 2.46 | 0 | dd7768d3e | campaign/the-winze | MacBookPro | 10 |
 | 2026-08-24T15:32:34Z | gate-commit | 109.820 | 610.082 | 47.207 | 5.99 | 0 | 8db07eeb6 | campaign/the-confidant | MacBookPro | 10 |
 | 2026-08-24T15:36:45Z | gate-commit | 19.185 | 46.732 | 11.904 | 3.06 | 0 | 8db07eeb6 | campaign/the-confidant | MacBookPro | 10 |
 | 2026-08-24T16:01:03Z | gate-commit | 11.478 | 11.176 | 0.227 | 0.99 | 0 | 3eee6e59a | campaign/the-confidant | MacBookPro | 10 |
@@ -4126,6 +4139,49 @@ measured here.
 | 2026-08-29T15:37:37Z | sluice:outboard | 40.824 | 25.454 | 39.109 | 1.58 | 0 | 201463eb3 |  | lefford | 40 |
 | 2026-08-29T15:45:19Z | sluice:gate | 460.823 | 13494.370 | 422.082 | 30.20 | 0 | 24ce47001 |  | lefford | 40 |
 | 2026-08-29T15:53:58Z | sluice:clients | 519.061 | 9529.005 | 94.156 | 18.54 | 0 | 24a2aee7f |  | lefford | 40 |
+| 2026-08-29T22:33:47Z | rebaseline | 86.451 | 270.198 | 12.626 | 3.27 | 0 | fc41e9459 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-29T23:35:03Z | gate-commit | 20.171 | 51.830 | 13.550 | 3.24 | 0 | fc41e9459 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-29T23:35:40Z | gate-commit | 23.726 | 27.033 | 7.281 | 1.45 | 0 | fc41e9459 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-29T23:36:26Z | gate-commit | 36.201 | 69.462 | 31.092 | 2.78 | 0 | fc41e9459 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-29T23:41:39Z | gate-commit | 28.795 | 53.052 | 14.290 | 2.34 | 0 | fc41e9459 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T00:22:44Z | rebaseline | 80.770 | 272.938 | 12.311 | 3.53 | 0 | 2a9cecc88 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T00:25:16Z | gate-commit | 45.272 | 72.740 | 21.560 | 2.08 | 0 | 2a9cecc88 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T00:27:29Z | gate-commit | 34.624 | 55.028 | 14.130 | 2.00 | 0 | 2a9cecc88 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T01:00:13Z | rebaseline | 103.318 | 270.519 | 12.964 | 2.74 | 0 | 2a8a05b86 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T02:21:36Z | rebaseline | 55.025 | 267.738 | 12.675 | 5.10 | 0 | 2a8a05b86 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T02:22:24Z | gate-commit | 30.189 | 64.649 | 21.037 | 2.84 | 0 | 2a8a05b86 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T02:23:38Z | gate-commit | 21.217 | 50.921 | 13.152 | 3.02 | 0 | 2a8a05b86 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T02:49:07Z | rebaseline | 103.472 | 299.485 | 12.644 | 3.02 | 0 | 1d84a5790 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T02:53:42Z | rebaseline | 179.297 | 277.259 | 12.654 | 1.62 | 0 | 1d84a5790 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T02:55:53Z | rebaseline | 98.935 | 271.005 | 13.268 | 2.87 | 0 | 1d84a5790 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T03:56:03Z | gate-commit | 7.804 | 13.526 | 8.961 | 2.88 | 0 | 1d84a5790 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T03:57:03Z | gate-commit | 31.631 | 101.900 | 15.606 | 3.71 | 0 | 1d84a5790 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T03:58:51Z | gate-commit | 20.680 | 50.605 | 13.220 | 3.09 | 0 | 1d84a5790 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T04:19:41Z | rebaseline | 52.991 | 273.240 | 13.914 | 5.42 | 0 | 5db7beb5d | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T04:20:18Z | gate-commit | 29.695 | 105.469 | 14.610 | 4.04 | 0 | 5db7beb5d | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T04:21:41Z | gate-commit | 20.578 | 50.476 | 13.067 | 3.09 | 0 | 5db7beb5d | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T04:42:42Z | rebaseline | 57.634 | 274.596 | 13.840 | 5.00 | 0 | 8ea840940 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T04:43:27Z | gate-commit | 34.802 | 106.955 | 30.107 | 3.94 | 0 | 8ea840940 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T04:54:21Z | gate-commit | 26.560 | 64.207 | 22.589 | 3.27 | 0 | 8ea840940 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T04:55:42Z | gate-commit | 20.498 | 50.442 | 13.065 | 3.10 | 0 | 8ea840940 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T05:11:49Z | quick | 8.165 | 15.808 | 9.192 | 3.06 | 0 | d93daf4ee | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T05:12:52Z | quick | 24.584 | 40.064 | 22.044 | 2.53 | 0 | d93daf4ee | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T05:17:35Z | rebaseline | 61.431 | 274.949 | 14.535 | 4.71 | 0 | d93daf4ee | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T05:30:16Z | gate-commit | 29.195 | 102.656 | 11.241 | 3.90 | 0 | d93daf4ee | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T05:32:10Z | gate-commit | 16.227 | 27.385 | 5.416 | 2.02 | 0 | d93daf4ee | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T05:33:35Z | gate-commit | 3.730 | 3.960 | 0.393 | 1.17 | 0 | d93daf4ee | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T05:36:36Z | gate-commit | 22.531 | 54.074 | 14.479 | 3.04 | 0 | d93daf4ee | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T05:37:49Z | gate-commit | 29.447 | 105.636 | 11.329 | 3.97 | 0 | c65b8b230 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T12:32:47Z | rebaseline | 69.286 | 273.162 | 13.980 | 4.14 | 0 | c65b8b230 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T12:37:28Z | gate-commit | 51.565 | 58.782 | 14.921 | 1.43 | 0 | c65b8b230 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T12:40:10Z | gate-commit | 31.718 | 54.887 | 13.294 | 2.15 | 0 | c65b8b230 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T12:46:40Z | gate-commit | 32.789 | 54.432 | 13.556 | 2.07 | 0 | c65b8b230 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T12:49:18Z | gate-commit | 30.955 | 54.803 | 13.418 | 2.20 | 0 | 916877518 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T12:53:02Z | gate-commit | 31.446 | 54.895 | 13.836 | 2.19 | 0 | 916877518 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T13:12:10Z | gate-commit | 20.770 | 50.204 | 12.566 | 3.02 | 0 | bba2be3ef | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T13:13:01Z | rebaseline | 42.782 | 272.357 | 13.972 | 6.69 | 0 | bba2be3ef | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T13:16:25Z | gate-commit | 32.704 | 88.663 | 14.525 | 3.16 | 0 | bba2be3ef | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T13:20:33Z | gate-commit | 20.898 | 50.396 | 13.092 | 3.04 | 0 | bba2be3ef | campaign/the-winze | MacBookPro | 10 |
 | 2026-08-29T21:30:56Z | prewarm | 205.239 | 1181.148 | 42.001 | 5.96 | 0 | 6f121ac07 | campaign/the-quoin | MacBookPro | 10 |
 | 2026-08-29T22:44:31Z | gate-commit | 67.180 | 69.539 | 24.017 | 1.39 | 0 | b7f0d21b6 | campaign/the-quoin | MacBookPro | 10 |
 | 2026-08-29T22:46:05Z | gate-commit | 59.222 | 55.865 | 14.435 | 1.19 | 0 | b7f0d21b6 | campaign/the-quoin | MacBookPro | 10 |
@@ -4241,6 +4297,13 @@ measured here.
 | 2026-08-30T12:45:09Z | sluice:gate | 520.193 | 14854.890 | 547.858 | 29.61 | 0 | 3b625646d |  | lefford | 40 |
 | 2026-08-30T12:54:26Z | sluice:clients | 556.258 | 10118.471 | 140.422 | 18.44 | 0 | 083b9a6db |  | lefford | 40 |
 | 2026-08-30T13:02:09Z | sluice:heavy | 462.392 | 9682.026 | 153.761 | 21.27 | 0 | 5c1712ee8 |  | lefford | 40 |
+| 2026-08-30T13:29:24Z | gate-commit | 111.679 | 561.758 | 55.485 | 5.53 | 0 | e2e03f957 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T13:16:51Z | census | 853.214 | 27298.332 | 265.794 | 32.31 | 0 | bba2be3ef |  | lefford | 40 |
+| 2026-08-30T14:10:01Z | gate-commit | 7.509 | 5.920 | 1.557 | 1.00 | 0 | f474fd011 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T14:10:29Z | gate-commit | 19.937 | 32.661 | 8.115 | 2.05 | 0 | f474fd011 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T14:18:33Z | gate-commit | 26.047 | 30.896 | 5.893 | 1.41 | 0 | f474fd011 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T15:26:01Z | gate-commit | 30.204 | 53.588 | 13.697 | 2.23 | 0 | f474fd011 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T15:40:09Z | gate-commit | 41.409 | 56.729 | 14.461 | 1.72 | 0 | f474fd011 | campaign/the-winze | MacBookPro | 10 |
 | 2026-08-30T13:30:33Z | gate-commit | 22.274 | 51.740 | 13.350 | 2.92 | 0 | c41c9753a | fix/the-quoin-close-sweep | MacBookPro | 10 |
 | 2026-08-30T13:33:21Z | sluice:artifacts | 68.506 | 631.188 | 22.430 | 9.54 | 0 | 80c4efc46 |  | lefford | 40 |
 | 2026-08-30T13:34:03Z | sluice:outboard | 41.103 | 26.054 | 39.252 | 1.59 | 0 | 247928279 |  | lefford | 40 |
@@ -4253,6 +4316,10 @@ measured here.
 | 2026-08-30T15:12:05Z | sluice:gate | 469.603 | 13586.927 | 456.049 | 29.90 | 0 | bb13856e3 |  | lefford | 40 |
 | 2026-08-30T15:20:39Z | sluice:clients | 512.885 | 9863.714 | 106.644 | 19.44 | 0 | 762c42e09 |  | lefford | 40 |
 | 2026-08-30T15:28:16Z | sluice:heavy | 456.862 | 9591.172 | 160.268 | 21.34 | 0 | 2ff6f2851 |  | lefford | 40 |
+| 2026-08-30T16:15:47Z | gate-commit | 37.518 | 106.018 | 25.640 | 3.51 | 0 | d98d6678b | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T16:17:04Z | rebaseline | 64.559 | 275.787 | 13.066 | 4.47 | 0 | d98d6678b | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T16:19:36Z | gate-commit | 26.126 | 53.467 | 13.606 | 2.57 | 0 | d98d6678b | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T16:21:13Z | gate-commit | 28.221 | 55.168 | 13.440 | 2.43 | 0 | 55cf217f7 | campaign/the-winze | MacBookPro | 10 |
 | 2026-08-30T16:35:47Z | gate-commit | 104.963 | 538.341 | 77.607 | 5.87 | 0 | 983103106 | campaign/the-chattel | MacBookPro | 10 |
 | 2026-08-30T16:36:49Z | rebaseline | 60.942 | 276.537 | 13.225 | 4.75 | 0 | ce5692e57 | campaign/the-chattel | MacBookPro | 10 |
 | 2026-08-30T16:38:54Z | rebaseline | 43.010 | 274.796 | 14.206 | 6.72 | 0 | dfa8fcf3a | campaign/the-chattel | MacBookPro | 10 |
@@ -4266,6 +4333,11 @@ measured here.
 | 2026-08-30T16:26:36Z | sluice:gate | 466.602 | 13561.788 | 432.292 | 29.99 | 0 | 2c6b0ea9f |  | lefford | 40 |
 | 2026-08-30T16:35:33Z | sluice:clients | 536.141 | 9717.426 | 123.684 | 18.36 | 0 | 3588e1a39 |  | lefford | 40 |
 | 2026-08-30T16:43:14Z | sluice:heavy | 461.171 | 9652.581 | 153.445 | 21.26 | 0 | e3513454d |  | lefford | 40 |
+| 2026-08-30T16:46:09Z | gate-commit | 36.772 | 110.997 | 18.005 | 3.51 | 0 | 102b9f173 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T17:47:46Z | gate-commit | 39.134 | 78.932 | 41.645 | 3.08 | 0 | a4e4e68f2 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T17:48:38Z | gate-commit | 25.224 | 52.338 | 13.661 | 2.62 | 0 | a4e4e68f2 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T18:08:53Z | gate-commit | 23.132 | 52.744 | 13.629 | 2.87 | 0 | c1488c0b0 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T18:13:59Z | gate-commit | 46.238 | 59.289 | 15.450 | 1.62 | 0 | c1488c0b0 | campaign/the-winze | MacBookPro | 10 |
 | 2026-08-30T17:22:27Z | prewarm | 57.587 | 392.668 | 15.192 | 7.08 | 0 | cd6547134 | campaign/the-repertory | MacBookPro | 10 |
 | 2026-08-30T17:46:56Z | gate-commit | 24.683 | 56.869 | 12.076 | 2.79 | 0 | 4a0944249 | campaign/the-repertory | MacBookPro | 10 |
 | 2026-08-30T17:47:40Z | gate-commit | 26.175 | 46.915 | 12.308 | 2.26 | 0 | 4a0944249 | campaign/the-repertory | MacBookPro | 10 |
@@ -4286,6 +4358,10 @@ measured here.
 | 2026-08-30T18:35:45Z | gate-commit | 114.750 | 345.959 | 81.563 | 3.73 | 0 | 1c9d4e2ce | campaign/the-gleaning | MacBookPro | 10 |
 | 2026-08-30T18:37:09Z | rebaseline | 78.876 | 279.198 | 15.548 | 3.74 | 0 | 1c9d4e2ce | campaign/the-gleaning | MacBookPro | 10 |
 | 2026-08-30T18:38:17Z | gate-commit | 21.999 | 52.363 | 13.868 | 3.01 | 0 | 1c9d4e2ce | campaign/the-gleaning | MacBookPro | 10 |
+| 2026-08-30T18:17:40Z | rebaseline | 107.485 | 318.837 | 15.842 | 3.11 | 0 | 76ecbbb44 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T18:23:38Z | gate-commit | 116.937 | 406.608 | 65.092 | 4.03 | 0 | 76ecbbb44 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T19:39:54Z | gate-commit | 25.533 | 55.074 | 14.359 | 2.72 | 0 | 18782ec34 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T19:40:17Z | gate-commit | 22.797 | 52.767 | 13.879 | 2.92 | 0 | 18782ec34 | campaign/the-winze | MacBookPro | 10 |
 | 2026-08-30T17:29:53Z | gate-commit | 93.003 | 64.191 | 33.392 | 1.05 | 0 | cd6547134 | campaign/the-lodestar | ambrose | 12 |
 | 2026-08-30T17:31:33Z | gate-commit | 82.556 | 53.987 | 26.731 | 0.98 | 0 | cd6547134 | campaign/the-lodestar | ambrose | 12 |
 | 2026-08-30T17:34:38Z | gate-commit | 86.487 | 54.501 | 26.862 | 0.94 | 0 | 51f7a5953 | campaign/the-lodestar | ambrose | 12 |
@@ -4313,3 +4389,4 @@ measured here.
 | 2026-08-30T19:48:38Z | sluice:gate | 531.131 | 15275.926 | 539.978 | 29.78 | 0 | c2ddda095 |  | lefford | 40 |
 | 2026-08-30T19:57:30Z | sluice:clients | 531.663 | 9785.229 | 121.078 | 18.63 | 0 | 5083c28cd |  | lefford | 40 |
 | 2026-08-30T20:05:08Z | sluice:heavy | 457.596 | 9709.951 | 171.645 | 21.59 | 0 | 21ff2637d |  | lefford | 40 |
+| 2026-08-30T19:41:25Z | gate-commit | 41.357 | 147.058 | 26.425 | 4.19 | 0 | 9eccdaf6d | campaign/the-winze | MacBookPro | 10 |

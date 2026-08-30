@@ -1,0 +1,1089 @@
+# The Winze — design
+
+*A winze is a shaft driven downward from inside a working. It is the part of a
+mine that goes looking.*
+
+**Status:** spec, awaiting G3.
+**Autopilot:** engaged. Ledger at `.superpowers/sdd/decision-ledger.md`.
+**Sibling:** supersedes the mechanism of **The Planes**, whose transit-realm
+scope returns to the Chorography's campaign-3 slot unbuilt. That spec lives on
+`campaign/the-planes` and is deliberately not linked here — it may never merge,
+and §1 below states its falsification chain inline so this document stands
+alone.
+
+---
+
+## 1. What occasioned it
+
+The Planes proposed three mechanisms and measured two of them dead. The
+sequence is the reason this spec exists and is worth stating plainly:
+
+1. **A wound is a cell property gated on ancient crust.** Measured: 0 / 0 / 36
+   scar cells and **zero** occupations over one, across seeds 42 / 7 / 1234.
+   Falsified.
+2. **A wound is the deepest terminus of a fraction of caves, selected by
+   rank.** Better — it removed an absolute threshold on a quantity whose
+   distribution nobody had measured. But still geometry: it placed wounds *by
+   depth*.
+3. **Nathan, 2026-08-19:** depth neither guarantees nor precludes one. *"It's
+   just that if the cave reaches one, it's not likely to go further."* The
+   causality is inverted. A wound does not appear because a place is deep; a
+   place is deep **because a wound stopped the digging there.**
+
+**"A fraction of the extreme minima" is therefore a survivorship effect, not a
+placement rule** — and the thing that *finds* a wound is a culture delving, not
+a cave existing. A natural void discovers nothing.
+
+That reframing is cheaper than either design it replaces: no order statistic,
+no fraction constant, no clamped-distribution problem. But it needs a
+substrate that does not exist, and finding that out is what makes this its own
+campaign rather than a third attempt at the last one.
+
+## 2. Keystone
+
+> **A delving stops where it finds something. What it found is legible only
+> to the people it killed, and only for as long as anyone remembers.**
+
+## 3. The findings this rests on
+
+All verified in the tree, not inferred.
+
+### 3.1 Every occupation in every world is `Agrarian`
+
+`windows/worldgen/src/history_bake.rs:2260` contains the **only**
+`Function::` assignment in production code:
+
+```rust
+function: Function::Agrarian,
+```
+
+`Function::{Mine, Trade, Cult, Fort}` are constructed nowhere outside test
+fixtures. There are no mines in any world. There never have been.
+
+### 3.2 Four of five vestige kinds cannot occur
+
+`vestige_from_occupation` maps function to kind:
+
+```
+Function::Mine        -> AbandonedDelving   UNREACHABLE (no mine exists)
+Function::Fort|Cult   -> SealedVault        UNREACHABLE (neither exists)
+everything else       -> BuriedRuin         the only live kind
+pre-human scar        -> GateScar           measured 0/0/36 cells
+the deep sealing itself -> NaturalSeal      same gate as GateScar
+```
+
+The committed seed-42 gallery page carries a **five-entry legend** for this
+taxonomy. One entry can occur.
+
+### 3.3 An occupation has no depth
+
+`Community.rung: DelveRung` exists build-local in `history_bake.rs:942`.
+`OccupationRecord` carries no depth at all, so *"how deep did this delving
+get"* is unsaved and unaskable from the ledger.
+
+### 3.4 `dread` has no consumer
+
+Read only by `render.rs` (a colour) and one census metric. Nothing in
+placement, seating, or history consults it. There is no avoidance mechanism in
+the world, in any form.
+
+### 3.5 The knowledge machinery is half-built, and the built half is the right half
+
+```rust
+warning_legibility = exp(-(now - end) / WARNING_HALF_LIFE_DAYS)
+dread              = base + 0.4 * (1.0 - warning_legibility)
+```
+
+**Dread rises as legibility decays.** The world already encodes "the older it
+is, the less you know what it is, and the more you fear it." Nothing reads
+either number. `KnownChannel` is a *player-session* overlay, not a
+culture-level one, so knowledge *between* cultures is not modelled.
+
+### 3.6 The derivations the design needs all ship
+
+- `prospectivity(...)` — exported from `hornvale-terrain`.
+- `seat_at(...)` — which rung of a cell's column a people would settle at
+  (The Underworld).
+- `Cave { kind, deepest_band, depth_reach_m }` — a terminus in metres, with
+  `deepest_band == band_at_depth(column, depth_reach_m)` enforced by
+  construction.
+
+## 4. The design
+
+### 4.1 A function is derived, not drawn
+
+A settlement founded on rich ore is a `Mine`. `prospectivity_at(cell)` is
+shipped and exported, and `Bake::open` already has `site`, `people`, `year`
+and `population` in scope.
+
+**CORRECTED 2026-08-19, at plan time.** An earlier draft of this paragraph
+said "this is one line becoming a derivation". It is not. **`Bake` has no
+terrain** — it imports the `DelveRung` *type* and nothing else from
+`hornvale-terrain`, so prospectivity is not reachable from `open` at all. The
+change is a precomputed field threaded in, following the shape `caps_by_era`
+already sets (`&'a [Vec<CapacityMap>]`, built at the composition root and
+borrowed by `Bake`): build a `CellMap<f64>` of `prospectivity_at` once and
+hand it to `bake_history`. Precedented and not architecturally hard, but a
+signature change rather than a literal swap — and the cost belongs in the
+plan, not hidden in a sentence.
+
+It unblocks `AbandonedDelving` on its own.
+
+**The other functions are NOT in scope.** `Trade`, `Cult` and `Fort` each want
+their own derivation (a route, a shrine-worthy feature, a defensible seat) and
+each is its own argument. This campaign derives exactly one and says so.
+
+### 4.2 A delving has a depth, and the depth is committed
+
+A mine's working depth derives from `seat_at`, deepened over its tenure. It
+goes on `OccupationRecord`, because "how deep did they get" is exactly the
+question the rest of the design asks and it cannot be re-derived from the seed
+once the occupation has ended.
+
+### 4.3 The hazard is per-increment, and it is the whole mechanism
+
+Each increment of delving carries a small probability of breaching. **A
+delving that breaches stops** — and ends.
+
+Nothing selects on depth. The survivorship shape falls out: a breached delving
+sits at its own maximum by construction, and delvings that end for ordinary
+reasons are shallower. "A fraction of the extreme minima" is an **output**.
+
+### 4.4 The consequence is on the finders, not on the future
+
+Nathan's ruling, 2026-08-19. A breach **ends the delving culture** — flees or
+is destroyed. It does **not** place a permanent penalty on the ground.
+
+**Future people may move back in.** This is explicit and it is the reason
+avoidance-as-field-penalty is refused (§7): a cell that is forever unsettleable
+is a scar on the map, not a memory in a culture.
+
+### 4.5 What a later culture knows is transmitted, decays, and can be wrong
+
+Three states, and the model already has the numbers for all three:
+
+```
+RECENT      the warning is legible. A later people can read what happened.
+DECAYED     warning_legibility -> 0, dread -> high. They know SOMETHING is
+            wrong and not what. (MEM-2's floating gap: living memory reaches
+            ~3 generations.)
+WARDED      SealState::Maintained reads SAFE --- and may be wrong. A ward
+            that is being kept is indistinguishable from a place that was
+            never dangerous.
+```
+
+That last line is the design's best property and it is free: **the model can
+be mistaken in the direction that kills people**, without anyone authoring a
+deception. It is also decision 0003's source-blindness arriving structurally —
+a later culture receives an appearance (dread), never a source (what is
+behind the wall).
+
+**Whether a later founding acts on that knowledge is NOT in this campaign**
+(§7). The campaign produces the knowledge; consuming it is the next one.
+
+### 4.6 Nothing is named
+
+A breach records that a delving ended by breaching. It does not record what
+came through, because nothing knows. `thaumic` stays 0.0; UNI-2 stays
+unratified.
+
+## 5. Preregistration
+
+Frozen before the code (decision 0016). Branch tables, not predictions.
+
+### 5.1 Do mines exist, and how many? (before the hazard is written)
+
+```
+mines per world, across seeds [42, 7, 1234], once function derives:
+
+  0 on a majority of seeds -> the prospectivity derivation is wrong. STOP.
+                              Do NOT widen the ore threshold to manufacture
+                              mines; report and let the controller choose.
+  1-5 per world            -> viable but thin. Pool across the panel;
+                              single-seed claims banned for the campaign.
+  6-40 per world           -> proceed.
+  >40% of all occupations  -> TOO MANY. A world that is mostly mines has the
+                              same defect as one with none. Report first.
+```
+
+### 5.2 Does the hazard produce the survivorship shape?
+
+The claim is that breached delvings sit at their own maximum depth **without
+being selected for depth**. Measure the depth distribution of breached versus
+ordinarily-ended delvings.
+
+```
+breached and ordinary distributions are indistinguishable
+    -> the survivorship claim is FALSE and the mechanism is decoration.
+       Report it as the headline. Do NOT tune the hazard to separate them.
+breached are deeper, with overlap
+    -> the claim holds. Report the separation and the overlap honestly.
+```
+
+### 5.3 Determinism
+
+- The hazard **draws**, so it perturbs `history_bake`'s stream and every
+  world's history changes. This is deliberate, is an epoch-scale artifact
+  move, and must be re-pinned in the commit that causes it.
+- `OccupationRecord` gains a field — a save-format change, additive, never a
+  rename.
+
+## 6. Save-format and epoch consequences
+
+**Additive; not a rename; every world's history moves.**
+
+- A new field on `OccupationRecord`, a new `CauseOfEnd` variant, a new
+  predicate, and a new draw in the bake. The draw is the big one: stream
+  consumption order is a contract, and a new draw inside the epoch loop moves
+  every seed's history.
+- Keystone fixtures refreeze at merge, from main's tip.
+- For an enum widening, **the compiler is the enumeration** — no plan will
+  carry a match-site list.
+
+## 7. Non-goals
+
+- **No avoidance-as-placement-penalty.** Nathan's ruling. Future people may
+  resettle; the ground is not cursed, the culture is dead.
+- **No cursed biome.** `HazardKind::Cursed` is a vestige classification; there
+  is no biome, and adding one is a climate-layer argument this campaign does
+  not make.
+- **No culture-level knowledge channel.** The campaign produces legibility and
+  dread with honest semantics; building the transmission layer (MEM-1..5) is
+  its own campaign.
+- **No `Trade`/`Cult`/`Fort` derivation.** One function, derived, argued for.
+- **No metaphysics.** Nothing named; `thaumic` stays 0.0.
+- **No transit realms.** The Planes' original scope returns to the
+  Chorography's c3 slot, unbuilt.
+
+## 8. Task shape
+
+```
+1  MEASURE: does prospectivity separate? would mines exist, and how many?
+2  Function derives from ore --- mines exist; AbandonedDelving becomes reachable
+3  A delving has a committed depth
+4  The hazard, and the CauseOfEnd it produces
+5  MEASURE: the survivorship shape (5.2) --- the null is publishable
+6  Legibility and dread get honest semantics at a breached delving
+7  Narration: almanac + census
+8  Book, chronicle, retrospective, decision record
+```
+
+## 9. Provenance
+
+Nathan's reframing of 2026-08-19, in conversation, after The Planes' second
+mechanism was scoped. Three `ideonomy-plain` passes across the two campaigns;
+the one that produced this shape was dimension-identification +
+organon-construction over a matrix, on the axes *visibility*, *source*, and
+*hierarchicalness* — which surfaced that `source` walks rock → history →
+survivors → observer exactly once per state, and that `visibility` splits into
+"can you read what it is" (`warning_legibility`, shipped) and "can you tell
+it is something" (the physical seal, unmodelled).
+
+Every mechanism in §4 is Nathan's. The contribution of this document is
+checking each against the tree and finding that three of the four things it
+needs are declared and unproduced.
+
+---
+
+# AMENDMENT, 2026-08-19: a mine is FOUNDED for ore, not reclassified onto it
+
+§4.1 said a settlement founded on rich ore *is* a `Mine`. **Measured false,
+and the way it is false is the campaign's most useful finding.** The section
+stands above; this replaces it.
+
+## B.1 What Task 1 measured
+
+```
+prospectivity = 0.6*setting + 0.3*unrest + 0.1*metamorphic_grade
+                setting = 0.1 off a plate boundary, 0.4-0.7 on one
+
+seed 42  land:      min 0.0600  p50 0.0602  p75 0.0667  p90 0.1442  max 0.6771
+seed 7   land:      min 0.0600  p50 0.0623  p75 0.1191  p90 0.2113  max 0.7398
+seed 7   occupied:  min 0.0600  p50 0.0607  p75 0.0653  p90 0.1213  max 0.5679
+
+occupations in land's top prospectivity decile: 0.48% / 2.75% / 11.81%
+  --- at or BELOW the ~10% chance alone would produce, never above
+```
+
+Two facts, and the second is the important one:
+
+1. **Prospectivity is a near-constant floor with a thin tail.** Off a plate
+   boundary `setting = 0.1`, so most land sits at `0.6 x 0.1 = 0.06`; on seed
+   42, 75% of land lies in a band 0.0067 wide. There is almost nothing to
+   separate on.
+2. **Settlements are UNDER-represented in high-ore ground**, not merely
+   indifferent to it — and that is the model being *correct*. Ore is high on
+   plate boundaries and unrest; farmland is not. Agrarian siting puts
+   settlements where ore isn't, by construction.
+
+## B.2 The general error, and it cost three mechanisms
+
+**A derivation cannot reclassify a population that was placed by a different
+objective.** Every occupation in Hornvale is sited by capacity-maximising
+agrarian logic. Relabelling some of them as mines cannot work, because that
+logic has already put them where ore is not — correctly, and it would be a
+worse model if it hadn't.
+
+This is the same error as The Planes' first two mechanisms, which tried to
+find wounds among cells and caves the world had placed for unrelated reasons.
+Three deaths, one cause: **reclassification, where creation was needed.**
+
+## B.3 A mine is a daughter founded on a different objective
+
+`Bake::grow` already spawns daughter settlements and already scores candidate
+sites:
+
+```rust
+let dest = traversable_neighbors(self.cur(), site)
+    .filter(|&n| self.vacant_for(era, n, dpidx))
+    .max_by(|a, b| {
+        let sa = caps_now()[dpidx].at(*a) * river_factor(river_prox.get(*a));
+        ...  // tie-break: lowest CellId, total_cmp
+    });
+self.open(people, dest, year, DAUGHTER_POP, Founding::From(parent), ...)
+```
+
+It already carries `Founding::From(parent)`. **A mining camp is a daughter
+founded on ore instead of on fertility, from a parent that supplies it** —
+which is what a mining camp is.
+
+So the change is **a second scoring objective inside one existing site
+choice**, not a new founding path:
+
+```
+TODAY      score = capacity * river_factor          (one objective)
+PROPOSED   an expansion is occasionally a WORKING, scoring
+           score = f(prospectivity)                 (the other objective)
+           and opening with function = Mine
+```
+
+**Genesis is untouched.** That is deliberate and it bounds the blast radius:
+genesis is the most byte-identity-sensitive path in the bake, and this design
+never enters it.
+
+## B.4 Can anything live where the ore is? Measured: yes
+
+The obvious objection to B.3 is that a settlement founded on ore starves,
+since ore tracks unrest and plate boundaries. Task 1b measured it before this
+section was written:
+
+```
+fraction of top-prospectivity-decile land cells viable for at least one people
+                  VIABLE_MIN=2.0     SURVIVE_K=5.0
+  worst seed          71.49%            56.51%     (seed 1234)
+  range               71-97%            56-97%
+```
+
+Per-decile median capacity **does** decline as prospectivity rises on 2 of 3
+seeds — the anti-correlation is real and visible — but typical capacity runs
+in the 10s-30s against a floor of 2-5, so it rarely flips a cell unviable.
+Mutation control: forcing the capacity closure to `0.0` drives the fraction
+to 0%, so the non-zero result is not a probe that cannot fail.
+
+**Mines need not be satellite-only.** The design is writable.
+
+## B.5 The viability floor is `SURVIVE_K`, not `VIABLE_MIN`
+
+An earlier brief of mine named `VIABLE_MIN = 2.0` as "the bake's own floor".
+**Wrong, and worth recording because a spec that inherits it would compare
+the wrong quantities.** Every use of `VIABLE_MIN` in `history_bake.rs`
+compares it to a *population* (`if pop < VIABLE_MIN`), never to a capacity.
+
+The floor a genesis founding's own starvation arithmetic uses is
+`SURVIVE_K = GENESIS_POP / COLLAPSE_PRESSURE = 10.0 / 2.0 = 5.0`, derived
+independently by `niche_breadth_probe.rs`. **Any spec needing a single
+viability floor uses `SURVIVE_K`.**
+
+## B.6 What is NOT decided here
+
+- **How often an expansion is a working.** A rate, chosen from measured data
+  the way every other constant in this campaign must be — not frozen in prose.
+- **The ore scoring function.** Given B.1's near-constant floor, a naive
+  `max_by(prospectivity)` will tie across most of the map. The scoring must be
+  shown to discriminate before it is adopted, and that is a measurement.
+- Everything in §4.2-§4.6 stands: depth, the per-increment hazard, the
+  survivorship shape, decaying and fallible knowledge, and naming nothing.
+
+## B.7 Save-format consequence, restated
+
+This changes **placement**, so every world's history moves — a larger blast
+radius than the reclassification design had, and the reason B.3 keeps genesis
+out of scope. Re-pin in the commit that causes the move; treat an *absence*
+of drift as a stop.
+
+---
+
+# AMENDMENT, 2026-08-24: what came through MAY persist and travel — the campaign permits it and models none of it
+
+§4.4 was read, by the session resuming this campaign, as a guarantee that a
+breach's consequence stays with the finders. **It never said that.** Grepped
+before writing this: the document above contains no occurrence of *spread*,
+*contagion*, *propagate*, or *containment*. §4.4 refuses exactly one thing — a
+**permanent penalty on the ground** — and §7 names the same refusal as
+"avoidance-as-placement-penalty… a cell that is forever unsettleable is a scar
+on the map."
+
+Nathan's clarification, 2026-08-24, in conversation: the ruling was that the
+harm **could** stay with the finders, not that it necessarily does. Evil that
+spreads through several underworld systems is wanted, not refused. This
+amendment records the permission, states what bounds it, and defers all of it.
+
+## C.1 What occasioned it: the premise moved while the campaign was parked
+
+Ledger #21 parked this campaign behind The Stope. The Stope merged; The Drift
+merged 2026-08-24. Re-measured against the substrate that now exists
+(`windows/worldgen/tests/suite/winze_scale_probe.rs`, seeds 42/7/1234,
+pooled, per land cell):
+
+```
+                       pre-Drift            post-Drift
+  chambers        1.648x / 2.361x           3.264x     falsified
+  reachable                 0.172x          3.264x     falsified
+  runs                      0.253x          0.502x     survives
+```
+
+The surface half did not move (11283/19332/11684 land cells, byte-identical),
+so every ratio moved because its numerator did. `chamber_exists`'s existence
+coin (`EXISTENCE_DENSITY = 0.5`) was deleted, which doubled every count; the
+`entrance` axis was deleted, which merged two of the four readings; and
+reachability went **7.28% -> 100%**, which moved the third across the line.
+
+`BIO-underworld-has-no-energy`'s **size** clause is falsified: the sole
+surviving reading is RUNS, and a run is a container of places rather than a
+place. Its **energy** clause is untouched, and C.3 is why that is the half
+that matters. Junctions additionally link systems laterally — 4,165 links,
+largest network 119 systems at one band, on seed 42.
+
+## C.2 The position the spec never enumerated
+
+What comes through a breach can sit in one of three places, and §4 considered
+two of them:
+
+```
+  ABSTRACT     a recorded event with no referent          <- what §4.4/§4.6 ship
+  MECHANICAL   a permanent penalty on the ground          <- what §7 REFUSES
+  ALIVE        a tenant that eats, spreads, and can be
+               killed, fled, or bargained with            <- never considered
+```
+
+A mind flayer colony, an aboleth, a balrog are the third position. They are
+**not** the second: a live tenant is a thing a later people can meet, and a
+placement penalty is a number on a cell that nobody can meet. §7's refusal
+survives this amendment unchanged, and so does §4.4's sentence as written.
+
+**The connectivity is what makes the third position interesting rather than
+decorative.** Pre-Drift, 92.7% of the lattice was unreachable, so a tenant
+would have been sealed in a pocket by the geometry — alive in name and
+abstract in effect. At 100% intra-system reachability plus lateral junctions,
+range is a real quantity for the first time.
+
+## C.3 What bounds it, and why it must be DERIVED
+
+Nathan's constraint, same conversation: not every world may become *DOOM*, the
+same way not every world may become *The Walking Dead*. Carpenter's Apocalypse
+Trilogy is the shape wanted — three world-ending scenarios that differ from
+each other, rather than one that arrives in every world at the same hour.
+
+**A tuned ceiling cannot deliver that and a derived one can.** A constant
+capping how far a horror ranges is a knob whose value is the same in every
+world by construction; varying it per world is authoring, not simulating.
+What varies per world already is the **rock**.
+
+The bounding quantity is therefore the underworld's own productive base —
+`BIO-subterranean-energy-sources`' "an Underworld as lush as the Overworld
+needs its own productive base" — and the campaign that builds it inherits two
+results from this one:
+
+- **How much space it must feed:** 3.264x the surface, all of it reachable.
+- **That its inputs are real:** ledger #22 established the six lithology axes
+  carry genuine independent signal (the earlier "everything correlates"
+  reading was an instrument artifact — the vectors had been sorted
+  independently before correlating, which by the rearrangement inequality
+  computes the maximum correlation over any pairing rather than the
+  correlation of the data). `winze_energy_probe`'s M4 assertions now pin that
+  corrected verdict.
+
+**The bound should be symmetric, and this is the amendment's one design
+claim.** Flip the polarity of "a spreading horror" and the positive analogue
+is a spreading *ecology* — the lush underworld the same row asks for. Both eat
+the same rock. One budget with two kinds of consumer is a mechanism; a
+special-case cap on monsters is a knob wearing a mechanism's clothes. A world
+whose rock feeds a balrog far is the same world whose chemotrophic ecology is
+rich, and that coupling is content rather than a cost.
+
+## C.4 What this amendment changes, and what it does not
+
+**Changes — one sentence of permission, no machinery:**
+
+> A breach's consequence **may** persist beyond the delving that caused it,
+> and may travel the lattice it was released into. This campaign records that
+> a delving ended by breaching and models neither the tenant nor its range.
+> §4.6's "nothing is named" is what defers it: nothing knows what came
+> through, so nothing can yet say how far it went.
+
+**Does not change:**
+
+- §4.1–4.3. The function derivation, the committed depth, and the
+  per-increment hazard are untouched by connectivity — nothing in them
+  selects on depth or on reachability.
+- §4.4's own sentence. It refuses a placement penalty and continues to.
+- §4.5. Knowledge still transmits, decays, and can be wrong. The amendment
+  sharpens one case rather than altering it: 57% of cave systems are
+  multi-entrance (1.87 apertures per system, pooled), so a maintained ward
+  reading safe is now **provably** insufficient rather than merely fallible.
+- §4.6 and §7. Nothing is named; `thaumic` stays 0.0; no metaphysics.
+- §6. **No save-format consequence.** The permission adds no field, no
+  variant, and no draw — recording that a delving ended by breaching is
+  already §6's enumeration. A tenant with a range would add all three, which
+  is a second reason it belongs to its own campaign and its own epoch.
+
+## C.5 Provenance
+
+Two `ideonomy-plain` passes, 2026-08-24. The first
+(dimension-identification + combination over a matrix; cardinality,
+reversibility, materiality) established that the consequential substrate move
+is **connectivity, not scale**, and that the materiality axis — a chamber is a
+place, a run is a coordinate — is what the size clause actually failed on.
+
+The second (substitution + organon-construction over a graph; intentionality,
+polarity, animacy) produced C.2's three-position ladder and C.3's symmetry
+claim, and found the graph's shape: the delving/depth/finders/knowledge
+cluster touches the energy cluster at **exactly one node, the breach**. Two
+ideas under one name, joined at a single point — which is why building this
+campaign without the energy model is the natural cut rather than a
+compromise.
+
+---
+
+# AMENDMENT, 2026-08-29: a working searches outward for its ore
+
+**Nathan's ruling, 2026-08-29, after Task 2 landed.** §B.3's design stands in
+every other respect; this changes one thing — the set of sites a working may be
+founded on — and freezes a preregistration for the re-measure before the code
+is written.
+
+## E.1 What Task 2 measured, and what bound it
+
+```
+                        seed 42    seed 7   seed 1234
+  mines                       1        13           2
+  occupations              1240       661         898
+  mine share              0.08%     1.97%       0.22%
+
+  daughter throws           466       292          23
+  throws with ANY vacant
+    neighbour at/above
+    ORE_CUT = 0.24            4        23           4
+```
+
+**Neither the rate nor the cut is the binding constraint.** The rate is the
+site's own prospectivity and the cut sits on a measured plateau; what binds is
+that `Bake::grow` considers only the parent's **direct traversable
+neighbours**, and ore is rarely one hop from farmland. That is Task 1's
+finding — settlements are under-represented in high-ore ground because
+agrarian siting correctly puts them where ore is not — arriving one hop out
+and biting the design that was built to answer it.
+
+On seed 42 that is one mining camp in 1,240 settlements. `AbandonedDelving`,
+the vestige kind this campaign exists to make reachable, is reachable in
+principle and absent in practice.
+
+## E.2 The change
+
+A working is founded by a **ring scan outward** from the parent, not by a scan
+of the parent's direct neighbours.
+
+**The argument is from the objective, not from the count.** One hop is the
+right radius for the agrarian daughter path: a farm village spreads to the next
+field, and the next field is next. A working is founded *because of where the
+ore is*, so its search radius must be set by the thing it is searching for. The
+two objectives were sharing a radius because they were sharing a code path, and
+that is the kind of coupling §B.3 was already unpicking when it split the
+scoring — this finishes the split.
+
+**There is precedent in the same file and it is not a stretch.**
+`Bake::best_home` (`history_bake.rs:1674`) already resolves a destination by
+`self.nearest_ring(from, |ring| …)` for relocation. A working is closer in kind
+to a relocation than to a daughter: in both, a people moves to reach something
+specific rather than spilling into adjacent room.
+
+## E.3 This is a POST-UNBLINDING change to the mechanism, and the record says so
+
+Decided after seeing 1 / 13 / 2. That must be stated plainly rather than
+smoothed over, and two things about it are worth being precise about, because
+the difference between them is the whole of this project's preregistration
+discipline:
+
+**It is not a retune to rescue a falsified prediction.** §5.1's branch table
+was *satisfied*: no seed returned zero, so the STOP row never fired, and the
+result landed in the sanctioned `1-5 per world` row — "viable but thin. Pool
+across the panel; single-seed claims banned for the campaign." The
+preregistration anticipated this outcome and permitted the campaign to
+continue. Nothing here is being rescued.
+
+**It is a design change on an axis the preregistration never spoke to.** §5.1
+asks "do mines exist, and how many" as a question about whether the derivation
+*works*. It does. The question Nathan answered is a different one — whether a
+feature a player meets once in 1,240 settlements is *in the world* in any
+meaningful sense — and no frozen criterion addressed it, because none was
+written. A campaign is allowed to discover that it measured the wrong thing;
+what it is not allowed to do is quietly move a number it did measure.
+
+**What would have made this illegitimate**, recorded so a later reader can
+check we did not do it: lowering `ORE_CUT` to manufacture mines. §5.1's STOP
+row forbids it by name, and Task 2 measured why — at the barren floor you get
+42 / 19 / 6 mines, of which 23 of seed 42's 42 stand on prospectivity 0.0600,
+which is to say on no ore at all. The cut is untouched by this amendment.
+
+## E.4 Preregistration for the re-measure — frozen before the code
+
+Decision 0016. Computed against the resolver, not beside it: the numbers below
+are branch tables over what the existing `ore_siting_probe` and `mines_exist`
+tests already report, not predictions from a second implementation.
+
+### E.4.1 Mine population
+
+§5.1's four-row table is **unchanged and still governs** — the acceptance
+range for "does the derivation work" does not move because the search radius
+did:
+
+```
+  0 on a majority of seeds -> the derivation is wrong. STOP. Do NOT widen the
+                              ore threshold to manufacture mines.
+  1-5 per world            -> viable but thin. Pool across the panel;
+                              single-seed claims banned for the campaign.
+  6-40 per world           -> proceed.
+  >40% of all occupations  -> TOO MANY. Report first.
+```
+
+Added for this amendment, because a ring scan can overshoot in a way a
+one-hop scan could not:
+
+```
+  mines exceed the count of daughter throws that HAVE a workable-ore
+  candidate in range
+      -> impossible; a founding was minted somewhere other than the scan.
+         STOP.
+
+  the ring scan reaches so far that a working's parent is not plausibly its
+  supplier (state the radius distribution; §B.3 calls a mining camp "a
+  daughter founded on ore FROM A PARENT THAT SUPPLIES IT")
+      -> report the distribution before proceeding. A supply relationship
+         that spans half a continent is a different design, not this one.
+```
+
+### E.4.2 The Task 5 panel — the rule, fixed now, before the hazard exists
+
+Task 5 compares the depth distribution of breached against ordinarily-ended
+delvings. Its power is set by how many delvings exist, which this amendment
+changes, so the panel rule is frozen here rather than chosen once the answer
+is visible:
+
+```
+  pooled mines across [42, 7, 1234] >= 60
+      -> keep the panel at [42, 7, 1234]. Task 5 pools over it.
+  fewer than 60
+      -> extend the panel by CONSECUTIVE seeds 0, 1, 2, ... (skipping any
+         already in it) until pooled mines >= 60 or the panel reaches 12
+         seeds, whichever comes first. Report the panel actually used and
+         the count it reached.
+```
+
+**Why 60, and why a rule rather than a number chosen later.** The comparison
+needs enough in the *smaller* group to be a distribution rather than a handful:
+at a breach fraction anywhere near a third, 60 delvings gives roughly 20
+breached against 40 ordinary, which is the neighbourhood where an overlap
+statement means something. The figure is a floor on sample size, not a target
+for the mechanism, and the seeds are taken in a fixed order so the panel cannot
+be chosen for its answer.
+
+**Task 4 chooses the hazard rate without reference to any of this.** The rate
+is a modelling choice about how dangerous digging is; if it were picked to land
+the breached count somewhere convenient, this rule would be laundering a
+tuned constant through a sample-size argument. Task 4's report states its rate
+and its justification before Task 5 runs.
+
+## E.5 What does not change
+
+- **The cut.** `ORE_CUT = 0.24`, read off `prospectivity`'s own definition
+  (`0.6 × 0.4` is where "on a plate boundary" begins) and corroborated by the
+  plateau measurement. Untouched.
+- **The rate.** The site's own prospectivity, per the field's own doc.
+  Untouched.
+- **The stream leg.** `settlement/working/v1`, keyed on the parent's
+  `(vertex, band, year)`. A ring scan changes which vertex is chosen, not how
+  the draw is derived, so no epoch bump and no label change.
+- **Genesis.** Still untouched, and still the reason the blast radius is
+  bounded.
+- **§4.2–4.6, §7, and amendment C.** Depth, the per-increment hazard, the
+  survivorship claim, fallible knowledge, naming nothing, and the permission
+  that a breach's consequence may travel — all unchanged.
+
+## E.6 §4.2's "derives from `seat_at`" is INERT under Amendment B — found by Task 3
+
+§4.2 says *"A mine's working depth derives from `seat_at`, deepened over its
+tenure."* The first half no longer does any work, and it is worth recording
+because it is the **third** instance this campaign of a section written before
+Amendment B and never revisited after it — the same shape as the plan's Task 2
+(built on the refuted design) and the plan's compressed branch table.
+
+Under §B.3 a mine is a **surface daughter** founded on ore. `seat_at` returns
+`Band::Surface` for it, so the seat's contribution to a working's depth is
+`0` on every mine that exists. Task 3 therefore threaded no seat depth in at
+all — no composition-root field, no `Seating` change — and the task was small
+for that reason rather than because it cut a corner.
+
+**The half that survives is "deepened over its tenure", and it turned out to be
+the whole justification for committing the field.** The seat is a pure function
+of `(people, vertex)` and is re-derivable, which is exactly what
+`Community.rung`'s doc comment says and why it refuses to commit a rung. The
+working is the integral of a *live* quantity — population and tech horizon as
+they stood in each epoch — and the ledger keeps neither trajectory (`occ-peak`
+is a maximum, `occ-tech` a final value). So `delve_depth_m` commits precisely
+the half nothing can re-derive, and an absolute depth below the surface is the
+sum of the two, which a consumer can form.
+
+Had the design come out a pure function of `(people, vertex)`, the correct
+outcome was **no field**. That it did not is a result, not an assumption.
+
+## E.7 The sailing-lane tail: ACCEPTED, with its amplification recorded
+
+Task 2b reported, per E.4.1's requirement, that **8 of 39 workings sit beyond
+three *adjacency* hops of their parent, one at 19 (~2,100 km)** — while all 39
+are within three *graph* hops. The cause is that a `WaterRoute` edge is one hop
+to the bake and up to twenty ocean vertices to the geosphere
+(`history_bake.rs:4270` already says so in its own doc).
+
+**Accepted, from precedent in the tree.** `traversable_neighbors` filters edges
+on `conductance > 0.0` and **not on edge kind**, so water routes have always
+been traversable for *every* siting decision the bake makes — ordinary daughter
+foundings, raids, tribute, and `best_home`'s relocation scan. The working scan
+introduces no traversal that was not already there; excluding `WaterRoute` for
+this one decision would give it a bespoke graph no other siting decision uses,
+which is a larger and less defensible departure than the tail it would remove.
+
+**The supply argument survives, because it was never about kilometres.** §B.3
+requires "a parent that supplies it". A sea route is the strongest supply line
+a pre-industrial world has; a mining camp reached from its parent by water is
+the ordinary historical case, not an anomaly. Three hundred kilometres of
+mountain is a worse supply relationship than two thousand of open water, and
+the bake's own conductance model is what encodes that.
+
+**What is genuinely new, and is recorded rather than dismissed:** the ring scan
+**amplifies** a rare behaviour into a common one. Ordinary daughters, which
+never look past one ring, cross a lane 0.7% of the time; workings do so 20% of
+the time, because three rings can chain three lanes. Each instance is
+precedented; the *rate* is not. So the world now has a visible class of
+overseas workings where before it had a curiosity. That is a change in
+character, it is emergent from the world's own geography rather than authored,
+and it is the kind of thing that should be looked at again if it reads badly in
+the gallery rather than settled permanently here.
+
+**Not a defect, and specifically not this campaign's defect to fix.** If the
+lane geometry is wrong, it is wrong for daughters, raids and tribute first.
+
+## E.8 The hazard's CLOCK decides whether §5.2 can be measured at all
+
+Task 4's finding, and the campaign's most consequential one. §4.3 says *"each
+increment of delving carries a small probability of breaching"* and never says
+what an increment is. The plan offered "uniform per increment" and the obvious
+reading of the bake's own idiom is **per epoch** — every other rate in
+`history_bake.rs` is per epoch.
+
+**Per epoch would have produced §5.2's null by construction, and Task 5 would
+have published it as a discovery.**
+
+Breach and the ordinary ends are competing risks in time. With a constant
+per-epoch breach probability `p` and a constant per-epoch ordinary-end
+probability `q`, the time to *any* end is geometric in `(p + q)`, and given an
+end at epoch `t`, the probability it was a breach is `p / (p + q)` —
+**independent of `t`**. The two groups therefore share a tenure distribution;
+depth accrues with tenure; so the two groups share a depth distribution,
+exactly. §5.2's first branch — *"breached and ordinary distributions are
+indistinguishable → the survivorship claim is FALSE and the mechanism is
+decoration"* — would have fired with mathematical certainty, on a mechanism
+that had never been given a chance to produce the effect.
+
+**Clocked per metre, the effect is real and nothing selects on depth.**
+
+```
+P(breach this epoch) = 1 - exp(-metres_cut_this_epoch / BREACH_FREE_PATH_M)
+```
+
+Integrated over a working's life this is `1 - exp(-depth / 3000)` — an
+exponential in *depth* — while the rule evaluated at any one epoch reads only
+**metres cut that epoch**, a local quantity. Two workings cutting 100 m this
+epoch face the identical hazard whether one stands at 50 m and the other at
+3,000 m. Depth appears nowhere in the rule, and the survivorship shape is
+therefore an output, exactly as §4.3 requires.
+
+**Why this is not the threshold design in disguise**, since it is the nearest
+this campaign has come to it: a threshold *places* wounds at depth — depth is
+the cause. Here digging is the cause and depth and breach are both its
+consequences, which is precisely Nathan's inversion of 2026-08-19 (*"a place is
+deep because a wound stopped the digging there"*). The correlation between
+depth and breach is the mechanism working, not a rule reading a depth.
+
+Measured, pooled over E.4.2's extended panel: breached median **569.1 m**
+against ordinary **31.1 m**, with overlap in both directions — 18 of 26
+breaches fall below the deepest ordinary end, and 56 of 96 ordinary ends above
+the shallowest breach. That is §5.2's *"breached are deeper, with overlap"*
+branch, and the overlap is what distinguishes it from the third branch's
+warning that perfect separation would indicate a threshold in disguise.
+
+**The constant is read off terrain, not chosen.**
+`BREACH_FREE_PATH_M = 3000.0` is `hornvale_terrain::cave_depth::CAVE_REACH_CEILING_M`
+— the declared depth of the world's void-bearing crust. The claim it encodes:
+*a working that cuts through the entire void-bearing column has, on average,
+found something.* Survival across that whole window is `1/e ≈ 37%`; an
+ordinary-depth working is under 1%. Written as a literal rather than a
+reference, following `ORE_CUT`'s idiom, so that a terrain recalibration cannot
+silently re-roll every world's history.
+
+**The general lesson, which outlives this campaign:** when a preregistered
+comparison is between two sub-populations of one process, *the clock the
+process runs on can determine the answer before any data exists*. Ask what
+distribution the mechanism implies under each candidate clock, and if one of
+them makes the preregistered null a theorem, that clock is not a modelling
+choice — it is a way of not running the experiment.
+
+## E.9 E.4.2's panel rule fixed the WRONG QUANTITY — the cap governs, not the threshold
+
+**A defect in E.4.2, found by checking the rule against Task 4's data before
+Task 5 ran.** E.4.2 set its stopping threshold on **mines**, as a proxy for the
+quantity the comparison actually needs, which is **breaches**. Its own
+reasoning said so out loud and got the conversion wrong:
+
+> at a breach fraction anywhere near a third, 60 delvings gives roughly 20
+> breached against 40 ordinary
+
+The measured breach fraction is **26 / 196 = 13.3%**, not a third. Applying the
+rule literally:
+
+```
+panel through seed    42   n= 1   mines= 16   breached= 0
+panel through seed     7   n= 2   mines= 35   breached= 1
+panel through seed  1234   n= 3   mines= 39   breached= 1
+panel through seed     0   n= 4   mines= 64   breached= 3   <-- rule stops here
+...
+panel through seed     9   n=12   mines=196   breached=26   <-- the frozen cap
+```
+
+**The rule's own stopping point yields three breaches.** A distribution
+comparison on n=3 is not a comparison, so the rule as written would have made
+§5.2 unmeasurable while appearing to have been satisfied — the worst kind of
+failure, because the criterion reports success.
+
+### The resolution: the cap, which was frozen before any data existed
+
+E.4.2 wrote **two** numbers: a threshold (60 mines) and a cap (12 seeds). The
+threshold is defective. **The cap is not**, and it governs, for a reason that
+matters more than convenience: taking the cap invents no new number and
+exercises the *minimum available discretion*. Every alternative — a new
+breach-count threshold, a re-derived mine threshold — would be a number chosen
+**after** Task 4 published per-seed breach counts, which is precisely the
+freedom preregistration exists to remove.
+
+Two further properties make this defensible rather than merely expedient:
+
+- **Consecutive-seed extension cannot cherry-pick.** The seeds are taken in a
+  fixed order fixed in advance, so the only quantity being chosen is *how much
+  data*, never *which*.
+- **More data cannot bias this comparison, only sharpen it.** The estimand is
+  unchanged; nothing about the mechanism, the hazard rate, or the depth
+  accrual is touched.
+
+Task 4 had already used the 12-seed panel. This section is not a ratification
+of that choice after the fact — it is the finding that the rule's threshold was
+wrong, and that the cap is the only part of it that survives contact with the
+measured breach fraction.
+
+### What Task 5 must do about it
+
+Report **both**: the 12-seed result as the campaign's answer, and the 4-seed
+result the literal threshold specifies, as a transparency control. If the
+4-seed result is uninformative — it will be, at n=3 — that is the demonstration
+that the cap is the right reading rather than a convenient one. If the two
+disagree in *direction*, that is a finding that outranks everything else in the
+task and the campaign stops until it is explained.
+
+### The general form
+
+This is the second time in this campaign that a controller-authored decision
+rule was defective in the same way: **it was written about a proxy rather than
+about the quantity that matters.** The first compressed a four-row branch table
+to three and deleted the row the answer landed in. Both were authored while
+correcting something else, both read as careful, and neither was caught by
+re-reading — the first died to an implementer's measurement, this one to
+running the rule's own arithmetic against real data.
+
+**A preregistered rule should be executed against a dry run before it is
+frozen.** Freezing a rule nobody has run is freezing an untested program, and
+this one had a 7x error in its only conversion.
+
+## E.10 §5.2's verdict, and two ways the criterion was under-specified
+
+**Task 5 landed §5.2's middle row: breached delvings are deeper, with
+substantial overlap in both directions.** Nothing was tuned.
+
+```
+PANEL [42, 7, 1234, 0, 1, 2, 3, 4, 5, 6, 8, 9]
+  196 workings — 26 breached, 96 ordinarily ended, 74 STILL OPEN (excluded)
+               n   at floor      min     q1    median      q3      max
+  breached    26   1 ( 3.8%)    12.0  127.8    398.5  1094.0   2656.2
+  ordinary    96  35 (36.5%)     4.0   12.0     28.5    86.2   1022.5
+  AUC 0.8654   z 5.702
+  OVERLAP  18/26 (69%) breached below the deepest ordinary end
+           56/96 (58%) ordinary above the shallowest breach
+```
+
+Not row one (z 5.702 against a 3.0 boundary fixed by convention, not read off
+the result); not row three (overlap non-empty both ways). The 4-seed control
+E.9 requires agrees in direction and cannot decide (z 1.902) — which is E.9's
+own claim demonstrated rather than asserted.
+
+### E.10.1 The criterion named two populations and the data has three
+
+**74 of 196 workings — 38%, the largest single group — are still open**, and
+§5.2 silently assumes every delving ends. A reader implementing "ordinary" as
+the natural predicate `cause != Breached` pools them in and measures **AUC
+0.6767** instead of 0.8654. Still row two, so the *verdict* is robust; the
+*effect size* is off by a third and nothing in §5.2 flags it.
+
+**An honesty note that must travel with this result.** Excluding the still-open
+group is the principled choice — a working that has not ended has no final
+depth; it is a right-censored observation and treating it as a completed one is
+simply wrong. But it is *also* the choice that shows the larger effect, because
+still-open workings are deep (median 674.9 m, above the breached median). The
+controller's dispatch asserted the opposite — that including them would
+"manufacture separation" — and **that was wrong in both halves**: including
+them raises the ordinary median 28.5 → 99.4 m and *shrinks* AUC to 0.6767. The
+exclusion costs the finding evidence rather than inflating it, and the reason to
+prefer it is censoring, not conservatism. Task 5 measured this rather than
+accepting the brief's reasoning, which is the eighth defect in
+controlling-session text this campaign and the fourth caught by an implementer.
+
+### E.10.2 The prescribed comparison could not separate the claim from a weaker one
+
+This is the more serious gap, and the campaign escaped it by luck.
+
+§5.2 prescribes a **pooled** comparison of two depth distributions. But
+*"breached delvings sit at their own maximum without being selected for depth"*
+and *"breach is a tenure lottery and depth is a bystander"* **produce identical
+pooled distributions**. §5.2 names no statistic that tells them apart, so a
+pooled pass is consistent with the mechanism being decoration in a way row one
+does not describe and row two would have credited.
+
+Breached median tenure is **17.5 epochs against 3.0**, so the weaker reading
+was live and large. What closes it is conditioning on tenure:
+
+```
+by epochs dug     breached           ordinary        stratum AUC
+  1             n= 1 med    12.0   n=20 med   12.0      0.675
+  2-3           n= 2 med    29.9   n=31 med   12.0      0.823
+  4-8           n= 4 med   105.0   n=27 med   61.2      0.731
+  9-20          n= 8 med   210.2   n=12 med  165.9      0.646
+  21+           n=11 med  1274.3   n= 6 med  335.2      0.939
+STRATIFIED  AUC 0.7599  z 3.303 — direction holds in EVERY stratum
+```
+
+The pooled gap attenuates (0.8654 → 0.7599, the honest size of the tenure
+contribution) and **survives**. Under a per-metre hazard both halves are the
+mechanism — the hazard integrates total metres, and total metres is tenure ×
+rate — but only the stratified result rules out the reading in which the hazard
+merely re-labels long-lived workings.
+
+**That statistic is not in §5.2.** It reached the task through the controller's
+dispatch, which named the property without prescribing the statistic. Had the
+stratified result collapsed, §5.2 as written would have reported a pass.
+
+**The general lesson, and it is the campaign's second about preregistration:** a
+frozen criterion must be checked against the *rival* explanations of a pass, not
+only against its own failure mode. §5.2 carefully enumerated three ways the
+comparison could come out and never asked what else could produce row two. A
+branch table over outcomes is not the same object as a discriminating test, and
+it is easy to mistake the first for the second because both look like rigour.
+Sibling finding to E.9: there the rule was written about the wrong quantity;
+here it was written about the wrong question.
+
+## E.11 §4.5 ships unchanged — and the WARDED state is subtler than §4.5 says
+
+**Task 6 landed as tests only.** The shipped formulas already produce all three
+of §4.5's states; no derivation changed. Measured over the 12-seed panel before
+any test was written:
+
+```
+RECENT   youngest breach, age   25 y   legibility 0.920   dread 0.632
+DECAYED  oldest   breach, age 1500 y   legibility 0.0067  dread 0.997
+WARDED   a living occupation over a breached delving — 3 vertices
+```
+
+### E.11.1 A breached delving's own layer can never read as a kept ward
+
+The controller's dispatch asserted that *"a delving that ended by breaching may
+leave a vestige whose seal is later `Maintained`"*. **It cannot.**
+`SealState::Maintained` holds exactly when `ended.is_none()`, and
+`CauseOfEnd::Breached` *is* an ending. §4.5's WARDED state therefore lives one
+layer up — **a living occupation standing over the breach** — not on the
+breach's own layer at any age, in any world. Ninth defect in
+controlling-session text this campaign, fifth caught by an implementer; the
+live gate now asserts the impossibility, so conflating the two `Breached`
+enums reddens.
+
+### E.11.2 The indistinguishability is per-LAYER, and the field gives it away
+
+This is the part §4.5 does not say, and the campaign that builds a consumer
+needs it.
+
+All three living layers read **byte-identically** to a living layer where
+nothing ever happened — `Maintained` / `Venerated` / dread 0.1 / legibility
+1.0. That is §4.5's property, and it is asserted field by field and marked
+not-to-be-repaired.
+
+But `vestige_dread` is a **max over the vertex's whole palimpsest**, so those
+same three vertices read **0.936 / 0.997 / 0.998** at the field. The breach's
+own layer is still there underneath.
+
+**So the world can lie to you only if you read the layer.** Read the field and
+the danger is plain. Both halves are now assertions — *source-blind at the
+layer, not amnesiac at the vertex* — and the design's "the model can be
+mistaken in the direction that kills people" is true of a reader of layers and
+false of a reader of the field.
+
+**That is a choice point, not a defect, and it is handed forward deliberately.**
+Nothing consumes `vestige_dread` today (§3.4 — it is a hook whose own doc says
+so). Whichever campaign wires the avoidance or knowledge layer decides, by
+picking a read, whether its cultures can be wrong about what is behind a wall.
+It should decide that on purpose.
+
+### E.11.3 `SealedVault` is still unreachable — §3.2 listed two and this campaign fixed one
+
+Pooled over 12 seeds: **9,394 Agrarian / 196 Mine / 0 Trade / 0 Cult / 0 Fort**
+across 9,590 occupations. `SealedVault` reads off `Fort`/`Cult`, neither of
+which any world produces, so §4.5's *literal* "ward that is being kept" has no
+producer and the reachable form is the living-occupation case measured above.
+Not fixed here: manufacturing one needs a second function derivation, which
+§4.1 excludes by name and argues for excluding.
+
+### E.11.4 Two corrections shipped, one calibration deliberately not
+
+`WARNING_HALF_LIFE_DAYS` is renamed `WARNING_EFOLD_YEARS`, **value untouched at
+300.0**. The old name was wrong twice and one half was a live determinism trap:
+the unit is bake *years* (measured ages 25–1500 against `present_year` 2000),
+while `present_frame` — ledger *days* — sits beside `present_year` in the same
+export list, so **a reader repairing the call to match the name would have
+multiplied every ruin's apparent age by the day/year factor and moved every
+world's residue**, with two doc comments agreeing with each other and with
+neither reality. It is also an e-folding time, not a half-life: `exp(-t/T)` is
+0.368 at `t=T`, and the actual half-life is ~208 years.
+
+The **value** is reported, not tuned: 300 years is ~10x MEM-2's three-generation
+gap (77% legible at 80 years, below 0.1 only at ~690). Whether that is the
+right scale is a calibration question this campaign did not preregister, and
+moving it would move the galleries, the residue lens and four census columns.
+
+### E.11.5 One image for the chronicle
+
+Seed 4, `Vertex(30619)`: a **living Mine** standing over a breached delving —
+digging again where the last lot died. One instance over twelve seeds, too thin
+to gate on, and exactly the thing §4.4 permits by refusing to curse the ground.
