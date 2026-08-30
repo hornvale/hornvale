@@ -880,7 +880,10 @@ register rows — that would put a client concern in `windows/`.
   DIRECTLY — the canonical pair `region.rs` itself uses. There is no
   `water_class`.
   Task 1's `binding_of`.
-- Produces: `TileTerrain` gains `pub band: u8` and `pub water: u8`;
+- Produces: `TileTerrain` gains `pub band: u32` and `pub water: u8`.
+  **Mind the two widths — they differ and the plan first got this wrong:**
+  `relief_band` returns `u32`, `WaterKind::index()` returns `u8`. Carry each
+  through at its own width rather than casting to a common one;
   `pub ocean: bool` is RETAINED — the strip's invariant depends on it.
 
 - [ ] **Step 1: Write the failing tests**
