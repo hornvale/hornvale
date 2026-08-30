@@ -745,3 +745,39 @@ sum of the two, which a consumer can form.
 
 Had the design come out a pure function of `(people, vertex)`, the correct
 outcome was **no field**. That it did not is a result, not an assumption.
+
+## E.7 The sailing-lane tail: ACCEPTED, with its amplification recorded
+
+Task 2b reported, per E.4.1's requirement, that **8 of 39 workings sit beyond
+three *adjacency* hops of their parent, one at 19 (~2,100 km)** — while all 39
+are within three *graph* hops. The cause is that a `WaterRoute` edge is one hop
+to the bake and up to twenty ocean vertices to the geosphere
+(`history_bake.rs:4270` already says so in its own doc).
+
+**Accepted, from precedent in the tree.** `traversable_neighbors` filters edges
+on `conductance > 0.0` and **not on edge kind**, so water routes have always
+been traversable for *every* siting decision the bake makes — ordinary daughter
+foundings, raids, tribute, and `best_home`'s relocation scan. The working scan
+introduces no traversal that was not already there; excluding `WaterRoute` for
+this one decision would give it a bespoke graph no other siting decision uses,
+which is a larger and less defensible departure than the tail it would remove.
+
+**The supply argument survives, because it was never about kilometres.** §B.3
+requires "a parent that supplies it". A sea route is the strongest supply line
+a pre-industrial world has; a mining camp reached from its parent by water is
+the ordinary historical case, not an anomaly. Three hundred kilometres of
+mountain is a worse supply relationship than two thousand of open water, and
+the bake's own conductance model is what encodes that.
+
+**What is genuinely new, and is recorded rather than dismissed:** the ring scan
+**amplifies** a rare behaviour into a common one. Ordinary daughters, which
+never look past one ring, cross a lane 0.7% of the time; workings do so 20% of
+the time, because three rings can chain three lanes. Each instance is
+precedented; the *rate* is not. So the world now has a visible class of
+overseas workings where before it had a curiosity. That is a change in
+character, it is emergent from the world's own geography rather than authored,
+and it is the kind of thing that should be looked at again if it reads badly in
+the gallery rather than settled permanently here.
+
+**Not a defect, and specifically not this campaign's defect to fix.** If the
+lane geometry is wrong, it is wrong for daughters, raids and tribute first.
