@@ -4270,3 +4270,4 @@ measured here.
 | 2026-08-30T17:24:35Z | rebaseline | 67.312 | 288.237 | 14.925 | 4.50 | 0 | ec4e204a3 | campaign/the-chattel | MacBookPro | 10 |
 | 2026-08-30T17:28:38Z | sluice:artifacts | 143.888 | 1387.329 | 67.117 | 10.11 | 0 | 2e7cc4182 |  | lefford | 40 |
 | 2026-08-30T17:29:22Z | sluice:outboard | 42.507 | 27.833 | 40.263 | 1.60 | 0 | 3d9c900c4 |  | lefford | 40 |
+| 2026-08-30T17:38:17Z | sluice:gate | 534.758 | 15312.723 | 561.790 | 29.69 | 0 | cc5f358ed |  | lefford | 40 |
