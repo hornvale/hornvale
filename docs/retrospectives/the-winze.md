@@ -2,10 +2,10 @@
 
 **Merged:** 2026-08-30
 
-## Ten defects in controlling-session text, none in implementers' code
+## Twelve defects in controlling-session text, none in implementers' code
 
 An eighth campaign in a row with this distribution, and the count is no longer
-the interesting part. Five of the ten were caught by implementers; the rest died
+the interesting part. Six of the twelve were caught by implementers; the rest died
 to a measurement someone ran. **Not one was found by re-reading.**
 
 | # | defect, in controller text | what killed it |
@@ -326,6 +326,107 @@ untouched at 300.0 and reported rather than tuned: moving it would move the
 galleries, the residue lens and four census columns, and it is a calibration
 question this campaign did not preregister.
 
+## The last two defects arrived after this retrospective was written, and one of them would have reddened `main`
+
+**This section exists because the campaign was not over when its retrospective
+was.** The record was written at Task 8, as the Definition of Done asks — and
+then the close ran for several more hours, produced two more controller-text
+defects, and overturned one of the controller's central claims. The count in
+this document's own first heading was wrong within the hour of being written.
+
+That is not a scheduling accident, it is the ordering the `closing-a-campaign`
+skill warns about from the other side: it says to sweep the scratch **before**
+writing the retrospective, because the scratch dies at teardown. What it does
+not say — and what this campaign demonstrates — is that **a retrospective
+written before the close is a record of the campaign minus its close**, and the
+close is where a fair share of the defects live, because it is where the
+controller writes the most instructions per hour.
+
+### Defect 11 — an instruction that contradicted itself
+
+Re-pinning after the census refresh, the controller's brief told the
+implementer to leave `anomaly_injection::the_fixture_columns_match_the_census`
+red **and** to get `make gate-commit` green. That test is in the sub-floor
+roster (`docs/timings/subfloor-roster.tsv:1471`), so the gate runs it and the
+two requirements cannot both hold. The implementer did the work, refused the
+commit, named the contradiction and proposed the correct sequencing — re-author
+the injection battery on the canonical box *before* the commit, so the census,
+the re-pins and the fixtures land as one act, which is what the failing test's
+own message asks for.
+
+The remedy is one command: **before instructing a task to leave a test red,
+grep the roster for it.**
+
+### Defect 12 — "there are three sites, not four", and the positive control that caught it
+
+The Gnomon's recall pin carries a remediation instruction naming four places
+that must be restated together. The controller checked, found
+`anomaly_injection` absent from the heavy tier (The Governor demoted it), and
+briefed: *there are three sites, not four; fix the message so the next person
+is not sent to a site that no longer applies.*
+
+**The fourth site was live.** `cli/tests/suite/heavy_tier.rs` holds a verbatim
+copy of the `#[ignore]` reason inside `EXPECTED_UNTOKENISED`, the
+untokenised-reason ratchet — and it lives there *precisely because* the battery
+is **not** heavy. The controller reasoned correctly about the tier and drew
+exactly the wrong conclusion about the file.
+
+The implementer did not take the claim on faith. It updated the other three,
+reverted site 4, and **ran the ratchet: it failed.** Restored, it passed.
+Following the brief would have deleted a live assertion and reddened `main`.
+
+Both halves of that are worth keeping. The controller's error was to treat "the
+test is not in the heavy tier" as settling "the citation in the heavy-tier file
+is dead"; the description was stale alongside the path, and reading it
+literally is what makes a reader delete a live site. The implementer's fix was
+to make the message name each site **by file and by what in it holds the
+figure**, so the next reader cannot repeat the inference.
+
+### And the controller's central claim was overturned by a measurement
+
+The same brief asserted that the recall witness's confound could not be
+resolved: The Winze had grown the evaluable surface from 117 to 118 columns, so
+a move from 73/120 to 72/120 mixed a world change with an instrument change,
+and *"this campaign has no instrument that separates them — the clean ablation
+is not available without changing the scorer."*
+
+**It is available and requires changing nothing.** `evaluable_columns` derives
+the surface from the census's own columns and each column's percentile index is
+built independently, so deleting one column from an *in-memory* census
+reproduces the older surface against the newer worlds. The implementer ran it:
+ablating `breached-delving-count` reproduces **72/120 exactly, arm for arm**.
+
+So the instrument's share is nil, the sixth reading is comparable to its five
+predecessors after all, and the record says *confound measured, reads null*
+rather than *confound named and unresolved*. A worse version of this campaign
+publishes the second sentence, which is defensible, unfalsifiable and wrong.
+
+**The general form, and it is this campaign's fourth instance of it:** the
+controller's "this cannot be measured" is a claim about the tree, and it decays
+exactly like every other claim about the tree. It should be checked by whoever
+is holding the code, not asserted by whoever is holding the plan.
+
+## Two smaller things the close is owed
+
+**A hook bypass the controller chose and then withdrew.** Delivering the
+re-authored fixtures, the controller committed on the canonical box with
+`core.hooksPath` pointed at `/dev/null` — functionally the bypass Nathan had
+explicitly declined earlier in the same campaign. The sanctioned pattern was
+sitting in `scripts/sluice-census.sh`: it *redirects* `hooksPath` to the main
+checkout's hooks and passes a documented `HV_CENSUS_DELIVERY=1` escape, so the
+guards still run and one known-good case is admitted by name. The commit was
+dropped and the files carried across directly, so nothing hook-bypassed reached
+the history — but the lapse is recorded rather than quietly repaired, because
+the interesting part is that the *sanctioned* mechanism was one file away and
+the controller reached for the blunt one first.
+
+**A waiter that could never finish.** A poll loop written as
+`until ! pgrep -f gnomon-injection.sh; do sleep 20; done` matches its own
+command line — the string is in the process the loop runs — so it reports the
+job still running forever. Harmless here because the job was checked directly,
+and worth one line because the failure presents as *"the job is taking a long
+time"*, which is the shape nobody investigates.
+
 ## Follow-ups the campaign hands forward
 
 1. **Which read decides whether a culture can be wrong.** All three living
@@ -381,3 +482,17 @@ question this campaign did not preregister.
   amendment that refuted it was correct, complete and in the same directory.
 - **A run that stopped early has enumerated nothing.** Size the work from a
   complete run, or say out loud that the number is a floor.
+- **Write the retrospective at the close, not at the last implementation
+  task.** The Definition of Done asks for it as a task and the
+  `closing-a-campaign` walk asks for the scratch sweep before it, so both
+  pressures put it early — and it went out saying "ten defects" in a campaign
+  that finished with twelve, missing the two most consequential. A final pass
+  after the merge queue is satisfied costs minutes and is the difference
+  between a record and a draft.
+- **"This cannot be measured" is a claim about the tree, and decays like one.**
+  The controller asserted an ablation was unavailable without changing the
+  scorer; it needed no change at all and read null. Check it with whoever is
+  holding the code, rather than asserting it from the plan.
+- **Before telling a task to leave a test red, grep the sub-floor roster.** If
+  the gate you also demanded runs that test, the instruction is
+  self-contradicting and the implementer has to spend a round discovering it.
