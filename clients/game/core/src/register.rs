@@ -62,6 +62,59 @@ pub const REGISTER: &[Binding] = &[
         population: Population::Chrome,
         means: "the command prompt",
     },
+    // The Legend, Task 6: the world map's terrain vocabulary. Water
+    // outranks elevation at a given vertex (`plate::glyph_and_color_for`),
+    // so `WaterKind::DryLand` claims no glyph of its own here — only the
+    // wet classes and the elevation ladder that shows through dry land do.
+    Binding {
+        glyph: '~',
+        population: Population::Water,
+        means: "ocean",
+    },
+    Binding {
+        glyph: '=',
+        population: Population::Water,
+        means: "salt basin",
+    },
+    Binding {
+        glyph: '"',
+        population: Population::Water,
+        means: "river",
+    },
+    // The elevation ladder (`hornvale_scene::RELIEF_LEGEND`'s six bands),
+    // drawn only where the water class is dry land. Ink ascends with the
+    // band (spec §2's allocation rule): a blank glyph is deliberate at the
+    // floor, not an omission.
+    Binding {
+        glyph: ' ',
+        population: Population::Elevation,
+        means: "abyss",
+    },
+    Binding {
+        glyph: '`',
+        population: Population::Elevation,
+        means: "shelf",
+    },
+    Binding {
+        glyph: ',',
+        population: Population::Elevation,
+        means: "lowland",
+    },
+    Binding {
+        glyph: ';',
+        population: Population::Elevation,
+        means: "upland",
+    },
+    Binding {
+        glyph: '{',
+        population: Population::Elevation,
+        means: "highland",
+    },
+    Binding {
+        glyph: '%',
+        population: Population::Elevation,
+        means: "alpine",
+    },
 ];
 
 /// The binding for `glyph`, if the register claims it.

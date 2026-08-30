@@ -4116,15 +4116,16 @@ mod portolan_tests {
             hornvale_game_core::MIN_HEIGHT,
         );
         let text = g.to_plain_text();
-        // `~` ocean, `.` land — plate.rs's own module doc names this
-        // vocabulary; hardcoded here rather than widening that module's
-        // private surface for two already-documented characters.
+        // The Legend (Task 6) retired the `~` ocean / `.` land binary for a
+        // water-class-and-elevation-band vocabulary (`plate::
+        // glyph_and_color_for`), so "shows land" is no longer one hardcoded
+        // character — it is any drawn glyph that is not the ocean mark.
         assert!(
             text.contains('~'),
             "a cold-start plate must still show ocean: {text:?}"
         );
         assert!(
-            text.contains('.'),
+            text.chars().any(|c| !c.is_whitespace() && c != '~'),
             "a cold-start plate must still show land: {text:?}"
         );
     }
@@ -4545,9 +4546,12 @@ mod portolan_tests {
             "band B lost the observer's own position marker:\n{text}"
         );
         // AND the terrain is still under it — an overlay that had wiped the
-        // raster would satisfy the assertion above on its own.
+        // raster would satisfy the assertion above on its own. The Legend
+        // retired the `~`/`.` binary, so "the raster survived" is any
+        // drawn glyph besides the observer's own marker, not one hardcoded
+        // pair.
         assert!(
-            text.contains('~') || text.contains('.'),
+            text.chars().any(|c| c != '@' && !c.is_whitespace()),
             "band B lost its terrain raster:\n{text}"
         );
         // Exactly one observer: the packet has exactly one `here` facet, and
