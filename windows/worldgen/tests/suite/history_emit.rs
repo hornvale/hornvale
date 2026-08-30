@@ -46,6 +46,7 @@ fn base_record(community: u64, people: &'static str, site: u32, founded: f64) ->
             tongue: None,
             cause: None,
             notability: Notability::Common,
+            delve_depth_m: 0.0,
         },
         community: bid(community),
         lineage: bid(community),
@@ -816,8 +817,32 @@ fn distinct_layers_tie_only_on_genuine_material_matches() {
     // the witness alternates back to the empty state, which is the reading
     // this file has recorded most often. Post-unblinding re-measure,
     // declared per decision 0016.
+    //
+    // THE WINZE re-reading (Task 2, 2026-08-29): 0 -> 1 over 7848 compared
+    // pairs (up from 7764). `Bake::grow` gained a second siting objective
+    // (spec §B.3: an expansion onto ore-bearing ground may be a *working*,
+    // sited on prospectivity rather than river-weighted capacity), which
+    // re-places settlements a twelfth time. **It has still never held a value
+    // twice running** — twelve readings, and the sequence is
+    // 1 -> 0 -> 2 -> 0 -> 1 -> 0 -> 1 -> 2 -> 0 -> 1 -> 0 -> 1. The standing
+    // reading is unchanged and this entry restates it rather than narrating a
+    // new one: the count is a coincidence of which occupation chains a world
+    // grows, never a property of `layer_key`. At 1 tie the per-tie assertions
+    // in the loop above are load-bearing rather than vacuous — recovered by
+    // accident again, not by hunting for it. Post-unblinding re-measure,
+    // declared per decision 0016.
+    //
+    // THE WINZE T2b re-reading (spec amendment E, 2026-08-29): 1 -> 2 over
+    // 7513 compared pairs (down from 7848, because the panel's occupation
+    // count falls with the mines that displace farms). Thirteenth reading, and
+    // it STILL has never held a value twice running:
+    // 1 -> 0 -> 2 -> 0 -> 1 -> 0 -> 1 -> 2 -> 0 -> 1 -> 0 -> 1 -> 2. The
+    // standing reading is unchanged — a coincidence of which occupation chains
+    // a world grows, never a property of `layer_key` — and at 2 ties the
+    // per-tie assertions above stay load-bearing. Post-unblinding re-measure,
+    // declared per decision 0016.
     assert_eq!(
-        ties, 0,
+        ties, 2,
         "measured {ties} tying pairs on the live corpus over {pairs} compared pairs; a \
          different count means the key's tie conditions changed"
     );
@@ -1105,9 +1130,41 @@ fn the_material_fourth_key_barely_moves_the_stratigraphy() {
     // THE GRANARY re-pin (2026-08-25): [0, 1, 1] -> [0, 2, 0], total 2 -> 2.
     // Same lever as every prior reading — re-placed settlements — and the
     // same verdict: three seeds cannot distinguish them (decision 0097).
+    //
+    // THE WINZE re-pin (Task 2, 2026-08-29): [0, 2, 0] -> [0, 1, 0], total
+    // 2 -> 1. `Bake::grow` gained a second siting objective (spec §B.3: an
+    // expansion onto ore-bearing ground may be a *working*), which re-places
+    // settlements a seventh time — seed 7 carries 13 of the panel's 16 mines,
+    // so it is the seed that moved, exactly as it is the seed that has carried
+    // every nonzero reading here. Recorded, not narrated: 1 is no more
+    // "better" for `barely moves` than 2 was "worse", and three seeds cannot
+    // distinguish them (decision 0097). The witness stays load-bearing rather
+    // than vacuous at this reading, which is again where it happened to land
+    // and not something this task went looking for.
+    //
+    // THE WINZE T2b re-pin (spec amendment E, 2026-08-29): [0, 1, 0] ->
+    // [0, 0, 1], total 1 -> 1. Eighth reading. The moved seed is 1000 this
+    // time and seed 7 fell to zero, which is the first time the nonzero
+    // reading has sat anywhere but seed 7 — worth recording precisely because
+    // the prior entry offered "seed 7 carries most of the mines" as the
+    // explanation, and one ring-scan later the same explanation would have
+    // predicted the wrong seed. It was a coincidence then too. Three seeds
+    // cannot distinguish these readings (decision 0097).
+    //
+    // THE WINZE T4 re-pin (spec §4.3, 2026-08-29): [0, 0, 1] -> [0, 0, 2],
+    // total 1 -> 2. Ninth reading, and the same lever again: the breach hazard
+    // ends some workings before the world otherwise would have, which
+    // re-places settlements a ninth time. Seed 1000 keeps the whole of the
+    // nonzero reading. Recorded, not narrated: 2 is no more "worse" for
+    // `barely moves` than 1 was "better", both are tiny against ~19k land
+    // vertices per world, and three seeds cannot distinguish them (decision
+    // 0097). Seed 42 stays at zero for a reason that is NOT a coincidence
+    // this time and is worth having on the record: none of seed 42's sixteen
+    // workings breached, so this epoch does not move that world at all
+    // (`breach.rs` reports 0 breached on seed 42 across the whole panel).
     assert_eq!(
         measured,
-        vec![(42u64, 0usize), (7, 2), (1000, 0)],
+        vec![(42u64, 0usize), (7, 0), (1000, 2)],
         "the per-seed order-change counts moved"
     );
 }

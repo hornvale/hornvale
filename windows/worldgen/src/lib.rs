@@ -130,8 +130,9 @@ pub use graph_derive::{
 };
 pub use hazard::{HazardEvent, HazardEventKind, Recurrence, events_in, has_edifice, hazard_at};
 pub use history_bake::{
-    BakeCensus, BakeConfig, BakeId, BakeOccupation, CASCADE_DEPTH_CAP, History, TributeRelation,
-    bake, cascade_sizes, census, defensibility_for_test, weakest_point_defensibility,
+    BakeCensus, BakeConfig, BakeId, BakeOccupation, CASCADE_DEPTH_CAP, History, ORE_CUT,
+    TributeRelation, bake, cascade_sizes, census, defensibility_for_test,
+    weakest_point_defensibility,
 };
 pub use history_emit::{
     GOBLINOIDS, Landmass, Stratigraphy, TERRITORY_DILATION_RINGS, bake_year_of_ledger_day,
@@ -4699,6 +4700,7 @@ fn hazard_name(hazard: HazardKind) -> &'static str {
 
 /// The Vestige's headline lines for the almanac: notable subsurface residue
 /// across the land — sealed wards, abandoned delvings and buried undercities,
+/// the delvings among those that ended by breaking through (The Winze),
 /// the venerated-vs-forgotten valence split, prominent pre-human gate-scars,
 /// and the residue's dominant hazard (The Vestige). Reads the batched
 /// [`vestiges_field`] once for the whole world (rather than calling
@@ -4716,6 +4718,13 @@ pub fn vestige_lines_from(
     let (mut land, mut residue_vertices) = (0usize, 0usize);
     let (mut sealed, mut delvings, mut buried_ruins, mut gate_scars) =
         (0usize, 0usize, 0usize, 0usize);
+    // The Winze, Task 7. A DELVING THAT ENDED BY BREAKING THROUGH, COUNTED
+    // WITHOUT A NEW FIELD: `vestige_from_occupation` maps
+    // `CauseOfEnd::Breached` — and nothing else — to `HazardKind::Numinous`,
+    // so on an `AbandonedDelving` the hazard *is* the cause. The other
+    // `Numinous` producer is a pre-human gate scar, which carries
+    // `VestigeKind::GateScar` and so cannot reach this counter.
+    let mut breached_delvings = 0usize;
     let (mut venerated, mut forgotten) = (0usize, 0usize);
     let mut hazard_counts = [0usize; 6];
     for vertex in geo.vertices() {
@@ -4731,7 +4740,12 @@ pub fn vestige_lines_from(
         for vestige in stack {
             match vestige.kind {
                 VestigeKind::SealedVault | VestigeKind::NaturalSeal => sealed += 1,
-                VestigeKind::AbandonedDelving => delvings += 1,
+                VestigeKind::AbandonedDelving => {
+                    delvings += 1;
+                    if vestige.hazard == HazardKind::Numinous {
+                        breached_delvings += 1;
+                    }
+                }
                 VestigeKind::BuriedRuin => buried_ruins += 1,
                 VestigeKind::GateScar => gate_scars += 1,
             }
@@ -4766,6 +4780,24 @@ pub fn vestige_lines_from(
     if delvings + buried_ruins > 0 {
         lines.push(format!(
             "{delvings} abandoned delvings and {buried_ruins} buried undercities lie beneath the land."
+        ));
+    }
+    // The Winze, spec §4.3/§4.6. CONDITIONAL, AND THAT IS THE POINT: a line
+    // that renders for every world is a template, not narration, so a world
+    // whose workings all ended ordinarily says nothing here at all.
+    //
+    // THE LINE NAMES NOTHING. A breach records that a delving ended by
+    // breaking through; it does not record what came through, because
+    // nothing in the model knows (§4.6). Nor does it say the ground is
+    // cursed — §4.4 refuses avoidance-as-penalty outright, and a later
+    // people may and does dig the same vertex again. And nothing here
+    // narrates a depth: the hazard is per-metre-cut, nothing selects on
+    // depth, and a sentence implying they dug too far and woke something
+    // would assert a mechanism the campaign deliberately does not have.
+    if breached_delvings > 0 {
+        lines.push(format!(
+            "{breached_delvings} of those delvings ended where they broke through — the digging \
+             stopped there, and no account of what was found survives."
         ));
     }
     lines.push(if forgotten > venerated {
@@ -7883,12 +7915,21 @@ fn bake_history_from(
     // key its amplitude on the biome it actually stands in at open.
     let climate_biomes = climate.biome_map();
     let biomes = hornvale_kernel::VertexMap::from_fn(geo, |c| biome_class(*climate_biomes.get(c)));
+    // THE ORE FIELD (The Winze, spec §B.3). The bake's second siting
+    // objective: a daughter is occasionally a *working*, and a working is
+    // sited on `prospectivity_at` alone. Built here, once, for the same reason
+    // `biomes` and `caps_by_era` above are — the bake has no terrain, and this
+    // is where terrain and the bake's other inputs meet. A dense read over a
+    // committed lithology buffer, so it costs one pass over the globe and no
+    // derivation.
+    let prospectivity = hornvale_kernel::VertexMap::from_fn(geo, |c| terrain.prospectivity_at(c));
     Ok(history_bake::bake(
         seed,
         geo,
         &biomes,
         &caps_by_era,
         &river_prox,
+        &prospectivity,
         &eras,
         &paleo.refugia,
         &peoples,
@@ -11266,7 +11307,31 @@ mod tests {
         // two derived counts hold while the gloss count tracks the merged
         // world's larger named population. Post-unblinding re-measure,
         // declared per decision 0016.
-        assert_eq!(count("name-gloss"), 514);
+        //
+        // THE WINZE (Task 2): UNMOVED at 514, and worth a line precisely
+        // because every campaign entry above it moved. `Bake::grow` gained a
+        // second siting objective (spec §B.3: an expansion onto ore-bearing
+        // ground may be a *working*), which moves seed 42's world — one
+        // settlement of 1240 is a `Function::Mine` now, and it stands on a
+        // different vertex than the farm that would have been founded there.
+        // That is a smaller perturbation than any previous entry because the
+        // working decision hangs off its OWN keyed leg
+        // (`streams::SETTLEMENT_WORKING`) rather than consuming a draw from
+        // the bake's sequential stream: a world moves where a working is
+        // founded and nowhere else. The first cut of this task did draw
+        // sequentially, and this count read 498 under it — a 16-name move on
+        // a world with one mine in it, which is the measurement that sent the
+        // draw onto its own leg.
+        //
+        // THE WINZE T2b (spec amendment E): 514 -> 515. The working scan now
+        // walks outward to `WORKING_REACH` rings instead of the parent's direct
+        // neighbours, so seed 42 carries 16 mines rather than 1 and 1,212
+        // occupations rather than 1,240. A one-name move on a change that
+        // re-sites fifteen settlements, which is the same "own keyed leg"
+        // property holding: the draw is still keyed on the parent's
+        // (vertex, band, year), so a world moves where a working is founded and
+        // nowhere else.
+        assert_eq!(count("name-gloss"), 515);
     }
 
     #[test]

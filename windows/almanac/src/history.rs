@@ -259,6 +259,11 @@ fn record_of(world: &World, entity: EntityId) -> Option<OccupationRecord> {
             .ledger
             .text_of(entity, hornvale_history::OCC_NOTABILITY)?,
     )?;
+    // ABSENT MEANS NEVER DUG, not "missing" — the emitter commits
+    // `occ-delve-depth` only for an occupation that actually drove a working
+    // (The Winze, spec §4.2), so this is a defaulting read and never a
+    // `?`-return the way the load-bearing facts above are.
+    let delve_depth_m = number(world, entity, hornvale_history::OCC_DELVE_DEPTH).unwrap_or(0.0);
     let ended_by = match world
         .ledger
         .value_of(entity, hornvale_history::OCC_ENDED_BY)
@@ -288,6 +293,7 @@ fn record_of(world: &World, entity: EntityId) -> Option<OccupationRecord> {
             tongue: None,
             cause,
             notability,
+            delve_depth_m,
         },
         id: entity,
         founded_from,
@@ -408,6 +414,11 @@ fn parse_cause(label: &str) -> Option<CauseOfEnd> {
         "plague" => CauseOfEnd::Plague,
         "fled" => CauseOfEnd::Fled,
         "migrated" => CauseOfEnd::Migrated,
+        // The Winze, spec §4.3. This decoder is NOT enumerated by the
+        // compiler — it matches on a `&str` and falls through to `None` — so a
+        // new cause added to the enum and forgotten here silently reads back
+        // as "still alive" on every occupation that ended that way.
+        "breached" => CauseOfEnd::Breached,
         _ => return None,
     })
 }
@@ -632,6 +643,18 @@ fn ending_sentence(world: &World, r: &OccupationRecord, index: usize) -> String 
         }
         CauseOfEnd::Plague => {
             "Plague emptied it — the dead outnumbered the living, and the rest walked away."
+                .to_string()
+        }
+        // The Winze, spec §4.3. **The sentence names nothing, and that is the
+        // whole constraint** (§4.6): the working broke through, the delving
+        // stopped there, and no account of what lay behind the rock exists —
+        // because nothing in the model holds one. `by` is deliberately not
+        // consulted, unlike `Burned` and `Fled` above: a breach closes with
+        // `Ended::Nature`, so there is no antagonist to name even if the line
+        // wanted one.
+        CauseOfEnd::Breached => {
+            "They cut into something. The working ended there, and no account of what \
+             they found survives."
                 .to_string()
         }
     }
@@ -1134,6 +1157,7 @@ mod tests {
                 tongue: None,
                 cause: None,
                 notability: Notability::Common,
+                delve_depth_m: 0.0,
             },
             community: bid(community),
             lineage: bid(community),
@@ -1247,6 +1271,7 @@ mod tests {
             tongue: None,
             cause: None,
             notability: Notability::Common,
+            delve_depth_m: 0.0,
         }
     }
 

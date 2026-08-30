@@ -1634,6 +1634,17 @@ fn cmd_lab_diff(args: &[String]) -> Result<(), String> {
 /// spec §2): load the study and its committed `rows.csv`, reconstruct the
 /// run, and print the manifest (marked `"backfilled": true`) on stdout —
 /// the caller redirects it into the study's generated directory, once.
+///
+/// The reconstruction reads the fixture AS AUTHORED
+/// (`hornvale_lab::load_authored`), through the `schema.json` already sitting
+/// beside the rows, rather than through the live study. That is what this
+/// command is FOR: it re-derives each column's per-metric FIELDS (`doc`,
+/// `domain`, `role`, buckets) from today's registry while leaving the COLUMN
+/// SET exactly as the committed rows have it. Reading through the live study
+/// instead made the whole regeneration script abort the moment anybody
+/// registered a metric — the rows.csv predated it, `load_rows` requires an
+/// exact header match, and every step after this one (the Domesday survey,
+/// the anomaly report) was skipped as collateral.
 fn cmd_lab_backfill_schema(args: &[String]) -> Result<(), String> {
     let (Some(study_path), Some(csv_path)) = (args.get(2), args.get(3)) else {
         return Err(format!(
@@ -1644,7 +1655,16 @@ fn cmd_lab_backfill_schema(args: &[String]) -> Result<(), String> {
     let study =
         hornvale_lab::load_study(std::path::Path::new(study_path)).map_err(|e| e.to_string())?;
     let csv = std::fs::read_to_string(csv_path).map_err(|e| format!("read {csv_path}: {e}"))?;
-    let result = hornvale_lab::load_rows(&study, &csv).map_err(|e| e.to_string())?;
+    let dir = std::path::Path::new(csv_path)
+        .parent()
+        .ok_or_else(|| format!("{csv_path} has no parent directory"))?;
+    let (result, age) =
+        hornvale_lab::load_authored(&study, dir, &study.name).map_err(|e| e.to_string())?;
+    // On stderr, never stdout: stdout is the manifest the caller redirects
+    // into schema.json, and a notice mixed into it would corrupt the artifact.
+    if let Some(line) = age.message(&study.name) {
+        eprintln!("{line}");
+    }
     print!("{}", hornvale_lab::render_schema(&result, &csv, true));
     Ok(())
 }
@@ -1809,8 +1829,13 @@ fn cmd_lab_anomalies(args: &[String]) -> Result<(), String> {
 /// (`lane-run.sh`) held it; the chamber (`sluice-run.sh`) holds it. So the
 /// `gate` set's `ci-record` refused on every single run, in the one
 /// environment on the one box where nothing else was running at all, and
-/// `docs/timings/subfloor-roster.tsv` has exactly one commit in its history —
-/// authored by hand. The remedy CLAUDE.md described (a copy-out surviving the
+/// `docs/timings/subfloor-roster.tsv` **had, at that moment, exactly one
+/// commit in its entire history** — authored by hand. (Past tense as of The
+/// Gleaning, 2026-08-30: `git log -- docs/timings/subfloor-roster.tsv` counts
+/// **162**. The sentence was written in the present tense and became false
+/// the first time the fix below worked, which is the same shape as the stale
+/// `make gate-stage` line that used to sit in the roster's own header.)
+/// The remedy CLAUDE.md described (a copy-out surviving the
 /// next dispatch) addressed a later step in a pipeline whose first step never
 /// produced a byte. A claim held by our own ancestor is not contention: it is
 /// the job we are part of, and it is the most serialized moment available.
@@ -1904,9 +1929,14 @@ fn cmd_ci_record() -> Result<(), String> {
          # that never author a roster of their own -- see `subfloor_path`'s\n\
          # doc in windows/lab/src/timings.rs for the full reasoning.\n\
          # The commit gate (`make gate-commit`) runs exactly these.\n\
-         # Rewritten by every GREEN `make gate-stage`; a red run leaves it alone.\n\
+         # Rewritten by the chamber's `gate` phase on every GREEN chamber job (a\n\
+         # stage gate or a merge, `scripts/sluice-run.sh`); a red run leaves it\n\
+         # alone, because a red run's `run.json` is truncated and a roster taken\n\
+         # from one would silently DROP tests from the commit gate. `make\n\
+         # gate-stage` used to be named here and is a refusing signpost now\n\
+         # (decisions 0132, 0139) -- submit `make sluice-stage BRANCH=... REF=...`.\n\
          # A test absent from this file is NOT in the commit gate — see the\n\
-         # spec's exclude-unknown rule. It enters on the next green stage gate.\n",
+         # spec's exclude-unknown rule. It enters on the next green chamber job.\n",
     );
     for id in &roster {
         roster_body.push_str(id);

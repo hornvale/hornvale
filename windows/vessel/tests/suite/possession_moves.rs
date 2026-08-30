@@ -26,6 +26,34 @@ fn walked(session: &mut Session, label: &str) -> bool {
     }
 }
 
+/// The first derived NPC that committed **no** positional fact across the wait
+/// just taken — the one whose dated fact is a `drank`, and the subject the
+/// stay-put narration claims below are about.
+///
+/// **Chosen by the property, not by roster position, and that is The Winze
+/// T2b's correction.** Three tests here took `npc_labels().first()` and
+/// asserted it stayed put, on a comment that read "the flagship's own, always
+/// first in the derived roster … seed 42's flagship settlement structurally
+/// cannot produce a departure any more". Spec amendment E's working ring scan
+/// re-placed every settlement and the flagship landed off the river: it now
+/// walks, the roster is two NPCs rather than three, and all three tests went
+/// red at once on a premise none of them was actually about. Selecting on the
+/// property means the next placement epoch moves the witness rather than the
+/// test.
+fn stay_put_npc(session: &mut Session, labels: &[String]) -> String {
+    labels
+        .iter()
+        .find(|l| !walked(session, l))
+        .unwrap_or_else(|| {
+            panic!(
+                "no derived NPC of {labels:?} drank in place — every one committed a \
+                 positional fact, so the stay-put narration claims below have no \
+                 subject and would hold vacuously"
+            )
+        })
+        .clone()
+}
+
 fn world() -> hornvale_kernel::World {
     hornvale_worldgen::build_world(
         hornvale_kernel::Seed(42),
@@ -81,13 +109,22 @@ fn waiting_moves_an_npc_and_it_is_observed() {
     let out = session.handle("wait 7");
     assert!(
         session.committed_drank_count() >= 1,
-        "the world moved on wait (a drank fact committed even though the \
-         flagship's own NPC never walked)"
+        "the world moved on wait (a drank fact committed)"
     );
+    // **THE WINZE T2b: THE FLAGSHIP WALKS AGAIN, AND THIS TEST RECOVERS THE
+    // CLAIM ITS OWN NAME MAKES.** The paragraph above records that The
+    // Confluence's condensation put seed 42's flagship settlement directly on
+    // fresh water, so "the world moved on wait" had to be proved through
+    // `drank` rather than through a real walk. Spec amendment E's working ring
+    // scan re-places every settlement and this one landed off the river: the
+    // flagship's own NPC now walks to water, so the stronger, original witness
+    // — an observed `agent-at` — is available again and is asserted here.
+    // Both halves are kept: the drink above and the walk below are separate
+    // facts and this test wants the walk.
     assert!(
-        !walked(&mut session, &flagship),
-        "measured: the on-water flagship settlement's own NPC never needs to \
-         walk to reach fresh water"
+        walked(&mut session, &flagship),
+        "measured: seed 42's flagship settlement is off the river again, so its \
+         own NPC walks to reach water and commits a positional fact"
     );
     // The wait output mentions motion (non-empty, references an NPC/movement).
     match out {
@@ -202,10 +239,14 @@ fn a_colocated_npcs_drinking_in_place_is_not_narrated_as_a_false_departure() {
     // (the flagship's own, always first in the derived roster) really did
     // stay put, so "no departure happened" is a fact about it and not an
     // artifact of nobody being derived.
-    let colocated = labels.first().expect("a session always derives NPCs");
+    // Selected by the property (see `stay_put_npc`): after The Winze T2b the
+    // flagship's own NPC walks, and the roster's SECOND member is the one that
+    // drinks in place. It panics rather than skipping if none does, so the
+    // narration claims above cannot quietly become vacuous.
+    let colocated = stay_put_npc(&mut session, &labels);
     assert!(
-        !walked(&mut session, colocated),
-        "measured: the co-located on-water NPC never leaves the room"
+        !walked(&mut session, &colocated),
+        "measured: {colocated} drank in place and never left the room"
     );
 }
 
@@ -230,39 +271,48 @@ fn why_recounts_an_npcs_dated_history_after_it_drinks() {
         .into_iter()
         .map(str::to_string)
         .collect();
-    let label = labels.first().expect("a session always derives NPCs");
+    assert!(!labels.is_empty(), "a session always derives NPCs");
 
     let out_text = |t: Turn| match t {
         Turn::Out(s) => s,
         Turn::Released(_) => panic!("why never releases"),
     };
 
-    // Before any wait, the NPC has no committed agent-at yet (day-0 pin):
-    // recounting it either says nothing is recorded, or (since the NPC
-    // entity was minted this session) never mentions "day".
-    let before = out_text(session.handle(&format!("!why {label}")));
-    assert!(
-        !before.contains("day"),
-        "before any wait, no dated agent-at exists to recount: {before}"
-    );
+    // Before any wait, NO NPC has a committed agent-at yet (day-0 pin):
+    // recounting one either says nothing is recorded, or (since the entity was
+    // minted this session) never mentions "day". Checked over the WHOLE roster
+    // rather than one member — the subject of the recount below is chosen
+    // after the wait, by which NPC drank in place, so the day-0 pin has to
+    // hold for whichever that turns out to be.
+    for label in &labels {
+        let before = out_text(session.handle(&format!("!why {label}")));
+        assert!(
+            !before.contains("day"),
+            "before any wait, no dated agent-at exists to recount: {before}"
+        );
+    }
 
     // Advance across a full drive cycle (the-wanting: ~5.667 days to the
     // seek crossing) so the tick commits a dated fact. THE CONFLUENCE,
-    // MEASURED: this NPC (the flagship settlement's own) now condenses
-    // directly onto fresh water (see `liveness.rs`'s
-    // `seed_42_home_settlements_real_walk_reachability_is_a_measured_t5_finding`
-    // — 0 moves, drinks in place), so the dated fact the crossing commits is
-    // a `drank`, never an `agent-at`. (The Tumult, 2026-07-26: still true of
-    // THIS NPC after the predation epoch; a neighbour's NPC now walks, which
-    // is why the check below is per-NPC rather than session-wide.)
+    // MEASURED: an on-water NPC's crossing commits a `drank`, never an
+    // `agent-at`, and this test is about recounting THAT — a dated fact that
+    // is not a move. (The Tumult, 2026-07-26: the roster stopped being
+    // uniformly on-water, which is why the check below is per-NPC rather than
+    // session-wide. **The Winze T2b:** it stopped being the FLAGSHIP that is
+    // on water — spec amendment E's ring scan re-placed the settlements and
+    // the flagship now walks — so the subject is selected by the property
+    // instead of by roster position. Without that this test would have gone on
+    // asserting `contains("day")` against an `agent-at` recount and quietly
+    // stopped being about a drink at all.)
     session.handle("wait 7");
     assert!(
         session.committed_drank_count() >= 1,
         "the NPC satisfied its sustenance goal"
     );
+    let label = &stay_put_npc(&mut session, &labels);
     assert!(
         !walked(&mut session, label),
-        "measured: this NPC's own settlement is on-water; it never walks"
+        "measured: {label} drank in place; it never walks"
     );
 
     let recount = out_text(session.handle(&format!("!why {label}")));

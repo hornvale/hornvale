@@ -710,6 +710,17 @@ fn the_weakest_raider_beats_the_strongest_abstainer_primary_claim() {
 /// the floor's stated mechanism exactly as 14 and 12 did. The deferral still
 /// does not move: the estimator's scale is still what is wrong.
 ///
+/// **RE-READ A FOURTH TIME AT THE WINZE'S CLOSE (2026-08-30): drow fell to
+/// 9/60 = 0.150,** and this re-read carries the sharpest attribution the pin
+/// has had: not a campaign name and not a commit, but a **mechanism**
+/// isolated by neutralising each half of The Winze independently — the
+/// breach hazard moves it and the working's placement does not. The
+/// denominator again held at 60, and 9 live re-seats again refute the floor's
+/// stated mechanism exactly as 14, 12 and 10 did. The deferral still does not
+/// move: the estimator's scale is still what is wrong, and the fall is again
+/// a shipped feature's documented consequence rather than a defect. The
+/// witness below carries the measurement.
+///
 /// Tracked as `BIO-raid-partition-order-statistic`. The witness below keeps
 /// the reading measured while this is deferred.
 ///
@@ -717,7 +728,7 @@ fn the_weakest_raider_beats_the_strongest_abstainer_primary_claim() {
 /// `RAID_DISPOSITION_MIN` re-seats its genesis flagship on at least
 /// `RAIDER_MIN` of the seed panel's worlds.
 #[test]
-#[ignore = "PREREGISTERED, not met: awaits BIO-raid-partition-order-statistic (decision 0138; drow fell to 14/60 = 0.233 under the 0.30 raider floor when The Glasshouse corrected the climate, to 12/60 = 0.200 at The Underworld's close, and to 10/60 = 0.167 at The Granary's close (named at The Governor's close, 2026-08-28: eeaa011fd, BAKE stream epoch v2 -> v3), denominator held at 60 throughout, and the floor's stated mechanism - that the raid branch stopped running - is refuted by 10 live re-seats, so the floor is reading a post-epoch world at a pre-epoch scale)"]
+#[ignore = "PREREGISTERED, not met: awaits BIO-raid-partition-order-statistic (decision 0138; drow fell to 14/60 = 0.233 under the 0.30 raider floor when The Glasshouse corrected the climate, to 12/60 = 0.200 at The Underworld's close, to 10/60 = 0.167 at The Granary's close (named at The Governor's close, 2026-08-28: eeaa011fd, BAKE stream epoch v2 -> v3), and to 9/60 = 0.150 at The Winze's close (mechanism measured, not assumed: the breach hazard, NOT the working's placement - see the witness), denominator held at 60 throughout, and the floor's stated mechanism - that the raid branch stopped running - is refuted by 9 live re-seats, so the floor is reading a post-epoch world at a pre-epoch scale)"]
 fn every_raider_clears_the_floor_preregistered_not_met() {
     let wc = WorldComponents::assemble().expect("assemble the shipped component set");
     let (raiders, _) = raiders_and_abstainers(&wc);
@@ -735,10 +746,11 @@ fn every_raider_clears_the_floor_preregistered_not_met() {
         under.is_empty(),
         "PREREGISTERED, NOT MET (decision 0138): {} raiding people(s) below the \
          {RAIDER_MIN} floor: {under:?}. Measured 14/60 = 0.233 for drow at The Glasshouse's \
-         close, 12/60 = 0.200 at The Underworld's, and 10/60 = 0.167 at The Granary's \
-         (cause named at The Governor's close: eeaa011fd, BAKE v2 -> v3); a DIFFERENT \
-         reading here means the deferral has moved and owes a re-read, not a lowered \
-         floor. See this test's doc comment.",
+         close, 12/60 = 0.200 at The Underworld's, 10/60 = 0.167 at The Granary's \
+         (cause named at The Governor's close: eeaa011fd, BAKE v2 -> v3), and 9/60 = 0.150 \
+         at The Winze's (mechanism measured: the breach hazard, not the working's \
+         placement); a DIFFERENT reading here means the deferral has moved and owes a \
+         re-read, not a lowered floor. See this test's doc comment.",
         under.len()
     );
 }
@@ -821,6 +833,69 @@ fn every_raider_clears_the_floor_preregistered_not_met() {
 /// Re-stated here rather than repaired: nothing in The Governor's own scope
 /// touches raid timing, so there is nothing to fix, only a stale number to
 /// correct with its cause on record.
+///
+/// # RE-READ AT THE WINZE'S CLOSE (2026-08-30): 10/60 → 9/60, MECHANISM MEASURED
+///
+/// **The denominator held at 60 for the fourth time**, so the pin's own
+/// distinction resolves the easy way again: drow re-seats less often
+/// (0.167 → 0.150), and drow is not flagship-less on more worlds. The
+/// deferral does not move — 9 live re-seats refute the floor's stated
+/// mechanism exactly as 14, 12 and 10 did.
+///
+/// **THE OBVIOUS STORY IS THE WRONG ONE, AND THIS IS THE FIRST RE-READ TO
+/// NAME A MECHANISM RATHER THAN A COMMIT.** The Winze founds **workings** —
+/// daughter settlements sited on an ore objective up to `WORKING_REACH` rings
+/// away rather than on `grow`'s nearest vacant neighbour — and gives a living
+/// working a **breach hazard** that can end it. "The campaign moved settlement
+/// placement, therefore re-seating moved" is the story this pin exists to
+/// refuse, and it is refuted: the placement change alone leaves the witness
+/// exactly where it was pinned. Each half was neutralised independently, with
+/// the rest of the campaign intact, and the witness read three times:
+///
+/// ```text
+///   working selection neutralised (no expansion is ever a working;
+///     `deepen` and `maybe_breach` are inert without a `Function::Mine`)
+///                                        10/60   0.167   <- the pinned value
+///   breach neutralised only (workings founded on their ore sites as
+///     shipped, but `maybe_breach` never closes one)
+///                                        10/60   0.167   <- the pinned value
+///   the campaign as it ships                9/60   0.150
+/// ```
+///
+/// So **the fall is the breach hazard's**, and the ore-objective siting — the
+/// campaign's larger and more visible change — contributes nothing to it.
+///
+/// **The flip is one seed, and it is seed 33.** Instrumenting
+/// [`reselection_rates`] to print drow's genesis site, flagship site and
+/// record count per seed, under the shipped tree and under the
+/// breach-neutralised arm, moves exactly one of the sixty:
+///
+/// ```text
+///   seed 33, breach neutralised : genesis v28452, flagship v7230,  changed, 180 drow records
+///   seed 33, as shipped         : genesis v28452, flagship v28452, UNCHANGED, 20 drow records
+/// ```
+///
+/// With the hazard live, two of drow's delvings on that seed break through
+/// (`v30341` at 83 m and `v30324` at 693 m), drow's history on the seed runs
+/// **20 occupations instead of 180**, and the genesis seat at `v28452` is
+/// still alive at `now` — so it is its own flagship. With the hazard off that
+/// expansion runs on, the genesis seat ends somewhere in it, and a later
+/// occupation at `v7230` is the flagship instead. The counter-intuitive
+/// reading is the correct one: **the hazard did not end drow's flagship, it
+/// truncated the expansion that would otherwise have replaced it.**
+///
+/// **What is NOT established, said plainly.** The chain *inside* seed 33 —
+/// from "a delving broke through at `v30341` in some epoch" to "the genesis
+/// seat at `v28452` survives to `now`" — is a cascade through the bake's
+/// epoch dynamics and has not been traced step by step. What is measured is
+/// the attribution (breach, not placement) and the locus (one seed, named,
+/// with its record counts). Naming the intra-seed chain would be the
+/// invention this pin exists to prevent.
+///
+/// Re-stated rather than repaired, for the third time and the same reason:
+/// the hazard is a shipped, spec'd feature (The Winze §4.3) doing exactly
+/// what it was built to do, so there is nothing to fix — only a stale number
+/// to correct with its cause on record.
 #[test]
 #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn the_sub_floor_raider_reading_is_pinned_as_a_witness() {
@@ -830,16 +905,20 @@ fn the_sub_floor_raider_reading_is_pinned_as_a_witness() {
     println!("witness: drow re-seated {changed}/{worlds}");
     assert_eq!(
         (changed, worlds),
-        (10, 60),
-        "drow's flagship re-seating moved from the pinned 10/60. This is NOT a number to \
+        (9, 60),
+        "drow's flagship re-seating moved from the pinned 9/60. This is NOT a number to \
          update — re-read it, then re-state this witness, the #[ignore] reason on \
          every_raider_clears_the_floor_preregistered_not_met, its roster entry in \
-         cli/tests/heavy_tier.rs and the BIO-raid-partition-order-statistic registry row in \
-         the SAME commit. THIS HAS NOW HAPPENED TWICE (The Underworld, 2026-08-18, 14/60 → \
+         cli/tests/suite/heavy_tier.rs (the EXPECTED_UNTOKENISED ratchet, which holds a \
+         VERBATIM copy of that reason string and will red if you touch one and not the \
+         other) and the BIO-raid-partition-order-statistic registry row in the SAME \
+         commit. THIS HAS NOW HAPPENED THREE TIMES (The Underworld, 2026-08-18, 14/60 → \
          12/60; The Granary, landed 2026-08-24 and re-read at The Governor's close on \
-         2026-08-28, 12/60 → 10/60 — see the doc comment's Governor section for the named \
-         cause, `eeaa011fd`'s BAKE v2 -> v3 epoch bump). BEFORE ASSUMING A CAUSE, MEASURE \
-         ONE."
+         2026-08-28, 12/60 → 10/60, `eeaa011fd`'s BAKE v2 -> v3 epoch bump; The Winze, \
+         2026-08-30, 10/60 → 9/60, the breach hazard and NOT the working placement, \
+         isolated by neutralising each half). BEFORE ASSUMING A CAUSE, MEASURE ONE — the \
+         Winze re-read is the worked example: the obvious story (placement moved) was \
+         measured and refuted."
     );
 }
 

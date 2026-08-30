@@ -6,9 +6,14 @@
 # that never author a roster of their own -- see `subfloor_path`'s
 # doc in windows/lab/src/timings.rs for the full reasoning.
 # The commit gate (`make gate-commit`) runs exactly these.
-# Rewritten by every GREEN `make gate-stage`; a red run leaves it alone.
+# Rewritten by the chamber's `gate` phase on every GREEN chamber job (a
+# stage gate or a merge, `scripts/sluice-run.sh`); a red run leaves it
+# alone, because a red run's `run.json` is truncated and a roster taken
+# from one would silently DROP tests from the commit gate. `make
+# gate-stage` used to be named here and is a refusing signpost now
+# (decisions 0132, 0139) -- submit `make sluice-stage BRANCH=... REF=...`.
 # A test absent from this file is NOT in the commit gate — see the
-# spec's exclude-unknown rule. It enters on the next green stage gate.
+# spec's exclude-unknown rule. It enters on the next green chamber job.
 hornvale-alchemy::hornvale_alchemy$production::tests::admission_includes_the_max_boundary
 hornvale-alchemy::hornvale_alchemy$production::tests::admission_includes_the_min_boundary
 hornvale-alchemy::hornvale_alchemy$production::tests::admission_requires_every_requirement
@@ -1188,6 +1193,21 @@ hornvale-kernel::suite$golden_harness::rebaseline_creates_a_missing_fixture_and_
 hornvale-kernel::suite$golden_harness::rebaseline_on_matching_bytes_is_a_no_op_match
 hornvale-kernel::suite$golden_harness::rebaseline_rewrites_a_drifted_fixture
 hornvale-lab::burr_calibration$the_baseline_roster_is_eighteen_tongues
+hornvale-lab::hornvale_lab$authored::tests::a_changed_value_moves_the_authored_diff
+hornvale-lab::hornvale_lab$authored::tests::a_column_the_live_registry_no_longer_has_is_diverged
+hornvale-lab::hornvale_lab$authored::tests::a_current_fixture_announces_nothing
+hornvale-lab::hornvale_lab$authored::tests::a_fixture_matching_the_live_study_reads_current
+hornvale-lab::hornvale_lab$authored::tests::a_fixture_missing_a_live_column_reads_predates_without_shifting_its_values
+hornvale-lab::hornvale_lab$authored::tests::a_fixture_without_a_schema_is_refused
+hornvale-lab::hornvale_lab$authored::tests::a_rows_csv_that_is_not_seed_pin_set_metrics_refusal_is_refused
+hornvale-lab::hornvale_lab$authored::tests::a_schema_that_disagrees_with_its_rows_csv_is_refused
+hornvale-lab::hornvale_lab$authored::tests::a_shared_column_whose_kind_changed_is_diverged
+hornvale-lab::hornvale_lab$authored::tests::diffing_two_differently_aged_fixtures_is_refused
+hornvale-lab::hornvale_lab$authored::tests::predates_names_every_column_it_predates
+hornvale-lab::hornvale_lab$authored::tests::reordered_shared_columns_are_diverged
+hornvale-lab::hornvale_lab$authored::tests::the_narrowed_study_reselects_the_fixture_columns_in_the_fixtures_order
+hornvale-lab::hornvale_lab$authored::tests::the_trio_is_in_the_registry_order_these_tests_assume
+hornvale-lab::hornvale_lab$authored::tests::two_identical_fixtures_diff_to_no_movement
 hornvale-lab::hornvale_lab$blackbox::tests::record_failure_reports_an_unknown_pin_set_without_panicking
 hornvale-lab::hornvale_lab$census_claim::tests::a_cheap_run_never_claims_and_never_waits
 hornvale-lab::hornvale_lab$census_claim::tests::a_claim_held_by_our_own_ancestor_is_not_contention
@@ -1227,11 +1247,10 @@ hornvale-lab::hornvale_lab$diff::tests::identical_results_report_no_movement
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::a_frozen_column_is_excluded_with_a_reason
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::a_world_with_no_flagged_columns_still_reports_up_to_report_size
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::categorical_and_flag_columns_are_never_evaluable
-hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_surface_on_the_226_column_census
+hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_surface_on_the_227_column_census
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::exclusion_reasons_carry_the_exact_documented_wording
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_matches_the_same_worlds_entry_in_rank
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_returns_none_for_an_unknown_seed
-hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_is_deterministic
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_orders_most_anomalous_first
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_agrees_with_for_seed_on_a_census_row
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_scores_against_an_uncontaminated_index
@@ -1289,7 +1308,6 @@ hornvale-lab::hornvale_lab$domesday::detect::tests::d8_fires_on_exactly_alchemy_
 hornvale-lab::hornvale_lab$domesday::detect::tests::defensibility_capacity_rank_corr_still_exists_in_the_registry
 hornvale-lab::hornvale_lab$domesday::detect::tests::direct_references_match_measured_crates
 hornvale-lab::hornvale_lab$domesday::detect::tests::domain_crates_are_still_exactly_this_list
-hornvale-lab::hornvale_lab$domesday::detect::tests::findings_are_sorted_by_detector_then_metric
 hornvale-lab::hornvale_lab$domesday::detect::tests::pearson_reads_a_nontrivial_correlation_and_its_sign
 hornvale-lab::hornvale_lab$domesday::detect::tests::pearson_returns_none_for_a_constant_column
 hornvale-lab::hornvale_lab$domesday::detect::tests::the_live_census_reproduces_the_preregistered_findings
@@ -1300,6 +1318,7 @@ hornvale-lab::hornvale_lab$domesday::render::tests::a_detector_that_fired_nothin
 hornvale-lab::hornvale_lab$domesday::render::tests::a_domain_page_carries_the_generated_header_and_only_computed_numbers
 hornvale-lab::hornvale_lab$domesday::render::tests::a_domain_with_no_metrics_renders_the_no_metrics_notice_verbatim
 hornvale-lab::hornvale_lab$domesday::render::tests::a_flag_metric_always_renders_both_true_and_false_rows
+hornvale-lab::hornvale_lab$domesday::render::tests::a_metric_that_trips_two_detectors_is_grouped_under_one_heading_not_two
 hornvale-lab::hornvale_lab$domesday::render::tests::a_novel_detector_name_reaches_the_rendered_index
 hornvale-lab::hornvale_lab$domesday::render::tests::a_removed_parenthetical_directly_before_a_period_does_not_leave_a_dangling_space
 hornvale-lab::hornvale_lab$domesday::render::tests::an_ellipsis_survives_the_space_dot_space_cleanup_untouched
@@ -2799,6 +2818,7 @@ hornvale-vessel::hornvale_vessel$liveness::tests::shared_belief_is_a_noop_when_a
 hornvale-vessel::hornvale_vessel$liveness::tests::shared_belief_is_order_independent
 hornvale-vessel::hornvale_vessel$liveness::tests::social_proposal_and_serviceability_are_the_home_step
 hornvale-vessel::hornvale_vessel$liveness::tests::soft_maslow_severe_cold_beats_mild_thirst_but_dying_of_thirst_beats_any_cold
+hornvale-vessel::hornvale_vessel$liveness::tests::the_agent_at_predicate_spelling_is_a_permanent_on_disk_key
 hornvale-vessel::hornvale_vessel$liveness::tests::the_fatigue_drive_rests_in_place_wherever_the_creature_is
 hornvale-vessel::hornvale_vessel$liveness::tests::the_herd_bolts_borrowed_alarm_makes_a_calm_creature_flee_then_settle
 hornvale-vessel::hornvale_vessel$liveness::tests::the_hoisted_walk_emits_exactly_what_the_loop_emitted
@@ -3247,6 +3267,7 @@ hornvale-worldgen::hornvale_worldgen$history_bake::tests::traversable_neighbors_
 hornvale-worldgen::hornvale_worldgen$history_bake::tests::traversable_neighbors_excludes_ocean_includes_lanes
 hornvale-worldgen::hornvale_worldgen$history_bake::tests::two_settlements_of_one_people_can_differ_in_raiding
 hornvale-worldgen::hornvale_worldgen$history_bake::tests::two_underworld_communities_can_share_a_column_at_different_rungs
+hornvale-worldgen::hornvale_worldgen$history_bake::tests::working_site_never_reaches_past_the_supply_bound
 hornvale-worldgen::hornvale_worldgen$knownness::tests::a_holder_with_no_generation_length_falls_back_on_the_allometry_anchor
 hornvale-worldgen::hornvale_worldgen$observer::tests::observer_roster_is_sorted_ascending
 hornvale-worldgen::hornvale_worldgen$observer::tests::ocular_reason_rounds_the_merge_fraction_for_display
@@ -3315,7 +3336,11 @@ hornvale-worldgen::hornvale_worldgen$traversal::tests::a_lone_high_vertex_costs_
 hornvale-worldgen::hornvale_worldgen$traversal::tests::every_marine_biome_is_impassable
 hornvale-worldgen::hornvale_worldgen$traversal::tests::zero_slope_yields_exactly_the_base_cost
 hornvale-worldgen::hornvale_worldgen$vestige::tests::a_living_ward_is_maintained_and_venerated
+hornvale-worldgen::hornvale_worldgen$vestige::tests::a_maintained_ward_reads_as_safe
+hornvale-worldgen::hornvale_worldgen$vestige::tests::a_numinous_hazard_no_longer_implies_a_prehuman_site
 hornvale-worldgen::hornvale_worldgen$vestige::tests::a_plague_end_yields_a_pestilent_hazard
+hornvale-worldgen::hornvale_worldgen$vestige::tests::a_recent_breach_is_legible
+hornvale-worldgen::hornvale_worldgen$vestige::tests::an_ancient_breach_is_dreaded_and_illegible
 hornvale-worldgen::hornvale_worldgen$vestige::tests::an_ancient_ruin_is_breached_and_forgotten_with_a_lost_warning
 hornvale-worldgen::hornvale_worldgen$volcano::tests::the_volcano_key_spelling_is_pinned
 hornvale-worldgen::suite$artifacts::astronomy_depth_produces_no_terrain_and_no_climate

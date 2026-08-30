@@ -72,7 +72,8 @@
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::Seed;
 use hornvale_lab::{
-    BuiltView, FullView, RunResult, TerrainView, canonical_value, load_rows, load_study, registry,
+    BuiltView, FullView, RunResult, TerrainView, canonical_value, load_authored, load_study,
+    registry,
 };
 use hornvale_worldgen::BuildDepth;
 use std::path::Path;
@@ -94,15 +95,21 @@ const GUARDED: &[&str] = &[
     "crisis-fires",
 ];
 
-/// The canonical census and its committed rows.
+/// The canonical census and its committed fixture directory.
 const STUDY: &str = "../../studies/the-census.study.json";
-const ROWS: &str = "../../book/src/laboratory/generated/the-census/rows.csv";
+const FIXTURE_DIR: &str = "../../book/src/laboratory/generated/the-census";
 
-/// Load the committed census exactly as `calibration.rs` does.
+/// Load the committed census exactly as `calibration.rs` does — AS AUTHORED,
+/// through the fixture's own `schema.json`. A fixture that predates a newly
+/// registered metric still loads, so this tripwire keeps failing at its OWN
+/// comparison (a guarded metric whose value moved) rather than dying earlier
+/// at a schema parse, which is what masked it before.
 fn committed() -> RunResult {
     let study = load_study(Path::new(STUDY)).expect("load the census study");
-    let csv = std::fs::read_to_string(ROWS).expect("read the census fixture");
-    load_rows(&study, &csv).expect("reconstruct the census from its fixture")
+    let (result, age) = load_authored(&study, Path::new(FIXTURE_DIR), FIXTURE_DIR)
+        .expect("reconstruct the census from its committed fixture");
+    age.announce(FIXTURE_DIR);
+    result
 }
 
 /// Build one seed to `depth`, as `BuiltView` so the registry's extractors
