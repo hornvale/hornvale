@@ -7,7 +7,7 @@
 //! preregistration boundary requires, so the numbers frozen here cannot have
 //! been tuned by the thing they will later judge.
 //!
-//! Three claims, one per test:
+//! Three claims. The third is split across two tests — see the fourth bullet.
 //!
 //! - **`..._negative_theorem`** — the NEGATIVE control's provable-zero theorem,
 //!   demonstrated on a hand-built fixture in milliseconds. Under
@@ -37,9 +37,24 @@
 //!   width → fewest hops → witness); arm B applies an alternative selection
 //!   rule to the candidate set the seam delivers. The change rewrites the held
 //!   telling at a large fraction of holders while moving the divergence
-//!   aggregate (`mutually_exclusive`) by ≤ 4 of ~100 — the dissociation the
-//!   whole campaign exists to expose. This test re-derives both quantities and
-//!   asserts a qualifying alternative exists.
+//!   aggregate (`mutually_exclusive`) by ≤ 4 — the dissociation the whole
+//!   campaign exists to expose. This test re-derives both quantities, prints
+//!   the whole signature table, and asserts the LOAD-BEARING controls:
+//!   `shipped_absent == 0`, a non-empty population, and the frozen
+//!   `positive_tail >= 20%` criterion as a witness.
+//!
+//! - **`..._positive_aggregate_tolerance_preregistered_not_met`** — the fourth
+//!   test, and the reason there are four rather than three. The qualifying
+//!   rule's SECOND half — an alternative clearing 40% held-telling churn
+//!   *while* the aggregate moves by no more than ±4 — is preregistered and NOT
+//!   MET on this tree, so it is carried `#[ignore]`d against a registry row
+//!   rather than deleted or retuned. It is a SPLIT rather than an `#[ignore]`
+//!   on the test above, deliberately: the two shared a body, and
+//!   `docs/audits/heavy-tier-adjudication.md` row 81 records that
+//!   `shipped_absent == 0` — not the qualifying rule, which that row calls
+//!   *"report-shaped in isolation"* — is why this file is in the heavy tier at
+//!   all. Ignoring the pair would have disabled the load-bearing half to defer
+//!   the report-shaped one.
 //!
 //! ## The enumeration machinery lives in `tests/common/mod.rs`.
 //!
@@ -60,6 +75,11 @@
 //! The two heavy tests read the 12-seed panel and are `#[ignore]`d into the
 //! heavy tier. Run them by name:
 //! `cargo nextest run -p hornvale-hearsay --run-ignored all -E 'test(touchstone_controls_probe)'`.
+//!
+//! That command also runs the preregistered-not-met test, which is RED by
+//! design and costs a third panel pass. The heavy tier itself never selects
+//! it: `scripts/gate-full-heavy.sh` builds its filterset from the `fn` under
+//! each `#[ignore = "heavy:` tag, and that test carries no such tag.
 
 mod common;
 
@@ -355,17 +375,79 @@ struct SignatureRow {
     alt_mutex: usize,
 }
 
-/// The POSITIVE control's prior signature, re-derived on this tree. Arm A is
-/// the shipped walk under `(WithRaidSeam, Multiplicative)`; arm B applies an
-/// alternative selection rule to the candidate set the seam delivers. A
-/// qualifying alternative rewrites the held telling at ≥ 40% of holders while
-/// moving the aggregate (`mutually_exclusive`) by ≤ 4 of ~100.
+/// One whole pass of the POSITIVE control over the 12-seed panel — every
+/// quantity the two tests below assert on, measured once.
+///
+/// The two tests each call [`measure_positive_signature`] for themselves
+/// rather than sharing a cached result: nextest is process-per-test, so there
+/// is no cache to share. The heavy tier pays for exactly one pass, because it
+/// selects only the `heavy:`-tagged test (see the module doc's cost note).
+struct PositiveSignature {
+    /// Denominator: (holder, foreign ending) pairs reached under contact.
+    holders: usize,
+    /// The divergence aggregate under arm A, summed over the panel.
+    shipped_mutex: usize,
+    /// Holders where the shipped walk's own answer was missing from the
+    /// enumerated candidate set, or the holder itself was absent from arm A.
+    shipped_absent: usize,
+    /// Endings whose enumeration hit the candidate cap and were not scored.
+    capped: usize,
+    /// Panel seeds skipped for want of a year rung.
+    skipped: Vec<u64>,
+    /// Per-alternative signature rows, keyed by index into
+    /// `Selection::ALTERNATIVES`.
+    sig: BTreeMap<usize, SignatureRow>,
+}
+
+impl PositiveSignature {
+    /// One alternative's held-telling (`Claim`) churn as a fraction of the
+    /// holder population — the quantity spec §4 calls `positive_tail`.
+    fn claim_frac(&self, ai: usize) -> f64 {
+        let row = self.sig.get(&ai).copied().unwrap_or_default();
+        row.claim_churn as f64 / self.holders.max(1) as f64
+    }
+
+    /// One alternative's movement of the divergence aggregate against arm A.
+    fn delta(&self, ai: usize) -> i64 {
+        let row = self.sig.get(&ai).copied().unwrap_or_default();
+        row.alt_mutex as i64 - self.shipped_mutex as i64
+    }
+
+    /// The strongest alternative by held-telling churn ALONE, ignoring the
+    /// aggregate tolerance — the half of the qualifying rule that still
+    /// reproduces on this tree, and what the witness assertion reads.
+    fn strongest_by_churn(&self) -> Option<(usize, f64)> {
+        (0..Selection::ALTERNATIVES.len())
+            .map(|ai| (ai, self.claim_frac(ai)))
+            .fold(None, |best: Option<(usize, f64)>, cand| match best {
+                Some((_, bf)) if bf >= cand.1 => best,
+                _ => Some(cand),
+            })
+    }
+
+    /// The strongest alternative meeting BOTH halves of the qualifying rule:
+    /// at least 40% held-telling churn AND an aggregate delta within ±4. This
+    /// is the preregistered criterion the fourth test carries as NOT MET; both
+    /// constants are frozen and neither is touched here.
+    fn best_qualifying(&self) -> Option<(usize, f64)> {
+        (0..Selection::ALTERNATIVES.len())
+            .filter(|ai| self.claim_frac(*ai) >= 0.40 && self.delta(*ai).abs() <= 4)
+            .map(|ai| (ai, self.claim_frac(ai)))
+            .fold(None, |best: Option<(usize, f64)>, cand| match best {
+                Some((_, bf)) if bf >= cand.1 => best,
+                _ => Some(cand),
+            })
+    }
+}
+
+/// Re-derive the POSITIVE control's whole signature on the panel, and print
+/// it. Arm A is the shipped walk under `(WithRaidSeam, Multiplicative)`; arm B
+/// applies each alternative selection rule to the candidate set the seam
+/// delivers.
 ///
 /// claim: structural(seed: panel) — false-positive seed-loop flag; the loop
 /// binds a census-panel prefix, not a search over seeds.
-#[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
-fn touchstone_controls_probe_positive_signature() {
+fn measure_positive_signature() -> PositiveSignature {
     let components = hornvale_worldgen::WorldComponents::assemble().expect("components assemble");
 
     let mut holders = 0usize; // denominator: (holder, foreign ending) reached under contact
@@ -483,96 +565,190 @@ fn touchstone_controls_probe_positive_signature() {
         }
     }
 
-    println!("\n=========== TOUCHSTONE — POSITIVE CONTROL SIGNATURE ===========");
-    println!(
-        "panel                 : {} seeds, skipped {skipped:?}",
-        PANEL.len()
-    );
-    println!(
-        "arm A (baseline)      : shipped walk — least-damage selection, (WithRaidSeam, multiplicative)"
-    );
-    println!(
-        "population            : {holders} (holder, foreign ending) pairs reached under contact"
-    );
-    println!("aggregate (arm A)     : {shipped_mutex} mutually-exclusive cross-people endings");
-    println!("capped endings        : {capped}");
-    println!(
-        "\n  The QUALIFYING metric is `claim≠` — the held-telling / `Claim`-diff rate (remembered \
-         DAY or hops or rung differs), which is what spec §4 names the ~41.9% signature. `value≠` \
-         (day only) is reported beside it as the probe_tiebreak-comparable figure. `route`/`width` \
-         live OUTSIDE the `Claim`, so the eventual instrument sees at least this much (spec §4)."
-    );
-    println!(
-        "\n  {:<14} {:>10} {:>9} {:>10} {:>9} {:>8} {:>8} {:>7}",
-        "arm B rule", "value≠", "value%", "claim≠", "claim%", "mutexB", "delta", "PASS?"
-    );
+    let measured = PositiveSignature {
+        holders,
+        shipped_mutex,
+        shipped_absent,
+        capped,
+        skipped,
+        sig,
+    };
+    measured.report();
+    measured
+}
 
-    // Strongest qualifying alternative by held-telling (Claim) churn, subject
-    // to the aggregate barely moving. That IS the dissociation.
-    let mut best: Option<(usize, f64)> = None; // (alt index, claim_churn fraction)
-    for (ai, alt) in Selection::ALTERNATIVES.iter().enumerate() {
-        let row = sig.get(&ai).copied().unwrap_or_default();
-        let claim_frac = row.claim_churn as f64 / holders.max(1) as f64;
-        let delta = row.alt_mutex as i64 - shipped_mutex as i64;
-        let passes = claim_frac >= 0.40 && delta.abs() <= 4;
+impl PositiveSignature {
+    /// Print the whole signature table. Both tests below print it, so whichever
+    /// one a reader ran has the numbers its assertion turns on.
+    fn report(&self) {
+        println!("\n=========== TOUCHSTONE — POSITIVE CONTROL SIGNATURE ===========");
         println!(
-            "  {:<14} {:>10} {:>8.2}% {:>10} {:>8.2}% {:>8} {:>+8} {:>7}",
-            alt.label(),
-            row.value_churn,
-            pct(row.value_churn, holders),
-            row.claim_churn,
-            pct(row.claim_churn, holders),
-            row.alt_mutex,
-            delta,
-            if passes { "yes" } else { "no" },
+            "panel                 : {} seeds, skipped {:?}",
+            PANEL.len(),
+            self.skipped
         );
-        if passes && best.is_none_or(|(_, bf)| claim_frac > bf) {
-            best = Some((ai, claim_frac));
+        println!(
+            "arm A (baseline)      : shipped walk — least-damage selection, (WithRaidSeam, multiplicative)"
+        );
+        println!(
+            "population            : {} (holder, foreign ending) pairs reached under contact",
+            self.holders
+        );
+        println!(
+            "aggregate (arm A)     : {} mutually-exclusive cross-people endings",
+            self.shipped_mutex
+        );
+        println!("capped endings        : {}", self.capped);
+        println!(
+            "\n  The QUALIFYING metric is `claim≠` — the held-telling / `Claim`-diff rate (remembered \
+             DAY or hops or rung differs), which is what spec §4 names the ~41.9% signature. `value≠` \
+             (day only) is reported beside it as the probe_tiebreak-comparable figure. `route`/`width` \
+             live OUTSIDE the `Claim`, so the eventual instrument sees at least this much (spec §4)."
+        );
+        println!(
+            "\n  {:<14} {:>10} {:>9} {:>10} {:>9} {:>8} {:>8} {:>7}",
+            "arm B rule", "value≠", "value%", "claim≠", "claim%", "mutexB", "delta", "PASS?"
+        );
+        for (ai, alt) in Selection::ALTERNATIVES.iter().enumerate() {
+            let row = self.sig.get(&ai).copied().unwrap_or_default();
+            let delta = self.delta(ai);
+            let passes = self.claim_frac(ai) >= 0.40 && delta.abs() <= 4;
+            println!(
+                "  {:<14} {:>10} {:>8.2}% {:>10} {:>8.2}% {:>8} {:>+8} {:>7}",
+                alt.label(),
+                row.value_churn,
+                pct(row.value_churn, self.holders),
+                row.claim_churn,
+                pct(row.claim_churn, self.holders),
+                row.alt_mutex,
+                delta,
+                if passes { "yes" } else { "no" },
+            );
+        }
+        println!(
+            "\n  A qualifying arm B rewrites the held telling at >= 40% of holders (claim≠) while \
+             moving the aggregate by <= 4 events — the dissociation the touchstone must see and the \
+             aggregate cannot. The FROZEN success criterion is looser still: positive_tail >= 20%."
+        );
+        println!(
+            "  NOTE — SUBSTRATE DRIFT ON THE EXACT PRIOR (a finding, not a rescue): the prior quoted \
+             a ~41.9% VALUE-change signature; this tree's strongest value-change is under 40% \
+             (recency 38.37%), while the held-telling (claim) churn is 62.64%. The exact prior \
+             magnitude does not reproduce to the digit; the dissociation PROPERTY does, and no floor \
+             was lowered to say so — the frozen 20% criterion stands and is cleared 3x."
+        );
+        println!(
+            "  NOTE — THE AGGREGATE TOLERANCE IS ABSOLUTE ON A SMALL COUNT (The Winze, 2026-08-29): \
+             the ±4 half of the qualifying rule is carried as PREREGISTERED, NOT MET in \
+             `touchstone_controls_probe_positive_aggregate_tolerance_preregistered_not_met`, against \
+             `TOOL-touchstone-aggregate-tolerance-is-absolute-on-a-small-count`. Read the arm-A \
+             aggregate printed above before reading a delta: it is a count in the tens, not the ~100 \
+             the rule was written against."
+        );
+        match self.best_qualifying() {
+            Some((ai, frac)) => println!(
+                "  FROZEN POSITIVE ARM B : {} (held-telling churn {:.2}%, aggregate delta within +-4)",
+                Selection::ALTERNATIVES[ai].label(),
+                frac * 100.0
+            ),
+            None => println!(
+                "  NO QUALIFYING ALTERNATIVE — this is a FINDING; see the deferred test's reason."
+            ),
         }
     }
-    println!(
-        "\n  A qualifying arm B rewrites the held telling at >= 40% of holders (claim≠) while \
-         moving the aggregate by <= 4 events — the dissociation the touchstone must see and the \
-         aggregate cannot. The FROZEN success criterion is looser still: positive_tail >= 20%."
-    );
-    println!(
-        "  NOTE — SUBSTRATE DRIFT ON THE EXACT PRIOR (a finding, not a rescue): the prior quoted \
-         a ~41.9% VALUE-change signature; this tree's strongest value-change is under 40% \
-         (recency 38.37%), while the held-telling (claim) churn is 62.64%. The exact prior \
-         magnitude does not reproduce to the digit; the dissociation PROPERTY does, and no floor \
-         was lowered to say so — the frozen 20% criterion stands and is cleared 3x."
-    );
-    match best {
-        Some((ai, frac)) => println!(
-            "  FROZEN POSITIVE ARM B : {} (held-telling churn {:.2}%, aggregate delta within +-4)",
-            Selection::ALTERNATIVES[ai].label(),
-            frac * 100.0
-        ),
-        None => {
-            println!("  NO QUALIFYING ALTERNATIVE — this is a FINDING; see the assertion below.")
-        }
-    }
+}
+
+/// The POSITIVE control's LOAD-BEARING assertions, re-derived on this tree.
+///
+/// `docs/audits/heavy-tier-adjudication.md` row 81 keeps this file in the heavy
+/// tier on `shipped_absent == 0` — the enumerator must contain the shipped
+/// walk's own answer on every holder — and says in as many words that the
+/// qualifying-alternative assertion is *"report-shaped in isolation and does
+/// not itself justify KEEP"*. So the qualifying rule moved out (below) and this
+/// test keeps every control the verdict actually rests on.
+///
+/// **The witness.** `cli/tests/suite/heavy_tier.rs` asks that a
+/// PREREGISTERED-not-met deferral leave an always-running assertion beside it,
+/// so the deferred figures stay measured rather than becoming fiction. Here
+/// that is the FROZEN success criterion itself — `positive_tail >= 20%`, the
+/// held-telling churn of the strongest alternative — which this tree clears
+/// roughly 3x (62.08% measured 2026-08-29 against the note's 62.64%). It is
+/// deliberately NOT a pinned integer: the whole finding below is that these
+/// counts move for any world change, so pinning one would re-import the very
+/// brittleness being deferred. The 20% bar is the campaign's own frozen
+/// criterion and is not moved here.
+///
+/// claim: structural(seed: panel) — false-positive seed-loop flag; the loop
+/// binds a census-panel prefix, not a search over seeds.
+#[test]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+fn touchstone_controls_probe_positive_signature() {
+    let measured = measure_positive_signature();
 
     // Controls.
     assert!(
-        skipped.len() < PANEL.len(),
+        measured.skipped.len() < PANEL.len(),
         "control: every panel seed was skipped for want of a year rung"
     );
     assert!(
-        holders > 0,
+        measured.holders > 0,
         "control: the contact arm reached no foreign-ending holder"
     );
     assert_eq!(
-        shipped_absent, 0,
+        measured.shipped_absent, 0,
         "control: the shipped walk's own answer must appear in the enumerated candidate set on \
-         every holder — that is what keeps arm A the real baseline; it was absent on \
-         {shipped_absent}"
+         every holder — that is what keeps arm A the real baseline; it was absent on {}",
+        measured.shipped_absent
     );
+
+    // The witness: the frozen success criterion, on the churn half alone.
+    let (ai, frac) = measured
+        .strongest_by_churn()
+        .expect("Selection::ALTERNATIVES is non-empty");
     assert!(
-        best.is_some(),
+        frac >= 0.20,
+        "THE FROZEN POSITIVE CRITERION (positive_tail >= 20%) NO LONGER HOLDS: the strongest \
+         alternative ({}) rewrites the held telling at only {:.2}% of {} holders. The dissociation \
+         PROPERTY itself has stopped reproducing — do NOT lower this bar; it is the campaign's own \
+         preregistered floor (decision 0016). Report it and stop.",
+        Selection::ALTERNATIVES[ai].label(),
+        frac * 100.0,
+        measured.holders
+    );
+}
+
+/// The qualifying rule's SECOND half — PREREGISTERED, NOT MET, carried rather
+/// than retuned.
+///
+/// Requirement as frozen: some alternative selection rule rewrites the held
+/// telling at ≥ 40% of holders **while** moving the divergence aggregate
+/// (`mutually_exclusive`) by no more than ±4. The churn half reproduces
+/// comfortably — 62.08% measured 2026-08-29, and asserted unignored as the
+/// witness above. The aggregate half does not, and the reason is the
+/// tolerance's shape rather than the world's behaviour: ±4 is an ABSOLUTE
+/// allowance written against a "~100" aggregate that this tree does not
+/// produce. Across three arms of one campaign the arm-A aggregate read
+/// **23 / 17 / 9** while recency's delta read **+2 / +7 / +7** — so the arm
+/// nearest `main` passed by two events, and the quantity's natural range dwarfs
+/// its tolerance.
+///
+/// **Not retuned, deliberately.** Widening ±4 to fit would delete the only
+/// thing that noticed the aggregate is small; a successor discharges this by
+/// re-deriving a tolerance from the aggregate's own base and re-freezing it,
+/// filed as
+/// [`TOOL-touchstone-aggregate-tolerance-is-absolute-on-a-small-count`](https://github.com/hornvale/hornvale/blob/main/book/src/frontier/idea-registry.md).
+#[test]
+#[ignore = "PREREGISTERED, not met: awaits TOOL-touchstone-aggregate-tolerance-is-absolute-on-a-small-count (the qualifying rule pairs a >= 40% held-telling churn bar with an ABSOLUTE |delta| <= 4 tolerance on the mutually-exclusive aggregate, and that aggregate is a count in the tens, not the ~100 the rule was written against: across three arms of The Winze it read 23 / 17 / 9 with recency's delta at +2 / +7 / +7, so the arm nearest main passed by two events and the quantity's natural range dwarfs its tolerance. The churn half still reproduces - 62.08% against the committed note's 62.64%, clearing the frozen 20% criterion 3x - and is asserted UNIGNORED as a witness in touchstone_controls_probe_positive_signature, which also keeps this file's load-bearing shipped_absent == 0 control running per heavy-tier-adjudication row 81. Widening the tolerance would retune away the only instrument that noticed the aggregate is small, so decision 0016 keeps the unmet criterion on the record instead; a successor re-derives the tolerance from the aggregate's own base and re-freezes it)"]
+fn touchstone_controls_probe_positive_aggregate_tolerance_preregistered_not_met() {
+    let measured = measure_positive_signature();
+
+    assert!(
+        measured.best_qualifying().is_some(),
         "THE POSITIVE CONTROL DID NOT REPRODUCE ITS DISSOCIATION on this tree: no alternative \
          selection rule achieved >= 40% held-telling (claim) churn with an aggregate delta within \
-         +-4. Per the brief this would be a FINDING — do NOT lower the floor to make it pass; \
-         report it and stop."
+         +-4 (arm A aggregate {}, over {} holders). Per the brief this is a FINDING — do NOT lower \
+         the floor or widen the tolerance to make it pass; report it and stop.",
+        measured.shipped_mutex,
+        measured.holders
     );
 }

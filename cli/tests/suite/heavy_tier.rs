@@ -454,7 +454,7 @@ fn the_heavy_roster_is_exactly_this_fixture() {
 /// outside **both**: outside `preregistration_guard`'s path filter, and
 /// outside this file's adjudication unless its reason happens to carry a
 /// token. Four of the seven blind spots listed above are exactly that case.
-const EXPECTED_UNTOKENISED: [&str; 33] = [
+const EXPECTED_UNTOKENISED: [&str; 34] = [
     "...",
     "PREREGISTERED, cannot adjudicate at n=120: awaits TOOL-anomaly-ranking-concentrates-injection (recall@10 = 0.6000 over 120 pairs, exactly ON the 0.60 bar; six census epochs of one unchanged report read 0.5667, 0.6083, 0.6000, 0.6083, 0.6083 and 0.6000, all inside one SE of the bar, so the battery separates nothing. The sixth is the first taken after the evaluable surface grew, 117 -> 118 columns; an ablation dropping the new column re-reads 72/120 arm for arm, so the surface contributed nothing and the reading stays comparable)",
     "PREREGISTERED, not met: awaits BIO-gause-distinctness-vacuous (the corrected climate collapsed all three arms of the cv-ratio instrument - real 0.9945, goblin-niche-substituted 0.9964, width-only 0.9964 against 0.9747 when last authored - so the real gap 0.0055 no longer clears the 0.007 floor and the statistic can no longer separate human from a goblin-substituted human; lowering the floor would retune away the very vacuity it exists to announce)",
@@ -466,6 +466,7 @@ const EXPECTED_UNTOKENISED: [&str; 33] = [
     "PREREGISTERED, not met: awaits MAP-waterfall-threshold-mis-scaled (WATERFALL_MIN_DRAINAGE = 80 was calibrated on pre-epoch catchments; the sea-level epoch shortened drainage paths, so seed 42's loud vertices fell 34 -> 16 against a floor of 17 and strong crossings 8 -> 2 against a floor of 4, and lowering either floor would delete the only instrument that noticed)",
     "PREREGISTERED, not met: awaits PROC-domesday-all-absent-blind-spot (5 zero-present-value columns are invisible to D2/D4 — stats::numeric returns None on an empty column)",
     "PREREGISTERED, not met: awaits TOOL-min-vs-max-separation-compares-an-overlap (decision 0134 retires it; the whole-roster Spearman rho, already asserted above, carries the direction)",
+    "PREREGISTERED, not met: awaits TOOL-touchstone-aggregate-tolerance-is-absolute-on-a-small-count (the qualifying rule pairs a >= 40% held-telling churn bar with an ABSOLUTE |delta| <= 4 tolerance on the mutually-exclusive aggregate, and that aggregate is a count in the tens, not the ~100 the rule was written against: across three arms of The Winze it read 23 / 17 / 9 with recency's delta at +2 / +7 / +7, so the arm nearest main passed by two events and the quantity's natural range dwarfs its tolerance. The churn half still reproduces - 62.08% against the committed note's 62.64%, clearing the frozen 20% criterion 3x - and is asserted UNIGNORED as a witness in touchstone_controls_probe_positive_signature, which also keeps this file's load-bearing shipped_absent == 0 control running per heavy-tier-adjudication row 81. Widening the tolerance would retune away the only instrument that noticed the aggregate is small, so decision 0016 keeps the unmet criterion on the record instead; a successor re-derives the tolerance from the aggregate's own base and re-freezes it)",
     "TODO: re-enable once the number settles",
     "The Hand Task 3: NEITHER route to this test works, and the second one is a finding about the sim (docs/retrospectives/the-hand.md). (1) THE SEAM DOES NOT SERVE IT: place_creature_at_me/place_creature_out_of_my_sight only place a body at the possessions OWN room, so they can manufacture co-location but not an ARRIVAL, which needs before=false at the wait's own start and after=true from the TICK's own commit -- something only the drive simulation can produce mid-call. Measured: placed at the flagship then relocated by its own drive-seeking, a wild creature departs reliably (see the departure test above) but never returns in 8 subsequent waits; six placed or unplaced companions (2 settled, 4 wild) produce zero arrivals across 40 unmodified waits. (2) THE SEED SEARCH STILL IN THIS FILE PASSED ON MAIN AND NOW FAILS ON EVERY SEED: world_where_an_unsensed_creature_arrives exhausts 0..64 and panics with its own message, re-measured 2026-08-24 at 233.72 s -- so, in that panics own words, either the arrival narration or the sight narrowing regressed, or no world in the range exercises the pair any more. That is a finding about the sim, not a flaky fixture. CONSEQUENCE, RECORDED DELIBERATELY: !wait's ARRIVAL narration has NO witness of any kind right now -- the departure half is covered, the arrival half is not. Closing this needs either a day-parameterised placement seam able to pre-stage a same-tick position change, or a measurement of why the search went empty, or accepting the null -- a design decision beyond a co-location fixture.",
     "calibration: run by hand, prints the approach_ease quantiles",
@@ -583,6 +584,22 @@ const EXPECTED_UNTOKENISED: [&str; 33] = [
 /// `the_collapsed_cv_ratio_arms_are_pinned_as_witnesses`,
 /// `the_sub_floor_raider_reading_is_pinned_as_a_witness`), so the deferred
 /// figures stay measured.
+///
+/// The Winze added one, reviewed 2026-08-29:
+/// `TOOL-touchstone-aggregate-tolerance-is-absolute-on-a-small-count`, at
+/// `windows/hearsay/tests/touchstone_controls_probe.rs::touchstone_controls_probe_positive_aggregate_tolerance_preregistered_not_met`. It is the Glasshouse
+/// SPLIT pattern again, and for a documented reason rather than a stylistic
+/// one: `docs/audits/heavy-tier-adjudication.md` row 81 says the failing
+/// assertion is *"report-shaped in isolation"* and that the KEEP verdict rests
+/// on `shipped_absent == 0` in the SAME test body, so an `#[ignore]` on the
+/// pair would have disabled the load-bearing half to defer the report-shaped
+/// one. Its witness is not a pinned integer, and the reason is worth reading
+/// before the next entry copies the pattern: the finding IS that the deferred
+/// counts move for any world change (23 / 17 / 9 across three arms of one
+/// campaign, against a ±4 tolerance), so a pinned integer would re-import the
+/// brittleness being deferred. The witness is the campaign's own frozen
+/// criterion instead — `positive_tail >= 20%`, cleared 3x — asserted unignored
+/// beside it.
 ///
 /// **The Gnomon also found the rot this convention carries, and closed it for
 /// its own entry.** An `#[ignore]`d measurement stops being measured: the

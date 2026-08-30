@@ -464,6 +464,34 @@ time"*, which is the shape nobody investigates.
    fifth call to the same batched field in the same block, each paying its own
    grouped ledger scan. Collapsing all five behind one memoised field is the
    fix the laboratory's own guide prescribes and was not this campaign's.
+6. **A heavy-tier positive control is not robust to any world change, and the
+   project had already adjudicated the failing assertion as report-shaped.**
+   The campaign's last act was to chase
+   `touchstone_controls_probe_positive_signature`, red in the chamber's `heavy`
+   phase. It is not a campaign defect — The Winze touches no hearsay code, a
+   breach ending is `Ended::Nature` with no attacker so it cannot inject a
+   foreign ending, and `shipped_absent == 0` and both negative controls pass.
+   What fails is a hard-coded `delta.abs() <= 4` on a count whose base is in the
+   tens: across three arms of this campaign the arm-A aggregate read
+   **23 / 17 / 9** and recency's delta read **+2 / +7 / +7**, so the arm nearest
+   `main` passed by two events. The dissociation *property* reproduces
+   untouched — 62.08% held-telling churn against the committed note's 62.64%,
+   clearing the frozen `positive_tail >= 20%` criterion roughly 3x. And
+   `docs/audits/heavy-tier-adjudication.md` row 81, the KEEP verdict for this
+   very test, already said the failing assertion is *"report-shaped in isolation
+   and does not itself justify KEEP; the verdict rests on `shipped_absent == 0`
+   and on this file being the sole surviving instance of that check."* So the
+   remedy was a **split**, not an `#[ignore]`: ignoring the test would have
+   disabled the load-bearing control in order to defer the report-shaped one,
+   which is exactly backwards. The load-bearing assertions and the frozen
+   criterion keep running in the heavy tier; the ±4 conjunct is carried
+   `#[ignore]`d as PREREGISTERED, not met against
+   `TOOL-touchstone-aggregate-tolerance-is-absolute-on-a-small-count`. **The
+   general lesson is the one worth carrying forward**: a tolerance is a claim
+   about a scale, and this one was written against a "~100" the tree stopped
+   producing — nothing re-checked the scale when the base moved, and an
+   absolute allowance on a drifting small count reddens for reasons that have
+   nothing to do with the property it guards.
 
 ## Do differently next time
 
