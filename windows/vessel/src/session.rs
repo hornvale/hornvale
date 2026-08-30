@@ -2919,37 +2919,67 @@ impl<'w> Session<'w> {
     ///
     /// | state | answer |
     /// |---|---|
-    /// | latent (never placed, or placed here) | taken |
+    /// | never placed, and the GRAMMAR puts it inside a shut container | "shut away in something closed" |
+    /// | latent otherwise (never placed and reachable, or placed here) | taken |
     /// | already located on the body | "you are already carrying it" |
     /// | located in a container standing here | taken, if that container admits ([`Self::holder_admits`]) |
-    /// | anywhere else | "you see no … here" — the negative fold (spec §3.4) |
+    /// | anywhere else | the LEDGER is asked whether anything of that name is here ([`Self::take_from_the_ledger`]) |
     ///
-    /// The third row is what makes `put` reversible: a key stowed in a chest
+    /// The fourth row is what makes `put` reversible: a key stowed in a chest
     /// stops being latent, so without it the room would refuse to give back
     /// what the player had just put down.
     ///
-    /// # WHAT IT DELIBERATELY DOES NOT CONSULT, AND THE DEFECT THAT EXPOSES
+    /// # THE LID GATE RUNS ON BOTH PATHS NOW, AND THIS DOC USED TO RECORD THE
+    /// DEFECT INSTEAD OF FIXING IT
     ///
-    /// **It does not ask whether the GRAMMAR puts this thing inside
-    /// something.** `Anchor.within` is decor to every verb in this tree:
-    /// `chamber_prose::chamber_nouns` names a key inside a shut strongbox,
-    /// `describe_chamber` says so on entry, and `examine a key` answers in
-    /// full — all shipped before this task. A `take` that alone refused to
-    /// reach through a lid would be the only verb in the tree that did, and
-    /// would still not make the lid mean anything, because the player can
-    /// already see and examine what is behind it.
+    /// The first row is new (Task 13, fix round 1). It used to be absent, and
+    /// the absence was **asymmetric in a way no reader would guess**: the
+    /// container check sat behind `if !is_latent(…)`, so a key the LEDGER had
+    /// put in a chest was refused (*"The key is shut away in something
+    /// closed"*) while a key the GRAMMAR had composed inside the same chest —
+    /// the untouched, as-generated case, which is every world on its first
+    /// turn — came out through a locked lid. Measured through the shipped CLI
+    /// on seed 1, standing in the storeroom:
     ///
-    /// **The consequence is a real defect and it is NOT in this function.**
-    /// `the-key-in-the-strongbox` is the only pattern that places the only
-    /// `Portable` kind, and it places it `Within(Strongbox)` — "a key is
-    /// inside a strongbox or it is nowhere", in its own words. So the one key
-    /// a played world contains sits inside the very lockable chest it opens,
-    /// and a player who takes it out has defeated the lock in one move. That
-    /// is an authored-grammar problem with an authored-grammar fix (a pattern
-    /// placing a key somewhere a strongbox is not, which is Task 11's Step 0
-    /// shape and needs its own census re-run), and gating this verb instead
-    /// would trade a lock nobody can defend for a verb nobody can reach.
-    /// Recorded here rather than repaired here.
+    /// ```text
+    /// > open a strongbox   It is locked, and you are carrying nothing that would open it.
+    /// > take a key         You take the key.
+    /// > open a strongbox   You open the strongbox. Within it: a key.
+    /// ```
+    ///
+    /// The only lock in the game fell in one move. This doc RECORDED that —
+    /// "the consequence is a real defect and it is NOT in this function" —
+    /// and deferred it to an authored-grammar fix, on the grounds that
+    /// gating the verb alone "would trade a lock nobody can defend for a
+    /// verb nobody can reach". That reasoning was sound and its conclusion
+    /// was still wrong, because it treated the two halves as alternatives.
+    /// They are one change: `interior::pattern`'s `the-key-on-the-ledge`
+    /// puts a key in the hearthroom — a room `role_for` guarantees is
+    /// shallower than any `Role::Store` — so the lid can close without the
+    /// strongbox becoming unopenable. Neither half is safe alone.
+    ///
+    /// **It asks `Anchor.within`, and only on the latent path.** The
+    /// grammar's containment is the truth exactly while the ledger has no
+    /// opinion; once a thing has been placed, its `located-in` fold is
+    /// authoritative and the anchor graph is stale. Applying the gate
+    /// unconditionally would refuse a key the player had already taken out
+    /// and set down on that room's own floor, because the grammar still says
+    /// it lives in the chest.
+    ///
+    /// **The lid, not the lock**, and the two are separate states (decision
+    /// 0399). This asks [`Self::holder_admits`] — the same question `put`
+    /// and [`Self::take_from_the_ledger`] ask about the same lid, so one
+    /// container cannot be reachable one way and not the other. A locked box
+    /// is refused here because it is also shut, not because it is locked;
+    /// unlock it, open it, and `take` proceeds.
+    ///
+    /// **What still is NOT gated, stated so the asymmetry that remains is a
+    /// choice.** `chamber_prose::chamber_nouns` still names a key inside a
+    /// shut strongbox, `describe_chamber` still says so on entry, and
+    /// `examine a key` still answers in full. Those belong to
+    /// `PLAY-closed-container-conceals-nothing`, whose bill decision 0398
+    /// priced. A verb that MOVES a thing is the one place the lid has to
+    /// mean something, and it does now.
     ///
     /// # IT CHARGES, UNLIKE `open`/`close`/`warm`, AND THE REASON IS
     /// REPRESENTABILITY RATHER THAN TARIFF
@@ -3027,18 +3057,51 @@ impl<'w> Session<'w> {
         let thing = crate::thing::thing_id(&room, thing_kind.0, 0)
             .expect("a chamber facet packs, or the interior above could not have composed");
         let body = self.agent_entity();
+        // The GRAMMAR's containment, authoritative exactly while the ledger
+        // holds NO opinion about where this thing is.
+        //
+        // **Asked of the location fold's `None`, and not of
+        // [`crate::thing::is_latent`], and the difference is a real state a
+        // player can produce.** `is_latent` is true for two things: an anchor
+        // nothing ever placed, and a thing set down on THIS room's own floor.
+        // Only the first has no ledger answer to defer to. Gating on
+        // `is_latent` would refuse a key the player had taken out of the chest
+        // and dropped at their feet the moment they shut the lid — the anchor
+        // graph still says that key lives in the chest, forever, because a
+        // composed interior is a pure function of the room and never moves.
+        if crate::thing::location_of(&self.ledger, thing, self.day).is_none()
+            && let Some(container) = interior.anchor(id).within
+        {
+            let container_kind = crate::affordance::thing_kind_of(interior.anchor(container).kind);
+            let container_entity = crate::thing::thing_id(&room, container_kind.0, 0)
+                .expect("a chamber facet packs, or the interior could not have composed");
+            if !self.holder_admits(container_kind, container_entity) {
+                return Turn::Out(format!("The {bare} is shut away in something closed."));
+            }
+        }
         if !crate::thing::is_latent(&self.ledger, &room, thing_kind.0, 0, self.day)
             .expect("a chamber facet packs")
         {
+            // THIS ROOM'S OWN ANCHOR IS SOMEWHERE ELSE — so ask the ledger
+            // whether something of that NAME is here anyway, rather than
+            // refusing on the strength of the one thing the grammar happens
+            // to spell. The two arms below used to answer "You see no … here"
+            // outright, which was harmless while the only key anchor in the
+            // world sat in the deepest room a walk could reach and nothing
+            // could be carried to it. `the-key-by-the-door` ends that: the
+            // threshold chamber composes a key anchor, so a key carried in
+            // from elsewhere and set down at the front door would be shadowed
+            // by an anchor whose own key is three rooms away in a chest, and
+            // a player would be told there was no key while standing on one.
             let holder = match crate::thing::location_of(&self.ledger, thing, self.day) {
                 Some(Value::Entity(h)) if h == body => {
                     return Turn::Out(format!("You are already carrying the {bare}."));
                 }
                 Some(Value::Entity(h)) => h,
-                _ => return Turn::Out(format!("You see no {} here.", rest.trim())),
+                _ => return self.take_from_the_ledger(&interior, &room, &wanted, rest.trim()),
             };
             let Some(holder_kind) = self.holder_anchored_here(&interior, &room, holder) else {
-                return Turn::Out(format!("You see no {} here.", rest.trim()));
+                return self.take_from_the_ledger(&interior, &room, &wanted, rest.trim());
             };
             if !self.holder_admits(holder_kind, holder) {
                 return Turn::Out(format!("The {bare} is shut away in something closed."));
@@ -8860,15 +8923,47 @@ mod tests {
         assert_eq!(asleep_then("carrying"), BODY_ASLEEP_REFUSAL);
     }
 
+    /// Seed 1's flagship possession, one `enter` in — the threshold chamber,
+    /// which since fix round 1 is where `the-key-by-the-door` composes the
+    /// key a player can actually pick up.
+    ///
+    /// **This is the shallow half of the pair, and the pair exists because a
+    /// lid means something now.** Before the lid gate, every custody test
+    /// walked to the deepest chamber and lifted the key straight out of a
+    /// locked strongbox; that route is closed, so a test that needs a
+    /// `Portable` thing in hand starts HERE and a test that needs a container
+    /// walks on with the key.
+    fn at_the_door_of_seed_one(world: &World) -> Session<'_> {
+        let (mut session, _) =
+            Session::start(world, &PossessOpts::default()).expect("seed 1 possesses");
+        assert!(
+            say(&mut session, "enter").starts_with("[chamber "),
+            "the possession never got indoors, so nothing below is tested"
+        );
+        let nouns = session.chamber_nouns_here();
+        assert!(
+            nouns.iter().any(|n| n == "a key"),
+            "precondition: seed 1's threshold chamber must hold a key, or this \
+             test drives nothing: {nouns:?}"
+        );
+        assert!(
+            !nouns.iter().any(|n| n == "a strongbox"),
+            "precondition: the room the key is taken in must stand no chest, \
+             or the lid gate is not what lets this take through: {nouns:?}"
+        );
+        session
+    }
+
     /// Walk seed 1's flagship possession as far into its dwelling as the
     /// place goes — the route
     /// `a_key_in_custody_opens_the_strongbox_a_player_walked_to` takes, for
     /// the same reason (`Role::Store` is only ever chamber index >= 2), and
-    /// the only route in the tree that reaches a `Portable` thing at all.
+    /// the only route in the tree that reaches a container with a LID.
     ///
     /// Returns the session and the say-helper's own preconditions already
     /// checked, so a caller's assertions cannot pass against a possession
-    /// that never got indoors.
+    /// that never got indoors. The body is empty-handed and the strongbox is
+    /// as the seed drew it: shut and locked.
     fn in_the_store_room_of_seed_one(world: &World) -> Session<'_> {
         let (mut session, _) =
             Session::start(world, &PossessOpts::default()).expect("seed 1 possesses");
@@ -8890,6 +8985,49 @@ mod tests {
         session
     }
 
+    /// [`in_the_store_room_of_seed_one`] with the door key already in hand —
+    /// the walk the campaign's own thesis describes, and the only way to
+    /// reach the strongbox with something that opens it since the lid gate
+    /// closed.
+    ///
+    /// It takes the key in the threshold chamber and then walks in, so a
+    /// caller arrives standing in front of a shut, LOCKED chest carrying the
+    /// one thing that turns it. The two facets are asserted distinct, because
+    /// a walk that never left the front room would satisfy every downstream
+    /// assertion for the wrong reason.
+    fn in_the_store_room_of_seed_one_with_a_key(world: &World) -> Session<'_> {
+        let mut session = at_the_door_of_seed_one(world);
+        let door = session
+            .chamber_facet_here()
+            .expect("`enter` lands in a chamber");
+        assert_eq!(say(&mut session, "take a key"), "You take the key.");
+        for _ in 0..4 {
+            if !say(&mut session, "enter further in").starts_with("[chamber ") {
+                break;
+            }
+        }
+        let store = session
+            .chamber_facet_here()
+            .expect("the walk ended in a chamber");
+        assert_ne!(
+            store, door,
+            "precondition: the key must have been carried into a DIFFERENT \
+             room, or nothing here crosses a threshold"
+        );
+        let nouns = session.chamber_nouns_here();
+        assert!(
+            nouns.iter().any(|n| n == "a strongbox"),
+            "precondition: the walk must end in front of a chest: {nouns:?}"
+        );
+        assert_eq!(
+            say(&mut session, "carrying"),
+            "You are carrying a key.",
+            "precondition: the key must survive the walk, or the open below \
+             is not being paid for"
+        );
+        session
+    }
+
     /// One line at a possession, with the release arm turned into a panic —
     /// the closure four tests above spell inline, factored once the fifth
     /// wanted it.
@@ -8906,11 +9044,17 @@ mod tests {
     /// is `custody_survives_a_save_and_a_re_possession` in
     /// `tests/suite/session.rs`).
     ///
-    /// The route crosses three rooms, not two: the store chamber the key is
-    /// taken in, the open air `out` returns to, and the entrance chamber
-    /// `enter` lands in — and the two chamber facets are asserted DISTINCT,
-    /// because a walk that never left the room it started in would satisfy
-    /// every other assertion here.
+    /// The route crosses three rooms, not two: the threshold chamber the key
+    /// is taken in, the chamber behind it, and the open air `out` returns
+    /// to — and the two chamber facets are asserted DISTINCT, because a walk
+    /// that never left the room it started in would satisfy every other
+    /// assertion here.
+    ///
+    /// **It starts at the door rather than in the storeroom since fix round
+    /// 1**, because the storeroom's key is inside a shut, locked chest and
+    /// `take` no longer reaches through one. Nothing about the claim moved:
+    /// the key is still taken in one room, still carried into another, and
+    /// the entity held is still the one the room it came FROM derives.
     ///
     /// MUTATION THIS MUST FAIL AGAINST — the property is *that custody is
     /// held by the BODY and therefore travels with it*, not merely that
@@ -8944,10 +9088,10 @@ mod tests {
     #[test]
     fn a_thing_taken_is_carried_between_rooms() {
         let world = world_at(1).expect("seed 1 builds");
-        let mut session = in_the_store_room_of_seed_one(&world);
-        let store = session
+        let mut session = at_the_door_of_seed_one(&world);
+        let door = session
             .chamber_facet_here()
-            .expect("the walk above ended in a chamber");
+            .expect("`enter` lands in a chamber");
 
         assert_eq!(say(&mut session, "carrying"), "You are carrying nothing.");
         assert_eq!(say(&mut session, "take a key"), "You take the key.");
@@ -8957,30 +9101,31 @@ mod tests {
             "the take must reach custody, or the walk below tests nothing"
         );
 
-        assert!(say(&mut session, "out").starts_with("[room "));
-        assert_eq!(
-            say(&mut session, "carrying"),
-            "You are carrying a key.",
-            "custody must survive leaving the building"
-        );
-        assert!(say(&mut session, "enter").starts_with("[chamber "));
-        let entrance = session
+        assert!(say(&mut session, "enter further in").starts_with("[chamber "));
+        let deeper = session
             .chamber_facet_here()
-            .expect("`enter` lands in a chamber");
+            .expect("`enter further in` lands in a chamber");
         assert_ne!(
-            entrance, store,
+            deeper, door,
             "precondition: the walk must have changed rooms, or 'carried \
              between rooms' is not what was tested"
         );
         assert_eq!(
             say(&mut session, "carrying"),
             "You are carrying a key.",
-            "the key must still be in hand after the walk"
+            "the key must still be in hand one room further in"
+        );
+
+        assert!(say(&mut session, "out").starts_with("[room "));
+        assert_eq!(
+            say(&mut session, "carrying"),
+            "You are carrying a key.",
+            "custody must survive leaving the building"
         );
         assert_eq!(
             crate::thing::held_by(&session.ledger, session.agent_entity(), session.day),
-            vec![crate::thing::thing_id(&store, "key", 0).expect("a chamber facet packs")],
-            "and the entity held must be the one the STORE room derives — \
+            vec![crate::thing::thing_id(&door, "key", 0).expect("a chamber facet packs")],
+            "and the entity held must be the one the THRESHOLD room derives — \
              custody carries an identity, not a copy minted where it was \
              last seen"
         );
@@ -8991,8 +9136,8 @@ mod tests {
     ///
     /// The room it is dropped in is NOT the room it came from and composes no
     /// key anchor of its own, which is the case that makes this more than a
-    /// restatement of latency: the entrance chamber's grammar has never heard
-    /// of a key, so the only thing that can offer it back is
+    /// restatement of latency: the chamber behind the threshold has never
+    /// heard of a key, so the only thing that can offer it back is
     /// [`crate::thing::lying_in`] — the ledger's own answer. A `take` that
     /// consulted the grammar alone would refuse here.
     ///
@@ -9019,18 +9164,17 @@ mod tests {
     #[test]
     fn a_dropped_thing_joins_the_room_it_was_dropped_in() {
         let world = world_at(1).expect("seed 1 builds");
-        let mut session = in_the_store_room_of_seed_one(&world);
-        let store = session
-            .chamber_facet_here()
-            .expect("the walk above ended in a chamber");
-        assert_eq!(say(&mut session, "take a key"), "You take the key.");
-
-        assert!(say(&mut session, "out").starts_with("[room "));
-        assert!(say(&mut session, "enter").starts_with("[chamber "));
-        let entrance = session
+        let mut session = at_the_door_of_seed_one(&world);
+        let door = session
             .chamber_facet_here()
             .expect("`enter` lands in a chamber");
-        assert_ne!(entrance, store, "precondition: a different room");
+        assert_eq!(say(&mut session, "take a key"), "You take the key.");
+
+        assert!(say(&mut session, "enter further in").starts_with("[chamber "));
+        let entrance = session
+            .chamber_facet_here()
+            .expect("`enter further in` lands in a chamber");
+        assert_ne!(entrance, door, "precondition: a different room");
         assert!(
             !session.chamber_nouns_here().iter().any(|n| n == "a key"),
             "precondition: this room's GRAMMAR must not compose a key, or the \
@@ -9042,7 +9186,7 @@ mod tests {
         assert_eq!(
             crate::thing::location_of(
                 &session.ledger,
-                crate::thing::thing_id(&store, "key", 0).expect("a chamber facet packs"),
+                crate::thing::thing_id(&door, "key", 0).expect("a chamber facet packs"),
                 session.day
             ),
             Some(Value::Text(
@@ -9108,15 +9252,7 @@ mod tests {
     #[test]
     fn a_thing_put_into_an_open_chest_can_be_taken_back_out() {
         let world = world_at(1).expect("seed 1 builds");
-        let mut session = in_the_store_room_of_seed_one(&world);
-        assert!(
-            session
-                .chamber_nouns_here()
-                .iter()
-                .any(|n| n == "a strongbox"),
-            "precondition: this test needs a container standing here"
-        );
-        assert_eq!(say(&mut session, "take a key"), "You take the key.");
+        let mut session = in_the_store_room_of_seed_one_with_a_key(&world);
         assert_eq!(
             say(&mut session, "put a key in a strongbox"),
             "The strongbox is shut.",
@@ -9124,7 +9260,26 @@ mod tests {
         );
         assert_eq!(
             say(&mut session, "open a strongbox"),
-            "You open the strongbox. Within it: a key."
+            "You open the strongbox. Within it: a key.",
+            "the door key must turn the seeded lock, or nothing below is \
+             reachable at all"
+        );
+        assert_eq!(
+            say(&mut session, "put a key in a strongbox"),
+            "You put the key in the strongbox."
+        );
+        assert_eq!(say(&mut session, "carrying"), "You are carrying nothing.");
+
+        // THE STORE ROOM'S OWN KEY, out and back in — and it has to be this
+        // one rather than the door key, because only a thing the ledger has
+        // already placed reaches `take`'s container arm at all. The door key
+        // stowed above is still in the chest and unreachable by noun: the
+        // grammar's match resolves "a key" to this room's own anchor, so
+        // every take below is about the store key.
+        assert_eq!(
+            say(&mut session, "take a key"),
+            "You take the key.",
+            "with the lid up, the room's own key comes out — the GRAMMAR arm"
         );
         assert_eq!(
             say(&mut session, "put a key in a strongbox"),
@@ -9146,8 +9301,9 @@ mod tests {
     ///
     /// The sibling test above stows the key in the strongbox of the room that
     /// composes both, where `take`'s own container arm answers. This one
-    /// carries the key three rooms away into a chamber whose grammar knows
-    /// only a doorway and an alcove, so the noun match at the top of
+    /// carries the key out of the building and back into the chamber whose
+    /// grammar knows only a doorway and an alcove, so the noun match at the
+    /// top of
     /// [`Session::take`] cannot fire and control reaches
     /// [`Session::take_from_the_ledger`] — where [`crate::thing::lying_in`] is
     /// room-keyed and direct and cannot see a thing held by a container
@@ -9181,11 +9337,10 @@ mod tests {
     #[test]
     fn a_thing_put_into_a_container_the_grammar_never_composes_comes_back_out() {
         let world = world_at(1).expect("seed 1 builds");
-        let mut session = in_the_store_room_of_seed_one(&world);
+        let mut session = in_the_store_room_of_seed_one_with_a_key(&world);
         let store = session
             .chamber_facet_here()
             .expect("the walk above ended in a chamber");
-        assert_eq!(say(&mut session, "take a key"), "You take the key.");
 
         assert!(say(&mut session, "out").starts_with("[room "));
         assert!(say(&mut session, "enter").starts_with("[chamber "));
@@ -9218,6 +9373,190 @@ mod tests {
              must still be reachable, or `put` is a one-way trapdoor"
         );
         assert_eq!(say(&mut session, "carrying"), "You are carrying a key.");
+    }
+
+    /// **A locked lid refuses `take`, and lifting it lets the same take
+    /// through** — the bypass fix's own witness (Task 13, fix round 1), both
+    /// directions in one session.
+    ///
+    /// Before this, `take` asked about a container only on the LEDGER path,
+    /// so a key the grammar composed inside a locked chest — the untouched
+    /// state every world starts in — came straight out and the only lock in
+    /// the game fell in one move:
+    ///
+    /// ```text
+    /// > open a strongbox   It is locked, and you are carrying nothing that would open it.
+    /// > take a key         You take the key.
+    /// ```
+    ///
+    /// **The third beat is the half that keeps this from being a
+    /// one-directional assertion**, and it is why the gate reads the location
+    /// fold's `None` rather than [`crate::thing::is_latent`]: a key taken out
+    /// and set down on this room's own floor is `is_latent`, and the anchor
+    /// graph still says it lives in the chest — forever, because a composed
+    /// interior is a pure function of the room. Shut the lid on that key and
+    /// the naive gate refuses a thing lying in plain sight at the player's
+    /// feet.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST — two, because the gate has two ways
+    /// to be wrong and each has its own red. Both confirmed 2026-08-30,
+    /// unfiltered over the whole crate (`--no-fail-fast`), and each was the
+    /// ONLY failure of its run — `868 tests run: 867 passed, 1 failed, 3
+    /// skipped`, twice:
+    ///
+    /// 1. Neutralise the gate — `if false && let Some(container) =
+    ///    interior.anchor(id).within`. Beat one goes green and the lock is
+    ///    defeated again:
+    ///
+    ///    ```text
+    ///    assertion `left == right` failed: a shut lid must refuse the verb
+    ///    that would move what is behind it
+    ///      left: "You take the key."
+    ///     right: "The key is shut away in something closed."
+    ///    ```
+    ///
+    /// 2. Widen its condition from
+    ///    `crate::thing::location_of(&self.ledger, thing, self.day).is_none()`
+    ///    to `crate::thing::is_latent(…)`. Beats one and two stay green and
+    ///    beat three reds with the key lying at the player's feet:
+    ///
+    ///    ```text
+    ///    assertion `left == right` failed: a key lying on this floor must be
+    ///    takeable however the grammar composed it
+    ///      left: "The key is shut away in something closed."
+    ///     right: "You take the key."
+    ///    ```
+    ///
+    /// **The two mutations are not redundant and the second is the one worth
+    /// having.** Mutation 1 is the defect this campaign fixed; mutation 2 is
+    /// the defect the FIX would have introduced, and it is the plausible
+    /// version of the gate — `is_latent` is the predicate the function was
+    /// already calling one line down, so writing it there is the natural
+    /// move rather than an exotic one.
+    #[test]
+    fn a_shut_lid_refuses_take_and_an_open_one_does_not() {
+        let world = world_at(1).expect("seed 1 builds");
+        let mut session = in_the_store_room_of_seed_one_with_a_key(&world);
+
+        // 1. The grammar puts a key inside this chest and the chest is shut.
+        assert_eq!(
+            say(&mut session, "take a key"),
+            "The key is shut away in something closed.",
+            "a shut lid must refuse the verb that would move what is behind it"
+        );
+        assert_eq!(
+            say(&mut session, "carrying"),
+            "You are carrying a key.",
+            "the refusal must not have quietly taken it anyway"
+        );
+
+        // 2. The same take, through a lid the player has lifted.
+        assert_eq!(
+            say(&mut session, "open a strongbox"),
+            "You open the strongbox. Within it: a key."
+        );
+        assert_eq!(
+            say(&mut session, "take a key"),
+            "You take the key.",
+            "an open lid must not refuse: a gate that never lets go is a \
+             capability removed, not a lock"
+        );
+
+        // 3. That key, set down on this room's floor with the lid shut again.
+        // The grammar still composes it inside the chest; the ledger knows
+        // better, and the ledger wins.
+        assert_eq!(say(&mut session, "drop a key"), "You set the key down.");
+        assert_eq!(
+            say(&mut session, "close a strongbox"),
+            "You close the strongbox."
+        );
+        assert_eq!(
+            say(&mut session, "take a key"),
+            "You take the key.",
+            "a key lying on this floor must be takeable however the grammar \
+             composed it, or shutting a lid strands what is outside it"
+        );
+    }
+
+    /// **A key set down where the grammar composes a DIFFERENT one is still
+    /// found** — the shadowing the second key pattern made reachable, closed
+    /// in the same change (Task 13, fix round 1).
+    ///
+    /// [`Session::take`] resolves a typed noun against this room's anchors
+    /// FIRST, so the anchor decides which entity the verb is about. While
+    /// `the-key-in-the-strongbox` was the only key pattern that was harmless:
+    /// the one room with a key anchor was the deepest room a walk could
+    /// reach, and nothing could be carried into it that the anchor did not
+    /// already name. `the-key-by-the-door` puts an anchor in the room every
+    /// possession passes through, so the shadow became a state a player can
+    /// produce in six moves — stow the door key in the chest, carry the
+    /// chest's key to the front room, set it down, and ask for it back.
+    /// Before the fix the answer was *"You see no a key here"* with a key
+    /// lying at the player's feet.
+    ///
+    /// The two verbs that made the old behaviour safe are still in the tree
+    /// unchanged: this is a fall-through to
+    /// [`Self::take_from_the_ledger`], not a second search, so the sentence a
+    /// genuinely absent thing gets is the same sentence it always got.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST — the property is *that the ledger is
+    /// consulted when the room's own anchor is elsewhere*: revert either
+    /// fall-through in `Session::take`'s ledger branch to
+    /// `return Turn::Out(format!("You see no {} here.", rest.trim()))`. Both
+    /// compile; the second (`holder_anchored_here`'s `else`) is the arm this
+    /// walk takes. Confirmed 2026-08-30, unfiltered over the whole crate,
+    /// the only failure — `868 tests run: 867 passed, 1 failed, 3 skipped`:
+    ///
+    /// ```text
+    /// assertion `left == right` failed: a key lying in this room must be
+    /// takeable even though the room's own key anchor is somewhere else
+    ///   left: "You see no a key here."
+    ///  right: "You take the key."
+    /// ```
+    #[test]
+    fn a_key_set_down_where_another_is_composed_is_still_taken() {
+        let world = world_at(1).expect("seed 1 builds");
+        let mut session = in_the_store_room_of_seed_one_with_a_key(&world);
+
+        // Put the DOOR key beyond the front room's reach, so the anchor that
+        // room composes is answering about something three chambers away.
+        assert_eq!(
+            say(&mut session, "open a strongbox"),
+            "You open the strongbox. Within it: a key."
+        );
+        assert_eq!(
+            say(&mut session, "put a key in a strongbox"),
+            "You put the key in the strongbox."
+        );
+        // And bring the STORE room's key back to the front room instead.
+        assert_eq!(say(&mut session, "take a key"), "You take the key.");
+        assert!(say(&mut session, "out").starts_with("[room "));
+        assert!(say(&mut session, "enter").starts_with("[chamber "));
+        let door = session
+            .chamber_facet_here()
+            .expect("`enter` lands in a chamber");
+        assert!(
+            session.chamber_nouns_here().iter().any(|n| n == "a key"),
+            "precondition: this room must compose a key ANCHOR of its own, or \
+             there is no shadow to cast"
+        );
+        assert_eq!(say(&mut session, "drop a key"), "You set the key down.");
+
+        assert_eq!(
+            say(&mut session, "take a key"),
+            "You take the key.",
+            "a key lying in this room must be takeable even though the room's \
+             own key anchor is somewhere else"
+        );
+        assert_eq!(
+            crate::thing::held_by(&session.ledger, session.agent_entity(), session.day)
+                .into_iter()
+                .filter(|t| *t == crate::thing::thing_id(&door, "key", 0).expect("packs"))
+                .count(),
+            0,
+            "and the thing taken must be the one on the floor, not the anchor \
+             the room composes"
+        );
     }
 
     /// **Closing a container does not lock it** (decision 0399) — the
@@ -9258,8 +9597,7 @@ mod tests {
     #[test]
     fn closing_a_container_does_not_lock_it() {
         let world = world_at(1).expect("seed 1 builds");
-        let mut session = in_the_store_room_of_seed_one(&world);
-        assert_eq!(say(&mut session, "take a key"), "You take the key.");
+        let mut session = in_the_store_room_of_seed_one_with_a_key(&world);
         assert_eq!(
             say(&mut session, "open a strongbox"),
             "You open the strongbox. Within it: a key.",
@@ -9388,11 +9726,10 @@ mod tests {
     #[test]
     fn open_and_close_each_take_an_instant() {
         let world = world_at(1).expect("seed 1 builds");
-        let mut session = in_the_store_room_of_seed_one(&world);
+        let mut session = in_the_store_room_of_seed_one_with_a_key(&world);
         let room = session
             .chamber_facet_here()
             .expect("the walk above ended in a chamber");
-        assert_eq!(say(&mut session, "take a key"), "You take the key.");
 
         let before = session.day;
         assert_eq!(

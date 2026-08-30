@@ -125,6 +125,21 @@ fn nouns_by_depth(session: &mut Session) -> Vec<Vec<String>> {
 /// worth a second look: `["a doorway", "a water jar"]` is a `Store` chamber
 /// with the water jar in it and nothing to lock. The gate never removed the
 /// room; it removed the only thing the room was for.
+///
+/// **That pasted output is dated and its first chamber has since moved**, and
+/// it is left as recorded rather than edited: Task 13's fix round added
+/// `the-key-on-…` — `the-key-by-the-door` — so chamber 0 now reads
+/// `["a doorway", "a screen", "a key"]`. Re-running the same mutation today
+/// would print the new list. Nothing about the argument changes; a pasted run
+/// is a record of a moment and rewriting it would make it a claim about now.
+///
+/// **The `holds("a key")` assertion below is WEAKER than it was for the same
+/// reason, and it is kept for the message rather than the coverage.** A key
+/// stands in chamber 0 of every built structure now, so that line can no
+/// longer detect an empty strongbox on its own. The assertion immediately
+/// after it — that one chamber holds BOTH — is what carries the property, and
+/// it did before too (a key in the third room and a strongbox in the fourth
+/// would always have satisfied the two separately).
 #[test]
 fn a_possession_walks_to_a_strongbox_and_finds_it_locked() {
     let world = world_at(1);
@@ -172,11 +187,20 @@ fn a_possession_walks_to_a_strongbox_and_finds_it_locked() {
 /// through the same walk the test above makes.
 ///
 /// It lives in this file rather than in a new one because the world is the
-/// expensive part and this seed is the only one that supplies a thing to
-/// carry: `key` is the sole kind in `affordance::object_registry` marked
-/// `Portable`, a key is composed only inside a strongbox, and seed 42's
-/// flagship structure draws too few chambers to reach a `Store` role. Reusing
-/// `world_at(1)` here costs one more world build (~4 s) and no new fixture.
+/// expensive part and this seed is the one the sibling test above already
+/// pays for: `key` is the sole kind in `affordance::object_registry` marked
+/// `Portable`, and seed 42's flagship structure draws too few chambers to
+/// reach a `Store` role. Reusing `world_at(1)` here costs one more world
+/// build (~4 s) and no new fixture.
+///
+/// **The key it lifts is the THRESHOLD chamber's, not the storeroom's, and
+/// the reason is Task 13's fix round.** A key is no longer composed only
+/// inside a strongbox — `the-key-by-the-door` puts one beside the entrance
+/// screen — and `take` no longer reaches through a shut lid, so the
+/// storeroom's own key is unreachable until something opens the chest. The
+/// walk therefore goes all the way in (to prove the structure still composes
+/// what the sibling test asserts), comes back to the door for a key, and
+/// then carries it in and out again.
 ///
 /// **Three states, in one session, because the field's whole claim is that it
 /// MOVES**: empty on the opening turn, naming the key once `take` has
@@ -191,8 +215,9 @@ fn a_possession_walks_to_a_strongbox_and_finds_it_locked() {
 ///
 /// MUTATION THIS MUST FAIL AGAINST — that the snapshot reads the same custody
 /// the verbs do: replace the `carrying:` fold in `Session::snapshot` with
-/// `Vec::new()`, which compiles. Confirmed 2026-08-30, unfiltered over the
-/// whole crate (`823/865 tests run: 822 passed, 1 failed, 3 skipped`):
+/// `Vec::new()`, which compiles. Re-taken 2026-08-30 in the fix round,
+/// unfiltered over the whole crate — `868 tests run: 867 passed, 1 failed,
+/// 3 skipped`:
 ///
 /// ```text
 /// FAIL suite::strongbox_reachability::the_snapshot_carries_what_the_body_holds
@@ -200,13 +225,23 @@ fn a_possession_walks_to_a_strongbox_and_finds_it_locked() {
 /// the wire says the body holds 0 things while `carrying` says one
 /// ```
 ///
+/// **THE FIGURE THIS REPLACES COULD NOT SUPPORT THE CLAIM ATTACHED TO IT.**
+/// It read `823/865 tests run: 822 passed, 1 failed, 3 skipped` — and 823 of
+/// 865 means nextest ABANDONED the run at the first failure with 42 tests
+/// never executed, so "one failure" was a statement about a truncated run
+/// rather than about the crate. The rerun above uses `--no-fail-fast`,
+/// reaches `868 tests run`, and is the first version of this note whose
+/// denominator is the whole suite.
+///
 /// **One failure, and the test that did NOT fail is the reason this one
 /// exists.** `session_snapshot::the_client_fixtures_are_current` compares
-/// three committed byte-goldens of this exact wire and stayed GREEN through
-/// the mutation, because no possession those fixtures record has ever typed
-/// `take` — every one of them carries `"carrying":[]`, which is what a
-/// neutralised fold emits too. A byte-golden can only hold a field it has a
-/// non-empty value for.
+/// committed byte-goldens of this exact wire and stayed GREEN through the
+/// mutation, because it reads the seed-42 fixtures and no possession those
+/// record has ever typed `take` — every one carries `"carrying":[]`, which
+/// is what a neutralised fold emits too. A byte-golden can only hold a field
+/// it has a non-empty value for, and the one that does
+/// (`session-seed-1-carrying.json`) is a CLIENT fixture this vessel test
+/// does not read.
 #[test]
 fn the_snapshot_carries_what_the_body_holds() {
     let world = world_at(1);
@@ -229,7 +264,18 @@ fn the_snapshot_carries_what_the_body_holds() {
         "seed 1's structure no longer composes a key, so nothing below is \
          tested: {per_chamber:?}"
     );
-    assert_eq!(out(session.handle("take a key")), "You take the key.");
+    // Back out to the THRESHOLD chamber to pick one up. `nouns_by_depth`
+    // leaves the possession in the deepest room, whose key is inside a shut,
+    // locked strongbox — and since Task 13's fix round `take` refuses a lid
+    // rather than reaching through it. The key a player can actually lift is
+    // the one `the-key-by-the-door` composes one room in.
+    assert!(out(session.handle("out")).starts_with("[room "));
+    assert!(out(session.handle("enter")).starts_with("[chamber "));
+    assert_eq!(
+        out(session.handle("take a key")),
+        "You take the key.",
+        "the threshold chamber must offer a key, or nothing below is tested"
+    );
 
     let held = session.snapshot().expect("the snapshot builds").me.carrying;
     assert_eq!(
@@ -244,10 +290,16 @@ fn the_snapshot_carries_what_the_body_holds() {
     );
     let key = held[0].entity;
 
-    // Out of the structure entirely and back in through the front door — the
-    // key crosses four chambers and one outdoors room, and the id it comes
-    // back with is the id it left with. That identity is the campaign's own
-    // headline, and nothing else on this wire would carry it.
+    // As far into the structure as the place goes, out of it entirely, and
+    // back in through the front door — the key crosses four chambers and one
+    // outdoors room, and the id it comes back with is the id it left with.
+    // That identity is the campaign's own headline, and nothing else on this
+    // wire would carry it.
+    for _ in 0..4 {
+        if !out(session.handle("enter further in")).starts_with("[chamber ") {
+            break;
+        }
+    }
     assert!(out(session.handle("out")).starts_with("[room "));
     assert!(out(session.handle("enter")).starts_with("[chamber "));
     let still_held = session.snapshot().expect("the snapshot builds").me.carrying;

@@ -138,10 +138,20 @@ pub struct SelfChannel {
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct CarriedEntry {
     /// The thing's ledger entity id. Serializes as a decimal **string**, for
-    /// the third time on this wire and for the same reason `SelfChannel::
-    /// agent` and `PresentEntry::entity` do: since The Signet an `EntityId`
-    /// is a full-width 64-bit derivation of the entity's lineage, and a JS
-    /// `number` cannot hold one losslessly (see `u64_as_decimal_string`).
+    /// the FOURTH time on this wire and for the same reason the three before
+    /// it do: since The Signet an `EntityId` is a full-width 64-bit
+    /// derivation of the entity's lineage, and a JS `number` cannot hold one
+    /// losslessly (see `u64_as_decimal_string`).
+    ///
+    /// **This said "third" and named two of the three, and two other sites
+    /// copied the miscount with a DIFFERENT pair each** (corrected Task 13,
+    /// fix round). The roster is not a memory: it is every
+    /// `serialize_with = "u64_as_decimal_string"` in this file —
+    /// [`SelfChannel::agent`], this field, [`PresentEntry::entity`] and
+    /// [`SocialEntry::entity`], four of them. `grep -n u64_as_decimal_string
+    /// windows/vessel/src/snapshot.rs` is the whole check, which is why the
+    /// count is stated with the command that produces it rather than with a
+    /// list to keep in step.
     #[serde(serialize_with = "u64_as_decimal_string")]
     pub entity: u64,
     /// The noun prose says it by (`"a key"`) — what `drop` and `put` accept,
@@ -341,9 +351,23 @@ pub enum SpatialChannel {
 ///   byte-identically the same list the walk-band fixture beside it carries.
 ///   The Chattel's own new fixture is a second, independent instance:
 ///   `session-seed-1-carrying.json` is a chamber-band snapshot taken on a
-///   different seed, twenty-one turns in, standing in a room whose prose
-///   names a doorway and a screen — and its `nouns` are the biome, the
-///   canopy, the settlement, the sky and two moons.
+///   different seed, standing in a chamber with a key in hand — and its
+///   `nouns` are the biome, the canopy, the settlement, the sky and the
+///   sun. Five, where the seed-42 pair carry six (two moons rather than a
+///   sun, because they are taken at a different hour). **The COUNT is not
+///   the claim and stating it as one is how this bullet went wrong twice**
+///   (corrected Task 13, fix round): what matters is that every entry is a
+///   WALK-band noun and no chamber anchor is among them — no doorway, no
+///   screen, no key — in a snapshot whose own `band` is `chamber`.
+///
+///   The first version of this bullet said the fixture was taken "standing
+///   in a room whose prose names a doorway and a screen", which was true of
+///   the room and unreadable from the artifact cited: that fixture's
+///   `narration.prose` is the walk's LAST REPLY (`"You are carrying a
+///   key."`), not a room description. The second said "the same six", and
+///   the walk it describes then moved to an earlier hour. Read the `nouns`
+///   array, which is the half that is both readable there and load-bearing
+///   here.
 /// - **The consequence.** An `affordances` field added today would serialize
 ///   `[]` for every entry of every snapshot in every world, which is the
 ///   third artifact in this arc that would read as delivered while doing
@@ -351,8 +375,11 @@ pub enum SpatialChannel {
 ///
 /// **The prerequisite is named, so a successor gets a task rather than a
 /// hunch: `narration.nouns` must first carry a CHAMBER-band noun catalog.**
-/// That is a real feature — the chamber band builds a `Vec<String>` of nouns
-/// for its prose and constructs no [`crate::Noun`] anywhere — and
+/// That is a real feature — the chamber band builds a `Vec<&'static str>` of
+/// nouns for its prose (`chamber_prose::chamber_nouns`) and constructs no
+/// [`crate::Noun`] anywhere. **The element type is `&'static str` and this
+/// said `Vec<String>`** (corrected Task 13, fix round); the load-bearing
+/// half — that no chamber-band `Noun` is ever built — is unchanged. And
 /// it is a producer-side change to the one surface with committed client
 /// fixtures and a schema discipline, so it belongs to its own campaign and
 /// not to the tail of this one. Registered as

@@ -1,34 +1,44 @@
 //! The endpaper: a thin identity strip beneath the spread.
 //!
-//! This is an identity strip, not a vitals bar. `Snapshot` carries no
-//! player vitals at all — no hit points, stamina, hunger — by design, so
-//! this module draws only what the wire actually names: who the
-//! possession is, where it is from, and when.
+//! This is an identity strip, not a vitals bar: it draws who the
+//! possession is, where it is from, and when — and nothing else, because
+//! one row is what it is.
 //!
-//! **That sentence used to end "…, or inventory — by design (The Quire
-//! spec §6)", and both halves of the ending were wrong** (The Chattel,
-//! Task 13, correcting this module rather than quietly deleting it).
+//! **This module doc has been wrong twice, and both corrections are kept
+//! here rather than tidied away**, because the sentence it started from is
+//! the sentence a future reader will reach for. It read: *"`Snapshot`
+//! carries no player vitals at all — no hit points, stamina, hunger, or
+//! inventory — by design (The Quire spec §6)."*
 //!
-//! The CITATION was false: The Quire's spec contains the word `inventory`
-//! zero times, and its §6 is about the drive-across-the-linker /
-//! read-across-the-serializer seam. The rule this list obeys was never
-//! written there.
+//! The CITATION was false (The Chattel, Task 13): The Quire's spec
+//! contains the word `inventory` zero times, and its §6 is about the
+//! drive-across-the-linker / read-across-the-serializer seam. The rule
+//! this list obeys was never written in a spec at all.
 //!
-//! The CLASSIFICATION was false too, and it is the half that matters.
-//! Hit points, stamina and hunger belong together because the sim commits
-//! no such quantity — `CLIENT-vitality-folds` is explicit that wounds
-//! commit and health folds, and there is no HP counter anywhere — so a
-//! strip printing one would be **inventing** it. Custody is the opposite
-//! kind of thing: `located-in` naming the body as its object is an
-//! ordinary committed fact with an entity on each end, saved with the
-//! world and read back by three verbs. It rides the wire as
-//! `self.carrying` (decision 0400) and no version moved to admit it.
+//! The CLASSIFICATION was false too, and the FIRST correction got its
+//! reason wrong (Task 13, fix round). That correction said hit points,
+//! stamina and hunger "belong together because the sim commits no such
+//! quantity". Two of the three are folds over committed events, in the
+//! very crate that builds this snapshot: `windows/vessel/src/liveness.rs`
+//! carries `fatigue_at` ("FATIGUE == FOLD", over `rested`) and `hunger_at`
+//! ("HUNGER == FOLD", folding `eaten`), with `RESTED` and `EATEN` as
+//! registered predicates. Only **hit points** genuinely lack a model, by
+//! decision 0070's own construction — wounds commit, vitality folds, and
+//! no stored health value exists anywhere.
 //!
-//! This strip still draws none of it, for its own reason and not that
-//! one: it is an identity strip, one row, and what a body is holding is
-//! not who it is. `draw_carries_no_vitals`'s forbidden-word list keeps
-//! `"inventory"` in it, and that assertion is about THIS ROW — never a
-//! claim about what `Snapshot` carries.
+//! So the honest statement is narrower and does not depend on a taxonomy:
+//! **this strip is one row about identity, and none of these four is
+//! identity.** What the wire carries is a separate question with a
+//! separate answer — custody rides it as `self.carrying` (decision 0400),
+//! because `located-in` naming the body as its object is an ordinary
+//! committed fact with an entity on each end, saved with the world and
+//! read back by three verbs; no version moved to admit it. Decision 0070
+//! had already put inventory in one family with drive, belief, affect and
+//! health, which is the citation 0400 owed and did not make.
+//!
+//! `draw_carries_no_vitals`'s forbidden-word list keeps `"inventory"` in
+//! it, and that assertion is about THIS ROW — never a claim about what
+//! `Snapshot` carries.
 
 use crate::{Cell, SelfChannel, Source, Weight};
 

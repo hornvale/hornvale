@@ -159,7 +159,7 @@ pub struct Pattern {
 ///
 /// Sized near its intended scale deliberately, all the same: growth is cheap
 /// today and will not stay cheap.
-pub const INVENTORY: [Pattern; 15] = [
+pub const INVENTORY: [Pattern; 16] = [
     // --- built, drawn at BOTH bands ---
     Pattern {
         name: "the-ground",
@@ -388,6 +388,68 @@ pub const INVENTORY: [Pattern; 15] = [
         needs_cold: false,
         built: true,
         roles: &[Role::Store],
+        at_locale: false,
+        needs_populous: false,
+    },
+    // --- The Chattel (Task 13, fix round 1): the SECOND key ---
+    //
+    // **The pattern above is the whole reason `take` could reach through a
+    // locked lid, and this one is why closing that hole does not brick the
+    // strongbox.** `the-key-in-the-strongbox` places the only `Portable` kind
+    // in the game inside the only `Lockable` one, so the single key a played
+    // world contained was the key to the box it was sealed in. A `take` that
+    // refused a shut lid — which is what a lid MEANS — would then have made
+    // the strongbox unopenable in every world, reverting decision 0398's
+    // reachability ruling by a different route. The lock is only a lock if
+    // there is a key somewhere else; the two changes are one change.
+    //
+    // **A role a strongbox never occupies, chosen structurally rather than
+    // for flavour.** `role_for` puts `Role::Threshold` at chamber index 0 and
+    // EVERY `Role::Store` at index 2 or deeper. So a structure that composes
+    // a strongbox at all necessarily has a threshold chamber in front of it,
+    // and a possession reaches this key BEFORE it can reach that lock — the
+    // grammar itself carries "a reachable lock implies a reachable key", with
+    // no seed sweep needed to believe it. It also keeps
+    // `no_production_room_composes_two_anchors_of_one_kind` true for free:
+    // `roles` here and on `the-key-in-the-strongbox` are disjoint, so no
+    // composed interior can hold two `Key` anchors and collide their derived
+    // `EntityId`s at ordinal 0.
+    //
+    // **`requires: Some(Screen)` is the world claim, and it is load-bearing
+    // rather than decorative.** A household does not leave its key in the
+    // open part of the room strangers walk into. `the-screen` is the one
+    // furnishing in this grammar whose whole job is to break the sightline
+    // from the doorway ("a screen affords nothing and shapes sightlines",
+    // in its own entry) — so the discreet spot exists exactly where the
+    // screen makes one, and a threshold chamber with no screen draws no key.
+    //
+    // **The hearthroom was the other candidate and was rejected on a
+    // measurement, not a preference.** The alcove is the only lidless
+    // container the grammar composes and it is `roles: &[Role::Hearthroom]`;
+    // putting the key there would leave NO room in the world that stands a
+    // container and composes no key, which is the exact shape
+    // `a_thing_put_into_a_container_the_grammar_never_composes_comes_back_out`
+    // needs to reach `take_from_the_ledger`'s second source. A pattern
+    // placement that makes a regression test unsatisfiable is a placement
+    // that deleted a guard.
+    //
+    // `Attach::Beside`, not `Within`: a hook by a screen is not a container,
+    // so this composes no new (container, contained) pair and
+    // `the_grammar_puts_exactly_these_things_inside_other_things` is
+    // untouched. `at_locale: false` for the reason its sibling states — a
+    // locale-band append feeds `warmth_at` and is an EPOCH. `needs_cold:
+    // false`: a household keeps its key whether or not it keeps a fire.
+    // Appended rather than inserted, and the append position is the only
+    // admissible one anyway: `draw` admits a pattern only once its `requires`
+    // kind is present, and `the-screen` is index 6.
+    Pattern {
+        name: "the-key-by-the-door",
+        kind: AnchorKind::Key,
+        attach: Attach::Beside(AnchorKind::Screen),
+        requires: Some(AnchorKind::Screen),
+        needs_cold: false,
+        built: true,
+        roles: &[Role::Threshold],
         at_locale: false,
         needs_populous: false,
     },
@@ -1127,6 +1189,123 @@ mod tests {
             names, populous,
             "a town's storeroom and a hamlet's differ, so something is still \
              population-gated"
+        );
+    }
+
+    /// **A key stands somewhere a strongbox cannot** — the grammar half of
+    /// the lock's repair (Task 13, fix round 1).
+    ///
+    /// The lid gate `Session::take` grew in the same change is only safe
+    /// because of this: while `the-key-in-the-strongbox` was the ONLY key
+    /// pattern, refusing to reach through a shut lid made the box unopenable
+    /// in every world. So what has to hold is not merely "a second key
+    /// exists" but the two structural facts that make it reachable from the
+    /// box:
+    ///
+    /// 1. The two key patterns' `roles` are DISJOINT, which is what keeps
+    ///    `no_production_room_composes_two_anchors_of_one_kind` true — two
+    ///    `Key` anchors in one interior would derive one `EntityId` at
+    ///    ordinal 0 and silently fuse two things.
+    /// 2. `role_for` puts every `Role::Store` at chamber index 2 or deeper
+    ///    and `Role::Threshold` at index 0, so a structure holding a
+    ///    strongbox at all holds this key in a shallower room of the same
+    ///    building — and a possession walks THROUGH it to reach the lock.
+    ///    That is a claim about the grammar, provable here, and it is what
+    ///    makes the 48-seed reachability figure a corroboration rather than
+    ///    the argument.
+    /// 3. The threshold chamber stands no container at all, which is why the
+    ///    key went here rather than in the hearthroom: the alcove is the only
+    ///    lidless `Encloses` kind the grammar composes, and a key beside it
+    ///    would leave no room in the world that stands a container and
+    ///    composes no key — the shape
+    ///    `a_thing_put_into_a_container_the_grammar_never_composes_comes_back_out`
+    ///    needs.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST: change `the-key-by-the-door`'s
+    /// `roles` to `&[Role::Store]` — the plausible copy of its sibling, which
+    /// compiles and leaves an `INVENTORY` of the same length. Confirmed
+    /// 2026-08-30, unfiltered over the whole crate: this test plus **nine**
+    /// custody tests that walk to the front door for a key, including
+    /// `a_shut_lid_refuses_take_and_an_open_one_does_not` and
+    /// `custody_survives_a_save_and_a_re_possession`.
+    ///
+    /// **`no_production_room_composes_two_anchors_of_one_kind` stays GREEN
+    /// under it, and this doc predicted otherwise before the mutation was
+    /// run.** The prediction was that a Store-roled key would collide with
+    /// `the-key-in-the-strongbox` at ordinal 0. It does not: `requires:
+    /// Some(Screen)` is unsatisfiable in a `Role::Store` chamber — a screen
+    /// is `roles: &[Role::Threshold]` — so `draw` drops the pattern
+    /// altogether and the second key vanishes from the world instead of
+    /// doubling in one room. Both outcomes are bad and only one of them is
+    /// what the collision census watches for, which is exactly why clause 1
+    /// is asserted HERE, on the roles themselves, rather than left to a
+    /// downstream test that would only fire for a different reason.
+    /// Measured, 19 passed / 1 failed over `interior::pattern`:
+    ///
+    /// ```text
+    /// FAILED interior::pattern::tests::a_key_is_drawn_where_no_strongbox_is
+    /// ok     interior::pattern::tests::no_production_room_composes_two_anchors_of_one_kind
+    /// ```
+    #[test]
+    fn a_key_is_drawn_where_no_strongbox_is() {
+        let key_roles = |name: &str| {
+            INVENTORY
+                .iter()
+                .find(|p| p.name == name)
+                .unwrap_or_else(|| panic!("{name} is an authored pattern"))
+                .roles
+        };
+        let in_box = key_roles("the-key-in-the-strongbox");
+        let by_the_door = key_roles("the-key-by-the-door");
+        assert!(
+            !in_box.iter().any(|r| by_the_door.contains(r)),
+            "the two key patterns share a role, so one room composes two Key \
+             anchors and ordinal 0 fuses them: {in_box:?} vs {by_the_door:?}"
+        );
+
+        // The second key is really drawn, in the band that draws it, with no
+        // container beside it. `built=true, cold=false` is the plainest
+        // production gate; `no_production_room_composes_two_anchors_of_one_kind`
+        // sweeps the rest.
+        let door: Vec<&str> = selection_for(Role::Threshold, true, false, false)
+            .iter()
+            .map(|p| p.name)
+            .collect();
+        assert!(
+            door.contains(&"the-key-by-the-door"),
+            "a threshold chamber draws no key, so closing `take`'s lid bypass \
+             leaves the strongbox unopenable: {door:?}"
+        );
+        let stands_a_container = selection_for(Role::Threshold, true, false, false)
+            .iter()
+            .any(|p| {
+                crate::affordance::carries(
+                    crate::affordance::thing_kind_of(p.kind),
+                    crate::affordance::ObjectProperty::Encloses,
+                )
+            });
+        assert!(
+            !stands_a_container,
+            "the threshold chamber now stands a container, so the room shape \
+             `a_thing_put_into_a_container_the_grammar_never_composes_comes_back_out` \
+             needs may no longer exist: {door:?}"
+        );
+
+        // The depth argument, read off `role_for` rather than restated: the
+        // shallowest Store is deeper than the Threshold, so a walk that
+        // reaches a strongbox has already passed this key.
+        let plain = plain_brief();
+        let first_store = (0..=8)
+            .find(|i| role_for(*i, &plain) == Role::Store)
+            .expect("some chamber index is a store");
+        let threshold = (0..=8)
+            .find(|i| role_for(*i, &plain) == Role::Threshold)
+            .expect("some chamber index is a threshold");
+        assert!(
+            threshold < first_store,
+            "the key's room ({threshold}) is no longer shallower than the \
+             strongbox's ({first_store}), so a possession can reach a lock it \
+             has not passed a key for"
         );
     }
 

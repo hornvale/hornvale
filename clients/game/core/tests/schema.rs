@@ -81,12 +81,18 @@ fn no_id_in_the_fixture_is_a_bare_number_a_javascript_client_would_round() {
     for (name, body) in [
         ("session-seed-42-turn-0.json", FIXTURE),
         ("session-seed-42-chamber.json", CHAMBER_FIXTURE),
-        // The third id family on this wire arrives with this fixture: a
+        // The FOURTH id family on this wire arrives with this fixture: a
         // carried thing's `entity`. It is a lineage-derived `EntityId` like
-        // the two `sensed`/`social` already carry, so it is subject to the
-        // same 2^53 rounding, and this crate's mirror does not model
-        // `self.carrying` — which is exactly why the check is on the raw
-        // document.
+        // the three already on it — `self.agent`, `sensed.present[].entity`
+        // and `social[].entity` — so it is subject to the same 2^53
+        // rounding, and this crate's mirror does not model `self.carrying`,
+        // which is exactly why the check is on the raw document.
+        //
+        // This said "third" and named only `sensed`/`social`, dropping
+        // `self.agent`; `snapshot.rs`'s own doc said "third" too and named a
+        // different pair. Corrected together (The Chattel, Task 13 fix
+        // round) against `grep -n u64_as_decimal_string
+        // windows/vessel/src/snapshot.rs`, which lists four.
         ("session-seed-1-carrying.json", CARRYING_FIXTURE),
     ] {
         let raw: serde_json::Value = serde_json::from_str(body).unwrap();

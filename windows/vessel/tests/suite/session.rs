@@ -1020,16 +1020,23 @@ fn custody_survives_a_save_and_a_re_possession() {
         say(&mut session, "enter").starts_with("[chamber "),
         "the possession never got indoors, so nothing below is tested"
     );
+    // The THRESHOLD chamber's key, not the storeroom's: since Task 13's fix
+    // round the storeroom key is inside a shut, locked chest and `take` no
+    // longer reaches through a lid. This walks one room in, takes the key
+    // `the-key-by-the-door` composes, and then carries it as far into the
+    // building as the place goes — so the save below is taken with the key in
+    // hand three rooms from where it was picked up, which is a stronger
+    // starting state for the round trip than the old one, not a weaker.
+    assert_eq!(
+        say(&mut session, "take a key"),
+        "You take the key.",
+        "precondition: seed 1's threshold chamber must hold a takeable key"
+    );
     for _ in 0..4 {
         if !say(&mut session, "enter further in").starts_with("[chamber ") {
             break;
         }
     }
-    assert_eq!(
-        say(&mut session, "take a key"),
-        "You take the key.",
-        "precondition: seed 1's deepest chamber must hold a takeable key"
-    );
     assert_eq!(say(&mut session, "carrying"), "You are carrying a key.");
 
     let saved_at = session.day();
