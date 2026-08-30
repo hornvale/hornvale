@@ -35,7 +35,7 @@
 //! The discipline is therefore social and stated here: a token goes in only
 //! alongside a test in `domains/language` that realizes a clause exercising
 //! it, in Common and, where the tongue realizer is the point, in a tongue.
-//! The thirteen present tokens are backed by, respectively:
+//! The eighteen present tokens are backed by, respectively:
 //! `clause.rs::classify_*`; `a_past_clause_says_was` and
 //! `grammar.rs::realize_tongue_reads_its_drawn_tense_depth`;
 //! `a_negated_clause_says_is_not` and
@@ -220,10 +220,15 @@
 //! already existed becoming reachable once its own presupposition landed —
 //! not a second instance of the `null`-introduces control-rung shape. The
 //! FRONTIER move is the largest single-token one in this campaign, 19 → 34,
-//! matching Task 0's row: `r007` and `r012` both drop off (now covered),
-//! and fifteen rungs across the ladder's determiner/deixis/interrogative
-//! branches join at once, each because `definiteness` (or the closure it
-//! completes through `r007`/`r012`) was the last demand outstanding for it.
+//! matching Task 0's row: `r007` drops off the frontier (now covered) —
+//! `r012` does **not** drop off, because it was never ON the frontier to
+//! begin with (`definiteness` is not `r012`'s own `introduces` token, so
+//! `ladder_frontier`'s rule could not admit it until `definiteness`
+//! landed, at which point all its remaining demands are satisfied at
+//! once and it jumps straight to covered) — and sixteen rungs across the
+//! ladder's determiner/deixis/interrogative branches join at once, each
+//! because `definiteness` (or the closure it completes through
+//! `r007`/`r012`) was the last demand outstanding for it: 19 − 1 + 16 = 34.
 //! This token moves neither corpus's headline count: the-merchant stays 7
 //! of 12 (no merchant entry demands `definiteness`), and the-flood-watch
 //! moves by exactly 50 demand instances (340 → 390 of 1128), matching Task
@@ -413,7 +418,7 @@ fn the_flood_watch_corpus_is_frozen_at_its_authored_size() {
 /// enforces on the corpus itself.
 ///
 /// **Nothing mechanically checks a row here against the grammar**; see the
-/// module doc, which names the test backing each of the thirteen.
+/// module doc, which names the test backing each of the eighteen.
 const IMPLEMENTED_DEMANDS: &[&str] = &[
     // The Interlinear.
     "classify",
@@ -3280,7 +3285,8 @@ fn ladder_construction(id: &str) -> MerchantConstruction {
 /// once — including its own `pronoun-reference`, covered since The
 /// Inquest — so it jumps straight from "not on the frontier" to "covered"
 /// in the same step, never passing through frontier membership at all.
-/// Seventeen rungs join, net of the one that drops off: the determiner/
+/// Sixteen rungs join, net of the one that drops off (19 − 1 + 16 = 34):
+/// the determiner/
 /// deixis/interrogative sub-tree the campaign's earlier tasks
 /// (`person-deixis`, `polar-question`) had already primed but could not
 /// open, because every one of those rungs' remaining demands bottomed out

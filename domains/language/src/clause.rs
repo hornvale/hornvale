@@ -409,6 +409,23 @@ fn indefinite_article(word: &str) -> &'static str {
     }
 }
 
+/// The definiteness-marking prefix Common puts in front of a noun phrase —
+/// `"the "`, an [`indefinite_article`]-selected `"a "`/`"an "`, or nothing
+/// (a bare plural generic) — factored out because Common has exactly ONE
+/// such convention and two call sites both need it: `Part::Determiner`
+/// below (marking the OBJECT slot) and [`realize_common_discourse`]
+/// (marking the SUBJECT, the identical rule applied one slot over — see
+/// that function's own doc). Before this factoring the two sites carried
+/// the rule as two independent `match` expressions with nothing asserting
+/// they agreed; now a caller cannot drift one without drifting both.
+fn definiteness_prefix(definiteness: Definiteness, number: Number, word: &str) -> String {
+    match (definiteness, number) {
+        (Definiteness::Def, _) => "the ".to_string(),
+        (Definiteness::Indef, Number::Sg) => format!("{} ", indefinite_article(word)),
+        (Definiteness::Indef, Number::Pl) => String::new(), // bare generic
+    }
+}
+
 /// One slot or literal in a construction's surface form.
 /// type-audit: bare-ok(prose: Literal.0)
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -1785,14 +1802,11 @@ fn emit_parts(
             // than taken.
             Part::Determiner
                 if matches!(spec.object, Argument::Pronoun(_) | Argument::Clause(_)) => {}
-            Part::Determiner => match (spec.definiteness, spec.number) {
-                (Definiteness::Def, _) => out.push_str("the "),
-                (Definiteness::Indef, Number::Sg) => {
-                    out.push_str(indefinite_article(&complement));
-                    out.push(' ');
-                }
-                (Definiteness::Indef, Number::Pl) => {} // bare generic
-            },
+            Part::Determiner => out.push_str(&definiteness_prefix(
+                spec.definiteness,
+                spec.number,
+                &complement,
+            )),
             Part::Complement => out.push_str(&complement),
             Part::ModifierTail => {
                 let mut inline: Vec<String> = Vec::new();
@@ -2456,14 +2470,14 @@ fn discourse_subject_is_repeat_mention(clauses: &[DiscourseClause], index: usize
 /// order, [`discourse_subject_is_repeat_mention`] decides `Def` (repeat) vs
 /// `Indef` (first mention); the resolved word
 /// ([`surface_complement`], pluralized by the clause's own [`Number`]) is
-/// then prefixed with `"the "` or an [`indefinite_article`] the same way
-/// [`Part::Determiner`]'s own match arm chooses one for the OBJECT slot —
-/// the identical rule, applied to the subject instead, because Common has
-/// exactly one definiteness-marking convention and this is the second slot
-/// that needs it. The built [`Subject::Name`] then carries that computed
-/// text into an ordinary [`Clause`], realized through [`realize_common`]
-/// unchanged — this function adds no second realizer, only a subject
-/// builder in front of the existing one.
+/// then prefixed by [`definiteness_prefix`] — the SAME helper
+/// [`Part::Determiner`]'s own match arm calls for the OBJECT slot, not a
+/// second copy of its rule — the identical rule, applied to the subject
+/// instead, because Common has exactly one definiteness-marking convention
+/// and this is the second slot that needs it. The built [`Subject::Name`]
+/// then carries that computed text into an ordinary [`Clause`], realized
+/// through [`realize_common`] unchanged — this function adds no second
+/// realizer, only a subject builder in front of the existing one.
 ///
 /// Panics if `discourse.clauses` is empty: a discourse with nothing in it
 /// states a contradiction in its own name, the same class of panic
@@ -2479,11 +2493,15 @@ pub fn realize_common_discourse(discourse: &Discourse, vocab: &CommonVocabulary)
     for (index, dc) in discourse.clauses.iter().enumerate() {
         let repeat = discourse_subject_is_repeat_mention(&discourse.clauses, index);
         let word = surface_complement(vocab, &dc.referent, dc.number);
-        let subject_text = match (repeat, dc.number) {
-            (true, _) => format!("the {word}"),
-            (false, Number::Sg) => format!("{} {word}", indefinite_article(&word)),
-            (false, Number::Pl) => word,
+        let definiteness = if repeat {
+            Definiteness::Def
+        } else {
+            Definiteness::Indef
         };
+        let subject_text = format!(
+            "{}{word}",
+            definiteness_prefix(definiteness, dc.number, &word)
+        );
         let clause = Clause {
             predicate: dc.predicate.clone(),
             subject: Subject::Name(subject_text),
@@ -4108,8 +4126,14 @@ mod tests {
     /// a strategy in its own right — the ordinary present-tense form in a
     /// great many languages — rather than as a copula deleted from
     /// somewhere else, and the rung is DELIBERATELY not filed under answer
-    /// ellipsis (r166). So this is its own part list, not `CLASSIFY` with
-    /// `Part::Copula` removed.
+    /// ellipsis (r166). What keeps this an honest reading of that claim
+    /// rather than a contradiction of it is generality over EVERY
+    /// copula-bearing valence, not just this test's own `Locative`
+    /// predicate: [`realize_common_verbless`] strips the copula from
+    /// whichever of `CLASSIFY`, `PROPERTY` or `LOCATIVE` the predicate's own
+    /// [`Valence`] selected (see that function's own doc), so this is not
+    /// `CLASSIFY` with `Part::Copula` removed specifically — it is one
+    /// strategy applied uniformly across all three.
     ///
     /// **Substitution:** the rung's text is *"A dead woman in the
     /// marketplace, and the gate open all night."*; `dead`, `woman`,
@@ -4134,6 +4158,83 @@ mod tests {
             realize_common_verbless(&clause, &vocab),
             "the person under the tree."
         );
+    }
+
+    /// A construction whose verb group is a LEXICAL VERB has no copula to
+    /// elide, and is refused, loudly — the same fail-fast posture
+    /// [`realize_common_polar_question`] takes for its own refused case
+    /// (see [`realize_common_verbless`]'s own doc, "A construction with no
+    /// copula is REFUSED, loudly"). `kill` is [`Valence::Transitive`]
+    /// (`PREDICATE_VALENCE`), so its construction is `TRANSITIVE`, which
+    /// carries [`Part::Verb`] and never [`Part::Copula`].
+    #[test]
+    #[should_panic(expected = "Common's verbless strategy elides a copula")]
+    fn a_verbless_clause_on_a_lexical_verb_panics() {
+        let vocab = CommonVocabulary::default();
+        let clause = Clause {
+            predicate: KILL.to_string(),
+            subject: Subject::Name("the guard".to_string()),
+            object: Argument::Concept("person".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        let _ = realize_common_verbless(&clause, &vocab);
+    }
+
+    /// **The generality claim [`realize_common_verbless`]'s own doc makes —
+    /// "general over every copula-bearing valence, not written for one" —
+    /// exercised at a SECOND valence.** Every other verbless test in this
+    /// module runs `Locative` (`UNDER`); this one runs `Nominal` (`IS_A`,
+    /// `CLASSIFY`'s own valence) to convert that doc's load-bearing claim
+    /// from an argument into a pinned fact, the way
+    /// `a_verbless_clause_predicates_a_property_without_a_verb` does for
+    /// `Property` beside it.
+    #[test]
+    fn a_verbless_clause_predicates_a_nominal_without_a_verb() {
+        let vocab = CommonVocabulary::default();
+        let clause = Clause {
+            predicate: IS_A.to_string(),
+            subject: Subject::Name("the person".to_string()),
+            object: Argument::Concept("tree".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        assert_eq!(
+            realize_common_verbless(&clause, &vocab),
+            "the person the tree."
+        );
+    }
+
+    /// The third and last copula-bearing valence, `Property` (`OLD`,
+    /// `PROPERTY`'s own valence) — see
+    /// `a_verbless_clause_predicates_a_nominal_without_a_verb`'s doc for why
+    /// this is worth pinning rather than trusting the doc's claim on its
+    /// own. `PROPERTY` carries no `Part::Determiner`/`Part::Complement`
+    /// pair (`a_property_predication_takes_no_determiner`), so stripping its
+    /// copula leaves only the subject and the predicate word.
+    #[test]
+    fn a_verbless_clause_predicates_a_property_without_a_verb() {
+        let vocab = CommonVocabulary::default();
+        let clause = Clause {
+            predicate: OLD.to_string(),
+            subject: Subject::Name("the road".to_string()),
+            object: Argument::Absent,
+            number: Number::Sg,
+            definiteness: Definiteness::Indef,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        assert_eq!(realize_common_verbless(&clause, &vocab), "the road old.");
     }
 
     /// r104 `existential`. Freeze (1992): existential, locative and
@@ -4343,6 +4444,24 @@ mod tests {
             realize_common_discourse(&discourse, &vocab),
             "a person sleeps. a tree sleeps. the person is under the tree."
         );
+    }
+
+    /// A discourse of zero clauses states a contradiction in its own name —
+    /// nothing to realize — and is refused by panic rather than silently
+    /// returning an empty string, the same class of refusal
+    /// [`realize_common_coordination`]'s own minimum-length check is (see
+    /// `a_coordination_of_one_clause_panics`), at [`Discourse`]'s own
+    /// lower floor of zero rather than two (a discourse of ONE clause is
+    /// meaningful — always the first mention of its own referent — so only
+    /// zero is refused; see [`Discourse::clauses`]'s own doc).
+    #[test]
+    #[should_panic(expected = "at least one clause")]
+    fn a_discourse_of_zero_clauses_panics() {
+        let vocab = CommonVocabulary::default();
+        let discourse = Discourse {
+            clauses: Vec::new(),
+        };
+        let _ = realize_common_discourse(&discourse, &vocab);
     }
 
     /// **A verbless clause cannot be recovered by `parse_common` either, and

@@ -185,14 +185,22 @@ criterion could not have told the chosen five from the rejected one; it fires
 on nearly anything.
 
 Per rung, what each one alone unblocked (computed by re-running the resolver
-with only that token added):
+with only that token added). **The column below is `frontier joins`, not
+`unblocks`** — `unblocks` is a defined term (`ladder_unblocks` in
+`cli/tests/suite/sentence_corpus.rs`, also the generated
+`docs/audits/sentence-coverage.md`): the number of OTHER rungs that become
+fully **covered** as a side effect of building the rung alone. The quantity
+this table needs is different — how many rungs newly *reach the frontier* —
+and the two agree for four of the five rows here but not `definiteness`,
+whose true `ladder_unblocks` is 1 (`r012`, riding along to full coverage; see
+"unblocked `pronoun-reference`'s `r012`" above) against 16 frontier joins:
 
-| rung | frontier before → after | unblocks |
+| rung | frontier before → after | frontier joins |
 |---|---|---|
 | `spatial-adverbial` | 20 → 20 (membership swap: r048 leaves, r049 joins) | 1 |
 | `temporal-adverbial` | 20 → 20 (r049 leaves, r060 joins) | 1 |
 | `verbless-clause` | 20 → **19** (r171 leaves, nothing joins) | 0 |
-| `definiteness` | 19 → **34** (the largest single move) | 15 |
+| `definiteness` | 19 → **34** (the largest single move) | 16 |
 | `existential` | 34 → 33 (r104 leaves, nothing joins) | 0 |
 
 `definiteness` alone carries the entire net cumulative gain and then some;

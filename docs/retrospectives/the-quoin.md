@@ -119,11 +119,23 @@ back to `three_` after Task 5 removed one (`m04` left the list for
 the test from `docs/timings/subfloor-roster.tsv` — the sub-floor tier's own
 roster — until the next green chamber run rewrites it. The roster is a
 chamber artifact and correctly not hand-edited by this campaign; it is
-recorded here rather than fixed, and it currently carries at least three
-stale entries from this campaign's renames. The general form: a name that
-encodes a fact the test's own subject can change is a name that will need
-changing again, and each time it does the commit gate silently drops that
-test until an external process notices.
+recorded here rather than fixed. **Audited: exactly two stale entries survive
+from this campaign's renames** — `merchant_coverage_is_six_of_twelve` (now
+`merchant_coverage_is_eight_of_twelve`) and
+`the_covered_entries_are_m05_m06_m07_m08_m09_and_m10` (now
+`the_covered_entries_are_m02_m04_m05_m06_m07_m08_m09_and_m10`).
+`three_entries_sit_at_one_missing_demand` itself — the test this section is
+*about* — is not one of them: its round trip landed back on its original
+name, so the roster's entry for it is byte-identical to the current test and
+was never dropped. That is arguably the more interesting case, not a weaker
+one: a name that encodes a fact CAN return to a stale-looking roster entry
+that is secretly still correct, purely by the subject cycling back to its
+starting value, which is a sharper trap than "renamed and forgotten" because
+nothing about the roster line changing (or not) tells you which happened.
+The general form still stands: a name that encodes a fact the test's own
+subject can change is a name that will need changing again, and each time it
+does the commit gate silently drops that test until an external process
+notices.
 
 ## The produce-side finding, and the instrument that had to be built to state it
 
