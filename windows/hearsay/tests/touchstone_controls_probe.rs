@@ -79,7 +79,17 @@
 //! That command also runs the preregistered-not-met test, which is RED by
 //! design and costs a third panel pass. The heavy tier itself never selects
 //! it: `scripts/gate-full-heavy.sh` builds its filterset from the `fn` under
-//! each `#[ignore = "heavy:` tag, and that test carries no such tag.
+//! each ignore-tag whose reason begins with the heavy marker, and that test
+//! carries no such tag.
+//!
+//! That sentence is deliberately paraphrased rather than quoting the marker
+//! literally. `gate-full-heavy.sh` finds tags with a plain `grep` over every
+//! `.rs` file, so a doc comment quoting the tag verbatim is counted AS a tag —
+//! and since the following line is prose rather than a `fn`, the script sees
+//! one more tag than it can name and refuses to run at all rather than
+//! silently skip a heavy test. This exact sentence did that once
+//! (The Winze, 2026-08-30): the chamber failed in 1.8 s with
+//! "65 heavy: tags but 64 fn names extracted".
 
 mod common;
 

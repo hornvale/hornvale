@@ -4347,3 +4347,4 @@ measured here.
 | 2026-08-30T17:54:57Z | sluice:heavy | 459.246 | 9626.625 | 168.308 | 21.33 | 0 | 2a118829d |  | lefford | 40 |
 | 2026-08-30T18:17:40Z | rebaseline | 107.485 | 318.837 | 15.842 | 3.11 | 0 | 76ecbbb44 | campaign/the-winze | MacBookPro | 10 |
 | 2026-08-30T18:23:38Z | gate-commit | 116.937 | 406.608 | 65.092 | 4.03 | 0 | 76ecbbb44 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T19:39:54Z | gate-commit | 25.533 | 55.074 | 14.359 | 2.72 | 0 | 18782ec34 | campaign/the-winze | MacBookPro | 10 |

@@ -203,7 +203,7 @@ as a metric value — silently, with plausible output. That is why the task was
 "resolve the metric list from the fixture's own schema" rather than "tolerate a
 header mismatch".
 
-## Two repo guards fired on prose about commands
+## Four times prose was matched as code, and the fourth one broke the build
 
 Twice this campaign a guard pattern-matched command **text** appearing in
 documentation rather than a command being run: once on a bare stash idiom
@@ -227,6 +227,41 @@ The finding is only that the blast radius includes documentation, which the
 guard has no way to distinguish today — and that documentation is where the
 *negations* live, so the false-positive rate is structurally worst on prose
 that is being careful.
+
+**The fourth instance is the one that cost something, and it is the purest
+form of the class.** The campaign's very last code change split a hearsay test,
+and its author wrote a module doc comment explaining *how the heavy tier
+selects tests* — quoting the tag literal verbatim so the next reader would
+understand the mechanism. `scripts/gate-full-heavy.sh` finds heavy tests with a
+plain `grep` over every `.rs` file in the repo, so **the sentence describing the
+selector was counted by the selector as a sixty-fifth tag.** The line after it
+is prose rather than a `fn`, so the script could extract only 64 names, and it
+refused:
+
+```
+gate-full-heavy: 65 heavy: tags but 64 fn names extracted —
+  a heavy #[ignore] tag is not directly above its fn (intervening attribute?),
+  or two heavy tests share a name.
+```
+
+The chamber died in **1.8 seconds** after four green phases and ~1300 s of
+work, and held a strictly serial queue while it did.
+
+**The script is not at fault and should not be changed.** It refuses rather
+than silently skipping a heavy test, which is exactly the right failure mode
+for a tier whose whole purpose is running what the cheap gates cannot; a
+selector that guessed would be worse than one that stops. The fix belongs in
+the prose, and the file now carries a paraphrase plus a note saying why it is
+paraphrased — because the obvious edit for a future reader is to "improve" it
+back into a verbatim quote.
+
+**What ties all four together:** documentation is where a project explains its
+own mechanisms, so documentation is exactly where a mechanism's own pattern is
+most likely to appear. The two stash/flag guards fired on *prose about a
+command*; the census guard fired on a sentence *promising not to run one*; this
+one fired on a sentence *explaining the matcher to the reader*. A text-matching
+guard cannot distinguish use from mention, and the density of mentions is
+highest in precisely the files that are trying to be helpful.
 
 ## Preregistration held where it was supposed to, and the record says where it did not
 
