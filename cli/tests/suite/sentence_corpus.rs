@@ -19,9 +19,13 @@
 //! 2 of 12 to 5 of 12; The Rail added five — `intransitive-frame`,
 //! `property-predication`, `locative-predication`, `person-deixis` and
 //! `polar-question` — of which only the last moves this corpus, taking it
-//! from 5 of 12 to 6 of 12. The remaining tokens name capabilities no
-//! campaign has built: content questions, temporal adjuncts, existentials,
-//! witness lists, named-entity lists.
+//! from 5 of 12 to 6 of 12. The Quoin added five more —
+//! `spatial-adverbial`, `temporal-adverbial`, `verbless-clause`,
+//! `definiteness` and `existential` — of which `temporal-adverbial` and
+//! `existential` each move this corpus again, taking it to 7 of 12 and then
+//! 8 of 12 (see the module doc's own task-by-task account below for the
+//! full history). The remaining tokens name capabilities no campaign has
+//! built: content questions, witness lists, named-entity lists.
 //!
 //! **[`IMPLEMENTED_DEMANDS`] is a hand-maintained declaration and nothing
 //! mechanically proves it.** No test crosses a token in that list against the
@@ -3551,10 +3555,12 @@ fn sentence_coverage_report() {
          Mortise added `coordination`, `embedded-clause` and \
          `epistemic-hedge`; The Rail added `intransitive-frame`, \
          `property-predication`, `locative-predication`, `person-deixis` \
-         and `polar-question`. Everything still uncovered names a \
-         grammatical capability no campaign has built — content questions, \
-         temporal adjuncts, existentials, witness lists, named-entity \
-         lists. A **low score is the expected result**, not a defect; the \
+         and `polar-question`; The Quoin added `spatial-adverbial`, \
+         `temporal-adverbial`, `verbless-clause`, `definiteness` and \
+         `existential`. Everything still uncovered names a grammatical \
+         capability no campaign has built — content questions, witness \
+         lists, named-entity lists. A **low score is the expected result**, \
+         not a defect; the \
          corpus is the program's map, not any one campaign's \
          scorecard.\n\n\
          Read the **distance** table below the merchant tally, not only the \
