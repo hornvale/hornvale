@@ -279,13 +279,29 @@ reader before dispatching and this is the corrected list.**
 - Modify: `docs/generated-path-authors.md:17` — Task 1's own file shows the
   one-column loop too
 
-**THE BREAKAGE WOULD BE SILENT, AND THAT IS WHY THIS LIST EXISTS.**
-`nightly-drift.sh` builds `git diff --exit-code -- $paths` by word-splitting.
-With a second column it passes `artifacts` and `heavy` as pathspecs matching
-nothing — and `git diff --exit-code` over a pathspec that matches nothing
-**exits 0**. The nightly drift check would report "no drift" forever, with no
-error anywhere. That is this campaign's own thesis, and adding the column
-without this list would have created a fresh instance of it.
+**WHY THIS LIST EXISTS — and the controller's first answer here was WRONG.**
+I claimed the breakage would be silent: that `nightly-drift.sh`'s
+`git diff --exit-code -- $paths` would exit 0 forever. **Task 3's Step 3b
+probe refuted it, and I then reproduced the refutation myself.** Unquoted
+`$(...)` word-splits on the embedded tab (it is in the default `IFS`), so
+`path<TAB>author` becomes *two* tokens, the bogus one is a pathspec matching
+nothing, and `git diff` unions its pathspecs — exit 1, correctly:
+
+```
+  word-split of "real/<TAB>artifacts"  ->  [real/] [artifacts]
+  git diff --exit-code -- real/ artifacts   ->  exit=1   (correct)
+  git diff --exit-code -- artifacts         ->  exit=0   (matches nothing)
+```
+
+Only the last line was true, and it never bites, because word-splitting never
+LOSES the real path.
+
+**The eight-file list stands on weaker but sufficient grounds:** the Rust
+reader would have broken loudly (every row red on the tracked-ness check), the
+bash behaviour is *accidentally* safe rather than guaranteed — a quoted
+`"$paths"` or a changed `IFS` breaks it — and a reader of a two-column file
+should read the column it means. Step 3b stays, because a probe that refutes
+the plan is worth more than one that confirms it.
 
 **Interfaces:**
 - Produces: `fn declared() -> Vec<(String, String)>` — `(path, author)`,
