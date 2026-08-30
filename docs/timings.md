@@ -4420,3 +4420,5 @@ measured here.
 | 2026-08-30T21:57:31Z | sluice:clients | 527.948 | 9823.485 | 107.780 | 18.81 | 0 | 5686bb940 |  | lefford | 40 |
 | 2026-08-30T22:05:11Z | sluice:heavy | 459.901 | 9583.135 | 178.631 | 21.23 | 0 | 115aec3da |  | lefford | 40 |
 | 2026-08-30T23:27:20Z | rebaseline | 57.407 | 268.183 | 13.431 | 4.91 | 0 | f1cc95ba6 | campaign/the-company | MacBookPro | 10 |
+| 2026-08-30T23:32:22Z | gate-commit | 27.711 | 62.069 | 17.674 | 2.88 | 0 | f1cc95ba6 | campaign/the-company | MacBookPro | 10 |
+| 2026-08-30T23:32:55Z | gate-commit | 23.339 | 53.959 | 13.584 | 2.89 | 0 | b4d58d0fd | campaign/the-company | MacBookPro | 10 |
