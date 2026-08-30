@@ -4308,3 +4308,4 @@ measured here.
 | 2026-08-30T19:15:01Z | sluice:heavy | 455.207 | 9646.261 | 151.344 | 21.52 | 0 | 357aa4e95 |  | lefford | 40 |
 | 2026-08-30T18:40:15Z | gate-commit | 40.536 | 123.010 | 33.053 | 3.85 | 0 | d86d0e4ab | campaign/the-gleaning | MacBookPro | 10 |
 | 2026-08-30T18:41:13Z | rebaseline | 57.423 | 273.565 | 14.542 | 5.02 | 0 | d86d0e4ab | campaign/the-gleaning | MacBookPro | 10 |
+| 2026-08-30T19:39:04Z | sluice:artifacts | 131.193 | 1162.615 | 50.611 | 9.25 | 0 | 5e38068e8 |  | lefford | 40 |
