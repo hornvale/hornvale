@@ -846,3 +846,77 @@ process runs on can determine the answer before any data exists*. Ask what
 distribution the mechanism implies under each candidate clock, and if one of
 them makes the preregistered null a theorem, that clock is not a modelling
 choice — it is a way of not running the experiment.
+
+## E.9 E.4.2's panel rule fixed the WRONG QUANTITY — the cap governs, not the threshold
+
+**A defect in E.4.2, found by checking the rule against Task 4's data before
+Task 5 ran.** E.4.2 set its stopping threshold on **mines**, as a proxy for the
+quantity the comparison actually needs, which is **breaches**. Its own
+reasoning said so out loud and got the conversion wrong:
+
+> at a breach fraction anywhere near a third, 60 delvings gives roughly 20
+> breached against 40 ordinary
+
+The measured breach fraction is **26 / 196 = 13.3%**, not a third. Applying the
+rule literally:
+
+```
+panel through seed    42   n= 1   mines= 16   breached= 0
+panel through seed     7   n= 2   mines= 35   breached= 1
+panel through seed  1234   n= 3   mines= 39   breached= 1
+panel through seed     0   n= 4   mines= 64   breached= 3   <-- rule stops here
+...
+panel through seed     9   n=12   mines=196   breached=26   <-- the frozen cap
+```
+
+**The rule's own stopping point yields three breaches.** A distribution
+comparison on n=3 is not a comparison, so the rule as written would have made
+§5.2 unmeasurable while appearing to have been satisfied — the worst kind of
+failure, because the criterion reports success.
+
+### The resolution: the cap, which was frozen before any data existed
+
+E.4.2 wrote **two** numbers: a threshold (60 mines) and a cap (12 seeds). The
+threshold is defective. **The cap is not**, and it governs, for a reason that
+matters more than convenience: taking the cap invents no new number and
+exercises the *minimum available discretion*. Every alternative — a new
+breach-count threshold, a re-derived mine threshold — would be a number chosen
+**after** Task 4 published per-seed breach counts, which is precisely the
+freedom preregistration exists to remove.
+
+Two further properties make this defensible rather than merely expedient:
+
+- **Consecutive-seed extension cannot cherry-pick.** The seeds are taken in a
+  fixed order fixed in advance, so the only quantity being chosen is *how much
+  data*, never *which*.
+- **More data cannot bias this comparison, only sharpen it.** The estimand is
+  unchanged; nothing about the mechanism, the hazard rate, or the depth
+  accrual is touched.
+
+Task 4 had already used the 12-seed panel. This section is not a ratification
+of that choice after the fact — it is the finding that the rule's threshold was
+wrong, and that the cap is the only part of it that survives contact with the
+measured breach fraction.
+
+### What Task 5 must do about it
+
+Report **both**: the 12-seed result as the campaign's answer, and the 4-seed
+result the literal threshold specifies, as a transparency control. If the
+4-seed result is uninformative — it will be, at n=3 — that is the demonstration
+that the cap is the right reading rather than a convenient one. If the two
+disagree in *direction*, that is a finding that outranks everything else in the
+task and the campaign stops until it is explained.
+
+### The general form
+
+This is the second time in this campaign that a controller-authored decision
+rule was defective in the same way: **it was written about a proxy rather than
+about the quantity that matters.** The first compressed a four-row branch table
+to three and deleted the row the answer landed in. Both were authored while
+correcting something else, both read as careful, and neither was caught by
+re-reading — the first died to an implementer's measurement, this one to
+running the rule's own arithmetic against real data.
+
+**A preregistered rule should be executed against a dry run before it is
+frozen.** Freezing a rule nobody has run is freezing an untested program, and
+this one had a 7x error in its only conversion.
