@@ -393,8 +393,31 @@ input — record it, and **do not weaken the test to accommodate it**.
 - [ ] **Step 1: Capture the write set.** At the start of a run, stamp a marker;
   at the end, emit one line per declared path giving how many of its tracked
   files that run wrote. This is Task 1 Step 1's measurement made a byproduct of
-  a run that already happens. It must be **dash-safe** and must not change any
-  artifact's bytes.
+  a run that already happens. It must not change any artifact's bytes.
+
+  **It does NOT need to be dash-safe, and this plan said otherwise.** Checked
+  before dispatch: `scripts/regenerate-artifacts.sh` is `#!/usr/bin/env bash`,
+  the roster invokes it as `bash scripts/regenerate-artifacts.sh`, and
+  `sluice-run.sh` does not source it (0 hits). The Global Constraint binds what
+  `sluice-run.sh` *sources*, and this is not that. Bash is available. The file
+  today uses none of `[[ ]]`, arrays, or `${x%%…}` (0 occurrences), so prefer
+  plain constructs to match its style — for consistency, not portability.
+
+  **WHERE IT WRITES — the plan did not say, and this is the ruling.** The
+  capture writes **`docs/generated-path-writes.tsv`**: one row per declared
+  path, `path<TAB>written<TAB>tracked`. That file is itself **declared in
+  `docs/generated-paths.txt` with author `artifacts`**, which is
+  self-consistent rather than circular — the record of what an author wrote is
+  written by that author and declared against it, so the campaign's machinery
+  covers its own instrument. **Do NOT put this in `docs/timings.md`**: that
+  ledger's columns are `when | label | wall_s | user_s | sys_s | cpu_ratio |
+  waited_s | commit | branch | host | cores`, several readers parse it, and a
+  per-path count does not fit without corrupting the schema.
+
+  If the counts prove unstable between two consecutive runs on an unchanged
+  tree, **stop and report** — a committed artifact that churns for no reason is
+  worse than no artifact, and that would be grounds to demote this to run-log
+  output instead.
 
   **`docs/generated-paths.txt` is TWO COLUMNS by the time this task runs** —
   Task 3 lands the author column first. Take the path from field 1 only
