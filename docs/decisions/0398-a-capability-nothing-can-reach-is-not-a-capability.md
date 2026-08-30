@@ -165,8 +165,22 @@ mechanism is written down.
   strongbox in — `enter` then three `enter further in`s reads *"A small room,
   holding a doorway, a water jar and a loom"* and then *"This is as far in as
   the place goes."* The positive control that this empty diff means something
-  is the 8-of-48 sweep above: the generator would render a strongbox if the
-  world it renders had one.
+  is the 8-of-48 sweep above — the capability is reachable, so an unmoved
+  artifact is a fact about that artifact's world rather than about the
+  relaxation.
+
+  **The sentence that used to end this bullet is false, and it is the one a
+  future reader leans on.** It read: *"the generator would render a strongbox
+  if the world it renders had one."* It would not. `scripts/possession-walk.txt`
+  — the input the gallery transcript is generated from — contains exactly
+  **one** `enter further in`, so the walk never stands deeper than chamber
+  index 1, and `interior::pattern::role_for` puts **every** `Role::Store` at
+  index 2 or deeper. Give seed 42 a `Store` at index 2 and the transcript
+  would still show no strongbox, because the walk stops one room short of it.
+  So there are **two independent reasons the gallery could not move** and only
+  one of them was written down; the recorded one (seed 42's index-2 role is
+  `Loomroom`) is true, and stating it alone implied that fixing the world
+  would move the artifact. Moving the artifact needs a longer walk as well.
 
 - **The room's prose names what the closed chest conceals, and this record is
   where that is written down rather than left for a player to find.**
@@ -177,11 +191,66 @@ mechanism is written down.
   named the same way since The Blocking — but it was **unobservable** until
   now, because `(Strongbox, Key)` is the first `within` pair whose container
   carries `Openable`. `examine_detail` already gates contents on openness; the
-  room description does not, and making it agree would drop the hearth out of
-  every hearthroom's prose, move the gallery, and move a committed transcript.
-  That is a scoped change with its own reasoning, not a rider on this one, so
-  it is **registered as a followup, not fixed here** — and named here so that
-  nobody later reads the concealment as working.
+  room description does not.
+
+  **The gap is WIDER than "the prose names it", and the wider half is the one
+  worth knowing.** `open_or_close` and `examine_chamber` both resolve a typed
+  noun over the whole of `interior.ids()`, contained anchors included, so the
+  concealed key is not merely *named* — it is directly **addressable** by the
+  same surface that concealed it. Measured on seed 1's storeroom, 2026-08-29,
+  through `Session::handle` with the chest shut:
+
+  ```text
+  > examine a key  ->  A short shank of worked iron, its ward cut in a single stepped notch.
+  > open a key     ->  The key does not open.
+  ```
+
+  **The deferral is REPRICED, because it was priced against a fix nobody would
+  write.** This bullet used to say the fix "would drop the hearth out of every
+  hearthroom's prose, move the gallery, and move a committed transcript". That
+  is true of a naive `within.is_some()` filter and false of the rule this same
+  campaign already shipped one function away: `examine_detail`'s two arms hide
+  contents iff `Encloses && Openable && !opened`. Under that rule the alcove is
+  untouched (it carries `Encloses` and no `Openable`, so the hearth stays), and
+  `strongbox` is the **only** kind in `affordance::object_registry` carrying
+  both — so the change can reach no prose that does not name a strongbox. No
+  committed artifact names one: not `book/src/gallery/possession-seed-42.md`
+  (see the bullet above — the walk stops at chamber index 1, and every `Store`
+  is at index 2 or deeper) and not
+  `clients/game/core/tests/fixtures/session-seed-42-chamber.json` (chamber
+  index 0, *"A small room, holding a doorway and a screen."*).
+
+  Measured rather than argued, 2026-08-29: the two-arm rule was applied to
+  `chamber_nouns` on a scratch tree and the gallery regenerated through
+  `regenerate-artifacts.sh`'s own recipe — **byte-identical**, `diff` silent.
+  The positive control that the empty diff means something is a deep walk on
+  two other seeds, where the rule IS live and does exactly what it should:
+
+  ```text
+  seed 13 clean : A small room, holding a doorway, an alcove, a hearth and a bed.
+  seed 13 ruled : A small room, holding a doorway, an alcove, a hearth and a bed.
+  seed 13 clean : A small room, holding a doorway, a water jar, a strongbox and a key.
+  seed 13 ruled : A small room, holding a doorway, a water jar and a strongbox.
+  ```
+
+  The hearth-in-an-alcove line is untouched and the key-in-a-strongbox line
+  loses the key — which is the whole of the old bullet's first objection,
+  falsified on the real subject. (Seed 1 reproduces both rows identically.)
+
+  **What the deferral actually costs, then.** `describe_chamber(interior,
+  brief)` is a pure function of the interior — it holds no ledger and no day,
+  which is what an openness read needs — and it is `pub`, re-exported from
+  `hornvale_vessel`, with an out-of-module caller in
+  `windows/vessel/tests/suite/the_blocking.rs`. Threading state into it changes
+  a published signature; keeping the signature means the openness filter moves
+  up into `Session` and `chamber_nouns` stops being the one catalogue
+  `describe_chamber` renders from, which is a property its own doc pins. That
+  is the real bill, it is a scoped change with its own reasoning, and it is
+  still not a rider on this one — so it stays deferred, now **registered where
+  a followup survives a worktree**:
+  [`PLAY-closed-container-conceals-nothing`](../../book/src/frontier/idea-registry.md).
+  This record previously said it was "registered as a followup" while
+  registering it nowhere tracked, which made the claim self-referential.
 
 - **Two doc comments that asserted unreachability are corrected loudly, in
   place.** `session.rs`'s `a_lockable_thing_opens_only_with_the_key_in_custody`

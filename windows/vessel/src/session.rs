@@ -2472,11 +2472,19 @@ impl<'w> Session<'w> {
     /// thing's kind read back off its own `instance-of`, and the property
     /// table asked about that label.
     ///
-    /// **Still M+N.** The lock declares what it requires (a property) and the
-    /// key declares what it carries (the same property, on its own row in
-    /// `object_registry`), and neither names the other: nothing here mentions
-    /// `strongbox` or `key`, and a second lockable kind or a second portable
-    /// kind arrives with no edit to this function or to the dispatcher.
+    /// **M+N in the KINDS, not in the property — and this doc used to claim
+    /// both.** It read: *"The lock declares what it requires (a property) and
+    /// the key declares what it carries."* Only the second clause holds.
+    /// Nothing here mentions `strongbox` or `key`, and a second lockable kind
+    /// or a second portable kind arrives with no edit to this function or to
+    /// the dispatcher — that much is real, and it is what M+N means here. But
+    /// [`crate::affordance::ObjectProperty::Lockable`] carries no payload, so
+    /// the lock declares nothing about its opener; the wanted property is the
+    /// literal `ObjectProperty::Portable` at [`Self::open_or_close`]'s one
+    /// call to this function. **A second portable kind therefore arrives with
+    /// no edit AND opens every lock in the world** — see
+    /// [`LOCKED_WITHOUT_A_KEY_REFUSAL`]'s doc for the hazard and the test that
+    /// reddens on it.
     fn carrying_something_that(&self, property: crate::affordance::ObjectProperty) -> bool {
         crate::thing::held_by(&self.ledger, self.agent_entity(), self.day)
             .into_iter()
@@ -6861,9 +6869,31 @@ const NOTHING_HERE_OPENS_REFUSAL: &str = "There is nothing here that opens.";
 /// own acceptance test, spoken (spec §3.8, acceptance 2).
 ///
 /// It names the lock and the want, never the KIND of thing that would satisfy
-/// it: the lock declares what it requires and the key declares what it
-/// carries, and neither names the other (M+N). A sentence saying "you need
-/// the iron key" would put the naming back.
+/// it. A sentence saying "you need the iron key" would put the naming back.
+///
+/// **What M+N this actually buys, corrected.** This doc read: *"the lock
+/// declares what it requires and the key declares what it carries, and
+/// neither names the other."* The second half is true — `key` declares
+/// [`crate::affordance::ObjectProperty::Portable`] on its own
+/// `object_registry` row and names no lock. **The first half is false.**
+/// `ObjectProperty::Lockable` is a bare enum variant with no payload: it
+/// declares only THAT there is a lock, never what opens it. The required
+/// property is a LITERAL in one place — `ObjectProperty::Portable`, written
+/// inside [`Session::open_or_close`]'s lock arm — so the honest statement is
+/// that the lock names no KIND (a second lockable kind costs no edit), while
+/// what it wants is a constant, not a declaration.
+///
+/// **The hazard that hides in the difference, and it is Task 12's.** The
+/// literal is correct today only because `Portable` went to `key` and nowhere
+/// else. The day a second kind carries it, EVERY portable thing opens EVERY
+/// lock — a lantern, a coin, a loaf. Nothing about this const or that arm
+/// would change, no test would notice from the lock's side, and the failure
+/// would be a played one. That is why
+/// `the_lock_wants_a_property_and_exactly_one_kind_supplies_it` asserts the
+/// `Portable` roster by name rather than trusting a sentence: it reddens on
+/// the second carrier, and its message states the two ways out (give the lock
+/// a payload naming its opener, or add a narrower property the key alone
+/// carries).
 /// type-audit: bare-ok(prose)
 const LOCKED_WITHOUT_A_KEY_REFUSAL: &str =
     "It is locked, and you are carrying nothing that would open it.";
@@ -7727,6 +7757,200 @@ mod tests {
         );
     }
 
+    /// **Acceptance 6.2's FIRST clause, driven through the verb** — *"a key
+    /// opens a lockable strongbox"*, said by [`Session::handle`] to a body
+    /// standing in the room the strongbox is in.
+    ///
+    /// # Why this test had to be written, and what was wrong before it
+    ///
+    /// Spec §6.2 is a conjunction: *"a key opens a lockable strongbox AND the
+    /// same body without the key cannot."* The second clause was pinned twice
+    /// over (here at the fold, and as a played reply in
+    /// `tests/suite/strongbox_reachability.rs`). **The first clause was held
+    /// by nothing at the verb level.**
+    /// `a_lockable_thing_opens_only_with_the_key_in_custody` above never calls
+    /// `open` at all — it pins that `strongbox` declares `Lockable` and that
+    /// [`crate::thing::held_by`] is a fold, and leaves the JOIN between them
+    /// unasserted. The consequence was measurable: making the lock's custody
+    /// read vacuous, so the lock refuses even while carrying —
+    ///
+    /// ```text
+    /// && !self.carrying_something_that(ObjectProperty::Portable)
+    ///   ->  && (true || !self.carrying_something_that(ObjectProperty::Portable))
+    /// ```
+    ///
+    /// — left the whole crate green (`850 tests run: 850 passed, 3 skipped`).
+    /// So did the whole SUCCESS half of [`Session::open_or_close`] behind it:
+    /// the `set_openness` call for a container, the `"Within it: …"` clause,
+    /// the already-open no-op, and the empty case. This test kills the first
+    /// three; the fourth is recorded as unreachable below.
+    ///
+    /// # A committed holding fact, because `held_by` is a FOLD
+    ///
+    /// Task 12's `take` is what will put a key in a body's hands from inside
+    /// the world, and it does not exist yet. It does not have to: custody is
+    /// a fold over [`crate::thing::LOCATED_IN`] postings, so a test can
+    /// commit the posting `take` will one day commit and the verb cannot tell
+    /// the difference. The key is a REAL promotion of the kind
+    /// `object_registry` marks `Portable`, in a real facet, exactly as the
+    /// test above does it — never an invented `EntityId`.
+    ///
+    /// **What that leaves unmet in acceptance 6.2, stated rather than
+    /// implied.** The success arm is now HELD; it is still not REACHABLE by
+    /// a player, because no shipped verb moves a key into custody. That is
+    /// Task 12's, and it is the whole residual — the same shape decision 0369
+    /// and Task 9's own residual are recorded in. One arm is narrower still:
+    /// `"You open the {bare}. It is empty."` is unreachable AND unheld, and
+    /// the reason is structural rather than pending.
+    /// `the-key-in-the-strongbox` and `the-strongbox` carry identical gates
+    /// in `INVENTORY` (`built: true`, no cold, no populous, `roles:
+    /// &[Role::Store]`, `at_locale: false`) and `draw_from` is a pure filter
+    /// with no seeded selection, so **every composed strongbox has a key in
+    /// it** and `contents_of` can never return `None` for one. Reaching that
+    /// branch needs a second `Openable` container the grammar puts nothing
+    /// inside — a change to the pattern language, not a test.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST — the property is *that custody
+    /// UNLOCKS, not merely that it is consulted*: the vacuous-lock mutation
+    /// quoted above. Confirmed 2026-08-29, unfiltered over the whole crate.
+    #[test]
+    fn a_key_in_custody_opens_the_strongbox_a_player_walked_to() {
+        use crate::affordance::{ObjectProperty, thing_kind_of};
+        let world = world_at(1).expect("seed 1 builds");
+        let (mut session, _) =
+            Session::start(&world, &PossessOpts::default()).expect("seed 1 possesses");
+        let say = |s: &mut Session<'_>, line: &str| match s.handle(line) {
+            Turn::Out(t) => t,
+            Turn::Released(t) => panic!("`{line}` must not release: {t}"),
+        };
+
+        // Walk in and as far in as the place goes — the same route
+        // `tests/suite/strongbox_reachability.rs` walks, for the same reason:
+        // `Role::Store` is only ever chamber index >= 2 (`pattern::role_for`).
+        assert!(
+            say(&mut session, "enter").starts_with("[chamber "),
+            "the possession never got indoors, so nothing below is tested"
+        );
+        for _ in 0..4 {
+            if !say(&mut session, "enter further in").starts_with("[chamber ") {
+                break;
+            }
+        }
+        let nouns = session.chamber_nouns_here();
+        assert!(
+            nouns.iter().any(|n| n == "a strongbox") && nouns.iter().any(|n| n == "a key"),
+            "precondition: seed 1's deepest chamber must hold a strongbox with \
+             a key in it, or this test drives nothing: {nouns:?}"
+        );
+
+        // Before: the played refusal. Asserted here as well as in the suite
+        // test, because a success assertion with no paired refusal cannot
+        // tell "the key opened it" from "the lock was never consulted".
+        assert_eq!(
+            say(&mut session, "open a strongbox"),
+            LOCKED_WITHOUT_A_KEY_REFUSAL
+        );
+
+        let body = session.agent_entity();
+        let day = session.day;
+        let elsewhere = Facet {
+            face: 0,
+            path: vec![1],
+        };
+        let key = crate::thing::promote(
+            &mut session.ledger,
+            &session.registry,
+            &elsewhere,
+            thing_kind_of(crate::interior::AnchorKind::Key).0,
+            0,
+            day,
+        )
+        .expect("a shallow facet packs");
+        session
+            .ledger
+            .commit(
+                crate::thing::located_in_holder_fact(key, body, day),
+                &session.registry,
+            )
+            .expect("LOCATED_IN is registered by Session::start and is non-functional");
+        assert!(
+            session.carrying_something_that(ObjectProperty::Portable),
+            "sanity check: the committed holding fact must reach the fold, or \
+             the assertions below would pass for the wrong reason"
+        );
+
+        // The success arm, its contents clause, its no-op, and the round trip.
+        assert_eq!(
+            say(&mut session, "open a strongbox"),
+            "You open the strongbox. Within it: a key.",
+            "a key in custody must open the lock, and the reply must name what \
+             the lid was hiding"
+        );
+        assert_eq!(
+            say(&mut session, "open a strongbox"),
+            "The strongbox is already open.",
+            "a second open reports the state and commits nothing"
+        );
+        assert_eq!(
+            say(&mut session, "close a strongbox"),
+            "You close the strongbox.",
+            "close is unlocked in both senses — a lid you could open, you may shut"
+        );
+        assert_eq!(
+            say(&mut session, "open a strongbox"),
+            "You open the strongbox. Within it: a key.",
+            "and it re-opens: openness is a fold, not a latch"
+        );
+        assert!(
+            session.ledger.find(crate::thing::OPENNESS).next().is_some(),
+            "the verb's success arm must WRITE, not merely answer"
+        );
+    }
+
+    /// **The lock wants a PROPERTY and exactly one kind supplies it** — the
+    /// hazard [`LOCKED_WITHOUT_A_KEY_REFUSAL`]'s doc names, made
+    /// unmissable from Task 12 rather than left as a sentence.
+    ///
+    /// [`Session::open_or_close`] refuses a `Lockable` thing unless the body
+    /// carries something marked [`crate::affordance::ObjectProperty::
+    /// Portable`]. `Lockable` has no payload, so that property is a literal at
+    /// the call site, and it is the right literal only while `key` is the
+    /// sole carrier. This test asserts that roster by NAME. The day Task 12
+    /// makes a lantern or a coin portable, this reddens before the world ships
+    /// a lock every pocket opens.
+    ///
+    /// **Deliberately not a "count is 1" assertion.** The failure message has
+    /// to arrive with the two ways out, because the person who trips it is
+    /// mid-way through a different task and the correct fix is not "revert":
+    /// give `Lockable` a payload naming the property (or kind) it wants, or
+    /// coin a narrower property the key alone carries and read THAT in the
+    /// lock arm. Either is a design act; neither is obvious from a bare count.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST — the property is *that the roster is
+    /// pinned, not merely non-empty*: add `ObjectProperty::Portable` to any
+    /// other row of `affordance::object_registry` (`log` and `vessel` are the
+    /// plausible ones). Confirmed 2026-08-29, unfiltered.
+    #[test]
+    fn the_lock_wants_a_property_and_exactly_one_kind_supplies_it() {
+        use crate::affordance::{ObjectProperty, object_registry};
+        let portable: Vec<&str> = object_registry()
+            .iter()
+            .filter(|(_, traits)| traits.properties.contains(&ObjectProperty::Portable))
+            .map(|(kind, _)| kind.0)
+            .collect();
+        assert_eq!(
+            portable,
+            vec!["key"],
+            "`open`'s lock arm asks for ObjectProperty::Portable and nothing \
+             narrower, so every kind on this roster opens every lock in the \
+             world. It was written when the roster was exactly [\"key\"]. It \
+             is now {portable:?}, so the lock is no longer a lock. Two ways \
+             out, both design acts: give ObjectProperty::Lockable a payload \
+             naming what it wants, or coin a narrower property (an opener) \
+             that the key alone carries and read that in `open_or_close`."
+        );
+    }
+
     /// Opening is durable for the session, and closing undoes it — the
     /// re-closability decision 0367 deferred, now shipped (spec §3.7,
     /// acceptance 3).
@@ -7740,11 +7964,34 @@ mod tests {
     /// into a chamber a possession could stand in, so `handle("open a
     /// strongbox")` could not reach the writer at all. Decision 0398 relaxed
     /// that gate and eight of 48 swept seeds now do
-    /// (`tests/suite/strongbox_reachability.rs`). The writer-and-fold form is
-    /// kept because it is still the sharper instrument for the FOUR states
-    /// below — a played walk reaches only the first two, since `close` needs
-    /// a chest the session has already opened and the key is behind Task
-    /// 12's `take`.
+    /// (`tests/suite/strongbox_reachability.rs`).
+    ///
+    /// **THE SENTENCE THAT USED TO CLOSE THAT PARAGRAPH WAS FALSE, AND ITS
+    /// OWN SECOND CLAUSE IS WHY.** It read: *"still the sharper instrument
+    /// for the FOUR states below — a played walk reaches only the first two,
+    /// since `close` needs a chest the session has already opened and the key
+    /// is behind Task 12's `take`."* If the key is behind `take`, a played
+    /// walk cannot open anything, so it cannot reach the second state either.
+    /// Counted rather than estimated, seed 1's deepest chamber, 2026-08-29:
+    ///
+    /// ```text
+    /// > close a strongbox  ->  The strongbox is already shut.
+    /// > open a strongbox   ->  It is locked, and you are carrying nothing that would open it.
+    /// ```
+    ///
+    /// **One state, not two** — shut, reported by the already-shut no-op. A
+    /// correction that miscounts the thing it is correcting is the failure
+    /// 0398 exists to name, so it is fixed loudly rather than quietly.
+    ///
+    /// **What actually reaches all four is
+    /// `a_key_in_custody_opens_the_strongbox_a_player_walked_to` above**,
+    /// which commits the `LOCATED_IN` posting `take` will one day commit and
+    /// then drives every state through [`Session::handle`]. So this test is
+    /// no longer the only thing holding the ladder, and it is kept for two
+    /// things that one cannot do: it evaluates the fold at an instant EARLIER
+    /// than any posting (the last assertion — a verb can only ever ask about
+    /// now), and it needs no world to compose a strongbox, so it still holds
+    /// if worldgen stops drawing one.
     ///
     /// Four states, not two, and the third is the deliverable: 0367's latch
     /// was MONOTONE — it short-circuited on any clearing fact ever committed
@@ -13051,7 +13298,7 @@ mod tests {
     /// `possess`/`unpossess`) — **36** total. Group B's six `!`-twins
     /// (`!map`/`!examine`/`!needs`/`!wait`/`!look`/`!knows`) are deliberately
     /// NOT counted a second time — [`HELP`]'s own text calls them "the
-    /// out-of-character halves" of verbs already among the 22: the same verb
+    /// out-of-character halves" of verbs already among the 24: the same verb
     /// under the other mood, not a distinct one.
     ///
     /// Each verb runs against its OWN fresh, freshly-possessed session

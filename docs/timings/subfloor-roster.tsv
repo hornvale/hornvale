@@ -2829,6 +2829,7 @@ hornvale-vessel::hornvale_vessel$session::tests::render_testimony_none_says_noth
 hornvale-vessel::hornvale_vessel$session::tests::render_testimony_withheld_lands_nothing_and_names_no_state
 hornvale-vessel::hornvale_vessel$session::tests::session_control_is_never_an_in_character_verb
 hornvale-vessel::hornvale_vessel$session::tests::the_arbitration_never_reaches_a_divergent_utterance
+hornvale-vessel::hornvale_vessel$session::tests::the_lock_wants_a_property_and_exactly_one_kind_supplies_it
 hornvale-vessel::hornvale_vessel$structure::tests::a_built_locale_has_a_bounded_chamber_set
 hornvale-vessel::hornvale_vessel$structure::tests::a_different_locale_gives_a_different_structure
 hornvale-vessel::hornvale_vessel$structure::tests::an_unbuilt_locale_has_no_structure

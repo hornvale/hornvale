@@ -511,6 +511,21 @@ mod tests {
     /// signalled a scan change. The new `surplus` row `(4,22,2,4,5)` is the
     /// same cause seen from the other side: a chamber with four floor squares
     /// cannot hold five anchors, and `placed.len() <= floor` still holds.
+    ///
+    /// # The raise took 20% of SLACK, and that is why the sweep now asserts
+    /// both directions
+    ///
+    /// This is asserted with `<=`, so 5 → 6 does not merely record a worse
+    /// corpus — it permanently loosens the claim by one case, and a later
+    /// change that put the true count back to 5 would satisfy a ceiling of 6
+    /// in silence. The moment the slack was taken is THIS commit, so it is
+    /// said here rather than inferred from a diff. The remedy is a ratchet in
+    /// both directions: [`the_grown_corpus_is_where_the_filter_binds`] also
+    /// fails when the true count drops BELOW this number, with a message
+    /// naming the value to lower it to. The `<=` stays — the claim really is
+    /// a ceiling, and an equality would read as though 6 were a target — but
+    /// a ceiling nothing can fall through quietly is a different instrument
+    /// from a ceiling nothing can fall through at all.
     /// type-audit: bare-ok(count)
     const GROWN_RELAXATIONS: usize = 6;
 
@@ -591,6 +606,21 @@ mod tests {
             unfaithful.len() <= GROWN_RELAXATIONS,
             "{} of 256 grown placements are unfaithful, over the measured ceiling of \
              {GROWN_RELAXATIONS}: {unfaithful:?}",
+            unfaithful.len()
+        );
+        // The other direction, and it is the half a `<=` ceiling cannot see.
+        // Decision 0398 raised the ceiling 5 -> 6 for a corpus reason, which
+        // left a case of slack; without this, a later change that put the true
+        // count back to 5 would satisfy the ceiling in silence and the slack
+        // would never be reclaimed. This is not "fewer is worse" — it is
+        // "fewer is a result, and a result belongs in the constant".
+        assert!(
+            unfaithful.len() >= GROWN_RELAXATIONS,
+            "only {} of 256 grown placements are unfaithful, UNDER the ceiling of \
+             {GROWN_RELAXATIONS} — the corpus or the scan improved, which is good \
+             news that must be banked: lower GROWN_RELAXATIONS to {} and say in its \
+             doc what moved. {unfaithful:?}",
+            unfaithful.len(),
             unfaithful.len()
         );
     }
