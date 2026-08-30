@@ -85,11 +85,19 @@
 //! this the only way available without re-deriving Task 1's census/heavy
 //! measurement work inside a test: cross-referencing
 //! `docs/generated-path-writes.tsv`, the committed record of what a REAL
-//! `make rebaseline` run actually touched. A more-specific row that
-//! overrides a less-specific row's author for some file must have its OWN
-//! entry there — proof someone ran the regen after adding it, not merely
-//! asserted the row — or the override is rejected as unverified. WHAT THIS
-//! IS BLIND TO: a TSV entry that EXISTS but does not actually support the
+//! `make rebaseline` run actually touched — **for every row EXCEPT a
+//! `census`-authored one, which since final review finding I3 gets no line
+//! at all** (a `census`-authored row's true written/tracked shape depends on
+//! which of two invocations ran it, `HV_CENSUS` unset or set, and the
+//! capture has no way to say which one did; see
+//! `scripts/regenerate-artifacts.sh`'s comment beside the emission loop). A
+//! more-specific row that overrides a less-specific row's author for some
+//! file must have its OWN entry there — proof someone ran the regen after
+//! adding it, not merely asserted the row — or the override is rejected as
+//! unverified; this is unaffected by the `census` exclusion because every
+//! override case this closes today is a non-`census` row overriding a
+//! less-specific `census` row, never the reverse. WHAT THIS IS BLIND TO: a
+//! TSV entry that EXISTS but does not actually support the
 //! currently-declared author (e.g. an author swapped after the last
 //! measurement, with the path itself untouched) — this test checks
 //! presence, not (again) ground truth; and a same-length tie between two

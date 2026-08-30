@@ -44,10 +44,10 @@ silently rewriting the prose that turned out wrong.
   it found on its first run (The Scarf and The Quadrat, waived as historical
   fact rather than fixed).
 
-Status above, §7's H3 row and §11's task 1 are corrected in place rather than
-superseded here: those are facts that went stale by the campaign's own later
-work (it closed, H3 resolved null, the classification count was corrected),
-not rulings this spec stated backwards.
+Status above, §7's H3 row, §8's H3 bullet, and §11's task 1 are corrected in
+place rather than superseded here: those are facts that went stale by the
+campaign's own later work (it closed, H3 resolved null, the classification
+count was corrected), not rulings this spec stated backwards.
 
 ---
 
@@ -399,11 +399,16 @@ this section carries into the plan rather than settling here.
   hypothesis is left here rather than deleted because the campaign's own thesis
   applies to it — a withdrawn hypothesis that leaves no row reads exactly like
   one that was never proposed.
-- **H3** — the reader surfaces an absence not already known. **This one has a
-  real chance of failing**, because the two absences we know about are the two
-  that motivated the campaign. A null means the instrument is correct and the
-  repository is currently clean, which is worth reporting as such and is not a
-  reason to withhold it.
+- **H3 — NULL, reported as such.** The reader's first run reported five
+  confident false positives (`owed but absent: clients`), traced to a chamber
+  narrowing the reader did not model; corrected, what remains is already-
+  known history (18 pre-decision-0148 `seam-guard` rows, `census`'s
+  structural inability to ever produce a `sluice:census` row) — zero new
+  absences found. The two absences that motivated the campaign were exactly
+  the two the reader would have needed to find something beyond in order to
+  confirm; it found nothing beyond them. A null means the instrument is
+  correct and the repository is currently clean, which is worth reporting as
+  such and is not a reason to withhold it.
 
 ## 9. Flagged for Nathan at G3
 

@@ -404,8 +404,8 @@ input — record it, and **do not weaken the test to accommodate it**.
   plain constructs to match its style — for consistency, not portability.
 
   **WHERE IT WRITES — the plan did not say, and this is the ruling.** The
-  capture writes **`docs/generated-path-writes.tsv`**: one row per declared
-  path, `path<TAB>written<TAB>tracked`. That file is itself **declared in
+  capture writes **`docs/generated-path-writes.tsv`**:
+  `path<TAB>written<TAB>tracked`. That file is itself **declared in
   `docs/generated-paths.txt` with author `artifacts`**, which is
   self-consistent rather than circular — the record of what an author wrote is
   written by that author and declared against it, so the campaign's machinery
@@ -413,6 +413,18 @@ input — record it, and **do not weaken the test to accommodate it**.
   ledger's columns are `when | label | wall_s | user_s | sys_s | cpu_ratio |
   waited_s | commit | branch | host | cores`, several readers parse it, and a
   per-path count does not fit without corrupting the schema.
+
+  **CORRECTED AFTER FINAL REVIEW (finding I3): it is not one row per declared
+  path any more.** `census`-authored rows are excluded outright, not merely
+  reported as zero — `scripts/regenerate-artifacts.sh`'s `HV_CENSUS`
+  conditional means a `census`-authored row's true written/tracked shape
+  differs by which invocation ran it, and this capture has no way to say
+  which one did, so it emits no line for that row at all rather than a
+  number that would be true for only one of the two invocations. `heavy`-
+  and `none(...)`-authored rows are unaffected and still get a row, because
+  neither has that invocation ambiguity. See
+  `scripts/regenerate-artifacts.sh`'s own comment beside the emission loop
+  for the full account.
 
   If the counts prove unstable between two consecutive runs on an unchanged
   tree, **stop and report** — a committed artifact that churns for no reason is

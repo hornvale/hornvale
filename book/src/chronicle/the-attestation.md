@@ -110,6 +110,7 @@ editing either would misstate what each campaign actually reserved.
 | the chamber's two phase lists restate the roster's `rung` column, one-sided | `the_phase_lists_and_the_roster_rungs_agree_both_ways` | both — a rung the lists omit, and a phase the lists carry that no rung implies |
 | a declared generated path names no author, or the wrong one | `docs/generated-paths.txt`'s author column, `every_declared_path_names_a_known_author` | every declared path attributes to a roster set name or a reasoned `none(<reason>)` |
 | nothing diffs what a job actually ran against what it owed | `cli/src/attest.rs` (`hornvale attest`) | both — owed-but-absent, and present-but-unowed, for `stage`-rung phases; `none(...)` authors and conditionally-droppable phases reported honestly as their own categories, never as a confident absence — but see below: this is narrower than spec §5 claimed, and does not reach the campaign's own motivating example |
+| a decision record can land inside another campaign's reserved block | `decision_blocks_do_not_overlap_across_campaigns` | committed declarations checked against each other (cannot see a block never declared at all) |
 
 **The shipped reader is narrower than spec §5 claimed, and the table row
 above used to repeat the wider claim without qualification** (final review,
@@ -136,7 +137,6 @@ Both are documented honestly in `cli/src/attest.rs`'s own module doc. This
 table was not, and it is the one document the book publishes: correcting it
 is this campaign's own standard applied to itself, not a hedge added for
 comfort.
-| a decision record can land inside another campaign's reserved block | `decision_blocks_do_not_overlap_across_campaigns` | committed declarations checked against each other (cannot see a block never declared at all) |
 
 Five decisions were ratified: [0456](../../docs/decisions/0456-a-rule-stated-in-two-places-needs-a-bidirectional-agreement-test.md)
 (a rule stated twice needs a two-way agreement test),
