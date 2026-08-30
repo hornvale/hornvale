@@ -13,7 +13,7 @@
 
 use crate::common_vocab::CommonVocabulary;
 use crate::morphology::Evidential;
-use crate::packs::{EAT, KILL, KNOW, OLD, SLEEP, THINK, UNDER};
+use crate::packs::{EAT, KILL, KNOW, NIGHT, OLD, SLEEP, THINK, UNDER};
 use hornvale_kernel::world::IS_A;
 use std::sync::OnceLock;
 
@@ -406,6 +406,23 @@ fn indefinite_article(word: &str) -> &'static str {
     match word.chars().next().map(|c| c.to_ascii_lowercase()) {
         Some('a' | 'e' | 'i' | 'o' | 'u') => "an",
         _ => "a",
+    }
+}
+
+/// The definiteness-marking prefix Common puts in front of a noun phrase —
+/// `"the "`, an [`indefinite_article`]-selected `"a "`/`"an "`, or nothing
+/// (a bare plural generic) — factored out because Common has exactly ONE
+/// such convention and two call sites both need it: `Part::Determiner`
+/// below (marking the OBJECT slot) and [`realize_common_discourse`]
+/// (marking the SUBJECT, the identical rule applied one slot over — see
+/// that function's own doc). Before this factoring the two sites carried
+/// the rule as two independent `match` expressions with nothing asserting
+/// they agreed; now a caller cannot drift one without drifting both.
+fn definiteness_prefix(definiteness: Definiteness, number: Number, word: &str) -> String {
+    match (definiteness, number) {
+        (Definiteness::Def, _) => "the ".to_string(),
+        (Definiteness::Indef, Number::Sg) => format!("{} ", indefinite_article(word)),
+        (Definiteness::Indef, Number::Pl) => String::new(), // bare generic
     }
 }
 
@@ -1110,6 +1127,18 @@ fn verb_surface(
 /// `know` are one `Transitive` between them, adding no variant. If a future
 /// campaign finds itself adding a variant per predicate, it has rebuilt
 /// `Frame` and should stop.
+///
+/// **The Quoin's `verbless-clause` (r171) pressed on this closure directly,
+/// and did not need a sixth variant.** Zero-copula predication looks at
+/// first glance like a new argument structure, but it isn't one — it
+/// removes the copula from whichever of [`Valence::Nominal`],
+/// [`Valence::Property`] or [`Valence::Locative`] a predicate already has,
+/// which is a fact about the SURFACE, not about what the predicate relates.
+/// [`realize_common_verbless`] reads this enum exactly as [`realize_common`]
+/// does (through [`common_constructions`]) and only then strips the copula
+/// from the part list it gets back — a transformation over a clause's own
+/// construction, the same shape [`realize_common_polar_question`] already
+/// has for force, one axis over.
 /// type-audit: bare-ok(identifier-text)
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Valence {
@@ -1366,6 +1395,16 @@ pub struct Construction {
 /// break the render, not recompile cleanly and panic on every gallery page;
 /// `EAT` lives in this crate's `packs.rs` because that is what registers the
 /// concept.
+///
+/// **A predicate gets exactly ONE row here, still — a verbless reading is
+/// COMPUTED from it, never a second row.** [`realize_common_verbless`]
+/// (The Quoin, Task 3) looks a predicate's construction up through this same
+/// function and then strips its copula out at call time; it does not add a
+/// `(predicate, "verbless")` entry to this table, which would be exactly the
+/// re-keying decision 0326 already refused for `know`. So a predicate that
+/// gains a verbless reading gains no second row and no second `Valence` —
+/// the transformation lives beside [`realize_common_polar_question`]'s own
+/// force operator, not here.
 /// type-audit: bare-ok(identifier-text)
 pub fn common_constructions() -> &'static [Construction] {
     const CLASSIFY: &[Part] = &[
@@ -1470,6 +1509,19 @@ pub fn common_constructions() -> &'static [Construction] {
 /// candidate (unreachable today, and returning an empty list rather than
 /// panicking keeps the parser's failure a [`ParseError`] rather than a
 /// crash).
+///
+/// **Still unreachable after The Quoin's `verbless-clause` (r171), and for a
+/// load-bearing reason rather than an oversight.** [`realize_common_verbless`]
+/// renders a surface with neither [`Part::Copula`] nor [`Part::Verb`], but
+/// it does so by transforming a construction's parts at CALL TIME — it never
+/// adds that stripped part list to [`common_constructions`]'s own inventory,
+/// which is exactly what this function walks. So a verbless surface
+/// contributes no candidate here either way, which is *why* parsing one
+/// fails closed with [`ParseError::NoVerbGroup`] rather than misparsing:
+/// there is no row anywhere for the search to find a partial match against.
+/// If a future campaign ever puts a verbless construction INTO the
+/// inventory this function reads, this `else` arm becomes reachable for the
+/// first time and stops being an unexercised branch.
 ///
 /// **One entry per ROW, not per distinct form — so no row is nominated
 /// "canonical" and none has to be.** The widened key (The Rail, `r011`)
@@ -1750,14 +1802,11 @@ fn emit_parts(
             // than taken.
             Part::Determiner
                 if matches!(spec.object, Argument::Pronoun(_) | Argument::Clause(_)) => {}
-            Part::Determiner => match (spec.definiteness, spec.number) {
-                (Definiteness::Def, _) => out.push_str("the "),
-                (Definiteness::Indef, Number::Sg) => {
-                    out.push_str(indefinite_article(&complement));
-                    out.push(' ');
-                }
-                (Definiteness::Indef, Number::Pl) => {} // bare generic
-            },
+            Part::Determiner => out.push_str(&definiteness_prefix(
+                spec.definiteness,
+                spec.number,
+                &complement,
+            )),
             Part::Complement => out.push_str(&complement),
             Part::ModifierTail => {
                 let mut inline: Vec<String> = Vec::new();
@@ -2083,6 +2132,392 @@ pub fn realize_common_polar_question(clause: &Clause, vocab: &CommonVocabulary) 
     )
 }
 
+/// The part list [`realize_common_verbless`] renders through: a
+/// copula-bearing construction's own parts with [`Part::Copula`] — and the
+/// [`Part::Literal`]`(" ")` immediately before it — removed.
+///
+/// **A transformation over a clause's own construction, not a table row —
+/// the same shape [`invert_for_question`] already has for polar force,
+/// applied to a different axis.** [`Valence`] stays closed at five (Global
+/// Constraint 1, decision 0326): a verbless clause reuses whichever part
+/// list [`common_constructions`] already selected for the clause's own
+/// predicate rather than adding a sixth valence or re-keying
+/// [`PREDICATE_VALENCE`] on `(predicate, shape)` — refused for `know` by
+/// decision 0326, for the identical reason it is refused here.
+///
+/// **General over every copula-bearing valence, not written for one, and
+/// that generality is what keeps this an honest reading of Stassen
+/// (1997)/Hengeveld (1992) rather than a contradiction of it.** Zero-copula
+/// predication is a strategy in its own right, not "the nominal
+/// construction with its copula deleted" (r171's own corpus note is
+/// explicit that it is deliberately not filed under answer ellipsis, r166)
+/// — so this function does not hand-write a `Nominal`-only part list; it
+/// strips the copula from whichever of `CLASSIFY`, `PROPERTY` or `LOCATIVE`
+/// the predicate's own [`Valence`] selected, the same way
+/// [`invert_for_question`] inverts whichever copula-bearing construction it
+/// is handed rather than one hardcoded shape.
+///
+/// Panics if `parts` carries no [`Part::Copula`] — checked by the caller
+/// ([`realize_common_verbless`]) before this runs.
+fn strip_copula(parts: &[Part]) -> Vec<Part> {
+    let copula_at = parts
+        .iter()
+        .position(|p| *p == Part::Copula)
+        .expect("checked by the caller before this is called");
+    let mut stripped = parts.to_vec();
+    stripped.remove(copula_at);
+    // Every copula-bearing construction places a `Part::Literal(" ")`
+    // immediately before the copula (see `common_constructions`) — removed
+    // here too, so the surface has no doubled space where the copula stood.
+    if copula_at > 0 {
+        stripped.remove(copula_at - 1);
+    }
+    stripped
+}
+
+/// Realize a [`Clause`] as a Common **verbless clause** — *"the person under
+/// the tree."* — zero-copula predication (r171, `verbless-clause`), by
+/// stripping the copula out of its own construction rather than by spelling
+/// a second surface.
+///
+/// **A different STRATEGY for the same proposition, not a different
+/// proposition** — the same move [`realize_common_polar_question`]'s own
+/// doc makes for force, one axis over: that function's clause is the same
+/// proposition asked instead of asserted; this one's is the same
+/// proposition predicated with no finite verb instead of with one. Neither
+/// needs a new field on [`Clause`] or a new [`Valence`] variant, for the
+/// same reason: both are facts about HOW a predication surfaces, not about
+/// what it relates.
+///
+/// # A construction with no copula is REFUSED, loudly
+///
+/// `TRANSITIVE` and `INTRANSITIVE` carry [`Part::Verb`], never
+/// [`Part::Copula`] — their predicate IS the verb, so there is no copula to
+/// elide and no zero-copula reading of *"the guard sleeps"* that is not
+/// simply a different clause. Common has no periphrastic stand-in for a
+/// lexical verb the way English `do`-support fills one for
+/// [`realize_common_polar_question`]'s own refused case, so this function
+/// panics rather than silently doing nothing, the same fail-fast posture
+/// every refusal in this module takes for an authoring hole rather than a
+/// fact about the world.
+///
+/// # The parse direction is a stated loss
+///
+/// A verbless surface has neither a copula form nor a lexical-verb form
+/// anywhere in it, so [`parse_clause_body`]'s verb-group search returns no
+/// hit at all and reports [`ParseError::NoVerbGroup`], regardless of what a
+/// [`ParseContext`] registers — sharper than [`Valence::Locative`]'s own
+/// parse loss, which still depends on registration. See
+/// `a_verbless_clause_is_not_recovered_by_parsing` for the pin. This
+/// campaign is production-side only (spec §1.1); the loss is stated, not
+/// fixed.
+///
+/// Panics if `clause.predicate` names no construction, or if the
+/// construction it names has no [`Part::Copula`].
+/// type-audit: bare-ok(prose)
+pub fn realize_common_verbless(clause: &Clause, vocab: &CommonVocabulary) -> String {
+    let construction = common_construction_for(clause);
+    assert!(
+        construction.parts.contains(&Part::Copula),
+        "Common's verbless strategy elides a copula, and predicate {:?} has \
+         a lexical verb instead: a transitive or intransitive frame's \
+         predicate IS its verb, so there is no copula there to omit and no \
+         zero-copula reading of it",
+        clause.predicate
+    );
+    emit_parts(&strip_copula(construction.parts), clause, vocab, true)
+}
+
+/// One [`Valence::Locative`] construction's part list, fronted into the
+/// existential frame — the same "swap slots, add no literal beyond the one
+/// this operator itself needs" discipline [`invert_for_question`] already
+/// has for polar force, one argument-fronting axis over (Freeze 1992).
+///
+/// **What moves, precisely.** Every locative construction opens
+/// `[Subject, Literal(" "), Copula, Literal(" "), PredicateWord, …]`
+/// (`LOCATIVE`, [`common_constructions`]). This drops the fronted subject
+/// out of its own leading slot, puts the dummy pivot `Literal("there")`
+/// there instead, and reinserts [`Part::Subject`] immediately after the
+/// copula — *"there is `<subject>` under `<complement>`"* — leaving every
+/// part from the adposition onward ([`Part::PredicateWord`],
+/// [`Part::Determiner`], [`Part::Complement`], [`Part::ModifierTail`], the
+/// terminal `Literal(".")`) exactly where [`common_constructions`] already
+/// put it. Exactly one literal is added (the dummy pivot); nothing is
+/// rebuilt from scratch, the same property [`invert_for_question`]'s own
+/// doc states for its own axis.
+///
+/// Panics if `parts` carries no [`Part::Subject`] or no [`Part::Copula`], or
+/// if the subject does not precede the copula — checked here rather than
+/// assumed, even though the caller ([`realize_common_existential`]) only
+/// ever hands this a [`Valence::Locative`] construction, where both hold
+/// for every row [`common_constructions`] builds today.
+fn front_existential(parts: &[Part]) -> Vec<Part> {
+    let subject_at = parts
+        .iter()
+        .position(|p| *p == Part::Subject)
+        .expect("a locative construction has a subject slot");
+    let copula_at = parts
+        .iter()
+        .position(|p| *p == Part::Copula)
+        .expect("a locative construction has a copula slot");
+    assert!(
+        subject_at < copula_at,
+        "every construction places the subject before the copula \
+         (common_constructions); found subject at {subject_at} and copula \
+         at {copula_at}, which this operator does not know how to front"
+    );
+    let mut fronted = Vec::with_capacity(parts.len() + 2);
+    fronted.push(Part::Literal("there"));
+    // `parts[subject_at + 1..=copula_at]` is `[Literal(" "), Copula]` on
+    // every construction this runs against — the separator that already
+    // sat between the old subject and the copula, carried over unchanged so
+    // "there" gets the identical spacing the old subject had.
+    fronted.extend_from_slice(&parts[subject_at + 1..=copula_at]);
+    fronted.push(Part::Literal(" "));
+    fronted.push(Part::Subject);
+    fronted.extend_from_slice(&parts[copula_at + 1..]);
+    fronted
+}
+
+/// Realize a [`Clause`] at [`Valence::Locative`] as a Common **existential**
+/// — *"there is a person under the tree."* — by fronting its own
+/// construction rather than by spelling a second surface.
+///
+/// # Freeze (1992): a transformation over a locative clause, not a sixth `Valence`
+///
+/// [`Valence`] stays closed at five (Global Constraint 1, decision 0326):
+/// existential, locative and possessive predication are one construction
+/// with different arguments fronted, so this needs no new row in
+/// [`PREDICATE_VALENCE`] and no new [`Valence`] variant — the identical
+/// "transformation, not a table row" move [`realize_common_polar_question`]
+/// makes for force and [`realize_common_verbless`] makes for strategy, this
+/// campaign's third instance of the same shape, one argument-structure axis
+/// over. [`Valence::Locative`]'s own doc refuses the inference that its
+/// existence alone unlocks this rung in advance — this function is what
+/// makes good on that refusal: existential predication is *built*, but
+/// built as an operator that consumes a locative clause, never as a
+/// property of the valence itself.
+///
+/// # The definiteness effect is EXPRESSIBLE here, not ENFORCED
+///
+/// Freeze's rung note states the effect existentials are named for:
+/// *"the definiteness effect (existentials resist definite pivots) is why
+/// r007 is also needed: the constraint cannot be stated without the
+/// category."* This function does not state it, and the reason is where the
+/// pivot's definiteness actually lives. [`Clause::definiteness`] governs the
+/// GROUND — the object slot [`Part::Determiner`] renders (*"**the** tree"*)
+/// — never the pivot: there is exactly one [`Part::Determiner`] in this
+/// grammar and it reads `spec.object`/`spec.definiteness`, not
+/// `spec.subject`. The pivot fronted here is whatever [`Subject::Name`]
+/// text the caller already resolved (*"a person"*), a literal string this
+/// domain cannot inspect for its own article. So a caller CAN write
+/// `Subject::Name("the person".to_string())` and this function will front
+/// it exactly as readily as an indefinite one — *"there is the person under
+/// the tree."*, oddly grammatical Common and ungrammatical English, emitted
+/// rather than refused.
+///
+/// **Deliberately not routed through [`Discourse`]/[`DiscourseClause`] to
+/// close this gap.** [`discourse_subject_is_repeat_mention`] is the only
+/// machinery in this crate that DERIVES a subject's article from referent
+/// identity, so it is the only thing that could refuse (or correct) a
+/// definite pivot here — but spec §3.5 scopes Task 4's structure as
+/// "consulted, not built on" for this task, and `Discourse` tracks
+/// definiteness across a SEQUENCE of clauses about a recurring referent,
+/// which is a different phenomenon from a single existential clause's own
+/// pivot. Reaching for it here would widen this task's dependency on a
+/// structure built for a different axis, for a check this function can
+/// instead simply state as a stated limit — the same "expressible, not
+/// enforced" posture is honest and cheap where forcing composition would
+/// not obviously be correct. A future campaign that wants the effect
+/// ENFORCED has a real design question to answer first: whether an
+/// existential's pivot should be [`Discourse`]-tracked at all, or whether
+/// it needs its own, narrower derivation.
+///
+/// # A non-locative valence is REFUSED, loudly
+///
+/// Rendering a non-[`Valence::Locative`] clause through this operator would
+/// front a relation the clause does not have — the "plausible garbage"
+/// class every transformation in this module refuses rather than emits
+/// (The Rail, Task 9's review, naming the pattern this module's own fifth
+/// instance of it would otherwise have been).
+///
+/// Panics if `clause.predicate` is not at [`Valence::Locative`].
+/// type-audit: bare-ok(prose)
+pub fn realize_common_existential(clause: &Clause, vocab: &CommonVocabulary) -> String {
+    assert_eq!(
+        predicate_valence(&clause.predicate),
+        Some(Valence::Locative),
+        "an existential fronts a LOCATIVE clause (Freeze 1992); predicate \
+         {:?} is at a different valence, and rendering it through this \
+         operator would front a relation the clause does not have — refused \
+         rather than emitted",
+        clause.predicate
+    );
+    let construction = common_construction_for(clause);
+    emit_parts(&front_existential(construction.parts), clause, vocab, true)
+}
+
+/// One clause in a [`Discourse`], carrying the concept id its subject
+/// refers to instead of an already-resolved [`Subject`].
+///
+/// **Why not a [`Clause`] directly.** `Subject::Name` already holds
+/// pre-resolved surface text — including any article a caller chose to bake
+/// in (`"the guard"`, `"a person"`; see that variant's own callers). That is
+/// exactly the fact [`realize_common_discourse`] needs to COMPUTE rather
+/// than accept: whether this mention is the first (`"a person"`) or a
+/// repeat (`"the person"`) of `referent`. So this type withholds a resolved
+/// subject and gives the sequence realizer a concept id to track instead.
+///
+/// **Everything else is [`Clause`]'s own fields, unchanged**, because
+/// nothing about tense, polarity, evidential, adjuncts or the OBJECT's own
+/// [`Definiteness`] is discourse-tracked — only the subject is. `r007`'s
+/// text has a second definite article too (*"the gate"*), on the object
+/// slot of an unrelated predicate; that one is [`Clause::definiteness`],
+/// already built, forwarded here unchanged as `definiteness`.
+/// type-audit: bare-ok(identifier-text: referent), bare-ok(identifier-text: predicate)
+#[derive(Clone, Debug, PartialEq)]
+pub struct DiscourseClause {
+    /// The concept id naming this clause's subject referent —
+    /// [`realize_common_discourse`] compares this, mention to mention,
+    /// against every EARLIER clause's `referent` to decide `Indef` vs
+    /// `Def`. Not a display string: it is resolved through `vocab` the same
+    /// way [`Argument::Concept`]'s object slot already is.
+    pub referent: String,
+    /// The relation this clause asserts — [`Clause::predicate`]'s own
+    /// field, unchanged.
+    pub predicate: String,
+    /// What the predicate relates the subject to — [`Clause::object`]'s own
+    /// field, unchanged. Not referent-tracked: only the SUBJECT slot is.
+    pub object: Argument,
+    /// Grammatical number, threaded to both the computed subject phrase and
+    /// the object slot — [`Clause::number`]'s own field, unchanged.
+    pub number: Number,
+    /// The OBJECT's definiteness, forwarded to the built [`Clause`]
+    /// unchanged. Unrelated to the subject-referent tracking this type
+    /// performs — see this struct's own doc.
+    pub definiteness: Definiteness,
+    /// How this clause's content was epistemically grounded —
+    /// [`Clause::evidential`]'s own field, unchanged.
+    pub evidential: Evidential,
+    /// When this clause's content stands relative to the utterance —
+    /// [`Clause::tense`]'s own field, unchanged.
+    pub tense: Tense,
+    /// Whether this clause asserts or denies — [`Clause::polarity`]'s own
+    /// field, unchanged.
+    pub polarity: Polarity,
+    /// Role bindings on this clause — [`Clause::adjuncts`]'s own field,
+    /// unchanged.
+    pub adjuncts: Vec<Adjunct>,
+}
+
+/// An ORDERED sequence of clauses about possibly-recurring referents — the
+/// structure `definiteness` (r007) needed and nothing before this task
+/// supplied. [`Coordination`] is the nearest existing type and is not this:
+/// it joins clauses into ONE sentence with one shared subject slot;
+/// `Discourse` keeps each clause its OWN sentence while tracking, across
+/// the sequence, whether a referent has been mentioned before. r007's own
+/// text is two sentences on purpose (*"definiteness is not visible inside
+/// one clause"*, the rung's note) — this type is what "not inside one
+/// clause" is built out of.
+///
+/// **Minimal on purpose** (spec §3.3's branch-1 finding): an ordered list
+/// plus a referent id per clause is enough. No discourse-representation
+/// theory, no entity-tracking beyond string equality on
+/// [`DiscourseClause::referent`] — see [`realize_common_discourse`]'s own
+/// doc for exactly what "mentioned before" means and why it deliberately
+/// differs from [`elide_coordinated_subjects`]'s "last stated" rule.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Discourse {
+    /// The clauses, in surface (discourse) order. At least one — a
+    /// "discourse" of zero clauses is not a sequence to realize, matching
+    /// the panic-below-two discipline [`realize_common_coordination`] takes
+    /// for its own minimum, at a lower floor: unlike a coordination, a
+    /// discourse of ONE clause is meaningful (it is simply always the first
+    /// mention of its own referent), so only zero is refused.
+    pub clauses: Vec<DiscourseClause>,
+}
+
+/// Whether `clauses[index]`'s referent has been mentioned by ANY earlier
+/// clause in the sequence — string equality on [`DiscourseClause::referent`]
+/// against every clause `0..index`, not merely the immediately preceding
+/// one.
+///
+/// **Deliberately "any earlier mention," not "last stated."**
+/// [`elide_coordinated_subjects`] compares against the LAST stated subject,
+/// because subject elision is genuinely sensitive to what a reader has just
+/// read — that was The Mortise's Task 7 fix, and comparing to clause 0
+/// instead misattributed a re-mention to the wrong referent for `[X, Y, X]`.
+/// Definiteness does not carry that hazard: once a referent has been
+/// introduced into the discourse, EVERY later mention of it is definite
+/// regardless of what was said in between (Chafe 1976; Lambrecht 1994) — an
+/// intervening `tree` between two mentions of `person` does not make the
+/// second `person` indefinite again. So `[X, Y, X]` here gives Indef / Indef
+/// / **Def** (X's second mention is definite no matter that Y intervened),
+/// which is a different answer from what a "last stated" rule would give
+/// were it applied here, and applying that rule to THIS phenomenon would be
+/// importing a fix for a different hazard than the one this type has.
+fn discourse_subject_is_repeat_mention(clauses: &[DiscourseClause], index: usize) -> bool {
+    let referent = &clauses[index].referent;
+    clauses[..index].iter().any(|c| &c.referent == referent)
+}
+
+/// Realize a [`Discourse`] as a sequence of Common sentences, space-joined —
+/// each clause keeps its own subject, verb and full stop, unlike
+/// [`realize_common_coordination`], which joins clauses into ONE sentence.
+///
+/// **The only thing this function computes that [`realize_common`] does
+/// not accept as input: the SUBJECT's definiteness.** For each clause, in
+/// order, [`discourse_subject_is_repeat_mention`] decides `Def` (repeat) vs
+/// `Indef` (first mention); the resolved word
+/// ([`surface_complement`], pluralized by the clause's own [`Number`]) is
+/// then prefixed by [`definiteness_prefix`] — the SAME helper
+/// [`Part::Determiner`]'s own match arm calls for the OBJECT slot, not a
+/// second copy of its rule — the identical rule, applied to the subject
+/// instead, because Common has exactly one definiteness-marking convention
+/// and this is the second slot that needs it. The built [`Subject::Name`]
+/// then carries that computed text into an ordinary [`Clause`], realized
+/// through [`realize_common`] unchanged — this function adds no second
+/// realizer, only a subject builder in front of the existing one.
+///
+/// Panics if `discourse.clauses` is empty: a discourse with nothing in it
+/// states a contradiction in its own name, the same class of panic
+/// [`realize_common_coordination`]'s own minimum-length check is.
+/// type-audit: bare-ok(prose)
+pub fn realize_common_discourse(discourse: &Discourse, vocab: &CommonVocabulary) -> String {
+    assert!(
+        !discourse.clauses.is_empty(),
+        "a discourse realizes at least one clause; 0 is not a sequence to \
+         realize"
+    );
+    let mut sentences: Vec<String> = Vec::with_capacity(discourse.clauses.len());
+    for (index, dc) in discourse.clauses.iter().enumerate() {
+        let repeat = discourse_subject_is_repeat_mention(&discourse.clauses, index);
+        let word = surface_complement(vocab, &dc.referent, dc.number);
+        let definiteness = if repeat {
+            Definiteness::Def
+        } else {
+            Definiteness::Indef
+        };
+        let subject_text = format!(
+            "{}{word}",
+            definiteness_prefix(definiteness, dc.number, &word)
+        );
+        let clause = Clause {
+            predicate: dc.predicate.clone(),
+            subject: Subject::Name(subject_text),
+            object: dc.object.clone(),
+            number: dc.number,
+            definiteness: dc.definiteness,
+            evidential: dc.evidential,
+            tense: dc.tense,
+            polarity: dc.polarity,
+            adjuncts: dc.adjuncts.clone(),
+        };
+        sentences.push(realize_common(&clause, vocab));
+    }
+    sentences.join(" ")
+}
+
 /// Render a small cardinal number as an English word (`0` through `12`);
 /// larger numbers render as plain digits.
 /// type-audit: bare-ok(prose)
@@ -2204,6 +2639,65 @@ pub fn common_role_surface(
         ("occ-ended", Argument::Count(year)) => Some((
             AdjunctPosition::Trailing,
             format!("it ended in year {}", cardinal(*year)),
+        )),
+        // r048 `spatial-adverbial`: a locative adjunct on an event. The role
+        // IS the adposition — the same identification `Valence::Locative`
+        // makes for the locative PREDICATE, one slot over. Inline, because a
+        // location is part of the event being described rather than a
+        // separate one (contrast `occ-ended`, which gets its own trailing
+        // clause). The complement goes through `surface_complement` so this
+        // arm cannot drift from the object slot's pluralization.
+        //
+        // `UNDER` alone, not `UNDER | OVER`: `over` is a registered concept
+        // (`ConceptKind::Quality`) but has no `packs.rs` constant, and this
+        // task has exactly one caller. Widening to a second role id on the
+        // strength of one caller is speculative generality — Task 2 is the
+        // second caller that would justify it, if it needs to.
+        (UNDER, Argument::Concept(id)) => Some((
+            AdjunctPosition::Inline,
+            format!(
+                "{} the {}",
+                vocab.word_for(&adjunct.role),
+                surface_complement(vocab, id, Number::Sg)
+            ),
+        )),
+        // r049 `temporal-adverbial`: a temporal adjunct on an event, the
+        // second caller of this role-adjunct shape (Task 1's `UNDER` arm,
+        // r048) — but NOT collapsed into it, because the two still differ
+        // structurally, even after a review-round correction to THIS arm's
+        // shape (see `packs::NIGHT`'s doc for the full account of what
+        // changed and why).
+        //
+        // **Corrected design, review round 1:** the role, `NIGHT`, still
+        // NAMES the temporal relation this arm realizes (there is only one:
+        // "at"), but the argument slot now carries `Argument::Concept(id)`
+        // — the SAME shape `UNDER`'s arm takes for its own complement — not
+        // `Argument::Absent`. The original version emptied the argument
+        // slot on the theory that the role alone said enough; it did not
+        // say enough to a TONGUE, which resolves only `adjunct.argument`
+        // and never reads `adjunct.role` at all (`realize_adjuncts`'s own
+        // doc), so an absent argument left the tongue path with nothing to
+        // resolve — not merely Common-only, but a live, unforced defect
+        // (`grammar.rs`'s stray-space finding, since corrected alongside
+        // this arm). `night` is `ladder_rank: 0` in `universal_stratum`
+        // exactly like `tree`, r048's own complement, so nothing about the
+        // concept itself forced the emptier design.
+        //
+        // The literal `"at"` is still supplied by the arm rather than
+        // looked up through `vocab`, because `at` is not itself a
+        // registered concept — the same absence `UNDER` stands in for,
+        // from the opposite side. **What still keeps the two arms
+        // separate**: `UNDER`'s role IS the relation word rendered
+        // (`vocab.word_for(&adjunct.role)`, "under"), so its role and its
+        // rendered relation are the same string by construction; this arm's
+        // role (`NIGHT`) names a concept that is never itself rendered as
+        // the relation word — `"at"` is a hardcoded literal, not a lookup
+        // on the role — so the two arms key their match on a role id for
+        // two different reasons and still cannot be collapsed into one
+        // parametrized on the literal adposition alone.
+        (NIGHT, Argument::Concept(id)) => Some((
+            AdjunctPosition::Inline,
+            format!("at {}", surface_complement(vocab, id, Number::Sg)),
         )),
         (role, Argument::Clause(_)) => panic!(
             "an adjunct may not carry an embedded clause (role {role:?}): \
@@ -3036,6 +3530,111 @@ mod tests {
             "Vebe is a planet with two moons, orbiting a yellow-white dwarf."
         );
     }
+
+    /// r048 `spatial-adverbial`: a locative adjunct on an EVENT, which is a
+    /// different thing from `Valence::Locative`'s locative PREDICATE (r005).
+    /// The clause is transitive — the adjunct rides `Part::ModifierTail`,
+    /// which `TRANSITIVE` has carried since The Interlinear; what is new is
+    /// that a SPATIAL role has a surface at all.
+    ///
+    /// **Substitutions, per the campaign's no-registration rule:** the rung's
+    /// text is *"The guard struck her in the marketplace."*; `guard`,
+    /// `strike` and `marketplace` are registered nowhere, and registering one
+    /// would move `world-seed-42.json`. `kill` stands in for `strike` (the
+    /// same substitution `r006`'s witness records), `person` for the two
+    /// human referents, and `under`/`tree` for the location.
+    #[test]
+    fn a_spatial_adjunct_locates_an_event() {
+        let vocab = CommonVocabulary::default();
+        let clause = Clause {
+            predicate: KILL.to_string(),
+            subject: Subject::Name("the person".to_string()),
+            object: Argument::Concept("person".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: vec![Adjunct {
+                role: UNDER.to_string(),
+                argument: Argument::Concept("tree".to_string()),
+            }],
+        };
+        assert_eq!(
+            realize_common(&clause, &vocab),
+            "the person killed the person under the tree."
+        );
+    }
+
+    /// r049 `temporal-adverbial`. The rung's text is merchant entry `m02`,
+    /// *"Everything was fine until last night."*; `everything`, `fine` and
+    /// `until` are registered nowhere, so the witness keeps only the part
+    /// the token names — a temporal adjunct on a clause — and substitutes
+    /// `sleep` (a registered `Act`, `Valence::Intransitive`) and `night` (a
+    /// registered `ConceptKind::Celestial`).
+    ///
+    /// **The r048 dependency this rung declares is DIACHRONIC, not
+    /// synchronic**, and the corpus says so at the rung itself: there is no
+    /// synchronic requirement that a language have spatial adjuncts before
+    /// temporal ones. This campaign built r048 first because the two share
+    /// one extension point (`common_role_surface`), which is an engineering
+    /// reason; nothing here asserts Haspelmath's implication about how the
+    /// category historically arises.
+    ///
+    /// **The witness is deliberately intransitive, trading naturalness for
+    /// second-valence coverage.** `r048`'s witness already exercises this
+    /// shape on a transitive clause (`kill`); this one exercises the SAME
+    /// role-adjunct shape on an `Intransitive` predicate, which is a real
+    /// gap `kill` alone would leave uncovered. The cost is that Common's
+    /// past tense is the naive regular append-`ed` (pinned deliberately —
+    /// `eat` surfaces as `eated` a few tests up, and that doc explains why
+    /// pinning the wrong-looking output is what keeps an irregular table a
+    /// red test to update rather than a latent defect): `sleep` surfaces as
+    /// `sleeped`, never `slept`. Pinning it here takes the same posture.
+    ///
+    /// **The role id resolves to `NIGHT`, not a new `"at-time"` name.**
+    /// `Adjunct`'s own doc calls a role a registered predicate; `night` is a
+    /// registered concept (no predicate-valence row, since it is never a
+    /// clause's own predicate), and binding the role to it directly needs
+    /// no new registration — see `packs::NIGHT`'s doc for the asymmetry
+    /// this creates against `UNDER`'s arm, and `common_role_surface`'s
+    /// `NIGHT` arm for why the two are not collapsed into one.
+    ///
+    /// **The adjunct's `argument` also carries `Argument::Concept(NIGHT)`,
+    /// not `Argument::Absent` — corrected in review round 1.** The role
+    /// alone is enough for COMMON, which reads only `adjunct.role` on this
+    /// arm; it is not enough for a TONGUE, which resolves only
+    /// `adjunct.argument` and never reads `adjunct.role` at all
+    /// (`realize_adjuncts`'s own doc, `grammar.rs`). An absent argument
+    /// left the tongue path with no concept to resolve — a live, unforced
+    /// defect (`grammar.rs`'s
+    /// `a_tongue_realizes_a_temporal_adjuncts_concept_the_same_shape_as_any_other_role`
+    /// pins the corrected, working shape; see its doc for the defect this
+    /// replaced), not merely the stated Common-only gap this crate already
+    /// accepts for `UNDER`'s own relation word.
+    #[test]
+    fn a_temporal_adjunct_places_an_event_in_time() {
+        let vocab = CommonVocabulary::default();
+        let clause = Clause {
+            predicate: SLEEP.to_string(),
+            subject: Subject::Name("the person".to_string()),
+            object: Argument::Absent,
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: vec![Adjunct {
+                role: NIGHT.to_string(),
+                argument: Argument::Concept(NIGHT.to_string()),
+            }],
+        };
+        assert_eq!(
+            realize_common(&clause, &vocab),
+            "the person sleeped at night."
+        );
+    }
+
     #[test]
     fn cardinal_words() {
         assert_eq!(cardinal(2), "two");
@@ -3520,6 +4119,376 @@ mod tests {
             .expect("the tie-break always favors is-a, so this resolves rather than fails");
         assert_eq!(misparsed.predicate, IS_A);
         assert_eq!(misparsed.object, Argument::Concept("under".to_string()));
+    }
+
+    /// r171 `verbless-clause`: predication with no finite verb anywhere.
+    /// Stassen (1997) and Hengeveld (1992) treat zero-copula predication as
+    /// a strategy in its own right — the ordinary present-tense form in a
+    /// great many languages — rather than as a copula deleted from
+    /// somewhere else, and the rung is DELIBERATELY not filed under answer
+    /// ellipsis (r166). What keeps this an honest reading of that claim
+    /// rather than a contradiction of it is generality over EVERY
+    /// copula-bearing valence, not just this test's own `Locative`
+    /// predicate: [`realize_common_verbless`] strips the copula from
+    /// whichever of `CLASSIFY`, `PROPERTY` or `LOCATIVE` the predicate's own
+    /// [`Valence`] selected (see that function's own doc), so this is not
+    /// `CLASSIFY` with `Part::Copula` removed specifically — it is one
+    /// strategy applied uniformly across all three.
+    ///
+    /// **Substitution:** the rung's text is *"A dead woman in the
+    /// marketplace, and the gate open all night."*; `dead`, `woman`,
+    /// `marketplace` and `gate` are registered nowhere. `person` and `tree`
+    /// stand in, keeping the one thing the token names — a predication with
+    /// no verb.
+    #[test]
+    fn a_verbless_clause_predicates_without_a_verb() {
+        let vocab = CommonVocabulary::default();
+        let clause = Clause {
+            predicate: UNDER.to_string(),
+            subject: Subject::Name("the person".to_string()),
+            object: Argument::Concept("tree".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        assert_eq!(
+            realize_common_verbless(&clause, &vocab),
+            "the person under the tree."
+        );
+    }
+
+    /// A construction whose verb group is a LEXICAL VERB has no copula to
+    /// elide, and is refused, loudly — the same fail-fast posture
+    /// [`realize_common_polar_question`] takes for its own refused case
+    /// (see [`realize_common_verbless`]'s own doc, "A construction with no
+    /// copula is REFUSED, loudly"). `kill` is [`Valence::Transitive`]
+    /// (`PREDICATE_VALENCE`), so its construction is `TRANSITIVE`, which
+    /// carries [`Part::Verb`] and never [`Part::Copula`].
+    #[test]
+    #[should_panic(expected = "Common's verbless strategy elides a copula")]
+    fn a_verbless_clause_on_a_lexical_verb_panics() {
+        let vocab = CommonVocabulary::default();
+        let clause = Clause {
+            predicate: KILL.to_string(),
+            subject: Subject::Name("the guard".to_string()),
+            object: Argument::Concept("person".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        let _ = realize_common_verbless(&clause, &vocab);
+    }
+
+    /// **The generality claim [`realize_common_verbless`]'s own doc makes —
+    /// "general over every copula-bearing valence, not written for one" —
+    /// exercised at a SECOND valence.** Every other verbless test in this
+    /// module runs `Locative` (`UNDER`); this one runs `Nominal` (`IS_A`,
+    /// `CLASSIFY`'s own valence) to convert that doc's load-bearing claim
+    /// from an argument into a pinned fact, the way
+    /// `a_verbless_clause_predicates_a_property_without_a_verb` does for
+    /// `Property` beside it.
+    #[test]
+    fn a_verbless_clause_predicates_a_nominal_without_a_verb() {
+        let vocab = CommonVocabulary::default();
+        let clause = Clause {
+            predicate: IS_A.to_string(),
+            subject: Subject::Name("the person".to_string()),
+            object: Argument::Concept("tree".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        assert_eq!(
+            realize_common_verbless(&clause, &vocab),
+            "the person the tree."
+        );
+    }
+
+    /// The third and last copula-bearing valence, `Property` (`OLD`,
+    /// `PROPERTY`'s own valence) — see
+    /// `a_verbless_clause_predicates_a_nominal_without_a_verb`'s doc for why
+    /// this is worth pinning rather than trusting the doc's claim on its
+    /// own. `PROPERTY` carries no `Part::Determiner`/`Part::Complement`
+    /// pair (`a_property_predication_takes_no_determiner`), so stripping its
+    /// copula leaves only the subject and the predicate word.
+    #[test]
+    fn a_verbless_clause_predicates_a_property_without_a_verb() {
+        let vocab = CommonVocabulary::default();
+        let clause = Clause {
+            predicate: OLD.to_string(),
+            subject: Subject::Name("the road".to_string()),
+            object: Argument::Absent,
+            number: Number::Sg,
+            definiteness: Definiteness::Indef,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        assert_eq!(realize_common_verbless(&clause, &vocab), "the road old.");
+    }
+
+    /// r104 `existential`. Freeze (1992): existential, locative and
+    /// possessive predication are one construction with different arguments
+    /// fronted — so this is a TRANSFORMATION over a locative clause, in the
+    /// shape [`realize_common_polar_question`] already has, and NOT a sixth
+    /// [`Valence`]. [`Valence::Locative`]'s own doc refuses that inference
+    /// in advance: it "grants no dispensation for r019 or r104 on its own".
+    ///
+    /// **Substitution:** the rung's text is *"There is a body in the
+    /// marketplace."*; `body` and `marketplace` are registered nowhere.
+    /// `person` is the pivot and `under`/`tree` the location.
+    ///
+    /// **The pivot's own indefiniteness is not what this test pins.** The
+    /// pivot text (*"a person"*) is a literal string, baked in by the
+    /// caller — this domain cannot inspect a `Subject::Name` for its own
+    /// article (see [`realize_common_existential`]'s own doc, "The
+    /// definiteness effect is EXPRESSIBLE here, not ENFORCED"). What this
+    /// test pins instead is [`Clause::definiteness`], which governs the
+    /// GROUND (*"**the** tree"*), not the pivot — `Definiteness::Def` is
+    /// correct here for exactly that reason, not `Indef`: the object slot
+    /// is the one thing this field actually controls, and the rung's own
+    /// text has a definite ground (*"in **the** marketplace"*).
+    #[test]
+    fn an_existential_fronts_a_locative_and_takes_an_indefinite_pivot() {
+        let vocab = CommonVocabulary::default();
+        let clause = Clause {
+            predicate: UNDER.to_string(),
+            subject: Subject::Name("a person".to_string()),
+            object: Argument::Concept("tree".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        assert_eq!(
+            realize_common_existential(&clause, &vocab),
+            "there is a person under the tree."
+        );
+    }
+
+    /// The definiteness-effect control, by value: a `Def` PIVOT — a
+    /// `Subject::Name` text that already bakes in a definite article — is
+    /// not refused. It renders exactly as readily as the indefinite pivot
+    /// above, because the pivot's article lives inside the literal string
+    /// this function cannot inspect (see [`realize_common_existential`]'s
+    /// own doc). Pinned by value so the odd output is RECORDED, per the
+    /// task brief's own branch table, rather than rediscovered the next
+    /// time someone reads this function and assumes the effect is
+    /// enforced.
+    #[test]
+    fn a_definite_pivot_renders_rather_than_being_refused() {
+        let vocab = CommonVocabulary::default();
+        let clause = Clause {
+            predicate: UNDER.to_string(),
+            subject: Subject::Name("the person".to_string()),
+            object: Argument::Concept("tree".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        assert_eq!(
+            realize_common_existential(&clause, &vocab),
+            "there is the person under the tree."
+        );
+    }
+
+    /// A non-locative clause is refused, loudly, rather than fronting a
+    /// relation the clause does not have — the same fail-fast posture
+    /// [`realize_common_polar_question`] takes for a lexical-verb
+    /// construction and [`realize_common_verbless`] takes for one with no
+    /// copula.
+    #[test]
+    #[should_panic(expected = "fronts a LOCATIVE clause")]
+    fn a_non_locative_clause_is_refused_by_the_existential_operator() {
+        let vocab = CommonVocabulary::default();
+        let clause = Clause {
+            predicate: SLEEP.to_string(),
+            subject: Subject::Name("the person".to_string()),
+            object: Argument::Absent,
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        let _ = realize_common_existential(&clause, &vocab);
+    }
+
+    /// r007 `definiteness`: first mention indefinite, second mention
+    /// definite. TWO clauses on purpose — the rung's own note says
+    /// definiteness "is not visible inside one clause", which is why this
+    /// is the campaign's only new structure rather than a field that
+    /// already exists.
+    ///
+    /// **Substitution:** the rung's text is *"A stranger waits at the gate.
+    /// The stranger is a soldier."*; `stranger`, `gate`, `wait` and
+    /// `soldier` are registered nowhere. `person` is the shared referent and
+    /// `tree` the second-clause complement, keeping the only thing the
+    /// token names: the SAME referent, indefinite then definite.
+    ///
+    /// **The property under test is DERIVED, not asserted twice.**
+    /// `DiscourseClause` carries no `Definiteness` for its own subject at
+    /// all (see that type's own doc) — there is no field here a caller
+    /// could set by hand in either direction. `realize_common_discourse`
+    /// computes both articles from `referent` identity alone, so this test
+    /// could not pass by stating `Def`/`Indef` twice even if it tried to.
+    #[test]
+    fn a_referent_is_indefinite_on_first_mention_and_definite_on_second() {
+        let vocab = CommonVocabulary::default();
+        let discourse = Discourse {
+            clauses: vec![
+                DiscourseClause {
+                    referent: "person".to_string(),
+                    predicate: SLEEP.to_string(),
+                    object: Argument::Absent,
+                    number: Number::Sg,
+                    definiteness: Definiteness::Indef,
+                    evidential: Evidential::Witnessed,
+                    tense: Tense::Present,
+                    polarity: Polarity::Pos,
+                    adjuncts: Vec::new(),
+                },
+                DiscourseClause {
+                    referent: "person".to_string(),
+                    predicate: UNDER.to_string(),
+                    object: Argument::Concept("tree".to_string()),
+                    number: Number::Sg,
+                    definiteness: Definiteness::Def,
+                    evidential: Evidential::Witnessed,
+                    tense: Tense::Present,
+                    polarity: Polarity::Pos,
+                    adjuncts: Vec::new(),
+                },
+            ],
+        };
+        assert_eq!(
+            realize_common_discourse(&discourse, &vocab),
+            "a person sleeps. the person is under the tree."
+        );
+    }
+
+    /// **Negative control for r007: definiteness must track REFERENT
+    /// IDENTITY, not clause POSITION.** A structure that (wrongly) marked
+    /// every non-initial clause definite would still pass the positive test
+    /// above — it has only two clauses sharing one referent, so "not clause
+    /// 0" and "already mentioned" agree on both rows there. This is the
+    /// same shape of trap `elide_coordinated_subjects`'s fix round 1 was
+    /// written to catch — comparing to clause 0 rather than tracking the
+    /// actual referent, which misattributes a re-mention in a 3+-clause
+    /// sequence — applied here to `Discourse` instead of `Coordination`.
+    ///
+    /// THREE clauses, two referents: `person` (first mention), `tree`
+    /// (first mention, at POSITION 1 — a naive "position > 0 is definite"
+    /// rule would wrongly render this "the tree"), `person` again (a
+    /// genuine repeat, correctly definite). If `discourse_subject_is_
+    /// repeat_mention` ever regresses to comparing position instead of
+    /// `referent`, the middle sentence flips to "the tree sleeps." and this
+    /// assertion objects.
+    #[test]
+    fn a_different_referent_is_not_marked_definite_by_position_alone() {
+        let vocab = CommonVocabulary::default();
+        let discourse = Discourse {
+            clauses: vec![
+                DiscourseClause {
+                    referent: "person".to_string(),
+                    predicate: SLEEP.to_string(),
+                    object: Argument::Absent,
+                    number: Number::Sg,
+                    definiteness: Definiteness::Indef,
+                    evidential: Evidential::Witnessed,
+                    tense: Tense::Present,
+                    polarity: Polarity::Pos,
+                    adjuncts: Vec::new(),
+                },
+                DiscourseClause {
+                    referent: "tree".to_string(),
+                    predicate: SLEEP.to_string(),
+                    object: Argument::Absent,
+                    number: Number::Sg,
+                    definiteness: Definiteness::Indef,
+                    evidential: Evidential::Witnessed,
+                    tense: Tense::Present,
+                    polarity: Polarity::Pos,
+                    adjuncts: Vec::new(),
+                },
+                DiscourseClause {
+                    referent: "person".to_string(),
+                    predicate: UNDER.to_string(),
+                    object: Argument::Concept("tree".to_string()),
+                    number: Number::Sg,
+                    definiteness: Definiteness::Def,
+                    evidential: Evidential::Witnessed,
+                    tense: Tense::Present,
+                    polarity: Polarity::Pos,
+                    adjuncts: Vec::new(),
+                },
+            ],
+        };
+        assert_eq!(
+            realize_common_discourse(&discourse, &vocab),
+            "a person sleeps. a tree sleeps. the person is under the tree."
+        );
+    }
+
+    /// A discourse of zero clauses states a contradiction in its own name —
+    /// nothing to realize — and is refused by panic rather than silently
+    /// returning an empty string, the same class of refusal
+    /// [`realize_common_coordination`]'s own minimum-length check is (see
+    /// `a_coordination_of_one_clause_panics`), at [`Discourse`]'s own
+    /// lower floor of zero rather than two (a discourse of ONE clause is
+    /// meaningful — always the first mention of its own referent — so only
+    /// zero is refused; see [`Discourse::clauses`]'s own doc).
+    #[test]
+    #[should_panic(expected = "at least one clause")]
+    fn a_discourse_of_zero_clauses_panics() {
+        let vocab = CommonVocabulary::default();
+        let discourse = Discourse {
+            clauses: Vec::new(),
+        };
+        let _ = realize_common_discourse(&discourse, &vocab);
+    }
+
+    /// **A verbless clause cannot be recovered by `parse_common` either, and
+    /// the loss is SHARPER than either `Property`'s or `Locative`'s own,
+    /// not merely a repeat of one of them.** Both of those failures still
+    /// depend on what is registered (an unregistered `old`/`under` causes
+    /// one branch of the misparse; registering it causes the other). Here
+    /// neither branch is reachable at all: a verbless surface contains no
+    /// copula form and no lexical-verb form anywhere in it — `verb_group_
+    /// forms` only ever contributes candidates for a construction carrying
+    /// `Part::Copula` or `Part::Verb` (see its own doc), and `realize_
+    /// common_verbless`'s surface carries neither — so `parse_clause_body`'s
+    /// search finds no hit at all, REGARDLESS of what `ParseContext`
+    /// registers. Pinned by value, the same discipline `a_locative_
+    /// predication_is_not_recovered_by_parsing` uses for its own two
+    /// outcomes, so the hazard is recorded rather than rediscovered by
+    /// whoever builds this rung's parse direction (spec §1.1: this campaign
+    /// is production-side).
+    #[test]
+    fn a_verbless_clause_is_not_recovered_by_parsing() {
+        assert_eq!(
+            parse_common(
+                "the person under the tree.",
+                &ctx(&["tree", "under", "person"])
+            ),
+            Err(ParseError::NoVerbGroup)
+        );
     }
 
     /// `Valence` is CLOSED at Stassen (1997)'s four intransitive predication

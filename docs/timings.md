@@ -4026,6 +4026,9 @@ measured here.
 | 2026-08-29T15:37:37Z | sluice:outboard | 40.824 | 25.454 | 39.109 | 1.58 | 0 | 201463eb3 |  | lefford | 40 |
 | 2026-08-29T15:45:19Z | sluice:gate | 460.823 | 13494.370 | 422.082 | 30.20 | 0 | 24ce47001 |  | lefford | 40 |
 | 2026-08-29T15:53:58Z | sluice:clients | 519.061 | 9529.005 | 94.156 | 18.54 | 0 | 24a2aee7f |  | lefford | 40 |
+| 2026-08-29T21:30:56Z | prewarm | 205.239 | 1181.148 | 42.001 | 5.96 | 0 | 6f121ac07 | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-29T22:44:31Z | gate-commit | 67.180 | 69.539 | 24.017 | 1.39 | 0 | b7f0d21b6 | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-29T22:46:05Z | gate-commit | 59.222 | 55.865 | 14.435 | 1.19 | 0 | b7f0d21b6 | campaign/the-quoin | MacBookPro | 10 |
 | 2026-08-29T21:13:49Z | gate-commit | 150.799 | 826.784 | 66.076 | 5.92 | 0 | 0216dc303 | the-overture | MacBookPro | 10 |
 | 2026-08-29T21:16:36Z | rebaseline | 128.720 | 273.924 | 12.527 | 2.23 | 0 | ccb7cf0c2 | the-overture | MacBookPro | 10 |
 | 2026-08-29T21:31:29Z | gate-commit | 32.435 | 54.333 | 13.579 | 2.09 | 0 | 037b23df7 | the-overture | MacBookPro | 10 |
@@ -4034,3 +4037,30 @@ measured here.
 | 2026-08-29T22:14:47Z | sluice:gate | 516.011 | 14630.253 | 539.434 | 29.40 | 0 | 9b649ba8f |  | lefford | 40 |
 | 2026-08-29T22:23:40Z | sluice:clients | 532.090 | 9832.749 | 148.696 | 18.76 | 0 | 3904660fc |  | lefford | 40 |
 | 2026-08-29T22:31:21Z | sluice:heavy | 460.954 | 9889.954 | 177.306 | 21.84 | 0 | 64d6475cd |  | lefford | 40 |
+| 2026-08-29T22:56:17Z | rebaseline | 214.042 | 280.539 | 13.731 | 1.37 | 0 | 2ccea5295 | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-29T22:59:13Z | gate-commit | 133.536 | 333.504 | 32.808 | 2.74 | 0 | 9dc79fff8 | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-29T23:24:01Z | gate-commit | 43.236 | 15.136 | 0.503 | 0.36 | 0 | a4b858c6b | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-29T23:26:09Z | gate-commit | 92.094 | 96.092 | 29.597 | 1.36 | 0 | a4b858c6b | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-29T23:29:14Z | gate-commit | 65.873 | 56.868 | 15.261 | 1.09 | 0 | a4b858c6b | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-29T23:43:43Z | gate-commit | 55.817 | 83.484 | 29.170 | 2.02 | 0 | 77dc20617 | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-29T23:45:33Z | gate-commit | 23.556 | 51.468 | 13.600 | 2.76 | 0 | 77dc20617 | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-29T23:53:00Z | gate-commit | 31.643 | 66.016 | 26.648 | 2.93 | 0 | 70c0638f5 | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-29T23:54:58Z | gate-commit | 23.977 | 51.651 | 13.397 | 2.71 | 0 | 70c0638f5 | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-30T00:12:02Z | gate-commit | 38.163 | 29.508 | 4.540 | 0.89 | 0 | 31795593e | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-30T00:13:25Z | gate-commit | 55.559 | 72.447 | 25.359 | 1.76 | 0 | 31795593e | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-30T00:14:27Z | gate-commit | 33.446 | 54.276 | 13.720 | 2.03 | 0 | 31795593e | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-30T00:38:38Z | gate-commit | 49.606 | 194.468 | 28.727 | 4.50 | 0 | 1769d8e42 | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-30T00:39:33Z | gate-commit | 21.325 | 50.303 | 12.964 | 2.97 | 0 | 1769d8e42 | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-30T01:05:08Z | gate-commit | 131.132 | 285.490 | 29.826 | 2.40 | 0 | 980f11c12 | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-30T01:06:44Z | gate-commit | 57.906 | 55.656 | 14.132 | 1.21 | 0 | 980f11c12 | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-30T01:18:38Z | gate-commit | 27.796 | 52.888 | 13.570 | 2.39 | 0 | c81bd9576 | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-30T01:27:37Z | rebaseline | 126.558 | 277.276 | 12.223 | 2.29 | 0 | 43b2796c5 | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-30T01:34:25Z | gate-commit | 31.112 | 54.964 | 13.920 | 2.21 | 0 | 43b2796c5 | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-30T01:50:23Z | gate-commit | 34.920 | 57.139 | 13.909 | 2.03 | 0 | 7f299c02e | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-30T01:51:21Z | gate-commit | 33.683 | 55.982 | 14.027 | 2.08 | 0 | 7f299c02e | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-30T02:01:23Z | gate-commit | 42.072 | 55.846 | 13.669 | 1.65 | 0 | 6d6704657 | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-30T02:02:10Z | gate-commit | 32.909 | 55.495 | 13.999 | 2.11 | 0 | 6d6704657 | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-30T02:23:12Z | gate-commit | 22.693 | 50.470 | 12.896 | 2.79 | 0 | 164793ec3 | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-30T02:52:49Z | rebaseline | 163.049 | 277.218 | 11.704 | 1.77 | 0 | e4e50a3d9 | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-30T02:54:40Z | gate-commit | 42.992 | 72.414 | 26.964 | 2.31 | 0 | e4e50a3d9 | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-30T12:09:51Z | gate-commit | 20.854 | 50.201 | 12.942 | 3.03 | 0 | 4a4b0ddcc | campaign/the-quoin | MacBookPro | 10 |
