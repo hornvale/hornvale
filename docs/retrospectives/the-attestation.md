@@ -100,3 +100,82 @@ logs, a coverage-set diff, or a mutation of the claim itself. A controlling
 session's own confidence in a mechanism is not evidence for the mechanism,
 even — especially — when the mechanism is being cited to justify a fix that
 turns out to be correct anyway, for a different reason.
+
+## Appendix: the deferred register, reconstructed after the scratch was lost
+
+**Provenance, stated because it changes how much this list can be trusted.**
+This section was NOT written from the SDD ledger. The campaign's worktree was
+recycled by `make worktree-take` between the merge landing and the close walk,
+which swept `.superpowers/sdd/` with it — the ledger, eight task reports, ten
+reviews, the deletion list and the final review are gone and are not
+recoverable from git, because that directory is git-ignored by design. What
+follows is reconstructed from the controlling session's own transcript, which
+recorded each finding as it arrived. Anything that was in the ledger and never
+reported upward is not here, and by construction nobody can now say what that
+was.
+
+**The close skill names this exact failure and I walked into it anyway.** Its
+step 2 says to sweep the scratch *before* writing the retrospective, and warns
+that The Ell promoted nine items and still lost six. I read that, wrote the
+retrospective from the ledger, and then left the ledger in a recyclable
+worktree — reasoning explicitly that I would keep it "until it lands."
+**Landing is what makes a worktree eligible for recycling.** The guard was
+inverted: the moment I judged it safe to keep was the moment it became unsafe.
+
+### Deferred minors (nine, all triaged as shippable by the final review)
+
+1. `docs/timings.md` rows appended by the pre-commit hook alongside task
+   commits — expected side effect, not a hand edit.
+2. Two date ranges in `docs/generated-path-authors.md` are off by one day at
+   the start (`branches-family`, `census-of-coasts-tuning` — the latter wrong
+   at both ends). Cosmetic; the commit counts and the classification are
+   unaffected.
+3. The H1 summary label "110 frozen one-off studies across nine directories"
+   collapses **two** distinguishable cases, not one: `census-of-skies` (whose
+   automated author was deleted with `.github/workflows/ci.yml` by decision
+   0125) and `earth-mask-l6` (a standalone tool run). Partially corrected in
+   the final fix wave; re-check if the label is reused.
+4. `written` in `docs/generated-path-writes.tsv` means *mtime advanced*, not
+   *content changed* — a byte-identical rewrite counts. Disclosed in the
+   script and the TSV header.
+5. The capture's `sleep 1` granularity guard assumes ≤1 s filesystem timestamp
+   resolution; undocumented for coarser mounts. Fails toward the loud
+   direction.
+6. The `none(<reason>)` "no roster author" scoping — **closed** during the
+   campaign; recorded here only so the trail is complete.
+7. An unknown author is caught by two tests, not the one a report's prose
+   implied. Prose discrepancy, not a wrong claim.
+8. `decision_blocks_do_not_overlap_across_campaigns` skips same-campaign
+   spec/plan pairs unconditionally, so a campaign's own spec and plan headers
+   *disagreeing* goes undetected. Narrower than it sounds — both are still
+   compared against every other campaign, so nothing wrong can be minted — but
+   it is a silent absence inside the check built to find silent absences.
+9. The stale-waiver check is inlined into one test rather than split per the
+   file's existing waiver-list convention. Cosmetic.
+
+### Parked findings (two, with the rulings that parked them)
+
+- **A census-authored override reds with a remedy that cannot work.** Adding a
+  `census`-authored overriding row fails `an_overriding_declaration_must_be_measured`
+  with "run `make rebaseline`", while the write-capture now excludes census
+  rows from emission — so the named remedy cannot satisfy the check. Real, but
+  no current row triggers it and the defect is the *message*, not the check.
+  *Cost of parking:* a future author loses ten minutes to a wrong remedy.
+- **`CONDITIONALLY_DROPPABLE`'s extractor is blind to a more complex pattern.**
+  It reads `sluice-phases.sh`'s literal `grep -vxE '…'`; a character class,
+  anchor, capture group, second `grep` or multi-line pattern would defeat it.
+  It **panics** rather than silently agreeing, which is the correct failure
+  mode and was verified by probe — but the blindness is real and stated.
+
+### Deferred by explicit ruling, with their measurements
+
+- **A shared `scripts/lib/generated-paths.sh`.** Three parsers read that file
+  and each was fixed independently this campaign. Consolidating them is the
+  same single-source discipline the project already applies to the list's
+  *contents*, extended to how the list is *read*. Deferred as infrastructure
+  with its own review, not because it is wrong.
+- **The originally-specced, ledger-reading decision-block check is still
+  owed.** What shipped is a strict subset: it compares committed spec headers,
+  and it cannot catch a campaign that declares no block at all (the
+  `the-stride`/`the-burr` shape). If the block ledger is ever made committable,
+  the full check should be built.
