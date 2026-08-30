@@ -126,20 +126,25 @@ fn nouns_by_depth(session: &mut Session) -> Vec<Vec<String>> {
 /// with the water jar in it and nothing to lock. The gate never removed the
 /// room; it removed the only thing the room was for.
 ///
-/// **That pasted output is dated and its first chamber has since moved**, and
-/// it is left as recorded rather than edited: Task 13's fix round added
-/// `the-key-on-…` — `the-key-by-the-door` — so chamber 0 now reads
-/// `["a doorway", "a screen", "a key"]`. Re-running the same mutation today
-/// would print the new list. Nothing about the argument changes; a pasted run
-/// is a record of a moment and rewriting it would make it a claim about now.
+/// **That pasted output is dated and one of its chambers has moved twice**,
+/// and it is left as recorded rather than edited. Task 13's fix round added a
+/// second key pattern in the THRESHOLD chamber, so chamber 0 read
+/// `["a doorway", "a screen", "a key"]` for a while; The Custodian moved that
+/// pattern to `roles: &[Role::Loomroom]` — because a key in the entrance of
+/// every built structure in every world is not a key anyone has to find — so
+/// chamber 0 reads as pasted again and chamber 2 is now
+/// `["a doorway", "a water jar", "a loom", "a key"]`. Re-running the same
+/// mutation today would print that list. Nothing about the argument changes;
+/// a pasted run is a record of a moment and rewriting it would make it a
+/// claim about now.
 ///
-/// **The `holds("a key")` assertion below is WEAKER than it was for the same
-/// reason, and it is kept for the message rather than the coverage.** A key
-/// stands in chamber 0 of every built structure now, so that line can no
-/// longer detect an empty strongbox on its own. The assertion immediately
-/// after it — that one chamber holds BOTH — is what carries the property, and
-/// it did before too (a key in the third room and a strongbox in the fourth
-/// would always have satisfied the two separately).
+/// **The `holds("a key")` assertion below is WEAKER than it was, and it is
+/// kept for the message rather than the coverage.** Seed 1's structure
+/// composes a loomroom, so a key stands in it whether or not the strongbox
+/// holds one, and that line cannot detect an empty strongbox on its own. The
+/// assertion immediately after it — that one chamber holds BOTH — is what
+/// carries the property, and it did before too (a key in the third room and a
+/// strongbox in the fourth would always have satisfied the two separately).
 #[test]
 fn a_possession_walks_to_a_strongbox_and_finds_it_locked() {
     let world = world_at(1);
@@ -193,14 +198,14 @@ fn a_possession_walks_to_a_strongbox_and_finds_it_locked() {
 /// reach a `Store` role. Reusing `world_at(1)` here costs one more world
 /// build (~4 s) and no new fixture.
 ///
-/// **The key it lifts is the THRESHOLD chamber's, not the storeroom's, and
-/// the reason is Task 13's fix round.** A key is no longer composed only
-/// inside a strongbox — `the-key-by-the-door` puts one beside the entrance
-/// screen — and `take` no longer reaches through a shut lid, so the
+/// **The key it lifts is the LOOMROOM's, not the storeroom's, and the reason
+/// is Task 13's fix round as amended by The Custodian.** A key is no longer
+/// composed only inside a strongbox — `the-key-by-the-loom` puts one beside
+/// the loom — and `take` no longer reaches through a shut lid, so the
 /// storeroom's own key is unreachable until something opens the chest. The
 /// walk therefore goes all the way in (to prove the structure still composes
-/// what the sibling test asserts), comes back to the door for a key, and
-/// then carries it in and out again.
+/// what the sibling test asserts), comes back out to the loomroom for a key,
+/// and then carries it in and out again.
 ///
 /// **Three states, in one session, because the field's whole claim is that it
 /// MOVES**: empty on the opening turn, naming the key once `take` has
@@ -264,17 +269,29 @@ fn the_snapshot_carries_what_the_body_holds() {
         "seed 1's structure no longer composes a key, so nothing below is \
          tested: {per_chamber:?}"
     );
-    // Back out to the THRESHOLD chamber to pick one up. `nouns_by_depth`
-    // leaves the possession in the deepest room, whose key is inside a shut,
-    // locked strongbox — and since Task 13's fix round `take` refuses a lid
-    // rather than reaching through it. The key a player can actually lift is
-    // the one `the-key-by-the-door` composes one room in.
+    // Back out to the LOOMROOM to pick one up. `nouns_by_depth` leaves the
+    // possession in the deepest room, whose key is inside a shut, locked
+    // strongbox — and since Task 13's fix round `take` refuses a lid rather
+    // than reaching through it. The key a player can actually lift is the one
+    // `the-key-by-the-loom` composes at chamber index 2.
+    //
+    // `out` leaves the structure from any chamber, so the return trip is
+    // `enter` plus two `enter further in`. It was `enter` alone until The
+    // Custodian moved the pattern off `Role::Threshold`, the role every built
+    // structure has — the move that stopped a key standing in every
+    // dwelling's front room in every world.
     assert!(out(session.handle("out")).starts_with("[room "));
     assert!(out(session.handle("enter")).starts_with("[chamber "));
+    for _ in 0..2 {
+        assert!(
+            out(session.handle("enter further in")).starts_with("[chamber "),
+            "seed 1's structure no longer reaches the loomroom"
+        );
+    }
     assert_eq!(
         out(session.handle("take a key")),
         "You take the key.",
-        "the threshold chamber must offer a key, or nothing below is tested"
+        "the loomroom must offer a key, or nothing below is tested"
     );
 
     let held = session.snapshot().expect("the snapshot builds").me.carrying;

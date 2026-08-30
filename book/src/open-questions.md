@@ -2842,6 +2842,29 @@ places*, and a place nobody can reach is a weaker candidate than one they can.
   contradict a prior it was never drawn from. The row's own sharp claim is
   about a *lazily generated* detail contradicting its own statistical prior,
   and nothing here tests that, because nothing here promotes a drawn quantity.
+
+  **Re-scored UP by The Custodian (2026-08-30) — up, and not to settled.**
+  The move is Nathan's, taken on the numbers The Chattel measured and
+  deliberately declined to score on. What has actually changed is the
+  *mechanism* half of the phrase, exactly as The Lintel's re-scoring changed
+  the *derivation* half and left the loop alone: promotion-on-touch is built,
+  it is cheap (~90 ns per latency read against a 22,880-fact played ledger),
+  and it runs at the ratio this row hoped for — **3 of 16** latent slots
+  promoted under a deliberately exhaustive playthrough, with the thirteen that
+  stayed free being the design working rather than coverage missing. That
+  ratio is also the honest bound on the evidence: the machinery has been
+  exercised on about a fifth of what it claims, by one session, in one world.
+  **The half that did not move is the half the row was always about.**
+  Objects are the *easy* case, and easy in a way that is structural rather
+  than incidental — a kind roster is authored, so a promoted thing cannot
+  contradict a prior it was never drawn from, and the delta store has nothing
+  to reconcile. The hard version is a detail drawn from a statistical prior —
+  terrain, weather — where promoting one observed value could contradict the
+  distribution it came from and the store has to decide which wins. Nothing
+  in this campaign or the last touches that, so the bet stays in this section
+  rather than moving up to what the world can check itself on: what would move
+  it there is a promotion the Laboratory can score against the prior it
+  departed from, and no such promotion exists yet.
 - **Coarse constrains fine.** The design principle — a `ConstantSun` and a
   generated star system are both valid; higher fidelity refines and never
   contradicts lower — *shipped*, and holds from astronomy through religion's

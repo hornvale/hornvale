@@ -1,10 +1,10 @@
 enter
 carrying
 take a key
-carrying
+enter further in
 enter further in
 take a key
-enter further in
+carrying
 enter further in
 examine a strongbox
 take a key
