@@ -4035,3 +4035,5 @@ measured here.
 | 2026-08-29T22:23:40Z | sluice:clients | 532.090 | 9832.749 | 148.696 | 18.76 | 0 | 3904660fc |  | lefford | 40 |
 | 2026-08-29T22:31:21Z | sluice:heavy | 460.954 | 9889.954 | 177.306 | 21.84 | 0 | 64d6475cd |  | lefford | 40 |
 | 2026-08-29T23:51:50Z | prewarm | 201.010 | 1214.953 | 45.561 | 6.27 | 0 | ac2adfbbb | campaign/the-attestation | MacBookPro | 10 |
+| 2026-08-30T00:57:55Z | rebaseline | 110.874 | 268.561 | 11.384 | 2.52 | 0 | 14b27322a | campaign/the-attestation | MacBookPro | 10 |
+| 2026-08-30T01:09:27Z | gate-commit | 59.089 | 99.619 | 18.166 | 1.99 | 0 | 14b27322a | campaign/the-attestation | MacBookPro | 10 |
