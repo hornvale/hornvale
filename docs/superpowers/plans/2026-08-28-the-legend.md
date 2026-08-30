@@ -1092,6 +1092,33 @@ git commit -m "feat(legend): volcanoes, ranges, waterfalls, deltas and playas re
 
 ---
 
+### Task 8's register state, measured — read before writing any Binding
+
+Checked against `clients/game/core/src/register.rs` after Task 7. The
+impedance ladder is `_ . : ^ A`, and the four unclaimed marks are NOT the
+ones you would guess:
+
+| mark | state | what Task 8 does |
+|---|---|---|
+| `^` | **already claimed**, `means: "high or steep ground"` | **Share the EXISTING row. Do not add a second.** Task 6 wrote its `means` deliberately broad so globe-scale highland and walk-scale steep going are one binding — the Ruling K pattern that also lets `.` serve two scales. |
+| `_` | unclaimed | add a row |
+| `:` | unclaimed (the delta row that briefly held it was removed) | add a row |
+| `A` | unclaimed | add a row |
+| `.` | unclaimed **in the register**, but `plan.rs:69` draws it as FLOOR | add ONE row meaning **"ordinary traversable ground"**, covering both chamber floor and walk-band relief-2. They are the same concept at two scales. Do NOT add a second row for floor in Task 9 — verify there instead that `plan.rs` uses this binding. |
+
+**A caution about checking this yourself:** a bare `grep "glyph: '.'"`
+reports a false claim, because `.` is a regex wildcard and `^` is an anchor.
+Use `grep -F`. I got a wrong answer from exactly that before catching it.
+
+**And the ladder's true span is SEVEN values into FIVE glyphs.**
+`relief_band` returns `0..=5`, so `relief + 0.5*canopy + 0.5*roughness`
+ranges over `[0, 6]` and the match's catch-all `_ => 'A'` absorbs both 5 and
+6. A naive "five bands, five glyphs" reading is wrong. This only became true
+when the campaign re-pointed at the six-band `relief_band`; it was five
+before.
+
+---
+
 ### Task 8: The walk band gets the impedance ladder
 
 **Files:**
