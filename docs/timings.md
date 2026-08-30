@@ -3917,3 +3917,4 @@ measured here.
 | 2026-08-30T13:19:10Z | gate-commit | 84.328 | 50.800 | 25.190 | 0.90 | 0 | 296a50e01 | campaign/the-lodestar | ambrose | 12 |
 | 2026-08-30T13:21:03Z | gate-commit | 84.095 | 50.889 | 25.281 | 0.91 | 0 | 1ba9cc411 | campaign/the-lodestar | ambrose | 12 |
 | 2026-08-30T13:22:38Z | gate-commit | 83.828 | 50.483 | 24.861 | 0.90 | 0 | aa97325dd | campaign/the-lodestar | ambrose | 12 |
+| 2026-08-30T13:35:50Z | game-check | 769.221 | 3816.688 | 74.704 | 5.06 | 0 | 1be0bad69 | campaign/the-lodestar | ambrose | 12 |
