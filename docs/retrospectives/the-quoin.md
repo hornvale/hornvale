@@ -157,6 +157,69 @@ figure actually lives; the second round consolidated the disclosure at the
 generator, stated once, pointed to rather than restated where the
 flood-watch section needed it.
 
+## A backgrounded command reset the working directory, and the write that went wrong was the one that succeeded
+
+`make prewarm` was launched in the background at campaign start. Its result
+carried the notice that the session's working directory would not follow
+it — **at launch, many turns before it mattered**. Later, two commands
+resolved against the *main checkout* instead of this worktree:
+
+- `git add docs/superpowers/plans/...` — **failed loudly**, `pathspec did not
+  match any files`.
+- `cat >> .superpowers/sdd/decision-ledger.md` — **succeeded silently**,
+  creating a stray campaign ledger in main's ignored scratch.
+
+A write to a path that exists in both trees cannot fail, so the only signal
+was the unrelated command that happened to fail first. Had the ledger append
+been the only one, nothing would have reported it — and a stray ledger in a
+shared scratch is precisely what CLAUDE.md warns hands the next campaign a
+previous campaign's decisions, reading as its own. Damage was contained:
+`.superpowers/` is git-ignored, main's tracked tree stayed clean, and the file
+was relocated.
+
+**The controller was already re-anchoring**, with compound
+`cd <worktree> && ...` commands — the discipline the existing memory on this
+prescribes. That anchors **one call**. It does not survive anything that
+resets the directory *between* calls, which is exactly what a backgrounded
+command does. The sharpened rule: **for anything that WRITES, use
+`git -C <path>` and absolute paths**, which cannot be silently redirected and
+so leave no window to miss. Reserve `cd` for reads, where a wrong tree is
+recoverable.
+
+## Deferred, with a home
+
+- **No discourse test exercises a vowel-initial subject**, so
+  `definiteness_prefix`'s `an` branch is unexercised at the
+  `realize_common_discourse` call site. Pre-existing rather than introduced by
+  the refactor that surfaced it, and not live — `make rebaseline` regenerates
+  every almanac and gallery page over real worlds and byte-matches. `earth` is
+  a registered vowel-initial concept, so the fix is one test. Parked at the
+  final re-review rather than opening a second fix wave for a Minor.
+- **Two stale ids in `docs/timings/subfloor-roster.tsv`**, rewritten by the
+  merge's own green gate phase — see the test-name section above.
+
+## Both of the above were LOST at the close, and recovered only by asking what did not survive
+
+This campaign wrote its scratch diligently — a controller ledger with thirteen
+rulings, a separate decision ledger, a followup register whose own header read
+*"Promote into `docs/retrospectives/the-quoin.md` before teardown"*. The
+retrospective was then written, the campaign merged, and **neither of the two
+items above was in it**. The followup register had instructed its own
+promotion and was not consulted.
+
+They were recovered by a reviewer dispatched with exactly one question —
+*what did NOT survive?* — required to name a committed `file:line` for each of
+21 scratch items and to list the ones it could not. It found 19 landed and 2
+lost. A diff review cannot find an absence, and neither can re-reading the
+document you just wrote: both check what is present against itself.
+
+That is the same practice `closing-a-campaign` already prescribes from The
+Ell, which promoted nine items and still lost six. **The second data point
+matters more than the first**: The Ell's loss could be read as one careless
+close, and this one cannot — the material was written down, the instruction to
+promote it was written down beside it, and it was still lost. The check is not
+a backstop for sloppiness; it catches the ordinary case.
+
 ## Do differently next time
 
 - **Pre-dispatch brief verification against the tree is still catching every
