@@ -152,7 +152,8 @@ from the level the player is actually standing in, with lit, remembered and
 never-seen cells distinguishable in monochrome — but thinner than the
 catalogue's first pass would have credited. The pane anchors a level's own
 top-left corner to a fixed-width plate and drops anything past it with no
-camera-follow; every rung past the first is wider than that fixed plate, so
+camera-follow; every walkable rung is wider than that fixed plate — ranks 1-5
+run 44x26 to 60x34, and none of them fits — so
 a deep cavern — the one catalogue item that names depth explicitly — can
 walk its own player marker off the visible screen with nothing on screen to
 say so. That is not a new defect this campaign introduced; it is the same

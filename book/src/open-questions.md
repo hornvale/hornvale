@@ -2056,7 +2056,8 @@ itself. One new limitation surfaced in the same campaign's own closing
 audit, of the *other* kind on this ledger — not a wire ambiguity but a
 picture that can silently run off its own edge: the pane anchors a
 generated level's own corner to a fixed-width plate with no camera-follow,
-so a rung wider than that plate (every rung past the first) can walk the
+so a rung wider than that plate (which is EVERY walkable rung — ranks 1-5
+run 44x26 to 60x34, and none of them fits) can walk the
 player's own marker off the visible screen. Recorded as its own frontier row
 rather than left for a future campaign to re-discover the way this ledger's
 own Risk section had to name it before any
