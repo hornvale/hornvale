@@ -4268,3 +4268,4 @@ measured here.
 | 2026-08-30T16:43:14Z | sluice:heavy | 461.171 | 9652.581 | 153.445 | 21.26 | 0 | e3513454d |  | lefford | 40 |
 | 2026-08-30T17:23:22Z | gate-commit | 39.335 | 112.675 | 19.636 | 3.36 | 0 | 7280fbd4f | campaign/the-chattel | MacBookPro | 10 |
 | 2026-08-30T17:24:35Z | rebaseline | 67.312 | 288.237 | 14.925 | 4.50 | 0 | ec4e204a3 | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-30T17:28:38Z | sluice:artifacts | 143.888 | 1387.329 | 67.117 | 10.11 | 0 | 2e7cc4182 |  | lefford | 40 |
