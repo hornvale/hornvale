@@ -40,7 +40,7 @@ const UNDERGROUND_ROCK_REFUSAL: &str =
 /// its own instead — but `peek_stairs`/`take_stairs` are real seams, and
 /// `session.rs`'s own `peek_stairs_refuses_off_any_stairs_cell` reaches this
 /// arm directly, the same way `rock_refuses_a_step_with_a_physical_reason`
-/// reaches `Underground::step`'s seam rather than through `Session::handle`.
+/// reaches `Underground::peek`'s seam rather than through `Session::handle`.
 const NOT_ON_STAIRS_REFUSAL: &str = "There is no stairway underfoot to take.";
 
 /// The physical reason the descent's own deepest rung refuses a `StairsDown`
@@ -338,29 +338,6 @@ impl Underground {
         habitation_rungs()[self.rung]
     }
 
-    /// A compass step underground: one cell, in the bearing named — the
-    /// interface [`Underground::peek`] + [`Underground::commit_step`] split
-    /// apart in Fix round 1 so a charging caller could run a cost check
-    /// between them, recombined here as the uncharged convenience form.
-    ///
-    /// **Unused in production as of Fix round 1** —
-    /// `Session::step_underground` calls `peek`/`commit_step` directly so it
-    /// can charge in between, so nothing non-test calls this all-in-one
-    /// form. Kept because it is this task's own documented produced
-    /// interface (`Underground::step(&mut self, dir: Compass) ->
-    /// StepOutcome`) and because it is the natural shape for a caller that
-    /// does not need to charge anything — this crate's own low-level rock-
-    /// refusal test (`session.rs`) is exactly that caller. The same
-    /// "documented interface, no live production caller yet" shape
-    /// `Underground::seed` and `Underground::rung_band` already carry.
-    #[allow(dead_code)]
-    pub(crate) fn step(&mut self, dir: Compass) -> StepOutcome {
-        match self.peek(dir) {
-            Err(reason) => StepOutcome::Blocked(reason),
-            Ok(target) => self.commit_step(target),
-        }
-    }
-
     /// The would-be destination of a compass step underground, WITHOUT
     /// moving there (The Gallery, Task 4; reshaped in Fix round 1).
     ///
@@ -515,7 +492,7 @@ impl Underground {
     /// anything (this module's own tests are exactly that caller) to call
     /// directly, and safe for a caller that DOES need to charge
     /// (`Session::take_stairs`, `session.rs`) to call only after peeking and
-    /// charging first — the same division [`Underground::step`] and
+    /// charging first — the same division
     /// [`Underground::peek`]/[`Underground::commit_step`] already draw.
     pub(crate) fn take_stairs(&mut self) -> Option<Band> {
         let (next, landing) = self.peek_stairs().ok()?;
@@ -789,6 +766,17 @@ pub(crate) enum StepOutcome {
     Moved,
     /// The step was refused, with the physical reason why — never a parse
     /// complaint and never a sentence naming a verb or a movement mode.
+    ///
+    /// **Never constructed since `Underground::step`'s deletion** (the
+    /// deleted all-in-one form was the only thing that built this variant
+    /// from [`Underground::peek`]'s `Err`; [`Underground::commit_step`]'s
+    /// own doc has always said it "never itself refuses"). Kept, not
+    /// deleted, because `session.rs`'s `step_underground` still matches it
+    /// as a real arm rather than `unreachable!()` — the same "fail loudly
+    /// with a message, not a panic with no context" reasoning that arm's
+    /// own doc gives for itself applies here: a future `commit_step` change
+    /// that starts refusing has a variant ready to return.
+    #[allow(dead_code)]
     Blocked(&'static str),
     /// The step landed on a stairs cell. Moving BETWEEN rungs needs the
     /// stairs verb (Task 5), not another compass bearing, so this is kept
