@@ -4402,3 +4402,4 @@ measured here.
 | 2026-08-30T21:33:02Z | gate-commit | 21.728 | 52.031 | 13.368 | 3.01 | 0 | ddab95410 | campaign/the-custodian | MacBookPro | 10 |
 | 2026-08-30T21:34:06Z | rebaseline | 46.182 | 267.011 | 13.344 | 6.07 | 0 | 424660194 | campaign/the-custodian | MacBookPro | 10 |
 | 2026-08-30T21:35:44Z | gate-commit | 21.834 | 52.396 | 13.225 | 3.01 | 0 | 2d84b78ce | campaign/the-custodian | MacBookPro | 10 |
+| 2026-08-30T21:39:02Z | sluice:artifacts | 109.560 | 821.867 | 35.653 | 7.83 | 0 | 607e95aed |  | lefford | 40 |
