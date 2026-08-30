@@ -314,8 +314,20 @@ census-authored file is:
 ```
 
 Those 132 do fall into a small number of authors — four, cleanly: 2 heavy
-(`the-history`), 3 formerly-heavy-now-manual (`the-sounding`), 110 frozen
-one-off studies across nine directories, and 17 hand-written prose pages.
+(`the-history`), 3 formerly-heavy-now-manual (`the-sounding`), 110 files
+across nine directories with no roster author, and 17 hand-written prose
+pages. **The 110 is not one case, though, and collapsing it into a single
+"frozen one-off studies" label — as an earlier version of this section did —
+erases a distinction the table above draws deliberately:** 79 files across
+seven directories genuinely were only ever run once by hand
+(`branches-family`, `census-of-coasts`, `census-of-coasts-tuning`,
+`the-cascade`, `the-contour`, `the-granary`, `the-namesake`); `census-of-
+skies` (30 files) had an automated author — CI's regen list — that decision
+0125 deleted along with the rest of CI, a *removed* automation, not a
+*never-existed* one; and `earth-mask-l6` (1 file) was never a `lab run`
+study at all, but a standalone tool (`tools/earth-mask`) run once outside
+the workspace. "No writer today" is true of all nine equally; "frozen
+one-off study" is true of only seven.
 **So H1's substance is confirmed** (no bulk "no author" case, no
 proliferation into dozens of distinct authors) **but its headline number,
 585, should not be carried into Task 3's schema design or Task 5's

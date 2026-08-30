@@ -2,9 +2,52 @@
 
 **Branch:** `campaign/the-attestation`, from `origin/main` @ `26db4df99` ·
 **Decision block:** 0456–0465 · **Drafted:** 2026-08-29 ·
-**Status:** G3 package pending.
+**Status:** Closed. G3 was resolved (see the block below); the campaign
+merged with the ruling recorded in decision 0457 and the chronicle
+(`book/src/chronicle/the-attestation.md`).
 
 *A muster roll exists to find out who did not answer.*
+
+---
+
+## Superseded by the G3 ruling and Task 7 (added at final review, finding I5)
+
+**This spec is authoritative for the campaign's design, not for two calls
+made after it was drafted.** Two sections below assert the opposite of what
+actually shipped. Per this project's own idiom — supersede visibly, don't
+quietly edit (§3 and §7's own withdrawn-H2 row already do this once) — and
+per this campaign's own thesis (a record that outlives its subject produces
+wrong answers from good-faith readers), the correction lives here rather than
+silently rewriting the prose that turned out wrong.
+
+- **§4 assertion 3** ("A path with no author is a declaration error. Not a
+  tolerated case, not a waiver … the fix is to stop declaring it.") and
+  **§9.1** ("§4 assertion 3 will most likely produce deletions from
+  `docs/generated-paths.txt`, not new generators") both state the OPPOSITE of
+  what Nathan ruled at G3. Presented with the plan's three options (narrow /
+  remove / keep-partial), he chose a fourth: **declare the absence** —
+  `none(<reason>)`, the same append-and-review ratchet idiom as type-audit's
+  `waiver(<reason>)` and seam-guard's `expect(survives: …)`. See decision
+  [0457](../../decisions/0457-a-generated-paths-author-absence-is-declared-not-deleted.md).
+  The row count went **11 → 72**. Zero deletions.
+- **§5a** poses "What it needs is the block ledger to be readable from a
+  checkout, which is the one design question this section carries into the
+  plan" as still open. Task 7 settled it: the ledger
+  (`scripts/decision-block.sh`'s `blocks.tsv`) lives outside the repository,
+  per machine, reachable only by ssh — not committable, and a workspace test
+  must not shell out to it. The narrower, repo-only substitute that shipped
+  instead is `cli/tests/suite/docs_consistency.rs::decision_blocks_do_not_
+  overlap_across_campaigns`, checking committed `Decision block:` header
+  declarations pairwise, which is blind to a block reserved but never
+  declared in any header. See the chronicle's "A real collision, found live"
+  section for the full account, including the one genuine double-reservation
+  it found on its first run (The Scarf and The Quadrat, waived as historical
+  fact rather than fixed).
+
+Status above, §7's H3 row and §11's task 1 are corrected in place rather than
+superseded here: those are facts that went stale by the campaign's own later
+work (it closed, H3 resolved null, the classification count was corrected),
+not rulings this spec stated backwards.
 
 ---
 
@@ -339,7 +382,7 @@ this section carries into the plan rather than settling here.
 | `make rebaseline` writes 98 of 941 declared files | **verified** — measured | marker + mtime, 2026-08-29 |
 | the unaccounted files resolve into a small number of authors | **H1 — CONFIRMED, headline count corrected** | Task 1: 132 (not 585), resolving into four authors |
 | ~~deriving the phase lists in dash costs nothing measurable~~ | **WITHDRAWN before test** — derivation loses phase order, which is load-bearing | measured at plan time: roster and phase order are transposed |
-| the reader finds at least one absence nobody knew about | **hypothesis (H3)** | run it against the committed ledger |
+| the reader finds at least one absence nobody knew about | **H3 — NULL** (corrected post-close; see the superseded-by block above) | Task 6/8: the reader's first run reported five confident false positives (`owed but absent: clients`), traced to a chamber narrowing the reader did not model; corrected, what remains is already-known history (18 pre-decision-0148 `seam-guard` rows, `census`'s structural inability to ever produce a `sluice:census` row) — zero new absences found |
 
 ## 8. Preregistered measurement
 
@@ -393,7 +436,9 @@ this section carries into the plan rather than settling here.
 
 ## 11. Task outline
 
-1. Classify all 585 unaccounted files by author (settles H1 before any code).
+1. Classify all ~~585~~ **132** (corrected post-measurement; see §1.3, §8, and
+   the superseded-by block above) unaccounted files by author (settles H1
+   before any code).
 2. The two-way set-agreement test between the roster's rungs and the chamber's
    lists — written first, and shown failing on a tree where they disagree.
    (Task 3 of the first draft, deriving the lists, is deleted: see §3.)

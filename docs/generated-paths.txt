@@ -66,6 +66,21 @@
 # FIXTURE" — and the difference is load-bearing enough that two sessions
 # proposed widening this list the wrong way on 2026-08-23 before checking.
 #
+# THIS PARAGRAPH IS THE `artifacts`-ROW CRITERION ONLY, NOT THE WHOLE FILE'S
+# (review finding I4, final review of The Attestation — left standing,
+# unqualified, between the two paragraphs above and below it that state the
+# actual, wider rule). Since Task 5, only 15 of this file's 72 rows (13
+# `artifacts` plus 2 `census`, itself the same script under `HV_CENSUS`) are
+# produced by `scripts/regenerate-artifacts.sh` at all; the other 57 are not,
+# and 56 of those are declared `none(...)` — a roster author writes NOTHING
+# there, by Nathan's G3 ruling (decision 0457), which this paragraph predates.
+# The file-wide criterion is decision
+# [0458](decisions/0458-tracked-ness-proves-coverage-never-freshness.md)'s:
+# tracked-ness proves COVERAGE, never freshness. A path belongs in this file
+# when it needs that coverage guarantee AND has a true author to declare
+# (a roster set, or `none(<reason>)`) — this paragraph only narrows that to
+# the `artifacts` rows' own stronger property, below.
+#
 # A path belongs here when `scripts/regenerate-artifacts.sh` PRODUCES it, so a
 # stale copy is a bookkeeping failure the artifacts phase should fix on its own.
 # `clients/game/core/tests/fixtures/` qualifies: regenerate-artifacts.sh:827-843
@@ -202,13 +217,46 @@ docs/audits/the-reticence-report.md	artifacts
 
 # `docs/generated-path-writes.tsv` (Task 4, The Attestation) is Task 1's
 # by-hand write-set measurement made a byproduct of every ordinary run: a
-# footer inside scripts/regenerate-artifacts.sh counts, per OTHER row above,
-# how many of that row's tracked files carry an mtime newer than a marker
-# stamped at the top of the same run. Self-consistent rather than circular —
-# the record of what an author wrote is written by that author and declared
-# against it, so this row is genuinely tracked and genuinely authored by
-# `artifacts`, and `every_declared_generated_path_is_tracked` covers it
-# exactly the way it covers every other row.
+# footer inside scripts/regenerate-artifacts.sh counts, per other declared
+# row above EXCEPT a `census`-authored one (see below), how many of that
+# row's tracked files carry an mtime newer than a marker stamped at the top
+# of the same run (mtime advanced, not content changed). Self-consistent
+# rather than circular — the record of what an author wrote is written by
+# that author and declared against it, so this row is genuinely tracked and
+# genuinely authored by `artifacts`, and
+# `every_declared_generated_path_is_tracked` covers it exactly the way it
+# covers every other row.
+#
+# `census`-AUTHORED ROWS ARE EXCLUDED; `heavy`-AUTHORED AND `none(...)` ROWS
+# ARE NOT (review finding I3, final review — this scoping was added after
+# the fact, and its first draft over-excluded). A `census`-authored row is
+# written by a DIFFERENT invocation of this same script (`HV_CENSUS=1`), so
+# the SAME row's true written/tracked counts differ depending on which
+# invocation last ran: a plain run leaves a census row's directory at
+# `1/229` (only the unconditional schema-backfill touches it); a census run
+# leaves the identical row at `229/229`. Before this fix the footer captured
+# whichever shape the LAST run happened to be, `scripts/sluice-census.sh`'s
+# `git add -u` committed a census run's `229/229` shape onto the delivery
+# branch, and the next ordinary merge's `artifacts` phase silently wrote
+# `1/229` back — perpetual, undetected two-way churn on a brand-new
+# drift-checked artifact, because `measured_writes()` in
+# `cli/tests/suite/generated_paths.rs` reads only key PRESENCE, never the
+# counts.
+#
+# `heavy`-authored rows (`the-history/`, `the-sounding/`) and `none(...)`
+# rows have NO such ambiguity to exclude for: this script never writes
+# either kind of path under ANY flag it accepts (the heavy tier is a
+# separate test binary; a `none(...)` row's whole claim is that nothing here
+# writes it), so their captured counts are stable regardless of invocation.
+# They also cannot be dropped without breaking a sibling check:
+# `an_overriding_declaration_must_be_measured` requires every OVERRIDING row
+# — of any author, `none(...)` included — to have a writes.tsv entry (key
+# presence only, never the values), and most `none(...)` rows are exactly
+# such overrides (e.g. `book/src/gallery/the-sky.md` overriding
+# `book/src/gallery/`'s `artifacts`). Excluding only `census` loses no
+# coverage that check needs, since every override case it resolves today is
+# a non-`census` row overriding a less-specific `census` row (e.g.
+# `.../the-census/schema.json` over `.../the-census/`), never the reverse.
 #
 # IT IS NOT GIVEN A ROW IN ITS OWN OUTPUT, AND THAT IS DELIBERATE (review
 # finding, Task 4). A shell redirect on a compound command

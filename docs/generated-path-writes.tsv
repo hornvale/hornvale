@@ -1,4 +1,11 @@
 # path<TAB>written<TAB>tracked -- emitted by scripts/regenerate-artifacts.sh; do not hand-edit.
+# written = how many of this row's git-tracked files carry an mtime newer than
+# the marker stamped at the top of this run. mtime ADVANCED, not content
+# CHANGED -- a file rewritten byte-for-byte identically still counts as written.
+# census-AUTHORED ROWS GET NO LINE HERE (review finding I3): this script's own
+# HV_CENSUS conditional means a census-authored row's true written/tracked shape
+# differs by which invocation ran it, and this file has no way to say which one
+# did. See docs/generated-paths.txt's own comment beside this row for the account.
 # docs/generated-path-writes.tsv is declared but excluded from the rows below: this
 # file's own output redirect stamps its mtime before this loop ever runs, so a
 # self-observed count would be guaranteed true by construction, not measured.
@@ -29,9 +36,7 @@ book/src/reference/scene-tiles-v1.md	0	1
 book/src/reference/layering-generated.md	0	1
 book/src/laboratory/generated/the-chorus/	9	9
 book/src/laboratory/generated/the-census/schema.json	1	1
-book/src/laboratory/generated/the-census/	1	229
 book/src/laboratory/generated/census-of-the-meeting/schema.json	1	1
-book/src/laboratory/generated/census-of-the-meeting/	1	455
 book/src/laboratory/generated/the-history/	0	2
 book/src/laboratory/generated/the-sounding/	0	3
 book/src/laboratory/generated/branches-family/	0	35

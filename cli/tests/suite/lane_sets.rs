@@ -59,7 +59,14 @@ fn repo_root() -> PathBuf {
 }
 
 /// `(name, gate, where, authors, command)` for each non-comment row.
-fn roster() -> Vec<(String, String, String, String, String)> {
+///
+/// `pub(crate)`: `cli/tests/suite/generated_paths.rs`'s
+/// `known_authors_agree_with_the_roster` reuses this parser directly rather
+/// than writing a third copy of "how to read `scripts/lane-sets.tsv`" —
+/// `cli/src/attest.rs` already carries a second, structurally forced one
+/// (a library cannot call a test binary's module), and a fourth would be
+/// the same drift this campaign exists to remove.
+pub(crate) fn roster() -> Vec<(String, String, String, String, String)> {
     let text = fs::read_to_string(repo_root().join("scripts/lane-sets.tsv"))
         .expect("scripts/lane-sets.tsv is readable");
     text.lines()

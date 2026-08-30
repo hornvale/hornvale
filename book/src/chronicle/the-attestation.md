@@ -18,10 +18,13 @@ the residual would resolve into a small number of authors (H1). It does, but
 census conditional, on the adjacent line of the same block in
 `scripts/regenerate-artifacts.sh`. The real residual is **132**: 2 files from
 an active heavy-tier author, 3 from a heavy test demoted to hand-run only,
-110 from nine frozen one-off study runs (a tenth, `census-of-skies`, had an
-automated author too — a CI workflow decision 0125 later deleted, leaving
-only git history as its trace), and 17 hand-written prose files sitting
-directly under a declared directory.
+110 across nine directories with no current writer (79 of them, across
+seven directories, genuinely run once by hand and frozen; `census-of-skies`
+had an automated author too, a CI workflow decision 0125 later deleted,
+leaving only git history as its trace; `earth-mask-l6` was never a `lab run`
+study at all, but a standalone tool run once outside the workspace — three
+distinct shapes, not one "frozen one-off" bucket), and 17 hand-written
+prose files sitting directly under a declared directory.
 
 **H1 is confirmed, and its own motivating figure is falsified in the same
 breath.** A hypothesis can be right about the shape of an answer and wrong
@@ -106,7 +109,33 @@ editing either would misstate what each campaign actually reserved.
 |---|---|---|
 | the chamber's two phase lists restate the roster's `rung` column, one-sided | `the_phase_lists_and_the_roster_rungs_agree_both_ways` | both — a rung the lists omit, and a phase the lists carry that no rung implies |
 | a declared generated path names no author, or the wrong one | `docs/generated-paths.txt`'s author column, `every_declared_path_names_a_known_author` | every declared path attributes to a roster set name or a reasoned `none(<reason>)` |
-| nothing diffs what a job actually ran against what it owed | `cli/src/attest.rs` (`hornvale attest`) | both — owed-but-absent, and present-but-unowed; `none(...)` authors and conditionally-droppable phases reported honestly as their own categories, never as a confident absence |
+| nothing diffs what a job actually ran against what it owed | `cli/src/attest.rs` (`hornvale attest`) | both — owed-but-absent, and present-but-unowed, for `stage`-rung phases; `none(...)` authors and conditionally-droppable phases reported honestly as their own categories, never as a confident absence — but see below: this is narrower than spec §5 claimed, and does not reach the campaign's own motivating example |
+
+**The shipped reader is narrower than spec §5 claimed, and the table row
+above used to repeat the wider claim without qualification** (final review,
+finding I2). Two concrete gaps, found by the review rather than by this
+campaign's own tasks:
+
+- **The ten-day `sluice:heavy` silence that opens this campaign's own spec
+  — "already committed, never read" — is undetectable by what shipped.**
+  `heavy` is `merge`-rung, so it is never in a `stage`-rung job's owed set at
+  all (blind spot 1, honestly named in `cli/src/attest.rs`'s own module
+  doc); and the per-author freshness check only fires when there is **no**
+  `sluice:heavy` row anywhere in the whole ledger, ever — a real but stale
+  row from ten days ago satisfies it just as well as one from ten minutes
+  ago. A live run against the committed ledger confirms it: `heavy` does not
+  appear in the report at all.
+- **Spec §5's "per author — when it last ran, from its own rows" is not
+  delivered for the two authors a freshness question is actually about.**
+  `last_seen` is populated only when an author has NO canonical row at
+  all (`!has_canonical`), so no "last ran" date is ever emitted for
+  `artifacts` or `heavy` — only for `census`, the one author that can never
+  produce a canonical row in the first place, by design.
+
+Both are documented honestly in `cli/src/attest.rs`'s own module doc. This
+table was not, and it is the one document the book publishes: correcting it
+is this campaign's own standard applied to itself, not a hedge added for
+comfort.
 | a decision record can land inside another campaign's reserved block | `decision_blocks_do_not_overlap_across_campaigns` | committed declarations checked against each other (cannot see a block never declared at all) |
 
 Five decisions were ratified: [0456](../../docs/decisions/0456-a-rule-stated-in-two-places-needs-a-bidirectional-agreement-test.md)

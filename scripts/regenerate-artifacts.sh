@@ -1036,11 +1036,52 @@ run -p hornvale -- lab anomalies
 echo "regenerate-artifacts: done." >&2
 
 # Emit the write-set capture (Task 4, The Attestation): one row per declared
-# path, `path<TAB>written<TAB>tracked`, where `written` is how many of that
-# path's git-tracked files carry an mtime newer than the marker stamped at
-# the top of this run, and `tracked` is how many of its files git tracks at
-# all. This is a READ over mtimes and `git ls-files`; it changes no
-# artifact's bytes.
+# path EXCEPT a `census`-authored one (see the scoping note below, added by
+# the final review's I3 fix), `path<TAB>written<TAB>tracked`, where `written`
+# is how many of that path's git-tracked files carry an mtime newer than the
+# marker stamped at the top of this run (mtime ADVANCED, not content changed
+# — a file this loop rewrites byte-for-byte identically still counts as
+# written), and `tracked` is how many of its files git tracks at all. This
+# is a READ over mtimes and `git ls-files`; it changes no artifact's bytes.
+#
+# `census`-AUTHORED ROWS ARE EXCLUDED, AND THIS WAS NOT ALWAYS TRUE (review
+# finding I3, final review). This footer used to iterate every declared row
+# regardless of author, including `census`-authored rows such as
+# `book/src/laboratory/generated/the-census/`. Those rows have TWO authors
+# that write different bytes through this one script, gated by `HV_CENSUS`:
+# a PLAIN run (this branch, `HV_CENSUS` unset) never rewrites the census
+# study's own output, so a census-authored row measured 1/229 (only
+# `schema.json`, rewritten unconditionally by the backfill loop below); a
+# CENSUS run (`HV_CENSUS=1`) rewrites the whole study, so the same row
+# measures 229/229. `scripts/sluice-census.sh`'s `git add -u` commits
+# whichever shape a census run left, and the next ordinary merge's
+# `artifacts` phase then overwrote it with the plain-run shape — perpetual,
+# silent, two-way churn on a drift-checked artifact, with nothing
+# downstream able to tell the two shapes apart (`measured_writes()` in
+# `cli/tests/suite/generated_paths.rs` reads only key presence, never the
+# counts).
+#
+# ONLY `census` IS EXCLUDED, NOT EVERY NON-`artifacts` AUTHOR — `heavy`-
+# authored and `none(...)` rows STAY IN, deliberately, and this needed a
+# second look before shipping: a first attempt at this fix scoped emission
+# to `artifacts`-authored rows only, which broke
+# `an_overriding_declaration_must_be_measured` — that test requires EVERY
+# overriding row, of ANY author including `none(...)`, to have a
+# writes.tsv entry (key presence only, not the values), and most of the
+# `none(...)` rows are exactly such overrides (e.g. `book/src/gallery/
+# the-sky.md` overriding `book/src/gallery/`'s `artifacts`). `heavy`- and
+# `none(...)`-authored rows have NO invocation ambiguity to exclude for:
+# this script never writes either kind of path under any flag it accepts
+# (`the-history/`/`the-sounding/` are written only by the separate heavy
+# test binary; a `none(...)` row's whole claim is that nothing here writes
+# it), so their captured counts are stable — always the same value — no
+# matter which invocation ran. `census` is the one author whose bytes
+# genuinely depend on which of two distinct invocations produced them, and
+# excluding exactly that author loses no coverage
+# `an_overriding_declaration_must_be_measured` needs, since every override
+# case that test resolves today is a non-`census` row overriding a
+# less-specific `census` row (e.g. `.../the-census/schema.json` over
+# `.../the-census/`), never the reverse.
 #
 # THE OUTPUT FILE CANNOT MEASURE ITSELF, AND MUST NOT PRETEND TO (review
 # finding, The Attestation Task 4). `docs/generated-path-writes.tsv` is
@@ -1071,6 +1112,13 @@ if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     echo "regenerate-artifacts: capturing the write set -> docs/generated-path-writes.tsv" >&2
     {
         echo "# path<TAB>written<TAB>tracked -- emitted by scripts/regenerate-artifacts.sh; do not hand-edit."
+        echo "# written = how many of this row's git-tracked files carry an mtime newer than"
+        echo "# the marker stamped at the top of this run. mtime ADVANCED, not content"
+        echo "# CHANGED -- a file rewritten byte-for-byte identically still counts as written."
+        echo "# census-AUTHORED ROWS GET NO LINE HERE (review finding I3): this script's own"
+        echo "# HV_CENSUS conditional means a census-authored row's true written/tracked shape"
+        echo "# differs by which invocation ran it, and this file has no way to say which one"
+        echo "# did. See docs/generated-paths.txt's own comment beside this row for the account."
         echo "# ${write_capture_self_path} is declared but excluded from the rows below: this"
         echo "# file's own output redirect stamps its mtime before this loop ever runs, so a"
         echo "# self-observed count would be guaranteed true by construction, not measured."
@@ -1088,7 +1136,7 @@ if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
                 fi
             done < <(git ls-files -- "$declared_path")
             printf '%s\t%s\t%s\n' "$declared_path" "$written" "$tracked"
-        done < <(grep -v '^#' docs/generated-paths.txt | grep -v '^$' | cut -f1)
+        done < <(grep -v '^#' docs/generated-paths.txt | grep -v '^$' | awk -F'\t' '$2 != "census" { print $1 }')
     } > docs/generated-path-writes.tsv
 else
     echo "regenerate-artifacts: not a git checkout -- skipping the write-set capture" >&2

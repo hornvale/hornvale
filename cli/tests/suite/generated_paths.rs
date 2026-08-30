@@ -102,6 +102,7 @@
 //! invocations. Declared-implies-attributed; blind to a generated path
 //! nobody declared, the same blindness the first direction documents.
 
+use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -211,6 +212,22 @@ fn the_declared_list_is_not_empty() {
     );
 }
 
+/// The roster's own set names, NOT invented labels: an author name IS a
+/// roster set name IS the suffix of a `sluice:<set>` ledger label.
+///
+/// THIS WAS THE SIXTH INSTANCE (final review of The Attestation, I1) — a
+/// rule restated with no agreement test, minted by decision 0456 and
+/// committed in the very file that states it. Proven: deleting the
+/// `census` row from `scripts/lane-sets.tsv` left this list naming a set
+/// that no longer exists, and the suite stayed green. `KNOWN_IS_A_ROSTER_
+/// SUBSET` below is the guard; without it, this constant is exactly the
+/// kind of hand-copied duplicate `cli/tests/suite/lane_sets.rs`'s
+/// `the_phase_lists_and_the_roster_rungs_agree_both_ways` and
+/// `cli/tests/suite/attest.rs`'s
+/// `the_conditionally_droppable_set_agrees_with_sluice_phases_sh` already
+/// exist to catch elsewhere in this tree.
+const KNOWN: &[&str] = &["artifacts", "census", "heavy"];
+
 /// Every declared path names an author, and the author is one we know: a
 /// roster set name, or `none(<reason>)` declaring that no roster author
 /// writes it (Task 5, The Attestation).
@@ -229,9 +246,6 @@ fn the_declared_list_is_not_empty() {
 /// `none(...)`, e.g. a typo or an invented label.
 #[test]
 fn every_declared_path_names_a_known_author() {
-    // The roster's own set names, NOT invented labels: an author name IS a
-    // roster set name IS the suffix of a `sluice:<set>` ledger label.
-    const KNOWN: &[&str] = &["artifacts", "census", "heavy"];
     let bad: Vec<String> = declared()
         .into_iter()
         .filter(|(_, author)| !KNOWN.contains(&author.as_str()) && none_reason(author).is_none())
@@ -243,6 +257,68 @@ fn every_declared_path_names_a_known_author() {
          (known: {KNOWN:?}, or `none(<reason>)`). A declared generated path with no \
          recognised author is a claim about this repository that nothing can check:\n  {}",
         bad.join("\n  ")
+    );
+}
+
+/// `KNOWN` agrees with `scripts/lane-sets.tsv` — the guard for the constant
+/// above, modelled on `cli/tests/suite/lane_sets.rs`'s
+/// `the_phase_lists_and_the_roster_rungs_agree_both_ways` and
+/// `cli/tests/suite/attest.rs`'s
+/// `the_conditionally_droppable_set_agrees_with_sluice_phases_sh`: a fact
+/// stated once in a TSV and copied by hand into a Rust constant needs an
+/// agreement test, not just a comment claiming they match.
+///
+/// # Direction this check enforces, and the asymmetry that shapes it
+///
+/// **Every value in `KNOWN` must name a roster row whose `authors` column is
+/// `yes`.** That is the one direction that actually holds: `style`,
+/// `subfloor`, `gate` and `seam-guard` are rostered sets that author no
+/// generated path at all (their `authors` column says `no`), so `KNOWN`
+/// naming every roster set — the tempting symmetric check — would be FALSE
+/// on the real roster today, not a stricter guard. The reverse also does not
+/// hold: `outboard` and `clients` are `authors=yes` rostered sets with no
+/// currently-declared path, because nothing in `docs/generated-paths.txt`
+/// happens to name them yet — asserting `KNOWN` must equal the full
+/// `authors=yes` set would fail on that alone, for no defect. So this is a
+/// one-directional subset check: `KNOWN ⊆ {roster rows with authors=yes}`.
+///
+/// This direction is sufficient to catch the review's reproduction case
+/// (deleting the `census` roster row): `"census"` stays in `KNOWN` but no
+/// longer names ANY roster row, `authors=yes` or otherwise, so the subset
+/// check fails directly — it needs no second assertion for a removed
+/// roster set, because "removed" is just "absent from the roster entirely",
+/// which the subset already requires against.
+///
+/// # What this is still blind to
+///
+/// A roster set gaining `authors=yes` and a real writer, with nobody adding
+/// it to `KNOWN` — a future `docs/generated-paths.txt` row naming that
+/// author would then fail `every_declared_path_names_a_known_author`
+/// (loudly, at the point someone tries to declare the row), not this test.
+/// That is the same shape as `every_declared_generated_path_is_tracked`'s
+/// own blindness to an undeclared path: nothing here enumerates the
+/// roster's *intended* future authors independently of `KNOWN` itself.
+#[test]
+fn known_authors_agree_with_the_roster() {
+    let authors_yes: BTreeSet<String> = crate::lane_sets::roster()
+        .into_iter()
+        .filter(|(_, _, _, authors, _)| authors == "yes")
+        .map(|(name, ..)| name)
+        .collect();
+
+    let stale: Vec<&str> = KNOWN
+        .iter()
+        .copied()
+        .filter(|name| !authors_yes.contains(*name))
+        .collect();
+
+    assert!(
+        stale.is_empty(),
+        "cli/tests/suite/generated_paths.rs's KNOWN names {stale:?}, which \
+         scripts/lane-sets.tsv either has no row for at all, or rosters with \
+         authors=no. KNOWN must be a subset of the roster's authors=yes set \
+         names — one of the two files moved without the other. (Roster rows \
+         with authors=yes today: {authors_yes:?})"
     );
 }
 
