@@ -4407,3 +4407,16 @@ measured here.
 | 2026-08-30T23:20:18Z | gate-commit | 21.567 | 52.155 | 13.418 | 3.04 | 0 | 42d2ac7b7 | campaign/the-company | MacBookPro | 10 |
 | 2026-08-30T23:22:51Z | rebaseline | 45.951 | 266.844 | 13.049 | 6.09 | 0 | b4e924941 | campaign/the-company | MacBookPro | 10 |
 | 2026-08-30T23:24:37Z | gate-commit | 21.660 | 52.457 | 13.347 | 3.04 | 0 | efc98f875 | campaign/the-company | MacBookPro | 10 |
+| 2026-08-30T21:10:22Z | rebaseline | 65.704 | 303.943 | 15.237 | 4.86 | 0 | ddab95410 | campaign/the-custodian | MacBookPro | 10 |
+| 2026-08-30T21:12:57Z | gate-commit | 107.487 | 558.776 | 93.522 | 6.07 | 0 | ddab95410 | campaign/the-custodian | MacBookPro | 10 |
+| 2026-08-30T21:26:46Z | gate-commit | 33.401 | 69.541 | 31.334 | 3.02 | 0 | ddab95410 | campaign/the-custodian | MacBookPro | 10 |
+| 2026-08-30T21:31:49Z | rebaseline | 56.761 | 265.105 | 13.187 | 4.90 | 0 | ddab95410 | campaign/the-custodian | MacBookPro | 10 |
+| 2026-08-30T21:33:02Z | gate-commit | 21.728 | 52.031 | 13.368 | 3.01 | 0 | ddab95410 | campaign/the-custodian | MacBookPro | 10 |
+| 2026-08-30T21:34:06Z | rebaseline | 46.182 | 267.011 | 13.344 | 6.07 | 0 | 424660194 | campaign/the-custodian | MacBookPro | 10 |
+| 2026-08-30T21:35:44Z | gate-commit | 21.834 | 52.396 | 13.225 | 3.01 | 0 | 2d84b78ce | campaign/the-custodian | MacBookPro | 10 |
+| 2026-08-30T21:39:02Z | sluice:artifacts | 109.560 | 821.867 | 35.653 | 7.83 | 0 | 607e95aed |  | lefford | 40 |
+| 2026-08-30T21:39:46Z | sluice:outboard | 43.411 | 26.798 | 40.616 | 1.55 | 0 | 16186e7b9 |  | lefford | 40 |
+| 2026-08-30T21:48:43Z | sluice:gate | 537.099 | 15906.115 | 497.554 | 30.54 | 0 | be7fe3ac5 |  | lefford | 40 |
+| 2026-08-30T21:57:31Z | sluice:clients | 527.948 | 9823.485 | 107.780 | 18.81 | 0 | 5686bb940 |  | lefford | 40 |
+| 2026-08-30T22:05:11Z | sluice:heavy | 459.901 | 9583.135 | 178.631 | 21.23 | 0 | 115aec3da |  | lefford | 40 |
+| 2026-08-30T23:27:20Z | rebaseline | 57.407 | 268.183 | 13.431 | 4.91 | 0 | f1cc95ba6 | campaign/the-company | MacBookPro | 10 |

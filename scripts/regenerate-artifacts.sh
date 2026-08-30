@@ -297,7 +297,11 @@ gen_possession_overtime() {
 # flagship structure does not draw enough chambers for its possession to reach
 # a `Store` role, so no strongbox stands anywhere it can walk (decision 0398;
 # `windows/vessel/tests/suite/strongbox_reachability.rs` holds the same fact
-# as a test). 8 of 48 swept seeds reach one; 1 is the lowest. This is
+# as a test). 10 of 48 swept seeds reach one; 1 is the lowest. (Decision 0398
+# recorded 8, measured in-process at `PossessOpts::default()`'s noon; The
+# Custodian re-swept through this same CLI at its own `--day 0` default and
+# got 10, unchanged across the key's move off the threshold. Two instruments,
+# two numbers, and the CLI's is the one this comment is about.) This is
 # therefore a NEW script rather than an edit to an existing one — the seed-42
 # transcripts stay byte-identical.
 #
@@ -308,18 +312,35 @@ gen_possession_overtime() {
 # defect in `Session::take` (the lid gate ran on the ledger path only), and
 # fixing it needed a second key pattern as well, since the only key in the
 # world was inside the box it opened. The walk now does what the campaign
-# always claimed: picks up the key `the-key-by-the-door` composes beside the
-# entrance screen, carries it three chambers in, is REFUSED by the shut lid,
-# opens the chest with the key in hand, and only then moves what is inside.
+# always claimed: picks up the key `the-key-by-the-loom` composes beside the
+# loom, carries it one chamber further, is REFUSED by the shut lid, opens the
+# chest with the key in hand, and only then moves what is inside.
+#
+# IT CHANGED AGAIN IN THE CUSTODIAN, AND THE CLOSING BEAT GOT STRONGER FOR
+# IT. That second key pattern was `roles: &[Role::Threshold]` — the role
+# `interior::pattern::role_for` gives chamber index 0 unconditionally — so a
+# key stood in the entrance of every built structure in every world, and the
+# walk began by taking one on the first move. The pattern is
+# `roles: &[Role::Loomroom]` now (`requires: Some(Loom)`, so the grammar
+# confines it the way an alcove confines the fire), which is why the walk
+# below types two `enter further in` before it finds anything to lift.
 #
 # IT CARRIES ITS OWN NEGATIVE CONTROLS, which is the other thing the first
 # version lacked. `take a key` is typed twice in rooms that answer
-# differently for reasons the page can state: once in the chamber behind the
-# threshold, whose grammar composes no key at all ("You see no a key here."),
-# and once at the shut chest ("The key is shut away in something closed.").
-# Without them the closing beat — a key set down in the front room and picked
-# up again — reads as a reply rather than as evidence, because nothing shows
-# what a room WITHOUT one says.
+# differently for reasons the page can state: once in the THRESHOLD chamber,
+# whose grammar composes no key at all now ("You see no a key here."), and
+# once at the shut chest ("The key is shut away in something closed.").
+# Without them the closing beat — a key set down and picked up again — reads
+# as a reply rather than as evidence, because nothing shows what a room
+# WITHOUT one says.
+#
+# THE NEGATIVE CONTROL AND THE CLOSING BEAT ARE NOW THE SAME ROOM, which they
+# were not before. The key is set down in the threshold chamber, whose
+# grammar composes no key — so the retake reaches `take_from_the_ledger`'s
+# second source rather than the SHADOWING path a room with its own key anchor
+# takes. The page shows the same room answering "You see no a key here." and
+# then "You take the key.", eighteen moves apart, with nothing between them
+# but the ledger.
 #
 # ONE RUN, TWO ARTIFACTS. The same invocation writes the page and, through
 # `--snapshot`, the committed `session-seed-1-carrying.json` fixture — the one
@@ -341,7 +362,7 @@ gen_possession_carry() {
     # it opens on.
     printf '# A Possession of Seed 1 — a thing carried\n'
     # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
-    printf '\n*(This transcript is frozen. It is the only gallery page that types the\ncustody verbs — `take`, `drop`, `put`, `open`, `close`, `carrying` — and it\nis the campaign'"'"'s thesis end to end: a key is picked up beside the entrance\nscreen, carried three chambers into a hamlet dwelling, refused by a shut\nlid, and then used to open that chest. Two refusals are the evidence, not\nthe noise. `take a key` one room in answers \"You see no a key here.\" —\nthat room composes none — which is what makes the closing beat, where a key\nset down in the front room is picked up again, a measurement rather than a\nreply. And `take a key` at the shut chest answers \"The key is shut away in\nsomething closed.\": the lid means something, and until this campaign'"'"'s fix\nround it did not.*\n\n*Read the room descriptions as the GRAMMAR'"'"'s catalogue and not as an\ninventory, because that is what they are — and this dwelling has TWO keys,\nwhich is what makes the difference visible. Chamber prose renders the\npattern the room was composed from, never the ledger, so it moves for\nnobody: the front room says \"a doorway, a screen and a key\" on the last\nentry, naming the key its grammar composes even though that key is by then\nstowed in the chest three chambers away — while the key actually lying on\nits floor is named by nothing (`PLAY-room-prose-omits-what-the-ledger-\nholds`). The storeroom reads the same way in the other direction, listing\n\"a key\" while the chest is shut on it\n(`PLAY-closed-container-conceals-nothing`). Both are the same absent read,\nand both are deferred with a priced bill rather than unnoticed.*\n\n*One more thing not to mistake for a bug: `close` does not re-lock. A lid\nand a lock are separate states, so the second `open` needs no key\n(decision 0399).)*\n'
+    printf '\n*(This transcript is frozen. It is the only gallery page that types the\ncustody verbs — `take`, `drop`, `put`, `open`, `close`, `carrying` — and it\nis the campaign'"'"'s thesis end to end: a key is picked up beside a loom two\nchambers into a hamlet dwelling, carried one room further, refused by a shut\nlid, and then used to open that chest. Two refusals are the evidence, not\nthe noise. `take a key` in the very first room answers \"You see no a key\nhere.\" — that room composes none, since The Custodian moved the key pattern\noff `Role::Threshold`, the one role every built structure has — which is\nwhat makes the closing beat, where a key set down in that same room is\npicked up again, a measurement rather than a reply. And `take a key` at the\nshut chest answers \"The key is shut away in something closed.\": the lid\nmeans something, and until The Chattel'"'"'s fix round it did not.*\n\n*A key on a floor is a stand-in for a PERSON, and reading it as a difficulty\nsetting is the mistake this page invites. The household that lives here\nwould hold its own key or stash it somewhere only a resident knows; the\ncustody mechanism for exactly that already exists and is body-agnostic. What\nis missing is the resident, so which rooms furnish a key is a\nprop-management knob for as long as nobody is home to carry one\n(`PLAY-key-placement-stands-in-for-a-resident`).*\n\n*Read the room descriptions as the GRAMMAR'"'"'s catalogue and not as an\ninventory, because that is what they are — and this dwelling has TWO keys,\nwhich is what makes the difference visible. Chamber prose renders the\npattern the room was composed from, never the ledger, so it moves for\nnobody: the storeroom lists \"a key\" while the chest is shut on it\n(`PLAY-closed-container-conceals-nothing`), and the front room says \"a\ndoorway and a screen\" on the last entry, silent about the key a player has\njust set down on its floor (`PLAY-room-prose-omits-what-the-ledger-holds`).\nBoth are the same absent read, and both are deferred with a priced bill\nrather than unnoticed.*\n\n*One more thing not to mistake for a bug: `close` does not re-lock. A lid\nand a lock are separate states, so the second `open` needs no key\n(decision 0399).)*\n'
     tail -n +2 "$possess_tmp"
     rm -f "$possess_tmp"
 }
