@@ -267,16 +267,20 @@ pub fn room_key(room: &Facet) -> Result<String, FacetError> {
 /// REPRESENT all three location types (spec §3.3): in a room, in a container,
 /// in a hand.
 ///
-/// **Representable is not resolvable, and today only two of the three
-/// resolve.** [`room_of`] follows a [`Value::Text`] room key and a
-/// [`Value::Entity`] holder that is itself located, so "in a room" and "in a
-/// container" both answer. "In a hand" does not: a body's own position is
-/// committed under [`crate::liveness::AGENT_AT`], a predicate this fold never
-/// consults, so a thing whose location is a BODY resolves to `None` — the
-/// same answer a thing nobody ever placed gets. Nothing puts a thing in a
-/// hand until Task 12 (`take`/`drop`/`put`/`carrying`), so the gap is PINNED
-/// by a test (`a_thing_held_by_a_body_has_no_room_today`) rather than closed
-/// by a fallback nothing in this tree could exercise.
+/// **Representable is not resolvable, and only two of the three resolve.**
+/// [`room_of`] follows a [`Value::Text`] room key and a [`Value::Entity`]
+/// holder that is itself located, so "in a room" and "in a container" both
+/// answer. "In a hand" does not: a body's own position is committed under
+/// [`crate::liveness::AGENT_AT`], a predicate this fold never consults, so a
+/// thing whose location is a BODY resolves to `None` — the same answer a
+/// thing nobody ever placed gets. The gap is PINNED by a test
+/// (`a_thing_held_by_a_body_has_no_room_today`).
+///
+/// **THIS PARAGRAPH USED TO END "Nothing puts a thing in a hand until Task
+/// 12", AND TASK 12 HAS SHIPPED.** `Session::take` commits exactly this
+/// shape now. The fallback was still not written, and the reason CHANGED
+/// rather than lapsed — see [`room_of`]'s own doc, which carries the
+/// measurement.
 ///
 /// **The location rides in the fact's `object`, never in [`Fact::place`].**
 /// `Fact::place` is an `Option<EntityId>` ("the entity where this fact was
@@ -391,7 +395,7 @@ pub fn located_in_room_fact(
 }
 
 /// The fact committed when `thing` comes to rest in `holder` — a chest, and
-/// from Task 12 a body — on `day`. The holder rides as a [`Value::Entity`],
+/// since Task 12 a body — on `day`. The holder rides as a [`Value::Entity`],
 /// which is what [`room_of`] follows transitively.
 pub fn located_in_holder_fact(thing: EntityId, holder: EntityId, day: WorldTime) -> Fact {
     located_fact(thing, Value::Entity(holder), day)
@@ -553,10 +557,38 @@ pub fn location_of(ledger: &Ledger, thing: EntityId, day: WorldTime) -> Option<V
 /// positioned by [`crate::liveness::AGENT_AT`], which this walk never
 /// consults, so a thing held by a body walks one hop and then finds no
 /// location at all — `None`, indistinguishable from a thing nobody placed.
-/// That is deliberate for now: nothing commits a held thing until Task 12,
-/// and `a_thing_held_by_a_body_has_no_room_today` fails the moment a fallback
-/// lands, so whoever writes that task must revisit this paragraph rather than
-/// inherit it.
+///
+/// # Task 12 arrived, did not write the fallback, and the reason is not the old one
+///
+/// This paragraph used to say the omission was "deliberate for now: nothing
+/// commits a held thing until Task 12", and instructed whoever wrote that
+/// task to revisit it. `Session::take` commits a held thing today, so that
+/// reason has lapsed. Two others replaced it, and the second is the one that
+/// matters:
+///
+/// 1. **Nothing calls this function in production.** Grepped across the
+///    workspace at Task 12: every call site is a test in this module. The
+///    custody verbs read [`location_of`], [`held_by`] and [`lying_in`]
+///    directly, because each asks about a DIRECT location and none of them
+///    wants a transitive one.
+/// 2. **The fallback would answer in a different key space, and nothing in
+///    the answer would say so.** A body's `AGENT_AT` object is its WALK-BAND
+///    locale facet: `Session::commit_agent_at` is reached only from `go` and
+///    `back`, and `Session::enter` commits no position at all, so the fact
+///    does not move while a possession walks from chamber to chamber. A
+///    thing set down indoors is keyed on `Session::chamber_facet_here` — a
+///    chamber facet, twenty-one path digits deep. Measured on seed 1, one
+///    turn apart in one played walk: the body's `agent-at` room key was
+///    `540999680` while the chamber it stood in packed to
+///    `141819825979456`. Both are [`Value::Text`] and [`room_key`] spells
+///    both, so a caller comparing "where is the key I am holding" against
+///    "where is the key I just put down" would read two incomparable numbers
+///    and conclude the key had moved rooms.
+///
+/// Closing it therefore needs a decision about what a body's room IS while
+/// it is indoors — which is a position-model question, not a fold question.
+/// `a_thing_held_by_a_body_has_no_room_today` still fails the moment a
+/// fallback lands, so the obligation is intact; only its owner has moved.
 ///
 /// **A cycle terminates.** `visited` is a [`std::collections::BTreeSet`] (no
 /// `HashSet` — decision 0005's deterministic-collections ban; 0004 is the
@@ -581,7 +613,7 @@ pub fn room_of(ledger: &Ledger, thing: EntityId, day: WorldTime) -> Option<Strin
 }
 
 /// Every thing whose location is `holder` itself as of `day` — what a chest
-/// contains, and (from Task 12) what a body carries.
+/// contains, and (since Task 12) what a body carries.
 ///
 /// **The O-shaped question, and the only one in this module that is.** Every
 /// other fold here starts from a thing and asks where it is; this starts from
@@ -618,6 +650,47 @@ pub fn held_by(ledger: &Ledger, holder: EntityId, day: WorldTime) -> Vec<EntityI
         .into_iter()
         .filter(|&thing| location_of(ledger, thing, day) == Some(Value::Entity(holder)))
         .collect()
+}
+
+/// Every thing whose location is `room` ITSELF as of `day` — what a player
+/// left lying on a chamber's floor (The Chattel, Task 12).
+///
+/// **[`held_by`]'s sibling, and the second O-shaped question in this module.**
+/// It differs in exactly one thing: a room rides as a [`Value::Text`] key
+/// where a holder rides as a [`Value::Entity`], so the [`Ledger::
+/// query_by_object`] probe is built from [`room_key`] and the fold is
+/// otherwise identical — the same two filters, the same re-ask through
+/// [`location_of`] so a superseded posting cannot answer, the same
+/// [`std::collections::BTreeSet`] dedup into `EntityId` order.
+///
+/// **It exists because a DROPPED thing has no anchor.** A room's offer list
+/// is the grammar's — `interior_of` composes anchors — and a key carried in
+/// from two rooms away is composed by nothing here. Without this fold a
+/// player could set a thing down in a room whose grammar never held one and
+/// never pick it up again, which is the "and is offered there on the next
+/// entry" half of the campaign's own acceptance claim.
+///
+/// DIRECT residence only, on [`held_by`]'s own terms: a key inside a chest
+/// standing in this room is *in the chest*, and this answers about the floor.
+///
+/// Fallible for the reason every room-keyed function in this module is: a
+/// facet past `MAX_DEPTH` does not pack, and refusing beats unwrapping.
+pub fn lying_in(
+    ledger: &Ledger,
+    room: &Facet,
+    day: WorldTime,
+) -> Result<Vec<EntityId>, FacetError> {
+    let here = Value::Text(room_key(room)?);
+    let candidates: std::collections::BTreeSet<EntityId> = ledger
+        .query_by_object(&here)
+        .filter(|fact| fact.predicate == LOCATED_IN)
+        .filter(|fact| fact.day.is_some_and(|d| d <= day))
+        .map(|fact| fact.subject)
+        .collect();
+    Ok(candidates
+        .into_iter()
+        .filter(|&thing| location_of(ledger, thing, day).as_ref() == Some(&here))
+        .collect())
 }
 
 /// Whether `thing` was open as of `day`, or `None` if no [`OPENNESS`] fact
@@ -700,17 +773,24 @@ pub fn is_open(ledger: &Ledger, thing: EntityId, day: WorldTime) -> Option<bool>
 /// the thing somewhere unreadable is still a fact that it was moved, and
 /// re-offering it would mint a second copy.
 ///
-/// **That argument is asymmetric, and the gap is worth stating before Task
-/// 12 inherits it.** The grammar ALSO expresses containment — `the-fire` is
+/// **That argument is asymmetric, and Task 12 inherited the gap knowingly.**
+/// The grammar ALSO expresses containment — `the-fire` is
 /// `Attach::Within(AnchorKind::Alcove)` and `compose` sets `Anchor.within`
 /// from it — and `offers_of` correctly offers both the alcove and the hearth
 /// within it. But this fold suppresses a thing whose containment is stated
 /// in the LEDGER, so committing a holder fact that merely restates what the
 /// grammar already says would stop the room offering an anchor the grammar
-/// still places there. Nothing commits such a fact and Task 7 gives
-/// `Portable` to the key rather than the hearth, so no wrong answer is
-/// reachable today; a verb that records grammar-implied containment would
-/// make one reachable.
+/// still places there.
+///
+/// **`Session::put_in` is now a verb that commits exactly such a fact, and
+/// the wrong answer it could produce is closed one layer up rather than
+/// here.** `put a key in a strongbox` posts `located-in(key, strongbox)` — a
+/// key whose grammar already puts it `Within(Strongbox)` — so the key stops
+/// being latent in that room, which is correct (it is in the chest, not on
+/// the floor) but would make the room refuse to give it back. `Session::take`
+/// therefore reads a second arm: a thing whose direct location is a container
+/// ANCHORED IN THIS ROOM is takeable if that container admits. This fold is
+/// unchanged; the conjunct that was always the caller's stayed the caller's.
 ///
 /// # Cost
 ///
@@ -732,12 +812,15 @@ pub fn is_open(ledger: &Ledger, thing: EntityId, day: WorldTime) -> Option<bool>
 /// every fact it holds. The kernel documents this state outright in
 /// `index_is_absent_until_first_use_then_complete`.
 ///
-/// **The forward consequence belongs to Task 12, not here:** a `possess
-/// --world` session that renders a room before committing anything pays 2-7
-/// whole-ledger scans per entry rather than 2-7 lookups, and Task 1's own
-/// played session held 22,880 facts. Nothing in this fold is wrong and there
-/// is no live caller yet; what was wrong was a doc stating an absolute for
-/// the half of the state space it had measured.
+/// **The forward consequence is Task 12's and it now has a live caller:**
+/// `Session::take` asks this once per attempt, not once per slot, so a
+/// `possess --world` session that has committed nothing yet pays ONE
+/// whole-ledger scan on the first take and none afterwards — the first
+/// `Ledger::commit` builds the index. Task 1's own played session held
+/// 22,880 facts. The paragraph this replaces said "there is no live caller
+/// yet"; there is, and the cost it pays is bounded by the number of takes
+/// rather than by the number of slots, because nothing in production
+/// enumerates an interior through this fold.
 ///
 /// Both [`Facet::pack`] calls behind it are fallible, so an unpackable room
 /// is refused rather than unwrapped — the same contract [`thing_id`] and
@@ -1380,13 +1463,26 @@ mod tests {
     /// room), so this is not the absence of data: it is the absence of a
     /// bridge between two predicates.
     ///
-    /// **TASK 12 (`take`/`drop`/`put`/`carrying`) MUST CHANGE THIS**, and
-    /// must change this test and [`LOCATED_IN`]'s and [`room_of`]'s doc
-    /// comments with it. The fallback was deliberately NOT implemented here:
-    /// nothing in the tree commits a held thing yet, so it would be a branch
-    /// no test could exercise — the exact defect class this campaign keeps
-    /// finding. A deferred obligation written only as prose is one nobody
-    /// meets; written as a red, it cannot be inherited silently.
+    /// **TASK 12 SHIPPED AND THIS TEST DID NOT MOVE, WHICH IS A RESULT AND
+    /// NOT AN OVERSIGHT.** This doc used to read "TASK 12
+    /// (`take`/`drop`/`put`/`carrying`) MUST CHANGE THIS", on the reasoning
+    /// that a fallback could not be exercised until something committed a
+    /// held thing. Something does now — `Session::take` — and the fallback
+    /// was still not written, because implementing it surfaced a second
+    /// obstacle the first one had been hiding: a body's `AGENT_AT` position
+    /// is its WALK-BAND LOCALE and a thing set down indoors is keyed on the
+    /// CHAMBER, so the fallback would answer in a different key space from
+    /// every other answer this function gives, with nothing in the
+    /// [`Value::Text`] to mark which. [`room_of`]'s own doc carries the
+    /// measurement (`540999680` against `141819825979456`, one turn apart in
+    /// one walk) and the consequence.
+    ///
+    /// So the tripwire is KEPT rather than satisfied or deleted, and it now
+    /// guards a sharper thing: not "somebody forgot", but "somebody closed
+    /// this without deciding what a body's room is while it is indoors". A
+    /// deferred obligation written only as prose is one nobody meets;
+    /// written as a red, it cannot be inherited silently — and the red is
+    /// still armed.
     #[test]
     fn a_thing_held_by_a_body_has_no_room_today() {
         let reg = play_registry();
@@ -1410,8 +1506,12 @@ mod tests {
             None,
             "a thing in a hand does not resolve to a room today. If you just \
              implemented the AGENT_AT fallback, this red is the tripwire \
-             working: update this test, `LOCATED_IN`'s doc and `room_of`'s \
-             doc together."
+             working — and before you rebaseline it, read `room_of`'s doc: a \
+             body's agent-at position is its WALK-BAND LOCALE, while a thing \
+             set down indoors is keyed on the CHAMBER, so a naive fallback \
+             answers in a key space no caller can tell apart from the other \
+             one. Update this test, `LOCATED_IN`'s doc and `room_of`'s doc \
+             together, and say what a body's room is while it is indoors."
         );
         assert_eq!(
             location_of(&ledger, key, at(5.0)),
@@ -1607,10 +1707,12 @@ mod tests {
     /// because it is a mutation of the SHARED fold and says nothing about
     /// this function.) What this test holds that no other does is a claim
     /// spanning two functions: that [`promote`] writes no location at all,
-    /// so promotion cannot take a thing out of its own room. Task 12 is what
-    /// makes that falsifiable — a `take` verb that promoted and placed in one
-    /// step would red here — which is exactly when a standing assertion is
-    /// worth more than a mutation score today.
+    /// so promotion cannot take a thing out of its own room. **Task 12 made
+    /// that falsifiable and it held**: `Session::take` promotes AND places,
+    /// in that order, in one turn — and it places the thing on the BODY, not
+    /// in the room, so `promote`'s own silence about location is what keeps
+    /// this assertion true rather than an accident of nothing having tried.
+    /// A `promote` that wrote a room posting of its own would red here.
     #[test]
     fn a_promoted_thing_that_never_moved_is_still_here() {
         let reg = play_registry();
@@ -1794,7 +1896,7 @@ mod tests {
     /// MUTATION THIS FAILS AGAINST: `Some(_) => false` to `Some(_) => true`,
     /// which reds exactly this test and the container test above — the arm's
     /// two inputs. Keeping both is what makes the pair informative: the day
-    /// `Value::Entity` is given its own branch (Task 12's hand, say), this
+    /// `Value::Entity` is given its own branch, this
     /// one still holds the malformed case alone:
     ///
     /// ```text

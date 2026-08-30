@@ -340,10 +340,12 @@ fn h3_refusal_is_selective_not_global() {
 /// the switch, while the stickiness measured above is about the sim never
 /// producing it unprompted. Neither is an impossibility proof.
 /// `IN_CHARACTER_VERBS` (`session.rs`) is a closed, exhaustive
-/// 24-verb roster (The Offer added `warm`, The Latch added `clear`, The
+/// 28-verb roster (The Offer added `warm`, The Latch added `clear`, The
 /// Gallery added `down`/`up` for underworld stairs, and The Chattel added
-/// `open`/`close` for lids; none of the seven resolves a drive, and there is
-/// still no drink/eat/relief verb);
+/// `open`/`close` for lids and then `take`/`drop`/`put`/`carrying` for
+/// custody; none of the eleven resolves a drive, and there is
+/// still no drink/eat/relief verb — custody moves a THING's `located-in`,
+/// which no drive reads);
 /// the driven body's own
 /// passive `!wait` walk discards every fact it would otherwise commit
 /// (`_driven_facts` is unconditionally dropped, `session.rs:4090` and the

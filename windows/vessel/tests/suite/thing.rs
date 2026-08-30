@@ -14,8 +14,16 @@
 //! CALLER, because `is_latent` holds no terrain, no seed and no world. The
 //! ledger's half is `is_latent`. `offers_of` below is the four-line join, and
 //! it is written out rather than imported because nothing in the tree
-//! performs it yet: Task 12's verbs are what will, and this file is the
-//! standing demonstration that the signature they inherit is sufficient.
+//! performs the whole enumeration. **Task 12 shipped the verbs and did NOT
+//! make this file's join a production function**, which is worth stating
+//! precisely: `Session::take` asks `is_latent` about ONE slot — the one whose
+//! noun the player typed — rather than filtering a whole offer list through
+//! it, because the grammar's half of §3.4's conjunction is already answered by
+//! the noun match. So the signature this file demonstrated is sufficient, and
+//! the shape that consumes it is per-slot-on-demand rather than
+//! per-interior-on-entry. The narration still renders from the composed
+//! interior alone (`chamber_prose::describe_chamber`), so a room's PROSE does
+//! not yet drop what was carried out of it; only its verbs do.
 //!
 //! **The `AnchorKind` -> thing-kind spelling here is a STAND-IN.** Task 7 owns
 //! the real, total mapping (spec §3.6, one property table keyed on `KindId`);

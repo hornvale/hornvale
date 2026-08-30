@@ -400,6 +400,27 @@ pub enum OfferedVerb {
     /// Open a thing that has a closed state — gates on `Openable` (The
     /// Chattel, spec §3.7/§3.8).
     Open,
+    /// Take a thing up into the body's custody — gates on `Portable` (The
+    /// Chattel, Task 12, spec §3.8). The property was granted in Task 7 and
+    /// gated nothing until now; `the_re_key_preserves_every_anchor_kinds_offer`
+    /// froze `Key`'s offer at `[Examine]` precisely so that this arrival had
+    /// to move a line deliberately.
+    Take,
+    /// Set a carried thing down in the room — gates on `Portable` too, and
+    /// the shared requirement is the same argument [`OfferedVerb::Close`]
+    /// makes about its own pair: a body may always set down what it could
+    /// pick up, and a second property would let a kind declare a thing it can
+    /// take and never release. Spec §3.8 bounds the vocabulary at three
+    /// additions and all three are spent, so a fourth would have to be earned
+    /// against that bound rather than assumed.
+    Drop,
+    /// Stow a carried thing inside a container — gates on `Portable`, for the
+    /// same reason again: the property belongs to the thing being MOVED. What
+    /// the container must be (`Encloses`, and open if it has a lid) is a
+    /// precondition on the ACT, read against a second object exactly as
+    /// [`OfferedVerb::Open`]'s lock is, and so is not expressible in this
+    /// query — which holds one object and no other.
+    Put,
     /// Close it again — gates on `Openable` too, and the shared requirement
     /// is the point rather than a shortcut. Spec §3.7's deliverable is that
     /// re-closing exists at all: decision 0367 deferred a closing act because
@@ -431,6 +452,9 @@ impl OfferedVerb {
             OfferedVerb::Warm,
             OfferedVerb::Open,
             OfferedVerb::Close,
+            OfferedVerb::Take,
+            OfferedVerb::Drop,
+            OfferedVerb::Put,
         ]
     }
 
@@ -468,6 +492,9 @@ impl OfferedVerb {
             OfferedVerb::Warm => "warm",
             OfferedVerb::Open => "open",
             OfferedVerb::Close => "close",
+            OfferedVerb::Take => "take",
+            OfferedVerb::Drop => "drop",
+            OfferedVerb::Put => "put",
         }
     }
 }
@@ -498,6 +525,15 @@ fn required_properties(v: OfferedVerb) -> BTreeSet<ObjectProperty> {
         // open", inverting the meaning. `lockable_kinds_are_also_openable`
         // holds the one direction that IS a property relation.
         OfferedVerb::Open | OfferedVerb::Close => [ObjectProperty::Openable].into_iter().collect(),
+        // The three verbs The Chattel's Task 12 ships, all gated on the one
+        // property spec §3.8 assigns them. `Put`'s CONTAINER requirement
+        // (`Encloses`, plus an open lid where the kind has one) is deliberately
+        // absent for the reason `Lockable`'s omission above gives: it is a
+        // precondition on the act, read against a SECOND object, and this
+        // query holds exactly one.
+        OfferedVerb::Take | OfferedVerb::Drop | OfferedVerb::Put => {
+            [ObjectProperty::Portable].into_iter().collect()
+        }
     }
 }
 

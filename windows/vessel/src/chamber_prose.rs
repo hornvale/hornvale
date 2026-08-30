@@ -29,6 +29,60 @@ pub(crate) fn noun(kind: AnchorKind) -> Option<&'static str> {
     }
 }
 
+/// The noun for a thing-kind LABEL, as prose says it — [`noun`] reached by the
+/// string the ledger speaks rather than by the anchor the grammar drew (The
+/// Chattel, Task 12).
+///
+/// **It takes a `&str`, not a [`hornvale_kernel::KindId`], and the difference
+/// is not cosmetic.** `KindId` wraps a `&'static str`; a label read back out
+/// of the ledger is a runtime `String` slice
+/// ([`hornvale_kernel::Ledger::kind_of`]) and cannot become one without
+/// leaking. This is the same conversion `affordance::label_carries` makes for
+/// the same reason, on the same side of the same boundary.
+///
+/// **It exists because custody is label-keyed and prose is anchor-keyed.** A
+/// thing in a body's hands reaches a reader as
+/// [`hornvale_kernel::Ledger::kind_of`]'s `&str` — an `instance-of` object —
+/// and there is no `AnchorKind` in that answer at all. `drop`, `put` and
+/// `carrying` all name a carried thing, and none of them holds the anchor it
+/// was promoted from: the room it came from may be two rooms behind, and its
+/// interior is not composed any more.
+///
+/// **The inversion is sound only because
+/// [`crate::affordance::thing_kind_of`] is injective**, which is not assumed
+/// here — `affordance::the_anchor_to_thing_kind_mapping_is_injective`
+/// (`tests/suite/affordance.rs`) asserts it, and its own doc says why that
+/// property is what keeps a table like this one from silently answering for
+/// the wrong anchor. A label no anchor kind maps to (`cave-mouth`, which
+/// `passage.rs` mints and no `AnchorKind` expresses) yields `None`, the same
+/// honest answer `noun` gives for the floor.
+///
+/// A linear scan over fifteen variants, not a table: a second hand-written
+/// label→noun map is the duplicated-table shape decision 0261 warns about,
+/// and its cheapest repair deletes the check that would have caught the
+/// divergence.
+pub(crate) fn noun_for_label(label: &str) -> Option<&'static str> {
+    AnchorKind::ALL
+        .iter()
+        .find(|&&a| crate::affordance::thing_kind_of(a).0 == label)
+        .and_then(|&a| noun(a))
+}
+
+/// A list of nouns as one prose fragment — "a key", or "a key and a loaf", or
+/// "a key, a loaf and a lamp" — or `None` for an empty list.
+///
+/// The SAME formatter [`contents_of`] is made of, factored out so that what a
+/// chest says it holds and what `carrying` says a body holds cannot drift
+/// into two spellings of one list.
+pub(crate) fn listed(items: &[&str]) -> Option<String> {
+    let (last, rest) = items.split_last()?;
+    Some(if rest.is_empty() {
+        (*last).to_string()
+    } else {
+        format!("{} and {}", rest.join(", "), last)
+    })
+}
+
 /// One authored line per kind: what a closer look at this thing gives you.
 ///
 /// Exhaustive on purpose, with no catch-all arm. A new `AnchorKind` fails to
@@ -118,13 +172,7 @@ pub(crate) fn without_article(noun: &str) -> &str {
 /// `examine`'s would describe one chest two ways in consecutive turns, and
 /// nothing but a reader's eye would object.
 pub(crate) fn contents_of(interior: &Interior, id: AnchorId) -> Option<String> {
-    let contents = nouns_within(interior, id);
-    let (last, rest) = contents.split_last()?;
-    Some(if rest.is_empty() {
-        (*last).to_string()
-    } else {
-        format!("{} and {}", rest.join(", "), last)
-    })
+    listed(&nouns_within(interior, id))
 }
 
 /// `examine`'s answer for the anchor `id` (The Offer, Task 6, spec §3.6,

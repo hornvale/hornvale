@@ -1583,7 +1583,7 @@ fn no_hardcoded_anchor_kind_gates_warm() {
 /// slip: the shortened list is now the TABLE, which is `left`.
 #[test]
 fn the_re_key_preserves_every_anchor_kinds_offer() {
-    use OfferedVerb::{Close, Drink, Enter, Examine, Open, Sleep, Warm};
+    use OfferedVerb::{Close, Drink, Drop, Enter, Examine, Open, Put, Sleep, Take, Warm};
     let expected: [(AnchorKind, &[OfferedVerb]); 15] = [
         (AnchorKind::Hearth, &[Examine, Warm]),
         (AnchorKind::Threshold, &[Enter, Examine]),
@@ -1614,13 +1614,24 @@ fn the_re_key_preserves_every_anchor_kinds_offer() {
         (AnchorKind::Loom, &[Examine]),
         (AnchorKind::Anvil, &[Examine]),
         (AnchorKind::Altar, &[Examine]),
-        // The Chattel, Task 11's appended variant. A key carries `Portable`
-        // alone, and `Portable` gates `take`/`drop` — verbs Task 12 ships —
-        // so today it offers only the universal `Examine`. That is a real
-        // row rather than a placeholder: it is what makes the appended
-        // variant's offer FROZEN, so Task 12's addition has to move this
-        // line deliberately.
-        (AnchorKind::Key, &[Examine]),
+        // THE KEY'S ROW MOVED, AND THIS IS TASK 12 ARRIVING AT THE FROZEN
+        // TABLE — the second half of the deliberate move the previous line
+        // demanded. Task 11 wrote it as `&[Examine]` and said in this very
+        // comment that `Portable` gated `take`/`drop`, "verbs Task 12 ships",
+        // so that "Task 12's addition has to move this line deliberately".
+        // It did, and nothing in `object_registry` changed to produce it:
+        // three new `OfferedVerb`s naming `Portable` in their
+        // `required_properties` reach the one carrier through the subset
+        // filter alone. That is acceptance clause 7's second direction
+        // ("a new verb appears on every qualifying thing with no kind edit")
+        // observed a second time, on a different property, by a table that
+        // could not have followed on its own.
+        //
+        // `Put` is here on the same footing as `Take` and `Drop`: the
+        // property belongs to the thing being MOVED. What the CONTAINER must
+        // be is a precondition on the act read against a second object, the
+        // way `Lockable` is for `Open`, and this query holds one object.
+        (AnchorKind::Key, &[Examine, Take, Drop, Put]),
     ];
     // Task 9: the two rosters agree, in both directions and in order. A
     // variant dropped from either enumeration reddens here rather than
