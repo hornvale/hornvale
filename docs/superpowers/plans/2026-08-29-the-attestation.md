@@ -79,7 +79,14 @@ No production code. This task produces the fact every later task depends on, and
 the spec explicitly refuses to assume it.
 
 **Files:**
-- Create: `docs/audits/generated-path-authors.md` (the classification, committed)
+- Create: `docs/generated-path-authors.md` (the classification, committed)
+
+  **Not `docs/audits/`** — that directory is itself a declared generated path
+  (`docs/generated-paths.txt:50`). A classification *of* generated paths must
+  not live *inside* one, or this task manufactures a fresh instance of the
+  defect Task 5 deletes, and Task 5's list has to include a file this campaign
+  just wrote. `docs/` root already holds `timings.md`, `generated-paths.txt`
+  and `README.md`.
 
 - [ ] **Step 1: Reproduce the measurement.** From the repo root, on a clean tree:
 
@@ -339,6 +346,15 @@ input — record it, and **do not weaken the test to accommodate it**.
   files that run wrote. This is Task 1 Step 1's measurement made a byproduct of
   a run that already happens. It must be **dash-safe** and must not change any
   artifact's bytes.
+
+  **`docs/generated-paths.txt` is TWO COLUMNS by the time this task runs** —
+  Task 3 lands the author column first. Take the path from field 1 only
+  (`cut -f1`). A one-column reader would treat `path<TAB>author` as a single
+  pathspec, match nothing, and report every declared path as zero-written: a
+  plausible all-zeros result, which is exactly the silent-wrong-number failure
+  this campaign exists to catch. Nothing reads this file from the script today
+  (verified: `grep -n generated-paths scripts/regenerate-artifacts.sh` returns
+  only a comment at line 207), so you are adding the reader, not amending one.
 
 - [ ] **Step 2: Prove it changes no committed byte**
 
