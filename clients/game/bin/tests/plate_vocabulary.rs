@@ -8,13 +8,15 @@
 //! `seed_42_draws_more_than_two_distinct_terrain_glyphs` is that sentence
 //! as an assertion.
 
+use hornvale_game::discovery::{Discovered, FeatureId};
 use hornvale_game::mercator;
 use hornvale_game::plate::{self, Window};
 use hornvale_game_core::Grid;
 use hornvale_game_core::register::binding_of;
-use hornvale_kernel::{Geosphere, NearestVertexIndex, RoomMeshMemo, Seed};
+use hornvale_kernel::{Geosphere, NearestVertexIndex, RoomMeshMemo, Seed, Vertex};
+use hornvale_terrain::landscape::FeatureClass;
 use hornvale_terrain::{GeneratedTerrain, TerrainPins};
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 /// Seed 42's terrain, built the same way `plate.rs`'s own private
 /// `test_world()` does — no shared helper crosses the integration-test
@@ -73,8 +75,11 @@ fn seed_42_terrain_layer() -> Grid {
         w,
         24,
         false,
+        &BTreeMap::new(),
         &BTreeSet::new(),
         &BTreeSet::new(),
+        &[],
+        &[],
         &Default::default(),
     )
 }
@@ -139,5 +144,170 @@ fn the_ocean_land_boundary_still_agrees_with_the_terrain() {
                 "tile at (row={row}, col={col}) disagreed with its own vertex's ocean status"
             );
         }
+    }
+}
+
+/// Whether `site`'s own projected position draws `glyph` at SOME rung of
+/// the shipped ladder (`GLOBE_RUNG..=BAND_B_RUNG`), when `draw` renders a
+/// small `w`x`h` window centred there. `draw` is handed the window and the
+/// screen column/row to check, and supplies its own rosters/discovery
+/// gate — kept generic over a closure because the three landform kinds
+/// below take different roster TYPES (a volcano is discovery-gated through
+/// `BTreeSet<Vertex>`; a waterfall/delta draws unconditionally from a bare
+/// slice), so one shared roster shape would not fit all three.
+///
+/// A vertex above the projection's polar clamp at a given rung is SKIPPED
+/// at that rung, not treated as absent — the loop still tries every other
+/// rung, since a real vertex can be inside the clamp at one rung's frame
+/// geometry and not another's only in principle (the clamp is a fixed
+/// latitude band, so this is defensive rather than observed on seed 42).
+fn drawn_at_some_shipped_rung(
+    geo: &Geosphere,
+    f: &mercator::Frame,
+    w: u16,
+    h: u16,
+    site: Vertex,
+    glyph: char,
+    mut draw: impl FnMut(&Window, u16, u16) -> Grid,
+) -> bool {
+    for depth in plate::GLOBE_RUNG..=plate::BAND_B_RUNG {
+        let (vw, vh) = plate::virtual_dims(depth);
+        let g = geo.coord(site);
+        let Some((row, col)) = mercator::project(f, g.latitude, g.longitude, vw, vh) else {
+            continue;
+        };
+        let origin_row = row.saturating_sub(u32::from(h) / 2).min(vh - u32::from(h));
+        let origin_col = (col + vw - u32::from(w) / 2) % vw;
+        let win = Window {
+            depth,
+            origin_col,
+            origin_row,
+        };
+        let sx = ((col + vw - origin_col) % vw) as u16;
+        let sy = (row - origin_row) as u16;
+        let grid = draw(&win, sx, sy);
+        if grid.get(sx, sy).and_then(|c| c.glyph) == Some(glyph) {
+            return true;
+        }
+    }
+    false
+}
+
+/// Task 7's own guard, and it exists because of a defect The Quadrat found
+/// once already: a glyph that is defined and reachable in principle but
+/// UNDRAWABLE in practice (seed 42's flagship settlement, undrawable at
+/// every shipped rung under the old area-majority sampling). For each
+/// landform the terrain reports as PRESENT on seed 42, this asserts its
+/// glyph appears somewhere across the shipped rungs. A landform seed 42
+/// does NOT have is SKIPPED, not failed — this is a reachability guard on
+/// what exists, not an assertion that every world has every landform.
+#[test]
+fn seed_42_draws_at_least_one_of_each_landform_it_actually_has() {
+    let (terrain, geo) = test_world();
+    let index = NearestVertexIndex::new(&geo);
+    let f = mercator::frame_for(false);
+    let (w, h) = (32u16, 16u16);
+
+    // Volcanoes are assembled at the composition root
+    // (`hornvale_worldgen::gazetteer_features`), not by `domains/terrain`
+    // alone — see that crate's own doc on why `FeatureClass::Volcano`
+    // cannot be built there.
+    let features = hornvale_worldgen::gazetteer_features(Seed(42), &geo, &terrain);
+    let volcano_anchor = features
+        .iter()
+        .find(|feat| feat.id.class == FeatureClass::Volcano)
+        .map(|feat| feat.anchor);
+
+    if let Some(site) = volcano_anchor {
+        let volcanoes: BTreeSet<Vertex> = std::iter::once(site).collect();
+        let mut discovered = Discovered::default();
+        discovered.record(FeatureId::Extent(hornvale_terrain::landscape::FeatureId {
+            class: FeatureClass::Volcano,
+            vertex: site,
+        }));
+        let found =
+            drawn_at_some_shipped_rung(&geo, &f, w, h, site, plate::VOLCANO_GLYPH, |win, _, _| {
+                plate::draw_with(
+                    &terrain,
+                    &geo,
+                    &index,
+                    &f,
+                    win,
+                    w,
+                    h,
+                    false,
+                    &BTreeMap::new(),
+                    &BTreeSet::new(),
+                    &volcanoes,
+                    &[],
+                    &[],
+                    &discovered,
+                )
+            });
+        assert!(
+            found,
+            "seed 42 has a volcano at {site:?} but its glyph never appeared at any shipped rung"
+        );
+    }
+
+    if let Some(&site) = terrain.waterfalls().first() {
+        let waterfalls = [site];
+        let found = drawn_at_some_shipped_rung(
+            &geo,
+            &f,
+            w,
+            h,
+            site,
+            plate::WATERFALL_GLYPH,
+            |win, _, _| {
+                plate::draw_with(
+                    &terrain,
+                    &geo,
+                    &index,
+                    &f,
+                    win,
+                    w,
+                    h,
+                    false,
+                    &BTreeMap::new(),
+                    &BTreeSet::new(),
+                    &BTreeSet::new(),
+                    &waterfalls,
+                    &[],
+                    &Discovered::default(),
+                )
+            },
+        );
+        assert!(
+            found,
+            "seed 42 has a waterfall at {site:?} but its glyph never appeared at any shipped rung"
+        );
+    }
+
+    if let Some(&site) = terrain.deltas().first() {
+        let deltas = [site];
+        let found =
+            drawn_at_some_shipped_rung(&geo, &f, w, h, site, plate::DELTA_GLYPH, |win, _, _| {
+                plate::draw_with(
+                    &terrain,
+                    &geo,
+                    &index,
+                    &f,
+                    win,
+                    w,
+                    h,
+                    false,
+                    &BTreeMap::new(),
+                    &BTreeSet::new(),
+                    &BTreeSet::new(),
+                    &[],
+                    &deltas,
+                    &Discovered::default(),
+                )
+            });
+        assert!(
+            found,
+            "seed 42 has a delta at {site:?} but its glyph never appeared at any shipped rung"
+        );
     }
 }

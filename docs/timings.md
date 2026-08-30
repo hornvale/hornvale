@@ -3802,3 +3802,6 @@ measured here.
 | 2026-08-30T17:11:09Z | gate-commit | 73.716 | 53.011 | 24.682 | 1.05 | 0 | f70e3180b | campaign/the-legend | ambrose | 12 |
 | 2026-08-30T17:13:23Z | gate-commit | 72.867 | 52.694 | 24.133 | 1.05 | 0 | f70e3180b | campaign/the-legend | ambrose | 12 |
 | 2026-08-30T17:16:39Z | gate-commit | 75.715 | 53.442 | 26.104 | 1.05 | 0 | f70e3180b | campaign/the-legend | ambrose | 12 |
+| 2026-08-30T18:02:04Z | gate-commit | 68.017 | 46.680 | 21.137 | 1.00 | 0 | f7d00bb9f | campaign/the-legend | ambrose | 12 |
+| 2026-08-30T18:04:18Z | gate-commit | 72.317 | 52.731 | 24.087 | 1.06 | 0 | f7d00bb9f | campaign/the-legend | ambrose | 12 |
+| 2026-08-30T18:05:35Z | gate-commit | 72.797 | 52.742 | 24.166 | 1.06 | 0 | f7d00bb9f | campaign/the-legend | ambrose | 12 |

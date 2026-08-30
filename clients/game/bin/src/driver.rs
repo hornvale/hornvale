@@ -81,7 +81,7 @@ use hornvale_kernel::{FacetId, NearestVertexIndex, Seed, Value, Vertex, World};
 use hornvale_language::{MorphOptions, Phonology};
 use hornvale_terrain::GeneratedTerrain;
 use hornvale_terrain::TerrainPins;
-use hornvale_terrain::landscape::VertexFeatureIndex;
+use hornvale_terrain::landscape::{FeatureClass, VertexFeatureIndex};
 use hornvale_vessel::{
     PossessOpts, PossessTarget, Session, Turn, VesselError, WorldContext, snapshot_json,
 };
@@ -89,7 +89,7 @@ use hornvale_worldgen::{
     BuildError, SettlementPins, SkyChoice, WorldComponents, build_world, gazetteer_features,
     language_of_in, morph_options, resolve_chain_at, terrain_of,
 };
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 /// What the strip says, with the map focused, over a band this campaign has
 /// no resolver for (walk and chamber both draw a real plate; only the
@@ -337,13 +337,18 @@ pub struct Driver {
     /// The world's seed, needed to draw a feature's name.
     seed: Seed,
     /// Every terrain vertex the world's ledger commits at least one
-    /// settlement nearest to (The Portolan part II, Task 5) — built ONCE
-    /// here at `start`, the same "derive once, never per-turn" discipline
+    /// settlement nearest to, valued by that settlement's own committed
+    /// population (Task 7 widens this from a bare `BTreeSet<Vertex>`,
+    /// The Portolan part II Task 5's original shape) — built ONCE here at
+    /// `start`, the same "derive once, never per-turn" discipline
     /// `index`/`nearest` already follow. Not itself a discovery record:
     /// this is the plate's own point-site ROSTER (where a settlement
-    /// stands, ground truth, always known to the client that draws the
-    /// map), gated by [`Self::discovered`] at draw time, never here.
-    settlements: BTreeSet<Vertex>,
+    /// stands and how big it is, ground truth, always known to the client
+    /// that draws the map), gated by [`Self::discovered`] at draw time,
+    /// never here. The population is what
+    /// [`plate::draw_feature_layer`]'s own viewport-relative major/minor
+    /// ranking reads.
+    settlements: BTreeMap<Vertex, u64>,
     /// Every vertex carrying a cave mouth, scanned once here at `start` for
     /// the same reason `settlements` is: `plate::draw_feature_layer`
     /// PROJECTS each site rather than asking every screen cell whether its
@@ -351,6 +356,21 @@ pub struct Driver {
     /// per-render scan of all 40,962 vertices would be the cost the projection
     /// exists to avoid.
     caves: BTreeSet<Vertex>,
+    /// Every volcano's own anchor vertex (Task 7), read once from the same
+    /// `features` list `index` is built from. Discovery is the EXISTING
+    /// extent-feature mechanism (`Self::index`/`Self::discovered`'s own
+    /// `FeatureId::Extent`); this roster only supplies where to draw an
+    /// already-discovered marker.
+    volcanoes: BTreeSet<Vertex>,
+    /// Every waterfall vertex `GeneratedTerrain::waterfalls()` reports
+    /// (Task 7), scanned once at `start`. Drawn UNCONDITIONALLY by
+    /// [`plate::draw_feature_layer`] — see that function's own doc for why
+    /// this roster carries no discovery gate, unlike `caves`/`settlements`/
+    /// `volcanoes`.
+    waterfalls: Vec<Vertex>,
+    /// Every river-delta vertex `GeneratedTerrain::deltas()` reports (Task
+    /// 7). See [`Self::waterfalls`] for why this is also ungated.
+    deltas: Vec<Vertex>,
     /// Every walk-band room the possession has stood in this session
     /// (spec Amendment 1 §A4a: "where have I been"). Never consulted by
     /// [`Self::discovered`] and never consults it — see `discovery`'s
@@ -661,7 +681,19 @@ impl Driver {
         // already exercises dev-only; this is the shipped-path use of it.
         // Ground truth, never gated — [`plate::draw_with`] is where
         // `discovered` decides whether a member of this set is ever drawn.
-        let settlements: BTreeSet<Vertex> = world_ref
+        //
+        // **Task 7 widens the roster from a `BTreeSet<Vertex>` to a
+        // `BTreeMap<Vertex, u64>`**, keyed the same way, valued by the
+        // settlement's own committed `hornvale_settlement::POPULATION` —
+        // the size the world map's O/o major/minor split ranks by
+        // (`plate::draw_feature_layer`'s own doc). Two settlements that
+        // resolve to the SAME nearest vertex are, for this map's purposes,
+        // the same point (`discovery::FeatureId::Settlement`'s own doc
+        // already says so for identity); population takes the larger of
+        // the two rather than the last one scanned, so map iteration order
+        // cannot silently pick a smaller town's population for the shared
+        // marker.
+        let settlements: BTreeMap<Vertex, u64> = world_ref
             .ledger
             .find(hornvale_settlement::IS_SETTLEMENT)
             .filter_map(|fact| {
@@ -679,9 +711,21 @@ impl Driver {
                     Some(Value::Number(n)) => *n,
                     _ => return None,
                 };
-                Some(nearest.nearest(&geo, lat, lon))
+                let population = match world_ref
+                    .ledger
+                    .value_of(fact.subject, hornvale_settlement::POPULATION)
+                {
+                    Some(Value::Number(n)) => *n as u64,
+                    _ => return None,
+                };
+                Some((nearest.nearest(&geo, lat, lon), population))
             })
-            .collect();
+            .fold(BTreeMap::new(), |mut map, (vertex, population)| {
+                map.entry(vertex)
+                    .and_modify(|p: &mut u64| *p = (*p).max(population))
+                    .or_insert(population);
+                map
+            });
 
         // The cave roster, scanned once. `cave_at` is a pure read of the
         // vertex's own stratigraphic column, so this is a scan of the mesh
@@ -692,6 +736,38 @@ impl Driver {
             .map(|i| Vertex(i as u32))
             .filter(|&c| terrain.cave_at(c).is_some())
             .collect();
+
+        // The Legend, Task 7: the volcano roster — every volcano's ANCHOR
+        // vertex (`hornvale_terrain::landscape::Feature::anchor`, the
+        // canonical vertex `feature_salt`/naming already key on), read off
+        // the SAME `features` this constructor already built for the
+        // gazetteer/cursor system two lines up. Discovery for these is not
+        // a new mechanism: `Driver::update_discovery`'s existing
+        // `for id in self.index.at(vertex)` loop already records
+        // `FeatureId::Extent` the instant a possession walks onto ANY
+        // vertex of a volcano's extent (an edifice can span many vertices,
+        // §A4b's "the ground and the feature are the same object" for an
+        // extent class) — this roster only supplies WHERE to draw the
+        // already-discovered marker, at its one anchor.
+        let volcanoes: BTreeSet<Vertex> = features
+            .iter()
+            .filter(|f| f.id.class == FeatureClass::Volcano)
+            .map(|f| f.anchor)
+            .collect();
+
+        // The waterfall and delta rosters (Task 7): bare vertices
+        // `GeneratedTerrain` already computed at genesis
+        // (`waterfalls()`/`deltas()`, both sorted ascending `Vertex` by
+        // their own doc), read once here for the same reason the cave
+        // roster is — `plate::draw_feature_layer` projects sites, it does
+        // not scan for them. Neither carries a `FeatureClass` (the
+        // landscape feature system does not individuate them, and this
+        // task's own interface note forbids minting one to give them one),
+        // so they draw UNCONDITIONALLY as ground truth — see that
+        // function's own doc for why that split from the volcano roster
+        // above is deliberate.
+        let waterfalls: Vec<Vertex> = terrain.waterfalls().to_vec();
+        let deltas: Vec<Vertex> = terrain.deltas().to_vec();
 
         // The Portolan part II: the projection's central line is derived
         // from the world's own physics (spec §3.1), not assumed —
@@ -757,6 +833,9 @@ impl Driver {
             seed: world_ref.seed,
             settlements,
             caves,
+            volcanoes,
+            waterfalls,
+            deltas,
             visited: Visited::default(),
             discovered: Discovered::default(),
             plate_height: FLOOR_PLATE_CONTENT_HEIGHT,
@@ -960,6 +1039,9 @@ impl Driver {
             plate_height,
             &self.settlements,
             &self.caves,
+            &self.volcanoes,
+            &self.waterfalls,
+            &self.deltas,
             &self.discovered,
         )
     }
@@ -1073,6 +1155,9 @@ impl Driver {
             plate::colour_allowed(),
             &self.settlements,
             &self.caves,
+            &self.volcanoes,
+            &self.waterfalls,
+            &self.deltas,
             &self.discovered,
         );
         // LAYER THREE, band B only (The Quadrat, Task 6): the observer's own
@@ -4203,7 +4288,7 @@ mod portolan_tests {
         let coord = start.coord();
         let vertex = d.nearest.nearest(&d.geo, coord.latitude, coord.longitude);
         assert!(
-            d.settlements.contains(&vertex),
+            d.settlements.contains_key(&vertex),
             "sanity: seed 42's flagship starts at a settlement vertex"
         );
         let site = FeatureId::Settlement(vertex);
@@ -4247,8 +4332,10 @@ mod portolan_tests {
                 hornvale_game_core::MIN_WIDTH,
                 hornvale_game_core::MIN_HEIGHT,
             );
+            let text = g.to_plain_text();
             assert!(
-                !g.to_plain_text().contains(plate::SETTLEMENT_GLYPH),
+                !text.contains(plate::SETTLEMENT_MAJOR_GLYPH)
+                    && !text.contains(plate::SETTLEMENT_MINOR_GLYPH),
                 "co-location leaked at rung {depth}: the settlement's glyph appeared \
                  on an undiscovered map"
             );

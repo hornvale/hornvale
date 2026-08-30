@@ -24,7 +24,11 @@ pub enum Population {
     Structure,
     /// A living thing, drawn as its noun's initial.
     Creature,
-    /// A discovered point site — settlement, cave mouth.
+    /// A point site on the world map: a discovered settlement or cave
+    /// mouth, or a landform (Task 7 widens this from "settlement, cave
+    /// mouth" — a volcano, waterfall or river delta is the same kind of
+    /// referent, a fixed point worth marking, whether or not it happens to
+    /// be discovery-gated).
     PointSite,
     /// Interface furniture that is not part of the world.
     Chrome,
@@ -119,6 +123,49 @@ pub const REGISTER: &[Binding] = &[
         glyph: '%',
         population: Population::Elevation,
         means: "alpine",
+    },
+    // Task 7: point sites (Nathan's own glyph assignments, `progress.md`
+    // 2026-08-30). `o`/`O` move off the letter's apparent creature-codespace
+    // collision by Ruling AG — the world map never draws a creature's noun
+    // initial (it draws the generic agent mark instead), so `o`/`O` are free
+    // here even though the register's own rule reserves `a`-`z`/`A`-`Z` for
+    // `Population::Creature` everywhere else.
+    Binding {
+        glyph: '*',
+        population: Population::PointSite,
+        means: "cave mouth",
+    },
+    Binding {
+        glyph: 'o',
+        population: Population::PointSite,
+        means: "settlement",
+    },
+    Binding {
+        glyph: 'O',
+        population: Population::PointSite,
+        means: "major settlement",
+    },
+    // Landforms (Task 7): a volcano is discovery-gated like a settlement or
+    // cave; a waterfall and a river delta draw unconditionally, ground
+    // truth like the relief/water ladders above — see
+    // `hornvale_game::plate::draw_feature_layer`'s own doc for why that
+    // split is deliberate. All three are still `PointSite`s here: this
+    // table classifies WHAT a glyph refers to, not whether it happens to be
+    // gated.
+    Binding {
+        glyph: '!',
+        population: Population::PointSite,
+        means: "volcano",
+    },
+    Binding {
+        glyph: '|',
+        population: Population::PointSite,
+        means: "waterfall",
+    },
+    Binding {
+        glyph: ':',
+        population: Population::PointSite,
+        means: "river delta",
     },
 ];
 
