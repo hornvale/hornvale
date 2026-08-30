@@ -131,14 +131,38 @@ All three defects are the same shape and take the same remedy.
 
 ## 3. The phase lists are derived, not restated
 
-`sluice-run.sh` resolves `merge_phases` and `stage_phases` from
-`lane-sets.tsv`'s `rung` column instead of restating them: the `stage` rung is
-the stage list, and the `stage` rung plus the `merge` rung is the merge list.
-The copy stops existing rather than being tested against.
+**Derivation is REJECTED, on correctness rather than on cost, and this
+section's first draft had it backwards.** The plan-writing pass measured the
+two orders:
+
+```
+  roster order   style subfloor gate artifacts outboard clients heavy census …
+  phase order    artifacts outboard gate clients heavy
+```
+
+`gate` and `artifacts`/`outboard` are **transposed**. Phase order is
+load-bearing — `artifacts` regenerates and commits, so running `gate` first
+would gate a pre-regeneration tree — and the roster is ordered by rung, not by
+sequence. A task that derived the lists from the roster would have silently
+reordered every merge. `sluice-run.sh`'s own comment says the literals are
+deliberate for exactly this reason; the first draft of this section read that
+comment as inertia.
+
+**So the literals stay, and the agreement test is the whole deliverable.**
+`lane_sets.rs` gains the direction it lacks: the chamber's two lists and the
+roster's `rung` column must agree **as SETS, in both directions** — every
+`stage`-rung set appears in `stage_phases`, every `stage`-or-`merge`-rung set
+appears in `merge_phases`, and neither list contains a set the rungs do not
+imply. Order is deliberately not asserted: the script owns sequence, the roster
+owns membership, and the test asserts only what both actually claim.
+
+This is a better outcome than derivation. Deleting one copy would have made
+order implicit in a file that does not encode it; asserting agreement leaves
+each file authoritative for the thing it is actually authoritative for.
 
 `integration` is itself a `merge`-rung row naming `sluice-run.sh`, so the
-derivation must exclude the row describing the chamber itself. That exclusion
-is a real edge and gets a test, not a comment.
+agreement test must exclude the row describing the chamber itself. That
+exclusion is a real edge and gets a test, not a comment.
 
 `lane_sets.rs` gains the direction it lacks: whatever the chamber resolves must
 equal what the roster's rungs imply, **checked in both directions**, so neither
@@ -281,7 +305,7 @@ this section carries into the plan rather than settling here.
 | `lane_sets.rs` does not check list-vs-rung agreement | **verified** — read at spec time | the file's own header |
 | `make rebaseline` writes 98 of 941 declared files | **verified** — measured | marker + mtime, 2026-08-29 |
 | the 585 unaccounted files resolve into a small number of authors | **hypothesis (H1)** | Task 1 classifies every one |
-| deriving the phase lists in dash costs nothing measurable | **hypothesis (H2)** | timed against the current chamber |
+| ~~deriving the phase lists in dash costs nothing measurable~~ | **WITHDRAWN before test** — derivation loses phase order, which is load-bearing | measured at plan time: roster and phase order are transposed |
 | the reader finds at least one absence nobody knew about | **hypothesis (H3)** | run it against the committed ledger |
 
 ## 8. Preregistered measurement
@@ -289,9 +313,12 @@ this section carries into the plan rather than settling here.
 - **H1** — the 585 fall into few authors. **Null is a result:** if they fall
   into many, or into "no author" in bulk, then §4's assertion 3 is a much larger
   deletion than this spec assumes and the campaign should stop and re-present.
-- **H2** — derivation is not measurably slower than the literals. Null: keep
-  the literals and add the two-way test instead. The test is the load-bearing
-  half; derivation is the tidier half.
+- **H2 is withdrawn, not tested.** It asked whether derivation was fast enough,
+  which was the wrong question: derivation is wrong at any speed, because the
+  roster does not encode phase order and the order is load-bearing. The
+  hypothesis is left here rather than deleted because the campaign's own thesis
+  applies to it — a withdrawn hypothesis that leaves no row reads exactly like
+  one that was never proposed.
 - **H3** — the reader surfaces an absence not already known. **This one has a
   real chance of failing**, because the two absences we know about are the two
   that motivated the campaign. A null means the instrument is correct and the
@@ -330,9 +357,9 @@ this section carries into the plan rather than settling here.
 ## 11. Task outline
 
 1. Classify all 585 unaccounted files by author (settles H1 before any code).
-2. The two-way agreement test between the roster's rungs and the chamber's
-   lists — written first, and shown failing on today's tree if it can be.
-3. Derive the phase lists from the roster (H2), or keep the literals if null.
+2. The two-way set-agreement test between the roster's rungs and the chamber's
+   lists — written first, and shown failing on a tree where they disagree.
+   (Task 3 of the first draft, deriving the lists, is deleted: see §3.)
 4. The author column in `docs/generated-paths.txt`, and assertions 1 and 2.
 5. Assertion 3, and the deletions it implies — the G3-flagged item.
 6. The freshness reader, diffing both directions (H3).
