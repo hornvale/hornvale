@@ -27,9 +27,17 @@
 //! read the *roster* and are blind to a set the chamber invents out of
 //! nowhere; the third reads the *chamber* and is blind to a rostered set
 //! nobody ever runs. Neither implies the other, so both sides are checked.
-//! The fourth is narrower than either: it does not care which side invents or
-//! drops a set, only whether the two sides' claims about rung membership
-//! match once a set is present in both.
+//! The fourth OVERLAPS the third rather than replacing it, and does not
+//! partition the space with it. An unrostered token invented in either phase
+//! list fires both checks: the third because the token has no roster row at
+//! all, the fourth because a token with no roster row is implied by no rung
+//! and so is reported as "in the list but not implied by any rung". That
+//! overlap is deliberate to name, not a defect — it means neither check may
+//! later be trimmed on the belief that the other already covers this case
+//! exclusively. What the fourth is genuinely blind to is ORDER: the roster
+//! carries no phase sequence (it is grouped by rung, the chamber by
+//! execution order — see the per-test doc below), so this check compares
+//! set membership only and asserts nothing about position.
 //!
 //! THE THIRD CHECK USED TO READ THE MAKEFILE, for literal
 //! `@bash scripts/lane-dispatch.sh <set>` lines in the `gate-*` targets.
