@@ -1189,6 +1189,37 @@ git commit -m "feat(legend): the walk band reads impedance, not plus signs"
 
 ---
 
+### Task 9 also closes the specimen sheet's assertion, and must
+
+**Claim `#` (wall) and `+` (threshold) in the register.** Both are drawn by
+`clients/game/core/src/plan.rs` (lines 67, 71) and neither is claimed — the
+register is incomplete without them, and `#` is the glyph whose collision
+with the settlement marker started this whole thread.
+
+**Claiming them WILL break `make rebaseline`, and the fix is to retire an
+assertion rather than re-pick a glyph.** `clients/game/bin/examples/
+specimen_sheet.rs` asserts every candidate ladder's marks are disjoint from
+the register. It has now been re-picked twice to satisfy that assertion — and
+it currently uses `'#'` at line 102 inside a REJECTED candidate. The moment
+you claim `#`, it fires again.
+
+The assertion is the defect. It was correct exactly once: while selection was
+open and any candidate might be adopted. **Selection is over.** A rejected
+candidate's marks are never drawn anywhere, so requiring them to be unclaimed
+is a rule with no referent — and it has now generated three collisions, all
+of them artifacts of the check rather than real conflicts.
+
+So: **stop asserting disjointness for rejected candidates.** Keep it for the
+ADOPTED ladder, where it still means something. If you want the history to
+stay informative, annotate rejected marks that are now claimed elsewhere
+rather than forbidding them — that is real information, where the assertion
+was noise.
+
+**Verify `make rebaseline` completes and the drift check is clean before you
+commit.** It broke twice in this campaign already; do not make it three.
+
+---
+
 ### Task 9: Creatures become distinguishable
 
 Closes the coverage audit's FIRST UNMET item, 2.1 Entities and Components
