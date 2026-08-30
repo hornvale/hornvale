@@ -428,6 +428,7 @@
 - [The Lodestar](./chronicle/the-lodestar.md)
 - [The Overture](./chronicle/the-overture.md)
 - [The Attestation](./chronicle/the-attestation.md)
+- [The Repertory](./chronicle/the-repertory.md)
 
 # Appendix: The Frontier
 

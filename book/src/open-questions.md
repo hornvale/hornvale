@@ -3243,6 +3243,31 @@ its honest size.
    moved from promissory note to a mechanism with a measured, partly-null
    result.
 
+4. **An inhabited moment worth standing in.** The project's thesis is that the
+   world becomes interesting enough to be worth stewarding, and stewardship is
+   chosen, not assigned — so the game has to be *seductive*, and seduction is
+   the one property in this repository with no instrument pointed at it. The
+   census grades values; `tropes/` and `systems/` grade capability; none of
+   them can tell you whether a goblin village is worth watching for ten
+   minutes. Decomposed along this section's template, the split is unusually
+   clean. The **self-scorable half is traversal**: does an act reach through
+   the stack and come back changed — does the scene *play out at all*. That
+   half is now instrumented, by [The Repertory](./chronicle/the-repertory.md),
+   whose verdicts come from running `possess` rather than from any declaration
+   about it. The **taste half is whether the moment is worth having**, and it
+   waits on a human sitting in a market and reporting what they noticed.
+   **Confidence: low, and the split is the whole of the progress so far.**
+   Two things are worth stating plainly, because both are load-bearing. First,
+   a fully green repertory is entirely compatible with a world nobody wants to
+   stand in — traversal is necessary and nowhere near sufficient, and reading
+   a green roster as evidence about the taste half is the specific error this
+   row exists to prevent. Second, this half must **stay a bet and never become
+   a metric**. The campaigns here are very good at making numbers go green, so
+   a scored proxy for *is it alive* would be optimised against long before it
+   was validated — which is the one failure mode that would leave every gate
+   green while the thesis quietly failed. It moves when a human plays and says
+   it moved.
+
 ## The standing horizon
 
 Year 1 varied the world and held the observer; Year 2 varied the observer and
