@@ -1,4 +1,4 @@
-use hornvale_game_core::{Grid, Ink, Snapshot, Spatial, Weight, chart};
+use hornvale_game_core::{Chart, ChartCell, Grid, Ink, Micro, Snapshot, Spatial, Weight, chart};
 
 const FIXTURE: &str = include_str!("fixtures/session-seed-42-turn-0.json");
 
@@ -118,7 +118,8 @@ const REFERENCE_SHAPE: &str = include_str!("fixtures/chart-reference-seed-42.txt
 /// filled, not what glyph fills them. This is what makes comparing this
 /// crate's render against the sim's own legitimate despite the two using
 /// different glyph vocabularies in general (the sim's per-biome/water
-/// alphabet vs. this crate's deliberately coarse `@`/`+`) — a real
+/// alphabet, which also distinguishes water and marks, vs. this crate's
+/// impedance ladder alone plus `@`) — a real
 /// disagreement in cell PLACEMENT still shows up as a shape mismatch; a
 /// difference in which character was chosen for an otherwise-correctly-
 /// placed cell would not, and this test is not trying to catch that.
@@ -182,4 +183,118 @@ fn the_shape_matches_the_sims_own_ascii_render() {
     let mut g = Grid::new(40, 12);
     chart::draw(&c, &mut g, (0, 0));
     assert_eq!(grid_shape(&g), shape_of(REFERENCE_SHAPE));
+}
+
+/// `chart.rs:79`'s old `PLACED_GLYPH` drew `+` for "everything else in
+/// view, terrain and marks alike" — one glyph, no matter what. This
+/// fixture's own 30 non-`here` cells span relief bands 1 and 2 with real
+/// `micro.openness`/`micro.relief` spread (see `task-8-report.md`), so an
+/// ordinal ladder over the RENDERED output must show more than one glyph.
+#[test]
+fn the_walk_band_draws_an_ordinal_ladder_not_one_glyph() {
+    let c = walk_chart();
+    let mut g = Grid::new(80, 24);
+    chart::draw(&c, &mut g, (0, 0));
+    let terrain_glyphs: std::collections::BTreeSet<char> = g
+        .to_plain_text()
+        .chars()
+        .filter(|&ch| ch != ' ' && ch != '\n' && ch != '@')
+        .collect();
+    assert!(
+        terrain_glyphs.len() > 1,
+        "still one glyph: {terrain_glyphs:?}"
+    );
+}
+
+/// A minimal chart cell addressed by its polar coordinate, matching how
+/// [`chart::draw`] reads one — see `src/chart.rs`'s own `chart_cell` test
+/// helper, which this mirrors for this external integration binary (no
+/// access to that private helper from here).
+fn synth_cell(
+    bearing_deg: f64,
+    distance_rad: f64,
+    relief: u32,
+    openness: f64,
+    roughness: f64,
+) -> ChartCell {
+    ChartCell {
+        u: Some(0),
+        v: Some(0),
+        w: Some(0),
+        up: Some(true),
+        seam: false,
+        state: "sensed".to_string(),
+        biome: 0,
+        water: 0,
+        relief,
+        color: None,
+        micro: Micro {
+            relief: roughness,
+            aspect: 0.0,
+            wetness: 0.0,
+            openness,
+        },
+        marks: vec![],
+        bearing_deg,
+        distance_rad,
+    }
+}
+
+fn synth_chart(radius: u32, cells: Vec<ChartCell>) -> Chart {
+    Chart {
+        radius,
+        depth: 12,
+        biome_legend: vec![],
+        water_legend: vec![],
+        relief_legend: vec![],
+        cells,
+        legend: vec![],
+        sight: None,
+    }
+}
+
+/// Ordinality on the RENDERED output, not on a private helper: a ladder
+/// that is ordinal in `impedance_glyph` and shuffled at `glyph_of`'s call
+/// site would still read as nominal from outside this crate. Six synthetic
+/// cells due east at increasing distance land at six distinct, predictable
+/// columns (the documented projection: due east, `row = 0`, `col` scales
+/// with distance — see `src/chart.rs`'s module doc), each carrying relief
+/// `0..=5` with canopy fully open and roughness flat, so each cell's own
+/// impedance is exactly its relief index. The five-glyph ladder
+/// (`_ . : ^ A`) must therefore read non-decreasing rank left to right,
+/// including the doubly-overloaded top rung (relief 5 and 6 both draw `A`).
+#[test]
+fn the_ladder_ascends_with_impedance() {
+    let cells: Vec<ChartCell> = (0..=5)
+        .map(|relief| synth_cell(90.0, f64::from(relief) + 1.0, relief, 1.0, 0.0))
+        .collect();
+    let farthest = 6.0; // the relief-5 cell's own distance_rad
+    let radius = 6;
+    let chart = synth_chart(radius, cells);
+    let mut g = Grid::new(40, 4);
+    chart::draw(&chart, &mut g, (0, 0));
+
+    let centre_x = 20i64;
+    let centre_y = 2i64;
+    let rank = |glyph: char| -> usize {
+        ['_', '.', ':', '^', 'A']
+            .iter()
+            .position(|&g| g == glyph)
+            .unwrap_or_else(|| panic!("{glyph} is not a ladder rung"))
+    };
+    let mut ranks = Vec::new();
+    for relief in 0..=5i64 {
+        let distance = f64::from(relief as u32) + 1.0;
+        let r = distance / farthest * radius as f64;
+        let col = (r * 2.0).round() as i64; // sin(90deg) == 1
+        let cell = g
+            .get((centre_x + col) as u16, centre_y as u16)
+            .expect("in bounds");
+        let glyph = cell.glyph.expect("a drawn cell");
+        ranks.push(rank(glyph));
+    }
+    assert!(
+        ranks.windows(2).all(|w| w[0] <= w[1]),
+        "impedance ladder must be non-decreasing: {ranks:?}"
+    );
 }

@@ -71,13 +71,6 @@ use std::collections::BTreeMap;
 /// The `here` cell's glyph: the possessed character's own position.
 const HERE_GLYPH: char = '@';
 
-/// Every other placed lattice cell's glyph. The shipped vocabulary for this
-/// campaign is deliberately this coarse — one glyph for "here" and one for
-/// everything else in view, terrain and marks alike. The 22-biome glyph set
-/// (and any per-mark glyph it would enable) is a separate campaign; see The
-/// Quire spec, scope "Out".
-const PLACED_GLYPH: char = '+';
-
 /// Weight from the epistemic state. Fixed by the brief; not a design choice.
 fn weight_of(state: &str) -> Weight {
     match state {
@@ -96,12 +89,59 @@ fn weight_of(state: &str) -> Weight {
     }
 }
 
-/// Glyph from the epistemic state: `@` for `here`, `+` for anything placed.
-fn glyph_of(state: &str) -> char {
-    if state == "here" {
+/// Glyph from the epistemic state and impedance: `@` for `here`, otherwise
+/// the ordinal a walker actually feels underfoot ([`impedance_glyph`]).
+/// Marks are not yet drawn distinctly here — a marked non-`here` cell still
+/// draws its impedance glyph (Task 9, a disjoint change to this same
+/// function's call site, layers the creature-identity glyph on top).
+fn glyph_of(cell: &ChartCell) -> char {
+    if cell.state == "here" {
         HERE_GLYPH
     } else {
-        PLACED_GLYPH
+        impedance_glyph(cell)
+    }
+}
+
+/// The **ordinal** a cell draws when it is not `here`: impedance, not
+/// relief alone — "how hard this ground is to cross," absorbing canopy and
+/// roughness into one ranked answer (spec §2.2). Ported verbatim from
+/// `windows/scene/src/surrounds_ascii.rs::impedance_glyph`, the sim's own
+/// reference — this crate cannot call that function directly (the
+/// containment rule: no hornvale crate in this client's dependency graph),
+/// so this is a second implementation of the same formula, not a shared one.
+///
+/// `cell.relief` (`0..=5`, an index into `relief_legend`) is the base term:
+/// elevation is the coarsest, most reliable difficulty signal a room
+/// carries. Two [`crate::Micro`] terms perturb it, each bounded to at most
+/// one band of movement, so impedance never crosses two elevation bands at
+/// once from vegetation or terrain roughness alone:
+///
+/// - **canopy** — `micro.openness` (`-1` closed .. `+1` open) contributes
+///   `(1 - openness) / 2` (`0` in the open, `1` under closed canopy).
+/// - **roughness** — `micro.relief` (`-1` hollow .. `+1` rise) contributes
+///   `|micro.relief|` (`0` flat, `1` at either extreme) — only the
+///   magnitude counts, not the sign. `micro.aspect` is deliberately not
+///   used: it says which way a slope faces, not how hard the ground is to
+///   cross.
+///
+/// The two perturbations are weighted `0.5` each, so a cell at its very
+/// worst (closed canopy AND maximal roughness) rounds up at most one band.
+///
+/// **The ladder's true span is seven values into five glyphs.** `relief` is
+/// `0..=5` (six bands), so `impedance` ranges over `[0, 6]`; the catch-all
+/// arm absorbs both `5` and `4.5..5.5`-rounding-to-5 AND `6`, so the top
+/// glyph (`A`) is the one rung carrying two elevation bands' worth of
+/// impedance, not one.
+fn impedance_glyph(cell: &ChartCell) -> char {
+    let canopy = (1.0 - cell.micro.openness) / 2.0;
+    let roughness = cell.micro.relief.abs();
+    let impedance = f64::from(cell.relief) + 0.5 * canopy + 0.5 * roughness;
+    match impedance.round() as i64 {
+        0 | 1 => '_',
+        2 => '.',
+        3 => ':',
+        4 => '^',
+        _ => 'A',
     }
 }
 
@@ -161,7 +201,8 @@ type BoxRank = (bool, bool, u32, usize);
 /// the other.** It is written out here, in `windows/scene/src/
 /// surrounds_ascii.rs::box_rank`, and in `clients/vessel/src/pane_chart.ts`
 /// in identical terms — the three renderers may differ in *vocabulary*
-/// (this one draws `@` and `+` for everything) but never in this rule:
+/// (this one does not yet draw marks distinctly — see [`glyph_of`]) but
+/// never in this rule:
 ///
 /// 1. **The observer never loses their own box.** The chart is egocentric;
 ///    a band that drew over `@` would have lost the one cell the reader is
@@ -287,7 +328,7 @@ pub fn draw(chart: &Chart, into: &mut crate::Grid, origin: (u16, u16)) {
             x as u16,
             y as u16,
             Cell::inked(
-                glyph_of(&cell.state),
+                glyph_of(cell),
                 weight_of(&cell.state),
                 Source::Chart,
                 cell.color,
@@ -316,6 +357,7 @@ pub fn disclosure(sight: &crate::Sight) -> String {
 mod tests {
     use super::*;
     use crate::Ink;
+    use crate::Micro;
     use crate::cell::test_env::{with_no_color_removed, with_no_color_set};
 
     /// The seed-42 turn-0 fixture's own sight declaration, as a literal —
@@ -429,6 +471,18 @@ mod tests {
             water: 0,
             relief: 0,
             color: None,
+            // Fully open, flat ground by default: relief 0 + 0 canopy + 0
+            // roughness rounds to `'_'`. Nothing in this file's existing
+            // assertions cares which non-`@` glyph is drawn — they check
+            // weight, ink, or mere presence — so this default is inert
+            // except where a test overrides it (see `tests/chart.rs`'s own
+            // `synth_cell`, which sets `micro` explicitly per case).
+            micro: Micro {
+                relief: 0.0,
+                aspect: 0.0,
+                wetness: 0.0,
+                openness: 1.0,
+            },
             marks: vec![],
             bearing_deg,
             distance_rad,

@@ -126,6 +126,38 @@ pub const REGISTER: &[Binding] = &[
         population: Population::Elevation,
         means: "alpine",
     },
+    // The Legend, Task 8: the walk band's impedance ladder
+    // (`chart.rs::impedance_glyph`, ported from
+    // `windows/scene/src/surrounds_ascii.rs`). This is the "later task"
+    // the comment above `^` was written for: `^` (impedance rung 4) is
+    // NOT re-added here, its existing Elevation-population row above is
+    // shared as-is, per that comment's own instruction.
+    //
+    // `.` is claimed here too, even though `plan.rs` also draws `.` for a
+    // chamber floor — deliberately ONE row, `means` broadened the same way
+    // `^`'s was: ordinary ground at walk-scale relief-2 and an ordinary
+    // chamber floor are the same concept at two scales (spec's Ruling K).
+    // `plan.rs` does not mint its own binding for it.
+    Binding {
+        glyph: '_',
+        population: Population::Relief,
+        means: "open, easy going",
+    },
+    Binding {
+        glyph: '.',
+        population: Population::Relief,
+        means: "ordinary traversable ground",
+    },
+    Binding {
+        glyph: ':',
+        population: Population::Relief,
+        means: "moderately rough going",
+    },
+    Binding {
+        glyph: 'A',
+        population: Population::Relief,
+        means: "dense or steep going",
+    },
     // Task 7: point sites (Nathan's own glyph assignments, `progress.md`
     // 2026-08-30). `o`/`O` move off the letter's apparent creature-codespace
     // collision by Ruling AG — the world map never draws a creature's noun

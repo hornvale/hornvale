@@ -44,8 +44,9 @@
 //! ## Marks carry no glyph of their own this campaign
 //!
 //! The shipped vocabulary is four glyphs total (`#`/`.`/`+`/`@`), and none
-//! is spare for `PlanMark`s the way `chart.rs`'s `PLACED_GLYPH` (`+`) was
-//! spare for the walk band — every plan glyph is already claimed by a
+//! is spare for `PlanMark`s the way `chart.rs`'s old catch-all glyph (`+`,
+//! `PLACED_GLYPH`, before Task 8 replaced it with the impedance ladder) was
+//! once spare for the walk band — every plan glyph is already claimed by a
 //! `CellKind` or by `you`. Task 6's `chart.rs` met the identical question
 //! (see that module's doc and `task-6-report.md`'s "Marks" section) and
 //! answered it the same way this module does: the marks pass redraws the

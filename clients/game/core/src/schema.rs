@@ -152,6 +152,12 @@ pub struct ChartCell {
     /// means "no colour claimed here", never black.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub color: Option<[u8; 3]>,
+    /// The sub-cell micro-field at this room, mirroring
+    /// `scene/surrounds/v2`'s `Micro`. `chart.rs`'s impedance ladder (The
+    /// Legend, Task 8) reads [`Micro::relief`] and [`Micro::openness`];
+    /// `aspect` and `wetness` are carried for record fidelity alone (module
+    /// doc: a leaf field of a record this crate reads stays, even unread).
+    pub micro: Micro,
     /// Salience-ranked things standing here.
     pub marks: Vec<Mark>,
     /// Great-circle initial azimuth from the observer to this cell, degrees
@@ -218,6 +224,27 @@ pub struct Sight {
     pub projection_slots: Option<[u32; 3]>,
     /// The per-output-slot normalizers, or `None` with no projection.
     pub projection_norms: Option<[f64; 3]>,
+}
+
+/// A cell's sub-cell micro-field, mirroring `scene/surrounds/v2`'s `Micro`.
+/// Every axis is `[-1, 1]`; `chart.rs`'s impedance ladder reads `relief` and
+/// `openness` — see [`ChartCell::micro`].
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct Micro {
+    /// Micro-relief, hollow (`-1`) to rise (`+1`). Read by the impedance
+    /// ladder as roughness: `|relief|`, since a hollow and a rise are
+    /// equally uneven underfoot.
+    pub relief: f64,
+    /// Slope aspect / insolation, shaded (`-1`) to sunlit (`+1`). Not read
+    /// by the impedance ladder — it says which way a slope faces, not how
+    /// hard the ground is to cross.
+    pub aspect: f64,
+    /// Local wetness, dry (`-1`) to wet (`+1`). Not read by the impedance
+    /// ladder.
+    pub wetness: f64,
+    /// Canopy openness, closed (`-1`) to open (`+1`). Read by the impedance
+    /// ladder as canopy: `(1 - openness) / 2`.
+    pub openness: f64,
 }
 
 /// A salience-ranked thing standing on a cell.
