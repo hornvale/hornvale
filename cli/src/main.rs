@@ -2,7 +2,8 @@
 #![warn(missing_docs)]
 
 use hornvale::{
-    audio, concepts, dictionary, flag_value, phonology, proto, repl, streams, systems, tropes,
+    attest, audio, concepts, dictionary, flag_value, phonology, proto, repl, streams, systems,
+    tropes,
 };
 use hornvale_astronomy::{SkyPins, parse_pin};
 use hornvale_kernel::{EntityId, Facet, FacetId, Seed, World, WorldTime, math};
@@ -151,6 +152,8 @@ usage:
   hornvale lab reticence                   render The Reticence's doctrine-prior report (builds its own Seed(42);
                                             docs/audits/the-reticence-report.md)
   hornvale ci-record                       record this run's durations as the host baseline
+  hornvale attest                          diff declared authors and the roster against docs/timings.md,
+                                            both directions (The Attestation); reports, never gates
 
 sky flags (shared by new and scout):
 ";
@@ -205,6 +208,7 @@ fn main() -> ExitCode {
         Some("voice") => audio::cmd_voice(&args),
         Some("lab") => cmd_lab(&args),
         Some("ci-record") => cmd_ci_record(),
+        Some("attest") => cmd_attest(),
         Some("help") | None => {
             print!("{}", usage());
             Ok(())
@@ -1932,6 +1936,31 @@ fn cmd_ci_record() -> Result<(), String> {
         .map_err(|e| format!("ci-record: writing {}: {e}", roster_path.display()))?;
     println!("wrote {} ({} tests)", roster_path.display(), roster.len());
 
+    Ok(())
+}
+
+/// Diff `docs/generated-paths.txt`'s declared authors and
+/// `scripts/lane-sets.tsv`'s roster against what `docs/timings.md` actually
+/// records — in both directions (The Attestation, Task 6). Reads the three
+/// committed files by repo-relative path (anchored at compile time, not the
+/// working directory, the same way `cmd_ci_record` finds the repo root) and
+/// prints [`hornvale::attest::render_report`]'s
+/// output. Reports; never gates — see `attest.rs`'s module doc for the two
+/// properties of the ledger this may not claim past (no exit code; jobs by
+/// adjacency, not id).
+fn cmd_attest() -> Result<(), String> {
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .ok_or("cli/ has a parent")?
+        .to_path_buf();
+    let read = |rel: &str| -> Result<String, String> {
+        std::fs::read_to_string(root.join(rel)).map_err(|e| format!("attest: reading {rel}: {e}"))
+    };
+    let timings = read("docs/timings.md")?;
+    let roster = read("scripts/lane-sets.tsv")?;
+    let declared = read("docs/generated-paths.txt")?;
+    let report = attest::attest_report(&timings, &roster, &declared);
+    print!("{}", attest::render_report(&report));
     Ok(())
 }
 

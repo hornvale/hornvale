@@ -47,7 +47,8 @@ biome classification, the coastlines, and every downstream census. Read
 2. **Artifact drift check** — regenerate and diff, because a byte change may
    pass every test yet move the committed elevation map / census:
    `SKIP_CENSUS=1 bash scripts/regenerate-artifacts.sh` then
-   `git diff -- $(grep -v '^#' docs/generated-paths.txt | grep -v '^$')`.
+   `git diff -- $(grep -v '^#' docs/generated-paths.txt | grep -v '^$' | cut -f1)`
+   (`cut -f1` takes the path column; the second column is the path's author).
    That list lives in `docs/generated-paths.txt` and is read, never restated —
    this line used to enumerate six paths and had already gone stale, missing
    `clients/game/core/tests/fixtures/` after it became the seventh.

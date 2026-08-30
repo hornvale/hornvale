@@ -117,6 +117,12 @@ run "census guard"    bash scripts/test-census-guard.sh
 # an operator's scratchpad, because an unrun test is the failure this set was
 # widened to fix twice already (test-pre-push.sh, then the seam-guard suite).
 run "sluice drain"    bash scripts/test-sluice-drain.sh
+# The post-merge hook's own suite, added the same way pre-push's was:
+# nothing exercised this hook, so its own author (Task 3, The Attestation)
+# shipped a Critical that made it silent on every merge, for all ten
+# declared paths, forever. See scripts/test-post-merge.sh's own header for
+# the mechanism.
+run "post-merge hook" bash scripts/test-post-merge.sh
 run "shellcheck"       make --no-print-directory shellcheck
 
 if [ "$fails" -ne 0 ]; then
