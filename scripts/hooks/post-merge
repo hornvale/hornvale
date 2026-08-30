@@ -72,9 +72,17 @@ cd "$repo_root"
 paths_file='docs/generated-paths.txt'
 [[ -f "$paths_file" ]] || exit 0
 
+# Since The Attestation, each line is `path<TAB>author` — take field 1 only.
+# `"${line%%$'\t'*}"` strips the tab and everything after it, leaving the
+# bare path. Read the WHOLE line unsplit (as before) would silently break
+# this hook: `git diff --name-only ... -- "${generated[@]}"` takes each array
+# element as ONE literal pathspec token, and "book/src/gallery/<TAB>artifacts"
+# matches no tracked file at all — the hook would report clean forever, on
+# every merge, for all ten declared paths (found in review after Task 3's own
+# commit shipped this exact defect; see docs/retrospectives for the account).
 generated=()
 while IFS= read -r line; do
-    generated+=("$line")
+    generated+=("${line%%$'\t'*}")
 done < <(grep -v '^#' "$paths_file" | grep -v '^[[:space:]]*$')
 [[ ${#generated[@]} -gt 0 ]] || exit 0
 
@@ -121,7 +129,7 @@ echo "Nothing in 'make gate' checks this, and there is no CI (decision 0125)." >
 echo "" >&2
 echo "Regenerate and confirm the tree is clean before building on this merge:" >&2
 echo "    make rebaseline" >&2
-echo "    git diff --exit-code -- \$(grep -v '^#' $paths_file | grep -v '^\$')" >&2
+echo "    git diff --exit-code -- \$(grep -v '^#' $paths_file | grep -v '^\$' | cut -f1)" >&2
 echo "" >&2
 
 exit 0
