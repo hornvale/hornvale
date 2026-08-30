@@ -1,15 +1,85 @@
 # The drift-check path list — the single source of truth.
 #
-# `make rebaseline` diffs these; cli/tests/suite/generated_paths.rs asserts each is
+# TWO TAB-SEPARATED COLUMNS: `path<TAB>author`. `make rebaseline` diffs the
+# path column; cli/tests/suite/generated_paths.rs asserts each path is
 # TRACKED, because `git diff --exit-code <path>` is silently vacuous against a
-# path with no index entry (CLAUDE.md, "Generated-artifact freshness").
+# path with no index entry (CLAUDE.md, "Generated-artifact freshness") — and,
+# since The Attestation, that its author is one the roster names. Every shell
+# reader takes the path with `cut -f1`; do not word-split a raw line.
 #
-# Adding a generated directory means adding it HERE and `git add`-ing its
-# contents in the same commit.
+# THE AUTHOR COLUMN NAMES AN INVOCATION, NOT A PROGRAM. The three ROSTER
+# values are the set names `scripts/lane-sets.tsv` already uses for the same
+# thing (`artifacts`, `census`, `heavy`) — an author IS a roster set name IS
+# the suffix of a `sluice:<set>` ledger label, so the whole chain joins with
+# no separate mapping table. `scripts/regenerate-artifacts.sh` is the literal
+# writer behind BOTH `artifacts` and `census`: the same script, gated by the
+# `HV_CENSUS` flag, so naming the *script* here would collapse exactly the
+# distinction this campaign draws between an ordinary rebaseline and a census
+# refresh. Use the invocation the roster names, never the program underneath
+# it.
+#
+# A FOURTH VALUE, `none(<reason>)`, DECLARES AN ABSENCE RATHER THAN DELETING
+# THE ROW OR LEAVING A COARSER ROW FALSE FOR IT (Task 5, The Attestation —
+# Nathan's ruling at G3). Some files a directory's declaration nominally
+# reaches have NO writer at all: hand-written prose, a hand-edited file, a
+# retired generator, or a study frozen and run by hand exactly once.
+# `none(<reason>)` keeps the file's TRACKED-NESS guarantee (still `git
+# add`-ed, exactly like any other declared path) while stating, reviewably,
+# that no roster author writes it — the repo's existing ratchet idiom
+# (type-audit's `waiver(<reason>)`, seam-guard's `expect(survives: <why>)`,
+# `tropes check`), not a new invention. `none(...)` SCOPES STRICTLY TO "NO
+# ROSTER AUTHOR" (artifacts/census/heavy), NOT "NO WRITER OF ANY KIND": a
+# handful of `none(...)` rows below (the Casement client build's
+# `vessel.js`/`vessel-worker.js`, the opt-in-flag-rebaselined
+# `lexicon-inventory.tsv`, the byte-golden `layering-generated.md`) DO have a
+# real writer, just not one this schema's three-value roster can name — the
+# reason names that real writer so the fact is declared, not lost. THE
+# REASON IS MANDATORY: a bare
+# `none` or an empty `none()` is a PARSE ERROR, exactly as a reasonless
+# `waiver(...)` or `expect(survives: ...)` is elsewhere — the reason is the
+# whole value of the row, since it is what a future reader acts on.
+# `every_declared_path_names_a_known_author` (cli/tests/suite/
+# generated_paths.rs) enforces the syntax; a sibling check there catches a
+# `none(...)` row gone STALE — one of the two known sources below starting
+# to write a path declared absent — the same one-directional-declaration
+# rot `expect(survives: ...)`'s STALE-DECL verdict exists to catch.
+#
+# PRECEDENCE, NEEDED ONLY BECAUSE `none(...)` EXISTS: THE LONGEST MATCHING
+# DECLARED PATH GOVERNS A FILE'S TRUE AUTHOR. Several directories below pair
+# a directory row (the author of MOST of its files) with individual file or
+# subdirectory rows naming the TRUE author — often `none(...)` — for the
+# files that are exceptions. `git ls-files` (the tracked-ness check) still
+# matches every row that nominally covers a file, redundantly and
+# harmlessly, exactly as it already did for the three individually-declared
+# `docs/audits/` files below (The Stope, Task 2b). But for "is this row's
+# author TRUE for this file", read a directory row's author as "true for
+# every file under this path NOT more specifically declared elsewhere" —
+# never as an unconditional claim about literally everything `git ls-files`
+# would return for it. This is why `book/src/gallery/` still reads
+# `artifacts` even though 11 of its 56 files are declared `none(...)`
+# individually below it: the specific rows are what make that claim true.
+#
+# Adding a generated directory means adding it HERE, with its author, and
+# `git add`-ing its contents in the same commit.
 #
 # THE CRITERION IS "REGENERATE-ARTIFACTS.SH WRITES IT", NOT "IT IS A COMMITTED
 # FIXTURE" — and the difference is load-bearing enough that two sessions
 # proposed widening this list the wrong way on 2026-08-23 before checking.
+#
+# THIS PARAGRAPH IS THE `artifacts`-ROW CRITERION ONLY, NOT THE WHOLE FILE'S
+# (review finding I4, final review of The Attestation — left standing,
+# unqualified, between the two paragraphs above and below it that state the
+# actual, wider rule). Since Task 5, only 15 of this file's 72 rows (13
+# `artifacts` plus 2 `census`, itself the same script under `HV_CENSUS`) are
+# produced by `scripts/regenerate-artifacts.sh` at all; the other 57 are not,
+# and 56 of those are declared `none(...)` — a roster author writes NOTHING
+# there, by Nathan's G3 ruling (decision 0457), which this paragraph predates.
+# The file-wide criterion is decision
+# [0458](decisions/0458-tracked-ness-proves-coverage-never-freshness.md)'s:
+# tracked-ness proves COVERAGE, never freshness. A path belongs in this file
+# when it needs that coverage guarantee AND has a true author to declare
+# (a roster set, or `none(<reason>)`) — this paragraph only narrows that to
+# the `artifacts` rows' own stronger property, below.
 #
 # A path belongs here when `scripts/regenerate-artifacts.sh` PRODUCES it, so a
 # stale copy is a bookkeeping failure the artifacts phase should fix on its own.
@@ -17,20 +87,26 @@
 # writes those seed-42 session snapshots via `possess --snapshot`, and they are
 # a cached INPUT — tests read them instead of paying for genesis.
 #
-# BYTE-GOLDENS ARE THE OPPOSITE AND MUST NEVER BE LISTED HERE.
+# BYTE-GOLDENS ARE THE OPPOSITE AND MUST NEVER BE LISTED HERE AS THE
+# `artifacts`/`census`/`heavy` AUTHOR OF THEIR OWN BYTES.
 # `cli/tests/fixtures/`, `windows/vessel/tests/fixtures/` and
 # `windows/worldgen/tests/fixtures/` are guarded by `kernel/src/golden.rs`,
 # which PANICS on mismatch unless `REBASELINE=1`. They are ASSERTIONS, not
 # inputs: a stale one means the world's bytes moved, which is exactly the
 # determinism signal the project exists to protect. `make rebaseline` does not
 # write them and must not — `make rebaseline-goldens` does, deliberately, so a
-# human reviews the diff before accepting new bytes.
+# human reviews the diff before accepting new bytes. (One byte-golden,
+# `book/src/reference/layering-generated.md`, was found nested INSIDE a
+# declared `artifacts` directory by Task 1 of this campaign; it is declared
+# `none(...)` below rather than deleted from tracked-ness checking, but it is
+# still never declared as `artifacts`-authored — see its row for detail.)
 #
-# Listing a byte-golden here would be inert today (regeneration never touches
-# it, so the diff is always empty) and actively harmful the moment anything
-# did: the artifacts phase COMMITS the drift it finds, which would silently
-# rebaseline a determinism golden and land it green. The gate phase failing on
-# a stale golden is not a gap in this list. It is the design.
+# Listing a byte-golden here as an `artifacts`/`census`/`heavy` author would be
+# inert today (regeneration never touches it, so the diff is always empty) and
+# actively harmful the moment anything did: the artifacts phase COMMITS the
+# drift it finds, which would silently rebaseline a determinism golden and
+# land it green. The gate phase failing on a stale golden is not a gap in this
+# list. It is the design.
 #
 # AND `cli/tests/fixtures/` IS WORSE THAN THE OTHER TWO, not merely another
 # golden. `kernel/src/golden.rs` says so in its own header:
@@ -44,13 +120,89 @@
 # the world used to emit. Declaring that directory is a category error rather
 # than an inert mistake: there is no circumstance, including `REBASELINE=1`,
 # under which regenerating it is correct.
-book/src/gallery/
-book/src/reference/
-book/src/laboratory/
-docs/audits/
-docs/digest/
-book/src/domesday/
-clients/game/core/tests/fixtures/
+
+# --- book/src/gallery/ — 56 tracked, 45 `artifacts`-written; 11 exceptions ---
+book/src/gallery/	artifacts
+book/src/gallery/almanac.md	none(hand-written prose, never regenerated)
+book/src/gallery/atlas.md	none(hand-written prose, never regenerated)
+book/src/gallery/first-light.md	none(hand-written prose, never regenerated)
+book/src/gallery/possession-live.md	none(hand-written prose, never regenerated)
+book/src/gallery/surrounds-seed-42.md	none(hand-written prose, never regenerated -- regenerate-artifacts.sh:776-777 says so explicitly; only the three charts it {{#include}}s are regenerated, each under generated/surrounds-seed-42/)
+book/src/gallery/the-gods-seed-42.md	none(hand-written prose, never regenerated)
+book/src/gallery/the-meeting-seed-42.md	none(hand-written prose, never regenerated)
+book/src/gallery/the-sky.md	none(hand-written prose, never regenerated)
+book/src/gallery/vessel.js	none(written by the Casement client build -- clients/vessel/deno.json, run via `make vessel-check` -- not a roster author)
+book/src/gallery/vessel-worker.js	none(written by the Casement client build -- clients/vessel/deno.json, run via `make vessel-check` -- not a roster author)
+book/src/gallery/lithology-seed-42.png	none(no current writer -- `hornvale map --field lithology` is a retired invocation; regenerate-artifacts.sh only ever calls --field for sediment/column/features; last touched 2026-07-14)
+
+# --- book/src/reference/ — 21 tracked, 9 `artifacts`-written; 12 exceptions ---
+book/src/reference/	artifacts
+book/src/reference/concept-registry.md	none(hand-written prose companion to concept-registry-generated.md, never regenerated)
+book/src/reference/layering.md	none(hand-written prose companion to layering-generated.md, never regenerated)
+book/src/reference/lexicon-of-place.md	none(hand-written prose, never regenerated)
+book/src/reference/stream-manifest.md	none(hand-written prose companion to stream-manifest-generated.md, never regenerated)
+book/src/reference/scene-eclipses-v2.md	none(hand-written schema-reference prose, never regenerated)
+book/src/reference/scene-moons-v1.md	none(hand-written schema-reference prose, never regenerated)
+book/src/reference/scene-neighbors-v1.md	none(hand-written schema-reference prose, never regenerated)
+book/src/reference/scene-surrounds-v2.md	none(hand-written schema-reference prose, never regenerated)
+book/src/reference/scene-system-v1.md	none(hand-written schema-reference prose, never regenerated)
+book/src/reference/scene-tiles-region-v1.md	none(hand-written schema-reference prose, never regenerated)
+book/src/reference/scene-tiles-v1.md	none(hand-written schema-reference prose, never regenerated)
+book/src/reference/layering-generated.md	none(byte golden asserted by cli/tests/suite/architecture.rs's the_layering_page_matches_the_enforced_graph via kernel_golden::assert_golden, rebaselined only by REBASELINE=1 -- not `make rebaseline` output, and never declared `artifacts` per this file's own header on byte-goldens; nesting a golden under a declared rebaseline directory is a separate, unresolved defect shape flagged by Task 1 -- see docs/generated-path-authors.md)
+
+# --- book/src/laboratory/ — 825 tracked files, FULLY DECOMPOSED, no bare
+# directory row. Task 1 (docs/generated-path-authors.md) found five distinct
+# authors under one declared `artifacts` value, wrong for 814 of 825 files;
+# a directory-level `none(...)`-vs-`artifacts` split cannot represent that,
+# so every subdirectory and every top-level file gets its own row instead.
+book/src/laboratory/generated/the-chorus/	artifacts
+book/src/laboratory/generated/the-census/schema.json	artifacts
+book/src/laboratory/generated/the-census/	census
+book/src/laboratory/generated/census-of-the-meeting/schema.json	artifacts
+book/src/laboratory/generated/census-of-the-meeting/	census
+book/src/laboratory/generated/the-history/	heavy
+book/src/laboratory/generated/the-sounding/	none(demoted from heavy 2026-08-28 by The Governor; committed bytes last written by the heavy tier at 34c6ff03b, but windows/chronicle/tests/suite/sounding_sweep.rs's #[ignore] reason today carries no `heavy:` tag -- run by hand, ad hoc, not any automated phase)
+book/src/laboratory/generated/branches-family/	none(frozen one-off study -- run by hand via `cargo run -p hornvale -- lab run studies/branches-family.study.json`, never automated; frozen deliberately at cc031f422, census-as-data spec Section 1)
+book/src/laboratory/generated/census-of-coasts/	none(frozen one-off study -- run by hand via `lab run studies/census-of-coasts.study.json`, never automated; frozen at cc031f422)
+book/src/laboratory/generated/census-of-coasts-tuning/	none(frozen one-off study -- run by hand via `lab run studies/census-of-coasts-tuning.study.json`, never automated; frozen at cc031f422)
+book/src/laboratory/generated/earth-mask-l6/	none(run once by hand via the standalone tools/earth-mask tool, outside the cargo workspace; never re-invoked)
+book/src/laboratory/generated/the-cascade/	none(frozen one-off study -- run by hand via `lab run studies/the-cascade.study.json`, never automated)
+book/src/laboratory/generated/the-contour/	none(frozen one-off study -- run by hand via `lab run studies/the-contour.study.json`, never automated)
+book/src/laboratory/generated/the-granary/	none(frozen one-off study -- run by hand via `lab run studies/the-granary.study.json`, never automated)
+book/src/laboratory/generated/the-namesake/	none(frozen one-off study -- run by hand via `lab run studies/the-namesake.study.json`, never automated)
+book/src/laboratory/generated/census-of-skies/	none(DISTINCT from the eight rows above: this study WAS wired into an automated regenerator once -- .github/workflows/ci.yml's regen list at 7b7bec3ef, 2026-07-09 -- and that automation, its only author, was deleted whole with the workflow by decision 0125's CI retirement; it did not merely go unrun like the other eight, its author was removed out from under it)
+book/src/laboratory/overview.md	none(hand-written prose, never regenerated)
+book/src/laboratory/study-001.md	none(hand-written prose, never regenerated)
+book/src/laboratory/study-002.md	none(hand-written prose, never regenerated)
+book/src/laboratory/study-003.md	none(hand-written prose, never regenerated)
+book/src/laboratory/study-004.md	none(hand-written prose, never regenerated)
+book/src/laboratory/study-005.md	none(hand-written prose, never regenerated)
+book/src/laboratory/study-006.md	none(hand-written prose, never regenerated)
+book/src/laboratory/study-007.md	none(hand-written prose, never regenerated)
+book/src/laboratory/study-008.md	none(hand-written prose, never regenerated)
+book/src/laboratory/study-009.md	none(hand-written prose, never regenerated)
+book/src/laboratory/study-010.md	none(hand-written prose, never regenerated)
+book/src/laboratory/study-011.md	none(hand-written prose, never regenerated)
+book/src/laboratory/study-012.md	none(hand-written prose, never regenerated)
+book/src/laboratory/the-terminator-probe.md	none(hand-written prose, never regenerated)
+book/src/laboratory/census-of-coasts-ii.md	none(hand-written prose, never regenerated)
+book/src/laboratory/census-of-coasts-iii.md	none(hand-written prose, never regenerated)
+book/src/laboratory/census-of-coasts-iv.md	none(hand-written prose, never regenerated)
+
+# --- docs/audits/ — 16 tracked, 11 `artifacts`-written; 5 exceptions ---
+docs/audits/	artifacts
+docs/audits/heavy-tier-adjudication.md	none(hand-written one-off campaign finding -- The Governor -- never regenerated)
+docs/audits/land-elevation-attribution.md	none(hand-written one-off campaign finding -- The Glasshouse -- never regenerated)
+docs/audits/the-assay-build-volume-audit.md	none(hand-written one-off campaign finding -- The Assay -- never regenerated)
+docs/audits/the-escapement-census-attribution.md	none(hand-written one-off campaign finding -- The Escapement -- never regenerated)
+docs/audits/lexicon-inventory.tsv	none(written by cli/tests/suite/lexicon_guard.rs under the opt-in HV_LEXICON_REBASELINE=1 flag, not by `make rebaseline` -- a third authorship mechanism sharing this declared path, distinct from both `artifacts` and the hand-written reports above)
+
+# --- docs/digest/ — 3 tracked, 2 `artifacts`-written; 1 exception ---
+docs/digest/	artifacts
+docs/digest/facts.jsonl	none(hand-edited directly, or via tools/digest's MCP interface -- its own module doc names hand-editing as the intended path; regenerate-artifacts.sh only ever READS it, to render the two files that are written)
+
+book/src/domesday/	artifacts
+clients/game/core/tests/fixtures/	artifacts
 
 # Declared as a FILE as well as inside docs/audits/ above, and the redundancy
 # is the point (The Stope, Task 2b). `git diff --exit-code` is vacuous against
@@ -59,19 +211,105 @@ clients/game/core/tests/fixtures/
 # directory's other tracked files keep the tracked-ness check green while the
 # new one is invisible. Naming the file directly is what makes
 # cli/tests/suite/generated_paths.rs refuse until it is `git add`-ed.
-docs/audits/underworld-lattice-seed-panel.md
-docs/audits/the-confidant-report.md
-docs/audits/the-reticence-report.md
+docs/audits/underworld-lattice-seed-panel.md	artifacts
+docs/audits/the-confidant-report.md	artifacts
+docs/audits/the-reticence-report.md	artifacts
+
+# `docs/generated-path-writes.tsv` (Task 4, The Attestation) is Task 1's
+# by-hand write-set measurement made a byproduct of every ordinary run: a
+# footer inside scripts/regenerate-artifacts.sh counts, per other declared
+# row above EXCEPT a `census`-authored one (see below), how many of that
+# row's tracked files carry an mtime newer than a marker stamped at the top
+# of the same run (mtime advanced, not content changed). Self-consistent
+# rather than circular — the record of what an author wrote is written by
+# that author and declared against it, so this row is genuinely tracked and
+# genuinely authored by `artifacts`, and
+# `every_declared_generated_path_is_tracked` covers it exactly the way it
+# covers every other row.
+#
+# `census`-AUTHORED ROWS ARE EXCLUDED; `heavy`-AUTHORED AND `none(...)` ROWS
+# ARE NOT (review finding I3, final review — this scoping was added after
+# the fact, and its first draft over-excluded). A `census`-authored row is
+# written by a DIFFERENT invocation of this same script (`HV_CENSUS=1`), so
+# the SAME row's true written/tracked counts differ depending on which
+# invocation last ran: a plain run leaves a census row's directory at
+# `1/229` (only the unconditional schema-backfill touches it); a census run
+# leaves the identical row at `229/229`. Before this fix the footer captured
+# whichever shape the LAST run happened to be, `scripts/sluice-census.sh`'s
+# `git add -u` committed a census run's `229/229` shape onto the delivery
+# branch, and the next ordinary merge's `artifacts` phase silently wrote
+# `1/229` back — perpetual, undetected two-way churn on a brand-new
+# drift-checked artifact, because `measured_writes()` in
+# `cli/tests/suite/generated_paths.rs` reads only key PRESENCE, never the
+# counts.
+#
+# `heavy`-authored rows (`the-history/`, `the-sounding/`) and `none(...)`
+# rows have NO such ambiguity to exclude for: this script never writes
+# either kind of path under ANY flag it accepts (the heavy tier is a
+# separate test binary; a `none(...)` row's whole claim is that nothing here
+# writes it), so their captured counts are stable regardless of invocation.
+# They also cannot be dropped without breaking a sibling check:
+# `an_overriding_declaration_must_be_measured` requires every OVERRIDING row
+# — of any author, `none(...)` included — to have a writes.tsv entry (key
+# presence only, never the values), and most `none(...)` rows are exactly
+# such overrides (e.g. `book/src/gallery/the-sky.md` overriding
+# `book/src/gallery/`'s `artifacts`). Excluding only `census` loses no
+# coverage that check needs, since every override case it resolves today is
+# a non-`census` row overriding a less-specific `census` row (e.g.
+# `.../the-census/schema.json` over `.../the-census/`), never the reverse.
+#
+# IT IS NOT GIVEN A ROW IN ITS OWN OUTPUT, AND THAT IS DELIBERATE (review
+# finding, Task 4). A shell redirect on a compound command
+# (`{ ...; } > docs/generated-path-writes.tsv`) stamps the target's mtime at
+# open time, before anything inside the group runs — so a self-check would
+# read this file's own mtime as "just written" on every single run,
+# unconditionally, whether or not the footer's logic actually changed
+# anything. That is guaranteed true by construction, not an observation, and
+# Step 3's falsifier (delete the generator, watch the count drop to zero)
+# cannot apply to it — deleting the footer deletes the file's only writer,
+# so there is no "not written" state distinguishable from "not generated at
+# all". The footer's own comment (scripts/regenerate-artifacts.sh, next to
+# `write_capture_self_path`) names this path and excludes it from the rows
+# it emits rather than fabricate a number that looks measured but isn't.
+docs/generated-path-writes.tsv	artifacts
+
+# EVERY ROW USED TO BE `artifacts`, AND THAT WAS A FINDING, NOT AN OVERSIGHT
+# (Task 1, docs/generated-path-authors.md): every one of the ten original
+# paths had at least one file `scripts/regenerate-artifacts.sh` writes on a
+# plain `make rebaseline`, which is the file's own declared criterion, so
+# `artifacts` was a correct value for each row BY THAT CRITERION alone —
+# it was just not TRUE for every file each row covered, which Task 5 (this
+# revision) is the fix for.
+#
+# TASK 5 REPLACED THE FIVE ROWS WHOSE FILES HAD MIXED OR ABSENT AUTHORS
+# (`book/src/gallery/`, `book/src/reference/`, `book/src/laboratory/`,
+# `docs/audits/`, `docs/digest/`) WITH THE FINER-GRAINED ROWS ABOVE, per
+# Nathan's G3 ruling: split each row so every declared path's author is true
+# for every file it covers, and declare a path nothing writes as
+# `none(<reason>)` rather than deleting it or leaving a coarser row wrong.
+# The two invariants that ruling holds this file to: no coverage loss (every
+# file tracked under the old rows is still tracked under some new row) and
+# no row whose author is false for a file it covers (verified per-row against
+# docs/generated-path-authors.md and docs/generated-path-writes.tsv; see the
+# Task 5 report in .superpowers/sdd/2026-08-29-the-attestation/ for the
+# worked proof). `book/src/domesday/`, `clients/game/core/tests/fixtures/`
+# and the three individually-declared `docs/audits/` files needed no split:
+# Task 1 measured each of those fully current (every tracked file written on
+# the run that measured them), so `artifacts` was already true for 100% of
+# what each covers.
 
 # Two more FILES declared by name, for the same reason and against the same
 # hazard (The Chattel, Task 13). Both land inside directories this list
 # already declares -- book/src/gallery/ and
-# clients/game/core/tests/fixtures/ -- so the directories' other tracked
-# files would keep the tracked-ness check green while `git diff` could not
-# see either new file at all. They are the campaign's only published evidence
-# that the custody verbs exist (the transcript) and the only committed
+# clients/game/core/tests/fixtures/ -- so the directories' other tracked files
+# would keep the tracked-ness check green while `git diff` could not see
+# either new file at all. They are the campaign's only published evidence that
+# the custody verbs exist (the transcript) and the only committed
 # `vessel/session/v2` document whose `self.carrying` is not empty (the
-# fixture), so an artifact invisible to the drift check is exactly the
-# failure worth refusing here.
-book/src/gallery/possession-carry-seed-1.md
-clients/game/core/tests/fixtures/session-seed-1-carrying.json
+# fixture), so an artifact invisible to the drift check is exactly the failure
+# worth refusing here. Both are written by regenerate-artifacts.sh -- the
+# transcript at :975, the fixture at :336 via `possess --snapshot` in the same
+# run -- so both are authored by `artifacts` in this file's second column,
+# which main gained (The Attestation) while this campaign was in flight.
+book/src/gallery/possession-carry-seed-1.md	artifacts
+clients/game/core/tests/fixtures/session-seed-1-carrying.json	artifacts

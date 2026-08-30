@@ -11,5 +11,5 @@
 # of paths a build embeds, and none of it is visible in any output.
 #
 # Format: <workspace-relative path> <count>
-cli/src/main.rs 1
+cli/src/main.rs 2
 windows/lab/src/blackbox.rs 1

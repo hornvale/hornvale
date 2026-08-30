@@ -1231,6 +1231,7 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::exclusion_reasons_carry_the_exact_documented_wording
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_matches_the_same_worlds_entry_in_rank
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_returns_none_for_an_unknown_seed
+hornvale-lab::hornvale_lab$domesday::anomaly::tests::partitioning_columns_are_all_covered_by_d2_or_d4
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_orders_most_anomalous_first
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_agrees_with_for_seed_on_a_census_row
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_scores_against_an_uncontaminated_index
@@ -1238,7 +1239,6 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::structural_columns_are_neit
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::tail_depth_averages_ranks_across_ties
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::tail_depth_clamps_a_value_outside_the_census_range
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::tail_depth_is_zero_at_the_extremes_and_half_at_the_median
-hornvale-lab::hornvale_lab$domesday::anomaly::tests::the_log_guard_holds_for_a_real_extreme_holding_world
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::too_few_present_values_is_excluded_with_its_reason
 hornvale-lab::hornvale_lab$domesday::census::tests::absent_count_panics_loudly_on_an_unknown_metric_rather_than_reporting_all_absent
 hornvale-lab::hornvale_lab$domesday::census::tests::absent_values_are_counted_not_skipped
@@ -3538,6 +3538,16 @@ hornvale::suite$architecture::the_kernel_depends_on_no_workspace_crate
 hornvale::suite$architecture::the_layering_page_matches_the_enforced_graph
 hornvale::suite$architecture::the_layering_render_is_deterministic_and_grounded
 hornvale::suite$architecture::windows_depend_only_on_kernel_domains_and_windows
+hornvale::suite$attest::a_job_can_be_both_owed_but_absent_and_undetermined_at_once
+hornvale::suite$attest::a_job_carrying_an_unowed_phase_is_reported
+hornvale::suite$attest::a_job_missing_an_unconditionally_owed_phase_is_reported
+hornvale::suite$attest::a_job_missing_only_a_conditionally_droppable_phase_is_undetermined_not_owed_but_absent
+hornvale::suite$attest::a_none_row_is_never_reported_as_an_absent_author_and_is_its_own_category
+hornvale::suite$attest::a_reasonless_none_row_is_a_parse_error
+hornvale::suite$attest::a_well_formed_tree_reports_nothing
+hornvale::suite$attest::an_author_never_seen_at_all_is_reported_with_no_last_seen
+hornvale::suite$attest::an_author_with_no_canonical_row_is_reported_with_its_last_bare_row
+hornvale::suite$attest::the_conditionally_droppable_set_agrees_with_sluice_phases_sh
 hornvale::suite$audio_artifacts::committed_audio_is_exactly_the_page_referenced_set
 hornvale::suite$build_path_embedding::production_code_embeds_no_new_build_paths
 hornvale::suite$build_path_embedding::the_frozen_list_only_shrinks
@@ -3564,6 +3574,8 @@ hornvale::suite$docs_consistency::all_knowledge_doc_links_resolve
 hornvale::suite$docs_consistency::an_escaped_pipe_is_not_a_column_separator
 hornvale::suite$docs_consistency::cite_error_resolves_the_known_forms
 hornvale::suite$docs_consistency::cite_errors_in_catches_line_wrapped_cites
+hornvale::suite$docs_consistency::decision_block_declaration_count_has_not_dropped
+hornvale::suite$docs_consistency::decision_blocks_do_not_overlap_across_campaigns
 hornvale::suite$docs_consistency::decision_cites_in_sources_resolve
 hornvale::suite$docs_consistency::decision_numbers_are_unique
 hornvale::suite$docs_consistency::every_frontier_section_is_listed_in_the_contents
@@ -3582,10 +3594,14 @@ hornvale::suite$docs_consistency::the_confidence_gradient_links_resolve
 hornvale::suite$docs_consistency::the_decision_log_starts_at_0001
 hornvale::suite$docs_consistency::the_history_page_prose_names_the_vertex_it_renders
 hornvale::suite$docs_consistency::the_waiver_list_only_shrinks
+hornvale::suite$generated_paths::an_overriding_declaration_must_be_measured
 hornvale::suite$generated_paths::every_declared_generated_path_is_tracked
-hornvale::suite$generated_paths::every_declared_generated_path_is_written_by_the_regeneration_script
+hornvale::suite$generated_paths::every_declared_generated_path_is_written_by_its_author
+hornvale::suite$generated_paths::every_declared_path_names_a_known_author
+hornvale::suite$generated_paths::known_authors_agree_with_the_roster
 hornvale::suite$generated_paths::no_claude_md_restates_the_declared_path_list
 hornvale::suite$generated_paths::no_generated_artifact_is_routed_through_a_regenerating_merge_driver
+hornvale::suite$generated_paths::no_two_declared_rows_tie_for_precedence_with_different_authors
 hornvale::suite$generated_paths::the_declared_list_is_not_empty
 hornvale::suite$generated_paths::the_root_guide_names_the_declared_path_list
 hornvale::suite$heavy_tier::every_whole_runner_test_is_front_loaded
@@ -3609,6 +3625,7 @@ hornvale::suite$lane_sets::claude_md_names_the_roster_and_does_not_restate_it
 hornvale::suite$lane_sets::every_phase_the_chamber_runs_is_rostered
 hornvale::suite$lane_sets::every_rostered_set_is_well_formed
 hornvale::suite$lane_sets::the_commit_gate_is_local_and_everything_else_is_the_lane
+hornvale::suite$lane_sets::the_phase_lists_and_the_roster_rungs_agree_both_ways
 hornvale::suite$lexicon_guard::a_waiver_needs_a_reason
 hornvale::suite$lexicon_guard::no_vertex_sense_cell_comes_back
 hornvale::suite$lexicon_guard::the_inventory_is_sorted_and_not_empty

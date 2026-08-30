@@ -429,6 +429,7 @@
 - [The Lodestar](./chronicle/the-lodestar.md)
 - [The Overture](./chronicle/the-overture.md)
 - [The Chattel](./chronicle/the-chattel.md)
+- [The Attestation](./chronicle/the-attestation.md)
 
 # Appendix: The Frontier
 

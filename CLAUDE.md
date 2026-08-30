@@ -632,8 +632,10 @@ cargo run --manifest-path tools/digest/Cargo.toml -- render delta      > docs/di
 # already-declared-directory hazard below.
 make rebaseline                        # regenerate everything EXCEPT censuses
 make rebaseline-goldens                # accept drifted byte-golden fixtures (REBASELINE=1)
-# The drift check, reading its path list from the one file that declares it:
-git diff --exit-code -- $(grep -v '^#' docs/generated-paths.txt | grep -v '^$')
+# The drift check, reading its path list from the one file that declares it.
+# `cut -f1` takes the path column — the file's second column, since The
+# Attestation, names the path's AUTHOR (a roster set name), not a pathspec:
+git diff --exit-code -- $(grep -v '^#' docs/generated-paths.txt | grep -v '^$' | cut -f1)
 # The notes below explain WHY particular entries are in that file; they are
 # commentary on it, never a second copy of it.
 # docs/audits/ is in that list — the type-audit report drifts on any

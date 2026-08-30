@@ -6,6 +6,7 @@
 //! description true of the crate and not merely of its intent.
 #![warn(missing_docs)]
 
+pub mod attest;
 pub mod audio;
 pub mod concepts;
 pub mod dictionary;

@@ -15,6 +15,8 @@ mod accession;
 mod anchor_thing_correspondence;
 #[path = "suite/architecture.rs"]
 mod architecture;
+#[path = "suite/attest.rs"]
+mod attest;
 #[path = "suite/audio_artifacts.rs"]
 mod audio_artifacts;
 #[path = "suite/branches_coverage.rs"]
