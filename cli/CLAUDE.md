@@ -170,8 +170,9 @@ tweak — drifts those. After any output change:
 ```bash
 make rebaseline
 # The path list is `docs/generated-paths.txt` — the single source of truth, so
-# no guide restates it (`cli/tests/generated_paths.rs` enforces that).
-git diff -- $(grep -v '^#' docs/generated-paths.txt | grep -v '^$')
+# no guide restates it (`cli/tests/generated_paths.rs` enforces that). `cut -f1`
+# takes the path column; the second column is the path's author, not a pathspec.
+git diff -- $(grep -v '^#' docs/generated-paths.txt | grep -v '^$' | cut -f1)
 ```
 
 `clients/game/core/tests/fixtures/` belongs on that list even though it lives

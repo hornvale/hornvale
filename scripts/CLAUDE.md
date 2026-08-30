@@ -51,8 +51,10 @@ Key knobs:
   **`docs/generated-paths.txt`** — the single source of truth, which no guide
   restates (`cli/tests/suite/generated_paths.rs` fails on a second copy, because an
   inline list drifts the moment a generated directory is added). Read it:
-  `git diff -- $(grep -v '^#' docs/generated-paths.txt | grep -v '^$')`.
-  The notes that follow explain WHY particular entries are in that file; they
+  `git diff -- $(grep -v '^#' docs/generated-paths.txt | grep -v '^$' | cut -f1)`
+  — `cut -f1` takes the path column; the file's second column is the path's
+  author, not a pathspec. The notes that follow explain WHY particular
+  entries are in that file; they
   are commentary on it, not a duplicate of it — note
   **`docs/audits/`** is in the list, and it now holds TWO drift-checked
   reports: the type-audit report (drifts on any pub-boundary change — a common

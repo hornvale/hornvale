@@ -1,11 +1,25 @@
 # The drift-check path list — the single source of truth.
 #
-# `make rebaseline` diffs these; cli/tests/suite/generated_paths.rs asserts each is
+# TWO TAB-SEPARATED COLUMNS: `path<TAB>author`. `make rebaseline` diffs the
+# path column; cli/tests/suite/generated_paths.rs asserts each path is
 # TRACKED, because `git diff --exit-code <path>` is silently vacuous against a
-# path with no index entry (CLAUDE.md, "Generated-artifact freshness").
+# path with no index entry (CLAUDE.md, "Generated-artifact freshness") — and,
+# since The Attestation, that its author is one the roster names. Every shell
+# reader takes the path with `cut -f1`; do not word-split a raw line.
 #
-# Adding a generated directory means adding it HERE and `git add`-ing its
-# contents in the same commit.
+# THE AUTHOR COLUMN NAMES AN INVOCATION, NOT A PROGRAM. The three legal
+# values are the set names `scripts/lane-sets.tsv` already uses for the same
+# thing (`artifacts`, `census`, `heavy`) — an author IS a roster set name IS
+# the suffix of a `sluice:<set>` ledger label, so the whole chain joins with
+# no separate mapping table. `scripts/regenerate-artifacts.sh` is the literal
+# writer behind BOTH `artifacts` and `census`: the same script, gated by the
+# `HV_CENSUS` flag, so naming the *script* here would collapse exactly the
+# distinction this campaign draws between an ordinary rebaseline and a census
+# refresh. Use the invocation the roster names, never the program underneath
+# it.
+#
+# Adding a generated directory means adding it HERE, with its author, and
+# `git add`-ing its contents in the same commit.
 #
 # THE CRITERION IS "REGENERATE-ARTIFACTS.SH WRITES IT", NOT "IT IS A COMMITTED
 # FIXTURE" — and the difference is load-bearing enough that two sessions
@@ -44,13 +58,13 @@
 # the world used to emit. Declaring that directory is a category error rather
 # than an inert mistake: there is no circumstance, including `REBASELINE=1`,
 # under which regenerating it is correct.
-book/src/gallery/
-book/src/reference/
-book/src/laboratory/
-docs/audits/
-docs/digest/
-book/src/domesday/
-clients/game/core/tests/fixtures/
+book/src/gallery/	artifacts
+book/src/reference/	artifacts
+book/src/laboratory/	artifacts
+docs/audits/	artifacts
+docs/digest/	artifacts
+book/src/domesday/	artifacts
+clients/game/core/tests/fixtures/	artifacts
 
 # Declared as a FILE as well as inside docs/audits/ above, and the redundancy
 # is the point (The Stope, Task 2b). `git diff --exit-code` is vacuous against
@@ -59,6 +73,19 @@ clients/game/core/tests/fixtures/
 # directory's other tracked files keep the tracked-ness check green while the
 # new one is invisible. Naming the file directly is what makes
 # cli/tests/suite/generated_paths.rs refuse until it is `git add`-ed.
-docs/audits/underworld-lattice-seed-panel.md
-docs/audits/the-confidant-report.md
-docs/audits/the-reticence-report.md
+docs/audits/underworld-lattice-seed-panel.md	artifacts
+docs/audits/the-confidant-report.md	artifacts
+docs/audits/the-reticence-report.md	artifacts
+
+# EVERY CURRENT ROW IS `artifacts`, AND THAT IS A FINDING, NOT AN OVERSIGHT
+# (Task 1, docs/generated-path-authors.md). Every one of these ten paths has
+# at least one file `scripts/regenerate-artifacts.sh` writes on a plain
+# `make rebaseline`, which is the file's own declared criterion — so
+# `artifacts` is the correct single value for all ten by that criterion.
+# `book/src/laboratory/` is nonetheless NOT purely `artifacts`: 682 of its
+# 825 tracked files (the-census + census-of-the-meeting) are authored only
+# under the `census` invocation, and `generated/the-history/` (2 files) only
+# by `heavy`. A one-value-per-row schema cannot represent that split; Task 1
+# and Task 5 carry the finer-grained account and any future cleanup. Do not
+# read this row's single `artifacts` value as a claim that census and heavy
+# author nothing under it.

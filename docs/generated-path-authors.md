@@ -14,10 +14,15 @@ documentation commits ahead of the `26db4df99` the spec measured at):
 ```
 marker=$(mktemp); sleep 1
 make rebaseline
-for p in $(grep -v '^#' docs/generated-paths.txt | grep -v '^$'); do
+for p in $(grep -v '^#' docs/generated-paths.txt | grep -v '^$' | cut -f1); do
   # count tracked files newer than the marker, per declared path
 done
 ```
+
+(`cut -f1` takes the path column. At the time this measurement ran the file
+had no second column yet — Task 3 added the author column afterward — so
+the loop as actually executed needed no `cut`; it is shown here with `cut -f1`
+so the recipe still reproduces against the file's current, two-column form.)
 
 Then, for every tracked file the run left untouched, its actual author was
 established by **reading the file or finding its writer** — never inferred
