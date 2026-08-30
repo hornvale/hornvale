@@ -948,6 +948,43 @@ positive-control clause covers an instrument that cannot fire; this adds the
 case where the instrument fires correctly and the number it is compared
 against was never its own.
 
+A seventeenth campaign tests the remedy the sixteenth proposed, on the
+successor campaign it was proposed for. [The Quoin](./chronicle/the-quoin.md)
+(2026-08-29) built its own preregistration the way The Rail's retrospective
+demanded: append the five tokens under measurement, run the two live
+instruments the campaign would later be judged against, record their output,
+revert. All four figures — ladder covered, frontier, merchant coverage,
+flood-watch demand instances — matched on the first run, at every one of five
+tasks, and none was revised. **The remedy generalizes past the campaign that
+discovered the need for it**, and the campaign is explicit about what that
+does and does not prove: Task 0 derived the predictions with the same
+resolver that later scored the outcome, so agreement confirms the
+implementation did what the resolver predicted, not that the resolver is
+right about the world. Three genuine defects still originated in this
+campaign's own plan text — a merchant-coverage step the plan omitted, a
+witness string requiring `sleep` to inflect as `slept` when the grammar's
+past-tense rule is a pinned-on-purpose naive `+ed`, and a witness pairing
+`Definiteness::Indef` with an expected string that needed `Def` — and every
+one is a *different* class from the one PREREG-1 was built to close. All
+three were caught by pre-dispatch brief verification against the tree,
+before an implementer saw them, not by re-reading and not by the mechanism
+under test.
+
+The same campaign supplies a second, independent instance of *complementing
+beats replacing* (the fifteenth campaign's own finding, above): its
+preregistration bound the chronicle to quote a produce-side demand-instance
+figure the resolver, as built through the campaign's own reconciliation
+task, could not compute. Rather than report the composite the instrument
+already had, or loosen what the criterion meant to fit the instrument that
+existed, the campaign built the missing split as its own reviewed task,
+disclosed in the generated artifact itself that the split postdates the
+implementation work it measures, and reported what it found even though the
+result **cuts against the campaign**: the produce-side figure (31.8%) sits
+three points below the composite the report would otherwise have led with
+(34.8%). A preregistration that cannot be satisfied by the instrument that
+exists is a finding about the instrument, not a license to report the number
+that instrument happens to produce.
+
 ## What the world can already check itself on (high confidence)
 
 **The kernel substrate.** Hash-based seeding, coherent noise, append-only
