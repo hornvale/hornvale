@@ -41,8 +41,31 @@
 //! in this file catches a row whose single author value is wrong for most of
 //! what it declares.
 //!
-//! A DECLARED PATH'S AUTHOR MUST ALSO BE ONE THE ROSTER NAMES (Step 2 below,
-//! `every_declared_path_names_a_known_author`) — `artifacts`, `census`, or
+//! FIFTH DIRECTION, TASK 5'S FIX FOR THE FOURTH: a declared path's author may
+//! now be `none(<reason>)` instead of a roster name, declaring that NO
+//! roster author writes it — the repo's `waiver(<reason>)` /
+//! `expect(survives: <why>)` idiom, not a new invention. A row with a mixed
+//! or absent true author is SPLIT into a directory row (true for the files
+//! it still covers) plus individual file/subdirectory rows naming the real
+//! author of the rest, closing the fourth direction's gap for every case this
+//! campaign found. Two things this buys, and one it does not:
+//!   - A reasonless `none` (bare `none`, or `none()` with nothing inside the
+//!     parens) is a PARSE ERROR, raised by `declared()` itself, not a soft
+//!     test failure — the reason is the whole value of the declaration.
+//!   - A `none(...)` row that goes STALE — one of the two known author
+//!     sources starts literally writing that path — is caught by
+//!     `every_declared_generated_path_is_written_by_its_author`, the same
+//!     one-directional-declaration rot seam-guard's STALE-DECL verdict
+//!     exists to catch.
+//!   - It does NOT make the third check's directory-granularity substring
+//!     match exact. A directory row's author is still read as "true for
+//!     every file under this path NOT more specifically declared elsewhere"
+//!     (precedence: longest matching declared path governs a file's true
+//!     author) — Task 5 closed every gap it MEASURED, not every gap the
+//!     substring check could theoretically miss in the future.
+//!
+//! A DECLARED PATH'S AUTHOR MUST ALSO BE ONE THE ROSTER NAMES, OR `none(...)`
+//! (Step 2 below, `every_declared_path_names_a_known_author`) — `artifacts`, `census`, or
 //! `heavy`, the set names `scripts/lane-sets.tsv` already uses for the same
 //! invocations. Declared-implies-attributed; blind to a generated path
 //! nobody declared, the same blindness the first direction documents.
@@ -62,6 +85,16 @@ fn repo_root() -> PathBuf {
 /// lines stripped. Each row is `path<TAB>author` (docs/generated-paths.txt's
 /// own header names the two columns); a row with no tab is a malformed
 /// declaration and panics loudly rather than silently losing the author.
+///
+/// A `none(...)` author is validated HERE, not in a later soft test: a bare
+/// `none` or an empty `none()` panics immediately, exactly as a missing tab
+/// column does above. This is deliberate, not an inconsistency with the
+/// softer `every_declared_path_names_a_known_author` test below — a missing
+/// or unrecognised author is a fact worth REPORTING (that test names every
+/// offending row in one assertion), but a reasonless `none` is a malformed
+/// DECLARATION, the same category of error as a row with no tab at all, and
+/// the brief is explicit that it is a parse error: "a reasonless `none` is a
+/// PARSE ERROR, exactly as it is for seam-guard".
 fn declared() -> Vec<(String, String)> {
     let text = std::fs::read_to_string(repo_root().join("docs/generated-paths.txt"))
         .expect("docs/generated-paths.txt must exist");
@@ -79,9 +112,35 @@ fn declared() -> Vec<(String, String)> {
                      every declared path must name its author"
                 )
             });
+            if author == "none" || author.starts_with("none(") {
+                let reason = author
+                    .strip_prefix("none(")
+                    .and_then(|s| s.strip_suffix(')'))
+                    .map(str::trim);
+                if !matches!(reason, Some(r) if !r.is_empty()) {
+                    panic!(
+                        "docs/generated-paths.txt row {path:?} declares `none` with no \
+                         reason — a reasonless `none(...)` is a PARSE ERROR, exactly as a \
+                         reasonless `waiver(...)` is for type-audit or `expect(survives: ...)` \
+                         is for seam-guard. Write `none(<reason>)` naming why no roster author \
+                         writes this path."
+                    );
+                }
+            }
             (path.to_string(), author.to_string())
         })
         .collect()
+}
+
+/// The reason inside a `none(<reason>)` author value, or `None` if `author`
+/// is not the `none(...)` form. Never returns `Some("")` — `declared()`
+/// already panics on a reasonless `none` before this function ever sees one,
+/// so an empty reason here would mean that guard broke, not that one exists
+/// in the file.
+fn none_reason(author: &str) -> Option<&str> {
+    author
+        .strip_prefix("none(")
+        .and_then(|s| s.strip_suffix(')'))
 }
 
 #[test]
@@ -120,7 +179,9 @@ fn the_declared_list_is_not_empty() {
     );
 }
 
-/// Every declared path names an author, and the author is one we know.
+/// Every declared path names an author, and the author is one we know: a
+/// roster set name, or `none(<reason>)` declaring that no roster author
+/// writes it (Task 5, The Attestation).
 ///
 /// # Direction this check enforces
 ///
@@ -128,6 +189,12 @@ fn the_declared_list_is_not_empty() {
 /// the same blindness `every_declared_generated_path_is_tracked` documents,
 /// and for the same reason: nothing enumerates this repository's generated
 /// output independently of this file.
+///
+/// A malformed `none` (no reason) never reaches this test at all —
+/// `declared()` panics on it first, because that is a parse error, not a
+/// reporting-worthy fact about the roster. What this test catches is
+/// different: an author that is neither a roster name NOR a well-formed
+/// `none(...)`, e.g. a typo or an invented label.
 #[test]
 fn every_declared_path_names_a_known_author() {
     // The roster's own set names, NOT invented labels: an author name IS a
@@ -135,14 +202,14 @@ fn every_declared_path_names_a_known_author() {
     const KNOWN: &[&str] = &["artifacts", "census", "heavy"];
     let bad: Vec<String> = declared()
         .into_iter()
-        .filter(|(_, author)| !KNOWN.contains(&author.as_str()))
+        .filter(|(_, author)| !KNOWN.contains(&author.as_str()) && none_reason(author).is_none())
         .map(|(p, a)| format!("{p} -> {a:?}"))
         .collect();
     assert!(
         bad.is_empty(),
         "docs/generated-paths.txt rows whose author is missing or unknown \
-         (known: {KNOWN:?}). A declared generated path with no author is a \
-         claim about this repository that nothing can check:\n  {}",
+         (known: {KNOWN:?}, or `none(<reason>)`). A declared generated path with no \
+         recognised author is a claim about this repository that nothing can check:\n  {}",
         bad.join("\n  ")
     );
 }
@@ -190,6 +257,17 @@ fn claude_md_files() -> Vec<(String, String)> {
 ///
 /// Threshold two, not one, deliberately: a guide naming a single generated
 /// directory while explaining it is exactly what these files are for.
+///
+/// NESTED STEMS DON'T DOUBLE-COUNT (Task 5, The Attestation). Splitting a
+/// directory row into per-file exceptions means a stem like
+/// `docs/digest/facts.jsonl` now sits inside an already-declared parent
+/// stem, `docs/digest` — so a line naming ONE file (`docs/digest/facts.jsonl
+/// is the compacted...`) trivially also "contains" its own parent's stem as
+/// a prefix, which would count as 2 distinct paths named by a naive
+/// substring tally even though the line mentions exactly one thing. A
+/// matched stem that is a proper substring of another ALSO-matched, longer
+/// stem on the same line is dropped before counting — it is a fragment of
+/// the longer match, not a second distinct reference.
 #[test]
 fn no_claude_md_restates_the_declared_path_list() {
     // Match on the slash-stripped stem so `book/src/gallery` and
@@ -211,9 +289,17 @@ fn no_claude_md_restates_the_declared_path_list() {
             // `has_seed_closure` is a raw substring scan over the body text
             // and does not skip comments. Hence the circumlocution here: this
             // note cannot spell the offending token it is about.
-            let named = stems
+            let matched: Vec<&String> = stems
                 .iter()
                 .filter(|stem| line.contains(stem.as_str()))
+                .collect();
+            let named = matched
+                .iter()
+                .filter(|stem| {
+                    !matched
+                        .iter()
+                        .any(|other| other.len() > stem.len() && other.contains(stem.as_str()))
+                })
                 .count();
             if named >= 2 {
                 offenders.push(format!("{}:{} names {} declared paths", path, n + 1, named));
@@ -334,7 +420,82 @@ fn source_for_author(author: &str) -> &'static str {
     }
 }
 
-/// Every declared path must be one its declared **author** actually writes.
+/// Every distinct source file a roster author's writes are found in. Used to
+/// check a `none(...)` declaration for staleness: a path declared absent
+/// must not appear, by either matching rule below, in ANY of these, not just
+/// the one source its (nonexistent) roster author would map to.
+const KNOWN_SOURCES: &[&str] = &[
+    "scripts/regenerate-artifacts.sh",
+    "cli/tests/suite/history_battery.rs",
+];
+
+/// Whether `source`'s text can be read as writing `path`.
+///
+/// The baseline rule is the literal substring match this check has always
+/// used (see `every_declared_generated_path_is_written_by_its_author`'s own
+/// doc comment for what that rule cannot see). Task 5 needed a second rule
+/// for one specific, narrow case, found while splitting `book/src/
+/// laboratory/` into per-study rows: `scripts/regenerate-artifacts.sh`
+/// invokes a lab study as `lab run studies/<name>.study.json`, and the
+/// convention that its OUTPUT lands at `book/src/laboratory/generated/
+/// <name>/` lives in `windows/lab`'s Rust, not as a literal path in the
+/// shell script — exactly the "future artifact written through a shell
+/// variable" case the module doc already named as a known false-positive
+/// shape. Falling back to the bare STUDY NAME for a path under that one
+/// directory convention is a real, narrow, non-vacuous signal, not a general
+/// weakening of the check: Task 5 verified that every currently-automated
+/// study name (`the-chorus`, `the-census`, `census-of-the-meeting`) appears
+/// literally in `scripts/regenerate-artifacts.sh` — via its own `lab run
+/// studies/<name>.study.json` call, or (for the two census schemas) the
+/// schema-backfill loop's `for study in the-census census-of-the-meeting`
+/// list — and that NONE of the nine frozen study names, nor `the-sounding`,
+/// appears anywhere in either known source. So the fallback stays a
+/// falsifiable ratchet: automate a frozen study again and its name starts
+/// appearing, catching a `none(...)` row gone stale; retire an automated
+/// study's `lab run` call and its name disappears, catching the row that
+/// should have been downgraded to `none(...)` and was not.
+fn source_writes_path(path: &str, source: &str) -> bool {
+    if source.contains(path) {
+        return true;
+    }
+    if let Some(rest) = path.strip_prefix("book/src/laboratory/generated/") {
+        let name = rest.trim_end_matches('/').split('/').next().unwrap_or("");
+        if !name.is_empty() && source.contains(name) {
+            return true;
+        }
+    }
+    false
+}
+
+/// `source` with comment-only lines dropped — lines whose trimmed start is
+/// `#` (bash) or `//` (Rust). Good enough for this file's two known sources
+/// without a general comment parser; used ONLY for the `none(...)`
+/// staleness check below, never for the roster-author check above, which
+/// keeps its long-standing (weaker, documented) behaviour of accepting a
+/// comment mention as evidence.
+///
+/// WHY THE TWO CHECKS WANT OPPOSITE LENIENCE: the roster-author check is
+/// safe to fool with a mere mention — that direction already fails *safe*
+/// (a false "written" reads as fine when it might not be). The staleness
+/// check is not: `book/src/gallery/surrounds-seed-42.md` is declared
+/// `none(...)` precisely BECAUSE `scripts/regenerate-artifacts.sh:776-777`
+/// says, in a comment, that it is hand-authored and never regenerated — the
+/// very sentence proving the `none(...)` row correct also contains the
+/// path's literal text, which would read as "now written" under the plain
+/// rule and falsely redden an accurate declaration.
+fn non_comment_text(source: &str) -> String {
+    source
+        .lines()
+        .filter(|line| {
+            let trimmed = line.trim_start();
+            !(trimmed.starts_with('#') || trimmed.starts_with("//"))
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+/// Every declared path must be one its declared **author** actually writes —
+/// or, for a `none(<reason>)` row, one that NO known author writes.
 ///
 /// The list's whole purpose is "this author's invocation produces it, so a
 /// stale copy is a bookkeeping failure that invocation fixes on its own". A
@@ -344,38 +505,83 @@ fn source_for_author(author: &str) -> &'static str {
 /// `kernel/src/golden.rs` — declaring it invites the chamber to commit drift
 /// that a human was supposed to review.
 ///
-/// WHAT SUBSTRING MATCHING CANNOT SEE, FIRST DIRECTION (inherited from the
+/// WHAT MATCHING CANNOT SEE, FIRST DIRECTION (inherited from the
 /// single-script version of this check): a future artifact written through a
-/// shell variable (`"$out_dir/foo.md"`) would read as undeclared-by-the-
-/// author and redden this test even though regeneration does produce it —
-/// a false positive, so it fails *safe*.
+/// shell variable would read as undeclared-by-the-author and redden this
+/// test even though regeneration does produce it — a false positive, so it
+/// fails *safe*. `source_writes_path` closes the one instance of this Task 5
+/// actually hit (the lab-study output-directory convention); it does not
+/// close the shape in general.
 ///
-/// SECOND DIRECTION, FOUND BY THIS CAMPAIGN: this check is satisfied at
-/// DIRECTORY granularity while most files beneath stay unwritten by the
-/// declared author. `docs/generated-path-authors.md` (Task 1) measured 814
-/// of 825 tracked files under `book/src/laboratory/` left untouched by a
+/// SECOND DIRECTION, FOUND BY THE ATTESTATION AND FIXED BY TASK 5: this
+/// check used to be satisfied at DIRECTORY granularity while most files
+/// beneath stayed unwritten by the declared author.
+/// `docs/generated-path-authors.md` (Task 1) measured 814 of 825 tracked
+/// files under the old single `book/src/laboratory/` row left untouched by a
 /// plain `make rebaseline` run — 682 authored only by `census`, 2 only by
 /// `heavy`, and the rest hand-written or authored by nothing currently in
-/// the tree — while this test, seeing only the row's single declared
-/// `artifacts` value, stays green throughout. That is a FALSE NEGATIVE, the
-/// opposite direction from the one above, and it fails *unsafe*: neither
-/// this check nor `every_declared_path_names_a_known_author` can catch it,
-/// because both operate on the row's one declared value, never on the files
-/// underneath it.
+/// the tree. Task 5 replaced that one row (and four siblings with the same
+/// shape) with per-file/per-subdirectory rows naming the TRUE author of
+/// each — often `none(...)` — so the row-level check this test performs is
+/// now checking something true, not merely something this test could not
+/// see through. The remaining, accepted blind spot is narrower: a directory
+/// row's author is read as "true for every file under it not more
+/// specifically declared elsewhere" (precedence: longest matching declared
+/// path wins), which this test — being row-scoped, not file-scoped — cannot
+/// verify by itself; `docs/generated-path-authors.md` and
+/// `docs/generated-path-writes.tsv` are what Task 5's report checked that
+/// precedence claim against, by hand, per row.
+///
+/// THIRD DIRECTION: a `none(<reason>)` row asserts an ABSENCE, and an
+/// absence can go stale exactly the way seam-guard's `expect(survives: ...)`
+/// does — the moment some author starts writing the path, the declaration
+/// is no longer true and must be upgraded to name that author. This test
+/// checks every `none(...)` row against every known source
+/// (`KNOWN_SOURCES`), not just the one its (nonexistent) roster author would
+/// map to, and fails loudly on the first one that has started being
+/// written — the mirror image of the roster-author check just above it.
 #[test]
 fn every_declared_generated_path_is_written_by_its_author() {
     let root = repo_root();
-
-    let undeclared: Vec<String> = declared()
-        .into_iter()
-        .filter(|(path, author)| {
-            let source_path = source_for_author(author);
-            let source = std::fs::read_to_string(root.join(source_path))
+    let sources: Vec<(&str, String)> = KNOWN_SOURCES
+        .iter()
+        .map(|&source_path| {
+            let text = std::fs::read_to_string(root.join(source_path))
                 .unwrap_or_else(|e| panic!("reading {source_path}: {e}"));
-            !source.contains(path.as_str())
+            (source_path, text)
         })
-        .map(|(p, a)| format!("{p} (author {a:?})"))
         .collect();
+    let source_text = |source_path: &str| -> &str {
+        &sources
+            .iter()
+            .find(|(p, _)| *p == source_path)
+            .unwrap_or_else(|| panic!("no known source loaded for {source_path:?}"))
+            .1
+    };
+
+    let non_comment_sources: Vec<String> = sources
+        .iter()
+        .map(|(_, text)| non_comment_text(text))
+        .collect();
+
+    let mut undeclared: Vec<String> = Vec::new();
+    let mut stale_none: Vec<String> = Vec::new();
+
+    for (path, author) in declared() {
+        if let Some(reason) = none_reason(&author) {
+            if non_comment_sources
+                .iter()
+                .any(|text| source_writes_path(&path, text))
+            {
+                stale_none.push(format!("{path} (declared none({reason:?}))"));
+            }
+            continue;
+        }
+        let source_path = source_for_author(&author);
+        if !source_writes_path(&path, source_text(source_path)) {
+            undeclared.push(format!("{path} (author {author:?})"));
+        }
+    }
 
     assert!(
         undeclared.is_empty(),
@@ -389,5 +595,16 @@ fn every_declared_generated_path_is_written_by_its_author() {
          change. See the header of docs/generated-paths.txt.",
         undeclared.len(),
         undeclared,
+    );
+
+    assert!(
+        stale_none.is_empty(),
+        "docs/generated-paths.txt declares {} path(s) `none(<reason>)` that a known author's \
+         source NOW writes: {:?}\n\
+         A `none(...)` declaration is a claim that NO roster author writes this path — the \
+         same one-directional-declaration rot seam-guard's STALE-DECL verdict exists to catch. \
+         Give the path a real author instead of `none(...)`.",
+        stale_none.len(),
+        stale_none,
     );
 }
