@@ -8,43 +8,34 @@
 <text x="50" y="86.0" font-size="11" fill="currentColor" opacity="0.75" text-anchor="end">750</text>
 <line x1="56.0" y1="36.0" x2="624.0" y2="36.0" stroke="currentColor" stroke-opacity="0.15" stroke-width="1" />
 <text x="50" y="36.0" font-size="11" fill="currentColor" opacity="0.75" text-anchor="end">1000</text>
-<rect x="59.3" y="234.4" width="37.1" height="1.6" fill="#5b8dd9" rx="2" />
-<text x="77.8" y="230.4" font-size="11" fill="currentColor" text-anchor="middle">8</text>
-<text x="77.8" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 77.8 252.0)">alpine</text>
-<rect x="103.0" y="235.8" width="37.1" height="0.2" fill="#5b8dd9" rx="2" />
-<text x="121.5" y="231.8" font-size="11" fill="currentColor" text-anchor="middle">1</text>
-<text x="121.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 121.5 252.0)">coral-reef</text>
-<rect x="146.7" y="235.4" width="37.1" height="0.6" fill="#5b8dd9" rx="2" />
-<text x="165.2" y="231.4" font-size="11" fill="currentColor" text-anchor="middle">3</text>
-<text x="165.2" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 165.2 252.0)">epipelagic</text>
-<rect x="190.4" y="235.4" width="37.1" height="0.6" fill="#5b8dd9" rx="2" />
-<text x="208.9" y="231.4" font-size="11" fill="currentColor" text-anchor="middle">3</text>
-<text x="208.9" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 208.9 252.0)">kelp-forest</text>
-<rect x="234.0" y="235.2" width="37.1" height="0.8" fill="#5b8dd9" rx="2" />
-<text x="252.6" y="231.2" font-size="11" fill="currentColor" text-anchor="middle">4</text>
-<text x="252.6" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 252.6 252.0)">savanna</text>
-<rect x="277.7" y="235.8" width="37.1" height="0.2" fill="#5b8dd9" rx="2" />
-<text x="296.3" y="231.8" font-size="11" fill="currentColor" text-anchor="middle">1</text>
-<text x="296.3" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 296.3 252.0)">shrubland</text>
-<rect x="321.4" y="193.4" width="37.1" height="42.6" fill="#5b8dd9" rx="2" />
-<text x="340.0" y="189.4" font-size="11" fill="currentColor" text-anchor="middle">213</text>
-<text x="340.0" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 340.0 252.0)">taiga</text>
-<rect x="365.1" y="129.0" width="37.1" height="107.0" fill="#5b8dd9" rx="2" />
-<text x="383.7" y="125.0" font-size="11" fill="currentColor" text-anchor="middle">535</text>
-<text x="383.7" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 383.7 252.0)">temperate-forest</text>
-<rect x="408.8" y="234.4" width="37.1" height="1.6" fill="#5b8dd9" rx="2" />
-<text x="427.4" y="230.4" font-size="11" fill="currentColor" text-anchor="middle">8</text>
-<text x="427.4" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 427.4 252.0)">temperate-rainforest</text>
-<rect x="452.5" y="234.0" width="37.1" height="2.0" fill="#5b8dd9" rx="2" />
-<text x="471.1" y="230.0" font-size="11" fill="currentColor" text-anchor="middle">10</text>
-<text x="471.1" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 471.1 252.0)">tropical-rainforest</text>
-<rect x="496.2" y="193.6" width="37.1" height="42.4" fill="#5b8dd9" rx="2" />
-<text x="514.8" y="189.6" font-size="11" fill="currentColor" text-anchor="middle">212</text>
-<text x="514.8" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 514.8 252.0)">tropical-seasonal-forest</text>
-<rect x="539.9" y="235.8" width="37.1" height="0.2" fill="#5b8dd9" rx="2" />
-<text x="558.5" y="231.8" font-size="11" fill="currentColor" text-anchor="middle">1</text>
-<text x="558.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 558.5 252.0)">upwelling</text>
-<rect x="583.6" y="235.8" width="37.1" height="0.2" fill="#5b8dd9" rx="2" />
-<text x="602.2" y="231.8" font-size="11" fill="currentColor" text-anchor="middle">1</text>
-<text x="602.2" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 602.2 252.0)">absent</text>
+<rect x="60.3" y="234.4" width="48.3" height="1.6" fill="#5b8dd9" rx="2" />
+<text x="84.4" y="230.4" font-size="11" fill="currentColor" text-anchor="middle">8</text>
+<text x="84.4" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 84.4 252.0)">alpine</text>
+<rect x="117.1" y="235.4" width="48.3" height="0.6" fill="#5b8dd9" rx="2" />
+<text x="141.2" y="231.4" font-size="11" fill="currentColor" text-anchor="middle">3</text>
+<text x="141.2" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 141.2 252.0)">epipelagic</text>
+<rect x="173.9" y="235.6" width="48.3" height="0.4" fill="#5b8dd9" rx="2" />
+<text x="198.0" y="231.6" font-size="11" fill="currentColor" text-anchor="middle">2</text>
+<text x="198.0" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 198.0 252.0)">kelp-forest</text>
+<rect x="230.7" y="235.2" width="48.3" height="0.8" fill="#5b8dd9" rx="2" />
+<text x="254.8" y="231.2" font-size="11" fill="currentColor" text-anchor="middle">4</text>
+<text x="254.8" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 254.8 252.0)">savanna</text>
+<rect x="287.5" y="190.6" width="48.3" height="45.4" fill="#5b8dd9" rx="2" />
+<text x="311.6" y="186.6" font-size="11" fill="currentColor" text-anchor="middle">227</text>
+<text x="311.6" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 311.6 252.0)">taiga</text>
+<rect x="344.3" y="130.8" width="48.3" height="105.2" fill="#5b8dd9" rx="2" />
+<text x="368.4" y="126.8" font-size="11" fill="currentColor" text-anchor="middle">526</text>
+<text x="368.4" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 368.4 252.0)">temperate-forest</text>
+<rect x="401.1" y="233.6" width="48.3" height="2.4" fill="#5b8dd9" rx="2" />
+<text x="425.2" y="229.6" font-size="11" fill="currentColor" text-anchor="middle">12</text>
+<text x="425.2" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 425.2 252.0)">temperate-rainforest</text>
+<rect x="457.9" y="233.8" width="48.3" height="2.2" fill="#5b8dd9" rx="2" />
+<text x="482.0" y="229.8" font-size="11" fill="currentColor" text-anchor="middle">11</text>
+<text x="482.0" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 482.0 252.0)">tropical-rainforest</text>
+<rect x="514.7" y="195.0" width="48.3" height="41.0" fill="#5b8dd9" rx="2" />
+<text x="538.8" y="191.0" font-size="11" fill="currentColor" text-anchor="middle">205</text>
+<text x="538.8" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 538.8 252.0)">tropical-seasonal-forest</text>
+<rect x="571.5" y="235.6" width="48.3" height="0.4" fill="#5b8dd9" rx="2" />
+<text x="595.6" y="231.6" font-size="11" fill="currentColor" text-anchor="middle">2</text>
+<text x="595.6" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 595.6 252.0)">upwelling</text>
 </svg>
