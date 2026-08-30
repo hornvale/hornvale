@@ -96,7 +96,7 @@ pub use clause::{
     Person, Polarity, PronounCase, PronounRow, Subject, Tense, VERB_PARADIGM, Valence, VerbRow,
     common_pronoun, nominative_person, parse_common, parse_common_with_tail, predicate_valence,
     realize_common, realize_common_coordination, realize_common_discourse,
-    realize_common_polar_question, realize_common_verbless,
+    realize_common_existential, realize_common_polar_question, realize_common_verbless,
 };
 pub use common_vocab::{CommonVocabulary, MissingCommonWords};
 pub use etymology::{

@@ -2214,6 +2214,135 @@ pub fn realize_common_verbless(clause: &Clause, vocab: &CommonVocabulary) -> Str
     emit_parts(&strip_copula(construction.parts), clause, vocab, true)
 }
 
+/// One [`Valence::Locative`] construction's part list, fronted into the
+/// existential frame — the same "swap slots, add no literal beyond the one
+/// this operator itself needs" discipline [`invert_for_question`] already
+/// has for polar force, one argument-fronting axis over (Freeze 1992).
+///
+/// **What moves, precisely.** Every locative construction opens
+/// `[Subject, Literal(" "), Copula, Literal(" "), PredicateWord, …]`
+/// (`LOCATIVE`, [`common_constructions`]). This drops the fronted subject
+/// out of its own leading slot, puts the dummy pivot `Literal("there")`
+/// there instead, and reinserts [`Part::Subject`] immediately after the
+/// copula — *"there is `<subject>` under `<complement>`"* — leaving every
+/// part from the adposition onward ([`Part::PredicateWord`],
+/// [`Part::Determiner`], [`Part::Complement`], [`Part::ModifierTail`], the
+/// terminal `Literal(".")`) exactly where [`common_constructions`] already
+/// put it. Exactly one literal is added (the dummy pivot); nothing is
+/// rebuilt from scratch, the same property [`invert_for_question`]'s own
+/// doc states for its own axis.
+///
+/// Panics if `parts` carries no [`Part::Subject`] or no [`Part::Copula`], or
+/// if the subject does not precede the copula — checked here rather than
+/// assumed, even though the caller ([`realize_common_existential`]) only
+/// ever hands this a [`Valence::Locative`] construction, where both hold
+/// for every row [`common_constructions`] builds today.
+fn front_existential(parts: &[Part]) -> Vec<Part> {
+    let subject_at = parts
+        .iter()
+        .position(|p| *p == Part::Subject)
+        .expect("a locative construction has a subject slot");
+    let copula_at = parts
+        .iter()
+        .position(|p| *p == Part::Copula)
+        .expect("a locative construction has a copula slot");
+    assert!(
+        subject_at < copula_at,
+        "every construction places the subject before the copula \
+         (common_constructions); found subject at {subject_at} and copula \
+         at {copula_at}, which this operator does not know how to front"
+    );
+    let mut fronted = Vec::with_capacity(parts.len() + 2);
+    fronted.push(Part::Literal("there"));
+    // `parts[subject_at + 1..=copula_at]` is `[Literal(" "), Copula]` on
+    // every construction this runs against — the separator that already
+    // sat between the old subject and the copula, carried over unchanged so
+    // "there" gets the identical spacing the old subject had.
+    fronted.extend_from_slice(&parts[subject_at + 1..=copula_at]);
+    fronted.push(Part::Literal(" "));
+    fronted.push(Part::Subject);
+    fronted.extend_from_slice(&parts[copula_at + 1..]);
+    fronted
+}
+
+/// Realize a [`Clause`] at [`Valence::Locative`] as a Common **existential**
+/// — *"there is a person under the tree."* — by fronting its own
+/// construction rather than by spelling a second surface.
+///
+/// # Freeze (1992): a transformation over a locative clause, not a sixth `Valence`
+///
+/// [`Valence`] stays closed at five (Global Constraint 1, decision 0326):
+/// existential, locative and possessive predication are one construction
+/// with different arguments fronted, so this needs no new row in
+/// [`PREDICATE_VALENCE`] and no new [`Valence`] variant — the identical
+/// "transformation, not a table row" move [`realize_common_polar_question`]
+/// makes for force and [`realize_common_verbless`] makes for strategy, this
+/// campaign's third instance of the same shape, one argument-structure axis
+/// over. [`Valence::Locative`]'s own doc refuses the inference that its
+/// existence alone unlocks this rung in advance — this function is what
+/// makes good on that refusal: existential predication is *built*, but
+/// built as an operator that consumes a locative clause, never as a
+/// property of the valence itself.
+///
+/// # The definiteness effect is EXPRESSIBLE here, not ENFORCED
+///
+/// Freeze's rung note states the effect existentials are named for:
+/// *"the definiteness effect (existentials resist definite pivots) is why
+/// r007 is also needed: the constraint cannot be stated without the
+/// category."* This function does not state it, and the reason is where the
+/// pivot's definiteness actually lives. [`Clause::definiteness`] governs the
+/// GROUND — the object slot [`Part::Determiner`] renders (*"**the** tree"*)
+/// — never the pivot: there is exactly one [`Part::Determiner`] in this
+/// grammar and it reads `spec.object`/`spec.definiteness`, not
+/// `spec.subject`. The pivot fronted here is whatever [`Subject::Name`]
+/// text the caller already resolved (*"a person"*), a literal string this
+/// domain cannot inspect for its own article. So a caller CAN write
+/// `Subject::Name("the person".to_string())` and this function will front
+/// it exactly as readily as an indefinite one — *"there is the person under
+/// the tree."*, oddly grammatical Common and ungrammatical English, emitted
+/// rather than refused.
+///
+/// **Deliberately not routed through [`Discourse`]/[`DiscourseClause`] to
+/// close this gap.** [`discourse_subject_is_repeat_mention`] is the only
+/// machinery in this crate that DERIVES a subject's article from referent
+/// identity, so it is the only thing that could refuse (or correct) a
+/// definite pivot here — but spec §3.5 scopes Task 4's structure as
+/// "consulted, not built on" for this task, and `Discourse` tracks
+/// definiteness across a SEQUENCE of clauses about a recurring referent,
+/// which is a different phenomenon from a single existential clause's own
+/// pivot. Reaching for it here would widen this task's dependency on a
+/// structure built for a different axis, for a check this function can
+/// instead simply state as a stated limit — the same "expressible, not
+/// enforced" posture is honest and cheap where forcing composition would
+/// not obviously be correct. A future campaign that wants the effect
+/// ENFORCED has a real design question to answer first: whether an
+/// existential's pivot should be [`Discourse`]-tracked at all, or whether
+/// it needs its own, narrower derivation.
+///
+/// # A non-locative valence is REFUSED, loudly
+///
+/// Rendering a non-[`Valence::Locative`] clause through this operator would
+/// front a relation the clause does not have — the "plausible garbage"
+/// class every transformation in this module refuses rather than emits
+/// (The Rail, Task 9's review, naming the pattern this module's own fifth
+/// instance of it would otherwise have been).
+///
+/// Panics if `clause.predicate` is not at [`Valence::Locative`].
+/// type-audit: bare-ok(prose)
+pub fn realize_common_existential(clause: &Clause, vocab: &CommonVocabulary) -> String {
+    assert_eq!(
+        predicate_valence(&clause.predicate),
+        Some(Valence::Locative),
+        "an existential fronts a LOCATIVE clause (Freeze 1992); predicate \
+         {:?} is at a different valence, and rendering it through this \
+         operator would front a relation the clause does not have — refused \
+         rather than emitted",
+        clause.predicate
+    );
+    let construction = common_construction_for(clause);
+    emit_parts(&front_existential(construction.parts), clause, vocab, true)
+}
+
 /// One clause in a [`Discourse`], carrying the concept id its subject
 /// refers to instead of an already-resolved [`Subject`].
 ///
@@ -4005,6 +4134,99 @@ mod tests {
             realize_common_verbless(&clause, &vocab),
             "the person under the tree."
         );
+    }
+
+    /// r104 `existential`. Freeze (1992): existential, locative and
+    /// possessive predication are one construction with different arguments
+    /// fronted — so this is a TRANSFORMATION over a locative clause, in the
+    /// shape [`realize_common_polar_question`] already has, and NOT a sixth
+    /// [`Valence`]. [`Valence::Locative`]'s own doc refuses that inference
+    /// in advance: it "grants no dispensation for r019 or r104 on its own".
+    ///
+    /// **Substitution:** the rung's text is *"There is a body in the
+    /// marketplace."*; `body` and `marketplace` are registered nowhere.
+    /// `person` is the pivot and `under`/`tree` the location.
+    ///
+    /// **The pivot's own indefiniteness is not what this test pins.** The
+    /// pivot text (*"a person"*) is a literal string, baked in by the
+    /// caller — this domain cannot inspect a `Subject::Name` for its own
+    /// article (see [`realize_common_existential`]'s own doc, "The
+    /// definiteness effect is EXPRESSIBLE here, not ENFORCED"). What this
+    /// test pins instead is [`Clause::definiteness`], which governs the
+    /// GROUND (*"**the** tree"*), not the pivot — `Definiteness::Def` is
+    /// correct here for exactly that reason, not `Indef`: the object slot
+    /// is the one thing this field actually controls, and the rung's own
+    /// text has a definite ground (*"in **the** marketplace"*).
+    #[test]
+    fn an_existential_fronts_a_locative_and_takes_an_indefinite_pivot() {
+        let vocab = CommonVocabulary::default();
+        let clause = Clause {
+            predicate: UNDER.to_string(),
+            subject: Subject::Name("a person".to_string()),
+            object: Argument::Concept("tree".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        assert_eq!(
+            realize_common_existential(&clause, &vocab),
+            "there is a person under the tree."
+        );
+    }
+
+    /// The definiteness-effect control, by value: a `Def` PIVOT — a
+    /// `Subject::Name` text that already bakes in a definite article — is
+    /// not refused. It renders exactly as readily as the indefinite pivot
+    /// above, because the pivot's article lives inside the literal string
+    /// this function cannot inspect (see [`realize_common_existential`]'s
+    /// own doc). Pinned by value so the odd output is RECORDED, per the
+    /// task brief's own branch table, rather than rediscovered the next
+    /// time someone reads this function and assumes the effect is
+    /// enforced.
+    #[test]
+    fn a_definite_pivot_renders_rather_than_being_refused() {
+        let vocab = CommonVocabulary::default();
+        let clause = Clause {
+            predicate: UNDER.to_string(),
+            subject: Subject::Name("the person".to_string()),
+            object: Argument::Concept("tree".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        assert_eq!(
+            realize_common_existential(&clause, &vocab),
+            "there is the person under the tree."
+        );
+    }
+
+    /// A non-locative clause is refused, loudly, rather than fronting a
+    /// relation the clause does not have — the same fail-fast posture
+    /// [`realize_common_polar_question`] takes for a lexical-verb
+    /// construction and [`realize_common_verbless`] takes for one with no
+    /// copula.
+    #[test]
+    #[should_panic(expected = "fronts a LOCATIVE clause")]
+    fn a_non_locative_clause_is_refused_by_the_existential_operator() {
+        let vocab = CommonVocabulary::default();
+        let clause = Clause {
+            predicate: SLEEP.to_string(),
+            subject: Subject::Name("the person".to_string()),
+            object: Argument::Absent,
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: Vec::new(),
+        };
+        let _ = realize_common_existential(&clause, &vocab);
     }
 
     /// r007 `definiteness`: first mention indefinite, second mention
