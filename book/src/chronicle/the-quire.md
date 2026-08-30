@@ -196,6 +196,25 @@ not carry the distinction, and a client that renders only the emitted contract
 has now proved it insufficient for this element. It remains an open question,
 and this campaign is evidence for it rather than a resolution of it.
 
+> **Resolved by The Gallery (2026-08-29), and this note is loud because the
+> paragraph above is where the question was first asked.** Every clause of it
+> is now false for the underground band. The wire carries `band: "underground"`
+> with its own `vessel/level/v1` document, so the distinction no longer lives
+> "inside the prose"; `Ways on: out.` was deleted once `go` could walk a
+> generated level; and the client renders the band from the emitted contract
+> without parsing a word of narration — the boundary this crate exists not to
+> cross was never crossed to fix it.
+>
+> The finding was right and the diagnosis was right: the emitted contract
+> genuinely was insufficient, and the fix was made in the simulation exactly
+> where this paragraph said it had to be. What is corrected here is only the
+> tense. `clients/game/bin/src/driver.rs` carried the same claim and received
+> its own correction during that campaign; this is the document that claim came
+> from, and leaving it uncorrected would send a reader tracing the provenance
+> back to a resolved question presented as open. `submerged` still folds into
+> `walk`, deliberately — the water column has no lattice to step across — so the
+> question above survives for that band alone.
+
 The proposed fix was to make the simulation emit the exits as a structured
 field — additive, cheap, and it would have removed the defect by construction.
 It was argued for at length, including an argument that a described opening

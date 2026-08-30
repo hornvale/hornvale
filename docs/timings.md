@@ -4022,6 +4022,17 @@ measured here.
 | 2026-08-29T13:29:01Z | sluice:outboard | 40.477 | 25.314 | 38.766 | 1.58 | 0 | 61c7211ca |  | lefford | 40 |
 | 2026-08-29T13:39:08Z | sluice:gate | 606.095 | 14404.998 | 533.969 | 24.65 | 0 | f2f7ca064 |  | lefford | 40 |
 | 2026-08-29T13:47:59Z | sluice:clients | 530.784 | 9563.668 | 92.753 | 18.19 | 0 | 102e2992f |  | lefford | 40 |
+| 2026-08-29T13:58:17Z | prewarm | 495.319 | 1779.083 | 106.596 | 3.81 | 0 | 430d9541c | campaign/the-lodestar | ambrose | 12 |
+| 2026-08-30T12:56:19Z | gate-commit | 115.970 | 112.476 | 36.303 | 1.28 | 0 | 597c576d2 | campaign/the-lodestar | ambrose | 12 |
+| 2026-08-30T12:58:05Z | gate-commit | 82.249 | 50.507 | 24.115 | 0.91 | 0 | 597c576d2 | campaign/the-lodestar | ambrose | 12 |
+| 2026-08-30T12:58:33Z | game-check | 0.331 | 0.088 | 0.067 | 0.47 | 0 | 597c576d2 | campaign/the-lodestar | ambrose | 12 |
+| 2026-08-30T13:12:25Z | game-check | 820.505 | 3898.181 | 91.721 | 4.86 | 0 | 597c576d2 | campaign/the-lodestar | ambrose | 12 |
+| 2026-08-30T13:13:54Z | gate-commit | 82.869 | 50.331 | 24.337 | 0.90 | 0 | 597c576d2 | campaign/the-lodestar | ambrose | 12 |
+| 2026-08-30T13:17:31Z | gate-commit | 86.099 | 51.398 | 26.075 | 0.90 | 0 | 597c576d2 | campaign/the-lodestar | ambrose | 12 |
+| 2026-08-30T13:19:10Z | gate-commit | 84.328 | 50.800 | 25.190 | 0.90 | 0 | 296a50e01 | campaign/the-lodestar | ambrose | 12 |
+| 2026-08-30T13:21:03Z | gate-commit | 84.095 | 50.889 | 25.281 | 0.91 | 0 | 1ba9cc411 | campaign/the-lodestar | ambrose | 12 |
+| 2026-08-30T13:22:38Z | gate-commit | 83.828 | 50.483 | 24.861 | 0.90 | 0 | aa97325dd | campaign/the-lodestar | ambrose | 12 |
+| 2026-08-30T13:35:50Z | game-check | 769.221 | 3816.688 | 74.704 | 5.06 | 0 | 1be0bad69 | campaign/the-lodestar | ambrose | 12 |
 | 2026-08-29T13:49:30Z | sluice:artifacts | 67.873 | 653.875 | 25.401 | 10.01 | 0 | 8053bb5ed |  | lefford | 40 |
 | 2026-08-29T13:50:10Z | sluice:outboard | 40.263 | 25.075 | 38.768 | 1.59 | 0 | 6e9cec370 |  | lefford | 40 |
 | 2026-08-29T13:57:48Z | sluice:gate | 457.894 | 13476.189 | 420.803 | 30.35 | 0 | 232719baa |  | lefford | 40 |
@@ -4132,3 +4143,15 @@ measured here.
 | 2026-08-30T14:18:33Z | gate-commit | 26.047 | 30.896 | 5.893 | 1.41 | 0 | f474fd011 | campaign/the-winze | MacBookPro | 10 |
 | 2026-08-30T15:26:01Z | gate-commit | 30.204 | 53.588 | 13.697 | 2.23 | 0 | f474fd011 | campaign/the-winze | MacBookPro | 10 |
 | 2026-08-30T15:40:09Z | gate-commit | 41.409 | 56.729 | 14.461 | 1.72 | 0 | f474fd011 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-30T13:30:33Z | gate-commit | 22.274 | 51.740 | 13.350 | 2.92 | 0 | c41c9753a | fix/the-quoin-close-sweep | MacBookPro | 10 |
+| 2026-08-30T13:33:21Z | sluice:artifacts | 68.506 | 631.188 | 22.430 | 9.54 | 0 | 80c4efc46 |  | lefford | 40 |
+| 2026-08-30T13:34:03Z | sluice:outboard | 41.103 | 26.054 | 39.252 | 1.59 | 0 | 247928279 |  | lefford | 40 |
+| 2026-08-30T13:41:38Z | sluice:gate | 454.586 | 13525.684 | 422.369 | 30.68 | 0 | 849b27ca9 |  | lefford | 40 |
+| 2026-08-30T13:49:47Z | rebaseline | 189.122 | 324.501 | 19.890 | 1.82 | 0 | 87b58d64a | campaign/the-lodestar | ambrose | 12 |
+| 2026-08-30T13:54:39Z | gate-commit | 283.374 | 709.245 | 86.735 | 2.81 | 0 | 87b58d64a | campaign/the-lodestar | ambrose | 12 |
+| 2026-08-30T15:00:36Z | gate-commit | 85.028 | 52.893 | 25.858 | 0.93 | 0 | 665b5ef95 | campaign/the-lodestar | ambrose | 12 |
+| 2026-08-30T15:03:34Z | sluice:artifacts | 95.670 | 757.994 | 30.166 | 8.24 | 0 | 09fc09267 |  | lefford | 40 |
+| 2026-08-30T15:04:16Z | sluice:outboard | 40.832 | 25.577 | 39.582 | 1.60 | 0 | 819b72828 |  | lefford | 40 |
+| 2026-08-30T15:12:05Z | sluice:gate | 469.603 | 13586.927 | 456.049 | 29.90 | 0 | bb13856e3 |  | lefford | 40 |
+| 2026-08-30T15:20:39Z | sluice:clients | 512.885 | 9863.714 | 106.644 | 19.44 | 0 | 762c42e09 |  | lefford | 40 |
+| 2026-08-30T15:28:16Z | sluice:heavy | 456.862 | 9591.172 | 160.268 | 21.34 | 0 | 2ff6f2851 |  | lefford | 40 |

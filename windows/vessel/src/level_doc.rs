@@ -693,21 +693,47 @@ mod tests {
 
     #[test]
     fn depth_m_is_quantized_at_the_emit_boundary() {
+        // Copied from `snapshot.rs`'s own quantization test, and it
+        // inherited that test's defect: a naive `contains("0.33333333")`
+        // passes with or without quantization, since the RAW `f64` for
+        // 1/3 serializes as `0.3333333333333333`, which contains that
+        // substring too. This instead checks the field's own bounded
+        // serialization and proves the raw form is genuinely excluded,
+        // computing both reprs from `quantize` itself rather than a
+        // hand-typed literal — see `snapshot.rs`'s own fix for the same
+        // shape.
+        let raw = 1.0 / 3.0;
+        let quantized = hornvale_kernel::quantize::quantize(raw);
+        let raw_repr = serde_json::to_string(&raw).unwrap();
+        let quantized_repr = serde_json::to_string(&quantized).unwrap();
+        assert_ne!(
+            raw_repr, quantized_repr,
+            "the fixture must pick a value quantization actually changes, \
+             or this test cannot distinguish quantized from raw output"
+        );
+
         let level = tiny();
         let lit = BTreeSet::from([Cell(2, 2)]);
         let doc = level_of(
             &level,
             Band::Undercroft,
-            1.0 / 3.0,
+            raw,
             Cell(2, 2),
             &lit,
             |_| false,
             Vec::new(),
         );
         let json = serde_json::to_string(&doc).unwrap();
+        let quantized_needle = format!("\"depth_m\":{quantized_repr}");
+        let raw_needle = format!("\"depth_m\":{raw_repr}");
         assert!(
-            json.contains("0.33333333"),
-            "depth_m must pass through quantize_serde::f64_field: {json}"
+            json.contains(&quantized_needle),
+            "depth_m must serialize as its QUANTIZED value ({quantized_needle}): {json}"
+        );
+        assert!(
+            !json.contains(&raw_needle),
+            "depth_m must not serialize as the raw, unquantized f64 \
+             ({raw_needle}) — quantize_serde::f64_field must have run: {json}"
         );
     }
 }
