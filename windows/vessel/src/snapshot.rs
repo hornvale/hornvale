@@ -613,11 +613,39 @@ mod tests {
     fn floats_are_quantized_at_the_emit_boundary() {
         // 1/3 has no short decimal form; quantization pins it to 8
         // significant digits so the bytes are cross-platform stable.
+        //
+        // A naive `contains("0.33333333")` passes with or without
+        // quantization: the RAW `f64` serializes as
+        // `0.3333333333333333`, which contains that exact substring too.
+        // So this asserts against the field's own bounded serialization
+        // (`"grievance":<value>,` or `"grievance":<value>}`, a hard
+        // boundary the raw repr's extra trailing digits cannot satisfy)
+        // and separately proves the raw form really is excluded, computing
+        // both reprs from `quantize` itself rather than a hand-typed
+        // literal.
+        let raw = 1.0 / 3.0;
+        let quantized = hornvale_kernel::quantize::quantize(raw);
+        let raw_repr = serde_json::to_string(&raw).unwrap();
+        let quantized_repr = serde_json::to_string(&quantized).unwrap();
+        assert_ne!(
+            raw_repr, quantized_repr,
+            "the fixture must pick a value quantization actually changes, \
+             or this test cannot distinguish quantized from raw output"
+        );
+
         let mut snap = minimal();
-        snap.social[0].grievance = 1.0 / 3.0;
+        snap.social[0].grievance = raw;
+        let json = snapshot_json(&snap);
+        let quantized_needle = format!("\"grievance\":{quantized_repr}");
+        let raw_needle = format!("\"grievance\":{raw_repr}");
         assert!(
-            snapshot_json(&snap).contains("0.33333333"),
-            "grievance must pass through quantize_serde::f64_field"
+            json.contains(&quantized_needle),
+            "grievance must serialize as its QUANTIZED value ({quantized_needle}): {json}"
+        );
+        assert!(
+            !json.contains(&raw_needle),
+            "grievance must not serialize as the raw, unquantized f64 \
+             ({raw_needle}) — quantize_serde::f64_field must have run: {json}"
         );
     }
 }

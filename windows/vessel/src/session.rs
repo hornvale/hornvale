@@ -13182,6 +13182,18 @@ mod tests {
     /// or refuses — the rung's own remembered set must be a superset of
     /// what it was one turn before, never smaller.
     ///
+    /// **A superset check alone cannot fail, and this test used to carry
+    /// only that one.** A set that never shrinks satisfies
+    /// `after.is_superset(&before)` trivially, and the non-vacuity guard
+    /// that shipped beside it (`assert!(!before.is_empty())`) was already
+    /// satisfied at turn zero — `delve_at` marks the entrance before the
+    /// loop even starts — so deleting `Session::mark_underground_seen`
+    /// from `step_underground` entirely left this test green. The fix is
+    /// `ever_grew` below: it asserts the set actually GROWS at least once
+    /// across the walk, which is the property this doc's own opening
+    /// sentence claims ("only ever adds") and the one a dropped-marking
+    /// regression would actually violate.
+    ///
     /// Exercised through `Session::handle`, not `Underground::step`
     /// directly: the wiring under test is `Session::mark_underground_seen`,
     /// which sits one level above `Underground` and is what a bare
@@ -13203,6 +13215,7 @@ mod tests {
         );
 
         let mut before = seen_snapshot(session.underground.as_ref().expect("descended"));
+        let mut ever_grew = false;
         for _ in 0..8 {
             for d in ["n", "s", "e", "w"] {
                 match session.handle(&format!("go {d}")) {
@@ -13219,13 +13232,18 @@ mod tests {
                     after.len(),
                     before.difference(&after).collect::<Vec<_>>()
                 );
+                if after.len() > before.len() {
+                    ever_grew = true;
+                }
                 before = after;
             }
         }
         assert!(
-            !before.is_empty(),
-            "32 attempted steps from a connected level must have marked at \
-             least one cell"
+            ever_grew,
+            "32 attempted steps from a connected level must have GROWN what \
+             is remembered at least once — a set that starts non-empty and \
+             never shrinks would satisfy every assertion above even if \
+             nothing were ever marked seen again"
         );
     }
 

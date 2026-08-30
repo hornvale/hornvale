@@ -4068,6 +4068,17 @@ measured here.
 | 2026-08-29T15:45:08Z | gate-commit | 34.562 | 100.258 | 24.724 | 3.62 | 0 | bbe1f1ece | campaign/the-chattel | MacBookPro | 10 |
 | 2026-08-29T15:46:04Z | gate-commit | 34.948 | 100.603 | 26.894 | 3.65 | 0 | bbe1f1ece | campaign/the-chattel | MacBookPro | 10 |
 | 2026-08-29T15:50:52Z | gate-commit | 20.852 | 49.830 | 13.371 | 3.03 | 0 | bbe1f1ece | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T13:58:17Z | prewarm | 495.319 | 1779.083 | 106.596 | 3.81 | 0 | 430d9541c | campaign/the-lodestar | ambrose | 12 |
+| 2026-08-30T12:56:19Z | gate-commit | 115.970 | 112.476 | 36.303 | 1.28 | 0 | 597c576d2 | campaign/the-lodestar | ambrose | 12 |
+| 2026-08-30T12:58:05Z | gate-commit | 82.249 | 50.507 | 24.115 | 0.91 | 0 | 597c576d2 | campaign/the-lodestar | ambrose | 12 |
+| 2026-08-30T12:58:33Z | game-check | 0.331 | 0.088 | 0.067 | 0.47 | 0 | 597c576d2 | campaign/the-lodestar | ambrose | 12 |
+| 2026-08-30T13:12:25Z | game-check | 820.505 | 3898.181 | 91.721 | 4.86 | 0 | 597c576d2 | campaign/the-lodestar | ambrose | 12 |
+| 2026-08-30T13:13:54Z | gate-commit | 82.869 | 50.331 | 24.337 | 0.90 | 0 | 597c576d2 | campaign/the-lodestar | ambrose | 12 |
+| 2026-08-30T13:17:31Z | gate-commit | 86.099 | 51.398 | 26.075 | 0.90 | 0 | 597c576d2 | campaign/the-lodestar | ambrose | 12 |
+| 2026-08-30T13:19:10Z | gate-commit | 84.328 | 50.800 | 25.190 | 0.90 | 0 | 296a50e01 | campaign/the-lodestar | ambrose | 12 |
+| 2026-08-30T13:21:03Z | gate-commit | 84.095 | 50.889 | 25.281 | 0.91 | 0 | 1ba9cc411 | campaign/the-lodestar | ambrose | 12 |
+| 2026-08-30T13:22:38Z | gate-commit | 83.828 | 50.483 | 24.861 | 0.90 | 0 | aa97325dd | campaign/the-lodestar | ambrose | 12 |
+| 2026-08-30T13:35:50Z | game-check | 769.221 | 3816.688 | 74.704 | 5.06 | 0 | 1be0bad69 | campaign/the-lodestar | ambrose | 12 |
 | 2026-08-29T13:49:30Z | sluice:artifacts | 67.873 | 653.875 | 25.401 | 10.01 | 0 | 8053bb5ed |  | lefford | 40 |
 | 2026-08-29T13:50:10Z | sluice:outboard | 40.263 | 25.075 | 38.768 | 1.59 | 0 | 6e9cec370 |  | lefford | 40 |
 | 2026-08-29T13:57:48Z | sluice:gate | 457.894 | 13476.189 | 420.803 | 30.35 | 0 | 232719baa |  | lefford | 40 |
@@ -4115,6 +4126,9 @@ measured here.
 | 2026-08-29T15:37:37Z | sluice:outboard | 40.824 | 25.454 | 39.109 | 1.58 | 0 | 201463eb3 |  | lefford | 40 |
 | 2026-08-29T15:45:19Z | sluice:gate | 460.823 | 13494.370 | 422.082 | 30.20 | 0 | 24ce47001 |  | lefford | 40 |
 | 2026-08-29T15:53:58Z | sluice:clients | 519.061 | 9529.005 | 94.156 | 18.54 | 0 | 24a2aee7f |  | lefford | 40 |
+| 2026-08-29T21:30:56Z | prewarm | 205.239 | 1181.148 | 42.001 | 5.96 | 0 | 6f121ac07 | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-29T22:44:31Z | gate-commit | 67.180 | 69.539 | 24.017 | 1.39 | 0 | b7f0d21b6 | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-29T22:46:05Z | gate-commit | 59.222 | 55.865 | 14.435 | 1.19 | 0 | b7f0d21b6 | campaign/the-quoin | MacBookPro | 10 |
 | 2026-08-29T21:13:49Z | gate-commit | 150.799 | 826.784 | 66.076 | 5.92 | 0 | 0216dc303 | the-overture | MacBookPro | 10 |
 | 2026-08-29T21:16:36Z | rebaseline | 128.720 | 273.924 | 12.527 | 2.23 | 0 | ccb7cf0c2 | the-overture | MacBookPro | 10 |
 | 2026-08-29T21:31:29Z | gate-commit | 32.435 | 54.333 | 13.579 | 2.09 | 0 | 037b23df7 | the-overture | MacBookPro | 10 |
@@ -4146,3 +4160,47 @@ measured here.
 | 2026-08-30T16:29:46Z | game-check | 539.757 | 3885.792 | 30.041 | 7.25 | 0 | 01da9800a | campaign/the-chattel | MacBookPro | 10 |
 | 2026-08-30T16:31:09Z | gate-commit | 21.396 | 50.763 | 13.358 | 3.00 | 0 | 01da9800a | campaign/the-chattel | MacBookPro | 10 |
 | 2026-08-30T16:32:03Z | rebaseline | 43.466 | 269.762 | 13.473 | 6.52 | 0 | 03b33cd2c | campaign/the-chattel | MacBookPro | 10 |
+| 2026-08-29T22:56:17Z | rebaseline | 214.042 | 280.539 | 13.731 | 1.37 | 0 | 2ccea5295 | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-29T22:59:13Z | gate-commit | 133.536 | 333.504 | 32.808 | 2.74 | 0 | 9dc79fff8 | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-29T23:24:01Z | gate-commit | 43.236 | 15.136 | 0.503 | 0.36 | 0 | a4b858c6b | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-29T23:26:09Z | gate-commit | 92.094 | 96.092 | 29.597 | 1.36 | 0 | a4b858c6b | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-29T23:29:14Z | gate-commit | 65.873 | 56.868 | 15.261 | 1.09 | 0 | a4b858c6b | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-29T23:43:43Z | gate-commit | 55.817 | 83.484 | 29.170 | 2.02 | 0 | 77dc20617 | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-29T23:45:33Z | gate-commit | 23.556 | 51.468 | 13.600 | 2.76 | 0 | 77dc20617 | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-29T23:53:00Z | gate-commit | 31.643 | 66.016 | 26.648 | 2.93 | 0 | 70c0638f5 | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-29T23:54:58Z | gate-commit | 23.977 | 51.651 | 13.397 | 2.71 | 0 | 70c0638f5 | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-30T00:12:02Z | gate-commit | 38.163 | 29.508 | 4.540 | 0.89 | 0 | 31795593e | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-30T00:13:25Z | gate-commit | 55.559 | 72.447 | 25.359 | 1.76 | 0 | 31795593e | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-30T00:14:27Z | gate-commit | 33.446 | 54.276 | 13.720 | 2.03 | 0 | 31795593e | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-30T00:38:38Z | gate-commit | 49.606 | 194.468 | 28.727 | 4.50 | 0 | 1769d8e42 | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-30T00:39:33Z | gate-commit | 21.325 | 50.303 | 12.964 | 2.97 | 0 | 1769d8e42 | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-30T01:05:08Z | gate-commit | 131.132 | 285.490 | 29.826 | 2.40 | 0 | 980f11c12 | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-30T01:06:44Z | gate-commit | 57.906 | 55.656 | 14.132 | 1.21 | 0 | 980f11c12 | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-30T01:18:38Z | gate-commit | 27.796 | 52.888 | 13.570 | 2.39 | 0 | c81bd9576 | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-30T01:27:37Z | rebaseline | 126.558 | 277.276 | 12.223 | 2.29 | 0 | 43b2796c5 | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-30T01:34:25Z | gate-commit | 31.112 | 54.964 | 13.920 | 2.21 | 0 | 43b2796c5 | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-30T01:50:23Z | gate-commit | 34.920 | 57.139 | 13.909 | 2.03 | 0 | 7f299c02e | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-30T01:51:21Z | gate-commit | 33.683 | 55.982 | 14.027 | 2.08 | 0 | 7f299c02e | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-30T02:01:23Z | gate-commit | 42.072 | 55.846 | 13.669 | 1.65 | 0 | 6d6704657 | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-30T02:02:10Z | gate-commit | 32.909 | 55.495 | 13.999 | 2.11 | 0 | 6d6704657 | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-30T02:23:12Z | gate-commit | 22.693 | 50.470 | 12.896 | 2.79 | 0 | 164793ec3 | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-30T02:52:49Z | rebaseline | 163.049 | 277.218 | 11.704 | 1.77 | 0 | e4e50a3d9 | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-30T02:54:40Z | gate-commit | 42.992 | 72.414 | 26.964 | 2.31 | 0 | e4e50a3d9 | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-30T12:09:51Z | gate-commit | 20.854 | 50.201 | 12.942 | 3.03 | 0 | 4a4b0ddcc | campaign/the-quoin | MacBookPro | 10 |
+| 2026-08-30T12:35:47Z | sluice:artifacts | 137.746 | 1296.813 | 61.550 | 9.86 | 0 | d104d6819 |  | lefford | 40 |
+| 2026-08-30T12:36:29Z | sluice:outboard | 42.197 | 26.941 | 40.327 | 1.59 | 0 | d3e9db3e2 |  | lefford | 40 |
+| 2026-08-30T12:45:09Z | sluice:gate | 520.193 | 14854.890 | 547.858 | 29.61 | 0 | 3b625646d |  | lefford | 40 |
+| 2026-08-30T12:54:26Z | sluice:clients | 556.258 | 10118.471 | 140.422 | 18.44 | 0 | 083b9a6db |  | lefford | 40 |
+| 2026-08-30T13:02:09Z | sluice:heavy | 462.392 | 9682.026 | 153.761 | 21.27 | 0 | 5c1712ee8 |  | lefford | 40 |
+| 2026-08-30T13:30:33Z | gate-commit | 22.274 | 51.740 | 13.350 | 2.92 | 0 | c41c9753a | fix/the-quoin-close-sweep | MacBookPro | 10 |
+| 2026-08-30T13:33:21Z | sluice:artifacts | 68.506 | 631.188 | 22.430 | 9.54 | 0 | 80c4efc46 |  | lefford | 40 |
+| 2026-08-30T13:34:03Z | sluice:outboard | 41.103 | 26.054 | 39.252 | 1.59 | 0 | 247928279 |  | lefford | 40 |
+| 2026-08-30T13:41:38Z | sluice:gate | 454.586 | 13525.684 | 422.369 | 30.68 | 0 | 849b27ca9 |  | lefford | 40 |
+| 2026-08-30T13:49:47Z | rebaseline | 189.122 | 324.501 | 19.890 | 1.82 | 0 | 87b58d64a | campaign/the-lodestar | ambrose | 12 |
+| 2026-08-30T13:54:39Z | gate-commit | 283.374 | 709.245 | 86.735 | 2.81 | 0 | 87b58d64a | campaign/the-lodestar | ambrose | 12 |
+| 2026-08-30T15:00:36Z | gate-commit | 85.028 | 52.893 | 25.858 | 0.93 | 0 | 665b5ef95 | campaign/the-lodestar | ambrose | 12 |
+| 2026-08-30T15:03:34Z | sluice:artifacts | 95.670 | 757.994 | 30.166 | 8.24 | 0 | 09fc09267 |  | lefford | 40 |
+| 2026-08-30T15:04:16Z | sluice:outboard | 40.832 | 25.577 | 39.582 | 1.60 | 0 | 819b72828 |  | lefford | 40 |
+| 2026-08-30T15:12:05Z | sluice:gate | 469.603 | 13586.927 | 456.049 | 29.90 | 0 | bb13856e3 |  | lefford | 40 |
+| 2026-08-30T15:20:39Z | sluice:clients | 512.885 | 9863.714 | 106.644 | 19.44 | 0 | 762c42e09 |  | lefford | 40 |
+| 2026-08-30T15:28:16Z | sluice:heavy | 456.862 | 9591.172 | 160.268 | 21.34 | 0 | 2ff6f2851 |  | lefford | 40 |

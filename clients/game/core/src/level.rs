@@ -73,15 +73,42 @@
 //! pass then overwrites it with `@`, Bold, exactly as `plan::draw`'s two
 //! passes do.
 //!
-//! ## Marks are not drawn this task
+//! ## Marks draw their own glyph, unlike the chamber band's
 //!
-//! `Level::marks` ships `[]` until spec §3.6's placement lands (Task 11).
-//! Drawing nothing for an empty list is a no-op either way, but this module
-//! deliberately does not write a marks-drawing pass at all — an untested,
-//! unreachable pass invented ahead of its data is the placeholder Task 9's
-//! own brief says not to build.
+//! Spec §3.6: an underground resident is "drawn on the plan as marks and
+//! filtered by sight, which the chamber band already does correctly" — the
+//! placement and sight-filtering precedent is [`crate::plan::draw`]'s, and
+//! this module's marks pass copies its *shape* (a third pass, after cells
+//! and `you`, iterating `level.marks`; see [`draw`]). It does **not** copy
+//! `plan.rs`'s specific glyph choice, and the reason is that module's own
+//! doc: `plan.rs` redraws a mark's own terrain glyph because chamber
+//! marks have no glyph to spare — every character in that band's four-glyph
+//! vocabulary (`#`/`.`/`+`/`@`) is already claimed by a `CellKind` or by
+//! `you`. This band's ten-glyph terrain vocabulary (five kinds, each with a
+//! seen/remembered twin) never claims `&`, so a resident draws as `&`
+//! outright — the same glyph `clients/game/bin/src/plate.rs::AGENT_GLYPH`
+//! and `windows/scene/src/surrounds_ascii.rs::terrain_glyph` already use for
+//! an `"agent"`-kind mark elsewhere in this project, reused rather than
+//! invented. Drawing the terrain glyph instead here would leave the
+//! headline fact of this campaign — a creature the possession can now see —
+//! literally invisible in the one place a player looks: the picture.
+//!
+//! A mark is drawn only when its own `(x, y)` lands inside `into`'s bounds
+//! ([`grid_pos`] returns `None` and the draw is skipped, matching the cells
+//! and `you` passes' own discipline), and it draws unconditionally once it
+//! does — the producer (`windows/vessel/src/session.rs::underground_level`,
+//! `purview::AGENT_MARK_KIND`) already filters a mark to a genuinely `lit`
+//! cell before it ever reaches the wire, so this pass does not re-check
+//! visibility.
 
-use crate::{Cell, Level, Source, Weight};
+use crate::{Cell, Level, PlanMark, Source, Weight};
+
+/// The glyph every mark on this band draws — see the module doc for why a
+/// dedicated glyph is correct here where it would not be for
+/// [`crate::plan::draw`]. Reuses `clients/game/bin/src/plate.rs::AGENT_GLYPH`
+/// and `windows/scene/src/surrounds_ascii.rs`'s own `"agent"`-kind glyph
+/// rather than inventing a fourth character for the same fact.
+const MARK_GLYPH: char = '&';
 
 /// The "seen" (here or lit) glyph for a floor cell.
 const FLOOR_GLYPH: char = '.';
@@ -186,9 +213,10 @@ fn grid_pos(
 }
 
 /// Draw `level` into `into`, anchored so the level's own `(extent.x,
-/// extent.y)` lands at `origin`. Two passes, in order: every seen cell by
-/// its palette glyph, then `you` as `@` — see the module doc's "Marks are
-/// not drawn this task" for why there is no third pass.
+/// extent.y)` lands at `origin`. Three passes, in order: every seen cell by
+/// its palette glyph, then `you` as `@`, then marks as `&` — see the module
+/// doc's "Marks draw their own glyph" section for why this band's marks
+/// pass draws a dedicated glyph where [`crate::plan::draw`]'s cannot.
 pub fn draw(level: &Level, into: &mut crate::Grid, origin: (u16, u16)) {
     for cell in &level.cells {
         let Some(entry) = level.palette.get(cell.ix as usize) else {
@@ -212,6 +240,24 @@ pub fn draw(level: &Level, into: &mut crate::Grid, origin: (u16, u16)) {
     // terrain beneath it, exactly as `plan::draw` draws its own `@`.
     if let Some((gx, gy)) = grid_pos(level, level.you.x, level.you.y, origin, into) {
         into.set(gx, gy, Cell::glyph(YOU_GLYPH, Weight::Bold, Source::Level));
+    }
+
+    for m in &level.marks {
+        draw_mark(level, m, origin, into);
+    }
+}
+
+/// One mark's contribution to the marks pass: draw [`MARK_GLYPH`] at the
+/// mark's own cell. See the module doc for why this band draws a dedicated
+/// glyph rather than redrawing the terrain beneath, as
+/// [`crate::plan::draw_mark`] does for the chamber band.
+fn draw_mark(level: &Level, m: &PlanMark, origin: (u16, u16), into: &mut crate::Grid) {
+    if let Some((gx, gy)) = grid_pos(level, m.x, m.y, origin, into) {
+        into.set(
+            gx,
+            gy,
+            Cell::glyph(MARK_GLYPH, Weight::Normal, Source::Level),
+        );
     }
 }
 
@@ -400,6 +446,53 @@ mod tests {
         });
         let mut g = crate::Grid::new(5, 5);
         // Must not panic.
+        draw(&level, &mut g, (0, 0));
+    }
+
+    /// The regression this fix exists for: `Level::marks` used to reach this
+    /// module and draw nothing at all (no marks-drawing pass existed).
+    /// (0, 0) is `small_level`'s remembered wall — the mark drawn there must
+    /// win over that terrain glyph, and the two must actually differ, or a
+    /// deleted marks pass would leave this test green for the wrong reason.
+    #[test]
+    fn a_mark_draws_a_glyph_distinguishable_from_the_terrain_beneath() {
+        let mut level = small_level();
+        level.marks = vec![PlanMark {
+            x: 0,
+            y: 0,
+            noun: "xorn".to_string(),
+            kind: "agent".to_string(),
+            datum: "A xorn chews through the rock nearby.".to_string(),
+            salience: 5,
+        }];
+        let mut g = crate::Grid::new(5, 5);
+        draw(&level, &mut g, (0, 0));
+        let cell = g.get(0, 0).unwrap();
+        assert_eq!(
+            cell.glyph,
+            Some(MARK_GLYPH),
+            "a marked cell must draw the mark's own glyph"
+        );
+        assert_ne!(
+            cell.glyph,
+            Some(WALL_REMEMBERED_GLYPH),
+            "the mark's glyph must be distinguishable from the terrain it stands on"
+        );
+    }
+
+    #[test]
+    fn a_mark_outside_the_grid_is_silently_skipped() {
+        let mut level = small_level();
+        level.marks = vec![PlanMark {
+            x: 99,
+            y: 99,
+            noun: "ghost".to_string(),
+            kind: "agent".to_string(),
+            datum: "A ghost, somehow off the map.".to_string(),
+            salience: 1,
+        }];
+        let mut g = crate::Grid::new(5, 5);
+        // Must not panic, and must not draw anything at (99, 99).
         draw(&level, &mut g, (0, 0));
     }
 }

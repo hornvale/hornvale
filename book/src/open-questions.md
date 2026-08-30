@@ -948,6 +948,43 @@ positive-control clause covers an instrument that cannot fire; this adds the
 case where the instrument fires correctly and the number it is compared
 against was never its own.
 
+A seventeenth campaign tests the remedy the sixteenth proposed, on the
+successor campaign it was proposed for. [The Quoin](./chronicle/the-quoin.md)
+(2026-08-29) built its own preregistration the way The Rail's retrospective
+demanded: append the five tokens under measurement, run the two live
+instruments the campaign would later be judged against, record their output,
+revert. All four figures — ladder covered, frontier, merchant coverage,
+flood-watch demand instances — matched on the first run, at every one of five
+tasks, and none was revised. **The remedy generalizes past the campaign that
+discovered the need for it**, and the campaign is explicit about what that
+does and does not prove: Task 0 derived the predictions with the same
+resolver that later scored the outcome, so agreement confirms the
+implementation did what the resolver predicted, not that the resolver is
+right about the world. Three genuine defects still originated in this
+campaign's own plan text — a merchant-coverage step the plan omitted, a
+witness string requiring `sleep` to inflect as `slept` when the grammar's
+past-tense rule is a pinned-on-purpose naive `+ed`, and a witness pairing
+`Definiteness::Indef` with an expected string that needed `Def` — and every
+one is a *different* class from the one PREREG-1 was built to close. All
+three were caught by pre-dispatch brief verification against the tree,
+before an implementer saw them, not by re-reading and not by the mechanism
+under test.
+
+The same campaign supplies a second, independent instance of *complementing
+beats replacing* (the fifteenth campaign's own finding, above): its
+preregistration bound the chronicle to quote a produce-side demand-instance
+figure the resolver, as built through the campaign's own reconciliation
+task, could not compute. Rather than report the composite the instrument
+already had, or loosen what the criterion meant to fit the instrument that
+existed, the campaign built the missing split as its own reviewed task,
+disclosed in the generated artifact itself that the split postdates the
+implementation work it measures, and reported what it found even though the
+result **cuts against the campaign**: the produce-side figure (31.8%) sits
+three points below the composite the report would otherwise have led with
+(34.8%). A preregistration that cannot be satisfied by the instrument that
+exists is a finding about the instrument, not a license to report the number
+that instrument happens to produce.
+
 ## What the world can already check itself on (high confidence)
 
 **The kernel substrate.** Hash-based seeding, coherent noise, append-only
@@ -2056,11 +2093,36 @@ itself. One new limitation surfaced in the same campaign's own closing
 audit, of the *other* kind on this ledger — not a wire ambiguity but a
 picture that can silently run off its own edge: the pane anchors a
 generated level's own corner to a fixed-width plate with no camera-follow,
-so a rung wider than that plate (every rung past the first) can walk the
+so a rung wider than that plate (which is EVERY walkable rung — ranks 1-5
+run 44x26 to 60x34, and none of them fits) can walk the
 player's own marker off the visible screen. Recorded as its own frontier row
 rather than left for a future campaign to re-discover the way this ledger's
 own Risk section had to name it before any
 code existed.
+
+**Amended by [The Lodestar](./chronicle/the-lodestar.md) (2026-08-30), and
+the amendment is this ledger's own subject turned on the campaign that
+thought it had settled it.** The paragraph above was true of the TAG and
+false of the RENDER. The wire carried the underground band's creature in
+`SessionLevel::marks`; the terminal client had no marks-drawing pass at
+all, having been written one task before the derivation that fills them and
+never reopened. So "a consumer reading the tag alone now knows what Quire's
+consumer could only have guessed" described a consumer that was throwing
+the payload away. Twelve per-task reviews each passed; a whole-branch review
+run after the merge found it in the first pass, because the gap lived
+between two tasks and belonged to neither.
+
+Worse for the claim, and better for the ledger: **there are two client band
+mirrors and the campaign updated one.** `clients/vessel` still declares its
+spatial union as walk-or-chamber and goes blank underground, silently,
+with its own gate green throughout — and the workspace tripwire built during
+that campaign to catch exactly this is hardcoded to the other client's test
+directory. The wire fix was real and the consumer-side gap simply moved down
+a level, which is the shape this row has now taken twice: **a channel
+correctly describing what a consumer does not read is indistinguishable, from
+the channel's side, from one that describes too little.** Recorded as
+`CLIENT-second-band-mirror`. The Lodestar fixes the first mirror and leaves
+the second registered rather than half-fixed.
 
 One older row recurs and one instrument for it becomes mechanizable. The
 recurrence: the outdoor chart was geometrically wrong — the sim's own render of
