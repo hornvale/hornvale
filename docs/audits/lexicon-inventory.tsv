@@ -121,6 +121,7 @@ windows/vessel/src/underworld_level/dense.rs	58
 windows/vessel/src/underworld_level/mod.rs	216
 windows/vessel/src/underworld_level/region.rs	2
 windows/vessel/tests/common/mod.rs	1
+windows/vessel/tests/suite/furnishing_marks.rs	20
 windows/vessel/tests/suite/lantern_fabric.rs	2
 windows/vessel/tests/suite/lantern_lens.rs	3
 windows/vessel/tests/suite/lantern_light.rs	35
