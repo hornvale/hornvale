@@ -148,9 +148,9 @@ fi
 # judgment stated as a settled fact, and The Cartulary (2026-08-30) measured
 # it false: promotion-at-close has failed FIVE recorded times
 # (`docs/superpowers/specs/2026-08-30-the-cartulary-design.md` §1 —
-# `docs/retrospectives/{the-quoin,the-lodestar}.md` plus two more), the last
-# two of them *after* campaigns had added verification specifically to catch
-# this. Verification cannot save it: a check that reads the ledger to
+# `docs/retrospectives/{the-ell,the-quoin,the-lodestar,the-overture,the-attestation}.md`),
+# the last two of them *after* campaigns had added verification specifically
+# to catch this. Verification cannot save it: a check that reads the ledger to
 # confirm promotion cannot detect the ledger having been recycled out of
 # existence first, which is what happened both times.
 #
