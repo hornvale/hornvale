@@ -76,6 +76,14 @@ pub const OCC_FOUNDED_FROM: &str = "occ-founded-from";
 /// Predicate: how notable the occupation was (functional, Text).
 /// type-audit: bare-ok(identifier-text)
 pub const OCC_NOTABILITY: &str = "occ-notability";
+/// Predicate: how far below its seat the occupation drove a working, in metres
+/// (functional, Number). **Absent means it never dug** — the same "no claim is
+/// made" reading [`OCC_ENDED`] and [`OCC_CAUSE`] carry while an occupation is
+/// alive, rather than a committed `0.0` asserting a working that is nought
+/// metres deep. See [`record::Occupation::delve_depth_m`] for why this half of
+/// "how deep did they get" is committed and the seat half is not.
+/// type-audit: bare-ok(identifier-text)
+pub const OCC_DELVE_DEPTH: &str = "occ-delve-depth";
 /// Predicate marking an occupation's site as a ruin (a dead occupation's
 /// present-frame residue).
 /// type-audit: bare-ok(identifier-text)
@@ -131,6 +139,11 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         "how the occupation began: genesis, or founded from another community",
     )?;
     registry.register_predicate(OCC_NOTABILITY, true, "how notable the occupation was")?;
+    registry.register_predicate(
+        OCC_DELVE_DEPTH,
+        true,
+        "how far below its seat the occupation drove a working, in metres",
+    )?;
     registry.register_predicate(IS_RUIN, true, "subject is a ruin (a dead occupation)")?;
     registry.register_predicate(
         PAYS_TRIBUTE_TO,

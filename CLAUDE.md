@@ -67,7 +67,7 @@ editing:
   today's grammar can produce or parse a demand a real utterance makes. It
   holds **two kinds of corpus, not one**: recorded or authored *dialogue*
   (`the-merchant`, `the-flood-watch`), and a typology-ordered *capability
-  ladder* of graded rungs (`the-ladder`, an unfrozen `.DRAFT`) which is not
+  ladder* of graded rungs (`the-ladder`, frozen by The Rail) which is not
   dialogue at all. A corpus **declares** its demands or **derives** them
   by transitive closure, never both (decision 0386). Same data/code split as
   `tropes/`/`systems/` (decision 0011) — the corpus is data, the resolver is
@@ -89,11 +89,16 @@ canonical box. Everything costing minutes or more — the stage gate, the
 merge queue, the heavy tier, and censuses — runs on
 **lefford**, the canonical box for the artifacts several of them author,
 behind one strictly serial claim (below). The heavy tier is an *authoring*
-path, not merely an expensive one — three of its tests write committed
-artifacts and one compares a live probe against lefford-authored census
-fixtures — so `heavy-run.sh` carries the same canonical-host guard a census
-does. Dispatch it from the Mac with `make heavy-remote REF=<full-sha>` (a
-SHA, not a branch name).
+path, not merely an expensive one — **one** of its tests writes a committed
+artifact (`history_battery::history_gates_full_world_and_cross_seed`, writing
+`book/src/laboratory/generated/the-history/`; the count read three until The
+Governor, 2026-08-28, which demoted `sounding_sweep` out of the tier and
+found that the third, `occupancy_readout_is_current`, only ever COMPARED
+against its fixture and was never a writer at all — see decision 0086's three
+amendments) and one compares a live probe against
+lefford-authored census fixtures — so `heavy-run.sh` carries the same
+canonical-host guard a census does. Dispatch it from the Mac with
+`make heavy-remote REF=<full-sha>` (a SHA, not a branch name).
 
 **The claim, not the Mac, absorbs contention now (decision 0133).** The old
 loadavg-42–63 shape The Timekeeper measured — three campaign sessions each
@@ -147,7 +152,27 @@ make doctor        # the repo self-map — run this first in a fresh session
 #   make quick                                        # cheap half only: fmt-check + clippy + type-audit
 #   make gate-commit                                  # THE COMMIT GATE: local, seconds, every commit
 #   make sluice-stage BRANCH=<branch> REF=<full-sha>  # THE STAGE GATE: the queue, minutes, each plan-stage boundary — never pushes
-#   make sluice       BRANCH=<branch> REF=<full-sha>  # THE MERGE: same queue, same FOUR phases as the stage gate, pushes the SHA it tested
+#   make sluice       BRANCH=<branch> REF=<full-sha>  # THE MERGE: same queue, the stage phases PLUS heavy, pushes the SHA it tested
+#
+# A MERGE RUNS ONE MORE PHASE THAN A STAGE GATE AGAIN (decision 0426,
+# 2026-08-28). `heavy` is back on `scripts/sluice-run.sh`'s MERGE list, last,
+# after The Governor cut the tier 3.52x (1551.631 s -> 440.269 s nextest wall,
+# 118 -> 64 tests, 10 -> 0 failures on lefford, measured at `e76ea0497`). The
+# roster is 64: that campaign's final review restored
+# `occupancy_readout_is_current` to `heavy:` (decision 0086's third amendment),
+# and a re-measure against the full 64-test roster confirmed the restoration
+# cost nothing — the restored test slotted under the tier's existing pole and
+# the wall moved down, not up. A merge goes from ~1129.5 s to ~1595.3 s
+# (+41%) — the mean of the four 2026-08-28 four-phase merges plus ~465.8 s, both
+# derived in decision 0426 and not restated in a second form here; a
+# prose-only candidate still pays none of it. `seam-guard`
+# stays off both. THE STAGE LIST IS UNTOUCHED, and deliberately: heavy compares
+# a live probe against the COMMITTED census fixtures, which are refreshed once
+# per campaign at pre-merge close, so on a stage gate it would red predictably
+# for the whole middle of any world-touching campaign. This restores the
+# pre-0148 arrangement exactly — heavy was never a stage phase. The phase names
+# themselves stay in `scripts/lane-sets.tsv`, which this block points at rather
+# than restates.
 #
 # THE STAGE GATE IS THE SAME OBJECT AS A MERGE, MINUS THE PUSH. It is not a
 # separate system: one column in the queue TSV (`kind`), one branch at the
@@ -278,11 +303,15 @@ make doctor        # the repo self-map — run this first in a fresh session
 # closed rather than falling back to an uncontrolled local run.
 #
 # THERE IS NO LONGER AN "ONE SET ON DEMAND" ESCAPE. `make lane SET=<set>` is
-# gone with the rest of the dispatch layer. The two sets the chamber does not
-# run keep their own entry points (`make heavy-remote`, `census-run.sh`); for
+# gone with the rest of the dispatch layer. The sets the chamber does not run
+# keep their own entry points (`make seam-guard`, `census-run.sh`); for
 # anything else, the honest answer is that an operator resident on the box
 # runs that set's own command from `scripts/lane-sets.tsv` directly, which is
-# what "one session managing one machine" means in practice.
+# what "one session managing one machine" means in practice. (`make
+# heavy-remote` used to be listed here as a set the chamber does not run.
+# Decision 0426 put the tier back on the MERGE phase list; the by-hand entry
+# point survives, and is still the only way to run the tier at a plan-stage
+# boundary, but it is no longer the only thing that dispatches it.)
 #
 #   make sluice-census BRANCH=<requester> REF=<full-sha>  # A CENSUS, QUEUED
 #
@@ -485,9 +514,11 @@ cargo run --manifest-path tools/type-audit/Cargo.toml -- report > docs/audits/ty
 #     /// seam-guard: identity(0) scope(hornvale-kernel)
 # `identity(N)` replaces the call with its Nth argument (unit conversions,
 # clamps, wrappers); `returns(EXPR)` replaces it outright. Runs as its own
-# `campaign`-rung set, run as one of the merge queue's chamber phases (there
-# is no aggregate campaign-gate target and no on-demand set dispatch anymore
-# — see the gate ladder above), not the commit gate — each call site costs a full scoped
+# `campaign`-rung set, run ONLY when a human types `make seam-guard` — it is
+# not a chamber phase (decision 0148 took it off and 0426 did not put it
+# back), there is no aggregate campaign-gate target, and there is no on-demand
+# set dispatch anymore — see the gate ladder above. Nor is it in the commit
+# gate — each call site costs a full scoped
 # test run, so `list` (which shows the site count without building) is worth
 # reading first: an experimental tag on `quantize` listed 36 sites, and a
 # broadly-called function makes a poor seam.
@@ -521,7 +552,11 @@ cargo run --manifest-path tools/seam-guard/Cargo.toml -- run <seam> <file>  # na
 # ROSTER MEANS (decision 0148).** 0148 took `seam-guard` and `heavy` off the
 # merge phase list because the two were 80.5% of a merge's wall time. So it
 # now runs only when a human types `make seam-guard` — there is no schedule,
-# no gate, and no phase behind it.
+# no gate, and no phase behind it. **This is now true of seam-guard ALONE**:
+# decision 0426 put the heavy tier back on the merge phase list once The
+# Governor had cut it 3.52x, and declined to do the same for seam-guard, whose cost is
+# a full scoped test run per call site and whose guarantee moves at campaign
+# cadence. Do not read the two as still sharing a fate.
 #
 # `docs/audits/seam-guard-roster.md` (the committed, drift-checked artifact)
 # lists what is REGISTERED and what has been DECLARED. It has never carried
@@ -597,8 +632,10 @@ cargo run --manifest-path tools/digest/Cargo.toml -- render delta      > docs/di
 # already-declared-directory hazard below.
 make rebaseline                        # regenerate everything EXCEPT censuses
 make rebaseline-goldens                # accept drifted byte-golden fixtures (REBASELINE=1)
-# The drift check, reading its path list from the one file that declares it:
-git diff --exit-code -- $(grep -v '^#' docs/generated-paths.txt | grep -v '^$')
+# The drift check, reading its path list from the one file that declares it.
+# `cut -f1` takes the path column — the file's second column, since The
+# Attestation, names the path's AUTHOR (a roster set name), not a pathspec:
+git diff --exit-code -- $(grep -v '^#' docs/generated-paths.txt | grep -v '^$' | cut -f1)
 # The notes below explain WHY particular entries are in that file; they are
 # commentary on it, never a second copy of it.
 # docs/audits/ is in that list — the type-audit report drifts on any

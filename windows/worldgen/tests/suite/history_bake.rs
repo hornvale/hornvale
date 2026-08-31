@@ -23,6 +23,17 @@ fn biome_map(geo: &Geosphere) -> VertexMap<hornvale_culture::BiomeClass> {
     VertexMap::from_fn(geo, |_| hornvale_culture::BiomeClass::Grassland)
 }
 
+/// The prospectivity map every bake fixture is handed (The Winze, Task 2): all
+/// `0.0`, which is below `ORE_CUT` everywhere, so no expansion ever qualifies
+/// as a working and no pre-campaign expectation in this file moves. The ore
+/// draw is taken only inside that filter, so stream consumption order over
+/// these fixtures is unchanged too — which is what keeps
+/// `same_seed_bakes_byte_identical_history` and the pin-shape tests below
+/// asserting about the same bake they always did.
+fn barren(geo: &Geosphere) -> VertexMap<f64> {
+    VertexMap::from_fn(geo, |_| 0.0)
+}
+
 /// A pure-land connection graph over `geo` (unit-conductance adjacency, no water
 /// routes). `traversable_neighbors` over this equals `geo.neighbors`, so on an
 /// all-land world the bake is byte-identical to the pre-Sundering raw-adjacency
@@ -223,6 +234,7 @@ fn same_seed_bakes_byte_identical_history() {
         &biome_map(&geo),
         &caps_per_era(&cap, &people),
         &river,
+        &barren(&geo),
         &eras,
         &refugia,
         &people,
@@ -236,6 +248,7 @@ fn same_seed_bakes_byte_identical_history() {
         &biome_map(&geo),
         &caps_per_era(&cap, &people),
         &river,
+        &barren(&geo),
         &eras,
         &refugia,
         &people,
@@ -258,6 +271,7 @@ fn different_seeds_diverge() {
         &biome_map(&geo),
         &caps_per_era(&cap, &people),
         &river,
+        &barren(&geo),
         &eras,
         &refugia,
         &people,
@@ -271,6 +285,7 @@ fn different_seeds_diverge() {
         &biome_map(&geo),
         &caps_per_era(&cap, &people),
         &river,
+        &barren(&geo),
         &eras,
         &refugia,
         &people,
@@ -299,6 +314,7 @@ fn the_workload_fires_climate_displacement_at_volume_without_conflict() {
         &biome_map(&geo),
         &caps_per_era(&cap, &people),
         &river,
+        &barren(&geo),
         &eras,
         &refugia,
         &people,
@@ -377,6 +393,7 @@ fn a_strong_community_raids_a_weaker_richer_neighbour_with_land_to_spare() {
         &biome_map(&geo),
         &caps_of(&cap, &people, eras.len()),
         &river,
+        &barren(&geo),
         &eras,
         &refugia,
         &people,
@@ -506,6 +523,7 @@ fn a_displaced_people_rolls_downhill_and_the_cascade_is_recorded() {
         &biome_map(&geo),
         &caps_of(&cap, &people, eras.len()),
         &river,
+        &barren(&geo),
         &eras,
         &refugia,
         &people,
@@ -614,6 +632,7 @@ fn a_hostile_vertex_in_a_full_world_starves_instead_of_cascading() {
         &biome_map(&geo),
         &caps_per_era(&cap, &people),
         &river,
+        &barren(&geo),
         &eras,
         &refugia,
         &people,
@@ -644,6 +663,7 @@ fn a_hostile_vertex_in_a_full_world_starves_instead_of_cascading() {
         &biome_map(&geo),
         &caps_per_era(&cap, &people),
         &river,
+        &barren(&geo),
         &eras,
         &refugia,
         &people,
@@ -802,6 +822,7 @@ fn value_flat_history_seeded_with(
         &biome_map(&geo),
         &caps_of(&cap, &people, eras.len()),
         &river,
+        &barren(&geo),
         &eras,
         &refugia,
         &people,
@@ -1143,6 +1164,7 @@ fn ocean_sunders_and_a_lane_leapfrogs() {
         &biome_map(&geo),
         &caps_per_era(&capacity, &people),
         &river,
+        &barren(&geo),
         &eras,
         &refugia,
         &people,
@@ -1163,6 +1185,7 @@ fn ocean_sunders_and_a_lane_leapfrogs() {
         &biome_map(&geo),
         &caps_per_era(&capacity, &people),
         &river,
+        &barren(&geo),
         &eras,
         &refugia,
         &people,

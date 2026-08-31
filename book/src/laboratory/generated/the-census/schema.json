@@ -685,6 +685,22 @@
     {
       "buckets": [
         0.0,
+        1.0,
+        2.0,
+        4.0,
+        8.0,
+        16.0
+      ],
+      "doc": "Count of land-vertex vestige LAYERS that are an abandoned delving whose hazard is Numinous — i.e. a working that ended by breaking through (The Winze, spec §4.3). A layer read, never the dread FIELD: `vestige_dread` is a max over a vertex's whole palimpsest, so a field read counts places that read as dreadful (a living working over an old breach, a pre-human gate scar) rather than delvings that ended (spec §E.11.2). Names nothing about what was found, because nothing knows (spec §4.6). 0 where no delving on land broke through",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "breached-delving-count",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
         50000.0,
         150000.0,
         300000.0,
@@ -1112,7 +1128,7 @@
         6.0,
         8.0
       ],
-      "doc": "Mean per-vertex species diversity of the coexistence density stack (task A16a; feeds the A16b β calibration): the mean, over habitable land vertices, of the demography report's `byproducts.strife` field — already the per-vertex inverse-Herfindahl diversity 1/Σ frac_s² (1.0 when one species dominates a vertex, →N when N species share it evenly). Recomputed via `hornvale_worldgen::demography_report_from`, which reconstructs the IDENTICAL report the settlement-genesis path builds internally (the shared-assembly refactor of task A16a), so this measures the stack the world actually ships, not a parallel one. Absent if the report fails to build or the world has no habitable vertices",
+      "doc": "Mean per-vertex species diversity of the coexistence density stack (task A16a; feeds the A16b β calibration): the mean, over habitable land vertices, of the demography report's `byproducts.strife` field — already the per-vertex inverse-Herfindahl diversity 1/Σ frac_s² (1.0 when one species dominates a vertex, →N when N species share it evenly). Read via `SettlementView::demography_report`, the view's own memoised build of `hornvale_worldgen::demography_report_from` (task 3 of The Governor: shared with `composition-variance` below rather than each rebuilding it), which reconstructs the IDENTICAL report the settlement-genesis path builds internally (the shared-assembly refactor of task A16a), so this measures the stack the world actually ships, not a parallel one. Absent if the report fails to build or the world has no habitable vertices",
       "domain": "settlement",
       "kind": "numeric",
       "name": "per-cell-diversity",
@@ -1128,7 +1144,7 @@
         0.05,
         0.1
       ],
-      "doc": "Spatial heterogeneity of settlement composition (The Niche): the sum over roster species of the variance, across the demography report's `stack_settlements`, of each species' composition fraction. 0.0 iff every settlement has the identical species mix (the pre-Niche 'oatmeal' — one flat blend worldwide); > 0 when composition varies across space (species dominant in different strongholds). Recomputed via `hornvale_worldgen::demography_report_from` (the niche-differentiated coexistence shadow). Absent if the report fails to build or the world has fewer than 2 settlements",
+      "doc": "Spatial heterogeneity of settlement composition (The Niche): the sum over roster species of the variance, across the demography report's `stack_settlements`, of each species' composition fraction. 0.0 iff every settlement has the identical species mix (the pre-Niche 'oatmeal' — one flat blend worldwide); > 0 when composition varies across space (species dominant in different strongholds). Read via `SettlementView::demography_report`, the view's own memoised build of `hornvale_worldgen::demography_report_from` (the niche-differentiated coexistence shadow) — shared with the settlement diversity metric registered above rather than each rebuilding it (task 3 of The Governor). Absent if the report fails to build or the world has fewer than 2 settlements",
       "domain": "settlement",
       "kind": "numeric",
       "name": "composition-variance",
@@ -3196,7 +3212,7 @@
   },
   "rows": {
     "count": 1000,
-    "fnv1a64": "0xc14a3ff66fe0dd5b"
+    "fnv1a64": "0x300bc0a406893ca8"
   },
   "schema_version": 1,
   "study": {

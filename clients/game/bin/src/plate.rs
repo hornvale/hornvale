@@ -61,13 +61,87 @@
 //! number of grid-level facets the plate covers.
 
 use hornvale_game_core::{Cell, Grid, Ink, Source, Weight};
-use hornvale_kernel::{Facet, FacetId, Geosphere, NearestVertexIndex, RoomMeshMemo, Vertex};
+use hornvale_kernel::{
+    Facet, FacetId, Geosphere, NearestVertexIndex, RoomMeshMemo, Value, Vertex, World,
+};
 use hornvale_terrain::GeneratedTerrain;
 use hornvale_terrain::landscape::{FeatureClass, FeatureId as LandscapeFeatureId};
 use std::collections::{BTreeMap, BTreeSet};
 
 use crate::discovery::{Discovered, FeatureId};
 use crate::mercator::{self, Frame};
+
+/// Every placed settlement's nearest terrain vertex, valued by that
+/// settlement's own committed population — every subject carrying
+/// [`hornvale_settlement::IS_SETTLEMENT`], resolved through its own
+/// committed `LATITUDE`/`LONGITUDE` to the [`Vertex`] [`NearestVertexIndex::nearest`]
+/// says is closest. A settlement missing either coordinate fact is skipped
+/// rather than guessed at (genesis always commits the pair together; a
+/// hand-built world might not, and this must not panic on one). Two
+/// settlements resolving to the SAME nearest vertex are, for a drawn map's
+/// purposes, the same point (`crate::discovery::FeatureId::Settlement`'s own
+/// doc already says so for identity); population takes the larger of the
+/// two rather than the last one scanned, so map iteration order cannot
+/// silently pick a smaller town's population for the shared marker.
+///
+/// **Extracted here (fix round 1, R10) from two near-identical copies**:
+/// `driver.rs`'s `Driver::start_from_world` inlined this exact sequence
+/// (Task 5, The Portolan part II) before `crate::overture::atlas` needed the
+/// same read for a second caller and grew its own copy. Two copies of a
+/// ledger-reading idiom drift silently — the skip-on-missing rule above is
+/// exactly the kind of thing one side would later "fix" without the other —
+/// so this is the one copy both callers share. Lives in `plate.rs` because
+/// this is where the roster is CONSUMED ([`draw_with`]'s own `settlements`
+/// parameter), matching [`draw_feature_layer`]'s existing convention of
+/// taking a resolved roster rather than a ledger to read.
+///
+/// **Widened from `BTreeSet<Vertex>` to `BTreeMap<Vertex, u64>` (The
+/// Legend, Task 7)**, keyed the same way, valued by
+/// `hornvale_settlement::POPULATION` — the size
+/// [`draw_feature_layer`]'s own viewport-relative major/minor split ranks
+/// by. Both callers draw through [`draw_with`], whose own `settlements`
+/// parameter widened the same way at the same time, so there is no
+/// caller left that only ever wanted membership; a bare vertex set is
+/// still one `.keys()` away for a reader that does.
+pub fn settlements_of(
+    world: &World,
+    geo: &Geosphere,
+    nearest: &NearestVertexIndex,
+) -> BTreeMap<Vertex, u64> {
+    world
+        .ledger
+        .find(hornvale_settlement::IS_SETTLEMENT)
+        .filter_map(|fact| {
+            let lat = match world
+                .ledger
+                .value_of(fact.subject, hornvale_settlement::LATITUDE)
+            {
+                Some(Value::Number(n)) => *n,
+                _ => return None,
+            };
+            let lon = match world
+                .ledger
+                .value_of(fact.subject, hornvale_settlement::LONGITUDE)
+            {
+                Some(Value::Number(n)) => *n,
+                _ => return None,
+            };
+            let population = match world
+                .ledger
+                .value_of(fact.subject, hornvale_settlement::POPULATION)
+            {
+                Some(Value::Number(n)) => *n as u64,
+                _ => return None,
+            };
+            Some((nearest.nearest(geo, lat, lon), population))
+        })
+        .fold(BTreeMap::new(), |mut map, (vertex, population)| {
+            map.entry(vertex)
+                .and_modify(|p: &mut u64| *p = (*p).max(population))
+                .or_insert(population);
+            map
+        })
+}
 
 /// A view onto the world plate: which mesh RUNG the virtual chart is drawn
 /// at, and which tile of that chart the window's own origin sits at.
@@ -87,10 +161,17 @@ use crate::mercator::{self, Frame};
 /// own coordinates, never the screen's.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Window {
-    /// The mesh rung the virtual chart is drawn at —
-    /// [`GLOBE_RUNG`]`..=`[`BAND_B_RUNG`] on the shipped ladder. Higher is
-    /// FINER: each rung halves the facet edge, so it doubles the chart.
-    /// See [`virtual_dims`] for the chart that follows from it.
+    /// The mesh rung the virtual chart is drawn at. [`GLOBE_RUNG`]`..=`
+    /// [`BAND_B_RUNG`] is every rung `Driver` itself ever picks, but it is
+    /// not the full range a caller may construct: [`virtual_dims`]'s own doc
+    /// states that a COARSER-than-`GLOBE_RUNG` depth is deliberately still
+    /// honoured (`terrain_at_tile` resolves it at the grid's own level,
+    /// the only level terrain exists on), and `overture::atlas`'s
+    /// `fit_depth` ships depths below `GLOBE_RUNG` for exactly this reason —
+    /// a small startup plate needs a coarser-than-any-`Driver`-rung chart to
+    /// show the whole globe at once. Higher is FINER: each rung halves the
+    /// facet edge, so it doubles the chart. See [`virtual_dims`] for the
+    /// chart that follows from any given value.
     pub depth: u32,
     /// The window's origin column, in VIRTUAL chart cells (see
     /// [`virtual_dims`]), added to every drawn column before

@@ -92,6 +92,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "hornvale"
+version = "0.1.0"
+dependencies = [
+ "hornvale-almanac",
+ "hornvale-astronomy",
+ "hornvale-book",
+ "hornvale-chronicle",
+ "hornvale-climate",
+ "hornvale-culture",
+ "hornvale-explain",
+ "hornvale-historiography",
+ "hornvale-kernel",
+ "hornvale-lab",
+ "hornvale-language",
+ "hornvale-locale",
+ "hornvale-paleoclimate",
+ "hornvale-religion",
+ "hornvale-scene",
+ "hornvale-settlement",
+ "hornvale-species",
+ "hornvale-terrain",
+ "hornvale-thing",
+ "hornvale-vessel",
+ "hornvale-worldgen",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "hornvale-alchemy"
 version = "0.1.0"
 dependencies = [
@@ -136,6 +165,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "hornvale-chronicle"
+version = "0.1.0"
+dependencies = [
+ "hornvale-kernel",
+]
+
+[[package]]
 name = "hornvale-climate"
 version = "0.1.0"
 dependencies = [
@@ -172,12 +208,14 @@ name = "hornvale-game"
 version = "0.1.0"
 dependencies = [
  "crossterm",
+ "hornvale",
  "hornvale-astronomy",
  "hornvale-game-core",
  "hornvale-kernel",
  "hornvale-language",
  "hornvale-scene",
  "hornvale-settlement",
+ "hornvale-species",
  "hornvale-terrain",
  "hornvale-vessel",
  "hornvale-worldgen",
@@ -191,6 +229,15 @@ version = "0.1.0"
 dependencies = [
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "hornvale-hearsay"
+version = "0.1.0"
+dependencies = [
+ "hornvale-astronomy",
+ "hornvale-history",
+ "hornvale-kernel",
 ]
 
 [[package]]
@@ -212,6 +259,30 @@ name = "hornvale-kernel"
 version = "0.1.0"
 dependencies = [
  "libm",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "hornvale-lab"
+version = "0.1.0"
+dependencies = [
+ "hornvale-astronomy",
+ "hornvale-climate",
+ "hornvale-culture",
+ "hornvale-demography",
+ "hornvale-hearsay",
+ "hornvale-history",
+ "hornvale-kernel",
+ "hornvale-language",
+ "hornvale-locale",
+ "hornvale-religion",
+ "hornvale-settlement",
+ "hornvale-species",
+ "hornvale-terrain",
+ "hornvale-topology",
+ "hornvale-vessel",
+ "hornvale-worldgen",
  "serde",
  "serde_json",
 ]
@@ -293,6 +364,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "hornvale-thing"
+version = "0.1.0"
+dependencies = [
+ "hornvale-kernel",
+]
+
+[[package]]
 name = "hornvale-topology"
 version = "0.1.0"
 dependencies = [
@@ -341,6 +419,7 @@ dependencies = [
  "hornvale-settlement",
  "hornvale-species",
  "hornvale-terrain",
+ "hornvale-thing",
  "hornvale-topology",
 ]
 

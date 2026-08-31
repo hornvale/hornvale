@@ -481,9 +481,12 @@ fn detect_d7(c: &Census) -> Vec<Finding> {
     out
 }
 
-/// Every crate under `domains/`, frozen at authoring time (spec §4.4a — 13
-/// crates as of this campaign). `domain_crates_are_still_exactly_this_list`
-/// cross-checks this against the live tree so it cannot silently drift.
+/// Every crate under `domains/` — 15 as of The Chattel's `domains/thing`
+/// (spec §4.4a authored this list at 13; it had already drifted to 14 with
+/// `person` before this campaign touched it, undetected because this comment
+/// is prose the roster-vs-tree check below has no opinion about).
+/// `domain_crates_are_still_exactly_this_list` cross-checks the roster
+/// itself against the live tree so its CONTENTS cannot silently drift.
 const DOMAIN_CRATES: &[&str] = &[
     "alchemy",
     "astronomy",
@@ -501,6 +504,10 @@ const DOMAIN_CRATES: &[&str] = &[
     "settlement",
     "species",
     "terrain",
+    // The Chattel's domain (object kinds). Deliberately absent from
+    // `MEASURED_CRATES`, the same shape as `person`: no census metric reads
+    // a thing-kind yet.
+    "thing",
     "topology",
 ];
 
@@ -1319,16 +1326,16 @@ mod tests {
     }
 
     #[test]
-    fn d8_fires_on_exactly_alchemy_paleoclimate_and_person() {
+    fn d8_fires_on_exactly_alchemy_paleoclimate_person_and_thing() {
         let f = detect_d8();
         let names: Vec<&str> = f.iter().map(|x| x.metric.as_str()).collect();
         assert_eq!(
             names,
-            vec!["alchemy", "paleoclimate", "person"],
+            vec!["alchemy", "paleoclimate", "person", "thing"],
             "D8 must fire on exactly the crates no metric reaches. `person` \
              joined the roster with The Particular and no census metric reads \
-             it yet — a real gap in the world, which D8 exists to render \
-             rather than to hide."
+             it yet; `thing` joined with The Chattel, same shape — a real gap \
+             in the world, which D8 exists to render rather than to hide."
         );
     }
 

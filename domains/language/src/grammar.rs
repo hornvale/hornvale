@@ -3,18 +3,22 @@
 //! Mortise — subordination strategy (Task 5: whether an embedded clause is
 //! marked with a complementizer, and its drawn form) and coordination
 //! strategy (Task 6: whether coordinated clauses are joined with a
-//! conjunction, and its drawn form). This is the floor slice of LANG-40's
+//! conjunction, and its drawn form), and — since The Rail, Task 9 —
+//! interrogative strategy (whether a polar question is marked with a free
+//! particle, and its drawn form, or by transcription convention for a
+//! tongue that draws none). This is the floor slice of LANG-40's
 //! grammaticalization-depth vector — C7 (the morphology campaign) extends
 //! [`TongueGrammar`], never replaces it.
 //!
 //! Word order is historically **contingent**, not derivable from a
 //! species' psychology or subsistence pattern (spec §3): deriving it from
 //! existing culture vectors would be astrology shipped as science, so
-//! these parameters are DRAWN from five permanent stream labels
+//! these parameters are DRAWN from six permanent stream labels
 //! (`language/<species>/grammar/constituent-order`,
 //! `language/<species>/grammar/copula`, `language/<species>/grammar/articles`,
 //! `language/<species>/grammar/subordinator`,
-//! `language/<species>/grammar/conjunction`)
+//! `language/<species>/grammar/conjunction`,
+//! `language/<species>/grammar/interrogative`)
 //! — build-state (decision 0058): drawn at composition/render time, never
 //! serialized, so adding them is byte-identical to every existing world.
 //!
@@ -31,7 +35,13 @@
 //! the identical way again (spec §4.10): a hardcoded "and" would make
 //! every tongue coordinate like English, and a tongue that draws none
 //! coordinates by bare juxtaposition — also a legitimate grammar, not a
-//! gap.
+//! gap. A drawn interrogative particle's form is filled the identical way a
+//! third time (The Rail, Task 9): a tongue that draws none questions by
+//! INTONATION — the commonest strategy cross-linguistically (Ultan 1978;
+//! Dryer, WALS 116) — and a text renderer cannot show intonation, so such a
+//! tongue's polar question is its declarative surface plus `?`, a
+//! TRANSCRIPTION CONVENTION rather than a grammatical marker (see
+//! [`realize_tongue_polar_question`]'s own doc).
 //!
 //! **A vocabulary word costs zero stream labels; a function word costs
 //! one.** A word is a `dynamic(concept)` value on the existing
@@ -137,6 +147,21 @@ pub struct TongueGrammar {
     /// identical reason: a free word that never hosts an affix layer, so no
     /// parallel `_segments` field.
     pub conjunction: Option<String>,
+    /// The overt interrogative particle's roman form for tongues that mark a
+    /// polar question with a free particle word — drawn from the tongue's
+    /// own phonology, never authored — or `None` for a tongue that questions
+    /// by INTONATION alone: the commonest strategy cross-linguistically
+    /// (Ultan 1978; Dryer, WALS 116), a legitimate drawn value and not a
+    /// degenerate one (The Rail, Task 9). A text renderer cannot show
+    /// intonation, so [`realize_tongue_polar_question`] falls back to a
+    /// TRANSCRIPTION CONVENTION for such a tongue — its declarative surface
+    /// plus `?` — never a grammatical marker; see that function's own doc
+    /// and the idea-registry row
+    /// `LANG-prosody-needs-a-stated-transcription-convention`. On the
+    /// identical shape [`Self::subordinator`] and [`Self::conjunction`]
+    /// carry and for the identical reason: a free word that never hosts an
+    /// affix layer, so no parallel `_segments` field.
+    pub interrogative: Option<String>,
 }
 
 /// The `range_u32(1, 100)` roll boundaries for [`ConstituentOrder`]
@@ -209,12 +234,28 @@ fn draw_conjunction_form(stream: &mut Stream, namer: &Namer, orth: Orthography) 
     render_views_with(&segments, orth).roman
 }
 
-/// Draw `species`' tongue grammar from the five permanent grammar streams
+/// Draw the overt interrogative particle's one-syllable roman form from
+/// `namer`'s phonology, consuming `stream` — the same stream the presence
+/// roll already drew from, so presence and form share the one permanent
+/// `.../grammar/interrogative` stream (The Rail, Task 9). Uses the exact
+/// syllable-fill mechanism [`draw_copula_form`]/[`draw_subordinator_form`]/
+/// [`draw_conjunction_form`] use. Only the roman form is returned, on the
+/// identical reasoning those two functions state: an interrogative particle
+/// is a free word that never hosts an affix layer, so it needs no parallel
+/// segments to join at.
+fn draw_interrogative_form(stream: &mut Stream, namer: &Namer, orth: Orthography) -> String {
+    let syllables = namer.draw_syllables(stream, 1, 1, false);
+    let segments = segments_of(&syllables);
+    render_views_with(&segments, orth).roman
+}
+
+/// Draw `species`' tongue grammar from the six permanent grammar streams
 /// (`language/<species>/grammar/…`): constituent order, copula presence
 /// (and drawn form), article presence, subordination strategy
-/// (complementizer presence and drawn form, or bare parataxis), and
+/// (complementizer presence and drawn form, or bare parataxis),
 /// coordination strategy (conjunction presence and drawn form, or bare
-/// juxtaposition).
+/// juxtaposition), and interrogative strategy (particle presence and drawn
+/// form, or intonation-only questioning marked by transcription convention).
 /// type-audit: bare-ok(identifier-text)
 pub fn tongue_grammar(seed: &Seed, species: &str, ph: &Phonology) -> TongueGrammar {
     let namer = Namer::new(seed, species, ph);
@@ -289,6 +330,29 @@ pub fn tongue_grammar(seed: &Seed, species: &str, ph: &Phonology) -> TongueGramm
         None
     };
 
+    let mut interrogative_stream = seed
+        .derive(streams::ROOT)
+        .derive(StreamLabel::dynamic(species))
+        .derive(streams::GRAMMAR)
+        .derive(streams::INTERROGATIVE)
+        .stream();
+    // Skewed toward NO particle, unlike the subordinator/conjunction axes'
+    // even 50/50 split: those two cite no literature-backed skew (spec
+    // §4.6, §4.10), but this one has one — intonation-only polar
+    // questioning is the cross-linguistic MAJORITY strategy (Ultan 1978;
+    // Dryer, WALS 116) — so the roll favors `None`, on the identical
+    // authored-typology footing [`order_from_roll`]'s own comment states
+    // for [`ConstituentOrder`].
+    let interrogative = if interrogative_stream.range_u32(1, 100) <= 40 {
+        Some(draw_interrogative_form(
+            &mut interrogative_stream,
+            &namer,
+            ph.orthography,
+        ))
+    } else {
+        None
+    };
+
     TongueGrammar {
         order,
         copula,
@@ -296,6 +360,7 @@ pub fn tongue_grammar(seed: &Seed, species: &str, ph: &Phonology) -> TongueGramm
         articles,
         subordinator,
         conjunction,
+        interrogative,
     }
 }
 
@@ -383,6 +448,13 @@ fn resolve_argument(
         Argument::Count(n) => Ok(n.to_string()),
         Argument::Quantity(x) => Ok(x.to_string()),
         Argument::Pronoun(person) => Ok(tongue_pronoun(*person, number, pronouns)?),
+        // The intransitive frame's object slot: no argument at all, and
+        // callers that reach here for it (this crate's floor realizer) have
+        // nothing to resolve. This arm keeps the match exhaustive; the empty
+        // string it returns never reaches `realize_tongue_with_subject`'s
+        // ordering, since that function gates the object slot on `valence`
+        // (The Rail, Task 3) rather than trusting this value's presence.
+        Argument::Absent => Ok(String::new()),
         Argument::Clause(inner) => {
             let depth = clause_embed_depth(argument);
             assert!(
@@ -601,6 +673,76 @@ fn tongue_verb(
             roman: roman.clone(),
         })),
         Valence::Transitive => Ok(Some(resolve_concept_marked(&clause.predicate, lexicon)?)),
+        // The verb slot is filled identically to the transitive case — the
+        // clause's own predicate, lexicalized through this tongue's own
+        // lexicon — and only the object differs. The ordering half (how a
+        // tongue with a drawn constituent order places a verb with no
+        // object) is Task 3's business, not this function's.
+        Valence::Intransitive => Ok(Some(resolve_concept_marked(&clause.predicate, lexicon)?)),
+        // Property predication GAPS, and this is spec §4's law applied
+        // rather than an oversight: "Renders fully or gaps entirely -- a
+        // gap on the object, on the VERB, or on any adjunct concept fails
+        // the whole clause" (see this function's own caller,
+        // `realize_tongue`, whose doc states it). No tongue construction has
+        // a slot for the property word at all: Common's
+        // `Part::PredicateWord` renders the clause's own predicate, but the
+        // tongue path's constituent ordering carries only
+        // subject/verb/object, and filling the verb slot with the drawn
+        // copula (the way `Valence::Nominal` does) would leave the property
+        // itself with nowhere to go. Returning `Ok` with just the copula
+        // would render *something* -- "Subject Copula." -- and that
+        // something is exactly the failure mode this campaign keeps
+        // finding: a PLAUSIBLE surface, a complete-looking zero-property
+        // utterance, that is silently wrong rather than visibly absent. So
+        // this gaps instead, with a recountable reason, the same as any
+        // other unbuilt tongue construction.
+        //
+        // Building the tongue half for real needs a fourth ordering slot
+        // (today's `s`/`v`/`o` triad has no seat for a bare predicate word
+        // alongside a filled copula) in both `realize_tongue_with_subject`
+        // and `realize_tongue_deep_with_subject`, plus lexicalizing
+        // `clause.predicate` through `lexicon` the way `Valence::Transitive`
+        // already does here -- at which point this arm returns `Ok(Some(..))`
+        // for the copula exactly as it does today, and a second slot carries
+        // the lexicalized property word. Until then: gap, not partial
+        // render. `a_tongue_gaps_a_property_predication` pins this.
+        Valence::Property => Err(TongueGap {
+            concept: clause.predicate.clone(),
+            reason: "no tongue construction for property predication yet -- \
+                     no ordering slot carries the property word"
+                .to_string(),
+        }),
+        // Locative predication GAPS for a DIFFERENT reason than `Property`
+        // does, even though `Valence::binds_object` says it binds a real
+        // object: the missing seat is not the object, it is the adposition
+        // itself. `binds_object` being true means `realize_tongue_with_
+        // subject` orders a real `o` token (the located thing, lexicalized
+        // through this tongue's own lexicon exactly as `Nominal`'s object
+        // is) -- but the s/v/o triad still has only ONE verb-slot seat, and
+        // this valence needs two words there: the tense-carrying copula
+        // AND the relation word (`under`, `at`, `in`, ...). Filling that one
+        // seat with the copula alone (the way `Nominal` does) would render
+        // "Subject Copula Object." -- a complete-LOOKING sentence with the
+        // relation silently missing, exactly the plausible-but-wrong
+        // surface spec §4's render-fully-or-gap law exists to keep out of a
+        // rendered artifact (the same finding this campaign's Task 4 made
+        // for `Property`, on review). So this gaps too, with a distinct
+        // reason naming the actual missing seat rather than reusing
+        // `Property`'s.
+        //
+        // Building the tongue half for real needs the same fourth ordering
+        // slot `Property`'s own comment above describes -- once it exists,
+        // this arm returns `Ok(Some(..))` for the copula exactly as
+        // `Nominal` does today, and the new slot carries the lexicalized
+        // relation word alongside the object `realize_tongue_with_subject`
+        // already orders. Until then: gap, not partial render.
+        // `a_tongue_gaps_a_locative_predication` pins this.
+        Valence::Locative => Err(TongueGap {
+            concept: clause.predicate.clone(),
+            reason: "no tongue construction for locative predication yet -- \
+                     no ordering slot carries the adposition"
+                .to_string(),
+        }),
     }
 }
 
@@ -671,18 +813,46 @@ fn realize_tongue_with_subject(
         realize_adjuncts(&clause.adjuncts, grammar, lexicon, clause.number, pronouns)?;
     let s = subject.as_deref();
     let v = verb.as_deref();
-    let o = complement.as_str();
+    // The object slot: `None` when this valence binds no object at all
+    // (`Valence::binds_object`) -- `Intransitive` (The Rail, Task 3) and
+    // `Property` (The Rail, Task 4) both bind `Argument::Absent`, and
+    // Common's own analogue is a part list with no `Part::Complement` for
+    // either (`INTRANSITIVE`/`PROPERTY`, see `common_constructions`) --
+    // `Some` for every other valence, even where the resolved text happens
+    // to be empty (a gap-free absent argument never reaches this function
+    // to begin with, since `resolve_argument` already errored on any real
+    // gap upstream).
+    //
+    // **Currently unreachable for `Property` specifically, and kept
+    // anyway.** `tongue_verb`'s `Property` arm gaps before this line is
+    // ever reached (the `?` on `verb` above returns first), so this
+    // exclusion has no live caller today. It is kept because
+    // `binds_object` says `Property` binds no object regardless of whether
+    // any tongue construction exists to render one -- a fact about what the
+    // clause MEANS, not about what `tongue_verb` currently builds -- so a
+    // future campaign that flips that arm to `Ok` inherits a correct gate
+    // rather than having to rediscover it.
+    //
+    // `Locative` never reaches this exclusion at all -- `binds_object` says
+    // `true` for it, so `o` below is always `Some` in principle -- but
+    // `tongue_verb`'s own `Locative` arm gaps first for an unrelated reason
+    // (no ordering slot carries the adposition), so this line is equally
+    // unreachable for it today, just not via this exclusion.
+    let o = valence.binds_object().then_some(complement.as_str());
     // Order the present constituents; an absent verb (a zero-copula tongue
     // predicating nominally) simply drops out, exactly as an elided subject
-    // now does. A transitive clause always fills the verb slot, so all six
-    // orders emit three tokens with a subject present and two without one.
+    // now does -- and an absent object drops out the same way for an
+    // intransitive clause, rather than leaving a spurious empty token
+    // between the two real ones. A transitive clause always fills the verb
+    // slot, so all six orders emit three tokens with a subject present and
+    // two without one; an intransitive clause emits at most two either way.
     let ordered: Vec<&str> = match grammar.order {
-        ConstituentOrder::Sov => [s, Some(o), v],
-        ConstituentOrder::Svo => [s, v, Some(o)],
-        ConstituentOrder::Vso => [v, s, Some(o)],
-        ConstituentOrder::Vos => [v, Some(o), s],
-        ConstituentOrder::Ovs => [Some(o), v, s],
-        ConstituentOrder::Osv => [Some(o), s, v],
+        ConstituentOrder::Sov => [s, o, v],
+        ConstituentOrder::Svo => [s, v, o],
+        ConstituentOrder::Vso => [v, s, o],
+        ConstituentOrder::Vos => [v, o, s],
+        ConstituentOrder::Ovs => [o, v, s],
+        ConstituentOrder::Osv => [o, s, v],
     }
     .into_iter()
     .flatten()
@@ -782,6 +952,108 @@ pub fn realize_tongue_coordination(
         )?);
     }
     Ok(join_coordinated(texts, grammar.conjunction.as_deref()))
+}
+
+/// Turn an already-realized tongue DECLARATIVE into its polar-question
+/// surface: prefix the drawn interrogative particle, or apply the
+/// transcription convention. Split out from [`realize_tongue_polar_question`]
+/// on the identical precedent [`invert_for_question`] sets for
+/// [`crate::clause::realize_common_polar_question`] (`clause.rs`) — a
+/// private, directly-testable operator over an already-assembled string,
+/// so its loud-panic guard can be pinned by a test without needing a
+/// `Clause`/`Lexicon`/pronoun fixture whose declarative happens to violate
+/// the assumption (today none can — every `Ok` return of
+/// `realize_tongue_with_subject` pushes exactly one terminal `.`).
+///
+/// **A drawn particle prefixes `declarative`**, on the identical
+/// boundary-marking convention [`mark_embedded_clause`] uses for the
+/// subordinator — *"zil the Vavako are goblins?"* A clause-initial particle
+/// is one of the attested cross-linguistic positions (Dryer, WALS 92); no
+/// position axis is drawn (this campaign spends exactly one stream label
+/// per typological fact, on [`streams::INTERROGATIVE`]'s own doc), so the
+/// realizer fixes one position rather than adding a second draw for it.
+///
+/// **No particle (`None`) questions by INTONATION** — the commonest
+/// strategy cross-linguistically (Ultan 1978; Dryer, WALS 116), the
+/// majority case this axis's own skewed draw reflects, not the degenerate
+/// one — **and a text renderer cannot show intonation**, so the surface is
+/// `declarative` with its terminal `.` replaced by `?`: a TRANSCRIPTION
+/// CONVENTION, not a grammatical marker. Spec §3.6:
+/// [`crate::phonology::Phonology::orthography`] is a stated VIEW of a
+/// tongue, and punctuation is how writing encodes prosody — so
+/// transcription may express this contrast (the model DRAWS whether a
+/// polar question exists) while it may not manufacture one the model does
+/// not draw (contrastive focus, say). See the idea-registry row
+/// `LANG-prosody-needs-a-stated-transcription-convention`; this does **not**
+/// close the question of real alphabets and writing systems, stated future
+/// work of its own.
+///
+/// **Panics, loudly, if `declarative` does not end in `.`** — a silent
+/// fallback here (append `?` to whatever the text ends with, or leave it
+/// untouched) would be the identical defect shape [`invert_for_question`]'s
+/// own loud panic exists to rule out, just reached by a different door
+/// (T9 review round 1: fixing four instances of a pattern while writing a
+/// fifth is a sign the pattern was matched, not the principle applied — so
+/// this function gets the same loud assumption its sibling does, not just
+/// the four that were already flagged).
+fn question_from_declarative(mut declarative: String, interrogative: Option<&str>) -> String {
+    assert!(
+        declarative.ends_with('.'),
+        "a tongue declarative always ends in \".\" — every `Ok` return of \
+         `realize_tongue_with_subject` pushes exactly one — so this operator \
+         has something to strip and replace with \"?\"; got {declarative:?} \
+         instead, on the identical loud-panic posture `invert_for_question` \
+         takes for the identical shape (T9 review round 1)"
+    );
+    declarative.pop();
+    match interrogative {
+        Some(particle) => format!("{particle} {declarative}?"),
+        None => format!("{declarative}?"),
+    }
+}
+
+/// Realize a [`Clause`] as a tongue's own polar question (The Rail, Task 9,
+/// spec §4, LANG-40) — the tongue-side counterpart to
+/// [`crate::clause::realize_common_polar_question`], and a different
+/// OPERATOR from it, not a port. Common inverts its one auxiliary (the
+/// copula) because English marks a polar question by INVERSION; a tongue
+/// marks one by a free PARTICLE, or by no grammatical marker at all
+/// (spec §4, LANG-40's floor slice), so this function never moves a
+/// constituent — it appends to the tongue's own already-realized
+/// declarative surface. The particle-vs-transcription strategy itself is
+/// [`question_from_declarative`]'s own doc; this function's job is only to
+/// produce the declarative once and hand it there.
+///
+/// **No lexical-verb refusal, unlike Common's.** Common's own polar-question
+/// operator panics on a construction whose verb slot is
+/// [`Part::Verb`](crate::clause::Part::Verb)
+/// (its own doc: English inverts only an auxiliary, and the copula is the
+/// only one Common has). Neither strategy here moves a constituent — a
+/// particle prefixes the whole clause, and the transcription convention
+/// only rewrites the terminal punctuation — so nothing here depends on
+/// which valence filled the verb slot, and a lexical-verb clause questions
+/// exactly as readily as a nominal one.
+///
+/// **Takes the already-assembled declarative text, never rebuilds it** — a
+/// single call to [`realize_tongue`], transformed by
+/// [`question_from_declarative`], is what keeps this surface and the
+/// declarative one from silently drifting apart, the same discipline
+/// [`mark_embedded_clause`]'s own doc states for the identical reason.
+///
+/// Renders fully or gaps entirely (spec §4): any gap [`realize_tongue`]
+/// itself raises for `clause` propagates unchanged.
+/// type-audit: bare-ok(prose)
+pub fn realize_tongue_polar_question(
+    clause: &Clause,
+    grammar: &TongueGrammar,
+    lexicon: &Lexicon,
+    pronouns: &BTreeMap<&'static str, MorphForm>,
+) -> Result<String, TongueGap> {
+    let declarative = realize_tongue(clause, grammar, lexicon, pronouns)?;
+    Ok(question_from_declarative(
+        declarative,
+        grammar.interrogative.as_deref(),
+    ))
 }
 
 /// A word mid-assembly: its segments when known (so a further affix layer
@@ -1084,6 +1356,26 @@ fn realize_tongue_deep_with_subject(
                 None,
             )
         }
+        // The intransitive frame's object slot: no argument at all. Named
+        // explicitly rather than left to the `other` catch-all below, on
+        // purpose -- the catch-all would silently absorb it into an empty
+        // `Marked`, which used to be ordered into the tongue's constituent
+        // sequence as an empty complement, a WRONG surface (not a gap) for
+        // any caller realizing an intransitive clause through this deep
+        // realizer, since `predicate_valence` now answers `Intransitive`
+        // for a real predicate (`SLEEP`). This arm still produces that same
+        // empty `Marked`; what has changed (The Rail, Task 3) is that the
+        // ordering below now gates the object token on `valence`, so an
+        // `Intransitive` clause's `o_tok` is `None` and this empty roman
+        // string never reaches `ordered` at all -- the value sitting
+        // unused here is inert, not silently rendered.
+        Argument::Absent => (
+            Marked {
+                segments: None,
+                roman: String::new(),
+            },
+            None,
+        ),
         other => (
             Marked {
                 segments: None,
@@ -1235,38 +1527,59 @@ fn realize_tongue_deep_with_subject(
     } else {
         Role::Complement
     };
-    let o = complement.roman.as_str();
+    // The object slot: `None` when this valence binds no object at all
+    // (`Valence::binds_object`) -- `Intransitive` (The Rail, Task 3) and
+    // `Property` (The Rail, Task 4) both bind `Argument::Absent` -- the
+    // same "absent constituent simply drops out" shape `s`/`s_tok` above
+    // and `v` below already have -- `Some` for every other valence, even
+    // where the resolved text happens to be empty (a gap-free absent
+    // argument never reaches this function, since `resolve_argument`
+    // already errored on any real gap upstream). Named here rather than
+    // inlined at each arm, since every arm needs the same `Option`-wrapped
+    // token.
+    //
+    // **Currently unreachable for `Property` specifically, the same way its
+    // floor-realizer twin is** (`tongue_verb`'s `Property` arm gaps at the
+    // `?` on `verb`, ~line 1190, before this line ever runs) -- kept
+    // because `binds_object` states a fact about what the clause MEANS, not
+    // about what `tongue_verb` currently builds, so a future campaign that
+    // flips that arm to `Ok` inherits a correct gate rather than having to
+    // rediscover it.
+    //
+    // `Locative` binds an object (`binds_object` is `true`) but is equally
+    // unreachable here today, for the unrelated reason `tongue_verb`'s own
+    // `Locative` arm documents: it gaps before this line runs because no
+    // ordering slot carries the adposition, not because it binds no object.
+    let o_tok = valence
+        .binds_object()
+        .then(|| (Role::Complement, complement.roman.clone()));
     let mut ordered: Vec<(Role, String)> = match grammar.order {
         ConstituentOrder::Sov => [
             s_tok.clone(),
-            Some((Role::Complement, o.to_string())),
+            o_tok.clone(),
             v.map(|v| (Role::Verb, v.to_string())),
         ],
         ConstituentOrder::Svo => [
             s_tok.clone(),
             v.map(|v| (Role::Verb, v.to_string())),
-            Some((Role::Complement, o.to_string())),
+            o_tok.clone(),
         ],
         ConstituentOrder::Vso => [
             v.map(|v| (Role::Verb, v.to_string())),
             s_tok.clone(),
-            Some((Role::Complement, o.to_string())),
+            o_tok.clone(),
         ],
         ConstituentOrder::Vos => [
             v.map(|v| (Role::Verb, v.to_string())),
-            Some((Role::Complement, o.to_string())),
+            o_tok.clone(),
             s_tok.clone(),
         ],
         ConstituentOrder::Ovs => [
-            Some((Role::Complement, o.to_string())),
+            o_tok.clone(),
             v.map(|v| (Role::Verb, v.to_string())),
             s_tok.clone(),
         ],
-        ConstituentOrder::Osv => [
-            Some((Role::Complement, o.to_string())),
-            s_tok,
-            v.map(|v| (Role::Verb, v.to_string())),
-        ],
+        ConstituentOrder::Osv => [o_tok, s_tok, v.map(|v| (Role::Verb, v.to_string()))],
     }
     .into_iter()
     .flatten()
@@ -1436,7 +1749,7 @@ mod tests {
     use crate::etymology::CascadeRegime;
     use crate::lexicon::{ExposureClass, LexEntry, build_lexicon};
     use crate::naming::render_views;
-    use crate::packs::{EAT, KILL, KNOW};
+    use crate::packs::{EAT, KILL, KNOW, NIGHT, OLD, SLEEP, UNDER};
     use crate::phonology::{Envelope, ExoticSeg, draw_phonology};
     use hornvale_kernel::Seed;
     use hornvale_kernel::world::IS_A;
@@ -1702,6 +2015,7 @@ mod tests {
             articles: false,
             subordinator: None,
             conjunction: None,
+            interrogative: None,
         };
         assert_eq!(
             realize_tongue(&clause, &svo, &lex, &no_pronouns()).unwrap(),
@@ -1714,6 +2028,7 @@ mod tests {
             articles: false,
             subordinator: None,
             conjunction: None,
+            interrogative: None,
         };
         assert_eq!(
             realize_tongue(&clause, &sov, &lex, &no_pronouns()).unwrap(),
@@ -1726,11 +2041,140 @@ mod tests {
             articles: false,
             subordinator: None,
             conjunction: None,
+            interrogative: None,
         };
         assert_eq!(
             realize_tongue(&clause, &zero_copula, &lex, &no_pronouns()).unwrap(),
             format!("Vavako {word}.")
         );
+    }
+
+    /// A tongue that drew an interrogative particle marks its polar
+    /// questions with it (The Rail, Task 9): the particle prefixes the
+    /// clause's own declarative surface, and the declarative constituents
+    /// (word choice, word order) are otherwise unchanged.
+    #[test]
+    fn a_tongue_with_an_interrogative_particle_marks_a_polar_question() {
+        let lex = tiny_lexicon_with(&[("goblin-kind", ExposureClass::Steeped)]);
+        let word = match lex.entry("goblin-kind").unwrap() {
+            LexEntry::Root { views, .. } => views.roman.clone(),
+            other => panic!("goblin-kind should be a root, got {other:?}"),
+        };
+        let clause = Clause {
+            predicate: IS_A.to_string(),
+            subject: Subject::Name("Vavako".to_string()),
+            object: Argument::Concept("goblin-kind".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: vec![],
+        };
+        let grammar = TongueGrammar {
+            order: ConstituentOrder::Svo,
+            copula: Some("gha".into()),
+            copula_segments: None,
+            articles: false,
+            subordinator: None,
+            conjunction: None,
+            interrogative: Some("zil".into()),
+        };
+        let declarative = realize_tongue(&clause, &grammar, &lex, &no_pronouns()).unwrap();
+        assert_eq!(declarative, format!("Vavako gha {word}."));
+        // Expected question DERIVED from the declarative just computed above
+        // — not a second, independent literal — so a future word-order or
+        // spacing change needs updating in one place, not two (T9 review
+        // round 1 Minor: the no-particle sibling test already does this).
+        let expected = format!("zil {}?", &declarative[..declarative.len() - 1]);
+        let question =
+            realize_tongue_polar_question(&clause, &grammar, &lex, &no_pronouns()).unwrap();
+        assert_eq!(
+            question, expected,
+            "the particle prefixes the SAME constituents the declarative \
+             already ordered, with `.` replaced by `?`"
+        );
+    }
+
+    /// **A tongue that drew NO particle questions by intonation, and a text
+    /// renderer cannot show intonation.** Its polar question is its
+    /// declarative surface plus `?` — a TRANSCRIPTION CONVENTION, not a
+    /// grammatical marker, and the distinction is the whole finding (The
+    /// Rail, Task 9).
+    ///
+    /// [`crate::phonology::Phonology::orthography`] is a stated VIEW of a
+    /// tongue, and punctuation is how writing encodes prosody, so a
+    /// transcription convention for interrogative is legitimate where one
+    /// for contrastive focus would not be: transcription can express any
+    /// contrast the model DRAWS and cannot manufacture one it does not.
+    /// Intonation-only questioning is the commonest strategy
+    /// cross-linguistically (Ultan 1978; Dryer, WALS 116), so this is the
+    /// majority case, not the degenerate one.
+    ///
+    /// See the idea-registry row
+    /// `LANG-prosody-needs-a-stated-transcription-convention`. **It does
+    /// not close the question of real alphabets and writing systems**,
+    /// which is stated future work of its own.
+    ///
+    /// **Asserted against a declarative COMPUTED here, never a hard-coded
+    /// string** — the whole claim is that the interrogative surface EQUALS
+    /// the declarative plus `?`, so computing the declarative and comparing
+    /// is the assertion; a literal expected string would let the two drift
+    /// apart silently.
+    #[test]
+    fn a_tongue_with_no_interrogative_particle_questions_by_transcription() {
+        let lex = tiny_lexicon_with(&[("goblin-kind", ExposureClass::Steeped)]);
+        let clause = Clause {
+            predicate: IS_A.to_string(),
+            subject: Subject::Name("Vavako".to_string()),
+            object: Argument::Concept("goblin-kind".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: vec![],
+        };
+        let grammar = TongueGrammar {
+            order: ConstituentOrder::Svo,
+            copula: Some("gha".into()),
+            copula_segments: None,
+            articles: false,
+            subordinator: None,
+            conjunction: None,
+            interrogative: None,
+        };
+        let declarative = realize_tongue(&clause, &grammar, &lex, &no_pronouns()).unwrap();
+        assert!(
+            declarative.ends_with('.'),
+            "fixture sanity: every tongue declarative ends in a full stop"
+        );
+        let expected = format!("{}?", &declarative[..declarative.len() - 1]);
+        let question =
+            realize_tongue_polar_question(&clause, &grammar, &lex, &no_pronouns()).unwrap();
+        assert_eq!(
+            question, expected,
+            "an intonation-only tongue's polar question is its declarative \
+             surface, computed above, with the terminal `.` replaced by `?` \
+             — never a hard-coded string"
+        );
+    }
+
+    /// The loud-panic guard, pinned directly against the private operator
+    /// [`question_from_declarative`] with a hand-built string that does not
+    /// end in `.` — unreachable through the public
+    /// [`realize_tongue_polar_question`] today (every `Ok` return of
+    /// `realize_tongue_with_subject` pushes exactly one terminal `.`), but
+    /// the function's own contract is a panic rather than a silent
+    /// fallback, and nothing pinned that arm firing until this test (T9
+    /// review round 1 — the same gap `invert_for_question`'s sibling panic
+    /// had, fixed the same way: split the guard into a directly-testable
+    /// private function rather than trying to construct an unreachable
+    /// `Clause`).
+    #[test]
+    #[should_panic(expected = "always ends in")]
+    fn question_from_declarative_panics_on_a_non_period_terminal() {
+        let _ = question_from_declarative("Vavako gha kell!".to_string(), Some("zil"));
     }
 
     #[test]
@@ -1754,6 +2198,7 @@ mod tests {
             articles: false,
             subordinator: None,
             conjunction: None,
+            interrogative: None,
         };
         let gap = realize_tongue(&clause, &g, &lex, &no_pronouns()).unwrap_err();
         assert_eq!(gap.concept, "planet");
@@ -1803,6 +2248,7 @@ mod tests {
             articles: false,
             subordinator: None,
             conjunction: None,
+            interrogative: None,
         };
         let gap = realize_tongue(&clause, &g, &lex, &no_pronouns()).unwrap_err();
         assert_eq!(gap.concept, "blue");
@@ -1850,6 +2296,7 @@ mod tests {
             articles: false,
             subordinator: None,
             conjunction: None,
+            interrogative: None,
         };
         let out =
             realize_tongue(&clause, &g, &lex, &no_pronouns()).expect("both concepts are known");
@@ -1860,6 +2307,138 @@ mod tests {
         assert!(
             !out.contains("orbiting"),
             "Common's role surface must not leak into a tongue: {out}"
+        );
+    }
+
+    /// r048 `spatial-adverbial`, tongue side: a spatial adjunct's concept
+    /// renders through the tongue's own lexicon exactly the SHAPE
+    /// [`a_tongue_realizes_an_adjunct_whose_concept_it_knows`] already pins
+    /// for `star-class` — `realize_adjuncts` resolves only the argument, and
+    /// never reads a role at all, so this is not new behavior for a spatial
+    /// role and not a gap: the location concept's own tongue word appears,
+    /// and Common's `"under"` (from `common_role_surface`) never leaks in.
+    /// **Common-only for the RELATION**: no tongue construction states
+    /// *where* the location concept sits relative to the event, only that
+    /// it is present — the `IMPLEMENTED_DEMANDS` doc states this gap
+    /// explicitly, the way `epistemic-hedge` states its own tongue gap.
+    #[test]
+    fn a_tongue_realizes_a_spatial_adjuncts_concept_the_same_shape_as_any_other_role() {
+        let lex = tiny_lexicon_with(&[
+            (KILL, ExposureClass::Steeped),
+            ("person", ExposureClass::Steeped),
+            ("tree", ExposureClass::Steeped),
+        ]);
+        let tree_word = match lex.entry("tree").unwrap() {
+            LexEntry::Root { views, .. } => views.roman.clone(),
+            other => panic!("expected a Root, got {other:?}"),
+        };
+        let clause = Clause {
+            predicate: KILL.to_string(),
+            subject: Subject::Name("Vavako".to_string()),
+            object: Argument::Concept("person".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: vec![Adjunct {
+                role: UNDER.to_string(),
+                argument: Argument::Concept("tree".into()),
+            }],
+        };
+        let g = TongueGrammar {
+            order: ConstituentOrder::Svo,
+            copula: None,
+            copula_segments: None,
+            articles: false,
+            subordinator: None,
+            conjunction: None,
+            interrogative: None,
+        };
+        let out =
+            realize_tongue(&clause, &g, &lex, &no_pronouns()).expect("both concepts are known");
+        assert!(
+            out.contains(&tree_word),
+            "the tongue's own word for the location concept must appear: {out}"
+        );
+        assert!(
+            !out.contains("under"),
+            "Common's role surface must not leak into a tongue: {out}"
+        );
+    }
+
+    /// r049 `temporal-adverbial`, tongue side — the SAME shape
+    /// [`a_tongue_realizes_a_spatial_adjuncts_concept_the_same_shape_as_any_other_role`]
+    /// pins for `r048`, not the total-gap shape an earlier version of this
+    /// test pinned.
+    ///
+    /// **Corrected in review round 1, replacing
+    /// `a_tongue_stray_spaces_a_temporal_adjunct_whose_role_carries_no_argument`.**
+    /// That test pinned a self-inflicted defect: `clause.rs`'s original
+    /// `NIGHT` arm bound the adjunct's `argument` to `Argument::Absent`,
+    /// which is not what the role-naming decision required — only the
+    /// ROLE needed to name the concept, per the brief's own option table —
+    /// and `realize_adjuncts`/`resolve_argument` resolve `adjunct.argument`
+    /// exclusively, never `adjunct.role`. An absent argument left the
+    /// tongue path with nothing to resolve: a live, unforced render defect
+    /// (a stray trailing space, no concept word at all), not a stated gap.
+    /// The corrected arm carries `Argument::Concept(id)`, structurally
+    /// parallel to `UNDER`'s own arm, and `night` is `ladder_rank: 0` in
+    /// `universal_stratum` exactly like `tree` (`UNDER`'s complement) — so
+    /// nothing about the concept itself forced the emptier design.
+    ///
+    /// With the argument corrected, this is now the LESSER gap `r048`
+    /// already established: the temporal CONCEPT'S own tongue word appears
+    /// (`realize_adjuncts` resolves the argument through the lexicon
+    /// regardless of role, the same shape `star-class` and `r048`'s
+    /// location concept already exercise), and Common's `"at"` relation
+    /// word stays Common-only — no tongue construction states *where in
+    /// time* the concept sits relative to the event, only that it is
+    /// present. That is a stated gap in `IMPLEMENTED_DEMANDS`, the same
+    /// posture `epistemic-hedge` and `r048` take for their own gaps, not a
+    /// silent one.
+    #[test]
+    fn a_tongue_realizes_a_temporal_adjuncts_concept_the_same_shape_as_any_other_role() {
+        let lex = tiny_lexicon_with(&[
+            (SLEEP, ExposureClass::Steeped),
+            ("night", ExposureClass::Steeped),
+        ]);
+        let night_word = match lex.entry("night").unwrap() {
+            LexEntry::Root { views, .. } => views.roman.clone(),
+            other => panic!("expected a Root, got {other:?}"),
+        };
+        let clause = Clause {
+            predicate: SLEEP.to_string(),
+            subject: Subject::Name("Vavako".to_string()),
+            object: Argument::Absent,
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Past,
+            polarity: Polarity::Pos,
+            adjuncts: vec![Adjunct {
+                role: NIGHT.to_string(),
+                argument: Argument::Concept(NIGHT.to_string()),
+            }],
+        };
+        let g = TongueGrammar {
+            order: ConstituentOrder::Svo,
+            copula: None,
+            copula_segments: None,
+            articles: false,
+            subordinator: None,
+            conjunction: None,
+            interrogative: None,
+        };
+        let out =
+            realize_tongue(&clause, &g, &lex, &no_pronouns()).expect("both concepts are known");
+        assert!(
+            out.contains(&night_word),
+            "the tongue's own word for the temporal concept must appear: {out}"
+        );
+        assert!(
+            !out.to_lowercase().contains("at "),
+            "Common's role surface (\"at\") must not leak into a tongue: {out}"
         );
     }
 
@@ -1890,6 +2469,7 @@ mod tests {
             articles: false,
             subordinator: None,
             conjunction: None,
+            interrogative: None,
         };
         let gap = realize_tongue(&clause, &g, &lex, &no_pronouns()).unwrap_err();
         assert_eq!(gap.concept, "yellow-white-dwarf");
@@ -1937,6 +2517,7 @@ mod tests {
             articles: false,
             subordinator: None,
             conjunction: None,
+            interrogative: None,
         };
         let _ = realize_tongue(&clause, &g, &lex, &no_pronouns());
     }
@@ -1978,6 +2559,7 @@ mod tests {
             articles: false,
             subordinator: None,
             conjunction: None,
+            interrogative: None,
         };
         let shallow = TongueMorphology {
             pronouns: drawn_pronouns(),
@@ -2078,6 +2660,7 @@ mod tests {
                 articles: false,
                 subordinator: None,
                 conjunction: None,
+                interrogative: None,
             };
             assert_eq!(
                 realize_tongue(&clause, &grammar, &lex, &no_pronouns()).unwrap(),
@@ -2288,6 +2871,7 @@ mod tests {
             articles: grammar.articles,
             subordinator: grammar.subordinator.clone(),
             conjunction: grammar.conjunction.clone(),
+            interrogative: None,
         };
         let expected_enclitic = affix(
             &complement_segments,
@@ -2343,9 +2927,11 @@ mod tests {
                     number_depth: MorphDepth::None,
                     tense_depth,
                     polarity_depth: MorphDepth::None,
+                    person_depth: MorphDepth::None,
                     number_position: ClassPosition::Suffix,
                     tense_position,
                     polarity_position: ClassPosition::Suffix,
+                    person_position: ClassPosition::Suffix,
                 },
                 tense,
                 polarity: BTreeMap::new(),
@@ -2516,6 +3102,7 @@ mod tests {
             articles: grammar.articles,
             subordinator: grammar.subordinator.clone(),
             conjunction: grammar.conjunction.clone(),
+            interrogative: None,
         };
         let expected_enclitic = affix(
             &complement_segments,
@@ -2563,6 +3150,7 @@ mod tests {
             articles: false,
             subordinator: None,
             conjunction: None,
+            interrogative: None,
         };
         let (affix_paradigm, _, past_roman) =
             tense_paradigm(&ph, MorphDepth::Affix, ClassPosition::Suffix);
@@ -2615,9 +3203,11 @@ mod tests {
                     number_depth: MorphDepth::None,
                     tense_depth: MorphDepth::None,
                     polarity_depth,
+                    person_depth: MorphDepth::None,
                     number_position: ClassPosition::Suffix,
                     tense_position: ClassPosition::Suffix,
                     polarity_position,
+                    person_position: ClassPosition::Suffix,
                 },
                 tense: BTreeMap::new(),
                 polarity,
@@ -2777,6 +3367,7 @@ mod tests {
             articles: grammar.articles,
             subordinator: grammar.subordinator.clone(),
             conjunction: grammar.conjunction.clone(),
+            interrogative: None,
         };
         let expected_enclitic = affix(
             &complement_segments,
@@ -2822,6 +3413,7 @@ mod tests {
             articles: false,
             subordinator: None,
             conjunction: None,
+            interrogative: None,
         };
         let (affix_paradigm, _, neg_roman) =
             polarity_paradigm(&ph, MorphDepth::Affix, ClassPosition::Suffix);
@@ -2938,6 +3530,7 @@ mod tests {
             articles: false,
             subordinator: None,
             conjunction: None,
+            interrogative: None,
         }
     }
 
@@ -3248,6 +3841,7 @@ mod tests {
             articles: false,
             subordinator: None,
             conjunction: None,
+            interrogative: None,
         };
         let clause = Clause {
             predicate: IS_A.to_string(),
@@ -3325,6 +3919,30 @@ mod tests {
         }
     }
 
+    /// The intransitive fixture (The Rail, Task 3): a lexicon carrying a
+    /// word for the ACT alone — no patient, unlike [`transitive_lexicon`] —
+    /// which is the whole of what an intransitive clause asks of a tongue.
+    fn intransitive_lexicon() -> Lexicon {
+        tiny_lexicon_with(&[(SLEEP, ExposureClass::Steeped)])
+    }
+
+    /// `Nwamvam <sleep>` — the intransitive demonstration clause, the
+    /// tongue-side sibling of [`transitive_clause`] with the object slot
+    /// left [`Argument::Absent`] rather than filled.
+    fn intransitive_clause(tense: Tense) -> Clause {
+        Clause {
+            predicate: SLEEP.to_string(),
+            subject: Subject::Name("Nwamvam".to_string()),
+            object: Argument::Absent,
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense,
+            polarity: Polarity::Pos,
+            adjuncts: vec![],
+        }
+    }
+
     /// The clause-embedding fixture (The Mortise, Task 5): a lexicon
     /// carrying words for both predicates the headline construction needs —
     /// `know`'s own clause complement and `kill`'s transitive frame — the
@@ -3383,6 +4001,7 @@ mod tests {
             articles: false,
             subordinator: subordinator.map(str::to_string),
             conjunction: None,
+            interrogative: None,
         }
     }
 
@@ -3710,6 +4329,7 @@ mod tests {
                     articles: false,
                     subordinator: None,
                     conjunction: None,
+                    interrogative: None,
                 };
                 let out = realize_tongue(&clause, &grammar, &lex, &no_pronouns()).unwrap();
                 assert_eq!(out, expected, "order {order:?} copula {copula:?}");
@@ -3720,6 +4340,256 @@ mod tests {
                 );
             }
         }
+    }
+
+    /// A tongue orders two constituents, not three, for an intransitive
+    /// clause — and every one of the six drawn orders projects onto exactly
+    /// one of the two possible two-slot sequences.
+    ///
+    /// **Six orders, two outcomes, and that is the whole typological
+    /// content.** SOV/SVO/OSV put the subject before the verb; VSO/VOS/OVS
+    /// put the verb first. Nothing here is drawn afresh: the projection
+    /// reads the order the tongue already has.
+    ///
+    /// **Exercises both realizers, not just the floor one.** The deep
+    /// realizer (`realize_tongue_deep`) computes the object slot's ordering
+    /// token independently of the floor realizer's — a separate `match` on
+    /// the same six orders, over `(Role, String)` pairs instead of `&str` —
+    /// so a fix to one does not fix the other (The Rail, Task 3 brief). An
+    /// `unmarked_morphology()`/`paradigm: None` bundle draws no marker at
+    /// all, so the deep surface must equal the floor surface exactly, the
+    /// same shallow-identity assertion `shallow_identity_holds_with_
+    /// nonempty_adjuncts` makes for the transitive/nominal path. The deep
+    /// assertion below is written against the **literal** `expected`, not
+    /// against the floor realizer's `out`: a `deep == out` assertion is an
+    /// oracle only for as long as `out == expected` still runs ahead of it,
+    /// and anchoring both to the literal makes the deep half immune to what
+    /// happens to its neighbour.
+    #[test]
+    fn a_tongue_orders_an_intransitive_clause_with_no_object_slot() {
+        let lex = intransitive_lexicon();
+        let (verb, _) = root_of(&lex, SLEEP);
+        let clause = intransitive_clause(Tense::Present);
+        let morph = unmarked_morphology();
+        let noun_class_of = |_: &str| NounClass::Inanimate;
+        let cases: [(ConstituentOrder, String); 6] = [
+            (ConstituentOrder::Sov, format!("Nwamvam {verb}.")),
+            (ConstituentOrder::Svo, format!("Nwamvam {verb}.")),
+            (ConstituentOrder::Vso, format!("{verb} Nwamvam.")),
+            (ConstituentOrder::Vos, format!("{verb} Nwamvam.")),
+            (ConstituentOrder::Ovs, format!("{verb} Nwamvam.")),
+            (ConstituentOrder::Osv, format!("Nwamvam {verb}.")),
+        ];
+        for (order, expected) in cases {
+            for copula in [Some("gha".to_string()), None] {
+                let grammar = TongueGrammar {
+                    order,
+                    copula: copula.clone(),
+                    copula_segments: None,
+                    articles: false,
+                    subordinator: None,
+                    conjunction: None,
+                    interrogative: None,
+                };
+                let out = realize_tongue(&clause, &grammar, &lex, &no_pronouns()).unwrap();
+                assert_eq!(out, expected, "order {order:?} copula {copula:?}");
+                assert!(
+                    !out.contains("gha"),
+                    "an intransitive clause fills the verb slot with its own \
+                     predicate, so the drawn copula must not appear: {out}"
+                );
+                assert!(
+                    !out.contains("  "),
+                    "the object slot must drop out entirely for an \
+                     intransitive clause, not leave a gap between the two \
+                     real tokens: {out:?}"
+                );
+                let deep = realize_tongue_deep(
+                    &clause,
+                    &grammar,
+                    &morph,
+                    None,
+                    &noun_class_of,
+                    &lex,
+                    Orthography::Digraph,
+                )
+                .unwrap();
+                // Anchored to the LITERAL, not to `out`, and deliberately
+                // so: `assert_eq!(deep, out)` is a real oracle only while
+                // `assert_eq!(out, expected)` above still runs first in this
+                // same loop body. Reorder or delete that one and a bare
+                // `deep == out` degrades silently into a cross-implementation
+                // comparison that passes whenever BOTH realizers are wrong
+                // the same way. Comparing against `expected` says the same
+                // thing about the deep realizer and cannot be weakened by
+                // anything that happens to its neighbour.
+                assert_eq!(
+                    deep, expected,
+                    "the deep realizer's own object-slot ordering (a \
+                     separate match, over (Role, String) pairs) must drop \
+                     the object exactly as the floor realizer's does: \
+                     order {order:?} copula {copula:?}"
+                );
+            }
+        }
+    }
+
+    /// **`realize_tongue` on a property clause GAPS, and this is spec §4's
+    /// law applied, not a stated loss** (The Rail, Task 4, review round 1).
+    /// A first draft of this test proved a tongue drops the property word
+    /// entirely and called that acceptable; it is not, because "Renders
+    /// fully or gaps entirely -- a gap on the object, on the VERB, or on any
+    /// adjunct concept fails the whole clause" is `realize_tongue`'s own
+    /// documented law, and a bare "Subject Copula." is a plausible,
+    /// complete-*looking* zero-property utterance -- silently wrong rather
+    /// than visibly absent, exactly the failure class this campaign keeps
+    /// finding. `tongue_verb`'s `Property` arm now returns a `TongueGap`
+    /// instead of `Ok`, so this asserts the specific gap rather than a
+    /// surface. A lexicon that DOES carry a word for `old` is used
+    /// deliberately, the same way `a_tongue_gaps_when_it_has_no_word_for_
+    /// the_verb` (below) proves its own gap is REAL by using a lexicon that
+    /// does NOT: here the point is the opposite proof -- the gap fires even
+    /// when the word exists, because the missing thing is an ordering slot,
+    /// not a lexicon entry. If a future campaign builds that slot, this
+    /// test reds and is the signal to replace it with a real surface
+    /// assertion.
+    #[test]
+    fn a_tongue_gaps_a_property_predication() {
+        let lex = tiny_lexicon_with(&[(OLD, ExposureClass::Steeped)]);
+        let clause = Clause {
+            predicate: OLD.to_string(),
+            subject: Subject::Name("Nwamvam".to_string()),
+            object: Argument::Absent,
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: vec![],
+        };
+        let grammar = TongueGrammar {
+            order: ConstituentOrder::Svo,
+            copula: Some("gha".to_string()),
+            copula_segments: None,
+            articles: false,
+            subordinator: None,
+            conjunction: None,
+            interrogative: None,
+        };
+        let gap = realize_tongue(&clause, &grammar, &lex, &no_pronouns()).unwrap_err();
+        assert_eq!(gap.concept, OLD);
+        assert_eq!(
+            gap.reason,
+            "no tongue construction for property predication yet -- no ordering \
+             slot carries the property word"
+        );
+    }
+
+    /// **`realize_tongue` on a locative clause GAPS too, for a DIFFERENT
+    /// reason than the property one does** (The Rail, Task 5). `Valence::
+    /// Locative::binds_object` is `true` — unlike `Property`, this valence
+    /// does bind a real object, and a lexicon carrying a word for it (`tree`,
+    /// below) lets `resolve_argument` succeed rather than gapping first. The
+    /// missing thing is not the object; it is a SECOND verb-slot seat for the
+    /// adposition (`under`) alongside the tense-carrying copula, and today's
+    /// s/v/o triad has only one. Filling that one seat with the copula alone
+    /// (the way `Nominal` does) would render "Nwamvam is [tree]." — a
+    /// complete-looking sentence with the relation silently missing, the
+    /// exact plausible-but-wrong surface spec §4's render-fully-or-gap law
+    /// exists to keep out. A lexicon that DOES carry a word for `under` is
+    /// used deliberately, the same proof-of-a-real-gap shape
+    /// `a_tongue_gaps_a_property_predication` uses for `old`: the gap fires
+    /// even though the word exists, because the missing thing is an ordering
+    /// slot, not a lexicon entry.
+    #[test]
+    fn a_tongue_gaps_a_locative_predication() {
+        let lex = tiny_lexicon_with(&[
+            (UNDER, ExposureClass::Steeped),
+            ("tree", ExposureClass::Steeped),
+        ]);
+        let clause = Clause {
+            predicate: UNDER.to_string(),
+            subject: Subject::Name("Nwamvam".to_string()),
+            object: Argument::Concept("tree".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: vec![],
+        };
+        let grammar = TongueGrammar {
+            order: ConstituentOrder::Svo,
+            copula: Some("gha".to_string()),
+            copula_segments: None,
+            articles: false,
+            subordinator: None,
+            conjunction: None,
+            interrogative: None,
+        };
+        let gap = realize_tongue(&clause, &grammar, &lex, &no_pronouns()).unwrap_err();
+        assert_eq!(gap.concept, UNDER);
+        assert_eq!(
+            gap.reason,
+            "no tongue construction for locative predication yet -- no ordering \
+             slot carries the adposition"
+        );
+    }
+
+    /// **The Quoin, Task 3, `verbless-clause` (r171) — a FINDING, not a
+    /// build.** A zero-copula tongue already predicates with no verb at all
+    /// for `Valence::Nominal`, and needed no new code: `tongue_verb`'s
+    /// `Nominal` arm has read `grammar.copula.as_ref().map(...)` since
+    /// before this campaign, so `copula: None` was already `Ok(None)`
+    /// there, and `realize_tongue_with_subject` already orders an absent
+    /// verb by simply not placing one (see `realize_tongue_orders_and_
+    /// copula`'s own `zero_copula` case, unchanged by this task). This test
+    /// states that explicitly, for `r171`'s own record, rather than leaving
+    /// it an unremarked side effect of an older task.
+    ///
+    /// **This is NOT the tongue path for `r171`'s own witness.** The witness
+    /// this campaign builds (`ladder_construction`'s `"r171"` arm, in
+    /// `cli/tests/suite/sentence_corpus.rs`) predicates at `Valence::
+    /// Locative` (`UNDER`), and the tongue path GAPS there regardless of
+    /// whether a copula is drawn — `a_tongue_gaps_a_locative_predication`
+    /// already pins that, for the unrelated "only one verb-slot seat"
+    /// reason `tongue_verb`'s own `Locative` arm documents. So
+    /// `verbless-clause` is Common-only for the construction its own
+    /// witness exercises (spec's Common-only posture, the same one
+    /// `property-predication` and `locative-predication` already take) —
+    /// not because zero-copula predication itself is unavailable to a
+    /// tongue; it plainly is, for `Nominal`, and always has been.
+    #[test]
+    fn a_zero_copula_tongue_already_predicates_without_a_verb() {
+        let lex = tiny_lexicon_with(&[("goblin-kind", ExposureClass::Steeped)]);
+        let word = match lex.entry("goblin-kind").unwrap() {
+            LexEntry::Root { views, .. } => views.roman.clone(),
+            other => panic!("goblin-kind should be a root, got {other:?}"),
+        };
+        let clause = Clause {
+            predicate: IS_A.to_string(),
+            subject: Subject::Name("Vavako".to_string()),
+            object: Argument::Concept("goblin-kind".to_string()),
+            number: Number::Sg,
+            definiteness: Definiteness::Def,
+            evidential: Evidential::Witnessed,
+            tense: Tense::Present,
+            polarity: Polarity::Pos,
+            adjuncts: vec![],
+        };
+        let zero_copula = TongueGrammar {
+            order: ConstituentOrder::Svo,
+            copula: None,
+            copula_segments: None,
+            articles: false,
+            subordinator: None,
+            conjunction: None,
+            interrogative: None,
+        };
+        assert_eq!(
+            realize_tongue(&clause, &zero_copula, &lex, &no_pronouns()).unwrap(),
+            format!("Vavako {word}.")
+        );
     }
 
     /// The verb lexicalizes through the tongue's OWN lexicon, and gaps the
@@ -3781,6 +4651,7 @@ mod tests {
                 articles: false,
                 subordinator: None,
                 conjunction: None,
+                interrogative: None,
             };
             let past = realize_tongue_deep(
                 &transitive_clause(Tense::Past),
@@ -3851,6 +4722,7 @@ mod tests {
                     articles: false,
                     subordinator: None,
                     conjunction: None,
+                    interrogative: None,
                 };
                 for tense in [Tense::Present, Tense::Past] {
                     let clause = transitive_clause(tense);
@@ -3921,6 +4793,7 @@ mod tests {
             articles: false,
             subordinator: None,
             conjunction: conjunction.map(str::to_string),
+            interrogative: None,
         }
     }
 

@@ -11,6 +11,13 @@ const FIXTURE: &str = include_str!("fixtures/session-seed-42-turn-0.json");
 /// later tasks lean on those types.
 const CHAMBER_FIXTURE: &str = include_str!("fixtures/session-seed-42-chamber.json");
 
+/// A seed-1 snapshot taken with a key in the possession's hand (The Chattel,
+/// Task 13). It is the ONLY committed `vessel/session/v2` document whose
+/// `self.carrying` is non-empty: every seed-42 fixture records a possession
+/// that never typed `take`, and seed 42's flagship structure has no strongbox
+/// to take a key from in the first place (decision 0398).
+const CARRYING_FIXTURE: &str = include_str!("fixtures/session-seed-1-carrying.json");
+
 #[test]
 fn the_fixture_parses() {
     let s = hornvale_game_core::Snapshot::parse(FIXTURE).expect("fixture must parse");
@@ -74,6 +81,19 @@ fn no_id_in_the_fixture_is_a_bare_number_a_javascript_client_would_round() {
     for (name, body) in [
         ("session-seed-42-turn-0.json", FIXTURE),
         ("session-seed-42-chamber.json", CHAMBER_FIXTURE),
+        // The FOURTH id family on this wire arrives with this fixture: a
+        // carried thing's `entity`. It is a lineage-derived `EntityId` like
+        // the three already on it — `self.agent`, `sensed.present[].entity`
+        // and `social[].entity` — so it is subject to the same 2^53
+        // rounding, and this crate's mirror does not model `self.carrying`,
+        // which is exactly why the check is on the raw document.
+        //
+        // This said "third" and named only `sensed`/`social`, dropping
+        // `self.agent`; `snapshot.rs`'s own doc said "third" too and named a
+        // different pair. Corrected together (The Chattel, Task 13 fix
+        // round) against `grep -n u64_as_decimal_string
+        // windows/vessel/src/snapshot.rs`, which lists four.
+        ("session-seed-1-carrying.json", CARRYING_FIXTURE),
     ] {
         let raw: serde_json::Value = serde_json::from_str(body).unwrap();
 
@@ -151,7 +171,8 @@ fn the_chamber_band_parses_and_the_plan_is_internally_consistent() {
 
     let plan = match s.spatial {
         hornvale_game_core::Spatial::Chamber { plan } => plan,
-        hornvale_game_core::Spatial::Walk { .. } => {
+        hornvale_game_core::Spatial::Walk { .. }
+        | hornvale_game_core::Spatial::Underground { .. } => {
             panic!(
                 "CHAMBER_FIXTURE must be indoors — regenerate it with scripts/possession-chamber.txt"
             )
@@ -183,5 +204,151 @@ fn the_chamber_band_parses_and_the_plan_is_internally_consistent() {
         plan.you.x,
         plan.you.y,
         plan.extent
+    );
+}
+
+/// A synthetic `band: "underground"` document (The Gallery, Task 9). Unlike
+/// [`CHAMBER_FIXTURE`] above, no committed `session-seed-42-underground.json`
+/// exists yet, so — per this task's own brief — the case is CONSTRUCTED
+/// rather than skipped: "a two-band test that silently omits the third is
+/// the same gap one layer up." Minimal but schema-faithful: one `"here"`
+/// floor cell (`you`'s own) and one `"remembered"` wall cell.
+const UNDERGROUND_SNAPSHOT: &str = r#"{
+  "schema": "vessel/session/v2",
+  "turn": 3,
+  "day": 0.02,
+  "self": {
+    "agent": "1",
+    "species": "human",
+    "settlement": "Test",
+    "population": 1
+  },
+  "narration": {
+    "prose": "You stand in a dripping cave.",
+    "nouns": []
+  },
+  "spatial": {
+    "band": "underground",
+    "level": {
+      "rung": "undercroft",
+      "depth_m": 12.5,
+      "extent": { "x": 0, "y": 0, "w": 2, "h": 1 },
+      "palette": [
+        { "kind": "floor", "state": "here" },
+        { "kind": "wall", "state": "remembered" }
+      ],
+      "cells": [
+        { "x": 0, "y": 0, "ix": 0 },
+        { "x": 1, "y": 0, "ix": 1 }
+      ],
+      "you": { "x": 0, "y": 0 },
+      "marks": []
+    }
+  }
+}"#;
+
+/// **A REGRESSION CHECK, NOT THE ENFORCEMENT (Task 9, Step 3b; corrected in
+/// review round 1).** Spec §4.3 first claimed the client's `Spatial` mirror
+/// gaining `Underground` was "a compile error until it is handled" and that
+/// claim was false: the mirror is the client's OWN enum, so an unhandled
+/// band fails silently at RUNTIME instead — `bin`'s `Driver::refresh`
+/// swallows a parse error by design (`.unwrap_or_default()` on the
+/// snapshot, `if let Ok(snap)` on the parse), leaving the previous plate
+/// standing with no error anywhere.
+///
+/// **This test does NOT provide the guard that claim was supposed to be,
+/// and an earlier version of this comment wrongly said it did.** It parses
+/// three STATIC, hand-authored cases (two committed fixtures, one literal
+/// string) and checks each still lands on its expected `Spatial` variant —
+/// a real regression check, worth keeping, that would catch this mirror
+/// breaking on a band it already claims to read. But `clients/game/core`
+/// has no dependency on `hornvale-vessel` at all (the repo boundary is the
+/// determinism boundary, decision 0055), so nothing here is wired to
+/// `SpatialChannel` itself. A FOURTH band arriving on the wire leaves this
+/// test exactly as green as it is today; nothing about running it would
+/// tell anyone a new variant exists. The actual compile-time trip for that
+/// lives on the workspace side, where the sim's own type is visible:
+/// `cli/tests/suite/client_band_coverage.rs`.
+#[test]
+fn the_client_can_parse_every_band_the_sim_emits() {
+    let walk = hornvale_game_core::Snapshot::parse(FIXTURE).expect("walk band must parse");
+    assert!(
+        matches!(walk.spatial, hornvale_game_core::Spatial::Walk { .. }),
+        "FIXTURE must actually land on the walk band, or this proves nothing"
+    );
+
+    let chamber =
+        hornvale_game_core::Snapshot::parse(CHAMBER_FIXTURE).expect("chamber band must parse");
+    assert!(
+        matches!(chamber.spatial, hornvale_game_core::Spatial::Chamber { .. }),
+        "CHAMBER_FIXTURE must actually land on the chamber band, or this proves nothing"
+    );
+
+    let underground = hornvale_game_core::Snapshot::parse(UNDERGROUND_SNAPSHOT)
+        .expect("underground band must parse");
+    let level = match underground.spatial {
+        hornvale_game_core::Spatial::Underground { level } => level,
+        other => {
+            panic!("UNDERGROUND_SNAPSHOT must land on the underground band, got {other:?}")
+        }
+    };
+    assert_eq!(level.palette.len(), 2);
+    for cell in &level.cells {
+        assert!(
+            (cell.ix as usize) < level.palette.len(),
+            "cell ({}, {}) indexes palette entry {}, but the palette holds {} entries",
+            cell.x,
+            cell.y,
+            cell.ix,
+            level.palette.len()
+        );
+    }
+    assert!(
+        level.you.x >= level.extent.x
+            && level.you.x < level.extent.x + level.extent.w
+            && level.you.y >= level.extent.y
+            && level.you.y < level.extent.y + level.extent.h,
+        "the possession's own cell ({}, {}) must sit inside the level's extent {:?}",
+        level.you.x,
+        level.you.y,
+        level.extent
+    );
+}
+
+/// **The wire's custody field is not empty in at least one committed
+/// document**, which is the only thing a fixture can prove about it.
+///
+/// `make game-check` is the one gate that reads these files, and the
+/// workspace gate cannot see them at all — so this is the same
+/// raw-document check `no_id_in_the_fixture_is_a_bare_number_a_javascript_
+/// client_would_round` makes, for the same reason. The mirror deliberately
+/// does not model `self.carrying` (nothing here draws it yet), so the
+/// assertion cannot be made through the parsed type.
+///
+/// Why it is worth a test at all: a field that ships empty in every
+/// committed artifact is indistinguishable from a field nothing fills, and
+/// refusing to ship one of those is what The Offer's deferred
+/// `NounEntry.affordances` is still waiting on.
+#[test]
+fn the_carrying_fixture_names_a_thing_in_hand() {
+    let raw: serde_json::Value = serde_json::from_str(CARRYING_FIXTURE).unwrap();
+    let carrying = raw["self"]["carrying"]
+        .as_array()
+        .expect("self.carrying is an array on vessel/session/v2");
+    assert_eq!(
+        carrying.len(),
+        1,
+        "the seed-1 fixture is taken with exactly one thing in hand: {carrying:?}"
+    );
+    assert_eq!(
+        carrying[0]["noun"].as_str(),
+        Some("a key"),
+        "the fixture must name the thing by the noun the verbs take"
+    );
+    assert!(
+        carrying[0]["entity"]
+            .as_str()
+            .is_some_and(|id| id.parse::<u64>().is_ok()),
+        "a carried thing's id must cross as a decimal string, not a number"
     );
 }

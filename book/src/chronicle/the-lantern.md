@@ -327,9 +327,10 @@ and the error scales with how dark the emitter is:
 | lava | basalt, near zero in every band | **nearly black, while its neighbours glow red** |
 
 So the model is right for fungi and visibly wrong for lava. Lava and fungi were
-already out of scope, since the underworld has no chart of its own to appear
-on — but that deferral now carries a *correctness* reason rather than only a
-scope one, and the campaign that lights a cave must not pull lava in without a
+already out of scope, since the underworld had no chart of its own to appear
+on (The Gallery gave it one in 2026-08; the deferral below is what outlived
+that, and outlived it intact) — but that deferral now carries a *correctness*
+reason rather than only a scope one, and the campaign that lights a cave must not pull lava in without a
 real emission term first. It is registered, cross-linked to the row that already
 named `EMIT` as a verb a `[0, 1]` scalar cannot express.
 

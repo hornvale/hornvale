@@ -126,7 +126,9 @@ scene JSON, the census CSVs, the book's generated pages). Two consequences:
   seed, and no lens changes it.
 - **A rendering change is an artifact change.** Regenerate and review:
   `make rebaseline`, then diff the paths `docs/generated-paths.txt` declares —
-  `git diff -- $(grep -v '^#' docs/generated-paths.txt | grep -v '^$')`. That
+  `git diff -- $(grep -v '^#' docs/generated-paths.txt | grep -v '^$' | cut -f1)`
+  (`cut -f1` takes the path column; the second column is the path's author,
+  not a pathspec). That
   file is the single source of truth and no guide restates it
   (`cli/tests/generated_paths.rs` enforces it). One of its entries,
   `clients/game/core/tests/fixtures/`, is a window's artifact

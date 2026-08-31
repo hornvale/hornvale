@@ -24,11 +24,11 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 0.063106796 | 0.18979837 | 0.375 | 1 | 0.25404497 |
+| 0 | 0.071240106 | 0.18346569 | 0.39285714 | 1 | 0.25727983 |
 
 ### `composition-variance`
 
-Spatial heterogeneity of settlement composition (The Niche): the sum over roster species of the variance, across the demography report's `stack_settlements`, of each species' composition fraction. 0.0 iff every settlement has the identical species mix (the pre-Niche 'oatmeal' — one flat blend worldwide); > 0 when composition varies across space (species dominant in different strongholds). Recomputed via `hornvale_worldgen::demography_report_from` (the niche-differentiated coexistence shadow). Absent if the report fails to build or the world has fewer than 2 settlements
+Spatial heterogeneity of settlement composition (The Niche): the sum over roster species of the variance, across the demography report's `stack_settlements`, of each species' composition fraction. 0.0 iff every settlement has the identical species mix (the pre-Niche 'oatmeal' — one flat blend worldwide); > 0 when composition varies across space (species dominant in different strongholds). Read via `SettlementView::demography_report`, the view's own memoised build of `hornvale_worldgen::demography_report_from` (the niche-differentiated coexistence shadow) — shared with the settlement diversity metric registered above rather than each rebuilding it (task 3 of The Governor). Absent if the report fails to build or the world has fewer than 2 settlements
 
 n = 1000 present, 0 absent (of 1000 worlds)
 
@@ -40,91 +40,87 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 The goblin flagship settlement's committed biome; Absent if there is no goblin flagship
 
-n = 999 present, 1 absent (of 1000 worlds)
+n = 1000 present, 0 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `temperate-forest` | 535 | 53.6% |
-| `taiga` | 213 | 21.3% |
-| `tropical-seasonal-forest` | 212 | 21.2% |
-| `tropical-rainforest` | 10 | 1.0% |
+| `temperate-forest` | 526 | 52.6% |
+| `taiga` | 227 | 22.7% |
+| `tropical-seasonal-forest` | 205 | 20.5% |
+| `temperate-rainforest` | 12 | 1.2% |
+| `tropical-rainforest` | 11 | 1.1% |
 | `alpine` | 8 | 0.8% |
-| `temperate-rainforest` | 8 | 0.8% |
 | `savanna` | 4 | 0.4% |
 | `epipelagic` | 3 | 0.3% |
-| `kelp-forest` | 3 | 0.3% |
-| `coral-reef` | 1 | 0.1% |
-| `shrubland` | 1 | 0.1% |
-| `upwelling` | 1 | 0.1% |
+| `kelp-forest` | 2 | 0.2% |
+| `upwelling` | 2 | 0.2% |
 
 ### `flagship-coastal`
 
 Whether the goblin flagship settlement's vertex borders an ocean vertex, recomputed from the terrain provider; Absent if there is no goblin flagship
 
-n = 999 present, 1 absent (of 1000 worlds)
+n = 1000 present, 0 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `true` | 190 | 19.0% |
-| `false` | 809 | 81.0% |
+| `true` | 183 | 18.3% |
+| `false` | 817 | 81.7% |
 
 ### `flagship-structure-size`
 
 Number of castes present in the goblin flagship settlement's emergent structure (a stratification proxy, matched against the same community religion's pantheon-verticality reasons about); Absent if there is no goblin flagship
 
-n = 999 present, 1 absent (of 1000 worlds)
+n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 2 | 3 | 3 | 3 | 3 | 2.958959 |
+| 2 | 3 | 3 | 3 | 3 | 2.965 |
 
 ### `flagship-subsistence`
 
 The goblin flagship settlement's committed subsistence mode (the pantheon's community, spec §6); Absent if there is no goblin flagship or no committed subsistence
 
-n = 999 present, 1 absent (of 1000 worlds)
+n = 1000 present, 0 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `farming` | 982 | 98.3% |
-| `fishing` | 9 | 0.9% |
+| `farming` | 985 | 98.5% |
+| `fishing` | 8 | 0.8% |
 | `foraging` | 7 | 0.7% |
-| `herding` | 1 | 0.1% |
 
 ### `goblin-flagship-coastal`
 
 Whether the goblin flagship settlement's vertex borders an ocean vertex, recomputed from the terrain provider; Absent if goblins placed no settlement
 
-n = 999 present, 1 absent (of 1000 worlds)
+n = 1000 present, 0 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `true` | 190 | 19.0% |
-| `false` | 809 | 81.0% |
+| `true` | 183 | 18.3% |
+| `false` | 817 | 81.7% |
 
 ### `goblin-flagship-roles`
 
 The goblin flagship's committed role ladder, comma-joined, lowest to highest; Absent if goblins placed no settlement
 
-n = 999 present, 1 absent (of 1000 worlds)
+n = 1000 present, 0 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `farmer,shaman,chief` | 958 | 95.9% |
-| `farmer,chief` | 24 | 2.4% |
-| `fisher,chief` | 9 | 0.9% |
+| `farmer,shaman,chief` | 965 | 96.5% |
+| `farmer,chief` | 20 | 2.0% |
+| `fisher,chief` | 8 | 0.8% |
 | `forager,chief` | 7 | 0.7% |
-| `herder,chief` | 1 | 0.1% |
 
 ### `goblin-flagship-surplus`
 
 The goblin flagship vertex's subsistence surplus, recomputed from providers as fertility(biome_class) × moisture (the independent column the slave calibration needs); Absent if goblins placed no settlement
 
-n = 999 present, 1 absent (of 1000 worlds)
+n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.046627014 | 0.48313681 | 0.51248377 | 0.53552439 | 0.72 | 0.50528983 |
+| 0.046627014 | 0.48480608 | 0.51253157 | 0.53622386 | 0.81 | 0.50729493 |
 
 ### `goblin-settlement-count`
 
@@ -134,7 +130,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 5 | 12 | 27 | 117 | 18.065 |
+| 1 | 4 | 10 | 25 | 107 | 17.694 |
 
 ### `kobold-flagship-coastal`
 
@@ -144,8 +140,8 @@ n = 980 present, 20 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `true` | 4 | 0.4% |
-| `false` | 976 | 99.6% |
+| `true` | 7 | 0.7% |
+| `false` | 973 | 99.3% |
 
 ### `kobold-flagship-roles`
 
@@ -155,10 +151,10 @@ n = 980 present, 20 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `digger,keeper,elders` | 668 | 68.2% |
-| `digger,elders` | 308 | 31.4% |
-| `digger,warden,keeper,elders` | 3 | 0.3% |
-| `digger,warden,elders` | 1 | 0.1% |
+| `digger,keeper,elders` | 674 | 68.8% |
+| `digger,elders` | 303 | 30.9% |
+| `digger,warden,elders` | 2 | 0.2% |
+| `digger,warden,keeper,elders` | 1 | 0.1% |
 
 ### `kobold-flagship-surplus`
 
@@ -168,7 +164,7 @@ n = 980 present, 20 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.0074137685 | 0.38022498 | 0.43830689 | 0.48608388 | 0.60800137 | 0.40046511 |
+| 0.013529788 | 0.37929919 | 0.43828354 | 0.48370752 | 0.585 | 0.40078671 |
 
 ### `kobold-settlement-count`
 
@@ -178,7 +174,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 7 | 30 | 60 | 224 | 40.228 |
+| 0 | 6 | 31 | 62 | 244 | 41.001 |
 
 ### `largest-holding-share`
 
@@ -188,11 +184,11 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.004633486 | 0.0084139265 | 0.010311671 | 0.013727055 | 0.067085954 | 0.01293531 |
+| 0.0044783281 | 0.0087080842 | 0.01077479 | 0.01426335 | 0.071910112 | 0.013339622 |
 
 ### `per-cell-diversity`
 
-Mean per-vertex species diversity of the coexistence density stack (task A16a; feeds the A16b β calibration): the mean, over habitable land vertices, of the demography report's `byproducts.strife` field — already the per-vertex inverse-Herfindahl diversity 1/Σ frac_s² (1.0 when one species dominates a vertex, →N when N species share it evenly). Recomputed via `hornvale_worldgen::demography_report_from`, which reconstructs the IDENTICAL report the settlement-genesis path builds internally (the shared-assembly refactor of task A16a), so this measures the stack the world actually ships, not a parallel one. Absent if the report fails to build or the world has no habitable vertices
+Mean per-vertex species diversity of the coexistence density stack (task A16a; feeds the A16b β calibration): the mean, over habitable land vertices, of the demography report's `byproducts.strife` field — already the per-vertex inverse-Herfindahl diversity 1/Σ frac_s² (1.0 when one species dominates a vertex, →N when N species share it evenly). Read via `SettlementView::demography_report`, the view's own memoised build of `hornvale_worldgen::demography_report_from` (task 3 of The Governor: shared with `composition-variance` below rather than each rebuilding it), which reconstructs the IDENTICAL report the settlement-genesis path builds internally (the shared-assembly refactor of task A16a), so this measures the stack the world actually ships, not a parallel one. Absent if the report fails to build or the world has no habitable vertices
 
 n = 1000 present, 0 absent (of 1000 worlds)
 
@@ -208,7 +204,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 4.789578 | 12.314887 | 15.667516 | 19.714466 | 54.837652 | 17.250523 |
+| 5.3869043 | 12.504918 | 15.548359 | 19.559578 | 55.405177 | 17.237741 |
 
 ### `rank-size-slope`
 
@@ -218,7 +214,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| -1.0487627 | -0.62087732 | -0.57325156 | -0.52360711 | -0.30459 | -0.57626363 |
+| -1.0518004 | -0.6248594 | -0.5776447 | -0.53095787 | -0.34823261 | -0.58220994 |
 
 ### `settlement-count`
 
@@ -228,13 +224,13 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 33 | 205 | 274.5 | 337 | 602 | 269.543 |
+| 33 | 200 | 267 | 335 | 583 | 264.673 |
 
 ## Weaknesses found here
 
 ### `flagship-coastal`
 
-- **D1**: "false" holds 809/999 worlds (81.0%), at or above the 80% threshold
+- **D1**: "false" holds 817/1000 worlds (81.7%), at or above the 80% threshold
 
 ### `flagship-structure-size`
 
@@ -243,27 +239,27 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `flagship-subsistence`
 
-- **D1**: "farming" holds 982/999 worlds (98.3%), at or above the 80% threshold
+- **D1**: "farming" holds 985/1000 worlds (98.5%), at or above the 80% threshold
 
 ### `goblin-flagship-coastal`
 
-- **D1**: "false" holds 809/999 worlds (81.0%), at or above the 80% threshold
+- **D1**: "false" holds 817/1000 worlds (81.7%), at or above the 80% threshold
 
 ### `goblin-flagship-roles`
 
-- **D1**: "farmer,shaman,chief" holds 958/999 worlds (95.9%), at or above the 80% threshold
+- **D1**: "farmer,shaman,chief" holds 965/1000 worlds (96.5%), at or above the 80% threshold
 
 ### `kobold-flagship-coastal`
 
-- **D1**: "false" holds 976/980 worlds (99.6%), at or above the 80% threshold
+- **D1**: "false" holds 973/980 worlds (99.3%), at or above the 80% threshold
 
 ### `pop-weighted-abs-latitude`
 
-- **D5 strength**: declared moderate tracking mean-land-temperature-c, but observed r = +0.148 (1000 pairs) is weak (positive)
+- **D5 strength**: declared moderate tracking mean-land-temperature-c, but observed r = +0.166 (1000 pairs) is weak (positive)
 
 ### `settlement-count`
 
-- **D5 strength**: declared strong tracking habitable-fraction, but observed r = +0.212 (1000 pairs) is weak (positive)
-- **D5 strength**: declared moderate tracking mountain-coverage, but observed |r| = 0.073 (1000 pairs) is none
-- **D5 strength**: declared moderate tracking ocean-fraction, but observed |r| = 0.004 (1000 pairs) is none
+- **D5 strength**: declared strong tracking habitable-fraction, but observed r = +0.179 (1000 pairs) is weak (positive)
+- **D5 strength**: declared moderate tracking mountain-coverage, but observed |r| = 0.077 (1000 pairs) is none
+- **D5 strength**: declared moderate tracking ocean-fraction, but observed |r| = 0.008 (1000 pairs) is none
 

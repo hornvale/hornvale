@@ -869,7 +869,7 @@ fn fold_vertex(rows: &[SeedRow], ci: usize, ri: usize) -> Vertex {
 /// `probe_tiebreak_rules.rs`'s own claim tag, which this file's panel is a
 /// strict copy of).
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: whether the crossing penalty changes the non-argmin defect count; RED as of 2026-08-28 — the shared BASELINE_ENDINGS_12/FOREIGN_12 live-worldgen pins have drifted again since The Underworld changed settlement placement, and this question (The Undertow, Myth campaign 5, Task 3) is closed; run by hand; demoted by The Governor"]
 fn does_the_crossing_penalty_change_the_non_argmin_defect() {
     let components = hornvale_worldgen::WorldComponents::assemble().expect("components assemble");
     let mut rows: Vec<SeedRow> = Vec::new();

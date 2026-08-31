@@ -70,14 +70,14 @@
 # execution for that one commit; `-c core.hooksPath=…` repoints WHERE git
 # looks for hooks, and the directory this points at (`/dev/null`, not a
 # directory at all) simply has none to find — the commit is still fully
-# verified, by the four phases already running around it. Re-running
+# verified, by the other phases already running around it. Re-running
 # `gate-commit`'s own fmt/clippy/type-audit/sub-floor-nextest subset INSIDE
 # every artifact-authoring commit is pure redundant, recursive cost on the
 # canonical box's one serial lane: the chamber's own `gate` phase already
 # runs a strict superset (the full `--workspace` suite plus doctests) later
 # in the same invocation. The one real cost of this choice: `gate` runs
-# third of four (`artifacts outboard gate clients`), so a
-# fmt/clippy regression introduced by `artifacts` itself is caught by `gate`
+# third of five (the phase lists are further down; do not restate them here),
+# so a fmt/clippy regression introduced by `artifacts` itself is caught by `gate`
 # rather than fail-fast at `artifacts`'s own commit — later, and only after
 # `outboard` has also run — not never.
 #
@@ -141,9 +141,11 @@ sha="${2:?usage: sluice-run.sh <branch> <full-sha> [merge|stage]}"
 # layer alive to serve it. A stage request is instead a queue entry with
 # `kind=stage`: it takes the same claim, merges main+branch in the same
 # chamber, and runs the same roster-declared phases against the same real
-# merge product. It just never pushes, and it runs the `stage`-rung phases
-# rather than all six. One branch, at the push step — see the `kind` gate
-# below `final_sha`.
+# merge product. It just never pushes. One branch, at the push step — see the
+# `kind` gate below `final_sha`. (This note used to add "and it runs the
+# `stage`-rung phases rather than all six" — a distinction 0148 removed and
+# 0426 kept removed: the two lists are identical and both run every
+# `stage`-rung set, so the push is the ONLY difference.)
 kind="${3:-merge}"
 case "$kind" in
     merge|stage) ;;
@@ -328,36 +330,68 @@ lane_sets_file="${HV_SLUICE_LANE_SETS:-$repo_root/scripts/lane-sets.tsv}"
 # (`stage` rows for one, `stage`+`campaign` minus `census` for the other),
 # and the roster would then be the only place a set is named. It is not done
 # that way because ORDER IS LOAD-BEARING here and roster order is not phase
-# order: the roster lists `heavy` fifth of ten, while the phase comment
-# below places it LAST deliberately (at a measured mean 1678 s it is 47% of
-# the set's ~3602 s, so running it before a cheap phase that would have gone
-# red wastes half an hour of the one serial box). A derived list would have
-# silently reordered that. `cli/tests/suite/lane_sets.rs` reads these two lines
-# instead and fails if either names a set with no roster row — the same
-# direction it used to enforce over the Makefile's `lane-dispatch.sh` lines,
-# pointed at the caller that replaced them.
-# THE MERGE RUNS FOUR PHASES, NOT SIX (Nathan, 2026-08-19; decision 0148).
-# `seam-guard` and `heavy` came off this list, so a merge and a stage gate now
-# run the SAME phases and differ only in the push — which was always the design
-# ("the stage gate is this script with the push turned off"), and is now true of
-# the phase list too.
+# order: the roster lists `heavy` seventh of ten, while these two lines place it
+# LAST deliberately (it is the single most expensive phase, so running it
+# before a cheap phase that would have gone red wastes the one serial box). A
+# derived list would have silently reordered that. `cli/tests/suite/lane_sets.rs`
+# reads these two lines instead and fails if either names a set with no roster
+# row — the same direction it used to enforce over the Makefile's
+# `lane-dispatch.sh` lines, pointed at the caller that replaced them.
 #
-# WHAT THIS COSTS, STATED PLAINLY BECAUSE IT IS A REAL REDUCTION IN COVER.
-# Decision 0139's guarantee — "every commit on origin/main is the tip of a tree
-# that was gated as itself" — is unchanged in KIND and weaker in DEGREE: the
-# merge product is still built and still gated as itself, by four phases rather
-# than six. Nothing runs `seam-guard` or `heavy` automatically any more. They
-# keep their `campaign`-rung rows in scripts/lane-sets.tsv and their own entry
-# points (`make seam-guard`, `make heavy-remote REF=<full-sha>`), and those are
-# now the ONLY things that run them.
+# `heavy` IS BACK ON THE MERGE LIST ONLY (decision 0426, The Governor,
+# 2026-08-28), AND `seam-guard` IS NOT BACK AT ALL. Decision 0148 took both off
+# the merge list on 2026-08-19 because together they were 80.5% of a 3704 s
+# six-phase merge; on that evidence it was right, and its measurement is not
+# disputed. What changed is the tier: The Governor cut it 3.52x (1551.631 s ->
+# 440.269 s nextest wall, 118 -> 64 tests, 10 -> 0 failures, lefford,
+# 2f8faf243 -> e76ea0497; that campaign's final review restored one test and a
+# re-measure confirmed it cost nothing), so `heavy` is now ~29% of a
+# ~1595.3 s merge rather than 53% of a 3704 s one.
 #
-# WHY IT IS WORTH IT: measured on this box, `heavy` was 2026 s of a 65-minute
-# merge and `seam-guard` costs a full scoped test run per call site — together
-# the large majority of a merge's wall time, on two sets whose guarantees move
-# at campaign cadence rather than per-merge. Paying them on every merge priced
-# a campaign-cadence check at merge frequency, which is the same mispricing
-# decision 0132 split the gates to remove.
-merge_phases="artifacts outboard gate clients"
+# THE TWO LISTS DIVERGE AGAIN, AND THAT IS A RESTORATION, NOT NEW SCOPE.
+# `heavy` has NEVER been a stage-gate phase: at 3163ceb2c^ (0148's parent) the
+# lists read `artifacts outboard gate seam-guard clients heavy` and `artifacts
+# outboard gate clients`. 0148 shrank the merge list DOWN TO the stage list —
+# it did not remove `heavy` from both — so putting `heavy` back on the merge
+# list alone reproduces the pre-0148 arrangement exactly. A first cut of this
+# change put it on both lists and described that as restoration. It was not.
+#
+# WHY STAGE MUST NOT RUN IT, on its own merits and not only by precedent.
+# `fixture_staleness::census_fixtures_match_a_probe_of_live_seeds` is
+# heavy-rostered and compares a LIVE probe against the COMMITTED census
+# fixtures by exact equality. The census is refreshed once per campaign, at the
+# pre-merge close (CLAUDE.md's standing rule). So a campaign that moves any
+# census metric would red that test on EVERY stage gate from its first moved
+# value until close — ~465.8 s of the one serial box each time, for a reason that
+# is expected, benign and not yet fixable. A gate that reds predictably for a
+# known-benign reason trains people to ignore it, which is precisely the
+# disease this campaign diagnosed in the heavy tier. The merge does not have
+# this problem: by merge time the census HAS been refreshed, so the cadence the
+# test assumes and the moment the merge occupies are the same moment.
+#
+# WHY IT IS BACK AT ALL. Removing it removed the only automatic dispatcher the
+# tier had, and nothing replaced it. It then ran only when a human remembered,
+# accumulated ten failures nobody saw, and wrote no bare `heavy` timings row
+# for 27 runs. The failure this fixes is an ASYMMETRY, not a cost: a campaign
+# could move shipped world values (The Granary's `history/bake/v3` bump,
+# eeaa011fd), pass every gate it was asked to pass, and leave the tier red for
+# the NEXT campaign to inherit and mis-attribute.
+#
+# WHAT IT COSTS, STATED PLAINLY. A four-phase merge is ~1129.5 s; five is
+# ~1595.3 s (+41%) on the one strictly serial box, paid by every campaign in the
+# queue behind it — about +44 h/month at the landing tempo measured over
+# 2026-08-17..28 (128 non-prose landings in 11.327 days). Every one of those
+# figures is derived ONCE, next to its inputs, in decision 0426; this block
+# quotes them and derives nothing. A prose-only candidate pays none of it: see the
+# sluice-phases.sh block below, which already drops `heavy`. Full reasoning,
+# the rejected alternatives (stage-gate-only, conditional on a world-code
+# predicate, scheduled) and the residuals are in
+# docs/decisions/0426-the-heavy-tier-is-a-phase-of-the-queue-again.md.
+#
+# `seam-guard` does NOT come back: it costs a full scoped test run per call
+# site, its guarantee moves when seams or tests change (campaign-shaped, not
+# per-merge), and it keeps its `campaign`-rung row and `make seam-guard`.
+merge_phases="artifacts outboard gate clients heavy"
 stage_phases="artifacts outboard gate clients"
 
 if [ "$kind" = "stage" ]; then
@@ -681,7 +715,7 @@ if [ -z "$phase_failed" ]; then
                 # campaign is not authorised to except it — see the
                 # CLEAN-TREE INVARIANT header note above for the
                 # two-mechanisms distinction and the full reasoning). This
-                # commit is still fully verified: by the four phases already
+                # commit is still fully verified: by the other phases already
                 # running around it, one of which (`gate`) is a strict
                 # superset of what the hook itself would re-run here.
                 git -c core.hooksPath=/dev/null commit -q -m "chore(artifacts): regenerate after $phase

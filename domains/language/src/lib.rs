@@ -92,10 +92,11 @@ pub use account::{
 };
 pub use clause::{
     Adjunct, AdjunctPosition, Argument, COPULA_PARADIGM, Clause, Coordination, CopulaRow,
-    Definiteness, Number, PRONOUN_PARADIGM, ParseContext, ParseError, Person, Polarity,
-    PronounCase, PronounRow, Subject, Tense, VERB_PARADIGM, Valence, VerbRow, common_pronoun,
-    nominative_person, parse_common, parse_common_with_tail, predicate_valence, realize_common,
-    realize_common_coordination,
+    Definiteness, Discourse, DiscourseClause, Number, PRONOUN_PARADIGM, ParseContext, ParseError,
+    Person, Polarity, PronounCase, PronounRow, Subject, Tense, VERB_PARADIGM, Valence, VerbRow,
+    common_pronoun, nominative_person, parse_common, parse_common_with_tail, predicate_valence,
+    realize_common, realize_common_coordination, realize_common_discourse,
+    realize_common_existential, realize_common_polar_question, realize_common_verbless,
 };
 pub use common_vocab::{CommonVocabulary, MissingCommonWords};
 pub use etymology::{
@@ -130,7 +131,7 @@ pub use exemplars::{HUE_CONCEPTS, hue_exemplar};
 pub use grammar::{
     ConstituentOrder, TongueGap, TongueGrammar, TongueParadigm, realize_tongue,
     realize_tongue_coordination, realize_tongue_deep, realize_tongue_deep_coordination,
-    tongue_grammar,
+    realize_tongue_polar_question, tongue_grammar,
 };
 pub use lexicon::{
     ExposureClass, GapReason, Headedness, LexEntry, Lexicon, WordViews, build_lexicon,
@@ -1112,6 +1113,10 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
             "whether coordinated clauses are joined with an overt coordinating conjunction, and (when they are) the conjunction's one-syllable drawn form from the tongue's own phonology — a tongue that draws none coordinates by bare juxtaposition, a legitimate grammar and not a gap (The Mortise, Task 6, spec §4.10). A function word earns this label because its PRESENCE is typological, not lexical; a vocabulary word costs zero labels, drawn instead as a `dynamic(concept)` value on the existing `lexicon/root` axis",
         ),
         (
+            "language/<species>/grammar/interrogative",
+            "whether a polar question is marked with an overt free particle, and (when it is) the particle's one-syllable drawn form from the tongue's own phonology, skewed toward absent — a tongue that draws none questions by INTONATION, the cross-linguistic majority strategy (Ultan 1978; Dryer, WALS 116), which a text renderer cannot show, so it questions by a transcription convention instead: its declarative surface plus `?` (The Rail, Task 9, spec §4)",
+        ),
+        (
             "language/<species>/grammar/depth/evidential",
             "C7's depth vector: how deeply evidentiality grammaticalizes (None/Particle/Affix, weighted [60,25,15])",
         ),
@@ -1146,6 +1151,14 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
         (
             "language/<species>/grammar/polarity-position",
             "The Inquest: which side of the marked word the Polarity affix binds",
+        ),
+        (
+            "language/<species>/grammar/depth/person",
+            "The Rail (Task 7): the species' drawn Person (subject-agreement) grammaticalization depth (None/Particle/Affix), independent of number/tense/polarity — a tongue's own take on how deeply it grammaticalizes person, distinct from Common's fixed rules",
+        ),
+        (
+            "language/<species>/grammar/person-position",
+            "The Rail (Task 7): which side of the marked word the Person affix binds",
         ),
         (
             "language/family/<family>/morph/evidential/<value>",

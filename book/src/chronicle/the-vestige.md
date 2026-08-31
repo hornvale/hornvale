@@ -41,9 +41,10 @@ Where occupations stack on one cell across ages, their vestiges form a
 The keystone is a **three-rate decay**, the nuclear-waste-warning problem made
 mechanical: the residue itself outlasts the containment that was built to hold
 it, and the containment outlasts the **warning** that told anyone what lay
-inside. Warning-legibility decays fastest of the three (a short half-life on the
-time since abandonment), so the oldest, most dangerous sites are precisely the
-ones whose warnings have gone silent — a delver reads a breached seal with no
+inside. Warning-legibility decays fastest of the three — an exponential in the
+time since abandonment, e-folding over three centuries and so falling by half in
+about two — which means the oldest and most dangerous sites are precisely the
+ones whose warnings have gone silent: a delver reads a breached seal with no
 legible caution and no memory of what it held. Venerated sites decay slower than
 forgotten ones: memory is itself a form of maintenance.
 
@@ -64,8 +65,13 @@ residue is inert — it records that a seal has breached, but nothing *comes
 through*. The **live** half — a seal that fails during active simulation, a
 delving that is dug now, a gate that opens as an event — waits for the rung
 where the underworld first gains agency. The **entity** behind a numinous seal
-or through a gate-scar stays behind the metaphysics gate: the `numinous` hazard
-and the gate-scar are reserved hooks, named but empty. And the full
+or through a gate-scar stays behind the metaphysics gate: nothing is named, and
+nothing comes through. When this shipped, both the `numinous` hazard and the
+gate-scar were reserved hooks with almost nothing to produce them.
+[The Winze](./the-winze.md) filled the hazard — a delving that ends by breaking
+through is numinous, so the kind now has a common producer and no longer implies
+that a site predates people — and left the rest of the sentence standing: what
+came through still has no name. And the full
 memory-and-upkeep model — who *chose* to keep tending a ward, and why one
 people venerates what another forgot — is the vertical-relationship campaign's
 to build; the valence ships here as a coarse age-and-abandonment proxy, honest

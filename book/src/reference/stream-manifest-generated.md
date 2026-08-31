@@ -103,6 +103,7 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `language/<species>/grammar/articles` | whether the tongue has articles (floor: drawn but surfaces no article lexeme until the morphology campaign) |
 | `language/<species>/grammar/subordinator` | whether an embedded clause is marked with an overt complementizer, and (when it is) the complementizer's one-syllable drawn form from the tongue's own phonology — a tongue that draws none subordinates by bare parataxis, a legitimate grammar and not a gap (The Mortise, Task 5, spec §4.6) |
 | `language/<species>/grammar/conjunction` | whether coordinated clauses are joined with an overt coordinating conjunction, and (when they are) the conjunction's one-syllable drawn form from the tongue's own phonology — a tongue that draws none coordinates by bare juxtaposition, a legitimate grammar and not a gap (The Mortise, Task 6, spec §4.10). A function word earns this label because its PRESENCE is typological, not lexical; a vocabulary word costs zero labels, drawn instead as a `dynamic(concept)` value on the existing `lexicon/root` axis |
+| `language/<species>/grammar/interrogative` | whether a polar question is marked with an overt free particle, and (when it is) the particle's one-syllable drawn form from the tongue's own phonology, skewed toward absent — a tongue that draws none questions by INTONATION, the cross-linguistic majority strategy (Ultan 1978; Dryer, WALS 116), which a text renderer cannot show, so it questions by a transcription convention instead: its declarative surface plus `?` (The Rail, Task 9, spec §4) |
 | `language/<species>/grammar/depth/evidential` | C7's depth vector: how deeply evidentiality grammaticalizes (None/Particle/Affix, weighted [60,25,15]) |
 | `language/<species>/grammar/depth/noun-class` | C7's depth vector: how deeply noun class grammaticalizes (None/Particle/Affix, weighted [55,15,30]) |
 | `language/<species>/grammar/class-position` | C7: which side of the noun the class marker binds when noun-class depth is Particle/Affix (prefix 40 / suffix 60) |
@@ -112,6 +113,8 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `language/<species>/grammar/tense-position` | The Residue: which side of the marked word the Tense affix binds |
 | `language/<species>/grammar/depth/polarity` | The Inquest: the species' drawn Polarity grammaticalization depth (None/Particle/Affix) — how a tongue marks a negated clause; an independent stream, added additively (spec §3.4) |
 | `language/<species>/grammar/polarity-position` | The Inquest: which side of the marked word the Polarity affix binds |
+| `language/<species>/grammar/depth/person` | The Rail (Task 7): the species' drawn Person (subject-agreement) grammaticalization depth (None/Particle/Affix), independent of number/tense/polarity — a tongue's own take on how deeply it grammaticalizes person, distinct from Common's fixed rules |
+| `language/<species>/grammar/person-position` | The Rail (Task 7): which side of the marked word the Person affix binds |
 | `language/family/<family>/morph/evidential/<value>` | C7: the family's one-syllable evidential-marker proto-form for <value> (witnessed/taught/inferred), drawn once per family and evolved per daughter via its own cascade — the cognate law |
 | `language/family/<family>/morph/class/<value>` | C7: the family's one-syllable noun-class-marker proto-form for <value> (animate/inanimate), drawn once per family and evolved per daughter via its own cascade — the cognate law |
 | `language/family/<family>/morph/number/plural` | The Residue: the family's Plural affix proto-form, shared by every daughter (family-cognate law) |
@@ -190,6 +193,10 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `terrain/channel-meander` | channel meander displacement field (hash-noise only; no stream draws) |
 | `terrain/rill-partition` | where a sub-vertex catchment divides between its two branches (hash-noise only; no stream draws) |
 
+### hornvale-thing
+
+*(no seed-derivation streams)*
+
 ### hornvale-vessel
 
 | Label | Meaning |
@@ -218,6 +225,8 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `doctrine-lexeme` | the doctrine-voice twin of the lexeme leg |
 | `religion/deity/v2` | the deity-naming stream, epoch v2 |
 | `settlement/disposition/v1` | the per-settlement disposition draw, keyed on the occupation's (site, founded-year) |
+| `settlement/working/v1` | whether one expansion is a working rather than a farm, keyed on the parent's (vertex, band, year) |
+| `settlement/breach/v1` | whether one epoch's advance of a working breaks through, keyed on the working's (vertex, band, year) |
 | `chamber/v3` | a display-only address formatter; the underworld's real derivation key is RUN_FLOORS and the per-branch legs |
 | `chamber/run-floors/v2` | how many levels one run realizes, keyed on (vertex, branch, band) |
 | `chamber/branch-character/v2` | which character one branch carries, keyed on (vertex, branch, band) |

@@ -7,16 +7,16 @@
 //! system. `FRAME`-tier under decision 0069, same as `crate::lattice`:
 //! derived fresh from a `Seed` on every call, nothing serialized.
 
-use std::collections::BTreeMap;
-
 use hornvale_kernel::Seed;
 
 use crate::lattice::{Cell, Rect};
 
 mod carve;
+mod dense;
 mod region;
 
 pub use carve::Algorithm;
+pub use dense::CellGrid;
 
 /// A cell's role within a generated underworld level.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -33,6 +33,44 @@ pub enum LevelCellKind {
     StairsUp,
 }
 
+/// How a body may move through one cell (The Gallery, Task 4; spec §3.2
+/// part 3) — movement is a MODE, not a boolean. `Swim` and `Fly` are
+/// reserved: a sequel's capability model (amphibious, or a carried/worn
+/// item) is what will make them reachable, and nothing returns them yet.
+/// The same seam shape spec §3.4 names for reach ("one named function
+/// answers 'how', rather than a constant or a boolean re-derived at every
+/// call site").
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum MovementMode {
+    /// Ordinary footing — dry floor, or a rung connection.
+    Walk,
+    /// Standing water, crossable on foot (spec §3.2 part 1: wet cells are
+    /// walkable, you wade).
+    Wade,
+    /// Reserved for a sequel: swimming as a travel mode.
+    #[allow(dead_code)]
+    Swim,
+    /// Reserved for a sequel: flight as a travel mode.
+    #[allow(dead_code)]
+    Fly,
+}
+
+/// How a body may move through `kind`, or `None` if it may not move through
+/// it at all — the one predicate every lateral mover asks, rather than
+/// comparing against `LevelCellKind::Wall` directly (the rule
+/// `CellKind::passable`'s own doc states: a rule written against the
+/// variant breaks the day a new impassable kind arrives; a rule written
+/// against the predicate survives it).
+pub fn movement_mode(kind: LevelCellKind) -> Option<MovementMode> {
+    match kind {
+        LevelCellKind::Floor | LevelCellKind::StairsDown | LevelCellKind::StairsUp => {
+            Some(MovementMode::Walk)
+        }
+        LevelCellKind::Flooded => Some(MovementMode::Wade),
+        LevelCellKind::Wall => None,
+    }
+}
+
 /// A generated underworld level: one rung of one cave system, under one
 /// surface cell. Never serialized — re-derive it from the same inputs
 /// rather than storing it (decision 0069).
@@ -43,7 +81,7 @@ pub struct Level {
     pub extent: Rect,
     /// Every cell of `extent`, with its kind. Total: every cell of the
     /// extent appears exactly once.
-    pub cells: BTreeMap<Cell, LevelCellKind>,
+    pub cells: CellGrid,
     /// How many independent seeded choices generation made. Reported, not
     /// recomputed, mirroring `lattice::Lattice::dof`.
     pub dof: u32,
@@ -162,12 +200,7 @@ pub fn generate_level_with_origin(
     seed: Seed,
 ) -> Level {
     let (tree, mut dof) = region::build_region(extent, seed);
-    let mut cells = BTreeMap::new();
-    for x in extent.x..(extent.x + extent.w) {
-        for y in extent.y..(extent.y + extent.h) {
-            cells.insert(Cell(x, y), LevelCellKind::Wall);
-        }
-    }
+    let mut cells = CellGrid::new(extent, LevelCellKind::Wall);
     let mut style_stream = seed.derive(crate::streams::UNDERWORLD_LEVEL_STYLE).stream();
     let mut cellular_stream = seed
         .derive(crate::streams::UNDERWORLD_LEVEL_CELLULAR)
@@ -207,14 +240,14 @@ pub fn generate_level_with_origin(
 
 /// Every `Floor`/`Flooded` cell within `region`'s own leaf rects (not the
 /// whole level) — the candidate endpoints a connector can anchor to.
-fn walkable_cells_in(region: &region::Region, cells: &BTreeMap<Cell, LevelCellKind>) -> Vec<Cell> {
+fn walkable_cells_in(region: &region::Region, cells: &CellGrid) -> Vec<Cell> {
     let mut out = Vec::new();
     for rect in region::leaves(region) {
         for x in rect.x..(rect.x + rect.w) {
             for y in rect.y..(rect.y + rect.h) {
                 let cell = Cell(x, y);
                 if matches!(
-                    cells.get(&cell),
+                    cells.get(cell),
                     Some(LevelCellKind::Floor) | Some(LevelCellKind::Flooded)
                 ) {
                     out.push(cell);
@@ -245,12 +278,12 @@ fn nearest_pair(a: &[Cell], b: &[Cell]) -> Option<(Cell, Cell)> {
 /// cells — the same shape `carve::connect_centers` already uses for
 /// within-leaf room connections, generalized to take endpoints directly
 /// rather than deriving them from room rects.
-fn connect_cells(a: Cell, b: Cell, cells: &mut BTreeMap<Cell, LevelCellKind>) {
+fn connect_cells(a: Cell, b: Cell, cells: &mut CellGrid) {
     for x in a.0.min(b.0)..=a.0.max(b.0) {
-        cells.insert(Cell(x, a.1), LevelCellKind::Floor);
+        cells.set(Cell(x, a.1), LevelCellKind::Floor);
     }
     for y in a.1.min(b.1)..=a.1.max(b.1) {
-        cells.insert(Cell(b.0, y), LevelCellKind::Floor);
+        cells.set(Cell(b.0, y), LevelCellKind::Floor);
     }
 }
 
@@ -262,7 +295,7 @@ fn connect_cells(a: Cell, b: Cell, cells: &mut BTreeMap<Cell, LevelCellKind>) {
 /// in this task's own header: `region::cut` leaves a permanent wall gap
 /// between siblings, and nothing else in this module ever carves through
 /// it.
-fn connect_split_boundaries(region: &region::Region, cells: &mut BTreeMap<Cell, LevelCellKind>) {
+fn connect_split_boundaries(region: &region::Region, cells: &mut CellGrid) {
     if let region::Region::Split(a, b) = region {
         connect_split_boundaries(a, cells);
         connect_split_boundaries(b, cells);
@@ -292,12 +325,29 @@ pub fn generate_level(extent: Rect, seed: Seed) -> Level {
     )
 }
 
-/// As `generate_level_with_origin`, additionally carving a flooded basin
-/// when `is_sump` says this chamber is phreatic. Reuses
-/// `hornvale_worldgen::chamber::is_sump` directly — a chamber's depth is a
-/// single scalar (spec §4.4), so this answers a per-chamber question, not
-/// a per-cell one, and the basin is the first leaf in generation order
-/// rather than a further seeded choice.
+/// As `generate_level_with_origin`, additionally flooding every UNWORKED
+/// leaf's `Floor` cells when `depth_m`/`water_table_m` says this level sits
+/// in the phreatic zone (The Gallery, Task 4; spec §3.2's water rule,
+/// rewritten at the Task 0 stop).
+///
+/// **Wetness keys on `LeafStyle.worked`, not on `origin`.** The rule is:
+/// wet is common and correct (a worked leaf is drained — cut and kept dry
+/// by whoever built it — a natural leaf is wet), and it applies per LEAF,
+/// not per chamber. `origin`'s own `is_sump` short-circuit
+/// (`hornvale_worldgen::chamber::is_sump` returns `false` for
+/// `ChamberOrigin::Made` unconditionally) never actually reaches a leaf's
+/// dryness under this rule, because the shipped path
+/// (`Underground::enter`) only ever produces `Found` — so this reads
+/// `hornvale_terrain::is_phreatic` directly, the physical half of
+/// `is_sump`'s own definition, and lets each leaf's own `worked` flag (not
+/// the chamber-wide origin) decide whether IT floods.
+///
+/// **The alignment this depends on**: `generate_level_with_origin` builds
+/// `leaf_styles` in one pass over `region::leaves(&tree)`, pushing one
+/// style per leaf in the same order — so `level.leaf_styles[i]` is always
+/// `leaves()[i]`'s own style, and re-deriving the tree here (rather than
+/// threading it through, `FRAME`-tier re-derivation being exactly what
+/// decision 0069 calls for) is safe to zip against it.
 /// type-audit: bare-ok(diagnostic-value: depth_m), bare-ok(diagnostic-value: water_table_m), bare-ok(ratio: inherited_worked_bias)
 #[allow(clippy::too_many_arguments)]
 pub fn generate_level_with_water(
@@ -318,28 +368,32 @@ pub fn generate_level_with_water(
         inherited_worked_bias,
         seed,
     );
-    if hornvale_worldgen::chamber::is_sump(origin, depth_m, water_table_m)
-        && let Some(basin) = region_first_leaf_rect(extent, seed)
-    {
-        for x in basin.x..(basin.x + basin.w) {
-            for y in basin.y..(basin.y + basin.h) {
-                let cell = Cell(x, y);
-                if level.cells.get(&cell) == Some(&LevelCellKind::Floor) {
-                    level.cells.insert(cell, LevelCellKind::Flooded);
+    if hornvale_terrain::is_phreatic(depth_m, water_table_m) {
+        let (tree, _dof) = region::build_region(extent, seed);
+        let leaves = region::leaves(&tree);
+        debug_assert_eq!(
+            leaves.len(),
+            level.leaf_styles.len(),
+            "leaves() and leaf_styles must stay index-aligned"
+        );
+        for (rect, style) in leaves.iter().zip(level.leaf_styles.iter()) {
+            if style.worked {
+                // Drained by whoever cut it — the same reading `is_sump`
+                // already gives `ChamberOrigin::Made`, now applied per leaf
+                // rather than per chamber.
+                continue;
+            }
+            for x in rect.x..(rect.x + rect.w) {
+                for y in rect.y..(rect.y + rect.h) {
+                    let cell = Cell(x, y);
+                    if level.cells.get(cell) == Some(LevelCellKind::Floor) {
+                        level.cells.set(cell, LevelCellKind::Flooded);
+                    }
                 }
             }
         }
     }
     level
-}
-
-/// The same partition tree `generate_level_with_origin` already built,
-/// re-derived (not stored) so the flooding pass can find "the first leaf"
-/// without threading the tree itself through every function above it —
-/// `FRAME`-tier re-derivation is exactly what decision 0069 calls for.
-fn region_first_leaf_rect(extent: Rect, seed: Seed) -> Option<Rect> {
-    let (tree, _dof) = region::build_region(extent, seed);
-    region::leaves(&tree).into_iter().next()
 }
 
 /// The realized worked-fraction of a level's leaves — Task 6's own
@@ -380,13 +434,13 @@ fn place_connections(level: &mut Level, extent: Rect, has_up: bool, seed: Seed) 
     if let Some(&first) = leaf_rects.first()
         && let Some(cell) = first_walkable_cell(level, first)
     {
-        level.cells.insert(cell, LevelCellKind::StairsDown);
+        level.cells.set(cell, LevelCellKind::StairsDown);
     }
     if has_up
         && let Some(&last) = leaf_rects.last()
         && let Some(cell) = first_walkable_cell(level, last)
     {
-        level.cells.insert(cell, LevelCellKind::StairsUp);
+        level.cells.set(cell, LevelCellKind::StairsUp);
     }
 }
 
@@ -398,7 +452,7 @@ fn first_walkable_cell(level: &Level, rect: Rect) -> Option<Cell> {
         for y in rect.y..(rect.y + rect.h) {
             let cell = Cell(x, y);
             if matches!(
-                level.cells.get(&cell),
+                level.cells.get(cell),
                 Some(LevelCellKind::Floor) | Some(LevelCellKind::Flooded)
             ) {
                 return Some(cell);
@@ -520,6 +574,32 @@ pub fn generate_descent_for_character(
 mod tests {
     use super::*;
     use hornvale_worldgen::character::Character;
+    use std::collections::BTreeMap;
+
+    /// The movement-mode seam (The Gallery, Task 4; spec §3.2 part 3),
+    /// pinned kind by kind: `Wall` is the one impassable kind, `Flooded`
+    /// wades rather than refuses (part 1's own rule), and both `Floor` and
+    /// a rung connection walk.
+    #[test]
+    fn movement_mode_answers_one_mode_per_passable_kind() {
+        assert_eq!(
+            movement_mode(LevelCellKind::Floor),
+            Some(MovementMode::Walk)
+        );
+        assert_eq!(
+            movement_mode(LevelCellKind::StairsDown),
+            Some(MovementMode::Walk)
+        );
+        assert_eq!(
+            movement_mode(LevelCellKind::StairsUp),
+            Some(MovementMode::Walk)
+        );
+        assert_eq!(
+            movement_mode(LevelCellKind::Flooded),
+            Some(MovementMode::Wade)
+        );
+        assert_eq!(movement_mode(LevelCellKind::Wall), None);
+    }
 
     #[test]
     fn generation_is_deterministic() {
@@ -546,13 +626,13 @@ mod tests {
         for x in extent.x..(extent.x + extent.w) {
             for y in extent.y..(extent.y + extent.h) {
                 assert!(
-                    level.cells.contains_key(&Cell(x, y)),
+                    level.cells.get(Cell(x, y)).is_some(),
                     "cell ({x}, {y}) missing from a total level"
                 );
             }
         }
         assert_eq!(
-            level.cells.len(),
+            level.cells.iter().count(),
             (extent.w * extent.h) as usize,
             "no cell outside the extent"
         );
@@ -639,8 +719,30 @@ mod tests {
         assert_eq!(origin, ChamberOrigin::Found);
     }
 
+    /// The Gallery, Task 4: superseded `a_sump_gets_a_flooded_region_a_made_
+    /// chamber_never_does`, whose "a Made chamber is drained regardless of
+    /// the water table" assertion encoded the OLD rule — flooding gated on
+    /// `origin` through `is_sump` — that spec §3.2's rewrite retires.
+    /// Wetness now keys on each leaf's own `LeafStyle.worked`, so this
+    /// asserts the new invariant directly against the leaves themselves
+    /// rather than against `origin`: under a phreatic column, a worked leaf
+    /// stays fully drained and at least one natural leaf floods; above the
+    /// water table, nothing floods regardless of the worked/natural mix.
+    ///
+    /// **`Seed(4)` is load-bearing, not arbitrary.** The fixture this test
+    /// carried before (`Seed(2)`) partitions this 40x24 extent into exactly
+    /// ONE leaf, and that leaf is natural — so `if style.worked` never ran
+    /// at all, and the whole test degenerated to "some cell somewhere is
+    /// flooded." Deleting the `worked`-skip from the flooding pass left it
+    /// green. `Seed(4)` partitions into two leaves, one of each kind (a
+    /// worked 11x24 strip and a natural 28x24 strip, verified by printing
+    /// `leaves()`/`leaf_styles` directly), so both `if`/`else` arms of the
+    /// loop below actually execute — `any_worked_leaf` and
+    /// `any_natural_leaf_flooded` below assert that they did, so a future
+    /// regression back to a single-leaf-only fixture fails loudly here
+    /// rather than silently passing again.
     #[test]
-    fn a_sump_gets_a_flooded_region_a_made_chamber_never_does() {
+    fn a_phreatic_level_floods_its_natural_leaves_and_drains_its_worked_ones() {
         use hornvale_terrain::CaveKind;
         use hornvale_worldgen::chamber::ChamberOrigin;
 
@@ -659,26 +761,40 @@ mod tests {
             100.0,
             10.0,
             NEUTRAL_WORKED_BIAS,
-            Seed(2),
+            Seed(4),
+        );
+        let (tree, _dof) = region::build_region(extent, Seed(4));
+        let leaves = region::leaves(&tree);
+        assert_eq!(
+            leaves.len(),
+            sump.leaf_styles.len(),
+            "leaves() and leaf_styles must stay index-aligned"
+        );
+        let mut any_worked_leaf = false;
+        let mut any_natural_leaf_flooded = false;
+        for (rect, style) in leaves.iter().zip(sump.leaf_styles.iter()) {
+            let leaf_has_flood = (rect.x..(rect.x + rect.w)).any(|x| {
+                (rect.y..(rect.y + rect.h))
+                    .any(|y| sump.cells.get(Cell(x, y)) == Some(LevelCellKind::Flooded))
+            });
+            if style.worked {
+                any_worked_leaf = true;
+                assert!(
+                    !leaf_has_flood,
+                    "a worked leaf must stay drained even under a phreatic water table"
+                );
+            } else if leaf_has_flood {
+                any_natural_leaf_flooded = true;
+            }
+        }
+        assert!(
+            any_worked_leaf,
+            "the fixture must carve at least one worked leaf, or the \
+             worked-stays-drained branch above never ran"
         );
         assert!(
-            sump.cells.values().any(|k| *k == LevelCellKind::Flooded),
-            "a phreatic Found chamber must carve a flooded region"
-        );
-
-        let made = generate_level_with_water(
-            extent,
-            CaveKind::Karst,
-            ChamberOrigin::Made,
-            Character::WildCave,
-            100.0,
-            10.0,
-            NEUTRAL_WORKED_BIAS,
-            Seed(2),
-        );
-        assert!(
-            made.cells.values().all(|k| *k != LevelCellKind::Flooded),
-            "a Made chamber is drained regardless of the water table (is_sump's own rule)"
+            any_natural_leaf_flooded,
+            "a phreatic Found chamber must carve at least one flooded natural leaf"
         );
 
         let dry = generate_level_with_water(
@@ -689,11 +805,84 @@ mod tests {
             5.0,
             10.0,
             NEUTRAL_WORKED_BIAS,
-            Seed(2),
+            Seed(4),
         );
         assert!(
-            dry.cells.values().all(|k| *k != LevelCellKind::Flooded),
+            dry.cells.iter().all(|(_, k)| k != LevelCellKind::Flooded),
             "a vadose Found chamber (above the water table) stays dry"
+        );
+    }
+
+    /// spec §3.2 part 2's own regression: wetness keys on `LeafStyle.worked`,
+    /// so a heavily-worked character's descent must come out substantially
+    /// drier than a natural-cave character's, on the SAME seed and the SAME
+    /// depth/water-table inputs — the only thing that differs between the
+    /// two runs is how many leaves read as worked. Asserts the DIRECTION
+    /// and a MARGIN, not a fixed percentage: the percentage is a
+    /// calibration this task does not own.
+    ///
+    /// claim: rate(seed: 0..30) — a mean-flooded-fraction comparison across
+    /// a 30-seed sweep, not a per-seed-without-exception invariant.
+    #[test]
+    fn a_drow_tier_descent_comes_out_substantially_drier_than_a_wild_cave_one() {
+        use hornvale_kernel::Band;
+        use hornvale_terrain::CaveKind;
+        use hornvale_worldgen::chamber::ChamberOrigin;
+
+        let rungs = [Band::Undercroft, Band::Shallows, Band::Deeps];
+        let origins = [ChamberOrigin::Found; 3];
+        // Every rung phreatic (a deep column against a shallow table), so
+        // any dryness difference between the two runs comes only from the
+        // worked/natural mix a character selects, not from whether the
+        // column is wet at all.
+        let depths_m = [500.0, 500.0, 500.0];
+        let water_table_m = 10.0;
+
+        fn flooded_fraction(levels: &[Level]) -> f64 {
+            let total: usize = levels.iter().map(|l| l.cells.iter().count()).sum();
+            let flooded: usize = levels
+                .iter()
+                .map(|l| {
+                    l.cells
+                        .iter()
+                        .filter(|(_, k)| *k == LevelCellKind::Flooded)
+                        .count()
+                })
+                .sum();
+            flooded as f64 / total.max(1) as f64
+        }
+
+        const TRIALS: u64 = 30;
+        let mut drow_total = 0.0;
+        let mut wild_total = 0.0;
+        for s in 0..TRIALS {
+            let drow = generate_descent_for_character(
+                &rungs,
+                CaveKind::Karst,
+                &origins,
+                &depths_m,
+                water_table_m,
+                Character::DrowTier,
+                Seed(s),
+            );
+            let wild = generate_descent_for_character(
+                &rungs,
+                CaveKind::Karst,
+                &origins,
+                &depths_m,
+                water_table_m,
+                Character::WildCave,
+                Seed(s),
+            );
+            drow_total += flooded_fraction(&drow);
+            wild_total += flooded_fraction(&wild);
+        }
+        let drow_mean = drow_total / TRIALS as f64;
+        let wild_mean = wild_total / TRIALS as f64;
+        assert!(
+            drow_mean < wild_mean - 0.05,
+            "a drow-tier descent must come out substantially drier than a \
+             wild-cave one: drow={drow_mean:.3}, wild={wild_mean:.3}"
         );
     }
 
@@ -781,9 +970,12 @@ mod tests {
         for (i, level) in levels.iter().enumerate() {
             let has_down = level
                 .cells
-                .values()
-                .any(|k| *k == LevelCellKind::StairsDown);
-            let has_up = level.cells.values().any(|k| *k == LevelCellKind::StairsUp);
+                .iter()
+                .any(|(_, k)| k == LevelCellKind::StairsDown);
+            let has_up = level
+                .cells
+                .iter()
+                .any(|(_, k)| k == LevelCellKind::StairsUp);
             assert!(has_down, "level {i} is missing its stairs down");
             if i == 0 {
                 assert!(
@@ -863,14 +1055,14 @@ mod tests {
                 let down_cells: Vec<Cell> = level
                     .cells
                     .iter()
-                    .filter(|(_, k)| **k == LevelCellKind::StairsDown)
-                    .map(|(c, _)| *c)
+                    .filter(|(_, k)| *k == LevelCellKind::StairsDown)
+                    .map(|(c, _)| c)
                     .collect();
                 let up_cells: Vec<Cell> = level
                     .cells
                     .iter()
-                    .filter(|(_, k)| **k == LevelCellKind::StairsUp)
-                    .map(|(c, _)| *c)
+                    .filter(|(_, k)| *k == LevelCellKind::StairsUp)
+                    .map(|(c, _)| c)
                     .collect();
                 assert_eq!(
                     down_cells.len(),
@@ -1070,7 +1262,7 @@ mod tests {
                                         | LevelCellKind::StairsUp
                                 )
                             })
-                            .map(|(&c, _)| c)
+                            .map(|(c, _)| c)
                             .collect();
                         assert!(
                             !standable.is_empty(),
@@ -1160,7 +1352,7 @@ mod tests {
                         .cells
                         .iter()
                         .filter(|(_, k)| matches!(k, LevelCellKind::Floor | LevelCellKind::Flooded))
-                        .map(|(&c, _)| c)
+                        .map(|(c, _)| c)
                         .collect();
                     let Some(&start) = walkable.iter().next() else {
                         continue; // a degenerate all-wall level has nothing to check

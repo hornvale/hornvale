@@ -1,4 +1,4 @@
-//! Keeps `ObjectProperty`'s five variants and `domains/language`'s
+//! Keeps `ObjectProperty`'s eight variants and `domains/language`'s
 //! `object_property_pack` concepts in step across the kernel -> domains ->
 //! windows layering (The Offer, Task 9), modelled directly on The
 //! Confidant's epoch 12 (`felt_state_concepts.rs`) — the same problem, the
@@ -12,9 +12,17 @@
 //! import could never run the other way either without creating a
 //! window -> domain -> window cycle. This window already depends on
 //! `hornvale_language` (see `Cargo.toml`), so the check runs from here
-//! instead: one test asserting the two rosters name the same five
+//! instead: one test asserting the two rosters name the same eight
 //! properties, rather than an import running the wrong way across the
 //! layering.
+//!
+//! **Both counts read "five" until The Chattel's Task 7 fix round 1.**
+//! The Offer registered five properties; Task 7 added `Portable`,
+//! `Openable` and `Lockable` (spec §3.8), taking the enum to eight. The
+//! test below never said five — it derives its roster from
+//! `ObjectProperty::all()` — so nothing went red and only the prose
+//! rotted, which is the failure mode a derived test is most prone to:
+//! it keeps working while its own description stops being true.
 //!
 //! Unlike `felt_state_concepts.rs`, `ObjectProperty` already carries its
 //! own `all()` and `concept_name()` (`affordance.rs`'s exhaustive-match

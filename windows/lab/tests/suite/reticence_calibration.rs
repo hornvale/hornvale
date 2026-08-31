@@ -133,7 +133,10 @@ fn h1_the_improvising_arms_are_distributed_as_preregistered() {
             ImprovisedName::Wordless { .. } => wordless += 1,
         }
     }
-    assert_eq!((god, spirit), (9, 6), "frozen arm counts over 15 peoples");
+    // THE WINZE T2b re-pin: (9, 6) -> (8, 7). Spec amendment E's working ring
+    // scan moves every world's settlement history, which re-draws the lexicons
+    // this arm assignment reads. A readout, not a target.
+    assert_eq!((god, spirit), (8, 7), "frozen arm counts over 15 peoples");
     assert_eq!(
         god + spirit + wordless,
         15,
@@ -340,8 +343,12 @@ fn h3_refusal_is_selective_not_global() {
 /// the switch, while the stickiness measured above is about the sim never
 /// producing it unprompted. Neither is an impossibility proof.
 /// `IN_CHARACTER_VERBS` (`session.rs`) is a closed, exhaustive
-/// 20-verb roster (The Offer added `warm` and The Latch added `clear`;
-/// neither resolves a drive, and there is still no drink/eat/relief verb);
+/// 28-verb roster (The Offer added `warm`, The Latch added `clear`, The
+/// Gallery added `down`/`up` for underworld stairs, and The Chattel added
+/// `open`/`close` for lids and then `take`/`drop`/`put`/`carrying` for
+/// custody; none of the ten resolves a drive, and there is
+/// still no drink/eat/relief verb — custody moves a THING's `located-in`,
+/// which no drive reads);
 /// the driven body's own
 /// passive `!wait` walk discards every fact it would otherwise commit
 /// (`_driven_facts` is unconditionally dropped, `session.rs:4090` and the
@@ -427,12 +434,16 @@ fn h4_does_the_prior_move_observable_testimony_at_all() {
     // not a threshold to tune. If the WORLD moves them, that is a finding to
     // report and re-quote in the chronicle — do NOT retune
     // `stance::patience()` to restore them (root `CLAUDE.md`, decision 0016).
+    // THE WINZE T2b re-pin: (70, 6) -> (71, 6). Same cause as H1 above — the
+    // working ring scan moves every world's history, so one more ask topic is
+    // observable. The sessions count is unmoved and the headline null below is
+    // unmoved; the prose that quoted "seventy" is re-quoted with it.
     assert_eq!(
         (denominator, sessions_with_observations),
-        (70, 6),
+        (71, 6),
         "H4's reported denominator moved; the chronicle and retrospective quote \
-         seventy observable points across six sessions and must be re-quoted together \
-         with this assertion"
+         seventy-one observable points across six sessions and must be re-quoted \
+         together with this assertion"
     );
     assert_eq!(
         diverged, 0,

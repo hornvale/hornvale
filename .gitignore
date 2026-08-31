@@ -81,3 +81,9 @@ book/src/laboratory/generated/gnomon-injection/
 # identity), and `scripts/hooks/pre-push` — decision 0139's enforcement — runs
 # on the pusher's machine. A commit made in a browser never touches one.
 .pi/
+
+# macOS Finder metadata. Nathan works across a Mac and lefford, so these appear
+# only on one side of the pair — which is exactly why they are easy to miss
+# until one is committed from the machine that creates them. None is tracked
+# and none is on disk as of 2026-08-29; this is preventive, not a cleanup.
+.DS_Store

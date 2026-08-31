@@ -368,6 +368,17 @@ impl Ledger {
     /// `positions_for_subject_predicate` yields object-key order, not
     /// position order, so the sort is load-bearing: commit order is the
     /// contract every caller of `facts_about`/`find` already relies on.
+    ///
+    /// **`O(log n + k)` is the INDEXED path, and this method cannot reach the
+    /// other one.** It takes `&self`, so it can never build the index; when
+    /// `index` is `None` it falls through to [`Self::naive_facts_of`], which
+    /// filters every fact the ledger holds. Since `index` is
+    /// `#[serde(skip)]` and only the `&mut self` paths (`mint_entity`,
+    /// `reuse_or_mint_entity`, `commit`) build it, a freshly deserialized
+    /// ledger pays that scan on every query until something commits — see
+    /// `index_is_absent_until_first_use_then_complete`. Callers that query a
+    /// loaded world before writing to it should know they are on the linear
+    /// path.
     /// type-audit: bare-ok(identifier-text)
     pub fn facts_of(&self, subject: EntityId, predicate: &str) -> impl Iterator<Item = &Fact> {
         let positions = match &self.index {
@@ -1710,7 +1721,7 @@ mod tests {
     // never serialized/gated — a justified, scoped exception.
     #[test]
     #[allow(clippy::disallowed_types)]
-    #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+    #[ignore = "probe: Ledger::commit's wall-time scaling, indexed commit vs. a naive O(n) scan; a wall-time micro-bench, not a live-worldgen battery; run by hand (decision 0132, the convention that put it in the tier; demoted by The Governor 2026-08-28)"]
     fn bench_commit_scaling_before_vs_after_index() {
         use std::hint::black_box;
         use std::time::Instant;

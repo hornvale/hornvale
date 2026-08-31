@@ -18,6 +18,25 @@ pub enum CauseOfEnd {
     Fled,
     /// The people migrated onward, in an orderly fashion.
     Migrated,
+    /// A working broke through, and the delving ended there (The Winze, spec
+    /// §4.3).
+    ///
+    /// **This variant records that a breach happened and nothing else, and
+    /// the silence is the design** (spec §4.6). No field here, on
+    /// [`Occupation`], or anywhere downstream says what came through, because
+    /// nothing in the model knows: the delving stopped, its people were
+    /// scattered or destroyed, and no observer survived the moment with an
+    /// identification. A later culture reads only an appearance — a delving
+    /// that ends abruptly at its own deepest point — which is decision 0003's
+    /// source-blindness arriving structurally rather than by convention.
+    ///
+    /// **Only a [`Function::Mine`] can end this way**, because only a working
+    /// cuts rock. Every other function ends by one of the five causes above.
+    ///
+    /// The end is [`Ended::Nature`], never `By`: `By` names an
+    /// agent, and naming one here would be the design drifting toward an
+    /// antagonist the spec refuses to author.
+    Breached,
 }
 
 /// What a community at this site was for.
@@ -96,7 +115,7 @@ pub enum Notability {
 /// The handle-bearing fields — which community, which lineage, who founded it,
 /// who ended it — live on the bake-side and ledger-side types instead, because
 /// they mean different things there.
-/// type-audit: bare-ok(count: founded), bare-ok(count: ended), bare-ok(count: peak_population)
+/// type-audit: bare-ok(count: founded), bare-ok(count: ended), bare-ok(count: peak_population), bare-ok(diagnostic-value: delve_depth_m)
 #[derive(Clone, Debug, PartialEq)]
 pub struct Occupation {
     /// The people occupying the site.
@@ -131,6 +150,31 @@ pub struct Occupation {
     pub cause: Option<CauseOfEnd>,
     /// How notable the occupation was.
     pub notability: Notability,
+    /// How far **below its own seat** this occupation drove a working, in
+    /// metres. `0.0` for every occupation that never dug — which, before The
+    /// Winze, was every occupation in every world (spec §3.3).
+    ///
+    /// **Not the absolute depth of the place they lived.** A people's *seat* —
+    /// which rung of its vertex's column it occupies — is not here and must
+    /// not be: `windows/worldgen`'s `Community::rung` states the reason, that
+    /// a seat is a pure function of `(people, vertex)` through the seating and
+    /// so committing it would add a save-format surface for a value the seed
+    /// re-derives exactly. That argument is right, and it does not reach this
+    /// field, because "how deep did they get" has two halves of different
+    /// kinds:
+    ///
+    /// - the **seat** is re-derivable and is not committed;
+    /// - the **working** is the integral of a *live* quantity over a tenure.
+    ///   It accrues once per epoch out of the community's population and tech
+    ///   horizon **as they stood in that epoch**, and the ledger keeps neither
+    ///   trajectory — [`Occupation::peak_population`] is the maximum ever
+    ///   reached and [`Occupation::tech`] the final horizon, so the path that
+    ///   produced this number is gone the moment the occupation closes.
+    ///
+    /// So the field commits exactly the half nothing can re-derive, and an
+    /// absolute depth below the surface is the sum of the two: the seat's own
+    /// depth for this occupation's `(people, site)`, plus this.
+    pub delve_depth_m: f64,
 }
 
 impl Occupation {

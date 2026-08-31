@@ -83,6 +83,140 @@ pub const KNOW: &str = "know";
 /// type-audit: bare-ok(identifier-text)
 pub const THINK: &str = "think";
 
+/// The `sleep` concept's id.
+///
+/// Named for the same reason [`EAT`], [`KILL`], [`KNOW`] and [`THINK`] are:
+/// the pack row that REGISTERS the concept and the
+/// `clause::PREDICATE_VALENCE` row that REALIZES it must not drift apart.
+///
+/// **It adds no pack entry.** `sleep` has been in [`universal_stratum`]
+/// since long before this campaign — it is Swadesh-core and needs no
+/// exposure gate — so this constant names an existing registration rather
+/// than creating one. That is why The Rail registers no concept and moves
+/// no keystone golden.
+/// type-audit: bare-ok(identifier-text)
+pub const SLEEP: &str = "sleep";
+
+/// The `old` concept's id.
+///
+/// Named for the same reason [`EAT`], [`KILL`], [`KNOW`], [`THINK`] and
+/// [`SLEEP`] are: the pack row that REGISTERS the concept and the
+/// `clause::PREDICATE_VALENCE` row that REALIZES it must not drift apart.
+///
+/// **It adds no pack entry, the same way [`SLEEP`]'s doc explains for
+/// itself.** `old` has been in [`universal_stratum`] since long before this
+/// campaign (`ConceptKind::Quality`, alongside `new`, `great`, `high`,
+/// `low` and `little`), so this constant names an existing registration
+/// rather than creating one.
+///
+/// **It stands in for the rung's own `long`.** `r003`'s authored text is
+/// *"The road is long"*, and `long` is not a registered concept anywhere in
+/// this crate — registering it would move `world-seed-42.json`, a
+/// byte-golden `make rebaseline` cannot write, and Task 0 established that
+/// this campaign registers no concept. `old` is the substitution, recorded
+/// again at its witness (`cli/tests/suite/sentence_corpus.rs`'s
+/// `ladder_construction`, `"r003"` arm) the same way `r006`'s witness
+/// records `kill` standing in for the unregistered `strike`.
+/// type-audit: bare-ok(identifier-text)
+pub const OLD: &str = "old";
+
+/// The `under` concept's id.
+///
+/// Named for the same reason [`EAT`], [`KILL`], [`KNOW`], [`THINK`],
+/// [`SLEEP`] and [`OLD`] are: the pack row that REGISTERS the concept and
+/// the `clause::PREDICATE_VALENCE` row that REALIZES it must not drift
+/// apart.
+///
+/// **It adds no pack entry, the same way [`SLEEP`]'s and [`OLD`]'s docs
+/// explain for themselves.** `under` has been in [`universal_stratum`]
+/// since long before this campaign (`ConceptKind::Quality`, doc "beneath;
+/// below"), so this constant names an existing registration rather than
+/// creating one.
+///
+/// **It stands in for the rung's own `at`.** `r005`'s authored text is
+/// *"The merchant is at the gate."*, and neither `at` nor `gate` is a
+/// registered concept anywhere in this crate — registering either would
+/// move `world-seed-42.json`, a byte-golden `make rebaseline` cannot write,
+/// and Task 0 established that this campaign registers no concept. `under`
+/// and `tree` are the substitution, recorded again at their witness
+/// (`cli/tests/suite/sentence_corpus.rs`'s `ladder_construction`, `"r005"`
+/// arm) the same way `r003`'s witness records `old` standing in for the
+/// unregistered `long`, and `r006`'s records `kill` for `strike`.
+///
+/// **Its registry KIND is a second, quieter compromise, recorded here so it
+/// is not rediscovered.** `under` is a `ConceptKind::Quality` — the same
+/// kind [`OLD`] carries, and [`OLD`] is the crate's only
+/// `Valence::Property` predicate. An adposition is not a quality, and in a
+/// registry designed around this crate's needs it would carry a kind of its
+/// own; it carries `Quality` because the no-new-concept constraint above
+/// forced the choice to be made from the kinds `universal_stratum` already
+/// had, and `Quality` was the nearest. **Nothing checks kind against
+/// valence.** The only thing separating a locative relation from a property
+/// word in this crate is `clause::PREDICATE_VALENCE`'s two rows, so a
+/// reader who infers valence from `ConceptKind` will infer it wrongly for
+/// exactly this concept. A campaign free to move `world-seed-42.json` could
+/// register an adposition kind and delete this paragraph.
+/// type-audit: bare-ok(identifier-text)
+pub const UNDER: &str = "under";
+
+/// The `night` concept's id.
+///
+/// Named for the same reason [`EAT`], [`KILL`], [`KNOW`], [`THINK`],
+/// [`SLEEP`], [`OLD`] and [`UNDER`] are: the pack row that REGISTERS the
+/// concept and the site that REALIZES it must not drift apart. Unlike the
+/// others, the realizing site here is not a `clause::PREDICATE_VALENCE`
+/// row — `night` is never a clause's own predicate — it is
+/// `clause::common_role_surface`'s `(NIGHT, Argument::Concept(id))` arm,
+/// r049's `temporal-adverbial`.
+///
+/// **It adds no pack entry.** `night` has been in [`universal_stratum`]
+/// since long before this campaign (`ConceptKind::Celestial`, doc "the dark
+/// half of the day-night cycle"), so this constant names an existing
+/// registration rather than creating one.
+///
+/// **It stands in for the rung's own `until last night`.** `r049`'s
+/// authored text is merchant entry `m02`, *"Everything was fine until last
+/// night."*; `everything`, `fine` and `until` are registered nowhere, and
+/// registering one would move `world-seed-42.json`, a byte-golden `make
+/// rebaseline` cannot write, and Global Constraint 2 forbids it. `night`
+/// alone is the substitution, keeping only the part the rung's token names
+/// — a temporal adjunct on a clause — recorded again at its witness
+/// (`cli/tests/suite/sentence_corpus.rs`'s `ladder_construction`, `"r049"`
+/// arm) the same way `r005`'s witness records `under`/`tree` standing in
+/// for `at`/`gate`.
+///
+/// **It names a TIME, not a RELATION — the opposite asymmetry from
+/// [`UNDER`], and worth recording rather than rediscovering.** `UNDER`'s
+/// role id is the relation word applied to a variable complement (`under
+/// the <X>`); this constant's role id names the temporal RELATION `at`
+/// realizes (there is only one, so the role and the relation happen to
+/// coincide), with the arm supplying the literal `"at"` itself rather than
+/// looking it up, because `at` is not itself a registered concept and
+/// registering it is the same forbidden move `UNDER` already stands in
+/// for. The two arms are therefore not the same shape and are not
+/// collapsed into one (see `common_role_surface`'s `NIGHT` arm doc).
+///
+/// **Review round 1 corrected this constant's OWN doc, not merely the arm
+/// that reads it.** The first version of this constant paired `NIGHT` with
+/// `Argument::Absent` on the theory that the role alone said enough, since
+/// the role already names the concept. That is true for COMMON — Common's
+/// realizer only ever reads `adjunct.role` here, and never touched
+/// `adjunct.argument` on this arm — but `realize_adjuncts` in `grammar.rs`
+/// is the other reader, and it resolves `adjunct.argument` exclusively,
+/// never `adjunct.role`. An absent argument therefore left the TONGUE path
+/// with nothing to render: not a stated Common-only gap, an unforced live
+/// defect (a stray space, no concept word at all — worse than the
+/// `UNDER`-arm gap this crate already accepts). The corrected witness
+/// carries `Argument::Concept(NIGHT.to_string())` — redundant with the
+/// role by name, not by necessity: the role SELECTS this arm, the argument
+/// is what a tongue actually resolves, and nothing forces the two fields to
+/// agree on content merely because they agree on the arm they land in
+/// today. `night` is `ladder_rank: 0` in [`universal_stratum`], exactly
+/// like `tree` — [`UNDER`]'s own complement — so nothing about this
+/// concept made the emptier design necessary.
+/// type-audit: bare-ok(identifier-text)
+pub const NIGHT: &str = "night";
+
 /// One entry in a vocabulary pack: a concept id, its broad category, a doc,
 /// and its rank on whichever acquisition ladder it belongs to (0 for
 /// entries outside any ladder — always in the lexicon once the pack is
@@ -185,7 +319,7 @@ pub fn universal_stratum() -> &'static [PackEntry] {
             ladder_rank: 0,
         },
         PackEntry {
-            concept: "sleep",
+            concept: SLEEP,
             kind: ConceptKind::Act,
             doc: "to rest unconscious",
             ladder_rank: 0,
@@ -324,13 +458,13 @@ pub fn universal_stratum() -> &'static [PackEntry] {
             ladder_rank: 0,
         },
         PackEntry {
-            concept: "old",
+            concept: OLD,
             kind: ConceptKind::Quality,
             doc: "long in existence",
             ladder_rank: 0,
         },
         PackEntry {
-            concept: "under",
+            concept: UNDER,
             kind: ConceptKind::Quality,
             doc: "beneath; below",
             ladder_rank: 0,
@@ -856,13 +990,16 @@ pub fn felt_state_pack() -> &'static [(&'static str, &'static str)] {
     ]
 }
 
-/// The five object properties an anchor may carry (`ObjectProperty`, The
+/// The eight object properties a thing-kind may carry (`ObjectProperty`, The
 /// Offer, spec §3.1/§3.3/§8/§12): what an object OFFERS, independent of any
 /// verb that reads it — `supports-rest` (a place a body may lie down and
 /// sleep), `holds-liquid` (a place a body may drink from), `affords-passage`
 /// (a seam between two rooms a body may pass through), `encloses` (an anchor
 /// that reveals what lies within it), `radiates-heat` (an anchor that emits
-/// warmth). `(concept, doc)` pairs, registered directly by
+/// warmth), and The Chattel's three (spec §3.8, each earned by a verb that
+/// campaign ships): `portable` (take/drop), `openable` (open/close),
+/// `lockable` (open, requiring a key in custody).
+/// `(concept, doc)` pairs, registered directly by
 /// [`register_concepts`] under [`hornvale_kernel::ConceptKind::Quality`]
 /// (its definition is already "an abstract property or attribute", the fit
 /// The Offer's G3 ruling names for a property a thing HAS, spec §12) —
@@ -887,6 +1024,12 @@ pub fn object_property_pack() -> &'static [(&'static str, &'static str)] {
         ),
         ("encloses", "an anchor that reveals what lies within it"),
         ("holds-liquid", "a place a body may drink from"),
+        (
+            "lockable",
+            "a thing whose opening needs the key that matches it",
+        ),
+        ("openable", "a thing that can be opened and closed again"),
+        ("portable", "a thing small enough for a body to carry"),
         ("radiates-heat", "an anchor that emits warmth"),
         ("supports-rest", "a place a body may lie down and sleep"),
     ]

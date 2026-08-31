@@ -363,7 +363,7 @@ fn print_distribution(name: &str, values: &[f64]) {
 /// assertions) — Task P1 of `task-p1-brief.md`, seeds 42/7/1234. A decision
 /// instrument, not a pass/fail gate on a chosen constant.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: the off-lithology decorrelation branch table; run by hand (The Winze Task P1 / The Sources answered its question; demoted by The Governor 2026-08-28)"]
 fn off_lithology_decorrelation_probe() {
     let mut any_field_measured = false;
 

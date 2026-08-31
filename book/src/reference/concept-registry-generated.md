@@ -71,6 +71,7 @@
 | `obliquity-amplitude` | yes | obliquity oscillation amplitude, degrees (moon-coupled) |
 | `obliquity-degrees` | yes | axial tilt of the anchor world, in degrees |
 | `occ-cause` | yes | why the occupation ended, absent while alive |
+| `occ-delve-depth` | yes | how far below its seat the occupation drove a working, in metres |
 | `occ-ended` | yes | the standard day the occupation ended, absent while alive |
 | `occ-ended-by` | yes | how the occupation ended: nature, or another entity's hand |
 | `occ-founded` | yes | the standard day the occupation began |
@@ -159,10 +160,14 @@
 | `abyssal` | climate | terrain | a biome class |
 | `abyssal-plain` | climate | substance | The flat floor of the deep ocean. |
 | `affords-passage` | language | quality | a seam between two rooms a body may pass through |
+| `alcove` | thing | object | a recessed space set into a wall |
 | `alpine` | climate | terrain | a biome class |
+| `altar` | thing | object | a raised surface where offerings are made |
+| `anvil` | thing | object | a heavy iron block a smith hammers metal against |
 | `bait-ball` | climate | substance | A dense turning mass of fish. |
 | `barley` | climate | substance | a staple crop |
 | `bathypelagic` | climate | terrain | a biome class |
+| `bed` | thing | object | a place made for lying down and sleeping |
 | `black-dragon-kind` | species | living | a black dragon |
 | `blood` | language | body | the circulating fluid of a body |
 | `blue` | language | quality | the color term for blue |
@@ -173,6 +178,7 @@
 | `bugbear-kind` | species | living | a bugbear |
 | `burn` | climate | substance | Ground recovering from fire. |
 | `carrion-crawler-kind` | species | living | a carrion crawler |
+| `cave-mouth` | thing | object | the opening where a cave meets the outside |
 | `chart` | language | act | to form a picture of the space around oneself — `map` |
 | `child` | language | kin | one's son or daughter |
 | `closed-canopy` | climate | substance | Tall closed-canopy tropical forest. |
@@ -227,6 +233,7 @@
 | `grass-sward` | climate | substance | Open grassland, unbroken by trees. |
 | `great` | language | quality | large in size or extent |
 | `green` | language | quality | the color term for green |
+| `ground` | thing | object | the bare earth underfoot |
 | `gully-dwarf-kind` | species | living | a gully dwarf |
 | `hadal-trench` | climate | terrain | a biome class |
 | `hamada` | climate | substance | A stony desert pavement of bare rock. |
@@ -237,6 +244,7 @@
 | `helpless` | language | affect | negative and persistent: given up despite an active drive |
 | `high` | language | quality | far above the ground |
 | `high-elf-kind` | species | living | a high elf |
+| `high-seat` | thing | object | the seat of a hall's presiding figure |
 | `hill` | terrain | terrain | ground that rises above what surrounds it |
 | `hill-dwarf-kind` | species | living | a hill dwarf |
 | `hobgoblin-kind` | species | living | a hobgoblin |
@@ -251,6 +259,7 @@
 | `island` | terrain | terrain | land the water surrounds |
 | `kelp-canopy` | climate | substance | The floating canopy of a kelp forest. |
 | `kelp-forest` | climate | terrain | a biome class |
+| `key` | thing | object | a small tool shaped to work one particular lock |
 | `kill` | language | act | to cause to cease living |
 | `killer-whale-kind` | species | living | a killer whale |
 | `know` | language | act | to hold something in memory or understanding — `knows` |
@@ -261,7 +270,10 @@
 | `light` | language | quality | the color term for white/light hues |
 | `lightless-water` | climate | substance | Water below all light. |
 | `little` | language | quality | small in size or extent |
+| `lockable` | language | quality | a thing whose opening needs the key that matches it |
+| `log` | thing | object | a length of felled, unworked timber |
 | `look` | language | act | to visually attend to something, near or far — `look`, `examine` |
+| `loom` | thing | object | a frame for weaving thread into cloth |
 | `lost` | language | affect | negative: blocked with no target to move toward |
 | `low` | language | quality | near the ground |
 | `many` | language | quality | an indefinitely large count |
@@ -287,6 +299,7 @@
 | `old-growth` | climate | substance | Mature forest, closed above and open beneath. |
 | `one` | language | quality | the cardinal number 1 |
 | `open-blue` | climate | substance | Open sunlit water, far from any shore. |
+| `openable` | language | quality | a thing that can be opened and closed again |
 | `orange-dwarf` | astronomy | celestial | a cooler, dimmer main-sequence star |
 | `orange-giant` | astronomy | celestial | a cooling star swollen off the main sequence |
 | `otyugh-kind` | species | living | an otyugh |
@@ -296,6 +309,8 @@
 | `person` | language | living | a person; a member of a people (the autonym root) |
 | `plankton-bloom` | climate | substance | Water thick with plankton. |
 | `playa` | climate | substance | A dry lake bed of salt and cracked clay. |
+| `pool` | thing | object | a small standing body of water |
+| `portable` | language | quality | a thing small enough for a body to carry |
 | `pressure-ridge` | climate | substance | Sea ice buckled into a ridge. |
 | `provoke` | language | act | to make someone hostile by an act the simulation itself did not choose — `!provoke` |
 | `radiates-heat` | language | quality | an anchor that emits warmth |
@@ -320,6 +335,7 @@
 | `scattering-layer` | climate | substance | The daily-rising layer of small sea life. |
 | `sclerophyll-scrub` | climate | substance | Hard-leaved drought-adapted scrub. |
 | `scoured-ice` | climate | substance | Ice swept bare and carved by wind. |
+| `screen` | thing | object | a partition set up to divide or shield a space |
 | `sea` | terrain | terrain | a body of salt water |
 | `sea-elf-kind` | species | living | a sea elf |
 | `sea-ice` | climate | terrain | a biome class |
@@ -345,6 +361,7 @@
 | `star` | astronomy | celestial | a fixed point of light in the night sky |
 | `starlit` | language | quality | dark faintly lit by stars |
 | `stone` | terrain | substance | rock |
+| `strongbox` | thing | object | a locked chest built to keep valuables safe |
 | `sun` | astronomy | celestial | the sun |
 | `sun-like-star` | astronomy | celestial | a distant star resembling this world's own sun |
 | `supports-rest` | language | quality | a place a body may lie down and sleep |
@@ -355,6 +372,7 @@
 | `temperate-rainforest` | climate | terrain | a biome class |
 | `think` | language | act | to hold an uncertain belief |
 | `thorn-scrub` | climate | substance | Dry scrub of thorned shrubs. |
+| `threshold` | thing | object | the sill marking where one place ends and another begins |
 | `tide` | astronomy | celestial | the rise and fall of the waters under the moons |
 | `treant-kind` | species | living | a treant |
 | `tree` | language | living | a woody plant |
@@ -373,6 +391,7 @@
 | `urchin-barren` | climate | substance | Seabed grazed bare of kelp. |
 | `valley` | terrain | terrain | low ground between heights |
 | `vent-plume` | climate | substance | Shimmering hot water rising from a vent. |
+| `vessel` | thing | object | a container shaped to hold liquid or goods |
 | `vine` | climate | substance | a staple crop |
 | `wait` | language | act | to let time pass without acting — `wait` |
 | `water` | language | substance | the drinkable liquid |

@@ -24,6 +24,8 @@
 //! the host guard governs WRITES — this only reads. Do not "fix" the missing
 //! guard: it is what makes a Mac-side sentinel possible at all.
 
+use hornvale_lab::MetricValue;
+use std::collections::BTreeMap;
 use std::path::Path;
 
 /// Metric names allowed to disagree with the committed census, each with a
@@ -70,13 +72,16 @@ fn the_first_three_census_worlds_match_the_committed_rows() {
 
     let live = hornvale_lab::run(&sentinel).expect("the sentinel study must run");
 
-    let csv = std::fs::read_to_string(
-        root.join(hornvale_lab::CENSUS_GOLDENS_DIR)
-            .join("the-census/rows.csv"),
-    )
-    .expect("the committed census rows must exist");
-    let committed = hornvale_lab::load_rows(&sentinel, &csv)
-        .expect("the committed rows must parse against the census study");
+    // AS AUTHORED (`hornvale_lab::authored`): through the fixture's own
+    // `schema.json`, so a fixture that predates a newly registered metric
+    // still loads and this test still fails — or passes — on its OWN
+    // comparison rather than dying earlier at a schema parse.
+    let fixture = root
+        .join(hornvale_lab::CENSUS_GOLDENS_DIR)
+        .join("the-census");
+    let (committed, age) = hornvale_lab::load_authored(&sentinel, &fixture, "the-census")
+        .expect("the committed rows must parse as authored");
+    age.announce("the-census");
 
     let waived: Vec<String> = waivers().into_iter().map(|(n, _)| n).collect();
     let mut moved: Vec<String> = Vec::new();
@@ -104,13 +109,22 @@ fn the_first_three_census_worlds_match_the_committed_rows() {
              seed 0 and that the sentinel's `seeds.from` matches it.",
             got.seed, want_row.seed
         );
-        for ((name, g), w) in live
+        // BY NAME, never by position. The committed fixture may predate a
+        // metric this run measures, and a positional zip would then compare
+        // every column after the insertion point against its neighbour and
+        // report a wall of plausible-looking movement. A live column the
+        // fixture does not carry is skipped; `age.announce` above names it.
+        let stored: BTreeMap<&str, &MetricValue> = committed
             .metric_names
             .iter()
-            .zip(got.values.iter())
+            .copied()
             .zip(want_row.values.iter())
-        {
-            if g != w && !waived.iter().any(|x| x == name) {
+            .collect();
+        for (name, g) in live.metric_names.iter().zip(got.values.iter()) {
+            let Some(w) = stored.get(name) else {
+                continue;
+            };
+            if g != *w && !waived.iter().any(|x| x == name) {
                 moved.push(format!(
                     "seed {} · {name}: live {g:?} vs committed {w:?}",
                     got.seed

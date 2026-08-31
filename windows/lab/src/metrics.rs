@@ -1,5 +1,7 @@
 //! Tier-1 metrics extractors: analyzable properties of generated worlds.
 
+use std::cell::Ref; // lexicon: std::cell::Ref, the Rust interior-mutability type, not the mesh sense
+
 use hornvale_astronomy::{
     Calendar, NeighborClass, Rotation, StarSystem, streams::ROOT as ASTRONOMY_STREAM_ROOT,
 };
@@ -15,12 +17,12 @@ use hornvale_terrain::{
     CarveParams, Commodity, GlobeSummary, Hydro, MarginPolarity, RockClass, SoilOrder, fertility,
 };
 use hornvale_worldgen::{
-    BuildDepth, BuildError, ChorusVoice, HazardKind, Sky, SkyChoice, Valence, WorldComponents,
-    accounts_from, build_world_from_components, build_world_to_with_artifacts, climate_from,
-    commodity_name, flagship_of, language_of_in, migration_events, observed_phenomena_as_at_from,
-    observed_phenomena_as_in_from, occupation_records, rock_class_name,
-    settlement_site_concepts as worldgen_settlement_site_concepts, sky_of, soil_of,
-    soil_order_name, terrain_of, vestiges_field,
+    BuildDepth, BuildError, ChorusVoice, HazardKind, Sky, SkyChoice, Valence, VestigeKind,
+    WorldComponents, accounts_from, build_world_from_components, build_world_to_with_artifacts,
+    climate_from, commodity_name, flagship_of, language_of_in, migration_events,
+    observed_phenomena_as_at_from, observed_phenomena_as_in_from, occupation_records,
+    rock_class_name, settlement_site_concepts as worldgen_settlement_site_concepts, sky_of,
+    soil_of, soil_order_name, terrain_of, vestiges_field,
 };
 
 use hornvale_astronomy::SkyPins;
@@ -371,6 +373,22 @@ impl AsRef<AstronomyView> for ClimateView {
     }
 }
 
+#[cfg(test)]
+thread_local! {
+    /// Test-only diagnostic (task 3 of The Governor, mirroring
+    /// `LEX_BUILD_CALLS`): counts calls to [`SettlementView::demography_report`]'s
+    /// uncached build path, i.e. actual `hornvale_worldgen::demography_report_from`
+    /// invocations. A `thread_local`, not a plain `static AtomicUsize`, for the
+    /// same reason `LEX_BUILD_CALLS` is one — nextest is process-per-test
+    /// (`windows/lab/CLAUDE.md`), so a plain `static` is already exclusive to
+    /// one test, but a thread-local also survives if that ever changes to a
+    /// multi-threaded test harness without becoming a cross-test race. Exists
+    /// to let a test measure "one report build per view, not one per metric"
+    /// by counting, not by reading the call graph, and then guard the
+    /// memoised path against silently regressing back to a rebuild per metric.
+    static DEMOGRAPHY_BUILD_CALLS: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };  // lexicon: std::cell::RefCell/Cell/Ref/OnceCell — the Rust interior-mutability type, not the mesh sense
+}
+
 /// Settlement rung: climate + a world built to settlement depth (spec §4 /
 /// MAP-25). A metric handed a `SettlementView` reads a world whose
 /// religion/culture/species/deep-time facts do not exist yet — the type
@@ -379,6 +397,32 @@ impl AsRef<AstronomyView> for ClimateView {
 pub struct SettlementView {
     /// The climate rung this view extends.
     pub climate: ClimateView,
+    /// This view's own demography report, computed on first demand by
+    /// [`SettlementView::demography_report`] and reused thereafter (task 3
+    /// of The Governor). Two Settlement-rung metrics
+    /// (`per-cell-diversity`, `composition-variance`) each called  // lexicon: frozen metric name (per-cell-diversity), not the mesh sense
+    /// `hornvale_worldgen::demography_report_from` independently against the
+    /// same `(world, components, terrain, climate)` and rebuilt the
+    /// identical report — profiled at 7.58% + 7.53% of census study cycles.
+    ///
+    /// **Scoping is the whole safety argument, so it is stated here, the
+    /// same way [`FullView::lexicon_cache`] states it for its own per-view
+    /// cache.** This field is private, so its lifetime is exactly one
+    /// world's evaluation: `build_row` constructs a `BuiltView` per (seed,
+    /// pin set), applies every metric to it, and drops it. `RefCell` (never  // lexicon: std::cell::RefCell/Cell/Ref/OnceCell — the Rust interior-mutability type, not the mesh sense
+    /// a `Mutex`) is deliberate: it is `!Sync`, so a view carrying a filled
+    /// cache cannot be shared across the runner's worker threads even by
+    /// accident.
+    ///
+    /// `Option<Result<..>>` rather than caching only the `Ok` payload:
+    /// `BuildError` is not `Clone`, so the whole `Result` — including a
+    /// failed build — is memoised, and a world whose report fails to build
+    /// re-uses that SAME error on every later call instead of re-attempting
+    /// (and re-paying for) the build. Byte-identical to the un-memoised
+    /// path either way, since `demography_report_from` is a pure function
+    /// of this view's own already-committed fields.
+    demography_cache:
+        std::cell::RefCell<Option<Result<hornvale_demography::DemographyReport, BuildError>>>, // lexicon: std::cell::RefCell/Cell/Ref/OnceCell — the Rust interior-mutability type, not the mesh sense
 }
 
 impl SettlementView {
@@ -394,7 +438,39 @@ impl SettlementView {
         wc: WorldComponents,
     ) -> Result<SettlementView, BuildError> {
         let climate = ClimateView::build_to(seed, pins, wc, BuildDepth::Settlements)?;
-        Ok(SettlementView { climate })
+        Ok(SettlementView {
+            climate,
+            demography_cache: std::cell::RefCell::new(None), // lexicon: std::cell::RefCell/Cell/Ref/OnceCell — the Rust interior-mutability type, not the mesh sense
+        })
+    }
+
+    /// This view's demography report, memoised against
+    /// [`SettlementView::demography_cache`] — see that field's doc for the
+    /// scoping argument. Every settlement-rung metric that needs
+    /// `hornvale_worldgen::demography_report_from` should call this instead
+    /// of the worldgen function directly, so the whole crate shares one
+    /// build per view.
+    // Named construction site (decision 0092): the ONE place this view
+    // calls the derivation entry point; every metric extractor reads the
+    // memoised result back out instead.
+    #[allow(clippy::disallowed_methods)]
+    pub fn demography_report(
+        &self,
+    ) -> Ref<'_, Result<hornvale_demography::DemographyReport, BuildError>> {
+        if self.demography_cache.borrow().is_none() {
+            #[cfg(test)]
+            DEMOGRAPHY_BUILD_CALLS.with(|c| c.set(c.get() + 1));
+            let built = hornvale_worldgen::demography_report_from(
+                self.world(),
+                self.components(),
+                self.terrain(),
+                self.climate(),
+            );
+            *self.demography_cache.borrow_mut() = Some(built);
+        }
+        Ref::map(self.demography_cache.borrow(), |cached| {
+            cached.as_ref().expect("populated immediately above")
+        })
     }
 
     /// The world ledger, reached through the climate/terrain/astronomy
@@ -491,7 +567,10 @@ impl FullView {
     ) -> Result<FullView, BuildError> {
         let climate = ClimateView::build_to(seed, pins, wc, BuildDepth::Full)?;
         Ok(FullView {
-            settlement: SettlementView { climate },
+            settlement: SettlementView {
+                climate,
+                demography_cache: std::cell::RefCell::new(None), // lexicon: std::cell::RefCell/Cell/Ref/OnceCell — the Rust interior-mutability type, not the mesh sense
+            },
             lexicon_cache: std::cell::RefCell::new(std::collections::BTreeMap::new()),
         })
     }
@@ -1917,6 +1996,62 @@ pub fn registry() -> Vec<Metric> {
                 MetricValue::Number(if count == 0 { 0.0 } else { sum / count as f64 })
             }),
         },
+        // --- The Winze (Task 7): the campaign's one census column.
+        //
+        // A LAYER READ, AND THE CHOICE IS THE METRIC'S MEANING (spec
+        // §E.11.2). A breach is visible in two places and they are different
+        // quantities. At the LAYER it is one delving that ended by breaking
+        // through, which is what this column counts. At the FIELD —
+        // `vestige_dread`, a `max` over the vertex's whole palimpsest — it is
+        // a place that *reads* wrong, which is a different population: it
+        // includes vertices whose own top layer is innocent (a living working
+        // standing over an old breach, measured on the panel), and it cannot
+        // separate a breach from a pre-human gate scar, since both are
+        // maximally dreaded and both are `Numinous`. This campaign's quantity
+        // is endings, so the read is the layer.
+        //
+        // Cost: a fifth `vestiges_field` in this block, which is a grouped
+        // ledger scan plus a per-vertex noise probe — not a terrain sweep
+        // (`windows/lab/CLAUDE.md`, "Registering a metric is not a local
+        // act", item 3). The four siblings above each pay the same call
+        // separately; collapsing all five behind one memoised field on
+        // `FullView` (the pattern `TerrainView::band_transects` already
+        // uses) is the fix that doc prescribes, and is not this task's. ---
+        Metric {
+            name: "breached-delving-count",
+            doc: "Count of land-vertex vestige LAYERS that are an abandoned delving \
+                  whose hazard is Numinous — i.e. a working that ended by breaking \
+                  through (The Winze, spec §4.3). A layer read, never the dread \
+                  FIELD: `vestige_dread` is a max over a vertex's whole palimpsest, \
+                  so a field read counts places that read as dreadful (a living \
+                  working over an old breach, a pre-human gate scar) rather than \
+                  delvings that ended (spec §E.11.2). Names nothing about what was \
+                  found, because nothing knows (spec §4.6). 0 where no delving on \
+                  land broke through",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 1.0, 2.0, 4.0, 8.0, 16.0],
+            },
+            domain: Domain::History,
+            role: Role::Descriptor,
+            extract: Extractor::Full(|v: &FullView| {
+                let terrain = v.terrain();
+                let geo = terrain.geosphere();
+                let field = vestiges_field(v.world(), terrain);
+                let mut breached = 0usize;
+                for vertex in geo.vertices() {
+                    if !terrain.is_ocean(vertex) {
+                        for vestige in field.get(vertex) {
+                            if vestige.kind == VestigeKind::AbandonedDelving
+                                && vestige.hazard == HazardKind::Numinous
+                            {
+                                breached += 1;
+                            }
+                        }
+                    }
+                }
+                MetricValue::Number(breached as f64)
+            }),
+        },
         // --- The Gnomon (Task 1): the first-occurrence index. Each column
         // reads the earliest `Fact.day` for a predicate (optionally narrowed
         // to a specific text object) via the shared `first_day` helper below
@@ -2412,28 +2547,26 @@ pub fn registry() -> Vec<Metric> {
                    A16a; feeds the A16b β calibration): the mean, over habitable land vertices, \
                    of the demography report's `byproducts.strife` field — already the \
                    per-vertex inverse-Herfindahl diversity 1/Σ frac_s² (1.0 when one species \
-                   dominates a vertex, →N when N species share it evenly). Recomputed via \
-                   `hornvale_worldgen::demography_report_from`, which reconstructs the IDENTICAL \
-                   report the settlement-genesis path builds internally (the shared-assembly \
-                   refactor of task A16a), so this measures the stack the world actually \
-                   ships, not a parallel one. Absent if the report fails to build or the \
-                   world has no habitable vertices",
+                   dominates a vertex, →N when N species share it evenly). Read via \
+                   `SettlementView::demography_report`, the view's own memoised build of \
+                   `hornvale_worldgen::demography_report_from` (task 3 of The Governor: shared \
+                   with `composition-variance` below rather than each rebuilding it), which \
+                   reconstructs the IDENTICAL report the settlement-genesis path builds \
+                   internally (the shared-assembly refactor of task A16a), so this measures the \
+                   stack the world actually ships, not a parallel one. Absent if the report \
+                   fails to build or the world has no habitable vertices",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[1.0, 1.5, 2.0, 3.0, 4.0, 6.0, 8.0],
             },
             domain: Domain::Settlement,
             role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| {
-                // Named construction site (decision 0092): a metric extractor
-                // deliberately recomputes the fit per read against already-derived
-                // artifacts (documented in the metric's doc string above).
-                #[allow(clippy::disallowed_methods)]
-                let Ok(report) = hornvale_worldgen::demography_report_from(
-                    v.world(),
-                    v.components(),
-                    v.terrain(),
-                    v.climate(),
-                ) else {
+                // Reads the view's own memoised report (task 3 of The
+                // Governor) rather than deriving one — see
+                // `SettlementView::demography_report`'s doc for the
+                // construction site and scoping argument.
+                let cached = v.demography_report();
+                let Ok(report) = &*cached else {
                     return MetricValue::Absent;
                 };
                 let geo = v.terrain().geosphere();
@@ -2459,26 +2592,25 @@ pub fn registry() -> Vec<Metric> {
                    `stack_settlements`, of each species' composition fraction. 0.0 iff \
                    every settlement has the identical species mix (the pre-Niche \
                    'oatmeal' — one flat blend worldwide); > 0 when composition varies \
-                   across space (species dominant in different strongholds). Recomputed \
-                   via `hornvale_worldgen::demography_report_from` (the niche-differentiated \
-                   coexistence shadow). Absent if the report fails to build or the world \
-                   has fewer than 2 settlements",
+                   across space (species dominant in different strongholds). Read via \
+                   `SettlementView::demography_report`, the view's own memoised build of \
+                   `hornvale_worldgen::demography_report_from` (the niche-differentiated \
+                   coexistence shadow) — shared with the settlement diversity metric \
+                   registered above rather than \
+                   each rebuilding it (task 3 of The Governor). Absent if the report fails to \
+                   build or the world has fewer than 2 settlements",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.005, 0.01, 0.02, 0.05, 0.1],
             },
             domain: Domain::Settlement,
             role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| {
-                // Named construction site (decision 0092): a metric extractor
-                // deliberately recomputes the fit per read against already-derived
-                // artifacts (documented in the metric's doc string above).
-                #[allow(clippy::disallowed_methods)]
-                let Ok(report) = hornvale_worldgen::demography_report_from(
-                    v.world(),
-                    v.components(),
-                    v.terrain(),
-                    v.climate(),
-                ) else {
+                // Reads the view's own memoised report (task 3 of The
+                // Governor) rather than deriving one — see
+                // `SettlementView::demography_report`'s doc for the
+                // construction site and scoping argument.
+                let cached = v.demography_report();
+                let Ok(report) = &*cached else {
                     return MetricValue::Absent;
                 };
                 let settlements = &report.stack_settlements;
@@ -5526,10 +5658,14 @@ fn pearson_correlation(xs: &[f64], ys: &[f64]) -> Option<f64> {
 /// between [`hornvale_worldgen::weakest_point_defensibility`] and
 /// [`hornvale_demography::carrying_capacity`], over every PRESENT-DAY
 /// habitable vertex (`v.climate().habitability()`) — NOT the bake's own final
-/// era. `hornvale_worldgen::connection_graph_of` is the crate's existing
-/// present-day-graph entry point (already used by the legibility surface
-/// and the DoD check), reused here wholesale rather than reconstructed by
-/// hand; `hornvale_demography::carrying_capacity` over
+/// era. `hornvale_worldgen::connection_graph_from` is the crate's
+/// already-built-terrain-and-climate present-day-graph entry point --
+/// `v.terrain()`/`v.climate()` are already the `FullView`'s own
+/// reconstruction, so this reuses them wholesale instead of paying
+/// `connection_graph_of` to reconstruct a second, identical terrain and
+/// climate (The Governor, Task 2: this call was profiled at 13.17% of
+/// census study cycles before the split);
+/// `hornvale_demography::carrying_capacity` over
 /// `hornvale_worldgen::carrying_inputs_of` is the SAME species-agnostic
 /// capacity field `bake_history_from` itself feeds into the bake (up to
 /// its private `SETTLERS_PER_CAPACITY` scale, which cannot move a RANK
@@ -5544,8 +5680,10 @@ fn spearman_defensibility_capacity(v: &FullView) -> MetricValue {
         geo,
         &hornvale_worldgen::carrying_inputs_of(geo, v.terrain(), v.climate()),
     );
-    let graph = hornvale_worldgen::connection_graph_of(
+    let graph = hornvale_worldgen::connection_graph_from(
         v.world(),
+        v.terrain(),
+        v.climate(),
         &hornvale_worldgen::GraphConfig::default(),
     );
 
@@ -9791,6 +9929,7 @@ mod tests {
                     Ended::Nature => None,
                 },
                 notability: Notability::Common,
+                delve_depth_m: 0.0,
             },
             id: eid(id),
             founded_from: Founding::Genesis(Vertex(0)),
@@ -10229,7 +10368,17 @@ mod tests {
         // granary-raids-in-depleted-half) — per-world aggregates over the
         // bake's raid-ending day-of-year stamps; both read committed history
         // records only, so no sweep cost beyond the bake itself.
-        assert_eq!(registry().len(), 226);
+        //
+        // +1 for THE WINZE (Task 7: breached-delving-count) — the campaign's
+        // ONE column, and one and not two deliberately. The obvious second
+        // (a mean or maximum `delve_depth_m` over the breached population)
+        // was refused: nothing in this campaign selects on depth, and a
+        // committed census column pairing "breached" with "how deep" invites
+        // exactly the reading spec §4.3 exists to refuse. The depth
+        // distribution is measured where it belongs, in Task 5's
+        // `survivorship_probe`, which reports both populations and their
+        // overlap rather than one number that looks like a threshold.
+        assert_eq!(registry().len(), 227);
         //
         // THE CONFIDANT (Task 7) registered +45 here — `reportable-
         // fraction-<species>`, `collapse-ratio-<species>`,
@@ -10257,7 +10406,11 @@ mod tests {
         // assertion already counts (granary-raid-phase-concentration,
         // granary-raids-in-depleted-half); the trailing assert here had not
         // caught up with them until now.
-        assert_eq!(registry().len(), 226);
+        // THE WINZE (T7): 226 -> 227 (breached-delving-count). BOTH
+        // assertions in this test pin the same number and they are edited
+        // together — the Granary note above records what happens when only
+        // one of them is, and the pair is what caught this edit.
+        assert_eq!(registry().len(), 227);
     }
 
     // --- The Ford (spec §10): the estimators behind the three channel
@@ -11299,9 +11452,13 @@ mod tests {
         // goblin's syllable templates on the SAME site pool The Underworld's placement
         // left; still inside the 2-3 target, the row's actual claim. Re-pinned from the
         // merged run.
+        //
+        // THE WINZE T2b re-pin: 2.391304347826087 -> 2.5. The ring scan changes
+        // WHERE workings are founded, so seed 42's site pool moves and with it
+        // which goblin names are drawn. Still inside the 2-3 target.
         assert_eq!(
             extract_from(&built, "name-syllables-goblin"),
-            MetricValue::Number(2.391304347826087)
+            MetricValue::Number(2.5)
         );
         // The Watershed, Item 0: sonority sequencing collapses equal-sonority
         // neighbours inside a template, so kobold falls 2.743 -> 2.683. Goblin
@@ -11524,9 +11681,16 @@ mod tests {
         // and so kobold's named-site pool. Corroborated: the canonical census
         // refreshed at this branch's tip (`c54fb62c9`) reads name-syllables-kobold
         // = 2.5414013 on its own seed-42 row.
+        //
+        // THE WINZE T2b re-pin: 2.5414012738853504 -> 2.5067567567567566. Spec
+        // amendment E's working ring scan reseats seed 42's settlements again
+        // and with them kobold's named-site pool. Nothing in this campaign
+        // touches phonology, wear or the namer. NOT corroborated against a
+        // census: this campaign's refresh happens once, at pre-merge close, and
+        // has not been run.
         assert_eq!(
             extract_from(&built, "name-syllables-kobold"),
-            MetricValue::Number(2.5414012738853504)
+            MetricValue::Number(2.5067567567567566)
         );
     }
 
@@ -11762,7 +11926,13 @@ mod tests {
         // changes WHICH names read as transparent. Corroborated: the canonical census
         // refreshed at this branch's tip (`c54fb62c9`) reads name-transparency =
         // 0.61953728 on its own seed-42 row.
-        assert_eq!(share, 0.6195372750642674, "seed 42 transparency drifted");
+        //
+        // THE WINZE T2b re-pin: 0.6195372750642674 -> 0.6102564102564103. Same
+        // cause as the syllable pin above — the ring scan reseats seed 42's site
+        // pool, changing which names read as transparent. NOT corroborated
+        // against a census: this campaign's refresh happens once, at pre-merge
+        // close, and has not been run.
+        assert_eq!(share, 0.6102564102564103, "seed 42 transparency drifted");
     }
 
     /// The arity regression `name-gloss-true` had, stated as a test so it
@@ -11925,6 +12095,10 @@ mod tests {
             "forgotten-fraction",
             "dominant-hazard",
             "mean-warning-legibility",
+            // The Winze (Task 7), registered into The Vestige's family
+            // because it reads the same `vestiges_field` over the same
+            // land-only population.
+            "breached-delving-count",
         ] {
             assert!(names.contains(&want), "missing metric {want}");
         }
@@ -12390,7 +12564,21 @@ mod tests {
             // "valley" — the same narrowing-at-equal-size the Glasshouse-close
             // entry recorded, which is again why the SET is pinned and not its
             // cardinality.
-            vec!["river", "ford", "marsh", "spring"],
+            //
+            // THE WINZE re-pin (Task 2, the working objective): SIX — every
+            // toponymic concept but "hill", and the widest this precondition
+            // has ever read, wider even than the 2026-08-04 merge. The TENTH
+            // oscillation. `Bake::grow`'s expansion gained a second siting
+            // objective (spec §B.3: an expansion onto ore-bearing ground may
+            // be a *working*, sited on prospectivity instead of river-weighted
+            // capacity), so a handful of seed 7's foundings land on plate-
+            // boundary ground the agrarian objective would never have chosen,
+            // and their descendants reach terrain goblin had not touched.
+            // "valley" and "island" both return. Re-pin the set, do not swap
+            // the seed, per the precedent this comment has now followed
+            // through all ten. Coverage is the best it has ever been here:
+            // river, elevation and karst/wetland gate classes all exercised.
+            vec!["river", "ford", "valley", "marsh", "spring", "island"],
             "seed 7 goblins must root these toponymic concepts for this test to bite"
         );
         for concept in &rooted {
@@ -13037,6 +13225,45 @@ mod tests {
         assert!(
             matches!(m("mean-warning-legibility"), MetricValue::Number(f) if (0.0..=1.0).contains(&f))
         );
+        // The Winze (Task 7): a COUNT, so the shape assertion is "a whole
+        // number, not negative", not a [0,1] range. Seed 42 under the
+        // generated sky carries workings and none of them broke through, so
+        // the column reads 0 here — which is the metric's own quiet case and
+        // is asserted rather than skipped. The non-zero side needs a world
+        // that has one; that is the test below.
+        match m("breached-delving-count") {
+            MetricValue::Number(n) => {
+                assert!(n >= 0.0, "breached-delving-count must not be negative: {n}");
+                assert_eq!(n, n.trunc(), "breached-delving-count is a count: {n}");
+            }
+            other => panic!("breached-delving-count: {other:?}"),
+        }
+    }
+
+    /// The census column is POPULATED, not merely registered.
+    ///
+    /// claim: reachability(seed 3 under the generated sky — the campaign's
+    /// panel reads ten breached workings there, the largest of the twelve, so
+    /// one world is a sufficient witness that the column can be non-zero.
+    /// This is an existence claim about the INSTRUMENT, not a rate: the
+    /// pooled claim about how often a delving breaches lives in
+    /// `windows/worldgen/tests/suite/breach.rs`, over the whole panel.)
+    ///
+    /// A column that only ever reads 0 would satisfy
+    /// `the_vestige_metrics_extract_for_seed_42` above and every schema check
+    /// in the census, and would still be dead. Both sides are asserted.
+    #[test]
+    fn the_breached_delving_count_is_populated_where_a_delving_broke_through() {
+        let view = FullView::build(Seed(3), &SkyPins::default()).unwrap();
+        let built = BuiltView::Full(view);
+        match extract_from(&built, "breached-delving-count") {
+            MetricValue::Number(n) => assert!(
+                n > 0.0,
+                "seed 3 has breached workings, so the census column must read \
+                 above zero; got {n}"
+            ),
+            other => panic!("breached-delving-count: {other:?}"),
+        }
     }
 
     #[test]
@@ -13671,17 +13898,33 @@ mod tests {
     /// identical to the one every species-, tech-, and cause-keyed metric in
     /// the roster calls.
     ///
+    /// **THE WINZE re-pin (Task 2): -> seed 15.** The seed this test actually
+    /// built was `Seed(11)` — the prose above records the `7 -> 100` swap and
+    /// a later campaign moved it again without amending the prose, which is
+    /// worth noting since the sentence "seed 100 shows it" was false when
+    /// read. `Bake::grow`'s second siting objective (spec §B.3) moves every
+    /// world with ore-bearing ground next to an expansion, and at seed 11 the
+    /// gap collapsed: `iron`-keyed occupations now begin at day `0.0`, the
+    /// same as the unfiltered minimum, because a genesis settlement that used
+    /// to be lost now survives to the iron horizon. Re-swept seeds 11-22:
+    /// 15, 18, 20 and 21 still show the gap. **Seed 15** is taken — unfiltered
+    /// min `0.0`, iron min `100_443.75` (max `383_512.5`, 15 iron-keyed
+    /// facts) — because its gap is the widest of the four and so the most
+    /// likely to survive the next world change. Swapping the seed rather than
+    /// re-pinning follows this doc's own precedent above: the seed is a
+    /// technical witness for `first_day`'s object filter, not a subject world.
+    ///
     /// Both self-defence guards from the sibling tests apply here together:
     /// `expected_min != expected_max` (catches `first_day` silently returning
     /// the maximum) and `expected_min` strictly greater than the predicate's
     /// own unfiltered minimum (catches the object filter being dropped —
     /// without this, `first_day` would fall back to `occ-tech`'s unfiltered
-    /// `0.0`, not `iron`'s `54_787.5`). If a later world change collapses
+    /// `0.0`, not `iron`'s own minimum). If a later world change collapses
     /// either gap, this test must fail loudly rather than quietly start
     /// passing for the wrong reason.
     #[test]
     fn first_day_of_a_keyed_object_with_a_higher_floor_matches_an_independently_computed_minimum() {
-        let v = FullView::build(Seed(11), &SkyPins::default()).expect("seed 11 builds");
+        let v = FullView::build(Seed(15), &SkyPins::default()).expect("seed 15 builds");
         let mut unfiltered_days: Vec<f64> = v
             .world()
             .ledger
@@ -15013,10 +15256,40 @@ mod tests {
         // longer roots barley. Re-swept seeds 0..150 against every placed
         // people by the same dynamic method; (133, hobgoblin) clears all six
         // staple bands, with (145, hobgoblin) and (145, bugbear) behind it.
-        let view = FullView::build(Seed(133), &SkyPins::default()).unwrap();
-        let lexicon = lex(&view, "hobgoblin").expect("hobgoblins hold a lexicon");
-        let steeped =
-            independently_steeped_concepts(&view, "hobgoblin").expect("hobgoblin is placed");
+        //
+        // **THE WINZE re-witness (Task 2): seed 133/hobgoblin -> seed
+        // 137/kobold.** `Bake::grow`'s second siting objective (spec §B.3)
+        // re-places every world that has ore-bearing ground beside an
+        // expansion, and (133, hobgoblin) lost a staple band with it. Re-swept
+        // `0..150` with `sweep_for_the_independent_reading_witness` above,
+        // `--ignored --release` (598.10 s), the fourth pass to use the shipped
+        // method. **TWO qualifying pairs — (137, kobold) and (142, kobold) —
+        // so the count reads 3 -> 4 -> 7 -> 11 -> 3 -> 15 -> 9 -> 5 -> 10 ->
+        // 2 -> 2 -> 2 -> 2.** A fourth consecutive reading at n = 2; the tenth
+        // pass's warning still stands unaddressed, and the witness is
+        // load-bearing alone (no same-seed second species). **THE SUBJECT
+        // MOVED AGAIN**, and the SPECIES with it: hobgoblin -> kobold.
+        //
+        // **THE WINZE T2b re-witness (spec amendment E): seed 137/kobold ->
+        // seed 42/bugbear.** The working ring scan re-places every world a
+        // seventh time and (137, kobold) lost a staple band with it. Re-swept
+        // `0..150` with `sweep_for_the_independent_reading_witness` above,
+        // `--ignored --release` (516.37 s), the fifth pass to use the shipped
+        // method. **FOUR qualifying pairs — (42, bugbear), (111, hobgoblin),
+        // (117, wood-elf) and (125, hill-dwarf) — so the count reads
+        // 3 -> 4 -> 7 -> 11 -> 3 -> 15 -> 9 -> 5 -> 10 -> 2 -> 2 -> 2 -> 2 ->
+        // 4.** THE FOUR-PASS RUN AT n = 2 ENDS, and the tenth pass's warning —
+        // that this test was one world away from having no witness at all —
+        // eases for the first time since it was written. It is not withdrawn:
+        // the mechanism it named (a steeper latitude gradient narrows the
+        // staple range one people's territory covers) is still unaddressed,
+        // and n has been under 5 for five consecutive passes. The witness is
+        // still load-bearing alone — no same-seed second species — and **THE
+        // SUBJECT MOVED AGAIN**, species with it: kobold -> bugbear, onto the
+        // flagship seed.
+        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
+        let lexicon = lex(&view, "bugbear").expect("bugbears hold a lexicon");
+        let steeped = independently_steeped_concepts(&view, "bugbear").expect("bugbear is placed");
         for staple in STAPLE_CONCEPTS {
             // The sweep's own criterion, asserted rather than assumed: this
             // test bites only where WORLDGEN steeps the staple, and a lexicon
@@ -15026,7 +15299,12 @@ mod tests {
             // wrong one.
             assert!(
                 matches!(lexicon.entry(staple), Some(LexEntry::Root { .. })),
-                "seed 26 hobgoblins must root {staple} for this test to bite"
+                // The seed and species are named from the witness the sweep
+                // above selected, not from a literal — this message read
+                // "seed 26 hobgoblins" through two witness moves before The
+                // Winze, and a failure message that names the wrong world
+                // sends its reader to the wrong place.
+                "seed 42 bugbears must root {staple} for this test to bite"
             );
             assert!(
                 steeped.contains(staple),
@@ -15325,6 +15603,34 @@ mod tests {
             calls, 15,
             "expected one lexicon build per species (15), shared across all three metric \
              families by FullView's per-view cache — {calls} means the memoisation regressed"
+        );
+    }
+
+    /// **Confirms, by direct measurement, the redundant-build finding this
+    /// task's report names and then guards the fix against regressing**
+    /// (task 3 of The Governor, mirroring
+    /// `felt_testimony_metrics_share_one_lexicon_build_per_species` above).
+    /// Before memoisation, evaluating both `per-cell-diversity` and  // lexicon: frozen metric name (per-cell-diversity), not the mesh sense
+    /// `composition-variance` on the same view called
+    /// `hornvale_worldgen::demography_report_from` **twice** — each metric's
+    /// extractor built its own report, profiled at 7.58% + 7.53% of census
+    /// study cycles. After `SettlementView::demography_report`'s memoised
+    /// body, it is **once**: both metrics read the same cached report. A
+    /// future change that reintroduces a second uncached path (a metric
+    /// bypassing `demography_report`, or a cache that gets rebuilt) would
+    /// move this number back toward 2, and this test would catch it.
+    #[test]
+    fn demography_metrics_share_one_report_build_per_view() {
+        DEMOGRAPHY_BUILD_CALLS.with(|c| c.set(0));
+        let view = SettlementView::build(Seed(42), &SkyPins::default()).unwrap();
+        let built = BuiltView::Settlement(view);
+        let _ = extract_from(&built, "per-cell-diversity"); // lexicon: frozen metric name (per-cell-diversity), not the mesh sense
+        let _ = extract_from(&built, "composition-variance");
+        let calls = DEMOGRAPHY_BUILD_CALLS.with(|c| c.get());
+        assert_eq!(
+            calls, 1,
+            "expected one demography report build shared by both metrics — {calls} means the \
+             memoisation regressed"
         );
     }
 }

@@ -95,7 +95,8 @@ const FLOOR_GLYPH: char = '.';
 const THRESHOLD_GLYPH: char = '+';
 /// The glyph for the cell the possession stands in. The same mark the
 /// walk-band chart uses for `here` (`chart::HERE_GLYPH`), deliberately: one
-/// verb, two bands, one "you are here" mark to learn.
+/// verb, three bands now (The Gallery's `level.rs::YOU_GLYPH` is the same
+/// character too), one "you are here" mark to learn.
 const YOU_GLYPH: char = '@';
 /// The glyph for a `"furnishing"` mark — a hearth, a bed, an alcove, and
 /// every other `AnchorKind` `windows/vessel/src/session.rs::Session::

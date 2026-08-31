@@ -79,7 +79,7 @@ git reset --hard origin/main --quiet || exit 1
 make rebaseline >/tmp/hv-nightly-drift.log 2>&1
 rc=$?
 
-paths="$(grep -v '^#' docs/generated-paths.txt | grep -v '^$' | tr '\n' ' ')"
+paths="$(grep -v '^#' docs/generated-paths.txt | grep -v '^$' | cut -f1 | tr '\n' ' ')"
 if [ -z "$paths" ]; then
     echo "nightly-drift: docs/generated-paths.txt yielded no paths; not diffing" >&2
     exit 1

@@ -498,6 +498,70 @@ the two can never be misread into each other. The nesting itself stops at one
 level, stated as the depth this campaign built and tested rather than argued
 as a safety limit. See [The Mortise](../chronicle/the-mortise.md).
 
+And since The Rail, a clause can predicate five ways rather than two, ask
+rather than assert, and say who is speaking. Its **valence** — the field
+that decides which surface parts a predicate's clause is built from — now
+enumerates Stassen (1997)'s four intransitive predication strategies
+(nominal, adjectival, locational, verbal) plus the two-argument transitive
+case, and the list is **closed by that typology**: a further predicate is one
+row in a lookup table, while a further *strategy* would need the typology to
+be wrong. The two new copular strategies share one uninflected predicate
+slot and differ only in the object: a property relates a subject to a state
+(*"the road is old"*, with no determiner and no third definiteness value —
+the classification frame's *road is-a old* was the wrong relation, not
+merely the wrong string), a locative relates it to a located thing. An
+intransitive clause's object is a named **absence** rather than a nullable
+field, which keeps the fact-shape claim intact by the route the kernel
+already uses for an objectless assertion. The copula and verb paradigms gain
+a **person** axis and stop being injective — English spells *are* for four
+different feature bundles — and the parse nominates no canonical row: person
+lives on the *subject*, not on the clause, so the backward read narrows the
+candidates instead of choosing among them, and nothing is lost. Interrogative
+force is an **operator over** a clause rather than a field on it, on the same
+footing embedding and coordination already stand: Common asks by inverting
+its one auxiliary and refuses loudly where English would need *do*-support,
+while a tongue asks with a drawn particle — or, for the majority of tongues,
+which mark a question by intonation alone, by a **transcription convention**
+that writes the question mark and says in as many words that it is
+punctuation and not morphology. The capability ladder The Rail's five rungs
+come from is now scored and publishes its own **frontier**: the build-next
+list, recomputed on every regeneration. See [The Rail](../chronicle/the-rail.md).
+
+And since The Quoin, that operator family — force, embedding, coordination —
+has three more members. A verbless clause (*"the person under the tree."*)
+strips the copula from whichever copula-bearing construction a predicate's
+`Valence` already selected, general over `Nominal`, `Property` and
+`Locative` rather than hand-written for one — Stassen (1997) and Hengeveld
+(1992) both treat zero-copula predication as a strategy in its own right,
+not the nominal construction with its copula deleted, and the witness that
+clears the distinction is a locative predicate: only a strategy general
+enough to reach `Locative` could have built it. An existential (*"there is a
+person under the tree."*) fronts a locative clause's own part list — the
+dummy pivot `"there"` swapped into the subject's leading slot, the subject
+reinserted after the copula, everything from the adposition onward
+untouched — realizing Freeze (1992)'s claim that existential, locative and
+possessive predication are one construction with different arguments
+fronted. Both operators leave `Valence` exactly as closed as force found it:
+five variants, no new row in the predicate-valence table, no new
+construction. See decision 0446.
+
+The third member is not an operator over a clause at all — it is the first
+structure that reaches *across* a sequence of them. `Discourse` tracks
+whether a referent has been mentioned before, so a caller states no
+definiteness for a discourse's own subject and gets it computed: `"a
+person"` on first mention, `"the person"` on every later one, regardless of
+what intervened between them (Chafe 1976; Lambrecht 1994). `Clause` already
+carried a `definiteness` field for its *object* slot, stated by the caller
+like every other clause feature; what a two-clause rung like *"a stranger
+waits at the gate. the stranger is a soldier."* needed was the same fact for
+the *subject*, and a single clause cannot state that about itself — visible
+only across a sequence. See decision 0447 for the discourse-fact result and
+why it deliberately compares against *any* earlier mention rather than the
+*last stated* one that subject elision uses for a different hazard.
+
+Ladder capability now reads 19 of 214, frontier 33. See
+[The Quoin](../chronicle/the-quoin.md).
+
 **The full model card.** The articulation-vector table above types the
 species' *envelope* — six authored capacities per people. Everything this
 domain builds *from* that envelope sorts into the same four kinds

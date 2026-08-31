@@ -15,10 +15,12 @@
 
 use crate::traversal::traversal_cost;
 use hornvale_climate::Biome;
+use hornvale_climate::GeneratedClimate;
 use hornvale_climate::snowpack::DEFAULT_SNOWPACK;
 use hornvale_climate::substrate::SubstrateField;
 use hornvale_climate::wetness::{DEFAULT_WETNESS, receptivity};
 use hornvale_kernel::{Geosphere, ReferenceElevation, Value, Vertex, VertexMap, World, WorldTime};
+use hornvale_terrain::GeneratedTerrain;
 use hornvale_topology::route::least_cost;
 use hornvale_topology::{ConnectionGraph, Edge, EdgeKind};
 use std::collections::BTreeSet;
@@ -165,13 +167,55 @@ pub fn connection_graph_at(
 /// the World-to-inputs adapter over [`connection_graph`] (Task 5's real-world
 /// entry point; Task 6's legibility surface and Task 7's DoD check reuse it
 /// too). Reconstructs terrain and climate (`crate::terrain_of` /
-/// `crate::climate_from`), reads the current field pointwise
-/// (`GeneratedClimate::current_at`, no `current_map()` accessor exists) into
-/// a `VertexMap`, and reads each settlement's `cell-id` fact
-/// (`hornvale_settlement::VERTEX_ID`) into the `Vec<Vertex>` `connection_graph`
-/// wants -- then calls `connection_graph`. Derivation logic stays there;
-/// this function is only the adapter, so it never duplicates
-/// `connection_graph`'s edge-assembly.
+/// `crate::climate_from`) and hands them to [`connection_graph_from`], which
+/// does the rest -- reading the current field, the settlement list, graph
+/// assembly, and any weather-gating (see its doc comment for that half).
+/// This function exists for a caller that does not already hold a built
+/// terrain and climate; a caller that does (e.g. a lab metric already
+/// holding a `FullView`'s terrain and climate) should call
+/// [`connection_graph_from`] directly rather than pay for a second
+/// sculpt/fit through this wrapper -- exactly the redundancy The Governor's
+/// Task 2 removed from `spearman_defensibility_capacity`, profiled at
+/// 13.17% of census study cycles.
+///
+/// # Panics
+///
+/// `world` must have been built through at least `BuildDepth::Settlements`
+/// (true of any world `build_world`/`build_world_to` returned at that depth
+/// or deeper): panics if terrain or climate fails to reconstruct, or if any
+/// committed settlement lacks its `cell-id` fact (the latter is  // lexicon: frozen predicate VALUE (cell-id, decision 0246), not the mesh sense
+/// [`connection_graph_from`]'s own panic).
+// Named construction site (decision 0092): the sole caller of `terrain_of`/
+// `climate_from` on this path -- sculpts/fits once for its own
+// connection-graph readout, then hands the pair to `connection_graph_from`,
+// which takes an already-built terrain/climate and therefore calls neither
+// disallowed method itself and needs no allow of its own.
+#[allow(clippy::disallowed_methods)]
+pub fn connection_graph_of(world: &World, cfg: &GraphConfig) -> ConnectionGraph {
+    let terrain = crate::terrain_of(world)
+        .expect("world was built with terrain (BuildDepth::Terrain or deeper)");
+    let climate = crate::climate_from(world, &terrain)
+        .expect("world was built with climate (BuildDepth::Terrain or deeper)");
+    connection_graph_from(world, &terrain, &climate, cfg)
+}
+
+/// Assemble a world's [`ConnectionGraph`] from an ALREADY-BUILT terrain and
+/// climate -- the body of [`connection_graph_of`] after its
+/// `terrain_of`/`climate_from` lines, taking the terrain and climate the
+/// caller already holds instead of re-deriving them (the same "pass the
+/// pre-built value" idiom as `climate_from` beside `climate_of`).
+/// Byte-identical to `connection_graph_of(world, cfg)` whenever `terrain`
+/// equals `crate::terrain_of(world)` and `climate` equals
+/// `crate::climate_from(world, terrain)` -- the sole extra construction site
+/// for a caller (e.g. a lab metric already holding a `FullView`'s terrain
+/// and climate) that must not pay for a second sculpt/fit.
+///
+/// Reads the current field pointwise (`GeneratedClimate::current_at`, no
+/// `current_map()` accessor exists) into a `VertexMap`, and reads each
+/// settlement's `cell-id` fact (`hornvale_settlement::VERTEX_ID`) into the  // lexicon: frozen predicate VALUE (cell-id, decision 0246), not the mesh sense
+/// `Vec<Vertex>` `connection_graph` wants -- then calls `connection_graph`.
+/// Derivation logic stays there; this function is only the adapter, so it
+/// never duplicates `connection_graph`'s edge-assembly.
 ///
 /// If `cfg.day` is `Some(day)` (The Mire, Task 6), the assembled graph is
 /// then weather-gated: two `SubstrateField`s (surface wetness, snowpack) are
@@ -183,18 +227,13 @@ pub fn connection_graph_at(
 ///
 /// # Panics
 ///
-/// `world` must have been built through at least `BuildDepth::Settlements`
-/// (true of any world `build_world`/`build_world_to` returned at that depth
-/// or deeper): panics if terrain or climate fails to reconstruct, or if any
-/// committed settlement lacks its `cell-id` fact.
-// Named construction site (decision 0092): sculpts/fits once for its own
-// connection-graph readout.
-#[allow(clippy::disallowed_methods)]
-pub fn connection_graph_of(world: &World, cfg: &GraphConfig) -> ConnectionGraph {
-    let terrain = crate::terrain_of(world)
-        .expect("world was built with terrain (BuildDepth::Terrain or deeper)");
-    let climate = crate::climate_from(world, &terrain)
-        .expect("world was built with climate (BuildDepth::Terrain or deeper)");
+/// Panics if any committed settlement lacks its `cell-id` fact.  // lexicon: frozen predicate VALUE (cell-id, decision 0246), not the mesh sense
+pub fn connection_graph_from(
+    world: &World,
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+    cfg: &GraphConfig,
+) -> ConnectionGraph {
     let geo = terrain.geosphere();
     let elevation = &terrain.globe().elevation;
     let biome = climate.biome_map();
@@ -222,7 +261,7 @@ pub fn connection_graph_of(world: &World, cfg: &GraphConfig) -> ConnectionGraph 
         // follow-up, change 2) -- arithmetically identical to two separate
         // `SubstrateField::compute` calls, just without the duplicate year.
         let (wetness_field, snow_field) =
-            SubstrateField::compute_pair(&climate, &DEFAULT_WETNESS, &DEFAULT_SNOWPACK);
+            SubstrateField::compute_pair(climate, &DEFAULT_WETNESS, &DEFAULT_SNOWPACK);
         let factor_at = |vertex: Vertex| -> f64 {
             // `SubstrateField::at` still takes a bare `f64` day. Retyping it
             // is the same defect one layer along and deliberately NOT done
@@ -626,6 +665,47 @@ mod tests {
                 "vertex {vertex:?} drifted"
             );
         }
+    }
+
+    /// The property Task 2 exists to establish: [`connection_graph_from`] --
+    /// what `spearman_defensibility_capacity` now calls instead of
+    /// `connection_graph_of` -- does not re-derive terrain or climate. Not a
+    /// byte-identity check (that is `a_day_less_config_leaves_the_graph_byte_identical`
+    /// and the census sentinel); this counts actual `terrain_of`/
+    /// `climate_from` invocations (`crate::TERRAIN_OF_CALLS`/
+    /// `crate::CLIMATE_FROM_CALLS`, the same thread-local-`Cell` diagnostic  // lexicon: std::cell::Cell diagnostic counter idiom, not the mesh sense
+    /// idiom `windows/lab/src/metrics.rs`'s `LEX_BUILD_CALLS` uses for the
+    /// analogous lexicon-rebuild claim) across the one `connection_graph_from`
+    /// call, so a regression that reintroduced the re-derivation would fail
+    /// on the COUNT even if it happened to produce an identical graph.
+    #[test]
+    // Test fixture (decision 0092): builds its own terrain/climate directly
+    // to pass into `connection_graph_from`, mirroring the sanctioned
+    // test-fixture posture the weir's spec carves out.
+    #[allow(clippy::disallowed_methods)]
+    fn connection_graph_from_does_not_rederive_terrain_or_climate() {
+        let world = sample_world();
+        let terrain = crate::terrain_of(&world).expect("world built with terrain");
+        let climate = crate::climate_from(&world, &terrain).expect("world built with climate");
+        let cfg = GraphConfig::default();
+
+        let terrain_before = crate::TERRAIN_OF_CALLS.with(|c| c.get());
+        let climate_before = crate::CLIMATE_FROM_CALLS.with(|c| c.get());
+
+        let _graph = connection_graph_from(&world, &terrain, &climate, &cfg);
+
+        assert_eq!(
+            crate::TERRAIN_OF_CALLS.with(|c| c.get()),
+            terrain_before,
+            "connection_graph_from called terrain_of -- the redundancy Task 2 \
+             removed is back"
+        );
+        assert_eq!(
+            crate::CLIMATE_FROM_CALLS.with(|c| c.get()),
+            climate_before,
+            "connection_graph_from called climate_from -- the redundancy Task 2 \
+             removed is back"
+        );
     }
 
     #[test]

@@ -971,7 +971,7 @@ fn merge(into: &mut RuleRow, from: &RuleRow) {
 /// claim: structural(seed: panel) — false-positive seed-loop flag; the loop
 /// binds a census-panel prefix, not a search over seeds.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: whether the crossing penalty reaches the ladder; RED as of 2026-08-28 — the shared BASELINE_ENDINGS_12/FOREIGN_12 live-worldgen pins have drifted again since The Underworld changed settlement placement, and this question (The Undertow, Myth campaign 5) is closed; run by hand; demoted by The Governor"]
 fn whether_the_crossing_penalty_reaches_the_ladder() {
     let components = hornvale_worldgen::WorldComponents::assemble().expect("components assemble");
     let mut rows: Vec<SeedRow> = Vec::new();

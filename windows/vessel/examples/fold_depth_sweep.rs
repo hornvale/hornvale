@@ -323,16 +323,18 @@ fn room_for(i: usize) -> Facet {
     }
 }
 
-/// Encode a `Facet` exactly as `liveness.rs`'s own (private) `room_to_text`
-/// does: the packed `FacetId`, rendered as a decimal `u64` string.
-/// `drive_at` decodes this with `room_from_text`, so any other encoding either
-/// panics or silently reads a different room -- the second failure mode would
-/// produce a plausible but wrong number.
+/// Encode a `Facet` as `drive_at` expects to decode it: the packed `FacetId`,
+/// rendered as a decimal `u64` string.
+///
+/// **This used to be a hand-copy of `liveness.rs`'s own (then private)
+/// `room_to_text`**, carrying a comment saying so. The Chattel made
+/// `thing::room_key` the crate's one room-key encoder — `agent-at`,
+/// `located-in` and this sweep all route through it now — so the copy is
+/// gone. Any other encoding either panics in `room_from_text` or silently
+/// reads a different room, and the second failure mode would produce a
+/// plausible but wrong number.
 fn room_to_text(r: &Facet) -> String {
-    r.pack()
-        .expect("a depth-0 face room always packs")
-        .0
-        .to_string()
+    hornvale_vessel::thing::room_key(r).expect("a depth-0 face room always packs")
 }
 
 /// One synthetic `agent-at` posting for day `i + 1`: cycles through

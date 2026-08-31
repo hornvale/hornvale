@@ -374,6 +374,38 @@ self-check or this was one attentive session is not something one instance
 can answer; it is a hypothesis for the next campaign's data, not a practice
 yet.
 
+**The Attestation (2026-08-29) turns this chapter's own earlier finding — a
+path declared and never written is "silently vacuous no matter how long it
+has sat green" — into a durable structural answer, and produces a further
+instance of the running diagnosis while doing it.** Three committed checks
+were named as verifying a *state* while being structurally blind to an
+*action that did not happen*: a phase roster restated in two places with a
+one-sided agreement test, a ledger nothing diffs against what a job owed, and
+a decision-block reservation nothing compares against the records actually
+minted inside it. The campaign's own headline measurement (H1: the residual
+unaccounted-for files resolve into a small number of authors) was
+**confirmed and its own motivating number falsified in the same breath** —
+the spec's claimed 585 files was arithmetic that missed a second census-gated
+directory on the adjacent line of the same conditional block; the real
+residual was 132. Its payoff hypothesis (H3: the new freshness reader would
+surface an absence nobody already knew about) came back **NULL** on the
+honest second try: the first run reported five confident "owed but absent"
+jobs and called the hypothesis confirmed, and every one was a legitimate
+prose-only narrowing the chamber's own dispatch script already accounts for —
+the same shape as this chapter's recurring diagnosis, a check whose stated
+guarantee exceeds what it actually verifies, this time committed by the
+instrument built to find exactly that shape of defect. Nathan's own ruling —
+declare a generated path's absence of an author with a reason
+(`none(<reason>)`), rather than deleting the declaration or leaving it wrong
+— makes this chapter's "an unpaired check scores as unchecked" into standing
+policy: an absence now has a row, instead of a silently narrowed drift check.
+And a live collision was caught only because the specced check (reading a
+canonical, ssh-only ledger no checkout can reach) could not be built at all:
+the substitute — comparing committed decision-block declarations against each
+other — reddened immediately on the real tree, on The Scarf and The
+Quadrat's already-known double reservation of 0286–0295, waived rather than
+fixed because both headers are historical fact.
+
 **A note from The Staff (2026-08-14), amended by The Sluice (2026-08-15),
 since this score is read against an instrument this passage names by a label
 that no longer exists.** Both halves of Sexton's pairing — the census
@@ -900,6 +932,97 @@ designed in rather than discovered, and folding the two denominators together
 to close the gap would destroy the split the spec's own text demands.
 **Complementing beats replacing**, and a practice that only ever swaps the
 statistic will eventually swap away a working instrument.
+
+A sixteenth campaign adds a **new position on the checkability axis**, and it
+is one this passage has been circling without naming.
+[The Rail](./chronicle/the-rail.md) (2026-08-29) preregistered four numbers
+before writing any code, and every one of them was judged against a resolver
+that already existed. The numbers were **computed by a different program**: a
+script written during the design pass, which reimplemented the resolver's
+demand-closure rule and got one case wrong. Fifteen rungs of a 214-rung ladder
+introduce no capability token at all — they exist as free tripwires on
+composition — and the script treated each one's absent token as an
+*unsatisfiable demand*, so all fifteen were permanently excluded from
+*covered* in every predicted figure. The first task to land a token reported
+six covered where the prediction said five, said so, and used the resolver's
+answer.
+
+**The prediction was not falsified by the world; it had never been run against
+the instrument it was predicting.** That is a distinct failure from anything
+above it. An unpaired check is a verifier nobody invokes; an unanchored one is
+a verifier with no external truth. This is a *third* thing: a fully paired,
+fully anchored check whose **target value** came from a second implementation
+of the thing under test. Both programs were run, both produced numbers, and
+the agreement between them was the untested assumption. So the floor gains a
+seventh question, asked of any preregistered figure: **was this number
+produced by the instrument that will judge it, or by something that
+reimplements it?** If the second, the prediction is a claim about the
+reimplementation, and the two agree only by luck.
+
+The same campaign then supplied the passage's sharpest instance of *"a
+correction is unaudited text"*. Its design document's coverage paragraph was
+wrong twice, in opposite directions — the first crediting the control rungs
+for a count they had no part in, the second, written explicitly as a
+correction of the first, asserting that none of them ever counts. Both came
+from the same buggy script; neither was caught by re-reading. And a later
+repair to the campaign's own command list, made to fix five steps that named
+an unrunnable command, dropped one character from each step's output path in
+the same edit, so every one of the five wrote one file and inspected another.
+Each step then ran, exited zero, printed nothing, and **read exactly like a
+clean run** — the failure this whole passage is about, authored mechanically
+inside the act of preventing it. It was found by the next agent to execute the
+list, not by anyone reading it.
+
+Those two are part of a longer tally the campaign kept deliberately:
+**thirteen substantive defects, every one originating in a controlling
+session's own design or planning prose, none in an implementer's code, and
+none found by re-reading.** That is the seventh consecutive campaign with
+this distribution. Three of the thirteen run the other way and are the
+cheapest lesson in the list — a controller's *stated worry* that a reader
+checked instead of accepting, and found unfounded each time. A worry taken
+sympathetically costs a round of rework; a worry checked costs one command.
+
+**Score: the bet holds, and the practice gains a seventh question.** The
+positive-control clause covers an instrument that cannot fire; this adds the
+case where the instrument fires correctly and the number it is compared
+against was never its own.
+
+A seventeenth campaign tests the remedy the sixteenth proposed, on the
+successor campaign it was proposed for. [The Quoin](./chronicle/the-quoin.md)
+(2026-08-29) built its own preregistration the way The Rail's retrospective
+demanded: append the five tokens under measurement, run the two live
+instruments the campaign would later be judged against, record their output,
+revert. All four figures — ladder covered, frontier, merchant coverage,
+flood-watch demand instances — matched on the first run, at every one of five
+tasks, and none was revised. **The remedy generalizes past the campaign that
+discovered the need for it**, and the campaign is explicit about what that
+does and does not prove: Task 0 derived the predictions with the same
+resolver that later scored the outcome, so agreement confirms the
+implementation did what the resolver predicted, not that the resolver is
+right about the world. Three genuine defects still originated in this
+campaign's own plan text — a merchant-coverage step the plan omitted, a
+witness string requiring `sleep` to inflect as `slept` when the grammar's
+past-tense rule is a pinned-on-purpose naive `+ed`, and a witness pairing
+`Definiteness::Indef` with an expected string that needed `Def` — and every
+one is a *different* class from the one PREREG-1 was built to close. All
+three were caught by pre-dispatch brief verification against the tree,
+before an implementer saw them, not by re-reading and not by the mechanism
+under test.
+
+The same campaign supplies a second, independent instance of *complementing
+beats replacing* (the fifteenth campaign's own finding, above): its
+preregistration bound the chronicle to quote a produce-side demand-instance
+figure the resolver, as built through the campaign's own reconciliation
+task, could not compute. Rather than report the composite the instrument
+already had, or loosen what the criterion meant to fit the instrument that
+existed, the campaign built the missing split as its own reviewed task,
+disclosed in the generated artifact itself that the split postdates the
+implementation work it measures, and reported what it found even though the
+result **cuts against the campaign**: the produce-side figure (31.8%) sits
+three points below the composite the report would otherwise have led with
+(34.8%). A preregistration that cannot be satisfied by the instrument that
+exists is a finding about the instrument, not a license to report the number
+that instrument happens to produce.
 
 ## What the world can already check itself on (high confidence)
 
@@ -1991,6 +2114,55 @@ mapping sends its verb unconditionally, and an invalid move is answered with a
 sentence. A consumer's requirement for a channel should be checked before the
 channel is designed.
 
+**Re-scored by [The Gallery](./chronicle/the-gallery.md) (2026-08-29): the
+exact gap The Quire named — a wire that cannot distinguish two states except
+by an unparseable word in the prose — is closed for one of the two states it
+named, by giving the state its own wire value rather than a better parser.**
+`SpatialChannel` gains `Underground`, carrying its own schema
+(`vessel/level/v1`); the pane now emits `band: "underground"` and the `map`
+verb draws the same level, with a test (`the_pane_and_the_verb_agree_
+underground`) asserting they cannot drift apart. The document no longer
+"correctly describes less than a consumer needs" for this state — a consumer
+reading the tag alone now knows what Quire's consumer could only have
+guessed from prose. **`submerged` is deliberately left exactly as Quire
+found it** — still folded into `walk`, still distinguishable only by prose
+— because the water column has no lattice for a pane to draw yet; the
+frontier row this campaign moved is narrowed rather than closed, and says so
+itself. One new limitation surfaced in the same campaign's own closing
+audit, of the *other* kind on this ledger — not a wire ambiguity but a
+picture that can silently run off its own edge: the pane anchors a
+generated level's own corner to a fixed-width plate with no camera-follow,
+so a rung wider than that plate (which is EVERY walkable rung — ranks 1-5
+run 44x26 to 60x34, and none of them fits) can walk the
+player's own marker off the visible screen. Recorded as its own frontier row
+rather than left for a future campaign to re-discover the way this ledger's
+own Risk section had to name it before any
+code existed.
+
+**Amended by [The Lodestar](./chronicle/the-lodestar.md) (2026-08-30), and
+the amendment is this ledger's own subject turned on the campaign that
+thought it had settled it.** The paragraph above was true of the TAG and
+false of the RENDER. The wire carried the underground band's creature in
+`SessionLevel::marks`; the terminal client had no marks-drawing pass at
+all, having been written one task before the derivation that fills them and
+never reopened. So "a consumer reading the tag alone now knows what Quire's
+consumer could only have guessed" described a consumer that was throwing
+the payload away. Twelve per-task reviews each passed; a whole-branch review
+run after the merge found it in the first pass, because the gap lived
+between two tasks and belonged to neither.
+
+Worse for the claim, and better for the ledger: **there are two client band
+mirrors and the campaign updated one.** `clients/vessel` still declares its
+spatial union as walk-or-chamber and goes blank underground, silently,
+with its own gate green throughout — and the workspace tripwire built during
+that campaign to catch exactly this is hardcoded to the other client's test
+directory. The wire fix was real and the consumer-side gap simply moved down
+a level, which is the shape this row has now taken twice: **a channel
+correctly describing what a consumer does not read is indistinguishable, from
+the channel's side, from one that describes too little.** Recorded as
+`CLIENT-second-band-mirror`. The Lodestar fixes the first mirror and leaves
+the second registered rather than half-fixed.
+
 One older row recurs and one instrument for it becomes mechanizable. The
 recurrence: the outdoor chart was geometrically wrong — the sim's own render of
 the identical thirty-one cells is five dense rows and the client drew nine
@@ -2645,6 +2817,61 @@ places*, and a place nobody can reach is a weaker candidate than one they can.
   headline is *the player now writes to the ledger* looks from outside like it
   should have moved this row, and decision 0030's sweep is answered by a
   statement either way.
+  **Promotion-on-touch is BUILT, by [The Chattel](./chronicle/the-chattel.md)
+  (2026-08-30), and the paragraph above calling it "exactly as unbuilt as they
+  were" is superseded rather than merely dated.** The mechanism is the one this
+  row names and not a cousin of it: an anchor is a derived region of a room
+  that stays free until something touches it, at which point it *promotes* to a
+  ledger entity whose identity was already a pure function of `(room facet,
+  kind, ordinal)` — so the object could be named, compared and matched before
+  any fact about it existed, and only a change pays. The delta store this row
+  says promotion implies is the ledger itself: what a thing IS, where it is,
+  whether it is open and whether it is locked are all folds over dated facts,
+  read at the instant asked about (decisions 0396, 0399). The prior is
+  untouched by an untouched room — a chamber's interior is still a pure
+  function of its address and the seed, and a room nobody enters still commits
+  nothing.
+
+  **The number, and the status is deliberately left where it is.** A play that
+  drives every promoting verb at every noun through seed 1's whole structure
+  reaches 4 rooms offering **16 latent slots** and promotes **3** of them —
+  the door key, the chest, and the chest's own key — so 13 of 16 slots stay
+  free through a deliberately exhaustive session, and a normal one touches
+  fewer. Across the full production gate space, Task 1's census of all 60
+  combinations found a composed interior offers between 2 and 7 anchors,
+  median 2.5, and the latency read that decides "is this slot still free"
+  costs ~90 ns against a 22,880-fact played ledger. So the write half now
+  exists and is cheap, and the ratio it runs at is the one this row hoped for.
+  **A witness firing is not a witness changing status:** this bet's score is
+  Nathan's to move, and the two things that would move it are not settled by
+  the above. Objects are the *first* thing promotion-on-touch has been built
+  for and the easiest — a kind roster is authored, so a promoted thing cannot
+  contradict a prior it was never drawn from. The row's own sharp claim is
+  about a *lazily generated* detail contradicting its own statistical prior,
+  and nothing here tests that, because nothing here promotes a drawn quantity.
+
+  **Re-scored UP by The Custodian (2026-08-30) — up, and not to settled.**
+  The move is Nathan's, taken on the numbers The Chattel measured and
+  deliberately declined to score on. What has actually changed is the
+  *mechanism* half of the phrase, exactly as The Lintel's re-scoring changed
+  the *derivation* half and left the loop alone: promotion-on-touch is built,
+  it is cheap (~90 ns per latency read against a 22,880-fact played ledger),
+  and it runs at the ratio this row hoped for — **3 of 16** latent slots
+  promoted under a deliberately exhaustive playthrough, with the thirteen that
+  stayed free being the design working rather than coverage missing. That
+  ratio is also the honest bound on the evidence: the machinery has been
+  exercised on about a fifth of what it claims, by one session, in one world.
+  **The half that did not move is the half the row was always about.**
+  Objects are the *easy* case, and easy in a way that is structural rather
+  than incidental — a kind roster is authored, so a promoted thing cannot
+  contradict a prior it was never drawn from, and the delta store has nothing
+  to reconcile. The hard version is a detail drawn from a statistical prior —
+  terrain, weather — where promoting one observed value could contradict the
+  distribution it came from and the store has to decide which wins. Nothing
+  in this campaign or the last touches that, so the bet stays in this section
+  rather than moving up to what the world can check itself on: what would move
+  it there is a promotion the Laboratory can score against the prior it
+  departed from, and no such promotion exists yet.
 - **Coarse constrains fine.** The design principle — a `ConstantSun` and a
   generated star system are both valid; higher fidelity refines and never
   contradicts lower — *shipped*, and holds from astronomy through religion's
@@ -3077,6 +3304,48 @@ its honest size.
    read stays the gate; what changes, again, is that one more named guardrail
    moved from promissory note to a mechanism with a measured, partly-null
    result.
+
+4. **An inhabited moment worth standing in.** The project's thesis is that the
+   world becomes interesting enough to be worth stewarding, and stewardship is
+   chosen, not assigned — so the game has to be *seductive*, and seduction is
+   the one property in this repository with no instrument pointed at it. The
+   census grades values; `tropes/` and `systems/` grade capability; none of
+   them can tell you whether a goblin village is worth watching for ten
+   minutes. Decomposed along this section's template, the split is unusually
+   clean. The **self-scorable half is traversal**: does an act reach through
+   the stack and come back changed — does the scene *play out at all*. That
+   half is now instrumented, by [The Repertory](./chronicle/the-repertory.md),
+   whose verdicts come from running `possess` rather than from any declaration
+   about it. The **taste half is whether the moment is worth having**, and it
+   waits on a human sitting in a market and reporting what they noticed.
+   **Confidence: low, and the split is the whole of the progress so far.**
+   Two things are worth stating plainly, because both are load-bearing. First,
+   a fully green repertory is entirely compatible with a world nobody wants to
+   stand in — traversal is necessary and nowhere near sufficient, and reading
+   a green roster as evidence about the taste half is the specific error this
+   row exists to prevent. Second, this half must **stay a bet and never become
+   a metric**. The campaigns here are very good at making numbers go green, so
+   a scored proxy for *is it alive* would be optimised against long before it
+   was validated — which is the one failure mode that would leave every gate
+   green while the thesis quietly failed. It moves when a human plays and says
+   it moved.
+   **Annotated by [The Company](./chronicle/the-company.md) (2026-08-30), and
+   the annotation is about the WORLD rather than the instrument.** The
+   traversal half gained a second instrument, and the first thing it measured
+   is that a shared room is rare by construction: across twelve seeds and both
+   possession targets, `sensed.present` was empty in **24 of 24** witnesses,
+   and sixty days of waiting produced none. The cause is neither a defect nor
+   new — `SOC-one-creature-per-settlement` records that a settlement holds
+   exactly one derived creature, and the standing ruling is that changing world
+   population to restore an incidental co-location guarantee is its own
+   campaign, tick cost having been measured superlinear in that dimension.
+   **The score does not move, and why it does not is the point.** This is
+   evidence about how often the world assembles a scene, which sits upstream of
+   whether a scene is worth watching and says nothing about it: a market with
+   two people in it can still be dull. What it does change is the honest
+   description of the gap. The taste half is not merely unmeasured — in most
+   worlds it is currently unreachable, because the moment that would be judged
+   does not assemble.
 
 ## The standing horizon
 
@@ -4229,3 +4498,123 @@ chaos-eviction schedule whose most aggressive form gives the least signal,
 because it replaces the state immediately after every step it is meant to
 stress. Both were green. Both were pinning nothing. Neither would have been
 found by reviewing the tests against their specification.
+
+### A third look at cost, and it found a distribution rather than a pathology (2026-08-29)
+
+[The Overture](./chronicle/the-overture.md) is a client campaign and **no bet
+in the map above moved** — it resolves no open question about the world, and
+nothing it built crosses the determinism boundary. It contributes one thing to
+the accounting immediately above, and only because that accounting counts
+occasions rather than results.
+
+The section before this one observes that cost is scored "when a campaign
+chooses to look", and that on the two occasions anyone had, each found a
+quadratic nobody predicted. This is a third occasion, and it found neither a
+quadratic nor anything else pathological — it found a **distribution**, which
+is a different kind of answer and worth distinguishing from a clean bill of
+health:
+
+```
+  settlements               1840 ms    60.2%
+  WorldContext::build        830 ms    27.2%   (demography report: 480 ms)
+  terrain (genesis)          202 ms     6.6%
+  deep time                  181 ms     5.9%
+  astronomy                    0.4 ms   0.01%
+  ------------------------------------------
+  total                     3054 ms
+```
+
+Two items are **76%** of world generation. The 480 ms demography report is the
+largest single item in the build that has never been profiled by anyone — this
+campaign measured it and deliberately did not touch it. So the base rate the
+paragraph above reports is unchanged in the direction that matters: three
+campaigns have looked at cost, two found an unpredicted quadratic, and the
+third found a concentration it did not investigate. Nothing here is a
+counterexample to "a poor base rate for an unwatched dimension"; it is one more
+observation that the dimension is unwatched.
+
+The measurement is also a reminder of what *this* chapter's floor asks for.
+These figures are five agreeing runs on one machine on one day, and they are
+already load-bearing for a shipped design decision — a progress substrate
+refuses to draw a global percentage *because* one phase is 60% of the whole. A
+number with that much weight on it should be re-measured by whoever next
+depends on it, not inherited.
+### A branch table is not a discriminating test (2026-08-30)
+
+[The Winze](./chronicle/the-winze.md) staked a bet this chapter does not carry
+— nothing in the list above is about subsurface residue, memory decay, or a
+survivorship shape — and it belongs here anyway, because it ran a
+self-scorable measurement twice into the wall this chapter keeps rebuilding:
+**an instrument that reports a verdict it cannot support.**
+
+The measurement was frozen before the code and reads like rigour. Three
+outcomes were enumerated: the two depth distributions are indistinguishable and
+the mechanism is decoration; they separate with overlap and the claim holds;
+they separate perfectly and the hazard has become the depth threshold the
+design replaced. The result landed on the middle branch, nothing was tuned, and
+the campaign could have stopped there.
+
+**It could not have told that pass from a much weaker one.** *Delvings that
+broke through sit at their own maximum without anything selecting on depth* and
+*breaking through is a tenure lottery and depth is a bystander* produce
+**identical pooled distributions**. Breached tenure runs at a median of 17.5
+epochs against 3.0, so the weak reading was live and large, and the statistic
+that separates them — conditioning on tenure, under which the separation
+attenuates from AUC 0.8654 to 0.7599 and *survives*, holding direction in every
+stratum — appears nowhere in the frozen criterion. It reached the measurement
+through a dispatch that happened to name the property. Had it collapsed, the
+criterion as written would have reported support.
+
+The chapter's preamble already holds that the only thing distinguishing a check
+that fires from one that does not is making it fail on command. This is the
+same floor one level up: **a branch table over outcomes is not a discriminating
+test, and both look like rigour.** A criterion is finished when, for the outcome
+that would count as support, it names the rival explanation and the statistic
+that tells them apart.
+
+**And the second instance is worse, because it precedes the data entirely.**
+The mechanism is a per-increment chance of breaking through, and the design
+never said what an increment is. Every other rate in the settlement bake is per
+epoch, which is the obvious reading. Under it, breaking through and the ordinary
+endings are competing risks in time: with constant per-epoch rates `p` and `q`,
+the probability that an ending at epoch `t` was a breach is `p/(p+q)`,
+independent of `t`. The two groups share a tenure distribution exactly, depth
+accrues with tenure, and the preregistered null fires **as a theorem** — on a
+mechanism never given a chance to produce the effect. Clocked per metre cut it
+works, and nothing reads a depth. **When a preregistered comparison is between
+two sub-populations of one process, the clock the process runs on can decide the
+answer before any data exists**, and a clock that makes the null a theorem is
+not a modelling choice but a way of not running the experiment.
+
+**What this does to the chapter's own accounting.** Self-scorability has been
+carried here as a property of a claim, then sharpened into a property of a
+statistic. It is narrower still: it is a property of a statistic *plus the
+alternatives it can exclude*. Every bet in the sections above that names a
+success criterion should be read as scoring the outcome, not the mechanism,
+unless something in it says which rival readings a pass rules out.
+
+### A third channel now carries unrest into settlement siting (2026-08-30)
+
+The entry above records a campaign whose instrument confirmed an effect and
+could not find its cause: settlements over-occupy high-unrest ground (×1.572,
+×2.578, ×5.395 up the unrest deciles), and severing **both** modelled channels
+through which unrest reaches siting did not flatten the gradient. Its honest
+scope clause is *unattributed by this instrument on this roster*, and the
+strongest thing said about it was that neither modelled channel carries the
+effect.
+
+There are three channels now. A mining camp is founded by scoring candidate
+sites on mineral prospectivity, and prospectivity is
+`0.6·setting + 0.3·unrest + 0.1·metamorphic_grade` — so a working is sited
+partly *because* the ground is tectonically violent, and the coupling is direct
+rather than incidental.
+
+It is far too small to be the missing cause. Pooled over twelve seeds the world
+carries 196 mines against 9,394 agrarian settlements, 2.0% of occupations, which
+cannot produce a fivefold excess in the top unrest decile. **The finding is not
+that the puzzle is solved; it is that the ablation's denominator moved.** A
+future disambiguating arm must sever three channels rather than two, and one of
+the three did not exist when the arm was designed. This chapter's own warning
+about ablations applies with the sign reversed: an ablation on a channel almost
+nobody reads is a null with no power, and an ablation that misses a channel
+entirely is a null with a hole in it.

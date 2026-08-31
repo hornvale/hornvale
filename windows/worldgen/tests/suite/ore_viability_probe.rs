@@ -138,7 +138,7 @@ fn pct(sorted: &[f64], q: f64) -> f64 {
 /// this probe's assertions pin the branch actually landed in, not a
 /// preferred one.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: the ore-viability branch-table verdict; run by hand (The Winze Task 1b / The Sources Task 1 answered its question; demoted by The Governor 2026-08-28)"]
 fn ore_viability_probe() {
     // Per-seed decisive fractions, collected so the cross-seed summary at the
     // very end can state one branch for the whole panel rather than three

@@ -62,6 +62,7 @@ use hornvale_astronomy::SkyPins;
 use hornvale_history::record::{CauseOfEnd, Ended};
 use hornvale_kernel::Seed;
 use hornvale_terrain::TerrainPins;
+use hornvale_worldgen::seed_sweep;
 use hornvale_worldgen::{SettlementPins, SkyChoice, WorldComponents, census, history_for};
 use std::collections::BTreeMap;
 
@@ -78,20 +79,29 @@ const PEOPLES_AS_OF_THE_GENERALIST: [&str; 6] =
 /// Kept as an invariant and not retired with the readouts it diagnosed: this
 /// comparison is unreachable from the census, because `History::tally` is
 /// discarded after `emit_history` and a metric holds only a `World`.
+///
+/// nextest: sized-sweep
 #[test]
 #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn is_the_raid_proxy_ambiguous_or_is_its_population_stale() {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
 
-    // Totals pooled over the seed range, plus the per-seed disagreement count
-    // that decides the branch.
-    let mut census_raided_total: u64 = 0;
-    let mut unfiltered_total: u64 = 0;
-    let mut filtered_total: u64 = 0;
-    let mut seeds_disagreeing_unfiltered: Vec<u64> = Vec::new();
-    let mut out_of_population: BTreeMap<&'static str, u64> = BTreeMap::new();
+    // One seed's raw per-record tally: (census().raided, unfiltered count,
+    // filtered-to-the-six count, whether unfiltered disagreed with the
+    // census, and the out-of-population victims by people). Built in
+    // parallel below and reduced to the pooled totals afterward, so the
+    // reduction is pure integer addition — commutative and exact, hence
+    // order-independent regardless of which worker finishes first.
+    type SeedTally = (u64, u64, u64, bool, BTreeMap<&'static str, u64>);
 
-    for seed_value in SEEDS {
+    // The seed sweep runs across the machine's CPUs (see
+    // `seed_sweep::map_seeds`), but the pooled totals below are
+    // byte-identical to the serial loop this replaced: each seed's tally is
+    // a pure function of its seed, each worker shares nothing, and results
+    // come back in SEED order — matched back up with `SEEDS.zip(...)` below,
+    // the same pairing the serial loop produced one seed at a time. Set
+    // `HV_SEED_SWEEP_THREADS=1` to reproduce that serial loop exactly.
+    let per_seed: Vec<SeedTally> = seed_sweep::map_seeds(SEEDS, |seed_value| {
         let seed = Seed(seed_value);
         let history = history_for(
             seed,
@@ -105,6 +115,7 @@ fn is_the_raid_proxy_ambiguous_or_is_its_population_stale() {
 
         let mut unfiltered: u64 = 0;
         let mut filtered: u64 = 0;
+        let mut out_of_population: BTreeMap<&'static str, u64> = BTreeMap::new();
         for rec in &history.records {
             let raided = matches!(rec.core.cause, Some(CauseOfEnd::Fled))
                 && matches!(rec.ended_by, Ended::By(_));
@@ -121,12 +132,37 @@ fn is_the_raid_proxy_ambiguous_or_is_its_population_stale() {
         }
 
         let tally = census(&history);
-        if unfiltered != tally.raided {
+        let disagreed = unfiltered != tally.raided;
+        (
+            tally.raided,
+            unfiltered,
+            filtered,
+            disagreed,
+            out_of_population,
+        )
+    });
+
+    // Totals pooled over the seed range, plus the per-seed disagreement list
+    // that decides the branch — reduced from `per_seed` in the exact order
+    // the serial loop accumulated them.
+    let mut census_raided_total: u64 = 0;
+    let mut unfiltered_total: u64 = 0;
+    let mut filtered_total: u64 = 0;
+    let mut seeds_disagreeing_unfiltered: Vec<u64> = Vec::new();
+    let mut out_of_population: BTreeMap<&'static str, u64> = BTreeMap::new();
+
+    for (seed_value, (raided, unfiltered, filtered, disagreed, seed_out_of_population)) in
+        SEEDS.zip(per_seed)
+    {
+        if disagreed {
             seeds_disagreeing_unfiltered.push(seed_value);
         }
-        census_raided_total += tally.raided;
+        census_raided_total += raided;
         unfiltered_total += unfiltered;
         filtered_total += filtered;
+        for (people, n) in seed_out_of_population {
+            *out_of_population.entry(people).or_default() += n;
+        }
     }
 
     let gap = census_raided_total - filtered_total;

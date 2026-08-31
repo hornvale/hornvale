@@ -213,13 +213,24 @@ fn the_fixture_columns_match_the_census() {
 fn every_injection_moved_the_world_and_the_baselines_did_not() {
     let study = hornvale_lab::load_study(Path::new("../../studies/gnomon-injection.study.json"))
         .expect("the injection study loads");
-    let base_csv = std::fs::read_to_string(fixtures().join("baseline-a/rows.csv"))
-        .expect("baseline-a rows.csv is committed");
+    let base = fixtures().join("baseline-a");
 
     for name in arm_names("injection") {
-        let csv = std::fs::read_to_string(fixtures().join(&name).join("rows.csv"))
-            .expect("arm rows.csv is committed");
-        let report = hornvale_lab::render_diff(&study, &base_csv, &csv).expect("diff renders");
+        // AS AUTHORED, through each arm's own committed `schema.json`
+        // (`hornvale_lab::authored`) — never through the live registry. These
+        // arms are authored evidence: `scripts/gnomon-injection.sh` can only
+        // re-author them on the canonical box at a checked-out SHA, so reading
+        // them through a registry that keeps growing would make every past
+        // injection unreadable the moment anybody registers a metric.
+        let (report, age) = hornvale_lab::render_authored_diff(
+            &study,
+            &base,
+            "baseline-a",
+            &fixtures().join(&name),
+            &name,
+        )
+        .expect("diff renders");
+        age.announce(&format!("injection fixtures ({name} vs baseline-a)"));
         assert!(
             !report.contains("No metric moved."),
             "injection {name} moved NOTHING — it is VOID and cannot contribute to \
@@ -240,9 +251,14 @@ fn every_injection_moved_the_world_and_the_baselines_did_not() {
         .into_iter()
         .filter(|n| n != "baseline-a")
     {
-        let csv = std::fs::read_to_string(fixtures().join(&name).join("rows.csv"))
-            .expect("arm rows.csv is committed");
-        let report = hornvale_lab::render_diff(&study, &base_csv, &csv).expect("diff renders");
+        let (report, _) = hornvale_lab::render_authored_diff(
+            &study,
+            &base,
+            "baseline-a",
+            &fixtures().join(&name),
+            &name,
+        )
+        .expect("diff renders");
         assert!(
             report.contains("No metric moved."),
             "{name} is an UNPERTURBED rerun of baseline-a and must be identical to \
@@ -313,7 +329,7 @@ fn two_independent_baseline_runs_rank_identically() {
 /// claim: readout(preregistered) — recall@10 over the committed (injection x
 /// seed) pairs, against the frozen 0.60 bar; the seed loop enumerates the
 /// battery's own arms rather than sampling a population.
-#[ignore = "PREREGISTERED, cannot adjudicate at n=120: awaits TOOL-anomaly-ranking-concentrates-injection (recall@10 = 0.6083 over 120 pairs, +0.19 SE from the 0.60 bar; five census epochs of one unchanged report read 0.5667, 0.6083, 0.6000, 0.6083 and 0.6083, all inside one SE of the bar, so the battery separates nothing)"]
+#[ignore = "PREREGISTERED, cannot adjudicate at n=120: awaits TOOL-anomaly-ranking-concentrates-injection (recall@10 = 0.6000 over 120 pairs, exactly ON the 0.60 bar; six census epochs of one unchanged report read 0.5667, 0.6083, 0.6000, 0.6083, 0.6083 and 0.6000, all inside one SE of the bar, so the battery separates nothing. The sixth is the first taken after the evaluable surface grew, 117 -> 118 columns; an ablation dropping the new column re-reads 72/120 arm for arm, so the surface contributed nothing and the reading stays comparable)"]
 #[test]
 fn h1_recall_at_10() {
     let t = tally_recall();
@@ -357,7 +373,9 @@ fn h1_recall_at_10() {
 ///
 /// [`h1_recall_at_10`] is ignored because its preregistered assertion is
 /// *not met* and the failure is the record (the roster entry in
-/// `cli/tests/heavy_tier.rs` carries the figure). But an ignored measurement
+/// `cli/tests/suite/heavy_tier.rs` carries the figure, in its
+/// `EXPECTED_UNTOKENISED` roster — NOT in the heavy tier, which this battery
+/// is not in). But an ignored measurement
 /// stops being measured: change [`REPORT_SIZE`], `TAIL_DEPTH_BAR` or the
 /// scorer and nothing anywhere goes red, while the published 0.5667 quietly
 /// becomes fiction. No other test in this file pins it.
@@ -488,7 +506,80 @@ fn h1_recall_at_10() {
 /// the tally by three hits, which is exactly why only canonical readings
 /// enter this list.
 ///
-/// claim: invariant(the committed battery scores exactly 73 hits over 120
+/// **RE-READ A FIFTH TIME AT THE WINZE'S CLOSE (2026-08-29), AND THIS IS THE
+/// FIRST RE-READ WHERE THE RANKED SURFACE ITSELF MOVED.** Every earlier
+/// re-read could say "nothing about the report changed" and mean it in the
+/// strong sense: same `REPORT_SIZE`, same `TAIL_DEPTH_BAR`, same scorer, and
+/// the same set of columns the scorer ranks over. The Winze registered a new
+/// census metric, `breached-delving-count`, and it lands EVALUABLE — so the
+/// surface [`anomaly::score_row`] ranks over grew from 117 columns to 118,
+/// while the report stayed a fixed top-`REPORT_SIZE` cut of it. One more
+/// candidate column can displace the tenth flag of any world, and the moved
+/// set a hit is scored against is itself intersected with the surface, so
+/// there are two live mechanisms by which the INSTRUMENT rather than the
+/// world could have moved the tally. Re-measured on the refreshed census and
+/// re-authored fixtures: **72/120 = 0.6000**, exactly on the bar.
+///
+/// **THE CONFOUND WAS MEASURABLE AND IT MEASURES NULL.** Two checks settle
+/// it, both run this campaign, neither requiring a line of committed code to
+/// change:
+///
+/// 1. *The surface moved by exactly one column.* Running
+///    [`anomaly::evaluable_columns`] over the pre-refresh committed census
+///    and over the refreshed one: evaluable 117 → 118, excluded 50 → 50, the
+///    difference set `{breached-delving-count}` in the new direction and
+///    **empty** in the old. Nothing else crossed the boundary under the world
+///    change, so `breached-delving-count` is the whole of the instrument
+///    delta rather than merely the visible part of it.
+/// 2. *Ablating that one column reproduces the tally exactly.* Dropping
+///    `breached-delving-count` from the loaded `Census` restores the
+///    117-column surface, and re-scoring the same committed fixtures against
+///    it reads **72/120 — and 20/20, 4/20, 20/20, 2/20, 7/20, 19/20 arm for
+///    arm**, identical in every arm. The new column contributed zero hits and
+///    zero counted pairs.
+///
+/// The ablation is cheap and needs no change to the scorer, which is the
+/// reason it was worth running instead of declaring the reading
+/// incomparable: [`anomaly::evaluable_columns`] derives the surface from
+/// `Census::columns`, [`anomaly::score_row`] takes the census by reference,
+/// and each column's index is built independently of the others — so
+/// removing one column from an in-memory census reproduces the older surface
+/// against the newer worlds exactly. **A future re-read that finds the
+/// surface has moved should run these same two checks before concluding
+/// anything**, in either direction: a null here licenses comparison, and a
+/// non-null would be the larger question the assertion below warns about.
+///
+/// So this is a sixth COMPARABLE reading, and it repeats The Underworld's:
+///
+/// ```text
+///     SE at the bar = sqrt(0.6 * 0.4 / 120) = 0.04472
+///
+///     68/120 = 0.5667   -0.75 SE   The Gnomon      (published as refuted)
+///     73/120 = 0.6083   +0.19 SE   The Glasshouse  (verdict withdrawn)
+///     72/120 = 0.6000    0.00 SE   The Underworld  (corroborated the withdrawal)
+///     73/120 = 0.6083   +0.19 SE   The Burr        (repeats The Glasshouse)
+///     73/120 = 0.6083   +0.19 SE   The Granary     (canonical; a pilot first read 70)
+///     72/120 = 0.6000    0.00 SE   The Winze       (repeats The Underworld)
+/// ```
+///
+/// Six readings, six census epochs, one report whose *definition* has never
+/// moved, every one of them inside ±0.75 SE of the bar. **Landing exactly ON
+/// a bar this battery cannot adjudicate is worth one sentence and no more: it
+/// is not a result, it is the same null arriving at its least legible
+/// coordinate.** The verdict remains "cannot tell"; the instrument remains
+/// underpowered; the fix remains more pairs, not a moved bar. The registry
+/// row's status is unchanged, as it was unchanged by each of the four before
+/// it.
+///
+/// One arm-level note, recorded because it is the closest thing to
+/// reassurance the ablation's null can offer: `breached-delving-count`
+/// appears in GEOTHERMAL's own moved-column set, which is physically
+/// coherent — a geothermal-gradient perturbation moves cave depth, which
+/// moves delve depth, which moves breaches. The new column is not inert. It
+/// simply never displaced anything out of a top-10 report in a way that
+/// changed whether a pair scored.
+///
+/// claim: invariant(the committed battery scores exactly 72 hits over 120
 /// evaluable (injection x seed) pairs, with no void pairs) — an identity over
 /// committed fixtures and a committed census, not a statistic.
 #[test]
@@ -501,29 +592,64 @@ fn the_falsified_recall_is_pinned_as_a_witness() {
             t.void_no_movement,
             t.void_unrankable_only
         ),
-        (73, 120, 0, 0),
+        (72, 120, 0, 0),
         "the injection battery's recall tally moved. This is the WITNESS to The \
-         Gnomon's finding (recall@10 now reads 73/120 = 0.6083, +0.19 SE from \
+         Gnomon's finding (recall@10 now reads 72/120 = 0.6000, exactly ON the \
          preregistered bar of 0.60 — a bar this battery is NOT powered to \
          adjudicate, see the doc comment), and it is pinned so that a change to \
          the report — REPORT_SIZE, TAIL_DEPTH_BAR, the scorer, the evaluable \
          surface, the census, or the fixtures — cannot silently turn the \
-         published figure into fiction. Do not simply update these integers: \
-         re-read the finding, re-state it in book/src/chronicle/the-gnomon.md, \
-         in the TOOL-anomaly-ranking-concentrates-injection registry row and in \
-         the `#[ignore]` reason rostered in cli/tests/heavy_tier.rs, and re-pin \
-         all four in the same commit. THIS HAS NOW HAPPENED FIVE TIMES (The \
-         Glasshouse, 2026-08-15, which overturned the verdict; The Underworld, \
-         2026-08-17, which corroborated the withdrawal at a third census \
-         epoch; The Burr, 2026-08-18/19, which reproduced The Glasshouse's \
-         exact reading at a fourth; The Granary, 2026-08-24, whose canonical \
-         reading repeated it a fifth time after a host-divergent local pilot \
-         first said otherwise). Every time the \
-         report was untouched and the number moved because the WORLD moved, \
-         which is the strongest argument for keeping this pin. FIRST ASK \
-         WHETHER YOUR CHANGE TOUCHED THE REPORT: if it did, the four readings \
-         above are no longer comparable and you have a different, larger \
-         question than a re-pin."
+         published figure into fiction. \
+         \
+         DO NOT SIMPLY UPDATE THESE INTEGERS. Re-read the finding and re-state \
+         it, in the same commit, at all FOUR of the sites below. The list was \
+         wrong twice before and each error sent a reader somewhere that no \
+         longer existed, so it names the file AND what in it holds the figure: \
+         (1) THIS FILE — these integers, this test's doc comment, and the \
+         `#[ignore]` reason on h1_recall_at_10 above; \
+         (2) book/src/chronicle/the-gnomon.md — the postscript series; \
+         (3) book/src/frontier/idea-registry.md — the \
+         TOOL-anomaly-ranking-concentrates-injection row (capped at 600 chars, \
+         so compact rather than append); \
+         (4) cli/tests/suite/heavy_tier.rs — the EXPECTED_UNTOKENISED array, \
+         which holds a VERBATIM copy of that `#[ignore]` reason and is an \
+         exact-set assertion, so changing the reason without it reds \
+         the_untokenised_ignore_reasons_are_exactly_this_roster. \
+         Site 4's path and its DESCRIPTION were both stale here until The \
+         Winze: the file moved to tests/suite/ with test-binary consolidation, \
+         and this message called it `the heavy tier`, which it is not — this \
+         battery carries no `heavy:` token and is in no lane set. It is the \
+         UNTOKENISED roster that happens to live in the same file, and reading \
+         `heavy tier` literally is exactly what makes a reader conclude the \
+         site is gone. It is not. \
+         \
+         THE PIN HAS NOW BEEN RE-STATED FIVE TIMES, producing six readings \
+         with The Gnomon's original: The Glasshouse (2026-08-15, overturned \
+         the verdict); The Underworld (2026-08-17, corroborated the withdrawal \
+         at a third census epoch); The Burr (2026-08-18/19, reproduced The \
+         Glasshouse's exact reading at a fourth); The Granary (2026-08-24, \
+         whose canonical reading repeated it a fifth time after a \
+         host-divergent local pilot first said otherwise); and The Winze \
+         (2026-08-29, this one). (This message previously said FIVE TIMES \
+         while naming four campaigns — it was counting readings in one clause \
+         and re-statements in the other. Both counts are given above so the \
+         next reader does not have to guess which is meant.) \
+         \
+         FIRST ASK WHETHER YOUR CHANGE TOUCHED THE REPORT. For the first four \
+         re-statements the answer was no, and the number moved because the \
+         WORLD moved, which was the strongest argument for keeping this pin. \
+         The Winze is the first where the answer was YES: registering \
+         `breached-delving-count` grew the evaluable surface 117 -> 118, so \
+         instrument and world both changed at once. That is the LARGER \
+         QUESTION this sentence has always warned about, and the way through \
+         it is to MEASURE the instrument's share rather than to declare the \
+         reading incomparable: diff evaluable_columns across the two censuses \
+         to bound what moved, then ablate the moved column out of an \
+         in-memory Census and re-score. Both are cheap, neither touches the \
+         scorer, and for The Winze both read null — the ablated tally is \
+         72/120 arm for arm. See the doc comment for the full derivation. If \
+         your own ablation does NOT read null, you have a genuinely \
+         incomparable reading, and THAT is when to stop and say so."
     );
 }
 

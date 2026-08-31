@@ -143,9 +143,31 @@ const SESSION_CONTROL: [&str; 3] = ["release", "quit", "exit"];
 /// a verb listed in one place and missing from the other, never a verb
 /// missing from both — and it is why `clear_is_refused_while_asleep` exists
 /// beside `warm_is_refused_while_asleep` rather than in place of it.
-const IN_CHARACTER_VERBS: [&str; 20] = [
-    "ask", "back", "clear", "climb", "consult", "delve", "dive", "enter", "examine", "go", "knows",
-    "look", "map", "needs", "out", "sleep", "surface", "wait", "warm", "write",
+///
+/// **`carrying` is in this roster and not in [`SESSION_CONTROL`], and the
+/// choice was made from the code rather than from taste (The Chattel, Task
+/// 12).** It reads state and writes none, which makes it look like an
+/// operator instrument; `knows` and `needs` are the standing counterexample —
+/// both read-only, both write nothing, both in-character — and what they read
+/// is *the body's own* state. `carrying` reads the body's custody, which is
+/// as body-relative as a reading gets: an operator instrument bypasses the
+/// body (spec §2.2), and a question whose entire subject IS the body has
+/// nothing left to answer once it does.
+///
+/// **The mechanical half is that the disjointness check would NOT have caught
+/// the other choice.** `session_control_is_never_an_in_character_verb` sweeps
+/// [`SESSION_CONTROL`] and asserts no entry is in this roster; a `carrying`
+/// placed in `SESSION_CONTROL` alone and listed in `HELP` satisfies it
+/// (it is in only one roster), satisfies
+/// `every_bare_verb_help_lists_is_classified`'s first loop (it IS classified),
+/// and is never reached by its second (which iterates this roster). It would
+/// have shipped ungated — The Latch's `clear` failure arriving through the
+/// other door — so `carrying_is_refused_while_asleep` is the witness, exactly
+/// as it is for `open`/`close`/`take`/`drop`/`put`.
+const IN_CHARACTER_VERBS: [&str; 28] = [
+    "ask", "back", "carrying", "clear", "climb", "close", "consult", "delve", "dive", "down",
+    "drop", "enter", "examine", "go", "knows", "look", "map", "needs", "open", "out", "put",
+    "sleep", "surface", "take", "up", "wait", "warm", "write",
 ];
 
 /// The provenance a walk-band step commits under (The Deed, Task 7).
@@ -311,13 +333,31 @@ const INDOOR_DIAGONAL_REFUSAL: &str =
 /// that text died with the constant, so only the water's own reason remains.)
 const SUBMERGED_LATERAL_REFUSAL: &str = "Not while you are under. Surface first, then swim.";
 
-/// What lateral movement says while underground (The Deep Realm). The cave
-/// lattice this campaign ships has no walkable interior — only the entrance
-/// chamber is reachable — so a compass step from it is refused for the same
-/// reason a step from a water stratum is: there is nowhere down here for a
-/// bearing to mean. Diegetic, not a parse error, matching
-/// [`SUBMERGED_LATERAL_REFUSAL`]'s own reasoning one realm over.
-const UNDERGROUND_LATERAL_REFUSAL: &str = "Not down here. Climb out first, then walk.";
+/// What `back` says underground (The Gallery, Task 4). `go` is reversed —
+/// `UNDERGROUND_LATERAL_REFUSAL` claimed "there is nowhere down here for a
+/// bearing to mean", which Task 3's real generated level made false, and
+/// Task 4 deletes the constant along with that claim. `back` is NOT
+/// reversed, for the same reason it stays refused indoors after The
+/// Blocking's own reversal of `go`: this campaign built intra-level
+/// GEOMETRY, not a retraceable trail, so there is nothing for `back` to
+/// retrace in either band.
+const UNDERGROUND_BACK_REFUSAL: &str =
+    "There is no trail to retrace down here; walk it again, cell by cell.";
+
+/// What `map <anything>` says underground (The Gallery, Task 8). A level has
+/// no coarser rung to zoom to the way the walk band's chart does — `map out
+/// N` is a question about the country overhead, and there is no overhead to
+/// draw from inside the rock — so any argument is refused the same way an
+/// indoor `map <arg>` is refused by [`INDOOR_CHART_REFUSAL`]: for the
+/// geometry, not as a parse complaint.
+const UNDERGROUND_CHART_REFUSAL: &str =
+    "Down here the chart is the rock around you; there is no coarser rung to draw.";
+
+/// `climb`'s refusal from any rung but the entrance (The Gallery, Task 3):
+/// there is no one-step way out of a multi-rung descent, only the stairs
+/// up (Task 5).
+const CLIMB_FROM_DEPTH_REFUSAL: &str =
+    "You are too far down to climb straight out; find the stairs up.";
 
 /// The player-authored disposition-shift predicate (The First Mark): the
 /// first fact the possessing player, not a world system, ever commits.
@@ -421,12 +461,25 @@ verbs:
   delve            descend into the cave here, if the rock admits
                    one; 'climb' comes back
   climb            return to the surface from underground
+  down             descend a rung by the stairs underfoot, if there is one;
+                   'up' comes back
+  up               ascend a rung by the stairs underfoot, if there is one
   clear            clear the way down at a barred cave mouth; only a thin
                    fall of rubble gives, and once cleared it stays cleared
   enter [way]      step inside what is built here; once inside, 'enter further
                    in' goes deeper and 'out' leaves
   out              step back out of doors
   examine <thing>  anything look or the floor plan names
+  open <thing>     open what has a lid, indoors; a locked one wants a key
+                   you are already carrying
+  close <thing>    shut it again; what was inside goes out of sight
+  take <thing>     pick it up, if it is a thing a body can carry; it comes
+                   with you until you set it down
+  drop <thing>     set down here something you are carrying
+  put <thing> in <where>
+                   stow something you are carrying inside something that
+                   holds things and is not shut
+  carrying         what you have in hand
   warm             warm yourself at a hearth, where one burns
   back             retrace your last step, out of doors
   wait [N]         let N days pass overhead (default 1); the world moves too
@@ -674,8 +727,14 @@ pub struct Session<'w> {
     /// The evolving ledger: a clone of the frozen world's ledger, mutated
     /// only by `wait`'s tick (NPC `agent-at` facts). Never written back.
     ledger: Ledger,
-    /// A clone of the world's registry, extended with `AGENT_AT` (registered
-    /// per-session, never at genesis — spec §3).
+    /// A clone of the world's registry, extended with the live-play
+    /// predicates — `AGENT_AT`, `LOCATED_IN`, `OPENNESS` and `LOCKEDNESS` (The Chattel,
+    /// which also RETIRED `PASSAGE_CLEARED` from this list), and the
+    /// drive/needs predicates beside
+    /// them — every one registered per-session, never at genesis (spec §3).
+    /// The roster is `Session::start`'s own `register_predicate` block, which
+    /// is where a reader should look rather than trusting this list to stay
+    /// exhaustive; it has already gone stale three predicates in a row.
     registry: ConceptRegistry,
     /// Whose eyes the possession's chart is coloured through (The Beholding,
     /// Task 4), carried from `PossessOpts::eyes`.
@@ -766,17 +825,20 @@ pub struct Session<'w> {
     /// The depth band, mirroring `inside`: a second way of being somewhere
     /// other than out of doors at ground level.
     submerged: Option<hornvale_climate::Stratum>,
-    /// The chamber the possession has descended into within the cave lattice
-    /// beneath this vertex, if any (The Deep Realm, Task 5). `None` is the
-    /// surface. Mirrors `submerged`: the whole resolved value is carried
-    /// rather than just an address, so `climb` and a later `look` never need
-    /// to re-derive it (`chamber_at` is pure and would return the same
-    /// content either way, but there is nothing to gain by re-deriving what
-    /// is already in hand). This campaign's lattice has only the entrance
-    /// address reachable from the vessel seam — no deeper descent verb
-    /// exists yet — so this is always the entrance chamber (`band = 0,
-    /// branch = 0, floor = 0`) when `Some`.
-    underground: Option<hornvale_worldgen::chamber::Chamber>,
+    /// The possession's position within a generated underworld descent, if
+    /// any (The Deep Realm, Task 5; made a real place by The Gallery, Task
+    /// 3). `None` is the surface. Mirrors `submerged`: the whole resolved
+    /// value is carried rather than just an address, so `climb` and a later
+    /// `look` never need to re-derive it.
+    ///
+    /// **Before this task this was a single entrance
+    /// `hornvale_worldgen::chamber::Chamber` — a bucket, not a place.** It
+    /// is now a [`crate::underground::Underground`]: a whole descent
+    /// (`Vec<Level>`, one per habitation rung) plus which rung and which
+    /// cell of it the possession stands on. `delve_at` builds it once,
+    /// through [`crate::underground::Underground::enter`]; nothing here
+    /// re-derives it.
+    underground: Option<crate::underground::Underground>,
     /// The session-lived geometry memo (the-waymark fix round, Finding 2):
     /// `RoomMeshMemo` is fixed for this session's whole lifetime (`neighbors`
     /// is world-independent; `corner_weights` is fixed once `ctx`'s
@@ -1073,32 +1135,58 @@ impl<'w> Session<'w> {
         registry
             .register_predicate(AGENT_AT, false, "an agent's position on a day")
             .expect("AGENT_AT registers identically every session");
-        // PASSAGE_CLEARED is likewise never registered at genesis (The
-        // Latch): a live-play predicate is minted HERE, per session, beside
-        // AGENT_AT above.
+        // PASSAGE_CLEARED USED TO BE REGISTERED HERE, and its registration is
+        // gone rather than kept as a compatibility stub (The Chattel, Task 8;
+        // decision 0396 supersedes 0367). A cave mouth is a thing now, and the
+        // predicate it writes is OPENNESS, registered a few lines below beside
+        // LOCATED_IN — so this block would have registered a predicate nothing
+        // in the tree can write and nothing reads. "Per-session" always named
+        // WHERE a predicate is registered, not how long it lasts, and that has
+        // not changed: `Session::into_played_world` moves `self.registry` AND
+        // `self.ledger` into the saved `World`, and `possess --out` writes it
+        // (decision 0368; decision 0171 already ruled a player's acts are not
+        // filtered on the way out). A saved world written BEFORE this flip
+        // still carries `passage-cleared` in its own registry and its own
+        // facts; nothing reads them, so a passage it recorded as cleared is
+        // barred again on reload. That break was measured, not estimated — no
+        // committed fixture carries the predicate — and decision 0189 is the
+        // precedent for taking one deliberately.
         //
-        // "Per-session" names WHERE it is registered, NOT how long it lasts,
-        // and this comment said the opposite until the final whole-branch
-        // review — it read "the whole live-play fact layer is session-scoped,
-        // in registry and ledger both", citing a spec section (3.1) that has
-        // since been retired as wrong. Both halves are false:
-        // `Session::into_played_world` moves `self.registry` AND `self.ledger`
-        // into the saved `World`, and `possess --out` writes it (decision
-        // 0368; decision 0171 already ruled a player's acts are not filtered
-        // on the way out).
+        // The Chattel's two live-play predicates, registered on exactly the
+        // same terms as AGENT_AT above: a predicate is registered by whoever
+        // builds the registry that will hold its facts. Nothing registers
+        // these at genesis, so `world-seed-42.json` does not move for them;
+        // an out-of-session reader registers them into its own registry the
+        // way `windows/lab` already does for AGENT_AT (`health.rs`,
+        // `synthetic.rs`), which is a no-op for an identical definition
+        // (`ConceptRegistry::register_predicate` is documented idempotent).
         //
-        // Note also that this registration is UNCONDITIONAL — it runs whether
-        // or not anything is ever cleared — so every `--out` world carries
-        // PASSAGE_CLEARED in its registry even with no clearing fact behind
-        // it. Harmless: no committed artifact carries a session registry, and
-        // a registered-but-unused predicate is what AGENT_AT has always been.
+        // Both are NON-FUNCTIONAL: a thing moves more than once, and a chest —
+        // or, since Task 8, a cave mouth —
+        // opens, closes and opens again. Each change is one dated fact and
+        // the read is the as-of-day fold in `thing.rs`, never a latest-value
+        // read.
         registry
             .register_predicate(
-                crate::passage::PASSAGE_CLEARED,
+                crate::thing::LOCATED_IN,
                 false,
-                "a passage this body has cleared",
+                crate::thing::LOCATED_IN_DOC,
             )
-            .expect("PASSAGE_CLEARED registers identically every session");
+            .expect("LOCATED_IN registers identically every session");
+        registry
+            .register_predicate(crate::thing::OPENNESS, false, crate::thing::OPENNESS_DOC)
+            .expect("OPENNESS registers identically every session");
+        // The third, on the same terms (decision 0399). LOCKEDNESS is a
+        // separate state from OPENNESS, not a second spelling of it: `close`
+        // shuts a lid and never turns a key, so a chest a player shut on their
+        // own key can still be opened again.
+        registry
+            .register_predicate(
+                crate::thing::LOCKEDNESS,
+                false,
+                crate::thing::LOCKEDNESS_DOC,
+            )
+            .expect("LOCKEDNESS registers identically every session");
         // Idempotent (same def every session): never conflicts, since DRANK
         // is never registered at genesis either (spec §3).
         registry
@@ -1491,6 +1579,14 @@ impl<'w> Session<'w> {
                         entity: npc.entity.0.get(),
                         label: npc.label.clone(),
                         felt: felt_phrase(&affect),
+                        carrying: self
+                            .carried_by(npc.entity)
+                            .into_iter()
+                            .map(|(entity, noun)| crate::snapshot::CarriedEntry {
+                                entity: entity.0.get(),
+                                noun: noun.to_string(),
+                            })
+                            .collect(),
                     },
                 )
             })
@@ -1572,26 +1668,31 @@ impl<'w> Session<'w> {
             })
             .collect();
 
-        // The band the possession is in decides the channel. `inside` is the
-        // same discriminator `handle`'s `map` arm uses, so pane and verb can
-        // never disagree about which band is current — and that is the whole
-        // reason this matches on `inside` alone rather than on the three
-        // "not out of doors" states the session now carries (`inside`,
-        // `submerged`, `underground`). `map`'s arms guard on `inside` too, so
-        // the other two fall through to the surface chart in the verb and
-        // must fall through here identically or the pane would start showing
-        // something the verb refuses to. Adding a band to the session without
-        // deciding what the pane shows there is the failure this comment
-        // exists to catch: see `SpatialChannel`'s doc.
-        let spatial = match self.inside.as_ref() {
-            Some(inside) => SpatialChannel::Chamber {
+        // The band the possession is in decides the channel. `inside` and
+        // `underground` each get their own arm; `submerged` is the one
+        // remaining state that still falls through to the surface chart,
+        // exactly as the `map` VERB's own arms do (they guard on `inside`
+        // alone, so a submerged `map` draws the surface chart too — pane and
+        // verb must keep agreeing there, or the pane would start showing
+        // something the verb refuses to). Adding a band to the session
+        // without deciding what the pane shows there is the failure this
+        // comment exists to catch: see `SpatialChannel`'s own doc, which
+        // also records why `underground` is no longer one of the ones that
+        // folds (The Gallery, Task 7).
+        let spatial = if let Some(inside) = self.inside.as_ref() {
+            SpatialChannel::Chamber {
                 plan: self.chamber_plan(inside, marks, &self.eyes)?,
-            },
+            }
+        } else if let Some(ug) = self.underground.as_ref() {
+            SpatialChannel::Underground {
+                level: Box::new(self.underground_level(ug, marks)),
+            }
+        } else {
             // `purview(0)` is the same call `map` makes out of doors, at the
             // same zoom, so the pane shows what the verb would have shown.
-            None => SpatialChannel::Walk {
+            SpatialChannel::Walk {
                 chart: Box::new(self.purview(0)?),
-            },
+            }
         };
 
         Ok(SessionSnapshot {
@@ -1612,6 +1713,19 @@ impl<'w> Session<'w> {
                     // makes for the identical error type.
                     .map_err(|e| VesselError::Build(format!("{e:?}")))?
                     .0,
+                // The SAME fold `carrying`, `drop` and `put` resolve against
+                // (`Self::carried`), not a second read of the ledger: a pane
+                // that disagreed with the verb about what is in hand would be
+                // a worse defect than an absent field, and there is exactly
+                // one function here to disagree with.
+                carrying: self
+                    .carried()
+                    .into_iter()
+                    .map(|(entity, noun)| crate::snapshot::CarriedEntry {
+                        entity: entity.0.get(),
+                        noun: noun.to_string(),
+                    })
+                    .collect(),
             },
             sensed: SensedChannel {
                 room: vantage.locale.clone(),
@@ -1748,6 +1862,28 @@ impl<'w> Session<'w> {
     /// its own shadowcast — this seam refuses to fabricate an occlusion the
     /// fine layer could not itself produce, the same discipline
     /// [`Self::place_creature_at_me`] applies to a lit one.
+    /// Mint a thing of `kind` here and commit it into `holder`'s hand — the
+    /// custody sibling of [`Self::place_creature_at_me`], and a test seam for
+    /// the same reason: nothing a player can type puts a thing in ANOTHER
+    /// creature's hand, so the positive direction of `sensed.present`'s
+    /// custody has no other way to be exercised.
+    ///
+    /// Returns the thing's id, or `None` if this room's facet cannot pack one.
+    /// type-audit: bare-ok(identifier-text: kind)
+    pub fn place_thing_in_hand(&mut self, holder: EntityId, kind: &str) -> Option<EntityId> {
+        let room = self.position();
+        let thing =
+            crate::thing::promote(&mut self.ledger, &self.registry, &room, kind, 0, self.day)
+                .ok()?;
+        self.ledger
+            .commit(
+                crate::thing::located_in_holder_fact(thing, holder, self.day),
+                &self.registry,
+            )
+            .expect("located-in is registered every session and non-functional");
+        Some(thing)
+    }
+
     /// type-audit: bare-ok(flag: return)
     pub fn place_creature_out_of_my_sight(&mut self, who: EntityId) -> bool {
         let room = self.position();
@@ -2389,6 +2525,16 @@ impl<'w> Session<'w> {
     /// [`Self::examine_chamber`] is: one knowledge gate for every surface
     /// that reads an offer (Nathan's #9 ruling), not two.
     ///
+    /// **The [`crate::affordance::thing_kind_of`] conversion is at this call
+    /// site since Task 9, not inside the query** (spec §3.6, decision 0397).
+    /// It is here because the anchor is here: this method holds an
+    /// [`crate::interior::AnchorKind`] and the query speaks thing-kind, so
+    /// the conversion belongs where the anchor is — the same rule
+    /// `crate::affordance::encloses` already follows. Moving it out of
+    /// `offered_to_observer` is what lets a caller who holds NO anchor kind
+    /// (a cave mouth, addressed by a `Vertex`/`ChamberAddr`) reach the gate
+    /// at all; nothing about warming changes.
+    ///
     /// **Commits nothing, and mints no `Action` variant.** Warming is not a
     /// GOAP-planned creature act — no successor in `action.rs`'s search
     /// spaces ever proposes it — and `dive`/`surface`/`delve`/`climb` beside
@@ -2407,7 +2553,7 @@ impl<'w> Session<'w> {
         let can_warm = self.chamber_interior_here().is_some_and(|interior| {
             interior.ids().iter().any(|&a| {
                 crate::affordance::offered_to_observer(
-                    interior.anchor(a).kind,
+                    crate::affordance::thing_kind_of(interior.anchor(a).kind),
                     self.driven_body(),
                     &self.knowledge,
                 )
@@ -2418,6 +2564,984 @@ impl<'w> Session<'w> {
             return Turn::Out("There is no fire here to warm yourself at.".to_string());
         }
         Turn::Out("You warm yourself at the fire.".to_string())
+    }
+
+    /// The [`Facet`] of the chamber the possession is standing in — the ROOM
+    /// key a thing promoted here is lineage-keyed on, and `None` out of doors.
+    ///
+    /// **Not [`Self::position`], and the difference is an entity-id
+    /// collision.** `position()` is the outdoor LOCALE facet and does not move
+    /// while descending into a structure — every chamber of one structure
+    /// shares it, which is exactly why `offered_to_observer`'s knowledge gate
+    /// can never fail indoors. Keying a thing on it would give the strongbox
+    /// of a structure's third chamber and the strongbox of its fourth the
+    /// SAME `EntityId`: `role_for` returns `Role::Store` for chamber index 2
+    /// and for every index past it, so a four-chamber dwelling composes two
+    /// strongboxes and two keys, in two different rooms, that
+    /// `thing::thing_id` could not tell apart. `Structure::chambers` is a
+    /// `Vec<Facet>` — a chamber IS a facet, drawn from the locale's own seed
+    /// under `room/chambers/v1` and asserted distinct by
+    /// `structure::tests::chambers_are_distinct` — so the right key was
+    /// already in hand and needed only to be reached for.
+    ///
+    /// The per-room census that licenses `ordinal: 0`
+    /// (`interior::pattern::tests::no_production_room_composes_two_anchors_of_
+    /// one_kind`) is a statement about ONE composed interior, so it says
+    /// nothing about this hazard; the two guards are complementary and neither
+    /// substitutes for the other.
+    fn chamber_facet_here(&self) -> Option<Facet> {
+        let inside = self.inside.as_ref()?;
+        Some(inside.structure.chambers[inside.at].clone())
+    }
+
+    /// Whether the container of `kind` in `room` stands open as of now.
+    ///
+    /// **This is where a container's absent-fact default is authored, and it
+    /// is authored HERE rather than in [`crate::thing::is_open`] on purpose.**
+    /// `is_open` returns `Option<bool>` because an absent [`crate::thing::
+    /// OPENNESS`] fact means "whatever the seed drew" (spec §3.3), never
+    /// "shut" — collapsing the `None` inside that fold would state that every
+    /// untouched door in the world is closed, and its own doc forbids exactly
+    /// that. A cave mouth's draw is `hornvale_worldgen::barrier_of`, which
+    /// `passage::effective_state` falls back to. **No generator draws an
+    /// openness for a container**, so the container's fallback is an authored
+    /// constant, and it is `false`: a strongbox is a banded chest whose own
+    /// `detail` line already says "its lid seated flush".
+    ///
+    /// The two fallbacks therefore live in the two readers, in the shape §3.7
+    /// pins — `effective_state` for the passage angle, this for the container
+    /// angle — over one shared fold.
+    fn container_is_open(&self, room: &Facet, kind: hornvale_kernel::KindId) -> bool {
+        crate::thing::thing_id(room, kind.0, 0)
+            .ok()
+            .and_then(|id| crate::thing::is_open(&self.ledger, id, self.day))
+            .unwrap_or(false)
+    }
+
+    /// Whether the thing of `kind` in `room` is locked as of now (decision
+    /// 0399) — [`Self::container_is_open`]'s sibling over
+    /// [`crate::thing::LOCKEDNESS`], and the authored home of THAT fold's
+    /// absent-fact default.
+    ///
+    /// **The default is keyed on the KIND, and that is the difference from
+    /// the openness reader beside it.** A kind carrying
+    /// [`crate::affordance::ObjectProperty::Lockable`] with no fact about it
+    /// is locked — that is what makes a seeded strongbox worth finding a key
+    /// for, and it is the state every world starts in, since no generator
+    /// draws a lockedness any more than it draws an openness. A kind with no
+    /// lock is never locked, at any ordinal, under any fact: an alcove has
+    /// nothing to turn.
+    ///
+    /// **Nothing in this campaign ever writes `true`.** The only writer is
+    /// [`Self::open_or_close`]'s unlock, so the fold has exactly two reachable
+    /// states — the authored default, and unlocked-for-good. Re-locking would
+    /// need the key put IN THE LOCK, which is a location no verb can reach
+    /// (decision 0399, clause 4).
+    fn container_is_locked(&self, room: &Facet, kind: hornvale_kernel::KindId) -> bool {
+        if !crate::affordance::carries(kind, crate::affordance::ObjectProperty::Lockable) {
+            return false;
+        }
+        crate::thing::thing_id(room, kind.0, 0)
+            .ok()
+            .and_then(|id| crate::thing::is_locked(&self.ledger, id, self.day))
+            .unwrap_or(true)
+    }
+
+    /// Whether the driven body is carrying anything that carries `property`.
+    ///
+    /// **The first precondition in Hornvale that reads a SECOND object** (spec
+    /// §3.8). Custody is a [`crate::thing::LOCATED_IN`] fact whose object is
+    /// the body itself, so this is `held_by` over the body's entity, each held
+    /// thing's kind read back off its own `instance-of`, and the property
+    /// table asked about that label.
+    ///
+    /// **M+N in the KINDS, not in the property — and this doc used to claim
+    /// both.** It read: *"The lock declares what it requires (a property) and
+    /// the key declares what it carries."* Only the second clause holds.
+    /// Nothing here mentions `strongbox` or `key`, and a second lockable kind
+    /// or a second portable kind arrives with no edit to this function or to
+    /// the dispatcher — that much is real, and it is what M+N means here. But
+    /// [`crate::affordance::ObjectProperty::Lockable`] carries no payload, so
+    /// the lock declares nothing about its opener; the wanted property is the
+    /// literal `ObjectProperty::Portable` at [`Self::open_or_close`]'s one
+    /// call to this function. **A second portable kind therefore arrives with
+    /// no edit AND opens every lock in the world** — see
+    /// [`LOCKED_WITHOUT_A_KEY_REFUSAL`]'s doc for the hazard and the test that
+    /// reddens on it.
+    fn carrying_something_that(&self, property: crate::affordance::ObjectProperty) -> bool {
+        crate::thing::held_by(&self.ledger, self.agent_entity(), self.day)
+            .into_iter()
+            .filter_map(|thing| self.ledger.kind_of(thing))
+            .any(|label| crate::affordance::label_carries(label, property))
+    }
+
+    /// `open <thing>` and `close <thing>` — The Chattel's headline verbs
+    /// (Task 11, spec §3.7/§3.8), and the first pair in this file to commit a
+    /// fact about a thing that is not the body.
+    ///
+    /// # One handler, both directions
+    ///
+    /// The two verbs differ in one boolean: which way the [`crate::thing::
+    /// OPENNESS`] fact points, and which sentences say so. Splitting them
+    /// would be two functions whose lock check, band guard, noun resolution
+    /// and promotion could each drift, and the drift that matters is
+    /// silent — a `close` that forgot the offer query would shut a thing the
+    /// grammar never gave a lid.
+    ///
+    /// # What it consults, in order, and why that order
+    ///
+    /// 1. **A named object.** Bare `open` is a hint, not a refusal: the player
+    ///    typed a real verb (`examine`'s own bare arm sets the precedent).
+    /// 2. **A chamber.** Only a chamber composes an [`crate::interior::
+    ///    Interior`], so only a chamber holds anything with a lid.
+    /// 3. **The noun, against this chamber's own anchors**, through
+    ///    `chamber_prose::noun` — the SAME matcher [`Self::examine_chamber`]
+    ///    uses, so a word that examines here also opens here or is refused
+    ///    with the same sentence.
+    /// 4. **The derived offer**, `offered_to_observer(...)`. Not
+    ///    `object_registry` directly and never an `AnchorKind` literal: a new
+    ///    thing-kind carrying `Openable` becomes openable with no edit here
+    ///    (acceptance 7), and the knowledge gate stands in front of this verb
+    ///    exactly as it stands in front of `warm` and `examine`.
+    /// 5. **The lock**, and only for `open` — [`Self::container_is_locked`]
+    ///    over the thing's own [`crate::thing::LOCKEDNESS`] fold, and only
+    ///    then a read of the body's custody
+    ///    ([`Self::carrying_something_that`]). `close` never consults either:
+    ///    it shuts a lid and turns nothing (decision 0399).
+    /// 6. **The no-op**, before the write. A second `open` on an open thing
+    ///    reports the state and commits nothing, which is `clear`'s own
+    ///    behaviour at an already-open mouth and is what keeps
+    ///    `thing::set_openness`'s across-days `instance-of` duplication
+    ///    unreachable through the verb.
+    /// 7. **The charge**, after every refusal and before both writes.
+    ///
+    /// # CLOSED AND LOCKED ARE DIFFERENT STATES (decision 0399, fix round 1)
+    ///
+    /// This verb shipped conflating them, and the conflation was reachable in
+    /// three moves. `openness` was the only state a container had, and the
+    /// lock arm re-derived "locked" from the PLAYER'S POCKETS at every ask —
+    /// so a chest was locked whenever the body happened not to be holding
+    /// something `Portable`, whatever the chest's own history. Shutting a lid
+    /// therefore re-locked it, and shutting it on the very key that opened it
+    /// was a permanent soft-lock: `open` refused for want of a key, and
+    /// `take a key` refused because the key was shut away. Measured through
+    /// the shipped CLI on seed 1, unrecoverable at any day by any verb:
+    ///
+    /// ```text
+    /// > take a key                -> You take the key.
+    /// > open a strongbox          -> You open the strongbox. Within it: a key.
+    /// > put a key in a strongbox  -> You put the key in the strongbox.
+    /// > close a strongbox         -> You close the strongbox.
+    /// > open a strongbox          -> It is locked, and you are carrying nothing that would open it.
+    /// > take a key                -> The key is shut away in something closed.
+    /// ```
+    ///
+    /// **The repair is a second state, not a special case.** `openness` is
+    /// untouched — it is still Task 5's open/shut fold — and lockedness is its
+    /// own predicate with its own authored default (`Lockable` and no fact
+    /// means locked, which is what makes a seeded strongbox worth finding a
+    /// key for). `open` with a key in custody turns the lock ONCE and commits
+    /// the unlocking; nothing re-locks it, because locking needs the key put
+    /// in the lock and this campaign ships no `lock` verb. The dead end
+    /// disappears with no precondition anywhere reading a container's
+    /// contents, which is what made every alternative remedy worse.
+    ///
+    /// # IT CHARGES, AND USED NOT TO (fix round 1)
+    ///
+    /// [`Self::charge_within_room`], the same `Action::MoveWithin` dial
+    /// `take`/`drop`/`put` and the `down`/`up` stairs already read — **no new
+    /// cost model**, which spec §3.4 forbids. `take`'s own doc recorded the
+    /// hazard from the other side while these two verbs still stayed free, and
+    /// understated it: a free verb leaves the clock where it found it, so
+    /// `open`, `close`, `open` in one instant commits `open`, `shut`, and then
+    /// a third fact byte-identical to the first, which `Ledger::commit` dedups
+    /// away. The last posting at that instant is `shut` while every reply was
+    /// computed before its commit. The result was not one wrong reply but a
+    /// STUCK INSTANT: every later `open` said it opened and did not, `close`
+    /// answered "already shut", `put` refused the shut chest, and only `wait`
+    /// escaped. Measured on seed 1 before the fix:
+    ///
+    /// ```text
+    /// > open a strongbox   -> You open the strongbox. Within it: a key.
+    /// > close a strongbox  -> You close the strongbox.
+    /// > open a strongbox   -> You open the strongbox. Within it: a key.
+    /// > open a strongbox   -> You open the strongbox. Within it: a key.
+    /// > close a strongbox  -> The strongbox is already shut.
+    /// > put a key in a strongbox -> The strongbox is shut.
+    /// ```
+    ///
+    /// The no-op arm (clause 6) returns BEFORE the charge, so reporting a
+    /// state still costs nothing — a refusal is not an act.
+    ///
+    /// # What it does NOT do
+    ///
+    /// **It does not open a passage, and `open` at a barred cave mouth
+    /// refuses.** `clear` is that act and Task 8 already folded it through
+    /// this very predicate, so the two angles share a FOLD (spec §3.7's
+    /// deliverable) without sharing a verb. Merging them is a real question
+    /// and a bigger one than this task: `clear`'s prose is about rubble
+    /// ("only a thin fall gives"), its refusals are seeded barrier states
+    /// rather than properties, and a passage has no `Interior` to resolve a
+    /// noun against. Whoever takes it up should read `clear_response` first.
+    fn open_or_close(&mut self, rest: &str, open: bool) -> Turn {
+        let wanted = rest.trim().to_lowercase();
+        if wanted.is_empty() {
+            return Turn::Out(
+                if open {
+                    OPEN_WHAT_HINT
+                } else {
+                    CLOSE_WHAT_HINT
+                }
+                .to_string(),
+            );
+        }
+        let (Some(interior), Some(room)) =
+            (self.chamber_interior_here(), self.chamber_facet_here())
+        else {
+            return Turn::Out(NOTHING_HERE_OPENS_REFUSAL.to_string());
+        };
+        let Some(id) = interior.ids().into_iter().find(|&id| {
+            crate::chamber_prose::noun(interior.anchor(id).kind)
+                .is_some_and(|n| n.to_lowercase() == wanted)
+        }) else {
+            return Turn::Out(format!("You see no {} here.", rest.trim()));
+        };
+
+        let thing_kind = crate::affordance::thing_kind_of(interior.anchor(id).kind);
+        let offer =
+            crate::affordance::offered_to_observer(thing_kind, self.driven_body(), &self.knowledge);
+        let verb = if open {
+            crate::affordance::OfferedVerb::Open
+        } else {
+            crate::affordance::OfferedVerb::Close
+        };
+        if !offer.contains(&verb) {
+            return Turn::Out(format!(
+                "The {} does not {}.",
+                crate::chamber_prose::without_article(
+                    crate::chamber_prose::noun(interior.anchor(id).kind)
+                        .expect("a noun matched above")
+                ),
+                verb.word()
+            ));
+        }
+
+        // Locked is a state of the THING, read off its own fold — not a state
+        // of the player's pockets re-derived at every ask (decision 0399).
+        // `close` is absent from this expression by construction: `open` gates
+        // it, so shutting a lid can never turn a key.
+        let locked = open && self.container_is_locked(&room, thing_kind);
+        if locked && !self.carrying_something_that(crate::affordance::ObjectProperty::Portable) {
+            return Turn::Out(LOCKED_WITHOUT_A_KEY_REFUSAL.to_string());
+        }
+
+        let bare = crate::chamber_prose::without_article(
+            crate::chamber_prose::noun(interior.anchor(id).kind).expect("a noun matched above"),
+        );
+        if self.container_is_open(&room, thing_kind) == open {
+            return Turn::Out(format!(
+                "The {bare} is already {}.",
+                if open { "open" } else { "shut" }
+            ));
+        }
+
+        // Charged BEFORE the writes and AFTER every refusal, exactly where
+        // `take`/`drop`/`put` charge, and for the representability reason
+        // their docs give rather than for a tariff: two openness facts at one
+        // instant are one fact, and `Ledger::commit`'s dedup of the third
+        // posting in `open`, `close`, `open` used to leave the chest shut
+        // while the reply said it opened. The no-op arm above returns first,
+        // so reporting a state costs nothing.
+        if let Err(e) = self.charge_within_room() {
+            return Turn::Out(e);
+        }
+
+        // The key turns before the lid lifts. One posting, once: `locked` is
+        // false unless the fold said the lock was still shut, so a chest
+        // opened twice writes this once and a chest with no lock never writes
+        // it at all.
+        if locked {
+            crate::thing::set_lockedness(
+                &mut self.ledger,
+                &self.registry,
+                &room,
+                thing_kind.0,
+                0,
+                false,
+                self.day,
+            )
+            .expect(
+                "a chamber facet packs, and LOCKEDNESS/instance-of are registered by Session::start",
+            );
+        }
+
+        crate::thing::set_openness(
+            &mut self.ledger,
+            &self.registry,
+            &room,
+            thing_kind.0,
+            0,
+            open,
+            self.day,
+        )
+        .expect("a chamber facet packs, and OPENNESS/instance-of are registered by Session::start");
+
+        if !open {
+            return Turn::Out(format!("You close the {bare}."));
+        }
+        match crate::chamber_prose::contents_of(&interior, id) {
+            None => Turn::Out(format!("You open the {bare}. It is empty.")),
+            Some(listed) => Turn::Out(format!("You open the {bare}. Within it: {listed}.")),
+        }
+    }
+
+    /// Every thing in the driven body's custody, paired with the noun prose
+    /// says it by — the one read `carrying`, `drop` and `put` all resolve
+    /// against, so the three cannot disagree about what a body is holding.
+    ///
+    /// **Label-keyed, because custody is.** A carried thing reaches this
+    /// method as an [`EntityId`] whose kind is an `instance-of` object — a
+    /// runtime string — and the room it was promoted from may be two rooms
+    /// behind with its interior no longer composed. So the noun comes from
+    /// [`crate::chamber_prose::noun_for_label`] and never from an
+    /// `AnchorKind`, which nothing here holds.
+    ///
+    /// A held thing whose label no anchor kind spells (`cave-mouth`, which
+    /// `passage.rs` mints) is dropped from this list rather than named by its
+    /// bare label: nothing can put one in a hand, and inventing prose for the
+    /// unreachable case would be prose no test could ever read back.
+    /// [`crate::thing::held_by`]'s `EntityId` order is preserved, which is
+    /// deterministic and never ledger order.
+    fn carried(&self) -> Vec<(EntityId, &'static str)> {
+        self.carried_by(self.agent_entity())
+    }
+
+    /// [`Self::carried`] for any holder, which is the whole of that method
+    /// with its holder lifted out (The Company).
+    ///
+    /// The extraction is what keeps `carried`'s own rule true once a SECOND
+    /// caller exists: "a pane that disagreed with the verb about what is in
+    /// hand would be a worse defect than an absent field, and there is
+    /// exactly one function here to disagree with." After this there is still
+    /// exactly one — `sensed.present`'s custody and the driven body's resolve
+    /// through the same fold, differing only in whose hand they ask about.
+    fn carried_by(&self, holder: EntityId) -> Vec<(EntityId, &'static str)> {
+        crate::thing::held_by(&self.ledger, holder, self.day)
+            .into_iter()
+            .filter_map(|thing| {
+                let noun = crate::chamber_prose::noun_for_label(self.ledger.kind_of(thing)?)?;
+                Some((thing, noun))
+            })
+            .collect()
+    }
+
+    /// The carried thing a player's word names, matched exactly as
+    /// [`Self::open_or_close`] and [`Self::examine_chamber`] match an
+    /// anchor's: against the full noun, article and all. One convention for
+    /// every verb that takes a thing, rather than a second, kinder one that
+    /// would make `drop key` work where `open strongbox` does not.
+    fn carried_named(&self, wanted: &str) -> Option<(EntityId, &'static str)> {
+        self.carried()
+            .into_iter()
+            .find(|(_, noun)| noun.to_lowercase() == wanted)
+    }
+
+    /// The thing-kind of `holder` if it is one of THIS chamber's own anchors,
+    /// and `None` if it is something standing somewhere else — asked by
+    /// [`Self::take`] to tell "in the chest here" from "in a chest two rooms
+    /// back".
+    ///
+    /// **It returns the KIND rather than a yes/no, and that is not
+    /// convenience.** The caller's next question is whether the holder is
+    /// open, and the only honest source for "does this holder have a lid" is
+    /// the anchor whose identity just matched — not
+    /// [`hornvale_kernel::Ledger::kind_of`], which answers `None` for a
+    /// container nothing has promoted yet and would send an untouched
+    /// strongbox down [`Self::holder_admits`]'s lidless arm.
+    ///
+    /// **The red that hazard names was a `put`, and `put` does not call this
+    /// function** — the doc said "it is the red this signature was written in
+    /// response to", which credited one verb's defect to the other verb's
+    /// helper (fix round 1). The function BOTH verbs share is
+    /// [`Self::holder_admits`], and what it needs from either caller is a
+    /// kind derived from an ANCHOR rather than from the ledger.
+    /// [`Self::put_in`] gets one inline — it already holds the anchor it
+    /// matched the container's noun against — and [`Self::take`] cannot,
+    /// because it starts from a holder [`crate::thing::location_of`] handed
+    /// it and has to find the anchor again. That search is what this function
+    /// is, and returning the kind rather than a bool is what keeps the ledger
+    /// out of the lid question on the path that has no anchor in hand.
+    ///
+    /// Derived, never minted: [`crate::thing::thing_id`] is a pure function
+    /// of `(room, kind, ordinal)`, so this compares ids for anchors that may
+    /// never have been promoted at all. `ordinal` is `0` for the reason
+    /// `interior::pattern::tests::no_production_room_composes_two_anchors_of_
+    /// one_kind` licenses everywhere else in this campaign.
+    fn holder_anchored_here(
+        &self,
+        interior: &crate::interior::Interior,
+        room: &Facet,
+        holder: EntityId,
+    ) -> Option<hornvale_kernel::KindId> {
+        interior.ids().into_iter().find_map(|id| {
+            let kind = crate::affordance::thing_kind_of(interior.anchor(id).kind);
+            crate::thing::thing_id(room, kind.0, 0)
+                .is_ok_and(|e| e == holder)
+                .then_some(kind)
+        })
+    }
+
+    /// Whether a container of `kind`, carrying entity `holder`, will let
+    /// things through right now — the precondition `take` reads before
+    /// pulling a thing out and `put` reads before pushing one in. **One
+    /// function for both directions**, because a lid a player can reach past
+    /// in one direction and not the other would be a rule nobody wrote.
+    ///
+    /// **Two arms, and the second is the alcove.** A kind carrying
+    /// [`crate::affordance::ObjectProperty::Openable`] has a lid, so its
+    /// [`crate::thing::OPENNESS`] fold decides — with the same authored
+    /// default [`Self::container_is_open`] states, an absent fact reading
+    /// *shut*. A kind with no lid (a recess cut into a wall) admits
+    /// unconditionally: there is nothing on it to be closed.
+    ///
+    /// M+N: it names no kind literal, so a second lidded container arrives
+    /// with no edit here, and a container that is `Encloses` and not
+    /// `Openable` needs none either.
+    fn holder_admits(&self, kind: hornvale_kernel::KindId, holder: EntityId) -> bool {
+        !crate::affordance::carries(kind, crate::affordance::ObjectProperty::Openable)
+            || crate::thing::is_open(&self.ledger, holder, self.day).unwrap_or(false)
+    }
+
+    /// `take <thing>` — the verb the whole campaign is named for (The
+    /// Chattel, Task 12, spec §3.8 and acceptance 1).
+    ///
+    /// # Custody is a `located-in` fact naming the BODY
+    ///
+    /// Nothing is copied, moved between stores, or held in a session field: a
+    /// take is one dated [`crate::thing::LOCATED_IN`] posting whose object is
+    /// [`hornvale_kernel::Value::Entity`] of the driven body
+    /// ([`crate::thing::located_in_holder_fact`]). That is what makes custody
+    /// survive `possess --out` for free — a saved world carries the ledger
+    /// (decision 0368) and the fold that reads it is the same fold either
+    /// side of the save.
+    ///
+    /// # The three ledger states a takeable slot can be in
+    ///
+    /// The grammar's half of the offer — *does this room compose a key at
+    /// all* — is `interior.ids()`, and the noun match against it is the same
+    /// one `open`/`examine` use. The LEDGER's half is
+    /// [`crate::thing::is_latent`], and this is its first production caller:
+    ///
+    /// | state | answer |
+    /// |---|---|
+    /// | never placed, and the GRAMMAR puts it inside a shut container | "shut away in something closed" |
+    /// | latent otherwise (never placed and reachable, or placed here) | taken |
+    /// | already located on the body | "you are already carrying it" |
+    /// | located in a container standing here | taken, if that container admits ([`Self::holder_admits`]) |
+    /// | anywhere else | the LEDGER is asked whether anything of that name is here ([`Self::take_from_the_ledger`]) |
+    ///
+    /// The fourth row is what makes `put` reversible: a key stowed in a chest
+    /// stops being latent, so without it the room would refuse to give back
+    /// what the player had just put down.
+    ///
+    /// # THE LID GATE RUNS ON BOTH PATHS NOW, AND THIS DOC USED TO RECORD THE
+    /// DEFECT INSTEAD OF FIXING IT
+    ///
+    /// The first row is new (Task 13, fix round 1). It used to be absent, and
+    /// the absence was **asymmetric in a way no reader would guess**: the
+    /// container check sat behind `if !is_latent(…)`, so a key the LEDGER had
+    /// put in a chest was refused (*"The key is shut away in something
+    /// closed"*) while a key the GRAMMAR had composed inside the same chest —
+    /// the untouched, as-generated case, which is every world on its first
+    /// turn — came out through a locked lid. Measured through the shipped CLI
+    /// on seed 1, standing in the storeroom:
+    ///
+    /// ```text
+    /// > open a strongbox   It is locked, and you are carrying nothing that would open it.
+    /// > take a key         You take the key.
+    /// > open a strongbox   You open the strongbox. Within it: a key.
+    /// ```
+    ///
+    /// The only lock in the game fell in one move. This doc RECORDED that —
+    /// "the consequence is a real defect and it is NOT in this function" —
+    /// and deferred it to an authored-grammar fix, on the grounds that
+    /// gating the verb alone "would trade a lock nobody can defend for a
+    /// verb nobody can reach". That reasoning was sound and its conclusion
+    /// was still wrong, because it treated the two halves as alternatives.
+    /// They are one change: `interior::pattern`'s `the-key-on-the-ledge`
+    /// puts a key in the hearthroom — a room `role_for` guarantees is
+    /// shallower than any `Role::Store` — so the lid can close without the
+    /// strongbox becoming unopenable. Neither half is safe alone.
+    ///
+    /// **It asks `Anchor.within`, and only on the latent path.** The
+    /// grammar's containment is the truth exactly while the ledger has no
+    /// opinion; once a thing has been placed, its `located-in` fold is
+    /// authoritative and the anchor graph is stale. Applying the gate
+    /// unconditionally would refuse a key the player had already taken out
+    /// and set down on that room's own floor, because the grammar still says
+    /// it lives in the chest.
+    ///
+    /// **The lid, not the lock**, and the two are separate states (decision
+    /// 0399). This asks [`Self::holder_admits`] — the same question `put`
+    /// and [`Self::take_from_the_ledger`] ask about the same lid, so one
+    /// container cannot be reachable one way and not the other. A locked box
+    /// is refused here because it is also shut, not because it is locked;
+    /// unlock it, open it, and `take` proceeds.
+    ///
+    /// **What still is NOT gated, stated so the asymmetry that remains is a
+    /// choice.** `chamber_prose::chamber_nouns` still names a key inside a
+    /// shut strongbox, `describe_chamber` still says so on entry, and
+    /// `examine a key` still answers in full. Those belong to
+    /// `PLAY-closed-container-conceals-nothing`, whose bill decision 0398
+    /// priced. A verb that MOVES a thing is the one place the lid has to
+    /// mean something, and it does now.
+    ///
+    /// # IT CHARGES, UNLIKE `open`/`close`/`warm`, AND THE REASON IS
+    /// REPRESENTABILITY RATHER THAN TARIFF
+    ///
+    /// It reuses [`Self::charge_within_room`]'s existing
+    /// [`crate::action::Action::MoveWithin`] dial — the same reuse The
+    /// Gallery's `down`/`up` argued for, on the same grounds (one flight of
+    /// stairs, or one thing lifted, is the scale of act that dial already
+    /// prices). **No new cost model is minted**, which is what spec §3.4
+    /// forbids; a dial that already exists is not one.
+    ///
+    /// The first draft made all three free, on `warm`'s precedent, and it
+    /// was WRONG in a way only running it showed. Custody is a fold over
+    /// dated postings, [`hornvale_kernel::Ledger::commit`] returns `false`
+    /// for a fact identical to one already held, and a free verb leaves the
+    /// clock where it found it — so `take`, `put`, `take` in one instant
+    /// commits `(key -> body)`, `(key -> chest)`, and then a THIRD fact
+    /// byte-identical to the first, which is deduped away. The postings at
+    /// that instant are `[body, chest]`, "last posting at one instant wins"
+    /// (`thing::latest_object_at_or_before`) resolves to the chest, and the
+    /// player is told they picked up a key that the world says is still in
+    /// the box. Measured, not reasoned:
+    ///
+    /// ```text
+    /// > take a key                  -> You take the key.
+    /// > carrying                    -> You are carrying nothing.
+    /// ```
+    ///
+    /// Charging gives each act its own instant, so the fold has an order to
+    /// read. **The same hazard was live in `open`/`close`, which shipped
+    /// free, and fix round 1 closed it there too**: `open`, `close`, `open` at
+    /// one instant dedups the third fact and leaves the chest SHUT while the
+    /// reply says it opened, because every reply in [`Self::open_or_close`] is
+    /// computed before its commit. That verb pair now takes the same
+    /// `MoveWithin` charge, before its writes and after its refusals; see its
+    /// own doc for the measured stuck-instant transcript.
+    ///
+    /// **The sentence this replaces deferred the repair to a witness that
+    /// does not exist**, and that is the part worth keeping. It read: *"those
+    /// two verbs are Task 11's and their transcripts are in the galleries."*
+    /// No gallery contains `open`, `close`, `take`, `drop`, `put` or
+    /// `carrying` at all — `scripts/possession-walk.txt` and
+    /// `scripts/possession-over-time-walk.txt` are the only inputs
+    /// `book/src/gallery/possession-*.md` is generated from, and neither
+    /// types any of the six. A deferral that names a witness nobody checked
+    /// reads as coverage; there was none, and the defect survived a task
+    /// boundary because of it.
+    fn take(&mut self, rest: &str) -> Turn {
+        let wanted = rest.trim().to_lowercase();
+        if wanted.is_empty() {
+            return Turn::Out(TAKE_WHAT_HINT.to_string());
+        }
+        let (Some(interior), Some(room)) =
+            (self.chamber_interior_here(), self.chamber_facet_here())
+        else {
+            return Turn::Out(NOTHING_HERE_TO_TAKE_REFUSAL.to_string());
+        };
+        let Some(id) = interior.ids().into_iter().find(|&id| {
+            crate::chamber_prose::noun(interior.anchor(id).kind)
+                .is_some_and(|n| n.to_lowercase() == wanted)
+        }) else {
+            return self.take_from_the_ledger(&interior, &room, &wanted, rest.trim());
+        };
+
+        let thing_kind = crate::affordance::thing_kind_of(interior.anchor(id).kind);
+        let bare = crate::chamber_prose::without_article(
+            crate::chamber_prose::noun(interior.anchor(id).kind).expect("a noun matched above"),
+        );
+        if !crate::affordance::offered_to_observer(thing_kind, self.driven_body(), &self.knowledge)
+            .contains(&crate::affordance::OfferedVerb::Take)
+        {
+            return Turn::Out(format!("The {bare} is not yours to carry off."));
+        }
+
+        let thing = crate::thing::thing_id(&room, thing_kind.0, 0)
+            .expect("a chamber facet packs, or the interior above could not have composed");
+        let body = self.agent_entity();
+        // The GRAMMAR's containment, authoritative exactly while the ledger
+        // holds NO opinion about where this thing is.
+        //
+        // **Asked of the location fold's `None`, and not of
+        // [`crate::thing::is_latent`], and the difference is a real state a
+        // player can produce.** `is_latent` is true for two things: an anchor
+        // nothing ever placed, and a thing set down on THIS room's own floor.
+        // Only the first has no ledger answer to defer to. Gating on
+        // `is_latent` would refuse a key the player had taken out of the chest
+        // and dropped at their feet the moment they shut the lid — the anchor
+        // graph still says that key lives in the chest, forever, because a
+        // composed interior is a pure function of the room and never moves.
+        if crate::thing::location_of(&self.ledger, thing, self.day).is_none()
+            && let Some(container) = interior.anchor(id).within
+        {
+            let container_kind = crate::affordance::thing_kind_of(interior.anchor(container).kind);
+            let container_entity = crate::thing::thing_id(&room, container_kind.0, 0)
+                .expect("a chamber facet packs, or the interior could not have composed");
+            if !self.holder_admits(container_kind, container_entity) {
+                return Turn::Out(format!("The {bare} is shut away in something closed."));
+            }
+        }
+        if !crate::thing::is_latent(&self.ledger, &room, thing_kind.0, 0, self.day)
+            .expect("a chamber facet packs")
+        {
+            // THIS ROOM'S OWN ANCHOR IS SOMEWHERE ELSE — so ask the ledger
+            // whether something of that NAME is here anyway, rather than
+            // refusing on the strength of the one thing the grammar happens
+            // to spell. The two arms below used to answer "You see no … here"
+            // outright, which was harmless while the only key anchor in the
+            // world sat in the deepest room a walk could reach and nothing
+            // could be carried to it. `the-key-by-the-loom` ends that: a
+            // second room composes a key anchor, so a key carried in from
+            // elsewhere and set down there would be shadowed by an anchor
+            // whose own key is a room away in a chest, and a player would be
+            // told there was no key while standing on one.
+            let holder = match crate::thing::location_of(&self.ledger, thing, self.day) {
+                Some(Value::Entity(h)) if h == body => {
+                    return Turn::Out(format!("You are already carrying the {bare}."));
+                }
+                Some(Value::Entity(h)) => h,
+                _ => return self.take_from_the_ledger(&interior, &room, &wanted, rest.trim()),
+            };
+            let Some(holder_kind) = self.holder_anchored_here(&interior, &room, holder) else {
+                return self.take_from_the_ledger(&interior, &room, &wanted, rest.trim());
+            };
+            if !self.holder_admits(holder_kind, holder) {
+                return Turn::Out(format!("The {bare} is shut away in something closed."));
+            }
+        }
+
+        if let Err(e) = self.charge_within_room() {
+            return Turn::Out(e);
+        }
+        crate::thing::promote(
+            &mut self.ledger,
+            &self.registry,
+            &room,
+            thing_kind.0,
+            0,
+            self.day,
+        )
+        .expect("a chamber facet packs, and instance-of is a kernel-core predicate");
+        let fact = crate::thing::located_in_holder_fact(thing, body, self.day);
+        self.ledger
+            .commit(fact, &self.registry)
+            .expect("LOCATED_IN is registered by Session::start and is non-functional");
+        Turn::Out(format!("You take the {bare}."))
+    }
+
+    /// [`Self::take`]'s second source: a thing the LEDGER says is lying on
+    /// this chamber's floor, rather than one the grammar composes here.
+    ///
+    /// **A dropped thing has no anchor, and that is the whole reason this
+    /// exists.** `interior_of` composes what a room's *pattern grammar* puts
+    /// in it; a key carried in from two rooms away is composed by nothing
+    /// here, so the noun match one frame up cannot see it and a player who set
+    /// it down would never pick it up again. [`crate::thing::lying_in`] is
+    /// [`crate::thing::held_by`]'s room-keyed sibling and answers exactly the
+    /// question that gap poses.
+    ///
+    /// **No property gate, deliberately.** A thing on this floor is here
+    /// because a body carried it here, and `take` already asked whether it was
+    /// [`crate::affordance::ObjectProperty::Portable`] on the way in. Asking
+    /// again would let a registry edit strand a thing in a room forever, with
+    /// no verb able to lift it.
+    ///
+    /// **The room's PROSE does not name it, and this doc says so rather than
+    /// implying otherwise.** `chamber_prose::describe_chamber` renders from
+    /// the composed interior alone, so a dropped key is takeable here and
+    /// unmentioned here. Putting the ledger's own things into the narration is
+    /// the wire's half of this campaign (Task 13, "carried things on the
+    /// snapshot"), not this verb's.
+    ///
+    /// **THE DIVERGENCE RUNS BOTH WAYS, AND ONLY THIS DIRECTION WAS EVER
+    /// WRITTEN DOWN** (fix round 1). The paragraph above says the prose omits
+    /// what the ledger holds. The prose also ASSERTS what the ledger denies:
+    /// after `take a key`, `look` still lists *"a key"* among the room's
+    /// contents, and `open a strongbox` still answers *"Within it: a key"*
+    /// while the key is in the player's hand — because
+    /// [`crate::chamber_prose::contents_of`] reads `nouns_within`, the
+    /// GRAMMAR's containment, with no latency filter and no ledger at all.
+    /// Neither direction is repaired here: both belong to the deferred
+    /// containment work registered as
+    /// `PLAY-closed-container-conceals-nothing`, whose bill (threading day and
+    /// ledger into a pure, published `describe_chamber`) decision 0398 already
+    /// priced.
+    ///
+    /// # A SECOND SOURCE: A CONTAINER STANDING HERE (fix round 1)
+    ///
+    /// The floor is not the only place the grammar cannot see. `put a key in
+    /// an alcove`, in any room whose grammar composes no key of its own, used
+    /// to lose the key **permanently and silently**: [`Self::take`]'s
+    /// container arm sits behind the noun match against `interior.ids()`, and
+    /// a room composing no key anchor never reaches it, so control arrived
+    /// here — and [`crate::thing::lying_in`] is room-keyed and DIRECT, so it
+    /// cannot see a thing whose location is a container entity. Measured
+    /// through the shipped CLI on seed 1, in the alcove room two doors in:
+    ///
+    /// ```text
+    /// > put a key in an alcove  -> You put the key in the alcove.
+    /// > take a key              -> You see no a key here.
+    /// > drop a key              -> You are not carrying a key.
+    /// > look                    -> A small room, holding a doorway and an alcove.
+    /// ```
+    ///
+    /// That is the exact loss [`NOWHERE_TO_SET_DOWN_REFUSAL`] refuses `drop`
+    /// out of doors to prevent ("it would be lost"), arriving through the
+    /// sibling verb with no refusal and no record. So this function asks the
+    /// ledger twice: the floor first, then every container this room's
+    /// grammar stands ([`Self::stowed_in_a_container_here`]). A shut container
+    /// answers with the same sentence `take`'s own container arm gives, since
+    /// it is the same [`Self::holder_admits`] question about the same lid.
+    fn take_from_the_ledger(
+        &mut self,
+        interior: &crate::interior::Interior,
+        room: &Facet,
+        wanted: &str,
+        typed: &str,
+    ) -> Turn {
+        let here = crate::thing::lying_in(&self.ledger, room, self.day)
+            .expect("a chamber facet packs, or the interior could not have composed");
+        let on_the_floor = here.into_iter().find_map(|thing| {
+            let noun = crate::chamber_prose::noun_for_label(self.ledger.kind_of(thing)?)?;
+            (noun.to_lowercase() == wanted).then_some((thing, noun))
+        });
+        // The floor first, then the containers standing on it — a thing set
+        // down loose is the commoner case and the cheaper read, and a thing
+        // cannot be in both places at once, so the order is a preference and
+        // never an ambiguity.
+        let found = match on_the_floor {
+            Some((thing, noun)) => Some((thing, noun, None)),
+            None => self
+                .stowed_in_a_container_here(interior, room, wanted)
+                .map(|(thing, noun, kind, holder)| (thing, noun, Some((kind, holder)))),
+        };
+        let Some((thing, noun, stowed)) = found else {
+            return Turn::Out(format!("You see no {typed} here."));
+        };
+        let bare = crate::chamber_prose::without_article(noun);
+        if let Some((holder_kind, holder)) = stowed
+            && !self.holder_admits(holder_kind, holder)
+        {
+            return Turn::Out(format!("The {bare} is shut away in something closed."));
+        }
+        if let Err(e) = self.charge_within_room() {
+            return Turn::Out(e);
+        }
+        let fact = crate::thing::located_in_holder_fact(thing, self.agent_entity(), self.day);
+        self.ledger
+            .commit(fact, &self.registry)
+            .expect("LOCATED_IN is registered by Session::start and is non-functional");
+        Turn::Out(format!("You take the {bare}."))
+    }
+
+    /// The thing named `wanted` sitting inside one of THIS room's containers,
+    /// with the container's kind and entity — [`Self::take_from_the_ledger`]'s
+    /// second source (fix round 1), and the half that closes `put`'s one-way
+    /// trapdoor.
+    ///
+    /// **It starts from the GRAMMAR and asks the LEDGER, which is the only
+    /// order that terminates.** A room's containers are its anchors, so the
+    /// enumeration is `interior.ids()` filtered to
+    /// [`crate::affordance::ObjectProperty::Encloses`]; each one's entity is
+    /// derived by [`crate::thing::thing_id`] (a pure function, so a container
+    /// nothing has ever promoted still resolves) and asked what it holds
+    /// through [`crate::thing::held_by`]. The reverse order — enumerate every
+    /// thing in the ledger and ask where it is — would answer about containers
+    /// in other rooms, which is the question [`Self::holder_anchored_here`]
+    /// exists to say no to.
+    ///
+    /// **DIRECT containment, one level, deliberately.** A chest inside a chest
+    /// is not reachable here, and nothing in this world composes one:
+    /// `Anchor.within` nests exactly one deep and no `Encloses` kind is
+    /// `Within` another. A transitive walk would be a fold nothing could
+    /// exercise, and the honest place for it is the day something nests.
+    ///
+    /// **No openness check**, and that is not an omission: the caller needs
+    /// the pair to ask [`Self::holder_admits`] and give the shut lid its own
+    /// sentence, which a `None` here could not be told apart from "no such
+    /// thing in this room". Deterministic by construction: `interior.ids()`
+    /// and `held_by` both answer in `EntityId` order, never ledger order.
+    fn stowed_in_a_container_here(
+        &self,
+        interior: &crate::interior::Interior,
+        room: &Facet,
+        wanted: &str,
+    ) -> Option<(EntityId, &'static str, hornvale_kernel::KindId, EntityId)> {
+        interior.ids().into_iter().find_map(|id| {
+            let kind = crate::affordance::thing_kind_of(interior.anchor(id).kind);
+            if !crate::affordance::carries(kind, crate::affordance::ObjectProperty::Encloses) {
+                return None;
+            }
+            let holder = crate::thing::thing_id(room, kind.0, 0).ok()?;
+            crate::thing::held_by(&self.ledger, holder, self.day)
+                .into_iter()
+                .find_map(|thing| {
+                    let noun = crate::chamber_prose::noun_for_label(self.ledger.kind_of(thing)?)?;
+                    (noun.to_lowercase() == wanted).then_some((thing, noun, kind, holder))
+                })
+        })
+    }
+
+    /// `drop <thing>` — custody's other direction: one
+    /// [`crate::thing::LOCATED_IN`] posting naming the ROOM instead of the
+    /// body ([`crate::thing::located_in_room_fact`]).
+    ///
+    /// **It resolves the thing against CUSTODY, not against the room**, and
+    /// that is the whole difference from [`Self::take`]. A carried thing may
+    /// be of a kind this chamber's grammar never composes — it came from a
+    /// room two doors back — so there is no anchor here to match a word
+    /// against and [`crate::chamber_prose::noun`] cannot be reached from an
+    /// `AnchorKind` this interior does not hold.
+    ///
+    /// **The order of its refusals is deliberate**: the custody lookup comes
+    /// BEFORE the band check, so a player carrying nothing is told so
+    /// wherever they are standing, rather than being told about the floor.
+    ///
+    /// **Chamber-only, and the reason is mechanical rather than physical.** A
+    /// body out of doors could obviously set something down; what it could
+    /// not do is ever find it again. [`Self::chamber_facet_here`] is the only
+    /// room key a thing's identity is derived under, and no locale-band
+    /// interior composes a portable anchor, so a thing dropped outside would
+    /// have a location no offer list ever reads — lost, silently, with a
+    /// cheerful reply. Refusing with the reason is the honest half.
+    fn drop_carried(&mut self, rest: &str) -> Turn {
+        let wanted = rest.trim().to_lowercase();
+        if wanted.is_empty() {
+            return Turn::Out(DROP_WHAT_HINT.to_string());
+        }
+        let Some((thing, noun)) = self.carried_named(&wanted) else {
+            return Turn::Out(format!("You are not carrying {}.", rest.trim()));
+        };
+        let Some(room) = self.chamber_facet_here() else {
+            return Turn::Out(NOWHERE_TO_SET_DOWN_REFUSAL.to_string());
+        };
+        let bare = crate::chamber_prose::without_article(noun);
+        if let Err(e) = self.charge_within_room() {
+            return Turn::Out(e);
+        }
+        let fact = crate::thing::located_in_room_fact(thing, &room, self.day)
+            .expect("a chamber facet packs");
+        self.ledger
+            .commit(fact, &self.registry)
+            .expect("LOCATED_IN is registered by Session::start and is non-functional");
+        Turn::Out(format!("You set the {bare} down."))
+    }
+
+    /// `put <thing> in <container>` — the third direction custody can go, and
+    /// the one that makes [`crate::thing::room_of`]'s transitive walk a thing
+    /// a player can produce rather than a thing a test can construct.
+    ///
+    /// **Two objects, resolved in two different places**, which is why this
+    /// is not folded into [`Self::drop_carried`]: the thing comes from
+    /// custody and the container from this chamber's anchors. Both halves of
+    /// the container's precondition are act-level rather than offer-level —
+    /// [`crate::affordance::ObjectProperty::Encloses`] is what makes it a
+    /// container at all, and [`Self::holder_admits`] is whether it is open —
+    /// so neither is expressible in `offered_to_observer`, which holds one
+    /// object. `Lockable`'s omission from `required_properties` is the same
+    /// argument, and this is its second instance.
+    ///
+    /// **The preposition is `" in "`, matched literally.** No noun this
+    /// module authors contains it, so a split on the first occurrence
+    /// partitions the line exactly. A bare `put` and a `put` with no `in`
+    /// both answer with the shape rather than a refusal — `examine`'s own
+    /// bare arm is the precedent: the player typed a real verb.
+    fn put_in(&mut self, rest: &str) -> Turn {
+        let line = rest.trim().to_lowercase();
+        if line.is_empty() {
+            return Turn::Out(PUT_WHAT_HINT.to_string());
+        }
+        let Some((what, holder_word)) = line.split_once(" in ") else {
+            return Turn::Out(PUT_WHAT_HINT.to_string());
+        };
+        let (what, holder_word) = (what.trim(), holder_word.trim());
+        let Some((thing, noun)) = self.carried_named(what) else {
+            return Turn::Out(format!("You are not carrying {what}."));
+        };
+        let (Some(interior), Some(room)) =
+            (self.chamber_interior_here(), self.chamber_facet_here())
+        else {
+            return Turn::Out(format!("You see no {holder_word} here."));
+        };
+        let Some(id) = interior.ids().into_iter().find(|&id| {
+            crate::chamber_prose::noun(interior.anchor(id).kind)
+                .is_some_and(|n| n.to_lowercase() == holder_word)
+        }) else {
+            return Turn::Out(format!("You see no {holder_word} here."));
+        };
+
+        let holder_kind = crate::affordance::thing_kind_of(interior.anchor(id).kind);
+        let holder_bare = crate::chamber_prose::without_article(
+            crate::chamber_prose::noun(interior.anchor(id).kind).expect("a noun matched above"),
+        );
+        let bare = crate::chamber_prose::without_article(noun);
+        if !crate::affordance::carries(holder_kind, crate::affordance::ObjectProperty::Encloses) {
+            return Turn::Out(format!("The {holder_bare} does not hold things."));
+        }
+        // Derived first and promoted only once the act is certain, so a
+        // refused `put` mints nothing: `promote` commits an `instance-of`
+        // dated `self.day`, and promoting before the charge would date that
+        // fact one instant earlier than the posting beside it — the
+        // across-days duplication `thing::set_openness`'s own doc names.
+        let holder = crate::thing::thing_id(&room, holder_kind.0, 0)
+            .expect("a chamber facet packs, or the interior could not have composed");
+        if !self.holder_admits(holder_kind, holder) {
+            return Turn::Out(format!("The {holder_bare} is shut."));
+        }
+        if let Err(e) = self.charge_within_room() {
+            return Turn::Out(e);
+        }
+        crate::thing::promote(
+            &mut self.ledger,
+            &self.registry,
+            &room,
+            holder_kind.0,
+            0,
+            self.day,
+        )
+        .expect("a chamber facet packs, and instance-of is a kernel-core predicate");
+        let fact = crate::thing::located_in_holder_fact(thing, holder, self.day);
+        self.ledger
+            .commit(fact, &self.registry)
+            .expect("LOCATED_IN is registered by Session::start and is non-functional");
+        Turn::Out(format!("You put the {bare} in the {holder_bare}."))
+    }
+
+    /// `carrying` — what the driven body has in hand, read off the same fold
+    /// every other custody question uses ([`Self::carried`]).
+    ///
+    /// **In-character, and gated by the body.** See [`IN_CHARACTER_VERBS`]'s
+    /// own doc for the argument and for the mechanical half — the
+    /// disjointness check could not have caught the other placement, which is
+    /// why `carrying_is_refused_while_asleep` exists.
+    ///
+    /// Takes no argument, like `knows` and `needs` beside it, and ignores one
+    /// rather than refusing: the two verbs it is modelled on do the same, and
+    /// a body's whole custody is a short list.
+    ///
+    /// The list is formatted by [`crate::chamber_prose::listed`], which is
+    /// literally the function `open`'s "Within it: …" clause is made of, so a
+    /// chest and a pair of hands cannot spell one list two ways.
+    fn carrying(&self) -> String {
+        let held = self.carried();
+        let nouns: Vec<&str> = held.iter().map(|(_, noun)| *noun).collect();
+        match crate::chamber_prose::listed(&nouns) {
+            None => "You are carrying nothing.".to_string(),
+            Some(list) => format!("You are carrying {list}."),
+        }
     }
 
     /// The out-of-character namespace's own dispatch: every verb reachable
@@ -2459,7 +3583,7 @@ impl<'w> Session<'w> {
     /// | arm | where it discriminates | where it is an alias, and why |
     /// |---|---|---|
     /// | `!map` | out of doors, and indoors under a lens | indoors under [`crate::lens::Lens::Off`] — the plan carries no colour to decline, so the bytes match `map` exactly |
-    /// | `!examine` | the chamber band, on a creature sight withheld | the walk band (the objective eyes reach [`Self::purview_through`] but the legend carries nouns and datums, never colour) and underground (no creature arm at all) |
+    /// | `!examine` | the chamber band, on a creature sight withheld | the walk band (the objective eyes reach [`Self::purview_through`] but the legend carries nouns and datums, never colour) and underground (`examine_underground` takes no `Perceiving`/`Eyes` parameter at all, and reads `sight_reach()` — a constant unaffected by objective mode — for its own creature arm too) |
     /// | `!needs` | the chamber band | out of doors, where `sighting()` is `None` and [`Perceiving::Body`] already *is* the limit |
     /// | `!wait` | the chamber band, on both halves of the motion narration | out of doors, for the same reason as `!needs` |
     ///
@@ -2467,6 +3591,18 @@ impl<'w> Session<'w> {
     /// a place with nothing withheld is the subjective view of it. What would
     /// be a defect is advertising otherwise, so [`HELP`] states the band each
     /// arm is *for* rather than promising a difference it cannot always make.
+    ///
+    /// **Underground's cell in that row used to read "(no creature arm at
+    /// all)", and the reason — not the conclusion — is what The Gallery's
+    /// Task 11 falsified.** Underground has a creature arm now:
+    /// [`Self::underground_nouns`] gains the chamber's own derived resident
+    /// (spec §3.6) whenever [`Self::underground_resident`] finds one, lit.
+    /// The row's CONCLUSION survives unchanged — `examine_underground` still
+    /// takes no `Perceiving`/`Eyes` parameter, and the arm's own visibility
+    /// test (`sight_reach()`) is still a constant no objective mode moves —
+    /// so the bare and `!`-prefixed calls still agree byte-for-byte; only the
+    /// STATED REASON was stale, the same "fix the reason, keep the
+    /// conclusion" shape a driver.rs correction took one task earlier.
     ///
     /// # `!look` and `!knows`: shipped in Task 7's fix round, on a DIFFERENT
     /// discriminator
@@ -2530,6 +3666,10 @@ impl<'w> Session<'w> {
                 self.out(self.plan_here(&OBJECTIVE_EYES))
             }
             "map" if self.inside.is_some() => Turn::Out(INDOOR_CHART_REFUSAL.to_string()),
+            // The underground half of Task 8, objective mood: same rule as
+            // the bare form just below — a level, not the country overhead.
+            "map" if self.underground.is_some() && rest.is_empty() => self.out(self.level_here()),
+            "map" if self.underground.is_some() => Turn::Out(UNDERGROUND_CHART_REFUSAL.to_string()),
             "map" => self.map(rest, &OBJECTIVE_EYES),
             "examine" if self.inside.is_some() && !rest.is_empty() => {
                 Turn::Out(self.examine_chamber(rest, Perceiving::Objectively))
@@ -2620,6 +3760,19 @@ impl<'w> Session<'w> {
                     self.out(self.plan_here(&self.eyes))
                 }
                 "map" if self.inside.is_some() => Turn::Out(INDOOR_CHART_REFUSAL.to_string()),
+                // The underground band (The Gallery, Task 8, spec §5): the
+                // pane and the verb agree now — both answer `underground`,
+                // never the walk band's chart of the country overhead. No
+                // `eyes` parameter here, matching `level_here`'s own reason
+                // (`vessel/level/v1` carries an explicit visibility state
+                // per cell, never a colour, so there is nothing for a lens
+                // to filter).
+                "map" if self.underground.is_some() && rest.is_empty() => {
+                    self.out(self.level_here())
+                }
+                "map" if self.underground.is_some() => {
+                    Turn::Out(UNDERGROUND_CHART_REFUSAL.to_string())
+                }
                 "map" => self.map(rest, &self.eyes),
                 // `go` is band-aware for the same reason `look` and `map` are, and
                 // this arm is the reversal The Blocking owes The Lintel: indoors a
@@ -2635,12 +3788,14 @@ impl<'w> Session<'w> {
                 "go" if self.submerged.is_some() => {
                     Turn::Out(SUBMERGED_LATERAL_REFUSAL.to_string())
                 }
-                // The chamber lattice, likewise: this campaign ships only the
-                // entrance address, no walkable interior, so a bearing from it
-                // has nowhere to mean either (The Deep Realm, Task 5).
-                "go" if self.underground.is_some() => {
-                    Turn::Out(UNDERGROUND_LATERAL_REFUSAL.to_string())
-                }
+                // The cave level, by contrast, IS reversed (The Gallery, Task
+                // 4): Task 3 gave it real cells to walk, which is what makes
+                // `UNDERGROUND_LATERAL_REFUSAL`'s own claim false.
+                // `step_underground` is `Self::step`'s reversal one band
+                // over, following the same three rules its own doc names —
+                // a diagonal refused before any lookup, passability asked as
+                // a predicate, and lateral movement that never changes band.
+                "go" if self.underground.is_some() => self.step_underground(rest),
                 "go" => self.go(rest),
                 // Band-aware, for the same reason `look` is: the outdoor path resolves
                 // against the LOCALE's two grains, which know nothing of what stands
@@ -2674,7 +3829,7 @@ impl<'w> Session<'w> {
                     Turn::Out(SUBMERGED_LATERAL_REFUSAL.to_string())
                 }
                 "back" if self.underground.is_some() => {
-                    Turn::Out(UNDERGROUND_LATERAL_REFUSAL.to_string())
+                    Turn::Out(UNDERGROUND_BACK_REFUSAL.to_string())
                 }
                 "back" => self.back(),
                 "wait" => self.wait(rest, Perceiving::Body),
@@ -2703,6 +3858,49 @@ impl<'w> Session<'w> {
                 // those four from minting. See `Self::warm`'s own doc for
                 // why it needs no `Action` variant either.
                 "warm" => self.warm(),
+                // The two verbs The Chattel adds (Task 11, spec §3.7/§3.8).
+                // Unlike `warm` just above they COMMIT — an `openness` fact
+                // about a promoted thing — which is why `open`/`close` are
+                // the second and third entries in `IN_CHARACTER_VERBS` that
+                // write to the ledger at all, and why each carries its own
+                // `<verb>_is_refused_while_asleep` test rather than trusting
+                // the roster-agreement check (which cannot see a verb missing
+                // from both rosters — The Latch shipped `clear` that way).
+                //
+                // Free, like `warm`: `clock::base_ticks` prices no lid, and
+                // minting a cost dial here is the "new cost model" spec §3.4
+                // forbids. One handler for both directions, for the reason
+                // `thing::set_openness`'s doc gives about its own halves.
+                "open" => self.open_or_close(rest, true),
+                "close" => self.open_or_close(rest, false),
+                // The four verbs The Chattel adds last (Task 12, spec §3.8,
+                // acceptance 1): the campaign's thesis — an identity that
+                // moves — becomes playable here. Three of them WRITE (a
+                // `located-in` posting naming a body, a room, or a chest),
+                // which puts `take`/`drop`/`put` in the same consequential
+                // class as `clear` and `open`/`close`, and is why each has its
+                // own `<verb>_is_refused_while_asleep` rather than trusting
+                // the roster-agreement check.
+                //
+                // `carrying` writes nothing and is in-character all the same:
+                // what it reads IS the body. See `IN_CHARACTER_VERBS`'s doc
+                // for that argument and for the blind zone in
+                // `session_control_is_never_an_in_character_verb` that would
+                // have let the other choice ship ungated.
+                //
+                // The three writers CHARGE, unlike `open`/`close`/`warm`
+                // just above, and they reuse `Action::MoveWithin` rather
+                // than minting a dial — The Gallery's `down`/`up`
+                // precedent, so spec §3.4's "no new cost model" is intact.
+                // The reason is not tariff but REPRESENTABILITY: two moves
+                // of one thing at one instant are indistinguishable to an
+                // as-of-day fold, and a repeat posting is deduped outright.
+                // See `Session::take`'s own doc for the measured failure.
+                // `carrying` charges nothing, like `knows` and `needs`.
+                "take" => self.take(rest),
+                "drop" => self.drop_carried(rest),
+                "put" => self.put_in(rest),
+                "carrying" => Turn::Out(self.carrying()),
                 // THE FOUR VERTICAL BAND CHANGES, AND THE ONE THING THEY DO
                 // NOT DO (fix round 1). Each is an in-character act — the gate
                 // above stands in front of all four — and each still charges
@@ -2717,6 +3915,17 @@ impl<'w> Session<'w> {
                 "surface" => self.surface(),
                 "delve" => self.delve(),
                 "climb" => self.climb(),
+                // The Gallery, Task 5: unlike the four vertical band changes
+                // just above, a stairs move BETWEEN RUNGS charges — it
+                // reuses the very `Action::MoveWithin` dial
+                // `step_underground` already prices one lateral cell with,
+                // rather than inventing a new one (spec §3.4 forbids that).
+                // One flight of stairs is the same scale of act as one cell,
+                // not a whole band's worth of descent the way `dive`/`delve`
+                // are, which is what makes reusing that dial the right call
+                // rather than the free ride the four above get.
+                "down" => self.take_stairs(true),
+                "up" => self.take_stairs(false),
                 // The Latch, Task 5: the act that clears a barred passage.
                 // Gated by the same band guards `delve` carries just above
                 // (`clear_passage`'s own doc explains why), so it is dispatched
@@ -2755,7 +3964,7 @@ impl<'w> Session<'w> {
                     Turn::Out(SUBMERGED_LATERAL_REFUSAL.to_string())
                 }
                 other if self.underground.is_some() && parse_compass(other).is_some() => {
-                    Turn::Out(UNDERGROUND_LATERAL_REFUSAL.to_string())
+                    self.step_underground(other)
                 }
                 other if parse_compass(other).is_some() => self.go(other),
                 other => Turn::Out(format!("No verb '{other}' ('!help' lists them).")),
@@ -2913,12 +4122,10 @@ impl<'w> Session<'w> {
     /// EITHER outcome this comment tracks goes missing.
     fn delve(&mut self) -> Turn {
         if self.inside.is_some() {
-            return Turn::Out("There is no rock to delve into in here.".to_string());
+            return Turn::Out(NO_ROCK_INSIDE_REFUSAL.to_string());
         }
         if self.underground.is_some() {
-            return Turn::Out(
-                "You are already below; 'climb' brings you back up first.".to_string(),
-            );
+            return Turn::Out(ALREADY_BELOW_DELVE_REFUSAL.to_string());
         }
         self.delve_column(self.chamber_column_here())
     }
@@ -2938,7 +4145,7 @@ impl<'w> Session<'w> {
         column: Option<(hornvale_kernel::Vertex, hornvale_terrain::Cave)>,
     ) -> Turn {
         let Some((vertex, cave)) = column else {
-            return Turn::Out("There is no cave here to delve into.".to_string());
+            return Turn::Out(NO_CAVE_TO_DELVE_REFUSAL.to_string());
         };
         self.delve_at(vertex, cave)
     }
@@ -2970,7 +4177,7 @@ impl<'w> Session<'w> {
         // `chamber_column_here` already resolved the cave through, so no
         // second, independently-chosen lookup is introduced here.
         let Some(terrain) = self.wctx.terrain.as_ref() else {
-            return Turn::Out("There is no cave here to delve into.".to_string());
+            return Turn::Out(NO_CAVE_TO_DELVE_REFUSAL.to_string());
         };
         // The Latch: a barred passage refuses descent even where the lattice
         // realizes a chamber. This is the first precondition in the tree that
@@ -2996,14 +4203,28 @@ impl<'w> Session<'w> {
             addr,
             &overrides,
         ) {
-            None => Turn::Out(
-                "The cave mouth is here, but the rock beyond is sealed; there is no way down."
-                    .to_string(),
-            ),
+            None => Turn::Out(UNREALIZED_CHAMBER_REFUSAL.to_string()),
             Some(chamber) => {
-                self.underground = Some(chamber);
+                // The Gallery, Task 3: the entrance chamber above only
+                // gates whether this cave mouth leads anywhere at all (the
+                // sealed refusal above) — it is not itself where the
+                // possession stands. `Underground::enter` builds the real
+                // descent and places the possession on the entrance rung's
+                // first standable cell, from the SAME terrain handle and
+                // vertex the sealed-check above already resolved.
+                self.underground = Some(crate::underground::Underground::enter(
+                    terrain,
+                    vertex,
+                    cave,
+                    self.world.seed,
+                ));
+                // Fix round 1: every ARRIVAL marks, not just a lateral step
+                // (spec §3.5, amended in commit f6051a9c3) — the entrance
+                // cell is the first of the three landing paths, and the one
+                // a player sees before ever taking a single step.
+                self.mark_underground_seen();
                 Turn::Out(format!(
-                    "You worm down into the dark. The rock here is {}.",
+                    "{DESCENT_PREFIX} {}.",
                     stratum_word(chamber.stratum)
                 ))
             }
@@ -3011,19 +4232,273 @@ impl<'w> Session<'w> {
     }
 
     /// Return to the surface from the chamber lattice — `delve`'s inverse,
-    /// mirroring `surface`. This campaign's lattice reaches only the
-    /// entrance address, so unlike `surface` there is no intermediate layer
-    /// to rise through: any descent climbs out in one step.
+    /// mirroring `surface`.
+    ///
+    /// **Only clears `underground` from the entrance rung (The Gallery,
+    /// Task 3).** Before this task the lattice reached only the entrance
+    /// address, so any descent climbed out in one step; now a descent has
+    /// several rungs, and stairs (Task 5) are the only way down or up
+    /// between them. Climbing from a deeper rung refuses and says to take
+    /// the stairs up — this task's own scope stops at that refusal; the
+    /// stairs verb it names is Task 5's.
     fn climb(&mut self) -> Turn {
-        if self.underground.take().is_none() {
-            return Turn::Out(
-                "You are not underground; there is nothing to climb out of.".to_string(),
-            );
+        match &self.underground {
+            None => {
+                return Turn::Out(
+                    "You are not underground; there is nothing to climb out of.".to_string(),
+                );
+            }
+            Some(ug) if ug.rung != 0 => {
+                return Turn::Out(CLIMB_FROM_DEPTH_REFUSAL.to_string());
+            }
+            Some(_) => {}
         }
+        self.underground = None;
         match self.describe_here() {
             Ok(d) => Turn::Out(format!("You climb back into the light.\n{d}")),
             other => self.out(other),
         }
+    }
+
+    /// A compass step UNDERGROUND: one cell of the current rung's real
+    /// generated level (The Gallery, Task 4).
+    ///
+    /// The geometry itself — diagonal refusal, the passability predicate,
+    /// and the law that lateral movement never changes band (metaplan
+    /// §1b.6) — lives entirely in [`crate::underground::Underground::peek`]/
+    /// [`crate::underground::Underground::commit_step`]; this wrapper parses
+    /// the bearing, charges the move, and narrates the outcome, the same
+    /// division `Self::step` (the indoor precedent, `session.rs:3413`) draws
+    /// between its own geometry and this method's `go`/bare-compass
+    /// callers.
+    ///
+    /// **Fix round 1 (review finding 2): charges exactly the way the indoor
+    /// step does, and in the same order.** `Self::step`'s own precedent
+    /// calls `charge_within_room` AFTER confirming the target is passable
+    /// but BEFORE mutating `inside.cell`, so a refused clock (a body too
+    /// spent to move) leaves the possession exactly where it stood and
+    /// reports the charge's own error as the turn's output. This mirrors
+    /// that: `peek` validates and returns the target WITHOUT moving,
+    /// `charge_within_room` runs next, and only once that succeeds does
+    /// `commit_step` move the possession. No new cost model — the same
+    /// `Action::MoveWithin(AnchorId(0))` dial the indoor step already
+    /// charges, reused rather than invented.
+    ///
+    /// **Part 1 of spec §3.2's water rule reads here, not in the geometry.**
+    /// `Flooded` is passable (you wade), so the narration — not the
+    /// refusal — is where "wet" becomes visible: the verb is `wade` when
+    /// [`crate::underworld_level::movement_mode`] answers `Wade` for the
+    /// cell just entered, `step` otherwise. Querying the mode is part 3 of
+    /// the same rule: one seam answers "how", asked here rather than a
+    /// boolean re-derived from the cell kind directly.
+    fn step_underground(&mut self, dir: &str) -> Turn {
+        let Some(wanted) = parse_compass(dir) else {
+            return Turn::Out(format!("Go where? '{dir}' is no direction I know."));
+        };
+        let Some(ug) = self.underground.as_ref() else {
+            // Unreachable through `handle` (every call site guards on
+            // `self.underground.is_some()` first), the same shape `step`'s
+            // own unreachable guard takes one band over.
+            return Turn::Out("error: no cave floor to step across: not below".to_string());
+        };
+        let target = match ug.peek(wanted) {
+            Err(reason) => return Turn::Out(reason.to_string()),
+            Ok(target) => target,
+        };
+        // The charge runs BEFORE the move lands (review finding 2): a
+        // refused clock must not move the possession, the same order
+        // `Self::step`'s own `charge_within_room` call keeps indoors.
+        if let Err(e) = self.charge_within_room() {
+            return Turn::Out(e);
+        }
+        let ug = self
+            .underground
+            .as_mut()
+            .expect("checked Some above; nothing between then and now clears it");
+        let outcome = ug.commit_step(target);
+        // The Gallery, Task 6: fog marks after the move actually lands, on
+        // the path that moved it — never for a step `commit_step` would
+        // refuse (it never does; see the unreachable arm just below), and
+        // never before `charge_within_room` has already succeeded above.
+        if !matches!(outcome, crate::underground::StepOutcome::Blocked(_)) {
+            self.mark_underground_seen();
+        }
+        match outcome {
+            crate::underground::StepOutcome::Blocked(reason) => {
+                // Unreachable: `commit_step` only ever runs on a target
+                // `peek` already validated, and never itself refuses. Kept
+                // as a real arm (not `unreachable!()`) so a future change to
+                // `commit_step` fails loudly with a message rather than a
+                // panic with no context.
+                Turn::Out(reason.to_string())
+            }
+            crate::underground::StepOutcome::Moved => {
+                let ug = self.underground.as_ref().expect("just stepped");
+                let kind = ug
+                    .level()
+                    .cells
+                    .get(ug.cell)
+                    .expect("the possession's own cell is always in the level's extent");
+                let mode = crate::underworld_level::movement_mode(kind)
+                    .expect("a cell just stepped onto is passable");
+                let verb = match mode {
+                    crate::underworld_level::MovementMode::Wade => "wade",
+                    _ => "step",
+                };
+                Turn::Out(format!("You {verb} {}.", bearing_word(wanted)))
+            }
+            crate::underground::StepOutcome::NeedsStairs => {
+                let ug = self.underground.as_ref().expect("just stepped");
+                let word = match ug.level().cells.get(ug.cell) {
+                    Some(crate::underworld_level::LevelCellKind::StairsDown) => "down",
+                    Some(crate::underworld_level::LevelCellKind::StairsUp) => "up",
+                    _ => "on",
+                };
+                Turn::Out(format!(
+                    "You step {}, onto a stairway leading {word}.",
+                    bearing_word(wanted)
+                ))
+            }
+        }
+    }
+
+    /// Fold the current cell's shadowcast into the current rung's own
+    /// remembered set (The Gallery, Task 6; spec §3.5, amended in Fix round
+    /// 1 by commit f6051a9c3: "every arrival marks", not merely a lateral
+    /// step). Called from all three ways a possession comes to occupy an
+    /// underground cell, each AFTER the possession has actually landed
+    /// there — never before, and never for a refused or blocked move, so
+    /// what gets remembered is always somewhere the possession genuinely
+    /// stood:
+    ///
+    /// - [`Self::delve_at`], right after `self.underground` is built, for
+    ///   the entrance cell.
+    /// - [`Self::step_underground`], after [`crate::underground::
+    ///   Underground::commit_step`] has moved the possession one cell.
+    /// - [`Self::take_stairs`], after [`crate::underground::Underground::
+    ///   take_stairs`] has landed the possession on the connecting rung.
+    ///
+    /// **One shared call rather than three copies of the same logic** — Fix
+    /// round 1's own instruction, and the reason a fourth arrival path
+    /// (should one ever exist) only has one call site to remember to add.
+    ///
+    /// **The reach comes from [`Self::sight_reach`], never a literal** —
+    /// the same seam `chamber_sources`'s implicit-torch source reads
+    /// through, so a future carried-light model changes every call site by
+    /// changing one function.
+    ///
+    /// A no-op if the possession is not underground. A private helper that
+    /// assumes its own caller's precondition instead of checking it is a
+    /// private helper waiting to be misused by the next one.
+    fn mark_underground_seen(&mut self) {
+        let reach = self.sight_reach();
+        let Some(ug) = self.underground.as_ref() else {
+            return;
+        };
+        let level = ug.level();
+        let lit = crate::lattice::shadowcast_with(
+            |cell| {
+                level
+                    .cells
+                    .get(cell)
+                    .and_then(crate::underworld_level::movement_mode)
+                    .is_some()
+            },
+            |cell| level.extent.contains(cell),
+            ug.cell,
+            reach,
+        );
+        let rung = ug.rung;
+        self.underground
+            .as_mut()
+            .expect("checked Some above; nothing between then and now clears it")
+            .seen[rung]
+            .mark_all(&lit);
+    }
+
+    /// Moving between rungs by way of the stairs (The Gallery, Task 5) — the
+    /// verb-level wrapper around
+    /// [`crate::underground::Underground::peek_stairs`]/
+    /// [`crate::underground::Underground::take_stairs`], one level up the
+    /// same way [`Self::step_underground`] wraps
+    /// [`crate::underground::Underground::peek`]/
+    /// [`crate::underground::Underground::commit_step`].
+    ///
+    /// **New verbs, not a re-point of `delve`/`climb`.** Both already carry
+    /// an established meaning at this band boundary — `delve` opens a
+    /// descent from the surface, `climb` closes one back to it, with its own
+    /// pinned refusals ("You are already below; 'climb' brings you back up
+    /// first." — [`Self::delve`]; [`CLIMB_FROM_DEPTH_REFUSAL`], which
+    /// already tells the player to "find the stairs up", naming a DIFFERENT
+    /// mechanism rather than itself). Re-pointing either would mean
+    /// rewriting both of those pinned sentences into stairs-aware dispatch
+    /// for no evidence they need to move; two new verbs cost one
+    /// [`IN_CHARACTER_VERBS`] array-length bump and two `HELP` lines
+    /// instead, with neither existing verb's behaviour touched. See this
+    /// task's own report for the fuller argument.
+    ///
+    /// **The direction is checked against the current cell BEFORE
+    /// `peek_stairs` is ever asked**, because `peek_stairs` itself is
+    /// direction-agnostic (it reads whichever kind the current cell already
+    /// is) — asking it while standing on the WRONG kind of stairs would
+    /// silently take a player the opposite way from the word they typed.
+    /// Refusing here, with a physical reason naming neither verb, is what
+    /// keeps `down` always meaning down.
+    ///
+    /// **Charges exactly the way [`Self::step_underground`] does, and in the
+    /// same order**: `peek_stairs` validates that the move can succeed and
+    /// returns WITHOUT moving, `charge_within_room` runs next, and only once
+    /// that succeeds does
+    /// [`crate::underground::Underground::take_stairs`] itself move the
+    /// possession — so a refused clock, or a structurally-impossible move
+    /// (the descent's own deepest rung has no further rung to land on),
+    /// never moves the possession and never spends a tick. One flight of
+    /// stairs is priced the same as one lateral cell
+    /// (`Action::MoveWithin(AnchorId(0))`, the same dial
+    /// `charge_within_room` already charges) rather than a new cost model —
+    /// spec §3.4 forbids minting one, and nothing here does.
+    fn take_stairs(&mut self, want_down: bool) -> Turn {
+        let Some(ug) = self.underground.as_ref() else {
+            return Turn::Out("You are not underground; there are no stairs to take.".to_string());
+        };
+        let wanted_kind = if want_down {
+            crate::underworld_level::LevelCellKind::StairsDown
+        } else {
+            crate::underworld_level::LevelCellKind::StairsUp
+        };
+        if ug.level().cells.get(ug.cell) != Some(wanted_kind) {
+            return Turn::Out(if want_down {
+                "There is no stairway down from here.".to_string()
+            } else {
+                "There is no stairway up from here.".to_string()
+            });
+        }
+        if let Err(reason) = ug.peek_stairs() {
+            return Turn::Out(reason.to_string());
+        }
+        // The charge runs BEFORE the move lands, the same order
+        // `step_underground`'s own `charge_within_room` call keeps: a
+        // refused clock must not move the possession.
+        if let Err(e) = self.charge_within_room() {
+            return Turn::Out(e);
+        }
+        let ug = self
+            .underground
+            .as_mut()
+            .expect("checked Some above; charge_within_room never touches underground");
+        ug.take_stairs()
+            .expect("peek_stairs just confirmed this succeeds");
+        // Fix round 1: the stairs are the second of the three arrival paths
+        // that mark fog (spec §3.5, amended in commit f6051a9c3) — a rung
+        // entered and left entirely by stairs must still remember the
+        // landing's own surroundings, not just whatever a lateral step
+        // happened to add.
+        self.mark_underground_seen();
+        let word = if want_down { "down" } else { "up" };
+        Turn::Out(format!(
+            "You take the stairs {word}.\n{}",
+            self.describe_underground_here()
+        ))
     }
 
     /// Clear the barred passage at the cave mouth here (The Latch, Task 5) —
@@ -3033,12 +4508,10 @@ impl<'w> Session<'w> {
     /// the same two facts about where a body is standing.
     fn clear_passage(&mut self) -> Turn {
         if self.inside.is_some() {
-            return Turn::Out("There is nothing to clear from in here.".to_string());
+            return Turn::Out(NOTHING_TO_CLEAR_INSIDE_REFUSAL.to_string());
         }
         if self.underground.is_some() {
-            return Turn::Out(
-                "You are already below; there is nothing left to clear from down here.".to_string(),
-            );
+            return Turn::Out(ALREADY_BELOW_CLEAR_REFUSAL.to_string());
         }
         self.clear_passage_column(self.chamber_column_here())
     }
@@ -3052,7 +4525,7 @@ impl<'w> Session<'w> {
         column: Option<(hornvale_kernel::Vertex, hornvale_terrain::Cave)>,
     ) -> Turn {
         let Some((vertex, _cave)) = column else {
-            return Turn::Out("There is no cave mouth here to clear.".to_string());
+            return Turn::Out(NO_CAVE_MOUTH_TO_CLEAR_REFUSAL.to_string());
         };
         self.clear_passage_at(vertex)
     }
@@ -3066,10 +4539,34 @@ impl<'w> Session<'w> {
     /// Reads the barrier through [`crate::passage::effective_state`] — the
     /// SAME fold `delve_at` consults, against the SAME address
     /// ([`cave_entrance_addr`]), so a passage this clears is a passage
-    /// `delve_at` then finds open. Commits
-    /// [`crate::passage::cleared_fact`] only for [`hornvale_worldgen::
+    /// `delve_at` then finds open. Writes through
+    /// [`crate::passage::set_openness`] only for [`hornvale_worldgen::
     /// BarrierState::Thin`] — [`clear_response`]'s own doc explains why
     /// `Sealed` and `Warded` do not yield to this act.
+    ///
+    /// **What is written changed with The Chattel, and what is NOT written
+    /// changed with it.** The Latch committed a `passage-cleared` fact whose
+    /// SUBJECT was the clearing body and whose object carried the address.
+    /// The subject is now the cave mouth itself — a promoted
+    /// [`crate::thing`] — and the predicate is `openness`, the one a
+    /// strongbox already uses. So the body that did the clearing is no longer
+    /// recorded anywhere by this act. That is a real loss of information and
+    /// it is deliberate: The Latch's own fold never consulted the subject
+    /// ("any body's clearing fact opens the passage for everyone"), so
+    /// nothing INTERPRETED the subject and no assertion HELD it, and a
+    /// predicate about a thing whose subject is a different thing is
+    /// precisely what joining the object model removes. Whoever wants "who
+    /// opened this" back wants an agentive predicate, not this one's subject
+    /// slot.
+    ///
+    /// **"Write-only" is what this paragraph said first, and it overstated
+    /// the case** (fix round 1, m1). `windows/historiography::recount`
+    /// iterates `Ledger::facts_about` with no predicate filter, and
+    /// `cli/src/repl.rs`'s `why <id>` calls it, so a pre-flip `possess --out`
+    /// world reloaded into `repl` DID render the clearing against the body
+    /// that did it, under the predicate's registered doc. Unread by any
+    /// interpreter is not the same as unreadable by any reader, and the fold
+    /// claim — the one that licenses the loss — is the former.
     fn clear_passage_at(&mut self, vertex: hornvale_kernel::Vertex) -> Turn {
         let addr = cave_entrance_addr(vertex);
         let barrier = crate::passage::effective_state(
@@ -3080,49 +4577,126 @@ impl<'w> Session<'w> {
             &hornvale_worldgen::BarrierPins::default(),
         );
         if barrier == hornvale_worldgen::BarrierState::Thin {
-            let fact = crate::passage::cleared_fact(self.driven_body().entity, &addr, self.day);
-            self.ledger
-                .commit(fact, &self.registry)
-                .expect("PASSAGE_CLEARED is registered every session and non-functional");
+            crate::passage::set_openness(&mut self.ledger, &self.registry, &addr, true, self.day)
+                .expect("OPENNESS and instance-of are registered and non-functional");
         }
         Turn::Out(clear_response(barrier))
     }
 
     /// The chamber rendering while underground (The Deep Realm, Task 5) —
     /// deliberately minimal, in `describe_chamber_here`'s spirit one realm
-    /// over: this campaign ships no interior lattice for a cave the way a
-    /// structure has one, only the entrance address, so there is no floor
-    /// plan or anchor catalogue to draw from. Read straight off
-    /// `self.underground` rather than re-deriving through `chamber_at` —
-    /// re-deriving would be pure and would agree, but there is nothing to
-    /// gain by paying for it a second time.
+    /// over: no floor plan or anchor catalogue is drawn, only the footing
+    /// underfoot. Read straight off `self.underground`'s own generated
+    /// level rather than re-deriving anything — the level is already in
+    /// hand, and there is nothing to gain by paying for a second lookup.
+    ///
+    /// **The Gallery, Task 3: reads the generated level's own cell, not a
+    /// stratigraphic `stratum` word.** Before this task `self.underground`
+    /// carried the entrance chamber's rock stratum (e.g. "sandstone");
+    /// that chamber is now consulted only to gate whether the cave mouth
+    /// leads anywhere at all (`delve_at`'s sealed check), and a descent's
+    /// rungs are not stratum-addressed the way that single entrance bucket
+    /// was. `underground_footing_word` reports the one thing the real
+    /// generated level actually says about the cell the possession stands
+    /// on: whether it is dry or `Flooded`.
     fn describe_underground_here(&self) -> String {
-        let chamber = self
+        let ug = self
             .underground
+            .as_ref()
             .expect("guarded by self.underground.is_some() at the call site");
         format!(
-            "[underground]\nThe rock here is {}. Ways on: out.",
-            stratum_word(chamber.stratum)
+            "[underground]\nThe rock here is {}. {}",
+            underground_footing_word(ug),
+            self.underground_ways_from_cell()
         )
+    }
+
+    /// The underworld's own "ways on" report (Fix round 1, review finding
+    /// 1): the passable orthogonal neighbours of the cell stood on, in the
+    /// same bearing vocabulary `Self::ways_from_cell` (indoors) already
+    /// uses, plus `out` whenever the current rung is the entrance rung —
+    /// `climb`'s own guard is `ug.rung != 0`, not "stood on the entrance
+    /// cell", so `out` is a way on from anywhere on rung 0, not only the
+    /// cell `Underground::enter` placed the possession on.
+    ///
+    /// **Before this fix the sentence was a fixed `"Ways on: out."`**
+    /// regardless of what `go` could actually do from here — true only
+    /// while `go` refused every lateral bearing (Task 3); Task 4 made `go`
+    /// walk the level, which made the fixed sentence a one-turn observable
+    /// contradiction the moment it landed (`look` says the only way on is
+    /// out, `go n` immediately proves that false).
+    fn underground_ways_from_cell(&self) -> String {
+        let Some(ug) = self.underground.as_ref() else {
+            return String::new();
+        };
+        let mut open = Vec::new();
+        if ug.rung == 0 {
+            open.push("out".to_string());
+        }
+        for wanted in COMPASS_SQUARE {
+            let delta = cell_delta(wanted).expect("COMPASS_SQUARE is orthogonal");
+            let target = crate::lattice::Cell(ug.cell.0 + delta.0, ug.cell.1 + delta.1);
+            if ug
+                .level()
+                .cells
+                .get(target)
+                .and_then(crate::underworld_level::movement_mode)
+                .is_some()
+            {
+                open.push(bearing_letter(wanted));
+            }
+        }
+        if open.is_empty() {
+            "No way on.".to_string()
+        } else {
+            format!("Ways on: {}.", open.join(", "))
+        }
     }
 
     /// The underworld's examinable catalog. The band has its own because you
     /// cannot see the forest from inside the rock — resolving an underground
     /// `examine` against the surface locale's nouns is the defect this fixes
     /// (The Handle, Task 4).
+    ///
+    /// See [`Self::describe_underground_here`]'s doc for why this reads the
+    /// cell's footing rather than a stratum word (The Gallery, Task 3).
+    ///
+    /// **Gains a third entry for the chamber's derived resident (Fix round
+    /// 1, spec §3.6/§4.1.2).** Task 11 drew the resident on the pane
+    /// (`Self::underground_level`) but left this catalog untouched, which is
+    /// exactly the "prose contradicting behaviour a player can observe in
+    /// one turn" shape this campaign's Task 4 already fixed once for
+    /// `look`/`go`: a creature on the plate that `examine` calls nonexistent
+    /// teaches a player the game is lying, with no way to tell which half.
+    /// [`Self::underground_resident`] is the one predicate both this method
+    /// and the pane read, so an unlit-but-remembered resident is absent from
+    /// BOTH or neither — never examinable without being drawn, and never
+    /// drawn without being examinable.
     fn underground_nouns(&self) -> Vec<crate::focalize::Noun> {
-        let chamber = self
+        let ug = self
             .underground
+            .as_ref()
             .expect("guarded by self.underground.is_some() at the call site");
-        let stratum = stratum_word(chamber.stratum);
-        vec![
-            crate::focalize::Noun::new("the rock", "rock", &format!("The rock here is {stratum}.")),
+        let footing = underground_footing_word(ug);
+        let mut nouns = vec![
+            crate::focalize::Noun::new("the rock", "rock", &format!("The rock here is {footing}.")),
             crate::focalize::Noun::new(
-                stratum,
-                stratum,
-                &format!("{stratum} — the rock of this chamber."),
+                footing,
+                footing,
+                &format!("{footing} rock — the footing of this passage."),
             ),
-        ]
+        ];
+        if let Some((kind, source, _cell)) = self.underground_resident(ug) {
+            nouns.push(
+                crate::focalize::Noun::new(
+                    kind.0,
+                    kind.0,
+                    &crate::underground::inhabitant_datum(kind, source),
+                )
+                .with_kind(crate::focalize::NounKind::Creature),
+            );
+        }
+        nouns
     }
 
     /// `examine <noun>` UNDERGROUND: the band's own catalog only — never the
@@ -3180,9 +4754,13 @@ impl<'w> Session<'w> {
         // laterals do not reach a submerged room at all. Claiming "no
         // direction here is closed" there would be false the instant the
         // player tried one, which is exactly the class of defect decision
-        // 0141 exists to remove. `Ways on: surface.` mirrors
-        // `describe_underground_here`'s `Ways on: out.` — the one way on this
-        // band actually leads anywhere.
+        // 0141 exists to remove. `Ways on: surface.` is fixed for the same
+        // reason `describe_underground_here`'s report used to be, before Fix
+        // round 1 gave it real geometry to report on: the submerged band
+        // has no lateral mesh at all, so `surface` really is the one way on
+        // this band actually leads anywhere. Underground no longer shares
+        // that excuse — it has real cells now, and `underground_ways_from_
+        // cell` reports them.
         let closing = if self.submerged.is_some() {
             "Ways on: surface.".to_string()
         } else {
@@ -3848,6 +5426,19 @@ impl<'w> Session<'w> {
         ))
     }
 
+    /// The possession's own reach — how far it can see, and how far its
+    /// implicit torch throws light (The Gallery, Task 6; spec §3.4's seam:
+    /// "one named function answers 'how', rather than a constant or a
+    /// boolean re-derived at every call site"). Today this simply returns
+    /// [`SIGHT_RADIUS`]; a future carried-light model replaces this body
+    /// alone, with every caller already reading through it rather than a
+    /// second copy of the number — `chamber_sources`'s implicit-torch
+    /// [`crate::light::Source`] above, and the underground fog mark
+    /// ([`Self::mark_underground_seen`]) below.
+    fn sight_reach(&self) -> i32 {
+        SIGHT_RADIUS
+    }
+
     /// Every light burning where the possession stands (spec §4.2).
     ///
     /// Three kinds, and **one radius for all of them**: [`SIGHT_RADIUS`], whose
@@ -3883,7 +5474,14 @@ impl<'w> Session<'w> {
                 &hornvale_kernel::color::blackbody(crate::light::TORCH_KELVIN),
                 4.0, // The Wick, spec §2.1
             ),
-            radius: SIGHT_RADIUS,
+            // The Gallery, Task 6: this is THE body's own reach, read
+            // through `sight_reach()` rather than `SIGHT_RADIUS` directly —
+            // the seam a future carried-light model fills. The hearth and
+            // doorway sources below keep `SIGHT_RADIUS` on purpose: they are
+            // the FIRE's and the OPENING's own reach, not the body's, so
+            // routing them through the same seam would mean picking up a
+            // lantern brightens every hearth and doorway in the building.
+            radius: self.sight_reach(),
         }];
 
         let has_hearth = self.chamber_interior_here().is_some_and(|interior| {
@@ -3973,6 +5571,181 @@ impl<'w> Session<'w> {
             inside.cell,
             marks,
             shading.as_ref(),
+        ))
+    }
+
+    /// The chamber's derived resident, if it is visible RIGHT NOW — present
+    /// (`crate::underground::chamber_resident`, spec §3.6) AND standing on
+    /// a cell the CURRENT shadowcast actually lights
+    /// (`crate::underground::resident_cell`), never merely remembered.
+    ///
+    /// **The single source both [`Self::underground_level`] (the pane's own
+    /// mark) and [`Self::underground_nouns`] (`examine`'s own catalog)
+    /// read** (Fix round 1) — a creature the pane draws that `examine` says
+    /// does not exist is this campaign's signature defect shape (Task 4 hit
+    /// the identical thing for `look`/`go`), and the fix is not "teach
+    /// `examine` the same rule," which two independent copies of a fog rule
+    /// will eventually disagree about, but "give both callers one rule to
+    /// read." Recomputing the shadowcast here rather than threading it in
+    /// from a caller matches this module's own existing precedent
+    /// ([`Self::mark_underground_seen`] and [`Self::underground_level`]
+    /// already each compute it independently); a third independent
+    /// computation of the SAME shadowcast predicate is consistent with that
+    /// shape, while a third independent computation of the RESIDENT
+    /// visibility rule is exactly what this method exists to prevent.
+    fn underground_resident(
+        &self,
+        ug: &crate::underground::Underground,
+    ) -> Option<(
+        hornvale_kernel::KindId,
+        hornvale_worldgen::energy::EnergySource,
+        crate::lattice::Cell,
+    )> {
+        let terrain = self.wctx.terrain.as_ref()?;
+        let climate = self.wctx.climate.as_ref()?;
+        let (kind, source) = crate::underground::chamber_resident(ug, terrain, climate)?;
+        let level = ug.level();
+        let cell = crate::underground::resident_cell(level)?;
+        let lit = crate::lattice::shadowcast_with(
+            |c| {
+                level
+                    .cells
+                    .get(c)
+                    .and_then(crate::underworld_level::movement_mode)
+                    .is_some()
+            },
+            |c| level.extent.contains(c),
+            ug.cell,
+            self.sight_reach(),
+        );
+        lit.contains(&cell).then_some((kind, source, cell))
+    }
+
+    /// The underground band's own floor plan (The Gallery, Task 7; spec §4)
+    /// — [`Self::chamber_plan`] one band down, minus the colour seam: a
+    /// level carries an explicit visibility STATE per cell, never a shade
+    /// (spec §4.1), so there is no `Shading` to resolve and no observer to
+    /// ask for.
+    ///
+    /// The shadowcast computed here is the SAME predicate
+    /// [`Self::mark_underground_seen`] folds into `ug.seen` on every
+    /// arrival: this method never mutates that bitset, only reads it (via
+    /// [`crate::underground::SeenBits::saw`]), so a cell this call marks
+    /// `"lit"` is always already `"remembered"` too by the time this runs —
+    /// nothing here can show the possession a cell its own arrival did not
+    /// already commit to memory.
+    ///
+    /// **Since The Gallery, Task 11 (spec §3.6), `marks` may grow a chamber
+    /// resident here even when the caller passed an empty `Vec`.** The
+    /// resident is derived fresh from `ug`'s own substrate and energy
+    /// (`crate::underground::chamber_resident`) whenever `self.wctx.terrain`
+    /// and `self.wctx.climate` are both available, and appears only if its
+    /// fixed cell (`crate::underground::resident_cell`) is genuinely `lit`
+    /// this turn — a chamber that is out of sight shows nobody, exactly as
+    /// the chamber band's own NPC marks already require.
+    fn underground_level(
+        &self,
+        ug: &crate::underground::Underground,
+        mut marks: Vec<crate::plan::PlanMark>,
+    ) -> crate::level_doc::SessionLevel {
+        let level = ug.level();
+        let lit = crate::lattice::shadowcast_with(
+            |cell| {
+                level
+                    .cells
+                    .get(cell)
+                    .and_then(crate::underworld_level::movement_mode)
+                    .is_some()
+            },
+            |cell| level.extent.contains(cell),
+            ug.cell,
+            self.sight_reach(),
+        );
+        // The Gallery, Task 11 (spec §3.6): who lives here is derived from
+        // THIS chamber's own substrate and energy, never a spawn table and
+        // never the surface roster. Fix round 1: this reads
+        // `Self::underground_resident` rather than re-deriving the
+        // present/lit test inline, so the pane's own mark and `examine`'s
+        // catalog (`Self::underground_nouns`) cannot independently drift on
+        // which cell counts as lit.
+        if let Some((kind, source, cell)) = self.underground_resident(ug) {
+            marks.push(crate::plan::PlanMark {
+                x: cell.0,
+                y: cell.1,
+                noun: kind.0.to_string(),
+                kind: crate::purview::AGENT_MARK_KIND.to_string(),
+                datum: crate::underground::inhabitant_datum(kind, source),
+                salience: crate::purview::AGENT_SALIENCE,
+            });
+        }
+        crate::level_doc::level_of(
+            level,
+            ug.rung_band(),
+            ug.depths_m[ug.rung],
+            ug.cell,
+            &lit,
+            |c| ug.seen[ug.rung].saw(c),
+            marks,
+        )
+    }
+
+    /// `map` underground (The Gallery, Task 8; spec §5) — the verb's own
+    /// answer, one band down, drawn from the exact `SessionLevel` document
+    /// the pane emits ([`Self::underground_level`]). The pane and the verb
+    /// read one source now, which is what keeps them from drifting apart
+    /// the way the retired fold worried they might (see this module's
+    /// `the_pane_and_the_verb_agree_underground`, formerly
+    /// `the_underground_band_folds_into_walk_as_map_does`).
+    ///
+    /// Fog-of-war-respecting by construction, not by a filter added here:
+    /// `doc.cells` already omits every never-seen cell (spec §4.1.1), so a
+    /// cell this picture never marks is simply left blank rather than
+    /// checked and skipped.
+    ///
+    /// No `eyes` parameter and no lens, unlike [`Self::plan_here`]:
+    /// `vessel/level/v1` carries an explicit visibility STATE per cell,
+    /// never a shade (`level_doc`'s own module doc, spec §4.1), so there is
+    /// no colour here for a lens to filter.
+    ///
+    /// **This picture never draws a creature mark, and that stays true after
+    /// The Gallery, Task 11** — not because `doc.marks` is empty (as of
+    /// Task 11 it may carry a derived chamber resident, exactly as the pane
+    /// does: [`Self::underground_level`] builds it whether this verb's own
+    /// `Vec::new()` argument is empty or not), but because the render loop
+    /// below only ever walks `doc.cells`, `doc.palette` and `doc.you` — it
+    /// never reads `doc.marks` at all. [`Self::plan_here`] draws the same
+    /// way, for the same reason (it too always passes `Vec::new()` for
+    /// `marks`, and its own picture ignores whatever a plan's `marks` would
+    /// have carried).
+    fn level_here(&self) -> Result<String, VesselError> {
+        let Some(ug) = self.underground.as_ref() else {
+            // Unreachable through `handle` (the arm checks first), the same
+            // guard and the same reason `plan_here` gives for its own.
+            return Err(VesselError::Build(
+                "no level to draw: the possession is not underground".to_string(),
+            ));
+        };
+        let doc = self.underground_level(ug, Vec::new());
+        let e = doc.extent;
+        let mut rows = vec![vec![' '; e.w as usize]; e.h as usize];
+        for cell in &doc.cells {
+            let glyph = level_kind_glyph(&doc.palette[cell.ix as usize].kind);
+            rows[(cell.y - e.y) as usize][(cell.x - e.x) as usize] = glyph;
+        }
+        rows[(doc.you.y - e.y) as usize][(doc.you.x - e.x) as usize] = '@';
+        let picture = rows
+            .into_iter()
+            .map(|r| r.into_iter().collect::<String>())
+            .collect::<Vec<_>>()
+            .join("\n");
+        Ok(format!(
+            "[level: rung {} of {}, {} — {:.1} m]\n{}\n  legend: # wall, . floor, ~ flooded, \
+             > stairs down, < stairs up, @ you",
+            ug.rung + 1,
+            ug.descent.len(),
+            doc.rung,
+            doc.depth_m,
+            picture
         ))
     }
 
@@ -4309,6 +6082,7 @@ impl<'w> Session<'w> {
         if let Some(interior) = self.chamber_interior_here() {
             for id in interior.ids() {
                 let kind = interior.anchor(id).kind;
+                let thing_kind_here = crate::affordance::thing_kind_of(kind);
                 if crate::chamber_prose::noun(kind).is_some_and(|n| n.to_lowercase() == wanted) {
                     // The Offer, Task 7 (spec §3.5/§4): routed through the
                     // derived offer query, not the anchor's bare kind, so
@@ -4328,8 +6102,17 @@ impl<'w> Session<'w> {
                     // knowledge` proves the branch is real by manufacturing
                     // the one `Knowledge` state a live session cannot reach
                     // on its own.
+                    //
+                    // The Chattel, Task 9 (spec §3.6, decision 0397): the
+                    // `thing_kind_of` conversion is HERE now, not inside
+                    // `offered_to_observer`, which is keyed on `KindId`.
+                    // `kind` is an `AnchorKind` read off this chamber's own
+                    // anchor, so the conversion sits where the anchor is;
+                    // the offer this consults is unchanged, because
+                    // `thing_kind_of` is exactly what the query used to
+                    // apply to the same value one frame in.
                     if !crate::affordance::offered_to_observer(
-                        kind,
+                        crate::affordance::thing_kind_of(kind),
                         self.driven_body(),
                         &self.knowledge,
                     )
@@ -4342,7 +6125,16 @@ impl<'w> Session<'w> {
                     // its authored `detail` line — see `examine_detail`'s
                     // own doc for the property gate and the mutation it
                     // guards against.
-                    return crate::chamber_prose::examine_detail(&interior, id);
+                    // The Chattel, Task 11: the "or transparent" arm of the
+                    // interactive-fiction rule goes live. `examine_detail`
+                    // holds no ledger and no day, so the openness fold is
+                    // asked HERE and handed in — see its doc for the two-arm
+                    // rule and for why a container nobody has touched reads
+                    // shut. Ignored for a kind carrying no `Openable`.
+                    let opened = self
+                        .chamber_facet_here()
+                        .is_some_and(|room| self.container_is_open(&room, thing_kind_here));
+                    return crate::chamber_prose::examine_detail(&interior, id, opened);
                 }
             }
         }
@@ -5908,6 +7700,48 @@ fn stratum_word(s: hornvale_climate::Stratum) -> &'static str {
     }
 }
 
+/// The reader-facing word for the footing under the possession's feet
+/// underground (The Gallery, Task 3) — whether `ug`'s current cell is
+/// `Flooded` or dry `Floor`. `describe_underground_here` and
+/// `underground_nouns` share this rather than each reading `ug.level()`
+/// and matching on the cell kind separately.
+///
+/// Matches on anything other than `Flooded` as dry rather than listing
+/// `Floor` alone: `Underground::enter`'s own invariant guarantees the
+/// possession's cell is `Floor` or `Flooded` at the moment a descent
+/// begins, and a later task's stairs (Task 5) or fog (Task 6) adding a
+/// third live kind at this position should read as dry footing, not panic
+/// a description verb that has nothing to do with either.
+/// type-audit: bare-ok(prose: return)
+fn underground_footing_word(ug: &crate::underground::Underground) -> &'static str {
+    match ug.level().cells.get(ug.cell) {
+        Some(crate::underworld_level::LevelCellKind::Flooded) => "flooded",
+        _ => "dry",
+    }
+}
+
+/// The glyph [`Session::level_here`] draws for one `LevelPaletteEntry::kind`
+/// wire string. Chosen fresh for this verb's own text render: `level_doc`'s
+/// own module doc is explicit that the wire `kind` field is a name, never a
+/// glyph (decision 0022 leaves glyph selection to the client), so this
+/// mapping is `map`'s own and binds nothing on the wire.
+///
+/// `_ => '?'` is unreachable for any kind [`crate::level_doc::level_of`]
+/// actually emits — every [`crate::underworld_level::LevelCellKind`]
+/// variant has a named arm above it — kept rather than a hard panic because
+/// a display glyph is not worth crashing a player's turn over should a
+/// future variant land here first.
+fn level_kind_glyph(kind: &str) -> char {
+    match kind {
+        "wall" => '#',
+        "floor" => '.',
+        "flooded" => '~',
+        "stairs_down" => '>',
+        "stairs_up" => '<',
+        _ => '?',
+    }
+}
+
 /// The chamber address a cave's entrance names, for whichever verb needs to
 /// key a barrier read or a clearing fact against it (The Latch). Shared by
 /// [`Session::delve_at`] and [`Session::clear_passage_at`] so the two can
@@ -5925,11 +7759,188 @@ fn cave_entrance_addr(vertex: hornvale_kernel::Vertex) -> hornvale_worldgen::cha
     }
 }
 
+/// What [`Session::delve_at`] says when the cave mouth is unbarred but the
+/// entrance chamber the lattice would realize does not exist — spec §3.4
+/// rung 0, *"the void exists and is unreachable"*.
+///
+/// **A const rather than an inline literal, and the promotion is the point.**
+/// It is the ninth string in the vocabulary [`barred_refusal`] and
+/// [`clear_response`] between them own, and the one a reader is most likely
+/// to collide with by accident, because it is the only one that is about
+/// stone the way three of `barred_refusal`'s arms are and is written a whole
+/// function away from them. `every_passage_outcome_reads_distinctly` sweeps
+/// all sixteen of the two verbs' strings pairwise, which it could not do
+/// while this one was spelled inside a `match` arm — and fix round 1 promoted
+/// the other seven for the same reason, after the review showed a collision
+/// between two of them passing the whole vessel suite.
+///
+/// Unreachable since The Drift deleted the existence coin
+/// (`delve_has_three_distinguishable_outcomes`'s doc records the measurement:
+/// 0 of 48,316 caves over thirty worlds), and kept as live code for the reason
+/// that doc gives.
+/// type-audit: bare-ok(prose)
+const UNREALIZED_CHAMBER_REFUSAL: &str =
+    "The cave mouth is here, but the rock beyond is sealed; there is no way down.";
+
+/// The seven strings the two passage verbs say OUTSIDE the barrier tables —
+/// the footing refusals a body gets for standing in the wrong place, plus the
+/// line a descent that succeeds actually prints.
+///
+/// **Consts rather than inline literals, and fix round 1's review is the
+/// reason.** `every_passage_outcome_reads_distinctly` shipped sweeping nine
+/// strings while the two verbs could say sixteen, and the review demonstrated
+/// what the gap cost: making `clear_passage_column`'s no-cave refusal
+/// byte-identical to `delve_column`'s left the whole vessel suite green. A
+/// sweep widened over hand-COPIED literals would have stayed green against
+/// that same edit, because the copy and the call site are two objects and
+/// only one of them moved. The sweep reads these, production reads these, so
+/// there is one object and a collision is reachable.
+///
+/// `delve`'s refusal for a body that is indoors: there is rock under a
+/// chamber, but not a cave mouth you can reach from inside one.
+/// type-audit: bare-ok(prose)
+const NO_ROCK_INSIDE_REFUSAL: &str = "There is no rock to delve into in here.";
+
+/// `delve`'s refusal for a body already underground — it names the verb that
+/// undoes the state rather than merely saying no.
+/// type-audit: bare-ok(prose)
+const ALREADY_BELOW_DELVE_REFUSAL: &str =
+    "You are already below; 'climb' brings you back up first.";
+
+/// `delve`'s refusal where the terrain places no cave at all — the outcome
+/// [`barred_refusal`]'s doc argues every OTHER refusal must be distinguishable
+/// from. Said at two sites ([`Session::delve_column`] with no cave, and
+/// [`Session::delve_at`] with no terrain handle at all): one string, because
+/// both are the same fact about the world from the player's side.
+/// type-audit: bare-ok(prose)
+const NO_CAVE_TO_DELVE_REFUSAL: &str = "There is no cave here to delve into.";
+
+/// `clear`'s refusal for a body that is indoors — [`Session::clear_passage`]
+/// shares `delve`'s footing but not its prose, which is the thing the sweep
+/// below exists to keep true.
+/// type-audit: bare-ok(prose)
+const NOTHING_TO_CLEAR_INSIDE_REFUSAL: &str = "There is nothing to clear from in here.";
+
+/// `clear`'s refusal for a body already underground.
+/// type-audit: bare-ok(prose)
+const ALREADY_BELOW_CLEAR_REFUSAL: &str =
+    "You are already below; there is nothing left to clear from down here.";
+
+/// `clear`'s refusal where the terrain places no cave mouth at all.
+/// type-audit: bare-ok(prose)
+const NO_CAVE_MOUTH_TO_CLEAR_REFUSAL: &str = "There is no cave mouth here to clear.";
+
+/// What `open`/`close` say when the player named nothing. A hint rather than
+/// a parse error, the shape `examine`'s own bare arm already uses: the player
+/// typed a real verb and left out its object, which is a different mistake
+/// from typing a word that is not a verb.
+/// type-audit: bare-ok(prose)
+const OPEN_WHAT_HINT: &str = "Open what?";
+
+/// [`OPEN_WHAT_HINT`]'s other half.
+/// type-audit: bare-ok(prose)
+const CLOSE_WHAT_HINT: &str = "Close what?";
+
+/// `open`/`close`'s refusal outside a chamber.
+///
+/// **One string for out of doors, underwater and underground, and that is
+/// deliberate rather than lazy.** The only things in this world with a lid
+/// are anchors of a chamber's interior; nowhere else composes an `Interior`
+/// at all, so "there is nothing here that opens" is the same true sentence in
+/// all three bands. It is NOT true of a barred cave mouth, which does open —
+/// but `clear` is that act and this task did not merge the two (see
+/// [`Session::open_or_close`]'s doc for what that would take).
+/// type-audit: bare-ok(prose)
+const NOTHING_HERE_OPENS_REFUSAL: &str = "There is nothing here that opens.";
+
+/// `take`'s bare-verb hint — a hint, not a refusal, on
+/// [`OPEN_WHAT_HINT`]'s own terms: the player typed a real verb.
+/// type-audit: bare-ok(prose)
+const TAKE_WHAT_HINT: &str = "Take what?";
+
+/// [`TAKE_WHAT_HINT`]'s counterpart for `drop`.
+/// type-audit: bare-ok(prose)
+const DROP_WHAT_HINT: &str = "Drop what?";
+
+/// `put`'s hint, which answers for BOTH the bare verb and a line with no
+/// `in` — one sentence, because the two are the same mistake (a player who
+/// knows what they want to stow and not where) and a second sentence would be
+/// two spellings of one correction.
+/// type-audit: bare-ok(prose)
+const PUT_WHAT_HINT: &str = "Put what, and in what? Say it as 'put a key in a strongbox'.";
+
+/// `take`'s refusal outside a chamber, on exactly [`NOTHING_HERE_OPENS_REFUSAL`]'s
+/// terms: only a chamber composes an `Interior`, so nowhere else in the world
+/// holds a thing a body could pick up, and one true sentence covers out of
+/// doors, underwater and underground alike.
+/// type-audit: bare-ok(prose)
+const NOTHING_HERE_TO_TAKE_REFUSAL: &str = "There is nothing here you could pick up.";
+
+/// `drop`'s refusal outside a chamber. It names the CONSEQUENCE rather than
+/// pretending a body cannot let go of something in the open air: a thing's
+/// identity is derived under a chamber facet and no locale-band interior
+/// composes a portable anchor, so a thing set down outdoors would have a
+/// location nothing ever reads again. See [`Session::drop_carried`].
+/// type-audit: bare-ok(prose)
+const NOWHERE_TO_SET_DOWN_REFUSAL: &str =
+    "Not here — put down out of doors, it would be lost. Carry it inside first.";
+
+/// `open`'s refusal at a lockable thing with no key in custody — the arc's
+/// own acceptance test, spoken (spec §3.8, acceptance 2).
+///
+/// It names the lock and the want, never the KIND of thing that would satisfy
+/// it. A sentence saying "you need the iron key" would put the naming back.
+///
+/// **What M+N this actually buys, corrected.** This doc read: *"the lock
+/// declares what it requires and the key declares what it carries, and
+/// neither names the other."* The second half is true — `key` declares
+/// [`crate::affordance::ObjectProperty::Portable`] on its own
+/// `object_registry` row and names no lock. **The first half is false.**
+/// `ObjectProperty::Lockable` is a bare enum variant with no payload: it
+/// declares only THAT there is a lock, never what opens it. The required
+/// property is a LITERAL in one place — `ObjectProperty::Portable`, written
+/// inside [`Session::open_or_close`]'s lock arm — so the honest statement is
+/// that the lock names no KIND (a second lockable kind costs no edit), while
+/// what it wants is a constant, not a declaration.
+///
+/// **The hazard that hides in the difference — Task 12 came and went without
+/// tripping it, so it now belongs to whoever next edits the property table.**
+/// The
+/// literal is correct today only because `Portable` went to `key` and nowhere
+/// else. The day a second kind carries it, EVERY portable thing opens EVERY
+/// lock — a lantern, a coin, a loaf. Nothing about this const or that arm
+/// would change, no test would notice from the lock's side, and the failure
+/// would be a played one. Task 12 shipped `take`/`drop`/`put` — three verbs
+/// gating on `Portable` — and gave the property to no new kind, so the
+/// roster is still exactly `["key"]`. That is why
+/// `the_lock_wants_a_property_and_exactly_one_kind_supplies_it` asserts the
+/// `Portable` roster by name rather than trusting a sentence: it reddens on
+/// the second carrier, and its message states the two ways out (give the lock
+/// a payload naming its opener, or add a narrower property the key alone
+/// carries).
+/// type-audit: bare-ok(prose)
+const LOCKED_WITHOUT_A_KEY_REFUSAL: &str =
+    "It is locked, and you are carrying nothing that would open it.";
+
+/// The fixed half of the one passage outcome that is not a fixed string:
+/// [`Session::delve_at`]'s success line, completed with [`stratum_word`] for
+/// the entrance chamber's rock.
+///
+/// **Split at the format hole deliberately.** The sweep needs an object it can
+/// compare, and the whole rendered line is not one — it is eleven lines, one
+/// per [`hornvale_climate::Stratum`]. What decides this outcome's
+/// distinctness from the other fifteen is the prefix, which no other outcome
+/// shares any word of, so the prefix is what is pinned and the sweep says so
+/// rather than quietly comparing one arbitrary filling as though it were the
+/// whole.
+/// type-audit: bare-ok(prose)
+const DESCENT_PREFIX: &str = "You worm down into the dark. The rock here is";
+
 /// The refusal a barred passage gives, naming WHICH barrier turned the body
 /// back — a refusal that named no reason would be indistinguishable from the
 /// no-cave one, which is the thing `delve`'s third outcome exists to be.
 ///
-/// **Deliberately distinct from `delve_at`'s `None`-arm string** ("the rock
+/// **Deliberately distinct from [`UNREALIZED_CHAMBER_REFUSAL`]** ("the rock
 /// beyond is sealed") even for `BarrierState::Sealed`: that arm answers a
 /// different question — an entrance chamber the lattice never realizes at
 /// all, currently unreachable since The Drift deleted the existence coin,
@@ -5959,9 +7970,10 @@ fn barred_refusal(barrier: hornvale_worldgen::BarrierState) -> String {
 
 /// What [`Session::clear_passage_at`] reports for each barrier state — the
 /// full outcome table for `clear`, mirroring [`barred_refusal`]'s shape so
-/// the two verbs read consistently. Whether the state ALSO commits a
-/// [`crate::passage::PASSAGE_CLEARED`] fact is the caller's own decision
-/// (exactly one arm, `Thin`, is paired with a commit); this function only
+/// the two verbs read consistently. Whether the state ALSO writes an
+/// [`crate::thing::OPENNESS`] fact through [`crate::passage::set_openness`]
+/// is the caller's own decision
+/// (exactly one arm, `Thin`, is paired with a write); this function only
 /// answers what the player reads.
 ///
 /// **Only [`hornvale_worldgen::BarrierState::Thin`] yields to `clear`,** and
@@ -6018,7 +8030,12 @@ const COMPASS_SQUARE: [Compass; 4] = [Compass::N, Compass::E, Compass::S, Compas
 /// `None` for the diagonals is the honest answer, not an omission:
 /// [`crate::lattice::HEADINGS`] is orthogonal because a diagonal step through the
 /// corner where two walls meet is not a way through a building.
-fn cell_delta(c: Compass) -> Option<(i32, i32)> {
+///
+/// **`pub(crate)`, not private (The Gallery, Task 4):**
+/// [`crate::underground::Underground::peek`] reuses this exact table rather
+/// than a second copy of it — a diagonal is a diagonal whether the walls
+/// around it are built or natural rock.
+pub(crate) fn cell_delta(c: Compass) -> Option<(i32, i32)> {
     match c {
         Compass::N => Some((0, -1)),
         Compass::E => Some((1, 0)),
@@ -6161,7 +8178,7 @@ mod tests {
     /// names, and the one that resists a runtime `offered_to_observer` call
     /// for a structural reason rather than an oversight — it lists every
     /// verb unconditionally, for a body that may be standing anywhere at
-    /// all, so there is no single `(AnchorKind, Body, Knowledge)` triple to
+    /// all, so there is no single `(KindId, Body, Knowledge)` triple to
     /// route it through (see the Task 7 report for the fuller finding). What
     /// IS mechanizable is the text-level agreement this test holds: the
     /// `warm` line's own word must be [`crate::affordance::OfferedVerb::
@@ -6193,8 +8210,10 @@ mod tests {
              assigns RadiatesHeat to ({hearth_noun:?}): {warm_line:?}"
         );
         assert!(
-            crate::affordance::offered_by(crate::interior::AnchorKind::Hearth)
-                .contains(&crate::affordance::OfferedVerb::Warm),
+            crate::affordance::offered_by(crate::affordance::thing_kind_of(
+                crate::interior::AnchorKind::Hearth,
+            ))
+            .contains(&crate::affordance::OfferedVerb::Warm),
             "the carrier HELP names must actually offer Warm, or the two \
              texts would agree with each other while disagreeing with the \
              derived query"
@@ -6280,8 +8299,9 @@ mod tests {
     /// `clear` is gated by the body like every other in-character verb (spec
     /// §2.1/§3.2), and it is the verb for which that mattered most: it is
     /// the only one in the free band that WRITES TO THE LEDGER, so an
-    /// ungated `clear` meant a sleeping body could commit a
-    /// `PASSAGE_CLEARED` fact — contradicting `HELP`'s own `sleep` line
+    /// ungated `clear` meant a sleeping body could commit an
+    /// `openness` fact (a `PASSAGE_CLEARED` one, before Task 8 retired that
+    /// predicate) — contradicting `HELP`'s own `sleep` line
     /// ("the body stops obeying until its own cycle wakes it, and only '!'
     /// verbs answer meanwhile").
     ///
@@ -6310,6 +8330,44 @@ mod tests {
     ///
     /// — the dispatch ran `clear_passage` unrefused and answered from inside
     /// the handler. Restored, and re-run on a fresh binary: green.
+    ///
+    /// **The ledger assertion names its SUBJECT** (fix round 1, m5). It
+    /// shipped as "no OPENNESS fact exists anywhere in this ledger", which is
+    /// a true statement about a session today and a fragile one: Task 11's
+    /// `open`/`close` writes `openness` in a session, and this test would then
+    /// have reddened for a reason with nothing to do with the sleep gate. It
+    /// now checks the only population a `clear` could touch — cave mouths —
+    /// and commits an unrelated `openness` fact first, so the narrowing is
+    /// demonstrated rather than asserted: the old assertion fires on that
+    /// control, the new one does not. Confirmed 2026-08-29 by re-inserting
+    /// the shipped form beside the new one:
+    ///
+    /// ```text
+    /// thread 'session::tests::clear_is_refused_while_asleep' panicked at
+    /// windows/vessel/src/session.rs: a refused `clear` must commit nothing:
+    /// the gate stands in front of the act, not inside it
+    /// ```
+    ///
+    /// Removed again, and the subject-named pair re-run green.
+    ///
+    /// **The refusal string is the mutation witness; the ledger assertion is
+    /// a standing invariant.** Seed 42's flagship vertex bears no cave, so an
+    /// ungated `clear` refuses with `NO_CAVE_MOUTH_TO_CLEAR_REFUSAL` and
+    /// writes nothing either — which is exactly what the red above shows.
+    /// That is stated plainly rather than left for a reader to discover: the
+    /// ledger half cannot be reddened by the mutation this test names, and a
+    /// check whose strength is overstated is the shape fix round 1 found twice
+    /// in this file.
+    /// The subject of `clear_is_refused_while_asleep`'s control fact — an
+    /// entity that is deliberately not a cave mouth and not anything else the
+    /// session mints, so an `openness` fact about it can only have come from
+    /// that test.
+    const UNRELATED_OPENABLE: hornvale_kernel::EntityId =
+        hornvale_kernel::EntityId(match std::num::NonZeroU64::new(0x00C0_FFEE) {
+            Some(n) => n,
+            None => unreachable!(),
+        });
+
     #[test]
     fn clear_is_refused_while_asleep() {
         let world = seam_world();
@@ -6328,18 +8386,1758 @@ mod tests {
             BodyState::Asleep,
             "sanity check: asleep alone must gate as asleep"
         );
+        // A POSITIVE CONTROL for the subject-named assertion below: an
+        // openness fact about something that is not a cave mouth. The
+        // assertion this test used to carry ("no thing anywhere was opened")
+        // fires on this; the one it carries now must not.
+        session
+            .ledger
+            .commit(
+                crate::thing::openness_fact(UNRELATED_OPENABLE, true, session.day),
+                &session.registry,
+            )
+            .expect("OPENNESS is registered by Session::start and is non-functional");
+
         let cleared = match session.handle("clear") {
             Turn::Out(t) => t,
             Turn::Released(t) => panic!("clear must not release: {t}"),
         };
         assert_eq!(cleared, "You cannot — you are asleep.");
+
+        // NAME THE SUBJECT (fix round 1, m5). This assertion first read "no
+        // OPENNESS fact exists anywhere", which is true today only because
+        // nothing else in a session writes one — Task 11's `open`/`close`
+        // will, and this test would then have gone red for a reason with
+        // nothing to do with the sleep gate. The only subject a `clear` can
+        // ever open is a CAVE MOUTH, so that is the population checked, and
+        // the control fact above proves the filter discriminates rather than
+        // passing because the ledger happens to be bare.
+        let cave_mouths: std::collections::BTreeSet<hornvale_kernel::EntityId> = session
+            .ledger
+            .find(hornvale_kernel::INSTANCE_OF)
+            .filter(|f| f.object == Value::Text(crate::passage::CAVE_MOUTH.to_string()))
+            .map(|f| f.subject)
+            .collect();
+        let opened: Vec<hornvale_kernel::EntityId> = session
+            .ledger
+            .find(crate::thing::OPENNESS)
+            .map(|f| f.subject)
+            .filter(|subject| cave_mouths.contains(subject))
+            .collect();
+        assert!(
+            cave_mouths.is_empty() && opened.is_empty(),
+            "a refused `clear` must neither promote a cave mouth nor open \
+             one — the gate stands in front of the act, not inside it: \
+             promoted {cave_mouths:?}, opened {opened:?}"
+        );
+        assert!(
+            session
+                .ledger
+                .find(crate::thing::OPENNESS)
+                .any(|f| f.subject == UNRELATED_OPENABLE),
+            "the control fact must still be in the ledger, or the check above \
+             is passing on an empty population rather than a filtered one"
+        );
+    }
+
+    // --- The Chattel, Task 11: `open` and `close` (spec §3.7/§3.8) ---
+
+    /// A body asleep cannot open anything. The body-state gate stands in
+    /// front of every in-character verb, and a verb absent from
+    /// [`IN_CHARACTER_VERBS`] silently bypasses it — the blind zone
+    /// `every_bare_verb_help_lists_is_classified` cannot see, because a verb
+    /// in NEITHER roster satisfies both of its directions by its absence.
+    /// The Latch shipped `clear` exactly that way, and `open` is in the same
+    /// consequential class: it WRITES to the ledger.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST: remove `"open"` from
+    /// [`IN_CHARACTER_VERBS`] (and its `HELP` line, so the roster-agreement
+    /// test stays green and this test is the only thing objecting) — exactly
+    /// the state The Latch shipped in. The verb keeps working and the
+    /// dispatch is unchanged. Confirmed 2026-08-29, unfiltered over the whole
+    /// crate (`cargo nextest run -p hornvale-vessel --no-fail-fast`, `847
+    /// tests run: 845 passed, 2 failed`) — BEHAVIOURALLY, not on a compile
+    /// error: the dispatch ran `open_or_close` unrefused and answered from
+    /// inside the handler.
+    ///
+    /// ```text
+    /// assertion `left == right` failed
+    ///   left: "Open what?"
+    ///  right: "You cannot — you are asleep."
+    /// ```
+    ///
+    /// The second failure in that run was
+    /// `h2_no_shipped_verb_can_end_a_possession_by_death` (`left: 35 right:
+    /// 36`), which is a roster-SIZE witness rather than a behavioural one and
+    /// is named here so the "2 failed" is accounted for rather than left to
+    /// look like this test firing twice.
+    #[test]
+    fn open_is_refused_while_asleep() {
+        assert_eq!(
+            asleep_then(crate::affordance::OfferedVerb::Open.word()),
+            BODY_ASLEEP_REFUSAL
+        );
+    }
+
+    /// Same, for `close`. Written as its own test rather than a loop over the
+    /// two words: the point of the pair is that EACH verb has its own
+    /// behavioural witness, and a loop would let one mutation redden a test
+    /// whose name blames the other.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST: remove `"close"` from
+    /// [`IN_CHARACTER_VERBS`] and its `HELP` line. Confirmed 2026-08-29,
+    /// unfiltered (`847 tests run: 845 passed, 2 failed` — the second is the
+    /// same roster-size witness the test above names):
+    ///
+    /// ```text
+    /// assertion `left == right` failed
+    ///   left: "Close what?"
+    ///  right: "You cannot — you are asleep."
+    /// ```
+    #[test]
+    fn close_is_refused_while_asleep() {
+        assert_eq!(
+            asleep_then(crate::affordance::OfferedVerb::Close.word()),
+            BODY_ASLEEP_REFUSAL
+        );
+    }
+
+    /// What the body-state gate says, as one constant, so the two tests above
+    /// and the sanity checks in [`asleep_then`] cannot drift into two
+    /// spellings of one refusal.
+    const BODY_ASLEEP_REFUSAL: &str = "You cannot — you are asleep.";
+
+    /// Put a fresh seed-42 possession to sleep and hand it `line`, returning
+    /// what it answered — the shape `warm_is_refused_while_asleep` and
+    /// `clear_is_refused_while_asleep` each write out inline, factored so a
+    /// third and fourth copy do not accumulate.
+    ///
+    /// The two sanity checks are load-bearing and are why this is not merely
+    /// two lines: without the first, a `sleep` that stopped being a verb
+    /// would make every caller assert against a body that never went under;
+    /// without the second, a change to what `sleep` does to `wake_at` would
+    /// do the same more quietly.
+    fn asleep_then(line: &str) -> String {
+        let world = seam_world();
+        let (mut session, _) =
+            Session::start(&world, &PossessOpts::default()).expect("seed 42 possesses");
+        let slept = match session.handle("sleep") {
+            Turn::Out(t) => t,
+            Turn::Released(t) => panic!("sleep must not release: {t}"),
+        };
+        assert!(
+            !slept.starts_with("No verb"),
+            "`sleep` must be a verb for this to mean anything: {slept}"
+        );
+        assert_eq!(
+            session.body_state(),
+            BodyState::Asleep,
+            "sanity check: asleep alone must gate as asleep"
+        );
+        match session.handle(line) {
+            Turn::Out(t) => t,
+            Turn::Released(t) => panic!("`{line}` must not release: {t}"),
+        }
+    }
+
+    /// `open`/`close` dispatch for real, against a real chamber anchor, and
+    /// are refused by the DERIVED offer rather than by a kind literal — an
+    /// alcove is a recess, and a recess has no lid.
+    ///
+    /// **This is the end-to-end witness the pair otherwise lacks, and the
+    /// reason it names an alcove rather than a strongbox is measured, not
+    /// chosen** — see `a_lockable_thing_opens_only_with_the_key_in_custody`
+    /// for the measurement. What it proves is the whole dispatch path: the
+    /// arm in `Session::handle`, the band guard, the noun resolution against
+    /// this chamber's own anchors, and `offered_to_observer`'s verdict.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST: make `open_or_close` skip the offer
+    /// check — `if !offer.contains(&verb)` -> `if false && !offer.contains(
+    /// &verb)` (kept as an `&&` so `verb` stays bound and the red is
+    /// behavioural rather than an unused-variable compile error). Confirmed
+    /// 2026-08-29, unfiltered (`847 tests run: 846 passed, 1 failed` — this
+    /// one and nothing else):
+    ///
+    /// ```text
+    /// assertion `left == right` failed
+    ///   left: "You open the alcove. Within it: a hearth."
+    ///  right: "The alcove does not open."
+    /// ```
+    ///
+    /// The `left` side is worth reading twice: without the offer gate the
+    /// verb does not merely answer wrongly, it COMMITS an openness fact about
+    /// a recess in a wall and then reports its contents — which is why the
+    /// ledger assertion below is part of this test rather than a separate
+    /// one.
+    #[test]
+    fn a_kind_with_no_lid_is_refused_by_the_offer_not_by_a_kind_literal() {
+        let world = world_at(13).expect("seed 13 builds");
+        let (mut session, _) =
+            Session::start(&world, &PossessOpts::default()).expect("seed 13 possesses");
+        session.handle("enter");
+        session.handle("enter further in");
+        let interior = session
+            .chamber_interior_here()
+            .expect("still indoors after stepping further in");
+        let alcove = interior
+            .ids()
+            .into_iter()
+            .find(|&a| crate::chamber_prose::noun(interior.anchor(a).kind) == Some("an alcove"))
+            .expect(
+                "precondition: seed 13's second chamber is the hearthroom, which draws an alcove",
+            );
+        let kind = crate::affordance::thing_kind_of(interior.anchor(alcove).kind);
+        assert!(
+            crate::affordance::carries(kind, crate::affordance::ObjectProperty::Encloses),
+            "precondition: the alcove must ENCLOSE, or this test could not \
+             tell 'no lid' apart from 'not a container'"
+        );
+        assert!(
+            !crate::affordance::carries(kind, crate::affordance::ObjectProperty::Openable),
+            "precondition: the alcove must carry no Openable"
+        );
+
+        let refused = match session.handle("open an alcove") {
+            Turn::Out(t) => t,
+            Turn::Released(t) => panic!("open must not release: {t}"),
+        };
+        assert_eq!(refused, "The alcove does not open.");
+        let refused = match session.handle("close an alcove") {
+            Turn::Out(t) => t,
+            Turn::Released(t) => panic!("close must not release: {t}"),
+        };
+        assert_eq!(refused, "The alcove does not close.");
+        assert!(
+            session.ledger.find(crate::thing::OPENNESS).next().is_none(),
+            "a refused open must commit nothing: the offer stands in front of \
+             the act, not inside it"
+        );
+    }
+
+    /// The two arms that need no container at all: a bare `open` is a HINT
+    /// (the player typed a real verb and left out its object), and out of
+    /// doors there is nothing with a lid.
+    #[test]
+    fn open_and_close_hint_when_bare_and_refuse_out_of_doors() {
+        let world = seam_world();
+        let (mut session, _) =
+            Session::start(&world, &PossessOpts::default()).expect("seed 42 possesses");
+        assert!(
+            session.inside.is_none(),
+            "sanity check: a fresh possession starts out of doors"
+        );
+        let say = |s: &mut Session<'_>, line: &str| match s.handle(line) {
+            Turn::Out(t) => t,
+            Turn::Released(t) => panic!("`{line}` must not release: {t}"),
+        };
+        assert_eq!(say(&mut session, "open"), OPEN_WHAT_HINT);
+        assert_eq!(say(&mut session, "close"), CLOSE_WHAT_HINT);
+        assert_eq!(
+            say(&mut session, "open a strongbox"),
+            NOTHING_HERE_OPENS_REFUSAL
+        );
+        assert_eq!(
+            say(&mut session, "close a strongbox"),
+            NOTHING_HERE_OPENS_REFUSAL
+        );
+    }
+
+    /// A lockable thing refuses without the key and yields with it — the
+    /// arc's own acceptance test (spec §6.2), and the first precondition in
+    /// Hornvale that reads a SECOND object.
+    ///
+    /// # Why this drives the precondition rather than the sentence
+    ///
+    /// **THE PREMISE BELOW WAS TRUE WHEN WRITTEN AND IS NOW FALSE (decision
+    /// 0398), and the correction is loud rather than a quiet edit because a
+    /// reader reasons FROM a premise.** This paragraph read: *"No `Session` in
+    /// any world can stand in front of a strongbox today, and that is a
+    /// MEASUREMENT rather than an assumption"* — `the-strongbox` carried
+    /// `needs_populous: true` (The Blocking: "a hamlet has nothing worth
+    /// locking up"), which reads `Brief::is_populous`, i.e. `peak_population >
+    /// hornvale_history::flesh::HAMLET_POPULATION_CEILING`, > 150. Probed on
+    /// this tree, and the numbers stand:
+    ///
+    /// ```text
+    /// seed 42: ceiling=150 occupations=1240 alive=389 populous_alive=0 max_alive_peak=84
+    /// seed 13: ceiling=150 occupations=1094 alive=305 populous_alive=0 max_alive_peak=87
+    /// seed  1: ceiling=150 occupations=1163 alive=310 populous_alive=0 max_alive_peak=85
+    /// ```
+    ///
+    /// Not one living occupation in three whole worlds clears the ceiling, and
+    /// a 48-seed sweep of the flagship a possession actually starts at found
+    /// `populous = true` zero times. **What changed is the gate, not the
+    /// demography**: 0398 dropped `needs_populous` from the strongbox and its
+    /// key, on the ground that a capability nothing can reach is not a
+    /// capability. The same 48-seed sweep now finds 8 seeds where a possession
+    /// walks into a room holding a strongbox with a key inside it
+    /// (`tests/suite/strongbox_reachability.rs`), so
+    /// [`LOCKED_WITHOUT_A_KEY_REFUSAL`] IS reachable through `Session::handle`
+    /// and is asserted there against a played reply.
+    ///
+    /// This test is unchanged all the same, and deliberately so. What it
+    /// drives is both halves the lock joins, each against real state — a
+    /// custody FOLD that an end-to-end walk exercises only one arm of
+    /// (Task 12 shipped `take`, so the *true* arm is reachable in play now;
+    /// the third assertion below — false again once the key is set down in a
+    /// room — still is not, because `drop` places it in the room the player
+    /// is standing in and this test places it in another):
+    ///
+    /// 1. **The lock's declaration** — `strongbox` carries `Lockable` and the
+    ///    alcove does not, read from `object_registry` through the same
+    ///    `carries` query `open_or_close` calls.
+    /// 2. **The custody read** — [`Session::carrying_something_that`] over a
+    ///    real session's real ledger: false before, true after a REAL
+    ///    promotion of a key into the body's hands, and false again once the
+    ///    key is put down in a room. The third assertion is the one that
+    ///    makes this a fold rather than a search: `query_by_object` still
+    ///    finds the superseded fact, and only `location_of`'s latest-posting
+    ///    re-ask drops it.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST — the property is *that custody is
+    /// consulted*: in [`crate::thing::held_by`], drop the second filter, i.e.
+    /// `.filter(|&thing| location_of(ledger, thing, day) ==
+    /// Some(Value::Entity(holder)))` -> `.filter(|&thing| { let _ = thing;
+    /// true })`. Every candidate the O-index ever saw is then held forever,
+    /// so a key put back down still opens the lock. Confirmed 2026-08-29,
+    /// unfiltered (`847 tests run: 845 passed, 2 failed` — this test and
+    /// `thing::a_holder_holds_what_was_last_put_in_it_and_nothing_it_has_
+    /// given_up`, which is the same property asserted one layer down):
+    ///
+    /// ```text
+    /// thread 'session::tests::a_lockable_thing_opens_only_with_the_key_in_custody'
+    /// panicked at windows/vessel/src/session.rs:
+    /// a key put back down is no longer carried — custody is a FOLD over the
+    /// latest posting, not a search for any posting ever made
+    /// ```
+    #[test]
+    fn a_lockable_thing_opens_only_with_the_key_in_custody() {
+        use crate::affordance::{ObjectProperty, carries, thing_kind_of};
+        let strongbox = thing_kind_of(crate::interior::AnchorKind::Strongbox);
+        assert!(
+            carries(strongbox, ObjectProperty::Lockable),
+            "the lock must declare what it requires"
+        );
+        assert!(
+            !carries(
+                thing_kind_of(crate::interior::AnchorKind::Alcove),
+                ObjectProperty::Lockable
+            ),
+            "a kind with no lock must not declare one, or the gate is universal"
+        );
+
+        let world = seam_world();
+        let (mut session, _) =
+            Session::start(&world, &PossessOpts::default()).expect("seed 42 possesses");
+        let body = session.agent_entity();
+        let day = session.day;
+        assert!(
+            !session.carrying_something_that(ObjectProperty::Portable),
+            "a freshly possessed body carries nothing"
+        );
+
+        // A REAL promotion, in a real room, of the kind `object_registry`
+        // marks Portable — never an invented EntityId, which would prove the
+        // fold reads a value this test chose rather than one the ledger minted.
+        let elsewhere = Facet {
+            face: 0,
+            path: vec![1],
+        };
+        let key = crate::thing::promote(
+            &mut session.ledger,
+            &session.registry,
+            &elsewhere,
+            thing_kind_of(crate::interior::AnchorKind::Key).0,
+            0,
+            day,
+        )
+        .expect("a shallow facet packs");
+        session
+            .ledger
+            .commit(
+                crate::thing::located_in_holder_fact(key, body, day),
+                &session.registry,
+            )
+            .expect("LOCATED_IN is registered by Session::start and is non-functional");
+        assert!(
+            session.carrying_something_that(ObjectProperty::Portable),
+            "a key placed in the body's own hands must be in its custody"
+        );
+
+        // Put it down again, a day later. The putting-IN fact is still in the
+        // ledger forever; only the latest posting decides.
+        let later = WorldTime::from_ticks(day.ticks() + 1);
+        session
+            .ledger
+            .commit(
+                crate::thing::located_in_room_fact(key, &elsewhere, later)
+                    .expect("a shallow facet packs"),
+                &session.registry,
+            )
+            .expect("LOCATED_IN is registered and non-functional");
+        session.day = later;
+        assert!(
+            !session.carrying_something_that(ObjectProperty::Portable),
+            "a key put back down is no longer carried — custody is a FOLD \
+             over the latest posting, not a search for any posting ever made"
+        );
+    }
+
+    /// **Acceptance 6.2's FIRST clause, driven through the verb** — *"a key
+    /// opens a lockable strongbox"*, said by [`Session::handle`] to a body
+    /// standing in the room the strongbox is in.
+    ///
+    /// # Why this test had to be written, and what was wrong before it
+    ///
+    /// Spec §6.2 is a conjunction: *"a key opens a lockable strongbox AND the
+    /// same body without the key cannot."* The second clause was pinned twice
+    /// over (here at the fold, and as a played reply in
+    /// `tests/suite/strongbox_reachability.rs`). **The first clause was held
+    /// by nothing at the verb level.**
+    /// `a_lockable_thing_opens_only_with_the_key_in_custody` above never calls
+    /// `open` at all — it pins that `strongbox` declares `Lockable` and that
+    /// [`crate::thing::held_by`] is a fold, and leaves the JOIN between them
+    /// unasserted. The consequence was measurable: making the lock's custody
+    /// read vacuous, so the lock refuses even while carrying —
+    ///
+    /// ```text
+    /// && !self.carrying_something_that(ObjectProperty::Portable)
+    ///   ->  && (true || !self.carrying_something_that(ObjectProperty::Portable))
+    /// ```
+    ///
+    /// — left the whole crate green (`850 tests run: 850 passed, 3 skipped`).
+    /// So did the whole SUCCESS half of [`Session::open_or_close`] behind it:
+    /// the `set_openness` call for a container, the `"Within it: …"` clause,
+    /// the already-open no-op, and the empty case. This test kills the first
+    /// three; the fourth is recorded as unreachable below.
+    ///
+    /// # A committed holding fact, because `held_by` is a FOLD
+    ///
+    /// Custody is a fold over [`crate::thing::LOCATED_IN`] postings, so this
+    /// test commits the posting directly rather than typing `take`. It is
+    /// kept that way after Task 12 rather than rewritten: the key is planted
+    /// in a DIFFERENT facet (`face: 0, path: [1]`), which no walk can reach,
+    /// so what is proved is that the lock reads CUSTODY and not proximity —
+    /// a `take` here would put a key from this very room in the hand and
+    /// could not tell the two apart. The key is a REAL promotion of the kind
+    /// `object_registry` marks `Portable`, in a real facet, never an invented
+    /// `EntityId`.
+    ///
+    /// **THE RESIDUAL THIS DOC RECORDED IS CLOSED, AND THE PARAGRAPH IS
+    /// REPLACED RATHER THAN DELETED.** It read: *"The success arm is now
+    /// HELD; it is still not REACHABLE by a player, because no shipped verb
+    /// moves a key into custody. That is Task 12's, and it is the whole
+    /// residual."* Task 12 shipped `take`, and the whole ladder is now
+    /// played. Measured on seed 1's deepest chamber, 2026-08-29:
+    ///
+    /// ```text
+    /// > open a strongbox   ->  It is locked, and you are carrying nothing that would open it.
+    /// > take a key         ->  You take the key.
+    /// > open a strongbox   ->  You open the strongbox. Within it: a key.
+    /// ```
+    ///
+    /// **AND THE THING THAT MAKES IT REACHABLE IS ALSO A DEFECT, WHICH IS
+    /// WHY THE FABRICATED-CUSTODY TEST IS KEPT.** Look at where the key came
+    /// from: `the-key-in-the-strongbox` is the only pattern placing the only
+    /// `Portable` kind, and it places it INSIDE the very lockable chest it
+    /// opens — "a key is inside a strongbox or it is nowhere", in its own
+    /// words. No verb in this tree respects grammar containment (the room's
+    /// prose names the key, `examine a key` answers in full, both shipped
+    /// before Task 12), so the played sequence above is a lock defeated by
+    /// its own contents. That is an authored-grammar problem needing an
+    /// authored-grammar fix — a pattern putting a key somewhere a strongbox
+    /// is not, which is Task 11's Step 0 shape and owes its own census
+    /// re-run — and `Session::take`'s doc records it at the verb. This test,
+    /// which brings its key from a room the player never stood in, is the
+    /// one that holds acceptance 2 honestly meanwhile. One arm is narrower
+    /// still:
+    /// `"You open the {bare}. It is empty."` is unreachable AND unheld, and
+    /// the reason is structural rather than pending.
+    /// `the-key-in-the-strongbox` and `the-strongbox` carry identical gates
+    /// in `INVENTORY` (`built: true`, no cold, no populous, `roles:
+    /// &[Role::Store]`, `at_locale: false`) and `draw_from` is a pure filter
+    /// with no seeded selection, so **every composed strongbox has a key in
+    /// it** and `contents_of` can never return `None` for one. Reaching that
+    /// branch needs a second `Openable` container the grammar puts nothing
+    /// inside — a change to the pattern language, not a test.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST — the property is *that custody
+    /// UNLOCKS, not merely that it is consulted*: the vacuous-lock mutation
+    /// quoted above. Confirmed 2026-08-29, unfiltered over the whole crate.
+    #[test]
+    fn a_key_in_custody_opens_the_strongbox_a_player_walked_to() {
+        use crate::affordance::{ObjectProperty, thing_kind_of};
+        let world = world_at(1).expect("seed 1 builds");
+        let (mut session, _) =
+            Session::start(&world, &PossessOpts::default()).expect("seed 1 possesses");
+        let say = |s: &mut Session<'_>, line: &str| match s.handle(line) {
+            Turn::Out(t) => t,
+            Turn::Released(t) => panic!("`{line}` must not release: {t}"),
+        };
+
+        // Walk in and as far in as the place goes — the same route
+        // `tests/suite/strongbox_reachability.rs` walks, for the same reason:
+        // `Role::Store` is only ever chamber index >= 2 (`pattern::role_for`).
+        assert!(
+            say(&mut session, "enter").starts_with("[chamber "),
+            "the possession never got indoors, so nothing below is tested"
+        );
+        for _ in 0..4 {
+            if !say(&mut session, "enter further in").starts_with("[chamber ") {
+                break;
+            }
+        }
+        let nouns = session.chamber_nouns_here();
+        assert!(
+            nouns.iter().any(|n| n == "a strongbox") && nouns.iter().any(|n| n == "a key"),
+            "precondition: seed 1's deepest chamber must hold a strongbox with \
+             a key in it, or this test drives nothing: {nouns:?}"
+        );
+
+        // Before: the played refusal. Asserted here as well as in the suite
+        // test, because a success assertion with no paired refusal cannot
+        // tell "the key opened it" from "the lock was never consulted".
+        assert_eq!(
+            say(&mut session, "open a strongbox"),
+            LOCKED_WITHOUT_A_KEY_REFUSAL
+        );
+
+        let body = session.agent_entity();
+        let day = session.day;
+        let elsewhere = Facet {
+            face: 0,
+            path: vec![1],
+        };
+        let key = crate::thing::promote(
+            &mut session.ledger,
+            &session.registry,
+            &elsewhere,
+            thing_kind_of(crate::interior::AnchorKind::Key).0,
+            0,
+            day,
+        )
+        .expect("a shallow facet packs");
+        session
+            .ledger
+            .commit(
+                crate::thing::located_in_holder_fact(key, body, day),
+                &session.registry,
+            )
+            .expect("LOCATED_IN is registered by Session::start and is non-functional");
+        assert!(
+            session.carrying_something_that(ObjectProperty::Portable),
+            "sanity check: the committed holding fact must reach the fold, or \
+             the assertions below would pass for the wrong reason"
+        );
+
+        // The success arm, its contents clause, its no-op, and the round trip.
+        assert_eq!(
+            say(&mut session, "open a strongbox"),
+            "You open the strongbox. Within it: a key.",
+            "a key in custody must open the lock, and the reply must name what \
+             the lid was hiding"
+        );
+        assert_eq!(
+            say(&mut session, "open a strongbox"),
+            "The strongbox is already open.",
+            "a second open reports the state and commits nothing"
+        );
+        assert_eq!(
+            say(&mut session, "close a strongbox"),
+            "You close the strongbox.",
+            "close is unlocked in both senses — a lid you could open, you may shut"
+        );
+        assert_eq!(
+            say(&mut session, "open a strongbox"),
+            "You open the strongbox. Within it: a key.",
+            "and it re-opens: openness is a fold, not a latch"
+        );
+        assert!(
+            session.ledger.find(crate::thing::OPENNESS).next().is_some(),
+            "the verb's success arm must WRITE, not merely answer"
+        );
+    }
+
+    // --- The Chattel, Task 12: `take`/`drop`/`put`/`carrying` (spec §3.8) ---
+
+    /// A body asleep cannot pick anything up. Same argument, same blind zone,
+    /// same consequential class as `open`: `take` WRITES — a
+    /// [`crate::thing::LOCATED_IN`] posting naming the body — and a verb
+    /// absent from [`IN_CHARACTER_VERBS`] bypasses the gate without either
+    /// direction of `every_bare_verb_help_lists_is_classified` noticing.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST: remove `"take"` from
+    /// [`IN_CHARACTER_VERBS`] and its `HELP` line (so the roster-agreement
+    /// test stays green and this test is the only thing objecting).
+    /// Confirmed 2026-08-29, unfiltered over the whole crate
+    /// (`860 tests run: 859 passed, 1 failed`) — BEHAVIOURALLY, not on a
+    /// compile error: the dispatch ran `Session::take` unrefused and answered
+    /// from inside the handler. It is the ONLY test that objects, which is
+    /// the blind zone stated as a measurement.
+    ///
+    /// ```text
+    /// assertion `left == right` failed
+    ///   left: "Take what?"
+    ///  right: "You cannot — you are asleep."
+    /// ```
+    #[test]
+    fn take_is_refused_while_asleep() {
+        assert_eq!(
+            asleep_then(crate::affordance::OfferedVerb::Take.word()),
+            BODY_ASLEEP_REFUSAL
+        );
+    }
+
+    /// Same, for `drop`. Its own test rather than a loop over the four, for
+    /// the reason `close_is_refused_while_asleep` states: the point of the
+    /// set is that EACH verb has a behavioural witness, and a loop would let
+    /// one mutation redden a test whose name blames another.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST: remove `"drop"` from
+    /// [`IN_CHARACTER_VERBS`] and its `HELP` line. Confirmed 2026-08-29,
+    /// unfiltered over the whole crate, in one run that also carried `put`'s
+    /// and `carrying`'s mutations — `860 tests run: 857 passed, 3 failed`,
+    /// the three being exactly the three tests those three mutations name,
+    /// which is what makes the attribution unambiguous rather than merely
+    /// plausible:
+    ///
+    /// ```text
+    /// assertion `left == right` failed
+    ///   left: "Drop what?"
+    ///  right: "You cannot — you are asleep."
+    /// ```
+    #[test]
+    fn drop_is_refused_while_asleep() {
+        assert_eq!(
+            asleep_then(crate::affordance::OfferedVerb::Drop.word()),
+            BODY_ASLEEP_REFUSAL
+        );
+    }
+
+    /// Same, for `put`.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST: remove `"put"` from
+    /// [`IN_CHARACTER_VERBS`] and its `HELP` line. Confirmed 2026-08-29,
+    /// unfiltered (the same three-mutation run
+    /// `drop_is_refused_while_asleep` cites):
+    ///
+    /// ```text
+    /// assertion `left == right` failed
+    ///   left: "Put what, and in what? Say it as 'put a key in a strongbox'."
+    ///  right: "You cannot — you are asleep."
+    /// ```
+    #[test]
+    fn put_is_refused_while_asleep() {
+        assert_eq!(
+            asleep_then(crate::affordance::OfferedVerb::Put.word()),
+            BODY_ASLEEP_REFUSAL
+        );
+    }
+
+    /// **`carrying` is refused while asleep, and this is the test the
+    /// disjointness check could never have stood in for.**
+    ///
+    /// `carrying` writes nothing, which makes it the one verb of the four
+    /// that could plausibly have been classified as an operator instrument.
+    /// Had it gone into [`SESSION_CONTROL`] alone, every roster test in this
+    /// file would still have passed:
+    /// `session_control_is_never_an_in_character_verb` asserts only that no
+    /// control verb is ALSO in-character (it would have been in one roster,
+    /// not both), and `every_bare_verb_help_lists_is_classified`'s first loop
+    /// accepts a `HELP` verb classified by EITHER roster while its second
+    /// loop iterates [`IN_CHARACTER_VERBS`], which would not have contained
+    /// it. A sleeping body would have answered a question about its own
+    /// hands. That is The Latch's `clear` failure arriving through the other
+    /// door, and this assertion is the only thing in the tree standing in
+    /// front of it.
+    ///
+    /// It is written as a spelled literal rather than through
+    /// `OfferedVerb::_.word()` because `carrying` has no `OfferedVerb`: it is
+    /// body-scoped, and the offer query answers about an OBJECT.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST: move `"carrying"` out of
+    /// [`IN_CHARACTER_VERBS`] and into [`SESSION_CONTROL`], leaving its
+    /// `HELP` line in place — the exact miscategorisation above. Confirmed
+    /// 2026-08-29, unfiltered. **Every roster test stayed green under it**,
+    /// which is the finding rather than a footnote:
+    /// `every_bare_verb_help_lists_is_classified` and
+    /// `session_control_is_never_an_in_character_verb` both passed while a
+    /// sleeping body answered a question about its own hands, and this
+    /// assertion was the only thing in `860 tests run: 857 passed, 3 failed`
+    /// that objected on `carrying`'s behalf.
+    ///
+    /// ```text
+    /// assertion `left == right` failed
+    ///   left: "You are carrying nothing."
+    ///  right: "You cannot — you are asleep."
+    /// ```
+    #[test]
+    fn carrying_is_refused_while_asleep() {
+        assert_eq!(asleep_then("carrying"), BODY_ASLEEP_REFUSAL);
+    }
+
+    /// Seed 1's flagship possession, walked in to the LOOMROOM — chamber
+    /// index 2, which since The Custodian is where `the-key-by-the-loom`
+    /// composes the key a player can actually pick up.
+    ///
+    /// **It was one `enter` and it is three now, and the extra two steps are
+    /// the point rather than an inconvenience.** The Chattel put this key in
+    /// the threshold chamber, which `role_for` gives to every built structure
+    /// unconditionally, so every dwelling in every world furnished a key at
+    /// its own front door and finding one was a formality. The pattern moved
+    /// to `roles: &[Role::Loomroom]`; seed 1's flagship is agrarian, so its
+    /// index-2 chamber is a loomroom and the walk below is what reaches it.
+    ///
+    /// **This is still the shallow half of the pair, and the pair exists
+    /// because a lid means something.** Before the lid gate, every custody
+    /// test walked to the deepest chamber and lifted the key straight out of
+    /// a locked strongbox; that route is closed, so a test that needs a
+    /// `Portable` thing in hand starts HERE and a test that needs a container
+    /// walks one room further with the key.
+    fn at_the_loom_of_seed_one(world: &World) -> Session<'_> {
+        let (mut session, _) =
+            Session::start(world, &PossessOpts::default()).expect("seed 1 possesses");
+        assert!(
+            say(&mut session, "enter").starts_with("[chamber "),
+            "the possession never got indoors, so nothing below is tested"
+        );
+        for _ in 0..2 {
+            assert!(
+                say(&mut session, "enter further in").starts_with("[chamber "),
+                "seed 1's structure no longer reaches chamber index 2, so the \
+                 loomroom this key stands in is unreachable"
+            );
+        }
+        let nouns = session.chamber_nouns_here();
+        assert!(
+            nouns.iter().any(|n| n == "a key"),
+            "precondition: seed 1's loomroom must hold a key, or this test \
+             drives nothing: {nouns:?}"
+        );
+        assert!(
+            !nouns.iter().any(|n| n == "a strongbox"),
+            "precondition: the room the key is taken in must stand no chest, \
+             or the lid gate is not what lets this take through: {nouns:?}"
+        );
+        session
+    }
+
+    /// Walk seed 1's flagship possession as far into its dwelling as the
+    /// place goes — the route
+    /// `a_key_in_custody_opens_the_strongbox_a_player_walked_to` takes, for
+    /// the same reason (`Role::Store` is only ever chamber index >= 2), and
+    /// the only route in the tree that reaches a container with a LID.
+    ///
+    /// Returns the session and the say-helper's own preconditions already
+    /// checked, so a caller's assertions cannot pass against a possession
+    /// that never got indoors. The body is empty-handed and the strongbox is
+    /// as the seed drew it: shut and locked.
+    fn in_the_store_room_of_seed_one(world: &World) -> Session<'_> {
+        let (mut session, _) =
+            Session::start(world, &PossessOpts::default()).expect("seed 1 possesses");
+        assert!(
+            say(&mut session, "enter").starts_with("[chamber "),
+            "the possession never got indoors, so nothing below is tested"
+        );
+        for _ in 0..4 {
+            if !say(&mut session, "enter further in").starts_with("[chamber ") {
+                break;
+            }
+        }
+        let nouns = session.chamber_nouns_here();
+        assert!(
+            nouns.iter().any(|n| n == "a key"),
+            "precondition: seed 1's deepest chamber must hold a key, or this \
+             test drives nothing: {nouns:?}"
+        );
+        session
+    }
+
+    /// [`in_the_store_room_of_seed_one`] with the loomroom's key already in
+    /// hand — the walk the campaign's own thesis describes, and the only way
+    /// to reach the strongbox with something that opens it since the lid gate
+    /// closed.
+    ///
+    /// It takes the key in the loomroom and then walks on, so a caller
+    /// arrives standing in front of a shut, LOCKED chest carrying the one
+    /// thing that turns it. The two facets are asserted distinct, because a
+    /// walk that never left the room it started in would satisfy every
+    /// downstream assertion for the wrong reason.
+    fn in_the_store_room_of_seed_one_with_a_key(world: &World) -> Session<'_> {
+        let mut session = at_the_loom_of_seed_one(world);
+        let loom = session
+            .chamber_facet_here()
+            .expect("the walk lands in a chamber");
+        assert_eq!(say(&mut session, "take a key"), "You take the key.");
+        for _ in 0..4 {
+            if !say(&mut session, "enter further in").starts_with("[chamber ") {
+                break;
+            }
+        }
+        let store = session
+            .chamber_facet_here()
+            .expect("the walk ended in a chamber");
+        assert_ne!(
+            store, loom,
+            "precondition: the key must have been carried into a DIFFERENT \
+             room, or nothing here crosses a threshold"
+        );
+        let nouns = session.chamber_nouns_here();
+        assert!(
+            nouns.iter().any(|n| n == "a strongbox"),
+            "precondition: the walk must end in front of a chest: {nouns:?}"
+        );
+        assert_eq!(
+            say(&mut session, "carrying"),
+            "You are carrying a key.",
+            "precondition: the key must survive the walk, or the open below \
+             is not being paid for"
+        );
+        session
+    }
+
+    /// One line at a possession, with the release arm turned into a panic —
+    /// the closure four tests above spell inline, factored once the fifth
+    /// wanted it.
+    fn say(session: &mut Session<'_>, line: &str) -> String {
+        match session.handle(line) {
+            Turn::Out(t) => t,
+            Turn::Released(t) => panic!("`{line}` must not release: {t}"),
+        }
+    }
+
+    /// **A thing taken in one room is carried into another and is still held
+    /// there — the identity-that-travels claim, which is the whole
+    /// campaign** (spec §6 acceptance 1, the first half; the saved-world half
+    /// is `custody_survives_a_save_and_a_re_possession` in
+    /// `tests/suite/session.rs`).
+    ///
+    /// The route crosses three rooms, not two: the loomroom the key is taken
+    /// in, the chamber behind it, and the open air `out` returns to — and the
+    /// two chamber facets are asserted DISTINCT, because a walk that never
+    /// left the room it started in would satisfy every other assertion here.
+    ///
+    /// **It starts where the key stands rather than in the storeroom since
+    /// fix round 1**, because the storeroom's key is inside a shut, locked
+    /// chest and `take` no longer reaches through one. That room was the
+    /// threshold chamber until The Custodian moved the pattern to the
+    /// loomroom; nothing about the claim moved with it. The key is still
+    /// taken in one room, still carried into another, and the entity held is
+    /// still the one the room it came FROM derives.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST — the property is *that custody is
+    /// held by the BODY and therefore travels with it*, not merely that
+    /// `take` writes something: point `Session::take`'s commit at
+    /// `located_in_room_fact(thing, &room, self.day)` instead of
+    /// `located_in_holder_fact(thing, body, self.day)`. The take still
+    /// answers "You take the key.", the room still stops offering it, and
+    /// every latency assertion in the campaign stays green — the key is
+    /// simply left on the floor of the room it was picked up in. Confirmed
+    /// 2026-08-29, unfiltered over the whole crate. **It reds at the
+    /// PRECONDITION, not at the assertion the mutation was aimed at**, and
+    /// that is recorded rather than tidied: the first `carrying` after the
+    /// take already disagrees, so the walk never runs. The later assertion is
+    /// still worth its lines — it is what would catch a custody that reached
+    /// the hand and did not survive the room change — but nothing has yet
+    /// demonstrated it, and saying otherwise would be a mutation credited to
+    /// the wrong line.
+    ///
+    /// ```text
+    /// assertion `left == right` failed: the take must reach custody, or the
+    /// walk below tests nothing
+    ///   left: "You are carrying nothing."
+    ///  right: "You are carrying a key."
+    /// ```
+    ///
+    /// `860 tests run: 856 passed, 4 failed` — this test, both tests below,
+    /// and `custody_survives_a_save_and_a_re_possession`. `take` is upstream
+    /// of every custody assertion in the campaign, so a mutation of its
+    /// commit is deliberately NOT a discriminating one; the three that follow
+    /// are.
+    #[test]
+    fn a_thing_taken_is_carried_between_rooms() {
+        let world = world_at(1).expect("seed 1 builds");
+        let mut session = at_the_loom_of_seed_one(&world);
+        let loom = session
+            .chamber_facet_here()
+            .expect("the walk lands in a chamber");
+
+        assert_eq!(say(&mut session, "carrying"), "You are carrying nothing.");
+        assert_eq!(say(&mut session, "take a key"), "You take the key.");
+        assert_eq!(
+            say(&mut session, "carrying"),
+            "You are carrying a key.",
+            "the take must reach custody, or the walk below tests nothing"
+        );
+
+        assert!(say(&mut session, "enter further in").starts_with("[chamber "));
+        let deeper = session
+            .chamber_facet_here()
+            .expect("`enter further in` lands in a chamber");
+        assert_ne!(
+            deeper, loom,
+            "precondition: the walk must have changed rooms, or 'carried \
+             between rooms' is not what was tested"
+        );
+        assert_eq!(
+            say(&mut session, "carrying"),
+            "You are carrying a key.",
+            "the key must still be in hand one room further in"
+        );
+
+        assert!(say(&mut session, "out").starts_with("[room "));
+        assert_eq!(
+            say(&mut session, "carrying"),
+            "You are carrying a key.",
+            "custody must survive leaving the building"
+        );
+        assert_eq!(
+            crate::thing::held_by(&session.ledger, session.agent_entity(), session.day),
+            vec![crate::thing::thing_id(&loom, "key", 0).expect("a chamber facet packs")],
+            "and the entity held must be the one the LOOMROOM derives — \
+             custody carries an identity, not a copy minted where it was \
+             last seen"
+        );
+    }
+
+    /// **A dropped thing joins the room it was dropped in, and is offered
+    /// there on the next entry** (spec §3.4's negative fold, read forwards).
+    ///
+    /// The room it is dropped in is NOT the room it came from and composes no
+    /// key anchor of its own, which is the case that makes this more than a
+    /// restatement of latency: the THRESHOLD chamber has never heard of a
+    /// key, so the only thing that can offer it back is
+    /// [`crate::thing::lying_in`] — the ledger's own answer. A `take` that
+    /// consulted the grammar alone would refuse here.
+    ///
+    /// **The route out of the loomroom is `out` then `enter`, not one more
+    /// `enter further in`, and the difference is load-bearing since The
+    /// Custodian.** The room one step DEEPER than the loomroom is the
+    /// storeroom, whose grammar composes `the-key-in-the-strongbox` — so
+    /// dropping there would test the shadowing case
+    /// (`a_key_set_down_where_another_is_composed_is_still_taken`) instead of
+    /// this one. `out` leaves the structure entirely from any chamber, so
+    /// `enter` returns to index 0: the threshold chamber, which composes no
+    /// key at all now that the pattern moved off it. The precondition below
+    /// is what makes that a checked fact rather than a remembered one.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST — the property is *that a dropped
+    /// thing is placed in THIS room rather than merely released*: change
+    /// `Session::drop_carried`'s commit to
+    /// `located_in_room_fact(thing, &Facet { face: 0, path: vec![1] }, ...)`,
+    /// a room that is not here. The reply is unchanged, `carrying` correctly
+    /// reports empty hands, and the key is simply gone. Confirmed 2026-08-29,
+    /// unfiltered, in one run carrying this mutation and the two below —
+    /// `860 tests run: 857 passed, 3 failed`, one per mutation, so each is
+    /// attributed by name rather than by argument.
+    ///
+    /// **The red is the ROOM KEY, one assertion earlier than the retake**,
+    /// which is the sharper witness: `160` is the packed foreign facet the
+    /// mutation names and `141819825979456` is the chamber the player is
+    /// actually standing in.
+    ///
+    /// ```text
+    /// assertion `left == right` failed: the drop must post THIS room's key
+    ///   left: Some(Text("160"))
+    ///  right: Some(Text("141819825979456"))
+    /// ```
+    #[test]
+    fn a_dropped_thing_joins_the_room_it_was_dropped_in() {
+        let world = world_at(1).expect("seed 1 builds");
+        let mut session = at_the_loom_of_seed_one(&world);
+        let loom = session
+            .chamber_facet_here()
+            .expect("the walk lands in a chamber");
+        assert_eq!(say(&mut session, "take a key"), "You take the key.");
+
+        assert!(say(&mut session, "out").starts_with("[room "));
+        assert!(say(&mut session, "enter").starts_with("[chamber "));
+        let entrance = session
+            .chamber_facet_here()
+            .expect("`enter` lands in a chamber");
+        assert_ne!(entrance, loom, "precondition: a different room");
+        assert!(
+            !session.chamber_nouns_here().iter().any(|n| n == "a key"),
+            "precondition: this room's GRAMMAR must not compose a key, or the \
+             ledger's own answer is not what is being tested"
+        );
+
+        assert_eq!(say(&mut session, "drop a key"), "You set the key down.");
+        assert_eq!(say(&mut session, "carrying"), "You are carrying nothing.");
+        assert_eq!(
+            crate::thing::location_of(
+                &session.ledger,
+                crate::thing::thing_id(&loom, "key", 0).expect("a chamber facet packs"),
+                session.day
+            ),
+            Some(Value::Text(
+                crate::thing::room_key(&entrance).expect("a chamber facet packs")
+            )),
+            "the drop must post THIS room's key"
+        );
+        assert_eq!(
+            say(&mut session, "take a key"),
+            "You take the key.",
+            "the dropped key must be lying in THIS room, and takeable again"
+        );
+    }
+
+    /// `put` stows a carried thing in a container standing here, and `take`
+    /// gets it back out — the third direction custody can go, and the one
+    /// that would silently strand a thing if [`Session::take`]'s container
+    /// arm did not exist.
+    ///
+    /// It also pins the shut arm from both sides: a closed strongbox refuses
+    /// the `put`, and the same strongbox opened accepts it.
+    ///
+    /// **IT COVERS ONE ROOM SHAPE OF TWO, AND ITS DOC USED TO CLAIM THE
+    /// HOLE WAS CLOSED** (fix round 1). `take`'s container arm sits behind the
+    /// noun match against `interior.ids()`, so it is reachable only in a room
+    /// whose grammar composes the stowed thing's OWN anchor — which the
+    /// storeroom below does, because the key is `Within(Strongbox)` there. In
+    /// any other room the same `put` used to lose the thing for good;
+    /// `a_thing_put_into_a_container_the_grammar_never_composes_comes_back_out`
+    /// is the other shape, and [`Session::take_from_the_ledger`]'s second
+    /// source is what answers it. Neither test substitutes for the other.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST — the property is *that `take` can
+    /// reach into a container standing here*, which is what makes `put`
+    /// reversible rather than a hole: in `Session::take`'s container arm,
+    /// replace `Some(Value::Entity(h)) => h,` with
+    /// `Some(Value::Entity(_)) => return Turn::Out(format!("You see no {} here.", rest.trim())),`
+    /// — the already-carrying arm above it survives, so the match still
+    /// compiles and every other take still works.
+    ///
+    /// **The mutation this replaces could not be applied at all.** It named
+    /// `Some(Value::Entity(h)) if self.holder_stands_here(...)`, and there is
+    /// no `holder_stands_here` in the tree and no guard on that arm: the real
+    /// function is [`Session::holder_anchored_here`] and it is called AFTER
+    /// the match, not inside it. A mutation nobody can apply is a claim that
+    /// reads exactly like evidence. Re-taken against the real code, confirmed
+    /// 2026-08-30, unfiltered over the whole crate —
+    /// `864 tests run: 862 passed, 2 failed, 3 skipped`:
+    ///
+    /// ```text
+    /// assertion `left == right` failed: a thing put into a chest standing
+    /// here must be takeable back out of it
+    ///   left: "You see no a key here."
+    ///  right: "You take the key."
+    /// ```
+    ///
+    /// **The second red is `closing_a_container_does_not_lock_it`, and it is
+    /// recorded rather than tidied**: that test ends by taking the key back
+    /// out of the same strongbox in the same room, so it rides this arm too.
+    /// It is a weaker witness for THIS property (it reaches the take through
+    /// four earlier verbs) and a sharper one for its own, which is why both
+    /// exist.
+    #[test]
+    fn a_thing_put_into_an_open_chest_can_be_taken_back_out() {
+        let world = world_at(1).expect("seed 1 builds");
+        let mut session = in_the_store_room_of_seed_one_with_a_key(&world);
+        assert_eq!(
+            say(&mut session, "put a key in a strongbox"),
+            "The strongbox is shut.",
+            "a shut lid refuses what a player tries to stow behind it"
+        );
+        assert_eq!(
+            say(&mut session, "open a strongbox"),
+            "You open the strongbox. Within it: a key.",
+            "the door key must turn the seeded lock, or nothing below is \
+             reachable at all"
+        );
+        assert_eq!(
+            say(&mut session, "put a key in a strongbox"),
+            "You put the key in the strongbox."
+        );
+        assert_eq!(say(&mut session, "carrying"), "You are carrying nothing.");
+
+        // THE STORE ROOM'S OWN KEY, out and back in — and it has to be this
+        // one rather than the door key, because only a thing the ledger has
+        // already placed reaches `take`'s container arm at all. The door key
+        // stowed above is still in the chest and unreachable by noun: the
+        // grammar's match resolves "a key" to this room's own anchor, so
+        // every take below is about the store key.
+        assert_eq!(
+            say(&mut session, "take a key"),
+            "You take the key.",
+            "with the lid up, the room's own key comes out — the GRAMMAR arm"
+        );
+        assert_eq!(
+            say(&mut session, "put a key in a strongbox"),
+            "You put the key in the strongbox."
+        );
+        assert_eq!(say(&mut session, "carrying"), "You are carrying nothing.");
+        assert_eq!(
+            say(&mut session, "take a key"),
+            "You take the key.",
+            "a thing put into a chest standing here must be takeable back out \
+             of it"
+        );
+        assert_eq!(say(&mut session, "carrying"), "You are carrying a key.");
+    }
+
+    /// **A thing stowed in a container the room's GRAMMAR never composes
+    /// comes back out** — the other room shape, and the one the shipped verb
+    /// lost the thing in permanently (fix round 1).
+    ///
+    /// The sibling test above stows the key in the strongbox of the room that
+    /// composes both, where `take`'s own container arm answers. This one
+    /// carries the key out of the building and back into the chamber whose
+    /// grammar knows only a doorway and an alcove, so the noun match at the
+    /// top of
+    /// [`Session::take`] cannot fire and control reaches
+    /// [`Session::take_from_the_ledger`] — where [`crate::thing::lying_in`] is
+    /// room-keyed and direct and cannot see a thing held by a container
+    /// entity. Before the fix the key was gone from the world for the rest of
+    /// play, with a cheerful reply and no refusal: exactly the loss
+    /// [`NOWHERE_TO_SET_DOWN_REFUSAL`] exists to prevent, through the sibling
+    /// verb.
+    ///
+    /// The `an alcove` precondition is asserted rather than assumed, because
+    /// an alcove carries `Encloses` and NOT `Openable` — it is the lidless
+    /// arm of [`Session::holder_admits`], so this test also pins that a
+    /// container with nothing to shut never refuses.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST — the property is *that the ledger's
+    /// second source is consulted at all*: in
+    /// `Session::take_from_the_ledger`, replace the
+    /// `None => self.stowed_in_a_container_here(interior, room, wanted).map(...)`
+    /// arm with `None => None`. Every floor take still works and the reply
+    /// for a stowed thing reverts to "You see no a key here.". Confirmed
+    /// 2026-08-30, unfiltered over the whole crate —
+    /// `864 tests run: 863 passed, 1 failed, 3 skipped`, this test alone, so
+    /// the second source is held by nothing else in the tree:
+    ///
+    /// ```text
+    /// assertion `left == right` failed: a thing stowed in a container this
+    /// room's grammar never composed must still be reachable, or `put` is a
+    /// one-way trapdoor
+    ///   left: "You see no a key here."
+    ///  right: "You take the key."
+    /// ```
+    #[test]
+    fn a_thing_put_into_a_container_the_grammar_never_composes_comes_back_out() {
+        let world = world_at(1).expect("seed 1 builds");
+        let mut session = in_the_store_room_of_seed_one_with_a_key(&world);
+        let store = session
+            .chamber_facet_here()
+            .expect("the walk above ended in a chamber");
+
+        assert!(say(&mut session, "out").starts_with("[room "));
+        assert!(say(&mut session, "enter").starts_with("[chamber "));
+        assert!(say(&mut session, "enter further in").starts_with("[chamber "));
+        let alcove_room = session
+            .chamber_facet_here()
+            .expect("`enter further in` lands in a chamber");
+        assert_ne!(alcove_room, store, "precondition: a different room");
+        let nouns = session.chamber_nouns_here();
+        assert!(
+            nouns.iter().any(|n| n == "an alcove"),
+            "precondition: this room must stand a lidless container: {nouns:?}"
+        );
+        assert!(
+            !nouns.iter().any(|n| n == "a key"),
+            "precondition: this room's GRAMMAR must not compose a key, or \
+             `take`'s own container arm answers and the ledger's second \
+             source is not what is being tested: {nouns:?}"
+        );
+
+        assert_eq!(
+            say(&mut session, "put a key in an alcove"),
+            "You put the key in the alcove."
+        );
+        assert_eq!(say(&mut session, "carrying"), "You are carrying nothing.");
+        assert_eq!(
+            say(&mut session, "take a key"),
+            "You take the key.",
+            "a thing stowed in a container this room's grammar never composed \
+             must still be reachable, or `put` is a one-way trapdoor"
+        );
+        assert_eq!(say(&mut session, "carrying"), "You are carrying a key.");
+    }
+
+    /// **A locked lid refuses `take`, and lifting it lets the same take
+    /// through** — the bypass fix's own witness (Task 13, fix round 1), both
+    /// directions in one session.
+    ///
+    /// Before this, `take` asked about a container only on the LEDGER path,
+    /// so a key the grammar composed inside a locked chest — the untouched
+    /// state every world starts in — came straight out and the only lock in
+    /// the game fell in one move:
+    ///
+    /// ```text
+    /// > open a strongbox   It is locked, and you are carrying nothing that would open it.
+    /// > take a key         You take the key.
+    /// ```
+    ///
+    /// **The third beat is the half that keeps this from being a
+    /// one-directional assertion**, and it is why the gate reads the location
+    /// fold's `None` rather than [`crate::thing::is_latent`]: a key taken out
+    /// and set down on this room's own floor is `is_latent`, and the anchor
+    /// graph still says it lives in the chest — forever, because a composed
+    /// interior is a pure function of the room. Shut the lid on that key and
+    /// the naive gate refuses a thing lying in plain sight at the player's
+    /// feet.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST — two, because the gate has two ways
+    /// to be wrong and each has its own red. Both confirmed 2026-08-30,
+    /// unfiltered over the whole crate (`--no-fail-fast`), and each was the
+    /// ONLY failure of its run — `868 tests run: 867 passed, 1 failed, 3
+    /// skipped`, twice:
+    ///
+    /// 1. Neutralise the gate — `if false && let Some(container) =
+    ///    interior.anchor(id).within`. Beat one goes green and the lock is
+    ///    defeated again:
+    ///
+    ///    ```text
+    ///    assertion `left == right` failed: a shut lid must refuse the verb
+    ///    that would move what is behind it
+    ///      left: "You take the key."
+    ///     right: "The key is shut away in something closed."
+    ///    ```
+    ///
+    /// 2. Widen its condition from
+    ///    `crate::thing::location_of(&self.ledger, thing, self.day).is_none()`
+    ///    to `crate::thing::is_latent(…)`. Beats one and two stay green and
+    ///    beat three reds with the key lying at the player's feet:
+    ///
+    ///    ```text
+    ///    assertion `left == right` failed: a key lying on this floor must be
+    ///    takeable however the grammar composed it
+    ///      left: "The key is shut away in something closed."
+    ///     right: "You take the key."
+    ///    ```
+    ///
+    /// **The two mutations are not redundant and the second is the one worth
+    /// having.** Mutation 1 is the defect this campaign fixed; mutation 2 is
+    /// the defect the FIX would have introduced, and it is the plausible
+    /// version of the gate — `is_latent` is the predicate the function was
+    /// already calling one line down, so writing it there is the natural
+    /// move rather than an exotic one.
+    #[test]
+    fn a_shut_lid_refuses_take_and_an_open_one_does_not() {
+        let world = world_at(1).expect("seed 1 builds");
+        let mut session = in_the_store_room_of_seed_one_with_a_key(&world);
+
+        // 1. The grammar puts a key inside this chest and the chest is shut.
+        assert_eq!(
+            say(&mut session, "take a key"),
+            "The key is shut away in something closed.",
+            "a shut lid must refuse the verb that would move what is behind it"
+        );
+        assert_eq!(
+            say(&mut session, "carrying"),
+            "You are carrying a key.",
+            "the refusal must not have quietly taken it anyway"
+        );
+
+        // 2. The same take, through a lid the player has lifted.
+        assert_eq!(
+            say(&mut session, "open a strongbox"),
+            "You open the strongbox. Within it: a key."
+        );
+        assert_eq!(
+            say(&mut session, "take a key"),
+            "You take the key.",
+            "an open lid must not refuse: a gate that never lets go is a \
+             capability removed, not a lock"
+        );
+
+        // 3. That key, set down on this room's floor with the lid shut again.
+        // The grammar still composes it inside the chest; the ledger knows
+        // better, and the ledger wins.
+        assert_eq!(say(&mut session, "drop a key"), "You set the key down.");
+        assert_eq!(
+            say(&mut session, "close a strongbox"),
+            "You close the strongbox."
+        );
+        assert_eq!(
+            say(&mut session, "take a key"),
+            "You take the key.",
+            "a key lying on this floor must be takeable however the grammar \
+             composed it, or shutting a lid strands what is outside it"
+        );
+    }
+
+    /// **A key set down where the grammar composes a DIFFERENT one is still
+    /// found** — the shadowing the second key pattern made reachable, closed
+    /// in the same change (Task 13, fix round 1).
+    ///
+    /// [`Session::take`] resolves a typed noun against this room's anchors
+    /// FIRST, so the anchor decides which entity the verb is about. While
+    /// `the-key-in-the-strongbox` was the only key pattern that was harmless:
+    /// the one room with a key anchor was the deepest room a walk could
+    /// reach, and nothing could be carried into it that the anchor did not
+    /// already name. `the-key-by-the-loom` puts an anchor in a SECOND room —
+    /// one a possession passes through on its way to the lock — so the shadow
+    /// became a state a player can produce in a handful of moves: stow the
+    /// loomroom's key in the chest, carry the chest's key back to the
+    /// loomroom, set it down, and ask for it back. Before the fix the answer
+    /// was *"You see no a key here"* with a key lying at the player's feet.
+    ///
+    /// **The shadowed room was the THRESHOLD chamber until The Custodian**,
+    /// which moved the pattern to `roles: &[Role::Loomroom]` so that a key
+    /// would stop standing in the entrance of every structure in every world.
+    /// The property under test is unchanged — it was never about which room
+    /// composes the anchor, only that some room other than the chest's does.
+    ///
+    /// The two verbs that made the old behaviour safe are still in the tree
+    /// unchanged: this is a fall-through to
+    /// [`Self::take_from_the_ledger`], not a second search, so the sentence a
+    /// genuinely absent thing gets is the same sentence it always got.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST — the property is *that the ledger is
+    /// consulted when the room's own anchor is elsewhere*: revert either
+    /// fall-through in `Session::take`'s ledger branch to
+    /// `return Turn::Out(format!("You see no {} here.", rest.trim()))`. Both
+    /// compile; the second (`holder_anchored_here`'s `else`) is the arm this
+    /// walk takes. Confirmed 2026-08-30, unfiltered over the whole crate,
+    /// the only failure — `868 tests run: 867 passed, 1 failed, 3 skipped`:
+    ///
+    /// ```text
+    /// assertion `left == right` failed: a key lying in this room must be
+    /// takeable even though the room's own key anchor is somewhere else
+    ///   left: "You see no a key here."
+    ///  right: "You take the key."
+    /// ```
+    #[test]
+    fn a_key_set_down_where_another_is_composed_is_still_taken() {
+        let world = world_at(1).expect("seed 1 builds");
+        let mut session = in_the_store_room_of_seed_one_with_a_key(&world);
+
+        // Put the LOOMROOM's key beyond that room's reach, so the anchor it
+        // composes is answering about something a chamber away.
+        assert_eq!(
+            say(&mut session, "open a strongbox"),
+            "You open the strongbox. Within it: a key."
+        );
+        assert_eq!(
+            say(&mut session, "put a key in a strongbox"),
+            "You put the key in the strongbox."
+        );
+        // And bring the STORE room's key back to the loomroom instead. `out`
+        // leaves the structure from any chamber, so the return trip is
+        // `enter` plus two `enter further in` — the loomroom is index 2.
+        assert_eq!(say(&mut session, "take a key"), "You take the key.");
+        assert!(say(&mut session, "out").starts_with("[room "));
+        assert!(say(&mut session, "enter").starts_with("[chamber "));
+        assert!(say(&mut session, "enter further in").starts_with("[chamber "));
+        assert!(say(&mut session, "enter further in").starts_with("[chamber "));
+        let loom = session
+            .chamber_facet_here()
+            .expect("the walk lands in a chamber");
+        assert!(
+            session.chamber_nouns_here().iter().any(|n| n == "a key"),
+            "precondition: this room must compose a key ANCHOR of its own, or \
+             there is no shadow to cast"
+        );
         assert!(
             !session
-                .ledger
+                .chamber_nouns_here()
                 .iter()
-                .any(|f| f.predicate == crate::passage::PASSAGE_CLEARED),
-            "a refused `clear` must commit nothing: the gate stands in front \
-             of the act, not inside it"
+                .any(|n| n == "a strongbox"),
+            "precondition: the walk must have stopped SHORT of the storeroom, \
+             or the anchor being shadowed is the one already in hand"
+        );
+        assert_eq!(say(&mut session, "drop a key"), "You set the key down.");
+
+        assert_eq!(
+            say(&mut session, "take a key"),
+            "You take the key.",
+            "a key lying in this room must be takeable even though the room's \
+             own key anchor is somewhere else"
+        );
+        assert_eq!(
+            crate::thing::held_by(&session.ledger, session.agent_entity(), session.day)
+                .into_iter()
+                .filter(|t| *t == crate::thing::thing_id(&loom, "key", 0).expect("packs"))
+                .count(),
+            0,
+            "and the thing taken must be the one on the floor, not the anchor \
+             the room composes"
+        );
+    }
+
+    /// **Closing a container does not lock it** (decision 0399) — the
+    /// permanent soft-lock the shipped verbs could reach in three moves, and
+    /// the model correction that removed it.
+    ///
+    /// The sequence is the reviewer's, verbatim: open the chest with the key,
+    /// put the key inside it, shut the lid. Under the shipped conflation the
+    /// world ended there — `open` refused for want of a key that was inside
+    /// the chest, and `take a key` refused because the key was shut away, at
+    /// any day, by any verb. Under decision 0399 the chest is shut and
+    /// UNLOCKED, so the lid lifts again with empty hands and the key comes
+    /// back out.
+    ///
+    /// **It asserts the recovery, not the absence of a refusal**, which is
+    /// the distinction that makes it a regression test rather than a
+    /// re-spelling of the bug: the last two lines are the two verbs that were
+    /// stuck, each answering the way it would if nothing had ever been locked.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST — the property is *that lockedness is
+    /// a state of the THING and not of the player's pockets*, which is
+    /// decision 0399 itself put back: in `Session::open_or_close`, replace
+    /// `let locked = open && self.container_is_locked(&room, thing_kind);`
+    /// with
+    /// `let locked = open && crate::affordance::carries(thing_kind, crate::affordance::ObjectProperty::Lockable);`
+    /// — the pre-0399 expression. It compiles and every first-open test stays
+    /// green, which is the whole reason the defect shipped. Confirmed
+    /// 2026-08-30, unfiltered over the whole crate —
+    /// `864 tests run: 863 passed, 1 failed, 3 skipped`, this test alone:
+    ///
+    /// ```text
+    /// assertion `left == right` failed: a shut lid is not a turned key: the
+    /// chest a player closed on their own key must open again with empty
+    /// hands
+    ///   left: "It is locked, and you are carrying nothing that would open it."
+    ///  right: "You open the strongbox. Within it: a key."
+    /// ```
+    #[test]
+    fn closing_a_container_does_not_lock_it() {
+        let world = world_at(1).expect("seed 1 builds");
+        let mut session = in_the_store_room_of_seed_one_with_a_key(&world);
+        assert_eq!(
+            say(&mut session, "open a strongbox"),
+            "You open the strongbox. Within it: a key.",
+            "precondition: the key in custody must turn the seeded lock, or \
+             nothing below is about closing"
+        );
+        assert_eq!(
+            say(&mut session, "put a key in a strongbox"),
+            "You put the key in the strongbox."
+        );
+        assert_eq!(
+            say(&mut session, "close a strongbox"),
+            "You close the strongbox."
+        );
+
+        assert_eq!(
+            say(&mut session, "open a strongbox"),
+            "You open the strongbox. Within it: a key.",
+            "a shut lid is not a turned key: the chest a player closed on \
+             their own key must open again with empty hands"
+        );
+        assert_eq!(
+            say(&mut session, "take a key"),
+            "You take the key.",
+            "and the key must come back out, or the soft-lock is only one \
+             verb further along"
+        );
+    }
+
+    /// **A chest that was never unlocked stays locked across a close** — the
+    /// other half of decision 0399, and the half a reader is likeliest to
+    /// suspect the fix of breaking.
+    ///
+    /// Clause 3: a seeded strongbox starts locked, and the default is
+    /// authored on the KIND rather than drawn, so a chest nobody has opened
+    /// refuses empty hands however many times its lid is worked. The walk
+    /// below never takes the key, so `open` never turns the lock, so
+    /// `container_is_locked` reads its absent-fact default every time.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST — the property is *that a REFUSED
+    /// `open` writes nothing*, which is what the last two lines hold and what
+    /// the first line alone could not: in `Session::open_or_close`, hoist the
+    /// `if locked { crate::thing::set_lockedness(…, false, …) }` block ABOVE
+    /// the `LOCKED_WITHOUT_A_KEY_REFUSAL` return, so the lock turns on the
+    /// way to being told it did not. Confirmed 2026-08-30, unfiltered over
+    /// the whole crate — `864 tests run: 863 passed, 1 failed, 3 skipped`,
+    /// this test alone, and it reds on the THIRD assertion rather than the
+    /// precondition:
+    ///
+    /// ```text
+    /// assertion `left == right` failed: and the lock is still a lock
+    ///   left: "You open the strongbox. Within it: a key."
+    ///  right: "It is locked, and you are carrying nothing that would open it."
+    /// ```
+    ///
+    /// **A second, blunter mutation is recorded because its RED IS IN THE
+    /// WRONG PLACE and that is worth knowing before anyone credits it**:
+    /// flipping `Session::container_is_locked`'s `.unwrap_or(true)` to
+    /// `.unwrap_or(false)` reds three tests
+    /// (`864 tests run: 861 passed, 3 failed`) — this one plus
+    /// `a_key_in_custody_opens_the_strongbox_a_player_walked_to` and
+    /// `strongbox_reachability::a_possession_walks_to_a_strongbox_and_finds_
+    /// it_locked` — and all three object at "a seeded strongbox starts
+    /// locked", which was already held before this test existed. It proves
+    /// the default, not the close, so it is not this test's mutation.
+    #[test]
+    fn a_container_nobody_unlocked_is_still_locked_after_a_close() {
+        let world = world_at(1).expect("seed 1 builds");
+        let mut session = in_the_store_room_of_seed_one(&world);
+        assert_eq!(
+            say(&mut session, "open a strongbox"),
+            LOCKED_WITHOUT_A_KEY_REFUSAL,
+            "precondition: a seeded strongbox starts locked"
+        );
+        assert_eq!(
+            say(&mut session, "close a strongbox"),
+            "The strongbox is already shut.",
+            "the refused open must have written nothing"
+        );
+        assert_eq!(
+            say(&mut session, "open a strongbox"),
+            LOCKED_WITHOUT_A_KEY_REFUSAL,
+            "and the lock is still a lock"
+        );
+    }
+
+    /// **`open` and `close` each take an instant, so a chest's state is
+    /// representable** (fix round 1) — the same representability argument
+    /// [`Session::take`]'s doc makes for custody, applied to the verb pair
+    /// that shipped free.
+    ///
+    /// `Ledger::commit` dedups a fact identical to one already held and a
+    /// free verb leaves the clock where it found it, so `open`, `close`,
+    /// `open` at ONE instant committed `open`, `shut`, and then a third fact
+    /// byte-identical to the first — dropped. The last posting at that
+    /// instant was `shut`, every reply having been computed before its
+    /// commit. The result was not one wrong reply but a stuck instant that
+    /// only `wait` escaped.
+    ///
+    /// **The assertion is on the LEDGER's answer and on the next verb, never
+    /// on `open`'s own reply**, because `open`'s reply is exactly what lied:
+    /// a test reading it back would have passed against the defect.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST — the property is *that the charge is
+    /// what makes three acts three instants*: delete the
+    /// `if let Err(e) = self.charge_within_room() { return Turn::Out(e); }`
+    /// block from `Session::open_or_close`. Every reply in the walk below is
+    /// unchanged and the chest silently stays shut. Confirmed 2026-08-30,
+    /// unfiltered over the whole crate —
+    /// `864 tests run: 863 passed, 1 failed, 3 skipped`, this test alone, so
+    /// nothing else in the tree notices `open`/`close` going free again:
+    ///
+    /// ```text
+    /// opening a lid must cost an instant, or the two facts below cannot be
+    /// told apart
+    /// ```
+    ///
+    /// **It reds at the CLOCK assertion, one line in, not at the two
+    /// assertions this test was written for**, and that is recorded rather
+    /// than tidied. The clock line is a precondition — it is what makes the
+    /// three postings distinguishable at all — so the mutation never reaches
+    /// the ledger read or the `put`. Those two are still worth their lines
+    /// (they are what would catch a charge that advanced the clock while the
+    /// commits stayed on the old day), but nothing has demonstrated them, and
+    /// saying otherwise would credit a mutation to the wrong assertion.
+    #[test]
+    fn open_and_close_each_take_an_instant() {
+        let world = world_at(1).expect("seed 1 builds");
+        let mut session = in_the_store_room_of_seed_one_with_a_key(&world);
+        let room = session
+            .chamber_facet_here()
+            .expect("the walk above ended in a chamber");
+
+        let before = session.day;
+        assert_eq!(
+            say(&mut session, "open a strongbox"),
+            "You open the strongbox. Within it: a key."
+        );
+        assert!(
+            session.day > before,
+            "opening a lid must cost an instant, or the two facts below \
+             cannot be told apart"
+        );
+        assert_eq!(
+            say(&mut session, "close a strongbox"),
+            "You close the strongbox."
+        );
+        assert_eq!(
+            say(&mut session, "open a strongbox"),
+            "You open the strongbox. Within it: a key."
+        );
+
+        assert!(
+            session.container_is_open(&room, hornvale_kernel::KindId("strongbox")),
+            "the ledger must agree with the reply: a third posting deduped \
+             away leaves the chest shut while `open` says it opened"
+        );
+        assert_eq!(
+            say(&mut session, "put a key in a strongbox"),
+            "You put the key in the strongbox.",
+            "and the next verb must see the open chest the player is looking \
+             at"
+        );
+    }
+
+    /// **The lock wants a PROPERTY and exactly one kind supplies it** — the
+    /// hazard [`LOCKED_WITHOUT_A_KEY_REFUSAL`]'s doc names, made
+    /// unmissable from Task 12 rather than left as a sentence.
+    ///
+    /// [`Session::open_or_close`] refuses a `Lockable` thing unless the body
+    /// carries something marked [`crate::affordance::ObjectProperty::
+    /// Portable`]. `Lockable` has no payload, so that property is a literal at
+    /// the call site, and it is the right literal only while `key` is the
+    /// sole carrier. This test asserts that roster by NAME. **Task 12 has
+    /// shipped and did not fire it**: it added three verbs that GATE on
+    /// `Portable` and no kind that CARRIES it, so the roster is unmoved. The
+    /// day a lantern or a coin becomes portable, this reddens before the
+    /// world ships a lock every pocket opens.
+    ///
+    /// **Deliberately not a "count is 1" assertion.** The failure message has
+    /// to arrive with the two ways out, because the person who trips it is
+    /// mid-way through a different task and the correct fix is not "revert":
+    /// give `Lockable` a payload naming the property (or kind) it wants, or
+    /// coin a narrower property the key alone carries and read THAT in the
+    /// lock arm. Either is a design act; neither is obvious from a bare count.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST — the property is *that the roster is
+    /// pinned, not merely non-empty*: add `ObjectProperty::Portable` to any
+    /// other row of `affordance::object_registry` (`log` and `vessel` are the
+    /// plausible ones). Confirmed 2026-08-29, unfiltered; re-confirmed
+    /// unfiltered at Task 12, where the same mutation now also reddens
+    /// `the_re_key_preserves_every_anchor_kinds_offer` — because `Portable`
+    /// gates three verbs since this test was written, so a second carrier
+    /// moves that frozen table's row for the newly-portable kind as well.
+    #[test]
+    fn the_lock_wants_a_property_and_exactly_one_kind_supplies_it() {
+        use crate::affordance::{ObjectProperty, object_registry};
+        let portable: Vec<&str> = object_registry()
+            .iter()
+            .filter(|(_, traits)| traits.properties.contains(&ObjectProperty::Portable))
+            .map(|(kind, _)| kind.0)
+            .collect();
+        assert_eq!(
+            portable,
+            vec!["key"],
+            "`open`'s lock arm asks for ObjectProperty::Portable and nothing \
+             narrower, so every kind on this roster opens every lock in the \
+             world. It was written when the roster was exactly [\"key\"]. It \
+             is now {portable:?}, so the lock is no longer a lock. Two ways \
+             out, both design acts: give ObjectProperty::Lockable a payload \
+             naming what it wants, or coin a narrower property (an opener) \
+             that the key alone carries and read that in `open_or_close`."
+        );
+    }
+
+    /// Opening is durable for the session, and closing undoes it — the
+    /// re-closability decision 0367 deferred, now shipped (spec §3.7,
+    /// acceptance 3).
+    ///
+    /// **Driven through the real writer and the real fold**,
+    /// [`crate::thing::set_openness`] and [`Session::container_is_open`], on
+    /// a live session's own ledger and registry — the same pair
+    /// `Session::open_or_close` calls, one frame in. It is written this way
+    /// for a reason that has since lapsed and is recorded rather than
+    /// silently dropped: when this was written, no world composed a strongbox
+    /// into a chamber a possession could stand in, so `handle("open a
+    /// strongbox")` could not reach the writer at all. Decision 0398 relaxed
+    /// that gate and eight of 48 swept seeds now do
+    /// (`tests/suite/strongbox_reachability.rs`).
+    ///
+    /// **THE SENTENCE THAT USED TO CLOSE THAT PARAGRAPH WAS FALSE, AND ITS
+    /// OWN SECOND CLAUSE IS WHY.** It read: *"still the sharper instrument
+    /// for the FOUR states below — a played walk reaches only the first two,
+    /// since `close` needs a chest the session has already opened and the key
+    /// is behind Task 12's `take`."* If the key is behind `take`, a played
+    /// walk cannot open anything, so it cannot reach the second state either.
+    /// Counted rather than estimated, seed 1's deepest chamber, 2026-08-29:
+    ///
+    /// ```text
+    /// > close a strongbox  ->  The strongbox is already shut.
+    /// > open a strongbox   ->  It is locked, and you are carrying nothing that would open it.
+    /// ```
+    ///
+    /// **One state, not two** — shut, reported by the already-shut no-op. A
+    /// correction that miscounts the thing it is correcting is the failure
+    /// 0398 exists to name, so it is fixed loudly rather than quietly.
+    ///
+    /// **What actually reaches all four is
+    /// `a_key_in_custody_opens_the_strongbox_a_player_walked_to` above**,
+    /// which commits a `LOCATED_IN` posting from a room no walk reaches and
+    /// then drives every state through [`Session::handle`]. (Since Task 12 a
+    /// PURELY played walk reaches them too — `take a key` first — but from
+    /// the strongbox's own contents, which is the grammar defect that test's
+    /// doc records.) So this test is
+    /// no longer the only thing holding the ladder, and it is kept for two
+    /// things that one cannot do: it evaluates the fold at an instant EARLIER
+    /// than any posting (the last assertion — a verb can only ever ask about
+    /// now), and it needs no world to compose a strongbox, so it still holds
+    /// if worldgen stops drawing one.
+    ///
+    /// Four states, not two, and the third is the deliverable: 0367's latch
+    /// was MONOTONE — it short-circuited on any clearing fact ever committed
+    /// — so under that rule the `close` below could not have lowered
+    /// anything and the fourth state would be unreachable.
+    ///
+    /// The FIRST assertion is the other half: a container nobody has touched
+    /// reads shut. That is an authored default living in
+    /// `Session::container_is_open`, not in `thing::is_open` (whose `None`
+    /// means "whatever the seed drew"), and nothing else in the tree pins it.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST — the property is *that the latest
+    /// posting wins, not the first*: in
+    /// `crate::thing::latest_object_at_or_before`, invert the fold's
+    /// comparison, `best.is_none_or(|(seen, _)| seen <= d)` ->
+    /// `best.is_none_or(|(seen, _)| seen >= d)`. The first posting then wins
+    /// and the chest never closes. Confirmed 2026-08-29, unfiltered:
+    ///
+    /// ```text
+    /// assertion `left == right` failed: after setting open=false the fold
+    /// must report false
+    ///   left: true
+    ///  right: false
+    /// ```
+    ///
+    /// **That run failed SIX tests, not one, and the blast radius is the
+    /// honest shape of this evidence rather than a footnote.**
+    /// `latest_object_at_or_before` is the one fold `location_of` and
+    /// `is_open` are both made of, so the same mutation also reddened
+    /// `thing::tests::a_thing_put_back_is_still_here`,
+    /// `thing::tests::location_is_read_as_of_the_day_asked_about`,
+    /// `thing::tests::openness_is_absent_until_a_fact_says_otherwise`,
+    /// `passage::a_cave_mouth_closed_after_it_was_opened_bars_again` and this
+    /// task's own `thing::a_holder_holds_what_was_last_put_in_it_...`. A
+    /// mutation this broadly caught proves the fold is held; what it does NOT
+    /// prove on its own is that anything holds `open`/`close` SPECIFICALLY,
+    /// which is what the four-state sequence below is for and what the three
+    /// narrower mutations above establish.
+    #[test]
+    fn a_container_opens_closes_and_re_opens() {
+        let world = seam_world();
+        let (mut session, _) =
+            Session::start(&world, &PossessOpts::default()).expect("seed 42 possesses");
+        let room = Facet {
+            face: 0,
+            path: vec![2],
+        };
+        let kind = crate::affordance::thing_kind_of(crate::interior::AnchorKind::Strongbox);
+
+        assert!(
+            !session.container_is_open(&room, kind),
+            "a container nobody has touched reads shut — no generator draws \
+             an openness for one, so the fallback is authored at the reader"
+        );
+
+        let mut at = session.day;
+        for (open, expect) in [(true, true), (false, false), (true, true)] {
+            at = WorldTime::from_ticks(at.ticks() + 1);
+            crate::thing::set_openness(
+                &mut session.ledger,
+                &session.registry,
+                &room,
+                kind.0,
+                0,
+                open,
+                at,
+            )
+            .expect("a shallow facet packs, and the predicates are registered");
+            session.day = at;
+            assert_eq!(
+                session.container_is_open(&room, kind),
+                expect,
+                "after setting open={open} the fold must report {expect}"
+            );
+        }
+
+        // TIME-CORRECT, not a flag: the day before anything happened still
+        // reads shut, however many postings came later.
+        session.day = WorldTime::from_ticks(at.ticks() - 4);
+        assert!(
+            !session.container_is_open(&room, kind),
+            "a fold evaluated at an earlier instant must not see later postings"
         );
     }
 
@@ -7586,7 +11384,12 @@ mod tests {
         assert_ne!(reply, format!("You see no {noun} here."));
         assert_eq!(
             reply,
-            crate::chamber_prose::examine_detail(&interior, id),
+            // `false` is the right expectation and not a guess: nothing in
+            // this test opens anything, and `container_is_open`'s authored
+            // default for a container with no `openness` fact is shut. It is
+            // also inert for the anchor this fixture reaches — the threshold
+            // chamber's first nouned anchor, which carries no `Openable`.
+            crate::chamber_prose::examine_detail(&interior, id, false),
             "examine_chamber's anchor reply must equal chamber_prose's own \
              examine_detail — the pin this task's re-point must not move"
         );
@@ -8206,6 +12009,163 @@ mod tests {
             })
     }
 
+    /// **The sixteen strings the two passage verbs can say must be pairwise
+    /// distinct.** A refusal that reads like another refusal is a refusal that
+    /// tells the player nothing — `barred_refusal`'s own doc gives that
+    /// argument for one pair of them ("a refusal that named no reason would be
+    /// indistinguishable from the no-cave one") and
+    /// `clearing_a_warded_passage_names_the_ward_not_the_rubble` gives it for
+    /// a second pair. This is the same argument applied to the whole
+    /// vocabulary at once.
+    ///
+    /// **THIS CHECK DID NOT EXIST BEFORE TASK 8, AND THE BRIEF THAT ASKED FOR
+    /// IT SAID IT DID.** The instruction was to extend a check that "verified
+    /// the four refusal strings pairwise distinct once"; nothing in this crate
+    /// did that — `delve_has_three_distinguishable_outcomes` compares three
+    /// whole TURN OUTPUTS for one barrier state, and the two `clear` tests
+    /// each assert on a substring. So this was written rather than extended,
+    /// which is worth recording because a check believed to exist is weaker
+    /// than one known not to: nobody re-derives it.
+    ///
+    /// **IT THEN SHIPPED SWEEPING NINE OF THE SIXTEEN AND CLAIMING ALL OF
+    /// THEM, WHICH IS THE SAME LESSON ONE TURN LATER.** Task 8's own first
+    /// line here read "the nine strings the two passage verbs can say";
+    /// grepping the two verbs finds sixteen. Fix round 1's review DEMONSTRATED
+    /// the cost instead of asserting it: making `clear_passage_column`'s
+    /// no-cave refusal byte-identical to `delve_column`'s left all 831 vessel
+    /// tests green — and `barred_refusal`'s doc argues distinctness
+    /// specifically against the no-cave refusal, so the single string that
+    /// argument names by hand was the one string the sweep did not hold. The
+    /// seven that were missing are both verbs' three footing refusals and the
+    /// descent line.
+    ///
+    /// **The sweep reads the production sites, not copies of them**, which is
+    /// why those seven are consts ([`NO_ROCK_INSIDE_REFUSAL`] and its
+    /// neighbours) rather than literals re-typed into this test. A widened
+    /// sweep over hand-copied literals would have stayed green against the
+    /// very collision that exposed the gap: the copy and the call site are two
+    /// objects, and only one of them moves.
+    ///
+    /// **Fifteen exact strings and one PREFIX, which is all the sixteenth can
+    /// honestly contribute.** `delve_at`'s success line carries a format hole
+    /// filled by [`stratum_word`], so it is not one string but eleven.
+    /// [`DESCENT_PREFIX`] — its fixed half — is what this sweep holds, plus a
+    /// `starts_with` check below that no other outcome begins with it; the two
+    /// together imply every filling is distinct from every other outcome.
+    /// Sweeping all eleven fillings instead was rejected deliberately: it
+    /// would redden this test the day two STRATA came to share a word, which
+    /// is a different table doing a different job, and a passage test that
+    /// fails for a stratigraphy reason is the failure mode fix round 1's own
+    /// m5 finding names.
+    ///
+    /// **Sixteen, and the enumeration is by hand for the two tables and by
+    /// const for the rest.** `barred_refusal` and `clear_response` each answer
+    /// four [`hornvale_worldgen::BarrierState`]s, written out here because the
+    /// enum is not `all()`-bearing; a fifth variant would not automatically
+    /// appear, but it would redden both `match`es at compile time, which is
+    /// the compiler doing the enumeration this test cannot.
+    /// [`UNREALIZED_CHAMBER_REFUSAL`] is the ninth and was an inline `match`
+    /// arm until Task 8 — unreachable for any assertion to name, which is
+    /// exactly how a collision with it would have gone unnoticed.
+    ///
+    /// MUTATION this must fail against (fix round 1, reproducing the review's
+    /// own collision): give [`NO_CAVE_MOUTH_TO_CLEAR_REFUSAL`] the text of
+    /// [`NO_CAVE_TO_DELVE_REFUSAL`], so `clear` and `delve` refuse a
+    /// cave-less vertex in identical words. Confirmed 2026-08-29:
+    ///
+    /// ```text
+    /// assertion `left == right` failed: two passage outcomes read
+    /// identically — a player cannot tell them apart. All sixteen: [
+    ///     ...,
+    ///     "There is no cave here to delve into.",
+    ///     ...,
+    ///     "There is no cave here to delve into.",
+    ///     ...,
+    /// ]
+    ///   left: 15
+    ///  right: 16
+    /// ```
+    ///
+    /// The earlier, narrower mutation is kept as a second witness because it
+    /// exercises the two TABLES rather than the consts: in `clear_response`,
+    /// give the `Open` arm `barred_refusal`'s `Open` text ("The way down is
+    /// open.") — the most plausible real collision, since the two tables
+    /// mirror each other's shape by design and that pair is the only one whose
+    /// meanings are genuinely close. Confirmed 2026-08-29 the same way, `left:
+    /// 15  right: 16`.
+    ///
+    /// **The duplicate is printed, which is the reason the message carries
+    /// the whole list rather than just the counts.** `15 != 16` alone names no
+    /// culprit, and a reader who has to go re-derive which two collided is a
+    /// reader who will not.
+    ///
+    /// Genuine behavioural reds, not compile errors; restored and re-run
+    /// on a fresh binary, green.
+    #[test]
+    fn every_passage_outcome_reads_distinctly() {
+        let states = [
+            hornvale_worldgen::BarrierState::Sealed,
+            hornvale_worldgen::BarrierState::Warded,
+            hornvale_worldgen::BarrierState::Thin,
+            hornvale_worldgen::BarrierState::Open,
+        ];
+        let mut said: Vec<String> = Vec::new();
+        for state in states {
+            said.push(barred_refusal(state));
+            said.push(clear_response(state));
+        }
+        said.push(UNREALIZED_CHAMBER_REFUSAL.to_string());
+        // The seven the sweep did not hold until fix round 1 — both verbs'
+        // footing refusals, and the fixed half of the descent line.
+        said.push(NO_ROCK_INSIDE_REFUSAL.to_string());
+        said.push(ALREADY_BELOW_DELVE_REFUSAL.to_string());
+        said.push(NO_CAVE_TO_DELVE_REFUSAL.to_string());
+        said.push(NOTHING_TO_CLEAR_INSIDE_REFUSAL.to_string());
+        said.push(ALREADY_BELOW_CLEAR_REFUSAL.to_string());
+        said.push(NO_CAVE_MOUTH_TO_CLEAR_REFUSAL.to_string());
+        said.push(DESCENT_PREFIX.to_string());
+
+        assert_eq!(
+            said.len(),
+            16,
+            "non-vacuous guard: the sweep must actually collect every string \
+             the two verbs can say, or the uniqueness check below passes by \
+             comparing nothing"
+        );
+        let unique: std::collections::BTreeSet<&String> = said.iter().collect();
+        assert_eq!(
+            unique.len(),
+            said.len(),
+            "two passage outcomes read identically — a player cannot tell \
+             them apart. All sixteen: {said:#?}"
+        );
+
+        // Every one must also NAME something. An empty or whitespace-only
+        // refusal is trivially distinct from the other fifteen and tells a
+        // player nothing at all, so uniqueness alone would not catch it.
+        for line in &said {
+            assert!(
+                line.len() > 20,
+                "a passage outcome must say something: {line:?}"
+            );
+        }
+
+        // The sixteenth is a PREFIX, so exact-string uniqueness above says
+        // nothing about the eleven lines it actually renders into. This is
+        // what carries the gap: no other outcome may BEGIN with it, or some
+        // stratum filling could read as that outcome plus a trailing phrase.
+        for line in &said {
+            if line == DESCENT_PREFIX {
+                continue;
+            }
+            assert!(
+                !line.starts_with(DESCENT_PREFIX),
+                "a passage outcome begins with the descent line's fixed half, \
+                 so some stratum filling of it reads as this outcome: {line:?}"
+            );
+        }
+    }
+
     /// The Deep Realm, Task 5 shipped `delve` with THREE distinguishable
     /// outcomes: no cave, a cave whose entrance chamber resolves to nothing
     /// (spec §3.4 rung 0, "the void exists and is unreachable," a real fact
@@ -8422,6 +12382,112 @@ mod tests {
         );
     }
 
+    /// The Gallery, Task 12 (spec §6 acceptance criterion 9): the campaign's
+    /// constitutional property, stated once at the end rather than assumed
+    /// throughout. Every prior task in this campaign asserted a behaviour
+    /// (a refusal reads correctly, fog is monotone, an inhabitant is
+    /// derived); none asserted that two INDEPENDENT builds of the same seed
+    /// and pins, driven through the identical script, stay byte-identical
+    /// at every turn — not merely at the end, which would pass even if the
+    /// two diverged mid-descent and reconverged by coincidence.
+    ///
+    /// **Two separately-built `World`s**, not one `World` shared by two
+    /// `Session`s: sharing a `World` would prove the session-level fold is
+    /// deterministic given identical inputs, but would leave any
+    /// nondeterminism inside world genesis itself (terrain, the cave
+    /// lattice) unexercised, since both sessions would be reading the exact
+    /// same in-memory value rather than two independently-derived ones.
+    ///
+    /// `find_open_cave_vertex` is called on EACH terrain independently and
+    /// the two answers are asserted equal before either session delves —
+    /// a determinism check on the finder itself, and the reason a later
+    /// snapshot mismatch could not be blamed on picking two different
+    /// entrances.
+    ///
+    /// The script is concrete to seed 42's fixture rather than a generic
+    /// blind sweep, and was found by running it and reading what the
+    /// narration actually said (`Underground::enter` places the possession
+    /// at the first standable cell in `Cell` order, which is not guaranteed
+    /// to be a stairs cell — unlike a rung's connectivity PROBE, which
+    /// measures from the entrance by convention, see the plan's F3):
+    /// stepping `n` from the entrance happens to land on a stairs-down cell
+    /// here, so `down` actually descends; the walk on rung 1 happens to
+    /// cross a stairs-up cell, so `up` actually returns. The script therefore
+    /// exercises a real multi-rung round trip — delve, a lateral step, a
+    /// real descent, three more lateral steps, a real ascent, climb — not
+    /// merely a sequence of blind attempts, and the two sessions' snapshot
+    /// bytes are compared after every single line.
+    #[test]
+    fn the_same_seed_and_pins_produce_a_byte_identical_descent_and_pane() {
+        fn world_at_seed_42() -> World {
+            build_world(
+                Seed(42),
+                &SkyPins::default(),
+                SkyChoice::Generated,
+                &TerrainPins::default(),
+                &SettlementPins::default(),
+            )
+            .expect("seed 42 builds")
+        }
+
+        let world_a = world_at_seed_42();
+        let world_b = world_at_seed_42();
+
+        let (mut session_a, _) = Session::start(&world_a, &PossessOpts::default()).unwrap();
+        let (mut session_b, _) = Session::start(&world_b, &PossessOpts::default()).unwrap();
+
+        let terrain_a = session_a
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let terrain_b = session_b
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let (vertex_a, cave_a) = find_open_cave_vertex(&terrain_a, world_a.seed);
+        let (vertex_b, cave_b) = find_open_cave_vertex(&terrain_b, world_b.seed);
+        assert_eq!(
+            vertex_a, vertex_b,
+            "two independent builds of the same seed must find the same open cave vertex"
+        );
+
+        let assert_same_snapshot = |a: &Session, b: &Session, label: &str| {
+            let json_a = crate::snapshot_json(&a.snapshot().unwrap());
+            let json_b = crate::snapshot_json(&b.snapshot().unwrap());
+            assert_eq!(
+                json_a, json_b,
+                "snapshots diverged at {label} — the same seed and pins must \
+                 produce a byte-identical descent and pane at every turn, not \
+                 merely at the end"
+            );
+        };
+
+        match session_a.delve_at(vertex_a, cave_a) {
+            Turn::Out(_) => {}
+            Turn::Released(_) => panic!("delve must not release"),
+        };
+        match session_b.delve_at(vertex_b, cave_b) {
+            Turn::Out(_) => {}
+            Turn::Released(_) => panic!("delve must not release"),
+        };
+        assert!(
+            session_a.underground.is_some() && session_b.underground.is_some(),
+            "an open, unbarred vertex found by find_open_cave_vertex must delve successfully"
+        );
+        assert_same_snapshot(&session_a, &session_b, "delve");
+
+        const SCRIPT: &[&str] = &[
+            "look", "go n", "down", "go n", "go e", "go s", "go w", "up", "climb",
+        ];
+        for line in SCRIPT {
+            session_a.handle(line);
+            session_b.handle(line);
+            assert_same_snapshot(&session_a, &session_b, line);
+        }
+    }
+
     /// The Latch's own headline, end to end (Task 5, acceptance criteria 1
     /// and 2): a barred mouth refuses, `clear` clears it, and it stays clear
     /// for the REST OF THE SESSION — across several turns, including a
@@ -8452,16 +12518,20 @@ mod tests {
     /// proven fact, and this test does not reach it either.
     ///
     /// MUTATION this must fail against: delete `clear_passage_at`'s
-    /// `self.ledger.commit(fact, &self.registry)` call. The post-clear delve
-    /// then reports the refusal again and the final assertion fires.
+    /// `crate::passage::set_openness(...)` call (the whole `if barrier ==
+    /// Thin` body). The post-clear delve then reports the refusal again and
+    /// the final assertion fires.
     ///
-    /// Confirmed 2026-08-28: with the commit call deleted, the panic read
+    /// Confirmed 2026-08-29 against the openness write (Task 8); confirmed
+    /// 2026-08-28 against the `passage-cleared` commit it replaced. In both
+    /// cases the panic read
     /// `a cleared passage must let descent through after several turns and a
     /// wait: The cave mouth is here, but a thin fall of rubble blocks the
     /// way down; it looks like it would not take much to clear.` — the
     /// post-clear delve fell straight back to `barred_refusal`'s own `Thin`
-    /// text because `effective_state` never found a `PASSAGE_CLEARED` fact
-    /// to fold over. A genuine behavioural red, not a compile error.
+    /// text because `effective_state` never found an `openness` fact about
+    /// the cave mouth to fold over. A genuine behavioural red, not a compile
+    /// error.
     #[test]
     fn a_cleared_passage_stays_open_for_the_rest_of_the_session() {
         let world = seam_world();
@@ -8538,12 +12608,13 @@ mod tests {
     ///
     /// MUTATION this must fail against: widen `clear_passage_at`'s gate from
     /// `barrier == BarrierState::Thin` to `barrier != BarrierState::Open`
-    /// (i.e. "everything barred yields"). `clear_passage_at` then commits a
-    /// `PASSAGE_CLEARED` fact for the `Sealed` vertex below, and the
+    /// (i.e. "everything barred yields"). `clear_passage_at` then opens the
+    /// cave mouth at the `Sealed` vertex below, and the
     /// post-clear delve at the end of this test succeeds where it must
     /// still refuse.
     ///
-    /// Confirmed 2026-08-28: under that mutation, the panic read `a Sealed
+    /// Confirmed 2026-08-29 (Task 8) and 2026-08-28 (The Latch): under that
+    /// mutation, the panic read `a Sealed
     /// passage must still refuse descent after a clear attempt: You worm
     /// down into the dark. The rock here is the basement rock.` — the
     /// widened gate committed a clearing fact for the Sealed vertex, and the
@@ -8675,10 +12746,16 @@ mod tests {
     /// workspace, outside this crate's reach to import from) detects a
     /// successful delve by matching this EXACT literal prefix — including
     /// the trailing period — against the turn's own narration text via
-    /// `str::starts_with`. It is the ONLY signal available to it:
-    /// `Spatial` deliberately folds underground into `Walk`
-    /// (`the_underground_band_folds_into_walk_as_map_does`, this module),
-    /// so there is no typed alternative to read instead.
+    /// `str::starts_with`. As of this test's writing that was the ONLY
+    /// signal available to it: `Spatial` folded underground into `Walk`, so
+    /// there was no typed alternative to read instead. **The Gallery, Task 7
+    /// changed the sim-side half of that**: the pane now carries its own
+    /// `band: "underground"` with `vessel/level/v1`
+    /// (`the_underground_pane_reads_band_underground`, this module) rather
+    /// than folding. `clients/game` itself has not been re-pointed at it
+    /// yet — that is Task 9's job — so `DELVE_SUCCESS_PREFIX`'s narration
+    /// scan remains the client's actual, live cave-discovery signal until
+    /// then, and this tripwire's own job is unchanged.
     ///
     /// The nearest existing coverage before this test
     /// (`underground_examine_answers_for_the_rock_it_names`, below) only
@@ -8781,13 +12858,17 @@ mod tests {
         );
     }
 
-    /// Lateral movement is refused while underground, and says so
-    /// diegetically — mirroring `SUBMERGED_LATERAL_REFUSAL`'s own guard one
-    /// realm over. Exercised directly against a hand-picked open cave
-    /// (`delve_at`) rather than a walk, for the same reason
+    /// `back` alone is still refused while underground (The Gallery, Task
+    /// 4 narrows what was `lateral_movement_is_refused_underground`):
+    /// `go`/a bare compass token are reversed now that a cave level has real
+    /// geometry to step through, but `back` is not, for the same reason it
+    /// stays refused indoors after The Blocking's own reversal of `go` —
+    /// this campaign built intra-level GEOMETRY, not a retraceable trail.
+    /// Exercised directly against a hand-picked open cave (`delve_at`)
+    /// rather than a walk, for the same reason
     /// `delve_has_three_distinguishable_outcomes` is.
     #[test]
-    fn lateral_movement_is_refused_underground() {
+    fn back_is_still_refused_underground() {
         let world = seam_world();
         let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
         let terrain = session
@@ -8801,21 +12882,1410 @@ mod tests {
             session.underground.is_some(),
             "the fixture must have descended"
         );
-        for line in ["go n", "back", "n"] {
+        let out = match session.handle("back") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("back must not release"),
+        };
+        assert!(!out.contains("No verb"), "{out}");
+        assert!(
+            out.contains("no trail to retrace"),
+            "back must refuse underground with its own reason: {out}"
+        );
+    }
+
+    /// The Gallery, Task 4's headline: a compass step underground moves the
+    /// possession one cell, the same shape `handle`'s given test template
+    /// specifies. Tries every orthogonal bearing from the entrance cell
+    /// rather than a fixed one — Task 3's own connectivity invariant
+    /// guarantees at least one is walkable from any standable cell, but not
+    /// which one, so trying all four is what makes this robust against a
+    /// terrain epoch that moves the entrance cell's local shape.
+    #[test]
+    fn a_compass_step_underground_moves_one_cell() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+        session.delve_at(vertex, cave);
+
+        let before = session.underground.as_ref().expect("descended").cell;
+        // Try each bearing until one is not rock; at least one must be,
+        // because the possession was placed on a cell of a connected level.
+        let moved = ["n", "s", "e", "w"].iter().any(|d| {
+            session.handle(&format!("go {d}"));
+            session.underground.as_ref().expect("still below").cell != before
+        });
+        assert!(
+            moved,
+            "at least one bearing from a standable cell must be walkable"
+        );
+    }
+
+    /// Rock refuses a lateral step with a PHYSICAL reason: not a parse
+    /// complaint, and not a sentence naming a verb or a movement mode.
+    /// Exercised at the `Underground::peek` seam directly rather than
+    /// through `Session::handle` — the entrance cell's own neighbours are
+    /// generated content, not guaranteed to include a rock face, so this
+    /// scans the level for a standable cell known to sit beside `Wall`
+    /// before stepping toward it, the same scanning discipline
+    /// `find_open_cave_vertex`'s own doc argues for over a hand-picked
+    /// coordinate.
+    #[test]
+    fn rock_refuses_a_step_with_a_physical_reason() {
+        let world = seam_world();
+        let (session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+        let mut ug = crate::underground::Underground::enter(&terrain, vertex, cave, world.seed);
+        let level = ug.level().clone();
+        let mut rock_adjacent = None;
+        'search: for (cell, kind) in level.cells.iter() {
+            if !matches!(
+                kind,
+                crate::underworld_level::LevelCellKind::Floor
+                    | crate::underworld_level::LevelCellKind::Flooded
+            ) {
+                continue;
+            }
+            for wanted in [Compass::N, Compass::E, Compass::S, Compass::W] {
+                let delta = cell_delta(wanted).expect("orthogonal");
+                let neighbour = crate::lattice::Cell(cell.0 + delta.0, cell.1 + delta.1);
+                if level.cells.get(neighbour) == Some(crate::underworld_level::LevelCellKind::Wall)
+                {
+                    rock_adjacent = Some((cell, wanted));
+                    break 'search;
+                }
+            }
+        }
+        let (cell, wanted) =
+            rock_adjacent.expect("a generated level has at least one standable cell beside rock");
+        ug.cell = cell;
+        match ug.peek(wanted) {
+            Err(reason) => {
+                let lower = reason.to_lowercase();
+                assert!(!lower.contains("verb"), "not a parse complaint: {reason}");
+                assert!(!lower.contains("mode"), "must not name a mode: {reason}");
+                assert!(!lower.contains("wade"), "must not name a mode: {reason}");
+                assert!(!lower.contains("walk"), "must not name a mode: {reason}");
+            }
+            Ok(target) => panic!("expected a refusal, got a move to {target:?}"),
+        }
+    }
+
+    /// `Underground::peek_stairs`'s own catch-all arm — refusing when the
+    /// current cell is not a stairs cell at all — is unreachable through any
+    /// shipped path: `Session::take_stairs` always checks the current
+    /// cell's kind against the direction it wants BEFORE ever calling
+    /// `peek_stairs`, so a live session can never hand it a non-stairs
+    /// cell. `peek_stairs`'s own doc calls it "a real seam a test... can
+    /// reach directly" — this is that test, exercised the same way
+    /// `rock_refuses_a_step_with_a_physical_reason` (just above) reaches
+    /// `Underground::peek`'s own seam: build a real `Underground` via
+    /// `enter`, place it on a scanned, known-non-stairs cell, and call the
+    /// method directly rather than through `Session::handle`.
+    #[test]
+    fn peek_stairs_refuses_off_any_stairs_cell() {
+        let world = seam_world();
+        let (session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+        let mut ug = crate::underground::Underground::enter(&terrain, vertex, cave, world.seed);
+        let level = ug.level().clone();
+        let floor_cell = level
+            .cells
+            .iter()
+            .find(|(_, k)| {
+                matches!(
+                    k,
+                    crate::underworld_level::LevelCellKind::Floor
+                        | crate::underworld_level::LevelCellKind::Flooded
+                )
+            })
+            .map(|(c, _)| c)
+            .expect("a generated level has at least one standable, non-stairs cell");
+        ug.cell = floor_cell;
+        match ug.peek_stairs() {
+            Err(reason) => {
+                assert!(
+                    reason.to_lowercase().contains("stairway"),
+                    "the refusal must name the physical reason: {reason}"
+                );
+            }
+            Ok(_) => panic!("a plain Floor/Flooded cell must not offer stairs"),
+        }
+    }
+
+    /// `UNDERGROUND_LATERAL_REFUSAL`'s own doc said "there is nowhere down
+    /// here for a bearing to mean" — false the moment Task 3 gave the cave
+    /// real cells to walk. The Gallery, Task 4 deletes the constant
+    /// outright; this pins that its text is truly gone from a walking
+    /// session's output, not merely unreachable from one call site.
+    #[test]
+    fn the_lateral_refusal_is_gone() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+        session.delve_at(vertex, cave);
+        assert!(
+            session.underground.is_some(),
+            "the fixture must have descended"
+        );
+        for line in ["go n", "go s", "go e", "go w", "n", "s", "e", "w", "back"] {
             let out = match session.handle(line) {
                 Turn::Out(t) => t,
                 Turn::Released(_) => panic!("{line} must not release"),
             };
-            assert!(!out.contains("No verb"), "{line}: {out}");
             assert!(
-                out.contains("Climb out first"),
-                "{line} must refuse underground with the underground reason: {out}"
+                !out.contains("Not down here") && !out.contains("Climb out first"),
+                "{line}: the retired underground lateral refusal must never print: {out}"
             );
         }
     }
 
-    /// The snapshot's spatial channel and the `map` verb must answer the
-    /// SAME band question, including in a band neither was written against.
+    /// Fix round 1, finding 1: `look`'s underground "Ways on" must agree
+    /// with the level's own real passable neighbours, in BOTH directions —
+    /// a way that exists is listed, and a way that does not is absent — the
+    /// agreement shape a one-directional check cannot catch (The Latch's own
+    /// retrospective). Before this fix the sentence was a fixed `"Ways on:
+    /// out."` regardless of the level, so a bare "some bearing is listed"
+    /// check would have passed against the old, wrong text too; this test
+    /// picks a cell with a KNOWN mixed neighbourhood (at least one open
+    /// bearing and at least one blocked one) so both directions are
+    /// actually exercised rather than a degenerate all-open or all-blocked
+    /// cell.
+    #[test]
+    fn underground_ways_on_agrees_with_the_levels_real_neighbours() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+        let ug = crate::underground::Underground::enter(&terrain, vertex, cave, world.seed);
+        let level = ug.level().clone();
+
+        let mut mixed = None;
+        let mut open_wanted = None;
+        let mut blocked_wanted = None;
+        'search: for (cell, kind) in level.cells.iter() {
+            if crate::underworld_level::movement_mode(kind).is_none() {
+                continue;
+            }
+            let mut open = None;
+            let mut blocked = None;
+            for wanted in [Compass::N, Compass::E, Compass::S, Compass::W] {
+                let delta = cell_delta(wanted).expect("orthogonal");
+                let neighbour = crate::lattice::Cell(cell.0 + delta.0, cell.1 + delta.1);
+                match level
+                    .cells
+                    .get(neighbour)
+                    .and_then(crate::underworld_level::movement_mode)
+                {
+                    Some(_) => open = open.or(Some(wanted)),
+                    None => blocked = blocked.or(Some(wanted)),
+                }
+            }
+            if let (Some(o), Some(b)) = (open, blocked) {
+                mixed = Some(cell);
+                open_wanted = Some(o);
+                blocked_wanted = Some(b);
+                break 'search;
+            }
+        }
+        let cell = mixed.expect(
+            "a generated level has a cell with both an open and a blocked orthogonal bearing",
+        );
+        let open_wanted = open_wanted.expect("set alongside mixed");
+        let blocked_wanted = blocked_wanted.expect("set alongside mixed");
+
+        let mut expected: Vec<String> = vec!["out".to_string()]; // rung 0
+        for wanted in [Compass::N, Compass::E, Compass::S, Compass::W] {
+            let delta = cell_delta(wanted).expect("orthogonal");
+            let neighbour = crate::lattice::Cell(cell.0 + delta.0, cell.1 + delta.1);
+            if level
+                .cells
+                .get(neighbour)
+                .and_then(crate::underworld_level::movement_mode)
+                .is_some()
+            {
+                expected.push(bearing_letter(wanted));
+            }
+        }
+
+        session.underground = Some(ug);
+        session.underground.as_mut().expect("just set").cell = cell;
+
+        let out = match session.handle("look") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("look must not release"),
+        };
+        let marker = "Ways on: ";
+        let start = out
+            .find(marker)
+            .unwrap_or_else(|| panic!("no {marker:?} substring in {out:?}"));
+        let ways_body = &out[start + marker.len()..];
+        let ways_body = ways_body.trim_end_matches('\n');
+        let ways_body = ways_body.strip_suffix('.').unwrap_or(ways_body);
+        let listed: Vec<String> = ways_body.split(", ").map(|part| part.to_string()).collect();
+        let ways_line = format!("{marker}{ways_body}.");
+
+        // Direction 1: a way that EXISTS is listed.
+        assert!(
+            listed.contains(&bearing_letter(open_wanted)),
+            "an open bearing {open_wanted:?} must be listed: {ways_line:?}"
+        );
+        // Direction 2: a way that does NOT exist is absent.
+        assert!(
+            !listed.contains(&bearing_letter(blocked_wanted)),
+            "a blocked bearing {blocked_wanted:?} must not be listed: {ways_line:?}"
+        );
+        // And the full set, both ways: nothing extra, nothing missing.
+        let mut listed_sorted = listed.clone();
+        listed_sorted.sort();
+        let mut expected_sorted = expected.clone();
+        expected_sorted.sort();
+        assert_eq!(
+            listed_sorted, expected_sorted,
+            "ways-on must match the level's real neighbours exactly: {ways_line:?}"
+        );
+    }
+
+    /// The property that matters (The Gallery, Task 5's own brief):
+    /// descending from rung `n` and climbing back arrives on rung `n` —
+    /// not necessarily the same CELL, since `place_connections` sites the
+    /// down-stairs and the up-stairs independently (first leaf vs last
+    /// leaf), so this asserts on the RUNG alone, never the cell.
+    ///
+    /// Reaching a stairs cell by walking is impractical from a test — the
+    /// same reason `delve_at` exists as a seam
+    /// (`underground_ways_on_agrees_with_the_levels_real_neighbours` above
+    /// already uses it the same way): this scans the entrance rung's own
+    /// level for its one `StairsDown` cell and places the possession there
+    /// directly.
+    #[test]
+    fn stairs_connect_adjacent_rungs_in_both_directions() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+        session.delve_at(vertex, cave);
+        assert!(
+            session.underground.is_some(),
+            "the fixture must have descended"
+        );
+        assert_eq!(
+            session.underground.as_ref().expect("descended").rung,
+            0,
+            "sanity check: `enter` always starts a descent at rung 0"
+        );
+
+        let down_cell = {
+            let ug = session.underground.as_ref().expect("descended");
+            ug.level()
+                .cells
+                .iter()
+                .find(|(_, k)| *k == crate::underworld_level::LevelCellKind::StairsDown)
+                .map(|(c, _)| c)
+                .expect("every rung has exactly one StairsDown cell")
+        };
+        session.underground.as_mut().expect("descended").cell = down_cell;
+
+        let down_out = match session.handle("down") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("down must not release"),
+        };
+        assert_eq!(
+            session.underground.as_ref().expect("still below").rung,
+            1,
+            "descending from rung 0 must land on rung 1: {down_out}"
+        );
+
+        // Round trip: `up` from here must arrive back on rung 0 — the
+        // possession already stands on rung 1's own `StairsUp` cell
+        // (`Underground::peek_stairs`'s own landing rule), so no further
+        // scan or placement is needed before taking the stairs back up.
+        let up_out = match session.handle("up") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("up must not release"),
+        };
+        assert_eq!(
+            session.underground.as_ref().expect("still below").rung,
+            0,
+            "ascending back must land on rung 0: {up_out}"
+        );
+    }
+
+    /// The direction is checked against the CURRENT cell, not merely
+    /// "is this any stairs cell" — typing `up` while standing on a
+    /// `StairsDown` cell must refuse rather than silently taking the
+    /// possession down (`Self::take_stairs`'s own doc explains why: asking
+    /// `peek_stairs` with no direction check first would do exactly that,
+    /// since it reads whichever kind the current cell already is).
+    #[test]
+    fn down_refuses_on_an_up_stairs_cell_and_vice_versa() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+        session.delve_at(vertex, cave);
+        let down_cell = {
+            let ug = session.underground.as_ref().expect("descended");
+            ug.level()
+                .cells
+                .iter()
+                .find(|(_, k)| *k == crate::underworld_level::LevelCellKind::StairsDown)
+                .map(|(c, _)| c)
+                .expect("every rung has exactly one StairsDown cell")
+        };
+        session.underground.as_mut().expect("descended").cell = down_cell;
+        let before = session.underground.as_ref().expect("descended").rung;
+
+        let out = match session.handle("up") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("up must not release"),
+        };
+        assert_eq!(
+            session.underground.as_ref().expect("still below").rung,
+            before,
+            "`up` on a StairsDown cell must not move the possession: {out}"
+        );
+        assert!(
+            out.to_lowercase().contains("no stairway up"),
+            "the refusal must name the physical mismatch: {out}"
+        );
+    }
+
+    /// Fix round 1's first covering test: `delve_at` itself is one of the
+    /// three arrival paths that marks fog (spec §3.5, amended by commit
+    /// f6051a9c3 — "every arrival marks", not merely a lateral step). This
+    /// is the test that failed before the fix: taking no step at all, the
+    /// entrance cell's own surroundings must already be remembered the
+    /// instant the descent is built.
+    #[test]
+    fn delving_marks_the_arrival_cell_without_a_step() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+        session.delve_at(vertex, cave);
+        let ug = session
+            .underground
+            .as_ref()
+            .expect("the fixture must have descended");
+        assert!(
+            ug.seen[ug.rung].saw(ug.cell),
+            "the entrance cell itself must be remembered immediately after \
+             delve_at, before any step is ever taken"
+        );
+    }
+
+    /// Fix round 1's second covering test: `take_stairs`' own landing is
+    /// the second of the three arrival paths (spec §3.5, amended by commit
+    /// f6051a9c3). Descend to a fresh rung by the stairs alone — no lateral
+    /// step on the new rung at all — and the landing cell must already be
+    /// remembered there.
+    #[test]
+    fn taking_stairs_marks_the_landing_without_a_step() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+        session.delve_at(vertex, cave);
+        assert!(
+            session.underground.is_some(),
+            "the fixture must have descended"
+        );
+
+        // Reaching the StairsDown cell by walking is impractical from a
+        // test — the same reason
+        // `stairs_connect_adjacent_rungs_in_both_directions` places it
+        // directly.
+        let down_cell = {
+            let ug = session.underground.as_ref().expect("descended");
+            ug.level()
+                .cells
+                .iter()
+                .find(|(_, k)| *k == crate::underworld_level::LevelCellKind::StairsDown)
+                .map(|(c, _)| c)
+                .expect("every rung has exactly one StairsDown cell")
+        };
+        session.underground.as_mut().expect("descended").cell = down_cell;
+
+        match session.handle("down") {
+            Turn::Out(_) => {}
+            Turn::Released(_) => panic!("down must not release"),
+        }
+        let ug = session.underground.as_ref().expect("still below");
+        assert_eq!(ug.rung, 1, "descending from rung 0 must land on rung 1");
+        assert!(
+            ug.seen[ug.rung].saw(ug.cell),
+            "the landing cell on rung 1 must be remembered immediately after \
+             taking the stairs down, before any lateral step there"
+        );
+    }
+
+    /// Every cell of `ug.rung`'s own remembered set — a `BTreeSet` snapshot
+    /// taken by scanning the level, used only by this task's own fog tests
+    /// to compare "before" against "after" with an ordinary set-comparison
+    /// method rather than poking at `SeenBits`'s packed bits directly.
+    fn seen_snapshot(
+        ug: &crate::underground::Underground,
+    ) -> std::collections::BTreeSet<crate::lattice::Cell> {
+        let level = ug.level();
+        level
+            .cells
+            .iter()
+            .filter(|(cell, _)| ug.seen[ug.rung].saw(*cell))
+            .map(|(cell, _)| cell)
+            .collect()
+    }
+
+    /// The Gallery, Task 6, Step 1's `walking_only_ever_adds_to_what_is_
+    /// remembered`: monotonicity (spec §4.1.2's acceptance 4b). After every
+    /// real "go <bearing>" turn — whether it actually moves the possession
+    /// or refuses — the rung's own remembered set must be a superset of
+    /// what it was one turn before, never smaller.
+    ///
+    /// **A superset check alone cannot fail, and this test used to carry
+    /// only that one.** A set that never shrinks satisfies
+    /// `after.is_superset(&before)` trivially, and the non-vacuity guard
+    /// that shipped beside it (`assert!(!before.is_empty())`) was already
+    /// satisfied at turn zero — `delve_at` marks the entrance before the
+    /// loop even starts — so deleting `Session::mark_underground_seen`
+    /// from `step_underground` entirely left this test green. The fix is
+    /// `ever_grew` below: it asserts the set actually GROWS at least once
+    /// across the walk, which is the property this doc's own opening
+    /// sentence claims ("only ever adds") and the one a dropped-marking
+    /// regression would actually violate.
+    ///
+    /// Exercised through `Session::handle`, not `Underground::peek`/
+    /// `commit_step` directly: the wiring under test is
+    /// `Session::mark_underground_seen`, which sits one level above
+    /// `Underground` and is what a bare `Underground` call would bypass
+    /// entirely.
+    #[test]
+    fn walking_only_ever_adds_to_what_is_remembered() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+        session.delve_at(vertex, cave);
+        assert!(
+            session.underground.is_some(),
+            "the fixture must have descended"
+        );
+
+        let mut before = seen_snapshot(session.underground.as_ref().expect("descended"));
+        let mut ever_grew = false;
+        for _ in 0..8 {
+            for d in ["n", "s", "e", "w"] {
+                match session.handle(&format!("go {d}")) {
+                    Turn::Out(_) => {}
+                    Turn::Released(_) => panic!("go {d} must not release"),
+                }
+                let after = seen_snapshot(session.underground.as_ref().expect("still below"));
+                assert!(
+                    after.is_superset(&before),
+                    "remembered cells must never shrink after `go {d}`: \
+                     before had {} cells, after has {}, and after is missing \
+                     {:?}",
+                    before.len(),
+                    after.len(),
+                    before.difference(&after).collect::<Vec<_>>()
+                );
+                if after.len() > before.len() {
+                    ever_grew = true;
+                }
+                before = after;
+            }
+        }
+        assert!(
+            ever_grew,
+            "32 attempted steps from a connected level must have GROWN what \
+             is remembered at least once — a set that starts non-empty and \
+             never shrinks would satisfy every assertion above even if \
+             nothing were ever marked seen again"
+        );
+    }
+
+    /// A shortest path of bearings from `from` to some passable cell whose
+    /// Chebyshev distance from `from` is strictly greater than
+    /// `min_chebyshev` — used by this task's own fog tests to reach a cell
+    /// genuinely OUTSIDE a given reach, rather than one that merely happens
+    /// to be a single lateral step away (which Fix round 1 made ambiguous:
+    /// after commit f6051a9c3, `delve_at` itself marks everything within
+    /// `sight_reach()` of the entrance, so a nearby cell cannot distinguish
+    /// "still remembered from before" from "freshly visible from here").
+    /// Every non-Surface rung is at least 40x24 (`generate_level_extent`),
+    /// and Task 9's own connectivity invariant
+    /// (`every_walkable_cell_is_reachable_from_every_other`) guarantees a
+    /// path exists to any passable cell, so a cell beyond `min_chebyshev`
+    /// is always reachable from an interior point this many cells wide.
+    fn path_beyond_reach(
+        level: &crate::underworld_level::Level,
+        from: crate::lattice::Cell,
+        min_chebyshev: i32,
+    ) -> Vec<Compass> {
+        use std::collections::{BTreeMap, BTreeSet, VecDeque};
+        let mut visited: BTreeSet<crate::lattice::Cell> = BTreeSet::new();
+        let mut parent: BTreeMap<crate::lattice::Cell, (crate::lattice::Cell, Compass)> =
+            BTreeMap::new();
+        let mut queue = VecDeque::new();
+        queue.push_back(from);
+        visited.insert(from);
+        let mut target = None;
+        while let Some(cur) = queue.pop_front() {
+            let dist = (cur.0 - from.0).abs().max((cur.1 - from.1).abs());
+            if dist > min_chebyshev {
+                target = Some(cur);
+                break;
+            }
+            for d in [Compass::N, Compass::E, Compass::S, Compass::W] {
+                let delta = cell_delta(d).expect("orthogonal");
+                let next = crate::lattice::Cell(cur.0 + delta.0, cur.1 + delta.1);
+                if visited.contains(&next) {
+                    continue;
+                }
+                if level
+                    .cells
+                    .get(next)
+                    .and_then(crate::underworld_level::movement_mode)
+                    .is_none()
+                {
+                    continue;
+                }
+                visited.insert(next);
+                parent.insert(next, (cur, d));
+                queue.push_back(next);
+            }
+        }
+        let target = target.expect(
+            "a level at least 40x24 must have a passable cell beyond min_chebyshev \
+             reachable from an interior point (Task 9's connectivity invariant)",
+        );
+        let mut path = Vec::new();
+        let mut cur = target;
+        while cur != from {
+            let (prev, d) = parent[&cur];
+            path.push(d);
+            cur = prev;
+        }
+        path.reverse();
+        path
+    }
+
+    /// The Gallery, Task 6, Step 4's `fog_survives_moving_between_rungs_
+    /// and_dies_on_climbing_out`: spec acceptance criterion 5, in both
+    /// directions. Descend, walk to accumulate seen cells on rung 0, take
+    /// the stairs down and back up — rung 0's own remembered set must still
+    /// hold what was walked. Then climb out and delve again: the fresh
+    /// descent's rung 0 must remember nothing, because fog is session-lived
+    /// (spec §3.5), not derived from `(seed, address)`.
+    ///
+    /// **Fix round 1 (commit f6051a9c3) walks to a cell OUTSIDE
+    /// `sight_reach()` of the entrance**, not merely one lateral step away.
+    /// Before this fix `delve_at` marked nothing, so any walked-to cell was
+    /// a valid witness; now `delve_at` itself marks the entrance's own
+    /// surroundings, so a fresh descent legitimately remembers a NEARBY
+    /// cell again — that is correct behaviour, not a lifetime leak. Only a
+    /// cell beyond the fresh entrance's own reach can distinguish "the old
+    /// descent's fog leaked through" from "the new descent can see this
+    /// far on its own".
+    #[test]
+    fn fog_survives_moving_between_rungs_and_dies_on_climbing_out() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+        session.delve_at(vertex, cave);
+        assert!(
+            session.underground.is_some(),
+            "the fixture must have descended"
+        );
+
+        let entrance_cell = session.underground.as_ref().expect("descended").cell;
+        let level = session
+            .underground
+            .as_ref()
+            .expect("descended")
+            .level()
+            .clone();
+        let path = path_beyond_reach(&level, entrance_cell, SIGHT_RADIUS);
+        assert!(
+            !path.is_empty(),
+            "the entrance cell itself must already be beyond its own reach \
+             from itself, which is impossible — path must be non-empty"
+        );
+        for bearing in &path {
+            let letter = bearing_letter(*bearing).to_lowercase();
+            match session.handle(&format!("go {letter}")) {
+                Turn::Out(_) => {}
+                Turn::Released(_) => panic!("go {letter} must not release"),
+            }
+        }
+        let remote_cell = session.underground.as_ref().expect("still below").cell;
+        let dist = (remote_cell.0 - entrance_cell.0)
+            .abs()
+            .max((remote_cell.1 - entrance_cell.1).abs());
+        assert!(
+            dist > SIGHT_RADIUS,
+            "the walked-to cell must be strictly beyond sight_reach() of the \
+             entrance: distance {dist}, SIGHT_RADIUS {SIGHT_RADIUS}"
+        );
+        assert!(
+            session.underground.as_ref().expect("still below").seen[0].saw(remote_cell),
+            "the remote cell just walked to must be marked seen on rung 0"
+        );
+
+        // Place the possession on the entrance rung's own StairsDown cell —
+        // reaching it by walking is impractical from a test, the same
+        // reason `stairs_connect_adjacent_rungs_in_both_directions` places
+        // it directly.
+        let down_cell = {
+            let ug = session.underground.as_ref().expect("descended");
+            ug.level()
+                .cells
+                .iter()
+                .find(|(_, k)| *k == crate::underworld_level::LevelCellKind::StairsDown)
+                .map(|(c, _)| c)
+                .expect("every rung has exactly one StairsDown cell")
+        };
+        session.underground.as_mut().expect("descended").cell = down_cell;
+
+        match session.handle("down") {
+            Turn::Out(_) => {}
+            Turn::Released(_) => panic!("down must not release"),
+        }
+        assert_eq!(
+            session.underground.as_ref().expect("still below").rung,
+            1,
+            "descending from rung 0 must land on rung 1"
+        );
+        match session.handle("up") {
+            Turn::Out(_) => {}
+            Turn::Released(_) => panic!("up must not release"),
+        }
+        assert_eq!(
+            session.underground.as_ref().expect("still below").rung,
+            0,
+            "ascending back must land on rung 0"
+        );
+        assert!(
+            session.underground.as_ref().expect("still below").seen[0].saw(remote_cell),
+            "rung 0's remembered set must survive a round trip through rung 1"
+        );
+
+        // Climb out (rung is 0, so `climb` succeeds) and delve the SAME cave
+        // again: `Underground::enter` re-derives an identical descent from
+        // the same seed/vertex/cave (nothing here consumes any per-session
+        // state), so `remote_cell` names the same physical cell in the new
+        // descent — but the new descent's own `seen` starts all-unseen
+        // except for what `delve_at`'s OWN arrival mark reaches, which
+        // `remote_cell` is, by construction, outside of.
+        match session.handle("climb") {
+            Turn::Out(_) => {}
+            Turn::Released(_) => panic!("climb must not release"),
+        }
+        assert!(
+            session.underground.is_none(),
+            "climb must clear the descent entirely"
+        );
+        session.delve_at(vertex, cave);
+        assert!(
+            session.underground.is_some(),
+            "the fixture must have descended again"
+        );
+        assert!(
+            !session.underground.as_ref().expect("descended again").seen[0].saw(remote_cell),
+            "fog is session-lived: a fresh descent must remember nothing \
+             beyond its own entrance's reach, even at a cell the previous \
+             descent had marked"
+        );
+    }
+
+    /// The descent's own deepest rung still carries a `StairsDown` cell
+    /// (`place_connections` never special-cases the last rung), but nothing
+    /// generated lies beneath it — `Underground::peek_stairs`'s own
+    /// boundary check. Reached here by forcing `rung` to the bottom rather
+    /// than walking a full descent down: this task's own scope is the
+    /// stairs verb, not a fifth end-to-end walk of the ladder.
+    #[test]
+    fn the_deepest_rungs_stairs_down_refuses_without_moving() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+        session.delve_at(vertex, cave);
+        let bottom = session
+            .underground
+            .as_ref()
+            .expect("descended")
+            .descent
+            .len()
+            - 1;
+        let down_cell = {
+            let ug = session.underground.as_mut().expect("descended");
+            ug.rung = bottom;
+            ug.level()
+                .cells
+                .iter()
+                .find(|(_, k)| *k == crate::underworld_level::LevelCellKind::StairsDown)
+                .map(|(c, _)| c)
+                .expect("every rung, the last included, has exactly one StairsDown cell")
+        };
+        session.underground.as_mut().expect("descended").cell = down_cell;
+        let before = session.day;
+
+        let out = match session.handle("down") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("down must not release"),
+        };
+        assert_eq!(
+            session.underground.as_ref().expect("still below").rung,
+            bottom,
+            "the deepest rung's own down-stairs must not move the possession: {out}"
+        );
+        assert_eq!(
+            session.day, before,
+            "a refused stairs move must not spend a tick: {out}"
+        );
+        assert!(
+            !out.to_lowercase().contains("verb"),
+            "not a parse complaint: {out}"
+        );
+    }
+
+    /// A stairs move charges time, the same dial `an_underground_step_
+    /// advances_the_clock` (just below) already pins for a lateral cell —
+    /// one flight of stairs is priced the same scale of act as one cell,
+    /// not the free ride `dive`/`surface`/`delve`/`climb` get for a whole
+    /// band's worth of vertical movement.
+    #[test]
+    fn taking_the_stairs_advances_the_clock() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+        session.delve_at(vertex, cave);
+        let down_cell = {
+            let ug = session.underground.as_ref().expect("descended");
+            ug.level()
+                .cells
+                .iter()
+                .find(|(_, k)| *k == crate::underworld_level::LevelCellKind::StairsDown)
+                .map(|(c, _)| c)
+                .expect("every rung has exactly one StairsDown cell")
+        };
+        session.underground.as_mut().expect("descended").cell = down_cell;
+        let before = session.day;
+
+        let out = match session.handle("down") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("down must not release"),
+        };
+        assert!(
+            session.day > before,
+            "taking the stairs must advance the clock: before={before:?}, \
+             after={:?}, out={out}",
+            session.day
+        );
+    }
+
+    /// `down` is gated by the body like every other in-character verb (spec
+    /// §2.1/§3.2) — the behavioural half of the three-roster proof
+    /// (`every_bare_verb_help_lists_is_classified` catches a roster drift
+    /// structurally; this drives an actual sleeping body at `down` and
+    /// checks the refusal itself). Copied from `warm_is_refused_while_
+    /// asleep`, the pattern that pin names: The Latch shipped a verb
+    /// (`clear`) that was in NEITHER `IN_CHARACTER_VERBS` nor `HELP`, which
+    /// satisfies every STRUCTURAL agreement check in both directions
+    /// (absence agrees with absence) — only a live sleeping body at the verb
+    /// itself catches that shape of drift.
+    #[test]
+    fn down_is_refused_while_asleep() {
+        let world = seam_world();
+        let (mut session, _) =
+            Session::start(&world, &PossessOpts::default()).expect("seed 42 possesses");
+        let slept = match session.handle("sleep") {
+            Turn::Out(t) => t,
+            Turn::Released(t) => panic!("sleep must not release: {t}"),
+        };
+        assert!(
+            !slept.starts_with("No verb"),
+            "`sleep` must be a verb for this test to mean anything: {slept}"
+        );
+        assert_eq!(
+            session.body_state(),
+            BodyState::Asleep,
+            "sanity check: asleep alone must gate as asleep"
+        );
+        let out = match session.handle("down") {
+            Turn::Out(t) => t,
+            Turn::Released(t) => panic!("down must not release: {t}"),
+        };
+        assert_eq!(out, "You cannot — you are asleep.");
+    }
+
+    /// `up`'s own half of the same proof `down_is_refused_while_asleep`
+    /// carries — both verbs were added together, so both get the
+    /// behavioural check, not just the one this doc happened to name first.
+    #[test]
+    fn up_is_refused_while_asleep() {
+        let world = seam_world();
+        let (mut session, _) =
+            Session::start(&world, &PossessOpts::default()).expect("seed 42 possesses");
+        let slept = match session.handle("sleep") {
+            Turn::Out(t) => t,
+            Turn::Released(t) => panic!("sleep must not release: {t}"),
+        };
+        assert!(
+            !slept.starts_with("No verb"),
+            "`sleep` must be a verb for this test to mean anything: {slept}"
+        );
+        let out = match session.handle("up") {
+            Turn::Out(t) => t,
+            Turn::Released(t) => panic!("up must not release: {t}"),
+        };
+        assert_eq!(out, "You cannot — you are asleep.");
+    }
+
+    /// Fix round 1, finding 2: an underground step must advance the clock,
+    /// the same way an indoor cell step does (`charge_within_room`) —
+    /// without this, walking underground costs no time at all, and the
+    /// world's own clock (`WorldTime`) stands still while the possession
+    /// crosses a cave.
+    #[test]
+    fn an_underground_step_advances_the_clock() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+        session.delve_at(vertex, cave);
+        assert!(
+            session.underground.is_some(),
+            "the fixture must have descended"
+        );
+        let before = session.day;
+        let moved = ["n", "s", "e", "w"].iter().any(|d| {
+            let cell_before = session.underground.as_ref().expect("descended").cell;
+            session.handle(&format!("go {d}"));
+            session.underground.as_ref().expect("still below").cell != cell_before
+        });
+        assert!(
+            moved,
+            "at least one bearing must be walkable to exercise the charge"
+        );
+        assert!(
+            session.day > before,
+            "an underground step must advance the clock: before={before:?}, after={:?}",
+            session.day
+        );
+    }
+
+    /// The Gallery, Task 7's own headline assertion (spec §4, §6 acceptance
+    /// 3): the pane answers `band: "underground"` the moment the possession
+    /// descends, carrying `vessel/level/v1` rather than folding into the
+    /// walk-band chart. See `SpatialChannel`'s own doc and
+    /// `the_pane_and_the_verb_agree_underground` (below) for the history
+    /// this replaces.
+    #[test]
+    fn the_underground_pane_reads_band_underground() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+        session.delve_at(vertex, cave);
+        let snap = session.snapshot().expect("a descended session snapshots");
+        let json = crate::snapshot_json(&snap);
+        assert!(
+            json.contains(r#""band":"underground""#),
+            "the pane must read `underground` immediately after a descent: {json:.200}"
+        );
+    }
+
+    /// Spec §4.1.1: the document carries only cells the possession has
+    /// seen, so on the very first turn after descending — before a single
+    /// lateral step — the level document's own cell count must be strictly
+    /// less than the rung's full extent area. A dense, TOTAL grid (as
+    /// `vessel/plan/v1`'s `cells` is) could never satisfy this: it always
+    /// carries exactly `w * h` entries, seen or not.
+    #[test]
+    fn a_never_seen_cell_is_absent_from_the_document() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+        session.delve_at(vertex, cave);
+        let snap = session.snapshot().expect("a descended session snapshots");
+        let level = match &snap.spatial {
+            crate::snapshot::SpatialChannel::Underground { level } => level,
+            other => panic!("expected the underground band, got {other:?}"),
+        };
+        let area = (level.extent.w * level.extent.h) as usize;
+        assert!(
+            level.cells.len() < area,
+            "a freshly-entered level must not carry every cell of its extent: \
+             {} of {area} cells present",
+            level.cells.len()
+        );
+    }
+
+    /// Spec §4.1, §4.1.2: `here`, `lit` and `remembered` must all be
+    /// reachable in one document, distinguished by the `state` field alone —
+    /// never by colour. Walking far enough from the entrance that it falls
+    /// outside the current shadowcast is what manufactures the third state:
+    /// the entrance is marked the instant `delve_at` lands
+    /// (`Session::mark_underground_seen`'s "every arrival marks" rule), so
+    /// once the possession is more than `sight_reach()` Chebyshev cells away
+    /// from it, the entrance is guaranteed `remembered`, not `lit` —
+    /// [`crate::lattice::shadowcast_with`] cannot light a cell farther than
+    /// the radius it was given, regardless of the level's own geometry.
+    #[test]
+    fn the_three_visibility_states_are_distinguishable_without_colour() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+        session.delve_at(vertex, cave);
+        let start = session.underground.as_ref().expect("descended").cell;
+        let reach = session.sight_reach();
+
+        // Rather than walking there through `handle("go ...")` — which risks
+        // an unlucky maze shape sending a fixed-priority walk back and forth
+        // near the entrance instead of away from it — find a reachable cell
+        // more than `reach` Chebyshev cells from the entrance by breadth-
+        // first search over the level's own walkable graph, then place the
+        // possession there directly and fold its shadowcast the same way a
+        // real arrival would (`Session::mark_underground_seen`). Every
+        // generated level is connected well beyond `reach` cells from its
+        // own entrance (Task 9's connectivity invariant), so the search
+        // always finds one.
+        let far_cell = {
+            let ug = session.underground.as_ref().expect("descended");
+            let level = ug.level();
+            let mut visited = std::collections::BTreeSet::new();
+            let mut queue = std::collections::VecDeque::new();
+            visited.insert(start);
+            queue.push_back(start);
+            let mut found = None;
+            while let Some(cur) = queue.pop_front() {
+                let dist = (cur.0 - start.0).abs().max((cur.1 - start.1).abs());
+                if dist > reach {
+                    found = Some(cur);
+                    break;
+                }
+                for (dx, dy) in [(0, 1), (0, -1), (1, 0), (-1, 0)] {
+                    let next = crate::lattice::Cell(cur.0 + dx, cur.1 + dy);
+                    if visited.insert(next)
+                        && level
+                            .cells
+                            .get(next)
+                            .and_then(crate::underworld_level::movement_mode)
+                            .is_some()
+                    {
+                        queue.push_back(next);
+                    }
+                }
+            }
+            found.expect(
+                "a generated level is connected well beyond sight_reach() from \
+                 its own entrance (Task 9's connectivity invariant)",
+            )
+        };
+        session.underground.as_mut().expect("descended").cell = far_cell;
+        session.mark_underground_seen();
+
+        let snap = session.snapshot().expect("a descended session snapshots");
+        let json = crate::snapshot_json(&snap);
+        for needle in [
+            r#""state":"here""#,
+            r#""state":"lit""#,
+            r#""state":"remembered""#,
+        ] {
+            assert!(json.contains(needle), "missing {needle} in {json}");
+        }
+        assert!(
+            !json.contains("\"color\"") && !json.contains("\"colour\""),
+            "the level document must distinguish visibility by state alone, \
+             never by colour: {json}"
+        );
+    }
+
+    /// The Gallery, Task 11 (spec §4.1.2, §3.6): a chamber's derived
+    /// resident is drawn only while its own cell is `lit` — never merely
+    /// `remembered`. The chamber band's own marks already follow this rule
+    /// (`a_creature_beyond_sight_appears_neither_in_sensed_nor_in_marks`,
+    /// below); this is the same assertion one band down, for a mark this
+    /// module derives fresh on every snapshot rather than reading off a
+    /// placed body.
+    ///
+    /// Stands the possession directly on the resident's own cell (folding
+    /// the shadowcast there via [`Session::mark_underground_seen`], exactly
+    /// as a real arrival would) so that cell is genuinely `seen`, then walks
+    /// far enough away — by BFS over the level's own walkable graph, the
+    /// same technique
+    /// [`the_three_visibility_states_are_distinguishable_without_colour`]
+    /// uses, rather than steering a walk there and risking an unlucky maze
+    /// shape — that the resident's cell falls outside the current
+    /// shadowcast: `remembered`, not `lit`. The mark must vanish there and
+    /// reappear back at the resident's own cell.
+    #[test]
+    fn a_creature_underground_is_drawn_only_while_lit() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let climate = session
+            .wctx
+            .climate
+            .clone()
+            .expect("seed 42 builds climate");
+        let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+        session.delve_at(vertex, cave);
+
+        let (kind, _) = {
+            let ug = session.underground.as_ref().expect("descended");
+            crate::underground::chamber_resident(ug, &terrain, &climate).unwrap_or_else(|| {
+                panic!(
+                    "the fixture's entrance chamber must support a resident for this \
+                     test to exercise anything — if a terrain/species change moved \
+                     this, pick a different fixture vertex rather than deleting the \
+                     assertion"
+                )
+            })
+        };
+        let resident_cell = {
+            let ug = session.underground.as_ref().expect("descended");
+            crate::underground::resident_cell(ug.level())
+                .expect("Task 9's connectivity invariant guarantees a standable cell")
+        };
+        let reach = session.sight_reach();
+
+        // Stand on the resident's own cell and fold the shadowcast there, the
+        // same way a real arrival marks its surroundings seen.
+        session.underground.as_mut().expect("descended").cell = resident_cell;
+        session.mark_underground_seen();
+
+        let has_resident_mark = |session: &Session| -> bool {
+            let snap = session.snapshot().expect("a descended session snapshots");
+            match snap.spatial {
+                crate::snapshot::SpatialChannel::Underground { level } => level
+                    .marks
+                    .iter()
+                    .any(|m| m.noun == kind.0 && m.x == resident_cell.0 && m.y == resident_cell.1),
+                other => panic!("expected the underground band, got {other:?}"),
+            }
+        };
+
+        assert!(
+            has_resident_mark(&session),
+            "standing on the resident's own (lit) cell must show its mark"
+        );
+
+        // BFS over the level's own walkable graph for a cell more than
+        // `reach` Chebyshev cells from the resident's cell — guaranteed to
+        // exist by Task 9's connectivity invariant.
+        let far_cell = {
+            let ug = session.underground.as_ref().expect("descended");
+            let level = ug.level();
+            let mut visited = std::collections::BTreeSet::new();
+            let mut queue = std::collections::VecDeque::new();
+            visited.insert(resident_cell);
+            queue.push_back(resident_cell);
+            let mut found = None;
+            while let Some(cur) = queue.pop_front() {
+                let dist = (cur.0 - resident_cell.0)
+                    .abs()
+                    .max((cur.1 - resident_cell.1).abs());
+                if dist > reach {
+                    found = Some(cur);
+                    break;
+                }
+                for (dx, dy) in [(0, 1), (0, -1), (1, 0), (-1, 0)] {
+                    let next = crate::lattice::Cell(cur.0 + dx, cur.1 + dy);
+                    if visited.insert(next)
+                        && level
+                            .cells
+                            .get(next)
+                            .and_then(crate::underworld_level::movement_mode)
+                            .is_some()
+                    {
+                        queue.push_back(next);
+                    }
+                }
+            }
+            found.expect(
+                "Task 9's connectivity invariant: every level is connected well beyond \
+                 `reach` cells from any of its own standable cells",
+            )
+        };
+
+        session.underground.as_mut().expect("descended").cell = far_cell;
+        assert!(
+            !has_resident_mark(&session),
+            "the resident's cell is now merely REMEMBERED (seen earlier, not lit \
+             from here) — its mark must not appear, exactly as an entity's own \
+             mark never appears from mere memory (spec §4.1.2)"
+        );
+
+        // Walk back: the resident's own cell is lit again, so the mark must
+        // reappear — this is not a one-shot "seen once, gone forever" bug.
+        session.underground.as_mut().expect("descended").cell = resident_cell;
+        assert!(
+            has_resident_mark(&session),
+            "the mark must reappear once its cell is lit again"
+        );
+    }
+
+    /// Fix round 1 (spec §3.6/§4.1.2): the pane and `examine` must AGREE
+    /// about the chamber's derived resident — a creature the plate draws
+    /// that `examine` calls nonexistent is this campaign's signature defect
+    /// shape (Task 4 fixed the identical thing for `look`/`go`). Standing on
+    /// the resident's own (lit) cell, the pane's `marks` carries it AND
+    /// `examine <its noun>` answers about it, with the SAME text
+    /// (`crate::underground::inhabitant_datum`) the mark's own `datum`
+    /// carries — one noun, one datum, the same discipline
+    /// `a_noun_at_both_grains_resolves_to_one_datum` already pins one band
+    /// up.
+    #[test]
+    fn a_creature_underground_is_examinable_exactly_when_the_pane_draws_it() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let climate = session
+            .wctx
+            .climate
+            .clone()
+            .expect("seed 42 builds climate");
+        let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+        session.delve_at(vertex, cave);
+
+        let (kind, _source) = {
+            let ug = session.underground.as_ref().expect("descended");
+            crate::underground::chamber_resident(ug, &terrain, &climate).unwrap_or_else(|| {
+                panic!(
+                    "the fixture's entrance chamber must support a resident for this                      test to exercise anything"
+                )
+            })
+        };
+        let resident_cell = {
+            let ug = session.underground.as_ref().expect("descended");
+            crate::underground::resident_cell(ug.level())
+                .expect("Task 9's connectivity invariant guarantees a standable cell")
+        };
+
+        session.underground.as_mut().expect("descended").cell = resident_cell;
+        session.mark_underground_seen();
+
+        let snap = session.snapshot().expect("a descended session snapshots");
+        let mark_datum = match snap.spatial {
+            crate::snapshot::SpatialChannel::Underground { level } => level
+                .marks
+                .iter()
+                .find(|m| m.noun == kind.0)
+                .unwrap_or_else(|| {
+                    panic!(
+                        "the pane must draw {} while standing on its own cell",
+                        kind.0
+                    )
+                })
+                .datum
+                .clone(),
+            other => panic!("expected the underground band, got {other:?}"),
+        };
+
+        let examine_reply = session.examine_underground(kind.0);
+        assert_ne!(
+            examine_reply,
+            format!("You see no {} here.", kind.0),
+            "examine must not deny a creature the SAME turn's pane draws it"
+        );
+        assert_eq!(
+            examine_reply, mark_datum,
+            "the mark's own datum and examine's reply must be the SAME text —              one noun, one datum, across the pane and the prose"
+        );
+    }
+
+    /// The negative half of the agreement above: where the resident is NOT
+    /// drawn (its cell merely remembered, not lit), `examine` must still
+    /// refuse it — otherwise the fog `underground_level` correctly respects
+    /// on the pane would leak straight through `examine`, which the
+    /// coordinator's own fix-round note calls a worse bug than the one this
+    /// round fixes. A test that only checked the positive half would pass on
+    /// a chamber that happens to hold nobody at all; this one is only
+    /// meaningful because the fixture DOES have a resident, pinned by the
+    /// same panic-if-absent guard the positive test uses.
+    #[test]
+    fn an_unlit_resident_stays_unexaminable() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let climate = session
+            .wctx
+            .climate
+            .clone()
+            .expect("seed 42 builds climate");
+        let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+        session.delve_at(vertex, cave);
+
+        let (kind, _source) = {
+            let ug = session.underground.as_ref().expect("descended");
+            crate::underground::chamber_resident(ug, &terrain, &climate).unwrap_or_else(|| {
+                panic!(
+                    "the fixture's entrance chamber must support a resident for this                      test to exercise anything"
+                )
+            })
+        };
+        let resident_cell = {
+            let ug = session.underground.as_ref().expect("descended");
+            crate::underground::resident_cell(ug.level())
+                .expect("Task 9's connectivity invariant guarantees a standable cell")
+        };
+        let reach = session.sight_reach();
+
+        // Fold the shadowcast from the resident's own cell first, so it is
+        // genuinely SEEN (remembered), then walk far enough away — by BFS,
+        // the same technique
+        // `a_creature_underground_is_drawn_only_while_lit` uses — that it is
+        // no longer LIT. Remembered-but-unlit is the one state that could
+        // leak through a naive `examine` fix.
+        session.underground.as_mut().expect("descended").cell = resident_cell;
+        session.mark_underground_seen();
+
+        let far_cell = {
+            let ug = session.underground.as_ref().expect("descended");
+            let level = ug.level();
+            let mut visited = std::collections::BTreeSet::new();
+            let mut queue = std::collections::VecDeque::new();
+            visited.insert(resident_cell);
+            queue.push_back(resident_cell);
+            let mut found = None;
+            while let Some(cur) = queue.pop_front() {
+                let dist = (cur.0 - resident_cell.0)
+                    .abs()
+                    .max((cur.1 - resident_cell.1).abs());
+                if dist > reach {
+                    found = Some(cur);
+                    break;
+                }
+                for (dx, dy) in [(0, 1), (0, -1), (1, 0), (-1, 0)] {
+                    let next = crate::lattice::Cell(cur.0 + dx, cur.1 + dy);
+                    if visited.insert(next)
+                        && level
+                            .cells
+                            .get(next)
+                            .and_then(crate::underworld_level::movement_mode)
+                            .is_some()
+                    {
+                        queue.push_back(next);
+                    }
+                }
+            }
+            found.expect(
+                "Task 9's connectivity invariant: every level is connected well beyond                  `reach` cells from any of its own standable cells",
+            )
+        };
+        session.underground.as_mut().expect("descended").cell = far_cell;
+
+        let snap = session.snapshot().expect("a descended session snapshots");
+        let still_drawn = match snap.spatial {
+            crate::snapshot::SpatialChannel::Underground { level } => {
+                level.marks.iter().any(|m| m.noun == kind.0)
+            }
+            other => panic!("expected the underground band, got {other:?}"),
+        };
+        assert!(
+            !still_drawn,
+            "sanity check: the pane must not draw a merely-remembered resident"
+        );
+
+        assert_eq!(
+            session.examine_underground(kind.0),
+            format!("You see no {} here.", kind.0),
+            "a remembered-but-unlit resident must stay unexaminable, exactly as              it stays undrawn — the fog must not leak through examine"
+        );
+    }
+
+    /// The snapshot's spatial channel and the `map` verb, underground —
+    /// **the fold, retired (The Gallery, Task 8; spec §5).**
     ///
     /// Found at The Panes' merge, not during either campaign: The Deep Realm
     /// added `underground` while The Panes added the spatial channel, in
@@ -8823,18 +14293,29 @@ mod tests {
     /// touched different lines of the same file. `SpatialChannel` enumerates
     /// bands; The Deep Realm added one; neither campaign's chronicle mentions
     /// the other's surface. That is precisely the semantic collision
-    /// `make preflight` says it cannot score.
+    /// `make preflight` says it cannot score. **This test's own name and
+    /// body have changed twice, and the invariant it pins has not.** Its
+    /// first form (`the_underground_band_folds_into_walk_as_map_does`)
+    /// asserted a FOLD — the pane and the `map` verb both answering `walk`
+    /// underground — under the argument that whichever answer the sim
+    /// settles on, one change must move both, so a silent fold could never
+    /// hide behind a passing test. Task 7 answered the PANE half (its own
+    /// `band: "underground"`, carrying `vessel/level/v1`) while deliberately
+    /// leaving the verb one turn behind, so that test's second form pinned
+    /// the two answering DIFFERENTLY on purpose — a transitional state, not
+    /// a destination — for exactly as long as it took Task 8 to land the
+    /// verb's own arm.
     ///
-    /// What it asserts is a FOLD, not a correctness claim. Standing in a cave
-    /// chamber, the pane shows a chart of the country overhead — which is
-    /// odd, and is exactly what the `map` verb already does in the same
-    /// state, because both guard on `inside` alone. So the invariant worth
-    /// pinning is not "the pane is right here" but "the pane and the verb
-    /// cannot drift apart here": whichever answer the sim settles on, one
-    /// change must move both. Without this, adding a fourth band would fold
-    /// silently into `walk` and no test would notice.
+    /// **This is that landing.** Renamed again because a reader scanning the
+    /// test list must not see a fold reported as intact when there is none
+    /// left to report — the old name was half-false the moment Task 7
+    /// landed and would have been wholly false the moment this task did, had
+    /// it survived unrenamed. What survives, under the new name, is the
+    /// original argument verbatim: the pane and the verb cannot drift apart
+    /// here, so one change — this one — must move both, and this test now
+    /// asserts them agreeing on the new answer rather than the old one.
     #[test]
-    fn the_underground_band_folds_into_walk_as_map_does() {
+    fn the_pane_and_the_verb_agree_underground() {
         let world = seam_world();
         let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
         let terrain = session
@@ -8849,36 +14330,134 @@ mod tests {
             "the fixture must have descended"
         );
 
-        // The pane: `walk`, carrying a chart rather than a plan.
+        // The pane: its own `underground` band (Task 7), carrying a level
+        // rather than a chart or a plan.
         let snap = session.snapshot().expect("a descended session snapshots");
         match &snap.spatial {
-            crate::snapshot::SpatialChannel::Walk { .. } => {}
-            crate::snapshot::SpatialChannel::Chamber { .. } => panic!(
-                "the underground band emitted `chamber` — if that is now intended, \
-                 `SpatialChannel`'s doc and the `map` verb's band arms must change WITH it"
+            crate::snapshot::SpatialChannel::Underground { .. } => {}
+            other => panic!(
+                "the underground band no longer answers `underground` — if that \
+                 changed again, `SpatialChannel`'s own doc and this test must \
+                 change WITH it: {other:?}"
             ),
         }
         let json = crate::snapshot_json(&snap);
         assert!(
-            json.contains(r#""band":"walk""#),
-            "the wire tag must read `walk` underground: {json:.120}"
+            json.contains(r#""band":"underground""#),
+            "the wire tag must read `underground`: {json:.120}"
         );
 
-        // The verb, in the same state: the surface chart, not a plan and not
-        // a refusal. `plan_here` prints a legend; `map`'s chart prints a lens
-        // header — so the two are told apart by content, not by length.
+        // The verb, in the same state: the level now, never the surface
+        // chart and never the indoor refusal. `plan_here` prints a
+        // ` legend: ` line; the walk-band chart prints a `[lens:` header —
+        // so all three are told apart by content, not by length.
         let out = match session.handle("map") {
             Turn::Out(t) => t,
             Turn::Released(_) => panic!("map must not release"),
         };
         assert!(
-            out.contains("[lens:"),
-            "map underground must draw the walk-band chart, as the pane does: {out}"
+            out.starts_with("[level:"),
+            "map underground must draw the level, not the country overhead: {out}"
+        );
+        assert!(
+            !out.contains("[lens:"),
+            "map underground must not fall through to the walk-band chart: {out}"
         );
         assert!(
             !out.contains(INDOOR_CHART_REFUSAL),
             "map underground must not take the indoor refusal: {out}"
         );
+    }
+
+    /// Fix round 1 finding 1: `handle_ooc`'s underground `map` arm and
+    /// `handle`'s underground `map` arm are two copies of one rule
+    /// (`self.underground.is_some() && rest.is_empty() => self.level_here()`)
+    /// with nothing to distinguish them — `level_here` takes no `eyes`
+    /// parameter, unlike the `inside` pair `!map`/`map` genuinely diverge on
+    /// (`OBJECTIVE_EYES` vs `self.eyes`; see `ooc_objective.rs`'s own
+    /// discriminators). `ooc_objective.rs`'s two `!map` tests cover only the
+    /// walk band and the indoor chamber, so nothing exercised `!map`
+    /// underground at all, and a future edit to only one of the two arms
+    /// (say, the bare form's refusal text) would go undetected. This test
+    /// pins the AGREEMENT the duplication depends on, not merely that each
+    /// arm works in isolation — that is the property two unsynchronized
+    /// copies threaten.
+    #[test]
+    fn bang_map_and_bare_map_agree_underground() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+        session.delve_at(vertex, cave);
+        assert!(
+            session.underground.is_some(),
+            "the fixture must have descended"
+        );
+
+        let bare = match session.handle("map") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("map must not release"),
+        };
+        let bang = match session.handle("!map") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("!map must not release"),
+        };
+        assert!(
+            bare.starts_with("[level:"),
+            "the bare form must draw the level: {bare}"
+        );
+        assert_eq!(
+            bare, bang,
+            "handle_ooc's underground `map` arm and handle's underground `map` \
+             arm must agree — both call `level_here`, which takes no `eyes` \
+             parameter, so nothing legitimately distinguishes them"
+        );
+    }
+
+    /// Fix round 1 finding 2: `UNDERGROUND_CHART_REFUSAL` was implemented
+    /// and reachable (the guard ordering makes it fire only when `rest` is
+    /// non-empty) but exercised by no test anywhere. The indoor precedent
+    /// this copies, `map_indoors_draws_the_plan_and_map_out_indoors_refuses`,
+    /// asserts both `"map out"` and `"map out 2"` for exactly the reason
+    /// given here: the refusal arm is the one nobody drives by accident.
+    #[test]
+    fn map_out_is_refused_underground() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+        session.delve_at(vertex, cave);
+        assert!(
+            session.underground.is_some(),
+            "the fixture must have descended"
+        );
+
+        for line in ["map out", "map out 2"] {
+            let refused = match session.handle(line) {
+                Turn::Out(t) => t,
+                Turn::Released(_) => panic!("map must not release"),
+            };
+            assert_eq!(
+                refused, UNDERGROUND_CHART_REFUSAL,
+                "{line:?} underground must refuse rather than ignore the argument"
+            );
+            let refused_ooc = match session.handle(&format!("!{line}")) {
+                Turn::Out(t) => t,
+                Turn::Released(_) => panic!("map must not release"),
+            };
+            assert_eq!(
+                refused_ooc, UNDERGROUND_CHART_REFUSAL,
+                "!{line:?} underground must refuse rather than ignore the argument"
+            );
+        }
     }
 
     /// The Handle, Task 4: an underground `examine` must resolve against the
@@ -8916,6 +14495,33 @@ mod tests {
         assert!(
             !reply.starts_with("You see no"),
             "the underworld names rock and then refuses it: {reply}"
+        );
+    }
+
+    /// The Gallery, Task 3: `delve` no longer sets a bucket — it stands the
+    /// possession on a real cell of a real generated level.
+    #[test]
+    fn delve_places_the_possession_on_a_real_cell_of_a_generated_level() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+        session.delve_at(vertex, cave);
+
+        let ug = session.underground.as_ref().expect("a resolved descent");
+        assert!(!ug.descent.is_empty(), "a descent has at least one rung");
+        assert_eq!(ug.rung, 0, "you enter at the top rung");
+        assert!(
+            matches!(
+                ug.level().cells.get(ug.cell),
+                Some(crate::underworld_level::LevelCellKind::Floor)
+                    | Some(crate::underworld_level::LevelCellKind::Flooded)
+            ),
+            "the possession stands on a standable cell, not inside rock"
         );
     }
 
@@ -8983,7 +14589,9 @@ mod tests {
             .spatial
         {
             SpatialChannel::Chamber { plan } => plan.marks,
-            SpatialChannel::Walk { .. } => panic!("expected the chamber band"),
+            SpatialChannel::Walk { .. } | SpatialChannel::Underground { .. } => {
+                panic!("expected the chamber band")
+            }
         }
     }
 
@@ -9725,11 +15333,11 @@ mod tests {
     /// that fact today regardless of what a player types. The conclusion
     /// rests on that; the loop below corroborates it over a roster.
     ///
-    /// **WHAT THIS FIXTURE ACTUALLY EXERCISES IS 12 OF THE 32, NOT 32 —
+    /// **WHAT THIS FIXTURE ACTUALLY EXERCISES IS 12 OF THE 34, NOT 34 —
     /// state that plainly rather than let the roster count imply
     /// otherwise.** Every verb here runs against a session that has just
     /// been `!possess`ed, and a possessed body is exactly what
-    /// `gated_by_the_body` refuses in front of: all 20
+    /// `gated_by_the_body` refuses in front of: all 24
     /// [`IN_CHARACTER_VERBS`] are turned away by the body-state gate BEFORE
     /// their handlers run, so only the 3 [`SESSION_CONTROL`] verbs and the
     /// 9 Group-A operator instruments below reach any dispatch arm at all.
@@ -9745,6 +15353,13 @@ mod tests {
     /// from that measurement — same 12 ungated verbs, two more gated ones,
     /// 18→19→20 and 30→31→32 — rather than re-run, since
     /// `gated_by_the_body`'s own logic is untouched by either addition).
+    /// The Gallery's Task 5 added two more gated verbs still, `down`/`up`,
+    /// re-derived the identical way: 20→22 and 32→34, the 12 ungated verbs
+    /// again untouched. The Chattel's Task 11 added `open`/`close` — both
+    /// gated, both in-character — re-derived the same way once more: 22→24
+    /// and 34→36, and the 12 ungated verbs untouched for the fourth time,
+    /// since `gated_by_the_body`'s own logic is unchanged by an entry in the
+    /// roster it reads.
     ///
     /// **So this is a weak tripwire, not the tripwire that turns red the
     /// day mortality ships.** If a death terminator ever arrives through an
@@ -9757,15 +15372,17 @@ mod tests {
     ///
     /// The stated denominator (spec §7's own requirement): the full shipped
     /// verb roster this file itself classifies is the SUM of three groups —
-    /// [`IN_CHARACTER_VERBS`] (20, since The Offer's Task 5 added `warm` and
-    /// The Latch's fix wave added `clear`),
+    /// [`IN_CHARACTER_VERBS`] (28, since The Offer's Task 5 added `warm`,
+    /// The Latch's fix wave added `clear`, The Gallery's Task 5 added
+    /// `down`/`up`, The Chattel's Task 11 added `open`/`close` and its Task
+    /// 12 added `take`/`drop`/`put`/`carrying`),
     /// [`SESSION_CONTROL`] (3: `release`/`quit`/`exit`), and the nine
     /// out-of-character-ONLY operator instruments `handle_ooc`'s Group A
     /// dispatches (`why`/`npcs`/`help`/`eyes`/`whoami`/`provoke`/`soothe`/
-    /// `possess`/`unpossess`) — **32** total. Group B's six `!`-twins
+    /// `possess`/`unpossess`) — **40** total. Group B's six `!`-twins
     /// (`!map`/`!examine`/`!needs`/`!wait`/`!look`/`!knows`) are deliberately
     /// NOT counted a second time — [`HELP`]'s own text calls them "the
-    /// out-of-character halves" of verbs already among the 20: the same verb
+    /// out-of-character halves" of verbs already among the 24: the same verb
     /// under the other mood, not a distinct one.
     ///
     /// Each verb runs against its OWN fresh, freshly-possessed session
@@ -9779,7 +15396,7 @@ mod tests {
     /// argument to make it succeed: since no dispatch arm anywhere
     /// constructs the string `"died"` regardless of input, a bare
     /// invocation already covers the whole surface this loop can reach —
-    /// which, per the paragraph above, is the 12 ungated verbs, not the 32
+    /// which, per the paragraph above, is the 12 ungated verbs, not the 40
     /// the roster names.
     #[test]
     fn h2_no_shipped_verb_can_end_a_possession_by_death() {
@@ -9802,11 +15419,11 @@ mod tests {
             .collect();
         assert_eq!(
             roster.len(),
-            32,
-            "the stated denominator: 20 IN_CHARACTER_VERBS + 3 SESSION_CONTROL \
+            40,
+            "the stated denominator: 28 IN_CHARACTER_VERBS + 3 SESSION_CONTROL \
              + 9 Group-A operator instruments the OOC namespace alone \
              dispatches. This pins the ROSTER's size, NOT the exercised \
-             population: under a possessed body the gate refuses all 20 \
+             population: under a possessed body the gate refuses all 28 \
              in-character verbs, so 12 reach a dispatch arm — see this \
              test's doc comment"
         );
@@ -9831,6 +15448,272 @@ mod tests {
                  death arm is already correct and shipped, and spec §6 wants \
                  updating, not this test deleted"
             );
+        }
+    }
+
+    /// Every `instance-of` fact a played session commits names a thing the
+    /// grammar ALREADY offered at the room it was promoted in — spec §5's
+    /// non-goal ("nothing is created and nothing is destroyed") made
+    /// mechanical, and the only assertion of it in the tree.
+    ///
+    /// # Why the non-goal needed a test at all
+    ///
+    /// §5 states the invariant as a *consequence* of not shipping a
+    /// consumption verb, which is an argument about what the plan omitted
+    /// rather than about what the code does. Tasks 1–13 shipped six verbs and
+    /// two promotion routes; nothing checked that the routes only ever hand
+    /// back identities the room already had. A verb that derived a FRESH id
+    /// for a thing already in the ledger would create a second object out of
+    /// one, silently, and every existing test would stay green — the same
+    /// object would simply be two.
+    ///
+    /// # The two producers, reconciled
+    ///
+    /// "The grammar latently offers it at that room" has two spellings, and
+    /// asserting only one would have left the other unwitnessed:
+    ///
+    /// - **the room producer**, `thing_role(facet, kind)` →
+    ///   `thing@<packed-facet>/<kind>`, reached by [`Session::take`],
+    ///   [`Session::put_in`] and [`Session::open_or_close`]. Its latent set is
+    ///   the anchors a room's own [`crate::interior::Interior`] composes, at
+    ///   ordinal 0. **This test is that half**, and it was the unwitnessed one.
+    /// - **the passage producer**, `passage::cave_mouth_role(addr)` →
+    ///   `thing@passage/<addr>/cave-mouth`, whose address is a `ChamberAddr`
+    ///   and which therefore cannot be spelled by `thing_role` at all. Its
+    ///   latency already has a witness —
+    ///   `suite::passage::cave_mouth_id_derives_the_entity_promotion_mints`
+    ///   derives the id BEFORE any promotion and asserts the promotion mints
+    ///   that same id — so it is cited here rather than duplicated. The two
+    ///   spellings are disjoint by prefix, so a room-keyed assertion can never
+    ///   accidentally cover a cave mouth or vice versa.
+    ///
+    /// # ONE check covers BOTH clauses of the non-goal, and that is measured
+    ///
+    /// The test asserts a single thing: **every `(subject, kind)` pair the
+    /// play adds is one the walk recorded as latent BEFORE touching that
+    /// room, and the kind committed is the kind that derivation used.** The
+    /// latent set is built from `chamber_interior_here()` on arrival, so it
+    /// can only describe what the grammar composes; a promotion at any other
+    /// `(room, kind, ordinal)` lands outside it.
+    ///
+    /// That one check answers "nothing destroyed" as well as "nothing
+    /// created", and the reason is a property of the ledger rather than a
+    /// convenience. **`Ledger` has no removal API at all** — `facts` is
+    /// append-only and nothing retracts — so destruction is not representable
+    /// as a retraction. It has exactly one available spelling:
+    /// `Ledger::change_kind` APPENDS a second `instance-of` and
+    /// `Ledger::kind_of` reads the LATEST, so re-kinding a strongbox into ash
+    /// is how a thing would stop being what it was. That appended fact is a
+    /// new pair, and a new pair whose object disagrees with the derivation is
+    /// exactly what this check refuses. The second mutation below is that
+    /// destroy path, and it dies on this assertion.
+    ///
+    /// **A separate "no thing carries two instance-of objects" assertion was
+    /// written first and then deleted, because running the destroy mutation
+    /// showed it never fired** — the check above reached the same fact one
+    /// line earlier and strictly more of them (it also covers a re-kinding of
+    /// a genesis entity, which a thing-scoped loop filters out). A subsumed
+    /// assertion in a test whose whole subject is a non-goal would read as two
+    /// clauses covered by two guards when it is two clauses covered by one.
+    ///
+    /// # The positive control
+    ///
+    /// The play must actually promote something. Without that assertion a
+    /// walk refused at the front door would satisfy everything above by
+    /// having nothing to check, which is the vacuous-guard shape this project
+    /// has shipped five of in one campaign.
+    ///
+    /// # Coverage, stated rather than implied
+    ///
+    /// Seed 1's structure is walked to its end, which is the only production
+    /// path known to reach a `Role::Store` chamber and therefore the only one
+    /// that composes a strongbox and both key patterns. The floor asserted
+    /// below (three rooms, six distinct latent kinds) is what makes "the walk
+    /// covered several gate settings" a checked claim rather than a hope. It
+    /// is NOT a sweep of every `selection_for(role, built, cold, populous)`
+    /// combination: `cold` and `populous` are seed-drawn, so a sweep would
+    /// cost a world build per combination. The unreached combinations compose
+    /// from the same `INVENTORY` through the same `compose` and are promoted
+    /// through the same two routes, so what they could carry is a new
+    /// *pattern*, never a new *promotion route* — and it is the routes this
+    /// test holds.
+    ///
+    /// MUTATION 1 — the property is *that a verb hands back an identity the
+    /// room already had, rather than minting a fresh one*: in
+    /// [`Session::put_in`], change the `ordinal` argument of its
+    /// `crate::thing::promote` call from `0` to `1`. Every production room
+    /// composes at most one anchor of a kind
+    /// (`interior::pattern::tests::no_production_room_composes_two_anchors_of_one_kind`),
+    /// so ordinal 1 names an object the grammar offers nowhere. Confirmed
+    /// 2026-08-30:
+    ///
+    /// ```text
+    /// the play committed instance-of(EntityId(12700770777358008321), "strongbox")
+    /// for an object no room this walk stood in latently offered — spec §5
+    /// says every object that will ever exist is already latent
+    /// ```
+    ///
+    /// MUTATION 2 — the property is *that nothing is destroyed*: insert
+    /// `self.ledger.change_kind(thing, "ash", Some(self.day), "mutation",
+    /// &self.registry)` before the posting at the end of [`Session::take`],
+    /// which is a taken thing burning in the player's hand. Confirmed
+    /// 2026-08-30:
+    ///
+    /// ```text
+    /// the walk must promote through BOTH routes — a portable through `take`
+    /// and a container through `open`/`unlock` — or the check above ran over
+    /// one verb's output: [(EntityId(14873712364730122240), "ash"),
+    ///                     (EntityId(14873712364730122240), "key")]
+    /// ```
+    ///
+    /// **Read mutation 2's red carefully, because it is not the assertion you
+    /// would predict and the difference is worth keeping.** The destroy
+    /// mutation lands on the POSITIVE CONTROL rather than on the latency
+    /// check, and it lands there for a reason that is behaviour rather than
+    /// accident: a key burned to ash on the way into the hand is no longer
+    /// `Portable`, so the strongbox three rooms later is never unlocked and
+    /// never promoted, and the control's "both routes must have fired" is what
+    /// notices. The destruction is still visible in the failure — `"ash"` is
+    /// printed in the minted set, beside the `"key"` it replaced — and the
+    /// latency check would have caught it on the very next line had the
+    /// control not fired first. What this shows is that in a played session
+    /// the two clauses of §5 are not independently observable: a destroyed
+    /// object stops participating, so its destruction is detected as an
+    /// absence downstream as readily as as a contradiction in place. That is
+    /// a finding about the non-goal, not a weakness in the test, and it is
+    /// recorded here rather than tidied away.
+    #[test]
+    fn a_played_session_promotes_only_what_was_already_latent() {
+        /// Every `(subject, kind)` the ledger states, as a set — `instance-of`
+        /// is non-functional, so a subject may legitimately appear once and
+        /// must never appear twice with different objects.
+        fn instance_of_pairs(ledger: &Ledger) -> std::collections::BTreeSet<(EntityId, String)> {
+            ledger
+                .find(hornvale_kernel::INSTANCE_OF)
+                .filter_map(|f| match &f.object {
+                    Value::Text(t) => Some((f.subject, t.clone())),
+                    _ => None,
+                })
+                .collect()
+        }
+
+        let world = world_at(1).expect("seed 1 builds");
+        let (mut session, _) =
+            Session::start(&world, &PossessOpts::default()).expect("seed 1 possesses");
+        let before = instance_of_pairs(&session.ledger);
+
+        // What the GRAMMAR offers, recorded on arrival in each room and never
+        // afterwards: a set built after the verbs ran could be widened by them.
+        let mut latent: std::collections::BTreeMap<EntityId, String> =
+            std::collections::BTreeMap::new();
+        let mut rooms = 0usize;
+
+        assert!(
+            say(&mut session, "enter").starts_with("[chamber "),
+            "the possession never got indoors, so nothing below is tested"
+        );
+        // `MAX_CHAMBERS` is 4; five steps is one more than any structure has,
+        // and the loop stops on the far-end reply rather than on the count.
+        for _ in 0..5 {
+            let room = session
+                .chamber_facet_here()
+                .expect("the walk is standing in a chamber");
+            let interior = session
+                .chamber_interior_here()
+                .expect("the walk is standing in a chamber");
+            for id in interior.ids() {
+                let kind = crate::affordance::thing_kind_of(interior.anchor(id).kind);
+                let thing = crate::thing::thing_id(&room, kind.0, 0)
+                    .expect("a chamber facet packs, or the interior could not have composed");
+                latent.insert(thing, kind.0.to_string());
+            }
+            rooms += 1;
+
+            // Every promoting verb at every noun, including the pairs — the
+            // point is to reach every route that can commit an `instance-of`,
+            // not to have each line succeed. A refusal is a fine outcome; an
+            // unasked verb is not.
+            //
+            // **The ORDER is load-bearing and was measured.** The first draft
+            // ran `take`, `close`, `lock`, `drop` per noun, which set the door
+            // key down in the room it was found in — so the walk arrived at
+            // the strongbox three rooms later empty-handed, every `unlock`
+            // was refused, and the whole play promoted ONE thing. Each noun is
+            // therefore picked up before anything else is asked of it and
+            // picked up again after each act that could have set it down, so
+            // the key travels with the walk and the lock it opens is reached
+            // holding it.
+            let nouns = session.chamber_nouns_here();
+            for noun in &nouns {
+                for line in [
+                    format!("take {noun}"),
+                    format!("unlock {noun}"),
+                    format!("open {noun}"),
+                    format!("take {noun}"),
+                    format!("close {noun}"),
+                    format!("open {noun}"),
+                    format!("drop {noun}"),
+                    format!("take {noun}"),
+                ] {
+                    let _ = session.handle(&line);
+                }
+            }
+            for noun in &nouns {
+                for holder in &nouns {
+                    let _ = session.handle(&format!("put {noun} in {holder}"));
+                    let _ = session.handle(&format!("take {noun}"));
+                }
+            }
+
+            if !say(&mut session, "enter further in").starts_with("[chamber ") {
+                break;
+            }
+        }
+
+        assert!(
+            rooms >= 3 && latent.len() >= 6,
+            "precondition: the walk must cross several rooms and see several \
+             kinds, or 'over the production gate combinations' is one room — \
+             {rooms} rooms, {} latent kinds",
+            latent.len()
+        );
+
+        let after = instance_of_pairs(&session.ledger);
+        let minted: Vec<(EntityId, String)> = after.difference(&before).cloned().collect();
+
+        // THE POSITIVE CONTROL, first: the check below is satisfiable by a
+        // session that promoted nothing at all, so an empty `minted` would be
+        // a green test over an empty set. Non-emptiness alone is also too
+        // weak — one promotion proves one route — so the control names the
+        // two routes it must have reached. Measured 2026-08-30: 16 latent
+        // slots across 4 rooms, 3 of them promoted, `["key", "strongbox",
+        // "key"]` — two keys from two different rooms and the chest between
+        // them.
+        let promoted_kinds: std::collections::BTreeSet<&str> =
+            minted.iter().map(|(_, k)| k.as_str()).collect();
+        assert!(
+            minted.len() >= 3
+                && promoted_kinds.contains("key")
+                && promoted_kinds.contains("strongbox"),
+            "the walk must promote through BOTH routes — a portable through \
+             `take` and a container through `open`/`unlock` — or the check \
+             below runs over one verb's output: {minted:?}"
+        );
+
+        // 1. Nothing created.
+        for (subject, kind) in &minted {
+            match latent.get(subject) {
+                Some(offered) => assert_eq!(
+                    offered, kind,
+                    "the play committed instance-of({subject:?}, {kind:?}) against \
+                     an id the grammar derived for a {offered:?}"
+                ),
+                None => panic!(
+                    "the play committed instance-of({subject:?}, {kind:?}) for an \
+                     object no room this walk stood in latently offered — spec §5 \
+                     says every object that will ever exist is already latent"
+                ),
+            }
         }
     }
 }

@@ -193,6 +193,19 @@ w42="$work/hv-42.json"       # seed 42, tier-0 constant sun
 wsky="$work/hv-sky.json"     # seed 42, generated sky (default)
 wlocked="$work/hv-locked.json" # seed 42, tidally locked
 
+# THE WRITE-SET CAPTURE (Task 4, The Attestation). Task 1's Step 1 measured
+# how much of each declared generated path an ordinary run actually touches
+# by hand, once, off a marker file and `find -newer`; this makes that
+# measurement a byproduct of every run instead of a by-hand recipe someone
+# has to re-derive. Stamp the marker now, before any generation happens; the
+# footer near the end of this script counts, per declared path, how many of
+# its tracked files carry an mtime newer than it. `sleep 1` guards against a
+# filesystem whose mtime resolution is coarser than the time this script
+# itself takes to reach its first write.
+write_capture_marker="$work/hv-write-capture-marker"
+touch "$write_capture_marker"
+sleep 1
+
 run() { cargo run -q "$@"; }
 run_release() { cargo run -q --release "$@"; }
 
@@ -267,6 +280,91 @@ gen_possession_overtime() {
     printf '\n*(This transcript is frozen too — a recording, not a live session — but\nunlike the [day-0 transcript](./possession-seed-42.md), it `wait`s across a\nfull homeostatic drive cycle: watch a derived NPC grow thirsty and\nsatisfy it — narrated by `wait`, felt directly through `needs`, and\nrecounted with its own reason by `!why`. This settlement condenses\ndirectly onto fresh water (settlements-near-rivers): the NPC drinks in\nplace rather than walking to it, so `!why` recounts a drink, not a\njourney — not every settlement'"'"'s fate (condensation lands most, not\nall, towns on the river network), but this world'"'"'s own flagship\nsettlement'"'"'s real, measured outcome. The world still moves only\ninside a possess session; a freshly built world commits none of this.)*\n'
     tail -n +2 "$possess_ot_tmp"
     rm -f "$possess_ot_tmp"
+}
+
+# The custody transcript (The Chattel, Task 13). The campaign shipped six
+# verbs — `open`, `close`, `take`, `drop`, `put`, `carrying` — and NO gallery
+# page typed one of them: `possession-walk.txt` and
+# `possession-over-time-walk.txt` are the only inputs the two seed-42
+# transcripts are generated from, and neither uses any of the six. That
+# absence was already load-bearing before anyone noticed it — decision 0399
+# records `Session::take`'s own doc deferring a defect on the grounds that
+# "their transcripts are in the galleries", which they were not — and it is
+# why "regenerate the galleries" produced an empty diff at the end of two
+# consecutive tasks.
+#
+# SEED 1, NOT 42, and the reason is measured rather than stylistic: seed 42's
+# flagship structure does not draw enough chambers for its possession to reach
+# a `Store` role, so no strongbox stands anywhere it can walk (decision 0398;
+# `windows/vessel/tests/suite/strongbox_reachability.rs` holds the same fact
+# as a test). 10 of 48 swept seeds reach one; 1 is the lowest. (Decision 0398
+# recorded 8, measured in-process at `PossessOpts::default()`'s noon; The
+# Custodian re-swept through this same CLI at its own `--day 0` default and
+# got 10, unchanged across the key's move off the threshold. Two instruments,
+# two numbers, and the CLI's is the one this comment is about.) This is
+# therefore a NEW script rather than an edit to an existing one — the seed-42
+# transcripts stay byte-identical.
+#
+# THE WALK CHANGED IN TASK 13'S FIX ROUND, AND SO DID WHAT THE PAGE IS
+# EVIDENCE OF. The first version opened by taking the key straight out of a
+# shut, LOCKED strongbox and then opening that strongbox with it — a lock
+# defeated in one move, published as an ordinary retrieval. That was a real
+# defect in `Session::take` (the lid gate ran on the ledger path only), and
+# fixing it needed a second key pattern as well, since the only key in the
+# world was inside the box it opened. The walk now does what the campaign
+# always claimed: picks up the key `the-key-by-the-loom` composes beside the
+# loom, carries it one chamber further, is REFUSED by the shut lid, opens the
+# chest with the key in hand, and only then moves what is inside.
+#
+# IT CHANGED AGAIN IN THE CUSTODIAN, AND THE CLOSING BEAT GOT STRONGER FOR
+# IT. That second key pattern was `roles: &[Role::Threshold]` — the role
+# `interior::pattern::role_for` gives chamber index 0 unconditionally — so a
+# key stood in the entrance of every built structure in every world, and the
+# walk began by taking one on the first move. The pattern is
+# `roles: &[Role::Loomroom]` now (`requires: Some(Loom)`, so the grammar
+# confines it the way an alcove confines the fire), which is why the walk
+# below types two `enter further in` before it finds anything to lift.
+#
+# IT CARRIES ITS OWN NEGATIVE CONTROLS, which is the other thing the first
+# version lacked. `take a key` is typed twice in rooms that answer
+# differently for reasons the page can state: once in the THRESHOLD chamber,
+# whose grammar composes no key at all now ("You see no a key here."), and
+# once at the shut chest ("The key is shut away in something closed.").
+# Without them the closing beat — a key set down and picked up again — reads
+# as a reply rather than as evidence, because nothing shows what a room
+# WITHOUT one says.
+#
+# THE NEGATIVE CONTROL AND THE CLOSING BEAT ARE NOW THE SAME ROOM, which they
+# were not before. The key is set down in the threshold chamber, whose
+# grammar composes no key — so the retake reaches `take_from_the_ledger`'s
+# second source rather than the SHADOWING path a room with its own key anchor
+# takes. The page shows the same room answering "You see no a key here." and
+# then "You take the key.", eighteen moves apart, with nothing between them
+# but the ledger.
+#
+# ONE RUN, TWO ARTIFACTS. The same invocation writes the page and, through
+# `--snapshot`, the committed `session-seed-1-carrying.json` fixture — the one
+# artifact of `vessel/session/v2` in which `self.carrying` is NOT empty. Every
+# seed-42 fixture records a possession that never typed `take`, so all of them
+# carry `"carrying":[]`, which is exactly what a broken fold would emit too;
+# a golden can only hold a field it has a non-empty value for. The script
+# deliberately ends WITHOUT `release`, so the snapshot is taken with the key
+# still in hand.
+gen_possession_carry() {
+    local possess_tmp
+    possess_tmp="$(mktemp)"
+    run -p hornvale -- possess --seed 1 --script scripts/possession-carry.txt \
+        --snapshot clients/game/core/tests/fixtures/session-seed-1-carrying.json \
+        > "$possess_tmp"
+    # Retitled at this seam rather than in the command, the same move
+    # `gen_possession_overtime` makes: `possess`'s own H1 is "A Possession of
+    # Seed 1 — day 0", and this page is defined by what it does, not the day
+    # it opens on.
+    printf '# A Possession of Seed 1 — a thing carried\n'
+    # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
+    printf '\n*(This transcript is frozen. It is the only gallery page that types the\ncustody verbs — `take`, `drop`, `put`, `open`, `close`, `carrying` — and it\nis the campaign'"'"'s thesis end to end: a key is picked up beside a loom two\nchambers into a hamlet dwelling, carried one room further, refused by a shut\nlid, and then used to open that chest. Two refusals are the evidence, not\nthe noise. `take a key` in the very first room answers \"You see no a key\nhere.\" — that room composes none, since The Custodian moved the key pattern\noff `Role::Threshold`, the one role every built structure has — which is\nwhat makes the closing beat, where a key set down in that same room is\npicked up again, a measurement rather than a reply. And `take a key` at the\nshut chest answers \"The key is shut away in something closed.\": the lid\nmeans something, and until The Chattel'"'"'s fix round it did not.*\n\n*A key on a floor is a stand-in for a PERSON, and reading it as a difficulty\nsetting is the mistake this page invites. The household that lives here\nwould hold its own key or stash it somewhere only a resident knows; the\ncustody mechanism for exactly that already exists and is body-agnostic. What\nis missing is the resident, so which rooms furnish a key is a\nprop-management knob for as long as nobody is home to carry one\n(`PLAY-key-placement-stands-in-for-a-resident`).*\n\n*Read the room descriptions as the GRAMMAR'"'"'s catalogue and not as an\ninventory, because that is what they are — and this dwelling has TWO keys,\nwhich is what makes the difference visible. Chamber prose renders the\npattern the room was composed from, never the ledger, so it moves for\nnobody: the storeroom lists \"a key\" while the chest is shut on it\n(`PLAY-closed-container-conceals-nothing`), and the front room says \"a\ndoorway and a screen\" on the last entry, silent about the key a player has\njust set down on its floor (`PLAY-room-prose-omits-what-the-ledger-holds`).\nBoth are the same absent read, and both are deferred with a priced bill\nrather than unnoticed.*\n\n*One more thing not to mistake for a bug: `close` does not re-lock. A lid\nand a lock are separate states, so the second `open` needs no key\n(decision 0399).)*\n'
+    tail -n +2 "$possess_tmp"
+    rm -f "$possess_tmp"
 }
 
 # The chart reference fixture (Task 11, the-illumination; spec §5.3): the
@@ -907,6 +1005,7 @@ spawn run -p hornvale -- possess --seed 42 --script scripts/possession-chamber.t
 
 spawn gen_chart_reference > clients/game/core/tests/fixtures/chart-reference-seed-42.txt
 
+spawn gen_possession_carry > book/src/gallery/possession-carry-seed-1.md
 spawn gen_possession_overtime > book/src/gallery/possession-over-time-seed-42.md
 spawn gen_history > book/src/gallery/history-seed-42.md
 spawn gen_connections > book/src/gallery/connections-seed-42.md
@@ -1033,3 +1132,110 @@ echo "regenerate-artifacts: the anomaly report" >&2
 run -p hornvale -- lab anomalies
 
 echo "regenerate-artifacts: done." >&2
+
+# Emit the write-set capture (Task 4, The Attestation): one row per declared
+# path EXCEPT a `census`-authored one (see the scoping note below, added by
+# the final review's I3 fix), `path<TAB>written<TAB>tracked`, where `written`
+# is how many of that path's git-tracked files carry an mtime newer than the
+# marker stamped at the top of this run (mtime ADVANCED, not content changed
+# — a file this loop rewrites byte-for-byte identically still counts as
+# written), and `tracked` is how many of its files git tracks at all. This
+# is a READ over mtimes and `git ls-files`; it changes no artifact's bytes.
+#
+# `census`-AUTHORED ROWS ARE EXCLUDED, AND THIS WAS NOT ALWAYS TRUE (review
+# finding I3, final review). This footer used to iterate every declared row
+# regardless of author, including `census`-authored rows such as
+# `book/src/laboratory/generated/the-census/`. Those rows have TWO authors
+# that write different bytes through this one script, gated by `HV_CENSUS`:
+# a PLAIN run (this branch, `HV_CENSUS` unset) never rewrites the census
+# study's own output, so a census-authored row measured 1/229 (only
+# `schema.json`, rewritten unconditionally by the backfill loop below); a
+# CENSUS run (`HV_CENSUS=1`) rewrites the whole study, so the same row
+# measures 229/229. `scripts/sluice-census.sh`'s `git add -u` commits
+# whichever shape a census run left, and the next ordinary merge's
+# `artifacts` phase then overwrote it with the plain-run shape — perpetual,
+# silent, two-way churn on a drift-checked artifact, with nothing
+# downstream able to tell the two shapes apart (`measured_writes()` in
+# `cli/tests/suite/generated_paths.rs` reads only key presence, never the
+# counts).
+#
+# ONLY `census` IS EXCLUDED, NOT EVERY NON-`artifacts` AUTHOR — `heavy`-
+# authored and `none(...)` rows STAY IN, deliberately, and this needed a
+# second look before shipping: a first attempt at this fix scoped emission
+# to `artifacts`-authored rows only, which broke
+# `an_overriding_declaration_must_be_measured` — that test requires EVERY
+# overriding row, of ANY author including `none(...)`, to have a
+# writes.tsv entry (key presence only, not the values), and most of the
+# `none(...)` rows are exactly such overrides (e.g. `book/src/gallery/
+# the-sky.md` overriding `book/src/gallery/`'s `artifacts`). `heavy`- and
+# `none(...)`-authored rows have NO invocation ambiguity to exclude for:
+# this script never writes either kind of path under any flag it accepts
+# (`the-history/`/`the-sounding/` are written only by the separate heavy
+# test binary; a `none(...)` row's whole claim is that nothing here writes
+# it), so their captured counts are stable — always the same value — no
+# matter which invocation ran. `census` is the one author whose bytes
+# genuinely depend on which of two distinct invocations produced them, and
+# excluding exactly that author loses no coverage
+# `an_overriding_declaration_must_be_measured` needs, since every override
+# case that test resolves today is a non-`census` row overriding a
+# less-specific `census` row (e.g. `.../the-census/schema.json` over
+# `.../the-census/`), never the reverse.
+#
+# THE OUTPUT FILE CANNOT MEASURE ITSELF, AND MUST NOT PRETEND TO (review
+# finding, The Attestation Task 4). `docs/generated-path-writes.tsv` is
+# itself declared in docs/generated-paths.txt with author `artifacts` — that
+# declaration is correct, the file really is written every run — but a
+# shell output redirect on a compound command (`{ ...; } > file`) truncates
+# and stamps the target's mtime at REDIRECT-OPEN time, before the body
+# inside it runs (confirmed empirically: a body emitting zero bytes still
+# moved the file's mtime to within 0.0002s of a marker set immediately
+# before). So by the time this loop would check its own row, this file's
+# mtime has already moved past the marker — every single run, unconditional
+# on whether anything below actually changed. A "written" value for this
+# row would be guaranteed true by construction, not observed, and Step 3's
+# falsifier ("delete the generator, watch the count drop to zero") cannot
+# apply to it: deleting this very footer deletes the file's only writer, so
+# there is no way to distinguish "not written" from "not generated at all".
+# Presenting a number here would be exactly the failure this instrument
+# exists to catch, so the self-referential path is named and explicitly
+# excluded below rather than given a fabricated row.
+write_capture_self_path="docs/generated-path-writes.tsv"
+#
+# Skipped outside a git checkout: `repo_root` above is deliberately resolved
+# without `git rev-parse` because the (abandoned, decision 0063) AWS path
+# once ran this script against an rsync'd, non-git tree, and `git ls-files`
+# has no answer there. A missing write-set capture must never turn a
+# working regeneration into a failed one.
+if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    echo "regenerate-artifacts: capturing the write set -> docs/generated-path-writes.tsv" >&2
+    {
+        echo "# path<TAB>written<TAB>tracked -- emitted by scripts/regenerate-artifacts.sh; do not hand-edit."
+        echo "# written = how many of this row's git-tracked files carry an mtime newer than"
+        echo "# the marker stamped at the top of this run. mtime ADVANCED, not content"
+        echo "# CHANGED -- a file rewritten byte-for-byte identically still counts as written."
+        echo "# census-AUTHORED ROWS GET NO LINE HERE (review finding I3): this script's own"
+        echo "# HV_CENSUS conditional means a census-authored row's true written/tracked shape"
+        echo "# differs by which invocation ran it, and this file has no way to say which one"
+        echo "# did. See docs/generated-paths.txt's own comment beside this row for the account."
+        echo "# ${write_capture_self_path} is declared but excluded from the rows below: this"
+        echo "# file's own output redirect stamps its mtime before this loop ever runs, so a"
+        echo "# self-observed count would be guaranteed true by construction, not measured."
+        while IFS= read -r declared_path; do
+            if [ "$declared_path" = "$write_capture_self_path" ]; then
+                continue
+            fi
+            tracked=0
+            written=0
+            while IFS= read -r tracked_file; do
+                [ -n "$tracked_file" ] || continue
+                tracked=$((tracked + 1))
+                if [ -n "$(find "$tracked_file" -newer "$write_capture_marker" -print 2>/dev/null)" ]; then
+                    written=$((written + 1))
+                fi
+            done < <(git ls-files -- "$declared_path")
+            printf '%s\t%s\t%s\n' "$declared_path" "$written" "$tracked"
+        done < <(grep -v '^#' docs/generated-paths.txt | grep -v '^$' | awk -F'\t' '$2 != "census" { print $1 }')
+    } > docs/generated-path-writes.tsv
+else
+    echo "regenerate-artifacts: not a git checkout -- skipping the write-set capture" >&2
+fi

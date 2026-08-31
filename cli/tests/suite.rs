@@ -11,8 +11,12 @@
 
 #[path = "suite/accession.rs"]
 mod accession;
+#[path = "suite/anchor_thing_correspondence.rs"]
+mod anchor_thing_correspondence;
 #[path = "suite/architecture.rs"]
 mod architecture;
+#[path = "suite/attest.rs"]
+mod attest;
 #[path = "suite/audio_artifacts.rs"]
 mod audio_artifacts;
 #[path = "suite/branches_coverage.rs"]
@@ -27,6 +31,8 @@ mod cave_kind_correspondence;
 mod census_duration;
 #[path = "suite/claim_shape.rs"]
 mod claim_shape;
+#[path = "suite/client_band_coverage.rs"]
+mod client_band_coverage;
 #[path = "suite/common_is_total.rs"]
 mod common_is_total;
 #[path = "suite/correspondence.rs"]
@@ -66,6 +72,8 @@ mod no_entity_id_values_in_prose;
 mod prose_is_not_a_contract;
 #[path = "suite/release_determinism.rs"]
 mod release_determinism;
+#[path = "suite/repertory_corpus.rs"]
+mod repertory_corpus;
 #[path = "suite/repose_byte_identity.rs"]
 mod repose_byte_identity;
 #[path = "suite/retired_gate_signposts.rs"]
