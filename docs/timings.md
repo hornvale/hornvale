@@ -4407,3 +4407,7 @@ measured here.
 | 2026-08-30T21:48:43Z | sluice:gate | 537.099 | 15906.115 | 497.554 | 30.54 | 0 | be7fe3ac5 |  | lefford | 40 |
 | 2026-08-30T21:57:31Z | sluice:clients | 527.948 | 9823.485 | 107.780 | 18.81 | 0 | 5686bb940 |  | lefford | 40 |
 | 2026-08-30T22:05:11Z | sluice:heavy | 459.901 | 9583.135 | 178.631 | 21.23 | 0 | 115aec3da |  | lefford | 40 |
+| 2026-08-31T11:48:44Z | gate-commit | 34.029 | 67.801 | 11.338 | 2.33 | 0 | cec3603e5 | campaign/the-pavement | ambrose | 12 |
+| 2026-08-31T11:51:20Z | gate-commit | 29.162 | 39.206 | 10.761 | 1.71 | 0 | cec3603e5 | campaign/the-pavement | ambrose | 12 |
+| 2026-08-31T11:57:36Z | gate-commit | 354.396 | 1140.879 | 95.545 | 3.49 | 0 | cec3603e5 | campaign/the-pavement | ambrose | 12 |
+| 2026-08-31T12:04:46Z | gate-commit | 152.591 | 119.496 | 67.353 | 1.22 | 0 | cec3603e5 | campaign/the-pavement | ambrose | 12 |

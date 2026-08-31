@@ -69,6 +69,7 @@ domains/terrain/src/streams.rs	1
 domains/terrain/tests/suite/channel_golden.rs	1
 kernel/src/band.rs	1
 kernel/src/color.rs	1
+kernel/src/cube.rs	5
 kernel/src/room.rs	1
 tools/board/src/store.rs	4
 tools/digest/src/render/delta.rs	2
