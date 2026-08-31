@@ -14595,6 +14595,21 @@ mod tests {
         }
     }
 
+    /// The AGENT-kind subset of [`marks_of`] — creatures only, never a
+    /// furnishing (Task 10, The Legend). `marks_of` alone answers "what is
+    /// drawn on this plan", which stopped being synonymous with "what
+    /// creatures are drawn" once a lit furnishing started riding the same
+    /// list; a test whose claim is specifically about creature placement
+    /// (a count, an emptiness check) needs this narrower read, or a
+    /// furnishing sharing the chamber fails the assertion for a reason that
+    /// has nothing to do with the creature under test.
+    fn agent_marks_of(session: &Session<'_>) -> Vec<crate::plan::PlanMark> {
+        marks_of(session)
+            .into_iter()
+            .filter(|m| m.kind == crate::purview::AGENT_MARK_KIND)
+            .collect()
+    }
+
     #[test]
     fn two_creatures_cannot_be_drawn_in_one_cell() {
         // THE SIGHTING, TEST 2. `lattice::Occupancy::place`'s `Refusal` path
@@ -14623,7 +14638,7 @@ mod tests {
         let first = session.bodies[1].entity;
         session.place_creature_at_me(first);
         assert_eq!(
-            marks_of(&session).len(),
+            agent_marks_of(&session).len(),
             1,
             "precondition: the first placement alone is drawn"
         );
@@ -14644,10 +14659,12 @@ mod tests {
         );
 
         let marks = marks_of(&session);
+        let agent_marks = agent_marks_of(&session);
         assert_eq!(
-            marks.len(),
+            agent_marks.len(),
             1,
-            "one cell may hold one creature: the second must be REFUSED, not stacked — got {marks:?}"
+            "one cell may hold one creature: the second must be REFUSED, not \
+             stacked — got {agent_marks:?}"
         );
         // THE UNPLACED ROW (fix round 2), and this test is the only place that
         // constructs it. The refused creature is co-located, is NOT drawn, and
@@ -14773,7 +14790,14 @@ mod tests {
             1,
             "precondition: a creature in sight IS sent"
         );
-        assert_eq!(marks_of(&session).len(), 1, "precondition: and IS drawn");
+        // Agent-kind only (see `agent_marks_of`'s doc): a lit furnishing at
+        // this room's `near` anchor would otherwise inflate this count for a
+        // reason unrelated to the creature this precondition is about.
+        assert_eq!(
+            agent_marks_of(&session).len(),
+            1,
+            "precondition: and IS drawn"
+        );
         assert!(
             !session
                 .examine_chamber(&label, Perceiving::Body)
@@ -14793,9 +14817,27 @@ mod tests {
             "a creature out of sight must not be sent: {:?}",
             snap.sensed.present
         );
+        // NOT `marks_of(&session).is_empty()`. That was equivalent to this
+        // test's actual claim only while a creature was the only thing that
+        // could ever produce a mark; since Task 10 (The Legend) a lit
+        // furnishing (a hearth, a bed, …) rides the same `marks` list and is
+        // drawn — correctly — whenever the possession's own shadowcast lights
+        // its spot, regardless of whether any creature is in sight. This
+        // fixture's `near` anchor happens to coincide with (or `held`-suppress)
+        // such a furnishing while the creature stands there, which is why the
+        // PRECONDITION above tolerates `marks_of(&session).len() == 1`; moving
+        // the creature `far` un-suppresses it, so a bare emptiness check
+        // fails on a mark this test was never about. The claim this test
+        // actually makes is about the CREATURE's own mark, so narrow to
+        // agent-kind marks — still the same shadowcast-decides-both point,
+        // just scoped to the subject the test's name names.
         assert!(
-            marks_of(&session).is_empty(),
-            "and must not be drawn either — one shadowcast decides both"
+            !marks_of(&session)
+                .iter()
+                .any(|m| m.kind == crate::purview::AGENT_MARK_KIND),
+            "the creature's mark must not be drawn either — one shadowcast \
+             decides both `sensed` and the agent mark (a furnishing mark is a \
+             different subject and may legitimately remain)"
         );
         // THE SIDE CHANNEL, closed. `examine_chamber` answers a creature's noun
         // (fix round 1, so the noun does not stop answering at a doorway) — but
