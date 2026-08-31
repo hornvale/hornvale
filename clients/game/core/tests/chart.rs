@@ -1,5 +1,6 @@
 use hornvale_game_core::{
     Chart, ChartCell, Grid, Ink, Mark, Micro, Snapshot, Spatial, Weight, chart,
+    register::binding_of,
 };
 
 const FIXTURE: &str = include_str!("fixtures/session-seed-42-turn-0.json");
@@ -206,6 +207,32 @@ fn the_walk_band_draws_an_ordinal_ladder_not_one_glyph() {
         terrain_glyphs.len() > 1,
         "still one glyph: {terrain_glyphs:?}"
     );
+}
+
+/// Decision 0389 enforced against a REAL render, mirroring
+/// `clients/game/bin/tests/plate_vocabulary.rs`'s guard of the same name
+/// against the world map's own vocabulary. Before this test the walk-band
+/// chart was one of two panes `no_character_is_bound_twice` could not see
+/// at all — it validates `register::REGISTER` against itself and has no
+/// way to notice a pane drawing a glyph the table never claimed, which is
+/// exactly the mechanism behind the three historical `.`/`+`/`#`
+/// collisions (progress.md, "the register is unpinned for two of three
+/// panes").
+#[test]
+fn every_drawn_glyph_is_claimed_by_the_register() {
+    let c = walk_chart();
+    let mut g = Grid::new(80, 24);
+    chart::draw(&c, &mut g, (0, 0));
+    let glyphs: std::collections::BTreeSet<char> = (0..g.height())
+        .flat_map(|y| (0..g.width()).map(move |x| (x, y)))
+        .filter_map(|(x, y)| g.get(x, y).and_then(|c| c.glyph))
+        .collect();
+    for glyph in glyphs {
+        assert!(
+            binding_of(glyph).is_some() || glyph.is_ascii_alphabetic(),
+            "{glyph:?} is drawn but unclaimed"
+        );
+    }
 }
 
 /// A minimal chart cell addressed by its polar coordinate, matching how

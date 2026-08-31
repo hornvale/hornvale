@@ -132,3 +132,18 @@ landed at 0.049-0.068 ms against a 0.20 ms bar — supported, with headroom
 to spare, and consistent with the prior campaign's own 0.056 ms baseline
 for the identical quantity. Full replicates, load, and the drift check's
 result are in `docs/timings.md` and this task's own report.
+
+## Deferred minors (promoted from the scratch ledger at close)
+
+Small, real, and deliberately not chased down mid-campaign:
+
+1. The retargeted agreement pin no longer exercises `draw_terrain_layer`'s
+   row/col -> grid wiring.
+2. `band_b_still_shows_the_observer_over_its_own_terrain` excludes `@` but
+   not settlement/cave marks.
+3. Volcano is discovery-gated while waterfalls draw unconditionally —
+   intentional per `plate::draw_feature_layer`'s own doc, noted here so a
+   future reader does not read the asymmetry as an oversight.
+4. `.DS_Store` is not gitignored (`git status` lists it as untracked) — a
+   one-line fix, deliberately left for the board lane or a chore commit
+   rather than a glyph campaign (`.superpowers/sdd/followups.md` #7).
