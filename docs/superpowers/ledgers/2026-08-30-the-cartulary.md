@@ -324,3 +324,30 @@ The report's narrative says all 54 unmatched plans are "date drift / stage
 words / umbrella specs". The reviewer found ~13 with no companion spec under
 any name — correctly outside the population rather than matcher misses. The
 count is right; the characterisation is looser than the evidence.
+
+### Task 3 — complete (`64b28a2a6..c8dae50cb`, review clean after 1 fix round)
+
+The ratchet landed and the demonstrated hole now has a row. Two things the
+re-review settled better than I had:
+
+**`==` is necessary, not merely defensible.** I asked whether equality would
+redden on legitimate corpus growth and get deleted the first time it fired
+inconveniently. The reviewer checked by hand: `>=` would have let its OWN
+probe pass (55 >= 54), making the ratchet a no-op against the exact defect it
+exists to catch. Unlike the decision-block count it was modelled on — where
+growth is inherently safe because reservations are append-never — this
+population mixes legitimate spec-less growth with real matcher misses, so a
+rise cannot be waved through by rule.
+
+**It makes the hole visible; it does not close it, and it says so.** I asked
+whether a moved count actually requires a ledger or merely reports a number
+changed. It is the latter, and the fix's own doc comment states it: *"This
+test does not close the hole ... it only makes the count that hole hides in
+impossible to move quietly."* The finding was about silence — "never flagged,
+never exempted, simply unseen, permanently" — and after the fix a human is
+forced to look, so shipping without a ledger becomes a visible reviewable diff
+rather than an absence with no row. Guarantee stated accurately; no overclaim.
+
+Red reproduced by the reviewer with a *different* shape than the implementer
+used — a one-day date drift rather than a stage word — so the evidence does
+not rest on one self-selected case.
