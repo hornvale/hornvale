@@ -177,8 +177,26 @@ it should know before it hardens.** Its §3.0 ruled against the plate fetching
 onto a *different* mesh, so a plate fetching it would resample twice
 (violating 0287), and 0196's never-invent-detail rule. **This campaign removes
 the first objection** — after it there is one mesh, so there is no second
-resample — and leaves 0196 standing alone. Its "share a function, not a fetch"
-conclusion may still be right, but it now rests on one leg instead of two. Decision 0356 retired the external clients, so the cross-repo
+resample.
+
+**And on The Legend's own re-examination the second leg does not apply either.**
+`region.rs`'s schema doc states that continuous layers are barycentric while
+**discrete layers are nearest-vertex**, and `relief` — the field a reissue
+would carry — is discrete and nearest-vertex by construction
+(`region.rs:431`, `relief_band(terrain.elevation_at(t_vertex)…)`). 0196's
+never-invent-detail-below-the-datum rule therefore never bit for it, and had
+not before this campaign either.
+
+**Consequence, and it is a real one for a future campaign to know:** "share a
+function, not a fetch" survives as a *preference*, not a prohibition. What is
+left of the argument is that a Rust client can call the classifier directly,
+so a fetch buys a serialization round trip and nothing else — simplicity, not
+correctness. After this campaign lands, **moving the plate onto the wire would
+violate nothing**; it would merely buy nothing today. Recorded here because a
+prohibition that has quietly become a preference is exactly the kind of record
+that outlives its subject and produces confident wrong answers from readers
+acting in good faith — the failure `CLAUDE.md` documents against itself over
+the retired external clients. Decision 0356 retired the external clients, so the cross-repo
 "additive-or-versioned" constraint that would once have forced a version bump
 has lapsed — but the two projections must not silently disagree inside this
 repo. Either `region.rs` adopts the warp (one projection, one definition,
@@ -407,8 +425,19 @@ depth of the facet tree — a tile at rung `d` is a facet at depth `d`." That is
 untouched here: a tile is still a facet at a depth, the facet is simply square.
 What breaks is the *corollary* The Quadrat drew from it — that a facet's
 corners are geosphere vertices, and terrain therefore needs no spatial search.
-Nothing in 0287's own text asserts that corollary. This campaign owes it a
-recorded amendment, not a supersession.
+Nothing in 0287's own text asserts that corollary — **checked, not assumed**:
+`grep -cie 'vertex|vertices|corner'` over the whole record returns **0**.
+Facet-corner-is-a-geosphere-vertex is a property of the icosphere
+*implementation*, never a claim 0287 makes. This campaign owes 0287 a recorded
+**amendment, not a supersession**, and 0506 must say so explicitly so that a
+later reader does not find a superseded 0287 and conclude the zoom ladder
+moved. It did not.
+
+*Provenance, because the record should show it:* The Pavement raised the
+distinction; The Legend verified it at the source with the grep above and
+corrected its own spec's §3.0 before it hardened into a chronicle. Neither
+half would have been enough alone — the campaign that noticed was not the
+campaign that could check it cheaply.
 
 **H3b — the plate-draw budget after losing that corollary.** The Quadrat's
 headline was that "a tile IS a facet", so terrain came from that facet's three
@@ -426,10 +455,20 @@ campaign measured 65.3 / 65.6 / 70.3 / 91.5 ms for one uncached code path — a
 path as load-sensitive instead. Quoting any one of them as "the" baseline
 would repeat the error `docs/CLAUDE.md` records against reading a cost off
 prose. The Legend's Task 11 measures a fresh warm redraw with replicates
-against a preregistered 0.20 ms bar, on the same code path this campaign would
-regress and including the two O(1) per-tile lookups its own branch adds.
-**That is H3b's baseline; take it from there, or take it fresh, and never from
-a remembered figure.**
+against a preregistered 0.20 ms bar — warm redraw, 200x200, coarsest rung,
+idle box, at least three replicates. The bar was tightened from 1.0 ms
+deliberately, because an 18x allowance would pass a real regression silently;
+it is a bar that can fail, which is what makes it usable here. If replicates
+disagree by more than 1.4x it is re-measured rather than averaged, per The
+Quadrat's own finding about a loaded box.
+
+**Which baseline, and the distinction matters.** The Legend's branch adds two
+O(1) lookups per tile (`relief_band` and `water_kind_at`, both at the
+already-resolved vertex) over the code The Quadrat measured. So its number
+baselines *its* tree, not The Quadrat's. This campaign will land after it, so
+**The Legend's figure is the correct baseline for H3b**; the pre-Legend figure,
+if ever needed for attribution, is measured at `0551fa149`. Take it from one of
+those two, or take it fresh — never from a remembered figure.
 
 ## 8. Testing
 
@@ -451,7 +490,8 @@ a remembered figure.**
 ## 9. Decisions to promote (block 0506–0515)
 
 - **0506** — The occupancy lattice is a cube-sphere; the icosphere stays the
-  field substrate. *Supersedes 0141.*
+  field substrate. *Supersedes 0141. Amends 0287 — whose core survives
+  untouched — by retiring only its corner-is-a-vertex corollary.*
 - **0507** — Every lattice in the project is 8-connected.
 - **0508** — A diagonal costs √2, because the movement clock is flat.
 - **0509** — A diagonal through a two-walled corner is refused; one open flank
