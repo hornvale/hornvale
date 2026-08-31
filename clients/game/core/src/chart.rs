@@ -65,7 +65,7 @@
 //! decides who keeps it, and states the rule the sim and the vessel pane
 //! implement identically.
 
-use crate::lexicon::{creature_glyph, creature_ranks};
+use crate::lexicon::creature_glyph;
 use crate::{Cell, Chart, ChartCell, Mark, Source, Weight};
 use std::collections::BTreeMap;
 
@@ -98,17 +98,16 @@ fn weight_of(state: &str) -> Weight {
 /// terrain, not a new site vocabulary); otherwise the ordinal a walker
 /// actually feels underfoot ([`impedance_glyph`]).
 ///
-/// `ranks` is [`creature_ranks`]'s output for the WHOLE chart, computed
-/// once by [`draw`] rather than argument-by-argument here, so two
-/// creatures standing apart still draw distinctly from each other.
-fn glyph_of(cell: &ChartCell, ranks: &BTreeMap<String, usize>) -> char {
+/// [`creature_glyph`] is a pure function of the noun alone (fix round 2 —
+/// see `lexicon.rs`'s module doc): the same species always draws the same
+/// letter wherever it stands, so nothing here needs to know what else is
+/// on the chart.
+fn glyph_of(cell: &ChartCell) -> char {
     if cell.state == "here" {
         return HERE_GLYPH;
     }
     match dominant_mark(&cell.marks) {
-        Some(m) if m.kind == "agent" => {
-            creature_glyph(&m.noun, ranks.get(&m.noun).copied().unwrap_or(0))
-        }
+        Some(m) if m.kind == "agent" => creature_glyph(&m.noun),
         _ => impedance_glyph(cell),
     }
 }
@@ -329,18 +328,6 @@ pub fn draw(chart: &Chart, into: &mut crate::Grid, origin: (u16, u16)) {
     let centre_x = origin.0 as i64 + into.width() as i64 / 2;
     let centre_y = origin.1 as i64 + into.height() as i64 / 2;
 
-    // Ranks derived once, over every creature noun this WHOLE chart carries
-    // — not per mark drawn below — so two creatures standing apart still
-    // draw distinctly from each other (see [`glyph_of`]'s doc).
-    let ranks = creature_ranks(
-        chart
-            .cells // lexicon: `Chart::cells` is the wire's own name for its chart squares — the AREA sense
-            .iter()
-            .flat_map(|c| c.marks.iter())
-            .filter(|m| m.kind == "agent")
-            .map(|m| m.noun.as_str()),
-    );
-
     for ((row, col), (_, cell)) in boxes_of(chart) {
         let x = centre_x + col;
         let y = centre_y + row;
@@ -351,7 +338,7 @@ pub fn draw(chart: &Chart, into: &mut crate::Grid, origin: (u16, u16)) {
             x as u16,
             y as u16,
             Cell::inked(
-                glyph_of(cell, &ranks),
+                glyph_of(cell),
                 weight_of(&cell.state),
                 Source::Chart,
                 cell.color,

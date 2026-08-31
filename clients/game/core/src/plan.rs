@@ -65,9 +65,8 @@
 //! creatures found by sight, not the possession itself), so the marks pass
 //! never has occasion to overdraw the `@` it follows.
 
-use crate::lexicon::{creature_glyph, creature_ranks};
+use crate::lexicon::creature_glyph;
 use crate::{Cell, Plan, PlanMark, Source, Weight};
-use std::collections::BTreeMap;
 
 /// The glyph for a wall cell — the building's fabric, impassable.
 const WALL_GLYPH: char = '#';
@@ -138,16 +137,6 @@ fn grid_pos(
 /// palette glyph, then `you` as `@`, then marks — see the module doc for
 /// what the marks pass draws for an `"agent"` mark versus everything else.
 pub fn draw(plan: &Plan, into: &mut crate::Grid, origin: (u16, u16)) {
-    // Ranks derived once, over every creature noun this WHOLE plan carries
-    // — not per mark — so two creatures standing in different rooms still
-    // draw distinctly from each other (mirrors `chart::draw`).
-    let ranks = creature_ranks(
-        plan.marks
-            .iter()
-            .filter(|m| m.kind == "agent")
-            .map(|m| m.noun.as_str()),
-    );
-
     let w = plan.extent.w;
     if w > 0 {
         for i in 0..plan.cells.len() {
@@ -181,23 +170,17 @@ pub fn draw(plan: &Plan, into: &mut crate::Grid, origin: (u16, u16)) {
     }
 
     for m in &plan.marks {
-        draw_mark(plan, m, &ranks, origin, into);
+        draw_mark(plan, m, origin, into);
     }
 }
 
 /// One mark's contribution to the marks pass. An `"agent"` mark — a
-/// creature — draws its own noun's initial ([`creature_glyph`], ranked by
-/// `ranks`, [`creature_ranks`]'s output for the whole plan). Any other kind
-/// (a settlement, say) is a point site, not a creature, and re-draws the
-/// glyph its own cell's palette entry already names — the original
-/// structural no-op; see the module doc.
-fn draw_mark(
-    plan: &Plan,
-    m: &PlanMark,
-    ranks: &BTreeMap<String, usize>,
-    origin: (u16, u16),
-    into: &mut crate::Grid,
-) {
+/// creature — draws its own noun's initial ([`creature_glyph`], a pure
+/// function of the noun alone since fix round 2 — see `lexicon.rs`'s module
+/// doc). Any other kind (a settlement, say) is a point site, not a
+/// creature, and re-draws the glyph its own cell's palette entry already
+/// names — the original structural no-op; see the module doc.
+fn draw_mark(plan: &Plan, m: &PlanMark, origin: (u16, u16), into: &mut crate::Grid) {
     let w = plan.extent.w;
     if w <= 0 {
         return;
@@ -209,7 +192,7 @@ fn draw_mark(
     }
     let i = row as usize * w as usize + col as usize;
     let glyph = if m.kind == "agent" {
-        creature_glyph(&m.noun, ranks.get(&m.noun).copied().unwrap_or(0))
+        creature_glyph(&m.noun)
     } else {
         let Some(g) = cell_glyph(plan, i) else {
             return;

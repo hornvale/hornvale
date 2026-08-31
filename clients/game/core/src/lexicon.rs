@@ -3,17 +3,39 @@
 //!
 //! ## Creature identity (The Legend, Task 9)
 //!
-//! [`creature_glyph`] and [`creature_ranks`] are the derivation the
-//! coverage audit's 2.1 item asked for: a creature draws its own noun's
-//! initial rather than the generic mark every other referent on the walk
-//! band and floor plan already draws by ordinal or by terrain. There is no
-//! authored species table — none could stay current (The Radiation moved
-//! the species roster from nine peoples to fifteen the day before this
-//! task was written) — so the rule is derived fresh from whatever nouns a
-//! render actually carries.
+//! [`creature_glyph`] is the derivation the coverage audit's 2.1 item asked
+//! for: a creature draws its own noun's initial rather than the generic mark
+//! every other referent on the walk band and floor plan already draws by
+//! ordinal or by terrain. There is no authored species table — none could
+//! stay current (The Radiation moved the species roster from nine peoples to
+//! fifteen the day before this task was written) — so the rule is derived
+//! fresh from whatever noun a render actually carries.
+//!
+//! ## Stable letters, collisions tolerated (fix round 2)
+//!
+//! The first version of this rule ranked nouns by RENDER — every
+//! `"agent"`-kind mark visible in the same chart or plan competed for the
+//! codespace, and a noun losing that competition walked to a different one
+//! of its own letters. That made the same species draw differently turn to
+//! turn, purely as a function of who else happened to be in view: a goblin
+//! alone drew `g`, but a goblin standing next to a gargoyle drew `o`,
+//! because the gargoyle sorted first and took `g`. Decision 0389 admits a
+//! glyph on the ORDER clause or the IDENTITY clause; a letter that changes
+//! per frame is neither — it is a per-frame slot number, the nominal
+//! category 0389 forbids, and a slot number needs a legend to read, which
+//! defeats the entire point of drawing a creature as its own initial.
+//!
+//! So [`creature_glyph`] is now a pure function of the noun alone: a goblin
+//! is always `g`, and so is a gnoll — the two are ambiguous on the grid, and
+//! the cursor (which names the noun outright) is what disambiguates them,
+//! not the glyph. This is ADoM's own convention, and it is the division of
+//! labour the client already has: the glyph carries identity at a glance,
+//! the cursor carries the detail. **Do not restore per-render ranking to
+//! chase uniqueness** — that is the exact property this fix round removed on
+//! Nathan's explicit instruction, and restoring it reopens the per-frame-slot
+//! defect this doc section exists to document.
 
 use crate::schema::Narration;
-use std::collections::{BTreeMap, BTreeSet};
 
 /// What a candidate is — mirrors the wire tags on session NounEntry.kind.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -170,73 +192,27 @@ impl Lexicon {
 /// codespace — see `register.rs`'s own doc: "a creature draws its noun's
 /// initial, so its codespace is `a-z`/`A-Z` by RULE rather than by row").
 ///
-/// `rank` is the noun's position among every OTHER noun a render has
-/// already assigned the SAME natural initial — see [`creature_ranks`],
-/// which derives it. `rank == 0` always draws the noun's own first
-/// ASCII-alphabetic character, lowercased: a goblin is `'g'`, a bugbear is
-/// `'b'`. A nonzero rank means a collision (two nouns opening on the same
-/// letter) and shifts to another of the SAME noun's own letters, picked by
-/// `rank` modulo the noun's own alphabetic letter count — so the rule
-/// needs no authored species table, and it needs no per-collision-group
-/// bookkeeping either: a noun's glyph is a pure function of its own
-/// spelling and the rank it was handed.
+/// **A pure function of the noun alone (fix round 2).** Always the noun's
+/// own first ASCII-alphabetic character, lowercased: a goblin is always
+/// `'g'`, a gnoll is always `'g'` too — same-initial species draw
+/// identically, and the cursor (which names the noun outright) is what
+/// disambiguates them on the grid, not the glyph. This was a two-argument,
+/// render-scoped rank function through fix round 1; see this module's doc
+/// section "Stable letters, collisions tolerated" for why that was wrong
+/// (a letter that changes with who else is in view is a per-frame slot
+/// number, not identity) and must not be restored.
 ///
 /// Infallible by design (a render must not panic on a document that
 /// parsed, the same discipline `chart.rs`'s `weight_of` already follows):
 /// a noun with no ASCII-alphabetic character at all (an unromanized name)
-/// still draws something non-whitespace, deterministic in `rank` alone.
-pub fn creature_glyph(noun: &str, rank: usize) -> char {
-    let letters: Vec<char> = noun
-        .chars()
-        .filter(char::is_ascii_alphabetic)
+/// still draws something non-whitespace — a fixed `'a'` fallback that, like
+/// every other output of this function, depends on nothing but the noun
+/// itself.
+pub fn creature_glyph(noun: &str) -> char {
+    noun.chars()
+        .find(char::is_ascii_alphabetic)
         .map(|c| c.to_ascii_lowercase())
-        .collect();
-    match letters.len() {
-        0 => (b'a' + (rank % 26) as u8) as char,
-        n => letters[rank % n],
-    }
-}
-
-/// Assigns every distinct noun in `nouns` a [`creature_glyph`] rank, walked
-/// in the nouns' own alphabetical order (a derived order, never an
-/// authored one — sorting the nouns actually on the wire this render, not
-/// a species catalog this crate does not have): the smallest rank whose
-/// [`creature_glyph`] is not already spoken for by an earlier noun in that
-/// order. A noun with an initial nothing has claimed yet gets rank `0` and
-/// draws that initial; a noun whose own natural initial is already taken —
-/// by a same-initial rival OR by an unrelated noun that happened to land
-/// on the same letter through ITS OWN collision — walks its own letters
-/// forward until it finds one nobody has drawn yet.
-///
-/// Callers (`chart.rs`, `plan.rs`) compute this ONCE per render, over
-/// every creature-kind mark's noun in the whole band or plan — not for
-/// each mark on its own — so two creatures standing apart still draw
-/// distinctly, and a fifteenth or sixteenth species costs this function no
-/// edit: it only ever reads what is actually present. Measured against the
-/// real 12-noun roster Task 5's specimen sheet used (four collision
-/// groups: `g`x3, `d`x2, `h`x2, `k`x2), this resolves every noun to a
-/// distinct glyph, not merely every colliding PAIR.
-///
-/// A noun's own letters can theoretically all be spoken for already (a
-/// short word on a densely-claimed roster); rather than search forever,
-/// that rare case falls back to rank `0` and accepts the collision — see
-/// [`creature_glyph`]'s own infallibility discipline.
-pub fn creature_ranks<'a, I>(nouns: I) -> BTreeMap<String, usize>
-where
-    I: IntoIterator<Item = &'a str>,
-{
-    let distinct: BTreeSet<&str> = nouns.into_iter().collect();
-    let mut drawn: BTreeSet<char> = BTreeSet::new();
-    let mut ranks = BTreeMap::new();
-    for noun in distinct {
-        let letter_count = noun.chars().filter(char::is_ascii_alphabetic).count();
-        let candidates = letter_count.max(1);
-        let rank = (0..candidates)
-            .find(|&r| drawn.insert(creature_glyph(noun, r)))
-            .unwrap_or(0);
-        ranks.insert(noun.to_string(), rank);
-    }
-    ranks
+        .unwrap_or('a')
 }
 
 #[cfg(test)]
