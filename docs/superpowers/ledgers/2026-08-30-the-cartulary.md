@@ -229,3 +229,54 @@ explicit appeal not to widen the tree. The reviewer judged it likely to
 survive a cold read a year out. That was the task's durable half and the
 thing most able to fail quietly — a boundary that is merely asserted gets
 widened by the first campaign that finds it inconvenient.
+
+---
+
+## Task 2 — complete (`0281b01fa..352b8a51c`, review clean, no fix rounds)
+
+Superseded the two statements Task 1 made false. Review: spec ✅, quality
+approved, one Minor.
+
+**The distinction held in both directions**, which was the substance of the
+task and the thing most able to go wrong quietly:
+
+- the **hook's** claim was FALSIFIED — it rested on "promotion at close
+  works", and five recorded failures say otherwise;
+- **`CLAUDE.md`'s** claim was NARROWED — the absorption clobber is a real
+  property of the shared filename, stays true of `.superpowers/sdd/`, and
+  stops applying to a per-campaign path.
+
+Presenting either as the other would have been a defect, in opposite
+directions. Both edits quote the superseded sentence verbatim before replacing
+it, so a cold reader learns that a claim was made and what measured it wrong.
+
+**The guard still refuses, reproduced independently.** The reviewer checked
+`core.hooksPath` = `scripts/hooks` first, staged a scratch file with
+`git add -f`, and got the refusal at exit 1. That mattered: a superseded
+rationale that had quietly become a weakened guard would read as a pure
+documentation diff and pass any review that only read the prose.
+
+### Deferred minor
+
+**The hook's own citation undercounts its evidence.** It reads "failed FIVE
+recorded times (spec §1 — `docs/retrospectives/{the-quoin,the-lodestar}.md`
+plus two more)", naming or implying four sources for a five-row table. The
+reviewer verified all five have retrospective files on disk: `the-ell`,
+`the-quoin`, `the-lodestar`, `the-overture`, `the-attestation`. The primary
+citation (spec §1) is correct and sufficient, so nothing substantive is
+wrong — but the paragraph's entire purpose is exactness-by-measurement, which
+makes an imprecise citation inside it worse than it would be anywhere else.
+*Ruling:* deferred, not a fix round — the fix is naming the five, and Task 6
+writes the chronicle and decisions where the same five are cited anyway.
+*Cost if wrong:* a reader chases four sources for a five-source claim and
+wonders which one is missing.
+
+### Two implementer judgment calls, both upheld
+
+It declined to cite decision numbers 0486/0487 — which do not exist until
+Task 6 — and cited the campaign by name and spec path instead. Dangling
+references to unwritten decisions are exactly the rot this project keeps
+finding. And it was careful to write that the *committed* ledger no longer
+needs `.superpowers/`, rather than that the scratch file is retired, because
+Task 4 has not re-pointed the skills yet. A statement true only after a later
+task is false now.
