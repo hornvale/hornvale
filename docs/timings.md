@@ -4150,3 +4150,5 @@ measured here.
 | 2026-08-30T16:43:14Z | sluice:heavy | 461.171 | 9652.581 | 153.445 | 21.26 | 0 | e3513454d |  | lefford | 40 |
 | 2026-08-30T23:37:56Z | gate-commit | 157.104 | 1089.318 | 50.493 | 7.26 | 0 | aaa6f6170 | campaign/the-cartulary | MacBookPro | 10 |
 | 2026-08-31T00:10:15Z | gate-commit | 21.901 | 51.324 | 13.248 | 2.95 | 0 | 0281b01fa | campaign/the-cartulary | MacBookPro | 10 |
+| 2026-08-31T00:24:41Z | gate-commit | 21.861 | 47.203 | 11.859 | 2.70 | 0 | 64b28a2a6 | campaign/the-cartulary | MacBookPro | 10 |
+| 2026-08-31T00:25:57Z | gate-commit | 22.011 | 51.747 | 13.175 | 2.95 | 0 | 64b28a2a6 | campaign/the-cartulary | MacBookPro | 10 |

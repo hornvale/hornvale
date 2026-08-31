@@ -1552,3 +1552,164 @@ fn the_decision_log_starts_at_0001() {
          misnamed, never retired."
     );
 }
+
+/// Suffixes a spec file's stem may carry beyond a plan's own slug. A plan is
+/// named `<date>-<slug>.md`; its spec is almost always
+/// `<date>-<slug>-design.md`, with `-metaplan`, `-brief` and
+/// `-question-space` covering the handful of historical exceptions observed
+/// in `docs/superpowers/specs/` (`2026-08-07-the-journal-brief.md`,
+/// `2026-07-07-year-2-metaplan-design.md`'s siblings, and
+/// `2026-08-11-the-ford-stage-2-question-space.md`). The empty string covers
+/// the rare case where spec and plan share the identical stem.
+const SPEC_SUFFIXES: &[&str] = &["", "-design", "-metaplan", "-brief", "-question-space"];
+
+/// Every `.md` file stem directly inside `dir`.
+fn file_stems(dir: &Path) -> BTreeSet<String> {
+    fs::read_dir(dir)
+        .unwrap_or_else(|e| panic!("reading {}: {e}", dir.display()))
+        .filter_map(|entry| entry.ok())
+        .map(|entry| entry.path())
+        .filter(|path| path.extension().is_some_and(|ext| ext == "md"))
+        .filter_map(|path| path.file_stem().map(|s| s.to_string_lossy().into_owned()))
+        .collect()
+}
+
+/// Every campaign slug (a plan's filename stem, e.g. `2026-08-30-the-cartulary`
+/// — the same string a ledger for it would be named after) that has both a
+/// spec and a plan today, matched by exact slug: the spec's stem must equal
+/// the plan's stem plus one of `SPEC_SUFFIXES`.
+///
+/// # What this cannot see
+///
+/// The match requires spec and plan to share the exact same date-plus-slug
+/// stem. Real historical campaigns violate that in ways this function does
+/// not chase: a spec written a day before its plan
+/// (`2026-08-27-the-precedence-design.md` / `2026-08-28-the-precedence.md`),
+/// a plan that inserts a word the spec's slug does not carry
+/// (`2026-08-20-the-deed-design.md` / `2026-08-20-the-deed-state.md`), or an
+/// umbrella spec covering several separately-dated sub-campaign plans
+/// (`campaign-2-the-sky-design.md` covering `campaign-2a-genesis.md`,
+/// `campaign-2b-sky-debut.md`, ...). Those campaigns are invisible to this
+/// function and so never appear in its output at all — not flagged missing a
+/// ledger, not carried in the exemption list, simply outside what this check
+/// evaluates. A fuzzier matcher could reclaim some of them; it would also
+/// risk a false pairing nobody could verify by eye. This function trades
+/// recall for a rule any reader can check against the two directories
+/// directly.
+fn campaigns_with_spec_and_plan() -> BTreeSet<String> {
+    let root = repo_root();
+    let spec_stems = file_stems(&root.join("docs/superpowers/specs"));
+    file_stems(&root.join("docs/superpowers/plans"))
+        .into_iter()
+        .filter(|plan_stem| {
+            SPEC_SUFFIXES
+                .iter()
+                .any(|suffix| spec_stems.contains(&format!("{plan_stem}{suffix}")))
+        })
+        .collect()
+}
+
+/// Whether `docs/superpowers/ledgers/<slug>.md` exists and holds more than
+/// whitespace. Resolved **by name from the slug** — never by listing the
+/// ledgers directory — so `docs/superpowers/ledgers/README.md` is invisible
+/// to this check by construction rather than by an exclusion rule someone
+/// has to maintain (`docs/superpowers/ledgers/README.md` states the same
+/// resolution rule from the other side).
+fn ledger_exists_and_is_nonempty(slug: &str) -> bool {
+    let path = repo_root()
+        .join("docs/superpowers/ledgers")
+        .join(format!("{slug}.md"));
+    fs::read_to_string(&path).is_ok_and(|s| !s.trim().is_empty())
+}
+
+/// Campaign slugs exempted from `every_campaign_with_a_spec_and_a_plan_has_a_ledger`
+/// because they predate the ledger convention (The Cartulary, 2026-08-30).
+/// **Append-never in the shrinking direction only**: an entry is removed
+/// once its campaign gains a ledger, never added — a new campaign cannot
+/// exempt itself, the same ratchet `registry_length_waivers` enforces for
+/// the registry Idea-column length budget.
+fn ledger_exempt_campaigns() -> BTreeSet<&'static str> {
+    include_str!("../fixtures/ledger-exempt-campaigns.txt")
+        .lines()
+        .map(str::trim)
+        .filter(|l| !l.is_empty())
+        .collect()
+}
+
+/// A campaign with a spec and a plan also has a ledger.
+///
+/// # Direction this check enforces
+///
+/// spec-and-plan implies ledger. It is blind to a ledger with no campaign
+/// (harmless), and blind to every campaign in
+/// `cli/tests/fixtures/ledger-exempt-campaigns.txt` — the 239 that predate
+/// this convention. That list may only SHRINK: a campaign gaining a ledger
+/// drops out of it, and a new campaign cannot add itself.
+///
+/// # What it cannot see, stated because a check that does not say so reads
+/// as total
+///
+/// It sees that a ledger file exists and is non-empty. It cannot see whether
+/// the contents are honest, whether they are complete, or whether they were
+/// written as the campaign ran rather than backfilled in one sitting at
+/// close. Those are the properties that actually matter and none of them is
+/// mechanically checkable — the same three-valued honesty `tropes check` and
+/// type-audit's `waiver(...)` carry.
+#[test]
+fn every_campaign_with_a_spec_and_a_plan_has_a_ledger() {
+    let exempt = ledger_exempt_campaigns();
+    let missing: Vec<String> = campaigns_with_spec_and_plan()
+        .into_iter()
+        .filter(|slug| !exempt.contains(slug.as_str()))
+        .filter(|slug| !ledger_exists_and_is_nonempty(slug))
+        .collect();
+    assert!(
+        missing.is_empty(),
+        "campaigns with a spec and a plan but no ledger at \
+         docs/superpowers/ledgers/. A campaign's rulings, deferred minors and \
+         parked findings belong in a committed file — scratch dies with the \
+         worktree, which has cost this project five recorded losses:\n  {}",
+        missing.join("\n  ")
+    );
+}
+
+/// The equivalent of `the_waiver_list_only_shrinks`, for the ledger
+/// exemption list. Both halves apply here exactly as they do there: an
+/// exempted slug that never had both a spec and a plan is a typo or a
+/// fabrication (append-never means nothing should ever need to be added,
+/// so a slug outside today's population could not have arrived
+/// legitimately), and an exempted slug whose campaign now carries a
+/// non-empty ledger should have been removed rather than left to ride
+/// along unused.
+#[test]
+fn the_ledger_exemption_list_only_shrinks() {
+    let exempt = ledger_exempt_campaigns();
+    let population = campaigns_with_spec_and_plan();
+    let population_refs: BTreeSet<&str> = population.iter().map(String::as_str).collect();
+
+    let unknown: Vec<&str> = exempt
+        .iter()
+        .filter(|slug| !population_refs.contains(*slug))
+        .copied()
+        .collect();
+    assert!(
+        unknown.is_empty(),
+        "exempted slugs with no matching spec-and-plan pair today — the \
+         exemption list is append-never and its population is fixed, so a \
+         slug outside that population means a typo, a renamed campaign, or a \
+         fabricated entry:\n  {}",
+        unknown.join("\n  ")
+    );
+
+    let now_ledgered: Vec<&str> = exempt
+        .iter()
+        .filter(|slug| ledger_exists_and_is_nonempty(slug))
+        .copied()
+        .collect();
+    assert!(
+        now_ledgered.is_empty(),
+        "these campaigns now have a ledger — remove them from \
+         fixtures/ledger-exempt-campaigns.txt so the ratchet holds:\n  {}",
+        now_ledgered.join("\n  ")
+    );
+}
