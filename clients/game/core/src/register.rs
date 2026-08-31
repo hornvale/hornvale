@@ -209,6 +209,23 @@ pub const REGISTER: &[Binding] = &[
         population: Population::PointSite,
         means: "waterfall",
     },
+    // Task 9: the chamber-band floor plan's structure glyphs
+    // (`plan.rs::glyph_of`), claimed here for the first time — `#` is the
+    // very glyph whose collision with the settlement marker started this
+    // campaign's whole collision thread. `.` is not re-claimed: it already
+    // has a Relief-population row above, broadened by Ruling K to cover
+    // "an ordinary chamber floor" too, and `@`/`you` is `Population::
+    // Observer` already.
+    Binding {
+        glyph: '#',
+        population: Population::Structure,
+        means: "wall",
+    },
+    Binding {
+        glyph: '+',
+        population: Population::Structure,
+        means: "threshold",
+    },
 ];
 
 /// The binding for `glyph`, if the register claims it.

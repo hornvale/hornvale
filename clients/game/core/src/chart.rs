@@ -65,6 +65,7 @@
 //! decides who keeps it, and states the rule the sim and the vessel pane
 //! implement identically.
 
+use crate::lexicon::{creature_glyph, creature_ranks};
 use crate::{Cell, Chart, ChartCell, Mark, Source, Weight};
 use std::collections::BTreeMap;
 
@@ -89,16 +90,26 @@ fn weight_of(state: &str) -> Weight {
     }
 }
 
-/// Glyph from the epistemic state and impedance: `@` for `here`, otherwise
-/// the ordinal a walker actually feels underfoot ([`impedance_glyph`]).
-/// Marks are not yet drawn distinctly here — a marked non-`here` cell still
-/// draws its impedance glyph (Task 9, a disjoint change to this same
-/// function's call site, layers the creature-identity glyph on top).
-fn glyph_of(cell: &ChartCell) -> char {
+/// Glyph from the epistemic state, marks, and impedance: `@` for `here`;
+/// a creature's own noun-initial ([`creature_glyph`]) when [`dominant_mark`]
+/// names an `"agent"` — a settlement or cave mark is a point site, not a
+/// creature, and still falls through to the terrain glyph (Task 9's scope
+/// rule: creature initials are an identity layer over the walk band's
+/// terrain, not a new site vocabulary); otherwise the ordinal a walker
+/// actually feels underfoot ([`impedance_glyph`]).
+///
+/// `ranks` is [`creature_ranks`]'s output for the WHOLE chart, computed
+/// once by [`draw`] rather than argument-by-argument here, so two
+/// creatures standing apart still draw distinctly from each other.
+fn glyph_of(cell: &ChartCell, ranks: &BTreeMap<String, usize>) -> char {
     if cell.state == "here" {
-        HERE_GLYPH
-    } else {
-        impedance_glyph(cell)
+        return HERE_GLYPH;
+    }
+    match dominant_mark(&cell.marks) {
+        Some(m) if m.kind == "agent" => {
+            creature_glyph(&m.noun, ranks.get(&m.noun).copied().unwrap_or(0))
+        }
+        _ => impedance_glyph(cell),
     }
 }
 
@@ -201,8 +212,8 @@ type BoxRank = (bool, bool, u32, usize);
 /// the other.** It is written out here, in `windows/scene/src/
 /// surrounds_ascii.rs::box_rank`, and in `clients/vessel/src/pane_chart.ts`
 /// in identical terms — the three renderers may differ in *vocabulary*
-/// (this one does not yet draw marks distinctly — see [`glyph_of`]) but
-/// never in this rule:
+/// (this one draws an `"agent"` mark as its noun's own initial, Task 9's
+/// [`creature_glyph`] — see [`glyph_of`]) but never in this rule:
 ///
 /// 1. **The observer never loses their own box.** The chart is egocentric;
 ///    a band that drew over `@` would have lost the one cell the reader is
@@ -318,6 +329,18 @@ pub fn draw(chart: &Chart, into: &mut crate::Grid, origin: (u16, u16)) {
     let centre_x = origin.0 as i64 + into.width() as i64 / 2;
     let centre_y = origin.1 as i64 + into.height() as i64 / 2;
 
+    // Ranks derived once, over every creature noun this WHOLE chart carries
+    // — not per mark drawn below — so two creatures standing apart still
+    // draw distinctly from each other (see [`glyph_of`]'s doc).
+    let ranks = creature_ranks(
+        chart
+            .cells // lexicon: `Chart::cells` is the wire's own name for its chart squares — the AREA sense
+            .iter()
+            .flat_map(|c| c.marks.iter())
+            .filter(|m| m.kind == "agent")
+            .map(|m| m.noun.as_str()),
+    );
+
     for ((row, col), (_, cell)) in boxes_of(chart) {
         let x = centre_x + col;
         let y = centre_y + row;
@@ -328,7 +351,7 @@ pub fn draw(chart: &Chart, into: &mut crate::Grid, origin: (u16, u16)) {
             x as u16,
             y as u16,
             Cell::inked(
-                glyph_of(cell),
+                glyph_of(cell, &ranks),
                 weight_of(&cell.state),
                 Source::Chart,
                 cell.color,

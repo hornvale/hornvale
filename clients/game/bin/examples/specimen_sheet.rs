@@ -19,16 +19,18 @@
 //! disjoint from the client register and the impedance ladder, legible
 //! monochrome at 80x24) and deliberately does not name marks — this project
 //! has found an outside guess at a specific choice worse than an inside
-//! search, every time it tried. `main` below checks all three properties at
-//! runtime against the live register (`binding_of`) rather than by eyeball,
-//! so a future edit that violates one fails loudly instead of silently.
+//! search, every time it tried. `main` below checks the two properties that
+//! still have a referent (disjoint from the impedance ladder, outside
+//! Creature's codespace) at runtime rather than by eyeball; the third
+//! (disjoint from the live register) was retired at Task 9 once selection
+//! closed — see the module doc above `CANDIDATES` for why.
 //!
 //! The verdict on which candidate to ship, and whether the impedance
 //! ladder's `'A'` overload reads as legible, is recorded in this task's
 //! report (`.superpowers/sdd/2026-08-28-the-legend/task-5-report.md`), not
 //! in this file — the sheet is the evidence, not the conclusion.
 
-use hornvale_game_core::register::{Population, REGISTER, binding_of};
+use hornvale_game_core::register::REGISTER;
 use hornvale_kernel::SeaLevelHeight;
 use hornvale_scene::{RELIEF_LEGEND, relief_band};
 
@@ -96,6 +98,27 @@ struct Candidate {
 /// property check exists to catch, so re-picking here (to `'#'`/`'\\'`)
 /// rather than silencing the check is the same move Task 6 already made
 /// once for the ladder that actually shipped.
+///
+/// **Fix round 2 (Task 9): the disjointness check against `REGISTER` is
+/// retired below, not re-picked a third time.** It was correct exactly
+/// once, while selection was still open and any of these three might be
+/// adopted; selection has been over since Task 6, none of these three
+/// literal arrays is what shipped (the real Elevation ladder lives in
+/// `register.rs` itself, under its OWN disjointness guard —
+/// `tests/register.rs::no_character_is_bound_twice`), and a glyph a
+/// REJECTED candidate merely illustrates is drawn nowhere, so requiring it
+/// to stay unclaimed by every later feature is a rule with no referent.
+/// Round 1 already collided twice (`'*'`, `'|'`); claiming `'#'` for
+/// `Structure`'s wall (this same task) is the third, and the fix this time
+/// is to stop asserting rather than re-pick again. The now-claimed marks
+/// are annotated below instead, which is real information where the
+/// assertion had become noise:
+/// - `stipple`'s highland `'#'` — claimed by `Structure`, "wall"
+///   (`plan.rs`, this task).
+/// - `stipple`'s original highland `'*'` — claimed by `PointSite`, "cave
+///   mouth" (Task 7).
+/// - `rule`'s original alpine `'|'` — claimed by `PointSite`, "waterfall"
+///   (Task 7).
 const CANDIDATES: [Candidate; 3] = [
     Candidate {
         name: "stipple",
@@ -209,12 +232,27 @@ fn visible_width(line: &str) -> usize {
 }
 
 fn main() {
-    // ---- Property checks against the LIVE register, not by eyeball ------
+    // ---- Property checks, not by eyeball ---------------------------------
     //
-    // Ordinal, disjoint-from-REGISTER, disjoint-from-impedance-ladder,
-    // outside Creature's a-z/A-Z codespace: every candidate glyph is
-    // checked here, so a future edit that violates one of the brief's three
-    // properties fails loudly instead of shipping unnoticed.
+    // Ordinal, disjoint-from-the-impedance-ladder, outside Creature's
+    // a-z/A-Z codespace: every candidate glyph is checked here, so a future
+    // edit that violates one of the brief's remaining properties fails
+    // loudly instead of shipping unnoticed.
+    //
+    // Fix round 2 (Task 9) RETIRED the third property this loop used to
+    // check — disjointness against the live `REGISTER` — for exactly the
+    // reason the module doc above the `CANDIDATES` array now states:
+    // selection is over, none of these three arrays is what shipped, and a
+    // rejected candidate's glyph is drawn nowhere, so requiring it to stay
+    // unclaimed by every later feature is a rule with no referent. It had
+    // already fired twice on exactly that non-referent (round 1's `'*'`/
+    // `'|'`); claiming `'#'` for `Structure`'s wall this task made it fire
+    // a third time, and the fix is to stop asserting, not to re-pick again.
+    // The real, adopted Elevation ladder lives in `register.rs` and carries
+    // its OWN disjointness guard (`tests/register.rs::
+    // no_character_is_bound_twice`) — this sheet asserting the same thing a
+    // second time, against arrays that were never adopted, was never
+    // buying real coverage.
     assert_eq!(
         RELIEF_LEGEND.len(),
         6,
@@ -228,24 +266,6 @@ fn main() {
             c.name
         );
         for &g in &c.glyphs {
-            // Fix round 1: this sheet's own precondition ("no candidate
-            // collides with the register") was correct only while nothing
-            // was claimed. Task 6 ADOPTED the winning `stipple` candidate
-            // into `REGISTER` under `Population::Elevation`, so a candidate
-            // glyph landing on an Elevation row is the selection having
-            // worked, not a collision — the disjointness that actually
-            // matters is against a DIFFERENT population (a settlement, a
-            // cave mouth, a landform, …), which this ladder was never
-            // proposing to be.
-            if let Some(b) = binding_of(g) {
-                assert_eq!(
-                    b.population,
-                    Population::Elevation,
-                    "{}: glyph {g:?} already claimed by REGISTER for a different population ({:?})",
-                    c.name,
-                    b
-                );
-            }
             assert!(
                 !IMPEDANCE_GLYPHS.contains(&g),
                 "{}: glyph {g:?} collides with the impedance ladder",
@@ -258,11 +278,12 @@ fn main() {
             );
         }
     }
-    // The register itself is small today (two rows) — this sheet's fixed
-    // 24-line budget below is sized for that. A future row added to
-    // REGISTER should grow this sheet too; the line-count assertion at the
-    // end of `main` is what makes that an observed failure rather than a
-    // silently-truncated one.
+    // The register has grown well past this sheet's original two-row
+    // budget (22 rows as of Task 9) — see the "REGISTER LEGEND" section's
+    // own packing comment below for how it keeps fitting the fixed 24-line
+    // floor. A future row added to REGISTER should grow this sheet too; the
+    // line-count assertion at the end of `main` is what makes that an
+    // observed failure rather than a silently-truncated one.
 
     // relief_band/RELIEF_LEGEND agreement, exercised with one representative
     // height per band (the thresholds `windows/scene/src/surrounds.rs`
@@ -311,8 +332,10 @@ fn main() {
         lines.push(colour);
     }
 
-    lines.push(String::new());
-
+    // Fix round 2 (Task 9): the blank separator line that used to sit here
+    // is gone — `REGISTER` grew by two rows (`#`, `+`) and the fixed
+    // 24-line floor has no slack left for it. Section headers still carry
+    // the visual break; only the extra blank row is spent.
     lines.push(
         "IMPEDANCE LADDER (surrounds_ascii::impedance_glyph): 7 values -> 5 glyphs".to_string(),
     );
@@ -336,8 +359,8 @@ fn main() {
     lines.push(imp_mono);
     lines.push(imp_colour);
 
-    lines.push(String::new());
-
+    // Fix round 2 (Task 9): same trade as above — this blank separator is
+    // spent to make room for `REGISTER`'s two new rows.
     lines.push(
         "CREATURE-INITIAL RULE: glyph = noun's initial (Creature owns all a-z/A-Z)".to_string(),
     );

@@ -1,7 +1,19 @@
 //! The completion vocabulary: candidates, scopes, their fold, and the
 //! prefix-matching completion engine.
+//!
+//! ## Creature identity (The Legend, Task 9)
+//!
+//! [`creature_glyph`] and [`creature_ranks`] are the derivation the
+//! coverage audit's 2.1 item asked for: a creature draws its own noun's
+//! initial rather than the generic mark every other referent on the walk
+//! band and floor plan already draws by ordinal or by terrain. There is no
+//! authored species table — none could stay current (The Radiation moved
+//! the species roster from nine peoples to fifteen the day before this
+//! task was written) — so the rule is derived fresh from whatever nouns a
+//! render actually carries.
 
 use crate::schema::Narration;
+use std::collections::{BTreeMap, BTreeSet};
 
 /// What a candidate is — mirrors the wire tags on session NounEntry.kind.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -151,6 +163,80 @@ impl Lexicon {
         }
         out
     }
+}
+
+/// The glyph a creature draws, by IDENTITY: the character spells the
+/// thing, which is why it needs no legend (spec's Ruling on `Creature`'s
+/// codespace — see `register.rs`'s own doc: "a creature draws its noun's
+/// initial, so its codespace is `a-z`/`A-Z` by RULE rather than by row").
+///
+/// `rank` is the noun's position among every OTHER noun a render has
+/// already assigned the SAME natural initial — see [`creature_ranks`],
+/// which derives it. `rank == 0` always draws the noun's own first
+/// ASCII-alphabetic character, lowercased: a goblin is `'g'`, a bugbear is
+/// `'b'`. A nonzero rank means a collision (two nouns opening on the same
+/// letter) and shifts to another of the SAME noun's own letters, picked by
+/// `rank` modulo the noun's own alphabetic letter count — so the rule
+/// needs no authored species table, and it needs no per-collision-group
+/// bookkeeping either: a noun's glyph is a pure function of its own
+/// spelling and the rank it was handed.
+///
+/// Infallible by design (a render must not panic on a document that
+/// parsed, the same discipline `chart.rs`'s `weight_of` already follows):
+/// a noun with no ASCII-alphabetic character at all (an unromanized name)
+/// still draws something non-whitespace, deterministic in `rank` alone.
+pub fn creature_glyph(noun: &str, rank: usize) -> char {
+    let letters: Vec<char> = noun
+        .chars()
+        .filter(char::is_ascii_alphabetic)
+        .map(|c| c.to_ascii_lowercase())
+        .collect();
+    match letters.len() {
+        0 => (b'a' + (rank % 26) as u8) as char,
+        n => letters[rank % n],
+    }
+}
+
+/// Assigns every distinct noun in `nouns` a [`creature_glyph`] rank, walked
+/// in the nouns' own alphabetical order (a derived order, never an
+/// authored one — sorting the nouns actually on the wire this render, not
+/// a species catalog this crate does not have): the smallest rank whose
+/// [`creature_glyph`] is not already spoken for by an earlier noun in that
+/// order. A noun with an initial nothing has claimed yet gets rank `0` and
+/// draws that initial; a noun whose own natural initial is already taken —
+/// by a same-initial rival OR by an unrelated noun that happened to land
+/// on the same letter through ITS OWN collision — walks its own letters
+/// forward until it finds one nobody has drawn yet.
+///
+/// Callers (`chart.rs`, `plan.rs`) compute this ONCE per render, over
+/// every creature-kind mark's noun in the whole band or plan — not for
+/// each mark on its own — so two creatures standing apart still draw
+/// distinctly, and a fifteenth or sixteenth species costs this function no
+/// edit: it only ever reads what is actually present. Measured against the
+/// real 12-noun roster Task 5's specimen sheet used (four collision
+/// groups: `g`x3, `d`x2, `h`x2, `k`x2), this resolves every noun to a
+/// distinct glyph, not merely every colliding PAIR.
+///
+/// A noun's own letters can theoretically all be spoken for already (a
+/// short word on a densely-claimed roster); rather than search forever,
+/// that rare case falls back to rank `0` and accepts the collision — see
+/// [`creature_glyph`]'s own infallibility discipline.
+pub fn creature_ranks<'a, I>(nouns: I) -> BTreeMap<String, usize>
+where
+    I: IntoIterator<Item = &'a str>,
+{
+    let distinct: BTreeSet<&str> = nouns.into_iter().collect();
+    let mut drawn: BTreeSet<char> = BTreeSet::new();
+    let mut ranks = BTreeMap::new();
+    for noun in distinct {
+        let letter_count = noun.chars().filter(char::is_ascii_alphabetic).count();
+        let candidates = letter_count.max(1);
+        let rank = (0..candidates)
+            .find(|&r| drawn.insert(creature_glyph(noun, r)))
+            .unwrap_or(0);
+        ranks.insert(noun.to_string(), rank);
+    }
+    ranks
 }
 
 #[cfg(test)]
