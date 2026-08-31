@@ -154,13 +154,45 @@ fn grid_picture(g: &Grid) -> Vec<String> {
 /// other test in this file; only a real comparison against the sim's own
 /// output catches it — see `chart.rs`'s module doc for the precedent this
 /// campaign already found that mistake once.
+///
+/// **Marks are cleared before this comparison (fix round 1, The Legend
+/// Task 10).** The committed fixture now carries a real `"furnishing"`
+/// mark (a screen, at plan-local `(2, 13)`), and this client correctly
+/// draws it as its own glyph — a deliberate divergence from
+/// `REFERENCE_PICTURE`, which comes from the sim's own console `map` verb
+/// and never draws a mark of any kind (the module doc's own history). This
+/// golden's job is catching a wrong PROJECTION (an axis swap, a missed
+/// offset), not re-litigating whether a mark draws its own glyph — that is
+/// `src/plan.rs`'s own unit tests' job, and
+/// `the_fixtures_own_furnishing_mark_draws_its_glyph` below pins that the
+/// one real mark this fixture carries still draws correctly when marks are
+/// NOT cleared.
 #[test]
 fn the_shape_matches_the_sims_own_ascii_render() {
-    let p = chamber_plan();
+    let mut p = chamber_plan();
+    p.marks.clear();
     let mut g = full_grid();
     plan::draw(&p, &mut g, (0, 0));
     let want: Vec<String> = REFERENCE_PICTURE.lines().map(|l| l.to_string()).collect();
     assert_eq!(grid_picture(&g), want);
+}
+
+/// The companion half of the golden above: with the fixture's own marks
+/// left intact, its one real furnishing mark (a screen, at plan-local
+/// `(2, 13)`) draws the furnishing glyph — proving the divergence the
+/// golden strips out is exactly this, and only this, moved.
+#[test]
+fn the_fixtures_own_furnishing_mark_draws_its_glyph() {
+    let p = chamber_plan();
+    let mut g = full_grid();
+    plan::draw(&p, &mut g, (0, 0));
+    let x = (2 - p.extent.x) as u16;
+    let y = (13 - p.extent.y) as u16;
+    assert_eq!(
+        g.get(x, y).unwrap().glyph,
+        Some('?'),
+        "the fixture's own furnishing mark (a screen) must draw the furnishing glyph"
+    );
 }
 
 /// A minimal 3x2 plan (mirrors `src/plan.rs`'s own private `small_plan` test

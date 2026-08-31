@@ -42,6 +42,7 @@
 //! shape to invent ink for.
 //!
 //! ## Marks carry no glyph of their own — except a creature's identity (Task 9)
+//! ## and a furnishing's presence (Task 10, fix round 1)
 //!
 //! Through Task 8, the shipped vocabulary was four glyphs total
 //! (`#`/`.`/`+`/`@`), none spare for `PlanMark`s the way `chart.rs`'s old
@@ -64,6 +65,24 @@
 //! `windows/vessel/src/session.rs`'s sighting-to-mark path only walks
 //! creatures found by sight, not the possession itself), so the marks pass
 //! never has occasion to overdraw the `@` it follows.
+//!
+//! **Task 10 shipped the hearth to the wire and left it invisible on the
+//! screen — fix round 1 closes that gap.** `windows/vessel/src/session.rs`
+//! emits a `"furnishing"` kind mark for a lit hearth, bed, alcove, and so
+//! on, but through Task 10's own commit [`draw_mark`]'s `match` only knew
+//! `"agent"`; every other kind — furnishing included — fell into the same
+//! structural no-op a settlement mark gets, redrawing the ordinary floor
+//! underneath it. So the hearth reached the wire and drew nothing: a
+//! caller-level fallback, invisible to any test that called [`draw_mark`]
+//! directly rather than through [`draw`] with a real furnishing mark on the
+//! plan. [`draw_mark`] now draws a `"furnishing"` kind mark as
+//! [`FURNISHING_GLYPH`] — **one glyph for every furnishing kind**, not one
+//! per `AnchorKind`: `CLIENT-glyphs-22-rejected` already settled that a
+//! nominal mark per kind does not self-legend, letters are unavailable
+//! (`Population::Creature` owns `a`-`z`/`A`-`Z`, and a hearth drawing `h`
+//! would collide with a human or hobgoblin standing in the same room), and
+//! the glyph's whole job is "something here is worth a look" — the cursor,
+//! not the map, carries which thing it is.
 
 use crate::lexicon::creature_glyph;
 use crate::{Cell, Plan, PlanMark, Source, Weight};
@@ -78,6 +97,13 @@ const THRESHOLD_GLYPH: char = '+';
 /// walk-band chart uses for `here` (`chart::HERE_GLYPH`), deliberately: one
 /// verb, two bands, one "you are here" mark to learn.
 const YOU_GLYPH: char = '@';
+/// The glyph for a `"furnishing"` mark — a hearth, a bed, an alcove, and
+/// every other `AnchorKind` `windows/vessel/src/session.rs::Session::
+/// sighting` emits. ONE glyph for every kind (fix round 1, see the module
+/// doc): the mark means "a furnishing is here," and `examine` — reading
+/// the mark's own `datum` — carries which one. Registered in
+/// `register.rs` under `Population::Furnishing`.
+const FURNISHING_GLYPH: char = '?';
 
 /// Glyph for a palette entry's `kind` string. See the module doc for why
 /// this reads the string rather than assuming a palette index's meaning,
@@ -177,9 +203,12 @@ pub fn draw(plan: &Plan, into: &mut crate::Grid, origin: (u16, u16)) {
 /// One mark's contribution to the marks pass. An `"agent"` mark — a
 /// creature — draws its own noun's initial ([`creature_glyph`], a pure
 /// function of the noun alone since fix round 2 — see `lexicon.rs`'s module
-/// doc). Any other kind (a settlement, say) is a point site, not a
-/// creature, and re-draws the glyph its own cell's palette entry already
-/// names — the original structural no-op; see the module doc.
+/// doc). A `"furnishing"` mark draws [`FURNISHING_GLYPH`] (fix round 1 —
+/// see the module doc: one glyph for every furnishing kind, never a glyph
+/// per `AnchorKind`). Any other kind (a settlement, say) is a point site,
+/// not a creature or a furnishing, and re-draws the glyph its own cell's
+/// palette entry already names — the original structural no-op; see the
+/// module doc.
 fn draw_mark(plan: &Plan, m: &PlanMark, origin: (u16, u16), into: &mut crate::Grid) {
     let w = plan.extent.w;
     if w <= 0 {
@@ -193,6 +222,8 @@ fn draw_mark(plan: &Plan, m: &PlanMark, origin: (u16, u16), into: &mut crate::Gr
     let i = row as usize * w as usize + col as usize;
     let glyph = if m.kind == "agent" {
         creature_glyph(&m.noun)
+    } else if m.kind == "furnishing" {
+        FURNISHING_GLYPH
     } else {
         let Some(g) = cell_glyph(plan, i) else {
             return;
@@ -312,6 +343,35 @@ mod tests {
         let mut g = crate::Grid::new(5, 5);
         draw(&p, &mut g, (0, 0));
         assert_eq!(g.get(2, 0).unwrap().glyph, Some('g'));
+        assert_eq!(g.get(1, 1).unwrap().glyph, Some(YOU_GLYPH));
+    }
+
+    #[test]
+    fn a_furnishing_mark_draws_its_own_glyph_and_never_erases_you() {
+        // Fix round 1: a `"furnishing"` mark (a hearth, say) is not a
+        // creature and not a point site — through `draw`, the real entry
+        // point a wire-carried plan is rendered by, it must draw
+        // `FURNISHING_GLYPH` rather than falling into the generic
+        // structural no-op every other non-agent kind still gets. A test
+        // that called `draw_mark` directly rather than `draw` would not
+        // have caught the regression this pins: the caller-level `match`
+        // in Task 10's own commit never knew "furnishing" existed.
+        let mut p = small_plan();
+        p.marks = vec![PlanMark {
+            x: 2,
+            y: 0,
+            noun: "a hearth".to_string(),
+            kind: "furnishing".to_string(),
+            datum: "Stones set in a ring, and the ash inside them still warm.".to_string(),
+            salience: 30,
+        }];
+        let mut g = crate::Grid::new(5, 5);
+        draw(&p, &mut g, (0, 0));
+        assert_eq!(
+            g.get(2, 0).unwrap().glyph,
+            Some(FURNISHING_GLYPH),
+            "a furnishing mark must draw its own glyph, not the floor beneath it"
+        );
         assert_eq!(g.get(1, 1).unwrap().glyph, Some(YOU_GLYPH));
     }
 

@@ -34,6 +34,14 @@ pub enum Population {
     PointSite,
     /// Interface furniture that is not part of the world.
     Chrome,
+    /// A furnishing anchor within a chamber — a hearth, a bed, an alcove,
+    /// and so on (`windows/vessel/src/interior/anchor.rs::AnchorKind`).
+    /// One glyph covers every kind (fix round 1, The Legend Task 10): see
+    /// [`REGISTER`]'s own furnishing row for why a glyph per kind was
+    /// rejected. Do not read a future furnishing kind as license to add a
+    /// second row here — the whole point of this population is that it
+    /// stays at one.
+    Furnishing,
     /// RESERVED for Delving campaign 2. Deliberately unpopulated.
     Subterranean,
 }
@@ -226,19 +234,31 @@ pub const REGISTER: &[Binding] = &[
         population: Population::Structure,
         means: "threshold",
     },
-    // The Legend, Task 10: `vessel/plan/v1` grew a `"furnishing"` mark kind
-    // (a hearth, a bed, an alcove, …) and it claims NO row here, deliberately
-    // — not an omission left for a later task. `plan.rs::draw_mark`'s own
-    // doc already settled this at Task 9: any mark kind but `"agent"` simply
-    // re-draws the ground truth its own palette entry already paints there
-    // — the original structural no-op, the same treatment a `"settlement"`
-    // mark gets. A furnishing anchor sits on ordinary floor already, so
-    // drawing it a second glyph here would be the exact double-encoding
-    // decision 0389 forbids — the doorway-drawn-twice trap this campaign
-    // found on the SIM side (`windows/vessel/src/session.rs::sighting`),
-    // one layer further down the wire. `Mark.kind`'s own doc calls this
-    // additive by design: "a future kind needs no special case anywhere to
-    // appear", and a claimed row here would be exactly that special case.
+    // The Legend, Task 10, fix round 1: `vessel/plan/v1` grew a
+    // `"furnishing"` mark kind (a hearth, a bed, an alcove, …), and Task 10's
+    // own commit shipped it all the way to the wire and never drew it — the
+    // mark reached the client and `plan.rs::draw_mark`'s `match` still only
+    // knew `"agent"`, so a furnishing fell into the settlement-style
+    // structural no-op and redrew the ordinary floor underneath it.
+    //
+    // The fix is ONE glyph for every furnishing kind, not one row per
+    // `AnchorKind` (14 variants and rising with Delving 2's own furniture).
+    // `CLIENT-glyphs-22-rejected` already settled the general shape of this
+    // question for biome glyphs: a nominal mark per kind does not
+    // self-legend, and a reader would need a permanent key just to tell a
+    // bed from an altar. Letters are unavailable here for a second reason
+    // this campaign is specific to: `Population::Creature` owns the whole
+    // `a`-`z`/`A`-`Z` codespace on the chamber-band plan (unlike the world
+    // map's `o`/`O` carve-out — Ruling AG — creature initials ARE drawn on
+    // this band), so a hearth drawn as `h` would collide with a human or
+    // hobgoblin standing in the same room. And it matches Nathan's own
+    // stated division of labour: the glyph says "something here is worth
+    // attention," `examine` (the mark's own `datum`) says what it is.
+    Binding {
+        glyph: '?',
+        population: Population::Furnishing,
+        means: "a furnishing — a hearth, a bed, and every other kind alike",
+    },
 ];
 
 /// The binding for `glyph`, if the register claims it.
