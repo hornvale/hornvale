@@ -1609,6 +1609,77 @@ fn campaigns_with_spec_and_plan() -> BTreeSet<String> {
         .collect()
 }
 
+/// Plan slugs [`campaigns_with_spec_and_plan`]'s exact-slug rule could not
+/// pair with a spec: an umbrella spec covering several separately-dated
+/// sub-campaigns (`campaign-2-the-sky-design.md` /
+/// `campaign-2a-genesis.md`), a spec/plan pair whose date or wording
+/// drifted apart (`2026-08-27-the-precedence-design.md` /
+/// `2026-08-28-the-precedence.md`), and a plan with no spec under any name
+/// at all (`2026-07-11-test-system-quick-wins`, one of roughly a dozen
+/// tooling/process plans this repository never required a spec for). This
+/// function cannot tell those three apart — see
+/// [`the_unmatched_plan_count_has_not_moved`] for what that costs and why
+/// it is frozen rather than left to drift silently.
+fn unmatched_plan_slugs() -> BTreeSet<String> {
+    let matched = campaigns_with_spec_and_plan();
+    file_stems(&repo_root().join("docs/superpowers/plans"))
+        .into_iter()
+        .filter(|slug| !matched.contains(slug))
+        .collect()
+}
+
+/// The count [`unmatched_plan_slugs`] returned in a full census taken
+/// 2026-08-30 (Task 3's fix round, The Cartulary — a reviewer demonstrated
+/// that a spec/plan pair shaped like `the-deed-design`/`the-deed-state`
+/// passes both ledger checks clean with no ledger at all). Frozen the same
+/// way `decision_block_declaration_count_has_not_dropped` freezes its own
+/// count and `registry_length_waivers` freezes the registry Idea-column waiver list —
+/// a number nobody re-derives by eye, changed only on purpose.
+///
+/// # Why this exists
+///
+/// `campaigns_with_spec_and_plan`'s exact-slug rule is a deliberate trade of
+/// recall for a rule anyone can verify by eye (its own doc comment). The
+/// cost of that trade is real: a campaign whose spec and plan names take the
+/// shape that rule already names as its blind spot is invisible to BOTH
+/// `every_campaign_with_a_spec_and_a_plan_has_a_ledger` (never counted, so
+/// never flagged missing) and `the_ledger_exemption_list_only_shrinks`
+/// (never exempted, because it was never in the population to begin with).
+/// It can ship with no ledger, forever, and nothing in this file would ever
+/// say so — an absence with no row, inside the instrument this campaign
+/// built to remove exactly that (spec `2026-08-29-the-attestation-design.md`
+/// §2 names the same thesis for a different corpus). This test does not
+/// close the hole — closing it needs a smarter matcher, which trades away
+/// the verifiability the simple rule was chosen for — it only makes the
+/// count that hole hides in impossible to move quietly.
+///
+/// # What it cannot see
+///
+/// This test can only report that the count moved, never why. Of today's
+/// 54, only a portion are plans with no spec under any name at all
+/// (`2026-07-11-test-system-quick-wins` and roughly a dozen siblings) —
+/// correctly outside the population. The rest are umbrella specs and
+/// date/wording drift `campaigns_with_spec_and_plan` chose not to chase. A
+/// rise in this count could be either kind, and a human has to look: if the
+/// new plan has a spec the matcher missed, widen the matcher or give the
+/// campaign a ledger (or an exemption-list entry); if it truly has none,
+/// raise this constant with a one-line note of which plan and why. A fall
+/// means a plan was deleted, renamed into a matching pair, or the matcher
+/// improved — investigate before lowering it.
+const EXPECTED_UNMATCHED_PLAN_COUNT: usize = 54;
+
+#[test]
+fn the_unmatched_plan_count_has_not_moved() {
+    let unmatched = unmatched_plan_slugs();
+    let found = unmatched.len();
+    assert_eq!(
+        found,
+        EXPECTED_UNMATCHED_PLAN_COUNT,
+        "the unmatched-plan count moved: {EXPECTED_UNMATCHED_PLAN_COUNT}          recorded, {found} now. This ratchet cannot tell a real gap from a          false alarm (see the doc comment on          the_unmatched_plan_count_has_not_moved) — a rise means a NEW plan          whose spec campaigns_with_spec_and_plan could not pair, which needs          a human to check by hand whether it needs a ledger; a fall means a          plan was deleted, renamed into a matching pair, or the matcher          improved. Either way, investigate before touching this constant.          Current unmatched set:\n  {}",
+        unmatched.into_iter().collect::<Vec<_>>().join("\n  ")
+    );
+}
+
 /// Whether `docs/superpowers/ledgers/<slug>.md` exists and holds more than
 /// whitespace. Resolved **by name from the slug** — never by listing the
 /// ledgers directory — so `docs/superpowers/ledgers/README.md` is invisible
