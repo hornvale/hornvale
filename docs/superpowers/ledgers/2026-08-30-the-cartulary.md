@@ -422,3 +422,56 @@ level up.
 Confirmed: only the Quick Reference row was a sibling.
 `campaign-autopilot`'s `.superpowers/sdd/followups.md` mention is a
 genuinely-still-scratch item, not an instance of this bug.
+
+### Task 5 — H1/H2 measurement (`d6421dd60..`, this campaign's own falsifiable claim)
+
+**H1 — the ledger survives recycling. CONFIRMED.**
+
+Simulated the loss The Attestation suffered (worktree recycled between
+landing and close: branch survived, scratch did not) without touching the
+live worktree, per the task's safety rule. Method: a fresh scratch clone of
+`campaign/the-cartulary` at HEAD (`d6421dd60`) into a throwaway directory
+outside this repo, then a `rm -rf` of that clone afterward — a clone has no
+`.superpowers/sdd/` history to begin with, which *is* the simulation, since
+that directory is git-ignored and per-worktree by construction (confirmed via
+`git check-ignore -v .superpowers/sdd` → `.gitignore:24:.superpowers/`).
+
+```
+git clone --branch campaign/the-cartulary --single-branch \
+  /Users/nathan/Projects/hornvale/hornvale <scratch>/the-cartulary-h1-sim
+# .superpowers/ absent in the clone (ls: No such file or directory)
+# docs/superpowers/ledgers/2026-08-30-the-cartulary.md present, 424 lines
+diff <scratch>/.../2026-08-30-the-cartulary.md \
+     <(git show HEAD:docs/superpowers/ledgers/2026-08-30-the-cartulary.md)
+# → IDENTICAL, no output
+```
+
+The ledger was present, complete (424 lines, byte-identical to `git show
+HEAD:...` in the live worktree), and readable as an ordinary file with no
+`.superpowers/` in sight — exactly the artifact The Attestation's nine
+deferred minors and two parked findings needed and didn't have. **The
+campaign's premise holds; Task 6 may proceed.**
+
+**H2 — committing does not change what gets written. UNMEASURABLE FROM
+INSIDE, as preregistered (spec §8).**
+
+Preregistered prediction was that committing *does* slightly change candour —
+the entry most worth keeping ("I do not know why this works") is the one most
+likely to be softened once it's headed for a permanent, reviewed record — and
+that this would not be measurable from inside the campaign that makes the
+change. That prediction stands unfalsified and unconfirmed: I have no control
+condition. Measuring it would require the same campaign run twice, once
+writing to committed `docs/superpowers/ledgers/` and once to the old
+git-ignored `.superpowers/sdd/progress.md`, with the same decisions arising
+and independent judges (blinded to which arm produced which text) comparing
+candour. That is not an instrument this task can build or run — it would
+need a second full campaign execution as a control arm, decided in advance
+of Task 1, which this campaign did not do. No such control exists, so no
+comparison is possible after the fact. I did not construct a proxy (e.g.
+comparing this ledger's tone against an unrelated campaign's retrospective)
+because a proxy answering a different question and reporting it as H2 is the
+exact failure spec §8 warns against ("a campaign that claims to have
+confirmed H2 should be disbelieved unless it names its instrument").
+
+**Verdict: STOP-condition not triggered.** H1 confirmed, campaign has
+purpose. Task 6 may run.
