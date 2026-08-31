@@ -135,7 +135,29 @@ a' = tan(a * PI/4)      b' = tan(b * PI/4)      p = normalize(n + a'*u + b'*v)
 ```
 
 which measures **1.41x** — better than the icosphere, and the "relatively
-undistorted local grid" the campaign was asked for. The inverse uses `atan`
+undistorted local grid" the campaign was asked for.
+
+**The acceptance criterion is LOCAL, and it is met by three orders of
+magnitude.** Nathan, 2026-08-30: *"as long as the area around the cursor
+itself is distorted minimally, I think we have very little to complain
+about."* The 1.41x above is a whole-FACE spread — the ratio between opposite
+corners of a cube face, thousands of kilometres apart and never both on one
+screen. What a player sees is the LOCAL gradient, which is far smaller because
+the scale factor varies smoothly:
+
+```
+ depth  cells/edge   adjacent cells   21x21 viewport   whole face
+     6          64        1.0236x          1.342x        1.397x
+     8         256        1.0061x          1.115x        1.410x
+     9         512        1.0031x          1.061x        1.412x
+```
+
+The local excess falls as 1/N (0.0236 -> 0.0061 -> 0.0031 across 64 -> 256 ->
+512, a clean inverse). **Extrapolated** — not measured, since depth 13 is 67M
+cells per face — the walk band sits near **1.0002x between adjacent cells and
+~1.004x across a full viewport**. §8 adds a test that measures this rather
+than trusting the extrapolation, at the largest N that runs in test time, and
+asserts the 1/N trend rather than a single value. The inverse uses `atan`
 and is equally exact.
 
 **This costs the transcendental-free property, and that is affordable but must
@@ -482,6 +504,10 @@ those two, or take it fresh — never from a remembered figure.
 - Byte-identity: `locate_on_cube` used by both `region.rs` and `room.rs`
   returns identical bytes for the same position — one definition, asserted,
   not two that happen to agree.
+- **Local distortion, measured rather than extrapolated** (§2.0): adjacent-cell
+  area ratio at several depths, asserting the 1/N trend holds — a single-value
+  assertion at one depth would pass on a projection that is locally smooth and
+  globally wrong.
 - The corner rule in both directions: one flank open ⇒ permitted; both walled
   ⇒ refused. (The one-directional version of this test is the trap
   `docs/CLAUDE.md` names: a check asserting only refusal is blind to
