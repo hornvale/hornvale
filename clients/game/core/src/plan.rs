@@ -41,26 +41,50 @@
 //! fourth string here is a schema change the client did not agree to, not a
 //! shape to invent ink for.
 //!
-//! ## Marks carry no glyph of their own this campaign
+//! ## Marks carry no glyph of their own — except a creature's identity (Task 9)
+//! ## and a furnishing's presence (Task 10, fix round 1)
 //!
-//! The shipped vocabulary is four glyphs total (`#`/`.`/`+`/`@`), and none
-//! is spare for `PlanMark`s the way `chart.rs`'s `PLACED_GLYPH` (`+`) was
-//! spare for the walk band — every plan glyph is already claimed by a
-//! `CellKind` or by `you`. Task 6's `chart.rs` met the identical question
-//! (see that module's doc and `task-6-report.md`'s "Marks" section) and
-//! answered it the same way this module does: the marks pass redraws the
-//! *cell's own* glyph (from its palette entry, exactly as the cells pass
-//! would) at the marked position, so it is a structural no-op against today's
-//! vocabulary but guarantees a marked cell wins its box over a plain terrain
-//! cell should a future geometry ever collide two cells onto one grid
-//! position — which cannot happen under this module's 1:1 projection, but
-//! could under a denser one later. `you` is drawn between the two passes
-//! (cells, then `you`, then marks) per the brief; a mark is never emitted at
-//! the possession's own cell (`PlanMark` describes *other* individuals —
+//! Through Task 8, the shipped vocabulary was four glyphs total
+//! (`#`/`.`/`+`/`@`), none spare for `PlanMark`s the way `chart.rs`'s old
+//! catch-all glyph (`+`, `PLACED_GLYPH`, before Task 8 replaced it with the
+//! impedance ladder) was once spare for the walk band — every plan glyph
+//! was already claimed by a `CellKind` or by `you`. Task 6's `chart.rs` met
+//! the identical question and answered it the same way this module did: the
+//! marks pass redrew the *cell's own* glyph, a structural no-op.
+//!
+//! **This is the campaign that closes that question for a creature.**
+//! `Population::Creature` claims the whole `a`-`z`/`A`-`Z` codespace by rule
+//! (`register.rs`), so it was never competing with the four-glyph floor
+//! vocabulary in the first place. [`draw_mark`] now draws an `"agent"` kind
+//! mark as its own noun's initial ([`crate::lexicon::creature_glyph`]); a
+//! `"settlement"` or other point-site kind mark is not a creature and still
+//! redraws the cell's own glyph, the original structural no-op — see
+//! [`draw_mark`]'s own doc. `you` is drawn between the two passes (cells,
+//! then `you`, then marks) per the brief; a mark is never emitted at the
+//! possession's own cell (`PlanMark` describes *other* individuals —
 //! `windows/vessel/src/session.rs`'s sighting-to-mark path only walks
 //! creatures found by sight, not the possession itself), so the marks pass
 //! never has occasion to overdraw the `@` it follows.
+//!
+//! **Task 10 shipped the hearth to the wire and left it invisible on the
+//! screen — fix round 1 closes that gap.** `windows/vessel/src/session.rs`
+//! emits a `"furnishing"` kind mark for a lit hearth, bed, alcove, and so
+//! on, but through Task 10's own commit [`draw_mark`]'s `match` only knew
+//! `"agent"`; every other kind — furnishing included — fell into the same
+//! structural no-op a settlement mark gets, redrawing the ordinary floor
+//! underneath it. So the hearth reached the wire and drew nothing: a
+//! caller-level fallback, invisible to any test that called [`draw_mark`]
+//! directly rather than through [`draw`] with a real furnishing mark on the
+//! plan. [`draw_mark`] now draws a `"furnishing"` kind mark as
+//! [`FURNISHING_GLYPH`] — **one glyph for every furnishing kind**, not one
+//! per `AnchorKind`: `CLIENT-glyphs-22-rejected` already settled that a
+//! nominal mark per kind does not self-legend, letters are unavailable
+//! (`Population::Creature` owns `a`-`z`/`A`-`Z`, and a hearth drawing `h`
+//! would collide with a human or hobgoblin standing in the same room), and
+//! the glyph's whole job is "something here is worth a look" — the cursor,
+//! not the map, carries which thing it is.
 
+use crate::lexicon::creature_glyph;
 use crate::{Cell, Plan, PlanMark, Source, Weight};
 
 /// The glyph for a wall cell — the building's fabric, impassable.
@@ -74,6 +98,13 @@ const THRESHOLD_GLYPH: char = '+';
 /// verb, three bands now (The Gallery's `level.rs::YOU_GLYPH` is the same
 /// character too), one "you are here" mark to learn.
 const YOU_GLYPH: char = '@';
+/// The glyph for a `"furnishing"` mark — a hearth, a bed, an alcove, and
+/// every other `AnchorKind` `windows/vessel/src/session.rs::Session::
+/// sighting` emits. ONE glyph for every kind (fix round 1, see the module
+/// doc): the mark means "a furnishing is here," and `examine` — reading
+/// the mark's own `datum` — carries which one. Registered in
+/// `register.rs` under `Population::Furnishing`.
+const FURNISHING_GLYPH: char = '?';
 
 /// Glyph for a palette entry's `kind` string. See the module doc for why
 /// this reads the string rather than assuming a palette index's meaning,
@@ -131,8 +162,7 @@ fn grid_pos(
 /// Draw `plan` into `into`, anchored so the plan's own `(extent.x,
 /// extent.y)` lands at `origin`. Three passes, in order: every cell by its
 /// palette glyph, then `you` as `@`, then marks — see the module doc for
-/// why the marks pass draws no glyph a cells-only render would not already
-/// have drawn, and why that is still the correct structure to ship.
+/// what the marks pass draws for an `"agent"` mark versus everything else.
 pub fn draw(plan: &Plan, into: &mut crate::Grid, origin: (u16, u16)) {
     let w = plan.extent.w;
     if w > 0 {
@@ -171,9 +201,15 @@ pub fn draw(plan: &Plan, into: &mut crate::Grid, origin: (u16, u16)) {
     }
 }
 
-/// One mark's contribution to the marks pass: re-draw the glyph its own
-/// cell's palette entry already names, at that cell's grid position. See
-/// the module doc's "Marks carry no glyph of their own" section.
+/// One mark's contribution to the marks pass. An `"agent"` mark — a
+/// creature — draws its own noun's initial ([`creature_glyph`], a pure
+/// function of the noun alone since fix round 2 — see `lexicon.rs`'s module
+/// doc). A `"furnishing"` mark draws [`FURNISHING_GLYPH`] (fix round 1 —
+/// see the module doc: one glyph for every furnishing kind, never a glyph
+/// per `AnchorKind`). Any other kind (a settlement, say) is a point site,
+/// not a creature or a furnishing, and re-draws the glyph its own cell's
+/// palette entry already names — the original structural no-op; see the
+/// module doc.
 fn draw_mark(plan: &Plan, m: &PlanMark, origin: (u16, u16), into: &mut crate::Grid) {
     let w = plan.extent.w;
     if w <= 0 {
@@ -185,12 +221,19 @@ fn draw_mark(plan: &Plan, m: &PlanMark, origin: (u16, u16), into: &mut crate::Gr
         return;
     }
     let i = row as usize * w as usize + col as usize;
-    let Some(glyph) = cell_glyph(plan, i) else {
-        return;
+    let glyph = if m.kind == "agent" {
+        creature_glyph(&m.noun)
+    } else if m.kind == "furnishing" {
+        FURNISHING_GLYPH
+    } else {
+        let Some(g) = cell_glyph(plan, i) else {
+            return;
+        };
+        g
     };
-    // Spec §2.2: marks are identity, not cover — they re-draw the cell's
-    // glyph Plain, never tinted (mirrors the producer's
-    // `windows/vessel/src/session.rs` `tint()` withholding).
+    // Spec §2.2: marks are identity, not cover — they re-draw Plain, never
+    // tinted (mirrors the producer's `windows/vessel/src/session.rs`
+    // `tint()` withholding).
     if let Some((gx, gy)) = grid_pos(plan, m.x, m.y, origin, into) {
         into.set(gx, gy, Cell::glyph(glyph, Weight::Normal, Source::Plan));
     }
@@ -286,7 +329,9 @@ mod tests {
     }
 
     #[test]
-    fn a_mark_redraws_its_own_cells_glyph_and_never_erases_you() {
+    fn an_agent_mark_draws_its_creature_glyph_and_never_erases_you() {
+        // Task 9: an `"agent"` mark is a creature, and draws its own noun's
+        // initial — no longer the cell's own glyph underneath it.
         let mut p = small_plan();
         p.marks = vec![PlanMark {
             x: 2,
@@ -298,8 +343,56 @@ mod tests {
         }];
         let mut g = crate::Grid::new(5, 5);
         draw(&p, &mut g, (0, 0));
-        // The marked cell is a threshold; the mark pass must not change its
-        // glyph, only prove it wins should a future geometry collide.
+        assert_eq!(g.get(2, 0).unwrap().glyph, Some('g'));
+        assert_eq!(g.get(1, 1).unwrap().glyph, Some(YOU_GLYPH));
+    }
+
+    #[test]
+    fn a_furnishing_mark_draws_its_own_glyph_and_never_erases_you() {
+        // Fix round 1: a `"furnishing"` mark (a hearth, say) is not a
+        // creature and not a point site — through `draw`, the real entry
+        // point a wire-carried plan is rendered by, it must draw
+        // `FURNISHING_GLYPH` rather than falling into the generic
+        // structural no-op every other non-agent kind still gets. A test
+        // that called `draw_mark` directly rather than `draw` would not
+        // have caught the regression this pins: the caller-level `match`
+        // in Task 10's own commit never knew "furnishing" existed.
+        let mut p = small_plan();
+        p.marks = vec![PlanMark {
+            x: 2,
+            y: 0,
+            noun: "a hearth".to_string(),
+            kind: "furnishing".to_string(),
+            datum: "Stones set in a ring, and the ash inside them still warm.".to_string(),
+            salience: 30,
+        }];
+        let mut g = crate::Grid::new(5, 5);
+        draw(&p, &mut g, (0, 0));
+        assert_eq!(
+            g.get(2, 0).unwrap().glyph,
+            Some(FURNISHING_GLYPH),
+            "a furnishing mark must draw its own glyph, not the floor beneath it"
+        );
+        assert_eq!(g.get(1, 1).unwrap().glyph, Some(YOU_GLYPH));
+    }
+
+    #[test]
+    fn a_non_agent_mark_still_redraws_its_own_underlying_glyph() {
+        // A point-site kind (settlement, say) is not a creature; the marks
+        // pass keeps drawing the cell's own glyph underneath it, the
+        // original structural no-op — proving it wins should a future
+        // geometry ever collide two cells onto one grid position.
+        let mut p = small_plan();
+        p.marks = vec![PlanMark {
+            x: 2,
+            y: 0,
+            noun: "hearth".to_string(),
+            kind: "settlement".to_string(),
+            datum: "A hearth stands here.".to_string(),
+            salience: 5,
+        }];
+        let mut g = crate::Grid::new(5, 5);
+        draw(&p, &mut g, (0, 0));
         assert_eq!(g.get(2, 0).unwrap().glyph, Some(THRESHOLD_GLYPH));
         assert_eq!(g.get(1, 1).unwrap().glyph, Some(YOU_GLYPH));
     }
@@ -347,9 +440,9 @@ mod tests {
         assert_eq!(cell.weight, Weight::Bold);
     }
 
-    /// Marks re-draw their cell's glyph untinted, same rule.
+    /// An agent mark's creature glyph is untinted, same rule as `you`.
     #[test]
-    fn marks_draw_untinted() {
+    fn an_agent_marks_creature_glyph_draws_untinted() {
         // SAFETY: ink resolution reads process-global NO_COLOR; ENV_LOCK
         // serialises this read against every mutating sibling thread.
         let _env = crate::cell::test_env::ENV_LOCK.lock().unwrap();
@@ -361,6 +454,29 @@ mod tests {
             noun: "goblin".to_string(),
             kind: "agent".to_string(),
             datum: "A goblin stands here.".to_string(),
+            salience: 5,
+        }];
+        let mut g = crate::Grid::new(5, 5);
+        draw(&p, &mut g, (0, 0));
+        let cell = g.get(2, 0).unwrap();
+        assert_eq!(cell.glyph, Some('g'));
+        assert_eq!(cell.ink, crate::Ink::Plain, "marks are identity, not cover");
+    }
+
+    /// A non-agent mark still redraws its cell's glyph untinted, same rule.
+    #[test]
+    fn a_non_agent_marks_own_glyph_draws_untinted() {
+        // SAFETY: ink resolution reads process-global NO_COLOR; ENV_LOCK
+        // serialises this read against every mutating sibling thread.
+        let _env = crate::cell::test_env::ENV_LOCK.lock().unwrap();
+        let mut p = small_plan();
+        p.palette[2].color = Some([8, 8, 0]);
+        p.marks = vec![PlanMark {
+            x: 2,
+            y: 0,
+            noun: "hearth".to_string(),
+            kind: "settlement".to_string(),
+            datum: "A hearth stands here.".to_string(),
             salience: 5,
         }];
         let mut g = crate::Grid::new(5, 5);

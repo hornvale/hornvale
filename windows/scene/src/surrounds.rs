@@ -32,8 +32,16 @@ pub const RELIEF_LEGEND: [&str; 6] = ["abyss", "shelf", "lowland", "upland", "hi
 /// reason The Benchmark exists: these thresholds are sea-level-relative, and
 /// before v2 this function was handed the raw isostatic reading, so on a world
 /// whose sea level sits near -2936 m almost all land classified as `shelf`.
+///
+/// **Public since The Legend (Task 3, fix round 2): this is the shared
+/// classifier for both the `scene/surrounds/v2` schema and the tile/plate
+/// pair (`windows/scene/src/classify.rs` and its would-be `elevation_band`
+/// were a differently-tuned near-duplicate of exactly this function, and
+/// were deleted rather than kept alongside it).** Do not retune the floors
+/// below to make a picture look better — they are load-bearing for a shipped
+/// wire field.
 /// type-audit: bare-ok(index: return)
-fn relief_band(height: SeaLevelHeight) -> u32 {
+pub fn relief_band(height: SeaLevelHeight) -> u32 {
     match height.get() {
         e if e < -3000.0 => 0,
         e if e < 0.0 => 1,
@@ -1539,6 +1547,51 @@ mod tests {
             coarse_colors > 1,
             "the builder returned one colour even across {coarse_colors} grid \
              cells — it is not reading lithology at all"
+        );
+    }
+
+    #[test]
+    fn relief_band_is_monotone_in_height_above_sea() {
+        // The ORDINAL property, promoted here from the now-deleted
+        // `classify::elevation_band` (The Legend, Task 3, fix round 2). It is
+        // the whole reason a ladder reads without a legend (decision NNNN):
+        // if `relief_band` is not monotone, ink density stops meaning
+        // "higher" and the ladder becomes a nominal set.
+        let mut last = relief_band(SeaLevelHeight::from_metres(-5000.0));
+        for m in (-5000..=9000).step_by(50) {
+            let b = relief_band(SeaLevelHeight::from_metres(f64::from(m)));
+            assert!(
+                b >= last,
+                "band fell from {last} to {b} at {m} m above sea — the ladder is not ordinal"
+            );
+            last = b;
+        }
+    }
+
+    #[test]
+    fn relief_band_spans_its_whole_legend() {
+        // Promoted alongside the monotone test above. A ladder whose top
+        // rung is unreachable has fewer rungs than it claims, and a
+        // specimen sheet built on it would be measuring a fiction.
+        //
+        // (The third property `classify::elevation_band`'s tests carried —
+        // "sea level is the datum, not the number zero" — is not repeated
+        // here: `relief_band` takes a `SeaLevelHeight`, which IS height
+        // above sea, so there is no raw-elevation-plus-datum pair to get
+        // wrong inside this function. The risk that property guarded lives
+        // at the CALL SITE instead, and it already has a stronger,
+        // real-world guard: `the_emitted_band_is_the_height_band_at_a_
+        // discriminating_room` below, which fails if a caller ever passes
+        // the raw isostatic reading instead of `height_asl_m` again.)
+        let seen: BTreeSet<u32> = (-5000..=9000)
+            .step_by(10)
+            .map(|m| relief_band(SeaLevelHeight::from_metres(f64::from(m))))
+            .collect();
+        assert_eq!(
+            seen.len(),
+            RELIEF_LEGEND.len(),
+            "bands actually reached: {seen:?} against {} legend entries",
+            RELIEF_LEGEND.len()
         );
     }
 

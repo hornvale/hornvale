@@ -973,6 +973,18 @@ spawn gen_possession_day0 > book/src/gallery/possession-seed-42.md
 # genesis and never reads $w42/$wsky/$wlocked, so this has no real
 # dependency on Group A's reap — it is scheduled here anyway because it
 # shares no write target with anything else in this block.
+# The glyph specimen sheet (The Legend, Task 5): candidate elevation ladders
+# and the sim's own impedance ladder, rendered at the 80x24 monochrome floor
+# so selection happens against the medium the glyphs ship in, not a
+# document. `clients/game` is OUTSIDE the cargo workspace (root Cargo.toml's
+# `exclude`), so `run`'s `cargo run -p ...` cannot reach it -- the same
+# subshell-`cd` shape `build_atlas` uses for `clients/atlas`, the other
+# out-of-workspace client.
+gen_glyph_specimen_sheet() {
+    (cd "$repo_root/clients/game/bin" && cargo run -q --example specimen_sheet)
+}
+spawn gen_glyph_specimen_sheet > docs/audits/glyph-specimen-sheet.txt
+
 mkdir -p clients/game/core/tests/fixtures
 spawn run -p hornvale -- possess --seed 42 --script scripts/possession-empty.txt \
     --snapshot clients/game/core/tests/fixtures/session-seed-42-turn-0.json > /dev/null

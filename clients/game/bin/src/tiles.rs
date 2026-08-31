@@ -613,8 +613,13 @@ mod tests {
             "every tile in this window holds the same picture ({distinct} distinct), so a \
              hit/miss count cannot tell a reused tile from a wrong one"
         );
+        // The Legend retired the `~`/`.` binary, so "shows land" is any
+        // non-blank, non-ocean glyph rather than one hardcoded character.
         assert!(
-            before.to_plain_text().contains('~') && before.to_plain_text().contains('.'),
+            {
+                let text = before.to_plain_text();
+                text.contains('~') && text.chars().any(|c| !c.is_whitespace() && c != '~')
+            },
             "the window must show both ocean and land, or it proves nothing"
         );
 
@@ -704,11 +709,13 @@ mod tests {
         );
 
         // Non-vacuity: a pair of blank or uniform plates would "differ"
-        // for reasons that have nothing to do with the key.
+        // for reasons that have nothing to do with the key. "Not uniform"
+        // is ocean plus at least one non-ocean, non-blank glyph, not the
+        // pre-Legend `~`/`.` binary.
         for (name, g) in [("coarse", &a), ("fine", &b)] {
             let text = g.to_plain_text();
             assert!(
-                text.contains('~') && text.contains('.'),
+                text.contains('~') && text.chars().any(|c| !c.is_whitespace() && c != '~'),
                 "the {name} plate is uniform, so this comparison proves nothing"
             );
         }
@@ -781,8 +788,13 @@ mod tests {
         let mut cache = TileCache::default();
         let composed = render_through(&mut cache, &world, &f, &win, w, h);
         let direct = render_direct(&world, &f, &win, w, h);
+        // See `scrolling_one_column_reuses_every_tile_but_the_new_edge`'s
+        // own note on why this is no longer a `~`/`.` literal check.
         assert!(
-            direct.to_plain_text().contains('~') && direct.to_plain_text().contains('.'),
+            {
+                let text = direct.to_plain_text();
+                text.contains('~') && text.chars().any(|c| !c.is_whitespace() && c != '~')
+            },
             "a uniform plate would hide a seam disagreement"
         );
         for y in 0..direct.height() {

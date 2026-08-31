@@ -1,5 +1,39 @@
 //! The completion vocabulary: candidates, scopes, their fold, and the
 //! prefix-matching completion engine.
+//!
+//! ## Creature identity (The Legend, Task 9)
+//!
+//! [`creature_glyph`] is the derivation the coverage audit's 2.1 item asked
+//! for: a creature draws its own noun's initial rather than the generic mark
+//! every other referent on the walk band and floor plan already draws by
+//! ordinal or by terrain. There is no authored species table — none could
+//! stay current (The Radiation moved the species roster from nine peoples to
+//! fifteen the day before this task was written) — so the rule is derived
+//! fresh from whatever noun a render actually carries.
+//!
+//! ## Stable letters, collisions tolerated (fix round 2)
+//!
+//! The first version of this rule ranked nouns by RENDER — every
+//! `"agent"`-kind mark visible in the same chart or plan competed for the
+//! codespace, and a noun losing that competition walked to a different one
+//! of its own letters. That made the same species draw differently turn to
+//! turn, purely as a function of who else happened to be in view: a goblin
+//! alone drew `g`, but a goblin standing next to a gargoyle drew `o`,
+//! because the gargoyle sorted first and took `g`. Decision 0389 admits a
+//! glyph on the ORDER clause or the IDENTITY clause; a letter that changes
+//! per frame is neither — it is a per-frame slot number, the nominal
+//! category 0389 forbids, and a slot number needs a legend to read, which
+//! defeats the entire point of drawing a creature as its own initial.
+//!
+//! So [`creature_glyph`] is now a pure function of the noun alone: a goblin
+//! is always `g`, and so is a gnoll — the two are ambiguous on the grid, and
+//! the cursor (which names the noun outright) is what disambiguates them,
+//! not the glyph. This is ADoM's own convention, and it is the division of
+//! labour the client already has: the glyph carries identity at a glance,
+//! the cursor carries the detail. **Do not restore per-render ranking to
+//! chase uniqueness** — that is the exact property this fix round removed on
+//! Nathan's explicit instruction, and restoring it reopens the per-frame-slot
+//! defect this doc section exists to document.
 
 use crate::schema::Narration;
 
@@ -151,6 +185,34 @@ impl Lexicon {
         }
         out
     }
+}
+
+/// The glyph a creature draws, by IDENTITY: the character spells the
+/// thing, which is why it needs no legend (spec's Ruling on `Creature`'s
+/// codespace — see `register.rs`'s own doc: "a creature draws its noun's
+/// initial, so its codespace is `a-z`/`A-Z` by RULE rather than by row").
+///
+/// **A pure function of the noun alone (fix round 2).** Always the noun's
+/// own first ASCII-alphabetic character, lowercased: a goblin is always
+/// `'g'`, a gnoll is always `'g'` too — same-initial species draw
+/// identically, and the cursor (which names the noun outright) is what
+/// disambiguates them on the grid, not the glyph. This was a two-argument,
+/// render-scoped rank function through fix round 1; see this module's doc
+/// section "Stable letters, collisions tolerated" for why that was wrong
+/// (a letter that changes with who else is in view is a per-frame slot
+/// number, not identity) and must not be restored.
+///
+/// Infallible by design (a render must not panic on a document that
+/// parsed, the same discipline `chart.rs`'s `weight_of` already follows):
+/// a noun with no ASCII-alphabetic character at all (an unromanized name)
+/// still draws something non-whitespace — a fixed `'a'` fallback that, like
+/// every other output of this function, depends on nothing but the noun
+/// itself.
+pub fn creature_glyph(noun: &str) -> char {
+    noun.chars()
+        .find(char::is_ascii_alphabetic)
+        .map(|c| c.to_ascii_lowercase())
+        .unwrap_or('a')
 }
 
 #[cfg(test)]

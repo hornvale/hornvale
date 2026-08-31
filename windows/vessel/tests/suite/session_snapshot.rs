@@ -503,14 +503,24 @@ fn a_creature_standing_in_the_chamber_reaches_the_plan() {
     let extent = plan.extent;
     let you = plan.you;
 
+    // Narrowed to AGENT-kind marks (The Legend, Task 10): since a lit
+    // furnishing (a hearth, a bed, …) now rides the same `marks` list with
+    // `kind: "furnishing"`, `marks` is no longer synonymous with "the
+    // creatures drawn here". This test's own claim is about the placed
+    // companion specifically, so it must check the subset the companion
+    // could actually appear in, not the whole list — a furnishing sharing
+    // this chamber would otherwise fail every assertion below for a reason
+    // that has nothing to do with the companion.
+    let agent_marks: Vec<_> = marks.iter().filter(|m| m.kind == "agent").collect();
+
     assert!(
-        !marks.is_empty(),
-        "the placed companion was chosen BECAUSE it draws a mark, so an empty \
-         plan here means the seam placement and the snapshot disagree: present \
-         = {:?}",
+        !agent_marks.is_empty(),
+        "the placed companion was chosen BECAUSE it draws a mark, so no agent \
+         mark on the plan here means the seam placement and the snapshot \
+         disagree: present = {:?}",
         snap.sensed.present
     );
-    for mark in &marks {
+    for mark in &agent_marks {
         // The NPC's OWN noun, not a generic one — the join `PlanMark` took the
         // focalizer's shape for.
         assert!(

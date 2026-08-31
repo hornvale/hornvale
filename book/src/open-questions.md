@@ -764,6 +764,13 @@ terrain and marks alike. The catalogue's *refusals* are a separate and smaller
 set, each tracing to a ratified decision rather than to a deficiency; they
 confirm existing positions rather than moving a bet.
 
+**That render gap is now closed, and this bet moves.** [The Legend](./chronicle/the-legend.md)
+(2026-08-28) gave every creature its own noun-initial glyph in the walk band
+and floor plan, distinct from terrain, so the catalogue's first unmet item
+now reads `present`. Per-entity colour still does not exist anywhere in the
+client — the smaller, secondary gap the same finding already named — and
+that half stays open.
+
 A thirteenth campaign contributes two corners the practice does not reach,
 and a correction to a score written above. [The Sluice](./chronicle/the-sluice.md)
 (2026-08-16) built a serial merge queue and produced **fourteen** defects from
