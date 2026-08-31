@@ -537,3 +537,40 @@ measurement, not a limitation of this task's execution of it, and it belongs
 in the retrospective as a lesson (preregister the instrument, not just the
 expectation of failing to find one) rather than filed under "structural, not
 a defect" as the earlier entry did.
+
+### Task 5 — complete (`d6421dd60..cc8e97f12`, review clean after 1 fix round)
+
+**H1 CONFIRMED, on stronger ground than the task claimed.** The reviewer read
+`scripts/worktree-take.sh`'s actual mechanism and found the clone is not a
+weaker analogy for recycling but a harder test: real recycling only fires on
+already-merged branches and switches branch within a shared object store,
+while the simulation fully disconnected from the repo and tested an unmerged
+branch.
+
+**H2's operationalization was unfalsifiable, and that is my error in the
+spec.** The hypothesis is falsifiable in principle — a preregistered blinded
+twin-campaign study could settle it. What guaranteed an "unmeasurable" report
+regardless of truth was preregistering "I expect not to measure this" and then
+building no instrument at all.
+
+**A cheap instrument existed and went unused**, sitting in the implementer's
+own working directory: this campaign's scratch reports (ephemeral, the old
+regime) against its matching committed ledger entries (permanent, the new
+regime) — same task, same author, minutes apart.
+
+**Applied post hoc to Task 5 itself, it found one confounded observation
+consistent with H2.** The report's most self-critical line survived in scratch
+and was absent from the committed ledger, while mechanical content carried
+through verbatim. Not a confirmation: an unblinded single post-hoc pair cannot
+distinguish "committed, therefore softened" from "second pass, therefore
+tightened — and the second pass happens to be the committed one."
+
+**The fix's own trap was checked and did not spring.** A remedy for "the
+candid line was softened out" that landed a softened version of that line
+would have been the same defect committed by its own cure, and would have read
+as complete. The reviewer put the two wordings side by side: verbatim,
+character-for-character, with only the incorrect framing dropped.
+
+*The recursion is the campaign's finding.* It built a durable ledger so candid
+material would stop being lost, and then lost a candid line from that ledger,
+in the task that tested whether the ledger works — and caught it.
