@@ -43,6 +43,8 @@ mod display_handle;
 mod doctrine;
 #[path = "suite/felt_state_concepts.rs"]
 mod felt_state_concepts;
+#[path = "suite/furnishing_marks.rs"]
+mod furnishing_marks;
 #[path = "suite/gate_table.rs"]
 mod gate_table;
 #[path = "suite/lantern_fabric.rs"]

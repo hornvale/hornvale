@@ -226,6 +226,19 @@ pub const REGISTER: &[Binding] = &[
         population: Population::Structure,
         means: "threshold",
     },
+    // The Legend, Task 10: `vessel/plan/v1` grew a `"furnishing"` mark kind
+    // (a hearth, a bed, an alcove, …) and it claims NO row here, deliberately
+    // — not an omission left for a later task. `plan.rs::draw_mark`'s own
+    // doc already settled this at Task 9: any mark kind but `"agent"` simply
+    // re-draws the ground truth its own palette entry already paints there
+    // — the original structural no-op, the same treatment a `"settlement"`
+    // mark gets. A furnishing anchor sits on ordinary floor already, so
+    // drawing it a second glyph here would be the exact double-encoding
+    // decision 0389 forbids — the doorway-drawn-twice trap this campaign
+    // found on the SIM side (`windows/vessel/src/session.rs::sighting`),
+    // one layer further down the wire. `Mark.kind`'s own doc calls this
+    // additive by design: "a future kind needs no special case anywhere to
+    // appear", and a claimed row here would be exactly that special case.
 ];
 
 /// The binding for `glyph`, if the register claims it.

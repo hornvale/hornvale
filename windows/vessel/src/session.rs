@@ -63,6 +63,26 @@ const CONSULT_FALLBACK: &str = "The Book holds more for the initiated.";
 /// type-audit: bare-ok(count)
 const SIGHT_RADIUS: i32 = crate::lattice::CHAMBER_SIDE / 2;
 
+/// What a furnishing anchor's mark calls itself on the chamber-band plan —
+/// The Hearth's furnishings reaching the wire for the first time (The
+/// Legend, Task 10). A new [`crate::plan::PlanMark::kind`] value, additive by
+/// [`Mark.kind`](hornvale_scene::Mark)'s own design: a consumer that does not
+/// recognize it still renders the mark (`clients/game/core/src/plan.rs`'s
+/// `draw_mark` redraws whatever glyph is already there for any kind but
+/// `"agent"`), so no special case is needed anywhere for this string to
+/// appear.
+/// type-audit: bare-ok(identifier-text)
+const FURNISHING_MARK_KIND: &str = "furnishing";
+
+/// The salience of a furnishing mark — well above (so less salient than)
+/// [`crate::purview::AGENT_SALIENCE`], because a creature standing at the
+/// hearth would be the more notable thing. In practice the two never
+/// collide: [`Session::sighting`] excludes a furnishing already claimed by
+/// `held`, so this ordering is never exercised by a real collision on the
+/// chamber plan — it is chosen anyway, for the day that exclusion changes.
+/// type-audit: bare-ok(index)
+const FURNISHING_SALIENCE: u32 = 30;
+
 /// Spec §3.2's group D — session control, which is *not an act* and therefore
 /// carries no [`Mood`] at all. A body you cannot let go of is a hang, not a
 /// capability, and `exit`'s coarse-ward refusal is a statement about the
@@ -854,6 +874,11 @@ struct Inside {
     seed: Seed,
 }
 
+/// One furnishing anchor's kind and the spot the fine-layer placement gave
+/// it — named so [`Sighting::furnishings`]'s type does not repeat the same
+/// qualified path at every use site.
+type FurnishingSpot = (crate::interior::AnchorKind, crate::lattice::Cell); // lexicon: AREA-sense chamber-lattice square, never a mesh vertex
+
 /// What the fine layer says about the chamber the possession is standing in:
 /// where each co-located creature has been drawn, and which cells the
 /// possession can see from where it stands.
@@ -877,6 +902,32 @@ struct Sighting {
     /// is why [`Session::snapshot`] narrows `sensed.present` only on a creature
     /// this map DOES place.
     placed: std::collections::BTreeMap<EntityId, crate::lattice::Cell>,
+    /// Every FURNISHING anchor this chamber's own graph places, at the
+    /// position the fine-layer placement gives it — sight-gated exactly as
+    /// `placed` is (the anchor's OWN position must be lit) and
+    /// additionally checked against `held`, the same
+    /// [`crate::lattice::Occupancy`] the possession and every colocated
+    /// creature were seated into first, so a furnishing never overdraws the
+    /// `@` glyph or a creature's own identity glyph the way `draw_mark`'s
+    /// structural no-op would if two marks ever landed in one place
+    /// (`clients/game/core/src/plan.rs`'s own doc: a non-`"agent"` mark
+    /// redraws whatever glyph is already there, which erases what an
+    /// earlier mark at that spot put there).
+    ///
+    /// Two anchor kinds never appear here, and neither is a special case in
+    /// the sense `Mark.kind`'s doc warns against — both are excluded by a
+    /// GENERIC rule, not by naming the kind:
+    /// - [`crate::interior::AnchorKind::Threshold`] is excluded explicitly
+    ///   (see [`Session::sighting`]): the plan already draws it as `+`, a
+    ///   `Structure`-population glyph, so a mark here would double-encode the
+    ///   same doorway the picture already speaks for.
+    /// - [`crate::interior::AnchorKind::Ground`] excludes itself: it has no
+    ///   examinable noun (`crate::chamber_prose::noun`'s own doc — "it is the
+    ///   chamber's own floor, not a thing standing in it"), for the identical
+    ///   reason `Threshold` is excluded by hand — every square of it already
+    ///   draws as `.` — so filtering on "has a noun" drops it with no
+    ///   anchor-kind check at all.
+    furnishings: Vec<FurnishingSpot>,
 }
 
 /// Whether a read of who is present is narrowed by what the possessed body
@@ -1458,22 +1509,43 @@ impl<'w> Session<'w> {
         // one creature answered `examine` with two different sentences depending
         // on which side of a doorway the player stood — the exact drift §6
         // forbids, one band lower than The Lintel's jar.
+        //
+        // Furnishings ride the same list (The Hearth reaches the wire, The
+        // Legend Task 10): `s.furnishings` is already sight-gated and
+        // already excludes anywhere `held` claims (`Session::sighting`'s own
+        // doc), so no second filter belongs here — this arm only resolves
+        // each `(kind, spot)` pair into the noun/datum a `PlanMark` carries.
         let marks: Vec<crate::plan::PlanMark> = sighting
             .as_ref()
             .map(|s| {
-                here.iter()
-                    .filter_map(|(who, species, entry)| {
-                        let cell = *s.placed.get(who)?;
-                        s.lit.contains(&cell).then(|| crate::plan::PlanMark {
-                            x: cell.0,
-                            y: cell.1,
-                            noun: entry.label.clone(),
-                            kind: crate::purview::AGENT_MARK_KIND.to_string(),
-                            datum: crate::purview::creature_datum(&entry.label, species),
-                            salience: crate::purview::AGENT_SALIENCE,
-                        })
+                let creatures = here.iter().filter_map(|(who, species, entry)| {
+                    let cell = *s.placed.get(who)?;
+                    s.lit.contains(&cell).then(|| crate::plan::PlanMark {
+                        x: cell.0,
+                        y: cell.1,
+                        noun: entry.label.clone(),
+                        kind: crate::purview::AGENT_MARK_KIND.to_string(),
+                        datum: crate::purview::creature_datum(&entry.label, species),
+                        salience: crate::purview::AGENT_SALIENCE,
                     })
-                    .collect()
+                });
+                let furnishings = s
+                    .furnishings
+                    .iter()
+                    .map(|&(kind, spot)| crate::plan::PlanMark {
+                        x: spot.0,
+                        y: spot.1,
+                        noun: crate::chamber_prose::noun(kind)
+                            .expect(
+                                "Sighting::furnishings only ever holds a kind chamber_prose::noun \
+                                 answers for — sighting()'s own filter guarantees it",
+                            )
+                            .to_string(),
+                        kind: FURNISHING_MARK_KIND.to_string(),
+                        datum: crate::chamber_prose::detail(kind).to_string(),
+                        salience: FURNISHING_SALIENCE,
+                    });
+                creatures.chain(furnishings).collect()
             })
             .unwrap_or_default();
 
@@ -4117,6 +4189,11 @@ impl<'w> Session<'w> {
             inside.at
         );
         let cells = crate::lattice::anchor_cells(&chamber, &inside.lattice, inside.at, inside.seed);
+        // Derived once and shared by `placed` (below) and `furnishings`
+        // (after it): the SAME shadowcast that decides whether a creature is
+        // drawn also decides whether a furnishing is, per the brief's own
+        // instruction not to invent a second gating rule.
+        let lit = crate::lattice::shadowcast(&inside.lattice, inside.cell, SIGHT_RADIUS);
 
         let mut held = crate::lattice::Occupancy::default();
         // `Inside::cell` is documented passable (`standing_cell`/`cell_beyond`
@@ -4169,9 +4246,42 @@ impl<'w> Session<'w> {
             }
         }
 
+        // Every chamber anchor that is (a) genuinely a FURNISHING — not
+        // `Threshold`, already drawn as the plan's own `+` (THE TRAP: a
+        // second mark here would draw one doorway twice, plausibly under two
+        // different glyphs, the exact double-encoding decision 0389
+        // forbids), and not `Ground`, which has no noun because it IS the
+        // chamber's own floor under a second name — (b) actually placed
+        // (the fine-layer placement leaves surplus anchors unplaced when a
+        // chamber holds fewer floor squares than the interior holds
+        // anchors, same as the creature join above), (c) sight-gated by the
+        // identical shadowcast `placed` uses, and (d) not already claimed
+        // in `held`, which by this point holds the possession's own
+        // standing spot and every colocated creature this loop placed —
+        // reusing it rather than re-deriving "is anyone already here" is
+        // what keeps a furnishing from ever overdrawing an `@` or a
+        // creature's own glyph.
+        let furnishings: Vec<FurnishingSpot> = chamber
+            .ids()
+            .into_iter()
+            .filter_map(|a| {
+                let kind = chamber.anchor(a).kind;
+                if kind == crate::interior::AnchorKind::Threshold {
+                    return None;
+                }
+                crate::chamber_prose::noun(kind)?;
+                let spot = *cells.get(&a)?; // lexicon: AREA-sense chamber-lattice square, never a mesh vertex
+                if !lit.contains(&spot) || held.at(spot).is_some() {
+                    return None;
+                }
+                Some((kind, spot))
+            })
+            .collect();
+
         Some(Sighting {
-            lit: crate::lattice::shadowcast(&inside.lattice, inside.cell, SIGHT_RADIUS),
+            lit,
             placed,
+            furnishings,
         })
     }
 
