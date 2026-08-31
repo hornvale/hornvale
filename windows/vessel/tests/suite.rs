@@ -43,6 +43,8 @@ mod display_handle;
 mod doctrine;
 #[path = "suite/felt_state_concepts.rs"]
 mod felt_state_concepts;
+#[path = "suite/furnishing_marks.rs"]
+mod furnishing_marks;
 #[path = "suite/gate_table.rs"]
 mod gate_table;
 #[path = "suite/lantern_fabric.rs"]
@@ -59,6 +61,8 @@ mod lantern_seam;
 mod ledger_query_equivalence;
 #[path = "suite/liveness_genesis.rs"]
 mod liveness_genesis;
+#[path = "suite/noun_entity.rs"]
+mod noun_entity;
 #[path = "suite/object_property_concepts.rs"]
 mod object_property_concepts;
 #[path = "suite/one_roster.rs"]
@@ -85,6 +89,8 @@ mod session;
 mod session_snapshot;
 #[path = "suite/stance.rs"]
 mod stance;
+#[path = "suite/strongbox_reachability.rs"]
+mod strongbox_reachability;
 #[path = "suite/submerged.rs"]
 mod submerged;
 #[path = "suite/submerged_before_arm.rs"]
@@ -101,6 +107,8 @@ mod the_handle;
 mod the_lintel;
 #[path = "suite/the_purview.rs"]
 mod the_purview;
+#[path = "suite/thing.rs"]
+mod thing;
 #[path = "suite/tick_commit_budget.rs"]
 mod tick_commit_budget;
 #[path = "suite/underworld_level_generation.rs"]

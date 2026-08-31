@@ -25,6 +25,8 @@ mod beta_calibration_freeze;
 mod beta_calibration_sweep;
 #[path = "suite/branch_character.rs"]
 mod branch_character;
+#[path = "suite/breach.rs"]
+mod breach;
 #[path = "suite/capacity_cost_probe.rs"]
 mod capacity_cost_probe;
 #[path = "suite/chorus_params.rs"]
@@ -47,6 +49,8 @@ mod deep_realm_rehome;
 mod deep_realm_substrate;
 #[path = "suite/defensibility_field.rs"]
 mod defensibility_field;
+#[path = "suite/delve_depth.rs"]
+mod delve_depth;
 #[path = "suite/delver_bind_audit.rs"]
 mod delver_bind_audit;
 #[path = "suite/delver_depth_probe.rs"]
@@ -119,6 +123,8 @@ mod junctions;
 mod keeping_probe;
 #[path = "suite/lantern_probe.rs"]
 mod lantern_probe;
+#[path = "suite/mines_exist.rs"]
+mod mines_exist;
 #[path = "suite/name_pattern.rs"]
 mod name_pattern;
 #[path = "suite/niche_breadth_probe.rs"]
@@ -131,6 +137,8 @@ mod occupancy_readout;
 mod off_lithology_decorrelation_probe;
 #[path = "suite/ore_separation_probe.rs"]
 mod ore_separation_probe;
+#[path = "suite/ore_siting_probe.rs"]
+mod ore_siting_probe;
 #[path = "suite/ore_viability_probe.rs"]
 mod ore_viability_probe;
 #[path = "suite/person_promotion.rs"]
@@ -173,6 +181,8 @@ mod species_worlds;
 mod stope_variety_probe;
 #[path = "suite/subterranean_energy_probe.rs"]
 mod subterranean_energy_probe;
+#[path = "suite/survivorship_probe.rs"]
+mod survivorship_probe;
 #[path = "suite/tense_shadow.rs"]
 mod tense_shadow;
 #[path = "suite/termination_probe.rs"]

@@ -474,9 +474,24 @@ pub fn residue_of(occ: &OccupationRecord, now: f64, seed: Seed, departure: Depar
                 items.push(ResidueItem::Bones);
                 items.push(ResidueItem::Foundation);
             }
-            CauseOfEnd::Famine | CauseOfEnd::Fled => {
+            CauseOfEnd::Famine | CauseOfEnd::Fled | CauseOfEnd::Breached => {
                 // A hurried departure: a tool dropped, the pots left behind,
                 // the dwelling lines abandoned to the grass.
+                //
+                // **`Breached` shares this arm deliberately** (The Winze, spec
+                // §4.3/§4.6). A working that breaks through ends where it
+                // stands, and what a searcher finds is exactly this: the tools
+                // still at the face, the pots in the huts, the turf-lines of a
+                // camp nobody packed up. Giving the breach its own assemblage
+                // was considered and refused twice over. `ResidueItem::Bones`
+                // would assert the delvers were *destroyed*, and spec §4.4
+                // leaves that open on purpose — a breach "flees or is
+                // destroyed", and the model does not know which. Anything
+                // more specific would be a description of what came through,
+                // which §4.6 forbids to every surface, this one included: the
+                // residue is the strongest temptation in the file to name it,
+                // because a find is exactly where an author would put the
+                // claw-mark.
                 items.push(ResidueItem::Tool);
                 items.push(ResidueItem::Potsherd);
                 items.push(ResidueItem::Foundation);

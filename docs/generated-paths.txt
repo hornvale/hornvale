@@ -214,6 +214,7 @@ clients/game/core/tests/fixtures/	artifacts
 docs/audits/underworld-lattice-seed-panel.md	artifacts
 docs/audits/the-confidant-report.md	artifacts
 docs/audits/the-reticence-report.md	artifacts
+docs/audits/glyph-specimen-sheet.txt	artifacts
 
 # `docs/generated-path-writes.tsv` (Task 4, The Attestation) is Task 1's
 # by-hand write-set measurement made a byproduct of every ordinary run: a
@@ -297,3 +298,19 @@ docs/generated-path-writes.tsv	artifacts
 # Task 1 measured each of those fully current (every tracked file written on
 # the run that measured them), so `artifacts` was already true for 100% of
 # what each covers.
+
+# Two more FILES declared by name, for the same reason and against the same
+# hazard (The Chattel, Task 13). Both land inside directories this list
+# already declares -- book/src/gallery/ and
+# clients/game/core/tests/fixtures/ -- so the directories' other tracked files
+# would keep the tracked-ness check green while `git diff` could not see
+# either new file at all. They are the campaign's only published evidence that
+# the custody verbs exist (the transcript) and the only committed
+# `vessel/session/v2` document whose `self.carrying` is not empty (the
+# fixture), so an artifact invisible to the drift check is exactly the failure
+# worth refusing here. Both are written by regenerate-artifacts.sh -- the
+# transcript at :975, the fixture at :336 via `possess --snapshot` in the same
+# run -- so both are authored by `artifacts` in this file's second column,
+# which main gained (The Attestation) while this campaign was in flight.
+book/src/gallery/possession-carry-seed-1.md	artifacts
+clients/game/core/tests/fixtures/session-seed-1-carrying.json	artifacts

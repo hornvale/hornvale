@@ -362,6 +362,7 @@ mod tests {
                 tongue: None,
                 cause: None,
                 notability: Notability::Common,
+                delve_depth_m: 0.0,
             },
             id: EntityId::new(1).expect("nonzero"),
             ended_by: Ended::Nature,

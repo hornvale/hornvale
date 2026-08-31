@@ -3,7 +3,7 @@
 //! noun the prose mentions is in `nouns`, and only those are examinable.
 
 use crate::Vantage;
-use hornvale_kernel::SeaLevelHeight;
+use hornvale_kernel::{EntityId, SeaLevelHeight};
 
 /// A rendered vantage: prose plus its noun catalog.
 /// type-audit: bare-ok(prose: prose)
@@ -74,6 +74,13 @@ impl NounKind {
 /// **process-internal and never serialized**: putting aliases on the wire would
 /// spray "forest, tropical, seasonal" into the browser client's legend beside
 /// the real entry.
+///
+/// **Nothing on this struct can reach the wire by accident, and the mechanism
+/// is not a `serde(skip)`.** `Noun` derives no `Serialize` at all; the wire
+/// type is a separate struct, [`crate::snapshot::NounEntry`], built
+/// field-by-field in `Session::snapshot`. So a field added here — `words`,
+/// `entity` — is invisible to every client until someone writes the line that
+/// copies it across.
 /// type-audit: bare-ok(identifier-text: display), bare-ok(prose: datum), bare-ok(identifier-text: words)
 #[derive(Debug, Clone, PartialEq)]
 pub struct Noun {
@@ -86,6 +93,18 @@ pub struct Noun {
     /// The coarse kind claimed for this entry. Defaults to `Unknown`; see
     /// `with_kind` for the construction sites that can claim one.
     pub kind: NounKind,
+    /// The ledger entity this word names, where the catalog site knows one.
+    ///
+    /// **This is the name → entity lookup** (The Chattel, Task 10): before it,
+    /// resolving a typed word yielded a `datum` — a String — and stopped, so
+    /// two rooms' water jars were indistinguishable to every caller downstream
+    /// of `matches`. `Some(id)` is the identity a verb can act on; `None` is
+    /// the honest default for a site with no entity to claim (the biome, the
+    /// sky, a chart-legend mark), not a placeholder to be invented.
+    ///
+    /// Defaults to `None`; see `with_entity` for the construction sites that
+    /// can claim one.
+    pub entity: Option<EntityId>,
 }
 
 impl Noun {
@@ -113,12 +132,26 @@ impl Noun {
             datum: datum.to_string(),
             words,
             kind: NounKind::Unknown,
+            entity: None,
         }
     }
 
     /// Attach a coarse kind, for construction sites that can claim one.
     pub fn with_kind(mut self, kind: NounKind) -> Noun {
         self.kind = kind;
+        self
+    }
+
+    /// Attach the ledger entity this entry names, for construction sites that
+    /// can claim one — the shape `with_kind` established, and for the same
+    /// reason: `new`'s signature stays what every one of its callers already
+    /// passes, and a site that knows nothing about entities says nothing.
+    ///
+    /// Takes an `EntityId` rather than an `Option<EntityId>`: a caller with
+    /// nothing to claim does not call this at all, which is a stronger
+    /// statement than passing `None` through a builder.
+    pub fn with_entity(mut self, entity: EntityId) -> Noun {
+        self.entity = Some(entity);
         self
     }
 
@@ -351,6 +384,13 @@ mod tests {
         }
     }
 
+    /// `Noun` derives `PartialEq`, so `a.nouns == b.nouns` covers every field
+    /// this struct has — including `entity`, added by The Chattel's Task 10.
+    /// **That coverage is vacuous today and worth saying so**: no site in
+    /// `render` calls `with_entity`, so both sides carry `None` and the new
+    /// field is compared trivially. The day a render site claims an entity,
+    /// this assertion starts holding that the claim is a pure function of the
+    /// vantage, with no edit here.
     #[test]
     fn the_focalization_is_deterministic() {
         let a = TemplateFocalizer.render(&vantage_at(0.0));

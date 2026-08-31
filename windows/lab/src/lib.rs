@@ -1,6 +1,7 @@
 //! Hornvale laboratory: batch studies over generated worlds.
 #![warn(missing_docs)]
 
+pub mod authored;
 pub mod blackbox;
 pub mod census_claim;
 pub mod census_guard;
@@ -20,6 +21,7 @@ pub mod synthetic;
 pub mod timings;
 pub mod tongue_distance;
 
+pub use authored::{FixtureAge, load_authored, render_authored_diff};
 pub use blackbox::record_failure;
 pub use census_guard::{
     CENSUS_GOLDENS_DIR, canonical_host, current_hostname, require_canonical_host_for,

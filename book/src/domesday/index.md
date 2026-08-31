@@ -4,7 +4,7 @@
 
 A generated survey of the committed census: what Hornvale's worlds actually produce, and where the instrument finds them wanting.
 
-1000 worlds, 226 metrics across 12 domains.
+1000 worlds, 227 metrics across 12 domains.
 
 ## Domains
 
@@ -21,7 +21,7 @@ A generated survey of the committed census: what Hornvale's worlds actually prod
 | Religion | 21 | 12 | [page](./religion.md) |
 | Language | 48 | 36 | [page](./language.md) |
 | Naming | 17 | 10 | [page](./naming.md) |
-| History | 24 | 25 | [page](./history.md) |
+| History | 25 | 25 | [page](./history.md) |
 
 ## Crate coverage (D8)
 
@@ -30,6 +30,7 @@ A `domains/` crate no census metric measures at all is a gap in the world, not a
 - `alchemy`: no census metric measures any quantity the `alchemy` crate produces
 - `paleoclimate`: no census metric measures any quantity the `paleoclimate` crate produces
 - `person`: no census metric measures any quantity the `person` crate produces
+- `thing`: no census metric measures any quantity the `thing` crate produces
 
 ## Findings by detector
 
@@ -46,4 +47,4 @@ Raw firing counts, not distinct metrics: D2's hits are a subset of D4's by const
 | D5 unmeasurable | 6 |
 | D6 | 1 |
 | D7 | 0 |
-| D8 | 3 |
+| D8 | 4 |

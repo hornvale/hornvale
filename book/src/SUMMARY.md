@@ -55,6 +55,7 @@
 - [The Strange Sites of Seed 42](./gallery/strange-sites-seed-42.md)
 - [The Look of the World — Seed 42](./gallery/room-sample-seed-42.md)
 - [A Possession of Seed 42 — over time](./gallery/possession-over-time-seed-42.md)
+- [A Possession of Seed 1 — a thing carried](./gallery/possession-carry-seed-1.md)
 - [A Possession, Live](./gallery/possession-live.md)
 - [The Purview of Seed 42](./gallery/surrounds-seed-42.md)
 
@@ -421,14 +422,19 @@
 - [The Stile](./chronicle/the-stile.md)
 - [The Latch](./chronicle/the-latch.md)
 - [The Precedence](./chronicle/the-precedence.md)
+- [The Legend](./chronicle/the-legend.md)
 - [The Governor](./chronicle/the-governor.md)
 - [The Rail](./chronicle/the-rail.md)
 - [The Quoin](./chronicle/the-quoin.md)
 - [The Gallery](./chronicle/the-gallery.md)
+- [The Winze](./chronicle/the-winze.md)
 - [The Lodestar](./chronicle/the-lodestar.md)
 - [The Overture](./chronicle/the-overture.md)
+- [The Chattel](./chronicle/the-chattel.md)
 - [The Attestation](./chronicle/the-attestation.md)
 - [The Cartulary](./chronicle/the-cartulary.md)
+- [The Repertory](./chronicle/the-repertory.md)
+- [The Company](./chronicle/the-company.md)
 
 # Appendix: The Frontier
 

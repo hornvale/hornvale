@@ -550,6 +550,20 @@ mod tests {
                 "room/layout/anchors v1",
                 "room/layout/grown v1",
                 "room/layout/rectilinear v1",
+                // The Winze, Task 4 (spec §4.3): whether one epoch's advance
+                // of a working breaks through. Additive at v1 — a NEW label,
+                // so it perturbs no existing stream and no world that exists
+                // today consumed a draw under it — and versioned from birth
+                // for the same reason `settlement/disposition v1` below is:
+                // the draw shape (`1 - exp(-metres_cut / BREACH_FREE_PATH_M)`,
+                // one draw per living working per epoch) and the
+                // (vertex, band, year) key are both save-format contracts, and
+                // changing either re-rolls which delvings broke through in
+                // every world ever generated. See
+                // `windows/worldgen/src/streams.rs`'s `SETTLEMENT_BREACH` for
+                // why it is a keyed leg rather than a draw on
+                // `history/bake/v3`.
+                "settlement/breach v1",
                 // The Tolerance: the per-settlement disposition draw, a
                 // people's authored mind perturbed by its authored
                 // dispersion. Additive at v1 — a NEW label, so it perturbs
@@ -561,6 +575,18 @@ mod tests {
                 // settlement's mind. See
                 // `windows/worldgen/src/disposition.rs`.
                 "settlement/disposition v1",
+                // The Winze, Task 2: whether one expansion out of
+                // `Bake::grow` is a WORKING rather than a farm — the
+                // second siting objective that makes `Function::Mine`
+                // reachable at all (spec §B.3). Additive at v1: a NEW
+                // label on its own leg, so it consumes nothing from
+                // `history/bake v3` and a world moves only where a
+                // working is founded. Versioned from birth for the same
+                // reason `settlement/disposition v1` is — the rate
+                // (the site's own prospectivity) and the
+                // (vertex, band, year) key are both save-format
+                // contracts. See `windows/worldgen/src/streams.rs`.
+                "settlement/working v1",
                 // The Adit, Task 3: the cellular-automata cave content
                 // generator (Karst-biased leaves). Versioned from birth
                 // like the other entries in this golden. See

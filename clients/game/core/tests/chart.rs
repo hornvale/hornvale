@@ -1,4 +1,7 @@
-use hornvale_game_core::{Grid, Ink, Snapshot, Spatial, Weight, chart};
+use hornvale_game_core::{
+    Chart, ChartCell, Grid, Ink, Mark, Micro, Snapshot, Spatial, Weight, chart,
+    register::binding_of,
+};
 
 const FIXTURE: &str = include_str!("fixtures/session-seed-42-turn-0.json");
 
@@ -120,7 +123,8 @@ const REFERENCE_SHAPE: &str = include_str!("fixtures/chart-reference-seed-42.txt
 /// filled, not what glyph fills them. This is what makes comparing this
 /// crate's render against the sim's own legitimate despite the two using
 /// different glyph vocabularies in general (the sim's per-biome/water
-/// alphabet vs. this crate's deliberately coarse `@`/`+`) — a real
+/// alphabet, which also distinguishes water and marks, vs. this crate's
+/// impedance ladder alone plus `@`) — a real
 /// disagreement in cell PLACEMENT still shows up as a shape mismatch; a
 /// difference in which character was chosen for an otherwise-correctly-
 /// placed cell would not, and this test is not trying to catch that.
@@ -184,4 +188,211 @@ fn the_shape_matches_the_sims_own_ascii_render() {
     let mut g = Grid::new(40, 12);
     chart::draw(&c, &mut g, (0, 0));
     assert_eq!(grid_shape(&g), shape_of(REFERENCE_SHAPE));
+}
+
+/// `chart.rs:79`'s old `PLACED_GLYPH` drew `+` for "everything else in
+/// view, terrain and marks alike" — one glyph, no matter what. This
+/// fixture's own 30 non-`here` cells span relief bands 1 and 2 with real
+/// `micro.openness`/`micro.relief` spread (see `task-8-report.md`), so an
+/// ordinal ladder over the RENDERED output must show more than one glyph.
+#[test]
+fn the_walk_band_draws_an_ordinal_ladder_not_one_glyph() {
+    let c = walk_chart();
+    let mut g = Grid::new(80, 24);
+    chart::draw(&c, &mut g, (0, 0));
+    let terrain_glyphs: std::collections::BTreeSet<char> = g
+        .to_plain_text()
+        .chars()
+        .filter(|&ch| ch != ' ' && ch != '\n' && ch != '@')
+        .collect();
+    assert!(
+        terrain_glyphs.len() > 1,
+        "still one glyph: {terrain_glyphs:?}"
+    );
+}
+
+/// Decision 0389 enforced against a REAL render, mirroring
+/// `clients/game/bin/tests/plate_vocabulary.rs`'s guard of the same name
+/// against the world map's own vocabulary. Before this test the walk-band
+/// chart was one of two panes `no_character_is_bound_twice` could not see
+/// at all — it validates `register::REGISTER` against itself and has no
+/// way to notice a pane drawing a glyph the table never claimed, which is
+/// exactly the mechanism behind the three historical `.`/`+`/`#`
+/// collisions (progress.md, "the register is unpinned for two of three
+/// panes").
+#[test]
+fn every_drawn_glyph_is_claimed_by_the_register() {
+    let c = walk_chart();
+    let mut g = Grid::new(80, 24);
+    chart::draw(&c, &mut g, (0, 0));
+    let glyphs: std::collections::BTreeSet<char> = (0..g.height())
+        .flat_map(|y| (0..g.width()).map(move |x| (x, y)))
+        .filter_map(|(x, y)| g.get(x, y).and_then(|c| c.glyph))
+        .collect();
+    for glyph in glyphs {
+        assert!(
+            binding_of(glyph).is_some() || glyph.is_ascii_alphabetic(),
+            "{glyph:?} is drawn but unclaimed"
+        );
+    }
+}
+
+/// A minimal chart cell addressed by its polar coordinate, matching how
+/// [`chart::draw`] reads one — see `src/chart.rs`'s own `chart_cell` test
+/// helper, which this mirrors for this external integration binary (no
+/// access to that private helper from here).
+fn synth_cell(
+    bearing_deg: f64,
+    distance_rad: f64,
+    relief: u32,
+    openness: f64,
+    roughness: f64,
+) -> ChartCell {
+    ChartCell {
+        u: Some(0),
+        v: Some(0),
+        w: Some(0),
+        up: Some(true),
+        seam: false,
+        state: "sensed".to_string(),
+        biome: 0,
+        water: 0,
+        relief,
+        color: None,
+        micro: Micro {
+            relief: roughness,
+            aspect: 0.0,
+            wetness: 0.0,
+            openness,
+        },
+        marks: vec![],
+        bearing_deg,
+        distance_rad,
+    }
+}
+
+fn synth_chart(radius: u32, cells: Vec<ChartCell>) -> Chart {
+    Chart {
+        radius,
+        depth: 12,
+        biome_legend: vec![],
+        water_legend: vec![],
+        relief_legend: vec![],
+        cells,
+        legend: vec![],
+        sight: None,
+    }
+}
+
+/// Ordinality on the RENDERED output, not on a private helper: a ladder
+/// that is ordinal in `impedance_glyph` and shuffled at `glyph_of`'s call
+/// site would still read as nominal from outside this crate. Six synthetic
+/// cells due east at increasing distance land at six distinct, predictable
+/// columns (the documented projection: due east, `row = 0`, `col` scales
+/// with distance — see `src/chart.rs`'s module doc), each carrying relief
+/// `0..=5` with canopy fully open and roughness flat, so each cell's own
+/// impedance is exactly its relief index. The five-glyph ladder
+/// (`_ . : ^ A`) must therefore read non-decreasing rank left to right,
+/// including the doubly-overloaded top rung (relief 5 and 6 both draw `A`).
+#[test]
+fn the_ladder_ascends_with_impedance() {
+    let cells: Vec<ChartCell> = (0..=5)
+        .map(|relief| synth_cell(90.0, f64::from(relief) + 1.0, relief, 1.0, 0.0))
+        .collect();
+    let farthest = 6.0; // the relief-5 cell's own distance_rad
+    let radius = 6;
+    let chart = synth_chart(radius, cells);
+    let mut g = Grid::new(40, 4);
+    chart::draw(&chart, &mut g, (0, 0));
+
+    let centre_x = 20i64;
+    let centre_y = 2i64;
+    let rank = |glyph: char| -> usize {
+        ['_', '.', ':', '^', 'A']
+            .iter()
+            .position(|&g| g == glyph)
+            .unwrap_or_else(|| panic!("{glyph} is not a ladder rung"))
+    };
+    let mut ranks = Vec::new();
+    for relief in 0..=5i64 {
+        let distance = f64::from(relief as u32) + 1.0;
+        let r = distance / farthest * radius as f64;
+        let col = (r * 2.0).round() as i64; // sin(90deg) == 1
+        let cell = g
+            .get((centre_x + col) as u16, centre_y as u16)
+            .expect("in bounds");
+        let glyph = cell.glyph.expect("a drawn cell");
+        ranks.push(rank(glyph));
+    }
+    assert!(
+        ranks.windows(2).all(|w| w[0] <= w[1]),
+        "impedance ladder must be non-decreasing: {ranks:?}"
+    );
+}
+
+type AgentEntry = ChartCell; // lexicon: AREA-sense chart entry, not a mesh vertex.
+
+/// One synthetic agent-bearing walk-band entry, all else defaulted.
+fn synth_agent(bearing_deg: f64, distance_rad: f64, noun: &str) -> AgentEntry {
+    let mut c = synth_cell(bearing_deg, distance_rad, 0, 1.0, 0.0); // lexicon: AREA sense, not a mesh vertex.
+    c.marks = vec![Mark {
+        noun: noun.to_string(),
+        kind: "agent".to_string(),
+        datum: format!("A {noun} stands here."),
+        salience: 1,
+    }];
+    c
+}
+
+/// Fix round 2's review finding: `tests/lexicon.rs` pins `creature_glyph`
+/// itself as a pure function of the noun alone, but the regression that
+/// mattered — per-render disambiguation — would not reappear there. It
+/// would reappear in a CALLER of `creature_glyph` (here, [`chart::draw`])
+/// that collected the chart's visible nouns and de-duplicated them before
+/// calling — a change that never touches `creature_glyph`'s signature and
+/// so would pass every assertion in `tests/lexicon.rs`. This test pins the
+/// property one layer up, through the real entry point: a creature's own
+/// glyph must not change depending on which other creatures share the
+/// render.
+///
+/// The company is not arbitrary. `giant elk` and `gnoll` both sort
+/// alphabetically before `goblin` and share its initial `g` — exactly the
+/// three-way collision fix round 1's `creature_ranks` resolved by moving
+/// `goblin` off `g` onto `o` (`task-9-report.md`'s worked example). A
+/// per-render greedy rank walk reintroduced at the `chart::draw` call site
+/// (rather than inside `creature_glyph`) would still make goblin's glyph
+/// change here, and this test is what would catch it — see the fix
+/// round 2 report's pasted red for the proof.
+#[test]
+fn a_creatures_glyph_is_stable_through_chart_draw_regardless_of_company() {
+    let goblin_alone = synth_chart(4, vec![synth_agent(90.0, 1.0, "goblin")]);
+    let mut g_alone = crate::Grid::new(20, 20);
+    chart::draw(&goblin_alone, &mut g_alone, (0, 0));
+
+    let goblin_crowded = synth_chart(
+        4,
+        vec![
+            synth_agent(90.0, 1.0, "goblin"),
+            // Sorts before "goblin", shares its initial.
+            synth_agent(0.0, 1.0, "giant elk"),
+            // Same initial as "goblin".
+            synth_agent(180.0, 1.0, "gnoll"),
+        ],
+    );
+    let mut g_crowded = crate::Grid::new(20, 20);
+    chart::draw(&goblin_crowded, &mut g_crowded, (0, 0));
+
+    // Every entry here sits on the same rim (`distance_rad == 1.0`), so
+    // `farthest` is 1.0 in both charts and goblin's own box — bearing 90,
+    // radius (rings) 4 — lands at the identical grid position in both:
+    // (row 0, col 8) from centre (see `project_puts_north_up_east_right_
+    // and_doubles_the_column`, pinned directly on this same formula).
+    let (cx, cy): (u16, u16) = (10, 10);
+    let alone_glyph = g_alone.get(cx + 8, cy).unwrap().glyph;
+    let crowded_glyph = g_crowded.get(cx + 8, cy).unwrap().glyph;
+    assert_eq!(
+        alone_glyph, crowded_glyph,
+        "a goblin's own glyph must not change because giant elk and gnoll also share the chart"
+    );
+    assert_eq!(alone_glyph, Some('g'));
 }

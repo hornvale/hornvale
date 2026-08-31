@@ -1,0 +1,117 @@
+{
+  "name": "the-founding",
+  "provenance": "Authored 2026-08-30 in the brainstorm that opened The Repertory. These four are the instrument's positive control: each was run and verified to pass before the resolver existed, so the resolver's first AUTHORED is one it has actually earned.",
+  "scenes": [
+    {
+      "id": "walk-changes-the-room",
+      "title": "A body walks a compass exit and the room it senses changes",
+      "provenance": "authored",
+      "control": 80,
+      "beta": true,
+      "beats": [
+        {
+          "id": "b1",
+          "description": "the body senses a room before it moves",
+          "script": [
+            "look"
+          ],
+          "assertion": {
+            "kind": "snapshot_present",
+            "pointer": "/self/room"
+          }
+        },
+        {
+          "id": "b2",
+          "description": "after walking east, the room is a different room",
+          "script": [
+            "go e"
+          ],
+          "assertion": {
+            "kind": "snapshot_changes",
+            "pointer": "/self/room"
+          }
+        }
+      ],
+      "witness": {
+        "kind": "pin",
+        "seed": 42,
+        "target": "most-populous-settlement"
+      }
+    },
+    {
+      "id": "waiting-moves-the-day",
+      "title": "A body waits and the day above it moves",
+      "provenance": "authored",
+      "control": 80,
+      "beta": true,
+      "beats": [
+        {
+          "id": "b1",
+          "description": "waiting a day advances the world's clock",
+          "script": [
+            "wait 1"
+          ],
+          "assertion": {
+            "kind": "snapshot_changes",
+            "pointer": "/day"
+          }
+        }
+      ],
+      "witness": {
+        "kind": "pin",
+        "seed": 42,
+        "target": "most-populous-settlement"
+      }
+    },
+    {
+      "id": "waiting-does-not-move-the-body",
+      "title": "A body waits and does not thereby travel",
+      "provenance": "authored; a negative-space scene (spec section 7) -- it asserts what must NOT happen",
+      "control": 80,
+      "beta": true,
+      "beats": [
+        {
+          "id": "b1",
+          "description": "time passes and the body stays where it stood",
+          "script": [
+            "wait 1"
+          ],
+          "assertion": {
+            "kind": "snapshot_unchanged",
+            "pointer": "/self/room"
+          }
+        }
+      ],
+      "witness": {
+        "kind": "pin",
+        "seed": 42,
+        "target": "most-populous-settlement"
+      }
+    },
+    {
+      "id": "co-location-is-observable",
+      "title": "A body can tell that it shares its room with someone",
+      "provenance": "authored",
+      "control": 80,
+      "beta": true,
+      "beats": [
+        {
+          "id": "b1",
+          "description": "a co-located creature is named to the possessing will",
+          "script": [
+            "look"
+          ],
+          "assertion": {
+            "kind": "snapshot_present",
+            "pointer": "/social/0/label"
+          }
+        }
+      ],
+      "witness": {
+        "kind": "pin",
+        "seed": 42,
+        "target": "most-populous-settlement"
+      }
+    }
+  ]
+}

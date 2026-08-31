@@ -46,6 +46,33 @@
 //! not separate settlements" conclusion by a wider margin, not a flip. No
 //! metaplan or registry number cites this figure, so nothing outside this
 //! file's own doc comment needed updating.
+//!
+//! # The campaign this probe authorised has moved its own reading (The Winze, 2026-08-30)
+//!
+//! Re-run on this branch after the working mechanism landed, the top-decile
+//! occupation share reads **2.64% / 9.76% / 9.96%** against the 0.89% / 1.98%
+//! / 8.86% above. **This is expected and it is the campaign working**: The
+//! Winze founds a mining camp by scoring candidate sites on this very field,
+//! so occupations are no longer sited without reference to it, and a working's
+//! own daughters are founded near it on ground that is ore-rich for the same
+//! reason. Corroborating rather than merely plausible: the occupation totals on
+//! this branch (1212 / 656 / 914) are exactly the moves that campaign's ring
+//! scan produced from 1240 / 661 / 898, and nothing else moved them.
+//!
+//! **What this does to the probe's own verdict, stated precisely.** The STOP
+//! verdict was about a world with *no* ore-directed siting, and it stands as a
+//! historical finding about that world — it is the reason the founding design
+//! exists. It is no longer a live description of this tree: settlements are now
+//! at the indifferent-siting base rate in the top decile rather than under it,
+//! on two of three seeds. The assertions below still hold (the guard is 0.20,
+//! and 9.96% is the largest reading), and if a later change pushes the share
+//! past 20% they will redden — which is the right behaviour, because at that
+//! point ore-directed siting would have stopped being a minority mechanism.
+//!
+//! **Not isolated, and the honest limit on the attribution:** nothing here
+//! splits the top-decile occupations by function, so "mines and their
+//! descendants" is inference from the totals rather than measurement. A
+//! per-function breakdown of that decile is the reading that would settle it.
 #![allow(clippy::disallowed_methods)]
 
 use hornvale_astronomy::SkyPins;
@@ -172,12 +199,19 @@ fn ore_separation_probe() {
         //   (b) the top decile is not over-represented among occupations: if
         //       siting were indifferent to prospectivity, ~10% of occupations
         //       would fall in land's own top decile by chance; measured share
-        //       is 0.89% / 1.98% / 8.86% across the panel (re-measured against
+        //       was 0.89% / 1.98% / 8.86% across the panel (re-measured against
         //       `main` at `7576eca00`, The Sources Task 1, 2026-08-26; the
         //       figure moved from the branch's 0.48% / 2.75% / 11.81%, but the
-        //       verdict is unaffected — every seed now sits *below* the ~10%
+        //       verdict was unaffected — every seed sat *below* the ~10%
         //       base rate, which is the same conclusion by a wider margin) —
         //       at or below that base rate on every seed, never above it.
+        //
+        //       **PAST TENSE SINCE The Winze (2026-08-30):** on this tree the
+        //       share reads 2.64% / 9.76% / 9.96%, because a working is now
+        //       founded by scoring THIS field. The under-representation the
+        //       verdict rests on is a fact about a world with no ore-directed
+        //       siting; see the module doc's dated section. The assertions
+        //       below are guards at 0.20, not restatements of these figures.
         //
         // Landed branch: "occupied-vertex prospectivity is indistinguishable
         // from land overall" -> ore does not separate settlements. Per the

@@ -11,6 +11,8 @@
 
 #[path = "suite/accession.rs"]
 mod accession;
+#[path = "suite/anchor_thing_correspondence.rs"]
+mod anchor_thing_correspondence;
 #[path = "suite/architecture.rs"]
 mod architecture;
 #[path = "suite/attest.rs"]
@@ -70,6 +72,8 @@ mod no_entity_id_values_in_prose;
 mod prose_is_not_a_contract;
 #[path = "suite/release_determinism.rs"]
 mod release_determinism;
+#[path = "suite/repertory_corpus.rs"]
+mod repertory_corpus;
 #[path = "suite/repose_byte_identity.rs"]
 mod repose_byte_identity;
 #[path = "suite/retired_gate_signposts.rs"]

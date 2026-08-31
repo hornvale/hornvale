@@ -1,6 +1,6 @@
 # 0367. The latch is monotone — a passage opens and never re-closes
 
-**Status:** Accepted (2026-08-28) · **Decider:** Nathan (autopilot; ruled at
+**Status:** Superseded by [0396](0396-a-passage-is-a-thing-and-openness-is-its-fold.md) (2026-08-29) · **Decider:** Nathan (autopilot; ruled at
 the spec stop, and the campaign is named for it) · **Relates:**
 [0366](0366-passage-state-is-derived-never-stored.md) (the fold this
 constrains) ·

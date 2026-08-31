@@ -48,7 +48,7 @@ use hornvale_game::plate::{self, Window};
 use hornvale_game::tiles::{TILE_EDGE, TileCache};
 use hornvale_kernel::{Geosphere, NearestVertexIndex, Seed};
 use hornvale_terrain::{GeneratedTerrain, TerrainPins};
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 /// Runs per measured quantity, unless `--runs` says otherwise — matches
 /// `repossess_cost.rs`'s five.
@@ -150,7 +150,8 @@ fn main() {
         ..win
     };
 
-    let empty = BTreeSet::new();
+    let empty: BTreeSet<hornvale_kernel::Vertex> = BTreeSet::new();
+    let empty_settlements: BTreeMap<hornvale_kernel::Vertex, u64> = BTreeMap::new();
     let undiscovered = hornvale_game::discovery::Discovered::default();
 
     let mut draws = Vec::new();
@@ -166,8 +167,10 @@ fn main() {
             w,
             h,
             false,
+            &empty_settlements,
             &empty,
             &empty,
+            &[],
             &undiscovered,
         );
         draws.push(t0.elapsed().as_secs_f64() * 1000.0);
@@ -195,8 +198,10 @@ fn main() {
             w,
             h,
             false,
+            &empty_settlements,
             &empty,
             &empty,
+            &[],
             &undiscovered,
         );
         draws_aligned.push(t0.elapsed().as_secs_f64() * 1000.0);
@@ -306,15 +311,26 @@ fn main() {
             &f,
             &aligned,
             false,
-            &empty,
+            &empty_settlements,
             &caves,
+            &empty,
+            &[],
             &undiscovered,
         );
         feature_none.push(t0.elapsed().as_secs_f64() * 1000.0);
         #[allow(clippy::disallowed_types)] // benchmark harness
         let t1 = Instant::now();
         plate::draw_feature_layer(
-            &mut base, &geo, &f, &aligned, false, &empty, &caves, &all_found,
+            &mut base,
+            &geo,
+            &f,
+            &aligned,
+            false,
+            &empty_settlements,
+            &caves,
+            &empty,
+            &[],
+            &all_found,
         );
         feature_all.push(t1.elapsed().as_secs_f64() * 1000.0);
     }

@@ -177,6 +177,7 @@ fn cause_label(c: CauseOfEnd) -> &'static str {
         CauseOfEnd::Plague => "plague",
         CauseOfEnd::Fled => "fled",
         CauseOfEnd::Migrated => "migrated",
+        CauseOfEnd::Breached => "breached",
     }
 }
 
@@ -330,6 +331,34 @@ pub fn emit_history(world: &mut World, h: &History) -> Result<(), BuildError> {
             Value::Text(notability_label(record.core.notability).to_string()),
             day,
         )?;
+        // THE WORKING (The Winze, spec §4.2). Committed only where there IS
+        // one, for the same reason `occ-ended` and `occ-cause` are conditional
+        // above: an absent fact is "no claim", while a committed `0.0` would
+        // assert a working that is nought metres deep on every farm in the
+        // world — 1,239 of seed 42's 1,240 occupations. The decoder's
+        // `unwrap_or(0.0)` is the other half of that reading.
+        //
+        // **Stamped at the END day, like `occ-cause` and for the same
+        // reason.** The depth is an integral over the whole tenure, so it only
+        // became true as the occupation closed; an as-of-day-N query must not
+        // see a dead delving already at its final depth on the day it was
+        // founded.
+        //
+        // A STILL-ALIVE delving falls through `end_day`'s `unwrap_or` to its
+        // founding day, and that stamp IS early — it says a living working
+        // was already this deep when it was sunk. Recorded rather than fixed:
+        // the honest day would be the bake's `now`, which this function does
+        // not receive (`emit_history` takes only the `History`), and a living
+        // delving's depth is still moving anyway, so no single day is true of
+        // it. Every consumer this campaign writes reads the value, not the
+        // stamp.
+        if record.core.delve_depth_m > 0.0 {
+            commit_on(
+                hornvale_history::OCC_DELVE_DEPTH,
+                Value::Number(record.core.delve_depth_m),
+                end_day,
+            )?;
+        }
 
         if record.core.is_alive() {
             commit_on(hornvale_settlement::IS_SETTLEMENT, Value::Flag(true), day)?;
@@ -589,6 +618,11 @@ fn reconstruct_occupation(world: &World, entity: EntityId) -> Option<OccupationR
             .ledger
             .text_of(entity, hornvale_history::OCC_NOTABILITY)?,
     )?;
+    // ABSENT MEANS NEVER DUG, not "missing" — the emitter commits
+    // `occ-delve-depth` only for an occupation that actually drove a working
+    // (The Winze, spec §4.2), so this is a defaulting read and never a
+    // `?`-return the way the load-bearing facts above are.
+    let delve_depth_m = occ_number(world, entity, hornvale_history::OCC_DELVE_DEPTH).unwrap_or(0.0);
     let ended_by = match world
         .ledger
         .value_of(entity, hornvale_history::OCC_ENDED_BY)
@@ -618,6 +652,7 @@ fn reconstruct_occupation(world: &World, entity: EntityId) -> Option<OccupationR
             tongue: None,
             cause,
             notability,
+            delve_depth_m,
         },
         id: entity,
         founded_from,
@@ -662,6 +697,13 @@ fn parse_cause(label: &str) -> Option<CauseOfEnd> {
         "plague" => CauseOfEnd::Plague,
         "fled" => CauseOfEnd::Fled,
         "migrated" => CauseOfEnd::Migrated,
+        // The Winze, spec §4.3. **This half of the codec is not enumerated
+        // by the compiler** — it matches on a `&str` and falls through to
+        // `None` — so a variant added to `cause_label` above and forgotten
+        // here would encode fine and decode as "never ended", on every
+        // occupation that ended that way. `history_emit`'s round-trip gates
+        // are what actually hold the pair together.
+        "breached" => CauseOfEnd::Breached,
         _ => return None,
     })
 }

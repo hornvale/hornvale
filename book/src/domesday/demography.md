@@ -14,17 +14,17 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 1 | 15 | 175 | 3070 | 183.542 |
+| 0 | 1 | 20 | 176 | 3144 | 186.771 |
 
 ### `goblin-flagship-population`
 
 The goblin flagship settlement's committed population; Absent if goblins placed no settlement
 
-n = 999 present, 1 absent (of 1000 worlds)
+n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 3 | 35 | 40 | 41 | 43 | 34.957958 |
+| 2 | 34 | 40 | 41 | 43 | 34.913 |
 
 ### `kobold-flagship-population`
 
@@ -34,7 +34,7 @@ n = 980 present, 20 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 2 | 28 | 45 | 56 | 70 | 41.402041 |
+| 2 | 29 | 45 | 56 | 70 | 41.491837 |
 
 ### `mean-population`
 
@@ -44,7 +44,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 6.1011236 | 23.434783 | 29.048458 | 31.701422 | 43.618644 | 27.084593 |
+| 6.3063584 | 23.536481 | 28.830471 | 31.558313 | 42.120968 | 26.89191 |
 
 ### `peoples-alive-at-bake-end`
 
@@ -54,7 +54,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 7 | 15 | 15 | 15 | 15 | 14.907 |
+| 8 | 15 | 15 | 15 | 15 | 14.905 |
 
 ### `peoples-placed`
 
@@ -64,7 +64,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 7 | 15 | 15 | 15 | 15 | 14.907 |
+| 8 | 15 | 15 | 15 | 15 | 14.905 |
 
 ### `total-population`
 
@@ -74,7 +74,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 477 | 5119 | 7804 | 9996 | 19208 | 7584.354 |
+| 445 | 4883 | 7490 | 9753 | 18757 | 7383.817 |
 
 ## Weaknesses found here
 
@@ -84,16 +84,16 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `peoples-alive-at-bake-end`
 
-- **D3**: p25..p75 spans 0 (0.00% of the 8 min..max range), under the 5% bar
-- **D4**: median 15 equals the max (7 .. 15)
+- **D3**: p25..p75 spans 0 (0.00% of the 7 min..max range), under the 5% bar
+- **D4**: median 15 equals the max (8 .. 15)
 
 ### `peoples-placed`
 
-- **D3**: p25..p75 spans 0 (0.00% of the 8 min..max range), under the 5% bar
-- **D4**: median 15 equals the max (7 .. 15)
+- **D3**: p25..p75 spans 0 (0.00% of the 7 min..max range), under the 5% bar
+- **D4**: median 15 equals the max (8 .. 15)
 
 ### `total-population`
 
-- **D5 strength**: declared strong tracking fertile-land-fraction, but observed r = +0.270 (1000 pairs) is weak (positive)
-- **D5 strength**: declared strong tracking habitable-fraction, but observed r = +0.260 (1000 pairs) is weak (positive)
+- **D5 strength**: declared strong tracking fertile-land-fraction, but observed r = +0.244 (1000 pairs) is weak (positive)
+- **D5 strength**: declared strong tracking habitable-fraction, but observed r = +0.232 (1000 pairs) is weak (positive)
 

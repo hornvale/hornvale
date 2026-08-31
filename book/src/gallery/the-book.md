@@ -1469,9 +1469,9 @@ The Ṅuṅa's own priesthood taught wrongly, and could be shown wrong by any wh
 *In truth, the Ṅuṅa's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
 *In truth, the darkenings of the first hundred years number 81.*
 
-## Volume 3: Dodoa
+## Volume 3: Zozea
 
-Dodoa is a planet with one moon, orbiting an orange dwarf (K); its day lasts about 0.7 standard days.
+Zozea is a planet with one moon, orbiting an orange dwarf (K); its day lasts about 0.7 standard days.
 The Dokdoo are bugbears.
 The Bafak are desert dwarfs.
 The Rupre are desert elfs.
@@ -1491,35 +1491,35 @@ The Rutre are wood elfs.
 ### Tongues
 
 Dokdoo Doodooqdoo. (in the bugbear tongue: "The Dokdoo are bugbears.")
-Dodoa Doododoa. (in the bugbear tongue: "Dodoa is the earth.")
+Zozea Doododoa. (in the bugbear tongue: "Zozea is the earth.")
 Bafak Boobwoak Kazaf. (in the desert-dwarf tongue: "The Bafak are desert dwarfs.")
-Dodoa Boobwoak Vavaz. (in the desert-dwarf tongue: "Dodoa is the earth.")
+Zozea Boobwoak Vavaz. (in the desert-dwarf tongue: "Zozea is the earth.")
 Rupre Truu Ra Ruupra Ra. (in the desert-elf tongue: "The Rupre are desert elfs.")
-Dodoa Truu Ra Rapre Ra. (in the desert-elf tongue: "Dodoa is the earth.")
+Zozea Truu Ra Rapre Ra. (in the desert-elf tongue: "Zozea is the earth.")
 Šrobro Šroosro Sra. (in the drow tongue: "The Šrobro are drows.")
-Dodoa Brabro Sra. (in the drow tongue: "Dodoa is the earth.")
+Zozea Brabro Sra. (in the drow tongue: "Zozea is the earth.")
 Plawplaw Plownowplaol Noow. (in the gnoll tongue: "The Plawplaw are gnolls.")
-Dodoa Plaalmoaw Noow. (in the gnoll tongue: "Dodoa is the earth.")
+Zozea Plaalmoaw Noow. (in the gnoll tongue: "Zozea is the earth.")
 Rekroeg Roreg Reg. (in the goblin tongue: "The Rekroeg are goblins.")
-Dodoa Rorea Reg. (in the goblin tongue: "Dodoa is the earth.")
+Zozea Rorea Reg. (in the goblin tongue: "Zozea is the earth.")
 Gapag Badag Xreog. (in the gully-dwarf tongue: "The Gapag are gully dwarfs.")
-Dodoa Babad Xreog. (in the gully-dwarf tongue: "Dodoa is the earth.")
+Zozea Babad Xreog. (in the gully-dwarf tongue: "Zozea is the earth.")
 Šzopze Tjo Tza Pzoa Zza. (in the high-elf tongue: "The Šzopze are high elfs.")
-Dodoa Tjo Tza Gzapze Tzaa. (in the high-elf tongue: "Dodoa is the earth.")
+Zozea Tjo Tza Gzapze Tzaa. (in the high-elf tongue: "Zozea is the earth.")
 Gapap Gapad Shoab. (in the hill-dwarf tongue: "The Gapap are hill dwarfs.")
-Dodoa Babaz Shoab. (in the hill-dwarf tongue: "Dodoa is the earth.")
+Zozea Babaz Shoab. (in the hill-dwarf tongue: "Zozea is the earth.")
 Zekzoe Qloo Zeozazo. (in the hobgoblin tongue: "The Zekzoe are hobgoblins.")
-Dodoa Qloo Zoezozea. (in the hobgoblin tongue: "Dodoa is the earth.")
+Zozea Qloo Zoezozea. (in the hobgoblin tongue: "Zozea is the earth.")
 Vaar Tar Soor. (in the human tongue: "The Vaar are humans.")
-Dodoa Shoer Soor. (in the human tongue: "Dodoa is the earth.")
+Zozea Shoer Soor. (in the human tongue: "Zozea is the earth.")
 Dzhaojxo Jojaajqzo. (in the kobold tongue: "The Dzhaojxo are kobolds.")
-Dodoa Xoajo. (in the kobold tongue: "Dodoa is the earth.")
+Zozea Xoajo. (in the kobold tongue: "Zozea is the earth.")
 Gzeoszasza Zza Szubze. (in the sea-elf tongue: "The Szubze are sea elfs.")
-Gzabzesza Tzaa Dodoa. (in the sea-elf tongue: "Dodoa is the earth.")
+Gzabzesza Tzaa Zozea. (in the sea-elf tongue: "Zozea is the earth.")
 Šropro Prookro Vroa Zra. (in the snow-elf tongue: "The Šropro are snow elfs.")
-Dodoa Grapro Vroa Zra. (in the snow-elf tongue: "Dodoa is the earth.")
+Zozea Grapro Vroa Zra. (in the snow-elf tongue: "Zozea is the earth.")
 Rutre Ruu. (in the wood-elf tongue: "The Rutre are wood elfs.")
-Dodoa Ratre. (in the wood-elf tongue: "Dodoa is the earth.")
+Zozea Ratre. (in the wood-elf tongue: "Zozea is the earth.")
 
 bugbear: gap — planet (no entry in this lexicon)
 desert-dwarf: gap — planet (no entry in this lexicon)
@@ -1556,15 +1556,15 @@ The Dzhaojxo are kobolds — rivals.
 The Szubze are sea elfs — rivals.
 The Šropro are snow elfs — rivals.
 The Rutre are wood elfs — rivals.
-Dodoa is the earth with one moon.
+Zozea is the earth with one moon.
 The moon crosses because Do walks the sky, slowly.
 The day returns to keep the balance.
 
-*In truth, Dodoa is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
+*In truth, Zozea is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
 ##### As the priesthood of the Dokdoo teach it
 
-Dodoa Doododoa. ("Dodoa is the earth — as it is taught.")
+Zozea Doododoa. ("Zozea is the earth — as it is taught.")
 
 The Dokdoo are bugbears — ourselves.
 The Bafak are desert dwarfs — rivals.
@@ -1581,17 +1581,17 @@ The Dzhaojxo are kobolds — rivals.
 The Szubze are sea elfs — rivals.
 The Šropro are snow elfs — rivals.
 The Rutre are wood elfs — rivals.
-Dodoa is the earth with one moon.
+Zozea is the earth with one moon.
 The moon crosses because it answers Do.
 The day returns to keep the balance.
 
 — though the folk say The moon crosses because Do walks the sky, slowly.
 
-*In truth, Dodoa is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
+*In truth, Zozea is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
 #### As the Bafak tell it
 
-Dodoa is the earth with one moon.
+Zozea is the earth with one moon.
 The moon crosses because it answers Faza.
 The day returns because Faza rows the sky, briskly.
 The Dokdoo are bugbears — neighbors.
@@ -1610,11 +1610,11 @@ The Szubze are sea elfs — neighbors.
 The Šropro are snow elfs — neighbors.
 The Rutre are wood elfs — neighbors.
 
-*In truth, Dodoa is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
+*In truth, Zozea is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
 #### As the Rupre tell it
 
-Dodoa is the earth with one moon.
+Zozea is the earth with one moon.
 The moon crosses because Ruepru rows the sky, slowly.
 The day returns because Rue rows the sky, briskly.
 The Dokdoo are bugbears — neighbors.
@@ -1633,7 +1633,7 @@ The Szubze are sea elfs — neighbors.
 The Šropro are snow elfs — neighbors.
 The Rutre are wood elfs — neighbors.
 
-*In truth, Dodoa is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
+*In truth, Zozea is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
 #### As the Šrobro tell it
 
@@ -1652,14 +1652,14 @@ The Dzhaojxo are kobolds — rivals.
 The Szubze are sea elfs — rivals.
 The Šropro are snow elfs — rivals.
 The Rutre are wood elfs — rivals.
-Dodoa is the earth with one moon.
+Zozea is the earth with one moon.
 The moon crosses because Troobro walks the sky, slowly.
 
-*In truth, Dodoa is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
+*In truth, Zozea is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
 ##### As the priesthood of the Šrobro teach it
 
-Dodoa Brabro Sro. ("Dodoa is the earth — as it is taught.")
+Zozea Brabro Sro. ("Zozea is the earth — as it is taught.")
 
 The Dokdoo are bugbears — rivals.
 The Bafak are desert dwarfs — rivals.
@@ -1676,10 +1676,10 @@ The Dzhaojxo are kobolds — rivals.
 The Szubze are sea elfs — rivals.
 The Šropro are snow elfs — rivals.
 The Rutre are wood elfs — rivals.
-Dodoa is the earth with one moon.
+Zozea is the earth with one moon.
 The moon crosses because Troobro walks the sky, slowly.
 
-*In truth, Dodoa is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
+*In truth, Zozea is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
 #### As the Plawplaw tell it
 
@@ -1698,11 +1698,11 @@ The Dzhaojxo are kobolds — neighbors.
 The Szubze are sea elfs — neighbors.
 The Šropro are snow elfs — neighbors.
 The Rutre are wood elfs — neighbors.
-Dodoa is the earth with one moon.
+Zozea is the earth with one moon.
 The moon crosses because Moolnaw steers the sky, slowly.
 The day returns because the sky must be crossed.
 
-*In truth, Dodoa is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
+*In truth, Zozea is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
 #### As the Rekroeg tell it
 
@@ -1721,14 +1721,14 @@ The Dzhaojxo are kobolds — neighbors.
 The Szubze are sea elfs — neighbors.
 The Šropro are snow elfs — neighbors.
 The Rutre are wood elfs — neighbors.
-Dodoa is the earth.
+Zozea is the earth.
 The day returns to keep the balance.
 
-*In truth, Dodoa is a planet with one moon, orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
+*In truth, Zozea is a planet with one moon, orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
 ##### As the priesthood of the Rekroeg teach it
 
-Dodoa Rorea Ro. ("Dodoa is the earth — as it is taught.")
+Zozea Rorea Ro. ("Zozea is the earth — as it is taught.")
 
 The Dokdoo are bugbears — neighbors.
 The Bafak are desert dwarfs — neighbors.
@@ -1745,12 +1745,12 @@ The Dzhaojxo are kobolds — neighbors.
 The Szubze are sea elfs — neighbors.
 The Šropro are snow elfs — neighbors.
 The Rutre are wood elfs — neighbors.
-Dodoa is the earth.
+Zozea is the earth.
 The moon is counted and known to the priesthood.
 The moon crosses because Xnazha walks the sky, slowly.
 The day returns to keep the balance.
 
-*In truth, Dodoa is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
+*In truth, Zozea is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
 #### As the Gapag tell it
 
@@ -1769,14 +1769,14 @@ The Dzhaojxo are kobolds — neighbors.
 The Szubze are sea elfs — neighbors.
 The Šropro are snow elfs — neighbors.
 The Rutre are wood elfs — neighbors.
-Dodoa is the earth.
+Zozea is the earth.
 The day returns, as all things return.
 
-*In truth, Dodoa is a planet with one moon, orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
+*In truth, Zozea is a planet with one moon, orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
 ##### As the priesthood of the Gapag teach it
 
-Dodoa Babad Xreog. ("Dodoa is the earth — as it is taught.")
+Zozea Babad Xreog. ("Zozea is the earth — as it is taught.")
 
 The Dokdoo are bugbears — neighbors.
 The Bafak are desert dwarfs — neighbors.
@@ -1793,16 +1793,16 @@ The Dzhaojxo are kobolds — neighbors.
 The Szubze are sea elfs — neighbors.
 The Šropro are snow elfs — neighbors.
 The Rutre are wood elfs — neighbors.
-Dodoa is the earth.
+Zozea is the earth.
 The moon is counted and known to the priesthood.
 The moon crosses because Padas walks the sky, slowly.
 The day returns because the sky must be crossed.
 
-*In truth, Dodoa is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
+*In truth, Zozea is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
 #### As the Šzopze tell it
 
-Dodoa is the earth with one moon.
+Zozea is the earth with one moon.
 The moon crosses because Tzoebzoa walks the sky, slowly.
 The day returns, as all things return.
 The Dokdoo are bugbears — neighbors.
@@ -1821,13 +1821,13 @@ The Szubze are sea elfs — neighbors.
 The Šropro are snow elfs — neighbors.
 The Rutre are wood elfs — neighbors.
 
-*In truth, Dodoa is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
+*In truth, Zozea is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
 ##### As the priesthood of the Šzopze teach it
 
-Dodoa Tjo Tzo Gzapze Tzaa. ("Dodoa is the earth — as it is taught.")
+Zozea Tjo Tzo Gzapze Tzaa. ("Zozea is the earth — as it is taught.")
 
-Dodoa is the earth with one moon.
+Zozea is the earth with one moon.
 The moon crosses because Tzoebzoa walks the sky, slowly.
 The day returns because Tzoebzoa walks the sky, briskly.
 The Dokdoo are bugbears — neighbors.
@@ -1846,7 +1846,7 @@ The Szubze are sea elfs — neighbors.
 The Šropro are snow elfs — neighbors.
 The Rutre are wood elfs — neighbors.
 
-*In truth, Dodoa is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
+*In truth, Zozea is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
 #### As the Gapap tell it
 
@@ -1865,14 +1865,14 @@ The Dzhaojxo are kobolds — neighbors.
 The Szubze are sea elfs — neighbors.
 The Šropro are snow elfs — neighbors.
 The Rutre are wood elfs — neighbors.
-Dodoa is the earth.
+Zozea is the earth.
 The day returns because Dabab strides the sky, briskly.
 
-*In truth, Dodoa is a planet with one moon, orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
+*In truth, Zozea is a planet with one moon, orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
 ##### As the priesthood of the Gapap teach it
 
-Dodoa Babaz Shoab. ("Dodoa is the earth — as it is taught.")
+Zozea Babaz Shoab. ("Zozea is the earth — as it is taught.")
 
 The Dokdoo are bugbears — neighbors.
 The Bafak are desert dwarfs — neighbors.
@@ -1889,12 +1889,12 @@ The Dzhaojxo are kobolds — neighbors.
 The Szubze are sea elfs — neighbors.
 The Šropro are snow elfs — neighbors.
 The Rutre are wood elfs — neighbors.
-Dodoa is the earth.
+Zozea is the earth.
 The moon is counted and known to the priesthood.
 The moon crosses because Zadzhatvat strides the sky, slowly.
 The day returns because Dabab strides the sky, briskly.
 
-*In truth, Dodoa is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
+*In truth, Zozea is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
 #### As the Zekzoe tell it
 
@@ -1913,14 +1913,14 @@ The Dzhaojxo are kobolds — rivals.
 The Szubze are sea elfs — rivals.
 The Šropro are snow elfs — rivals.
 The Rutre are wood elfs — rivals.
-Dodoa is the earth.
+Zozea is the earth.
 The day returns because the sky must be crossed.
 
-*In truth, Dodoa is a planet with one moon, orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
+*In truth, Zozea is a planet with one moon, orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
 ##### As the priesthood of the Zekzoe teach it
 
-Dodoa Qloo Zoezozea. ("Dodoa is the earth — as it is taught.")
+Zozea Qloo Zoezozea. ("Zozea is the earth — as it is taught.")
 
 The Dokdoo are bugbears — rivals.
 The Bafak are desert dwarfs — rivals.
@@ -1937,16 +1937,16 @@ The Dzhaojxo are kobolds — rivals.
 The Szubze are sea elfs — rivals.
 The Šropro are snow elfs — rivals.
 The Rutre are wood elfs — rivals.
-Dodoa is the earth.
+Zozea is the earth.
 The moon is counted and known to the priesthood.
 The moon crosses because Zhloozhlo strides the sky, slowly.
 The day returns to keep the balance.
 
-*In truth, Dodoa is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
+*In truth, Zozea is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
 #### As the Vaar tell it
 
-Dodoa is the earth.
+Zozea is the earth.
 The day returns because the sky must be crossed.
 The Dokdoo are bugbears — neighbors.
 The Bafak are desert dwarfs — neighbors.
@@ -1964,13 +1964,13 @@ The Szubze are sea elfs — neighbors.
 The Šropro are snow elfs — neighbors.
 The Rutre are wood elfs — neighbors.
 
-*In truth, Dodoa is a planet with one moon, orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
+*In truth, Zozea is a planet with one moon, orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
 ##### As the priesthood of the Vaar teach it
 
-Dodoa Shoer Soar. ("Dodoa is the earth — as it is taught.")
+Zozea Shoer Soar. ("Zozea is the earth — as it is taught.")
 
-Dodoa is the earth.
+Zozea is the earth.
 The moon is counted and known to the priesthood.
 The moon crosses because Faorbsarver walks the sky, slowly.
 The day returns because Vorqser strides the sky, briskly.
@@ -1990,11 +1990,11 @@ The Szubze are sea elfs — neighbors.
 The Šropro are snow elfs — neighbors.
 The Rutre are wood elfs — neighbors.
 
-*In truth, Dodoa is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
+*In truth, Zozea is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
 #### As the Dzhaojxo tell it
 
-Dodoa is the earth with one moon.
+Zozea is the earth with one moon.
 The moon crosses because it answers Jaa.
 The day returns to keep the balance.
 The Dokdoo are bugbears — rivals.
@@ -2013,13 +2013,13 @@ The Szubze are sea elfs — rivals.
 The Šropro are snow elfs — rivals.
 The Rutre are wood elfs — rivals.
 
-*In truth, Dodoa is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
+*In truth, Zozea is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
 ##### As the priesthood of the Dzhaojxo teach it
 
-Dodoa Xoajo. ("Dodoa is the earth — as it is taught.")
+Zozea Xoajo. ("Zozea is the earth — as it is taught.")
 
-Dodoa is the earth with one moon.
+Zozea is the earth with one moon.
 The moon crosses because it answers Jaa.
 The day returns because the sky must be crossed.
 The Dokdoo are bugbears — rivals.
@@ -2038,11 +2038,11 @@ The Szubze are sea elfs — rivals.
 The Šropro are snow elfs — rivals.
 The Rutre are wood elfs — rivals.
 
-*In truth, Dodoa is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
+*In truth, Zozea is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
 #### As the Szubze tell it
 
-Dodoa is the earth with one moon.
+Zozea is the earth with one moon.
 The moon crosses because Tzuebzua rows the sky, slowly.
 The day returns because the sky must be crossed.
 The Dokdoo are bugbears — neighbors.
@@ -2061,7 +2061,7 @@ The Szubze are sea elfs — ourselves.
 The Šropro are snow elfs — neighbors.
 The Rutre are wood elfs — neighbors.
 
-*In truth, Dodoa is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
+*In truth, Zozea is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
 #### As the Šropro tell it
 
@@ -2080,11 +2080,11 @@ The Dzhaojxo are kobolds — neighbors.
 The Szubze are sea elfs — neighbors.
 The Šropro are snow elfs — ourselves.
 The Rutre are wood elfs — neighbors.
-Dodoa is the earth with one moon.
+Zozea is the earth with one moon.
 The moon crosses because it is Proobro's kin.
 The day returns because the sky must be crossed.
 
-*In truth, Dodoa is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
+*In truth, Zozea is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
 #### As the Rutre tell it
 
@@ -2103,14 +2103,14 @@ The Dzhaojxo are kobolds — neighbors.
 The Szubze are sea elfs — neighbors.
 The Šropro are snow elfs — neighbors.
 The Rutre are wood elfs — ourselves.
-Dodoa is the earth.
+Zozea is the earth.
 The day returns because the sky must be crossed.
 
-*In truth, Dodoa is a planet with one moon, orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
+*In truth, Zozea is a planet with one moon, orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
 ##### As the priesthood of the Rutre teach it
 
-Dodoa Ratre. ("Dodoa is the earth — as it is taught.")
+Zozea Ratre. ("Zozea is the earth — as it is taught.")
 
 The Dokdoo are bugbears — neighbors.
 The Bafak are desert dwarfs — neighbors.
@@ -2127,12 +2127,12 @@ The Dzhaojxo are kobolds — neighbors.
 The Szubze are sea elfs — neighbors.
 The Šropro are snow elfs — neighbors.
 The Rutre are wood elfs — ourselves.
-Dodoa is the earth.
+Zozea is the earth.
 The moon is counted and known to the priesthood.
 The moon crosses because it answers Ruedroa.
 The day returns, as all things return.
 
-*In truth, Dodoa is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
+*In truth, Zozea is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
 ### The Reckoning of Years
 

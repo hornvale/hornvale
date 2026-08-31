@@ -1,0 +1,267 @@
+//! The glyph register: every character the client may draw, and what it
+//! means. ONE table, because the alternative is what shipped before The
+//! Legend — each pane allocating privately, and `.`, `+` and `#` each
+//! meaning two or three different things with nothing to notice.
+//!
+//! The allocation rule (spec §2): a glyph carries ORDER (ink ascends with
+//! the quantity) or IDENTITY (the character is the referent's initial),
+//! never an arbitrary category. Colour carries category and MAY FAIL, so
+//! nothing a reader must trust lives only there.
+
+/// Which population of referents a glyph belongs to. A character belongs to
+/// exactly one, which is what makes double-binding detectable.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Population {
+    /// The possession's own cell. (lexicon: a terminal grid cell, an area, same sense as this crate's own cell module — never a mesh vertex.)
+    Observer,
+    /// Walk-band impedance: how hard this ground is to cross.
+    Relief,
+    /// Globe-scale elevation: how high this ground stands.
+    Elevation,
+    /// Surface water, by kind.
+    Water,
+    /// Built structure — wall, threshold.
+    Structure,
+    /// A living thing, drawn as its noun's initial.
+    Creature,
+    /// A point site on the world map: a discovered settlement or cave
+    /// mouth, or a landform (Task 7 widens this from "settlement, cave
+    /// mouth" — a volcano or waterfall is the same kind of referent, a
+    /// fixed point worth marking, whether or not it happens to be
+    /// discovery-gated). A river delta was a third landform here briefly
+    /// and was removed in fix round 1 — see [`REGISTER`]'s own doc on the
+    /// `:` collision that forced it out.
+    PointSite,
+    /// Interface furniture that is not part of the world.
+    Chrome,
+    /// A furnishing anchor within a chamber — a hearth, a bed, an alcove,
+    /// and so on (`windows/vessel/src/interior/anchor.rs::AnchorKind`).
+    /// One glyph covers every kind (fix round 1, The Legend Task 10): see
+    /// [`REGISTER`]'s own furnishing row for why a glyph per kind was
+    /// rejected. Do not read a future furnishing kind as license to add a
+    /// second row here — the whole point of this population is that it
+    /// stays at one.
+    Furnishing,
+    /// RESERVED for Delving campaign 2. Deliberately unpopulated.
+    Subterranean,
+}
+
+/// One character's single meaning.
+#[derive(Debug)]
+pub struct Binding {
+    /// The character drawn.
+    pub glyph: char,
+    /// The population it belongs to.
+    pub population: Population,
+    /// What it means — for the legend, and for the double-binding panic.
+    pub means: &'static str,
+}
+
+/// Every character the client may draw. Adding a row is how a campaign
+/// claims a mark; the guard in `tests/register.rs` refuses a second claim on
+/// a character already spoken for.
+///
+/// `Creature` is NOT enumerated: a creature draws its noun's initial, so its
+/// codespace is `a-z`/`A-Z` by RULE rather than by row. Those letters are
+/// therefore unavailable to every other population, which is exactly the
+/// constraint the rule intends.
+pub const REGISTER: &[Binding] = &[
+    Binding {
+        glyph: '@',
+        population: Population::Observer,
+        means: "you",
+    },
+    Binding {
+        glyph: '>',
+        population: Population::Chrome,
+        means: "the command prompt",
+    },
+    // The Legend, Task 6: the world map's terrain vocabulary. Water
+    // outranks elevation at a given vertex (`plate::glyph_and_color_for`),
+    // so `WaterKind::DryLand` claims no glyph of its own here — only the
+    // wet classes and the elevation ladder that shows through dry land do.
+    Binding {
+        glyph: '~',
+        population: Population::Water,
+        means: "ocean",
+    },
+    Binding {
+        glyph: '=',
+        population: Population::Water,
+        means: "salt basin",
+    },
+    Binding {
+        glyph: '"',
+        population: Population::Water,
+        means: "river",
+    },
+    // The elevation ladder (`hornvale_scene::RELIEF_LEGEND`'s six bands),
+    // drawn only where the water class is dry land. Ink ascends with the
+    // band (spec §2's allocation rule): a blank glyph is deliberate at the
+    // floor, not an omission.
+    Binding {
+        glyph: ' ',
+        population: Population::Elevation,
+        means: "abyss",
+    },
+    Binding {
+        glyph: '`',
+        population: Population::Elevation,
+        means: "shelf",
+    },
+    Binding {
+        glyph: ',',
+        population: Population::Elevation,
+        means: "lowland",
+    },
+    Binding {
+        glyph: ';',
+        population: Population::Elevation,
+        means: "upland",
+    },
+    // `means` is deliberately broad ("high or steep ground", not just
+    // "highland"): globe-scale highland and the sim's own walk-band
+    // impedance-4 mark are the same concept at two scales, and a later
+    // task porting that ladder into this register should claim this row
+    // rather than mint a second glyph for it.
+    Binding {
+        glyph: '^',
+        population: Population::Elevation,
+        means: "high or steep ground",
+    },
+    Binding {
+        glyph: '%',
+        population: Population::Elevation,
+        means: "alpine",
+    },
+    // The Legend, Task 8: the walk band's impedance ladder
+    // (`chart.rs::impedance_glyph`, ported from
+    // `windows/scene/src/surrounds_ascii.rs`). This is the "later task"
+    // the comment above `^` was written for: `^` (impedance rung 4) is
+    // NOT re-added here, its existing Elevation-population row above is
+    // shared as-is, per that comment's own instruction.
+    //
+    // `.` is claimed here too, even though `plan.rs` also draws `.` for a
+    // chamber floor — deliberately ONE row, `means` broadened the same way
+    // `^`'s was: ordinary ground at walk-scale relief-2 and an ordinary
+    // chamber floor are the same concept at two scales (spec's Ruling K).
+    // `plan.rs` does not mint its own binding for it.
+    Binding {
+        glyph: '_',
+        population: Population::Relief,
+        means: "open, easy going",
+    },
+    Binding {
+        glyph: '.',
+        population: Population::Relief,
+        means: "ordinary traversable ground",
+    },
+    Binding {
+        glyph: ':',
+        population: Population::Relief,
+        means: "moderately rough going",
+    },
+    Binding {
+        glyph: 'A',
+        population: Population::Relief,
+        means: "dense or steep going",
+    },
+    // Task 7: point sites (Nathan's own glyph assignments, `progress.md`
+    // 2026-08-30). `o`/`O` move off the letter's apparent creature-codespace
+    // collision by Ruling AG — the world map never draws a creature's noun
+    // initial (it draws the generic agent mark instead), so `o`/`O` are free
+    // here even though the register's own rule reserves `a`-`z`/`A`-`Z` for
+    // `Population::Creature` everywhere else.
+    Binding {
+        glyph: '*',
+        population: Population::PointSite,
+        means: "cave mouth",
+    },
+    Binding {
+        glyph: 'o',
+        population: Population::PointSite,
+        means: "settlement",
+    },
+    Binding {
+        glyph: 'O',
+        population: Population::PointSite,
+        means: "major settlement",
+    },
+    // Landforms (Task 7): a volcano is discovery-gated like a settlement or
+    // cave; a waterfall draws unconditionally, ground truth like the
+    // relief/water ladders above — see
+    // `hornvale_game::plate::draw_feature_layer`'s own doc for why that
+    // split is deliberate. Both are still `PointSite`s here: this table
+    // classifies WHAT a glyph refers to, not whether it happens to be
+    // gated.
+    //
+    // **A river delta was a third landform here, and fix round 1 removed
+    // it outright** rather than re-picking its glyph: `:` collided with
+    // `windows/scene/src/surrounds_ascii.rs`'s impedance band 3, and that
+    // ladder cannot move (`the_shape_matches_the_sims_own_ascii_render`
+    // pins it to the sim). Unlike `^` (globe-scale highland and walk-scale
+    // steep going are genuinely the same concept at two scales, so sharing
+    // one glyph is a merge, not a collision), a river delta and moderately
+    // rough going are unrelated referents that cannot share a binding. The
+    // campaign's own tier spike also measured that a third point-marker
+    // kind read as noise rather than invitation — dropping the least
+    // evocative of the three landforms serves the map's stated purpose,
+    // not just the collision.
+    Binding {
+        glyph: '!',
+        population: Population::PointSite,
+        means: "volcano",
+    },
+    Binding {
+        glyph: '|',
+        population: Population::PointSite,
+        means: "waterfall",
+    },
+    // Task 9: the chamber-band floor plan's structure glyphs
+    // (`plan.rs::glyph_of`), claimed here for the first time — `#` is the
+    // very glyph whose collision with the settlement marker started this
+    // campaign's whole collision thread. `.` is not re-claimed: it already
+    // has a Relief-population row above, broadened by Ruling K to cover
+    // "an ordinary chamber floor" too, and `@`/`you` is `Population::
+    // Observer` already.
+    Binding {
+        glyph: '#',
+        population: Population::Structure,
+        means: "wall",
+    },
+    Binding {
+        glyph: '+',
+        population: Population::Structure,
+        means: "threshold",
+    },
+    // The Legend, Task 10, fix round 1: `vessel/plan/v1` grew a
+    // `"furnishing"` mark kind (a hearth, a bed, an alcove, …), and Task 10's
+    // own commit shipped it all the way to the wire and never drew it — the
+    // mark reached the client and `plan.rs::draw_mark`'s `match` still only
+    // knew `"agent"`, so a furnishing fell into the settlement-style
+    // structural no-op and redrew the ordinary floor underneath it.
+    //
+    // The fix is ONE glyph for every furnishing kind, not one row per
+    // `AnchorKind` (14 variants and rising with Delving 2's own furniture).
+    // `CLIENT-glyphs-22-rejected` already settled the general shape of this
+    // question for biome glyphs: a nominal mark per kind does not
+    // self-legend, and a reader would need a permanent key just to tell a
+    // bed from an altar. Letters are unavailable here for a second reason
+    // this campaign is specific to: `Population::Creature` owns the whole
+    // `a`-`z`/`A`-`Z` codespace on the chamber-band plan (unlike the world
+    // map's `o`/`O` carve-out — Ruling AG — creature initials ARE drawn on
+    // this band), so a hearth drawn as `h` would collide with a human or
+    // hobgoblin standing in the same room. And it matches Nathan's own
+    // stated division of labour: the glyph says "something here is worth
+    // attention," `examine` (the mark's own `datum`) says what it is.
+    Binding {
+        glyph: '?',
+        population: Population::Furnishing,
+        means: "a furnishing — a hearth, a bed, and every other kind alike",
+    },
+];
+
+/// The binding for `glyph`, if the register claims it.
+pub fn binding_of(glyph: char) -> Option<&'static Binding> {
+    REGISTER.iter().find(|b| b.glyph == glyph)
+}

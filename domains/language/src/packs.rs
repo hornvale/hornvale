@@ -990,13 +990,16 @@ pub fn felt_state_pack() -> &'static [(&'static str, &'static str)] {
     ]
 }
 
-/// The five object properties an anchor may carry (`ObjectProperty`, The
+/// The eight object properties a thing-kind may carry (`ObjectProperty`, The
 /// Offer, spec §3.1/§3.3/§8/§12): what an object OFFERS, independent of any
 /// verb that reads it — `supports-rest` (a place a body may lie down and
 /// sleep), `holds-liquid` (a place a body may drink from), `affords-passage`
 /// (a seam between two rooms a body may pass through), `encloses` (an anchor
 /// that reveals what lies within it), `radiates-heat` (an anchor that emits
-/// warmth). `(concept, doc)` pairs, registered directly by
+/// warmth), and The Chattel's three (spec §3.8, each earned by a verb that
+/// campaign ships): `portable` (take/drop), `openable` (open/close),
+/// `lockable` (open, requiring a key in custody).
+/// `(concept, doc)` pairs, registered directly by
 /// [`register_concepts`] under [`hornvale_kernel::ConceptKind::Quality`]
 /// (its definition is already "an abstract property or attribute", the fit
 /// The Offer's G3 ruling names for a property a thing HAS, spec §12) —
@@ -1021,6 +1024,12 @@ pub fn object_property_pack() -> &'static [(&'static str, &'static str)] {
         ),
         ("encloses", "an anchor that reveals what lies within it"),
         ("holds-liquid", "a place a body may drink from"),
+        (
+            "lockable",
+            "a thing whose opening needs the key that matches it",
+        ),
+        ("openable", "a thing that can be opened and closed again"),
+        ("portable", "a thing small enough for a body to carry"),
         ("radiates-heat", "an anchor that emits warmth"),
         ("supports-rest", "a place a body may lie down and sleep"),
     ]

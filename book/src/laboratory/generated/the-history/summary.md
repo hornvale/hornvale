@@ -9,9 +9,9 @@ The measure-don't-narrate payoff check for history-first placement. All values a
 
 ## Seed-42 headline (built to `BuildDepth::Full`)
 
-- **migration events**: 11 at Full depth. Informational only — the per-seed firing/volume claim this line used to gate (against a floor of 5) retired to the census column `climate-displacement-events` (The Assize, 2026-08-08), because a single-seed firing gate has a ~12.5% failure rate by construction (zero on 6 of 48 worlds). This regen measures seed 42 itself as one of the zero-migration worlds, which is exactly the case the retired gate could not have survived.
-- **territories-separated**: mean pairwise region overlap 0.0195 (ceiling 0.25; raw vertex-set overlap 0.0000 is a structural 0). PASS — the four goblinoids occupy strongly distinct countries. **The diversity payoff landed.**
-- **stratigraphy-emerged**: 279/454 occupied sites re-occupied (0.6145); depth/capacity correlation -0.1776 (negative). PASS on emergence and on the *coupling*; the negative sign is the falsification finding above.
+- **migration events**: 8 at Full depth. Informational only — the per-seed firing/volume claim this line used to gate (against a floor of 5) retired to the census column `climate-displacement-events` (The Assize, 2026-08-08), because a single-seed firing gate has a ~12.5% failure rate by construction (zero on 6 of 48 worlds). This regen measures seed 42 itself as one of the zero-migration worlds, which is exactly the case the retired gate could not have survived.
+- **territories-separated**: mean pairwise region overlap 0.0150 (ceiling 0.25; raw vertex-set overlap 0.0000 is a structural 0). PASS — the four goblinoids occupy strongly distinct countries. **The diversity payoff landed.**
+- **stratigraphy-emerged**: 232/452 occupied sites re-occupied (0.5133); depth/capacity correlation -0.2872 (negative). PASS on emergence and on the *coupling*; the negative sign is the falsification finding above.
 
 ## Cross-seed robustness sweep (Settlements depth)
 
@@ -19,12 +19,12 @@ Per-seed floors: migration >= 25, region overlap < 0.25, re-occupied sites >= 2,
 
 | seed | migration | region overlap | occupied | restacked | fraction | depth/capacity corr |
 |---|---|---|---|---|---|---|
-| 1 | 15 | 0.0111 | 355 | 222 | 0.6254 | -0.3464 |
-| 2 | 80 | 0.0061 | 432 | 239 | 0.5532 | -0.2571 |
-| 3 | 1 | 0.0451 | 249 | 96 | 0.3855 | -0.2703 |
-| 7 | 2 | 0.0595 | 326 | 160 | 0.4908 | -0.3406 |
-| 13 | 13 | 0.0061 | 350 | 199 | 0.5686 | -0.3146 |
-| 42 | 11 | 0.0195 | 454 | 279 | 0.6145 | -0.1776 |
-| 100 | 67 | 0.0000 | 93 | 21 | 0.2258 | -0.5041 |
-| 256 | 392 | 0.0462 | 453 | 273 | 0.6026 | -0.2667 |
-| 777 | 10 | 0.0184 | 365 | 217 | 0.5945 | -0.2959 |
+| 1 | 14 | 0.0269 | 358 | 219 | 0.6117 | -0.3853 |
+| 2 | 87 | 0.0155 | 568 | 365 | 0.6426 | -0.2025 |
+| 3 | 1 | 0.0917 | 331 | 176 | 0.5317 | -0.4258 |
+| 7 | 46 | 0.0600 | 272 | 127 | 0.4669 | -0.5094 |
+| 13 | 49 | 0.0013 | 309 | 180 | 0.5825 | -0.3130 |
+| 42 | 8 | 0.0150 | 452 | 232 | 0.5133 | -0.2872 |
+| 100 | 80 | 0.0000 | 92 | 23 | 0.2500 | -0.5517 |
+| 256 | 393 | 0.0174 | 492 | 296 | 0.6016 | -0.1861 |
+| 777 | 4 | 0.0251 | 385 | 221 | 0.5740 | -0.2730 |

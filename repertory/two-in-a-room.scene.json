@@ -1,0 +1,28 @@
+{
+  "name": "two-in-a-room",
+  "provenance": "Authored 2026-08-30 by The Company. The MECHANISM half of the-orange, split out so the part the world can already do is measured separately from the part it cannot. Its witness is a query, not a pin: at seed 42 the pair that resolves is a wild otyugh and a wild carrion-crawler, because SOC-one-creature-per-settlement makes a settlement hold exactly one derived creature and therefore makes wild concentrations the only place two bodies share a room.",
+  "scenes": [
+    {
+      "id": "two-in-a-room",
+      "title": "Two creatures share a room, and the possessing will can see what one of them carries",
+      "provenance": "authored",
+      "control": 40,
+      "beta": true,
+      "witness": { "kind": "co-located", "from_seed": 42, "scan": 1 },
+      "beats": [
+        {
+          "id": "b1-co-located",
+          "description": "someone else is genuinely in this room -- the presence-gated channel, not the world-truth one",
+          "script": ["look"],
+          "assertion": { "kind": "snapshot_present", "pointer": "/sensed/present/0/label" }
+        },
+        {
+          "id": "b2-custody-is-visible",
+          "description": "and the will can see what that creature is holding. NOTE: this asserts the CHANNEL is there, which is the whole of what a world can currently witness -- no co-located creature in any world found so far is actually holding anything, so the non-empty case is proven only by vessel's own test (a_co_located_creature_reports_what_it_carries_and_reports_an_empty_hand_as_empty) and not by a scene. That gap is a finding, not an oversight.",
+          "script": ["look"],
+          "assertion": { "kind": "snapshot_present", "pointer": "/sensed/present/0/carrying" }
+        }
+      ]
+    }
+  ]
+}

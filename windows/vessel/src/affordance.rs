@@ -4,11 +4,23 @@
 //! `affordances(object, body, observer) = { verb : required_properties(verb)
 //! ⊆ properties(object) } ∩ ...` (spec §3.2) is the derived query this
 //! vocabulary feeds; deriving the query itself is a later task. This module
-//! is only the vocabulary and the table: [`ObjectProperty`], the five
+//! is only the vocabulary and the table: [`ObjectProperty`], the eight
 //! variants the spec earns against real or imminent verbs, and
-//! [`object_registry`], a `ComponentStore<AnchorKind, ObjectTraits>` held
+//! [`object_registry`], a `ComponentStore<KindId, ObjectTraits>` held
 //! vessel-locally — build-state, not world-state (spec §3.1), so it needs no
 //! kernel, domain, or worldgen change and nothing here is serialized.
+//!
+//! **The table is keyed on thing-kind, not on anchor kind (The Chattel,
+//! Task 7, spec §3.6).** The Offer keyed it on `AnchorKind`, an
+//! interior-object enum; IV.c promotes an anchor into a *thing*, so the same
+//! strongbox exists at two lifecycle stages and a second, thing-keyed table
+//! would let its properties disagree between them. There is therefore ONE
+//! table, keyed on [`hornvale_kernel::KindId`], and [`thing_kind_of`] carries
+//! every [`AnchorKind`] into it — total by an exhaustive match with no
+//! wildcard arm. The key space widening from a closed enum to an arbitrary
+//! string is the one thing the re-key gives up, and it is bought back by
+//! `cli/tests/suite/anchor_thing_correspondence.rs`, which pins every key
+//! this module mints against `hornvale_thing::THING_KINDS`.
 //!
 //! `MaterialTraits` (`domains/terrain/src/lib.rs`) is the model for the
 //! *shape*: a thin, honest, kind-keyed trait table built with
@@ -18,7 +30,7 @@ use crate::body::Body;
 use crate::clock::REFERENCE_MASS_KG;
 use crate::interior::AnchorKind;
 use crate::knowledge::{Knowledge, LOCALE_KEY_PREFIX};
-use hornvale_kernel::ComponentStore;
+use hornvale_kernel::{ComponentStore, KindId};
 use std::collections::BTreeSet;
 
 /// A property an object may carry — what it OFFERS, independent of any verb
@@ -38,13 +50,40 @@ pub enum ObjectProperty {
     /// An anchor that reveals what lies `within` it on examine — the
     /// interactive-fiction rule (spec §3.6, amended): contents show when a
     /// container is open or transparent. Both `Strongbox` and `Alcove`
-    /// carry it; IV.a has no closed/open state to gate on, so every
-    /// carrier reveals unconditionally — a carrier with nothing `within`
-    /// it stays silent for want of contents, not for want of the property.
+    /// carry it. A carrier with nothing `within` it stays silent for want of
+    /// contents, not for want of the property.
+    ///
+    /// **The "or transparent" half went live in Task 11, and this doc used to
+    /// say the opposite.** It read: *"IV.a has no closed/open state to gate
+    /// on, so every carrier reveals unconditionally."* True then; there is a
+    /// state now. `chamber_prose::examine_detail` gates a carrier that ALSO
+    /// carries [`ObjectProperty::Openable`] on its `openness` fold, and leaves
+    /// a carrier without one (the alcove — a recess has no lid) revealing
+    /// unconditionally, which is what the two-arm rule always said.
     Encloses,
     /// An anchor that emits warmth, read via `warmth_at`'s graph-distance
     /// decay — gates `warm` (spec §3.3: a new verb).
     RadiatesHeat,
+    /// A thing a body may take up and carry — gates `take`/`drop` (The
+    /// Chattel, spec §3.8). This is the SINGLE source of truth for "may a
+    /// body carry this kind": `hornvale_thing::ThingTraits` carried a
+    /// `portable: bool` keyed on the same [`KindId`] until Task 7 deleted
+    /// it, because two `KindId`-keyed tables answering one question is the
+    /// disagreement spec §3.6 re-keys this table to prevent.
+    Portable,
+    /// A thing with a closed state and an open one — gates `open`/`close`
+    /// (spec §3.7/§3.8). Carrying it says the kind HAS the two states, never
+    /// which one it is in: the state itself is a fold over committed
+    /// `openness` facts (Task 5), not a property.
+    Openable,
+    /// A thing whose `open` additionally requires a key in the body's
+    /// custody (spec §3.8). Still M+N: the lock declares what it requires
+    /// and the key declares what it carries, and neither names the other.
+    /// Implies nothing on its own — a `Lockable` kind that did not also
+    /// carry [`ObjectProperty::Openable`] would have a lock and no lid, and
+    /// `lockable_kinds_are_also_openable` refuses that combination rather
+    /// than letting the two drift apart.
+    Lockable,
 }
 
 impl ObjectProperty {
@@ -57,6 +96,9 @@ impl ObjectProperty {
             ObjectProperty::AffordsPassage,
             ObjectProperty::Encloses,
             ObjectProperty::RadiatesHeat,
+            ObjectProperty::Portable,
+            ObjectProperty::Openable,
+            ObjectProperty::Lockable,
         ]
     }
 
@@ -67,8 +109,10 @@ impl ObjectProperty {
     /// the eventual language-side pack to be revisited. One function, not
     /// two: an earlier draft paired this with a separate
     /// `object_property_variants_must_all_be_rostered` match returning the
-    /// same five strings, which is a duplicated table whose cheapest repair
-    /// deletes one side. Never remove, never add a `_` arm.
+    /// same strings, which is a duplicated table whose cheapest repair
+    /// deletes one side. Never remove, never add a `_` arm. It fired as
+    /// designed for The Chattel's three additions (Task 7): the compiler
+    /// refused the new variants here before anything else could be run.
     /// type-audit: bare-ok(identifier-text: return)
     pub fn concept_name(self) -> &'static str {
         match self {
@@ -77,11 +121,14 @@ impl ObjectProperty {
             ObjectProperty::AffordsPassage => "affords-passage",
             ObjectProperty::Encloses => "encloses",
             ObjectProperty::RadiatesHeat => "radiates-heat",
+            ObjectProperty::Portable => "portable",
+            ObjectProperty::Openable => "openable",
+            ObjectProperty::Lockable => "lockable",
         }
     }
 }
 
-/// What an anchor kind offers: the properties it carries. Thin and honest
+/// What a thing-kind offers: the properties it carries. Thin and honest
 /// (the `MaterialTraits` model) — a set, not a bitmask or a table of bools,
 /// because most kinds carry zero or one property and a set says so directly.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -90,67 +137,183 @@ pub struct ObjectTraits {
     pub properties: BTreeSet<ObjectProperty>,
 }
 
-/// The canonical object-kind registry: which [`AnchorKind`] carries which
-/// [`ObjectProperty`]. Assigns the six carriers spec §3.3 names by name
-/// (`Bed`→`SupportsRest`, `Pool`/`Vessel`→`HoldsLiquid`,
-/// `Threshold`→`AffordsPassage`, `Strongbox`→`Encloses`,
-/// `Hearth`→`RadiatesHeat`) plus one more §3.6 itself adds on amendment —
-/// `Alcove`→`Encloses` — for seven entries in all. A kind absent from this
-/// table carries no property.
+/// The thing-kind an [`AnchorKind`] IS (The Chattel, Task 7, spec §3.6).
 ///
-/// **Every other kind was checked against the code and found to carry
+/// **Total, by an exhaustive match with no wildcard arm** — the same
+/// compile-time tripwire [`ObjectProperty::concept_name`] uses, and for the
+/// same reason: a new `AnchorKind` variant (the enum's own doc calls
+/// appending routine) must fail to *compile* here rather than fall through a
+/// `_` arm into some default thing-kind and quietly inherit its properties.
+/// **Never add a `_` arm**; `thing_kind_of_has_no_wildcard_arm`
+/// (`tests/suite/affordance.rs`) scans this function's own source and fails
+/// if one appears, because a wildcard is invisible to every behavioural test
+/// until the day someone appends a variant.
+///
+/// Every label returned here is a row in `hornvale_thing::THING_KINDS`
+/// (Task 2 authored the roster wide enough for exactly this), which
+/// `cli/tests/suite/anchor_thing_correspondence.rs` asserts against the real
+/// roster — `windows/vessel` cannot import `hornvale-thing` to check it here
+/// without a dependency it needs for nothing else, and `cli/` is the one
+/// crate that already depends on both.
+///
+/// The mapping is INJECTIVE today: fourteen anchor kinds, fourteen distinct
+/// labels. That is not stated as a law — two anchor kinds could legitimately
+/// be one thing-kind some day — but it is the property that makes the
+/// re-key behaviour-preserving, so
+/// `the_re_key_preserves_every_anchor_kinds_offer` pins the resulting verb
+/// set for all fourteen rather than trusting the mapping to stay sane.
+pub fn thing_kind_of(kind: AnchorKind) -> KindId {
+    match kind {
+        AnchorKind::Hearth => KindId("hearth"),
+        AnchorKind::Threshold => KindId("threshold"),
+        AnchorKind::Bed => KindId("bed"),
+        AnchorKind::Vessel => KindId("vessel"),
+        AnchorKind::Screen => KindId("screen"),
+        AnchorKind::Pool => KindId("pool"),
+        AnchorKind::Log => KindId("log"),
+        AnchorKind::Ground => KindId("ground"),
+        AnchorKind::Alcove => KindId("alcove"),
+        AnchorKind::Strongbox => KindId("strongbox"),
+        AnchorKind::HighSeat => KindId("high-seat"),
+        AnchorKind::Loom => KindId("loom"),
+        AnchorKind::Anvil => KindId("anvil"),
+        AnchorKind::Altar => KindId("altar"),
+        AnchorKind::Key => KindId("key"),
+    }
+}
+
+/// The canonical object-kind registry: which thing-kind carries which
+/// [`ObjectProperty`]. **Keyed on [`KindId`], not on [`AnchorKind`] (The
+/// Chattel, Task 7, spec §3.6):** IV.c promotes an anchor into a thing, so
+/// the strongbox a player opens and the strongbox derived into a room are
+/// one object at two lifecycle stages. Two tables would let their properties
+/// disagree, which §3.1's promotion makes reachable by construction, so
+/// there is one — and `hornvale_thing::ThingTraits` lost its `portable: bool`
+/// in the same commit rather than becoming the second (see
+/// [`ObjectProperty::Portable`]).
+///
+/// The Offer's seven carriers, carried across unchanged by
+/// [`thing_kind_of`]: `bed`→`SupportsRest`, `pool`/`vessel`→`HoldsLiquid`,
+/// `threshold`→`AffordsPassage`, `strongbox`/`alcove`→`Encloses`,
+/// `hearth`→`RadiatesHeat`. Task 7 adds the three properties spec §3.8
+/// earns, on the carriers §3.8 names: `key`→`Portable`,
+/// `strongbox`/`cave-mouth`→`Openable`, `strongbox`→`Lockable`; Task 8 adds
+/// `cave-mouth`→`AffordsPassage` (spec §3.7). A kind
+/// absent from this table carries no property.
+///
+/// **`key` and `cave-mouth` are the first rows with no `AnchorKind` behind
+/// them at all**, and that is the point of the re-key rather than an
+/// oversight: a cave mouth is a `Vertex`/`ChamberAddr` and a key is a thing
+/// a body carries, neither expressible in the enum The Offer keyed on
+/// (decision 0369's "the obstacle is addressing, not durability").
+///
+/// **`cave-mouth` carries BOTH `Openable` and `AffordsPassage` as of Task 8**
+/// (spec §3.7), and the paragraph this replaces deferred the second one with
+/// a precise condition, so the condition is worth settling rather than
+/// quietly dropping. It read: *"`AffordsPassage` gates `Enter`, and nothing
+/// routes chamber entry through this table until Task 8 retires
+/// `passage-cleared` … Task 8 adds it with the consumer that reads it."*
+///
+/// Task 8 retired the predicate: chamber entry (`Session::delve_at`) is now
+/// gated on the cave mouth's own `openness` fold, so the cave mouth is a
+/// promoted thing with a derived `EntityId` and an authored kind, which is
+/// what the deferral was waiting on.
+///
+/// **What Task 9 changed here, and what it did not.** This paragraph used
+/// to read "no production caller holds a cave-mouth [`KindId`] yet … Task 9
+/// re-keys [`offered_to_observer`] to `KindId` …, which is the call site."
+/// The re-key landed; the second clause was optimistic and is corrected
+/// rather than deleted, because it is the kind of sentence a later reader
+/// reasons FROM. What the re-key bought is that a cave mouth can now be
+/// NAMED in the query's currency at all — `offered_to_observer(KindId(
+/// "cave-mouth"), …)` is a well-typed call where `offered_to_observer(
+/// AnchorKind::…, …)` could never have reached this row, since
+/// `thing_kind_of` is injective over fourteen variants and none of them is
+/// `cave-mouth`. What it did NOT buy is a production caller: chamber entry
+/// (`Session::delve_at`) gates on the cave mouth's own `openness` fold, not
+/// on this table, so `offered_by(KindId("cave-mouth")) == {Enter, Examine}`
+/// is still a fact only the test suite reads. That distinction is decision
+/// 0397's, and it is the honest half of answering 0369 — addressing lifted,
+/// live reachability untouched. The property is granted HERE rather than at
+/// a call site because §3.7 assigns it to Task 8 and because the thing it
+/// describes — a mouth a body passes through, whose passability is a ledger
+/// fold — exists as of that task and not before it.
+///
+/// **Every kind NOT listed was checked against the code and found to carry
 /// nothing**, not merely left unconsidered:
-/// - `Screen`'s own doc says outright "affords nothing, shapes sightlines"
+/// - `screen`'s own doc says outright "affords nothing, shapes sightlines"
 ///   (`interior/anchor.rs`).
-/// - `Alcove` carries `Encloses` too, and did not always: an earlier draft
+/// - `alcove` carries `Encloses` too, and did not always: an earlier draft
 ///   of §3.6 drew a semantic/spatial line that excluded it, reserving
 ///   `Encloses` for containment that is semantic (a strongbox keeps
 ///   things) rather than merely spatial (an alcove is a recess in a wall).
-///   Task 6 measured the consequence — the grammar's only `within`
-///   relation anywhere is `{(Hearth, Alcove)}` (a full census over all 60
-///   production gate combinations, `task-6-report.md`) — and that line put
-///   the property on the one anchor (`Strongbox`) that never holds
-///   anything, so the feature would have reported nothing, forever. The
-///   interactive-fiction rule that replaced it (contents show when a
-///   container is open or transparent, Inform/TADS's own convention) marks
-///   BOTH: the alcove reports because the grammar places a hearth within
-///   it; the strongbox stays silent because no pattern ever attaches
-///   anything within it — not because containment reading is
-///   unimplemented. IV.a models no open/closed state at all (that is
-///   IV.b's rung), so this table does not distinguish "closed" from
-///   "empty"; both read as silence, which is the correct behaviour either
-///   way.
+///   The Offer's Task 6 measured the consequence — the grammar's only
+///   `within` relation anywhere was `{(Hearth, Alcove)}` (a full census over
+///   all 60 production gate combinations) — and that line put the property
+///   on the one anchor (`strongbox`) that never held anything, so the
+///   feature would have reported nothing, forever. The interactive-fiction
+///   rule that replaced it (contents show when a container is open or
+///   transparent, Inform/TADS's own convention) marks BOTH.
+///   **The strongbox holds something now** (The Chattel, Task 11): the
+///   authored `the-key-in-the-strongbox` pattern makes the census read
+///   `{(Alcove, Hearth), (Strongbox, Key)}`, and
+///   `interior::pattern::tests::the_grammar_puts_exactly_these_things_
+///   inside_other_things` is that measurement made permanent. The tenses
+///   above are past on purpose: the sentence is a record of why the line
+///   moved, not a live claim about today's grammar.
 /// - `warmth_at` (`interior/field.rs`) sums only over anchors whose
 ///   `kind == AnchorKind::Hearth`; no other kind ever contributes to the
 ///   warmth field, so `RadiatesHeat` has exactly one mechanically-supported
 ///   carrier.
 /// - `AnchorKind::Bed` is the only kind ever pushed in a rest/fatigue
 ///   context anywhere in this crate (`session.rs`'s `SLEPT_PROVENANCE`,
-///   every `Rest`-adjacent test); `HighSeat` ("a carved chair... sees the
-///   door first") and `Alcove` ("deep enough to sit in") both afford
+///   every `Rest`-adjacent test); `high-seat` ("a carved chair... sees the
+///   door first") and `alcove` ("deep enough to sit in") both afford
 ///   sitting, not the fatigue-resetting rest `Action::Rest` models, so
 ///   neither earns `SupportsRest`.
-/// - `Threshold` is the only kind ever described as "ALSO a room-graph
+/// - `threshold` is the only kind ever described as "ALSO a room-graph
 ///   edge" (`interior/anchor.rs`); every other seam concept
 ///   (`interior/seam.rs`) is a property of the room-graph EDGE, not of an
 ///   anchor kind.
-/// - `Log` appears in no pattern in `interior/pattern.rs`'s `INVENTORY` at
+/// - `log` appears in no pattern in `interior/pattern.rs`'s `INVENTORY` at
 ///   all — it is drawn by nothing today — so nothing in the code licenses
 ///   assigning it a property.
-pub fn object_registry() -> ComponentStore<AnchorKind, ObjectTraits> {
-    fn one(property: ObjectProperty) -> ObjectTraits {
+/// - **`Portable` went to `key` and nowhere else, and that set was READ
+///   rather than chosen**: it is exactly the set
+///   `hornvale_thing::thing_registry` marked `portable: true` before Task 7
+///   deleted the field, so the deletion moves the fact without changing it.
+///   A `log` is the one plausible further candidate and nothing in the tree
+///   ever picks one up; inventing a carrier here would be the Cyc bound
+///   spec §3.8 names.
+pub fn object_registry() -> ComponentStore<KindId, ObjectTraits> {
+    fn traits(properties: &[ObjectProperty]) -> ObjectTraits {
         ObjectTraits {
-            properties: [property].into_iter().collect(),
+            properties: properties.iter().copied().collect(),
         }
     }
     [
-        (AnchorKind::Bed, one(ObjectProperty::SupportsRest)),
-        (AnchorKind::Pool, one(ObjectProperty::HoldsLiquid)),
-        (AnchorKind::Vessel, one(ObjectProperty::HoldsLiquid)),
-        (AnchorKind::Threshold, one(ObjectProperty::AffordsPassage)),
-        (AnchorKind::Strongbox, one(ObjectProperty::Encloses)),
-        (AnchorKind::Alcove, one(ObjectProperty::Encloses)),
-        (AnchorKind::Hearth, one(ObjectProperty::RadiatesHeat)),
+        (KindId("bed"), traits(&[ObjectProperty::SupportsRest])),
+        (KindId("pool"), traits(&[ObjectProperty::HoldsLiquid])),
+        (KindId("vessel"), traits(&[ObjectProperty::HoldsLiquid])),
+        (
+            KindId("threshold"),
+            traits(&[ObjectProperty::AffordsPassage]),
+        ),
+        (
+            KindId("strongbox"),
+            traits(&[
+                ObjectProperty::Encloses,
+                ObjectProperty::Openable,
+                ObjectProperty::Lockable,
+            ]),
+        ),
+        (KindId("alcove"), traits(&[ObjectProperty::Encloses])),
+        (KindId("hearth"), traits(&[ObjectProperty::RadiatesHeat])),
+        (KindId("key"), traits(&[ObjectProperty::Portable])),
+        (
+            KindId("cave-mouth"),
+            traits(&[ObjectProperty::AffordsPassage, ObjectProperty::Openable]),
+        ),
     ]
     .into_iter()
     .collect()
@@ -162,14 +325,55 @@ pub fn object_registry() -> ComponentStore<AnchorKind, ObjectTraits> {
 /// it never encloses, matching [`offered_by`]'s own "absent = empty set"
 /// convention.
 ///
+/// Takes a [`KindId`] since Task 7's re-key; its one production caller
+/// (`chamber_prose::examine_detail`) holds an [`AnchorKind`] and converts
+/// with [`thing_kind_of`] at the call site, rather than this function
+/// converting for it — the conversion belongs where the anchor is, not
+/// inside a query over the thing table.
+///
 /// `pub(crate)`, not `pub`: the only production caller is `chamber_prose.rs`,
 /// a sibling module in this crate. (No `type-audit:` tag: the extractor only
 /// reads bare-`pub` items, same reason `chamber_prose::noun`/`detail` carry
 /// none.)
-pub(crate) fn encloses(kind: AnchorKind) -> bool {
+pub(crate) fn encloses(kind: KindId) -> bool {
+    carries(kind, ObjectProperty::Encloses)
+}
+
+/// Whether `kind` carries `property` — [`encloses`] generalised, because The
+/// Chattel's Task 11 needs the same question asked of three properties rather
+/// than one, and three near-identical wrappers is the duplicated-table shape
+/// decision 0261 warns about.
+///
+/// `encloses` is kept as its own name rather than folded in: it is the
+/// vocabulary `chamber_prose` reads, and its doc carries the interactive-
+/// fiction rule that gates it. It now routes through here, so there is one
+/// registry read and not two that agree.
+pub(crate) fn carries(kind: KindId, property: ObjectProperty) -> bool {
     object_registry()
         .get(&kind)
-        .is_some_and(|traits| traits.properties.contains(&ObjectProperty::Encloses))
+        .is_some_and(|traits| traits.properties.contains(&property))
+}
+
+/// Whether the kind spelled `label` carries `property`.
+///
+/// **The label-keyed door into the property table, and it exists because the
+/// LEDGER speaks labels.** A promoted thing's kind reaches a reader as
+/// `Ledger::kind_of`'s `&str` — an `instance-of` object, a `Value::Text` —
+/// and [`KindId`] wraps a `&'static str`, so a runtime string cannot be
+/// turned into one without leaking it. Scanning the registry for a matching
+/// spelling is the honest conversion: it answers `false` for a label no row
+/// carries, which is the same "absent = no property" convention
+/// [`object_registry`]'s own doc states.
+///
+/// The one caller today is `open`'s lock precondition, which asks whether
+/// anything in a body's custody carries [`ObjectProperty::Portable`] — the
+/// first question in Hornvale asked of a thing the ledger knows about rather
+/// than of an anchor the grammar just drew.
+/// type-audit: bare-ok(identifier-text: label)
+pub(crate) fn label_carries(label: &str, property: ObjectProperty) -> bool {
+    object_registry()
+        .iter()
+        .any(|(kind, traits)| kind.0 == label && traits.properties.contains(&property))
 }
 
 /// A verb an object may advertise to a body — the counterpart to
@@ -193,6 +397,39 @@ pub enum OfferedVerb {
     Examine,
     /// Warm oneself at a heat source — gates on `RadiatesHeat`.
     Warm,
+    /// Open a thing that has a closed state — gates on `Openable` (The
+    /// Chattel, spec §3.7/§3.8).
+    Open,
+    /// Take a thing up into the body's custody — gates on `Portable` (The
+    /// Chattel, Task 12, spec §3.8). The property was granted in Task 7 and
+    /// gated nothing until now; `the_re_key_preserves_every_anchor_kinds_offer`
+    /// froze `Key`'s offer at `[Examine]` precisely so that this arrival had
+    /// to move a line deliberately.
+    Take,
+    /// Set a carried thing down in the room — gates on `Portable` too, and
+    /// the shared requirement is the same argument [`OfferedVerb::Close`]
+    /// makes about its own pair: a body may always set down what it could
+    /// pick up, and a second property would let a kind declare a thing it can
+    /// take and never release. Spec §3.8 bounds the vocabulary at three
+    /// additions and all three are spent, so a fourth would have to be earned
+    /// against that bound rather than assumed.
+    Drop,
+    /// Stow a carried thing inside a container — gates on `Portable`, for the
+    /// same reason again: the property belongs to the thing being MOVED. What
+    /// the container must be (`Encloses`, and open if it has a lid) is a
+    /// precondition on the ACT, read against a second object exactly as
+    /// [`OfferedVerb::Open`]'s lock is, and so is not expressible in this
+    /// query — which holds one object and no other.
+    Put,
+    /// Close it again — gates on `Openable` too, and the shared requirement
+    /// is the point rather than a shortcut. Spec §3.7's deliverable is that
+    /// re-closing exists at all: decision 0367 deferred a closing act because
+    /// "doors, lids, and containers … are the same mechanism seen from three
+    /// angles", and a `Closeable` property distinct from `Openable` would be
+    /// a fourth vocabulary item no verb needs and would let a kind declare a
+    /// lid it can open and not shut. Spec §3.8 bounds the property vocabulary
+    /// at three additions; this is the reading that stays inside it.
+    Close,
 }
 
 impl OfferedVerb {
@@ -213,6 +450,11 @@ impl OfferedVerb {
             OfferedVerb::Enter,
             OfferedVerb::Examine,
             OfferedVerb::Warm,
+            OfferedVerb::Open,
+            OfferedVerb::Close,
+            OfferedVerb::Take,
+            OfferedVerb::Drop,
+            OfferedVerb::Put,
         ]
     }
 
@@ -248,6 +490,11 @@ impl OfferedVerb {
             OfferedVerb::Enter => "enter",
             OfferedVerb::Examine => "examine",
             OfferedVerb::Warm => "warm",
+            OfferedVerb::Open => "open",
+            OfferedVerb::Close => "close",
+            OfferedVerb::Take => "take",
+            OfferedVerb::Drop => "drop",
+            OfferedVerb::Put => "put",
         }
     }
 }
@@ -271,6 +518,22 @@ fn required_properties(v: OfferedVerb) -> BTreeSet<ObjectProperty> {
         OfferedVerb::Enter => [ObjectProperty::AffordsPassage].into_iter().collect(),
         OfferedVerb::Examine => BTreeSet::new(),
         OfferedVerb::Warm => [ObjectProperty::RadiatesHeat].into_iter().collect(),
+        // `Lockable` is deliberately NOT required here, and the omission is
+        // the design rather than a gap. A lock is a precondition on the ACT
+        // — it reads the body's custody, which is not a property of the
+        // object at all — so requiring it would say "only lockable things
+        // open", inverting the meaning. `lockable_kinds_are_also_openable`
+        // holds the one direction that IS a property relation.
+        OfferedVerb::Open | OfferedVerb::Close => [ObjectProperty::Openable].into_iter().collect(),
+        // The three verbs The Chattel's Task 12 ships, all gated on the one
+        // property spec §3.8 assigns them. `Put`'s CONTAINER requirement
+        // (`Encloses`, plus an open lid where the kind has one) is deliberately
+        // absent for the reason `Lockable`'s omission above gives: it is a
+        // precondition on the act, read against a SECOND object, and this
+        // query holds exactly one.
+        OfferedVerb::Take | OfferedVerb::Drop | OfferedVerb::Put => {
+            [ObjectProperty::Portable].into_iter().collect()
+        }
     }
 }
 
@@ -278,15 +541,38 @@ fn required_properties(v: OfferedVerb) -> BTreeSet<ObjectProperty> {
 /// are a SUBSET of `traits.properties` (spec §3.2). Subset, never equality —
 /// see `extra_properties_expand_the_offer_never_withdraw_it` in the test
 /// suite, which asserts this against a *constructed* `ObjectTraits` rather
-/// than one read from [`object_registry`]. That distinction is load-bearing:
-/// every kind [`object_registry`] currently assigns carries exactly one
-/// property (Task 1's finding), so no query run only against the registry
-/// can tell a correct subset filter apart from an incorrect equality
-/// check — both agree on every single-property carrier. This is the actual
-/// query; [`offered_by`] is a thin wrapper reading the global registry, kept
-/// separate precisely so a test can hand it traits the registry does not
-/// (and never will, while every carrier stays single-property) produce on
-/// its own.
+/// than one read from [`object_registry`].
+///
+/// **That distinction WAS load-bearing and no longer is, and the claim this
+/// paragraph replaces is now false in production** (The Chattel, Task 7 fix
+/// round 1). It read: "every kind [`object_registry`] currently assigns
+/// carries exactly one property (Task 1's finding), so no query run only
+/// against the registry can tell a correct subset filter apart from an
+/// incorrect equality check — both agree on every single-property carrier
+/// … a test can hand it traits the registry does not (and never will, while
+/// every carrier stays single-property) produce on its own." Task 7 gave
+/// `strongbox` three properties (`Encloses`/`Openable`/`Lockable`), so the
+/// registry now discriminates subset from equality by itself — asserted by
+/// `a_registered_multi_property_kind_discriminates_subset_from_equality` in
+/// the test suite, which says the opposite of the parenthesis above.
+///
+/// It is corrected here rather than deleted because the parenthesis is
+/// exactly the kind of sentence a later reader reasons FROM: "the registry
+/// can never produce multi-property traits" is a licence to write a query
+/// that assumes it. Two copies of this same claim in
+/// `tests/suite/affordance.rs` were corrected during Task 7 and this one —
+/// the copy a reader of `offered` actually meets — was missed, because the
+/// correction was made by matching wording rather than by grepping the
+/// claim.
+///
+/// What survives unchanged is the reason the two functions are separate:
+/// [`offered`] takes traits so a test can construct a property set
+/// independent of whatever the registry happens to hold today, and
+/// [`offered_by`] is the thin wrapper that reads the global registry. That
+/// separation is now a convenience rather than the only route to the
+/// discriminating case, and `extra_properties_expand_the_offer_never_
+/// withdraw_it` keeps its constructed traits for the reason its own doc
+/// gives.
 pub fn offered(traits: &ObjectTraits) -> BTreeSet<OfferedVerb> {
     OfferedVerb::all()
         .into_iter()
@@ -295,15 +581,25 @@ pub fn offered(traits: &ObjectTraits) -> BTreeSet<OfferedVerb> {
 }
 
 /// The verbs `kind` advertises — [`offered`] applied to `kind`'s registered
-/// traits (spec §3.2).
+/// traits (spec §3.2). Keyed on thing-kind since Task 7's re-key; an
+/// anchor-side caller converts with [`thing_kind_of`].
 ///
 /// A `kind` absent from [`object_registry`] is treated as carrying the empty
-/// property set (`ObjectTraits::default()`), not as offering nothing: eight
-/// of the fourteen `AnchorKind` variants carry no property at all, and
-/// `Examine`'s universality (empty required set ⊆ empty property set) must
-/// hold for them too, or "universal" would silently mean "universal among
-/// the six kinds Task 1 happened to register."
-pub fn offered_by(kind: AnchorKind) -> BTreeSet<OfferedVerb> {
+/// property set (`ObjectTraits::default()`), not as offering nothing: seven
+/// of the fourteen `AnchorKind` variants map to a thing-kind carrying no
+/// property at all, and `Examine`'s universality (empty required set ⊆ empty
+/// property set) must hold for them too, or "universal" would silently mean
+/// "universal among the kinds The Offer happened to register."
+///
+/// **The re-key widened the key space from a closed enum to an arbitrary
+/// string, and that is a real loss this doc states rather than hides.**
+/// `offered_by(KindId("srongbox"))` is a well-typed call returning the
+/// empty-set answer, where `offered_by(AnchorKind::Srongbox)` could not
+/// compile. Nothing in this module can close that; what closes it is
+/// `cli/tests/suite/anchor_thing_correspondence.rs`, which pins every key
+/// [`object_registry`] and [`thing_kind_of`] mint against
+/// `hornvale_thing::THING_KINDS`.
+pub fn offered_by(kind: KindId) -> BTreeSet<OfferedVerb> {
     let reg = object_registry();
     let traits = reg.get(&kind).cloned().unwrap_or_default();
     offered(&traits)
@@ -351,7 +647,10 @@ fn body_can_use(property: ObjectProperty, body: &Body) -> bool {
         ObjectProperty::HoldsLiquid
         | ObjectProperty::AffordsPassage
         | ObjectProperty::Encloses
-        | ObjectProperty::RadiatesHeat => true,
+        | ObjectProperty::RadiatesHeat
+        | ObjectProperty::Portable
+        | ObjectProperty::Openable
+        | ObjectProperty::Lockable => true,
     }
 }
 
@@ -369,7 +668,7 @@ fn body_can_use(property: ObjectProperty, body: &Body) -> bool {
 /// *alongside* the pre-existing at-home rest precondition (outside this
 /// module) — a large body still rests exactly as it could before this
 /// campaign, just not via a bed too small for it.
-pub fn offered_to(kind: AnchorKind, body: &Body) -> BTreeSet<OfferedVerb> {
+pub fn offered_to(kind: KindId, body: &Body) -> BTreeSet<OfferedVerb> {
     offered_by(kind)
         .into_iter()
         .filter(|v| {
@@ -440,6 +739,34 @@ fn has_encountered_any_room(known: &Knowledge) -> bool {
 /// things would ship a check that reads as live and is permanently
 /// satisfied — this doc comment is the tripwire for that.
 ///
+/// **Keyed on [`KindId`] since Task 9, and the re-key IS the deliverable
+/// rather than a tidy-up (spec §3.6, decision 0397 answering 0369).** The
+/// table, [`offered_by`] and [`offered_to`] were re-keyed by Task 7 while
+/// this one kept converting with [`thing_kind_of`] on the way in, which
+/// left the *gate's* currency at [`AnchorKind`] — and that currency was
+/// exactly 0369's obstacle. `AnchorKind` is an interior-object enum with no
+/// cave-mouth variant, `thing_kind_of` is injective over its fourteen
+/// variants, and none of them lands on `cave-mouth`, so **before this change
+/// there was no argument that named a passage and the gate could not be
+/// asked about one at all.** Moving the conversion OUT of this function and
+/// to its two anchor-side call sites (`Session::warm`,
+/// `Session::examine_chamber`) is the whole mechanism by which the obstacle
+/// lifts: an argument that is a thing-kind admits `KindId("cave-mouth")`,
+/// which `passage.rs` mints for a `Vertex`/`ChamberAddr` and no anchor
+/// enum can express. `an_unencountered_passage_offers_nothing`
+/// (`tests/suite/affordance.rs`) is the denial that was unwritable before.
+///
+/// **What did NOT change, said plainly so the re-key is not over-read.** The
+/// gate's *reachability through a live `Session`* is untouched — the
+/// paragraph above about unconditional absorption still holds, and no
+/// production caller passes `KindId("cave-mouth")` here today
+/// (chamber entry gates on the cave mouth's own `openness` fold in
+/// `Session::delve_at`, not on this query). What Task 9 bought is
+/// ADDRESSABILITY: the gate can now be asked about a passage and answers by
+/// denying, which is precisely the half 0369 identified as the wall. A
+/// campaign that wants the *other* half must change one of the two things
+/// the tripwire paragraph above names, not the key.
+///
 /// Consumed with synthetic `Knowledge` values (as the tests beside
 /// `offered_to`/`offered_by` already do with synthetic `Body` values),
 /// because that is the only way to observe the deny branch at all today —
@@ -447,11 +774,7 @@ fn has_encountered_any_room(known: &Knowledge) -> bool {
 /// a real, reachable state of the type, and this function's contract must
 /// hold for it regardless of whether any current caller happens to produce
 /// it.
-pub fn offered_to_observer(
-    kind: AnchorKind,
-    body: &Body,
-    known: &Knowledge,
-) -> BTreeSet<OfferedVerb> {
+pub fn offered_to_observer(kind: KindId, body: &Body, known: &Knowledge) -> BTreeSet<OfferedVerb> {
     if has_encountered_any_room(known) {
         offered_to(kind, body)
     } else {
@@ -464,27 +787,65 @@ mod tests {
     use super::*;
 
     #[test]
-    fn each_property_is_carried_by_at_least_one_anchor_kind() {
+    fn each_property_is_carried_by_at_least_one_thing_kind() {
         let reg = object_registry();
         for p in ObjectProperty::all() {
             assert!(
                 reg.iter().any(|(_, t)| t.properties.contains(&p)),
-                "{p:?} is carried by no anchor kind: a property no object has \
+                "{p:?} is carried by no thing-kind: a property no object has \
                  cannot gate a verb, and is dead vocabulary"
             );
         }
     }
 
+    /// The carriers spec §3.3 (The Offer) and spec §3.8 (The Chattel) each
+    /// name outright — the half of [`object_registry`] that is not the
+    /// implementer's call. Every row is asserted through [`thing_kind_of`]
+    /// where an anchor kind exists for it, so a mis-keyed mapping arm fails
+    /// here as well as a missing property.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST: drop `ObjectProperty::Lockable` from
+    /// `strongbox`'s row in `object_registry`. Red observed:
+    ///
+    /// ```text
+    /// thread 'affordance::tests::the_certain_carriers_named_by_the_spec_carry_their_property'
+    /// panicked at windows/vessel/src/affordance.rs:
+    /// KindId("strongbox") must carry Lockable (spec §3.3/§3.8)
+    /// ```
     #[test]
     fn the_certain_carriers_named_by_the_spec_carry_their_property() {
         let reg = object_registry();
         let certain = [
-            (AnchorKind::Bed, ObjectProperty::SupportsRest),
-            (AnchorKind::Pool, ObjectProperty::HoldsLiquid),
-            (AnchorKind::Vessel, ObjectProperty::HoldsLiquid),
-            (AnchorKind::Threshold, ObjectProperty::AffordsPassage),
-            (AnchorKind::Strongbox, ObjectProperty::Encloses),
-            (AnchorKind::Hearth, ObjectProperty::RadiatesHeat),
+            (thing_kind_of(AnchorKind::Bed), ObjectProperty::SupportsRest),
+            (thing_kind_of(AnchorKind::Pool), ObjectProperty::HoldsLiquid),
+            (
+                thing_kind_of(AnchorKind::Vessel),
+                ObjectProperty::HoldsLiquid,
+            ),
+            (
+                thing_kind_of(AnchorKind::Threshold),
+                ObjectProperty::AffordsPassage,
+            ),
+            (
+                thing_kind_of(AnchorKind::Strongbox),
+                ObjectProperty::Encloses,
+            ),
+            (
+                thing_kind_of(AnchorKind::Hearth),
+                ObjectProperty::RadiatesHeat,
+            ),
+            // The Chattel, spec §3.8's own table.
+            (KindId("key"), ObjectProperty::Portable),
+            (
+                thing_kind_of(AnchorKind::Strongbox),
+                ObjectProperty::Openable,
+            ),
+            (KindId("cave-mouth"), ObjectProperty::Openable),
+            (KindId("cave-mouth"), ObjectProperty::AffordsPassage),
+            (
+                thing_kind_of(AnchorKind::Strongbox),
+                ObjectProperty::Lockable,
+            ),
         ];
         for (kind, prop) in certain {
             let traits = reg
@@ -492,8 +853,35 @@ mod tests {
                 .unwrap_or_else(|| panic!("{kind:?} has no ObjectTraits"));
             assert!(
                 traits.properties.contains(&prop),
-                "{kind:?} must carry {prop:?} (spec §3.3)"
+                "{kind:?} must carry {prop:?} (spec §3.3/§3.8)"
             );
+        }
+    }
+
+    /// A lock with no lid is not a thing: [`ObjectProperty::Lockable`]
+    /// extends `open`'s precondition (spec §3.8, "a lockable thing's `open`
+    /// requires a key in the body's custody"), so a kind carrying it without
+    /// [`ObjectProperty::Openable`] would declare a requirement on a verb it
+    /// never offers. Asserted over the whole registry rather than against
+    /// `strongbox` by name, so a future carrier inherits the rule.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST: drop `ObjectProperty::Openable` from
+    /// `strongbox`'s row (leaving `Encloses` and `Lockable`). Red observed:
+    ///
+    /// ```text
+    /// thread 'affordance::tests::lockable_kinds_are_also_openable' panicked at
+    /// windows/vessel/src/affordance.rs:
+    /// KindId("strongbox") carries Lockable without Openable: a lock with no lid
+    /// ```
+    #[test]
+    fn lockable_kinds_are_also_openable() {
+        for (kind, traits) in object_registry().iter() {
+            if traits.properties.contains(&ObjectProperty::Lockable) {
+                assert!(
+                    traits.properties.contains(&ObjectProperty::Openable),
+                    "{kind:?} carries Lockable without Openable: a lock with no lid"
+                );
+            }
         }
     }
 
@@ -511,13 +899,19 @@ mod tests {
     fn both_strongbox_and_alcove_carry_encloses() {
         for kind in [AnchorKind::Strongbox, AnchorKind::Alcove] {
             assert!(
-                encloses(kind),
+                encloses(thing_kind_of(kind)),
                 "{kind:?} must carry ObjectProperty::Encloses (spec §3.6, amended)"
             );
         }
         assert!(
-            !encloses(AnchorKind::Bed),
-            "a kind absent from object_registry must not enclose"
+            !encloses(thing_kind_of(AnchorKind::Bed)),
+            "a kind whose row carries no Encloses must not enclose"
+        );
+        assert!(
+            !encloses(KindId("no-such-thing-kind")),
+            "a KindId absent from object_registry must not enclose — the \
+             widened key space still answers the absent case the way \
+             offered_by's `absent = empty set` convention does"
         );
     }
 

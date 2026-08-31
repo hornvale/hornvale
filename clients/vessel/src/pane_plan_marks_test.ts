@@ -81,12 +81,24 @@ Deno.test("a mark renders its glyph at its cell", () => {
 
   // Anti-vacuity: the plain chamber fixture's `marks` is `[]` (see above), so
   // a test that merely looped over marks would pass on an empty array. This
-  // fixture's whole job is to carry exactly one, and if it ever carries none
-  // the assertions below would vanish rather than fail.
+  // fixture's whole job is to carry exactly one AGENT mark, and if it ever
+  // carries none the assertions below would vanish rather than fail.
+  //
+  // Filtered to `kind === "agent"`, not `marks.length` alone (The Legend):
+  // the fixture now also carries the chamber's own furnishing anchor (a
+  // `"furnishing"`-kind mark for its hearth or screen, sight-gated the same
+  // way), so a bare length-1 assertion would fail the moment that anchor's
+  // shadowcast reaches this fixture's possession — a fact about the room,
+  // not about whether the creature this test is actually about still draws.
   const marks = plan.marks ?? [];
-  assertEquals(marks.length, 1, "the occupied fixture must carry exactly one mark");
+  const agentMarks = marks.filter((m) => m.kind === "agent");
+  assertEquals(
+    agentMarks.length,
+    1,
+    "the occupied fixture must carry exactly one agent mark",
+  );
 
-  const mark = marks[0];
+  const mark = agentMarks[0];
   const gx = mark.x - plan.extent.x;
   const gy = mark.y - plan.extent.y;
   // The mark must be in bounds, or `planCells` is right to ignore it and this

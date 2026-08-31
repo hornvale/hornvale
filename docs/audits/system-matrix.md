@@ -11,7 +11,7 @@ mistake.
 
 | Corpus | present | refused | deferred | absent | inapplicable | Report |
 |---|---|---|---|---|---|---|
-| `wolverson-2021` | 26 | 5 | 26 | 12 | 5 | [system-coverage-wolverson-2021.md](./system-coverage-wolverson-2021.md) |
+| `wolverson-2021` | 27 | 5 | 26 | 11 | 5 | [system-coverage-wolverson-2021.md](./system-coverage-wolverson-2021.md) |
 
 ## The surplus read
 
@@ -39,6 +39,7 @@ instrument's own bias in its own output; it does not correct for it.
 - `domains/person`
 - `domains/religion`
 - `domains/settlement`
+- `domains/thing`
 - `domains/topology`
 - `windows/almanac`
 - `windows/book`
