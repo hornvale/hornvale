@@ -98,10 +98,23 @@ sibling tree.
 load-bearing point. `CLAUDE.md` warns that a committed ledger "silently
 clobbers every parallel session's on absorption, raising no conflict."
 That hazard is real and is a property of the *shared filename*:
-`.superpowers/sdd/progress.md` is written identically by every campaign, so
-two campaigns editing "the" ledger merge to one side silently. A path keyed
-by campaign slug is touched by exactly one campaign, ever — an absorption
-sees a clean add, and there is no collision to have.
+`.superpowers/sdd/decision-ledger.md` is written identically by every
+campaign, so two campaigns editing "the" ledger merge to one side silently.
+A path keyed by campaign slug is touched by exactly one campaign, ever — an
+absorption sees a clean add, and there is no collision to have.
+
+**Correction, final review, 2026-08-30 (finding I2):** this entry originally
+named the shared file as `.superpowers/sdd/progress.md`. That was wrong —
+`progress.md` has always lived at the per-campaign-keyed
+`.superpowers/sdd/<slug>/progress.md` and never carried the hazard this
+ruling describes. `decision-ledger.md` (flat, unkeyed, at
+`.superpowers/sdd/decision-ledger.md`) is the file the argument actually
+needs, and the paragraph above is corrected in place rather than left wrong
+beside a footnote, because the wrong name was never load-bearing to the
+*decision* — only to which file the reader should picture — and leaving it
+wrong in the primary sentence while correcting it only in a footnote is how
+a stale fact survives a correction. See decision 0493, which supersedes
+0487's own copy of this same mistake.
 
 **Alternatives discarded:** A single shared ledger file for all campaigns —
 rejected, as it reintroduces exactly the collision `CLAUDE.md` already
@@ -462,9 +475,13 @@ that this would not be measurable from inside the campaign that makes the
 change. That prediction stands unfalsified and unconfirmed: I have no control
 condition. Measuring it would require the same campaign run twice, once
 writing to committed `docs/superpowers/ledgers/` and once to the old
-git-ignored `.superpowers/sdd/progress.md`, with the same decisions arising
-and independent judges (blinded to which arm produced which text) comparing
-candour. That is not an instrument this task can build or run — it would
+git-ignored `.superpowers/sdd/decision-ledger.md` [corrected 2026-08-30,
+final review finding I2 — this originally named `.superpowers/sdd/
+progress.md`, the wrong file; `progress.md` holds task state and was never
+where rulings lived, `decision-ledger.md` was; see decision 0493], with the
+same decisions arising and independent judges (blinded to which arm
+produced which text) comparing candour. That is not an instrument this task
+can build or run — it would
 need a second full campaign execution as a control arm, decided in advance
 of Task 1, which this campaign did not do. No such control exists, so no
 comparison is possible after the fact. I did not construct a proxy (e.g.

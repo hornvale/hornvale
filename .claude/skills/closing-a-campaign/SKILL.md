@@ -83,6 +83,20 @@ not done until every one is checked or explicitly N/A.
    - **Every entry made after the G3 stop** → Nathan has not seen these
      yet; they lead the G6 digest, and the material ones get promoted into
      the spec's decisions section or a decision record.
+   - **Every deferred minor recorded anywhere in the ledger, at any task
+     boundary, not only those made after the G3 stop** → a home, even if
+     that home is one line in the retrospective's deferred-minors section
+     stating its outcome (fixed in a later task, accepted as-is, or carried
+     forward as a registry row). This is the bullet Task 4's rewrite of
+     this step deleted with no replacement (The Cartulary final review,
+     finding I1): half A above only catches a minor that never reached the
+     ledger at all, and the bullet just above only catches entries made
+     after G3 — a minor ledgered *before* G3, which is the ordinary case
+     for a routine task-boundary finding, was a home for neither. Read the
+     whole ledger for "Deferred minor" headings, not only its tail, and
+     name where each one landed. A minor sitting only in the ledger is not
+     routed — "it's in the ledger" is not a location, any more than "it's
+     covered in the chronicle" was.
 
    **The check that catches what this step misses:** for each item from
    either half, name the committed file and line it landed in. "It's
@@ -160,7 +174,7 @@ not done until every one is checked or explicitly N/A.
 | Registry flips | `book/src/frontier/idea-registry.md` | registry header rules |
 | Keystone refreeze | `cli/tests/fixtures/` etc., from main's tip | merge-time discipline |
 | Scratch promotion | `.superpowers/sdd/` (plugin `progress.md`, reports, reviews, mutation proofs) → retrospective + registry rows | step 2A; scratch is git-ignored and dies with the worktree |
-| Ledger review | `docs/superpowers/ledgers/<slug>.md`, read for post-G3 entries → spec decisions section / decision record | step 2B; committed at write time, but unreviewed until read here |
+| Ledger review | `docs/superpowers/ledgers/<slug>.md`, read for post-G3 entries → spec decisions section / decision record; every deferred minor in it → retrospective, with its outcome | step 2B; committed at write time, but unreviewed until read here |
 
 ## Common mistakes
 

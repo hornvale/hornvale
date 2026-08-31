@@ -83,6 +83,69 @@ instrument, not the expectation of failing to find one** — a preregistration
 step that only records what you expect not to learn is not doing the job
 preregistration exists for.
 
+## The whole-branch review found a third instance, and this campaign's own three deferred minors had no recorded disposition
+
+Task 4's rewrite of `closing-a-campaign` deleted the bullet that routed a
+deferred minor to a named home and replaced it with two narrower ones: one
+for a minor that never reached the ledger, one for a ledger entry made
+after the G3 stop. Between them they left a gap — a minor already sitting
+in the ledger, from before G3, the ordinary case for a routine finding —
+routed nowhere. This campaign's own retrospective, in its first draft, was
+proof: three deferred minors sit in the ledger (Task 1's missing ideonomy
+field, Task 2's undercounted hook citation, Task 3's loose characterisation
+of the unmatched-plan count) and none of them had a stated outcome anywhere.
+Their actual dispositions, established now:
+
+- **Task 1's missing `ideonomy passes / overturns` field on the four seeded
+  entries** — discharged by Task 4, which added the backfilled-entry
+  exemption to `campaign-autopilot`'s ledger format section (a backfilled
+  entry may omit the field if it says so explicitly).
+- **Task 2's hook comment undercounting its own evidence** ("plus two more"
+  for a five-row table) — fixed directly, commit `010242e67`, naming all
+  five retrospective files.
+- **Task 3's report characterising all 54 unmatched plans as "date drift /
+  stage words / umbrella specs"**, looser than the reviewer's finding of
+  ~13 with no companion spec under any name — landed correctly but not
+  explicitly closed: `unmatched_plan_slugs`'s own doc comment in
+  `cli/tests/suite/docs_consistency.rs` already states the accurate
+  three-way breakdown (umbrella specs, date/wording drift, and plans with no
+  spec at all), which supersedes the narrower framing in substance even
+  though nothing marked the minor resolved when that doc comment was
+  written.
+
+Nothing material was lost — this is precisely the state the five prior
+losses were in before the loss each is now remembered for, which is the
+uncomfortable point: absence is invisible until someone asks what a
+rewrite stopped saying, and the per-task diff review and the sibling sweep
+were both structurally unable to find it, because neither was looking for
+something that used to be there and no longer is. Restored in
+`closing-a-campaign`, wired to where a deferred minor now actually lives.
+
+## Two more findings from the same review, both about claims that were never checked
+
+**The load-bearing "shared filename" argument named the wrong file, in five
+places, because the one thing that was actually verified was that
+`CLAUDE.md` named *a* path, not *which* path.** `.superpowers/sdd/
+progress.md` has always been per-campaign-keyed; the file that is actually
+flat and shared is `.superpowers/sdd/decision-ledger.md`. The spec, the
+plan, and this campaign's own ledger all cited the former where the latter
+was meant — a claim gets copied forward through however many documents
+restate it, and none of those restatements is itself a re-verification.
+Corrected in place across all five, plus a new decision (0493) superseding
+0487, whose Consequences bullet had compounded the error by attributing
+`progress.md`'s actual job to the wrong file as well.
+
+**"A new campaign cannot add itself" to the exemption list was asserted in
+two places and enforced in neither.** The reviewer proved it by mutation: a
+fresh spec, a fresh plan, and a self-added exemption with no ledger passed
+all three ledger checks green. The general lesson this campaign already
+knows — a stated blindness needs a visible ratchet, not a silent fix
+(decision 0491, Task 3) — had a second application sitting one function
+away in the same file, and nobody asked whether the rule the doc comments
+stated was actually the rule the code enforced. Closed the same way: the
+exemption list's length (239) is now a frozen ceiling, proven to redden on
+exactly the reviewer's mutation and to return green once restored.
+
 ## Recurring findings
 
 - **A record that outlives its subject produces wrong answers**, restated

@@ -136,10 +136,12 @@ is git-ignored (never force-add it: a committed ledger silently clobbers every
 ```
 
 The hazard is real **and it is a property of the shared filename**, not of
-committing. Every campaign writes `.superpowers/sdd/progress.md`, so two
-editing it merge to one side with no conflict. State that, and that a
-per-campaign path has no such collision — one campaign touches one file, ever.
-Point at `docs/superpowers/ledgers/`.
+committing. Every campaign writes `.superpowers/sdd/decision-ledger.md`, so two
+editing it merge to one side with no conflict. (Corrected 2026-08-30, final
+review finding I2: this originally named `progress.md`, which has always been
+per-campaign-keyed and never carried this hazard; see decision 0493.) State
+that, and that a per-campaign path has no such collision — one campaign
+touches one file, ever. Point at `docs/superpowers/ledgers/`.
 
 - [ ] **Step 3: Prove the guard still fires.** Stage a file under
   `.superpowers/` with `git add -f`, confirm the hook refuses, unstage. Paste

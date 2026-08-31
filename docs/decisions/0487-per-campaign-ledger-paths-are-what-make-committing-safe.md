@@ -1,6 +1,6 @@
 # 0487. Per-campaign ledger paths are what make committing safe
 
-**Status:** Accepted (2026-08-30) · **Decider:** Nathan (autopilot) ·
+**Status:** Superseded by [0493](0493-decision-ledger-md-not-progress-md-is-the-shared-scratch-file.md) (2026-08-30) · **Decider:** Nathan (autopilot) ·
 **Relates:** [0486](0486-a-campaigns-decision-ledger-is-a-committed-document-not-scratch.md) ·
 [The Cartulary](../../book/src/chronicle/the-cartulary.md)
 

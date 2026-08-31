@@ -162,6 +162,29 @@ softened out" was itself checked, side by side, word for word, against the
 version it replaced, to confirm the remedy had not shipped a softened
 version of the very sentence it existed to restore.
 
+## A third instance, found by the whole-branch review, and it was still in the tree
+
+The two instances above were both caught by this campaign itself. A
+whole-branch review found a third, and its own framing is the point: the
+skill re-pointed to fix the ledger's location (Task 4) deleted the bullet
+that routes a deferred minor to a named home, and did not replace it — a
+ledgered deferred minor, the ordinary case under the new regime, had no
+routing instruction left at all. This campaign's own three deferred minors
+(a missing ideonomy field, an undercounted citation, a loosely characterised
+count) reached no recorded disposition in the first draft of its own
+retrospective. Nothing material was lost this time; two had already been
+quietly discharged and one had partially landed in a doc comment — which is
+exactly the state the five prior losses this campaign exists to prevent were
+in, before the loss each is now remembered for. Restored, with the three
+given a home in this campaign's own retrospective.
+
+The same review found the load-bearing "shared filename" argument had been
+citing the wrong file in five places (the per-campaign `progress.md` where
+the actually-shared `decision-ledger.md` was meant, corrected by decision
+0493) and that the exemption list's stated "a new campaign cannot add
+itself" was asserted and not enforced, proven by a mutation the review ran
+and this campaign then reproduced. Both are corrected below.
+
 ## What shipped
 
 | what | mechanism |
@@ -173,10 +196,10 @@ version of the very sentence it existed to restore.
 | two ledgers, two owners | the committed ledger is primary from the start; the plugin's `progress.md` is untouched and unmirrored |
 | the in-repo skills' stale ledger pointers | re-pointed in Task 4, with the sibling sweep catching a second stale instance |
 
-Seven decisions were ratified, 0486–0492: [0486](../../docs/decisions/0486-a-campaigns-decision-ledger-is-a-committed-document-not-scratch.md)
+Eight decisions were ratified, 0486–0493: [0486](../../docs/decisions/0486-a-campaigns-decision-ledger-is-a-committed-document-not-scratch.md)
 (the ledger is committed, not scratch),
 [0487](../../docs/decisions/0487-per-campaign-ledger-paths-are-what-make-committing-safe.md)
-(per-campaign paths make committing safe),
+(per-campaign paths make committing safe — superseded by 0493, below),
 [0488](../../docs/decisions/0488-a-record-that-must-be-manually-copied-to-survive-will-not.md)
 (a record that must be manually copied to survive will not),
 [0489](../../docs/decisions/0489-verification-cannot-substitute-for-durability.md)
@@ -184,24 +207,29 @@ Seven decisions were ratified, 0486–0492: [0486](../../docs/decisions/0486-a-c
 [0490](../../docs/decisions/0490-two-ledgers-two-owners-the-committed-one-is-primary-from-the-start.md)
 (two ledgers, two owners),
 [0491](../../docs/decisions/0491-a-stated-blindness-gets-a-visible-ratchet-not-a-silent-fix.md)
-(a stated blindness gets a visible ratchet, not a silent fix), and
+(a stated blindness gets a visible ratchet, not a silent fix),
 [0492](../../docs/decisions/0492-a-preregistered-hypothesis-needs-a-preregistered-instrument.md)
-(a preregistered hypothesis needs a preregistered instrument). Three
-numbers in the reserved block, 0493–0495, were not needed and are left
-unused.
+(a preregistered hypothesis needs a preregistered instrument), and
+[0493](../../docs/decisions/0493-decision-ledger-md-not-progress-md-is-the-shared-scratch-file.md)
+(`decision-ledger.md`, not `progress.md`, is the shared scratch file — the
+whole-branch review's own correction to 0487, minted from the same reserved
+block rather than editing 0487's substance). Two numbers in the reserved
+block, 0494–0495, were not needed and are left unused.
 
 ## What is still owed
 
 **Reports and reviews still die with their scratch home, on purpose** — the
-spec's own §2 measured ~200 K of scratch prose per campaign against
-three-to-four orders of magnitude more in regenerable diff-style review
-packages, and judged the asymmetry (a lost report costs a campaign's effort
-to reconstruct; a lost ledger costs the project's memory) worth keeping
-rather than widening the committed tree to swallow everything. A fresh
-measurement across six live campaign checkouts at this campaign's own close
-puts the committed ledger's own share at roughly 15–19 K of that ~200 K —
-meaning on the order of 180 K of implementer reports and review packages per
-campaign are still scratch, still regenerable in principle, and still not
-actually reconstructed once that scratch material is gone. That gap is
+spec's own §2 measured scratch prose at Task 1 across three checkouts and
+called it "remarkably stable at ~200 K per campaign." Later re-measurement
+inside this same campaign found that word false: six checkouts at Task 6's
+close spanned 80–360 K, and the whole-branch review's own pass across
+thirteen found a 95x spread, 4 K to 380 K. The mean sits near 200 K; the
+argument built on it does not depend on the word "stable," and survives the
+correction — the outliers are almost entirely on the *regenerable* side (one
+checkout's review packages alone ran to 58.9 MB), which is exactly the side
+this design already treats as disposable. The committed ledger's own share
+is a consistent 15–19 K regardless of which sample is read, meaning the
+implementer reports and review packages that still die with their scratch
+home are the large majority of that prose in every sample taken. That gap is
 banked as its own registry row rather than a task, because it is a
 deliberate, costed boundary this campaign drew on purpose, not an oversight.

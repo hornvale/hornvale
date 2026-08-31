@@ -1675,7 +1675,13 @@ fn the_unmatched_plan_count_has_not_moved() {
     assert_eq!(
         found,
         EXPECTED_UNMATCHED_PLAN_COUNT,
-        "the unmatched-plan count moved: {EXPECTED_UNMATCHED_PLAN_COUNT}          recorded, {found} now. This ratchet cannot tell a real gap from a          false alarm (see the doc comment on          the_unmatched_plan_count_has_not_moved) — a rise means a NEW plan          whose spec campaigns_with_spec_and_plan could not pair, which needs          a human to check by hand whether it needs a ledger; a fall means a          plan was deleted, renamed into a matching pair, or the matcher          improved. Either way, investigate before touching this constant.          Current unmatched set:\n  {}",
+        "the unmatched-plan count moved: {EXPECTED_UNMATCHED_PLAN_COUNT} recorded, {found} now. \
+         This ratchet cannot tell a real gap from a false alarm (see the doc comment on \
+         the_unmatched_plan_count_has_not_moved) — a rise means a NEW plan whose spec \
+         campaigns_with_spec_and_plan could not pair, which needs a human to check by hand \
+         whether it needs a ledger; a fall means a plan was deleted, renamed into a matching \
+         pair, or the matcher improved. Either way, investigate before touching this constant. \
+         Current unmatched set:\n  {}",
         unmatched.into_iter().collect::<Vec<_>>().join("\n  ")
     );
 }
@@ -1698,7 +1704,15 @@ fn ledger_exists_and_is_nonempty(slug: &str) -> bool {
 /// **Append-never in the shrinking direction only**: an entry is removed
 /// once its campaign gains a ledger, never added — a new campaign cannot
 /// exempt itself, the same ratchet `registry_length_waivers` enforces for
-/// the registry Idea-column length budget.
+/// the registry Idea-column length budget. **This was asserted here and in
+/// `every_campaign_with_a_spec_and_a_plan_has_a_ledger`'s own doc comment
+/// and enforced nowhere until the final review proved it by mutation**: a
+/// fresh spec, plan and self-added exemption with no ledger passed every
+/// check green, because the two existing checks only look for a slug
+/// OUTSIDE today's population or a slug that has since gained a ledger — a
+/// brand-new, still-ledgerless campaign is neither. `EXPECTED_LEDGER_
+/// EXEMPT_CEILING` below closes it, the same way `EXPECTED_UNMATCHED_
+/// PLAN_COUNT` freezes its own count.
 fn ledger_exempt_campaigns() -> BTreeSet<&'static str> {
     include_str!("../fixtures/ledger-exempt-campaigns.txt")
         .lines()
@@ -1706,6 +1720,16 @@ fn ledger_exempt_campaigns() -> BTreeSet<&'static str> {
         .filter(|l| !l.is_empty())
         .collect()
 }
+
+/// The exemption list's length the day this ceiling was added (2026-08-30,
+/// final review finding I3), 239. The list is append-never in the growing
+/// direction (`ledger_exempt_campaigns`'s doc comment), so this is a
+/// CEILING rather than an exact pin: it may fall, when a campaign gains a
+/// ledger and is removed from the fixture, but must never rise. A rise
+/// means either a new campaign added its own slug (the exact defect this
+/// ceiling exists to catch) or a legitimately exempt slug was duplicated —
+/// investigate before lowering it back, never raise it to match.
+const EXPECTED_LEDGER_EXEMPT_CEILING: usize = 239;
 
 /// A campaign with a spec and a plan also has a ledger.
 ///
@@ -1715,7 +1739,10 @@ fn ledger_exempt_campaigns() -> BTreeSet<&'static str> {
 /// (harmless), and blind to every campaign in
 /// `cli/tests/fixtures/ledger-exempt-campaigns.txt` — the 239 that predate
 /// this convention. That list may only SHRINK: a campaign gaining a ledger
-/// drops out of it, and a new campaign cannot add itself.
+/// drops out of it, and a new campaign cannot add itself — enforced by
+/// `the_ledger_exemption_list_only_shrinks`'s `EXPECTED_LEDGER_EXEMPT_CEILING`
+/// assertion, not by this test; before 2026-08-30 (final review finding I3)
+/// that second half was asserted here and nowhere enforced.
 ///
 /// # What it cannot see, stated because a check that does not say so reads
 /// as total
@@ -1782,5 +1809,22 @@ fn the_ledger_exemption_list_only_shrinks() {
         "these campaigns now have a ledger — remove them from \
          fixtures/ledger-exempt-campaigns.txt so the ratchet holds:\n  {}",
         now_ledgered.join("\n  ")
+    );
+
+    // The direction neither check above covers: the list growing with an
+    // entry that looks entirely legitimate (inside today's population,
+    // genuinely ledgerless). Proven reachable by mutation (final review,
+    // finding I3) before this assertion existed.
+    assert!(
+        exempt.len() <= EXPECTED_LEDGER_EXEMPT_CEILING,
+        "the exemption list grew to {} entries, past its {}-entry ceiling. \
+         It is append-never in the growing direction: a NEW campaign cannot \
+         add itself here. A rise means either a fabricated/duplicated entry \
+         (remove it) or a legitimate need to widen the ceiling after a human \
+         checks by hand that the added slug truly predates the ledger \
+         convention — never raise this constant to make a red pass without \
+         that check.",
+        exempt.len(),
+        EXPECTED_LEDGER_EXEMPT_CEILING
     );
 }

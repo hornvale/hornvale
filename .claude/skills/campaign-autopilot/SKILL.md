@@ -211,10 +211,29 @@ existed to capture it contemporaneously (pre-flight scan findings, or
 decisions made during spec/plan authoring before Task 1 of a campaign like
 The Cartulary created its own ledger) — may omit `ideonomy passes /
 overturns` if no pass was ever run for it, provided the entry says so
-explicitly rather than leaving the field silently blank. **A live entry,
-written from the ledger's creation onward, gets no such exemption**: the
-required-slot rule above (a non-zero `ideonomy passes / overturns` field)
-still applies to it in full.
+explicitly rather than leaving the field silently blank.
+
+**Two shapes of live entry, not one, and both are still required to state
+question · decision · why · alternatives discarded · capture actions —
+only the LAYOUT differs.** A cross-task ruling made outside any single
+task's own review loop (a pre-flight conflict between two tasks, a
+mid-campaign Q consultation with Nathan, an ad hoc controller call) uses
+the numbered `#N [G1|G2|G4|G5|Q] — ...` line above, because nothing else
+is going to organize it. A ruling that IS the subject of a task's own
+"Task N — complete" or "Task N — fix round" section inherits that
+section's own narrative structure instead — the review that produced the
+section already interrogated the question, the decision, the why and what
+was rejected, so re-flattening it into the one-line tagged form would
+duplicate content already present in a fuller form, not add rigor. This is
+a correction, not a new rule: The Cartulary's own exemplar ledger
+(`docs/superpowers/ledgers/2026-08-30-the-cartulary.md`) wrote every live
+ruling this second way from Task 1 onward and none the first way, which an
+earlier draft of this paragraph called a violation of "no exemption" — a
+false reading of the campaign's own practice, caught by its final review
+(finding M2). `ideonomy passes / overturns` is still a required, non-zero
+field either way — a task-boundary ruling states it in the task section's
+own prose (e.g. "no ideonomy pass was run for this" or naming the pass
+taken) rather than as a labelled slot.
 
 ## The G3 package
 

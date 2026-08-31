@@ -38,7 +38,7 @@ records, not the ruling itself.** The decision that matters — what was
 decided and why — belongs in a ledger entry. The report that led to it is
 working material, not the durable fact.
 
-**Measured 2026-08-30, across three live campaign worktrees:**
+**Measured 2026-08-30, across three live campaign worktrees at Task 1:**
 
 ```
                 regenerable (.diff)     durable prose
@@ -47,12 +47,22 @@ working material, not the durable fact.
   the-winze             16 K            196 K  (15 files)
 ```
 
-Durable prose (a ledger's kind of content) is stable at ~200 K per campaign.
-Review packages vary by two orders of magnitude — up to 3.4 MB — because
-they're diffs, and diff size tracks the size of the change, not the
-significance of the decision behind it. A ledger itself is ~15 K. Widening
-this tree to also hold reports or review packages would drag that variance
-into git for every campaign, for no benefit: the thing being committed is
+**That n=3 read as "remarkably stable at ~200 K" and this campaign's own
+later re-measurements falsified the word, not the argument.** Task 6's own
+close re-measured at n=6 (range 80–360 K); this campaign's final review
+measured n=13 and found a 95x spread — `the-wick` 4 K to `the-governor`
+380 K, with every value in between. The mean sits close to 200 K, but
+"stable" overclaimed a real, wide distribution as a narrow one. Same
+correction for "up to 3.4 MB" of regenerable diffs: `the-burr` held 58.9 MB
+at the same measurement. Durable prose (a ledger's kind of content) is
+still on the order of hundreds of K, not megabytes, and review packages are
+still the thing that varies by orders of magnitude — the argument this
+tree's design rests on (don't widen it to hold reports or reviews) survives
+and is if anything strengthened by the wider spread, because the outliers
+are all on the regenerable side. A ledger itself is ~15–19 K on the same
+n=6/n=13 measurements. Widening this tree to also hold reports or review
+packages would drag that variance into git for every campaign, for no
+benefit: the thing being committed is
 already reproducible from two SHAs that git already has.
 
 **The plugin's own `progress.md` keeps its separate job and also does not
@@ -79,16 +89,30 @@ decisive.
 
 ## Format
 
-Entries follow `campaign-autopilot`'s ledger entry format:
+Entries follow `campaign-autopilot`'s ledger entry format, in one of two
+shapes (`campaign-autopilot`'s "The decision ledger" section has the full
+rule, corrected 2026-08-30 by this campaign's own final review, finding
+M2): a numbered `#N [G1|G2|G4|G5|Q] — question · decision · why (precedent
+cited) · alternatives discarded · ideonomy passes / overturns · capture
+actions` line for a ruling made outside any single task's own review loop
+(pre-flight cross-task conflicts, a Q consultation, an ad hoc controller
+call), or that task's own "Task N — complete"/"Task N — fix round" section
+for a ruling that section already reviewed — same required content
+(question, decision, why, alternatives, ideonomy pass), different layout,
+because the task write-up already interrogated it once. **Not** "whatever
+shape the controller finds clearest" for an ordinary task-boundary ruling —
+this campaign's own exemplar ledger used the task-narrative shape for every
+live entry it wrote and an earlier draft of this README read that as
+license rather than as the second, equally-required shape.
 
-```
-#N [G1|G2|G4|G5|Q] — question · decision · why (precedent cited) ·
-alternatives discarded · ideonomy passes / overturns · capture actions
-```
+Deferred minors and parked findings genuinely may use whatever shape is
+clearest, because they are notes toward a future disposition rather than a
+ruling with alternatives to record.
 
-Pre-flight cross-task rulings and deferred/parked findings may use whatever
-shape the controller finds clearest — the freshness check (spec §5) only
-requires a campaign's ledger file to exist and be non-empty, not any
-particular internal schema. That check resolves a campaign's ledger **by
-name from its slug**, never by listing this directory, so this README and
-any other file dropped here are invisible to it by construction.
+The freshness check (spec §5) only requires a campaign's ledger file to
+exist and be non-empty, not any particular internal schema — that check
+resolves a campaign's ledger **by name from its slug**, never by listing
+this directory, so this README and any other file dropped here are
+invisible to it by construction. The schema above is a human convention the
+check does not enforce, which is why getting it right depends on this
+document rather than on a test.

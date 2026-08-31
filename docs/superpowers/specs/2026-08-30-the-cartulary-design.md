@@ -91,8 +91,13 @@ effort and a lost ledger costs the project's memory.
 bearing point. `CLAUDE.md` warns that a committed ledger "silently clobbers
 every parallel session's on absorption, raising no conflict." That hazard is
 real and it is a property of the **shared filename**: every campaign writes
-`.superpowers/sdd/progress.md`, so two of them editing it merge to one side
-silently. A path keyed by campaign is touched by exactly one campaign, ever.
+`.superpowers/sdd/decision-ledger.md`, so two of them editing it merge to one
+side silently. (Corrected 2026-08-30, final review finding I2: this
+originally named `progress.md`, which is per-campaign-keyed
+(`.superpowers/sdd/<slug>/progress.md`) and never had this hazard;
+`decision-ledger.md` is the flat, unkeyed file the argument actually needs.
+See decision 0493.) A path keyed by campaign is touched by exactly one
+campaign, ever.
 An absorption sees a clean add. There is no collision to have.
 
 **The controller commits at each task boundary and each ruling** — small
@@ -125,7 +130,9 @@ falsified by measurement.
 > session's on absorption, raising no conflict"
 
 Dissolved by per-campaign paths (§3), not overruled. The sentence stays true
-of `.superpowers/sdd/progress.md` and stops applying to the new path.
+of `.superpowers/sdd/decision-ledger.md` and stops applying to the new path.
+(Corrected 2026-08-30, final review finding I2 — see the §3 note and decision
+0493; this line named `progress.md` before the correction.)
 
 **The hook's guard itself is unchanged.** It keeps refusing `.superpowers/`,
 which remains correct for the up-to-3.4 MB of regenerable diffs that stay
@@ -209,7 +216,13 @@ three-valued honesty `tropes check` and type-audit's `waiver(...)` carry.
 | ~200 K prose / up to 3.4 MB diffs per campaign | **verified** — measured 2026-08-30 across three worktrees | `du` over three live scratch dirs |
 | promotion-at-close has failed five times | **verified** — four in committed retrospectives, one in this session | `docs/retrospectives/{the-quoin,the-lodestar}.md` and the two campaigns' own records |
 | a committed ledger survives worktree recycling | **hypothesis (H1)** | recycle a worktree mid-campaign, read the ledger from git |
-| committing does not change what gets written | **hypothesis (H2)** | see §8 — probably unfalsifiable from inside |
+| committing does not change what gets written | **hypothesis (H2)** | see §8 — probably unfalsifiable from inside (†) |
+
+(†) **Superseded by decision [0492](../../decisions/0492-a-preregistered-hypothesis-needs-a-preregistered-instrument.md)
+(Task 5's review, 2026-08-30, final review finding M6).** "Probably
+unfalsifiable from inside" describes this spec's own choice not to build an
+instrument, not a property of H2 itself. Left unedited below, as the
+artifact 0492 argues from.
 
 ## 8. Preregistered measurement
 
@@ -223,6 +236,18 @@ three-valued honesty `tropes check` and type-audit's `waiver(...)` carry.
   from here"; a campaign that claims to have confirmed H2 should be
   disbelieved unless it names its instrument.
 
+  **Superseded by decision 0492, added 2026-08-30 (final review finding
+  M6).** This paragraph reads as the honest, structurally-forced shape of a
+  preregistration. It is not: preregistering "I expect not to be able to
+  measure it" and then building no instrument at all *guarantees* an
+  unmeasurable report whether or not H2 is true, which is a methodological
+  error in this paragraph's own design, not a fact about H2 — a blinded
+  twin-campaign study could settle H2 in principle. This spec was already
+  amended once during execution (§4a), so "frozen" is not a defence for
+  leaving this uncorrected; it is corrected here, visibly, rather than
+  silently, per the same idiom this campaign applied to the hook comment and
+  `CLAUDE.md`.
+
 ## 9. Flagged for Nathan at G3
 
 1. **This reverses a documented position** — a hook comment stating that
@@ -233,7 +258,10 @@ three-valued honesty `tropes check` and type-audit's `waiver(...)` carry.
    keeping — "I do not know why this works" — is the one most likely to be
    softened when written for the record. This spec accepts that cost and
    cannot measure it.
-3. **The check's exemption list is append-never and starts at ~293 entries.**
+3. **The check's exemption list is append-never and starts at 239 entries**
+   (corrected 2026-08-30, final review finding M6 — this originally said
+   "~293", which is the raw count of plan files in the tree, not the
+   spec-and-plan-matched population the exemption list actually covers).
    That is a large frozen list; the plan must decide whether it is enumerated
    or expressed as a date/threshold, and either choice has a failure mode.
 
@@ -242,10 +270,19 @@ three-valued honesty `tropes check` and type-audit's `waiver(...)` carry.
 - **0486** — a campaign's decision ledger is a committed document, not scratch.
 - **0487** — per-campaign paths are what make a shared record safe to commit;
   the absorption hazard is a property of the filename, not of committing.
+  (Superseded by 0493 — 0487's own exemplar named the wrong file; see the §3
+  note above.)
 - **0488** — a record that must be manually copied to survive will not
   survive; five instances.
 - **0489** — verification cannot substitute for durability: a check that reads
   an artifact cannot detect that artifact's absence.
+
+**This list predates §4a and Task 5, and both added a decision it does not
+name.** Seven decisions shipped in total (0486–0492), plus 0493 correcting
+0487 during final review — this section is left as written, rather than
+padded out after the fact, because the retrospective and chronicle carry the
+real list and this section's job was to flag the four decisions visible at
+spec time, not to be re-counted into a manifest.
 
 ## 11. Task outline
 
