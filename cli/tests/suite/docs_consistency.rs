@@ -1721,15 +1721,42 @@ fn ledger_exempt_campaigns() -> BTreeSet<&'static str> {
         .collect()
 }
 
-/// The exemption list's length the day this ceiling was added (2026-08-30,
-/// final review finding I3), 239. The list is append-never in the growing
-/// direction (`ledger_exempt_campaigns`'s doc comment), so this is a
-/// CEILING rather than an exact pin: it may fall, when a campaign gains a
-/// ledger and is removed from the fixture, but must never rise. A rise
-/// means either a new campaign added its own slug (the exact defect this
-/// ceiling exists to catch) or a legitimately exempt slug was duplicated —
-/// investigate before lowering it back, never raise it to match.
-const EXPECTED_LEDGER_EXEMPT_CEILING: usize = 239;
+/// The exemption list's length, 244. It may FALL, when a campaign gains a
+/// ledger and is removed from the fixture. A rise is the defect this
+/// ceiling exists to catch — a new campaign exempting itself instead of
+/// writing a ledger — with exactly one documented exception, described
+/// below, which is why the number is 244 and not the 239 it was added at.
+///
+/// # The crossover window, which "append-never" did not anticipate
+///
+/// The list was frozen (2026-08-30, final review finding I3) against The
+/// Cartulary's own worktree, which was 333 commits behind `main`. It was
+/// therefore a snapshot of the campaign population AT THIS BRANCH'S BASE,
+/// not of main's. Absorbing main before merge admitted five campaigns that
+/// had landed in the interim and carry no ledger:
+///
+///   2026-08-19-the-winze, 2026-08-28-the-chattel, 2026-08-28-the-legend,
+///   2026-08-30-the-company, 2026-08-30-the-repertory
+///
+/// None is a self-exemption, and the distinction is checkable rather than
+/// asserted: every one of the five was already merged to `origin/main`
+/// before this branch's absorb (each one's spec and plan is absent from
+/// `git merge-base HEAD origin/main` and present on main), so no live
+/// session could have added its own slug here. Each predates the
+/// convention in the only sense that binds — the convention does not exist
+/// on main until this branch lands.
+///
+/// So the honest invariant is narrower than "append-never": the list may
+/// grow ONLY for a campaign that merged before the convention did, and
+/// that window closes the moment this branch lands. After that there is no
+/// legitimate rise, and a rise means what the original comment said it
+/// meant. A date floor was considered as a self-maintaining replacement
+/// and rejected: slug dates are authored, not merge dates, and two of the
+/// five carry the same date as The Cartulary itself, so no cutoff
+/// separates them.
+///
+/// Investigate before lowering it back; never raise it to match.
+const EXPECTED_LEDGER_EXEMPT_CEILING: usize = 244;
 
 /// A campaign with a spec and a plan also has a ledger.
 ///

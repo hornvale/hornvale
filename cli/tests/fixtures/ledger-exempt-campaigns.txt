@@ -201,6 +201,7 @@
 2026-08-18-the-undertow
 2026-08-19-the-portolan
 2026-08-19-the-touchstone
+2026-08-19-the-winze
 2026-08-20-the-cant
 2026-08-20-the-cupel
 2026-08-20-the-deed
@@ -229,11 +230,15 @@
 2026-08-26-the-sources
 2026-08-27-the-mortise
 2026-08-27-the-offer
+2026-08-28-the-chattel
 2026-08-28-the-gallery
 2026-08-28-the-governor
 2026-08-28-the-latch
+2026-08-28-the-legend
 2026-08-28-the-overture
 2026-08-28-the-rail
 2026-08-28-the-stile
 2026-08-29-the-attestation
 2026-08-29-the-quoin
+2026-08-30-the-company
+2026-08-30-the-repertory

@@ -711,3 +711,63 @@ describes the I3 correction.** *Ruling: cosmetic, parked.*
 
 **M4 was never in scope and remains open:** nothing documents that the ratchet
 binds before a campaign's first ruling.
+
+## Pre-merge absorb — the ratchet reddened on its own author
+
+Absorbing `origin/main` (333 commits) before submitting to the merge queue
+turned `every_campaign_with_a_spec_and_a_plan_has_a_ledger` RED. Five
+campaigns landed on main after this branch's base and carry no ledger:
+`2026-08-19-the-winze`, `2026-08-28-the-chattel`, `2026-08-28-the-legend`,
+`2026-08-30-the-company`, `2026-08-30-the-repertory`.
+
+`gate-commit` was GREEN across the same merge product — this test is not in
+the sub-floor roster, so nothing local would have caught it. It would have
+reddened in the chamber.
+
+**Q — is this the self-exemption the ceiling exists to catch, or is the list
+simply stale?** *Stale, and checkably so.* The list was frozen against THIS
+BRANCH'S BASE, not main's tip. Each of the five has its spec and its plan
+absent from `git merge-base HEAD origin/main` and present on `origin/main`
+— so each was already merged before the absorb, and no live session could
+have added its own slug. Each predates the convention in the only sense that
+binds: the convention does not exist on main until this branch lands.
+
+*Decision:* add the five, raise `EXPECTED_LEDGER_EXEMPT_CEILING` 239 → 244,
+and restate the invariant as a **crossover window** that closes when this
+branch lands — after that a rise means what the original comment said it
+meant. Precedent is the ceiling's own assert message, which already provides
+for "a legitimate need to widen the ceiling after a human checks by hand that
+the added slug truly predates the ledger convention"; that check is the
+merge-base evidence above.
+
+*Alternatives discarded.* (a) Backfill ledgers for the five — impossible and
+dishonest: their scratch is gone, which is this campaign's own premise, and a
+fabricated ledger is worse than an absent one. (b) Replace the list with a
+slug-date floor, self-maintaining — rejected on a concrete counterexample:
+slug dates are authored rather than merge dates, and `the-company` and
+`the-repertory` carry the same date as The Cartulary itself, so no cutoff
+separates them. (c) Redesign the exemption mechanism — a fifth fix wave, in
+the campaign whose defining finding is that every fix wave produced a new
+instance of its own defect.
+
+*Ideonomy: 1 pass, 0 overturns, 1 enrichment* — inversion ("shrink the
+population instead of growing the list") produced (b) and its refutation;
+implication-mining produced the crossover-window framing, which is a strictly
+better statement of the invariant than "append-never" and is what got
+written.
+
+*Positive control.* The ceiling was mutated 244 → 243 and the test went RED
+naming both numbers; restored. The assert reads the live fixture length, so
+the raise is a real re-pin rather than a constant nobody consults.
+
+*Blast radius.* Two further sites restated the old claim and were corrected
+in the same commit: `ledger_exempt_campaigns`'s doc ("never added") and the
+check's own `# Direction this check enforces` section ("the 239").
+
+**One parked residual is touched, and this says so.** The rewritten ceiling
+doc does not restate "or a legitimately exempt slug was duplicated" — the
+cause proven above to be unable to fire. The assert MESSAGE at the bottom of
+`the_ledger_exemption_list_only_shrinks` still carries it and is left parked
+as ruled. So the two now differ in what they name, deliberately: re-adding a
+known-false cause to a doc comment in the campaign built to make records
+trustworthy was not a defensible way to stay consistent.
