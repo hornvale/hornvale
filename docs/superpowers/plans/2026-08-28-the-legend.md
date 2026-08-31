@@ -1310,6 +1310,44 @@ git commit -m "feat(legend): a goblin is not a boulder"
 
 ---
 
+### Task 10's ground truth, measured before dispatch
+
+This task is **substantially cheaper than its brief implies**, and it has one
+trap the brief does not name.
+
+**Already built, in `session.rs` itself:**
+
+- `crate::lattice::anchor_cells(interior, lattice, chamber, seed) ->
+  BTreeMap<AnchorId, Cell>` places every anchor. `session.rs` ALREADY calls
+  it at lines 1641, 1694 and 4119 — the same file as the `PlanMark`
+  construction at 1461-1467.
+- **The sight-gating is already written**, at 1638-1650: it computes
+  `shadowcast(&inside.lattice, inside.cell, SIGHT_RADIUS)` and filters to "a
+  chamber anchor whose OWN placed cell is actually lit". Its own comment
+  calls this "the only choice honest enough not to fabricate a placement the
+  fine layer could not itself have produced." **Reuse that rationale and that
+  filter; do not invent a second gating rule.**
+
+**The noun comes from the KIND, not from free text.** `Anchor { kind:
+AnchorKind, within: Option<AnchorId> }` carries no label —
+`interior/mod.rs` describes "a small graph of NAMED anchors", and the names
+are the `AnchorKind` variants (`Hearth`, documented "A fire: emits warmth and
+light; the canonical gathering place"; `Bed`; `Threshold`; …).
+
+**THE TRAP: `AnchorKind::Threshold` is already drawn.** The floor plan draws
+thresholds as `+` through its own wall/threshold logic, and `+` is a
+register-claimed Structure glyph. Emitting every anchor as a furnishing mark
+would draw a threshold TWICE, plausibly with two different glyphs — the exact
+double-encoding decision 0389 forbids, arriving through a door nobody was
+watching.
+
+So: **exclude `Threshold` from the furnishing emit**, and say why in the code.
+It is not a furnishing; it is structure, and it already has a claim. Audit the
+rest of the variants for the same overlap before emitting them — any anchor
+kind the plan already draws by another route is excluded on the same grounds.
+
+---
+
 ### Task 10: The hearth reaches the wire
 
 The one task touching `windows/`. Furnishing anchors are derived and placed
