@@ -48,6 +48,8 @@ presentation: glyph and ANSI in the TUI, RGB in atlas, sprites later.
   second question: `cargo test ... > /tmp/hv.log 2>&1; echo "exit=$?"` then
   grep. A pre-commit hook enforces this.
 
+**Status: COMPLETE (2026-08-31).** All eleven tasks landed and reviewed. Fix rounds: Task 3 x2 (duplicate classifiers I had specified), Task 6 x1 (Nathan's caret), Task 7 x1, Task 9 x2, Task 10 x1. See `docs/retrospectives/the-legend.md`.
+
 ---
 
 ### Task 0: Read this before Task 1

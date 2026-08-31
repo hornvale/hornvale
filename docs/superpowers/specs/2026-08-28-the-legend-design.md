@@ -1,7 +1,7 @@
 # The Legend — a map legend, and the register that keeps one honest
 
 **Branch:** `campaign/the-legend`, from `origin/main` @ `b7c97a4df` ·
-**Drafted:** 2026-08-28 · **Status:** G3 package pending.
+**Drafted:** 2026-08-28 · **Status:** COMPLETE — merged 2026-08-31. All eleven tasks landed; H1 supported (warm redraw 0.049-0.068 ms against a 0.20 ms bar, 15 replicates); coverage item 2.1 moved `absent` -> `present`.
 
 > A legend is the part of a map that tells you what its marks mean. This
 > campaign discovers that Hornvale's client has been assigning marks without
