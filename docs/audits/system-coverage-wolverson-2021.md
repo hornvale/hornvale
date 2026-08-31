@@ -29,15 +29,17 @@ committed transcripts stay byte-stable. Measured: `possess --seed 42` then
 the program prints its own reason above the chart — `0 tinted, 31 withheld
 (water, a mark, or you)` — because seed 42's flagship stands on water. Seed
 13 outdoors reports `30 tinted, 1 withheld`, which is the positive control:
-the walk band tints when there is ground to tint. WHAT IS UNCONDITIONALLY
-ABSENT IS PER-ENTITY DISTINCTION, and it fails at the glyph before colour is
-reached. In the shipped character-grid client's walk band,
-`clients/game/core/src/chart.rs` draws `@` for the possession and `+` for
-EVERYTHING ELSE — its own words, 'one glyph for here and one for everything
-else in view, terrain and marks alike' — so a creature and a boulder are the
-same character on every seed. No per-entity colour channel exists either:
-`Mark` carries `noun`/`kind`/`datum`/`salience` and nothing else, and all
-three renderers withhold tint from a mark by explicit rule. The lesson for a
+the walk band tints when there is ground to tint. PER-ENTITY GLYPH
+DISTINCTION NOW EXISTS (The Legend, 2026-08-28), AND THIS PARAGRAPH USED TO
+SAY OTHERWISE. It read: a creature and a boulder are the same character on
+every seed, because the shipped character-grid client's walk band drew `@`
+for the possession and `+` for EVERYTHING ELSE.
+`clients/game/core/src/lexicon.rs::creature_glyph` now derives a creature's
+own noun-initial, and `chart.rs`/`plan.rs` draw it in both the walk band and
+the floor plan, distinct from wall `#`, threshold `+`, and the ordinal
+relief/impedance glyphs. PER-ENTITY COLOUR STILL DOES NOT EXIST: `Mark`
+carries `noun`/`kind`/`datum`/`salience` and nothing else, and all three
+renderers withhold tint from a mark by explicit rule. The lesson for a
 reader, since the truecolor code in `windows/scene/src/surrounds_ascii.rs`
 will be found again: a code path is not a default, a default is not a
 screen, and neither is evidence about a particular seed. Say which surface,
@@ -56,22 +58,22 @@ above the tally it most affects.
 
 ## Tally
 
-- present: 24 (32%)
+- present: 25 (34%)
 - refused: 5 (7%)
 - deferred: 28 (38%)
-- absent: 12 (16%)
+- absent: 11 (15%)
 - inapplicable: 5 (7%)
 
 ## First unmet
 
-2.1 — **Entities and Components** (absent).
+2.6 — **Dealing Damage** (refused).
 
 ## Items
 
 | id | title | verdict | anchor | note |
 |---|---|---|---|---|
 | 1 | Building for the Web | inapplicable | reason:the tutorial's own bracket-lib and wasm-pack build toolchain, not a world capability | front matter by construction (spec §8): included rather than excluded so the reason travels with it |
-| 2.1 | Entities and Components | absent |  | WEAKEST-HALF, and the render half decides it. SIM half present and richly so: an entity is a ledger subject, its components are the facts committed about it, contradiction-checked against a concept registry no ECS tutorial has an analogue for, and kernel/src/component.rs carries a typed ComponentStore keyed by identity. RENDER half fails AT THE GLYPH, before colour is reached: in the shipped character-grid client's walk band, `clients/game/core/src/chart.rs` draws `@` for the possession and `+` for everything else — its own comment reads "one glyph for here and one for everything else in view, terrain and marks alike" — so a creature and a boulder are the same character, on every seed, with no flag that changes it. An entity is not distinguishable from terrain at all. WHY 0136 CLAUSE 2 DOES NOT RESCUE THIS, since it is the obvious objection: clause 2 protects a single missing ELEMENT inside an otherwise-delivered half, which is what keeps 2.7 `present` with no health bar. Here the half is not otherwise-delivered — what is missing is the whole distinguishability of an entity in the weakest renderer's primary view, which is this chapter's entire deliverable, not one attribute of it. Colour is the SECONDARY point, and it is not a story about defaults at all: colour is ON by default in the interactive path (measured, see provenance), yet no per-entity colour channel exists anywhere (`Mark` carries noun/kind/datum/salience) and all three renderers withhold tint from a mark by explicit rule, so `Renderable { glyph, fg, bg }` has no counterpart in either field. `absent` rather than `refused`, the same conservative direction 4.12-4.15 took: no ratified decision forbids per-entity distinction |
+| 2.1 | Entities and Components | present | path:clients/game/core/src/lexicon.rs | WEAKEST-HALF, and the render half now clears it. SIM half unchanged and present: an entity is a ledger subject, its components are the facts committed about it, contradiction-checked against a concept registry no ECS tutorial has an analogue for, and kernel/src/component.rs carries a typed ComponentStore keyed by identity. RENDER half WAS absent at the glyph: the walk band and floor plan drew `+` for "everything else in view, terrain and marks alike", so a creature and a boulder were the same character on every seed. THE LEGEND (2026-08-28) fixed exactly that: `clients/game/core/src/lexicon.rs::creature_glyph` derives a creature's own noun-initial with no authored species table, and `chart.rs`/`plan.rs` draw it in both the walk band and the floor plan, distinct from wall `#`, threshold `+`, and the ordinal relief/impedance glyphs `_ . : ^ A`. Two same-initial species (goblin, gnoll) deliberately draw the same letter — ambiguous, never wrong, and disambiguated by `examine`/the cursor rather than the glyph, which is the collision decision 0389 accepts, not the terrain-collision this item was scored on. Colour remains absent per entity (`Mark` carries noun/kind/datum/salience and nothing else, withheld by explicit rule on all three renderers) — the same secondary gap 2.5's `present` verdict already carries, so per 0136 clause 2 it does not block this one either. The world map (`plate.rs`) is untouched by design — Ruling AG keeps its generic `&` for every agent so `o`/`O` can be city markers — and stays scored separately at 2.5 |
 | 2.2 | Walking A Map | present | test:hornvale-vessel::go_moves_and_back_retraces | `go <dir>` walks the locale mesh and `back` retraces; indoors a wall refuses with a physical reason (the_blocking.rs::a_wall_refuses_with_a_physical_reason) |
 | 2.3 | A More Interesting Map | present | test:hornvale-terrain::every_default_globe_satisfies_every_invariant | WEAKEST-HALF: sim half present (a sculpted planet rather than a rectangle of rooms and corridors, a pure function of seed and pins, asserted against invariants across a seed sweep). Render half present on GLYPHS ALONE, which is what makes it robust: glyph selection is not lens-gated, so the map reads the same whether or not a cell is tinted, and it does not depend on the seed the way tint does — five relief glyphs `_ . : ^ A` and three water glyphs `~ = +` outdoors, `#`/`.`/`+` for wall, floor and threshold indoors. A player reading an uncoloured terminal still sees the map |
 | 2.4 | Field of View | present | test:hornvale-vessel::a_wall_blocks_what_lies_behind_it | windows/vessel/src/lattice/sight.rs is Ford's SYMMETRIC recursive shadowcasting over four quadrants (sight_is_symmetric is a property test over every ordered floor pair); the walk band carries the remembered-vs-seen half through purview.rs, and The Sighting gates the `sensed` channel on it. The seen/remembered distinction is carried by a GLYPH twin rather than a dimmed tint — `faded()` maps `.`->`,`, `^`->`n`, `&`->`%` — so it survives an uncoloured cell, an uncoloured terminal, and the monochrome client alike |

@@ -303,6 +303,40 @@ FOUND, and the worst case it feared is 0.13% of the 50 ms budget. The
 settlement roster is a ledger read this harness does not build and is not
 measured here.
 
+**The Legend Task 11's H1 readout (2026-08-31, `campaign/the-legend`,
+ambrose, twelve cores) — the same `TileCache::compose` warm path, now
+through `hornvale_scene::relief_band` after Task 3 pulled `plate.rs`'s own
+elevation classifier out into the function `windows/scene`'s tile builder
+also calls.** Run as `clients/game/bin/examples/legend_redraw_bench.rs`
+(`--release`), a dedicated harness rather than a reuse of `rung_bench.rs`,
+because H1 asks about a refactor `rung_bench.rs` predates. Three separate
+invocations, five replicates each, 200x200 tiles at `GLOBE_RUNG` (the
+coarsest rung), warm cache only:
+
+| invocation | replicates (ms) | min | max | spread | load avg (1/5/15m) |
+|---|---|---|---|---|---|
+| 1 | 0.0680, 0.0539, 0.0530, 0.0530, 0.0530 | 0.0530 | 0.0680 | 1.28x | 10.39 / 9.66 / 18.64 |
+| 2 | 0.0569, 0.0498, 0.0496, 0.0492, 0.0516 | 0.0492 | 0.0569 | 1.16x | 8.87 / 9.35 / 18.33 |
+| 3 | 0.0627, 0.0500, 0.0492, 0.0493, 0.0491 | 0.0491 | 0.0627 | 1.28x | 8.40 / 9.25 / 18.24 |
+
+Every invocation's own spread stays under the 1.4x re-measure threshold The
+Quadrat's own H1 readout used, so none was discarded as contended, and this
+box's load held steady (not idle in the instantaneous sense — a shared Mac
+running two other Claude sessions, per `ps aux` — but stable across all
+three invocations, which is the property the 1.4x check actually stands
+in for). Each invocation's first replicate reads a little high (a warm-up
+effect inside the process, despite one un-timed `compose` call already
+primed before the loop); every later replicate in every invocation settles
+to 0.0491-0.0539 ms.
+
+**H1 SUPPORTED.** Every replicate across all three invocations is under the
+frozen 0.20 ms bar (spec §7.1) — the worst single reading, 0.0680 ms, is
+still 2.9x under it — and the figures sit almost exactly on The Quadrat's
+own 0.056 ms baseline for the identical quantity (200x200, `GLOBE_RUNG`,
+warm). Extracting the classifier into `hornvale_scene::relief_band` and
+calling it from both the scene tile builder and `plate.rs` cost nothing
+measurable at the rung a player actually holds a key down to reach.
+
 | when (UTC) | label | wall_s | user_s | sys_s | cpu_ratio | waited_s | commit | branch | host | cores |
 |---|---|---|---|---|---|---|---|---|---|---|
 | 2026-07-13T00:00:00Z | suite-full (pre-tiering, backfilled) | 2610.89 | 9246.93 | 36.88 | 3.56 | a2d39fa | main | m1max | 10 |
@@ -3836,3 +3870,6 @@ measured here.
 | 2026-08-31T04:29:30Z | gate-commit | 54.552 | 39.855 | 13.561 | 0.98 | 0 | 26e3718c6 | campaign/the-legend | ambrose | 12 |
 | 2026-08-31T04:30:11Z | rebaseline | 37.518 | 235.837 | 8.036 | 6.50 | 0 | 26e3718c6 | campaign/the-legend | ambrose | 12 |
 | 2026-08-31T04:31:30Z | gate-commit | 51.001 | 39.282 | 13.645 | 1.04 | 0 | 26e3718c6 | campaign/the-legend | ambrose | 12 |
+| 2026-08-31T04:48:56Z | rebaseline | 37.491 | 237.151 | 8.346 | 6.55 | 0 | d9b8573b5 | campaign/the-legend | ambrose | 12 |
+| 2026-08-31T04:54:25Z | rebaseline | 38.251 | 236.032 | 8.233 | 6.39 | 0 | d9b8573b5 | campaign/the-legend | ambrose | 12 |
+| 2026-08-31T04:55:31Z | gate-commit | 52.708 | 39.184 | 13.321 | 1.00 | 0 | d9b8573b5 | campaign/the-legend | ambrose | 12 |
