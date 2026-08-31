@@ -257,3 +257,4 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0448](0448-a-produce-side-demand-instance-statistic-complements-the-composite-and-never-replaces-it.md) | A produce-side demand-instance statistic complements the composite, and never replaces it | Accepted |
 | [0466](0466-authored-evidence-is-read-through-its-own-schema.md) | Authored evidence is read through its own schema, not the live registry | Accepted |
 | [0467](0467-a-frozen-criterion-must-discriminate-against-rival-explanations-of-a-pass.md) | A frozen criterion must discriminate against the rival explanations of a pass | Accepted |
+| [0516](0516-a-reachable-lock-implies-a-reachable-key-is-left-empirical.md) | "A reachable lock implies a reachable key" is left empirical, deliberately — wait for the residents | Accepted |
