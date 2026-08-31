@@ -156,6 +156,36 @@ builds cube-face nodes via `face_unit(face, a, b)`, and `interp`
 **barycentrically interpolates** geosphere values onto them (discrete layers
 are nearest-vertex).
 
+**CORRECTION (2026-08-30), and it weakens this section's argument.** The
+Pavement (`campaign/the-pavement`) challenged the citation of 0287 below and
+is right. I re-read the record: 0287's decision text is *"a tile at rung `d`
+is a facet at depth `d`, and zooming out truncates the path rather than
+averaging the picture"*, and the word "vertex", "vertices" and "corner"
+appear **nowhere in it**. That a facet's corners are geosphere vertices is a
+corollary of the ICOSPHERE IMPLEMENTATION, not a claim 0287 makes.
+
+So 0287's real role here is narrower than stated below: it does not
+independently forbid resampling, it makes 0196's guarantee STRUCTURAL ("A
+tile can never be finer than its datum — 0196's 'may never invent detail
+below it' is now structural, not checked", 0287 §Consequences).
+
+Two consequences worth having before this hardens:
+
+- **The double-resample leg is contingent, not permanent.** It exists because
+  two meshes exist. A change unifying them — which The Pavement proposes —
+  removes it.
+- **The 0196 leg is narrower than written.** The scene interpolates
+  CONTINUOUS layers barycentrically and takes DISCRETE ones nearest-vertex
+  (`region.rs:235`). `relief` is discrete and nearest-vertex by construction
+  (`region.rs:431`, Task 4), so 0196 does not bite for the field this
+  campaign actually added.
+
+**The conclusion still stands, but on a simpler footing than the argument
+below claims**: the TUI is a Rust client that can call the classifier
+directly, so a fetch would buy a serialization round-trip and nothing else.
+That is an argument from simplicity, not from correctness, and it should be
+cited as such rather than as a two-decision prohibition.
+
 So a plate consuming that scene would resample twice — geosphere facet ->
 cube-face node -> Mercator tile — breaking two ratified decisions:
 
