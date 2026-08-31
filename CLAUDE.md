@@ -1116,11 +1116,32 @@ delivery arm. The board also reaches where the wire cannot: other accounts, CI,
 and sessions that do not exist yet.
 
 **A campaign's scratch is per-worktree and dies with it.** `.superpowers/sdd/`
-is git-ignored (never force-add it: a committed ledger silently clobbers every
-parallel session's on absorption, raising no conflict), so promote findings
-into the retrospective *before* teardown or they are gone. On lefford, the
-regeneration worktree is **shared** — ask before reusing it, verify its HEAD,
-and sweep orphans rather than assuming it is parked where you left it.
+is git-ignored, and what still lives there — reports, review packages, task
+state — stays scratch by design: it is regenerable or derivative, so promote
+findings into the retrospective *before* teardown or they are gone.
+
+**This paragraph used to fold the decision ledger into that same warning:
+"never force-add it: a committed ledger silently clobbers every parallel
+session's on absorption, raising no conflict."** The Cartulary (2026-08-30)
+narrowed that claim rather than overruling it, and the two are not the same
+correction. The clobber is real, and it is a property of the *filename*, not
+of committing: every campaign's scratch ledger lived at the identical path,
+`.superpowers/sdd/decision-ledger.md`, so two campaigns editing it merged to
+one side silently — nothing about that has changed, and it is still exactly
+true of that path today. What changed is where the durable material lives: a
+campaign's decision ledger is now a committed document at
+`docs/superpowers/ledgers/YYYY-MM-DD-<slug>.md` — a path keyed by campaign
+slug, touched by exactly one campaign, ever, so there is no collision to
+have. Rulings, deferred minors and parked findings are written there as they
+occur, per the in-repo skills, rather than promoted from scratch at close —
+promotion-at-close is the practice that failed five recorded times
+(`docs/superpowers/specs/2026-08-30-the-cartulary-design.md` §1), which is
+also why `scripts/hooks/pre-commit`'s `.superpowers/` guard comment carries
+the same correction, dated the same day.
+
+On lefford, the regeneration worktree is **shared** — ask before reusing it,
+verify its HEAD, and sweep orphans rather than assuming it is parked where
+you left it.
 
 **Measurement is preregistered.** A study freezes its hypothesis and its
 success criteria *before* the code that would move them (decision 0016). Note

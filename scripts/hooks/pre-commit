@@ -134,15 +134,35 @@ elif git diff --cached --name-only | grep -qE "^(${census_guard_files})$"; then
     fi
 fi
 
-# The scratch-in-worktree guard. `.superpowers/` is campaign scratch — decision
-# ledgers, sdd notes — and is already in `.gitignore`. But `git add -f`
-# deliberately overrides `.gitignore`, and once a path is tracked the ignore
-# stops applying at all, so a single forced add silently makes the file
-# permanent. That has happened at least twice (a `chore: untrack .superpowers/
-# scratch that slipped past its own gitignore` commit exists, and The Action
-# Clock repeated it while freezing a baseline). The ledger is explicitly NOT
-# the durable record — material entries are promoted into the spec at close —
-# so committing it is always a mistake, never a judgment call.
+# The scratch-in-worktree guard. `.superpowers/` is campaign scratch —
+# reports, review packages, task state — and is already in `.gitignore`. But
+# `git add -f` deliberately overrides `.gitignore`, and once a path is
+# tracked the ignore stops applying at all, so a single forced add silently
+# makes the file permanent. That has happened at least twice (a `chore:
+# untrack .superpowers/ scratch that slipped past its own gitignore` commit
+# exists, and The Action Clock repeated it while freezing a baseline).
+#
+# THIS COMMENT USED TO END: "The ledger is explicitly NOT the durable
+# record — material entries are promoted into the spec at close — so
+# committing it is always a mistake, never a judgment call." That was a
+# judgment stated as a settled fact, and The Cartulary (2026-08-30) measured
+# it false: promotion-at-close has failed FIVE recorded times
+# (`docs/superpowers/specs/2026-08-30-the-cartulary-design.md` §1 —
+# `docs/retrospectives/{the-quoin,the-lodestar}.md` plus two more), the last
+# two of them *after* campaigns had added verification specifically to catch
+# this. Verification cannot save it: a check that reads the ledger to
+# confirm promotion cannot detect the ledger having been recycled out of
+# existence first, which is what happened both times.
+#
+# THE GUARD DOES NOT LOOSEN FOR THAT CORRECTION. What still lives under
+# `.superpowers/` is regenerable (a review package is `git diff` output) or
+# derivative (a report is evidence for a ruling recorded elsewhere) — a
+# campaign's decision ledger no longer needs to live here to survive: it is
+# instead a committed, per-campaign document at
+# `docs/superpowers/ledgers/YYYY-MM-DD-<slug>.md` (this campaign's own is
+# already there), written directly as rulings occur rather than promoted
+# from scratch at close. So every reason this guard refuses a
+# `.superpowers/` path still holds; only the rationale above it does not.
 #
 # Closing it by construction: no commit may ADD or MODIFY anything under
 # `.superpowers/`. `--diff-filter=d` excludes deletions deliberately —
@@ -152,8 +172,9 @@ fi
 if git diff --cached --name-only --diff-filter=d | grep -qE '(^|/)\.superpowers/'; then
     echo "pre-commit: a .superpowers/ path is staged." >&2
     echo "That directory is campaign SCRATCH and is gitignored; it was almost" >&2
-    echo "certainly added with 'git add -f'. The decision ledger is not the" >&2
-    echo "durable record — promote material entries into the spec instead." >&2
+    echo "certainly added with 'git add -f'. Reports and review packages are" >&2
+    echo "regenerable and don't belong in git; a campaign's decision ledger" >&2
+    echo "belongs at docs/superpowers/ledgers/, not here." >&2
     echo "" >&2
     git diff --cached --name-only --diff-filter=d | grep -E '(^|/)\.superpowers/' | sed 's/^/  /' >&2
     echo "" >&2
