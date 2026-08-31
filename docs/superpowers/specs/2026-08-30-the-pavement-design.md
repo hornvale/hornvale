@@ -101,13 +101,60 @@ primal and dual of one:
   and how it moves. Squares, 8-connected, sampling the fields above by
   position.
 
-Nothing new is invented for the second mesh. `windows/scene/src/region.rs`
-already carries a cube-sphere quadtree, described in its own module doc as
-*"the projection here is the normative one, shared byte-for-byte with the
-orrery's `cubeSphere.ts` and the reference page."* Its `locate_on_cube` is dot
-products and one division — **transcendental-free, therefore cross-platform
-byte-identical by construction**, which is the property `kernel/CLAUDE.md`
-demands of anything on the determinism path.
+`windows/scene/src/region.rs` already carries a cube-sphere quadtree, and its
+face bases, addressing and quadtree descent transfer directly. **Its
+projection does not, and this is the one place the first draft of this spec
+was wrong.**
+
+### 2.0 The projection must be tangent-warped, and the naive one is a trap
+
+A cube-sphere maps a face's `(a, b) ∈ [-1, 1]²` grid onto the sphere. The
+obvious map — `normalize(n + a·û + b·v̂)`, which is what `region.rs` does —
+bunches cells at the face corners and stretches them at the face centre.
+Measured, sweeping one face and converging in `N`:
+
+```
+    N      naive    tan-warped        max/min CELL AREA across one face
+    8     3.740x       1.276x
+   32     4.856x       1.379x
+  128     5.114x       1.406x
+  256     5.155x       1.410x         naive -> 3*sqrt(3) = 5.196 (analytic)
+```
+
+**The naive cube-sphere is ~5.2x area distortion — worse than the icosphere
+it replaces**, whose own room-mesh spec (§13.4) records "centre children
+~1.5-2x the corner children". Adopting it verbatim would have made the very
+property this campaign exists to improve strictly worse, while the spec
+claimed the opposite.
+
+The fix is the standard tangent warp, applied to each face parameter before
+projection:
+
+```
+a' = tan(a * PI/4)      b' = tan(b * PI/4)      p = normalize(n + a'*u + b'*v)
+```
+
+which measures **1.41x** — better than the icosphere, and the "relatively
+undistorted local grid" the campaign was asked for. The inverse uses `atan`
+and is equally exact.
+
+**This costs the transcendental-free property, and that is affordable but must
+be stated.** `locate_on_cube` today is dot products and one division, so it is
+byte-identical across platforms by construction. With the warp it calls `tan`
+and `atan`, which under decision 0041 route through `kernel/src/math.rs`'s
+pure-Rust `libm` — bit-identical across platforms by the same guarantee every
+other transcendental in this project already relies on. It is a weaker
+guarantee (a library contract rather than an arithmetic one) traded for a 3.7x
+reduction in distortion.
+
+**What it breaks:** `region.rs`'s projection is currently the normative one
+and `scene/tiles-region/v1` is a wire schema, so warping changes what a tile
+means. Decision 0356 retired the external clients, so the cross-repo
+"additive-or-versioned" constraint that would once have forced a version bump
+has lapsed — but the two projections must not silently disagree inside this
+repo. Either `region.rs` adopts the warp (one projection, one definition,
+`scene/tiles-region` reissued) or the campaign keeps two and names which is
+which. **G3 flagged; recommendation is one projection.**
 
 ### 2.1 The address space survives untouched
 
@@ -337,11 +384,17 @@ measurement whose result informs a decision, not a prediction to pass or fail.
 - **0510** — Compass input is 4-way primary and 8-way capable; no destination
   requires a diagonal.
 - **0511** — Walk depth is `globe_level + 7`, chosen to preserve step length.
+- **0512** — The cube-sphere projection is tangent-warped, trading the
+  transcendental-free property for a 3.7x reduction in area distortion; there
+  is one projection in the repository, not two.
 
 ## 10. Task outline
 
-1. Cube base geometry in `kernel/src/room.rs` — `FACES`, `coord`, `corners`,
-   `containing`, `face_lattice`; `pack`/`child`/`parent` untouched.
+1. Cube base geometry in `kernel/src/room.rs` — `FACES`, the §2.0 tangent
+   warp, `coord`, `corners`, `containing`, `face_lattice`; `pack`/`child`/
+   `parent` untouched. Re-measure the distortion table against the shipped
+   code, not against the spec's Python.
+1b. Reconcile `region.rs` to one projection (0512).
 2. The neighbour walk — interior, the 12 seams, the 8 corners; symmetry
    property test.
 3. `walk_depth` → `globe_level + 7`; the §2.3 measurement.
