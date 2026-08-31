@@ -147,9 +147,38 @@ other transcendental in this project already relies on. It is a weaker
 guarantee (a library contract rather than an arithmetic one) traded for a 3.7x
 reduction in distortion.
 
-**What it breaks:** `region.rs`'s projection is currently the normative one
-and `scene/tiles-region/v1` is a wire schema, so warping changes what a tile
-means. Decision 0356 retired the external clients, so the cross-repo
+**What it breaks — narrower than the first draft implied.** The game client's
+world plate does **not** draw through `region.rs`: `plate.rs` holds zero
+references to `RegionScene`/`tiles_region_scene` and projects through
+`crate::mercator` (verified with The Legend). So the 5.2x figure does not
+reach the game client at all. It reaches **`clients/atlas`**, which consumes
+the wire, and `scene/tiles-region/v1` is a wire schema, so warping changes what
+a tile means.
+
+**The schema has MOVED this week and a reissue must carry the movement.**
+`RegionScene` now carries two fields appended after `precip_mm_yr`
+(`windows/scene/src/region.rs:338,341`, verified):
+
+```rust
+pub relief: Vec<u32>,
+pub relief_legend: Vec<String>,
+```
+
+— the six-band `relief_band` classification, nearest-vertex like
+`ocean`/`biome`/`plate`. **Built through `ReferenceElevation::above`, never
+`SeaLevelHeight::from_metres`**, whose own doc calls itself "the hole through
+which the datum-confusion class returns" and which this crate has already
+shipped as a bug once. Any reissue preserves both the fields and that datum
+discipline.
+
+**One downstream conclusion of The Legend's own spec is weakened by this, and
+it should know before it hardens.** Its §3.0 ruled against the plate fetching
+`RegionScene` on two grounds: that `RegionScene` resamples geosphere values
+onto a *different* mesh, so a plate fetching it would resample twice
+(violating 0287), and 0196's never-invent-detail rule. **This campaign removes
+the first objection** — after it there is one mesh, so there is no second
+resample — and leaves 0196 standing alone. Its "share a function, not a fetch"
+conclusion may still be right, but it now rests on one leg instead of two. Decision 0356 retired the external clients, so the cross-repo
 "additive-or-versioned" constraint that would once have forced a version bump
 has lapsed — but the two projections must not silently disagree inside this
 repo. Either `region.rs` adopts the warp (one projection, one definition,
@@ -300,6 +329,11 @@ Authorised explicitly (ledger #2). `Facet` values change meaning, so:
   0189's precedent, and it is regenerated from its seed and pins;
 - `vessel/session/v2` fixtures, the seed-42 gallery transcripts, the committed
   almanacs and `scene/surrounds` goldens all rebaseline.
+- **Volume, not risk, and it stacks with a campaign already in flight.** The
+  Legend reports having already moved `windows/scene/tests/fixtures/region-
+  seed-1-f0-l3.json`, `book/src/gallery/scene-tiles-region-seed-42.json`, the
+  seed-42 session fixtures and `docs/audits/glyph-specimen-sheet.txt`; all
+  rebaseline again under this flip. None is a determinism contract.
 
 **What does NOT move, and this is the load-bearing half:** no seed label, no
 stream label, no draw, no stream consumption order. The occupancy lattice
@@ -345,16 +379,57 @@ costs within 0.5% of `√2 · k` orthogonal steps' worth of ticks, across the
 body-mass and climb range. *Positive control:* with the multiplier removed,
 the same probe shows the 41% discrepancy.
 
-**H3 — the plate-draw budget after losing The Quadrat's H1.** The Quadrat's
+**H3a — the named casualty: a test whose PREMISE dissolves.** Reported by
+The Legend on the wire, verified in its tree at
+`clients/game/bin/src/plate.rs:1918`:
+
+```rust
+let point_vertex = index.nearest(&geo, lat, lon);
+let tile = terrain_at_tile(...);
+total += 1;
+if tile.vertex == point_vertex { agree += 1; }
+```
+
+with `assert_eq!(agree, total)` — mesh addressing reproduces
+`NearestVertexIndex::nearest` **exactly**. Under a cube-sphere a cell's corners
+are not geosphere vertices, so there is no `tile.vertex` for that equality to
+be about. **It does not get slower; it stops meaning anything**, and it must be
+reported as dissolved rather than passed — the same discipline The Quadrat drew
+about its own H2 and §3.4 draws about `course_properties`. It is also *more*
+exposed than The Quadrat left it: The Legend retargeted it this week from
+comparing drawn glyphs to comparing vertices, because the glyph form was a
+weaker proxy (two distinct vertices both ocean draw the same glyph, so it
+passed even when addressing disagreed).
+
+**0287 SURVIVES; ITS COROLLARY IS THE CASUALTY, and the distinction is worth
+stating precisely.** Decision 0287 holds that "a zoom rung is a refinement
+depth of the facet tree — a tile at rung `d` is a facet at depth `d`." That is
+untouched here: a tile is still a facet at a depth, the facet is simply square.
+What breaks is the *corollary* The Quadrat drew from it — that a facet's
+corners are geosphere vertices, and terrain therefore needs no spatial search.
+Nothing in 0287's own text asserts that corollary. This campaign owes it a
+recorded amendment, not a supersession.
+
+**H3b — the plate-draw budget after losing that corollary.** The Quadrat's
 headline was that "a tile IS a facet", so terrain came from that facet's three
 corner *geosphere vertices* by direct addressing: 1,960,000 vertex candidates
 scanned falling to 90 on a 200×200 plate. **A cube-sphere cell's corners are
 not geosphere vertices**, so sampling returns to `NearestVertexIndex` lookups.
 `region.rs` already does exactly this for the tiles path, so the machinery
-exists — the budget does not. Measure the 200×200 plate at every rung, on a
-quiet box, and report the regression as a number rather than a reassurance.
-**No success threshold is preregistered for H3**, deliberately: this is a
-measurement whose result informs a decision, not a prediction to pass or fail.
+exists — the budget does not. **No success threshold is preregistered for H3b**,
+deliberately: this is a measurement whose result informs a decision, not a
+prediction to pass or fail.
+
+**The baseline must not be taken from The Quadrat's published figures.** That
+campaign measured 65.3 / 65.6 / 70.3 / 91.5 ms for one uncached code path — a
+**1.40x spread** — and explicitly refused to pin a fifth number, recording the
+path as load-sensitive instead. Quoting any one of them as "the" baseline
+would repeat the error `docs/CLAUDE.md` records against reading a cost off
+prose. The Legend's Task 11 measures a fresh warm redraw with replicates
+against a preregistered 0.20 ms bar, on the same code path this campaign would
+regress and including the two O(1) per-tile lookups its own branch adds.
+**That is H3b's baseline; take it from there, or take it fresh, and never from
+a remembered figure.**
 
 ## 8. Testing
 
