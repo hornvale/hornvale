@@ -2040,6 +2040,8 @@ hornvale-scene::hornvale_scene$region::tests::node_grid_is_sized_and_determinist
 hornvale-scene::hornvale_scene$region::tests::validation_is_loud
 hornvale-scene::hornvale_scene$region::tests::weights_are_a_partition_of_unity_off_center
 hornvale-scene::hornvale_scene$region::tests::weights_are_exact_at_a_vertex_center
+hornvale-scene::hornvale_scene$surrounds::tests::relief_band_is_monotone_in_height_above_sea
+hornvale-scene::hornvale_scene$surrounds::tests::relief_band_spans_its_whole_legend
 hornvale-scene::hornvale_scene$surrounds_ascii::tests::a_band_with_no_distance_collapses_to_the_origin
 hornvale-scene::hornvale_scene$surrounds_ascii::tests::a_marked_cell_outranks_an_unmarked_one_in_either_document_order
 hornvale-scene::hornvale_scene$surrounds_ascii::tests::a_remembered_cell_holding_a_mark_wins_its_box_and_still_draws_dim
