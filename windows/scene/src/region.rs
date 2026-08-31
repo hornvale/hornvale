@@ -232,8 +232,28 @@ fn interp(
 
 /// One `scene/tiles-region/v1` document (The Region §3.3). Field order is the
 /// JSON key order and is contract. Per-node layers are `(samples+1)²`,
-/// row-major (`i = row·(samples+1) + col`). Continuous layers are barycentric;
-/// discrete layers (`ocean`, `biome`, `plate`) are nearest-vertex.
+/// row-major (`i = row·(samples+1) + col`).
+///
+/// **Per-layer sampling: INTERPOLABLE layers are barycentric, the rest are
+/// nearest-vertex.** An earlier form of this line said "continuous layers are
+/// barycentric; discrete layers (`ocean`, `biome`, `plate`) are
+/// nearest-vertex", which was wrong twice: it enumerated three of six
+/// nearest-vertex layers, and its dichotomy has a counterexample in each
+/// direction. `drainage` is a continuous `f64` and is nearest-vertex, because
+/// averaging two flow accumulations does not give the flow between them;
+/// `unrest` is a continuous ratio and IS interpolated. The rule is whether a
+/// value BETWEEN two data points is meaningful, not whether the type is
+/// discrete.
+///
+/// - **Barycentric** (`interp`): `elevation_m`, `unrest`, `t_mean_c`,
+///   `t_swing_c`, `t_diurnal_amp_c`, `moisture`, `precip_mm_yr`.
+/// - **Nearest-vertex** (at `t_vertex`): `ocean`, `water`, `drainage`,
+///   `relief`, `biome`, `plate`.
+///
+/// Keep both lists complete when adding a layer. This one went stale when
+/// `relief`/`relief_legend` were added and was caught by a reader in another
+/// campaign relying on it as an enumeration — which the paragraph above,
+/// declaring field order to be contract, invites.
 /// type-audit: bare-ok(identifier-text: schema), bare-ok(constructor-edge: seed), bare-ok(index: face), bare-ok(count: level), bare-ok(index: ix), bare-ok(index: iy), bare-ok(count: samples), pending(wave-3: sea_level_m), bare-ok(diagnostic-value: season_period_days), bare-ok(count: circulation_bands), bare-ok(identifier-text: biome_legend), waiver(elevation-convention: elevation_m), bare-ok(flag: ocean), bare-ok(index: biome), bare-ok(index: plate), bare-ok(ratio: unrest), bare-ok(diagnostic-value: t_mean_c), bare-ok(diagnostic-value: t_swing_c), bare-ok(ratio: moisture), bare-ok(index: water), bare-ok(identifier-text: water_legend), bare-ok(diagnostic-value: drainage), bare-ok(diagnostic-value: t_diurnal_amp_c), bare-ok(diagnostic-value: precip_mm_yr), bare-ok(index: relief), bare-ok(identifier-text: relief_legend)
 #[derive(Debug, Serialize)]
 pub struct RegionScene {
