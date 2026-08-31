@@ -650,3 +650,64 @@ that touched this area.
 enforced; the reviewer mutation-proved a fresh spec + plan + self-exemption
 passing all three checks green. The fix idiom was one function away in the same
 commit. Now ratcheted, red-then-green proven.
+
+---
+
+## Final fix wave — adjudicated, not re-fixed
+
+All eight in-scope findings ADDRESSED. The wave introduced a **fourth
+instance** and three lesser defects. Per process there is no second fix wave;
+these are adjudicated here and surfaced to Nathan rather than swung at again.
+
+**The reason that is the right call, and it is a finding in itself: every fix
+wave in this campaign has introduced a new instance of the campaign's own
+defect.** Task 4's fix created I1's dropped bullet. The wave fixing I1 created
+the stability overclaim. A fifth swing would most likely create a fifth. That
+is a convergence failure, and it is exactly what the no-second-wave rule
+anticipates.
+
+### The fourth instance (load-bearing — recommended for a fix)
+
+The wave corrected "remarkably stable ~200 K" (falsified at n=3) and wrote
+**"a consistent 15–19 K regardless of which sample is read"** six lines away,
+about the object that same commit was enlarging. The source
+(`task-6-report.md:81`) says *mean ~15–19 K, range 12–32 K* — the restatement
+dropped the range and promoted a mean to a value. There is no n=13 ledger
+measurement; that pass measured scratch prose. And the only committed ledger
+in existence was already outside the band:
+
+```
+  010242e67 exemplar ledger:  31,647 bytes
+  b1400b4f5 exemplar ledger:  35,617 bytes   (this commit)
+```
+
+*Why load-bearing:* it is a false factual claim in the README that defines
+this tree's contract, about this tree's only inhabitant, in the campaign that
+exists to make such records trustworthy. A future campaign reads it.
+
+### Parked, with rulings
+
+**The assert message names a cause that cannot fire.** It says a rise means a
+"fabricated/duplicated entry"; `ledger_exempt_campaigns()` returns a
+`BTreeSet`, so a duplicate line cannot move the count — proven, the mutation
+stayed PASS. *Ruling: real, parked.* It misdirects a reader debugging a red,
+but the check itself is correct and the red still means what it should.
+
+**The ceiling's `<=` lets a swap through, unstated.** One exempt campaign
+gains a ledger and drops out, a new one takes its slot, length stays 239, all
+five tests green. *Ruling: real, parked.* Under 0491 that direction should be
+named in `# What it cannot see`; it is a stated-blindness gap rather than a
+coverage gap, and the swap requires two simultaneous changes.
+
+**M2's carve-out narrowed and dropped a category.** The README rewrite went
+from "pre-flight cross-task rulings and deferred/parked findings" to "deferred
+minors and parked findings", leaving the exemplar's own `### Ruling A`
+conforming to neither documented shape. *Ruling: real, parked* — and noted as
+I1's shape at smaller scale, which is the third time a narrowing edit in this
+campaign has dropped a category on the way past.
+
+**Chronicle:184 says both findings "are corrected below"; nothing below
+describes the I3 correction.** *Ruling: cosmetic, parked.*
+
+**M4 was never in scope and remains open:** nothing documents that the ratchet
+binds before a campaign's first ruling.
