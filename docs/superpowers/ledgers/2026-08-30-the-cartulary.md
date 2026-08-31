@@ -591,3 +591,62 @@ character-for-character, with only the incorrect framing dropped.
 *The recursion is the campaign's finding.* It built a durable ledger so candid
 material would stop being lost, and then lost a candid line from that ledger,
 in the task that tested whether the ledger works — and caught it.
+
+---
+
+## Task 6 — the close, and the third instance
+
+This entry is late, and its lateness was itself a finding (final review M1):
+the ledger stopped at Task 5 and skipped its own final task boundary — the
+exemplar breaking the every-boundary cadence it exists to demonstrate. Written
+now by the controller, which is whose write it was.
+
+Decisions **0486–0492** minted, plus **0493** superseding 0487. Chronicle,
+retrospective, registry row, freshness sweep. Drift check exit 0, nothing under
+`domesday/`, `gallery/` or an almanac moved.
+
+### The third instance — an ABSENCE, which is why nothing else caught it
+
+Final review I1. Task 4's rewrite split `closing-a-campaign`'s step 2 into two
+halves and, in doing so, **deleted the "Deferred minors → a home" bullet with
+no replacement.** Half 2A routes minors that never reached the ledger; half 2B
+routes post-G3 entries; a *ledgered deferred minor* falls between them with
+nowhere to go. The campaign then closed without routing its own three.
+
+The two earlier instances were both **stale pointers** — a comment naming a
+moved path, a line missing from a file. A diff shows those. This one is an
+instruction that stopped existing, which no per-task review was positioned to
+see, and which only a whole-branch read found.
+
+The reviewer's sentence is the one worth keeping: *nothing material was lost
+this time — which is exactly the state the five prior campaigns were in before
+the loss they are now remembered for.*
+
+### I2 — the load-bearing argument named the wrong file, and that is mine
+
+The claim that per-campaign paths make committing safe rests on identifying
+which file is shared. I named `progress.md` in spec §3, spec §4, the plan, and
+two ledger entries. Measured across 13 worktrees:
+
+```
+  progress.md         .superpowers/sdd/<campaign-slug>/progress.md   campaign-KEYED, always
+  decision-ledger.md  .superpowers/sdd/decision-ledger.md            flat, SHARED, every worktree
+```
+
+`progress.md` has always been per-campaign and never carried the hazard.
+`decision-ledger.md` is the shared one. **The conclusion survives — the
+collision is a property of a shared filename and per-campaign paths dissolve
+it — but the exemplar was wrong**, and the error compounded into 0487
+contradicting 0490. Corrected in all five places; 0493 supersedes 0487 rather
+than editing it, because decisions are append-only.
+
+*Cost of the error:* a committed decision record asserted a false fact about
+which file is still written, and would have been cited by the next campaign
+that touched this area.
+
+### I3 — an asserted rule nothing enforced
+
+"A new campaign cannot add itself to the exemption list" was stated and not
+enforced; the reviewer mutation-proved a fresh spec + plan + self-exemption
+passing all three checks green. The fix idiom was one function away in the same
+commit. Now ratcheted, red-then-green proven.
