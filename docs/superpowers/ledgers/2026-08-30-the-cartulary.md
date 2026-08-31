@@ -280,3 +280,47 @@ finding. And it was careful to write that the *committed* ledger no longer
 needs `.superpowers/`, rather than that the scratch file is retired, because
 Task 4 has not re-pointed the skills yet. A statement true only after a later
 task is false now.
+
+---
+
+## Task 3 — the ratchet, and a demonstrated hole in it
+
+Review: spec ✅, quality approved, one Important (framing) + one Minor. Both
+Step 5 mutations reproduced verbatim by the reviewer; the exemption list
+independently regenerated in Python and diffed against the committed fixture
+(exact match both directions); `the-cartulary` confirmed absent from it, its
+own 282-line ledger present — dogfooding intact.
+
+**Ruling: build the unmatched-plan count ratchet.**
+
+The reviewer demonstrated the hole rather than reasoning about it. A future
+campaign whose spec and plan names defeat the exact-slug matcher — the
+`the-deed-design`/`the-deed-state` shape the code's own comment cites — is
+invisible to BOTH tests: never flagged missing, never exempted, simply unseen,
+permanently. It created exactly that pair and the check passed clean.
+
+The hole is real. What I got wrong is where the reassurance lived: the code's
+doc comment already states this blindness in the harsh, accurate form. It was
+the *report's* summary ("safe for the ratchet's correctness") that read as
+"nothing to worry about" — a narrower claim, true only of the exemption list's
+internal consistency.
+
+So this is not a documentation failure. It is a stated blindness that can be
+turned into a visible red cheaply, and this campaign's whole thesis is that an
+absence needs a row. A campaign the check never looks at is an absence with no
+row, inside the instrument built to remove them.
+
+*The fix:* freeze the unmatched-plan count (54) as its own ratchet, the same
+frozen-count idiom The Attestation used for decision-block declarations and
+that `tropes check` and the timings baseline use. A new unmatched campaign
+moves the count and reddens the day it happens.
+*Cost if wrong:* one fix round, and a frozen number that must be re-derived
+whenever the corpus legitimately grows — the same maintenance every ratchet in
+this repo carries.
+
+### Minor (deferred)
+
+The report's narrative says all 54 unmatched plans are "date drift / stage
+words / umbrella specs". The reviewer found ~13 with no companion spec under
+any name — correctly outside the population rather than matcher misses. The
+count is right; the characterisation is looser than the evidence.
