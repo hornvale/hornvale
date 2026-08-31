@@ -4548,3 +4548,8 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-08-31T01:33:20Z | sluice:gate | 535.761 | 15983.284 | 496.070 | 30.76 | 0 | 06e3898a7 |  | lefford | 40 |
 | 2026-08-31T01:42:14Z | sluice:clients | 533.741 | 9921.416 | 107.318 | 18.79 | 0 | 3ab6cf1be |  | lefford | 40 |
 | 2026-08-31T01:50:03Z | sluice:heavy | 469.622 | 9611.227 | 180.615 | 20.85 | 0 | b3f203e7e |  | lefford | 40 |
+| 2026-08-31T13:08:35Z | gate-commit | 46.067 | 71.185 | 12.075 | 1.81 | 0 | 679ae15ab | campaign/the-legend | ambrose | 12 |
+| 2026-08-31T13:11:40Z | rebaseline | 180.847 | 344.377 | 23.398 | 2.03 | 0 | 679ae15ab | campaign/the-legend | ambrose | 12 |
+| 2026-08-31T13:20:08Z | gate-commit | 472.777 | 1229.239 | 98.260 | 2.81 | 0 | 679ae15ab | campaign/the-legend | ambrose | 12 |
+| 2026-08-31T13:21:54Z | gate-commit | 78.200 | 47.705 | 22.693 | 0.90 | 0 | 679ae15ab | campaign/the-legend | ambrose | 12 |
+| 2026-08-31T13:24:36Z | gate-commit | 87.817 | 55.360 | 27.433 | 0.94 | 0 | 679ae15ab | campaign/the-legend | ambrose | 12 |
