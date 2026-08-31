@@ -187,14 +187,34 @@ route everything raised — including promising ideonomy discards:
 
 ## The decision ledger
 
-Location: the campaign worktree's `.superpowers/sdd/decision-ledger.md`
-(scratch-in-worktree rule — never the shared main checkout). Create it at
-the first auto-resolved decision. Entry format:
+Location: `docs/superpowers/ledgers/YYYY-MM-DD-<slug>.md` — a committed,
+per-campaign document (The Cartulary, decision 0486), not the vendored
+plugin's per-worktree `.superpowers/sdd/<campaign>/progress.md` (which keeps
+its own separate job — task state, fix rounds, resume-after-compaction
+material — and stays scratch; see spec §4a). Create it at the first
+auto-resolved decision, committing as each entry is written rather than
+batching. **"Never the shared main checkout" still governs**, in its
+original form: the ledger is written on the campaign's own branch, in the
+campaign's own worktree, and lands on `main` only through the normal merge
+path — the same discipline that already applies to every other file a
+campaign writes. What changed is that the file is no longer git-ignored
+scratch; the rule about *which checkout* was never about that. Entry
+format:
 
 ```
 #N [G1|G2|G4|G5|Q] — question · decision · why (precedent cited) ·
 alternatives discarded · ideonomy passes / overturns · capture actions
 ```
+
+**A backfilled entry** — one recording a ruling made before the ledger
+existed to capture it contemporaneously (pre-flight scan findings, or
+decisions made during spec/plan authoring before Task 1 of a campaign like
+The Cartulary created its own ledger) — may omit `ideonomy passes /
+overturns` if no pass was ever run for it, provided the entry says so
+explicitly rather than leaving the field silently blank. **A live entry,
+written from the ledger's creation onward, gets no such exemption**: the
+required-slot rule above (a non-zero `ideonomy passes / overturns` field)
+still applies to it in full.
 
 ## The G3 package
 
@@ -214,8 +234,10 @@ At the spec-review stop, present one message containing, in order:
 4. The spec path.
 
 If Nathan vetoes an entry, revise the spec and re-present. Promote material
-ledger entries into the spec's decisions section — the scratch ledger is
-not the durable record.
+ledger entries into the spec's decisions section regardless — the ledger
+is committed and durable now, but it is a per-campaign narrative, not the
+cross-campaign decision log; anything meant to bind future campaigns still
+needs a decision record of its own.
 
 ## Carve-outs — hard-stop regardless of gate
 

@@ -29,13 +29,20 @@ not done until every one is checked or explicitly N/A.
    and still yours: read the other branches' chronicles, not just their
    diffs.
 
-2. **Sweep the scratch before it dies — and do it BEFORE writing the
-   retrospective, not after.** `.superpowers/sdd/` is git-ignored and
-   per-worktree, so everything in it evaporates at step 7's teardown:
-   the decision ledger, the SDD progress ledger, every implementer's
-   report, every mutation proof, every deferred and parked finding. The
-   retrospective and the registry are where that material has to land, so
-   the sweep is an *input* to writing them.
+2. **Sweep what's still scratch before it dies — and do it BEFORE writing
+   the retrospective, not after.** `.superpowers/sdd/` is git-ignored and
+   per-worktree, so everything left in it evaporates at step 7's teardown.
+   Since The Cartulary, that is a narrower set than it used to be: the
+   decision ledger is no longer in this scratch tree at all. It lives at
+   `docs/superpowers/ledgers/<slug>.md`, committed as each ruling occurs
+   (`campaign-autopilot`'s "The decision ledger" section), so it has
+   already survived by the time you reach this step — nothing to sweep,
+   because there is nothing left of it here to lose. **What is still
+   scratch, and still needs this sweep**, is everything the ledger was
+   never the home for: the vendored plugin's own `progress.md` (task
+   state, fix rounds, resume-after-compaction material — its own separate
+   job, deliberately not mirrored, see spec §4a of The Cartulary), every
+   implementer's report, every review package, every mutation proof.
 
    Walk the whole directory and route every item, rather than summarizing
    from memory of the campaign:
@@ -49,21 +56,28 @@ not done until every one is checked or explicitly N/A.
    - **Speculative directions and unfinished work** → idea-registry rows,
      each carrying the measurement that motivates it rather than a hunch.
      A row with a number is worth several without.
-   - **Ledger entries made after the G3 stop** → Nathan has not seen these;
-     they lead the G6 digest and the material ones get promoted into the
-     spec's decisions section or a decision record.
-   - **Deferred minors** → a home, even if that home is one line in the
-     retrospective's deferred list. A minor nobody wrote down is a minor
-     nobody fixes.
+   - **A `progress.md` line that reads like a ruling, deferred minor, or
+     parked finding that never made it into the committed ledger** → that
+     is a discipline miss, not a routine finding: ledger it now (as a
+     backfilled entry — see `campaign-autopilot`'s note on how those
+     differ from a live one) and say in the retrospective that it should
+     have been ledgered contemporaneously instead of found here.
+   - **Ledger entries made after the G3 stop** → Nathan has not seen these
+     yet (the ledger being committed does not mean it was reviewed); they
+     lead the G6 digest and the material ones get promoted into the spec's
+     decisions section or a decision record.
 
-   **The check that catches what this step misses:** for each item, name
-   the committed file and line it landed in. "It's covered in the
-   chronicle" is not a location. The Ell's close promoted nine items and
-   still lost six, including a newly-introduced kernel float newtype
-   deriving `PartialOrd` with no `total_cmp` companion — found only
-   because a reviewer was asked, explicitly, to list what had *not*
-   survived. Ask a reviewer that question; the answer is consistently
-   worth more than its findings on the diff.
+   **The check that catches what this step misses:** for each item still
+   found in scratch, name the committed file and line it landed in. "It's
+   covered in the chronicle" is not a location. The Ell's close promoted
+   nine items and still lost six, including a newly-introduced kernel
+   float newtype deriving `PartialOrd` with no `total_cmp` companion —
+   found only because a reviewer was asked, explicitly, to list what had
+   *not* survived. Ask a reviewer that question; the answer is
+   consistently worth more than its findings on the diff. **This check is
+   why the ledger became durable in the first place — it kept finding the
+   same loss** — but it still applies in full to everything that remains
+   scratch-shaped.
 
 3. **DoD artifacts, on the branch, before merging:**
    - **Chronicle entry** — `book/src/chronicle/<slug>.md`, name-only
