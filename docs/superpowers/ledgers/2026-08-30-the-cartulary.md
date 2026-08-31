@@ -475,3 +475,65 @@ confirmed H2 should be disbelieved unless it names its instrument").
 
 **Verdict: STOP-condition not triggered.** H1 confirmed, campaign has
 purpose. Task 6 may run.
+
+### Task 5 — review fix: the omitted line, a cheap H2 instrument, and a corrected H2 status
+
+**Reviewer finding, accepted in full.** The Task 5 scratch report
+(`.superpowers/sdd/2026-08-30-the-cartulary/task-5-report.md`, git-ignored)
+carried a self-critical line that did not make it into the ledger entry
+above:
+
+> H2's honest "unmeasurable" answer is only as trustworthy as the
+> preregistration itself — since the prediction and the "expect
+> unmeasurable" clause were both written into the spec by the same author,
+> one could argue the unfalsifiability was baked in rather than discovered.
+
+The mechanical H1/H2 content carried through from scratch report to
+committed ledger nearly verbatim; this line, specifically, did not. My
+stated reason at the time — that spec §9 item 2 already covers it — does not
+hold: §9 item 2 is the general prediction that committing changes candour
+("the entry most worth keeping... is the one most likely to be softened");
+this line is a narrower, sharper claim about H2's own *construction* (a
+prediction paired with an admission that it wasn't expected to be tested is
+unfalsifiable by design, independent of whether committing changes anything).
+Writing the sharp form here, in the permanent record, is the fix for a
+candid line vanishing from it — see below for what this is and is not
+evidence of.
+
+**A cheap H2 instrument existed and was applied, post hoc, to exactly this
+occurrence.** The scratch report and this ledger's H1/H2 entry are a matched
+pair: same task, same author, minutes apart, one written to the git-ignored
+*old regime* (`.superpowers/sdd/`) and one to the committed *new regime*
+(`docs/superpowers/ledgers/`). Comparing them is not the twin-campaign,
+blinded-judge study §8 calls for — it costs nothing beyond a `diff`-by-eye
+of two files already on disk, on a sample of one task from one campaign, with
+no blinding and no control for authorial fatigue, ordering effects, or plain
+inconsistency across two writing passes.
+
+**The result:** the mechanical content (commands, output, H1 verdict, H2
+verdict) carried through unchanged; the one line most resembling "I'm not
+sure this holds up" did not. That is **one confounded data point consistent
+with H2's prediction that committing softens candour** — not a confirmation.
+The confound stated plainly: an author naturally tightens a report's tone on
+a second pass regardless of where it's headed, and dropping a line during
+condensation is ordinary editing, not necessarily self-censorship aimed at a
+permanent record. Distinguishing "committed record → softened" from
+"second pass → tightened, and this record happens to be the second pass"
+needs exactly the blinded, controlled comparison this one post-hoc pair does
+not have. **Read this as: an instrument existed, it was applied once, it
+produced one confounded observation pointing the direction §8 predicted —
+not as H2 confirmed.**
+
+**H2's status, corrected.** H2 itself is falsifiable in principle — a
+preregistered, blinded twin-campaign study (same decisions, one arm
+committing to a permanent ledger, one arm writing to ephemeral scratch,
+independent judges scoring candour without knowing which arm produced which
+text) could settle it. What this campaign's spec actually rendered
+unfalsifiable was its own *operationalization* of H2: §8 preregistered "I
+expect not to be able to measure it," and no instrument was built to try —
+which guarantees a report of "unmeasurable" regardless of whether H2 is true
+or false. That is a methodological error in the spec's design of the
+measurement, not a limitation of this task's execution of it, and it belongs
+in the retrospective as a lesson (preregister the instrument, not just the
+expectation of failing to find one) rather than filed under "structural, not
+a defect" as the earlier entry did.

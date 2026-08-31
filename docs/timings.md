@@ -4156,3 +4156,4 @@ measured here.
 | 2026-08-31T00:39:09Z | gate-commit | 21.492 | 51.066 | 13.154 | 2.99 | 0 | 2190d9ee5 | campaign/the-cartulary | MacBookPro | 10 |
 | 2026-08-31T00:51:24Z | gate-commit | 30.005 | 73.599 | 17.487 | 3.04 | 0 | bdc531723 | campaign/the-cartulary | MacBookPro | 10 |
 | 2026-08-31T01:00:14Z | gate-commit | 21.341 | 51.134 | 13.065 | 3.01 | 0 | 347573d28 | campaign/the-cartulary | MacBookPro | 10 |
+| 2026-08-31T01:16:31Z | gate-commit | 23.418 | 52.488 | 13.435 | 2.82 | 0 | ae714367b | campaign/the-cartulary | MacBookPro | 10 |
