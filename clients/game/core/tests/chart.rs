@@ -1,4 +1,6 @@
-use hornvale_game_core::{Chart, ChartCell, Grid, Ink, Micro, Snapshot, Spatial, Weight, chart};
+use hornvale_game_core::{
+    Chart, ChartCell, Grid, Ink, Mark, Micro, Snapshot, Spatial, Weight, chart,
+};
 
 const FIXTURE: &str = include_str!("fixtures/session-seed-42-turn-0.json");
 
@@ -297,4 +299,71 @@ fn the_ladder_ascends_with_impedance() {
         ranks.windows(2).all(|w| w[0] <= w[1]),
         "impedance ladder must be non-decreasing: {ranks:?}"
     );
+}
+
+type AgentEntry = ChartCell; // lexicon: AREA-sense chart entry, not a mesh vertex.
+
+/// One synthetic agent-bearing walk-band entry, all else defaulted.
+fn synth_agent(bearing_deg: f64, distance_rad: f64, noun: &str) -> AgentEntry {
+    let mut c = synth_cell(bearing_deg, distance_rad, 0, 1.0, 0.0); // lexicon: AREA sense, not a mesh vertex.
+    c.marks = vec![Mark {
+        noun: noun.to_string(),
+        kind: "agent".to_string(),
+        datum: format!("A {noun} stands here."),
+        salience: 1,
+    }];
+    c
+}
+
+/// Fix round 2's review finding: `tests/lexicon.rs` pins `creature_glyph`
+/// itself as a pure function of the noun alone, but the regression that
+/// mattered — per-render disambiguation — would not reappear there. It
+/// would reappear in a CALLER of `creature_glyph` (here, [`chart::draw`])
+/// that collected the chart's visible nouns and de-duplicated them before
+/// calling — a change that never touches `creature_glyph`'s signature and
+/// so would pass every assertion in `tests/lexicon.rs`. This test pins the
+/// property one layer up, through the real entry point: a creature's own
+/// glyph must not change depending on which other creatures share the
+/// render.
+///
+/// The company is not arbitrary. `giant elk` and `gnoll` both sort
+/// alphabetically before `goblin` and share its initial `g` — exactly the
+/// three-way collision fix round 1's `creature_ranks` resolved by moving
+/// `goblin` off `g` onto `o` (`task-9-report.md`'s worked example). A
+/// per-render greedy rank walk reintroduced at the `chart::draw` call site
+/// (rather than inside `creature_glyph`) would still make goblin's glyph
+/// change here, and this test is what would catch it — see the fix
+/// round 2 report's pasted red for the proof.
+#[test]
+fn a_creatures_glyph_is_stable_through_chart_draw_regardless_of_company() {
+    let goblin_alone = synth_chart(4, vec![synth_agent(90.0, 1.0, "goblin")]);
+    let mut g_alone = crate::Grid::new(20, 20);
+    chart::draw(&goblin_alone, &mut g_alone, (0, 0));
+
+    let goblin_crowded = synth_chart(
+        4,
+        vec![
+            synth_agent(90.0, 1.0, "goblin"),
+            // Sorts before "goblin", shares its initial.
+            synth_agent(0.0, 1.0, "giant elk"),
+            // Same initial as "goblin".
+            synth_agent(180.0, 1.0, "gnoll"),
+        ],
+    );
+    let mut g_crowded = crate::Grid::new(20, 20);
+    chart::draw(&goblin_crowded, &mut g_crowded, (0, 0));
+
+    // Every entry here sits on the same rim (`distance_rad == 1.0`), so
+    // `farthest` is 1.0 in both charts and goblin's own box — bearing 90,
+    // radius (rings) 4 — lands at the identical grid position in both:
+    // (row 0, col 8) from centre (see `project_puts_north_up_east_right_
+    // and_doubles_the_column`, pinned directly on this same formula).
+    let (cx, cy): (u16, u16) = (10, 10);
+    let alone_glyph = g_alone.get(cx + 8, cy).unwrap().glyph;
+    let crowded_glyph = g_crowded.get(cx + 8, cy).unwrap().glyph;
+    assert_eq!(
+        alone_glyph, crowded_glyph,
+        "a goblin's own glyph must not change because giant elk and gnoll also share the chart"
+    );
+    assert_eq!(alone_glyph, Some('g'));
 }

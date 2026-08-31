@@ -1,4 +1,6 @@
-use hornvale_game_core::{Grid, Snapshot, Spatial, plan};
+use hornvale_game_core::{
+    Grid, PaletteEntry, Plan, PlanExtent, PlanMark, PlanPoint, Snapshot, Spatial, plan,
+};
 
 const FIXTURE: &str = include_str!("fixtures/session-seed-42-chamber.json");
 
@@ -159,4 +161,91 @@ fn the_shape_matches_the_sims_own_ascii_render() {
     plan::draw(&p, &mut g, (0, 0));
     let want: Vec<String> = REFERENCE_PICTURE.lines().map(|l| l.to_string()).collect();
     assert_eq!(grid_picture(&g), want);
+}
+
+/// A minimal 3x2 plan (mirrors `src/plan.rs`'s own private `small_plan` test
+/// helper, unreachable from this external integration binary): wall, floor,
+/// threshold on row 0; wall, floor, wall on row 1. `you` stands on the
+/// floor at (1, 1), leaving (0, 0), (2, 0), and (0, 1) free for marks.
+fn minimal_plan() -> Plan {
+    Plan {
+        extent: PlanExtent {
+            x: 0,
+            y: 0,
+            w: 3,
+            h: 2,
+        },
+        palette: vec![
+            PaletteEntry {
+                kind: "wall".to_string(),
+                chambers: vec![],
+                color: None,
+            },
+            PaletteEntry {
+                kind: "floor".to_string(),
+                chambers: vec![0],
+                color: None,
+            },
+            PaletteEntry {
+                kind: "threshold".to_string(),
+                chambers: vec![0, 1],
+                color: None,
+            },
+        ],
+        cells: vec![0, 1, 2, 0, 1, 0], // lexicon: `Plan::cells` is this crate's own AREA-sense row-major grid, not a mesh vertex.
+        you: PlanPoint { x: 1, y: 1 },
+        marks: vec![],
+    }
+}
+
+/// One agent mark at `(x, y)`.
+fn agent_mark(x: i32, y: i32, noun: &str) -> PlanMark {
+    PlanMark {
+        x,
+        y,
+        noun: noun.to_string(),
+        kind: "agent".to_string(),
+        datum: format!("A {noun} stands here."),
+        salience: 1,
+    }
+}
+
+/// Fix round 2's review finding, `plan::draw`'s half — see `tests/chart.rs`'s
+/// `a_creatures_glyph_is_stable_through_chart_draw_regardless_of_company`
+/// for the property and why it must be pinned through the real entry point,
+/// not just `creature_glyph` in isolation: a caller of `creature_glyph`
+/// inside `plan::draw`'s marks pass could collect the plan's visible nouns
+/// and de-duplicate them before calling, which would never touch
+/// `creature_glyph`'s signature and so would pass every assertion in
+/// `tests/lexicon.rs`.
+///
+/// Same discriminating company as the chart test: `giant elk` and `gnoll`
+/// both sort alphabetically before `goblin` and share its initial — the
+/// exact case fix round 1's `creature_ranks` resolved by moving `goblin`
+/// off `g`.
+#[test]
+fn a_creatures_glyph_is_stable_through_plan_draw_regardless_of_company() {
+    let mut alone = minimal_plan();
+    alone.marks = vec![agent_mark(2, 0, "goblin")];
+    let mut g_alone = Grid::new(5, 5);
+    plan::draw(&alone, &mut g_alone, (0, 0));
+
+    let mut crowded = minimal_plan();
+    crowded.marks = vec![
+        agent_mark(2, 0, "goblin"),
+        // Sorts before "goblin", shares its initial.
+        agent_mark(0, 0, "giant elk"),
+        // Same initial as "goblin".
+        agent_mark(0, 1, "gnoll"),
+    ];
+    let mut g_crowded = Grid::new(5, 5);
+    plan::draw(&crowded, &mut g_crowded, (0, 0));
+
+    let alone_glyph = g_alone.get(2, 0).unwrap().glyph;
+    let crowded_glyph = g_crowded.get(2, 0).unwrap().glyph;
+    assert_eq!(
+        alone_glyph, crowded_glyph,
+        "a goblin's own glyph must not change because giant elk and gnoll also share the plan"
+    );
+    assert_eq!(alone_glyph, Some('g'));
 }
