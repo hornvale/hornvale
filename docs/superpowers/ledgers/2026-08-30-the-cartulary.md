@@ -400,3 +400,25 @@ diverged from the filesystem. It caught this by verifying `git diff` after
 each edit and redid the work through Bash. Nothing wrong shipped. Recorded
 here because an agent that trusted the success return would have committed a
 change missing edits it believed it had made, and that failure is silent.
+
+### Task 4 — complete (`bdc531723..6443f2874`, review clean after 1 fix round)
+
+The fix split step 2 into **2A** (the scratch sweep — what still dies) and
+**2B** (`cat` the committed ledger — what survives but still needs reading),
+with the failure mode named before either half. The sibling sweep I asked for
+earned itself: it found a **second** instance in the Quick Reference table's
+"Scratch promotion" row, which the targeted fix would have left behind.
+
+The re-review **executed step 2 literally rather than reading it for intent** —
+the original defect was an instruction that read correctly and found nothing
+when followed, so reading the fix for intent would have reproduced the mistake
+that made it. Both halves reach their material.
+
+It also re-derived the sibling sweep independently, and in doing so caught its
+own first pass being incomplete: an anchored `grep '^```'` missed indented
+fences, so it widened the search and re-ran. Same discipline, applied one
+level up.
+
+Confirmed: only the Quick Reference row was a sibling.
+`campaign-autopilot`'s `.superpowers/sdd/followups.md` mention is a
+genuinely-still-scratch item, not an instance of this bug.
