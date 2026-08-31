@@ -351,3 +351,52 @@ rather than an absence with no row. Guarantee stated accurately; no overclaim.
 Red reproduced by the reviewer with a *different* shape than the implementer
 used — a one-day date drift rather than a stage word — so the evidence does
 not rest on one self-selected case.
+
+---
+
+## Task 4 — the skills re-pointed, and one instruction left behind
+
+Review: spec ✅, quality approved, one Important + one Minor. The reviewer
+re-ran the stale-claim grep itself and reproduced every per-location count
+exactly, spot-checked one hit from each correct-as-history bucket (a frozen
+spec, two plans, a retrospective, `CLAUDE.md`'s own superseding paragraph) and
+found no stale claim misfiled as history, and read all three skills as an
+executor would rather than grepping for the word "mirror" — confirming no copy
+step was smuggled in.
+
+**Ruling (the Important, entering fix round 1): `closing-a-campaign`'s step 2
+routes a bullet its own discovery mechanism can no longer find.** The step
+still says to route "ledger entries made after the G3 stop", and its shell
+commands still `ls`/`grep` over `.superpowers/sdd/` — where the ledger no
+longer is. A closer following it literally sees no ledger and concludes there
+is nothing to route.
+
+This is the campaign's own thesis committed by the task that moves the
+ledger: a record that outlives its subject produces wrong answers from
+good-faith readers, and here the *instruction* outlived the *location* it
+assumed. Fixing it, and asking the implementer to sweep all three edited
+skills for siblings — any step naming a mechanism (a path, a grep, a command)
+rather than a thing to find.
+*Cost if wrong:* one fix round on skill prose.
+
+**Ruling (the classification table): all 182 remaining hits stay untouched,
+and that is correct rather than incomplete.** 81 in frozen specs, 59 in
+plans, 38 in retrospectives, 2 in `CLAUDE.md`, 2 in this task's own new text.
+The specs and plans describe the ledger as it stood when they were written —
+including this campaign's own spec, which is the "before" its plan exists to
+change, and its own plan, which quotes the pre-change instruction verbatim as
+Task 4's instruction. Editing them would destroy the evidence the campaign
+argues from, and the project's supersede-never-edit convention exists for
+exactly this. Only the two `campaign-autopilot` lines were genuinely stale,
+and both are fixed.
+*Cost if wrong:* a future reader takes a frozen spec's description of the old
+arrangement as current. Mitigated by those documents being dated and by the
+supersession Task 2 landed in the two live files.
+
+**Harness issue observed, not a campaign defect.** The implementer reported
+the Edit tool returning success twice for edits that never reached disk, then
+failing to match text it had itself reported as applied — its cached view
+diverged from the filesystem. It caught this by verifying `git diff` after
+each edit and redid the work through Bash. Nothing wrong shipped. Recorded
+here because an agent that trusted the success return would have committed a
+change missing edits it believed it had made, and that failure is silent.
