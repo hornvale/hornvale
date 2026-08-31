@@ -29,20 +29,26 @@ not done until every one is checked or explicitly N/A.
    and still yours: read the other branches' chronicles, not just their
    diffs.
 
-2. **Sweep what's still scratch before it dies — and do it BEFORE writing
-   the retrospective, not after.** `.superpowers/sdd/` is git-ignored and
-   per-worktree, so everything left in it evaporates at step 7's teardown.
-   Since The Cartulary, that is a narrower set than it used to be: the
-   decision ledger is no longer in this scratch tree at all. It lives at
-   `docs/superpowers/ledgers/<slug>.md`, committed as each ruling occurs
-   (`campaign-autopilot`'s "The decision ledger" section), so it has
-   already survived by the time you reach this step — nothing to sweep,
-   because there is nothing left of it here to lose. **What is still
-   scratch, and still needs this sweep**, is everything the ledger was
-   never the home for: the vendored plugin's own `progress.md` (task
-   state, fix rounds, resume-after-compaction material — its own separate
-   job, deliberately not mirrored, see spec §4a of The Cartulary), every
-   implementer's report, every review package, every mutation proof.
+2. **Route what's still scratch before it dies, AND separately read what's
+   now durable — two actions, not one sweep, and do both BEFORE writing the
+   retrospective, not after.** Since The Cartulary, step 2 covers two halves
+   that no longer share a discovery mechanism, and treating them as one
+   sweep is exactly the failure mode this campaign exists to remove: an
+   instruction (route post-G3 ledger entries) whose original discovery
+   command (`ls`/`grep` over `.superpowers/sdd/`) quietly stopped reaching
+   its subject the day the ledger moved out of that tree. A closer who runs
+   only that command sees no ledger file and concludes there is nothing to
+   route — which is false, not merely incomplete.
+
+   **A. What dies at step 7's teardown — still needs sweeping out of
+   `.superpowers/sdd/`.** `.superpowers/sdd/` is git-ignored and
+   per-worktree, so everything left in it evaporates. This is narrower than
+   it used to be: the decision ledger is gone from this tree entirely (see
+   B). What remains here, and only here, is the vendored plugin's own
+   `progress.md` (task state, fix rounds, resume-after-compaction material
+   — its own separate job, deliberately not mirrored, see spec §4a of The
+   Cartulary), every implementer's report, every review package, every
+   mutation proof.
 
    Walk the whole directory and route every item, rather than summarizing
    from memory of the campaign:
@@ -62,13 +68,24 @@ not done until every one is checked or explicitly N/A.
      backfilled entry — see `campaign-autopilot`'s note on how those
      differ from a live one) and say in the retrospective that it should
      have been ledgered contemporaneously instead of found here.
-   - **Ledger entries made after the G3 stop** → Nathan has not seen these
-     yet (the ledger being committed does not mean it was reviewed); they
-     lead the G6 digest and the material ones get promoted into the spec's
-     decisions section or a decision record.
 
-   **The check that catches what this step misses:** for each item still
-   found in scratch, name the committed file and line it landed in. "It's
+   **B. What survives teardown — still needs READING, not rescuing.** The
+   decision ledger, `docs/superpowers/ledgers/<slug>.md`, is committed as
+   each ruling occurs (`campaign-autopilot`'s "The decision ledger"
+   section), so nothing here is at risk of being lost. But committed is not
+   the same as reviewed, and nobody has read it end to end just because git
+   has a copy:
+
+   ```bash
+   cat docs/superpowers/ledgers/<slug>.md
+   ```
+
+   - **Every entry made after the G3 stop** → Nathan has not seen these
+     yet; they lead the G6 digest, and the material ones get promoted into
+     the spec's decisions section or a decision record.
+
+   **The check that catches what this step misses:** for each item from
+   either half, name the committed file and line it landed in. "It's
    covered in the chronicle" is not a location. The Ell's close promoted
    nine items and still lost six, including a newly-introduced kernel
    float newtype deriving `PartialOrd` with no `total_cmp` companion —
@@ -77,7 +94,9 @@ not done until every one is checked or explicitly N/A.
    consistently worth more than its findings on the diff. **This check is
    why the ledger became durable in the first place — it kept finding the
    same loss** — but it still applies in full to everything that remains
-   scratch-shaped.
+   scratch-shaped (half A), and to whether half B's post-G3 entries
+   actually got read here rather than assumed reviewed because they were
+   committed.
 
 3. **DoD artifacts, on the branch, before merging:**
    - **Chronicle entry** — `book/src/chronicle/<slug>.md`, name-only
@@ -140,7 +159,8 @@ not done until every one is checked or explicitly N/A.
 | Gradient re-score | `book/src/open-questions.md` (if a bet moved) | decision 0030 |
 | Registry flips | `book/src/frontier/idea-registry.md` | registry header rules |
 | Keystone refreeze | `cli/tests/fixtures/` etc., from main's tip | merge-time discipline |
-| Scratch promotion | `.superpowers/sdd/` → retrospective + registry rows | step 2; the scratch is git-ignored and dies with the worktree |
+| Scratch promotion | `.superpowers/sdd/` (plugin `progress.md`, reports, reviews, mutation proofs) → retrospective + registry rows | step 2A; scratch is git-ignored and dies with the worktree |
+| Ledger review | `docs/superpowers/ledgers/<slug>.md`, read for post-G3 entries → spec decisions section / decision record | step 2B; committed at write time, but unreviewed until read here |
 
 ## Common mistakes
 
