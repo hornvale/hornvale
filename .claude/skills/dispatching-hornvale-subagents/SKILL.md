@@ -111,7 +111,10 @@ Work the brief's claims, not its prose:
 **Outputs.** Fold corrections into the dispatch as the controller's
 resolution of ambiguity. If a finding contradicts the plan rather than
 merely sharpening it, ledger it and fix the plan text — the next task
-reads that file too.
+reads that file too. (The ledger is the committed
+`docs/superpowers/ledgers/<slug>.md`, not worktree scratch — see
+`campaign-autopilot`'s "The decision ledger" section for the path and
+entry format.)
 
 **If this step balloons past ~10 minutes, stop.** A brief that cannot be
 checked against the code in ten minutes is a plan defect, not a

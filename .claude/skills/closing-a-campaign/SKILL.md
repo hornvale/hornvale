@@ -29,13 +29,26 @@ not done until every one is checked or explicitly N/A.
    and still yours: read the other branches' chronicles, not just their
    diffs.
 
-2. **Sweep the scratch before it dies — and do it BEFORE writing the
-   retrospective, not after.** `.superpowers/sdd/` is git-ignored and
-   per-worktree, so everything in it evaporates at step 7's teardown:
-   the decision ledger, the SDD progress ledger, every implementer's
-   report, every mutation proof, every deferred and parked finding. The
-   retrospective and the registry are where that material has to land, so
-   the sweep is an *input* to writing them.
+2. **Route what's still scratch before it dies, AND separately read what's
+   now durable — two actions, not one sweep, and do both BEFORE writing the
+   retrospective, not after.** Since The Cartulary, step 2 covers two halves
+   that no longer share a discovery mechanism, and treating them as one
+   sweep is exactly the failure mode this campaign exists to remove: an
+   instruction (route post-G3 ledger entries) whose original discovery
+   command (`ls`/`grep` over `.superpowers/sdd/`) quietly stopped reaching
+   its subject the day the ledger moved out of that tree. A closer who runs
+   only that command sees no ledger file and concludes there is nothing to
+   route — which is false, not merely incomplete.
+
+   **A. What dies at step 7's teardown — still needs sweeping out of
+   `.superpowers/sdd/`.** `.superpowers/sdd/` is git-ignored and
+   per-worktree, so everything left in it evaporates. This is narrower than
+   it used to be: the decision ledger is gone from this tree entirely (see
+   B). What remains here, and only here, is the vendored plugin's own
+   `progress.md` (task state, fix rounds, resume-after-compaction material
+   — its own separate job, deliberately not mirrored, see spec §4a of The
+   Cartulary), every implementer's report, every review package, every
+   mutation proof.
 
    Walk the whole directory and route every item, rather than summarizing
    from memory of the campaign:
@@ -49,21 +62,55 @@ not done until every one is checked or explicitly N/A.
    - **Speculative directions and unfinished work** → idea-registry rows,
      each carrying the measurement that motivates it rather than a hunch.
      A row with a number is worth several without.
-   - **Ledger entries made after the G3 stop** → Nathan has not seen these;
-     they lead the G6 digest and the material ones get promoted into the
-     spec's decisions section or a decision record.
-   - **Deferred minors** → a home, even if that home is one line in the
-     retrospective's deferred list. A minor nobody wrote down is a minor
-     nobody fixes.
+   - **A `progress.md` line that reads like a ruling, deferred minor, or
+     parked finding that never made it into the committed ledger** → that
+     is a discipline miss, not a routine finding: ledger it now (as a
+     backfilled entry — see `campaign-autopilot`'s note on how those
+     differ from a live one) and say in the retrospective that it should
+     have been ledgered contemporaneously instead of found here.
 
-   **The check that catches what this step misses:** for each item, name
-   the committed file and line it landed in. "It's covered in the
-   chronicle" is not a location. The Ell's close promoted nine items and
-   still lost six, including a newly-introduced kernel float newtype
-   deriving `PartialOrd` with no `total_cmp` companion — found only
-   because a reviewer was asked, explicitly, to list what had *not*
-   survived. Ask a reviewer that question; the answer is consistently
-   worth more than its findings on the diff.
+   **B. What survives teardown — still needs READING, not rescuing.** The
+   decision ledger, `docs/superpowers/ledgers/<slug>.md`, is committed as
+   each ruling occurs (`campaign-autopilot`'s "The decision ledger"
+   section), so nothing here is at risk of being lost. But committed is not
+   the same as reviewed, and nobody has read it end to end just because git
+   has a copy:
+
+   ```bash
+   cat docs/superpowers/ledgers/<slug>.md
+   ```
+
+   - **Every entry made after the G3 stop** → Nathan has not seen these
+     yet; they lead the G6 digest, and the material ones get promoted into
+     the spec's decisions section or a decision record.
+   - **Every deferred minor recorded anywhere in the ledger, at any task
+     boundary, not only those made after the G3 stop** → a home, even if
+     that home is one line in the retrospective's deferred-minors section
+     stating its outcome (fixed in a later task, accepted as-is, or carried
+     forward as a registry row). This is the bullet Task 4's rewrite of
+     this step deleted with no replacement (The Cartulary final review,
+     finding I1): half A above only catches a minor that never reached the
+     ledger at all, and the bullet just above only catches entries made
+     after G3 — a minor ledgered *before* G3, which is the ordinary case
+     for a routine task-boundary finding, was a home for neither. Read the
+     whole ledger for "Deferred minor" headings, not only its tail, and
+     name where each one landed. A minor sitting only in the ledger is not
+     routed — "it's in the ledger" is not a location, any more than "it's
+     covered in the chronicle" was.
+
+   **The check that catches what this step misses:** for each item from
+   either half, name the committed file and line it landed in. "It's
+   covered in the chronicle" is not a location. The Ell's close promoted
+   nine items and still lost six, including a newly-introduced kernel
+   float newtype deriving `PartialOrd` with no `total_cmp` companion —
+   found only because a reviewer was asked, explicitly, to list what had
+   *not* survived. Ask a reviewer that question; the answer is
+   consistently worth more than its findings on the diff. **This check is
+   why the ledger became durable in the first place — it kept finding the
+   same loss** — but it still applies in full to everything that remains
+   scratch-shaped (half A), and to whether half B's post-G3 entries
+   actually got read here rather than assumed reviewed because they were
+   committed.
 
 3. **DoD artifacts, on the branch, before merging:**
    - **Chronicle entry** — `book/src/chronicle/<slug>.md`, name-only
@@ -126,7 +173,8 @@ not done until every one is checked or explicitly N/A.
 | Gradient re-score | `book/src/open-questions.md` (if a bet moved) | decision 0030 |
 | Registry flips | `book/src/frontier/idea-registry.md` | registry header rules |
 | Keystone refreeze | `cli/tests/fixtures/` etc., from main's tip | merge-time discipline |
-| Scratch promotion | `.superpowers/sdd/` → retrospective + registry rows | step 2; the scratch is git-ignored and dies with the worktree |
+| Scratch promotion | `.superpowers/sdd/` (plugin `progress.md`, reports, reviews, mutation proofs) → retrospective + registry rows | step 2A; scratch is git-ignored and dies with the worktree |
+| Ledger review | `docs/superpowers/ledgers/<slug>.md`, read for post-G3 entries → spec decisions section / decision record; every deferred minor in it → retrospective, with its outcome | step 2B; committed at write time, but unreviewed until read here |
 
 ## Common mistakes
 

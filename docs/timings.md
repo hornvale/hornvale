@@ -4445,6 +4445,22 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-08-30T16:26:36Z | sluice:gate | 466.602 | 13561.788 | 432.292 | 29.99 | 0 | 2c6b0ea9f |  | lefford | 40 |
 | 2026-08-30T16:35:33Z | sluice:clients | 536.141 | 9717.426 | 123.684 | 18.36 | 0 | 3588e1a39 |  | lefford | 40 |
 | 2026-08-30T16:43:14Z | sluice:heavy | 461.171 | 9652.581 | 153.445 | 21.26 | 0 | e3513454d |  | lefford | 40 |
+| 2026-08-30T23:37:56Z | gate-commit | 157.104 | 1089.318 | 50.493 | 7.26 | 0 | aaa6f6170 | campaign/the-cartulary | MacBookPro | 10 |
+| 2026-08-31T00:10:15Z | gate-commit | 21.901 | 51.324 | 13.248 | 2.95 | 0 | 0281b01fa | campaign/the-cartulary | MacBookPro | 10 |
+| 2026-08-31T00:24:41Z | gate-commit | 21.861 | 47.203 | 11.859 | 2.70 | 0 | 64b28a2a6 | campaign/the-cartulary | MacBookPro | 10 |
+| 2026-08-31T00:25:57Z | gate-commit | 22.011 | 51.747 | 13.175 | 2.95 | 0 | 64b28a2a6 | campaign/the-cartulary | MacBookPro | 10 |
+| 2026-08-31T00:38:29Z | gate-commit | 22.190 | 51.798 | 13.514 | 2.94 | 0 | 2190d9ee5 | campaign/the-cartulary | MacBookPro | 10 |
+| 2026-08-31T00:39:09Z | gate-commit | 21.492 | 51.066 | 13.154 | 2.99 | 0 | 2190d9ee5 | campaign/the-cartulary | MacBookPro | 10 |
+| 2026-08-31T00:51:24Z | gate-commit | 30.005 | 73.599 | 17.487 | 3.04 | 0 | bdc531723 | campaign/the-cartulary | MacBookPro | 10 |
+| 2026-08-31T01:00:14Z | gate-commit | 21.341 | 51.134 | 13.065 | 3.01 | 0 | 347573d28 | campaign/the-cartulary | MacBookPro | 10 |
+| 2026-08-31T01:16:31Z | gate-commit | 23.418 | 52.488 | 13.435 | 2.82 | 0 | ae714367b | campaign/the-cartulary | MacBookPro | 10 |
+| 2026-08-31T01:24:18Z | rebaseline | 73.581 | 266.622 | 12.774 | 3.80 | 0 | 686213187 | campaign/the-cartulary | MacBookPro | 10 |
+| 2026-08-31T01:30:53Z | rebaseline | 45.587 | 267.546 | 13.939 | 6.17 | 0 | 686213187 | campaign/the-cartulary | MacBookPro | 10 |
+| 2026-08-31T01:34:08Z | gate-commit | 20.960 | 51.014 | 12.778 | 3.04 | 0 | 686213187 | campaign/the-cartulary | MacBookPro | 10 |
+| 2026-08-31T01:35:30Z | gate-commit | 20.990 | 51.007 | 12.819 | 3.04 | 0 | 7f5607896 | campaign/the-cartulary | MacBookPro | 10 |
+| 2026-08-31T02:01:56Z | rebaseline | 44.543 | 267.339 | 13.266 | 6.30 | 0 | 010242e67 | campaign/the-cartulary | MacBookPro | 10 |
+| 2026-08-31T02:02:47Z | gate-commit | 21.839 | 51.634 | 13.031 | 2.96 | 0 | 010242e67 | campaign/the-cartulary | MacBookPro | 10 |
+| 2026-08-31T02:03:25Z | gate-commit | 21.212 | 51.017 | 13.157 | 3.03 | 0 | 010242e67 | campaign/the-cartulary | MacBookPro | 10 |
 | 2026-08-30T16:46:09Z | gate-commit | 36.772 | 110.997 | 18.005 | 3.51 | 0 | 102b9f173 | campaign/the-winze | MacBookPro | 10 |
 | 2026-08-30T17:47:46Z | gate-commit | 39.134 | 78.932 | 41.645 | 3.08 | 0 | a4e4e68f2 | campaign/the-winze | MacBookPro | 10 |
 | 2026-08-30T17:48:38Z | gate-commit | 25.224 | 52.338 | 13.661 | 2.62 | 0 | a4e4e68f2 | campaign/the-winze | MacBookPro | 10 |
@@ -4573,3 +4589,10 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-08-31T17:52:37Z | sluice:gate | 540.762 | 16092.286 | 501.378 | 30.69 | 0 | 63a1906bf |  | lefford | 40 |
 | 2026-08-31T18:01:54Z | sluice:clients | 556.695 | 10021.147 | 114.148 | 18.21 | 0 | 94821b213 |  | lefford | 40 |
 | 2026-08-31T18:09:38Z | sluice:heavy | 463.918 | 9583.435 | 143.836 | 20.97 | 0 | 8b789fa84 |  | lefford | 40 |
+| 2026-08-31T23:45:47Z | rebaseline | 77.182 | 316.094 | 16.187 | 4.31 | 0 | 6d1a1a4b3 | campaign/the-cartulary | MacBookPro | 10 |
+| 2026-08-31T23:47:59Z | gate-commit | 114.227 | 751.290 | 47.385 | 6.99 | 0 | 6d1a1a4b3 | campaign/the-cartulary | MacBookPro | 10 |
+| 2026-08-31T23:51:55Z | gate-commit | 25.019 | 56.061 | 14.006 | 2.80 | 0 | 0c3721621 | campaign/the-cartulary | MacBookPro | 10 |
+| 2026-08-31T23:52:29Z | gate-commit | 22.075 | 53.293 | 14.067 | 3.05 | 0 | 0c3721621 | campaign/the-cartulary | MacBookPro | 10 |
+| 2026-09-01T00:28:15Z | rebaseline | 52.963 | 276.563 | 14.618 | 5.50 | 0 | edcb5ac61 | campaign/the-cartulary | MacBookPro | 10 |
+| 2026-09-01T00:28:39Z | gate-commit | 23.738 | 54.878 | 14.710 | 2.93 | 0 | edcb5ac61 | campaign/the-cartulary | MacBookPro | 10 |
+| 2026-09-01T00:38:42Z | gate-commit | 22.051 | 53.271 | 13.887 | 3.05 | 0 | 046d654f8 | campaign/the-cartulary | MacBookPro | 10 |
