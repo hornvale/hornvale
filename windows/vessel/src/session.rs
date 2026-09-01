@@ -8283,7 +8283,7 @@ mod tests {
              assigns RadiatesHeat to ({hearth_noun:?}): {warm_line:?}"
         );
         assert!(
-            crate::affordance::offered_by(kinds::HEARTH,)
+            crate::affordance::offered_by(kinds::HEARTH)
                 .contains(&crate::affordance::OfferedVerb::Warm),
             "the carrier HELP names must actually offer Warm, or the two \
              texts would agree with each other while disagreeing with the \

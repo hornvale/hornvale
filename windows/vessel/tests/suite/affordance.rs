@@ -1633,7 +1633,7 @@ fn the_re_key_preserves_every_anchor_kinds_offer() {
         // passage tests above. With the key an open label the row is simply
         // writable, which is the addressing half of decision 0397 arriving
         // at a place that could not previously hold it.
-        (KindId("cave-mouth"), &[Enter, Examine, Open, Close]),
+        (kinds::CAVE_MOUTH, &[Enter, Examine, Open, Close]),
         (kinds::GROUND, &[Examine]),
         (kinds::HEARTH, &[Examine, Warm]),
         (kinds::HIGH_SEAT, &[Examine]),
@@ -1701,7 +1701,7 @@ fn the_re_key_preserves_every_anchor_kinds_offer() {
     }
 }
 
-// --- FOUR SOURCE-SCANNING TESTS RETIRED HERE (The Wicket, Task 2) -------
+// --- FIVE SOURCE-SCANNING TESTS RETIRED HERE (The Wicket, Task 2) -------
 //
 // Their SUBJECTS were deleted, not their claims relaxed, and each is named
 // so a reader looking for the guarantee finds where it went:

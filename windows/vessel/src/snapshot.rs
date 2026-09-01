@@ -420,10 +420,23 @@ pub struct NounEntry {
     /// `Thing`/`Unknown`), which is fed exclusively by walk-band content —
     /// biome, regime, village, sky (`focalize.rs`'s own `render`). No
     /// `narration.nouns` entry has ever carried a chamber anchor's kind at
-    /// any call site (`grep -rn "kinds::" windows/vessel/src/snapshot.rs
-    /// windows/vessel/src/focalize.rs` returns nothing, as the same grep for
-    /// the deleted `AnchorKind` did before The Wicket), including while
-    /// the possession stands indoors — `Session::snapshot` always renders
+    /// any call site. The evidence is a grep for a thing-kind handle in the
+    /// two files that build these nouns, with doc comments excluded so the
+    /// citation cannot match itself:
+    ///
+    /// ```text
+    /// grep -rn 'kinds::' windows/vessel/src/snapshot.rs \
+    ///     windows/vessel/src/focalize.rs | grep -v '///'
+    /// ```
+    ///
+    /// It exits 1 with no output (verified 2026-09-01), as the same grep for
+    /// the deleted `AnchorKind` did before The Wicket. **The `grep -v` is
+    /// load-bearing rather than tidiness**: without it the command matches
+    /// this very sentence and returns one line, which is what the pre-Wicket
+    /// citation quietly did once the identifier it named became the string it
+    /// was searching for. The claim held throughout; the command stopped
+    /// witnessing it. This holds while
+    /// the possession stands indoors, too — `Session::snapshot` always renders
     /// `self.focalizer.render(&vantage)` from the walk-band `Vantage`,
     /// never from the chamber's own `Interior`, and a committed chamber-band
     /// fixture (`clients/game/core/tests/fixtures/session-seed-42-chamber.json`)

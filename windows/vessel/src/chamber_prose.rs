@@ -222,14 +222,11 @@ pub(crate) fn contents_of(interior: &Interior, id: AnchorId) -> Option<String> {
 /// type-audit: bare-ok(flag: opened)
 pub(crate) fn examine_detail(interior: &Interior, id: AnchorId, opened: bool) -> String {
     let kind = interior.anchor(id).kind;
-    let thing_kind = kind;
     let base = detail(kind);
-    if !crate::affordance::encloses(thing_kind) {
+    if !crate::affordance::encloses(kind) {
         return base.to_string();
     }
-    if crate::affordance::carries(thing_kind, crate::affordance::ObjectProperty::Openable)
-        && !opened
-    {
+    if crate::affordance::carries(kind, crate::affordance::ObjectProperty::Openable) && !opened {
         return base.to_string();
     }
     match contents_of(interior, id) {
@@ -389,6 +386,121 @@ mod tests {
         kinds::ALTAR,
         kinds::KEY,
     ];
+
+    /// **Every kind the authored grammar can place has a [`detail`] line** —
+    /// swept over [`crate::interior::INVENTORY`] itself, never over a roster
+    /// beside it.
+    ///
+    /// **This is the assertion that stopped existing when the enum did (The
+    /// Wicket, Task 2), and its absence was a player-facing crash rather than
+    /// a tidiness problem.** [`detail`] used to be an exhaustive `match` over a
+    /// closed enum, so a pattern could only name a variant and every variant
+    /// had to have an arm or the crate would not compile. A pattern now names
+    /// a label, and [`detail`] ends in a wildcard that PANICS. That panic is
+    /// reached from [`examine_detail`] and from `Session::sighting`'s
+    /// `PlanMark.datum`, so an `INVENTORY` row whose kind has no arm is a
+    /// runtime crash in a real chamber the first time anyone looks at the
+    /// room.
+    ///
+    /// **Why the two sweeps beside it do not cover this.**
+    /// [`every_kind_has_a_detail`] and
+    /// [`the_articles_this_module_authors_are_the_two_it_strips`] both run
+    /// over [`EVERY_KIND`], which is hand-written — so a kind added to
+    /// `INVENTORY` and not to that list makes both of them measure one kind
+    /// short and stay green, which is the exact failure
+    /// `domains/thing`'s `the_roster_is_frozen_as_an_ordered_set` records
+    /// having been measured once already at 1209 tests green. Sweeping
+    /// `INVENTORY` is what makes this one unable to narrow: the population is
+    /// the authored grammar itself.
+    ///
+    /// It reads all three slots a pattern can name a kind in — the anchor it
+    /// contributes, the kind it `requires`, and the
+    /// `Attach::Beside`/`Attach::Within` target — because all three reach
+    /// `Interior::push` or a `first_of` lookup, and a kind that reaches an
+    /// interior reaches prose.
+    ///
+    /// **Task 4's G-a and G-b will imply this transitively and it stays
+    /// anyway.** G-a says every `INVENTORY` kind is a `THING_KINDS` row and
+    /// G-b says every `THING_KINDS` row has a chamber-prose row, so the
+    /// composition gives this. "Transitively implied" is precisely the
+    /// reasoning that goes wrong quietly — it survives one of the two links
+    /// being narrowed, or scoped, or moved to a different roster — and the
+    /// direct assertion costs one loop.
+    ///
+    /// **A missing arm arrives as [`detail`]'s own refusal, quoting the
+    /// kind**, rather than as an assertion here. Pre-empting it would need a
+    /// second copy of the arm list in this test, which is the duplicated
+    /// table decision 0261 warns about and whose cheapest repair deletes the
+    /// check.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST: point `the-altar`'s `kind` in
+    /// [`crate::interior::INVENTORY`] at `KindId("altar-stone")` — a kind
+    /// with no [`detail`] arm. It compiles, `INVENTORY` keeps its length,
+    /// every composition still validates, and [`EVERY_KIND`] is untouched.
+    ///
+    /// **`the-altar` rather than a pattern anyone walks past, and the choice
+    /// is what makes this evidence.** The obvious mutation — misspelling
+    /// [`detail`]'s own `"vessel"` arm — was run first and reddened FOUR
+    /// tests, this one plus [`every_kind_has_a_detail`],
+    /// [`no_detail_speaks_of_terrain`] and a session-level golden, because
+    /// `the-water-jar` is drawn in every built composition. A mutation caught
+    /// several ways over says nothing about which test is holding the
+    /// property. `the-altar` is `roles: &[Role::Shrine]`, and The Custodian
+    /// measured `Role::Shrine` occurring **zero** times in any flagship a
+    /// possession starts at, so no behavioural test renders a chamber holding
+    /// one — which is exactly the shape of the gap this test exists for: a
+    /// kind reachable by the GRAMMAR but by no test's transcript.
+    ///
+    /// Applied with `scripts/mutate.py`, run unfiltered over the crate,
+    /// restored from a `cp` backup and re-run green afterwards. Red observed
+    /// 2026-09-01 — **exactly one test failed**:
+    ///
+    /// ```text
+    /// FAIL [   0.011s] ( 17/876) hornvale-vessel chamber_prose::tests::every_kind_the_grammar_places_has_a_detail
+    /// thread 'chamber_prose::tests::every_kind_the_grammar_places_has_a_detail'
+    /// panicked at windows/vessel/src/chamber_prose.rs:120:18:
+    /// no chamber prose for kind "altar-stone"
+    ///      Summary [ 190.620s] 876 tests run: 875 passed, 1 failed, 3 skipped
+    /// ```
+    #[test]
+    fn every_kind_the_grammar_places_has_a_detail() {
+        use crate::interior::{Attach, INVENTORY};
+
+        let mut checked = 0usize;
+        for p in INVENTORY.iter() {
+            let mut named = vec![("kind", p.kind)];
+            if let Some(r) = p.requires {
+                named.push(("requires", r));
+            }
+            match p.attach {
+                Attach::Beside(k) | Attach::Within(k) => named.push(("attach", k)),
+                Attach::Hub => {}
+            }
+            for (slot, id) in named {
+                // `detail` REFUSES rather than defaults, so a kind with no arm
+                // panics HERE, naming itself. What this loop adds is the
+                // population: the authored grammar, not a list beside it.
+                let line = detail(id);
+                assert!(
+                    line.ends_with('.') && !line.trim().is_empty(),
+                    "pattern {:?} names {:?} in its {slot}, whose detail is not \
+                     a sentence: {line:?}",
+                    p.name,
+                    id.0
+                );
+                checked += 1;
+            }
+        }
+        // Anti-vacuity, and the accounting a census owes: a future edit that
+        // dropped a slot from the walk above would satisfy every assertion by
+        // measuring less. 16 patterns, each naming a `kind`; 10 of them also
+        // name a `requires`; 12 also name an `Attach` target.
+        assert_eq!(
+            checked, 38,
+            "the sweep no longer reads every kind INVENTORY names: {checked} \
+             slots, not 38"
+        );
+    }
 
     #[test]
     fn every_kind_has_a_detail() {

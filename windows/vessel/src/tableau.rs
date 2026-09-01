@@ -34,10 +34,24 @@ use serde::{Deserialize, Serialize};
 /// One thing a tableau puts in a creature's hands.
 ///
 /// `kind` is a thing-kind the world already knows (`"key"`, `"loaf"`), not a
-/// free noun. A tableau may stage anything the world can REPRESENT, and the
-/// vocabulary of things is currently a closed enum — see
-/// `MAP-one-kind-model`, which is where that fence gets retired. Until then a
+/// free noun. A tableau may stage anything the world can REPRESENT, and a
 /// staged prop is one of the world's own kinds.
+///
+/// **THE CLOSED-ENUM FENCE IS GONE (The Wicket, Task 2), and this sentence
+/// said the opposite.** It read: *"the vocabulary of things is currently a
+/// closed enum — see `MAP-one-kind-model`, which is where that fence gets
+/// retired. Until then a staged prop is one of the world's own kinds."* True
+/// when written and false now: an anchor carries a
+/// [`hornvale_kernel::KindId`], the vocabulary is
+/// `hornvale_thing::THING_KINDS`, and adding a kind is a row rather than a
+/// variant. What bounds a staged prop today is that roster — open, but
+/// ratcheted — not a type.
+///
+/// `MAP-one-kind-model` is NOT thereby discharged, and reading it that way is
+/// the over-read this correction invites. Its first addition (kinds as data)
+/// is what landed; the other two — kind-to-kind EDGES, and per-instance
+/// components DERIVED from `Lineage` — are untouched, and the registry row is
+/// still open.
 /// type-audit: bare-ok(identifier-text: kind), bare-ok(index: held_by)
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct StagedThing {
