@@ -661,3 +661,36 @@ easily met — it is recorded because a condition nobody wrote down is a conditi
 nobody checks. Related: `tick_commit_budget` headroom is now 17% (1.242 against
 a 1.5 ceiling) while ~35% of the volume is naps, so **no fact-emitting behaviour
 may be added before Task 8 gives that headroom back.**
+
+#34 [G5] — **An honest, specific failure message is not evidence the check
+performs what it says.** Task 7's implementer reported that its
+quantizer-witness test was vacuous in its first form — it compared
+`quantize(n as f64)` to `n as f64`, applying the `i64→f64` rounding to *both*
+sides, so the `limit → 10^18` mutation left it green — and that this was the
+**fourth** vacuous-first test in that task alone. Its own summary is the
+finding: *"three of my four had honest, specific messages describing a check
+they were not performing, and none was found by re-reading."*
+
+That sharpens the campaign's eight-instance shape into something operational.
+The failing mode is not sloppiness or vague wording — the messages were
+precise, and precision is what made them convincing. **Re-reading a check
+compares it against the model that produced it, so it cannot see the gap;
+only mutation can.** Every one of the eight instances was found by running
+something, never by looking harder.
+
+#35 [G5] — **A reviewer's prescribed criterion was wrong, and the implementer
+inside the code found the discriminating one.** The review specified the new
+`FATIGUE_FALL` guard as "a saturated body drops below `FATIGUE_ACT` in 3-4
+cycles". The implementer checked and reported that this does not discriminate:
+one half-day night repays 0.5 and takes a saturated body under 0.85 at 0.6, 1.0
+**and** 1.6 alike. It substituted "returns to fully rested", which is what
+`FATIGUE_FALL`'s doc and the reviewer's own re-derivation are actually authored
+against, and which reddens both ways — **0.6 → 7 nights, 1.6 → 2**, with all of
+P1-P6 staying green, which is precisely the gap the test exists to close.
+
+This is `campaign-autopilot`'s own rule vindicated from the reviewer's side:
+*never prescribe a specific mutation from outside the code; name the property
+and let the implementer find one.* I relayed a prescribed criterion instead of
+a property, and the person with the code in front of them corrected it. The
+rule is not only about plan text — it binds review instructions too, and that
+extension is worth carrying into the retrospective.
