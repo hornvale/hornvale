@@ -39,7 +39,7 @@ use hornvale_kernel::{
 use hornvale_species::{ActivityCycle, ThermalStrategy};
 use hornvale_vessel::body::Body;
 use hornvale_vessel::liveness::{
-    AGENT_AT, DRANK, EATEN, Hazards, RESTED, Terrain, ThreatNiche, place_agent,
+    AGENT_AT, DRANK, EATEN, Hazards, RESTED, SLEPT, Terrain, ThreatNiche, place_agent,
 };
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -156,6 +156,8 @@ fn harness_registry() -> ConceptRegistry {
         false,
         "an agent rested on a day, for this many ticks",
     );
+    let _ =
+        registry.register_predicate(SLEPT, false, "an agent slept on a day, for this many ticks");
     let _ = registry.register_predicate(EATEN, false, "an agent ate on a day");
     registry
 }

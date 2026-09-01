@@ -2733,7 +2733,7 @@ hornvale-vessel::hornvale_vessel$liveness::tests::arbitrates_proposal_cache_matc
 hornvale-vessel::hornvale_vessel$liveness::tests::arbitration_is_deterministic_reload_stable_and_breaks_ties_by_ascending_room_addr
 hornvale-vessel::hornvale_vessel$liveness::tests::arbitration_reports_only_the_dominant_drive_and_keeps_the_suppressed_one_retrievable
 hornvale-vessel::hornvale_vessel$liveness::tests::arriving_into_an_empty_interior_is_a_no_op_not_a_panic
-hornvale-vessel::hornvale_vessel$liveness::tests::asleep_a_creature_rests_and_wakes_only_for_survival
+hornvale-vessel::hornvale_vessel$liveness::tests::asleep_a_creature_sleeps_and_wakes_only_for_survival
 hornvale-vessel::hornvale_vessel$liveness::tests::believed_hazard_clears_a_disproven_phantom
 hornvale-vessel::hornvale_vessel$liveness::tests::believed_hazard_holds_the_visited_dangerous_cells
 hornvale-vessel::hornvale_vessel$liveness::tests::believed_hazard_is_empty_when_never_frightened
@@ -2823,7 +2823,7 @@ hornvale-vessel::hornvale_vessel$liveness::tests::shared_belief_is_order_indepen
 hornvale-vessel::hornvale_vessel$liveness::tests::social_proposal_and_serviceability_are_the_home_step
 hornvale-vessel::hornvale_vessel$liveness::tests::soft_maslow_severe_cold_beats_mild_thirst_but_dying_of_thirst_beats_any_cold
 hornvale-vessel::hornvale_vessel$liveness::tests::the_agent_at_predicate_spelling_is_a_permanent_on_disk_key
-hornvale-vessel::hornvale_vessel$liveness::tests::the_fatigue_drive_rests_in_place_wherever_the_creature_is
+hornvale-vessel::hornvale_vessel$liveness::tests::the_fatigue_drive_beds_down_in_place_wherever_the_creature_is
 hornvale-vessel::hornvale_vessel$liveness::tests::the_herd_bolts_borrowed_alarm_makes_a_calm_creature_flee_then_settle
 hornvale-vessel::hornvale_vessel$liveness::tests::the_hoisted_walk_emits_exactly_what_the_loop_emitted
 hornvale-vessel::hornvale_vessel$liveness::tests::the_phantom_detours_around_a_passed_alarm_then_relearns_the_ground_safe

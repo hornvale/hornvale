@@ -162,8 +162,8 @@ use hornvale_locale::LocaleContext;
 use hornvale_species::{ActivityCycle, ThermalStrategy};
 use hornvale_vessel::body::Body;
 use hornvale_vessel::liveness::{
-    AGENT_AT, DRANK, EATEN, LocaleTerrain, RESTED, Terrain, ThreatNiche, built_rooms, derive_npcs,
-    place_agent,
+    AGENT_AT, DRANK, EATEN, LocaleTerrain, RESTED, SLEPT, Terrain, ThreatNiche, built_rooms,
+    derive_npcs, place_agent,
 };
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -447,6 +447,8 @@ fn planted_registry() -> ConceptRegistry {
         false,
         "an agent rested on a day, for this many ticks",
     );
+    let _ =
+        registry.register_predicate(SLEPT, false, "an agent slept on a day, for this many ticks");
     let _ = registry.register_predicate(EATEN, false, "an agent ate on a day");
     registry
 }

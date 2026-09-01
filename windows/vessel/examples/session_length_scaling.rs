@@ -982,6 +982,10 @@ fn run(
             "an agent rested on a day, for this many ticks",
         ),
         (
+            hornvale_vessel::liveness::SLEPT,
+            "an agent slept on a day, for this many ticks",
+        ),
+        (
             hornvale_vessel::liveness::EATEN,
             "an agent ate (eased its hunger) on a day",
         ),

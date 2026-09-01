@@ -4661,3 +4661,9 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-01T18:00:32Z | rebaseline | 60.673 | 271.443 | 14.484 | 4.71 | 0 | e4e654955 | campaign/the-wicket | MacBookPro | 10 |
 | 2026-09-01T18:02:06Z | gate-commit | 27.525 | 61.652 | 19.551 | 2.95 | 0 | e4e654955 | campaign/the-wicket | MacBookPro | 10 |
 | 2026-09-01T18:02:54Z | gate-commit | 21.569 | 53.197 | 13.647 | 3.10 | 0 | e4e654955 | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T19:15:58Z | rebaseline | 60.314 | 272.077 | 13.825 | 4.74 | 0 | 6da32a52f | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T19:16:45Z | gate-commit | 29.919 | 61.199 | 44.042 | 3.52 | 0 | 6da32a52f | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T19:17:03Z | gate-commit | 12.895 | 15.269 | 5.731 | 1.63 | 0 | 6da32a52f | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T19:17:23Z | gate-commit | 7.915 | 7.690 | 0.175 | 0.99 | 0 | 6da32a52f | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T19:17:53Z | gate-commit | 18.041 | 19.961 | 5.766 | 1.43 | 0 | 6da32a52f | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T19:18:40Z | gate-commit | 37.844 | 144.903 | 25.084 | 4.49 | 0 | 6da32a52f | campaign/the-wicket | MacBookPro | 10 |

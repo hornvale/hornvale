@@ -18,7 +18,7 @@ use hornvale_locale::LocaleContext;
 use hornvale_vessel::body::Body;
 use hornvale_vessel::liveness::{
     AGENT_AT, Affect, AffectLabel, DRANK, DriveKind, DriveMovements, EATEN, HomeNavCache,
-    LocaleTerrain, PrimaryAfraidMemo, RESTED, SUSTENANCE, Terrain, affect_of_memo_occupied,
+    LocaleTerrain, PrimaryAfraidMemo, RESTED, SLEPT, SUSTENANCE, Terrain, affect_of_memo_occupied,
     agent_position, built_rooms, derive_npcs, waking_offset,
 };
 use std::collections::BTreeMap;
@@ -303,6 +303,8 @@ pub fn simulate_world(world: &World) -> Vec<AffectTrace> {
         false,
         "an agent rested on a day, for this many ticks",
     );
+    let _ =
+        registry.register_predicate(SLEPT, false, "an agent slept on a day, for this many ticks");
     let _ = registry.register_predicate(EATEN, false, "an agent ate on a day");
     let home = match hornvale_settlement::all_settlements(world).first() {
         Some(v) => v.id,

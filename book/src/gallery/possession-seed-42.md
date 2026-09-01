@@ -134,7 +134,7 @@ No direction here is closed; the nearest ground lies NW, SW, E.
 Tropical rainforest — a stream gully, shaded, damp, in a hollow — in the lands of Doaba. The sky above: The sun, a yellow dwarf (G), climbs the morning sky. The light is golden. The days are near their longest. The sky is a flat overcast.
 No direction here is closed; the nearest ground lies NE, W, SE.
 > wait 90
-Time passes. You sense movement nearby (292 stirred).
+Time passes. You sense movement nearby (226 stirred).
 > examine sky
 The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are shrinking. The sky is a flat overcast.
 > knows

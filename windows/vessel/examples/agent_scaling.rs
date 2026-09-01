@@ -362,6 +362,13 @@ fn run_rung(
         .expect("RESTED registers identically every run");
     registry
         .register_predicate(
+            hornvale_vessel::liveness::SLEPT,
+            false,
+            "an agent slept on a day, for this many ticks",
+        )
+        .expect("SLEPT registers identically every run");
+    registry
+        .register_predicate(
             hornvale_vessel::liveness::EATEN,
             false,
             "an agent ate (eased its hunger) on a day",

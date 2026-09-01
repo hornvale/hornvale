@@ -9,9 +9,9 @@ use crate::controller::{Controller, ImposedController, PlayerController};
 use crate::gate::{BodyState, Verdict, verdict};
 use crate::liveness::{
     AGENT_AT, Affect, AffectLabel, DRANK, DriveKind, DriveMovements, EATEN, HomeNavCache,
-    LocaleTerrain, Mode, Occupancy, PrimaryAfraidMemo, RESTED, SUSTENANCE, Terrain,
-    affect_of_memo_occupied, agent_at_fact, agent_position, built_rooms, derive_npcs,
-    derive_wild_npcs, next_awake_day, rested_fact, species_activity, village_or_fallback,
+    LocaleTerrain, Mode, Occupancy, PrimaryAfraidMemo, RESTED, SLEPT, SUSTENANCE, Terrain,
+    act_span, affect_of_memo_occupied, agent_at_fact, agent_position, built_rooms, derive_npcs,
+    derive_wild_npcs, renders_unconscious, slept_fact, species_activity, village_or_fallback,
 };
 use crate::snapshot::{
     KnownChannel, KnownEntry, Narration, NounEntry, PresentEntry, SESSION_SCHEMA, SelfChannel,
@@ -1200,6 +1200,9 @@ impl<'w> Session<'w> {
                 "an agent rested on a day, for this many ticks",
             )
             .expect("RESTED registers identically every session");
+        registry
+            .register_predicate(SLEPT, false, "an agent slept on a day, for this many ticks")
+            .expect("SLEPT registers identically every session");
         registry
             .register_predicate(EATEN, false, "an agent ate (eased its hunger) on a day")
             .expect("EATEN registers identically every session");
@@ -2513,19 +2516,30 @@ impl<'w> Session<'w> {
     /// this arc adds: the acceptance test needs a body that can stop obeying,
     /// and none of the 26 existing verbs could produce one.
     ///
-    /// **It mints nothing.** It routes to the existing [`Action::Rest`] — so
-    /// it costs what lying down costs, and commits the same `rested` fact a
-    /// creature's own Rest commits — and `rest`/`sleep` are both already
-    /// registered concepts, so no concept, cohort or accession entry moves.
+    /// **It mints nothing.** It routes to [`Action::Sleep`] — so it costs what
+    /// going under costs, and commits the same `slept` fact a creature's own
+    /// Sleep commits — and `sleep` was already a registered concept before the
+    /// variant existed, so no concept, cohort or accession entry moves.
     ///
-    /// **When it wakes** is `liveness::next_awake_day`, the same scan a
-    /// creature's Rest jumps by. That function answers "the next moment this
-    /// species is awake", which is at least one scan step away, so the body is
-    /// genuinely under until the clock advances. It is honest but coarse: a
-    /// body that lies down *during* its own waking phase wakes at the next
-    /// scan step rather than sleeping through to the following night. Naming
-    /// a finer rule would be inventing a second sleep model beside the
-    /// creature layer's, which this task declines to do.
+    /// **It used to route to [`Action::Rest`], and that was the defect Task 8
+    /// fixed.** One act cannot be both conscious and unconscious, so
+    /// unconsciousness lived HERE — this method set `wake_at` itself — and a
+    /// creature performing the very same `Action::Rest` never went under. The
+    /// property is the act's now: this method asks
+    /// [`renders_unconscious`] rather than deciding, so the two routes reach
+    /// the same state by construction rather than by two implementations
+    /// agreeing.
+    ///
+    /// **How long it lasts** is [`act_span`], the one place a bout's length is
+    /// decided, shared verbatim with the creature layer's own walk. For a sleep
+    /// that is the body's own cycle (`next_awake_day`) floored at a full sleep
+    /// bout. The floor is what this doc used to lack: it said the wake was
+    /// "honest but coarse" because a body lying down *during* its waking phase
+    /// woke at the next scan step — seven minutes — and declined to name a
+    /// finer rule on the grounds that doing so would invent a second sleep
+    /// model beside the creature layer's. With two acts there is no second
+    /// model to invent: the floor is a property of sleeping, and both layers
+    /// read it from the same function.
     ///
     /// **An argument is refused, not swallowed** (fix round 1). `sleep 5`
     /// reads as "sleep five days" and cannot be honoured — the body wakes on
@@ -2538,31 +2552,38 @@ impl<'w> Session<'w> {
         if !arg.is_empty() {
             return Turn::Out(SLEEP_ARGUMENT_REFUSAL.to_string());
         }
-        if let Err(e) = self.charge(&Action::Rest, 1.0) {
+        if let Err(e) = self.charge(&Action::Sleep, 1.0) {
             return Turn::Out(e);
         }
-        // THE WAKE INSTANT COMES FIRST NOW (The Wicket, Task 7), because the
-        // `rested` fact records how long the body was down and this method
-        // already knew: `wake_at` was computed from the same scan and the fact
-        // was committed without it. Fatigue is a recovery stock, so the span is
-        // what a rest actually repays.
-        let wake = {
+        // THE SPAN COMES FIRST (The Wicket, Task 7), because the `slept` fact
+        // records how long the body was down and this method already knew:
+        // `wake_at` was computed from the same scan and the fact was committed
+        // without it. Fatigue is a recovery stock, so the span is what a sleep
+        // actually repays.
+        let span = {
             let activity = species_activity(self.world, &self.driven_body().species);
             let terrain = self.terrain_here();
-            next_awake_day(activity, &terrain, &self.position(), self.day)
+            act_span(
+                &Action::Sleep,
+                activity,
+                &terrain,
+                &self.position(),
+                self.day,
+            )
+            .expect("Sleep is one of the two acts act_span answers for")
         };
-        let fact = rested_fact(
-            self.agent_entity(),
-            self.day,
-            wake - self.day,
-            SLEPT_PROVENANCE,
-        );
+        let fact = slept_fact(self.agent_entity(), self.day, span, SLEPT_PROVENANCE);
         self.ledger
             .commit(fact, &self.registry)
-            .expect("RESTED is registered every session and non-functional");
-        // `next_awake_day` answers with the instant itself now, so the wake
-        // time needs no reconstruction from a float day — and cannot fail.
-        self.wake_at = Some(wake);
+            .expect("SLEPT is registered every session and non-functional");
+        // UNCONSCIOUSNESS IS READ OFF THE ACT, NOT ASSERTED HERE (The Wicket,
+        // Task 8). The `if` is not decoration on an act that always answers
+        // `true`: it is the statement that this method has no opinion of its
+        // own about whether the body goes under, so a future act routed through
+        // here gets the answer its own classification gives.
+        if renders_unconscious(&Action::Sleep) {
+            self.wake_at = Some(self.day + span);
+        }
         Turn::Out(SLEEP_REPLY.to_string())
     }
 
