@@ -685,6 +685,13 @@ in existence was already outside the band:
 this tree's contract, about this tree's only inhabitant, in the campaign that
 exists to make such records trustworthy. A future campaign reads it.
 
+> **Correction, pre-merge (see "The fifth instance" below): this entry names
+> the wrong file for the quoted wording.** "a consistent 15–19 K regardless
+> of which sample is read" is the CHRONICLE's sentence,
+> `book/src/chronicle/the-cartulary.md`. The README carried a softer variant
+> of the same error. Both came from the same fix-wave commit, `75fa38e1c`,
+> and both are corrected.
+
 ### Parked, with rulings
 
 **The assert message names a cause that cannot fire.** It says a rise means a
@@ -771,3 +778,44 @@ cause proven above to be unable to fire. The assert MESSAGE at the bottom of
 as ruled. So the two now differ in what they name, deliberately: re-adding a
 known-false cause to a doc comment in the campaign built to make records
 trustworthy was not a defensible way to stay consistent.
+
+
+## The fifth instance — the record named the wrong file, and the stronger copy was in the book
+
+Fixing the fourth instance found a fifth, and it was found by grepping the
+CLAIM rather than by reading the record that reported it.
+
+The entry above, the chronicle's own account, and the handoff into this
+session all located the overclaim in `docs/superpowers/ledgers/README.md`.
+It is in two files. `git log -S'consistent 15–19 K regardless'` returns one
+commit, `75fa38e1c` — the whole-branch fix wave — and its diff writes the
+strong wording into the CHRONICLE and a softer variant into the README, six
+lines apart in the same commit:
+
+```
+-puts the committed ledger's own share at roughly 15–19 K of that ~200 K —
++is a consistent 15–19 K regardless of which sample is read, meaning the   # chronicle
++are all on the regenerable side. A ledger itself is ~15–19 K on the same  # README
+```
+
+So a session acting faithfully on the record would have corrected the weaker
+instance in a docs tree and shipped the stronger one in the published book.
+The pattern is the campaign's own, at one further remove: not a dropped
+category this time but a **dropped site** — a correction that names one
+location for a claim written to two.
+
+*What caught it:* `grep -rn '15–19'` across the chronicle, retrospective,
+ledger, README and the campaign's decisions, run because a correction has a
+blast radius and the record is not a reliable index of it. Re-reading the
+entry could not have caught it: the entry is internally consistent and cites
+a real file that really carried a real version of the error.
+
+*Both are corrected*, with the range restored, the mean labelled as a mean,
+and the tree's only inhabitant (41 K, above the 12–32 K range's ceiling)
+named as the evidence that these are a floor rather than a size. Decided by
+Nathan at the pre-merge stop, over parking it or deleting the claim.
+
+*Instance count for the campaign's headline finding: five, not four.* The
+fifth arrived after the fix wave that was supposed to be the last, which is
+the finding rather than an exception to it — and it is the reason the wave
+before it was adjudicated instead of re-swung at.

@@ -225,11 +225,14 @@ inside this same campaign found that word false: six checkouts at Task 6's
 close spanned 80–360 K, and the whole-branch review's own pass across
 thirteen found a 95x spread, 4 K to 380 K. The mean sits near 200 K; the
 argument built on it does not depend on the word "stable," and survives the
-correction — the outliers are almost entirely on the *regenerable* side (one
-checkout's review packages alone ran to 58.9 MB), which is exactly the side
-this design already treats as disposable. The committed ledger's own share
-is a consistent 15–19 K regardless of which sample is read, meaning the
-implementer reports and review packages that still die with their scratch
-home are the large majority of that prose in every sample taken. That gap is
-banked as its own registry row rather than a task, because it is a
-deliberate, costed boundary this campaign drew on purpose, not an oversight.
+correction — the outliers are almost entirely on the *regenerable* side
+(one checkout's review packages alone ran to 58.9 MB), which is exactly the
+side this design already treats as disposable. The committed ledger's own
+share averaged 15–19 K across those same samples, over a 12–32 K range —
+and this campaign's own ledger closed at 41 K, above that range's ceiling,
+so read those as a floor rather than a size. Whichever figure is taken it
+is the small share: the implementer reports and review packages that still
+die with their scratch home are the large majority of that prose in every
+sample. That gap is banked as its own registry row rather than a task,
+because it is a deliberate, costed boundary this campaign drew on purpose,
+not an oversight.

@@ -59,11 +59,15 @@ still on the order of hundreds of K, not megabytes, and review packages are
 still the thing that varies by orders of magnitude — the argument this
 tree's design rests on (don't widen it to hold reports or reviews) survives
 and is if anything strengthened by the wider spread, because the outliers
-are all on the regenerable side. A ledger itself is ~15–19 K on the same
-n=6/n=13 measurements. Widening this tree to also hold reports or review
-packages would drag that variance into git for every campaign, for no
-benefit: the thing being committed is
-already reproducible from two SHAs that git already has.
+are all on the regenerable side. A ledger itself measured a MEAN of
+~15–19 K across those same n=6/n=13 samples, over a 12–32 K range — and
+this tree's only inhabitant, this campaign's own ledger, is 41 K and still
+growing, above even that range's ceiling. Read those figures as a floor,
+not a size. The first draft of this sentence dropped the range and reported
+the mean as the value, four lines under the paragraph correcting exactly
+that move. Widening this tree to also hold reports or review packages would
+drag that variance into git for every campaign, for no benefit: the thing
+being committed is already reproducible from two SHAs that git already has.
 
 **The plugin's own `progress.md` keeps its separate job and also does not
 belong here.** `.superpowers/sdd/<campaign>/progress.md` is defined by the

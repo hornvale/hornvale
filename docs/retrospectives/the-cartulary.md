@@ -143,8 +143,42 @@ knows — a stated blindness needs a visible ratchet, not a silent fix
 (decision 0491, Task 3) — had a second application sitting one function
 away in the same file, and nobody asked whether the rule the doc comments
 stated was actually the rule the code enforced. Closed the same way: the
-exemption list's length (239) is now a frozen ceiling, proven to redden on
-exactly the reviewer's mutation and to return green once restored.
+exemption list's length is now a frozen ceiling (239 when it was added; 244
+after the absorb below), proven to redden on exactly the reviewer's
+mutation and to return green once restored.
+
+## Two findings from the pre-merge absorb, both structural
+
+**A frozen exemption list is frozen against the branch's base, not main's
+tip, and 333 commits of absorb reddened this campaign's own ratchet.** Five
+campaigns landed on main after the base and carry no ledger. Nothing local
+would have caught it: `gate-commit` was green across the same merge product,
+because `every_campaign_with_a_spec_and_a_plan_has_a_ledger` is not in the
+sub-floor tier. The list was never a snapshot of the population — it was a
+snapshot of *this checkout's view* of the population, and "append-never"
+described it as complete on the day it was written. The general shape is
+worth more than the fix: **a ratchet whose reference set is enumerated by
+hand from a working tree inherits that tree's staleness, silently, and reads
+as authoritative afterwards.** Resolved by naming a crossover window that
+closes when this branch lands, so the invariant states the one condition
+under which the list may legitimately grow instead of forbidding growth it
+could not prevent.
+
+**The record named one file for a claim written to two, and the copy in the
+published book was the stronger one — a fifth instance of the campaign's
+headline pattern, arriving after the wave that was supposed to be the
+last.** The ledger's own "fourth instance" entry, the chronicle, and the
+handoff into the merge session all located a falsified ledger-size figure in
+`docs/superpowers/ledgers/README.md`. `git log -S` on the quoted wording
+returns one commit, the fix wave itself, whose diff writes the strong
+version into the chronicle and a softer variant into the README six lines
+apart. A session acting faithfully on the record would have corrected the
+weaker instance and shipped the stronger one in the book. It was caught by
+grepping the *claim*, not by reading the *record* — the record is
+internally consistent and cites a real file that really carried a real
+version of the error, so re-reading it can never surface the second site.
+**A correction has a blast radius, and the entry that reports the defect is
+not a reliable index of it.**
 
 ## Recurring findings
 

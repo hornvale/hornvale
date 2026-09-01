@@ -259,6 +259,8 @@ artifact 0492 argues from.
    softened when written for the record. This spec accepts that cost and
    cannot measure it.
 3. **The check's exemption list is append-never and starts at 239 entries**
+   (244 after the pre-merge absorb admitted five campaigns that had merged to
+   main before this convention did; see the ceiling's own doc comment)
    (corrected 2026-08-30, final review finding M6 — this originally said
    "~293", which is the raw count of plan files in the tree, not the
    spec-and-plan-matched population the exemption list actually covers).
