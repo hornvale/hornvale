@@ -436,3 +436,30 @@ Capture: none needed; this entry is the record. Cost if wrong: a bare literal
 typo'd at a genuine future consumer site compiles silently, same residual
 risk the brief named — bounded, because G-a and G-e already cover every
 literal in the two tables that currently hold one.
+
+#23 [G5] — **A vacuity guard that is itself vacuous, and a comment that
+overclaims — the fourth instance of one shape.** Task 3's review found
+`assert!(checked >= INVENTORY.len(), "... the loop is not running")` is
+satisfied by `0 >= 0` if `INVENTORY` were empty, while its message asserts the
+opposite; and `assert!(!reg.is_empty())` passes with one row where there are
+nineteen. Both are **this plan's own literal code**, not an implementer
+deviation · Decision: routed to Task 4 Step 1a as plan work rather than opened
+as a fix round — Task 4 appends to the same file, and SDD keeps minors out of
+the loop · Why absolute counts: the retired correspondence test used an
+absolute floor and Task 2 set the better precedent inside this campaign
+(`assert_eq!(checked, 38)`). An exact count is a ratchet whose cost is a
+deliberate edit when Task 5 appends a pattern — the same cost `FROZEN` already
+carries · Alternatives discarded: leaving it to the final review, which would
+carry a knowingly-false comment through the sluice stage gate ·
+ideonomy passes / overturns: 0 / 0 · Capture: plan Task 4 Step 1a.
+
+**The pattern is now four deep and it is the campaign's real product.** Same
+shape every time — *a check whose stated guarantee exceeds what it can
+actually detect*: (1) `SupportsRest` advertising a gate `Session::sleep` never
+consults; (2) two source-scanning guards hunting a literal the re-key made
+impossible; (3) a doc sweep that could not see a false sentence because the
+sentence named the concept without naming the identifier; (4) a vacuity guard
+whose message claims it cannot pass vacuously. Two of the four are mine, in
+plan text. Carry this into the retrospective as ONE finding with four
+instances, not four findings — the instances are cheap and the shape is what
+generalises.

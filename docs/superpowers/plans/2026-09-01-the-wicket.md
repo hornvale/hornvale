@@ -782,6 +782,35 @@ fn every_chamber_prose_row_is_a_roster_kind() {
 }
 ```
 
+- [ ] **Step 1a: Make Task 3's vacuity guards absolute, and fix a comment that overclaims**
+
+Task 3's review found both vacuity guards in `kind_totality.rs` are **relative,
+not absolute**, and that one of them carries a comment claiming more than the
+assertion delivers:
+
+```text
+  kind_totality.rs:62   assert!(checked >= INVENTORY.len(), "... the loop is not running")
+                        -> 0 >= 0 holds if INVENTORY is empty. The comment says this
+                           "cannot pass while the loop is not running". It can.
+  kind_totality.rs:96   assert!(!reg.is_empty())
+                        -> passes with one row where there are ~19
+```
+
+Both trace to this plan's own literal code, not to an implementer deviation.
+The retired correspondence test did it correctly with an absolute floor
+(`object_registry().ids().count() >= 9`), and Task 2 set the better precedent
+inside this campaign: `every_kind_the_grammar_places_has_a_detail` closes on
+`assert_eq!(checked, 38)`.
+
+Do the same here — pin exact counts, and **correct the comment to describe what
+the assertion actually guarantees**. An exact count is a ratchet: Task 5 appends
+a pattern and will update it deliberately, exactly as it updates `FROZEN`. That
+is the intended cost.
+
+A guard whose comment overstates it is this campaign's own recurring defect
+wearing a fourth costume — the reason `SupportsRest` looked like a gate, the
+reason two source-scanning guards looked like coverage. Do not add a fifth.
+
 - [ ] **Step 2: Run them and watch them fail to compile**
 
 Run: `cargo nextest run -p hornvale-vessel -E 'test(chamber_prose)'`
