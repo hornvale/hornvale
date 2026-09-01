@@ -329,6 +329,7 @@ mod tests {
     use crate::brief::Brief;
     use crate::lattice::{embed_with, extent_for};
     use crate::liveness::Terrain;
+    use crate::site::{Site, SiteKind};
     use crate::structure::{Structure, structure_at};
     use hornvale_kernel::{Facet, WorldTime};
 
@@ -360,7 +361,16 @@ mod tests {
     fn brief() -> Brief {
         // built + cold, which is what `WalkKeyedTerrain` reports at a built
         // locale — `chamber_interior_of` debug-asserts the two agree.
-        Brief::from_parts(None, None, None, None, 0, true, true)
+        Brief::from_parts(
+            None,
+            None,
+            None,
+            None,
+            0,
+            true,
+            true,
+            Some(Site::new(SiteKind::Settlement, None)),
+        )
     }
 
     /// The brief that selects the GROWN embedding, passed to `embed_with` and
@@ -374,7 +384,7 @@ mod tests {
     /// it: the grown lattice is the hostile geometry, reachable as a fixture
     /// and not reachable in production.
     fn wild() -> Brief {
-        Brief::from_parts(None, None, None, None, 0, false, true)
+        Brief::from_parts(None, None, None, None, 0, false, true, None)
     }
 
     /// The `n`th walk-band locale, `n` written out as base-4 path digits.

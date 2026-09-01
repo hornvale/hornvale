@@ -297,6 +297,7 @@ mod tests {
     use crate::lattice::{
         Cell, CellKind, Lattice, Rect, embed_with, extent_for, kind_of, shadowcast,
     };
+    use crate::site::{Site, SiteKind};
     use crate::structure::{Structure, structure_at};
     use hornvale_kernel::{Facet, Seed};
     use std::collections::{BTreeMap, BTreeSet};
@@ -398,13 +399,22 @@ mod tests {
     }
 
     fn built() -> Brief {
-        Brief::from_parts(None, None, None, None, 0, true, true)
+        Brief::from_parts(
+            None,
+            None,
+            None,
+            None,
+            0,
+            true,
+            true,
+            Some(Site::new(SiteKind::Settlement, None)),
+        )
     }
 
     /// The brief that selects the GROWN embedding, passed to `embed_with` and
     /// nothing else — the same fixture idiom `anchor_cells` settled on.
     fn wild() -> Brief {
-        Brief::from_parts(None, None, None, None, 0, false, true)
+        Brief::from_parts(None, None, None, None, 0, false, true, None)
     }
 
     fn locale_number(n: u64) -> Facet {

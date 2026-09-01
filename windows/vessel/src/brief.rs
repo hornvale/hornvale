@@ -28,6 +28,7 @@
 //! the day a population-gated pattern is written, and unlike the seven absent
 //! `Option`s this one has a live wire behind it.
 
+use crate::site::{Site, SiteKind};
 use hornvale_history::record::{Function, Notability, TechHorizon};
 use hornvale_kernel::{Facet, Geosphere, KindId, NearestVertexIndex, Vertex, World};
 
@@ -54,12 +55,17 @@ pub struct Brief {
     pub built: bool,
     /// Whether warmth matters here — `Terrain::is_cold` at the WALK band.
     pub cold: bool,
+    /// The site here, if any — the gate every enterable place hangs off.
+    /// Decision 0536. For a settlement this mirrors [`Self::built`]; caves
+    /// and exotic sites arrive in Tasks 4 and 5.
+    pub site: Option<Site>,
 }
 
 impl Brief {
     /// Assemble a brief from already-resolved parts. Exists so the type can be
     /// unit-tested without a world; `brief_of` is the production path.
     /// type-audit: bare-ok(flag: built), bare-ok(flag: cold), bare-ok(count: peak_population)
+    #[allow(clippy::too_many_arguments)] // `site` (Task 2, The Prospect) pushed this to 8; the parameters ARE `Brief`'s fields, and the whole point of this constructor is to assemble them without a world to derive `site` from
     pub fn from_parts(
         function: Option<Function>,
         tech: Option<TechHorizon>,
@@ -68,6 +74,7 @@ impl Brief {
         peak_population: u32,
         built: bool,
         cold: bool,
+        site: Option<Site>,
     ) -> Self {
         Self {
             function,
@@ -77,6 +84,7 @@ impl Brief {
             peak_population,
             built,
             cold,
+            site,
         }
     }
 
@@ -150,6 +158,7 @@ pub fn brief_of(
     let locale = crate::depth::truncate_to_walk(place, walk_depth);
     let built = terrain.is_built(&locale);
     let cold = terrain.is_cold(&locale);
+    let site = built.then(|| Site::new(SiteKind::Settlement, None));
     let alive = containing_vertex(&locale, geo, index)
         .and_then(|vertex| {
             // NOTE ON COST: this derives the whole per-vertex occupation map on
@@ -170,8 +179,9 @@ pub fn brief_of(
             o.core.peak_population,
             built,
             cold,
+            site,
         ),
-        None => Brief::from_parts(None, None, None, None, 0, built, cold),
+        None => Brief::from_parts(None, None, None, None, 0, built, cold, site),
     }
 }
 
@@ -190,6 +200,7 @@ mod tests {
             900,
             true,
             true,
+            None,
         );
         assert_eq!(b.function, Some(Function::Trade));
         assert_eq!(b.tech, Some(TechHorizon::Classical));
@@ -200,7 +211,7 @@ mod tests {
 
     #[test]
     fn from_parts_with_no_occupation_axes_still_carries_climate() {
-        let b = Brief::from_parts(None, None, None, None, 0, false, true);
+        let b = Brief::from_parts(None, None, None, None, 0, false, true, None);
         assert!(!b.built);
         assert!(
             b.cold,
@@ -222,6 +233,7 @@ mod tests {
             0,
             true,
             false,
+            None,
         );
         let b = Brief::from_parts(
             Some(Function::Fort),
@@ -231,7 +243,28 @@ mod tests {
             0,
             true,
             false,
+            None,
         );
         assert_ne!(a, b);
+    }
+
+    /// H1's anchor at this task: a brief with `built` true carries a Settlement
+    /// site, and one without carries none. The two agree exactly, so swapping
+    /// the gate in Task 3 cannot change enterability.
+    ///
+    /// `from_parts` no longer derives `site` from `built` itself — it has no
+    /// world to ask about a cave or an exotic site, so a self-derivation here
+    /// would be a half-right answer masquerading as authoritative. The caller
+    /// computes it, exactly as `brief_of` does in production.
+    #[test]
+    fn a_built_brief_carries_a_settlement_site_and_an_unbuilt_one_carries_none() {
+        let built_site = Some(Site::new(SiteKind::Settlement, None));
+        let built = Brief::from_parts(None, None, None, None, 0, true, false, built_site);
+        let wild = Brief::from_parts(None, None, None, None, 0, false, false, None);
+        assert_eq!(
+            built.site.as_ref().map(|site| site.kind),
+            Some(SiteKind::Settlement)
+        );
+        assert_eq!(wild.site, None);
     }
 }

@@ -80,6 +80,7 @@ pub fn chamber_interior_of(
 mod tests {
     use super::*;
     use crate::interior::anchor::AnchorKind;
+    use crate::site::{Site, SiteKind};
     use hornvale_kernel::WorldTime;
 
     /// A `Terrain` that answers only what derivation reads.
@@ -240,7 +241,8 @@ mod tests {
     /// A brief matching [`WalkKeyedTerrain`]'s reads (which are always cold), so
     /// `chamber_interior_of`'s debug assertions hold.
     fn brief(built: bool) -> crate::brief::Brief {
-        crate::brief::Brief::from_parts(None, None, None, None, 0, built, true)
+        let site = built.then(|| Site::new(SiteKind::Settlement, None));
+        crate::brief::Brief::from_parts(None, None, None, None, 0, built, true, site)
     }
 
     #[test]

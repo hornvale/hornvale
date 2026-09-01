@@ -125,6 +125,7 @@ fn child_path(locale: &Facet, draw: u64, extra: usize) -> Facet {
 mod tests {
     use super::*;
     use crate::brief::Brief;
+    use crate::site::{Site, SiteKind};
     use hornvale_kernel::Seed;
 
     const WALK: u32 = 13;
@@ -137,12 +138,21 @@ mod tests {
     }
 
     fn built_brief() -> Brief {
-        Brief::from_parts(None, None, None, None, 0, true, true)
+        Brief::from_parts(
+            None,
+            None,
+            None,
+            None,
+            0,
+            true,
+            true,
+            Some(Site::new(SiteKind::Settlement, None)),
+        )
     }
 
     #[test]
     fn an_unbuilt_locale_has_no_structure() {
-        let wild = Brief::from_parts(None, None, None, None, 0, false, true);
+        let wild = Brief::from_parts(None, None, None, None, 0, false, true, None);
         assert!(structure_at(&locale(), &wild, Seed(42), WALK).is_none());
     }
 

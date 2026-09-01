@@ -28,6 +28,7 @@ use hornvale_vessel::light::{ATTENUATION, Source, TORCH_KELVIN, light_field};
 /// distance-4 test below): strictly above the pre-change reading, well under
 /// what a nearer cell renders.
 const BRIGHT_SUM: u32 = 172;
+use hornvale_vessel::site::{Site, SiteKind};
 use hornvale_vessel::structure::{Structure, structure_at};
 use hornvale_vessel::{
     Brief, Cell, Lattice, PossessOpts, Session, SpatialChannel, embed_with, extent_for,
@@ -39,12 +40,21 @@ const WALK: u32 = 13;
 
 /// A built place; the brief `allocate` is selected by.
 fn built() -> Brief {
-    Brief::from_parts(None, None, None, None, 0, true, true)
+    Brief::from_parts(
+        None,
+        None,
+        None,
+        None,
+        0,
+        true,
+        true,
+        Some(Site::new(SiteKind::Settlement, None)),
+    )
 }
 
 /// A wild place; the brief `grow` is selected by — the hostile geometry.
 fn wild() -> Brief {
-    Brief::from_parts(None, None, None, None, 0, false, true)
+    Brief::from_parts(None, None, None, None, 0, false, true, None)
 }
 
 fn locale_number(n: u64) -> Facet {

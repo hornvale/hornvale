@@ -667,6 +667,14 @@ pub fn permits(interior: &Interior) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::site::{Site, SiteKind};
+
+    /// A settlement site, mirroring `built` — the same computation
+    /// `brief_of` performs, kept here so every fixture below stays a real
+    /// (built, site) pairing rather than an untested combination.
+    fn settlement_site() -> Option<Site> {
+        Some(Site::new(SiteKind::Settlement, None))
+    }
 
     #[test]
     fn selection_is_derived_from_conditions_not_authored_per_culture() {
@@ -805,7 +813,7 @@ mod tests {
 
     /// A brief with no alive occupation — a place whose deep chambers are stores.
     fn plain_brief() -> crate::brief::Brief {
-        crate::brief::Brief::from_parts(None, None, None, None, 0, true, false)
+        crate::brief::Brief::from_parts(None, None, None, None, 0, true, false, settlement_site())
     }
 
     #[test]
@@ -1119,6 +1127,7 @@ mod tests {
             0,
             true,
             false,
+            settlement_site(),
         );
         let farm = crate::brief::Brief::from_parts(
             Some(Function::Agrarian),
@@ -1128,6 +1137,7 @@ mod tests {
             0,
             true,
             false,
+            settlement_site(),
         );
         assert_ne!(
             role_for(2, &fort),
@@ -1144,6 +1154,7 @@ mod tests {
             0,
             true,
             false,
+            settlement_site(),
         );
         assert_eq!(role_for(2, &seat), Role::Hall);
         // The front two rooms are the place's own regardless of its business.
@@ -1165,6 +1176,7 @@ mod tests {
                 0,
                 true,
                 false,
+                settlement_site(),
             );
             selection_for(role_for(2, &b), true, false, false)
                 .iter()
@@ -1196,7 +1208,16 @@ mod tests {
     #[test]
     fn a_hamlet_composes_a_strongbox_with_a_key_inside_it() {
         let ceiling = hornvale_history::flesh::HAMLET_POPULATION_CEILING;
-        let hamlet = crate::brief::Brief::from_parts(None, None, None, None, ceiling, true, false);
+        let hamlet = crate::brief::Brief::from_parts(
+            None,
+            None,
+            None,
+            None,
+            ceiling,
+            true,
+            false,
+            settlement_site(),
+        );
         assert!(!hamlet.is_populous(), "at the ceiling is still a hamlet");
         let names = selection_for(Role::Store, true, false, hamlet.is_populous())
             .iter()
@@ -1373,6 +1394,7 @@ mod tests {
             0,
             true,
             false,
+            settlement_site(),
         );
         let first_store = (0..=8)
             .find(|i| role_for(*i, &agrarian) == Role::Store)
@@ -1471,7 +1493,18 @@ mod tests {
     #[test]
     fn is_populous_reads_the_shared_hamlet_ceiling() {
         let ceiling = hornvale_history::flesh::HAMLET_POPULATION_CEILING;
-        let at = |n: u32| crate::brief::Brief::from_parts(None, None, None, None, n, true, false);
+        let at = |n: u32| {
+            crate::brief::Brief::from_parts(
+                None,
+                None,
+                None,
+                None,
+                n,
+                true,
+                false,
+                settlement_site(),
+            )
+        };
         assert!(
             !at(ceiling).is_populous(),
             "at the ceiling is still a hamlet"

@@ -21,6 +21,7 @@ use hornvale_kernel::{Seed, Value, Vertex, World};
 use hornvale_terrain::TerrainPins;
 use hornvale_vessel::fabric::{Fabric, FabricContext, reflectance_of};
 use hornvale_vessel::light::{HEARTH_KELVIN, Source, hearth_cell, light_field};
+use hornvale_vessel::site::{Site, SiteKind};
 use hornvale_vessel::structure::structure_at;
 use hornvale_vessel::{
     Brief, Cell, Lattice, PossessOpts, Session, SessionPlan, SpatialChannel, embed_with, extent_for,
@@ -43,7 +44,16 @@ const H2_SEEDS: [u64; 4] = [1, 7, 42, 1024];
 
 /// A built place; the brief `allocate` is selected by.
 fn built() -> Brief {
-    Brief::from_parts(None, None, None, None, 0, true, true)
+    Brief::from_parts(
+        None,
+        None,
+        None,
+        None,
+        0,
+        true,
+        true,
+        Some(Site::new(SiteKind::Settlement, None)),
+    )
 }
 
 /// A real world's chamber plan, taken through a live possession.

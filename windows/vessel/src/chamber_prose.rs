@@ -343,9 +343,19 @@ mod tests {
     use super::*;
     use crate::brief::Brief;
     use crate::interior::{AnchorKind, Interior};
+    use crate::site::{Site, SiteKind};
 
     fn brief() -> Brief {
-        Brief::from_parts(None, None, None, None, 0, true, true)
+        Brief::from_parts(
+            None,
+            None,
+            None,
+            None,
+            0,
+            true,
+            true,
+            Some(Site::new(SiteKind::Settlement, None)),
+        )
     }
 
     fn interior_with(kinds: &[AnchorKind]) -> Interior {
@@ -527,7 +537,7 @@ mod tests {
         // `brief` must be READ, not merely carried: a built place is a room,
         // an unbuilt one is a hollow.
         let i = interior_with(&[AnchorKind::Ground, AnchorKind::Hearth]);
-        let wild = Brief::from_parts(None, None, None, None, 0, false, true);
+        let wild = Brief::from_parts(None, None, None, None, 0, false, true, None);
         assert_ne!(describe_chamber(&i, &brief()), describe_chamber(&i, &wild));
         assert!(describe_chamber(&i, &wild).contains("hollow"));
     }

@@ -83,6 +83,7 @@ mod tests {
     use super::*;
     use crate::brief::Brief;
     use crate::lattice::{embed_with, extent_for};
+    use crate::site::{Site, SiteKind};
     use crate::structure::structure_at;
     use hornvale_kernel::{Facet, Seed};
 
@@ -108,7 +109,16 @@ mod tests {
             face: 3,
             path: (0..WALK).map(|i| (i % 4) as u8).collect(),
         };
-        let brief = Brief::from_parts(None, None, None, None, 0, true, true);
+        let brief = Brief::from_parts(
+            None,
+            None,
+            None,
+            None,
+            0,
+            true,
+            true,
+            Some(Site::new(SiteKind::Settlement, None)),
+        );
         (0u64..64)
             .find_map(|sd| {
                 let s = structure_at(&addr, &brief, Seed(sd), WALK)?;
