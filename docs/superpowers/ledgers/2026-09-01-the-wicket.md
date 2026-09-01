@@ -626,3 +626,38 @@ totality gates, prose as a component table, and a new kind placed in a real
 world — survive contact with main as a real merge product, not as a branch tip
 in isolation. Stage 5 (the acts) begins from here, which is the point of
 gating at this boundary: anything the next gate reddens has one candidate cause.
+
+#32 [G5] — **The campaign's signature shape, instances six through eight, all
+in Task 7.** (6) Three of the implementer's own property tests were vacuous on
+first writing and it caught them itself — the first time the author beat the
+reviewer to it. (7) A surviving assertion cannot fail:
+`fatigue_with_pending(&ledger, &[], e, t) == fatigue_at(&ledger, e, t)`, where
+both sides are one-line calls to the same function; the test's own message
+admits it, which makes it honest and still misleading, because it is the
+assertion a later reader mistakes for coverage of the thing the test is named
+for. (8) A count claim outran its support again: the report says the predicate
+doc was changed "at all three registration sites"; there are **seven**, and
+three in `windows/lab` still register `RESTED` as *"an agent rested on a day"* —
+now documenting a tick count as a bare day-flag, which is the exact misleading
+render the implementer fixed in the session path.
+
+**Eight instances, one shape, and it is now unambiguously the campaign's
+product.** A statement whose form outruns what it can support: an advertised
+gate nothing enforces, a guard hunting an impossible literal, a sweep blind to a
+sentence that never names its identifier, a vacuity guard that passes
+vacuously, a false claim laundered by past tense, three tests that pass against
+their own mutants, an assertion that cannot fail, and a site count off by four.
+Two of the eight are mine in plan text; the rest are spread evenly across
+implementers and reviewers. The retrospective carries this as ONE finding.
+
+#33 [G5] — **CONTROLLER OBLIGATION, not implementer work: Task 8 must land
+before pre-merge close.** Task 7's reviewer established that the nap-fragmentation
+deferral is sound *conditionally* — no committed world file carries a `rested`
+fact, so nothing durable is baked, and every artifact holding the naps is
+regenerable. But census goldens refresh once, at pre-merge close. If Task 8
+slipped past that close, what would merge is a creature dozing ~22 times over 39
+days with the census encoding it. Task 8 is the next task, so the condition is
+easily met — it is recorded because a condition nobody wrote down is a condition
+nobody checks. Related: `tick_commit_budget` headroom is now 17% (1.242 against
+a 1.5 ceiling) while ~35% of the volume is naps, so **no fact-emitting behaviour
+may be added before Task 8 gives that headroom back.**
