@@ -2180,6 +2180,39 @@ const TWILIGHT_DEG: f64 = 6.0;
 /// wake-gate, drives the daily rest) and only crosses `FATIGUE_ACT` after days
 /// of PREVENTED sleep — the exhaustion backstop. Authored.
 const FATIGUE_RISE: f64 = 0.3;
+/// Fatigue REPAID per day ASLEEP (The Wicket, Task 7) — the recovery half of
+/// the stock, and the constant that turns fatigue from a flag any rest clears
+/// into a debt a rest pays DOWN in proportion to its length.
+///
+/// **Derived by SYMMETRY with [`FATIGUE_RISE`]'s own budget, which is the only
+/// anchor either constant has.** `FATIGUE_RISE` is authored so that exhaustion
+/// ([`FATIGUE_ACT`], 0.85) arrives after roughly 2.8 days of PREVENTED sleep —
+/// that sentence is the rise constant's whole justification. The recovery rate
+/// has to answer the mirrored question: a body pushed to a saturated debt
+/// should get back to rested in about the same span of ordinary nights it took
+/// to break. At 1.0 per day asleep, a normal night (half a standard day, the
+/// jump the wake-gate's own `next_awake_day` produces) repays 0.5 against the
+/// ~0.15-0.22 a waking phase accrues, so full exhaustion clears over about
+/// three cycles. Same order as the 2.8 days that built it.
+///
+/// **THE FIRST VALUE AUTHORED HERE WAS 2 x `FATIGUE_RISE`, AND IT WAS WRONG
+/// FOR A REASON WORTH KEEPING.** The argument was the ratio a body keeps —
+/// sixteen hours awake repaid by eight asleep, so recovery at twice accrual.
+/// That conflates a ratio of HOURS with a ratio of RATES: the two coincide only
+/// if the awake fraction is 2/3, and this world's creatures are awake for
+/// roughly half to three quarters of a cycle depending on latitude and season.
+/// At 0.6 a night barely out-paid the day that preceded it, so creatures
+/// hovered just under exhaustion permanently and dozed their way through every
+/// afternoon; `tick_commit_budget::facts_committed_per_agent_per_tick_stays_
+/// bounded` is what surfaced it, at 1.84 facts/agent/tick against its 1.5
+/// ceiling (0.96 before this change, 1.24 after the re-derivation). The guard
+/// caught a modelling error, not a budget overrun, which is what a guard on a
+/// steady-state rate is for.
+///
+/// A rate large enough to clear ANY debt in one night would be the old flag
+/// wearing a rate's clothes; this one is not — a half-night repays half the
+/// scale, so a body three days awake still wakes in debt.
+const FATIGUE_FALL: f64 = 1.0;
 /// The fatigue seek threshold: at/above this, the creature seeks rest. Mirrors
 /// thirst's `act`.
 const FATIGUE_ACT: f64 = 0.85;
@@ -2266,28 +2299,161 @@ fn is_awake(activity: ActivityCycle, terrain: &dyn Terrain, room: &Facet, day: W
     }
 }
 
-/// The fatigue at `t`: time since the last rest, a fold over committed `rested`
-/// events (0 before any rest), clamped `[0, 1]` (The Slumber). FATIGUE == FOLD,
-/// over `rested` — the structural twin of thirst's `drive_at` over `drank`.
+/// How long a rest lasted, read off a committed `rested` fact's object.
+///
+/// A `rested` fact carries its own DURATION (The Wicket, Task 7): the object is
+/// `Value::Number(span_in_ticks)`, an exact integer count, never a fractional
+/// day. Ticks are chosen over days for the reason the whole module prefers
+/// them — `Ledger::commit` quantizes a numeric object to 8 significant digits
+/// (decision 0033), and every span this world can produce is an integer below
+/// `10^8` ticks (`next_awake_day` bounds a rest at 1.5 standard days =
+/// 150,000 ticks), so an integer tick count round-trips through the quantizer
+/// EXACTLY while a fractional day would not. `round()` before the cast is
+/// belt-and-braces against that quantizer, not decoration: it makes the read
+/// (which sees the quantized number) and the mover (which sees the raw one,
+/// this tick's own emitted fact not yet being committed) agree on an INTEGER
+/// rather than on two floats that happen to be equal today.
+///
+/// A fact whose object is not a number is a rest **of no recorded length** and
+/// restores nothing. That is the conservative reading and it is deliberate: no
+/// world file in this repository carries a `rested` fact (the predicate is
+/// registered by the session, never at genesis), so the only way to reach this
+/// arm is a hand-built ledger, where silently granting a full night's recovery
+/// to a fact that never claimed one would be the worse failure.
+fn rest_span_of(fact: &Fact) -> TickSpan {
+    match fact.object {
+        Value::Number(n) if n.is_finite() => TickSpan::from_ticks(n.round() as i64),
+        _ => TickSpan::from_ticks(0),
+    }
+}
+
+/// Every rest `entity` had begun at or before `t`, as `(start, span)` pairs in
+/// chronological order — the input [`fatigue_from_rests`] folds.
+///
+/// `pending` is a slice of facts EMITTED this tick but not yet committed (the
+/// live walk's own `out`); it is empty for a pure read. Both sources are
+/// filtered by subject and predicate and merged into one sorted timeline, which
+/// is what lets the read and the mover call one function over one input shape.
+fn rest_timeline(
+    ledger: &Ledger,
+    pending: &[Fact],
+    entity: EntityId,
+    t: WorldTime,
+) -> Vec<(WorldTime, TickSpan)> {
+    let mut rests: Vec<(WorldTime, TickSpan)> = ledger
+        .facts_of(entity, RESTED)
+        .filter_map(|f| f.day.map(|d| (d, rest_span_of(f))))
+        .filter(|&(d, _)| d <= t)
+        .collect();
+    rests.extend(
+        pending
+            .iter()
+            .filter(|f| f.subject == entity && f.predicate == RESTED)
+            .filter_map(|f| f.day.map(|d| (d, rest_span_of(f))))
+            .filter(|&(d, _)| d <= t),
+    );
+    // Sorted on exact integers (`WorldTime` and `TickSpan` are both `Ord`), so
+    // this needs no `total_cmp` tie-break and cannot depend on iteration order.
+    rests.sort_unstable();
+    rests
+}
+
+/// THE ONE FATIGUE ARITHMETIC. Both the read ([`fatigue_at`]) and the mover
+/// (`decide_step`) reach this function and nothing else computes fatigue.
+///
+/// Fatigue is a STOCK integrated along the creature's own timeline: it rises at
+/// [`FATIGUE_RISE`] per day awake and falls at [`FATIGUE_FALL`] per day asleep,
+/// clamped into `[0, 1]` at every segment boundary so it can neither run past
+/// exhaustion nor bank credit below zero. `rests` must be sorted by start
+/// instant ([`rest_timeline`] is the only producer).
+///
+/// **Why the read and the mover must be ONE function, not two agreeing ones.**
+/// They were once two, and they diverged: the mover subtracted two INSTANTS and
+/// crossed their exact span once, while the read subtracted two separately
+/// crossed `f64` days. Those shapes are not interchangeable — `t/K - r/K` and
+/// `(t - r)/K` differ by an ULP for **56.7%** of tick pairs in the walk band
+/// (measured over 2e6 random pairs). The Slumber aligned the two shapes by
+/// hand and pinned them with
+/// `a_fatigue_read_matches_the_walks_own_fatigue_arithmetic`. The Wicket
+/// removes the second copy instead: a stock needs the whole rest timeline
+/// rather than a single instant, and maintaining a second incremental copy of
+/// an integral is a strictly worse bargain than the one that already failed.
+/// That test survives, now stating the CONTRACT (the segment arithmetic,
+/// written out by hand) against the single implementation.
+///
+/// Every span crossing to `f64` is an exact lattice difference (`t - cursor`),
+/// never a difference of two separately crossed days — the shape The Slumber
+/// settled on, preserved segment by segment.
+fn fatigue_from_rests(rests: &[(WorldTime, TickSpan)], t: WorldTime) -> f64 {
+    let mut fatigue = 0.0_f64;
+    // How far along the creature's timeline the fold has consumed. Starts at
+    // genesis for the same reason the old `last_rested` fold defaulted there:
+    // a creature that has never rested has been awake since the world began.
+    let mut cursor = WorldTime::GENESIS;
+    for &(start, span) in rests {
+        if start > t {
+            break;
+        }
+        let end = start + span;
+        // Awake, from wherever the fold left off to the moment it lay down. A
+        // rest that starts inside an earlier one (impossible from the walk,
+        // cheap to survive) accrues nothing here and recovers only its
+        // uncovered tail below.
+        if start > cursor {
+            fatigue = (fatigue + FATIGUE_RISE * (start - cursor).as_std_days()).min(1.0);
+            cursor = start;
+        }
+        // Asleep, over the part of the rest that is both uncovered and already
+        // in the past: a query landing MID-rest credits only the sleep the body
+        // has actually had by `t`, which is why this truncates rather than
+        // granting the whole span the moment the fact exists.
+        let woke = end.min(t);
+        if woke > cursor {
+            fatigue = (fatigue - FATIGUE_FALL * (woke - cursor).as_std_days()).max(0.0);
+        }
+        if end > cursor {
+            cursor = end;
+        }
+    }
+    // Awake since the last rest ended (or since genesis, if there was none).
+    if t > cursor {
+        fatigue = (fatigue + FATIGUE_RISE * (t - cursor).as_std_days()).min(1.0);
+    }
+    fatigue
+}
+
+/// The fatigue at `t`: a recovery STOCK folded over committed `rested` events
+/// — rising while awake, falling while asleep in proportion to how long the
+/// body was down, clamped `[0, 1]` (The Slumber, made a stock by The Wicket).
+/// FATIGUE == FOLD, over `rested` — the structural twin of thirst's `drive_at`
+/// over `drank`, and like it a pure function of the committed ledger: no state
+/// is held anywhere, so recomputing at `t` twice, or after a reload, gives the
+/// same answer.
+///
+/// **Any rest no longer zeroes the debt.** A short rest repays a little and a
+/// long one repays more; a body denied sleep for days does not become fresh by
+/// lying down once. That is the property the act split (rest vs sleep) needs in
+/// order to mean anything.
 /// type-audit: bare-ok(ratio: return)
 pub fn fatigue_at(ledger: &Ledger, entity: EntityId, t: WorldTime) -> f64 {
-    // THE READ AND THE MOVER MUST COMPUTE THIS THE SAME WAY (this module's own
-    // FOLD doctrine, stated on `learned_helplessness` and `drive_at`). The
-    // walk's own fatigue (`decide_step`) subtracts two INSTANTS on the lattice
-    // and crosses their exact span once. This read used to subtract two
-    // separately-crossed `f64` days, which is a different arithmetic shape:
-    // `t/K - r/K` and `(t - r)/K` disagree by an ULP for **56.7%** of tick
-    // pairs in the walk band (measured over 2e6 random pairs), so the two were
-    // no longer computing one function. The shapes are aligned here rather
-    // than in `decide_step`, because the exact-span form is the numerically
-    // better one and regressing the mover to match a float read would be
-    // backwards. `a_fatigue_read_matches_the_walks_own_fatigue_arithmetic`
-    // pins it on inputs measured to disagree under the old shape.
-    let last_rested = ledger
-        .facts_of(entity, RESTED)
-        .filter_map(|f| f.day)
-        .fold(WorldTime::GENESIS, WorldTime::max);
-    (FATIGUE_RISE * (t - last_rested).as_std_days()).clamp(0.0, 1.0)
+    fatigue_from_rests(&rest_timeline(ledger, &[], entity, t), t)
+}
+
+/// [`fatigue_at`], plus rests emitted THIS tick and not yet committed — the
+/// mover's entry point, and the only thing that distinguishes it from the read.
+///
+/// The live walk pushes a creature's `rested` fact into a shared `out` buffer
+/// and keeps stepping, so its own fatigue must see a rest the ledger cannot yet
+/// report. This is where the walk's `WalkState::last_rested` field went: the
+/// incremental copy is gone, and the pending facts are folded by the same
+/// function over the same timeline instead. Catch-up passes its own `out` and
+/// needs no `<= day` filtering discipline from its caller, because
+/// [`rest_timeline`] applies it (a rest that chronologically postdates `day`
+/// cannot suppress fatigue for the days before it — the obligation
+/// `decide_step`'s own doc places on its `last_drank`/`last_ate` callers is
+/// discharged here BY CONSTRUCTION for fatigue).
+fn fatigue_with_pending(ledger: &Ledger, pending: &[Fact], entity: EntityId, t: WorldTime) -> f64 {
+    fatigue_from_rests(&rest_timeline(ledger, pending, entity, t), t)
 }
 
 /// The rest (fatigue) drive, Drive #3 (The Slumber). A STOCK drive like thirst:
@@ -4189,6 +4355,22 @@ pub fn place_agent(entity: EntityId, room: &Facet, day: WorldTime) -> Fact {
     agent_at_fact(entity, room, day, "harness-placement")
 }
 
+/// Record a rest for a scenario harness: `entity` lay down at `day` and was
+/// down for `span` (The Wicket, Task 7) — the fatigue twin of [`place_agent`],
+/// and for the same reason.
+///
+/// Fatigue is a recovery STOCK folded over `rested` facts, so a harness that
+/// wants to put a creature in a state of sleep debt — a body denied rest for
+/// days, or one given only naps — has to be able to write that history. Before
+/// this, a `rested` fact carried a bare flag and any of them meant the same
+/// thing, so there was nothing to construct. [`rested_fact`] itself stays
+/// crate-private because its `provenance` is a bare string the walk owns; this
+/// wrapper is typed throughout (no primitive at the boundary), so it needs no
+/// type-audit tag, exactly as `place_agent` does not.
+pub fn record_rest(entity: EntityId, day: WorldTime, span: TickSpan) -> Fact {
+    rested_fact(entity, day, span, "harness-rest")
+}
+
 /// A committed `drank` fact: `entity` satisfied its sustenance goal on `day`.
 fn drank_fact(entity: EntityId, day: WorldTime, provenance: &str) -> Fact {
     Fact {
@@ -4201,13 +4383,31 @@ fn drank_fact(entity: EntityId, day: WorldTime, provenance: &str) -> Fact {
     }
 }
 
-/// A committed `rested` fact: `entity` slept (reset its fatigue) on `day` — The
-/// Slumber's discharge, the fatigue twin of [`drank_fact`].
-pub(crate) fn rested_fact(entity: EntityId, day: WorldTime, provenance: &str) -> Fact {
+/// A committed `rested` fact: `entity` lay down on `day` and was down for
+/// `span` — The Slumber's discharge, the fatigue twin of [`drank_fact`].
+///
+/// **The object carries the SPAN** (The Wicket, Task 7), where it used to carry
+/// a bare `Flag(true)`. A rest already had a duration at both call sites — the
+/// walk jumps `st.day` to `next_awake_day`, the player's `sleep` sets `wake_at`
+/// from the same scan — and both threw it away, which is precisely why fatigue
+/// could only be a flag. It is an exact tick count, not a fractional day; see
+/// [`rest_span_of`] for why that distinction is load-bearing against
+/// `Ledger::commit`'s quantizer.
+///
+/// The span is a parameter rather than something this constructor derives,
+/// because deriving it would need the terrain and activity cycle
+/// `next_awake_day` takes and would then be a SECOND place that decides when a
+/// body wakes. Each caller passes the wake instant it is already committed to.
+pub(crate) fn rested_fact(
+    entity: EntityId,
+    day: WorldTime,
+    span: TickSpan,
+    provenance: &str,
+) -> Fact {
     Fact {
         subject: entity,
         predicate: RESTED.to_string(),
-        object: Value::Flag(true),
+        object: Value::Number(span.ticks() as f64),
         place: None,
         day: Some(day),
         provenance: provenance.to_string(),
@@ -4354,7 +4554,7 @@ fn hold_step(
 /// resolution is reached.
 ///
 /// What this function does NOT guarantee by construction: that its
-/// `last_drank`/`last_ate`/`last_rested` arguments are correct FOR `day`. A
+/// `last_drank`/`last_ate` arguments are correct FOR `day`. A
 /// caller replaying several days must supply the value each drive would
 /// actually have seen at that point in the replay, not one folded once over
 /// the caller's entire history — a discharge fact landing chronologically
@@ -4395,7 +4595,6 @@ fn decide_step(
     visited: &std::collections::BTreeSet<Facet>,
     last_drank: WorldTime,
     last_ate: WorldTime,
-    last_rested: WorldTime,
     interior: Option<(&Interior, AnchorId)>,
     mode: Mode,
     params: &DriveParams,
@@ -4465,9 +4664,13 @@ fn decide_step(
         &HUNGER,
     );
     let explore_step = lowest_unvisited_neighbor_memo(pos, visited, terrain, mesh_memo);
-    // The fatigue ramp is continuous too, but the SPAN it reads is exact: two
-    // instants subtract on the lattice and only their difference crosses.
-    let fatigue = (FATIGUE_RISE * (day - last_rested).as_std_days()).clamp(0.0, 1.0);
+    // THE MOVER'S FATIGUE, AND IT IS NO LONGER A SECOND COPY OF THE READ'S (The
+    // Wicket, Task 7). This line used to restate `fatigue_at`'s arithmetic —
+    // two definitions held in agreement by a test, having already diverged once
+    // by an ULP on 56.7% of tick pairs. Fatigue is a stock now, so a single
+    // instant could not have carried it anyway; the walk folds the same
+    // timeline the read does, over `frozen` plus this tick's own emitted rests.
+    let fatigue = fatigue_with_pending(frozen, out, npc.entity, day);
     let view = Perceived {
         position: pos.clone(),
         drive,
@@ -4560,9 +4763,10 @@ fn decide_step(
 
 /// The subject's most recent `predicate` fact day at or before `day`, or
 /// `None` if there is none — the per-day counterpart to the whole-history folds
-/// computed once outside the walk (`drive_at`, `fatigue_at`, and
-/// `step_with_occupancy`'s own `last_drank`/`last_ate`/`last_rested`
-/// locals). Those are correct for a SINGLE evaluation instant; catch-up's
+/// computed once outside the walk (`drive_at` and `step_with_occupancy`'s own
+/// `last_drank`/`last_ate` locals; `fatigue_at` re-filters internally now, so
+/// fatigue no longer needs this). Those are correct for a SINGLE evaluation
+/// instant; catch-up's
 /// replay loop (below) evaluates many instants across a span that may
 /// itself contain the very fact being folded, so it must re-filter to
 /// `<= day` at each one rather than reuse a value folded over the whole
@@ -4685,8 +4889,6 @@ fn catch_up(
             .unwrap_or(WorldTime::GENESIS);
         let last_ate = last_fact_day_at_or_before(frozen, EATEN, npc.entity, day)
             .unwrap_or(WorldTime::GENESIS);
-        let last_rested = last_fact_day_at_or_before(frozen, RESTED, npc.entity, day)
-            .unwrap_or(WorldTime::GENESIS);
         let (resolution, drive) = decide_step(
             day,
             pos,
@@ -4698,7 +4900,6 @@ fn catch_up(
             visited,
             last_drank,
             last_ate,
-            last_rested,
             occupancy.at(npc.entity).map(|a| (interior, a)),
             mode,
             params,
@@ -5111,8 +5312,6 @@ struct WalkState {
     /// The INSTANT of its most recent drink, `frozen`-seeded and advanced by
     /// this walk's own emitted `drank` facts.
     last_drank: WorldTime,
-    /// The INSTANT of its most recent sleep, the fatigue twin of `last_drank`.
-    last_rested: WorldTime,
     /// The INSTANT of its most recent meal, the hunger twin of `last_drank`.
     last_ate: WorldTime,
     /// The water source it believes in, seeded from the band's pooled belief and
@@ -5182,12 +5381,12 @@ impl WalkState {
             .facts_of(npc.entity, DRANK)
             .filter_map(|f| f.day)
             .fold(WorldTime::GENESIS, WorldTime::max);
-        // Likewise the last rest day (The Slumber): fatigue is time since it,
-        // reset when a `rested` fact is emitted.
-        let last_rested = frozen
-            .facts_of(npc.entity, RESTED)
-            .filter_map(|f| f.day)
-            .fold(WorldTime::GENESIS, WorldTime::max);
+        // NO `last_rested` TWIN (The Wicket, Task 7). Fatigue is a recovery
+        // stock now, folded over the whole `rested` timeline rather than
+        // carried as a single instant, so the walk holds no incremental copy
+        // of it: `fatigue_with_pending` folds `frozen` plus this tick's own
+        // emitted rests at every step. The field this comment replaces was
+        // the second of the two definitions that once disagreed by an ULP.
         // Likewise the last meal day (The Provender): hunger is a path
         // integral since it, reset when an `eaten` fact is emitted.
         let last_ate = frozen
@@ -5228,7 +5427,6 @@ impl WalkState {
             pos,
             day,
             last_drank,
-            last_rested,
             last_ate,
             believed,
             visited,
@@ -5309,7 +5507,6 @@ impl<'a> DriveMovements<'a> {
             &st.visited,
             st.last_drank,
             st.last_ate,
-            st.last_rested,
             occupancy.at(npc.entity).map(|a| (&st.interior, a)),
             st.mode,
             &self.params,
@@ -5432,15 +5629,20 @@ impl<'a> DriveMovements<'a> {
                 st.last_drank = st.day;
             }
             Intent::Do(Action::Rest) => {
+                // Sleep through the off-phase in one jump to the next
+                // waking, rather than re-resting every step (The Slumber).
+                // The wake instant is computed FIRST because the rest's span
+                // is now recorded on the fact (The Wicket, Task 7): the walk
+                // always knew how long the body would be down and simply
+                // discarded it, which is what kept fatigue a flag.
+                let wake = next_awake_day(npc.activity, self.terrain, &st.pos, st.day);
                 out.push(rested_fact(
                     npc.entity,
                     st.day,
+                    wake - st.day,
                     "slept at home (fatigue eased)",
                 ));
-                st.last_rested = st.day;
-                // Sleep through the off-phase in one jump to the next
-                // waking, rather than re-resting every step (The Slumber).
-                st.day = next_awake_day(npc.activity, self.terrain, &st.pos, st.day);
+                st.day = wake;
                 if st.day > self.to {
                     return false;
                 }
@@ -7648,7 +7850,12 @@ mod tests {
         // `k - round(2k/3)`: 0, 1, 1, 1, 2, 2, 2 for `k = 1..7`.
         //
         // THE PROFILE. Seven Hold jumps per creature over this walk, so the
-        // staircase tops out at +2:
+        // staircase tops out at +2. **THE INDICES BELOW ARE POSITIONS IN THE
+        // EIGHTY-FACT ROSTER THAT PRECEDED THE WICKET**, which grew this
+        // fixture to 140 — see the section after this one. The mechanism and
+        // the tick values are unchanged; only the row numbers that used to
+        // address them are stale, and they are kept because the anchors are how
+        // you tell which side of the snapping change you are on.
         //
         //     facts  0-13   +0 ticks (byte-identical)
         //     facts 14-53   +1 tick
@@ -7657,11 +7864,13 @@ mod tests {
         // THREE ANCHORS, so checking which side of the change you are on is a
         // lookup rather than a re-derivation. If your run produces the LEFT
         // column, you have reverted the snapping; the RIGHT column is what is
-        // recorded below.
+        // recorded below. The first two anchors still sit at their old indices
+        // in the current roster; the third named the LAST fact of the old one
+        // and has no counterpart in this one.
         //
         //     fact  0   100150  ->   100150   (unchanged)
         //     fact 14  1206633  ->  1206634
-        //     fact 79  3665800  ->  3665802
+        //     fact 79  3665800  ->  3665802   (old roster's last fact)
         //
         // Nothing else moved: not an order, not a room, not a provenance, not
         // a subject. Only the day column, only upward, both twins identically.
@@ -7677,13 +7886,63 @@ mod tests {
         // would reintroduce the very `f64` the campaign exists to delete. This
         // value is the accepted one. Do not "fix" it back.
         //
+        // AND IT MOVED AGAIN, LARGELY, AT THE WICKET'S TASK 7 — 80 FACTS TO
+        // 134. This one is a BEHAVIOUR change, not a placement one, and it is
+        // the finding the task was looking for rather than a cost paid for it.
+        //
+        // THE MECHANISM. Fatigue is a recovery STOCK now: a rest repays
+        // `FATIGUE_FALL` per day ASLEEP instead of zeroing the debt outright,
+        // and each `rested` fact records the span the body was actually down
+        // (its object is a tick count, which is the visible half of this diff).
+        // The walk is unchanged in every other respect, and the counts prove
+        // it: `agent-at` 48 -> 48, `drank` 12 -> 12, `eaten` 6 -> 6, all three
+        // in the same order, in the same rooms, with the same provenances, and
+        // the same subjects. `rested` alone moved, 14 -> 68, and the entire
+        // fact-count delta is those fifty-four rests. The surviving non-rest
+        // facts move only LATER on the clock (the first shift is a `walking
+        // home (sated)` at 1256934 -> 1272384), because the extra rests cost
+        // time like any other act.
+        //
+        // WHY FIFTY-FOUR MORE RESTS. Forty-four of the 68 are
+        // `Number(5000.0)` — one `WAKE_SCAN_STEP`, a twentieth of a day. That
+        // is what `next_awake_day` returns for a creature that lies down while
+        // it is ALREADY AWAKE: the next scan step, because the creature is
+        // awake there too. Under the flag model such a rest zeroed the debt by
+        // fiat and one of them was always enough. Under a stock it repays only
+        // `FATIGUE_FALL * 0.05`, so a creature deep in debt dozes through its
+        // own waking phase until either the debt falls under `FATIGUE_ACT`'s
+        // hysteresis band or night comes and the next rest is a real one — the
+        // runs of 5000s followed by a 45000 or 50000 in the literal below are
+        // exactly that, and they read as a body napping through the afternoon
+        // and then sleeping properly at dusk. It terminates: every doze
+        // strictly reduces the debt and accrues nothing, so the loop is
+        // bounded by the debt itself.
+        //
+        // THIS FIXTURE IS SYNTHETIC AND OVERSTATES IT. `hoist_walk_shape` runs
+        // a planted terrain with no forage, no temperatures and one water room,
+        // over 39 days — creatures here are under pressures a real world spaces
+        // out. The seed-42 measurement is
+        // `tick_commit_budget::facts_committed_per_agent_per_tick_stays_bounded`,
+        // which reads 1.24 facts/agent/tick against its 1.5 ceiling (0.96
+        // before this change). Read the rate there, not the fact count here.
+        //
+        // WHAT THIS SAYS TO TASK 8, and it is the reason it is written here
+        // rather than smoothed away. `Session::sleep`'s own doc already called
+        // the scan-step wake "honest but coarse" and declined to invent a finer
+        // rule beside the creature layer's. The stock makes that coarseness
+        // VISIBLE for the first time — it was always there, and the flag hid
+        // it. The act split (rest vs sleep) is where a rest's intended length
+        // becomes a property of the ACT rather than a by-product of a wake
+        // scan, so that is where this belongs; damping it here would mean
+        // authoring a second sleep model with no verb to hang it on.
+        //
         const EXPECTED: &[&str] = &[
-            r#"knower|rested|Flag(true)|Some(100150)|slept at home (fatigue eased)"#,
-            r#"lost|rested|Flag(true)|Some(100150)|slept at home (fatigue eased)"#,
+            r#"knower|rested|Number(25000.0)|Some(100150)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Number(25000.0)|Some(100150)|slept at home (fatigue eased)"#,
             r#"knower|agent-at|Text("180243")|Some(576667)|went down to the river it knew (thirst)"#,
             r#"lost|agent-at|Text("180243")|Some(576667)|went down to the river it knew (thirst)"#,
-            r#"knower|rested|Flag(true)|Some(576817)|slept at home (fatigue eased)"#,
-            r#"lost|rested|Flag(true)|Some(576817)|slept at home (fatigue eased)"#,
+            r#"knower|rested|Number(50000.0)|Some(576817)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Number(50000.0)|Some(576817)|slept at home (fatigue eased)"#,
             r#"knower|agent-at|Text("180339")|Some(636817)|went down to the river it knew (thirst)"#,
             r#"lost|agent-at|Text("180339")|Some(636817)|went down to the river it knew (thirst)"#,
             r#"knower|drank|Flag(true)|Some(636967)|drank from the river (thirst sated)"#,
@@ -7694,70 +7953,124 @@ mod tests {
             r#"lost|agent-at|Text("172046")|Some(656967)|walking home (sated)"#,
             r#"knower|eaten|Flag(true)|Some(1206634)|grazed the productive ground (hunger sated)"#,
             r#"lost|eaten|Flag(true)|Some(1206634)|grazed the productive ground (hunger sated)"#,
-            r#"knower|rested|Flag(true)|Some(1206784)|slept at home (fatigue eased)"#,
-            r#"lost|rested|Flag(true)|Some(1206784)|slept at home (fatigue eased)"#,
+            r#"knower|rested|Number(20000.0)|Some(1206784)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Number(20000.0)|Some(1206784)|slept at home (fatigue eased)"#,
             r#"knower|agent-at|Text("180243")|Some(1236784)|went down to the river it knew (thirst)"#,
             r#"lost|agent-at|Text("180243")|Some(1236784)|went down to the river it knew (thirst)"#,
             r#"knower|agent-at|Text("180339")|Some(1246784)|went down to the river it knew (thirst)"#,
             r#"lost|agent-at|Text("180339")|Some(1246784)|went down to the river it knew (thirst)"#,
             r#"knower|drank|Flag(true)|Some(1246934)|drank from the river (thirst sated)"#,
             r#"lost|drank|Flag(true)|Some(1246934)|drank from the river (thirst sated)"#,
-            r#"knower|agent-at|Text("180243")|Some(1256934)|walking home (sated)"#,
-            r#"lost|agent-at|Text("180243")|Some(1256934)|walking home (sated)"#,
-            r#"knower|agent-at|Text("172046")|Some(1266934)|walking home (sated)"#,
-            r#"lost|agent-at|Text("172046")|Some(1266934)|walking home (sated)"#,
-            r#"knower|rested|Flag(true)|Some(1813751)|slept at home (fatigue eased)"#,
-            r#"lost|rested|Flag(true)|Some(1813751)|slept at home (fatigue eased)"#,
+            r#"knower|rested|Number(5000.0)|Some(1247084)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Number(5000.0)|Some(1247084)|slept at home (fatigue eased)"#,
+            r#"knower|rested|Number(5000.0)|Some(1252234)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Number(5000.0)|Some(1252234)|slept at home (fatigue eased)"#,
+            r#"knower|rested|Number(5000.0)|Some(1257384)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Number(5000.0)|Some(1257384)|slept at home (fatigue eased)"#,
+            r#"knower|agent-at|Text("180243")|Some(1272384)|walking home (sated)"#,
+            r#"lost|agent-at|Text("180243")|Some(1272384)|walking home (sated)"#,
+            r#"knower|agent-at|Text("172046")|Some(1282384)|walking home (sated)"#,
+            r#"lost|agent-at|Text("172046")|Some(1282384)|walking home (sated)"#,
+            r#"knower|rested|Number(45000.0)|Some(1282534)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Number(45000.0)|Some(1282534)|slept at home (fatigue eased)"#,
+            r#"knower|rested|Number(15000.0)|Some(1813751)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Number(15000.0)|Some(1813751)|slept at home (fatigue eased)"#,
             r#"knower|agent-at|Text("180243")|Some(1838751)|went down to the river it knew (thirst)"#,
             r#"lost|agent-at|Text("180243")|Some(1838751)|went down to the river it knew (thirst)"#,
             r#"knower|agent-at|Text("180339")|Some(1848751)|went down to the river it knew (thirst)"#,
             r#"lost|agent-at|Text("180339")|Some(1848751)|went down to the river it knew (thirst)"#,
             r#"knower|drank|Flag(true)|Some(1848901)|drank from the river (thirst sated)"#,
             r#"lost|drank|Flag(true)|Some(1848901)|drank from the river (thirst sated)"#,
-            r#"knower|agent-at|Text("180243")|Some(1858901)|walking home (sated)"#,
-            r#"lost|agent-at|Text("180243")|Some(1858901)|walking home (sated)"#,
-            r#"knower|agent-at|Text("172046")|Some(1868901)|walking home (sated)"#,
-            r#"lost|agent-at|Text("172046")|Some(1868901)|walking home (sated)"#,
+            r#"knower|rested|Number(5000.0)|Some(1849051)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Number(5000.0)|Some(1849051)|slept at home (fatigue eased)"#,
+            r#"knower|rested|Number(5000.0)|Some(1854201)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Number(5000.0)|Some(1854201)|slept at home (fatigue eased)"#,
+            r#"knower|rested|Number(5000.0)|Some(1859351)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Number(5000.0)|Some(1859351)|slept at home (fatigue eased)"#,
+            r#"knower|rested|Number(5000.0)|Some(1864501)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Number(5000.0)|Some(1864501)|slept at home (fatigue eased)"#,
+            r#"knower|agent-at|Text("180243")|Some(1879501)|walking home (sated)"#,
+            r#"lost|agent-at|Text("180243")|Some(1879501)|walking home (sated)"#,
+            r#"knower|rested|Number(50000.0)|Some(1879651)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Number(50000.0)|Some(1879651)|slept at home (fatigue eased)"#,
+            r#"knower|agent-at|Text("172046")|Some(1939651)|walking home (sated)"#,
+            r#"lost|agent-at|Text("172046")|Some(1939651)|walking home (sated)"#,
             r#"knower|eaten|Flag(true)|Some(2418568)|grazed the productive ground (hunger sated)"#,
             r#"lost|eaten|Flag(true)|Some(2418568)|grazed the productive ground (hunger sated)"#,
-            r#"knower|rested|Flag(true)|Some(2418718)|slept at home (fatigue eased)"#,
-            r#"lost|rested|Flag(true)|Some(2418718)|slept at home (fatigue eased)"#,
+            r#"knower|rested|Number(10000.0)|Some(2418718)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Number(10000.0)|Some(2418718)|slept at home (fatigue eased)"#,
             r#"knower|agent-at|Text("180243")|Some(2438718)|went down to the river it knew (thirst)"#,
             r#"lost|agent-at|Text("180243")|Some(2438718)|went down to the river it knew (thirst)"#,
             r#"knower|agent-at|Text("180339")|Some(2448718)|went down to the river it knew (thirst)"#,
             r#"lost|agent-at|Text("180339")|Some(2448718)|went down to the river it knew (thirst)"#,
             r#"knower|drank|Flag(true)|Some(2448868)|drank from the river (thirst sated)"#,
             r#"lost|drank|Flag(true)|Some(2448868)|drank from the river (thirst sated)"#,
-            r#"knower|agent-at|Text("180243")|Some(2458868)|walking home (sated)"#,
-            r#"lost|agent-at|Text("180243")|Some(2458868)|walking home (sated)"#,
-            r#"knower|agent-at|Text("172046")|Some(2468868)|walking home (sated)"#,
-            r#"lost|agent-at|Text("172046")|Some(2468868)|walking home (sated)"#,
-            r#"knower|rested|Flag(true)|Some(3015685)|slept at home (fatigue eased)"#,
-            r#"lost|rested|Flag(true)|Some(3015685)|slept at home (fatigue eased)"#,
+            r#"knower|rested|Number(5000.0)|Some(2449018)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Number(5000.0)|Some(2449018)|slept at home (fatigue eased)"#,
+            r#"knower|rested|Number(5000.0)|Some(2454168)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Number(5000.0)|Some(2454168)|slept at home (fatigue eased)"#,
+            r#"knower|rested|Number(5000.0)|Some(2459318)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Number(5000.0)|Some(2459318)|slept at home (fatigue eased)"#,
+            r#"knower|rested|Number(5000.0)|Some(2464468)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Number(5000.0)|Some(2464468)|slept at home (fatigue eased)"#,
+            r#"knower|rested|Number(5000.0)|Some(2469618)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Number(5000.0)|Some(2469618)|slept at home (fatigue eased)"#,
+            r#"knower|agent-at|Text("180243")|Some(2484618)|walking home (sated)"#,
+            r#"lost|agent-at|Text("180243")|Some(2484618)|walking home (sated)"#,
+            r#"knower|rested|Number(45000.0)|Some(2484768)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Number(45000.0)|Some(2484768)|slept at home (fatigue eased)"#,
+            r#"knower|agent-at|Text("172046")|Some(2539768)|walking home (sated)"#,
+            r#"lost|agent-at|Text("172046")|Some(2539768)|walking home (sated)"#,
+            r#"knower|rested|Number(10000.0)|Some(3015685)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Number(10000.0)|Some(3015685)|slept at home (fatigue eased)"#,
             r#"knower|agent-at|Text("180243")|Some(3035685)|went down to the river it knew (thirst)"#,
             r#"lost|agent-at|Text("180243")|Some(3035685)|went down to the river it knew (thirst)"#,
             r#"knower|agent-at|Text("180339")|Some(3045685)|went down to the river it knew (thirst)"#,
             r#"lost|agent-at|Text("180339")|Some(3045685)|went down to the river it knew (thirst)"#,
             r#"knower|drank|Flag(true)|Some(3045835)|drank from the river (thirst sated)"#,
             r#"lost|drank|Flag(true)|Some(3045835)|drank from the river (thirst sated)"#,
-            r#"knower|agent-at|Text("180243")|Some(3055835)|walking home (sated)"#,
-            r#"lost|agent-at|Text("180243")|Some(3055835)|walking home (sated)"#,
-            r#"knower|agent-at|Text("172046")|Some(3065835)|walking home (sated)"#,
-            r#"lost|agent-at|Text("172046")|Some(3065835)|walking home (sated)"#,
+            r#"knower|rested|Number(5000.0)|Some(3045985)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Number(5000.0)|Some(3045985)|slept at home (fatigue eased)"#,
+            r#"knower|rested|Number(5000.0)|Some(3051135)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Number(5000.0)|Some(3051135)|slept at home (fatigue eased)"#,
+            r#"knower|rested|Number(5000.0)|Some(3056285)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Number(5000.0)|Some(3056285)|slept at home (fatigue eased)"#,
+            r#"knower|rested|Number(5000.0)|Some(3061435)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Number(5000.0)|Some(3061435)|slept at home (fatigue eased)"#,
+            r#"knower|rested|Number(5000.0)|Some(3066585)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Number(5000.0)|Some(3066585)|slept at home (fatigue eased)"#,
+            r#"knower|agent-at|Text("180243")|Some(3081585)|walking home (sated)"#,
+            r#"lost|agent-at|Text("180243")|Some(3081585)|walking home (sated)"#,
+            r#"knower|rested|Number(45000.0)|Some(3081735)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Number(45000.0)|Some(3081735)|slept at home (fatigue eased)"#,
+            r#"knower|agent-at|Text("172046")|Some(3136735)|walking home (sated)"#,
+            r#"lost|agent-at|Text("172046")|Some(3136735)|walking home (sated)"#,
             r#"knower|eaten|Flag(true)|Some(3615502)|grazed the productive ground (hunger sated)"#,
             r#"lost|eaten|Flag(true)|Some(3615502)|grazed the productive ground (hunger sated)"#,
-            r#"knower|rested|Flag(true)|Some(3615652)|slept at home (fatigue eased)"#,
-            r#"lost|rested|Flag(true)|Some(3615652)|slept at home (fatigue eased)"#,
+            r#"knower|rested|Number(10000.0)|Some(3615652)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Number(10000.0)|Some(3615652)|slept at home (fatigue eased)"#,
             r#"knower|agent-at|Text("180243")|Some(3635652)|went down to the river it knew (thirst)"#,
             r#"lost|agent-at|Text("180243")|Some(3635652)|went down to the river it knew (thirst)"#,
             r#"knower|agent-at|Text("180339")|Some(3645652)|went down to the river it knew (thirst)"#,
             r#"lost|agent-at|Text("180339")|Some(3645652)|went down to the river it knew (thirst)"#,
             r#"knower|drank|Flag(true)|Some(3645802)|drank from the river (thirst sated)"#,
             r#"lost|drank|Flag(true)|Some(3645802)|drank from the river (thirst sated)"#,
-            r#"knower|agent-at|Text("180243")|Some(3655802)|walking home (sated)"#,
-            r#"lost|agent-at|Text("180243")|Some(3655802)|walking home (sated)"#,
-            r#"knower|agent-at|Text("172046")|Some(3665802)|walking home (sated)"#,
-            r#"lost|agent-at|Text("172046")|Some(3665802)|walking home (sated)"#,
+            r#"knower|rested|Number(5000.0)|Some(3645952)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Number(5000.0)|Some(3645952)|slept at home (fatigue eased)"#,
+            r#"knower|rested|Number(5000.0)|Some(3651102)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Number(5000.0)|Some(3651102)|slept at home (fatigue eased)"#,
+            r#"knower|rested|Number(5000.0)|Some(3656252)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Number(5000.0)|Some(3656252)|slept at home (fatigue eased)"#,
+            r#"knower|rested|Number(5000.0)|Some(3661402)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Number(5000.0)|Some(3661402)|slept at home (fatigue eased)"#,
+            r#"knower|rested|Number(5000.0)|Some(3666552)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Number(5000.0)|Some(3666552)|slept at home (fatigue eased)"#,
+            r#"knower|agent-at|Text("180243")|Some(3681552)|walking home (sated)"#,
+            r#"lost|agent-at|Text("180243")|Some(3681552)|walking home (sated)"#,
+            r#"knower|rested|Number(45000.0)|Some(3681702)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Number(45000.0)|Some(3681702)|slept at home (fatigue eased)"#,
+            r#"knower|agent-at|Text("172046")|Some(3736702)|walking home (sated)"#,
+            r#"lost|agent-at|Text("172046")|Some(3736702)|walking home (sated)"#,
         ];
         let shape = hoist_walk_shape();
         assert_eq!(
@@ -13533,12 +13846,12 @@ mod tests {
         );
     }
 
-    /// THE READ AND THE MOVER COMPUTE FATIGUE WITH ONE ARITHMETIC SHAPE.
+    /// THE READ AND THE MOVER COMPUTE FATIGUE WITH ONE ARITHMETIC SHAPE — P5.
     ///
     /// `fatigue_at` (the read, behind `affect_of`) and `decide_step` (the
     /// mover, inside the walk) must agree — this module's FOLD doctrine, and
     /// the reason `learned_helplessness` carries the same sentence. The retype
-    /// briefly broke it: the mover subtracts two INSTANTS and crosses the
+    /// briefly broke it: the mover subtracted two INSTANTS and crossed the
     /// exact span (`(t - r).as_std_days()`), while the read subtracted two
     /// separately-crossed days (`t.as_std_days() - r.as_std_days()`).
     ///
@@ -13547,38 +13860,106 @@ mod tests {
     /// so a test asserting they agree could never have passed, which is why
     /// this pins the SHAPE rather than asserting an equality between them.
     ///
-    /// Every pair below was measured to disagree under the old shape and to
-    /// land strictly inside the clamp, so reverting `fatigue_at` to the float
-    /// difference turns this red deterministically rather than by luck.
+    /// THE WICKET CLOSED THE GAP AT ITS SOURCE: there is one implementation
+    /// now (`fatigue_from_rests`), reached by the read and by the mover's
+    /// `fatigue_with_pending`, so agreement is structural rather than
+    /// maintained. This test survives because structural agreement between two
+    /// CALLERS says nothing about whether the one implementation still crosses
+    /// EXACT SPANS. So it states the contract — the segment arithmetic written
+    /// out by hand — and holds the implementation to it bit for bit. Every pair
+    /// below was measured to disagree under the old float-difference shape and
+    /// every segment lands strictly inside the clamp, so a regression to
+    /// separately-crossed days turns this red deterministically rather than by
+    /// luck.
+    ///
+    /// The last assertion is the half only The Wicket could have: the same rest
+    /// read as a COMMITTED fact (whose numeric object `Ledger::commit`
+    /// quantizes) and as a PENDING one (raw, straight off the walk) must give
+    /// bit-identical fatigue. That is the mover's actual situation mid-tick,
+    /// and it is what makes an integer tick span the right carrier for a rest's
+    /// length.
     #[test]
     fn a_fatigue_read_matches_the_walks_own_fatigue_arithmetic() {
         let mut reg = hornvale_kernel::ConceptRegistry::default();
         reg.register_predicate(RESTED, false, "rested").unwrap();
-        // (query_ticks, rested_ticks) pairs whose two arithmetic shapes were
-        // measured to differ in the last bit.
-        const PAIRS: &[(i64, i64)] = &[
-            (207002, 170638),
-            (191727, 152774),
-            (30409, 29809),
-            (36625, 15772),
-            (47560, 36113),
+        // (query_ticks, rested_ticks, span_ticks). The first two are The
+        // Slumber's own pairs, measured to differ in the last bit under the
+        // float-difference shape. THE SPANS ARE NOT ARBITRARY AND WERE NOT
+        // GUESSED: a stock's fold crosses to `f64` once per SEGMENT, so the
+        // pair that has to disagree is no longer `(t, rested)` but
+        // `(t, rested + span)` for the awake-since-waking segment and
+        // `(rested + span, rested)` for the sleep segment. Each span below was
+        // searched for so that BOTH of those disagree under
+        // `a/K - b/K` versus `(a - b)/K`, and so that all three segments land
+        // strictly inside both clamps — the assertion under the loop re-checks
+        // the second half of that on every run. A span picked for looking
+        // plausible (500 was tried first) silently makes this test vacuous: it
+        // still passes, and it stops discriminating.
+        const PAIRS: &[(i64, i64, i64)] = &[
+            (207002, 170638, 100),
+            (191727, 152774, 100),
+            (30409, 29809, 100),
+            (36625, 15772, 100),
+            (47560, 36113, 100),
+            // A query landing MID-rest: the body has had only part of the sleep
+            // it will eventually get, and only that part may be credited. Here
+            // the discriminating pair is the sleep segment `(t, rested)`, and
+            // there is no awake-since-waking segment at all.
+            (207002, 170638, 40000),
         ];
-        for &(t_ticks, r_ticks) in PAIRS {
+        for &(t_ticks, r_ticks, span_ticks) in PAIRS {
             let mut ledger = Ledger::default();
             let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
             let rested = WorldTime::from_ticks(r_ticks);
+            let span = TickSpan::from_ticks(span_ticks);
             let t = WorldTime::from_ticks(t_ticks);
-            ledger.commit(rested_fact(e, rested, "t"), &reg).unwrap();
-            // The MOVER's shape, written out here exactly as `decide_step`
-            // computes it, so this test states the contract rather than
-            // calling the code it is pinning.
-            let mover = (FATIGUE_RISE * (t - rested).as_std_days()).clamp(0.0, 1.0);
+            let fact = rested_fact(e, rested, span, "t");
+            ledger.commit(fact.clone(), &reg).unwrap();
+            // THE CONTRACT, written out here segment by segment exactly as
+            // `fatigue_from_rests` must compute it, so this test states the
+            // arithmetic rather than calling the code it is pinning. Each
+            // crossing to `f64` is ONE exact lattice difference.
+            let woke = rested + span;
+            let awake_before =
+                (FATIGUE_RISE * (rested - WorldTime::GENESIS).as_std_days()).min(1.0);
+            let slept_until = woke.min(t);
+            let after_rest =
+                (awake_before - FATIGUE_FALL * (slept_until - rested).as_std_days()).max(0.0);
+            let mover = if t > woke {
+                (after_rest + FATIGUE_RISE * (t - woke).as_std_days()).min(1.0)
+            } else {
+                after_rest
+            };
+            assert!(
+                mover > 0.0 && mover < 1.0,
+                "the fixture must land strictly inside the clamp or it pins \
+                 nothing: t={t_ticks}, rested={r_ticks}, span={span_ticks} \
+                 gave {mover}"
+            );
             assert_eq!(
                 fatigue_at(&ledger, e, t).to_bits(),
                 mover.to_bits(),
-                "the fatigue read must be BIT-identical to the walk's own \
-                 fatigue arithmetic at t={t_ticks} ticks, rested={r_ticks} \
-                 ticks; a float-difference read disagrees here in the last bit"
+                "the fatigue read must be BIT-identical to the segment \
+                 arithmetic at t={t_ticks} ticks, rested={r_ticks} ticks, \
+                 span={span_ticks} ticks; a float-difference read disagrees \
+                 here in the last bit"
+            );
+            // The MOVER's own entry point, over the same committed history.
+            assert_eq!(
+                fatigue_with_pending(&ledger, &[], e, t).to_bits(),
+                mover.to_bits(),
+                "read and mover are one function, so they cannot disagree"
+            );
+            // And the mover's REAL situation: the rest emitted this tick, not
+            // yet committed, so its span has not been through the quantizer.
+            let mut empty = Ledger::default();
+            let e2 = empty.mint_entity(test_lineage(empty.entity_count() as u16));
+            let pending = rested_fact(e2, rested, span, "t");
+            assert_eq!(
+                fatigue_with_pending(&empty, std::slice::from_ref(&pending), e2, t).to_bits(),
+                mover.to_bits(),
+                "a rest read back through `Ledger::commit`'s quantizer must \
+                 give the same fatigue as the raw one the walk emitted"
             );
         }
     }
@@ -13900,46 +14281,127 @@ mod tests {
 
     #[test]
     fn fatigue_folds_rested_events() {
-        // FATIGUE == FOLD over `rested`: rises since the last rest, resets on it,
-        // clamps at 1 — the structural twin of thirst's `drive_at`.
+        // FATIGUE == FOLD over `rested`, and since The Wicket the fold is a
+        // recovery STOCK: it rises while awake, falls while asleep in
+        // proportion to the rest's recorded span, and clamps into [0, 1].
+        //
+        // WHAT MOVED FROM THE SLUMBER'S VERSION OF THIS TEST, and why the new
+        // numbers are the right ones: the old assertions were
+        // `fatigue(2.0) == 0` and `fatigue(3.0) == FATIGUE_RISE` — "the rest at
+        // day 2 zeroed the debt, and a day awake since then rebuilt it". Both
+        // encode the flag model. Under a stock, a rest that BEGINS at day 2
+        // has repaid nothing AT day 2 (no time asleep has passed yet), and the
+        // creature is still asleep at day 2.4, so the reading at 3.0 is
+        // "0.6 accrued, 0.3 repaid by half a day asleep, then 0.15 accrued over
+        // the half day since waking".
         let mut reg = ConceptRegistry::default();
         reg.register_predicate(RESTED, false, "rested").unwrap();
         reg.register_predicate(EATEN, false, "eaten").unwrap();
         let mut ledger = Ledger::default();
         let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
+        let at = |d: f64| WorldTime::from_std_days(d).expect("a day value is finite");
+        // Before any rest: a pure ramp from genesis, exactly as it always was.
+        assert!((fatigue_at(&ledger, e, at(0.5)) - FATIGUE_RISE * 0.5).abs() < 1e-9);
+        // A HALF-DAY sleep beginning at day 2 — a creature's normal night.
+        let night = TickSpan::from_std_days(0.5).expect("a span value is finite");
+        ledger
+            .commit(rested_fact(e, td(2.0), night, "t"), &reg)
+            .unwrap();
+        // AT the moment it lies down, the debt is what two days awake built.
+        // The old model read 0 here; that was the flag.
         assert!(
-            (fatigue_at(
-                &ledger,
-                e,
-                WorldTime::from_std_days(0.5).expect("a day value is finite")
-            ) - FATIGUE_RISE * 0.5)
-                .abs()
-                < 1e-9
+            (fatigue_at(&ledger, e, at(2.0)) - FATIGUE_RISE * 2.0).abs() < 1e-9,
+            "lying down is not itself rest: the debt at the instant sleep \
+             begins is still two days' worth"
         );
-        ledger.commit(rested_fact(e, td(2.0), "t"), &reg).unwrap();
+        // Mid-sleep, a quarter of a day in: half the night's repayment.
         assert!(
-            fatigue_at(
-                &ledger,
-                e,
-                WorldTime::from_std_days(2.0).expect("a day value is finite")
-            ) < 1e-9
+            (fatigue_at(&ledger, e, at(2.25)) - (FATIGUE_RISE * 2.0 - FATIGUE_FALL * 0.25)).abs()
+                < 1e-9,
+            "a query mid-rest credits only the sleep the body has had by then"
         );
+        // Woken at 2.5 having repaid FATIGUE_FALL * 0.5, then awake for half a
+        // day more.
+        let after_night = FATIGUE_RISE * 2.0 - FATIGUE_FALL * 0.5;
         assert!(
-            (fatigue_at(
-                &ledger,
-                e,
-                WorldTime::from_std_days(3.0).expect("a day value is finite")
-            ) - FATIGUE_RISE)
-                .abs()
-                < 1e-9
+            (fatigue_at(&ledger, e, at(3.0)) - (after_night + FATIGUE_RISE * 0.5)).abs() < 1e-9,
+            "the old model read exactly FATIGUE_RISE here, on the premise that \
+             the rest had zeroed the debt"
+        );
+        // The ceiling still holds however long a body stays up.
+        assert_eq!(fatigue_at(&ledger, e, at(100.0)), 1.0);
+    }
+
+    /// THE WALK ACTUALLY RECORDS THE SPAN IT ALREADY KNEW (The Wicket, Task 7).
+    ///
+    /// The stock is only as good as its input, and the input is a number the
+    /// walk had in hand the whole time and threw away: `Action::Rest` jumped
+    /// `st.day` to `next_awake_day` and committed a `rested` fact carrying a
+    /// bare `Flag(true)`. Every property test below this one would still pass
+    /// against a walk that recorded a ZERO span — the fold would be correct and
+    /// the world would have no rests in it. So this pins the plumbing: a real
+    /// creature, put to sleep by the wake-gate, commits a rest whose recorded
+    /// length is exactly the jump the same tick makes.
+    #[test]
+    fn the_walk_records_how_long_a_creature_actually_slept() {
+        let home = raddr(1.0);
+        // Thermally inert (optimum at the planted ambient, a huge tolerance
+        // band), ignorant of water, empty diet: the wake-gate is the only
+        // thing that can decide anything here, and while asleep it forces
+        // Fatigue, whose proposal is always `Rest`.
+        let terrain = PlantedTerrain::thermal([(home.clone(), 20.0)]);
+        let niche = ConditionResponse {
+            optimum: 20.0,
+            width: 50.0,
+            devotion: 0.5,
+        };
+        let npc = cold_thermal_npc(npc_id(1), home.clone(), niche);
+        let mut reg = ConceptRegistry::default();
+        reg.register_predicate(AGENT_AT, true, "agent-at").unwrap();
+        let mut ledger = Ledger::default();
+        let e = npc.entity;
+        // Midnight of day 3: a diurnal creature is in its off-phase.
+        let night = WorldTime::from_std_days(3.0).expect("a day value is finite");
+        assert!(
+            !is_awake(ActivityCycle::Diurnal, &terrain, &home, night),
+            "the fixture must actually catch the creature asleep"
+        );
+        ledger.commit(place_agent(e, &home, night), &reg).unwrap();
+        let sys = DriveMovements {
+            npcs: vec![npc],
+            from: night,
+            // A tenth of a day of room: the Rest arm ends the walk as soon as
+            // its own jump passes `to`, so this is one decision wide in
+            // practice, but `from == to` leaves the walk no interval at all.
+            to: night + TickSpan::from_ticks(WorldTime::TICKS_PER_STD_DAY / 10),
+            params: SUSTENANCE,
+            day_ticks: None,
+            terrain: &terrain,
+        };
+        let (facts, _occ) =
+            sys.step_with_occupancy(&ledger, &mut RoomMeshMemo::new(), &mut HomeNavCache::new());
+        let rests: Vec<&Fact> = facts
+            .iter()
+            .filter(|f| f.subject == e && f.predicate == RESTED)
+            .collect();
+        assert_eq!(rests.len(), 1, "one rest, in one tick: {facts:?}");
+        // Dated when the body lay DOWN — one action charge after the tick
+        // opened, since lying down costs time like any other act.
+        let lay_down = rests[0].day.expect("a rest is always dated");
+        assert!(
+            lay_down >= night,
+            "a rest is dated at or after the tick's own start"
+        );
+        let expected = next_awake_day(ActivityCycle::Diurnal, &terrain, &home, lay_down) - lay_down;
+        assert!(
+            expected.ticks() > 0,
+            "the fixture must produce a rest of real length, or this test \
+             would pass against a walk that recorded nothing"
         );
         assert_eq!(
-            fatigue_at(
-                &ledger,
-                e,
-                WorldTime::from_std_days(100.0).expect("a day value is finite")
-            ),
-            1.0
+            rests[0].object,
+            Value::Number(expected.ticks() as f64),
+            "the rest's recorded span must be the very jump the walk makes"
         );
     }
 
@@ -15222,8 +15684,8 @@ mod tests {
         let npc = cold_thermal_npc(e, home.clone(), niche);
         // A ONE-day gap — generous for the composed chain's 3-hop journey
         // (task 6's own finding), but short enough that Fatigue's own
-        // `last_rested` fold (defaulted to `0.0`, no `rested` fact in this
-        // ledger) never crosses `FATIGUE_ACT` (0.85 at `FATIGUE_RISE`
+        // stock (no `rested` fact in this ledger, so it accrues from genesis)
+        // never crosses `FATIGUE_ACT` (0.85 at `FATIGUE_RISE`
         // 0.3/day ⇒ ~2.8 days) and competes for the arbitration this test
         // means to isolate to Thermal.
         let now = WorldTime::from_std_days(entry_day + 1.0).expect("a day value is finite");
@@ -15264,7 +15726,7 @@ mod tests {
     #[test]
     fn catch_up_replay_sees_thirst_before_a_drank_fact_inside_the_window() {
         // The Threshold whole-branch review, Important 3: `last_drank` (and
-        // its `last_ate`/`last_rested` twins) folded ONCE over a creature's
+        // its `last_ate` twin) folded ONCE over a creature's
         // ENTIRE committed history and reused unchanged for every replayed
         // day is wrong whenever that fold's own maximum lands INSIDE the
         // replay window — a day chronologically BEFORE the drink would
@@ -15324,7 +15786,6 @@ mod tests {
             &visited,
             correct_last_drank,
             WorldTime::GENESIS,
-            WorldTime::GENESIS,
             None,
             Mode::Idle,
             &SUSTENANCE,
@@ -15362,7 +15823,6 @@ mod tests {
             &alarm,
             &visited,
             buggy_last_drank,
-            WorldTime::GENESIS,
             WorldTime::GENESIS,
             None,
             Mode::Idle,

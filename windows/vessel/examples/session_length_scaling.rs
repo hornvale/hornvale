@@ -979,7 +979,7 @@ fn run(
         ),
         (
             hornvale_vessel::liveness::RESTED,
-            "an agent rested (eased its fatigue) on a day",
+            "an agent rested on a day, for this many ticks",
         ),
         (
             hornvale_vessel::liveness::EATEN,

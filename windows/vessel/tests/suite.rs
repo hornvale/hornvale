@@ -41,6 +41,8 @@ mod course_properties;
 mod display_handle;
 #[path = "suite/doctrine.rs"]
 mod doctrine;
+#[path = "suite/fatigue_stock.rs"]
+mod fatigue_stock;
 #[path = "suite/felt_state_concepts.rs"]
 mod felt_state_concepts;
 #[path = "suite/furnishing_marks.rs"]

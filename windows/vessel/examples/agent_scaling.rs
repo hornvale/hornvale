@@ -357,7 +357,7 @@ fn run_rung(
         .register_predicate(
             hornvale_vessel::liveness::RESTED,
             false,
-            "an agent rested (eased its fatigue) on a day",
+            "an agent rested on a day, for this many ticks",
         )
         .expect("RESTED registers identically every run");
     registry

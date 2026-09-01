@@ -1197,7 +1197,7 @@ impl<'w> Session<'w> {
             .register_predicate(
                 RESTED,
                 false,
-                "an agent rested (eased its fatigue) on a day",
+                "an agent rested on a day, for this many ticks",
             )
             .expect("RESTED registers identically every session");
         registry
@@ -2541,15 +2541,25 @@ impl<'w> Session<'w> {
         if let Err(e) = self.charge(&Action::Rest, 1.0) {
             return Turn::Out(e);
         }
-        let fact = rested_fact(self.agent_entity(), self.day, SLEPT_PROVENANCE);
-        self.ledger
-            .commit(fact, &self.registry)
-            .expect("RESTED is registered every session and non-functional");
+        // THE WAKE INSTANT COMES FIRST NOW (The Wicket, Task 7), because the
+        // `rested` fact records how long the body was down and this method
+        // already knew: `wake_at` was computed from the same scan and the fact
+        // was committed without it. Fatigue is a recovery stock, so the span is
+        // what a rest actually repays.
         let wake = {
             let activity = species_activity(self.world, &self.driven_body().species);
             let terrain = self.terrain_here();
             next_awake_day(activity, &terrain, &self.position(), self.day)
         };
+        let fact = rested_fact(
+            self.agent_entity(),
+            self.day,
+            wake - self.day,
+            SLEPT_PROVENANCE,
+        );
+        self.ledger
+            .commit(fact, &self.registry)
+            .expect("RESTED is registered every session and non-functional");
         // `next_awake_day` answers with the instant itself now, so the wake
         // time needs no reconstruction from a float day — and cannot fail.
         self.wake_at = Some(wake);
