@@ -1722,28 +1722,37 @@ mod tests {
         // measures 4 today. The design this guard exists to catch — reading
         // `aspect`/`openness`/`wetness` continuously instead of banding them
         // into tiers — was reinstated on this exact band as an experiment
-        // and measured **18** distinct colours, comfortably under an
-        // earlier, unproven `<= 20` ceiling (which is why that ceiling was
-        // wrong: 15-18 colours from address noise passed it silently). `9`
-        // sits strictly between the shipped design's 3 and the rejected
-        // design's 18, and was confirmed to redden the continuous variant
-        // and stay green on the shipped one before landing — see the Task
-        // 2b fix-round report for both runs.
+        // and measured **18** distinct colours at `globe_level + 6`,
+        // comfortably under an earlier, unproven `<= 20` ceiling (which is
+        // why that ceiling was wrong: 15-18 colours from address noise
+        // passed it silently). `9` sat strictly between the shipped design's
+        // 3 and the rejected design's 18, and was confirmed to redden the
+        // continuous variant and stay green on the shipped one before
+        // landing — see the Task 2b fix-round report for both runs, and the
+        // paragraph below for the re-run at the band this test uses now.
         //
-        // **THE CALIBRATION MOVED BAND AND THE 18 WAS NOT RE-MEASURED — SAY
-        // SO RATHER THAN IMPLY OTHERWISE (fix round 1).** Both the shipped
-        // reading (3) and the rejected variant's (18) were taken at
-        // `globe_level + 6`; this band is now `walk_depth`, a quarter of the
-        // ground per room, and the shipped reading moved 3 -> 4. The rejected
-        // continuous variant was NOT re-run here, so 18 is a figure from the
-        // coarser band. The ceiling survives on the argument's shape rather
-        // than on a fresh pair of runs: the continuous variant's count is
-        // bounded below by the number of distinct micro-field triples in the
-        // band, which can only RISE with a finer band, while the tiered
-        // design's is bounded above by 27 regardless of grain. 9 still sits
-        // strictly between 4 and any count at or above 18. If that ceiling
-        // ever needs raising, re-run BOTH variants at this band before
-        // touching it.
+        // **RE-MEASURED AT THIS BAND (fix round 2), because the argument
+        // that stood in for the measurement was wrong.** Both the shipped
+        // reading (3) and the rejected variant's (18) were originally taken
+        // at `globe_level + 6`; this band is `walk_depth`, a quarter of the
+        // ground per room. Fix round 1 declined to re-run the rejected
+        // variant and argued instead that its count "is bounded below by the
+        // number of distinct micro-field triples in the band, which can only
+        // RISE with a finer band". Both halves of that were false: a radius-8
+        // ball is 289 rooms at EITHER band (the ground per room shrinks, the
+        // room count does not, so nothing rises), and the band carries on the
+        // order of 230 distinct micro triples at radius 8 against the
+        // variant's 18, so distinct triples are demonstrably not a lower
+        // bound on it.
+        //
+        // So it was re-run rather than re-argued. Reinstating the continuous
+        // read of `aspect`/`openness`/`wetness` (`surface.rs`, `tier3(x)` ->
+        // `x` at all three sites) on THIS band measures **28** distinct
+        // colours and REDDENS this assertion with the message below; the
+        // shipped tiered design measures **4** and passes. 9 sits strictly
+        // between them, and the pair of runs is now a fresh pair. If the
+        // ceiling ever needs raising, re-run BOTH variants at this band
+        // before touching it — which is what this round did.
         assert!(
             walk_colors <= 9,
             "a radius-8 walking-depth chart drew {walk_colors} colours across \

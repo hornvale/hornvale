@@ -307,25 +307,31 @@ pub const DIAGONAL_STEP_FACTOR: f64 = hornvale_locale::DIAGONAL_STEP_FACTOR;
 /// needs the same predicate for the water REACH. Two copies of "is this step a
 /// diagonal" that could drift apart would let the clock charge for a diagonal
 /// the reach priced as orthogonal, so there is one:
-/// [`hornvale_locale::is_diagonal_step`], which derives the prefix length from
-/// [`Facet::neighbor_steps`] instead of restating it.
+/// [`hornvale_locale::step_kind`], which derives the prefix length from
+/// [`Facet::neighbor_steps`] instead of restating it — and answers "not a step
+/// at all" as its own third value, so this function gets both answers from a
+/// single walk of the neighbour list.
 /// type-audit: bare-ok(ratio: return)
 pub fn step_factor(from: &Facet, to: &Facet) -> f64 {
-    if !from.neighbors().iter().any(|n| n == to) {
-        debug_assert!(
-            from == to,
-            "step_factor asked to price a step between rooms that do not \
-             touch: {from:?} -> {to:?}. Every caller reads the destination \
-             out of the `MoveTo` it is charging, so this means a caller \
-             has begun charging a move the mesh does not admit — the \
-             orthogonal fallback below would under-charge it silently."
-        );
-        return 1.0;
-    }
-    if hornvale_locale::is_diagonal_step(from, to) {
-        DIAGONAL_STEP_FACTOR
-    } else {
-        1.0
+    // ONE walk of `from.neighbors()`, not two. `neighbors()` allocates, and
+    // this asked twice — once for its own adjacency check and once inside
+    // `is_diagonal_step` — for two allocations per movement charge. The
+    // three-valued `step_kind` answers both questions from one walk; see its
+    // doc.
+    match hornvale_locale::step_kind(from, to) {
+        Some(hornvale_locale::StepKind::Diagonal) => DIAGONAL_STEP_FACTOR,
+        Some(hornvale_locale::StepKind::Edge) => 1.0,
+        None => {
+            debug_assert!(
+                from == to,
+                "step_factor asked to price a step between rooms that do not \
+                 touch: {from:?} -> {to:?}. Every caller reads the destination \
+                 out of the `MoveTo` it is charging, so this means a caller \
+                 has begun charging a move the mesh does not admit — the \
+                 orthogonal fallback below would under-charge it silently."
+            );
+            1.0
+        }
     }
 }
 

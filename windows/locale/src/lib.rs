@@ -536,16 +536,63 @@ pub const DIAGONAL_STEP_FACTOR: f64 = std::f64::consts::SQRT_2;
 /// A pair that is not adjacent at all — which no caller passes, since a
 /// crossing is a step — is **not** a diagonal, so the stride stays orthogonal
 /// and the function is total. Symmetric: adjacency on this lattice is.
+///
+/// A caller that needs to tell "not a step" from "an edge step" — the movement
+/// clock does, to fail loudly on a move the mesh does not admit — asks
+/// [`step_kind`] instead, which is where the work happens; this is the
+/// two-valued view of it.
 /// type-audit: bare-ok(flag: return)
 pub fn is_diagonal_step(a: &Facet, b: &Facet) -> bool {
+    step_kind(a, b) == Some(StepKind::Diagonal)
+}
+
+/// Which of the two geometries a walk-band step has — the distinction
+/// [`DIAGONAL_STEP_FACTOR`] exists to price.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum StepKind {
+    /// `b` shares a SIDE with `a`: one lattice step, the orthogonal unit.
+    Edge,
+    /// `b` shares only a CORNER with `a`: [`DIAGONAL_STEP_FACTOR`] times the
+    /// ground of an edge step.
+    Diagonal,
+}
+
+/// The step geometry of `a` -> `b`, or `None` when `b` is not a neighbour of
+/// `a` at all.
+///
+/// **This is the one place the edge-first prefix is indexed**, and the three
+/// public answers ([`is_diagonal_step`], `hornvale_vessel`'s
+/// `clock::step_factor`, and [`LocaleContext::crossing_between`] through the
+/// first) are all views of this single walk of `a.neighbors()`. That matters
+/// for more than tidiness: `neighbors()` ALLOCATES, and `step_factor` used to
+/// walk it once for its own adjacency check and once more inside
+/// `is_diagonal_step` — two allocations per movement charge, on the path
+/// `Session::charge`'s `MoveTo` and the creature walk both take.
+///
+/// The three-valued return is what let those two collapse into one call: an
+/// `Option` distinguishes "not a step at all" (which the clock fails loudly
+/// on) from "an edge step" (which it charges the orthogonal unit for), where a
+/// bare `bool` conflates them.
+///
+/// Derived from [`Facet::neighbors`]'s pinned edge-first prefix, and the prefix
+/// LENGTH is derived too rather than written as a `4`: an edge step is exactly
+/// a [`Facet::neighbor_steps`] entry with one zero component, so counting them
+/// asks the kernel's own step table how long its edge prefix is. That matters
+/// because `neighbors()` DROPS one step at a cube-corner room and the dropped
+/// step is always a diagonal, so index-past-the-prefix survives the drop while
+/// `neighbor_steps()[i]` would not.
+pub fn step_kind(a: &Facet, b: &Facet) -> Option<StepKind> {
     let edge_prefix = Facet::neighbor_steps()
         .iter()
         .filter(|(dx, dy)| *dx == 0 || *dy == 0)
         .count();
-    a.neighbors()
-        .iter()
-        .position(|n| n == b)
-        .is_some_and(|i| i >= edge_prefix)
+    a.neighbors().iter().position(|n| n == b).map(|i| {
+        if i >= edge_prefix {
+            StepKind::Diagonal
+        } else {
+            StepKind::Edge
+        }
+    })
 }
 
 /// The shortest of a room's four edges, radians — the smallest step the mesh
@@ -3085,8 +3132,42 @@ mod tests {
     /// 90 degrees off is now zero. A step that lands one word away is a step
     /// in about the right direction; a word 156 degrees off is not.
     ///
-    /// It is a property of the MESH plus any per-room rule, not of this
-    /// objective: min-sum over the same DP measured the identical 190.
+    /// # WHAT THE 190 IS THE PRICE OF — measured, because the first answer
+    /// # here was wrong
+    ///
+    /// This doc used to say the 190 "is a property of the MESH plus any
+    /// per-room rule, not of this objective". **That is refuted by its own
+    /// paragraph above** — greedy is also a per-room rule and scores 82 — and
+    /// more sharply by measurement. Over this test's exact 12,282-pair
+    /// population, a **non-bijective nearest-word rule** (each neighbour
+    /// independently takes the word nearest its bearing, duplicates and gaps
+    /// allowed) scores **14 non-inverting pairs (0.114%) with a worst error of
+    /// 22.4464 degrees** — better than this rule on BOTH counts. So ~14 is the
+    /// mesh's own floor, and the other 176 are the price of the **bijection**:
+    /// every neighbour gets exactly one word, and every word names at most one
+    /// neighbour.
+    ///
+    /// **That bijection is not a stylistic preference; dropping it costs
+    /// navigability.** Under the nearest-word rule, **152 of the 1,536 sampled
+    /// rooms (9.9%) are not bijective**: 248 neighbour steps share a word with
+    /// another neighbour of the same room, and 248 word slots go unused beyond
+    /// the six a 7-arity cube corner legitimately leaves. That is 2.0% of all
+    /// steps reachable by no unambiguous word — `go E` either refuses or picks
+    /// one of two rooms — which is a worse thing to hand a player than a
+    /// one-word round-trip failure.
+    ///
+    /// **The real shape is a trilemma: bijection, bounded per-room accuracy,
+    /// and invertibility — any two, not all three.** This rule takes the first
+    /// two. Supporting that choice, and measured in fix round 1 and its
+    /// re-review rather than argued: min-sum over the same DP scores the
+    /// identical 190; lexicographic min-max AND min-sum run on *symmetrised*
+    /// (forced-antipodal) bearings also score 190 while degrading the worst
+    /// error to 45 and 90 degrees, so the cheap "consult the pair, not the
+    /// room" fix buys nothing and costs accuracy; and a rule that consulted
+    /// the neighbour's own ASSIGNMENT is circular (a's rose depends on b's rose
+    /// depends on a's) and would need a global matching over the whole
+    /// 8-connected graph — non-local, uncacheable, and topologically
+    /// obstructed at the eight cube corners.
     /// type-audit: bare-ok(count)
     const ROSE_NON_INVERTIBLE_PAIRS: usize = 190;
 
@@ -3189,15 +3270,23 @@ mod tests {
     ///    own population added.
     /// 2. **It bounds the WORST word, not the DISTRIBUTION.** A change that
     ///    left the worst case alone and doubled the number of rooms carrying a
-    ///    40-degree word would pass. The `over_45` / `over_90` counts are
-    ///    printed and asserted as ceilings for exactly this reason, but they
-    ///    are coarse.
+    ///    30-degree word would pass. (The example is 30 and not 40 because a
+    ///    40-degree word is impossible under the 34.578 ceiling standing above
+    ///    it — a blindness statement whose own example the test would catch is
+    ///    worse than no example.) The `over_45` / `over_90` counts are
+    ///    **printed, not asserted** — both read 0 today, so an assertion on
+    ///    them would be strictly implied by `worst <= ROSE_WORST_DEG` and would
+    ///    add no coverage; what they give a reader is the shape of the
+    ///    distribution the ceiling summarises, and nothing in this test bounds
+    ///    the mass below 34.578.
     /// 3. **It says nothing about which word is wrong.** A rose that named
     ///    every neighbour 20 degrees off would pass as readily as one that is
     ///    exact seven times and 20 degrees off once, and the second is the
     ///    better rose.
     /// 4. **Invertibility is bounded, not eliminated, and the residue is the
-    ///    mesh's rather than the rule's.** See the assertion's own comment.
+    ///    price of a BIJECTIVE optimal assignment rather than the mesh's
+    ///    alone** — the mesh's own floor is 14 over the same population, not
+    ///    190. See [`ROSE_NON_INVERTIBLE_PAIRS`]'s doc.
     /// 5. **It runs at one depth.** `WALK` is checked against the live walk
     ///    depth by `cli/tests/suite/walk_depth_agreement.rs`'s
     ///    `every_walk_constant_tracks_the_walk_band`, so it cannot go stale —
@@ -3388,11 +3477,12 @@ mod tests {
              doc what moved"
         );
         // INVERTIBILITY, two-sided for the same reason the angle is. The
-        // residue is the mesh's and not this rule's — a room assigns its rose
-        // without consulting its neighbour's, and min-sum over the same DP
-        // measures the identical count — so what this pins is that the residue
-        // has not GROWN, and that it is still the small kind (off by one word,
-        // mostly at a seam) rather than the reversing kind.
+        // residue is the price of a BIJECTIVE optimal per-room assignment, not
+        // of the mesh alone — a non-bijective nearest-word rule scores 14 over
+        // this same population, and `ROSE_NON_INVERTIBLE_PAIRS`'s doc has the
+        // whole trade. What this pins is that the residue has not GROWN, and
+        // that it is still the small kind (off by one word, mostly at a seam)
+        // rather than the reversing kind.
         assert!(
             non_invertible <= ROSE_NON_INVERTIBLE_PAIRS,
             "{non_invertible} of {pairs} steps do not invert ({per_mille} per mille), \

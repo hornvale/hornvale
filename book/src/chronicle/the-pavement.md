@@ -222,17 +222,32 @@ call against greedy's 5.9. Worst error over the same populations falls from
 **156.5° to 34.6°**, and no room anywhere carries a word more than 45° off —
 so every word now names the correct octant, which greedy could not promise.
 
-**One axis got worse, and it is inherent rather than accidental.** Steps that do
+**One axis got worse, and the first account of why was wrong.** Steps that do
 not invert — where `go e` followed by `go w` fails to return you — rose from
-0.67% to 1.55% of sampled pairs. A per-room rule cannot avoid this: each room
-assigns its words without consulting its neighbour's assignment, and where the
-rose rotates between two adjacent rooms the reverse of *east from here* is
-simply not *west from there*. Perfect invertibility and bounded per-room
-accuracy cannot both hold on a curved surface under a local rule. Given the
-choice, a step that lands one room from where you expected is a smaller lie than
-a word that points 156° wrong, and 184 of the 190 failures are off by exactly
-one word. Both numbers are now pinned two-sided, so an improvement has to be
-banked rather than absorbed in silence.
+0.67% to 1.55% of sampled pairs (190 of 12,282). The campaign wrote that down as
+inherent: a per-room rule cannot avoid it, because each room assigns its words
+without consulting its neighbour's, so where the rose rotates between two
+adjacent rooms the reverse of *east from here* is simply not *west from there*.
+
+That reads well and it is refuted by measurement. Drop the requirement that the
+assignment be a **bijection** — let every neighbour independently take the word
+nearest its own bearing, duplicates and gaps allowed — and the same population
+yields **14** non-inverting pairs with a worst error of **22.4°**: better than
+the shipped rule on both axes at once, from a rule that is still per-room and
+still local. So ~14 is what the mesh's curvature costs, and the other 176 are
+the price of insisting that each of a room's neighbours gets exactly one word and
+each word names at most one neighbour.
+
+The real shape is a **trilemma — bijection, bounded per-room accuracy,
+invertibility: any two.** The project takes the first two, and the reason is
+navigability rather than elegance: under the non-bijective rule, 152 of 1,536
+sampled rooms are not bijective at all, leaving 248 steps — 2% of them — that no
+unambiguous word reaches, so `go e` must either refuse or silently pick one of
+two rooms. A step that lands one room from where you expected is a smaller lie
+than a word that points 156° wrong, and a smaller lie than a direction the game
+cannot name; 184 of the 190 failures are off by exactly one word. Both numbers
+are now pinned two-sided, so an improvement has to be banked rather than
+absorbed in silence.
 
 ## What the rhumb leaves behind
 
