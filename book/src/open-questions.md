@@ -2259,6 +2259,56 @@ settled here; the campaign records that agreeing by construction is strictly
 better than agreeing by comparison wherever one projection can serve both sides,
 which is a stronger form of the instrument this row already carries.
 
+**Re-scored by [The Pavement](./chronicle/the-pavement.md) (2026-09-01): the
+row's one hard limit on what a mechanization could catch was a property of a
+choice, not of mechanization — and the way it resolved is worth more than the
+fact that it did.** The Rhumb left this ledger its sharpest negative result: a
+checkable contract "can require that every offered destination exists" but
+"cannot require that the ground be able to go there straight," because the
+drift it measured — 172.6 step-lengths at 2,000 steps, growing linearly — came
+from both sides behaving correctly. It was the tiling declining to represent a
+continuous curve. That reading was exactly right about the tiling it was written
+under, and it quietly carried a premise: that the tiling was fixed and the
+walker was the only thing left to move.
+
+Decision 0141 had made that premise explicit, and justified it — editing room
+adjacency would silently change ecology, settlement fitting and path costs. The
+justification was checkable and false. At 0141's own commit, `git grep` for the
+room-adjacency accessor across every domain crate returns nothing, and it
+returns nothing today: adjacency had only ever been read by the layer that draws
+the player. So the ground was movable the whole time, and a bet was scored as
+structurally unmechanizable on the strength of a constraint that did not exist.
+
+Moving it dissolves the category rather than improving the number. On an
+eight-connected quadrilateral lattice there is no ideal course for a walked cell
+to drift from, so the drift is not bounded — it is *absent*, and the suite that
+measured it is retired as dissolved rather than passing. The ledger's entry of a
+new kind, *the interface over-admits and the substrate silently declines*, is
+answered by widening the substrate to the vocabulary rather than by narrowing
+the vocabulary to the substrate: all eight compass words now resolve to real
+edges, and the diagonal that a two-walled corner refuses is refused for a stated
+geometric reason rather than by an accident of which triangle lay underfoot.
+
+The re-score the row actually gains is methodological, and it cuts against the
+comfortable reading of every other entry here. This chapter records instruments
+that convert taste into comparison, and it has learned to treat "no mechanization
+could have caught this" as a finding. The Pavement's contribution is that such a
+verdict inherits every assumption its author was standing on, and the load-bearing
+one is usually not the geometry — it is a decision record that sounded settled.
+The check is cheap and was never run for four months: take the reason a decision
+gives, and grep for it. Two of this campaign's four measured distortion figures
+also moved under the same discipline, and the projection its own specification
+first named would have been *worse* than the mesh it replaced — 5.2x against
+1.5-2x — which nobody would have discovered by reasoning about addressing.
+
+What does not change is the bet's direction. A zero-dependency renderer is still
+the strongest evidence a contract is renderable, and the parity contract still
+covers declared nouns in one direction only. What changes is the standing of a
+closed question: a superseded decision does not merely stop being true, it keeps
+producing correct-looking answers from readers acting in good faith, and this
+ledger is one of the places those answers accumulate.
+
+
 **Terrain shape has Earth-anchored, self-checking acceptance bands, and the
 one that stayed open resolved by superseding its own instrument rather than
 closing under it.** The Measured Coast preregistered six Earth-anchored

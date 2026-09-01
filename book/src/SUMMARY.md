@@ -435,6 +435,7 @@
 - [The Cartulary](./chronicle/the-cartulary.md)
 - [The Repertory](./chronicle/the-repertory.md)
 - [The Company](./chronicle/the-company.md)
+- [The Pavement](./chronicle/the-pavement.md)
 
 # Appendix: The Frontier
 
