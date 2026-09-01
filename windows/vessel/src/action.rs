@@ -17,8 +17,17 @@ pub enum Action {
     MoveTo(Facet),
     /// Drink (precondition: at the water room; effect: hydrated).
     Drink,
-    /// Rest / sleep (precondition: at home; effect: fatigue reset) — The
-    /// Slumber's discharge action, the fatigue analogue of `Drink`.
+    /// Rest / sleep (effect: fatigue reset) — The Slumber's discharge
+    /// action, the fatigue analogue of `Drink`. **This doc used to read
+    /// "(precondition: at home; effect: fatigue reset)", and no at-home
+    /// precondition has ever been enforced anywhere**:
+    /// [`precondition_reads_committed_state`] already answers `false` for
+    /// `Rest`, and the creature layer's own fatigue drive
+    /// (`liveness.rs`) says outright that a creature sleeps *where it is* —
+    /// its proposal is always `Rest`, so an explorer beds down in the field
+    /// at nightfall rather than trekking home. `home` survives as a reserved
+    /// hook for a future rest-QUALITY refinement, never a gate; see
+    /// `PSY-rest-quality-is-a-grade-not-a-gate` in the idea registry.
     Rest,
     /// Eat / graze (precondition: standing on a room rich enough to feed;
     /// effect: hunger reset) — The Provender's discharge action, the hunger

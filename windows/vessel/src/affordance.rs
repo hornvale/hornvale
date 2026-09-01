@@ -156,15 +156,23 @@ pub struct ObjectTraits {
 /// `cave-mouth`→`AffordsPassage` (spec §3.7). A kind
 /// absent from this table carries no property.
 ///
-/// **`key` and `cave-mouth` were the first rows with no anchor-kind variant
-/// behind them at all**, and that was the point of the re-key rather than an
-/// oversight: a cave mouth is a `Vertex`/`ChamberAddr` and a key is a thing
-/// a body carries, neither expressible in the closed enum The Offer keyed on
-/// (decision 0369's "the obstacle is addressing, not durability"). The
-/// Wicket deleted that enum, so the distinction those two rows drew no
-/// longer separates anything — every row here is a label now — and the
-/// sentence is kept in the past tense because it is the record of why the
-/// key moved.
+/// **This paragraph used to claim "`key` and `cave-mouth` were the first
+/// rows with no anchor-kind variant behind them at all", past-tensed as a
+/// record of why the re-key happened rather than a live claim — and the
+/// claim was false the whole time it stood, not merely superseded.** `key`
+/// got an `AnchorKind::Key` variant in The Chattel's Task 11, four tasks
+/// after this sentence was first written, so it was never true by the time
+/// the enum this campaign deleted actually went away. Past-tensing a false
+/// claim launders it into false history: a reader audits a claim about NOW
+/// and accepts one about THEN, so the tense change made the sentence harder
+/// to catch, not easier — and two reviewers read it after that rewrite and
+/// neither flagged it. What the sentence was reaching for is true of
+/// `cave-mouth` alone: a cave mouth is a `Vertex`/`ChamberAddr`, never
+/// expressible in the closed enum The Offer keyed on (decision 0369's "the
+/// obstacle is addressing, not durability"), so it is the row that was
+/// never an anchor — the openness this campaign generalised. The Wicket
+/// deleted that enum outright, so the distinction either row once drew no
+/// longer separates anything and every row here is a label now.
 ///
 /// **`cave-mouth` carries BOTH `Openable` and `AffordsPassage` as of Task 8**
 /// (spec §3.7), and the paragraph this replaces deferred the second one with
@@ -346,8 +354,19 @@ pub(crate) fn label_carries(label: &str, property: ObjectProperty) -> bool {
 /// [`object_registry`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum OfferedVerb {
-    /// Lie down and sleep — gates on `SupportsRest` (spec §3.4:
-    /// body-relative, additive to the existing at-home precondition).
+    /// Lie down and sleep. **This doc used to say "gates on `SupportsRest`
+    /// (spec §3.4: body-relative, additive to the existing at-home
+    /// precondition)", and both halves were false**: no at-home precondition
+    /// has ever been enforced (see [`crate::action::Action::Rest`]'s doc),
+    /// and `SupportsRest` reaches only the *advertisement* layer —
+    /// [`required_properties`]`(Sleep)` decides which objects LIST `sleep`
+    /// as something they offer, but nothing reads that property to decide
+    /// whether sleeping is ALLOWED, because sleeping is always allowed
+    /// (Nathan's ruling, 2026-09-01: a creature must be able to pass out in
+    /// the road, and prefer a bed, a fur or bracken where it can). The
+    /// property survives here as a GRADE filed among gates, not a gate
+    /// itself — `PSY-rest-quality-is-a-grade-not-a-gate` in the idea
+    /// registry is where that distinction, and its eventual use, live.
     Sleep,
     /// Drink from a source — gates on `HoldsLiquid`.
     Drink,

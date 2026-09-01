@@ -46,6 +46,9 @@ use hornvale_vessel::affordance::{
 use hornvale_vessel::body::Body;
 use hornvale_vessel::clock::{REFERENCE_MASS_KG, mass_for_species};
 use hornvale_vessel::liveness::ThreatNiche;
+use hornvale_vessel::{PossessOpts, Session, Turn};
+
+use crate::common;
 
 /// Every kind the roster carries, once — `hornvale_thing::THING_KINDS`, read
 /// as ids.
@@ -1818,4 +1821,42 @@ fn a_registered_multi_property_kind_discriminates_subset_from_equality() {
             "{kind:?}: subset and equality must genuinely disagree on this row"
         );
     }
+}
+
+/// Sleeping is NOT gated on an object, and this test exists so it stays that
+/// way. `Session::sleep` refuses a non-empty argument, charges the clock,
+/// commits `rested` and sets `wake_at`; it asks nothing about the room.
+///
+/// The tripwire is for a specific future mistake: someone reads
+/// `OfferedVerb::Sleep`'s doc, sees "gates on SupportsRest", and makes the
+/// verb honour it. At that point a magically-slept target walks off to find a
+/// bed, because the two routes into sleep — the voluntary act and an imposed
+/// effect — would share a gate that only one of them chose.
+///
+/// The room this test sleeps in is the walk-band start position
+/// `Session::start` opens in, which is a room with no rest-affording anchor
+/// **by construction**: `object_registry` grants `SupportsRest` to `bed`
+/// alone, `bed` is only ever pushed as a CHAMBER anchor (`interior::pattern`,
+/// `liveness.rs`'s rest tests, `chamber_prose.rs`), and `Session::
+/// chamber_interior_here` answers `None` out of doors — there is no anchor
+/// graph at all until `enter` finds a structure. So this is not merely A room
+/// with no bed; it is the class of room (every walk-band room, on every
+/// world) that can never contain one.
+///
+/// MUTATION THIS MUST FAIL AGAINST: add an early return to `Session::sleep`
+/// refusing when no anchor in the current interior offers `OfferedVerb::Sleep`
+/// (the "fix" this test exists to reject).
+#[test]
+fn sleeping_needs_no_bed() {
+    let world = common::build(42).expect("seed 42 builds");
+    let (mut s, _) = Session::start(&world, &PossessOpts::default()).expect("possession starts");
+
+    let reply = match s.handle("sleep") {
+        Turn::Out(t) | Turn::Released(t) => t,
+    };
+    assert!(
+        reply.contains("You lie down"),
+        "sleep must succeed with no bed, no home and no anchor in reach at \
+         all — sleeping is gated on nothing: {reply}"
+    );
 }
