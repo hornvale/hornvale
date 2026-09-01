@@ -729,11 +729,7 @@ pub fn variant_pool(
             ],
             // The rock bands never pair with `OpenWater` — see the matching
             // note in `facets.rs::BiomeExpr::biome`. Named explicitly.
-            Stratum::Regolith
-            | Stratum::Cover
-            | Stratum::Basement
-            | Stratum::Roots
-            | Stratum::Underneath => unreachable!(
+            Stratum::Rock(_) => unreachable!(
                 "OpenWater never pairs with a rock stratum; caves carry \
                  their own Formation"
             ),

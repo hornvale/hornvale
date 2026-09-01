@@ -7937,6 +7937,7 @@ fn tint(picture: &str, plan: &crate::plan::SessionPlan, lens: &crate::lens::Lens
 /// type-audit: bare-ok(prose: return)
 fn stratum_word(s: hornvale_climate::Stratum) -> &'static str {
     use hornvale_climate::Stratum;
+    use hornvale_kernel::Horizon;
     match s {
         Stratum::Surface => "the surface",
         Stratum::Epipelagic => "sunlit water",
@@ -7944,11 +7945,11 @@ fn stratum_word(s: hornvale_climate::Stratum) -> &'static str {
         Stratum::Bathypelagic => "the lightless water",
         Stratum::Abyssal => "the abyss",
         Stratum::Hadal => "a trench",
-        Stratum::Regolith => "the regolith",
-        Stratum::Cover => "the cover rock",
-        Stratum::Basement => "the basement rock",
-        Stratum::Roots => "the roots of the world",
-        Stratum::Underneath => "the underneath",
+        Stratum::Rock(Horizon::Regolith) => "the regolith",
+        Stratum::Rock(Horizon::Cover) => "the cover rock",
+        Stratum::Rock(Horizon::Basement) => "the basement rock",
+        Stratum::Rock(Horizon::Roots) => "the roots of the world",
+        Stratum::Rock(Horizon::Underneath) => "the underneath",
     }
 }
 

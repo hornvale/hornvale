@@ -20,6 +20,7 @@ pub mod fold;
 pub mod genesis;
 pub mod geosphere;
 pub mod golden;
+pub mod horizon;
 pub mod ledger;
 pub mod manifest;
 pub mod math;
@@ -58,6 +59,7 @@ pub use ecology::{
 pub use field::{ConstantField, Field, NoiseField, Position, WorldTime};
 pub use genesis::{GenesisError, GenesisOutcome};
 pub use geosphere::{GeoCoord, Geosphere, NearestVertexIndex, Vertex, VertexMap};
+pub use horizon::Horizon;
 pub use ledger::{
     EntityId, Fact, KindId, Ledger, LedgerError, Lineage, Value, derive_entity_id, test_lineage,
 };

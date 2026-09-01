@@ -4,6 +4,7 @@
 //! unaffected.
 
 use crate::Biome;
+use hornvale_kernel::Horizon;
 
 /// What fills a realm. A realm is `(medium, access, strata)`, never an
 /// enumerated world, so a later sky realm — or an elemental plane — is a new
@@ -57,6 +58,18 @@ pub enum Access {
     Dive,
 }
 
+/// The rock strata, in [`Horizon::all`]'s order, each wrapped in
+/// [`Stratum::Rock`]. `Horizon::all()` is not const-callable in an array
+/// literal, so this is written out by hand; the correspondence test in
+/// `domains/climate/tests/suite/facets.rs` asserts the two agree.
+const ROCK_STRATA: [Stratum; 5] = [
+    Stratum::Rock(Horizon::Regolith),
+    Stratum::Rock(Horizon::Cover),
+    Stratum::Rock(Horizon::Basement),
+    Stratum::Rock(Horizon::Roots),
+    Stratum::Rock(Horizon::Underneath),
+];
+
 /// A realm: a medium, the way in, and the column of strata it holds.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Realm {
@@ -98,13 +111,7 @@ impl Realm {
                 Stratum::Abyssal,
                 Stratum::Hadal,
             ],
-            Medium::Rock => &[
-                Stratum::Regolith,
-                Stratum::Cover,
-                Stratum::Basement,
-                Stratum::Roots,
-                Stratum::Underneath,
-            ],
+            Medium::Rock => &ROCK_STRATA,
         }
     }
 }
@@ -126,28 +133,14 @@ pub enum Stratum {
     Abyssal,
     /// Trench depths, below 6000 m.
     Hadal,
-    /// The living skin: soil / weathered regolith. A rock depth *register* —
-    /// explicitly not something a chamber moves between (The Stratum §3).
-    /// Mirrors `hornvale_terrain::Horizon::Regolith` (decision 0094: a
-    /// shared roster, never a shared derivation — climate may not import
-    /// terrain).
-    Regolith,
-    /// Deposited / volcanic surface rock — the legible archive. Mirrors
-    /// `hornvale_terrain::Horizon::Cover`.
-    Cover,
-    /// Crystalline craton (terrain's inherited `Basement`). Mirrors
-    /// `hornvale_terrain::Horizon::Basement`.
-    Basement,
-    /// Deep crust: hot, high-pressure. Mirrors
-    /// `hornvale_terrain::Horizon::Roots`.
-    Roots,
-    /// The primordial substrate / threshold to the not-here. Measured empty
-    /// (0 of 55,947 caves — Task 0) but included regardless: rule 1a makes
-    /// `ChamberAddr.band` index this ladder, and the open
-    /// `MAP-cave-depth-weld` fix may make this band occur — omitting it
-    /// would relocate every address the day that fix lands. Mirrors
-    /// `hornvale_terrain::Horizon::Underneath`.
-    Underneath,
+    /// A band of the rock column (the kernel's shared roster — decision
+    /// 0517; terrain derives which band a depth falls in). A rock depth
+    /// *register*, explicitly not something a chamber moves between (The
+    /// Stratum §3). Measured note kept from the mirror era: `Underneath`
+    /// was empty in 55,947 caves (Task 0) but stays representable — rule 1a
+    /// makes `ChamberAddr.band` index the delve ladder, and the open
+    /// `MAP-cave-depth-weld` fix may make it occur.
+    Rock(Horizon),
 }
 
 impl Stratum {
@@ -298,11 +291,7 @@ impl BiomeExpr {
                 // `Formation` (handled below). Named explicitly, rather than
                 // wildcarded, so a future stratum still has to justify
                 // itself here.
-                Stratum::Regolith
-                | Stratum::Cover
-                | Stratum::Basement
-                | Stratum::Roots
-                | Stratum::Underneath => unreachable!(
+                Stratum::Rock(_) => unreachable!(
                     "OpenWater never pairs with a rock stratum; caves carry \
                      their own Formation"
                 ),
