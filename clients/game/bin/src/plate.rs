@@ -596,14 +596,29 @@ pub(crate) fn colour_allowed() -> bool {
 /// unqualified is the mistake this sentence used to make.** The memo saves
 /// exactly the reuse the rung offers, which is how many tiles share a
 /// grid-level facet. Measured on a 200x200 plate (`examples/rung_bench.rs`,
-/// 2026-08-26), against the 1,960,000 scans the 49-point vote cost at every
-/// rung: **90 at [`BAND_B_RUNG`]** (three orders of magnitude, because
-/// thousands of tiles share one grid-level facet) but **88,986 at
-/// [`GLOBE_RUNG`]** (about 1.4 orders, because there a chart tile is already
-/// about the size of a facet and there is almost nothing to share). The
-/// mechanism holds at every rung — the coarse end is still 22x — but the
-/// magnitude does not, and `GLOBE_RUNG` is a shipped rung a player reaches
-/// by holding `-`. The module doc states the rule this is an instance of.
+/// **re-measured 2026-09-01 by The Pavement — BOTH figures moved, for two
+/// independent reasons**), against the 1,960,000 scans the 49-point vote cost
+/// at every rung: **12 at [`BAND_B_RUNG`]** (a 163,000x reduction, because
+/// tens of thousands of tiles share one grid-level facet — 4 memo misses
+/// against 39,996 hits over 40,000 tiles) but **38,496 at [`GLOBE_RUNG`]**
+/// (50.9x, because there a chart tile is already about the size of a facet
+/// and there is little to share — 12,832 misses against 27,168 hits). The
+/// mechanism holds at every rung — the coarse end is 51x — but the magnitude
+/// does not, and `GLOBE_RUNG` is a shipped rung a player reaches by holding
+/// `-`. The module doc states the rule this is an instance of.
+///
+/// **Why both moved, stated because only one of the two causes is obvious.**
+/// The fine figure (90 -> 12) moved because `BAND_B_RUNG` itself moved
+/// 12 -> 13 with the walk band (decision 0511): a finer rung means smaller
+/// tiles, so a 200x200 plate spans fewer grid-level facets and shares each of
+/// them harder. The coarse figure (88,986 -> 38,496) moved even though
+/// `GLOBE_RUNG` did not, because the *base geometry* did — a cube-sphere
+/// carries 6*4^6 = 24,576 facets at level 6 where the icosphere carried
+/// 20*4^6 = 81,920, so a grid-level facet is about 3.3x larger and a chart
+/// tile covers proportionally less of one. A figure keyed to a named constant
+/// goes stale when the constant moves; a figure keyed to the MESH goes stale
+/// when the mesh moves, and nothing in its label says which kind it is. Hence
+/// the re-measurement date beside the original.
 ///
 /// **`w`/`h` are the drawn plate's own size — the screen window —
 /// never the virtual chart's.** [`virtual_dims`]`(win.depth)` gives the

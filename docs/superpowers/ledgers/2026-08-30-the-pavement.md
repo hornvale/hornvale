@@ -30,9 +30,17 @@ depth-derived value. Which task owns the update?
 **Decision:** It moves with `walk_depth`, in Task 2, and gains a bidirectional
 agreement test rather than a re-pinned literal.
 
-**Why (precedent cited):** Decision 0456 — a one-directional check reads as
-total to the next reader. A re-pinned literal would go green while proving
-only that someone typed the new number.
+**Why (precedent cited):** Decision 0456 — a rule stated in two places needs a
+bidirectional agreement test; the depth constant and the test's expectation are
+two such places. A re-pinned literal would go green while proving only that
+someone typed the new number.
+
+**CORRECTION (2026-09-01, caught by Task 10's implementer):** this entry
+originally glossed 0456 as "a one-directional check reads as total to the next
+reader." That sentence is decision **0491**'s content (a stated blindness gets a
+visible ratchet, not a silent fix), not 0456's. The citation was right and the
+gloss was borrowed from a neighbouring decision — which is the more insidious
+error of the two, because the number checks out.
 
 **Alternatives discarded:** Leaving it for Task 9's sweep — rejected: the group
 that changes the depth cannot be green with a stale assertion inside it, and
@@ -270,7 +278,10 @@ stretch is acceptable now and matters for a future tilemap.
   were not; that branch carried them. Verified false three ways, corrected in
   place, board post `534015fbf`. This absorption is where they actually arrived.
 - **Three citation misattributions**, all to `docs/CLAUDE.md` for rules whose
-  real homes are root `CLAUDE.md` and decision 0456. Verified with
+  real homes are root `CLAUDE.md` and decision **0491** (not 0456 — see the
+  correction under ruling #1; I made the same 0456/0491 substitution twice, in
+  two different documents, which makes it a habit rather than a slip).
+  Verified with
   `grep -ci "cost" docs/CLAUDE.md` → 0. Fixed three; a fourth citation checked
   and left because it was correct.
 - **A false §2 argument about drive arbitration.** I told the user the limit
@@ -661,3 +672,103 @@ collapsed distinction underneath: with `origin_row: 0` the test's own
 …)` were the same expression, so nothing could tell them apart. The equator
 offset pulls them apart, and the test now goes through the window origin the
 way the function does.
+
+### #22 [G5, measurement] — H1's floor is RE-FOUNDED and H1 is CONFIRMED; ruling #16 was too pessimistic
+
+**This supersedes the disposition in ruling #16.** #16 said the H1 baseline was
+void and the test should stay red until re-measured. The first half was right
+about the NUMBER and wrong about the ARM, and the distinction is the whole
+finding.
+
+**The decisive question, answered by measurement and against my expectation:**
+the 81-cell band is a physically **DIFFERENT region**, not the same angular
+region sampled more densely. Band extent is defined in BFS rings at the walk
+depth, never in radians, so it moved with the depth: 31 cells over ~47 km²
+reaching ~4.3 km became 81 cells over ~121 km² reaching a measured 6.4905 km,
+with per-cell areas within 2% of each other — decision 0511 chose the depth to
+preserve step length and preserved cell area with it. **Resolution unchanged,
+region 2.55x larger.** My brief offered two branches and warned against picking
+the tidier one; the implementer measured and picked the other.
+
+**Then it found a third option neither branch contained.** The bedrock *number*
+is unrecoverable, but the bedrock *arm* is not: `b0f20c71`'s `reflectance_at`
+body was `lithology::reflectance` at the dominant corner, integrated, and every
+call in that path is still `pub`. So the control re-runs over today's band.
+Measured: **mixture 3 distinct colours, bedrock 1, over 81 cells** — floor and
+ceiling both hold, H1 CONFIRMED on a re-derived control rather than a
+remembered one.
+
+**Why leaving `BEDROCK_BASELINE = 1` would have been the worst option, and it is
+subtler than "stale literal":** a larger region is *likelier* to span a second
+rock class, so band growth alone could satisfy `> 1`. The assertion would have
+gone green on the confound instead of the effect. That is a stronger objection
+than the one #16 made.
+
+**Capture:** `windows/scene/tests/common/mod.rs::bedrock_colours` is the
+re-derivable arm; `illumination_probe.rs`'s "only moment this number can be
+taken" comment is corrected in place, because saying only its true half is what
+would send the next reader back to "unrecoverable".
+
+### #23 [G5, measurement] — the wetness trunk null is FALSIFIED downward, and its conclusion survives strengthened
+
+**Decision:** The guard is removed rather than flipped, and what replaces it
+asserts the trunk term's materiality directly.
+
+**The attribution reversed, measured:** rill-head walks enter a trunk band on
+**96/448 (21.4%)** against the land spread's **74/1048 (7.1%)** — 3.0x, where
+The Rill's reading required them to be trunk-POOR. So the conditional the guard
+protected no longer exists, and flipping the inequality (ruling #17 forbade it,
+correctly) would have asserted a claim nobody made.
+
+**And "adding the coarse trunk changes nothing" is itself false.** Implemented as
+two arms through `grounded_wetness`: the trunk term is active on 96 rooms,
+reverses **49 of 420** step verdicts, and moves the descending-step fraction
+**0.7405 → 0.6452** (swapped in) or 0.6286 (nearer of the two) — *away* from
+R-7's 0.80 floor.
+
+**So the finding is stronger than the caveat it replaces.** "The coarse trunk
+does not rescue R-7" was a conditional resting on an untested population; it is
+now unconditional and measured, with the trunk actively costing the fraction.
+R-7 remains falsified on the emitted axis (0.5262). A null that gets *more*
+robust when its stated reason dies is worth recording as such.
+
+### #24 [Q] — the lexicon ceiling is RAISED, with the human reason the guard requires
+
+**Decision:** `docs/audits/lexicon-inventory.tsv` rises on exactly two rows —
+`windows/scene/tests/common/mod.rs` 2 → 17 and
+`illumination_hypotheses.rs` 37 → 57.
+
+**Why:** the guard's own rebaseline header says *"A number may fall freely.
+Raising one needs a human's reason."* The reason: the H1 band's population is
+the subject under measurement and `SurroundsScene.cells` is the field's own
+name, so these occurrences are the AREA/collection sense the inventory already
+admits, not the mesh-VERTEX sense the guard prohibits.
+
+**Alternatives discarded:** rewording to synonyms — which was the CORRECT call
+earlier this campaign in `furnishing_marks.rs`, and is the wrong call here. The
+difference is whether the word is load-bearing: there it was incidental prose,
+here the measurement is literally a count of cells. A ratchet aimed at one
+defect should not be allowed to degrade accurate prose about a different one.
+
+**A THIRD ROW ROSE, mine, and it takes the same reason.**
+`windows/scene/examples/illumination_probe.rs` 20 → 22, from the correction to
+its "only moment this number can be taken" comment (ruling #22). The added
+occurrences are "the 31-cell band became an 81-cell one" — the band's population
+again, the collection sense. `clients/game/bin/src/plate.rs` also FELL 46 → 43
+from the rung re-measurement, which needs no reason: a count may fall freely.
+
+**Ideonomy:** 1 pass, 0 overturns.
+
+### #25 [G5] — I substituted decision 0491 for 0456 twice, in two documents
+
+Caught by Task 10's implementer. **0456** is *a rule stated in two places needs
+a bidirectional agreement test*; **0491** is *a stated blindness gets a visible
+ratchet, not a silent fix*. Ruling #1 cited 0456 correctly for the agreement
+test and then glossed it with 0491's sentence; the deferred-minors list
+attributed 0491's content to 0456 outright. Both corrected in place.
+
+**Why it is worth a numbered entry rather than a quiet fix:** a wrong number is
+caught by anyone who opens the record. A right number with a borrowed gloss
+survives review, because the citation checks out — and this campaign's whole
+first day was spent undoing a decision record that read as settled. Two
+instances is a habit, not a slip.

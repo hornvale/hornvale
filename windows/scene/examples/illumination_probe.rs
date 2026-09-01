@@ -604,9 +604,22 @@ fn main() {
     println!();
 
     // ---------------------------------------------------------------
-    // §7 / H1 — the bedrock-era distinct-colour count. THIS IS THE ONLY
-    // MOMENT THIS NUMBER CAN BE TAKEN: every later task in this campaign
-    // changes what `color` means.
+    // §7 / H1 — the bedrock-era distinct-colour count.
+    //
+    // THIS WAS THE ONLY MOMENT THIS *NUMBER* COULD BE TAKEN: every later
+    // task in that campaign changed what `color` means, so the 1 printed
+    // here is a fact about the code at `b0f20c71` and is not re-derivable
+    // from today's coloured path.
+    //
+    // BUT THE *ARM* IS RE-DERIVABLE, and saying only the first half sent a
+    // later reader to "unrecoverable" when it was not (The Pavement,
+    // 2026-09-01). The bedrock reflectance this block measured was
+    // `lithology::reflectance` at the dominant corner, integrated, and every
+    // call in that path is still `pub` — so the bedrock arm can be re-run
+    // over any band. `windows/scene/tests/common/mod.rs`'s
+    // `bedrock_colours` does exactly that, which is how H1's floor was
+    // re-founded after the walk band moved to `globe_level + 7` and the
+    // 31-cell band became an 81-cell one over a physically larger region.
     // ---------------------------------------------------------------
     println!("--- §7/H1: bedrock baseline over the seed-42 walk band ---");
     let vertex_count = band.cells.len();
