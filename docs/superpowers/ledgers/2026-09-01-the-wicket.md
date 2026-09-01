@@ -694,3 +694,19 @@ and let the implementer find one.* I relayed a prescribed criterion instead of
 a property, and the person with the code in front of them corrected it. The
 rule is not only about plan text — it binds review instructions too, and that
 extension is worth carrying into the retrospective.
+
+#36 [G4] — **Task 8 gains the nap-fragmentation fix Task 7 deferred to it.**
+Task 7 left a body that lies down while awake taking its span from
+`next_awake_day` — one scan step, 7.2 minutes — so an exhausted creature dozes
+repeatedly and then sleeps properly at dusk: ~35% of the new fact volume and the
+whole 80 → 134 golden growth · Why the deferral was right and why it ends here:
+damping it requires a rest's length to be a property of the ACT, and until Task
+8 there was one act. `Session::sleep`'s own doc already called the coarseness
+"honest but coarse" · The plan now states the properties the fix must achieve
+rather than a mechanism, and requires the before/after fact-volume numbers in
+the report — `tick_commit_budget` sits at 1.242 against a 1.5 ceiling where it
+was 0.96 pre-Task-7 · **Explicit: do not widen `STEADY_STATE_CEILING` or
+`NON_GROWTH_MARGIN`.** If passing requires moving a ceiling, that is a finding
+about the model, not a calibration chore — and this campaign has already
+verified once that no tolerance was widened, which is a check worth keeping
+honest · ideonomy passes / overturns: 0 / 0 · Capture: plan Task 8 Step 2b.

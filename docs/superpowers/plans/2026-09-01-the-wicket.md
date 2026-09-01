@@ -1325,6 +1325,40 @@ concept (`domains/language/src/accession.rs`, `packs.rs`), so no concept, cohort
 or accession entry moves. **Verify that rather than assuming it** — run the
 orphan-acts audit and confirm it is quiet.
 
+- [ ] **Step 2b: Resolve nap fragmentation — Task 7 deferred it here on purpose**
+
+Task 7 made fatigue a recovery stock and, in doing so, produced a behaviour it
+deliberately did not damp: **a body that lies down while already awake gets its
+span from `next_awake_day`, which is one scan step — 7.2 minutes.** So an
+exhausted creature dozes repeatedly through the afternoon and then sleeps
+properly at dusk. Measured by Task 7: that is ~35% of the new fact volume and
+the entire 80 → 134 growth in the walk golden.
+
+Task 7 was right not to fix it there. Damping it required a rest's length to be
+a property of the *act*, and until this task there was one act. `Session::sleep`
+already called the coarseness "honest but coarse". **Now there are two acts and
+the property has somewhere to live.**
+
+What to do is yours — the shape depends on how `next_awake_day` and the drive
+interact, which you will have read by this point. What the fix must achieve:
+
+```text
+  a creature that sleeps does so for a span that is a property of SLEEPING,
+  not of how soon the next scan step falls
+  a creature that rests while awake is not thereby committed to a 7.2-minute act
+  the fact volume returns toward its pre-Task-7 level
+```
+
+**Measure before and after, and put both numbers in the report.** Task 7 left
+`tick_commit_budget` at **1.242 against a 1.5 ceiling** — 17% headroom, where it
+was 0.96 before that task, with ~35% of the volume being naps. This task should
+give headroom back. If it does not, say so with the number rather than leaving
+it to be discovered at the stage gate.
+
+**Do not widen `STEADY_STATE_CEILING` or `NON_GROWTH_MARGIN`.** If the only way
+to pass is to move a ceiling, stop and report — that is a finding about the
+model, not a calibration chore.
+
 - [ ] **Step 3: The three acts, asserted apart**
 
 In `action_module.rs`, one test per distinction, so a failure names which
