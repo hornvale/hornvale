@@ -269,15 +269,42 @@ evidence: a `THING_KINDS` row, a `thing_registry` row, a prose row, an
 `object_registry` row, and one appended `Pattern`. No enum edit, no match arm,
 no macro, no dispatcher edit.
 
-**The kind: `brazier`** — a standing pan of coals, carrying `RadiatesHeat`.
+**The kind: `brazier`** — a standing pan of coals, carrying `RadiatesHeat`,
+**in the loomroom**.
+
+> **Corrected 2026-09-01, before Task 5, and the correction is the point.** This
+> section originally placed the brazier in a shrine (`Role::Shrine`). That role
+> occurs **zero times** in any world a possession can reach, and the project had
+> already measured it: a comment in `interior/pattern.rs` records a 48-seed
+> sweep through `possess --seed N --script` finding `Role::Loomroom` at chamber
+> index 2 in **24 of 24** structures that have an index 2 at all, with
+> `Role::Smithy`, `Role::Hall` and `Role::Shrine` at zero — because `role_for`
+> reaches them only through `Function::Mine | Function::Fort`,
+> `Notability::Seat` and `Function::Cult`, and no flagship a possession starts
+> at carries one. That comment draws the conclusion in so many words: *"a key in
+> the smithy would therefore be a key in no world — which is decision 0398's own
+> finding repeated on a different field: a gate whose predicate is false
+> everywhere is not a gate, it is a deletion."*
+>
+> A brazier in a shrine is a brazier in no world. Choosing a role this campaign
+> cites 0398 to justify, without checking a 48-seed measurement sitting in the
+> file the campaign edits, would have shipped the exact defect 0398 names. The
+> shrine reasoning was the better story and the wrong placement — the same
+> sentence that campaign wrote about its key.
 
 `warm` is genuinely enforced. `Session::warm` (`session.rs:2624`) asks
 `offered_to_observer` of every anchor in the room and refuses with *"There is no
 fire here to warm yourself at"* if none offers `Warm`. `hearth` is the only
 `RadiatesHeat` carrier, and a hearth is confined by a three-link chain —
 `the-fire` requires `Alcove`, and `the-alcove` declares
-`roles: &[Role::Hearthroom]` — so **no shrine, hall, smithy or storeroom in any
-world can be warmed at.** A brazier in a shrine makes a refused act succeed.
+`roles: &[Role::Hearthroom]` — so **no room but a hearthroom can be warmed at**,
+and that includes the loomroom every reachable three-chamber structure has. A
+brazier beside the loom makes a refused act succeed, in 24 of 24 swept
+structures rather than none.
+
+It is also the better placement on its own terms, not merely the reachable one:
+fine work at a loom wants light and warmth, so the anchor is earned by the
+activity it affords — `anchor.rs`'s standing rule — rather than by decoration.
 
 The choice is not merely available; the code asks for it by name. `warm`'s own
 doc comment, written when the method was fixed to read the offer instead of a
@@ -292,16 +319,16 @@ edit already unnecessary — which is a stronger proof than a kind chosen to sui
 the campaign.
 
 ```text
-  the-brazier   kind: brazier   roles: [Shrine]   built: true
-                attach: Beside(altar)   requires: altar
+  the-brazier   kind: brazier   roles: [Loomroom]   built: true
+                attach: Beside(loom)   requires: loom
                 at_locale: false        properties: [RadiatesHeat]
                 noun: "a brazier"
 ```
 
-**Appended, never inserted, and after `the-altar`.** `INVENTORY` is a
+**Appended, never inserted, and after `the-loom`.** `INVENTORY` is a
 fixed-size `[Pattern; 16]` and `draw` admits a pattern only once its `requires`
 kind is already present, so the order IS the dependency order: inserting or
-reordering is an epoch, and a brazier placed before the altar it requires would
+reordering is an epoch, and a brazier placed before the loom it requires would
 be silently dropped from every composition. The array's length becomes 17 in the
 same edit.
 
@@ -329,8 +356,11 @@ the pattern, and the artifact diff *after*, under §7's branch table. If the
 measurement shows shrines are unreachable at those seeds — the 0398 failure
 repeating one level down, which is exactly what `needs_populous` turned out to
 be — the brazier moves to a role that is reachable, and the measurement is the
-finding either way. `Role::Shrine` requires `Function::Cult` at chamber index 2,
-so the count is a real question and not a formality.
+finding either way. The 48-seed sweep already recorded in `pattern.rs` says
+`Role::Loomroom` is 24 of 24, so this measurement is expected to CONFIRM rather
+than discover — which is exactly why it must still be run. A measurement you
+expect to pass is the one you are most likely to skip, and skipping the
+equivalent check is what put the brazier in a shrine in the first draft.
 
 ## 6a. The space left for sleep quality
 
@@ -617,7 +647,7 @@ was overlooked.
    gone.
 4. **The brazier**, and the three comment corrections and the ungated-sleep
    regression test that go with it (§6a). One kind, five data rows, one appended
-   `Pattern`, no control flow. Shrine reachability measured before, artifact
+   `Pattern`, no control flow. Loomroom reachability measured before, artifact
    diff read after under §7's branch table.
    **Stage gate on the sluice here** — the last boundary at which the tree is
    still artifact-clean, so anything the queue reddens is attributable to the

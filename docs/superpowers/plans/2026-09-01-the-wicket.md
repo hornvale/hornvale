@@ -895,40 +895,52 @@ campaign has not done what it claims.
 - Consumes: everything above.
 - Produces: `hornvale_thing::kinds::BRAZIER`.
 
-- [ ] **Step 1: Measure shrine reachability BEFORE adding anything**
+- [ ] **Step 1: Measure loomroom reachability BEFORE adding anything**
 
 Write a throwaway probe (do not commit it) that builds worlds at the three
-census seeds and counts chambers whose `role_for` is `Role::Shrine`. Report the
-counts.
+census seeds and counts chambers whose `role_for` is `Role::Loomroom`. Report
+the counts.
 
-**There is already a signal, and it is not encouraging.** Task 2's fix round
-reported, incidentally, that `Role::Shrine` occurs **zero times in any flagship
-a possession starts at** — that is why misspelling `the-altar`'s kind reddened
-exactly one test where misspelling `the-water-jar`'s reddened four. Treat that
-as a warning, not as the answer: a flagship a possession *starts at* is a much
-narrower population than every chamber in every world, and a shrine needs
-`Function::Cult` at chamber index 2 wherever it occurs.
+**This is expected to CONFIRM, not discover.** `interior/pattern.rs` already
+records a 48-seed sweep finding `Role::Loomroom` at chamber index 2 in 24 of 24
+structures that have an index 2, with `Smithy`, `Hall` and `Shrine` at zero. An
+earlier draft of this task put the brazier in a shrine, which that sweep had
+already measured as empty. Run the probe anyway: a measurement you expect to
+pass is the one you skip, and skipping this one is what produced the error.
 
-So measure **two** things, not one, because 0398 is about reachability and not
-about existence:
+**The prior evidence, and why the role moved.** An earlier draft of this task
+put the brazier in a shrine. `interior/pattern.rs` already carried a 48-seed
+sweep, run through `possess --seed N --script` by an earlier campaign, finding
+the role at chamber index 2 is `Role::Loomroom` in **24 of 24** structures that
+have an index 2 at all, and that `Role::Smithy`, `Role::Hall` and `Role::Shrine`
+occur **zero** times — `role_for` reaches those three only through
+`Function::Mine | Function::Fort`, `Notability::Seat` and `Function::Cult`, and
+no flagship a possession starts at carries one. That comment states the
+consequence outright: *a gate whose predicate is false everywhere is not a gate,
+it is a deletion.* A brazier in a shrine would have been a brazier in no world —
+decision 0398's failure, shipped by the campaign that cites 0398.
 
-- **(a) Existence:** how many `Role::Shrine` chambers exist at the three census
-  seeds.
+So measure **two** things, because 0398 is about reachability and not existence:
+
+- **(a) Existence:** how many `Role::Loomroom` chambers exist at the three
+  census seeds.
 - **(b) Reachability:** whether a possession can actually get to one and delve
-  it — a shrine in a settlement no session ever reaches is precisely the
-  capability 0398 refuses.
+  it.
 
 Branch on the pair:
-- **Both non-zero** → proceed as written.
+- **Both non-zero** → proceed as written. This is the expected outcome; the
+  48-seed sweep predicts it.
 - **(a) non-zero, (b) zero** → the brazier exists and no player meets it. Report
-  it and move the kind to a role that is reachable. This is the 0398 failure in
-  its exact original form — The Chattel's strongbox existed too.
-- **(a) zero** → STOP and report. The role itself is dead, which is a finding
-  about the chamber grammar well beyond this campaign's scope.
+  it and stop; the campaign needs a different proof kind, and the fact that the
+  loomroom is unreachable would contradict a committed measurement, which is a
+  finding in its own right.
+- **(a) zero** → STOP and report. That contradicts the 48-seed sweep directly,
+  so either the sweep has rotted or the probe is wrong — settle which before
+  going further.
 
-Whatever the numbers, **write them into the report**. A null here is a result:
-"shrines are unreachable at the census seeds" is worth more to the project than
-a brazier nobody sees, and it retires a role the grammar is paying for.
+Whatever the numbers, **write them into the report**. A null here is a result,
+and it would be a bigger one than the brazier: it would mean a committed
+48-seed measurement no longer holds.
 
 `Role::Shrine` is drawn at chamber index 2 when the place's history function is
 `Function::Cult` and its notability is not `Seat`, so the count is a real
@@ -962,18 +974,18 @@ fn a_brazier_offers_warm_with_no_dispatcher_edit() {
 2. `chamber_prose_registry`: `noun: Some("a brazier")`, and a detail line in
    the register of the existing ones — short, concrete, no terrain words.
 3. `object_registry`: `(kinds::BRAZIER, traits(&[ObjectProperty::RadiatesHeat]))`.
-4. `INVENTORY`: appended **after `the-altar`**, and the array length becomes
+4. `INVENTORY`: appended **after `the-loom`**, and the array length becomes
    `[Pattern; 17]`.
 
 ```rust
     Pattern {
         name: "the-brazier",
         kind: kinds::BRAZIER,
-        attach: Attach::Beside(kinds::ALTAR),
-        requires: Some(kinds::ALTAR),
+        attach: Attach::Beside(kinds::LOOM),
+        requires: Some(kinds::LOOM),
         needs_cold: false,
         built: true,
-        roles: &[Role::Shrine],
+        roles: &[Role::Loomroom],
         at_locale: false,
         needs_populous: false,
     },
@@ -981,7 +993,7 @@ fn a_brazier_offers_warm_with_no_dispatcher_edit() {
 
 **Append, never insert.** `draw` admits a pattern only once its `requires` kind
 is present, so the order IS the dependency order: a brazier placed before the
-altar it requires would be silently dropped from every composition, and
+loom it requires would be silently dropped from every composition, and
 reordering is an epoch outright. `at_locale: false` keeps the append LATENT per
 `INVENTORY`'s own three-part rule — the chamber renderer reads it and nothing
 that commits does.

@@ -357,3 +357,33 @@ the response to it · Capture: plan Task 5 Step 1, including the instruction
 that a null is a publishable result — "shrines are unreachable at the census
 seeds" is worth more than a brazier nobody meets, and it would retire a role
 the grammar currently pays for.
+
+#21 [G5] — **Ruling: the brazier moves from `Role::Shrine` to `Role::Loomroom`,
+and the spec is corrected mid-campaign.** Task 2's re-reviewer, checking an
+out-of-scope claim I asked about, found the corroborating measurement already
+committed in the file this campaign edits: `interior/pattern.rs` records a
+48-seed sweep run through `possess --seed N --script` finding the role at
+chamber index 2 is `Role::Loomroom` in **24 of 24** structures that have an
+index 2, and `Role::Smithy`, `Role::Hall` and `Role::Shrine` at **zero** ·
+Why this is a correction and not a preference: that same comment states the
+consequence in the general form — *"a gate whose predicate is false everywhere
+is not a gate, it is a deletion"* — and cites decision 0398 while doing it. A
+brazier in a shrine is a brazier in no world. The campaign that cites 0398 as
+the reason it must place a kind at all would have shipped 0398's exact defect ·
+Alternatives discarded: (i) leaving the shrine and letting Task 5's Step 1
+discover it, which wastes a task and risks the measurement being skipped
+precisely because it was expected to pass; (ii) `Role::Smithy`, thematically
+the best home for a coal pan and measured at zero, the same trap one step over ·
+ideonomy passes / overturns: 0 / 0 — a measurement already in the repo ·
+Capture: spec §6 carries a loud correction quoting the sweep; plan Task 5
+re-pointed at `the-loom` with `requires: Some(kinds::LOOM)`, and its Step 1
+kept — reframed as CONFIRM rather than discover, with the note that a
+measurement you expect to pass is the one you skip.
+
+**The failure this records is mine and it is a repeat.** The project's standing
+rule is to grep before proposing, and the evidence was not in a decision record
+or a retrospective but in a comment beside the `INVENTORY` table the campaign
+was already editing — read by two implementers and a reviewer before anyone
+connected it to the brazier. Cost if the ruling is wrong: the loomroom is the
+only role the sweep found, so the alternative is no placed kind at all, which
+would forfeit the campaign's 0398 obligation.
