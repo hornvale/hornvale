@@ -38,6 +38,12 @@ ruling as it is made, do not batch to the end.
   **standard** day. `TickSpan(i64)` is the signed difference.
 - **Every crate sets `#![warn(missing_docs)]`.** Every public item, field and
   variant gets a one-line doc comment.
+- **`tools/type-audit` is default-deny**, and it is the commit gate's third
+  step — stricter than `missing_docs` and the one that actually reddens. Every
+  primitive at a `pub` boundary carries a verdict tag (`bare-ok(<class>)` /
+  `waiver(<reason>)` / `pending(wave-N)`) as the last line of its doc comment.
+  A new `pub const` holding a `&str`, a `bool`, an index or a count needs one;
+  `bare-ok(identifier-text)` is the class for a label.
 - **`cargo fmt` is the final step before every commit.** fmt-gate skips are the
   most common review finding.
 - **Commit gate**: `make gate-commit` runs on every commit via the pre-commit
@@ -234,6 +240,8 @@ pub mod kinds {
     /// is what makes `AnchorKind::ALL` safe and it is exactly what is NOT
     /// wanted here — this list is checked against the ROSTER, a third party,
     /// so it must be able to go wrong.
+    ///
+    /// type-audit: bare-ok(identifier-text)
     pub const EVERY_HANDLE: &[(&str, KindId)] = &[
         ("ALCOVE", ALCOVE),
         ("ALTAR", ALTAR),
