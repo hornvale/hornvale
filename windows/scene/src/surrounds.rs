@@ -114,13 +114,20 @@ pub struct LegendEntry {
 pub struct SurroundsCell {
     /// Packed room id.
     pub room: u64,
-    /// Lattice offset from the observer on axis 0; `null` on a seam cell.
+    /// Lattice offset from the observer on the base face's first parameter;
+    /// `null` on a seam cell.
     pub u: Option<i64>,
-    /// Lattice offset on axis 1; `null` on a seam cell.
+    /// Lattice offset on the base face's second parameter; `null` on a seam
+    /// cell.
     pub v: Option<i64>,
-    /// Lattice offset on axis 2; `null` on a seam cell.
+    /// Always `null` since The Pavement — the third barycentric axis of a mesh
+    /// that no longer exists. A cube-sphere cell's face-local address is the
+    /// pair `(u, v)`; retiring the field itself is a `scene/surrounds` schema
+    /// change and has not been made.
     pub w: Option<i64>,
-    /// Triangle orientation; `null` on a seam cell.
+    /// Always `null` since The Pavement — the triangle's orientation flag. A
+    /// quad's four children all share their parent's handedness, so there is
+    /// no orientation left to report. Retained for the same reason as `w`.
     pub up: Option<bool>,
     /// Set when this cell lies on a different base face than the observer,
     /// so the lattice bends and no honest local coordinate exists.
@@ -340,9 +347,12 @@ pub struct Sight {
 
 /// What resolution this chart's fields are decided at.
 ///
-/// **Why a document says this at all.** A chart at walk depth sits six
+/// **Why a document says this at all.** A chart at walk depth sits seven
 /// refinement levels below the canonical grid, so a field decided per grid cell
-/// is necessarily constant across the whole view — 4^6 rooms share one cell.
+/// is necessarily constant across the whole view — 4^7 rooms share one cell.
+/// (One level coarser until The Pavement moved the walk band; the emitted
+/// [`Resolution::depth_below_grid`] is DERIVED from the real depths and never a
+/// literal, so only this prose had to move.)
 /// Read without this block, that flatness looks like the chart contradicting the
 /// room's own prose ("open water" against "buttressed canopy, shaded, in a
 /// hollow"); read with it, the flatness is the field's resolution stated out
@@ -573,10 +583,20 @@ pub fn surrounds_scene_in(
         marks.sort_by(|a, b| a.salience.cmp(&b.salience).then(a.noun.cmp(&b.noun)));
         cells.push(SurroundsCell {
             room: key,
-            u: lat.map(|l| l.a - origin.a),
-            v: lat.map(|l| l.b - origin.b),
-            w: lat.map(|l| l.c - origin.c),
-            up: lat.map(|l| l.up),
+            // The Pavement: a room's face lattice is an integer `(x, y)` on a
+            // cube face, so `u`/`v` are the two real offsets and `w`/`up` have
+            // nothing left to carry. Both are held at `None` rather than
+            // removed from the schema — dropping two wire fields is a
+            // `scene/surrounds` schema change and is not this task's, and
+            // `clients/game` already treats all four as optional (its
+            // `SurroundsCell` declares `Option`s and only ever writes `None`
+            // into them). `w` was the third barycentric axis; `up` was the
+            // triangle's orientation flag, and a quad's four children share
+            // handedness so there is no orientation to report.
+            u: lat.map(|l| l.x - origin.x),
+            v: lat.map(|l| l.y - origin.y),
+            w: None,
+            up: None,
             seam,
             state: if is_here { "here" } else { "sensed" }.to_string(),
             biome: catalog
@@ -919,7 +939,7 @@ mod tests {
 
     fn observer(w: &hornvale_kernel::World) -> Facet {
         let ctx = hornvale_locale::LocaleContext::build(w).unwrap();
-        let depth = ctx.globe_level() + 6;
+        let depth = hornvale_locale::walk_depth(&ctx);
         // The flagship settlement's own room — the same place a possession
         // mints its agent, so the gallery scene shows the walked ground.
         let v = hornvale_settlement::village_info(w).expect("seed 42 has a village");
@@ -930,15 +950,42 @@ mod tests {
         )
     }
 
+    /// The ball size of a radius-`r` chart, on the quad lattice: `(2r+1)^2`.
+    ///
+    /// **31 until The Pavement, and the change is the mesh, not this chart.**
+    /// The old triangular face-adjacency lattice gave three neighbours per
+    /// facet and ball sizes `1 + 3k(k+1)/2` (1, 4, 10, 19, 31, ...). A
+    /// cube-sphere quad gives eight, so the ball is the full square ring set:
+    /// 1, 9, 25, 49, 81. Stated as a FORMULA over the radius rather than as a
+    /// literal, so a test that wants "a radius-4 chart" asks for its size
+    /// instead of carrying a number that was true of a mesh this repository
+    /// no longer has.
+    fn ball_size(radius: u32) -> usize {
+        let side = (2 * radius + 1) as usize;
+        side * side
+    }
+
     #[test]
-    fn a_radius_four_neighbourhood_holds_thirty_one_cells() {
+    fn a_radius_four_neighbourhood_is_the_whole_square_ball() {
         let w = world();
         let s = surrounds_scene(&w, &observer(&w), 4, WorldTime::GENESIS).unwrap();
         assert_eq!(s.schema, SURROUNDS_SCHEMA);
         assert_eq!(s.radius, 4);
-        // Ball sizes in the triangular face-adjacency lattice are
-        // 1 + 3k(k+1)/2: 1, 4, 10, 19, 31, ...
-        assert_eq!(s.cells.len(), 31);
+        assert_eq!(s.cells.len(), ball_size(4));
+        // Anti-vacuity for the formula itself: the ball must GROW with the
+        // radius, and the three radii below must be three different numbers,
+        // or `ball_size` could be any constant and this test would not know.
+        let sizes: Vec<usize> = [1u32, 2, 3]
+            .into_iter()
+            .map(|r| {
+                surrounds_scene(&w, &observer(&w), r, WorldTime::GENESIS)
+                    .unwrap()
+                    .cells
+                    .len()
+            })
+            .collect();
+        assert_eq!(sizes, vec![ball_size(1), ball_size(2), ball_size(3)]);
+        assert!(sizes[0] < sizes[1] && sizes[1] < sizes[2]);
     }
 
     #[test]
@@ -947,9 +994,14 @@ mod tests {
         let s = surrounds_scene(&w, &observer(&w), 3, WorldTime::GENESIS).unwrap();
         let here: Vec<&SurroundsCell> = s.cells.iter().filter(|c| c.state == "here").collect();
         assert_eq!(here.len(), 1);
+        // `w` is permanently `None` since decision 0513 — a quad's face-local
+        // address is the pair `(u, v)` alone and there is no third axis to
+        // report. It is asserted here rather than dropped from the tuple, so
+        // this test still fails if the field ever starts carrying a value
+        // again without that decision being revisited.
         assert_eq!(
-            (here[0].u, here[0].v, here[0].w),
-            (Some(0), Some(0), Some(0))
+            (here[0].u, here[0].v, here[0].w, here[0].up),
+            (Some(0), Some(0), None, None)
         );
         assert_eq!(here[0].room, s.observer.room);
         assert!(!here[0].seam);
@@ -959,59 +1011,175 @@ mod tests {
     // radius 4 (a coincidence of where seed 42 places its village) — so this
     // test alone never enters the `if c.seam` branch. It stays as coverage
     // of the no-seam case; `a_seam_observer_carries_no_coordinate_on_seam_cells`
-    // below is the real seam-handling test.
+    // below, which asks `seam_observer` for a chart that genuinely crosses one,
+    // is the real seam-handling test.
+    /// **The four lattice fields no longer move together, and that is
+    /// decision 0513 rather than a defect.** `u`/`v` still carry the real
+    /// per-cell offset on a non-seam cell and `null` on a seam cell; `w` and
+    /// `up` are permanently `null` everywhere, because a quad's face-local
+    /// address is the pair alone and its four children all share their
+    /// parent's handedness. This test used to assert all four `Some` off-seam
+    /// and all four `None` on it, which was the invariant 0513 explicitly
+    /// retires.
     #[test]
-    fn every_non_seam_cell_carries_a_lattice_coordinate_and_seam_cells_carry_none() {
+    fn only_the_two_live_lattice_axes_track_the_seam() {
         let w = world();
         let s = surrounds_scene(&w, &observer(&w), 4, WorldTime::GENESIS).unwrap();
         for c in &s.cells {
+            assert!(
+                c.w.is_none() && c.up.is_none(),
+                "cell {} carries a third axis or an orientation flag (decision 0513)",
+                c.room
+            );
             if c.seam {
-                assert!(c.u.is_none() && c.v.is_none() && c.w.is_none() && c.up.is_none());
+                assert!(c.u.is_none() && c.v.is_none());
             } else {
-                assert!(c.u.is_some() && c.v.is_some() && c.w.is_some() && c.up.is_some());
+                assert!(c.u.is_some() && c.v.is_some());
             }
         }
     }
 
-    /// An observer verified to sit near a base-face seam (latitude -10°,
-    /// longitude 0°, depth 12 lands on face 14), whose radius-4 neighbourhood
-    /// genuinely crosses onto neighbouring faces — the real coverage for the
-    /// seam branch the sibling test above never reaches. Uses the same
-    /// lat/lon -> unit-sphere conversion as the `observer` helper above.
+    /// An observer whose radius-4 neighbourhood genuinely crosses a base-face
+    /// seam — **found by asking for the property, not hardcoded**.
+    ///
+    /// It used to be a hardcoded `(-10.0, 0.0)` at depth 12 with an asserted
+    /// `face == 14`, and BOTH halves died with the icosphere: a cube has six
+    /// faces, so face 14 does not exist, and that point's neighbourhood is no
+    /// longer near a seam anyway. A fixture that hardcodes an address because
+    /// the address happened to satisfy a property buys one green suite and
+    /// leaves the next mesh change the same bill, so this asks for the
+    /// property: scan a fixed lat/lon ladder at walk depth and take the FIRST
+    /// room whose radius-4 chart reports at least one seam cell and at least
+    /// one non-seam cell — both branches, since a chart that is ALL seam
+    /// exercises the `else` arm no better than one with none.
+    ///
+    /// Deterministic (a fixed scan order, no draws) and loud (it panics rather
+    /// than silently returning a non-seam observer and leaving every test
+    /// below it vacuous).
+    fn seam_observer(w: &hornvale_kernel::World) -> Facet {
+        let ctx = hornvale_locale::LocaleContext::build(w).unwrap();
+        let depth = hornvale_locale::walk_depth(&ctx);
+        // The CORNERS of each base face, addressed directly: a path of one
+        // repeated digit descends into the same child quadrant at every level,
+        // so it lands in the corner of its face and its neighbourhood spills
+        // onto the faces beside it. Twenty-four candidates, and the first that
+        // shows both a seam cell and a non-seam cell wins.
+        //
+        // A lat/lon ladder was tried first and is the wrong instrument here: a
+        // walk-band room is ~1.1 km across, so a 10-degree grid lands within
+        // four cells of a face boundary essentially never — it scanned 629
+        // candidates in 291 s and found nothing. Addressing the corner says
+        // what the fixture actually wants instead of sampling for it.
+        // **The candidate is filtered on the MESH, not by building a chart.**
+        // Each `surrounds_scene` call costs ~0.4 s, and the search that walked
+        // a lat/lon ladder spent 291 s to find nothing. A breadth-first ball
+        // over `Facet::neighbors` answers both questions for free: does the
+        // neighbourhood touch a second base face (a seam), and is it the whole
+        // square ball.
+        //
+        // **Both conditions are needed and the second is the one that bites.**
+        // A room at a cube CORNER — three quads meeting — genuinely has fewer
+        // rooms around it, so its radius-4 chart draws 65 cells rather than 81
+        // and "no cell was dropped" would be asserting something false about
+        // the mesh. A room part-way along a face EDGE crosses a seam with the
+        // ball intact, which is the case that claim is actually about; the
+        // alternating-digit paths below are what reach one, since a constant
+        // path descends into the same quadrant every level and lands on the
+        // corner itself.
+        let ball_of = |from: &Facet| -> Vec<Facet> {
+            let mut seen: std::collections::BTreeSet<Facet> =
+                std::iter::once(from.clone()).collect();
+            let mut frontier = vec![from.clone()];
+            for _ in 0..4 {
+                let mut next = Vec::new();
+                for r in &frontier {
+                    for n in r.neighbors() {
+                        if seen.insert(n.clone()) {
+                            next.push(n);
+                        }
+                    }
+                }
+                frontier = next;
+            }
+            seen.into_iter().collect()
+        };
+        let mut candidates: Vec<Facet> = Vec::new();
+        for face in 0..6u8 {
+            for a in 0..4u8 {
+                for b in 0..4u8 {
+                    candidates.push(Facet {
+                        face,
+                        path: (0..depth as usize)
+                            .map(|i| if i % 2 == 0 { a } else { b })
+                            .collect(),
+                    });
+                }
+            }
+        }
+        for candidate in candidates {
+            let ball = ball_of(&candidate);
+            let crosses = ball.iter().any(|r| r.face != candidate.face);
+            if !crosses || ball.len() != ball_size(4) {
+                continue;
+            }
+            let Ok(s) = surrounds_scene(w, &candidate, 4, WorldTime::GENESIS) else {
+                continue;
+            };
+            let seams = s.cells.iter().filter(|c| c.seam).count();
+            if seams > 0 && seams < s.cells.len() && s.cells.len() == ball_size(4) {
+                return candidate;
+            }
+        }
+        panic!(
+            "no room beside a base-face corner has a radius-4 chart that crosses a \
+             seam, stays partly on its own face AND keeps the ball whole — the seam \
+             branch cannot be covered at all, which is a finding about the mesh, not \
+             about this fixture"
+        );
+    }
+
+    /// A seam cell has no honest lattice coordinate, so `u`/`v` are `None`
+    /// there while an off-seam cell carries both. `w`/`up` are `None`
+    /// everywhere (decision 0513) and are asserted by
+    /// [`only_the_two_live_lattice_axes_track_the_seam`] rather than restated
+    /// here.
+    ///
+    /// **The seam count is no longer pinned to an integer**, and dropping that
+    /// pin is deliberate. It used to read `12 of 31 cells at radius 4`, a
+    /// number that was a fact about one hardcoded icosphere address and about
+    /// nothing else — it could not survive a mesh change and it did not. What
+    /// the test actually needs is that BOTH branches run, which
+    /// [`seam_observer`] now guarantees by construction and which is asserted
+    /// again here so a future change to that helper cannot quietly make this
+    /// vacuous.
     #[test]
     fn a_seam_observer_carries_no_coordinate_on_seam_cells() {
         let w = world();
-        let seam_observer = Facet::containing(
-            hornvale_kernel::math::unit_sphere_from_lat_lon(-10.0, 0.0),
-            12,
-        );
-        assert_eq!(
-            seam_observer.face, 14,
-            "fixture observer must land on the verified face"
-        );
-        let s = surrounds_scene(&w, &seam_observer, 4, WorldTime::GENESIS).unwrap();
-        assert_eq!(s.cells.len(), 31, "no cell was dropped");
+        let o = seam_observer(&w);
+        let s = surrounds_scene(&w, &o, 4, WorldTime::GENESIS).unwrap();
+        assert_eq!(s.cells.len(), ball_size(4), "no cell was dropped");
 
         let seam_count = s.cells.iter().filter(|c| c.seam).count();
         assert_ne!(
             seam_count, 0,
-            "fixture observer must actually see seam cells, or this test is vacuous again"
+            "the observer must actually see seam cells, or this test is vacuous again"
         );
-        assert_eq!(
-            seam_count, 12,
-            "verified fixture: 12 of 31 cells are seam cells at radius 4"
+        assert_ne!(
+            seam_count,
+            s.cells.len(), // lexicon: SurroundsCell is a chart AREA — one room's box — not a mesh vertex
+            "the observer must also see non-seam cells, or the `else` arm is untested"
         );
 
         for c in &s.cells {
             if c.seam {
                 assert!(
-                    c.u.is_none() && c.v.is_none() && c.w.is_none() && c.up.is_none(),
+                    c.u.is_none() && c.v.is_none(),
                     "seam cell {} carries a lattice coordinate",
                     c.room
                 );
             } else {
                 assert!(
-                    c.u.is_some() && c.v.is_some() && c.w.is_some() && c.up.is_some(),
+                    c.u.is_some() && c.v.is_some(),
                     "non-seam cell {} is missing a lattice coordinate",
                     c.room
                 );
@@ -1020,22 +1188,17 @@ mod tests {
     }
 
     /// Step 6 of Task 9's brief: a seam cell has no honest lattice
-    /// coordinate (`u`/`v`/`w`/`up` are all `None`), but it still carries a
-    /// packed `room` id — a plain `u64`, not an `Option` — so `bearing_deg`
-    /// and `distance_rad` must be computable and finite there too. This is
-    /// the whole north-up unblock (spec §5.1/§5.2): a client that cannot
-    /// draw a seam cell today gets a polar coordinate for it regardless of
-    /// the lattice bending underneath. Reuses the exact verified
-    /// seam-crossing fixture `a_seam_observer_carries_no_coordinate_on_seam_
-    /// cells` establishes above (12 of 31 cells are seam cells at radius 4).
+    /// coordinate, but it still carries a packed `room` id — a plain `u64`,
+    /// not an `Option` — so `bearing_deg` and `distance_rad` must be
+    /// computable and finite there too. This is the whole north-up unblock
+    /// (spec §5.1/§5.2): a client that cannot draw a seam cell today gets a
+    /// polar coordinate for it regardless of the lattice bending underneath.
+    /// Reuses the same [`seam_observer`] the sibling test above establishes.
     #[test]
     fn a_seam_observer_still_carries_bearing_and_distance_on_seam_cells() {
         let w = world();
-        let seam_observer = Facet::containing(
-            hornvale_kernel::math::unit_sphere_from_lat_lon(-10.0, 0.0),
-            12,
-        );
-        let s = surrounds_scene(&w, &seam_observer, 4, WorldTime::GENESIS).unwrap();
+        let o = seam_observer(&w);
+        let s = surrounds_scene(&w, &o, 4, WorldTime::GENESIS).unwrap();
         let seam_cells: Vec<&SurroundsCell> = s.cells.iter().filter(|c| c.seam).collect();
         assert_ne!(
             seam_cells.len(),
@@ -1216,7 +1379,7 @@ mod tests {
         let with = s.cells.iter().filter(|c| c.color.is_some()).count();
         assert_eq!(
             with,
-            s.cells.len(),
+            s.cells.len(), // lexicon: SurroundsCell is a chart AREA — one room's box — not a mesh vertex
             "{with} of {} cells received a colour — the standard observer has a \
              truthful sRGB image, so every placed cell must",
             s.cells.len()
@@ -1396,14 +1559,31 @@ mod tests {
     ///
     /// Reuses the exact walk-depth flagship band
     /// `the_color_now_varies_within_one_grid_cell_via_the_micro_field`
-    /// measures colour variation over (radius 8, `globe_level + 6`):
-    /// measured here, that band draws 2 distinct cover classes
-    /// (`chlorophyll`, `litter`) across its cells.
+    /// measures colour variation over (radius 8, `hornvale_locale::
+    /// walk_depth`): measured here, that band is **289 rooms** and draws 2
+    /// distinct cover classes (`chlorophyll`, `litter`).
+    ///
+    /// **THE BAND WAS A LEVEL TOO COARSE UNTIL FIX ROUND 1, AND THIS TEST IS
+    /// A POSITIVE CONTROL, SO THAT MATTERED.** It read
+    /// `Facet::containing(pos, gl + 6)` with a local `gl` — The Pavement moved
+    /// the walk band to `globe_level + 7` (decision 0511) and this site kept
+    /// the old arithmetic, so it measured a band **4x the ground per room**
+    /// than the one the client draws. A cover-mixture regression that
+    /// collapses at walk grain but not at `+6` grain would have passed the
+    /// control written to catch it. It evaded all three arms of
+    /// `cli/tests/suite/walk_depth_agreement.rs`: the offset scan matches the
+    /// literal `globe_level()` and this used a local binding, the absolute
+    /// roster is opt-in and never listed this file, and the `const WALK` arm
+    /// needs a constant of that name. Calling the function is what closes all
+    /// three at once, which is the guard's own stated remedy.
+    ///
+    /// The room count moved with it — 109 at `+6` on the old triangular mesh,
+    /// **289** for a radius-8 ball on the quad lattice — and the class count
+    /// did not.
     #[test]
     fn every_covers_index_is_in_bounds_and_cover_varies_across_a_real_band() {
         let w = world();
         let ctx = hornvale_locale::LocaleContext::build(&w).unwrap();
-        let gl = ctx.globe_level();
         let v = hornvale_settlement::village_info(&w).expect("seed 42 has a village");
         let (lat, lon) = place_latlon(&w, v.id).expect("the flagship has coordinates");
         let pos = hornvale_kernel::math::unit_sphere_from_lat_lon(lat, lon);
@@ -1411,7 +1591,7 @@ mod tests {
         let s = surrounds_scene_colored_in(
             &w,
             &ctx,
-            &Facet::containing(pos, gl + 6),
+            &Facet::containing(pos, hornvale_locale::walk_depth(&ctx)),
             8,
             WorldTime::GENESIS,
             &hornvale_kernel::color::standard_observer(),
@@ -1438,6 +1618,13 @@ mod tests {
             seen > 0,
             "no cell carried a cover index at all — the loop body never executed"
         );
+        eprintln!(
+            "cover across the real walk band (depth {}, radius 8): {} rooms, {} distinct \
+             classes {distinct:?}",
+            hornvale_locale::walk_depth(&ctx),
+            s.cells.len(), // lexicon: SurroundsCell is a chart AREA — one room's box — not a mesh vertex
+            distinct.len()
+        );
         assert!(
             distinct.len() > 1,
             "every one of {seen} cells carried the same cover index {distinct:?} — either \
@@ -1454,8 +1641,10 @@ mod tests {
     /// Before Task 2b, rock class was the *only* colour input, read from the
     /// room's dominant *canonical-grid* corner
     /// (`LocaleContext::reflectance_at`), so a radius-8 walking-depth
-    /// neighbourhood (109 cells, `globe_level + 6` — rooms roughly 64× finer
-    /// per axis than a globe cell) reported one rock, one biome, one water
+    /// neighbourhood (109 rooms on the then-triangular mesh at
+    /// `globe_level + 6` — **289 rooms at `hornvale_locale::walk_depth` on
+    /// today's quad lattice**, rooms roughly 128× finer per axis than a globe
+    /// room) reported one rock, one biome, one water
     /// kind, one relief band, and one colour: colour was exactly as
     /// spatially resolved as every OTHER categorical field the chart
     /// carried. Task 2b composes a surface-cover layer above the mineral
@@ -1473,9 +1662,16 @@ mod tests {
     /// (`surface.rs::tier3`), so one climate regime can produce at most a
     /// handful of distinguishable mixtures, never a continuum. Measured on
     /// this world: a radius-8 walking-depth chart around the flagship now
-    /// draws **3** distinct colours (was 1 pre-Task-2b); a radius-4
-    /// grid-level chart still draws several more, unaffected (colour there
-    /// was already varying with climate/lithology, not micro).
+    /// draws **4** distinct colours (3 when this band was built at
+    /// `globe_level + 6`, 1 pre-Task-2b); a radius-4 grid-level chart still
+    /// draws several more, unaffected (colour there was already varying with
+    /// climate/lithology, not micro).
+    ///
+    /// **THE BAND IS THE REAL WALK DEPTH SINCE FIX ROUND 1.** It was built at
+    /// a local `gl + 6` — a level coarser than the walk band has been since
+    /// decision 0511, and invisible to every arm of
+    /// `cli/tests/suite/walk_depth_agreement.rs` for the reasons the sibling
+    /// test above records. It now calls `hornvale_locale::walk_depth`.
     #[test]
     fn the_color_now_varies_within_one_grid_cell_via_the_micro_field() {
         let w = world();
@@ -1505,7 +1701,12 @@ mod tests {
 
         // At walking depth the whole neighbourhood is one grid cell — still
         // true of every CATEGORICAL field, but no longer true of colour.
-        let (walk_colors, walk_biomes) = distinct(gl + 6, 8);
+        let (walk_colors, walk_biomes) = distinct(hornvale_locale::walk_depth(&ctx), 8);
+        eprintln!(
+            "walk band (depth {}, radius 8): {walk_colors} distinct colours, {walk_biomes} \
+             distinct biomes",
+            hornvale_locale::walk_depth(&ctx)
+        );
         assert!(
             walk_colors > 1,
             "a radius-8 walking-depth chart drew only {walk_colors} colour(s); \
@@ -1518,16 +1719,40 @@ mod tests {
         // one climate regime to at most 3 (aspect) x 3 (openness) x 3
         // (wetness) = 27 combinations in the worst case, but this specific
         // band (unfrozen, so aspect's snow-only effect never activates)
-        // measures 3 today. The design this guard exists to catch — reading
+        // measures 4 today. The design this guard exists to catch — reading
         // `aspect`/`openness`/`wetness` continuously instead of banding them
         // into tiers — was reinstated on this exact band as an experiment
-        // and measured **18** distinct colours, comfortably under an
-        // earlier, unproven `<= 20` ceiling (which is why that ceiling was
-        // wrong: 15-18 colours from address noise passed it silently). `9`
-        // sits strictly between the shipped design's 3 and the rejected
-        // design's 18, and was confirmed to redden the continuous variant
-        // and stay green on the shipped one before landing — see the Task
-        // 2b fix-round report for both runs.
+        // and measured **18** distinct colours at `globe_level + 6`,
+        // comfortably under an earlier, unproven `<= 20` ceiling (which is
+        // why that ceiling was wrong: 15-18 colours from address noise
+        // passed it silently). `9` sat strictly between the shipped design's
+        // 3 and the rejected design's 18, and was confirmed to redden the
+        // continuous variant and stay green on the shipped one before
+        // landing — see the Task 2b fix-round report for both runs, and the
+        // paragraph below for the re-run at the band this test uses now.
+        //
+        // **RE-MEASURED AT THIS BAND (fix round 2), because the argument
+        // that stood in for the measurement was wrong.** Both the shipped
+        // reading (3) and the rejected variant's (18) were originally taken
+        // at `globe_level + 6`; this band is `walk_depth`, a quarter of the
+        // ground per room. Fix round 1 declined to re-run the rejected
+        // variant and argued instead that its count "is bounded below by the
+        // number of distinct micro-field triples in the band, which can only
+        // RISE with a finer band". Both halves of that were false: a radius-8
+        // ball is 289 rooms at EITHER band (the ground per room shrinks, the
+        // room count does not, so nothing rises), and the band carries on the
+        // order of 230 distinct micro triples at radius 8 against the
+        // variant's 18, so distinct triples are demonstrably not a lower
+        // bound on it.
+        //
+        // So it was re-run rather than re-argued. Reinstating the continuous
+        // read of `aspect`/`openness`/`wetness` (`surface.rs`, `tier3(x)` ->
+        // `x` at all three sites) on THIS band measures **28** distinct
+        // colours and REDDENS this assertion with the message below; the
+        // shipped tiered design measures **4** and passes. 9 sits strictly
+        // between them, and the pair of runs is now a fresh pair. If the
+        // ceiling ever needs raising, re-run BOTH variants at this band
+        // before touching it — which is what this round did.
         assert!(
             walk_colors <= 9,
             "a radius-8 walking-depth chart drew {walk_colors} colours across \
@@ -1654,7 +1879,7 @@ mod tests {
         let coord = ctx.climate().geosphere().coord(probe);
         let addr = Facet::containing(
             hornvale_kernel::math::unit_sphere_from_lat_lon(coord.latitude, coord.longitude),
-            ctx.globe_level() + 6,
+            hornvale_locale::walk_depth(&ctx),
         );
 
         let scene = surrounds_scene_in(&w, &ctx, &addr, 0, WorldTime::GENESIS).unwrap();
@@ -1713,7 +1938,7 @@ mod tests {
         // Stated over VERTICES, where the invariant holds by definition: a land
         // vertex IS one with `elevation >= sea_level`, so its height is >= 0 and its
         // band must be `lowland` or above. Deliberately NOT over rooms — a room's
-        // height is a three-corner blend while its water kind is a point sample of
+        // height is a four-corner blend while its water kind is a point sample of
         // the dominant corner, so a shoreline room can be dry-land-dominant and
         // still blend centimetres below sea level (spec §12.4).
         let w = world();
@@ -1979,11 +2204,12 @@ mod tests {
         let s =
             surrounds_scene_in(&w, &ctx, &here, 4, WorldTime::GENESIS).expect("the chart builds");
 
-        // Every cell, including the 30 that are not `here`.
+        // Every cell, including the ones that are not `here`.
         assert_eq!(
-            s.cells.len(),
-            31,
-            "the fixture's premise moved: a radius-4 chart is no longer 31 cells"
+            s.cells.len(), // lexicon: SurroundsCell is a chart AREA — one room's box — not a mesh vertex
+            ball_size(4),
+            "the fixture's premise moved: a radius-4 chart is no longer {} cells",
+            ball_size(4)
         );
 
         // The four axes are independent sub-streams, so distinct rooms give
@@ -1999,10 +2225,15 @@ mod tests {
                 )
             })
             .collect();
+        // Stated as a FRACTION of the ball rather than as a literal, for the
+        // same reason `ball_size` exists: `25 of 31` was 81% of the old
+        // triangular ball, and the number that survives a mesh change is the
+        // rate, not the count.
         assert!(
-            distinct.len() > 25,
-            "31 cells produced only {} distinct micro tuples; the field is being \
+            distinct.len() * 100 > ball_size(4) * 80,
+            "{} cells produced only {} distinct micro tuples; the field is being \
              shared rather than derived per room",
+            s.cells.len(), // lexicon: SurroundsCell is a chart AREA — one room's box — not a mesh vertex
             distinct.len()
         );
     }
@@ -2183,7 +2414,7 @@ mod tests {
                 hornvale_kernel::math::sin(t * 0.023) * 0.5,
                 hornvale_kernel::math::cos(t * 0.031),
             ];
-            let addr = Facet::containing(dir, ctx.globe_level() + 6);
+            let addr = Facet::containing(dir, hornvale_locale::walk_depth(&ctx));
             if let Ok(loc) = ctx.describe(&addr, WorldTime::GENESIS)
                 && loc.cave.is_some()
             {
@@ -2230,7 +2461,7 @@ mod tests {
                 hornvale_kernel::math::sin(t * 0.023) * 0.5,
                 hornvale_kernel::math::cos(t * 0.031),
             ];
-            let addr = Facet::containing(dir, ctx.globe_level() + 6);
+            let addr = Facet::containing(dir, hornvale_locale::walk_depth(&ctx));
             if let Ok(loc) = ctx.describe(&addr, WorldTime::GENESIS)
                 && loc.cave.is_none()
             {

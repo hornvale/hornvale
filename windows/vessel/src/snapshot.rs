@@ -367,7 +367,7 @@ pub enum SpatialChannel {
 ///   six — the biome, the canopy, the settlement, the sky and two moons —
 ///   byte-identically the same list the walk-band fixture beside it carries.
 ///   The Chattel's own new fixture is a second, independent instance:
-///   `session-seed-1-carrying.json` is a chamber-band snapshot taken on a
+///   `session-seed-14-carrying.json` is a chamber-band snapshot taken on a
 ///   different seed, standing in a chamber with a key in hand — and its
 ///   `nouns` are the biome, the canopy, the settlement, the sky and the
 ///   sun. Five, where the seed-42 pair carry six (two moons rather than a

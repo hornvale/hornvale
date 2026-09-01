@@ -76,7 +76,7 @@ fn examine_accepts_exactly_the_union_of_both_grains() {
         }
     }
     // `session.handle(&format!("go {way}"))`'s result is discarded above, and
-    // `ways()` always returns three edges regardless of whether the agent
+    // `ways()` always returns the same edge set regardless of whether the agent
     // actually moved — so a `go` silently broken into a no-op would leave
     // this whole loop re-examining turn 0's room six times without anything
     // noticing. The walk is known (empirically) to visit 3 distinct rooms
@@ -215,11 +215,32 @@ fn drawing_the_map_never_moves_the_world() {
 /// draws, not the walk-depth room the agent stands in — those are different
 /// rooms once `zoom_out > 0`, and a footer that reports the wrong one is
 /// exactly the "picture lies, caption doesn't" failure this campaign's
-/// rendering doctrine forbids. Measured directly on seed 42: after one `go`,
-/// the room the agent stands in exits NE/NW/S, but the ancestor room
-/// `map out 1` draws from there exits SE/N/SW — a genuine divergence, not a
-/// coincidence of ordering, so this test would have failed under the old
-/// code (which passed `self.ways()`, the walk-depth exits, unconditionally).
+/// rendering doctrine forbids.
+///
+/// # THE OLD FORM OF THIS TEST CANNOT BE RE-PINNED, AND THAT IS THE FINDING
+///
+/// It used to pin two literal triads — the fine room's `{NE, W, SE}` and the
+/// coarse room's `{E, NW, SW}` — and assert they were DISJOINT, which is what
+/// made it strong: a footer leaking the walk-depth room's exits onto a coarser
+/// chart would fail on every point. Four campaigns re-measured those triads and
+/// each time the disjointness survived, because a triangular room had only
+/// three of eight compass words and two rooms rarely drew the same three.
+///
+/// **On the cube-sphere mesh every interior room exits in all eight
+/// directions** (`Facet::neighbors` returns 8, and only the 24 cube-corner
+/// rooms return 7). So the fine room's exits and the coarse room's exits are
+/// now the SAME SET at almost every point of any walk — not because the rungs
+/// merged, but because the alphabet stopped distinguishing them. Re-pinning
+/// the two literals to `N..NW` twice over would have produced a green test
+/// that could no longer fail for the reason it exists.
+///
+/// So the claim is asserted against the mesh instead of against a second
+/// reading of the session: the footer must name **the drawn room's own
+/// `Facet::neighbors` rose**, computed here from `position().parent()`, and it
+/// must do so at a rung where the drawn room is a genuinely different room. A
+/// footer that reported the walk-depth room's exits would still be reporting a
+/// DIFFERENT ROOM's exits — the sets happen to coincide today, and this test
+/// says so out loud rather than resting on it.
 #[test]
 fn map_out_names_the_drawn_rooms_own_exits_not_the_walk_depths() {
     let w = world();
@@ -230,6 +251,29 @@ fn map_out_names_the_drawn_rooms_own_exits_not_the_walk_depths() {
         .map(|(c, _)| format!("{c:?}"))
         .expect("the starting room has exits");
     session.handle(&format!("go {way}"));
+
+    let fine_room = session.position();
+    let coarse_room = fine_room.parent().expect("a walk-band room has a parent");
+    assert_ne!(
+        fine_room, coarse_room,
+        "`map out 1` must draw a genuinely different room, or this test compares \
+         a room with itself"
+    );
+
+    // The rose the mesh gives each room, independently of anything the session
+    // says: one compass word per neighbour, in `Compass::all` order. This is
+    // `hornvale_locale::heading_rose`'s assignment, which since The Pavement is
+    // also the rule `Locale::exits` and `go` both read — so "the drawn room's
+    // own exits" has exactly one meaning now.
+    let rose_of = |room: &hornvale_kernel::Facet| -> Vec<String> {
+        hornvale_locale::Compass::all()
+            .into_iter()
+            .zip(hornvale_locale::heading_rose(room))
+            .filter(|(_, n)| n.is_some())
+            .map(|(c, _)| format!("{c:?}").to_uppercase())
+            .collect()
+    };
+
     let fine_ways: Vec<String> = session
         .ways()
         .iter()
@@ -237,74 +281,15 @@ fn map_out_names_the_drawn_rooms_own_exits_not_the_walk_depths() {
         .collect();
     assert_eq!(
         fine_ways,
-        // Re-measured under The Tense (2026-08-05): seed 42 re-placed from 209
-        // settlements to 122, so the walk lands in a different fine room and
-        // that room has its own exits. `NE, NW, S` -> `N, SW, SE`. The CLAIM is
-        // unchanged and is not about these three compass points: it is that
-        // `map` reports the drawn room's OWN exits rather than the walk depth's,
-        // which is why the pin is re-measured rather than relaxed to a count.
-        // Re-measured again under The Glasshouse (decision 0134, 2026-08-14):
-        // the terrain epoch moves every coastline, so the walk lands in a
-        // different fine room again. `N, SW, SE` -> `NE, W, SE`. Note the
-        // claim survives the re-measure in the strong form: the drawn room's
-        // exits and the walk-depth room's exits are STILL different sets, so
-        // this test would still have failed under the code that passed
-        // `self.ways()` unconditionally — a re-pin that kept the number but
-        // lost the divergence would have made it vacuous.
-        //
-        // Re-measured a further time under The Glasshouse's Stage B Task 4
-        // (the thermostat): the damped, greenhouse-forced insolation
-        // baseline re-places the walk a second time this campaign.
-        // `NE, W, SE` -> `E, NW, SW` — the fine room's new triad is exactly
-        // the PREVIOUS coarse room's triad, which is a coincidence of this
-        // mesh's limited exit alphabet, not evidence the two rungs merged;
-        // see the coarse re-measure below for the divergence check that
-        // rules that out directly.
-        vec!["NE", "W", "SE"],
-        "pin: the fine room's own exits at this point of the seed-42 walk \
-         (if world-gen ever changes this, re-measure and update the pin)"
+        rose_of(&fine_room),
+        "the walk-band footer names the walk-band room's own rose"
     );
-    // The two triads SWAPPED under The Tense, which looks alarming and is not.
-    // Each room on this mesh offers three exits, and `{N, SW, SE}` and
-    // `{NE, NW, S}` are the pair the walk alternated between there. (These are
-    // not the ONLY triads the mesh admits: `{NW, SW, E}` occurs too, measured
-    // out at sea in `session.rs`'s water walk. Do not infer a global
-    // two-parity rule from this pin, which is what an earlier draft of this
-    // comment did.)
-    //
-    // The Glasshouse (decision 0134) re-measured both rungs and is the reason
-    // that warning stands: the fine room now exits `{NE, W, SE}` and the
-    // coarse room `{E, NW, SW}` — a pair neither of the previous readings
-    // used, and one that includes `E` and `W`, which the old "two triads that
-    // swap" framing had no room for. The alternation was a coincidence of two
-    // samples. The CLAIM this test makes is untouched, and is precisely that
-    // the two rungs report DIFFERENT triads: the footer must show the drawn
-    // room's parity, never the walk-depth room's.
-    //
-    // The Glasshouse, Stage B Task 4 (the thermostat) re-measured both rungs
-    // again: the fine room now exits `{E, NW, SW}` — exactly the PREVIOUS
-    // reading's coarse triad — and the coarse room exits `{SE, NE, W}`, a
-    // triad neither rung has shown before. The two rungs are still genuinely
-    // different sets, which is the only thing this test asserts.
+
     let coarse = out(session.handle("map out 1"));
-    // The Glasshouse close (`k` settled at 0.30) re-measured both rungs a
-    // third time this campaign. The fine room exits `{NE, W, SE}` and the
-    // coarse room `{E, NW, SW}` — which is the Stage-B-Task-2 pair with the
-    // two rungs EXCHANGED. Read that as the mesh's small exit alphabet
-    // recurring, exactly as the note above warns, and not as an alternation
-    // rule: three passes have now produced three different rung-to-triad
-    // assignments from the same handful of triads.
-    //
-    // The check that matters is unchanged and still passes in the strong
-    // form: the two triads are DISJOINT here, so a footer that reported the
-    // walk-depth room's exits would fail on every one of the three points.
+    let want = format!("ways on: {}", rose_of(&coarse_room).join(", "));
     assert!(
-        coarse.contains("ways on: E, NW, SW"),
-        "the footer must report the DRAWN room's own exits: {coarse}"
-    );
-    assert!(
-        !coarse.contains("ways on: NE, W, SE"),
-        "the footer must not leak the walk-depth room's exits onto a coarser chart: {coarse}"
+        coarse.contains(&want),
+        "the footer must report the DRAWN room's own exits ({want}): {coarse}"
     );
 }
 
@@ -326,31 +311,42 @@ fn map_out_reaches_a_coarser_rung_and_stops_at_the_bottom() {
     );
 }
 
-/// The real bound isn't the walk depth (12 on seed 42) — it's
-/// `depth - globe_level`, which is 6 on seed 42. `map out 99` alone doesn't
-/// pin this: any refusal at all would pass it, including one that fires far
-/// too early or far too late. `map out 7` sits one rung past the real bound,
-/// so it's the smallest input that actually exercises the boundary — and it
-/// must refuse cleanly, never leak the underlying `VesselError`'s "room is
-/// coarser than the canonical grid" wording, which says nothing to a player
+/// The real bound isn't the walk depth — it's `walk_depth - globe_level`,
+/// which The Pavement moved from 6 to **7** when the walk band became
+/// `globe_level + 7` (spec section 2.3: depth 12 on the cube-sphere is a
+/// 2.251 km step, twice the icosphere's, so the band went one level finer).
+/// `map out 99` alone doesn't pin this: any refusal at all would pass it,
+/// including one that fires far too early or far too late. The rung one past
+/// the real bound is the smallest input that actually exercises the boundary —
+/// and it must refuse cleanly, never leak the underlying `VesselError`'s "room
+/// is coarser than the canonical grid" wording, which says nothing to a player
 /// about zooming.
+///
+/// **Derived, not written down.** The old form spelled the two rungs as the
+/// literals `6` and `7`, which is what made this test a casualty of a band
+/// change it has no opinion about. It asks the two functions now, and the test
+/// name keeps the word "seven" only because renaming a test is a separate act
+/// from re-deriving its constant.
 #[test]
 fn map_out_seven_is_just_past_the_real_bound_and_refuses_cleanly() {
     let w = world();
+    let ctx = hornvale_locale::LocaleContext::build(&w).expect("seed 42 builds a context");
+    let bound = hornvale_locale::walk_depth(&ctx) - ctx.globe_level();
     let (mut session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
-    // Just inside the real bound (depth 12 - globe_level 6 = 6): must draw.
-    let still_ok = out(session.handle("map out 6"));
+    // Just inside the real bound: must draw.
+    let still_ok = out(session.handle(&format!("map out {bound}")));
     assert!(
         // Default eyes are `Own` (The Beholding, Task 5): colour, not terrain.
         still_ok.contains("[lens: colour"),
-        "rung 6 is the real bound and must still draw: {still_ok}"
+        "rung {bound} is the real bound and must still draw: {still_ok}"
     );
     // One rung past the real bound: must refuse in player-facing language,
     // never leak the locale layer's internal "canonical grid" wording.
-    let past_bound = out(session.handle("map out 7"));
+    let past_bound = out(session.handle(&format!("map out {}", bound + 1)));
     assert!(
         past_bound.contains("no coarser"),
-        "rung 7 is past the real bound and must refuse: {past_bound}"
+        "rung {} is past the real bound and must refuse: {past_bound}",
+        bound + 1
     );
     assert!(
         !past_bound.to_lowercase().contains("canonical grid"),
@@ -364,13 +360,17 @@ fn map_out_seven_is_just_past_the_real_bound_and_refuses_cleanly() {
 /// cases into. It must also never state a false bound: an earlier version of
 /// this refusal quoted `u32::MAX` (4294967295) as "the chart tops out at"
 /// that many rungs, which was not true — the real ceiling is `depth -
-/// globe_level` (six on seed 42), enforced separately below. The honest fix
+/// globe_level` (SEVEN on seed 42 since The Pavement moved the walk band to
+/// `globe_level + 7`), enforced separately below. The honest fix
 /// saturates the overflowed value and lets that real bound check answer, so
-/// this reply must be byte-identical to what `map out 7` (one past the real
-/// bound) already produces.
+/// this reply must be byte-identical to what the first rung past the real
+/// bound already produces — a rung this test now derives rather than writes
+/// down, since the literal `7` it used to name is INSIDE the bound today.
 #[test]
 fn map_out_past_u32_names_the_real_problem_not_a_parse_failure() {
     let w = world();
+    let ctx = hornvale_locale::LocaleContext::build(&w).expect("seed 42 builds a context");
+    let bound = hornvale_locale::walk_depth(&ctx) - ctx.globe_level();
     let (mut session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
     let too_large = out(session.handle("map out 4294967296"));
     assert!(
@@ -379,9 +379,10 @@ fn map_out_past_u32_names_the_real_problem_not_a_parse_failure() {
     );
     assert!(
         !too_large.contains("4294967295") && !too_large.to_lowercase().contains("u32"),
-        "the refusal must not state ANY numeric bound — the real bound is 6, not u32::MAX: {too_large}"
+        "the refusal must not state ANY numeric bound — the real bound is \
+         {bound}, not u32::MAX: {too_large}"
     );
-    let past_real_bound = out(session.handle("map out 7"));
+    let past_real_bound = out(session.handle(&format!("map out {}", bound + 1)));
     assert_eq!(
         too_large, past_real_bound,
         "an overflowed zoom must be refused by the SAME real bound check as an \

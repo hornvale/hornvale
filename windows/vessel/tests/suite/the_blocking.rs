@@ -246,7 +246,11 @@ fn a_creatures_noun_answers_the_same_line_on_both_sides_of_a_doorway() {
     );
 
     inside(&mut session);
-    session.place_creature_at_me(companion);
+    // Not `place_creature_at_me` alone: since The Pavement the flagship's
+    // ENTRANCE chamber draws none of its room's anchors inside the shadowcast,
+    // so a creature placed there is present and undrawn — see
+    // `common::deepen_until_the_plan_draws` for the measurement.
+    common::deepen_until_the_plan_draws(&mut session, companion);
     // The precondition the old version left implicit, and the reason its failure
     // message was misleading: `examine` is only obliged to answer a noun the
     // plan DEPICTS, so a red assertion below means something only once the mark
@@ -291,7 +295,8 @@ fn every_noun_the_plan_depicts_is_examinable() {
     let (mut session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
     session.handle("wait");
     inside(&mut session);
-    session.place_creature_at_me(session.bodies()[1].entity);
+    let companion = session.bodies()[1].entity;
+    common::deepen_until_the_plan_draws(&mut session, companion);
     let mut nouns = session.plan_legend_nouns();
     assert!(
         !nouns.is_empty(),

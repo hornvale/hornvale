@@ -225,7 +225,7 @@ fn flagship_latlon(world: &hornvale_kernel::World) -> (f64, f64) {
 fn surrounds_seed_42_flagship_json() -> String {
     let w = seed_42_world();
     let ctx = hornvale_locale::LocaleContext::build(&w).unwrap();
-    let depth = ctx.globe_level() + 6;
+    let depth = hornvale_locale::walk_depth(&ctx);
     let (lat, lon) = flagship_latlon(&w);
     let observer = hornvale_kernel::Facet::containing(
         hornvale_kernel::math::unit_sphere_from_lat_lon(lat, lon),
@@ -249,36 +249,74 @@ fn surrounds_v1_land_and_mark_bytes_are_pinned() {
 }
 
 // The two observers below (The Margin's gallery, `book/src/gallery/
-// surrounds-seed-42.md`) are the only charts in the repo that actually show
-// ocean meeting land and a face-seam disclosure — the flagship pin above
-// sits in a uniform biome and neither the tiles-seed-1 nor the surrounds-
-// seed-1 pin ever reaches a seam. The gallery page itself is (correctly)
-// excluded from CI's cross-platform drift check, since it's an ASCII
-// rendering of the same libm-thresholded classifications the tiles gallery
-// exclusion already covers — but that leaves these two renders pinned
-// NOWHERE, unlike every other gallery chart. These platform-local byte pins
-// restore that protection without reintroducing the cross-platform noise the
-// CI exclusion exists to avoid, exactly as `surrounds_v1_bytes_are_pinned`
-// above does for the JSON encoding.
+// surrounds-seed-42.md`) are the two charts in the repo that reach ground the
+// flagship pin does not: the flagship sits in a uniform biome, and neither
+// the tiles-seed-1 nor the surrounds-seed-1 pin ever reaches a base-face
+// seam. The gallery page itself is (correctly) excluded from CI's
+// cross-platform drift check, since it's an ASCII rendering of the same
+// libm-thresholded classifications the tiles gallery exclusion already
+// covers — but that leaves these two renders pinned NOWHERE, unlike every
+// other gallery chart. These platform-local byte pins restore that
+// protection without reintroducing the cross-platform noise the CI exclusion
+// exists to avoid, exactly as `surrounds_v1_bytes_are_pinned` above does for
+// the JSON encoding.
+//
+// **THIS PARAGRAPH USED TO SAY "the only charts in the repo that actually
+// show ocean meeting land", AND THAT HALF WAS ALREADY FALSE ON `main` BEFORE
+// The Pavement TOUCHED IT.** The coastline observer's neighbourhood is open
+// ocean at every room in its ball and has been for some time: `git show
+// origin/main:book/src/gallery/generated/surrounds-seed-42/coastline.txt` is
+// solid `~`, legend `bathypelagic`. The Pavement re-addressed both observers
+// (below) and deliberately did NOT go hunting for a replacement coastline —
+// re-pointing a showcase at different GROUND is a gallery-content decision,
+// not an addressing one, and the epoch's diff is worth keeping readable as
+// pure re-addressing. The claim is corrected here rather than carried
+// forward; restoring a genuine land/water chart is open work.
 
 /// The observer room a possession's own `map`/`scene surrounds --render
-/// ascii` would draw for room 897392747 — face 11, depth 12, half a degree
-/// east of the settlement Mjoexaenoenoa (`connections-seed-42.md`), where
-/// the 31-cell neighbourhood genuinely splits between ocean and land (the
-/// gallery's "A coastline east of Mjoexaenoenoa").
+/// ascii` would draw for room 3015902083 — face 3, depth 13, at 17.1785 N,
+/// 103.6835 W (the gallery's "The water east of the flagship").
+///
+/// **Re-minted by The Pavement, and the id it replaces does not decode.** It
+/// was 897392747: face **11** of the icosphere, at depth 12. A room id packs
+/// its base face in its low five bits, the occupancy lattice is a cube-sphere
+/// now, and `FacetId::unpack` refuses any face >= 6 — decision 0189 working as
+/// written, since a pre-flip address must fail loudly rather than decode into
+/// a valid-looking cube address.
+///
+/// **The GROUND is unchanged**, which is the whole point: 3015902083 is
+/// `Facet::containing` the same point at the walk band's new depth, so this
+/// observer stands where it always stood and only its name moved.
 fn coastline_room() -> hornvale_kernel::Facet {
-    hornvale_kernel::FacetId(897392747)
+    hornvale_kernel::FacetId(3015902083)
         .unpack()
-        .expect("897392747 is a valid packed room id (the gallery's coastline observer)")
+        .expect("3015902083 is a valid packed room id (the gallery's coastline observer)")
 }
 
-/// The observer room for room 724698318 — face 14, depth 12, latitude -10°/
-/// longitude 0° — whose radius-4 neighbourhood reaches across a base-face
-/// edge for 12 of its 31 cells (the gallery's "A seam, disclosed").
+/// The observer room for room 2290649216 — face 0, depth 13, at 10.7309 S,
+/// 44.9945 W — whose radius-4 neighbourhood reaches across a base-face edge
+/// for 36 of its 81 rooms (the gallery's "A seam, drawn").
+///
+/// **Re-minted by The Pavement, and unlike [`coastline_room`] this one could
+/// not keep its ground.** It was 724698318: face **14** of the icosphere at
+/// depth 12, addressing 10.0 S, 0.0 E — a point chosen because it sat on an
+/// ICOSAHEDRON face edge. The cube's face boundaries are elsewhere entirely
+/// (they are the great circles where two of |x|, |y|, |z| are equal, i.e. 45
+/// degrees from each face's centre), and 10 S / 0 E is ~35 degrees inside the
+/// +x face — thousands of kilometres from any seam, against a walk-band room
+/// ~1.1 km across. Keeping the coordinate would have kept a green test that
+/// no longer exercised the seam branch at all.
+///
+/// So this address is REACHED, not chosen: it is the first candidate the
+/// `seam_observer` search in `windows/scene/src/surrounds.rs` returns — face 0
+/// with the alternating path `0,1,0,1,…` at walk depth, which descends toward
+/// a face EDGE (rather than a face CORNER, where three quads meet and the ball
+/// holds 65 rooms rather than 81). Its longitude, -44.9945, is a fifth of a
+/// room off the -45 degree meridian, which is exactly where a cube seam runs.
 fn seam_room() -> hornvale_kernel::Facet {
-    hornvale_kernel::FacetId(724698318)
+    hornvale_kernel::FacetId(2290649216)
         .unpack()
-        .expect("724698318 is a valid packed room id (the gallery's seam observer)")
+        .expect("2290649216 is a valid packed room id (the gallery's seam observer)")
 }
 
 /// The `ways on:` footer text, computed exactly as `cmd_scene`'s `--render
@@ -317,7 +355,7 @@ fn surrounds_ascii_coastline_bytes_are_pinned() {
         )),
         &surrounds_ascii_coastline(),
         "the gallery's coastline observer's ASCII chart bytes moved (The Margin's showcase \
-         page, room 897392747) — platform-local pin (host-libm-sensitive biome/water/relief \
+         page, room 3015902083) — platform-local pin (host-libm-sensitive biome/water/relief \
          classification, same exposure class as the scene-tiles exclusion); accept \
          deliberately, re-run with REBASELINE=1, and review the diff",
     );
@@ -340,23 +378,37 @@ fn surrounds_ascii_seam_bytes_are_pinned() {
         )),
         &surrounds_ascii_seam(),
         "the gallery's seam observer's ASCII chart bytes moved (The Margin's showcase page, \
-         room 724698318) — platform-local pin (host-libm-sensitive biome/water/relief \
+         room 2290649216) — platform-local pin (host-libm-sensitive biome/water/relief \
          classification, same exposure class as the scene-tiles exclusion); accept \
          deliberately, re-run with REBASELINE=1, and review the diff",
     );
 }
 
-/// Spec §5.2 on the one REAL band in the repo that is known to contain seam
-/// cells: room 724698318's radius-4 neighbourhood, 12 of whose 31 cells lie
-/// across a base-face edge. Under the lattice projection those twelve had no
-/// coordinate and were counted in a footer instead of drawn — the golden
-/// above recorded exactly that, `19` placed and `12 cells beyond a face
-/// seam`. Bearing and distance exist for a seam cell, so all 31 draw now.
+/// Spec §5.2 on the one REAL band in the repo that is known to reach across a
+/// base-face seam: [`seam_room`]'s radius-4 neighbourhood, 36 of whose 81
+/// rooms lie on the far side of one. Under the lattice projection such a room
+/// had no coordinate and was counted in a footer instead of drawn. Bearing and
+/// distance exist across a seam, so every room of the ball reaches the chart's
+/// placement accounting now, the seam-side ones included.
 ///
 /// Asserted here rather than left to the byte pin because a byte pin says
 /// only "the render did not change since someone accepted it"; this says
 /// what the render must CONTAIN, and it is what would catch a future
-/// projection that quietly went back to dropping cells it could not place.
+/// projection that quietly went back to dropping ground it could not place.
+///
+/// **The Pavement moved every number in this test and split one claim in
+/// two.** The band was `(31, 12)` on the icosphere's triangle mesh and is
+/// `(81, 36)` on the cube-sphere's quad mesh — a radius-4 ball is a 9x9 block
+/// now, which is the campaign's thesis rather than corruption. The claim that
+/// had to split is the old caption assertion, `31 of 31 drawn and 0 occluded`:
+/// with 81 rooms on a character grid, two of them DO land in one box, and the
+/// render says so (48 drawn, 33 occluded at the time of writing). Occlusion is
+/// a property of squeezing a chart onto characters and is disclosed in the
+/// caption; DROPPING ground for want of a coordinate is the defect this test
+/// exists for. So the
+/// accounting is asserted to be COMPLETE — `drawn + occluded` is the whole
+/// ball — rather than asserted to be lossless, and neither figure is pinned to
+/// a literal, since the byte golden beside this already does that job.
 #[test]
 fn every_cell_of_the_seam_band_is_drawn_including_the_seam_cells() {
     let w = seed_42_world();
@@ -365,29 +417,52 @@ fn every_cell_of_the_seam_band_is_drawn_including_the_seam_cells() {
     let seams = scene.cells.iter().filter(|c| c.seam).count();
     assert_eq!(
         (scene.cells.len(), seams),
-        (31, 12),
+        (81, 36),
         "this test is only meaningful on a band that really does cross a face \
          seam — if these counts moved, re-point `seam_room` before touching \
          the assertions below"
     );
     let out = surrounds_ascii_seam();
-    assert!(
-        out.contains("31 of 31 cells drawn, 0 occluded"),
-        "every cell of a seam band must be drawn now, seam cells included: {out}"
+    let caption = out
+        .lines()
+        .find(|l| l.contains("cells drawn"))
+        .unwrap_or_else(|| panic!("the chart must caption its own placement: {out}"));
+    // "… — 48 of 81 cells drawn, 33 occluded where two fell in one box …"
+    let number_before = |needle: &str| -> usize {
+        let head = &caption[..caption
+            .find(needle)
+            .unwrap_or_else(|| panic!("caption has no `{needle}`: {caption}"))];
+        head.trim_end()
+            .rsplit(|c: char| !c.is_ascii_digit())
+            .next()
+            .and_then(|d| d.parse::<usize>().ok())
+            .unwrap_or_else(|| panic!("no count before `{needle}`: {caption}"))
+    };
+    let drawn = number_before(" of 81 cells drawn");
+    let occluded = number_before(" occluded");
+    assert_eq!(
+        drawn + occluded,
+        81,
+        "the caption must account for every room of the ball — one that is \
+         neither drawn nor occluded has been DROPPED, which is the defect this \
+         test exists for: {out}"
     );
     assert!(
         !out.contains("beyond a face seam"),
-        "the seam footer is retired; a seam cell has an honest place on a \
-         north-up chart: {out}"
+        "the seam footer is retired; ground beyond a seam has an honest place \
+         on a north-up chart: {out}"
     );
-    // The picture, not just the caption's arithmetic: 31 drawn boxes must
+    // The picture, not just the caption's arithmetic: the drawn boxes must
     // actually be on the page. Counting glyphs is what separates "the
-    // renderer believes it placed 31" from "31 are visible".
+    // renderer believes it placed them" from "they are visible".
     let glyphs = out
         .lines()
         .filter(|l| !l.starts_with('[') && !l.contains(": "))
         .flat_map(str::chars)
         .filter(|c| !c.is_whitespace())
         .count();
-    assert_eq!(glyphs, 31, "the picture must carry 31 glyphs: {out}");
+    assert_eq!(
+        glyphs, drawn,
+        "the picture must carry the {drawn} glyphs its own caption claims: {out}"
+    );
 }

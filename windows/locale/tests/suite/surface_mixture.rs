@@ -48,28 +48,51 @@ fn neutral_micro() -> MicroField {
 
 /// A depth at which every constructed `Facet` is guaranteed addressable:
 /// `corner_weights` requires `path.len() >= geo.depth()`, and the seed-42
-/// world's canonical grid sits at level 6 (`GLOBE_LEVEL`), so 12 — the same
-/// "six refinement levels below the canonical grid" convention
-/// `windows/locale/src/lib.rs` and `windows/vessel/src/agent.rs` already use
-/// for a walking depth — clears that floor with room to spare.
-const DEPTH: usize = 12;
+/// world's canonical grid sits at level 6 (`GLOBE_LEVEL`), so 13 — the walk
+/// band, which `hornvale_locale::walk_depth` defines — clears that floor with
+/// room to spare.
+///
+/// **13, not 12, and this constant is on a leash now.** It restates the walk
+/// depth ABSOLUTELY, which is invisible to any scan for a `globe_level()`
+/// offset, so it fell a band behind when The Pavement moved the walk band to
+/// `globe_level + 7`. Its own doc cited "the same 'six refinement levels below
+/// the canonical grid' convention `windows/locale/src/lib.rs` and
+/// `windows/vessel/src/agent.rs` already use" — a restatement of a
+/// restatement. `cli/tests/suite/walk_depth_agreement.rs`'s
+/// `absolute_walk_depth_constants_track_the_walk_band` now holds this value to
+/// the live walk depth at the canonical globe level. It cannot be a call,
+/// because it is a `const` and `walk_depth` needs a `LocaleContext`.
+const DEPTH: usize = 13;
 
-/// How many addresses to generate per icosahedron face.
-const PER_FACE: u8 = 10;
+/// How many addresses to generate per base face.
+///
+/// **Ten until The Pavement, when the base mesh went from twenty triangular
+/// faces to six quads.** Ten per face was 200 addresses; ten per face is now
+/// 60, which is a thinner spread than the claim below wants. Thirty-three
+/// keeps the total near 200 (198) and needs three base-4 path digits rather
+/// than two — 64 combinations, so all thirty-three are still distinct.
+const PER_FACE: u8 = 33;
 
-/// A spread of exactly `20 * PER_FACE` (= 200) distinct, addressable
-/// `Facet`s, round-robin distributed 10 per face across all 20
-/// icosahedron faces (never filled greedily from one face — the earlier
-/// version of this test claimed "all 20 faces" while actually only
-/// reaching 13 of them, because it broke out of the loop as soon as it had
-/// 200 addresses). Each face's 10 addresses vary the leading two path
-/// digits (`i % 4`, `i / 4` for `i` in `0..PER_FACE`, base-4 digits so all
-/// ten are distinct), padded to `DEPTH` with zeros.
+/// The number of base faces the mesh has. **Six since The Pavement**, and it
+/// is stated here rather than written inline because the loop below used to
+/// say `0..20u8` — every address on faces 6..20 became `Unaddressable` at the
+/// epoch, and the first thing this test did with one was panic inside the
+/// kernel: *"invalid cube face 6: a cube-sphere has exactly 6 faces, numbered
+/// 0..6"*.
+const BASE_FACES: u8 = 6;
+
+/// A spread of `BASE_FACES * PER_FACE` distinct, addressable `Facet`s,
+/// round-robin distributed across ALL base faces (never filled greedily from
+/// one face — an earlier version of this test claimed "all 20 faces" while
+/// actually reaching 13 of them, because it broke out of the loop as soon as
+/// it had 200 addresses). Each face's addresses vary the leading three path
+/// digits (base-4, so all `PER_FACE` are distinct), padded to `DEPTH` with
+/// zeros.
 fn spread() -> Vec<Facet> {
-    let mut out = Vec::with_capacity(20 * PER_FACE as usize);
-    for face in 0..20u8 {
+    let mut out = Vec::with_capacity(BASE_FACES as usize * PER_FACE as usize);
+    for face in 0..BASE_FACES {
         for i in 0..PER_FACE {
-            let mut path = vec![i % 4, i / 4];
+            let mut path = vec![i % 4, (i / 4) % 4, i / 16];
             path.resize(DEPTH, 0);
             out.push(Facet { face, path });
         }
@@ -84,14 +107,20 @@ fn integrating_the_kept_mixture_equals_integrating_immediately() {
     let addrs = spread();
     assert_eq!(
         addrs.len(),
-        200,
-        "spread must produce exactly 200 addresses"
+        BASE_FACES as usize * PER_FACE as usize,
+        "spread must produce one address per (face, index) pair"
+    );
+    let distinct: BTreeSet<&Facet> = addrs.iter().collect();
+    assert_eq!(
+        distinct.len(),
+        addrs.len(),
+        "spread must produce DISTINCT addresses, or the sweep counts one room twice"
     );
     let faces: BTreeSet<u8> = addrs.iter().map(|a| a.face).collect();
     assert_eq!(
         faces.len(),
-        20,
-        "spread must cover all 20 icosahedron faces"
+        BASE_FACES as usize,
+        "spread must cover every base face"
     );
     let micro = neutral_micro();
     for addr in &addrs {
@@ -160,38 +189,63 @@ fn high_ground_is_brighter_in_the_cold_half_of_the_year() {
     )
     .expect("seed 42 builds with a generated sky");
     let ctx = LocaleContext::build(&world).unwrap();
-    let vertex = Vertex(30344);
-
-    // A `Facet` whose dominant corner is exactly this vertex: `containing`
-    // at the vertex's own centroid, at the walking depth this crate uses
-    // everywhere else (`globe_level() + 6`).
-    let coord = ctx.climate().geosphere().coord(vertex);
-    let depth = ctx.globe_level() + 6;
-    let addr = Facet::containing(
-        unit_sphere_from_lat_lon(coord.latitude, coord.longitude),
-        depth,
-    );
-    let corners = addr
-        .corner_weights(ctx.climate().geosphere(), ctx.nearest_index())
-        .expect("a vertex's own centroid resolves on the grid it came from");
-    // The same "max weight, tie-break lowest Vertex" rule
-    // `LocaleContext`'s private `dominant_corner` uses — restated here
-    // rather than imported, since it is not `pub` and this is an
-    // integration test in a separate crate.
-    let dominant = corners
-        .iter()
-        .fold(corners[0], |best, &cand| {
-            if cand.1 > best.1 || (cand.1 == best.1 && cand.0.0 < best.0.0) {
-                cand
-            } else {
-                best
-            }
+    let depth = hornvale_locale::walk_depth(&ctx);
+    // **A vertex with a seasonal freeze/thaw crossing, FOUND rather than
+    // pinned.** It was `Vertex(30344)`, measured by Task 1 of another
+    // campaign, and the address built from its centroid then resolved back to
+    // it. On the cube-sphere mesh a room's corners are not geosphere vertices
+    // (decision 0287's corollary, retired by The Pavement), so the same
+    // construction resolves to `Vertex(30331)` instead and the identity
+    // assertion below it failed.
+    //
+    // The identity was never the claim. What the load-bearing assertion needs
+    // is a place where reflectance VARIES across the year, which requires a
+    // vertex whose temperature crosses freezing — so that is what this asks
+    // for, and it asks for it of the vertex the constructed address actually
+    // resolves to, which is what keeps the two halves consistent by
+    // construction rather than by a re-measured coincidence.
+    let year = ctx.climate().year_length_std();
+    let crosses = |v: Vertex| {
+        let mut below = false;
+        let mut above = false;
+        for i in 0..8 {
+            let at = WorldTime::from_std_days(year * f64::from(i) / 8.0).expect("finite day");
+            let t = ctx.climate().temperature_at(v, at).get();
+            below |= t <= 0.0;
+            above |= t > 0.0;
+        }
+        below && above
+    };
+    let (vertex, addr) = (0..ctx.climate().geosphere().vertex_count() as u32)
+        .step_by(7)
+        .find_map(|i| {
+            let seed_vertex = Vertex(i);
+            let coord = ctx.climate().geosphere().coord(seed_vertex);
+            let addr = Facet::containing(
+                unit_sphere_from_lat_lon(coord.latitude, coord.longitude),
+                depth,
+            );
+            let corners = addr.corner_weights(ctx.climate().geosphere(), ctx.nearest_index())?;
+            // The same "max weight, tie-break lowest Vertex" rule
+            // `LocaleContext`'s private `dominant_corner` uses — restated here
+            // rather than imported, since it is not `pub` and this is an
+            // integration test in a separate crate.
+            let dominant = corners
+                .iter()
+                .fold(corners[0], |best, &cand| {
+                    if cand.1 > best.1 || (cand.1 == best.1 && cand.0.0 < best.0.0) {
+                        cand
+                    } else {
+                        best
+                    }
+                })
+                .0;
+            crosses(dominant).then_some((dominant, addr))
         })
-        .0;
-    assert_eq!(
-        dominant, vertex,
-        "the constructed address must resolve to Vertex(30344), the vertex Task 1 measured"
-    );
+        .expect(
+            "no sampled vertex on seed 42 has a temperature that crosses freezing across its \
+             own year, so there is nowhere the seasonal snow term can be observed at all",
+        );
 
     // Neutral micro-field: isolate the seasonal (climate) term the test
     // claims, rather than letting the room's own address-noise modulation

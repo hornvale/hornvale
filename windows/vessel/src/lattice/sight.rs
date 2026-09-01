@@ -301,7 +301,7 @@ mod tests {
     use hornvale_kernel::{Facet, Seed};
     use std::collections::{BTreeMap, BTreeSet};
 
-    const WALK: u32 = 12;
+    const WALK: u32 = 13;
 
     /// A hand-built lattice, small enough to eyeball: two 3x3 rooms
     /// (`Floor(0)` and `Floor(1)`) inside a 9x5 extent, separated by a wall

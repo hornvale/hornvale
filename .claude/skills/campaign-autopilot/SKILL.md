@@ -262,7 +262,19 @@ needs a decision record of its own.
 
 - **Fidelity cuts / accuracy tradeoffs** — always unpacked and brought to
   Nathan.
-- **Census regen / AWS spend** — explicit authorization only.
+- **Census regen** — NO LONGER A CARVE-OUT (decision 0514, 2026-09-01).
+  `make sluice-census BRANCH=<branch> REF=<full-sha>` is ordinary queued work;
+  dispatch it without asking. Every hazard the old carve-out named has been
+  closed by a later decision — the host guard (0079), the one serial claim and
+  the census's own FIFO row (0133), the anchored worktree default (0146), and
+  the fact that a census pushes a `census/<ref>-<stamp>` branch and never
+  `main` (0139). Cost is ~15 min (read `docs/timings.md`, not prose). What is
+  still gated: LANDING the moved goldens, which goes through the merge queue
+  and G6 like any candidate.
+- **AWS spend** — RETIRED, not relaxed. Decision 0063 deleted the thing this
+  governed; `scripts/aws-gate/` and `make regen-remote` are abandoned. Listing
+  a hazard that cannot occur trains readers to skim the list that also holds
+  the live ones.
 - **Destructive or externally visible actions** — force-pushes, deletions,
   publishing.
 
@@ -281,7 +293,7 @@ ratification. Re-engage only when he says so.
 
 | Thought | Reality |
 |---------|---------|
-| "This one is too important to answer myself" | Check the carve-out list. Not on it? Answer from precedent and ledger it. |
+| "This one is too important to answer myself" | Check the carve-out list. Not on it? Answer from precedent and ledger it. Note the list SHRANK on 2026-09-01 (decision 0514) — a census refresh is no longer on it. |
 | "I'll ledger these at the end" | Ledger BEFORE the gate passes. Batching loses entries. |
 | "The tangent isn't worth recording" | The invariant is unconditional: capture it or ledger its rejection with a reason. |
 | "Nathan probably wants to see this section" | That is what the G3 package is for. Proceed. |

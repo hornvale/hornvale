@@ -2127,7 +2127,7 @@ fn cmd_scene(args: &[String]) -> Result<(), String> {
                 Some(raw) => raw
                     .parse::<u32>()
                     .map_err(|e| format!("--depth must be a u32: {e}"))?,
-                None => ctx.globe_level() + 6,
+                None => hornvale_locale::walk_depth(&ctx),
             };
             let radius = match flag_value(args, "--radius") {
                 Some(raw) => raw
@@ -2283,7 +2283,7 @@ fn cmd_locale(args: &[String]) -> Result<(), String> {
 
     let depth: u32 = match flag_value(args, "--depth") {
         Some(s) => s.parse().map_err(|_| format!("bad --depth: {s}"))?,
-        None => ctx.globe_level() + 6,
+        None => hornvale_locale::walk_depth(&ctx),
     };
 
     if args.iter().any(|a| a == "--strange") {

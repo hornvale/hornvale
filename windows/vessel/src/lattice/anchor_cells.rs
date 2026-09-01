@@ -305,7 +305,10 @@ fn reaches(lattice: &Lattice, from: Cell, to: Cell, blocked: &BTreeSet<Cell>) ->
     let mut seen: BTreeSet<Cell> = [from].into_iter().collect();
     let mut frontier = vec![from];
     while let Some(at) = frontier.pop() {
-        for n in neighbours(at) {
+        // First four: this doc's own claim just above is "orthogonal-only",
+        // and `neighbours` now also carries four diagonals (Task 5's corner
+        // rule) that this flood must not silently start admitting.
+        for n in neighbours(at).into_iter().take(4) {
             if n == to {
                 return kind_of(lattice, n).is_some_and(|k| k.passable());
             }
@@ -329,7 +332,7 @@ mod tests {
     use crate::structure::{Structure, structure_at};
     use hornvale_kernel::{Facet, WorldTime};
 
-    const WALK: u32 = 12;
+    const WALK: u32 = 13;
 
     /// A `Terrain` whose built-set is keyed at the WALK band, exactly as
     /// `LocaleTerrain` is — the shape `interior::derive`'s own tests use,
@@ -526,8 +529,33 @@ mod tests {
     /// a ceiling, and an equality would read as though 6 were a target — but
     /// a ceiling nothing can fall through quietly is a different instrument
     /// from a ceiling nothing can fall through at all.
+    /// # 20 OF 1024 SINCE THE PAVEMENT, AND THE CORPUS GREW WITH IT
+    ///
+    /// The sweep ran seeds `0..64` over four chamber counts — 256 cases — and
+    /// on the cube-sphere mesh that slice stopped containing a single
+    /// `surplus` case, so the non-vacuity guard beside the ceiling went red
+    /// with its own message: *"no grown chamber holds fewer cells than its
+    /// interior holds anchors, so the surplus-unplaced branch is untested
+    /// here"*. Nothing about the scan or the relaxation moved; the fixture
+    /// addresses are built from `WALK` and the walk band went to
+    /// `globe_level + 7`, so the same seeds draw different blobs.
+    ///
+    /// **The corpus was widened rather than the guard relaxed**: seeds
+    /// `0..256`, 1024 cases. That restores the branch (19 surplus cases) and
+    /// — the part worth checking before accepting the new number — leaves the
+    /// RATE where it was:
+    ///
+    /// ```text
+    ///   before   5-6 of  256   = 2.0-2.3%
+    ///   after     20 of 1024   = 1.95%
+    /// ```
+    ///
+    /// So this is the same instrument reading the same world, over four times
+    /// as many cases. A count that had moved as a RATE would have been a
+    /// finding about the scan; this one is a finding about how many cases were
+    /// being looked at.
     /// type-audit: bare-ok(count)
-    const GROWN_RELAXATIONS: usize = 6;
+    const GROWN_RELAXATIONS: usize = 20;
 
     /// The same sweep as [`every_placement_is_faithful`], against the GROWN
     /// embedding — and this is the one where the scan's filter does work.
@@ -558,8 +586,15 @@ mod tests {
     fn the_grown_corpus_is_where_the_filter_binds() {
         let mut unfaithful: Vec<(usize, u64, usize, usize, usize)> = Vec::new();
         let mut surplus: Vec<(usize, u64, usize, usize, usize)> = Vec::new();
+        // 256 seeds, not the 64 this swept until The Pavement — see
+        // [`GROWN_RELAXATIONS`] for why the corpus grew and for the rate that
+        // carried across the widening. The case count is DERIVED and printed
+        // rather than written into the messages, which is what let the old
+        // ones go on saying "256" while the sweep changed.
+        const SEEDS: u64 = 256;
+        let cases = SEEDS as usize * crate::structure::MAX_CHAMBERS;
         for n in 1..=crate::structure::MAX_CHAMBERS {
-            for seed in 0u64..64 {
+            for seed in 0u64..SEEDS {
                 let (interior, lattice, chamber) = fixture_embedded_with(n, Seed(seed), &wild());
                 let placed = anchor_cells(&interior, &lattice, chamber, Seed(seed));
                 let floor = floor_of(&lattice, chamber).len();
@@ -593,7 +628,7 @@ mod tests {
             }
         }
         eprintln!(
-            "GROWN: cases=256 unfaithful={} surplus-unplaced={}\n  unfaithful (n, seed, chamber, floor, anchors): {unfaithful:?}\n  surplus: {surplus:?}",
+            "GROWN: cases={cases} unfaithful={} surplus-unplaced={}\n  unfaithful (n, seed, chamber, floor, anchors): {unfaithful:?}\n  surplus: {surplus:?}",
             unfaithful.len(),
             surplus.len()
         );
@@ -604,7 +639,7 @@ mod tests {
         );
         assert!(
             unfaithful.len() <= GROWN_RELAXATIONS,
-            "{} of 256 grown placements are unfaithful, over the measured ceiling of \
+            "{} of {cases} grown placements are unfaithful, over the measured ceiling of \
              {GROWN_RELAXATIONS}: {unfaithful:?}",
             unfaithful.len()
         );
@@ -616,7 +651,7 @@ mod tests {
         // "fewer is a result, and a result belongs in the constant".
         assert!(
             unfaithful.len() >= GROWN_RELAXATIONS,
-            "only {} of 256 grown placements are unfaithful, UNDER the ceiling of \
+            "only {} of {cases} grown placements are unfaithful, UNDER the ceiling of \
              {GROWN_RELAXATIONS} — the corpus or the scan improved, which is good \
              news that must be banked: lower GROWN_RELAXATIONS to {} and say in its \
              doc what moved. {unfaithful:?}",

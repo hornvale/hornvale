@@ -16,6 +16,61 @@
 //!
 //! Every rule here asks [`CellKind::passable`], never `== CellKind::Wall`. A rule
 //! written against the variant breaks the day `Rubble` arrives.
+//!
+//! # Why the structural rules stay 4-connected while movement is 8-connected
+//!
+//! **Named and decided, not left to fall out** (The Pavement, Task 6). Every
+//! flood in this module reads `neighbours(..)[..4]`, while `Session::step` and
+//! `Underground::peek` now walk all eight bearings with the corner rule applied.
+//! The two are deliberately different, because they answer different questions:
+//!
+//! - **These rules describe what the GENERATOR built.** `grow`'s flood spreads
+//!   orthogonally, its separation rule (`claimable`) is over orthogonal
+//!   adjacency, and its tunnels are orthogonal by argument rather than by
+//!   accident (see `grow::rotated`'s doc: a one-cell-wide diagonal corridor is
+//!   unwalkable under the very corner rule that makes movement 8-connected). A
+//!   structural invariant stated in a connectivity the construction does not use
+//!   is not checking the construction.
+//! - **The mover is not the generator.** Section 3.1 makes a WALK 8-connected;
+//!   it does not make a doorway diagonal or a chamber boundary diagonal.
+//!
+//! The two places the difference could bite, and what happens at each:
+//!
+//! 1. **`realized_links` reporting a link the graph never specified, if this
+//!    flood were widened.** Widening was the alternative and it is the one that
+//!    would break rule 1, not keeping it narrow. This flood walks a run of
+//!    `Threshold` cells and collects the `Floor` chambers beside it, and
+//!    `grow::reservable` constrains only a reserved cell's FOUR ORTHOGONAL
+//!    neighbours (`neighbours(cell)[..4]`) to belong to the two chambers the
+//!    doorway names — a threshold's DIAGONAL neighbours are unconstrained and may
+//!    be owned by a third chamber. An 8-connected flood would therefore collect
+//!    that third chamber and report `(A, C)` as realized, which the anchor graph
+//!    never specified: rule 1 would fail on correctly generated lattices, and the
+//!    fix would be a generator change with its own epoch.
+//!
+//!    **What this is NOT, and the correction is worth keeping.** The first
+//!    version of this note argued the other direction — that a walker crossing
+//!    diagonally between two chambers would mint an undoored connection rule 1
+//!    exists to catch, and that `Session::step`'s
+//!    `INDOOR_UNDOORED_ROOM_REFUSAL` therefore protects this invariant. **That
+//!    was false.** Whenever the corner rule opens such a diagonal, the open
+//!    flank is provably the `Threshold` joining exactly those two chambers, so
+//!    the link is already in the graph and already reported — rule 1 could never
+//!    have fired. See that constant's own doc for the proof and for the three
+//!    reasons the refusal is right anyway. The refusal and this restriction are
+//!    still one decision; they are simply not the same argument.
+//! 2. **`reachable_from` under-reporting** (rule 8's sealed-pocket detection).
+//!    It does, and the direction is safe: a 4-connected flood reaches no more
+//!    than a walker can, so the rule is conservative. It may reject a layout a
+//!    diagonal step would have rescued; it can never certify a pocket as
+//!    reachable when it is not.
+//!
+//! Neither reading is free of cost, and the cost of this one is stated rather
+//! than hidden: rule 8 is stricter than the verb.
+//!
+//! **Read this note, not a summary of it.** Both restriction sites below point
+//! here by name rather than restating the argument, because it was restated once
+//! already and the copy was the half that went wrong.
 
 use super::{Cell, CellKind, Lattice, Rect, neighbours};
 use std::collections::BTreeSet;
@@ -123,13 +178,23 @@ pub fn doorway_between(lattice: &Lattice, a: usize, b: usize) -> Option<Cell> {
 /// rather than as a case to paper over.
 /// type-audit: bare-ok(index: chamber)
 pub fn cell_beyond(lattice: &Lattice, through: Cell, chamber: usize) -> Option<Cell> {
+    // First four only: a mover lands beside the threshold ORTHOGONALLY, never
+    // diagonally, so the search stays over `neighbours`'s first four entries.
     neighbours(through)
         .into_iter()
+        .take(4)
         .find(|c| kind_of(lattice, *c) == Some(CellKind::Floor(chamber)))
 }
 
-/// Every adjacent pair of PASSABLE cells inside the extent — the complete set of
-/// steps a mover may take.
+/// Every ORTHOGONALLY adjacent pair of PASSABLE cells inside the extent.
+///
+/// **It said "the complete set of steps a mover may take", and that is no longer
+/// true** (The Pavement): a mover takes eight bearings, corner rule permitting.
+/// What this enumerates is the 4-connected passable graph of the lattice as
+/// BUILT, which is what the rules over it want — see the module note "Why the
+/// structural rules stay 4-connected while movement is 8-connected". A caller
+/// wanting what a mover may do must ask
+/// [`crate::lattice::diagonal_is_blocked`] as well.
 ///
 /// `(1, 0)` and `(0, 1)` only, so each unordered pair is visited exactly once from
 /// its lower cell.
@@ -189,7 +254,16 @@ pub fn realized_links(lattice: &Lattice) -> BTreeSet<(usize, usize)> {
         seen.insert(c);
         let mut touching: BTreeSet<usize> = BTreeSet::new();
         while let Some(at) = queue.pop() {
-            for n in neighbours(at) {
+            // First four, AND IT STAYS FOUR NOW THAT MOVEMENT IS EIGHT — a
+            // decision, not an oversight. Read the module-level note "Why the
+            // structural rules stay 4-connected while movement is 8-connected"
+            // for it; the one-line version is that `reservable` constrains only a
+            // threshold's ORTHOGONAL neighbours, so an 8-connected flood here
+            // would collect a third chamber sitting diagonally off the doorway
+            // and report a link the anchor graph never specified. That is rule 1
+            // failing on a correctly generated lattice, which is the opposite of
+            // what an earlier draft of this comment claimed.
+            for n in neighbours(at).into_iter().take(4) {
                 match kind_of(lattice, n) {
                     Some(CellKind::Floor(i)) => {
                         touching.insert(i);
@@ -233,7 +307,14 @@ pub fn reachable_from(lattice: &Lattice, chamber: usize) -> BTreeSet<Cell> {
     let mut queue = vec![start];
     out.insert(start);
     while let Some(at) = queue.pop() {
-        for n in neighbours(at) {
+        // First four, deliberately, though a mover walks eight — see the
+        // module-level note "Why the structural rules stay 4-connected while
+        // movement is 8-connected". The direction of the inequality is what
+        // makes it safe: a 4-connected flood reaches a SUBSET of what a walker
+        // can, so rule 8 is STRICTER than movement requires. It can reject a
+        // layout a diagonal would have rescued; it can never pass a pocket a
+        // walker cannot reach, which is the failure that would ship.
+        for n in neighbours(at).into_iter().take(4) {
             if kind_of(lattice, n).is_some_and(|k| k.passable()) && out.insert(n) {
                 queue.push(n);
             }
@@ -262,7 +343,7 @@ mod tests {
     use crate::structure::structure_at;
     use hornvale_kernel::{Facet, Seed};
 
-    const WALK: u32 = 12;
+    const WALK: u32 = 13;
     /// Widened from Task 3's 24 in Task 4b. Rules 1, 2 and 8 are claims that the
     /// GROWER's construction makes true — a separation rule and a reservation, argued
     /// rather than searched for — and an argument is worth more seeds than a search:
@@ -678,9 +759,16 @@ mod tests {
              and this control would prove nothing"
         );
         let pocket = *mine.last().expect("chamber 0 holds floor");
-        for n in neighbours(pocket) {
-            if kind_of(&l, n).is_some_and(|k| k.passable()) {
-                l.cells.insert(n, CellKind::Wall);
+        // First four (orthogonal) only: `reachable_from` floods only those
+        // (see its own note), so walling all eight of `neighbours` here would
+        // over-seal relative to what the flood actually reads — a weaker
+        // control than intended, since the assertion below would still pass
+        // even if the four orthogonal walls alone were not enough to seal the
+        // pocket. Restricting to `[..4]` makes this a control on the exact
+        // cells rule 8's own reachability check walks.
+        for n in neighbours(pocket)[..4].iter() {
+            if kind_of(&l, *n).is_some_and(|k| k.passable()) {
+                l.cells.insert(*n, CellKind::Wall);
             }
         }
         assert!(

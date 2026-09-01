@@ -56,7 +56,15 @@ const LEVEL: u32 = 6;
 
 /// Walk depth: the room depth `windows/locale` places a walker at, and the
 /// depth every containment number in this file is stated at.
-const WALK_DEPTH: u32 = 12;
+///
+/// 13, not 12, since The Pavement (spec section 2.3): the occupancy lattice is a
+/// cube-sphere, and `globe_level + 7` is the offset that preserves the length
+/// of one step (depth 13 is 1.126 km per room side against the icosphere's
+/// 1.08 km effective step; depth 12 would be 2.251 km). It must track
+/// `hornvale_vessel::walk_depth` — this file's containment percentages are
+/// stated per walk-depth room, so a stale value here reports the right ratio
+/// for the wrong band.
+const WALK_DEPTH: u32 = 13;
 
 /// Coarse vertices sampled per seed for containment and channel area, by stride
 /// over the whole `Vertex` ordering. Each carries its whole partition — tens
@@ -202,12 +210,34 @@ fn midpoint(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
 fn containment_and_channel_area_of_the_branch_network() {
     let geo = Geosphere::new(LEVEL);
     let unit = vertex_catchment(&geo);
-    // Rooms are FACES (`20·4^depth`) and vertices are their DUAL
+    // TWO MESHES, NOT ONE MESH AND ITS DUAL — and the comment that stood here
+    // said the opposite, confidently, in the one file that exists to stop a
+    // counting error.
+    //
+    // It read: "Rooms are FACES (`20·4^depth`) and vertices are their DUAL
     // (`10·4^level + 2`), so this ratio is not a power of four and mixing the
     // two counts is the factor-of-two error this campaign has now made three
-    // times. Stated as one division so there is nowhere for it to hide.
-    let rooms_per_vertex = (20u64 << (2 * WALK_DEPTH)) as f64 / geo.vertex_count() as f64;
-    let room_area = 4.0 * std::f64::consts::PI / (20u64 << (2 * WALK_DEPTH)) as f64;
+    // times." Every clause of that was true of the icosphere and The Pavement
+    // makes it false. A room is now a quad of the tangent-warped CUBE-sphere
+    // (`6·4^depth` quads), while `Geosphere`'s vertices remain the icosphere's
+    // (`10·4^level + 2`). The occupancy lattice and the field mesh are two
+    // DIFFERENT meshes now: a room is not a face of the icosphere, the two are
+    // not dual, and **there is no dual relationship left to reason from**. A
+    // room's corners are not geosphere vertices at any level (decision 0287's
+    // corner-is-a-vertex corollary, retired; spec section 7's H3a).
+    //
+    // So `rooms_per_vertex` is exactly what it says and nothing more — a ratio
+    // of two independently-counted populations, useful as an instrument line
+    // and not derivable from either mesh's structure. Stated as one division
+    // so there is nowhere for it to hide.
+    //
+    // Not an assertion, either half: these two feed the `println!` below.
+    // That is why the wrong `20` here would have printed numbers off by 20/6
+    // without a single test going red, which is why it moved into the commit
+    // that changes the depth rather than waiting for the epoch task.
+    let quad_count = 6u64 << (2 * WALK_DEPTH);
+    let rooms_per_vertex = quad_count as f64 / geo.vertex_count() as f64;
+    let room_area = 4.0 * std::f64::consts::PI / quad_count as f64;
     let step = room_spacing(&Facet {
         face: 0,
         path: vec![0; WALK_DEPTH as usize],

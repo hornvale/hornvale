@@ -38,7 +38,9 @@
 //!   fixed rule over the channel network — every polyline's mid vertex first
 //!   (so every river in the world is represented before any river is
 //!   represented twice), then every head, then every mouth, then the mid-vertex
-//!   rooms' three neighbours, deduplicated by packed room id in that order.
+//!   rooms' neighbours, deduplicated by packed room id in that order (three
+//!   apiece when the fixtures were captured on the icosahedral triangle
+//!   lattice; eight, or seven at a cube corner, since The Pavement).
 //!   The tests below do not re-run that rule: each fixture line *is* a whole
 //!   document and names its own room, so the sampled set cannot drift between
 //!   capture and check.
@@ -70,18 +72,72 @@ fn world() -> World {
     World::new(Seed(42))
 }
 
-/// The room each fixture line describes, recovered from the line itself.
-fn room_of(line: &str) -> Facet {
-    let v: Value = serde_json::from_str(line).expect("fixture line is JSON");
-    Facet {
-        face: v["face"].as_u64().expect("face") as u8,
-        path: v["path"]
-            .as_array()
-            .expect("path")
-            .iter()
-            .map(|d| d.as_u64().expect("path digit") as u8)
-            .collect(),
+/// A live spread of walk-band rooms, one per fixture line.
+///
+/// # The fixture's own addresses stopped being addresses at The Pavement
+///
+/// `pre-stage-2-rooms.jsonl` records rooms on faces 0..20 at depth 12 with
+/// three corners — the icosphere. The cube-sphere mesh has six faces, so
+/// `Facet::pack` refuses two thirds of those lines outright and `describe`
+/// answers `Unaddressable("Invalid")`. Five tests in this file broke on it at
+/// once, all with that same message.
+///
+/// **What each of those five actually needs is a LIVE room, not that room.**
+/// They assert over the document's SHAPE — its top-level key order, its nested
+/// key sets, that a band recomputes from a stored distance, that an ordinal is
+/// recoverable, that the resolution block declares which fields are
+/// grid-resolution — and a document's shape is a function of the struct
+/// definition, not of where the room is. `the_document_appends_keys_and_
+/// removes_none`'s own doc already says so in as many words. The fixture LINE
+/// is still the before-arm for the key shape; only the address it carries has
+/// stopped resolving, so the address is the part that gets rebuilt.
+///
+/// A lat/lon grid rather than a path enumeration, for the reason
+/// `wetness_reading.rs`'s `sampled_rooms` records: varying the leading path
+/// digits and zero-filling puts every address in one deep corner of its face.
+fn live_rooms(ctx: &LocaleContext) -> Vec<Facet> {
+    // **Seeded on the channel network, then topped up from a lat/lon grid.**
+    // A pure grid was tried first and two of the five tests refused it with
+    // their own anti-vacuity guards — *"the sweep reached only [(Dry, 198),
+    // (Terrace, 2)]; it no longer exercises the banding"* — because a room
+    // drawn uniformly over the globe is almost never near a watercourse, and
+    // these tests are about the channel bands. The fixture's population was
+    // not uniform either; it was captured by a campaign that was measuring
+    // water. So the rebuilt sample is seeded where the water is and filled out
+    // with ordinary ground, which exercises both the banded and the dry arms.
+    let want = FIXTURE.lines().count();
+    let geo = ctx.climate().geosphere();
+    let depth = walk_depth(ctx);
+    let mut out: Vec<Facet> = Vec::with_capacity(want);
+    let vertices: Vec<Vertex> = ctx
+        .terrain()
+        .channels()
+        .run_vertices
+        .iter()
+        .flatten()
+        .copied()
+        .collect();
+    let stride = (vertices.len() / (want / 2).max(1)).max(1);
+    for v in vertices.iter().step_by(stride) {
+        out.push(Facet::containing(geo.position(*v), depth));
+        if out.len() == want / 2 {
+            break;
+        }
     }
+    'grid: for a in 0..20u32 {
+        let lat = -85.0 + 170.0 * f64::from(a) / 19.0;
+        for b in 0..20u32 {
+            let lon = -180.0 + 360.0 * f64::from(b) / 20.0;
+            out.push(Facet::containing(
+                hornvale_kernel::math::unit_sphere_from_lat_lon(lat, lon),
+                depth,
+            ));
+            if out.len() == want {
+                break 'grid;
+            }
+        }
+    }
+    out
 }
 
 /// H2-2 — appending is additive. Every key the pre-stage-2 document carried is
@@ -133,8 +189,7 @@ fn the_document_appends_keys_and_removes_none() {
     let world = world();
     let ctx = LocaleContext::build(&world).unwrap();
     let mut checked = 0usize;
-    for old in FIXTURE.lines() {
-        let room = room_of(old);
+    for (old, room) in FIXTURE.lines().zip(live_rooms(&ctx)) {
         let loc = ctx.describe(&room, WorldTime::GENESIS).unwrap();
         let json = serde_json::to_string(&loc).unwrap();
 
@@ -242,6 +297,23 @@ fn top_level_keys(doc: &str) -> Vec<String> {
 /// difference and values are exactly what this test no longer claims.
 fn assert_same_key_shape(was: &Value, now: &Value, path: &str, room: &Facet) {
     match (was, now) {
+        // An externally-tagged ENUM serializes as a one-key object whose key
+        // IS the variant, so recursing into one compares world state, not
+        // struct shape. It only ever passed by accident: `exits[i].direction`
+        // read `{"Compass": ...}` for the first three entries of both
+        // documents and `{"Enter": n}` for the last four, because a room had
+        // exactly three lateral exits on the triangular mesh. A cube-sphere
+        // room has eight, so index 4 is a `Compass` in the live document
+        // against an `Enter` in the captured one and the comparison went red
+        // on a difference that is not a schema change at all.
+        //
+        // The pair is skipped rather than the array truncated: truncating
+        // would keep comparing variants and merely stop at the shortest, which
+        // is the same category error with a smaller blast radius. The struct
+        // that CONTAINS `direction` is still compared — `Exit`'s own
+        // `direction`/`kind`/`to` key set is asserted by the object arm one
+        // level up, which is the shape claim H2-2 is actually about.
+        (Value::Object(_), _) | (_, Value::Object(_)) if path.ends_with(".direction") => {}
         (Value::Object(a), Value::Object(b)) => {
             let ka: Vec<&String> = a.keys().collect();
             let kb: Vec<&String> = b.keys().collect();
@@ -284,8 +356,7 @@ fn the_band_recomputes_from_the_stored_distance_and_edges() {
     let ctx = LocaleContext::build(&world).unwrap();
     let mut checked = 0usize;
     let mut seen: Vec<(Transverse, usize)> = Vec::new();
-    for line in FIXTURE.lines() {
-        let room = room_of(line);
+    for room in live_rooms(&ctx) {
         let loc = ctx.describe(&room, WorldTime::GENESIS).unwrap();
         let doc: Value = serde_json::from_str(&serde_json::to_string(&loc).unwrap()).unwrap();
         let (Some(d), Some(edges)) = (
@@ -374,8 +445,7 @@ fn the_ordinal_is_recoverable_as_a_function_over_a_room() {
     let ctx = LocaleContext::build(&world).unwrap();
     let mut checked = 0usize;
     let mut seen: Vec<Transverse> = Vec::new();
-    for line in FIXTURE.lines() {
-        let room = room_of(line);
+    for room in live_rooms(&ctx) {
         let loc = ctx.describe(&room, WorldTime::GENESIS).unwrap();
         let doc: Value = serde_json::from_str(&serde_json::to_string(&loc).unwrap()).unwrap();
         let (Some(d), Some(edges)) = (
@@ -427,8 +497,7 @@ fn the_ordinal_is_recoverable_as_a_function_over_a_room() {
 fn the_distance_and_the_bands_are_one_reading() {
     let world = world();
     let ctx = LocaleContext::build(&world).unwrap();
-    for line in FIXTURE.lines() {
-        let room = room_of(line);
+    for room in live_rooms(&ctx) {
         let loc = ctx.describe(&room, WorldTime::GENESIS).unwrap();
         let reading = ctx.terrain().channels().bank_reading(room.centroid());
         assert_eq!(
@@ -461,7 +530,10 @@ fn the_distance_and_the_bands_are_one_reading() {
 fn the_room_declares_which_fields_are_grid_and_channel_resolution() {
     let world = world();
     let ctx = LocaleContext::build(&world).unwrap();
-    let room = room_of(FIXTURE.lines().next().unwrap());
+    let room = live_rooms(&ctx)
+        .into_iter()
+        .next()
+        .expect("the live spread is non-empty");
     let loc = ctx.describe(&room, WorldTime::GENESIS).unwrap();
 
     assert_eq!(
@@ -513,11 +585,14 @@ fn the_room_declares_which_fields_are_grid_and_channel_resolution() {
         ("exits", "the room's own mesh links"),
         (
             "fields.temperature_c",
-            "a three-corner blend; genuinely varies room by room",
+            "a four-corner bilinear blend; genuinely varies room by room",
         ),
-        ("fields.moisture", "a three-corner blend"),
-        ("fields.elevation_m", "a three-corner blend"),
-        ("fields.height_asl_m", "a three-corner blend, re-datumed"),
+        ("fields.moisture", "a four-corner bilinear blend"),
+        ("fields.elevation_m", "a four-corner bilinear blend"),
+        (
+            "fields.height_asl_m",
+            "a four-corner bilinear blend, re-datumed",
+        ),
         (
             "regime",
             "MIXED granularity (0123 rule 3): dominant-corner substrate and \
@@ -706,14 +781,25 @@ const LOUD_REACH_VERTICES_FLOOR: usize = 17;
 /// still flips at 100% is the better instrument.
 const WIDTH_FLIP_FLOOR: usize = 70;
 
-/// Walk depth: six refinement levels below the canonical grid.
+/// Walk depth — a thin alias for [`hornvale_locale::walk_depth`], kept only so
+/// the ~40 call sites below read unchanged.
 ///
-/// This is `hornvale_vessel::walk_depth`'s definition restated, not a fresh
-/// choice — `windows/vessel` depends on this crate, so the dependency cannot
-/// run the other way — and it is what `hornvale locale` and `hornvale possess`
-/// default to.
+/// **This used to be a genuine second DEFINITION**, restating
+/// `globe_level() + 6` because `windows/vessel` (where the function then lived)
+/// depends on this crate and the dependency could not run the other way. That
+/// reason is gone: The Pavement moved the definition into `hornvale_locale`
+/// itself, which is this crate, so the restatement had no purpose left but to
+/// drift.
+///
+/// The doc it carried also asserted this "is what `hornvale locale` and
+/// `hornvale possess` default to". That was FALSE when written: `possess`
+/// follows `walk_depth` through `Session`, but `hornvale locale`'s `--depth`
+/// default was its own hardcoded `globe_level() + 6` in `cli/src/main.rs` and
+/// had fallen a band behind. Both CLI defaults now call the function, so the
+/// sentence is true again — and it is true by construction rather than by
+/// assertion, which is why it is not restated as a claim here.
 fn walk_depth(ctx: &LocaleContext) -> u32 {
-    ctx.globe_level() + 6
+    hornvale_locale::walk_depth(ctx)
 }
 
 fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {
@@ -758,10 +844,41 @@ fn offset_from(base: [f64; 3], dir: [f64; 3], off: f64) -> [f64; 3] {
 }
 
 /// One transect of the channel network: the room the centreline runs through,
-/// and the **three mesh steps out of it**, plus the reach it belongs to.
+/// and **every mesh step out of it**, plus the reach it belongs to.
 ///
-/// The three steps are `Facet::neighbors()`, so every pair this population
-/// asks about is a walker's step **by construction** rather than by filtering.
+/// The steps are `Facet::neighbors()`, so every pair this population asks
+/// about is a walker's step **by construction** rather than by filtering.
+/// **ALL EIGHT NEIGHBOURS, NOT THE FOUR EDGES — ruled during The Pavement's
+/// Task 3, and the reason belongs here rather than in a review thread.** The
+/// octile cost model this campaign adopts treats a diagonal as a *real step at
+/// `sqrt(2)` cost*, not as a non-step. A diagonal neighbour is therefore
+/// genuinely reachable, and a transect that asks "what water is reachable from
+/// here" must see it; restricting the set to the four edge neighbours would
+/// invent a distinction the movement model does not make. The alternative was
+/// considered explicitly and refused.
+///
+/// **How many there are is not fixed and must not be hardcoded** — it was
+/// three on the icosahedral triangle lattice and is eight (seven at a cube
+/// corner) since The Pavement made the walk 8-connected. `verdict` and
+/// `width_pricing` below both derive their count from `steps` for that reason;
+/// an earlier state of this file had that reporter (then `step_lengths`)
+/// hardcode `[0]`, `[1]`,
+/// `[2]` while `verdict` iterated all of them, which is the exact one-sidedness
+/// `width_pricing`'s own doc exists to prevent — and it was admitting steps it
+/// should have refused, not merely reporting fewer.
+///
+/// **THIS CHANGES WHAT THE CALIBRATION MEASURES. It is not a fix and not a
+/// tuning.** The population every §8 reading in this file is taken over is
+/// "each sampled channel room plus its mesh neighbourhood". That neighbourhood
+/// was **3 rooms of 3 possible** and is now **8 of 8** (7 at a cube corner), on
+/// a base mesh that also changed shape underneath it. Every fordability number
+/// recorded in this file was measured on the old one. The affected figures and
+/// their before/after are stated at the two tests that carry them —
+/// `the_fordable_fraction_of_the_network_is_within_its_interval` and
+/// `the_loud_reach_population_is_pinned_as_a_witness` — rather than summarised
+/// here, so that a reader meets the movement at the assertion it applies to.
+/// Decision 0016 governs; the chronicle entry is The Pavement's Task 10.
+///
 /// That matters, and it is the second construction this test has had:
 ///
 /// The first probed two points half a room edge either side of the vertex and
@@ -783,8 +900,10 @@ struct Transect {
     /// The room the centreline runs through: the transect's origin, and the
     /// one room guaranteed to be inside its own bands.
     home: Facet,
-    /// The three mesh steps out of `home`.
-    steps: [Facet; 3],
+    /// Every mesh step out of `home` — `Facet::neighbors()` verbatim, so the
+    /// length is whatever the lattice's connectivity is (eight, or seven at a
+    /// cube corner). Nothing downstream may assume a count.
+    steps: Vec<Facet>,
     /// The transected vertex's own band edges (channel/bank, bank/floodplain,
     /// floodplain/terrace, terrace/dry).
     edges: [f64; 4],
@@ -794,7 +913,7 @@ struct Transect {
 
 impl Transect {
     /// What crossing the network the walker meets here: `Fordable` if any of
-    /// the three steps out of the channel room can be waded, `Impassable` if
+    /// the steps out of the channel room can be waded, `Impassable` if
     /// some step crosses the channel but none can be waded, `NotACrossing` if
     /// no step crosses it at all — the channel is wider than every step
     /// available, or the walker is not in its bands.
@@ -814,8 +933,10 @@ impl Transect {
         }
     }
 
-    /// The step lengths `crossing_between` will actually price this transect's
-    /// three steps against — `room_edge(home).min(room_edge(step))`, per step.
+    /// Everything §8's fordability clauses will actually compare for **every
+    /// one of** this transect's steps: the step length
+    /// (`room_edge(home).min(room_edge(step))`, per step, one entry per entry in
+    /// `steps`) and the full widths of the reaches the gate prices it against.
     ///
     /// Published as its own helper because a test that filters on
     /// `room_edge(&home)` alone is asserting against a DIFFERENT quantity than
@@ -824,13 +945,149 @@ impl Transect {
     /// then asserting on the gate's verdict is one-sided — it holds only while
     /// the two happen to agree, and fails as a spurious red rather than a
     /// silent green when they stop.
-    fn step_lengths(&self) -> [f64; 3] {
-        let home = room_edge(&self.home);
-        [
-            home.min(room_edge(&self.steps[0])),
-            home.min(room_edge(&self.steps[1])),
-            home.min(room_edge(&self.steps[2])),
-        ]
+    ///
+    /// **THE COUNT IS DERIVED FROM `steps`, NEVER A LITERAL (The Pavement,
+    /// Task 3, fix round 2).** This helper's predecessor used to hardcode
+    /// `[self.steps[0], self.steps[1], self.steps[2]]`. When the walk
+    /// went 8-connected, `steps` grew to eight and `verdict` — which iterates
+    /// `&self.steps` — began pricing all eight, while the reporter kept
+    /// reporting three. That is not a cosmetic mismatch: the one caller requires
+    /// that NO step can be admitted on width, then asserts
+    /// on `verdict`. Computed over a subset, that precondition can hold while a
+    /// fourth-through-eighth step IS narrow enough — reintroducing the exact
+    /// one-sidedness the paragraph above was written to remove, silently.
+    /// Deriving the count from `steps` is what makes reporter and pricer the
+    /// same quantity by construction rather than by a matching literal.
+    ///
+    /// # THE WIDTH IS PER READING, NOT PER TRANSECT — the second half of the
+    /// same mistake, and the one that actually went red (The Pavement, the
+    /// absorb-water task)
+    ///
+    /// This helper used to report step lengths only (`step_lengths`), and its
+    /// one caller paired them with `2.0 * self.edges[0]`: the full width of the
+    /// reach **being transected**, `ChannelNetwork::band_edges[i][j]`.
+    /// `crossing_between` prices no such quantity. It prices
+    /// `2.0 * r.band_edges[0]` for each `BankReading` the two rooms of the step
+    /// **independently win**, and a room's winning line need not be the sampled
+    /// polyline at all.
+    ///
+    /// **THIS IS A DEFECT IN THE TEST'S MODEL OF THE GATE, NOT IN THE GATE**,
+    /// and it was established by instrumenting the failing pair rather than by
+    /// reading the code. At `Vertex(2656)`, polyline 284 index 3, the transected
+    /// reach's full width is 3.5692e-5 rad — but the transect's own home room
+    /// wins **line 1106**, full width 1.6007e-5, and its eight neighbours win
+    /// lines 1097, 1084, 1106, 23, 284, 1106, 23 and 260, whose full widths run
+    /// from 1.5922e-5 to 4.5276e-5. Six different channels, one of them less
+    /// than half the width of the one the filter was reading. The step that
+    /// returns `Fordable` at depth 16 is the line-1106 pair, priced at
+    /// 1.6007e-5 against a 1.9635e-5 step — the width clause deciding
+    /// correctly, about water the filter never looked at.
+    ///
+    /// `Vertex(2656)` is not a unique identity for the water either, which is
+    /// why the old failure message could say "the SAME water" and be wrong: a
+    /// grid vertex carries one polyline vertex per run terminating on it, each
+    /// with its own discharge and therefore its own `band_edges`, which is how
+    /// every reading above names that same vertex at six different widths.
+    ///
+    /// **The `sqrt(2)` diagonal hypothesis was REFUTED AS THE CAUSE OF THAT
+    /// FAILURE, and has since been RATIFIED AS THE RULE (decision 0515).** Read
+    /// the two apart, because this paragraph used to say only the first half.
+    /// The obvious reading of an 8-connected mesh is that a diagonal step's
+    /// true crossing distance is `edge · sqrt(2)` while `min(home, step)`
+    /// reports the plain edge. That was never the cause of the `Vertex(2656)`
+    /// failure above — 1.41 × 1.9635e-5 = 2.77e-5 is still under 3.5692e-5, so
+    /// the factor could not have flipped that verdict — and the open design
+    /// question the old wording left ("whether the gate SHOULD charge a
+    /// diagonal 1.41 edges of water") is now answered YES, uniformly, by
+    /// decision 0515: the movement clock has charged `√2` for a diagonal since
+    /// 0508 and the reach follows the same factor, because the reason a
+    /// diagonal costs more is the ground it covers.
+    ///
+    /// So the step length here is `room_edge(home).min(room_edge(step))` times
+    /// [`hornvale_locale::DIAGONAL_STEP_FACTOR`] on a corner-adjacent step —
+    /// the gate's own arithmetic, asked through the gate's own
+    /// [`hornvale_locale::is_diagonal_step`] rather than re-derived, which is
+    /// what keeps this reporter matching the gate by construction.
+    ///
+    /// Only **interpretable** readings are listed, because those are the only
+    /// ones `wadeable` is applied to (`crossing_between`'s clause 3 filter). A
+    /// step with empty `widths` cannot be a crossing at all, which is why such
+    /// an entry reads as *refused* to the caller's deep arm and as *silent* to
+    /// its shallow arm.
+    fn width_pricing(&self, ctx: &LocaleContext) -> Vec<StepPricing> {
+        let net = ctx.terrain().channels();
+        let home_edge = room_edge(&self.home);
+        let home_reading = net.bank_reading(self.home.centroid());
+        self.steps
+            .iter()
+            .map(|step| {
+                let step_len = home_edge.min(room_edge(step))
+                    * if hornvale_locale::is_diagonal_step(&self.home, step) {
+                        hornvale_locale::DIAGONAL_STEP_FACTOR
+                    } else {
+                        1.0
+                    };
+                let priced: Vec<hornvale_terrain::channel::BankReading> =
+                    [home_reading, net.bank_reading(step.centroid())]
+                        .into_iter()
+                        .flatten()
+                        // Clause 3: the gate applies `wadeable` to the readings
+                        // standing inside their own bank edge and to no others.
+                        .filter(|r| r.signed_distance.abs() < r.band_edges[1])
+                        .collect();
+                StepPricing {
+                    step: step_len,
+                    quiet: priced
+                        .iter()
+                        .all(|r| ctx.terrain().drainage_at(r.vertex) < WATERFALL_MIN_DRAINAGE),
+                    lines: priced.iter().map(|r| r.line).collect(),
+                    widths: priced.iter().map(|r| 2.0 * r.band_edges[0]).collect(),
+                }
+            })
+            .collect()
+    }
+}
+
+/// What §8's two fordability clauses compare for one step out of a transect's
+/// home room — the gate's own operands, read from the network and the mesh
+/// rather than from `crossing_between`.
+///
+/// One of these per entry in [`Transect::steps`]; see
+/// [`Transect::width_pricing`] for why the widths are plural and why they are
+/// not the transected reach's.
+#[derive(Debug)]
+struct StepPricing {
+    /// The stride the width clause compares each width against:
+    /// `room_edge(home).min(room_edge(step))`, times
+    /// [`hornvale_locale::DIAGONAL_STEP_FACTOR`] when the step is
+    /// corner-adjacent (decision 0515).
+    step: f64,
+    /// The full widths (`2 · band_edges[0]`) of the reaches the gate would
+    /// price this step against: the interpretable readings among the two rooms.
+    /// Empty when neither room stands inside its own bank edge, in which case
+    /// the step is `NotACrossing`.
+    widths: Vec<f64>,
+    /// The winning polyline of each priced reading, positionally matched to
+    /// `widths` — the identity that says whether two depths priced the same
+    /// water.
+    lines: Vec<usize>,
+    /// Whether every reach priced here is below `WATERFALL_MIN_DRAINAGE`, so
+    /// the discharge clause cannot be what decided this step.
+    quiet: bool,
+}
+
+impl StepPricing {
+    /// The width clause can only ADMIT this step: every reach the gate prices
+    /// is narrower than the step.
+    fn width_admits(&self) -> bool {
+        self.widths.iter().all(|w| *w < self.step)
+    }
+
+    /// The width clause REFUSES this step: no reach the gate prices is narrower
+    /// than the step. Vacuously true when nothing is priced — such a step is
+    /// `NotACrossing`, which is equally not `Fordable`.
+    fn width_refuses(&self) -> bool {
+        !self.widths.iter().any(|w| *w < self.step)
     }
 }
 
@@ -841,7 +1098,9 @@ impl Transect {
 /// world.
 ///
 /// **The two drop causes the previous construction had are now structurally
-/// absent** — a room always has three distinct mesh neighbours, so neither
+/// absent** — a room always has at least four distinct mesh neighbours (the
+/// whole edge prefix of `Facet::neighbors`; three before The Pavement), so
+/// neither
 /// "both probes in one room" (41 of 341 at half a room edge) nor "the pair is
 /// not a step" (307 of 341) can arise. That is the argument for building the
 /// step rather than probing for one: the drops it removes were the ones
@@ -982,7 +1241,7 @@ fn transects_with_strongest(
 ///
 /// So every pair here has **at least one room inside its own bank edge**
 /// (`|d| < channel_bands[1]`): the room the channel actually runs through, and
-/// one of its three mesh neighbours reading the same sign. **And both rooms'
+/// one of its mesh neighbours reading the same sign. **And both rooms'
 /// readings are of the same polyline**, so the gate's same-channel clause is
 /// satisfied by construction too. The band clause and the same-channel clause
 /// are both satisfied, the two rooms are edge-adjacent — a real step — and the
@@ -1066,7 +1325,7 @@ fn same_bank_neighbours_are_not_a_crossing() {
 ///
 /// `frac = |{v : Fordable(transect(v))}| / |V'|`, where `V` is the sampled
 /// vertices and `V'` the ones that yielded a usable transect. A transect is
-/// `Fordable` when at least one of the three mesh steps out of the channel room
+/// `Fordable` when at least one of the mesh steps out of the channel room
 /// can be waded (see [`Transect::verdict`]).
 ///
 /// # THE READING IS PARAMETER-DEPENDENT, AND THE PARAMETER IS THE STEP LENGTH
@@ -1226,6 +1485,45 @@ fn same_bank_neighbours_are_not_a_crossing() {
 ///     (* walk depth)
 ///   ```
 ///
+///   **THE MESH THIS WHOLE TABLE WAS MEASURED ON NO LONGER EXISTS (The
+///   Pavement, Task 3). The table is history; do not read any row as current.**
+///   Every figure above was taken on the icosahedral triangle lattice, where a
+///   room had **3 neighbours of 3 possible**. The base mesh is now a
+///   tangent-warped cube-sphere quad lattice and the neighbourhood is **8 of 8**
+///   (7 at a cube corner), so both the room a sample lands in and the set of
+///   steps out of it moved. Re-measured at walk depth on seed 42, `|V'| = 394`
+///   against the 395 the post-Task-3 row was taken over:
+///
+///   ```text
+///     walk-depth fordable fraction, same population size, mesh varied
+///       0.2228   recorded above (triangle lattice, 3 of 3 neighbours)
+///       0.3452   cube lattice, neighbourhood TRUNCATED to 3   <- geometry alone
+///       0.3807   cube lattice, the 4 edge neighbours
+///       0.4695   cube lattice, all 8 neighbours               <- what ships
+///   ```
+///
+///   **The isolation matters more than the headline, and it points the other
+///   way from the obvious guess.** Truncating today's neighbourhood back to
+///   three isolates the geometry change from the connectivity change: the
+///   geometry alone moves 0.2228 -> 0.3452 (+55% relative), and widening 3 -> 8
+///   adds 0.3452 -> 0.4695 (+36% relative). So the larger share of the movement
+///   is the base mesh, not the extra steps — a reader who attributed all of it
+///   to 8-connectivity would be wrong by roughly three-fifths.
+///
+///   **The assertion below still passes, which is exactly why this note is
+///   here.** §8's interval is `[0.10, 0.70]`; 0.4695 sits inside it as 0.2228
+///   did, so nothing goes red and a 2.11x relative move in the campaign's
+///   headline §8 number would otherwise be invisible. **No threshold was
+///   adjusted** — the interval is untouched and so is the criterion. A moved
+///   number here is a finding, not a failure (CLAUDE.md; decision 0016), and
+///   The Pavement's Task 10 owns the chronicle entry.
+///
+///   **THE SWEEP HAS NOT BEEN RE-TAKEN and the numbers above are walk depth
+///   only.** Which depth peaks, and whether the collapse at depth 15 is still
+///   absent, are open on the new mesh. Anyone quoting fordability as a function
+///   of traversal scale must re-run the sweep rather than carry the table below
+///   forward.
+///
 ///   The peak moved from depth 13 to **depth 14**, and the collapse to zero at
 ///   depth 15 — "by then no step spans the water", as this bullet used to read
 ///   — **no longer happens**. The mechanism is the width law, not the gate: a
@@ -1264,7 +1562,8 @@ fn same_bank_neighbours_are_not_a_crossing() {
 /// 2. the mesh-adjacency requirement was added, after which the surviving
 ///    population was 34 of 341 pairs and read **0.7059** — **also outside
 ///    [0.10, 0.70]**, i.e. a *falsifying* reading, not merely a thin one;
-/// 3. the transect was rebuilt around three mesh steps per vertex — **adopted
+/// 3. the transect was rebuilt around the mesh steps out of each vertex's room
+///    (three at the time, on the triangle lattice) — **adopted
 ///    directly after that falsifying reading** — giving **0.3372**, The Ford's
 ///    column in the sweep table above.
 ///
@@ -1622,10 +1921,26 @@ fn the_discharge_clause_makes_the_strongest_crossing_impassable() {
 /// drainage paths and shrinks catchments, so seed 42's loud vertices fell 34 → 16
 /// and strong crossings 8 → 2. `WATERFALL_MIN_DRAINAGE = 80` was calibrated
 /// against pre-epoch catchments and is now measuring a different world at the
-/// old scale. Lowering these floors to 16 and 2 would delete the only
+/// old scale. Lowering these floors would delete the only
 /// instrument that noticed, which is why they are deferred at their pre-epoch
 /// values rather than nudged — the `"PREREGISTERED, not met"` convention
 /// rostered in `cli/tests/heavy_tier.rs`.
+///
+/// # ONE OF THE TWO FLOORS IS NO LONGER UNMET (The Pavement, Task 11)
+///
+/// This test still fails, and it now fails on **one** assertion rather than
+/// two. `strong` moved **2 → 15** when the room mesh became a cube-sphere quad
+/// lattice, which is clear of `STRONG_CROSSINGS_FLOOR` (4) — run it with
+/// `--ignored` and the panic is the loud-vertices message alone. So the
+/// deferral's shape has changed: the crossing count is a WITNESS now (pinned
+/// by the test below), not a deferred criterion, and only
+/// `LOUD_REACH_VERTICES_FLOOR` still awaits the re-fit.
+///
+/// **Not a rescue, and the direction is the giveaway.** Nothing was lowered to
+/// let `strong` through — it rose past a floor that has not moved since it was
+/// authored, because a walker on a quad mesh meets more of the same water than
+/// a walker on a triangular one. `loud_vertices` is unchanged at 16, which is
+/// the honest reading of that: the NETWORK did not move, the reach did.
 ///
 /// The repair is to re-fit the threshold against post-epoch catchments under
 /// decision 0106's provenance discipline, with a census metric that makes the
@@ -1633,7 +1948,7 @@ fn the_discharge_clause_makes_the_strongest_crossing_impassable() {
 /// `MAP-waterfall-threshold-mis-scaled`. Because an ignored measurement stops
 /// being measured, [`the_loud_reach_population_is_pinned_as_a_witness`] runs
 /// always and pins what the world actually produces now.
-#[ignore = "PREREGISTERED, not met: awaits MAP-waterfall-threshold-mis-scaled (WATERFALL_MIN_DRAINAGE = 80 was calibrated on pre-epoch catchments; the sea-level epoch shortened drainage paths, so seed 42's loud vertices fell 34 -> 16 against a floor of 17 and strong crossings 8 -> 2 against a floor of 4, and lowering either floor would delete the only instrument that noticed)"]
+#[ignore = "PREREGISTERED, not met: awaits MAP-waterfall-threshold-mis-scaled (WATERFALL_MIN_DRAINAGE = 80 was calibrated on pre-epoch catchments; the sea-level epoch shortened drainage paths, so seed 42's loud vertices fell 34 -> 16 against a floor of 17, and lowering that floor would delete the only instrument that noticed. THE STRONG-CROSSINGS HALF OF THIS DEFERRAL HAS LAPSED: The Pavement's cube-sphere mesh moved that reading 2 -> 15, clear of its floor of 4 - 10 of the 13 is the base mesh and 3 is the widening from three neighbours to eight - so the loud-vertices floor alone is still unmet and this test now fails on one assertion, not two)"]
 #[test]
 fn the_world_still_produces_water_loud_enough_to_refuse() {
     let world = world();
@@ -1684,9 +1999,92 @@ fn the_world_still_produces_water_loud_enough_to_refuse() {
 /// The two integers are pinned separately because they fail differently:
 /// `loud_vertices` is a fact about the network (how much loud water exists at
 /// all) and `strong` is a fact about reachability (how much of it a walker
-/// meets). A correct re-fit of the threshold should move both; a change that
-/// moved only `strong` would be a sampling or transect regression, not the
-/// epoch.
+/// meets).
+///
+/// # THE DECISION RULE, WITH ITS THIRD ARM (The Pavement, Task 11)
+///
+/// It read as a binary and the binary was wrong. Three arms, not two:
+///
+/// 1. **Both integers move** → the threshold or the world's hypsometry moved.
+///    That is the epoch case, and the re-fit
+///    `MAP-waterfall-threshold-mis-scaled` calls for.
+/// 2. **Only `loud_vertices` moves** → the NETWORK moved (a channel-rendering
+///    or drainage change) while the walker's reach did not.
+/// 3. **Only `strong` moves** → the ground a walker WALKS ON moved, or the
+///    sampling did. These are not the same thing and the old rule collapsed
+///    them, naming only the second: *"a sampling or transect regression"*.
+///
+/// **Arm 3 is what actually happened, and following the old rule would have
+/// sent the next reader hunting a bug that does not exist.** The mesh became a
+/// cube-sphere quad lattice and a transect's neighbourhood went from three of
+/// three to eight of eight; nothing about the discharge clause, the threshold,
+/// the sampling rule or the criterion changed. Distinguishing arm 3's two
+/// halves is a measurement, not a judgement: vary the neighbourhood on the
+/// mesh and see whether the number tracks it (the table below does exactly
+/// that), and if it does, the transect construction is not what moved.
+///
+/// # THE WITNESS MOVED, AND HAS BEEN RE-STATED: `(16, 2)` -> `(16, 15)`
+///
+/// Task 3 measured this move and deliberately did NOT re-pin it, because this
+/// test's own failure message requires a coordinated re-statement across four
+/// sites in one commit. **That restraint was correct and this is the
+/// re-statement.** The four, all landing together:
+///
+/// 1. the pin below, `(16, 2)` -> `(16, 15)`;
+/// 2. the `#[ignore]` reason on
+///    [`the_world_still_produces_water_loud_enough_to_refuse`], which now
+///    records that its strong-crossings half has LAPSED;
+/// 3. that reason's verbatim copy in `cli/tests/suite/heavy_tier.rs`'s
+///    `EXPECTED_UNTOKENISED` roster, which is compared byte for byte;
+/// 4. the `MAP-waterfall-threshold-mis-scaled` row in
+///    `book/src/frontier/idea-registry.md`.
+///
+/// **What moved, and what did not.** `loud_vertices` is **unchanged at 16** —
+/// the network and the threshold did not move, and this campaign never touched
+/// either. `strong` went **2 -> 15**. Measured on seed 42 with the
+/// neighbourhood varied on today's mesh:
+///
+/// ```text
+///    2   recorded pin (triangle lattice, 3 neighbours of 3 possible)
+///   12   cube lattice, neighbourhood TRUNCATED to 3   <- geometry alone
+///   13   cube lattice, the 4 edge neighbours
+///   15   cube lattice, all 8 neighbours               <- what ships
+/// ```
+///
+/// # DO NOT READ THIS AS "8-CONNECTIVITY MOVED THE WATER"
+///
+/// The obvious attribution is wrong, and the decomposition above is the whole
+/// reason this paragraph is here. **Of the 13-crossing rise, 10 is the base
+/// cube mesh and 3 is the widening from three steps to eight** — the mesh is
+/// roughly three quarters of it and the connectivity change is the remainder.
+/// The same split appears in the fordable fraction, measured independently:
+///
+/// ```text
+///   0.2228  triangle lattice
+///   0.3452  cube lattice, geometry alone
+///   0.3807  cube lattice, the four edge neighbours
+///   0.4695  cube lattice, all eight
+/// ```
+///
+/// **A 2.11x total move of which the base mesh is roughly HALF — 49.6%, not
+/// the "three fifths" this doc said until the Task 11 fix round.** The
+/// arithmetic is `(0.3452 - 0.2228) / (0.4695 - 0.2228) = 0.1224 / 0.2467`;
+/// carrying it out to the four-edge rung gives 64.0%, and the eight-way
+/// widening is the remaining 36.0%. The crossings gloss above is a different
+/// number and IS right: 10 of 13 is 76.9%, roughly three quarters.
+///
+/// The correction matters in the same direction the paragraph does, and less
+/// strongly than it claimed: a reader who concludes that letting a walker step
+/// diagonally is what made the world's water fordable has still attributed the
+/// larger half of a base-geometry change to a neighbourhood change — but it is
+/// a half, not three fifths, and on this measure the two causes are nearer to
+/// equal than the crossings count suggests.
+///
+/// The base mesh is a tangent-warped cube-sphere quad lattice (The Pavement,
+/// Tasks 1-2) and the transect's neighbourhood is now 8 of 8 rather than 3 of
+/// 3 (`Transect`'s own doc carries the ruling and the reason). Not a fix and
+/// not a tuning: nothing about the discharge clause, the threshold, the
+/// sampling rule or the criterion changed.
 #[test]
 fn the_loud_reach_population_is_pinned_as_a_witness() {
     let world = world();
@@ -1711,13 +2109,15 @@ fn the_loud_reach_population_is_pinned_as_a_witness() {
         .collect();
     assert_eq!(
         (loud_vertices.len(), strong),
-        (16, 2),
+        (16, 15),
         "the post-epoch loud-reach population moved: {} loud vertices and {strong} strong \
-         crossings, against the pinned (16, 2). This is NOT a number to update — re-read the \
+         crossings, against the pinned (16, 15). This is NOT a number to update — re-read the \
          catchment scale, then re-state this witness, the #[ignore] reason on \
          the_world_still_produces_water_loud_enough_to_refuse, its roster entry in \
-         cli/tests/heavy_tier.rs and the MAP-waterfall-threshold-mis-scaled registry row in the \
-         SAME commit.",
+         cli/tests/suite/heavy_tier.rs and the MAP-waterfall-threshold-mis-scaled registry row \
+         in the SAME commit. Before deciding which of the three arms of the rule above you are \
+         in, vary the neighbourhood on the mesh and see whether the number tracks it — that is \
+         what separates a mesh change from a transect regression.",
         loud_vertices.len()
     );
 }
@@ -1741,11 +2141,21 @@ fn the_loud_reach_population_is_pinned_as_a_witness() {
 /// traversal unit changed, which is precisely what §8 claims to measure.
 ///
 /// The references are outside `crossing_between`: the step lengths at each
-/// depth come from the mesh (`Transect::step_lengths`, which is the same
-/// `min(home, step)` the gate prices against — not the home room's edge alone,
-/// which would be a different quantity), the channel width from the network's
-/// own `band_edges`, and every pair is required to be QUIET (`Q` below the
-/// discharge threshold) so the other clause cannot be what flipped the verdict.
+/// depth come from the mesh and the channel widths from the network's own
+/// `band_edges`, both assembled by `Transect::width_pricing` so that they are
+/// the same operands the gate compares — `min(home, step)` per step against the
+/// full width of every reach the two rooms' readings win, not the home room's
+/// edge alone and **not the transected reach's width**, each of which is a
+/// different quantity. Every pair is also required to be QUIET (`Q` below the
+/// discharge threshold) over those same readings, so the other clause cannot be
+/// what flipped the verdict, and to price the same set of polylines at both
+/// depths, so "the same water" is asserted rather than assumed.
+///
+/// **The width operand was wrong until The Pavement's absorb-water task**, and
+/// `Transect::width_pricing`'s doc carries the instrumented evidence: the filter
+/// read the transected reach's width while the gate priced whichever reach each
+/// room independently won, so the control was describing different water from
+/// the one it asserted about.
 #[test]
 fn the_width_clause_binds_when_the_step_shrinks() {
     let world = world();
@@ -1753,14 +2163,22 @@ fn the_width_clause_binds_when_the_step_shrinks() {
     let shallow_depth = walk_depth(&ctx);
     let deep_depth = shallow_depth + 3;
     // 1600, not the 400 the other tests sample. Once the network renders the
-    // whole land flow tree, the qualifying population — reaches whose full
-    // width falls BETWEEN the deep step and the shallow one — is a shrinking
-    // fraction of a growing sample: 96 of 400 (24%) when only river vertices were
-    // rendered, 37 of 400 (9%) now, because a headwater creek is narrower than
-    // both steps and is filtered out at the `wide >= longest_deep` clause. The
-    // rate is the measurement; the count is the anti-vacuity floor, and it is
-    // restored by sampling more rather than by lowering the floor. Both depths
-    // take the same `wanted` so the two strides agree and the vertices match.
+    // whole land flow tree, the qualifying population — pairs whose priced
+    // reaches all fall BETWEEN the deep step and the shallow one — is a
+    // fraction of a growing sample, because a headwater creek narrower than
+    // both steps is filtered out at the `width_refuses` clause. The rate is the
+    // measurement; the count is the anti-vacuity floor, and it is restored by
+    // sampling more rather than by lowering the floor. Both depths take the same
+    // `wanted` so the two strides agree and the vertices match.
+    //
+    // **THE HISTORICAL RATES HERE DO NOT CARRY ACROSS THE OPERAND FIX.** This
+    // comment used to read "96 of 400 (24%) when only river vertices were
+    // rendered, 37 of 400 (9%) now". Both were measured with the transected
+    // reach's width as the filter's operand, which is not a quantity the gate
+    // prices (see `Transect::width_pricing`), so they are rates of a different
+    // criterion and are recorded here as history rather than as a baseline. On
+    // the corrected operand the qualifying population is 488 of 1600 sampled
+    // vertices, all 488 of which flip — measured, not projected.
     let wanted = 1_600;
     let (shallow, _, _) = transects_at(&ctx, wanted, shallow_depth);
     let (deep, _, _) = transects_at(&ctx, wanted, deep_depth);
@@ -1771,25 +2189,50 @@ fn the_width_clause_binds_when_the_step_shrinks() {
         let Some(b) = deep.iter().find(|b| b.polyline_at == a.polyline_at) else {
             continue;
         };
-        // Same reach, so same discharge; require it QUIET, so the discharge
-        // clause is satisfied at both depths and cannot be the cause.
-        if ctx.terrain().drainage_at(a.vertex) >= WATERFALL_MIN_DRAINAGE {
+        // The clause must actually flip between the two steps, or this pair has
+        // nothing to say about it — and the flip must be stated over the
+        // quantities the GATE compares: per step, `min(home, step)` against the
+        // full width of every reach the two rooms' own readings win. Shallow:
+        // every priced width must clear EVERY step, so no step can be refused
+        // on width. Deep: none may, so no step can be admitted on width.
+        // Anything between is a pair the width clause decides only for some of
+        // the steps, which cannot support an assertion about the transect's
+        // single verdict.
+        //
+        // **THE WIDTH USED TO BE `2.0 * a.edges[0]` AND THAT WAS THE BUG** —
+        // the transected reach's width, which `crossing_between` never looks
+        // at. `Transect::width_pricing`'s doc carries the instrumented
+        // counter-example (`Vertex(2656)`: six different channels in one
+        // eight-neighbourhood, the fordable one less than half the width the
+        // filter was reading) and the refutation of the `sqrt(2)`-diagonal
+        // hypothesis. This is the test's model of the gate being corrected, not
+        // the gate: the verdict under test was right and the filter was
+        // describing different water. Both arms now cover EVERY step
+        // `verdict()` prices, which is the property the count-derived-from-
+        // `steps` rule above exists to keep.
+        let shallow_steps = a.width_pricing(&ctx);
+        let deep_steps = b.width_pricing(&ctx);
+        // Require it QUIET at both depths, over the readings the gate actually
+        // prices rather than over the transected vertex's own drainage, so the
+        // discharge clause is satisfied throughout and cannot be the cause.
+        if !shallow_steps.iter().all(|p| p.quiet) || !deep_steps.iter().all(|p| p.quiet) {
             continue;
         }
-        let wide = 2.0 * a.edges[0];
-        // The clause must actually flip between the two steps, or this pair has
-        // nothing to say about it — and the flip must be stated over the step
-        // lengths the GATE prices against (`min(home, step)` per step), not
-        // over the home room's edge alone. Shallow: the width must clear EVERY
-        // step, so no step can be refused on width. Deep: it must clear NONE,
-        // so no step can be admitted on width. Anything between is a pair the
-        // width clause decides only for some of the three steps, which cannot
-        // support an assertion about the transect's single verdict.
-        let shallow_steps = a.step_lengths();
-        let deep_steps = b.step_lengths();
-        let shortest_shallow = shallow_steps.iter().copied().fold(f64::INFINITY, f64::min);
-        let longest_deep = deep_steps.iter().copied().fold(0.0_f64, f64::max);
-        if !(wide < shortest_shallow && wide >= longest_deep) {
+        if !shallow_steps.iter().all(StepPricing::width_admits)
+            || !deep_steps.iter().all(StepPricing::width_refuses)
+        {
+            continue;
+        }
+        // THE SAME WATER, asserted rather than assumed. The control's claim is
+        // that only the traversal unit changed, so the two depths must price
+        // the same set of reaches; a grid vertex is not that identity (it
+        // carries one polyline vertex per run terminating on it), and neither is
+        // the sampled polyline (the rooms win their own lines). The winning
+        // lines are.
+        let lines_of = |ps: &[StepPricing]| -> std::collections::BTreeSet<usize> {
+            ps.iter().flat_map(|p| p.lines.iter().copied()).collect()
+        };
+        if lines_of(&shallow_steps) != lines_of(&deep_steps) {
             continue;
         }
         let (near, far) = (a.verdict(&ctx), b.verdict(&ctx));
@@ -1803,17 +2246,21 @@ fn the_width_clause_binds_when_the_step_shrinks() {
         assert_eq!(
             near,
             Crossing::Fordable,
-            "vertex {:?}: full width {wide:e} is below every {shallow_depth}-depth step (shortest \
-             {shortest_shallow:e}) and the water is quiet, yet the crossing is {near:?}",
+            "vertex {:?} (polyline {:?}): every reach priced at {shallow_depth}-depth is narrower \
+             than its own step and every one is quiet, so no step can be refused — yet the \
+             crossing is {near:?}. Pricing: {shallow_steps:?}",
             a.vertex,
+            a.polyline_at,
         );
         assert_eq!(
             far,
             Crossing::Impassable,
-            "vertex {:?}: the SAME water, full width {wide:e}, is wider than every {deep_depth}-\
-             depth step (longest {longest_deep:e}) — yet the crossing is {far:?}, so the width \
-             clause is not deciding anything",
+            "vertex {:?} (polyline {:?}): the SAME reaches ({:?}), every one at least as wide as \
+             its own {deep_depth}-depth step, so no step can be admitted — yet the crossing is \
+             {far:?}, so the width clause is not deciding anything. Pricing: {deep_steps:?}",
             a.vertex,
+            a.polyline_at,
+            lines_of(&deep_steps),
         );
         flipped += 1;
     }

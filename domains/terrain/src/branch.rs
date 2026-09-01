@@ -320,22 +320,31 @@ pub fn vertex_catchment(geo: &Geosphere) -> f64 {
     4.0 * std::f64::consts::PI / geo.vertex_count() as f64
 }
 
-/// The room's own angular spacing, radians: the mean of the three arc lengths
-/// of its own triangle at its own depth.
+/// The room's own angular spacing, radians: the mean of the four arc lengths
+/// of its own quad at its own depth.
 ///
 /// **Carried forward from the construction this module replaces, because the
-/// obligation it serves is unchanged**: a room's corners are mesh *vertices*,
-/// so at a `Geosphere`'s own level a room's three edges are three
-/// vertex-to-vertex separations — the same quantity `channel.rs`'s `vertex_spacing`
-/// averages, taken around a face instead of around a vertex. Below vertex scale
-/// there is no `Geosphere` to ask (level 12 would be `10·4¹² + 2` vertices), so
-/// this is how a room-scale area or spacing is obtained. `tests/` anchors it
-/// absolutely against [`Geosphere::position`], because a parent/child ratio
-/// cannot see a spacing derived one level off — the factor cancels.
+/// obligation it serves is unchanged**: a room-scale length is needed below
+/// vertex scale, where there is no `Geosphere` to ask (level 12 would be
+/// `10·4¹² + 2` vertices), so it is taken around the room's own quad — the
+/// same quantity `channel.rs`'s `vertex_spacing` averages around a vertex.
+/// `tests/` anchors it absolutely against [`Geosphere::position`], because a
+/// parent/child ratio cannot see a spacing derived one level off — the factor
+/// cancels.
+///
+/// **The justification this doc used to give is retired with the triangle.**
+/// It read "a room's corners are mesh *vertices*, so at a `Geosphere`'s own
+/// level a room's three edges are three vertex-to-vertex separations" — which
+/// is decision 0287's corner-is-a-vertex corollary, retired by The Pavement
+/// (spec section 7's H3a). A cube-sphere quad's corners are not geosphere
+/// vertices at any level, so this is no longer a vertex separation even at the
+/// globe level; it is the room's own edge length, which is what every caller
+/// actually wanted. The mean over four edges rather than three is the only
+/// change to the value.
 /// type-audit: pending(wave-1: return)
 pub fn room_spacing(addr: &Facet) -> f64 {
-    let [a, b, c] = addr.corners();
-    (angle(a, b) + angle(b, c) + angle(c, a)) / 3.0
+    let [a, b, c, d] = addr.corners();
+    (angle(a, b) + angle(b, c) + angle(c, d) + angle(d, a)) / 4.0
 }
 
 /// Dot product of two 3-vectors.

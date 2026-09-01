@@ -114,7 +114,7 @@ fn no_reachable_cost_differs_by_a_tick_on_any_admitted_world() {
     for day in admitted_day_ticks() {
         for mass in [0.001, 1.0, REFERENCE_MASS_KG, 1_000.0, HEAVIEST_SPECIES_KG] {
             for terrain in [1.0, 2.0, MAX_CLIMB_FACTOR] {
-                let cost = cost_of(&mv, mass, terrain);
+                let cost = cost_of(&mv, mass, terrain, 1.0);
                 checked += 1;
                 // The round trip the old bridge made, now expressed through
                 // the kernel's own hatch: a span out to continuous days and
@@ -150,10 +150,10 @@ fn no_reachable_cost_differs_by_a_tick_on_any_admitted_world() {
 #[test]
 fn a_move_costs_the_same_span_on_every_world() {
     let mv = move_action();
-    let reference = cost_of(&mv, REFERENCE_MASS_KG, 1.0);
+    let reference = cost_of(&mv, REFERENCE_MASS_KG, 1.0, 1.0);
     for day in admitted_day_ticks() {
         assert_eq!(ticks_per_local_day(Some(day)), day.ticks());
-        assert_eq!(cost_of(&mv, REFERENCE_MASS_KG, 1.0), reference);
+        assert_eq!(cost_of(&mv, REFERENCE_MASS_KG, 1.0, 1.0), reference);
     }
 }
 

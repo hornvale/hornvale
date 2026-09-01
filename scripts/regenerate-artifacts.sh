@@ -342,8 +342,33 @@ gen_possession_overtime() {
 # then "You take the key.", eighteen moves apart, with nothing between them
 # but the ledger.
 #
+# SEED 14, NOT 1, SINCE THE PAVEMENT — AND THE PAIRING WITH
+# `windows/vessel/tests/suite/strongbox_reachability.rs` IS THE POINT. A
+# structure's chambers are drawn from its room's seed, the epoch moved every
+# room address, and so which seeds draw a `Store` room is NOT preserved across
+# one. Seed 1's flagship dwelling now draws three chambers — screen, alcove,
+# loomroom — and no strongbox at all, so this page regenerated onto a
+# transcript in which `open a strongbox` answers "You see no a strongbox here."
+# five times while the caption below still promised a lid refusal and two keys.
+# `strongbox_reachability.rs` had ALREADY moved to seed 14 for exactly this
+# reason (its `CHAMBERED_SEED` doc records the sweep); this generator had not,
+# and that split — one instrument about the property re-pointed, its published
+# evidence left behind — is what let a gutted page through a green suite.
+#
+# Independently re-measured here before the move: over seeds 1..=60, the seeds
+# whose flagship dwelling draws a strongbox AND two key-bearing chambers AND no
+# key in the entrance chamber are 8, 14, 15, 23, 28, 31, 38, 49, 56, 58 — and
+# within 1..=20 that is {7, 8, 11, 14, 15}, reproducing `CHAMBERED_SEED`'s own
+# sweep exactly. 14 is the lowest that also draws the separate loomroom, which
+# is the one this script's third `enter further in` lands in.
+#
+# THE TRIPWIRE IS `strongbox_reachability.rs`'s OWN PREMISE GUARD, not this
+# comment: it asserts the chambered seed still composes a key and a strongbox
+# and fails loudly when it stops. Because the two now name the same seed, the
+# next epoch reddens a test instead of quietly hollowing out this page.
+#
 # ONE RUN, TWO ARTIFACTS. The same invocation writes the page and, through
-# `--snapshot`, the committed `session-seed-1-carrying.json` fixture — the one
+# `--snapshot`, the committed `session-seed-14-carrying.json` fixture — the one
 # artifact of `vessel/session/v2` in which `self.carrying` is NOT empty. Every
 # seed-42 fixture records a possession that never typed `take`, so all of them
 # carry `"carrying":[]`, which is exactly what a broken fold would emit too;
@@ -353,16 +378,16 @@ gen_possession_overtime() {
 gen_possession_carry() {
     local possess_tmp
     possess_tmp="$(mktemp)"
-    run -p hornvale -- possess --seed 1 --script scripts/possession-carry.txt \
-        --snapshot clients/game/core/tests/fixtures/session-seed-1-carrying.json \
+    run -p hornvale -- possess --seed 14 --script scripts/possession-carry.txt \
+        --snapshot clients/game/core/tests/fixtures/session-seed-14-carrying.json \
         > "$possess_tmp"
     # Retitled at this seam rather than in the command, the same move
     # `gen_possession_overtime` makes: `possess`'s own H1 is "A Possession of
-    # Seed 1 — day 0", and this page is defined by what it does, not the day
+    # Seed 14 — day 0", and this page is defined by what it does, not the day
     # it opens on.
-    printf '# A Possession of Seed 1 — a thing carried\n'
+    printf '# A Possession of Seed 14 — a thing carried\n'
     # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
-    printf '\n*(This transcript is frozen. It is the only gallery page that types the\ncustody verbs — `take`, `drop`, `put`, `open`, `close`, `carrying` — and it\nis the campaign'"'"'s thesis end to end: a key is picked up beside a loom two\nchambers into a hamlet dwelling, carried one room further, refused by a shut\nlid, and then used to open that chest. Two refusals are the evidence, not\nthe noise. `take a key` in the very first room answers \"You see no a key\nhere.\" — that room composes none, since The Custodian moved the key pattern\noff `Role::Threshold`, the one role every built structure has — which is\nwhat makes the closing beat, where a key set down in that same room is\npicked up again, a measurement rather than a reply. And `take a key` at the\nshut chest answers \"The key is shut away in something closed.\": the lid\nmeans something, and until The Chattel'"'"'s fix round it did not.*\n\n*A key on a floor is a stand-in for a PERSON, and reading it as a difficulty\nsetting is the mistake this page invites. The household that lives here\nwould hold its own key or stash it somewhere only a resident knows; the\ncustody mechanism for exactly that already exists and is body-agnostic. What\nis missing is the resident, so which rooms furnish a key is a\nprop-management knob for as long as nobody is home to carry one\n(`PLAY-key-placement-stands-in-for-a-resident`).*\n\n*Read the room descriptions as the GRAMMAR'"'"'s catalogue and not as an\ninventory, because that is what they are — and this dwelling has TWO keys,\nwhich is what makes the difference visible. Chamber prose renders the\npattern the room was composed from, never the ledger, so it moves for\nnobody: the storeroom lists \"a key\" while the chest is shut on it\n(`PLAY-closed-container-conceals-nothing`), and the front room says \"a\ndoorway and a screen\" on the last entry, silent about the key a player has\njust set down on its floor (`PLAY-room-prose-omits-what-the-ledger-holds`).\nBoth are the same absent read, and both are deferred with a priced bill\nrather than unnoticed.*\n\n*One more thing not to mistake for a bug: `close` does not re-lock. A lid\nand a lock are separate states, so the second `open` needs no key\n(decision 0399).)*\n'
+    printf '\n*(This transcript is frozen. It is the only gallery page that types the\ncustody verbs — `take`, `drop`, `put`, `open`, `close`, `carrying` — and it\nis the campaign'"'"'s thesis end to end: a key is picked up beside a loom two\nchambers into a village dwelling, carried one room further, refused by a shut\nlid, and then used to open that chest. Two refusals are the evidence, not\nthe noise. `take a key` in the very first room answers \"You see no a key\nhere.\" — that room composes none, since The Custodian moved the key pattern\noff `Role::Threshold`, the one role every built structure has — which is\nwhat makes the closing beat, where a key set down in that same room is\npicked up again, a measurement rather than a reply. And `take a key` at the\nshut chest answers \"The key is shut away in something closed.\": the lid\nmeans something, and until The Chattel'"'"'s fix round it did not.*\n\n*A key on a floor is a stand-in for a PERSON, and reading it as a difficulty\nsetting is the mistake this page invites. The household that lives here\nwould hold its own key or stash it somewhere only a resident knows; the\ncustody mechanism for exactly that already exists and is body-agnostic. What\nis missing is the resident, so which rooms furnish a key is a\nprop-management knob for as long as nobody is home to carry one\n(`PLAY-key-placement-stands-in-for-a-resident`).*\n\n*Read the room descriptions as the GRAMMAR'"'"'s catalogue and not as an\ninventory, because that is what they are — and this dwelling has TWO keys,\nwhich is what makes the difference visible. Chamber prose renders the\npattern the room was composed from, never the ledger, so it moves for\nnobody: the storeroom lists \"a key\" while the chest is shut on it\n(`PLAY-closed-container-conceals-nothing`), and the front room says \"a\ndoorway and a screen\" on the last entry, silent about the key a player has\njust set down on its floor (`PLAY-room-prose-omits-what-the-ledger-holds`).\nBoth are the same absent read, and both are deferred with a priced bill\nrather than unnoticed.*\n\n*One more thing not to mistake for a bug: `close` does not re-lock. A lid\nand a lock are separate states, so the second `open` needs no key\n(decision 0399).*\n\n*Seed 14, and it was seed 1 until The Pavement. A dwelling'"'"'s chambers are\ndrawn from its room'"'"'s seed, and that campaign moved every room address, so\nwhich seeds draw a strongbox is not preserved across an epoch — seed 1'"'"'s\nflagship dwelling now draws three chambers and no chest, and this page\nregenerated onto it with every beat below the loomroom answering \"You see no\na strongbox here.\" The seed moved to the one\n`windows/vessel/tests/suite/strongbox_reachability.rs` had already moved to\nfor the same reason, so the test that guards this shape and the page that\npublishes it now name the same world.)*\n'
     tail -n +2 "$possess_tmp"
     rm -f "$possess_tmp"
 }
@@ -875,13 +900,28 @@ gen_surrounds_flagship() {
     printf '$ hornvale scene surrounds --world world.json --render ascii\n'
     run -p hornvale -- scene surrounds --world "$wsky" --render ascii
 }
+# THE TWO OBSERVER IDS BELOW WERE RE-MINTED BY THE PAVEMENT, AND THE OLD ONES
+# ARE NOT MERELY STALE — THEY DO NOT DECODE. A room id packs its base face in
+# its low five bits; the occupancy lattice is a cube-sphere now, so `FacetId::
+# unpack` refuses any face >= 6, and the retired pair were faces 11 and 14 of
+# the icosphere. That refusal is decision 0189 working (a pre-flip address must
+# fail loudly, never decode into a valid-looking one) and it aborted this
+# script partway through until the ids were re-minted.
+#
+#   coastline  897392747 (face 11, depth 12) -> 3015902083 (face 3, depth 13)
+#   seam       724698318 (face 14, depth 12) -> 2290649216 (face 0, depth 13)
+#
+# The coastline observer keeps its GROUND: 3015902083 is the walk-depth room
+# containing 17.1745 N, 103.6804 W, the same point the old id addressed. The
+# seam observer could not — see `book/src/gallery/surrounds-seed-42.md`, which
+# states why in full.
 gen_surrounds_coastline() {
-    printf '$ hornvale scene surrounds --world world.json --room 897392747 --render ascii\n'
-    run -p hornvale -- scene surrounds --world "$wsky" --room 897392747 --render ascii
+    printf '$ hornvale scene surrounds --world world.json --room 3015902083 --render ascii\n'
+    run -p hornvale -- scene surrounds --world "$wsky" --room 3015902083 --render ascii
 }
 gen_surrounds_seam() {
-    printf '$ hornvale scene surrounds --world world.json --room 724698318 --render ascii\n'
-    run -p hornvale -- scene surrounds --world "$wsky" --room 724698318 --render ascii
+    printf '$ hornvale scene surrounds --world world.json --room 2290649216 --render ascii\n'
+    run -p hornvale -- scene surrounds --world "$wsky" --room 2290649216 --render ascii
 }
 
 echo "regenerate-artifacts: GROUP B+C — world readers and world-free dumps (parallel)" >&2
@@ -949,7 +989,11 @@ spawn run -p hornvale -- almanac --world "$wlocked" > book/src/gallery/almanac-s
 spawn run -p hornvale -- explain --world "$wsky" sky > book/src/gallery/explain-seed-42-sky.md
 spawn run -p hornvale -- gazetteer --world "$wsky" > book/src/gallery/gazetteer-seed-42.md
 spawn run -p hornvale -- dictionary --world "$wsky" > book/src/reference/dictionary-generated.md
-spawn run -p hornvale -- locale --world "$wsky" --room 1015166224 --json > book/src/reference/locale-seed-42.json
+# 1015166224 was face 16 of the icosphere and no longer decodes (see the
+# observer note above gen_surrounds_coastline). 2853504131 is the walk-depth
+# room containing the same point, 26.2560 N 132.4941 W — the same taiga
+# hollow, re-addressed.
+spawn run -p hornvale -- locale --world "$wsky" --room 2853504131 --json > book/src/reference/locale-seed-42.json
 spawn gen_possession_day0 > book/src/gallery/possession-seed-42.md
 
 # The committed session fixture (The Quire, Task 3): `hornvale-game-core`'s
@@ -1005,7 +1049,7 @@ spawn run -p hornvale -- possess --seed 42 --script scripts/possession-chamber.t
 
 spawn gen_chart_reference > clients/game/core/tests/fixtures/chart-reference-seed-42.txt
 
-spawn gen_possession_carry > book/src/gallery/possession-carry-seed-1.md
+spawn gen_possession_carry > book/src/gallery/possession-carry-seed-14.md
 spawn gen_possession_overtime > book/src/gallery/possession-over-time-seed-42.md
 spawn gen_history > book/src/gallery/history-seed-42.md
 spawn gen_connections > book/src/gallery/connections-seed-42.md

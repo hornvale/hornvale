@@ -169,6 +169,38 @@ pub fn what_moved(then: &BTreeMap<String, String>, now: &BTreeMap<String, String
 /// generic warning about an unspecified rearrangement. The subject varies with
 /// it — claiming the rooms rearranged when a deity-naming stream moved would
 /// be a new falsehood in place of the old vagueness.
+///
+/// # THE PAVEMENT'S EPOCH IS INVISIBLE TO THIS FUNCTION, AND THAT IS CORRECT
+///
+/// The Pavement (2026-08-31, decision
+/// [0506](../../docs/decisions/0506-the-occupancy-lattice-is-a-cube-sphere.md))
+/// replaced the occupancy lattice's triangular icosphere faces with
+/// cube-sphere quads and moved the walk band from `globe_level + 6` to
+/// `globe_level + 7` (decision 0511). Every `Facet` in the repository changed
+/// MEANING. `reload_notice` reports **nothing** about it, and a reader who
+/// expects otherwise has the mechanism backwards twice over:
+///
+/// 1. **This function diffs seed-derivation LABELS, and not one moved.** That
+///    is the campaign's load-bearing claim rather than an oversight: the
+///    occupancy lattice consumes no randomness, so terrain, climate and
+///    settlement all still generate on the icosphere from the same streams in
+///    the same order. Verified rather than asserted — `hornvale new --seed 42`
+///    at `origin/main` and on the branch produced BYTE-IDENTICAL world files
+///    (sha256 `e70ca3d0…`, 21,635 facts). A notice here would have been a
+///    falsehood, because the world genuinely did not move; only the addressing
+///    of where you stand in it did.
+/// 2. **A world file therefore reloads cleanly, because a genesis ledger
+///    carries no walk-band room ids.** What does NOT survive is anything that
+///    recorded a PLACE: a `vessel/session/v2` snapshot's `room/<id>` knowledge
+///    keys decode through `FacetId::unpack`, which refuses any face `>= 6`, so
+///    a pre-epoch session fails loudly with the key named
+///    (`windows/vessel/src/knowledge.rs`). That is decision 0189's shape and is
+///    the real protection; this function was never it.
+///
+/// The note is here rather than in a chronicle because this is where a future
+/// reader will come looking, having reasoned — correctly, from the code — that
+/// an epoch ought to produce a notice, and needing to learn that an epoch which
+/// moves no label is a real thing this project has now shipped once.
 /// type-audit: bare-ok(identifier-text: then), bare-ok(identifier-text: now), bare-ok(prose: return)
 pub fn reload_notice(
     then: &BTreeMap<String, String>,

@@ -10,6 +10,7 @@ pub mod band;
 pub mod claim;
 pub mod color;
 pub mod component;
+pub mod cube;
 pub mod derived;
 pub mod domain;
 pub mod ecology;
@@ -45,6 +46,7 @@ pub use color::{
     Signal, Spectrum, standard_observer,
 };
 pub use component::{Component, ComponentStore};
+pub use cube::{CUBE_FACES, face_unit, locate};
 pub use domain::{Domain, WorldContext};
 pub use ecology::{
     ANIMAL_PREY, AxisValence, CHEMOSYNTHATE, ConditionResponse, DETRITUS, DISTURBANCE, ENERGY,

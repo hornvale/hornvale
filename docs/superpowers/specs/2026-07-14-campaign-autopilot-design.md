@@ -110,8 +110,14 @@ the durable record.
 
 - **Fidelity cuts / accuracy tradeoffs** — always unpacked and brought to
   Nathan (standing rule).
-- **Census regen / AWS spend** — explicit authorization only (standing
-  rule).
+- **Census regen** — no longer a carve-out as of **decision 0514**
+  (2026-09-01). Dispatch `make sluice-census` without asking; every hazard
+  this clause named was closed by a later decision (0063, 0079, 0133, 0139,
+  0146), and a census pushes a branch, never `main`. Landing the moved
+  goldens is still gated by the merge queue and G6.
+- **AWS spend** — retired outright by decision 0063, which deleted the
+  spend. Recorded here rather than deleted so the amendment is visible to a
+  reader of the original.
 - **Destructive or externally visible actions** — force-pushes, deletions,
   publishing.
 

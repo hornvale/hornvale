@@ -222,7 +222,7 @@ mod tests {
         }
     }
 
-    const WALK: u32 = 12;
+    const WALK: u32 = 13;
 
     fn walk_addr() -> Facet {
         Facet {

@@ -2,11 +2,19 @@
 //! at higher on-tile density than the global lattice. Continuous layers are
 //! barycentrically interpolated between geosphere vertices (a smooth surface, not
 //! new physics — the ~110 km vertex spacing is the resolution floor); discrete
-//! layers stay nearest-vertex. The projection here is the normative one, shared
-//! byte-for-byte with the orrery's `cubeSphere.ts` and the reference page.
+//! layers stay nearest-vertex. **There is one projection in this repository, not
+//! two that happen to agree** (Spec §2.0): this module projects through
+//! `hornvale_kernel::cube` — the same tangent-warped cube-sphere the kernel's
+//! own `Facet` (`kernel/src/room.rs`) uses — rather than carrying its own copy,
+//! so a change to the
+//! projection (the warp function, the face basis, a seam special-case) cannot
+//! drift the two apart the way two independently-maintained copies eventually
+//! would. `region_and_room_project_through_the_same_function`
+//! (`windows/scene/tests/suite/one_projection.rs`) is the test that would catch
+//! a reintroduced fork.
 
 use crate::{RELIEF_LEGEND, SceneContext, SceneError, WaterfallPoint, relief_band};
-use hornvale_kernel::{Geosphere, NearestVertexIndex, Vertex, World, WorldTime};
+use hornvale_kernel::{Geosphere, NearestVertexIndex, Vertex, World, WorldTime, cube};
 use serde::Serialize;
 
 /// Deepest addressable quadtree level (the client clamps its own to ~18; this
@@ -18,43 +26,10 @@ pub const MAX_REGION_LEVEL: u32 = 24;
 /// type-audit: bare-ok(count)
 pub const MAX_REGION_SAMPLES: u32 = 256;
 
-/// The six cube-face bases `(n, u, v)`: a face point is `normalize(n + a·u + b·v)`
-/// for `(a, b) ∈ [-1, 1]²`. Identical to the orrery's `FACES`.
-const FACES: [[[f64; 3]; 3]; 6] = [
-    [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
-    [[-1.0, 0.0, 0.0], [0.0, -1.0, 0.0], [0.0, 0.0, 1.0]],
-    [[0.0, 1.0, 0.0], [-1.0, 0.0, 0.0], [0.0, 0.0, 1.0]],
-    [[0.0, -1.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, 1.0]],
-    [[0.0, 0.0, 1.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
-    [[0.0, 0.0, -1.0], [-1.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
-];
-
 /// A face parameter: `-1 + 2·(index + offset)/2^level`, a dyadic rational in
 /// [-1, 1]. `offset ∈ [0, 1]` walks a tile's edge.
 fn param(index: u32, offset: f64, level: u32) -> f64 {
     -1.0 + 2.0 * (f64::from(index) + offset) / (1u64 << level) as f64
-}
-
-/// The inverse of `face_unit`: which face a unit sphere position belongs to
-/// (the standard cube-map assignment — the face whose normal has the
-/// largest dot product with `p`) and its `(a, b)` parameters on that face.
-/// Exact for points not exactly on a face seam (measure zero); each `FACES`
-/// row is an orthonormal `(n, u, v)` triple, so `p·n = 1/|q|` and
-/// `p·u = a·(p·n)` where `q = n + a·u + b·v` is `face_unit`'s pre-normalized
-/// vector — dividing recovers `a` (and `b` likewise) exactly.
-/// Transcendental-free (dot products and one division), so cross-platform
-/// byte-identical.
-fn locate_on_cube(p: [f64; 3]) -> (usize, f64, f64) {
-    let dot = |x: [f64; 3], y: [f64; 3]| x[0] * y[0] + x[1] * y[1] + x[2] * y[2];
-    let (face, _) = FACES
-        .iter()
-        .enumerate()
-        .map(|(f, [n, _, _])| (f, dot(p, *n)))
-        .max_by(|a, b| a.1.total_cmp(&b.1))
-        .expect("FACES is nonempty");
-    let [n, u, v] = FACES[face];
-    let pn = dot(p, n);
-    (face, dot(p, u) / pn, dot(p, v) / pn)
 }
 
 /// Whether unit-sphere position `p` falls inside tile `addr`'s footprint —
@@ -62,7 +37,7 @@ fn locate_on_cube(p: [f64; 3]) -> (usize, f64, f64) {
 /// `(a, b)` range at `addr.level`/`addr.ix`/`addr.iy`), not a lat/lon
 /// approximation (which would distort near the poles and the antimeridian).
 fn tile_contains(addr: &RegionAddr, p: [f64; 3]) -> bool {
-    let (face, a, b) = locate_on_cube(p);
+    let (face, a, b) = cube::locate(p);
     if face != addr.face as usize {
         return false;
     }
@@ -71,16 +46,6 @@ fn tile_contains(addr: &RegionAddr, p: [f64; 3]) -> bool {
     let b_lo = param(addr.iy, 0.0, addr.level);
     let b_hi = param(addr.iy, 1.0, addr.level);
     (a_lo..=a_hi).contains(&a) && (b_lo..=b_hi).contains(&b)
-}
-
-/// The unit vector for face parameters `(a, b)`: `normalize(n + a·u + b·v)`.
-fn face_unit(face: usize, a: f64, b: f64) -> [f64; 3] {
-    let [n, u, v] = FACES[face];
-    let x = n[0] + a * u[0] + b * v[0];
-    let y = n[1] + a * u[1] + b * v[1];
-    let z = n[2] + a * u[2] + b * v[2];
-    let len = (x * x + y * y + z * z).sqrt();
-    [x / len, y / len, z / len]
 }
 
 /// One regional tile address (scene-protocol: The Region §3.1).
@@ -136,7 +101,7 @@ impl RegionAddr {
             let b = param(self.iy, f64::from(row) / f64::from(n), self.level);
             for col in 0..=n {
                 let a = param(self.ix, f64::from(col) / f64::from(n), self.level);
-                units.push(face_unit(face, a, b));
+                units.push(cube::face_unit(face, a, b));
             }
         }
         units
@@ -778,7 +743,7 @@ mod tests {
             .expect("seed 44 has river vertices (see the tiles_scene sibling test)");
         let pos = terrain.geosphere().position(river_vertex);
         let level = 3;
-        let (face, a, b) = locate_on_cube(pos);
+        let (face, a, b) = cube::locate(pos);
         let n = 1u64 << level;
         let ix = (((a + 1.0) * 0.5 * n as f64) as u64).min(n - 1) as u32;
         let iy = (((b + 1.0) * 0.5 * n as f64) as u64).min(n - 1) as u32;

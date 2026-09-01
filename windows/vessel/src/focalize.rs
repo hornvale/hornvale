@@ -185,7 +185,7 @@ fn height_phrase(h: SeaLevelHeight) -> String {
     // report came from sits 0.2 m under, and testing `m < 0.0` while formatting
     // `{:.0}` rendered it "0 m below sea level" — true, and unreadable. A place
     // within half a metre of the datum is simply at sea level, which is also the
-    // honest thing to say about a shoreline whose height is a three-corner blend
+    // honest thing to say about a shoreline whose height is a four-corner blend
     // and whose sign is not meaningful at that precision.
     if m.abs() < 0.5 {
         "at sea level".to_string()
