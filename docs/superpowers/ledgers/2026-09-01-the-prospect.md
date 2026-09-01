@@ -169,3 +169,34 @@ leaving it undeclared is the defect.
 **The uncomfortable part:** (b) is the "test whose input collapses to one value"
 shape, which is in my own memory notes with sixteen prior instances across two
 campaigns, and I wrote it into this plan the same afternoon.
+
+### #10 [G5] — `lattice/mod.rs`'s `built` check STAYS, and it vindicates the rename
+
+Task 2's review found a second site reading `brief.built` that the plan does not
+mention (`windows/vessel/src/lattice/mod.rs:398`):
+
+```rust
+pub fn embed_with(structure: &Structure, brief: &Brief, extent: Rect, seed: Seed) -> Lattice {
+    if brief.built { allocate(structure, extent, seed) }
+    else           { grow(structure, extent, seed) }
+}
+```
+
+**Decision:** `structure.rs`'s gate moves to `site`; this one stays on `built`.
+
+**Why:** it is not a gate at all — it is a generator dispatch. `allocate`
+produces rectilinear rooms, `grow` produces a non-convex blob. So the question
+it asks is "is this place CONSTRUCTED or NATURAL", which is exactly what `built`
+means and exactly the distinction a cave needs. Swapping it to
+`site.is_some()` would have generated every cave as a rectilinear building —
+a serious defect, and an easy one to introduce while doing a mechanical rename.
+
+**This vindicates decision 0536's shape.** Keeping `built` as a property of a
+settlement rather than deleting it looked like conservatism when the rename was
+proposed. It turns out to be load-bearing at precisely the site where a cave
+must diverge from a village, and the campaign gets that divergence for free
+because the two concepts were separated rather than merged.
+
+**Cost if wrong:** if `grow` turns out to be wrong for caves, the fix is a
+different generator, not a different predicate — the predicate is now asking
+the right question.
