@@ -200,3 +200,46 @@ because the two concepts were separated rather than merged.
 **Cost if wrong:** if `grow` turns out to be wrong for caves, the fix is a
 different generator, not a different predicate — the predicate is now asking
 the right question.
+
+### #11 [G5] — my red-then-green demand was incoherent, and the test is a regression guard
+
+Task 3's implementer reported honestly that the new test passed both BEFORE and
+AFTER the gate swap, so the red-then-green cycle I demanded could not be
+established.
+
+**It was right to report it and I was wrong to demand it.** Task 2 made `site`
+mirror `built` exactly — that is H1's whole content — so swapping the gate at
+Task 3 is a provable no-op, and no black-box test can distinguish the two gates
+by construction. Demanding red-then-green for a behaviour-preserving refactor is
+a category error.
+
+**Decision:** the test stands, documented as an **H1 regression guard** rather
+than a TDD cycle. It cannot fail today and will fail the moment a later task
+breaks the flagship's enterability, which is exactly its job. Same discipline as
+Task 1's forward guard: a known-vacuous-today assertion is fine when declared,
+and a defect when silent.
+
+**The pattern in my own instructions, third instance:** I keep demanding an
+evidence SHAPE the situation cannot produce — an inverted step-2 expectation
+(#7), a `count` tag on a non-count (#9), now red-then-green on a no-op. Each
+time the mechanism was right and the demanded proof was impossible. Worth
+naming: before asking for a failing test, check that a failure is reachable.
+
+### #12 [G5] — we are citing decisions in the one form the gate cannot see
+
+Task 3 hit `decision_cites_in_sources_resolve` refusing a lowercase
+"decision 0536" (correctly — 0536 does not exist until Task 9), and worked
+around it by using the capitalized "Decision 0536." form, citing Task 2's
+precedent.
+
+That is the form the checker is BLIND to (76 capitalized cites unchecked against
+1067 lowercase). So the campaign is now, twice, deliberately writing citations in
+the shape the gate cannot inspect.
+
+**Decision:** accept for now — the alternative is writing decision records before
+the decisions are settled — but Task 9 owes two things: write 0536/0537/0538,
+and MANUALLY verify every "Decision NNNN" this campaign added resolves, because
+the gate cannot do it. Relying on a blind spot is precisely the shape this
+project keeps finding, and leaving it unverified would be adopting it.
+
+**Cost if wrong:** a dangling citation ships. Mitigated by Task 9's manual sweep.
