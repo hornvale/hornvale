@@ -41,8 +41,12 @@ pub(crate) const AGENT_MARK_KIND: &str = "agent";
 /// would be two answers to one question, which is precisely the drift §6 exists
 /// to prevent.
 /// type-audit: bare-ok(identifier-text: label), bare-ok(identifier-text: species), bare-ok(prose: return)
-pub(crate) fn creature_datum(label: &str, species: &str) -> String {
-    format!("{label} — a {species} of this world, alive and moving.")
+pub(crate) fn creature_datum(label: &str, species: &str, carrying: &[&str]) -> String {
+    let base = format!("{label} — a {species} of this world, alive and moving.");
+    match crate::chamber_prose::listed(carrying) {
+        Some(held) => format!("{base} It is holding {held}."),
+        None => base,
+    }
 }
 
 /// The chart's centre address: `position` truncated `zoom_out` rungs
@@ -165,7 +169,11 @@ pub fn purview_scene(
             Mark {
                 noun: npc.label.clone(),
                 kind: AGENT_MARK_KIND.to_string(),
-                datum: creature_datum(&npc.label, &npc.species),
+                datum: {
+                    let held = crate::thing::carried_nouns(ledger, npc.entity, at);
+                    let nouns: Vec<&str> = held.iter().map(|(_, n)| *n).collect();
+                    creature_datum(&npc.label, &npc.species, &nouns)
+                },
                 salience: AGENT_SALIENCE,
             },
         ));

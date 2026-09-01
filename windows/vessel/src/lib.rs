@@ -33,6 +33,7 @@ pub mod snapshot;
 pub mod stance;
 pub mod streams;
 pub mod structure;
+pub mod tableau;
 pub mod testimony;
 pub mod thing;
 mod underground;
@@ -60,6 +61,7 @@ pub use snapshot::{
 };
 pub use streams::stream_labels;
 pub use structure::{MAX_CHAMBERS, Structure, structure_at};
+pub use tableau::{StagedBody, Tableau};
 pub use underworld_level::{
     Level, LevelCellKind, generate_descent, generate_descent_for_character, generate_level,
     generate_level_extent, generate_level_with_origin, generate_level_with_water,
@@ -206,6 +208,14 @@ pub struct PossessOpts {
     /// [`PossessTarget::Flagship`], byte-identical to the pre-existing
     /// behaviour.
     pub target: PossessTarget,
+    /// A staged situation, or `None` for an ordinary derived session (The
+    /// Tableau).
+    ///
+    /// Additive with a `Default`, so every existing construction site is
+    /// unchanged. When present the tableau's cast REPLACES the derived
+    /// roster — including when it is empty, which stages nobody rather than
+    /// inheriting the world's own inhabitants.
+    pub tableau: Option<crate::tableau::Tableau>,
 }
 
 impl Default for PossessOpts {
@@ -222,6 +232,7 @@ impl Default for PossessOpts {
             eyes: eyes::Eyes::Own,
             lens: lens::Lens::Off,
             target: PossessTarget::Flagship,
+            tableau: None,
         }
     }
 }

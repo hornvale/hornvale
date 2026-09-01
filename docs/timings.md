@@ -4589,6 +4589,15 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-08-31T17:52:37Z | sluice:gate | 540.762 | 16092.286 | 501.378 | 30.69 | 0 | 63a1906bf |  | lefford | 40 |
 | 2026-08-31T18:01:54Z | sluice:clients | 556.695 | 10021.147 | 114.148 | 18.21 | 0 | 94821b213 |  | lefford | 40 |
 | 2026-08-31T18:09:38Z | sluice:heavy | 463.918 | 9583.435 | 143.836 | 20.97 | 0 | 8b789fa84 |  | lefford | 40 |
+| 2026-09-01T00:56:43Z | gate-commit | 3.393 | 3.102 | 0.662 | 1.11 | 0 | 7c84f4a9e | campaign/the-tableau | MacBookPro | 10 |
+| 2026-09-01T00:57:38Z | gate-commit | 13.178 | 12.822 | 0.262 | 0.99 | 0 | 7c84f4a9e | campaign/the-tableau | MacBookPro | 10 |
+| 2026-09-01T00:59:11Z | gate-commit | 63.648 | 347.572 | 35.034 | 6.01 | 0 | 7c84f4a9e | campaign/the-tableau | MacBookPro | 10 |
+| 2026-09-01T02:58:21Z | gate-commit | 12.247 | 13.945 | 3.460 | 1.42 | 0 | 208efe4f1 | campaign/the-tableau | MacBookPro | 10 |
+| 2026-09-01T03:00:14Z | gate-commit | 52.941 | 238.254 | 32.945 | 5.12 | 0 | 208efe4f1 | campaign/the-tableau | MacBookPro | 10 |
+| 2026-09-01T03:10:11Z | rebaseline | 67.346 | 271.853 | 14.636 | 4.25 | 0 | 04e54de0d | campaign/the-tableau | MacBookPro | 10 |
+| 2026-09-01T03:11:39Z | gate-commit | 13.999 | 16.506 | 7.262 | 1.70 | 0 | 04e54de0d | campaign/the-tableau | MacBookPro | 10 |
+| 2026-09-01T03:12:52Z | gate-commit | 40.831 | 122.017 | 33.944 | 3.82 | 0 | 04e54de0d | campaign/the-tableau | MacBookPro | 10 |
+| 2026-09-01T09:29:40Z | rebaseline | 58.653 | 271.747 | 13.792 | 4.87 | 0 | aab262b76 | campaign/the-tableau | MacBookPro | 10 |
 | 2026-08-31T23:45:47Z | rebaseline | 77.182 | 316.094 | 16.187 | 4.31 | 0 | 6d1a1a4b3 | campaign/the-cartulary | MacBookPro | 10 |
 | 2026-08-31T23:47:59Z | gate-commit | 114.227 | 751.290 | 47.385 | 6.99 | 0 | 6d1a1a4b3 | campaign/the-cartulary | MacBookPro | 10 |
 | 2026-08-31T23:51:55Z | gate-commit | 25.019 | 56.061 | 14.006 | 2.80 | 0 | 0c3721621 | campaign/the-cartulary | MacBookPro | 10 |
@@ -4612,3 +4621,7 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-01T03:21:48Z | sluice:gate | 513.586 | 15891.460 | 467.275 | 31.85 | 0 | 1d651c153 |  | lefford | 40 |
 | 2026-09-01T03:30:51Z | sluice:clients | 543.642 | 9918.289 | 110.024 | 18.45 | 0 | 47a36edcf |  | lefford | 40 |
 | 2026-09-01T03:38:22Z | sluice:heavy | 450.131 | 9467.067 | 158.732 | 21.38 | 0 | 94e2d39ae |  | lefford | 40 |
+| 2026-09-01T09:32:15Z | gate-commit | 29.966 | 79.265 | 15.653 | 3.17 | 0 | 29eef338a | campaign/the-tableau | MacBookPro | 10 |
+| 2026-09-01T09:33:11Z | rebaseline | 47.173 | 272.375 | 14.251 | 6.08 | 0 | 79e5c287c | campaign/the-tableau | MacBookPro | 10 |
+| 2026-09-01T09:37:45Z | gate-commit | 22.227 | 53.805 | 13.732 | 3.04 | 0 | c5c058f99 | campaign/the-tableau | MacBookPro | 10 |
+| 2026-09-01T10:12:39Z | vessel-check | 41.260 | 58.438 | 2.700 | 1.48 | 0 | 481dac38d | campaign/the-tableau | MacBookPro | 10 |

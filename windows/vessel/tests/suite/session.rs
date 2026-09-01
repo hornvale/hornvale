@@ -25,6 +25,7 @@ fn opts() -> PossessOpts {
         eyes: hornvale_vessel::eyes::Eyes::Own,
         lens: hornvale_vessel::lens::Lens::Off,
         target: hornvale_vessel::PossessTarget::Flagship,
+        tableau: None,
     }
 }
 
@@ -284,6 +285,7 @@ fn the_stitch_law_end_to_end() {
             eyes: hornvale_vessel::eyes::Eyes::Own,
             lens: hornvale_vessel::lens::Lens::Off,
             target: hornvale_vessel::PossessTarget::Flagship,
+            tableau: None,
         },
     )
     .unwrap();
@@ -343,6 +345,7 @@ fn the_stitch_law_end_to_end() {
             eyes: hornvale_vessel::eyes::Eyes::Own,
             lens: hornvale_vessel::lens::Lens::Off,
             target: hornvale_vessel::PossessTarget::Flagship,
+            tableau: None,
         },
     )
     .unwrap();
@@ -429,6 +432,7 @@ fn run_drives_a_script_deterministically() {
             eyes: hornvale_vessel::eyes::Eyes::Own,
             lens: hornvale_vessel::lens::Lens::Off,
             target: hornvale_vessel::PossessTarget::Flagship,
+            tableau: None,
         },
         std::io::Cursor::new(script),
         &mut out_a,
@@ -443,6 +447,7 @@ fn run_drives_a_script_deterministically() {
             eyes: hornvale_vessel::eyes::Eyes::Own,
             lens: hornvale_vessel::lens::Lens::Off,
             target: hornvale_vessel::PossessTarget::Flagship,
+            tableau: None,
         },
         std::io::Cursor::new(script),
         &mut out_b,

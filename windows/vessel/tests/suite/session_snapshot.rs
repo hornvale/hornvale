@@ -73,6 +73,7 @@ fn opts() -> PossessOpts {
         eyes: hornvale_vessel::eyes::Eyes::Own,
         lens: hornvale_vessel::lens::Lens::Off,
         target: hornvale_vessel::PossessTarget::Flagship,
+        tableau: None,
     }
 }
 

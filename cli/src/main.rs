@@ -38,6 +38,7 @@ usage:
                                             narrate the sky's derivation, or the landscape's naming
   hornvale repl [--world <PATH>]           interrogate a world interactively
   hornvale possess (--world <PATH> | --seed <N>) [--day <D>] [--script <PATH>] [--out <PATH>]
+                                            [--tableau <PATH>]
                                             [--lens off|lantern]
                                             [--target flagship|most-populous-settlement]
                                             [--creature <ID>]
@@ -563,6 +564,29 @@ fn cmd_possess(args: &[String]) -> Result<(), String> {
         load_world(args)?
     };
     let day = parse_day_flag(args)?;
+    // The Tableau: a staged situation, read from a file. The file is a
+    // front-end over `Tableau`'s builder, never a second way to make one.
+    let tableau = match flag_value(args, "--tableau") {
+        Some(path) => {
+            let text = std::fs::read_to_string(path)
+                .map_err(|e| format!("reading tableau {path}: {e}"))?;
+            Some(
+                hornvale_vessel::Tableau::from_json(&text)
+                    .map_err(|e| format!("tableau {path}: {e}"))?,
+            )
+        }
+        None => None,
+    };
+    // A staged session must never write a saved world. Its situation was
+    // asserted by its author, not derived from the seed, so `--out` would put
+    // a world that never existed on disk in a form indistinguishable from one
+    // that did (spec §10.1's hazard through a different door).
+    if tableau.is_some() && flag_value(args, "--out").is_some() {
+        return Err("--tableau and --out are mutually exclusive: a staged \
+                    situation is not a world, and saving one would be \
+                    indistinguishable from saving a generated world"
+            .to_string());
+    }
     // Amendment 1 §1a.5: if an epoch moved something under a saved world's
     // feet, say so before the first turn instead of silently rearranging
     // someone's memory of a place. A `--seed` build is derived here and now,
@@ -650,6 +674,7 @@ fn cmd_possess(args: &[String]) -> Result<(), String> {
             eyes: hornvale_vessel::eyes::Eyes::Own,
             lens: lens(hornvale_vessel::lens::Lens::Off)?,
             target,
+            tableau: tableau.clone(),
         };
         let session = drive_session(&world, &opts, std::io::Cursor::new(script), &mut out)?;
         writeln!(out, "```").map_err(|e| e.to_string())?;
@@ -666,6 +691,7 @@ fn cmd_possess(args: &[String]) -> Result<(), String> {
             eyes: hornvale_vessel::eyes::Eyes::Own,
             lens: lens(hornvale_vessel::lens::Lens::Lantern)?,
             target,
+            tableau: tableau.clone(),
         };
         let session = drive_session(&world, &opts, stdin.lock(), stdout.lock())?;
         if let Some(path) = snapshot_path {
