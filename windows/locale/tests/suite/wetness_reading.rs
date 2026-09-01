@@ -87,7 +87,7 @@ use hornvale_climate::BiomeExpr;
 use hornvale_climate::variants::{GroundKind, Variant, variant_pool};
 use hornvale_kernel::{Facet, Seed, World, WorldTime};
 use hornvale_locale::{Locale, LocaleContext, grounded_wetness, wetness_is_grounded};
-use hornvale_terrain::branch::{CatchmentCut, rill_reading};
+use hornvale_terrain::branch::{CatchmentCut, RillReading, rill_reading};
 
 // THE COMMITTED FIXTURES HAVE NO READER IN THIS FILE ANY MORE, AND THAT IS
 // THE END STATE OF THE PAVEMENT'S TASK 11 RULING RATHER THAN AN OVERSIGHT.
@@ -521,17 +521,49 @@ fn descending_walks_of_the_required_length_exist() {
 /// 0.5018, and adding the coarse trunk's own `channel_distance`/`channel_bands`
 /// to the allocation changes nothing.
 ///
-/// **That trunk result is conditional on this walk population, and the
-/// condition is not incidental.** The walks are seeded at rill polyline *heads*,
-/// so they sample headwater terrain, where a trunk is exactly what one does not
-/// expect to find. This test therefore prints how many rooms fall inside a
-/// trunk band in the walk sample *and* in the fixture's independent `land`
-/// sample, and asserts the two disagree — the world does contain rooms inside a
-/// trunk's floodplain (seed 42's flagship room 750518284 has a
-/// `channel_distance` of 5.27e-4 rad against a terrace/dry edge of 2.30e-3),
-/// and the walks simply do not visit them. The honest claim is "adding the
-/// trunk changes nothing **on walks seeded at rill heads**", not "the trunk is
-/// inert".
+/// # The trunk null was falsified by The Pavement, in the direction nobody
+/// # was watching
+///
+/// **The paragraph this replaces said the trunk result was conditional on the
+/// walk population, and both halves of that are now measured false.** It read:
+/// *"The walks are seeded at rill polyline heads, so they sample headwater
+/// terrain, where a trunk is exactly what one does not expect to find … the
+/// walks simply do not visit them. The honest claim is 'adding the trunk
+/// changes nothing on walks seeded at rill heads', not 'the trunk is inert'."*
+/// It is left quoted rather than deleted, because it is a true statement about
+/// the icosphere walk band at `globe_level + 6` and it is what a reader of The
+/// Rill's chronicle will arrive holding.
+///
+/// On the cube-sphere walk band at `globe_level + 7` (decisions 0506, 0511):
+///
+/// 1. **The attribution is reversed, not merely weakened.** Rill-head walks
+///    enter a coarse trunk's band on **96 of 448** rooms (21.4%) against an
+///    independent 1,048-room land spread's **74** (7.1%) — **3.0x** the rate,
+///    where the old reading needed them to be trunk-poor. Both figures are
+///    printed by this test.
+/// 2. **"Adding the trunk changes nothing" is false.** The trunk term is
+///    active on 96 walk rooms and reverses **49 of 420** step verdicts. It is
+///    not near-inert the way the rill allocation is (65 rooms, 55 flips, whose
+///    reversals nearly cancel); the trunk's do not cancel.
+/// 3. **It changes things for the worse.** The descending-step fraction goes
+///    0.7405 (rill only) to **0.6452** (trunk swapped in) and **0.6286**
+///    (whichever watercourse is nearer as a fraction of its own valley) —
+///    further from R-7's 0.80 floor, not nearer. The supply alone still leads
+///    every arm at 0.7714.
+///
+/// **So the conclusion The Rill's null was carrying survives and is
+/// strengthened, while the null itself does not.** "The coarse trunk does not
+/// rescue R-7" is no longer a statement about a term nobody could reach on
+/// this population; it is a measured cost, taken on a population enriched in
+/// exactly the rooms the term needs. That is the stronger claim, and it is
+/// asserted below rather than reported.
+///
+/// **One reading of the mechanism, marked as unmeasured.** A trunk's valley is
+/// far wider than a rill's, so along a walk that lies inside one the proximity
+/// term saturates and stops varying, flattening the rill signal the arm was
+/// carrying. Plausible, consistent with all three numbers above, and NOT
+/// measured here — a campaign wanting it should measure the term's variance
+/// along a walk, not cite this sentence.
 ///
 /// # The obstacle is a scale measurement, not a choice of constant
 ///
@@ -556,10 +588,13 @@ fn descending_walks_of_the_required_length_exist() {
 /// What replaces them is the claim itself rather than a witness to it, asserted
 /// on a population rebuilt live: R-7's floor is now **asserted to be missed**
 /// rather than merely reported (the null is the headline, so it should be the
-/// assertion), the allocation is asserted non-inert, the trunk conditionality
-/// is asserted as before, and the supply-beats-chance-and-beats-emitted claim
-/// is asserted where the measurement supports it. All four are world-
-/// independent: none of them names a count this world happens to produce.
+/// assertion), the allocation is asserted non-inert, and the
+/// supply-beats-chance-and-beats-emitted claim is asserted where the
+/// measurement supports it. All are world-independent: none of them names a
+/// count this world happens to produce. **The trunk conditionality is no
+/// longer among them** — The Pavement measured it false and replaced it with
+/// the trunk term's own materiality and floor-miss; see the trunk section
+/// above.
 ///
 /// The `before (noise)` arm is also gone. It read the fixture's captured
 /// `wetness` — pure pre-Rill address noise — and there is no way to re-derive
@@ -614,6 +649,14 @@ fn a_walk_gets_damper_as_it_descends() {
         grounded: f64,
         /// The budget alone — this campaign's allocation term deleted.
         supply_only: f64,
+        /// The allocation fed the **coarse trunk's** own reading instead of
+        /// the sub-vertex rill's — the arm The Rill's "adding the trunk
+        /// changes nothing" was measured on.
+        trunk_only: f64,
+        /// The allocation fed whichever of the two watercourses is nearer as
+        /// a fraction of its own valley: the "add the trunk to the
+        /// allocation" arm, rather than "swap it in".
+        rill_or_trunk: f64,
         /// Whether the grounding writes to this room at all.
         in_scope: bool,
     }
@@ -622,6 +665,14 @@ fn a_walk_gets_damper_as_it_descends() {
     // supply. If this is zero the "supply beats chance" assertion below is
     // being satisfied by a term that predates this campaign entirely.
     let mut allocation_active = 0usize;
+    // The same materiality question asked of the TRUNK term: rooms where
+    // feeding the allocation the coarse trunk's reading moves the value away
+    // from the supply at all. If this is zero, "the trunk arm misses R-7's
+    // floor" is satisfied by an arm that is a copy of the supply, and the
+    // claim below is vacuous. This is the premise the dead
+    // `trunk_in_land > trunk_in_walks` guard used to carry, stated in the
+    // TERM rather than in the SAMPLE — see this test's doc comment.
+    let mut trunk_active = 0usize;
     let mut trunk_in_walks = 0usize;
     let mut per_walk: Vec<Vec<Reading>> = Vec::new();
     for w in &walks {
@@ -645,8 +696,19 @@ fn a_walk_gets_damper_as_it_descends() {
                 ),
             );
             let supply_only = grounded_wetness(loc.fields.moisture, None);
+            let trunk_only = grounded_wetness(loc.fields.moisture, trunk_reading(&loc));
+            // `grounded_wetness` is monotone increasing in its proximity term
+            // for a fixed supply (`2*(s + (1-s)*p) - 1`), so the greater of
+            // the two grounded values IS the value the greater of the two
+            // proximities would give. Taking the max here rather than
+            // reimplementing a two-watercourse proximity keeps this arm
+            // inside the model's own function.
+            let rill_or_trunk = grounded.max(trunk_only);
             if grounded != supply_only {
                 allocation_active += 1;
+            }
+            if trunk_only != supply_only {
+                trunk_active += 1;
             }
             if inside_a_trunk_band(&loc) {
                 trunk_in_walks += 1;
@@ -655,6 +717,8 @@ fn a_walk_gets_damper_as_it_descends() {
                 emitted: loc.regime.micro.wetness,
                 grounded,
                 supply_only,
+                trunk_only,
+                rill_or_trunk,
                 in_scope: wetness_is_grounded(BiomeExpr::for_legacy(loc.biome_kind)),
             });
         }
@@ -663,19 +727,26 @@ fn a_walk_gets_damper_as_it_descends() {
     let walk_rooms: usize = per_walk.iter().map(Vec::len).sum();
 
     // (kept, total) per arm, over all steps and over in-scope steps only.
-    let mut all = [(0usize, 0usize); 3];
-    let mut scoped = [(0usize, 0usize); 3];
+    let mut all = [(0usize, 0usize); 5];
+    let mut scoped = [(0usize, 0usize); 5];
     let mut allocation_flips = 0usize;
+    let mut trunk_flips = 0usize;
     for w in &per_walk {
         for p in w.windows(2) {
             let arms = [
                 p[1].emitted >= p[0].emitted,
                 p[1].grounded >= p[0].grounded,
                 p[1].supply_only >= p[0].supply_only,
+                p[1].trunk_only >= p[0].trunk_only,
+                p[1].rill_or_trunk >= p[0].rill_or_trunk,
             ];
             // Does deleting the allocation reverse this step's verdict?
             if arms[1] != arms[2] {
                 allocation_flips += 1;
+            }
+            // Does ADDING the coarse trunk to it reverse this step's verdict?
+            if arms[4] != arms[1] {
+                trunk_flips += 1;
             }
             for (i, kept) in arms.iter().enumerate() {
                 all[i].1 += 1;
@@ -688,13 +759,20 @@ fn a_walk_gets_damper_as_it_descends() {
         }
     }
     let f = |(k, t): (usize, usize)| k as f64 / t as f64;
-    let names = ["emitted axis   ", "grounded value ", "supply only    "];
+    let names = [
+        "emitted axis   ",
+        "grounded value ",
+        "supply only    ",
+        "trunk only     ",
+        "rill or trunk  ",
+    ];
     println!(
-        "R-7 (seed 42, walk depth 12, {} live walks, {walk_rooms} rooms), \
+        "R-7 (seed 42, walk depth {}, {} live walks, {walk_rooms} rooms), \
          steps that do not get drier:",
+        hornvale_locale::walk_depth(&ctx),
         walks.len()
     );
-    for i in 0..3 {
+    for i in 0..names.len() {
         println!(
             "  {}  in-scope {:>3}/{:<3} = {:.4}   all steps {:>3}/{:<3} = {:.4}",
             names[i],
@@ -717,6 +795,11 @@ fn a_walk_gets_damper_as_it_descends() {
     println!(
         "  allocation: active on {allocation_active} of {walk_rooms} walk rooms, \
          and flips {allocation_flips} of {} step verdicts",
+        all[0].1
+    );
+    println!(
+        "  coarse trunk: active on {trunk_active} of {walk_rooms} walk rooms, \
+         and flips {trunk_flips} of {} step verdicts",
         all[0].1
     );
 
@@ -753,15 +836,65 @@ fn a_walk_gets_damper_as_it_descends() {
         "the allocation term is inert on all {walk_rooms} walk rooms — every arm \
          above is measuring moisture alone"
     );
-    // The trunk null is conditional on the walk population, and this is what
-    // makes that conditionality checkable rather than a caveat in prose: the
-    // world does contain rooms inside a trunk's valley, and these walks — seeded
-    // at rill heads — do not visit them.
+    // **THE TRUNK NULL'S ATTRIBUTION IS DEAD AND ITS GUARD IS GONE WITH IT
+    // (The Pavement, task 10).** This read
+    // `assert!(trunk_in_land > trunk_in_walks, …)`: a premise guard making The
+    // Rill's *conditional* trunk null checkable, on the reading that walks
+    // seeded at rill heads sample headwater terrain and therefore do not enter
+    // a trunk's valley. On the finer walk band that is false, and reversed —
+    // the rates are printed above. It was NOT flipped: flipping it would
+    // assert the opposite conditionality and mean a claim nobody made, and the
+    // finding is not a reversed conditional at all. It is that the null the
+    // conditional was protecting has itself been measured and falsified, so
+    // there is no conditional left to guard. The comparison is still computed
+    // and printed; only the direction is no longer asserted, because no claim
+    // here rests on it any more.
+    //
+    // What replaces it is the materiality premise the trunk arm actually
+    // needs, in the same shape as `allocation_active` above: the trunk term
+    // must be doing something to these rooms, or the two assertions below are
+    // satisfied by an arm that is a copy of the supply. This also covers the
+    // case the old guard was reaching for from the other side — walks that
+    // entered no trunk band at all would leave the term inert and redden here.
     assert!(
-        trunk_in_land > trunk_in_walks,
-        "the land sample has no more trunk-band rooms than the rill-head walks \
-         ({trunk_in_land} vs {trunk_in_walks}), so the trunk null cannot be \
-         attributed to the walk population"
+        trunk_active > 0,
+        "the coarse trunk's reading is inert on all {walk_rooms} walk rooms — \
+         the two trunk arms above are copies of the supply arm and the claims \
+         below are vacuous"
+    );
+    // **The trunk does not rescue R-7, and it is no longer a null that says
+    // so.** Both trunk arms miss the preregistered floor, and by more than the
+    // rill arm does. Asserted as a floor miss rather than as a fraction: the
+    // fractions are this world's, the miss is not.
+    assert!(
+        f(all[3]) < R7_FLOOR
+            && f(all[4]) < R7_FLOOR
+            && f(scoped[3]) < R7_FLOOR
+            && f(scoped[4]) < R7_FLOOR,
+        "a coarse-trunk arm reached R-7's preregistered floor of {R7_FLOOR}: \
+         trunk-only in-scope {:.4} / all {:.4}, rill-or-trunk in-scope {:.4} / \
+         all {:.4}. The Rill's discarded alternative is back on the table and \
+         this test's doc comment needs re-reading, not re-pinning.",
+        f(scoped[3]),
+        f(all[3]),
+        f(scoped[4]),
+        f(all[4]),
+    );
+    // **And it makes the direction WORSE, which is why the null is falsified
+    // rather than confirmed.** "Adding the trunk changes nothing" was The
+    // Rill's wording; adding it moves the fraction down, away from the floor.
+    // Asserted as an inequality between two arms of the same run — a
+    // world-independent statement about the model, not a count this world
+    // happens to produce.
+    assert!(
+        f(all[4]) < f(all[1]),
+        "adding the coarse trunk to the allocation no longer costs the \
+         descending-step fraction: rill-or-trunk {:.4} against rill-only \
+         {:.4}. The Rill's 'changes nothing' was falsified downward by The \
+         Pavement; if it now points the other way that is a new finding, not a \
+         constant to bump.",
+        f(all[4]),
+        f(all[1]),
     );
 
     // **R-7 IS FALSIFIED, AND THAT IS NOW AN ASSERTION.** The Rill reported the
@@ -791,6 +924,39 @@ fn a_walk_gets_damper_as_it_descends() {
         f(scoped[2]),
         f(scoped[0]),
     );
+}
+
+/// The coarse trunk's own reading, shaped as the allocation's input: the
+/// document's `channel_distance` (unsigned — the allocation asks how far, the
+/// sign says which bank) against its `channel_bands`. `None` where the room's
+/// vertex has no trunk at all, which is [`grounded_wetness`]'s own
+/// "no watercourse" arm.
+///
+/// **This is the arm The Rill's discarded alternative was measured on**, and
+/// it lived only in prose until The Pavement: "adding the coarse trunk's own
+/// `channel_distance`/`channel_bands` to the allocation changes nothing" was
+/// a measurement nobody could re-run, so when The Pavement's walk band moved
+/// and the null's stated *attribution* died with it, there was nothing to
+/// re-read. Now there is.
+///
+/// **`catchment` and `vertex` are filler, and that is a disclosed
+/// blindness.** [`grounded_wetness`] reads exactly `distance` and
+/// `band_edges` off a [`RillReading`] and nothing else, so the two remaining
+/// fields cannot reach the value — the same filler
+/// `windows/locale/src/micro.rs`'s own unit tests use for the same reason. If
+/// that function ever grows a dependency on either, this arm starts lying
+/// silently; there is no assertion that can catch it from here, so it is
+/// written down instead.
+fn trunk_reading(loc: &Locale) -> Option<RillReading> {
+    match (loc.channel_distance, loc.channel_bands) {
+        (Some(distance), Some(band_edges)) => Some(RillReading {
+            distance: distance.abs(),
+            band_edges,
+            catchment: 0.0,
+            vertex: hornvale_kernel::Vertex(0),
+        }),
+        _ => None,
+    }
 }
 
 /// Whether a room stands inside the **coarse trunk's** valley — the reading the

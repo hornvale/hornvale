@@ -19,6 +19,9 @@
 //! "H3 CONFIRMED" in this campaign's reports with that qualifier attached;
 //! it is not restated at every occurrence.
 
+// The lexicon inventory's count for this file was RAISED by The Pavement's
+// task-10 measurement (37 -> 57). The reason the guard asks for is recorded
+// once, in `tests/common/mod.rs`'s module doc, which covers both files.
 use crate::common;
 
 use hornvale_scene::{
@@ -28,47 +31,136 @@ use hornvale_scene::{
 use std::collections::BTreeSet;
 
 /// Step 0: the population guard. Must run — and be trusted — before any
-/// colour count in this file is compared against Task 1's bedrock baseline.
+/// colour count in this file is read, because both H1 arms are counted over
+/// this band and a band that is not the whole purview counts the wrong
+/// population on both sides at once.
+///
+/// **This guard was re-founded by The Pavement, and the number it used to
+/// pin is gone on purpose.** It asserted `cells.len() == 31` with the
+/// message "the H1 band changed shape … the bedrock baseline of 1 distinct
+/// colour over 31 cells was measured at b0f20c71 and cannot be re-taken".
+/// The band did change shape, and not silently: decisions
+/// [0506] (the lattice is a cube-sphere) and [0511] (walk depth is
+/// `globe_level + 7`) moved it from 31 triangles to 81 quads deliberately.
+/// The 31-cell *value* is unrecoverable and stays unrecovered — H1's floor
+/// is founded on a live arm now
+/// ([`common::bedrock_colours`]), not on that literal.
+///
+/// **So this guard asserts a world-independent property instead of a
+/// literal**, following the ruling The Pavement applied to the same shape of
+/// failure in `clients/game`: stop stating the count and derive it from the
+/// band's own radius. An 8-connected purview of radius `r` **is** a
+/// `(2r+1)²` block, so a band that is one cell short has dropped a cell
+/// somewhere and the two H1 arms are being counted over a population neither
+/// of them describes.
+///
+/// **What it is blind to** (repo convention; decision [0491] is the record
+/// that a stated blindness is stated in the harsh, accurate form rather than
+/// implied away). It enforces one
+/// direction — the band is the complete square purview its own `radius`
+/// claims — and it is blind to three things. (1) **Position.** It says
+/// nothing about *where* the band is; moving `common::baseline_band` to
+/// another observer would keep this green while every colour count below
+/// changed. (2) **The cube's eight corners.** A purview overlapping one of
+/// them legitimately has fewer than `(2r+1)²` cells, because a corner cell
+/// has seven neighbours and not eight (spec §2.2); this guard would call
+/// that a defect. The flagship band is nowhere near a corner, so the case
+/// does not arise here — but a future band that moves must re-read this,
+/// not silence it. (3) **Content.** Cells could all be sea, all be ice, or
+/// all carry `color: None`, and this stays green; the arms below are what
+/// speak to that.
+///
+/// [0491]: `docs/decisions/0491-a-stated-blindness-gets-a-visible-ratchet-not-a-silent-fix.md`
+/// [0506]: `docs/decisions/0506-the-occupancy-lattice-is-a-cube-sphere.md`
+/// [0511]: `docs/decisions/0511-walk-depth-is-globe-level-plus-seven.md`
 #[test]
-fn the_h1_band_is_still_the_population_the_baseline_was_taken_over() {
+fn the_h1_band_is_the_whole_eight_connected_purview_both_arms_are_counted_over() {
     let world = common::genesis();
     let scene = common::baseline_band(&world);
+    let side = 2 * scene.radius as usize + 1;
     assert_eq!(
         scene.cells.len(),
-        31,
-        "the H1 band changed shape; the bedrock baseline of 1 distinct \
-         colour over 31 cells was measured at b0f20c71 and cannot be \
-         re-taken. Do not compare colour counts until this is explained."
+        side * side,
+        "the H1 band is not the complete 8-connected purview of its own \
+         radius {}: {} cells against the {side}x{side} = {} an 8-connected \
+         purview of that radius is. Both H1 arms below are counted over this \
+         band, so a dropped cell miscounts both. This is NOT the old 31-cell \
+         guard — that population is gone by decisions 0506/0511 and its \
+         bedrock literal with it; see this test's doc comment.",
+        scene.radius,
+        scene.cells.len(),
+        side * side,
     );
 }
 
 /// H1 (spec §7): the surface mixture increases the number of distinguishable
 /// colours in the walk band, bounded above and below.
 ///
-/// - Floor: strictly more distinct colours than the bedrock baseline.
-///   `BEDROCK_BASELINE` is the number Task 1's probe printed
-///   (`illumination_probe.rs`'s `§7/H1` block) at commit `b0f20c71`, over
-///   this exact band (`common::baseline_band`) — 1 distinct colour across
-///   31 cells.
+/// - Floor: strictly more distinct colours than the **bedrock arm** — the
+///   same band, same world, same day, same observer and illuminant, with the
+///   surface cover layer deleted. See [`common::bedrock_colours`].
 /// - Ceiling: not every cell gets a unique colour. A bijection between cell
 ///   and colour would mean the mixture is tracking address noise, not
 ///   cover — a defect dressed as a success, not a win.
+///
+/// # The floor was re-founded, not re-pinned (The Pavement, task 10)
+///
+/// It used to read `distinct.len() > BEDROCK_BASELINE` with
+/// `BEDROCK_BASELINE = 1`: a literal captured at commit `b0f20c71` over that
+/// era's 31-cell band. The Pavement moved the band (decisions 0506, 0511),
+/// and **measurement of the move settled that the new band is a different
+/// region, not the old one sampled more densely** — 81 quads over ~121 km²
+/// against 31 triangles over ~47 km², at per-cell areas within 2% of each
+/// other. "The bedrock was uniform over the old patch" therefore carries
+/// nothing to the new one.
+///
+/// **Leaving the literal in place would have been the worst option
+/// available**, and it is worth naming why, because the test was GREEN with
+/// it: the new region is 2.55x larger, so it is *more* likely to span a
+/// second rock class, and `> 1` could then be satisfied by the band having
+/// grown rather than by the surface mixture doing anything at all. A green
+/// assertion meaning a claim nobody made.
+///
+/// What replaces it is stronger than the literal ever was, in the same sense
+/// `windows/locale/tests/suite/wetness_reading.rs` records for its own
+/// replaced witnesses: the bedrock arm is a **same-world differential over
+/// the live function**, so it holds in every world and every band rather
+/// than in the one a capture happened to freeze, and the two arms differ in
+/// exactly one term. The historical figures are not restated as if current;
+/// `b0f20c71`'s "1 distinct colour over 31 cells" remains a true statement
+/// about that commit's band and lives in [`common::bedrock_colours`]'s doc
+/// as history.
 #[test]
 fn h1_the_surface_mixture_increases_distinguishable_colours() {
-    /// Task 1's probe, `b0f20c71`: "distinct color count = 1" over this
-    /// same 31-cell band. Never re-measurable — see this module's Step 0.
-    const BEDROCK_BASELINE: usize = 1;
-
     let world = common::genesis();
     let band = common::baseline_band(&world);
     let distinct: BTreeSet<Option<[u8; 3]>> = band.cells.iter().map(|c| c.color).collect();
+    let bedrock = common::bedrock_colours(&world, &band);
+
+    // Printed, not asserted: the two arms' cardinalities and how many cells
+    // carry no colour at all. A reader of a green run should not have to
+    // re-run the arms to learn how much margin the floor has, and the
+    // withheld count is what says whether either arm is speaking about
+    // colour at all (`to_srgb` returns `None` where the observer has no
+    // truthful sRGB image for a cell).
+    let withheld = band.cells.iter().filter(|c| c.color.is_none()).count();
+    println!(
+        "H1 (seed 42 flagship band, {} cells): mixture arm {} distinct, \
+         bedrock arm {} distinct, {withheld} cells carrying no colour",
+        band.cells.len(),
+        distinct.len(),
+        bedrock.len(),
+    );
 
     assert!(
-        distinct.len() > BEDROCK_BASELINE,
-        "H1 floor failed: distinct colour count {} did not exceed the bedrock \
-         baseline of {BEDROCK_BASELINE} (b0f20c71) — the surface mixture did not \
-         increase distinguishable colours over the H1 band",
-        distinct.len()
+        distinct.len() > bedrock.len(),
+        "H1 floor failed: the surface mixture yields {} distinct colours over \
+         the {}-cell band and the bedrock arm — the same band with the cover \
+         layer deleted — yields {}, so the mixture did not increase \
+         distinguishable colours",
+        distinct.len(),
+        band.cells.len(),
+        bedrock.len(),
     );
     assert_ne!(
         distinct.len(),

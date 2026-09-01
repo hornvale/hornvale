@@ -89,9 +89,9 @@ windows/scene/examples/illumination_probe.rs	20
 windows/scene/src/lib.rs	2
 windows/scene/src/surrounds.rs	259
 windows/scene/src/surrounds_ascii.rs	190
-windows/scene/tests/common/mod.rs	2
+windows/scene/tests/common/mod.rs	17
 windows/scene/tests/suite/golden.rs	11
-windows/scene/tests/suite/illumination_hypotheses.rs	37
+windows/scene/tests/suite/illumination_hypotheses.rs	57
 windows/sentiment/tests/suite/believability.rs	7
 windows/vessel/examples/turn_cost.rs	4
 windows/vessel/src/chamber_prose.rs	1
