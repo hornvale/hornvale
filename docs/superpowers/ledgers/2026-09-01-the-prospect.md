@@ -137,3 +137,35 @@ not know what the surrounding suite already provides.
 
 **Cost if wrong:** an implementer reinvents an existing helper; the task review
 catches it.
+
+### #9 [G5] — Task 1's two Important findings are both defects in my brief
+
+The task review approved the implementation and found two problems in the code
+I had written into the plan verbatim. Recorded here because a plan defect that
+the process catches still happened, and the pattern is what matters.
+
+**(a) `salience()` is tagged `bare-ok(count: return)` and is not a count.**
+Decision 0028 defines `count` as "an honest cardinality — cell/plate/moon
+counts, octaves, generations". `salience()` returns an ordinal presentation
+rank. The type-audit tool accepts the string because it validates the CLASS
+NAME, not the claim — so this is a wrong reason passing a gate that checks
+shape. **Ruling:** the implementer re-derives the correct class from 0028's own
+definitions rather than being handed one, because the property is "the tag
+states the true reason" and I have already demonstrated I will pick a plausible
+wrong one.
+
+**(b) `a_new_site_is_a_point` cannot fail.** `Extent` has exactly one variant,
+so any `Site::new` that compiles sets it. **Ruling:** keep the assertion but
+make the test discriminate TODAY by also round-tripping kind and name (a gutted
+`new` that dropped the name would go red), and mark the extent line as an
+explicit FORWARD guard — it exists to catch a future `new()` that defaults to
+`Region` once that variant lands. Declaring a vacuous assertion is this
+project's sanctioned remedy (`expect(survives:)`, the three-valued ratchets);
+leaving it undeclared is the defect.
+
+**Cost if wrong:** (a) a tag reads slightly off and a later audit re-classes it;
+(b) a test that is stronger than it needs to be.
+
+**The uncomfortable part:** (b) is the "test whose input collapses to one value"
+shape, which is in my own memory notes with sixteen prior instances across two
+campaigns, and I wrote it into this plan the same afternoon.
