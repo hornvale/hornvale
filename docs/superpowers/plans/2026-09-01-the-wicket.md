@@ -1047,9 +1047,22 @@ git diff --exit-code -- $(grep -v '^#' docs/generated-paths.txt | grep -v '^$' |
 - **Nothing moved** → proceed; say so.
 - **`clients/game/core/tests/fixtures/` moved** → the chamber-band session
   snapshot picked up the new anchor. Refresh and commit in the same commit.
-- **A census CSV or `book/src/domesday/` moved** → STOP. Something that commits
-  now reads a chamber, so `INVENTORY`'s latency rule has lapsed and this append
-  is an undeclared epoch. That is the campaign's headline, not a rebaseline.
+- **`book/src/gallery/` moved** → **PROCEED, and say so loudly.** This branch
+  read STOP in an earlier draft and that was a defect: the rule was imported
+  from Task 2, whose premise is that *nothing* should change, into a task whose
+  premise is that *one thing* should. A possession transcript gaining the new
+  kind is the campaign's success criterion made visible — decision 0398
+  satisfied in a committed artifact rather than argued in a spec. Refresh and
+  commit in the same commit.
+- **A census CSV or `book/src/domesday/` moved** → STOP. Those are folds over
+  the LEDGER, and a chamber's contents must never reach it (decision 0069 keeps
+  `Interior` unserialized). Movement there means a chamber is being committed,
+  which is a real epoch and the campaign's headline, not a rebaseline.
+
+**The distinction those two branches turn on, stated once:** a *rendered
+artifact* is not the *ledger*. A gallery transcript is regenerated from a live
+walk and may show anything the world now contains; a census column is a fold
+over committed facts and must not move because a room gained furniture.
 - **A generated file moved that is on none of these branches** → the
   enumeration is not exhaustive, so ask the question that decides it: *is this
   file derived from the WORLD, or from the SOURCE TREE?* A source-derived page

@@ -463,3 +463,56 @@ whose message claims it cannot pass vacuously. Two of the four are mine, in
 plan text. Carry this into the retrospective as ONE finding with four
 instances, not four findings — the instances are cheap and the shape is what
 generalises.
+
+#24 [G5] — **Ruling: the gallery transcript moving is PROCEED, not STOP, and my
+branch table was wrong.** Task 5's implementer stopped, correctly, because
+`book/src/gallery/possession-carry-seed-1.md` moved:
+
+```text
+-A small room, holding a doorway, a water jar, a loom and a key.
++A small room, holding a doorway, a water jar, a loom, a key and a brazier.
+```
+
+Why proceed: that line **is** the campaign's deliverable. Decision 0398 says a
+capability nothing can reach is not a capability; this is a body walking into a
+loomroom in a real world and finding a brazier it can warm itself at, produced
+by a diff of data rows and no dispatcher edit. Stopping on it would have been
+stopping on success · The defect is mine: the STOP-on-gallery rule was written
+for Task 2, whose premise is that a behaviour-preserving refactor changes
+nothing, and I carried it into a task whose entire premise is that exactly one
+thing changes. **A branch table is not portable between tasks with opposite
+premises** · Alternatives discarded: treating the move as an epoch, which would
+forfeit the campaign's 0398 obligation to place something reachable ·
+ideonomy passes / overturns: 0 / 0 · Capture: plan Task 5's branch table now
+distinguishes a RENDERED ARTIFACT (regenerated from a live walk; may show
+anything the world contains) from a LEDGER FOLD (a census column, which must
+not move because a room gained furniture — decision 0069 keeps `Interior`
+unserialized).
+
+#25 [G5] — **`INVENTORY`'s epoch rule was already stale before this campaign,
+and the implementer found it.** Its doc states that appending a pattern with
+`at_locale: false` is LATENT because "the only other consumer is
+`selection_for`, whose output is read by the chamber renderer and by nothing
+that commits", becoming an epoch "on the day something that commits reads a
+chamber". Verified: `book/src/gallery/possession-carry-seed-1.md` has rendered
+a delved chamber's composed contents since **2026-08-30** (`b8fc0cd02`,
+`26ebaf7e4` — The Chattel and The Custodian), so a chamber's contents have
+reached a committed, drift-checked artifact for two days before this campaign
+began · The doc is not wrong so much as **imprecise in the load-bearing word**:
+it conflates *commits* (enters the ledger) with *appears in a committed
+artifact*. The first is still false and is what decision 0069 guarantees; the
+second has been true since August 30 · Decision: correct the doc as part of
+Task 5, stating both halves — no world file moves, and a rendered artifact may
+· ideonomy passes / overturns: 0 / 0 · Capture: Task 5 amends
+`INVENTORY`'s doc; the retrospective carries it as a finding about a doc whose
+invariant decayed silently because nothing tested the sentence.
+
+#26 [G5] — **A seventh ratchet my enumeration missed, found only by running.**
+`domains/thing::concept_doc()` ends in `other => unreachable!`, so a roster kind
+with no doc arm panics **every world genesis**. My six-ratchet list was built by
+grep over count assertions and could not see a panic reachable only at runtime.
+The implementer found it, added the arm, and flagged it as unlisted. Recorded
+because it is the counter-example to the enumeration I was pleased with: a list
+of ratchets derived from static reading is a floor, never a total. Cost if it
+had been missed: every world fails to build, which is loud — the dangerous
+version of this defect is the one that does not panic.
