@@ -432,6 +432,7 @@
 - [The Overture](./chronicle/the-overture.md)
 - [The Chattel](./chronicle/the-chattel.md)
 - [The Attestation](./chronicle/the-attestation.md)
+- [The Cartulary](./chronicle/the-cartulary.md)
 - [The Repertory](./chronicle/the-repertory.md)
 - [The Company](./chronicle/the-company.md)
 - [The Tableau](./chronicle/the-tableau.md)

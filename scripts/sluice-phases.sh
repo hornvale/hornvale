@@ -46,6 +46,18 @@
 #   book/src/frontier/**        idea registry and essays
 #   book/src/open-questions.md  the confidence gradient
 #   book/src/SUMMARY.md         the book's table of contents
+#   .claude/skills/**           the procedural skills themselves
+#
+# `.claude/skills/**` earns its place by the same argument and was checked the
+# same way before being added (2026-09-01): nothing under it is AUTHORED by any
+# phase — regenerate-artifacts.sh, gate-full-heavy.sh and the clients targets
+# mention it zero times — and NO test in the workspace reads it, so no skipped
+# phase could observe a change there. Six tracked files, all SKILL.md.
+#
+# It is `.claude/skills/**` and not `.claude/**` deliberately: settings and
+# hook configuration under .claude/ govern how a session behaves, and a change
+# there is not obviously unobservable to a phase. Narrow is the whole posture
+# of this list.
 #
 # Excluded on purpose: book/src/gallery/ (clients builds atlas.js and the wasm
 # there), book/src/laboratory/ (heavy authors the-history and the-sounding),
@@ -66,7 +78,7 @@ sluice_is_prose_only() {
         [ -n "$pth" ] || continue
         seen=1
         case "$pth" in
-            docs/*|book/src/chronicle/*|book/src/frontier/*|book/src/open-questions.md|book/src/SUMMARY.md) ;;
+            docs/*|book/src/chronicle/*|book/src/frontier/*|book/src/open-questions.md|book/src/SUMMARY.md|.claude/skills/*) ;;
             *) return 1 ;;
         esac
     done <<EOF

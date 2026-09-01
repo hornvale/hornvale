@@ -4445,6 +4445,22 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-08-30T16:26:36Z | sluice:gate | 466.602 | 13561.788 | 432.292 | 29.99 | 0 | 2c6b0ea9f |  | lefford | 40 |
 | 2026-08-30T16:35:33Z | sluice:clients | 536.141 | 9717.426 | 123.684 | 18.36 | 0 | 3588e1a39 |  | lefford | 40 |
 | 2026-08-30T16:43:14Z | sluice:heavy | 461.171 | 9652.581 | 153.445 | 21.26 | 0 | e3513454d |  | lefford | 40 |
+| 2026-08-30T23:37:56Z | gate-commit | 157.104 | 1089.318 | 50.493 | 7.26 | 0 | aaa6f6170 | campaign/the-cartulary | MacBookPro | 10 |
+| 2026-08-31T00:10:15Z | gate-commit | 21.901 | 51.324 | 13.248 | 2.95 | 0 | 0281b01fa | campaign/the-cartulary | MacBookPro | 10 |
+| 2026-08-31T00:24:41Z | gate-commit | 21.861 | 47.203 | 11.859 | 2.70 | 0 | 64b28a2a6 | campaign/the-cartulary | MacBookPro | 10 |
+| 2026-08-31T00:25:57Z | gate-commit | 22.011 | 51.747 | 13.175 | 2.95 | 0 | 64b28a2a6 | campaign/the-cartulary | MacBookPro | 10 |
+| 2026-08-31T00:38:29Z | gate-commit | 22.190 | 51.798 | 13.514 | 2.94 | 0 | 2190d9ee5 | campaign/the-cartulary | MacBookPro | 10 |
+| 2026-08-31T00:39:09Z | gate-commit | 21.492 | 51.066 | 13.154 | 2.99 | 0 | 2190d9ee5 | campaign/the-cartulary | MacBookPro | 10 |
+| 2026-08-31T00:51:24Z | gate-commit | 30.005 | 73.599 | 17.487 | 3.04 | 0 | bdc531723 | campaign/the-cartulary | MacBookPro | 10 |
+| 2026-08-31T01:00:14Z | gate-commit | 21.341 | 51.134 | 13.065 | 3.01 | 0 | 347573d28 | campaign/the-cartulary | MacBookPro | 10 |
+| 2026-08-31T01:16:31Z | gate-commit | 23.418 | 52.488 | 13.435 | 2.82 | 0 | ae714367b | campaign/the-cartulary | MacBookPro | 10 |
+| 2026-08-31T01:24:18Z | rebaseline | 73.581 | 266.622 | 12.774 | 3.80 | 0 | 686213187 | campaign/the-cartulary | MacBookPro | 10 |
+| 2026-08-31T01:30:53Z | rebaseline | 45.587 | 267.546 | 13.939 | 6.17 | 0 | 686213187 | campaign/the-cartulary | MacBookPro | 10 |
+| 2026-08-31T01:34:08Z | gate-commit | 20.960 | 51.014 | 12.778 | 3.04 | 0 | 686213187 | campaign/the-cartulary | MacBookPro | 10 |
+| 2026-08-31T01:35:30Z | gate-commit | 20.990 | 51.007 | 12.819 | 3.04 | 0 | 7f5607896 | campaign/the-cartulary | MacBookPro | 10 |
+| 2026-08-31T02:01:56Z | rebaseline | 44.543 | 267.339 | 13.266 | 6.30 | 0 | 010242e67 | campaign/the-cartulary | MacBookPro | 10 |
+| 2026-08-31T02:02:47Z | gate-commit | 21.839 | 51.634 | 13.031 | 2.96 | 0 | 010242e67 | campaign/the-cartulary | MacBookPro | 10 |
+| 2026-08-31T02:03:25Z | gate-commit | 21.212 | 51.017 | 13.157 | 3.03 | 0 | 010242e67 | campaign/the-cartulary | MacBookPro | 10 |
 | 2026-08-30T16:46:09Z | gate-commit | 36.772 | 110.997 | 18.005 | 3.51 | 0 | 102b9f173 | campaign/the-winze | MacBookPro | 10 |
 | 2026-08-30T17:47:46Z | gate-commit | 39.134 | 78.932 | 41.645 | 3.08 | 0 | a4e4e68f2 | campaign/the-winze | MacBookPro | 10 |
 | 2026-08-30T17:48:38Z | gate-commit | 25.224 | 52.338 | 13.661 | 2.62 | 0 | a4e4e68f2 | campaign/the-winze | MacBookPro | 10 |
@@ -4582,3 +4598,26 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-01T03:11:39Z | gate-commit | 13.999 | 16.506 | 7.262 | 1.70 | 0 | 04e54de0d | campaign/the-tableau | MacBookPro | 10 |
 | 2026-09-01T03:12:52Z | gate-commit | 40.831 | 122.017 | 33.944 | 3.82 | 0 | 04e54de0d | campaign/the-tableau | MacBookPro | 10 |
 | 2026-09-01T09:29:40Z | rebaseline | 58.653 | 271.747 | 13.792 | 4.87 | 0 | aab262b76 | campaign/the-tableau | MacBookPro | 10 |
+| 2026-08-31T23:45:47Z | rebaseline | 77.182 | 316.094 | 16.187 | 4.31 | 0 | 6d1a1a4b3 | campaign/the-cartulary | MacBookPro | 10 |
+| 2026-08-31T23:47:59Z | gate-commit | 114.227 | 751.290 | 47.385 | 6.99 | 0 | 6d1a1a4b3 | campaign/the-cartulary | MacBookPro | 10 |
+| 2026-08-31T23:51:55Z | gate-commit | 25.019 | 56.061 | 14.006 | 2.80 | 0 | 0c3721621 | campaign/the-cartulary | MacBookPro | 10 |
+| 2026-08-31T23:52:29Z | gate-commit | 22.075 | 53.293 | 14.067 | 3.05 | 0 | 0c3721621 | campaign/the-cartulary | MacBookPro | 10 |
+| 2026-09-01T00:28:15Z | rebaseline | 52.963 | 276.563 | 14.618 | 5.50 | 0 | edcb5ac61 | campaign/the-cartulary | MacBookPro | 10 |
+| 2026-09-01T00:28:39Z | gate-commit | 23.738 | 54.878 | 14.710 | 2.93 | 0 | edcb5ac61 | campaign/the-cartulary | MacBookPro | 10 |
+| 2026-09-01T00:38:42Z | gate-commit | 22.051 | 53.271 | 13.887 | 3.05 | 0 | 046d654f8 | campaign/the-cartulary | MacBookPro | 10 |
+| 2026-09-01T00:41:38Z | sluice:artifacts | 74.973 | 695.752 | 27.682 | 9.65 | 0 | a024ce3df |  | lefford | 40 |
+| 2026-09-01T00:42:26Z | sluice:outboard | 47.500 | 28.867 | 41.476 | 1.48 | 0 | 91e274aa2 |  | lefford | 40 |
+| 2026-09-01T00:51:05Z | sluice:gate | 518.889 | 15874.163 | 464.531 | 31.49 | 0 | 0e9a88c23 |  | lefford | 40 |
+| 2026-09-01T01:00:11Z | sluice:clients | 545.524 | 9901.751 | 102.581 | 18.34 | 0 | c77670462 |  | lefford | 40 |
+| 2026-09-01T01:07:47Z | sluice:heavy | 455.930 | 9468.172 | 145.435 | 21.09 | 0 | ee7a2e25d |  | lefford | 40 |
+| 2026-09-01T02:42:09Z | gate-commit | 87.450 | 483.173 | 60.542 | 6.22 | 0 | 3b22e19e7 | campaign/fix-closing-campaign-teardown | MacBookPro | 10 |
+| 2026-09-01T02:45:18Z | sluice:artifacts | 74.153 | 652.318 | 25.378 | 9.14 | 0 | 177b49d3d |  | lefford | 40 |
+| 2026-09-01T02:46:05Z | sluice:outboard | 46.155 | 28.383 | 41.533 | 1.51 | 0 | 8f3dc984b |  | lefford | 40 |
+| 2026-09-01T02:54:46Z | sluice:gate | 521.198 | 15913.818 | 467.023 | 31.43 | 0 | 8429a11a9 |  | lefford | 40 |
+| 2026-09-01T03:03:25Z | sluice:clients | 518.580 | 9920.387 | 111.318 | 19.34 | 0 | 67c52fd1d |  | lefford | 40 |
+| 2026-09-01T03:10:43Z | sluice:heavy | 438.000 | 9605.097 | 161.065 | 22.30 | 0 | d4bb020b6 |  | lefford | 40 |
+| 2026-09-01T03:12:28Z | sluice:artifacts | 74.124 | 662.340 | 23.935 | 9.26 | 0 | b52e1f141 |  | lefford | 40 |
+| 2026-09-01T03:13:14Z | sluice:outboard | 45.038 | 27.197 | 40.831 | 1.51 | 0 | b815f15d1 |  | lefford | 40 |
+| 2026-09-01T03:21:48Z | sluice:gate | 513.586 | 15891.460 | 467.275 | 31.85 | 0 | 1d651c153 |  | lefford | 40 |
+| 2026-09-01T03:30:51Z | sluice:clients | 543.642 | 9918.289 | 110.024 | 18.45 | 0 | 47a36edcf |  | lefford | 40 |
+| 2026-09-01T03:38:22Z | sluice:heavy | 450.131 | 9467.067 | 158.732 | 21.38 | 0 | 94e2d39ae |  | lefford | 40 |
