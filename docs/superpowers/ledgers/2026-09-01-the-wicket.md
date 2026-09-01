@@ -516,3 +516,29 @@ because it is the counter-example to the enumeration I was pleased with: a list
 of ratchets derived from static reading is a floor, never a total. Cost if it
 had been missed: every world fails to build, which is loud — the dangerous
 version of this defect is the one that does not panic.
+
+#27 [G5] — **An eighth ratchet, and the campaign's cost claim is corrected in
+the spec.** Task 5 found, by running, that registering a kind as a CONCEPT
+obligates an accession slot: `hornvale_language::EPOCH_COHORTS` needed a new
+epoch-18 cohort, and without one every genesis defaults the kind to epoch 0 and
+reopens the proto-root churn The Accession closed. That forced three byte-golden
+refreshes including the keystone `cli/tests/fixtures/world-seed-42.json` —
+**verified purely additive: 6 insertions, 0 deletions** · Decision: correct spec
+§6's cost claim rather than let the headline stand · Why: §6 said "no enum edit,
+no match arm, no macro, no dispatcher edit". The first half held and the second
+was too strong — `domains/thing::concept_doc` IS an exhaustive match and it
+needed an arm. The claim that survives is narrower and still worth making: the
+room grammar's kind vocabulary is open, and adding a kind touches no dispatcher,
+enum or match arm **in that path** · Alternatives discarded: keeping the
+stronger sentence and treating the two arms as incidental, which is precisely
+the shape of an overclaiming guarantee this campaign has now caught four times ·
+ideonomy passes / overturns: 0 / 0 — a measurement ·
+Capture: spec §6 carries the measured table; new registry row
+`MAP-the-concept-side-is-still-closed`.
+
+**The finding is better than the headline it dents.** `MAP-one-kind-model`'s
+fence came down in `windows/vessel` and an equivalent one is still standing in
+`domains/thing` and `domains/language` — an exhaustive `concept_doc` match whose
+missing arm panics world genesis, and a hand-maintained accession cohort. Same
+shape, one layer over, two other crates, now named and located instead of
+suspected. That is what a forcing function is supposed to produce.

@@ -265,9 +265,32 @@ minted on 2026-08-29 against exactly this shape: The Chattel shipped a
 container, a lock, a key and an `open`/`close` pair no session in any world
 could stand in front of. An open kind vocabulary that places nothing new is the
 same failure. So the campaign places one kind, and the diff that adds it is the
-evidence: a `THING_KINDS` row, a `thing_registry` row, a prose row, an
-`object_registry` row, and one appended `Pattern`. No enum edit, no match arm,
-no macro, no dispatcher edit.
+evidence.
+
+**What it actually cost, measured rather than predicted.** This paragraph said
+"a `THING_KINDS` row, a `thing_registry` row, a prose row, an `object_registry`
+row, and one appended `Pattern`. No enum edit, no match arm, no macro, no
+dispatcher edit." The first half held. The second half was too strong, and Task
+5 found the difference by running:
+
+```text
+  the grammar path        roster row, registry row, prose row,     AS PREDICTED
+                          object_registry row, appended Pattern
+                          -- no enum, no match arm, no dispatcher
+  the concept path        concept_doc() exhaustive match arm       NOT PREDICTED
+                          EPOCH_COHORTS accession cohort (ep. 18)  NOT PREDICTED
+  the artifacts           keystone golden + 2 byte-goldens,        NOT PREDICTED
+                          purely additive (6 insertions, 0 deletions)
+```
+
+So the honest claim is narrower and still worth making: **the room grammar's
+kind vocabulary is open, and adding a kind touches no dispatcher, no enum and
+no match arm in that path.** But a kind is also a *concept*, and the concept
+side still has two closed lists of its own — an exhaustive `concept_doc` match
+and a hand-maintained accession cohort. `MAP-one-kind-model`'s fence came down
+in `windows/vessel`; an equivalent one is still standing in `domains/thing` and
+`domains/language`, one layer over. That is a finding, not a failure: it is the
+same shape the campaign was built to remove, and it is now named and located.
 
 **The kind: `brazier`** — a standing pan of coals, carrying `RadiatesHeat`,
 **in the loomroom**.
