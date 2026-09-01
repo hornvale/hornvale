@@ -47,8 +47,8 @@ use hornvale_vessel::body::Body;
 use hornvale_vessel::clock::{REFERENCE_MASS_KG, mass_for_species};
 use hornvale_vessel::liveness::ThreatNiche;
 
-/// Every kind this workspace has a NAMED handle for, once —
-/// `hornvale_thing::kinds::EVERY_HANDLE`, read as ids.
+/// Every kind the roster carries, once — `hornvale_thing::THING_KINDS`, read
+/// as ids.
 ///
 /// **It was `AnchorKind::ALL`, generated from the enum's own declaration, and
 /// what replaces it had to keep that generated property (The Wicket, Task
@@ -64,15 +64,27 @@ use hornvale_vessel::liveness::ThreatNiche;
 /// including a precondition whose doc comment promised to stop being
 /// evidence in exactly that case.
 ///
-/// `EVERY_HANDLE` is hand-written in `domains/thing`, so this is one step
-/// further from the declaration than the macro was. What holds it is a
-/// different ratchet rather than a generator: `every_named_handle_is_a_roster_
-/// row` (G-d) checks each handle against `THING_KINDS`, and
-/// `the_roster_is_frozen_as_an_ordered_set` (G-f) freezes that roster as an
-/// ordered SET rather than a count, so an addition, a removal and a
-/// compensating swap are each a visible edit to a committed list.
+/// **Task 2 landed this reading `hornvale_thing::kinds::EVERY_HANDLE`, and
+/// its own doc said that was one step weaker than what it replaced:**
+/// `EVERY_HANDLE` is hand-written, so a handle quietly dropped from it would
+/// narrow this sweep and nothing would object — `every_named_handle_is_a_
+/// roster_row` (G-d, Task 1) only checks *named ⊆ rostered*, never the
+/// converse. Task 3 (The Wicket, spec §5) points this at `THING_KINDS`
+/// instead: that roster is frozen as an ordered SET by
+/// `the_roster_is_frozen_as_an_ordered_set` (G-f), so it — unlike a
+/// hand-written handle list — cannot go short without a visible edit to a
+/// committed list. Handles exist for *code that names a kind*; a sweep
+/// asserting totality is not that, so it wants the set that cannot go short,
+/// not the set of names someone happened to write code against. The swap
+/// needs no new mechanism, and it is strictly stronger: `EVERY_HANDLE` and
+/// `THING_KINDS` name the same 16 kinds in the same order today (both
+/// alphabetical by label), so this table is unchanged by the swap — see the
+/// ledger entry ruling on this at plan time.
 fn every_named_kind() -> Vec<KindId> {
-    kinds::EVERY_HANDLE.iter().map(|(_, id)| *id).collect()
+    hornvale_thing::THING_KINDS
+        .iter()
+        .map(|l| KindId(l))
+        .collect()
 }
 
 /// Acceptance test (1): a new OBJECT kind ships with properties only — no

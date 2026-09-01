@@ -387,3 +387,52 @@ was already editing — read by two implementers and a reviewer before anyone
 connected it to the brazier. Cost if the ruling is wrong: the loomroom is the
 only role the sweep found, so the alternative is no placed kind at all, which
 would forfeit the campaign's 0398 obligation.
+
+#22 [G5] — **Ruling: Task 3 declines the bare-`KindId("` production guard;
+the census the brief predicted does not match what is actually there.**
+`git grep -n 'KindId("' -- windows/vessel/src domains/thing/src | grep -v
+'kinds::' | wc -l` returns **58**, by file:
+
+```
+domains/thing/src/lib.rs          35
+windows/vessel/src/affordance.rs  19
+windows/vessel/src/underground.rs  2
+windows/vessel/src/session.rs      1
+windows/vessel/src/chamber_prose.rs 1
+```
+
+Why declined, and why the brief's own two branches ("a handful, all in
+tests" / "many, spread through production") both mis-describe the shape:
+**zero of the 58 sit at a production CONSUMER site.** Every occurrence is one
+of three things — a kind's own AUTHORING table (`thing_registry` and the
+`kinds` handles module in `domains/thing/src/lib.rs`, 35; `object_registry`
+in `windows/vessel/src/affordance.rs`, 19), a test module (`underground.rs`,
+`session.rs`, 3), or a doc comment (`chamber_prose.rs`, 1). A guard on the
+model of `thing_kind_of_has_no_wildcard_arm` — scanning production source for
+a forbidden spelling — would need an exemption covering `thing_registry`
+(which necessarily spells its own literals; a handle keyed off the row that
+defines it is circular) and `object_registry` (Task 2 left this table
+spelling bare literals rather than `kinds::X`, and re-keying it is out of
+this task's scope) before it could pass today. That is a table-shaped
+allow-list of exactly the kind CLAUDE.md warns nobody maintains, and it is a
+different design from the "no bare `KindId(` outside the handles module"
+rule the brief describes — the brief's model does not fit the census it
+asked for.
+
+Decision: **no guard this task.** The residual risk the brief worried about
+— a typo'd literal at a call site — is not what the census found; both gates
+in this file (G-a, G-e) already close the two AUTHORING tables' error mode
+directly (a bad literal in `INVENTORY` or `object_registry` is caught by
+running the two new tests, not by a source-text scan), and the guard's real
+job — keeping `object_registry` and `thing_registry`'s own literals honest —
+is exactly what G-a/G-e already do, from the other direction (checking the
+literal against the roster, not checking that no literal was written).
+Converting `object_registry` to `kinds::X` handles, if wanted, is a follow-up
+with its own task, not a guard that ships pre-loaded with a two-table
+exemption list · Alternatives discarded: writing the guard with the two-table
+allow-list anyway, which launders an unmaintainable list into the campaign on
+day one · ideonomy passes / overturns: 0 / 0 — a census, not a design choice ·
+Capture: none needed; this entry is the record. Cost if wrong: a bare literal
+typo'd at a genuine future consumer site compiles silently, same residual
+risk the brief named — bounded, because G-a and G-e already cover every
+literal in the two tables that currently hold one.

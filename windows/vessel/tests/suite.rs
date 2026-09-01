@@ -47,6 +47,8 @@ mod felt_state_concepts;
 mod furnishing_marks;
 #[path = "suite/gate_table.rs"]
 mod gate_table;
+#[path = "suite/kind_totality.rs"]
+mod kind_totality;
 #[path = "suite/lantern_fabric.rs"]
 mod lantern_fabric;
 #[path = "suite/lantern_lens.rs"]
