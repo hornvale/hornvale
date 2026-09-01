@@ -908,3 +908,39 @@ like.
 people side (a `(species, thing)` edge) and the individual side (a
 `Lineage`-derived preference), both still parked at
 `PSY-rest-quality-is-a-grade-not-a-gate`.
+
+#44 [G5] — **Task 10 reintroduced, through a parameter, the divergence Task 7
+deleted a duplicated formula to abolish.** Task 7's guarantee was STRUCTURAL:
+the read and the mover reach one function, so they cannot disagree. Task 10 made
+the grade a **per-call-site parameter**, and the reviewer proved the regression
+by mutation — setting `affect_of_memo_occupied`'s `sites` to `None` while
+`decide_step` keeps `Some` leaves **903 tests passing**. P5 pins the two
+FUNCTIONS agreeing with `None, None`; nothing pins the two CALL SITES passing
+equal `RestSites`. A structural guarantee downgraded to a convention, silently.
+
+#45 [G5] — **The position-trail read has no witness at all.** Deleting the whole
+`position_timeline` merge — `let room = sites.body.home.clone()` — leaves P7
+green, all ten `fatigue_stock` tests green, and all 603 vessel lib tests green.
+Cause: P7's fixture gives each body a `home` equal to the room it sleeps in, so
+home and trail agree at every assertion. So the report's central design claim —
+that the site is *derived from the ledger's own `agent-at` timeline*, which is
+what justifies the new `O(trail)` cost and why `Session::sleep` needed no edit —
+is pinned by nothing. One line in the fixture fixes it: give the bedded body a
+`home` that is neither room.
+
+#46 [G5] — **CONSTITUTIONAL LIMIT, and it belongs to Nathan: the rest grade
+cannot be finer than the locale.** The reviewer established the player path
+works but is **graded too coarsely** — in a built+cold locale the grade fires
+everywhere in that locale, so *a player passing out in the street is repaid
+exactly as one who found the bed*. That is the real distance from Nathan's
+ruling (*prefer a bed... when they can get one*), and it is not an oversight
+that can simply be tightened: grading per ANCHOR would require the fold to know
+which anchor a body occupied, and **decision 0069 says fine position is never
+serialized**. The ledger carries the room, not the spot in it.
+
+So the object-half grade is locale-granular by construction, and making it
+anchor-granular is a decision about 0069, not a refinement of this task. Goes in
+the G6 package and becomes a registry row; it is NOT fixed in this campaign.
+The feared inversion, by contrast, cannot occur: `the-fireside-bed` needs
+`built && cold` at both bands, so there is no world where a chamber has a bed
+and its locale does not.
