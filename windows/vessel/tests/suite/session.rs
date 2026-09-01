@@ -105,13 +105,17 @@ fn entering_leaves_the_walk_band_position_alone() {
         Turn::Out(t) => t,
         _ => panic!("enter must not release"),
     };
-    // Without this, the test passes whether `enter` descended or answered
-    // "Nothing here is built" — and position-invariance is trivially true in
-    // the second case. `Session::start` mints the flagship in its own
-    // settlement, whose locale IS settlement territory, so a refusal here is a
-    // real failure and not a geography accident.
+    // Without this, the test passes whether `enter` descended or was
+    // refused — and position-invariance is trivially true in the refusal
+    // case too. `Session::start` mints the flagship in its own settlement,
+    // whose locale IS settlement territory, so a refusal here is a real
+    // failure and not a geography accident. Asserted as a POSITIVE signal
+    // (the chamber's own "Ways on" signature), not as the absence of a
+    // refusal string: a negative assertion against wording survives that
+    // wording changing out from under it and silently stops guarding
+    // anything (The Prospect, Ruling 1).
     assert!(
-        !reply.starts_with("Nothing here is built"),
+        reply.contains("Ways on"),
         "the flagship's own locale is built, so this must actually descend: {reply:?}"
     );
     assert_eq!(
