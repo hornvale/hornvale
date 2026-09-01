@@ -208,35 +208,65 @@ pub const BAND_B_RUNG: u32 = 13;
 /// type-audit: bare-ok(count)
 pub const GLOBE_RUNG: u32 = 6;
 
-/// The central angle an icosahedron's own base-face edge subtends at the
-/// centre of its circumsphere, in radians — `acos(1/sqrt(5))`, about
-/// 63.4349°. Every refinement level halves it, which is the whole content of
+/// The central angle one base FACE of the cube-sphere subtends along a great
+/// circle through four face centres: `pi/2` exactly, 90°. Every refinement
+/// level halves it, which is the whole content of
 /// [`tiles_around_a_great_circle`].
 ///
-/// Derived, never tabulated: `hornvale_kernel::math` (the `libm` route
-/// `mercator.rs` already uses for every transcendental in this client) is
-/// asked for the `acos` rather than a rounded literal being pasted here.
-fn base_edge_rad() -> f64 {
-    hornvale_kernel::math::acos(1.0 / 5.0f64.sqrt())
+/// # IT WAS THE ICOSAHEDRON'S NUMBER UNTIL FIX ROUND 1, AND BAND B WAS DRAWN 1.4188x TOO FINE
+///
+/// This function returned `acos(1/sqrt(5))` = 1.1071487 rad — 63.4349°, the
+/// central angle an ICOSAHEDRON's base-face edge subtends at the centre of its
+/// circumsphere — and its caller's doc justified the halving with "the facet
+/// count is `20 << (2 * depth)`". Both premises died with the base mesh
+/// (decision 0506): the count is `6 << (2 * depth)`, and the chart's width is
+/// a property of the CUBE. At rung 13 the old arithmetic produced
+/// `TAU / (1.1071487 / 2^13)` = **46,490** columns over a band that has
+/// **32,768** facets around its equator — a factor of 1.4188 — so
+/// [`terrain_at_tile`] and `driver.rs`'s cursor resolver mapped ~1.42 chart
+/// columns onto each walk-band room and moving the cursor one column
+/// frequently did not change room. `plate.rs`'s own "one tile per facet" and
+/// `driver.rs`'s "the finest rung is band B: one tile per facet" were both
+/// false by 42%.
+///
+/// # WHERE `pi/2` COMES FROM, and why it is exact rather than derived
+///
+/// A cube has six faces and four of them meet the equator, each spanning a
+/// quarter of it; a great circle through four face centres therefore crosses
+/// four base facets, so one base facet subtends `TAU/4 = pi/2` along that
+/// circle. Refining `depth` levels splits each facet into `4^depth` children,
+/// `2^depth` of them along each axis, so the count around the circle is
+/// `4 * 2^depth` — 32,768 at rung 13, which
+/// [`the_chart_width_is_the_meshs_own_equatorial_facet_count`] checks against
+/// the mesh itself rather than against this derivation.
+///
+/// **No transcendental, and that is a simplification rather than a loss.** The
+/// icosahedral figure needed an `acos` and a comment explaining why it was not
+/// tabulated; the cube's is a quarter turn, so `FRAC_PI_2` IS the derivation.
+/// The tangent warp redistributes facets WITHIN a face and does not change how
+/// many of them a face has, so the count is exact even though the individual
+/// facet arcs are not equal.
+fn base_facet_arc_rad() -> f64 {
+    std::f64::consts::FRAC_PI_2
 }
 
-/// How many facet edges fit around a great circle at mesh depth `depth`.
+/// How many facets fit around a great circle at mesh depth `depth`.
 ///
-/// **Derived from the icosahedron's own geometry, not a hardcoded ladder.**
+/// **Derived from the cube-sphere's own geometry, not a hardcoded ladder.**
 /// A table becomes a tuned number the first time the globe level moves. (This
 /// sentence used to cite `hornvale_vessel::course::step_length_rad`'s own doc as
 /// the precedent for avoiding that; The Pavement deleted the whole `course`
 /// module along with the rhumb it served, so the principle is stated here
-/// directly rather than pointed at a path that no longer resolves.) The
-/// base-face edge subtends [`base_edge_rad`]; each of the
-/// `depth` refinement levels halves it (the facet count is `20 << (2 *
-/// depth)`, i.e. four facets per facet per level, so the edge halves), so
-/// the count around a great circle is `2*pi` divided by that angle.
+/// directly rather than pointed at a path that no longer resolves.) One base
+/// facet subtends [`base_facet_arc_rad`]; each of the `depth` refinement
+/// levels halves it (the facet count is `6 << (2 * depth)`, i.e. four facets
+/// per facet per level, so each axis doubles), so the count around a great
+/// circle is `2*pi` divided by that angle — `4 * 2^depth`.
 ///
 /// `2.0^depth` is computed through `math::powf` rather than a shift, so a
 /// depth at or past 32 saturates instead of overflowing.
 fn tiles_around_a_great_circle(depth: u32) -> u32 {
-    let edge = base_edge_rad() / hornvale_kernel::math::powf(2.0, f64::from(depth));
+    let edge = base_facet_arc_rad() / hornvale_kernel::math::powf(2.0, f64::from(depth));
     ((std::f64::consts::TAU / edge).round() as u32).max(1)
 }
 
@@ -1526,19 +1556,38 @@ mod tests {
     /// The bound clause 1 of [`mesh_addressing_agrees_with_the_spatial_search`]
     /// asserts: how many grid spacings farther from a tile's own centre the
     /// mesh-addressed vertex may sit than the true nearest vertex does.
-    /// Measured max 1.1051 on that test's own window (The Pavement, Task 8);
-    /// 1.5 leaves headroom for another seed or window without admitting a
-    /// second grid spacing. **Not a ratchet** — a breach means addressing
-    /// resolved the wrong facet, which is a defect and not a drift.
+    /// **Measured max 0.7487** on that test's own window (fix round 1; it read
+    /// 1.1051 at The Pavement's Task 8, on a chart 1.4188x finer than the mesh
+    /// and against a `spacing` derived from the ICOSAHEDRON's base angle — both
+    /// halves of that ratio moved, and the raw angular excess fell too,
+    /// 0.019119 -> 0.018378 rad). 1.5 leaves headroom for another seed or
+    /// window without admitting a second grid spacing. **Not a ratchet** — a
+    /// breach means addressing resolved the wrong facet, which is a defect and
+    /// not a drift.
     const MAX_ADDRESSING_EXCESS_SPACINGS: f64 = 1.5;
 
     /// The floor clause 2 of [`mesh_addressing_agrees_with_the_spatial_search`]
     /// asserts: the fraction of tiles on which mesh addressing and a plain
     /// `nearest()` query pick the SAME vertex. Exact agreement was guaranteed
-    /// on the icosphere and is not on the cube-sphere; measured 0.5824 (The
-    /// Pavement, Task 8). **A ratchet**: raising it is always allowed and is
-    /// the direction of travel.
-    const MIN_ADDRESSING_AGREEMENT: f64 = 0.55;
+    /// on the icosphere and is not on the cube-sphere.
+    ///
+    /// **Measured 0.5036 (2,518 of 5,000) at fix round 1, down from 0.5824 at
+    /// The Pavement's Task 8, and the drop is the CHART getting coarser rather
+    /// than the addressing getting worse.** `base_facet_arc_rad` was returning
+    /// the icosahedron's edge angle, so this window's chart was 1.4188x finer
+    /// than the band it drew; a smaller tile keeps its centre nearer a facet
+    /// corner, so nearest-of-four-corners agreed with true-nearest more often.
+    /// Drawing at the mesh's own resolution doubles a tile's area and spreads
+    /// its centre further from any corner. **Clause 1 — the clause that
+    /// actually bounds the error — TIGHTENED over the same change** (0.7487
+    /// grid spacings against 1.1051, and 0.018378 rad against 0.019119), and
+    /// `a_tile_resolves_to_the_facet_that_contains_it` still holds exactly, so
+    /// nothing about which facet is resolved has moved.
+    ///
+    /// **A ratchet**: raising it is always allowed and is the direction of
+    /// travel. This is the second time it has been lowered, and both times for
+    /// a stated geometric reason rather than to make a run pass.
+    const MIN_ADDRESSING_AGREEMENT: f64 = 0.50;
 
     /// A committed-seed world, built the same way the spike builds one
     /// (`windows/worldgen/examples/portolan_spike.rs`'s own `main`,
@@ -1613,15 +1662,17 @@ mod tests {
 
         // Coarser rung => half the tiles. Each mesh level halves the edge length.
         // Tolerance is +/-1 IN EITHER DIRECTION because each rung rounds
-        // independently. Measured widths: rung 11 gives 11,623 and rung 12
-        // gives 23,245, so doubling THAT coarse rung OVERSHOOTS by one -- a
-        // one-sided tolerance fails there, which is what the first draft of
-        // this assertion did. The pair this assertion actually compares moved
-        // when The Pavement took `BAND_B_RUNG` to 13 (rung 12 gives 23,245 and
-        // rung 13 gives 46,490, an exact doubling), so the overshoot is no
-        // longer exercised here -- the two-sided tolerance stays anyway,
-        // because which pair is exact is a property of the rounding at that
-        // rung and not of the rule being asserted.
+        // independently. **The rounding no longer bites at all, and the history
+        // is worth keeping**: on the ICOSAHEDRAL base angle this function used
+        // until fix round 1, rung 11 gave 11,623 and rung 12 gave 23,245, so
+        // doubling THAT coarse rung OVERSHOT by one -- a one-sided tolerance
+        // failed there, which is what the first draft of this assertion did. On
+        // the cube-sphere's own quarter turn the width is `4 * 2^depth`
+        // exactly, an integer at every rung (rung 12 gives 16,384 and rung 13
+        // gives 32,768), so nothing rounds anywhere. The two-sided tolerance
+        // stays: which pair is exact is a property of the arithmetic and not of
+        // the rule being asserted, and a future projection whose base angle is
+        // not a quarter turn would want it back.
         let (w_coarse, _) = virtual_dims(BAND_B_RUNG - 1);
         assert!(
             (w_coarse * 2).abs_diff(w_a) <= 1,
@@ -1655,6 +1706,67 @@ mod tests {
             (ratio - 0.9967).abs() < 0.01,
             "clamped-Mercator aspect came out {ratio}, expected ~0.9967"
         );
+    }
+
+    /// **THE CHART'S WIDTH IS THE MESH'S OWN EQUATORIAL FACET COUNT** — asked
+    /// of the mesh, never of this module's derivation.
+    ///
+    /// This is the assertion whose absence let band B be drawn **1.4188x too
+    /// fine** for the whole of The Pavement. [`base_facet_arc_rad`] returned
+    /// the ICOSAHEDRON's base-face edge angle after decision 0506 replaced the
+    /// icosahedron, so `virtual_dims(13)` sized a 46,490-column chart over a
+    /// 32,768-facet band and every claim of "one tile per facet" in this crate
+    /// was false by 42%. Nothing caught it because
+    /// `tests/walk_band_agreement.rs` and
+    /// `cli/tests/suite/walk_depth_agreement.rs` pin the depth INTEGER, and
+    /// nothing compared chart RESOLUTION to mesh spacing.
+    ///
+    /// The reference is `Facet::containing`, walked along the equator at 4x the
+    /// expected column count and counted as a set — the mesh answering the
+    /// question in its own terms rather than this module restating its own
+    /// arithmetic. Every rung from the base face to [`BAND_B_RUNG`] must agree
+    /// EXACTLY, not within a tolerance: the count is an integer property of the
+    /// lattice.
+    ///
+    /// **What it is blind to.** It measures the EQUATOR, which on this base
+    /// mesh is a great circle through four face centres — the circle
+    /// [`base_facet_arc_rad`] is defined against and the one a Mercator chart's
+    /// width is. It says nothing about the chart's HEIGHT (that is
+    /// [`the_clamped_mercator_is_nearly_square_in_tiles`]'s job), nothing about
+    /// whether individual facets are equal in arc (the tangent warp makes them
+    /// unequal, and the COUNT is exact anyway), and nothing about a meridian,
+    /// where the two polar faces make facets-per-degree vary.
+    #[test]
+    fn the_chart_width_is_the_meshs_own_equatorial_facet_count() {
+        for depth in [0u32, 1, 2, 3, GLOBE_RUNG, BAND_B_RUNG] {
+            let expect = 4u32 << depth;
+            // 4x oversampling: the tangent warp makes equatorial facets unequal
+            // in arc, so a 2x walk could step over a narrow one and undercount.
+            let samples = 4u64 * u64::from(expect);
+            let mut seen: std::collections::BTreeSet<hornvale_kernel::Facet> =
+                std::collections::BTreeSet::new();
+            for k in 0..samples {
+                let lon = -180.0 + 360.0 * (k as f64) / (samples as f64);
+                let pos = hornvale_kernel::math::unit_sphere_from_lat_lon(0.0, lon);
+                seen.insert(hornvale_kernel::Facet::containing(pos, depth));
+            }
+            assert_eq!(
+                seen.len() as u32,
+                expect,
+                "the mesh has {} facets around its equator at depth {depth}, not the {expect} \
+                 this module's arithmetic assumes",
+                seen.len()
+            );
+            let (w, _) = virtual_dims(depth);
+            assert_eq!(
+                w,
+                expect,
+                "virtual_dims({depth}) sizes a {w}-column chart over a band with {expect} \
+                 facets around its equator. One tile per facet is what this client claims; a \
+                 ratio of {:.4} is what it would be drawing.",
+                f64::from(w) / f64::from(expect)
+            );
+        }
     }
 
     /// THE TASK'S OWN POINT: a narrow plate draws a SUBRECT of a wide one,
@@ -2005,7 +2117,9 @@ mod tests {
     /// by construction. A cube-sphere quad's corners are not geosphere
     /// vertices ([`terrain_at_tile`]'s own doc says so), so the guarantee is
     /// gone: measured on this test's own 5,000-tile equatorial window, the
-    /// two methods now agree on **2,912 of 5,000 tiles (58.24%)**. Deleting
+    /// two methods now agree on **2,518 of 5,000 tiles (50.36%)** — it was
+    /// 2,912 (58.24%) until fix round 1 corrected the chart's resolution, and
+    /// [`MIN_ADDRESSING_AGREEMENT`]'s doc has the mechanism. Deleting
     /// the test would drop the only coverage `terrain_at_tile`'s addressing
     /// has; re-pinning the exact equality would pin a claim the geometry no
     /// longer supports. So the assertion is replaced by the two claims that
@@ -2131,8 +2245,18 @@ mod tests {
         );
 
         // CLAUSE 1: the error is bounded by about one grid spacing.
-        let spacing = base_edge_rad() / f64::from(1u32 << geo.depth());
+        let spacing = base_facet_arc_rad() / f64::from(1u32 << geo.depth());
         let excess = max_excess / spacing;
+        // Printed, not merely asserted: both quantities are the ones the two
+        // recorded constants below were set from, and fix round 1 moved both
+        // (the chart's width, and the spacing's own base angle). A number a
+        // test computes and never shows is a number nobody can re-record.
+        eprintln!(
+            "mesh addressing: agree {agree}/{total} ({:.4}), max excess {excess:.4} grid \
+             spacings (spacing {spacing:.8} rad at grid depth {})",
+            f64::from(agree) / f64::from(total),
+            geo.depth()
+        );
         assert!(
             excess <= MAX_ADDRESSING_EXCESS_SPACINGS,
             "the mesh-addressed vertex sat {excess:.4} grid spacings farther from a tile's \

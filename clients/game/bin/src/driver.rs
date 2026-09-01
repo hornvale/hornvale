@@ -4053,16 +4053,23 @@ mod portolan_tests {
     /// Depth 5 is BELOW the shipped ladder's floor and reachable only by
     /// constructing a [`Window`] directly, which is exactly the point: what
     /// is under test is the ratio arithmetic, not the ladder. A rung-5 chart
-    /// is 182x181 tiles for seed 42's 40,962 vertices — 1.243 vertices per
+    /// is 128x128 tiles for seed 42's 40,962 vertices — 2.501 vertices per
     /// character — so the strip must say so, through the same `strip_text`
     /// instrument its silent sibling above reads.
+    ///
+    /// **It was 182x181 (1.243 per character) until fix round 1**, when
+    /// `plate::base_facet_arc_rad` stopped returning the ICOSAHEDRON's edge
+    /// angle on a cube-sphere mesh. The chart is `4 * 2^depth` columns wide
+    /// now, exactly, so a rung-5 chart is 128 wide rather than 182 and this
+    /// rung is coarser than the mesh by MORE than it used to claim — which
+    /// only strengthens what this test is here for.
     #[test]
     fn the_resolution_disclosure_speaks_at_a_rung_coarser_than_the_mesh() {
         let mut d = test_driver();
         enter_world_view(&mut d);
 
         let (w, h) = plate::virtual_dims(5);
-        assert_eq!((w, h), (182, 181), "sanity: the rung-5 chart");
+        assert_eq!((w, h), (128, 128), "sanity: the rung-5 chart");
         let ratio = d.geo.vertex_count() as f64 / (u64::from(w) * u64::from(h)) as f64;
         assert!(
             ratio > 1.0,

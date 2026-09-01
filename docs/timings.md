@@ -4677,3 +4677,5 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-01T10:08:14Z | gate-commit | 90.880 | 59.049 | 29.212 | 0.97 | 0 | bb76584d8 | campaign/the-pavement | ambrose | 12 |
 | 2026-09-01T11:21:17Z | gate-commit | 29.263 | 22.472 | 11.900 | 1.17 | 0 | fd00e0cde | campaign/the-pavement | ambrose | 12 |
 | 2026-09-01T11:24:36Z | gate-commit | 170.881 | 311.161 | 54.246 | 2.14 | 0 | fd00e0cde | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T11:27:29Z | gate-commit | 120.915 | 83.227 | 55.081 | 1.14 | 0 | fd00e0cde | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T11:54:49Z | game-check | 806.627 | 4009.500 | 86.609 | 5.08 | 0 | 3d8f95c24 | campaign/the-pavement | ambrose | 12 |

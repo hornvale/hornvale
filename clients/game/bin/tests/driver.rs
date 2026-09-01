@@ -225,17 +225,51 @@ fn moving_the_cursor_off_the_observers_box_changes_the_strip() {
         // driven far enough to cross a real vertex boundary — past the
         // plate's own edge, which SCROLLS the window (spec §4.2), which is
         // the only way to travel that far at this rung.
+        //
+        // **`i16::MIN` WAS A NO-OP AS SOON AS THE CHART'S WIDTH WAS CORRECT,
+        // AND THAT IS WORTH THE PARAGRAPH (fix round 1).** This used to scroll
+        // a magic 41 times by `i16::MIN`. `move_cursor` turns the cursor's
+        // spill into `window.origin_col += spill` under
+        // `rem_euclid(virtual_w)` — so a spill of exactly `virtual_w` moves
+        // the window nowhere at all. `plate::base_facet_arc_rad` was returning
+        // the ICOSAHEDRON's edge angle, making the chart 46,490 columns wide,
+        // and `-32,768 mod 46,490` is a real 13,722-column move; on the
+        // cube-sphere's own 32,768 the same action is a whole wrap and the
+        // window does not budge. Forty-one no-ops later the strip was
+        // unchanged — a red that says nothing about the property under test.
+        //
+        // So the step is a named ODD number of columns. Every chart width this
+        // module can produce is `4 * 2^depth`, a power of two, so an odd step
+        // is coprime with it and no repetition can ever land back on the
+        // starting residue. And the distance is DRIVEN UNTIL THE ANSWER MOVES
+        // rather than pinned, with a bound: that tests "the strip is a
+        // function of the cursor" without also pinning the chart's width, and
+        // a resolution that ever made this unreachable would redden on the
+        // bound rather than on an arithmetic coincidence.
         driver.apply(Action::CursorBy(-5, 0));
-        driver.apply(Action::CursorBy(i16::MIN, 0));
-        for _ in 0..40 {
-            driver.apply(Action::CursorBy(i16::MIN, 0));
-        }
-        let far_west = driver.strip_text().map(str::to_string);
+        const SCROLL_COLS: i16 = -4097;
+        const SCROLL_BUDGET: usize = 64;
+        let mut scrolls = 0usize;
+        let far_west = loop {
+            driver.apply(Action::CursorBy(SCROLL_COLS, 0));
+            scrolls += 1;
+            let now = driver.strip_text().map(str::to_string);
+            if now != at_observer || scrolls >= SCROLL_BUDGET {
+                break now;
+            }
+        };
+        eprintln!(
+            "the strip changed after {scrolls} westward scrolls of {} columns each",
+            -i32::from(SCROLL_COLS)
+        );
         assert_ne!(
-            far_west, at_observer,
-            "the strip must change once the cursor has travelled off the observer's \
-             own terrain — resolution is a function of the cursor, not of the \
-             possession"
+            far_west,
+            at_observer,
+            "the strip did not change in {SCROLL_BUDGET} westward scrolls of {} columns \
+             each — the strip must change once the cursor has travelled off the \
+             observer's own terrain, because resolution is a function of the cursor \
+             and not of the possession",
+            -i32::from(SCROLL_COLS)
         );
 
         // And coming back must restore the observer's own answer — proving

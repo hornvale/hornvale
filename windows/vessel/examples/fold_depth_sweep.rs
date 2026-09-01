@@ -311,12 +311,25 @@ impl Terrain for FlatTerrain {
     }
 }
 
-/// A small fixed set of rooms (8 of the mesh's 20 base faces, at depth 0)
-/// that the synthetic ledger's postings cycle through. A CONSTANT room would
-/// let a future optimisation collapse the segments and silently flatter the
-/// fold, so the postings must actually move.
+/// A small fixed set of rooms — **all six of the cube-sphere's base faces**,
+/// at depth 0 — that the synthetic ledger's postings cycle through. A CONSTANT
+/// room would let a future optimisation collapse the segments and silently
+/// flatter the fold, so the postings must actually move.
+///
+/// **SIX, not eight, since fix round 1.** This read `ROOM_COUNT = 8` with a
+/// doc saying "8 of the mesh's **20** base faces", both true of the
+/// icosahedron decision 0506 replaced. `Facet::pack` gained
+/// `if self.face >= 6 { Err(Invalid) }` at that campaign's Task 3
+/// (`kernel/src/room.rs`; `main` had `>= 20`), so faces 6 and 7 stopped
+/// packing and the sweep died on its 7th synthetic posting — `rc=101`, after
+/// printing its depth table and before producing any measurement. Nothing
+/// gates `examples/`: `cargo clippy --all-targets` COMPILES them and never
+/// RUNS them, so all three gates were green with this instrument permanently
+/// dead. Cycling six rooms instead of eight preserves the only property this
+/// helper claims — that the postings move — and is now the whole base mesh
+/// rather than a subset of it.
 fn room_for(i: usize) -> Facet {
-    const ROOM_COUNT: usize = 8;
+    const ROOM_COUNT: usize = 6;
     Facet {
         face: (i % ROOM_COUNT) as u8,
         path: Vec::new(),

@@ -1166,7 +1166,7 @@ mod tests {
         );
         assert_ne!(
             seam_count,
-            s.cells.len(),
+            s.cells.len(), // lexicon: SurroundsCell is a chart AREA — one room's box — not a mesh vertex
             "the observer must also see non-seam cells, or the `else` arm is untested"
         );
 
@@ -1379,7 +1379,7 @@ mod tests {
         let with = s.cells.iter().filter(|c| c.color.is_some()).count();
         assert_eq!(
             with,
-            s.cells.len(),
+            s.cells.len(), // lexicon: SurroundsCell is a chart AREA — one room's box — not a mesh vertex
             "{with} of {} cells received a colour — the standard observer has a \
              truthful sRGB image, so every placed cell must",
             s.cells.len()
@@ -1559,14 +1559,31 @@ mod tests {
     ///
     /// Reuses the exact walk-depth flagship band
     /// `the_color_now_varies_within_one_grid_cell_via_the_micro_field`
-    /// measures colour variation over (radius 8, `globe_level + 6`):
-    /// measured here, that band draws 2 distinct cover classes
-    /// (`chlorophyll`, `litter`) across its cells.
+    /// measures colour variation over (radius 8, `hornvale_locale::
+    /// walk_depth`): measured here, that band is **289 rooms** and draws 2
+    /// distinct cover classes (`chlorophyll`, `litter`).
+    ///
+    /// **THE BAND WAS A LEVEL TOO COARSE UNTIL FIX ROUND 1, AND THIS TEST IS
+    /// A POSITIVE CONTROL, SO THAT MATTERED.** It read
+    /// `Facet::containing(pos, gl + 6)` with a local `gl` — The Pavement moved
+    /// the walk band to `globe_level + 7` (decision 0511) and this site kept
+    /// the old arithmetic, so it measured a band **4x the ground per room**
+    /// than the one the client draws. A cover-mixture regression that
+    /// collapses at walk grain but not at `+6` grain would have passed the
+    /// control written to catch it. It evaded all three arms of
+    /// `cli/tests/suite/walk_depth_agreement.rs`: the offset scan matches the
+    /// literal `globe_level()` and this used a local binding, the absolute
+    /// roster is opt-in and never listed this file, and the `const WALK` arm
+    /// needs a constant of that name. Calling the function is what closes all
+    /// three at once, which is the guard's own stated remedy.
+    ///
+    /// The room count moved with it — 109 at `+6` on the old triangular mesh,
+    /// **289** for a radius-8 ball on the quad lattice — and the class count
+    /// did not.
     #[test]
     fn every_covers_index_is_in_bounds_and_cover_varies_across_a_real_band() {
         let w = world();
         let ctx = hornvale_locale::LocaleContext::build(&w).unwrap();
-        let gl = ctx.globe_level();
         let v = hornvale_settlement::village_info(&w).expect("seed 42 has a village");
         let (lat, lon) = place_latlon(&w, v.id).expect("the flagship has coordinates");
         let pos = hornvale_kernel::math::unit_sphere_from_lat_lon(lat, lon);
@@ -1574,7 +1591,7 @@ mod tests {
         let s = surrounds_scene_colored_in(
             &w,
             &ctx,
-            &Facet::containing(pos, gl + 6),
+            &Facet::containing(pos, hornvale_locale::walk_depth(&ctx)),
             8,
             WorldTime::GENESIS,
             &hornvale_kernel::color::standard_observer(),
@@ -1601,6 +1618,13 @@ mod tests {
             seen > 0,
             "no cell carried a cover index at all — the loop body never executed"
         );
+        eprintln!(
+            "cover across the real walk band (depth {}, radius 8): {} rooms, {} distinct \
+             classes {distinct:?}",
+            hornvale_locale::walk_depth(&ctx),
+            s.cells.len(), // lexicon: SurroundsCell is a chart AREA — one room's box — not a mesh vertex
+            distinct.len()
+        );
         assert!(
             distinct.len() > 1,
             "every one of {seen} cells carried the same cover index {distinct:?} — either \
@@ -1617,8 +1641,10 @@ mod tests {
     /// Before Task 2b, rock class was the *only* colour input, read from the
     /// room's dominant *canonical-grid* corner
     /// (`LocaleContext::reflectance_at`), so a radius-8 walking-depth
-    /// neighbourhood (109 cells, `globe_level + 6` — rooms roughly 64× finer
-    /// per axis than a globe cell) reported one rock, one biome, one water
+    /// neighbourhood (109 rooms on the then-triangular mesh at
+    /// `globe_level + 6` — **289 rooms at `hornvale_locale::walk_depth` on
+    /// today's quad lattice**, rooms roughly 128× finer per axis than a globe
+    /// room) reported one rock, one biome, one water
     /// kind, one relief band, and one colour: colour was exactly as
     /// spatially resolved as every OTHER categorical field the chart
     /// carried. Task 2b composes a surface-cover layer above the mineral
@@ -1636,9 +1662,16 @@ mod tests {
     /// (`surface.rs::tier3`), so one climate regime can produce at most a
     /// handful of distinguishable mixtures, never a continuum. Measured on
     /// this world: a radius-8 walking-depth chart around the flagship now
-    /// draws **3** distinct colours (was 1 pre-Task-2b); a radius-4
-    /// grid-level chart still draws several more, unaffected (colour there
-    /// was already varying with climate/lithology, not micro).
+    /// draws **4** distinct colours (3 when this band was built at
+    /// `globe_level + 6`, 1 pre-Task-2b); a radius-4 grid-level chart still
+    /// draws several more, unaffected (colour there was already varying with
+    /// climate/lithology, not micro).
+    ///
+    /// **THE BAND IS THE REAL WALK DEPTH SINCE FIX ROUND 1.** It was built at
+    /// a local `gl + 6` — a level coarser than the walk band has been since
+    /// decision 0511, and invisible to every arm of
+    /// `cli/tests/suite/walk_depth_agreement.rs` for the reasons the sibling
+    /// test above records. It now calls `hornvale_locale::walk_depth`.
     #[test]
     fn the_color_now_varies_within_one_grid_cell_via_the_micro_field() {
         let w = world();
@@ -1668,7 +1701,12 @@ mod tests {
 
         // At walking depth the whole neighbourhood is one grid cell — still
         // true of every CATEGORICAL field, but no longer true of colour.
-        let (walk_colors, walk_biomes) = distinct(gl + 6, 8);
+        let (walk_colors, walk_biomes) = distinct(hornvale_locale::walk_depth(&ctx), 8);
+        eprintln!(
+            "walk band (depth {}, radius 8): {walk_colors} distinct colours, {walk_biomes} \
+             distinct biomes",
+            hornvale_locale::walk_depth(&ctx)
+        );
         assert!(
             walk_colors > 1,
             "a radius-8 walking-depth chart drew only {walk_colors} colour(s); \
@@ -1681,7 +1719,7 @@ mod tests {
         // one climate regime to at most 3 (aspect) x 3 (openness) x 3
         // (wetness) = 27 combinations in the worst case, but this specific
         // band (unfrozen, so aspect's snow-only effect never activates)
-        // measures 3 today. The design this guard exists to catch — reading
+        // measures 4 today. The design this guard exists to catch — reading
         // `aspect`/`openness`/`wetness` continuously instead of banding them
         // into tiers — was reinstated on this exact band as an experiment
         // and measured **18** distinct colours, comfortably under an
@@ -1691,6 +1729,21 @@ mod tests {
         // design's 18, and was confirmed to redden the continuous variant
         // and stay green on the shipped one before landing — see the Task
         // 2b fix-round report for both runs.
+        //
+        // **THE CALIBRATION MOVED BAND AND THE 18 WAS NOT RE-MEASURED — SAY
+        // SO RATHER THAN IMPLY OTHERWISE (fix round 1).** Both the shipped
+        // reading (3) and the rejected variant's (18) were taken at
+        // `globe_level + 6`; this band is now `walk_depth`, a quarter of the
+        // ground per room, and the shipped reading moved 3 -> 4. The rejected
+        // continuous variant was NOT re-run here, so 18 is a figure from the
+        // coarser band. The ceiling survives on the argument's shape rather
+        // than on a fresh pair of runs: the continuous variant's count is
+        // bounded below by the number of distinct micro-field triples in the
+        // band, which can only RISE with a finer band, while the tiered
+        // design's is bounded above by 27 regardless of grain. 9 still sits
+        // strictly between 4 and any count at or above 18. If that ceiling
+        // ever needs raising, re-run BOTH variants at this band before
+        // touching it.
         assert!(
             walk_colors <= 9,
             "a radius-8 walking-depth chart drew {walk_colors} colours across \
@@ -2144,7 +2197,7 @@ mod tests {
 
         // Every cell, including the ones that are not `here`.
         assert_eq!(
-            s.cells.len(),
+            s.cells.len(), // lexicon: SurroundsCell is a chart AREA — one room's box — not a mesh vertex
             ball_size(4),
             "the fixture's premise moved: a radius-4 chart is no longer {} cells",
             ball_size(4)
@@ -2171,7 +2224,7 @@ mod tests {
             distinct.len() * 100 > ball_size(4) * 80,
             "{} cells produced only {} distinct micro tuples; the field is being \
              shared rather than derived per room",
-            s.cells.len(),
+            s.cells.len(), // lexicon: SurroundsCell is a chart AREA — one room's box — not a mesh vertex
             distinct.len()
         );
     }
