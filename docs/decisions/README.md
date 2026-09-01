@@ -265,4 +265,5 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0511](0511-walk-depth-is-globe-level-plus-seven.md) | Walk depth is `globe_level + 7`, chosen to preserve step length | Accepted |
 | [0512](0512-the-projection-is-tangent-warped-and-there-is-one-of-it.md) | The cube-sphere projection is tangent-warped, and there is one of it | Accepted |
 | [0513](0513-a-quadrilateral-lattice-carries-no-third-axis-or-orientation-flag.md) | A quadrilateral lattice carries no third axis or orientation flag | Accepted |
+| [0514](0514-a-census-refresh-needs-no-authorization.md) | A census refresh needs no per-run authorization (retires the AWS-spend carve-out outright) | Accepted |
 | [0516](0516-a-reachable-lock-implies-a-reachable-key-is-left-empirical.md) | "A reachable lock implies a reachable key" is left empirical, deliberately — wait for the residents | Accepted |
