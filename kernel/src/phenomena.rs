@@ -98,6 +98,40 @@ pub struct Phenomenon {
     pub venue: Venue,
 }
 
+/// A consumer's felt relationship to a phenomenon — watched (eternal),
+/// mourned-and-feasted (cyclic), or felt through the ambient world rather
+/// than watched (ambient). A pure function of a phenomenon's venue and
+/// periodicity, so it lives beside [`Phenomenon`] (decision 0517 clause
+/// (b): it originates in a kernel type). Each domain keeps its own meaning
+/// of it: religion's ledger spelling (`sentiment_tag`), language's render
+/// registers.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Sentiment {
+    /// An unchanging presence in the day or night sky: always watched.
+    Eternal,
+    /// A presence that departs and returns: mourned in absence, feasted on
+    /// return.
+    Cyclic,
+    /// Felt through the ambient world (air, seasons) rather than watched.
+    Ambient,
+}
+
+impl Sentiment {
+    /// Derive a sentiment from a phenomenon's venue and periodicity:
+    /// `Venue::Ambient` is always `Ambient`; otherwise an aperiodic
+    /// phenomenon (`period_days: None`) is `Eternal` and a periodic one is
+    /// `Cyclic`.
+    pub fn of(phenomenon: &Phenomenon) -> Self {
+        if phenomenon.venue == Venue::Ambient {
+            Sentiment::Ambient
+        } else if phenomenon.period_days.is_none() {
+            Sentiment::Eternal
+        } else {
+            Sentiment::Cyclic
+        }
+    }
+}
+
 /// Multiplicative per-venue salience weights: how much attention an
 /// observer's eyes give each venue. The identity lens is a byte-level
 /// no-op in `observe` — it triggers no arithmetic at all.
@@ -544,5 +578,51 @@ mod tests {
         let json = serde_json::to_string(&r).expect("a referent serializes");
         let back: Referent = serde_json::from_str(&json).expect("a referent deserializes");
         assert_eq!(r, back);
+    }
+
+    fn phenomenon(venue: Venue, period_days: Option<f64>) -> Phenomenon {
+        Phenomenon {
+            kind: "test".to_string(),
+            referent: Referent::of("test"),
+            period_days,
+            salience: 1.0,
+            venue,
+        }
+    }
+
+    #[test]
+    fn sentiment_of_ambient_venue_is_ambient_regardless_of_period() {
+        assert_eq!(
+            Sentiment::of(&phenomenon(Venue::Ambient, None)),
+            Sentiment::Ambient
+        );
+        assert_eq!(
+            Sentiment::of(&phenomenon(Venue::Ambient, Some(365.0))),
+            Sentiment::Ambient
+        );
+    }
+
+    #[test]
+    fn sentiment_of_aperiodic_sky_venue_is_eternal() {
+        assert_eq!(
+            Sentiment::of(&phenomenon(Venue::DaySky, None)),
+            Sentiment::Eternal
+        );
+        assert_eq!(
+            Sentiment::of(&phenomenon(Venue::NightSky, None)),
+            Sentiment::Eternal
+        );
+    }
+
+    #[test]
+    fn sentiment_of_periodic_sky_venue_is_cyclic() {
+        assert_eq!(
+            Sentiment::of(&phenomenon(Venue::DaySky, Some(29.5))),
+            Sentiment::Cyclic
+        );
+        assert_eq!(
+            Sentiment::of(&phenomenon(Venue::NightSky, Some(365.0))),
+            Sentiment::Cyclic
+        );
     }
 }

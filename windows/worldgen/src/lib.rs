@@ -9943,18 +9943,6 @@ pub fn genesis_notes(world: &World) -> Result<Vec<String>, BuildError> {
     })
 }
 
-/// Map religion's `Sentiment` onto language's own copy of the same
-/// distinction (spec §6): `domains/language` never imports
-/// `hornvale-religion`, so this conversion lives only here, at the
-/// composition root.
-fn line_sentiment_of(sentiment: hornvale_religion::Sentiment) -> hornvale_language::LineSentiment {
-    match sentiment {
-        hornvale_religion::Sentiment::Eternal => hornvale_language::LineSentiment::Eternal,
-        hornvale_religion::Sentiment::Cyclic => hornvale_language::LineSentiment::Cyclic,
-        hornvale_religion::Sentiment::Ambient => hornvale_language::LineSentiment::Ambient,
-    }
-}
-
 /// Build one belief's `LineContent` (spec §6). Every field but the period
 /// comes straight off the belief's own committed facts; `period_days` is
 /// **not** itself a committed fact (`religion::genesis` never stores one on
@@ -9970,7 +9958,7 @@ fn line_content_for(
     hornvale_language::LineContent {
         deity: belief.deity.clone(),
         epithet: belief.epithet.clone(),
-        sentiment: line_sentiment_of(belief.sentiment),
+        sentiment: belief.sentiment,
         period_days: phenomenon.and_then(|p| p.period_days),
         high_god: belief.high_god,
     }

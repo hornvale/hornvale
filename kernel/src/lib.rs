@@ -64,8 +64,8 @@ pub use ledger::{
 pub use manifest::{CognitiveHandle, Correspondent, Lexicalization, Manifest, PerceptKind, Void};
 pub use noise::{Fbm, fbm_2d, value_noise_2d};
 pub use phenomena::{
-    ObserverContext, PerceptionLens, PhenomenaSource, Phenomenon, Referent, VISIBILITY_FLOOR,
-    Venue, Visibility, observe,
+    ObserverContext, PerceptionLens, PhenomenaSource, Phenomenon, Referent, Sentiment,
+    VISIBILITY_FLOOR, Venue, Visibility, observe,
 };
 pub use polyline::{SphericalPolyline, band};
 pub use precision::Precision;
