@@ -599,3 +599,30 @@ ideonomy passes / overturns: 0 / 0 · Capture: the retrospective takes this as
 the fifth instance of the campaign's signature shape — a statement whose form
 outruns what it can support. Add to the rule: past-tense a claim only after
 checking it was ever true.
+
+#30 [G5] — **Adjudication: a dirty working tree does not compromise a sluice
+stage gate, because the sluice tests a SHA.** Task 6's reviewer raised as
+Important that `docs/timings.md` carried an uncommitted row, quoting the brief's
+premise — *"this is the last boundary at which the tree is artifact-clean, so
+anything the queue reddens is attributable to the re-key alone"* — and
+concluding the tree should be reverted before `make sluice-stage` runs ·
+Decision: **not a defect and not a fix round.** The observation is right and the
+consequence does not follow. `sluice-stage` takes `REF=<full-sha>`; the chamber
+checks that commit out on the canonical box and merges main into it there.
+Nothing about the submitter's working tree reaches the run. The gate had already
+completed green against exactly `747be7000d13`, which is HEAD · Why the reviewer
+reached it anyway: it reasoned from the brief's *premise sentence* rather than
+from the mechanism, and my sentence was loose — "artifact-clean tree" is about
+the COMMITTED artifacts being unmoved by stages 1-4, not about `git status`
+being empty · Committed the row as controller tree hygiene ·
+ideonomy passes / overturns: 0 / 0 · Cost if wrong: none — the gate is green
+either way, and the row is append-only telemetry that would otherwise be lost
+or swept into an unrelated commit.
+
+#31 — **FIRST SLUICE STAGE GATE: GREEN.**
+`req-747be7000d13-20260901T155501Z` → `reported`, all stage phases rc=0 in
+1325 s, **main unchanged at 2d84e1b71**. Stages 1-4 — the enum retired, the
+totality gates, prose as a component table, and a new kind placed in a real
+world — survive contact with main as a real merge product, not as a branch tip
+in isolation. Stage 5 (the acts) begins from here, which is the point of
+gating at this boundary: anything the next gate reddens has one candidate cause.
