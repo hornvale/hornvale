@@ -4,7 +4,7 @@
 use crate::action::{Action, Mood};
 use crate::agent::check_species_known;
 use crate::body::Body;
-use crate::clock::{climb_factor, cost_of, mass_for_species};
+use crate::clock::{climb_factor, cost_of, mass_for_species, step_factor};
 use crate::controller::{Controller, ImposedController, PlayerController};
 use crate::gate::{BodyState, Verdict, verdict};
 use crate::liveness::{
@@ -292,15 +292,119 @@ const INDOOR_CHART_REFUSAL: &str =
 const INDOOR_BACK_REFUSAL: &str =
     "Inside, there is no trail to retrace; the way you came is 'out'.";
 
-/// What a DIAGONAL step says indoors.
+/// What a diagonal step says indoors when the CORNER is closed.
 ///
-/// [`crate::lattice::HEADINGS`] is orthogonal only: a diagonal step through the
-/// corner where two walls meet is not a way through a building. Refused with the
-/// geometry as the reason, not with a parse complaint, and it names the four
-/// bearings that do work — the same standard `INDOOR_CHART_REFUSAL` holds itself
-/// to.
-const INDOOR_DIAGONAL_REFUSAL: &str =
-    "There is no slipping through a corner; step north, south, east or west.";
+/// **It used to refuse every diagonal, and the change of scope is the whole
+/// point of this constant now.** The old text read "There is no slipping through
+/// a corner; step north, south, east or west", and its doc justified the blanket
+/// by `crate::lattice::HEADINGS` being orthogonal only. Both halves have lapsed:
+/// `HEADINGS` carries four diagonal entries since The Pavement, and a diagonal
+/// step indoors is ordinary movement. What survives is the narrow physical claim
+/// the old sentence was really about — **passing between two walls that meet at
+/// a point is not a way through a building** — which is now asked cell by cell
+/// through [`crate::lattice::diagonal_is_blocked`] rather than asserted of all
+/// four diagonals at once.
+///
+/// It therefore no longer names "the four bearings that do work", because which
+/// bearings work is a fact about the cell stood on, not about the compass: a
+/// sentence naming a fixed four would be false at every cell with one open flank.
+/// It still states geometry rather than lodging a parse complaint — the standard
+/// `INDOOR_CHART_REFUSAL` holds itself to — and it names the two walls, which is
+/// the thing a player can actually go and look at on the plan.
+const INDOOR_CORNER_REFUSAL: &str =
+    "Two walls meet at that corner; there is no slipping between them.";
+
+/// What a step says when the cell beyond it is another chamber's floor and no
+/// doorway joins them there.
+///
+/// **A configuration 8-connectivity made representable, found while wiring the
+/// corner rule.** The lattice's separation rule
+/// (`crate::lattice::grow::claimable`) forbids two chambers' floors being
+/// ORTHOGONALLY adjacent, and section 7 rule 2 asserts exactly that — so while a
+/// step was orthogonal-only, "the target floor belongs to another chamber" was
+/// unrepresentable and [`Session::step`] never had to ask. Diagonally it is
+/// representable: two blobs may meet at a corner, and if the flank between them
+/// is the `Threshold` joining them (which `reservable` permits) the corner rule
+/// opens the diagonal. The step would then have moved the possession onto another
+/// chamber's floor while leaving `Inside::at` naming the room it left — a stale
+/// band address, with `describe_chamber_here` reporting the wrong room from then
+/// on.
+///
+/// **Not reachable from a live session today, and the guard is still right.**
+/// `crate::structure::structure_at` returns `None` unless `brief.built`, so
+/// `embed_with` always picks `allocate`, whose rect partition leaves floors two
+/// apart across a wall line — a diagonal touch is geometrically impossible there
+/// (probed: 0 of 2400 allocate lattices, against 532 of 2400 grown). So `grow` is
+/// test-only as things stand. It is the method that will be used, which is why
+/// this guard is written now rather than when it first goes live.
+///
+/// # Refused rather than treated as a crossing — and NOT for the reason first given
+///
+/// **The first version of this doc said a diagonal crossing would mint an
+/// undoored connection that section 7 rule 1 exists to catch. That is false, and
+/// the proof is short enough to keep.** Let the open flank be `f`, orthogonally
+/// adjacent to both `Floor(A)` and `Floor(B)`. If `f` were `Floor(x)`, then
+/// `claimable` — which forbids any orthogonal neighbour owned by another chamber
+/// — requires `x == A` AND `x == B`, impossible for `A != B`. So `f` is a
+/// `Threshold(a, b)`, and `reservable` (every already-owned neighbour belongs to
+/// `a` or `b`) forces `{a, b} ⊇ {A, B}`, hence `{a, b} = {A, B}`. **The open
+/// flank is always the doorway joining exactly those two chambers**, so the link
+/// is in the anchor graph, is realized, and `realized_links` already reports it.
+/// Rule 1 could never fire. The old paragraph even argued against itself in its
+/// last sentence.
+///
+/// Three reasons survive that proof, and they are why the refusal stays:
+///
+/// 1. **In this model a crossing IS the doorway cell.** [`Session::step`]'s
+///    threshold branch lands the possession at
+///    [`crate::lattice::cell_beyond`]'s answer — *beside* the doorway, on the far
+///    room's floor, which is what makes the arrival cell well defined and
+///    guaranteed to serve the new chamber. A diagonal crossing has no arrival
+///    cell with that property. It would break THAT invariant, not a graph rule.
+/// 2. **It is the corner-cut objection one scale up.** Squeezing between two
+///    rooms' floors that meet at a point is the same physical claim
+///    [`INDOOR_CORNER_REFUSAL`] makes about two walls, asked of chambers instead
+///    of cells. (The one part of the original reasoning that holds.)
+/// 3. **`{a, b} = {A, B}` is a DERIVED consequence, not a stated invariant.** It
+///    falls out of `claimable` and `reservable` together; neither function
+///    declares it and no test pins it. Admitting the crossing would silently
+///    couple `step` to that derivation, so a future generator that relaxed either
+///    function would break movement in a way nothing would catch. The refusal is
+///    correct under any generator.
+///
+/// The doorway is **one** step away, orthogonally — the `Threshold` flank is a
+/// direct neighbour of the cell stood on — and that step IS the crossing. (This
+/// said "two steps" until fix round 1; it was wrong, and it was the sentence that
+/// most nearly exposed the false rule-1 reason above.)
+const INDOOR_UNDOORED_ROOM_REFUSAL: &str = "The next room's floor touches yours only at that corner, and a corner is \
+     not a door; the doorway is the way between.";
+
+/// What a step into a cube corner's absent eighth neighbour says.
+///
+/// **Twenty-four rooms at every depth** have seven neighbours rather than eight,
+/// not eight rooms: the cube has eight corners, and **three quads meet at each**
+/// (which is exactly why the eighth neighbour is missing — only three quads meet
+/// at that vertex, where every other lattice vertex has four;
+/// `hornvale_kernel::Facet::neighbors`' own doc states the case). 8 corners x 3
+/// quads = 24 rooms, and `all_twenty_four_cube_corner_rooms_refuse_exactly_one_bearing_each`
+/// asserts precisely that count.
+///
+/// (**"Eight rooms" was wrong and travelled three generations** — a task brief,
+/// then a committed note, then five sites in this file, which by then
+/// contradicted the test in the same crate. Corrected in fix round 1. The number
+/// eight is real but names the CORNERS, never the rooms.)
+///
+/// One compass word at such a room has no room to name — [`heading_neighbour`]
+/// returns `None` for exactly one bearing at exactly those 24 rooms — and the
+/// missing bearing is **not a wall and not a bad word, it is a direction that
+/// does not exist there**.
+///
+/// Precedent for stating the geometry rather than refusing the token:
+/// [`INDOOR_CORNER_REFUSAL`]'s own doc. Unlike that one it CAN name what works,
+/// and does, because the count is a fact about the geometry rather than about
+/// the cell's walls: seven of the eight hold, always.
+const CORNER_BEARING_REFUSAL: &str = "The land folds away to nothing that way; no ground lies in \
+     that direction at all. The other seven bearings hold.";
 
 /// What lateral movement says while SUBMERGED (The Column). Swimming between
 /// coordinates is a later campaign; for now the water column is entered and left
@@ -695,12 +799,6 @@ pub struct Session<'w> {
     driven: usize,
     knowledge: Knowledge,
     trail: Vec<Facet>,
-    /// The walk-band course, if the possession is mid-traverse.
-    ///
-    /// `None` before the first `go` and after any verb that invalidates a
-    /// heading. Never serialized: a world is a seed plus a ledger, and a
-    /// course is a fact about this session's walk, not about the world.
-    course: Option<crate::course::Course>,
     day: WorldTime,
     focalizer: TemplateFocalizer,
     projection: IdentityProjection,
@@ -1278,7 +1376,6 @@ impl<'w> Session<'w> {
             driven,
             knowledge: Knowledge::default(),
             trail: Vec::new(),
-            course: None,
             day: opts.day,
             focalizer: TemplateFocalizer,
             projection: IdentityProjection,
@@ -1405,16 +1502,6 @@ impl<'w> Session<'w> {
     /// The accumulated knowledge (read-only).
     pub fn knowledge(&self) -> &Knowledge {
         &self.knowledge
-    }
-
-    /// This session's walk-band course, if it is mid-traverse.
-    ///
-    /// An accessor rather than a `pub` field: the course is session-private
-    /// state whose invariant is that `reckoned` advances only through
-    /// `rhumb_advance`. A `pub` field invites a consumer that assigns to it,
-    /// which is exactly the memoryless walk this campaign exists to avoid.
-    pub fn course(&self) -> Option<&crate::course::Course> {
-        self.course.as_ref()
     }
 
     /// The locale context this session walks (for the battery's checks).
@@ -2229,6 +2316,21 @@ impl<'w> Session<'w> {
     /// Errs on a clock overflow rather than saturating: `wait` already routes
     /// that through its own error channel (a live `possess` stdin can reach
     /// `wait 1e308` twice), and a move that cannot be timed must not happen.
+    ///
+    /// **The step geometry is derived HERE, not passed in** (The Pavement,
+    /// Task 7). The walk band is 8-connected, so a `MoveTo` is worth `√2`
+    /// steps when its destination is a diagonal neighbour, and charging a flat
+    /// rate is a ~41% travel-speed exploit (see
+    /// [`crate::clock::DIAGONAL_STEP_FACTOR`]). Deriving it inside means no
+    /// caller can under-price a diagonal by forgetting an argument — `go` and
+    /// `back` are both walk-band steps and neither has to know — and it costs
+    /// nothing, because the destination is already in the `Action` and the
+    /// origin is [`Self::position`].
+    ///
+    /// **It therefore inherits `climb_to`'s ordering requirement, exactly:**
+    /// both read `self.position()` as the room being LEFT, so both must run
+    /// before the move commits. Every caller already charges before
+    /// `commit_agent_at`, which is what makes that safe rather than lucky.
     fn charge(&mut self, action: &Action, terrain_factor: f64) -> Result<(), String> {
         debug_assert_eq!(
             action.mood(),
@@ -2236,11 +2338,16 @@ impl<'w> Session<'w> {
             "an out-of-character act must not reach the clock: cost_ticks \
              floors at one tick, which base_ticks prices at zero on purpose"
         );
+        let step = match action {
+            Action::MoveTo(to) => step_factor(&self.position(), to),
+            // No other action covers ground, so none has a step geometry.
+            _ => 1.0,
+        };
         // Integer addition, end to end (The Foliot). This used to convert the
         // cost to `f64` days and re-enter the lattice through
         // `WorldTime::from_std_days`; with a lattice-aligned day the cost IS a
         // kernel span, so there is no crossing left to make.
-        let span = cost_of(action, self.body_mass_kg, terrain_factor);
+        let span = cost_of(action, self.body_mass_kg, terrain_factor, step);
         match self
             .day
             .ticks()
@@ -3678,8 +3785,9 @@ impl<'w> Session<'w> {
                 // `UNDERGROUND_LATERAL_REFUSAL`'s own claim false.
                 // `step_underground` is `Self::step`'s reversal one band
                 // over, following the same three rules its own doc names —
-                // a diagonal refused before any lookup, passability asked as
-                // a predicate, and lateral movement that never changes band.
+                // a diagonal through a two-walled corner refused before any
+                // lookup, passability asked as a predicate, and lateral movement
+                // that never changes band.
                 "go" if self.underground.is_some() => self.step_underground(rest),
                 "go" => self.go(rest),
                 // Band-aware, for the same reason `look` is: the outdoor path resolves
@@ -3840,8 +3948,9 @@ impl<'w> Session<'w> {
                 // typed inside a structure would slip past the band split that
                 // `"go" if self.inside.is_some()` exists to make, and silently
                 // render the neighbouring locale from indoors. Indoors it therefore
-                // means what `go n` means indoors — one CELL of the floor plan, and
-                // `step` refuses a bare diagonal with the geometry as the reason.
+                // means what `go n` means indoors — one CELL of the floor plan, all
+                // eight bearings of it, with `step` refusing a diagonal only where
+                // two walls meet at the corner it would cut.
                 other if self.inside.is_some() && parse_compass(other).is_some() => {
                     self.step(other)
                 }
@@ -4148,7 +4257,7 @@ impl<'w> Session<'w> {
     /// A compass step UNDERGROUND: one cell of the current rung's real
     /// generated level (The Gallery, Task 4).
     ///
-    /// The geometry itself — diagonal refusal, the passability predicate,
+    /// The geometry itself — the corner rule, the passability predicate,
     /// and the law that lateral movement never changes band (metaplan
     /// §1b.6) — lives entirely in [`crate::underground::Underground::peek`]/
     /// [`crate::underground::Underground::commit_step`]; this wrapper parses
@@ -4497,8 +4606,10 @@ impl<'w> Session<'w> {
     }
 
     /// The underworld's own "ways on" report (Fix round 1, review finding
-    /// 1): the passable orthogonal neighbours of the cell stood on, in the
-    /// same bearing vocabulary `Self::ways_from_cell` (indoors) already
+    /// 1): the passable neighbours of the cell stood on — **all eight bearings
+    /// since The Pavement, with the corner rule applied**, not the four
+    /// orthogonal ones this line named until then — in the same bearing
+    /// vocabulary `Self::ways_from_cell` (indoors) already
     /// uses, plus `out` whenever the current rung is the entrance rung —
     /// `climb`'s own guard is `ug.rung != 0`, not "stood on the entrance
     /// cell", so `out` is a way on from anywhere on rung 0, not only the
@@ -4518,16 +4629,24 @@ impl<'w> Session<'w> {
         if ug.rung == 0 {
             open.push("out".to_string());
         }
-        for wanted in COMPASS_SQUARE {
-            let delta = cell_delta(wanted).expect("COMPASS_SQUARE is orthogonal");
-            let target = crate::lattice::Cell(ug.cell.0 + delta.0, ug.cell.1 + delta.1);
-            if ug
-                .level()
+        // All eight, corner rule applied — the same argument this method's own doc
+        // makes above about the fixed `"Ways on: out."` it replaced: the sentence
+        // must report what `go` can do, and `go` walks diagonals now (spec section
+        // 3.1). A bearing the corner rule refuses is not a way on.
+        let closed = |c: crate::lattice::Cell| {
+            ug.level()
                 .cells
-                .get(target)
+                .get(c)
                 .and_then(crate::underworld_level::movement_mode)
-                .is_some()
-            {
+                .is_none()
+        };
+        for wanted in COMPASS_ROSE {
+            let delta = cell_delta(wanted);
+            if crate::lattice::diagonal_is_blocked(ug.cell, delta, |c| !closed(c)) {
+                continue;
+            }
+            let target = crate::lattice::Cell(ug.cell.0 + delta.0, ug.cell.1 + delta.1);
+            if !closed(target) {
                 open.push(bearing_letter(wanted));
             }
         }
@@ -4659,10 +4778,27 @@ impl<'w> Session<'w> {
                     _ => None,
                 })
                 .collect();
-            format!(
-                "No direction here is closed; the nearest ground lies {}.",
-                ways.join(", ")
-            )
+            // **The leading clause is conditional now, and it has to be.** It
+            // was a flat "No direction here is closed", which was true while
+            // `go` could not refuse a bearing outdoors at all. It can, at
+            // exactly the 24 cube-corner rooms (8 corners, three quads meeting at
+            // each), where one compass word names
+            // no room (`CORNER_BEARING_REFUSAL`) — so the flat claim would be a
+            // one-turn observable falsehood there, the class of defect decision
+            // 0141 exists to remove. Everywhere else the sentence is unchanged,
+            // byte for byte.
+            let refused: Vec<String> = heading_rose(&self.position())
+                .iter()
+                .zip(COMPASS_ROSE)
+                .filter(|(n, _)| n.is_none())
+                .map(|(_, c)| bearing_letter(c))
+                .collect();
+            let lead = if refused.is_empty() {
+                "No direction here is closed".to_string()
+            } else {
+                format!("Every direction here is open but {}", refused.join(", "))
+            };
+            format!("{lead}; the nearest ground lies {}.", ways.join(", "))
         };
         Ok(format!(
             "[room {}, day {}]\n{}\n{closing}",
@@ -4684,8 +4820,8 @@ impl<'w> Session<'w> {
         let Some(wanted) = parse_compass(dir) else {
             return Turn::Out(format!("Go where? '{dir}' is no direction I know."));
         };
-        // The locale itself is no longer consulted for exit matching — a rhumb
-        // course resolves against pure geometry (the current position and its
+        // The locale itself is not consulted for exit matching — a heading
+        // resolves against pure geometry (the room stood in and its own
         // neighbours), not `v.locale.exits` — but the current position must
         // still be observable before a step is taken from it, so the call
         // stays for its error-detection side effect alone.
@@ -4699,19 +4835,15 @@ impl<'w> Session<'w> {
         ) {
             return Turn::Out(format!("error: {e}"));
         }
-        let bearing = crate::course::bearing_of(wanted);
-        // Continue an existing course only when the bearing is unchanged;
-        // any other direction starts a fresh one from where we stand.
-        let mut course = match self.course.take() {
-            Some(c) if c.bearing_deg == bearing => c,
-            _ => crate::course::Course {
-                bearing_deg: bearing,
-                reckoned: here.coord(),
-            },
+        // **A heading IS an edge now.** There is no reckoned point, no held
+        // course and no rhumb: the walk band is 8-connected, so a compass word
+        // names one of this room's own neighbours and stepping it is the whole
+        // act (spec section 3.4 — `crate::course` is deleted, not adapted). The
+        // one bearing that can fail to name a room is the cube corner's absent
+        // eighth, which `heading_neighbour` reports as `None`.
+        let Some(dest) = heading_neighbour(&here, wanted) else {
+            return Turn::Out(CORNER_BEARING_REFUSAL.to_string());
         };
-        let delta = crate::course::step_length_rad(&here);
-        course.reckoned = crate::course::rhumb_advance(course.reckoned, bearing, delta);
-        let dest = crate::course::nearest_neighbour(&here, course.reckoned);
         // The Deed, Task 7: a walk-band step is an in-character act, so it
         // pays the action clock against this body's own mass and posts the
         // `agent-at` a creature's step posts. Charged BEFORE the position
@@ -4722,7 +4854,6 @@ impl<'w> Session<'w> {
         if let Err(e) = self.charge(&Action::MoveTo(dest.clone()), ground) {
             return Turn::Out(e);
         }
-        self.course = Some(course);
         self.trail.push(here);
         // Decision 0069's committed tier: the WALK band is an entity's
         // persisted position, so this one commits. The fine layer below it —
@@ -4757,8 +4888,11 @@ impl<'w> Session<'w> {
         // Committing IS the position update now (spec §3.1) — there is no
         // mutable field left to assign `prev` to.
         self.commit_agent_at(&prev, RETRACED_PROVENANCE);
-        // A retrace is not a continuation of any heading.
-        self.course = None;
+        // Nothing to clear: there is no carried heading any more. `back` used to
+        // reset `Session.course` so a later `go e` would not continue a reckoning
+        // from before the retrace; a heading is resolved fresh from the room stood
+        // in every time now (spec section 3.4), so the state that could go stale
+        // does not exist. `back_clears_the_course` is dissolved with it.
         if let Err(e) = self.absorb_here() {
             return Turn::Out(format!("error: {e}"));
         }
@@ -4908,11 +5042,16 @@ impl<'w> Session<'w> {
     /// a chamber carries no bearing to walk along. True while a chamber had no
     /// interior; this campaign gave it one.
     ///
-    /// Four things happen here and the order matters:
+    /// Five things happen here and the order matters:
     ///
-    /// 1. **A diagonal is refused** ([`INDOOR_DIAGONAL_REFUSAL`]) before anything
-    ///    is looked up: `HEADINGS` is orthogonal, and slipping through the corner
-    ///    where two walls meet is not a way through a building.
+    /// 1. **A diagonal through a two-walled corner is refused**
+    ///    ([`INDOOR_CORNER_REFUSAL`]), asked through
+    ///    [`crate::lattice::diagonal_is_blocked`] before the target is looked up
+    ///    at all: slipping between two walls that meet at a point is not a way
+    ///    through a building. **This step used to refuse ALL FOUR diagonals**, on
+    ///    the strength of `HEADINGS` being orthogonal; it is four entries longer
+    ///    now (spec section 3.1) and the refusal narrowed to the corner it was
+    ///    always really about (spec section 3.3).
     /// 2. **An impassable target is refused with a physical reason.** Asked as
     ///    `passable()`, never as `== CellKind::Wall`, so the refusal survives the
     ///    day a `Rubble` cell arrives — the plan's constraint, not a preference.
@@ -4921,16 +5060,18 @@ impl<'w> Session<'w> {
     ///    same sense `enter` is, so it gets `enter`'s answer; and the possession
     ///    lands BESIDE the doorway rather than in it (see
     ///    [`crate::lattice::cell_beyond`]).
-    /// 4. **Otherwise the cell moves and the answer is brief.** A full chamber
+    /// 4. **A target that is another chamber's floor with no doorway between is
+    ///    refused** ([`INDOOR_UNDOORED_ROOM_REFUSAL`]) — reachable only
+    ///    diagonally, and only since this campaign; see that constant's doc for
+    ///    why it is a refusal rather than a crossing.
+    /// 5. **Otherwise the cell moves and the answer is brief.** A full chamber
     ///    description on every step would bury a transcript in repetitions of one
     ///    room's prose, so the step says what changed and what is now adjacent.
     fn step(&mut self, dir: &str) -> Turn {
         let Some(wanted) = parse_compass(dir) else {
             return Turn::Out(format!("Go where? '{dir}' is no direction I know."));
         };
-        let Some(delta) = cell_delta(wanted) else {
-            return Turn::Out(INDOOR_DIAGONAL_REFUSAL.to_string());
-        };
+        let delta = cell_delta(wanted);
         let Some(inside) = self.inside.as_ref() else {
             // Unreachable through `handle` (the arm checks first), the same guard
             // and the same reason as `plan_here`'s.
@@ -4940,6 +5081,16 @@ impl<'w> Session<'w> {
                     .to_string(),
             );
         };
+        // The corner rule, asked before the destination: a diagonal between two
+        // walls that meet at a point is refused on the geometry, whatever lies
+        // beyond it. `diagonal_is_blocked` reads only the two flanks and returns
+        // `false` outright for an orthogonal delta, so this one call covers all
+        // eight bearings without a diagonal special case here.
+        if crate::lattice::diagonal_is_blocked(inside.cell, delta, |c| {
+            crate::lattice::kind_of(&inside.lattice, c).is_some_and(|k| k.passable())
+        }) {
+            return Turn::Out(INDOOR_CORNER_REFUSAL.to_string());
+        }
         let target = crate::lattice::Cell(inside.cell.0 + delta.0, inside.cell.1 + delta.1);
         let kind = crate::lattice::kind_of(&inside.lattice, target);
         // `None` is outside the extent, which §7 rule 3(i) makes unreachable from
@@ -4972,6 +5123,15 @@ impl<'w> Session<'w> {
                 return self.out(self.describe_chamber_here());
             }
         }
+        // Another chamber's floor, reached without a doorway: refused rather than
+        // silently moved onto, which would leave `Inside::at` naming the room
+        // just left. See `INDOOR_UNDOORED_ROOM_REFUSAL` for why a refusal and not
+        // a crossing.
+        if let Some(crate::lattice::CellKind::Floor(owner)) = kind
+            && owner != inside.at
+        {
+            return Turn::Out(INDOOR_UNDOORED_ROOM_REFUSAL.to_string());
+        }
         if let Err(e) = self.charge_within_room() {
             return Turn::Out(e);
         }
@@ -4997,19 +5157,40 @@ impl<'w> Session<'w> {
     /// ([`crate::lattice::render::DOORWAY_NOUN`]), because stepping into it
     /// changes chamber — and because a player who reads `a doorway` here can type
     /// exactly that at `examine`.
+    ///
+    /// **All eight bearings, and the corner rule applied, since The Pavement.**
+    /// This sentence exists to say what [`Self::step`] can actually do from here;
+    /// leaving it at [`COMPASS_SQUARE`] while `step` walks diagonals would make
+    /// it a one-turn observable contradiction — `look` lists four ways on, `go ne`
+    /// immediately proves a fifth — which is the exact defect
+    /// [`Self::underground_ways_from_cell`]'s own doc records having been fixed one
+    /// band over. So it iterates [`COMPASS_ROSE`] and drops any diagonal
+    /// [`crate::lattice::diagonal_is_blocked`] refuses, so that every bearing
+    /// listed is a bearing that moves and every bearing omitted is one that does
+    /// not.
     fn ways_from_cell(&self) -> String {
         let Some(inside) = self.inside.as_ref() else {
             return String::new();
         };
         let mut open = Vec::new();
         let mut doors = Vec::new();
-        for wanted in COMPASS_SQUARE {
-            let delta = cell_delta(wanted).expect("COMPASS_SQUARE is orthogonal");
+        for wanted in COMPASS_ROSE {
+            let delta = cell_delta(wanted);
+            if crate::lattice::diagonal_is_blocked(inside.cell, delta, |c| {
+                crate::lattice::kind_of(&inside.lattice, c).is_some_and(|k| k.passable())
+            }) {
+                continue;
+            }
             let target = crate::lattice::Cell(inside.cell.0 + delta.0, inside.cell.1 + delta.1);
             match crate::lattice::kind_of(&inside.lattice, target) {
                 Some(crate::lattice::CellKind::Threshold(_, _)) => {
                     doors.push(bearing_letter(wanted))
                 }
+                // Another chamber's floor with no doorway between is a refusal,
+                // not a way on (see `INDOOR_UNDOORED_ROOM_REFUSAL`), so it is
+                // omitted here for the same reason a wall is. Reachable only
+                // diagonally: rule 2 forbids the orthogonal case.
+                Some(crate::lattice::CellKind::Floor(owner)) if owner != inside.at => {}
                 Some(k) if k.passable() => open.push(bearing_letter(wanted)),
                 _ => {}
             }
@@ -6095,7 +6276,7 @@ impl<'w> Session<'w> {
         };
         // Prefill the session-owned geometry memo (the-waymark fix round,
         // Finding 1) for each NPC's CURRENT position (`before`, captured
-        // above) and its three neighbours — the rooms this tick's drive
+        // above) and its neighbours — the rooms this tick's drive
         // stack (Thermal/Hunger/Danger/is_water/forage/hazards, all read via
         // `LocaleTerrain`) will touch for a stationary or slow-moving
         // creature. Under `&mut self.mesh_memo`, strictly BEFORE any
@@ -7855,17 +8036,55 @@ fn clear_response(barrier: hornvale_worldgen::BarrierState) -> String {
     .to_string()
 }
 
-/// Parse a compass token (case-insensitive, long names allowed).
-/// The four bearings a mover may take between CELLS, in `HEADINGS`-ish order:
-/// north first because that is how a reader scans the drawn plan.
+/// The four ORTHOGONAL bearings, in `HEADINGS`-ish order: north first because
+/// that is how a reader scans the drawn plan.
+///
+/// (The stray line "Parse a compass token (case-insensitive, long names allowed)"
+/// stood at the head of this doc comment until The Pavement — `parse_compass`'s
+/// own summary, left behind by an earlier reordering that moved the function away
+/// and glued its first line onto this constant. **Relocated to
+/// [`parse_compass`], not deleted**: fix round 1 caught that dropping it left
+/// that function with no doc at all, while this parenthesis claimed it had one.)
 ///
 /// A subset of [`Compass`] rather than a type of its own. The player's vocabulary
 /// is one compass at both bands — a step indoors and a step outdoors are typed the
 /// same way (§6.1 rejects a second `step` verb for exactly this reason) — so the
 /// bands differ in what they DO with a bearing, never in how it is spelled.
+///
+/// **`#[cfg(test)]` since The Pavement, and that is a finding rather than
+/// housekeeping.** This used to be what the two "Ways on:" reports iterated; both
+/// widened to [`COMPASS_ROSE`] when a cell step did, so nothing in the library
+/// asks for four bearings any more. What still does is three TESTS, each of which
+/// wants orthogonal-only for a stated reason (an orthogonal step reaches its
+/// target with no corner rule in the way, so the refusal or the report it reads
+/// back is unambiguous) — so the constant survives where its remaining callers
+/// are, rather than being deleted and restated three times.
+#[cfg(test)]
 const COMPASS_SQUARE: [Compass; 4] = [Compass::N, Compass::E, Compass::S, Compass::W];
 
-/// A compass bearing as a CELL delta, or `None` for a diagonal.
+/// All eight bearings, clockwise from north — the set a cell step may now take
+/// (spec section 3.1), and the roster [`heading_neighbour`] assigns against.
+///
+/// **Not a superset [`COMPASS_SQUARE`] can be derived from, deliberately.** The
+/// two constants answer different questions and both are still asked: this one
+/// is "what may a mover do", `COMPASS_SQUARE` is "what does the lattice's own
+/// construction guarantee" (its floods, its separation rule, its tunnels are all
+/// four-wide — see `crate::lattice::grow::rotated`). Collapsing them into one
+/// would erase that distinction at the sites where it is load-bearing.
+const COMPASS_ROSE: [Compass; 8] = [
+    Compass::N,
+    Compass::Ne,
+    Compass::E,
+    Compass::Se,
+    Compass::S,
+    Compass::Sw,
+    Compass::W,
+    Compass::Nw,
+];
+
+/// A compass bearing as a CELL delta. Eight bearings, eight deltas — the table
+/// is TOTAL since The Pavement, because every lattice in the project is
+/// 8-connected (spec section 3.1).
 ///
 /// **North is `-y`**, matching the render, which draws row `y` at line `y` from
 /// the top. Getting this backwards produces a world that is internally consistent
@@ -7874,22 +8093,72 @@ const COMPASS_SQUARE: [Compass; 4] = [Compass::N, Compass::E, Compass::S, Compas
 /// asserted against the picture (`a_step_north_moves_the_mark_up_the_picture`)
 /// rather than against another copy of this table.
 ///
-/// `None` for the diagonals is the honest answer, not an omission:
-/// [`crate::lattice::HEADINGS`] is orthogonal because a diagonal step through the
-/// corner where two walls meet is not a way through a building.
+/// # It used to return `Option`, and dropping that is the point
+///
+/// The old signature returned `None` for the four diagonals, and every caller
+/// spelled its reliance on that as `.expect("orthogonal")`. Those `expect`s were
+/// not defensive noise: they were the *guarantee* that a diagonal could not reach
+/// the code below them. Widening the table while KEEPING the `Option` would have
+/// left every one of them compiling and passing — an `expect` on `Some` never
+/// fires — so eight call sites would silently have begun admitting diagonals with
+/// no corner rule applied anywhere. Returning `(i32, i32)` instead makes the
+/// widening a COMPILE ERROR at all eight, which is what forced each to be decided
+/// on purpose rather than inheriting eight bearings because nobody looked.
+///
+/// So: **do not reintroduce the `Option` to mean "this caller wants only
+/// orthogonals".** Say that with the bearing set the caller iterates
+/// ([`COMPASS_SQUARE`] vs [`COMPASS_ROSE`]) or with the corner rule
+/// ([`crate::lattice::diagonal_is_blocked`]) — both of which a reader can check
+/// and a test can pin, unlike an `expect` string.
 ///
 /// **`pub(crate)`, not private (The Gallery, Task 4):**
 /// [`crate::underground::Underground::peek`] reuses this exact table rather
 /// than a second copy of it — a diagonal is a diagonal whether the walls
 /// around it are built or natural rock.
-pub(crate) fn cell_delta(c: Compass) -> Option<(i32, i32)> {
+pub(crate) fn cell_delta(c: Compass) -> (i32, i32) {
     match c {
-        Compass::N => Some((0, -1)),
-        Compass::E => Some((1, 0)),
-        Compass::S => Some((0, 1)),
-        Compass::W => Some((-1, 0)),
-        Compass::Ne | Compass::Se | Compass::Sw | Compass::Nw => None,
+        Compass::N => (0, -1),
+        Compass::Ne => (1, -1),
+        Compass::E => (1, 0),
+        Compass::Se => (1, 1),
+        Compass::S => (0, 1),
+        Compass::Sw => (-1, 1),
+        Compass::W => (-1, 0),
+        Compass::Nw => (-1, -1),
     }
+}
+
+/// The whole compass rose resolved at once — **`hornvale_locale`'s
+/// [`heading_rose`](hornvale_locale::heading_rose), re-exported here under the
+/// name this module has always used it by.**
+///
+/// It USED to be defined here, and moving it is the fix for a defect this
+/// campaign introduced: `hornvale_locale::exits_of` labelled a room's
+/// neighbours with a SECOND, independent rule (a 45-degree bucket), and on the
+/// cube mesh the two disagreed at 10.0% of walk-band rooms — inside a single
+/// `describe_here` sentence, which builds its letter list from
+/// `Locale::exits` and its "closed" clause from this function. The two rules
+/// are now one rule, so `look` and `go` cannot disagree by construction.
+///
+/// It moved DOWN rather than the exits moving up: `hornvale-vessel` depends on
+/// `hornvale-locale`, so a shared function can only live at that level or
+/// lower. The full rationale — including why the kernel was the wrong home —
+/// is on the function itself.
+use hornvale_locale::heading_rose;
+
+/// `wanted`'s index into [`COMPASS_ROSE`], hence into [`heading_rose`]'s answer.
+fn rose_index(wanted: Compass) -> usize {
+    COMPASS_ROSE
+        .iter()
+        .position(|&c| c == wanted)
+        .expect("COMPASS_ROSE holds every Compass variant")
+}
+
+/// Which of `from`'s neighbours the bearing `wanted` names — see
+/// [`heading_rose`], which answers this for all eight bearings at once and is
+/// what a caller wanting more than one should use.
+fn heading_neighbour(from: &Facet, wanted: Compass) -> Option<Facet> {
+    heading_rose(from)[rose_index(wanted)].clone()
 }
 
 /// A bearing spelled out, for a sentence: `north`.
@@ -7914,6 +8183,15 @@ fn bearing_letter(c: Compass) -> String {
     format!("{c:?}").to_uppercase()
 }
 
+/// Parse a compass token (case-insensitive, long names allowed).
+///
+/// `None` for anything else, which is what lets a caller distinguish "no
+/// direction I know" from a bearing that is known and refused — the two answers
+/// [`Session::go`] and [`Session::step`] give on their first two lines.
+///
+/// (This summary line is the one that had drifted onto [`COMPASS_SQUARE`]'s doc
+/// comment; see that constant. It is restored here rather than reworded, so the
+/// relocation is visibly a move.)
 fn parse_compass(s: &str) -> Option<Compass> {
     match s.to_lowercase().as_str() {
         "n" | "north" => Some(Compass::N),
@@ -7931,6 +8209,28 @@ fn parse_compass(s: &str) -> Option<Compass> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// **[`COMPASS_ROSE`] and `Compass::all()` must agree, and nothing asserted
+    /// it until the Task 11 fix round.** `describe_here` zips this constant
+    /// against [`heading_rose`]'s answer, and `heading_rose` — which now lives in
+    /// `hornvale_locale` — returns its entries in `Compass::all()`'s order. Two
+    /// hand-written orders, one silent zip: reordering either would mislabel every
+    /// bearing in the very sentence this campaign fixed, and every test would stay
+    /// green because both halves would move together only if someone happened to
+    /// change both. One assertion closes it.
+    #[test]
+    fn the_compass_rose_is_locales_own_order() {
+        assert_eq!(
+            COMPASS_ROSE.to_vec(),
+            Compass::all().to_vec(),
+            "COMPASS_ROSE has drifted from Compass::all(). `describe_here` zips this \
+             constant against `heading_rose`'s answer, which is in Compass::all() \
+             order, so a disagreement silently renames every exit the walk band \
+             prints — the exact defect The Pavement's Task 11 deleted the second \
+             labelling rule to prevent."
+        );
+    }
+
     use hornvale_astronomy::SkyPins;
     use hornvale_terrain::TerrainPins;
     use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
@@ -7946,6 +8246,33 @@ mod tests {
         .expect("seed 42 builds")
     }
 
+    /// The seed whose flagship dwelling draws the four-chamber shape the
+    /// custody tests walk: a loomroom holding a key at chamber index 2, and a
+    /// `Store` room holding a locked strongbox with its own key inside at
+    /// index 3.
+    ///
+    /// **14, not 1, since The Pavement.** Seed 1 drew that shape on the
+    /// icosphere and draws three chambers on the cube-sphere — screen, alcove,
+    /// loomroom — with no `Store` room at all, so ten tests lost their premise
+    /// at once and said so in the same words: *"no chamber of seed 1's
+    /// structure composes a strongbox"*. Nothing about the grammar moved. A
+    /// structure's chambers are drawn from its own room's seed, the epoch
+    /// moved every room address, and which seeds draw which shape is therefore
+    /// not preserved by an epoch and never was.
+    ///
+    /// **Re-measured rather than searched at run time, and the trade is
+    /// cost.** The measurement that produced this number walked seeds 1..=20
+    /// through `enter` / `enter further in` and read each chamber's nouns:
+    /// five hold a strongbox and a key in one chamber (7, 8, 11, 14, 15) — a
+    /// rate of 5/20, consistent with the 8/48 decision 0398 recorded — and two
+    /// of those, 14 and 15, also draw the SEPARATE loomroom the "carried in
+    /// from another room" half needs. 14 is the lower. Doing that scan inside
+    /// the tests would build twenty worlds (~80 s) in a module that already
+    /// pays for one per test, so the number is written down with its recipe,
+    /// exactly as decision 0398 wrote down its own rate rather than keeping
+    /// the 48-seed sweep as a test.
+    const CHAMBERED_SEED: u64 = 14;
+
     fn world_at(seed: u64) -> Option<World> {
         build_world(
             Seed(seed),
@@ -7955,6 +8282,554 @@ mod tests {
             &SettlementPins::default(),
         )
         .ok()
+    }
+
+    /// The walk depth the default globe level puts a room at, as a `Facet`
+    /// path length. Read from `crate::agent::walk_depth`'s own source of truth
+    /// rather than restated: `cli/tests/suite/walk_depth_agreement.rs` fails
+    /// the build if a `globe_level()` offset appears anywhere but
+    /// `hornvale_locale::walk_depth`, so this asks a real `LocaleContext` for
+    /// it instead of writing an arithmetic down.
+    fn walk_depth_of(world: &World) -> usize {
+        let wctx = WorldContext::build(world).expect("a built world has a context");
+        crate::agent::walk_depth(&wctx.ctx) as usize
+    }
+
+    /// One of the 24 cube-corner rooms: a constant-digit path is a corner of
+    /// its base face at every refinement, and a base-face corner IS a cube
+    /// corner. Asserted rather than assumed — `Facet::neighbors`' arity is the
+    /// whole premise of the corner test below, so it is checked at the point of
+    /// construction, not hoped for.
+    fn cube_corner_room(depth: usize) -> Facet {
+        let f = Facet {
+            face: 0,
+            path: vec![0u8; depth],
+        };
+        assert_eq!(
+            f.neighbors().len(),
+            7,
+            "precondition: a constant-digit path must be a cube corner, with the \
+             eighth (outward diagonal) neighbour absent"
+        );
+        f
+    }
+
+    /// A room at an explicit face-lattice position, encoding the path digits
+    /// `Facet::face_lattice` decodes: a digit is `(hi_x << 1) | hi_y`,
+    /// coarsest level first. The kernel's own constructor is private.
+    fn facet_at(face: u8, x: i64, y: i64, depth: u32) -> Facet {
+        Facet {
+            face,
+            path: (0..depth)
+                .rev()
+                .map(|i| ((((x >> i) & 1) as u8) << 1) | ((y >> i) & 1) as u8)
+                .collect(),
+        }
+    }
+
+    /// The walk band, from the one definition — a bare `World::new` needs no
+    /// genesis, so this costs nothing and restates no arithmetic.
+    fn bare_walk_depth() -> u32 {
+        let world = World::new(Seed(42));
+        let ctx =
+            hornvale_locale::LocaleContext::build(&world).expect("a bare world builds a context");
+        crate::agent::walk_depth(&ctx)
+    }
+
+    /// **A COMPASS WORD DOES NOT TELL YOU WHETHER THE STEP IS A DIAGONAL, and
+    /// 25.3% of interior assignments prove it.**
+    ///
+    /// This test exists to justify one line of [`Session::charge`]. Task 7's
+    /// brief specified the octile multiplier as "`std::f64::consts::SQRT_2`
+    /// for a diagonal heading and `1.0` otherwise" — keyed on the WORD the
+    /// player typed. `charge` keys on the step's actual geometry instead
+    /// (`clock::step_factor`, which asks whether the destination sits in
+    /// `neighbors()`' edge prefix), and the difference is not stylistic.
+    ///
+    /// [`heading_rose`] is a one-to-one ASSIGNMENT between the eight compass
+    /// words and the neighbours a room actually has, built greedily from the
+    /// smallest angular error up. Nothing in it constrains an orthogonal word
+    /// to an edge neighbour, and on a cube-sphere nothing should: a base
+    /// face's lattice axes have a fixed relation to geographic north only on
+    /// the four EQUATORIAL faces. On the two polar faces the lattice is
+    /// rotated by an amount that varies across the face, so `n` routinely
+    /// names a corner-adjacent room and `ne` an edge-adjacent one.
+    ///
+    /// Measured here rather than argued, and the numbers are this test's own
+    /// printed output rather than an estimate beside it: the mismatch is
+    /// **0% on each of faces 0-3** (0/800 apiece) and **74.5% and 77.5% on
+    /// faces 4 and 5** (596/800 and 620/800), **25.3% overall** (1216/4800).
+    /// So a word-keyed multiplier would have over-charged and under-charged
+    /// roughly a quarter of every walk-band step, in both directions, on a
+    /// third of the world.
+    ///
+    /// FIRES WHEN: someone "simplifies" `charge` back to keying the step
+    /// factor on the compass word, or `heading_rose` becomes class-preserving
+    /// (in which case the mismatch drops to zero and this test's premise is
+    /// the thing to revisit, not the assertion).
+    #[test]
+    fn a_compass_word_does_not_determine_whether_the_step_is_a_diagonal() {
+        let depth = bare_walk_depth();
+        let scale = 1i64 << depth;
+        let orthogonal_words = [Compass::N, Compass::E, Compass::S, Compass::W];
+        let mut per_face = [(0usize, 0usize); 6];
+        for i in 0..600i64 {
+            let face = (i % 6) as usize;
+            let x = 1 + (i * 1_367) % (scale - 2);
+            let y = 1 + (i * 2_741) % (scale - 2);
+            let room = facet_at(face as u8, x, y, depth);
+            let ns = room.neighbors();
+            assert_eq!(ns.len(), 8, "an interior room has all eight neighbours");
+            let rose = heading_rose(&room);
+            for (w, &word) in COMPASS_ROSE.iter().enumerate() {
+                let Some(dest) = rose[w].as_ref() else {
+                    continue;
+                };
+                let index = ns
+                    .iter()
+                    .position(|n| n == dest)
+                    .expect("the rose assigns this room's own neighbours");
+                let word_is_orthogonal = orthogonal_words.contains(&word);
+                // The kernel's pinned prefix: `[..4]` is the edge-adjacent
+                // rooms, everything beyond it is a diagonal.
+                let step_is_orthogonal = index < 4;
+                per_face[face].1 += 1;
+                if word_is_orthogonal != step_is_orthogonal {
+                    per_face[face].0 += 1;
+                }
+            }
+        }
+        let (bad, total) = per_face
+            .iter()
+            .fold((0usize, 0usize), |(b, t), (fb, ft)| (b + fb, t + ft));
+        println!("word/geometry class mismatch by face: {per_face:?}; total {bad}/{total}");
+        for (face, &(mismatched, _)) in per_face.iter().enumerate().take(4) {
+            assert_eq!(
+                mismatched, 0,
+                "face {face} is equatorial: its lattice axes DO track the compass, so a \
+                 mismatch there means the rose or the prefix has moved"
+            );
+        }
+        for (face, &(b, t)) in per_face.iter().enumerate().skip(4) {
+            assert!(
+                b * 4 > t,
+                "face {face} is polar and should mismatch on well over a quarter of \
+                 its assignments; got {b}/{t}. If this has genuinely dropped to \
+                 zero, `Session::charge` could key on the word again — but check \
+                 WHY before assuming it may."
+            );
+        }
+        assert!(
+            bad * 10 > total,
+            "the word/geometry mismatch has collapsed to {bad}/{total}; the reason \
+             `charge` derives the step factor from geometry rather than from the \
+             compass word needs re-examining, not the assertion loosening"
+        );
+    }
+
+    /// Which bearings `heading_neighbour` refuses from `from` — the set whose
+    /// SIZE is the whole claim: empty in the interior, one entry at a cube
+    /// corner.
+    fn refused_bearings(from: &Facet) -> Vec<Compass> {
+        COMPASS_ROSE
+            .into_iter()
+            .filter(|&c| heading_neighbour(from, c).is_none())
+            .collect()
+    }
+
+    /// The brief's Step 1 test, and the campaign's central movement claim: a
+    /// held heading walks true, so a heading and its opposite are inverse.
+    ///
+    /// **This was FALSE before The Pavement, and not marginally.** `go` carried
+    /// a dead-reckoned rhumb across a three-edge triangular lattice, so `n`
+    /// tacked between the two available edges nearest north (measured at
+    /// 206.7 degrees / 153.6 degrees by the campaign's own probe) and four
+    /// norths followed by four souths landed somewhere else entirely. With a
+    /// quad lattice `n` names an edge, and an edge has an opposite.
+    ///
+    /// **Each of the eight steps is asserted to MOVE, not just the round trip**
+    /// (fix round 1). The brief's version asserted only `!= start` after the four
+    /// norths and `== start` after the four souths, and a 1-of-4 partial-refusal
+    /// pattern satisfies both: three norths refused and one taken, then the
+    /// mirror image, returns you to the start having moved once. That is exactly
+    /// the failure a resolver with an occasional gap would produce, so the test
+    /// without per-step checks could not see the defect it exists to catch.
+    ///
+    /// FIRES WHEN: `go` resolves by anything that is not one-to-one — a
+    /// nearest-bearing pick that can alias two words to one room, a
+    /// re-introduced reckoned point that accumulates across steps, or a resolver
+    /// that refuses a bearing partway along a held heading.
+    #[test]
+    fn four_norths_and_four_souths_return_you_to_where_you_started() {
+        let world = world_at(42).expect("seed 42 builds");
+        let (mut s, _) =
+            Session::start(&world, &PossessOpts::default()).expect("seed 42 possesses");
+        let start = s.position();
+        let mut seen = vec![start.clone()];
+        for i in 0..4 {
+            let before = s.position();
+            s.handle("n");
+            assert_ne!(s.position(), before, "north {i} did not move");
+            seen.push(s.position());
+        }
+        assert_ne!(s.position(), start, "north must actually move");
+        for i in 0..4 {
+            let before = s.position();
+            s.handle("s");
+            assert_ne!(s.position(), before, "south {i} did not move");
+            // And it retraces the OUTWARD path exactly, room for room — a
+            // stronger claim than "ends where it started", which a walk that
+            // wandered and came back would also satisfy.
+            assert_eq!(
+                s.position(),
+                seen[3 - i],
+                "south {i} must retrace the outward path"
+            );
+        }
+        assert_eq!(s.position(), start, "n*4 then s*4 must be the identity");
+    }
+
+    /// The cube corner's absent bearing, in BOTH directions — an interior room
+    /// refuses none, a corner room refuses exactly one.
+    ///
+    /// **The pairing is the test.** A resolver that never refuses passes the
+    /// interior half and silently aliases two compass words onto one room at a
+    /// corner; a bucketing resolver passes the corner half and refuses a bearing
+    /// at 8.9% of ordinary interior rooms (measured over 384 walk-depth rooms
+    /// across all six faces — see `heading_neighbour`'s own doc). Only the
+    /// assignment rule passes both, and only asserting both can tell.
+    ///
+    /// FIRES WHEN: resolution stops being one-to-one in either direction.
+    #[test]
+    fn only_a_cube_corner_refuses_a_bearing_and_it_refuses_exactly_one() {
+        let world = world_at(42).expect("seed 42 builds");
+        let depth = walk_depth_of(&world);
+
+        let interior = Facet {
+            face: 0,
+            path: {
+                // A mixed path: away from every face corner, so all eight
+                // neighbours exist. Asserted, not assumed.
+                let mut path = vec![0u8; depth];
+                for (i, d) in path.iter_mut().enumerate() {
+                    *d = (i % 4) as u8;
+                }
+                path
+            },
+        };
+        assert_eq!(
+            interior.neighbors().len(),
+            8,
+            "precondition: the interior fixture must have all eight neighbours"
+        );
+        assert_eq!(
+            refused_bearings(&interior),
+            Vec::<Compass>::new(),
+            "an interior room must refuse no bearing at all"
+        );
+
+        let corner = cube_corner_room(depth);
+        assert_eq!(
+            refused_bearings(&corner).len(),
+            1,
+            "a cube corner has seven neighbours, so exactly one compass word \
+             has no room to name: {:?}",
+            refused_bearings(&corner)
+        );
+    }
+
+    /// And every OTHER cube-corner room behaves the same way — **all 24 of them**,
+    /// not the one face-0 fixture above, and not eight: the cube has eight
+    /// corners and three quads meet at each. A resolver whose one-to-one property
+    /// happened to hold on one face's winding and not another's would pass the
+    /// test above.
+    ///
+    /// (**Named for eight until fix round 1**, which put the test's own name in
+    /// contradiction with the `corners == 24` it asserts three lines down.
+    /// Renamed rather than left, because this test is new in this task and so
+    /// appears in no `docs/timings/subfloor-roster.tsv` key yet — the trade
+    /// `course.rs` had to make, keeping a stale name to stay inside
+    /// `gate-commit`'s filter, does not apply here.)
+    #[test]
+    fn all_twenty_four_cube_corner_rooms_refuse_exactly_one_bearing_each() {
+        let world = world_at(42).expect("seed 42 builds");
+        let depth = walk_depth_of(&world);
+        let mut corners = 0;
+        for face in 0u8..6 {
+            for digit in 0u8..4 {
+                let f = Facet {
+                    face,
+                    path: vec![digit; depth],
+                };
+                if f.neighbors().len() != 7 {
+                    continue;
+                }
+                corners += 1;
+                assert_eq!(
+                    refused_bearings(&f).len(),
+                    1,
+                    "face {face} digit {digit} refused {:?}",
+                    refused_bearings(&f)
+                );
+            }
+        }
+        // 24 constant-digit paths, one per (face, face-corner); the cube has
+        // eight corners and three faces meet at each, so every corner is named
+        // three times over. The positive control is that the sweep found any.
+        assert_eq!(
+            corners, 24,
+            "every constant-digit path at walk depth is a face corner, hence a \
+             cube corner with seven neighbours"
+        );
+    }
+
+    /// The corner refusal reaches the PLAYER, with the geometry as the reason
+    /// and no parse complaint — the standard `INDOOR_CHART_REFUSAL`'s own doc
+    /// sets and spec section 6 requires of this one.
+    ///
+    /// The possession is stood on a cube-corner room by committing an
+    /// `agent-at` there directly: no walk reaches one of 24 rooms in a
+    /// world of millions, and the refusal is a property of the room, not of
+    /// how the possession arrived.
+    ///
+    /// FIRES WHEN: `go` swallows the `None` and aliases the bearing to another
+    /// room, or answers with a parse error instead of the geometry.
+    #[test]
+    fn a_cube_corners_absent_bearing_is_refused_with_the_geometry_as_the_reason() {
+        let world = world_at(42).expect("seed 42 builds");
+        let depth = walk_depth_of(&world);
+        let corner = cube_corner_room(depth);
+        let absent = *refused_bearings(&corner)
+            .first()
+            .expect("a cube corner refuses one bearing");
+        let (mut s, _) =
+            Session::start(&world, &PossessOpts::default()).expect("seed 42 possesses");
+        s.commit_agent_at(&corner, WALKED_PROVENANCE);
+        assert_eq!(s.position(), corner, "the possession must be at the corner");
+        let word = format!("{absent:?}").to_lowercase();
+        let reply = match s.handle(&format!("go {word}")) {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("go must not release"),
+        };
+        assert_eq!(reply, CORNER_BEARING_REFUSAL, "go {word} at a cube corner");
+        let lower = reply.to_lowercase();
+        assert!(!lower.contains("direction i know"), "not a parse complaint");
+        assert!(!lower.contains("verb"), "must not name a verb: {reply}");
+        // And the other seven really do hold — the half a refusal-only test
+        // cannot see.
+        for c in COMPASS_ROSE {
+            if c == absent {
+                continue;
+            }
+            let (mut s, _) =
+                Session::start(&world, &PossessOpts::default()).expect("seed 42 possesses");
+            s.commit_agent_at(&corner, WALKED_PROVENANCE);
+            let word = format!("{c:?}").to_lowercase();
+            let reply = match s.handle(&format!("go {word}")) {
+                Turn::Out(t) => t,
+                Turn::Released(_) => panic!("go must not release"),
+            };
+            assert_ne!(
+                reply, CORNER_BEARING_REFUSAL,
+                "go {word} at a cube corner must not be the absent bearing"
+            );
+            assert_ne!(s.position(), corner, "go {word} must move");
+        }
+    }
+
+    /// A two-walled corner refuses the diagonal step INDOORS, and one open
+    /// flank permits it — the corner rule wired into `Session::step`.
+    ///
+    /// The lattice is replaced by a hand-built one rather than searched for in
+    /// a generated structure, for the reason
+    /// `windows/vessel/tests/suite/corner_rule.rs` states about the rule
+    /// itself: the claim is about a cell configuration, and building the
+    /// configuration is the only way to assert BOTH directions from the same
+    /// starting cell. Everything else about the session is real.
+    ///
+    /// FIRES WHEN: `Session::step` admits diagonals without asking
+    /// `diagonal_is_blocked`, or asks it with one flank instead of two.
+    #[test]
+    fn a_two_walled_corner_refuses_the_diagonal_step_indoors() {
+        // ONE world, four sessions — the same economy
+        // `every_compass_point_moves_the_possession` states above, and for the
+        // same reason: each configuration needs a fresh session, but genesis is
+        // far too expensive to repeat four times. (Fix round 1: it did repeat it
+        // four times, which is also the most plausible cause of the `LEAK` a
+        // reviewer saw nextest report on this test — a big `World` dropped four
+        // times over at process exit.)
+        let world = seam_world();
+        // Both flanks of the north-east diagonal walled, then just one.
+        for (walls, expect_refusal) in [
+            (
+                vec![crate::lattice::Cell(1, 0), crate::lattice::Cell(0, -1)],
+                true,
+            ),
+            (vec![crate::lattice::Cell(1, 0)], false),
+            (vec![crate::lattice::Cell(0, -1)], false),
+            (vec![], false),
+        ] {
+            let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+            session.handle("enter");
+            let extent = crate::lattice::Rect {
+                x: -2,
+                y: -2,
+                w: 5,
+                h: 5,
+            };
+            let mut cells = std::collections::BTreeMap::new();
+            let at = session.inside.as_ref().expect("entered").at;
+            for x in extent.x..(extent.x + extent.w) {
+                for y in extent.y..(extent.y + extent.h) {
+                    let cell = crate::lattice::Cell(x, y);
+                    let kind = if walls.contains(&cell) {
+                        crate::lattice::CellKind::Wall
+                    } else {
+                        crate::lattice::CellKind::Floor(at)
+                    };
+                    cells.insert(cell, kind);
+                }
+            }
+            let inside = session.inside.as_mut().expect("entered");
+            inside.lattice = crate::lattice::Lattice {
+                extent,
+                cells,
+                doorways: Vec::new(),
+                dof: 0,
+            };
+            inside.cell = crate::lattice::Cell(0, 0);
+            let reply = match session.handle("go ne") {
+                Turn::Out(t) => t,
+                Turn::Released(_) => panic!("go must not release"),
+            };
+            if expect_refusal {
+                assert_eq!(reply, INDOOR_CORNER_REFUSAL, "walls {walls:?}");
+                assert_eq!(
+                    session.inside.as_ref().expect("still inside").cell,
+                    crate::lattice::Cell(0, 0),
+                    "a refused step must not move the possession"
+                );
+            } else {
+                assert_ne!(reply, INDOOR_CORNER_REFUSAL, "walls {walls:?}");
+                assert_eq!(
+                    session.inside.as_ref().expect("still inside").cell,
+                    crate::lattice::Cell(1, -1),
+                    "one open flank permits the diagonal: walls {walls:?}"
+                );
+            }
+        }
+    }
+
+    /// Another chamber's floor, touching only at a corner and with no doorway
+    /// between, is refused — the guard 8-connectivity made necessary. See
+    /// [`INDOOR_UNDOORED_ROOM_REFUSAL`].
+    ///
+    /// The flank is deliberately left OPEN, so the corner rule does not refuse
+    /// the step and this guard is the only thing that can: a test with both
+    /// flanks walled would pass on the corner rule alone and prove nothing.
+    ///
+    /// FIRES WHEN: `step` moves onto another chamber's floor, leaving
+    /// `Inside::at` naming the room just left.
+    #[test]
+    fn a_corner_touch_between_two_chambers_is_not_a_way_between_them() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        session.handle("enter");
+        let at = session.inside.as_ref().expect("entered").at;
+        let other = at + 1;
+        let extent = crate::lattice::Rect {
+            x: -2,
+            y: -2,
+            w: 5,
+            h: 5,
+        };
+        let mut cells = std::collections::BTreeMap::new();
+        for x in extent.x..(extent.x + extent.w) {
+            for y in extent.y..(extent.y + extent.h) {
+                cells.insert(
+                    crate::lattice::Cell(x, y),
+                    crate::lattice::CellKind::Floor(at),
+                );
+            }
+        }
+        // The other chamber's floor, diagonally north-east, both flanks open.
+        cells.insert(
+            crate::lattice::Cell(1, -1),
+            crate::lattice::CellKind::Floor(other),
+        );
+        let inside = session.inside.as_mut().expect("entered");
+        inside.lattice = crate::lattice::Lattice {
+            extent,
+            cells,
+            doorways: Vec::new(),
+            dof: 0,
+        };
+        inside.cell = crate::lattice::Cell(0, 0);
+        let reply = match session.handle("go ne") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("go must not release"),
+        };
+        assert_eq!(reply, INDOOR_UNDOORED_ROOM_REFUSAL);
+        let inside = session.inside.as_ref().expect("still inside");
+        assert_eq!(inside.at, at, "the band address must not have moved");
+        assert_eq!(
+            inside.cell,
+            crate::lattice::Cell(0, 0),
+            "a refused step must not move the possession"
+        );
+        // The other direction: the same lattice with that cell owned by THIS
+        // chamber is an ordinary step, so the refusal is about ownership and not
+        // about the diagonal.
+        let inside = session.inside.as_mut().expect("still inside");
+        inside.lattice.cells.insert(
+            crate::lattice::Cell(1, -1),
+            crate::lattice::CellKind::Floor(at),
+        );
+        let reply = match session.handle("go ne") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("go must not release"),
+        };
+        assert_ne!(reply, INDOOR_UNDOORED_ROOM_REFUSAL);
+        assert_eq!(
+            session.inside.as_ref().expect("still inside").cell,
+            crate::lattice::Cell(1, -1)
+        );
+    }
+
+    /// `cell_delta` is total and each bearing's delta agrees with the compass
+    /// bearing the same table gives it: north is `-y` (up the picture), east is
+    /// `+x`, and a diagonal is the sum of its two cardinals.
+    ///
+    /// **Derived from `Compass::bearing_deg`, not from a second copy of the
+    /// deltas** —
+    /// decision 0456's discipline. Copying the table into the test would only
+    /// assert that someone typed it twice.
+    ///
+    /// FIRES WHEN: a delta and its bearing disagree in sign, or a diagonal is
+    /// not the sum of its cardinals.
+    #[test]
+    fn every_bearing_has_a_delta_that_agrees_with_its_bearing() {
+        for c in COMPASS_ROSE {
+            let (dx, dy) = cell_delta(c);
+            let bearing = c.bearing_deg();
+            // North is -y and east is +x, so the screen-space unit vector of a
+            // bearing is (sin, -cos) scaled to the {-1, 0, 1} lattice.
+            let want_x = match bearing {
+                b if (0.0..180.0).contains(&b) && b > 0.0 => 1,
+                b if b > 180.0 => -1,
+                _ => 0,
+            };
+            let want_y = match bearing {
+                b if !(90.0..=270.0).contains(&b) => -1,
+                b if (90.0..270.0).contains(&b) && b > 90.0 => 1,
+                _ => 0,
+            };
+            assert_eq!(
+                (dx, dy),
+                (want_x, want_y),
+                "{c:?} at {bearing} degrees has delta ({dx}, {dy})"
+            );
+        }
     }
 
     /// The verbs [`HELP`]'s own `verbs:` block lists, one per line at exactly
@@ -8714,9 +9589,9 @@ mod tests {
     #[test]
     fn a_key_in_custody_opens_the_strongbox_a_player_walked_to() {
         use crate::affordance::{ObjectProperty, thing_kind_of};
-        let world = world_at(1).expect("seed 1 builds");
+        let world = world_at(CHAMBERED_SEED).expect("the chambered seed builds");
         let (mut session, _) =
-            Session::start(&world, &PossessOpts::default()).expect("seed 1 possesses");
+            Session::start(&world, &PossessOpts::default()).expect("the chambered seed possesses");
         let say = |s: &mut Session<'_>, line: &str| match s.handle(line) {
             Turn::Out(t) => t,
             Turn::Released(t) => panic!("`{line}` must not release: {t}"),
@@ -8737,8 +9612,8 @@ mod tests {
         let nouns = session.chamber_nouns_here();
         assert!(
             nouns.iter().any(|n| n == "a strongbox") && nouns.iter().any(|n| n == "a key"),
-            "precondition: seed 1's deepest chamber must hold a strongbox with \
-             a key in it, or this test drives nothing: {nouns:?}"
+            "precondition: the chambered seed's deepest chamber must hold a \
+             strongbox with a key in it, or this test drives nothing: {nouns:?}"
         );
 
         // Before: the played refusal. Asserted here as well as in the suite
@@ -8941,9 +9816,9 @@ mod tests {
     /// a locked strongbox; that route is closed, so a test that needs a
     /// `Portable` thing in hand starts HERE and a test that needs a container
     /// walks one room further with the key.
-    fn at_the_loom_of_seed_one(world: &World) -> Session<'_> {
+    fn at_the_loom_of_the_chambered_seed(world: &World) -> Session<'_> {
         let (mut session, _) =
-            Session::start(world, &PossessOpts::default()).expect("seed 1 possesses");
+            Session::start(world, &PossessOpts::default()).expect("the chambered seed possesses");
         assert!(
             say(&mut session, "enter").starts_with("[chamber "),
             "the possession never got indoors, so nothing below is tested"
@@ -8951,15 +9826,15 @@ mod tests {
         for _ in 0..2 {
             assert!(
                 say(&mut session, "enter further in").starts_with("[chamber "),
-                "seed 1's structure no longer reaches chamber index 2, so the \
-                 loomroom this key stands in is unreachable"
+                "the chambered seed's structure no longer reaches chamber index 2, \
+                 so the loomroom this key stands in is unreachable"
             );
         }
         let nouns = session.chamber_nouns_here();
         assert!(
             nouns.iter().any(|n| n == "a key"),
-            "precondition: seed 1's loomroom must hold a key, or this test \
-             drives nothing: {nouns:?}"
+            "precondition: the chambered seed's loomroom must hold a key, or this \
+             test drives nothing: {nouns:?}"
         );
         assert!(
             !nouns.iter().any(|n| n == "a strongbox"),
@@ -8979,9 +9854,9 @@ mod tests {
     /// checked, so a caller's assertions cannot pass against a possession
     /// that never got indoors. The body is empty-handed and the strongbox is
     /// as the seed drew it: shut and locked.
-    fn in_the_store_room_of_seed_one(world: &World) -> Session<'_> {
+    fn in_the_store_room_of_the_chambered_seed(world: &World) -> Session<'_> {
         let (mut session, _) =
-            Session::start(world, &PossessOpts::default()).expect("seed 1 possesses");
+            Session::start(world, &PossessOpts::default()).expect("the chambered seed possesses");
         assert!(
             say(&mut session, "enter").starts_with("[chamber "),
             "the possession never got indoors, so nothing below is tested"
@@ -8994,13 +9869,13 @@ mod tests {
         let nouns = session.chamber_nouns_here();
         assert!(
             nouns.iter().any(|n| n == "a key"),
-            "precondition: seed 1's deepest chamber must hold a key, or this \
-             test drives nothing: {nouns:?}"
+            "precondition: the chambered seed's deepest chamber must hold a key, \
+             or this test drives nothing: {nouns:?}"
         );
         session
     }
 
-    /// [`in_the_store_room_of_seed_one`] with the loomroom's key already in
+    /// [`in_the_store_room_of_the_chambered_seed`] with the loomroom's key already in
     /// hand — the walk the campaign's own thesis describes, and the only way
     /// to reach the strongbox with something that opens it since the lid gate
     /// closed.
@@ -9010,8 +9885,8 @@ mod tests {
     /// thing that turns it. The two facets are asserted distinct, because a
     /// walk that never left the room it started in would satisfy every
     /// downstream assertion for the wrong reason.
-    fn in_the_store_room_of_seed_one_with_a_key(world: &World) -> Session<'_> {
-        let mut session = at_the_loom_of_seed_one(world);
+    fn in_the_store_room_of_the_chambered_seed_with_a_key(world: &World) -> Session<'_> {
+        let mut session = at_the_loom_of_the_chambered_seed(world);
         let loom = session
             .chamber_facet_here()
             .expect("the walk lands in a chamber");
@@ -9103,8 +9978,8 @@ mod tests {
     /// are.
     #[test]
     fn a_thing_taken_is_carried_between_rooms() {
-        let world = world_at(1).expect("seed 1 builds");
-        let mut session = at_the_loom_of_seed_one(&world);
+        let world = world_at(CHAMBERED_SEED).expect("the chambered seed builds");
+        let mut session = at_the_loom_of_the_chambered_seed(&world);
         let loom = session
             .chamber_facet_here()
             .expect("the walk lands in a chamber");
@@ -9190,8 +10065,8 @@ mod tests {
     /// ```
     #[test]
     fn a_dropped_thing_joins_the_room_it_was_dropped_in() {
-        let world = world_at(1).expect("seed 1 builds");
-        let mut session = at_the_loom_of_seed_one(&world);
+        let world = world_at(CHAMBERED_SEED).expect("the chambered seed builds");
+        let mut session = at_the_loom_of_the_chambered_seed(&world);
         let loom = session
             .chamber_facet_here()
             .expect("the walk lands in a chamber");
@@ -9279,8 +10154,8 @@ mod tests {
     /// exist.
     #[test]
     fn a_thing_put_into_an_open_chest_can_be_taken_back_out() {
-        let world = world_at(1).expect("seed 1 builds");
-        let mut session = in_the_store_room_of_seed_one_with_a_key(&world);
+        let world = world_at(CHAMBERED_SEED).expect("the chambered seed builds");
+        let mut session = in_the_store_room_of_the_chambered_seed_with_a_key(&world);
         assert_eq!(
             say(&mut session, "put a key in a strongbox"),
             "The strongbox is shut.",
@@ -9364,8 +10239,8 @@ mod tests {
     /// ```
     #[test]
     fn a_thing_put_into_a_container_the_grammar_never_composes_comes_back_out() {
-        let world = world_at(1).expect("seed 1 builds");
-        let mut session = in_the_store_room_of_seed_one_with_a_key(&world);
+        let world = world_at(CHAMBERED_SEED).expect("the chambered seed builds");
+        let mut session = in_the_store_room_of_the_chambered_seed_with_a_key(&world);
         let store = session
             .chamber_facet_here()
             .expect("the walk above ended in a chamber");
@@ -9463,8 +10338,8 @@ mod tests {
     /// move rather than an exotic one.
     #[test]
     fn a_shut_lid_refuses_take_and_an_open_one_does_not() {
-        let world = world_at(1).expect("seed 1 builds");
-        let mut session = in_the_store_room_of_seed_one_with_a_key(&world);
+        let world = world_at(CHAMBERED_SEED).expect("the chambered seed builds");
+        let mut session = in_the_store_room_of_the_chambered_seed_with_a_key(&world);
 
         // 1. The grammar puts a key inside this chest and the chest is shut.
         assert_eq!(
@@ -9549,8 +10424,8 @@ mod tests {
     /// ```
     #[test]
     fn a_key_set_down_where_another_is_composed_is_still_taken() {
-        let world = world_at(1).expect("seed 1 builds");
-        let mut session = in_the_store_room_of_seed_one_with_a_key(&world);
+        let world = world_at(CHAMBERED_SEED).expect("the chambered seed builds");
+        let mut session = in_the_store_room_of_the_chambered_seed_with_a_key(&world);
 
         // Put the LOOMROOM's key beyond that room's reach, so the anchor it
         // composes is answering about something a chamber away.
@@ -9642,8 +10517,8 @@ mod tests {
     /// ```
     #[test]
     fn closing_a_container_does_not_lock_it() {
-        let world = world_at(1).expect("seed 1 builds");
-        let mut session = in_the_store_room_of_seed_one_with_a_key(&world);
+        let world = world_at(CHAMBERED_SEED).expect("the chambered seed builds");
+        let mut session = in_the_store_room_of_the_chambered_seed_with_a_key(&world);
         assert_eq!(
             say(&mut session, "open a strongbox"),
             "You open the strongbox. Within it: a key.",
@@ -9711,8 +10586,8 @@ mod tests {
     /// the default, not the close, so it is not this test's mutation.
     #[test]
     fn a_container_nobody_unlocked_is_still_locked_after_a_close() {
-        let world = world_at(1).expect("seed 1 builds");
-        let mut session = in_the_store_room_of_seed_one(&world);
+        let world = world_at(CHAMBERED_SEED).expect("the chambered seed builds");
+        let mut session = in_the_store_room_of_the_chambered_seed(&world);
         assert_eq!(
             say(&mut session, "open a strongbox"),
             LOCKED_WITHOUT_A_KEY_REFUSAL,
@@ -9771,8 +10646,8 @@ mod tests {
     /// saying otherwise would credit a mutation to the wrong assertion.
     #[test]
     fn open_and_close_each_take_an_instant() {
-        let world = world_at(1).expect("seed 1 builds");
-        let mut session = in_the_store_room_of_seed_one_with_a_key(&world);
+        let world = world_at(CHAMBERED_SEED).expect("the chambered seed builds");
+        let mut session = in_the_store_room_of_the_chambered_seed_with_a_key(&world);
         let room = session
             .chamber_facet_here()
             .expect("the walk above ended in a chamber");
@@ -10098,19 +10973,6 @@ mod tests {
             assert!(!text.contains("No way"), "go {dir} refused with: {text}");
             assert_ne!(s.position(), before, "go {dir} did not move");
         }
-    }
-
-    /// `back` clears the course, so a subsequent `go e` starts fresh rather
-    /// than continuing a reckoning from before the retrace.
-    #[test]
-    fn back_clears_the_course() {
-        let world = world_at(42).expect("seed 42 builds");
-        let (mut s, _) =
-            Session::start(&world, &PossessOpts::default()).expect("seed 42 possesses");
-        s.handle("go e");
-        assert!(s.course().is_some());
-        s.handle("back");
-        assert!(s.course().is_none(), "back left a stale course");
     }
 
     /// The XOR applied to `Inside::seed` by
@@ -11535,17 +12397,21 @@ mod tests {
                 "{line:?} must not consume the walk-band trail"
             );
         }
-        // And the two refusals that remain say what they are. A diagonal is
-        // geometry (`HEADINGS` is orthogonal); `back` is a band.
+        // **One refusal remains here, not two, and the missing one is a
+        // dissolution.** This pair used to assert `go ne` returning
+        // `INDOOR_DIAGONAL_REFUSAL` beside `back` returning
+        // `INDOOR_BACK_REFUSAL`, on the reasoning that "a diagonal is geometry
+        // (`HEADINGS` is orthogonal); `back` is a band". The band half is
+        // untouched and asserted below. The geometry half has no subject any
+        // more: `HEADINGS` carries four diagonal entries (spec section 3.1) and a
+        // diagonal step indoors is ordinary movement, refused only when the
+        // corner it cuts is two-walled — a fact about the cell stood on, not
+        // about the compass, so it cannot be asserted from an arbitrary starting
+        // cell the way a blanket refusal could. It is asserted where it belongs
+        // instead, against a lattice built to have that corner:
+        // `a_two_walled_corner_refuses_the_diagonal_step_indoors`.
         session.handle("out");
         session.handle("enter");
-        assert_eq!(
-            match session.handle("go ne") {
-                Turn::Out(t) => t,
-                Turn::Released(_) => panic!("go must not release"),
-            },
-            INDOOR_DIAGONAL_REFUSAL
-        );
         assert_eq!(
             match session.handle("back") {
                 Turn::Out(t) => t,
@@ -12802,8 +13668,14 @@ mod tests {
             ) {
                 continue;
             }
-            for wanted in [Compass::N, Compass::E, Compass::S, Compass::W] {
-                let delta = cell_delta(wanted).expect("orthogonal");
+            // ORTHOGONAL on purpose. The claim under test is that a step into
+            // rock refuses with a physical reason; an orthogonal step reaches the
+            // rock cell with no corner rule in the way, so the refusal this test
+            // reads back is unambiguously the ROCK refusal rather than possibly
+            // `UNDERGROUND_CORNER_REFUSAL`. Widening the search to eight would
+            // make the assertion unable to tell the two refusals apart.
+            for wanted in COMPASS_SQUARE {
+                let delta = cell_delta(wanted);
                 let neighbour = crate::lattice::Cell(cell.0 + delta.0, cell.1 + delta.1);
                 if level.cells.get(neighbour) == Some(crate::underworld_level::LevelCellKind::Wall)
                 {
@@ -12939,8 +13811,14 @@ mod tests {
             }
             let mut open = None;
             let mut blocked = None;
-            for wanted in [Compass::N, Compass::E, Compass::S, Compass::W] {
-                let delta = cell_delta(wanted).expect("orthogonal");
+            // Orthogonal for the PRECONDITION search only: a cell with both an
+            // open and a blocked orthogonal bearing is the sharpest witness (an
+            // orthogonal bearing's presence in the report is decided by the target
+            // alone, with no corner rule in it), and the `expected` list below —
+            // which is what the report is actually compared against — is built
+            // over all eight.
+            for wanted in COMPASS_SQUARE {
+                let delta = cell_delta(wanted);
                 let neighbour = crate::lattice::Cell(cell.0 + delta.0, cell.1 + delta.1);
                 match level
                     .cells
@@ -12965,15 +13843,26 @@ mod tests {
         let blocked_wanted = blocked_wanted.expect("set alongside mixed");
 
         let mut expected: Vec<String> = vec!["out".to_string()]; // rung 0
-        for wanted in [Compass::N, Compass::E, Compass::S, Compass::W] {
-            let delta = cell_delta(wanted).expect("orthogonal");
-            let neighbour = crate::lattice::Cell(cell.0 + delta.0, cell.1 + delta.1);
-            if level
+        // EIGHT, with the corner rule applied — computed here from the level's own
+        // cells, independently of `underground_ways_from_cell`'s implementation,
+        // which is the whole point of this test. Widened with the report itself
+        // (spec section 3.1): left at four it would have failed the moment the
+        // report started listing a diagonal, and "the report lists more than the
+        // level has" is precisely the disagreement this test exists to catch.
+        let passable = |c: crate::lattice::Cell| {
+            level
                 .cells
-                .get(neighbour)
+                .get(c)
                 .and_then(crate::underworld_level::movement_mode)
                 .is_some()
-            {
+        };
+        for wanted in COMPASS_ROSE {
+            let delta = cell_delta(wanted);
+            if crate::lattice::diagonal_is_blocked(cell, delta, passable) {
+                continue;
+            }
+            let neighbour = crate::lattice::Cell(cell.0 + delta.0, cell.1 + delta.1);
+            if passable(neighbour) {
                 expected.push(bearing_letter(wanted));
             }
         }
@@ -13326,8 +14215,16 @@ mod tests {
                 target = Some(cur);
                 break;
             }
-            for d in [Compass::N, Compass::E, Compass::S, Compass::W] {
-                let delta = cell_delta(d).expect("orthogonal");
+            // ORTHOGONAL on purpose, and it is the connectivity invariant that
+            // says so: `every_walkable_cell_is_reachable_from_every_other`
+            // (`underworld_level/mod.rs`) floods `[(1,0),(-1,0),(0,1),(0,-1)]`, so
+            // a 4-connected search is guaranteed to find a path where an
+            // 8-connected one is merely likely to. This helper wants A path, not a
+            // short one, and every step it emits is orthogonal — so no step it
+            // returns can be refused by the corner rule, which keeps the caller's
+            // `go` loop free of a refusal this helper would have to reason about.
+            for d in COMPASS_SQUARE {
+                let delta = cell_delta(d);
                 let next = crate::lattice::Cell(cur.0 + delta.0, cur.1 + delta.1);
                 if visited.contains(&next) {
                     continue;
@@ -14399,6 +15296,92 @@ mod tests {
         session
     }
 
+    /// Which of the possession's ROOM anchors draw inside its own sight and
+    /// which draw outside it: `(near, far)`, the first of each in anchor order.
+    ///
+    /// The join is the one `sighting` itself performs — a room anchor is drawn
+    /// at the chamber anchor of the same KIND, and that chamber anchor's cell
+    /// comes from the embedding — so this measures what the plan will actually
+    /// show rather than restating a rule.
+    fn sight_split(
+        session: &Session<'_>,
+    ) -> (
+        Option<crate::interior::AnchorId>,
+        Option<crate::interior::AnchorId>,
+    ) {
+        let room = session.position();
+        let Some(inside) = session.inside.as_ref() else {
+            return (None, None);
+        };
+        let Some(chamber) = session.chamber_interior_here() else {
+            return (None, None);
+        };
+        let cells = crate::lattice::anchor_cells(&chamber, &inside.lattice, inside.at, inside.seed);
+        let lit = crate::lattice::shadowcast(&inside.lattice, inside.cell, SIGHT_RADIUS);
+        let terrain = session.terrain_here();
+        let interior = crate::interior::interior_of(&room, &terrain);
+        let mut near = None;
+        let mut far = None;
+        for a in interior.ids() {
+            let kind = interior.anchor(a).kind;
+            let cell = chamber
+                .ids()
+                .into_iter()
+                .find(|&c| chamber.anchor(c).kind == kind)
+                .and_then(|c| cells.get(&c).copied());
+            match cell {
+                Some(c) if lit.contains(&c) => near = near.or(Some(a)),
+                Some(_) => far = far.or(Some(a)),
+                None => {}
+            }
+        }
+        (near, far)
+    }
+
+    /// [`possessed_inside`], walked further in until it stands in a chamber
+    /// whose plan DRAWS at least one of the room's anchors inside the
+    /// possession's own sight and at least one outside it.
+    ///
+    /// **`possessed_inside` alone stopped being enough at The Pavement, and
+    /// the cause is the epoch rather than anything about chambers.** A
+    /// structure is drawn from its room's own seed and the cube-sphere mesh
+    /// moved every room address, so seed 42's flagship draws a different
+    /// entrance chamber than it did. Measured through [`sight_split`]: the
+    /// entrance chamber's five room anchors resolve to three cells and **none
+    /// of them lies inside the shadowcast** (`near = 0, far = 3`), while one
+    /// chamber further in gives `near = 2, far = 1`. Every fixture that placed
+    /// a creature "at me" and then asserted a mark was silently reading a
+    /// chamber that draws no mark at all, and each said so in its own
+    /// precondition — *"the first placement alone is drawn"*, *"some anchor of
+    /// this room draws inside the possession's sight"*, *"the placed companion
+    /// is drawn from the embedding"*.
+    ///
+    /// Walking until the property holds, rather than hardcoding "one further
+    /// in", is what keeps this from being a fixture the next epoch re-measures
+    /// by hand. It refuses loudly rather than returning a chamber that draws
+    /// nothing, because a silent one would make every caller vacuous.
+    fn possessed_where_the_plan_draws(world: &World) -> Session<'_> {
+        let mut session = possessed_inside(world);
+        // `MAX_CHAMBERS` is 4, so four steps is one more than any structure
+        // has; the loop stops on the far-end reply rather than on the count.
+        for _ in 0..4 {
+            let (near, far) = sight_split(&session);
+            if near.is_some() && far.is_some() {
+                return session;
+            }
+            let deeper = matches!(
+                session.handle("enter further in"),
+                Turn::Out(ref t) if t.starts_with("[chamber ")
+            );
+            assert!(
+                deeper,
+                "no chamber of this structure draws BOTH a lit and an unlit room \
+                 anchor, so nothing that places a creature here can be tested"
+            );
+        }
+        panic!("the structure ran past MAX_CHAMBERS without the plan ever drawing")
+    }
+
     /// Commit an `agent-at` putting `who` in `room` as of the session's current
     /// day.
     ///
@@ -14465,7 +15448,7 @@ mod tests {
         // derivation-order iteration (bodies()[1] before [2]) is what makes
         // the FIRST one placed win the cell in `sighting()`'s own scan.
         let world = seam_world();
-        let mut session = possessed_inside(&world);
+        let mut session = possessed_where_the_plan_draws(&world);
         let room = session.position();
         let first = session.bodies[1].entity;
         session.place_creature_at_me(first);
@@ -14566,41 +15549,16 @@ mod tests {
         // seed 42's chamber is confirmed (empirically, `place_creature_out_of_
         // my_sight`) to have both a lit and an unlit anchor.
         let world = seam_world();
-        let mut session = possessed_inside(&world);
+        let mut session = possessed_where_the_plan_draws(&world);
         let room = session.position();
         let who = session.bodies[1].entity;
         place_agent_now(&mut session, who, &room);
 
-        let (near, far) = {
-            let inside = session.inside.as_ref().unwrap();
-            let chamber = session.chamber_interior_here().unwrap();
-            let cells =
-                crate::lattice::anchor_cells(&chamber, &inside.lattice, inside.at, inside.seed);
-            let lit = crate::lattice::shadowcast(&inside.lattice, inside.cell, SIGHT_RADIUS);
-            let terrain = session.terrain_here();
-            let interior = crate::interior::interior_of(&room, &terrain);
-            // For each of the ROOM's anchors, which cell it would be drawn at
-            // (joined by kind, exactly as `sighting` joins them), and whether
-            // that cell is lit.
-            let drawn = |a: crate::interior::AnchorId| {
-                let kind = interior.anchor(a).kind;
-                chamber
-                    .ids()
-                    .into_iter()
-                    .find(|&c| chamber.anchor(c).kind == kind)
-                    .and_then(|c| cells.get(&c).copied())
-            };
-            let mut near = None;
-            let mut far = None;
-            for a in interior.ids() {
-                match drawn(a) {
-                    Some(cell) if lit.contains(&cell) => near = near.or(Some(a)),
-                    Some(_) => far = far.or(Some(a)),
-                    None => {}
-                }
-            }
-            (near, far)
-        };
+        // The near/far derivation lives in `sight_split` now, because
+        // `possessed_where_the_plan_draws` has to make the same measurement to
+        // decide which chamber to stop in — two copies of it would be two
+        // chances to disagree about what "drawn" means.
+        let (near, far) = sight_split(&session);
         let near = near.expect("some anchor of this room draws inside the possession's sight");
         let far = far.expect(
             "some anchor of this room draws OUTSIDE it — without one this test asserts nothing",
@@ -14813,7 +15771,7 @@ mod tests {
         // confirmed by the assertion below, which is this test's OWN positive
         // control now that nothing is naturally drawn to search a world for.
         let world = seam_world();
-        let mut session = possessed_inside(&world);
+        let mut session = possessed_where_the_plan_draws(&world);
         session.place_creature_at_me(session.bodies[1].entity);
         assert!(
             !marks_of(&session).is_empty(),
@@ -15444,9 +16402,13 @@ mod tests {
                 .collect()
         }
 
-        let world = world_at(1).expect("seed 1 builds");
+        // [`CHAMBERED_SEED`], for the reason its own doc gives: this walk needs
+        // BOTH promoting routes — a portable through `take` and a container
+        // through `open`/`unlock` — and the epoch left seed 1's structure with
+        // no `Store` room, so the container half had nothing to reach.
+        let world = world_at(CHAMBERED_SEED).expect("the chambered seed builds");
         let (mut session, _) =
-            Session::start(&world, &PossessOpts::default()).expect("seed 1 possesses");
+            Session::start(&world, &PossessOpts::default()).expect("the chambered seed possesses");
         let before = instance_of_pairs(&session.ledger);
 
         // What the GRAMMAR offers, recorded on arrival in each room and never

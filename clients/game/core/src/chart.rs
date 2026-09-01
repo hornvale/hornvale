@@ -415,14 +415,19 @@ mod tests {
     /// A cell addressed the way the renderer reads one: by its polar
     /// coordinate about the observer. `distance` is in units of the band's
     /// own rim, so `1.0` is "as far out as this band goes" and `0.0` is the
-    /// observer. The lattice offsets are filled in because a non-seam cell
-    /// carries them on the wire, but nothing reads them.
+    /// observer. `u`/`v` are filled in because a non-seam cell carries them
+    /// on the wire, but nothing reads them. `w`/`up` are `None` because a
+    /// non-seam cell does too, now — decision 0513 (the occupancy lattice
+    /// is a cube-sphere quad, which has no third axis or orientation flag
+    /// to report); they used to be filled in the same way `u`/`v` are,
+    /// which stopped being an accurate fixture the day the wire started
+    /// sending `null` there unconditionally.
     fn chart_cell(bearing_deg: f64, distance_rad: f64, state: &str) -> ChartCell {
         ChartCell {
             u: Some(0),
             v: Some(0),
-            w: Some(0),
-            up: Some(true),
+            w: None,
+            up: None,
             seam: false,
             state: state.to_string(),
             biome: 0,

@@ -225,7 +225,7 @@ const CHROMATIC_LOSS_DECLARATION: &str = "colour: this chart carries no chromati
 /// monochrome side, ABSENT on the coloured side — the positive control that
 /// keeps clause 2 from being satisfied by a sentence that is simply always
 /// there), and an unchanged glyph multiset.
-fn assert_h3_clauses(out_coloured: &str, out_mono: &str, mono_cell_count: usize) {
+fn assert_h3_clauses(out_coloured: &str, out_mono: &str, mono_band_size: usize) {
     // Clause 1: strictly fewer distinct renderings once the chromatic axis
     // is gone.
     let coloured_units = distinct_rendered_units(out_coloured);
@@ -253,11 +253,59 @@ fn assert_h3_clauses(out_coloured: &str, out_mono: &str, mono_cell_count: usize)
          claimed the chromatic axis was lost — the declaration is not \
          actually conditioned on anything: {out_coloured}"
     );
-    let carrying_no_colour = format!("{mono_cell_count} carrying no colour");
+    // The counts line, checked against the population it is ACTUALLY about.
+    //
+    // **This compared against the wrong population until The Pavement, and
+    // nothing could have caught it.** It read the whole radius-4 ball against
+    // a caption number that `windows/scene/src/surrounds_ascii.rs` computes
+    // from `placed.values()`, and whose own doc says the three counts
+    // partition the PLACED ones. Two different quantities; one literal.
+    //
+    // They were indistinguishable because on the icosphere's triangular ball
+    // **31 placed == 31 in the band**: nothing was ever occluded, so the two
+    // candidate populations collapsed to a single value and no assertion
+    // written over either could tell them apart. The epoch pulled them apart
+    // (81 rooms in the ball, 67 placed, 14 occluded where two fell in one
+    // character box) and the wrong one went red. This is the third instance
+    // of that trap in this campaign — an input whose two possible meanings
+    // agree at every value the test can reach — so it is worth naming rather
+    // than just fixing.
+    //
+    // The band population stays load-bearing rather than being dropped: the
+    // caption must still account for every room of the ball, `drawn +
+    // occluded`, which is what would catch a room DROPPED for want of a
+    // coordinate. Only the colour count is read against `drawn`.
+    let number_before = |needle: &str| -> usize {
+        let caption = out_mono
+            .lines()
+            .find(|l| l.contains("cells drawn")) // lexicon: the caption's own literal wording
+            .unwrap_or_else(|| panic!("the chart must caption its own placement: {out_mono}"));
+        let head = &caption[..caption
+            .find(needle)
+            .unwrap_or_else(|| panic!("caption has no `{needle}`: {caption}"))];
+        head.trim_end()
+            .rsplit(|c: char| !c.is_ascii_digit())
+            .next()
+            .and_then(|d| d.parse::<usize>().ok())
+            .unwrap_or_else(|| panic!("no count before `{needle}`: {caption}"))
+    };
+    // lexicon: `cells drawn` is the caption's own literal wording, matched verbatim
+    let drawn = number_before(&format!(" of {mono_band_size} cells drawn"));
+    let occluded = number_before(" occluded");
+    assert_eq!(
+        drawn + occluded,
+        mono_band_size,
+        "H3 clause 2 failed: the caption does not account for every room of \
+         the band ({drawn} drawn + {occluded} occluded against a population of \
+         {mono_band_size}) — a room that is neither drawn nor occluded has \
+         been dropped: {out_mono}"
+    );
+    let carrying_no_colour = format!("{drawn} carrying no colour");
     assert!(
         out_mono.contains(&carrying_no_colour),
-        "H3 clause 2 failed: the caption's own count does not match the \
-         band's population ({carrying_no_colour} expected): {out_mono}"
+        "H3 clause 2 failed: the caption's own colour count does not match \
+         what it placed ({carrying_no_colour} expected, from {drawn} drawn of \
+         {mono_band_size}): {out_mono}"
     );
 
     // Clause 3 — the load-bearing one: the glyph multiset is UNCHANGED

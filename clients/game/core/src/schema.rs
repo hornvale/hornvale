@@ -138,9 +138,17 @@ pub struct ChartCell {
     pub u: Option<i64>,
     /// Lattice offset on axis 1; `null` on a seam cell.
     pub v: Option<i64>,
-    /// Lattice offset on axis 2; `null` on a seam cell.
+    /// Always `null` since the occupancy lattice became a cube-sphere quad
+    /// (decision 0513) — the third barycentric axis a triangular mesh
+    /// needed and a quad does not. Retained on the wire for schema
+    /// stability, not for signal: `u`/`v` above still carry real per-cell
+    /// values, only `w` and `up` are permanently null now, so do not infer
+    /// "all four lattice fields move together" from the old mesh.
     pub w: Option<i64>,
-    /// Triangle orientation; `null` on a seam cell.
+    /// Always `null` since the occupancy lattice became a cube-sphere quad
+    /// (decision 0513) — the triangle-orientation flag a quad has no use
+    /// for (a quad's children all share its handedness). See
+    /// [`ChartCell::w`].
     pub up: Option<bool>,
     /// Set when this cell lies on a different base face than the observer.
     pub seam: bool,

@@ -19,13 +19,23 @@ use std::collections::BTreeSet;
 use crate::lattice::{Cell, Rect};
 use crate::underworld_level::{Level, LevelCellKind, generate_descent_for_character};
 
-/// Underground's own diagonal refusal (The Gallery, Task 4) — the same
-/// geometry `INDOOR_DIAGONAL_REFUSAL` states one band over
-/// (`session.rs`): [`crate::session::cell_delta`] is orthogonal only, so a
-/// diagonal step through the corner where two walls meet is not a way
-/// through rock either.
-const UNDERGROUND_DIAGONAL_REFUSAL: &str =
-    "There is no slipping through a corner down here either; try north, south, east or west.";
+/// Underground's own CORNER refusal — the same geometry
+/// `INDOOR_CORNER_REFUSAL` states one band over (`session.rs`): passing
+/// between two solid things that meet at a point is not a way through, and
+/// rock is no different from built fabric about it.
+///
+/// **It used to refuse every diagonal, and both halves of the reason it gave
+/// have lapsed.** The old text ("There is no slipping through a corner down
+/// here either; try north, south, east or west") rested on
+/// [`crate::session::cell_delta`] being orthogonal only. That table is total
+/// now (spec section 3.1) and a diagonal step underground is ordinary
+/// movement; what survives is the narrow claim about a closed corner, asked
+/// cell by cell through [`crate::lattice::diagonal_is_blocked`]. It no longer
+/// names four bearings that work, because which bearings work is a fact about
+/// the cell stood on: with one flank open the diagonal is walkable, and a
+/// sentence naming a fixed four would be false there.
+const UNDERGROUND_CORNER_REFUSAL: &str =
+    "Rock meets rock at that corner; there is no slipping between them down here either.";
 
 /// The physical reason a rock cell refuses a lateral step underground.
 /// Names no verb and no movement mode — a parse complaint this is not.
@@ -351,9 +361,14 @@ impl Underground {
     /// Follows the indoor compass step's own precedent
     /// (`Session::step`, `session.rs:3413`) rule for rule:
     ///
-    /// 1. **A diagonal is refused** ([`UNDERGROUND_DIAGONAL_REFUSAL`])
-    ///    before anything is looked up — [`crate::session::cell_delta`] is
-    ///    orthogonal only.
+    /// 1. **A diagonal through a two-walled corner is refused**
+    ///    ([`UNDERGROUND_CORNER_REFUSAL`]) before anything is looked up, asked
+    ///    through [`crate::lattice::diagonal_is_blocked`] with this band's own
+    ///    passability oracle. **It used to refuse every diagonal**, on the
+    ///    strength of [`crate::session::cell_delta`] being orthogonal only;
+    ///    that table is total now (spec section 3.1), so the refusal is the
+    ///    corner it was always really about (spec section 3.3) and nothing
+    ///    else.
     /// 2. **An impassable target is refused with a physical reason**
     ///    ([`UNDERGROUND_ROCK_REFUSAL`]), asked through
     ///    [`crate::underworld_level::movement_mode`] rather than compared
@@ -373,15 +388,24 @@ impl Underground {
     /// step_underground` is the one caller: it calls this, charges, and
     /// only then calls [`Underground::commit_step`].
     pub(crate) fn peek(&self, dir: Compass) -> Result<Cell, &'static str> {
-        let Some(delta) = crate::session::cell_delta(dir) else {
-            return Err(UNDERGROUND_DIAGONAL_REFUSAL);
+        let delta = crate::session::cell_delta(dir);
+        // This band's passability oracle, given to the shared corner rule: a cell
+        // is open when `movement_mode` has an answer for its kind, which is the
+        // same question step 2 below asks about the destination — never a
+        // comparison against `LevelCellKind::Wall`, so both survive the day a new
+        // impassable kind arrives.
+        let open = |c: Cell| {
+            self.descent[self.rung]
+                .cells
+                .get(c)
+                .and_then(crate::underworld_level::movement_mode)
+                .is_some()
         };
+        if crate::lattice::diagonal_is_blocked(self.cell, delta, open) {
+            return Err(UNDERGROUND_CORNER_REFUSAL);
+        }
         let target = Cell(self.cell.0 + delta.0, self.cell.1 + delta.1);
-        let kind = self.descent[self.rung].cells.get(target);
-        if kind
-            .and_then(crate::underworld_level::movement_mode)
-            .is_none()
-        {
+        if !open(target) {
             return Err(UNDERGROUND_ROCK_REFUSAL);
         }
         Ok(target)

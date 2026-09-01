@@ -65,7 +65,7 @@ pub fn baseline_band(world: &World) -> SurroundsScene {
         Some(Value::Number(n)) => *n,
         _ => panic!("flagship settlement has no longitude fact"),
     };
-    let depth = ctx.globe_level() + 6;
+    let depth = hornvale_locale::walk_depth(&ctx);
     let observer_room = Facet::containing(unit_sphere_from_lat_lon(lat, lon), depth);
 
     let star = hornvale_astronomy::star::generate_star(
@@ -106,7 +106,7 @@ pub fn baseline_band(world: &World) -> SurroundsScene {
 /// [`REAL_H3_BAND_LAT_LON`] and the task-6 report for why).
 pub fn real_band(world: &World, lat: f64, lon: f64) -> SurroundsScene {
     let ctx = LocaleContext::build(world).expect("world builds a locale context");
-    let depth = ctx.globe_level() + 6;
+    let depth = hornvale_locale::walk_depth(&ctx);
     let observer_room = Facet::containing(unit_sphere_from_lat_lon(lat, lon), depth);
 
     let star = hornvale_astronomy::star::generate_star(
@@ -147,7 +147,7 @@ pub fn real_band(world: &World, lat: f64, lon: f64) -> SurroundsScene {
 /// would leave behind.
 pub fn real_band_uncolored(world: &World, lat: f64, lon: f64) -> SurroundsScene {
     let ctx = LocaleContext::build(world).expect("world builds a locale context");
-    let depth = ctx.globe_level() + 6;
+    let depth = hornvale_locale::walk_depth(&ctx);
     let observer_room = Facet::containing(unit_sphere_from_lat_lon(lat, lon), depth);
     surrounds_scene(world, &observer_room, WALK_BAND_RADIUS, WorldTime::GENESIS)
         .expect("uncoloured surrounds scene builds")

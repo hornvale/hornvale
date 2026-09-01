@@ -485,8 +485,47 @@ fn the_objective_wait_narrates_a_departure_the_body_could_not_see() {
     // way rust-monster does. `bodies()[4]` is "a wild rust-monster" now;
     // the index moved with the reorder, the property this test needs did
     // not.
+    // THE PAVEMENT MOVED THE WORLD AGAIN, AND THE INDEX IS NOW SEARCHED RATHER
+    // THAN RE-MEASURED. `wild_idx = 4` was the third recorded value for this
+    // one line — the roster's order has been re-measured by hand at The Hand,
+    // at The Sources, and it would have been again here, because the epoch
+    // moves which creature is near enough to the flagship to leave on the next
+    // tick. The property this test needs has never been "index 4": it is
+    // "SOME creature the body cannot see departs on the very next tick", and a
+    // hardcoded index is a way of writing that down that stops being true
+    // every time the world moves.
+    //
+    // So the fixture asks. Each candidate gets a fresh session (placement and
+    // a tick are not undoable), is placed out of sight, and is kept only if
+    // `!wait` narrates its departure. Deterministic (roster order), and loud
+    // if the world stops producing one at all — which would be a finding about
+    // departures rather than about this test.
     let w = world();
-    let wild_idx = 4;
+    let roster_len = {
+        let (s, _) = Session::start(&w, &PossessOpts::default()).unwrap();
+        s.bodies().len()
+    };
+    let mut found = None;
+    for idx in 1..roster_len {
+        let (mut probe, _) = Session::start(&w, &PossessOpts::default()).unwrap();
+        probe.handle("wait");
+        probe.handle("enter");
+        let label = probe.bodies()[idx].label.clone();
+        let who = probe.bodies()[idx].entity;
+        if !probe.place_creature_out_of_my_sight(who) {
+            continue;
+        }
+        let narrated = out(&mut probe, "!wait");
+        if narrated.contains("You watch") && narrated.contains(&label) {
+            found = Some(idx);
+            break;
+        }
+    }
+    let wild_idx = found.expect(
+        "no creature on seed 42's roster departs the entered chamber on the very next \
+         tick while standing outside the possession's sight — without one there is no \
+         unwitnessed departure for `!wait` to narrate and nothing below is tested",
+    );
 
     let (mut s, _) = Session::start(&w, &PossessOpts::default()).unwrap();
     s.handle("wait");

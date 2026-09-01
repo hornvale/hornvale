@@ -177,9 +177,19 @@ reach the game client at all. It reaches **`clients/atlas`**, which consumes
 the wire, and `scene/tiles-region/v1` is a wire schema, so warping changes what
 a tile means.
 
-**The schema has MOVED this week and a reissue must carry the movement.**
-`RegionScene` now carries two fields appended after `precip_mm_yr`
-(`windows/scene/src/region.rs:338,341`, verified):
+**CORRECTION (2026-08-31): the two fields below are NOT in this tree, and this
+spec asserted they were.** They exist only on `campaign/the-legend`, unmerged. The
+controller verified The Legend's claim by grepping **The Legend's worktree**, which
+correctly established that its branch carries them, and then wrote them into this
+spec as though they were present in the tree The Pavement builds on. That is a
+verification of a neighbouring proposition, not of the one that mattered. Task 4's
+implementer caught it, refused to fabricate the fields on `RegionScene`, and fixed
+the stale doc to name the real fifth nearest-vertex field (`drainage`) instead —
+the right call in both halves.
+
+**What is still true and still matters:** when The Legend merges, these fields land
+in a `region.rs` whose projection THIS campaign has changed. The interaction is
+real even though the precondition stated here was not:
 
 ```rust
 pub relief: Vec<u32>,
@@ -475,7 +485,7 @@ prediction to pass or fail.
 campaign measured 65.3 / 65.6 / 70.3 / 91.5 ms for one uncached code path — a
 **1.40x spread** — and explicitly refused to pin a fifth number, recording the
 path as load-sensitive instead. Quoting any one of them as "the" baseline
-would repeat the error `docs/CLAUDE.md` records against reading a cost off
+would repeat the error the root `CLAUDE.md` records against reading a cost off
 prose. The Legend's Task 11 measures a fresh warm redraw with replicates
 against a preregistered 0.20 ms bar — warm redraw, 200x200, coarsest rung,
 idle box, at least three replicates. The bar was tightened from 1.0 ms
@@ -510,7 +520,7 @@ those two, or take it fresh — never from a remembered figure.
   globally wrong.
 - The corner rule in both directions: one flank open ⇒ permitted; both walled
   ⇒ refused. (The one-directional version of this test is the trap
-  `docs/CLAUDE.md` names: a check asserting only refusal is blind to
+  the root `CLAUDE.md` names at its seam-guard STALE-DECL rule, and decision 0456 states: a check asserting only refusal is blind to
   over-refusal.)
 
 ## 9. Decisions to promote (block 0506–0515)

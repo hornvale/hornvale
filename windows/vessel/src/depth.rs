@@ -56,7 +56,7 @@ mod tests {
     use hornvale_kernel::Facet;
 
     /// The walk depth on the canonical globe (`GLOBE_LEVEL` 6 + 6).
-    const WALK: u32 = 12;
+    const WALK: u32 = 13;
 
     fn addr(depth: u32) -> Facet {
         Facet {

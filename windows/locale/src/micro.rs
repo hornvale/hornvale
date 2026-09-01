@@ -80,7 +80,7 @@ const LOCAL_VARIATION: f64 = 0.1;
 /// that
 /// the choice is **determinism-neutral and precision-immaterial**: the blend is
 /// quantized at emit either way, so taking it is one fewer recomputation of the
-/// same three-corner mean rather than a second, differently-rounded copy of it,
+/// same four-corner mean rather than a second, differently-rounded copy of it,
 /// and the model is a bounded monotone map with no chaotic amplification, so
 /// eight significant digits of supply cannot move the emitted axis by more than
 /// its own quantization.
@@ -118,7 +118,21 @@ pub fn grounded_wetness(moisture: f64, rill: Option<RillReading>) -> f64 {
 /// **All four draws are spent, in order, either way.** Wetness is the third;
 /// a grounding that stopped consuming its draw would shift `openness` in every
 /// room of every world, which is a save-format break and not a style choice.
-pub(crate) fn micro_field(room_seed: Seed, grounded: Option<f64>) -> MicroField {
+/// **`#[doc(hidden)] pub` since The Pavement's Task 11 fix round, and the
+/// reason is a witness rather than a feature.** The draw ORDER below is a
+/// save-format contract — wetness is the third of four axes off one
+/// `LOCALE_MICRO` stream — and the only thing that ever witnessed it was a
+/// committed fixture of 200 pre-cube room addresses, which the mesh epoch
+/// turned into addresses of nothing. The replacement witnesses are
+/// same-world differentials over THIS function
+/// (`windows/locale/tests/suite/wetness_reading.rs`), which need to call it;
+/// they are strictly stronger than the fixture, because they hold in every
+/// world rather than in the one a capture happened to freeze. Hidden from the
+/// docs because it is not API: no consumer outside this crate has any business
+/// drawing a micro-field.
+/// type-audit: bare-ok(ratio: grounded)
+#[doc(hidden)]
+pub fn micro_field(room_seed: Seed, grounded: Option<f64>) -> MicroField {
     let mut s = room_seed.derive(LOCALE_MICRO).stream();
     let mut axis = || s.next_f64() * 2.0 - 1.0;
     let relief = axis();

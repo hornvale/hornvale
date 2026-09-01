@@ -256,7 +256,11 @@ pub fn hearth_cell(lattice: &Lattice, chamber: usize) -> Option<Cell> {
         .filter(|(_, kind)| **kind == CellKind::Wall)
         .map(|(cell, _)| *cell)
         .filter(|cell| {
-            neighbours(*cell)
+            // First four: a hearth sits against a wall the chamber's floor is
+            // ORTHOGONALLY beside, never diagonally — `neighbours` now also
+            // carries four diagonal entries (Task 5's corner rule) this rule
+            // has no reason to consider.
+            neighbours(*cell)[..4]
                 .iter()
                 .any(|n| lattice.cells.get(n) == Some(&CellKind::Floor(chamber)))
         })

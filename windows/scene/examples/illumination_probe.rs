@@ -74,7 +74,7 @@ pub fn baseline_band(world: &World) -> SurroundsScene {
         Some(Value::Number(n)) => *n,
         _ => panic!("flagship settlement has no longitude fact"),
     };
-    let depth = ctx.globe_level() + 6;
+    let depth = hornvale_locale::walk_depth(&ctx);
     let observer_room = Facet::containing(unit_sphere_from_lat_lon(lat, lon), depth);
 
     let star = hornvale_astronomy::star::generate_star(
@@ -110,7 +110,7 @@ pub fn baseline_band(world: &World) -> SurroundsScene {
 /// `windows/locale/src/lib.rs`'s private `dominant_corner` applies (biome,
 /// water, cave all inherit from it), reimplemented here because that helper
 /// is not `pub`.
-fn dominant_vertex(weights: &[(hornvale_kernel::Vertex, u64); 3]) -> hornvale_kernel::Vertex {
+fn dominant_vertex(weights: &[(hornvale_kernel::Vertex, u64); 4]) -> hornvale_kernel::Vertex {
     let mut best = weights[0];
     for &candidate in &weights[1..] {
         if candidate.1 > best.1 || (candidate.1 == best.1 && candidate.0 < best.0) {
@@ -337,7 +337,7 @@ fn h3_band_classification(scene: &SurroundsScene) -> (bool, bool) {
 /// exhibiting_bands, first_qualifying_lat_lon)`.
 fn h3_real_band_sweep(world: &World) -> (usize, usize, Option<(f64, f64)>) {
     let ctx = LocaleContext::build(world).expect("world builds a locale context");
-    let depth = ctx.globe_level() + 6;
+    let depth = hornvale_locale::walk_depth(&ctx);
     let star = hornvale_astronomy::star::generate_star(
         world.seed.derive(hornvale_astronomy::streams::ROOT),
     );
@@ -412,7 +412,7 @@ fn flagship_band_colour_counts(world: &World) -> Option<(usize, usize, usize)> {
         Some(Value::Number(n)) => *n,
         _ => return None,
     };
-    let depth = ctx.globe_level() + 6;
+    let depth = hornvale_locale::walk_depth(&ctx);
     let observer_room = Facet::containing(unit_sphere_from_lat_lon(lat, lon), depth);
     let star = hornvale_astronomy::star::generate_star(
         world.seed.derive(hornvale_astronomy::streams::ROOT),

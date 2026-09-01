@@ -6,6 +6,12 @@ pub use streams::stream_labels;
 
 mod regime;
 pub use micro::{grounded_wetness, wetness_is_grounded};
+// `#[doc(hidden)]` on the item itself; re-exported so the draw-order and
+// scope-guard witnesses in `tests/suite/wetness_reading.rs` can call the
+// function they are about. See its own doc for why a test seam beats the
+// committed fixture it replaces.
+#[doc(hidden)]
+pub use micro::micro_field;
 pub use regime::{EnergySource, Kingdom, MicroField, Negations, Regime, Substrate};
 
 mod substrate;
@@ -163,9 +169,9 @@ pub struct Locale {
 /// What this document's fields are decided at, so a reader can tell a field
 /// that is flat from a field that is broken (decision 0123).
 ///
-/// **Why a room says this at all.** A room at walking depth sits six
+/// **Why a room says this at all.** A room at walking depth sits seven
 /// refinement levels below the canonical grid, so a field decided per grid
-/// vertex is necessarily identical across all `4^6 = 4096` rooms in that vertex —
+/// vertex is necessarily identical across all `4^7 = 16384` rooms in that vertex —
 /// and now that the same document also carries a channel reading, it holds
 /// fields at *three* different grains at once. Without this block a reader has
 /// to guess which, and the last two campaigns' worth of diagnosis went into a
@@ -209,9 +215,11 @@ pub struct Resolution {
     ///   place, and a reader never mistakes one for a flattened measurement.
     /// - **The blended continuous fields** (`fields.temperature_c`,
     ///   `fields.moisture`, `fields.elevation_m`, `fields.height_asl_m`) —
-    ///   these are integer-barycentric means of three corner vertices with
-    ///   per-room weights, so they genuinely vary room by room. Listing them
-    ///   would be false.
+    ///   these are integer BILINEAR means of the FOUR corner vertices of the
+    ///   room's grid-level ancestor quad, with per-room weights, so they
+    ///   genuinely vary room by room. Listing them would be false. (Three
+    ///   barycentric corners until The Pavement moved the base mesh to a
+    ///   cube-sphere quad lattice — see [`Facet::corner_weights`].)
     /// - **`regime`** — mixed granularity, so 0123 rule 3 says list it in
     ///   neither: its substrate and biome expression come from the dominant
     ///   corner while `regime.micro` is hashed from the room address itself,
@@ -261,8 +269,9 @@ pub struct VertexWeight {
     pub weight: u64,
 }
 
-/// The blended continuous fields at the room centroid (weighted mean of the
-/// three corner vertices; quantized at emit).
+/// The blended continuous fields at the room centroid (bilinear weighted mean
+/// of the FOUR corner vertices of the room's grid-level ancestor quad — three
+/// barycentric corners before The Pavement; quantized at emit).
 /// type-audit: pending(wave-2: temperature_c), bare-ok(ratio: moisture), waiver(elevation-convention: elevation_m)
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct LocaleFields {
@@ -284,10 +293,10 @@ pub struct LocaleFields {
     /// drinkable query.
     ///
     /// **"Inherited" is the wrong word for this, and using it cost a campaign.**
-    /// [`dominant_corner`] is evaluated per ROOM, over that room's own three
+    /// [`dominant_corner`] is evaluated per ROOM, over that room's own four
     /// corner weights, so this is *categorical nearest-neighbour
     /// interpolation* — the correct method for a nominal field — and not a
-    /// value copied down from one vertex to all 4^6 rooms inside it. The field
+    /// value copied down from one vertex to all 4^7 rooms inside it. The field
     /// does look flat across a narrow view, but that is the interpolation
     /// stencil being wider than the view rather than a defect in the field.
     ///
@@ -419,7 +428,7 @@ pub struct LocaleContext {
 /// whose reflectance the colour layer reads — names the same vertex. Splitting
 /// this would let a room be described as granite lowland and drawn in
 /// basalt grey.
-fn dominant_corner(weights: &[(Vertex, u64); 3]) -> (Vertex, u64) {
+fn dominant_corner(weights: &[(Vertex, u64); 4]) -> (Vertex, u64) {
     let mut best = weights[0];
     for &cand in &weights[1..] {
         if cand.1 > best.1 || (cand.1 == best.1 && cand.0.0 < best.0.0) {
@@ -456,7 +465,41 @@ pub enum Crossing {
     Impassable,
 }
 
-/// The shortest of a room's three edges, radians — the smallest step the mesh
+/// The canonical walk depth: seven refinement levels below the canonical grid.
+///
+/// **THE ONE STATEMENT OF THIS ARITHMETIC IN THE REPOSITORY.** Every other
+/// site — `hornvale_vessel::walk_depth` (a re-export, not a second
+/// definition), `hornvale locale`'s and `hornvale surrounds`' `--depth`
+/// defaults, the scene goldens' observer, every walk-band probe and fixture —
+/// calls this function. `cli/tests/suite/walk_depth_agreement.rs` scans the
+/// whole tree and FAILS if a `globe_level()` offset appears anywhere outside
+/// this line, so a seventeenth copy cannot re-accrete quietly.
+///
+/// **Why it lives HERE rather than in `windows/vessel`, where it used to.**
+/// The dependency chain is `locale -> scene -> vessel -> cli`, so a definition
+/// in `vessel` was unreachable from three of the four crates that need it, and
+/// each of them restated the arithmetic instead. The Pavement found sixteen
+/// such restatements, two of them production `--depth` defaults that had
+/// silently fallen a whole band behind. `walk_depth` takes a
+/// [`LocaleContext`] and reads nothing but [`LocaleContext::globe_level`], so
+/// this crate — the bottom of the chain and the owner of both — is where it
+/// can actually be called from. Moving it is what makes "call it, do not
+/// restate it" possible at all.
+///
+/// **Seven, not six, since The Pavement (spec section 2.3).** The offset is
+/// chosen to preserve the length of one step, not for round numbers: on the
+/// icosphere, depth 12 gave an effective 1.08 km centre-to-centre step
+/// (measured 1.083/1.107 km alternating, seed 42); on the cube-sphere, depth
+/// 12 is 2.251 km per side and depth 13 is 1.126 km, so 13 is the one that
+/// keeps `windows/vessel`'s `clock.rs` authored 0.1-day `MoveTo` — and every
+/// duration calibrated against it — honest. Depth 12 would have silently
+/// doubled the ground covered per step.
+/// type-audit: bare-ok(count: return)
+pub fn walk_depth(ctx: &LocaleContext) -> u32 {
+    ctx.globe_level() + 7
+}
+
+/// The shortest of a room's four edges, radians — the smallest step the mesh
 /// offers out of it, and the unit "narrower than one step" is measured in.
 ///
 /// Derived from [`Facet::corners`], so it is the mesh's own geometry at
@@ -465,14 +508,18 @@ pub enum Crossing {
 /// *shortest* edge rather than the mean or the longest because the criterion
 /// is a claim about crossability and the strictest of a room's steps is the
 /// one that has to clear the water.
+///
+/// Four edges rather than three since The Pavement: a room is a cube-sphere
+/// quad. The four are the room's own sides, in `Facet::corners`'s winding —
+/// NOT its diagonals, which are longer and are not steps the lattice offers.
 /// type-audit: pending(wave-1: return)
 pub fn room_edge(addr: &Facet) -> f64 {
-    let [a, b, c] = addr.corners();
+    let [a, b, c, d] = addr.corners();
     let sep = |u: [f64; 3], v: [f64; 3]| -> f64 {
-        let d: f64 = u[0] * v[0] + u[1] * v[1] + u[2] * v[2];
-        hornvale_kernel::math::acos(d.clamp(-1.0, 1.0))
+        let dp: f64 = u[0] * v[0] + u[1] * v[1] + u[2] * v[2];
+        hornvale_kernel::math::acos(dp.clamp(-1.0, 1.0))
     };
-    sep(a, b).min(sep(b, c)).min(sep(c, a))
+    sep(a, b).min(sep(b, c)).min(sep(c, d)).min(sep(d, a))
 }
 
 impl LocaleContext {
@@ -605,7 +652,7 @@ impl LocaleContext {
     /// The vertex is the same *categorical* corner [`LocaleContext::describe`]
     /// takes its biome and water kind from (max blend weight, tie-break
     /// lowest `Vertex` — the shared `dominant_corner`), never a blend of the
-    /// three: rock class is categorical, and averaging granite with basalt
+    /// four: rock class is categorical, and averaging granite with basalt
     /// would name a rock that is not there. Sharing that one rule is what
     /// makes the colour and the prose agree about which ground a room
     /// stands on.
@@ -748,9 +795,11 @@ impl LocaleContext {
     /// last-element-wins tie-break, while this window's own
     /// `dominant_corner` (used by the two `describe_*` callers at `:763`/
     /// `:792` that ultimately reach this method) tie-breaks to the *lowest*
-    /// `Vertex` — and `Facet::corner_weights` does not sort its three
+    /// `Vertex` — and `Facet::corner_weights` does not sort its four
     /// corners by id, so the two selections are not provably identical on an
-    /// exact corner-weight tie. **BELOW-FLOOR FALLBACK, PRESERVED VERBATIM
+    /// exact corner-weight tie. (Three corners before The Pavement; four
+    /// makes an exact tie MORE likely, not less, so the divergence recorded
+    /// here is if anything wider now.) **BELOW-FLOOR FALLBACK, PRESERVED VERBATIM
     /// AND KNOWN WRONG:** a rung beneath the seabed (or, on land, any
     /// stratum but `Surface`) is rock, and this answers open water. Kept
     /// byte-for-byte because The Fathom may not move behaviour; see
@@ -838,7 +887,7 @@ impl LocaleContext {
         addr: &Facet,
         geo: &hornvale_kernel::Geosphere,
         cache: Option<&hornvale_kernel::RoomMeshMemo>,
-    ) -> Option<[(Vertex, u64); 3]> {
+    ) -> Option<[(Vertex, u64); 4]> {
         if let Some(cache) = cache {
             // The read-path half of the geo-aliasing guard (the-waymark fix
             // round, round 2): `corner_weights_memo`'s own `debug_assert_eq!`
@@ -872,7 +921,7 @@ impl LocaleContext {
         addr: &Facet,
         stratum: Option<Stratum>,
         id: u64,
-        weights: [(Vertex, u64); 3],
+        weights: [(Vertex, u64); 4],
     ) -> Result<Locale, LocaleError> {
         let denom: u64 = weights.iter().map(|&(_, w)| w).sum();
 
@@ -891,7 +940,7 @@ impl LocaleContext {
             quantize(sum / denom as f64)
         };
         let elevation_m = blend(&|c| self.terrain.globe().elevation.get(c).get());
-        // `from_metres`, not a subtraction: the left operand is a three-corner
+        // `from_metres`, not a subtraction: the left operand is a four-corner
         // BLEND, not any single vertex's reading, so there is no pair of
         // `ReferenceElevation`s here to subtract. Derived from the already-
         // quantized `elevation_m` and a quantized sea level so that the value
@@ -1160,8 +1209,10 @@ impl LocaleContext {
     /// signal a thermal drive senses at its own vertex, distinct from
     /// [`describe`](Self::describe)'s annual-MEAN `temperature_c` render field
     /// (left untouched, so the walk/almanac stay byte-identical). Blends the
-    /// three corner vertices' [`GeneratedClimate::temperature_at`] by the SAME
-    /// integer barycentric weights `describe` uses for the mean. Full
+    /// four corner vertices' [`GeneratedClimate::temperature_at`] by the SAME
+    /// integer BILINEAR weights `describe` uses for the mean (three
+    /// barycentric corners before The Pavement — see
+    /// [`Facet::corner_weights`]). Full
     /// precision — this is a compute-path read, never a serialization
     /// boundary, so it is NOT quantized (quantize-at-emit-only). `None` for a
     /// room the canonical grid does not cover (above the grid or unaddressable);
@@ -1192,7 +1243,7 @@ impl LocaleContext {
     /// The shared tail of [`Self::temperature_at`]/[`Self::temperature_at_cached`]:
     /// the blend itself, once `weights` is resolved (the-waymark fix round,
     /// round 2 — kills the base/`_cached` duplicate body).
-    fn temperature_with_weights(&self, at: WorldTime, weights: [(Vertex, u64); 3]) -> f64 {
+    fn temperature_with_weights(&self, at: WorldTime, weights: [(Vertex, u64); 4]) -> f64 {
         let denom: u64 = weights.iter().map(|&(_, w)| w).sum();
         let sum: f64 = weights
             .iter()
@@ -1203,9 +1254,9 @@ impl LocaleContext {
 
     /// The room's material food PRODUCTIVITY in `[0, 1]` — a Miami-model
     /// net-primary-productivity proxy over the climate, the food-value field
-    /// the drive layer's hunger drive reads (The Provender). Blends the three
+    /// the drive layer's hunger drive reads (The Provender). Blends the four
     /// corner vertices' annual-mean temperature and moisture by the SAME integer
-    /// barycentric weights [`describe`](Self::describe) uses, then takes the
+    /// BILINEAR weights [`describe`](Self::describe) uses, then takes the
     /// Liebig minimum of a triangular temperature response and moisture — the
     /// same NPP proxy demography's carrying-capacity uses, computed here from
     /// this context's own climate rather than depending up into demography (a
@@ -1239,7 +1290,7 @@ impl LocaleContext {
 
     /// The shared tail of [`Self::productivity_at`]/[`Self::productivity_at_cached`]
     /// (the-waymark fix round, round 2).
-    fn productivity_with_weights(&self, weights: [(Vertex, u64); 3]) -> f64 {
+    fn productivity_with_weights(&self, weights: [(Vertex, u64); 4]) -> f64 {
         let denom: u64 = weights.iter().map(|&(_, w)| w).sum();
         let blend = |value: &dyn Fn(Vertex) -> f64| -> f64 {
             let sum: f64 = weights.iter().map(|&(c, w)| w as f64 * value(c)).sum();
@@ -1251,8 +1302,9 @@ impl LocaleContext {
     }
 
     /// Corner-blend an externally-supplied per-vertex `field` (over the canonical
-    /// geosphere) at `addr` — the integer-barycentric read `productivity_at`/
-    /// `hazards_at` use, generalized so a caller can sample a field this context
+    /// geosphere) at `addr` — the integer four-corner bilinear read
+    /// `productivity_at`/`hazards_at` use, generalized so a caller can sample
+    /// a field this context
     /// does not itself hold. The Quarry injects `worldgen::predator_pressure_from`
     /// (the carnivore-pressure field) and reads it here per room. Full precision
     /// (a compute-path read, not quantized). `None` for a room the canonical grid
@@ -1284,7 +1336,7 @@ impl LocaleContext {
     /// fix round, round 2). No `&self` needed — the blend reads only `weights`
     /// and the injected `field`.
     fn blend_with_weights(
-        weights: [(Vertex, u64); 3],
+        weights: [(Vertex, u64); 4],
         field: &hornvale_kernel::VertexMap<f64>,
     ) -> f64 {
         let denom: u64 = weights.iter().map(|&(_, w)| w).sum();
@@ -1328,7 +1380,7 @@ impl LocaleContext {
 
     /// The shared tail of [`Self::hazards_at`]/[`Self::hazards_at_cached`] (the-waymark
     /// fix round, round 2).
-    fn hazards_with_weights(&self, weights: [(Vertex, u64); 3]) -> (f64, f64, f64) {
+    fn hazards_with_weights(&self, weights: [(Vertex, u64); 4]) -> (f64, f64, f64) {
         // The dominant corner vertex (max weight, tie-break lowest Vertex) — the
         // same pick `describe` uses for the categorical biome/regime.
         let mut best = weights[0];
@@ -1514,6 +1566,36 @@ impl Compass {
             Compass::Nw => "north-west",
         }
     }
+
+    /// The canonical bearing this word names, degrees clockwise from north.
+    ///
+    /// Exhaustive by construction: adding a [`Compass`] variant fails to
+    /// compile here until it is given a bearing, the same discipline
+    /// [`compass_variants_must_all_be_rostered`] holds below.
+    ///
+    /// Moved down from `windows/vessel`'s `session::bearing_of` by The
+    /// Pavement's Task 11, because [`heading_rose`] needs it and
+    /// `hornvale-vessel` depends on this crate rather than the other way
+    /// round. Vessel now calls this instead of holding a second copy.
+    /// `diagnostic-value` rather than a newtype, following
+    /// `windows/scene/src/surrounds.rs`'s own `bearing_deg` field, which is
+    /// the same quantity at the same boundary and carries the same class:
+    /// this is one of eight constants keyed on a closed enum, not a measured
+    /// angle crossing a domain boundary, so a unit newtype here would wrap a
+    /// literal per variant.
+    /// type-audit: bare-ok(diagnostic-value: return)
+    pub fn bearing_deg(self) -> f64 {
+        match self {
+            Compass::N => 0.0,
+            Compass::Ne => 45.0,
+            Compass::E => 90.0,
+            Compass::Se => 135.0,
+            Compass::S => 180.0,
+            Compass::Sw => 225.0,
+            Compass::W => 270.0,
+            Compass::Nw => 315.0,
+        }
+    }
 }
 
 /// Compile-time tripwire: a new [`Compass`] variant breaks this match — every
@@ -1543,28 +1625,116 @@ pub enum ExitKind {
     Vertical,
 }
 
-/// Bucket a bearing (degrees clockwise from north) to eight points. Bucketing
-/// on a quantized bearing keeps it cross-platform stable.
-fn compass(bearing_deg: f64) -> Compass {
-    let b = quantize((bearing_deg % 360.0 + 360.0) % 360.0);
-    let idx = (((b + 22.5) / 45.0).floor() as i64).rem_euclid(8);
-    [
-        Compass::N,
-        Compass::Ne,
-        Compass::E,
-        Compass::Se,
-        Compass::S,
-        Compass::Sw,
-        Compass::W,
-        Compass::Nw,
-    ][idx as usize]
+/// The smaller of the two ways round between two bearings, in degrees:
+/// `0..=180`.
+///
+/// Integer-free but transcendental-free too — a remainder and a comparison, no
+/// `atan2` — so it adds nothing to the determinism surface. Moved down from
+/// `windows/vessel`'s `session::bearing_gap_deg` with [`heading_rose`].
+fn bearing_gap_deg(a: f64, b: f64) -> f64 {
+    let d = ((a - b) % 360.0 + 360.0) % 360.0;
+    if d > 180.0 { 360.0 - d } else { d }
 }
 
+/// The whole compass rose resolved at once: for each [`Compass::all`] word, in
+/// that order, which of `from`'s neighbours it names — or `None` when that
+/// bearing has no neighbour at all, which happens at exactly the 24 cube-corner
+/// rooms (8 cube corners, three quads meeting at each) and for exactly one
+/// bearing there.
+///
+/// # THE ONE RULE, and why it lives here rather than in `windows/vessel`
+///
+/// This is the *only* rule in the project that turns a room's neighbours into
+/// compass words. It used to be two: `windows/vessel`'s `heading_rose` (which
+/// `go` reads) and this crate's own `compass()`, which bucketed each bearing
+/// into its own 45-degree sector and is what `look` printed. **On the cube mesh
+/// those two disagreed, visibly, inside a single sentence.** `describe_here`
+/// builds its letter list from `Locale::exits` and its "closed" clause from the
+/// rose, so at a measured **10.0% of walk-band rooms** it printed something like
+///
+/// > *No direction here is closed; the nearest ground lies E, NW, W, SE, N, W,
+/// > S, E.*
+///
+/// — E and W twice, NE and SW never — while `go ne` and `go sw` both worked.
+/// The geography is sharp and is a seam effect, not noise: 4.2% on the four
+/// equatorial faces against ~21.5% on faces 4 and 5, and within a face 19% of
+/// the outermost ring, ~1% one ring in, 0% beyond. It is not "a duplicated
+/// letter and a missing one" either — every sampled face-4 room had **two**
+/// duplicated and **two** missing.
+///
+/// The Pavement's Task 11 deleted the bucket rule outright and moved the
+/// assignment DOWN into this crate, rather than the reverse: `hornvale-vessel`
+/// already depends on `hornvale-locale`, so a shared function can only live at
+/// this level or lower. Between the two candidates — here beside [`Compass`],
+/// or in the kernel on `Facet` — this crate wins because the kernel does not
+/// know what a compass word is, and putting the rose there would mean moving
+/// `Compass` down with it, dragging a presentation vocabulary into the
+/// determinism substrate to serve one caller.
+///
+/// # Why an assignment, and not "the neighbour nearest that bearing"
+///
+/// Nearest-by-bearing never refuses: at a corner room, two compass words would
+/// silently resolve to the same neighbour, which is the aliasing the walk band
+/// says out loud instead. Bucketing each neighbour into its own 45-degree
+/// sector refuses too MUCH — that is the 10.0% measured above, because a quad's
+/// diagonals are not 45 degrees off its edges once the projection distorts
+/// them. A gap threshold cannot separate the two cases either: the corner's own
+/// missing direction sits 30 degrees from a real neighbour while an interior
+/// bearing can sit 25 degrees from its nearest, and tuning a constant into that
+/// 5-degree window is exactly the kind of number this project refuses to
+/// author.
+///
+/// So the rule is a **one-to-one assignment** between the eight compass words
+/// and the neighbours actually present, built greedily from the smallest
+/// angular error up: take the closest (word, neighbour) pair whose word and
+/// neighbour are both still free, and repeat. The candidate graph is complete —
+/// every neighbour has an error to every word — so a greedy maximal matching
+/// always reaches size `neighbors().len()`. That is the whole guarantee, and it
+/// is structural rather than measured:
+///
+/// > **eight neighbours leaves no word unmatched; seven leaves exactly one.**
+///
+/// Ties break on `total_cmp` then on the two integer keys (word index, then
+/// neighbour index), so an exact tie in angle resolves identically everywhere.
+/// The bearing is [`hornvale_kernel::quantize`]d before use, which is where the
+/// deleted bucket rule's own cross-platform stability came from.
+pub fn heading_rose(from: &Facet) -> Vec<Option<Facet>> {
+    let words = Compass::all();
+    let ns = from.neighbors();
+    let mut pairs: Vec<(f64, usize, usize)> = Vec::with_capacity(ns.len() * words.len());
+    for (i, n) in ns.iter().enumerate() {
+        let b = quantize(from.bearing_to(n));
+        for (w, &c) in words.iter().enumerate() {
+            pairs.push((bearing_gap_deg(b, c.bearing_deg()), w, i));
+        }
+    }
+    pairs.sort_by(|a, b| a.0.total_cmp(&b.0).then(a.1.cmp(&b.1)).then(a.2.cmp(&b.2)));
+    let mut out: Vec<Option<Facet>> = vec![None; words.len()];
+    let mut neighbour_taken = vec![false; ns.len()];
+    for (_, w, i) in pairs {
+        if out[w].is_some() || neighbour_taken[i] {
+            continue;
+        }
+        neighbour_taken[i] = true;
+        out[w] = Some(ns[i].clone());
+    }
+    out
+}
+
+/// A room's exits: one lateral edge per compass word [`heading_rose`] assigns,
+/// in [`Compass::all`] order, then the vertical pair.
+///
+/// **Compass order, not `neighbors()` order, since The Pavement's Task 11** —
+/// the list is now indexed by the word rather than by the mesh's own winding,
+/// which is what makes it the same assignment `go` resolves against. The
+/// lateral count is unchanged (one exit per neighbour; a cube-corner room's
+/// seven neighbours still yield seven exits, with one word simply unassigned).
 fn exits_of(addr: &Facet) -> Vec<Exit> {
     let mut exits = Vec::new();
-    for n in addr.neighbors() {
+    for (word, n) in Compass::all().into_iter().zip(heading_rose(addr)) {
+        let Some(n) = n else { continue };
         exits.push(Exit {
-            direction: Direction::Compass(compass(addr.bearing_to(&n))),
+            direction: Direction::Compass(word),
             kind: ExitKind::Edge,
             to: n.pack().map(|r| r.0).unwrap_or(0),
         });
@@ -1847,8 +2017,8 @@ mod tests {
         // world at a fixed deep address. Values captured from a known-good run.
         // We pin the platform-EXACT quantities only: the quantized blended
         // temperature (byte-identical cross-platform) and the corner
-        // (vertex, weight) pairs (pure integer barycentric numerators — the
-        // inheritance-selection inputs). The biome NAME is a depth-band
+        // (vertex, weight) pairs (pure integer bilinear numerators — the
+        // inheritance-selection inputs; barycentric until The Pavement). The biome NAME is a depth-band
         // classification thresholded on host-libm transcendentals (elevation +
         // a percentile sea_level), i.e. the cross-platform-divergence class CI
         // excludes elsewhere — so we assert membership, not the exact string,
@@ -1864,8 +2034,10 @@ mod tests {
         // The thermostat (a damped, greenhouse-forced insolation baseline
         // replacing the fixed 288 K blackbody one) plus the area-mean-zero
         // latitude profile move this address's blended temperature; the
-        // corners below (pure barycentric geometry over unchanged terrain)
-        // are untouched, confirming only the climate field moved.
+        // corners below (then pure barycentric geometry over unchanged
+        // terrain) were untouched, confirming only the climate field moved.
+        // That reasoning is HISTORICAL — see The Pavement's note below, which
+        // is the campaign where the corners themselves moved.
         //
         // THE GLASSHOUSE close re-pin (`k` settled at 0.30): 37.232618 ->
         // 23.999847. `k` moved after the Task 4/5 re-pin above, and this is a
@@ -1878,23 +2050,52 @@ mod tests {
         // old offset loses more than the thermostat returns. The corners are
         // again untouched, which is what says the climate field moved and the
         // geometry did not.
-        assert_eq!(loc.fields.temperature_c, 23.999847);
+        //
+        // THE PAVEMENT re-pin (Task 3): 23.999847 -> 25.154255, and the
+        // corners move from THREE to FOUR with entirely new vertex ids.
+        // **Both halves of the note above are now out of date and the reason
+        // is the point.** Every earlier re-pin here said "the corners are
+        // untouched, which is what says the climate field moved and the
+        // geometry did not". This campaign moved the geometry: the base mesh
+        // is a tangent-warped cube-sphere, so a room at this address is a
+        // different patch of the world (Task 2 — different corner positions,
+        // hence different nearest grid vertices), and `corner_weights` is a
+        // four-corner BILINEAR stencil rather than a three-corner barycentric
+        // one (Task 3 — see `Facet::corner_weights`). The numerators sum to
+        // `D = 4 << (2 * (depth - globe_level))` = `4^7` = 16384 at this
+        // address, replacing the old `3 << (depth - globe_level)` = 192.
+        //
+        // So the temperature moved for a reason no climate change can
+        // account for, and a reader must NOT read this row as a climate
+        // result: it is the same climate field sampled at a different place
+        // through a different stencil.
+        assert_eq!(loc.fields.temperature_c, 25.154255);
         assert_eq!(
             loc.corners,
             vec![
                 VertexWeight {
-                    vertex: 3799,
-                    weight: 46
+                    vertex: 36922,
+                    weight: 2125
                 },
                 VertexWeight {
-                    vertex: 15109,
-                    weight: 16
+                    vertex: 29318,
+                    weight: 8755
                 },
                 VertexWeight {
-                    vertex: 15099,
-                    weight: 130
+                    vertex: 29323,
+                    weight: 4429
+                },
+                VertexWeight {
+                    vertex: 29322,
+                    weight: 1075
                 },
             ]
+        );
+        // The denominator is a stated contract, not an incidental sum.
+        assert_eq!(
+            loc.corners.iter().map(|c| c.weight).sum::<u64>(),
+            4 << (2 * (addr.depth() - ctx.globe_level)),
+            "the four bilinear numerators must sum to D"
         );
         // Depth-band biome name: platform-sensitive, so assert only that a
         // known biome was selected (never the exact string).
@@ -1934,7 +2135,7 @@ mod tests {
     ///
     /// Sampled over many addresses (the same directional-spread idiom
     /// `locale_water_field_varies_and_includes_fresh_water_on_seed_42` uses)
-    /// rather than one fixed address: a single room's three corner weights
+    /// rather than one fixed address: a single room's four corner weights
     /// can coincidentally agree across categories even when the underlying
     /// wiring has split, so one address is not enough to trust a pass.
     ///
@@ -2031,15 +2232,17 @@ mod tests {
     ///
     /// **Not `max_by_key(|c| c.weight)`**, which returns the LAST maximum on a
     /// tie. Three equal weights are common enough on this mesh that the two
-    /// rules disagree in practice, and a test that used `max_by_key` compared
+    /// rules disagree in practice (four weights now, since The Pavement made
+    /// the stencil a quad), and a test that used `max_by_key` compared
     /// against a vertex production never chose — passing for a reason unrelated
     /// to what it claimed to measure. (Two paths in `windows/vessel` still
     /// resolve a vertex that way; that divergence is recorded and unfixed.)
     fn dominant_of(loc: &Locale) -> Vertex {
-        let w: [(Vertex, u64); 3] = [
+        let w: [(Vertex, u64); 4] = [
             (Vertex(loc.corners[0].vertex), loc.corners[0].weight),
             (Vertex(loc.corners[1].vertex), loc.corners[1].weight),
             (Vertex(loc.corners[2].vertex), loc.corners[2].weight),
+            (Vertex(loc.corners[3].vertex), loc.corners[3].weight),
         ];
         dominant_corner(&w).0
     }
@@ -2050,11 +2253,24 @@ mod tests {
     ///
     /// **Not a contiguous BFS neighbourhood, and the difference is the whole
     /// point.** A conservation claim is about a vertex, and a radius-4 patch
-    /// covers about 1/132 of one; across a patch that small the three-corner
-    /// blend of a terrain statistic moves ~2%, so a patch cannot see the
-    /// variation that a vertex-wide aggregate must account for. Fanning outward
-    /// instead sweeps the neighbour's blend weight from nearly 0 to nearly 1/3,
-    /// which is the range that actually exists inside the vertex.
+    /// covers about 1/132 of one; across a patch that small the corner blend
+    /// of a terrain statistic moves ~2%, so a patch cannot see the variation
+    /// that a vertex-wide aggregate must account for. Fanning outward instead
+    /// sweeps the neighbour's blend weight across the range that actually
+    /// exists inside the vertex.
+    ///
+    /// **THE TWO PARAGRAPHS BELOW ARE HISTORICAL AND THEIR PREMISE IS GONE.**
+    /// They reason about an interpolant of THREE barycentric corners over a
+    /// room mesh that subdivides the same icosphere as the vertices, with a
+    /// spherical point-in-triangle descent. The Pavement retired all three
+    /// premises: the base mesh is a tangent-warped cube-sphere quad lattice,
+    /// [`Facet::corner_weights`] is a FOUR-corner bilinear stencil, and
+    /// [`Facet::containing`] is a dyadic bisection of two face parameters with
+    /// no triangle test and no middle-child fallback. The lattice-coincidence
+    /// hazard they describe was real and the fixture still avoids it, so they
+    /// are kept as the reason this helper is shaped the way it is — but the
+    /// specific numbers (`1/3`, `64/64/64`, the ~5° miss) describe a mesh that
+    /// no longer exists, and nobody should re-derive anything from them.
     ///
     /// **No sample is a vertex centre, and none lies on the arc between two of
     /// them.** Rooms and vertices subdivide the *same* icosphere, so a level-6 vertex
@@ -2182,7 +2398,15 @@ mod tests {
         let ctx = LocaleContext::build(&world).unwrap();
         let geo = ctx.climate().geosphere();
         let globe = ctx.terrain().globe();
-        let depth = ctx.globe_level() + 6;
+        // The walk band, via the crate's own `walk_depth` rather than a
+        // restated offset. NOTE for whoever re-measures the locale suite after
+        // The Pavement's epoch: the populations quoted in this test's doc
+        // ("2151 rooms", "11 of 80", "27 of 80") were measured at
+        // `globe_level + 6` on the icosphere, so they are stale twice over —
+        // the band moved one level (4x the rooms per vertex) and the mesh
+        // changed underneath them. The conserved-vs-reverted CONTRAST is the
+        // claim; the counts are its witnesses and want re-taking.
+        let depth = crate::walk_depth(&ctx);
         let sea_level_m = quantize(globe.sea_level.get());
 
         let all: Vec<Vertex> = geo.vertices().collect();
@@ -2332,7 +2556,7 @@ mod tests {
     }
 
     #[test]
-    fn exits_are_three_lateral_plus_vertical() {
+    fn exits_are_eight_lateral_plus_vertical() {
         let world = land_world();
         let ctx = LocaleContext::build(&world).unwrap();
         let addr = Facet {
@@ -2345,7 +2569,13 @@ mod tests {
             .iter()
             .filter(|e| e.kind == ExitKind::Edge)
             .count();
-        assert_eq!(lateral, 3, "exactly three geometric edges");
+        // EIGHT, not three (The Pavement, Task 3). The base mesh is an
+        // 8-connected cube-sphere quad lattice: four edge-adjacent rooms and
+        // four corner-adjacent ones. A room at one of the cube's eight
+        // corners has seven — this address is not one, and the assertion is
+        // deliberately the exact 8 rather than `>= 7`, so that a walk which
+        // silently lost a diagonal would fail here.
+        assert_eq!(lateral, 8, "eight geometric edges away from a cube corner");
         assert!(
             loc.exits.iter().any(|e| e.direction == Direction::Exit),
             "a mid-mesh room has a parent (Exit)"
@@ -2367,14 +2597,196 @@ mod tests {
         }
     }
 
+    /// The rule [`heading_rose`] replaced was `compass()`, a 45-degree
+    /// bucket, and its test asserted that the buckets covered the circle.
+    /// That property is not the one that broke: the buckets did cover the
+    /// circle, and two neighbours still landed in one of them. So the
+    /// replacement asserts the property the bucket rule could not give —
+    /// **one word per neighbour, one neighbour per word**.
+    ///
+    /// # WHERE IT SWEEPS IS THE WHOLE TEST, AND THE FIRST VERSION GOT IT WRONG
+    ///
+    /// That version walked three hops from `path: [1,2,3,0,1,2,3,0,1,2,3,0]`
+    /// on each face. Measured: every one of the six balls is **49 rooms with
+    /// 0 off-face** — entirely face-INTERIOR. The bucket rule failed at 19% of
+    /// a face's outermost ring, ~1% one ring in, and **0% beyond**, so the
+    /// rule this test exists to prove gone **would have passed it**. A guard
+    /// weaker than its own description is decision 0467's subject exactly, and
+    /// this one's description claimed it covered "the seam faces where the
+    /// bucket rule failed 21.5% of the time" — which conflated being on face 4
+    /// or 5 with being on the ring where it failed.
+    ///
+    /// So the sweep is seeded at three DIFFERENT regimes, and it asserts that
+    /// it reached each of them rather than trusting the seeds:
+    ///
+    /// 1. **face-interior** — the 8-neighbour case, where the rule must be a
+    ///    perfect matching;
+    /// 2. **seam-crossing** — an alternating-digit path lands part-way along a
+    ///    face edge, and its 3-hop ball is 49 rooms with 21 off-face. This is
+    ///    the ring the deleted rule actually failed on;
+    /// 3. **cube-corner** — a constant-digit path lands on a corner, whose
+    ///    ball is 40 rooms and which contains rooms with **seven** neighbours.
+    ///    The guarantee there is that exactly one word goes unassigned, which
+    ///    the interior regime cannot exercise at all.
+    ///
+    /// The three coverage assertions at the end are the load-bearing part: a
+    /// future change to the seeds that quietly returned this to interior-only
+    /// reddens them instead of passing.
+    ///
+    /// # MUTATION THIS MUST FAIL AGAINST, and it is the one that matters
+    ///
+    /// Restore the deleted rule: label each exit `bucket(addr.bearing_to(&n))`
+    /// with the old 45-degree sector instead of the word [`heading_rose`]
+    /// assigned. Confirmed red, 2026-08-31:
+    ///
+    /// ```text
+    /// Facet { face: 0, path: [0,0,0,0,0,0,0,0,0,0,0,1] }:
+    ///   the exit list repeats a compass word: [N, Ne, Se, Se, S, Sw, W, Nw]
+    /// ```
+    ///
+    /// `Se` twice and `E` never — the exact defect, on a room only the
+    /// corner-seeded ball reaches. Run against the interior-only seeds this
+    /// test shipped with, the same mutation passes.
     #[test]
-    fn compass_buckets_cover_the_circle() {
-        assert_eq!(compass(0.0), Compass::N);
-        assert_eq!(compass(90.0), Compass::E);
-        assert_eq!(compass(180.0), Compass::S);
-        assert_eq!(compass(270.0), Compass::W);
-        assert_eq!(compass(45.0), Compass::Ne);
-        assert_eq!(compass(359.9), Compass::N);
+    fn every_room_labels_each_neighbour_with_its_own_compass_word() {
+        let world = land_world();
+        // Hoisted out of the loop. It was built once per swept room, which
+        // cost 107 s for a test whose subject is pure mesh geometry — the
+        // stage gate pays that every run.
+        let ctx = LocaleContext::build(&world).unwrap();
+
+        // Three seeds per face. `[1,2,3,0,...]` is deep inside the face;
+        // `[a,b,a,b,...]` with `a != b` walks toward a face EDGE; `[a,a,a,...]`
+        // descends into one quadrant every level and lands on a CORNER. The
+        // last two are the construction `windows/scene`'s `seam_observer` uses
+        // for the same reason.
+        let mut bases: Vec<Facet> = Vec::new();
+        for face in 0..6u8 {
+            bases.push(Facet {
+                face,
+                path: vec![1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0],
+            });
+            bases.push(Facet {
+                face,
+                path: (0..12).map(|i| if i % 2 == 0 { 0 } else { 1 }).collect(),
+            });
+            bases.push(Facet {
+                face,
+                path: vec![0; 12],
+            });
+        }
+
+        let mut rooms = 0usize;
+        let mut interior = 0usize;
+        let mut crossing = 0usize;
+        let mut corners = 0usize;
+        for base in &bases {
+            for room in walk_visited(base, 3) {
+                let ns = room.neighbors();
+                let rose = heading_rose(&room);
+                let assigned: Vec<&Facet> = rose.iter().flatten().collect();
+                assert_eq!(
+                    assigned.len(),
+                    ns.len(),
+                    "{room:?}: {} neighbours but {} compass words assigned — the \
+                     assignment must place every neighbour exactly once",
+                    ns.len(),
+                    assigned.len()
+                );
+                let distinct: std::collections::BTreeSet<&Facet> =
+                    assigned.iter().copied().collect();
+                assert_eq!(
+                    distinct.len(),
+                    assigned.len(),
+                    "{room:?}: a neighbour was named by two compass words at once"
+                );
+                // And the exits the document carries agree with it, letter for
+                // letter — the whole point of collapsing the two rules.
+                let loc = ctx.describe(&room, WorldTime::GENESIS).unwrap();
+                let letters: Vec<Compass> = loc
+                    .exits
+                    .iter()
+                    .filter(|e| e.kind == ExitKind::Edge)
+                    .filter_map(|e| match e.direction {
+                        Direction::Compass(c) => Some(c),
+                        _ => None,
+                    })
+                    .collect();
+                let unique: std::collections::BTreeSet<String> =
+                    letters.iter().map(|c| format!("{c:?}")).collect();
+                assert_eq!(
+                    unique.len(),
+                    letters.len(),
+                    "{room:?}: the exit list repeats a compass word: {letters:?}"
+                );
+                assert_eq!(
+                    letters.len(),
+                    ns.len(),
+                    "{room:?}: the document carries {} lateral exits for {} neighbours",
+                    letters.len(),
+                    ns.len()
+                );
+
+                if ns.len() == 7 {
+                    corners += 1;
+                    assert_eq!(
+                        rose.iter().filter(|n| n.is_none()).count(),
+                        1,
+                        "{room:?}: a seven-neighbour room must leave exactly one \
+                         compass word unassigned"
+                    );
+                }
+                if ns.iter().any(|n| n.face != room.face) {
+                    crossing += 1;
+                } else {
+                    interior += 1;
+                }
+                rooms += 1;
+            }
+        }
+
+        println!(
+            "rose sweep: {rooms} rooms — {interior} interior, {crossing} seam-crossing, \
+             {corners} cube-corner"
+        );
+        // THE COVERAGE GUARD. Without these three the sweep can silently
+        // narrow back to the interior-only population the first version had,
+        // where the rule this test replaced would itself have passed.
+        assert!(
+            interior > 0,
+            "the sweep reached no face-interior room, so the eight-neighbour \
+             matching is untested"
+        );
+        assert!(
+            crossing > 0,
+            "the sweep reached no room whose neighbourhood crosses a base face — \
+             that is the ring the deleted 45-degree bucket rule actually failed \
+             on, so a sweep without one cannot tell this rule from that one"
+        );
+        assert!(
+            corners > 0,
+            "the sweep reached no cube-corner room, so 'seven neighbours leaves \
+             exactly one word unmatched' is untested"
+        );
+        assert!(
+            rooms > 50,
+            "too few rooms swept to trust this ({rooms}); the fixture stopped \
+             producing neighbourhoods"
+        );
+    }
+
+    /// The bearing table is the one [`heading_rose`] assigns against, and its
+    /// eight words must name eight distinct bearings a full circle apart —
+    /// the invariant the deleted `compass()` bucket test was really standing
+    /// in for.
+    #[test]
+    fn the_eight_bearings_are_distinct_and_evenly_spaced() {
+        let mut degs: Vec<f64> = Compass::all().iter().map(|c| c.bearing_deg()).collect();
+        assert_eq!(degs.len(), 8);
+        degs.sort_by(f64::total_cmp);
+        for (i, d) in degs.iter().enumerate() {
+            assert_eq!(*d, i as f64 * 45.0, "bearing {i} is {d}, not {}", i * 45);
+        }
     }
 
     /// A small walk-visited neighborhood: `start` plus every room reachable

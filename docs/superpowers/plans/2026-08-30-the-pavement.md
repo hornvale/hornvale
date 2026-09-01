@@ -448,7 +448,7 @@ git commit -m "refactor(scene): one projection in the repository, and a doc that
 
 - [ ] **Step 1: Write the corner-rule test IN BOTH DIRECTIONS**
 
-A test asserting only refusal is structurally blind to over-refusal — the exact failure `docs/CLAUDE.md` names about one-directional checks.
+A test asserting only refusal is structurally blind to over-refusal — the failure the root `CLAUDE.md` names at its seam-guard STALE-DECL rule ("a one-directional acknowledgement can only ever be satisfied, so it rots") and that decision 0456 states as a rule. **Corrected 2026-08-31: this cited `docs/CLAUDE.md`, which says nothing about one-directional checks — it is about idea-registry drift discipline. The bad citation propagated into an implementer's code before being caught.**
 
 ```rust
 #[test]
@@ -618,7 +618,13 @@ fn a_diagonal_step_costs_root_two_orthogonal_steps() {
 Run: `cargo nextest run -p hornvale-vessel --test suite -E 'test(octile_cost)'`
 Expected: FAIL to compile — `cost_of` takes three arguments.
 
-- [ ] **Step 3: Implement.** `cost_of` multiplies by `step_factor`; `Session::go` passes `std::f64::consts::SQRT_2` for a diagonal heading and `1.0` otherwise. `base_cost` is unchanged — the flat 10,000 ticks remains the orthogonal unit.
+- [ ] **Step 3: Implement.** **CORRECTED 2026-08-31 — the rule below is WRONG and Task 7 rightly
+      refused it.** `go` resolves a heading through `heading_rose`, a greedy one-to-one assignment, so
+      the compass WORD does not determine the step's geometry: measured in-tree, 1216/4800 assignments
+      mismatch (25.3%) — 0% on the four equatorial faces, 74.5%/77.5% on the two polar ones. A
+      word-keyed rule would also have covered neither `back` nor the creature walk. Derive the factor
+      from the step's ACTUAL GEOMETRY in `Session::charge` instead. Original text follows:
+      `cost_of` multiplies by `step_factor`; `Session::go` passes `std::f64::consts::SQRT_2` for a diagonal heading and `1.0` otherwise. `base_cost` is unchanged — the flat 10,000 ticks remains the orthogonal unit.
 
 - [ ] **Step 4: Run**
 

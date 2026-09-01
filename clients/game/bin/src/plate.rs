@@ -47,9 +47,9 @@
 //! follows the same idiom rather than caching one internally.
 //!
 //! **What the index is still FOR is one question, asked a few dozen times
-//! per plate instead of a few million: which three `Vertex` ids are the
-//! corners of a grid-level triangle.** That is
-//! [`hornvale_kernel::Facet::corner_weights`]'s three
+//! per plate instead of a few million: which four `Vertex` ids the corners of
+//! a grid-level QUAD resolve to.** That is
+//! [`hornvale_kernel::Facet::corner_weights`]'s four
 //! `nearest_to_position` scans, and it is memoized per grid-level facet
 //! through a [`hornvale_kernel::RoomMeshMemo`] [`draw_with`] owns for the
 //! length of one draw. Thousands of band-B tiles share one grid-level
@@ -181,9 +181,12 @@ fn base_edge_rad() -> f64 {
 /// How many facet edges fit around a great circle at mesh depth `depth`.
 ///
 /// **Derived from the icosahedron's own geometry, not a hardcoded ladder.**
-/// A table becomes a tuned number the first time the globe level moves —
-/// the mistake `hornvale_vessel::course::step_length_rad`'s own doc records
-/// avoiding. The base-face edge subtends [`base_edge_rad`]; each of the
+/// A table becomes a tuned number the first time the globe level moves. (This
+/// sentence used to cite `hornvale_vessel::course::step_length_rad`'s own doc as
+/// the precedent for avoiding that; The Pavement deleted the whole `course`
+/// module along with the rhumb it served, so the principle is stated here
+/// directly rather than pointed at a path that no longer resolves.) The
+/// base-face edge subtends [`base_edge_rad`]; each of the
 /// `depth` refinement levels halves it (the facet count is `20 << (2 *
 /// depth)`, i.e. four facets per facet per level, so the edge halves), so
 /// the count around a great circle is `2*pi` divided by that angle.
@@ -1010,16 +1013,27 @@ pub struct TileTerrain {
 /// 1. the tile's centre unprojects to a position, and
 ///    [`Facet::containing`] turns that position into an ADDRESS by
 ///    descending the mesh — no search over vertices;
-/// 2. the address's grid-level ancestor names the triangle terrain is
-///    actually defined on ([`hornvale_terrain::GLOBE_LEVEL`]), and
-///    [`Facet::corner_weights_memo`] gives that triangle's three corner
+/// 2. the address's grid-level ancestor names the QUAD whose corners resolve
+///    to the grid vertices terrain is defined on
+///    ([`hornvale_terrain::GLOBE_LEVEL`]), and
+///    [`Facet::corner_weights_memo`] gives that quad's FOUR corner
 ///    vertices, memoized;
-/// 3. the tile's class is the nearest of those three corners.
+/// 3. the tile's class is the nearest of those four corners.
 ///
-/// **Step 3 is three dot products, and it is not an approximation of the
-/// old query — it is the same answer.** A point inside a grid-level
-/// triangle has its nearest mesh vertex among that triangle's own three
-/// corners, so this reproduces what
+/// **THE "SAME ANSWER, NOT AN APPROXIMATION" CLAIM BELOW RESTS ON A PREMISE
+/// THE PAVEMENT RETIRED, and this paragraph is a pointer, not a verdict.** It
+/// argued that a point inside a grid-level TRIANGLE has its nearest mesh
+/// vertex among that triangle's three corners, which held while a facet's
+/// corners WERE geosphere vertices (decision 0287's corner-is-a-vertex
+/// corollary). A cube-sphere quad's corners are not geosphere vertices at all,
+/// so the argument no longer runs. Spec section 7's H3a owns the consequence
+/// and Task 10 step 3 reports it; nothing here measures or re-states a result.
+/// The counts above (a quad, four corners) are corrected because they are
+/// facts about the code as it now stands.
+///
+/// **Step 3 is four dot products.** The retired argument was that a point
+/// inside a grid-level triangle has its nearest mesh vertex among that
+/// triangle's own three corners, so this reproduced what
 /// [`NearestVertexIndex::nearest`] would have returned at the tile's centre
 /// without asking it. `mesh_addressing_agrees_with_the_spatial_search`
 /// ASSERTS that agreement exactly — `assert_eq!(agree, total)`, 5,000 of
@@ -1034,11 +1048,13 @@ pub struct TileTerrain {
 /// windowed scan, captured separately and deliberately not fixed here).
 ///
 /// **The weights [`Facet::corner_weights_memo`] also returns are
-/// deliberately unused.** They are the barycentric position of the ADDRESSED
-/// facet's own centroid; at the grid level they are uniform (`1,1,1`), which
-/// would make every tile inside one triangle identical and blocky. The tile's
-/// own centre is a strictly finer thing to compare against, and comparing
-/// against it costs three dot products rather than a memo key per tile.
+/// deliberately unused.** They are the bilinear position of the ADDRESSED
+/// facet's own centroid; at the grid level they are uniform (`1,1,1,1` — the
+/// centroid of the ancestor is the quad's own centre, equidistant from all four
+/// corners), which would make every tile inside one quad identical and blocky.
+/// The tile's own centre is a strictly finer thing to compare against, and
+/// comparing against it costs four dot products rather than a memo key per
+/// tile.
 ///
 /// A rung COARSER than the grid has no ancestor at the grid level, so the
 /// tile's own centre is re-addressed at the grid level instead. Nothing on
@@ -1082,7 +1098,7 @@ pub fn terrain_at_tile(
         .corner_weights_memo(geo, index, memo)
         .expect("a facet AT the grid's own level is never coarser than the grid");
 
-    // The nearest of the triangle's three corners to the tile's own centre.
+    // The nearest of the quad's four corners to the tile's own centre.
     // Ties break to the lower `Vertex`, the same direction
     // `NearestVertexIndex`'s own scan breaks them.
     let mut vertex = corners[0].0;
@@ -1536,11 +1552,14 @@ mod tests {
 
     /// **Mesh addressing answers the question the spatial search answered.**
     /// [`terrain_at_tile`] never calls [`NearestVertexIndex::nearest`]: it
-    /// addresses the tile's grid-level triangle and takes the nearest of
-    /// that triangle's own three corners. The claim that makes this a
+    /// addresses the tile's grid-level QUAD and takes the nearest of
+    /// that quad's own FOUR corners. The claim that makes this a
     /// replacement rather than an approximation is that a point inside a
-    /// grid-level triangle HAS its nearest mesh vertex among those three
-    /// corners — so every drawn cell's glyph must equal the glyph a plain
+    /// grid-level facet HAS its nearest mesh vertex among that facet's
+    /// corners — **and that claim's premise is retired** (see
+    /// [`terrain_at_tile`]'s own doc: a cube-sphere quad's corners are not
+    /// geosphere vertices). Spec section 7's H3a owns it; this test is Task 10
+    /// step 3's subject, to be reported DISSOLVED rather than passed or failed — so every drawn cell's glyph must equal the glyph a plain
     /// `nearest()` query at that same cell's own centre would produce.
     ///
     /// **Retargeted, not renamed away.** This test was

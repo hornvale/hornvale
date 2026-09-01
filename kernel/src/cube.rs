@@ -23,19 +23,74 @@ pub const CUBE_FACES: [[[f64; 3]; 3]; 6] = [
 /// The naive cube-sphere squashes the grid toward a face corner; this
 /// pre-spreads it by the compensating amount. Measured: 5.16x max/min cell
 /// area unwarped, 1.41x warped (spec section 2.0).
+///
+/// **`warp(±1.0)` is special-cased to exactly `±1.0`, rather than falling
+/// through to `tan(±π/4)`.** `math::tan` evaluates that at one ULP below
+/// `1.0` (`0x3fefffffffffffff`), so without the special case two faces
+/// meeting at a seam compute the shared edge from componentwise-DIFFERENT
+/// pre-normalization vectors and land 1.11e-16 apart once normalized —
+/// measured, not assumed (`kernel/tests/suite/cube_adjacency.rs`'s
+/// `every_neighbour_physically_touches_the_room_it_neighbours`, before this
+/// fix). The snap is safe rather than a discontinuity, for three reasons:
+/// `tan(π/4)` **is** exactly `1` mathematically, so snapping to it REDUCES
+/// error against the true function rather than introducing any; `warp` is
+/// already monotone increasing on `[-1, 1]`, and pinning only the two
+/// endpoints to the values the true function already approaches there
+/// cannot break that monotonicity; and it only ever changes geometry at an
+/// EXACT face edge (`t = ±1`), which is precisely where two adjoining faces'
+/// projections must agree bit-for-bit for the cube-sphere to be watertight
+/// ACROSS a seam, not merely within one face (the within-face case was
+/// already exact — dyadic parameters through identical arithmetic — see
+/// `corners_are_watertight_across_the_lattice`). Do not "simplify" this
+/// special case away: removing it reintroduces the measured seam gap.
+/// `kernel/tests/suite/cube_adjacency.rs`'s
+/// `seam_corners_are_bit_exact_across_adjoining_faces` is the regression
+/// test that would catch it.
 fn warp(t: f64) -> f64 {
+    if t == 1.0 {
+        return 1.0;
+    }
+    if t == -1.0 {
+        return -1.0;
+    }
     crate::math::tan(t * std::f64::consts::FRAC_PI_4)
 }
 
-/// The inverse of [`warp`].
+/// The inverse of [`warp`], special-cased at `±1.0` for the same reason and
+/// by the same argument: `atan(1) / (π/4)` is exactly `1` mathematically, so
+/// pinning the endpoint keeps `unwarp` the exact inverse of `warp` there
+/// too, rather than landing one ULP off in the opposite direction.
 fn unwarp(t: f64) -> f64 {
+    if t == 1.0 {
+        return 1.0;
+    }
+    if t == -1.0 {
+        return -1.0;
+    }
     crate::math::atan(t) / std::f64::consts::FRAC_PI_4
 }
 
 /// The warped forward projection: a face index and `(a, b) ∈ [-1, 1]²` face
 /// parameters to a unit sphere position.
+///
+/// **Panics with the physical reason on an invalid `face`, not an opaque
+/// index-out-of-bounds.** `face` must be `0..CUBE_FACES.len()`; an
+/// unconditional `assert!` names the actual problem (a cube-sphere has
+/// exactly six faces) and the valid range, matching how this project words
+/// a refusal elsewhere (`GenesisError`, the pin refusals — the physical
+/// reason, not the mechanism), and it is the same silent/uninformative-
+/// failure family `FacetId::unpack`'s bound closed one layer up. Deliberately
+/// an `assert!`, not `debug_assert!`: a debug-only check disappears in a
+/// release build and leaves nothing behind but the bare indexing panic this
+/// replaces, so a release build would be back to reading `CUBE_FACES[face]`
+/// with no guard at all — this check runs in every build profile.
 /// type-audit: bare-ok(index: face), bare-ok(ratio: a), bare-ok(ratio: b), bare-ok(ratio: return)
 pub fn face_unit(face: usize, a: f64, b: f64) -> [f64; 3] {
+    let faces = CUBE_FACES.len();
+    assert!(
+        face < faces,
+        "invalid cube face {face}: a cube-sphere has exactly {faces} faces, numbered 0..{faces}"
+    );
     let [n, u, v] = CUBE_FACES[face];
     let (wa, wb) = (warp(a), warp(b));
     let q = [
@@ -88,6 +143,25 @@ mod tests {
     /// Local distortion falls as 1/N. Nathan's acceptance criterion is LOCAL
     /// ("as long as the area around the cursor itself is distorted minimally"),
     /// so this measures ADJACENT cells, not the whole-face spread.
+    ///
+    /// **WHICH ASSERTION DISCRIMINATES, corrected from what this comment used
+    /// to imply.** It implied the 1/N TREND check is what catches a projection
+    /// that is locally smooth but globally wrong. Task 1's reviewer measured
+    /// that and it is false: run against the NAIVE (unwarped) projection, the
+    /// halving ratio is ~2.03 — comfortably inside the same `(1.7, 2.3)` band
+    /// the warped projection's 1.96 satisfies — because that ratio falls close
+    /// to 1/N for essentially ANY smooth cube-sphere reparametrization. The
+    /// trend check cannot tell the two apart.
+    ///
+    /// The absolute `e64 < 0.030` check is doing all of the discriminating:
+    /// naive measures ~0.048 there and correctly fails; warped measures 0.0236
+    /// and passes.
+    ///
+    /// Both assertions stay. The trend check is still a real regression guard —
+    /// it fails if the projection stops being smooth at all, which the absolute
+    /// check at a single N would not see — it is simply not the guard the
+    /// comment advertised, and a reader deciding what this test protects needs
+    /// the two roles named correctly.
     #[test]
     fn adjacent_cell_distortion_falls_as_one_over_n() {
         fn tri(a: [f64; 3], b: [f64; 3], c: [f64; 3]) -> f64 {

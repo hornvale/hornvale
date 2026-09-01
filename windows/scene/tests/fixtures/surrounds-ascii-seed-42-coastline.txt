@@ -1,12 +1,12 @@
-[lens: terrain · depth 12 · radius 4 · north-up]
-  placement: north-up, one row per ring, east doubled for the character cell — 31 of 31 cells drawn, 0 occluded where two fell in one box (the more salient kept it).
-  epistemic: this lens carries no weight channel, so remembered cells draw identically to sensed ones — 0 of 31 placed.
-   ~~ ~ ~ ~
- ~   ~  ~   ~
-   ~   ~  ~
-~  ~   @   ~  ~
-  ~  ~   ~   ~
-  ~ ~ ~ ~~ ~ ~
-    ~   ~   ~
-  ways on: SW, SE, N
-  legend: bathypelagic, the lightless water, swept by a current, over a seamount
+[lens: terrain · depth 13 · radius 4 · north-up]
+  placement: north-up, one row per ring, east doubled for the character cell — 63 of 81 cells drawn, 18 occluded where two fell in one box (the more salient kept it).
+  epistemic: this lens carries no weight channel, so remembered cells draw identically to sensed ones — 0 of 63 placed.
+~~~ ~~~ ~~~
+~~~ ~~~ ~~~
+~~~ ~~~ ~~~
+~~~ ~@~ ~~~
+~~~ ~~~ ~~~
+~~~ ~~~ ~~~
+~~~ ~~~ ~~~
+  ways on: N, NE, E, SE, S, SW, W, NW
+  legend: bathypelagic, the lightless water, swept by a current, over a trough

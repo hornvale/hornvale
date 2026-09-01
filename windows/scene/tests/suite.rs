@@ -20,5 +20,7 @@ mod common;
 mod golden;
 #[path = "suite/illumination_hypotheses.rs"]
 mod illumination_hypotheses;
+#[path = "suite/one_projection.rs"]
+mod one_projection;
 #[path = "suite/wind_contract.rs"]
 mod wind_contract;

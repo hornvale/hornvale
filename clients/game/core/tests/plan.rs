@@ -98,24 +98,55 @@ fn you_lands_at_the_plans_own_coordinate() {
 /// into a tautology that can never fail again. The two agreed byte-for-byte
 /// once re-taken, which is the result that makes the re-pin safe — the client
 /// was already correct and only the transcription was old.
+///
+/// **RE-DERIVED AGAIN AT THE PAVEMENT (2026-09-01), FOR THE SAME REASON AND
+/// WITH THE SAME RESULT.** That campaign moved the occupancy lattice onto a
+/// cube-sphere and the walk band from `globe_level + 6` to `+ 7`, so the room
+/// seed-42's flagship possession stands in changed address — and a structure's
+/// chambers are drawn from its room's seed, so the chamber the committed
+/// `session-seed-42-chamber.json` fixture records is a different chamber. The
+/// dividing wall moved from x=5 to x=9 and both doorways with it.
+///
+/// Re-taken from the SIM by the recipe above, not by pasting the client's
+/// output, for exactly the reason the paragraph above gives. The two agreed
+/// byte for byte — 19 lines, compared mechanically rather than by eye — so
+/// once more the client was already correct and only the transcription was
+/// old.
+///
+/// One deviation from the recipe as written, stated rather than hidden: it was
+/// run through the DEBUG binary rather than the release one. That is the
+/// profile `scripts/regenerate-artifacts.sh`'s own `run()` helper uses to
+/// write the fixture this test parses, so re-taking under it compares like
+/// with like; determinism here is a per-seed contract, not a per-profile one
+/// (decisions 0033/0041).
+///
+/// **THIS TEST IS OUTSIDE THE CARGO WORKSPACE, AND THAT IS WHY IT SURVIVED A
+/// WHOLE EPOCH UNNOTICED.** `clients/game/core` is excluded from the
+/// workspace, so `cargo nextest run --workspace` — the suite The Pavement's epoch task ran, re-ran, and
+/// read failure by failure — never built this crate at all. The epoch
+/// rebaselined the fixture on line 3 and every whole-workspace signal stayed
+/// green. It surfaced only when `make game-check` was typed by hand. There is
+/// no CI (decision 0125), so nothing runs the far side of a gate boundary for
+/// you: regenerating a fixture that crosses one obliges you to run those gates
+/// too — `make game-check`, `make vessel-check`, `make world-check`.
 const REFERENCE_PICTURE: &str = r"###################
-#....#............#
-#....#............#
-#....+............#
-#....#............#
-#....#............#
-#....#######+######
-#....#............#
-#....#............#
-#..@.#............#
-#....#............#
-#....#............#
-#....#............#
-#....#............#
-#....#............#
-#....#............#
-#....#............#
-#....#............#
+#........#........#
+#........#........#
+#........#........#
+#........#........#
+#........#........#
+#........+........#
+#........#........#
+#........#........#
+#....@...#........#
+#........#........#
+#........#####+####
+#........#........#
+#........#........#
+#........#........#
+#........#........#
+#........#........#
+#........#........#
 ###################";
 
 /// Extract the tight bounding box of every non-blank cell as its actual

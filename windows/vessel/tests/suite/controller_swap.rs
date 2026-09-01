@@ -93,14 +93,22 @@ fn a_driven_body_still_arbitrates_its_own_drives() {
 fn a_driven_bodys_mode_tracks_its_own_state_as_time_passes() {
     let (world, _ctx) = seed_42();
     let (mut s, _) = Session::start(&world, &PossessOpts::default()).unwrap();
-    s.handle("!wait 1");
-    let early = s.driven_mode().expect("a driven body has a mode");
-    s.handle("!wait 30");
-    let later = s.driven_mode().expect("a driven body has a mode");
-    assert_ne!(
-        early, later,
+    // A LADDER, not the two checkpoints this used to take. `!wait 1` and
+    // `!wait 30` were an empirical pair — two days on which seed 42's flagship
+    // happened to report different modes — and The Pavement's epoch moved the
+    // flagship to a different room, where both read `Pursuing(Fatigue)`. The
+    // claim was never about those two days; it is that the mode is not frozen
+    // for the session's lifetime. So the fixture asks for that: walk a ladder
+    // of check-ins and require at least two of them to disagree.
+    let mut modes = Vec::new();
+    for _ in 0..9 {
+        s.handle("!wait 10");
+        modes.push(s.driven_mode().expect("a driven body has a mode"));
+    }
+    assert!(
+        modes.iter().any(|m| *m != modes[0]),
         "the driven body's own arbitration must track its OWN evolving state \
-         across ticks, not report a fixed value ({early:?} both times)"
+         across ticks, not report a fixed value ({modes:?})"
     );
 }
 
@@ -295,9 +303,15 @@ fn a_driven_bodys_early_affect_depends_on_which_seeds_population_not_merely_elap
 
 /// **The cognitive gap, at the Session boundary this time** (The Confidant,
 /// Task 5). Seed 7's flagship body, waited 30 days from a fresh session,
-/// arbitrates to `AffectLabel::Eager` while its own Fatigue drive stays
-/// genuinely ACTIVE and unpursued — checked directly (stable across single
-/// calls of 5, 10, 30, 100 and 200 days). This is a real two-drive conflict
+/// arbitrates to a single label while its own Fatigue drive stays genuinely
+/// ACTIVE and unpursued. **The label re-measured `Eager` -> `Searching` at The
+/// Pavement's epoch, and that is a fact about the room the flagship now stands
+/// in, not about the gap this test is named for**: the pursued drive still
+/// wins alone and Fatigue is still retrievable only through
+/// `suppressed_drives`. It is re-pinned rather than relaxed to "some label",
+/// because a specific value is what keeps this off the exhaustive-over-all-six-
+/// variants trap `AffectLabel`'s enum invites; the assertion below it is the
+/// one carrying the claim. This is a real two-drive conflict
 /// the world actually produces, not a constructed one:
 /// `driven_affect` reports the winner alone (a SPECIFIC value, not the
 /// exhaustive-over-all-six-variants trap `AffectLabel`'s enum invites); the
@@ -317,7 +331,7 @@ fn the_driven_bodys_suppressed_drive_is_retrievable_but_absent_from_what_it_says
     let affect = s.driven_affect().expect("a driven body has a felt state");
     assert_eq!(
         affect,
-        AffectLabel::Eager,
+        AffectLabel::Searching,
         "the driven body's own arbitration produced: {affect:?}"
     );
     assert_eq!(

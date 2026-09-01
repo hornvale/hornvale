@@ -6,8 +6,8 @@
 //!
 //! **Why climate alone cannot supply this.** Every climate accessor
 //! (`biome_expr_at`, `snow_fraction_at`, `temperature_at`, `moisture_at`) is
-//! keyed on a canonical-grid [`Vertex`], and a walk-depth room addresses six
-//! refinement levels below that grid — `4^6` rooms share one corner. A cover
+//! keyed on a canonical-grid [`Vertex`], and a walk-depth room addresses seven
+//! refinement levels below that grid — `4^7` rooms share one corner. A cover
 //! model built from climate alone would therefore return one colour for
 //! every room in a band, exactly reproducing the bedrock-era defect this
 //! campaign exists to fix (H1's own baseline: 31 vertices, 1 colour). So

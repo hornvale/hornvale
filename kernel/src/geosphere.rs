@@ -160,15 +160,6 @@ fn base_icosahedron() -> (Vec<[f64; 3]>, Vec<[u32; 3]>) {
     (vertices, faces)
 }
 
-/// The base icosahedron (12 vertices, 20 faces), computed once. `room` reads
-/// this immutably; `Geosphere::new` keeps taking its own owned copy to mutate.
-#[allow(clippy::type_complexity)]
-pub(crate) fn base_data() -> &'static (Vec<[f64; 3]>, Vec<[u32; 3]>) {
-    use std::sync::OnceLock;
-    static BASE: OnceLock<(Vec<[f64; 3]>, Vec<[u32; 3]>)> = OnceLock::new();
-    BASE.get_or_init(base_icosahedron)
-}
-
 /// Subdivide each triangular face into four, projecting new edge-midpoint
 /// vertices onto the unit sphere. Shared midpoints are deduplicated via an
 /// edge cache keyed by the ordered vertex-index pair, so vertex numbering is

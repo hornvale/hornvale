@@ -308,8 +308,22 @@ docs/generated-path-writes.tsv	artifacts
 # `vessel/session/v2` document whose `self.carrying` is not empty (the
 # fixture), so an artifact invisible to the drift check is exactly the failure
 # worth refusing here. Both are written by regenerate-artifacts.sh -- the
-# transcript at :975, the fixture at :336 via `possess --snapshot` in the same
+# transcript at :1040, the fixture at :382 via `possess --snapshot` in the same
 # run -- so both are authored by `artifacts` in this file's second column,
 # which main gained (The Attestation) while this campaign was in flight.
-book/src/gallery/possession-carry-seed-1.md	artifacts
-clients/game/core/tests/fixtures/session-seed-1-carrying.json	artifacts
+#
+# BOTH ROWS SAID `seed-1` UNTIL THE PAVEMENT, AND THE RENAME IS NOT COSMETIC.
+# A dwelling's chambers are drawn from its room's seed; the epoch moved every
+# room address; so which seeds draw a strongbox does not survive an epoch.
+# Seed 1's flagship dwelling now draws three chambers and no chest, and the
+# transcript regenerated onto it with its whole arc gone -- five `You see no a
+# strongbox here.` under a caption still promising a lid refusal and two keys.
+# The tracked-ness guarantee this block exists for held perfectly: both files
+# were tracked, both were written, both were drift-checked, and the drift check
+# reported the change faithfully. **Tracked-ness proves coverage, never
+# content** -- decision 0458's sentence, arriving from the other side. The
+# generator now names seed 14, the seed
+# `windows/vessel/tests/suite/strongbox_reachability.rs` had already moved to
+# for the same reason, so the guard and its published evidence agree.
+book/src/gallery/possession-carry-seed-14.md	artifacts
+clients/game/core/tests/fixtures/session-seed-14-carrying.json	artifacts

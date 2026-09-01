@@ -10,7 +10,7 @@ use crate::action::{
 };
 use crate::agent::{settlement_position, walk_depth};
 use crate::body::Body;
-use crate::clock::{climb_factor, cost_of};
+use crate::clock::{climb_factor, cost_of, step_factor};
 use crate::controller::{Controller, DefaultController, PlayerController};
 use crate::interior::{
     AnchorId, Interior, SeamKind, interior_of, landing, route_within, seam_kind, warmth_at,
@@ -515,7 +515,7 @@ pub fn downhill_step(from: &Facet, terrain: &dyn Terrain) -> Facet {
             best = Some((n, elev));
         }
     }
-    best.expect("a room has three neighbors").0
+    best.expect("a room always has at least four neighbours").0
 }
 
 /// The true nearest water room to `from` (ground-truth-best) — a deterministic
@@ -1492,7 +1492,7 @@ pub trait Drive {
     fn proposal(&self, view: &Perceived, budget: usize) -> Option<Action>;
 
     /// Extra candidate actions this drive proposes, BEYOND [`arbitrate`]'s
-    /// fixed room-scale set (the position's three neighbours as `MoveTo`, plus
+    /// fixed room-scale set (the position's neighbours as `MoveTo`, plus
     /// `Drink`/`Rest`/`Eat`) — the seam a drive whose action space is FINER
     /// than the room graph uses to make its own moves visible to the
     /// multi-drive utility scan. The default is empty, and is correct for
@@ -1799,7 +1799,7 @@ pub struct Thermal<'a> {
     /// `optimum`.
     pub niche: ConditionResponse,
     /// The temperature field this drive senses (the room it stands in and the
-    /// three neighbours it may step to).
+    /// neighbours it may step to).
     pub terrain: &'a dyn Terrain,
     /// The day the temperature is sensed at (the diurnal+seasonal phase).
     pub day: WorldTime,
@@ -2105,7 +2105,7 @@ fn comfort_step(
             best = Some((n, dev));
         }
     }
-    let (best_room, best_dev) = best.expect("a room has three neighbors");
+    let (best_room, best_dev) = best.expect("a room always has at least four neighbours");
     // Only step when a neighbour is STRICTLY more comfortable than here (an
     // equal-comfort or worse neighbour is no improvement — hold).
     if best_dev.total_cmp(&deviation(from)).is_lt() {
@@ -2121,7 +2121,7 @@ fn comfort_step(
 /// than `from` itself. [`Thermal::proposal`]'s within-room counterpart to
 /// [`comfort_step`]: the same `total_cmp`-then-ascending-id tie-break and the
 /// same "strictly better than here" gate, but scanning the interior's
-/// anchors rather than a room's three neighbours, and scoring VALUE (`warmth_at`,
+/// anchors rather than a room's neighbours, and scoring VALUE (`warmth_at`,
 /// which already accounts for every hearth's own reachability from each
 /// candidate) rather than adjacency.
 ///
@@ -2437,7 +2437,7 @@ fn forage_step(
             best = Some((n, v));
         }
     }
-    let (best_room, best_v) = best.expect("a room has three neighbors");
+    let (best_room, best_v) = best.expect("a room always has at least four neighbours");
     // Only step when a neighbour is STRICTLY richer than here.
     if best_v.total_cmp(&value(from)).is_gt() {
         Some(best_room)
@@ -2883,7 +2883,7 @@ fn flee_step(
             best = Some((n, t));
         }
     }
-    let (best_room, best_threat) = best.expect("a room has three neighbors");
+    let (best_room, best_threat) = best.expect("a room always has at least four neighbours");
     // Only flee when a neighbour is STRICTLY safer than here.
     if best_threat.total_cmp(&threat(from)).is_lt() {
         Some(best_room)
@@ -4056,7 +4056,7 @@ pub fn alarm_field_memo(
             continue;
         }
         // Stamp the emitter's felt-threat magnitude on its room and the one-hop
-        // halo (its three edge-neighbours), accumulating across emitters.
+        // halo (its edge-neighbours), accumulating across emitters.
         *field.entry(pos.clone()).or_insert(0.0) += magnitude;
         for n in pos.neighbors() {
             *field.entry(n).or_insert(0.0) += magnitude;
@@ -4742,7 +4742,7 @@ fn catch_up(
                 // TickSpan` with no conversion in either direction — the
                 // `f64` round-trip this line used to make is gone rather than
                 // made more carefully.
-                day = day + cost_of(&action, npc.mass_kg, 1.0);
+                day = day + cost_of(&action, npc.mass_kg, 1.0, 1.0);
                 if day > horizon {
                     break;
                 }
@@ -5368,11 +5368,19 @@ impl<'a> DriveMovements<'a> {
         // what can carry a walk past `to.day`, so it is checked immediately
         // after the charge and before anything is emitted.
         if let Intent::Do(action) = &intent {
-            let ground = match action {
-                Action::MoveTo(n) => {
-                    climb_factor(self.terrain.elevation(&st.pos), self.terrain.elevation(n))
-                }
-                _ => 1.0,
+            // The step-GEOMETRY factor rides alongside the climb factor and is
+            // read at the same moment for the same reason (The Pavement, Task
+            // 7): the walk band is 8-connected, so a `MoveTo` onto a diagonal
+            // neighbour covers `√2` times the ground and a flat charge is a
+            // ~41% travel-speed exploit (see `clock::DIAGONAL_STEP_FACTOR`).
+            // Both are (from, to) reads taken BEFORE `st.pos` moves, and both
+            // are `1.0` for every action that changes no room.
+            let (ground, step) = match action {
+                Action::MoveTo(n) => (
+                    climb_factor(self.terrain.elevation(&st.pos), self.terrain.elevation(n)),
+                    step_factor(&st.pos, n),
+                ),
+                _ => (1.0, 1.0),
             };
             // EXACT INTEGER ADDITION, the whole point of this retype: a cost
             // IS a `TickSpan` (The Foliot) and the walk's clock IS a tick
@@ -5381,7 +5389,7 @@ impl<'a> DriveMovements<'a> {
             // make — span to days, add to a float clock, round back at every
             // emitted fact — is gone rather than performed more carefully, and
             // with it the drift it accumulated across a long walk.
-            st.day = st.day + cost_of(action, npc.mass_kg, ground);
+            st.day = st.day + cost_of(action, npc.mass_kg, ground, step);
             if st.day > self.to {
                 return false;
             }
@@ -6907,10 +6915,8 @@ mod tests {
         // phantom, re-derived from the emitter's PAST room).
         let reg = agent_at_reg();
         let mut ledger = Ledger::default();
-        let d_room = raddr(1.0);
-        let ns = d_room.neighbors();
-        let hazard = ns[0].clone(); // E: frightens the emitter B
-        let x = ns[1].clone(); // X: safe, in B's halo (the phantom room)
+        // E frightens the emitter B; X is terrain-safe and inside B's halo.
+        let (d_room, hazard, x) = phantom_triple();
         let terrain = PlantedTerrain::hazard(std::iter::empty(), [(hazard.clone(), 0.8)]);
         // Emitter B: beside X on day 0.5, then far away by 9.5.
         let b_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
@@ -6957,10 +6963,8 @@ mod tests {
         //       alarm magnitude.
         let reg = agent_at_reg();
         let mut ledger = Ledger::default();
-        let d_room = raddr(1.0);
-        let ns = d_room.neighbors();
-        let hazard = ns[0].clone(); // E: frightens the emitter B (and A, if A stands there)
-        let x = ns[1].clone(); // X: terrain-safe, inside B's one-hop halo
+        // E frightens the emitter B; X is terrain-safe and inside B's halo.
+        let (d_room, hazard, x) = phantom_triple();
         let terrain = PlantedTerrain::hazard(std::iter::empty(), [(hazard.clone(), 0.8)]);
         // Emitter B: beside X on day 0.5 (primary-afraid — E is its neighbour).
         let b_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
@@ -7075,10 +7079,8 @@ mod tests {
         // A simply never moved — its committed position at `now` is still X.
         let reg = agent_at_reg();
         let mut ledger = Ledger::default();
-        let d_room = raddr(1.0);
-        let ns = d_room.neighbors();
-        let hazard = ns[0].clone(); // E: frightens the emitter B
-        let x = ns[1].clone(); // X: terrain-safe, in B's halo
+        // E frightens the emitter B; X is terrain-safe and inside B's halo.
+        let (d_room, hazard, x) = phantom_triple();
         let terrain = PlantedTerrain::hazard(std::iter::empty(), [(hazard.clone(), 0.8)]);
         // B: primary-afraid beside X on day 0.45, then far away by day 0.55.
         // The days are DAYLIGHT ones (the fractional-day sun is up around noon):
@@ -7127,10 +7129,8 @@ mod tests {
         // A's remembered dread — and the field must be empty at X.
         let reg = agent_at_reg();
         let mut ledger = Ledger::default();
-        let d_room = raddr(1.0);
-        let ns = d_room.neighbors();
-        let hazard = ns[0].clone();
-        let x = ns[1].clone();
+        // E frightens the emitter B; X is terrain-safe and inside B's halo.
+        let (d_room, hazard, x) = phantom_triple();
         let terrain = PlantedTerrain::hazard(std::iter::empty(), [(hazard.clone(), 0.8)]);
         let b_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let b = haunt_npc(b_e, d_room.clone());
@@ -7269,10 +7269,8 @@ mod tests {
         // `day` still fires (agent_position honours the remembered day).
         let reg = agent_at_reg();
         let mut ledger = Ledger::default();
-        let d_room = raddr(1.0); // where B stands (safe)
-        let ns = d_room.neighbors();
-        let hazard = ns[0].clone(); // E: the hazard that frightens B
-        let x = ns[1].clone(); // X: safe, in B's halo, two hops from E
+        // E frightens the emitter B; X is terrain-safe and inside B's halo.
+        let (d_room, hazard, x) = phantom_triple();
         let terrain = PlantedTerrain::hazard(std::iter::empty(), [(hazard.clone(), 0.8)]);
         // B: a steady emitter, committed at D on `day`, then walks far LATER.
         let b_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
@@ -7305,10 +7303,8 @@ mod tests {
         // lingers forever).
         let reg = agent_at_reg();
         let mut ledger = Ledger::default();
-        let d_room = raddr(1.0);
-        let ns = d_room.neighbors();
-        let hazard = ns[0].clone();
-        let x = ns[1].clone();
+        // E frightens the emitter B; X is terrain-safe and inside B's halo.
+        let (d_room, hazard, x) = phantom_triple();
         let terrain = PlantedTerrain::hazard(std::iter::empty(), [(hazard.clone(), 0.8)]);
         let b_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let b = haunt_npc(b_e, d_room.clone());
@@ -7467,11 +7463,7 @@ mod tests {
         let n0 = neighbors[0].clone();
         let n1 = neighbors[1].clone();
         let n2 = neighbors[2].clone();
-        let water = n1
-            .neighbors()
-            .into_iter()
-            .find(|r| *r != here)
-            .expect("n1 has a neighbor other than home");
+        let water = water_beyond_the_doorstep(&here, &n1);
         let t = PlantedTerrain {
             elevations: [(n0.clone(), 0.0), (n2.clone(), 0.0)].into_iter().collect(),
             fresh: [water.clone()].into_iter().collect(),
@@ -7637,87 +7629,116 @@ mod tests {
         // would reintroduce the very `f64` the campaign exists to delete. This
         // value is the accepted one. Do not "fix" it back.
         //
+        // AND ONCE MORE, AND THIS TIME IT IS THREE ROOM IDS AND NOTHING ELSE
+        // (The Pavement, Task 11). The room mesh became a cube-sphere quad
+        // lattice, so every packed `FacetId` in the world moved; nothing about
+        // the walk did. Measured against the previous literal, fact for fact:
+        //
+        //     eighty facts, same order      unchanged
+        //     every day (tick) column       unchanged
+        //     every subject and provenance  unchanged
+        //     Text("180243") -> Text("229408")   24 rows
+        //     Text("180339") -> Text("229504")   12 rows
+        //     Text("172046") -> Text("229376")   12 rows
+        //
+        // A ONE-TO-ONE RENAME, and that is the load-bearing part: the three
+        // ids map onto three ids with no room appearing twice and none
+        // dropped, so the walk visits the same three places in the same order
+        // for the same durations. If you are re-recording this literal and
+        // your diff is NOT of that shape, you have a different mechanism and
+        // must not rebaseline.
+        //
+        // IT CAME BACK TO EIGHTY FROM FIFTY-SIX, and the intermediate figure
+        // is worth knowing because it looked like a real behavioural finding
+        // and was not. `hoist_walk_shape` picked its water as "`n1`'s first
+        // neighbour that is not `here`", which was two steps from home on the
+        // triangular mesh and turned out to be ONE step on the cube (the
+        // diagonals). The errand halved, the walk emitted 56 facts, and the
+        // obvious reading — "octile movement made the world smaller" — would
+        // have been wrong: the fixture had stopped describing the world it
+        // meant to. `water_beyond_the_doorstep` asks for two steps now, and
+        // the eighty facts came back with their days bit-identical.
         const EXPECTED: &[&str] = &[
             r#"knower|rested|Flag(true)|Some(100150)|slept at home (fatigue eased)"#,
             r#"lost|rested|Flag(true)|Some(100150)|slept at home (fatigue eased)"#,
-            r#"knower|agent-at|Text("180243")|Some(576667)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180243")|Some(576667)|went down to the river it knew (thirst)"#,
+            r#"knower|agent-at|Text("229408")|Some(576667)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("229408")|Some(576667)|went down to the river it knew (thirst)"#,
             r#"knower|rested|Flag(true)|Some(576817)|slept at home (fatigue eased)"#,
             r#"lost|rested|Flag(true)|Some(576817)|slept at home (fatigue eased)"#,
-            r#"knower|agent-at|Text("180339")|Some(636817)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180339")|Some(636817)|went down to the river it knew (thirst)"#,
+            r#"knower|agent-at|Text("229504")|Some(636817)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("229504")|Some(636817)|went down to the river it knew (thirst)"#,
             r#"knower|drank|Flag(true)|Some(636967)|drank from the river (thirst sated)"#,
             r#"lost|drank|Flag(true)|Some(636967)|drank from the river (thirst sated)"#,
-            r#"knower|agent-at|Text("180243")|Some(646967)|walking home (sated)"#,
-            r#"lost|agent-at|Text("180243")|Some(646967)|walking home (sated)"#,
-            r#"knower|agent-at|Text("172046")|Some(656967)|walking home (sated)"#,
-            r#"lost|agent-at|Text("172046")|Some(656967)|walking home (sated)"#,
+            r#"knower|agent-at|Text("229408")|Some(646967)|walking home (sated)"#,
+            r#"lost|agent-at|Text("229408")|Some(646967)|walking home (sated)"#,
+            r#"knower|agent-at|Text("229376")|Some(656967)|walking home (sated)"#,
+            r#"lost|agent-at|Text("229376")|Some(656967)|walking home (sated)"#,
             r#"knower|eaten|Flag(true)|Some(1206634)|grazed the productive ground (hunger sated)"#,
             r#"lost|eaten|Flag(true)|Some(1206634)|grazed the productive ground (hunger sated)"#,
             r#"knower|rested|Flag(true)|Some(1206784)|slept at home (fatigue eased)"#,
             r#"lost|rested|Flag(true)|Some(1206784)|slept at home (fatigue eased)"#,
-            r#"knower|agent-at|Text("180243")|Some(1236784)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180243")|Some(1236784)|went down to the river it knew (thirst)"#,
-            r#"knower|agent-at|Text("180339")|Some(1246784)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180339")|Some(1246784)|went down to the river it knew (thirst)"#,
+            r#"knower|agent-at|Text("229408")|Some(1236784)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("229408")|Some(1236784)|went down to the river it knew (thirst)"#,
+            r#"knower|agent-at|Text("229504")|Some(1246784)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("229504")|Some(1246784)|went down to the river it knew (thirst)"#,
             r#"knower|drank|Flag(true)|Some(1246934)|drank from the river (thirst sated)"#,
             r#"lost|drank|Flag(true)|Some(1246934)|drank from the river (thirst sated)"#,
-            r#"knower|agent-at|Text("180243")|Some(1256934)|walking home (sated)"#,
-            r#"lost|agent-at|Text("180243")|Some(1256934)|walking home (sated)"#,
-            r#"knower|agent-at|Text("172046")|Some(1266934)|walking home (sated)"#,
-            r#"lost|agent-at|Text("172046")|Some(1266934)|walking home (sated)"#,
+            r#"knower|agent-at|Text("229408")|Some(1256934)|walking home (sated)"#,
+            r#"lost|agent-at|Text("229408")|Some(1256934)|walking home (sated)"#,
+            r#"knower|agent-at|Text("229376")|Some(1266934)|walking home (sated)"#,
+            r#"lost|agent-at|Text("229376")|Some(1266934)|walking home (sated)"#,
             r#"knower|rested|Flag(true)|Some(1813751)|slept at home (fatigue eased)"#,
             r#"lost|rested|Flag(true)|Some(1813751)|slept at home (fatigue eased)"#,
-            r#"knower|agent-at|Text("180243")|Some(1838751)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180243")|Some(1838751)|went down to the river it knew (thirst)"#,
-            r#"knower|agent-at|Text("180339")|Some(1848751)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180339")|Some(1848751)|went down to the river it knew (thirst)"#,
+            r#"knower|agent-at|Text("229408")|Some(1838751)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("229408")|Some(1838751)|went down to the river it knew (thirst)"#,
+            r#"knower|agent-at|Text("229504")|Some(1848751)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("229504")|Some(1848751)|went down to the river it knew (thirst)"#,
             r#"knower|drank|Flag(true)|Some(1848901)|drank from the river (thirst sated)"#,
             r#"lost|drank|Flag(true)|Some(1848901)|drank from the river (thirst sated)"#,
-            r#"knower|agent-at|Text("180243")|Some(1858901)|walking home (sated)"#,
-            r#"lost|agent-at|Text("180243")|Some(1858901)|walking home (sated)"#,
-            r#"knower|agent-at|Text("172046")|Some(1868901)|walking home (sated)"#,
-            r#"lost|agent-at|Text("172046")|Some(1868901)|walking home (sated)"#,
+            r#"knower|agent-at|Text("229408")|Some(1858901)|walking home (sated)"#,
+            r#"lost|agent-at|Text("229408")|Some(1858901)|walking home (sated)"#,
+            r#"knower|agent-at|Text("229376")|Some(1868901)|walking home (sated)"#,
+            r#"lost|agent-at|Text("229376")|Some(1868901)|walking home (sated)"#,
             r#"knower|eaten|Flag(true)|Some(2418568)|grazed the productive ground (hunger sated)"#,
             r#"lost|eaten|Flag(true)|Some(2418568)|grazed the productive ground (hunger sated)"#,
             r#"knower|rested|Flag(true)|Some(2418718)|slept at home (fatigue eased)"#,
             r#"lost|rested|Flag(true)|Some(2418718)|slept at home (fatigue eased)"#,
-            r#"knower|agent-at|Text("180243")|Some(2438718)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180243")|Some(2438718)|went down to the river it knew (thirst)"#,
-            r#"knower|agent-at|Text("180339")|Some(2448718)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180339")|Some(2448718)|went down to the river it knew (thirst)"#,
+            r#"knower|agent-at|Text("229408")|Some(2438718)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("229408")|Some(2438718)|went down to the river it knew (thirst)"#,
+            r#"knower|agent-at|Text("229504")|Some(2448718)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("229504")|Some(2448718)|went down to the river it knew (thirst)"#,
             r#"knower|drank|Flag(true)|Some(2448868)|drank from the river (thirst sated)"#,
             r#"lost|drank|Flag(true)|Some(2448868)|drank from the river (thirst sated)"#,
-            r#"knower|agent-at|Text("180243")|Some(2458868)|walking home (sated)"#,
-            r#"lost|agent-at|Text("180243")|Some(2458868)|walking home (sated)"#,
-            r#"knower|agent-at|Text("172046")|Some(2468868)|walking home (sated)"#,
-            r#"lost|agent-at|Text("172046")|Some(2468868)|walking home (sated)"#,
+            r#"knower|agent-at|Text("229408")|Some(2458868)|walking home (sated)"#,
+            r#"lost|agent-at|Text("229408")|Some(2458868)|walking home (sated)"#,
+            r#"knower|agent-at|Text("229376")|Some(2468868)|walking home (sated)"#,
+            r#"lost|agent-at|Text("229376")|Some(2468868)|walking home (sated)"#,
             r#"knower|rested|Flag(true)|Some(3015685)|slept at home (fatigue eased)"#,
             r#"lost|rested|Flag(true)|Some(3015685)|slept at home (fatigue eased)"#,
-            r#"knower|agent-at|Text("180243")|Some(3035685)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180243")|Some(3035685)|went down to the river it knew (thirst)"#,
-            r#"knower|agent-at|Text("180339")|Some(3045685)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180339")|Some(3045685)|went down to the river it knew (thirst)"#,
+            r#"knower|agent-at|Text("229408")|Some(3035685)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("229408")|Some(3035685)|went down to the river it knew (thirst)"#,
+            r#"knower|agent-at|Text("229504")|Some(3045685)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("229504")|Some(3045685)|went down to the river it knew (thirst)"#,
             r#"knower|drank|Flag(true)|Some(3045835)|drank from the river (thirst sated)"#,
             r#"lost|drank|Flag(true)|Some(3045835)|drank from the river (thirst sated)"#,
-            r#"knower|agent-at|Text("180243")|Some(3055835)|walking home (sated)"#,
-            r#"lost|agent-at|Text("180243")|Some(3055835)|walking home (sated)"#,
-            r#"knower|agent-at|Text("172046")|Some(3065835)|walking home (sated)"#,
-            r#"lost|agent-at|Text("172046")|Some(3065835)|walking home (sated)"#,
+            r#"knower|agent-at|Text("229408")|Some(3055835)|walking home (sated)"#,
+            r#"lost|agent-at|Text("229408")|Some(3055835)|walking home (sated)"#,
+            r#"knower|agent-at|Text("229376")|Some(3065835)|walking home (sated)"#,
+            r#"lost|agent-at|Text("229376")|Some(3065835)|walking home (sated)"#,
             r#"knower|eaten|Flag(true)|Some(3615502)|grazed the productive ground (hunger sated)"#,
             r#"lost|eaten|Flag(true)|Some(3615502)|grazed the productive ground (hunger sated)"#,
             r#"knower|rested|Flag(true)|Some(3615652)|slept at home (fatigue eased)"#,
             r#"lost|rested|Flag(true)|Some(3615652)|slept at home (fatigue eased)"#,
-            r#"knower|agent-at|Text("180243")|Some(3635652)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180243")|Some(3635652)|went down to the river it knew (thirst)"#,
-            r#"knower|agent-at|Text("180339")|Some(3645652)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180339")|Some(3645652)|went down to the river it knew (thirst)"#,
+            r#"knower|agent-at|Text("229408")|Some(3635652)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("229408")|Some(3635652)|went down to the river it knew (thirst)"#,
+            r#"knower|agent-at|Text("229504")|Some(3645652)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("229504")|Some(3645652)|went down to the river it knew (thirst)"#,
             r#"knower|drank|Flag(true)|Some(3645802)|drank from the river (thirst sated)"#,
             r#"lost|drank|Flag(true)|Some(3645802)|drank from the river (thirst sated)"#,
-            r#"knower|agent-at|Text("180243")|Some(3655802)|walking home (sated)"#,
-            r#"lost|agent-at|Text("180243")|Some(3655802)|walking home (sated)"#,
-            r#"knower|agent-at|Text("172046")|Some(3665802)|walking home (sated)"#,
-            r#"lost|agent-at|Text("172046")|Some(3665802)|walking home (sated)"#,
+            r#"knower|agent-at|Text("229408")|Some(3655802)|walking home (sated)"#,
+            r#"lost|agent-at|Text("229408")|Some(3655802)|walking home (sated)"#,
+            r#"knower|agent-at|Text("229376")|Some(3665802)|walking home (sated)"#,
+            r#"lost|agent-at|Text("229376")|Some(3665802)|walking home (sated)"#,
         ];
         let shape = hoist_walk_shape();
         assert_eq!(
@@ -7757,11 +7778,7 @@ mod tests {
         let n0 = neighbors[0].clone();
         let n1 = neighbors[1].clone();
         let n2 = neighbors[2].clone();
-        let water = n1
-            .neighbors()
-            .into_iter()
-            .find(|r| *r != here)
-            .expect("n1 has a neighbor other than home");
+        let water = water_beyond_the_doorstep(&here, &n1);
         let t = PlantedTerrain {
             elevations: [(n0, 0.0), (n2, 0.0)].into_iter().collect(),
             fresh: [water.clone()].into_iter().collect(),
@@ -7875,7 +7892,7 @@ mod tests {
         );
         // A cost IS a kernel span now (The Foliot), so its length in days is
         // the span's own continuous view — no clock conversion in between.
-        let expected = crate::clock::cost_of(&Action::Drink, mass, 1.0).as_std_days();
+        let expected = crate::clock::cost_of(&Action::Drink, mass, 1.0, 1.0).as_std_days();
         assert!(
             (drank_day.as_std_days() - arrived - expected).abs() < 1e-12,
             "a drink should cost exactly {expected} days; the gap is {}",
@@ -8309,11 +8326,7 @@ mod tests {
         let n0 = neighbors[0].clone();
         let n1 = neighbors[1].clone();
         let n2 = neighbors[2].clone();
-        let water = n1
-            .neighbors()
-            .into_iter()
-            .find(|r| *r != here)
-            .expect("n1 has a neighbor other than home");
+        let water = water_beyond_the_doorstep(&here, &n1);
         let t = PlantedTerrain {
             elevations: [(n0.clone(), 0.0), (n2.clone(), 0.0)].into_iter().collect(),
             fresh: [water.clone()].into_iter().collect(),
@@ -10442,61 +10455,15 @@ mod tests {
 
         // Geometry (as THE SHUN): the straight S→W path, X an interior room not
         // adjacent to either endpoint (so standing at S/W is never frightening).
-        let start = raddr(1.0);
-        let c1 = start.neighbors()[0].clone();
-        let c2 = c1
-            .neighbors()
-            .iter()
-            .find(|n| **n != start)
-            .unwrap()
-            .clone();
-        let c3 = c2
-            .neighbors()
-            .iter()
-            .find(|n| **n != c1 && **n != start)
-            .unwrap()
-            .clone();
-        let water = c3
-            .neighbors()
-            .iter()
-            .find(|n| **n != c2 && **n != c1 && **n != start)
-            .unwrap()
-            .clone();
-        let empty = std::collections::BTreeSet::new();
-        let straight = plan_to_room(&start, &water, PLAN_BUDGET, &empty).expect("reachable");
-        assert!(straight.len() >= 4, "need a path with an interior room");
-        let path_rooms: Vec<Facet> = straight
-            .iter()
-            .map(|a| match a {
-                Action::MoveTo(r) => r.clone(),
-                _ => unreachable!("plan_to_room emits only MoveTo"),
-            })
-            .collect();
-        let x = path_rooms[1].clone(); // interior, distance 2 from start
-        let p0 = path_rooms[0].clone(); // X's on-path predecessor (distance 1)
-        let p2 = path_rooms[2].clone(); // X's on-path successor (distance 3)
-        assert!(
-            !start.neighbors().contains(&x) && !water.neighbors().contains(&x),
-            "X must be interior (not adjacent to start or water)"
-        );
-
-        // The emitter's room D: X's OFF-path neighbour (not p0, not p2). Its own
-        // neighbour E carries the hazard, so B — standing at the SAFE room D beside
-        // the hazard — is primary-afraid (anticipatory) and its one-hop alarm halo
-        // covers X. E is two hops from X, so X itself stays terrain-SAFE (a pure
-        // phantom, not a Haunt).
-        let d_room = x
-            .neighbors()
-            .iter()
-            .find(|n| **n != p0 && **n != p2)
-            .expect("X has a third, off-path neighbour")
-            .clone();
-        let hazard_e = d_room
-            .neighbors()
-            .iter()
-            .find(|n| **n != x && **n != p0 && **n != p2 && **n != start && **n != water)
-            .expect("D has a hazard neighbour off the path")
-            .clone();
+        let PhantomGeometry {
+            start,
+            water,
+            x,
+            p0,
+            p2,
+            d_room,
+            hazard_e,
+        } = phantom_geometry();
         let far = raddr(-1.0);
         let terrain = PlantedTerrain::hazard([water.clone()], [(hazard_e.clone(), 0.8)]);
 
@@ -10725,51 +10692,15 @@ mod tests {
         // above: the straight S→W path, X an interior room, D its off-path
         // neighbour, E the hazard beside D (so X itself is terrain-SAFE and the
         // only thing that ever frightened anyone there was B's passing panic).
-        let start = raddr(1.0);
-        let c1 = start.neighbors()[0].clone();
-        let c2 = c1
-            .neighbors()
-            .iter()
-            .find(|n| **n != start)
-            .unwrap()
-            .clone();
-        let c3 = c2
-            .neighbors()
-            .iter()
-            .find(|n| **n != c1 && **n != start)
-            .unwrap()
-            .clone();
-        let water = c3
-            .neighbors()
-            .iter()
-            .find(|n| **n != c2 && **n != c1 && **n != start)
-            .unwrap()
-            .clone();
-        let empty = std::collections::BTreeSet::new();
-        let straight = plan_to_room(&start, &water, PLAN_BUDGET, &empty).expect("reachable");
-        assert!(straight.len() >= 4, "need a path with an interior room");
-        let path_rooms: Vec<Facet> = straight
-            .iter()
-            .map(|a| match a {
-                Action::MoveTo(r) => r.clone(),
-                _ => unreachable!("plan_to_room emits only MoveTo"),
-            })
-            .collect();
-        let x = path_rooms[1].clone(); // interior, distance 2 from start
-        let p0 = path_rooms[0].clone();
-        let p2 = path_rooms[2].clone();
-        let d_room = x
-            .neighbors()
-            .iter()
-            .find(|n| **n != p0 && **n != p2)
-            .expect("X has a third, off-path neighbour")
-            .clone();
-        let hazard_e = d_room
-            .neighbors()
-            .iter()
-            .find(|n| **n != x && **n != p0 && **n != p2 && **n != start && **n != water)
-            .expect("D has a hazard neighbour off the path")
-            .clone();
+        let PhantomGeometry {
+            start: _,
+            water,
+            x,
+            p0: _,
+            p2: _,
+            d_room,
+            hazard_e,
+        } = phantom_geometry();
         let far = raddr(-1.0);
         let terrain = PlantedTerrain::hazard([water.clone()], [(hazard_e.clone(), 0.8)]);
 
@@ -10887,9 +10818,14 @@ mod tests {
         // The discharge, in the walk itself: the very first thing A does is leave
         // X. And the disproof is EARNED, not stipulated — the homeward pull brings
         // it back to stand on the feared ground while nothing is there to fear.
-        assert_eq!(
-            walked.first(),
-            Some(&p0),
+        // OFF X, not "onto p0 specifically". The old assertion named the
+        // on-path predecessor because the triangular mesh left X with only one
+        // safe direction to take; the cube-sphere mesh offers several, and
+        // which one an equal-utility scan picks is an address tie-break, not
+        // the claim. The claim is the discharge: it does not stand still.
+        let first = walked.first().expect("the tick moves it somewhere");
+        assert_ne!(
+            first, &x,
             "the first step of the tick is OFF the haunted room: {walked:?}"
         );
         assert!(
@@ -11027,6 +10963,224 @@ mod tests {
             }
         }
     }
+
+    /// The rooms the two end-to-end phantom fixtures share: a straight
+    /// start→water path, an interior room `x` on it, an off-path room `d_room`
+    /// beside `x` where the herd-mate panics, and the terrain hazard
+    /// `hazard_e` beside `d_room` that gives it something to panic about.
+    struct PhantomGeometry {
+        /// The walker's home and the path's first room.
+        start: Facet,
+        /// The far end of the path, and the only fresh water.
+        water: Facet,
+        /// The interior path room the phantom attaches to. Terrain-SAFE.
+        x: Facet,
+        /// `x`'s on-path predecessor (one step from `start`).
+        p0: Facet,
+        /// `x`'s on-path successor.
+        p2: Facet,
+        /// The emitter's room: beside `x`, off the path, itself terrain-safe.
+        d_room: Facet,
+        /// The static hazard beside `d_room` — the ONLY planted hazard, and
+        /// far enough from every path room that none of them is frightening.
+        hazard_e: Facet,
+    }
+
+    /// [`PhantomGeometry`], built by asking for the properties the fixtures
+    /// need rather than by taking the first neighbour that happened to have
+    /// them.
+    ///
+    /// # What broke, and it is the same shape twice
+    ///
+    /// Both fixtures used to pick `hazard_e` as "the first neighbour of D that
+    /// is not one of the five named rooms". On the triangular mesh that was
+    /// enough, because a room two hops away could not also be one hop away.
+    /// On the cube-sphere mesh a room has eight neighbours and the two-hop and
+    /// one-hop sets overlap through the diagonals, so the chosen `hazard_e`
+    /// sat BESIDE a path room — and `frightened_at` reads the neighbourhood,
+    /// not just the room, so the path stopped being terrain-safe and the
+    /// fixture's own guard said so:
+    ///
+    /// > `path room Facet { face: 0, path: [3, 0, 0, 0, 2, 0] } must be
+    /// > terrain-safe (no static hazard)`
+    ///
+    /// The premise was never "the fourth-listed neighbour"; it was "a hazard
+    /// whose fear reaches D and nothing else". So that is what this searches
+    /// for — over both choices at once, since fixing only `hazard_e` would
+    /// leave `d_room` picked by the same superseded rule. Deterministic (the
+    /// mesh's own neighbour order, no draws) and loud: it panics with the
+    /// reason rather than returning a pair that quietly makes every assertion
+    /// below it vacuous.
+    fn phantom_geometry() -> PhantomGeometry {
+        let start = raddr(1.0);
+        let mut water = start.clone();
+        for _ in 0..4 {
+            water = water
+                .neighbors()
+                .into_iter()
+                .find(|n| *n != start)
+                .expect("every room has a neighbour");
+        }
+        let empty = std::collections::BTreeSet::new();
+        let straight = plan_to_room(&start, &water, PLAN_BUDGET, &empty).expect("reachable");
+        assert!(straight.len() >= 4, "need a path with an interior room");
+        let path_rooms: Vec<Facet> = straight
+            .iter()
+            .map(|a| match a {
+                Action::MoveTo(r) => r.clone(),
+                _ => unreachable!("plan_to_room emits only MoveTo"),
+            })
+            .collect();
+        let x = path_rooms[1].clone();
+        let p0 = path_rooms[0].clone();
+        let p2 = path_rooms[2].clone();
+        assert!(
+            !start.neighbors().contains(&x) && !water.neighbors().contains(&x),
+            "X must be interior (not adjacent to start or water)"
+        );
+        // The rooms a hazard must not touch: the whole walked path, ends
+        // included. `frightened_at` reads a room AND its neighbours, so "not
+        // touch" means neither equal to nor adjacent to any of them.
+        let sacred: Vec<Facet> = vec![
+            start.clone(),
+            p0.clone(),
+            x.clone(),
+            p2.clone(),
+            water.clone(),
+        ];
+        let clear_of_the_path = |r: &Facet| {
+            let ns = r.neighbors();
+            !sacred.iter().any(|s| s == r || ns.contains(s))
+        };
+        for d_room in x.neighbors() {
+            if d_room == p0 || d_room == p2 || sacred.contains(&d_room) {
+                continue;
+            }
+            // D must be adjacent to X (it is, by construction) and its own
+            // hazard must reach D without reaching the path.
+            if let Some(hazard_e) = d_room.neighbors().into_iter().find(clear_of_the_path) {
+                return PhantomGeometry {
+                    start,
+                    water,
+                    x,
+                    p0,
+                    p2,
+                    d_room,
+                    hazard_e,
+                };
+            }
+        }
+        panic!(
+            "no off-path neighbour of X has a hazard neighbour clear of the whole \
+             path — the phantom fixture cannot be built on this mesh, which is a \
+             finding about the mesh rather than about these tests"
+        );
+    }
+
+    /// The emitter's room, a terrain hazard beside it, and a halo room the
+    /// hazard's own fear does NOT reach — the three rooms the unit-level
+    /// phantom fixtures share.
+    ///
+    /// Six of them used to spell this as `ns[0]` for the hazard and `ns[1]`
+    /// for the halo room, and on the triangular mesh that was sound: two
+    /// neighbours of one room could not be neighbours of EACH OTHER. On the
+    /// cube-sphere mesh they routinely are (any diagonal pair), so `ns[1]`
+    /// began sitting inside `ns[0]`'s own one-hop fear halo — and
+    /// `frightened_at` reads a room's NEIGHBOURS as well as the room, so the
+    /// creature standing at X was primary-afraid of present terrain rather
+    /// than remembering anything. Every "X is terrain-safe; the fear is
+    /// memory, not sense" premise in this family died the same way, and each
+    /// said so in its own words:
+    ///
+    /// > `X read terrain-only is safe`
+    /// > `the shudderer must actually dread X`
+    /// > `a creature with no memory of this ground feels nothing here`
+    ///
+    /// So the fixtures ask for the property. `d` is the emitter's room; `e` is
+    /// a hazard beside `d`, so an emitter standing at `d` is primary-afraid;
+    /// `x` is a room beside `d` (inside the emitter's one-hop alarm halo) that
+    /// is neither `e` nor adjacent to it, so its own terrain frightens nobody.
+    fn phantom_triple() -> (Facet, Facet, Facet) {
+        let d = raddr(1.0);
+        let ns = d.neighbors();
+        let hazard = ns[0].clone();
+        let hazard_reach = hazard.neighbors();
+        let x = ns
+            .iter()
+            .find(|n| **n != hazard && !hazard_reach.contains(n))
+            .expect("D has a neighbour outside E's own one-hop reach")
+            .clone();
+        (d, hazard, x)
+    }
+
+    /// A water room a real walk away: two steps from `home`, through `via`.
+    ///
+    /// Three fixtures used to spell this as "`via`'s first neighbour that is
+    /// not `home`", and on the triangular mesh that was the same thing — a
+    /// room could not be both a neighbour of `home`'s neighbour and a
+    /// neighbour of `home`. On the cube-sphere mesh the diagonals make it
+    /// routine, and the room that clause picked turned out to sit on `home`'s
+    /// own doorstep: the errand collapsed from four moves per thirst cycle to
+    /// two, which is what took `the_hoisted_walk_emits_exactly_what_the_loop_
+    /// emitted` from 80 facts to 56 and put a whole sleep between the arrival
+    /// and the drink in `drinking_and_eating_now_cost_time`.
+    ///
+    /// The premise was always "the river is a walk away, not at the door", so
+    /// that is what this asks for.
+    fn water_beyond_the_doorstep(home: &Facet, via: &Facet) -> Facet {
+        let doorstep = home.neighbors();
+        via.neighbors()
+            .into_iter()
+            .find(|r| r != home && !doorstep.contains(r))
+            .expect("a neighbour of `via` that is two steps from `home`")
+    }
+
+    /// `home` and EVERY one of its neighbours planted at `background`, with
+    /// `exceptions` overriding by room — the shape a fixture that means "the
+    /// whole room-scale neighbourhood reads X, except here" should ask for.
+    ///
+    /// # It replaces twenty hand-listed three-entry lists, and that is a
+    /// finding rather than tidying
+    ///
+    /// Every caller below used to spell its background out as `(home, x),
+    /// (ns[0], x), (ns[1], x), (ns[2], x)`, which WAS the whole neighbourhood
+    /// while a room had three neighbours. A cube-sphere room has eight (seven
+    /// at the 24 cube-corner rooms), so on The Pavement's mesh those lists
+    /// stopped naming five of the rooms they meant, and the five fell through
+    /// to [`PlantedTerrain`]'s UNPLANTED defaults — which are not neutral:
+    ///
+    /// - an unplanted TEMPERATURE reads `INFINITY`, which `Thermal::urgency_of`
+    ///   maps to urgency `0.0`, so `MoveTo` there scores the maximum possible
+    ///   thermal serviceability: a **perfect** destination;
+    /// - an unplanted HAZARD reads `Hazards::ZERO`, so it is a **perfect**
+    ///   refuge;
+    /// - an unplanted FORAGE reads `DEFAULT_FORAGE` (fed), so it is **better**
+    ///   than the barren ground the fixture planted.
+    ///
+    /// In all three the rooms the fixture forgot became the most attractive in
+    /// the neighbourhood, which is why a dozen tests asserting "there is
+    /// nowhere better to go" began reporting that there was — and why the
+    /// winner in every one of those failures was the same room,
+    /// `path: [0, 3, 3, 3, 3, 3]`: the ascending-address tie-break picking the
+    /// first of the five unplanted rooms.
+    ///
+    /// Asking for the neighbourhood rather than listing it is what keeps the
+    /// next mesh change from re-sending the same bill.
+    fn neighbourhood_of<T: Clone>(
+        home: &Facet,
+        background: T,
+        exceptions: impl IntoIterator<Item = (Facet, T)>,
+    ) -> Vec<(Facet, T)> {
+        let mut out: Vec<(Facet, T)> = std::iter::once(home.clone())
+            .chain(home.neighbors())
+            .map(|r| (r, background.clone()))
+            .collect();
+        // Appended AFTER the background, so a `BTreeMap` built by `collect`
+        // takes the exception: a later insert of the same key wins.
+        out.extend(exceptions);
+        out
+    }
+
     impl Terrain for PlantedTerrain {
         fn elevation(&self, room: &Facet) -> f64 {
             self.elevations.get(room).copied().unwrap_or(f64::INFINITY)
@@ -11212,12 +11366,7 @@ mod tests {
         // otherwise tie).
         let ns = barren.neighbors();
         let rich = ns[0].clone();
-        let t = PlantedTerrain::forage([
-            (barren.clone(), 0.0),
-            (rich.clone(), 1.0),
-            (ns[1].clone(), 0.0),
-            (ns[2].clone(), 0.0),
-        ]);
+        let t = PlantedTerrain::forage(neighbourhood_of(&barren, 0.0, [(rich.clone(), 1.0)]));
         let day = WorldTime::GENESIS;
         let view_barren = Perceived {
             position: barren.clone(),
@@ -11407,12 +11556,7 @@ mod tests {
         // here is dangerous; one neighbour is safe(r), the others as bad as here.
         let t = PlantedTerrain::hazard(
             std::iter::empty(),
-            [
-                (here.clone(), 0.9),
-                (ns[0].clone(), 0.1),
-                (ns[1].clone(), 0.9),
-                (ns[2].clone(), 0.9),
-            ],
+            neighbourhood_of(&here, 0.9, [(ns[0].clone(), 0.1)]),
         );
         let danger = Danger {
             terrain: &t,
@@ -11735,7 +11879,7 @@ mod tests {
     #[test]
     fn alarm_field_haloes_a_primary_afraid_creature() {
         // THE ALARM: one creature on an UNCANNY-hazard room (its Danger crosses
-        // act) stamps a one-hop halo — its room and its three neighbours carry
+        // act) stamps a one-hop halo — its room and its neighbours carry
         // alarm in [0, 1]; a distant room is untouched.
         let reg = agent_at_reg();
         let mut ledger = Ledger::default();
@@ -11831,7 +11975,7 @@ mod tests {
 
         // Geometry, read from the real mesh so the scenario is topology-robust.
         let x = raddr(1.0); // A's room — the core of the hazard
-        let ns = x.neighbors(); // A's three edge-neighbours
+        let ns = x.neighbors(); // A's neighbours
         let b_start = ns[0].clone(); // B stands here: one hop from A, in the halo
         // The hazard patch = A's room AND its neighbours, so A is boxed in (no
         // neighbour is strictly safer → cornered, holds, keeps emitting).
@@ -11925,12 +12069,37 @@ mod tests {
         let a_entity = a.entity;
         let b_entity = b.entity;
 
-        // TICK 1 — the daytime window (frac 0.30 → 0.40, both awake). The alarm
-        // field haloes A's neighbourhood (B's room included), so B bolts.
+        // THE WINDOW IS SIZED FROM THE CLOCK, NOT WRITTEN DOWN. It used to be a
+        // flat `0.30 → 0.40` — 0.10 days, exactly one `MoveTo` at the reference
+        // mass — and that stopped admitting B's flight the moment steps became
+        // octile (The Pavement, Task 7): B's escape happens to be a DIAGONAL,
+        // which costs 17/12 of an orthogonal, so a window sized to one
+        // orthogonal admitted NO action at all. The tick then emitted zero
+        // facts and the failure read `B ... FLEES the borrowed alarm`, which
+        // points at the contagion rather than at the clock — a fixture premise
+        // failing in the language of the claim it was supposed to support.
+        //
+        // 1.2 flights: one step fits, a second cannot (0.2 of a flight is left,
+        // and the cheapest move is a whole orthogonal). Both ticks take the
+        // same length so the "settles" half is not quietly given a shorter
+        // window than the "bolts" half.
+        let flight = crate::clock::cost_of(
+            &Action::MoveTo(b_home.clone()),
+            crate::clock::REFERENCE_MASS_KG,
+            1.0,
+            crate::clock::step_factor(&b_start, &b_home),
+        )
+        .as_std_days();
+        let t0 = 0.30;
+        let t1 = t0 + 1.2 * flight;
+        let t2 = t1 + 1.2 * flight;
+
+        // TICK 1 — the daytime window (both awake). The alarm field haloes A's
+        // neighbourhood (B's room included), so B bolts.
         let sys1 = DriveMovements {
             npcs: vec![a.clone(), b.clone()],
-            from: WorldTime::from_std_days(0.30).expect("a day value is finite"),
-            to: WorldTime::from_std_days(0.40).expect("a day value is finite"),
+            from: WorldTime::from_std_days(t0).expect("a day value is finite"),
+            to: WorldTime::from_std_days(t1).expect("a day value is finite"),
             params: SUSTENANCE,
             // No sky in a planted-terrain fixture: the action clock takes its
             // base rate (spec §4.1).
@@ -11978,8 +12147,8 @@ mod tests {
         // (A still screams) but because B escaped the one-hop halo.
         let sys2 = DriveMovements {
             npcs: vec![a.clone(), b.clone()],
-            from: WorldTime::from_std_days(0.40).expect("a day value is finite"),
-            to: WorldTime::from_std_days(0.55).expect("a day value is finite"),
+            from: WorldTime::from_std_days(t1).expect("a day value is finite"),
+            to: WorldTime::from_std_days(t2).expect("a day value is finite"),
             params: SUSTENANCE,
             // No sky in a planted-terrain fixture: the action clock takes its
             // base rate (spec §4.1).
@@ -12006,8 +12175,8 @@ mod tests {
         let cb_entity = cb.entity;
         let csys = DriveMovements {
             npcs: vec![cb.clone()],
-            from: WorldTime::from_std_days(0.30).expect("a day value is finite"),
-            to: WorldTime::from_std_days(0.40).expect("a day value is finite"),
+            from: WorldTime::from_std_days(t0).expect("a day value is finite"),
+            to: WorldTime::from_std_days(t1).expect("a day value is finite"),
             params: SUSTENANCE,
             // No sky in a planted-terrain fixture: the action clock takes its
             // base rate (spec §4.1).
@@ -12648,12 +12817,15 @@ mod tests {
         let day = WorldTime::GENESIS;
 
         // Too COLD: home at −10 (dev 28 past optimum 18), ns[0] warmest/closest.
-        let cold_here = PlantedTerrain::thermal([
-            (home.clone(), -10.0),
-            (ns[0].clone(), 10.0),  // dev 8  → closest to optimum
-            (ns[1].clone(), -30.0), // dev 48
-            (ns[2].clone(), -20.0), // dev 38
-        ]);
+        let cold_here = PlantedTerrain::thermal(neighbourhood_of(
+            &home,
+            -30.0, // dev 48 — what every UNNAMED neighbour reads
+            [
+                (home.clone(), -10.0),
+                (ns[0].clone(), 10.0),  // dev 8  → closest to optimum
+                (ns[2].clone(), -20.0), // dev 38
+            ],
+        ));
         let drive = Thermal {
             niche: warm_niche(),
             terrain: &cold_here,
@@ -12672,12 +12844,15 @@ mod tests {
         );
 
         // Too HOT: home at 40 (dev 22), ns[0] coolest/closest to optimum 18.
-        let hot_here = PlantedTerrain::thermal([
-            (home.clone(), 40.0),
-            (ns[0].clone(), 20.0), // dev 2  → closest to optimum
-            (ns[1].clone(), 60.0), // dev 42
-            (ns[2].clone(), 50.0), // dev 32
-        ]);
+        let hot_here = PlantedTerrain::thermal(neighbourhood_of(
+            &home,
+            60.0, // dev 42 — what every UNNAMED neighbour reads
+            [
+                (home.clone(), 40.0),
+                (ns[0].clone(), 20.0), // dev 2  → closest to optimum
+                (ns[2].clone(), 50.0), // dev 32
+            ],
+        ));
         let drive = Thermal {
             niche: warm_niche(),
             terrain: &hot_here,
@@ -12699,10 +12874,13 @@ mod tests {
         let home = raddr(1.0);
         let ns = home.neighbors();
         let day = WorldTime::GENESIS;
-        let t = PlantedTerrain::thermal([
-            (home.clone(), 20.0),  // dev 2 ≤ width 8 → comfortable
-            (ns[0].clone(), 18.0), // exactly optimal, but we don't chase it
-        ]);
+        let t = PlantedTerrain::thermal(neighbourhood_of(
+            &home,
+            20.0, // dev 2 ≤ width 8 → comfortable, here and all round
+            [
+                (ns[0].clone(), 18.0), // exactly optimal, but we don't chase it
+            ],
+        ));
         let drive = Thermal {
             niche: warm_niche(),
             terrain: &t,
@@ -12727,12 +12905,15 @@ mod tests {
         let home = raddr(1.0);
         let ns = home.neighbors();
         let day = WorldTime::GENESIS;
-        let t = PlantedTerrain::thermal([
-            (home.clone(), 2.0),
-            (ns[0].clone(), 16.0), // warmer — the warm niche's comfort target
-            (ns[1].clone(), -10.0),
-            (ns[2].clone(), -20.0),
-        ]);
+        let t = PlantedTerrain::thermal(neighbourhood_of(
+            &home,
+            -20.0, // colder than home in every UNNAMED direction
+            [
+                (home.clone(), 2.0),
+                (ns[0].clone(), 16.0), // warmer — the warm niche's comfort target
+                (ns[1].clone(), -10.0),
+            ],
+        ));
         let view = at(home.clone());
 
         let cold = Thermal {
@@ -12770,12 +12951,15 @@ mod tests {
         let home = raddr(1.0);
         let ns = home.neighbors();
         let day = WorldTime::from_std_days(3.5).expect("a day value is finite");
-        let t = PlantedTerrain::thermal([
-            (home.clone(), -12.0),
-            (ns[0].clone(), 4.0),
-            (ns[1].clone(), -25.0),
-            (ns[2].clone(), -18.0),
-        ]);
+        let t = PlantedTerrain::thermal(neighbourhood_of(
+            &home,
+            -25.0,
+            [
+                (home.clone(), -12.0),
+                (ns[0].clone(), 4.0),
+                (ns[2].clone(), -18.0),
+            ],
+        ));
         let drive = Thermal {
             niche: warm_niche(),
             terrain: &t,
@@ -12801,12 +12985,14 @@ mod tests {
         let ns = home.neighbors();
         let day = WorldTime::GENESIS;
         let smaller = std::cmp::min(ns[0].clone(), ns[1].clone());
-        let t = PlantedTerrain::thermal([
-            (home.clone(), -40.0),  // dev 46 → outside the band, worse than either
-            (ns[0].clone(), 0.0),   // dev 6
-            (ns[1].clone(), 12.0),  // dev 6 → ties ns[0]
-            (ns[2].clone(), -40.0), // dev 46 → not chosen
-        ]);
+        let t = PlantedTerrain::thermal(neighbourhood_of(
+            &home,
+            -40.0, // dev 46 → outside the band: home and every UNNAMED neighbour
+            [
+                (ns[0].clone(), 0.0),  // dev 6
+                (ns[1].clone(), 12.0), // dev 6 → ties ns[0]
+            ],
+        ));
         let drive = Thermal {
             niche: cold_niche(),
             terrain: &t,
@@ -12845,12 +13031,7 @@ mod tests {
         let water = ns[0].clone();
         let far = raddr(9_999.0); // a believed source with no path within budget
         let day = WorldTime::GENESIS;
-        let terrain = PlantedTerrain::thermal([
-            (home.clone(), 18.0),
-            (ns[0].clone(), 18.0),
-            (ns[1].clone(), 18.0),
-            (ns[2].clone(), 18.0),
-        ]);
+        let terrain = PlantedTerrain::thermal(neighbourhood_of(&home, 18.0, []));
         let thirst = Thirst { params: SUSTENANCE };
         let thermal = Thermal {
             niche: warm_niche(),
@@ -12980,7 +13161,7 @@ mod tests {
             .proposal(&view, PLAN_BUDGET)
             .expect("water is known and reachable from home");
         let drives: [&dyn Drive; 1] = [&thirst];
-        // Six fixed candidates (three neighbours + Drink/Rest/Eat) means
+        // Six fixed candidates (three of the neighbours + Drink/Rest/Eat) means
         // `cached_serviceability` is asked about thirst's proposal six
         // times over in `grab_utility` alone, and again in `utility` — a
         // real cache hit, not just a single-shot compute.
@@ -13014,12 +13195,7 @@ mod tests {
         let water = ns[0].clone();
         let day = WorldTime::GENESIS;
         // All rooms at the warm niche's optimum → thermal urgency 0 everywhere.
-        let terrain = PlantedTerrain::thermal([
-            (home.clone(), 18.0),
-            (ns[0].clone(), 18.0),
-            (ns[1].clone(), 18.0),
-            (ns[2].clone(), 18.0),
-        ]);
+        let terrain = PlantedTerrain::thermal(neighbourhood_of(&home, 18.0, []));
         let params = SUSTENANCE;
         let thirst = Thirst { params };
         let thermal = Thermal {
@@ -13109,14 +13285,15 @@ mod tests {
         let ns = home.neighbors();
         let both = ns[0].clone(); // water + warm
         let warm_only = ns[1].clone(); // warm, not water
-        let cold = ns[2].clone(); // neither
         let day = WorldTime::GENESIS;
-        let terrain = PlantedTerrain::thermal([
-            (home.clone(), -20.0),     // freezing → thermal urgency 1.0
-            (both.clone(), 18.0),      // optimum → big comfort gain
-            (warm_only.clone(), 18.0), // optimum → equal comfort gain
-            (cold.clone(), -20.0),     // no gain
-        ]);
+        let terrain = PlantedTerrain::thermal(neighbourhood_of(
+            &home,
+            -20.0, // freezing → thermal urgency 1.0, here and every UNNAMED way
+            [
+                (both.clone(), 18.0),      // optimum → big comfort gain
+                (warm_only.clone(), 18.0), // optimum → equal comfort gain
+            ],
+        ));
         let view = Perceived {
             position: home.clone(),
             drive: 0.9,
@@ -13164,14 +13341,15 @@ mod tests {
         let ns = home.neighbors();
         let warm = ns[0].clone(); // pure warmth (loudest single relief)
         let both = ns[1].clone(); // water + moderate warmth
-        let cold = ns[2].clone();
         let day = WorldTime::GENESIS;
-        let terrain = PlantedTerrain::thermal([
-            (home.clone(), -20.0), // urgency 1.0 (capped 0.6)
-            (warm.clone(), 18.0),  // thermal serv 1.0
-            (both.clone(), 6.0),   // urgency 0.5 → thermal serv 0.5
-            (cold.clone(), -20.0),
-        ]);
+        let terrain = PlantedTerrain::thermal(neighbourhood_of(
+            &home,
+            -20.0, // urgency 1.0 (capped 0.6): home and every UNNAMED neighbour
+            [
+                (warm.clone(), 18.0), // thermal serv 1.0
+                (both.clone(), 6.0),  // urgency 0.5 → thermal serv 0.5
+            ],
+        ));
         let view = Perceived {
             position: home.clone(),
             drive: 0.5, // moderate thirst (capped 0.5), active under eager_thirst
@@ -13249,14 +13427,15 @@ mod tests {
         let ns = home.neighbors();
         let warm = ns[0].clone(); // pure warmth (loudest single relief)
         let both = ns[1].clone(); // water + moderate warmth
-        let cold = ns[2].clone();
         let day = WorldTime::GENESIS;
-        let terrain = PlantedTerrain::thermal([
-            (home.clone(), -20.0), // urgency 1.0 (capped 0.6)
-            (warm.clone(), 18.0),  // thermal serv 1.0
-            (both.clone(), 6.0),   // urgency 0.5 → thermal serv 0.5
-            (cold.clone(), -20.0),
-        ]);
+        let terrain = PlantedTerrain::thermal(neighbourhood_of(
+            &home,
+            -20.0, // urgency 1.0 (capped 0.6): home and every UNNAMED neighbour
+            [
+                (warm.clone(), 18.0), // thermal serv 1.0
+                (both.clone(), 6.0),  // urgency 0.5 → thermal serv 0.5
+            ],
+        ));
         let view = Perceived {
             position: home.clone(),
             drive: 0.5, // moderate thirst (capped 0.5), active under eager_thirst
@@ -13320,14 +13499,14 @@ mod tests {
         let ns = home.neighbors();
         let warm = ns[0].clone();
         let water = ns[1].clone();
-        let cold = ns[2].clone();
         let day = WorldTime::GENESIS;
-        let terrain = PlantedTerrain::thermal([
-            (home.clone(), -20.0),  // severe cold: thermal urgency 1.0 (cap 0.6)
-            (warm.clone(), 18.0),   // warmth here
-            (water.clone(), -20.0), // water here, but no warmer
-            (cold.clone(), -20.0),
-        ]);
+        let terrain = PlantedTerrain::thermal(neighbourhood_of(
+            &home,
+            -20.0, // severe cold (thermal urgency 1.0, cap 0.6) everywhere but `warm`
+            [
+                (warm.clone(), 18.0), // warmth here
+            ],
+        ));
         let thermal = Thermal {
             niche: warm_niche(),
             terrain: &terrain,
@@ -13937,12 +14116,8 @@ mod tests {
         // Freezing home (thermal urgency 1.0, capped 0.6); a fully-comfortable
         // warm neighbour → thermal grab-utility = capped(0.6) × drop(1.0) = 0.6.
         // Water lies in a cold direction (no thermal help).
-        let terrain = PlantedTerrain::thermal([
-            (home.clone(), -20.0),
-            (warm.clone(), 18.0),
-            (water.clone(), -20.0),
-            (ns[2].clone(), -20.0),
-        ]);
+        let terrain =
+            PlantedTerrain::thermal(neighbourhood_of(&home, -20.0, [(warm.clone(), 18.0)]));
         let thirst = Thirst {
             params: eager_thirst(),
         };
@@ -14043,12 +14218,11 @@ mod tests {
         // Thermal-only (thirst inactive, drive 0): home freezing, ns[0] and
         // ns[1] EQUALLY warm (both optimum) → equal thermal serviceability →
         // equal utility → the tie-break decides.
-        let terrain = PlantedTerrain::thermal([
-            (home.clone(), -20.0),
-            (ns[0].clone(), 18.0),
-            (ns[1].clone(), 18.0),
-            (ns[2].clone(), -20.0),
-        ]);
+        let terrain = PlantedTerrain::thermal(neighbourhood_of(
+            &home,
+            -20.0,
+            [(ns[0].clone(), 18.0), (ns[1].clone(), 18.0)],
+        ));
         let view = Perceived {
             position: home.clone(),
             drive: 0.0,
@@ -14460,12 +14634,7 @@ mod tests {
         // The room-scale gradient DOES have somewhere to go (ns[0] is
         // warmer), so this exercises a genuine fallback, not a coincidental
         // `None` from a boxed-in room.
-        let t = PlantedTerrain::thermal([
-            (home.clone(), -30.0),
-            (ns[0].clone(), 10.0),
-            (ns[1].clone(), -30.0),
-            (ns[2].clone(), -30.0),
-        ]);
+        let t = PlantedTerrain::thermal(neighbourhood_of(&home, -30.0, [(ns[0].clone(), 10.0)]));
         let view = at(home.clone());
         let drive = Thermal {
             niche: warm_niche(),
@@ -14592,18 +14761,12 @@ mod tests {
         interior.connect(hall, hearth);
 
         let home = raddr(1.0);
-        let ns = home.neighbors();
         let day = WorldTime::GENESIS;
         // Every room-scale neighbour reads the SAME cold as home (no
         // room-scale improvement available), so any `MoveTo` the fixed
         // candidate set offers scores exactly `0.0` — only the within-room
         // step, reached via `candidate_actions`, can win this arbitration.
-        let t = PlantedTerrain::thermal([
-            (home.clone(), -15.0),
-            (ns[0].clone(), -15.0),
-            (ns[1].clone(), -15.0),
-            (ns[2].clone(), -15.0),
-        ]);
+        let t = PlantedTerrain::thermal(neighbourhood_of(&home, -15.0, []));
         let thirst = Thirst { params: SUSTENANCE };
         let thermal = Thermal {
             niche: cold_niche(),
@@ -14673,7 +14836,6 @@ mod tests {
         }
 
         let home = raddr(1.0);
-        let ns = home.neighbors();
         // Deep, uniform cold: every room-scale neighbour reads the SAME
         // temperature as home, so the between-rooms gradient never fires and
         // any movement observed is genuinely the within-room mechanism.
@@ -14700,12 +14862,7 @@ mod tests {
             devotion: 0.5,
         };
         let ambient = -19.75;
-        let planted = PlantedTerrain::thermal([
-            (home.clone(), ambient),
-            (ns[0].clone(), ambient),
-            (ns[1].clone(), ambient),
-            (ns[2].clone(), ambient),
-        ]);
+        let planted = PlantedTerrain::thermal(neighbourhood_of(&home, ambient, []));
         let build_npc = |entity: EntityId| Body {
             entity,
             village: None,
@@ -15144,7 +15301,6 @@ mod tests {
         // occupancy progress this test observes is catch-up's alone, not
         // the live walk's.
         let home = raddr(1.0);
-        let ns = home.neighbors();
         // The exact niche/ambient task 6's own hearth-crossing test uses
         // (see that test's own comment for why: strictly decreasing,
         // unsaturated urgency at every one of the composed chain's four
@@ -15155,12 +15311,7 @@ mod tests {
             devotion: 0.5,
         };
         let ambient = -19.75;
-        let planted = PlantedTerrain::thermal([
-            (home.clone(), ambient),
-            (ns[0].clone(), ambient),
-            (ns[1].clone(), ambient),
-            (ns[2].clone(), ambient),
-        ]);
+        let planted = PlantedTerrain::thermal(neighbourhood_of(&home, ambient, []));
         let terrain = BuiltOverlay { inner: &planted };
 
         let reg = agent_at_reg();
@@ -15349,7 +15500,6 @@ mod tests {
         interior.connect(door, hearth);
 
         let home = raddr(1.0);
-        let ns = home.neighbors();
         // The exact niche/ambient `thermal_serviceability_scores_the_within_
         // room_step_by_warmth_gained` uses: −15 °C is inside `cold_niche`'s
         // tolerance once the hearth's own (undecayed) warmth is folded in,
@@ -15360,12 +15510,7 @@ mod tests {
         // `MoveTo` candidate falsely outscore the real within-room
         // improvement `MoveWithin` offers, arbitration never even reaching
         // this test's own point.
-        let terrain = PlantedTerrain::thermal([
-            (home.clone(), -15.0),
-            (ns[0].clone(), -15.0),
-            (ns[1].clone(), -15.0),
-            (ns[2].clone(), -15.0),
-        ]);
+        let terrain = PlantedTerrain::thermal(neighbourhood_of(&home, -15.0, []));
         let npc = cold_thermal_npc(npc_id(1), home.clone(), cold_niche());
 
         let ledger = Ledger::default();
@@ -15423,19 +15568,13 @@ mod tests {
         // is still free, so a future capacity change has a red test to
         // catch the regression at.
         let home = raddr(1.0);
-        let ns = home.neighbors();
         let niche = ConditionResponse {
             optimum: 6.0,
             width: 12.0,
             devotion: 0.5,
         };
         let ambient = -19.75;
-        let planted = PlantedTerrain::thermal([
-            (home.clone(), ambient),
-            (ns[0].clone(), ambient),
-            (ns[1].clone(), ambient),
-            (ns[2].clone(), ambient),
-        ]);
+        let planted = PlantedTerrain::thermal(neighbourhood_of(&home, ambient, []));
         let terrain = BuiltOverlay { inner: &planted };
 
         let entry_day = waking_offset(ActivityCycle::Diurnal);
@@ -15538,7 +15677,6 @@ mod tests {
         }
 
         let home = raddr(1.0);
-        let ns = home.neighbors();
         // Every neighbour plants the SAME ambient as `home` (not just
         // `home` itself) — an unplanted neighbour reads `INFINITY`, which
         // `Thermal::urgency_of` treats as "already comfortable" (`0.0`),
@@ -15563,12 +15701,7 @@ mod tests {
             width: 12.0,
             devotion: 0.5,
         };
-        let terrain = PlantedTerrain::thermal([
-            (home.clone(), -15.0),
-            (ns[0].clone(), -15.0),
-            (ns[1].clone(), -15.0),
-            (ns[2].clone(), -15.0),
-        ]);
+        let terrain = PlantedTerrain::thermal(neighbourhood_of(&home, -15.0, []));
         let npc = cold_thermal_npc(npc_id(1), home.clone(), niche);
         let ledger = Ledger::default();
         let entry_day = td(waking_offset(ActivityCycle::Diurnal));
@@ -15579,7 +15712,8 @@ mod tests {
         // test's arithmetic quietly disagreeing with the loop it measures.
         // A cost IS a kernel span now (The Foliot), so its length in days is
         // the span's own continuous view.
-        let step_days = cost_of(&Action::MoveWithin(anchors[0]), npc.mass_kg, 1.0).as_std_days();
+        let step_days =
+            cost_of(&Action::MoveWithin(anchors[0]), npc.mass_kg, 1.0, 1.0).as_std_days();
 
         let run = |horizon: WorldTime| -> Option<AnchorId> {
             let mut occ = Occupancy::default();
@@ -15902,9 +16036,20 @@ mod tests {
     /// and the same first-strict-improvement-wins relaxation `astar` itself
     /// uses) rather than through `SearchSpace` (there is no goal state to
     /// hand it — the point is reaching everything within budget). Valid
-    /// ONLY for empty-avoid queries: `move_cost` with an empty set is `1`
-    /// uniformly, so every edge is symmetric and a room's distance FROM
-    /// `home` equals its distance TO `home`.
+    /// ONLY for empty-avoid queries: with an empty set every edge is
+    /// symmetric, so a room's distance FROM `home` equals its distance TO
+    /// `home`.
+    ///
+    /// **This field counts STEPS, and since The Pavement's Task 7 that is no
+    /// longer `move_cost`'s scale.** It used to be: both were `1` per edge.
+    /// The planner's baseline is octile now (`ORTHOGONAL_STEP` 12,
+    /// `DIAGONAL_STEP` 17), so `distance` here is a hop count while
+    /// `plan_to_room`'s `g` is a cost — which WIDENS the already-disproven
+    /// equivalence below rather than changing its verdict, and is left as it
+    /// stands deliberately: re-scaling a recorded disproof would rewrite what
+    /// the-waymark actually measured. Its own `distance` comparison was always
+    /// against `plan_to_room(..).len()`, a hop count too, so the test still
+    /// asks the question it asked.
     struct ReverseField {
         /// Every room reached within the build budget: `(distance-to-home,
         /// next-hop-toward-home)`. `home` itself maps to `(0, None)`.
@@ -15953,7 +16098,7 @@ mod tests {
                 break;
             }
             for n in state.neighbors() {
-                let ng = g + 1; // move_cost is 1 uniformly — empty-avoid only
+                let ng = g + 1; // ONE HOP, not one `move_cost` — see the doc above
                 if best_g.get(&n).is_none_or(|&bg| ng < bg) {
                     best_g.insert(n.clone(), ng);
                     came_from.insert(n.clone(), state.clone());

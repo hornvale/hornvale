@@ -170,7 +170,7 @@ mod tests {
     use crate::structure::structure_at;
     use hornvale_kernel::{Facet, Seed};
 
-    const WALK: u32 = 12;
+    const WALK: u32 = 13;
     const SEEDS: std::ops::Range<u64> = 0..48;
 
     fn locale(n: u64) -> Facet {

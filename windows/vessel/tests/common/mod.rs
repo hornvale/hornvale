@@ -25,8 +25,8 @@
 
 #![allow(dead_code)]
 
-use hornvale_kernel::{Seed, World};
-use hornvale_vessel::{PlanMark, PossessOpts, Session, SpatialChannel};
+use hornvale_kernel::{EntityId, Seed, World};
+use hornvale_vessel::{PlanMark, PossessOpts, Session, SpatialChannel, Turn};
 
 /// The seeds searched. Wide enough that "no world in here draws a creature" is
 /// a real finding about the sim rather than about the sample, and cheap in
@@ -84,6 +84,49 @@ pub fn is_inside(session: &Session<'_>) -> bool {
 pub fn step_inside(session: &mut Session<'_>) {
     session.handle("wait");
     session.handle("enter");
+}
+
+/// Place `who` at the possession, and walk further in until the chamber it
+/// stands in actually DRAWS the mark. The caller has already entered.
+///
+/// **Entering alone stopped being enough at The Pavement, and the cause
+/// is the epoch rather than anything about sight.** A structure is drawn from
+/// its own room's seed and the cube-sphere mesh moved every room address, so
+/// the flagship's ENTRANCE chamber is drawn from a different seed than it was.
+/// Measured on seed 42: its five room anchors resolve to three cells and none
+/// of them lies inside the shadowcast, while one chamber further in has two
+/// lit and one unlit. Every fixture that entered and then asserted a mark was
+/// reading a chamber that draws none, and each said so in its own words —
+/// *"the placed companion was chosen BECAUSE it draws a mark"*, *"'x' must be
+/// drawn on the plan indoors"*.
+///
+/// Walking until the property holds is the same discipline as
+/// [`world_where`] one function down: ask for the property, do not pin the
+/// place that happened to have it. It panics rather than returning a chamber
+/// that draws nothing, for the reason that module doc gives — a search that
+/// quietly found nothing is worse than the hardcoded fixture it replaces.
+pub fn deepen_until_the_plan_draws(session: &mut Session<'_>, who: EntityId) {
+    assert!(
+        is_inside(session),
+        "the possession is not indoors, so nothing below is tested"
+    );
+    // `MAX_CHAMBERS` is 4, so four steps is one more than any structure has;
+    // the loop stops on the far-end reply rather than on the count.
+    for _ in 0..4 {
+        session.place_creature_at_me(who);
+        if !marks_of(session).is_empty() {
+            return;
+        }
+        let reply = match session.handle("enter further in") {
+            Turn::Out(t) | Turn::Released(t) => t,
+        };
+        assert!(
+            reply.starts_with("[chamber "),
+            "no chamber of this structure draws a placed creature on its plan, so \
+             nothing below is tested: {reply}"
+        );
+    }
+    panic!("the structure ran past MAX_CHAMBERS without the plan ever drawing");
 }
 
 /// The first seed in [`SIGHT_SEEDS`] whose fresh possession satisfies `pred` —

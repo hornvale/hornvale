@@ -180,7 +180,7 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0138](0138-a-preregistered-criterion-may-be-restated-when-its-estimator-is-wrong.md) | A preregistered criterion may be restated when its estimator is wrong | Accepted |
 | [0139](0139-main-advances-only-through-the-lock.md) | Main advances only through the lock | Accepted |
 | [0140](0140-the-stage-gate-is-a-kind-of-queue-request.md) | The stage gate is a kind of queue request, not a dispatch path | Accepted |
-| [0141](0141-compass-navigation-is-an-overlay.md) | Compass navigation is an overlay, never the graph | Accepted |
+| [0141](0141-compass-navigation-is-an-overlay.md) | Compass navigation is an overlay, never the graph | Superseded by 0506 |
 | [0142](0142-a-channel-carries-one-axis-and-a-lost-axis-is-declared.md) | A rendering channel carries one axis, and a lost axis is declared | Accepted |
 | [0143](0143-the-underworld-carries-two-ladders.md) | The underworld carries two ladders, and neither derives the other | Accepted |
 | [0144](0144-a-caves-depth-is-a-budget-in-metres.md) | A cave's depth is a budget in metres, not a stratigraphic band | Accepted |
@@ -257,3 +257,11 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0448](0448-a-produce-side-demand-instance-statistic-complements-the-composite-and-never-replaces-it.md) | A produce-side demand-instance statistic complements the composite, and never replaces it | Accepted |
 | [0466](0466-authored-evidence-is-read-through-its-own-schema.md) | Authored evidence is read through its own schema, not the live registry | Accepted |
 | [0467](0467-a-frozen-criterion-must-discriminate-against-rival-explanations-of-a-pass.md) | A frozen criterion must discriminate against the rival explanations of a pass | Accepted |
+| [0506](0506-the-occupancy-lattice-is-a-cube-sphere.md) | The occupancy lattice is a cube-sphere; the icosphere stays the field substrate (supersedes 0141, amends 0287) | Accepted |
+| [0507](0507-every-lattice-in-the-project-is-eight-connected.md) | Every lattice in the project is 8-connected | Accepted |
+| [0508](0508-a-diagonal-costs-root-two.md) | A diagonal costs √2, because the movement clock is flat | Accepted |
+| [0509](0509-a-diagonal-through-a-two-walled-corner-is-refused.md) | A diagonal through a two-walled corner is refused; one open flank permits it | Accepted |
+| [0510](0510-compass-input-is-four-way-primary-and-eight-way-capable.md) | Compass input is 4-way primary and 8-way capable; no destination requires a diagonal | Accepted |
+| [0511](0511-walk-depth-is-globe-level-plus-seven.md) | Walk depth is `globe_level + 7`, chosen to preserve step length | Accepted |
+| [0512](0512-the-projection-is-tangent-warped-and-there-is-one-of-it.md) | The cube-sphere projection is tangent-warped, and there is one of it | Accepted |
+| [0513](0513-a-quadrilateral-lattice-carries-no-third-axis-or-orientation-flag.md) | A quadrilateral lattice carries no third axis or orientation flag | Accepted |

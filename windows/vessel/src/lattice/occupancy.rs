@@ -86,7 +86,7 @@ mod tests {
     use crate::structure::structure_at;
     use hornvale_kernel::{Facet, Seed};
 
-    const WALK: u32 = 12;
+    const WALK: u32 = 13;
 
     /// `EntityId` wraps a `NonZeroU64` (`kernel/src/ledger.rs:14`), so an id is
     /// built rather than written as a literal.
@@ -94,14 +94,34 @@ mod tests {
         EntityId(std::num::NonZeroU64::new(n).expect("nonzero"))
     }
 
+    /// A plan that actually holds the cell kinds these tests look for.
+    ///
+    /// **The seed is SEARCHED, not written down.** It was `Seed(42)`, and when
+    /// the walk band moved to `globe_level + 7` the address below changed, so
+    /// seed 42's plan stopped holding a `Threshold` cell at all and
+    /// `a_cell(.., Threshold)` panicked with *"the plan holds a cell of that
+    /// kind"* — a fixture premise failing in the language of a rule about
+    /// where a creature may stand. The premise was never the seed; it is "a
+    /// plan with a floor and a threshold in it".
     fn plan() -> Lattice {
         let addr = Facet {
             face: 3,
             path: (0..WALK).map(|i| (i % 4) as u8).collect(),
         };
         let brief = Brief::from_parts(None, None, None, None, 0, true, true);
-        let s = structure_at(&addr, &brief, Seed(42), WALK).expect("built");
-        embed_with(&s, &brief, extent_for(&s), Seed(42))
+        (0u64..64)
+            .find_map(|sd| {
+                let s = structure_at(&addr, &brief, Seed(sd), WALK)?;
+                let l = embed_with(&s, &brief, extent_for(&s), Seed(sd));
+                let has = |want: fn(&CellKind) -> bool| l.cells.values().any(want);
+                (has(|k| matches!(k, CellKind::Floor(_)))
+                    && has(|k| matches!(k, CellKind::Threshold(_, _))))
+                .then_some(l)
+            })
+            .expect(
+                "no seed in 0..64 embeds a plan holding both a floor and a threshold at \
+                 this address, so the rules below have nothing to stand on",
+            )
     }
 
     /// A cell of the given kind in `l`, by predicate. Found rather than written as

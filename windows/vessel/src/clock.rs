@@ -25,6 +25,7 @@
 
 use crate::action::Action;
 use hornvale_kernel::component::ComponentStore;
+use hornvale_kernel::room::Facet;
 use hornvale_kernel::units::TickSpan;
 use hornvale_kernel::{KindId, WorldTime};
 use hornvale_species::BiosphereTraits;
@@ -163,6 +164,15 @@ pub fn tempo(mass_kg: f64) -> f64 {
 pub fn base_cost(action: &Action) -> TickSpan {
     match action {
         // 10_000 ticks = 0.1 days on an Earth-like world: today's MOVE_DURATION.
+        //
+        // FLAT, and deliberately so: this is the cost of ONE ORTHOGONAL step,
+        // the unit the rest of the model is expressed in. It is not the cost of
+        // a move — an `Action::MoveTo(Facet)` names a destination and cannot
+        // know whether reaching it was a diagonal, and on an 8-connected lattice
+        // a flat charge is a ~41% travel-speed exploit (a diagonal buys √2 the
+        // ground for the same time; measured 1.411786 on the real walk-depth
+        // lattice, so 41.18%). `cost_of`'s `step_factor` is where that closes;
+        // see [`DIAGONAL_STEP_FACTOR`] for the figure and the mechanism.
         Action::MoveTo(_) => TickSpan::from_ticks(10_000),
         // A step WITHIN a room (The Threshold): a tenth of a room-to-room move,
         // which is the ratio that campaign authored for it (`MOVE_DURATION /
@@ -230,18 +240,118 @@ pub fn climb_factor(from_elev_m: f64, to_elev_m: f64) -> f64 {
     (1.0 + climb / CLIMB_SCALE_M).clamp(1.0, MAX_CLIMB_FACTOR)
 }
 
+/// How many of a room's [`Facet::neighbors`] are EDGE-adjacent: the pinned
+/// prefix `[..4]`.
+///
+/// The kernel's [`Facet::neighbor_steps`] states the invariant this rests on —
+/// the first four steps are the four edge steps and everything from index 4 on
+/// shares only a single corner, and the step a cube corner drops is always a
+/// diagonal, so the prefix survives the short arity — and
+/// `the_first_four_neighbours_are_always_the_four_edge_neighbours` (in
+/// `kernel/tests/suite/cube_adjacency.rs`) pins it. Named here rather than
+/// spelled `4` at the one site that indexes, so the reliance is greppable.
+/// type-audit: bare-ok(count)
+const EDGE_ADJACENT_NEIGHBOURS: usize = 4;
+
+/// What a DIAGONAL walk-band step costs relative to an edge step: `√2`,
+/// because it covers `√2` times the ground.
+///
+/// # The 41% exploit this closes
+///
+/// [`base_cost`] prices `Action::MoveTo` at a flat 10,000 ticks whatever room
+/// it leads to. The walk band is 8-connected since The Pavement, so on a flat
+/// cost a diagonal step buys `√2 ≈ 1.414` times the ground for the same time:
+/// **a creature or a player travels ~41% faster by zigzagging than by walking
+/// straight**, which is a physics falsehood rather than a preference. Charging
+/// this factor on the diagonal steps is the whole fix, and the figure is
+/// recorded here because the campaign's H2 asserts against it: with the
+/// multiplier forced to `1.0` the ~41% gap must reappear
+/// (`windows/vessel/tests/suite/octile_cost.rs`, the positive control).
+///
+/// **`√2` is the ideal, and the real lattice agrees with it to 0.17%** —
+/// measured rather than assumed, because the cube-sphere's tangent warp
+/// distorts a quad and there was no reason a priori for the diagonal to sit at
+/// exactly `√2` edges. Over 4,000 interior rooms at walk depth spread across
+/// all six faces
+/// (`the_diagonal_is_root_two_edges_on_the_lattice_we_actually_walk`), the
+/// mean diagonal centroid separation is **1.411786** edge separations
+/// (`-0.172%` against `√2`), spread **1.366086–1.434180** per room. So the
+/// exploit was **41.18%** on the ground the project actually walks, against
+/// the ideal 41.42%.
+///
+/// Not a mean over all eight neighbours: the two groups are averaged
+/// SEPARATELY. That is Addendum 2's trap — the deleted `course.rs`'s
+/// `step_length_rad` divided by `ns.len()` and so returned ~1.21 edge steps
+/// once the mesh went 8-connected, a number that looks like one step and is
+/// not.
+/// type-audit: bare-ok(ratio)
+pub const DIAGONAL_STEP_FACTOR: f64 = std::f64::consts::SQRT_2;
+
+/// The geometry multiplier for one walk-band step: [`DIAGONAL_STEP_FACTOR`]
+/// when `to` is a diagonal (corner-adjacent) neighbour of `from`, and `1.0`
+/// when it is edge-adjacent.
+///
+/// **A pair that is not a step at all charges the orthogonal unit, and says so
+/// loudly in a debug build.** Every caller passes a real step (both
+/// `Session::charge`'s `MoveTo` and the creature walk's read the destination
+/// out of the action they are charging), so the arm is unreachable in
+/// practice — but "unreachable in practice" is an argument, and this project
+/// fails loudly rather than resting on one. The `debug_assert!` turns the
+/// argument into something a test run enforces; the release fallback stays
+/// `1.0` because a mid-walk panic is worse than an under-charge, and because
+/// returning `1.0` keeps this function total, which is what lets it be called
+/// from a match arm without an `expect`.
+///
+/// Geometry only — no world, no ledger, no terrain. [`Facet::neighbors`] is
+/// integer lattice arithmetic, so this stays inside the module's own rule that
+/// `clock` is testable without building a world.
+/// type-audit: bare-ok(ratio: return)
+pub fn step_factor(from: &Facet, to: &Facet) -> f64 {
+    match from.neighbors().iter().position(|n| n == to) {
+        Some(i) if i >= EDGE_ADJACENT_NEIGHBOURS => DIAGONAL_STEP_FACTOR,
+        Some(_) => 1.0,
+        None => {
+            debug_assert!(
+                from == to,
+                "step_factor asked to price a step between rooms that do not \
+                 touch: {from:?} -> {to:?}. Every caller reads the destination \
+                 out of the `MoveTo` it is charging, so this means a caller \
+                 has begun charging a move the mesh does not admit — the \
+                 orthogonal fallback below would under-charge it silently."
+            );
+            1.0
+        }
+    }
+}
+
 /// What `action` costs a creature of `mass_kg` over ground of
-/// `terrain_factor` (`1.0` for level or non-move actions), rounded to an exact
-/// tick count and never zero — a free action would let a creature act
-/// unboundedly at one instant.
-/// type-audit: bare-ok(ratio: mass_kg), bare-ok(ratio: terrain_factor)
-pub fn cost_of(action: &Action, mass_kg: f64, terrain_factor: f64) -> TickSpan {
-    let factor = if terrain_factor.is_finite() && terrain_factor > 0.0 {
-        terrain_factor
-    } else {
-        1.0
-    };
-    let scaled = base_cost(action).ticks() as f64 * tempo(mass_kg) * factor;
+/// `terrain_factor` (`1.0` for level or non-move actions) taking a step of
+/// `step_factor` ([`step_factor`]; `1.0` for an edge step or a non-move
+/// action), rounded to an exact tick count and never zero — a free action
+/// would let a creature act unboundedly at one instant.
+///
+/// # Why the step geometry is its OWN parameter
+///
+/// `Action::MoveTo(Facet)` names a destination and cannot know whether
+/// reaching it was a diagonal, so the factor has to arrive from outside. It
+/// arrives as a fourth argument named for what it is rather than folded into
+/// `terrain_factor`, because ground difficulty and step geometry vary
+/// independently and one number cannot carry both — the defect decision 0143
+/// exists to prevent, one ladder over. Considered and rejected:
+/// `Action::MoveTo { to, diagonal: bool }`, which would put a geometry fact
+/// inside a planner-facing enum that [`crate::action`]'s A* also constructs.
+///
+/// The planner has the same fix in integer form —
+/// `action::ORTHOGONAL_STEP`/`action::DIAGONAL_STEP` — and the two must not
+/// drift apart: `the_planner_and_the_clock_price_a_diagonal_alike` holds them
+/// to the same 0.5% the campaign preregistered for H2.
+/// type-audit: bare-ok(ratio: mass_kg), bare-ok(ratio: terrain_factor), bare-ok(ratio: step_factor)
+pub fn cost_of(action: &Action, mass_kg: f64, terrain_factor: f64, step_factor: f64) -> TickSpan {
+    let positive = |f: f64| if f.is_finite() && f > 0.0 { f } else { 1.0 };
+    let scaled = base_cost(action).ticks() as f64
+        * tempo(mass_kg)
+        * positive(terrain_factor)
+        * positive(step_factor);
     TickSpan::from_ticks((scaled.round() as i64).max(1))
 }
 
@@ -249,7 +359,6 @@ pub fn cost_of(action: &Action, mass_kg: f64, terrain_factor: f64) -> TickSpan {
 mod tests {
     use super::*;
     use crate::action::Action;
-    use hornvale_kernel::room::Facet;
 
     #[test]
     fn a_move_costs_exactly_todays_duration_on_an_earthlike_world() {
@@ -262,7 +371,7 @@ mod tests {
         });
         assert_eq!(base_cost(&mv), TickSpan::from_ticks(10_000));
         assert_eq!(
-            cost_of(&mv, REFERENCE_MASS_KG, 1.0),
+            cost_of(&mv, REFERENCE_MASS_KG, 1.0, 1.0),
             TickSpan::from_ticks(10_000)
         );
         // A cost IS a kernel span now, so its length in days is the span's
@@ -306,7 +415,7 @@ mod tests {
             face: 0,
             path: vec![0],
         });
-        let reference = cost_of(&mv, REFERENCE_MASS_KG, 1.0);
+        let reference = cost_of(&mv, REFERENCE_MASS_KG, 1.0, 1.0);
         for ticks in [41_000_i64, 270_000, 1_725_000] {
             assert_eq!(
                 ticks_per_local_day(Some(TickSpan::from_ticks(ticks))),
@@ -314,7 +423,7 @@ mod tests {
                 "the day is reported as drawn"
             );
             assert_eq!(
-                cost_of(&mv, REFERENCE_MASS_KG, 1.0),
+                cost_of(&mv, REFERENCE_MASS_KG, 1.0, 1.0),
                 reference,
                 "a move costs the same span on every world"
             );
@@ -359,7 +468,7 @@ mod tests {
                 "{a:?} is free — every action must cost time"
             );
             assert!(
-                cost_of(a, REFERENCE_MASS_KG, 1.0).ticks() > 0,
+                cost_of(a, REFERENCE_MASS_KG, 1.0, 1.0).ticks() > 0,
                 "{a:?} costs nothing"
             );
         }
@@ -428,8 +537,8 @@ mod tests {
             face: 0,
             path: vec![0],
         });
-        let level = cost_of(&mv, REFERENCE_MASS_KG, 1.0);
-        let steep = cost_of(&mv, REFERENCE_MASS_KG, climb_factor(0.0, 500.0));
+        let level = cost_of(&mv, REFERENCE_MASS_KG, 1.0, 1.0);
+        let steep = cost_of(&mv, REFERENCE_MASS_KG, climb_factor(0.0, 500.0), 1.0);
         assert!(
             steep > level,
             "the climb reaches the cost: {steep:?} vs {level:?}"
