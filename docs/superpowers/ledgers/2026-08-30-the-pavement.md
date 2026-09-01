@@ -386,3 +386,37 @@ better than a bare literal either way.
 
 **Capture actions:** brief at
 `.superpowers/sdd/2026-08-30-the-pavement/task-absorb-furnishing-brief.md`.
+
+### Parked finding: `water_reading::the_width_clause_binds_when_the_step_shrinks`
+
+**Verified (from the failure output, not conjecture):** at `Vertex(2656)`, water
+full width `3.5692404593032806e-5` rad, longest 16-depth step
+`1.9635450708660834e-5` rad. Water is 1.82x wider than every step the test
+enumerates, so the width clause should refuse every step and the crossing should
+read `Impassable`. It reads `Fordable`. The test's own comment says
+`wide < shortest_shallow` "is sound only because `step_lengths()` covers EVERY
+step `verdict()` prices — see its doc for what happened when it did not", so this
+file has been bitten by a coverage mismatch before.
+
+**Verified (read the code):** `step_lengths()` at
+`windows/locale/tests/suite/water_reading.rs:960` is
+`self.steps.iter().map(|step| home.min(room_edge(step)))`. It covers exactly the
+steps the transect holds, so this is not a set-coverage gap.
+
+**HYPOTHESIS, NOT ESTABLISHED — a subagent must verify or refute it before
+acting:** it may be a VALUE mismatch rather than a coverage one. `room_edge`
+returns one characteristic edge length per room. With 8-connectivity a
+diagonal step's true crossing distance is `edge * sqrt(2)`, but
+`home.min(room_edge(step))` returns the plain orthogonal edge for a diagonal
+step, understating it by ~1.41x. That would make `longest_deep` an
+underestimate.
+
+**Why the hypothesis is INSUFFICIENT as stated, and this is the part worth
+carrying:** 1.41 x 1.9635e-5 = 2.77e-5, still below the 3.569e-5 width. So the
+sqrt(2) factor alone does NOT flip the verdict, and anyone who stops at the
+tidy explanation will produce a fix that does not work. Either `verdict()`
+prices something `step_lengths()` does not model at all, or the width clause is
+short-circuited before it is reached. Read `verdict()` first.
+
+**Do not re-pin the literal.** This is a behavioural disagreement between two
+functions, not a moved constant.
