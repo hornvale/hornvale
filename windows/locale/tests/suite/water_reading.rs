@@ -989,16 +989,25 @@ impl Transect {
     /// with its own discharge and therefore its own `band_edges`, which is how
     /// every reading above names that same vertex at six different widths.
     ///
-    /// **The `sqrt(2)` diagonal hypothesis is REFUTED, and stating that is the
-    /// point of this paragraph.** The obvious reading of an 8-connected mesh is
-    /// that a diagonal step's true crossing distance is `edge · sqrt(2)` while
-    /// `min(home, step)` reports the plain edge. It is not the cause here:
-    /// `crossing_between` itself prices `room_edge(a).min(room_edge(b))` with no
-    /// diagonal factor, so this reporter already matches the gate exactly, and
-    /// 1.41 × 1.9635e-5 = 2.77e-5 is still under 3.5692e-5 — the factor cannot
-    /// flip this verdict even if it were applied. Whether the gate SHOULD charge
-    /// a diagonal 1.41 edges of water is a live design question about §8's
-    /// traversal unit; it is not this failure.
+    /// **The `sqrt(2)` diagonal hypothesis was REFUTED AS THE CAUSE OF THAT
+    /// FAILURE, and has since been RATIFIED AS THE RULE (decision 0515).** Read
+    /// the two apart, because this paragraph used to say only the first half.
+    /// The obvious reading of an 8-connected mesh is that a diagonal step's
+    /// true crossing distance is `edge · sqrt(2)` while `min(home, step)`
+    /// reports the plain edge. That was never the cause of the `Vertex(2656)`
+    /// failure above — 1.41 × 1.9635e-5 = 2.77e-5 is still under 3.5692e-5, so
+    /// the factor could not have flipped that verdict — and the open design
+    /// question the old wording left ("whether the gate SHOULD charge a
+    /// diagonal 1.41 edges of water") is now answered YES, uniformly, by
+    /// decision 0515: the movement clock has charged `√2` for a diagonal since
+    /// 0508 and the reach follows the same factor, because the reason a
+    /// diagonal costs more is the ground it covers.
+    ///
+    /// So the step length here is `room_edge(home).min(room_edge(step))` times
+    /// [`hornvale_locale::DIAGONAL_STEP_FACTOR`] on a corner-adjacent step —
+    /// the gate's own arithmetic, asked through the gate's own
+    /// [`hornvale_locale::is_diagonal_step`] rather than re-derived, which is
+    /// what keeps this reporter matching the gate by construction.
     ///
     /// Only **interpretable** readings are listed, because those are the only
     /// ones `wadeable` is applied to (`crossing_between`'s clause 3 filter). A
@@ -1012,7 +1021,12 @@ impl Transect {
         self.steps
             .iter()
             .map(|step| {
-                let step_len = home_edge.min(room_edge(step));
+                let step_len = home_edge.min(room_edge(step))
+                    * if hornvale_locale::is_diagonal_step(&self.home, step) {
+                        hornvale_locale::DIAGONAL_STEP_FACTOR
+                    } else {
+                        1.0
+                    };
                 let priced: Vec<hornvale_terrain::channel::BankReading> =
                     [home_reading, net.bank_reading(step.centroid())]
                         .into_iter()
@@ -1043,8 +1057,10 @@ impl Transect {
 /// not the transected reach's.
 #[derive(Debug)]
 struct StepPricing {
-    /// `room_edge(home).min(room_edge(step))` — the length the width clause
-    /// compares each width against.
+    /// The stride the width clause compares each width against:
+    /// `room_edge(home).min(room_edge(step))`, times
+    /// [`hornvale_locale::DIAGONAL_STEP_FACTOR`] when the step is
+    /// corner-adjacent (decision 0515).
     step: f64,
     /// The full widths (`2 · band_edges[0]`) of the reaches the gate would
     /// price this step against: the interpretable readings among the two rooms.

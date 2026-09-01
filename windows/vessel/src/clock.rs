@@ -240,19 +240,6 @@ pub fn climb_factor(from_elev_m: f64, to_elev_m: f64) -> f64 {
     (1.0 + climb / CLIMB_SCALE_M).clamp(1.0, MAX_CLIMB_FACTOR)
 }
 
-/// How many of a room's [`Facet::neighbors`] are EDGE-adjacent: the pinned
-/// prefix `[..4]`.
-///
-/// The kernel's [`Facet::neighbor_steps`] states the invariant this rests on —
-/// the first four steps are the four edge steps and everything from index 4 on
-/// shares only a single corner, and the step a cube corner drops is always a
-/// diagonal, so the prefix survives the short arity — and
-/// `the_first_four_neighbours_are_always_the_four_edge_neighbours` (in
-/// `kernel/tests/suite/cube_adjacency.rs`) pins it. Named here rather than
-/// spelled `4` at the one site that indexes, so the reliance is greppable.
-/// type-audit: bare-ok(count)
-const EDGE_ADJACENT_NEIGHBOURS: usize = 4;
-
 /// What a DIAGONAL walk-band step costs relative to an edge step: `√2`,
 /// because it covers `√2` times the ground.
 ///
@@ -284,8 +271,15 @@ const EDGE_ADJACENT_NEIGHBOURS: usize = 4;
 /// `step_length_rad` divided by `ns.len()` and so returned ~1.21 edge steps
 /// once the mesh went 8-connected, a number that looks like one step and is
 /// not.
+/// **The DEFINITION moved down a crate in fix round 1; this is an alias**
+/// (decision 0515). [`hornvale_locale::DIAGONAL_STEP_FACTOR`] is the one
+/// definition, because the CROSSING reach needs the same factor the clock
+/// charges — `LocaleContext::crossing_between` judges a diagonal step's water
+/// against a `√2` longer stride — and `windows/locale` may not depend on
+/// `windows/vessel`. Everything above is still this constant's justification;
+/// only its storage moved, and every caller's path is unchanged.
 /// type-audit: bare-ok(ratio)
-pub const DIAGONAL_STEP_FACTOR: f64 = std::f64::consts::SQRT_2;
+pub const DIAGONAL_STEP_FACTOR: f64 = hornvale_locale::DIAGONAL_STEP_FACTOR;
 
 /// The geometry multiplier for one walk-band step: [`DIAGONAL_STEP_FACTOR`]
 /// when `to` is a diagonal (corner-adjacent) neighbour of `from`, and `1.0`
@@ -305,22 +299,33 @@ pub const DIAGONAL_STEP_FACTOR: f64 = std::f64::consts::SQRT_2;
 /// Geometry only — no world, no ledger, no terrain. [`Facet::neighbors`] is
 /// integer lattice arithmetic, so this stays inside the module's own rule that
 /// `clock` is testable without building a world.
+///
+/// **WHICH steps are diagonal is asked of `hornvale_locale` rather than
+/// answered here** (decision 0515). This function used to index
+/// `neighbors()`'s pinned edge-first prefix against a local
+/// `EDGE_ADJACENT_NEIGHBOURS = 4`, and `LocaleContext::crossing_between` now
+/// needs the same predicate for the water REACH. Two copies of "is this step a
+/// diagonal" that could drift apart would let the clock charge for a diagonal
+/// the reach priced as orthogonal, so there is one:
+/// [`hornvale_locale::is_diagonal_step`], which derives the prefix length from
+/// [`Facet::neighbor_steps`] instead of restating it.
 /// type-audit: bare-ok(ratio: return)
 pub fn step_factor(from: &Facet, to: &Facet) -> f64 {
-    match from.neighbors().iter().position(|n| n == to) {
-        Some(i) if i >= EDGE_ADJACENT_NEIGHBOURS => DIAGONAL_STEP_FACTOR,
-        Some(_) => 1.0,
-        None => {
-            debug_assert!(
-                from == to,
-                "step_factor asked to price a step between rooms that do not \
-                 touch: {from:?} -> {to:?}. Every caller reads the destination \
-                 out of the `MoveTo` it is charging, so this means a caller \
-                 has begun charging a move the mesh does not admit — the \
-                 orthogonal fallback below would under-charge it silently."
-            );
-            1.0
-        }
+    if !from.neighbors().iter().any(|n| n == to) {
+        debug_assert!(
+            from == to,
+            "step_factor asked to price a step between rooms that do not \
+             touch: {from:?} -> {to:?}. Every caller reads the destination \
+             out of the `MoveTo` it is charging, so this means a caller \
+             has begun charging a move the mesh does not admit — the \
+             orthogonal fallback below would under-charge it silently."
+        );
+        return 1.0;
+    }
+    if hornvale_locale::is_diagonal_step(from, to) {
+        DIAGONAL_STEP_FACTOR
+    } else {
+        1.0
     }
 }
 

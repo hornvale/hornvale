@@ -499,6 +499,55 @@ pub fn walk_depth(ctx: &LocaleContext) -> u32 {
     ctx.globe_level() + 7
 }
 
+/// The geometry factor a **diagonal** walk-band step carries: one corner-
+/// adjacent step spans `√2` times the ground an edge-adjacent one does, so it
+/// costs `√2` more time and reaches `√2` further.
+///
+/// **This is the one definition** (decision 0515). `windows/vessel`'s
+/// `clock::DIAGONAL_STEP_FACTOR` — decision 0508's, and the name every
+/// movement-cost caller already uses — is now an alias of this constant rather
+/// than a second copy of `SQRT_2`. It lives here because `windows/locale` is
+/// the lower of the two crates that need it (`hornvale-vessel` depends on
+/// `hornvale-locale`, never the reverse) and a window may not reach sideways.
+///
+/// It prices two different things with one number on purpose: the movement
+/// clock's DURATION and [`LocaleContext::crossing_between`]'s REACH. The
+/// justification is the same in both directions — the distance covered — and
+/// splitting it into two tunable constants would be two numbers nothing
+/// measures instead of one.
+/// type-audit: bare-ok(ratio)
+pub const DIAGONAL_STEP_FACTOR: f64 = std::f64::consts::SQRT_2;
+
+/// Whether `b` is a **corner**-adjacent neighbour of `a` rather than an
+/// edge-adjacent one — the question [`DIAGONAL_STEP_FACTOR`] answers for, and
+/// the one definition of it (decision 0515). `windows/vessel`'s
+/// `clock::step_factor` and this crate's
+/// [`LocaleContext::crossing_between`] both ask it, so that the clock and the
+/// reach can never disagree about which steps are diagonal.
+///
+/// Derived from [`Facet::neighbors`]'s pinned edge-first prefix, and the
+/// prefix LENGTH is derived too rather than written as a `4`: an edge step is
+/// exactly a [`Facet::neighbor_steps`] entry with one zero component, so
+/// counting them asks the kernel's own step table how long its edge prefix is.
+/// That matters because `neighbors()` DROPS one step at a cube-corner room and
+/// the dropped step is always a diagonal, so index-past-the-prefix survives
+/// the drop while `neighbor_steps()[i]` would not.
+///
+/// A pair that is not adjacent at all — which no caller passes, since a
+/// crossing is a step — is **not** a diagonal, so the stride stays orthogonal
+/// and the function is total. Symmetric: adjacency on this lattice is.
+/// type-audit: bare-ok(flag: return)
+pub fn is_diagonal_step(a: &Facet, b: &Facet) -> bool {
+    let edge_prefix = Facet::neighbor_steps()
+        .iter()
+        .filter(|(dx, dy)| *dx == 0 || *dy == 0)
+        .count();
+    a.neighbors()
+        .iter()
+        .position(|n| n == b)
+        .is_some_and(|i| i >= edge_prefix)
+}
+
 /// The shortest of a room's four edges, radians — the smallest step the mesh
 /// offers out of it, and the unit "narrower than one step" is measured in.
 ///
@@ -1111,8 +1160,8 @@ impl LocaleContext {
     /// their own bank edge — **every** one must satisfy both:
     ///
     /// - its channel's **full** width, twice `channel_bands[0]` (which is the
-    ///   *half*-width), is less than one room edge at the pair's depth
-    ///   ([`room_edge`], the smaller of the two rooms'); and
+    ///   *half*-width), is less than **the stride the pair actually offers**;
+    ///   and
     /// - that reach's discharge is below
     ///   [`hornvale_terrain::carve::WATERFALL_MIN_DRAINAGE`].
     ///
@@ -1121,11 +1170,41 @@ impl LocaleContext {
     /// crossing means to the thing doing the crossing — and it is expressible
     /// without a length scale, which no quantity in this project has.
     ///
+    /// # THE STRIDE CARRIES THE DIAGONAL FACTOR (decision 0515)
+    ///
+    /// The stride is [`room_edge`] — the smaller of the two rooms' — times
+    /// [`DIAGONAL_STEP_FACTOR`] when `a` and `b` are corner-adjacent rather
+    /// than edge-adjacent. Until fix round 1 it was the bare room edge, so a
+    /// diagonal step was judged against the same channel width an orthogonal
+    /// one was even though it spans `√2` more ground. The movement clock has
+    /// priced that factor since decision 0508; **the reach must use the same
+    /// one, because the reason a diagonal costs `√2` more is that it covers
+    /// `√2` more distance**, and a rule that charges for the distance while
+    /// refusing to credit the reach is charging twice.
+    ///
+    /// The direction is **monotone**: the stride only ever grows, so a verdict
+    /// can move `Impassable` -> `Fordable` and never the reverse. Nothing
+    /// crossable before this change is uncrossable after it.
+    ///
+    /// **`√2` is a consistent simplification, not exact geometry, and the
+    /// record says so.** Channel width is measured PERPENDICULAR to the
+    /// channel, and the channel's bearing is arbitrary relative to the
+    /// lattice — so a diagonal step is not reliably more oblique to a stream
+    /// than an orthogonal one is. The exact model would divide the stride by
+    /// the sine of the angle between the step and the channel, which needs a
+    /// channel bearing this clause does not consult and
+    /// [`hornvale_terrain::channel::BankReading`] does not carry. Decision
+    /// 0515 accepts the uniform factor for the same reason 0508 did: one
+    /// number, applied everywhere a diagonal is priced, is a simplification a
+    /// reader can hold, and a per-crossing trigonometric correction is a
+    /// tuning surface with no measurement behind it.
+    ///
     /// Both the width and the discharge come from
     /// [`hornvale_terrain::channel::BankReading`], so they describe the same
     /// reach the distance was measured to and the same vertex the bands came
     /// from. Symmetric in its arguments: swapping `a` and `b` swaps a pair of
-    /// symmetric tests and nothing else.
+    /// symmetric tests and nothing else — [`is_diagonal_step`] is symmetric
+    /// too, because adjacency on this lattice is.
     pub fn crossing_between(&self, a: &Facet, b: &Facet) -> Crossing {
         let net = self.terrain.channels();
         let (Some(ra), Some(rb)) = (
@@ -1154,7 +1233,12 @@ impl LocaleContext {
         if !interpretable(&ra) && !interpretable(&rb) {
             return Crossing::NotACrossing;
         }
-        let step = room_edge(a).min(room_edge(b));
+        let step = room_edge(a).min(room_edge(b))
+            * if is_diagonal_step(a, b) {
+                DIAGONAL_STEP_FACTOR
+            } else {
+                1.0
+            };
         let wadeable = |r: &hornvale_terrain::channel::BankReading| {
             2.0 * r.band_edges[0] < step
                 && self.terrain.drainage_at(r.vertex)
@@ -1685,40 +1769,224 @@ fn bearing_gap_deg(a: f64, b: f64) -> f64 {
 /// author.
 ///
 /// So the rule is a **one-to-one assignment** between the eight compass words
-/// and the neighbours actually present, built greedily from the smallest
-/// angular error up: take the closest (word, neighbour) pair whose word and
-/// neighbour are both still free, and repeat. The candidate graph is complete —
-/// every neighbour has an error to every word — so a greedy maximal matching
-/// always reaches size `neighbors().len()`. That is the whole guarantee, and it
-/// is structural rather than measured:
+/// and the neighbours actually present. The candidate graph is complete —
+/// every neighbour has an angular error to every word — so an assignment of
+/// size `neighbors().len()` always exists, whatever the objective. That is the
+/// structural half of the guarantee, and it is unchanged:
 ///
 /// > **eight neighbours leaves no word unmatched; seven leaves exactly one.**
 ///
-/// Ties break on `total_cmp` then on the two integer keys (word index, then
-/// neighbour index), so an exact tie in angle resolves identically everywhere.
-/// The bearing is [`hornvale_kernel::quantize`]d before use, which is where the
-/// deleted bucket rule's own cross-platform stability came from.
+/// # THE OBJECTIVE IS THE OTHER HALF, AND ITS FIRST VERSION HAD NONE
+///
+/// Task 11 shipped a **greedy** matching: sort all `8 x neighbours` pairs by
+/// error and take each pair whose word and neighbour are both still free.
+/// Greedy guarantees cardinality and bounds *nothing*. It spends the good
+/// pairs first and hands the last word whatever neighbour is left, so where
+/// the room's local rose is rotated against true north — the normal condition
+/// on a cube-sphere, not an edge case — the residue is arbitrary. Measured at
+/// seed-42 room `FacetId(2169509120)` (face 0, face-lattice `(910, 0)`, walk
+/// depth 13), reproduced through the shipped CLI: `go E` walked **west and
+/// north**, 156.1 degrees off the word it names, and `look` agreed with it —
+/// the prose and the movement told the same falsehood. Over a uniform sample
+/// of 12,696 walk-depth rooms, 5.96% of rooms carried a word more than 45
+/// degrees off and 0.82% more than 90. That is decision 0141's
+/// "one-turn observable falsehood" exactly, and the bucket rule greedy
+/// replaced was at most 22.5 degrees wrong *by construction*.
+///
+/// So the objective is now stated, and it is **lexicographic min-max**:
+/// among all assignments, take the one whose errors, sorted DESCENDING,
+/// compare smallest. That minimises the worst word's error first, then the
+/// second worst, and so on — the right objective for a promise about the
+/// worst case, which is what a compass word is. At the room above it achieves
+/// 25.6 degrees where greedy achieved 156.1.
+///
+/// # HOW, and why exactly this algorithm
+///
+/// A subset dynamic program over the eight words: `best[mask]` is the best key
+/// for having placed the first `mask.count_ones()` neighbours into exactly the
+/// words in `mask`. It is exact because the key is monotone under extension —
+/// inserting the same error into two descending-sorted multisets preserves
+/// their lexicographic order — so an optimal whole assignment has an optimal
+/// prefix for its own mask, which is the exchange argument a DP needs.
+///
+/// 256 masks times 8 words is 2,048 transitions of a bounded 8-element insert
+/// and compare. **Measured 11.6 us per call** (release, 12,696 walk-depth
+/// rooms, this campaign's Mac) against **5.9 us** for the greedy rule it
+/// replaces — the same measurement, same rooms, and both figures include the
+/// eight `bearing_to` calls neither rule avoids. [`exits_of`] calls it once
+/// per `look`, so +5.7 us is the whole cost of the fix.
+///
+/// Two alternatives were measured rather than argued about. **Min-SUM** over
+/// the same DP costs 7.0 us and reaches a worst error of 35.82 degrees against
+/// this rule's 34.58 — cheaper, and worse at the one thing being bounded, so
+/// the objective is the min-max one. **Hungarian** is asymptotically cheaper
+/// than either, but it solves min-sum, so reaching min-max through it needs a
+/// threshold search wrapped around a matching; at `n = 8` this DP is exact for
+/// the objective actually wanted in a third of the code.
+///
+/// # DETERMINISM, and the tie-break
+///
+/// No map, no set, no iteration-order dependence: a fixed-size array indexed
+/// by word mask, walked in increasing numeric order. Every float comparison is
+/// `total_cmp`. Two neighbours CAN be exactly equidistant in bearing, so the
+/// key carries an explicit second component: **among assignments whose sorted
+/// error vectors are equal, the one whose word indices, read in
+/// `neighbors()` order, are lexicographically smallest wins.** That resolves
+/// every tie by index rather than by visitation order.
+///
+/// The bearing is **not** quantized. It was, until fix round 1: the stated
+/// purpose was "where the deleted bucket rule's own cross-platform stability
+/// came from", which decision 0041 had already answered — every
+/// transcendental in [`Facet::bearing_to`] routes through the pure-Rust
+/// `libm`, so the compute path is bit-identical without it. Quantization is an
+/// emit-boundary instrument (decision 0033) and this is a compute path that
+/// decides where the player moves; rounding to 8 significant digits here could
+/// only ever make two distinct gaps compare equal and hand the pair to the
+/// tie-break. Verified to change no assignment at any room sampled before it
+/// was removed.
+///
+/// # WHAT BOUNDS THE ERROR NOW
+///
+/// `the_worst_compass_word_is_within_the_measured_ceiling` — the assertion
+/// whose absence let greedy ship. Read its doc for the measured numbers, the
+/// two populations they come from, and what it is blind to.
 pub fn heading_rose(from: &Facet) -> Vec<Option<Facet>> {
     let words = Compass::all();
     let ns = from.neighbors();
-    let mut pairs: Vec<(f64, usize, usize)> = Vec::with_capacity(ns.len() * words.len());
-    for (i, n) in ns.iter().enumerate() {
-        let b = quantize(from.bearing_to(n));
+    // `cost[i][w]` — the bearing error, in degrees, of naming neighbour `i`
+    // with word `w`. Square and fixed-size: `ns.len()` is 8 in the interior
+    // and 7 at a cube corner, never more, and the unused rows are simply not
+    // visited.
+    let mut cost = [[0.0f64; ROSE_WORDS]; ROSE_WORDS];
+    debug_assert!(
+        ns.len() <= ROSE_WORDS,
+        "heading_rose was handed {} neighbours; the cube-sphere lattice offers \
+         at most {ROSE_WORDS}, so the cost matrix would silently truncate",
+        ns.len()
+    );
+    for (i, n) in ns.iter().enumerate().take(ROSE_WORDS) {
+        let b = from.bearing_to(n);
         for (w, &c) in words.iter().enumerate() {
-            pairs.push((bearing_gap_deg(b, c.bearing_deg()), w, i));
+            cost[i][w] = bearing_gap_deg(b, c.bearing_deg());
         }
     }
-    pairs.sort_by(|a, b| a.0.total_cmp(&b.0).then(a.1.cmp(&b.1)).then(a.2.cmp(&b.2)));
+    let placed = ns.len().min(ROSE_WORDS);
+    let assignment = rose_assignment(&cost, placed);
     let mut out: Vec<Option<Facet>> = vec![None; words.len()];
-    let mut neighbour_taken = vec![false; ns.len()];
-    for (_, w, i) in pairs {
-        if out[w].is_some() || neighbour_taken[i] {
-            continue;
-        }
-        neighbour_taken[i] = true;
-        out[w] = Some(ns[i].clone());
+    for (i, &w) in assignment.iter().enumerate().take(placed) {
+        out[w as usize] = Some(ns[i].clone());
     }
     out
+}
+
+/// The number of compass words, hence the width of [`heading_rose`]'s
+/// assignment problem and the bound on a room's lateral arity.
+const ROSE_WORDS: usize = 8;
+
+/// One partial assignment, and the key [`rose_assignment`] minimises.
+///
+/// `errs[..len]` holds the errors placed so far, sorted **descending**;
+/// `words[..len]` holds the word chosen for each neighbour, in `neighbors()`
+/// order. Comparison is lexicographic on the first, then on the second — see
+/// [`heading_rose`]'s determinism note for why the second component exists.
+#[derive(Clone, Copy)]
+struct RoseKey {
+    /// The errors placed so far, sorted descending; only `..len` is meaningful.
+    errs: [f64; ROSE_WORDS],
+    /// The word index chosen for each placed neighbour, in `neighbors()` order.
+    words: [u8; ROSE_WORDS],
+    /// How many neighbours this key has placed.
+    len: usize,
+}
+
+impl RoseKey {
+    /// The empty assignment.
+    const EMPTY: Self = Self {
+        errs: [0.0; ROSE_WORDS],
+        words: [0; ROSE_WORDS],
+        len: 0,
+    };
+
+    /// This key with neighbour `len` placed at `word` for `err` degrees of
+    /// error — the error inserted so `errs[..len + 1]` stays descending.
+    fn extend(&self, err: f64, word: u8) -> Self {
+        let mut errs = self.errs;
+        let mut k = self.len;
+        while k > 0 && errs[k - 1].total_cmp(&err) == core::cmp::Ordering::Less {
+            errs[k] = errs[k - 1];
+            k -= 1;
+        }
+        errs[k] = err;
+        let mut words = self.words;
+        words[self.len] = word;
+        Self {
+            errs,
+            words,
+            len: self.len + 1,
+        }
+    }
+
+    /// Lexicographic order on the descending error vector, then on the word
+    /// indices. Only ever called on two keys of equal `len`.
+    fn rank(&self, other: &Self) -> core::cmp::Ordering {
+        for k in 0..self.len.min(other.len) {
+            let o = self.errs[k].total_cmp(&other.errs[k]);
+            if o != core::cmp::Ordering::Equal {
+                return o;
+            }
+        }
+        self.words[..self.len].cmp(&other.words[..other.len])
+    }
+}
+
+/// The lexicographic min-max assignment of `placed` neighbours to distinct
+/// compass words, as `word_of[i]` for neighbour `i`.
+///
+/// Exact, by the subset DP [`heading_rose`] documents. `placed` is `0..=8`; a
+/// `placed` of 0 yields a key nothing reads.
+fn rose_assignment(cost: &[[f64; ROSE_WORDS]; ROSE_WORDS], placed: usize) -> [u8; ROSE_WORDS] {
+    let mut best: [Option<RoseKey>; 1 << ROSE_WORDS] = [None; 1 << ROSE_WORDS];
+    best[0] = Some(RoseKey::EMPTY);
+    // Indexed by mask rather than iterated: the body READS `best[mask]` and
+    // WRITES `best[mask | bit]`, which no single iterator can express. Masks
+    // rise monotonically and `mask | bit > mask`, so a written slot is never
+    // read again as a source — that ordering is what makes the DP a single
+    // forward pass instead of a relaxation loop.
+    #[allow(clippy::needless_range_loop)]
+    for mask in 0..(1usize << ROSE_WORDS) {
+        let i = (mask as u32).count_ones() as usize;
+        if i >= placed {
+            continue;
+        }
+        let Some(cur) = best[mask] else { continue };
+        for (w, &err) in cost[i].iter().enumerate() {
+            if mask & (1 << w) != 0 {
+                continue;
+            }
+            let cand = cur.extend(err, w as u8);
+            let next = mask | (1 << w);
+            let better = match &best[next] {
+                None => true,
+                Some(held) => cand.rank(held) == core::cmp::Ordering::Less,
+            };
+            if better {
+                best[next] = Some(cand);
+            }
+        }
+    }
+    let mut winner = RoseKey::EMPTY;
+    let mut found = false;
+    for (mask, slot) in best.iter().enumerate() {
+        if (mask as u32).count_ones() as usize != placed {
+            continue;
+        }
+        let Some(key) = slot else { continue };
+        if !found || key.rank(&winner) == core::cmp::Ordering::Less {
+            winner = *key;
+            found = true;
+        }
+    }
+    winner.words
 }
 
 /// A room's exits: one lateral edge per compass word [`heading_rose`] assigns,
@@ -2772,6 +3040,370 @@ mod tests {
             rooms > 50,
             "too few rooms swept to trust this ({rooms}); the fixture stopped \
              producing neighbourhoods"
+        );
+    }
+
+    /// The ceiling, in degrees, on how far ANY compass word may point from the
+    /// bearing of the room it names, anywhere in the walk band.
+    ///
+    /// **Measured 34.577273**, at face-3 ring-0 room `FacetId(2236617796)`,
+    /// on the `E` word — over 215,400 rooms across the two populations
+    /// [`the_worst_compass_word_is_within_the_measured_ceiling`] sweeps. The
+    /// pin is the measured value rounded up in its fourth decimal, not a
+    /// margin: the sweep is fixed and the mesh is integer arithmetic through
+    /// pure-Rust `libm`, so the number is exactly reproducible and there is
+    /// nothing for slack to absorb.
+    ///
+    /// The rule this replaced measured **156.5155** over the same rooms, with
+    /// 17.31% of the cube-edge rings past 90 degrees.
+    /// type-audit: bare-ok(angle)
+    const ROSE_WORST_DEG: f64 = 34.578;
+
+    /// The floor under [`ROSE_WORST_DEG`] — the arm a `<=` ceiling cannot
+    /// give. An improvement that dropped the worst word below this is good
+    /// news that must be banked into the ceiling rather than absorbed in
+    /// silence. Set one full degree under the measured value, so an ordinary
+    /// change of sample does not redden it and a change of KIND does.
+    /// type-audit: bare-ok(angle)
+    const ROSE_WORST_FLOOR_DEG: f64 = 33.5;
+
+    /// The exact count of sampled (room, word) pairs whose step does not
+    /// invert — `go W` then `go E` does not return you.
+    ///
+    /// **Measured 190 of 12,282 pairs (1.547%).** Two-sided, like
+    /// [`ROSE_WORST_DEG`], and an exact count rather than a rate because the
+    /// sample is fixed and deterministic.
+    ///
+    /// **This number went UP with the fix, and that is the trade, stated.**
+    /// Greedy measured 82 of the same 12,282 (0.668%). A per-room assignment
+    /// is computed without consulting the neighbour's own assignment, and an
+    /// optimal rule redistributes error further from "nearest first", so the
+    /// two rooms disagree more often. What they disagree ABOUT is small: 184
+    /// of the 190 are off by exactly ONE word (the neighbour calls you `Nw`
+    /// where you called it `W`), and 148 sit at a cube seam. Against that,
+    /// greedy's 0.756% of uniformly-sampled rooms carrying a word more than
+    /// 90 degrees off is now zero. A step that lands one word away is a step
+    /// in about the right direction; a word 156 degrees off is not.
+    ///
+    /// It is a property of the MESH plus any per-room rule, not of this
+    /// objective: min-sum over the same DP measured the identical 190.
+    /// type-audit: bare-ok(count)
+    const ROSE_NON_INVERTIBLE_PAIRS: usize = 190;
+
+    /// Every room at `WALK` on `face` whose lattice coordinates this sweep
+    /// visits, built by the inverse of [`Facet::face_lattice`]'s decode.
+    fn lattice_room(face: u8, x: i64, y: i64, depth: u32) -> Facet {
+        Facet {
+            face,
+            path: (0..depth)
+                .rev()
+                .map(|i| ((((x >> i) & 1) as u8) << 1) | (((y >> i) & 1) as u8))
+                .collect(),
+        }
+    }
+
+    /// The worst angular error [`heading_rose`] commits at `room`: over every
+    /// word it assigned, the gap between the word's canonical bearing and the
+    /// true bearing to the room it was given.
+    fn worst_rose_error_deg(room: &Facet) -> (f64, usize) {
+        let words = Compass::all();
+        let mut worst = 0.0f64;
+        let mut worst_word = 0usize;
+        for (w, n) in heading_rose(room).iter().enumerate() {
+            let Some(n) = n else { continue };
+            let e = bearing_gap_deg(room.bearing_to(n), words[w].bearing_deg());
+            if e > worst {
+                worst = e;
+                worst_word = w;
+            }
+        }
+        (worst, worst_word)
+    }
+
+    /// **THE ASSERTION WHOSE ABSENCE LET `go E` WALK WEST.**
+    ///
+    /// Nothing in this workspace looked at [`heading_rose`]'s angular error
+    /// before fix round 1 of The Pavement. The test above
+    /// ([`every_room_labels_each_neighbour_with_its_own_compass_word`]) asserts
+    /// cardinality and distinctness, and its own doc explicitly sets the
+    /// accuracy property aside as "not the one that broke" — true of the
+    /// 45-degree bucket rule it was written against, and precisely false of
+    /// the greedy matching that replaced it. The greedy rule stranded a word on
+    /// whatever neighbour was left: at seed-42 room `FacetId(2169509120)`,
+    /// `go E` walked 156.1 degrees off, west and north, and `look` said `E` was
+    /// open. A guarantee nothing measures is a guarantee that has not been made.
+    ///
+    /// # WHAT IT MEASURES, and why two populations rather than one
+    ///
+    /// The error is not uniform over the globe, so a uniform sample alone
+    /// understates it. Two populations are swept and reported separately:
+    ///
+    /// 1. **A uniform grid** — 46 x 46 lattice positions per face, all six
+    ///    faces, 12,696 rooms. This is the population a player mostly stands
+    ///    in.
+    /// 2. **The cube-edge rings, enumerated exactly** — every room in ring 0
+    ///    (the outermost lattice ring, where a room's neighbourhood spans a
+    ///    cube seam) plus rings 1 and 2 on a stride. Under greedy this
+    ///    population carried 17.78% of its rooms past 90 degrees while ring 1
+    ///    and inward carried none, so it is the one that decides the ceiling
+    ///    and a sweep that misses it measures the wrong thing.
+    ///
+    /// # THE MEASURED NUMBERS (this tree, fix round 1)
+    ///
+    /// Both rules, over identical populations, so the improvement is a
+    /// measurement rather than a claim:
+    ///
+    /// ```text
+    ///                        worst      >45 deg          >90 deg
+    ///   greedy   uniform   155.9378    760  (5.986%)     96 (0.756%)
+    ///   greedy   rings     156.5155  52560 (25.929%)  35088 (17.310%)
+    ///   optimal  uniform    34.3468      0  (0.000%)      0 (0.000%)
+    ///   optimal  rings      34.5773      0  (0.000%)      0 (0.000%)
+    ///
+    ///   invertibility (12,282 pairs)   greedy 82 (0.668%)
+    ///                                 optimal 190 (1.547%)
+    /// ```
+    ///
+    /// The uniform row reproduces the review's independent figures (5.96% and
+    /// 0.82% past 45 and 90 degrees, worst 156.1) closely enough to confirm
+    /// the two instruments are looking at the same thing.
+    ///
+    /// # WHY THE CEILING IS TWO-SIDED
+    ///
+    /// A `<=` ceiling nothing can fall through quietly is a different
+    /// instrument from one nothing can fall through at all: the upper arm
+    /// catches a regression, and the lower arm catches an IMPROVEMENT nobody
+    /// banked, which is how a ceiling drifts into meaninglessness. The idiom is
+    /// `GROWN_RELAXATIONS` in `windows/vessel/src/lattice/anchor_cells.rs`. The  // lexicon: a FILE PATH, and the cells it names are chamber floor squares (areas), not mesh vertices
+    /// floor here is a band rather than an equality, because the worst case is
+    /// a float over ~200k rooms and pinning it to the last bit would redden on
+    /// any change of sample rather than any change of quality.
+    ///
+    /// # WHAT THIS CHECK IS BLIND TO (decision 0491)
+    ///
+    /// 1. **It is a sample, not a proof.** The uniform grid touches 12,696 of
+    ///    the band's 402,653,184 rooms and the ring sweep is exact only for
+    ///    ring 0. A pathology confined to rooms neither population lands on is
+    ///    invisible here. Ring 0 is enumerated exactly *because* it was the
+    ///    offender; a future defect with a different geography would need its
+    ///    own population added.
+    /// 2. **It bounds the WORST word, not the DISTRIBUTION.** A change that
+    ///    left the worst case alone and doubled the number of rooms carrying a
+    ///    40-degree word would pass. The `over_45` / `over_90` counts are
+    ///    printed and asserted as ceilings for exactly this reason, but they
+    ///    are coarse.
+    /// 3. **It says nothing about which word is wrong.** A rose that named
+    ///    every neighbour 20 degrees off would pass as readily as one that is
+    ///    exact seven times and 20 degrees off once, and the second is the
+    ///    better rose.
+    /// 4. **Invertibility is bounded, not eliminated, and the residue is the
+    ///    mesh's rather than the rule's.** See the assertion's own comment.
+    /// 5. **It runs at one depth.** `WALK` is checked against the live walk
+    ///    depth by `cli/tests/suite/walk_depth_agreement.rs`'s
+    ///    `every_walk_constant_tracks_the_walk_band`, so it cannot go stale —
+    ///    but a coarser band's error is not measured here at all.
+    ///
+    /// claim: rate(forall-room-sampled, worst <= ROSE_WORST_DEG, measured
+    /// ceiling) — two-sided, over two populations, with a non-vacuity guard
+    #[test]
+    fn the_worst_compass_word_is_within_the_measured_ceiling() {
+        // The walk band's depth. Named `WALK` so that
+        // `every_walk_constant_tracks_the_walk_band` pins it to the live
+        // `walk_depth` without this file having to be rostered anywhere.
+        const WALK: u32 = 13;
+        /// Lattice positions per side of the uniform grid, per face.
+        const GRID: i64 = 46;
+        let scale: i64 = 1 << WALK;
+
+        struct Tally {
+            rooms: usize,
+            worst: f64,
+            worst_at: Option<(Facet, usize)>,
+            over_45: usize,
+            over_90: usize,
+            over_135: usize,
+        }
+        impl Tally {
+            fn new() -> Self {
+                Self {
+                    rooms: 0,
+                    worst: 0.0,
+                    worst_at: None,
+                    over_45: 0,
+                    over_90: 0,
+                    over_135: 0,
+                }
+            }
+            fn add(&mut self, room: &Facet) {
+                let (e, w) = worst_rose_error_deg(room);
+                self.rooms += 1;
+                if e > 45.0 {
+                    self.over_45 += 1;
+                }
+                if e > 90.0 {
+                    self.over_90 += 1;
+                }
+                if e > 135.0 {
+                    self.over_135 += 1;
+                }
+                if e > self.worst {
+                    self.worst = e;
+                    self.worst_at = Some((room.clone(), w));
+                }
+            }
+            fn line(&self, name: &str) -> String {
+                format!(
+                    "{name}: {} rooms, worst {:.4} deg at {:?} ({:?}), >45 {} ({:.3}%), \
+                     >90 {}, >135 {}",
+                    self.rooms,
+                    self.worst,
+                    self.worst_at.as_ref().map(|(r, _)| r.pack().map(|p| p.0)),
+                    self.worst_at
+                        .as_ref()
+                        .map(|(_, w)| Compass::all()[*w])
+                        .unwrap_or(Compass::N),
+                    self.over_45,
+                    self.over_45 as f64 * 100.0 / self.rooms.max(1) as f64,
+                    self.over_90,
+                    self.over_135,
+                )
+            }
+        }
+
+        // POPULATION 1 — the uniform grid.
+        let mut uniform = Tally::new();
+        for face in 0..6u8 {
+            for i in 0..GRID {
+                for j in 0..GRID {
+                    let room = lattice_room(face, i * scale / GRID, j * scale / GRID, WALK);
+                    uniform.add(&room);
+                }
+            }
+        }
+
+        // POPULATION 2 — the cube-edge rings. Ring 0 exactly; rings 1 and 2 on
+        // a stride, because they were clean under greedy and are here to show
+        // that the geography has not moved inward rather than to bound it.
+        let mut rings = Tally::new();
+        let mut ring0_rooms = 0usize;
+        for face in 0..6u8 {
+            for ring in 0..3i64 {
+                let lo = ring;
+                let hi = scale - 1 - ring;
+                let stride = if ring == 0 { 1 } else { 64 };
+                let mut edge = |x: i64, y: i64| {
+                    let room = lattice_room(face, x, y, WALK);
+                    rings.add(&room);
+                    if ring == 0 {
+                        ring0_rooms += 1;
+                    }
+                };
+                let mut t = lo;
+                while t <= hi {
+                    edge(t, lo);
+                    edge(t, hi);
+                    if t != lo && t != hi {
+                        edge(lo, t);
+                        edge(hi, t);
+                    }
+                    t += stride;
+                }
+            }
+        }
+
+        // INVERTIBILITY. `go W` then `go E` must return you. Measured over a
+        // coarser grid than the error sweep because each pair costs a second
+        // `heading_rose`.
+        let mut pairs = 0usize;
+        let mut non_invertible = 0usize;
+        let mut example: Option<(u64, usize)> = None;
+        for face in 0..6u8 {
+            for i in 0..16i64 {
+                for j in 0..16i64 {
+                    let room = lattice_room(face, i * scale / 16, j * scale / 16, WALK);
+                    let rose = heading_rose(&room);
+                    for (w, n) in rose.iter().enumerate() {
+                        let Some(n) = n else { continue };
+                        pairs += 1;
+                        let back = heading_rose(n);
+                        if back[(w + 4) % 8].as_ref() != Some(&room) {
+                            non_invertible += 1;
+                            if example.is_none() {
+                                example = Some((room.pack().map(|p| p.0).unwrap_or(0), w));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        let worst = uniform.worst.max(rings.worst);
+        let per_mille = non_invertible * 1000 / pairs.max(1);
+        println!("{}", uniform.line("uniform"));
+        println!("{}", rings.line("rings"));
+        println!("  ring 0 enumerated exactly: {ring0_rooms} rooms");
+        println!(
+            "invertibility: {non_invertible} of {pairs} pairs do not invert \
+             ({:.4}%, {per_mille} per mille), first {example:?}",
+            non_invertible as f64 * 100.0 / pairs.max(1) as f64
+        );
+        println!("WORST OVERALL: {worst:.6} deg");
+
+        // NON-VACUITY. Without these the sweep can silently stop visiting the
+        // population that decides the answer.
+        assert_eq!(
+            uniform.rooms,
+            6 * (GRID * GRID) as usize,
+            "the uniform grid did not visit every position it claims"
+        );
+        assert_eq!(
+            ring0_rooms,
+            6 * (4 * scale as usize - 4),
+            "ring 0 was not enumerated exactly, so the population that decides \
+             the ceiling is a sample"
+        );
+        assert!(
+            pairs > 3000,
+            "too few pairs to say anything about inversion"
+        );
+
+        assert!(
+            worst <= ROSE_WORST_DEG,
+            "a compass word points {worst:.4} degrees off the room it names, over the \
+             measured ceiling of {ROSE_WORST_DEG}. This is the defect fix round 1 \
+             closed: at 90 degrees or more the word names approximately the wrong \
+             half of the compass, and `look` will agree with it.\n  {}\n  {}",
+            uniform.line("uniform"),
+            rings.line("rings")
+        );
+        // The other direction, and it is the half a `<=` cannot see: an
+        // improvement nobody banks leaves a ceiling that stops meaning
+        // anything. Not an equality — the worst case is a float over ~200k
+        // rooms, so a band is the honest pin.
+        assert!(
+            worst >= ROSE_WORST_FLOOR_DEG,
+            "the worst compass word is only {worst:.4} degrees off, UNDER the floor of \
+             {ROSE_WORST_FLOOR_DEG} — the rule or the mesh improved, which is good news \
+             that must be banked: lower ROSE_WORST_DEG toward {worst:.4} and say in its \
+             doc what moved"
+        );
+        // INVERTIBILITY, two-sided for the same reason the angle is. The
+        // residue is the mesh's and not this rule's — a room assigns its rose
+        // without consulting its neighbour's, and min-sum over the same DP
+        // measures the identical count — so what this pins is that the residue
+        // has not GROWN, and that it is still the small kind (off by one word,
+        // mostly at a seam) rather than the reversing kind.
+        assert!(
+            non_invertible <= ROSE_NON_INVERTIBLE_PAIRS,
+            "{non_invertible} of {pairs} steps do not invert ({per_mille} per mille), \
+             over the measured count of {ROSE_NON_INVERTIBLE_PAIRS}. First: {example:?}"
+        );
+        assert!(
+            non_invertible >= ROSE_NON_INVERTIBLE_PAIRS,
+            "only {non_invertible} of {pairs} steps fail to invert, UNDER the measured \
+             {ROSE_NON_INVERTIBLE_PAIRS} — the rule or the mesh improved, which is good \
+             news that must be banked: lower ROSE_NON_INVERTIBLE_PAIRS to \
+             {non_invertible} and say in its doc what moved"
         );
     }
 
