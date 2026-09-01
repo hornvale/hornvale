@@ -337,3 +337,52 @@ with positive controls, H3a dissolved, H3b re-measured on an idle box, chronicle
 retrospective); four workspace failures (a census refresh needing
 `make sluice-census` on lefford, a 0016 ruling on a baseline whose subject no
 longer exists, and two live behavioural findings in water/wetness reading).
+
+## Post-absorption rulings
+
+### #15 [G5] — `furnishing_marks.rs`'s seed is re-founded, not re-pinned
+
+**Question:** The absorption's only two new failures are
+`furnishing_marks::{a_chamber_with_a_hearth_emits_a_furnishing_mark,
+an_unlit_hearth_is_not_emitted}`, both panicking at the same shared helper with
+"the hearth stopped existing in the hearthroom: You see no a hearth here."
+Is this a defect this campaign introduced, or a moved fixture?
+
+**Decision:** A moved fixture, and the fix re-founds the seed rather than
+swapping the literal 35 for 13.
+
+**Why (evidence, not inference):** Probed ten seeds through the live CLI
+(`possess --seed N --script`, `enter` / `enter further in` / `examine a
+hearth`). Nine show "a doorway and an alcove" and no hearth; **seed 13 shows
+"Stones set in a ring, and the ash inside them still …"**, so hearth placement
+works end to end and nothing in the mechanism broke. The gate is climate:
+`interior/pattern.rs`'s `the-fire` carries `needs_cold: true` while
+`the-alcove` carries `needs_cold: false`, which is exactly the observed
+signature — the alcove places, the fire within it does not. Seed 35 sat near
+the cold threshold and the walk band moving to `globe_level + 7` (decision
+0511) moved the sampled position off it.
+
+**This campaign already met this class once and wrote it down.** The doc on
+`anchor_cells.rs`'s `GROWN_RELAXATIONS`: *"the fixture addresses are built from
+`WALK` and the walk band went to `globe_level + 7`, so the same seeds draw
+different blobs."* That case was resolved by widening the corpus from 256 to
+1024 cases and CHECKING THE RATE HELD (2.0–2.3% → 1.95%) rather than relaxing
+the guard. Same discipline applies here.
+
+**Alternatives discarded:** `Seed(35)` → `Seed(13)` — rejected. It is a
+one-line green and it re-pins the exact kind of literal The Legend's own module
+doc predicted would break again: *"a future genesis change could move the
+hearth and break these tests for an unrelated reason."* The Legend
+de-hardcoded the COORDINATES and left the SEED; the seed is the half that
+actually carries the climate gate. Fixing it by moving the literal one seed
+over leaves the next geometry campaign the same failure.
+
+**Cost if wrong:** A bounded seed search costs world builds, and these tests
+already run 3.8–4.4 s. If the search is slow the honest fallback is the pinned
+seed WITH a loud premise assertion naming why it was chosen; that is strictly
+better than a bare literal either way.
+
+**Ideonomy:** 2 passes, 1 overturn (my first instinct was the literal swap).
+
+**Capture actions:** brief at
+`.superpowers/sdd/2026-08-30-the-pavement/task-absorb-furnishing-brief.md`.
