@@ -1347,12 +1347,68 @@ impl<'w> Session<'w> {
         // real field rather than a bare constant. `driven`'s actual value is
         // computed below, once the roster (settled + wild) is complete,
         // since `PossessTarget::Creature` (Task 4) may name a wild member.
-        let mut bodies = derive_npcs(world, ctx, &mut ledger, NPC_COUNT, village.id);
+        // The Tableau: a staged cast REPLACES the derived roster, and an
+        // EMPTY staged cast stages nobody. Falling back to `derive_npcs` here
+        // would make every tableau depend on whatever the seed happened to
+        // place — silently — which is the one thing the feature exists to
+        // prevent.
+        //
+        // Staged bodies go through `derive_wild_npcs` rather than a second
+        // derivation: a wild body is already a village-less body built from
+        // (species, position), which is exactly a staged one's shape. They
+        // share the settlement room's centroid, so `Facet::containing` lands
+        // them all in ONE room — the point of staging a cast.
+        let mut bodies = match opts.tableau.as_ref() {
+            Some(tableau) => {
+                let home = crate::liveness::settlement_room(world, ctx, village.id);
+                let at = home.centroid();
+                let cast: Vec<(String, [f64; 3])> = tableau
+                    .cast
+                    .iter()
+                    .map(|staged| (staged.species.clone(), at))
+                    .collect();
+                let staged = crate::liveness::derive_staged_npcs(world, ctx, &mut ledger, cast);
+                // Props, into the hands the tableau named. Out-of-range holders
+                // are a corpus error rather than a silent no-op: a tableau that
+                // says "the goblin holds a key" and stages no goblin has not
+                // described the scene its author meant.
+                for thing in &tableau.things {
+                    let holder = staged.get(thing.held_by).ok_or_else(|| {
+                        VesselError::Build(format!(
+                            "tableau stages a {} held by cast member {}, but the \
+                             cast has {} member(s)",
+                            thing.kind,
+                            thing.held_by,
+                            staged.len()
+                        ))
+                    })?;
+                    let id = crate::thing::promote(
+                        &mut ledger,
+                        &registry,
+                        &home,
+                        &thing.kind,
+                        0,
+                        opts.day,
+                    )
+                    .map_err(|e| VesselError::Build(format!("staging a {}: {e:?}", thing.kind)))?;
+                    ledger
+                        .commit(
+                            crate::thing::located_in_holder_fact(id, holder.entity, opts.day),
+                            &registry,
+                        )
+                        .map_err(|e| {
+                            VesselError::Build(format!("staging a {}: {e:?}", thing.kind))
+                        })?;
+                }
+                staged
+            }
+            None => derive_npcs(world, ctx, &mut ledger, NPC_COUNT, village.id),
+        };
         // The Wilding: append a few wild beast agents (a herd, a lair) so the
         // world's fauna walks alongside its peoples — and a herbivore beast
         // finally fears predator ground (The Quarry, live). Off only for the
         // settled-population narration unit tests that isolate the peopled path.
-        if opts.wild_agents {
+        if opts.wild_agents && opts.tableau.is_none() {
             // The wild-concentration roster, from the same shared `report`
             // (The Weir, Stage 1b) rather than a fourth independent fit.
             let concentrations = match (wc.as_ref(), report.as_ref()) {
@@ -1418,6 +1474,18 @@ impl<'w> Session<'w> {
         // (The Tackle): read here, once, exactly as `derive_npcs` reads a
         // creature's. Bound before the struct literal because `bodies` is
         // moved into it.
+        // A possession needs a body to possess. An empty staged cast is
+        // legal to WRITE — `Tableau::new()` stages nobody, which spec section
+        // 5 requires — but there is then no one to be, so this refuses rather
+        // than indexing an empty roster. The refusal names the cause; the
+        // panic it replaces said only "index out of bounds".
+        if bodies.is_empty() {
+            return Err(VesselError::Build(
+                "a tableau with an empty cast stages nobody, so there is no \
+                 body to possess: give the cast at least one creature"
+                    .to_string(),
+            ));
+        }
         let species_for_mass = bodies[driven].species.clone();
         let biosphere_for_mass = hornvale_species::biosphere_registry();
         let mut session = Session {
@@ -1708,7 +1776,11 @@ impl<'w> Session<'w> {
                         y: cell.1,
                         noun: entry.label.clone(),
                         kind: crate::purview::AGENT_MARK_KIND.to_string(),
-                        datum: crate::purview::creature_datum(&entry.label, species),
+                        datum: {
+                            let held: Vec<&str> =
+                                entry.carrying.iter().map(|c| c.noun.as_str()).collect();
+                            crate::purview::creature_datum(&entry.label, species, &held)
+                        },
                         salience: crate::purview::AGENT_SALIENCE,
                     })
                 });
@@ -3033,13 +3105,7 @@ impl<'w> Session<'w> {
     /// exactly one — `sensed.present`'s custody and the driven body's resolve
     /// through the same fold, differing only in whose hand they ask about.
     fn carried_by(&self, holder: EntityId) -> Vec<(EntityId, &'static str)> {
-        crate::thing::held_by(&self.ledger, holder, self.day)
-            .into_iter()
-            .filter_map(|thing| {
-                let noun = crate::chamber_prose::noun_for_label(self.ledger.kind_of(thing)?)?;
-                Some((thing, noun))
-            })
-            .collect()
+        crate::thing::carried_nouns(&self.ledger, holder, self.day)
     }
 
     /// The carried thing a player's word names, matched exactly as
@@ -6371,7 +6437,12 @@ impl<'w> Session<'w> {
         {
             let sensed = self.perceived_npcs(how);
             if sensed.iter().any(|n| n.entity == npc.entity) {
-                return crate::purview::creature_datum(&npc.label, &npc.species);
+                // What it is holding, through the SAME fold the wire and the
+                // verbs resolve against, so `examine` and `sensed.present`
+                // cannot disagree about whose hands hold what.
+                let held = self.carried_by(npc.entity);
+                let nouns: Vec<&str> = held.iter().map(|(_, noun)| *noun).collect();
+                return crate::purview::creature_datum(&npc.label, &npc.species, &nouns);
             }
         }
         format!("You see no {noun} here.")
