@@ -18,6 +18,7 @@
 - **No tableau output may enter `docs/generated-paths.txt`.** A golden generated from a staged situation would assert about a world that never existed.
 - **A tableau proves the machinery, never the world.** Staged scenes carry `provenance: staged` and are never read as evidence that the world produces anything.
 - **`PossessOpts` gains a field additively, with a `Default`**, so no existing construction site changes behaviour.
+- **The serialization says `settlement`, never `village`.** They are one concept under two names in this codebase (`all_settlements` returns `Vec<VillageInfo>`), and only `settlement` is safe: village/town/city is a size ladder and `settlement` is the neutral superordinate, while vessel's own doc already refers to "the town The Burr". A tableau file is hand-written and long-lived, so it must not spread the size-committed word. See `TOOL-lexicon-settlement-village`; renaming the type is NOT this campaign.
 
 ## Measured facts this plan rests on
 
