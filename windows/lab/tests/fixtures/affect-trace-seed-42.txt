@@ -1,52 +1,52 @@
 creature 0 species=bugbear
-  tick 0: label=Content arousal=0.27 valence=1.0 object=None
-  tick 1: label=Content arousal=0.57 valence=1.0 object=None
-  tick 2: label=Eager arousal=0.87 valence=1.0 object=Some(Fatigue)
-  tick 3: label=Eager arousal=0.65 valence=1.0 object=Some(Fatigue)
+  tick 0: label=Content arousal=0.30686003 valence=1.0 object=None
+  tick 1: label=Content arousal=0.64781561 valence=1.0 object=None
+  tick 2: label=Eager arousal=0.9887712 valence=1.0 object=Some(Fatigue)
+  tick 3: label=Eager arousal=0.76987771 valence=1.0 object=Some(Fatigue)
   tick 4: label=Eager arousal=0.77756072 valence=1.0 object=Some(Fatigue)
-  tick 5: label=Eager arousal=0.665 valence=1.0 object=Some(Fatigue)
-  tick 6: label=Eager arousal=0.9 valence=1.0 object=Some(Fatigue)
-  tick 7: label=Content arousal=0.411972 valence=1.0 object=None
-  tick 8: label=Content arousal=0.71 valence=1.0 object=None
+  tick 5: label=Eager arousal=0.84835887 valence=1.0 object=Some(Fatigue)
+  tick 6: label=Eager arousal=0.91202778 valence=1.0 object=Some(Fatigue)
+  tick 7: label=Content arousal=0.43021889 valence=1.0 object=None
+  tick 8: label=Content arousal=0.77117448 valence=1.0 object=None
   tick 9: label=Eager arousal=1.0 valence=1.0 object=Some(Fatigue)
-  tick 10: label=Eager arousal=0.684472 valence=1.0 object=Some(Fatigue)
-  tick 11: label=Eager arousal=0.594472 valence=1.0 object=Some(Fatigue)
-  tick 12: label=Eager arousal=0.634472 valence=1.0 object=Some(Fatigue)
-  tick 13: label=Eager arousal=0.804472 valence=1.0 object=Some(Fatigue)
-  tick 14: label=Eager arousal=1.0 valence=1.0 object=Some(Fatigue)
-  tick 15: label=Eager arousal=0.805956 valence=1.0 object=Some(Hunger)
-  tick 16: label=Eager arousal=0.909472 valence=1.0 object=Some(Fatigue)
-  tick 17: label=Content arousal=0.684472 valence=1.0 object=None
-  tick 18: label=Eager arousal=0.529472 valence=1.0 object=Some(Fatigue)
-  tick 19: label=Eager arousal=0.628944 valence=1.0 object=Some(Fatigue)
-  tick 20: label=Eager arousal=0.778944 valence=1.0 object=Some(Fatigue)
-  tick 21: label=Eager arousal=0.974472 valence=1.0 object=Some(Fatigue)
-  tick 22: label=Content arousal=0.72379829 valence=1.0 object=None
-  tick 23: label=Eager arousal=0.844472 valence=1.0 object=Some(Hunger)
-  tick 24: label=Content arousal=0.619472 valence=1.0 object=None
+  tick 10: label=Eager arousal=0.70282993 valence=1.0 object=Some(Fatigue)
+  tick 11: label=Eager arousal=0.64149884 valence=1.0 object=Some(Fatigue)
+  tick 12: label=Eager arousal=0.71426331 valence=1.0 object=Some(Fatigue)
+  tick 13: label=Eager arousal=0.92112334 valence=1.0 object=Some(Fatigue)
+  tick 14: label=Content arousal=0.705956 valence=1.0 object=None
+  tick 15: label=Searching arousal=0.816972 valence=0.0 object=Some(Thirst)
+  tick 16: label=Eager arousal=1.0 valence=1.0 object=Some(Fatigue)
+  tick 17: label=Content arousal=0.76078215 valence=1.0 object=None
+  tick 18: label=Eager arousal=0.63240328 valence=1.0 object=Some(Fatigue)
+  tick 19: label=Eager arousal=0.63811997 valence=1.0 object=Some(Fatigue)
+  tick 20: label=Eager arousal=0.84498 valence=1.0 object=Some(Fatigue)
+  tick 21: label=Content arousal=0.61794607 valence=1.0 object=None
+  tick 22: label=Content arousal=0.72334222 valence=1.0 object=None
+  tick 23: label=Eager arousal=0.91098673 valence=1.0 object=Some(Hunger)
+  tick 24: label=Content arousal=0.70646452 valence=1.0 object=None
   tick 25: label=Eager arousal=0.77711942 valence=1.0 object=Some(Fatigue)
-  tick 26: label=Eager arousal=0.309472 valence=1.0 object=Some(Fatigue)
-  tick 27: label=Eager arousal=0.414472 valence=1.0 object=Some(Fatigue)
-  tick 28: label=Content arousal=0.649472 valence=1.0 object=None
-  tick 29: label=Eager arousal=0.949472 valence=1.0 object=Some(Fatigue)
+  tick 26: label=Eager arousal=0.44970678 valence=1.0 object=Some(Fatigue)
+  tick 27: label=Eager arousal=0.58951903 valence=1.0 object=Some(Fatigue)
+  tick 28: label=Eager arousal=0.86342683 valence=1.0 object=Some(Fatigue)
+  tick 29: label=Content arousal=0.61843252 valence=1.0 object=None
   tick 30: label=Content arousal=0.72387999 valence=1.0 object=None
-  tick 31: label=Content arousal=0.764472 valence=1.0 object=None
-  tick 32: label=Eager arousal=0.479472 valence=1.0 object=Some(Fatigue)
-  tick 33: label=Eager arousal=0.389472 valence=1.0 object=Some(Fatigue)
-  tick 34: label=Eager arousal=0.46149131 valence=1.0 object=Some(Fatigue)
-  tick 35: label=Eager arousal=0.61629183 valence=1.0 object=Some(Fatigue)
-  tick 36: label=Searching arousal=0.899472 valence=0.0 object=Some(Thirst)
-  tick 37: label=Content arousal=0.62363321 valence=1.0 object=None
-  tick 38: label=Content arousal=0.839472 valence=1.0 object=None
-  tick 39: label=Eager arousal=0.614472 valence=1.0 object=Some(Fatigue)
+  tick 31: label=Content arousal=0.45100355 valence=1.0 object=None
+  tick 32: label=Eager arousal=0.196434 valence=1.0 object=Some(Fatigue)
+  tick 33: label=Eager arousal=0.346434 valence=1.0 object=Some(Fatigue)
+  tick 34: label=Eager arousal=0.496434 valence=1.0 object=Some(Fatigue)
+  tick 35: label=Eager arousal=0.646434 valence=1.0 object=Some(Fatigue)
+  tick 36: label=Searching arousal=0.82455335 valence=0.0 object=Some(Thirst)
+  tick 37: label=Eager arousal=0.95527004 valence=1.0 object=Some(Fatigue)
+  tick 38: label=Content arousal=0.731132 valence=1.0 object=None
+  tick 39: label=Eager arousal=0.95760786 valence=1.0 object=Some(Fatigue)
 creature 1 species=hobgoblin
-  tick 0: label=Content arousal=0.11450654 valence=1.0 object=None
+  tick 0: label=Content arousal=0.11933445 valence=1.0 object=None
   tick 1: label=Content arousal=0.21191604 valence=1.0 object=None
-  tick 2: label=Content arousal=0.36889089 valence=1.0 object=None
-  tick 3: label=Content arousal=0.615 valence=1.0 object=None
-  tick 4: label=Eager arousal=0.715 valence=1.0 object=Some(Fatigue)
-  tick 5: label=Eager arousal=0.83808336 valence=1.0 object=Some(Fatigue)
-  tick 6: label=Searching arousal=0.98808475 valence=0.0 object=Some(Thirst)
+  tick 2: label=Content arousal=0.39895895 valence=1.0 object=None
+  tick 3: label=Content arousal=0.73991453 valence=1.0 object=None
+  tick 4: label=Eager arousal=0.78910899 valence=1.0 object=Some(Fatigue)
+  tick 5: label=Eager arousal=0.83602292 valence=1.0 object=Some(Fatigue)
+  tick 6: label=Searching arousal=0.98604222 valence=0.0 object=Some(Thirst)
   tick 7: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
   tick 8: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
   tick 9: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
@@ -83,51 +83,51 @@ creature 1 species=hobgoblin
 creature 2 species=hobgoblin
   tick 0: label=Content arousal=0.16334405 valence=1.0 object=None
   tick 1: label=Content arousal=0.2025 valence=1.0 object=None
-  tick 2: label=Content arousal=0.3525 valence=1.0 object=None
-  tick 3: label=Content arousal=0.615 valence=1.0 object=None
-  tick 4: label=Eager arousal=0.715 valence=1.0 object=Some(Fatigue)
-  tick 5: label=Eager arousal=0.690967 valence=1.0 object=Some(Fatigue)
-  tick 6: label=Eager arousal=0.66 valence=1.0 object=Some(Fatigue)
+  tick 2: label=Content arousal=0.39895895 valence=1.0 object=None
+  tick 3: label=Content arousal=0.73991453 valence=1.0 object=None
+  tick 4: label=Eager arousal=0.78910899 valence=1.0 object=Some(Fatigue)
+  tick 5: label=Eager arousal=0.73315679 valence=1.0 object=Some(Fatigue)
+  tick 6: label=Eager arousal=0.73388125 valence=1.0 object=Some(Fatigue)
   tick 7: label=Content arousal=0.735 valence=1.0 object=None
-  tick 8: label=Content arousal=0.5022705 valence=1.0 object=None
-  tick 9: label=Content arousal=0.6522705 valence=1.0 object=None
-  tick 10: label=Eager arousal=0.95 valence=1.0 object=Some(Fatigue)
-  tick 11: label=Eager arousal=0.826989 valence=1.0 object=Some(Fatigue)
-  tick 12: label=Eager arousal=0.679541 valence=1.0 object=Some(Fatigue)
-  tick 13: label=Eager arousal=0.653519 valence=1.0 object=Some(Fatigue)
+  tick 8: label=Content arousal=0.546582 valence=1.0 object=None
+  tick 9: label=Content arousal=0.696582 valence=1.0 object=None
+  tick 10: label=Eager arousal=0.95378802 valence=1.0 object=Some(Fatigue)
+  tick 11: label=Eager arousal=0.82705166 valence=1.0 object=Some(Fatigue)
+  tick 12: label=Eager arousal=0.70405169 valence=1.0 object=Some(Fatigue)
+  tick 13: label=Eager arousal=0.70477614 valence=1.0 object=Some(Fatigue)
   tick 14: label=Eager arousal=0.6522705 valence=1.0 object=Some(Fatigue)
   tick 15: label=Content arousal=0.706797 valence=1.0 object=None
-  tick 16: label=Content arousal=0.249541 valence=1.0 object=None
-  tick 17: label=Content arousal=0.484541 valence=1.0 object=None
-  tick 18: label=Eager arousal=0.784541 valence=1.0 object=Some(Fatigue)
-  tick 19: label=Eager arousal=0.758519 valence=1.0 object=Some(Fatigue)
-  tick 20: label=Eager arousal=0.599541 valence=1.0 object=Some(Fatigue)
-  tick 21: label=Eager arousal=0.516797 valence=1.0 object=Some(Fatigue)
+  tick 16: label=Content arousal=0.38258399 valence=1.0 object=None
+  tick 17: label=Content arousal=0.65649179 valence=1.0 object=None
+  tick 18: label=Eager arousal=0.70568625 valence=1.0 object=Some(Fatigue)
+  tick 19: label=Eager arousal=0.607041 valence=1.0 object=Some(Fatigue)
+  tick 20: label=Eager arousal=0.85659408 valence=1.0 object=Some(Fatigue)
+  tick 21: label=Eager arousal=0.65153 valence=1.0 object=Some(Fatigue)
   tick 22: label=Content arousal=0.616797 valence=1.0 object=None
   tick 23: label=Content arousal=0.716797 valence=1.0 object=None
-  tick 24: label=Content arousal=0.6522705 valence=1.0 object=None
-  tick 25: label=Content arousal=0.734541 valence=1.0 object=None
-  tick 26: label=Eager arousal=0.756989 valence=1.0 object=Some(Fatigue)
-  tick 27: label=Eager arousal=0.674541 valence=1.0 object=Some(Fatigue)
-  tick 28: label=Eager arousal=0.648519 valence=1.0 object=Some(Fatigue)
+  tick 24: label=Content arousal=0.73367618 valence=1.0 object=None
+  tick 25: label=Content arousal=0.7841573 valence=1.0 object=None
+  tick 26: label=Eager arousal=0.52577511 valence=1.0 object=Some(Fatigue)
+  tick 27: label=Eager arousal=0.86673069 valence=1.0 object=Some(Fatigue)
+  tick 28: label=Eager arousal=0.77858166 valence=1.0 object=Some(Fatigue)
   tick 29: label=Content arousal=0.6522705 valence=1.0 object=None
   tick 30: label=Content arousal=0.621797 valence=1.0 object=None
   tick 31: label=Content arousal=0.721797 valence=1.0 object=None
-  tick 32: label=Content arousal=0.739541 valence=1.0 object=None
-  tick 33: label=Eager arousal=0.761989 valence=1.0 object=Some(Fatigue)
-  tick 34: label=Eager arousal=0.614541 valence=1.0 object=Some(Fatigue)
-  tick 35: label=Eager arousal=0.914541 valence=1.0 object=Some(Fatigue)
-  tick 36: label=Eager arousal=0.65153 valence=1.0 object=Some(Fatigue)
+  tick 32: label=Content arousal=0.73237644 valence=1.0 object=None
+  tick 33: label=Eager arousal=0.464541 valence=1.0 object=Some(Fatigue)
+  tick 34: label=Eager arousal=0.79058735 valence=1.0 object=Some(Fatigue)
+  tick 35: label=Eager arousal=0.78011166 valence=1.0 object=Some(Fatigue)
+  tick 36: label=Eager arousal=0.44648613 valence=1.0 object=Some(Fatigue)
   tick 37: label=Content arousal=0.53195 valence=1.0 object=None
   tick 38: label=Content arousal=0.63195 valence=1.0 object=None
-  tick 39: label=Content arousal=0.834541 valence=1.0 object=None
+  tick 39: label=Content arousal=0.73195 valence=1.0 object=None
 creature 3 species=hobgoblin
-  tick 0: label=Content arousal=0.11433525 valence=1.0 object=None
+  tick 0: label=Content arousal=0.11933445 valence=1.0 object=None
   tick 1: label=Content arousal=0.2025 valence=1.0 object=None
-  tick 2: label=Content arousal=0.3525 valence=1.0 object=None
-  tick 3: label=Content arousal=0.615 valence=1.0 object=None
-  tick 4: label=Eager arousal=0.715 valence=1.0 object=Some(Fatigue)
-  tick 5: label=Eager arousal=0.826331 valence=1.0 object=Some(Fatigue)
+  tick 2: label=Content arousal=0.39895895 valence=1.0 object=None
+  tick 3: label=Content arousal=0.73991453 valence=1.0 object=None
+  tick 4: label=Eager arousal=0.78910899 valence=1.0 object=Some(Fatigue)
+  tick 5: label=Eager arousal=0.8025 valence=1.0 object=Some(Fatigue)
   tick 6: label=Searching arousal=0.9525 valence=0.0 object=Some(Thirst)
   tick 7: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
   tick 8: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
@@ -165,51 +165,51 @@ creature 3 species=hobgoblin
 creature 4 species=hobgoblin
   tick 0: label=Content arousal=0.16379701 valence=1.0 object=None
   tick 1: label=Content arousal=0.2025 valence=1.0 object=None
-  tick 2: label=Content arousal=0.3525 valence=1.0 object=None
-  tick 3: label=Content arousal=0.615 valence=1.0 object=None
-  tick 4: label=Eager arousal=0.715 valence=1.0 object=Some(Fatigue)
-  tick 5: label=Eager arousal=0.690967 valence=1.0 object=Some(Fatigue)
-  tick 6: label=Eager arousal=0.66 valence=1.0 object=Some(Fatigue)
+  tick 2: label=Content arousal=0.39895895 valence=1.0 object=None
+  tick 3: label=Content arousal=0.73991453 valence=1.0 object=None
+  tick 4: label=Eager arousal=0.78910899 valence=1.0 object=Some(Fatigue)
+  tick 5: label=Eager arousal=0.73315679 valence=1.0 object=Some(Fatigue)
+  tick 6: label=Eager arousal=0.73388125 valence=1.0 object=Some(Fatigue)
   tick 7: label=Content arousal=0.735 valence=1.0 object=None
-  tick 8: label=Content arousal=0.5022705 valence=1.0 object=None
-  tick 9: label=Content arousal=0.6522705 valence=1.0 object=None
-  tick 10: label=Eager arousal=0.95 valence=1.0 object=Some(Fatigue)
-  tick 11: label=Eager arousal=0.826989 valence=1.0 object=Some(Fatigue)
-  tick 12: label=Eager arousal=0.679541 valence=1.0 object=Some(Fatigue)
-  tick 13: label=Eager arousal=0.653519 valence=1.0 object=Some(Fatigue)
+  tick 8: label=Content arousal=0.546582 valence=1.0 object=None
+  tick 9: label=Content arousal=0.696582 valence=1.0 object=None
+  tick 10: label=Eager arousal=0.95378802 valence=1.0 object=Some(Fatigue)
+  tick 11: label=Eager arousal=0.82705166 valence=1.0 object=Some(Fatigue)
+  tick 12: label=Eager arousal=0.70405169 valence=1.0 object=Some(Fatigue)
+  tick 13: label=Eager arousal=0.70477614 valence=1.0 object=Some(Fatigue)
   tick 14: label=Eager arousal=0.6522705 valence=1.0 object=Some(Fatigue)
   tick 15: label=Content arousal=0.706797 valence=1.0 object=None
-  tick 16: label=Content arousal=0.249541 valence=1.0 object=None
-  tick 17: label=Content arousal=0.484541 valence=1.0 object=None
-  tick 18: label=Eager arousal=0.784541 valence=1.0 object=Some(Fatigue)
-  tick 19: label=Eager arousal=0.758519 valence=1.0 object=Some(Fatigue)
-  tick 20: label=Eager arousal=0.599541 valence=1.0 object=Some(Fatigue)
-  tick 21: label=Eager arousal=0.516797 valence=1.0 object=Some(Fatigue)
+  tick 16: label=Content arousal=0.38258399 valence=1.0 object=None
+  tick 17: label=Content arousal=0.65649179 valence=1.0 object=None
+  tick 18: label=Eager arousal=0.70568625 valence=1.0 object=Some(Fatigue)
+  tick 19: label=Eager arousal=0.607041 valence=1.0 object=Some(Fatigue)
+  tick 20: label=Eager arousal=0.85659408 valence=1.0 object=Some(Fatigue)
+  tick 21: label=Eager arousal=0.65153 valence=1.0 object=Some(Fatigue)
   tick 22: label=Content arousal=0.616797 valence=1.0 object=None
   tick 23: label=Content arousal=0.716797 valence=1.0 object=None
-  tick 24: label=Content arousal=0.6522705 valence=1.0 object=None
-  tick 25: label=Content arousal=0.734541 valence=1.0 object=None
-  tick 26: label=Eager arousal=0.756989 valence=1.0 object=Some(Fatigue)
-  tick 27: label=Eager arousal=0.674541 valence=1.0 object=Some(Fatigue)
-  tick 28: label=Eager arousal=0.648519 valence=1.0 object=Some(Fatigue)
+  tick 24: label=Content arousal=0.73367618 valence=1.0 object=None
+  tick 25: label=Content arousal=0.7841573 valence=1.0 object=None
+  tick 26: label=Eager arousal=0.52577511 valence=1.0 object=Some(Fatigue)
+  tick 27: label=Eager arousal=0.86673069 valence=1.0 object=Some(Fatigue)
+  tick 28: label=Eager arousal=0.77858166 valence=1.0 object=Some(Fatigue)
   tick 29: label=Content arousal=0.6522705 valence=1.0 object=None
   tick 30: label=Content arousal=0.621797 valence=1.0 object=None
   tick 31: label=Content arousal=0.721797 valence=1.0 object=None
-  tick 32: label=Content arousal=0.739541 valence=1.0 object=None
-  tick 33: label=Eager arousal=0.761989 valence=1.0 object=Some(Fatigue)
-  tick 34: label=Eager arousal=0.614541 valence=1.0 object=Some(Fatigue)
-  tick 35: label=Eager arousal=0.914541 valence=1.0 object=Some(Fatigue)
-  tick 36: label=Eager arousal=0.65153 valence=1.0 object=Some(Fatigue)
+  tick 32: label=Content arousal=0.73237644 valence=1.0 object=None
+  tick 33: label=Eager arousal=0.464541 valence=1.0 object=Some(Fatigue)
+  tick 34: label=Eager arousal=0.79058735 valence=1.0 object=Some(Fatigue)
+  tick 35: label=Eager arousal=0.78011166 valence=1.0 object=Some(Fatigue)
+  tick 36: label=Eager arousal=0.44648613 valence=1.0 object=Some(Fatigue)
   tick 37: label=Content arousal=0.53195 valence=1.0 object=None
   tick 38: label=Content arousal=0.63195 valence=1.0 object=None
-  tick 39: label=Content arousal=0.834541 valence=1.0 object=None
+  tick 39: label=Content arousal=0.73195 valence=1.0 object=None
 creature 5 species=hobgoblin
-  tick 0: label=Content arousal=0.105 valence=1.0 object=None
+  tick 0: label=Content arousal=0.11933445 valence=1.0 object=None
   tick 1: label=Content arousal=0.2025 valence=1.0 object=None
-  tick 2: label=Content arousal=0.3525 valence=1.0 object=None
-  tick 3: label=Content arousal=0.615 valence=1.0 object=None
-  tick 4: label=Eager arousal=0.715 valence=1.0 object=Some(Fatigue)
-  tick 5: label=Eager arousal=0.826331 valence=1.0 object=Some(Fatigue)
+  tick 2: label=Content arousal=0.39895895 valence=1.0 object=None
+  tick 3: label=Content arousal=0.73991453 valence=1.0 object=None
+  tick 4: label=Eager arousal=0.78910899 valence=1.0 object=Some(Fatigue)
+  tick 5: label=Eager arousal=0.8025 valence=1.0 object=Some(Fatigue)
   tick 6: label=Searching arousal=0.9525 valence=0.0 object=Some(Thirst)
   tick 7: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
   tick 8: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
@@ -286,28 +286,28 @@ creature 6 species=xorn
   tick 38: label=Content arousal=0.0 valence=1.0 object=None
   tick 39: label=Content arousal=0.0 valence=1.0 object=None
 creature 7 species=rust-monster
-  tick 0: label=Content arousal=0.105 valence=1.0 object=None
-  tick 1: label=Content arousal=0.145 valence=1.0 object=None
-  tick 2: label=Content arousal=0.315 valence=1.0 object=None
-  tick 3: label=Content arousal=0.615 valence=1.0 object=None
-  tick 4: label=Eager arousal=0.715 valence=1.0 object=Some(Fatigue)
-  tick 5: label=Eager arousal=0.68916 valence=1.0 object=Some(Fatigue)
-  tick 6: label=Eager arousal=0.66 valence=1.0 object=Some(Fatigue)
-  tick 7: label=Content arousal=0.50708 valence=1.0 object=None
-  tick 8: label=Content arousal=0.48 valence=1.0 object=None
-  tick 9: label=Content arousal=0.585 valence=1.0 object=None
-  tick 10: label=Content arousal=0.685 valence=1.0 object=None
-  tick 11: label=Eager arousal=0.70756 valence=1.0 object=Some(Fatigue)
-  tick 12: label=Eager arousal=0.56 valence=1.0 object=Some(Fatigue)
-  tick 13: label=Eager arousal=0.53416 valence=1.0 object=Some(Fatigue)
+  tick 0: label=Content arousal=0.11933445 valence=1.0 object=None
+  tick 1: label=Content arousal=0.19209892 valence=1.0 object=None
+  tick 2: label=Content arousal=0.39895895 valence=1.0 object=None
+  tick 3: label=Content arousal=0.73991453 valence=1.0 object=None
+  tick 4: label=Eager arousal=0.78922672 valence=1.0 object=Some(Fatigue)
+  tick 5: label=Eager arousal=0.73315679 valence=1.0 object=Some(Fatigue)
+  tick 6: label=Eager arousal=0.73406898 valence=1.0 object=Some(Fatigue)
+  tick 7: label=Content arousal=0.40240125 valence=1.0 object=None
+  tick 8: label=Content arousal=0.40597241 valence=1.0 object=None
+  tick 9: label=Content arousal=0.54578465 valence=1.0 object=None
+  tick 10: label=Content arousal=0.67650134 valence=1.0 object=None
+  tick 11: label=Eager arousal=0.72581353 valence=1.0 object=Some(Fatigue)
+  tick 12: label=Eager arousal=0.60269582 valence=1.0 object=Some(Fatigue)
+  tick 13: label=Eager arousal=0.60360801 valence=1.0 object=Some(Fatigue)
   tick 14: label=Eager arousal=0.4305 valence=1.0 object=Some(Fatigue)
   tick 15: label=Content arousal=0.4605 valence=1.0 object=None
   tick 16: label=Helpless arousal=0.4905 valence=-1.0 object=Some(Thirst)
-  tick 17: label=Helpless arousal=0.625 valence=-1.0 object=Some(Thirst)
-  tick 18: label=Helpless arousal=0.925 valence=-1.0 object=Some(Thirst)
+  tick 17: label=Helpless arousal=0.82332704 valence=-1.0 object=Some(Thirst)
+  tick 18: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
   tick 19: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
-  tick 20: label=Eager arousal=0.77868 valence=1.0 object=Some(Fatigue)
-  tick 21: label=Helpless arousal=0.81452 valence=-1.0 object=Some(Thirst)
+  tick 20: label=Eager arousal=0.77874553 valence=1.0 object=Some(Fatigue)
+  tick 21: label=Helpless arousal=0.84721894 valence=-1.0 object=Some(Thirst)
   tick 22: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
   tick 23: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
   tick 24: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
@@ -329,11 +329,11 @@ creature 7 species=rust-monster
 creature 8 species=otyugh
   tick 0: label=Content arousal=0.22509915 valence=1.0 object=None
   tick 1: label=Content arousal=0.22519723 valence=1.0 object=None
-  tick 2: label=Content arousal=0.3525 valence=1.0 object=None
-  tick 3: label=Content arousal=0.615 valence=1.0 object=None
-  tick 4: label=Eager arousal=0.715 valence=1.0 object=Some(Fatigue)
-  tick 5: label=Eager arousal=0.693112 valence=1.0 object=Some(Fatigue)
-  tick 6: label=Eager arousal=0.66 valence=1.0 object=Some(Fatigue)
+  tick 2: label=Content arousal=0.39895895 valence=1.0 object=None
+  tick 3: label=Content arousal=0.73991453 valence=1.0 object=None
+  tick 4: label=Eager arousal=0.79003404 valence=1.0 object=Some(Fatigue)
+  tick 5: label=Eager arousal=0.73315679 valence=1.0 object=Some(Fatigue)
+  tick 6: label=Eager arousal=0.7353563 valence=1.0 object=Some(Fatigue)
   tick 7: label=Content arousal=0.735 valence=1.0 object=None
   tick 8: label=Frustrated arousal=0.835 valence=-1.0 object=Some(Hunger)
   tick 9: label=Frustrated arousal=0.935 valence=-1.0 object=Some(Hunger)
@@ -342,7 +342,7 @@ creature 8 species=otyugh
   tick 12: label=Eager arousal=1.0 valence=1.0 object=Some(Fatigue)
   tick 13: label=Eager arousal=1.0 valence=1.0 object=Some(Fatigue)
   tick 14: label=Eager arousal=1.0 valence=1.0 object=Some(Fatigue)
-  tick 15: label=Frustrated arousal=1.0 valence=-1.0 object=Some(Hunger)
+  tick 15: label=Lost arousal=1.0 valence=-1.0 object=Some(Hunger)
   tick 16: label=Frustrated arousal=1.0 valence=-1.0 object=Some(Hunger)
   tick 17: label=Frustrated arousal=1.0 valence=-1.0 object=Some(Hunger)
   tick 18: label=Eager arousal=1.0 valence=1.0 object=Some(Fatigue)
@@ -358,8 +358,8 @@ creature 8 species=otyugh
   tick 28: label=Eager arousal=1.0 valence=1.0 object=Some(Fatigue)
   tick 29: label=Lost arousal=1.0 valence=-1.0 object=Some(Hunger)
   tick 30: label=Lost arousal=1.0 valence=-1.0 object=Some(Hunger)
-  tick 31: label=Frustrated arousal=1.0 valence=-1.0 object=Some(Hunger)
-  tick 32: label=Frustrated arousal=1.0 valence=-1.0 object=Some(Hunger)
+  tick 31: label=Lost arousal=1.0 valence=-1.0 object=Some(Hunger)
+  tick 32: label=Lost arousal=1.0 valence=-1.0 object=Some(Hunger)
   tick 33: label=Eager arousal=1.0 valence=1.0 object=Some(Fatigue)
   tick 34: label=Eager arousal=1.0 valence=1.0 object=Some(Fatigue)
   tick 35: label=Eager arousal=1.0 valence=1.0 object=Some(Fatigue)
@@ -370,15 +370,15 @@ creature 8 species=otyugh
 creature 9 species=carrion-crawler
   tick 0: label=Content arousal=0.22504039 valence=1.0 object=None
   tick 1: label=Content arousal=0.22504039 valence=1.0 object=None
-  tick 2: label=Content arousal=0.3525 valence=1.0 object=None
-  tick 3: label=Content arousal=0.615 valence=1.0 object=None
-  tick 4: label=Eager arousal=0.715 valence=1.0 object=Some(Fatigue)
-  tick 5: label=Eager arousal=0.692605 valence=1.0 object=Some(Fatigue)
-  tick 6: label=Eager arousal=0.635 valence=1.0 object=Some(Fatigue)
+  tick 2: label=Content arousal=0.39895895 valence=1.0 object=None
+  tick 3: label=Content arousal=0.73991453 valence=1.0 object=None
+  tick 4: label=Eager arousal=0.78981539 valence=1.0 object=Some(Fatigue)
+  tick 5: label=Eager arousal=0.73315679 valence=1.0 object=Some(Fatigue)
+  tick 6: label=Eager arousal=0.73500765 valence=1.0 object=Some(Fatigue)
   tick 7: label=Content arousal=0.735 valence=1.0 object=None
   tick 8: label=Frustrated arousal=0.835 valence=-1.0 object=Some(Hunger)
   tick 9: label=Frustrated arousal=0.935 valence=-1.0 object=Some(Hunger)
-  tick 10: label=Frustrated arousal=1.0 valence=-1.0 object=Some(Hunger)
+  tick 10: label=Eager arousal=1.0 valence=1.0 object=Some(Fatigue)
   tick 11: label=Eager arousal=1.0 valence=1.0 object=Some(Fatigue)
   tick 12: label=Eager arousal=1.0 valence=1.0 object=Some(Fatigue)
   tick 13: label=Eager arousal=1.0 valence=1.0 object=Some(Fatigue)

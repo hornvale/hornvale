@@ -43,6 +43,13 @@ use hornvale_vessel::liveness::{
     RESTED, SLEPT, fatigue_at, record_rest, record_sleep, renders_unconscious,
 };
 
+/// `fatigue_at`'s rate argument (The Wicket, Task 9 — see
+/// `tests/suite/fatigue_stock.rs`'s own doc for the full story): human's row
+/// in `hornvale_species::fatigue_rise_registry`, the same `0.3` the old
+/// `FATIGUE_RISE` constant carried. Every call below also passes `day: None`,
+/// so the arithmetic is unchanged in shape from before this task.
+const RATE: f64 = 0.3;
+
 /// A fresh ledger with one body in it, and a registry that knows both bout
 /// predicates. `role` keeps the two bodies of the sleeping test distinguishable
 /// in a failure dump.
@@ -108,7 +115,7 @@ fn resting_leaves_the_body_conscious_and_restores_some_fatigue() {
     // the bout alone.
     let lay_down = at(2.0);
     let wakes = at(2.25);
-    let owed_lying_down = fatigue_at(&ledger, e, lay_down);
+    let owed_lying_down = fatigue_at(&ledger, e, lay_down, RATE, None);
     assert!(
         owed_lying_down > 0.0 && owed_lying_down < 1.0,
         "the fixture must sit strictly inside the clamps or a reduction cannot \
@@ -117,7 +124,7 @@ fn resting_leaves_the_body_conscious_and_restores_some_fatigue() {
     ledger
         .commit(record_rest(e, lay_down, span(0.25)), &registry)
         .expect("`rested` is non-functional");
-    let after = fatigue_at(&ledger, e, wakes);
+    let after = fatigue_at(&ledger, e, wakes, RATE, None);
     assert!(
         after < owed_lying_down,
         "a rest must REPAY: the debt at waking must be strictly below the debt \
@@ -159,13 +166,13 @@ fn sleeping_renders_the_body_unconscious_and_restores_strictly_more_than_resting
     rest_ledger
         .commit(record_rest(r, lay_down, bout), &rest_reg)
         .expect("`rested` is non-functional");
-    let rested = fatigue_at(&rest_ledger, r, wakes);
+    let rested = fatigue_at(&rest_ledger, r, wakes, RATE, None);
 
     let (mut sleep_ledger, s, sleep_reg) = bout_body("wicket-sleeper");
     sleep_ledger
         .commit(record_sleep(s, lay_down, bout), &sleep_reg)
         .expect("`slept` is non-functional");
-    let slept = fatigue_at(&sleep_ledger, s, wakes);
+    let slept = fatigue_at(&sleep_ledger, s, wakes, RATE, None);
 
     assert!(
         slept > 0.0 && rested < 1.0,
@@ -230,8 +237,8 @@ fn waiting_changes_nothing_about_the_body_that_time_alone_would_not() {
          `slept` for the possessed body"
     );
 
-    let predicted = fatigue_at(&before, body, after_day);
-    let actual = fatigue_at(&after, body, after_day);
+    let predicted = fatigue_at(&before, body, after_day, RATE, None);
+    let actual = fatigue_at(&after, body, after_day, RATE, None);
     assert_eq!(
         actual.to_bits(),
         predicted.to_bits(),
@@ -242,7 +249,7 @@ fn waiting_changes_nothing_about_the_body_that_time_alone_would_not() {
     // Anti-vacuity in both directions. Time really did accrue (so the equality
     // above is not two identical zeroes), and the reading is off a clamp (so it
     // is not two identical ceilings either).
-    let started_at = fatigue_at(&after, body, before_day);
+    let started_at = fatigue_at(&after, body, before_day, RATE, None);
     assert!(
         actual > started_at,
         "and time alone DOES accrue fatigue, or this test compares a constant \

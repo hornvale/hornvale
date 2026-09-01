@@ -4042,6 +4042,87 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
     .collect()
 }
 
+/// Sleep-debt accrued per LOCAL day awake (The Wicket, Task 9) — the rate
+/// `windows/vessel`'s fatigue stock folds against the walk's own planetary
+/// clock. Nathan's ruling: a rate like this "should actually be a
+/// component" rather than a single constant shared by every species in
+/// every world, and this table is that component — one row per kind that
+/// sleeps at all.
+///
+/// **Absence is the statement, not an omission.** The ruling names the
+/// mandatory rate as holding "for most species" — a wording a bare constant
+/// could not express and an `Option` field would collapse: "does not sleep"
+/// and "not yet authored" would read as the same `None`. So the boundary is
+/// drawn by which kinds get a row here, and a lookup miss means the debt
+/// never accrues (`0.0` per local day), not a placeholder waiting to be
+/// filled in. `xorn` is the one omission on today's roster —
+/// [`ThermalStrategy::Absent`]'s own doc already reads "no metabolism at
+/// all... no life-history", and the walk's ametabolic gate
+/// (`windows/vessel::liveness::decide_step`/`affect_of_memo_occupied`)
+/// already excludes exactly that kind from the REST drive on the same
+/// grounds ("does not... tire"). This table states the same fact where the
+/// arithmetic lives, rather than only where the arbitration reads it.
+///
+/// **Every row shares HUMAN's rate, and that is a scope boundary, not a
+/// finding.** The ruling anchors the number at "roughly a third of a
+/// planetary day" for a human, which is what the old `FATIGUE_RISE = 0.3`
+/// constant already approximately was — this table keeps that literal
+/// value rather than re-deriving it as an exact 1/3 (moving a number to a
+/// new denominator in the same commit that changes its shape would be two
+/// changes at once, and the second was never asked for). Differentiating
+/// any OTHER kind's rate away from human's — the "and might have personal
+/// preferences as well" half of the ruling — is a fidelity decision left
+/// for whoever authors it next; this task only builds the table it would go
+/// in.
+/// type-audit: bare-ok(identifier-text), bare-ok(ratio: return)
+pub fn fatigue_rise_registry() -> ComponentStore<KindId, f64> {
+    const RATE: f64 = 0.3;
+    [
+        (KindId("goblin"), RATE),
+        (KindId("kobold"), RATE),
+        (KindId("hobgoblin"), RATE),
+        (KindId("bugbear"), RATE),
+        (KindId("treant"), RATE),
+        (KindId("twig-blight"), RATE),
+        (KindId("giant-elk"), RATE),
+        (KindId("woolly-mammoth"), RATE),
+        (KindId("giant-goat"), RATE),
+        (KindId("otyugh"), RATE),
+        // `xorn` (`ThermalStrategy::Absent`) is deliberately absent — see
+        // this function's own doc.
+        (KindId("rust-monster"), RATE),
+        (KindId("white-dragon"), RATE),
+        (KindId("red-dragon"), RATE),
+        (KindId("black-dragon"), RATE),
+        (KindId("owlbear"), RATE),
+        (KindId("giant-scorpion"), RATE),
+        (KindId("giant-hyena"), RATE),
+        (KindId("dire-wolf"), RATE),
+        (KindId("rhinoceros"), RATE),
+        (KindId("giant-constrictor-snake"), RATE),
+        (KindId("carrion-crawler"), RATE),
+        (KindId("shrieker"), RATE),
+        (KindId("reef-shark"), RATE),
+        (KindId("giant-octopus"), RATE),
+        (KindId("killer-whale"), RATE),
+        (KindId("giant-squid"), RATE),
+        (KindId("giant-crocodile"), RATE),
+        (KindId("gnoll"), RATE),
+        (KindId("human"), RATE),
+        (KindId("desert-dwarf"), RATE),
+        (KindId("gully-dwarf"), RATE),
+        (KindId("hill-dwarf"), RATE),
+        (KindId("desert-elf"), RATE),
+        (KindId("drow"), RATE),
+        (KindId("high-elf"), RATE),
+        (KindId("sea-elf"), RATE),
+        (KindId("snow-elf"), RATE),
+        (KindId("wood-elf"), RATE),
+    ]
+    .into_iter()
+    .collect()
+}
+
 /// The individual-mind component — authored directly, present for every
 /// minded kind (the fifteen settling peoples and the three solitary dragons).
 /// Goblin's row happens to sit at [`MindVector::MANIKIN`] — a fact about

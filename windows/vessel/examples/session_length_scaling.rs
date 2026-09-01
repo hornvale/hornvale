@@ -288,8 +288,11 @@ fn probe_fatigue_us(ledger: &Ledger, entity: EntityId, t: WorldTime) -> f64 {
     #[allow(clippy::disallowed_types)] // benchmark harness
     let t0 = Instant::now();
     let mut sink = 0.0_f64;
+    // The rate/day-length arguments (The Wicket, Task 9) do not change the
+    // shape of this fold, only its inputs — human's rate and no calendar
+    // (base-rate) keep this probe's cost representative of the common case.
     for _ in 0..FOLD_REPS {
-        sink += fatigue_at(ledger, entity, t);
+        sink += fatigue_at(ledger, entity, t, 0.3, None);
     }
     let us = t0.elapsed().as_secs_f64() * 1e6 / FOLD_REPS as f64;
     // Consume `sink` so the calls cannot be optimized away.
