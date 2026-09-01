@@ -41,7 +41,7 @@ use serde::{Deserialize, Serialize};
 /// type-audit: bare-ok(identifier-text: kind), bare-ok(index: held_by)
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct StagedThing {
-    /// The thing-kind, as `thing_kind_of` labels it.
+    /// The thing-kind, as `hornvale_thing::THING_KINDS` spells it.
     pub kind: String,
     /// Whose hands it is in, as an index into the cast.
     pub held_by: usize,

@@ -1,78 +1,41 @@
-//! The Chattel: every `hornvale_vessel::interior::AnchorKind` has a
-//! counterpart in `hornvale_thing::THING_KINDS`, and every key the vessel's
-//! property table mints is a row that roster actually carries.
+//! The Chattel: every key the vessel's property table mints is a row
+//! `hornvale_thing::THING_KINDS` actually carries.
 //!
-//! **This file exists in `cli/` because it is the only crate that already
-//! depends on both.** A domain may not depend on a window (`domains/thing`
-//! cannot see `AnchorKind`), and `windows/vessel` carries no dependency on
-//! `hornvale-thing` — it needs one for nothing else, and adding a production
-//! dependency to hold a test-only invariant would move the workspace's
-//! dependency graph (a drift-checked artifact) for no runtime reason.
-//!
-//! **Task 7 turned this from a duplicate into a check.** It used to carry
-//! its own private `thing_label_for` — a hand-copy of a mapping that then
-//! lived nowhere else — so it asserted that a table in this file agreed with
-//! `THING_KINDS`, and said nothing about any mapping production used. Task 7
-//! put the real mapping in `hornvale_vessel::affordance::thing_kind_of`
-//! (total, exhaustive, no wildcard arm), and this file now reads THAT. A
-//! duplicated rule whose cheapest repair deletes one side is the shape
-//! decision 0261 warns about; deleting the copy was the repair.
+//! **This file exists in `cli/` because it WAS the only crate that already
+//! depended on both, and that reason lapsed with The Wicket's Task 2**, which
+//! gave `windows/vessel` an ordinary `hornvale-thing` dependency (a window
+//! may depend on a domain; vessel already depends on eight of them). Task 3
+//! deletes this file and reopens its checks in
+//! `windows/vessel/tests/suite/kind_totality.rs`, where their subject lives.
+//! Nothing here is intended to survive that task.
 //!
 //! **What the re-key made this load-bearing for.** The Offer keyed the
-//! property table on `AnchorKind`, a closed enum: a mis-spelled key could not
-//! compile. Task 7 keyed it on `KindId`, a newtype over `&'static str`, where
+//! property table on a closed enum: a mis-spelled key could not compile.
+//! Task 7 keyed it on `KindId`, a newtype over `&'static str`, where
 //! `KindId("srongbox")` is a well-typed key that silently resolves to "this
-//! kind carries no property". Nothing in `windows/vessel` can close that gap.
-//! This file is what closes it.
+//! kind carries no property". That is the gap these checks close, and spec
+//! §5.1's G-e is where the closing moves to.
+//!
+//! **One check left with the enum (The Wicket, Task 2).**
+//! `every_anchor_kind_has_a_thing_kind_counterpart` swept every anchor-kind
+//! variant through `affordance::thing_kind_of` and asserted the result was a
+//! roster row. Both the enum and the mapping are gone: an anchor CARRIES a
+//! `KindId` now, so the sweep would have been over
+//! `hornvale_thing::kinds::EVERY_HANDLE` asserting each handle is a roster
+//! row — which is exactly `domains/thing`'s own
+//! `every_named_handle_is_a_roster_row` (G-d), already written by Task 1. Two
+//! copies of one rule whose cheapest repair deletes one side is the shape
+//! decision 0261 warns about, so the copy was not made.
 
-use hornvale_vessel::affordance::{object_registry, thing_kind_of};
-use hornvale_vessel::interior::AnchorKind;
-
-/// Every `AnchorKind` variant — [`AnchorKind::ALL`], generated from the
-/// enum's own declaration (`windows/vessel/src/interior/anchor.rs`).
-///
-/// **This was a hand-written `[AnchorKind; 14]` until The Chattel's Task 9 fix
-/// round**, and its doc named `thing_kind_of`'s exhaustive match as the
-/// compile-time guard against an appended variant. That guard is real for the
-/// MAPPING and does not reach a LIST: an appended variant compiled here with
-/// this file's roster untouched, so this sweep would have run one kind short
-/// and stayed green — measured, not supposed. The roster now grows with the
-/// enum, so the two checks below sweep an appended variant on the run that
-/// first compiles it.
-const EVERY_ANCHOR_KIND: &[AnchorKind] = AnchorKind::ALL;
-
-/// Every anchor kind's thing-kind — read from the production mapping — is a
-/// row `hornvale_thing::THING_KINDS` actually carries.
-///
-/// MUTATION THIS MUST FAIL AGAINST: point `thing_kind_of`'s `HighSeat` arm at
-/// `KindId("high_seat")` (an underscore where the roster spells a hyphen —
-/// the single most likely way to mint an unbacked key, and one no `windows/
-/// vessel` test can see, since a key absent from `object_registry` is a legal
-/// property-less kind there). Red observed:
-///
-/// ```text
-/// thread 'anchor_thing_correspondence::every_anchor_kind_has_a_thing_kind_counterpart'
-/// panicked at cli/tests/suite/anchor_thing_correspondence.rs:
-/// HighSeat maps to thing-kind KindId("high_seat"), which THING_KINDS does not carry
-/// ```
-#[test]
-fn every_anchor_kind_has_a_thing_kind_counterpart() {
-    for &kind in EVERY_ANCHOR_KIND {
-        let id = thing_kind_of(kind);
-        assert!(
-            hornvale_thing::THING_KINDS.contains(&id.0),
-            "{kind:?} maps to thing-kind {id:?}, which THING_KINDS does not carry"
-        );
-    }
-}
+use hornvale_vessel::affordance::object_registry;
 
 /// The other direction the re-key opened: every key `object_registry` mints
-/// is a real thing-kind too. `key` and `cave-mouth` have no `AnchorKind`
-/// behind them at all (that is the point of keying on thing-kind — a cave
-/// mouth is a `Vertex`, a key is carried), so the test above cannot reach
-/// them, and a typo in either row would produce a property nothing carries
-/// while `each_property_is_carried_by_at_least_one_thing_kind` stayed green
-/// on the misspelt row.
+/// is a real thing-kind too. `key` and `cave-mouth` had no anchor-kind
+/// variant behind them at all (that was the point of keying on thing-kind — a
+/// cave mouth is a `Vertex`, a key is carried), and a typo in either row would
+/// produce a property nothing carries while
+/// `each_property_is_carried_by_at_least_one_thing_kind` stayed green on the
+/// misspelt row.
 ///
 /// MUTATION THIS MUST FAIL AGAINST: spell `object_registry`'s key row
 /// `KindId("cave_mouth")`. Red observed:
@@ -98,19 +61,16 @@ fn every_property_table_key_is_a_real_thing_kind() {
     }
 }
 
-/// Anti-vacuity for both tests above: they sweep a non-empty population, and
-/// the roster they check against is not so permissive that any string passes.
+/// Anti-vacuity for the test above: it sweeps a non-empty population, and
+/// the roster it checks against is not so permissive that any string passes.
 /// Without this, deleting every row of `object_registry` — or replacing
 /// `THING_KINDS` with a list that happened to contain everything — would read
-/// as two green results.
+/// as a green result.
 #[test]
 fn the_correspondence_checks_are_not_vacuous() {
-    // Fifteen is a claim about the ENUM, not about a list in this file:
-    // `AnchorKind::ALL` is generated from the declaration, so an appended
-    // variant reddens here on the run that first compiles it — which is
-    // exactly what it did for The Chattel's Task 11 `Key`, reporting
-    // `left: 15 right: 14` on the run that first compiled the variant.
-    assert_eq!(EVERY_ANCHOR_KIND.len(), 15);
+    // The anchor-kind arm of this control went with its test (see the module
+    // doc). What is left is the half that guards the check below: a registry
+    // stripped of rows, and a roster permissive enough to accept anything.
     assert!(
         object_registry().ids().count() >= 9,
         "object_registry lost rows; the key check above sweeps whatever is left"
@@ -130,12 +90,12 @@ fn the_correspondence_checks_are_not_vacuous() {
 /// object are one spelling because both read the const); the CROSS-TABLE
 /// claim in the same sentence was not.
 ///
-/// **Here rather than in `windows/vessel` for the reason this file's own
-/// header gives**: the assertion needs `hornvale_thing::THING_KINDS`, and
-/// `windows/vessel` deliberately carries no `hornvale-thing` dependency.
-/// A cave mouth is also the second row (with `key`) that has no `AnchorKind`
-/// behind it, so `every_anchor_kind_has_a_thing_kind_counterpart` above
-/// cannot reach it from the other direction either.
+/// **Here rather than in `windows/vessel` for a reason that has lapsed**:
+/// the assertion needs `hornvale_thing::THING_KINDS`, and `windows/vessel`
+/// carried no `hornvale-thing` dependency until The Wicket's Task 2. Task 3
+/// moves it.
+/// A cave mouth is also the second row (with `key`) that no room's grammar
+/// ever composes, so nothing reaches it from the anchor side either.
 ///
 /// MUTATION THIS MUST FAIL AGAINST: rename ONE side of the agreement — spell
 /// `passage::CAVE_MOUTH` `"cave_mouth"`, leaving `THING_KINDS` and

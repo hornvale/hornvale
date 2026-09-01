@@ -15,16 +15,18 @@
 //! Together they give a room depth — a hub composition, where everything hangs
 //! off the centre, is the degenerate case and is what the anti-hub test forbids.
 
-use super::anchor::{AnchorId, AnchorKind, Interior};
+use super::anchor::{AnchorId, Interior};
+use hornvale_kernel::KindId;
+use hornvale_thing::kinds;
 
 /// Where a pattern's anchor attaches to what is already composed.
 pub enum Attach {
-    /// To the room's [`AnchorKind::Ground`] — the open middle.
+    /// To the room's [`kinds::GROUND`] — the open middle.
     Hub,
     /// Adjacent to the first anchor of this kind (`Ec`).
-    Beside(AnchorKind),
+    Beside(KindId),
     /// Strictly inside the first anchor of this kind (`Ntpp`).
-    Within(AnchorKind),
+    Within(KindId),
 }
 
 /// What a chamber is FOR. A role admits a different pattern subset — the pattern
@@ -85,12 +87,12 @@ pub struct Pattern {
     /// [`selection`]).
     pub name: &'static str,
     /// The anchor this pattern contributes.
-    pub kind: AnchorKind,
+    pub kind: KindId,
     /// Where that anchor attaches.
     pub attach: Attach,
     /// A kind that must ALREADY be present for this pattern to be admissible —
     /// Alexander's "patterns complete other patterns", made checkable.
-    pub requires: Option<AnchorKind>,
+    pub requires: Option<KindId>,
     /// Whether this pattern is drawn only where warmth matters.
     pub needs_cold: bool,
     /// Whether this pattern belongs to BUILT rooms (false = wilderness).
@@ -163,7 +165,7 @@ pub const INVENTORY: [Pattern; 16] = [
     // --- built, drawn at BOTH bands ---
     Pattern {
         name: "the-ground",
-        kind: AnchorKind::Ground,
+        kind: kinds::GROUND,
         attach: Attach::Hub,
         requires: None,
         needs_cold: false,
@@ -174,7 +176,7 @@ pub const INVENTORY: [Pattern; 16] = [
     },
     Pattern {
         name: "the-threshold",
-        kind: AnchorKind::Threshold,
+        kind: kinds::THRESHOLD,
         attach: Attach::Hub,
         requires: None,
         needs_cold: false,
@@ -187,7 +189,7 @@ pub const INVENTORY: [Pattern; 16] = [
     },
     Pattern {
         name: "the-alcove",
-        kind: AnchorKind::Alcove,
+        kind: kinds::ALCOVE,
         attach: Attach::Hub,
         requires: None,
         needs_cold: false,
@@ -199,9 +201,9 @@ pub const INVENTORY: [Pattern; 16] = [
     },
     Pattern {
         name: "the-fire",
-        kind: AnchorKind::Hearth,
-        attach: Attach::Within(AnchorKind::Alcove),
-        requires: Some(AnchorKind::Alcove),
+        kind: kinds::HEARTH,
+        attach: Attach::Within(kinds::ALCOVE),
+        requires: Some(kinds::ALCOVE),
         needs_cold: true,
         built: true,
         // NO ROLE WITHHOLDS THE FIRE, and it still burns in exactly one room.
@@ -215,9 +217,9 @@ pub const INVENTORY: [Pattern; 16] = [
     },
     Pattern {
         name: "the-fireside-bed",
-        kind: AnchorKind::Bed,
-        attach: Attach::Beside(AnchorKind::Hearth),
-        requires: Some(AnchorKind::Hearth),
+        kind: kinds::BED,
+        attach: Attach::Beside(kinds::HEARTH),
+        requires: Some(kinds::HEARTH),
         needs_cold: true,
         built: true,
         // Confined the same way, one link further along the chain: a bed by the
@@ -228,8 +230,8 @@ pub const INVENTORY: [Pattern; 16] = [
     },
     Pattern {
         name: "the-water-jar",
-        kind: AnchorKind::Vessel,
-        attach: Attach::Beside(AnchorKind::Ground),
+        kind: kinds::VESSEL,
+        attach: Attach::Beside(kinds::GROUND),
         requires: None,
         needs_cold: false,
         built: true,
@@ -239,9 +241,9 @@ pub const INVENTORY: [Pattern; 16] = [
     },
     Pattern {
         name: "the-screen",
-        kind: AnchorKind::Screen,
-        attach: Attach::Beside(AnchorKind::Threshold),
-        requires: Some(AnchorKind::Threshold),
+        kind: kinds::SCREEN,
+        attach: Attach::Beside(kinds::THRESHOLD),
+        requires: Some(kinds::THRESHOLD),
         needs_cold: false,
         built: true,
         // A screen affords nothing and shapes sightlines, which is a thing worth
@@ -253,7 +255,7 @@ pub const INVENTORY: [Pattern; 16] = [
     // --- wild ---
     Pattern {
         name: "the-clearing",
-        kind: AnchorKind::Ground,
+        kind: kinds::GROUND,
         attach: Attach::Hub,
         requires: None,
         needs_cold: false,
@@ -266,8 +268,8 @@ pub const INVENTORY: [Pattern; 16] = [
     },
     Pattern {
         name: "the-pool",
-        kind: AnchorKind::Pool,
-        attach: Attach::Beside(AnchorKind::Ground),
+        kind: kinds::POOL,
+        attach: Attach::Beside(kinds::GROUND),
         requires: None,
         needs_cold: false,
         built: false,
@@ -288,9 +290,9 @@ pub const INVENTORY: [Pattern; 16] = [
     // strongbox stands in a room for keeping things, beside the water jar.
     Pattern {
         name: "the-strongbox",
-        kind: AnchorKind::Strongbox,
-        attach: Attach::Beside(AnchorKind::Vessel),
-        requires: Some(AnchorKind::Vessel),
+        kind: kinds::STRONGBOX,
+        attach: Attach::Beside(kinds::VESSEL),
+        requires: Some(kinds::VESSEL),
         needs_cold: false,
         built: true,
         roles: &[Role::Store],
@@ -299,9 +301,9 @@ pub const INVENTORY: [Pattern; 16] = [
     },
     Pattern {
         name: "the-high-seat",
-        kind: AnchorKind::HighSeat,
-        attach: Attach::Beside(AnchorKind::Threshold),
-        requires: Some(AnchorKind::Threshold),
+        kind: kinds::HIGH_SEAT,
+        attach: Attach::Beside(kinds::THRESHOLD),
+        requires: Some(kinds::THRESHOLD),
         needs_cold: false,
         built: true,
         // A high seat is set where whoever sits in it sees who comes in. That is
@@ -312,9 +314,9 @@ pub const INVENTORY: [Pattern; 16] = [
     },
     Pattern {
         name: "the-loom",
-        kind: AnchorKind::Loom,
-        attach: Attach::Beside(AnchorKind::Threshold),
-        requires: Some(AnchorKind::Threshold),
+        kind: kinds::LOOM,
+        attach: Attach::Beside(kinds::THRESHOLD),
+        requires: Some(kinds::THRESHOLD),
         needs_cold: false,
         built: true,
         // Weaving wants light, and in a building with no windows the doorway is
@@ -325,9 +327,9 @@ pub const INVENTORY: [Pattern; 16] = [
     },
     Pattern {
         name: "the-anvil",
-        kind: AnchorKind::Anvil,
-        attach: Attach::Beside(AnchorKind::Vessel),
-        requires: Some(AnchorKind::Vessel),
+        kind: kinds::ANVIL,
+        attach: Attach::Beside(kinds::VESSEL),
+        requires: Some(kinds::VESSEL),
         needs_cold: false,
         built: true,
         // The quench. An anvil without water within arm's reach is a smithy
@@ -339,9 +341,9 @@ pub const INVENTORY: [Pattern; 16] = [
     },
     Pattern {
         name: "the-altar",
-        kind: AnchorKind::Altar,
-        attach: Attach::Beside(AnchorKind::Vessel),
-        requires: Some(AnchorKind::Vessel),
+        kind: kinds::ALTAR,
+        attach: Attach::Beside(kinds::VESSEL),
+        requires: Some(kinds::VESSEL),
         needs_cold: false,
         built: true,
         // The washing the rite asks for before it begins.
@@ -382,9 +384,9 @@ pub const INVENTORY: [Pattern; 16] = [
     // strongbox or it is nowhere.
     Pattern {
         name: "the-key-in-the-strongbox",
-        kind: AnchorKind::Key,
-        attach: Attach::Within(AnchorKind::Strongbox),
-        requires: Some(AnchorKind::Strongbox),
+        kind: kinds::KEY,
+        attach: Attach::Within(kinds::STRONGBOX),
+        requires: Some(kinds::STRONGBOX),
         needs_cold: false,
         built: true,
         roles: &[Role::Store],
@@ -478,9 +480,9 @@ pub const INVENTORY: [Pattern; 16] = [
     // kind is present, and `the-loom` is index 11.
     Pattern {
         name: "the-key-by-the-loom",
-        kind: AnchorKind::Key,
-        attach: Attach::Beside(AnchorKind::Loom),
-        requires: Some(AnchorKind::Loom),
+        kind: kinds::KEY,
+        attach: Attach::Beside(kinds::LOOM),
+        requires: Some(kinds::LOOM),
         needs_cold: false,
         built: true,
         roles: &[Role::Loomroom],
@@ -559,7 +561,7 @@ fn draw_from(
     admits: impl Fn(&'static Pattern) -> bool,
 ) -> Vec<&'static Pattern> {
     let mut out: Vec<&'static Pattern> = Vec::new();
-    let mut present: std::collections::BTreeSet<AnchorKind> = std::collections::BTreeSet::new();
+    let mut present: std::collections::BTreeSet<KindId> = std::collections::BTreeSet::new();
     for p in inventory.iter() {
         if p.built != built {
             continue;
@@ -628,7 +630,7 @@ pub fn compose(selected: &[&Pattern]) -> Interior {
     let mut interior = Interior::new();
     let mut hub: Option<AnchorId> = None;
     // First placed anchor of each kind — the attachment target.
-    let mut first_of: std::collections::BTreeMap<AnchorKind, AnchorId> =
+    let mut first_of: std::collections::BTreeMap<KindId, AnchorId> =
         std::collections::BTreeMap::new();
 
     for p in selected {
@@ -648,7 +650,7 @@ pub fn compose(selected: &[&Pattern]) -> Interior {
         {
             interior.connect(t, id);
         }
-        if hub.is_none() && p.kind == AnchorKind::Ground {
+        if hub.is_none() && p.kind == kinds::GROUND {
             hub = Some(id);
         }
         first_of.entry(p.kind).or_insert(id);
@@ -680,7 +682,7 @@ mod tests {
             "climate must change which patterns a people uses"
         );
         assert!(
-            cold.iter().any(|p| p.kind == AnchorKind::Hearth),
+            cold.iter().any(|p| p.kind == kinds::HEARTH),
             "a cold people builds around a fire"
         );
     }
@@ -693,7 +695,7 @@ mod tests {
         // other patterns" made checkable.
         let warm = selection(true, false);
         assert!(
-            !warm.iter().any(|p| p.kind == AnchorKind::Hearth),
+            !warm.iter().any(|p| p.kind == kinds::HEARTH),
             "no fire in a warm room (fixture precondition)"
         );
         assert!(
@@ -719,7 +721,7 @@ mod tests {
             "an unbuilt room contains no built patterns"
         );
         assert!(
-            !wild.iter().any(|p| p.kind == AnchorKind::Threshold),
+            !wild.iter().any(|p| p.kind == kinds::THRESHOLD),
             "wilderness needs no doorway"
         );
     }
@@ -785,15 +787,15 @@ mod tests {
         // Not merely SOME 3-hop route: the route the grammar was designed to
         // produce. threshold -> ground -> alcove -> hearth -> bed.
         let interior = compose(&selection(true, true));
-        let find = |k: AnchorKind| {
+        let find = |k: KindId| {
             interior
                 .ids()
                 .into_iter()
                 .find(|id| interior.anchor(*id).kind == k)
                 .unwrap_or_else(|| panic!("a cold built room has a {k:?}"))
         };
-        let door = find(AnchorKind::Threshold);
-        let bed = find(AnchorKind::Bed);
+        let door = find(kinds::THRESHOLD);
+        let bed = find(kinds::BED);
         let plan = crate::interior::route_within(&interior, door, bed, 256)
             .expect("the bed is reachable from the door");
         assert!(
@@ -877,7 +879,7 @@ mod tests {
     /// thing that made a pattern addition safe has stopped holding.
     /// `windows/vessel/src/thing.rs` keys a thing's `EntityId` on
     /// `(room facet, kind, ordinal)` and every caller hardcodes ordinal `0`,
-    /// which is legitimate ONLY while each `AnchorKind` occurs at most once per
+    /// which is legitimate ONLY while each kind occurs at most once per
     /// composed interior. The moment one occurs twice, two distinct things in
     /// one room derive the SAME entity id: every fact about either keys to the
     /// other, and no gate in this tree can see it — a derived id has no
@@ -906,7 +908,7 @@ mod tests {
         let mut census = |label: String, selected: Vec<&'static Pattern>| {
             combinations += 1;
             let interior: Interior = compose(&selected);
-            let mut counts: std::collections::BTreeMap<AnchorKind, usize> =
+            let mut counts: std::collections::BTreeMap<KindId, usize> =
                 std::collections::BTreeMap::new();
             for id in interior.ids() {
                 *counts.entry(interior.anchor(id).kind).or_insert(0) += 1;
@@ -988,7 +990,7 @@ mod tests {
     #[test]
     fn the_grammar_puts_exactly_these_things_inside_other_things() {
         let mut combinations = 0usize;
-        let mut pairs: std::collections::BTreeSet<(AnchorKind, AnchorKind)> =
+        let mut pairs: std::collections::BTreeSet<(KindId, KindId)> =
             std::collections::BTreeSet::new();
 
         let mut census = |selected: Vec<&'static Pattern>| {
@@ -1024,13 +1026,13 @@ mod tests {
         );
         assert_eq!(combinations, 60, "the census swept {combinations}, not 60");
 
-        let expected: std::collections::BTreeSet<(AnchorKind, AnchorKind)> = [
+        let expected: std::collections::BTreeSet<(KindId, KindId)> = [
             // The Offer's Task 6 finding, unchanged: a fire within an alcove.
-            (AnchorKind::Alcove, AnchorKind::Hearth),
+            (kinds::ALCOVE, kinds::HEARTH),
             // The Chattel's Task 11 addition, and the whole point of it: a
             // production room that actually holds something inside a
             // container `open` can open.
-            (AnchorKind::Strongbox, AnchorKind::Key),
+            (kinds::STRONGBOX, kinds::KEY),
         ]
         .into_iter()
         .collect();
@@ -1064,7 +1066,7 @@ mod tests {
         for &role in EVERY_ROLE {
             let has_fire = selection_for(role, true, true, true)
                 .iter()
-                .any(|p| p.kind == AnchorKind::Hearth);
+                .any(|p| p.kind == kinds::HEARTH);
             assert_eq!(
                 has_fire,
                 role == Role::Hearthroom,
@@ -1336,10 +1338,7 @@ mod tests {
         let stands_a_container = selection_for(Role::Loomroom, true, false, false)
             .iter()
             .any(|p| {
-                crate::affordance::carries(
-                    crate::affordance::thing_kind_of(p.kind),
-                    crate::affordance::ObjectProperty::Encloses,
-                )
+                crate::affordance::carries(p.kind, crate::affordance::ObjectProperty::Encloses)
             });
         assert!(
             !stands_a_container,
@@ -1419,7 +1418,7 @@ mod tests {
         static SYNTHETIC: [Pattern; 2] = [
             Pattern {
                 name: "test-ground",
-                kind: AnchorKind::Ground,
+                kind: kinds::GROUND,
                 attach: Attach::Hub,
                 requires: None,
                 needs_cold: false,
@@ -1430,8 +1429,8 @@ mod tests {
             },
             Pattern {
                 name: "test-town-only",
-                kind: AnchorKind::Strongbox,
-                attach: Attach::Beside(AnchorKind::Ground),
+                kind: kinds::STRONGBOX,
+                attach: Attach::Beside(kinds::GROUND),
                 requires: None,
                 needs_cold: false,
                 built: true,
@@ -1484,8 +1483,8 @@ mod tests {
         // The first well-formedness rule (spec §6): an unreachable anchor means
         // part of the room cannot be used, so the composition is ill-formed.
         let mut broken = Interior::new();
-        broken.push(AnchorKind::Hearth, None);
-        broken.push(AnchorKind::Bed, None); // no edge — orphaned
+        broken.push(kinds::HEARTH, None);
+        broken.push(kinds::BED, None); // no edge — orphaned
         assert!(
             !permits(&broken),
             "the validator rejects an unreachable anchor"

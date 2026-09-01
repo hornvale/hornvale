@@ -6,8 +6,9 @@
 //! euclidean distance in this model to decay over, and introducing one would put
 //! a metric on an outcome path.
 
-use super::anchor::{AnchorId, AnchorKind, Interior};
+use super::anchor::{AnchorId, Interior};
 use super::route::route_within;
+use hornvale_thing::kinds;
 
 /// The warmth a hearth emits at its own anchor, in °C, read with ZERO decay
 /// (`warmth_at` applies `WARMTH_DECAY.powi(0) == 1` at the emitter itself) —
@@ -67,7 +68,7 @@ pub const WARMTH_DECAY: f64 = 0.5;
 pub fn warmth_at(interior: &Interior, at: AnchorId, budget: usize) -> f64 {
     let mut total = 0.0_f64;
     for id in interior.ids() {
-        if interior.anchor(id).kind != AnchorKind::Hearth {
+        if interior.anchor(id).kind != kinds::HEARTH {
             continue;
         }
         if let Some(path) = route_within(interior, at, id, budget) {
@@ -80,16 +81,16 @@ pub fn warmth_at(interior: &Interior, at: AnchorId, budget: usize) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::interior::{AnchorKind, Interior};
+    use crate::interior::Interior;
 
     #[test]
     fn warmth_falls_off_with_graph_distance_from_the_fire() {
         // hearth — hall — far. Warmth is greatest AT the fire, less one step
         // away, less again two steps away, and never negative.
         let mut i = Interior::new();
-        let hearth = i.push(AnchorKind::Hearth, None);
-        let hall = i.push(AnchorKind::Bed, None);
-        let far = i.push(AnchorKind::Threshold, None);
+        let hearth = i.push(kinds::HEARTH, None);
+        let hall = i.push(kinds::BED, None);
+        let far = i.push(kinds::THRESHOLD, None);
         i.connect(hearth, hall);
         i.connect(hall, far);
 
@@ -109,8 +110,8 @@ mod tests {
         // ADDITIVE-LATENT: with no emitter the field is zero, so a creature is
         // unchanged by construction — this is what makes byte-identity structural.
         let mut i = Interior::new();
-        let a = i.push(AnchorKind::Bed, None);
-        let b = i.push(AnchorKind::Threshold, None);
+        let a = i.push(kinds::BED, None);
+        let b = i.push(kinds::THRESHOLD, None);
         i.connect(a, b);
         assert_eq!(warmth_at(&i, a, 64), 0.0);
         assert_eq!(warmth_at(&i, b, 64), 0.0);
@@ -119,14 +120,14 @@ mod tests {
     #[test]
     fn warmth_sums_over_multiple_fires() {
         let mut i = Interior::new();
-        let hall = i.push(AnchorKind::Bed, None);
-        let f1 = i.push(AnchorKind::Hearth, None);
-        let f2 = i.push(AnchorKind::Hearth, None);
+        let hall = i.push(kinds::BED, None);
+        let f1 = i.push(kinds::HEARTH, None);
+        let f2 = i.push(kinds::HEARTH, None);
         i.connect(hall, f1);
         i.connect(hall, f2);
         let mut one = Interior::new();
-        let h = one.push(AnchorKind::Bed, None);
-        let g = one.push(AnchorKind::Hearth, None);
+        let h = one.push(kinds::BED, None);
+        let g = one.push(kinds::HEARTH, None);
         one.connect(h, g);
         assert!(
             warmth_at(&i, hall, 64) > warmth_at(&one, h, 64),

@@ -30,53 +30,50 @@
 //!   (`[OfferedVerb::Sleep, ...].into_iter().collect()`) or a block, never
 //!   an arm whose own output type IS `OfferedVerb`. Replaced with a
 //!   bracket-depth-aware scanner (below) that reads the whole arm body
-//!   between a `AnchorKind::X =>` and the arm's end, catching both shapes.
+//!   between a `kinds::X =>` and the arm's end, catching both shapes.
 //!   Its own positive/negative controls are below, so the scanner's claim
 //!   to catch the forbidden shape is evidence, not assertion.
 
 use std::collections::BTreeSet;
 
 use hornvale_kernel::{ConditionResponse, EntityId, Facet, KindId, ResourceVector};
+use hornvale_thing::kinds;
 use hornvale_vessel::Knowledge;
 use hornvale_vessel::affordance::{
     ObjectProperty, ObjectTraits, OfferedVerb, object_registry, offered, offered_by, offered_to,
-    offered_to_observer, thing_kind_of,
+    offered_to_observer,
 };
 use hornvale_vessel::body::Body;
 use hornvale_vessel::clock::{REFERENCE_MASS_KG, mass_for_species};
-use hornvale_vessel::interior::AnchorKind;
 use hornvale_vessel::liveness::ThreatNiche;
 
-/// Every `AnchorKind` variant, once — the roster
-/// `the_anchor_to_thing_kind_mapping_is_injective` sweeps and
-/// `an_unencountered_passage_offers_nothing` checks its precondition
-/// against. It is [`AnchorKind::ALL`], **generated from the enum's own
-/// declaration** (`windows/vessel/src/interior/anchor.rs`), not a list
-/// maintained here.
+/// Every kind this workspace has a NAMED handle for, once —
+/// `hornvale_thing::kinds::EVERY_HANDLE`, read as ids.
 ///
-/// **This alias is what is left of a hand-written roster, and the paragraph
-/// it replaces was wrong in the direction that happens.** Task 9 hoisted one
-/// `[AnchorKind; 14]` into this file and answered "what stops THIS copy going
-/// short" with: the compiler (`thing_kind_of` has no wildcard arm, so a
-/// fifteenth variant will not compile until someone writes its arm) plus the
-/// two-way agreement against
-/// `the_re_key_preserves_every_anchor_kinds_offer`'s own fourteen-row table.
-/// Both halves are true and neither is anchored to the enum's CARDINALITY.
-/// The compiler forces an ARM, never a LIST ENTRY; the two hand-maintained
-/// lists go short **together**, since the person appending a variant touches
-/// neither. Fix round 1 measured it: a fifteenth variant, given the arms the
-/// compiler demanded and pointed at `KindId("cave-mouth")`, left 1209 tests
-/// green — including the precondition below, whose doc comment promised to
-/// stop being evidence in exactly that case.
+/// **It was `AnchorKind::ALL`, generated from the enum's own declaration, and
+/// what replaces it had to keep that generated property (The Wicket, Task
+/// 2).** The paragraph this replaces recorded why, and the reason outlives
+/// the enum: Task 9 of The Chattel hoisted a hand-written `[AnchorKind; 14]`
+/// into this file and answered "what stops THIS copy going short" with the
+/// compiler plus a two-way agreement against the frozen verb table below.
+/// Both halves were true and neither was anchored to CARDINALITY. The
+/// compiler forces an ARM, never a LIST ENTRY; two hand-maintained lists go
+/// short **together**, since the person appending a kind touches neither.
+/// Fix round 1 measured it: a fifteenth variant, given the arms the compiler
+/// demanded and pointed at `KindId("cave-mouth")`, left 1209 tests green —
+/// including a precondition whose doc comment promised to stop being
+/// evidence in exactly that case.
 ///
-/// **Removing a variant reddened one test; adding one reddened nothing, and
-/// adding is the direction that happens.** No test can enumerate a variant
-/// it has never heard of, so no test could have closed that gap — the roster
-/// had to come from the declaration. It now does, and what remains
-/// hand-maintained is the frozen verb table below, deliberately: its two-way
-/// agreement against a roster that grows with the enum is what turns an
-/// appended variant into a red.
-const ALL_ANCHOR_KINDS: &[AnchorKind] = AnchorKind::ALL;
+/// `EVERY_HANDLE` is hand-written in `domains/thing`, so this is one step
+/// further from the declaration than the macro was. What holds it is a
+/// different ratchet rather than a generator: `every_named_handle_is_a_roster_
+/// row` (G-d) checks each handle against `THING_KINDS`, and
+/// `the_roster_is_frozen_as_an_ordered_set` (G-f) freezes that roster as an
+/// ordered SET rather than a count, so an addition, a removal and a
+/// compensating swap are each a visible edit to a committed list.
+fn every_named_kind() -> Vec<KindId> {
+    kinds::EVERY_HANDLE.iter().map(|(_, id)| *id).collect()
+}
 
 /// Acceptance test (1): a new OBJECT kind ships with properties only — no
 /// dispatcher change — and the right verbs appear on it.
@@ -84,20 +81,21 @@ const ALL_ANCHOR_KINDS: &[AnchorKind] = AnchorKind::ALL;
 /// **What it still catches after Task 7's re-key** (the write-up spec §7's
 /// Task 3 demands, kept beside the test rather than in a report that dies
 /// with the campaign): the query is now keyed on thing-kind, so this reads
-/// `offered_by(thing_kind_of(AnchorKind::Pool))` and covers one more link
-/// than it used to — a `pool` row that loses `HoldsLiquid`, a
-/// `required_properties(Drink)` that stops requiring it, a subset filter
-/// broken to return everything or nothing, AND a `thing_kind_of` arm that
-/// carries `Pool` to a kind with no liquid. It does NOT catch a mapping that
-/// sends `Pool` to `vessel`, because `vessel` also holds liquid; that is
-/// `the_re_key_preserves_every_anchor_kinds_offer`'s job, and the reason
-/// this file needs that test at all.
+/// `offered_by(kinds::POOL)` and covers one more link than it used to — a
+/// `pool` row that loses `HoldsLiquid`, a `required_properties(Drink)` that
+/// stops requiring it, and a subset filter broken to return everything or
+/// nothing. **It used to cover one more than that**, an anchor-kind → label
+/// mapping arm carrying `Pool` to a kind with no liquid; The Wicket deleted
+/// that mapping, so the link is gone rather than unguarded.
+/// `the_re_key_preserves_every_anchor_kinds_offer` is still what freezes the
+/// whole per-kind answer, and is still the reason this file needs that test
+/// at all.
 #[test]
 fn a_kind_gains_every_verb_its_properties_satisfy_with_no_dispatcher_edit() {
     // Pool carries HoldsLiquid; nothing anywhere names "pool" and "drink"
     // together. The verb arrives because the property matches.
-    assert!(offered_by(thing_kind_of(AnchorKind::Pool)).contains(&OfferedVerb::Drink));
-    assert!(!offered_by(thing_kind_of(AnchorKind::Bed)).contains(&OfferedVerb::Drink));
+    assert!(offered_by(kinds::POOL).contains(&OfferedVerb::Drink));
+    assert!(!offered_by(kinds::BED).contains(&OfferedVerb::Drink));
 }
 
 /// Acceptance test (2), the multi-carrier half: `HoldsLiquid` is the one
@@ -117,7 +115,7 @@ fn a_kind_gains_every_verb_its_properties_satisfy_with_no_dispatcher_edit() {
 ///
 /// **What it still catches after Task 7's re-key**: everything it caught
 /// before, over the same two carriers (`pool`/`vessel`), now discovered as
-/// [`KindId`]s from the re-keyed registry rather than as `AnchorKind`s. The
+/// [`KindId`]s read from the registry rather than as anchor-kind variants. The
 /// discovery is still from the registry, never a hand-written pair, so a
 /// carrier added or removed changes what this sweeps. The `>= 2` guard is
 /// what keeps it from going vacuous if the shared property ever loses a
@@ -214,21 +212,21 @@ fn subset_and_equality_genuinely_disagree_on_the_constructed_traits() {
 /// still falls out of the subset query.
 #[test]
 fn warm_appears_on_hearth_with_no_object_table_edit() {
-    assert!(offered_by(thing_kind_of(AnchorKind::Hearth)).contains(&OfferedVerb::Warm));
-    assert!(!offered_by(thing_kind_of(AnchorKind::Bed)).contains(&OfferedVerb::Warm));
+    assert!(offered_by(kinds::HEARTH).contains(&OfferedVerb::Warm));
+    assert!(!offered_by(kinds::BED).contains(&OfferedVerb::Warm));
 }
 
 /// `Examine` requires the empty property set (spec §3.3: universal), and the
 /// empty set is a subset of every set — including the empty set itself. So
-/// universality must hold even for an `AnchorKind` `object_registry` never
+/// universality must hold even for a kind `object_registry` never
 /// mentions at all (e.g. `Screen`, which Task 1 verified carries no property):
 /// there is no per-kind registry entry to fall back on, so this is the
 /// sharpest test that `offered_by` derives universality from the subset
 /// relation rather than from iterating only over registered kinds.
 #[test]
 fn examine_is_universal_even_for_a_kind_with_no_registered_properties() {
-    assert!(!object_registry().contains(&thing_kind_of(AnchorKind::Screen)));
-    let offered = offered_by(thing_kind_of(AnchorKind::Screen));
+    assert!(!object_registry().contains(&kinds::SCREEN));
+    let offered = offered_by(kinds::SCREEN);
     assert!(offered.contains(&OfferedVerb::Examine));
     assert_eq!(
         offered.len(),
@@ -249,7 +247,7 @@ fn find_bytes(haystack: &[u8], needle: &[u8]) -> Option<usize> {
     (0..=haystack.len() - needle.len()).find(|&i| &haystack[i..i + needle.len()] == needle)
 }
 
-/// Whether `src` contains a match arm keyed on a specific `AnchorKind`
+/// Whether `src` contains a match arm keyed on a specific thing-kind
 /// variant whose body mentions an `OfferedVerb` variant anywhere — the
 /// verb x object table shape acceptance test (4) forbids.
 ///
@@ -257,7 +255,7 @@ fn find_bytes(haystack: &[u8], needle: &[u8]) -> Option<usize> {
 /// looked for the literal substring `"=> OfferedVerb::"`, but `offered_by`
 /// returns `BTreeSet<OfferedVerb>`, so no real per-kind arm's output type is
 /// ever `OfferedVerb` itself — a hardcoded table has to build a *set*:
-/// `AnchorKind::Bed => [OfferedVerb::Sleep, OfferedVerb::Examine]
+/// `kinds::BED => [OfferedVerb::Sleep, OfferedVerb::Examine]
 /// .into_iter().collect()`, or a block. A reviewer checked both spellings
 /// against the old scanner and got 0 matches on each — the guard's blind
 /// spot was the only shape anyone would ever write.
@@ -278,13 +276,14 @@ fn find_bytes(haystack: &[u8], needle: &[u8]) -> Option<usize> {
 /// it; or one keyed on something the callers below do not pass — none of
 /// those are seen. The concrete instance already in this crate:
 /// `interior/field.rs`'s `warmth_at` contains `if interior.anchor(id).kind
-/// != AnchorKind::Hearth { continue; }`, a kind-to-behavior coupling this
+/// != kinds::HEARTH { continue; }`, a kind-to-behavior coupling this
 /// guard cannot see because it is not in `affordance.rs` and never mentions
 /// `OfferedVerb`.
 ///
 /// **`marker` is a parameter since The Chattel's Task 7, and that is a
 /// coverage repair rather than a tidy-up.** The scan was hard-coded to
-/// `AnchorKind::`, which was the property table's key when The Offer wrote
+/// the anchor-kind enum's variant spelling, which was the property table's
+/// key when The Offer wrote
 /// it. Task 7 re-keyed the table to `KindId`, so the natural spelling of a
 /// hardcoded verb table moved with it — `KindId("bed") => [OfferedVerb::
 /// Sleep, ...]` is a legal match arm (a tuple-struct pattern over a string
@@ -299,7 +298,7 @@ fn arm_mentions_offered_verb(src: &str, marker: &[u8]) -> bool {
         let variant_start = cursor + rel + marker.len();
         let mut j = variant_start;
         // The key text between the marker and the `=>`. The set is wide
-        // enough for both an `AnchorKind` variant name (`Bed`) and a
+        // enough for both a `kinds` handle name (`BED`) and a
         // `KindId` literal's remainder (`"cave-mouth")`), so one scan
         // serves both markers; it is a superset for the enum case and
         // changes nothing there.
@@ -343,18 +342,29 @@ fn arm_mentions_offered_verb(src: &str, marker: &[u8]) -> bool {
             }
         }
         // Advance past just the marker (not the whole arm) so an or-pattern
-        // like `AnchorKind::Bed | AnchorKind::Pool => ...` still finds the
+        // like `kinds::BED | kinds::POOL => ...` still finds the
         // second mention even though the first wasn't followed by `=>`.
         cursor = variant_start;
     }
     false
 }
 
-/// The `AnchorKind::`-keyed reading of [`arm_mentions_offered_verb`] — the
-/// shape The Offer's acceptance clause (4) named, kept as its own function
-/// so the three controls below read unchanged.
-fn anchor_kind_arm_mentions_offered_verb(src: &str) -> bool {
-    arm_mentions_offered_verb(src, b"AnchorKind::")
+/// The `kinds::`-keyed reading of [`arm_mentions_offered_verb`] — the shape
+/// The Offer's acceptance clause (4) named, kept as its own function so the
+/// three controls below read unchanged.
+///
+/// **The marker moved from `AnchorKind::` to `kinds::` (The Wicket, Task
+/// 2), and moving it was the whole repair rather than a rename.** The Offer
+/// wrote this against the enum's variant spelling; The Wicket deleted the
+/// enum, so `AnchorKind::` can no longer appear in any file and a scan for
+/// it would have gone permanently, invisibly vacuous — green because its
+/// subject left the tree, not because the forbidden shape is absent. The
+/// spelling a hardcoded anchor-side verb table would take today is
+/// `kinds::HEARTH => [OfferedVerb::Warm, ...]`, and that is what this now
+/// reads. This is the same repair Task 7's re-key forced on the sibling
+/// `KindId(` reading, one campaign later and one key further along.
+fn handle_arm_mentions_offered_verb(src: &str) -> bool {
+    arm_mentions_offered_verb(src, b"kinds::")
 }
 
 /// The `KindId(`-keyed reading — the shape a hardcoded verb table would take
@@ -370,11 +380,11 @@ fn thing_kind_arm_mentions_offered_verb(src: &str) -> bool {
 #[test]
 fn the_table_scanner_catches_a_set_builder_arm() {
     let table = "match kind {\n    \
-                  AnchorKind::Bed => [OfferedVerb::Sleep, OfferedVerb::Examine].into_iter().collect(),\n    \
+                  kinds::BED => [OfferedVerb::Sleep, OfferedVerb::Examine].into_iter().collect(),\n    \
                   _ => BTreeSet::new(),\n\
                   }";
     assert!(
-        anchor_kind_arm_mentions_offered_verb(table),
+        handle_arm_mentions_offered_verb(table),
         "positive control: a set-builder verb x object arm must be caught"
     );
 }
@@ -383,7 +393,7 @@ fn the_table_scanner_catches_a_set_builder_arm() {
 #[test]
 fn the_table_scanner_catches_a_block_arm() {
     let table = "match kind {\n    \
-                  AnchorKind::Bed => {\n        \
+                  kinds::BED => {\n        \
                   let mut s = BTreeSet::new();\n        \
                   s.insert(OfferedVerb::Sleep);\n        \
                   s\n    \
@@ -391,22 +401,22 @@ fn the_table_scanner_catches_a_block_arm() {
                   _ => BTreeSet::new(),\n\
                   }";
     assert!(
-        anchor_kind_arm_mentions_offered_verb(table),
+        handle_arm_mentions_offered_verb(table),
         "positive control: a block-form verb x object arm must be caught"
     );
 }
 
-/// Negative control: an `AnchorKind`-keyed arm whose body mentions only
+/// Negative control: a handle-keyed arm whose body mentions only
 /// `ObjectProperty` (the permitted indirection this whole module is built
 /// on) must NOT trip the scanner — otherwise it would also condemn
 /// `object_registry` itself.
 #[test]
 fn the_table_scanner_does_not_false_positive_on_property_indirection() {
     let legitimate = "match kind {\n    \
-                       AnchorKind::Bed => ObjectProperty::SupportsRest,\n    \
+                       kinds::BED => ObjectProperty::SupportsRest,\n    \
                        _ => ObjectProperty::HoldsLiquid,\n\
                        }";
-    assert!(!anchor_kind_arm_mentions_offered_verb(legitimate));
+    assert!(!handle_arm_mentions_offered_verb(legitimate));
 }
 
 /// Acceptance test (4): no verb x object table exists in `affordance.rs`. A
@@ -418,8 +428,8 @@ fn the_table_scanner_does_not_false_positive_on_property_indirection() {
 fn no_verb_by_object_table_exists() {
     let src = include_str!("../../src/affordance.rs");
     assert!(
-        !anchor_kind_arm_mentions_offered_verb(src),
-        "affordance.rs maps an AnchorKind variant to an OfferedVerb through a \
+        !handle_arm_mentions_offered_verb(src),
+        "affordance.rs maps a kinds:: handle to an OfferedVerb through a \
          match arm: that is the verb x object table the acceptance test \
          forbids"
     );
@@ -468,7 +478,7 @@ fn the_table_scanner_does_not_false_positive_on_thing_kind_property_rows() {
 /// Acceptance test (4), the half Task 7's re-key made necessary: no
 /// **thing-kind**-keyed verb table exists in `affordance.rs` either.
 ///
-/// `no_verb_by_object_table_exists` above scans for `AnchorKind::`-keyed
+/// `no_verb_by_object_table_exists` above scans for `kinds::`-keyed
 /// arms, which was the whole of the forbidden shape while the property table
 /// was keyed on that enum. It no longer is, so this is the same structural
 /// claim over the key the table actually uses. Stated so it cannot be
@@ -613,8 +623,8 @@ fn names_an_offered_verb_variant(body: &[u8]) -> bool {
 
 /// Every kind → verbs dispatch function in `src`, as `(name, body)` pairs:
 /// each `fn` whose return type is `BTreeSet<OfferedVerb>` AND whose
-/// parameter list names an object kind (the identifier `kind`, or the types
-/// `KindId`/`AnchorKind`). `src` must already have been through
+/// parameter list names an object kind (the identifier `kind`, or the type
+/// `KindId`). `src` must already have been through
 /// [`blank_comments_and_strings`].
 ///
 /// **This selector is the whole point of the repair, so the reasoning for
@@ -681,9 +691,8 @@ fn kind_to_verb_dispatch_bodies(src: &[u8]) -> Vec<(String, Vec<u8>)> {
         )
         .is_some();
         let params = &src[i + 1..params_end];
-        let names_a_kind = find_bytes(params, b"kind").is_some()
-            || find_bytes(params, b"KindId").is_some()
-            || find_bytes(params, b"AnchorKind").is_some();
+        let names_a_kind =
+            find_bytes(params, b"kind").is_some() || find_bytes(params, b"KindId").is_some();
         if !returns_verbs || !names_a_kind {
             continue;
         }
@@ -702,7 +711,7 @@ fn kind_to_verb_dispatch_bodies(src: &[u8]) -> Vec<(String, Vec<u8>)> {
 /// spellings rather than adding a third one to the pile. The two scans above
 /// it (`no_verb_by_object_table_exists`,
 /// `no_thing_kind_keyed_verb_table_exists`) look for a match arm keyed on a
-/// PARTICULAR spelling of the object key — `AnchorKind::`, then `KindId(`.
+/// PARTICULAR spelling of the object key — `kinds::`, then `KindId(`.
 /// A reviewer defeated both at once with a third spelling that is neither:
 ///
 /// ```ignore
@@ -779,7 +788,7 @@ fn kind_to_verb_dispatch_bodies(src: &[u8]) -> Vec<(String, Vec<u8>)> {
 /// test affordance::no_kind_keyed_dispatch_names_a_verb ... FAILED
 /// test affordance::no_thing_kind_keyed_verb_table_exists ... FAILED
 ///
-/// (3) `match kind { AnchorKind::Bed => [OfferedVerb::Sleep, ...] ... }`
+/// (3) `match kind { kinds::BED => [OfferedVerb::Sleep, ...] ... }`
 ///     in `offered_to_observer` — The Offer's original spelling:
 /// test affordance::no_kind_keyed_dispatch_names_a_verb ... FAILED
 /// test affordance::no_verb_by_object_table_exists ... FAILED
@@ -882,29 +891,31 @@ fn the_dispatch_scan_catches_a_thing_kind_keyed_table() {
     assert!(names_an_offered_verb_variant(&found[0].1));
 }
 
-/// Positive control (3): the `AnchorKind::` spelling.
+/// Positive control (3): a MULTI-LINE signature.
 ///
-/// **This doc used to read "on the one dispatch function that still speaks
-/// that key (`offered_to_observer`)", and Task 9 made that sentence false:
-/// no dispatch function in `affordance.rs` is keyed on `AnchorKind` any
-/// more.** The FIXTURE is unaffected and is deliberately kept — it is a
-/// synthetic source sample, never read off production, and what it proves
-/// is that [`kind_to_verb_dispatch_bodies`] can still walk a multi-line
-/// signature and that [`names_an_offered_verb_variant`] still recognises
-/// the `AnchorKind::` spelling. That must keep working precisely BECAUSE
-/// production no longer contains an example: the scan's coverage of a
-/// spelling must not quietly lapse when the last live instance of it
-/// leaves the tree, which is the same "a scanner that stops finding its
-/// subject reports success" failure `the_dispatch_scan_reports_the_
-/// functions_it_found` guards from the other side.
+/// **This doc has been corrected twice by campaigns deleting its subject,
+/// and the second correction is the reason it is now about the signature
+/// rather than about a spelling.** It read "on the one dispatch function
+/// that still speaks that key (`offered_to_observer`)" until Task 9 of The
+/// Chattel made that false; it then read that the fixture kept the scan's
+/// coverage of the deleted enum's spelling alive after production stopped
+/// containing one. The Wicket deleted the type outright, so a fixture
+/// naming it would be a synthetic source sample of a construct that cannot
+/// be written — coverage of nothing.
+///
+/// What the fixture proves, and what the sibling controls do not, is that
+/// [`kind_to_verb_dispatch_bodies`] walks a signature broken across lines
+/// before reaching the return type. That is a property of the scanner's
+/// parser rather than of any key spelling, so it survives every future
+/// re-key.
 #[test]
 fn the_dispatch_scan_catches_an_anchor_kind_keyed_table() {
     let src = b"pub fn offered_to_observer(\n    \
-                 kind: AnchorKind,\n    \
+                 kind: KindId,\n    \
                  body: &Body,\n\
                  ) -> BTreeSet<OfferedVerb> {\n    \
-                 match kind {\n        \
-                 AnchorKind::Bed => [OfferedVerb::Sleep].into_iter().collect(),\n        \
+                 match kind.0 {\n        \
+                 \"bed\" => [OfferedVerb::Sleep].into_iter().collect(),\n        \
                  _ => BTreeSet::new(),\n    \
                  }\n\
                  }";
@@ -1080,8 +1091,8 @@ fn the_same_object_offers_differently_to_different_bodies() {
     let large = body_with_mass("woolly-mammoth", large_mass);
 
     assert_ne!(
-        offered_to(thing_kind_of(AnchorKind::Bed), &small),
-        offered_to(thing_kind_of(AnchorKind::Bed), &large),
+        offered_to(kinds::BED, &small),
+        offered_to(kinds::BED, &large),
         "supports-rest is not body-relative: the offer is identical for \
          bodies of very different mass, so §3.4 is unexercised"
     );
@@ -1120,7 +1131,7 @@ fn body_relativity_never_withdraws_an_existing_capability() {
     ];
 
     let mut kinds: Vec<KindId> = object_registry().iter().map(|(k, _)| *k).collect();
-    kinds.push(thing_kind_of(AnchorKind::Screen));
+    kinds.push(kinds::SCREEN);
 
     for kind in kinds {
         let baseline = offered_by(kind);
@@ -1156,7 +1167,7 @@ fn an_unencountered_object_offers_nothing() {
     let body = body_with_mass("human", REFERENCE_MASS_KG);
     let empty = Knowledge::default();
     assert!(
-        offered_to_observer(thing_kind_of(AnchorKind::Hearth), &body, &empty).is_empty(),
+        offered_to_observer(kinds::HEARTH, &body, &empty).is_empty(),
         "a body with no recorded knowledge must be offered nothing"
     );
 }
@@ -1183,8 +1194,8 @@ fn an_encountered_object_offers_its_verbs() {
         "recorded".to_string(),
     )]));
     assert_eq!(
-        offered_to_observer(thing_kind_of(AnchorKind::Hearth), &body, &known),
-        offered_to(thing_kind_of(AnchorKind::Hearth), &body),
+        offered_to_observer(kinds::HEARTH, &body, &known),
+        offered_to(kinds::HEARTH, &body),
         "knowledge of an encountered room must withdraw nothing"
     );
 }
@@ -1197,14 +1208,18 @@ fn an_encountered_object_offers_its_verbs() {
 /// The gate has denied a *hearth* since The Offer
 /// (`an_unencountered_object_offers_nothing`, above). What it could never
 /// deny is a PASSAGE, and 0369 is precise about why: `offered_to_observer`
-/// took an `AnchorKind`, `AnchorKind` is an interior-object enum with no
+/// took an anchor-kind variant, that enum had no
 /// cave-mouth variant, and a cave mouth is addressed by a
 /// `Vertex`/`ChamberAddr`. **The obstacle was addressing, not durability**
 /// — so the remedy is not more state, it is a different key, which is what
-/// Task 9's re-key to [`KindId`] is. The first assertion below is the
-/// precondition that makes that concrete rather than asserted: no anchor
-/// kind maps to `cave-mouth`, so before the re-key there was no argument
-/// this call could have been given.
+/// Task 9's re-key to [`KindId`] is.
+///
+/// **This test carried a precondition loop making that concrete, and The
+/// Wicket's Task 2 retired it** — see the comment in the body. It swept the
+/// anchor-kind enum asserting no variant mapped to `cave-mouth`, which was
+/// the fact that made the pre-re-key call unwritable. With the enum deleted
+/// there is no closed variant set left to be unreachable through, so the
+/// loop could only ever have passed.
 ///
 /// **MUTATION THIS MUST FAIL AGAINST**: make `offered_to_observer` ignore
 /// its `known` argument and delegate straight to `offered_to` — the same
@@ -1242,7 +1257,7 @@ fn an_encountered_object_offers_its_verbs() {
 /// holding it for anchors, and `session.rs`'s own test was already holding it
 /// through a real `Session::examine_chamber`. What this test adds is the half
 /// no existing test could reach — the same kill against a kind with no
-/// `AnchorKind` behind it.
+/// anchor-kind variant behind it.
 ///
 /// **The residual, stated here because this is the first file a successor
 /// grepping for acceptance criterion 4 lands in** (fix round 1, m2; the same
@@ -1263,27 +1278,17 @@ fn an_encountered_object_offers_its_verbs() {
 #[test]
 fn an_unencountered_passage_offers_nothing() {
     let cave_mouth = KindId(hornvale_vessel::passage::CAVE_MOUTH);
-    // Precondition, and the reason this test could not have been written
-    // before the re-key: `cave-mouth` is unreachable through `AnchorKind`.
-    // If a cave-mouth anchor variant ever arrives, this test stops being
-    // evidence about ADDRESSING and someone must say so deliberately —
-    // and since fix round 1 that sentence is MECHANICAL rather than a
-    // hope. `AnchorKind::ALL` is generated from the enum's declaration, so
-    // a fifteenth variant is swept here on the run that first compiles it.
-    // Probed here after the fix: a `CaveMouth` variant pointed at
-    // `KindId("cave-mouth")`, given the three arms the compiler demands,
-    // reds this assertion along with three other tests. The reviewer ran
-    // the identical probe against the pre-fix hand-written roster and got
-    // 1209 tests green — see [`ALL_ANCHOR_KINDS`].
-    for &kind in ALL_ANCHOR_KINDS {
-        assert_ne!(
-            thing_kind_of(kind),
-            cave_mouth,
-            "precondition: {kind:?} maps to `cave-mouth`, so the gate was \
-             reachable for a passage through the pre-Task-9 `AnchorKind` \
-             key and decision 0369's obstacle is not what this test claims"
-        );
-    }
+    // THIS TEST CARRIED A PRECONDITION LOOP UNTIL THE WICKET, AND ITS
+    // SUBJECT IS GONE RATHER THAN ITS CLAIM. It swept every anchor-kind
+    // variant asserting that none mapped to `cave-mouth` — the fact that
+    // made "a passage cannot be named in the query's currency" true before
+    // Task 9 of The Chattel, and the reason THAT task's re-key was the
+    // deliverable rather than a tidy-up. The Wicket deleted the enum, so
+    // there is no closed variant set left to be unreachable through, and a
+    // loop asserting one would be a check that can never fire. The claim
+    // below is unchanged and is the one that was always being made: an
+    // observer who has encountered no room is offered nothing, including
+    // for a kind no room's grammar composes.
     let body = body_with_mass("human", REFERENCE_MASS_KG);
     let empty = Knowledge::default();
     let offered = offered_to_observer(cave_mouth, &body, &empty);
@@ -1360,13 +1365,13 @@ fn an_encountered_passage_offers_its_verbs() {
 // the per-kind coupling this campaign abolishes --------------------------
 
 /// `Warm` is offered to ANY object carrying [`ObjectProperty::RadiatesHeat`]
-/// — never to `AnchorKind::Hearth` because it is named `Hearth`. This is
+/// — never to `kinds::HEARTH` because it is named `Hearth`. This is
 /// the M+N claim `a_kind_gains_every_verb_its_properties_satisfy_with_no_
 /// dispatcher_edit` already proves for `Drink`/`HoldsLiquid`; restated here
 /// for `Warm`/`RadiatesHeat` because I1 found the one place in this
 /// codebase that did NOT go through this derivation:
 /// `Session::warm` (`session.rs`) used to compare `interior.anchor(a).kind
-/// == AnchorKind::Hearth` directly, a hardcoded per-kind check one file
+/// == kinds::HEARTH` directly, a hardcoded per-kind check one file
 /// over from this exact query. `warm_appears_on_hearth_with_no_object_
 /// table_edit` already shows the QUERY is generic; `no_hardcoded_anchor_
 /// kind_gates_warm` below is the companion proof that `Session::warm`
@@ -1380,7 +1385,7 @@ fn warm_is_offered_to_any_object_carrying_radiates_heat_not_only_hearth() {
     assert!(
         offered(&traits).contains(&OfferedVerb::Warm),
         "an object carrying RadiatesHeat must offer Warm regardless of \
-         which AnchorKind (if any) produced those traits"
+         which kind (if any) produced those traits"
     );
     let bare = ObjectTraits::default();
     assert!(
@@ -1393,7 +1398,7 @@ fn warm_is_offered_to_any_object_carrying_radiates_heat_not_only_hearth() {
 /// of `needle` in `src`, tracking brace depth from the block's own opening
 /// `{` to its matching close. Used below to isolate exactly `Session::
 /// warm`'s body out of `session.rs`'s several thousand lines — scanning the
-/// WHOLE file would also match `AnchorKind::Hearth` in `warm`'s own doc
+/// WHOLE file would also match `kinds::HEARTH` in `warm`'s own doc
 /// comment and in unrelated methods (`chamber_sources`'s light check,
 /// `interior/field.rs`'s `warmth_at`), none of which this test is about.
 fn block_body_after<'a>(src: &'a [u8], needle: &[u8]) -> Option<&'a [u8]> {
@@ -1439,16 +1444,23 @@ fn block_body_after_isolates_exactly_the_matched_block() {
 }
 
 /// The Offer, fix wave (I1): `Session::warm`'s own body must contain no
-/// `AnchorKind::` literal at all — the shape a per-kind dispatcher edit
-/// would take (`interior.anchor(a).kind == AnchorKind::Hearth`, the exact
-/// code this test's own mutation restores). A verb gated on the OFFER never
+/// kind literal at all — the shape a per-kind dispatcher edit would take
+/// (`interior.anchor(a).kind == kinds::HEARTH`, the exact code this test's
+/// own mutation restores).
+///
+/// **The needle moved from `AnchorKind::` to `kinds::` (The Wicket, Task
+/// 2), for the reason `handle_arm_mentions_offered_verb` gives at length:**
+/// the enum is deleted, so a scan for `AnchorKind::` would be green in every
+/// possible tree — a check that can never fire, which is worse than an
+/// absent one. `kinds::HEARTH` is the spelling the mutation would take
+/// today, and it is what this reads. A verb gated on the OFFER never
 /// needs to name a specific kind; naming one is the M×N coupling spec §3.2
 /// exists to abolish, reintroduced here even though every other surface
 /// (`examine_chamber`) was fixed cleanly at Task 7.
 ///
 /// **Would NOT have been caught by a plain "warm succeeds at a real
-/// hearth" test alone.** `AnchorKind::Bed` always co-occurs with
-/// `AnchorKind::Hearth` in every real chamber (`the-fireside-bed` requires
+/// hearth" test alone.** `kinds::BED` always co-occurs with
+/// `kinds::HEARTH` in every real chamber (`the-fireside-bed` requires
 /// `Hearth` in the same chamber, `interior/pattern.rs`), so a session-level
 /// success test cannot distinguish "gated on Hearth" from "gated on Bed" —
 /// confirmed directly in `session.rs`'s own `warm_succeeds_at_a_real_
@@ -1459,27 +1471,28 @@ fn block_body_after_isolates_exactly_the_matched_block() {
 ///
 /// Mutation this must fail against: revert `Session::warm` (session.rs) to
 /// the pre-fix body, `interior.anchor(a).kind ==
-/// crate::interior::AnchorKind::Hearth` — reddens (confirmed in the fix
+/// kinds::HEARTH` — reddens (confirmed in the fix
 /// wave's report) while every other `warm`/`examine` test stays green,
 /// exactly the I1 finding.
 ///
 /// **The direction this enforces, stated so it cannot be mistaken for a
 /// broader guarantee** — the same disclosure
-/// `anchor_kind_arm_mentions_offered_verb` above carries, for the same
+/// `handle_arm_mentions_offered_verb` above carries, for the same
 /// reason. This scans exactly the block `block_body_after` isolates for
 /// `fn warm(&self) -> Turn {`, for exactly the literal text
-/// `AnchorKind::`. **Extracting the gate into a one-line private helper
+/// `kinds::`. **Extracting the gate into a one-line private helper
 /// defeats it while it stays green**: `fn hearth_here(i: &Interior) ->
 /// bool { i.ids().iter().any(|&a| i.anchor(a).kind ==
-/// AnchorKind::Hearth) }`, called from `warm`, moves the literal out of
+/// kinds::HEARTH) }`, called from `warm`, moves the literal out of
 /// the block this reads and reintroduces the coupling with no test
 /// objecting. A re-reviewer BUILT that evasion and confirmed it. Nor does
 /// this see a coupling reached through a re-exported alias, a
-/// fully-qualified path that never spells `AnchorKind::`, or a gate keyed
-/// on something other than an anchor kind. The concrete in-tree instance,
+/// fully-qualified path that never spells `kinds::` (a bare
+/// `KindId("hearth")` is exactly that shape, and is newly writable now the
+/// key is an open label), or a gate keyed on something other than a kind. The concrete in-tree instance,
 /// the same one the sibling guard names: `interior/field.rs`'s
 /// `warmth_at` contains `if interior.anchor(id).kind !=
-/// AnchorKind::Hearth { continue; }` — a live kind-to-behaviour coupling
+/// kinds::HEARTH { continue; }` — a live kind-to-behaviour coupling
 /// neither guard can see, because it is in another file and mentions no
 /// `OfferedVerb`. Acceptance clause (4) is worded against what these two
 /// scans actually cover (spec §6, decision 0350), not against "anywhere".
@@ -1489,32 +1502,40 @@ fn no_hardcoded_anchor_kind_gates_warm() {
     let body = block_body_after(src.as_bytes(), b"fn warm(&self) -> Turn {")
         .expect("session.rs must define fn warm(&self) -> Turn");
     assert!(
-        find_bytes(body, b"AnchorKind::").is_none(),
-        "Session::warm's body names a specific AnchorKind literal directly, \
+        find_bytes(body, b"kinds::").is_none(),
+        "Session::warm's body names a specific thing-kind handle directly, \
          reintroducing the per-kind coupling spec 3.2 forbids: {:?}",
         std::str::from_utf8(body).unwrap_or("<non-utf8>")
     );
 }
 
-// --- The Chattel, Task 7: the re-key from AnchorKind to KindId ----------
+// --- The Chattel, Task 7: the re-key onto KindId -----------------------
 
 /// **The guard the re-key itself needed, and the one The Offer's suite could
-/// not provide.** Every test above reads the table through
-/// `thing_kind_of`, so a mapping arm that sends an anchor kind to the WRONG
-/// thing-kind is invisible to all of them whenever the wrong kind happens to
-/// carry the right property — `Pool -> KindId("vessel")` passes
+/// not provide.** Every test above read the table through the anchor-kind →
+/// thing-kind mapping, so a mapping arm that sent an anchor kind to the WRONG
+/// thing-kind was invisible to all of them whenever the wrong kind happened
+/// to carry the right property — `Pool -> KindId("vessel")` passed
 /// `a_kind_gains_every_verb_its_properties_satisfy_with_no_dispatcher_edit`
 /// unchanged, because a vessel holds liquid too. This freezes the whole
-/// fourteen-row answer instead: what verb set each `AnchorKind` offers,
-/// which is exactly what The Offer's table produced before the re-key and
-/// what spec §3.6 requires the re-key to preserve.
+/// per-kind answer instead: what verb set each kind offers, which is exactly
+/// what The Offer's table produced before the re-key and what spec §3.6
+/// requires the re-key to preserve.
+///
+/// **The mapping it was written against is gone (The Wicket, Task 2) and the
+/// freeze is not.** An anchor carries its `KindId`, so the specific error
+/// this guarded — a mis-pointed arm — cannot be made. What CAN be made is a
+/// mis-spelled handle, a row silently losing a property, and a subset filter
+/// that stops discriminating, and this table catches all three by naming the
+/// answer rather than deriving it.
 ///
 /// It is a frozen expectation, not a derivation — deriving it from
 /// `object_registry` would re-use the machinery under test and assert
 /// nothing. Moving a row here is therefore a deliberate act, the same
 /// discipline a byte-golden carries.
 ///
-/// MUTATION THIS MUST FAIL AGAINST: point `thing_kind_of`'s `Pool` arm at
+/// MUTATION THIS WAS PROVEN AGAINST, on the mapping that then stood between
+/// the roster and this table: point `thing_kind_of`'s `Pool` arm at
 /// `KindId("bed")` — a mapping error that keeps every property real. Red
 /// observed:
 ///
@@ -1531,31 +1552,43 @@ fn no_hardcoded_anchor_kind_gates_warm() {
 /// `the_anchor_to_thing_kind_mapping_is_injective`, and
 /// `a_kind_gains_every_verb_its_properties_satisfy_with_no_dispatcher_edit`
 /// — which is stated rather than trimmed because it is the honest shape of
-/// the evidence: this mutation is caught several ways over. The mutation
-/// that isolates THIS test is `Log -> KindId("ground")`'s sibling in the
-/// other direction — see the injectivity test's own doc for the pair that
-/// separates the two.
+/// the evidence: this mutation was caught several ways over.
 ///
-/// **Also the agreement half for [`ALL_ANCHOR_KINDS`] (Task 9), and since
-/// fix round 1 the agreement has a compiler-anchored side.** This table is
-/// now the ONLY hand-maintained enumeration of `AnchorKind` in this file:
-/// [`ALL_ANCHOR_KINDS`] is `AnchorKind::ALL`, generated from the enum's own
+/// **Both the mutation and one of its three witnesses are historical now
+/// (The Wicket, Task 2).** The mutation was applied to
+/// `affordance::thing_kind_of`, the anchor-kind -> thing-kind match, which no
+/// longer exists — an anchor CARRIES a `KindId`, so there is nothing between
+/// the roster and this table to mis-point. `the_anchor_to_thing_kind_mapping_
+/// is_injective` went with it. The red above is kept as the record of what
+/// this table caught while a mapping stood in that position; the table's
+/// live job is the agreement below.
+///
+/// **Also the agreement half for [`every_named_kind`] (Task 9), and the
+/// agreement still has a side this table cannot follow on its own.** This
+/// table is
+/// now the ONLY hand-maintained enumeration of kinds in this file:
+/// [`every_named_kind`] reads `hornvale_thing::kinds::EVERY_HANDLE`, which is
+/// ratcheted against the roster rather than generated from an enum's own
 /// declaration. That asymmetry is what makes the first assertion below carry
-/// the campaign's add-a-variant property. An appended variant lengthens the
-/// generated side and not this one, so it reddens here; a row dropped from
+/// the campaign's add-a-kind property. An added handle lengthens the
+/// ratcheted side and not this one, so it reddens here; a row dropped from
 /// this table shortens it against a side that cannot follow, so that reddens
 /// here too. Neither direction can be satisfied by both lists going short
-/// together, which is exactly how the pre-fix arrangement failed.
+/// together, which is exactly how the pre-fix arrangement failed. **The side
+/// that cannot follow is one step weaker than it was**: `EVERY_HANDLE` is
+/// hand-written, where `AnchorKind::ALL` was macro-generated, and what holds
+/// it honest is `the_roster_is_frozen_as_an_ordered_set` (G-f) rather than a
+/// generator. Say so rather than inheriting the old sentence's confidence.
 ///
 /// MUTATION THAT AGREEMENT MUST FAIL AGAINST — run because a guard written
 /// in the same commit as the thing it guards is unaudited text: drop
-/// `(AnchorKind::Loom, &[Examine])` from the table below and its length
+/// `(kinds::LOOM, &[Examine])` from the table below and its length
 /// annotation from 14 to 13 (the hand-maintained side; the generated side
 /// can no longer be shortened without deleting the variant). **Exactly one
 /// test failed, this one.**
 ///
 /// (Those two figures are the annotation as it stood when that run was
-/// taken. It is 15 now — Task 11 appended `AnchorKind::Key` — so the same
+/// taken. It is 15 now — Task 11 appended `kinds::KEY` — so the same
 /// mutation today is 15 to 14. The transcript below is left verbatim rather
 /// than renumbered: it is a record of a run, and a run that was not re-taken
 /// must not be made to look as though it had been. What the guard CAUGHT is
@@ -1573,7 +1606,7 @@ fn no_hardcoded_anchor_kind_gates_warm() {
 ///      Summary [ 173.431s] 836 tests run: 835 passed, 1 failed, 3 skipped
 ///
 /// assertion `left == right` failed: this table and ALL_ANCHOR_KINDS are the
-/// file's only two hand-maintained AnchorKind enumerations, ...
+/// file's only two hand-maintained kind enumerations, ...
 ///   left: [Hearth, Threshold, Bed, Vessel, Screen, Pool, Log, Ground, Alcove, Strongbox, HighSeat, Anvil, Altar]
 ///  right: [Hearth, Threshold, Bed, Vessel, Screen, Pool, Log, Ground, Alcove, Strongbox, HighSeat, Loom, Anvil, Altar]
 /// ```
@@ -1584,19 +1617,48 @@ fn no_hardcoded_anchor_kind_gates_warm() {
 #[test]
 fn the_re_key_preserves_every_anchor_kinds_offer() {
     use OfferedVerb::{Close, Drink, Drop, Enter, Examine, Open, Put, Sleep, Take, Warm};
-    let expected: [(AnchorKind, &[OfferedVerb]); 15] = [
-        (AnchorKind::Hearth, &[Examine, Warm]),
-        (AnchorKind::Threshold, &[Enter, Examine]),
-        (AnchorKind::Bed, &[Sleep, Examine]),
-        (AnchorKind::Vessel, &[Drink, Examine]),
-        (AnchorKind::Screen, &[Examine]),
-        (AnchorKind::Pool, &[Drink, Examine]),
-        (AnchorKind::Log, &[Examine]),
-        (AnchorKind::Ground, &[Examine]),
+    let expected: [(KindId, &[OfferedVerb]); 16] = [
         // Encloses gates no OfferedVerb (it is read by `examine`'s prose,
         // not by the offer query), so an enclosing kind offers Examine and
         // nothing more.
-        (AnchorKind::Alcove, &[Examine]),
+        (kinds::ALCOVE, &[Examine]),
+        (kinds::ALTAR, &[Examine]),
+        (kinds::ANVIL, &[Examine]),
+        (kinds::BED, &[Sleep, Examine]),
+        // THE CAVE MOUTH'S ROW IS NEW, AND ITS ARRIVAL IS THE WICKET'S OWN
+        // DELIVERABLE SHOWING UP AT THE FROZEN TABLE. This table used to
+        // enumerate anchor-kind variants, so `cave-mouth` — a `Vertex`/`ChamberAddr`
+        // that no anchor variant could express — was structurally
+        // unreachable from it, and its verbs were asserted only by the two
+        // passage tests above. With the key an open label the row is simply
+        // writable, which is the addressing half of decision 0397 arriving
+        // at a place that could not previously hold it.
+        (KindId("cave-mouth"), &[Enter, Examine, Open, Close]),
+        (kinds::GROUND, &[Examine]),
+        (kinds::HEARTH, &[Examine, Warm]),
+        (kinds::HIGH_SEAT, &[Examine]),
+        // THE KEY'S ROW MOVED, AND THIS IS TASK 12 ARRIVING AT THE FROZEN
+        // TABLE — the second half of the deliberate move the strongbox's own
+        // row demanded. Task 11 wrote it as `&[Examine]` and said in this
+        // very comment that `Portable` gated `take`/`drop`, "verbs Task 12
+        // ships", so that "Task 12's addition has to move this line
+        // deliberately". It did, and nothing in `object_registry` changed to
+        // produce it: three new `OfferedVerb`s naming `Portable` in their
+        // `required_properties` reach the one carrier through the subset
+        // filter alone. That is acceptance clause 7's second direction
+        // ("a new verb appears on every qualifying thing with no kind edit")
+        // observed a second time, on a different property, by a table that
+        // could not have followed on its own.
+        //
+        // `Put` is here on the same footing as `Take` and `Drop`: the
+        // property belongs to the thing being MOVED. What the CONTAINER must
+        // be is a precondition on the act read against a second object, the
+        // way `Lockable` is for `Open`, and this query holds one object.
+        (kinds::KEY, &[Examine, Take, Drop, Put]),
+        (kinds::LOG, &[Examine]),
+        (kinds::LOOM, &[Examine]),
+        (kinds::POOL, &[Drink, Examine]),
+        (kinds::SCREEN, &[Examine]),
         // THE STRONGBOX'S ROW MOVED, AND THAT IS THE TASK-11 DELIVERABLE
         // ARRIVING AT THE FROZEN TABLE. `Openable` gated no verb until Task
         // 11 shipped `open`/`close`; the property was granted in Task 7 and
@@ -1609,240 +1671,62 @@ fn the_re_key_preserves_every_anchor_kinds_offer() {
         // `Lockable` still gates nothing here and must not: a lock is a
         // precondition on the ACT, read against the body's custody, and this
         // query has no body's custody in it.
-        (AnchorKind::Strongbox, &[Examine, Open, Close]),
-        (AnchorKind::HighSeat, &[Examine]),
-        (AnchorKind::Loom, &[Examine]),
-        (AnchorKind::Anvil, &[Examine]),
-        (AnchorKind::Altar, &[Examine]),
-        // THE KEY'S ROW MOVED, AND THIS IS TASK 12 ARRIVING AT THE FROZEN
-        // TABLE — the second half of the deliberate move the previous line
-        // demanded. Task 11 wrote it as `&[Examine]` and said in this very
-        // comment that `Portable` gated `take`/`drop`, "verbs Task 12 ships",
-        // so that "Task 12's addition has to move this line deliberately".
-        // It did, and nothing in `object_registry` changed to produce it:
-        // three new `OfferedVerb`s naming `Portable` in their
-        // `required_properties` reach the one carrier through the subset
-        // filter alone. That is acceptance clause 7's second direction
-        // ("a new verb appears on every qualifying thing with no kind edit")
-        // observed a second time, on a different property, by a table that
-        // could not have followed on its own.
-        //
-        // `Put` is here on the same footing as `Take` and `Drop`: the
-        // property belongs to the thing being MOVED. What the CONTAINER must
-        // be is a precondition on the act read against a second object, the
-        // way `Lockable` is for `Open`, and this query holds one object.
-        (AnchorKind::Key, &[Examine, Take, Drop, Put]),
+        (kinds::STRONGBOX, &[Examine, Open, Close]),
+        (kinds::THRESHOLD, &[Enter, Examine]),
+        (kinds::VESSEL, &[Drink, Examine]),
     ];
-    // Task 9: the two rosters agree, in both directions and in order. A
-    // variant dropped from either enumeration reddens here rather than
-    // quietly shrinking what some other test sweeps.
-    let table_kinds: Vec<AnchorKind> = expected.iter().map(|(k, _)| *k).collect();
+    // The two rosters agree, in both directions and in order. A kind dropped
+    // from either enumeration reddens here rather than quietly shrinking
+    // what some other test sweeps. The ORDER is `EVERY_HANDLE`'s, which is
+    // alphabetical by handle name; it was the enum's declaration order until
+    // The Wicket deleted the enum, and the rows themselves are unchanged.
+    let table_kinds: Vec<KindId> = expected.iter().map(|(k, _)| *k).collect();
     assert_eq!(
         table_kinds,
-        ALL_ANCHOR_KINDS.to_vec(),
-        "this table and ALL_ANCHOR_KINDS are the file's only two \
-         AnchorKind enumerations, and only the table is hand-maintained: a \
-         variant appended to the enum lengthens ALL_ANCHOR_KINDS and not \
-         this table, and a row dropped from this table shortens it against \
-         a roster that cannot follow"
+        every_named_kind(),
+        "this table and every_named_kind() are the file's only two kind \
+         enumerations, and only the table is hand-maintained: a handle added \
+         to `hornvale_thing::kinds` lengthens every_named_kind() and not this \
+         table, and a row dropped from this table shortens it against a \
+         roster that cannot follow"
     );
     for (kind, want) in expected {
         let want: BTreeSet<OfferedVerb> = want.iter().copied().collect();
-        let got = offered_by(thing_kind_of(kind));
+        let got = offered_by(kind);
         assert_eq!(
-            got,
-            want,
+            got, want,
             "{kind:?} ({:?}) offers {got:?}, but the pre-re-key table offered {want:?}",
-            thing_kind_of(kind)
+            kind
         );
     }
 }
 
-/// Every `AnchorKind` maps to a DISTINCT thing-kind. Not a law forever — two
-/// anchor kinds could honestly be one thing some day — but it is the
-/// property that makes the frozen table above a preservation claim rather
-/// than a coincidence: if two anchor kinds collapsed onto one key they would
-/// silently share one property set, which is the two-lifecycle-stage
-/// disagreement spec §3.6 re-keys to prevent, arriving from the other
-/// direction.
-///
-/// MUTATION THIS MUST FAIL AGAINST: point `thing_kind_of`'s `Log` arm at
-/// `KindId("ground")` (both carry no property, so
-/// `the_re_key_preserves_every_anchor_kinds_offer` stays green — the two
-/// tests genuinely cover different failures, confirmed: the run below failed
-/// exactly one test, `21 passed; 1 failed`). Red observed:
-///
-/// ```text
-/// test affordance::the_anchor_to_thing_kind_mapping_is_injective ... FAILED
-/// thread 'affordance::the_anchor_to_thing_kind_mapping_is_injective' panicked at
-/// windows/vessel/tests/suite/affordance.rs:
-/// two anchor kinds map to KindId("ground"): 7 kinds for 14 variants
-/// ```
-///
-/// (`7`, not `13`: the count is how many DISTINCT keys had been accepted
-/// when the collision was hit, and `Log` is the seventh variant swept — the
-/// message reports progress, not a total.)
-#[test]
-fn the_anchor_to_thing_kind_mapping_is_injective() {
-    let mut seen: BTreeSet<KindId> = BTreeSet::new();
-    for &kind in ALL_ANCHOR_KINDS {
-        let id = thing_kind_of(kind);
-        assert!(
-            seen.insert(id),
-            "two anchor kinds map to {id:?}: {} kinds for {} variants",
-            seen.len(),
-            ALL_ANCHOR_KINDS.len()
-        );
-    }
-}
-
-/// `thing_kind_of` must stay exhaustive with **no wildcard arm** — a `_ =>`
-/// would compile, change no behaviour today, and silently absorb the next
-/// appended `AnchorKind` variant into whatever default it named, inheriting
-/// that thing-kind's properties. No behavioural test can see that: the
-/// mapping is total for all fourteen variants either way, so totality is
-/// only observable in the SOURCE until the day someone appends a variant,
-/// which is precisely too late.
-///
-/// A structural scan, in the style of `no_verb_by_object_table_exists` and
-/// `no_hardcoded_anchor_kind_gates_warm` above, with the same disclosure:
-/// it reads exactly the block `block_body_after` isolates, for exactly the
-/// literal text `_ =>`. A wildcard spelled `other =>` or `kind @ _ =>` is
-/// not seen; neither is one in a different function. The synthetic positive
-/// control below shows the scanner can fire at all.
-///
-/// MUTATION THIS MUST FAIL AGAINST — and this one is the real evidence,
-/// because it is run against PRODUCTION source rather than a synthetic
-/// string: replace `thing_kind_of`'s `AnchorKind::Altar => KindId("altar")`
-/// arm with `_ => KindId("altar")`. It compiles, changes no behaviour, and
-/// no other test in the file notices (`21 passed; 1 failed`). Red observed:
-///
-/// ```text
-/// test affordance::thing_kind_of_has_no_wildcard_arm ... FAILED
-/// thread 'affordance::thing_kind_of_has_no_wildcard_arm' panicked at
-/// windows/vessel/tests/suite/affordance.rs:
-/// thing_kind_of has a wildcard arm: an appended AnchorKind variant would fall
-/// through it instead of failing to compile, and inherit a thing-kind's
-/// properties silently: "{\n    match kind {\n        AnchorKind::Hearth => ...
-/// ```
-#[test]
-fn thing_kind_of_has_no_wildcard_arm() {
-    let src = include_str!("../../src/affordance.rs");
-    let body = block_body_after(
-        src.as_bytes(),
-        b"pub fn thing_kind_of(kind: AnchorKind) -> KindId",
-    )
-    .expect("affordance.rs must define pub fn thing_kind_of(kind: AnchorKind) -> KindId");
-    assert!(
-        find_bytes(body, b"_ =>").is_none(),
-        "thing_kind_of has a wildcard arm: an appended AnchorKind variant \
-         would fall through it instead of failing to compile, and inherit a \
-         thing-kind's properties silently: {:?}",
-        std::str::from_utf8(body).unwrap_or("<non-utf8>")
-    );
-}
-
-/// Positive control for the scan above: the forbidden shape must actually be
-/// caught, or `thing_kind_of_has_no_wildcard_arm`'s green is worth nothing.
-#[test]
-fn the_wildcard_scan_catches_a_wildcard_arm() {
-    let src = b"pub fn thing_kind_of(kind: AnchorKind) -> KindId {\n    \
-                 match kind {\n        \
-                 AnchorKind::Bed => KindId(\"bed\"),\n        \
-                 _ => KindId(\"ground\"),\n    \
-                 }\n\
-                 }";
-    let body = block_body_after(src, b"pub fn thing_kind_of(kind: AnchorKind) -> KindId")
-        .expect("the control must parse");
-    assert!(
-        find_bytes(body, b"_ =>").is_some(),
-        "positive control: a wildcard arm must be caught"
-    );
-}
-
-/// **[`AnchorKind::ALL`] must stay GENERATED, because the whole add-a-variant
-/// property rests on that and on nothing else** (fix round 1, MAJOR 1).
-///
-/// The enum and its roster are declared by one `anchor_kinds!` invocation in
-/// `interior/anchor.rs`. Unwind that into a plain `pub enum` beside a plain
-/// `pub const ALL` and everything still compiles, every test here stays
-/// green, and the roster is a hand-maintained list again — which is the state
-/// in which a fifteenth variant reddened nothing at all. Nothing else in the
-/// language is anchored to the enum's cardinality, so nothing else can notice
-/// the unwinding; this scan is what does.
-///
-/// Same disclosure the two scans above carry, for the same reason. It reads
-/// the block `block_body_after` isolates for the literal needle
-/// `macro_rules! anchor_kinds`, and asks for the literal texts
-/// `pub enum AnchorKind` and `pub const ALL` inside it. A roster generated by
-/// a differently-named macro, by a build script, or by a second macro layer
-/// is not seen; neither is one whose `ALL` is generated from a list other
-/// than the enum's own variants. It also asserts `pub enum AnchorKind`
-/// appears exactly ONCE in the file, so a hand-written second declaration
-/// cannot sit beside the generated one.
-///
-/// MUTATION THIS MUST FAIL AGAINST — run against production source, not a
-/// synthetic string: move the `pub const ALL` line out of the macro body and
-/// into a bare `impl AnchorKind` block below the invocation, spelling the
-/// fourteen variants by hand. It compiles and behaves identically today. Red
-/// observed, on an unfiltered `-p hornvale-vessel` run:
-///
-/// ```text
-/// FAIL [   0.005s] hornvale-vessel::suite affordance::the_anchor_kind_roster_is_generated_from_the_enums_declaration
-/// thread 'affordance::the_anchor_kind_roster_is_generated_from_the_enums_declaration'
-/// panicked at windows/vessel/tests/suite/affordance.rs:
-/// AnchorKind::ALL is not declared inside the anchor_kinds! macro that declares
-/// the enum, so it is a hand-maintained roster again and an appended variant
-/// reddens nothing
-/// ```
-#[test]
-fn the_anchor_kind_roster_is_generated_from_the_enums_declaration() {
-    let src = include_str!("../../src/interior/anchor.rs");
-    assert_eq!(
-        src.matches("pub enum AnchorKind").count(),
-        1,
-        "AnchorKind must be declared exactly once; a second declaration would \
-         let a hand-written enum sit beside the generated roster"
-    );
-    let body = block_body_after(src.as_bytes(), b"macro_rules! anchor_kinds")
-        .expect("interior/anchor.rs must define macro_rules! anchor_kinds");
-    let body = std::str::from_utf8(body).expect("anchor.rs is utf-8");
-    assert!(
-        body.contains("pub enum AnchorKind"),
-        "the anchor_kinds! macro must be what declares the enum: {body:?}"
-    );
-    assert!(
-        body.contains("pub const ALL"),
-        "AnchorKind::ALL is not declared inside the anchor_kinds! macro that \
-         declares the enum, so it is a hand-maintained roster again and an \
-         appended variant reddens nothing: {body:?}"
-    );
-}
-
-/// Positive control for the scan above: the forbidden shape — a roster
-/// declared OUTSIDE the macro that declares the enum — must actually be
-/// caught, or that test's green is worth nothing.
-#[test]
-fn the_roster_generation_scan_catches_a_hand_written_roster() {
-    let src = b"macro_rules! anchor_kinds {\n    \
-                 ($($v:ident),+) => {\n        \
-                 pub enum AnchorKind { $($v),+ }\n    \
-                 };\n\
-                 }\n\
-                 impl AnchorKind {\n    \
-                 pub const ALL: &[AnchorKind] = &[AnchorKind::Bed];\n\
-                 }";
-    let body = block_body_after(src, b"macro_rules! anchor_kinds").expect("the control must parse");
-    let body = std::str::from_utf8(body).expect("the control is utf-8");
-    assert!(
-        body.contains("pub enum AnchorKind"),
-        "the control must still put the enum inside the macro"
-    );
-    assert!(
-        !body.contains("pub const ALL"),
-        "positive control: a roster declared outside the macro must be caught"
-    );
-}
+// --- FOUR SOURCE-SCANNING TESTS RETIRED HERE (The Wicket, Task 2) -------
+//
+// Their SUBJECTS were deleted, not their claims relaxed, and each is named
+// so a reader looking for the guarantee finds where it went:
+//
+// - `the_anchor_to_thing_kind_mapping_is_injective` guarded
+//   `affordance::thing_kind_of`, the total anchor-kind -> thing-kind match.
+//   An anchor now CARRIES a `KindId`, so there is no mapping to be injective
+//   and the frozen verb table above indexes kinds directly.
+// - `thing_kind_of_has_no_wildcard_arm` and its positive control
+//   `the_wildcard_scan_catches_a_wildcard_arm` scanned that same function's
+//   source for a `_ =>` arm.
+// - `the_anchor_kind_roster_is_generated_from_the_enums_declaration` and its
+//   positive control `the_roster_generation_scan_catches_a_hand_written_
+//   roster` scanned `interior/anchor.rs` for the `anchor_kinds!` macro that
+//   declared the enum and its roster together. Both are gone with the macro.
+//
+// WHAT REPLACES THE GUARANTEE, since "the subject left" is only half an
+// answer. The enum's roster is now `hornvale_thing::THING_KINDS`, frozen as
+// an ORDERED SET by `the_roster_is_frozen_as_an_ordered_set` (G-f) rather
+// than generated; the handles this file sweeps are checked against it by
+// `every_named_handle_is_a_roster_row` (G-d); and the exhaustiveness the
+// wildcard scan protected becomes spec §5.1's G-a/G-b/G-c in Task 3 and
+// Task 4. Until those land, this file's frozen table is the only two-way
+// check over the kind set, which is why it gained a `cave-mouth` row above
+// rather than staying at fifteen.
 
 /// The registry can now discriminate a subset filter from an equality check
 /// on its OWN rows, which it could not before Task 7 — `strongbox` carries

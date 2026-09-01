@@ -394,6 +394,7 @@ dependencies = [
  "hornvale-settlement",
  "hornvale-species",
  "hornvale-terrain",
+ "hornvale-thing",
  "hornvale-worldgen",
  "serde",
  "serde_json",

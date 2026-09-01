@@ -4,6 +4,7 @@
 //! and its identity within a room is positional, not persisted.
 
 use super::relation::{Rcc8, converse};
+use hornvale_kernel::KindId;
 
 /// An anchor's index within its [`Interior`]. Not an entity id and never
 /// serialized — a derived anchor has no identity until promotion (spec §4,
@@ -12,116 +13,13 @@ use super::relation::{Rcc8, converse};
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct AnchorId(pub u16);
 
-/// Declares [`AnchorKind`] **and** its roster [`AnchorKind::ALL`] from one
-/// list of variants, so that no roster of anchor kinds exists anywhere that
-/// can go short of the enum.
-///
-/// **Why this crate grew a macro (The Chattel, Task 9 fix round 1).** Three
-/// separate hand-written `[AnchorKind; 14]` rosters had accumulated —
-/// `windows/vessel/tests/suite/affordance.rs`,
-/// `cli/tests/suite/anchor_thing_correspondence.rs`,
-/// `windows/vessel/src/chamber_prose.rs` — and each carried a comment saying
-/// it was "kept in step by an exhaustive match". **That claim is false in the
-/// direction that actually happens.** The compiler forces an arm per variant
-/// in `thing_kind_of`, `noun` and `detail`; it says nothing about a *list*
-/// sitting beside them. A reviewer added a fifteenth variant, wrote the arms
-/// the compiler demanded, pointed it at `KindId("cave-mouth")`, and 1209
-/// tests passed — including the precondition whose own doc comment promised
-/// to stop being evidence in exactly that case. Dropping a variant reddened
-/// a test; adding one reddened nothing.
-///
-/// No test can enumerate a variant it has never heard of, so no test can
-/// close that gap: the roster has to be produced by the same declaration
-/// that produces the enum. That is what this macro is, and it is the whole
-/// mechanism — with the roster generated, an added variant lengthens
-/// [`AnchorKind::ALL`], and every sweep and every frozen table measured
-/// against it moves with it.
-///
-/// Deliberately not exported and deliberately single-purpose: it declares
-/// this one enum. A second use would be a second design decision.
-macro_rules! anchor_kinds {
-    ($( $(#[$variant_doc:meta])* $variant:ident ),+ $(,)?) => {
-        /// What an anchor IS. An object earns a place here by the activity it
-        /// affords (spec §7), never by decoration. (No `type-audit:` tag: a
-        /// fieldless enum has no primitive at its boundary, and `tag` is NOT a
-        /// ratified `bare-ok` class — see `tools/type-audit/src/tag.rs:4` for
-        /// the eleven that are.)
-        #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
-        pub enum AnchorKind {
-            $( $(#[$variant_doc])* $variant, )+
-        }
-
-        impl AnchorKind {
-            /// Every variant, once, in declaration order — the single roster
-            /// of anchor kinds in this workspace.
-            ///
-            /// **Generated from the enum's own declaration, which is the
-            /// only reason it cannot go short.** It carries no length
-            /// annotation on purpose: a hand-written count is one more thing
-            /// to forget in step with the list it counts, and the length
-            /// that matters is asserted where it is load-bearing — against
-            /// the deliberately frozen verb table in
-            /// `the_re_key_preserves_every_anchor_kinds_offer`, which is
-            /// what turns an appended variant into a red rather than a
-            /// silently wider sweep.
-            pub const ALL: &[AnchorKind] = &[ $( AnchorKind::$variant, )+ ];
-        }
-    };
-}
-
-anchor_kinds! {
-    /// A fire: emits warmth and light; the canonical gathering place.
-    Hearth,
-    /// A doorway — an anchor that is ALSO a room-graph edge (the two-level seam).
-    Threshold,
-    /// A place to sleep.
-    Bed,
-    /// A water vessel or basin.
-    Vessel,
-    /// A screen or pillar: affords nothing, shapes sightlines (reserved).
-    Screen,
-    /// A natural pool (the wilderness half of the catalogue).
-    Pool,
-    /// A fallen log (the wilderness half).
-    Log,
-    /// The room's open middle — every room has one, built or wild. The anchor
-    /// other patterns attach to when they attach to nothing more specific.
-    Ground,
-    /// A recess off the main space: what makes a room deeper than a hub.
-    Alcove,
-    // --- appended by The Blocking (Task 6), for the chamber ROLES ---
-    //
-    // Appended rather than inserted. `Ord` here is derivation order, and
-    // `pattern::compose` keys two `BTree*` collections on it — by lookup only,
-    // never by iteration — so declaration order does not reach a composition
-    // today. Appending keeps it that way without needing that argument to hold.
-    /// A locked chest: what a place with more than a hamlet's people has to keep.
-    Strongbox,
-    /// The seat that commands the entrance — a regional seat's own chair.
-    HighSeat,
-    /// An upright loom: the domestic craft, and it wants the light of a doorway.
-    Loom,
-    /// A smith's anvil, which is why it stands within reach of the quenching water.
-    Anvil,
-    /// An altar, and the basin beside it is the washing the rite asks for first.
-    Altar,
-    // --- appended by The Chattel (Task 11), for the CONTAINER half ---
-    //
-    // The first anchor kind authored to be CONTAINED rather than to contain or
-    // to stand beside: `the-key-in-the-strongbox` attaches it
-    // `Attach::Within(Strongbox)`. Until it existed the grammar's only `within`
-    // relation anywhere was `{(Alcove, Hearth)}` — a full census over all 60
-    // production gate combinations — so `Openable` had nothing to reveal and
-    // `Lockable` nothing to lock (spec §3.8).
-    /// A small key, kept where a place keeps what it locks up.
-    Key,
-}
-
 /// One anchor: what it is, and the anchor it lies strictly within, if any.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Anchor {
-    /// What this anchor is.
-    pub kind: AnchorKind,
+    /// What this anchor is — a thing-kind, and a row rather than a variant
+    /// (The Wicket). A kind the roster does not carry cannot reach here,
+    /// because `Pattern` is the only producer and Task 3 gates it.
+    pub kind: KindId,
     /// The anchor this one lies strictly inside (`Ntpp`), if any.
     pub within: Option<AnchorId>,
 }
@@ -141,7 +39,7 @@ impl Interior {
     }
 
     /// Append an anchor, returning its id.
-    pub fn push(&mut self, kind: AnchorKind, within: Option<AnchorId>) -> AnchorId {
+    pub fn push(&mut self, kind: KindId, within: Option<AnchorId>) -> AnchorId {
         let id = AnchorId(self.anchors.len() as u16);
         self.anchors.push(Anchor { kind, within });
         id
@@ -279,15 +177,16 @@ impl Interior {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use hornvale_thing::kinds;
 
     /// A hall with a hearth inside it, a threshold touching the hall, and a
     /// screen disconnected from the hearth. Three of the four v1 relations.
     fn planted() -> (Interior, AnchorId, AnchorId, AnchorId, AnchorId) {
         let mut i = Interior::new();
-        let hall = i.push(AnchorKind::Pool, None); // stand-in region
-        let hearth = i.push(AnchorKind::Hearth, Some(hall));
-        let door = i.push(AnchorKind::Threshold, None);
-        let screen = i.push(AnchorKind::Screen, None);
+        let hall = i.push(kinds::POOL, None); // stand-in region
+        let hearth = i.push(kinds::HEARTH, Some(hall));
+        let door = i.push(kinds::THRESHOLD, None);
+        let screen = i.push(kinds::SCREEN, None);
         i.connect(hall, door);
         i.connect(hall, screen);
         (i, hall, hearth, door, screen)
@@ -339,15 +238,15 @@ mod tests {
         assert!(i.is_connected(), "the planted interior is connected");
         // An orphan anchor makes it unreachable — the validator's rule (T4).
         let mut broken = Interior::new();
-        let a = broken.push(AnchorKind::Hearth, None);
-        let _b = broken.push(AnchorKind::Bed, None);
+        let a = broken.push(kinds::HEARTH, None);
+        let _b = broken.push(kinds::BED, None);
         assert!(
             !broken.is_connected(),
             "two anchors with no edge between them are disconnected"
         );
         let mut fixed = Interior::new();
-        let x = fixed.push(AnchorKind::Hearth, None);
-        let y = fixed.push(AnchorKind::Bed, None);
+        let x = fixed.push(kinds::HEARTH, None);
+        let y = fixed.push(kinds::BED, None);
         fixed.connect(x, y);
         assert!(fixed.is_connected());
         let _ = a;

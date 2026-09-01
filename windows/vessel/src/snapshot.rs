@@ -419,9 +419,10 @@ pub struct NounEntry {
     /// snapshot` from `focalize::NounKind::tag()` (`Creature`/`Place`/
     /// `Thing`/`Unknown`), which is fed exclusively by walk-band content —
     /// biome, regime, village, sky (`focalize.rs`'s own `render`). No
-    /// `narration.nouns` entry has ever carried a chamber `AnchorKind` at
-    /// any call site (`grep -rn "AnchorKind" windows/vessel/src/snapshot.rs
-    /// windows/vessel/src/focalize.rs` returns nothing), including while
+    /// `narration.nouns` entry has ever carried a chamber anchor's kind at
+    /// any call site (`grep -rn "kinds::" windows/vessel/src/snapshot.rs
+    /// windows/vessel/src/focalize.rs` returns nothing, as the same grep for
+    /// the deleted `AnchorKind` did before The Wicket), including while
     /// the possession stands indoors — `Session::snapshot` always renders
     /// `self.focalizer.render(&vantage)` from the walk-band `Vantage`,
     /// never from the chamber's own `Interior`, and a committed chamber-band
@@ -432,8 +433,8 @@ pub struct NounEntry {
     /// **The finding survives The Chattel's Task 9; its REASON did not, and
     /// the difference is worth stating because a stale reason is what a
     /// later reader reasons from.** This used to read "`offered_to_observer`
-    /// requires a real `AnchorKind`, so there is no value this field could
-    /// route through it" — true when written, false since Task 9 re-keyed
+    /// requires a real anchor-kind variant, so there is no value this field
+    /// could route through it" — true when written, false since Task 9 re-keyed
     /// that query to [`hornvale_kernel::KindId`], which any string can
     /// spell. What still holds is the substantive half: `NounKind::tag()`
     /// emits `creature`/`place`/`thing`/`unknown`, and none of those is a

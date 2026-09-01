@@ -4631,3 +4631,6 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-01T10:44:24Z | sluice:clients | 549.766 | 10005.560 | 115.159 | 18.41 | 0 | 3f2a9a2c8 |  | lefford | 40 |
 | 2026-09-01T10:52:10Z | sluice:heavy | 465.557 | 9756.909 | 187.496 | 21.36 | 0 | f9a50b741 |  | lefford | 40 |
 | 2026-09-01T11:08:36Z | prewarm | 94.038 | 581.796 | 26.194 | 6.47 | 0 | 2d84e1b71 | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T12:46:03Z | rebaseline | 86.888 | 313.361 | 16.057 | 3.79 | 0 | 592d9838f | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T13:13:13Z | rebaseline | 63.615 | 277.132 | 14.273 | 4.58 | 0 | 592d9838f | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T13:14:23Z | gate-commit | 38.233 | 156.158 | 29.496 | 4.86 | 0 | 592d9838f | campaign/the-wicket | MacBookPro | 10 |

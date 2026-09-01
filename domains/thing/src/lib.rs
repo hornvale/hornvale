@@ -25,9 +25,12 @@
 //! domains already drew.
 //!
 //! The roster is deliberately wider than the three kinds this campaign's
-//! verbs need (`cave-mouth`, `strongbox`, `key`): a later task needs a total
-//! mapping from every `AnchorKind` to a thing-kind, so every anchor kind gets
-//! a row here too, carried at no cost to a world that never places one.
+//! verbs need (`cave-mouth`, `strongbox`, `key`): every kind a room's grammar
+//! can place carries a row here too, at no cost to a world that never places
+//! one. It was written wide so that The Wicket's Task 2 could re-key
+//! `windows/vessel`'s interior grammar onto [`KindId`] without adding a row
+//! first; that task has landed, and the width is now simply what the grammar
+//! needs.
 
 #![warn(missing_docs)]
 
@@ -52,9 +55,10 @@ pub struct ThingTraits {
 ///
 /// Three kinds are earned by a verb this campaign ships (spec §3.8):
 /// `cave-mouth` and `strongbox` by `open`/`close`, `key` by `take`/`drop`.
-/// The rest give every `AnchorKind` (`windows/vessel/src/interior/anchor.rs`)
-/// a thing-kind counterpart, so a later task's `AnchorKind` → [`KindId`]
-/// mapping can be total without adding a row here first.
+/// The rest are the kinds `windows/vessel`'s pattern grammar composes into a
+/// room. They were written here first so The Wicket's Task 2 could delete the
+/// closed anchor-kind enum and point the grammar straight at these labels
+/// without adding a row in the same change.
 /// type-audit: bare-ok(identifier-text)
 pub const THING_KINDS: &[&str] = &[
     "alcove",
@@ -78,7 +82,8 @@ pub const THING_KINDS: &[&str] = &[
 /// Named handles for the kinds that code names.
 ///
 /// **A handle is a convenience; a variant was a requirement.** This is the
-/// asymmetry the whole campaign turns on. `AnchorKind` made a variant
+/// asymmetry the whole campaign turns on. The closed `AnchorKind` enum that
+/// `windows/vessel` carried until The Wicket's Task 2 made a variant
 /// mandatory: a kind with no variant could not be placed in a room, however
 /// open the stores behind it were. A handle is the opposite — it exists so a
 /// predicate can say `kind == kinds::HEARTH` instead of `kind ==
@@ -129,9 +134,9 @@ pub mod kinds {
     /// Hand-written, and that is a deliberate cost rather than an oversight:
     /// there is no macro here because a macro generating both the constants
     /// and this list would make the list unable to disagree with them. That
-    /// is what makes `AnchorKind::ALL` safe and it is exactly what is NOT
-    /// wanted here — this list is checked against the ROSTER, a third party,
-    /// so it must be able to go wrong.
+    /// is what made the deleted `anchor_kinds!` macro's own roster safe, and
+    /// it is exactly what is NOT wanted here — this list is checked against
+    /// the ROSTER, a third party, so it must be able to go wrong.
     /// type-audit: bare-ok(identifier-text)
     pub const EVERY_HANDLE: &[(&str, KindId)] = &[
         ("ALCOVE", ALCOVE),
@@ -691,9 +696,36 @@ mod tests {
     /// A length assertion passes any compensating swap — drop one kind, add
     /// another, and a count-based ratchet reports nothing. Freezing the
     /// sequence makes every addition, removal and reordering a visible edit to
-    /// this list, which is the discipline `AnchorKind::ALL` bought by being
-    /// generated from the enum's own declaration. Update this list in the same
-    /// commit that changes the roster, never afterwards.
+    /// this list. Update this list in the same commit that changes the roster,
+    /// never afterwards.
+    ///
+    /// **WHY A ROSTER NEEDS A RATCHET AT ALL, measured rather than argued.**
+    /// This paragraph is the substance of a rationale that lived on
+    /// `windows/vessel`'s `anchor_kinds!` macro until The Wicket's Task 2
+    /// deleted it with the enum, and it is the reason this test exists rather
+    /// than a length check.
+    ///
+    /// Three separate hand-written `[AnchorKind; 14]` rosters had accumulated
+    /// across the tree — in `windows/vessel/tests/suite/affordance.rs`,
+    /// `cli/tests/suite/anchor_thing_correspondence.rs` and
+    /// `windows/vessel/src/chamber_prose.rs` — and each carried a comment
+    /// saying it was "kept in step by an exhaustive match". **That claim was
+    /// false in the direction that actually happens.** The compiler forces an
+    /// ARM per variant; it says nothing about a *list* sitting beside them. A
+    /// reviewer added a fifteenth variant, wrote the arms the compiler
+    /// demanded, pointed it at `KindId("cave-mouth")`, and 1209 tests passed
+    /// — including a precondition whose own doc comment promised to stop
+    /// being evidence in exactly that case. Dropping a variant reddened a
+    /// test; adding one reddened nothing.
+    ///
+    /// No test can enumerate a member it has never heard of, so no test can
+    /// close that gap from the inside. The macro closed it by GENERATING the
+    /// roster from the same declaration that produced the enum. That route is
+    /// gone — `THING_KINDS` is authored data, not a derivation — so the
+    /// closure here is the opposite one: the roster is frozen against a
+    /// committed copy, and every addition, removal and swap has to move two
+    /// lists in one commit. `every_named_handle_is_a_roster_row` above is the
+    /// other half, checking the handles against this same roster.
     ///
     /// MUTATION THIS MUST FAIL AGAINST: swap the `"log"` and `"loom"` entries
     /// in `THING_KINDS`. The length is unchanged and the set is unchanged;

@@ -14196,11 +14196,12 @@ mod tests {
         // hearth routes to the hearth anchor and is warmer there than where it
         // began. A creature in an identical room WITHOUT a fire has nowhere
         // warmer to go — the additive-latent control.
-        use crate::interior::{AnchorKind, Interior, route_within, warmth_at};
+        use crate::interior::{Interior, route_within, warmth_at};
+        use hornvale_thing::kinds;
         let mut warm_room = Interior::new();
-        let door = warm_room.push(AnchorKind::Threshold, None);
-        let hall = warm_room.push(AnchorKind::Bed, None);
-        let hearth = warm_room.push(AnchorKind::Hearth, None);
+        let door = warm_room.push(kinds::THRESHOLD, None);
+        let hall = warm_room.push(kinds::BED, None);
+        let hearth = warm_room.push(kinds::HEARTH, None);
         warm_room.connect(door, hall);
         warm_room.connect(hall, hearth);
 
@@ -14211,8 +14212,8 @@ mod tests {
         assert_eq!(plan.last(), Some(&hearth), "the plan ends at the fire");
 
         let mut cold_room = Interior::new();
-        let d2 = cold_room.push(AnchorKind::Threshold, None);
-        let h2 = cold_room.push(AnchorKind::Bed, None);
+        let d2 = cold_room.push(kinds::THRESHOLD, None);
+        let h2 = cold_room.push(kinds::BED, None);
         cold_room.connect(d2, h2);
         assert_eq!(
             warmth_at(&cold_room, d2, 64),
@@ -14229,12 +14230,12 @@ mod tests {
         let door = real
             .ids()
             .into_iter()
-            .find(|id| real.anchor(*id).kind == AnchorKind::Threshold)
+            .find(|id| real.anchor(*id).kind == kinds::THRESHOLD)
             .expect("a built room has a threshold");
         let fire = real
             .ids()
             .into_iter()
-            .find(|id| real.anchor(*id).kind == AnchorKind::Hearth)
+            .find(|id| real.anchor(*id).kind == kinds::HEARTH)
             .expect("a cold built room has a hearth");
         assert!(
             warmth_at(&real, fire, 64) > warmth_at(&real, door, 64),
@@ -14256,7 +14257,8 @@ mod tests {
         // byte-identity. Unlike the pre-crossing model (a hand-picked
         // `warmth: Some(scalar)`), warmth is now DERIVED from a real
         // `Interior`, so this test builds one rather than injecting a number.
-        use crate::interior::{AnchorKind, Interior};
+        use crate::interior::Interior;
+        use hornvale_thing::kinds;
         let home = raddr(1.0);
         let day = WorldTime::GENESIS;
         // −10 °C against the warm niche (optimum 18, width 8): deviation 28,
@@ -14275,7 +14277,7 @@ mod tests {
         // additive-latent discipline (an emitter-free room is byte-identical
         // to no interior at all).
         let mut cold_room = Interior::new();
-        let bed = cold_room.push(AnchorKind::Bed, None);
+        let bed = cold_room.push(kinds::BED, None);
         let unheated = Thermal {
             niche: warm_niche(),
             terrain: &t,
@@ -14289,8 +14291,8 @@ mod tests {
         // hand-injecting an arbitrary scalar the way the pre-crossing model
         // could.
         let mut warm_room = Interior::new();
-        let fire = warm_room.push(AnchorKind::Hearth, None);
-        let second_fire = warm_room.push(AnchorKind::Hearth, None);
+        let fire = warm_room.push(kinds::HEARTH, None);
+        let second_fire = warm_room.push(kinds::HEARTH, None);
         warm_room.connect(fire, second_fire);
         let beside_the_fire = Thermal {
             niche: warm_niche(),
@@ -14413,17 +14415,18 @@ mod tests {
         // well outside the niche band — steps WITHIN the room toward the
         // fire, each step landing somewhere strictly warmer than the last,
         // until it reaches the hearth itself and has nowhere better to go.
-        use crate::interior::{AnchorKind, compose, selection};
+        use crate::interior::{compose, selection};
+        use hornvale_thing::kinds;
         let interior = compose(&selection(true, true));
         let door = interior
             .ids()
             .into_iter()
-            .find(|&id| interior.anchor(id).kind == AnchorKind::Threshold)
+            .find(|&id| interior.anchor(id).kind == kinds::THRESHOLD)
             .expect("a built cold room has a threshold");
         let hearth_id = interior
             .ids()
             .into_iter()
-            .find(|&id| interior.anchor(id).kind == AnchorKind::Hearth)
+            .find(|&id| interior.anchor(id).kind == kinds::HEARTH)
             .expect("a cold built room has a hearth");
 
         let home = raddr(1.0);
@@ -14485,10 +14488,11 @@ mod tests {
         // own room's hearth. `route_within`'s `None` here is a real, expected
         // case, not a defect: the drive must fall back to the room-scale
         // gradient rather than treating it as impossible.
-        use crate::interior::{AnchorKind, Interior};
+        use crate::interior::Interior;
+        use hornvale_thing::kinds;
         let mut stranded = Interior::new();
-        let door = stranded.push(AnchorKind::Threshold, None);
-        stranded.push(AnchorKind::Hearth, None);
+        let door = stranded.push(kinds::THRESHOLD, None);
+        stranded.push(kinds::HEARTH, None);
         // Deliberately NO edge between them — `permits` would reject this as
         // a COMPOSITION (it is what a seasonal-passability READ could
         // produce transiently, not a shape `interior_of` ever composes
@@ -14534,10 +14538,11 @@ mod tests {
         // Reuses the `stranded` fixture from the `proposal` fallback test
         // above: a hearth with no edge to the door, so a genuinely warmer
         // anchor exists but is unroutable.
-        use crate::interior::{AnchorKind, Interior};
+        use crate::interior::Interior;
+        use hornvale_thing::kinds;
         let mut stranded = Interior::new();
-        let door = stranded.push(AnchorKind::Threshold, None);
-        stranded.push(AnchorKind::Hearth, None);
+        let door = stranded.push(kinds::THRESHOLD, None);
+        stranded.push(kinds::HEARTH, None);
 
         let home = raddr(1.0);
         let day = WorldTime::GENESIS;
@@ -14565,10 +14570,11 @@ mod tests {
         // between the creature's current anchor and a candidate one, clamped
         // to never go negative (a step that makes things worse serves the
         // drive not at all, exactly like the room-scale arm).
-        use crate::interior::{AnchorKind, Interior};
+        use crate::interior::Interior;
+        use hornvale_thing::kinds;
         let mut interior = Interior::new();
-        let door = interior.push(AnchorKind::Threshold, None);
-        let hearth = interior.push(AnchorKind::Hearth, None);
+        let door = interior.push(kinds::THRESHOLD, None);
+        let hearth = interior.push(kinds::HEARTH, None);
         interior.connect(door, hearth);
 
         let home = raddr(1.0);
@@ -14623,11 +14629,12 @@ mod tests {
         // `Drive::candidate_actions` actually makes `MoveWithin` reachable
         // via the live multi-drive path, not merely via `Thermal::proposal`
         // called in isolation (the test above).
-        use crate::interior::{AnchorKind, Interior};
+        use crate::interior::Interior;
+        use hornvale_thing::kinds;
         let mut interior = Interior::new();
-        let door = interior.push(AnchorKind::Threshold, None);
-        let hall = interior.push(AnchorKind::Bed, None);
-        let hearth = interior.push(AnchorKind::Hearth, None);
+        let door = interior.push(kinds::THRESHOLD, None);
+        let hall = interior.push(kinds::BED, None);
+        let hearth = interior.push(kinds::HEARTH, None);
         interior.connect(door, hall);
         interior.connect(hall, hearth);
 
@@ -14685,6 +14692,7 @@ mod tests {
 
     #[test]
     fn a_creature_crosses_a_hearth_bearing_room_but_not_a_hearthless_one() {
+        use hornvale_thing::kinds;
         // Task 6's own failing test (step 1): a cold creature at a
         // hearth-bearing interior's threshold ends its tick nearer the
         // hearth — reading strictly MORE warmth where it ends than where it
@@ -14794,7 +14802,7 @@ mod tests {
         let hearth_id = interior
             .ids()
             .into_iter()
-            .find(|&id| interior.anchor(id).kind == crate::interior::AnchorKind::Hearth)
+            .find(|&id| interior.anchor(id).kind == kinds::HEARTH)
             .expect("a built cold room has a hearth");
         let end = occ.at(e1).expect("the creature arrived somewhere");
         assert_ne!(
@@ -14917,10 +14925,10 @@ mod tests {
     /// several hops inside an alcove) — `walking_requires_adjacency` needs a
     /// threshold and a hearth that ARE neighbors, one hop apart.
     fn built_interior() -> Interior {
-        use crate::interior::AnchorKind;
+        use hornvale_thing::kinds;
         let mut i = Interior::new();
-        let t = i.push(AnchorKind::Threshold, None);
-        let h = i.push(AnchorKind::Hearth, None);
+        let t = i.push(kinds::THRESHOLD, None);
+        let h = i.push(kinds::HEARTH, None);
         i.connect(t, h);
         i
     }
@@ -14944,17 +14952,17 @@ mod tests {
     /// here, only a `kind`-respecting `arrive` can pass both assertions at
     /// once.
     fn built_interior_with_ground() -> Interior {
-        use crate::interior::AnchorKind;
+        use hornvale_thing::kinds;
         let mut i = Interior::new();
-        let t = i.push(AnchorKind::Threshold, None);
-        let g = i.push(AnchorKind::Ground, None);
+        let t = i.push(kinds::THRESHOLD, None);
+        let g = i.push(kinds::GROUND, None);
         i.connect(t, g);
         i
     }
 
     #[test]
     fn a_creature_arrives_at_the_seam_landing() {
-        use crate::interior::AnchorKind;
+        use hornvale_thing::kinds;
         let interior = built_interior_with_ground();
         let room = raddr(1.0);
         let mut narrow = Occupancy::default();
@@ -14962,14 +14970,14 @@ mod tests {
         let at_narrow = narrow
             .at(npc_id(1))
             .expect("an arrived creature stands somewhere");
-        assert_eq!(interior.anchor(at_narrow).kind, AnchorKind::Threshold);
+        assert_eq!(interior.anchor(at_narrow).kind, kinds::THRESHOLD);
 
         let mut broad = Occupancy::default();
         broad.arrive(npc_id(2), &room, &interior, SeamKind::Broad);
         let at_broad = broad
             .at(npc_id(2))
             .expect("an arrived creature stands somewhere");
-        assert_eq!(interior.anchor(at_broad).kind, AnchorKind::Ground);
+        assert_eq!(interior.anchor(at_broad).kind, kinds::GROUND);
 
         assert_ne!(
             at_narrow, at_broad,
@@ -15008,7 +15016,7 @@ mod tests {
 
     #[test]
     fn walking_requires_adjacency() {
-        use crate::interior::AnchorKind;
+        use hornvale_thing::kinds;
         let i = built_interior(); // threshold -- hearth
         let room = raddr(1.0);
         let mut occ = Occupancy::default();
@@ -15017,7 +15025,7 @@ mod tests {
             .ids()
             .iter()
             .copied()
-            .find(|&a| i.anchor(a).kind == AnchorKind::Hearth)
+            .find(|&a| i.anchor(a).kind == kinds::HEARTH)
             .unwrap();
         assert!(
             occ.walk(npc_id(1), &i, hearth),
@@ -15029,7 +15037,7 @@ mod tests {
         // the happy path. Plant a third anchor with no edge to the hearth and
         // confirm walking straight to it is refused rather than teleported.
         let mut disconnected = built_interior();
-        let stray = disconnected.push(AnchorKind::Bed, None);
+        let stray = disconnected.push(kinds::BED, None);
         let mut occ2 = Occupancy::default();
         occ2.arrive(npc_id(2), &raddr(2.0), &disconnected, SeamKind::Narrow);
         assert!(
@@ -15054,11 +15062,11 @@ mod tests {
         // live: a creature stepping from an alcove INTO the hearth it
         // contains was rejected by the old adjacency-only check even though
         // the route that proposed the step was valid.
-        use crate::interior::AnchorKind;
+        use hornvale_thing::kinds;
         let mut i = Interior::new();
-        let ground = i.push(AnchorKind::Ground, None);
-        let alcove = i.push(AnchorKind::Alcove, None);
-        let hearth = i.push(AnchorKind::Hearth, Some(alcove));
+        let ground = i.push(kinds::GROUND, None);
+        let alcove = i.push(kinds::ALCOVE, None);
+        let hearth = i.push(kinds::HEARTH, Some(alcove));
         i.connect(ground, alcove);
         let mut occ = Occupancy::default();
         occ.arrive(npc_id(1), &raddr(1.0), &i, SeamKind::Broad);
@@ -15093,14 +15101,14 @@ mod tests {
         // coverage. An accidental `.unwrap_or(some_default_anchor)` in place
         // of that early return would still pass every other test in this
         // module.
-        use crate::interior::AnchorKind;
+        use hornvale_thing::kinds;
         let i = built_interior();
         let mut occ = Occupancy::default();
         let hearth = i
             .ids()
             .iter()
             .copied()
-            .find(|&a| i.anchor(a).kind == AnchorKind::Hearth)
+            .find(|&a| i.anchor(a).kind == kinds::HEARTH)
             .unwrap();
         assert!(
             !occ.walk(npc_id(1), &i, hearth),
@@ -15382,10 +15390,10 @@ mod tests {
         // (occupancy actually moves off the landing anchor), so the
         // before/after equality below is not vacuously true because
         // nothing ran.
-        use crate::interior::AnchorKind;
+        use hornvale_thing::kinds;
         let mut interior = Interior::new();
-        let door = interior.push(AnchorKind::Threshold, None);
-        let hearth = interior.push(AnchorKind::Hearth, None);
+        let door = interior.push(kinds::THRESHOLD, None);
+        let hearth = interior.push(kinds::HEARTH, None);
         interior.connect(door, hearth);
 
         let home = raddr(1.0);
@@ -15559,16 +15567,16 @@ mod tests {
         // FULL corridor needs), the cap — not the horizon — ends the
         // replay, and the fallback then jumps straight to the hearth,
         // skipping every anchor still between it and where replay stopped.
-        use crate::interior::AnchorKind;
+        use hornvale_thing::kinds;
         const CAP: usize = 5;
         const LEN: usize = CAP + 3; // longer than the cap can ever traverse
         let mut interior = Interior::new();
         let mut anchors = Vec::with_capacity(LEN);
         for i in 0..LEN {
             let kind = if i == LEN - 1 {
-                AnchorKind::Hearth
+                kinds::HEARTH
             } else {
-                AnchorKind::Ground
+                kinds::GROUND
             };
             let id = interior.push(kind, None);
             if let Some(&prev) = anchors.last() {

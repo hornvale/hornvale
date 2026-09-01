@@ -199,7 +199,7 @@ pub fn light_field(lattice: &Lattice, sources: &[Source]) -> BTreeMap<Cell, Illu
 /// model is **topological** (anchors and the relations between them) and the
 /// lattice is **spatial** (cells), and until now nothing joined the two. So
 /// of spec §4.2's three light sources the torch (the observer's own cell) and
-/// the doorway (`Lattice::doorways`) could be placed and `AnchorKind::Hearth`
+/// the doorway (`Lattice::doorways`) could be placed and `kinds::HEARTH`
 /// could not — the spec said the hearth was "already in built interiors",
 /// which is true of the interior and false of the lattice.
 ///
