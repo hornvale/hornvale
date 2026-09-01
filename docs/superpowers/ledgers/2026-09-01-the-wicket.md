@@ -743,3 +743,37 @@ as a checkable inequality**: `REST_BOUT`'s comment says repayment must exceed
 `REST_BOUT.as_std_days() * REST_FALL > HYSTERESIS_H`, turns a sentence into a
 guard. **Pattern worth carrying: when a constant's doc states a budget, the
 budget is already a test; nobody had written it down as one.**
+
+#39 [G5] — **Fixing the defect made the metric worse, and the metric had been
+flattered by the defect.** Task 8's fix round moved `tick_commit_budget` from
+1.008333 **up** to 1.058333 and the walk golden from 90 to 108 facts. The
+implementer's explanation is the finding: *part of the 90-fact roster's thrift
+was the defect itself — an oversleeping body commits nothing* — so 108 is the
+honest number and 90 was a number produced partly by the bug. Headroom is 29%
+under an untouched 1.5 ceiling, still 15% better than Task 7's 1.242.
+
+Worth carrying: a budget improved by a defect reads exactly like a budget
+improved by a fix. Nothing in the instrument distinguishes them, and the only
+reason this one was caught is that a reviewer disproved the doc claim the defect
+was hiding behind.
+
+#40 [G5] — **A prescribed mechanism was taken, but only after being checked —
+and the check refined it.** The review suggested gating `SLEEP_BOUT`'s floor on
+`is_awake`. The implementer reproduced the reviewer's measurement first (8 of 18
+bind; all 18 `awake=false`), then found the suggestion incomplete: **while
+awake, `next_awake_day` does not always answer a scan step** — a body lying down
+before dusk scans past the whole night — so the awake branch keeps `max` rather
+than collapsing to a bare `SLEEP_BOUT`. Third time this campaign that a
+criterion or mechanism supplied from outside the code needed correction by
+someone reading it (see #35). The rule holds in both directions: a suggestion is
+a hypothesis, and the person with the code tests it.
+
+Two further things done right rather than asserted: the replacement frequency
+claim is a **full-day sweep at the wake lattice that asserts its own population
+discriminates** (7 of 9 off-phase instants have a cycle shorter than the floor),
+not two hand-picked instants; and the `REST_FALL` inequality, having tripped
+`clippy::assertions_on_constants`, became a `const _: () = assert!(...)` — so a
+bad value now fails to **compile** rather than to test. The residual is stated
+plainly rather than glossed: the bracket is (0.4, 1.0), 2.5x rather than
+unbounded-below, so 0.5 is still not uniquely determined — *what is now
+determined is every claim its own docs make*.
