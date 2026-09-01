@@ -387,7 +387,41 @@ const INDOOR_SNAPSHOT_BUDGET_MS: f64 = 40.0;
 /// comfortably is whether or not anyone has written down where the bytes went
 /// — so a reader should treat a row here as evidence that somebody looked,
 /// not as evidence that nothing has happened since.
-const WALK_BYTES_BUDGET: usize = 24600;
+/// **Basis re-recorded and ceiling raised (The Pavement), 2026-09-01 — the
+/// first raise this constant has taken, and the reason is a ratified change to
+/// what the band IS rather than growth in what one facet costs.** The walk band
+/// is now **42,986 bytes**, up from 16,664, and the ceiling moves
+/// 24600 -> 86000 to restore the ~2x margin the paragraphs above establish as
+/// this ceiling's intent.
+///
+/// **Read the decomposition before treating this as a regression, because the
+/// per-facet direction is the opposite of the total.** Decision 0511 moved the
+/// walk band to `globe_level + 7`, taking it from 31 facets to **81** — 2.61x
+/// finer over a 2.55x larger region, at essentially unchanged resolution:
+///
+/// ```text
+///   31 facets   16,664 B   550 B each   (The Grain, 2026-08-10)
+///   81 facets   42,986 B   531 B each   (The Pavement, 2026-09-01)
+/// ```
+///
+/// The total grew 2.52x while the population grew 2.61x, so **the per-facet cost
+/// FELL 3.5%** — decision 0513 nulled `w` and `up`, and a null is cheaper than
+/// the third barycentric axis and the orientation flag a triangle needed.
+/// Nothing got less efficient; there is simply more band.
+///
+/// **What this ceiling can no longer be used to argue.** A new per-facet field
+/// of twenty bytes now costs 1,620 B rather than 620 B, so the per-field prices
+/// recorded above are still correct individually and multiply 2.61x harder.
+/// Price a field against 81, not 31.
+///
+/// **The 3.8% that is NOT worth reclaiming, measured so nobody re-derives it.**
+/// The permanently-null `w`/`up` pairs total ~1,620 B — 3.8% of the payload.
+/// Omitting them via `skip_serializing_if` would be a wire schema change for a
+/// rounding error, and is deliberately not done. If this payload ever needs to
+/// shrink materially the target is the other 96%; tracked as
+/// `CLIENT-walk-snapshot-payload`.
+/// type-audit: bare-ok(count)
+const WALK_BYTES_BUDGET: usize = 86000;
 
 /// The measured basis for `START_BUDGET_MS`: 3442.192 ms, the slowest of
 /// three runs, host `MacBookPro`, dev profile, 2026-08-06 — the ORIGINAL
