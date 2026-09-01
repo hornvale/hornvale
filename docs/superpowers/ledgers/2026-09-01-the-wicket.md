@@ -710,3 +710,36 @@ was 0.96 pre-Task-7 · **Explicit: do not widen `STEADY_STATE_CEILING` or
 about the model, not a calibration chore — and this campaign has already
 verified once that no tolerance was widened, which is a check worth keeping
 honest · ideonomy passes / overturns: 0 / 0 · Capture: plan Task 8 Step 2b.
+
+#37 [G5] — **Instance eleven, and the sharpest yet: a doc claim falsified by
+the fixture it cites as evidence.** `SLEEP_BOUT`'s doc says the hoisted-walk
+golden's real nights measure 45,000 and 50,000 ticks "so on the ordinary path
+the cycle still decides and **this floor never binds**". Task 8's reviewer
+instrumented `act_span` and ran that very golden: of 18 sleeps, **8 have the
+floor bind** — cycles of 5,000 / 20,000 / 25,000 / 30,000 all overridden to
+40,000 — reconciling exactly with the golden's ten 40,000-spans.
+
+And the binding cases are not the case the floor was written for.
+`Fatigue::act()` returns `Sleep` iff `!awake`, so every creature-layer `slept`
+is an **in-phase** sleep; the "player types `sleep` at noon" case the floor
+exists for is never exercised there. What is exercised eight times is a body
+bedding down with its night nearly over and being pushed past dawn — worst case
+a 5,000-tick remaining night stretched to 40,000, an **8x overshoot**. The
+magnitude claim ("up to a bout") was right; the frequency claim was wrong, and
+the fixture named as evidence was the disproof.
+
+#38 [G5] — **`REST_FALL` survives a 90x mutation range: Task 7's Important 1,
+recurring for the new constant.** The full vessel suite passes at 0.9, at 0.1
+and at 0.01 — 898/898 each time. Only degenerate endpoints redden, so the
+effective bracket is the open interval (0, `FATIGUE_FALL`) and 0.5 is held by
+nothing. Neither the golden nor `tick_commit_budget` moved at any of the three,
+so the fragmentation-return risk from an under-powered rate is witnessed by
+nothing either.
+
+The remedy is unusually clean because **the doc already states the derivation
+as a checkable inequality**: `REST_BOUT`'s comment says repayment must exceed
+`HYSTERESIS_H` (0.1) and that "a quarter-day at `REST_FALL` repays 0.125". At
+0.01 that is 0.0025 — 40x below the stated floor, silently. One assertion,
+`REST_BOUT.as_std_days() * REST_FALL > HYSTERESIS_H`, turns a sentence into a
+guard. **Pattern worth carrying: when a constant's doc states a budget, the
+budget is already a test; nobody had written it down as one.**
