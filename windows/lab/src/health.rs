@@ -298,7 +298,11 @@ pub fn simulate_world(world: &World) -> Vec<AffectTrace> {
     // the clone, never at genesis (spec §3; same as `Session::start`).
     let _ = registry.register_predicate(AGENT_AT, false, "an agent's position on a day");
     let _ = registry.register_predicate(DRANK, false, "an agent satisfied its sustenance goal");
-    let _ = registry.register_predicate(RESTED, false, "an agent rested on a day");
+    let _ = registry.register_predicate(
+        RESTED,
+        false,
+        "an agent rested on a day, for this many ticks",
+    );
     let _ = registry.register_predicate(EATEN, false, "an agent ate on a day");
     let home = match hornvale_settlement::all_settlements(world).first() {
         Some(v) => v.id,

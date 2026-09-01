@@ -442,7 +442,11 @@ fn planted_registry() -> ConceptRegistry {
     let mut registry = ConceptRegistry::default();
     let _ = registry.register_predicate(AGENT_AT, false, "an agent's position on a day");
     let _ = registry.register_predicate(DRANK, false, "an agent satisfied its sustenance goal");
-    let _ = registry.register_predicate(RESTED, false, "an agent rested on a day");
+    let _ = registry.register_predicate(
+        RESTED,
+        false,
+        "an agent rested on a day, for this many ticks",
+    );
     let _ = registry.register_predicate(EATEN, false, "an agent ate on a day");
     registry
 }

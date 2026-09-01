@@ -32,7 +32,11 @@ use hornvale_vessel::liveness::{RESTED, fatigue_at, record_rest};
 fn body() -> (Ledger, EntityId, ConceptRegistry) {
     let mut registry = ConceptRegistry::default();
     registry
-        .register_predicate(RESTED, false, "an agent rested on a day")
+        .register_predicate(
+            RESTED,
+            false,
+            "an agent rested on a day, for this many ticks",
+        )
         .expect("a fresh registry accepts the predicate");
     let mut ledger = Ledger::default();
     let e = ledger.mint_entity(Lineage {

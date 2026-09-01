@@ -2213,6 +2213,29 @@ const FATIGUE_RISE: f64 = 0.3;
 /// wearing a rate's clothes; this one is not — a half-night repays half the
 /// scale, so a body three days awake still wakes in debt.
 const FATIGUE_FALL: f64 = 1.0;
+
+/// The exclusive upper bound, in TICKS, on a rest span that survives
+/// `Ledger::commit`'s quantizer unchanged (The Wicket, Task 7, fix round 1).
+///
+/// `quantize` keeps 8 significant decimal digits (decision 0033), so an integer
+/// of magnitude below `10^8` re-parses to itself and one at or above it may
+/// not: `123_456_789` comes back `123_456_790`. A span past this bound would
+/// make the READ (which sees the committed, quantized number) and the MOVER
+/// (which sees this tick's own raw emitted fact) fold different integers —
+/// the FOLD-doctrine failure this module already suffered once, reintroduced
+/// through the new carrier.
+///
+/// **The real maximum is 145,000, and the margin is three orders of
+/// magnitude.** That figure is the SCAN LOOP's bound, not `SCAN_LIMIT`'s value:
+/// `next_awake_day` starts at `day + WAKE_SCAN_STEP` and steps while
+/// `t < day + SCAN_LIMIT`, so the largest instant it can return is
+/// `day + 145_000`, and its polar-night fallback is exactly `day + 100_000`.
+/// (This doc and the task report first said 150,000, reading the constant
+/// rather than the loop.) Both production callers derive their span from that
+/// function, so nothing in the sim can approach the bound; the guard exists for
+/// [`record_rest`], which is `pub` and takes an arbitrary span from a caller
+/// this crate does not control.
+const REST_SPAN_EXACT_LIMIT: i64 = 100_000_000;
 /// The fatigue seek threshold: at/above this, the creature seeks rest. Mirrors
 /// thirst's `act`.
 const FATIGUE_ACT: f64 = 0.85;
@@ -2305,10 +2328,10 @@ fn is_awake(activity: ActivityCycle, terrain: &dyn Terrain, room: &Facet, day: W
 /// `Value::Number(span_in_ticks)`, an exact integer count, never a fractional
 /// day. Ticks are chosen over days for the reason the whole module prefers
 /// them — `Ledger::commit` quantizes a numeric object to 8 significant digits
-/// (decision 0033), and every span this world can produce is an integer below
-/// `10^8` ticks (`next_awake_day` bounds a rest at 1.5 standard days =
-/// 150,000 ticks), so an integer tick count round-trips through the quantizer
-/// EXACTLY while a fractional day would not. `round()` before the cast is
+/// (decision 0033), and every span this world can produce is an integer well
+/// below [`REST_SPAN_EXACT_LIMIT`], so an integer tick count round-trips
+/// through the quantizer EXACTLY while a fractional day would not.
+/// `round()` before the cast is
 /// belt-and-braces against that quantizer, not decoration: it makes the read
 /// (which sees the quantized number) and the mover (which sees the raw one,
 /// this tick's own emitted fact not yet being committed) agree on an INTEGER
@@ -4404,6 +4427,19 @@ pub(crate) fn rested_fact(
     span: TickSpan,
     provenance: &str,
 ) -> Fact {
+    // THE PRECONDITION THE CARRIER RESTS ON, checked at the one place every
+    // producer passes through rather than at each of them. Debug-only because
+    // it is unreachable from the sim (see [`REST_SPAN_EXACT_LIMIT`]) and this
+    // is on the walk's hot path; `a_rest_span_past_the_exact_range_is_refused`
+    // is what actually exercises it, and the witness test beside that one shows
+    // the quantizer really does move a span this large.
+    debug_assert!(
+        span.ticks() >= 0 && span.ticks() < REST_SPAN_EXACT_LIMIT,
+        "a rest span must be non-negative and inside the exactly-representable \
+         tick range, or the committed fact and the emitted one fold different \
+         integers: got {} ticks",
+        span.ticks()
+    );
     Fact {
         subject: entity,
         predicate: RESTED.to_string(),
@@ -13944,13 +13980,18 @@ mod tests {
                  span={span_ticks} ticks; a float-difference read disagrees \
                  here in the last bit"
             );
-            // The MOVER's own entry point, over the same committed history.
-            assert_eq!(
-                fatigue_with_pending(&ledger, &[], e, t).to_bits(),
-                mover.to_bits(),
-                "read and mover are one function, so they cannot disagree"
-            );
-            // And the mover's REAL situation: the rest emitted this tick, not
+            // NO `fatigue_with_pending(&ledger, &[], ...)` ASSERTION HERE, and
+            // its absence is deliberate (fix round 1). One stood here, against
+            // this same `mover` value, with a message admitting it could not
+            // fail — the read and the mover are both one-line calls to
+            // `fatigue_from_rests(&rest_timeline(...))`, so with an EMPTY
+            // pending slice the two expressions are literally the same
+            // computation. An honest message does not redeem an assertion that
+            // cannot discriminate; a later reader reads the test's NAME and
+            // takes the line for coverage of it. The agreement it claimed is
+            // structural now and is stated in `fatigue_from_rests`'s doc.
+            //
+            // The mover's REAL situation is the one worth asserting: the rest emitted this tick, not
             // yet committed, so its span has not been through the quantizer.
             let mut empty = Ledger::default();
             let e2 = empty.mint_entity(test_lineage(empty.entity_count() as u16));
@@ -13962,6 +14003,115 @@ mod tests {
                  give the same fatigue as the raw one the walk emitted"
             );
         }
+    }
+
+    /// The span carrier's precondition is CHECKED, not merely documented
+    /// (fix round 1, Important 2).
+    ///
+    /// `record_rest` is `pub` and takes an arbitrary `TickSpan` from a caller
+    /// this crate does not control. `rested_fact` — the one constructor every
+    /// producer passes through — debug-asserts the span into the
+    /// exactly-representable range; this is what exercises it.
+    #[test]
+    #[should_panic(expected = "exactly-representable")]
+    fn a_rest_span_past_the_exact_range_is_refused() {
+        let mut ledger = Ledger::default();
+        let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
+        let _ = record_rest(
+            e,
+            WorldTime::from_ticks(1_000),
+            TickSpan::from_ticks(REST_SPAN_EXACT_LIMIT),
+        );
+    }
+
+    /// A negative span is refused too — the other half of the precondition, and
+    /// the one that would silently ADD fatigue rather than remove it if the
+    /// `max(0.0)` guards inside the fold were ever loosened.
+    #[test]
+    #[should_panic(expected = "non-negative")]
+    fn a_negative_rest_span_is_refused() {
+        let mut ledger = Ledger::default();
+        let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
+        let _ = record_rest(e, WorldTime::from_ticks(1_000), TickSpan::from_ticks(-1));
+    }
+
+    /// THE WITNESS FOR [`REST_SPAN_EXACT_LIMIT`] — the bound's premise is a
+    /// claim about the quantizer, so it is checked against the quantizer.
+    ///
+    /// Without this, the "committed and pending fold bit-identical" assertion in
+    /// `a_fatigue_read_matches_the_walks_own_fatigue_arithmetic` is a positive
+    /// control on the design and not a discriminator: its spans (100 and 40,000
+    /// ticks) are exact under an 8-significant-digit round trip, so it would
+    /// pass whether or not the bound were real. This test supplies the negative
+    /// half — a span the quantizer genuinely moves — and the positive one at the
+    /// largest value the sim can actually produce.
+    ///
+    /// **AND IT RECORDS WHAT IT CANNOT SHOW, which is the reason the guard is a
+    /// precondition rather than something a fatigue test could catch.** The
+    /// divergence is real at the CARRIER but invisible at the READ: a span past
+    /// the bound is at least `10^8` ticks = 1,000 standard days, and
+    /// `FATIGUE_FALL * 1000` saturates the floor clamp whichever integer is
+    /// folded, so `fatigue_at` answers 0.0 both ways. There is no magnitude at
+    /// which the quantizer moves a tick count AND fatigue is sensitive to the
+    /// move. An assertion on fatigue here would pass for a reason unrelated to
+    /// what it claimed.
+    #[test]
+    fn the_quantizer_moves_a_span_past_the_bound_and_leaves_every_real_one_alone() {
+        let mut reg = hornvale_kernel::ConceptRegistry::default();
+        reg.register_predicate(RESTED, false, "rested").unwrap();
+        // Every value goes through the REAL path — a hand-built fact (because
+        // `rested_fact` now refuses the out-of-range one, which is the point),
+        // `Ledger::commit`, and `rest_span_of` — and the comparison is
+        // `i64` against `i64`.
+        //
+        // COMPARING TWO `f64`s HERE IS WHAT A FIRST VERSION DID, and it could
+        // not fail: `assert_eq!(quantize(n as f64), n as f64)` applies the
+        // `i64 -> f64` rounding to BOTH sides, so it cannot see a tick count
+        // too large for an `f64` to hold. Raising `REST_SPAN_EXACT_LIMIT` to
+        // `10^18` — the mutation that says the bound is arbitrary — left that
+        // version green. Against an `i64` it reddens.
+        let round_trip = |ticks: i64| -> i64 {
+            let mut ledger = Ledger::default();
+            let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
+            let raw = Fact {
+                subject: e,
+                predicate: RESTED.to_string(),
+                object: Value::Number(ticks as f64),
+                place: None,
+                day: Some(WorldTime::from_ticks(1_000)),
+                provenance: "witness".to_string(),
+            };
+            ledger.commit(raw, &reg).unwrap();
+            rest_span_of(
+                ledger
+                    .facts_of(e, RESTED)
+                    .next()
+                    .expect("the fact was just committed"),
+            )
+            .ticks()
+        };
+        // Inside the bound: the walk's own spans, the largest instant
+        // `next_awake_day`'s LOOP can return (`day + 5000` stepping by 5,000
+        // while `t < day + 150_000`, so `day + 145_000`), its polar-night
+        // fallback, and the bound's own last legal value. None moves.
+        for exact in [100_i64, 40_000, 100_000, 145_000, REST_SPAN_EXACT_LIMIT - 1] {
+            assert_eq!(
+                round_trip(exact),
+                exact,
+                "a tick count inside the bound must survive commit unchanged"
+            );
+        }
+        // Past it, the read folds a DIFFERENT integer than the mover emitted —
+        // the whole consequence the bound exists to prevent. 9 significant
+        // digits, rounded to 8.
+        let past = REST_SPAN_EXACT_LIMIT + 23_456_789;
+        assert_ne!(
+            round_trip(past),
+            past,
+            "the bound's premise is that a span this large does NOT survive \
+             commit; if this ever passes, the bound is arbitrary and the guard \
+             on it is theatre"
+        );
     }
 
     #[test]
@@ -14330,6 +14480,102 @@ mod tests {
         );
         // The ceiling still holds however long a body stays up.
         assert_eq!(fatigue_at(&ledger, e, at(100.0)), 1.0);
+    }
+
+    /// THE RECOVERY BUDGET [`FATIGUE_FALL`] CLAIMS IS PINNED (fix round 1,
+    /// Important 1) — a saturated body sleeping ordinary nights is back to
+    /// rested in THREE OR FOUR of them, and not in one.
+    ///
+    /// **Why this test had to exist.** Every fatigue property test uses
+    /// `FATIGUE_FALL` symbolically, so none of them can see a rate that is
+    /// merely wrong. Task 7's own report already recorded that no property
+    /// catches a rate too SMALL — that took a ledger-growth guard at a real
+    /// seed. The converse was unrecorded and is worse: nothing caught a rate
+    /// too LARGE, which is the direction that quietly restores the flag model
+    /// the task removed. At `FATIGUE_FALL = 1.6` one night clears any debt, and
+    /// every one of P1-P6 stays green — a stock in name with a flag's
+    /// behaviour. Raising the constant would instead have reddened four
+    /// fixtures whose own messages say *"the fixture must land strictly inside
+    /// the clamp"* and *"the ladder must not bottom out on the clamp"*, both of
+    /// which INSTRUCT the reader to widen the fixture. An author would lengthen
+    /// the awake segments, rebaseline the golden, and ship, with nothing having
+    /// asked whether recovery should take three cycles or one.
+    ///
+    /// **The criterion is "returns to fully rested", not "falls below
+    /// `FATIGUE_ACT`".** The review proposed the latter; it does not
+    /// discriminate, because a single half-day night repays 0.5 and takes a
+    /// saturated body straight under 0.85 at every candidate rate. Clearing to
+    /// zero is the quantity `FATIGUE_FALL`'s own doc is authored against
+    /// ("a saturated debt clears over about three cycles"), so it is the one
+    /// asserted here.
+    ///
+    /// **The cycle is the walk's own**, not an invented one: a 0.5-day rest —
+    /// the span `next_awake_day` returns for a night, and the size the walk
+    /// golden actually records (45,000-50,000 ticks) — with 0.6 days awake
+    /// between.
+    ///
+    /// Mutation-proved in both directions (pasted in the fix report):
+    /// `FATIGUE_FALL = 0.6` takes 7 nights and reddens this; `1.6` takes 2 and
+    /// reddens it too.
+    #[test]
+    fn a_saturated_body_recovers_over_three_or_four_ordinary_nights() {
+        // The budget's own two rungs, as authored: at least three nights (a
+        // rate that clears a full debt faster than this is the flag model
+        // wearing a rate's clothes) and at most four (a rate slower than this
+        // leaves creatures living permanently near exhaustion, which is what
+        // `tick_commit_budget` caught during Task 7).
+        const FEWEST_NIGHTS: usize = 3;
+        const MOST_NIGHTS: usize = 4;
+        // A night, and the waking phase between two of them.
+        let night = TickSpan::from_std_days(0.5).expect("a span value is finite");
+        let awake = TickSpan::from_std_days(0.6).expect("a span value is finite");
+
+        let mut reg = ConceptRegistry::default();
+        reg.register_predicate(RESTED, false, "rested").unwrap();
+        let mut ledger = Ledger::default();
+        let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
+
+        // Four days awake from genesis with no rest at all: the debt is pinned
+        // at the ceiling before the first night, so the count below starts from
+        // a genuinely saturated body rather than a merely tired one.
+        let mut day = WorldTime::from_std_days(4.0).expect("a day value is finite");
+        assert_eq!(
+            fatigue_at(&ledger, e, day),
+            1.0,
+            "the fixture must start saturated or it measures a shorter recovery \
+             than it claims"
+        );
+
+        let mut rested_on: Option<usize> = None;
+        let mut woke_at: Vec<f64> = Vec::new();
+        for n in 1..=(MOST_NIGHTS + 4) {
+            ledger
+                .commit(rested_fact(e, day, night, "t"), &reg)
+                .unwrap();
+            let woke = day + night;
+            let f = fatigue_at(&ledger, e, woke);
+            woke_at.push(f);
+            if f < 1e-9 && rested_on.is_none() {
+                rested_on = Some(n);
+            }
+            day = woke + awake;
+        }
+
+        assert!(
+            woke_at[0] > 0.0,
+            "ONE night must not clear a saturated debt — that is the flag model \
+              this task removed, and a large enough FATIGUE_FALL restores it \
+              without moving any other test: woke at {}",
+            woke_at[0]
+        );
+        let rested_on = rested_on
+            .unwrap_or_else(|| panic!("the body never came back to rested at all: {woke_at:?}"));
+        assert!(
+            (FEWEST_NIGHTS..=MOST_NIGHTS).contains(&rested_on),
+            "a saturated body must be rested again after {FEWEST_NIGHTS}-\
+             {MOST_NIGHTS} ordinary nights, the budget FATIGUE_FALL is authored \
+             against; this one took {rested_on}, waking at {woke_at:?}"
+        );
     }
 
     /// THE WALK ACTUALLY RECORDS THE SPAN IT ALREADY KNEW (The Wicket, Task 7).
