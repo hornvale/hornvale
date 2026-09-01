@@ -116,12 +116,12 @@ Score **12**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 
 
 | metric | depth | value |
 |---|---|---|
+| `cold-built-room-share` | 0.0005005005 | 1 |
 | `name-people-recoverability` | 0.0005005005 | 0.6 |
 | `chorus-variance` | 0.0015015015 | 0.0062652122 |
 | `peoples-alive-at-bake-end` | 0.002002002 | 10 |
 | `peoples-placed` | 0.002002002 | 10 |
 | `chorus-recoverability` | 0.0025025025 | 0.81428571 |
-| `cold-built-room-share` | 0.005005005 | 0.96 |
 | `per-cell-diversity` | 0.005005005 | 1.3724121 |
 | `settlement-count` | 0.007007007 | 50 |
 | `chorus-param-spread` | 0.0075075075 | 0.12666667 |
@@ -346,7 +346,7 @@ Score **8**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 c
 | `mountain-coverage` | 0.006006006 | 0.17066595 |
 | `mean-land-elevation-m` | 0.008008008 | 1222.6082 |
 | `sediment-volume` | 0.013013013 | 753959.77 |
-| `cold-built-room-share` | 0.014014014 | 0.0051546392 |
+| `cold-built-room-share` | 0.017017017 | 0.0068728522 |
 
 ### Seed `651`
 
