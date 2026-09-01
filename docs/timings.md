@@ -4712,3 +4712,8 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-01T16:26:43Z | world-check | 67.532 | 38.981 | 4.212 | 0.64 | 0 | 19595524b | campaign/the-pavement | ambrose | 12 |
 | 2026-09-01T17:08:49Z | gate-commit | 129.884 | 51.325 | 25.357 | 0.59 | 0 | cf8ca7a29 | campaign/the-pavement | ambrose | 12 |
 | 2026-09-01T17:12:26Z | gate-commit | 93.793 | 59.648 | 30.320 | 0.96 | 0 | cf8ca7a29 | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T17:19:25Z | sluice:artifacts | 128.161 | 1044.906 | 59.561 | 8.62 | 0 | f9d20628b |  | lefford | 40 |
+| 2026-09-01T17:20:13Z | sluice:outboard | 47.304 | 27.706 | 33.407 | 1.29 | 0 | 15bc48094 |  | lefford | 40 |
+| 2026-09-01T17:29:35Z | sluice:gate | 561.863 | 16385.856 | 547.578 | 30.14 | 0 | b5259f661 |  | lefford | 40 |
+| 2026-09-01T17:38:55Z | sluice:clients | 559.386 | 10073.746 | 108.607 | 18.20 | 0 | 100a1c968 |  | lefford | 40 |
+| 2026-09-01T17:46:42Z | sluice:heavy | 467.115 | 9683.460 | 146.079 | 21.04 | 0 | 2467249ec |  | lefford | 40 |
