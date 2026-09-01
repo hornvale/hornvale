@@ -58,7 +58,8 @@ ruling as it is made, do not batch to the end.
 
 | File | Responsibility | Tasks |
 | --- | --- | --- |
-| `domains/thing/src/lib.rs` | The kind roster, the registry rows, and (new) the named `KindId` handles + the ordered-set ratchet | 1, 5, 9 |
+| `domains/thing/src/lib.rs` | The kind roster, the registry rows, and (new) the named `KindId` handles + the ordered-set ratchet | 1, 5 |
+| `domains/species/src/lib.rs` | The per-species sleep-debt rate, beside the registries already there | 9 |
 | `windows/vessel/Cargo.toml` | Gains `hornvale-thing` | 2 |
 | `windows/vessel/src/interior/anchor.rs` | `Anchor`/`Interior` re-keyed to `KindId`; `anchor_kinds!` and `AnchorKind` deleted | 2 |
 | `windows/vessel/src/interior/pattern.rs` | `Pattern`/`Attach` re-keyed; the brazier appended | 2, 5 |
@@ -85,8 +86,9 @@ task adds that, and freezes the roster so growth is deliberate.
 
 **Files:**
 - Modify: `domains/thing/src/lib.rs`
-- Modify: `windows/vessel/src/passage.rs:71`
 - Test: `domains/thing/src/lib.rs` (in-module `#[cfg(test)] mod tests`)
+- **Not** `windows/vessel/src/passage.rs` — Step 4 explains where that edit
+  goes and why it does not go here.
 
 **Interfaces:**
 - Consumes: `hornvale_kernel::KindId`, `THING_KINDS`, `thing_registry()`.
