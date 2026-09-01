@@ -243,3 +243,48 @@ the gate cannot do it. Relying on a blind spot is precisely the shape this
 project keeps finding, and leaving it unverified would be adopting it.
 
 **Cost if wrong:** a dangling citation ships. Mitigated by Task 9's manual sweep.
+
+### #13 [G5, SPEC DEFECT — mine] — caves DO need the draw, and Tasks 4 and 5 swap order
+
+**The spec says caves are derived with no seeded draw**, on the grounds that
+`cave_proneness(&MaterialBuffer, f64)` is a pure function of two continuous
+fields. **That is true of the function and false of its data.**
+
+Verified before dispatching Task 4:
+
+```
+domains/terrain/src/provider.rs:319   material_at(&self, id: Vertex)
+domains/terrain/src/provider.rs:371   cave_proneness_at(&self, id: Vertex)
+```
+
+Both are **Vertex**-bound, so proneness is only available at level-6 resolution —
+110-132 km apart. And `Terrain::is_built`'s real implementation
+(`liveness.rs:745`) is not a field read at all: it is
+`built.zip(room.pack().ok()).is_some_and(|(set, id)| set.contains(&id))` — a
+lookup in a precomputed SET of settlement-territory facet ids.
+
+So a per-facet cave predicate has only two honest shapes: threshold the nearest
+vertex (which reproduces `CLIM-water-label-resolution-vs-walk-band` exactly —
+every facet for tens of kilometres becomes a cave), or pick a specific facet
+within the prone vertex's territory, which is a placement and therefore a draw.
+
+**Decision: Tasks 4 and 5 swap order, and caves use the SAME placement draw as
+exotic sites.** Task 5's `site/placement/v1` already exists to turn a coarse
+vertex signal into a real address; caves need precisely that. One mechanism, one
+epoch, no resolution defect.
+
+**Alternative considered and rejected:** place the cave at the facet containing
+the vertex — genuinely derived, no draw, one cave per prone vertex. Rejected
+because Task 5 mints the epoch regardless, so the draw is free at the margin,
+and a placement keyed to vertex centres puts every cave on a 120 km lattice
+point. That regularity is invisible to a player and visible to anyone who plots
+them, which is the kind of thing this project finds two campaigns later.
+
+**Cost if wrong:** the epoch covers one more label's worth of placement than it
+strictly had to. Recoverable — the alternative stays available.
+
+**The shape of my error, because it is the campaign's own subject.** I checked
+that `cave_proneness` was a pure function and inferred that its answer was
+available anywhere. I did not check where its INPUTS live. That is the same move
+as reading a ratio without its denominator, in a spec written the same day I
+catalogued that failure.
