@@ -106,3 +106,11 @@ and 8 branch tables.
 value) at ~15 sites · **Proceed per the approved spec** (§4 item 2 names
 the generic explicitly; the rename is the cost of the unification Nathan
 approved at G3) · Ideonomy: covered by #1's pass · Capture: plan Task 3.
+
+#9 [Q] — Does Task 2's `UnitError` collapse also fold in the other
+non-kernel error shapes turned up nearby? · **Deferred, not consolidated**:
+`terrain/src/crust.rs`'s `Result<CrustKm, String>` and
+`windows/worldgen/src/harvest.rs`'s `LatError` are error-convention
+outliers deferred (the latter dissolves with the queued angle family).
+Neither is a shape twin the detector sees. · Capture: Task 2 (`UnitError`
+collapse) scope note.
