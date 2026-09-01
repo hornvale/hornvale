@@ -87,3 +87,53 @@ not a corner of this one.
   generated but **unreachable**."
 - `plate.rs` draws settlements and nothing else, at any zoom — which is why
   Nathan sees only the flagship.
+
+## Pre-flight rulings, before Task 1
+
+The full scan table is in the plugin's scratch ledger; the three rulings are
+durable and live here.
+
+### #6 [G4] — `from_parts` gains a `site` parameter rather than deriving one
+
+**Question:** Task 2 derives `Brief::site` inside `from_parts` from `built`.
+Task 4 needs a cave to produce a site, and `from_parts` has no world to ask.
+
+**Decision:** `from_parts` takes `site: Option<Site>`; `brief_of` computes it.
+
+**Why:** overriding the field after construction would leave a constructor
+deriving a HALF-RIGHT answer that reads as authoritative to the next caller.
+`from_parts`'s own doc says it "exists so the type can be unit-tested without a
+world", which is precisely the argument for the caller owning a derivation that
+needs one.
+
+**Cost if wrong:** one extra parameter, a small edit to Task 2's test, and Task
+4 becomes a call-site change instead of a signature change.
+
+### #7 [G4] — Task 3's test asserts a positive signal, not an absent string
+
+**Question:** Task 3's step 2 claims the test fails before the fix. It does not.
+With the old refusal wording present, `!reply.starts_with("There is nothing here
+to enter")` is TRUE, so the test passes green at the step that is supposed to
+prove it is wired to the code.
+
+**Decision:** assert on the chamber's own signature (`reply.contains("Ways on")`)
+instead.
+
+**Why:** it goes red meaningfully if the gate breaks, and it decouples the test
+from message wording entirely — the refusal string is presentation and should
+not be load-bearing for an enterability test.
+
+**Cost if wrong:** none identified; it is strictly stronger than the plan asked
+for. Recorded because a plan defect I authored and then corrected is exactly the
+kind of thing that otherwise disappears.
+
+### #8 [G4] — undefined test helpers are the implementer's to write
+
+Tasks 4, 6 and 9 each name a helper the plan does not define
+(`measure_cave_rate`, `seed_42`/`flagship_facet`/`three_tiles_east`,
+`measure_site_density`). Standing precedent from The Pavement: the plan names
+the PROPERTY, the implementer finds the mechanism, because a plan author does
+not know what the surrounding suite already provides.
+
+**Cost if wrong:** an implementer reinvents an existing helper; the task review
+catches it.
