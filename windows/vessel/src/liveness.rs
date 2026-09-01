@@ -5938,6 +5938,37 @@ pub fn derive_wild_npcs(
     ledger: &mut Ledger,
     concentrations: Vec<(String, [f64; 3])>,
 ) -> Vec<Body> {
+    derive_bodies_at(world, ctx, ledger, concentrations, |species| {
+        format!("a wild {species}")
+    })
+}
+
+/// Bodies STAGED by a tableau, at positions the caller chose (The Tableau).
+///
+/// [`derive_wild_npcs`]'s sibling, and deliberately the same derivation: a
+/// staged body and a wild one are the same shape — village-less, built from
+/// (species, position) — so they must not drift into two ways of making one
+/// thing. They differ in exactly one respect, which is the label: a staged
+/// goblin is "a goblin" and calling it "a wild goblin" would assert something
+/// about the world that the caller never said.
+/// type-audit: bare-ok(identifier-text: cast)
+pub fn derive_staged_npcs(
+    world: &World,
+    ctx: &LocaleContext,
+    ledger: &mut Ledger,
+    cast: Vec<(String, [f64; 3])>,
+) -> Vec<Body> {
+    derive_bodies_at(world, ctx, ledger, cast, |species| format!("a {species}"))
+}
+
+/// The one derivation both wild and staged bodies are made of.
+fn derive_bodies_at(
+    world: &World,
+    ctx: &LocaleContext,
+    ledger: &mut Ledger,
+    concentrations: Vec<(String, [f64; 3])>,
+    label_of: impl Fn(&str) -> String,
+) -> Vec<Body> {
     let biosphere = hornvale_species::biosphere_registry();
     let psyche = hornvale_species::psyche_registry();
     let perception = hornvale_species::perception_registry();
@@ -5999,7 +6030,7 @@ pub fn derive_wild_npcs(
                 role: "wild-npc",
                 ordinal: i as u16,
             });
-            let label = format!("a wild {species}");
+            let label = label_of(&species);
             ledger
                 .commit(
                     Fact {

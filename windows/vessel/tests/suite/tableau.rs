@@ -83,3 +83,77 @@ fn a_tableau_with_no_cast_stages_nobody() {
         Err(_) => { /* refusing to possess an empty world is also correct */ }
     }
 }
+
+/// The file is a FRONT-END over the builder, not a second way to make one.
+#[test]
+fn a_tableau_read_from_json_equals_the_one_the_builder_makes() {
+    let built = Tableau::new()
+        .with_cast(["drow", "goblin"])
+        .with_thing("key", 1);
+    let read = Tableau::from_json(
+        r#"{"cast":[{"species":"drow"},{"species":"goblin"}],
+            "things":[{"kind":"key","held_by":1}]}"#,
+    )
+    .expect("a well-formed tableau parses");
+    assert_eq!(built, read);
+}
+
+/// A misspelt key must not stage something quietly different from what was
+/// written — the failure mode a hand-authored file is most prone to.
+#[test]
+fn a_tableau_with_an_unknown_field_is_refused() {
+    assert!(
+        Tableau::from_json(r#"{"casts":[{"species":"drow"}]}"#).is_err(),
+        "`casts` is not `cast`; a tableau that silently staged an empty cast \
+         here would be a scene its author never wrote"
+    );
+}
+
+/// **The drama.** A goblin holding something, a drow who can see it, in one
+/// room — staged, with no seed hunted for and no world that happened to
+/// contain it.
+#[test]
+fn a_drow_can_see_what_the_goblin_is_holding() {
+    let world = common::build(42).expect("seed 42 builds");
+    let opts = PossessOpts {
+        tableau: Some(
+            Tableau::new()
+                .with_cast(["drow", "goblin"])
+                .with_thing("key", 1),
+        ),
+        ..PossessOpts::default()
+    };
+    let (session, _) = Session::start(&world, &opts).expect("the drama stages");
+    let snap = session.snapshot().expect("snapshots");
+
+    assert_eq!(session.bodies()[0].species, "drow", "we are the drow");
+    let goblin = snap
+        .sensed
+        .present
+        .first()
+        .expect("the goblin shares the room");
+    assert_eq!(goblin.label, "a goblin");
+    let held: Vec<&str> = goblin.carrying.iter().map(|c| c.noun.as_str()).collect();
+    assert_eq!(
+        held,
+        vec!["a key"],
+        "the drow can see what the goblin is holding — the assertion The \
+         Company had to leave as `the channel exists`, because no world it \
+         could find had a co-located creature holding anything"
+    );
+}
+
+/// A tableau that puts a thing in nobody's hands is refused, not ignored.
+#[test]
+fn a_thing_held_by_a_cast_member_that_does_not_exist_is_refused() {
+    let world = common::build(42).expect("seed 42 builds");
+    let opts = PossessOpts {
+        tableau: Some(Tableau::new().with_cast(["drow"]).with_thing("key", 7)),
+        ..PossessOpts::default()
+    };
+    assert!(
+        Session::start(&world, &opts).is_err(),
+        "a tableau naming a holder it never staged has not described the \
+         scene its author meant"
+    );
+}

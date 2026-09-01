@@ -1269,7 +1269,40 @@ impl<'w> Session<'w> {
                     .iter()
                     .map(|staged| (staged.species.clone(), at))
                     .collect();
-                derive_wild_npcs(world, ctx, &mut ledger, cast)
+                let staged = crate::liveness::derive_staged_npcs(world, ctx, &mut ledger, cast);
+                // Props, into the hands the tableau named. Out-of-range holders
+                // are a corpus error rather than a silent no-op: a tableau that
+                // says "the goblin holds a key" and stages no goblin has not
+                // described the scene its author meant.
+                for thing in &tableau.things {
+                    let holder = staged.get(thing.held_by).ok_or_else(|| {
+                        VesselError::Build(format!(
+                            "tableau stages a {} held by cast member {}, but the \
+                             cast has {} member(s)",
+                            thing.kind,
+                            thing.held_by,
+                            staged.len()
+                        ))
+                    })?;
+                    let id = crate::thing::promote(
+                        &mut ledger,
+                        &registry,
+                        &home,
+                        &thing.kind,
+                        0,
+                        opts.day,
+                    )
+                    .map_err(|e| VesselError::Build(format!("staging a {}: {e:?}", thing.kind)))?;
+                    ledger
+                        .commit(
+                            crate::thing::located_in_holder_fact(id, holder.entity, opts.day),
+                            &registry,
+                        )
+                        .map_err(|e| {
+                            VesselError::Build(format!("staging a {}: {e:?}", thing.kind))
+                        })?;
+                }
+                staged
             }
             None => derive_npcs(world, ctx, &mut ledger, NPC_COUNT, village.id),
         };
