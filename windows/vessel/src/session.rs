@@ -5163,7 +5163,7 @@ impl<'w> Session<'w> {
             self.world.seed,
             self.walk_depth(),
         ) else {
-            return Turn::Out("Nothing here is built; there is nothing to enter.".to_string());
+            return Turn::Out("There is nothing here to enter.".to_string());
         };
         let at = structure
             .chambers
@@ -12114,7 +12114,7 @@ mod tests {
             Turn::Released(_) => panic!("enter must not release"),
         };
         assert!(
-            !reply.starts_with("Nothing here is built"),
+            !reply.starts_with("There is nothing here to enter"),
             "the flagship's own locale is built: {reply:?}"
         );
         let total = session
@@ -12169,7 +12169,7 @@ mod tests {
             Turn::Released(_) => panic!("enter must not release"),
         };
         assert!(
-            !shown.starts_with("Nothing here is built"),
+            !shown.starts_with("There is nothing here to enter"),
             "the flagship's own locale is built: {shown:?}"
         );
         // Take a noun the chamber's prose has just named to the player.
@@ -12575,7 +12575,7 @@ mod tests {
             Turn::Released(_) => panic!("enter must not release"),
         };
         assert!(
-            !shown.starts_with("Nothing here is built"),
+            !shown.starts_with("There is nothing here to enter"),
             "the flagship's own locale is built: {shown:?}"
         );
         let structure = session

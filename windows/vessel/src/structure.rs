@@ -51,7 +51,7 @@ pub struct Structure {
     pub links: Vec<(usize, usize)>,
 }
 
-/// The structure at `locale`, or `None` where nothing is built.
+/// The structure at `locale`, or `None` where there is no site to enter.
 ///
 /// The draw is keyed to the locale's own seed under `room/chambers/v1`, so the
 /// same locale in the same world always yields the same structure, and no other
@@ -74,9 +74,10 @@ pub fn structure_at(
         walk_depth,
         "structure_at takes a WALK-band locale"
     );
-    if !brief.built {
-        return None;
-    }
+    // Decision 0536: the gate is the SITE, not `built`. `built` still means
+    // "a structure stands here" and is one property of a settlement; a cave
+    // and an exotic site are enterable and were never built.
+    brief.site.as_ref()?;
     let mut stream = locale.seed(seed).derive(ROOM_CHAMBERS).stream();
     // How many chambers: 1..=MAX_CHAMBERS, one draw.
     let count = 1 + (stream.next_u64() as usize) % MAX_CHAMBERS;
