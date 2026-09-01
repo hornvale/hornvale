@@ -194,3 +194,27 @@ Ruling: a campaign whose stated purpose includes correcting stale comments must
 not emit ten new ones. Cost if wrong: the sweep costs a few minutes and could in
 principle churn prose the reviewer then has to read; that is a far cheaper error
 than shipping doc links pointing at a type the campaign deleted.
+
+#12 [G4] — **Plan defect: the Task 1 code block omitted a type-audit tag.**
+Found by accident — I ran `make gate-commit` over the tree while Task 1's
+implementer was mid-edit, and it reported `thing:135: untagged primitive at
+EVERY_HANDLE`. Decision: **the tag is added to the plan's code block and the
+rule is promoted into Global Constraints**, and the resolution was sent to the
+live implementer rather than left for it to rediscover · Why: `tools/type-audit`
+is default-deny at `pub` boundaries and is the commit gate's third step, so any
+new `pub const` holding a primitive fails the gate until tagged. The plan's
+Global Constraints named `missing_docs` but not the type audit, which is the
+stricter of the two and the one that actually reddens · Alternatives discarded:
+letting the implementer discover it (it would have, at its own gate run — but
+the cost of telling it is one message and the cost of not telling it is a fix
+round) · ideonomy passes / overturns: 0 / 0 — a measurement ·
+Capture: plan Global Constraints and Task 1's code block.
+
+Ruling: the controller must not run `git add -A` in a worktree a subagent is
+working in — it staged the implementer's half-finished file into a docs-only
+commit and then ran the gate against it. Unstaged with `git restore --staged`,
+which leaves the working tree untouched, so the implementer lost nothing.
+Commit with an explicit pathspec while any child is live. Cost if wrong: a
+controller commit contains someone else's unfinished work and a red gate blocks
+it — recoverable, but it also risks committing a half-applied edit if the hook
+had passed. Saved to memory as `never-git-add-all-while-a-subagent-works`.
