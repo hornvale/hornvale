@@ -308,3 +308,31 @@ report because it is the campaign's second instance of the same shape — the
 first was `SupportsRest` gating a verb that never consults it — and two
 instances in one campaign is a pattern worth carrying into the retrospective:
 **a guard written against a spelling outlives the spelling.**
+
+#18 [G5] — **Ruling: six Minor findings ride the fix round rather than being
+deferred.** The SDD default is that minors never enter the fix loop and go to
+the final review's triage · Why the exception: the loop is already open for the
+Important finding, so folding in six one-line corrections extends nothing — and
+one of them is a **knowingly false doc comment** (`tableau.rs:38`, "the
+vocabulary of things is currently a closed enum", now definitively untrue). This
+campaign's own §6a deliverable is correcting three comments that describe a gate
+nothing enforces; leaving a fourth false comment in place, having been told
+about it, would make the campaign incoherent with itself. The remaining five are
+a dead rebinding, an off-by-one in a header count, a stray trailing comma, a
+bare literal where a handle exists, and a citation whose command does not do
+what it claims · Alternatives discarded: strict deferral, which would carry a
+false statement through to a final review that may or may not triage it back ·
+ideonomy passes / overturns: 0 / 0 · Capture: the deferred one — a test whose
+name no longer describes it — stays deferred, because renaming a test edits
+`docs/timings/subfloor-roster.tsv`, which selects by exact name.
+
+#19 [G5] — **The doc sweep missed a false claim because the claim never says
+`AnchorKind`.** `tableau.rs:38` reads "the vocabulary of things is currently a
+closed enum"; the implementer edited line 39 of the same hunk and the grep did
+not fire, because the sentence names the concept without naming the identifier.
+This is the campaign's **third** instance of one shape — a check written against
+a spelling rather than against a meaning. The first: `SupportsRest` advertising
+a gate no dispatcher consults. The second: two guards scanning for a literal the
+re-key makes impossible. Now a grep sweep that cannot see a false sentence about
+the very thing it is sweeping for. Carry all three into the retrospective as one
+finding, not three. Cost of the miss here: one stale sentence, caught by review.
