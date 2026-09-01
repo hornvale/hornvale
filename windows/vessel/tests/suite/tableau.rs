@@ -132,7 +132,7 @@ fn a_drow_can_see_what_the_goblin_is_holding() {
         .present
         .first()
         .expect("the goblin shares the room");
-    assert_eq!(goblin.label, "a goblin");
+    assert_eq!(goblin.label, "goblin");
     let held: Vec<&str> = goblin.carrying.iter().map(|c| c.noun.as_str()).collect();
     assert_eq!(
         held,

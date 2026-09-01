@@ -747,6 +747,29 @@ pub fn held_by(ledger: &Ledger, holder: EntityId, day: WorldTime) -> Vec<EntityI
         .collect()
 }
 
+/// What `holder` is holding, as the NOUNS prose says them — [`held_by`] with
+/// each thing's kind resolved to its word.
+///
+/// **One fold, three readers.** `Session::carried_by` (the wire and the
+/// verbs), `examine`'s creature reply, and the chart's agent marks all call
+/// this rather than each resolving kinds themselves, because three
+/// independent copies is exactly how a pane and a verb end up disagreeing
+/// about whose hands hold what.
+/// type-audit: bare-ok(identifier-text: return)
+pub fn carried_nouns(
+    ledger: &Ledger,
+    holder: EntityId,
+    day: WorldTime,
+) -> Vec<(EntityId, &'static str)> {
+    held_by(ledger, holder, day)
+        .into_iter()
+        .filter_map(|thing| {
+            let noun = crate::chamber_prose::noun_for_label(ledger.kind_of(thing)?)?;
+            Some((thing, noun))
+        })
+        .collect()
+}
+
 /// Every thing whose location is `room` ITSELF as of `day` — what a player
 /// left lying on a chamber's floor (The Chattel, Task 12).
 ///

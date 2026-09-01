@@ -1689,7 +1689,11 @@ impl<'w> Session<'w> {
                         y: cell.1,
                         noun: entry.label.clone(),
                         kind: crate::purview::AGENT_MARK_KIND.to_string(),
-                        datum: crate::purview::creature_datum(&entry.label, species),
+                        datum: {
+                            let held: Vec<&str> =
+                                entry.carrying.iter().map(|c| c.noun.as_str()).collect();
+                            crate::purview::creature_datum(&entry.label, species, &held)
+                        },
                         salience: crate::purview::AGENT_SALIENCE,
                     })
                 });
@@ -2994,13 +2998,7 @@ impl<'w> Session<'w> {
     /// exactly one — `sensed.present`'s custody and the driven body's resolve
     /// through the same fold, differing only in whose hand they ask about.
     fn carried_by(&self, holder: EntityId) -> Vec<(EntityId, &'static str)> {
-        crate::thing::held_by(&self.ledger, holder, self.day)
-            .into_iter()
-            .filter_map(|thing| {
-                let noun = crate::chamber_prose::noun_for_label(self.ledger.kind_of(thing)?)?;
-                Some((thing, noun))
-            })
-            .collect()
+        crate::thing::carried_nouns(&self.ledger, holder, self.day)
     }
 
     /// The carried thing a player's word names, matched exactly as
@@ -6258,7 +6256,12 @@ impl<'w> Session<'w> {
         {
             let sensed = self.perceived_npcs(how);
             if sensed.iter().any(|n| n.entity == npc.entity) {
-                return crate::purview::creature_datum(&npc.label, &npc.species);
+                // What it is holding, through the SAME fold the wire and the
+                // verbs resolve against, so `examine` and `sensed.present`
+                // cannot disagree about whose hands hold what.
+                let held = self.carried_by(npc.entity);
+                let nouns: Vec<&str> = held.iter().map(|(_, noun)| *noun).collect();
+                return crate::purview::creature_datum(&npc.label, &npc.species, &nouns);
             }
         }
         format!("You see no {noun} here.")
