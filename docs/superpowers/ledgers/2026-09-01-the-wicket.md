@@ -218,3 +218,30 @@ Commit with an explicit pathspec while any child is live. Cost if wrong: a
 controller commit contains someone else's unfinished work and a red gate blocks
 it — recoverable, but it also risks committing a half-applied edit if the hook
 had passed. Saved to memory as `never-git-add-all-while-a-subagent-works`.
+
+#13 [G5] — **I landed a red on the branch and Task 1's implementer found it.**
+The four idea-registry rows written at #7 and #10 blew
+`docs_consistency::registry_idea_cells_are_within_budget`'s 600-char cap on the
+Idea cell (1337 / 972 / 763 / 1355). Decision: **compact all four to ≤600, do
+not waive** · Why: the waiver fixture is append-never by construction — its own
+doc says "a new row over the cap is a failure, not a fixture edit — that ratchet
+is the whole mechanism" — so waiving would have been the cheapest repair that
+deletes the check, the exact anti-pattern the cap exists to prevent. The cap's
+rationale also settles WHERE the cut prose goes: "a row is a shelf-mark: what
+the idea is, and a pointer to where it is argued", and the argument for all four
+already lives in the spec the Where cell links · Alternatives discarded: adding
+four waiver entries; moving the rows to `frontier.md` sections and flipping
+`raw` → `elaborated`, which the test itself offers as an option but which would
+claim a maturity these ideas have not earned in one day ·
+ideonomy passes / overturns: 0 / 0 — a repair · Verified: the four cells now
+measure 571 / 554 / 586 / 568, and the full `docs_consistency` module is 28
+passed / 0 failed.
+
+Ruling: **this campaign runs `cargo test -p hornvale --test suite -- docs_consistency`
+after any edit to `book/src/frontier/idea-registry.md` or `docs/`.** The
+pre-commit hook skips `make gate-commit` when no Rust-relevant path is staged,
+so every docs-only commit on this branch has been ungated — while
+`docs_consistency` and `generated_paths` READ exactly those files. That is a
+known trap I had in memory and did not apply, and the cost fell on an
+implementer who had to prove the red was not its own. Cost if wrong: a few
+seconds per docs commit.
