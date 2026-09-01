@@ -75,6 +75,84 @@ pub const THING_KINDS: &[&str] = &[
     "vessel",
 ];
 
+/// Named handles for the kinds that code names.
+///
+/// **A handle is a convenience; a variant was a requirement.** This is the
+/// asymmetry the whole campaign turns on. `AnchorKind` made a variant
+/// mandatory: a kind with no variant could not be placed in a room, however
+/// open the stores behind it were. A handle is the opposite — it exists so a
+/// predicate can say `kind == kinds::HEARTH` instead of `kind ==
+/// KindId("hearth")` and have the compiler catch the typo. A kind with **no**
+/// handle is a first-class kind that simply has no predicate written against
+/// it, and adding a kind never requires adding one here.
+///
+/// So: add a handle when you write code that names the kind. Do not add one
+/// "for completeness" — an unused handle is a name with no reader.
+pub mod kinds {
+    use hornvale_kernel::KindId;
+
+    /// A recess off the main space.
+    pub const ALCOVE: KindId = KindId("alcove");
+    /// An altar.
+    pub const ALTAR: KindId = KindId("altar");
+    /// A smith's anvil.
+    pub const ANVIL: KindId = KindId("anvil");
+    /// A place to sleep.
+    pub const BED: KindId = KindId("bed");
+    /// The mouth of a cave — a `Vertex`/`ChamberAddr`, never an anchor.
+    pub const CAVE_MOUTH: KindId = KindId("cave-mouth");
+    /// The room's open middle: the floor itself, not a thing standing on it.
+    pub const GROUND: KindId = KindId("ground");
+    /// A fire.
+    pub const HEARTH: KindId = KindId("hearth");
+    /// The seat that commands the entrance.
+    pub const HIGH_SEAT: KindId = KindId("high-seat");
+    /// A small key.
+    pub const KEY: KindId = KindId("key");
+    /// A fallen log.
+    pub const LOG: KindId = KindId("log");
+    /// An upright loom.
+    pub const LOOM: KindId = KindId("loom");
+    /// A natural pool.
+    pub const POOL: KindId = KindId("pool");
+    /// A screen or pillar: affords nothing, shapes sightlines.
+    pub const SCREEN: KindId = KindId("screen");
+    /// A locked chest.
+    pub const STRONGBOX: KindId = KindId("strongbox");
+    /// A doorway — an anchor that is also a room-graph edge.
+    pub const THRESHOLD: KindId = KindId("threshold");
+    /// A water vessel or basin.
+    pub const VESSEL: KindId = KindId("vessel");
+
+    /// Every handle with its own name, for the roster check.
+    ///
+    /// Hand-written, and that is a deliberate cost rather than an oversight:
+    /// there is no macro here because a macro generating both the constants
+    /// and this list would make the list unable to disagree with them. That
+    /// is what makes `AnchorKind::ALL` safe and it is exactly what is NOT
+    /// wanted here — this list is checked against the ROSTER, a third party,
+    /// so it must be able to go wrong.
+    /// type-audit: bare-ok(identifier-text)
+    pub const EVERY_HANDLE: &[(&str, KindId)] = &[
+        ("ALCOVE", ALCOVE),
+        ("ALTAR", ALTAR),
+        ("ANVIL", ANVIL),
+        ("BED", BED),
+        ("CAVE_MOUTH", CAVE_MOUTH),
+        ("GROUND", GROUND),
+        ("HEARTH", HEARTH),
+        ("HIGH_SEAT", HIGH_SEAT),
+        ("KEY", KEY),
+        ("LOG", LOG),
+        ("LOOM", LOOM),
+        ("POOL", POOL),
+        ("SCREEN", SCREEN),
+        ("STRONGBOX", STRONGBOX),
+        ("THRESHOLD", THRESHOLD),
+        ("VESSEL", VESSEL),
+    ];
+}
+
 /// The canonical thing-kind registry: one row per [`THING_KINDS`] label,
 /// carrying the display name and nothing else. Which kinds are portable,
 /// openable or lockable is `windows/vessel`'s `object_registry`
@@ -579,5 +657,79 @@ mod tests {
     fn stale_declaration_panics_if_nothing_collides() {
         let mut reg = hornvale_kernel::ConceptRegistry::default();
         let _ = register_concepts(&mut reg);
+    }
+
+    /// Every named handle resolves to a roster row (G-d, spec §5.1). The
+    /// direction this enforces is **named ⊆ rostered**: it cannot see a
+    /// rostered kind that has no handle, and deliberately so — a kind no code
+    /// names needs no handle, which is the whole difference between a handle
+    /// and a variant.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST: change `kinds::HIGH_SEAT` to
+    /// `KindId("high_seat")` (underscore for hyphen — the spelling a reader
+    /// guesses). It compiles, and every consumer keeps compiling, which is
+    /// exactly the failure a bare literal invites. Red observed:
+    ///
+    /// ```text
+    /// thread 'tests::every_named_handle_is_a_roster_row' panicked at domains/thing/src/lib.rs:680:13:
+    /// handle HIGH_SEAT is "high_seat", which the roster does not carry
+    /// test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 9 filtered out
+    /// ```
+    #[test]
+    fn every_named_handle_is_a_roster_row() {
+        for (name, id) in kinds::EVERY_HANDLE {
+            assert!(
+                THING_KINDS.contains(&id.0),
+                "handle {name} is {:?}, which the roster does not carry",
+                id.0
+            );
+        }
+    }
+
+    /// The roster is frozen as an ORDERED SET, not a count (G-f, spec §5.1).
+    ///
+    /// A length assertion passes any compensating swap — drop one kind, add
+    /// another, and a count-based ratchet reports nothing. Freezing the
+    /// sequence makes every addition, removal and reordering a visible edit to
+    /// this list, which is the discipline `AnchorKind::ALL` bought by being
+    /// generated from the enum's own declaration. Update this list in the same
+    /// commit that changes the roster, never afterwards.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST: swap the `"log"` and `"loom"` entries
+    /// in `THING_KINDS`. The length is unchanged and the set is unchanged;
+    /// only the order moves, and a count-based check would stay green. Red
+    /// observed:
+    ///
+    /// ```text
+    /// thread 'tests::the_roster_is_frozen_as_an_ordered_set' panicked at domains/thing/src/lib.rs:729:9:
+    /// assertion `left == right` failed: the thing-kind roster moved; update FROZEN in the same commit
+    ///   left: ["alcove", "altar", "anvil", "bed", "cave-mouth", "ground", "hearth", "high-seat", "key", "loom", "log", "pool", "screen", "strongbox", "threshold", "vessel"]
+    ///  right: ["alcove", "altar", "anvil", "bed", "cave-mouth", "ground", "hearth", "high-seat", "key", "log", "loom", "pool", "screen", "strongbox", "threshold", "vessel"]
+    /// test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 9 filtered out
+    /// ```
+    #[test]
+    fn the_roster_is_frozen_as_an_ordered_set() {
+        const FROZEN: &[&str] = &[
+            "alcove",
+            "altar",
+            "anvil",
+            "bed",
+            "cave-mouth",
+            "ground",
+            "hearth",
+            "high-seat",
+            "key",
+            "log",
+            "loom",
+            "pool",
+            "screen",
+            "strongbox",
+            "threshold",
+            "vessel",
+        ];
+        assert_eq!(
+            THING_KINDS, FROZEN,
+            "the thing-kind roster moved; update FROZEN in the same commit"
+        );
     }
 }
