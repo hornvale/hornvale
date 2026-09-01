@@ -69,3 +69,40 @@ declares deliberate · Ideonomy: 1 micro-check pass on the corrected claim
 (inversion: "what would make paleoclimate's ALSO deliberate?" — nothing in
 its docs claims a DTO boundary; the fields are stored samples, not
 pre-commit staging) · Capture: spec §4, scope note.
+
+#5 [G4] — Task order: ratchet before or after the promotions? · **After** —
+Tasks 2-8 delete the six §1 twins, so the tool's baseline tagging pass
+(Task 11 Step 2) starts near-empty instead of tagging types the next task
+deletes · Why: tag churn is pure waste, and a promote-worthy finding at
+baseline becomes a STOP signal (a Batch task missed something) instead of
+routine debt · Alternatives discarded: tool-first (spec §3's presentation
+order) — would tag six twins and immediately delete them · Ideonomy:
+covered by #1's pass (cyclicity: the ratchet's job is FUTURE twins) ·
+Capture: plan Tasks 9-11 ordering; this entry.
+
+#6 [Q] — The detector's exact member-set match misses subset mirrors
+(Horizon's five inside Stratum's eleven — the very shape Task 7 fixes by
+hand) · **Accepted for v1**: the ratchet guards novelty going forward, and
+the known subset mirrors are all resolved or adjudicated by this campaign's
+own tasks · Why: a subset detector (≥k shared members) is noisy in
+proportion to k's arbitrariness, and a noisy gate is an ignored gate (the
+repo's own ratchet doctrine) · Ideonomy: 1 micro-pass (inversion: "what
+would a subset detector flag today?" — every enum sharing three common
+words like North/South; enrichment, not overturn) · Capture: Task 12 may
+add a TOOL- row if a real subset mirror recurs; this entry records the
+limitation.
+
+#7 [G4] — Plan-time verification falsified two survey claims and one spec
+simplification: person's f64 days are waivered-deliberate (ledger #4);
+worldgen stores a YEAR in EraClimate.day on the bake path
+(windows/worldgen/src/lib.rs:3876, history_bake.rs:1651), so Task 5 is
+diagnosis-gated with a STOP branch; Formation's cave variants carry corpus
+spellings that genuinely differ from CaveKind's legend (genus_of's own doc),
+so Task 8 adjudicates embed-vs-deliberate by evidence · Why: the
+verify-the-brief discipline, applied pre-dispatch · Capture: plan Tasks 5
+and 8 branch tables.
+
+#8 [Q] — GenesisOutcome<T> renames the payload field (system/globe →
+value) at ~15 sites · **Proceed per the approved spec** (§4 item 2 names
+the generic explicitly; the rename is the cost of the unification Nathan
+approved at G3) · Ideonomy: covered by #1's pass · Capture: plan Task 3.
