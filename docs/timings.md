@@ -4595,3 +4595,4 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-08-31T23:52:29Z | gate-commit | 22.075 | 53.293 | 14.067 | 3.05 | 0 | 0c3721621 | campaign/the-cartulary | MacBookPro | 10 |
 | 2026-09-01T00:28:15Z | rebaseline | 52.963 | 276.563 | 14.618 | 5.50 | 0 | edcb5ac61 | campaign/the-cartulary | MacBookPro | 10 |
 | 2026-09-01T00:28:39Z | gate-commit | 23.738 | 54.878 | 14.710 | 2.93 | 0 | edcb5ac61 | campaign/the-cartulary | MacBookPro | 10 |
+| 2026-09-01T00:38:42Z | gate-commit | 22.051 | 53.271 | 13.887 | 3.05 | 0 | 046d654f8 | campaign/the-cartulary | MacBookPro | 10 |
