@@ -6,7 +6,17 @@
 · **Ledger:** `docs/superpowers/ledgers/2026-09-01-the-wicket.md`
 
 A wicket is a small gate set in front of open ground. This campaign takes one
-down.
+down — and then finds the same fence built out of a number instead of an enum,
+and takes that down too.
+
+**The thesis, widened 2026-09-01 on Nathan's ruling.** A closed vocabulary and
+an authored scalar are the same defect wearing different clothes: both are
+world-facts fixed at compile time that should be rows keyed by kind.
+`AnchorKind` says *these fifteen things exist*. `FATIGUE_RISE = 0.3` says *every
+species in every world accrues sleep debt at this rate*. Neither is a fact about
+Hornvale; both are facts about what nobody has keyed yet. So the campaign ships
+both halves: the vocabulary becomes rows (§4-§6), and the first constant that
+should never have been one follows it (§6b).
 
 ## 1. The problem, measured
 
@@ -111,10 +121,12 @@ demonstrates it.
   would be a second cross-domain communication mechanism competing with the
   trace protocol, and iteration order would become an undeclared save-format
   contract.
-- **Sleep quality.** Ruled in on 2026-09-01 and deliberately not built here;
-  §6a states what the campaign does instead, which is to leave the shape
-  uncontaminated and correct the three comments that describe a gate nothing
-  enforces.
+- **The people-side and individual-side halves of sleep quality.** The
+  campaign builds the OBJECT side — rest recovers more where the room affords
+  more, using property rows that already exist (§6b). It does not build *what a
+  people tends to sleep on* (a kind-to-kind edge, addition two) or *this one
+  likes a sleeping bag* (a `Lineage`-derived per-instance value, addition
+  three). §6a states the split and why the space for both is free.
 - **Runtime-generated kinds.** `KindId(pub &'static str)` — kinds are authored
   and committed, which is the "models author, dice roll" constraint. "Kinds as
   data" here means *authored data*, never *derived at runtime*.
@@ -328,8 +340,19 @@ people tends to use. They should normally make fairly sane choices about this,
 and a creature sleeping somewhere unsafe or unrestful is a useful indicator that
 something needs tuning.*
 
-This campaign **does not build that**, and the space it leaves is not a
-placeholder — it is the campaign's own thesis. After The Wicket a kind is a
+This campaign builds **one of the three halves that ruling names**, and leaves
+the other two a space that is not a placeholder but the campaign's own thesis.
+
+```text
+  object side      rest recovers more where the room affords more    BUILT (§6b)
+  people side      what a people tends to sleep on                   kind-to-kind EDGE (addition 2)
+  individual side  this one just likes a sleeping bag               Lineage-DERIVED (addition 3)
+```
+
+The object side is buildable now because `ObjectProperty` rows keyed by `KindId`
+already exist and this campaign is what makes them reachable from a room. The
+other two are additions two and three of `MAP-one-kind-model` arriving with a
+named consumer, which is a stronger position than the orange left them in. After The Wicket a kind is a
 `KindId` with open component tables behind it, so a future
 `ComponentStore<KindId, RestQuality>` is a new table and nothing else: no enum,
 no match, no dispatcher. Leaving room is therefore free; what is *not* free is
@@ -384,6 +407,106 @@ The readout is captured separately (`PSY-rest-site-is-a-tuning-indicator`),
 including the sign convention it needs settled before measurement — sleeping
 rough is a defect only where a better site was **reachable**, so the metric is a
 gap against the best site in range, never the absolute rung.
+
+## 6b. Wait, rest and sleep are three acts, and today they are one and a half
+
+Nathan's ruling, 2026-09-01: *waiting merely passes time and does not inherently
+change anything about the character that would not be changed merely through the
+passage of time. Resting should allow the character to remain conscious and
+watchful but allow some benefits of increased healing, mana recovery, etc.
+Sleeping should render the character unconscious and allow more dramatic
+benefits, and is (for most species) mandatory.* Absorbed into this campaign
+rather than sequenced after it, on his call, with a mid-campaign stage gate to
+flush out unexpected effects.
+
+### What is actually there
+
+**`wait` is already correct and needs no work.** `Session::wait`
+(`session.rs:6270`) parses a span, advances the clock, runs the NPC tick.
+Nothing intrinsic to the body changes, and it has no `Action` variant at all —
+which is the right shape for an act that transforms nothing.
+
+**`rest` and `sleep` are one act with two words.** `Action::Rest` is the only
+variant; its `concept_name()` is `"rest"`; the `sleep` verb routes to it and
+bolts `wake_at` on afterwards, so unconsciousness is a property of the player
+path rather than of the act. NPCs propose the same `Action::Rest` and never go
+under by that route — their sleeping is the wake-gate, a separate process. The
+language domain registers `"sleep"` and `"rest"` as two concepts
+(`accession.rs`, `packs.rs`), so the vocabulary already draws a line the
+simulation does not. Even the provenance collapses: `SLEPT_PROVENANCE` is
+`"lay down and slept (fatigue eased)"` and its own comment says it is *"the same
+register `liveness.rs` uses for a creature's own Rest"*.
+
+**`rested` is a reset, not a recovery — and this is the load-bearing one.**
+
+```rust
+(FATIGUE_RISE * (t - last_rested).as_std_days()).clamp(0.0, 1.0)
+```
+
+Fatigue is time since the most recent `rested` fact, so *any* rest zeroes it.
+There is no representation of how long a body slept, which means "rest gives
+some benefit, sleep gives more" cannot be said at all: the only value in the
+system is debt-cleared-to-zero. **The act split is cosmetic until this changes.**
+Sleep debt has to become a stock paid down at a rate, not a flag cleared.
+
+**The rate is the right number on the wrong clock.** `FATIGUE_RISE = 0.3` is
+within rounding of Nathan's ~1/3, and `fatigue_at` multiplies it by
+`.as_std_days()` — standard days, where the ruling says planetary. `LocalDays`
+and `in_local(day_length)` have been in `domains/astronomy/src/units.rs` the
+whole time. On any world whose rotation is not the standard day, sleep debt
+accrues at the wrong rate today, and nothing notices because the constant is
+authored and never compared against a local clock.
+
+**And it is one constant for every species.** "Humans would likely have..."
+names a per-species rate; "(for most species) mandatory" names species that opt
+out entirely. A constant can express neither; a `ComponentStore<KindId, _>` row
+expresses both, including the opt-out, as the absence of a row.
+
+### What this campaign builds
+
+1. **`Action::Sleep` beside `Action::Rest`.** `windows/vessel/src/action.rs`
+   carries no `_` arm in any of its matches (verified), so the compiler
+   enumerates every site the new variant must be classified at — `mood`,
+   `precondition_reads_committed_state`, `concept_name`, and `all()` under
+   `action_variants_must_all_be_rostered`. Unconsciousness moves off the player
+   path and onto the act, so an NPC that sleeps goes under for the same reason a
+   possessed body does.
+2. **Recovery replaces reset.** Fatigue becomes a stock discharged by an amount,
+   so `Rest` restores less than `Sleep` per unit time and neither zeroes the
+   debt by fiat. The rung for healing and mana is left named and unbuilt (§6b's
+   closing note).
+3. **The rate becomes a row and the clock becomes local.** `FATIGUE_RISE` moves
+   to a per-species component; `as_std_days()` becomes the planetary-day
+   conversion `units.rs` already provides. A species with no row does not sleep.
+4. **Rest effectiveness reads the affordances present** — the first real
+   consumer of §6a's grade, and the reason the grade is designed there rather
+   than deferred wholesale.
+
+### What it does not build
+
+No health, no mana. One mention of mana exists in the workspace
+(`kernel/src/ecology.rs`, naming it as an example of an ambient undepleted
+resource), and no health, wound or vitality state exists on a body at all. So
+"more dramatic benefits" has nothing to attach to yet, and inventing a health
+system to justify the split would be the tail wagging the dog. What ships is the
+**shape**: two acts with different recovery magnitudes, so that when a
+restorable stock arrives it plugs into a model that already distinguishes them.
+Fatigue and consciousness are the two stocks that exist, and both are observable
+today — fatigue drives NPC behaviour, consciousness is player-visible — so the
+split clears decision 0398's reachability bar on its own.
+
+### The cost, stated plainly
+
+Fatigue folds over committed facts, so changing the fold changes when creatures
+rest, which changes committed history: same seed, different world. That is not a
+determinism violation — the standard is commit-to-commit — but it is a full
+golden and census refresh, and every census column touching creature behaviour
+will move. Nathan ruled this acceptable ("pre-alpha, golden and census refreshes
+are the norm") and asked for a **stage gate on the sluice at this boundary** to
+surface unexpected effects before the campaign goes further. `RESTED` is a
+vessel-local predicate registered per session (`session.rs:1197`), not a domain
+predicate, so a second predicate is expected not to move the world-level concept
+dump — expected, and read off the branch table rather than assumed.
 
 ## 7. Artifacts and determinism
 
@@ -496,7 +619,16 @@ was overlooked.
    regression test that go with it (§6a). One kind, five data rows, one appended
    `Pattern`, no control flow. Shrine reachability measured before, artifact
    diff read after under §7's branch table.
-5. **DoD.** §11.
+   **Stage gate on the sluice here** — the last boundary at which the tree is
+   still artifact-clean, so anything the queue reddens is attributable to the
+   re-key alone.
+5. **The acts** (§6b): `Action::Sleep`; recovery replaces reset; the rate becomes
+   a per-species row on the planetary clock; rest reads the affordances present.
+   This is where committed history moves.
+   **Stage gate on the sluice here too**, on Nathan's instruction — this is the
+   boundary that changes world output, and the queue is what surfaces the
+   unexpected half.
+6. **DoD.** §11, including the golden and census refresh.
 
 ## 11. Definition of done
 
@@ -508,10 +640,12 @@ was overlooked.
   readers acting in good faith.
 - `MAP-one-kind-model` moves to reflect that addition one has shipped, with
   addition two (edges) carrying §8's inheritance argument.
-- Three idea-registry rows are already written rather than deferred to close:
+- Four idea-registry rows are already written rather than deferred to close:
   `PSY-rest-quality-is-a-grade-not-a-gate`,
-  `PSY-rest-site-is-a-tuning-indicator`, and
-  `MAP-wilderness-affords-no-rest` (the discarded alternative from §6).
+  `PSY-rest-site-is-a-tuning-indicator`,
+  `MAP-wilderness-affords-no-rest` (the discarded alternative from §6), and
+  `TOOL-authored-scalar-should-be-a-component` (§6b's generalisation, and the
+  sweep it implies).
 - Retrospective (`docs/retrospectives/the-wicket.md`).
 - Decision records for: the totality-by-registry rule (§5, and the direction
   each check enforces); the constant-is-a-convenience/variant-is-mandatory

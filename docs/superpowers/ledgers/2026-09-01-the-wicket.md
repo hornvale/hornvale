@@ -133,3 +133,40 @@ carrier, which closes a bigger gap but redraws every outdoor interior in every
 world (`MAP-wilderness-affords-no-rest`) · ideonomy passes / overturns: 1 / 1 —
 the pass that overturned the kneeler was the one that asked which verbs are
 enforced rather than which are advertised · Capture: spec §6.
+
+#9 [Q] — **Nathan's ruling: wait, rest and sleep are three acts and must stop
+being conflated; absorb it into this campaign.** Raised and scoped by Nathan
+directly, 2026-09-01, so the scope call is his and not an auto-resolved gate.
+Decision: **absorbed, as stage 5, with a stage gate on the sluice at both the
+stage-4 and stage-5 boundaries** · Why: he ruled the golden and census refresh a
+normal pre-alpha cost rather than a constraint, and asked for the queue to flush
+out unexpected effects. The two halves are near-independent — the act split
+needs a graded recovery stock, not the re-key — so absorbing costs sequencing
+risk, not design coupling, and the stage gate is what prices that risk ·
+Alternatives discarded: (i) pivot to the acts and queue the kind model behind
+it, which was my recommendation on the grounds that the conflation produces
+wrong behaviour today while the re-key pays off later; (ii) finish The Wicket
+and take the acts next, which would have authored one more universal constant
+that stage 5 then converts to a row · ideonomy passes / overturns: 0 / 0 — the
+scope call is Nathan's and the options were laid out for him rather than
+expanded · Capture: spec §6b, stages 4-6.
+
+#10 [Q] — **Nathan's generalisation: essentially everything should vary by
+species, and often by individual; watch for constants that should be
+components.** Decision: **recorded as `TOOL-authored-scalar-should-be-a-
+component`, and it re-frames the campaign's own thesis** · Why: the measured
+instance is `FATIGUE_RISE = 0.3` — one sleep-debt rate for every species in
+every world, multiplied by `.as_std_days()` when the quantity is per planetary
+day. It is the same defect as `AnchorKind`: a world-fact fixed at compile time
+that should be a row. So the campaign header is rewritten to say that outright
+rather than treating stage 5 as an annexe. The row also records the ladder,
+which is `MAP-one-kind-model`'s three additions seen from the numeric side:
+constant → per-species row (addition 1) → kind-to-kind edge (addition 2) →
+`Lineage`-derived individual value (addition 3). Sleep therefore exercises all
+three, which the orange also does, but sleep is nearer to shipping ·
+Alternatives discarded: treating it as a passing remark and not recording it,
+against the capture invariant; and building the sweep in this campaign, which
+would be a third subsystem in an already-widened scope ·
+ideonomy passes / overturns: 0 / 0 — Nathan's ruling is the input; the ladder
+observation came from mapping it onto the registry row already open ·
+Capture: the registry row; spec header and §6b.
