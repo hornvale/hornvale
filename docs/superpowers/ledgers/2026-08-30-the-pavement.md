@@ -930,3 +930,68 @@ git-ignored scratch that dies with the worktree. Severities are the reviewer's.
 - **A flake nobody owns.** `repertory_corpus::no_scene_has_fallen_below_its_recorded_floor` fails under full-suite load and passes in isolation, reproduced on a stashed clean tree; green in four full runs of mine. A flaky red in the chamber's gate phase is indistinguishable from a real one.
 - **Nothing gates `examples/`.** Two example binaries panicked outright on the new faces (rc=101 each) while all three gates stayed green. Fix round 1 repaired both and deliberately did not add a gate; the options and their costs are in its report.
 - **`docs/decisions/README.md` indexes 226 of 287 records** and `main` is missing the same 61, so no branch caused it. The generated in-force index is complete; only the hand-maintained entry point drifts. Board post `4e0aaf79b`.
+
+## Two findings Nathan raised at close, 2026-09-01
+
+### The water label's resolution is 18x coarser than the band it paints
+
+**Filed as `CLIM-water-label-resolution-vs-walk-band` (confidence: high).**
+Nathan noticed the area east of seed 42's start renders like open water despite
+being tropical seasonal forest. It does, and `+` is literally the RIVER glyph
+(`windows/scene/src/surrounds_ascii.rs:73`), so the render is asserting river
+rather than merely looking wet.
+
+Measured:
+
+```text
+  start room 3733133217   tropical seasonal forest, 156 m above sea level, on a rise
+  east neighbour          tropical seasonal forest, 153 m
+  level-6 geosphere edge  0.01729920 - 0.02067341 rad = 110 - 132 km (mean 120)
+  walk band, radius 4     6.4905 km across, 81 facets, ~121 km^2
+```
+
+`WaterKind` is classified per level-6 geosphere vertex and the `water` layer is
+**nearest-vertex, not interpolated** (`windows/scene/src/region.rs` says so in
+the doc main corrected during this campaign's absorption). So a band roughly a
+EIGHTEENTH the size of the gap between data points inherits one point's verdict,
+with no gradient available to soften it.
+
+**Not this campaign's defect, and that is the uncomfortable part.**
+`windows/CLAUDE.md` already records "the flagship walk band as 100% river on all
+five seeds sampled (42, 13, 7, 1, 100)" — written down as *context for a
+rendering question* and never interrogated. A measured absurdity sat in a
+guidance file as a supporting detail. Same shape as ruling #26: a number
+observed, recorded, and read only for the question in front of the observer.
+
+**The general defect it exposes:** nothing anywhere asserts that a consumer's
+spatial scale matches its field's. Decision 0038 makes fields resolution-free,
+but a discrete per-vertex LABEL is not a field in that sense, and the two are
+consumed through the same surface.
+
+### Rendering a square grid as a square grid
+
+**Extends `CLIENT-chart-needs-no-projection` with an implementation sketch.**
+Finding F8 (up to 41% of the band occluded) and this are one problem: the
+renderer computes each facet's bearing and distance and drops it into a
+character box, "one row per ring." That was right for a triangular ring. For a
+9x9 block it is a lossy round-trip through polar coordinates out of data that is
+already a grid, and it collides two facets into one box 28 times at the
+flagship.
+
+The facets already carry `(x, y)` on a cube face, so the whole placement is:
+
+```text
+  row = y - y_centre
+  col = x - x_centre
+```
+
+No trigonometry, no bearings, no collisions, and **strictly less code than the
+polar path**. It also dissolves F8's missing-assertion problem rather than
+satisfying it: a direct index cannot occlude anything, so there is no ratio left
+to bound.
+
+Two real wrinkles, neither hard: a band straddling a cube seam holds facets on
+two faces whose axes differ (that is `NAV-two-frames`, and the honest answer is
+to SHOW the seam rather than smooth it), and terminal cells are about twice as
+tall as wide — which is what the existing "east doubled" hack already handles
+and can keep handling.
