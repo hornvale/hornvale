@@ -200,6 +200,53 @@ absorption can hand you a new obligation, and that the obligation was worth
 paying — the ledger is 20 K of rulings that would otherwise have died with the
 worktree.
 
+## A ratio is two numbers, and I checked one of them
+
+Fix round 1 reported that a bound had improved from 1.1051 to 0.7487 grid
+spacings. I relayed that to Nathan as a real improvement. It was not: the fix had
+switched the *divisor* from the icosphere's edge to the cube's facet arc, and
+`π/2 ÷ acos(1/√5) = 1.4188`. Same physical error, larger unit.
+
+The consequence was worse than a wrong sentence. A live threshold of 1.5 came to
+admit **2.13 real spacings** while its own doc still claimed it excluded a second
+one — a 42% loosening of a bound, invisible in a diff because the constant's
+value never changed.
+
+**The lesson is not "check your units", which nobody disagrees with.** It is that
+a *reported improvement* deserves the same scrutiny as a reported failure, and
+gets far less, because it arrives as good news. Every review instinct in this
+campaign fired correctly on red results and passed straight over a green one. The
+question that would have caught it in one line: *did the numerator change, or did
+the denominator?*
+
+I had written this exact shape into my own notes — evaluate the curve, not the
+constant; verify the proposition, not a cheaper neighbour — a few hours earlier,
+and then walked into it. Writing a lesson down is not the same as holding it, and
+the gap between those two is where a checklist earns its keep over a memory.
+
+## The trilemma nobody had named
+
+Three campaigns moved around the same three-way tradeoff without stating it:
+
+- **Bijection** — every neighbour gets exactly one compass word, every word names
+  at most one neighbour.
+- **Bounded per-room accuracy** — no word points more than some stated angle away
+  from where it goes.
+- **Invertibility** — out and back returns you.
+
+You can have any two. The 45°-bucket rule took accuracy and invertibility and
+emitted duplicate letters. Greedy took bijection and invertibility and produced a
+156° lie. The optimal assignment takes bijection and accuracy and gives up 1.55%
+of round trips.
+
+Each campaign fixed the leg that was visibly broken and silently gave up a
+different one, because **nothing named the third leg**, so nothing measured it on
+the way past. The general form: when a repair trades one property for another,
+the property being surrendered is usually the one with no assertion — that is
+precisely why it was available to surrender. Ask, of any fix: *what did the old
+thing guarantee that the new thing does not?* A lost guarantee never appears in a
+diff.
+
 ## Two things left for someone else
 
 - **A flake nobody owns.** `repertory_corpus::no_scene_has_fallen_below_its_
