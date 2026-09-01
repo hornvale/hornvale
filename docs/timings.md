@@ -4597,3 +4597,4 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-01T00:28:39Z | gate-commit | 23.738 | 54.878 | 14.710 | 2.93 | 0 | edcb5ac61 | campaign/the-cartulary | MacBookPro | 10 |
 | 2026-09-01T00:38:42Z | gate-commit | 22.051 | 53.271 | 13.887 | 3.05 | 0 | 046d654f8 | campaign/the-cartulary | MacBookPro | 10 |
 | 2026-09-01T00:41:38Z | sluice:artifacts | 74.973 | 695.752 | 27.682 | 9.65 | 0 | a024ce3df |  | lefford | 40 |
+| 2026-09-01T00:42:26Z | sluice:outboard | 47.500 | 28.867 | 41.476 | 1.48 | 0 | 91e274aa2 |  | lefford | 40 |
