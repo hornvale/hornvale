@@ -393,6 +393,37 @@ else
     bad "the docs-recovery path set was NOT classified prose-only, so the saving never applies"
 fi
 
+# `.claude/skills/**` joined the allowlist 2026-09-01. It earns its place by the
+# same argument the rest do — no phase AUTHORS anything under it (checked:
+# regenerate-artifacts.sh, gate-full-heavy.sh and the clients targets mention it
+# zero times) and NO workspace test reads it — so no skipped phase could observe
+# such a change. campaign/the-overture paid ~1130 s of extra box time for a
+# two-file skill fix before it was added.
+if sluice_is_prose_only ".claude/skills/closing-a-campaign/SKILL.md
+docs/timings.md"; then
+    ok "a skill fix plus its timings row classifies as prose-only"
+else
+    bad "a .claude/skills change is not prose-only — the allowlist entry is missing or wrong"
+fi
+
+# THE NEGATIVE THAT DEFINES THE ENTRY'S EDGE. It is `.claude/skills/**`, not
+# `.claude/**`: settings and hook configuration govern how a session behaves and
+# are not obviously unobservable to a phase. If this ever passes, someone
+# widened the glob and took the argument with it.
+if sluice_is_prose_only ".claude/settings.json"; then
+    bad ".claude/settings.json classified prose-only — the glob was widened past its argument"
+else
+    ok ".claude/settings.json is NOT prose-only (the entry is skills-only, deliberately)"
+fi
+
+# Fails toward running: one non-prose path anywhere in the range is enough.
+if sluice_is_prose_only ".claude/skills/x/SKILL.md
+kernel/src/lib.rs"; then
+    bad "a skill plus a .rs file classified prose-only — the rule stopped failing toward running"
+else
+    ok "a skill plus one .rs file takes the full ladder"
+fi
+
 for bad_case in "kernel/src/lib.rs" "Cargo.toml" "clients/game/core/tests/fixtures/x.json" \
                 "book/src/gallery/atlas.js" "book/src/laboratory/generated/the-sounding/rows.csv" \
                 "book/src/reference/concept-registry-generated.md"; do
