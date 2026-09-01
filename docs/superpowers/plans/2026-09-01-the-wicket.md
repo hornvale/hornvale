@@ -901,12 +901,34 @@ Write a throwaway probe (do not commit it) that builds worlds at the three
 census seeds and counts chambers whose `role_for` is `Role::Shrine`. Report the
 counts.
 
-Branch on the answer:
-- **Non-zero at one or more seeds** → proceed as written.
-- **Zero at all three** → STOP and report. That is decision 0398 repeating one
-  level down — a capability nothing can reach — and it is exactly what
-  `needs_populous` turned out to be. The brazier then moves to a role that is
-  reachable, and the measurement is the finding either way.
+**There is already a signal, and it is not encouraging.** Task 2's fix round
+reported, incidentally, that `Role::Shrine` occurs **zero times in any flagship
+a possession starts at** — that is why misspelling `the-altar`'s kind reddened
+exactly one test where misspelling `the-water-jar`'s reddened four. Treat that
+as a warning, not as the answer: a flagship a possession *starts at* is a much
+narrower population than every chamber in every world, and a shrine needs
+`Function::Cult` at chamber index 2 wherever it occurs.
+
+So measure **two** things, not one, because 0398 is about reachability and not
+about existence:
+
+- **(a) Existence:** how many `Role::Shrine` chambers exist at the three census
+  seeds.
+- **(b) Reachability:** whether a possession can actually get to one and delve
+  it — a shrine in a settlement no session ever reaches is precisely the
+  capability 0398 refuses.
+
+Branch on the pair:
+- **Both non-zero** → proceed as written.
+- **(a) non-zero, (b) zero** → the brazier exists and no player meets it. Report
+  it and move the kind to a role that is reachable. This is the 0398 failure in
+  its exact original form — The Chattel's strongbox existed too.
+- **(a) zero** → STOP and report. The role itself is dead, which is a finding
+  about the chamber grammar well beyond this campaign's scope.
+
+Whatever the numbers, **write them into the report**. A null here is a result:
+"shrines are unreachable at the census seeds" is worth more to the project than
+a brazier nobody sees, and it retires a role the grammar is paying for.
 
 `Role::Shrine` is drawn at chamber index 2 when the place's history function is
 `Function::Cult` and its notability is not `Seat`, so the count is a real

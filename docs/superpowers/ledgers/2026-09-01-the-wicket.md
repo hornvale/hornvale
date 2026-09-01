@@ -336,3 +336,24 @@ a gate no dispatcher consults. The second: two guards scanning for a literal the
 re-key makes impossible. Now a grep sweep that cannot see a false sentence about
 the very thing it is sweeping for. Carry all three into the retrospective as one
 finding, not three. Cost of the miss here: one stale sentence, caught by review.
+
+#20 [G5] — **An incidental measurement in Task 2's fix round may invalidate
+Task 5's proof kind.** Choosing an isolating mutation, the implementer found
+that `Role::Shrine` occurs **zero times in any flagship a possession starts
+at** — misspelling `the-altar`'s kind reddens one test where misspelling
+`the-water-jar`'s reddens four, because no behavioural test renders a shrine ·
+Decision: **Task 5's Step 1 now measures existence AND reachability separately,
+with a three-way branch** · Why: the brazier was chosen (#8) precisely because
+`warm` is enforced and no shrine can be warmed at. If no session can reach a
+shrine, the brazier is decision 0398's failure in its original form — a
+capability nothing can stand in front of — and this campaign would ship the
+exact defect it cites as its justification. The signal is not yet the answer:
+"flagship a possession starts at" is a narrower population than "every chamber
+in every world" · Alternatives discarded: pre-emptively switching the proof kind
+to a reachable role now, which would discard a measurement the campaign has
+already half-made and would pick the replacement blind ·
+ideonomy passes / overturns: 0 / 0 — a measurement, and the branch table is
+the response to it · Capture: plan Task 5 Step 1, including the instruction
+that a null is a publishable result — "shrines are unreachable at the census
+seeds" is worth more than a brazier nobody meets, and it would retire a role
+the grammar currently pays for.
