@@ -187,11 +187,21 @@ pub struct Window {
 }
 
 /// The mesh depth band B is drawn at: the walk band, one tile per facet.
-/// Matches `hornvale_vessel::agent::walk_depth` (`globe_level + 6`) for the
-/// canonical globe level of 6; a world pinned to another globe level moves
-/// both together.
+/// Matches `hornvale_locale::walk_depth` (`hornvale_vessel::walk_depth` is a
+/// re-export of it, not a second definition) for the canonical globe level of
+/// 6; a world pinned to another globe level moves both together.
+///
+/// **13, not 12, since The Pavement (decision 0511).** That campaign moved the
+/// walk band one rung finer to preserve the ground covered by one step when
+/// the lattice became an 8-connected cube-sphere quad grid — see
+/// `hornvale_locale::walk_depth`'s own doc for the measured step lengths. This
+/// constant restates that depth ABSOLUTELY, which is invisible to any scan
+/// looking for the arithmetic, so it is pinned against the running function by
+/// `tests/walk_band_agreement.rs` in this crate and by
+/// `cli/tests/suite/walk_depth_agreement.rs`'s absolute roster in the
+/// workspace.
 /// type-audit: bare-ok(count)
-pub const BAND_B_RUNG: u32 = 12;
+pub const BAND_B_RUNG: u32 = 13;
 
 /// The coarsest rung: the canonical grid level, below which the terrain
 /// fields have no resolution to disclose (decision 0196).
@@ -1498,6 +1508,23 @@ mod tests {
     use hornvale_kernel::Seed;
     use hornvale_terrain::TerrainPins;
 
+    /// The bound clause 1 of [`mesh_addressing_agrees_with_the_spatial_search`]
+    /// asserts: how many grid spacings farther from a tile's own centre the
+    /// mesh-addressed vertex may sit than the true nearest vertex does.
+    /// Measured max 1.1051 on that test's own window (The Pavement, Task 8);
+    /// 1.5 leaves headroom for another seed or window without admitting a
+    /// second grid spacing. **Not a ratchet** — a breach means addressing
+    /// resolved the wrong facet, which is a defect and not a drift.
+    const MAX_ADDRESSING_EXCESS_SPACINGS: f64 = 1.5;
+
+    /// The floor clause 2 of [`mesh_addressing_agrees_with_the_spatial_search`]
+    /// asserts: the fraction of tiles on which mesh addressing and a plain
+    /// `nearest()` query pick the SAME vertex. Exact agreement was guaranteed
+    /// on the icosphere and is not on the cube-sphere; measured 0.5824 (The
+    /// Pavement, Task 8). **A ratchet**: raising it is always allowed and is
+    /// the direction of travel.
+    const MIN_ADDRESSING_AGREEMENT: f64 = 0.55;
+
     /// A committed-seed world, built the same way the spike builds one
     /// (`windows/worldgen/examples/portolan_spike.rs`'s own `main`,
     /// deleted at this campaign's close -- git history at `0292de87f^`)
@@ -1571,10 +1598,15 @@ mod tests {
 
         // Coarser rung => half the tiles. Each mesh level halves the edge length.
         // Tolerance is +/-1 IN EITHER DIRECTION because each rung rounds
-        // independently: at the real numbers, rung 11 gives 11,623 and rung 12
-        // gives 23,245, so doubling the coarse rung OVERSHOOTS by one. A
-        // one-sided tolerance fails here, which is what the first draft of this
-        // assertion did.
+        // independently. Measured widths: rung 11 gives 11,623 and rung 12
+        // gives 23,245, so doubling THAT coarse rung OVERSHOOTS by one -- a
+        // one-sided tolerance fails there, which is what the first draft of
+        // this assertion did. The pair this assertion actually compares moved
+        // when The Pavement took `BAND_B_RUNG` to 13 (rung 12 gives 23,245 and
+        // rung 13 gives 46,490, an exact doubling), so the overshoot is no
+        // longer exercised here -- the two-sided tolerance stays anyway,
+        // because which pair is exact is a property of the rounding at that
+        // rung and not of the rule being asserted.
         let (w_coarse, _) = virtual_dims(BAND_B_RUNG - 1);
         assert!(
             (w_coarse * 2).abs_diff(w_a) <= 1,
@@ -1944,17 +1976,50 @@ mod tests {
         );
     }
 
-    /// **Mesh addressing answers the question the spatial search answered.**
+    /// **Mesh addressing is a BOUNDED approximation of the spatial search,
+    /// and was an exact replacement for it until The Pavement.**
     /// [`terrain_at_tile`] never calls [`NearestVertexIndex::nearest`]: it
-    /// addresses the tile's grid-level QUAD and takes the nearest of
-    /// that quad's own FOUR corners. The claim that makes this a
-    /// replacement rather than an approximation is that a point inside a
-    /// grid-level facet HAS its nearest mesh vertex among that facet's
-    /// corners — **and that claim's premise is retired** (see
-    /// [`terrain_at_tile`]'s own doc: a cube-sphere quad's corners are not
-    /// geosphere vertices). Spec section 7's H3a owns it; this test is Task 10
-    /// step 3's subject, to be reported DISSOLVED rather than passed or failed — so every drawn cell's glyph must equal the glyph a plain
-    /// `nearest()` query at that same cell's own centre would produce.
+    /// addresses the tile's grid-level facet and takes the nearest of that
+    /// facet's own corners.
+    ///
+    /// **The claim this test used to make is DISSOLVED, and this is the
+    /// deliberate call The Pavement's Task 8 took on it.** The claim was
+    /// exact equality on every tile — sound because on the icosphere a
+    /// grid-level triangle's corners WERE geosphere vertices, so a point
+    /// inside a facet had its nearest mesh vertex among that facet's corners
+    /// by construction. A cube-sphere quad's corners are not geosphere
+    /// vertices ([`terrain_at_tile`]'s own doc says so), so the guarantee is
+    /// gone: measured on this test's own 5,000-tile equatorial window, the
+    /// two methods now agree on **2,912 of 5,000 tiles (58.24%)**. Deleting
+    /// the test would drop the only coverage `terrain_at_tile`'s addressing
+    /// has; re-pinning the exact equality would pin a claim the geometry no
+    /// longer supports. So the assertion is replaced by the two claims that
+    /// ARE true, both measured before being written down:
+    ///
+    /// 1. **The error is bounded by about one grid spacing.** The addressed
+    ///    vertex is at most [`MAX_ADDRESSING_EXCESS_SPACINGS`] grid spacings
+    ///    farther from the tile's own centre than the true nearest vertex is
+    ///    — measured max 1.1051, mean 0.1651, one grid spacing being the
+    ///    geosphere's own edge length at its level. That is what makes this
+    ///    an approximation rather than a wrong answer: the client samples a
+    ///    NEIGHBOURING vertex, never a distant one, so no tile is ever
+    ///    painted with terrain from across the map.
+    /// 2. **Exact agreement stays above a recorded floor**
+    ///    ([`MIN_ADDRESSING_AGREEMENT`]), a ratchet in the direction of
+    ///    travel: lowering it is a deliberate act, and raising it is always
+    ///    allowed.
+    ///
+    /// The two halves catch different failures, which is why both are here.
+    /// Clause 1 catches an addressing that resolves the wrong facet
+    /// altogether. Clause 2 catches one that resolves the right facet and
+    /// then picks badly among its corners — a mutation returning the first
+    /// corner unconditionally stays inside clause 1's bound and would sail
+    /// through it.
+    ///
+    /// **What this no longer proves, stated plainly:** the drawn terrain is
+    /// NOT guaranteed to be the terrain at the tile's nearest mesh vertex.
+    /// Spec section 7's H3a owns whether that matters visually; this test
+    /// bounds it rather than deciding it.
     ///
     /// **Retargeted, not renamed away.** This test was
     /// `at_a_fine_enough_window_area_majority_agrees_with_point_sampling`,
@@ -2001,6 +2066,7 @@ mod tests {
         let mut agree = 0u32;
         let mut total = 0u32;
         let mut land = 0u32;
+        let mut max_excess = 0.0f64;
         for row in 0..u32::from(h) {
             for col in 0..u32::from(w) {
                 let (lat, lon) = crate::mercator::unproject(
@@ -2011,6 +2077,7 @@ mod tests {
                     vh,
                 );
                 let point_vertex = index.nearest(&geo, lat, lon);
+                let pos = hornvale_kernel::math::unit_sphere_from_lat_lon(lat, lon);
                 let tile = terrain_at_tile(
                     &terrain, &geo, &index, &mut memo, &f, &win, vw, vh, row, col,
                 );
@@ -2021,11 +2088,25 @@ mod tests {
                 if !terrain.is_ocean(point_vertex) {
                     land += 1;
                 }
+                // How much FARTHER the addressed vertex sits from this tile's
+                // own centre than the true nearest one does — clause 1's
+                // quantity. Central angle, so it is comparable to the mesh's
+                // own edge length without a length scale anywhere in it.
+                let angle_to = |v| {
+                    let q: [f64; 3] = geo.position(v);
+                    hornvale_kernel::math::acos(
+                        (q[0] * pos[0] + q[1] * pos[1] + q[2] * pos[2]).clamp(-1.0, 1.0),
+                    )
+                };
+                let ex = angle_to(tile.vertex) - angle_to(point_vertex);
+                if ex > max_excess {
+                    max_excess = ex;
+                }
             }
         }
         // THE VACUITY GUARD. An all-ocean (or all-land) patch would make
         // every comparison trivially agree by construction. The compared
-        // region must straddle a real coastline for the equality below to
+        // region must straddle a real coastline for the comparison below to
         // discriminate.
         let total_cells = u32::from(w) * u32::from(h);
         assert!(
@@ -2033,10 +2114,28 @@ mod tests {
             "the compared region must straddle a coastline or this test proves \
              nothing: land={land} of {total_cells}"
         );
-        assert_eq!(
-            agree, total,
-            "mesh addressing must reproduce the spatial search exactly: \
-             {agree}/{total} cells agreed"
+
+        // CLAUSE 1: the error is bounded by about one grid spacing.
+        let spacing = base_edge_rad() / f64::from(1u32 << geo.depth());
+        let excess = max_excess / spacing;
+        assert!(
+            excess <= MAX_ADDRESSING_EXCESS_SPACINGS,
+            "the mesh-addressed vertex sat {excess:.4} grid spacings farther from a tile's \
+             own centre than the true nearest vertex, over the bound of \
+             {MAX_ADDRESSING_EXCESS_SPACINGS}. Addressing resolved the wrong facet, or the \
+             grid level it resolves through is not the one terrain lives on — this is not a \
+             ratchet to loosen."
+        );
+
+        // CLAUSE 2: exact agreement stays above the recorded floor.
+        let rate = f64::from(agree) / f64::from(total);
+        assert!(
+            rate >= MIN_ADDRESSING_AGREEMENT,
+            "mesh addressing agreed with the spatial search on {agree}/{total} tiles \
+             ({rate:.4}), under the recorded floor of {MIN_ADDRESSING_AGREEMENT}. Exact \
+             agreement is no longer guaranteed (see this test's own doc), but a drop this \
+             far means the corner chosen inside the facet is wrong, not that the geometry \
+             changed. Lowering this floor is a deliberate act; say why."
         );
     }
 
@@ -2060,12 +2159,24 @@ mod tests {
         let mut memo = RoomMeshMemo::default();
         let f = mercator::frame_for(false);
         for depth in [GLOBE_RUNG, GLOBE_RUNG + 3, BAND_B_RUNG] {
+            let (vw, vh) = virtual_dims(depth);
+            // PARKED AT THE EQUATOR, and the row offset is load-bearing.
+            // This sampled the chart's top-left corner (`origin_row: 0`),
+            // which is the north pole, where Mercator's stretch is at its
+            // most extreme: on the square lattice a 4x4 block of tiles up
+            // there falls entirely inside ONE grid-level facet, and the
+            // discrimination guard below fired correctly — 1 distinct facet
+            // over 16 tiles — the moment the mesh became a cube-sphere. The
+            // equator is where the chart is closest to the mesh's own
+            // spacing, which is both the honest place to sample and the
+            // hardest place for the two addressing methods to agree; it is
+            // where `mesh_addressing_agrees_with_the_spatial_search` parks
+            // for the same reason.
             let win = Window {
                 depth,
                 origin_col: 0,
-                origin_row: 0,
+                origin_row: vh / 2,
             };
-            let (vw, vh) = virtual_dims(win.depth);
             // A DISCRIMINATION GUARD, not decoration: the assertion below is
             // vacuous if every tile lands in the same facet (a gutted
             // `terrain_at_tile` returning a constant facet would pass). Count
@@ -2081,7 +2192,14 @@ mod tests {
                         depth,
                         "tile ({row},{col}) resolved at the wrong rung"
                     );
-                    let (lat, lon) = mercator::unproject(&f, row, col, vw, vh);
+                    // THROUGH THE WINDOW ORIGIN, exactly as `terrain_at_tile`
+                    // does. While `origin_row` was 0 the two forms were the
+                    // same expression and nothing could tell them apart; the
+                    // equator offset above pulls them apart, which makes this
+                    // a real comparison against the function's own input
+                    // rather than a coincidence of the fixture.
+                    let (lat, lon) =
+                        mercator::unproject(&f, win.origin_row + row, win.origin_col + col, vw, vh);
                     let pos = hornvale_kernel::math::unit_sphere_from_lat_lon(lat, lon);
                     assert_eq!(
                         got.facet,

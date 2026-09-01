@@ -562,3 +562,102 @@ by design (decisions 0063/0079). The resolution is
 pre-merge close — the once-per-campaign refresh the standing rule already
 prescribes. Not a defect, not deferrable to a local fix, and not something to
 work around.
+
+### #19 [Task 8] — `BAND_B_RUNG` was one rung stale, and the SILENCE was the defect
+
+**The failure:** `clients/game/bin/src/plate.rs`'s `BAND_B_RUNG` — the mesh
+depth the game client draws band B (its finest zoom rung) at — read `12` while
+`hornvale_locale::walk_depth` had moved to 13 (decision 0511). The client drew a
+whole band coarser than the possession it was drawing, and **no client test
+failed**: all ~80 readers read the constant, so a wrong constant is perfectly
+self-consistent, and `make game-check` held nothing that compared the number to
+the sim.
+
+**Decision:** Move the constant, correct its doc, and close the silence on the
+client's own side with `clients/game/bin/tests/walk_band_agreement.rs` —
+`BAND_B_RUNG == hornvale_vessel::walk_depth(ctx)` against a real
+`WorldContext`, plus a checked premise that the live globe level is still
+`plate::GLOBE_RUNG`. It asks the sim's function rather than restating the
+arithmetic, which is the whole point: re-deriving the offset would pass against
+a stale sim as happily as a current one. Observed failing at 12 and passing at
+13 before being accepted; cost 5.23 s.
+
+**Why a second guard when the workspace already has one.**
+`cli/tests/suite/walk_depth_agreement.rs`'s absolute roster carried this
+constant as `Absolute::StaleAt { value: 12 }` — the declaration working exactly
+as designed, and now deleted in favour of `Absolute::Tracks`. But that roster
+runs under a *workspace* gate, which by construction cannot see
+`clients/game/bin` at all: it reads the file as TEXT. A client-side test is the
+only thing that can fail in the client's own gate, which is the gate a client
+change actually reaches.
+
+**No new dependency.** `WorldContext` and `walk_depth` both come from
+`hornvale-vessel`, already a path dependency, and the `LocaleContext` type is
+never named — so `hornvale-locale` did not have to be added to reach it.
+
+### #20 [Task 8] — the client's `assert_eq!(checked, 31)` is NOT ledger #16's problem, and the difference decides the fix
+
+Entry #16 ruled that the H1 illumination baseline's `31` must not become `81`,
+because a colour count over 81 cells is a different measurement, and added
+"this is the same number as the client-side finding … neither is a literal to
+bump". The number is the same fact; **the two assertions are not the same kind
+of thing**, and treating them alike would have been wrong in one direction or
+the other.
+
+`the_perception_overlay_lands_exactly_where_the_raster_puts_that_facet`'s `31`
+is a **vacuity guard** on a projection test — its own comment says so ("an
+empty band, or a projection that placed nothing, would sail through the loop
+above"). It is not a preregistered baseline and nothing is being compared
+across time. So the honest fix is neither to re-pin 81 nor to leave it red: it
+is to stop stating the count at all and derive it from the wire's own
+`scene.radius`, `(2r+1)^2`, which is what an 8-connected purview *is*. Same for
+`every_rung_of_the_ladder_is_reachable_and_distinct`'s `6`/`7` (now
+`BAND_B_RUNG - GLOBE_RUNG + 1`) and
+`stripping_the_escapes_leaves_the_picture_standing`'s `"      _"` (now derived
+from the sim's own SGR-stripped picture). #16's ruling stands untouched for the
+lab baseline it was about.
+
+### #21 [Task 8, measurement integrity] — `mesh_addressing_agrees_with_the_spatial_search`: the deliberate call
+
+**The failure:** 2,912 of 5,000 tiles agreed where the test demanded all 5,000.
+Its own doc already recorded that the premise was retired: on the icosphere a
+grid-level triangle's corners WERE geosphere vertices, so a point inside a facet
+had its nearest mesh vertex among that facet's corners by construction. A
+cube-sphere quad's corners are not geosphere vertices, so the guarantee is gone.
+The ledger's scratch predecessor flagged this as "DISSOLVED rather than passed
+or failed — a design decision, not a constant bump", and left the call to
+Task 8.
+
+**Decision: bound it, do not delete it and do not re-pin it.** Deleting drops
+the only coverage `terrain_at_tile`'s addressing has. Re-pinning exact equality
+pins a claim the geometry cannot support. So the exact-equality assertion is
+replaced by the two claims that are true, both **measured before being written
+down**:
+
+1. the addressed vertex sits at most `MAX_ADDRESSING_EXCESS_SPACINGS = 1.5`
+   grid spacings farther from a tile's own centre than the true nearest vertex
+   does — measured max **1.1051**, mean **0.1651**. Not a ratchet: a breach
+   means the wrong facet was resolved.
+2. exact agreement stays at or above `MIN_ADDRESSING_AGREEMENT = 0.55` —
+   measured **0.5824**. A ratchet; raising it is always allowed.
+
+**Why both clauses.** They catch different failures, and either alone is weak.
+Clause 1 catches addressing that resolves the wrong facet altogether. Clause 2
+catches addressing that resolves the right facet and then picks badly among its
+corners — a mutation returning the first corner unconditionally stays inside
+clause 1's bound.
+
+**What is no longer proved, stated at the site:** the drawn terrain is not
+guaranteed to be the terrain at the tile's nearest mesh vertex. Whether that
+matters visually is spec §7's H3a; this test bounds it rather than deciding it.
+
+**One more instance of the campaign's own headline finding.**
+`a_tile_resolves_to_the_facet_that_contains_it`'s discrimination guard fired
+correctly — 1 distinct facet over 16 tiles — because it sampled the chart's
+top-left corner, i.e. the north pole, where the square lattice puts a whole 4×4
+tile block inside one facet. Moving it to the equator fixed it AND exposed a
+collapsed distinction underneath: with `origin_row: 0` the test's own
+`unproject(row, col, …)` and `terrain_at_tile`'s `unproject(origin_row + row,
+…)` were the same expression, so nothing could tell them apart. The equator
+offset pulls them apart, and the test now goes through the window origin the
+way the function does.

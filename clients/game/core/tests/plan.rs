@@ -5,8 +5,39 @@ use hornvale_game_core::{
 
 const FIXTURE: &str = include_str!("fixtures/session-seed-42-chamber.json");
 
+/// The other committed chamber-band snapshot, and the only one that carries a
+/// furnishing mark — see `furnished_plan` for why this file needs a second
+/// fixture at all.
+const FURNISHED_FIXTURE: &str = include_str!("fixtures/session-seed-14-carrying.json");
+
 fn chamber_plan() -> hornvale_game_core::Plan {
-    match Snapshot::parse(FIXTURE).unwrap().spatial {
+    plan_of(FIXTURE)
+}
+
+/// The seed-14 snapshot's chamber-band plan: the one committed fixture whose
+/// `marks` list is non-empty, so it is the only one that can drive a real
+/// behavioural test of the marks pass.
+///
+/// **Why not the seed-42 fixture this file otherwise uses.** Until The
+/// Pavement it carried a `"furnishing"` mark of its own (a screen), and
+/// `the_fixtures_own_furnishing_mark_draws_its_glyph` read it there at a
+/// hardcoded plan-local `(2, 13)`. Moving the walk band one rung finer
+/// (decision 0511) moved seed 42's arrival chamber, and the screen that room
+/// still holds — its prose says so, "a small room, holding a doorway and a
+/// screen" — is no longer inside `Session::sighting`'s own shadowcast from
+/// where the possession stands, so the producer emits no mark for it and
+/// `plan.marks` is now empty. That is the producer behaving correctly (a
+/// furnishing is sight-gated exactly as a creature is), not a stale fixture:
+/// regenerating it byte-for-byte from `scripts/possession-chamber.txt`
+/// reproduces the empty list. The seed-42 fixture cannot be re-aimed at a
+/// furnished chamber either, because `REFERENCE_PICTURE` below is the same
+/// snapshot's projection golden.
+fn furnished_plan() -> hornvale_game_core::Plan {
+    plan_of(FURNISHED_FIXTURE)
+}
+
+fn plan_of(fixture: &str) -> hornvale_game_core::Plan {
+    match Snapshot::parse(fixture).unwrap().spatial {
         Spatial::Chamber { plan } => plan,
         Spatial::Walk { .. } | Spatial::Underground { .. } => {
             panic!("fixture must be a chamber-band turn")
@@ -190,17 +221,20 @@ fn grid_picture(g: &Grid) -> Vec<String> {
 /// campaign already found that mistake once.
 ///
 /// **Marks are cleared before this comparison (fix round 1, The Legend
-/// Task 10).** The committed fixture now carries a real `"furnishing"`
-/// mark (a screen, at plan-local `(2, 13)`), and this client correctly
-/// draws it as its own glyph — a deliberate divergence from
-/// `REFERENCE_PICTURE`, which comes from the sim's own console `map` verb
-/// and never draws a mark of any kind (the module doc's own history). This
-/// golden's job is catching a wrong PROJECTION (an axis swap, a missed
-/// offset), not re-litigating whether a mark draws its own glyph — that is
-/// `src/plan.rs`'s own unit tests' job, and
-/// `the_fixtures_own_furnishing_mark_draws_its_glyph` below pins that the
-/// one real mark this fixture carries still draws correctly when marks are
-/// NOT cleared.
+/// Task 10), and the clear stays even though this fixture's `marks` list is
+/// currently empty.** A mark this client draws as its own glyph is a
+/// deliberate divergence from `REFERENCE_PICTURE`, which comes from the
+/// sim's own console `map` verb and never draws a mark of any kind (the
+/// module doc's own history). This golden's job is catching a wrong
+/// PROJECTION (an axis swap, a missed offset), not re-litigating whether a
+/// mark draws its own glyph — that is `src/plan.rs`'s own unit tests' job,
+/// and `a_furnishing_mark_draws_its_glyph_at_its_own_position` below pins
+/// it against a real committed snapshot with marks left intact. Clearing
+/// unconditionally is what keeps the two questions separate whichever way
+/// the next regeneration of this fixture falls: seed 42's arrival chamber
+/// carried a screen mark before The Pavement and carries none now (see
+/// `furnished_plan`), and neither state should be able to redden a
+/// projection check.
 #[test]
 fn the_shape_matches_the_sims_own_ascii_render() {
     let mut p = chamber_plan();
@@ -211,22 +245,86 @@ fn the_shape_matches_the_sims_own_ascii_render() {
     assert_eq!(grid_picture(&g), want);
 }
 
-/// The companion half of the golden above: with the fixture's own marks
-/// left intact, its one real furnishing mark (a screen, at plan-local
-/// `(2, 13)`) draws the furnishing glyph — proving the divergence the
-/// golden strips out is exactly this, and only this, moved.
+/// The companion half of the golden above: with a real committed snapshot's
+/// marks left intact, every `"furnishing"` mark it carries draws the
+/// furnishing glyph at *its own* recorded position — proving the divergence
+/// the golden strips out is exactly this, and only this, moved.
+///
+/// **What it enforces, and what it is blind to (decision 0456).** It
+/// enforces one direction only: a furnishing mark the producer DID emit
+/// reaches the screen as `FURNISHING_GLYPH`-equivalent `'?'` rather than
+/// as the floor underneath it — the regression The Legend's fix round 1
+/// found. It says nothing about whether the producer emitted the right set
+/// of marks (that is `windows/vessel`'s
+/// `tests/suite/furnishing_marks.rs`), and nothing about any other mark
+/// kind (`"agent"` and the point-site no-op are `src/plan.rs`'s own unit
+/// tests').
+///
+/// **The position is FOUND, never re-pinned.** This test used to hardcode
+/// seed 42's plan-local `(2, 13)`, and a fixture regeneration moved the
+/// screen out from under it — see `furnished_plan` for that history. It
+/// now reads the coordinate off the mark itself, so the next regeneration
+/// cannot silently point it at a floor square.
+///
+/// **A vacuous pass is the real danger and is refused loudly**, mirroring
+/// `windows/vessel/tests/suite/furnishing_marks.rs`'s own premise
+/// assertion: a fixture that carries no furnishing mark would make the loop
+/// below iterate zero times and report success while checking nothing, so
+/// the count is asserted non-zero first, naming the fixture. The
+/// before/after comparison is the second half of the same discipline —
+/// without it the assertion could not tell "the mark drew the glyph" from
+/// "the glyph was already there".
 #[test]
-fn the_fixtures_own_furnishing_mark_draws_its_glyph() {
-    let p = chamber_plan();
-    let mut g = full_grid();
-    plan::draw(&p, &mut g, (0, 0));
-    let x = (2 - p.extent.x) as u16;
-    let y = (13 - p.extent.y) as u16;
-    assert_eq!(
-        g.get(x, y).unwrap().glyph,
-        Some('?'),
-        "the fixture's own furnishing mark (a screen) must draw the furnishing glyph"
+fn a_furnishing_mark_draws_its_glyph_at_its_own_position() {
+    let p = furnished_plan();
+    let furnishings: Vec<&PlanMark> = p.marks.iter().filter(|m| m.kind == "furnishing").collect();
+    assert!(
+        !furnishings.is_empty(),
+        "session-seed-14-carrying.json carries no `furnishing` mark, so this test would \
+         pass without checking anything. Either the producer stopped emitting furnishing \
+         marks (the regression this test exists for) or the fixture drifted onto a chamber \
+         whose furnishings are all out of sight — find a committed chamber-band snapshot \
+         that carries one and point `furnished_plan` at it. Marks present: {:?}",
+        p.marks.iter().map(|m| &m.kind).collect::<Vec<_>>()
     );
+
+    // The floor underneath, with the marks pass given nothing to draw: the
+    // premise that makes the assertion below distinguishable from a square
+    // that already held `?`.
+    let mut bare = p.clone();
+    bare.marks.clear();
+    let mut without = full_grid();
+    plan::draw(&bare, &mut without, (0, 0));
+
+    let mut with = full_grid();
+    plan::draw(&p, &mut with, (0, 0));
+
+    for m in furnishings {
+        let x = (m.x - p.extent.x) as u16;
+        let y = (m.y - p.extent.y) as u16;
+        let under = without
+            .get(x, y)
+            .expect("the mark sits inside the grid")
+            .glyph;
+        assert_ne!(
+            under,
+            Some('?'),
+            "the square under {:?} at ({}, {}) already drew `?` without the marks pass, so \
+             this test cannot tell a drawn mark from its own floor",
+            m.noun,
+            m.x,
+            m.y
+        );
+        assert_eq!(
+            with.get(x, y).expect("the mark sits inside the grid").glyph,
+            Some('?'),
+            "the furnishing mark {:?} at its own ({}, {}) must draw the furnishing glyph, \
+             not the {under:?} beneath it",
+            m.noun,
+            m.x,
+            m.y
+        );
+    }
 }
 
 /// Decision 0389 enforced against a REAL render, mirroring

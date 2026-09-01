@@ -4664,3 +4664,8 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-01T07:16:50Z | gate-commit | 54.211 | 41.782 | 14.368 | 1.04 | 0 | 386f31a60 | campaign/the-pavement | ambrose | 12 |
 | 2026-09-01T07:20:46Z | game-check | 7.284 | 9.134 | 4.187 | 1.83 | 0 | 2b6b54480 | campaign/the-pavement | ambrose | 12 |
 | 2026-09-01T07:30:45Z | gate-commit | 90.199 | 42.780 | 15.720 | 0.65 | 0 | 2b6b54480 | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T07:42:04Z | game-check | 0.179 | 0.076 | 0.036 | 0.63 | 0 | c6004339b | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T07:46:42Z | game-check | 271.978 | 2734.754 | 17.222 | 10.12 | 0 | c6004339b | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T08:00:14Z | game-check | 446.070 | 3689.247 | 18.968 | 8.31 | 0 | c6004339b | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T08:01:46Z | gate-commit | 83.795 | 36.516 | 12.942 | 0.59 | 0 | c6004339b | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T08:03:18Z | gate-commit | 53.305 | 42.095 | 14.210 | 1.06 | 0 | c6004339b | campaign/the-pavement | ambrose | 12 |

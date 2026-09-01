@@ -152,6 +152,14 @@ enum Absolute {
     /// purpose: a one-directional acknowledgement can only ever be satisfied,
     /// so it rots. This one fails the moment the value changes AT ALL —
     /// whether somebody fixes it (delete the declaration) or it drifts further.
+    ///
+    /// **The list is empty**, for the same reason [`Role::Independent`]'s is:
+    /// the one declaration this variant ever carried (the game client's
+    /// `BAND_B_RUNG`) was fixed by The Pavement's Task 8 and its row deleted,
+    /// which is the declaration working as designed. The variant stays so the
+    /// next campaign that must ship a knowingly-stale constant can declare it
+    /// instead of leaving it unwatched.
+    #[allow(dead_code)]
     StaleAt {
         /// The wrong value it currently holds.
         value: u32,
@@ -172,19 +180,19 @@ fn absolute_roster() -> Vec<(&'static str, &'static str, Absolute)> {
             "DEPTH",
             Absolute::Tracks,
         ),
+        // FIXED, and the `StaleAt` declaration deleted with it (The Pavement,
+        // Task 8): the browser client's finest zoom rung now equals the live
+        // walk depth. Its ~80 readers all read the constant, so the move was
+        // the one line plus its doc — and the silence that let it drift a
+        // whole band with a green client gate is closed on the client's own
+        // side too, by `clients/game/bin/tests/walk_band_agreement.rs`, which
+        // asks `walk_depth` itself rather than restating the arithmetic. This
+        // row stays as `Tracks` even so: that test runs only under `make
+        // game-check`, which no workspace gate can see.
         (
             "clients/game/bin/src/plate.rs",
             "BAND_B_RUNG",
-            Absolute::StaleAt {
-                value: 12,
-                reason: "the browser client's finest zoom rung. It is a walk-band restatement \
-                         and it IS stale, but it has ~80 readers including the whole \
-                         `GLOBE_RUNG..=BAND_B_RUNG` zoom ladder and a dozen tests asserting \
-                         that ladder's length, it lives outside the cargo workspace with its \
-                         own toolchain and gate, and its neighbour \
-                         `clients/game/bin/src/input.rs` is the campaign's client task. \
-                         Moving it is that task's, not a walk_depth fix round's.",
-            },
+            Absolute::Tracks,
         ),
     ]
 }
