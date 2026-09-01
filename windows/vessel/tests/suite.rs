@@ -95,6 +95,8 @@ mod strongbox_reachability;
 mod submerged;
 #[path = "suite/submerged_before_arm.rs"]
 mod submerged_before_arm;
+#[path = "suite/tableau.rs"]
+mod tableau;
 #[path = "suite/testimony.rs"]
 mod testimony;
 #[path = "suite/the_blocking.rs"]

@@ -1249,12 +1249,35 @@ impl<'w> Session<'w> {
         // real field rather than a bare constant. `driven`'s actual value is
         // computed below, once the roster (settled + wild) is complete,
         // since `PossessTarget::Creature` (Task 4) may name a wild member.
-        let mut bodies = derive_npcs(world, ctx, &mut ledger, NPC_COUNT, village.id);
+        // The Tableau: a staged cast REPLACES the derived roster, and an
+        // EMPTY staged cast stages nobody. Falling back to `derive_npcs` here
+        // would make every tableau depend on whatever the seed happened to
+        // place — silently — which is the one thing the feature exists to
+        // prevent.
+        //
+        // Staged bodies go through `derive_wild_npcs` rather than a second
+        // derivation: a wild body is already a village-less body built from
+        // (species, position), which is exactly a staged one's shape. They
+        // share the settlement room's centroid, so `Facet::containing` lands
+        // them all in ONE room — the point of staging a cast.
+        let mut bodies = match opts.tableau.as_ref() {
+            Some(tableau) => {
+                let home = crate::liveness::settlement_room(world, ctx, village.id);
+                let at = home.centroid();
+                let cast: Vec<(String, [f64; 3])> = tableau
+                    .cast
+                    .iter()
+                    .map(|staged| (staged.species.clone(), at))
+                    .collect();
+                derive_wild_npcs(world, ctx, &mut ledger, cast)
+            }
+            None => derive_npcs(world, ctx, &mut ledger, NPC_COUNT, village.id),
+        };
         // The Wilding: append a few wild beast agents (a herd, a lair) so the
         // world's fauna walks alongside its peoples — and a herbivore beast
         // finally fears predator ground (The Quarry, live). Off only for the
         // settled-population narration unit tests that isolate the peopled path.
-        if opts.wild_agents {
+        if opts.wild_agents && opts.tableau.is_none() {
             // The wild-concentration roster, from the same shared `report`
             // (The Weir, Stage 1b) rather than a fourth independent fit.
             let concentrations = match (wc.as_ref(), report.as_ref()) {
@@ -1320,6 +1343,18 @@ impl<'w> Session<'w> {
         // (The Tackle): read here, once, exactly as `derive_npcs` reads a
         // creature's. Bound before the struct literal because `bodies` is
         // moved into it.
+        // A possession needs a body to possess. An empty staged cast is
+        // legal to WRITE — `Tableau::new()` stages nobody, which spec section
+        // 5 requires — but there is then no one to be, so this refuses rather
+        // than indexing an empty roster. The refusal names the cause; the
+        // panic it replaces said only "index out of bounds".
+        if bodies.is_empty() {
+            return Err(VesselError::Build(
+                "a tableau with an empty cast stages nobody, so there is no \
+                 body to possess: give the cast at least one creature"
+                    .to_string(),
+            ));
+        }
         let species_for_mass = bodies[driven].species.clone();
         let biosphere_for_mass = hornvale_species::biosphere_registry();
         let mut session = Session {

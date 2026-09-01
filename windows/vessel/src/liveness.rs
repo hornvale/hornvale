@@ -6063,7 +6063,7 @@ const DEFAULT_TEMPERATURE_NICHE: ConditionResponse = ConditionResponse {
 
 /// The room containing a settlement's site at walk depth (mirrors
 /// `mint_flagship`, via the shared `settlement_position` helper).
-fn settlement_room(world: &World, ctx: &LocaleContext, settlement: EntityId) -> Facet {
+pub(crate) fn settlement_room(world: &World, ctx: &LocaleContext, settlement: EntityId) -> Facet {
     let pos = settlement_position(world, settlement);
     Facet::containing(pos, walk_depth(ctx))
 }

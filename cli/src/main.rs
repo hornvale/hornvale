@@ -650,6 +650,7 @@ fn cmd_possess(args: &[String]) -> Result<(), String> {
             eyes: hornvale_vessel::eyes::Eyes::Own,
             lens: lens(hornvale_vessel::lens::Lens::Off)?,
             target,
+            tableau: None,
         };
         let session = drive_session(&world, &opts, std::io::Cursor::new(script), &mut out)?;
         writeln!(out, "```").map_err(|e| e.to_string())?;
@@ -666,6 +667,7 @@ fn cmd_possess(args: &[String]) -> Result<(), String> {
             eyes: hornvale_vessel::eyes::Eyes::Own,
             lens: lens(hornvale_vessel::lens::Lens::Lantern)?,
             target,
+            tableau: None,
         };
         let session = drive_session(&world, &opts, stdin.lock(), stdout.lock())?;
         if let Some(path) = snapshot_path {
