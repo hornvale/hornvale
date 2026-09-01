@@ -777,3 +777,59 @@ bad value now fails to **compile** rather than to test. The residual is stated
 plainly rather than glossed: the bracket is (0.4, 1.0), 2.5x rather than
 unbounded-below, so 0.5 is still not uniquely determined — *what is now
 determined is every claim its own docs make*.
+
+#41 [G5] — **Ruling: "absence means this species does not sleep" is INVERTED to
+explicit rows plus a ratchet. My instruction was wrong and the codebase said
+so.** I told Task 9's implementer that a species with no row does not sleep, so
+Nathan's "(for most species) mandatory" exception would fall out of the table
+for free. Task 9's reviewer ruled (a) — explicit — on three grounds, in
+ascending force:
+
+1. **This code path already has the opposite convention.** `body_at`
+   (`liveness.rs:6558-6612`) resolves seven species traits and every one falls
+   back to a documented NEUTRAL default, with its own comment naming that as the
+   rule. `fatigue_rise_for` is now the only species lookup in the crate whose
+   miss yields a **semantically extreme** value — permanent, total
+   sleeplessness — and it states the inverted convention 4,200 lines from where
+   the other seven state theirs.
+2. **The exception was already free, so the absence buys nothing.** `xorn` is
+   the sole absent row, but `view.fatigue`'s only consumer is pushed inside
+   `if !ametabolic`, so xorn's missing row changes no behaviour today. The
+   exception was already expressed where the arbitration reads it; restating it
+   as an absence spends the only signal that could distinguish "authored as
+   sleepless" from "nobody authored it".
+3. **The trap fired inside the task.** `cold_thermal_npc`'s `species: "test"`
+   silently became rate 0.0 and broke a walk test. Nothing reported a bad
+   species; a test simply changed meaning.
+
+My objection to an `Option` — that "does not sleep" and "not yet authored" would
+be the same `None` — is answered by (a) rather than defeated by it: a row
+carrying `0.0` is an authored statement, an absent row is an error. **Two
+mechanisms are needed and they catch different traps**: a coverage ratchet
+closes the REGISTRY half; a stated neutral fallback in `fatigue_rise_for`
+(shaped like `clock::mass_for_species`) closes the STRING half, since a typo in
+`Body.species` resolves to nothing whatever the registry contains.
+
+#42 [G5] — **A real physics regression: rise moved to the local clock and fall
+did not, so a legally pinnable world can no longer recover.** Task 9 converted
+the RISE term to local days and left `FATIGUE_FALL`/`REST_FALL` on standard
+days as a stated scope boundary. But a sleep bout is not a standard-day span —
+`act_span` runs a sleep to `next_awake_day`, roughly half a **local** day. With
+`L` = local day in standard days: accrual per waking phase is `0.3 × 0.5` =
+0.15, now invariant in `L`; repayment per night is `FATIGUE_FALL × L/2` = 0.5·L,
+still scaling with `L`. **Break-even at `L` = 0.3 std days = 7.2 hours.** Below
+that a full night repays less than a waking phase accrues and a creature
+ratchets monotonically to 1.0 and stays there.
+
+The unpinned draw is safe (16-40 h), but `RotationPin::PeriodHours` admits
+**4-100 h**, so `--day-hours 4` is a legal world where nightly sleep cannot keep
+up. Under the pre-task model this was impossible: both terms carried `L/2`, so
+the margin was a fixed 3.33x on every world. `FATIGUE_FALL`'s doc also survives
+this commit still asserting a recovery span that is true only at `L ≈ 1`.
+
+Decision: **fix it in this campaign** by converting the fall terms too, which
+restores `L`-invariance of the cycle while leaving the discriminating test (a
+pure ramp) still discriminating — the reviewer checked that. `REST_BOUT`'s fixed
+0.25 std days is the residue and becomes a registered follow-up rather than
+scope creep. This is a defect, not a fidelity tradeoff: a legal world where
+creatures can never recover is broken, not differently calibrated.
