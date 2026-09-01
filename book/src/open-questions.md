@@ -3346,6 +3346,23 @@ its honest size.
    description of the gap. The taste half is not merely unmeasured — in most
    worlds it is currently unreachable, because the moment that would be judged
    does not assemble.
+   **Re-scored by [The Tableau](./chronicle/the-tableau.md) (2026-09-01), and
+   this one moves the bet rather than annotating it.** The sentence above —
+   *the moment that would be judged does not assemble* — was true of a world
+   left to itself and is no longer true of the project. A tableau assembles
+   the moment on demand: two creatures of chosen species in one room, one of
+   them holding something, from four lines of JSON and no seed hunted. The
+   taste half is therefore **reachable for the first time**, which is a real
+   change in the bet's standing even though the score does not rise. It does
+   not rise because reachable is not the same as answered: a human still has
+   to sit in the scene and report what they noticed, and nothing about staging
+   makes the answer more likely to be *yes*. What has changed is that the
+   question can now be ASKED at will rather than waiting on a world that
+   happens to oblige — and, honestly, that a staged moment is the easiest
+   possible case, so a *yes* here would be the weakest possible evidence. The
+   bet is properly gated on an UNSTAGED market being worth standing in, and
+   staging is the instrument that lets us find out what such a market would
+   have to contain.
 
 ## The standing horizon
 
