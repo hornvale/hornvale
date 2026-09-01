@@ -228,6 +228,19 @@ fn warm_appears_on_hearth_with_no_object_table_edit() {
     assert!(!offered_by(kinds::BED).contains(&OfferedVerb::Warm));
 }
 
+/// A brazier offers `warm`, and it is the first carrier of `RadiatesHeat`
+/// outside a hearthroom. Before The Wicket this kind could not exist: `warm`
+/// reads whichever anchor is present through `offered_to_observer`, but the
+/// only kinds an anchor could BE were the enum's fifteen.
+///
+/// MUTATION THIS MUST FAIL AGAINST: drop `ObjectProperty::RadiatesHeat` from
+/// the `brazier` row in `object_registry()`.
+#[test]
+fn a_brazier_offers_warm_with_no_dispatcher_edit() {
+    assert!(offered_by(kinds::BRAZIER).contains(&OfferedVerb::Warm));
+    assert!(!offered_by(kinds::ALTAR).contains(&OfferedVerb::Warm));
+}
+
 /// `Examine` requires the empty property set (spec §3.3: universal), and the
 /// empty set is a subset of every set — including the empty set itself. So
 /// universality must hold even for a kind `object_registry` never
@@ -1629,7 +1642,7 @@ fn no_hardcoded_anchor_kind_gates_warm() {
 #[test]
 fn the_re_key_preserves_every_anchor_kinds_offer() {
     use OfferedVerb::{Close, Drink, Drop, Enter, Examine, Open, Put, Sleep, Take, Warm};
-    let expected: [(KindId, &[OfferedVerb]); 16] = [
+    let expected: [(KindId, &[OfferedVerb]); 17] = [
         // Encloses gates no OfferedVerb (it is read by `examine`'s prose,
         // not by the offer query), so an enclosing kind offers Examine and
         // nothing more.
@@ -1637,6 +1650,11 @@ fn the_re_key_preserves_every_anchor_kinds_offer() {
         (kinds::ALTAR, &[Examine]),
         (kinds::ANVIL, &[Examine]),
         (kinds::BED, &[Sleep, Examine]),
+        // THE BRAZIER'S ROW IS NEW (The Wicket, Task 5): the campaign's own
+        // proof that a kind can arrive with data rows only. `RadiatesHeat`
+        // gates `Warm` the same way `hearth`'s row does; `Examine` is
+        // universal.
+        (kinds::BRAZIER, &[Examine, Warm]),
         // THE CAVE MOUTH'S ROW IS NEW, AND ITS ARRIVAL IS THE WICKET'S OWN
         // DELIVERABLE SHOWING UP AT THE FROZEN TABLE. This table used to
         // enumerate anchor-kind variants, so `cave-mouth` — a `Vertex`/`ChamberAddr`

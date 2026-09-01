@@ -267,6 +267,7 @@ pub fn object_registry() -> ComponentStore<KindId, ObjectTraits> {
         ),
         (KindId("alcove"), traits(&[ObjectProperty::Encloses])),
         (KindId("hearth"), traits(&[ObjectProperty::RadiatesHeat])),
+        (KindId("brazier"), traits(&[ObjectProperty::RadiatesHeat])),
         (KindId("key"), traits(&[ObjectProperty::Portable])),
         (
             KindId("cave-mouth"),

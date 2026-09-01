@@ -88,6 +88,13 @@ pub fn chamber_prose_registry() -> ComponentStore<KindId, ChamberProse> {
             },
         ),
         (
+            KindId("brazier"),
+            ChamberProse {
+                noun: Some("a brazier"),
+                detail: "A squat iron bowl on three legs, coals glowing low within it.",
+            },
+        ),
+        (
             KindId("cave-mouth"),
             ChamberProse {
                 noun: None,
@@ -576,12 +583,15 @@ mod tests {
         }
         // Anti-vacuity, and the accounting a census owes: a future edit that
         // dropped a slot from the walk above would satisfy every assertion by
-        // measuring less. 16 patterns, each naming a `kind`; 10 of them also
-        // name a `requires`; 12 also name an `Attach` target.
+        // measuring less. 17 patterns, each naming a `kind`; 11 of them also
+        // name a `requires`; 13 also name an `Attach` target (The Wicket's
+        // Task 5 appended `the-brazier`, which names all three: `kind`,
+        // `requires: Some(kinds::LOOM)`, `attach: Attach::Beside(kinds::LOOM)`
+        // — moving this from 38 to 41).
         assert_eq!(
-            checked, 38,
+            checked, 41,
             "the sweep no longer reads every kind INVENTORY names: {checked} \
-             slots, not 38"
+             slots, not 41"
         );
     }
 
@@ -600,7 +610,9 @@ mod tests {
             assert!(!d.trim().is_empty(), "{label:?}: an empty detail");
         }
         // `ground` and `cave-mouth` have no noun and every other roster kind
-        // does, so sixteen kinds must yield fourteen nouns. This used to catch
+        // does, so seventeen kinds must yield fifteen nouns (The Wicket's Task
+        // 5 appended `brazier`, which has a noun, moving this from 14). This
+        // used to catch
         // an APPENDED enum variant on the run that first compiled it (that is
         // how The Chattel's `Key` was caught, going red at 13 against 14). It
         // cannot do that any more — the roster is a hand-written list itself
@@ -611,7 +623,7 @@ mod tests {
                 .iter()
                 .filter(|&&label| noun(label).is_some())
                 .count(),
-            14,
+            15,
             "the roster has drifted from `noun`'s own table"
         );
     }

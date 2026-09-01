@@ -65,6 +65,7 @@ pub const THING_KINDS: &[&str] = &[
     "altar",
     "anvil",
     "bed",
+    "brazier",
     "cave-mouth",
     "ground",
     "hearth",
@@ -104,6 +105,8 @@ pub mod kinds {
     pub const ANVIL: KindId = KindId("anvil");
     /// A place to sleep.
     pub const BED: KindId = KindId("bed");
+    /// A vessel of fire, standing apart from a hearth.
+    pub const BRAZIER: KindId = KindId("brazier");
     /// The mouth of a cave — a `Vertex`/`ChamberAddr`, never an anchor.
     pub const CAVE_MOUTH: KindId = KindId("cave-mouth");
     /// The room's open middle: the floor itself, not a thing standing on it.
@@ -143,6 +146,7 @@ pub mod kinds {
         ("ALTAR", ALTAR),
         ("ANVIL", ANVIL),
         ("BED", BED),
+        ("BRAZIER", BRAZIER),
         ("CAVE_MOUTH", CAVE_MOUTH),
         ("GROUND", GROUND),
         ("HEARTH", HEARTH),
@@ -169,6 +173,7 @@ pub fn thing_registry() -> ComponentStore<KindId, ThingTraits> {
         (KindId("altar"), ThingTraits { display: "altar" }),
         (KindId("anvil"), ThingTraits { display: "anvil" }),
         (KindId("bed"), ThingTraits { display: "bed" }),
+        (KindId("brazier"), ThingTraits { display: "brazier" }),
         (
             KindId("cave-mouth"),
             ThingTraits {
@@ -219,6 +224,7 @@ fn concept_doc(label: &str) -> &'static str {
         "altar" => "a raised surface where offerings are made",
         "anvil" => "a heavy iron block a smith hammers metal against",
         "bed" => "a place made for lying down and sleeping",
+        "brazier" => "a metal basin that holds a fire apart from a hearth",
         "cave-mouth" => "the opening where a cave meets the outside",
         "ground" => "the bare earth underfoot",
         "high-seat" => "the seat of a hall's presiding figure",
@@ -746,6 +752,7 @@ mod tests {
             "altar",
             "anvil",
             "bed",
+            "brazier",
             "cave-mouth",
             "ground",
             "hearth",

@@ -152,16 +152,44 @@ pub struct Pattern {
 /// 2. **Appending a pattern with `at_locale: true` is an epoch.** A locale
 ///    composition feeds [`crate::interior::warmth_at`], which feeds a creature's
 ///    thermal drive, which is committed history.
-/// 3. **Appending a pattern with `at_locale: false` is LATENT.** No live read can
-///    reach it: [`selection`] filters it out, and the only other consumer is
-///    [`selection_for`], whose output is read by the chamber renderer and by
-///    nothing that commits. It becomes an epoch on the day something that
-///    commits reads a chamber — the first in-chamber mark — and that is the day
-///    the gate opens, not the day the pattern was written.
+/// 3. **Appending a pattern with `at_locale: false` is LATENT — and "commits"
+///    here means one specific thing, stated precisely because the word used
+///    to do double duty.** No live read reaches it through the LEDGER:
+///    [`selection`] filters it out, and the only other consumer is
+///    [`selection_for`], whose output feeds the chamber renderer and nothing
+///    that writes a [`hornvale_kernel::Fact`]. A chamber's composed content
+///    is never serialized into a `World`'s ledger (decision 0069 — `Interior`
+///    is derived per room, bubble-scoped, discarded with the bubble), so no
+///    saved world's determinism, and no previously-committed fact, moves when
+///    a pattern is appended here. That half is permanent and does not decay.
+///
+///    **The other half of "commits" already decayed, and this sentence used
+///    to claim it had not.** It read "read by the chamber renderer and by
+///    nothing that commits", meaning nothing GIT-committed either. That
+///    stopped being true on **2026-08-30** (`b8fc0cd02`, `26ebaf7e4` — The
+///    Chattel and The Custodian, landing `the-loom` and
+///    `the-key-by-the-loom`, both `at_locale: false`):
+///    `book/src/gallery/possession-carry-seed-1.md`, a committed,
+///    drift-checked artifact (`docs/generated-paths.txt`), is a scripted
+///    `possess` transcript that renders a delved chamber's actual composed
+///    content, and has done so since that date. The Wicket's Task 5 found
+///    this while adding `the-brazier`, two days later, by reading the
+///    transcript's own diff rather than by anyone having flagged it at the
+///    time.
+///
+///    So: appending an `at_locale: false` pattern is LATENT with respect to
+///    the LEDGER — this remains the guarantee that matters, and is why such
+///    an append is not an epoch — but it is **not** latent with respect to a
+///    RENDERED artifact like a gallery transcript, which may show anything
+///    the world now contains and is expected to move. A census column or
+///    `book/src/domesday/` moving would be the real signal something has
+///    changed: those are folds over the ledger, not a live walk, and
+///    decision 0069 is precisely what keeps them from ever reading a
+///    chamber.
 ///
 /// Sized near its intended scale deliberately, all the same: growth is cheap
 /// today and will not stay cheap.
-pub const INVENTORY: [Pattern; 16] = [
+pub const INVENTORY: [Pattern; 17] = [
     // --- built, drawn at BOTH bands ---
     Pattern {
         name: "the-ground",
@@ -481,6 +509,50 @@ pub const INVENTORY: [Pattern; 16] = [
     Pattern {
         name: "the-key-by-the-loom",
         kind: kinds::KEY,
+        attach: Attach::Beside(kinds::LOOM),
+        requires: Some(kinds::LOOM),
+        needs_cold: false,
+        built: true,
+        roles: &[Role::Loomroom],
+        at_locale: false,
+        needs_populous: false,
+    },
+    // --- The Wicket, Task 5: the brazier ---
+    //
+    // The proof kind: a kind that could not have existed under the closed
+    // `AnchorKind` enum this campaign deleted, arriving as five data rows
+    // and no dispatcher edit. `RadiatesHeat` gates `warm` the same way
+    // `hearth`'s row does (`affordance::object_registry`); this is simply a
+    // second carrier, outside a hearthroom.
+    //
+    // **Placed in the loomroom, not the shrine.** An earlier draft of this
+    // task placed it in a shrine; `Role::Shrine` measures **zero** across the
+    // 48-seed sweep this file's own comments record (`role_for` reaches it
+    // only through `Function::Cult`, which no flagship a possession starts
+    // at carries), so that placement would have been a brazier in no world —
+    // decision 0398's own finding, repeated on a third field after the two
+    // key patterns above it already state it once each. `Role::Loomroom` is
+    // the one role the sweep found at chamber index 2 in 24 of 24 structures
+    // that have an index 2 at all, and Step 1's own probe (seeds 42, 7, 1234)
+    // confirms both existence (all three) and reachability (seed 42's
+    // flagship walks straight to it).
+    //
+    // `attach: Attach::Beside(kinds::LOOM)` and `requires: Some(kinds::LOOM)`
+    // for the same reason `the-key-by-the-loom` above it takes both: the
+    // grammar confines this to the loomroom without a rule anyone wrote, the
+    // way `requires: Some(Alcove)` confines the fire to the hearthroom.
+    // `Attach::Beside`, not `Within`: a brazier is not a container, so this
+    // composes no new (container, contained) pair.
+    //
+    // **Append, never insert.** `draw` admits a pattern only once its
+    // `requires` kind is present, so `the-loom` must precede this row or the
+    // brazier is silently dropped from every composition it would otherwise
+    // join. `at_locale: false` keeps the append LATENT under `INVENTORY`'s
+    // own three-part epoch rule (the chamber renderer reads it; nothing that
+    // commits does).
+    Pattern {
+        name: "the-brazier",
+        kind: kinds::BRAZIER,
         attach: Attach::Beside(kinds::LOOM),
         requires: Some(kinds::LOOM),
         needs_cold: false,

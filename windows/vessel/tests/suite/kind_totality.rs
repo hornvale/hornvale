@@ -63,10 +63,14 @@ fn every_kind_the_grammar_names_is_a_roster_row() {
     // the same precedent `chamber_prose::every_kind_the_grammar_places_has_a_
     // detail` set inside this campaign — so a future edit that dropped a slot
     // from the walk above would redden rather than silently measuring less.
+    //
+    // Task 5 appended `the-brazier`, which names all three slots (`kind`,
+    // `requires: Some(kinds::LOOM)`, `attach: Attach::Beside(kinds::LOOM)`),
+    // moving this from 38 to 41.
     assert_eq!(
-        checked, 38,
+        checked, 41,
         "the sweep no longer reads every kind INVENTORY names: {checked} \
-         slots, not 38"
+         slots, not 41"
     );
 }
 
@@ -102,10 +106,13 @@ fn every_propertied_kind_is_a_roster_row() {
     // the sibling test above carried. Pin the real count so a row dropped
     // from `object_registry` reddens here instead of narrowing the
     // population this loop measures.
+    //
+    // Task 5 added the `brazier` row (`RadiatesHeat`), moving this from 9 to
+    // 10.
     assert_eq!(
         reg.len(),
-        9,
-        "object_registry has {} rows, not 9 — the population this sweep \
+        10,
+        "object_registry has {} rows, not 10 — the population this sweep \
          measures has changed",
         reg.len()
     );
