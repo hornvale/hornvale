@@ -81,3 +81,55 @@ faith, which is the failure mode CLAUDE.md's own loud-correction paragraph
 exists for · ideonomy passes / overturns: 0 / 0 — a measurement, not a design
 decision; no pass was run for it · Capture: the essay and the registry row are
 both amended as part of the DoD sweep (spec §11).
+
+#6 [Q] — **Is `Sleep` actually gated on `SupportsRest`?** · Decision: **no —
+and three doc comments say it is** · Why: read the code rather than the
+comments. `Session::sleep` (`session.rs:2536`) refuses a non-empty argument,
+charges the clock, commits `rested` and sets `wake_at`; there is no bed check
+and no home check. `Session::warm` (`session.rs:2624`) DOES gate, on
+`offered_to_observer`, which is what a gated verb looks like here. The creature
+layer already agrees with the ungated reading and says so in its own doc
+(`liveness.rs:2293`, *"sleeps where it is — its proposal is always `Rest`"*),
+and it already reserves a hook for a rest-QUALITY refinement. So
+`SupportsRest` reaches only the advertisement layer · Alternatives discarded:
+trusting `OfferedVerb::Sleep`'s doc ("gates on `SupportsRest`") and
+`Action::Rest`'s doc ("precondition: at home"), which is what an earlier draft
+of the spec did — it justified the `kneeler` proof kind out of them and asserted
+"a shrine offers nowhere to rest", which is false ·
+ideonomy passes / overturns: 0 / 0 — a measurement · Capture: the three
+corrections are Task 4's, spec §6a.
+
+#7 [Q] — **Nathan's ruling: sleep is never gated; the place GRADES it.**
+Raised by Nathan directly, 2026-09-01, so this is his call and not an
+auto-resolved gate. Decision: **the campaign leaves the space and does not
+build the mechanism** · Why: the space is free — after this campaign a kind is
+a `KindId` with open tables behind it, so a `ComponentStore<KindId, RestQuality>`
+is a new table and nothing else — while building the grade would pull in a
+`(species, thing)` relation, the drive's site-selection, and a census readout,
+which is a campaign · Alternatives discarded: (i) build the grade now (three
+subsystems, and it would put the re-key at risk for a mechanism that is additive
+on it — the essay's own argument); (ii) note it and change nothing, rejected
+because the three false comments actively mislead, as demonstrated by this
+campaign's own first draft · ideonomy passes / overturns: 0 / 0 — Nathan's
+ruling is the input, and the design question it left (what "leaving space" means
+concretely) was answered from the campaign's own thesis rather than by
+expansion · Capture: `PSY-rest-quality-is-a-grade-not-a-gate` and
+`PSY-rest-site-is-a-tuning-indicator` written to the idea registry; spec §6a;
+a decision record at close.
+
+#8 [G1] — **Which kind proves the vocabulary is open?** · Decision: **a
+`brazier` carrying `RadiatesHeat`, replacing the `kneeler`** · Why: #6 removed
+the kneeler's justification — `SupportsRest` advertises and does not grant, so a
+kneeler would have added a listing rather than a capability. `warm` IS enforced
+(`session.rs:2624`), `hearth` is its only carrier, and a hearth is confined to a
+hearthroom by `the-fire` requires `Alcove` requires `roles: &[Role::Hearthroom]`
+— so no shrine, hall, smithy or storeroom can be warmed at. `Session::warm`'s
+own doc names the anticipated future carrier, *"a cauldron of coals on
+`AnchorKind::Vessel`, say"*, and says such a carrier would have needed a
+dispatcher edit before the fix that landed with it — so the brazier arrives to
+find the edit already unnecessary, which is the campaign's claim demonstrated
+rather than asserted · Alternatives discarded: the kneeler (#6); a wilderness
+carrier, which closes a bigger gap but redraws every outdoor interior in every
+world (`MAP-wilderness-affords-no-rest`) · ideonomy passes / overturns: 1 / 1 —
+the pass that overturned the kneeler was the one that asked which verbs are
+enforced rather than which are advertised · Capture: spec §6.

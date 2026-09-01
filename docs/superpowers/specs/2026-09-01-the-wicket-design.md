@@ -111,6 +111,10 @@ demonstrates it.
   would be a second cross-domain communication mechanism competing with the
   trace protocol, and iteration order would become an undeclared save-format
   contract.
+- **Sleep quality.** Ruled in on 2026-09-01 and deliberately not built here;
+  §6a states what the campaign does instead, which is to leave the shape
+  uncontaminated and correct the three comments that describe a gate nothing
+  enforces.
 - **Runtime-generated kinds.** `KindId(pub &'static str)` — kinds are authored
   and committed, which is the "models author, dice roll" constraint. "Kinds as
   data" here means *authored data*, never *derived at runtime*.
@@ -250,34 +254,42 @@ container, a lock, a key and an `open`/`close` pair no session in any world
 could stand in front of. An open kind vocabulary that places nothing new is the
 same failure. So the campaign places one kind, and the diff that adds it is the
 evidence: a `THING_KINDS` row, a `thing_registry` row, a prose row, an
-`object_registry` row, and one `Pattern`. No enum edit, no match arm, no macro.
+`object_registry` row, and one appended `Pattern`. No enum edit, no match arm,
+no macro, no dispatcher edit.
 
-**The kind: `kneeler`.** A shrine chamber (`Role::Shrine`, drawn at chamber
-index 2 of a place whose history function is `Cult`) draws exactly four
-patterns: `the-ground`, `the-threshold`, `the-water-jar` (Shrine is in
-`STORING_ROLES`) and `the-altar`. It affords passage, drinking and examining,
-and it offers nowhere to rest.
+**The kind: `brazier`** — a standing pan of coals, carrying `RadiatesHeat`.
 
-`SupportsRest` is carried by `bed` alone, and the chain that confines a bed runs
-`the-fireside-bed` requires `Hearth` → `the-fire` requires `Alcove` →
-`the-alcove` declares `roles: &[Role::Hearthroom]`. So although the bed itself
-declares `EVERY_ROLE`, no role but Hearthroom can produce one. A kneeler beside
-the altar is a place to kneel at a rite: it earns its place by the activity it
-affords, which is `anchor.rs`'s own standing rule ("an object earns a place here
-by the activity it affords, never by decoration"), and it is the first place
-outside a hearthroom where a body can rest.
+`warm` is genuinely enforced. `Session::warm` (`session.rs:2624`) asks
+`offered_to_observer` of every anchor in the room and refuses with *"There is no
+fire here to warm yourself at"* if none offers `Warm`. `hearth` is the only
+`RadiatesHeat` carrier, and a hearth is confined by a three-link chain —
+`the-fire` requires `Alcove`, and `the-alcove` declares
+`roles: &[Role::Hearthroom]` — so **no shrine, hall, smithy or storeroom in any
+world can be warmed at.** A brazier in a shrine makes a refused act succeed.
+
+The choice is not merely available; the code asks for it by name. `warm`'s own
+doc comment, written when the method was fixed to read the offer instead of a
+hardcoded `AnchorKind::Hearth` literal:
+
+> *A future `RadiatesHeat` carrier (a cauldron of coals on `AnchorKind::Vessel`,
+> say) would have needed an edit HERE as well as an `object_registry` entry —
+> exactly the M×N dispatcher-edit this campaign exists to abolish.*
+
+The brazier is that carrier. It is the anticipated case, arriving to find the
+edit already unnecessary — which is a stronger proof than a kind chosen to suit
+the campaign.
 
 ```text
-  the-kneeler   kind: kneeler   roles: [Shrine]   built: true
+  the-brazier   kind: brazier   roles: [Shrine]   built: true
                 attach: Beside(altar)   requires: altar
-                at_locale: false        properties: [SupportsRest]
-                noun: "a kneeler"
+                at_locale: false        properties: [RadiatesHeat]
+                noun: "a brazier"
 ```
 
 **Appended, never inserted, and after `the-altar`.** `INVENTORY` is a
 fixed-size `[Pattern; 16]` and `draw` admits a pattern only once its `requires`
 kind is already present, so the order IS the dependency order: inserting or
-reordering is an epoch, and a kneeler placed before the altar it requires would
+reordering is an epoch, and a brazier placed before the altar it requires would
 be silently dropped from every composition. The array's length becomes 17 in the
 same edit.
 
@@ -287,24 +299,91 @@ states the three-part epoch rule: reordering is always an epoch; appending with
 which feeds a creature's thermal drive, which is committed history; appending
 with `at_locale: false` is **latent** — `selection` filters it out and the only
 other consumer, `selection_for`, is read by the chamber renderer and by nothing
-that commits. A chamber-band kneeler therefore changes what a player sees on
+that commits. A chamber-band brazier therefore changes what a player finds on
 delving and commits nothing. §7 states this as a branch table rather than a
 prediction.
 
-**Alternatives discarded.** A wilderness rest object (`bracken`) would close a
-larger gap — no wild room affords rest at all — but it draws in every wild
-locale-band interior in every world, which is a content change of a size that
-does not belong riding on a refactor. It becomes a registry row instead (§11).
-A test-only kind was rejected under 0398.
+**Alternatives discarded.** A `kneeler` carrying `SupportsRest` — rejected
+because `SupportsRest` gates nothing (§6a), so the kind would have advertised a
+capability rather than granting one, and the "a shrine offers nowhere to rest"
+justification an earlier draft of this spec gave for it was false. A wilderness
+rest or heat object — a larger gap (`MAP-wilderness-affords-no-rest`) but it
+redraws every outdoor interior in every world, a content change too large to
+ride on a refactor. A test-only kind — rejected under 0398.
 
-**The blast radius is measured, not predicted.** The task that adds the kneeler
+**The blast radius is measured, not predicted.** The task that adds the brazier
 reports the count of shrine chambers at the three census seeds *before* it adds
 the pattern, and the artifact diff *after*, under §7's branch table. If the
 measurement shows shrines are unreachable at those seeds — the 0398 failure
 repeating one level down, which is exactly what `needs_populous` turned out to
-be — the kneeler moves to a role that is reachable, and the measurement is the
+be — the brazier moves to a role that is reachable, and the measurement is the
 finding either way. `Role::Shrine` requires `Function::Cult` at chamber index 2,
 so the count is a real question and not a formality.
+
+## 6a. The space left for sleep quality
+
+Nathan's ruling, 2026-09-01: *a creature should be able to pass out in the
+middle of the road, but prefer a bed, or a fur, or bracken — whatever their
+people tends to use. They should normally make fairly sane choices about this,
+and a creature sleeping somewhere unsafe or unrestful is a useful indicator that
+something needs tuning.*
+
+This campaign **does not build that**, and the space it leaves is not a
+placeholder — it is the campaign's own thesis. After The Wicket a kind is a
+`KindId` with open component tables behind it, so a future
+`ComponentStore<KindId, RestQuality>` is a new table and nothing else: no enum,
+no match, no dispatcher. Leaving room is therefore free; what is *not* free is
+entrenching the wrong shape on the way past, and three things guard against
+that.
+
+**(1) Three doc comments are false and are corrected here.** They describe a
+gate that does not exist, and they are precisely the sentences a later reader
+reasons from — an earlier draft of this very spec justified a `kneeler` out of
+them:
+
+```text
+  OfferedVerb::Sleep   "gates on SupportsRest"       Session::sleep never asks
+  Action::Rest         "precondition: at home"       nothing enforces it
+  affordance.rs        key and cave-mouth are the    Task 11 gave Key a variant
+                       rows with no AnchorKind       four tasks later
+```
+
+What actually runs: `Session::sleep` (`session.rs:2536`) refuses a non-empty
+argument, charges the clock, commits `rested`, sets `wake_at`. There is no bed
+check and no home check. The creature layer agrees and says so —
+`liveness.rs:2293`, the fatigue drive: *"sleeps where it is — its proposal is
+always `Rest`."* `SupportsRest` reaches only the **advertisement** layer:
+`required_properties(Sleep)` decides which objects list `sleep`, never whether
+sleeping is allowed. The corrections say that, and name the grade/gate split as
+the reason the property is misfiled rather than deleting it.
+
+**(2) A regression test pins the ungated behaviour.** `sleep` succeeds in a room
+with no rest-affording object in it. Cheap now, and it is the tripwire for the
+specific future mistake this section exists to prevent: someone tidying the
+inconsistency by making the verb honour its own comment, at which point a
+magically-slept target walks off to find a bed. The two routes into sleep — the
+voluntary act and an imposed effect — must not share a gate, because only one of
+them is chosen.
+
+**(3) No new `SupportsRest` carrier is added.** Adding one would deepen the
+advertisement model on the eve of replacing it. This is why the proof kind is a
+brazier rather than a kneeler; the property it carries, `RadiatesHeat`, gates a
+verb that is genuinely enforced.
+
+**What the later campaign inherits, so it need not re-derive it.** The grade is
+relational twice over. Once in the sense decision 0347 already settled — an
+affordance is a relation over (object, body, observer), *a supporter to a sprite
+is not one to a giant*. And once in a sense 0347 did not need: **what a people
+tends to sleep on**, which makes the preference a `(species KindId, thing
+KindId)` pair. That is a kind-to-kind edge, and it is the first non-hypothetical
+use case for MAP-one-kind-model's *second* addition, whose only prior example
+was the orange tree. It also sharpens §8's sequencing argument: edges now have a
+named consumer waiting on them.
+
+The readout is captured separately (`PSY-rest-site-is-a-tuning-indicator`),
+including the sign convention it needs settled before measurement — sleeping
+rough is a defect only where a better site was **reachable**, so the metric is a
+gap against the best site in range, never the absolute rung.
 
 ## 7. Artifacts and determinism
 
@@ -316,7 +395,7 @@ so the count is a real question and not a formality.
   change, regenerate and commit in the same commit; anything under
   `book/src/gallery/` or a census CSV moved → STOP, the re-key is not
   behaviour-preserving and that is a finding.*
-- The kneeler's artifact surface is **measured at Task 4, not predicted**, and
+- The brazier's artifact surface is **measured at Task 4, not predicted**, and
   the branch table is the deliverable: *nothing moved → proceed and say so;
   `clients/game/core/tests/fixtures/` moved → the chamber-band session snapshot
   picked up the new anchor, refresh and commit in the same commit; a census CSV
@@ -413,9 +492,10 @@ was overlooked.
 3. **Prose as a table.** `chamber_prose` becomes `ComponentStore<KindId,
    ChamberProse>`; G-b, G-c and the refusal land. The last exhaustive match is
    gone.
-4. **The kneeler.** One kind, five data rows, one appended `Pattern`, no
-   control flow. Reachability measured before, artifact diff read after under
-   §7's branch table.
+4. **The brazier**, and the three comment corrections and the ungated-sleep
+   regression test that go with it (§6a). One kind, five data rows, one appended
+   `Pattern`, no control flow. Shrine reachability measured before, artifact
+   diff read after under §7's branch table.
 5. **DoD.** §11.
 
 ## 11. Definition of done
@@ -428,11 +508,16 @@ was overlooked.
   readers acting in good faith.
 - `MAP-one-kind-model` moves to reflect that addition one has shipped, with
   addition two (edges) carrying §8's inheritance argument.
-- A new registry row for the wilderness-rest gap discarded in §6.
+- Three idea-registry rows are already written rather than deferred to close:
+  `PSY-rest-quality-is-a-grade-not-a-gate`,
+  `PSY-rest-site-is-a-tuning-indicator`, and
+  `MAP-wilderness-affords-no-rest` (the discarded alternative from §6).
 - Retrospective (`docs/retrospectives/the-wicket.md`).
 - Decision records for: the totality-by-registry rule (§5, and the direction
-  each check enforces), and the constant-is-a-convenience/variant-is-mandatory
-  asymmetry (§4.2) — both bind future campaigns and so need records rather than
-  ledger entries.
+  each check enforces); the constant-is-a-convenience/variant-is-mandatory
+  asymmetry (§4.2); and **sleep is never gated — the place grades it** (§6a),
+  which is Nathan's ruling and binds every future campaign that touches rest,
+  the sleep spell, or the property vocabulary. All three bind future campaigns
+  and so need records rather than ledger entries.
 - Census refreshed once at pre-merge close on lefford; artifacts regenerated;
   merged through the sluice.
