@@ -330,6 +330,15 @@ pub struct VariantEntry {
 /// The substrate a vertex's ground is made of, as the variant pool distinguishes
 /// it. Mirrors `locale`'s own substrate classes; passed in so this table can
 /// live below the window that computes it.
+///
+/// Deliberately does not derive `Serialize`: `hornvale-climate`, like every
+/// domain, depends on `hornvale-kernel` and nothing else (decision 0002,
+/// enforced by `cli/tests/suite/architecture.rs::domains_depend_only_on_the_kernel`
+/// as an *exact* match on normal deps — the crate-external allowlist that
+/// admits `serde` elsewhere does not override this stricter per-layer rule).
+/// `windows/locale::Negations` needs this type to serialize by variant name;
+/// see `regime::serialize_ground_kind` for how it gets that without adding a
+/// serde dependency here.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum GroundKind {
     /// Rock and soil — the mundane default.

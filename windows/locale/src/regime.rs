@@ -2,26 +2,12 @@
 //! biome (MAP-29). One value per exclusion slot, so composites are always
 //! coherent; `strangeness` is the derived magnitude of that vector.
 
+use hornvale_climate::GroundKind;
 use hornvale_kernel::quantize;
 use serde::Serialize;
 
 /// This campaign's strangeness ceiling (rung "exotic").
 pub(crate) const STRANGENESS_CEILING: f64 = 30.0;
-
-/// The material a room's ground is made of (substrate slot; proxy-earned only).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-pub enum Substrate {
-    /// Rock and soil — the mundane default.
-    Ordinary,
-    /// Wind-worked sand.
-    Sand,
-    /// Evaporite salt/gypsum crust.
-    Evaporite,
-    /// Bare volcanic basalt.
-    Basaltic,
-    /// Volcanic ash drifts.
-    Ashen,
-}
 
 /// What powers a room's ecology (energy slot).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -52,7 +38,8 @@ pub enum Kingdom {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct Negations {
     /// Substrate slot.
-    pub substrate: Substrate,
+    #[serde(serialize_with = "serialize_ground_kind")]
+    pub substrate: GroundKind,
     /// Energy slot.
     pub energy: EnergySource,
     /// Kingdom slot.
@@ -61,13 +48,39 @@ pub struct Negations {
     pub endemic: bool,
 }
 
+/// Serializes `GroundKind` by variant name, matching exactly what
+/// `#[derive(Serialize)]` on the enum itself would emit for `serde_json`
+/// (`serialize_unit_variant` and `serialize_str` render identically there).
+///
+/// `GroundKind` cannot derive `Serialize` in its home crate,
+/// `hornvale-climate`: decision 0002 holds every domain to `hornvale-kernel`
+/// and nothing else in its normal deps — an *exact* match enforced by
+/// `cli/tests/suite/architecture.rs::domains_depend_only_on_the_kernel`, not
+/// merely the crate-external allowlist that admits `serde` for other layers.
+/// `windows/locale` owns neither the type nor the trait, so it cannot supply
+/// a foreign `impl Serialize for GroundKind` either (the orphan rule); this
+/// field-level override reaches the same JSON shape without either.
+fn serialize_ground_kind<S>(kind: &GroundKind, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    let name = match kind {
+        GroundKind::Ordinary => "Ordinary",
+        GroundKind::Sand => "Sand",
+        GroundKind::Evaporite => "Evaporite",
+        GroundKind::Basaltic => "Basaltic",
+        GroundKind::Ashen => "Ashen",
+    };
+    serializer.serialize_str(name)
+}
+
 impl Negations {
     /// The derived strangeness magnitude: the *maximum* slot departure (so a
     /// basaltic vent reads "exotic", not the summed rung-45 we defer), plus a
     /// small endemic bonus, clamped to this campaign's ceiling.
     /// type-audit: bare-ok(ratio)
     pub fn strangeness(&self) -> f64 {
-        let substrate: f64 = if self.substrate == Substrate::Ordinary {
+        let substrate: f64 = if self.substrate == GroundKind::Ordinary {
             0.0
         } else {
             15.0
@@ -127,7 +140,7 @@ mod tests {
 
     fn mundane() -> Negations {
         Negations {
-            substrate: Substrate::Ordinary,
+            substrate: GroundKind::Ordinary,
             energy: EnergySource::Sunlit,
             kingdom: Kingdom::PlantAnimal,
             endemic: false,
@@ -142,7 +155,7 @@ mod tests {
     #[test]
     fn substrate_negation_is_extreme_rung() {
         let n = Negations {
-            substrate: Substrate::Sand,
+            substrate: GroundKind::Sand,
             ..mundane()
         };
         assert_eq!(n.strangeness(), 15.0);
@@ -166,7 +179,7 @@ mod tests {
     fn magnitude_is_the_max_departure_not_the_sum() {
         // basaltic (15) + chemo (30) reads as exotic (30), never rung-45.
         let n = Negations {
-            substrate: Substrate::Basaltic,
+            substrate: GroundKind::Basaltic,
             energy: EnergySource::Chemosynthetic,
             ..mundane()
         };
@@ -186,5 +199,19 @@ mod tests {
             ..mundane()
         };
         assert_eq!(capped.strangeness(), 30.0); // clamped to the campaign ceiling
+    }
+
+    /// Pins the serialized spelling of the substrate slot across the
+    /// Substrate -> GroundKind swap (The Hallmark): serde derives the
+    /// variant name, and the two enums' variant names are identical, so
+    /// this string must not move.
+    #[test]
+    fn substrate_slot_serializes_by_variant_name() {
+        let n = mundane();
+        let json = serde_json::to_string(&n).expect("Negations serializes");
+        assert!(
+            json.contains("\"substrate\":\"Ordinary\""),
+            "substrate slot spelling moved: {json}"
+        );
     }
 }
