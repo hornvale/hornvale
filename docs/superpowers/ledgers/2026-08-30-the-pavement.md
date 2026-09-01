@@ -864,3 +864,69 @@ checking what its denominator meant — hours after writing that exact failure
 shape into my own notes. `MIN_ADDRESSING_AGREEMENT`'s lowering 0.55 → 0.50 is
 still correct (2,518/5,000 against 2,500, deterministic over a fixed world and
 window, so it cannot flap) but the justification I gave for it was not.
+
+## Parked findings from the final review, promoted at close
+
+The whole-branch review raised 21 findings. Four were fixed in fix round 1
+(F1, F2, F3, F7) and five more in fix round 2 (N1-N5). **The seventeen below
+were NOT addressed**, and are recorded here because the review report itself is
+git-ignored scratch that dies with the worktree. Severities are the reviewer's.
+
+**F8 (MEDIUM) is the one a player would notice** and it should be read first.
+
+### MEDIUM — worth a campaign or a deliberate decision
+
+- **F8. The ASCII surrounds render now hides up to 41% of the band, and no
+  assertion bounds it.** The band went from a 31-room triangular ring to an
+  81-room square block, but the polar (bearing, distance) placement is
+  unchanged, so it no longer has room for the cells. Measured: flagship
+  53 of 81 drawn / **28 occluded** (was 31 of 31, 0 occluded); coastline 63 of
+  81. This is the campaign's most user-visible unhandled consequence — the
+  renderer is showing two thirds of a band it used to show whole — and it is
+  the same root cause as `CLIENT-chart-needs-no-projection`: a polar projection
+  built for triangles, kept over squares.
+- **F9. Three preregistered properties from the deleted `course_properties.rs`
+  are unreplaced, and the new rule is where they would bite.** Two of its five
+  tests are genuinely meaningless (no carried course exists). Three are not —
+  notably `no_lateral_refusal_survives_anywhere_on_the_walk_band`, which was
+  `claim: invariant(forall-seed)`-tagged over >=200 rooms and >=8 seeds
+  **through the real `Session::go`**, and whose nominated successor does not
+  exercise that path. Dissolving a suite is legitimate; dissolving the two that
+  died and silently dropping the three that did not is not.
+- **F4. `map_out_names_the_drawn_rooms_own_exits_not_the_walk_depths` no longer
+  discriminates.** The old form pinned two exit triads and asserted them
+  DISJOINT, which is what made a footer leaking walk-depth exits onto a coarser
+  chart fail. The new form asserts each footer equals its own room's corners,
+  and `assert_ne!(fine_room, coarse_room)` checks the rooms differ, not their
+  exit sets. Same shape as ruling #14: the discriminating half was dropped.
+- **F5. A tolerance widened by eight orders of magnitude (1e-9 -> 10%) on the
+  one function this campaign changed.** The new analytic ruler cannot be exact
+  and 10% still catches the depth hazard — but the old 1e-9 also pinned
+  `room_spacing`'s FORMULA, and that formula changed in this campaign. The
+  function has no production caller, which is why nobody felt it.
+- **F6. `every_cell_of_the_seam_band_is_drawn_including_the_seam_cells` no
+  longer distinguishes dropped ground from occluded ground.** Old form:
+  `31 of 31 drawn, 0 occluded`, which entailed all 12 seam cells drew. New form
+  asserts only `drawn + occluded == 81`, so `drawn=45, occluded=36` passes with
+  nothing checking a seam room is in the drawn bucket.
+
+### LOW-MEDIUM and LOW — cheap, and mostly documentation
+
+- **F10.** A tautological assertion (`f(x) == f(x)`) where `assert_eq!(walk_depth(&ctx), globe_level + 6)` previously pinned the offset. Avoiding a second copy of the arithmetic is right; the result has no content.
+- **F11.** Stale arity in a live `.expect`.
+- **F12.** Stale references to the deleted `course` module, one of them in brand-new code.
+- **F13.** A settling gate raised 67%, disclosed rather than hidden.
+- **F14.** Decision 0510's justification does not survive the compass layer, though its conclusion does. A decision record whose reasoning has lapsed is exactly what cost this campaign its first day (0141); worth an amendment.
+- **F15.** Two small soft spots in the new octile suite.
+- **F16.** The "pre-epoch session fails loudly" claim is probabilistic and untested.
+- **F17.** `region.rs` silently moved from the naive to the warped projection.
+- **F18.** (pre-existing) `clients/CLAUDE.md` still describes the Orrery as a live cross-repo consumer, which decision 0356 retired.
+- **F19.** (bookkeeping) The decision count is nine, not eight.
+- **F20.** (pre-existing) `docs/audits/tier-comparison-spike.txt` is a declaration defect with newly stale content; fix round 1 reproduced the drift and reverted rather than landing it.
+- **F21.** A `plate.rs` equality assertion is now empirical rather than derived.
+
+### Also parked, from elsewhere in the campaign
+
+- **A flake nobody owns.** `repertory_corpus::no_scene_has_fallen_below_its_recorded_floor` fails under full-suite load and passes in isolation, reproduced on a stashed clean tree; green in four full runs of mine. A flaky red in the chamber's gate phase is indistinguishable from a real one.
+- **Nothing gates `examples/`.** Two example binaries panicked outright on the new faces (rc=101 each) while all three gates stayed green. Fix round 1 repaired both and deliberately did not add a gate; the options and their costs are in its report.
+- **`docs/decisions/README.md` indexes 226 of 287 records** and `main` is missing the same 61, so no branch caused it. The generated in-force index is complete; only the hand-maintained entry point drifts. Board post `4e0aaf79b`.
