@@ -420,3 +420,72 @@ short-circuited before it is reached. Read `verdict()` first.
 
 **Do not re-pin the literal.** This is a behavioural disagreement between two
 functions, not a moved constant.
+
+### #16 [G5, measurement integrity] — the H1 illumination baseline is VOID, and the test staying red is correct
+
+**The failure:** `illumination_hypotheses::the_h1_band_is_still_the_population_the_baseline_was_taken_over`
+asserts `left: 81, right: 31` — *"the H1 band changed shape; the bedrock
+baseline of 1 distinct colour over 31 cells was measured at b0f20c71 and cannot
+be re-taken. Do not compare colour counts until this is explained."*
+
+**Decision:** The test is doing exactly its job and must NOT be re-pinned to 81.
+The H1 baseline is void, and re-measuring it is Task 10's already-scheduled work
+("H1/H2 with positive controls"). It stays red until that measurement runs.
+
+**Why (precedent cited):** Decision 0016 — a study freezes its hypothesis and
+success criteria before the code that would move them. The walk band moving to
+`globe_level + 7` took the band's population from 31 cells to 81. A colour count
+over 81 cells is not a larger sample of the same measurement; it is a different
+measurement. Changing `31` to `81` would make the assertion pass while destroying
+the only thing it protects, and the test's own message forbids exactly that
+("Do not compare colour counts until this is explained").
+
+**This is the same number as the client-side finding**, and they are one fact:
+`clients/game/bin`'s `assert_eq!(checked, 31)` needs the same 81. Neither is a
+literal to bump; both are the band population changing.
+
+**Alternatives discarded:** Re-pinning to 81 — rejected above. Marking the test
+`#[ignore]` — rejected: `preregistration_guard.rs` is a default-deny scan
+requiring every `#[ignore]` in a lab calibration test to name a cost or cite a
+decision, and "my campaign moved the number" is neither.
+
+**Ideonomy:** 2 passes, 0 overturns.
+
+### #17 [G5, measurement integrity] — the wetness trunk null's ATTRIBUTION is void, not its finding
+
+**The failure:** `wetness_reading::a_walk_gets_damper_as_it_descends` fails a
+PREMISE guard, not an outcome assertion: *"the land sample has no more trunk-band
+rooms than the rill-head walks (74 vs 96), so the trunk null cannot be attributed
+to the walk population."*
+
+**Decision:** Also Task 10's, and for a sharper reason than #16. The guard exists
+to make a *conditional* claim checkable: The Rill's trunk null was attributed to
+the walk population not visiting trunk-band rooms. At the finer walk band the
+rill-head walks now visit MORE trunk-band rooms (96) than the land sample does
+(74), so that attribution is no longer available. The null itself may well still
+hold — what died is the reason given for it.
+
+**Why this one must not be "fixed" by flipping the inequality:** the assertion is
+load-bearing in the direction it is written. Reversing it to `trunk_in_walks >
+trunk_in_land` would assert the opposite conditionality and pass, and the
+resulting green would mean a claim nobody made. This is the same shape as the
+value-comparing witnesses this campaign already re-founded rather than
+re-captured.
+
+**What Task 10 owes it:** re-read whether the trunk null survives on the new
+population, and either re-attribute it with the new numbers or record it as
+falsified. A null is a result either way.
+
+**Ideonomy:** 2 passes, 1 overturn (my first read was that this was a stale
+count, which it is not — it is an inequality between two live populations).
+
+### #18 [G5] — `census_sentinel` cannot be resolved on this machine, and that is a hard boundary
+
+**Decision:** `census_sentinel::the_first_three_census_worlds_match_the_committed_rows`
+stays red locally. It compares a live probe against census goldens authored on
+lefford, and this is a Mac. `scripts/census-run.sh` fails closed on the hostname
+by design (decisions 0063/0079). The resolution is
+`make sluice-census BRANCH=<branch> REF=<full-sha>` against a pushed SHA at
+pre-merge close — the once-per-campaign refresh the standing rule already
+prescribes. Not a defect, not deferrable to a local fix, and not something to
+work around.
