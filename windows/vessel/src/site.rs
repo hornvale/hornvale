@@ -54,7 +54,13 @@ impl Site {
 
     /// Presentation rank for choosing which sites a locale NAMES when it holds
     /// more than one (spec §6). Higher is more salient. Never world-state.
-    /// type-audit: bare-ok(count: return)
+    ///
+    /// Not `count` — this is not a cardinality of anything, it is an
+    /// ordinal position in the presentation-salience ordering over
+    /// [`SiteKind`] (decision 0028's `index` class: "a position into a
+    /// structure whose type carries the meaning"), the same reasoning
+    /// `Band::rank` in `kernel/src/band.rs` uses for its own rank return.
+    /// type-audit: bare-ok(index: return)
     pub fn salience(&self) -> u8 {
         match self.kind {
             SiteKind::Settlement => 3,
@@ -79,8 +85,25 @@ mod tests {
         assert!(x.salience() > c.salience());
     }
 
-    /// This campaign emits `Point` only (spec §7). The variant exists so
-    /// multi-facet sites are a fill-in rather than a migration.
+    /// `Site::new` must not silently drop or alter what it is given — a
+    /// regression that swapped or discarded `kind`/`name` would still
+    /// compile and would still pass every other test in this module.
+    #[test]
+    fn new_round_trips_kind_and_name() {
+        let named = Site::new(SiteKind::Settlement, Some("Doaba".into()));
+        assert_eq!(named.kind, SiteKind::Settlement);
+        assert_eq!(named.name, Some("Doaba".to_string()));
+
+        let unnamed = Site::new(SiteKind::Cave, None);
+        assert_eq!(unnamed.kind, SiteKind::Cave);
+        assert_eq!(unnamed.name, None);
+    }
+
+    /// This campaign emits `Point` only (spec §7). **Currently vacuous**:
+    /// `Extent` has exactly one variant, so any `Site::new` that compiles
+    /// necessarily sets it. Kept anyway as a FORWARD guard — it exists to
+    /// catch a future `Site::new` that defaults to a `Region` variant once
+    /// one lands, not to discriminate today.
     #[test]
     fn a_new_site_is_a_point() {
         assert_eq!(Site::new(SiteKind::Cave, None).extent, Extent::Point);
