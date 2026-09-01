@@ -542,3 +542,42 @@ fence came down in `windows/vessel` and an equivalent one is still standing in
 missing arm panics world genesis, and a hand-maintained accession cohort. Same
 shape, one layer over, two other crates, now named and located instead of
 suspected. That is what a forcing function is supposed to produce.
+
+#28 [G5] — **CORRECTION to #25: right date, wrong mechanism — and my correction
+carried the error into the ledger.** Entry #25 said a chamber's contents reached
+a committed artifact on 2026-08-30 via `b8fc0cd02`/`26ebaf7e4` "landing
+`the-loom` and `the-key-by-the-loom`". Task 5's reviewer disputed it and I
+verified the dispute myself:
+
+```text
+  git log -S'"the-loom"' -- windows/vessel/src/interior/pattern.rs
+    f2cfb0974  2026-07-28  (The Blocking)      <- the-loom landed HERE, a month earlier
+  git show --stat b8fc0cd02 -- book/src/gallery/possession-carry-seed-1.md
+    1 file changed, 77 insertions(+)           <- the transcript was CREATED here
+```
+
+`b8fc0cd02` created the transcript, and its **first** version already rendered
+`a loom`, `a strongbox` and `a key` — three `at_locale: false` anchors that had
+existed for a month. So the gate opened because **a new committed artifact
+walked deep enough**, not because a pattern was appended.
+
+**Why this is worth a numbered entry rather than a silent edit.** The
+`INVENTORY` doc's job is to tell a successor which act to review. As written,
+the correction says appending an `at_locale: false` pattern opened the gate —
+which is the very act the clause declares LATENT — so the corrected paragraph
+now contradicts itself, and a reader watching for the wrong act watches the
+cheap half. The true rule is the more useful one: *adding a committed artifact
+that walks a chamber* is the reviewable act, and every pattern already in
+`INVENTORY` becomes visible the moment one appears.
+
+Also in that paragraph, and mine: attributing to decision 0069 the claim that a
+census "never reads a chamber". 0069 says fine position is never serialized.
+That a census or `book/src/domesday/` does not read a chamber is a property of
+those readers, not a guarantee 0069 issues. The narrower true statement — 0069
+keeps `Interior` unserialized, so no world FILE moves — is the one to keep.
+
+**This is `a-correction-is-unaudited-text` happening in real time**: #25 was
+itself a correction, written confidently, and it introduced a false mechanism
+while fixing a true staleness. The date was right and I stopped checking.
+Cost of the miss: a durable doc comment pointing successors at the wrong act,
+caught by review one task later.
