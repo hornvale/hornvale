@@ -367,6 +367,21 @@ pub enum OfferedVerb {
     /// property survives here as a GRADE filed among gates, not a gate
     /// itself — `PSY-rest-quality-is-a-grade-not-a-gate` in the idea
     /// registry is where that distinction, and its eventual use, live.
+    ///
+    /// **"The eventual use" arrived in Task 10, and the paragraph above is
+    /// left standing because every word of it is still true.** Sleeping is
+    /// still ungated: `Session::sleep` still asks nothing about the room, and
+    /// a creature still beds down where it stands. What changed is that the
+    /// property is no longer advertisement-only —
+    /// `liveness::room_affords_rest` asks this verb of every anchor in the
+    /// room a recovery bout was taken in, and a bout in a room that offers it
+    /// repays `AFFORDED_REST_GAIN` times what one on bare ground repays. That
+    /// is the GRADE half of the grade/gate split going live, not the gate
+    /// half arriving late: the same act is available everywhere and is worth
+    /// more in some places. Only the OBJECT side of spec §6a is built; the
+    /// people side (a `(species, thing)` edge) and the individual side (a
+    /// `Lineage`-derived per-instance preference) are still where that
+    /// registry row leaves them.
     Sleep,
     /// Drink from a source — gates on `HoldsLiquid`.
     Drink,

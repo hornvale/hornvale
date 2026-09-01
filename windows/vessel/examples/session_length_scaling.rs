@@ -32,6 +32,19 @@
 //! the full roster inside a per-agent call, and `begin` re-folds `DRANK`,
 //! `RESTED` and `EATEN` from scratch per creature per tick.
 //!
+//! **`fatigue_at` IS a trail-walker as of The Wicket, Task 10, and the
+//! paragraph above no longer describes it.** A recovery bout is now graded by
+//! what the ROOM it was taken in offered the body, and the room a body was in
+//! at an instant is read off its committed `agent-at` trail — so the fold is
+//! `O(rests + trail)`, not `O(rests)`, and it belongs with the five above
+//! rather than beside them as the control. Two things bound it: the trail is
+//! walked ONCE per fold (one ordered merge against the bout list, not a scan
+//! per bout), and a creature with no rests at all returns before touching the
+//! trail. This bench's own `fatigue_us` column is where a regression would
+//! show; the "one fold with no stable elasticity sign" finding recorded above
+//! was measured against the pre-Task-10 shape and should not be read forward
+//! without re-measuring.
+//!
 //! ## Why there are TWO instruments, and why neither may be deleted
 //!
 //! This bench and `fold_depth_sweep.rs` are complements, not duplicates, and
@@ -301,7 +314,7 @@ fn probe_fatigue_us(ledger: &Ledger, entity: EntityId, t: WorldTime) -> f64 {
         .copied()
         .unwrap_or(0.3);
     for _ in 0..FOLD_REPS {
-        sink += fatigue_at(ledger, entity, t, rate, None);
+        sink += fatigue_at(ledger, entity, t, rate, None, None);
     }
     let us = t0.elapsed().as_secs_f64() * 1e6 / FOLD_REPS as f64;
     // Consume `sink` so the calls cannot be optimized away.

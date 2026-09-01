@@ -35,9 +35,28 @@
 //! world behind it actually is here — so `to_local_days` reduces to exactly
 //! `TickSpan::as_std_days` and every property below is unchanged in shape
 //! from before this task; only the call signature grew.
+//!
+//! **The site grade is a sixth argument, and P1-P6 pass `None` (The Wicket,
+//! Task 10).** A bout is now graded by what the room it was taken in offered
+//! the body that took it, which needs a terrain and a body neither a bare
+//! `Ledger` nor any of the six properties below has. `None` means UNGRADED —
+//! every bout reads as bare ground, which is exactly the arithmetic P1-P6
+//! were frozen against — so those six are unchanged in meaning as well as in
+//! shape. P7 below is the one property that supplies a world, and it pins
+//! that bare ground and `None` agree BIT for bit, so the two readings of
+//! "ungraded" cannot drift apart.
 
-use hornvale_kernel::{ConceptRegistry, EntityId, Ledger, Lineage, TickSpan, WorldTime};
-use hornvale_vessel::liveness::{RESTED, fatigue_at, record_rest};
+use hornvale_kernel::{
+    ConceptRegistry, ConditionResponse, EntityId, Facet, Ledger, Lineage, ResourceVector, TickSpan,
+    WorldTime,
+};
+use hornvale_vessel::affordance::{OfferedVerb, offered_to};
+use hornvale_vessel::body::Body;
+use hornvale_vessel::interior::interior_of;
+use hornvale_vessel::liveness::{
+    AGENT_AT, RESTED, RestSites, SLEPT, Terrain, ThreatNiche, fatigue_at, place_agent, record_rest,
+    record_sleep,
+};
 
 /// The rate every fixture below folds against — human's row in
 /// `hornvale_species::fatigue_rise_registry`, and the same `0.3` the old
@@ -106,13 +125,13 @@ fn p1_fatigue_is_a_pure_fold_over_committed_facts() {
     let probes = [0.5, 6.0, 1.2, 3.0, 4.25, 2.0];
     let first: Vec<u64> = probes
         .iter()
-        .map(|&d| fatigue_at(&ledger, e, at(d), RATE, None).to_bits())
+        .map(|&d| fatigue_at(&ledger, e, at(d), RATE, None, None).to_bits())
         .collect();
     for _ in 0..3 {
         let again: Vec<u64> = probes
             .iter()
             .rev()
-            .map(|&d| fatigue_at(&ledger, e, at(d), RATE, None).to_bits())
+            .map(|&d| fatigue_at(&ledger, e, at(d), RATE, None, None).to_bits())
             .collect();
         let again: Vec<u64> = again.into_iter().rev().collect();
         assert_eq!(
@@ -126,8 +145,8 @@ fn p1_fatigue_is_a_pure_fold_over_committed_facts() {
     let reloaded: Ledger = serde_json::from_str(&json).expect("and deserializes");
     for &d in &probes {
         assert_eq!(
-            fatigue_at(&ledger, e, at(d), RATE, None).to_bits(),
-            fatigue_at(&reloaded, e, at(d), RATE, None).to_bits(),
+            fatigue_at(&ledger, e, at(d), RATE, None, None).to_bits(),
+            fatigue_at(&reloaded, e, at(d), RATE, None, None).to_bits(),
             "fatigue at day {d} must survive a save/load round trip"
         );
     }
@@ -146,7 +165,7 @@ fn p2_fatigue_stays_in_range_and_rises_while_awake() {
     let mut previous = f64::NEG_INFINITY;
     for step in 0..60 {
         let d = step as f64 * 0.25;
-        let f = fatigue_at(&ledger, e, at(d), RATE, None);
+        let f = fatigue_at(&ledger, e, at(d), RATE, None, None);
         assert!(
             (0.0..=1.0).contains(&f),
             "fatigue left [0, 1] at day {d}: {f}"
@@ -159,11 +178,12 @@ fn p2_fatigue_stays_in_range_and_rises_while_awake() {
         previous = f;
     }
     assert!(
-        fatigue_at(&ledger, e, at(0.0), RATE, None) < fatigue_at(&ledger, e, at(1.0), RATE, None),
+        fatigue_at(&ledger, e, at(0.0), RATE, None, None)
+            < fatigue_at(&ledger, e, at(1.0), RATE, None, None),
         "a day awake must cost something"
     );
     assert_eq!(
-        fatigue_at(&ledger, e, at(1000.0), RATE, None),
+        fatigue_at(&ledger, e, at(1000.0), RATE, None, None),
         1.0,
         "and the ceiling must hold however long it stays up"
     );
@@ -191,10 +211,10 @@ fn p3_a_short_rest_does_not_zero_the_debt() {
     // Five days awake, then a rest of one twentieth of a day (the finest jump
     // `next_awake_day`'s scan can produce: a real, if minimal, nap).
     let (mut ledger, e, reg) = body();
-    let exhausted = fatigue_at(&ledger, e, at(5.0), RATE, None);
+    let exhausted = fatigue_at(&ledger, e, at(5.0), RATE, None, None);
     assert_eq!(exhausted, 1.0, "five days awake is a saturated debt");
     push_rest(&mut ledger, &reg, e, 5.0, 0.05);
-    let after_nap = fatigue_at(&ledger, e, at(5.05), RATE, None);
+    let after_nap = fatigue_at(&ledger, e, at(5.05), RATE, None, None);
 
     assert!(
         after_nap > 0.5,
@@ -234,7 +254,7 @@ fn p4_a_longer_rest_restores_strictly_more() {
     for span in [0.05_f64, 0.1, 0.2, 0.4, 0.8] {
         let (mut ledger, e, reg) = body();
         push_rest(&mut ledger, &reg, e, 3.0, span);
-        let f = fatigue_at(&ledger, e, at(3.0 + span), RATE, None);
+        let f = fatigue_at(&ledger, e, at(3.0 + span), RATE, None, None);
         assert!(
             f < previous,
             "a {span}-day rest must leave STRICTLY less debt at the moment it \
@@ -273,18 +293,19 @@ fn p4b_two_rests_restore_more_than_either_alone() {
     push_rest(&mut two, &reg2, e2, 1.0, 0.2);
     push_rest(&mut two, &reg2, e2, 2.9, 0.05);
     assert!(
-        fatigue_at(&one, e1, read_at, RATE, None) < 1.0
-            && fatigue_at(&two, e2, read_at, RATE, None) > 0.0,
+        fatigue_at(&one, e1, read_at, RATE, None, None) < 1.0
+            && fatigue_at(&two, e2, read_at, RATE, None, None) > 0.0,
         "both bodies must sit strictly inside the clamps for this comparison \
          to mean anything: {} and {}",
-        fatigue_at(&one, e1, read_at, RATE, None),
-        fatigue_at(&two, e2, read_at, RATE, None)
+        fatigue_at(&one, e1, read_at, RATE, None, None),
+        fatigue_at(&two, e2, read_at, RATE, None, None)
     );
     assert!(
-        fatigue_at(&two, e2, read_at, RATE, None) < fatigue_at(&one, e1, read_at, RATE, None),
+        fatigue_at(&two, e2, read_at, RATE, None, None)
+            < fatigue_at(&one, e1, read_at, RATE, None, None),
         "the second rest must count ON TOP of the first: {} vs {}",
-        fatigue_at(&two, e2, read_at, RATE, None),
-        fatigue_at(&one, e1, read_at, RATE, None)
+        fatigue_at(&two, e2, read_at, RATE, None, None),
+        fatigue_at(&one, e1, read_at, RATE, None, None)
     );
 }
 
@@ -300,7 +321,7 @@ fn p6_fatigue_never_goes_negative() {
     let (mut ledger, e, reg) = body();
     push_rest(&mut ledger, &reg, e, 0.5, 40.0);
     for d in [0.5, 1.0, 10.0, 40.0, 40.5, 41.0] {
-        let f = fatigue_at(&ledger, e, at(d), RATE, None);
+        let f = fatigue_at(&ledger, e, at(d), RATE, None, None);
         assert!(f >= 0.0, "a 40-day sleep drove fatigue to {f} at day {d}");
     }
     let (mut many, e2, reg2) = body();
@@ -309,7 +330,7 @@ fn p6_fatigue_never_goes_negative() {
     }
     for step in 0..60 {
         let d = step as f64 * 0.5;
-        let f = fatigue_at(&many, e2, at(d), RATE, None);
+        let f = fatigue_at(&many, e2, at(d), RATE, None, None);
         assert!(
             (0.0..=1.0).contains(&f),
             "fifty back-to-back rests left fatigue at {f} on day {d}"
@@ -328,10 +349,10 @@ fn p6_fatigue_never_goes_negative() {
 fn a_rest_in_progress_credits_only_the_sleep_already_had() {
     let (mut ledger, e, reg) = body();
     push_rest(&mut ledger, &reg, e, 2.0, 1.0);
-    let start = fatigue_at(&ledger, e, at(2.0), RATE, None);
-    let quarter = fatigue_at(&ledger, e, at(2.25), RATE, None);
-    let half = fatigue_at(&ledger, e, at(2.5), RATE, None);
-    let done = fatigue_at(&ledger, e, at(3.0), RATE, None);
+    let start = fatigue_at(&ledger, e, at(2.0), RATE, None, None);
+    let quarter = fatigue_at(&ledger, e, at(2.25), RATE, None, None);
+    let half = fatigue_at(&ledger, e, at(2.5), RATE, None, None);
+    let done = fatigue_at(&ledger, e, at(3.0), RATE, None, None);
     assert!(
         start > quarter && quarter > half && half >= done,
         "fatigue must fall monotonically THROUGH a rest, not jump at its \
@@ -394,8 +415,8 @@ fn the_debt_scales_with_the_worlds_own_local_day_not_the_standard_one() {
     // turned — so it must owe a quarter of the debt.
     let long_day = TickSpan::from_ticks(400_000);
 
-    let debt_short = fatigue_at(&ledger, e, t, RATE, Some(short_day));
-    let debt_long = fatigue_at(&ledger, e, t, RATE, Some(long_day));
+    let debt_short = fatigue_at(&ledger, e, t, RATE, Some(short_day), None);
+    let debt_long = fatigue_at(&ledger, e, t, RATE, Some(long_day), None);
 
     assert!(
         debt_short > 0.0 && debt_short < 1.0 && debt_long > 0.0 && debt_long < 1.0,
@@ -508,5 +529,293 @@ fn one_full_cycle(local_day: TickSpan) -> f64 {
         .commit(record_rest(e, lay_down, span), &reg)
         .expect("`rested` is non-functional");
     let woke = lay_down + span;
-    fatigue_at(&ledger, e, woke, RATE, Some(local_day))
+    fatigue_at(&ledger, e, woke, RATE, Some(local_day), None)
+}
+
+// --- P7: the room grades the bout (The Wicket, Task 10) ------------------
+
+/// A world of exactly two rooms, told apart by `is_built` alone.
+///
+/// `interior_of` reads exactly two things — `is_built` and `is_cold` — so a
+/// terrain that answers them is a complete fixture for the composition that
+/// decides what a room offers, and a real world would cost a full genesis to
+/// answer two booleans. Everything is COLD (`-20.0`, well under
+/// `FURNISHING_COLD_C`), so `furnished` composes the built+cold locale
+/// vocabulary — which is the one that draws `the-fireside-bed` — while the
+/// other room, unbuilt, composes wilderness and draws no bed at all.
+struct OneFurnishedRoom {
+    /// The one room this terrain calls built.
+    furnished: Facet,
+}
+
+impl Terrain for OneFurnishedRoom {
+    fn elevation(&self, _room: &Facet) -> f64 {
+        0.0
+    }
+    fn is_fresh_water(&self, _room: &Facet) -> bool {
+        false
+    }
+    fn temperature(&self, _room: &Facet, _day: WorldTime) -> f64 {
+        -20.0
+    }
+    fn is_built(&self, room: &Facet) -> bool {
+        *room == self.furnished
+    }
+}
+
+/// A `Body` fixture varying nothing that matters here, assembled the same way
+/// `tests/suite/affordance.rs`'s own `body_with_mass` is — locally, from
+/// public constructors, because `liveness.rs`'s test bodies are private to
+/// that module. `mass_kg` is the reference mass, well under the ceiling
+/// `affordance::body_can_use` applies to `SupportsRest`, so the body-relative
+/// half of the offer passes and the ROOM is the only thing varying.
+fn resting_body(entity: EntityId, home: Facet) -> Body {
+    Body {
+        entity,
+        home: home.clone(),
+        resource: home,
+        species: "human".into(),
+        activity: hornvale_species::ActivityCycle::Diurnal,
+        temperature_niche: ConditionResponse {
+            optimum: 15.0,
+            width: 10.0,
+            devotion: 0.5,
+        },
+        deliberation_latency: 0.5,
+        time_horizon: 0.0,
+        thermal_strategy: hornvale_species::ThermalStrategy::Endothermic,
+        niche: ResourceVector::new(&[]).expect("the empty niche is valid"),
+        boldness: 0.5,
+        threat_niche: ThreatNiche {
+            uncanny: 1.0,
+            heat: 0.0,
+            cold: 0.0,
+            predator: 0.5,
+        },
+        mass_kg: 70.0,
+        label: "rest-site-subject".into(),
+        perception: hornvale_species::PerceptionVector::MANIKIN,
+        village: None,
+    }
+}
+
+/// Does any anchor in `room` offer this body somewhere to sleep? The test's
+/// own reading of the fixture, written out here rather than borrowed from
+/// `liveness`, so the assertions below are checking that the two rooms
+/// genuinely differ in the way the task claims — the POSITIVE CONTROL for
+/// every comparison in `p7`. It pins nothing about the fold: a
+/// `room_affords_rest` that always answered `false` would leave this check
+/// green and redden the fatigue comparison, which is the direction that
+/// matters.
+fn room_offers_sleep(room: &Facet, body: &Body, terrain: &dyn Terrain) -> bool {
+    let interior = interior_of(room, terrain);
+    interior
+        .ids()
+        .iter()
+        .any(|&a| offered_to(interior.anchor(a).kind, body).contains(&OfferedVerb::Sleep))
+}
+
+/// A ledger with the three predicates a graded bout needs registered, and two
+/// entities: one that will bed down in the furnished room, one in the road.
+fn two_bodies() -> (Ledger, EntityId, EntityId, ConceptRegistry) {
+    let mut registry = ConceptRegistry::default();
+    for (p, doc) in [
+        (AGENT_AT, "an agent's room position on a day"),
+        (RESTED, "an agent rested on a day, for this many ticks"),
+        (SLEPT, "an agent slept on a day, for this many ticks"),
+    ] {
+        registry
+            .register_predicate(p, false, doc)
+            .expect("a fresh registry accepts the predicate");
+    }
+    let mut ledger = Ledger::default();
+    let mut mint = |ordinal| {
+        ledger.mint_entity(Lineage {
+            parent: None,
+            role: "rest-site-subject",
+            ordinal,
+        })
+    };
+    let bedded = mint(0);
+    let roadside = mint(1);
+    (ledger, bedded, roadside, registry)
+}
+
+/// P7 — **the same species, the same span, two rooms: the one with a
+/// `SupportsRest` anchor present restores strictly more** (The Wicket, Task
+/// 10; spec §6a's object grade, Nathan's ruling that a creature must be able
+/// to pass out in the road and prefer a bed where it can get one).
+///
+/// Asserted for BOTH acts, because the grade multiplies the act's own rate
+/// rather than replacing it: a graded conscious rest must still repay less
+/// than a graded sleep would, and neither act may be the only one the room
+/// reaches.
+///
+/// Four things are pinned here, in the order they are asserted:
+///
+/// 1. the fixture's two rooms really do differ in what they offer
+///    (`room_offers_sleep`) — without this the comparison could be measuring
+///    anything;
+/// 2. both readings sit strictly inside the `[0, 1]` clamp, so "strictly
+///    less" is a real inequality and not two saturated values;
+/// 3. the roadside body's debt is BIT-identical to the ungraded (`sites:
+///    None`) reading — the grade must not fire in a room that offers nothing.
+///    Observed red against `room_affords_rest` forced to `true`;
+/// 4. the furnished room's body carries strictly LESS debt — the claim.
+///    Observed red against `SiteGrade::Afforded => 1.0` (the recovery ignores
+///    the room) and against grading every bout `Afforded`.
+///
+/// **What (3) does NOT pin, said plainly: that bare ground's own multiplier is
+/// `1.0`.** `sites: None` and a room that offers nothing both route through
+/// the same `SiteGrade::Bare` arm, so the two sides of (3) move together and
+/// no value of that multiplier can separate them — `SiteGrade::Bare => 1.2`
+/// leaves this whole test green. That claim is pinned where the fold's
+/// arithmetic is written out by hand instead of called:
+/// `liveness::tests::a_fatigue_read_matches_the_walks_own_fatigue_arithmetic`,
+/// which computes `awake - fall * days` from `REST_FALL`/`FATIGUE_FALL`
+/// directly and compares BIT for bit. That test was run against
+/// `SiteGrade::Bare => 1.2` and reddens.
+///
+/// (3) and (4) are both live, and a mutation that breaks both reports
+/// whichever is asserted first — which is why (3) is asserted first: the
+/// mutations it alone catches (a permissive `room_affords_rest`) also break
+/// (4), while the reverse is not true.
+#[test]
+fn p7_a_bout_in_a_room_that_affords_rest_restores_strictly_more() {
+    let furnished = Facet::containing([0.10, 0.10, 0.0], 6);
+    let road = Facet::containing([-0.40, -0.40, 0.0], 6);
+    assert_ne!(furnished, road, "the two rooms must be distinct");
+    let terrain = OneFurnishedRoom {
+        furnished: furnished.clone(),
+    };
+
+    let (mut ledger, bedded, roadside, reg) = two_bodies();
+    let bedded_body = resting_body(bedded, furnished.clone());
+    let roadside_body = resting_body(roadside, road.clone());
+
+    // (1) THE FIXTURE DISCRIMINATES. Checked before anything is folded: if
+    // both rooms offered the same thing, every comparison below would be a
+    // null dressed as a result.
+    assert!(
+        room_offers_sleep(&furnished, &bedded_body, &terrain),
+        "the built, cold room must compose an anchor that offers Sleep — \
+         `the-fireside-bed` is the locale band's only `SupportsRest` carrier, \
+         and without it this test measures nothing"
+    );
+    assert!(
+        !room_offers_sleep(&road, &roadside_body, &terrain),
+        "the unbuilt room must offer nowhere to lie down (fixture precondition)"
+    );
+
+    let lay_down = at(2.0);
+    let span = TickSpan::from_std_days(0.3).expect("a finite span");
+    let woke = lay_down + span;
+    for (act, build) in [
+        (
+            "rested",
+            record_rest as fn(EntityId, WorldTime, TickSpan) -> _,
+        ),
+        (
+            "slept",
+            record_sleep as fn(EntityId, WorldTime, TickSpan) -> _,
+        ),
+    ] {
+        let mut ledger = ledger.clone();
+        for (e, room) in [(bedded, &furnished), (roadside, &road)] {
+            ledger
+                .commit(place_agent(e, room, WorldTime::GENESIS), &reg)
+                .expect("`agent-at` is non-functional");
+            ledger
+                .commit(build(e, lay_down, span), &reg)
+                .expect("a bout predicate is non-functional");
+        }
+        let on_a_bed = fatigue_at(
+            &ledger,
+            bedded,
+            woke,
+            RATE,
+            None,
+            Some(&RestSites {
+                terrain: &terrain,
+                body: &bedded_body,
+            }),
+        );
+        let in_the_road = fatigue_at(
+            &ledger,
+            roadside,
+            woke,
+            RATE,
+            None,
+            Some(&RestSites {
+                terrain: &terrain,
+                body: &roadside_body,
+            }),
+        );
+
+        // (2) Both strictly inside the clamp: a comparison between two
+        // saturated values would pass for any gain at all.
+        assert!(
+            on_a_bed > 0.0 && on_a_bed < 1.0 && in_the_road > 0.0 && in_the_road < 1.0,
+            "both {act} readings must land strictly inside [0, 1] or the \
+             inequality proves nothing: bed={on_a_bed}, road={in_the_road}"
+        );
+        // (3) The grade must not fire where nothing is offered: a bout in
+        // the road folds exactly what an UNGRADED read folds.
+        assert_eq!(
+            in_the_road.to_bits(),
+            fatigue_at(&ledger, roadside, woke, RATE, None, None).to_bits(),
+            "a {act} bout on bare ground must fold exactly the ungraded \
+             arithmetic — the grade is a bonus a room can give, never \
+             something every roadside body is quietly given too"
+        );
+        // (4) THE CLAIM.
+        assert!(
+            on_a_bed < in_the_road,
+            "a {act} bout of the same span, by the same species, must leave \
+             LESS sleep debt where the room afforded somewhere to lie down: \
+             bed={on_a_bed}, road={in_the_road}"
+        );
+    }
+
+    // THE GRADE IS PERMANENT, not a property of where the body is NOW.
+    // A body that slept in the furnished room and then walked out into the
+    // road must keep what the bed repaid: the site is read off the position
+    // the ledger records at the BOUT, so a later move cannot un-repay it.
+    ledger
+        .commit(place_agent(bedded, &furnished, WorldTime::GENESIS), &reg)
+        .expect("`agent-at` is non-functional");
+    ledger
+        .commit(record_sleep(bedded, lay_down, span), &reg)
+        .expect("`slept` is non-functional");
+    let at_the_bed = fatigue_at(
+        &ledger,
+        bedded,
+        woke,
+        RATE,
+        None,
+        Some(&RestSites {
+            terrain: &terrain,
+            body: &bedded_body,
+        }),
+    );
+    ledger
+        .commit(place_agent(bedded, &road, woke), &reg)
+        .expect("`agent-at` is non-functional");
+    let after_walking_out = fatigue_at(
+        &ledger,
+        bedded,
+        woke,
+        RATE,
+        None,
+        Some(&RestSites {
+            terrain: &terrain,
+            body: &bedded_body,
+        }),
+    );
+    assert_eq!(
+        at_the_bed.to_bits(),
+        after_walking_out.to_bits(),
+        "walking off a bed must not retroactively un-repay the night spent \
+         on it: {at_the_bed} became {after_walking_out}"
+    );
 }

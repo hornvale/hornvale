@@ -833,3 +833,78 @@ pure ramp) still discriminating — the reviewer checked that. `REST_BOUT`'s fix
 0.25 std days is the residue and becomes a registered follow-up rather than
 scope creep. This is a defect, not a fidelity tradeoff: a legal world where
 creatures can never recover is broken, not differently calibrated.
+
+#43 [G5] — **Rest quality reads `affordance::offered_to`, not
+`offered_to_observer`: the observer's knowledge is deliberately NOT consulted,
+and the brief said the opposite.** Task 10's brief instructed the implementer to
+read the room through `offered_to_observer` — "the same query every other
+surface reads" — citing `Session::warm`'s history, where a hardcoded
+`AnchorKind::Hearth` literal was correctly replaced by the offer. The
+kind-comparison half of that instruction is taken in full: `room_affords_rest`
+asks the offer, never `anchor.kind == kinds::BED`, so a future `SupportsRest`
+carrier (a fur, bracken) needs only its `object_registry` row. The *observer*
+half is refused, on three grounds in ascending force.
+
+1. **The knowledge gate governs what a body is TOLD, not what happens to it.**
+   `offered_to_observer`'s own doc states its job as spec §3.5's: "the offer
+   passes through the observer's knowledge before it is **rendered**". Every one
+   of its call sites is a rendering surface (`Session::warm`,
+   `Session::examine_chamber`). Physical restoration is rendered to nobody. A
+   body that sleeps on a bed it does not recognise as a bed still sleeps on a
+   bed.
+2. **The creature path carries no `Knowledge` at all, so the gate could only
+   have been faked.** `Knowledge` is a session structure; `Body` has no field
+   for it and `Perceived` carries belief about water and hazard, not the type
+   that query wants. Wiring it would have meant either synthesising a
+   `Knowledge` for every creature — a fabricated input to a gate — or grading
+   the player's bouts and the creature's by two different queries. The
+   controller's own standing requirement is that the read and the mover reach
+   ONE definition; two queries is the defect that requirement names.
+3. **The gate is a seam ahead of its consumer, and would have been permanently
+   satisfied here.** `offered_to_observer`'s doc records, measured, that no live
+   `Session` can present it with a `known` that fails: `Session::new` absorbs
+   the current room before the first turn. Routing restoration through it would
+   have added a check that reads as live, can never fire, and sits inside a
+   healthy-looking artifact — the shape CLAUDE.md calls worse than an absent
+   one.
+
+**What is kept from the middle rung.** `offered_to`, not the narrower
+`offered_by` the controller offered as the physical alternative: the
+body-relative half of the offer IS physical. `body_can_use(SupportsRest, body)`
+is a mass-ratio ceiling — spec §3.4's Gibson point, *a supporter to a sprite is
+not one to a giant* — and a bed too small to hold a body does not hold it. So
+the query declines exactly one of the three layers, and declines it for a stated
+reason rather than for convenience.
+
+**Where the single definition lives.** `liveness::room_affords_rest`, reached
+from `rest_timeline` and from nowhere else. Both fatigue entry points
+(`fatigue_at`, the read; `fatigue_with_pending`, the mover) go through that one
+`rest_timeline`, and both production call sites — `affect_of_memo_occupied` and
+`decide_step` — pass the same `RestSites { terrain, body: npc }` built from
+inputs each already held. `Session::sleep` needed no edit at all: the site is
+DERIVED from the ledger's own `agent-at` timeline rather than carried on the
+bout fact, so the player's route and the creature's are graded by the same
+function reading the same facts, and there is no second constructor argument for
+either to forget.
+
+**The consequence that made the derivation preferable rather than merely
+cheaper.** A grade read at the QUERY instant would have been non-monotonic: a
+body that slept on a bed and then walked into the road would have had the bed's
+repayment retroactively withdrawn. Reading the position the ledger records at
+the BOUT makes the grade permanent, and `p7`'s final assertion pins it.
+
+**Reachability, measured rather than assumed (decision 0398's bar).**
+`the-fireside-bed` is the locale band's only `SupportsRest` carrier and it needs
+a room that is both built and cold, so "a room that affords rest" is not
+automatic. Probed over five seeds at 50 settlements each, counting homes whose
+derived interior offers `Sleep`: seed 42 **1/50**, seed 13 **26/50**, seed 7
+**2/50**, seed 1 **0/50**, seed 100 **0/50**. And it reaches committed history:
+a 20-tick, 50-agent walk run with the gain at `1.5` and again at `1.0` differs
+on seed 13 (20,020 facts vs 20,050, different ledger digest) and is identical on
+the other four — which is what a grade confined to cold, built rooms should look
+like.
+
+**Out of scope by Nathan's stopping line, and it never became necessary:** the
+people side (a `(species, thing)` edge) and the individual side (a
+`Lineage`-derived preference), both still parked at
+`PSY-rest-quality-is-a-grade-not-a-gate`.

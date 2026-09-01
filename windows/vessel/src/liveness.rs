@@ -2668,8 +2668,180 @@ impl BoutKind {
     }
 }
 
+/// How much MORE a bout repays when the room it was taken in carries
+/// something a body can lie down on — Nathan's ruling, 2026-09-01: *a
+/// creature must be able to pass out in the middle of the road, but prefer a
+/// bed, or a fur, or bracken*. Multiplies the ACT's own rate
+/// ([`BoutKind::fall`]), so a bed improves a conscious rest and a sleep alike
+/// rather than being a third act.
+///
+/// **Bare ground is the baseline, and the bed is the bonus — not the other
+/// way round.** The inverse framing (a bed is normal, bare ground a penalty)
+/// was rejected on two grounds. It would be RESTRICTIVE where this campaign's
+/// whole discipline is additive (`affordance.rs`'s "additive, never
+/// restrictive, at the system level"), and it would silently falsify
+/// [`FATIGUE_FALL`]'s own authored calibration, which is stated for a normal
+/// night and would then describe a night nobody without furniture ever has.
+/// With `1.0` as the floor, every room that affords nothing keeps exactly the
+/// rates Tasks 7-9 authored, and the grade can only ever help.
+///
+/// **Why `1.5` and not `2.0` or `1.05`.** There is no restorable stock to
+/// calibrate against yet (spec §6b builds no health and no mana), so this is
+/// authored, and the two things it must be are bounded rather than derived.
+/// It must be strictly greater than `1.0` or the grade means nothing at all —
+/// `const _: ()` below refuses that outright. And it must be small enough
+/// that a body which can never reach furniture still functions: at `2.0` a
+/// night on a bed repays as much as two nights on the ground, which makes the
+/// bed a necessity rather than the *preference* the ruling asks for. Half
+/// again is the plainest reading of "prefer" that a body sleeping in the road
+/// can still live with.
+/// type-audit: bare-ok(ratio)
+const AFFORDED_REST_GAIN: f64 = 1.5;
+
+/// The grade is a PREFERENCE, so it must actually prefer. A value at or below
+/// `1.0` would make [`SiteGrade::Afforded`] a synonym for
+/// [`SiteGrade::Bare`] — the whole task reduced to a no-op — and this refuses
+/// it at COMPILE time rather than at test time, the same shape the
+/// `REST_FALL < FATIGUE_FALL` bracket took in Task 8.
+const _: () = assert!(
+    AFFORDED_REST_GAIN > 1.0,
+    "a rest-affording room must repay strictly more than bare ground, or the \
+     grade is a no-op wearing a constant's clothes"
+);
+
+/// What the room a bout was taken in offered the body that took it (The
+/// Wicket, Task 10) — the OBJECT half of spec §6a's grade.
+///
+/// Two-valued today because the question the offer answers is two-valued:
+/// either some anchor in the room offered [`crate::affordance::
+/// OfferedVerb::Sleep`] to this body, or none did. The two halves §6a leaves
+/// unbuilt — *what a people tends to sleep on* (a `(species, thing)` edge)
+/// and *this one likes a sleeping bag* (a `Lineage`-derived per-instance
+/// value) — would both refine this into a graded scalar, which is why it is a
+/// named type with a `gain()` rather than a bare `bool` threaded through the
+/// fold.
+///
+/// Carried through the timeline as an `Ord` TAG beside [`BoutKind`], for the
+/// same reason that one is: the sort stays an integer sort with no `total_cmp`
+/// anywhere near it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+enum SiteGrade {
+    /// Nothing in the room offered a place to lie down — the road, the open
+    /// field, a warm dwelling with no bed in it. Repays the act's own rate,
+    /// unmodified.
+    Bare,
+    /// Some anchor in the room offered [`crate::affordance::OfferedVerb::
+    /// Sleep`] to this body. Repays [`AFFORDED_REST_GAIN`] times the act's
+    /// rate.
+    Afforded,
+}
+
+impl SiteGrade {
+    /// The multiplier this grade applies to the bout's own repayment rate —
+    /// the ONE mapping from site to gain, read only by
+    /// [`fatigue_from_rests`].
+    /// type-audit: bare-ok(ratio: return)
+    fn gain(self) -> f64 {
+        match self {
+            SiteGrade::Bare => 1.0,
+            SiteGrade::Afforded => AFFORDED_REST_GAIN,
+        }
+    }
+}
+
+/// The world-side inputs the rest-site grade needs: the terrain the bout
+/// rooms are graded against, and the body that took them (The Wicket, Task
+/// 10).
+///
+/// **Optional at every fatigue entry point, and `None` means UNGRADED, not
+/// "bare by accident".** A caller with no world behind it — every fixture in
+/// `tests/suite/fatigue_stock.rs`, and the hand-built ledgers in this
+/// module's own tests — has no room to grade and no terrain to grade it
+/// against, so it passes `None` and every bout reads [`SiteGrade::Bare`],
+/// which is exactly the arithmetic Tasks 7-9 shipped. The two PRODUCTION
+/// callers (`affect_of_memo_occupied`, the read; `decide_step`, the mover)
+/// each already hold both fields and pass `Some`.
+///
+/// **`body` supplies the body-relative half of the offer, never the subject.**
+/// The bouts folded are the ones belonging to the `entity` argument, which
+/// stays authoritative; this field is read only by
+/// [`crate::affordance::offered_to`], for `body_can_use` — a bed too small for
+/// a mammoth is not a bed to a mammoth (spec §3.4, Gibson).
+pub struct RestSites<'a> {
+    /// The terrain each bout's room is derived and graded against.
+    pub terrain: &'a dyn Terrain,
+    /// The body whose bouts these are — the body-relative half of the offer.
+    pub body: &'a Body,
+}
+
+/// Whether `room` offers `body` somewhere to lie down: does any anchor in the
+/// room's derived interior offer [`crate::affordance::OfferedVerb::Sleep`]
+/// (The Wicket, Task 10).
+///
+/// **Read through the OFFER, never by comparing kinds.** `Session::warm`'s own
+/// history is the precedent — it compared `anchor.kind == kinds::HEARTH`
+/// directly until that was fixed, because a future `RadiatesHeat` carrier
+/// would then have needed an edit at the dispatcher as well as a row in
+/// `object_registry`. The same is true here: `bed` is the only `SupportsRest`
+/// carrier today, and a future one (a fur, bracken) must need only its
+/// registry row.
+///
+/// **Through [`crate::affordance::offered_to`], NOT `offered_to_observer` —
+/// the observer's knowledge is deliberately not consulted** (campaign ledger
+/// entry #43). The knowledge gate governs what a body may be TOLD it can do;
+/// physical restoration is not told to anyone. A body that sleeps on a bed it
+/// does not recognise as a bed still sleeps on a bed. The body-relative half
+/// IS consulted, because that half is physical: a bed too small to hold a body
+/// does not hold it.
+///
+/// Every anchor is asked, not just the landing one — a body that beds down in
+/// a room with a bed in it has a bed available to it, and which anchor it is
+/// standing at when the bout begins is a within-room detail
+/// (`MoveWithin`/`Occupancy`) the committed ledger does not record at all
+/// (decision 0069).
+fn room_affords_rest(room: &Facet, body: &Body, terrain: &dyn Terrain) -> bool {
+    let interior = interior_of(room, terrain);
+    interior.ids().iter().any(|&a| {
+        crate::affordance::offered_to(interior.anchor(a).kind, body)
+            .contains(&crate::affordance::OfferedVerb::Sleep)
+    })
+}
+
+/// Where `entity` stood over time, as `(day, room)` pairs in commit order —
+/// the timeline [`rest_timeline`] reads a bout's SITE off.
+///
+/// Commit order is time order (see [`latest_committed_position`], which reads
+/// the same facts one instant at a time), so this needs no sort of its own and
+/// the pending facts append after the committed ones — which is exactly what
+/// `latest_committed_position`'s "the last matching fact" means, extended to
+/// the walk's own not-yet-committed `out`.
+///
+/// Built ONCE per fold rather than per bout: resolving each bout's room by a
+/// separate scan would be `O(bouts x positions)` on a path that already runs
+/// per creature per tick, and a creature's position history grows for as long
+/// as it walks.
+fn position_timeline(
+    ledger: &Ledger,
+    pending: &[Fact],
+    entity: EntityId,
+) -> Vec<(WorldTime, Facet)> {
+    let mut seen: Vec<(WorldTime, Facet)> = Vec::new();
+    let read = |f: &Fact| match (&f.object, f.day) {
+        (Value::Text(s), Some(d)) => Some((d, room_from_text(s))),
+        _ => None,
+    };
+    seen.extend(ledger.facts_of(entity, AGENT_AT).filter_map(read));
+    seen.extend(
+        pending
+            .iter()
+            .filter(|f| f.subject == entity && f.predicate == AGENT_AT)
+            .filter_map(read),
+    );
+    seen
+}
+
 /// Every recovery bout `entity` had begun at or before `t`, as
-/// `(start, span, kind)` triples in chronological order — the input
+/// `(start, span, kind, site)` quadruples in chronological order — the input
 /// [`fatigue_from_rests`] folds.
 ///
 /// Merges BOTH predicates: [`RESTED`] bouts and [`SLEPT`] bouts land on one
@@ -2680,33 +2852,86 @@ impl BoutKind {
 /// live walk's own `out`); it is empty for a pure read. Both sources are
 /// filtered by subject and predicate and merged into one sorted timeline, which
 /// is what lets the read and the mover call one function over one input shape.
+///
+/// **The SITE is DERIVED from the ledger, never carried on the bout fact (The
+/// Wicket, Task 10), and that choice is what keeps the read and the mover one
+/// definition rather than two.** A `Fact` envelope carries one object and the
+/// bout's object is already its span (Task 7), so recording the site on the
+/// fact would have meant a second predicate, a second constructor argument at
+/// every producer, and a `Session::sleep` that has to remember to pass it —
+/// three chances for the player's route and the creature's to disagree. The
+/// room a body was in at an instant is ALREADY committed, as `agent-at`, so
+/// the fold reads it there: `Session::sleep` needs no edit at all, the walk
+/// needs no edit at all, and a bout is graded by where the ledger says the body
+/// was. Fatigue stays a pure fold over committed facts (P1), and a bout's grade
+/// is permanent — walking off a bed cannot retroactively un-repay the night
+/// spent on it, which is what a grade read at the QUERY instant would have
+/// done.
+///
+/// A bout with no committed position at or before it is graded at the body's
+/// HOME — the same default [`agent_position`] applies to the same question, and
+/// a second convention for "where is a body with no position fact" is exactly
+/// the divergence this function exists to avoid.
+///
+/// `sites` absent ⇒ every bout is [`SiteGrade::Bare`]; see [`RestSites`].
 fn rest_timeline(
     ledger: &Ledger,
     pending: &[Fact],
     entity: EntityId,
     t: WorldTime,
-) -> Vec<(WorldTime, TickSpan, BoutKind)> {
-    let mut rests: Vec<(WorldTime, TickSpan, BoutKind)> = Vec::new();
+    sites: Option<&RestSites<'_>>,
+) -> Vec<(WorldTime, TickSpan, BoutKind, SiteGrade)> {
+    let mut rests: Vec<(WorldTime, TickSpan, BoutKind, SiteGrade)> = Vec::new();
     for (predicate, kind) in [(RESTED, BoutKind::Rest), (SLEPT, BoutKind::Sleep)] {
         rests.extend(
             ledger
                 .facts_of(entity, predicate)
-                .filter_map(|f| f.day.map(|d| (d, rest_span_of(f), kind)))
-                .filter(|&(d, _, _)| d <= t),
+                .filter_map(|f| f.day.map(|d| (d, rest_span_of(f), kind, SiteGrade::Bare)))
+                .filter(|&(d, _, _, _)| d <= t),
         );
         rests.extend(
             pending
                 .iter()
                 .filter(|f| f.subject == entity && f.predicate == predicate)
-                .filter_map(|f| f.day.map(|d| (d, rest_span_of(f), kind)))
-                .filter(|&(d, _, _)| d <= t),
+                .filter_map(|f| f.day.map(|d| (d, rest_span_of(f), kind, SiteGrade::Bare)))
+                .filter(|&(d, _, _, _)| d <= t),
         );
     }
-    // Sorted on exact integers plus a derived-`Ord` tag (`WorldTime`,
-    // `TickSpan` and `BoutKind` are all `Ord`), so this needs no `total_cmp`
-    // tie-break and cannot depend on iteration order — including the order the
-    // two predicates were appended in above.
+    // Sorted on exact integers plus derived-`Ord` tags (`WorldTime`,
+    // `TickSpan`, `BoutKind` and `SiteGrade` are all `Ord`), so this needs no
+    // `total_cmp` tie-break and cannot depend on iteration order — including
+    // the order the two predicates were appended in above.
     rests.sort_unstable();
+    // Nothing to grade, and the guard is not decoration: everything below walks
+    // the creature's whole `agent-at` TRAIL, so a body that has never rested
+    // must not pay for a trail scan on every tick of its life.
+    if rests.is_empty() {
+        return rests;
+    }
+    let Some(sites) = sites else {
+        return rests;
+    };
+    // THE GRADE, resolved by ONE ordered merge against the position timeline
+    // rather than a scan per bout: both sides are already in time order, so a
+    // single cursor answers every bout in `O(bouts + positions)`.
+    let mut positions = position_timeline(ledger, pending, entity);
+    positions.sort_by_key(|(d, _)| *d);
+    let mut graded: std::collections::BTreeMap<Facet, bool> = std::collections::BTreeMap::new();
+    let mut cursor = 0usize;
+    let mut here: Option<Facet> = None;
+    for bout in rests.iter_mut() {
+        while cursor < positions.len() && positions[cursor].0 <= bout.0 {
+            here = Some(positions[cursor].1.clone());
+            cursor += 1;
+        }
+        let room = here.clone().unwrap_or_else(|| sites.body.home.clone());
+        let affords = *graded
+            .entry(room.clone())
+            .or_insert_with(|| room_affords_rest(&room, sites.body, sites.terrain));
+        if affords {
+            bout.3 = SiteGrade::Afforded;
+        }
+    }
     rests
 }
 
@@ -2780,7 +3005,7 @@ fn to_local_days(span: TickSpan, day: Option<TickSpan>) -> f64 {
 /// fast-rotating world is a separate design question, deliberately left
 /// alone here (see this task's own report).
 fn fatigue_from_rests(
-    rests: &[(WorldTime, TickSpan, BoutKind)],
+    rests: &[(WorldTime, TickSpan, BoutKind, SiteGrade)],
     t: WorldTime,
     rate: f64,
     day: Option<TickSpan>,
@@ -2790,7 +3015,7 @@ fn fatigue_from_rests(
     // genesis for the same reason the old `last_rested` fold defaulted there:
     // a creature that has never rested has been awake since the world began.
     let mut cursor = WorldTime::GENESIS;
-    for &(start, span, kind) in rests {
+    for &(start, span, kind, site) in rests {
         if start > t {
             break;
         }
@@ -2811,7 +3036,12 @@ fn fatigue_from_rests(
         if woke > cursor {
             // The rate is the ACT's, not the module's: a conscious rest repays
             // at `REST_FALL`, a sleep at `FATIGUE_FALL` (The Wicket, Task 8).
-            fatigue = (fatigue - kind.fall() * to_local_days(woke - cursor, day)).max(0.0);
+            // Scaled by what the ROOM offered the body that lay down in it
+            // (The Wicket, Task 10) — `1.0` on bare ground, so a body that
+            // never reaches furniture folds exactly the arithmetic Task 8
+            // shipped.
+            fatigue =
+                (fatigue - kind.fall() * site.gain() * to_local_days(woke - cursor, day)).max(0.0);
         }
         if end > cursor {
             cursor = end;
@@ -2842,6 +3072,14 @@ fn fatigue_from_rests(
 /// species/world state of its own, so a caller with none to give (every test
 /// in `tests/suite/fatigue_stock.rs`) passes whatever it needs the fold to
 /// see, exactly as `drive_at`'s callers already pass a `DriveParams`.
+/// `sites` (The Wicket, Task 10) is the same shape one step further: the
+/// terrain and body the SITE of each bout is graded against, `None` for a
+/// caller with no world behind it — see [`RestSites`] and [`rest_timeline`].
+///
+/// **A rest taken where the room affords one repays more** (spec §6a's object
+/// grade, Nathan's ruling). The grade is per-BOUT and derived from the ledger's
+/// own `agent-at` timeline, so it is permanent: a body that slept on a bed and
+/// then walked into the road keeps what the bed repaid.
 /// type-audit: bare-ok(ratio: return), bare-ok(ratio: rate)
 pub fn fatigue_at(
     ledger: &Ledger,
@@ -2849,8 +3087,9 @@ pub fn fatigue_at(
     t: WorldTime,
     rate: f64,
     day: Option<TickSpan>,
+    sites: Option<&RestSites<'_>>,
 ) -> f64 {
-    fatigue_from_rests(&rest_timeline(ledger, &[], entity, t), t, rate, day)
+    fatigue_from_rests(&rest_timeline(ledger, &[], entity, t, sites), t, rate, day)
 }
 
 /// [`fatigue_at`], plus rests emitted THIS tick and not yet committed — the
@@ -2873,8 +3112,14 @@ fn fatigue_with_pending(
     t: WorldTime,
     rate: f64,
     day: Option<TickSpan>,
+    sites: Option<&RestSites<'_>>,
 ) -> f64 {
-    fatigue_from_rests(&rest_timeline(ledger, pending, entity, t), t, rate, day)
+    fatigue_from_rests(
+        &rest_timeline(ledger, pending, entity, t, sites),
+        t,
+        rate,
+        day,
+    )
 }
 
 /// The NEUTRAL fallback rate for a species `fatigue_rise_for` cannot
@@ -2934,13 +3179,23 @@ fn fatigue_rise_for(species: &str, registry: Option<&FatigueRiseTable>) -> f64 {
 /// before that split there was one act and this doc said "always `Rest`"). A
 /// creature beds down **where it is** — neither act plans a journey — so an explorer
 /// beds down in the field at nightfall rather than trekking home, and a creature
-/// stranded from home can still rest (it is never *fatigue*-blocked). `home` is
-/// retained as a reserved hook for a future rest-QUALITY refinement (a safe,
-/// familiar den restoring more than an exposed camp).
+/// stranded from home can still rest (it is never *fatigue*-blocked).
+///
+/// **Rest QUALITY exists now and does NOT live here** (The Wicket, Task 10).
+/// This doc used to say `home` was "a reserved hook for a future rest-QUALITY
+/// refinement (a safe, familiar den restoring more than an exposed camp)", and
+/// half of that shipped somewhere else: how much a bout repays is graded by
+/// what the ROOM offered ([`room_affords_rest`], folded in
+/// [`fatigue_from_rests`]), which is a property of the recovery arithmetic
+/// rather than of the drive that proposes the act. The drive still does not
+/// consult it — a creature beds down where it is, and does not walk to a bed
+/// — so nothing here reads `home` yet. What the reservation still names is the
+/// SAFETY/familiarity half, which is a different question from affordance and
+/// is unbuilt.
 /// type-audit: bare-ok(flag: awake)
 pub struct Fatigue {
-    /// The creature's home — reserved for a future rest-quality refinement
-    /// (unused by the proposal today: rest is in place).
+    /// The creature's home — reserved for the safety/familiarity half of rest
+    /// quality (unused by the proposal today: rest is in place).
     pub home: Facet,
     /// Whether the body is inside its own waking phase right now — the same
     /// [`is_awake`] the wake-gate and `Disposition` already read, at the same
@@ -4535,6 +4790,11 @@ pub fn affect_of_memo_occupied(
             Some(&hornvale_species::fatigue_rise_registry()),
         ),
         terrain.day_ticks(),
+        // THE SITE GRADE (The Wicket, Task 10). The READ passes the same
+        // `RestSites` the mover does, built from the same two things both
+        // already hold, so the one arithmetic sees the same graded timeline
+        // from either side.
+        Some(&RestSites { terrain, body: npc }),
     );
     // The Haunt + The Phantom: the ground this creature remembers being
     // frightened on — a fold over its committed history (empty for a never-
@@ -5270,6 +5530,10 @@ fn decide_step(
             Some(&hornvale_species::fatigue_rise_registry()),
         ),
         terrain.day_ticks(),
+        // The mover's half of the same grade the read passes above — one
+        // `RestSites`, built from `terrain` and `npc`, which this function
+        // already holds.
+        Some(&RestSites { terrain, body: npc }),
     );
     let view = Perceived {
         position: pos.clone(),
@@ -14610,7 +14874,7 @@ mod tests {
                  span={span_ticks} gave {mover}"
                 );
                 assert_eq!(
-                    fatigue_at(&ledger, e, t, FATIGUE_RISE, None).to_bits(),
+                    fatigue_at(&ledger, e, t, FATIGUE_RISE, None, None).to_bits(),
                     mover.to_bits(),
                     "the fatigue read must be BIT-identical to the segment \
                  arithmetic for a {act} bout at t={t_ticks} ticks, \
@@ -14640,6 +14904,7 @@ mod tests {
                         e2,
                         t,
                         FATIGUE_RISE,
+                        None,
                         None,
                     )
                     .to_bits(),
@@ -15117,7 +15382,8 @@ mod tests {
         let at = |d: f64| WorldTime::from_std_days(d).expect("a day value is finite");
         // Before any rest: a pure ramp from genesis, exactly as it always was.
         assert!(
-            (fatigue_at(&ledger, e, at(0.5), FATIGUE_RISE, None) - FATIGUE_RISE * 0.5).abs() < 1e-9
+            (fatigue_at(&ledger, e, at(0.5), FATIGUE_RISE, None, None) - FATIGUE_RISE * 0.5).abs()
+                < 1e-9
         );
         // A HALF-DAY sleep beginning at day 2 — a creature's normal night.
         let night = TickSpan::from_std_days(0.5).expect("a span value is finite");
@@ -15127,13 +15393,14 @@ mod tests {
         // AT the moment it lies down, the debt is what two days awake built.
         // The old model read 0 here; that was the flag.
         assert!(
-            (fatigue_at(&ledger, e, at(2.0), FATIGUE_RISE, None) - FATIGUE_RISE * 2.0).abs() < 1e-9,
+            (fatigue_at(&ledger, e, at(2.0), FATIGUE_RISE, None, None) - FATIGUE_RISE * 2.0).abs()
+                < 1e-9,
             "lying down is not itself rest: the debt at the instant sleep \
              begins is still two days' worth"
         );
         // Mid-sleep, a quarter of a day in: half the night's repayment.
         assert!(
-            (fatigue_at(&ledger, e, at(2.25), FATIGUE_RISE, None)
+            (fatigue_at(&ledger, e, at(2.25), FATIGUE_RISE, None, None)
                 - (FATIGUE_RISE * 2.0 - FATIGUE_FALL * 0.25))
                 .abs()
                 < 1e-9,
@@ -15143,7 +15410,7 @@ mod tests {
         // day more.
         let after_night = FATIGUE_RISE * 2.0 - FATIGUE_FALL * 0.5;
         assert!(
-            (fatigue_at(&ledger, e, at(3.0), FATIGUE_RISE, None)
+            (fatigue_at(&ledger, e, at(3.0), FATIGUE_RISE, None, None)
                 - (after_night + FATIGUE_RISE * 0.5))
                 .abs()
                 < 1e-9,
@@ -15151,7 +15418,10 @@ mod tests {
              the rest had zeroed the debt"
         );
         // The ceiling still holds however long a body stays up.
-        assert_eq!(fatigue_at(&ledger, e, at(100.0), FATIGUE_RISE, None), 1.0);
+        assert_eq!(
+            fatigue_at(&ledger, e, at(100.0), FATIGUE_RISE, None, None),
+            1.0
+        );
 
         // AND THE OTHER ACT FOLDS TOO, at its own rate (The Wicket, Task 8). A
         // second body takes a `rested` bout of the SAME half-day span at the
@@ -15163,15 +15433,15 @@ mod tests {
             .commit(rested_fact(w, td(2.0), night, "t"), &reg)
             .unwrap();
         assert!(
-            (fatigue_at(&ledger, w, at(2.5), FATIGUE_RISE, None)
+            (fatigue_at(&ledger, w, at(2.5), FATIGUE_RISE, None, None)
                 - (FATIGUE_RISE * 2.0 - REST_FALL * 0.5))
                 .abs()
                 < 1e-9,
             "a conscious rest repays REST_FALL per day down, not FATIGUE_FALL"
         );
         assert!(
-            fatigue_at(&ledger, w, at(2.5), FATIGUE_RISE, None)
-                > fatigue_at(&ledger, e, at(2.5), FATIGUE_RISE, None),
+            fatigue_at(&ledger, w, at(2.5), FATIGUE_RISE, None, None)
+                > fatigue_at(&ledger, e, at(2.5), FATIGUE_RISE, None, None),
             "the body that only RESTED must still owe strictly more than the \
              body that SLEPT the identical span from the identical instant"
         );
@@ -15236,7 +15506,7 @@ mod tests {
         // a genuinely saturated body rather than a merely tired one.
         let mut day = WorldTime::from_std_days(4.0).expect("a day value is finite");
         assert_eq!(
-            fatigue_at(&ledger, e, day, FATIGUE_RISE, None),
+            fatigue_at(&ledger, e, day, FATIGUE_RISE, None, None),
             1.0,
             "the fixture must start saturated or it measures a shorter recovery \
              than it claims"
@@ -15251,7 +15521,7 @@ mod tests {
             // pinning the wrong constant under the right name.
             ledger.commit(slept_fact(e, day, night, "t"), &reg).unwrap();
             let woke = day + night;
-            let f = fatigue_at(&ledger, e, woke, FATIGUE_RISE, None);
+            let f = fatigue_at(&ledger, e, woke, FATIGUE_RISE, None, None);
             woke_at.push(f);
             if f < 1e-9 && rested_on.is_none() {
                 rested_on = Some(n);
