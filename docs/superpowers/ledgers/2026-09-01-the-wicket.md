@@ -245,3 +245,66 @@ so every docs-only commit on this branch has been ungated — while
 known trap I had in memory and did not apply, and the cost fell on an
 implementer who had to prove the red was not its own. Cost if wrong: a few
 seconds per docs commit.
+
+#14 [G5] — **Ruling: `chamber_prose::noun` takes `&str`, not `KindId`, and the
+plan was wrong.** Task 2's implementer reported the contradiction rather than
+silently following the plan, which is the right call and is why the plan is
+being corrected instead of the code · Why: `KindId(pub &'static str)` requires a
+`'static` label, and three of `noun`'s callers read the ledger, where
+`Ledger::kind_of` returns `Option<&str>` borrowed from a `String` in the fact
+store (`kernel/src/ledger.rs:541`). A runtime slice cannot be wrapped in a
+`KindId` at all — which is exactly why the retired `noun_for_label` existed, and
+my plan deleted the function without noticing it was solving a lifetime problem
+rather than a naming one · Alternatives discarded: (i) unify both accessors on
+`&str`, which loses `detail`'s typo-safety at every interior call site for the
+sake of surface symmetry; (ii) relax `KindId` to a non-`'static` lifetime, a
+kernel change with workspace-wide blast radius, refused outright ·
+ideonomy passes / overturns: 0 / 0 — a type constraint, not a design choice ·
+Capture: plan Task 4's Produces block now states the asymmetry and requires it
+be documented at the table, so a later reader does not "tidy" the two accessors
+into one. Cost if wrong: none — the alternative does not compile.
+
+#15 [G5] — **Ruling: the frozen verb table sweeps `THING_KINDS`, not
+`EVERY_HANDLE`.** Task 2 flagged, in the code's own doc, that
+`every_named_kind()` is "one step weaker than it was" because `AnchorKind::ALL`
+was generated and `EVERY_HANDLE` is hand-written · Why: Task 1's
+`every_named_handle_is_a_roster_row` enforces only *named ⊆ rostered*, so a
+handle dropped from `EVERY_HANDLE` silently narrows every sweep measured against
+it — a size ratchet that any compensating edit passes. `THING_KINDS` is frozen
+as an ORDERED SET and cannot go short, so sweeping it is strictly stronger and
+introduces no new mechanism. The handles exist for *code that names a kind*; a
+sweep is not that · Alternatives discarded: adding a converse
+*rostered ⊆ named* check, which would contradict Task 1's deliberate design
+that a kind needs no handle; asserting `EVERY_HANDLE.len()`, which is a count,
+and a count is not a membership · ideonomy passes / overturns: 0 / 0 ·
+Capture: plan Task 3 Step 1d, including the instruction that if the swap
+reddens the table, the disagreement is the finding and the table must not be
+edited to match. Cost if wrong: a sweep runs over 16 kinds instead of 16 — the
+sets are identical today, so the change is a guarantee, not a behaviour change.
+
+#16 [G5] — **Ruling: the artifact branch table is a RULE, not an enumeration.**
+Task 2 hit a generated file no branch listed — `book/src/reference/layering-generated.md`,
+which gained vessel's new `hornvale-thing` dependency row — and accepted it with
+`make rebaseline-goldens`, correctly · Why: my branch tables enumerated three
+outcomes and the world had a fourth, which is the failure mode a compressed
+branch table always has. The question that actually decides it is *world-derived
+or source-derived*: a source-derived page moving for a statable reason is
+expected and regenerates; a world-derived artifact moving is STOP whether or not
+it is listed. The layering page is authored by the layering enforcer from the
+manifest, so a dependency edit moving it is the mechanism working ·
+Alternatives discarded: extending the enumeration with a fourth row, which
+would leave the fifth case just as unhandled ·
+ideonomy passes / overturns: 0 / 0 · Capture: plan Task 5's branch table gains
+the rule; Task 7's inherits it by reference. Cost if wrong: an implementer
+regenerates a source-derived file that should have stopped the task — bounded,
+because the STOP half is stated by category rather than by list.
+
+#17 [G5] — **Task 2 found two guards that could never fire.**
+`no_verb_by_object_table_exists` and `no_hardcoded_anchor_kind_gates_warm` both
+searched source text for a literal (`AnchorKind::`) that the re-key makes
+impossible anywhere, so both would have read green in every possible tree
+forever. Repointed at `kinds::`. Recorded here rather than only in the task
+report because it is the campaign's second instance of the same shape — the
+first was `SupportsRest` gating a verb that never consults it — and two
+instances in one campaign is a pattern worth carrying into the retrospective:
+**a guard written against a spelling outlives the spelling.**

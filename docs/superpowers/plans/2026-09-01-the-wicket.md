@@ -600,6 +600,34 @@ fn every_propertied_kind_is_a_roster_row() {
 }
 ```
 
+- [ ] **Step 1d: Point the frozen verb table at the roster, not at the handles**
+
+Task 2 left `every_named_kind()` (`windows/vessel/tests/suite/affordance.rs`)
+reading `hornvale_thing::kinds::EVERY_HANDLE`, and flagged in its own doc that
+this is **one step weaker than what it replaced**: `AnchorKind::ALL` was
+generated from the enum's declaration and could not go short, while
+`EVERY_HANDLE` is hand-written and can. Task 1's
+`every_named_handle_is_a_roster_row` checks only *named ⊆ rostered*, so a handle
+quietly dropped from `EVERY_HANDLE` narrows the frozen verb table's sweep and
+nothing objects.
+
+Sweep the set that cannot go short instead:
+
+```rust
+fn every_named_kind() -> Vec<KindId> {
+    hornvale_thing::THING_KINDS.iter().map(|l| KindId(l)).collect()
+}
+```
+
+`THING_KINDS` is frozen as an ordered set by
+`the_roster_is_frozen_as_an_ordered_set`, so a kind cannot leave it silently.
+Strictly stronger, and it needs no new mechanism — handles are for *code that
+names a kind*, and a sweep is not that.
+
+Confirm the frozen verb table passes unchanged after the swap. If it does not,
+the two sets disagree today and **that disagreement is the finding** — report
+it rather than editing the table to match.
+
 - [ ] **Step 1c: Decide the bare-literal question, and record the decision**
 
 Spec §9 leaves this to the task: after Task 2, a production predicate could
@@ -690,10 +718,22 @@ used to get from the compiler into two tests that run in both directions.
 - Consumes: Task 1's handles, Task 2's re-key.
 - Produces: `pub struct ChamberProse { pub noun: Option<&'static str>, pub
   detail: &'static str }`; `pub fn chamber_prose_registry() ->
-  ComponentStore<KindId, ChamberProse>`; `pub(crate) fn noun(kind: KindId) ->
+  ComponentStore<KindId, ChamberProse>`; `pub(crate) fn noun(kind: &str) ->
   Option<&'static str>`; `pub(crate) fn detail(kind: KindId) ->
-  &'static str`. The two accessors keep their existing signatures so no caller
-  outside this file changes.
+  &'static str`. The accessors keep the signatures Task 2 left them with, so no
+  caller outside this file changes.
+
+**The two accessors take DIFFERENT key types, and that is forced, not sloppy.**
+An earlier draft of this plan specified `noun(kind: KindId)` and was wrong.
+`KindId` holds a `&'static str`, while three of `noun`'s callers read the
+ledger — `Ledger::kind_of` returns `Option<&str>` borrowed from a `String` in
+the fact store, not `'static`, so it cannot be wrapped in a `KindId` at all.
+That is precisely why the retired `noun_for_label` existed. `detail`'s callers
+are all interior-side and hold a real `KindId`, so it keeps the typed parameter
+and the typo-safety that comes with it. Document the asymmetry **at the table**,
+naming both caller sets: a reader who finds two accessors on one table with two
+key types will otherwise unify them, and unifying downward loses `detail`'s
+safety while unifying upward is impossible.
 
 - [ ] **Step 1: Write the two gates**
 
@@ -748,6 +788,17 @@ Run: `cargo nextest run -p hornvale-vessel -E 'test(chamber_prose)'`
 
 Expected: compile error — `chamber_prose_registry` does not exist. Not
 evidence; Step 5 captures the real reds.
+
+- [ ] **Step 2b: Delete `chamber_prose`'s test-module `EVERY_KIND`**
+
+Task 2 left a hand-written 15-kind roster in `chamber_prose`'s test module and
+documented it as a hazard: it is the exact anti-pattern the deleted
+`anchor_kinds!` macro existed to prevent — a list that can go short beside a
+sweep that looks total. It could not be replaced in Task 2 because `cave-mouth`
+had no `detail` line, which is the gap G-b closes here.
+
+Once every roster kind has prose, delete `EVERY_KIND` and let the tests that
+used it sweep `hornvale_thing::THING_KINDS` directly.
 
 - [ ] **Step 3: Build the table**
 
@@ -936,6 +987,15 @@ git diff --exit-code -- $(grep -v '^#' docs/generated-paths.txt | grep -v '^$' |
 - **A census CSV or `book/src/domesday/` moved** → STOP. Something that commits
   now reads a chamber, so `INVENTORY`'s latency rule has lapsed and this append
   is an undeclared epoch. That is the campaign's headline, not a rebaseline.
+- **A generated file moved that is on none of these branches** → the
+  enumeration is not exhaustive, so ask the question that decides it: *is this
+  file derived from the WORLD, or from the SOURCE TREE?* A source-derived page
+  (the layering diagram, the type-audit report, a manifest dump) moving for a
+  reason you can state in one sentence is expected — regenerate, commit it in
+  the same commit, and name the reason. A world-derived artifact moving is the
+  STOP branch whether or not it appears in a list. Task 2 hit exactly this with
+  `book/src/reference/layering-generated.md`, which gained vessel's new
+  dependency row.
 
 - [ ] **Step 6: Format, gate, commit, push**
 
