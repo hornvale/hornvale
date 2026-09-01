@@ -581,3 +581,21 @@ itself a correction, written confidently, and it introduced a false mechanism
 while fixing a true staleness. The date was right and I stopped checking.
 Cost of the miss: a durable doc comment pointing successors at the wrong act,
 caught by review one task later.
+
+#29 [G5] — **Past-tensing a false claim launders it into a false historical
+record.** Task 2's doc sweep was told: "a historical note in a test doc → keep
+the history, past-tense it." Applied to `affordance.rs:159` it produced *"`key`
+and `cave-mouth` **were** the first rows with no anchor-kind variant behind them
+at all"* — grammatically past, still factually wrong. `key` got an
+`AnchorKind::Key` variant in The Chattel's Task 11, four tasks after the
+sentence was written, so it was never true by the time the enum was deleted ·
+Decision: Task 6 corrects the fact, not the tense · Why this is worth an entry:
+the past-tense rule is a good rule and it has a failure mode I did not state
+when I wrote it — **it makes a false sentence read as settled history**, which
+is harder to catch than a false present-tense claim, because a reader audits
+claims about now and accepts claims about then. Two reviewers read that line
+after Task 2 and neither flagged it ·
+ideonomy passes / overturns: 0 / 0 · Capture: the retrospective takes this as
+the fifth instance of the campaign's signature shape — a statement whose form
+outruns what it can support. Add to the rule: past-tense a claim only after
+checking it was ever true.
