@@ -944,3 +944,109 @@ the G6 package and becomes a registry row; it is NOT fixed in this campaign.
 The feared inversion, by contrast, cannot occur: `the-fireside-bed` needs
 `built && cold` at both bands, so there is no world where a chamber has a bed
 and its locale does not.
+
+#47 [G5] — **The structural guarantee is restored by removing the argument, not
+by testing it: `creature_fatigue` is now the one production door, and it closed
+a SECOND divergence nobody had named.** #44's repair could have been a test that
+watches two call sites agree; it is instead one crate-private function that
+builds the whole argument list — species rate, local day, `RestSites` — so
+`pending` is the only parameter left, which is exactly what
+`fatigue_with_pending`'s own doc has always claimed is "the only thing that
+distinguishes" the mover from the read. The reviewer's mutation is no longer
+expressible: neither site has a `sites` argument to null out.
+
+The second divergence was already there and unremarked before Task 10. Both call
+sites spelled `fatigue_rise_for(&npc.species, Some(&fatigue_rise_registry()))`
+by hand, so a future edit hoisting a cached registry at the mover and not the
+read would have gone in just as silently as the site grade did — a duplicated
+expression, in the same two places, feeding the same fold. One function now
+holds it.
+
+`production_reaches_fatigue_through_exactly_one_door` (`liveness.rs`'s own test
+module) is the ratchet on top, and it counts THREE things in the production half
+of the file rather than one, because a single count would have missed the
+reviewer's own mutation in its new form: `RestSites{}` once, `fatigue_at(` once
+(its definition — **no production caller**), `fatigue_with_pending(` twice
+(definition plus `creature_fatigue`). The first row catches an inlined struct
+literal; the second catches the nearest expression of #44's divergence under the
+new shape, a call site that goes around `creature_fatigue` and asks for `None`
+directly. Both reds were observed (`left: 2, right: 1` on the respective rows).
+
+What it does not prove is stated in its own doc: a text scan cannot see that the
+two sites pass the same `terrain` and `npc`. What makes that true is that each
+function holds exactly one of each, of distinct types.
+
+#48 [G5] — **#45's fixture fix generalises: a fixture whose FALLBACK and whose
+SUBJECT answer the same thing pins neither, and it reads as a pass.** P7 gave
+each body a `home` equal to the room it slept in, so `rest_timeline`'s
+no-position fallback (`body.home`) and its trail read agreed at every assertion
+and the entire `position_timeline` merge could be deleted green. The bodies now
+live in a third room that is neither graded room, and the deletion reddens at the
+claim (`bed=0.44999999999999996, road=0.44999999999999996`).
+
+The shape is worth naming because it is not the usual vacuous-test failure. The
+test DID exercise the code path — the merge ran on every call — and it DID
+discriminate the property it was written for. What it could not see was that a
+much simpler implementation produced the same answers on this fixture. A
+mutation survey that only asks "does the feature's own mutation redden" cannot
+find that; the question that does is "what is the SIMPLEST implementation my
+fixture cannot tell from the real one".
+
+#49 [G5] — **The mechanism I gave for the empty artifact diff was false, the
+conclusion was right, and the true reason is one number.** Task 10's report said
+the regenerated artifacts "contain no creature walk at all". They do:
+`regenerate-artifacts.sh` runs `possess` twice with scripts containing `wait 90`,
+writing two book galleries under a declared path. A future task reading that
+sentence would conclude the galleries can never move on a fatigue change; they
+can.
+
+Measured instead of asserted: both seed-42 transcripts are byte-identical with
+the grade neutralised (`SiteGrade::Afforded => 1.0`), so the null is genuine —
+and the reason is the SEED, not the artifact set. Seed 42's flagship, Doaba, is
+`built=true cold=false` at **26.16 °C**, so it composes no `the-fireside-bed`
+and no bout in those 90 days is graded. Seed 13's flagship is `built=true
+cold=true` at **−61.21 °C** and does afford rest, which is why the reviewer's
+live `possess --seed 13` moves (947 vs 977 `stirred`) and my own 20-tick walk
+digest moves on 13 and on nothing else.
+
+So the honest statement is: *the gallery seed is warm.* Not *the galleries have
+no creatures in them.* One of those survives contact with seed 13 and the other
+does not.
+
+#50 [G5] — **The instrument I named for the perf concern could not fire, and
+naming it was worse than admitting the gap.** Task 10's report and the bench's
+own module doc both pointed at `session_length_scaling`'s `fatigue_us` column as
+where an `O(trail)` regression would show. `probe_fatigue_us` was passing
+`sites: None`, so the trail merge never ran under it. A named mitigation that
+cannot fire stops the next reader looking, which is strictly worse than an
+admitted absence — the same shape as a check that can never fail.
+
+The probe is graded now, with its own terrain carrying the world's real
+`built_rooms` set, kept separate from the sim's so the other five probes' inputs
+and the file's recorded findings are untouched. **And the measurement was then
+actually taken** (n=1, seed 42, 50 agents, 200 ticks): `fatigue_at` fits
+`k = 0.09139 us/call` per additional fact of history, `r^2 = 0.977`, elasticity
+**0.34**, final band **64.60 us/call**. That is the cheapest of the six folds by
+a factor of 8.8 against the next (`drive_at`, 565.88), and 752x under
+`hazard_memory_memo`. The header's older note that fatigue is "the one fold with
+no stable elasticity sign" belonged to the pre-Task-10 shape; graded, it has a
+clear positive sign well under 1.0, which is what a bounded one-pass merge over a
+growing trail should look like.
+
+#51 [G5] — **Reachability re-cited to a committed census column, superseding
+#43's throwaway probe.** #43 established decision 0398's bar with a probe written
+and deleted inside the task — evidence nobody can re-run. `cold-built-room-share`
+(`windows/lab/src/metrics.rs`) has measured the same quantity at **n=1000** since
+The Range: the share of a world's built settlement rooms that read `is_cold`, i.e.
+"the fraction of the settled world where `interior_of` would compose a hearth" —
+and therefore, one grammar link further along, a `the-fireside-bed`.
+`book/src/domesday/settlement.md` carries the distribution: **1000 present, 0
+absent; min 0, p25 0.0712, median 0.1835, p75 0.3929, max 1, mean 0.2573.**
+
+The probe's per-seed rank order matches (42 low, 13 high, 1 and 100 at the
+floor); the magnitudes differ about tenfold because the denominators differ — the
+probe counted 50 derived NPC HOMES, the column measures all built settlement
+ROOMS. Cite the column. The lesson is small and general: when a task needs to
+establish reachability, look for the committed census column before writing a
+probe, because a standing measurement at n=1000 outlives the task and a
+throwaway at n=5 does not.

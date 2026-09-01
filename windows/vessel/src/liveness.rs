@@ -2799,6 +2799,36 @@ pub struct RestSites<'a> {
 /// standing at when the bout begins is a within-room detail
 /// (`MoveWithin`/`Occupancy`) the committed ledger does not record at all
 /// (decision 0069).
+///
+/// **THE GRADE IS THEREFORE LOCALE-GRANULAR, AND A READER MUST NOT MISTAKE
+/// THAT FOR "on the bed"** (fix round 1, Minor 3; campaign ledger #46). In a
+/// built, cold locale this answers `true` for the WHOLE room, so a body that
+/// passes out in the street of such a place is repaid exactly as one that
+/// found the bed. That is a real distance from Nathan's ruling (*prefer a bed
+/// … when they can get one*), and it is **a constitutional limit rather than
+/// an oversight to be tightened here**: grading per ANCHOR would require this
+/// fold to know which anchor the body occupied, and decision 0069 says fine
+/// position is never serialized — the ledger carries the room, never the spot
+/// in it. Making it anchor-granular is a decision about 0069 and belongs to
+/// Nathan, so do not "fix" it by reaching for `Occupancy` here: an occupancy
+/// is a per-tick, in-memory structure and a fold over committed history cannot
+/// see one at a past instant.
+///
+/// The inversion a reader might fear — a chamber with a bed inside a locale
+/// without one — cannot occur: `the-fireside-bed` requires `built && cold` at
+/// BOTH bands, so no world has a chamber bed whose locale lacks one.
+///
+/// **How often this answers `true` is a committed census column, not a
+/// guess** (fix round 1, Minor 2): `cold-built-room-share`
+/// (`windows/lab/src/metrics.rs`) measures "the fraction of the settled world
+/// where `interior_of` would compose a hearth", which is one grammar link
+/// short of a fireside bed, at n=1000 — median **0.183**, mean 0.257, 0 absent
+/// (`book/src/domesday/settlement.md`). So decision 0398's bar is met by a
+/// standing measurement rather than by a probe written and deleted inside the
+/// task that needed it. It varies enormously by world: seed 42's flagship is
+/// built and WARM (26.16 °C, no bed), seed 13's is built and cold (−61.21 °C,
+/// a bed), which is why the seed-42 book galleries do not move on a grade
+/// change and a seed-13 walk does.
 fn room_affords_rest(room: &Facet, body: &Body, terrain: &dyn Terrain) -> bool {
     let interior = interior_of(room, terrain);
     interior.ids().iter().any(|&a| {
@@ -2916,7 +2946,23 @@ fn rest_timeline(
     // single cursor answers every bout in `O(bouts + positions)`.
     let mut positions = position_timeline(ledger, pending, entity);
     positions.sort_by_key(|(d, _)| *d);
-    let mut graded: std::collections::BTreeMap<Facet, bool> = std::collections::BTreeMap::new();
+    // THE MEMO IS KEYED ON `(is_built, is_cold)`, NOT ON THE ROOM (fix round 1,
+    // Minor 5). Those two booleans are the ENTIRE input to `interior_of` — it
+    // reads `terrain.is_built(room)` and `terrain.is_cold(room)` and composes
+    // `selection(built, cold)`, nothing else — so a room-keyed memo would hold
+    // up to one entry per room to answer a question with exactly four possible
+    // inputs. Keying on the room is not merely wasteful: it makes the memo's
+    // size grow with how far a creature has wandered, on a fold that already
+    // runs per creature per tick.
+    //
+    // This DOES depend on `interior_of`'s input set, and that dependence is
+    // safe to take rather than merely convenient: `interior_of`'s own doc
+    // pins it ("its output for every walk-band address is a committed-history
+    // input … so it must stay bit-for-bit what The Threshold shipped"), and
+    // widening its inputs would be an epoch, not a refactor. Indexed
+    // `built * 2 + cold`, so the four slots are exhaustive by construction and
+    // no key can be missing.
+    let mut graded: [Option<bool>; 4] = [None; 4];
     let mut cursor = 0usize;
     let mut here: Option<Facet> = None;
     for bout in rests.iter_mut() {
@@ -2925,9 +2971,10 @@ fn rest_timeline(
             cursor += 1;
         }
         let room = here.clone().unwrap_or_else(|| sites.body.home.clone());
-        let affords = *graded
-            .entry(room.clone())
-            .or_insert_with(|| room_affords_rest(&room, sites.body, sites.terrain));
+        let slot = usize::from(sites.terrain.is_built(&room)) * 2
+            + usize::from(sites.terrain.is_cold(&room));
+        let affords = *graded[slot]
+            .get_or_insert_with(|| room_affords_rest(&room, sites.body, sites.terrain));
         if affords {
             bout.3 = SiteGrade::Afforded;
         }
@@ -3119,6 +3166,63 @@ fn fatigue_with_pending(
         t,
         rate,
         day,
+    )
+}
+
+/// **THE ONE PRODUCTION FATIGUE CALL** — the read (`affect_of_memo_occupied`)
+/// and the mover (`decide_step`) reach fatigue through this and nothing else
+/// (fix round 1, Important 1).
+///
+/// **Why it exists, stated as the regression it repairs rather than as a
+/// tidy-up.** Task 7 deleted a duplicated fatigue formula because the read and
+/// the mover had diverged by an ULP on 56.7% of tick pairs, and the guarantee
+/// it put in place was STRUCTURAL: both reach one function, so they cannot
+/// disagree. Task 10 then made the site grade a per-call-site PARAMETER, which
+/// silently downgraded that guarantee to a convention — the reviewer proved it
+/// by setting the read's `sites` to `None` while the mover kept `Some` and
+/// watching 903 tests pass (campaign ledger #44). `fatigue_with_pending`'s own
+/// doc already named the only difference the two sites are allowed to have:
+/// "rests emitted THIS tick and not yet committed — **the only thing that
+/// distinguishes** [the mover] from [the read]". This function makes that
+/// sentence true again by construction: `pending` is the only parameter, and
+/// everything else — the species rate, the local day, the [`RestSites`] — is
+/// built HERE, once, so a change to any of them moves both sites or neither.
+///
+/// **Two divergences it closes, not one.** The site grade is the one the
+/// reviewer found. The other was already there and unremarked: both call sites
+/// spelled `fatigue_rise_for(&npc.species, Some(&fatigue_rise_registry()))` by
+/// hand, so a future edit to one site's rate table — a cached registry hoisted
+/// at the mover but not the read, say — would have been just as invisible.
+///
+/// **`&[]` is exactly [`fatigue_at`], and that is checked, not assumed.**
+/// `fatigue_at` and `fatigue_with_pending` are both one-line calls to
+/// `fatigue_from_rests(&rest_timeline(...))`, differing only in the slice
+/// `rest_timeline` merges; with an empty slice they are literally the same
+/// computation, which is the observation
+/// `a_fatigue_read_matches_the_walks_own_fatigue_arithmetic` records in its own
+/// comment. So routing the read through here at `&[]` changes no byte.
+/// [`fatigue_at`] stays `pub` as the documented read API for a caller outside
+/// this module (`clients/game/core`'s endpaper names it); it simply no longer
+/// has a production caller inside it.
+/// type-audit: bare-ok(ratio: return)
+fn creature_fatigue(
+    frozen: &Ledger,
+    pending: &[Fact],
+    npc: &Body,
+    day: WorldTime,
+    terrain: &dyn Terrain,
+) -> f64 {
+    fatigue_with_pending(
+        frozen,
+        pending,
+        npc.entity,
+        day,
+        fatigue_rise_for(
+            &npc.species,
+            Some(&hornvale_species::fatigue_rise_registry()),
+        ),
+        terrain.day_ticks(),
+        Some(&RestSites { terrain, body: npc }),
     )
 }
 
@@ -4781,21 +4885,13 @@ pub fn affect_of_memo_occupied(
     );
     let visited = std::collections::BTreeSet::new();
     let explore_step = lowest_unvisited_neighbor_memo(&pos, &visited, terrain, mesh_memo);
-    let fatigue = fatigue_at(
-        frozen,
-        npc.entity,
-        day,
-        fatigue_rise_for(
-            &npc.species,
-            Some(&hornvale_species::fatigue_rise_registry()),
-        ),
-        terrain.day_ticks(),
-        // THE SITE GRADE (The Wicket, Task 10). The READ passes the same
-        // `RestSites` the mover does, built from the same two things both
-        // already hold, so the one arithmetic sees the same graded timeline
-        // from either side.
-        Some(&RestSites { terrain, body: npc }),
-    );
+    // THE READ'S FATIGUE, through the ONE production entry point (fix round 1,
+    // Important 1). Its whole argument list — the rate table, the day length
+    // and the site grade — is built inside `creature_fatigue`, so it cannot
+    // differ from the mover's below by anything except the `pending` slice,
+    // which is the one difference that is supposed to exist. `&[]` is the
+    // read: nothing has been emitted this tick that the ledger has not seen.
+    let fatigue = creature_fatigue(frozen, &[], npc, day, terrain);
     // The Haunt + The Phantom: the ground this creature remembers being
     // frightened on — a fold over its committed history (empty for a never-
     // frightened creature ⇒ byte-identical). The roster is this call's `band`;
@@ -5520,21 +5616,10 @@ fn decide_step(
     // by an ULP on 56.7% of tick pairs. Fatigue is a stock now, so a single
     // instant could not have carried it anyway; the walk folds the same
     // timeline the read does, over `frozen` plus this tick's own emitted rests.
-    let fatigue = fatigue_with_pending(
-        frozen,
-        out,
-        npc.entity,
-        day,
-        fatigue_rise_for(
-            &npc.species,
-            Some(&hornvale_species::fatigue_rise_registry()),
-        ),
-        terrain.day_ticks(),
-        // The mover's half of the same grade the read passes above — one
-        // `RestSites`, built from `terrain` and `npc`, which this function
-        // already holds.
-        Some(&RestSites { terrain, body: npc }),
-    );
+    // THE MOVER'S FATIGUE, through the SAME entry point the read uses (fix
+    // round 1, Important 1) — `out` is this tick's own emitted facts, and it is
+    // the ONLY argument that differs between the two.
+    let fatigue = creature_fatigue(frozen, out, npc, day, terrain);
     let view = Perceived {
         position: pos.clone(),
         drive,
@@ -14762,6 +14847,96 @@ mod tests {
         assert!(
             thirst.anticipation_lead(1.0) > 0.0,
             "foresight leads a stock drive"
+        );
+    }
+
+    /// P5's SECOND HALF, and the one P5 itself cannot state (fix round 1,
+    /// Important 1). P5 below pins that the two FUNCTIONS agree; it passes
+    /// `None, None` for the site grade at both ends, so it says nothing at all
+    /// about the two production CALL SITES passing the same one. The reviewer
+    /// proved that gap by setting `affect_of_memo_occupied`'s `sites` to `None`
+    /// while `decide_step` kept `Some` and watching 903 tests pass (campaign
+    /// ledger #44).
+    ///
+    /// The repair is structural — [`creature_fatigue`] builds the whole
+    /// argument list once, so neither production site has a `sites` argument to
+    /// get wrong — and this test is what keeps the repair from being quietly
+    /// undone. It counts three things in the PRODUCTION half of this file
+    /// (everything above the single `#[cfg(test)]`), and each number is a
+    /// different way back to two definitions:
+    ///
+    /// ```text
+    ///   RestSites{}         1   only `creature_fatigue` builds a site grade
+    ///   fatigue_at(         1   its own definition; NO production caller
+    ///   fatigue_with_pending(   2   its definition + `creature_fatigue`
+    /// ```
+    ///
+    /// The second row is the one that closes the reviewer's exact mutation.
+    /// Under this fix the read has no `sites` argument to null out, so the
+    /// nearest equivalent is a call site that goes around
+    /// [`creature_fatigue`] and calls [`fatigue_at`] with `None` directly —
+    /// which the first row cannot see (it constructs nothing) and this row
+    /// can.
+    ///
+    /// **What it proves and what it does not.** It proves the production half
+    /// contains one site-grade construction and no direct fatigue calls. It
+    /// does NOT prove the two call sites pass the same `terrain` and `npc` —
+    /// a text scan cannot see that, and what makes it true is that each
+    /// function has exactly one of each in scope and the types are distinct.
+    ///
+    /// **Comment lines are stripped before counting, and the needles are
+    /// assembled with `concat!`.** Both are load-bearing rather than tidy: the
+    /// first draft counted the raw file and went red on its own doc comment,
+    /// which is a small instance of the thing it exists to catch — a text scan
+    /// that cannot tell a claim about code from the code. With prose excluded
+    /// the doc above is free to spell the constructions out.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST (two, both run): (a) inline the
+    /// site-grade struct literal — `Some(&RestSites { terrain, body: npc })`,
+    /// the shape Task 10 shipped and this fix round removed — back into either
+    /// fatigue call site; (b) the reviewer's own divergence, one site left
+    /// ungraded, expressed as a direct `fatigue_at(..., None)` at the read.
+    /// Reds observed:
+    ///
+    /// ```text
+    /// (a) `RestSites{}` must be constructed in exactly ONE place ...
+    ///       left: 2   right: 1
+    /// (b) `fatigue_at(` must appear exactly once ...
+    ///       left: 2   right: 1
+    /// ```
+    #[test]
+    fn production_reaches_fatigue_through_exactly_one_door() {
+        let src = include_str!("liveness.rs");
+        let split = src
+            .find("#[cfg(test)]")
+            .expect("this file has a test module");
+        let production: Vec<&str> = src[..split]
+            .lines()
+            .filter(|l| !l.trim_start().starts_with("//"))
+            .collect();
+        let count = |needle: &str| production.iter().filter(|l| l.contains(needle)).count();
+        assert_eq!(
+            count(concat!("RestSites", " {")),
+            1,
+            "the site grade must be constructed in exactly ONE place — \
+             `creature_fatigue`, which both the read and the mover reach — or \
+             the structural guarantee Task 7 established is back to being a \
+             convention two call sites are each free to break (campaign \
+             ledger #44)"
+        );
+        assert_eq!(
+            count(concat!("fatigue_at", "(")),
+            1,
+            "`fatigue_at` must have NO production caller: its one production \
+             occurrence is its own definition. A second one is a path around \
+             `creature_fatigue`, which is how a call site would go ungraded \
+             while the other stayed graded"
+        );
+        assert_eq!(
+            count(concat!("fatigue_with_pending", "(")),
+            2,
+            "`fatigue_with_pending` must have exactly one production caller \
+             (`creature_fatigue`) beside its own definition"
         );
     }
 

@@ -114,6 +114,19 @@ fn at(d: f64) -> WorldTime {
 /// lived anywhere but in the ledger, which is exactly the temptation a stock
 /// creates (the old model kept a `last_rested` field in the walk; this one
 /// deliberately keeps nothing).
+/// NO MUTATION MARKER, AND THE ABSENCE IS ITSELF THE FINDING (fix round 1,
+/// Minor 4). Eight mutations to `liveness.rs` were run against this file while
+/// authoring the markers below — drop the committed `d <= t` filter; remove the
+/// `[0, 1]` floor; remove the ceiling; credit a bout's whole span the moment
+/// the fact exists; revert `to_local_days` to `as_std_days`; make recovery a
+/// flat constant; fold only the most recent bout; make any bout zero the debt —
+/// and **this test stayed green under every one of them.** That is not a defect
+/// in it: both sides of both its assertions move together under any change to
+/// the arithmetic, because it compares the fold against ITSELF. It is a guard
+/// against a class of implementation — hidden state, or a span that does not
+/// survive serialization — neither of which is expressible as a one-line edit
+/// to the module. Real, and not coverage of what fatigue computes; do not read
+/// a green P1 as evidence about the numbers.
 #[test]
 fn p1_fatigue_is_a_pure_fold_over_committed_facts() {
     let (mut ledger, e, reg) = body();
@@ -158,6 +171,13 @@ fn p1_fatigue_is_a_pure_fold_over_committed_facts() {
 /// integral would sail past 1 for a creature awake long enough, and the drive
 /// stack's thresholds (`FATIGUE_ACT`, `FATIGUE_CEIL`) are all expressed against
 /// a `[0, 1]` urgency.
+/// MUTATION THIS MUST FAIL AGAINST: delete the `.min(1.0)` ceiling from
+/// `fatigue_from_rests`'s trailing awake term. Red observed:
+///
+/// ```text
+/// thread 'fatigue_stock::p2_fatigue_stays_in_range_and_rises_while_awake'
+/// panicked: fatigue must stay in [0, 1] ...
+/// ```
 #[test]
 fn p2_fatigue_stays_in_range_and_rises_while_awake() {
     let (ledger, e, _reg) = body();
@@ -206,6 +226,12 @@ fn p2_fatigue_stays_in_range_and_rises_while_awake() {
 /// opposite failure and the cheapest way to make the first line pass; so the
 /// second assertion requires the nap to have moved the number at all. P6 covers
 /// the floor.
+/// MUTATION THIS MUST FAIL AGAINST, and it is the old model expressed as one
+/// line rather than as a whole reverted function: replace the fall term with
+/// `(fatigue - 1000.0).max(0.0)`, so ANY bout of any length clears the debt
+/// outright. That is exactly the behaviour the pre-Task-7 flag had. Red
+/// observed (alongside `p4`, `p7`, `a_rest_in_progress` and `a_full_cycle`,
+/// which is the right blast radius for reverting the whole model).
 #[test]
 fn p3_a_short_rest_does_not_zero_the_debt() {
     // Five days awake, then a rest of one twentieth of a day (the finest jump
@@ -244,6 +270,10 @@ fn p3_a_short_rest_does_not_zero_the_debt() {
 /// and differs only in how much sleep it then got — so the comparison is
 /// recovery against recovery and nothing else. The flat-recovery mutation
 /// reddens it.
+/// MUTATION THIS MUST FAIL AGAINST: replace the span-proportional fall term
+/// with a flat one — `(fatigue - kind.fall() * site.gain() * 0.1).max(0.0)` —
+/// so every bout repays the same amount whatever its length. Red observed
+/// (with `a_rest_in_progress`, and nothing else).
 #[test]
 fn p4_a_longer_rest_restores_strictly_more() {
     let mut previous = f64::INFINITY;
@@ -284,6 +314,10 @@ fn p4_a_longer_rest_restores_strictly_more() {
 /// forgets the FIRST rest must also forget a day and a half of repayment and
 /// reads clearly HIGHER than the single-rest body, not equal to it. The
 /// `rests.iter().rev().take(1)` mutation reddens it.
+/// MUTATION THIS MUST FAIL AGAINST: fold only the most recent bout —
+/// `for &(start, span, kind, site) in rests.iter().rev().take(1)` — the "flag
+/// with a duration bolted on" this test exists to refuse. Red observed, and it
+/// is the ONLY test in this file that reddens under it.
 #[test]
 fn p4b_two_rests_restore_more_than_either_alone() {
     let read_at = at(3.0);
@@ -316,6 +350,9 @@ fn p4b_two_rests_restore_more_than_either_alone() {
 /// crossing `FATIGUE_ACT`, which is a behaviour nobody chose. Probed three
 /// ways — one absurdly long rest, many rests in a row, and a rest that is still
 /// running when the read happens.
+/// MUTATION THIS MUST FAIL AGAINST: delete the `.max(0.0)` floor from
+/// `fatigue_from_rests`'s fall term, so a long bout banks credit below zero.
+/// Red observed, and it is the ONLY test in this file that reddens under it.
 #[test]
 fn p6_fatigue_never_goes_negative() {
     let (mut ledger, e, reg) = body();
@@ -345,6 +382,11 @@ fn p6_fatigue_never_goes_negative() {
 /// (crediting the whole span the moment the fact exists) would let a body wake
 /// refreshed from a sleep it has not had yet, which is a stock that runs
 /// backwards in time.
+/// MUTATION THIS MUST FAIL AGAINST: `let woke = end.min(t)` becomes
+/// `let woke = end`, crediting a bout's whole span the moment its fact exists.
+/// Red observed, and it is the ONLY test in this file that reddens under it —
+/// which is what makes it worth keeping beside P1-P6 rather than folding into
+/// P4.
 #[test]
 fn a_rest_in_progress_credits_only_the_sleep_already_had() {
     let (mut ledger, e, reg) = body();
@@ -397,6 +439,11 @@ fn a_rest_in_progress_credits_only_the_sleep_already_had() {
 /// `snapshot-seed-0-chamber-occupied.json` golden — which reads as ordinary
 /// artifact drift — is this task's real witness that the calendar reaches
 /// the fold in production, not this test.
+/// MUTATION THIS MUST FAIL AGAINST: the revert the paragraph above names,
+/// applied at the one place both terms cross —
+/// `fn to_local_days(span, day) { span.as_std_days() }`. Red observed, here and
+/// in `a_full_cycle_lands_at_the_same_debt_regardless_of_the_local_day_length`,
+/// and in nothing else.
 #[test]
 fn the_debt_scales_with_the_worlds_own_local_day_not_the_standard_one() {
     let (ledger, e, _reg) = body();
@@ -487,6 +534,12 @@ fn the_debt_scales_with_the_worlds_own_local_day_not_the_standard_one() {
 /// of a local day spent resting, because an unconverted fall term repays
 /// per STANDARD day, and 0.1 of a 20-standard-day local day is a much bigger
 /// standard-day span than 0.1 of a 1-standard-day one.
+/// MUTATION THIS MUST FAIL AGAINST: `fn to_local_days(span, day) {
+/// span.as_std_days() }` — the same revert
+/// `the_debt_scales_with_the_worlds_own_local_day_not_the_standard_one` names,
+/// and the two are complementary: that one pins that the debt MOVES with the
+/// day length, this one that a full accrue-and-recover cycle does NOT, which
+/// is the property the fall terms' own conversion buys.
 #[test]
 fn a_full_cycle_lands_at_the_same_debt_regardless_of_the_local_day_length() {
     // Earth-like: one standard day. 20x longer: twenty standard days — "very
@@ -680,6 +733,31 @@ fn two_bodies() -> (Ledger, EntityId, EntityId, ConceptRegistry) {
 /// whichever is asserted first — which is why (3) is asserted first: the
 /// mutations it alone catches (a permissive `room_affords_rest`) also break
 /// (4), while the reverse is not true.
+///
+/// MUTATION THIS MUST FAIL AGAINST — five, all run against `liveness.rs`, each
+/// naming the part of the design it neutralises:
+///
+/// 1. **the recovery ignores the room**: `SiteGrade::Afforded => 1.0`. Red at
+///    (4): `bed=0.44999999999999996, road=0.44999999999999996`.
+/// 2. **the room-reading code never fires**: `room_affords_rest` forced to
+///    `false` — the vacuity check, and the reason this test is not the shape
+///    Task 9's discriminating test had. Red at (4), same values.
+/// 3. **the grade fires where nothing is offered**: `room_affords_rest` forced
+///    to `true`. Red at (3):
+///    `left: 4600427019358961664  right: 4601778099247172812`.
+/// 4. **the position trail is not read at all**: `let room =
+///    sites.body.home.clone()`, deleting the `position_timeline` merge in
+///    effect. Red at (4). **This is the mutation the first draft of this test
+///    survived** — its fixture gave each body a `home` equal to the room it
+///    slept in, so the trail read and the home fallback answered the same
+///    thing and the whole merge was pinned by nothing (campaign ledger #45).
+///    The bodies live in a third room now, which is what makes this red
+///    possible.
+/// 5. **the grade is read at the query instant, not the bout's**: `while
+///    cursor < positions.len()` (drop the `<= bout.0` bound), so every bout is
+///    graded by the LATEST position. Red at the permanence assertion:
+///    `walking off a bed must not retroactively un-repay the night spent on
+///    it: 0.15000000000000002 became 0.3`.
 #[test]
 fn p7_a_bout_in_a_room_that_affords_rest_restores_strictly_more() {
     let furnished = Facet::containing([0.10, 0.10, 0.0], 6);
@@ -689,9 +767,26 @@ fn p7_a_bout_in_a_room_that_affords_rest_restores_strictly_more() {
         furnished: furnished.clone(),
     };
 
+    // THE HOME IS A THIRD ROOM, and that is the fixture's load-bearing detail
+    // (fix round 1, Important 2). `rest_timeline` falls back to `body.home` for
+    // a bout with no committed position at or before it — the same default
+    // `agent_position` applies — so a body whose home IS the room it sleeps in
+    // makes the trail read and the home fallback agree at every assertion, and
+    // the whole `position_timeline` merge can be deleted with the test still
+    // green. The reviewer proved exactly that: replacing the merge's result
+    // with `sites.body.home.clone()` left P7, all of `fatigue_stock` and all
+    // 603 vessel lib tests passing (campaign ledger #45). Neither body lives in
+    // either room it is graded in, so the fallback and the trail can no longer
+    // be confused.
+    let elsewhere = Facet::containing([0.30, -0.30, 0.0], 6);
+    assert!(
+        elsewhere != furnished && elsewhere != road,
+        "the bodies' home must be a THIRD room, or the trail read and the \
+         `body.home` fallback answer the same thing and neither is pinned"
+    );
     let (mut ledger, bedded, roadside, reg) = two_bodies();
-    let bedded_body = resting_body(bedded, furnished.clone());
-    let roadside_body = resting_body(roadside, road.clone());
+    let bedded_body = resting_body(bedded, elsewhere.clone());
+    let roadside_body = resting_body(roadside, elsewhere.clone());
 
     // (1) THE FIXTURE DISCRIMINATES. Checked before anything is folded: if
     // both rooms offered the same thing, every comparison below would be a
