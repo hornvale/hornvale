@@ -8,10 +8,23 @@ use hornvale_kernel::{Geosphere, ReferenceElevation, Temperature, VertexMap};
 /// One coarse era's climate fields, all bare kernel types, filled by the
 /// composition root after re-running climate at the era's sea level and
 /// applying the era's albedo cooling offset to the temperature field.
+///
+/// **`day` stays a bare `f64` because it is not one axis** — see the idea
+/// registry's `DOM-era-day-axis` and The Hallmark's ledger entry #10. The
+/// composition root has two producers and they disagree about the unit:
+/// `paleoclimate_from` writes absolute standard days
+/// (`windows/worldgen/src/lib.rs:3733`), while `bake_eras` writes bake YEARS
+/// (`:3876`, `:3921`) which `history_bake.rs:1651` then compares against a
+/// year stepped by `epoch_years`. Retyping to `WorldTime` would have to pick
+/// one, and every choice either reinterprets a year as a day (365.25x) or
+/// moves the bake's era boundaries. Repair the axis first; the tag below
+/// stays until then.
 /// type-audit: pending(wave-2: day), bare-ok(flag: ice), bare-ok(flag: habitable), bare-ok(ratio: ice_fraction)
 #[derive(Debug, Clone)]
 pub struct EraClimate {
-    /// Absolute standard day of the era.
+    /// Absolute standard day of the era **on the deep-time path only** — the
+    /// history bake fills this slot with a bake YEAR instead. See the struct
+    /// doc above and `DOM-era-day-axis`; do not read a unit off this line.
     pub day: f64,
     /// This era's precomputed ice-ADVANCE mask: land iced this era that is
     /// NOT iced at present (see the composition root's `climate_at_era`).
@@ -66,6 +79,11 @@ pub fn glaciated(
 }
 
 /// The extracted strata of a world. Non-serialized; re-derived on demand.
+///
+/// **`glacial_maximum_day` inherits [`EraClimate::day`]'s two-axis ambiguity**
+/// — `extract` copies it straight out of the peak era below — so it cannot be
+/// typed `WorldTime` while its source is two-valued, even though it reaches
+/// the ledger (`facts::genesis`). See `DOM-era-day-axis` in the idea registry.
 /// type-audit: bare-ok(flag: envelope), bare-ok(flag: shoreline), bare-ok(flag: refugia), pending(wave-2: glacial_maximum_day), bare-ok(ratio: max_ice_fraction)
 #[derive(Debug, Clone)]
 pub struct PaleoRecord {

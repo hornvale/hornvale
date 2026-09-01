@@ -114,3 +114,50 @@ non-kernel error shapes turned up nearby? · **Deferred, not consolidated**:
 outliers deferred (the latter dissolves with the queued angle family).
 Neither is a shape twin the detector sees. · Capture: Task 2 (`UnitError`
 collapse) scope note.
+
+#10 [Q] — Task 5's gate: is `EraClimate.day` one axis (standard days
+throughout, merely misleading `year` variable names) or two axes sharing one
+slot? · **Two axes — STOP the migration; the retype is blocked on a semantic
+repair this campaign did not scope.** The trace, per the brief's deciding
+observable: `history_bake.rs:1648` `era_index_for(&self, eras, year: f64)`
+compares `e.day <= year` (`:1651`); its only production call site is
+`:4357`, inside the epoch loop opened at `:4355` as `let mut year =
+cfg.start_year; while year < cfg.end_year { … year += cfg.epoch_years; }` —
+so `year` is a bake YEAR (`BakeConfig::default_millennia()` = start `0.0`,
+end `2000.0`, epoch `25.0`, `history_bake.rs:903-905`). The `EraClimate.day`
+values it is compared against are written by `bake_eras` from that same year
+axis: `day: cfg.start_year` (`windows/worldgen/src/lib.rs:3876`, the
+constant-sky arm) and `bake_day = cfg.start_year + e*(cfg.end_year -
+cfg.start_year)/(CLIMATE_ERAS-1)` (`:3921-3924`). The OTHER producer,
+`paleoclimate_from`, writes the same field from `era_day =
+-DEEP_TIME_WINDOW_DAYS + e*DEEP_TIME_WINDOW_DAYS/(CLIMATE_ERAS-1)`
+(`:3733-3741`), where `DEEP_TIME_WINDOW_DAYS = 1_000_000.0 * 365.25`
+(`:3405`) — absolute standard DAYS, matching `IceState.day`'s
+`-k*ICE_STEP_DAYS` samples (`:3894-3902`) and the field's own doc,
+"Absolute standard day of the era" (`domains/paleoclimate/src/strata.rs:15`).
+The project already names this crossing elsewhere and declines to apply it
+here: `windows/worldgen/src/history_emit.rs:62`
+`ledger_day_of_bake_year(year: f64) -> f64`, whose doc (`:23-31`) states the
+rule outright — "The history bake reasons in years and is right to —
+`BakeConfig::start_year`/`end_year` stay years … What is constrained is what
+*crosses into the ledger*, which is days" · Why STOP rather than retype: each
+path is internally consistent, so nothing is broken today, and every
+available retype makes it worse. `WorldTime::from_std_days(cfg.start_year)`
+would silently reinterpret year 2000 as day 2000 — a 365.25x error where the
+bake's era boundaries meet the deep-time axis; converting at the construction
+site instead would move the bake's own era boundaries relative to
+`era_index_for`'s unconverted `year`, changing behaviour and committed bytes;
+converting both is a repair of the bake's whole time axis, not a type
+migration. `PaleoRecord.glacial_maximum_day` inherits the ambiguity rather
+than escaping it — `strata.rs:126` copies it straight out of a peak era's
+`day` — so the committed-ledger surface at `facts.rs:88` cannot be soundly
+typed while its source is two-valued · Residual scope, recorded not taken:
+`IceState.day` and `integrate_ice`'s `samples: &[(f64, f64)]`
+(`ice.rs:54,70`) are unambiguously days on BOTH paths (compared only against
+`era_day`, which is days in `bake_eras` too, `:3909-3913`), so a narrower
+migration of those two alone is sound. It was not attempted — Task 5's
+branch table says STOP the migration, and a partial retype nobody scoped is
+not a null result · Capture: idea-registry row `DOM-era-day-axis` (status
+`raw`); citations added to the four `pending(wave-2: …)` tag doc lines in
+`domains/paleoclimate` (tags themselves untouched, per the brief). No code
+retyped; Steps 3-5 (baseline, retype, byte-identity verdict) not reached.
