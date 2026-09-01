@@ -339,7 +339,7 @@ fn cmd_scout(args: &[String]) -> Result<(), String> {
     for seed in from..from.saturating_add(max_scan) {
         scanned += 1;
         if let Ok(outcome) = hornvale_astronomy::generate(hornvale_kernel::Seed(seed), &pins) {
-            let system = &outcome.system;
+            let system = &outcome.value;
             let day = match system.anchor.rotation {
                 hornvale_astronomy::Rotation::Spinning { day, .. } => {
                     format!("{:.1}h day", day.as_std_days() * 24.0)

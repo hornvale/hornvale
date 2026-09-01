@@ -80,10 +80,10 @@ impl GeneratedTerrain {
     /// Wrap a genesis outcome with the Geosphere it was generated over.
     /// Panics (fail fast) if the mesh and the globe disagree on vertex count —
     /// the caller must pass the same Geosphere it gave `generate`.
-    pub fn new(geosphere: Geosphere, outcome: GenesisOutcome) -> GeneratedTerrain {
+    pub fn new(geosphere: Geosphere, outcome: GenesisOutcome<TectonicGlobe>) -> GeneratedTerrain {
         assert_eq!(
             geosphere.vertex_count(),
-            outcome.globe.elevation.len(),
+            outcome.value.elevation.len(),
             "GeneratedTerrain: geosphere and globe disagree on vertex count"
         );
         // Built once here, beside the other genesis-time derivations, not
@@ -91,9 +91,9 @@ impl GeneratedTerrain {
         // committed state plus one hash-noise field — see `ChannelNetwork`'s
         // own doc comment for why this makes no seed draws.
         let channels = ChannelNetwork::build(
-            &outcome.globe,
+            &outcome.value,
             &geosphere,
-            outcome.globe.channel_noise_seed(),
+            outcome.value.channel_noise_seed(),
         );
 
         // The Gazetteer, Task 5: the landscape feature index, also built
@@ -105,10 +105,10 @@ impl GeneratedTerrain {
         // assembles the full set including volcanoes at the composition
         // root.
         //
-        // Membership predicates read `outcome.globe` directly rather than
+        // Membership predicates read `outcome.value` directly rather than
         // through `Self::water_kind_at`/`Self::elevation_at`: those accessors
         // need `self`, which does not exist until the struct literal below,
-        // and `outcome.globe`'s `elevation`/`sea_level`/`water_kind` fields
+        // and `outcome.value`'s `elevation`/`sea_level`/`water_kind` fields
         // are already fully computed at genesis (see their doc comments in
         // `globe.rs`) — nothing here forces a restructure. Landmass and Sea
         // use `elevation`/`sea_level` and `water_kind == WaterKind::Ocean`
@@ -118,11 +118,11 @@ impl GeneratedTerrain {
         // `Ocean` arm computes (`elevation < sea_level`, top precedence) —
         // so the two are equivalent, and this avoids a `classify()` call per
         // vertex.
-        let land = |c: Vertex| *outcome.globe.elevation.get(c) >= outcome.globe.sea_level;
+        let land = |c: Vertex| *outcome.value.elevation.get(c) >= outcome.value.sea_level;
         let total_land = geosphere.vertices().filter(|&c| land(c)).count();
         let total_ocean = geosphere
             .vertices()
-            .filter(|&c| *outcome.globe.water_kind.get(c) == WaterKind::Ocean)
+            .filter(|&c| *outcome.value.water_kind.get(c) == WaterKind::Ocean)
             .count();
         // Floors: MEASURED (Task 1, controller-ruled) — see the doc comment
         // on each class arm below. Landmass/Sea scale with this world's own
@@ -145,7 +145,7 @@ impl GeneratedTerrain {
         let sea: Vec<Feature> = landscape::classify(
             &geosphere,
             FeatureClass::Sea,
-            |c| *outcome.globe.water_kind.get(c) == WaterKind::Ocean,
+            |c| *outcome.value.water_kind.get(c) == WaterKind::Ocean,
             sea_floor,
         );
         // SaltLake floor is 1, not the spec's 20 (which yields zero here):
@@ -155,14 +155,14 @@ impl GeneratedTerrain {
         let salt_lake: Vec<Feature> = landscape::classify(
             &geosphere,
             FeatureClass::SaltLake,
-            |c| *outcome.globe.water_kind.get(c) == WaterKind::SaltBasin,
+            |c| *outcome.value.water_kind.get(c) == WaterKind::SaltBasin,
             1,
         );
         // River floor is the spec's own catchment tier, retained.
         let river: Vec<Feature> = landscape::rivers(
             &geosphere,
-            &outcome.globe.elevation,
-            outcome.globe.sea_level,
+            &outcome.value.elevation,
+            outcome.value.sea_level,
             24,
         );
         let features = FeatureIndex::from_parts(vec![
@@ -174,7 +174,7 @@ impl GeneratedTerrain {
 
         GeneratedTerrain {
             geosphere,
-            globe: outcome.globe,
+            globe: outcome.value,
             notes: outcome.notes,
             channels,
             features,
@@ -811,14 +811,14 @@ mod tests {
         let vertex = Vertex(0);
         assert_eq!(
             terrain.elevation_at(vertex),
-            *outcome.globe.elevation.get(vertex)
+            *outcome.value.elevation.get(vertex)
         );
         assert_eq!(
             terrain.plate_of(vertex),
-            *outcome.globe.plate_of.get(vertex)
+            *outcome.value.plate_of.get(vertex)
         );
-        assert_eq!(terrain.unrest_at(vertex), *outcome.globe.unrest.get(vertex));
-        assert_eq!(terrain.sea_level(), outcome.globe.sea_level);
+        assert_eq!(terrain.unrest_at(vertex), *outcome.value.unrest.get(vertex));
+        assert_eq!(terrain.sea_level(), outcome.value.sea_level);
         assert_eq!(
             terrain.is_ocean(vertex),
             terrain.elevation_at(vertex) < terrain.sea_level()
@@ -857,7 +857,7 @@ mod tests {
         for vertex in geo.vertices() {
             assert_eq!(
                 terrain.boundary_at(vertex),
-                *outcome.globe.boundary.get(vertex)
+                *outcome.value.boundary.get(vertex)
             );
         }
         // At least one vertex is a classified boundary on a real globe.
@@ -872,11 +872,11 @@ mod tests {
         for vertex in geo.vertices() {
             assert_eq!(
                 terrain.drainage_at(vertex),
-                *outcome.globe.drainage.get(vertex)
+                *outcome.value.drainage.get(vertex)
             );
             assert_eq!(
                 terrain.is_endorheic(vertex),
-                *outcome.globe.endorheic.get(vertex)
+                *outcome.value.endorheic.get(vertex)
             );
         }
         // Land vertices accumulate at least themselves.
@@ -892,18 +892,18 @@ mod tests {
         for vertex in geo.vertices() {
             assert_eq!(
                 terrain.crust_thickness_at(vertex),
-                *outcome.globe.crust.get(vertex)
+                *outcome.value.crust.get(vertex)
             );
             assert_eq!(
                 terrain.is_continental_at(vertex),
-                *outcome.globe.crust.get(vertex) >= crate::crust::CONTINENTAL_THRESHOLD_KM
+                *outcome.value.crust.get(vertex) >= crate::crust::CONTINENTAL_THRESHOLD_KM
             );
             // Age is 0 on oceanic floor, in [0,1] everywhere.
             let age = terrain.crust_age_at(vertex);
             assert!((0.0..=1.0).contains(&age));
             assert_eq!(
                 terrain.crust_age_at(vertex),
-                *outcome.globe.crust_age.get(vertex)
+                *outcome.value.crust_age.get(vertex)
             );
         }
         // Some vertex is within finite graph distance of a boundary.
@@ -921,9 +921,9 @@ mod tests {
 
         assert_eq!(
             terrain.waterfalls(),
-            outcome.globe.waterfall_sites.as_slice()
+            outcome.value.waterfall_sites.as_slice()
         );
-        assert_eq!(terrain.deltas(), outcome.globe.delta_vertices.as_slice());
+        assert_eq!(terrain.deltas(), outcome.value.delta_vertices.as_slice());
 
         // playas() is a live filter, not a stored field: check it against
         // the same filter applied directly.

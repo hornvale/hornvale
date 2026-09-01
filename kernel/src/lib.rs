@@ -17,6 +17,7 @@ pub mod ecology;
 mod fact_index;
 pub mod field;
 pub mod fold;
+pub mod genesis;
 pub mod geosphere;
 pub mod golden;
 pub mod ledger;
@@ -55,6 +56,7 @@ pub use ecology::{
     environment_v1_basis, sovereignty_floor, v1_basis,
 };
 pub use field::{ConstantField, Field, NoiseField, Position, WorldTime};
+pub use genesis::{GenesisError, GenesisOutcome};
 pub use geosphere::{GeoCoord, Geosphere, NearestVertexIndex, Vertex, VertexMap};
 pub use ledger::{
     EntityId, Fact, KindId, Ledger, LedgerError, Lineage, Value, derive_entity_id, test_lineage,

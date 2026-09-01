@@ -327,7 +327,7 @@ fn every_run_reaches_its_outlet() {
     let mut outlet_runs = 0usize;
     for seed in OUTLET_SEEDS {
         let outcome = generate(Seed(seed), &geo, &TerrainPins::default()).expect("seed generates");
-        let globe = &outcome.globe;
+        let globe = &outcome.value;
         let net = ChannelNetwork::build(globe, &geo, globe.channel_noise_seed());
 
         // The run that CLAIMED each vertex and continued past it, rebuilt from
@@ -485,7 +485,7 @@ fn the_network_renders_every_river_vertices_downhill_edge() {
     let mut checked = 0usize;
     for seed in OUTLET_SEEDS {
         let outcome = generate(Seed(seed), &geo, &TerrainPins::default()).expect("seed generates");
-        let globe = &outcome.globe;
+        let globe = &outcome.value;
         let net = ChannelNetwork::build(globe, &geo, globe.channel_noise_seed());
         let rendered = rendered_edges(&net);
         for c in geo.vertices() {
@@ -544,7 +544,7 @@ fn the_network_renders_the_whole_flow_tree() {
     let mut unrendered_sinks = 0usize;
     for seed in OUTLET_SEEDS {
         let outcome = generate(Seed(seed), &geo, &TerrainPins::default()).expect("seed generates");
-        let globe = &outcome.globe;
+        let globe = &outcome.value;
         let net = ChannelNetwork::build(globe, &geo, globe.channel_noise_seed());
 
         let is_land = |c: Vertex| *globe.elevation.get(c) >= globe.sea_level;
@@ -652,7 +652,7 @@ fn the_meander_field_is_pinned() {
     // sampled through is immaterial to what is pinned.
     let geo = Geosphere::new(5);
     let outcome = generate(Seed(42), &geo, &TerrainPins::default()).expect("seed 42 generates");
-    let net = ChannelNetwork::build(&outcome.globe, &geo, outcome.globe.channel_noise_seed());
+    let net = ChannelNetwork::build(&outcome.value, &geo, outcome.value.channel_noise_seed());
     let third = 0.577_350_269_189_625_8_f64;
     let pinned: [([f64; 3], u64); 8] = [
         ([1.0, 0.0, 0.0], 0xbfd2_2227_19c5_c360),
@@ -796,7 +796,7 @@ fn the_rendered_network_composes_to_the_coarse_graphs_terminus() {
     let mut agreed = 0usize;
     for seed in OUTLET_SEEDS {
         let outcome = generate(Seed(seed), &geo, &TerrainPins::default()).expect("seed generates");
-        let globe = &outcome.globe;
+        let globe = &outcome.value;
         let net = ChannelNetwork::build(globe, &geo, globe.channel_noise_seed());
         let is_reach = |c: Vertex| {
             !matches!(*globe.water_kind.get(c), WaterKind::Ocean) && globe.downhill.get(c).is_some()
@@ -933,7 +933,7 @@ fn a_vertices_branches_partition_its_own_unit_of_catchment() {
     let mut leaves = 0usize;
     for seed in OUTLET_SEEDS {
         let outcome = generate(Seed(seed), &geo, &TerrainPins::default()).expect("seed generates");
-        let globe = &outcome.globe;
+        let globe = &outcome.value;
         let net = ChannelNetwork::build(globe, &geo, globe.channel_noise_seed());
         let cut = CatchmentCut::Drawn(globe.rill_partition_seed());
 
@@ -1070,7 +1070,7 @@ fn every_branch_is_attached_to_the_line_above_it() {
     let mut worst_gap = 0.0_f64;
     for seed in OUTLET_SEEDS {
         let outcome = generate(Seed(seed), &geo, &TerrainPins::default()).expect("seed generates");
-        let globe = &outcome.globe;
+        let globe = &outcome.value;
         let net = ChannelNetwork::build(globe, &geo, globe.channel_noise_seed());
         let cut = CatchmentCut::Drawn(globe.rill_partition_seed());
         for vertex in sampled_vertices(globe, &geo) {
@@ -1329,7 +1329,7 @@ fn a_branchs_width_is_anchored_to_its_drained_area_not_to_a_level() {
         let index = NearestVertexIndex::new(&geo);
         let unit = vertex_catchment(&geo);
         let outcome = generate(Seed(42), &geo, &TerrainPins::default()).expect("seed generates");
-        let globe = &outcome.globe;
+        let globe = &outcome.value;
         let net = ChannelNetwork::build(globe, &geo, globe.channel_noise_seed());
         let cut = CatchmentCut::Drawn(globe.rill_partition_seed());
 
@@ -1504,7 +1504,7 @@ fn room_of_depth(face: &Facet, depth: u32) -> Facet {
 fn the_branching_follows_the_partition_and_not_a_fixed_rule() {
     let geo = Geosphere::new(OUTLET_LEVEL);
     let outcome = generate(Seed(42), &geo, &TerrainPins::default()).expect("seed generates");
-    let globe = &outcome.globe;
+    let globe = &outcome.value;
     let net = ChannelNetwork::build(globe, &geo, globe.channel_noise_seed());
     let vertex = *sampled_vertices(globe, &geo)
         .iter()

@@ -117,40 +117,7 @@ pub enum ForcingPin {
     Zero,
 }
 
-/// Why sky genesis refused to produce a system.
-/// type-audit: bare-ok(identifier-text: InvalidPin.pin), bare-ok(prose: InvalidPin.reason), bare-ok(identifier-text: UnsatisfiablePin.pin), bare-ok(prose: UnsatisfiablePin.reason)
-#[derive(Debug, Clone, PartialEq)]
-pub enum GenesisError {
-    /// A pin's value is outside its legal range.
-    InvalidPin {
-        /// The pin's CLI-facing name.
-        pin: String,
-        /// The rule it violates.
-        reason: String,
-    },
-    /// A legal pin has no physically consistent solution under the model.
-    UnsatisfiablePin {
-        /// The pin's CLI-facing name.
-        pin: String,
-        /// The physical conflict.
-        reason: String,
-    },
-}
-
-impl std::fmt::Display for GenesisError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            GenesisError::InvalidPin { pin, reason } => {
-                write!(f, "invalid pin '{pin}': {reason}")
-            }
-            GenesisError::UnsatisfiablePin { pin, reason } => {
-                write!(f, "unsatisfiable pin '{pin}': {reason}")
-            }
-        }
-    }
-}
-
-impl std::error::Error for GenesisError {}
+pub use hornvale_kernel::genesis::GenesisError;
 
 /// Render every pinned field of `pins` as a round-trippable `key=value`
 /// string (spec §8). Unpinned (`None`) fields emit nothing.

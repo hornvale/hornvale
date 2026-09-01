@@ -247,7 +247,7 @@ fn rift_probe_tables() {
     for seed in 1..=PROBE_SEEDS {
         let outcome = generate(Seed(seed), &geo, &TerrainPins::default())
             .unwrap_or_else(|e| panic!("seed {seed}: default genesis failed: {e}"));
-        let globe = &outcome.globe;
+        let globe = &outcome.value;
         let sea = globe.sea_level;
         let baseline = shoreline_development(&geo, &globe.elevation, sea)
             .unwrap_or_else(|| panic!("seed {seed}: baseline D has no land/ocean split"));

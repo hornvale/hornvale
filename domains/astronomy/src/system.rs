@@ -26,21 +26,16 @@ pub struct StarSystem {
     pub wanderers: Vec<Wanderer>,
 }
 
-/// A generated system plus the notes genesis recorded along the way.
-/// type-audit: bare-ok(prose)
-#[derive(Debug, Clone, PartialEq)]
-pub struct GenesisOutcome {
-    /// The system itself.
-    pub system: StarSystem,
-    /// Human-readable degradation records (become genesis-note facts).
-    pub notes: Vec<String>,
-}
+pub use hornvale_kernel::genesis::GenesisOutcome;
 
 /// Generate the sky for a world: anchor-first, pins conditioned on,
 /// loud failure on unsatisfiable pins. Takes the WORLD seed and derives
 /// the astronomy domain seed internally. Returns the system and any notes
 /// about degradations that occurred.
-pub fn generate(world_seed: Seed, pins: &SkyPins) -> Result<GenesisOutcome, GenesisError> {
+pub fn generate(
+    world_seed: Seed,
+    pins: &SkyPins,
+) -> Result<GenesisOutcome<StarSystem>, GenesisError> {
     let astronomy_seed = world_seed.derive(streams::ROOT);
     let star = generate_star(astronomy_seed);
     let anchor = generate_anchor(astronomy_seed, &star, pins)?;
@@ -49,7 +44,7 @@ pub fn generate(world_seed: Seed, pins: &SkyPins) -> Result<GenesisOutcome, Gene
     let forcing = crate::forcing::generate_forcing(astronomy_seed, &anchor, &moons, pins);
     let wanderers = generate_wanderers(astronomy_seed, &star, &anchor, pins);
     Ok(GenesisOutcome {
-        system: StarSystem {
+        value: StarSystem {
             star,
             anchor,
             moons,
@@ -68,7 +63,7 @@ mod tests {
     #[test]
     fn generate_assembles_a_complete_system() {
         let outcome = generate(Seed(42), &SkyPins::default()).unwrap();
-        let system = &outcome.system;
+        let system = &outcome.value;
         assert!(system.star.luminosity.get() > 0.0);
         assert!(system.anchor.year.get() > 0.0);
         assert!(system.moons.len() <= 3);
