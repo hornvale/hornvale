@@ -112,6 +112,12 @@ pub extern "C" fn hv_start(seed: u64) -> i32 {
         // committed transcript and this ABI's byte-identity smoke depend on
         // (The Quire, Task 2).
         target: hornvale_vessel::PossessTarget::Flagship,
+        // No tableau at the ABI. A tableau is a STAGED situation, asserted
+        // by its author rather than derived from the seed, and decision 0055
+        // runs the determinism guarantee up to and including this boundary:
+        // what crosses here must be a function of (seed, pins) and nothing
+        // else. Staging is a fixture and a sketchpad, not a wire format.
+        tableau: None,
     };
     match Session::start(world_ref, &opts) {
         Ok((session, opening)) => {
