@@ -82,6 +82,7 @@ map of the whole documentation set is [`docs/README.md`](https://github.com/horn
   - [The far field is low-rank — multipole summaries and one-way aggregation](#the-far-field-is-low-rank--multipole-summaries-and-one-way-aggregation)
   - [The instrument turned inward — the project as its own subject](#the-instrument-turned-inward--the-project-as-its-own-subject)
   - [A pattern language for traversal, not furnishing](#a-pattern-language-for-traversal-not-furnishing)
+  - [The orange problem — one kind model, not two](#the-orange-problem--one-kind-model-not-two)
   - [Intellectual lineage](#intellectual-lineage)
 
 ---
@@ -5445,6 +5446,139 @@ traversal grammar is on the right side of that line only for as long as its
 gates are derived — from ecology, from hydrology, from what a people cut — and
 not hand-placed. `MAP-underworld-vaults` is the authored-content sibling and is
 deliberately separable: that is content, this is structure.
+
+## The orange problem — one kind model, not two
+
+Consider an orange. It is edible. It is a fruit, as bananas and tomatoes are.
+It is normally orange, though not always. It grows on a tree; the tree dies
+outside a narrow climate; its blossom scents the air; it carries seeds that
+become more trees. And — one time in a hundred — it sprouts legs and a mouth
+and runs off shouting at bears, except for the ones that grow no eyes.
+
+Nine claims. They look like nine properties of a thing, and they are not. They
+are four different mechanisms wearing one noun, and telling them apart is most
+of the design.
+
+### What a species already is
+
+Hornvale's answer for creatures is already composition, and it is already
+running. A species is **not a type**. It is a string — `KindId("goblin")` —
+plus whatever component tables happen to carry a row for it:
+
+```text
+  biosphere_registry   KindId -> BiosphereTraits    niche, thermal strategy
+  psyche_registry      KindId -> MindVector         deliberation, horizon, boldness
+  perception_registry  KindId -> Perception         what it can sense
+  family_of            KindId -> &str               goblin -> goblinoid
+  habitat_realm        KindId -> HabitatRealm       where it can live
+```
+
+Nothing anywhere holds "the definition of a goblin". A goblin is the *join*
+across those tables at that key, and a species that no table mentions is
+simply a key with no consequences. Adding an axis — a new table — costs
+nothing to the species that lack it. This is the whole argument for
+composition over inheritance, and the project made it years before anyone
+wrote the word down: the interesting predicates cut *across* any spine you
+might pick. *Edible* crosses fruit and bread and, in some traditions, rings.
+*Orange-coloured* crosses oranges, carrots and sunsets. A tree of kinds forces
+one spine and then fights every property that refuses to run along it.
+
+### What an object is
+
+An object is the same thing with a fence in front of it.
+
+`object_registry()` is a `ComponentStore<KindId, ObjectTraits>` — the same
+open, string-keyed shape the species tables have. But the vocabulary a caller
+can actually name is `AnchorKind`, a closed enum built by a macro: thirty-four
+variants, thirty-six exhaustive match sites, seventeen files. `thing_kind_of`
+is the adapter between them, turning a variant into the `KindId` the store
+wanted all along.
+
+So the composition layer exists for objects and is reached only through a
+gate. The consequence is exact and it is why the orange is hard: **a kind the
+enum does not name cannot exist**, however open the store behind it is. Not
+because anything about the model forbids it, but because a fence built for
+thirteen furniture anchors is still standing after the world grew fruit.
+
+### The nine claims, sorted
+
+Sorted by mechanism rather than by subject, most of the orange is already
+answerable:
+
+```text
+  kind-level component     edible, normally orange      ObjectTraits row
+  kind taxonomy            orange, banana are fruit     family_of
+  kind-to-world niche      the tree dies in frost       ConditionNiche, BiomeAffinity
+  emission                 blossom scent                the phenomena channel
+  kind-to-kind edge        grows on; seeds become       MISSING
+  per-instance component   this one has legs, no eyes   MISSING
+```
+
+Four of six mechanisms ship today. What is missing is not a model but two
+additions to one.
+
+**Edges** are the first. *Grows on* and *seeds become* are not fields on
+orange; they are arrows between kinds. `family_of` is the degenerate case — a
+single edge type, flattened to a column — and the general form is a graph over
+`KindId`. That graph is what lets the world *reason* about an orange tree
+rather than look it up: a thing with an origin, a yield and a successor is a
+thing a simulation can grow, harvest and propagate without any of those verbs
+knowing what fruit is.
+
+**Per-instance variation** is the second, and it is where a naive answer costs
+the most. The one-in-a-hundred animate orange is a property of an *individual*,
+not of its kind, and the obvious implementation stores it.
+
+It should not be stored. Every entity in this world already derives from a
+`Lineage` — a parent, a role, an ordinal — and that lineage is exactly the
+per-instance identity a variation wants to be a function of. An orange's
+animacy can be **computed from its own identity**, on demand, deterministic
+forever, costing no ledger and surviving every reload without being written
+down. A thousand oranges then cost nothing but a thousand keys, and the
+hundredth one has legs because it always did.
+
+This is not an optimisation. It is the difference between a world whose
+detail is *authored into storage* and one whose detail is *implied by its
+seed*, and the second is the only one that scales to the object variety a
+roguelike expects.
+
+### Where the ECS analogy stops
+
+Take the entity and the component. Be careful with the system.
+
+An entity-component-system is three ideas, and only two of them are answers to
+Hornvale's problem. Composition of data — yes, and already done. Systems as
+the unit of behaviour — a scheduler that sweeps every entity carrying
+`Position` and `Velocity` — would introduce a **second cross-domain
+communication mechanism**, competing with the trace protocol of facts,
+phenomena and fields that domains already speak. And determinism makes the
+competition dangerous rather than merely redundant: two systems visiting one
+entity in a different order produce a different world, so iteration order
+becomes a save-format contract nobody declared. The existing arrangement —
+each domain owning its derivations, all of them meeting in the ledger — is
+stronger here precisely because it has no scheduler to get wrong.
+
+Archetype storage is the third idea and it answers a question this project
+has not asked. It buys cache locality for very large hot loops; Hornvale's
+components are read in derivations, not swept per frame, and the kernel's
+existing counsel is that dense storage is a `Vec` and not a map.
+
+### What not to do
+
+The temptation, having seen the shape whole, is to design the object model
+completely and land it at once. That trade is bad: three working mechanisms
+would be put at risk to serve two missing ones, and the two are additive on
+the three.
+
+The order that follows from the diagnosis is the order of least regret. Retire
+the enum's closedness, so a kind is a row rather than a variant and there is
+**one** answer to what a kind is instead of two. Then edges, which generalise
+a table that already exists. Then per-instance derivation, which needs the
+first two to have anything to vary.
+
+The orange is a better forcing function than a specification. It is small, it
+is concrete, and every version of it that cannot yet exist says exactly which
+mechanism is missing.
 
 ## Intellectual lineage
 
