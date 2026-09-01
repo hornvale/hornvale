@@ -189,6 +189,23 @@ pub struct PresentEntry {
     /// Its felt state — a presence-gated read of another creature's
     /// interior, which is why it lives here and not in `social`.
     pub felt: String,
+    /// What it is holding, in [`crate::thing::held_by`]'s `EntityId` order —
+    /// the co-located half of [`SelfChannel::carrying`], resolved through the
+    /// SAME fold, so a pane cannot disagree with a verb about what is in
+    /// whose hands.
+    ///
+    /// **Here rather than on `social`, for `felt`'s reason exactly.** Custody
+    /// is a presence-gated read of another creature's state: you learn it by
+    /// standing in the room and looking. `SocialEntry`'s membership is world
+    /// truth — every derived body, co-located or not — so the same field
+    /// there would hand a possession that has never met a creature the
+    /// contents of its hands, which is a materially more exploitable
+    /// disclosure than a mood.
+    ///
+    /// Empty for a creature holding nothing, which is most of them. Additive
+    /// on `vessel/session/v2` exactly as [`SelfChannel::carrying`] was, so no
+    /// version moves.
+    pub carrying: Vec<CarriedEntry>,
 }
 
 /// What the agent knows: the accumulated projection, in key order.
@@ -556,6 +573,7 @@ mod tests {
                     entity: 1230,
                     label: "a goblin".to_string(),
                     felt: "is content".to_string(),
+                    carrying: Vec::new(),
                 }],
             },
             known: KnownChannel {

@@ -504,14 +504,24 @@ fn a_creature_standing_in_the_chamber_reaches_the_plan() {
     let extent = plan.extent;
     let you = plan.you;
 
+    // Narrowed to AGENT-kind marks (The Legend, Task 10): since a lit
+    // furnishing (a hearth, a bed, …) now rides the same `marks` list with
+    // `kind: "furnishing"`, `marks` is no longer synonymous with "the
+    // creatures drawn here". This test's own claim is about the placed
+    // companion specifically, so it must check the subset the companion
+    // could actually appear in, not the whole list — a furnishing sharing
+    // this chamber would otherwise fail every assertion below for a reason
+    // that has nothing to do with the companion.
+    let agent_marks: Vec<_> = marks.iter().filter(|m| m.kind == "agent").collect();
+
     assert!(
-        !marks.is_empty(),
-        "the placed companion was chosen BECAUSE it draws a mark, so an empty \
-         plan here means the seam placement and the snapshot disagree: present \
-         = {:?}",
+        !agent_marks.is_empty(),
+        "the placed companion was chosen BECAUSE it draws a mark, so no agent \
+         mark on the plan here means the seam placement and the snapshot \
+         disagree: present = {:?}",
         snap.sensed.present
     );
-    for mark in &marks {
+    for mark in &agent_marks {
         // The NPC's OWN noun, not a generic one — the join `PlanMark` took the
         // focalizer's shape for.
         assert!(
@@ -650,4 +660,55 @@ fn the_snapshot_stays_a_pure_read() {
         a, b,
         "two snapshots with no verb between them must be identical"
     );
+}
+
+/// A co-located creature's custody reaches the wire, and an empty hand is an
+/// empty list rather than an absent field.
+///
+/// **Both directions, in one test, deliberately.** The negative half is the
+/// one that rots: a `carrying` that was never populated at all would satisfy
+/// an assertion that only ever checked the empty case, and the positive half
+/// alone would not notice a field that reports every creature's holdings
+/// regardless of what it holds.
+#[test]
+fn a_co_located_creature_reports_what_it_carries_and_reports_an_empty_hand_as_empty() {
+    let world = world();
+    let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+    common::step_inside(&mut session);
+    let companion = session.bodies()[1].entity;
+    session.place_creature_at_me(companion);
+
+    // Empty-handed first: the negative direction, before anything is placed.
+    let snap = session.snapshot().expect("a live session snapshots");
+    let seen = snap
+        .sensed
+        .present
+        .iter()
+        .find(|p| p.entity == companion.0.get())
+        .expect("the placed companion is present");
+    assert!(
+        seen.carrying.is_empty(),
+        "a creature holding nothing reports an empty list, not a populated \
+         one: {:?}",
+        seen.carrying
+    );
+
+    // Now put something in its hand.
+    let thing = session
+        .place_thing_in_hand(companion, "key")
+        .expect("a shallow facet packs a thing id");
+    let snap = session.snapshot().expect("a live session snapshots");
+    let seen = snap
+        .sensed
+        .present
+        .iter()
+        .find(|p| p.entity == companion.0.get())
+        .expect("the placed companion is still present");
+    assert_eq!(
+        seen.carrying.len(),
+        1,
+        "the companion holds one thing and `sensed.present` must say so"
+    );
+    assert_eq!(seen.carrying[0].entity, thing.0.get());
+    assert_eq!(seen.carrying[0].noun, "a key");
 }

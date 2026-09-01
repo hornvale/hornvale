@@ -3,9 +3,10 @@
 //! `hornvale-game-core`'s `Cargo.toml`) and handed to `core` as an
 //! already-rendered [`hornvale_game_core::Grid`].
 //!
-//! [`draw`]/[`draw_with`] paint exactly one thing: land vs ocean, one
-//! glyph per grid cell. Since The Quadrat a tile is a MESH FACET and its
-//! terrain is read from that facet's own grid-level triangle by direct
+//! [`draw`]/[`draw_with`] paint one glyph per grid cell, from that cell's
+//! water class and elevation band (The Legend, Task 6 — see
+//! [`glyph_and_color_for`]). Since The Quadrat a tile is a MESH FACET and
+//! its terrain is read from that facet's own grid-level triangle by direct
 //! addressing — [`terrain_at_tile`] — never by resampling the screen.
 //!
 //! **This replaces 49-point area-majority sampling, and the premise that
@@ -22,11 +23,14 @@
 //! every rung the raster draws. A footprint vote over a footprint smaller
 //! than a mesh cell buys nothing and costs 49 spatial searches.
 //!
-//! The glyph vocabulary (`~` ocean, `.` land) is the spike's own
+//! **History, not current behaviour**: the glyph vocabulary used to be a
+//! bare `` `~` `` ocean / `` `. ``  land binary, the spike's own
 //! (`windows/worldgen/examples/portolan_spike.rs`, `glyph_for`, line
 //! 171 -- deleted at this campaign's close, git history at `0292de87f^`)
-//! — reused rather than invented — even though the vertex-lookup
-//! mechanism underneath it is not: `glyph_for` asked
+//! — reused rather than invented at the time. The Legend (Task 6) retired
+//! that binary — see [`glyph_and_color_for`] for the vocabulary this
+//! module draws now — but the vertex-lookup mechanism it sits on top of
+//! was never the spike's: `glyph_for` asked
 //! [`hornvale_terrain::GeneratedTerrain::nearest_vertex`], an O(vertex count)
 //! brute-force scan the spike didn't have to care about (it renders three
 //! static frames and exits). This module asks
@@ -61,17 +65,24 @@ use hornvale_kernel::{
     Facet, FacetId, Geosphere, NearestVertexIndex, RoomMeshMemo, Value, Vertex, World,
 };
 use hornvale_terrain::GeneratedTerrain;
+use hornvale_terrain::landscape::{FeatureClass, FeatureId as LandscapeFeatureId};
 use std::collections::{BTreeMap, BTreeSet};
 
 use crate::discovery::{Discovered, FeatureId};
 use crate::mercator::{self, Frame};
 
-/// Every placed settlement's nearest terrain vertex — every subject
-/// carrying [`hornvale_settlement::IS_SETTLEMENT`], resolved through its own
+/// Every placed settlement's nearest terrain vertex, valued by that
+/// settlement's own committed population — every subject carrying
+/// [`hornvale_settlement::IS_SETTLEMENT`], resolved through its own
 /// committed `LATITUDE`/`LONGITUDE` to the [`Vertex`] [`NearestVertexIndex::nearest`]
 /// says is closest. A settlement missing either coordinate fact is skipped
 /// rather than guessed at (genesis always commits the pair together; a
-/// hand-built world might not, and this must not panic on one).
+/// hand-built world might not, and this must not panic on one). Two
+/// settlements resolving to the SAME nearest vertex are, for a drawn map's
+/// purposes, the same point (`crate::discovery::FeatureId::Settlement`'s own
+/// doc already says so for identity); population takes the larger of the
+/// two rather than the last one scanned, so map iteration order cannot
+/// silently pick a smaller town's population for the shared marker.
 ///
 /// **Extracted here (fix round 1, R10) from two near-identical copies**:
 /// `driver.rs`'s `Driver::start_from_world` inlined this exact sequence
@@ -82,12 +93,21 @@ use crate::mercator::{self, Frame};
 /// so this is the one copy both callers share. Lives in `plate.rs` because
 /// this is where the roster is CONSUMED ([`draw_with`]'s own `settlements`
 /// parameter), matching [`draw_feature_layer`]'s existing convention of
-/// taking a resolved `BTreeSet<Vertex>` rather than a ledger to read.
+/// taking a resolved roster rather than a ledger to read.
+///
+/// **Widened from `BTreeSet<Vertex>` to `BTreeMap<Vertex, u64>` (The
+/// Legend, Task 7)**, keyed the same way, valued by
+/// `hornvale_settlement::POPULATION` — the size
+/// [`draw_feature_layer`]'s own viewport-relative major/minor split ranks
+/// by. Both callers draw through [`draw_with`], whose own `settlements`
+/// parameter widened the same way at the same time, so there is no
+/// caller left that only ever wanted membership; a bare vertex set is
+/// still one `.keys()` away for a reader that does.
 pub fn settlements_of(
     world: &World,
     geo: &Geosphere,
     nearest: &NearestVertexIndex,
-) -> BTreeSet<Vertex> {
+) -> BTreeMap<Vertex, u64> {
     world
         .ledger
         .find(hornvale_settlement::IS_SETTLEMENT)
@@ -106,9 +126,21 @@ pub fn settlements_of(
                 Some(Value::Number(n)) => *n,
                 _ => return None,
             };
-            Some(nearest.nearest(geo, lat, lon))
+            let population = match world
+                .ledger
+                .value_of(fact.subject, hornvale_settlement::POPULATION)
+            {
+                Some(Value::Number(n)) => *n as u64,
+                _ => return None,
+            };
+            Some((nearest.nearest(geo, lat, lon), population))
         })
-        .collect()
+        .fold(BTreeMap::new(), |mut map, (vertex, population)| {
+            map.entry(vertex)
+                .and_modify(|p: &mut u64| *p = (*p).max(population))
+                .or_insert(population);
+            map
+        })
 }
 
 /// A view onto the world plate: which mesh RUNG the virtual chart is drawn
@@ -236,38 +268,222 @@ pub fn virtual_dims(depth: u32) -> (u32, u32) {
     (w, h)
 }
 
-/// The glyph for a cell whose sampled footprint is majority ocean — the
-/// spike's own vocabulary (see the module doc).
+/// The glyph for open ocean — `WaterKind::Ocean`, index 0
+/// ([`hornvale_terrain::WaterKind::LEGEND`]). Retained from the spike's own
+/// vocabulary (see the module doc), but it now names one specific water
+/// class rather than "everything the old ocean/land binary called wet" —
+/// see [`glyph_and_color_for`].
 const OCEAN_GLYPH: char = '~';
-/// The glyph for a cell whose sampled footprint is majority land — see
-/// [`OCEAN_GLYPH`].
-const LAND_GLYPH: char = '.';
+/// The glyph for a terminal endorheic sink — `WaterKind::SaltBasin`, index
+/// one. New at The Legend: before this task every non-ocean cell drew
+/// [`OCEAN_GLYPH`]'s complement regardless of what kind of water it
+/// actually was.
+const SALT_BASIN_GLYPH: char = '=';
+/// The glyph for a river channel — `WaterKind::River`, index 2. See
+/// [`SALT_BASIN_GLYPH`].
+const RIVER_GLYPH: char = '"';
 
-/// The colour claim for an ocean cell, when colour is allowed. An
-/// invented client-side palette, not a wire value: the world plate has no
-/// snapshot channel to carry a colour off (see
-/// [`hornvale_game_core::Source::World`]'s own doc), so this and
-/// [`LAND_COLOR`] are the only two colours this module will ever draw.
+/// The RELIEF ladder's glyphs, index-matched to
+/// [`hornvale_scene::RELIEF_LEGEND`] (`abyss, shelf, lowland, upland,
+/// highland, alpine`) — drawn only for `WaterKind::DryLand` (index 3;
+/// every wetter class draws its own water glyph instead, see
+/// [`glyph_and_color_for`]).
+///
+/// **The allocation rule in code** (spec §2, restated in this module's own
+/// doc): ink ASCENDS with the band, so adjacent bands stay tellable apart
+/// by weight alone even in monochrome. This is Task 5's specimen sheet
+/// (`docs/audits/glyph-specimen-sheet.txt`) "stipple" candidate — the only
+/// one of its three ladders with that property — **with the highland mark
+/// re-picked twice**:
+///
+/// The sheet's own stipple highland glyph was `*`, and Nathan assigned `*`
+/// to cave mouths (`.superpowers/sdd/2026-08-28-the-legend/progress.md`,
+/// "Nathan's glyph assignments", 2026-08-30), so Task 6 first moved
+/// highland to `{`, one of the sheet's own two listed alternatives at that
+/// rung (the other was `)`) — `{` was chosen over `)` because `)` reads as
+/// a stray, unbalanced parenthesis with nothing before it, while `{` kept
+/// the same "opening" shape-family the semicolon just below it already
+/// suggests.
+///
+/// **Nathan's fix-round-1 review moved it again, to `^`**: "carets work
+/// better for most mountains" — "most", so only this one rung moves; the
+/// other five bands are untouched. This is a deliberate departure from
+/// strict ink-ordinality, not an oversight of it: decision 0389 lets a
+/// glyph carry order OR identity, and while `^` is not obviously heavier
+/// ink than `;` (the upland glyph directly below it), `^` *depicts* a
+/// mountain — the universal roguelike convention for one — which is the
+/// stronger of the two claims. A future reader tempted to "fix" this ladder
+/// back to a pure ink ramp should not; the identity claim is the point.
+///
+/// `^` is not a collision with `windows/scene/src/surrounds_ascii.rs`'s own
+/// `impedance_glyph` (which also emits `^`, for impedance band 4): that is
+/// the sim's own walk-band vocabulary, outside this client's register by
+/// prior ruling, and high/steep ground is the same concept at globe scale
+/// (highland) and walk scale (impedance 4) — a future task porting that
+/// ladder into this crate's register should bind `^` once, to cover both,
+/// rather than mint a second glyph for the same idea.
+const RELIEF_GLYPHS: [char; 6] = [' ', '`', ',', ';', '^', '%'];
+
+/// The colour claim for open ocean, when colour is allowed. An invented
+/// client-side palette, not a wire value: the world plate has no snapshot
+/// channel to carry a colour off (see
+/// [`hornvale_game_core::Source::World`]'s own doc).
 const OCEAN_COLOR: [u8; 3] = [20, 60, 160];
-/// The colour claim for a land cell, when colour is allowed. See
-/// [`OCEAN_COLOR`].
-const LAND_COLOR: [u8; 3] = [40, 120, 40];
+/// The colour claim for a salt basin. See [`OCEAN_COLOR`].
+const SALT_BASIN_COLOR: [u8; 3] = [230, 230, 200];
+/// The colour claim for a river. See [`OCEAN_COLOR`].
+const RIVER_COLOR: [u8; 3] = [90, 180, 220];
+/// The RELIEF ladder's colours, index-matched to [`RELIEF_GLYPHS`] — lifted
+/// unchanged from Task 5's specimen sheet (the "stipple" row's own ramp),
+/// since re-tuning them here would silently fork the two artifacts.
+const RELIEF_COLORS: [[u8; 3]; 6] = [
+    [20, 20, 90],
+    [30, 130, 150],
+    [50, 150, 70],
+    [160, 160, 50],
+    [150, 95, 45],
+    [235, 235, 235],
+];
 
-/// The glyph for a DISCOVERED settlement (Task 5, §A3's "point sites").
+/// The terrain-layer glyph and colour for one tile, from its water class
+/// ([`TileTerrain::water`], `WaterKind::index()`'s own order) and elevation
+/// band ([`TileTerrain::band`], [`hornvale_scene::relief_band`]'s own
+/// order).
+///
+/// **Water outranks elevation for the three WET classes** (indices 0-2,
+/// ocean/salt-basin/river): a river channel draws as the river mark
+/// regardless of which relief band its own vertex would otherwise fall
+/// in — water is "what substance is here", which the register's own
+/// allocation rule (spec §2) says a glyph should carry as IDENTITY, not as
+/// a second-guess against the land's height. Only `WaterKind::DryLand`
+/// (index 3) has no water glyph of its own, so only there does the RELIEF
+/// band decide the mark.
+///
+/// `band` is clamped defensively to the legend's own length rather than
+/// indexing unchecked — [`hornvale_scene::relief_band`]'s own contract
+/// already guarantees `0..6`, so the clamp is a belt no caller is expected
+/// to need, not a silent tolerance for a wider range.
+fn glyph_and_color_for(water: u8, band: u32) -> (char, [u8; 3]) {
+    match water {
+        0 => (OCEAN_GLYPH, OCEAN_COLOR),
+        1 => (SALT_BASIN_GLYPH, SALT_BASIN_COLOR),
+        2 => (RIVER_GLYPH, RIVER_COLOR),
+        _ => {
+            let i = (band as usize).min(RELIEF_GLYPHS.len() - 1);
+            (RELIEF_GLYPHS[i], RELIEF_COLORS[i])
+        }
+    }
+}
+
+/// The glyph for a DISCOVERED MINOR settlement (Task 5, §A3's "point
+/// sites"; Task 7 splits the old single `SETTLEMENT_GLYPH` in two).
 /// Never drawn undiscovered — see [`draw_feature_layer`]'s own doc for why
 /// "not yet drawn" is the only state an undiscovered site is ever in.
-pub(crate) const SETTLEMENT_GLYPH: char = '#';
-/// The glyph for a DISCOVERED cave mouth. See [`SETTLEMENT_GLYPH`].
-pub(crate) const CAVE_GLYPH: char = 'o';
+///
+/// **Nathan's own glyph assignment (2026-08-30, `progress.md`'s "Nathan's
+/// glyph assignments"), not a Task 6 leftover.** The old `#` collided with
+/// `plan.rs`'s WALL in three renderers; Nathan picked `o`/`O` (lowercase for
+/// an ordinary settlement, capital for a MAJOR one) rather than leaving the
+/// replacement to the specimen sheet. That freed `o` from its old job —
+/// [`CAVE_GLYPH`] moves to `*` in the same commit, never leaving a stale
+/// claim on `o` for the two characters to collide over.
+///
+/// **Ruling AG resolves the letter's apparent collision with the creature
+/// codespace.** The register's own rule reserves `a`-`z`/`A`-`Z` for a
+/// creature's noun-initial, and `o` is an owlbear's initial — but that rule
+/// is scoped to the WALK band and floor plan (`chart.rs`), where telling one
+/// creature from another is the whole point. The world map draws every
+/// creature as the generic [`AGENT_GLYPH`] regardless of species, so `o`/`O`
+/// here never compete with a creature mark for the same cell, and Nathan's
+/// assignment stands unmodified.
+pub(crate) const SETTLEMENT_MINOR_GLYPH: char = 'o';
+/// The glyph for a DISCOVERED MAJOR settlement — the top
+/// [`MAJOR_SETTLEMENT_QUANTILE`] of settlements ranked by population among
+/// those actually IN FRAME (discovered and on-screen; see
+/// [`draw_feature_layer`]'s own doc for the ranking). See
+/// [`SETTLEMENT_MINOR_GLYPH`] for the rest of the reasoning; this is the
+/// same identity claim (a settlement), one size tier up.
+pub(crate) const SETTLEMENT_MAJOR_GLYPH: char = 'O';
+/// The glyph for a DISCOVERED cave mouth. Moved here from `o` (Task 7,
+/// Nathan's glyph assignments) once `o`/`O` were claimed by settlements —
+/// see [`SETTLEMENT_MINOR_GLYPH`]'s doc for why the two moves are one
+/// commit, not two.
+pub(crate) const CAVE_GLYPH: char = '*';
+/// The glyph for a DISCOVERED volcano (Task 7): the map's own edifice
+/// marker, gated on [`crate::discovery::FeatureId::Extent`] exactly like
+/// any other landscape feature — see [`draw_feature_layer`]'s own doc on
+/// why this is the one landform Task 7 draws THROUGH the existing
+/// discovery mechanism rather than unconditionally.
+///
+/// `pub`, not `pub(crate)` like [`CAVE_GLYPH`]/[`SETTLEMENT_MINOR_GLYPH`]:
+/// `bin/tests/plate_vocabulary.rs` (a separate crate to `rustc`) needs this
+/// to pin the landform reachability guard against a real render, the same
+/// reason [`terrain_at_tile`] is `pub`.
+pub const VOLCANO_GLYPH: char = '!';
+/// The glyph for a waterfall (Task 7). Drawn UNCONDITIONALLY — see
+/// [`draw_feature_layer`]'s own doc on why a waterfall has no discovery
+/// identity to gate on. `pub` for the same integration-test reason
+/// [`VOLCANO_GLYPH`] is.
+///
+/// **A third landform, a river delta, was drawn here through fix round 1
+/// and was removed outright**: its glyph (`:`) collided with the sim's own
+/// impedance ladder (`windows/scene/src/surrounds_ascii.rs`, band 3), which
+/// cannot move (it is pinned to the sim by
+/// `the_shape_matches_the_sims_own_ascii_render`), and unlike `^` a delta
+/// and moderately rough going are unrelated referents that cannot share a
+/// binding. See `clients/game/core/src/register.rs`'s own `REGISTER` doc
+/// for the fuller rationale, including the tier spike's own finding that a
+/// third point marker read as noise rather than invitation.
+pub const WATERFALL_GLYPH: char = '|';
 
 /// The colour claim for a discovered settlement — a warm tint distinct from
 /// both terrain colours, so a settlement reads as a different SUBSTANCE
 /// (§A5: colour carries substance, never the epistemic channel — an
 /// undiscovered site simply is not drawn at all, so there is no
 /// discovered/undiscovered pair of colours to confuse with one another).
+/// Shared by [`SETTLEMENT_MINOR_GLYPH`] and [`SETTLEMENT_MAJOR_GLYPH`]:
+/// colour carries the SUBSTANCE ("a settlement"), and size is the glyph's
+/// own job, so a second colour for the major tier would say two different
+/// things stand there.
 const SETTLEMENT_COLOR: [u8; 3] = [220, 180, 60];
 /// The colour claim for a discovered cave mouth. See [`SETTLEMENT_COLOR`].
 const CAVE_COLOR: [u8; 3] = [130, 120, 110];
+/// The colour claim for a discovered volcano — a hot, saturated tint
+/// distinct from every relief band and from [`SETTLEMENT_COLOR`]/
+/// [`CAVE_COLOR`], so an edifice reads as its own substance rather than an
+/// intense alpine band.
+const VOLCANO_COLOR: [u8; 3] = [220, 70, 30];
+/// The colour claim for a waterfall — brighter and cooler than
+/// [`RIVER_COLOR`], so a knickpoint reads as a distinct substance on the
+/// same channel rather than a re-tinted river cell.
+const WATERFALL_COLOR: [u8; 3] = [190, 230, 245];
+
+/// The top fraction of settlements IN FRAME, by population, that draw
+/// [`SETTLEMENT_MAJOR_GLYPH`] rather than [`SETTLEMENT_MINOR_GLYPH`] (Task
+/// 7). Nathan's own range is 10-25%; this picks the LOW end.
+///
+/// **Measured, not guessed** (`.superpowers/sdd/2026-08-28-the-legend/
+/// task-7-report.md` carries the full distribution): seed 42 mints 386
+/// settlements. In the campaign's own reference window (the GLOBE_RUNG,
+/// 80x24, equator-centred plate `plate_vocabulary.rs` renders), 16 land
+/// in frame, and 10% of that count (rounding up) is 2 majors. A sweep of
+/// every possible 80x24 window found the densest a plate can ever be —
+/// 54 settlements in one frame — where 10% is 6 majors, still rare against
+/// the picture. 25% at that same density would be 14, which starts to
+/// read as "half the towns are major", the exact noise the tier spike
+/// already warned against. The low end keeps `O` an event, not a texture,
+/// at every measured density.
+///
+/// **A single named constant, deliberately** (task brief): the rule may
+/// become rung-tied or world-relative later, and that should cost one
+/// line here, not a hunt through `draw_feature_layer`.
+///
+/// **Rank-based, not value-based.** The top `ceil(quantile * n)` settlements
+/// BY RANK draw major, not every settlement whose population clears some
+/// absolute or percentile VALUE — a world with one dominant capital and 300
+/// hamlets should not draw zero majors just because the capital is a
+/// long way above everyone else on the value axis.
+const MAJOR_SETTLEMENT_QUANTILE: f64 = 0.10;
 
 /// The observer's own position, on the band-B perception layer
 /// ([`draw_perception_layer`]). The SAME character
@@ -306,8 +522,10 @@ pub fn draw(
     win: &Window,
     w: u16,
     h: u16,
-    settlements: &BTreeSet<Vertex>,
+    settlements: &BTreeMap<Vertex, u64>,
     caves: &BTreeSet<Vertex>,
+    volcanoes: &BTreeSet<Vertex>,
+    waterfalls: &[Vertex],
     discovered: &Discovered,
 ) -> Grid {
     draw_with(
@@ -321,6 +539,8 @@ pub fn draw(
         colour_allowed(),
         settlements,
         caves,
+        volcanoes,
+        waterfalls,
         discovered,
     )
 }
@@ -426,7 +646,7 @@ pub(crate) fn colour_allowed() -> bool {
 /// glyph at its own cell (§A3: a point site "is not in the terrain render
 /// at all," unlike a terrain-borne landmark, which draws regardless of
 /// discovery).
-#[allow(clippy::too_many_arguments)] // `index` (fix round 1: build-once-pass-in, per Nathan's ruling) pushed this to 8; Task 5's `settlements`/`discovered` push it to 10 — mirroring `hornvale_game_core::render_with`'s own allow
+#[allow(clippy::too_many_arguments)] // `index` (fix round 1: build-once-pass-in, per Nathan's ruling) pushed this to 8; Task 5's `settlements`/`discovered` push it to 10; Task 7's `volcanoes`/`waterfalls` push it to 12 — mirroring `hornvale_game_core::render_with`'s own allow
 pub fn draw_with(
     terrain: &GeneratedTerrain,
     geo: &Geosphere,
@@ -436,8 +656,10 @@ pub fn draw_with(
     w: u16,
     h: u16,
     colour_allowed: bool,
-    settlements: &BTreeSet<Vertex>,
+    settlements: &BTreeMap<Vertex, u64>,
     caves: &BTreeSet<Vertex>,
+    volcanoes: &BTreeSet<Vertex>,
+    waterfalls: &[Vertex],
     discovered: &Discovered,
 ) -> Grid {
     // One memo for the whole plate — see this function's own doc for why
@@ -452,6 +674,8 @@ pub fn draw_with(
         colour_allowed,
         settlements,
         caves,
+        volcanoes,
+        waterfalls,
         discovered,
     );
     grid
@@ -509,12 +733,7 @@ pub(crate) fn draw_terrain_layer(
             // TERRAIN ONLY. Sites are PROJECTED by `draw_feature_layer` —
             // see its doc for why asking each screen cell "is your
             // representative a site?" dropped 37.8% of caves.
-            let ocean = tile.ocean;
-            let (glyph, color) = if ocean {
-                (OCEAN_GLYPH, OCEAN_COLOR)
-            } else {
-                (LAND_GLYPH, LAND_COLOR)
-            };
+            let (glyph, color) = glyph_and_color_for(tile.water, tile.band);
             grid.set(
                 col as u16,
                 row as u16,
@@ -557,6 +776,37 @@ fn tile_on_screen(
 ) -> Option<(u32, u32)> {
     let dcol = (plate_col + virtual_w - (win.origin_col % virtual_w)) % virtual_w;
     let drow = plate_row.checked_sub(win.origin_row)?;
+    Some((drow, dcol))
+}
+
+/// Where `vertex` lands on a `width`x`height` `dst`, or `None` if the
+/// projection puts it above the polar clamp or [`tile_on_screen`] puts it
+/// off the window (above/left) or off the drawn plate (right/bottom).
+///
+/// **Factored out at Task 7, not written twice.** [`draw_feature_layer`]'s
+/// own `place` closure needs this to decide where to paint; its
+/// viewport-relative settlement ranking (see that function's own doc) needs
+/// the SAME answer BEFORE any glyph is chosen, to know which settlements
+/// are even candidates for the comparison. Two copies of "is this vertex
+/// on screen, and where" is exactly the shape Task 6's fix round 1 already
+/// paid down once for [`tile_on_screen`] itself (see that function's own
+/// doc on the mutation it cost).
+fn project_onto_screen(
+    geo: &Geosphere,
+    f: &Frame,
+    win: &Window,
+    width: u32,
+    height: u32,
+    vertex: Vertex,
+) -> Option<(u32, u32)> {
+    let (virtual_w, virtual_h) = virtual_dims(win.depth);
+    let g = geo.coord(vertex);
+    let (plate_row, plate_col) =
+        mercator::project(f, g.latitude, g.longitude, virtual_w, virtual_h)?;
+    let (drow, dcol) = tile_on_screen(win, virtual_w, plate_row, plate_col)?;
+    if dcol >= width || drow >= height {
+        return None;
+    }
     Some((drow, dcol))
 }
 
@@ -606,8 +856,48 @@ fn tile_on_screen(
 /// then hidden" still holds by construction — an undiscovered site is not
 /// suppressed here, it is never reached.
 ///
-/// Caves are drawn first and settlements second, so a settlement wins a cell
-/// they share — the same precedence the sampled scheme's `if/else` gave.
+/// **Draw precedence, low to high (a later kind wins a shared cell), and
+/// where it comes from (Task 7 pre-dispatch ruling AA):**
+/// waterfalls, then volcanoes, then caves, then settlements. (A river
+/// delta briefly sat between waterfalls and volcanoes here; fix round 1
+/// removed the feature outright — see [`WATERFALL_GLYPH`]'s own doc — so
+/// this order no longer names it.) Caves-then-settlements is unchanged
+/// from Task 5 (`if/else` precedence carried forward as draw order).
+/// Waterfall is new to this layer and carries no [`FeatureClass`] of its
+/// own (`GeneratedTerrain` tracks it as bare vertices, not an individuated
+/// feature), so it takes the LOWEST rank among the new additions — a
+/// documented placement, not a derivation. Volcano is the one new kind
+/// that IS a landscape feature (`FeatureClass::Volcano`), and Nathan's
+/// ruling is explicit: use the EXISTING salience ordering rather than
+/// invent a second one. `FeatureClass::salience` puts `Volcano` at 0 — the
+/// single most specific class the landscape system has — so it sits
+/// directly below the two point-site kinds this layer already drew, ahead
+/// of the landform kind that has no salience of its own to consult. Real
+/// collisions between any two of these four kinds are rare in practice
+/// (measured: none in the seed 42 windows this task's own tests exercise),
+/// so this order is a documented tie-break for the case, not a
+/// load-bearing gameplay rule.
+///
+/// **Volcanoes are discovery-gated; a waterfall is not, and that split is
+/// deliberate, not an oversight.** A volcano is an EXTENT feature in
+/// `hornvale_terrain::landscape` — `FeatureClass::Volcano`, already
+/// wrapped as [`crate::discovery::FeatureId::Extent`] — so the SAME
+/// discovery mechanism that already fires when a possession walks onto
+/// any vertex of any landscape feature's extent
+/// (`Driver::update_discovery`'s `for id in self.index.at(vertex)` loop,
+/// already shipped, untouched by this task) already records a volcano the
+/// instant its slopes are walked. This layer only had to start reading
+/// that existing fact to draw it. A waterfall is a bare `Vertex`
+/// `GeneratedTerrain` reports (`waterfalls()`) — the landscape feature
+/// system does not carry an identity for it, and the task's own interface
+/// note forbids minting a new feature enum to give it one. Rather than
+/// invent that identity, it draws as GROUND TRUTH, unconditionally — the
+/// same epistemic status the relief and water ladders already have (a
+/// river or a mountain range is never gated on "has this been
+/// discovered", so a knickpoint on that same channel is not either). This
+/// is a judgement call flagged for review, not a claim that the design
+/// space has only one right answer here.
+///
 /// **`pub` rather than `pub(crate)` for the same reason
 /// [`terrain_at_tile`] is** (Task 3): `examples/rung_bench.rs` is a separate
 /// crate and prices this layer on its own, which is the only way to answer
@@ -621,52 +911,94 @@ pub fn draw_feature_layer(
     f: &Frame,
     win: &Window,
     colour_allowed: bool,
-    settlements: &BTreeSet<Vertex>,
+    settlements: &BTreeMap<Vertex, u64>,
     caves: &BTreeSet<Vertex>,
+    volcanoes: &BTreeSet<Vertex>,
+    waterfalls: &[Vertex],
     discovered: &Discovered,
 ) {
     let width = u32::from(dst.width());
     let height = u32::from(dst.height());
-    let (virtual_w, virtual_h) = virtual_dims(win.depth);
 
-    let place = |vertex: Vertex, id: FeatureId, glyph: char, color: [u8; 3], grid: &mut Grid| {
-        if !discovered.contains(id) {
-            return;
-        }
-        let g = geo.coord(vertex);
-        let Some((plate_row, plate_col)) =
-            mercator::project(f, g.latitude, g.longitude, virtual_w, virtual_h)
-        else {
-            return; // above the clamp: not on this map at all
-        };
-        // Longitude wraps, latitude does not — see [`tile_on_screen`], which
-        // is now the only place that arithmetic is written.
-        let Some((drow, dcol)) = tile_on_screen(win, virtual_w, plate_row, plate_col) else {
-            return;
-        };
-        if dcol >= width || drow >= height {
-            return;
-        }
-        grid.set(
-            dcol as u16,
-            drow as u16,
-            Cell {
-                glyph: Some(glyph),
-                weight: Weight::Normal,
-                ink: Ink::resolve(Some(color), colour_allowed),
-                source: Source::World,
-            },
-        );
-    };
+    // Task 7: which settlements draw MAJOR ([`SETTLEMENT_MAJOR_GLYPH`])
+    // rather than minor. The ranking is VIEWPORT-RELATIVE — only
+    // settlements that would actually be drawn HERE (discovered AND
+    // on-screen) enter the comparison set — so a town can flip between
+    // the two glyphs as the reader pans. Known and accepted (task brief):
+    // "what is notable here" changes with what "here" is. Computed once,
+    // before any glyph is chosen, so drawing itself never influences the
+    // ranking it depends on.
+    let mut in_frame: Vec<(Vertex, u64)> = settlements
+        .iter()
+        .filter(|&(&vertex, _)| discovered.contains(FeatureId::Settlement(vertex)))
+        .filter(|&(&vertex, _)| project_onto_screen(geo, f, win, width, height, vertex).is_some())
+        .map(|(&vertex, &population)| (vertex, population))
+        .collect();
+    // Population descending, ties broken by vertex ascending — total and
+    // deterministic (no `total_cmp` needed: population is an integer
+    // count), matching this module's own no-`HashMap` discipline.
+    in_frame.sort_unstable_by_key(|&(vertex, population)| (std::cmp::Reverse(population), vertex));
+    let major_count = (MAJOR_SETTLEMENT_QUANTILE * in_frame.len() as f64).ceil() as usize;
+    let major: BTreeSet<Vertex> = in_frame
+        .iter()
+        .take(major_count)
+        .map(|&(vertex, _)| vertex)
+        .collect();
 
-    for &vertex in caves {
-        place(vertex, FeatureId::Cave(vertex), CAVE_GLYPH, CAVE_COLOR, dst);
+    // `gate`: `None` draws unconditionally (ground truth — waterfalls);
+    // `Some(id)` draws only when `discovered` already carries `id` (a
+    // point site or an extent feature — caves, settlements, volcanoes).
+    let place =
+        |vertex: Vertex, gate: Option<FeatureId>, glyph: char, color: [u8; 3], grid: &mut Grid| {
+            if let Some(id) = gate
+                && !discovered.contains(id)
+            {
+                return;
+            }
+            let Some((drow, dcol)) = project_onto_screen(geo, f, win, width, height, vertex) else {
+                return;
+            };
+            grid.set(
+                dcol as u16,
+                drow as u16,
+                Cell {
+                    glyph: Some(glyph),
+                    weight: Weight::Normal,
+                    ink: Ink::resolve(Some(color), colour_allowed),
+                    source: Source::World,
+                },
+            );
+        };
+
+    for &vertex in waterfalls {
+        place(vertex, None, WATERFALL_GLYPH, WATERFALL_COLOR, dst);
     }
-    for &vertex in settlements {
+    for &vertex in volcanoes {
+        let id = FeatureId::Extent(LandscapeFeatureId {
+            class: FeatureClass::Volcano,
+            vertex,
+        });
+        place(vertex, Some(id), VOLCANO_GLYPH, VOLCANO_COLOR, dst);
+    }
+    for &vertex in caves {
         place(
             vertex,
-            FeatureId::Settlement(vertex),
-            SETTLEMENT_GLYPH,
+            Some(FeatureId::Cave(vertex)),
+            CAVE_GLYPH,
+            CAVE_COLOR,
+            dst,
+        );
+    }
+    for &vertex in settlements.keys() {
+        let glyph = if major.contains(&vertex) {
+            SETTLEMENT_MAJOR_GLYPH
+        } else {
+            SETTLEMENT_MINOR_GLYPH
+        };
+        place(
+            vertex,
+            Some(FeatureId::Settlement(vertex)),
+            glyph,
             SETTLEMENT_COLOR,
             dst,
         );
@@ -711,11 +1043,18 @@ pub(crate) struct Perceived<'a> {
 /// The vocabulary is `bin`'s existing one wherever one already exists:
 /// a settlement and a cave mouth draw exactly what
 /// [`draw_feature_layer`] draws for the same substance
-/// ([`SETTLEMENT_GLYPH`], [`CAVE_GLYPH`]), because a creature standing next
-/// to a cave mouth and a discovered cave mouth on the world map are the same
-/// thing seen through two channels, and giving them two glyphs would say
-/// otherwise. An `"agent"` has no world-map counterpart — point sites are
-/// terrain-fixed and an agent is not — so it gets its own.
+/// ([`SETTLEMENT_MINOR_GLYPH`], [`CAVE_GLYPH`]), because a creature standing
+/// next to a cave mouth and a discovered cave mouth on the world map are the
+/// same thing seen through two channels, and giving them two glyphs would
+/// say otherwise. An `"agent"` has no world-map counterpart — point sites
+/// are terrain-fixed and an agent is not — so it gets its own.
+///
+/// **Always the MINOR settlement glyph, never major, and that is a scope
+/// choice, not an oversight.** [`SETTLEMENT_MAJOR_GLYPH`] vs
+/// [`SETTLEMENT_MINOR_GLYPH`] is a rank among the settlements in the WORLD
+/// MAP's own frame (Task 7) — a single perception-packet mark carries no
+/// such frame to rank against, so it draws the substance ("a settlement is
+/// here") without a size claim it has no comparison set to justify.
 ///
 /// **An UNRECOGNISED kind still draws**, and that is the same infallibility
 /// `hornvale_scene::Mark::kind`'s own doc asks of a renderer ("a consumer
@@ -724,7 +1063,7 @@ pub(crate) struct Perceived<'a> {
 /// generic agent glyph rather than nothing.
 fn mark_glyph(kind: &str) -> char {
     match kind {
-        "settlement" => SETTLEMENT_GLYPH,
+        "settlement" => SETTLEMENT_MINOR_GLYPH,
         "cave" => CAVE_GLYPH,
         _ => AGENT_GLYPH,
     }
@@ -985,7 +1324,14 @@ pub(crate) fn perception_tile(
 /// it survives the vote's removal.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TileTerrain {
-    /// Whether the tile is painted ocean.
+    /// Whether the tile is painted ocean. RETAINED alongside
+    /// [`Self::water`] rather than derived from it at every call site — the
+    /// strip's own invariant (this struct's own doc) is stated on this
+    /// field, and `WaterKind::Ocean` disagreeing with `terrain.is_ocean` is
+    /// exactly the discrepancy `waterline_probe.rs` documents (the two
+    /// predicates disagree on ~8,162 of seed 42's vertices), so collapsing
+    /// them into one boolean here would be a silent choice about which
+    /// definition the strip means.
     /// type-audit: bare-ok(flag)
     pub ocean: bool,
     /// The mesh facet the tile's own centre falls in, at the WINDOW's rung
@@ -995,6 +1341,23 @@ pub struct TileTerrain {
     /// A grid-level [`Vertex`] of the painted class — the corner of
     /// [`Self::facet`]'s grid-level triangle nearest the tile's own centre.
     pub vertex: Vertex,
+    /// [`Self::vertex`]'s elevation band — [`hornvale_scene::relief_band`]
+    /// applied to `terrain.elevation_at(vertex).above(terrain.sea_level())`,
+    /// the SAME classifier `windows/scene/src/region.rs` uses for the
+    /// `scene/surrounds/v2` wire field (Task 3's shared classifier; see
+    /// [`glyph_and_color_for`] for how this and [`Self::water`] together
+    /// pick a mark). `u32`, matching `relief_band`'s own return type —
+    /// carried at its own width rather than cast to match [`Self::water`].
+    /// type-audit: bare-ok(index)
+    pub band: u32,
+    /// [`Self::vertex`]'s water class — `terrain.water_kind_at(vertex)
+    /// .index()` against `hornvale_terrain::WaterKind::LEGEND`, the
+    /// canonical pair `region.rs` itself uses (no second classifier is
+    /// introduced here). `u8`, matching `WaterKind::index`'s own return
+    /// type — carried at its own width rather than cast to match
+    /// [`Self::band`].
+    /// type-audit: bare-ok(index)
+    pub water: u8,
 }
 
 /// ONE chart tile's terrain, by direct mesh addressing (The Quadrat, Task
@@ -1117,10 +1480,15 @@ pub fn terrain_at_tile(
         }
     }
 
+    let band = hornvale_scene::relief_band(terrain.elevation_at(vertex).above(terrain.sea_level()));
+    let water = terrain.water_kind_at(vertex).index();
+
     TileTerrain {
         ocean: terrain.is_ocean(vertex),
         facet,
         vertex,
+        band,
+        water,
     }
 }
 
@@ -1277,8 +1645,10 @@ mod tests {
             32,
             8,
             false,
+            &BTreeMap::new(),
             &BTreeSet::new(),
             &BTreeSet::new(),
+            &[],
             &Discovered::default(),
         );
         let narrow = draw_with(
@@ -1290,8 +1660,10 @@ mod tests {
             8,
             8,
             false,
+            &BTreeMap::new(),
             &BTreeSet::new(),
             &BTreeSet::new(),
+            &[],
             &Discovered::default(),
         );
         // THE VACUITY GUARD: the compared region must straddle a real
@@ -1301,8 +1673,16 @@ mod tests {
             .flat_map(|y| (0..8u16).map(move |x| (x, y)))
             .map(|(x, y)| narrow.get(x, y).and_then(|c| c.glyph))
             .collect();
-        let land = glyphs.iter().filter(|g| **g == Some(LAND_GLYPH)).count();
+        // The Legend: the terrain vocabulary is no longer a `LAND_GLYPH`/
+        // `OCEAN_GLYPH` binary, so "land" here is "drawn, and not the
+        // ocean glyph" — any of the water or relief marks — rather than
+        // one hardcoded character. The guard's own point (a real
+        // coastline sits in the compared region) is unchanged.
         let ocean = glyphs.iter().filter(|g| **g == Some(OCEAN_GLYPH)).count();
+        let land = glyphs
+            .iter()
+            .filter(|g| g.is_some() && **g != Some(OCEAN_GLYPH))
+            .count();
         assert!(
             land > 0 && ocean > 0,
             "the compared 8x8 region must straddle a coastline or this test proves \
@@ -1346,7 +1726,8 @@ mod tests {
         let (row, col) = crate::mercator::project(&f, g.latitude, g.longitude, vw, vh).unwrap();
         let (win, sx, sy) = window_showing(GLOBE_RUNG, row, col, w, h);
 
-        let both: BTreeSet<Vertex> = std::iter::once(shared).collect();
+        let both_caves: BTreeSet<Vertex> = std::iter::once(shared).collect();
+        let both_settlements: BTreeMap<Vertex, u64> = std::iter::once((shared, 1)).collect();
         let mut discovered = Discovered::default();
         discovered.record(FeatureId::Settlement(shared));
         discovered.record(FeatureId::Cave(shared));
@@ -1360,13 +1741,18 @@ mod tests {
             w,
             h,
             false,
-            &both,
-            &both,
+            &both_settlements,
+            &both_caves,
+            &BTreeSet::new(),
+            &[],
             &discovered,
         );
         assert_eq!(
             grid.get(sx, sy).and_then(|c| c.glyph),
-            Some(SETTLEMENT_GLYPH),
+            // The sole in-frame settlement is trivially its own top 10%
+            // (ceil(0.1 * 1) == 1), so it draws MAJOR here — this test's
+            // subject is draw ORDER, not the size tier.
+            Some(SETTLEMENT_MAJOR_GLYPH),
             "a cave overwrote a settlement on a shared cell — draw order inverted"
         );
     }
@@ -1439,8 +1825,10 @@ mod tests {
             w,
             h,
             false,
-            &BTreeSet::new(),
+            &BTreeMap::new(),
             &caves,
+            &BTreeSet::new(),
+            &[],
             &discovered,
         );
 
@@ -1464,7 +1852,7 @@ mod tests {
             origin_col: 0,
             origin_row: 0,
         };
-        let empty_settlements = BTreeSet::new();
+        let empty_settlements = BTreeMap::new();
         let empty_discovered = Discovered::default();
         let g = draw(
             &terrain,
@@ -1476,6 +1864,8 @@ mod tests {
             20,
             &empty_settlements,
             &BTreeSet::new(), // no caves: this test's subject is terrain/colour
+            &BTreeSet::new(),
+            &[],
             &empty_discovered,
         );
         assert_eq!(g.width(), 40);
@@ -1502,7 +1892,7 @@ mod tests {
             origin_row: 0,
         };
 
-        let empty_settlements = BTreeSet::new();
+        let empty_settlements = BTreeMap::new();
         let empty_discovered = Discovered::default();
         let lit = draw_with(
             &terrain,
@@ -1515,6 +1905,8 @@ mod tests {
             true,
             &empty_settlements,
             &BTreeSet::new(), // no caves: this test's subject is terrain/colour
+            &BTreeSet::new(),
+            &[],
             &empty_discovered,
         );
         let mono = draw_with(
@@ -1528,6 +1920,8 @@ mod tests {
             false,
             &empty_settlements,
             &BTreeSet::new(), // no caves: this test's subject is terrain/colour
+            &BTreeSet::new(),
+            &[],
             &empty_discovered,
         );
 
@@ -1570,6 +1964,18 @@ mod tests {
     /// cell, because the two are now the same function rather than two
     /// samplings that mostly agree — a `> 0.97` threshold against a method
     /// that agrees exactly is a gate that never gates.
+    ///
+    /// **Retargeted a second time, at The Legend (Task 6).** This test used
+    /// to compare the drawn GLYPH against `if point_ocean { OCEAN_GLYPH }
+    /// else { LAND_GLYPH }` — sound only because the terrain vocabulary was
+    /// exactly those two characters, so a glyph was a faithful proxy for
+    /// "which vertex got addressed". The Legend retires that binary (the
+    /// whole point of the task this test's own module now serves), so the
+    /// proxy is retired with it: the comparison now asks the mesh-addressed
+    /// [`TileTerrain::vertex`] directly, which is the thing the old glyph
+    /// comparison was always standing in for, and states the invariant
+    /// MORE strictly than before — vertex identity, not merely agreement on
+    /// which side of the ocean/land boundary the vertex fell.
     #[test]
     fn mesh_addressing_agrees_with_the_spatial_search() {
         let (terrain, geo) = test_world();
@@ -1590,24 +1996,11 @@ mod tests {
             origin_col: 0,
             origin_row: vh / 2 - u32::from(h) / 2,
         };
-        let empty_settlements = BTreeSet::new();
-        let empty_discovered = Discovered::default();
-        let g = draw_with(
-            &terrain,
-            &geo,
-            &index,
-            &f,
-            &win,
-            w,
-            h,
-            false,
-            &empty_settlements,
-            &BTreeSet::new(), // no caves: this test's subject is terrain/colour
-            &empty_discovered,
-        );
+        let mut memo = RoomMeshMemo::default();
 
         let mut agree = 0u32;
         let mut total = 0u32;
+        let mut land = 0u32;
         for row in 0..u32::from(h) {
             for col in 0..u32::from(w) {
                 let (lat, lon) = crate::mercator::unproject(
@@ -1618,28 +2011,27 @@ mod tests {
                     vh,
                 );
                 let point_vertex = index.nearest(&geo, lat, lon);
-                let point_ocean = terrain.is_ocean(point_vertex);
-                let expected = if point_ocean { OCEAN_GLYPH } else { LAND_GLYPH };
-                let got = g.get(col as u16, row as u16).unwrap().glyph.unwrap();
+                let tile = terrain_at_tile(
+                    &terrain, &geo, &index, &mut memo, &f, &win, vw, vh, row, col,
+                );
                 total += 1;
-                if got == expected {
+                if tile.vertex == point_vertex {
                     agree += 1;
+                }
+                if !terrain.is_ocean(point_vertex) {
+                    land += 1;
                 }
             }
         }
-        // THE VACUITY GUARD. An all-ocean patch would make every
-        // comparison `~` against `~`, which a gutted `terrain_at_tile`
-        // painting a constant would also pass. The compared region must
-        // straddle a real coastline for the equality below to discriminate.
-        let land = (0..h)
-            .flat_map(|y| (0..w).map(move |x| (x, y)))
-            .filter(|&(x, y)| g.get(x, y).and_then(|c| c.glyph) == Some(LAND_GLYPH))
-            .count();
+        // THE VACUITY GUARD. An all-ocean (or all-land) patch would make
+        // every comparison trivially agree by construction. The compared
+        // region must straddle a real coastline for the equality below to
+        // discriminate.
+        let total_cells = u32::from(w) * u32::from(h);
         assert!(
-            land > 0 && land < usize::from(w) * usize::from(h),
+            land > 0 && land < total_cells,
             "the compared region must straddle a coastline or this test proves \
-             nothing: land={land} of {}",
-            usize::from(w) * usize::from(h)
+             nothing: land={land} of {total_cells}"
         );
         assert_eq!(
             agree, total,
@@ -1885,7 +2277,7 @@ mod tests {
             .vertices()
             .find(|&c| terrain.cave_at(c).is_some())
             .expect("seed 42 at GLOBE_LEVEL has at least one cave vertex");
-        let settlements = BTreeSet::new();
+        let settlements = BTreeMap::new();
         // The cave roster this test's subject must be IN — sites are
         // PROJECTED from the roster now, not sampled for, so an empty
         // roster would make this test vacuous rather than failing.
@@ -1910,6 +2302,8 @@ mod tests {
             false,
             &settlements,
             &caves,
+            &BTreeSet::new(),
+            &[],
             &undiscovered,
         );
         assert_ne!(
@@ -1931,6 +2325,8 @@ mod tests {
             false,
             &settlements,
             &caves,
+            &BTreeSet::new(),
+            &[],
             &discovered,
         );
         assert_eq!(
@@ -1953,9 +2349,11 @@ mod tests {
     /// terrain alone, while the settlement roster is built from the
     /// world's LEDGER by `driver.rs` and never reaches here. The roster
     /// parameters are the caller's either way — `draw_feature_layer` takes
-    /// two `BTreeSet<Vertex>` and asks the terrain nothing — so the same
-    /// vertex exercises the settlement path when it is handed to the
-    /// settlement roster instead.
+    /// a `BTreeSet<Vertex>` for caves and a `BTreeMap<Vertex, u64>` for
+    /// settlements (Task 7 widens the latter to carry population), and
+    /// asks the terrain nothing — so the same vertex exercises the
+    /// settlement path when it is handed to that roster instead, with an
+    /// arbitrary population.
     fn a_point_site(
         terrain: &GeneratedTerrain,
         geo: &Geosphere,
@@ -2014,8 +2412,10 @@ mod tests {
             &f,
             &win,
             false,
-            &BTreeSet::new(),
+            &BTreeMap::new(),
             &caves,
+            &BTreeSet::new(),
+            &[],
             &discovered,
         );
         assert_ne!(
@@ -2059,21 +2459,20 @@ mod tests {
         let f = mercator::frame_for(false);
         let (w, h) = (32u16, 16u16);
         let (site, win, x, y) = a_point_site(&terrain, &geo, &f, GLOBE_RUNG, w, h);
-        let roster: BTreeSet<Vertex> = std::iter::once(site).collect();
-        let empty = BTreeSet::new();
+        let cave_roster: BTreeSet<Vertex> = std::iter::once(site).collect();
+        let settlement_roster: BTreeMap<Vertex, u64> = std::iter::once((site, 1)).collect();
+        let empty_caves = BTreeSet::new();
+        let empty_settlements = BTreeMap::new();
         let mut memo = RoomMeshMemo::default();
         let bare = draw_terrain_layer(&terrain, &geo, &index, &mut memo, &f, &win, w, h, false);
         let bare_text = bare.to_plain_text();
 
-        for (settlements, caves, id, glyph) in [
-            (&empty, &roster, FeatureId::Cave(site), CAVE_GLYPH),
-            (
-                &roster,
-                &empty,
-                FeatureId::Settlement(site),
-                SETTLEMENT_GLYPH,
-            ),
-        ] {
+        // The cave and settlement cases take DIFFERENT roster types since
+        // Task 7 widened settlements to carry population, so they are two
+        // blocks rather than one homogeneous loop over both — each still
+        // proves the identical property: an undiscovered site is never
+        // drawn, and a discovered one is drawn at its own resolved cell.
+        {
             let mut g = bare.clone();
             draw_feature_layer(
                 &mut g,
@@ -2081,32 +2480,81 @@ mod tests {
                 &f,
                 &win,
                 false,
-                settlements,
-                caves,
+                &empty_settlements,
+                &cave_roster,
+                &BTreeSet::new(),
+                &[],
                 &Discovered::default(),
             );
             assert_eq!(
                 g.to_plain_text(),
                 bare_text,
-                "an UNdiscovered site was drawn ({glyph})"
+                "an UNdiscovered cave was drawn"
             );
 
             let mut discovered = Discovered::default();
-            discovered.record(id);
+            discovered.record(FeatureId::Cave(site));
             draw_feature_layer(
                 &mut g,
                 &geo,
                 &f,
                 &win,
                 false,
-                settlements,
-                caves,
+                &empty_settlements,
+                &cave_roster,
+                &BTreeSet::new(),
+                &[],
                 &discovered,
             );
             assert_eq!(
                 g.get(x, y).unwrap().glyph,
-                Some(glyph),
-                "a DISCOVERED site was not drawn"
+                Some(CAVE_GLYPH),
+                "a DISCOVERED cave was not drawn"
+            );
+        }
+
+        {
+            let mut g = bare.clone();
+            draw_feature_layer(
+                &mut g,
+                &geo,
+                &f,
+                &win,
+                false,
+                &settlement_roster,
+                &empty_caves,
+                &BTreeSet::new(),
+                &[],
+                &Discovered::default(),
+            );
+            assert_eq!(
+                g.to_plain_text(),
+                bare_text,
+                "an UNdiscovered settlement was drawn"
+            );
+
+            let mut discovered = Discovered::default();
+            discovered.record(FeatureId::Settlement(site));
+            draw_feature_layer(
+                &mut g,
+                &geo,
+                &f,
+                &win,
+                false,
+                &settlement_roster,
+                &empty_caves,
+                &BTreeSet::new(),
+                &[],
+                &discovered,
+            );
+            assert_eq!(
+                g.get(x, y).unwrap().glyph,
+                // The sole in-frame settlement is trivially its own top
+                // 10% (ceil(0.1 * 1) == 1) — see
+                // `a_settlement_outranks_a_cave_on_the_same_cell`'s own
+                // note on why a one-settlement roster always draws MAJOR.
+                Some(SETTLEMENT_MAJOR_GLYPH),
+                "a DISCOVERED settlement was not drawn"
             );
         }
     }
@@ -2123,7 +2571,7 @@ mod tests {
         let (w, h) = (32u16, 16u16);
         let (site, win, _, _) = a_point_site(&terrain, &geo, &f, GLOBE_RUNG, w, h);
         let caves: BTreeSet<Vertex> = std::iter::once(site).collect();
-        let settlements = BTreeSet::new();
+        let settlements = BTreeMap::new();
         let mut discovered = Discovered::default();
         discovered.record(FeatureId::Cave(site));
 
@@ -2138,6 +2586,8 @@ mod tests {
             false,
             &settlements,
             &caves,
+            &BTreeSet::new(),
+            &[],
             &discovered,
         );
 
@@ -2155,6 +2605,8 @@ mod tests {
             false,
             &settlements,
             &caves,
+            &BTreeSet::new(),
+            &[],
             &discovered,
         );
         assert_ne!(
@@ -2321,7 +2773,7 @@ mod tests {
             draw_perception_layer(&mut grid, &f, &win, true, &perceived);
             assert_eq!(
                 grid.get(0, 0).unwrap().glyph,
-                Some(SETTLEMENT_GLYPH),
+                Some(SETTLEMENT_MINOR_GLYPH),
                 "salience 0 outranks salience 9, whichever order they arrive in"
             );
         }
@@ -2333,7 +2785,7 @@ mod tests {
     /// arm of [`mark_glyph`] is otherwise unreachable from any real band.
     #[test]
     fn an_unrecognised_mark_kind_still_draws() {
-        assert_eq!(mark_glyph("settlement"), SETTLEMENT_GLYPH);
+        assert_eq!(mark_glyph("settlement"), SETTLEMENT_MINOR_GLYPH);
         assert_eq!(mark_glyph("cave"), CAVE_GLYPH);
         assert_eq!(mark_glyph("agent"), AGENT_GLYPH);
         assert_eq!(

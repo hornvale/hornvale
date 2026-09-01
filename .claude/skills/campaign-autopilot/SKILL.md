@@ -187,14 +187,53 @@ route everything raised — including promising ideonomy discards:
 
 ## The decision ledger
 
-Location: the campaign worktree's `.superpowers/sdd/decision-ledger.md`
-(scratch-in-worktree rule — never the shared main checkout). Create it at
-the first auto-resolved decision. Entry format:
+Location: `docs/superpowers/ledgers/YYYY-MM-DD-<slug>.md` — a committed,
+per-campaign document (The Cartulary, decision 0486), not the vendored
+plugin's per-worktree `.superpowers/sdd/<campaign>/progress.md` (which keeps
+its own separate job — task state, fix rounds, resume-after-compaction
+material — and stays scratch; see spec §4a). Create it at the first
+auto-resolved decision, committing as each entry is written rather than
+batching. **"Never the shared main checkout" still governs**, in its
+original form: the ledger is written on the campaign's own branch, in the
+campaign's own worktree, and lands on `main` only through the normal merge
+path — the same discipline that already applies to every other file a
+campaign writes. What changed is that the file is no longer git-ignored
+scratch; the rule about *which checkout* was never about that. Entry
+format:
 
 ```
 #N [G1|G2|G4|G5|Q] — question · decision · why (precedent cited) ·
 alternatives discarded · ideonomy passes / overturns · capture actions
 ```
+
+**A backfilled entry** — one recording a ruling made before the ledger
+existed to capture it contemporaneously (pre-flight scan findings, or
+decisions made during spec/plan authoring before Task 1 of a campaign like
+The Cartulary created its own ledger) — may omit `ideonomy passes /
+overturns` if no pass was ever run for it, provided the entry says so
+explicitly rather than leaving the field silently blank.
+
+**Two shapes of live entry, not one, and both are still required to state
+question · decision · why · alternatives discarded · capture actions —
+only the LAYOUT differs.** A cross-task ruling made outside any single
+task's own review loop (a pre-flight conflict between two tasks, a
+mid-campaign Q consultation with Nathan, an ad hoc controller call) uses
+the numbered `#N [G1|G2|G4|G5|Q] — ...` line above, because nothing else
+is going to organize it. A ruling that IS the subject of a task's own
+"Task N — complete" or "Task N — fix round" section inherits that
+section's own narrative structure instead — the review that produced the
+section already interrogated the question, the decision, the why and what
+was rejected, so re-flattening it into the one-line tagged form would
+duplicate content already present in a fuller form, not add rigor. This is
+a correction, not a new rule: The Cartulary's own exemplar ledger
+(`docs/superpowers/ledgers/2026-08-30-the-cartulary.md`) wrote every live
+ruling this second way from Task 1 onward and none the first way, which an
+earlier draft of this paragraph called a violation of "no exemption" — a
+false reading of the campaign's own practice, caught by its final review
+(finding M2). `ideonomy passes / overturns` is still a required, non-zero
+field either way — a task-boundary ruling states it in the task section's
+own prose (e.g. "no ideonomy pass was run for this" or naming the pass
+taken) rather than as a labelled slot.
 
 ## The G3 package
 
@@ -214,8 +253,10 @@ At the spec-review stop, present one message containing, in order:
 4. The spec path.
 
 If Nathan vetoes an entry, revise the spec and re-present. Promote material
-ledger entries into the spec's decisions section — the scratch ledger is
-not the durable record.
+ledger entries into the spec's decisions section regardless — the ledger
+is committed and durable now, but it is a per-campaign narrative, not the
+cross-campaign decision log; anything meant to bind future campaigns still
+needs a decision record of its own.
 
 ## Carve-outs — hard-stop regardless of gate
 

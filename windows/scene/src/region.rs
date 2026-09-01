@@ -13,7 +13,7 @@
 //! (`windows/scene/tests/suite/one_projection.rs`) is the test that would catch
 //! a reintroduced fork.
 
-use crate::{SceneContext, SceneError, WaterfallPoint};
+use crate::{RELIEF_LEGEND, SceneContext, SceneError, WaterfallPoint, relief_band};
 use hornvale_kernel::{Geosphere, NearestVertexIndex, Vertex, World, WorldTime, cube};
 use serde::Serialize;
 
@@ -197,12 +197,29 @@ fn interp(
 
 /// One `scene/tiles-region/v1` document (The Region §3.3). Field order is the
 /// JSON key order and is contract. Per-node layers are `(samples+1)²`,
-/// row-major (`i = row·(samples+1) + col`). Continuous layers are barycentric;
-/// discrete layers are nearest-vertex — five of them, not the three this
-/// comment used to name: `ocean`, `water`, `drainage`, `biome`, and `plate`
-/// (cited by name, not line — line numbers in this doc have been wrong
-/// twice already this campaign).
-/// type-audit: bare-ok(identifier-text: schema), bare-ok(constructor-edge: seed), bare-ok(index: face), bare-ok(count: level), bare-ok(index: ix), bare-ok(index: iy), bare-ok(count: samples), pending(wave-3: sea_level_m), bare-ok(diagnostic-value: season_period_days), bare-ok(count: circulation_bands), bare-ok(identifier-text: biome_legend), waiver(elevation-convention: elevation_m), bare-ok(flag: ocean), bare-ok(index: biome), bare-ok(index: plate), bare-ok(ratio: unrest), bare-ok(diagnostic-value: t_mean_c), bare-ok(diagnostic-value: t_swing_c), bare-ok(ratio: moisture), bare-ok(index: water), bare-ok(identifier-text: water_legend), bare-ok(diagnostic-value: drainage), bare-ok(diagnostic-value: t_diurnal_amp_c), bare-ok(diagnostic-value: precip_mm_yr)
+/// row-major (`i = row·(samples+1) + col`).
+///
+/// **Per-layer sampling: INTERPOLABLE layers are barycentric, the rest are
+/// nearest-vertex.** An earlier form of this line said "continuous layers are
+/// barycentric; discrete layers (`ocean`, `biome`, `plate`) are
+/// nearest-vertex", which was wrong twice: it enumerated three of six
+/// nearest-vertex layers, and its dichotomy has a counterexample in each
+/// direction. `drainage` is a continuous `f64` and is nearest-vertex, because
+/// averaging two flow accumulations does not give the flow between them;
+/// `unrest` is a continuous ratio and IS interpolated. The rule is whether a
+/// value BETWEEN two data points is meaningful, not whether the type is
+/// discrete.
+///
+/// - **Barycentric** (`interp`): `elevation_m`, `unrest`, `t_mean_c`,
+///   `t_swing_c`, `t_diurnal_amp_c`, `moisture`, `precip_mm_yr`.
+/// - **Nearest-vertex** (at `t_vertex`): `ocean`, `water`, `drainage`,
+///   `relief`, `biome`, `plate`.
+///
+/// Keep both lists complete when adding a layer. This one went stale when
+/// `relief`/`relief_legend` were added and was caught by a reader in another
+/// campaign relying on it as an enumeration — which the paragraph above,
+/// declaring field order to be contract, invites.
+/// type-audit: bare-ok(identifier-text: schema), bare-ok(constructor-edge: seed), bare-ok(index: face), bare-ok(count: level), bare-ok(index: ix), bare-ok(index: iy), bare-ok(count: samples), pending(wave-3: sea_level_m), bare-ok(diagnostic-value: season_period_days), bare-ok(count: circulation_bands), bare-ok(identifier-text: biome_legend), waiver(elevation-convention: elevation_m), bare-ok(flag: ocean), bare-ok(index: biome), bare-ok(index: plate), bare-ok(ratio: unrest), bare-ok(diagnostic-value: t_mean_c), bare-ok(diagnostic-value: t_swing_c), bare-ok(ratio: moisture), bare-ok(index: water), bare-ok(identifier-text: water_legend), bare-ok(diagnostic-value: drainage), bare-ok(diagnostic-value: t_diurnal_amp_c), bare-ok(diagnostic-value: precip_mm_yr), bare-ok(index: relief), bare-ok(identifier-text: relief_legend)
 #[derive(Debug, Serialize)]
 pub struct RegionScene {
     /// Always `scene/tiles-region/v1`.
@@ -296,6 +313,17 @@ pub struct RegionScene {
     /// latter matches the per-vertex values the tiles export ships.
     #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::vec_f64_field")]
     pub precip_mm_yr: Vec<f64>,
+    /// Relief band per node — [`crate::relief_band`]'s rung, index into
+    /// [`RELIEF_LEGEND`] (nearest-vertex; discrete, like `ocean`/`biome`/
+    /// `plate`). Appended at the struct's end rather than beside
+    /// `elevation_m`: field order is JSON key order and is contract, so a
+    /// middle insertion would have reordered every field after it. Same
+    /// field names `scene/surrounds/v2` already uses for this quantity —
+    /// deliberately, not a collision.
+    pub relief: Vec<u32>,
+    /// The relief catalog, `RELIEF_LEGEND`'s stable order — `relief`'s values
+    /// index into this. Appended per the schema stability contract.
+    pub relief_legend: Vec<String>,
 }
 
 /// Build the `scene/tiles-region/v1` scene for one tile address, deriving a
@@ -375,6 +403,7 @@ pub fn tiles_region_scene_in(
     let mut precip_mm_yr = Vec::with_capacity(units.len());
     let mut water = Vec::with_capacity(units.len());
     let mut drainage = Vec::with_capacity(units.len());
+    let mut relief = Vec::with_capacity(units.len());
     for s in &units {
         let tg = terrain.geosphere();
         let cg = climate.geosphere();
@@ -384,6 +413,9 @@ pub fn tiles_region_scene_in(
         ocean.push(terrain.is_ocean(t_vertex));
         water.push(terrain.water_kind_at(t_vertex).index());
         drainage.push(terrain.drainage_at(t_vertex));
+        relief.push(relief_band(
+            terrain.elevation_at(t_vertex).above(terrain.sea_level()),
+        ));
         let b = *biomes.get(c_vertex);
         biome.push(
             catalog
@@ -454,6 +486,8 @@ pub fn tiles_region_scene_in(
         waterfalls,
         t_diurnal_amp_c,
         precip_mm_yr,
+        relief,
+        relief_legend: RELIEF_LEGEND.iter().map(|s| s.to_string()).collect(),
     })
 }
 

@@ -93,7 +93,7 @@
 //! (settlements appear once placed) rather than merely exercising the code
 //! path.
 //!
-//! # Caves: skipped, deliberately
+//! # Caves, volcanoes and waterfalls: skipped, deliberately
 //!
 //! `Driver::start_from_world` builds its own cave roster with a full scan of
 //! every mesh vertex (`(0..geo.vertex_count())...filter(|&c|
@@ -113,6 +113,16 @@
 //! an unopened cave system — that is a fact about what an ATLAS is, not
 //! about what the viewer has or has not encountered. This view follows that
 //! convention.
+//!
+//! **The Legend's Task 7 added volcano and waterfall rosters to
+//! [`plate::draw_with`]'s own parameter list**, and this view passes empty
+//! ones for both, for the identical reason: neither is a discovery read
+//! (`Driver::start_from_world` scans `features`/`GeneratedTerrain::
+//! waterfalls()` once at genesis, the same "ground truth, no per-render
+//! scan" shape caves already follow here), so the cost argument above
+//! applies unchanged, and an atlas that draws coastlines, mountains and
+//! towns is under no more obligation to draw a volcano's anchor or a
+//! waterfall's vertex than it is a cave mouth.
 //!
 //! **This is a real, deliberate narrowing of spec §4's literal wording**
 //! ("settlements and caves appearing as placed"), not an oversight — worth
@@ -143,7 +153,7 @@
 //! against seed 42's real `Full`-depth settlement roster, before relying on
 //! the argument alone — see the task report.)
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use hornvale_game_core::Grid;
 use hornvale_kernel::{Geosphere, NearestVertexIndex, Vertex, World};
@@ -183,9 +193,14 @@ fn fit_depth(w: u16, h: u16) -> u32 {
 /// "The discovery decision" section for why the overture atlas shows every
 /// placed settlement rather than gating on session discovery, which has not
 /// started yet.
-fn discovered_of(settlements: &BTreeSet<Vertex>) -> Discovered {
+///
+/// Takes the roster's KEYS only (`plate::settlements_of` widened to
+/// `BTreeMap<Vertex, u64>` at The Legend's Task 7, valued by population for
+/// [`plate::draw_feature_layer`]'s own major/minor split) — discovery has no
+/// use for the value, only for which vertices are placed at all.
+fn discovered_of(settlements: &BTreeMap<Vertex, u64>) -> Discovered {
     let mut discovered = Discovered::default();
-    for &vertex in settlements {
+    for &vertex in settlements.keys() {
         discovered.record(FeatureId::Settlement(vertex));
     }
     discovered
@@ -282,9 +297,14 @@ impl View for AtlasView {
 
         let settlements = plate::settlements_of(world, geo, nearest);
         let discovered = discovered_of(&settlements);
-        // No caves — see the module doc's "Caves: skipped, deliberately"
-        // section.
+        // No caves, volcanoes or waterfalls — see the module doc's "Caves:
+        // skipped, deliberately" section, which is the same genre-convention
+        // argument for all three: a printed atlas draws coastlines,
+        // mountains and towns, never the mesh-projected extras a possessed
+        // agent's own map layers in as they are encountered.
         let caves = BTreeSet::new();
+        let volcanoes = BTreeSet::new();
+        let waterfalls: Vec<Vertex> = Vec::new();
 
         plate::draw_with(
             terrain,
@@ -297,6 +317,8 @@ impl View for AtlasView {
             plate::colour_allowed(),
             &settlements,
             &caves,
+            &volcanoes,
+            &waterfalls,
             &discovered,
         )
     }
@@ -405,26 +427,29 @@ mod tests {
         let full_text = at_full.to_plain_text();
 
         assert!(
-            !terrain_text.contains(plate::SETTLEMENT_GLYPH),
+            !terrain_text.contains(plate::SETTLEMENT_MAJOR_GLYPH)
+                && !terrain_text.contains(plate::SETTLEMENT_MINOR_GLYPH),
             "a settlement glyph appeared before any settlement was placed"
         );
         // NON-VACUITY: the assertion above would also pass against a blank
         // or broken grid that drew nothing at all. Prove the terrain layer
-        // actually painted a real raster — both glyphs `crate::plate`'s own
-        // module doc names as its vocabulary (`~` ocean, `.` land) — so the
-        // absence of the settlement glyph is a real absence, not a symptom
-        // of nothing having been drawn.
+        // actually painted a real raster. The Legend (Task 6) retired the
+        // `~` ocean / `.` land binary `crate::plate`'s module doc used to
+        // name as its whole vocabulary for a water-class-and-elevation-band
+        // one, so "drew land" is no longer one hardcoded character — it is
+        // any drawn glyph that is not the ocean mark.
         assert!(
             terrain_text.chars().any(|c| c == '~'),
             "the terrain layer drew no ocean at all: {terrain_text:?}"
         );
         assert!(
-            terrain_text.chars().any(|c| c == '.'),
+            terrain_text.chars().any(|c| !c.is_whitespace() && c != '~'),
             "the terrain layer drew no land at all: {terrain_text:?}"
         );
 
         assert!(
-            full_text.contains(plate::SETTLEMENT_GLYPH),
+            full_text.contains(plate::SETTLEMENT_MAJOR_GLYPH)
+                || full_text.contains(plate::SETTLEMENT_MINOR_GLYPH),
             "settlements never appeared even at Full"
         );
     }
@@ -473,8 +498,10 @@ mod tests {
             first_key, second_key,
             "the memo did not rebuild for a different terrain reference"
         );
+        let at_full_text = at_full.to_plain_text();
         assert!(
-            at_full.to_plain_text().contains(plate::SETTLEMENT_GLYPH),
+            at_full_text.contains(plate::SETTLEMENT_MAJOR_GLYPH)
+                || at_full_text.contains(plate::SETTLEMENT_MINOR_GLYPH),
             "the full-world render (after a rebuild) drew no settlement"
         );
     }

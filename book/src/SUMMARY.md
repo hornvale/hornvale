@@ -422,6 +422,7 @@
 - [The Stile](./chronicle/the-stile.md)
 - [The Latch](./chronicle/the-latch.md)
 - [The Precedence](./chronicle/the-precedence.md)
+- [The Legend](./chronicle/the-legend.md)
 - [The Governor](./chronicle/the-governor.md)
 - [The Rail](./chronicle/the-rail.md)
 - [The Quoin](./chronicle/the-quoin.md)
@@ -431,7 +432,9 @@
 - [The Overture](./chronicle/the-overture.md)
 - [The Chattel](./chronicle/the-chattel.md)
 - [The Attestation](./chronicle/the-attestation.md)
+- [The Cartulary](./chronicle/the-cartulary.md)
 - [The Repertory](./chronicle/the-repertory.md)
+- [The Company](./chronicle/the-company.md)
 
 # Appendix: The Frontier
 

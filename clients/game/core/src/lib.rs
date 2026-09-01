@@ -9,6 +9,7 @@ pub mod entry;
 pub mod level;
 pub mod lexicon;
 pub mod plan;
+pub mod register;
 pub mod schema;
 pub mod spread;
 pub mod strip;

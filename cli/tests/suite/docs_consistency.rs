@@ -1552,3 +1552,306 @@ fn the_decision_log_starts_at_0001() {
          misnamed, never retired."
     );
 }
+
+/// Suffixes a spec file's stem may carry beyond a plan's own slug. A plan is
+/// named `<date>-<slug>.md`; its spec is almost always
+/// `<date>-<slug>-design.md`, with `-metaplan`, `-brief` and
+/// `-question-space` covering the handful of historical exceptions observed
+/// in `docs/superpowers/specs/` (`2026-08-07-the-journal-brief.md`,
+/// `2026-07-07-year-2-metaplan-design.md`'s siblings, and
+/// `2026-08-11-the-ford-stage-2-question-space.md`). The empty string covers
+/// the rare case where spec and plan share the identical stem.
+const SPEC_SUFFIXES: &[&str] = &["", "-design", "-metaplan", "-brief", "-question-space"];
+
+/// Every `.md` file stem directly inside `dir`.
+fn file_stems(dir: &Path) -> BTreeSet<String> {
+    fs::read_dir(dir)
+        .unwrap_or_else(|e| panic!("reading {}: {e}", dir.display()))
+        .filter_map(|entry| entry.ok())
+        .map(|entry| entry.path())
+        .filter(|path| path.extension().is_some_and(|ext| ext == "md"))
+        .filter_map(|path| path.file_stem().map(|s| s.to_string_lossy().into_owned()))
+        .collect()
+}
+
+/// Every campaign slug (a plan's filename stem, e.g. `2026-08-30-the-cartulary`
+/// — the same string a ledger for it would be named after) that has both a
+/// spec and a plan today, matched by exact slug: the spec's stem must equal
+/// the plan's stem plus one of `SPEC_SUFFIXES`.
+///
+/// # What this cannot see
+///
+/// The match requires spec and plan to share the exact same date-plus-slug
+/// stem. Real historical campaigns violate that in ways this function does
+/// not chase: a spec written a day before its plan
+/// (`2026-08-27-the-precedence-design.md` / `2026-08-28-the-precedence.md`),
+/// a plan that inserts a word the spec's slug does not carry
+/// (`2026-08-20-the-deed-design.md` / `2026-08-20-the-deed-state.md`), or an
+/// umbrella spec covering several separately-dated sub-campaign plans
+/// (`campaign-2-the-sky-design.md` covering `campaign-2a-genesis.md`,
+/// `campaign-2b-sky-debut.md`, ...). Those campaigns are invisible to this
+/// function and so never appear in its output at all — not flagged missing a
+/// ledger, not carried in the exemption list, simply outside what this check
+/// evaluates. A fuzzier matcher could reclaim some of them; it would also
+/// risk a false pairing nobody could verify by eye. This function trades
+/// recall for a rule any reader can check against the two directories
+/// directly.
+fn campaigns_with_spec_and_plan() -> BTreeSet<String> {
+    let root = repo_root();
+    let spec_stems = file_stems(&root.join("docs/superpowers/specs"));
+    file_stems(&root.join("docs/superpowers/plans"))
+        .into_iter()
+        .filter(|plan_stem| {
+            SPEC_SUFFIXES
+                .iter()
+                .any(|suffix| spec_stems.contains(&format!("{plan_stem}{suffix}")))
+        })
+        .collect()
+}
+
+/// Plan slugs [`campaigns_with_spec_and_plan`]'s exact-slug rule could not
+/// pair with a spec: an umbrella spec covering several separately-dated
+/// sub-campaigns (`campaign-2-the-sky-design.md` /
+/// `campaign-2a-genesis.md`), a spec/plan pair whose date or wording
+/// drifted apart (`2026-08-27-the-precedence-design.md` /
+/// `2026-08-28-the-precedence.md`), and a plan with no spec under any name
+/// at all (`2026-07-11-test-system-quick-wins`, one of roughly a dozen
+/// tooling/process plans this repository never required a spec for). This
+/// function cannot tell those three apart — see
+/// [`the_unmatched_plan_count_has_not_moved`] for what that costs and why
+/// it is frozen rather than left to drift silently.
+fn unmatched_plan_slugs() -> BTreeSet<String> {
+    let matched = campaigns_with_spec_and_plan();
+    file_stems(&repo_root().join("docs/superpowers/plans"))
+        .into_iter()
+        .filter(|slug| !matched.contains(slug))
+        .collect()
+}
+
+/// The count [`unmatched_plan_slugs`] returned in a full census taken
+/// 2026-08-30 (Task 3's fix round, The Cartulary — a reviewer demonstrated
+/// that a spec/plan pair shaped like `the-deed-design`/`the-deed-state`
+/// passes both ledger checks clean with no ledger at all). Frozen the same
+/// way `decision_block_declaration_count_has_not_dropped` freezes its own
+/// count and `registry_length_waivers` freezes the registry Idea-column waiver list —
+/// a number nobody re-derives by eye, changed only on purpose.
+///
+/// # Why this exists
+///
+/// `campaigns_with_spec_and_plan`'s exact-slug rule is a deliberate trade of
+/// recall for a rule anyone can verify by eye (its own doc comment). The
+/// cost of that trade is real: a campaign whose spec and plan names take the
+/// shape that rule already names as its blind spot is invisible to BOTH
+/// `every_campaign_with_a_spec_and_a_plan_has_a_ledger` (never counted, so
+/// never flagged missing) and `the_ledger_exemption_list_only_shrinks`
+/// (never exempted, because it was never in the population to begin with).
+/// It can ship with no ledger, forever, and nothing in this file would ever
+/// say so — an absence with no row, inside the instrument this campaign
+/// built to remove exactly that (spec `2026-08-29-the-attestation-design.md`
+/// §2 names the same thesis for a different corpus). This test does not
+/// close the hole — closing it needs a smarter matcher, which trades away
+/// the verifiability the simple rule was chosen for — it only makes the
+/// count that hole hides in impossible to move quietly.
+///
+/// # What it cannot see
+///
+/// This test can only report that the count moved, never why. Of today's
+/// 54, only a portion are plans with no spec under any name at all
+/// (`2026-07-11-test-system-quick-wins` and roughly a dozen siblings) —
+/// correctly outside the population. The rest are umbrella specs and
+/// date/wording drift `campaigns_with_spec_and_plan` chose not to chase. A
+/// rise in this count could be either kind, and a human has to look: if the
+/// new plan has a spec the matcher missed, widen the matcher or give the
+/// campaign a ledger (or an exemption-list entry); if it truly has none,
+/// raise this constant with a one-line note of which plan and why. A fall
+/// means a plan was deleted, renamed into a matching pair, or the matcher
+/// improved — investigate before lowering it.
+const EXPECTED_UNMATCHED_PLAN_COUNT: usize = 54;
+
+#[test]
+fn the_unmatched_plan_count_has_not_moved() {
+    let unmatched = unmatched_plan_slugs();
+    let found = unmatched.len();
+    assert_eq!(
+        found,
+        EXPECTED_UNMATCHED_PLAN_COUNT,
+        "the unmatched-plan count moved: {EXPECTED_UNMATCHED_PLAN_COUNT} recorded, {found} now. \
+         This ratchet cannot tell a real gap from a false alarm (see the doc comment on \
+         the_unmatched_plan_count_has_not_moved) — a rise means a NEW plan whose spec \
+         campaigns_with_spec_and_plan could not pair, which needs a human to check by hand \
+         whether it needs a ledger; a fall means a plan was deleted, renamed into a matching \
+         pair, or the matcher improved. Either way, investigate before touching this constant. \
+         Current unmatched set:\n  {}",
+        unmatched.into_iter().collect::<Vec<_>>().join("\n  ")
+    );
+}
+
+/// Whether `docs/superpowers/ledgers/<slug>.md` exists and holds more than
+/// whitespace. Resolved **by name from the slug** — never by listing the
+/// ledgers directory — so `docs/superpowers/ledgers/README.md` is invisible
+/// to this check by construction rather than by an exclusion rule someone
+/// has to maintain (`docs/superpowers/ledgers/README.md` states the same
+/// resolution rule from the other side).
+fn ledger_exists_and_is_nonempty(slug: &str) -> bool {
+    let path = repo_root()
+        .join("docs/superpowers/ledgers")
+        .join(format!("{slug}.md"));
+    fs::read_to_string(&path).is_ok_and(|s| !s.trim().is_empty())
+}
+
+/// Campaign slugs exempted from `every_campaign_with_a_spec_and_a_plan_has_a_ledger`
+/// because they predate the ledger convention (The Cartulary, 2026-08-30).
+/// **Append-never in the shrinking direction only**: an entry is removed
+/// once its campaign gains a ledger, never added — a new campaign cannot
+/// exempt itself, the same ratchet `registry_length_waivers` enforces for
+/// the registry Idea-column length budget. **This was asserted here and in
+/// `every_campaign_with_a_spec_and_a_plan_has_a_ledger`'s own doc comment
+/// and enforced nowhere until the final review proved it by mutation**: a
+/// fresh spec, plan and self-added exemption with no ledger passed every
+/// check green, because the two existing checks only look for a slug
+/// OUTSIDE today's population or a slug that has since gained a ledger — a
+/// brand-new, still-ledgerless campaign is neither. `EXPECTED_LEDGER_
+/// EXEMPT_CEILING` below closes it, the same way `EXPECTED_UNMATCHED_
+/// PLAN_COUNT` freezes its own count.
+fn ledger_exempt_campaigns() -> BTreeSet<&'static str> {
+    include_str!("../fixtures/ledger-exempt-campaigns.txt")
+        .lines()
+        .map(str::trim)
+        .filter(|l| !l.is_empty())
+        .collect()
+}
+
+/// The exemption list's length, 244. It may FALL, when a campaign gains a
+/// ledger and is removed from the fixture. A rise is the defect this
+/// ceiling exists to catch — a new campaign exempting itself instead of
+/// writing a ledger — with exactly one documented exception, described
+/// below, which is why the number is 244 and not the 239 it was added at.
+///
+/// # The crossover window, which "append-never" did not anticipate
+///
+/// The list was frozen (2026-08-30, final review finding I3) against The
+/// Cartulary's own worktree, which was 333 commits behind `main`. It was
+/// therefore a snapshot of the campaign population AT THIS BRANCH'S BASE,
+/// not of main's. Absorbing main before merge admitted five campaigns that
+/// had landed in the interim and carry no ledger:
+///
+///   2026-08-19-the-winze, 2026-08-28-the-chattel, 2026-08-28-the-legend,
+///   2026-08-30-the-company, 2026-08-30-the-repertory
+///
+/// None is a self-exemption, and the distinction is checkable rather than
+/// asserted: every one of the five was already merged to `origin/main`
+/// before this branch's absorb (each one's spec and plan is absent from
+/// `git merge-base HEAD origin/main` and present on main), so no live
+/// session could have added its own slug here. Each predates the
+/// convention in the only sense that binds — the convention does not exist
+/// on main until this branch lands.
+///
+/// So the honest invariant is narrower than "append-never": the list may
+/// grow ONLY for a campaign that merged before the convention did, and
+/// that window closes the moment this branch lands. After that there is no
+/// legitimate rise, and a rise means what the original comment said it
+/// meant. A date floor was considered as a self-maintaining replacement
+/// and rejected: slug dates are authored, not merge dates, and two of the
+/// five carry the same date as The Cartulary itself, so no cutoff
+/// separates them.
+///
+/// Investigate before lowering it back; never raise it to match.
+const EXPECTED_LEDGER_EXEMPT_CEILING: usize = 244;
+
+/// A campaign with a spec and a plan also has a ledger.
+///
+/// # Direction this check enforces
+///
+/// spec-and-plan implies ledger. It is blind to a ledger with no campaign
+/// (harmless), and blind to every campaign in
+/// `cli/tests/fixtures/ledger-exempt-campaigns.txt` — the 239 that predate
+/// this convention. That list may only SHRINK: a campaign gaining a ledger
+/// drops out of it, and a new campaign cannot add itself — enforced by
+/// `the_ledger_exemption_list_only_shrinks`'s `EXPECTED_LEDGER_EXEMPT_CEILING`
+/// assertion, not by this test; before 2026-08-30 (final review finding I3)
+/// that second half was asserted here and nowhere enforced.
+///
+/// # What it cannot see, stated because a check that does not say so reads
+/// as total
+///
+/// It sees that a ledger file exists and is non-empty. It cannot see whether
+/// the contents are honest, whether they are complete, or whether they were
+/// written as the campaign ran rather than backfilled in one sitting at
+/// close. Those are the properties that actually matter and none of them is
+/// mechanically checkable — the same three-valued honesty `tropes check` and
+/// type-audit's `waiver(...)` carry.
+#[test]
+fn every_campaign_with_a_spec_and_a_plan_has_a_ledger() {
+    let exempt = ledger_exempt_campaigns();
+    let missing: Vec<String> = campaigns_with_spec_and_plan()
+        .into_iter()
+        .filter(|slug| !exempt.contains(slug.as_str()))
+        .filter(|slug| !ledger_exists_and_is_nonempty(slug))
+        .collect();
+    assert!(
+        missing.is_empty(),
+        "campaigns with a spec and a plan but no ledger at \
+         docs/superpowers/ledgers/. A campaign's rulings, deferred minors and \
+         parked findings belong in a committed file — scratch dies with the \
+         worktree, which has cost this project five recorded losses:\n  {}",
+        missing.join("\n  ")
+    );
+}
+
+/// The equivalent of `the_waiver_list_only_shrinks`, for the ledger
+/// exemption list. Both halves apply here exactly as they do there: an
+/// exempted slug that never had both a spec and a plan is a typo or a
+/// fabrication (append-never means nothing should ever need to be added,
+/// so a slug outside today's population could not have arrived
+/// legitimately), and an exempted slug whose campaign now carries a
+/// non-empty ledger should have been removed rather than left to ride
+/// along unused.
+#[test]
+fn the_ledger_exemption_list_only_shrinks() {
+    let exempt = ledger_exempt_campaigns();
+    let population = campaigns_with_spec_and_plan();
+    let population_refs: BTreeSet<&str> = population.iter().map(String::as_str).collect();
+
+    let unknown: Vec<&str> = exempt
+        .iter()
+        .filter(|slug| !population_refs.contains(*slug))
+        .copied()
+        .collect();
+    assert!(
+        unknown.is_empty(),
+        "exempted slugs with no matching spec-and-plan pair today — the \
+         exemption list is append-never and its population is fixed, so a \
+         slug outside that population means a typo, a renamed campaign, or a \
+         fabricated entry:\n  {}",
+        unknown.join("\n  ")
+    );
+
+    let now_ledgered: Vec<&str> = exempt
+        .iter()
+        .filter(|slug| ledger_exists_and_is_nonempty(slug))
+        .copied()
+        .collect();
+    assert!(
+        now_ledgered.is_empty(),
+        "these campaigns now have a ledger — remove them from \
+         fixtures/ledger-exempt-campaigns.txt so the ratchet holds:\n  {}",
+        now_ledgered.join("\n  ")
+    );
+
+    // The direction neither check above covers: the list growing with an
+    // entry that looks entirely legitimate (inside today's population,
+    // genuinely ledgerless). Proven reachable by mutation (final review,
+    // finding I3) before this assertion existed.
+    assert!(
+        exempt.len() <= EXPECTED_LEDGER_EXEMPT_CEILING,
+        "the exemption list grew to {} entries, past its {}-entry ceiling. \
+         It is append-never in the growing direction: a NEW campaign cannot \
+         add itself here. A rise means either a fabricated/duplicated entry \
+         (remove it) or a legitimate need to widen the ceiling after a human \
+         checks by hand that the added slug truly predates the ledger \
+         convention — never raise this constant to make a red pass without \
+         that check.",
+        exempt.len(),
+        EXPECTED_LEDGER_EXEMPT_CEILING
+    );
+}

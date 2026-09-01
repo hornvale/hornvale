@@ -1267,6 +1267,16 @@ mod tests {
     /// strongbox and all 10 open it, unchanged across the move — recorded in
     /// The Custodian's chronicle, and a measurement is a claim with a date.
     ///
+    /// **DO NOT STRENGTHEN THIS CLAUSE BACK WITHOUT REOPENING DECISION 0516.**
+    /// The universal claim reads like a defect to fix, and restoring it is the
+    /// specific act 0516 exists to prevent: the gap is left open deliberately,
+    /// because a key on a floor is a placeholder for the person who would hold
+    /// it, and the custody mechanism it stands in for already takes any entity
+    /// (`thing::held_by`). What is missing is the resident
+    /// (`SOC-one-creature-per-settlement`). Once a building has one, "where is
+    /// the key" becomes "who has it", and the question this clause cannot
+    /// answer stops being asked.
+    ///
     /// MUTATION THIS MUST FAIL AGAINST: change `the-key-by-the-loom`'s
     /// `roles` to `&[Role::Store]` — the plausible copy of its sibling, which
     /// compiles and leaves an `INVENTORY` of the same length. Confirmed
