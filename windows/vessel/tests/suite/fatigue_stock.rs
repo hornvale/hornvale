@@ -364,6 +364,18 @@ fn a_rest_in_progress_credits_only_the_sleep_already_had() {
 /// rests` reduces to exactly `RATE * to_local_days(t - GENESIS, day)`, clamped
 /// (never reached here — see the strictly-inside-the-clamps assertion below).
 /// That makes the predicted numbers exact, not merely ordered.
+///
+/// **What this test does NOT witness (fix round 1 review).** `day` here is a
+/// synthetic `TickSpan` handed straight to `fatigue_at` — this file never
+/// touches `LocaleTerrain`, `Calendar`, or a real world, so this test would
+/// stay GREEN even if `Terrain::day_ticks` never reached a real calendar at
+/// all (a seam bug entirely upstream of this fold). The reviewer checked
+/// that seam separately: mutating `LocaleTerrain::day_ticks` to always
+/// return `None` reddens
+/// `session_snapshot::the_client_fixtures_are_current`, so the committed
+/// `snapshot-seed-0-chamber-occupied.json` golden — which reads as ordinary
+/// artifact drift — is this task's real witness that the calendar reaches
+/// the fold in production, not this test.
 #[test]
 fn the_debt_scales_with_the_worlds_own_local_day_not_the_standard_one() {
     let (ledger, e, _reg) = body();
@@ -413,4 +425,88 @@ fn the_debt_scales_with_the_worlds_own_local_day_not_the_standard_one() {
          read IDENTICAL fatigue; discriminating on the local day length is \
          the whole point of this task"
     );
+}
+
+/// **THE FALL-TERM INVARIANT (fix round 1, Important 2).** A full accrue-
+/// and-recover cycle — 0.9 of a LOCAL day awake, then 0.1 of a LOCAL day
+/// spent resting — must land at the SAME net fatigue regardless of how long
+/// the local day actually is in standard days, once both the RISE and the
+/// FALL terms convert through `to_local_days`.
+///
+/// **Why 0.9/0.1 and not a 0.5/0.5 "normal night".** Tried first, and it is
+/// vacuous: `RATE * 0.5 = 0.15` accrued against `REST_FALL * 0.5 = 0.25`
+/// repaid clamps to EXACTLY `0.0` on both worlds, so the equality holds for a
+/// reason that has nothing to do with `L`-invariance — the clamp, not the
+/// arithmetic, is doing the agreeing. An unbalanced cycle (`RATE * 0.9 =
+/// 0.27` accrued against `REST_FALL * 0.1 = 0.05` repaid, net `0.22`) lands
+/// strictly inside both clamps, so the equality below is a real property of
+/// the fold.
+///
+/// **This is the test that would have caught the rotation-dependent
+/// recovery bug fix round 1 found.** The first cut of this task left the
+/// fall terms on `TickSpan::as_std_days()`, reasoned as a scope boundary
+/// (`FATIGUE_FALL`/`REST_FALL` are not named by Nathan's ruling). That
+/// reasoning missed that a sleep bout is not a standard-day span: the walk's
+/// own `act_span` runs a sleep to roughly half a LOCAL day. With `L` the
+/// local day in standard days, the waking phase accrues `RATE * 0.9`
+/// (`L`-invariant, once RISE converts) while an unconverted fall term repays
+/// `REST_FALL * 0.1 * L` — a recovery rate that SCALES with `L` while the
+/// accrual it must outpace does not. Break-even was at `L = 0.3` standard
+/// days (7.2 h); `RotationPin::PeriodHours` admits 4-100 h, so a legal
+/// `--day-hours 4` world could accrue faster than it could ever recover.
+/// Converting both terms restores the fixed margin at every `L` — the
+/// property the pre-Task-9 model had for free, because both terms carried
+/// the SAME (kernel) day.
+///
+/// Two worlds with very different local days — Earth-like (1 standard day)
+/// and 20x longer — the same species, one full cycle each, read at the
+/// moment the body wakes. Name the mutation: reverting the fall term's
+/// `to_local_days` back to `as_std_days` reddens this — the long-day world
+/// repays far more than the short-day one for the identical FRACTION (0.1)
+/// of a local day spent resting, because an unconverted fall term repays
+/// per STANDARD day, and 0.1 of a 20-standard-day local day is a much bigger
+/// standard-day span than 0.1 of a 1-standard-day one.
+#[test]
+fn a_full_cycle_lands_at_the_same_debt_regardless_of_the_local_day_length() {
+    // Earth-like: one standard day. 20x longer: twenty standard days — "very
+    // different" per the brief. This is the FOLD's own invariant, not a
+    // claim about which worlds worldgen can mint, so pin legality is beside
+    // the point.
+    let short_day = TickSpan::from_ticks(100_000);
+    let long_day = TickSpan::from_ticks(2_000_000);
+
+    let debt_short = one_full_cycle(short_day);
+    let debt_long = one_full_cycle(long_day);
+
+    assert!(
+        debt_short > 0.0 && debt_short < 1.0 && debt_long > 0.0 && debt_long < 1.0,
+        "both readings must sit strictly inside the clamps or the comparison \
+         below proves nothing: short={debt_short}, long={debt_long}"
+    );
+    assert!(
+        (debt_short - debt_long).abs() < 1e-9,
+        "a full accrue-and-recover cycle (0.9 of a LOCAL day awake, 0.1 \
+         resting) must land at the SAME net debt on both worlds — the rise \
+         and fall terms must scale with the SAME local day: \
+         short={debt_short} (day={short_day:?}), long={debt_long} \
+         (day={long_day:?})"
+    );
+}
+
+/// One full accrue-and-recover cycle on a world whose local day is
+/// `local_day`: 0.9 of a local day awake from genesis, then a `rested` bout
+/// spanning the remaining 0.1, read at the moment the body wakes. Ticks are
+/// derived directly from `local_day` (never through a standard-day float),
+/// so the fractions are exact on every `local_day` this is called with.
+fn one_full_cycle(local_day: TickSpan) -> f64 {
+    let (mut ledger, e, reg) = body();
+    let lay_down_ticks = local_day.ticks() * 9 / 10;
+    let span_ticks = local_day.ticks() - lay_down_ticks;
+    let lay_down = WorldTime::from_ticks(lay_down_ticks);
+    let span = TickSpan::from_ticks(span_ticks);
+    ledger
+        .commit(record_rest(e, lay_down, span), &reg)
+        .expect("`rested` is non-functional");
+    let woke = lay_down + span;
+    fatigue_at(&ledger, e, woke, RATE, Some(local_day))
 }

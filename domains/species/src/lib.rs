@@ -4047,24 +4047,34 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
 /// clock. Nathan's ruling: a rate like this "should actually be a
 /// component" rather than a single constant shared by every species in
 /// every world, and this table is that component — one row per kind that
-/// sleeps at all.
+/// exists at all, `xorn` included.
 ///
-/// **Absence is the statement, not an omission.** The ruling names the
-/// mandatory rate as holding "for most species" — a wording a bare constant
-/// could not express and an `Option` field would collapse: "does not sleep"
-/// and "not yet authored" would read as the same `None`. So the boundary is
-/// drawn by which kinds get a row here, and a lookup miss means the debt
-/// never accrues (`0.0` per local day), not a placeholder waiting to be
-/// filled in. `xorn` is the one omission on today's roster —
-/// [`ThermalStrategy::Absent`]'s own doc already reads "no metabolism at
-/// all... no life-history", and the walk's ametabolic gate
+/// **This is now a TOTAL map over `biosphere_registry`'s roster, not a
+/// partial one — fix round 1, Important 1.** The first cut of this task
+/// read Nathan's "for most species" as licence for an absent row to mean
+/// "does not sleep", with a caller-side `unwrap_or(0.0)` standing in for
+/// the missing case. Review found that inverted: every OTHER species-
+/// resolved trait `body_at` derives (temperature niche, thermal strategy,
+/// diet, mass, psyche, boldness, perception) falls back to a documented
+/// NEUTRAL default on a lookup miss, never to a semantically extreme one —
+/// and a miss is reached exactly as easily by a `Body.species` TYPO as by a
+/// genuinely unauthored kind, so the two cases must not read differently.
+/// `xorn` — [`ThermalStrategy::Absent`]'s own doc already reads "no
+/// metabolism at all... no life-history", and the walk's ametabolic gate
 /// (`windows/vessel::liveness::decide_step`/`affect_of_memo_occupied`)
 /// already excludes exactly that kind from the REST drive on the same
-/// grounds ("does not... tire"). This table states the same fact where the
-/// arithmetic lives, rather than only where the arbitration reads it.
+/// grounds ("does not... tire") — is still the one kind whose rate is
+/// `0.0`, but it earns that by an EXPLICIT row stating the fact, the same
+/// way every other row states its own. `coverage::every_biosphere_kind_
+/// carries_a_fatigue_rise_row` (modelled on `every_kind_with_a_mind_
+/// carries_a_dispersion`) ratchets the roster staying total. The caller-
+/// side miss default (`windows/vessel::liveness::DEFAULT_FATIGUE_RISE`) now
+/// exists purely for a species this registry has never heard of at all —
+/// the typo case — and answers the NEUTRAL value, matching `windows/
+/// vessel::clock::mass_for_species`'s own `REFERENCE_MASS_KG` shape.
 ///
-/// **Every row shares HUMAN's rate, and that is a scope boundary, not a
-/// finding.** The ruling anchors the number at "roughly a third of a
+/// **Every OTHER row shares HUMAN's rate, and that is a scope boundary, not
+/// a finding.** The ruling anchors the number at "roughly a third of a
 /// planetary day" for a human, which is what the old `FATIGUE_RISE = 0.3`
 /// constant already approximately was — this table keeps that literal
 /// value rather than re-deriving it as an exact 1/3 (moving a number to a
@@ -4088,8 +4098,13 @@ pub fn fatigue_rise_registry() -> ComponentStore<KindId, f64> {
         (KindId("woolly-mammoth"), RATE),
         (KindId("giant-goat"), RATE),
         (KindId("otyugh"), RATE),
-        // `xorn` (`ThermalStrategy::Absent`) is deliberately absent — see
-        // this function's own doc.
+        // `xorn` (`ThermalStrategy::Absent`) is EXPLICIT here, at `0.0` —
+        // fix round 1, Important 1: an ametabolic kind still sleeps
+        // "not at all", stated as a real row, not left to a lookup miss to
+        // say so. See this function's own doc for why the distinction
+        // matters (the miss case is now reserved for a species this table
+        // has never heard of, which must read the NEUTRAL fallback instead).
+        (KindId("xorn"), 0.0),
         (KindId("rust-monster"), RATE),
         (KindId("white-dragon"), RATE),
         (KindId("red-dragon"), RATE),

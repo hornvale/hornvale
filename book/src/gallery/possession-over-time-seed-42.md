@@ -74,7 +74,7 @@ hobgoblin of Neene:
 - an agent's position on a day: 895943271 (asserted by wandered, having found no water yet (thirst), day 6.91503)
 
 > wait 90
-Time passes. You sense movement nearby (279 stirred).
+Time passes. You sense movement nearby (251 stirred).
 > look
 [room 896860167, day 97]
 Tropical rainforest — buttressed canopy, damp — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.

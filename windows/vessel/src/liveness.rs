@@ -410,7 +410,6 @@ pub trait Terrain {
     /// documents — so every terrain that does not override this reads at the
     /// BASE (standard-day) rate, byte-identical to the pre-Task-9 arithmetic;
     /// a live `LocaleTerrain` OVERRIDES it with the real calendar's day.
-    /// type-audit: bare-ok(count: return)
     fn day_ticks(&self) -> Option<TickSpan> {
         None
     }
@@ -2249,10 +2248,15 @@ const TWILIGHT_DEG: f64 = 6.0;
 /// that sentence is the rise rate's whole justification. The recovery rate
 /// has to answer the mirrored question: a body pushed to a saturated debt
 /// should get back to rested in about the same span of ordinary nights it took
-/// to break. At 1.0 per day asleep, a normal night (half a standard day, the
-/// jump the wake-gate's own `next_awake_day` produces) repays 0.5 against the
+/// to break. At 1.0 per LOCAL day asleep, a normal night (half a LOCAL day,
+/// the jump the wake-gate's own `next_awake_day` produces, now converted the
+/// same way the rise term is — fix round 1) repays 0.5 against the
 /// ~0.15-0.22 a waking phase accrues, so full exhaustion clears over about
-/// three cycles. Same order as the 2.8 days that built it.
+/// three cycles ON EVERY WORLD, not only one whose local day happens to equal
+/// a standard day — that L-invariance is exactly what fix round 1's
+/// conversion of this term buys (see `fatigue_from_rests`'s own doc for the
+/// bug leaving it unconverted caused). Same order as the 2.8 days that built
+/// it.
 ///
 /// **THE FIRST VALUE AUTHORED HERE WAS 2x THE RISE RATE, AND IT WAS WRONG FOR
 /// A REASON WORTH KEEPING.** The argument was the ratio a body keeps —
@@ -2732,14 +2736,14 @@ fn to_local_days(span: TickSpan, day: Option<TickSpan>) -> f64 {
 /// Fatigue is a STOCK integrated along the creature's own timeline: it rises at
 /// `rate` per LOCAL day awake (The Wicket, Task 9 — was a single constant,
 /// applied per STANDARD day, for every species in every world) and falls,
-/// per STANDARD day spent down, at the rate the
+/// per LOCAL day spent down, at the rate the
 /// BOUT'S OWN ACT repays at — [`FATIGUE_FALL`] for a sleep, [`REST_FALL`] for
 /// a conscious rest (The Wicket, Task 8) — clamped into `[0, 1]` at every
 /// segment boundary so it can neither run past exhaustion nor bank credit
 /// below zero. `rests` must be sorted by start instant ([`rest_timeline`] is
 /// the only producer). `rate` is the caller's species-resolved sleep-debt
-/// rate (`hornvale_species::fatigue_rise_registry`, `0.0` for a kind with no
-/// row — it never sleeps); `day` is the world's local day length
+/// rate ([`fatigue_rise_for`], reading `hornvale_species::
+/// fatigue_rise_registry`); `day` is the world's local day length
 /// (`Terrain::day_ticks`), `None` on a tidally locked world.
 ///
 /// **Why the read and the mover must be ONE function, not two agreeing ones.**
@@ -2758,14 +2762,23 @@ fn to_local_days(span: TickSpan, day: Option<TickSpan>) -> f64 {
 ///
 /// Every span crossing to `f64` is an exact lattice difference (`t - cursor`),
 /// never a difference of two separately crossed days — the shape The Slumber
-/// settled on, preserved segment by segment. **Task 9 scopes the local-day
-/// conversion to the RISE term alone.** The fall rates ([`FATIGUE_FALL`]/
-/// [`REST_FALL`]) stay in standard days: neither is named by Nathan's
-/// ruling, and re-deriving their magnitude against a new denominator in the
-/// same commit that fixes the rise term's units would be a second, unasked
-/// change. On a world whose local day equals one standard day (the common
-/// case) `to_local_days` and `as_std_days` agree exactly, so this is
-/// behaviour-preserving there regardless.
+/// settled on, preserved segment by segment. **BOTH the rise and the fall
+/// terms convert through `to_local_days` (fix round 1) — leaving the fall
+/// terms on `as_std_days()` was tried first and was a bug, not a scope
+/// boundary.** A sleep bout is not a standard-day span: the walk's own
+/// `act_span` runs a sleep to roughly half a LOCAL day, so with `L` the
+/// local day in standard days, a waking phase accrues `rate * 0.5`
+/// (`L`-invariant, once the rise term converts) while an unconverted fall
+/// term repays `FATIGUE_FALL * L/2` — a recovery rate that SCALES with `L`
+/// while the accrual it must outpace does not. Break-even was at `L = 0.3`
+/// std days (7.2 h): `RotationPin::PeriodHours` admits 4-100 h, so a legal
+/// `--day-hours 4` world could never recover once saturated. Converting
+/// both terms restores the fixed margin between them at every `L` — the
+/// property the pre-Task-9 model had for free because both terms carried
+/// the SAME (kernel) day. [`REST_BOUT`]'s own span stays a fixed 0.25
+/// standard days regardless of `L` — a fixed WALL-CLOCK rest duration on a
+/// fast-rotating world is a separate design question, deliberately left
+/// alone here (see this task's own report).
 fn fatigue_from_rests(
     rests: &[(WorldTime, TickSpan, BoutKind)],
     t: WorldTime,
@@ -2798,7 +2811,7 @@ fn fatigue_from_rests(
         if woke > cursor {
             // The rate is the ACT's, not the module's: a conscious rest repays
             // at `REST_FALL`, a sleep at `FATIGUE_FALL` (The Wicket, Task 8).
-            fatigue = (fatigue - kind.fall() * (woke - cursor).as_std_days()).max(0.0);
+            fatigue = (fatigue - kind.fall() * to_local_days(woke - cursor, day)).max(0.0);
         }
         if end > cursor {
             cursor = end;
@@ -2864,28 +2877,54 @@ fn fatigue_with_pending(
     fatigue_from_rests(&rest_timeline(ledger, pending, entity, t), t, rate, day)
 }
 
-/// The species' sleep-debt RISE rate, resolved from `hornvale_species::
-/// fatigue_rise_registry` (The Wicket, Task 9). A lookup miss — a species
-/// with no row — answers `0.0`: absence IS the "does not sleep" statement,
-/// not a placeholder waiting to be authored (see that registry's own doc).
+/// The NEUTRAL fallback rate for a species `fatigue_rise_for` cannot
+/// resolve (fix round 1, Important 1) — matches `clock::mass_for_species`'s
+/// own `REFERENCE_MASS_KG` shape ("falls back... when the biosphere is
+/// absent or the species is not in it"). `0.0` was the first cut's answer
+/// here and was judged, in review, to be INVERTED: every other species-
+/// resolved trait `body_at` derives falls back to a documented neutral
+/// value on a miss, never to a semantically extreme one, and a
+/// `Body.species` TYPO reaches this exact path — it must not silently read
+/// as "this creature can never tire". `hornvale_species::
+/// fatigue_rise_registry` is now a TOTAL map over every biosphere kind
+/// (`xorn` included, at an EXPLICIT `0.0`), so this fallback is reserved for
+/// a species the registry has never heard of at all, not for a stated
+/// absence.
+const DEFAULT_FATIGUE_RISE: f64 = 0.3;
+
+/// The authored fatigue-rise roster's shape, mirroring `clock::Biosphere`:
+/// named here so [`fatigue_rise_for`] can take one BORROWED rather than
+/// building its own (fix round 1, Important/Minor review) — the same
+/// "type alias for a caller-owned registry" shape `clock::mass_for_species`
+/// already uses for `Option<&Biosphere>`.
+type FatigueRiseTable = hornvale_kernel::component::ComponentStore<hornvale_kernel::KindId, f64>;
+
+/// The species' sleep-debt RISE rate, read from a caller-supplied
+/// `hornvale_species::fatigue_rise_registry()` (The Wicket, Task 9; the
+/// borrowed-store shape, fix round 1). A lookup miss — `registry` absent,
+/// or the species not in it — answers [`DEFAULT_FATIGUE_RISE`], the neutral
+/// fallback (see its own doc for why `0.0` here was inverted).
 ///
 /// Shared by both `fatigue_at`'s production caller (the read, inside
 /// `affect_of_memo_occupied`) and `fatigue_with_pending`'s (the mover, inside
 /// `decide_step`) — each already has an `npc: &Body` in scope, so `&npc.
 /// species` costs nothing new to reach. Unlike every OTHER species-resolved
-/// trait on `Body` (`mass_kg`, `boldness`, `temperature_niche`, …), this one
-/// is NOT cached there: those are all resolved once at derivation
-/// (`body_at`), while this lookup runs once per `decide_step`/`affect_of`
-/// call (per creature, per tick for the live walk). Reconstructing a ~38-row
-/// `ComponentStore` that often is not free, but nothing on this path is
-/// per-tick-budget-sensitive today the way the geometry caches
-/// (`RoomMeshMemo`, `HomeNavCache`) exist to guard — if that changes, this is
-/// the function to memoize or fold into `Body` instead.
-fn fatigue_rise_for(species: &str) -> f64 {
-    hornvale_species::fatigue_rise_registry()
-        .get_by_label(species)
+/// trait on `Body` (`mass_kg`, `boldness`, `temperature_niche`, …), the
+/// RESULT of this lookup is NOT cached there: those are all resolved once at
+/// derivation (`body_at`), while this is read once per `decide_step`/
+/// `affect_of` call (per creature, per tick for the live walk). The registry
+/// itself, however, IS the caller's to build once and reuse — this function
+/// no longer constructs its own copy per call, matching `mass_for_species`'s
+/// shape rather than repeating the ~38-row `ComponentStore` build inline;
+/// nothing on this path is per-tick-budget-sensitive enough today to justify
+/// hoisting the BUILD itself up through `DriveMovements`/`Body` the way
+/// `RoomMeshMemo`/`HomeNavCache` are — if that changes, this signature is
+/// already the one a caller-owned, tick-scoped table would plug into.
+fn fatigue_rise_for(species: &str, registry: Option<&FatigueRiseTable>) -> f64 {
+    registry
+        .and_then(|r| r.get_by_label(species))
         .copied()
-        .unwrap_or(0.0)
+        .unwrap_or(DEFAULT_FATIGUE_RISE)
 }
 
 /// The rest (fatigue) drive, Drive #3 (The Slumber). A STOCK drive like thirst:
@@ -4491,7 +4530,10 @@ pub fn affect_of_memo_occupied(
         frozen,
         npc.entity,
         day,
-        fatigue_rise_for(&npc.species),
+        fatigue_rise_for(
+            &npc.species,
+            Some(&hornvale_species::fatigue_rise_registry()),
+        ),
         terrain.day_ticks(),
     );
     // The Haunt + The Phantom: the ground this creature remembers being
@@ -5223,7 +5265,10 @@ fn decide_step(
         out,
         npc.entity,
         day,
-        fatigue_rise_for(&npc.species),
+        fatigue_rise_for(
+            &npc.species,
+            Some(&hornvale_species::fatigue_rise_registry()),
+        ),
         terrain.day_ticks(),
     );
     let view = Perceived {
@@ -16896,9 +16941,17 @@ mod tests {
         // A ONE-day gap — generous for the composed chain's 3-hop journey
         // (task 6's own finding), but short enough that Fatigue's own
         // stock (no `rested` fact in this ledger, so it accrues from genesis)
-        // never crosses `FATIGUE_ACT` (0.85 at `FATIGUE_RISE`
-        // 0.3/day ⇒ ~2.8 days) and competes for the arbitration this test
-        // means to isolate to Thermal.
+        // never crosses `FATIGUE_ACT` (0.85 at human's registry rate ⇒
+        // ~2.8 days) and competes for the arbitration this test means to
+        // isolate to Thermal. This genuinely depends on human's row still
+        // being 0.3 (fix round 1 review) — read the registry rather than
+        // restate its value, so a future re-tuning of that row fails THIS
+        // assertion instead of silently invalidating the comment above it.
+        assert_eq!(
+            hornvale_species::fatigue_rise_registry().get_by_label("human"),
+            Some(&0.3),
+            "this fixture's one-day gap is sized against human's 0.3              sleep-debt rate never crossing FATIGUE_ACT (0.85) in that day;              a re-tuned rate invalidates the isolation this test claims"
+        );
         let now = WorldTime::from_std_days(entry_day + 1.0).expect("a day value is finite");
         let sys = DriveMovements {
             npcs: vec![npc],

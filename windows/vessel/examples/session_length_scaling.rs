@@ -291,8 +291,17 @@ fn probe_fatigue_us(ledger: &Ledger, entity: EntityId, t: WorldTime) -> f64 {
     // The rate/day-length arguments (The Wicket, Task 9) do not change the
     // shape of this fold, only its inputs — human's rate and no calendar
     // (base-rate) keep this probe's cost representative of the common case.
+    // The rate is read from the SAME registry production reads (fix round
+    // 1, Minor 2) rather than a hard-coded `0.3` literal: a literal made
+    // this probe exclude the per-call registry-lookup cost every production
+    // caller actually pays (`liveness::fatigue_rise_for`), understating the
+    // fold's real cost.
+    let rate = hornvale_species::fatigue_rise_registry()
+        .get_by_label("human")
+        .copied()
+        .unwrap_or(0.3);
     for _ in 0..FOLD_REPS {
-        sink += fatigue_at(ledger, entity, t, 0.3, None);
+        sink += fatigue_at(ledger, entity, t, rate, None);
     }
     let us = t0.elapsed().as_secs_f64() * 1e6 / FOLD_REPS as f64;
     // Consume `sink` so the calls cannot be optimized away.
