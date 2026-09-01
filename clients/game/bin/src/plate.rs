@@ -1555,16 +1555,43 @@ mod tests {
 
     /// The bound clause 1 of [`mesh_addressing_agrees_with_the_spatial_search`]
     /// asserts: how many grid spacings farther from a tile's own centre the
-    /// mesh-addressed vertex may sit than the true nearest vertex does.
-    /// **Measured max 0.7487** on that test's own window (fix round 1; it read
-    /// 1.1051 at The Pavement's Task 8, on a chart 1.4188x finer than the mesh
-    /// and against a `spacing` derived from the ICOSAHEDRON's base angle — both
-    /// halves of that ratio moved, and the raw angular excess fell too,
-    /// 0.019119 -> 0.018378 rad). 1.5 leaves headroom for another seed or
-    /// window without admitting a second grid spacing. **Not a ratchet** — a
-    /// breach means addressing resolved the wrong facet, which is a defect and
-    /// not a drift.
-    const MAX_ADDRESSING_EXCESS_SPACINGS: f64 = 1.5;
+    /// mesh-addressed vertex may sit than the true nearest vertex does, one
+    /// spacing being [`min_edge_rad`] — the GEOSPHERE's own smallest edge.
+    ///
+    /// **Measured max 1.0622, mean 0.2409** on that test's own window
+    /// (fix round 2; the test prints both). **THE BOUND IS ABOVE ONE SPACING,
+    /// AND THAT IS THE HONEST STATEMENT OF IT** — the measurement itself is,
+    /// so a doc claiming the addressed vertex lands within a single spacing
+    /// would be false about a number printed two lines away. What the bound
+    /// does exclude is a WHOLE FACET's worth of error: one cube-sphere facet
+    /// arc at this rung is `(pi/2)/64 / 0.01729920 = 1.4188` of these
+    /// spacings, and 1.25 sits below that, so a misresolution that reached
+    /// into a neighbouring facet's corners cannot pass. That is the ceiling
+    /// this value is capped by; the 17.7% it leaves over the measurement is
+    /// what is left after the cap, not a comfort margin chosen first.
+    ///
+    /// # THE HISTORY, BECAUSE THE UNIT MOVED TWICE AND THE VALUE DID NOT
+    ///
+    /// The Pavement's Task 8 measured **1.1051** against `acos(1/sqrt(5))/
+    /// 2^depth` — the icosphere's minimum edge, i.e. the same unit as today —
+    /// on a chart 1.4188x finer than the mesh. Fix round 1 corrected the
+    /// chart's resolution and, as collateral, switched this divisor to the
+    /// CUBE's `pi/2` facet arc, reporting **0.7487** and reading it as a 32%
+    /// tightening. It was not: the raw angular excess fell only 3.9%
+    /// (0.019119 -> 0.018378 rad) and the rest was a 1.4188x larger unit. In
+    /// real spacings the figure went 1.1051 -> 1.0622, and the unchanged
+    /// threshold of 1.5 silently came to admit 2.13 real spacings — a ~42%
+    /// loosening invisible in a diff, which is why the unit is now measured
+    /// off the mesh ([`min_edge_rad`]) rather than derived from a base angle
+    /// that belongs to the other lattice. 1.25 is the first value this
+    /// constant has carried that was set FROM a measurement in the unit it
+    /// is stated in.
+    ///
+    /// **Not a ratchet** — a breach means addressing resolved the wrong facet,
+    /// which is a defect and not a drift. If another seed or window ever
+    /// exceeds 1.25, the thing to do is find out which facet it resolved, not
+    /// to raise this number.
+    const MAX_ADDRESSING_EXCESS_SPACINGS: f64 = 1.25;
 
     /// The floor clause 2 of [`mesh_addressing_agrees_with_the_spatial_search`]
     /// asserts: the fraction of tiles on which mesh addressing and a plain
@@ -1578,11 +1605,34 @@ mod tests {
     /// than the band it drew; a smaller tile keeps its centre nearer a facet
     /// corner, so nearest-of-four-corners agreed with true-nearest more often.
     /// Drawing at the mesh's own resolution doubles a tile's area and spreads
-    /// its centre further from any corner. **Clause 1 — the clause that
-    /// actually bounds the error — TIGHTENED over the same change** (0.7487
-    /// grid spacings against 1.1051, and 0.018378 rad against 0.019119), and
-    /// `a_tile_resolves_to_the_facet_that_contains_it` still holds exactly, so
-    /// nothing about which facet is resolved has moved.
+    /// its centre further from any corner.
+    ///
+    /// # WHY THE LOWERING IS DEFENSIBLE, STATED CORRECTLY THIS TIME
+    ///
+    /// This doc used to carry the argument that **clause 1 tightened 32% over
+    /// the same change**, which was false: 1.1051 -> 0.7487 was mostly a
+    /// 1.4188x larger denominator (see
+    /// [`MAX_ADDRESSING_EXCESS_SPACINGS`]). The true reasons, all three
+    /// measured rather than argued:
+    ///
+    /// 1. **The real geometric error did not worsen — it improved 3.9%.**
+    ///    Raw angular excess 0.019119 -> 0.018378 rad; in the mesh's own
+    ///    spacings, 1.1051 -> 1.0622. So the quantity that actually matters
+    ///    for whether a tile is painted with the right terrain moved in the
+    ///    GOOD direction while this proxy fell.
+    /// 2. **`a_tile_resolves_to_the_facet_that_contains_it` still holds
+    ///    exactly**, so nothing about which facet is resolved has moved; what
+    ///    changed is only which of that facet's four corners wins a
+    ///    tie-adjacent comparison.
+    /// 3. **This floor is a proxy whose value tracks the chart's resolution
+    ///    relative to the mesh, not the addressing's quality.** It fell
+    ///    because the chart stopped being finer than the mesh it draws —
+    ///    which was itself the fix. A floor that refused to move here would
+    ///    be pinning the old resolution bug, not guarding the addressing.
+    ///
+    /// The measurement has 18 tiles of headroom over 0.50 and is
+    /// deterministic — a fixed seed-42 world and a fixed 5,000-tile window,
+    /// so it cannot flap.
     ///
     /// **A ratchet**: raising it is always allowed and is the direction of
     /// travel. This is the second time it has been lowered, and both times for
@@ -1617,6 +1667,65 @@ mod tests {
             .expect("default pins generate seed 42");
         let terrain = GeneratedTerrain::new(geo.clone(), outcome);
         (terrain, geo)
+    }
+
+    /// One grid spacing of the GEOSPHERE, in radians of central angle —
+    /// the unit clause 1 of
+    /// [`mesh_addressing_agrees_with_the_spatial_search`] reports its excess
+    /// in, measured off the mesh being normalised rather than derived from a
+    /// base angle.
+    ///
+    /// # WHY THIS IS NOT [`base_facet_arc_rad`] OVER `2^depth`
+    ///
+    /// **The two meshes came apart at decision 0506 and this quantity
+    /// belongs to the one that did not move.** 0506 replaced the walk band's
+    /// OCCUPANCY lattice with an 8-connected cube-sphere and deliberately
+    /// kept the icosphere as the FIELD substrate;
+    /// [`hornvale_kernel::Geosphere`]'s own first sentence still says
+    /// "icosphere region graph". Clause 1 measures a distance from a tile
+    /// centre to a geosphere VERTEX, so its unit is a geosphere edge. Fix
+    /// round 1 switched this divisor to the cube's `pi/2` facet arc along
+    /// with the chart's width, where it does not belong: at level 6 that is
+    /// `(pi/2)/64 = 0.02454369` rad, **18.7% above the largest edge the
+    /// geosphere has**, so it is not any spacing of the mesh under
+    /// measurement and it silently loosened the assertion ~42% in real units
+    /// while the threshold constant looked unchanged.
+    ///
+    /// # WHY THE MINIMUM EDGE, AND NOT THE MEAN OR THE MAX
+    ///
+    /// **An icosphere's edges are not uniform, so the choice is a real one:**
+    /// at level 6 (40,962 vertices) the central angles run min `0.01729920`,
+    /// mean `0.01888557`, max `0.02067341` — the max is 19.5% above the min,
+    /// so the same raw excess reports as three visibly different numbers.
+    /// The minimum is taken for two reasons. It is the CONSERVATIVE choice:
+    /// the smallest real spacing yields the largest ratio, so a bound stated
+    /// against it is the strongest of the three and cannot be satisfied by
+    /// picking a generous unit. And it is the HISTORICAL unit — the divisor
+    /// this test used before fix round 1, `acos(1/sqrt(5))/2^depth`, is
+    /// exactly the icosphere's minimum edge, so the figure recorded on
+    /// [`MAX_ADDRESSING_EXCESS_SPACINGS`] stays comparable across the whole
+    /// campaign instead of resetting its meaning a second time.
+    ///
+    /// Each undirected edge is visited once (`n > v`); the minimum is
+    /// unaffected by that either way, and it halves the `acos` count.
+    fn min_edge_rad(geo: &Geosphere) -> f64 {
+        let mut min = f64::INFINITY;
+        for v in geo.vertices() {
+            let p = geo.position(v);
+            for &n in geo.neighbors(v) {
+                if n <= v {
+                    continue;
+                }
+                let q = geo.position(n);
+                let d = hornvale_kernel::math::acos(
+                    (p[0] * q[0] + p[1] * q[1] + p[2] * q[2]).clamp(-1.0, 1.0),
+                );
+                if d < min {
+                    min = d;
+                }
+            }
+        }
+        min
     }
 
     /// A window at `depth` positioned so the virtual chart's tile
@@ -2125,14 +2234,19 @@ mod tests {
     /// longer supports. So the assertion is replaced by the two claims that
     /// ARE true, both measured before being written down:
     ///
-    /// 1. **The error is bounded by about one grid spacing.** The addressed
-    ///    vertex is at most [`MAX_ADDRESSING_EXCESS_SPACINGS`] grid spacings
-    ///    farther from the tile's own centre than the true nearest vertex is
-    ///    — measured max 1.1051, mean 0.1651, one grid spacing being the
-    ///    geosphere's own edge length at its level. That is what makes this
-    ///    an approximation rather than a wrong answer: the client samples a
-    ///    NEIGHBOURING vertex, never a distant one, so no tile is ever
-    ///    painted with terrain from across the map.
+    /// 1. **The error is bounded well inside one FACET, though not inside one
+    ///    grid spacing.** The addressed vertex is at most
+    ///    [`MAX_ADDRESSING_EXCESS_SPACINGS`] grid spacings farther from the
+    ///    tile's own centre than the true nearest vertex is — measured max
+    ///    **1.0622**, mean **0.2409**, one grid spacing being
+    ///    [`min_edge_rad`], the geosphere's own smallest edge at its level.
+    ///    The max exceeding 1.0 is stated rather than smoothed over: a
+    ///    handful of tiles do land a vertex past their immediate neighbour,
+    ///    and the bound's job is to keep that inside one cube facet (1.4188
+    ///    of these spacings) rather than to claim it never happens. That is
+    ///    what makes this an approximation rather than a wrong answer: the
+    ///    client samples a NEARBY vertex, never a distant one, so no tile is
+    ///    ever painted with terrain from across the map.
     /// 2. **Exact agreement stays above a recorded floor**
     ///    ([`MIN_ADDRESSING_AGREEMENT`]), a ratchet in the direction of
     ///    travel: lowering it is a deliberate act, and raising it is always
@@ -2196,6 +2310,10 @@ mod tests {
         let mut total = 0u32;
         let mut land = 0u32;
         let mut max_excess = 0.0f64;
+        // The MEAN excess is accumulated as well as the max, because this
+        // test's own doc quotes both and a figure a doc quotes should be a
+        // figure the test prints.
+        let mut sum_excess = 0.0f64;
         for row in 0..u32::from(h) {
             for col in 0..u32::from(w) {
                 let (lat, lon) = crate::mercator::unproject(
@@ -2231,6 +2349,7 @@ mod tests {
                 if ex > max_excess {
                     max_excess = ex;
                 }
+                sum_excess += ex;
             }
         }
         // THE VACUITY GUARD. An all-ocean (or all-land) patch would make
@@ -2245,15 +2364,26 @@ mod tests {
         );
 
         // CLAUSE 1: the error is bounded by about one grid spacing.
-        let spacing = base_facet_arc_rad() / f64::from(1u32 << geo.depth());
+        // The GEOSPHERE's own smallest edge, measured off the mesh whose
+        // vertices the excess above is a distance between — NOT the cube's
+        // facet arc, which is the occupancy lattice's unit and 18.7% above
+        // the largest edge this mesh has. `min_edge_rad`'s doc has the
+        // whole of why.
+        let spacing = min_edge_rad(&geo);
+        assert!(
+            spacing.is_finite() && spacing > 0.0,
+            "the measured grid spacing must be a real angle, got {spacing}"
+        );
         let excess = max_excess / spacing;
+        let mean_excess = sum_excess / f64::from(total) / spacing;
         // Printed, not merely asserted: both quantities are the ones the two
         // recorded constants below were set from, and fix round 1 moved both
         // (the chart's width, and the spacing's own base angle). A number a
         // test computes and never shows is a number nobody can re-record.
         eprintln!(
             "mesh addressing: agree {agree}/{total} ({:.4}), max excess {excess:.4} grid \
-             spacings (spacing {spacing:.8} rad at grid depth {})",
+             spacings, mean {mean_excess:.4} (one spacing = the geosphere's min edge, \
+             {spacing:.8} rad at grid depth {})",
             f64::from(agree) / f64::from(total),
             geo.depth()
         );
