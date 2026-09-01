@@ -421,6 +421,79 @@ short-circuited before it is reached. Read `verdict()` first.
 **Do not re-pin the literal.** This is a behavioural disagreement between two
 functions, not a moved constant.
 
+### #19 [G5] — the water-width finding is a TEST-MODEL defect, and the hypothesis above is refuted
+
+**Question:** the parked finding directly above. Is `crossing_between`'s width
+clause admitting a crossing over water wider than every available step?
+
+**Decision:** No. The gate is right; the test's model of it was wrong, and the
+fix corrects the test's *operands* rather than its assertions or its filter's
+purpose. `Transect::step_lengths()` becomes `Transect::width_pricing()`,
+returning the gate's own per-step operands.
+
+**Why (instrumented, not inferred):** the test paired its step lengths with
+`2.0 * a.edges[0]` — the full width of the reach **being transected**,
+`ChannelNetwork::band_edges[i][j]`. `crossing_between` prices no such quantity:
+it prices `2.0 * r.band_edges[0]` for each `BankReading` the two rooms of a step
+**independently win**. At `Vertex(2656)` (polyline 284, index 3) the transected
+reach is 3.5692e-5 rad wide, but the home room wins **line 1106** at 1.6007e-5,
+and its eight neighbours win lines 1097, 1084, 1106, 23, 284, 1106, 23 and 260 —
+**six distinct channels in one eight-neighbourhood**, widths 1.5922e-5 to
+4.5276e-5. The `Fordable` step at depth 16 is the line-1106 pair, 1.6007e-5
+against a 1.9635e-5 step. The clause was deciding correctly about water the
+filter never looked at.
+
+**Two by-products of the same dump.** `Vertex(2656)` is not an identity for
+"the water" — a grid vertex carries one polyline vertex per run terminating on
+it, each with its own discharge and bands, which is how six readings name that
+one vertex at six widths; so the old message's "the SAME water" was false for a
+second, independent reason. And the discharge filter was on the wrong quantity
+too: it read `drainage_at(a.vertex)` while `wadeable` reads it per priced
+reading.
+
+**The `sqrt(2)` hypothesis is REFUTED, on two independent grounds.**
+`crossing_between` prices `room_edge(a).min(room_edge(b))` with no diagonal
+factor, so the old reporter already matched the gate exactly; and 1.411786 x
+1.9635e-5 = 2.772e-5 is still under 3.5692e-5, so the factor could not flip this
+verdict even if applied. Recording the refutation matters because the tidy
+explanation was load-bearing in the parked entry above.
+
+**Alternatives discarded:** narrowing the filter to transects whose sampled
+polyline IS every room's winning line — rejected: it would keep the wrong
+operand and make `Vertex(2656)` drop out as a premise failure, which is the
+shape the brief forbids. Applying a diagonal factor in the gate — rejected: it
+does not fix this, and it moves live behaviour on an unruled design question.
+
+**The distinction was already in the file.**
+`the_fordable_fraction_of_the_network_is_within_its_interval` computes both §8
+clauses "on the reach BEING transected ... rather than on whichever reading a
+room happened to win" and says outright that they are "reported, never asserted
+on". The width-clause control asserted on them. Same shape as ruling #14: a test
+resting on a distinction that used to collapse.
+
+**What the fix makes stricter:** widths and discharges are now per *priced*
+reading (interpretable only, matching clause 3); both arms cover every step
+`verdict()` prices; and the control's "same water" claim is now **asserted** —
+the set of priced polylines must be identical at both depths — where it was
+previously assumed from the grid vertex, which cannot carry it. Population
+488 of 1600, all 488 flipping, against a floor of 70. The historical rates in
+that test's comment (96/400, 37/400) are recorded as history, not baseline: both
+were measured with the wrong operand.
+
+**Deferred:** whether §8 should charge a diagonal ~1.41 room edges of water is a
+live design question this campaign created. Conservative as it stands, unruled,
+and deliberately not decided by a test-fix task.
+
+**Capture actions:** brief and report at
+`.superpowers/sdd/2026-08-30-the-pavement/task-absorb-water-{brief,report}.md`.
+
+**Ideonomy:** 2 passes, 1 overturn (the parked entry's own hypothesis).
+
+**Also observed:** `scripts/hooks/pre-commit`'s "two cargo test runs in one
+command" guard fires on the TEXT of a command, and refused a `cat > report.md
+<<EOF` heredoc whose only two occurrences were inside a markdown table.
+Reworded rather than overridden; `HV_TEST_OK=1` was not used.
+
 ### #16 [G5, measurement integrity] — the H1 illumination baseline is VOID, and the test staying red is correct
 
 **The failure:** `illumination_hypotheses::the_h1_band_is_still_the_population_the_baseline_was_taken_over`

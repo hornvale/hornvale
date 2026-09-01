@@ -860,10 +860,11 @@ fn offset_from(base: [f64; 3], dir: [f64; 3], off: f64) -> [f64; 3] {
 /// **How many there are is not fixed and must not be hardcoded** — it was
 /// three on the icosahedral triangle lattice and is eight (seven at a cube
 /// corner) since The Pavement made the walk 8-connected. `verdict` and
-/// `step_lengths` below both derive their count from `steps` for that reason;
-/// an earlier state of this file had `step_lengths` hardcode `[0]`, `[1]`,
+/// `width_pricing` below both derive their count from `steps` for that reason;
+/// an earlier state of this file had that reporter (then `step_lengths`)
+/// hardcode `[0]`, `[1]`,
 /// `[2]` while `verdict` iterated all of them, which is the exact one-sidedness
-/// `step_lengths`' own doc exists to prevent — and it was admitting steps it
+/// `width_pricing`'s own doc exists to prevent — and it was admitting steps it
 /// should have refused, not merely reporting fewer.
 ///
 /// **THIS CHANGES WHAT THE CALIBRATION MEASURES. It is not a fix and not a
@@ -932,9 +933,10 @@ impl Transect {
         }
     }
 
-    /// The step lengths `crossing_between` will actually price **every one of**
-    /// this transect's steps against — `room_edge(home).min(room_edge(step))`,
-    /// per step, one entry per entry in `steps`.
+    /// Everything §8's fordability clauses will actually compare for **every
+    /// one of** this transect's steps: the step length
+    /// (`room_edge(home).min(room_edge(step))`, per step, one entry per entry in
+    /// `steps`) and the full widths of the reaches the gate prices it against.
     ///
     /// Published as its own helper because a test that filters on
     /// `room_edge(&home)` alone is asserting against a DIFFERENT quantity than
@@ -944,25 +946,132 @@ impl Transect {
     /// the two happen to agree, and fails as a spurious red rather than a
     /// silent green when they stop.
     ///
-    /// **THE RETURN TYPE IS A `Vec`, NOT `[f64; 3]`, AND THAT IS THE WHOLE
-    /// POINT OF THIS HELPER (The Pavement, Task 3, fix round 2).** It used to
-    /// hardcode `[self.steps[0], self.steps[1], self.steps[2]]`. When the walk
+    /// **THE COUNT IS DERIVED FROM `steps`, NEVER A LITERAL (The Pavement,
+    /// Task 3, fix round 2).** This helper's predecessor used to hardcode
+    /// `[self.steps[0], self.steps[1], self.steps[2]]`. When the walk
     /// went 8-connected, `steps` grew to eight and `verdict` — which iterates
-    /// `&self.steps` — began pricing all eight, while this reporter kept
-    /// reporting three. That is not a cosmetic mismatch: the one caller takes
-    /// `shortest_shallow` over these lengths and requires `wide <
-    /// shortest_shallow` so that NO step can be admitted on width, then asserts
+    /// `&self.steps` — began pricing all eight, while the reporter kept
+    /// reporting three. That is not a cosmetic mismatch: the one caller requires
+    /// that NO step can be admitted on width, then asserts
     /// on `verdict`. Computed over a subset, that precondition can hold while a
     /// fourth-through-eighth step IS narrow enough — reintroducing the exact
     /// one-sidedness the paragraph above was written to remove, silently.
     /// Deriving the count from `steps` is what makes reporter and pricer the
     /// same quantity by construction rather than by a matching literal.
-    fn step_lengths(&self) -> Vec<f64> {
-        let home = room_edge(&self.home);
+    ///
+    /// # THE WIDTH IS PER READING, NOT PER TRANSECT — the second half of the
+    /// same mistake, and the one that actually went red (The Pavement, the
+    /// absorb-water task)
+    ///
+    /// This helper used to report step lengths only (`step_lengths`), and its
+    /// one caller paired them with `2.0 * self.edges[0]`: the full width of the
+    /// reach **being transected**, `ChannelNetwork::band_edges[i][j]`.
+    /// `crossing_between` prices no such quantity. It prices
+    /// `2.0 * r.band_edges[0]` for each `BankReading` the two rooms of the step
+    /// **independently win**, and a room's winning line need not be the sampled
+    /// polyline at all.
+    ///
+    /// **THIS IS A DEFECT IN THE TEST'S MODEL OF THE GATE, NOT IN THE GATE**,
+    /// and it was established by instrumenting the failing pair rather than by
+    /// reading the code. At `Vertex(2656)`, polyline 284 index 3, the transected
+    /// reach's full width is 3.5692e-5 rad — but the transect's own home room
+    /// wins **line 1106**, full width 1.6007e-5, and its eight neighbours win
+    /// lines 1097, 1084, 1106, 23, 284, 1106, 23 and 260, whose full widths run
+    /// from 1.5922e-5 to 4.5276e-5. Six different channels, one of them less
+    /// than half the width of the one the filter was reading. The step that
+    /// returns `Fordable` at depth 16 is the line-1106 pair, priced at
+    /// 1.6007e-5 against a 1.9635e-5 step — the width clause deciding
+    /// correctly, about water the filter never looked at.
+    ///
+    /// `Vertex(2656)` is not a unique identity for the water either, which is
+    /// why the old failure message could say "the SAME water" and be wrong: a
+    /// grid vertex carries one polyline vertex per run terminating on it, each
+    /// with its own discharge and therefore its own `band_edges`, which is how
+    /// every reading above names that same vertex at six different widths.
+    ///
+    /// **The `sqrt(2)` diagonal hypothesis is REFUTED, and stating that is the
+    /// point of this paragraph.** The obvious reading of an 8-connected mesh is
+    /// that a diagonal step's true crossing distance is `edge · sqrt(2)` while
+    /// `min(home, step)` reports the plain edge. It is not the cause here:
+    /// `crossing_between` itself prices `room_edge(a).min(room_edge(b))` with no
+    /// diagonal factor, so this reporter already matches the gate exactly, and
+    /// 1.41 × 1.9635e-5 = 2.77e-5 is still under 3.5692e-5 — the factor cannot
+    /// flip this verdict even if it were applied. Whether the gate SHOULD charge
+    /// a diagonal 1.41 edges of water is a live design question about §8's
+    /// traversal unit; it is not this failure.
+    ///
+    /// Only **interpretable** readings are listed, because those are the only
+    /// ones `wadeable` is applied to (`crossing_between`'s clause 3 filter). A
+    /// step with empty `widths` cannot be a crossing at all, which is why such
+    /// an entry reads as *refused* to the caller's deep arm and as *silent* to
+    /// its shallow arm.
+    fn width_pricing(&self, ctx: &LocaleContext) -> Vec<StepPricing> {
+        let net = ctx.terrain().channels();
+        let home_edge = room_edge(&self.home);
+        let home_reading = net.bank_reading(self.home.centroid());
         self.steps
             .iter()
-            .map(|step| home.min(room_edge(step)))
+            .map(|step| {
+                let step_len = home_edge.min(room_edge(step));
+                let priced: Vec<hornvale_terrain::channel::BankReading> =
+                    [home_reading, net.bank_reading(step.centroid())]
+                        .into_iter()
+                        .flatten()
+                        // Clause 3: the gate applies `wadeable` to the readings
+                        // standing inside their own bank edge and to no others.
+                        .filter(|r| r.signed_distance.abs() < r.band_edges[1])
+                        .collect();
+                StepPricing {
+                    step: step_len,
+                    quiet: priced
+                        .iter()
+                        .all(|r| ctx.terrain().drainage_at(r.vertex) < WATERFALL_MIN_DRAINAGE),
+                    lines: priced.iter().map(|r| r.line).collect(),
+                    widths: priced.iter().map(|r| 2.0 * r.band_edges[0]).collect(),
+                }
+            })
             .collect()
+    }
+}
+
+/// What §8's two fordability clauses compare for one step out of a transect's
+/// home room — the gate's own operands, read from the network and the mesh
+/// rather than from `crossing_between`.
+///
+/// One of these per entry in [`Transect::steps`]; see
+/// [`Transect::width_pricing`] for why the widths are plural and why they are
+/// not the transected reach's.
+#[derive(Debug)]
+struct StepPricing {
+    /// `room_edge(home).min(room_edge(step))` — the length the width clause
+    /// compares each width against.
+    step: f64,
+    /// The full widths (`2 · band_edges[0]`) of the reaches the gate would
+    /// price this step against: the interpretable readings among the two rooms.
+    /// Empty when neither room stands inside its own bank edge, in which case
+    /// the step is `NotACrossing`.
+    widths: Vec<f64>,
+    /// The winning polyline of each priced reading, positionally matched to
+    /// `widths` — the identity that says whether two depths priced the same
+    /// water.
+    lines: Vec<usize>,
+    /// Whether every reach priced here is below `WATERFALL_MIN_DRAINAGE`, so
+    /// the discharge clause cannot be what decided this step.
+    quiet: bool,
+}
+
+impl StepPricing {
+    /// The width clause can only ADMIT this step: every reach the gate prices
+    /// is narrower than the step.
+    fn width_admits(&self) -> bool {
+        self.widths.iter().all(|w| *w < self.step)
+    }
+
+    /// The width clause REFUSES this step: no reach the gate prices is narrower
+    /// than the step. Vacuously true when nothing is priced — such a step is
+    /// `NotACrossing`, which is equally not `Fordable`.
+    fn width_refuses(&self) -> bool {
+        !self.widths.iter().any(|w| *w < self.step)
     }
 }
 
@@ -2016,11 +2125,21 @@ fn the_loud_reach_population_is_pinned_as_a_witness() {
 /// traversal unit changed, which is precisely what §8 claims to measure.
 ///
 /// The references are outside `crossing_between`: the step lengths at each
-/// depth come from the mesh (`Transect::step_lengths`, which is the same
-/// `min(home, step)` the gate prices against — not the home room's edge alone,
-/// which would be a different quantity), the channel width from the network's
-/// own `band_edges`, and every pair is required to be QUIET (`Q` below the
-/// discharge threshold) so the other clause cannot be what flipped the verdict.
+/// depth come from the mesh and the channel widths from the network's own
+/// `band_edges`, both assembled by `Transect::width_pricing` so that they are
+/// the same operands the gate compares — `min(home, step)` per step against the
+/// full width of every reach the two rooms' readings win, not the home room's
+/// edge alone and **not the transected reach's width**, each of which is a
+/// different quantity. Every pair is also required to be QUIET (`Q` below the
+/// discharge threshold) over those same readings, so the other clause cannot be
+/// what flipped the verdict, and to price the same set of polylines at both
+/// depths, so "the same water" is asserted rather than assumed.
+///
+/// **The width operand was wrong until The Pavement's absorb-water task**, and
+/// `Transect::width_pricing`'s doc carries the instrumented evidence: the filter
+/// read the transected reach's width while the gate priced whichever reach each
+/// room independently won, so the control was describing different water from
+/// the one it asserted about.
 #[test]
 fn the_width_clause_binds_when_the_step_shrinks() {
     let world = world();
@@ -2028,14 +2147,22 @@ fn the_width_clause_binds_when_the_step_shrinks() {
     let shallow_depth = walk_depth(&ctx);
     let deep_depth = shallow_depth + 3;
     // 1600, not the 400 the other tests sample. Once the network renders the
-    // whole land flow tree, the qualifying population — reaches whose full
-    // width falls BETWEEN the deep step and the shallow one — is a shrinking
-    // fraction of a growing sample: 96 of 400 (24%) when only river vertices were
-    // rendered, 37 of 400 (9%) now, because a headwater creek is narrower than
-    // both steps and is filtered out at the `wide >= longest_deep` clause. The
-    // rate is the measurement; the count is the anti-vacuity floor, and it is
-    // restored by sampling more rather than by lowering the floor. Both depths
-    // take the same `wanted` so the two strides agree and the vertices match.
+    // whole land flow tree, the qualifying population — pairs whose priced
+    // reaches all fall BETWEEN the deep step and the shallow one — is a
+    // fraction of a growing sample, because a headwater creek narrower than
+    // both steps is filtered out at the `width_refuses` clause. The rate is the
+    // measurement; the count is the anti-vacuity floor, and it is restored by
+    // sampling more rather than by lowering the floor. Both depths take the same
+    // `wanted` so the two strides agree and the vertices match.
+    //
+    // **THE HISTORICAL RATES HERE DO NOT CARRY ACROSS THE OPERAND FIX.** This
+    // comment used to read "96 of 400 (24%) when only river vertices were
+    // rendered, 37 of 400 (9%) now". Both were measured with the transected
+    // reach's width as the filter's operand, which is not a quantity the gate
+    // prices (see `Transect::width_pricing`), so they are rates of a different
+    // criterion and are recorded here as history rather than as a baseline. On
+    // the corrected operand the qualifying population is 488 of 1600 sampled
+    // vertices, all 488 of which flip — measured, not projected.
     let wanted = 1_600;
     let (shallow, _, _) = transects_at(&ctx, wanted, shallow_depth);
     let (deep, _, _) = transects_at(&ctx, wanted, deep_depth);
@@ -2046,28 +2173,50 @@ fn the_width_clause_binds_when_the_step_shrinks() {
         let Some(b) = deep.iter().find(|b| b.polyline_at == a.polyline_at) else {
             continue;
         };
-        // Same reach, so same discharge; require it QUIET, so the discharge
-        // clause is satisfied at both depths and cannot be the cause.
-        if ctx.terrain().drainage_at(a.vertex) >= WATERFALL_MIN_DRAINAGE {
+        // The clause must actually flip between the two steps, or this pair has
+        // nothing to say about it — and the flip must be stated over the
+        // quantities the GATE compares: per step, `min(home, step)` against the
+        // full width of every reach the two rooms' own readings win. Shallow:
+        // every priced width must clear EVERY step, so no step can be refused
+        // on width. Deep: none may, so no step can be admitted on width.
+        // Anything between is a pair the width clause decides only for some of
+        // the steps, which cannot support an assertion about the transect's
+        // single verdict.
+        //
+        // **THE WIDTH USED TO BE `2.0 * a.edges[0]` AND THAT WAS THE BUG** —
+        // the transected reach's width, which `crossing_between` never looks
+        // at. `Transect::width_pricing`'s doc carries the instrumented
+        // counter-example (`Vertex(2656)`: six different channels in one
+        // eight-neighbourhood, the fordable one less than half the width the
+        // filter was reading) and the refutation of the `sqrt(2)`-diagonal
+        // hypothesis. This is the test's model of the gate being corrected, not
+        // the gate: the verdict under test was right and the filter was
+        // describing different water. Both arms now cover EVERY step
+        // `verdict()` prices, which is the property the count-derived-from-
+        // `steps` rule above exists to keep.
+        let shallow_steps = a.width_pricing(&ctx);
+        let deep_steps = b.width_pricing(&ctx);
+        // Require it QUIET at both depths, over the readings the gate actually
+        // prices rather than over the transected vertex's own drainage, so the
+        // discharge clause is satisfied throughout and cannot be the cause.
+        if !shallow_steps.iter().all(|p| p.quiet) || !deep_steps.iter().all(|p| p.quiet) {
             continue;
         }
-        let wide = 2.0 * a.edges[0];
-        // The clause must actually flip between the two steps, or this pair has
-        // nothing to say about it — and the flip must be stated over the step
-        // lengths the GATE prices against (`min(home, step)` per step), not
-        // over the home room's edge alone. Shallow: the width must clear EVERY
-        // step, so no step can be refused on width. Deep: it must clear NONE,
-        // so no step can be admitted on width. Anything between is a pair the
-        // width clause decides only for some of the steps, which cannot
-        // support an assertion about the transect's single verdict. `wide <
-        // shortest_shallow` is sound only because `step_lengths()` covers EVERY
-        // step `verdict()` prices — see its doc for what happened when it did
-        // not.
-        let shallow_steps = a.step_lengths();
-        let deep_steps = b.step_lengths();
-        let shortest_shallow = shallow_steps.iter().copied().fold(f64::INFINITY, f64::min);
-        let longest_deep = deep_steps.iter().copied().fold(0.0_f64, f64::max);
-        if !(wide < shortest_shallow && wide >= longest_deep) {
+        if !shallow_steps.iter().all(StepPricing::width_admits)
+            || !deep_steps.iter().all(StepPricing::width_refuses)
+        {
+            continue;
+        }
+        // THE SAME WATER, asserted rather than assumed. The control's claim is
+        // that only the traversal unit changed, so the two depths must price
+        // the same set of reaches; a grid vertex is not that identity (it
+        // carries one polyline vertex per run terminating on it), and neither is
+        // the sampled polyline (the rooms win their own lines). The winning
+        // lines are.
+        let lines_of = |ps: &[StepPricing]| -> std::collections::BTreeSet<usize> {
+            ps.iter().flat_map(|p| p.lines.iter().copied()).collect()
+        };
+        if lines_of(&shallow_steps) != lines_of(&deep_steps) {
             continue;
         }
         let (near, far) = (a.verdict(&ctx), b.verdict(&ctx));
@@ -2081,17 +2230,21 @@ fn the_width_clause_binds_when_the_step_shrinks() {
         assert_eq!(
             near,
             Crossing::Fordable,
-            "vertex {:?}: full width {wide:e} is below every {shallow_depth}-depth step (shortest \
-             {shortest_shallow:e}) and the water is quiet, yet the crossing is {near:?}",
+            "vertex {:?} (polyline {:?}): every reach priced at {shallow_depth}-depth is narrower \
+             than its own step and every one is quiet, so no step can be refused — yet the \
+             crossing is {near:?}. Pricing: {shallow_steps:?}",
             a.vertex,
+            a.polyline_at,
         );
         assert_eq!(
             far,
             Crossing::Impassable,
-            "vertex {:?}: the SAME water, full width {wide:e}, is wider than every {deep_depth}-\
-             depth step (longest {longest_deep:e}) — yet the crossing is {far:?}, so the width \
-             clause is not deciding anything",
+            "vertex {:?} (polyline {:?}): the SAME reaches ({:?}), every one at least as wide as \
+             its own {deep_depth}-depth step, so no step can be admitted — yet the crossing is \
+             {far:?}, so the width clause is not deciding anything. Pricing: {deep_steps:?}",
             a.vertex,
+            a.polyline_at,
+            lines_of(&deep_steps),
         );
         flipped += 1;
     }
