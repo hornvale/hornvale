@@ -158,24 +158,36 @@ pub struct Pattern {
 ///    [`selection`] filters it out, and the only other consumer is
 ///    [`selection_for`], whose output feeds the chamber renderer and nothing
 ///    that writes a [`hornvale_kernel::Fact`]. A chamber's composed content
-///    is never serialized into a `World`'s ledger (decision 0069 — `Interior`
-///    is derived per room, bubble-scoped, discarded with the bubble), so no
-///    saved world's determinism, and no previously-committed fact, moves when
-///    a pattern is appended here. That half is permanent and does not decay.
+///    is never serialized into a `World`'s ledger (decision 0069 keeps
+///    `Interior` unserialized — derived per room, bubble-scoped, discarded
+///    with the bubble), so no world FILE moves when a pattern is appended
+///    here: no saved world's determinism and no previously-committed fact
+///    changes. That half is permanent and does not decay.
 ///
-///    **The other half of "commits" already decayed, and this sentence used
-///    to claim it had not.** It read "read by the chamber renderer and by
-///    nothing that commits", meaning nothing GIT-committed either. That
-///    stopped being true on **2026-08-30** (`b8fc0cd02`, `26ebaf7e4` — The
-///    Chattel and The Custodian, landing `the-loom` and
-///    `the-key-by-the-loom`, both `at_locale: false`):
-///    `book/src/gallery/possession-carry-seed-1.md`, a committed,
-///    drift-checked artifact (`docs/generated-paths.txt`), is a scripted
-///    `possess` transcript that renders a delved chamber's actual composed
-///    content, and has done so since that date. The Wicket's Task 5 found
-///    this while adding `the-brazier`, two days later, by reading the
-///    transcript's own diff rather than by anyone having flagged it at the
-///    time.
+///    **The other half of "commits" already decayed by the time this
+///    sentence first named a date, and a first correction got the date right
+///    and the mechanism wrong.** The sentence used to read "read by the
+///    chamber renderer and by nothing that commits", meaning nothing
+///    GIT-committed either — and a first fix (The Wicket's Task 5) dated
+///    that claim's death to **2026-08-30**, attributing it to `b8fc0cd02`/
+///    `26ebaf7e4` "landing `the-loom` and `the-key-by-the-loom`". Checked
+///    and wrong: `the-loom` landed **2026-07-28** (`f2cfb0974`, The
+///    Blocking) — a month earlier. `b8fc0cd02` did not land a pattern; it
+///    CREATED `book/src/gallery/possession-carry-seed-1.md`, and that
+///    transcript's very first version already rendered `a loom`, `a
+///    strongbox` and `a key` — three `at_locale: false` anchors that had
+///    existed since July.
+///
+///    **So the reviewable act is not "a pattern is appended" — that is the
+///    very act this clause declares LATENT, and saying it opened the gate
+///    contradicts the clause it sits in.** The act that opens the gate is *a
+///    new committed artifact walking a chamber deep enough to render one*:
+///    the day `book/src/gallery/possession-carry-seed-1.md` was created and
+///    scripted to delve past the threshold, every `at_locale: false` pattern
+///    already in `INVENTORY` became visible in a committed file at once,
+///    `the-loom` included, with no edit to `INVENTORY` itself. A successor
+///    reviewing "did this change open the gate" should watch for a new (or
+///    newly deepened) committed transcript/fixture, not for an append here.
 ///
 ///    So: appending an `at_locale: false` pattern is LATENT with respect to
 ///    the LEDGER — this remains the guarantee that matters, and is why such
@@ -183,9 +195,11 @@ pub struct Pattern {
 ///    RENDERED artifact like a gallery transcript, which may show anything
 ///    the world now contains and is expected to move. A census column or
 ///    `book/src/domesday/` moving would be the real signal something has
-///    changed: those are folds over the ledger, not a live walk, and
-///    decision 0069 is precisely what keeps them from ever reading a
-///    chamber.
+///    changed — not because decision 0069 promises those readers never touch
+///    a chamber (that a census or `book/src/domesday/` does not walk one is
+///    a property of those readers, not a guarantee 0069 issues), but because
+///    0069 keeps `Interior` unserialized, so no world FILE — census or
+///    otherwise — can move on account of a room gaining furniture.
 ///
 /// Sized near its intended scale deliberately, all the same: growth is cheap
 /// today and will not stay cheap.

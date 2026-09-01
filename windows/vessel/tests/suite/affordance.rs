@@ -234,7 +234,30 @@ fn warm_appears_on_hearth_with_no_object_table_edit() {
 /// only kinds an anchor could BE were the enum's fifteen.
 ///
 /// MUTATION THIS MUST FAIL AGAINST: drop `ObjectProperty::RadiatesHeat` from
-/// the `brazier` row in `object_registry()`.
+/// the `brazier` row in `object_registry()`. Applied with `scripts/
+/// mutate.py`, run unfiltered over the crate (`--no-fail-fast`), restored
+/// from a `cp` backup and re-run green afterwards. Red observed
+/// 2026-09-01 — **two tests failed, not one**, the same shape
+/// `an_encountered_passage_offers_its_verbs`'s own doc names above:
+///
+/// ```text
+///     Summary [ 190.823s] 881 tests run: 879 passed, 2 failed, 3 skipped
+///        FAIL [   0.016s] (594/881) hornvale-vessel::suite affordance::a_brazier_offers_warm_with_no_dispatcher_edit
+///        FAIL [   0.012s] (621/881) hornvale-vessel::suite affordance::the_re_key_preserves_every_anchor_kinds_offer
+///
+/// thread 'affordance::a_brazier_offers_warm_with_no_dispatcher_edit' panicked at windows/vessel/tests/suite/affordance.rs:240:5:
+/// assertion failed: offered_by(kinds::BRAZIER).contains(&OfferedVerb::Warm)
+///
+/// thread 'affordance::the_re_key_preserves_every_anchor_kinds_offer' panicked at windows/vessel/tests/suite/affordance.rs:1726:9:
+/// assertion `left == right` failed: KindId("brazier") (KindId("brazier")) offers {Examine}, but the pre-re-key table offered {Examine, Warm}
+///   left: {Examine}
+///  right: {Examine, Warm}
+/// ```
+///
+/// This test and the frozen table below it (`the_re_key_preserves_every_
+/// anchor_kinds_offer`) catch the same mutation two ways, the same
+/// over-determination `an_encountered_passage_offers_its_verbs`'s doc
+/// already remarks on rather than trims.
 #[test]
 fn a_brazier_offers_warm_with_no_dispatcher_edit() {
     assert!(offered_by(kinds::BRAZIER).contains(&OfferedVerb::Warm));
