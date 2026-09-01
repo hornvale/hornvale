@@ -398,6 +398,41 @@ at `noun`. Its own doc already anticipated this: it says a second hand-written
 label→noun map would be the duplicated-table shape decision 0261 warns about,
 and the re-key removes the need for either.
 
+- [ ] **Step 4b: Sweep what the compiler cannot see**
+
+**The compiler will not enumerate this task's whole worklist**, and that is a
+measured fact rather than a caution. Three files mention `AnchorKind` only in
+prose — `snapshot.rs` (3 lines), `light.rs` (1), `thing.rs` (2) — so they
+compile clean after the type is gone and keep describing a type that no longer
+exists. Worse, at least ten of the mentions are **intra-doc links** of the form
+``[`AnchorKind::ALL`]`` (in `chamber_prose.rs`, `session.rs`, `affordance.rs`,
+and `tests/suite/affordance.rs`). A broken intra-doc link is a *rustdoc* lint,
+not a rustc one, so `cargo clippy --workspace --all-targets -- -D warnings`
+stays green on every one of them.
+
+After the compiler is quiet, run:
+
+```bash
+git grep -n "AnchorKind" -- '*.rs' | wc -l
+git grep -n "AnchorKind" -- '*.rs'
+```
+
+Expected end state: **zero**. Each remaining mention is one of three cases, and
+each is resolved, not left:
+
+- an intra-doc link → re-point at `hornvale_thing::kinds` or the roster, or
+  delete the clause if the sentence was only ever about the enum;
+- a sentence explaining why something is the way it is *because* of the enum →
+  rewrite it to say what is now true. Several of these are load-bearing
+  explanations (the `anchor_kinds!` macro's own rationale about rosters going
+  short) and their content belongs with the roster ratchet in
+  `domains/thing`, not deleted;
+- a historical note in a test doc → keep the history, past-tense it.
+
+A stale doc comment describing a deleted mechanism is the exact failure this
+campaign is correcting in the frontier essay and in three of vessel's own
+comments (Task 6). Do not create ten more while removing three.
+
 - [ ] **Step 5: Run the vessel suite once, inspect many**
 
 ```bash

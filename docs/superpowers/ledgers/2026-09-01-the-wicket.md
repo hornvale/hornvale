@@ -170,3 +170,27 @@ would be a third subsystem in an already-widened scope ·
 ideonomy passes / overturns: 0 / 0 — Nathan's ruling is the input; the ladder
 observation came from mapping it onto the registry row already open ·
 Capture: the registry row; spec header and §6b.
+
+#11 [G4] — **The compiler does not enumerate the re-key's full worklist.**
+Found by the pre-dispatch brief verification for Task 2 (the
+`dispatching-hornvale-subagents` step that greps a brief's claims against the
+code), which is exactly the class of defect that step exists to catch, one task
+ahead rather than five. Decision: **Task 2 gains a Step 4b, a grep sweep with a
+zero end-state** · Why: the plan's Step 4 said "follow the compiler", and the
+compiler is blind to two whole categories here. Measured: `snapshot.rs` (3
+mentions), `light.rs` (1) and `thing.rs` (2) reference `AnchorKind` **only in
+prose**, so they compile clean after the deletion; and at least ten mentions
+across `chamber_prose.rs`, `session.rs`, `affordance.rs` and
+`tests/suite/affordance.rs` are intra-doc links, which are a rustdoc lint and
+therefore invisible to `clippy --all-targets -- -D warnings`, the only lint the
+gate runs · Alternatives discarded: trusting `-D warnings` to catch broken
+intra-doc links (it does not — different tool); adding `cargo doc` to the gate,
+which prices a whole new build into every commit to catch a class of defect a
+grep catches for free · ideonomy passes / overturns: 0 / 0 — a measurement ·
+Capture: plan Task 2 Step 4b, with the rule that a load-bearing explanation
+moves to `domains/thing` beside the roster ratchet rather than being deleted.
+
+Ruling: a campaign whose stated purpose includes correcting stale comments must
+not emit ten new ones. Cost if wrong: the sweep costs a few minutes and could in
+principle churn prose the reviewer then has to read; that is a far cheaper error
+than shipping doc links pointing at a type the campaign deleted.
