@@ -122,6 +122,53 @@ The common factor: each brief stated a *property* to achieve and left the
 mechanism open. Where I specified the mechanism instead, I was the weakest link
 in the chain. Keep prescribing properties.
 
+## I found the symptom, routed around it, and left the cause
+
+The worst finding of the campaign was mine, and I had already half-seen it.
+Mid-campaign I measured that `heading_rose`'s greedy matching disagreed with a
+bearing-derived cost on 1,216 of 4,800 samples (25.3%), and I used that
+measurement correctly — to reject keying movement cost on the compass word. Then
+I stopped. The measurement was evidence about the *assignment rule*, and I read
+it only as evidence about the *thing I was deciding*.
+
+The cause sat there for the rest of the campaign and shipped into the final
+review, where an adversarial reader found that `go e` walks west at 0.82% of the
+walk band. Reproduced through the shipped CLI in three commands.
+
+**The rule this suggests:** when a measurement surprises you on the way to a
+different decision, it has told you two things — one about your decision and one
+about the thing you measured. Write the second one down as its own finding
+before you move on, even when your immediate decision is settled. A number that
+was interesting enough to change your mind is interesting enough to explain.
+
+**And the deeper one, which the review stated better than I can:** the campaign
+replaced a 45° bucket rule that was wrong by at most 22.5° by construction but
+sometimes emitted a duplicated letter. It traded a **visible** inconsistency for
+an **invisible** one, and measured only the first. Ask, of any repair: what did
+the old thing guarantee that the new thing does not? Greedy guaranteed
+cardinality and the bucket rule guaranteed a bound. Losing a guarantee is not
+visible in a diff, and nothing in the suite was watching the one that was lost —
+every assertion checked that each neighbour got exactly one word, which is the
+one property greedy can never fail.
+
+## Cardinality is not accuracy, and six findings shared that shape
+
+The compass defect is the sixth instance in this campaign of a test measuring the
+neighbouring question:
+
+| what was measured | what mattered |
+|---|---|
+| every neighbour gets one word | the word points the right way |
+| the width of the reach being transected | the width of the channel the gate prices |
+| what failed before the recipe aborted | what fails |
+| 31 placed rooms | 31 cells (they coincided) |
+| a figure's named constant | the mesh the figure was keyed to |
+| the count in a printout | the count in the tree |
+
+None was findable by mutation, because in each case the code was doing what the
+test said. Naming the shape per-task in a brief is what made the later ones
+cheap, and it is the single practice from this campaign most worth keeping.
+
 ## Where my own rulings were too narrow
 
 Ruling C covered every call site of the function I was changing. It missed that

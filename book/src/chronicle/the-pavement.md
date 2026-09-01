@@ -172,6 +172,68 @@ findings rather than as breakage. In this campaign the majority of them were
 tests passing for the wrong reason, and one was a live gameplay defect wearing a
 green suite.
 
+## The compass, which this campaign broke and then fixed
+
+Eight real edges do not by themselves give you eight honest compass words. On a
+cube-sphere the local grid is rotated relative to true north almost everywhere —
+that is what it means to wrap a sphere in six squares — so at each room the
+eight neighbours have to be matched to the eight names, and the matching is a
+choice.
+
+The choice made here was a greedy one: score every (word, neighbour) pair by how
+far the word's nominal bearing sits from the neighbour's true bearing, sort, and
+accept each pair whose word and neighbour are both still unclaimed. It is the
+obvious rule, it is cheap, and it guarantees exactly one property —
+**cardinality**. Every neighbour receives exactly one word.
+
+It bounds nothing. Each acceptance consumes a word *and* a neighbour, so the
+final pair is forced: whatever word is left is stapled to whatever neighbour is
+left, however absurd. At one seed-42 room the result was this:
+
+```text
+go N    off by   0.0°      go S    off by  19.4°
+go Ne   off by   5.5°      go Sw   off by  21.1°
+go Se   off by  21.1°      go W    off by  22.7°
+go Nw   off by  14.7°      go E    off by 156.1°
+```
+
+Seven words excellent, one pointing nearly backwards. `go e` walked west, and
+`look` reported `E` as open, so the prose and the movement agreed on the same
+falsehood. That is precisely the "one-turn observable falsehood" decision 0141
+existed to prevent, reintroduced by the decision that supersedes it — and the
+distribution is why it survived: a rule that is wrong everywhere gets noticed,
+while a rule that is perfect seven times out of eight reads as correct.
+
+Measured over 12,696 rooms: 5.96% carried a word more than 45° off, 0.82% more
+than 90°, worst case 156.1°. It concentrated at the face seams, 17.8% of the
+outermost lattice ring.
+
+**No test in the workspace could see it, and that is the finding rather than the
+bug.** Every assertion about the rose checked that each neighbour received
+exactly one word — the one thing greedy always achieves. Nothing anywhere
+measured an angle. The campaign had replaced a 45°-bucket rule that was wrong by
+at most 22.5° by construction but sometimes emitted a duplicated letter; so it
+traded a *visible* inconsistency for an *invisible* one and measured only the
+first.
+
+The repair is to stop deciding pair by pair and solve the whole eight-by-eight
+assignment at once, which is a textbook problem with a cheap answer: 11.6 µs per
+call against greedy's 5.9. Worst error over the same populations falls from
+**156.5° to 34.6°**, and no room anywhere carries a word more than 45° off —
+so every word now names the correct octant, which greedy could not promise.
+
+**One axis got worse, and it is inherent rather than accidental.** Steps that do
+not invert — where `go e` followed by `go w` fails to return you — rose from
+0.67% to 1.55% of sampled pairs. A per-room rule cannot avoid this: each room
+assigns its words without consulting its neighbour's assignment, and where the
+rose rotates between two adjacent rooms the reverse of *east from here* is
+simply not *west from there*. Perfect invertibility and bounded per-room
+accuracy cannot both hold on a curved surface under a local rule. Given the
+choice, a step that lands one room from where you expected is a smaller lie than
+a word that points 156° wrong, and 184 of the 190 failures are off by exactly
+one word. Both numbers are now pinned two-sided, so an improvement has to be
+banked rather than absorbed in silence.
+
 ## What the rhumb leaves behind
 
 `course.rs` is deleted, and its suite is reported **dissolved** rather than
