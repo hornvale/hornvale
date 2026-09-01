@@ -1,0 +1,1 @@
+{"kind":"notice","by":"campaign/the-hallmark","note":"sluice: queued stage req-89e85823b00c-20260901T230856Z for campaign/the-hallmark at 89e85823b (tasks 1-5 of the-hallmark: decision 0517, UnitError/genesis kernel moves, GroundKind adoption, paleoclimate STOP diagnosis)","paths":["scripts/sluice-queue.sh"]}
