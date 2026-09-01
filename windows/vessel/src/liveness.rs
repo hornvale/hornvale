@@ -2251,11 +2251,48 @@ const FATIGUE_FALL: f64 = 1.0;
 /// single subtraction per segment, which is what [`fatigue_from_rests`]'s
 /// bit-identity contract with the mover rests on.
 ///
-/// Bracketed on both sides by
-/// `a_rest_repays_less_than_a_sleep_of_the_same_span` (strictly below
-/// `FATIGUE_FALL`) and by `resting_restores_some_fatigue` (strictly above
-/// zero) — the two halves of the ruling, each as its own assertion.
+/// **WHAT ACTUALLY HOLDS THIS VALUE, named correctly.** This doc used to cite
+/// `a_rest_repays_less_than_a_sleep_of_the_same_span` and
+/// `resting_restores_some_fatigue`; neither string occurs anywhere in the tree
+/// except in the sentence that named them, so a reader checking whether the
+/// constant was bracketed would have found nothing. The real guards are:
+///
+/// - `action_module::sleeping_renders_the_body_unconscious_and_restores_
+///   strictly_more_than_resting` — the upper side, that a rest repays strictly
+///   less than a sleep of the SAME span (so `REST_FALL < FATIGUE_FALL`);
+/// - `action_module::resting_leaves_the_body_conscious_and_restores_some_
+///   fatigue` — the lower side, that a rest repays strictly more than nothing;
+/// - `a_rest_bout_repays_more_than_the_hysteresis_band_it_must_clear` — the
+///   CALIBRATION, and the one this pair was missing.
+///
+/// **The bracket the first two give is (0, `FATIGUE_FALL`), which is 100x wider
+/// than the value is meant to be.** Measured in fix round 1: the whole vessel
+/// suite is green at `REST_FALL` = 0.9, at 0.1 and at 0.01 — 898/898 each time,
+/// with neither the walk golden nor `tick_commit_budget` moving — so only the
+/// degenerate endpoints were held and the value itself was held by nothing. At
+/// 0.01 a rest repays 0.0025, forty times under the floor [`REST_BOUT`]'s own
+/// doc asserts it must clear, and the nap fragmentation this task exists to
+/// remove would return with every test still green. The calibration test states
+/// that inequality directly.
 const REST_FALL: f64 = 0.5;
+
+/// The ORDER half of [`REST_FALL`]'s bracket, as a compile-time assertion
+/// rather than a test (The Wicket, Task 8, fix round 1).
+///
+/// `assert!` over two constants is a compile-time fact, and clippy says so —
+/// `clippy::assertions_on_constants` fires on it inside a `#[test]`, which the
+/// gate's `-D warnings` turns into an error. The right home for a claim that
+/// two constants stand in an order is `const _`, where it is checked on every
+/// build of this crate, cannot be skipped by a test filter, and fails to
+/// COMPILE rather than to run. The behavioural halves — that a rest actually
+/// repays less than a sleep, and more than nothing, through the fold — are
+/// still asserted at runtime by the two `action_module` tests
+/// [`REST_FALL`]'s own doc names.
+const _: () = assert!(
+    REST_FALL > 0.0 && REST_FALL < FATIGUE_FALL,
+    "a conscious rest must repay strictly more than nothing and strictly less \
+     per day down than a sleep, or the two acts differ only in name"
+);
 
 /// How long a conscious rest lasts: [`Action::Rest`]'s own span, and the first
 /// thing about a rest that is a property of the ACT rather than of the clock
@@ -2282,23 +2319,41 @@ const REST_FALL: f64 = 0.5;
 const REST_BOUT: TickSpan = TickSpan::from_ticks(WorldTime::TICKS_PER_STD_DAY / 4);
 
 /// The shortest span that counts as SLEEPING rather than dozing:
-/// [`Action::Sleep`]'s floor (The Wicket, Task 8).
+/// [`Action::Sleep`]'s floor **for a body that goes under while AWAKE** (The
+/// Wicket, Task 8).
 ///
-/// A sleep runs until the body's own cycle wakes it — `next_awake_day`, the
-/// scan the wake-gate has always used — but never for less than this. The floor
-/// is what makes the length a property of the act: without it, a body that goes
-/// under off-cycle (the player typing `sleep` at noon, or a creature bedding
-/// down at the tail of its night) is handed the next scan step and "sleeps" for
-/// seven minutes.
+/// A sleep runs until the body's own cycle wakes it (`next_awake_day`, the scan
+/// the wake-gate has always used). That answer is authoritative in the
+/// off-phase — the cycle knows where dawn is — and useless while the body is
+/// awake, where the same scan means "the next moment you are awake" and usually
+/// returns a single [`WAKE_SCAN_STEP`], 7.2 minutes. The floor supplies a
+/// length for that second case and **only** that case, which is what makes a
+/// sleep's length a property of the act rather than of the scan lattice.
 ///
-/// **Two fifths of a standard day (~9.6 hours), which is deliberately just
-/// UNDER the night the scan actually produces.** The hoisted-walk golden's real
-/// nights measure 45,000 and 50,000 ticks, so on the ordinary path the cycle
-/// still decides and this floor never binds; it binds exactly in the off-cycle
-/// case it was written for. The visible cost is at the other edge: a body that
-/// goes under a few minutes before its own dawn oversleeps into the morning by
-/// up to a bout. That reads correctly — a body does not wake refreshed four
-/// minutes after falling asleep — and it is the direction the ruling prefers.
+/// **THIS DOC USED TO CLAIM THE FLOOR APPLIED UNCONDITIONALLY AND NEVER BOUND
+/// ON THE ORDINARY PATH, AND THE FIXTURE IT CITED AS EVIDENCE DISPROVED BOTH
+/// HALVES.** It read: "the hoisted-walk golden's real nights measure 45,000 and
+/// 50,000 ticks, so on the ordinary path the cycle still decides and this floor
+/// never binds". Instrumenting `act_span` and running
+/// `the_hoisted_walk_emits_exactly_what_the_loop_emitted` measured the
+/// opposite: of that fixture's **18 sleeps, 8 had the floor bind** — cycles of
+/// 5,000, 20,000, 25,000 and 30,000 ticks all overridden to 40,000 — and
+/// **every one of the 18 was an in-phase sleep**, because `Fatigue::act`
+/// returns `Sleep` if and only if the body is NOT awake. So the case the floor
+/// was written for was never exercised by a creature at all, and the only thing
+/// an unconditional floor did there was push a body bedding down near its own
+/// dawn straight past it: worst case a 5,000-tick remaining night stretched to
+/// 40,000, an **eightfold overshoot**, eight times in one fixture.
+///
+/// The remedy is the `is_awake` gate in [`act_span`], not a different constant.
+/// The value stays two fifths of a standard day (~9.6 hours): a body that lies
+/// down at noon and sleeps has slept, not dozed.
+///
+/// `a_sleeps_length_is_the_cycles_in_phase_and_the_floors_out_of_phase` sweeps
+/// a full day of instants and pins the crossing in both directions, including
+/// that in-phase instants exist whose cycle is SHORTER than this floor — the
+/// eight cases above, which under the old rule were the defect and under the
+/// new one are the reason the gate is needed.
 const SLEEP_BOUT: TickSpan = TickSpan::from_ticks(WorldTime::TICKS_PER_STD_DAY * 2 / 5);
 
 /// The exclusive upper bound, in TICKS, on a rest span that survives
@@ -2467,7 +2522,21 @@ pub(crate) fn act_span(
 ) -> Option<TickSpan> {
     match action {
         Action::Rest => Some(REST_BOUT),
-        Action::Sleep => Some((next_awake_day(activity, terrain, room, day) - day).max(SLEEP_BOUT)),
+        Action::Sleep => {
+            // The body's own cycle answers first, and it is AUTHORITATIVE
+            // whenever the body is already in its off-phase: it knows when dawn
+            // is, and a sleep must end there. The floor applies only to a body
+            // going under WHILE AWAKE, where the same scan answers "the next
+            // moment you are awake" — which for a waking body is usually the
+            // next scan step and is not a sleep at all. See [`SLEEP_BOUT`] for
+            // the measurement that narrowed this from an unconditional `max`.
+            let cycle = next_awake_day(activity, terrain, room, day) - day;
+            Some(if is_awake(activity, terrain, room, day) {
+                cycle.max(SLEEP_BOUT)
+            } else {
+                cycle
+            })
+        }
         Action::MoveTo(_) | Action::MoveWithin(_) | Action::Drink | Action::Eat => None,
         Action::Why
         | Action::Npcs
@@ -5995,6 +6064,11 @@ impl<'a> DriveMovements<'a> {
                 // seven-minute dozes at Task 7.
                 let span = act_span(&action, npc.activity, self.terrain, &st.pos, st.day)
                     .expect("Rest and Sleep are exactly the two acts act_span answers for");
+                // Exhaustive over the outer or-pattern, with NO wildcard: a
+                // third bout act added above must fail to compile here rather
+                // than be silently recorded as a `rested` one. The
+                // `unreachable!` is the arm the outer pattern already excludes,
+                // and it names why it cannot fire.
                 let fact = match &action {
                     Action::Sleep => slept_fact(
                         npc.entity,
@@ -6002,11 +6076,15 @@ impl<'a> DriveMovements<'a> {
                         span,
                         "slept through its off-phase (fatigue eased)",
                     ),
-                    _ => rested_fact(
+                    Action::Rest => rested_fact(
                         npc.entity,
                         st.day,
                         span,
                         "lay down where it stood (fatigue eased)",
+                    ),
+                    other => unreachable!(
+                        "the arm's own pattern admits only Rest and Sleep; \
+                         got {other:?}"
                     ),
                 };
                 out.push(fact);
@@ -8220,11 +8298,15 @@ mod tests {
         //
         // THE PROFILE. Seven Hold jumps per creature over this walk, so the
         // staircase tops out at +2. **THE INDICES BELOW ARE POSITIONS IN THE
-        // EIGHTY-FACT ROSTER THAT PRECEDED THE WICKET**, which grew this
-        // fixture to 140 — see the section after this one. The mechanism and
-        // the tick values are unchanged; only the row numbers that used to
-        // address them are stale, and they are kept because the anchors are how
-        // you tell which side of the snapping change you are on.
+        // EIGHTY-FACT ROSTER THAT PRECEDED THE WICKET**, whose Task 8 leaves
+        // this fixture at 90 — see the section after this one, which carries
+        // the whole 80 -> 134 -> 90 history. (This sentence said "grew this
+        // fixture to 140"; it was wrong at 134 when written and wronger after
+        // the split, while the block sixty lines below had the number right
+        // the whole time.) The mechanism and the tick values are unchanged;
+        // only the row numbers that used to address them are stale, and they
+        // are kept because the anchors are how you tell which side of the
+        // snapping change you are on.
         //
         //     facts  0-13   +0 ticks (byte-identical)
         //     facts 14-53   +1 tick
@@ -8255,55 +8337,72 @@ mod tests {
         // would reintroduce the very `f64` the campaign exists to delete. This
         // value is the accepted one. Do not "fix" it back.
         //
-        // AND IT MOVED AGAIN, LARGELY, AT THE WICKET'S TASK 7 — 80 FACTS TO
-        // 134 — AND THEN BACK DOWN TO 90 AT ITS TASK 8. Both are BEHAVIOUR
-        // changes, not placement ones, and both are the finding the task was
-        // looking for rather than a cost paid for it.
+        // AND IT MOVED AGAIN, LARGELY, AT THE WICKET: 80 FACTS -> 134 AT ITS
+        // TASK 7, -> 90 AT TASK 8, -> 108 AT TASK 8'S FIX ROUND. Every one of
+        // those is a BEHAVIOUR change, not a placement one, and each was the
+        // finding the change was looking for rather than a cost paid for it.
         //
-        // TASK 7'S MECHANISM. Fatigue became a recovery STOCK: a rest repays
+        // TASK 7'S MECHANISM. Fatigue became a recovery STOCK: a bout repays
         // per day the body is down instead of zeroing the debt outright, and
         // each fact records the span the body was actually down (its object is
         // a tick count, which is the visible half of that diff).
         //
-        // TASK 8'S MECHANISM, and it is two changes at once. The one recovery
-        // act split into a conscious `rested` and an unconscious `slept`, which
-        // is why two predicates appear below where one did; and a bout's LENGTH
-        // became a property of the act (`act_span`) rather than whatever
+        // TASK 8'S MECHANISM, two changes at once. The one recovery act split
+        // into a conscious `rested` and an unconscious `slept`, which is why
+        // two predicates appear below where one did; and a bout's LENGTH became
+        // a property of the act (`act_span`) rather than whatever
         // `next_awake_day` happened to answer.
         //
-        // THE COUNTS PROVE THE WALK IS OTHERWISE UNTOUCHED, across all three
-        // rosters: `agent-at` 48 -> 48 -> 48, `drank` 12 -> 12 -> 12, `eaten`
-        // 6 -> 6 -> 6, in the same order, in the same rooms, with the same
-        // provenances and the same subjects. Only the recovery bouts move:
-        // 14 -> 68 -> 24 (6 `rested` + 18 `slept`). The surviving non-recovery
-        // facts move only on the CLOCK, because bouts cost time like any other
-        // act.
+        // THE FIX ROUND'S MECHANISM, and it is why this fixture went UP. Task 8
+        // floored every sleep at `SLEEP_BOUT` unconditionally. Instrumenting
+        // `act_span` over this very fixture showed that floor binding on 8 of
+        // its 18 sleeps — cycles of 5,000 / 20,000 / 25,000 / 30,000 ticks all
+        // overridden to 40,000 — and that all 18 were IN-PHASE sleeps, because
+        // `Fatigue::act` returns `Sleep` only when the body is not awake. So
+        // the floor's designed case (a body going under while AWAKE) was never
+        // exercised here at all, and what it actually did was push bodies past
+        // their own dawn, worst case eightfold. The floor is now gated on
+        // `is_awake`. Part of the 90-fact roster's apparent thrift was that
+        // defect: a body asleep commits nothing, so oversleeping was cheap.
         //
-        // WHY 68 BECAME 24. Forty-four of Task 7's 68 were `Number(5000.0)` —
-        // one `WAKE_SCAN_STEP`, a twentieth of a day. That is what
-        // `next_awake_day` returns for a body lying down while it is ALREADY
-        // AWAKE: the next scan step, because it is awake there too. Repaying
-        // only `FATIGUE_FALL * 0.05` per doze, a creature deep in debt dozed
-        // through its own afternoon and then slept properly at dusk. There is
-        // no `Number(5000.0)` anywhere below now, and that absence is the fix:
-        // an afternoon lie-down is an `Action::Rest` of `REST_BOUT`
-        // (25,000 ticks), which repays enough to clear the drive in one act.
-        // The spans that remain are exactly the three the two acts can produce
-        // — 25,000 (a rest), 40,000 (`SLEEP_BOUT`, a sleep begun off-cycle) and
-        // 45,000/50,000 (a sleep the body's own cycle timed).
+        // THE COUNTS PROVE THE WALK IS OTHERWISE UNTOUCHED, across all four
+        // rosters: `agent-at` 48 -> 48 -> 48 -> 48, `drank` 12 -> 12 -> 12 ->
+        // 12, `eaten` 6 -> 6 -> 6 -> 6, in the same order, in the same rooms,
+        // with the same provenances and the same subjects. Only the recovery
+        // bouts move: 14 -> 68 -> 24 -> 42 (18 `rested` + 24 `slept`). The
+        // surviving non-recovery facts move only on the CLOCK, because bouts
+        // cost time like any other act.
+        //
+        // WHAT THE SPANS BELOW SAY, and it is the whole nap-fragmentation
+        // story in one column. There is no `Number(5000.0)` anywhere — one
+        // `WAKE_SCAN_STEP`, 7.2 minutes, which was 44 of Task 7's 68 bouts and
+        // is the pathology Task 8 exists to remove. Every `rested` is exactly
+        // `REST_BOUT` (25,000), the flat act-owned span. Every `slept` is a
+        // real remaining night the body's own cycle timed (10,000 / 15,000 /
+        // 20,000 / 25,000 / 30,000 / 45,000 / 50,000); the eight 40,000s the
+        // pre-fix roster carried were the floor overriding those cycles.
+        //
+        // TWO RESTS IN A ROW APPEAR AND ARE NOT A CHAIN. From a SATURATED debt
+        // of 1.0 one `REST_BOUT` repays 0.125 and leaves 0.875, still inside
+        // the band the drive re-engages in (`FATIGUE_ACT - HYSTERESIS_H` =
+        // 0.75), so a second fires and a third does not.
+        // `a_rest_bout_repays_more_than_the_hysteresis_band_it_must_clear`
+        // states the bound it is calibrated against, which is measured from
+        // `FATIGUE_ACT` and not from saturation — so "one rest suffices" is
+        // true at the threshold and two is correct from the ceiling.
         //
         // THIS FIXTURE IS SYNTHETIC AND OVERSTATES IT. `hoist_walk_shape` runs
         // a planted terrain with no forage, no temperatures and one water room,
         // over 39 days — creatures here are under pressures a real world spaces
         // out. The seed-42 measurement is
         // `tick_commit_budget::facts_committed_per_agent_per_tick_stays_bounded`,
-        // which reads 1.01 facts/agent/tick against its 1.5 ceiling (0.96
-        // before Task 7, 1.24 after it). Read the rate there, not the fact
-        // count here.
+        // which reads 1.06 facts/agent/tick against its 1.5 ceiling (0.96
+        // before Task 7, 1.24 after it, 1.01 before this fix round). Read the
+        // rate there, not the fact count here.
         //
         const EXPECTED: &[&str] = &[
-            r#"knower|slept|Number(40000.0)|Some(100150)|slept through its off-phase (fatigue eased)"#,
-            r#"lost|slept|Number(40000.0)|Some(100150)|slept through its off-phase (fatigue eased)"#,
+            r#"knower|slept|Number(25000.0)|Some(100150)|slept through its off-phase (fatigue eased)"#,
+            r#"lost|slept|Number(25000.0)|Some(100150)|slept through its off-phase (fatigue eased)"#,
             r#"knower|agent-at|Text("180243")|Some(576667)|went down to the river it knew (thirst)"#,
             r#"lost|agent-at|Text("180243")|Some(576667)|went down to the river it knew (thirst)"#,
             r#"knower|slept|Number(50000.0)|Some(576817)|slept through its off-phase (fatigue eased)"#,
@@ -8318,80 +8417,98 @@ mod tests {
             r#"lost|agent-at|Text("172046")|Some(656967)|walking home (sated)"#,
             r#"knower|eaten|Flag(true)|Some(1206634)|grazed the productive ground (hunger sated)"#,
             r#"lost|eaten|Flag(true)|Some(1206634)|grazed the productive ground (hunger sated)"#,
-            r#"knower|slept|Number(40000.0)|Some(1206784)|slept through its off-phase (fatigue eased)"#,
-            r#"lost|slept|Number(40000.0)|Some(1206784)|slept through its off-phase (fatigue eased)"#,
-            r#"knower|agent-at|Text("180243")|Some(1256784)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180243")|Some(1256784)|went down to the river it knew (thirst)"#,
-            r#"knower|agent-at|Text("180339")|Some(1266784)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180339")|Some(1266784)|went down to the river it knew (thirst)"#,
-            r#"knower|drank|Flag(true)|Some(1266934)|drank from the river (thirst sated)"#,
-            r#"lost|drank|Flag(true)|Some(1266934)|drank from the river (thirst sated)"#,
-            r#"knower|agent-at|Text("180243")|Some(1276934)|walking home (sated)"#,
-            r#"lost|agent-at|Text("180243")|Some(1276934)|walking home (sated)"#,
-            r#"knower|slept|Number(50000.0)|Some(1277084)|slept through its off-phase (fatigue eased)"#,
-            r#"lost|slept|Number(50000.0)|Some(1277084)|slept through its off-phase (fatigue eased)"#,
-            r#"knower|agent-at|Text("172046")|Some(1337084)|walking home (sated)"#,
-            r#"lost|agent-at|Text("172046")|Some(1337084)|walking home (sated)"#,
-            r#"knower|agent-at|Text("180243")|Some(1843601)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180243")|Some(1843601)|went down to the river it knew (thirst)"#,
-            r#"knower|agent-at|Text("180339")|Some(1853601)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180339")|Some(1853601)|went down to the river it knew (thirst)"#,
-            r#"knower|drank|Flag(true)|Some(1853751)|drank from the river (thirst sated)"#,
-            r#"lost|drank|Flag(true)|Some(1853751)|drank from the river (thirst sated)"#,
-            r#"knower|rested|Number(25000.0)|Some(1853901)|lay down where it stood (fatigue eased)"#,
-            r#"lost|rested|Number(25000.0)|Some(1853901)|lay down where it stood (fatigue eased)"#,
-            r#"knower|slept|Number(50000.0)|Some(1879051)|slept through its off-phase (fatigue eased)"#,
-            r#"lost|slept|Number(50000.0)|Some(1879051)|slept through its off-phase (fatigue eased)"#,
-            r#"knower|agent-at|Text("180243")|Some(1939051)|walking home (sated)"#,
-            r#"lost|agent-at|Text("180243")|Some(1939051)|walking home (sated)"#,
-            r#"knower|agent-at|Text("172046")|Some(1949051)|walking home (sated)"#,
-            r#"lost|agent-at|Text("172046")|Some(1949051)|walking home (sated)"#,
-            r#"knower|eaten|Flag(true)|Some(2423418)|grazed the productive ground (hunger sated)"#,
-            r#"lost|eaten|Flag(true)|Some(2423418)|grazed the productive ground (hunger sated)"#,
-            r#"knower|slept|Number(40000.0)|Some(2423568)|slept through its off-phase (fatigue eased)"#,
-            r#"lost|slept|Number(40000.0)|Some(2423568)|slept through its off-phase (fatigue eased)"#,
-            r#"knower|agent-at|Text("180243")|Some(2473568)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180243")|Some(2473568)|went down to the river it knew (thirst)"#,
-            r#"knower|agent-at|Text("180339")|Some(2483568)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180339")|Some(2483568)|went down to the river it knew (thirst)"#,
-            r#"knower|drank|Flag(true)|Some(2483718)|drank from the river (thirst sated)"#,
-            r#"lost|drank|Flag(true)|Some(2483718)|drank from the river (thirst sated)"#,
-            r#"knower|slept|Number(45000.0)|Some(2483868)|slept through its off-phase (fatigue eased)"#,
-            r#"lost|slept|Number(45000.0)|Some(2483868)|slept through its off-phase (fatigue eased)"#,
-            r#"knower|agent-at|Text("180243")|Some(2538868)|walking home (sated)"#,
-            r#"lost|agent-at|Text("180243")|Some(2538868)|walking home (sated)"#,
-            r#"knower|agent-at|Text("172046")|Some(2548868)|walking home (sated)"#,
-            r#"lost|agent-at|Text("172046")|Some(2548868)|walking home (sated)"#,
-            r#"knower|agent-at|Text("180243")|Some(3060385)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180243")|Some(3060385)|went down to the river it knew (thirst)"#,
-            r#"knower|agent-at|Text("180339")|Some(3070385)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180339")|Some(3070385)|went down to the river it knew (thirst)"#,
-            r#"knower|drank|Flag(true)|Some(3070535)|drank from the river (thirst sated)"#,
-            r#"lost|drank|Flag(true)|Some(3070535)|drank from the river (thirst sated)"#,
-            r#"knower|rested|Number(25000.0)|Some(3070685)|lay down where it stood (fatigue eased)"#,
-            r#"lost|rested|Number(25000.0)|Some(3070685)|lay down where it stood (fatigue eased)"#,
-            r#"knower|slept|Number(40000.0)|Some(3095835)|slept through its off-phase (fatigue eased)"#,
-            r#"lost|slept|Number(40000.0)|Some(3095835)|slept through its off-phase (fatigue eased)"#,
-            r#"knower|agent-at|Text("180243")|Some(3145835)|walking home (sated)"#,
-            r#"lost|agent-at|Text("180243")|Some(3145835)|walking home (sated)"#,
-            r#"knower|agent-at|Text("172046")|Some(3155835)|walking home (sated)"#,
-            r#"lost|agent-at|Text("172046")|Some(3155835)|walking home (sated)"#,
-            r#"knower|eaten|Flag(true)|Some(3640202)|grazed the productive ground (hunger sated)"#,
-            r#"lost|eaten|Flag(true)|Some(3640202)|grazed the productive ground (hunger sated)"#,
-            r#"knower|agent-at|Text("180243")|Some(3650202)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180243")|Some(3650202)|went down to the river it knew (thirst)"#,
-            r#"knower|agent-at|Text("180339")|Some(3660202)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180339")|Some(3660202)|went down to the river it knew (thirst)"#,
-            r#"knower|drank|Flag(true)|Some(3660352)|drank from the river (thirst sated)"#,
-            r#"lost|drank|Flag(true)|Some(3660352)|drank from the river (thirst sated)"#,
-            r#"knower|rested|Number(25000.0)|Some(3660502)|lay down where it stood (fatigue eased)"#,
-            r#"lost|rested|Number(25000.0)|Some(3660502)|lay down where it stood (fatigue eased)"#,
-            r#"knower|slept|Number(40000.0)|Some(3685652)|slept through its off-phase (fatigue eased)"#,
-            r#"lost|slept|Number(40000.0)|Some(3685652)|slept through its off-phase (fatigue eased)"#,
-            r#"knower|agent-at|Text("180243")|Some(3735652)|walking home (sated)"#,
-            r#"lost|agent-at|Text("180243")|Some(3735652)|walking home (sated)"#,
-            r#"knower|agent-at|Text("172046")|Some(3745652)|walking home (sated)"#,
-            r#"lost|agent-at|Text("172046")|Some(3745652)|walking home (sated)"#,
+            r#"knower|slept|Number(20000.0)|Some(1206784)|slept through its off-phase (fatigue eased)"#,
+            r#"lost|slept|Number(20000.0)|Some(1206784)|slept through its off-phase (fatigue eased)"#,
+            r#"knower|agent-at|Text("180243")|Some(1236784)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180243")|Some(1236784)|went down to the river it knew (thirst)"#,
+            r#"knower|agent-at|Text("180339")|Some(1246784)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180339")|Some(1246784)|went down to the river it knew (thirst)"#,
+            r#"knower|drank|Flag(true)|Some(1246934)|drank from the river (thirst sated)"#,
+            r#"lost|drank|Flag(true)|Some(1246934)|drank from the river (thirst sated)"#,
+            r#"knower|rested|Number(25000.0)|Some(1247084)|lay down where it stood (fatigue eased)"#,
+            r#"lost|rested|Number(25000.0)|Some(1247084)|lay down where it stood (fatigue eased)"#,
+            r#"knower|agent-at|Text("180243")|Some(1282084)|walking home (sated)"#,
+            r#"lost|agent-at|Text("180243")|Some(1282084)|walking home (sated)"#,
+            r#"knower|slept|Number(45000.0)|Some(1282234)|slept through its off-phase (fatigue eased)"#,
+            r#"lost|slept|Number(45000.0)|Some(1282234)|slept through its off-phase (fatigue eased)"#,
+            r#"knower|agent-at|Text("172046")|Some(1337234)|walking home (sated)"#,
+            r#"lost|agent-at|Text("172046")|Some(1337234)|walking home (sated)"#,
+            r#"knower|slept|Number(15000.0)|Some(1813751)|slept through its off-phase (fatigue eased)"#,
+            r#"lost|slept|Number(15000.0)|Some(1813751)|slept through its off-phase (fatigue eased)"#,
+            r#"knower|agent-at|Text("180243")|Some(1838751)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180243")|Some(1838751)|went down to the river it knew (thirst)"#,
+            r#"knower|agent-at|Text("180339")|Some(1848751)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180339")|Some(1848751)|went down to the river it knew (thirst)"#,
+            r#"knower|drank|Flag(true)|Some(1848901)|drank from the river (thirst sated)"#,
+            r#"lost|drank|Flag(true)|Some(1848901)|drank from the river (thirst sated)"#,
+            r#"knower|rested|Number(25000.0)|Some(1849051)|lay down where it stood (fatigue eased)"#,
+            r#"lost|rested|Number(25000.0)|Some(1849051)|lay down where it stood (fatigue eased)"#,
+            r#"knower|rested|Number(25000.0)|Some(1874201)|lay down where it stood (fatigue eased)"#,
+            r#"lost|rested|Number(25000.0)|Some(1874201)|lay down where it stood (fatigue eased)"#,
+            r#"knower|slept|Number(30000.0)|Some(1899351)|slept through its off-phase (fatigue eased)"#,
+            r#"lost|slept|Number(30000.0)|Some(1899351)|slept through its off-phase (fatigue eased)"#,
+            r#"knower|agent-at|Text("180243")|Some(1939351)|walking home (sated)"#,
+            r#"lost|agent-at|Text("180243")|Some(1939351)|walking home (sated)"#,
+            r#"knower|agent-at|Text("172046")|Some(1949351)|walking home (sated)"#,
+            r#"lost|agent-at|Text("172046")|Some(1949351)|walking home (sated)"#,
+            r#"knower|eaten|Flag(true)|Some(2418568)|grazed the productive ground (hunger sated)"#,
+            r#"lost|eaten|Flag(true)|Some(2418568)|grazed the productive ground (hunger sated)"#,
+            r#"knower|slept|Number(10000.0)|Some(2418718)|slept through its off-phase (fatigue eased)"#,
+            r#"lost|slept|Number(10000.0)|Some(2418718)|slept through its off-phase (fatigue eased)"#,
+            r#"knower|agent-at|Text("180243")|Some(2438718)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180243")|Some(2438718)|went down to the river it knew (thirst)"#,
+            r#"knower|agent-at|Text("180339")|Some(2448718)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180339")|Some(2448718)|went down to the river it knew (thirst)"#,
+            r#"knower|drank|Flag(true)|Some(2448868)|drank from the river (thirst sated)"#,
+            r#"lost|drank|Flag(true)|Some(2448868)|drank from the river (thirst sated)"#,
+            r#"knower|rested|Number(25000.0)|Some(2449018)|lay down where it stood (fatigue eased)"#,
+            r#"lost|rested|Number(25000.0)|Some(2449018)|lay down where it stood (fatigue eased)"#,
+            r#"knower|rested|Number(25000.0)|Some(2474168)|lay down where it stood (fatigue eased)"#,
+            r#"lost|rested|Number(25000.0)|Some(2474168)|lay down where it stood (fatigue eased)"#,
+            r#"knower|slept|Number(30000.0)|Some(2499318)|slept through its off-phase (fatigue eased)"#,
+            r#"lost|slept|Number(30000.0)|Some(2499318)|slept through its off-phase (fatigue eased)"#,
+            r#"knower|agent-at|Text("180243")|Some(2539318)|walking home (sated)"#,
+            r#"lost|agent-at|Text("180243")|Some(2539318)|walking home (sated)"#,
+            r#"knower|agent-at|Text("172046")|Some(2549318)|walking home (sated)"#,
+            r#"lost|agent-at|Text("172046")|Some(2549318)|walking home (sated)"#,
+            r#"knower|slept|Number(10000.0)|Some(3015685)|slept through its off-phase (fatigue eased)"#,
+            r#"lost|slept|Number(10000.0)|Some(3015685)|slept through its off-phase (fatigue eased)"#,
+            r#"knower|agent-at|Text("180243")|Some(3035685)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180243")|Some(3035685)|went down to the river it knew (thirst)"#,
+            r#"knower|agent-at|Text("180339")|Some(3045685)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180339")|Some(3045685)|went down to the river it knew (thirst)"#,
+            r#"knower|drank|Flag(true)|Some(3045835)|drank from the river (thirst sated)"#,
+            r#"lost|drank|Flag(true)|Some(3045835)|drank from the river (thirst sated)"#,
+            r#"knower|rested|Number(25000.0)|Some(3045985)|lay down where it stood (fatigue eased)"#,
+            r#"lost|rested|Number(25000.0)|Some(3045985)|lay down where it stood (fatigue eased)"#,
+            r#"knower|rested|Number(25000.0)|Some(3071135)|lay down where it stood (fatigue eased)"#,
+            r#"lost|rested|Number(25000.0)|Some(3071135)|lay down where it stood (fatigue eased)"#,
+            r#"knower|slept|Number(30000.0)|Some(3096285)|slept through its off-phase (fatigue eased)"#,
+            r#"lost|slept|Number(30000.0)|Some(3096285)|slept through its off-phase (fatigue eased)"#,
+            r#"knower|agent-at|Text("180243")|Some(3136285)|walking home (sated)"#,
+            r#"lost|agent-at|Text("180243")|Some(3136285)|walking home (sated)"#,
+            r#"knower|agent-at|Text("172046")|Some(3146285)|walking home (sated)"#,
+            r#"lost|agent-at|Text("172046")|Some(3146285)|walking home (sated)"#,
+            r#"knower|eaten|Flag(true)|Some(3615502)|grazed the productive ground (hunger sated)"#,
+            r#"lost|eaten|Flag(true)|Some(3615502)|grazed the productive ground (hunger sated)"#,
+            r#"knower|slept|Number(10000.0)|Some(3615652)|slept through its off-phase (fatigue eased)"#,
+            r#"lost|slept|Number(10000.0)|Some(3615652)|slept through its off-phase (fatigue eased)"#,
+            r#"knower|agent-at|Text("180243")|Some(3635652)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180243")|Some(3635652)|went down to the river it knew (thirst)"#,
+            r#"knower|agent-at|Text("180339")|Some(3645652)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180339")|Some(3645652)|went down to the river it knew (thirst)"#,
+            r#"knower|drank|Flag(true)|Some(3645802)|drank from the river (thirst sated)"#,
+            r#"lost|drank|Flag(true)|Some(3645802)|drank from the river (thirst sated)"#,
+            r#"knower|rested|Number(25000.0)|Some(3645952)|lay down where it stood (fatigue eased)"#,
+            r#"lost|rested|Number(25000.0)|Some(3645952)|lay down where it stood (fatigue eased)"#,
+            r#"knower|rested|Number(25000.0)|Some(3671102)|lay down where it stood (fatigue eased)"#,
+            r#"lost|rested|Number(25000.0)|Some(3671102)|lay down where it stood (fatigue eased)"#,
+            r#"knower|slept|Number(30000.0)|Some(3696252)|slept through its off-phase (fatigue eased)"#,
+            r#"lost|slept|Number(30000.0)|Some(3696252)|slept through its off-phase (fatigue eased)"#,
+            r#"knower|agent-at|Text("180243")|Some(3736252)|walking home (sated)"#,
+            r#"lost|agent-at|Text("180243")|Some(3736252)|walking home (sated)"#,
+            r#"knower|agent-at|Text("172046")|Some(3746252)|walking home (sated)"#,
+            r#"lost|agent-at|Text("172046")|Some(3746252)|walking home (sated)"#,
         ];
         let shape = hoist_walk_shape();
         assert_eq!(
@@ -15107,37 +15224,54 @@ mod tests {
              would be the more restorative one and the ruling inverts"
         );
 
-        // AT DUSK the body's own cycle decides and the floor does not bind —
-        // the other side of the crossing, so the floor cannot have quietly
-        // become the only rule.
+        // IN THE OFF-PHASE the body's own cycle decides and the floor does not
+        // apply at all — the other side of the crossing, so the floor cannot
+        // have quietly become the only rule. Two instants, chosen so that the
+        // cycle's answer falls on OPPOSITE sides of the floor: from dusk the
+        // night is longer than `SLEEP_BOUT`, from midnight it is shorter. Both
+        // must answer the cycle. The second is the one that reddens under an
+        // unconditional floor, and it is the case the fixture measured eight
+        // times (see [`SLEEP_BOUT`]'s doc).
         //
-        // Dusk, not midnight: this planted terrain's coarse solar model gives a
-        // diurnal body a half-day off-phase, so from MIDNIGHT only a quarter
-        // day of it remains — less than `SLEEP_BOUT`, and the floor binds there
-        // too. That is the documented over-sleep edge (a body going under late
-        // in its night wakes into the morning), and it is why this half of the
-        // test has to start at the beginning of the off-phase to find an
-        // instant where the two rules genuinely differ. (3.8, not 3.75: at
-        // exactly frac 0.75 the model's solar altitude is not yet below the
-        // horizon.)
-        let dusk = WorldTime::from_std_days(3.8).expect("a day value is finite");
-        assert!(!is_awake(ActivityCycle::Diurnal, &terrain, &home, dusk));
-        let night = next_awake_day(ActivityCycle::Diurnal, &terrain, &home, dusk) - dusk;
+        // 3.8, not 3.75: at exactly frac 0.75 the model's solar altitude is not
+        // yet below the horizon.
+        for (label, at_days) in [("dusk", 3.8_f64), ("near dawn", 3.0_f64)] {
+            let t = WorldTime::from_std_days(at_days).expect("a day value is finite");
+            assert!(
+                !is_awake(ActivityCycle::Diurnal, &terrain, &home, t),
+                "{label}: the fixture must catch the body in its off-phase"
+            );
+            let night = next_awake_day(ActivityCycle::Diurnal, &terrain, &home, t) - t;
+            assert_eq!(
+                act_span(&Action::Sleep, ActivityCycle::Diurnal, &terrain, &home, t),
+                Some(night),
+                "{label}: a sleep begun in the off-phase runs until the cycle \
+                 wakes it, whether that is longer or shorter than the floor"
+            );
+        }
+        // ...and the two really do straddle the floor, or the loop above tested
+        // one rule twice.
+        let from_dusk = act_span(
+            &Action::Sleep,
+            ActivityCycle::Diurnal,
+            &terrain,
+            &home,
+            WorldTime::from_std_days(3.8).expect("a day value is finite"),
+        )
+        .expect("Sleep has a span");
+        let from_midnight = act_span(
+            &Action::Sleep,
+            ActivityCycle::Diurnal,
+            &terrain,
+            &home,
+            WorldTime::from_std_days(3.0).expect("a day value is finite"),
+        )
+        .expect("Sleep has a span");
         assert!(
-            night > SLEEP_BOUT,
-            "the fixture's night must be longer than the floor, or the \
-             assertion below cannot tell the two rules apart: {night:?}"
-        );
-        assert_eq!(
-            act_span(
-                &Action::Sleep,
-                ActivityCycle::Diurnal,
-                &terrain,
-                &home,
-                dusk
-            ),
-            Some(night),
-            "a sleep begun in the off-phase runs until the cycle wakes it"
+            from_dusk > SLEEP_BOUT && from_midnight < SLEEP_BOUT,
+            "the two off-phase instants must straddle the floor, or neither \
+             tells the gated rule from the ungated one: {from_dusk:?} and \
+             {from_midnight:?} against {SLEEP_BOUT:?}"
         );
 
         // And nothing else is a bout at all.
@@ -15151,6 +15285,145 @@ mod tests {
                 "{a:?} is not a recovery act and must have no bout span"
             );
         }
+    }
+
+    /// THE CALIBRATION [`REST_BOUT`]'S OWN DOC HAS BEEN PROMISING (The Wicket,
+    /// Task 8, fix round 1).
+    ///
+    /// `REST_BOUT`'s doc derives its value from a checkable inequality: one rest
+    /// must carry a body from [`FATIGUE_ACT`] clear of the band the drive
+    /// re-engages inside, so the repayment must exceed [`HYSTERESIS_H`]. Nothing
+    /// checked it. Measured in fix round 1, the whole vessel suite was green at
+    /// [`REST_FALL`] = 0.9, 0.1 and 0.01 — a 90x range, over which the doc's
+    /// claim goes from true to forty times false — and neither the walk golden
+    /// nor `tick_commit_budget` moved at any of them, so the fragmentation that
+    /// an under-powered rest reintroduces was witnessed by nothing.
+    ///
+    /// **Why the lower bound is the interesting one.** Below it a rest stops
+    /// discharging the drive that proposed it, so the drive proposes again on
+    /// the next step and the ledger fills with a body blinking — the exact Task
+    /// 7 pathology, restored by a constant rather than by a span. The upper
+    /// bound is the ruling itself and lives in two other places: a compile-time
+    /// `const _` beside [`REST_FALL`] (the order of the two constants) and
+    /// `action_module::sleeping_renders_the_body_unconscious_and_restores_
+    /// strictly_more_than_resting` (the same claim through the fold).
+    ///
+    /// This asserts the arithmetic, not a behaviour, deliberately: the
+    /// behavioural consequence is a steady-state commit rate that only a
+    /// seed-42 session can see, and `tick_commit_budget` demonstrably cannot see
+    /// this constant at all.
+    #[test]
+    fn a_rest_bout_repays_more_than_the_hysteresis_band_it_must_clear() {
+        let repaid = REST_BOUT.as_std_days() * REST_FALL;
+        assert!(
+            repaid > HYSTERESIS_H,
+            "one rest must take a body from FATIGUE_ACT ({FATIGUE_ACT}) clear \
+             of the hysteresis band the drive re-engages inside, so it must \
+             repay more than HYSTERESIS_H ({HYSTERESIS_H}); a REST_BOUT of \
+             {REST_BOUT:?} at REST_FALL {REST_FALL} repays {repaid}. Below this \
+             the drive that proposed the rest is still engaged when the body \
+             gets up, and the seven-minute dozing The Wicket's Task 8 removed \
+             comes back with every other test green"
+        );
+        // THE UPPER SIDE IS NOT ASSERTED HERE, and its absence is deliberate.
+        // `REST_FALL < FATIGUE_FALL` is a relation between two constants, so
+        // `clippy::assertions_on_constants` rejects it in a test and the gate's
+        // `-D warnings` makes that an error. It lives as a `const _: () =
+        // assert!(...)` beside `REST_FALL` instead — checked on every build,
+        // unskippable, and failing to compile rather than to run. The
+        // BEHAVIOURAL upper bound, that the fold really does repay a rest less
+        // than a sleep of the same span, is
+        // `action_module::sleeping_renders_the_body_unconscious_and_restores_
+        // strictly_more_than_resting`.
+    }
+
+    /// A SLEEP'S LENGTH IS THE CYCLE'S IN-PHASE AND THE FLOOR'S OUT-OF-PHASE,
+    /// swept over a whole day rather than sampled at two instants (The Wicket,
+    /// Task 8, fix round 1).
+    ///
+    /// **This test exists because a doc sentence made a FREQUENCY claim and the
+    /// fixture it cited disproved it.** [`SLEEP_BOUT`] said the floor "never
+    /// binds" on the ordinary path; instrumenting `act_span` showed it binding
+    /// on 8 of the hoisted walk's 18 sleeps. A claim about how often a branch
+    /// is taken cannot be pinned by two hand-picked instants, so this walks the
+    /// wake lattice for a full day and holds the rule at every one of them —
+    /// and asserts that BOTH branches, and both interesting sub-cases of the
+    /// off-phase branch, actually occur in the swept population.
+    ///
+    /// The counts are printed rather than asserted as exact numbers: they are a
+    /// property of this planted terrain's coarse solar model, and freezing them
+    /// would make the test fail for a reason unrelated to its claim.
+    #[test]
+    fn a_sleeps_length_is_the_cycles_in_phase_and_the_floors_out_of_phase() {
+        let home = raddr(1.0);
+        let terrain = PlantedTerrain::thermal([(home.clone(), 20.0)]);
+        let cycle_kind = ActivityCycle::Diurnal;
+
+        let mut awake_instants = 0_usize;
+        let mut asleep_instants = 0_usize;
+        // The off-phase instants whose own cycle is SHORTER than the floor —
+        // exactly the eight the walk fixture hit, and the ones an unconditional
+        // `max` would have overridden.
+        let mut asleep_under_floor = 0_usize;
+        // The awake instants where the floor actually supplies the answer.
+        let mut floor_supplied = 0_usize;
+
+        // A full standard day at the wake scan's own resolution, starting from
+        // a whole day so the sweep covers every phase of the cycle.
+        let start = WorldTime::from_std_days(3.0).expect("a day value is finite");
+        let steps = WorldTime::TICKS_PER_STD_DAY / WAKE_SCAN_STEP.ticks();
+        for i in 0..steps {
+            let t = start + TickSpan::from_ticks(i * WAKE_SCAN_STEP.ticks());
+            let awake = is_awake(cycle_kind, &terrain, &home, t);
+            let cycle = next_awake_day(cycle_kind, &terrain, &home, t) - t;
+            let got = act_span(&Action::Sleep, cycle_kind, &terrain, &home, t)
+                .expect("Sleep always has a span");
+            if awake {
+                awake_instants += 1;
+                assert_eq!(
+                    got,
+                    cycle.max(SLEEP_BOUT),
+                    "awake at {t:?}: the cycle answers `the next moment you are \
+                     awake`, which is no sleep at all, so the floor applies"
+                );
+                if got != cycle {
+                    floor_supplied += 1;
+                }
+            } else {
+                asleep_instants += 1;
+                assert_eq!(
+                    got, cycle,
+                    "asleep at {t:?}: the cycle knows where dawn is and is \
+                     authoritative — the floor must NOT push this body past it"
+                );
+                if cycle < SLEEP_BOUT {
+                    asleep_under_floor += 1;
+                }
+            }
+        }
+
+        println!(
+            "swept {steps} instants: awake={awake_instants} \
+             (floor supplied {floor_supplied}), asleep={asleep_instants} \
+             (cycle under the floor {asleep_under_floor})"
+        );
+        assert!(
+            awake_instants > 0 && asleep_instants > 0,
+            "the sweep must cross both phases or it tests one rule: \
+             awake={awake_instants}, asleep={asleep_instants}"
+        );
+        assert!(
+            floor_supplied > 0,
+            "the floor must actually supply the answer somewhere in the awake \
+             half, or the `max` above is untested"
+        );
+        assert!(
+            asleep_under_floor > 0,
+            "and the off-phase half must contain instants whose cycle is \
+             SHORTER than the floor, or this sweep cannot tell the gated rule \
+             from the unconditional `max` it replaced — those instants ARE the \
+             8-of-18 defect SLEEP_BOUT's doc records"
+        );
     }
 
     #[test]

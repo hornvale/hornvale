@@ -39,7 +39,7 @@ No direction here is closed; the nearest ground lies E, NW, SW.
 > needs
 No one else is here to read.
 > wait 1
-Time passes. You sense movement nearby (17 stirred).
+Time passes. You sense movement nearby (18 stirred).
 > look
 [room 896860167, day 6]
 Tropical rainforest — buttressed canopy, damp — in the lands of Doaba. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast.
@@ -47,7 +47,7 @@ No direction here is closed; the nearest ground lies E, NW, SW.
 > needs
 No one else is here to read.
 > wait 1
-Time passes. You sense movement nearby (9 stirred).
+Time passes. You sense movement nearby (11 stirred).
 > look
 [room 896860167, day 7]
 Tropical rainforest — buttressed canopy, damp — in the lands of Doaba. The sky above: Night. The sky is a low grey rain-deck.
@@ -74,7 +74,7 @@ hobgoblin of Neene:
 - an agent's position on a day: 895943271 (asserted by wandered, having found no water yet (thirst), day 6.91503)
 
 > wait 90
-Time passes. You sense movement nearby (214 stirred).
+Time passes. You sense movement nearby (279 stirred).
 > look
 [room 896860167, day 97]
 Tropical rainforest — buttressed canopy, damp — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
