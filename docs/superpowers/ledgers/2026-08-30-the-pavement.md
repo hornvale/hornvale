@@ -772,3 +772,95 @@ caught by anyone who opens the record. A right number with a borrowed gloss
 survives review, because the citation checks out — and this campaign's whole
 first day was spent undoing a decision record that read as settled. Two
 instances is a habit, not a slip.
+
+## Fix rounds after the final review
+
+### #26 [G5, HIGH] — the campaign reintroduced the defect class 0141 existed to prevent
+
+**The finding, from the whole-branch review and reproduced by me through the
+shipped CLI before acting on it:** at seed-42 room `FacetId(2169509120)`,
+`go E` walked WEST. Longitude −34.9969 → −35.0079, while `go W` went to
+−35.0131. Both decreased. `look` reported `E` as open, so the prose and the
+movement agreed on the same falsehood — precisely the "one-turn observable
+falsehood" decision 0141 was written to remove, reintroduced by 0506 which
+supersedes it.
+
+**Cause:** `heading_rose` matched compass words to neighbours GREEDILY — sort all
+(word, neighbour) pairs by angular error, accept each pair whose word and
+neighbour are both still free. That guarantees CARDINALITY and bounds nothing.
+Each acceptance consumes a word *and* a neighbour, so the final pair is forced:
+whatever word is left is stapled to whatever neighbour is left. 5.96% of rooms
+carried a word >45° off, 0.82% >90°, worst 156.1°.
+
+**Decision:** replaced with an exact lexicographic min-max assignment over the
+8x8 cost matrix. Worst error **156.5155° → 34.577273°, zero rooms past 45°** in
+either population (a uniform 12,696-room grid and an exact enumeration of ring 0,
+196,584 rooms). 11.6 µs/call against greedy's 5.9.
+
+**THE REAL FINDING IS THE MISSING ASSERTION, not the bug.** No test anywhere in
+the workspace looked at angular error. Every assertion about the rose checked
+that each neighbour received exactly one word — the one property greedy can never
+fail. `ROSE_WORST_DEG = 34.578` is now pinned two-sided (floor 33.5, whose
+failure message says to BANK an improvement rather than absorb it), with five
+blindnesses disclosed per decision 0491.
+
+**Why it survived review until the end:** a rule wrong everywhere gets noticed; a
+rule perfect seven times in eight reads as correct. Seven of the eight words at
+that room were 0–23° off.
+
+**MY OWN CONTRIBUTION TO IT, recorded because the shape recurs.** I measured the
+greedy mismatch mid-campaign — 1,216 of 4,800 samples, 25.3% — and used it
+correctly, to reject keying movement cost on the compass word. Then I stopped. It
+was evidence about the ASSIGNMENT RULE and I read it only as evidence about the
+decision I happened to be making. A number interesting enough to change your mind
+is interesting enough to explain.
+
+### #27 [G5] — the invertibility trade, and the argument for it that was WRONG
+
+Non-inverting pairs rose 82 → **190 of 12,282** (0.668% → 1.547%), pinned
+two-sided.
+
+**The trade is right; the first argument for it was refuted.** Fix round 1's doc
+(and my own relay of it to Nathan) said 190 was "a property of the mesh plus any
+per-room rule." The re-review refuted that **from the doc's own table**: greedy is
+also a per-room rule and scores 82, and a non-bijective nearest-word rule
+measures 14 of 12,282 (0.114%).
+
+**What 190 actually is:** 14 is the mesh's floor; the other 176 are the price of
+the **bijection** — every neighbour gets exactly one word, every word names at
+most one neighbour. Fix round 2 then MEASURED what dropping the bijection costs
+rather than asserting it: 152 of 1,536 rooms (9.9%) non-bijective, 2.0% of steps
+reachable by no unambiguous word — `go E` either refuses or picks one of two
+rooms. Worse to hand a player than a one-word round-trip failure.
+
+**The real shape is a trilemma: bijection, bounded per-room accuracy,
+invertibility — any two, not all three.** The 45°-bucket rule took accuracy and
+invertibility and lost bijection (duplicate/missing letters). Greedy took
+bijection and invertibility and lost accuracy. This rule takes bijection and
+accuracy. Nobody had named the triangle in three campaigns of moving around it.
+
+### #28 [G5, MEDIUM-HIGH] — a bound loosened 42% under a constant that never changed
+
+`plate.rs` measured the addressing excess in "grid spacings" and fix round 1
+switched the divisor to the **cube's** facet arc — while the vertices being
+measured are the **icosphere's**, because 0506 deliberately kept the icosphere as
+the field substrate. π/2 ÷ acos(1/√5) = 1.4188, so:
+
+- the reported improvement 1.1051 → 0.7487 was **a change of unit, not of error**;
+  the true figure is 1.0622 real spacings, ~3.9% better rather than 32%;
+- `MAX_ADDRESSING_EXCESS_SPACINGS = 1.5` therefore came to admit **2.13 real
+  spacings** while its doc still claimed it excluded a second one — a ~42%
+  loosening of a live bound, invisible in a diff because the constant's value
+  never moved.
+
+**Decision:** the divisor is `min_edge_rad(&geo)` — **measured off the mesh**
+rather than derived from a base angle — and the bound is re-set from the
+re-measurement to **1.25**. Fix round 2 re-ran it rather than converting the old
+figure arithmetically, which was the explicit instruction, because carrying a
+number across a change of unit without re-measuring is the whole defect.
+
+**I RELAYED THE FALSE IMPROVEMENT TO NATHAN AS FACT.** I accepted a ratio without
+checking what its denominator meant — hours after writing that exact failure
+shape into my own notes. `MIN_ADDRESSING_AGREEMENT`'s lowering 0.55 → 0.50 is
+still correct (2,518/5,000 against 2,500, deterministic over a fixed world and
+window, so it cannot flap) but the justification I gave for it was not.
