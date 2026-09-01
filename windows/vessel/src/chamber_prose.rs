@@ -6,56 +6,187 @@
 
 use crate::brief::Brief;
 use crate::interior::{AnchorId, Interior};
-use hornvale_kernel::KindId;
+use hornvale_kernel::{ComponentStore, KindId};
 use hornvale_thing::kinds;
+
+/// What prose calls a kind, and what `examine` says about it.
+///
+/// **Two accessors read this table, and they take DIFFERENT key types — that
+/// asymmetry is forced, not sloppy.** [`noun`] takes `&str`; [`detail`] takes
+/// [`KindId`]. `KindId` holds a `&'static str`, but three of `noun`'s callers
+/// read the ledger — [`hornvale_kernel::Ledger::kind_of`] returns
+/// `Option<&str>` borrowed from a `String` in the fact store, a runtime slice
+/// that cannot become a `KindId` without leaking — so `noun` must accept the
+/// widest of the two and the anchor-side callers simply pass `kind.0`.
+/// `detail`'s callers are all interior-side and already hold a real `KindId`,
+/// so it keeps the typed parameter and the typo-safety that comes with it. A
+/// reader who finds two accessors on one table with two key types will be
+/// tempted to unify them — unifying downward (`detail` to `&str`) loses that
+/// typo-safety, and unifying upward (`noun` to `KindId`) is impossible, since
+/// a ledger-read label is never `'static`. Do not "fix" this; it is the
+/// retired `noun_for_label`'s reason for having existed, folded into one
+/// table instead of two.
+/// type-audit: bare-ok(identifier-text: noun), bare-ok(prose: detail)
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ChamberProse {
+    /// How prose names this kind, or `None` for a kind that IS the room rather
+    /// than a thing standing in it — the floor — or for a kind this module has
+    /// authored no noun for (`cave-mouth`, which `passage.rs` mints and no
+    /// room's grammar composes, has always got `None` here). `detail` is total
+    /// where this is not, because the plan's legend requires every noun it
+    /// depicts to answer and the floor is depicted.
+    pub noun: Option<&'static str>,
+    /// The line `examine` gives. Short, concrete, and free of terrain words —
+    /// `no_detail_speaks_of_terrain` is the guard.
+    pub detail: &'static str,
+}
+
+/// The chamber-prose rows: one per thing-kind the grammar may place.
+///
+/// Prose is presentation, so it lives in the window; `hornvale_thing`'s
+/// `ThingTraits::display` is the domain's own label and stays there. Two
+/// tables answering two questions, not one table answering both — the same
+/// split The Chattel's Task 7 made when it deleted `ThingTraits::portable`
+/// rather than letting two tables answer "may a body carry this".
+///
+/// **Replaces two 15-arm `match`es (The Wicket, Task 4).** Those were
+/// exhaustive matches over a closed enum until Task 2, so a kind with no arm
+/// failed to *compile*. A `KindId` is a label, so no match over it can be
+/// exhaustive; this table plus `windows/vessel/tests/suite/kind_totality.rs`'s
+/// two-way totality gate (spec §5.1's G-b/G-c,
+/// `every_roster_kind_has_chamber_prose` and
+/// `every_chamber_prose_row_is_a_roster_kind`) is what stands in for the
+/// compiler now.
+pub fn chamber_prose_registry() -> ComponentStore<KindId, ChamberProse> {
+    [
+        (
+            KindId("alcove"),
+            ChamberProse {
+                noun: Some("an alcove"),
+                detail: "A recess cut back from the main space, deep enough to sit in.",
+            },
+        ),
+        (
+            KindId("altar"),
+            ChamberProse {
+                noun: Some("an altar"),
+                detail: "A low stone table, worn hollow at the centre and darkly stained.",
+            },
+        ),
+        (
+            KindId("anvil"),
+            ChamberProse {
+                noun: Some("an anvil"),
+                detail: "A block of iron on a sunk stump, bright where the work lands.",
+            },
+        ),
+        (
+            KindId("bed"),
+            ChamberProse {
+                noun: Some("a bed"),
+                detail: "A low frame, strung across and piled with what was to hand.",
+            },
+        ),
+        (
+            KindId("cave-mouth"),
+            ChamberProse {
+                noun: None,
+                detail: "A rough gap torn in the rock, cold air moving through it.",
+            },
+        ),
+        (
+            KindId("ground"),
+            ChamberProse {
+                noun: None,
+                detail: "Trodden floor, swept toward the walls.",
+            },
+        ),
+        (
+            KindId("hearth"),
+            ChamberProse {
+                noun: Some("a hearth"),
+                detail: "Stones set in a ring, and the ash inside them still warm.",
+            },
+        ),
+        (
+            KindId("high-seat"),
+            ChamberProse {
+                noun: Some("a high seat"),
+                detail: "A carved chair, set so that whoever sits in it sees the door first.",
+            },
+        ),
+        (
+            KindId("key"),
+            ChamberProse {
+                noun: Some("a key"),
+                detail: "A short shank of worked iron, its ward cut in a single stepped notch.",
+            },
+        ),
+        (
+            KindId("log"),
+            ChamberProse {
+                noun: Some("a fallen log"),
+                detail: "A fallen trunk, its bark sloughing where the damp got in.",
+            },
+        ),
+        (
+            KindId("loom"),
+            ChamberProse {
+                noun: Some("a loom"),
+                detail: "An upright frame, its warp weighted, a hand's width of cloth grown up it.",
+            },
+        ),
+        (
+            KindId("pool"),
+            ChamberProse {
+                noun: Some("a still pool"),
+                detail: "Still water, holding the light that reaches it.",
+            },
+        ),
+        (
+            KindId("screen"),
+            ChamberProse {
+                noun: Some("a screen"),
+                detail: "A standing panel, set to break the line of sight.",
+            },
+        ),
+        (
+            KindId("strongbox"),
+            ChamberProse {
+                noun: Some("a strongbox"),
+                detail: "A banded chest, low and heavier than it looks, its lid seated flush.",
+            },
+        ),
+        (
+            KindId("threshold"),
+            ChamberProse {
+                noun: Some("a doorway"),
+                detail: "A gap left in the wall, worn smooth at the jamb.",
+            },
+        ),
+        (
+            KindId("vessel"),
+            ChamberProse {
+                noun: Some("a water jar"),
+                detail: "A wide-mouthed jar, cool to the touch, standing half full.",
+            },
+        ),
+    ]
+    .into_iter()
+    .collect()
+}
 
 /// The noun for a thing-kind, as prose says it. `ground` has no noun: it is
 /// the chamber's own floor, not a thing standing in it, and neither does a
 /// kind this module has authored no prose for.
 ///
-/// **It takes a `&str`, not a [`hornvale_kernel::KindId`], and the difference
-/// is not cosmetic** — it is what lets ONE function serve both callers (The
-/// Wicket, Task 2). An anchor now carries a `KindId`, whose `.0` is a
-/// `&'static str`; a label read back out of the ledger
-/// ([`hornvale_kernel::Ledger::kind_of`]) is a runtime `String` slice and
-/// cannot become a `KindId` without leaking. A `&str` is the widest of the
-/// two, so the anchor side passes `kind.0` and the ledger side passes its
-/// slice, and there is no second table to keep in step.
-///
-/// **The second table is what this replaces.** Until The Wicket there were
-/// two functions here — `noun(AnchorKind)` and `noun_for_label(&str)`, the
-/// latter scanning the anchor-kind roster through a variant→label mapping to
-/// reach the former. Its own doc named the hazard it was living with: a
-/// second hand-written label→noun map is the duplicated-table shape decision
-/// 0261 warns about, and its cheapest repair deletes the check that would
-/// have caught the divergence. Once an anchor's kind IS a label there is
-/// nothing to invert, so the scan and the second entry point both go.
-///
-/// A label this module authors no line for yields `None` — the same honest
-/// answer it gives for the floor, and what `cave-mouth` (which `passage.rs`
-/// mints and no room's grammar composes) has always got here.
+/// **It takes a `&str`, not a [`hornvale_kernel::KindId`] — see
+/// [`ChamberProse`]'s own doc for why the two accessors on this one table
+/// take different key types.**
 pub(crate) fn noun(kind: &str) -> Option<&'static str> {
-    match kind {
-        "hearth" => Some("a hearth"),
-        "threshold" => Some("a doorway"),
-        "bed" => Some("a bed"),
-        "vessel" => Some("a water jar"),
-        "screen" => Some("a screen"),
-        "alcove" => Some("an alcove"),
-        "pool" => Some("a still pool"),
-        "log" => Some("a fallen log"),
-        "strongbox" => Some("a strongbox"),
-        "high-seat" => Some("a high seat"),
-        "loom" => Some("a loom"),
-        "anvil" => Some("an anvil"),
-        "altar" => Some("an altar"),
-        "key" => Some("a key"),
-        // `ground` and anything unauthored: no noun. Task 4 replaces this
-        // match with a `ComponentStore<KindId, ChamberProse>` and Task 4's
-        // two-way totality gate is what stops the silent-`None` case being a
-        // way to lose a kind's prose.
-        _ => None,
-    }
+    chamber_prose_registry()
+        .get_by_label(kind)
+        .and_then(|p| p.noun)
 }
 
 /// A list of nouns as one prose fragment — "a key", or "a key and a loaf", or
@@ -79,13 +210,13 @@ pub(crate) fn listed(items: &[&str]) -> Option<String> {
 /// with a loud one (The Wicket, Task 2).** This was an exhaustive `match` over
 /// a closed enum, so a kind with no line failed to *compile* — the guard that
 /// stopped `look` and `examine` disagreeing in The Lintel. A `KindId` is a
-/// label, so no match over it can be exhaustive and a wildcard arm is
-/// unavoidable; what the arm DOES is therefore the whole design. It panics.
-/// A `_ => "A featureless thing."` would put a plausible sentence in a real
-/// room forever, which is the quiet failure the enum never allowed. Task 4
-/// makes this a `ComponentStore<KindId, ChamberProse>` lookup with the same
-/// refusal, and adds the two-way totality gate (spec §5.1's G-b/G-c) that
-/// makes the refusal unreachable from the authored roster.
+/// label, so no lookup over it can be exhaustive; what the refusal below DOES
+/// is therefore the whole design. It panics. A fallback default would put a
+/// plausible sentence in a real room forever, which is the quiet failure the
+/// enum never allowed.
+/// `windows/vessel/tests/suite/kind_totality.rs`'s two-way totality gate
+/// (spec §5.1's G-b/G-c) is what makes the panic unreachable from the
+/// authored roster.
 ///
 /// `ground` has no NOUN (it is the chamber's own floor, not a thing standing in
 /// it) but it does have a detail: the render's legend names `the floor`, and §6
@@ -101,24 +232,10 @@ pub(crate) fn listed(items: &[&str]) -> Option<String> {
 /// (`tools/type-audit/src/extract.rs`), so a tag here would be a verdict the tool
 /// never gave — the same reason `noun` and `chamber_nouns` above carry none.)
 pub(crate) fn detail(kind: KindId) -> &'static str {
-    match kind.0 {
-        "ground" => "Trodden floor, swept toward the walls.",
-        "hearth" => "Stones set in a ring, and the ash inside them still warm.",
-        "threshold" => "A gap left in the wall, worn smooth at the jamb.",
-        "bed" => "A low frame, strung across and piled with what was to hand.",
-        "vessel" => "A wide-mouthed jar, cool to the touch, standing half full.",
-        "screen" => "A standing panel, set to break the line of sight.",
-        "alcove" => "A recess cut back from the main space, deep enough to sit in.",
-        "pool" => "Still water, holding the light that reaches it.",
-        "log" => "A fallen trunk, its bark sloughing where the damp got in.",
-        "strongbox" => "A banded chest, low and heavier than it looks, its lid seated flush.",
-        "high-seat" => "A carved chair, set so that whoever sits in it sees the door first.",
-        "loom" => "An upright frame, its warp weighted, a hand's width of cloth grown up it.",
-        "anvil" => "A block of iron on a sunk stump, bright where the work lands.",
-        "altar" => "A low stone table, worn hollow at the centre and darkly stained.",
-        "key" => "A short shank of worked iron, its ward cut in a single stepped notch.",
-        other => panic!("no chamber prose for kind {other:?}"),
-    }
+    chamber_prose_registry()
+        .get(&kind)
+        .map(|p| p.detail)
+        .unwrap_or_else(|| panic!("no chamber prose for kind {:?}", kind.0))
 }
 
 /// The nouns of every anchor lying directly `within` `id` (spec §3.6's
@@ -351,42 +468,6 @@ mod tests {
         i
     }
 
-    /// Every kind this module authors prose for, listed once.
-    ///
-    /// **This is a roster that CAN go short, and saying so is the point (The
-    /// Wicket, Task 2).** It was `AnchorKind::ALL`, generated from the enum's
-    /// own declaration, which is exactly why it could not: an appended variant
-    /// lengthened it on the run that first compiled the variant. That
-    /// generator is gone with the enum, so this list is hand-written again —
-    /// the shape whose failure mode `domains/thing`'s
-    /// `the_roster_is_frozen_as_an_ordered_set` now records: a list beside an
-    /// authored table cannot see the table grow, and a sweep over it stays
-    /// green while measuring one kind short.
-    ///
-    /// It is INTERIM, and its replacement is named rather than hoped for.
-    /// Task 4 turns [`noun`]/[`detail`] into a `ComponentStore<KindId,
-    /// ChamberProse>` and adds spec §5.1's G-b/G-c — every roster kind has a
-    /// prose row, and every prose row is a roster kind — which is a two-way
-    /// check over `hornvale_thing::THING_KINDS` and needs no list here at all.
-    /// Delete this const in that task; do not extend it.
-    const EVERY_KIND: &[KindId] = &[
-        kinds::GROUND,
-        kinds::HEARTH,
-        kinds::THRESHOLD,
-        kinds::BED,
-        kinds::VESSEL,
-        kinds::SCREEN,
-        kinds::ALCOVE,
-        kinds::POOL,
-        kinds::LOG,
-        kinds::STRONGBOX,
-        kinds::HIGH_SEAT,
-        kinds::LOOM,
-        kinds::ANVIL,
-        kinds::ALTAR,
-        kinds::KEY,
-    ];
-
     /// **Every kind the authored grammar can place has a [`detail`] line** —
     /// swept over [`crate::interior::INVENTORY`] itself, never over a roster
     /// beside it.
@@ -404,14 +485,16 @@ mod tests {
     ///
     /// **Why the two sweeps beside it do not cover this.**
     /// [`every_kind_has_a_detail`] and
-    /// [`the_articles_this_module_authors_are_the_two_it_strips`] both run
-    /// over [`EVERY_KIND`], which is hand-written — so a kind added to
-    /// `INVENTORY` and not to that list makes both of them measure one kind
-    /// short and stay green, which is the exact failure
-    /// `domains/thing`'s `the_roster_is_frozen_as_an_ordered_set` records
-    /// having been measured once already at 1209 tests green. Sweeping
-    /// `INVENTORY` is what makes this one unable to narrow: the population is
-    /// the authored grammar itself.
+    /// [`the_articles_this_module_authors_are_the_two_it_strips`] run over
+    /// `hornvale_thing::THING_KINDS` itself now (Task 4 deleted the
+    /// hand-written `EVERY_KIND` they used to sweep), so neither can narrow
+    /// independently of the roster any more. But a kind `INVENTORY` names
+    /// that is absent from `THING_KINDS` entirely would still slip past both
+    /// of them — that is `every_kind_the_grammar_names_is_a_roster_row`'s job
+    /// (`windows/vessel/tests/suite/kind_totality.rs`, spec §5.1's G-a), not
+    /// either sweep here. Sweeping `INVENTORY` directly is what makes this
+    /// test unable to narrow regardless: the population is the authored
+    /// grammar itself.
     ///
     /// It reads all three slots a pattern can name a kind in — the anchor it
     /// contributes, the kind it `requires`, and the
@@ -436,7 +519,7 @@ mod tests {
     /// MUTATION THIS MUST FAIL AGAINST: point `the-altar`'s `kind` in
     /// [`crate::interior::INVENTORY`] at `KindId("altar-stone")` — a kind
     /// with no [`detail`] arm. It compiles, `INVENTORY` keeps its length,
-    /// every composition still validates, and [`EVERY_KIND`] is untouched.
+    /// every composition still validates, and `THING_KINDS` is untouched.
     ///
     /// **`the-altar` rather than a pattern anyone walks past, and the choice
     /// is what makes this evidence.** The obvious mutation — misspelling
@@ -504,26 +587,32 @@ mod tests {
 
     #[test]
     fn every_kind_has_a_detail() {
-        // The roster grows with the enum, so this sweep cannot silently narrow;
-        // what it still adds is that `detail` answers for every kind and that
-        // `noun`'s own match distinguishes as many as the arithmetic below says.
+        // Swept over `hornvale_thing::THING_KINDS` itself (Task 4 deleted the
+        // hand-written `EVERY_KIND` beside it), so this sweep cannot silently
+        // narrow independently of the roster; what it adds is that `detail`
+        // answers for every declared kind and that `noun` distinguishes as
+        // many as the arithmetic below says.
         let mut seen = std::collections::BTreeSet::new();
-        for &kind in EVERY_KIND {
-            assert!(seen.insert(kind), "{kind:?} listed twice");
-            let d = detail(kind);
-            assert!(d.ends_with('.'), "{kind:?}: a detail is a sentence: {d:?}");
-            assert!(!d.trim().is_empty(), "{kind:?}: an empty detail");
+        for &label in hornvale_thing::THING_KINDS {
+            assert!(seen.insert(label), "{label:?} listed twice");
+            let d = detail(KindId(label));
+            assert!(d.ends_with('.'), "{label:?}: a detail is a sentence: {d:?}");
+            assert!(!d.trim().is_empty(), "{label:?}: an empty detail");
         }
-        // `ground` has no noun and every other kind here does, so fifteen kinds
-        // must yield fourteen nouns. This used to catch an APPENDED enum
-        // variant on the run that first compiled it (that is how The Chattel's
-        // `Key` was caught, going red at 13 against 14). It cannot do that any
-        // more — see [`EVERY_KIND`]'s own doc — so what it holds today is the
-        // narrower claim that this list and `noun`'s match still agree.
+        // `ground` and `cave-mouth` have no noun and every other roster kind
+        // does, so sixteen kinds must yield fourteen nouns. This used to catch
+        // an APPENDED enum variant on the run that first compiled it (that is
+        // how The Chattel's `Key` was caught, going red at 13 against 14). It
+        // cannot do that any more — the roster is a hand-written list itself
+        // now — so what it holds today is the narrower claim that the roster
+        // and `noun`'s table still agree.
         assert_eq!(
-            EVERY_KIND.iter().filter(|&&k| noun(k.0).is_some()).count(),
+            hornvale_thing::THING_KINDS
+                .iter()
+                .filter(|&&label| noun(label).is_some())
+                .count(),
             14,
-            "the kind list has drifted from `noun`'s own match"
+            "the roster has drifted from `noun`'s own table"
         );
     }
 
@@ -531,8 +620,11 @@ mod tests {
     fn no_detail_speaks_of_terrain() {
         // `a_chamber_never_speaks_of_terrain`'s counterpart. A detail line is read
         // in the same room by the same player, so the locale describer's
-        // vocabulary is as wrong here as it is in the prose.
-        for &kind in EVERY_KIND {
+        // vocabulary is as wrong here as it is in the prose. Swept over
+        // `hornvale_thing::THING_KINDS` itself — see `every_kind_has_a_detail`'s
+        // own comment for why that sweep can no longer narrow.
+        for &label in hornvale_thing::THING_KINDS {
+            let kind = KindId(label);
             for banned in [
                 "biome",
                 "elevation",
@@ -798,23 +890,24 @@ mod tests {
     /// [`without_article`] strips, so `the {bare}` is well-formed for every
     /// anchor kind rather than for the ones someone happened to check.
     ///
-    /// Swept over [`EVERY_KIND`] — see that const's own doc for what the
-    /// sweep can and can no longer catch since the anchor-kind enum was
-    /// deleted.
+    /// Swept over `hornvale_thing::THING_KINDS`, the roster itself (Task 4
+    /// deleted the hand-written `EVERY_KIND` it used to sweep) — see
+    /// [`every_kind_has_a_detail`]'s own comment for what the sweep can and
+    /// can no longer catch since the anchor-kind enum was deleted.
     #[test]
     fn the_articles_this_module_authors_are_the_two_it_strips() {
-        for &kind in EVERY_KIND {
-            let Some(n) = noun(kind.0) else { continue };
+        for &label in hornvale_thing::THING_KINDS {
+            let Some(n) = noun(label) else { continue };
             assert!(
                 n.starts_with("a ") || n.starts_with("an "),
-                "{kind:?}'s noun {n:?} carries neither article without_article \
+                "{label:?}'s noun {n:?} carries neither article without_article \
                  knows, so `the {}` would read wrong",
                 without_article(n)
             );
             assert_ne!(
                 without_article(n),
                 n,
-                "{kind:?}'s noun {n:?} lost no article"
+                "{label:?}'s noun {n:?} lost no article"
             );
         }
     }

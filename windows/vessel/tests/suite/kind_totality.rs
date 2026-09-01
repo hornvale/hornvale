@@ -56,13 +56,17 @@ fn every_kind_the_grammar_names_is_a_roster_row() {
             checked += 1;
         }
     }
-    // A vacuous pass is the failure mode of any loop-over-a-table test: an
-    // empty INVENTORY satisfies every assertion above. One kind per pattern is
-    // the floor, so this cannot pass while the loop is not running.
-    assert!(
-        checked >= INVENTORY.len(),
-        "checked {checked} kinds across {} patterns — the loop is not running",
-        INVENTORY.len()
+    // Anti-vacuity, and an exact ratchet rather than a floor: `checked >=
+    // INVENTORY.len()` reads as "the loop ran" but is satisfied by `0 >= 0`
+    // when `INVENTORY` is empty, which is exactly the vacuous pass this
+    // comment used to claim could not happen. Pin the real count instead —
+    // the same precedent `chamber_prose::every_kind_the_grammar_places_has_a_
+    // detail` set inside this campaign — so a future edit that dropped a slot
+    // from the walk above would redden rather than silently measuring less.
+    assert_eq!(
+        checked, 38,
+        "the sweep no longer reads every kind INVENTORY names: {checked} \
+         slots, not 38"
     );
 }
 
@@ -93,14 +97,63 @@ fn every_kind_the_grammar_names_is_a_roster_row() {
 #[test]
 fn every_propertied_kind_is_a_roster_row() {
     let reg = hornvale_vessel::affordance::object_registry();
-    assert!(
-        !reg.is_empty(),
-        "the property table is empty — this test is vacuous"
+    // Anti-vacuity, exact rather than a floor: `!reg.is_empty()` passes with
+    // one row where there are nine, which is the same relative-guard defect
+    // the sibling test above carried. Pin the real count so a row dropped
+    // from `object_registry` reddens here instead of narrowing the
+    // population this loop measures.
+    assert_eq!(
+        reg.len(),
+        9,
+        "object_registry has {} rows, not 9 — the population this sweep \
+         measures has changed",
+        reg.len()
     );
     for id in reg.ids() {
         assert!(
             THING_KINDS.contains(&id.0),
             "object_registry has {:?}, the roster does not",
+            id.0
+        );
+    }
+}
+
+/// **Direction: rostered ⊆ prosed.** Every kind in `THING_KINDS` has a
+/// chamber-prose row, so a kind the grammar may place always has something to
+/// be called and something to say when examined.
+///
+/// This is one half of what the two exhaustive `match`es used to guarantee. It
+/// is stated separately from its converse because the cheapest repair to a
+/// one-way check is to delete the check, and a pair that must agree in both
+/// directions cannot be repaired that way.
+///
+/// MUTATION THIS MUST FAIL AGAINST: delete the `"log"` row from
+/// `chamber_prose_registry()`.
+#[test]
+fn every_roster_kind_has_chamber_prose() {
+    let prose = hornvale_vessel::chamber_prose::chamber_prose_registry();
+    for label in THING_KINDS {
+        assert!(
+            prose.get(&hornvale_kernel::KindId(label)).is_some(),
+            "roster names {label:?}, chamber prose does not"
+        );
+    }
+}
+
+/// **Direction: prosed ⊆ rostered.** No chamber-prose row names a kind the
+/// roster does not carry — the converse of the check above, and the one that
+/// catches a row added for a kind that was renamed or never existed.
+///
+/// MUTATION THIS MUST FAIL AGAINST: add a `KindId("brasier")` row to
+/// `chamber_prose_registry()` (the plausible misspelling of the kind Task 5
+/// adds).
+#[test]
+fn every_chamber_prose_row_is_a_roster_kind() {
+    let prose = hornvale_vessel::chamber_prose::chamber_prose_registry();
+    for id in prose.ids() {
+        assert!(
+            THING_KINDS.contains(&id.0),
+            "chamber prose has {:?}, the roster does not",
             id.0
         );
     }
