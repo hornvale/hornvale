@@ -68,6 +68,8 @@ mod locale_cli;
 mod no_entity_id_values_in_prose;
 #[path = "suite/prose_is_not_a_contract.rs"]
 mod prose_is_not_a_contract;
+#[path = "suite/provision.rs"]
+mod provision;
 #[path = "suite/release_determinism.rs"]
 mod release_determinism;
 #[path = "suite/repertory_corpus.rs"]
@@ -104,5 +106,7 @@ mod the_unnameable;
 mod timings_alarm;
 #[path = "suite/trope_coverage.rs"]
 mod trope_coverage;
+#[path = "suite/trope_witness.rs"]
+mod trope_witness;
 #[path = "suite/walk_depth_agreement.rs"]
 mod walk_depth_agreement;

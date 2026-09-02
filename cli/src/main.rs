@@ -1125,17 +1125,18 @@ fn cmd_tropes(args: &[String]) -> Result<(), String> {
         &world_builder::SettlementPins::default(),
     )
     .map_err(|e| e.to_string())?;
-    let outcomes = tropes::resolve(&corpus, &world.registry);
+    let witnesses = tropes::witnesses();
+    let outcomes = tropes::resolve(&corpus, &world.registry, &world, &witnesses);
     match mode {
         Some("report") | None => {
             print!(
                 "{}",
-                tropes::render(&corpus, &outcomes, &world.registry, path)
+                tropes::render(&corpus, &outcomes, &world.registry, &witnesses, path)
             );
             Ok(())
         }
         Some("check") => {
-            let live = tropes::render(&corpus, &outcomes, &world.registry, path);
+            let live = tropes::render(&corpus, &outcomes, &world.registry, &witnesses, path);
             let artifact = tropes::artifact_path(&corpus);
             let committed =
                 std::fs::read_to_string(&artifact).map_err(|e| format!("{artifact}: {e}"))?;
@@ -1177,9 +1178,10 @@ fn cmd_tropes_matrix() -> Result<(), String> {
         let json = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
         corpora.push(tropes::load(&json)?);
     }
+    let witnesses = tropes::witnesses();
     let resolved: Vec<_> = corpora
         .iter()
-        .map(|c| (c, tropes::resolve(c, &world.registry)))
+        .map(|c| (c, tropes::resolve(c, &world.registry, &world, &witnesses)))
         .collect();
     let columns: Vec<_> = resolved.iter().map(|(c, out)| (*c, out)).collect();
     print!("{}", tropes::render_matrix(&columns, &world.registry));

@@ -275,3 +275,13 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0556](0556-totality-by-registry-replaces-totality-by-compiler.md) | Totality by registry replaces totality by compiler, and every check names its direction | Accepted |
 | [0557](0557-a-handle-is-a-convenience-where-a-variant-was-a-requirement.md) | A handle is a convenience where a variant was a requirement | Accepted |
 | [0558](0558-sleep-is-never-gated-the-place-grades-it.md) | Sleep is never gated — the place grades it | Accepted |
+| [0576](0576-the-capability-provision-table.md) | The capability provision table spans all three homes; ledger wired first | Accepted |
+| [0577](0577-the-realization-witness.md) | The realization witness | Superseded by 0581 |
+| [0578](0578-kinship-a-genesis-fact.md) | Kinship as a genesis fact | Superseded by 0584 |
+| [0579](0579-affect-component-data-never-a-fact.md) | Affect — component data, never a fact | Accepted |
+| [0580](0580-acts-are-addressable-without-being-stored.md) | Acts are addressable without being stored — a derived act view, session-home wired | Superseded by 0585 |
+| [0581](0581-the-witness-is-bound-to-its-situation.md) | The witness is bound to its situation (supersedes 0577) | Superseded by 0582 |
+| [0582](0582-the-witness-binding-is-bidirectional.md) | The witness binding is bidirectional (supersedes 0581) | Superseded by 0583 |
+| [0583](0583-the-witness-limits-list-is-open-not-closed.md) | The witness limits list is open, not closed (supersedes 0582) | Accepted |
+| [0584](0584-kinship-direction-and-the-parent-of-generation-cut.md) | Kinship direction and the `parent-of` generation cut (supersedes 0578) | Accepted |
+| [0585](0585-act-chronology-completes-too-and-the-method-is-act-handle.md) | `bundle:act-chronology` completes too, and the method is `Act::handle` (supersedes 0580) | Accepted |

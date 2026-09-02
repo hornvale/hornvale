@@ -437,6 +437,7 @@
 - [The Company](./chronicle/the-company.md)
 - [The Pavement](./chronicle/the-pavement.md)
 - [The Tableau](./chronicle/the-tableau.md)
+- [The Avowal](./chronicle/the-avowal.md)
 - [The Wicket](./chronicle/the-wicket.md)
 - [The Roll](./chronicle/the-roll.md)
 

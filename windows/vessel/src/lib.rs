@@ -3,6 +3,7 @@
 //! frozen locale mesh through a read-only verb loop (The Seam, Chunk 0 of
 //! The Walk).
 
+pub mod act;
 pub mod action;
 pub mod affordance;
 mod agent;

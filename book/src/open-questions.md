@@ -1024,6 +1024,55 @@ three points below the composite the report would otherwise have led with
 exists is a finding about the instrument, not a license to report the number
 that instrument happens to produce.
 
+**[The Avowal](./chronicle/the-avowal.md) (2026-09-01) is the clearest
+instance of this chapter's founding clause the trope corpus has produced,
+because the unpaired check was the corpus's *entire instrument*.**
+`cli/src/tropes.rs::resolve` reported a dramatic situation "stageable" the
+moment every one of its required tokens was a name in the concept registry —
+a generator with no verifier anywhere behind it. Registry membership is
+append-only, so the number it produced could only ever climb, and nothing
+distinguished a capability the world actually computes from a predicate
+somebody typed into `register_predicate` on optimism. Decision 0330 had
+already named this exact hazard on the sibling sentence corpus and answered
+it with a **realization witness** — a committed artifact that must
+demonstrate the capability, built to fail before it is made to pass. The
+trope corpus had no equivalent, and the campaign's own leverage arithmetic
+showed why that mattered: 38 predicates registered on the strength of
+membership alone would have carried the headline from 0/409 to 140/409 with
+not one of them witnessed.
+
+The witness this campaign built (decisions 0577→0581→0582→0583, one
+supersession per review round) is a small, hard instance of "pair the
+generator with a verifier": a situation is `Stageable` only when a committed
+`Tableau` stages its actants and the tableau's staged relations equal —
+by *set*, not merely by subset — the situation's own required `predicate:`
+tokens. It shipped red first, against a one-situation corpus with no witness
+registered at all, exactly as 0330 asks. And the pairing survived being
+probed three times by three different review rounds, each of which found the
+gate's own disclosure of its limits was itself an unpaired claim: 0577 said a
+witness "binds vacuously" only in the no-predicate case, and a live probe
+showed it bound to *any* situation, predicates or not; 0582's fix then closed
+that and declared actant-role assignment "the ONLY disclosed limit," and a
+third probe produced a `phenomenon:eclipse` requirement that resolved
+`Stageable` while nothing staged an eclipse. The record that finally held
+(0583) is the one that stopped asserting completeness at all — "the limits
+include X and Y" survives discovering a Z; "X is the only limit" does not,
+found or not — which is this chapter's own diagnosis landing a second time,
+one layer *inside* the very check built to close the first instance of it.
+
+**Score: the bet does not move — this was always a self-scorable claim, not
+a taste-gated one — but the campaign is the strongest confirmation yet that
+pairing a generator with a verifier is a property that must itself be
+checked for completeness, not assumed once built.** The headline number
+stayed at 0 of 36 and 0 of 409 throughout, which is the preregistered null
+(spec §5) and not a shortfall: token completion is necessary and was never
+sufficient, and the campaign's three bundle completions
+(`consanguineal-kin`, `witnessing`, `act-chronology`) shortened `Blocked`
+reasons without ever reaching the witness. Migration cost was zero — nothing
+had ever claimed `Stageable` under the old membership-only reading, so the
+new gate retrofitted no false claims — which will not be true of the next
+corpus that adds a witness after its own number has already moved.
+
 ## What the world can already check itself on (high confidence)
 
 **The kernel substrate.** Hash-based seeding, coherent noise, append-only
