@@ -194,3 +194,122 @@ named the missing `token |- producer` slot this entry fills. One
 self-correction, recorded above rather than quietly dropped.
 
 *Capture actions.* Spec §2.1, §4.1; decisions 0576, 0579.
+
+---
+
+#6 [G5] — **Task 1: the promoted-forebear yield probe — kill criterion for
+spec §4.3.**
+
+*Question.* Spec §5: "if the median [promoted-forebear] yield is under 10%,
+§4.3 does not ship." Measured on one seed only (42, from the committed
+fixture): 45.6%. Does a 25-seed panel confirm the world, not the one seed, is
+where that margin lives?
+
+*Instrument.* `windows/worldgen/tests/suite/promoted_forebear_yield.rs`
+(`#[ignore = "calibration: run by hand, prints the promoted-forebear yield
+panel"]`), tagged `claim: sanctioned-sweep(...)` per `cli/tests/suite/
+claim_shape.rs`'s default-deny lint. Built through `hornvale_worldgen::
+{select_founders, forebear_of, founder_of}` — the same public API the spec
+names for §4.3 — never through `Founder::handle`, which lives in a different,
+seed-independent handle space (`founder_handle`'s discrimination fold vs.
+`founder_of`'s seed XOR; see the test file's module doc for the full trap).
+`yield = (promoted founders whose forebear is ALSO promoted) / (all promoted
+founders)`; roots count against the denominator, per the brief.
+
+*Positive control (spec §5 step 3).* Before trusting a high reading, the
+probe was proven able to report a low one:
+`positive_control_a_capped_people_yields_near_zero` (not `#[ignore]`d — cheap,
+no world build) constructs one people, 25 hand-committed occupations: 5
+low-`peak_population` "parents" and 20 higher-`peak_population` "children"
+each naming a parent as `occ-founded-from`. `MEMORY_DEPTH` (20) promotes
+exactly the 20 children and drops all 5 parents, so every promoted founder's
+forebear exists but is never promoted — yield is **exactly 0%** by
+construction, and the test asserts it. Confirms the instrument moves.
+
+*Panel result (25 seeds: 42 + 1..=24; `#[ignore]`d run, `--release`,
+`--nocapture`, 63.9 s wall):*
+
+```
+  seed  promoted  fb_promoted  unpromoted_fb  roots  yield_all%  yield_excl_roots%
+  1        234       122            73          39      52.1        62.6
+  2        230        89           109          32      38.7        44.9
+  3        187        82            67          38      43.9        55.0
+  4        194        82            73          39      42.3        52.9
+  5        130        52            32          46      40.0        61.9
+  6        198        89            62          47      44.9        58.9
+  7        203       114            46          43      56.2        71.2
+  8        111        64             8          39      57.7        88.9
+  9        275       212            12          51      77.1        94.6
+  10       203       106            55          42      52.2        65.8
+  11       229       100            95          34      43.7        51.3
+  12       244       118            99          27      48.4        54.4
+  13       161        64            54          43      39.8        54.2
+  14       238       105            96          37      44.1        52.2
+  15       120        53            24          43      44.2        68.8
+  16       240       132            57          51      55.0        69.8
+  17       265       149            71          45      56.2        67.7
+  18       241       103           110          28      42.7        48.4
+  19       196       144             9          43      73.5        94.1
+  20       234       181             9          44      77.4        95.3
+  21       147        65            45          37      44.2        59.1
+  22       266       156            69          41      58.6        69.3
+  23       192        86            64          42      44.8        57.3
+  24       184        74            72          38      40.2        50.7
+  42       204        95            74          35      46.6        56.2
+
+  pooled promoted-ancestor chain depth: {0: 2489, 1: 1130, 2: 656, 3: 367,
+    4: 238, 5: 121, 6: 61, 7: 24, 8: 18, 9: 14, 10: 2, 11: 1, 12: 1, 13: 1,
+    14: 1, 15: 1, 16: 1}
+
+  median yield (all promoted founders, THE KILL CRITERION): 44.9%
+  median yield (excluding roots, not the kill criterion):   59.1%
+```
+
+Every seed in the panel individually clears 38.7%; the lowest reading is
+nearly 4x the 10% floor. Seed 42's own live reading (46.6%) is close to, but
+not identical to, the brief's fixture-derived reference (45.6%) — see the
+finding below for why, and why it does not matter here.
+
+*Decision.* **PASS. Median yield (all promoted founders) = 44.9%, well above
+the 10% kill criterion. §4.3 (`parent-of`/`kin-of`) ships.** Seed 42 is not
+unrepresentative — every other panel seed reads in the same 39-77% band.
+
+*Finding: `founder_of`'s handle space collides, ~3.5% of occupations at seed
+42 (not a defect in this probe, a property of the descent module).* Cross-
+checked ad hoc (not committed): `founder_of` maps seed 42's 1,212 occupations
+onto only 1,169 distinct `RoleHandle`s — 42 colliding groups. `founder_of` is
+exactly `founding_key_from(...) ^ seed`, with none of `founder_handle`'s extra
+discrimination fold (`ended`, `peak_population`, a role tag) — the very fold
+`select_founders` needed because the identity key alone is known to collide
+(The Salt's own 8.4%/3.3%/3.6% *stem*-collision figures at seeds 42/7/1000 are
+this same phenomenon's name-rendering symptom). A second, entity-identity-only
+cross-check (reading `occ-founded-from` directly and testing occupation-
+`EntityId` membership, bypassing `forebear_of`/`RoleHandle` entirely) measured
+seed 42 at 93/76/35/204 — **exactly** the spec §4.3 reference figure — against
+this probe's handle-based 95/74/35/204: two promoted founders whose forebear's
+handle happens to collide with an unrelated promoted occupation's handle, read
+as "forebear promoted" when the entity forebear was not. Both readings clear
+the kill criterion by a wide margin — irrelevant to *this* verdict — but it
+bears directly on Task 5: spec §4.3 requires `parent-of` be `functional` "if
+and only if a founder can have at most one recorded forebear," and a handle
+collision can make one `RoleHandle` resolve to more than one promoted person.
+If Task 5 commits `parent-of` by matching `forebear_of`'s returned handle
+against promoted founders (the only forebear-identification path the public
+API offers), it inherits this ~1-in-100 misattribution risk as-is, or must add
+a discrimination fold to `founder_of`/`forebear_of` itself (a `descent.rs`
+change, out of Task 1's scope). **Flagged for Task 5's implementer to decide,
+not resolved here.**
+
+*Alternatives discarded.* Fixing the `founder_of` collision inside Task 1 —
+out of scope (measurement only, no production code; the brief and spec both
+scope Task 1 to a probe). Silently reporting only the handle-based number
+without the entity-based cross-check — would have hidden a real,
+forward-relevant defect behind a coincidentally tiny effect size.
+
+*Ideonomy passes / overturns.* None — a measurement task, not a design
+question.
+
+*Capture actions.* This entry; the probe file's own module doc carries the
+same finding for a reader who never opens the ledger. Task 5's implementer
+should read the "finding" paragraph above before choosing how `parent-of` is
+committed.

@@ -149,6 +149,8 @@ mod pin_enumeration;
 mod portolan_resolution;
 #[path = "suite/profile.rs"]
 mod profile;
+#[path = "suite/promoted_forebear_yield.rs"]
+mod promoted_forebear_yield;
 #[path = "suite/proto_goblinoid_golden.rs"]
 mod proto_goblinoid_golden;
 #[path = "suite/radiation_admission.rs"]
