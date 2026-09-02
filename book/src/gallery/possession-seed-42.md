@@ -6,10 +6,12 @@ the same world in your browser — same crates, same bytes.)*
 ```text
 [room 3733133217, day 0]
 Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
+Here: Dvoashngashngo, Qvoshngavngo, Shngovngo and Shngoqvo, and 63 others.
 No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > look
 [room 3733133217, day 0]
 Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
+Here: Dvoashngashngo, Qvoshngavngo, Shngovngo and Shngoqvo, and 63 others.
 No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > map
 [lens: colour · depth 13 · radius 4 · north-up]
@@ -35,10 +37,12 @@ A bugbear of Doaba (agent 3286669968037249024), day 0, room 3733133217.
 > enter
 [chamber 978618474718145, day 0.01172]
 A small room, holding a doorway and a screen.
+Here: Dvoashngashngo, Qvoshngavngo, Shngovngo and Shngoqvo, and 63 others.
 Ways on: out, further in.
 > enter further in
 [chamber 978618475907617, day 0.02344]
 A small room, holding a doorway and an alcove.
+Here: Dvoashngashngo, Qvoshngavngo, Shngovngo and Shngoqvo, and 63 others.
 Ways on: out, further in.
 > map
 [plan: chamber 978618475907617, 2 of 3]
@@ -93,6 +97,7 @@ Set close and plumb, with no gap in it wide enough to pass.
 > out
 [room 3733133217, day 0.04688]
 Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
+Here: Dvoashngashngo, Qvoshngavngo, Shngovngo and Shngoqvo, and 63 others.
 No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > go n
 [room 3733134593, day 0.16425]

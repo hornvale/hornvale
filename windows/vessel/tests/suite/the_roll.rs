@@ -1074,3 +1074,221 @@ fn the_roster_never_reorders() {
         "the driven index never moves"
     );
 }
+
+// ---------------------------------------------------------------------------
+// Task 9: the presence line (spec §4, "Presence at scale").
+// ---------------------------------------------------------------------------
+
+/// [`Session::N_NAMED`]'s own value, mirrored here — `session` is a private
+/// module (`mod session;` in `lib.rs`), so the constant is not reachable
+/// through the crate's public surface even though it is `pub` (the same
+/// `pub`-for-type-audit shape `DISPOSITION_SHIFT`/`POSSESSED_BY` already
+/// have, neither of which any integration test references either). A drift
+/// between this literal and `session.rs`'s own would show up immediately —
+/// every test below fails the moment the two disagree, since both derive
+/// their expectations from the SAME sensed-roster count read off the live
+/// session, not from a second hardcoded total.
+const N_NAMED: usize = 4;
+
+/// Pull the `, and {n} others` count out of a `Here: …` line, panicking with
+/// the whole line if the shape does not hold — a parse failure here is
+/// itself a finding about the presence line's format, not a fixture bug.
+fn others_count(here_line: &str) -> usize {
+    here_line
+        .rsplit_once(", and ")
+        .and_then(|(_, tail)| tail.strip_suffix(" others."))
+        .unwrap_or_else(|| panic!("expected a `, and N others.` tail: {here_line:?}"))
+        .parse()
+        .unwrap_or_else(|e| panic!("the others count did not parse ({e}): {here_line:?}"))
+}
+
+/// The one `Here: …` line of `text`, or `None` if it names nobody.
+fn here_line(text: &str) -> Option<&str> {
+    text.lines().find(|l| l.starts_with("Here: "))
+}
+
+/// `look` at seed 42's flagship — a crowd of `sensed.present.len()` (67,
+/// measured at Task 9) — names exactly [`N_NAMED`] residents and counts the
+/// rest: the line reads `Here: A, B, C and D, and {P} others.` where
+/// `P + N_NAMED` is the sensed roster's own size, read off the live session
+/// rather than hardcoded, so this test tracks the roll's own population
+/// rather than pinning today's seed-42 headcount a second time.
+///
+/// MUTATION THIS MUST FAIL AGAINST: `N_NAMED + 1` in `presence_line`'s
+/// `labels.iter().take(N_NAMED)`. Performed by hand: changed the take to
+/// `N_NAMED + 1`, ran this test alone, and it went red on the separator
+/// count, not the total (the `others` count stays consistent with a wider
+/// take, since both read `labels.len() - N_NAMED` off the SAME unwidened
+/// constant — the total-only assertion is a null against this exact
+/// mutation, which is why the separator check exists beside it):
+/// `Here: Dvoashngashngo, Qvoshngavngo, Shngovngo, Shngoqvo and Vngaobvo, and
+/// 63 others.` — `assertion `left == right` failed: exactly N_NAMED names
+/// must be listed before the count`, left 4, right 3 (5 names shown, 4
+/// separators, one more than `N_NAMED - 1`) — then reverted the edit.
+#[test]
+fn look_names_a_few_and_counts_the_rest() {
+    let world = common::build(42).expect("seed 42 builds");
+    let (session, opening) = Session::start(&world, &PossessOpts::default()).expect("possesses");
+    let sensed = session
+        .snapshot()
+        .expect("a live session snapshots")
+        .sensed
+        .present
+        .len();
+    assert!(
+        sensed > N_NAMED,
+        "precondition: this test exercises the `, and N others` tail, which \
+         needs more than N_NAMED present. Got {sensed}"
+    );
+    let line = here_line(&opening).unwrap_or_else(|| panic!("no presence line: {opening:?}"));
+    assert_eq!(
+        others_count(line) + N_NAMED,
+        sensed,
+        "named + counted must equal the whole sensed roll: {line:?}"
+    );
+    // The named half really is capped at N_NAMED, not merely "some prefix":
+    // count the separators between names (each is either ", " or the one
+    // " and " before the last), which for N_NAMED items is N_NAMED - 1.
+    let heads = line
+        .strip_prefix("Here: ")
+        .and_then(|rest| rest.split(", and ").next())
+        .expect("a Here: line strips its own prefix");
+    let separators = heads.matches(", ").count() + heads.matches(" and ").count();
+    assert_eq!(
+        separators,
+        N_NAMED - 1,
+        "exactly N_NAMED names must be listed before the count: {line:?}"
+    );
+}
+
+/// Nobody present, no line at all. **Not attempted via a fresh possession's
+/// own first look**, which is the natural first reading and turned out to be
+/// a dead end worth recording: `common::world_where` searched all of
+/// `SIGHT_SEEDS` (0..64) for a seed whose fresh flagship possession senses
+/// nobody and found none — Task 7's roll change (M1's own prediction: company
+/// on first look should track `population >= 2`, which is 64 of 64 built
+/// seeds) means every fresh flagship possession in range now starts in
+/// company. So this test WALKS to an empty room instead: a dormant
+/// resident's `agent-at` fact never moves off the roll (§3.7), so
+/// `colocated_npcs` — keyed on the possession's CURRENT position — finds
+/// nobody the instant the possession no longer stands where the residents
+/// are. Cheaper than the search besides: one world build and at most a
+/// handful of steps, not up to 64 builds.
+///
+/// MUTATION THIS MUST FAIL AGAINST: `presence_line` returning
+/// `Some("Here: .".to_string())` unconditionally instead of `None` on an
+/// empty roll. Performed by hand: changed the `if roll.is_empty() { return
+/// None; }` guard to always fall through and render an empty group list, ran
+/// this test alone, and it went red on `!looked.contains("Here:")` — the
+/// look reply carried a literal `Here: .` line — then reverted the edit.
+#[test]
+fn an_empty_room_says_nothing_about_company() {
+    let world = common::build(42).expect("seed 42 builds");
+    let mut session = flagship_session(&world);
+    assert!(
+        !session
+            .snapshot()
+            .expect("a live session snapshots")
+            .sensed
+            .present
+            .is_empty(),
+        "precondition: the flagship itself must start in company — otherwise \
+         walking away tests nothing this task did not already have"
+    );
+    let mut looked = String::new();
+    let mut empty = false;
+    'walk: for _ in 0..3 {
+        for dir in ["n", "e", "s", "w"] {
+            let before = session.position();
+            looked = out(session.handle(&format!("go {dir}")));
+            if session.position() == before {
+                continue;
+            }
+            empty = session
+                .snapshot()
+                .expect("a live session snapshots")
+                .sensed
+                .present
+                .is_empty();
+            if empty {
+                break 'walk;
+            }
+        }
+    }
+    assert!(
+        empty,
+        "precondition: a short walk away from the flagship must reach an \
+         empty room. Last look: {looked:?}"
+    );
+    assert!(
+        !looked.contains("Here:"),
+        "an empty room names no company: {looked:?}"
+    );
+    assert!(
+        looked.starts_with("[room "),
+        "the room's own rendering must still be intact with nobody present: {looked:?}"
+    );
+}
+
+/// The presence line's count is the SENSED roster's, never the merely
+/// co-located one: seed 42's flagship chamber, one companion placed
+/// deliberately out of the shadowcast (`Session::place_creature_out_of_my_sight`,
+/// the same seam `the_objective_needs_reads_a_creature_the_body_cannot_sense`
+/// in `ooc_objective.rs` uses for exactly this precondition). Indoors that
+/// makes `colocated_entities().len()` and `snapshot().sensed.present.len()`
+/// disagree, and the presence line must track the second.
+///
+/// MUTATION THIS MUST FAIL AGAINST: `presence_line` reading
+/// `self.colocated_npcs()` instead of `self.perceived_npcs(how)`. Performed
+/// by hand: changed `let roll = self.perceived_npcs(how);` to
+/// `let roll = self.colocated_npcs();`, ran this test alone, and it went
+/// red on the EARLIER precondition, not the total: `Here: Dvoashngashngo,
+/// Qvoshngavngo, Shngovngo and Shngoqvo, and 63 others.` — the hidden
+/// companion is roll-order-first, so an unfiltered roster names it right in
+/// the first four, tripping `!looked.contains(&hidden)` before the total
+/// comparison is ever reached. Worth recording as-observed rather than
+/// as-guessed: the total-equals-sensed assertion further down would have
+/// caught this mutation too (63 others off an unfiltered 67 vs. the sensed
+/// 65), but the precondition on `hidden`'s name firing first is what this
+/// run actually showed. Reverted the edit afterward.
+#[test]
+fn the_count_is_the_sensed_roster() {
+    let world = common::build(42).expect("seed 42 builds");
+    let (mut session, _) =
+        Session::start(&world, &PossessOpts::default()).expect("seed 42 possesses");
+    let _ = out(session.handle("wait"));
+    let _ = out(session.handle("enter"));
+    let hidden = session.bodies()[1].label.clone();
+    let companion = session.bodies()[1].entity;
+    assert!(
+        session.place_creature_out_of_my_sight(companion),
+        "precondition: the entered chamber must have an anchor outside its own \
+         shadowcast to place `{hidden}` on"
+    );
+    let colocated = session.colocated_entities().len();
+    let sensed = session
+        .snapshot()
+        .expect("a live session snapshots")
+        .sensed
+        .present
+        .len();
+    assert!(
+        sensed < colocated,
+        "precondition: hiding `{hidden}` must actually separate the sensed \
+         roll from the colocated one, else this test cannot distinguish \
+         the two. Got sensed={sensed}, colocated={colocated}"
+    );
+    let looked = out(session.handle("look"));
+    assert!(
+        !looked.contains(&hidden),
+        "precondition: `look` must withhold the hidden companion's name \
+         (the sight gate `!needs`/`!examine` already enforce): {looked:?}"
+    );
+    let line = here_line(&looked).unwrap_or_else(|| panic!("no presence line: {looked:?}"));
+    let total = others_count(line) + N_NAMED;
+    assert_eq!(
+        total, sensed,
+        "the presence line's total must equal the SENSED roster, not the \
+         merely co-located one: {line:?}"
+    );
+}

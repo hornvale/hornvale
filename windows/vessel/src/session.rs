@@ -525,6 +525,14 @@ pub const POSSESSED_BY: &str = "possessed-by";
 /// type-audit: bare-ok(identifier-text)
 pub const POSSESSION_ENDED: &str = "possession-ended";
 
+/// The presence line's naming budget (The Roll, Task 9, spec §4 "Presence at
+/// scale"): [`Session::presence_line`] names the first `N_NAMED` labels of
+/// each resident group in roll order and only counts the rest. A tuning
+/// knob for how much of a crowd `look` spells out, not a physical or
+/// derived constant.
+/// type-audit: bare-ok(count)
+pub const N_NAMED: usize = 4;
+
 /// Who currently holds `body`, if anyone (The Coercion).
 ///
 /// A single pass in LEDGER ORDER over the body's own facts: a
@@ -1706,7 +1714,7 @@ impl<'w> Session<'w> {
         // and where it does bind, computing it is the honest answer.
         session.recompute_roll_mask();
         session.absorb_here()?;
-        let opening = session.describe_here()?;
+        let opening = session.describe_here(Perceiving::Body)?;
         session.last_text = opening.clone();
         Ok((session, opening))
     }
@@ -4224,10 +4232,14 @@ impl<'w> Session<'w> {
             // difference rather than exposing one. What this namespace buys is
             // that a sleeping — later possessed, unconscious — body can still
             // be looked out of.
-            "look" if self.inside.is_some() => self.out(self.describe_chamber_here()),
-            "look" if self.submerged.is_some() => self.out(self.describe_here()),
+            "look" if self.inside.is_some() => {
+                self.out(self.describe_chamber_here(Perceiving::Objectively))
+            }
+            "look" if self.submerged.is_some() => {
+                self.out(self.describe_here(Perceiving::Objectively))
+            }
             "look" if self.underground.is_some() => Turn::Out(self.describe_underground_here()),
-            "look" => self.out(self.describe_here()),
+            "look" => self.out(self.describe_here(Perceiving::Objectively)),
             "knows" => Turn::Out(self.knows()),
             // The one out-of-character act that MOVES THE CLOCK (spec §3.4).
             // Its objective half is the departure/arrival narration, not the
@@ -4275,8 +4287,12 @@ impl<'w> Session<'w> {
                 // inside a structure it renders the chamber, out of doors the
                 // locale. Everything else reads `self.position()`, which never
                 // leaves the walk band, so nothing else changes.
-                "look" if self.inside.is_some() => self.out(self.describe_chamber_here()),
-                "look" if self.submerged.is_some() => self.out(self.describe_here()),
+                "look" if self.inside.is_some() => {
+                    self.out(self.describe_chamber_here(Perceiving::Body))
+                }
+                "look" if self.submerged.is_some() => {
+                    self.out(self.describe_here(Perceiving::Body))
+                }
                 // Underground (The Deep Realm, Task 5): the chamber lattice's
                 // content is read straight from `self.underground`, never
                 // through `describe_here`'s locale pipeline — that pipeline's
@@ -4285,7 +4301,7 @@ impl<'w> Session<'w> {
                 // `Formation::OpenWater`), so feeding it a rock `Stratum` would
                 // render nonsense rather than a chamber.
                 "look" if self.underground.is_some() => Turn::Out(self.describe_underground_here()),
-                "look" => self.out(self.describe_here()),
+                "look" => self.out(self.describe_here(Perceiving::Body)),
                 // `map` is band-aware for exactly the reason `look` is, and it is the
                 // SAME verb rather than a new one: §6's contract is that any pane
                 // capability must first BE a verb, so the fewer verbs meaning one
@@ -4590,7 +4606,7 @@ impl<'w> Session<'w> {
         match next {
             Some(st) => {
                 self.submerged = Some(st);
-                self.out(self.describe_here())
+                self.out(self.describe_here(Perceiving::Body))
             }
             None => Turn::Out(format!(
                 "You are already as deep as this water goes; the floor is {}.",
@@ -4612,7 +4628,7 @@ impl<'w> Session<'w> {
             .and_then(|i| column.get(i - 1).copied());
         self.submerged = above;
         let breaking = above.is_none();
-        match self.describe_here() {
+        match self.describe_here(Perceiving::Body) {
             Ok(d) if breaking => Turn::Out(format!("You break the surface.\n{d}")),
             other => self.out(other),
         }
@@ -4794,7 +4810,7 @@ impl<'w> Session<'w> {
             Some(_) => {}
         }
         self.underground = None;
-        match self.describe_here() {
+        match self.describe_here(Perceiving::Body) {
             Ok(d) => Turn::Out(format!("You climb back into the light.\n{d}")),
             other => self.out(other),
         }
@@ -5276,8 +5292,16 @@ impl<'w> Session<'w> {
         Ok(())
     }
 
-    /// The full room rendering: room id, prose, ways on.
-    fn describe_here(&self) -> Result<String, VesselError> {
+    /// The full room rendering: room id, prose, presence, ways on.
+    ///
+    /// `how` decides [`Self::presence_line`]'s own roster the same way it
+    /// decides every other `!`-narrowed read (The Roll, Task 9): every
+    /// caller in this crate passes [`Perceiving::Body`] except the `!look`
+    /// arms in [`Self::handle_ooc`], which pass [`Perceiving::Objectively`]
+    /// — `look` is an in-character verb, and its out-of-character twin is
+    /// the one place a wider roster than the body can sense is the honest
+    /// answer.
+    fn describe_here(&self, how: Perceiving) -> Result<String, VesselError> {
         // Unsubmerged over water, the possession is AFLOAT — on the surface,
         // not down among whatever lives on the floor. Rendering the room's own
         // expression there would put a walker "in" a coral reef while they are
@@ -5346,8 +5370,16 @@ impl<'w> Session<'w> {
             };
             format!("{lead}; the nearest ground lies {}.", ways.join(", "))
         };
+        // The presence line (The Roll, Task 9, spec §4): its own line, after
+        // the room's prose and before the ways — a room says what it looks
+        // like, then who is in it, then how to leave. `None` (nobody
+        // sensed) contributes no line at all, never a blank one.
+        let presence = self
+            .presence_line(how)
+            .map(|line| format!("{line}\n"))
+            .unwrap_or_default();
         Ok(format!(
-            "[room {}, day {}]\n{}\n{closing}",
+            "[room {}, day {}]\n{}\n{presence}{closing}",
             v.locale.id,
             self.day.as_std_days(),
             f.prose,
@@ -5410,7 +5442,7 @@ impl<'w> Session<'w> {
         if let Err(e) = self.absorb_here() {
             return Turn::Out(format!("error: {e}"));
         }
-        self.out(self.describe_here())
+        self.out(self.describe_here(Perceiving::Body))
     }
 
     /// Retrace one step of the walk-band trail. Like [`Self::go`], reached only
@@ -5442,7 +5474,7 @@ impl<'w> Session<'w> {
         if let Err(e) = self.absorb_here() {
             return Turn::Out(format!("error: {e}"));
         }
-        self.out(self.describe_here())
+        self.out(self.describe_here(Perceiving::Body))
     }
 
     /// Descend into the structure at this locale, or move to a named chamber
@@ -5519,7 +5551,7 @@ impl<'w> Session<'w> {
                 cell,
                 seed,
             });
-            return self.out(self.describe_chamber_here());
+            return self.out(self.describe_chamber_here(Perceiving::Body));
         }
         let brief = self.brief_here();
         let Some(structure) = crate::structure::structure_at(
@@ -5552,7 +5584,7 @@ impl<'w> Session<'w> {
         if self.descend(structure, at).is_none() {
             return Turn::Out("error: that chamber has no floor to stand in".to_string());
         }
-        self.out(self.describe_chamber_here())
+        self.out(self.describe_chamber_here(Perceiving::Body))
     }
 
     /// Put the possession inside `structure` at chamber `at`, standing wherever
@@ -5666,7 +5698,7 @@ impl<'w> Session<'w> {
                 let inside = self.inside.as_mut().expect("checked above");
                 inside.at = next;
                 inside.cell = cell;
-                return self.out(self.describe_chamber_here());
+                return self.out(self.describe_chamber_here(Perceiving::Body));
             }
         }
         // Another chamber's floor, reached without a doorway: refused rather than
@@ -5776,7 +5808,7 @@ impl<'w> Session<'w> {
             return Turn::Out(e);
         }
         self.inside = None;
-        self.out(self.describe_here())
+        self.out(self.describe_here(Perceiving::Body))
     }
 
     /// The world's walk depth, as this session's locale context defines it.
@@ -5918,7 +5950,11 @@ impl<'w> Session<'w> {
     /// one way where two exist — which is how the deeper chambers became
     /// unreachable under The Lintel, where the reason was starker (every chamber
     /// derived the identical interior).
-    fn describe_chamber_here(&self) -> Result<String, VesselError> {
+    ///
+    /// `how` reaches [`Self::presence_line`] the same way it reaches
+    /// [`Self::describe_here`]'s own copy — see that doc comment (The Roll,
+    /// Task 9).
+    fn describe_chamber_here(&self, how: Perceiving) -> Result<String, VesselError> {
         let Some(inside) = self.inside.as_ref() else {
             // Unreachable through `handle` (every caller checks first), but a
             // silent fabrication of chamber prose while out of doors would be
@@ -5938,8 +5974,15 @@ impl<'w> Session<'w> {
         if Self::further_in(structure, at).is_some() {
             ways.push(FURTHER_IN);
         }
+        // The presence line (The Roll, Task 9, spec §4) — same placement
+        // rule as `describe_here`'s own: its own line, after the chamber's
+        // prose and before the ways.
+        let presence = self
+            .presence_line(how)
+            .map(|line| format!("{line}\n"))
+            .unwrap_or_default();
         Ok(format!(
-            "[chamber {}, day {}]\n{}\nWays on: {}.",
+            "[chamber {}, day {}]\n{}\n{presence}Ways on: {}.",
             id,
             self.day.as_std_days(),
             crate::chamber_prose::describe_chamber(&interior, &brief),
@@ -7625,6 +7668,75 @@ impl<'w> Session<'w> {
             // at its limit.
             Perceiving::Objectively => self.sensed_npcs(None),
         }
+    }
+
+    /// Who is here, as one line (The Roll, Task 9, spec §4 "Presence at
+    /// scale"): `None` if nobody is — never `Some("Here: .")` — otherwise
+    /// `"Here: {groups joined on "; "}."`.
+    ///
+    /// Consumes exactly [`Self::perceived_npcs`]`(how)` — **the same roster a
+    /// `!`-narrowed verb reads, never [`Self::colocated_npcs`]**: indoors a
+    /// creature the embedding placed but the shadowcast does not light is
+    /// colocated but not sensed, and this line must agree with what `!needs`/
+    /// `!examine` would say is here, not with who merely stands here.
+    ///
+    /// **Grouped by species, resident groups (`Body.village.is_some()`)
+    /// before wild, each group in roll order** — `perceived_npcs`' own
+    /// order, never re-sorted by name, so "who gets named" tracks the roll
+    /// budget's own priority rather than alphabetizing a crowd. A resident
+    /// group names its first [`N_NAMED`] labels through
+    /// [`crate::chamber_prose::listed`] and appends `", and {n} others"` for
+    /// whatever is left; a wild group has no individual names to give, so it
+    /// collapses entirely to a single count-first clause — `"a wild
+    /// {species}"` for one, `"{n} wild {species}"` for more, the species
+    /// word never pluralised.
+    fn presence_line(&self, how: Perceiving) -> Option<String> {
+        let roll = self.perceived_npcs(how);
+        if roll.is_empty() {
+            return None;
+        }
+        // Ordered groups keyed by (resident, species): a `Vec` scan, not a
+        // `HashMap` (no HashMap/HashSet anywhere in this workspace) — the
+        // roll a possession ever reads is small, so a linear `find` per
+        // member costs nothing. First-seen order is kept, which is what
+        // carries roll order into group order below.
+        let mut groups: Vec<(bool, &str, Vec<&str>)> = Vec::new();
+        for npc in &roll {
+            let resident = npc.village.is_some();
+            let species = npc.species.as_str();
+            match groups
+                .iter_mut()
+                .find(|(r, s, _)| *r == resident && *s == species)
+            {
+                Some((_, _, labels)) => labels.push(npc.label.as_str()),
+                None => groups.push((resident, species, vec![npc.label.as_str()])),
+            }
+        }
+        // A stable sort on residency alone: `Reverse(true) < Reverse(false)`
+        // puts every resident group ahead of every wild one while leaving
+        // each side's own relative (roll) order exactly as `sort_by_key`
+        // found it — the ordering guarantee `sort_by_key` documents.
+        groups.sort_by_key(|(resident, ..)| std::cmp::Reverse(*resident));
+        let rendered: Vec<String> = groups
+            .into_iter()
+            .map(|(resident, species, labels)| {
+                if resident {
+                    let named: Vec<&str> = labels.iter().take(N_NAMED).copied().collect();
+                    let heads = crate::chamber_prose::listed(&named)
+                        .expect("a group is never built empty — every push adds a label");
+                    if labels.len() > N_NAMED {
+                        format!("{heads}, and {} others", labels.len() - N_NAMED)
+                    } else {
+                        heads
+                    }
+                } else if labels.len() == 1 {
+                    format!("a wild {species}")
+                } else {
+                    format!("{} wild {species}", labels.len())
+                }
+            })
+            .collect();
+        Some(format!("Here: {}.", rendered.join("; ")))
     }
 
     /// Resolve `who` to one **sensed** co-located NPC (The First Mark): an empty
@@ -12453,7 +12565,9 @@ mod tests {
         let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
         let middle = path_structure(&session.position(), 3);
         session.descend(middle, 1).expect("a chamber to stand in");
-        let text = session.describe_chamber_here().expect("a chamber renders");
+        let text = session
+            .describe_chamber_here(Perceiving::Body)
+            .expect("a chamber renders");
         assert!(
             text.ends_with("Ways on: out, further in."),
             "a middle chamber must offer BOTH directions under distinct names: {text:?}"
@@ -12462,7 +12576,9 @@ mod tests {
         session
             .descend(innermost, 2)
             .expect("a chamber to stand in");
-        let text = session.describe_chamber_here().expect("a chamber renders");
+        let text = session
+            .describe_chamber_here(Perceiving::Body)
+            .expect("a chamber renders");
         assert!(
             text.ends_with("Ways on: out."),
             "the innermost chamber must not advertise a way that is not there: {text:?}"
