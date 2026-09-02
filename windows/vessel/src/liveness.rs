@@ -1191,9 +1191,25 @@ fn build_emitter_scan(
 /// alarm-free `affect_of` that `alarm_field` and the re-derivation share. The
 /// inner `affect_of` reads an EMPTY band, so its own `believed_hazard` is
 /// emitter-free and never re-enters this path (the recursion break).
+///
+/// **`folds` is the caller's resident store, and threading it here is what
+/// took the throwaway store off this path (The Pawl, spec §2.4).** The
+/// `affect_of` below is a PAST-DAY read — `day` is the instant being replayed,
+/// not the present — so it reaches `drive_at`, `hunger_at`, `believed_water`
+/// and `hazard_memory_memo` at an instant behind the ledger's end. Every one
+/// of those serves that read off this store, and the reset lookup the two
+/// sustenance drives make is the UNFILTERED one they have always made: the
+/// latest `drank`/`eaten` in the whole committed history, with no bound on
+/// `day`, so a drink in the replayed day's own future still zeroes the
+/// integral. That is today's behaviour, preserved deliberately rather than
+/// inherited — see `drive_at`'s doc and spec §3 rule 1. Decision 0237's
+/// filtered rule is the physically sensible one and is a followup, not this
+/// migration's business: changing it would move a past-day reading on every
+/// emitter-bearing world, which is what the census asserts against.
 fn emitter_arousal(
     afraid: &mut std::collections::BTreeMap<(EntityId, WorldTime), f64>,
     frozen: &Ledger,
+    folds: &OwnedFolds,
     npc: &Body,
     day: WorldTime,
     terrain: &dyn Terrain,
@@ -1202,7 +1218,7 @@ fn emitter_arousal(
     if let Some(&v) = afraid.get(&key) {
         return v;
     }
-    let affect = affect_of(frozen, npc, &[], day, terrain);
+    let affect = affect_of(frozen, folds, npc, &[], day, terrain);
     let v = if affect.object == Some(DriveKind::Danger) && affect.arousal >= DANGER_ACT {
         affect.arousal
     } else {
@@ -1412,6 +1428,7 @@ pub fn hazard_memory_memo(
                 WorldTime::from_std_days(day).expect("a day value is finite"),
                 &[],
                 ledger,
+                folds,
             ) {
                 mem.shunned.insert(room);
             }
@@ -1459,6 +1476,7 @@ pub fn hazard_memory_memo(
                 alarm += emitter_arousal(
                     afraid,
                     ledger,
+                    folds,
                     m,
                     WorldTime::from_std_days(day).expect("a day value is finite"),
                     terrain,
@@ -2833,11 +2851,12 @@ fn alarm_at(
     roster: &[Body],
     terrain: &dyn Terrain,
     frozen: &Ledger,
+    folds: &OwnedFolds,
 ) -> f64 {
     if roster.is_empty() {
         return 0.0;
     }
-    alarm_field(frozen, roster, terrain, day)
+    alarm_field(frozen, folds, roster, terrain, day)
         .get(room)
         .copied()
         .unwrap_or(0.0)
@@ -2853,6 +2872,7 @@ fn alarm_at(
 /// recovered long after the alarm itself has died. An EMPTY `roster` collapses
 /// this to The Haunt's terrain-only verdict (the recursion base case / the
 /// seed-42 path, where no primary-afraid emitter ever raises an alarm).
+#[allow(clippy::too_many_arguments)]
 fn frightened_at(
     room: &Facet,
     npc: &Body,
@@ -2860,10 +2880,11 @@ fn frightened_at(
     day: WorldTime,
     roster: &[Body],
     frozen: &Ledger,
+    folds: &OwnedFolds,
 ) -> bool {
     feels_frightening(
         threat_field(room, &npc.threat_niche, terrain),
-        alarm_at(room, day, roster, terrain, frozen),
+        alarm_at(room, day, roster, terrain, frozen, folds),
         npc.boldness,
     )
 }
@@ -3838,6 +3859,7 @@ pub fn arbitrate(
 /// acted on, not a poorer solo one.
 pub fn affect_of(
     frozen: &Ledger,
+    folds: &OwnedFolds,
     npc: &Body,
     band: &[Body],
     day: WorldTime,
@@ -3845,7 +3867,16 @@ pub fn affect_of(
 ) -> Affect {
     let mut memo = PrimaryAfraidMemo::new();
     let mut mesh_memo = RoomMeshMemo::new();
-    affect_of_memo(frozen, npc, band, day, terrain, &mut memo, &mut mesh_memo)
+    affect_of_memo(
+        frozen,
+        folds,
+        npc,
+        band,
+        day,
+        terrain,
+        &mut memo,
+        &mut mesh_memo,
+    )
 }
 
 /// [`affect_of`] sharing a caller-owned [`PrimaryAfraidMemo`] — for the lab's
@@ -3864,8 +3895,18 @@ pub fn affect_of(
 /// own kernel-fixed signature — a caller that DOES have a session-lived
 /// scope to share (`run_simulation`) calls [`affect_of_memo_occupied`]
 /// directly instead, precisely as it already does for `mesh_memo`.
+///
+/// **`folds` is NOT one of those throwaways, and used to be** (The Pawl,
+/// stage 2). This function built its own `OwnedFolds` per call — an advance
+/// over the WHOLE ledger every time, which on the hazard path
+/// (`hazard_memory_memo` → `emitter_arousal` → here, once per emitter per
+/// remembered day) was strictly worse than the per-call scans the store
+/// replaced. The store is now the caller's, threaded the whole way down the
+/// hazard chain, and no production path builds a throwaway one.
+#[allow(clippy::too_many_arguments)]
 pub fn affect_of_memo(
     frozen: &Ledger,
+    folds: &OwnedFolds,
     npc: &Body,
     band: &[Body],
     day: WorldTime,
@@ -3874,16 +3915,6 @@ pub fn affect_of_memo(
     mesh_memo: &mut RoomMeshMemo,
 ) -> Affect {
     let mut home_nav_cache = HomeNavCache::new();
-    // A throwaway resident store (The Pawl), for exactly the reason the
-    // throwaway `HomeNavCache` beside it is one: this signature is what every
-    // existing caller expects, and a caller that HAS a session-lived store to
-    // share calls `affect_of_memo_occupied` directly — which is what the
-    // session, both benches and the lab's headless sim now do. A throwaway
-    // costs one advance over the whole ledger, so it is never cheaper than the
-    // per-call scans it replaced on this path; making it cheaper means
-    // threading the store through the hazard re-derivation, which is stage 2's
-    // work (spec §6) and not this one's.
-    let folds = OwnedFolds::new(crate::resident::ResidentFolds::new());
     affect_of_memo_occupied(
         frozen,
         npc,
@@ -3894,7 +3925,7 @@ pub fn affect_of_memo(
         None,
         mesh_memo,
         &mut home_nav_cache,
-        &folds,
+        folds,
     )
 }
 
@@ -4172,12 +4203,13 @@ pub fn affect_of_memo_occupied(
 /// type-audit: bare-ok(ratio: return)
 pub fn alarm_field(
     frozen: &Ledger,
+    folds: &OwnedFolds,
     npcs: &[Body],
     terrain: &dyn Terrain,
     day: WorldTime,
 ) -> std::collections::BTreeMap<Facet, f64> {
     let mut memo = PrimaryAfraidMemo::new();
-    alarm_field_memo(frozen, npcs, terrain, day, &mut memo)
+    alarm_field_memo(frozen, folds, npcs, terrain, day, &mut memo)
 }
 
 /// [`alarm_field`] sharing a caller-owned [`PrimaryAfraidMemo`] so its
@@ -4186,6 +4218,7 @@ pub fn alarm_field(
 /// type-audit: bare-ok(ratio: return)
 pub fn alarm_field_memo(
     frozen: &Ledger,
+    folds: &OwnedFolds,
     npcs: &[Body],
     terrain: &dyn Terrain,
     day: WorldTime,
@@ -4221,7 +4254,7 @@ pub fn alarm_field_memo(
         // reproduces `affect_of`'s pre-Tidings (bandless) behaviour exactly.
         // `magnitude` is the emitter's Danger arousal, or `0.0` when it is not
         // primary-afraid (no emission).
-        let magnitude = emitter_arousal(&mut memo.afraid, frozen, npc, day, terrain);
+        let magnitude = emitter_arousal(&mut memo.afraid, frozen, folds, npc, day, terrain);
         if magnitude <= 0.0 {
             continue;
         }
@@ -5078,6 +5111,7 @@ impl<'a> DriveMovements<'a> {
         // drive below then reads it at each creature's room.
         let alarm = alarm_field_memo(
             frozen,
+            self.folds,
             &self.npcs,
             self.terrain,
             self.from,
@@ -5832,7 +5866,14 @@ impl<'a> DriveMovements<'a> {
         let band = [body.clone()];
         let mut occupancy = Occupancy::default();
         let mut afraid_memo = PrimaryAfraidMemo::new();
-        let alarm = alarm_field_memo(frozen, &band, self.terrain, self.from, &mut afraid_memo);
+        let alarm = alarm_field_memo(
+            frozen,
+            self.folds,
+            &band,
+            self.terrain,
+            self.from,
+            &mut afraid_memo,
+        );
         let memory = hazard_memory_memo(
             frozen,
             self.folds,
@@ -7427,14 +7468,14 @@ mod tests {
         // state reports the fear rather than a louder thirst.
         let now = WorldTime::from_std_days(0.6).expect("a day value is finite");
         let band = [a.clone(), b.clone(), c.clone()];
-        let felt = affect_of(&ledger, &a, &band, now, &terrain);
+        let felt = affect_of(&ledger, &test_folds(), &a, &band, now, &terrain);
         assert_eq!(
             felt.object,
             Some(DriveKind::Danger),
             "the rememberer is afraid on now-safe ground: {felt:?}"
         );
         assert!(felt.arousal >= DANGER_ACT, "and the fear is felt: {felt:?}");
-        let control = affect_of(&ledger, &c, &band, now, &terrain);
+        let control = affect_of(&ledger, &test_folds(), &c, &band, now, &terrain);
         assert_ne!(
             control.object,
             Some(DriveKind::Danger),
@@ -7479,7 +7520,7 @@ mod tests {
             .contains_key(&x),
             "fixture check: the shudderer must actually dread X"
         );
-        let field = alarm_field(&ledger, &[a, b], &terrain, now);
+        let field = alarm_field(&ledger, &test_folds(), &[a, b], &terrain, now);
         assert!(
             !field.contains_key(&x),
             "remembered dread is felt, never broadcast: {field:?}"
@@ -7543,7 +7584,15 @@ mod tests {
             };
             let drive_afraid = drive.urgency(&view_at(room.clone())) >= DANGER_ACT;
             assert_eq!(
-                frightened_at(room, &npc, &t, WorldTime::GENESIS, &[], &ledger),
+                frightened_at(
+                    room,
+                    &npc,
+                    &t,
+                    WorldTime::GENESIS,
+                    &[],
+                    &ledger,
+                    &test_folds(),
+                ),
                 drive_afraid,
                 "frightened_at agrees with the Danger drive at {room:?}"
             );
@@ -7572,7 +7621,8 @@ mod tests {
                     &t,
                     WorldTime::from_std_days(day).expect("a day value is finite"),
                     &[],
-                    &ledger
+                    &ledger,
+                    &test_folds()
                 ),
                 "the scary room frightens terrain-only on day {day}"
             );
@@ -7583,7 +7633,8 @@ mod tests {
                     &t,
                     WorldTime::from_std_days(day).expect("a day value is finite"),
                     &[],
-                    &ledger
+                    &ledger,
+                    &test_folds()
                 ),
                 "the mild room never frightens on day {day}"
             );
@@ -7617,12 +7668,20 @@ mod tests {
         let day = WorldTime::from_std_days(0.5).expect("a day value is finite");
         // X read terrain-only (empty roster) is safe.
         assert!(
-            !frightened_at(&x, &a, &terrain, day, &[], &ledger),
+            !frightened_at(&x, &a, &terrain, day, &[], &ledger, &test_folds()),
             "X read terrain-only is safe"
         );
         // With the roster, the re-derived PAST alarm at X frightens the coward.
         assert!(
-            frightened_at(&x, &a, &terrain, day, std::slice::from_ref(&b), &ledger),
+            frightened_at(
+                &x,
+                &a,
+                &terrain,
+                day,
+                std::slice::from_ref(&b),
+                &ledger,
+                &test_folds(),
+            ),
             "the re-derived alarm at (X, day) frightens the coward rememberer"
         );
     }
@@ -7654,7 +7713,8 @@ mod tests {
                 &terrain,
                 WorldTime::from_std_days(0.5).expect("a day value is finite"),
                 std::slice::from_ref(&b),
-                &ledger
+                &ledger,
+                &test_folds()
             ),
             "guard: X is alarmed while B stands beside it"
         );
@@ -7666,7 +7726,8 @@ mod tests {
                 &terrain,
                 WorldTime::from_std_days(9.5).expect("a day value is finite"),
                 std::slice::from_ref(&b),
-                &ledger
+                &ledger,
+                &test_folds()
             ),
             "after B leaves, X carries no re-derived alarm"
         );
@@ -10922,7 +10983,8 @@ mod tests {
                     &terrain,
                     WorldTime::from_std_days(1.0).expect("a day value is finite"),
                     &[],
-                    &empty_ledger
+                    &empty_ledger,
+                    &test_folds()
                 ),
                 "path room {room:?} must be terrain-safe (no static hazard)"
             );
@@ -11152,7 +11214,7 @@ mod tests {
         let band = [a.clone(), b.clone()];
 
         // (1) FELT.
-        let felt = affect_of(&ledger, &a, &band, now, &terrain);
+        let felt = affect_of(&ledger, &test_folds(), &a, &band, now, &terrain);
         assert_eq!(
             felt.object,
             Some(DriveKind::Danger),
@@ -12290,6 +12352,7 @@ mod tests {
         let terrain = PlantedTerrain::default(); // no hazard anywhere
         let field = alarm_field(
             &ledger,
+            &test_folds(),
             &[npc_a, npc_b],
             &terrain,
             WorldTime::from_std_days(0.5).expect("a day value is finite"),
@@ -12315,6 +12378,7 @@ mod tests {
         let terrain = PlantedTerrain::hazard(std::iter::empty(), [(room.clone(), 0.8)]);
         let field = alarm_field(
             &ledger,
+            &test_folds(),
             &[npc],
             &terrain,
             WorldTime::from_std_days(0.5).expect("a day value is finite"),
@@ -12350,6 +12414,7 @@ mod tests {
         // The field over BOTH creatures.
         let both = alarm_field(
             &ledger,
+            &test_folds(),
             &[a.clone(), b.clone()],
             &terrain,
             WorldTime::from_std_days(0.5).expect("a day value is finite"),
@@ -12357,6 +12422,7 @@ mod tests {
         // The field over A ALONE — the reference: B must add nothing.
         let a_only = alarm_field(
             &ledger,
+            &test_folds(),
             &[a],
             &terrain,
             WorldTime::from_std_days(0.5).expect("a day value is finite"),
@@ -12960,6 +13026,7 @@ mod tests {
         };
         let a = affect_of(
             &ledger,
+            &test_folds(),
             &base,
             &[],
             WorldTime::from_std_days(0.5).expect("a day value is finite"),
@@ -14283,6 +14350,7 @@ mod tests {
         // Day 100: a metabolizer would be long parched and roasting.
         let a = affect_of(
             &ledger,
+            &test_folds(),
             &base,
             &[],
             WorldTime::from_std_days(100.0).expect("a day value is finite"),
@@ -14299,6 +14367,7 @@ mod tests {
         };
         let b = affect_of(
             &ledger,
+            &test_folds(),
             &meta,
             &[],
             WorldTime::from_std_days(100.0).expect("a day value is finite"),
@@ -14349,6 +14418,7 @@ mod tests {
         };
         let a = affect_of(
             &ledger,
+            &test_folds(),
             &base,
             &[],
             WorldTime::from_std_days(0.5).expect("a day value is finite"),
@@ -14361,6 +14431,7 @@ mod tests {
         };
         let b = affect_of(
             &ledger,
+            &test_folds(),
             &meta,
             &[],
             WorldTime::from_std_days(0.5).expect("a day value is finite"),
@@ -14740,8 +14811,15 @@ mod tests {
         // never distinguish them).
         let now = WorldTime::from_std_days(10.0).expect("a day value is finite");
 
-        let alone = affect_of(&ledger, &lost, &[], now, &t);
-        let in_band = affect_of(&ledger, &lost, &[knower.clone(), lost.clone()], now, &t);
+        let alone = affect_of(&ledger, &test_folds(), &lost, &[], now, &t);
+        let in_band = affect_of(
+            &ledger,
+            &test_folds(),
+            &lost,
+            &[knower.clone(), lost.clone()],
+            now,
+            &t,
+        );
 
         assert_eq!(
             alone.label,
@@ -14957,8 +15035,8 @@ mod tests {
         let hearth_terrain = FurnishingStub { built: true };
         let wild_terrain = FurnishingStub { built: false };
 
-        let hearth_affect = affect_of(&ledger, &npc, &[], day, &hearth_terrain);
-        let wild_affect = affect_of(&ledger, &npc, &[], day, &wild_terrain);
+        let hearth_affect = affect_of(&ledger, &test_folds(), &npc, &[], day, &hearth_terrain);
+        let wild_affect = affect_of(&ledger, &test_folds(), &npc, &[], day, &wild_terrain);
 
         assert!(
             wild_affect.arousal > 0.0,

@@ -546,17 +546,35 @@ fn the_store_is_current_with_a_real_sessions_ledger() {
 /// offenders out of zero lookups reports nothing, and an earlier draft of this
 /// test did exactly that (see below).
 ///
-/// # The finding this witness produced first
+/// # The finding this witness produced first, and the finding that OVERTURNED
+/// its denominator
 ///
-/// **The seed-42 possession never calls `drive_at` or `hunger_at` at all.**
-/// Their only production caller is `affect_of_memo_occupied`, which
-/// `Session::snapshot` and `Session::needs` reach once per CO-LOCATED
-/// creature — and seed 42's flagship stands alone: `possess --seed 42` with a
-/// `needs` in the script answers "No one else is here to read." The session's
-/// tick walks nine creatures and commits twenty-two thousand facts, but every
-/// one of those reads goes through `decide_step`, which carries the walk's own
-/// reset local and makes no unfiltered lookup. So the session is measured
-/// here, and its zero is REPORTED rather than asserted on.
+/// **This test used to assert that the seed-42 possession never calls
+/// `drive_at` or `hunger_at` at all, and that assertion was measuring the
+/// instrument rather than the sim.** The reasoning behind it was sound as far
+/// as it went: `affect_of_memo_occupied` is reached by `Session::snapshot` and
+/// `Session::needs` once per CO-LOCATED creature, seed 42's flagship stands
+/// alone (`possess --seed 42` with a `needs` in the script answers "No one
+/// else is here to read"), and every read the tick's nine walking creatures
+/// make goes through `decide_step`, which carries the walk's own reset local
+/// and makes no unfiltered lookup.
+///
+/// What it missed is the tick's OTHER caller. `DriveMovements::step_with_
+/// occupancy` builds the per-tick alarm field before anyone moves, and
+/// `alarm_field_memo` probes every roster member that clears the cheap
+/// terrain gate through `emitter_arousal` → `affect_of` → `drive_at`/
+/// `hunger_at`. Those calls were always happening; until The Pawl's stage 2
+/// they landed on the THROWAWAY store `affect_of_memo` built per call, so
+/// their witness died with it and the session's counter read a true zero for
+/// a false reason. Threading the session's own store down that chain (this
+/// stage) makes them visible: **320 unfiltered reset lookups on the same
+/// 40-wait script that reported none.**
+///
+/// The denominator lesson is this campaign's own, for the fourth time: a zero
+/// is only as good as the path the counter sits on. The session's zero is
+/// asserted now on the quantity rule 1 is actually about — how many of those
+/// lookups found a reset in the read's future — with the lookup count itself
+/// asserted non-zero beneath it.
 ///
 /// The rule is then answered on the shape that does call them, which is the
 /// same call the lab's `run_simulation` makes every tick for every creature
@@ -596,13 +614,24 @@ fn rule_one_witness_no_read_runs_before_a_reset_of_the_same_entity() {
         session.committed_fact_count() > 0,
         "the 40-wait seed-42 script must commit facts, or this witness measured nothing"
     );
+    if let Some((entity, t, reset)) = session.resident_first_reset_in_the_future() {
+        println!(
+            "first offender in the session: entity {entity:?} read at {t:?} with a reset \
+             at {reset:?}"
+        );
+    }
+    assert!(
+        session.resident_reset_lookups() > 0,
+        "the seed-42 session must reach `drive_at`/`hunger_at` through the tick's own \
+         `alarm_field_memo` emitter probe (see this test's doc), or its verdict of zero \
+         offenders is zero out of zero and says nothing"
+    );
     assert_eq!(
-        session.resident_reset_lookups(),
+        session.resident_resets_in_the_future(),
         0,
-        "the finding this witness recorded: seed 42's possession is never co-located with \
-         another creature, so `affect_of_memo_occupied` -- the ONLY production caller of \
-         `drive_at`/`hunger_at` -- never runs. If this ever becomes non-zero the session \
-         has gained a reached path and the sweep below is no longer the whole answer"
+        "spec §3 rule 1, on the SESSION itself: a `drive_at`/`hunger_at` call ran with a \
+         reset in its future, so the unfiltered lookup and a filtered one are NOT \
+         byte-equivalent on the walk's own path -- STOP, and ledger it"
     );
 
     // The shape that DOES call them: `affect_of_memo_occupied` per body, at
@@ -655,10 +684,15 @@ fn rule_one_witness_no_read_runs_before_a_reset_of_the_same_entity() {
     // Informational, and deliberately NOT asserted on: the PAST-instant sweep.
     // `hazard_memory_memo` -> `frightened_at` -> `alarm_at` -> `alarm_field`
     // -> `emitter_arousal` -> `affect_of` reads a creature's affect at a past
-    // visit day, which is where an unfiltered reset lookup would differ -- but that
-    // chain is gated behind a non-empty emitter scan, and seed 42 is
-    // emitter-free, so no such call happens today. Stage 2 threads the store
-    // through that chain; this line records, now, what it will find.
+    // visit day, which is where an unfiltered reset lookup would differ. Stage
+    // 2 has now threaded the store through that chain, so a nested read is
+    // counted where it used to die with a throwaway store -- but the chain is
+    // still gated behind a non-empty emitter scan, and seed 42 is
+    // emitter-free, so the PAST-DAY reads counted below are the sweep's own
+    // outer calls rather than a replay the sim performs. The campaign's
+    // standing ruling is that this path keeps today's UNFILTERED semantics
+    // deliberately (see `emitter_arousal`'s doc), so a non-zero here is a
+    // recorded fact about the sim, not a stop.
     let past = hornvale_vessel::resident::OwnedFolds::new(ResidentFolds::new());
     {
         let mut afraid = PrimaryAfraidMemo::new();

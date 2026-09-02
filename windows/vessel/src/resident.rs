@@ -184,6 +184,125 @@ impl LedgerFold for KnownWater {
     }
 }
 
+/// Every entity's visits, INDEXED BY ROOM: for each room the entity has stood
+/// in, the sorted list of instants it was sighted there — the state
+/// `hazard_memory_memo`'s per-call `latest` map becomes (spec §2.4), and the
+/// domain the alarm scan's frightening-room test is applied over.
+///
+/// **A per-room VISIT LIST, not a latest-day map, and that shape was decided
+/// on a measured number rather than assumed.** Spec §3 rule 6 asks whether any
+/// production read of this fold runs at an instant strictly before a committed
+/// sighting of the same entity; a latest-day map (advanced to the ledger's
+/// end) can only answer at the ledger's end, so a past-instant read would need
+/// either a rebuild — which spec §2.2 refuses on a hot path — or the list. The
+/// witness (`windows/vessel/tests/suite/resident_folds.rs`,
+/// `rule_six_witness_hazard_memory_reads_run_at_past_instants`) measured the
+/// emitter-gated replay shape at **9 of 9** hazard reads at past instants, so
+/// the branch fired and this is the fallback the rule names. Reading it is
+/// [`Self::latest_at`]: one `partition_point` per room, over that room's own
+/// visits, never over history.
+///
+/// **It is a permutation index of [`Trail`], the way `Trail` is one of the
+/// ledger** — the same `(instant, room)` pairs, keyed the other way round.
+/// That is what makes the hazard fold's per-tick cost O(rooms visited × log
+/// visits-per-room) where it was O(history): the old loop walked every
+/// `agent-at` fact the entity had ever committed, on every call, to rebuild a
+/// map whose size is bounded by the rooms it has stood in.
+///
+/// **Two reads, one state.** [`Self::latest_at`] serves the hazard fold's
+/// most-recent-visit-per-room rule; [`Self::rooms_at`] serves the ALARM scan,
+/// which needs only the DISTINCT rooms a roster member has stood in at or
+/// before `t` so it can ask terrain whether each frightens that member. The
+/// alarm half is the tenant spec §2.4 lists as `Alarm`, and it holds no state
+/// of its own on purpose: everything `build_emitter_scan` accumulates —
+/// which members can ever emit, the halo of rooms their alarms could reach —
+/// is a function of TERRAIN and the member's own threat niche as well as the
+/// ledger, so none of it can live inside a [`LedgerFold`] (the same argument
+/// [`KnownWater`]'s doc makes for `is_water`). What the ledger determines is
+/// the visits, and those are here; the predicate is applied at read, and its
+/// result is memoised per tick in `PrimaryAfraidMemo::scans` exactly as the
+/// scan's output already was.
+#[derive(Debug, PartialEq, Default)]
+pub struct LatestVisit {
+    /// Each entity's rooms, and each room's visit instants, ascending.
+    visits: BTreeMap<EntityId, BTreeMap<Facet, Vec<WorldTime>>>,
+}
+
+impl LatestVisit {
+    /// Every room the entity has stood in, keyed to that room's ascending
+    /// visit instants; empty if it was never seen.
+    pub fn of(&self, entity: EntityId) -> &BTreeMap<Facet, Vec<WorldTime>> {
+        static EMPTY: BTreeMap<Facet, Vec<WorldTime>> = BTreeMap::new();
+        self.visits.get(&entity).unwrap_or(&EMPTY)
+    }
+
+    /// The MOST RECENT visit at or before `t` for every room the entity has
+    /// stood in by then, ascending by room — `hazard_memory_memo`'s `latest`
+    /// map, exactly. A room with no visit at or before `t` is absent, which is
+    /// what the old loop's `day <= t` filter did before it ever reached the
+    /// map.
+    ///
+    /// O(rooms visited × log visits-per-room): one `partition_point` per room.
+    pub fn latest_at(&self, entity: EntityId, t: WorldTime) -> BTreeMap<Facet, WorldTime> {
+        let mut latest = BTreeMap::new();
+        for (room, days) in self.of(entity) {
+            let n = days.partition_point(|d| *d <= t);
+            if n > 0 {
+                latest.insert(room.clone(), days[n - 1]);
+            }
+        }
+        latest
+    }
+
+    /// The DISTINCT rooms the entity had stood in at or before `t`, ascending
+    /// — the alarm scan's domain (see the type doc's "two reads" paragraph).
+    ///
+    /// The FIRST visit decides membership, so the test is against the list's
+    /// first element rather than a `partition_point`: a room is in the set as
+    /// soon as any sighting of it is at or before `t`.
+    pub fn rooms_at(&self, entity: EntityId, t: WorldTime) -> Vec<Facet> {
+        self.of(entity)
+            .iter()
+            .filter(|(_, days)| days.first().is_some_and(|first| *first <= t))
+            .map(|(room, _)| room.clone())
+            .collect()
+    }
+}
+
+impl LedgerFold for LatestVisit {
+    fn empty() -> Self {
+        LatestVisit::default()
+    }
+
+    fn absorb(&mut self, fact: &Fact) {
+        if fact.predicate != AGENT_AT {
+            return;
+        }
+        let Value::Text(s) = &fact.object else {
+            return;
+        };
+        // An UNDATED `agent-at` is not a sighting: `hazard_memory_memo`'s own
+        // loop reads `f.day.filter(|d| *d <= t)`, so an undated fact never
+        // reached its map at any `t`, and it never reaches this one.
+        let Some(day) = fact.day else {
+            return;
+        };
+        let days = self
+            .visits
+            .entry(fact.subject)
+            .or_default()
+            .entry(room_from_text(s))
+            .or_default();
+        // At the sorted position, for [`Trail`]'s reason and with the same
+        // cost — correct whether or not an entity's sightings ever commit out
+        // of day order, and never a rebuild. `<=` keeps equal instants in
+        // commit order, which the reads above cannot distinguish anyway (both
+        // ask only where the `<= t` boundary falls).
+        let at = days.partition_point(|d| *d <= day);
+        days.insert(at, day);
+    }
+}
+
 /// One entity's committed RESET instants for one sustenance drive — the
 /// `drank` days for thirst, the `eaten` days for hunger — ascending.
 ///
@@ -557,11 +676,13 @@ pub type OwnedFolds = std::cell::RefCell<ResidentFolds>; // lexicon: std::cell::
 /// The session-owned resident fold store: one [`Folded`] per tenant,
 /// advance-on-read.
 ///
-/// [`Trail`], [`ThirstResets`], [`HungerResets`] and [`KnownWater`] are its
-/// tenants; later tasks add the latest-visit map and the alarm rooms
-/// (spec §2.4). The store knows nothing about what a tenant's state means — a
-/// future tenant is a new [`LedgerFold`] impl and a new field, never a new
-/// store.
+/// [`Trail`], [`ThirstResets`], [`HungerResets`], [`KnownWater`] and
+/// [`LatestVisit`] are its tenants — the whole roster spec §2.4 names, with
+/// that spec's sixth entry (`Alarm`) folded into [`LatestVisit`]'s second read
+/// because none of an alarm scan's state is a function of the ledger alone
+/// (see that type's doc). The store knows nothing about what a tenant's state
+/// means — a future tenant is a new [`LedgerFold`] impl and a new field, never
+/// a new store.
 ///
 /// **Every read advances EVERY tenant** ([`Self::advance`]), not merely the
 /// one being asked for. That is what makes [`Self::position`] a single honest
@@ -579,6 +700,9 @@ pub struct ResidentFolds {
     hunger: Folded<HungerResets>,
     /// Every entity's distinct visited rooms and when each was first seen.
     known_water: Folded<KnownWater>,
+    /// Every entity's visits, indexed by room — the hazard fold's latest-visit
+    /// map and the alarm scan's room domain.
+    latest_visit: Folded<LatestVisit>,
     /// What the reads above have cost and seen — not a tenant, and not folded
     /// state; see [`ReadWitness`].
     witness: ReadWitness,
@@ -601,6 +725,7 @@ impl ResidentFolds {
         self.thirst.advance_to(ledger);
         self.hunger.advance_to(ledger);
         self.known_water.advance_to(ledger);
+        self.latest_visit.advance_to(ledger);
     }
 
     /// The trail, current with `ledger`.
@@ -677,6 +802,42 @@ impl ResidentFolds {
         )
     }
 
+    /// The room-indexed visit lists, current with `ledger` — the plain
+    /// accessor, for a reader not taking the rule-6 witness (the property
+    /// tests, and the alarm scan, which asks only for rooms).
+    pub fn latest_visit(&mut self, ledger: &Ledger) -> &LatestVisit {
+        self.advance(ledger);
+        self.latest_visit.state()
+    }
+
+    /// The room-indexed visit lists and the trail together, from ONE guard —
+    /// the ALARM scan's read: [`LatestVisit::rooms_at`] gives each roster
+    /// member's distinct rooms (the domain the frightening predicate is
+    /// applied over) and [`Trail`] gives an emitter's ordered timeline (the
+    /// domain its past position is binary-searched in).
+    pub fn latest_visit_and_trail(&mut self, ledger: &Ledger) -> (&LatestVisit, &Trail) {
+        self.advance(ledger);
+        (self.latest_visit.state(), self.trail.state())
+    }
+
+    /// The room-indexed visit lists, the trail and the read witness together,
+    /// from ONE guard — `hazard_memory_memo`'s own read. [`Trail`] rides along
+    /// for [`Self::known_water_and_trail`]'s reason: the rule-6 witness asks
+    /// whether `t` lies before this entity's last committed sighting, which is
+    /// the trail's last entry at O(1), and a second `borrow_mut` to ask it
+    /// would panic.
+    pub fn latest_visit_and_witness(
+        &mut self,
+        ledger: &Ledger,
+    ) -> (&LatestVisit, &Trail, &mut ReadWitness) {
+        self.advance(ledger);
+        (
+            self.latest_visit.state(),
+            self.trail.state(),
+            &mut self.witness,
+        )
+    }
+
     /// What the reads have cost and seen.
     pub fn witness(&self) -> &ReadWitness {
         &self.witness
@@ -708,6 +869,12 @@ impl ResidentFolds {
             self.known_water.position(),
             "every tenant advances on every read, so the trail and the visited-room \
              index must stand at the same position"
+        );
+        assert_eq!(
+            position,
+            self.latest_visit.position(),
+            "every tenant advances on every read, so the trail and the room-indexed \
+             visit lists must stand at the same position"
         );
         position
     }
