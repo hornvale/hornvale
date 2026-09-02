@@ -664,3 +664,93 @@ permanently unwitnessable.
 `docs/decisions/0581-the-witness-is-bound-to-its-situation.md` (restored,
 marked superseded); `docs/decisions/0582-the-witness-binding-is-
 bidirectional.md` (new); `docs/digest/decisions-in-force.md` (regenerated).
+
+---
+
+#11 [G5] — **Task 4 review round 3: F2 fails a third time, and the fix is
+to stop asserting completeness, not to enumerate better.**
+
+*What happened.* Round 2's `witness_binds` fix closed with "actant-role
+assignment ... is now the ONLY disclosed limit." A third review found this
+false with a live probe:
+
+```
+situation requires [predicate:instance-of, phenomenon:eclipse]
+witness stages cast [goblin, drow] + instance-of(0,1), no phenomenon of any kind
+-> outcome: Some(Stageable)
+```
+
+`witness_binds` is scoped to `predicate:` tokens — correctly, since
+nothing in `hornvale_vessel::Tableau` can represent a `concept:`/
+`phenomenon:` requirement — but that scoping was documented as an
+implementation footnote and then directly contradicted by the record's own
+closing sentence two paragraphs later. Both frozen corpora genuinely
+require such tokens (`concept:child/die/god/parent/person/sibling/spirit`,
+`phenomenon:eclipse/heliacal-rising/night-star/wandering-star`, plus
+`phenomenon:cold/heat` in `polti-1895`), so this was not a theoretical gap.
+
+*The recognized pattern.* Three consecutive records (0577, 0582, and — had
+this round not caught it — a fourth) each asserted their own disclosure was
+COMPLETE, and each was falsified by the next reader who looked harder.
+"The limits include X and Y" survives discovering a third limit Z; "X is
+the only limit" does not survive any Z at all, found or not. The ruling
+this round follows: stop making the falsifiable claim rather than trying
+to out-enumerate the next reviewer.
+
+*The fix.* `witness_binds`'s own doc, the shared report constant
+`WITNESS_BOUNDARY_WHAT` (used verbatim by `render` and `render_matrix`),
+and the decision chain now list KNOWN limits as an explicitly OPEN list —
+no closing punctuation of the "this is all of them" shape. Three limits
+are named: actant-role assignment (spec §4.2's own stated limit),
+`concept:`/`phenomenon:` requirements never being realized by a relation at
+all (the gap this round's probe found), and the bar being name-level not
+aptness-level (`PredicateDef` carries no object-type constraint, so a
+tableau relating two goblins by `latitude` counts as realizing
+`predicate:latitude` — a pre-existing `Provision`/decision-0576 limit,
+inherited rather than introduced here, and named per the reviewer's own
+"your call" offer since it belongs in an honest list). No code behavior
+changed — this is a documentation-only round, and no new test was needed
+for that reason; the existing 14-test `trope_witness::` suite and 17-test
+in-module suite both still pass unmodified.
+
+*Two N2 residuals from round 2's own fix, closed alongside.*
+`blocked_by_witness`'s doc said a colliding corpus token "would collide
+with this detector silently" — false as of round 2's own commit, since the
+collision now reaches `describe_witness_reason`'s panic; corrected to say
+so. That panic's message said "add an arm for it here", which is the right
+advice for a fourth INTERNAL sentinel but misdirects a reader debugging a
+CORPUS-authored collision (a `requires` token literally spelled to start
+with `witness:`) — reworded to name both causes, since the panic is
+reachable from corpus data, not only from a future code change.
+
+*Decision-number provenance.* 0583 confirmed free inside the campaign's
+`0576`-`0585` reserved block before use (0578-0580 remain reserved for
+Tasks 5-7; 0581-0582 are now both superseded, not available for reuse —
+append-only means a number is spent once claimed, superseded or not).
+
+*Verification.* Zero verdicts moved on either frozen corpus (still 0/36,
+0/409) — confirmed by regenerating all three artifacts and diffing every
+`| ` table row: byte-identical; only header prose changed.
+`docs/digest/decisions-in-force.md` regenerated (now lists `0583`, not
+`0582`, as in force); `docs/digest/intent-vs-reality.md` regenerated and
+found unchanged. `docs/audits/type-audit-report.md` regenerated and found
+unchanged (no pub-boundary primitive moved this round).
+
+*Alternatives discarded.* Leaving the "ONLY disclosed limit" claim and
+merely adding the third item to the enumeration — explicitly rejected by
+the ruling this round follows: a longer closed list is still a closed
+list, and would invite exactly the same falsification a fourth time.
+Mechanically closing the `concept:`/`phenomenon:` gap by requiring the
+full token set to match the staged-relation set — rejected again (as in
+0582) for making every situation requiring either kind permanently
+unwitnessable.
+
+*Ideonomy passes / overturns.* None — a review-response round.
+
+*Capture actions.* `cli/src/tropes.rs` (`witness_binds`'s doc,
+`WITNESS_BOUNDARY_WHAT`, `blocked_by_witness`'s doc,
+`describe_witness_reason`'s panic message); `cli/tests/suite/
+trope_witness.rs` (module doc only); `docs/decisions/0582-the-witness-
+binding-is-bidirectional.md` (restored, marked superseded);
+`docs/decisions/0583-the-witness-limits-list-is-open-not-closed.md` (new);
+`docs/digest/decisions-in-force.md` (regenerated).

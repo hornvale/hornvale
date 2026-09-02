@@ -12,11 +12,11 @@
 //! 0095 deferred until a second catalogue existed — one column says what this
 //! world supplies, and only the matrix can say what the catalogues ask for.
 //!
-//! **The witness (decisions 0577/0582, spec §4.2).** Token membership was
+//! **The witness (decisions 0577/0583, spec §4.2).** Token membership was
 //! never hard to satisfy — `PredicateDef` is `{ name, functional, doc }`
 //! with no object-type constraint — so `Stageable` now also requires a
 //! committed [`hornvale_vessel::Tableau`] that both BINDS to the situation
-//! it is filed under (0582: the situation's own required `predicate:`
+//! it is filed under (0583: the situation's own required `predicate:`
 //! tokens and the predicates the tableau stages as relations must be the
 //! SAME SET, not merely one a subset of the other — see [`witness_binds`])
 //! and actually stages successfully. Looked up by situation id in a
@@ -25,9 +25,13 @@
 //! record (0581's [`WitnessEntry`], closing the gap decision 0330's own
 //! module doc names). An absent witness, an unbound one, and one that fails
 //! to stage are refused identically: none can claim `Stageable` on a corpus
-//! token alone. See `cli/tests/suite/trope_witness.rs` for what this proves
-//! and does not, and decision 0330 for the sibling precedent
-//! (`sentence_corpus.rs`'s `MERCHANT_WITNESS`) this design follows.
+//! token alone. **The list of what this does NOT prove is open, not
+//! closed** — three review rounds each falsified a claim that the prior
+//! round's disclosure was exhaustive, so [`witness_binds`]'s own doc states
+//! known limits without ever calling the list complete. See
+//! `cli/tests/suite/trope_witness.rs` for what this proves and does not,
+//! and decision 0330 for the sibling precedent (`sentence_corpus.rs`'s
+//! `MERCHANT_WITNESS`) this design follows.
 
 use hornvale_kernel::{ConceptRegistry, World};
 use hornvale_vessel::{PossessOpts, Session, Tableau};
@@ -185,7 +189,7 @@ pub fn witnesses() -> Witnesses {
 }
 
 /// Whether `tableau`'s staged relations are actually BOUND to `situation`
-/// — the mechanical half of decision 0582's "against that staged scene"
+/// — the mechanical half of decision 0583's "against that staged scene"
 /// (spec §4.2), and BIDIRECTIONAL: the situation's own required
 /// `predicate:` tokens and the predicates `tableau` states as relations
 /// must be the SAME SET, not merely the tableau's side a subset of the
@@ -206,22 +210,41 @@ pub fn witnesses() -> Witnesses {
 /// ALL, not merely when the tableau's own relations happen to name
 /// something B never asked for.
 ///
-/// **Scoped to `predicate:` tokens only.** A `concept:`/`phenomenon:`
-/// token cannot be stated by a `StagedRelation` at all — nothing in
-/// [`Tableau`] represents either — so requiring the FULL required-token set
-/// (including those) to match the staged-relation set would make every
-/// situation requiring a `concept:`/`phenomenon:` token permanently
-/// unwitnessable, which is not what this check is for.
+/// **Scoped to `predicate:` tokens only, and this scoping is ITSELF a
+/// known limit, not merely an implementation note.** A `concept:`/
+/// `phenomenon:` token cannot be stated by a `StagedRelation` at all —
+/// nothing in [`Tableau`] represents either — so a situation requiring
+/// one is never checked against the staged scene by this function at all:
+/// it passed the token check (decision 0576) and nothing here asks the
+/// tableau to realize it. A witness for a situation requiring
+/// `phenomenon:eclipse` proves nothing about eclipses. Requiring the FULL
+/// required-token set (including `concept:`/`phenomenon:`) to match the
+/// staged-relation set was considered and rejected — it would make every
+/// situation requiring either kind permanently unwitnessable — but
+/// rejecting that fix does not make the gap it would have closed
+/// disappear.
 ///
-/// **What this does NOT prove, stated so a reader cannot infer more than
-/// it checks.** It does not verify that the tableau's cast fills the
-/// situation's actant ROLES: [`Situation::actants`] is prose-valued (a
-/// Greimas role name mapped to a free-text description), so there is no
-/// mechanical role check available the way there is for a predicate
-/// token — role assignment stays entirely unverified, which is exactly
-/// the limit spec §4.2 itself states for the whole witness bar ("does not
-/// prove any world produces the situation"). This is the one limit that
-/// remains once the set-equality check above closes the binding gap.
+/// **What this does NOT prove — KNOWN limits, stated as an open list, not
+/// a closed one.** Three rounds of review each falsified a claim that the
+/// prior round's disclosure was complete, so this list is deliberately
+/// never punctuated as final:
+///
+/// - Actant ROLE assignment is unverified: [`Situation::actants`] is
+///   prose-valued (a Greimas role name mapped to a free-text
+///   description), so there is no mechanical role check available the way
+///   there is for a predicate token — the limit spec §4.2 itself states
+///   for the whole witness bar ("does not prove any world produces the
+///   situation").
+/// - A `concept:`/`phenomenon:` requirement is never realized by the
+///   witness at all, for the structural reason above.
+/// - The bar is name-level, not aptness-level: `PredicateDef` is `{ name,
+///   functional, doc }` with no object-type constraint, so a tableau
+///   relating two goblins by `latitude` stages and counts as realizing
+///   `predicate:latitude` — this is [`crate::provision::Provision`]'s own
+///   pre-existing limit (decision 0576), inherited here rather than
+///   introduced by this function, and named so a reader does not have to
+///   rediscover it.
+///
 /// type-audit: bare-ok(identifier-text: corpus), bare-ok(flag: return)
 fn witness_binds(corpus: &Corpus, situation: &Situation, tableau: &Tableau) -> bool {
     let required_predicates: BTreeSet<String> = situation
@@ -412,18 +435,20 @@ pub fn regenerate_command(path: &str) -> String {
 }
 
 /// Shared header prose for the witnessed-`Stageable` boundary (decisions
-/// 0577/0582), used verbatim by both [`render`] and [`render_matrix`] so the
+/// 0577/0583), used verbatim by both [`render`] and [`render_matrix`] so the
 /// two committed artifacts cannot state the claim two different ways — the
 /// exact failure class (an artifact asserting more than the code checks,
 /// spec's own "the failure this project documents most") this constant
 /// exists to close off structurally, not just by care. States precisely
 /// what the gate checks — token resolution, a filed witness, the
 /// witness's staged-relation predicates and the situation's own required
-/// `predicate:` tokens matching EXACTLY (`witness_binds`, decision 0582),
-/// and a successful stage — and precisely what it does not: actant ROLE
-/// assignment is never checked, which is the one limit that remains once
-/// the binding check is bidirectional.
-const WITNESS_BOUNDARY_WHAT: &str = "**Stageable now means witnessed, not merely named (decisions 0577/0582).** A situation scores Stageable only when every requirement token resolves, a tableau is registered under its id, and the tableau stages successfully — its cast places as entities and its relations commit without contradiction. The witness's staged-relation predicates and the situation's own required `predicate:` tokens must be the SAME SET, not merely one a subset of the other: every predicate the tableau relates by is one the situation requires, AND every `predicate:` token the situation requires is realized by at least one staged relation — so neither an extraneous relation nor an uncovered requirement can pass silently, and a witness with no relations at all can bind only to a situation that requires none. It does **not** check that the tableau's cast fills the situation's actant ROLES — `actants` is prose-valued, and role assignment is unchecked, which is the one limit that remains.";
+/// `predicate:` tokens matching EXACTLY (`witness_binds`, decision 0583)
+/// — and an OPEN list of known limits, deliberately never punctuated as
+/// complete: three review rounds each falsified the prior round's claim
+/// that its own disclosure was exhaustive ("the one limit that remains",
+/// then "now the ONLY disclosed limit"), so this text names what it knows
+/// without asserting there is nothing left to find.
+const WITNESS_BOUNDARY_WHAT: &str = "**Stageable now means witnessed, not merely named (decisions 0577/0583).** A situation scores Stageable only when every requirement token resolves, a tableau is registered under its id, and the tableau stages successfully — its cast places as entities and its relations commit without contradiction. The witness's staged-relation predicates and the situation's own required `predicate:` tokens must be the SAME SET, not merely one a subset of the other: every predicate the tableau relates by is one the situation requires, AND every `predicate:` token the situation requires is realized by at least one staged relation — so neither an extraneous relation nor an uncovered requirement can pass silently, and a witness with no relations at all can bind only to a situation that requires none. **Known limits, named as an open list, not a closed one:** actant ROLE assignment is never checked (`actants` is prose-valued); a `concept:`/`phenomenon:` requirement is never realized by a relation at all, since nothing a tableau stages can represent one, so such a requirement is never actually witnessed even on a Stageable situation; and the bar is name-level, not aptness-level — a relation naming a registered predicate counts as realizing it whatever its actual arguments are.";
 
 /// The second half of the same disclosure: why a count from before this
 /// gate is not comparable to one taken after it. Phrased to read correctly
@@ -446,11 +471,14 @@ const WITNESS_BOUNDARY_COMPARABILITY: &str = "**A count taken before this gate e
 /// returns any non-`bundle:` requirement UNCHANGED, with no namespace
 /// validation at all (see `expand`'s own doc). A corpus that hand-authored
 /// a requirement literally spelled `"witness:something"` would collide
-/// with this detector silently. Unreachable on `tropes/polti.trope.json`
-/// and `tropes/tvtropes-2012.trope.json` as authored today; not something
-/// this function can rule out for a future corpus. Overstating this was
-/// the same class of defect decision 0577's `Provision` claim was — a
-/// record asserting more than the code guarantees.
+/// with this detector — LOUDLY, not silently: the collided string reaches
+/// [`describe_witness_reason`], which panics on any string that is not
+/// one of the three known sentinels (see that function's own doc).
+/// Unreachable on `tropes/polti.trope.json` and `tropes/tvtropes-2012.
+/// trope.json` as authored today; not something this function can rule
+/// out for a future corpus. Overstating the no-collision guarantee was the
+/// same class of defect decision 0577's `Provision` claim was — a record
+/// asserting more than the code guarantees.
 /// type-audit: bare-ok(identifier-text: missing), bare-ok(prose: return)
 fn blocked_by_witness(missing: &[String]) -> Option<&str> {
     match missing {
@@ -471,6 +499,13 @@ fn blocked_by_witness(missing: &[String]) -> Option<&str> {
 /// function, render a wrong description instead of failing anything — so
 /// the fallback arm panics instead, converting that mistake into a loud
 /// one the moment it is exercised.
+///
+/// **This panic is reachable from CORPUS DATA, not only from a future
+/// code change** — see [`blocked_by_witness`]'s own doc: a hand-authored
+/// corpus requirement literally spelled `"witness:something"` reaches this
+/// function as an unrecognized `reason` the moment that situation is the
+/// sole cause of its own `Blocked` outcome. The panic message is written
+/// for that reader, not for a future implementer of a fourth sentinel.
 fn describe_witness_reason(reason: &str) -> &'static str {
     match reason {
         "witness:absent" => "no witness is registered for this situation",
@@ -479,8 +514,11 @@ fn describe_witness_reason(reason: &str) -> &'static str {
         }
         "witness:refused" => "the registered witness failed to stage",
         other => panic!(
-            "describe_witness_reason: unrecognized witness sentinel {other:?} — add an \
-             arm for it here rather than falling through"
+            "describe_witness_reason: unrecognized witness sentinel {other:?}. Two known \
+             causes: (1) a corpus `requires` a token spelled to start with `witness:`, which \
+             collides with resolve's own internal sentinel namespace — rename the token in \
+             the corpus; (2) a fourth internal sentinel was added to witness_stages without \
+             a matching arm here — add one."
         ),
     }
 }

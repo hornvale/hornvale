@@ -1,6 +1,6 @@
 # 0582. The witness binding is bidirectional
 
-**Status:** Accepted (2026-09-02) · **Decider:** Nathan · **Campaign:** The Avowal · **Supersedes:** 0581
+**Status:** Superseded by [0583](0583-the-witness-limits-list-is-open-not-closed.md) (2026-09-02, same review cycle — a third review round proved this record's own closing clause false: it claimed actant-role assignment was "the ONLY disclosed limit," and a `phenomenon:eclipse` requirement realized by nothing was never named) · **Decider:** Nathan · **Campaign:** The Avowal · **Supersedes:** 0581
 
 ## Context
 

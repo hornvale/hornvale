@@ -16,7 +16,7 @@ A low score is the expected reading at this stage: the report is a baseline
 taken before the machinery it measures exists. What carries information is
 movement between runs, not the absolute number.
 
-**Stageable now means witnessed, not merely named (decisions 0577/0582).** A
+**Stageable now means witnessed, not merely named (decisions 0577/0583).** A
 situation scores Stageable only when every requirement token resolves, a
 tableau is registered under its id, and the tableau stages successfully —
 its cast places as entities and its relations commit without contradiction.
@@ -26,10 +26,14 @@ other: every predicate the tableau relates by is one the situation requires,
 AND every `predicate:` token the situation requires is realized by at least
 one staged relation — so neither an extraneous relation nor an uncovered
 requirement can pass silently, and a witness with no relations at all can
-bind only to a situation that requires none. It does **not** check that the
-tableau's cast fills the situation's actant ROLES — `actants` is
-prose-valued, and role assignment is unchecked, which is the one limit that
-remains.
+bind only to a situation that requires none. **Known limits, named as an
+open list, not a closed one:** actant ROLE assignment is never checked
+(`actants` is prose-valued); a `concept:`/`phenomenon:` requirement is never
+realized by a relation at all, since nothing a tableau stages can represent
+one, so such a requirement is never actually witnessed even on a Stageable
+situation; and the bar is name-level, not aptness-level — a relation naming
+a registered predicate counts as realizing it whatever its actual arguments
+are.
 
 **A count taken before this gate existed is not comparable to one taken
 after it.** Before, a count measured token membership alone; after, it

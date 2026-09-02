@@ -1,4 +1,4 @@
-//! The realization witness (decisions 0577/0582): `Stageable` requires a
+//! The realization witness (decisions 0577/0583): `Stageable` requires a
 //! committed tableau that actually stages a situation's actants and every
 //! relation it stipulates, AND that tableau's relations are mechanically
 //! BOUND to the situation it is filed under — not merely a corpus token
@@ -36,7 +36,22 @@
 //! member (a tableau relating by only SOME of what the situation
 //! requires). Both were run against the round-1 (one-directional) check
 //! via `scripts/mutate.py` and confirmed genuinely red before this fix
-//! landed — see `task-4-report.md`.
+//! landed — see `task-4-report.md`. Superseded by decision 0583, below,
+//! which restates the same mechanism (nothing here changed).
+//!
+//! **Fix round 3 (decision 0583) stops claiming the disclosed-limits list
+//! is exhaustive.** Round 2's prose said actant-role assignment "is the
+//! one limit that remains" once the binding was bidirectional; the review
+//! proved that false too, with a situation requiring `predicate:
+//! instance-of` AND `phenomenon:eclipse` whose witness relates by
+//! `instance-of` and states no phenomenon at all — `witness_binds` is
+//! scoped to `predicate:` tokens on purpose (nothing in `Tableau` can
+//! state a `concept:`/`phenomenon:` requirement), and that scoping is
+//! ITSELF an undisclosed limit: such a requirement is never actually
+//! witnessed, on any situation, ever. No test change was needed here —
+//! this round is a documentation fix (`witness_binds`'s own doc,
+//! `WITNESS_BOUNDARY_WHAT`, and decision 0583 all now name known limits as
+//! an explicitly OPEN list rather than asserting completeness).
 
 use hornvale::provision::Provision;
 use hornvale::tropes::{
@@ -406,7 +421,7 @@ fn a_tableau_covering_only_some_required_predicates_is_unbound() {
                 1,
             ),
             "deliberately partial: relates by only one of the situation's two required \
-             predicates -- the subset-family case decision 0582 also closes",
+             predicates -- the subset-family case decision 0583 also closes",
         ),
     );
     let out = resolve(&corpus, &registry, world, &table);
