@@ -526,3 +526,28 @@ path (`liveness::tests::…`), so the commit gate now runs 1,096 sub-floor
 tests instead of 1,098 until the Stage 3 gate's chamber run rewrites the
 roster with the new paths — the "renaming a test is a commit-gate change"
 rule, in its path form. The stage gate runs the full suite either way.
+
+## Stage 3 boundary — main moved, and the constants were re-measured MAIN-FIRST (decision 0541)
+
+`origin/main` advanced `0dccce029` → `4b82e544d` (The Reservoir: the suite
+reads the committed seed-42 world instead of rebuilding it, plus a
+build-site ratchet, `cli/tests/suite/world_build_sites.rs` / decision
+0606; it touches `windows/vessel/src/session.rs` by 13 lines). Before
+absorbing, a detached checkout of `4b82e544d` carrying none of this
+campaign's code was given `ledger_hash_witness.rs`'s two scripts and asked
+for its hashes:
+
+```
+witness              campaign constant      main @4b82e544d
+seed-42 ledger       0xabc4731e5cf1ab21     0xabc4731e5cf1ab21
+emitter ledger       0xc851e64b010538b2     0xc851e64b010538b2
+emitter hazard       0xa9f17d82c1832854     0xa9f17d82c1832854
+                     (127 bodies, 186 shunned, 6 dread — agreeing)
+```
+
+Main's walk did not move, so the constants stand and the merged tree is
+required to reproduce them unchanged. The absorption also owes the ratchet
+a row: `windows/vessel/src/liveness_tests/emitter_scan.rs` carries one
+`build_world(` site (the in-crate oracle's bench helper, seeds 42 and 6 —
+seed 6 has no fixture, so the reason is `identity`), and `liveness.rs`'s
+own count stays at 6 because the tests Task 7 moved build no world.
