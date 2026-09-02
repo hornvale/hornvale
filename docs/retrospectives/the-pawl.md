@@ -91,7 +91,7 @@ not explain itself, and the repair's witness went red on the pre-fix tree
 neighbouring population is not a weaker version of the right witness; it is a
 different measurement that happens to be green.
 
-## Three consecutive tasks corrected an inference by measuring it
+## Four inferences were corrected by measuring them, in three consecutive tasks
 
 - Task 2 corrected a count: 39 construction sites, not the 36 two successive
   resolutions had counted from memory.
@@ -100,19 +100,34 @@ different measurement that happens to be green.
   two walk-path calls; measured, the two differ (520 against 568 on the
   session then, and by a factor of 56 after the roster changed).
 - Task 5 corrected the emitter premise above.
+- Task 3 corrected a **signature**: the brief passed the accumulator and let it
+  derive its own reset, on the plan-text assumption that the reset is committed
+  before it is read. It is not — the walk updates it mid-tick as it emits the
+  drink and eat facts — so the reset is passed explicitly, and deriving it from
+  the committed ledger would have changed behaviour for the rest of that tick.
+  A fourth assumption, refuted the same way as the other three.
 
 Every one of those inferences began in **plan text** — a sentence written by
 the controller that read as a fact and was never marked as an assumption. The
-implementers found all three, each time by running something. The cheapest
+implementers found all four, each time by running something. The cheapest
 available control on plan text is to write the command that would establish
 each claim beside it, and this campaign did not.
 
 ## Absorbing main twice, and what a clean merge hid
 
-The branch absorbed 202 commits, then 59 more, then 43 at the close. Two
+The branch absorbed 202 commits, then 59 more, then 47 at the close. Three
 sibling campaigns landed inside that window, and only one of the three
 absorptions produced a textual conflict at all — in a generated aggregate,
 resolved by regenerating rather than by text-merging.
+
+**Both readouts predate all three absorptions**, and nothing in the
+measurement says so on its own. The numbers were taken on the campaign tree at
+`57e30acf9`; 308 commits of other people's work landed after the last one was
+recorded. The per-call fold costs are properties of the read; **the level and
+the whole-tick history share are pre-absorption numbers**, and neither was
+re-measured against what lands. That is a scheduling consequence of measuring
+at the stage the readout belongs to and absorbing at the close, and the honest
+repair is to say it rather than to re-run a six-hour instrument at the merge.
 
 What the clean merges hid was semantic. One sibling changed which creatures a
 session's roster holds, and the flagship seed's creature now condenses onto
@@ -121,6 +136,21 @@ silently emptied four of this campaign's own witnesses. **All four failed their
 own floor assertions rather than passing on an empty set** — which is the
 entire argument for the section above, arriving as a dividend rather than as a
 lesson.
+
+**The roster change also made the campaign's own witnesses expensive**, and
+two rulings came out of that. First, every campaign witness was required to
+cost under sixty seconds at the close: four were running at 306-341 seconds
+because the flagship seed now ticks 68 residents, and shortening a script is
+free only if every denominator stays non-zero and every floor is re-measured on
+the short script — which it was, six witnesses, not the four the ledger had
+predicted. Second, the fear-fold cost witness was shortened *and its
+denominator was named*: at ten of forty turns it cost 863 seconds and failed
+on a total that had grown 2.224x, while segments **per past-day replay** moved
+only 0.671 to 0.714. The fold's own integration work is flat; what grows is how
+many rooms a longer walk leaves an emitter remembering. So the assertion moved
+onto the quotient, and the total kept a guard that discriminates — it must grow
+strictly slower than the history it would otherwise have walked, which a return
+to a whole-history read could not satisfy.
 
 Two more things worth carrying:
 
@@ -162,11 +192,38 @@ change by any means. That sentence lives in the test file, not only here.
 ## A note on the close's own review
 
 The code half of the close was reviewed while this half was being written, and
-that review found two Important issues, both of the same shape as the campaign's
-recurring one: a doc comment claiming an assertion its file does not carry, and
-a sweep still using a literal where its own named constant now exists. A fix
-round was open when this was written. Recorded because the pattern reached the
-last commit of the campaign, having been named three times inside it.
+that review found two Important issues, both of the same shape as the
+campaign's recurring one: a doc comment claiming a seed guard that only one of
+the two files carried, and a sweep still using a literal where its own named
+constant existed. **Both were fixed** (`1f113f092`), by making the code true
+rather than the sentence weaker — and the second turned out to be a no-op in
+substance that had to be *measured* rather than assumed, because the sweep in
+question makes zero calls at either stride on that seed. Recorded because the
+pattern reached the last commit of the campaign, having been named three times
+inside it.
+
+The one Important carried out of the previous task also closed: the fear-fold
+witness's total guard had a margin recorded nowhere, and it now reads
+`history_growth` 2.28x against `segment_growth` 1.348x — the total sitting at
+59% of its ceiling, so the guard trips once that fold's integration work grows
+1.7x faster than it does today. A guard whose margin is unwritten is a guard
+nobody can tell is about to fire.
+
+## An improvement measured against a baseline the criterion did not name
+
+The fear memory's cost is reported as 1.57× down, and that is against a
+same-box control measured this week. The frozen criterion asked for a tenfold
+fall **from 73-97 milliseconds per call**, and against that number there was no
+reduction at all — the fold reads 93 milliseconds per call after the campaign.
+
+Both statements are true and only one of them answers the criterion. The
+control was added for a good reason (the frozen tables report no per-run
+intercept, and the falsifier is a claim about the intercept), and it is the
+better instrument for "did this change help". It is not the instrument the
+criterion was written against, and a readout that quotes only the control's
+ratio reads as a modest win where the frozen comparison reads as a flat miss.
+**Say both, and say which one the criterion asked for** — the campaign's own
+verdict table does, and the prose around it initially did not.
 
 ## The Confidence Gradient
 
@@ -234,9 +291,10 @@ comment claiming a distinction with no observable — **accepted**.
 about decision 0540 — **resolved**: the ledger governed, and 0540 is now
 written. The full suite not re-run after a doc-comment-only edit —
 **accepted**. A per-entity map on the production read path where precedent is a
-counter — **accepted**. Two `pub` items with only integration-test callers —
-**accepted** (they cannot be `pub(crate)`). The overlay cloned and sorted per
-call — **accepted**, and superseded in effect by the Task 5b accumulator.
+counter — **accepted**. One `pub` item with only integration-test callers
+(`Sustenance::resets()`) — **accepted** (it cannot be `pub(crate)`). The
+overlay cloned and sorted per call — **accepted**, and superseded in effect by
+the Task 5b accumulator.
 
 **Task 4.** A condition documented as exact that is an upper bound —
 **accepted**. A fixture's wet/dry assertion mismatching its denominators —

@@ -12,9 +12,9 @@ away by it. What The Tailrace could not do was give that catch anything to
 hold. It shipped the primitive with no tenant at all, and named the migration
 of the creature-drive stack onto it as work that needed its own plan.
 
-This is that plan. It moves five reads off the raw history and onto one
-resident store, it moves no committed byte, and it ends with two readouts that
-disagree with each other in a way worth reading carefully.
+This is that plan. It moves six reads off the raw history and onto five
+tenants of one resident store, it moves no committed byte, and it ends with two
+readouts that disagree with each other in a way worth reading carefully.
 
 ## One store, not six caches
 
@@ -96,6 +96,17 @@ private copies of the same fact stream — a distinction the campaign then
 promptly caught itself violating, and recorded as work still owed rather than
 shipping the fourth copy.
 
+**Five tenants shipped, not the six the design listed**, and the sixth is the
+one worth explaining. The design had the alarm scan as a tenant of its own.
+Building it revealed that everything the scan accumulates *from the ledger* is
+already held by two other tenants — the trail and the per-room visit lists —
+and that what remains needs the terrain and the observer's own threat niche,
+which no accumulator over facts can supply. So the alarm scan is a **read**
+over those two tenants plus a predicate, memoised for the tick as it always
+was. A tenant whose absorb step would record exactly what a neighbour records
+is a third copy of the same stream, and the campaign already had one of those
+it did not want.
+
 ## The questions the code answered differently from the plan
 
 The design carried six decision rules, each written as a branch table rather
@@ -114,6 +125,14 @@ same room. Adding a counter that asserted the witness had seen *anything*
 turned a comfortable zero into a real reading, and the real reading was that
 the divergence is live — six of eighteen reads at past visit days resolve a
 reset the read's own instant has not reached.
+
+That mechanism has since stopped being true, which is worth recording beside
+it rather than quietly replacing it. A sibling campaign made a session's roster
+the residents of the settlement you stand in, and the same script on the same
+seed now makes **5,360 of those lookups across 68 bodies** where it made 320
+against a creature that stood alone. The conclusion the witness reached is
+unaffected; the reason it originally saw so little is a fact about the world as
+it was that week.
 
 That same shape appeared twice more within hours: a sweep comparing the
 accumulator against the old scan was asserting that zero equals zero across
@@ -170,6 +189,17 @@ They asked for three things about the thirst read — that its cost stop growing
 with history, that a fixed floor become identifiable and positive, and that
 the history term fall below a fifth of a tick — and two about the fear memory,
 that it flatten and that its enormous absolute cost fall tenfold.
+
+Those criteria compare against The Tailrace's own tables, taken a week earlier
+on a differently loaded box and reporting no per-run intercept — and the
+falsifier is a claim about the intercept. So a **same-box control** was
+measured in the same session from a checkout at the campaign's merge base, with
+identical bench constants and no store. It is a control and **not** a
+re-freezing of a criterion, and the distinction is the one thing a reader can
+get wrong here: every threshold below is the frozen one, unchanged, and every
+verdict is stated against the frozen pre-campaign numbers as well as against
+the control. What makes the pairing legitimate is that both benches'
+deterministic columns are byte-identical across the two trees.
 
 Five of the six came back not met. The thirst read's sensitivity to history
 was 1.01 where it needed to be under 0.20; its fitted floor was negative on
@@ -250,11 +280,15 @@ behaviour change wearing an optimisation's clothes.
 Two of the five failures became passes; three did not, and nothing was
 averaged across a failure to make it look better. The thirst read fell from
 620 microseconds per call to 2.70 — a factor of 230 — and the hunger read from
-619 to 2.51. Every fold the accumulator does not touch stayed exactly where it
-was, at a ratio of 1.00, which is the signature of that change and of nothing
-else. The synthetic sweep's never-drinks column, which had been eighty-nine
-times slower than its periodic sibling before the campaign, now sits *on top*
-of it — 15.5 microseconds against 14.9 at ten thousand facts.
+619 to 2.51, a factor of 247. **The two reads the accumulator serves collapsed
+together and nothing else did**, which is the signature of that change and of
+no other: the fatigue read, the water belief and its shared sibling all sit at
+a ratio of 1.00, exactly as they did in the first readout, and the fear memory
+sits at 1.57 — moved, but by the store rather than by the accumulator.
+
+The synthetic sweep's never-drinks column, which had been eighty-nine times
+slower than its periodic sibling before the campaign, now sits *on top* of
+it — 15.5 microseconds against 14.9 at ten thousand facts.
 
 The two results that could have gone against the campaign are worth stating
 before the ones that went for it.
@@ -282,7 +316,9 @@ The three criteria that still fail all fail on the same fold, and it is bigger
 than the one that was fixed. At the deepest band measured, the fear memory
 costs 93,153 microseconds per call: **84% of the six timed reads' total**,
 against the thirst and hunger pair's combined 0.005%. It remains proportional
-to history at 0.92, and the store moved it by half.
+to history at 0.92, and the store moved it by 1.57× — 36% off the same-box
+control, and against the frozen criterion's own 73-97 milliseconds per call
+**no reduction at all**.
 
 Its remaining cost is legible from the code rather than merely suspected. Per
 tick, for every room the observer has visited and every emitter, the emitter's
@@ -297,14 +333,16 @@ a measured handoff with a number on it rather than as another task.
 
 ## What arrived while this was being built
 
-Two sibling campaigns landed in the middle: one that made fatigue a stock
-folded over the whole rest timeline, and one that made a session's roster the
-residents of the settlement you are standing in. Between them the branch
-absorbed 202 commits of main, then 59 more, then 43 at the close.
+Three sibling campaigns landed in the middle: one that made fatigue a stock
+folded over the whole rest timeline, one that made a session's roster the
+residents of the settlement you are standing in, and one that moved the ledger
+and the person domain upstream of everything a session commits. Between them
+the branch absorbed 202 commits of main, then 59 more, then 47 at the close.
 
-Both changed things this campaign was measuring, and the second changed them
-enough to matter. The flagship seed's creature now condenses onto fresh water,
-so the residents around it commit no positional facts at all — which quietly
+All three changed things this campaign was measuring, and the roster one
+changed them enough to matter. The flagship seed's creature now condenses onto
+fresh water, so the residents around it commit no positional facts at all —
+which quietly
 emptied four of the campaign's own witnesses. Every one of them *failed its
 own floor assertion* rather than passing on an empty set, which is the entire
 argument for putting floors under witnesses, and all four moved to a seed
@@ -345,6 +383,14 @@ line of its code. It is a standing tax on everyone else, and an unwinnable
 race besides, since what is gated is main merged with the branch rather than
 the branch alone.
 
+One casualty is worth naming, because deleting it would have been the tidy
+mistake. The old filtered lookup over committed facts lost its last production
+caller — two went to the store and the third to the rest-fold campaign — and it
+is now compiled only for tests, deliberately, because it is the *scan* half of
+the fold-equals-scan comparison that a surviving replay witness uses as its
+oracle. Left ungated it would have been a production-dead function still
+compiling into the library, which reads to a later reader as a live path.
+
 So the constants retire and the witnesses stay. Each keeps three things: it
 runs its script twice on two *fresh* sessions and requires the two to agree;
 it keeps every floor that proves it reached the path it claims to witness,
@@ -357,9 +403,23 @@ re-checks them.
 
 ## The honest limits
 
+**Both readouts were taken before any of the three absorptions.** The measured
+tree is the campaign as it stood at its own merge base plus its own work, and
+202, 59 and 47 commits of other people's work landed after the last number was
+recorded. That matters unevenly. The folds' own per-call costs are properties
+of the read and would be expected to survive — but they are measured on the
+pre-roster walk, and the roster campaign changed that walk materially enough
+that the same script on the same seed now makes 5,360 of one witness's lookups
+where it made 320. **The level and the whole-tick share are pre-absorption
+numbers**, and nobody has re-measured either against what actually lands.
+
 **Three of the six criteria were not met and are not explained away.** The
 whole-tick history share is 58% against a target of 20%, and both clauses
-about the fear memory failed twice. The attribution for that is arithmetic
+about the fear memory failed twice. The blunter form of the second: the
+criterion asked the fear memory's cost to fall tenfold from 73-97 milliseconds
+per call, and against that frozen figure it did not fall **at all** — the
+1.57-fold improvement is against a same-box control measured this week, not
+against the number the criterion named. The attribution for that is arithmetic
 rather than an excuse — a fix to a read that is now five-thousandths of a per
 cent of the total cannot move a share that another read dominates at 84% — but
 the criteria were written against that other read on purpose, and they failed.
