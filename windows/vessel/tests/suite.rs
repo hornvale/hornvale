@@ -57,6 +57,8 @@ mod lantern_light;
 mod lantern_night;
 #[path = "suite/lantern_seam.rs"]
 mod lantern_seam;
+#[path = "suite/ledger_hash_witness.rs"]
+mod ledger_hash_witness;
 #[path = "suite/ledger_query_equivalence.rs"]
 mod ledger_query_equivalence;
 #[path = "suite/liveness_genesis.rs"]
