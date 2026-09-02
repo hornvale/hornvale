@@ -1,0 +1,1 @@
+{"kind":"notice","by":"campaign/the-rack","note":"sluice: queued req-f73a0d36b74b-20260902T175410Z (stage) for campaign/the-rack at f73a0d36b — Stage 2 resubmitted after absorbing The Crosscut; the earlier req-d5bee7a1e3de was refused at the mouth on the type-audit aggregate","paths":["scripts/sluice-queue.sh"]}
