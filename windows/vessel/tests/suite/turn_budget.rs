@@ -24,6 +24,15 @@
 //! turn on this path already. It stays `#[ignore]`d anyway for uniformity
 //! with its two siblings and because it shares their `claim:` shape and
 //! their seed-42 cost, not because it is red.
+//!
+//! **The `claim: structural(seed: 42)` vocabulary in each `#[ignore]`
+//! reason is decision 0093's shape** (`cli/tests/suite/claim_shape.rs`'s
+//! sanctioned `SHAPES`), the same one this crate's own
+//! `possession_moves.rs::waiting_moves_an_npc_and_it_is_observed` carries as
+//! a doc-comment tag. It is not copied from `the_roll.rs` — that file's two
+//! `#[ignore]` reasons are `cost:`-shaped (world-build expense), a different
+//! convention entirely; an earlier draft of this module's own report
+//! mis-attributed the provenance there and has been corrected.
 
 use crate::common;
 use hornvale_vessel::{PossessOpts, Session};
@@ -144,7 +153,7 @@ fn a_wait_folds_the_roll_and_nothing_more() {
 /// change to zero is a measured move, not a claim. Deleted by Task 4.
 ///
 /// MUTATION THIS MUST FAIL AGAINST: comment out the
-/// `TurnWork::bump(&self.turn_work.affect_folds);` line at the top of
+/// `self.turn_work.bump_affect_folds();` line at the top of
 /// `Session::snapshot`'s `.map(|npc| { ... })` closure
 /// (`windows/vessel/src/session.rs`, immediately before the
 /// `affect_of_memo_occupied` call) and re-run `cargo test -p hornvale-vessel
