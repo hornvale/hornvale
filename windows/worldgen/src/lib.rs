@@ -92,6 +92,7 @@ pub mod delve_seating;
 mod descent;
 pub mod disposition;
 pub mod energy;
+pub mod fixture;
 pub mod gazetteer;
 pub mod graph_derive;
 pub mod harvest;
@@ -127,6 +128,7 @@ pub use chorus::{
 };
 pub use components::WorldComponents;
 pub use descent::{clan_root_of, forebear_of, founder_of, generation_length_of, name_pattern};
+pub use fixture::seed_42_world;
 pub use gazetteer::{feature_name, feature_salt, gazetteer_features};
 pub use graph_derive::{
     GraphConfig, connection_graph, connection_graph_at, connection_graph_from, connection_graph_of,
@@ -12065,7 +12067,22 @@ mod tests {
         .unwrap()
     }
 
+    /// A generated-sky world at `seed`. Seed 42 — 39 of this helper's 49
+    /// callers — is read from the committed fixture rather than rebuilt
+    /// (decision 0607); it is byte-identical to the build, pinned by
+    /// `windows/worldgen/tests/suite/fixture.rs`. Every other seed still
+    /// builds, because no fixture exists for it.
+    ///
+    /// **Two former seed-42 callers deliberately do not use this helper.**
+    /// `generated_worlds_are_deterministic` and
+    /// `glossed_names_are_stable_across_two_builds` compare two independent
+    /// builds, so reading one file twice would make them vacuous; each keeps
+    /// its own local builder. A migrated helper's callers must be swept for
+    /// that shape — see spec §5's residue list.
     fn generated(seed: u64) -> World {
+        if seed == 42 {
+            return crate::seed_42_world();
+        }
         build_world(
             Seed(seed),
             &SkyPins::default(),
@@ -13017,10 +13034,34 @@ mod tests {
         assert!(!hornvale_religion::beliefs_of(&world).is_empty());
     }
 
+    /// Two INDEPENDENT builds of seed 42 serialize identically.
+    ///
+    /// The builder is local rather than the shared `generated` helper, and
+    /// deliberately so: that helper reads the committed fixture for seed 42
+    /// (decision 0607), so calling it twice would compare two reads of one
+    /// file and assert only that `World::from_json(x).to_json()` is a pure
+    /// function of `x`. The build's own determinism — this test's entire
+    /// subject and its name — would go untested, and the test would pass in
+    /// milliseconds while looking healthy.
+    /// `windows/vessel/src/session.rs`'s
+    /// `the_same_seed_and_pins_produce_a_byte_identical_descent_and_pane`
+    /// keeps a local builder for exactly this reason; both files carry
+    /// `build-path` rows on the build-site roster (decision 0606).
     #[test]
     fn generated_worlds_are_deterministic() {
-        let a = generated(42).to_json();
-        let b = generated(42).to_json();
+        fn built_at_seed_42() -> World {
+            build_world(
+                Seed(42),
+                &SkyPins::default(),
+                SkyChoice::Generated,
+                &hornvale_terrain::TerrainPins::default(),
+                &SettlementPins::default(),
+            )
+            .expect("seed 42 builds at default pins")
+        }
+
+        let a = built_at_seed_42().to_json();
+        let b = built_at_seed_42().to_json();
         assert_eq!(a, b);
     }
 
@@ -14764,10 +14805,28 @@ mod tests {
         );
     }
 
+    /// Settlement names are stable across two INDEPENDENT builds.
+    ///
+    /// Local builder, not the shared `generated` helper, for the reason
+    /// stated at `generated_worlds_are_deterministic`: the helper reads the
+    /// committed fixture at seed 42, so two calls to it would perform zero
+    /// builds and the test's name would be a description of something it no
+    /// longer did.
     #[test]
     fn glossed_names_are_stable_across_two_builds() {
-        let a = generated(42);
-        let b = generated(42);
+        fn built_at_seed_42() -> World {
+            build_world(
+                Seed(42),
+                &SkyPins::default(),
+                SkyChoice::Generated,
+                &hornvale_terrain::TerrainPins::default(),
+                &SettlementPins::default(),
+            )
+            .expect("seed 42 builds at default pins")
+        }
+
+        let a = built_at_seed_42();
+        let b = built_at_seed_42();
         let names_a: Vec<String> = hornvale_settlement::all_settlements(&a)
             .iter()
             .map(|v| v.name.clone())

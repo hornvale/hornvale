@@ -83,6 +83,8 @@ mod exposure;
 mod fallow_feasibility;
 #[path = "suite/fathom_column_probe.rs"]
 mod fathom_column_probe;
+#[path = "suite/fixture.rs"]
+mod fixture;
 #[path = "suite/founder_collision.rs"]
 mod founder_collision;
 #[path = "suite/generalist_baseline.rs"]
