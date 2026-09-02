@@ -108,5 +108,7 @@ mod the_unnameable;
 mod timings_alarm;
 #[path = "suite/trope_coverage.rs"]
 mod trope_coverage;
+#[path = "suite/trope_witness.rs"]
+mod trope_witness;
 #[path = "suite/walk_depth_agreement.rs"]
 mod walk_depth_agreement;

@@ -4,10 +4,24 @@
 //! below are the ones the task brief names.
 
 use hornvale::provision::{Correspondent, Home, Provision, Unserved};
-use hornvale::tropes::{Corpus, Outcome, Situation, resolve};
-use hornvale_kernel::ConceptRegistry;
+use hornvale::tropes::{Corpus, Outcome, Situation, resolve, witnesses};
+use hornvale_kernel::{ConceptRegistry, Seed};
 use std::collections::BTreeMap;
 use std::process::Command;
+
+/// A world built the same way `cmd_tropes` builds one — `resolve` now needs
+/// one for its witness check even when (as every test in this file does) no
+/// situation's tokens ever resolve far enough to reach it.
+fn a_world() -> hornvale_kernel::World {
+    hornvale_worldgen::build_world(
+        Seed(0),
+        &hornvale_astronomy::SkyPins::default(),
+        hornvale_worldgen::SkyChoice::Generated,
+        &hornvale_terrain::TerrainPins::default(),
+        &hornvale_worldgen::SettlementPins::default(),
+    )
+    .unwrap_or_else(|e| panic!("seed 0 builds: {e}"))
+}
 
 /// The workspace root, the same way `trope_coverage.rs` derives it: every
 /// binary invocation below resolves corpus and artifact paths relative to
@@ -45,8 +59,9 @@ fn a_corpus(requires: Vec<String>) -> Corpus {
 #[test]
 fn undeclared_token_resolves_blocked() {
     let registry = ConceptRegistry::default();
+    let world = a_world();
     let corpus = a_corpus(vec!["predicate:no-such-predicate".to_string()]);
-    let out = resolve(&corpus, &registry);
+    let out = resolve(&corpus, &registry, &world, &witnesses());
     assert_eq!(
         out.get("s1"),
         Some(&Outcome::Blocked(vec![

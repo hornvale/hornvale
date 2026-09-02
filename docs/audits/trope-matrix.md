@@ -12,6 +12,14 @@ taken through that bias and nothing more. The finding a single column cannot
 carry is where the instruments **disagree** — which is what the demand table
 below is for.
 
+**Stageable now means witnessed, not merely named (decision 0577).** A
+situation scores Stageable only when a committed tableau actually places its
+actants and stages every relation it stipulates — a corpus token naming a
+registry entry is necessary but no longer sufficient. Every column's number
+is **not comparable across that boundary**: a figure taken before this gate
+existed measured token membership alone, and a figure taken after it
+measures a strictly harder claim.
+
 ## Columns
 
 All columns resolve against one registry of 395 tokens, built once per run,

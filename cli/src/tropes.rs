@@ -1,5 +1,9 @@
 //! The Repertoire: score a frozen corpus of dramatic situations against the
-//! concept registry. Build-state only — no seed, no world save, no census.
+//! concept registry. No seed choice and no census — but `resolve` now stages
+//! a real scene (decision 0577) on top of whatever world `cmd_tropes` built,
+//! so it is no longer "build-state only" in the sense this doc used to
+//! assert: it needs a `World` a session can actually start against, not the
+//! registry alone.
 //!
 //! Wired into the CLI as `hornvale tropes report|check|matrix`; `cmd_tropes`
 //! in `main.rs` builds a real world and calls `load`/`resolve`/`render` on
@@ -7,8 +11,21 @@
 //! resolution over every corpus in `CORPORA` and renders the comparison ADR
 //! 0095 deferred until a second catalogue existed — one column says what this
 //! world supplies, and only the matrix can say what the catalogues ask for.
+//!
+//! **The witness (decision 0577, spec §4.2).** Token membership was never
+//! hard to satisfy — `PredicateDef` is `{ name, functional, doc }` with no
+//! object-type constraint — so `Stageable` now also requires a committed
+//! [`hornvale_vessel::Tableau`] that actually places a situation's actants
+//! and stages every relation it stipulates, looked up by situation id in a
+//! caller-supplied witness table ([`witnesses`] is the production roster).
+//! An absent witness and a witness that fails to stage are refused
+//! identically: neither can claim `Stageable` on a corpus token alone. See
+//! `cli/tests/suite/trope_witness.rs` for what this proves and does not, and
+//! decision 0330 for the sibling precedent (`sentence_corpus.rs`'s
+//! `MERCHANT_WITNESS`) this design follows.
 
-use hornvale_kernel::ConceptRegistry;
+use hornvale_kernel::{ConceptRegistry, World};
+use hornvale_vessel::{PossessOpts, Session, Tableau};
 use serde::Deserialize;
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};
@@ -95,7 +112,55 @@ fn expand(corpus: &Corpus, req: &str) -> Vec<String> {
     }
 }
 
-/// Resolve every situation against a registry. Keyed by situation `id`.
+/// The realization witness roster (decision 0577): a hand-authored
+/// [`Tableau`] per situation id that `world` must stage successfully before
+/// that situation may resolve `Stageable`. Threaded through [`resolve`]
+/// rather than looked up internally, the same way [`crate::provision::
+/// Provision`] is passed by the caller rather than rebuilt inside — a test
+/// can substitute a synthetic table without touching either frozen corpus.
+/// type-audit: bare-ok(identifier-text: Witnesses)
+pub type Witnesses = BTreeMap<String, Tableau>;
+
+/// The production witness roster for the two frozen corpora
+/// (`tropes::CORPORA`).
+///
+/// **Empty today, and that is the correct state, not a placeholder to fill
+/// in eagerly.** Spec §4.2: "migration cost is zero and will never be this
+/// low again" — 0 of 36 (`polti-1895`) and 0 of 409 (`tvtropes-2012`)
+/// situations pass the token check, so authoring a witness for any of them
+/// right now would cost a file (§4.2 point 4: "the cost of a false claim
+/// rises from zero to a file") and move no verdict, since [`resolve`] never
+/// reaches the witness check for a situation still `Blocked` on tokens. A
+/// future campaign adds a row here in the same commit that makes some
+/// situation's tokens resolve, never ahead of it.
+pub fn witnesses() -> Witnesses {
+    BTreeMap::new()
+}
+
+/// Whether `id`'s registered witness stages successfully against `world`:
+/// its actants place as real entities and every stated relation resolves
+/// and passes contradiction-checking *together*, exactly the path a real
+/// possession commits through (`Session::start`) — never a per-token check.
+///
+/// An absent witness (`"witness:absent"`) and a witness whose tableau or
+/// relations fail to stage (`"witness:refused"`) are distinguished so a
+/// `Blocked` reason tells a reader "nobody wrote one" from "one was written
+/// and the world refuses it" — but both are refused identically by
+/// [`resolve`]: neither may claim `Stageable`.
+/// type-audit: bare-ok(identifier-text: id), bare-ok(prose: return)
+pub fn witness_stages(id: &str, world: &World, witnesses: &Witnesses) -> Result<(), &'static str> {
+    let tableau = witnesses.get(id).ok_or("witness:absent")?;
+    let opts = PossessOpts {
+        tableau: Some(tableau.clone()),
+        ..PossessOpts::default()
+    };
+    Session::start(world, &opts)
+        .map(|_| ())
+        .map_err(|_| "witness:refused")
+}
+
+/// Resolve every situation against a registry and a world. Keyed by
+/// situation `id`.
 ///
 /// Consults the [`crate::provision::Provision`] table (decision 0576)
 /// instead of `registry_tokens` alone: a token is present only if some
@@ -104,8 +169,22 @@ fn expand(corpus: &Corpus, req: &str) -> Vec<String> {
 /// exactly the tokens `registry_tokens` used to compute, and its ledger
 /// resolver checks the same three namespaces. The widening (component and
 /// session homes) arrives in Tasks 6 and 7 without `resolve` changing again.
+///
+/// **`Stageable` now ALSO requires a witness (decision 0577)**, checked only
+/// once every requirement token already resolves — a situation still
+/// `Blocked` on tokens never reaches [`witness_stages`], which is why
+/// wiring this gate moved no verdict on either frozen corpus today (spec
+/// §4.2: 0 of 36, 0 of 409 pass the token check already). A witness failure
+/// is folded into the same `Blocked` shape a missing token uses, rather than
+/// a new `Outcome` variant, so a situation's outcome stays a single flat
+/// list of reasons a reader can act on the same way either kind.
 /// type-audit: bare-ok(identifier-text: return)
-pub fn resolve(corpus: &Corpus, registry: &ConceptRegistry) -> BTreeMap<String, Outcome> {
+pub fn resolve(
+    corpus: &Corpus,
+    registry: &ConceptRegistry,
+    world: &World,
+    witnesses: &Witnesses,
+) -> BTreeMap<String, Outcome> {
     let table = crate::provision::Provision::from_registry(registry);
     let mut out = BTreeMap::new();
     for s in &corpus.situations {
@@ -122,14 +201,15 @@ pub fn resolve(corpus: &Corpus, registry: &ConceptRegistry) -> BTreeMap<String, 
                 missing.push(t);
             }
         }
-        out.insert(
-            s.id.clone(),
-            if missing.is_empty() {
-                Outcome::Stageable
-            } else {
-                Outcome::Blocked(missing)
-            },
-        );
+        let outcome = if !missing.is_empty() {
+            Outcome::Blocked(missing)
+        } else {
+            match witness_stages(&s.id, world, witnesses) {
+                Ok(()) => Outcome::Stageable,
+                Err(reason) => Outcome::Blocked(vec![reason.to_string()]),
+            }
+        };
+        out.insert(s.id.clone(), outcome);
     }
     out
 }
@@ -232,7 +312,7 @@ pub fn render(
     s.push_str(&format!("- **Source:** {}\n", corpus.provenance));
     s.push_str(&format!("- **Frozen:** {}\n", corpus.frozen));
     s.push_str(
-        "\nThis measures reach against *that* catalogue. It is not a verdict on the\nworld, and it scores **representability only** — whether an agent could plan\nor recognise a situation is not measured here.\n\nA low score is the expected reading at this stage: the report is a baseline\ntaken before the machinery it measures exists. What carries information is\nmovement between runs, not the absolute number.\n\n",
+        "\nThis measures reach against *that* catalogue. It is not a verdict on the\nworld, and it scores **representability only** — whether an agent could plan\nor recognise a situation is not measured here.\n\nA low score is the expected reading at this stage: the report is a baseline\ntaken before the machinery it measures exists. What carries information is\nmovement between runs, not the absolute number.\n\n**Stageable now means witnessed, not merely named (decision 0577).** A\nsituation scores Stageable only when a committed tableau actually places its\nactants and stages every relation it stipulates — a corpus token naming a\nregistry entry is necessary but no longer sufficient. This number is **not\ncomparable across that boundary**: a coverage figure taken before this gate\nexisted was measuring token membership alone, and a figure taken after it\nmeasures a strictly harder claim. Migration cost was zero at the moment this\ngate was wired (spec §4.2) — no situation here had a witness to lose — so\nthis run's counts are unchanged from the last pre-witness run, but that is a\nfact about today's corpus, not a property of the two numbers that would let a\nfuture reader diff them meaningfully.\n\n",
     );
 
     let (stageable, inapplicable) = tally(out);
@@ -617,6 +697,15 @@ pub fn render_matrix(
          instruments **disagree** — which is what the demand table below is for.",
     ));
     s.push_str("\n\n");
+    s.push_str(&wrap(
+        "**Stageable now means witnessed, not merely named (decision 0577).** A situation \
+         scores Stageable only when a committed tableau actually places its actants and \
+         stages every relation it stipulates — a corpus token naming a registry entry is \
+         necessary but no longer sufficient. Every column's number is **not comparable \
+         across that boundary**: a figure taken before this gate existed measured token \
+         membership alone, and a figure taken after it measures a strictly harder claim.",
+    ));
+    s.push_str("\n\n");
 
     // Per column: what its own report says, and a pointer to it. The counts
     // come from this run's `resolve`, not from the committed report, which is
@@ -835,6 +924,26 @@ pub fn render_matrix(
 mod tests {
     use super::*;
 
+    /// A real, once-built world these unit tests share for `resolve`'s
+    /// witness check. Built once per test binary (`OnceLock`, the same
+    /// pattern `windows/worldgen` uses for its own test fixtures) rather
+    /// than per test: every test below except the witness-specific ones
+    /// blocks on a missing TOKEN and never reaches the witness check at
+    /// all, so paying a fresh genesis per call would buy nothing.
+    fn a_world() -> &'static World {
+        static WORLD: std::sync::OnceLock<World> = std::sync::OnceLock::new();
+        WORLD.get_or_init(|| {
+            hornvale_worldgen::build_world(
+                hornvale_kernel::Seed(0),
+                &hornvale_astronomy::SkyPins::default(),
+                hornvale_worldgen::SkyChoice::Generated,
+                &hornvale_terrain::TerrainPins::default(),
+                &hornvale_worldgen::SettlementPins::default(),
+            )
+            .unwrap_or_else(|e| panic!("seed 0 builds: {e}"))
+        })
+    }
+
     /// A requirement naming a token the registry does not hold resolves
     /// `Blocked`, never silently satisfied — the default-deny posture.
     #[test]
@@ -847,7 +956,7 @@ mod tests {
         }"#;
         let corpus = load(json).expect("corpus parses");
         let registry = hornvale_kernel::ConceptRegistry::default();
-        let out = resolve(&corpus, &registry);
+        let out = resolve(&corpus, &registry, a_world(), &Witnesses::new());
         match out.get("s1").expect("s1 resolved") {
             Outcome::Blocked(missing) => {
                 assert_eq!(missing, &vec!["predicate:no-such-predicate".to_string()]);
@@ -856,9 +965,13 @@ mod tests {
         }
     }
 
-    /// A registered token satisfies, so the situation is stageable.
+    /// A registered token is no longer enough on its own (decision 0577):
+    /// with every requirement token resolved and NO witness declared, the
+    /// situation must still refuse `Stageable` — this is the AND-gate the
+    /// whole campaign exists to add, pinned at the unit level as well as in
+    /// `cli/tests/suite/trope_witness.rs`.
     #[test]
-    fn a_registered_token_makes_a_situation_stageable() {
+    fn a_registered_token_alone_is_not_enough_without_a_witness() {
         let json = r#"{
           "corpus":"t","provenance":"t","frozen":"t","bundles":{},
           "situations":[{"id":"s1","name":"S","actants":{},
@@ -870,7 +983,43 @@ mod tests {
             .register_predicate("known", false, "a predicate for the test")
             .expect("registers");
         assert_eq!(
-            resolve(&corpus, &registry).get("s1"),
+            resolve(&corpus, &registry, a_world(), &Witnesses::new()).get("s1"),
+            Some(&Outcome::Blocked(vec!["witness:absent".to_string()])),
+            "a registered token with no witness must not resolve Stageable"
+        );
+    }
+
+    /// The positive twin: a registered token AND a witness that actually
+    /// stages together make a situation `Stageable`.
+    #[test]
+    fn a_registered_token_with_a_witness_that_stages_is_stageable() {
+        // `known` (registered only on a throwaway local registry) cannot
+        // stand in for the relation predicate here: `Session::start` stages
+        // against `world`'s OWN cloned registry, not whatever the caller
+        // passes to `resolve` for the token check, so the witness's relation
+        // must name a predicate the WORLD actually holds. `INSTANCE_OF` is
+        // kernel-core and always registered, exactly like
+        // `windows/vessel/tests/suite/tableau.rs`'s own relation tests use
+        // it — and `world.registry` (not a synthetic one) is what both
+        // halves of `resolve` must see, matching how `cmd_tropes` calls it.
+        let json = r#"{
+          "corpus":"t","provenance":"t","frozen":"t","bundles":{},
+          "situations":[{"id":"s1","name":"S","actants":{},
+                         "requires":["predicate:instance-of"],"excluded_by":[]}]
+        }"#;
+        let corpus = load(json).expect("corpus parses");
+        let world = a_world();
+        let mut witnesses = Witnesses::new();
+        witnesses.insert(
+            "s1".to_string(),
+            Tableau::new().with_cast(["goblin", "drow"]).with_relation(
+                hornvale_kernel::INSTANCE_OF,
+                0,
+                1,
+            ),
+        );
+        assert_eq!(
+            resolve(&corpus, &world.registry, world, &witnesses).get("s1"),
             Some(&Outcome::Stageable)
         );
     }
@@ -888,7 +1037,7 @@ mod tests {
         let corpus = load(json).expect("corpus parses");
         let registry = hornvale_kernel::ConceptRegistry::default();
         assert_eq!(
-            resolve(&corpus, &registry).get("s1"),
+            resolve(&corpus, &registry, a_world(), &Witnesses::new()).get("s1"),
             Some(&Outcome::Inapplicable(
                 "this world has no marriage".to_string()
             ))
@@ -906,8 +1055,8 @@ mod tests {
         }"#;
         let corpus = load(json).expect("corpus parses");
         let registry = hornvale_kernel::ConceptRegistry::default();
-        let a = resolve(&corpus, &registry);
-        let b = resolve(&corpus, &registry);
+        let a = resolve(&corpus, &registry, a_world(), &Witnesses::new());
+        let b = resolve(&corpus, &registry, a_world(), &Witnesses::new());
         assert_eq!(format!("{a:?}"), format!("{b:?}"));
         assert_eq!(a.keys().collect::<Vec<_>>(), vec!["s1", "s2"]);
     }
@@ -924,7 +1073,7 @@ mod tests {
         }"#;
         let corpus = load(json).expect("corpus parses");
         let registry = hornvale_kernel::ConceptRegistry::default();
-        match resolve(&corpus, &registry).get("s1") {
+        match resolve(&corpus, &registry, a_world(), &Witnesses::new()).get("s1") {
             Some(Outcome::Blocked(missing)) => {
                 assert_eq!(missing, &vec!["bundle:does-not-exist".to_string()]);
             }
@@ -950,7 +1099,7 @@ mod tests {
         }"#;
         let corpus = load(json).expect("corpus parses");
         let registry = hornvale_kernel::ConceptRegistry::default();
-        match resolve(&corpus, &registry).get("s1") {
+        match resolve(&corpus, &registry, a_world(), &Witnesses::new()).get("s1") {
             Some(Outcome::Blocked(missing)) => {
                 assert_eq!(
                     missing,
@@ -1012,7 +1161,7 @@ mod tests {
         }"#;
         let corpus = load(json).expect("corpus parses");
         let registry = hornvale_kernel::ConceptRegistry::default();
-        let out = resolve(&corpus, &registry);
+        let out = resolve(&corpus, &registry, a_world(), &Witnesses::new());
         let text = render(&corpus, &out, &registry, "tropes/test.trope.json");
         assert!(text.contains("a catalogue with known bias"));
         for section in ["## Provenance", "## Demand", "## Leverage", "## Supply"] {
@@ -1043,7 +1192,7 @@ mod tests {
         }"#;
         let corpus = load(json).expect("corpus parses");
         let registry = hornvale_kernel::ConceptRegistry::default();
-        let out = resolve(&corpus, &registry);
+        let out = resolve(&corpus, &registry, a_world(), &Witnesses::new());
         let text = render(&corpus, &out, &registry, "tropes/test.trope.json");
 
         // Disclosed in prose, with the arithmetic that gets a reader from the
@@ -1104,8 +1253,8 @@ mod tests {
         )
         .expect("corpus parses");
         let registry = hornvale_kernel::ConceptRegistry::default();
-        let a = resolve(&small, &registry);
-        let b = resolve(&large, &registry);
+        let a = resolve(&small, &registry, a_world(), &Witnesses::new());
+        let b = resolve(&large, &registry, a_world(), &Witnesses::new());
         let text = render_matrix(&[(&small, &a), (&large, &b)], &registry);
 
         // 2/2 and 4/4 are both 100% — a pooled denominator of 6 would render
@@ -1171,7 +1320,7 @@ mod tests {
         )
         .expect("corpus parses");
         let registry = hornvale_kernel::ConceptRegistry::default();
-        let out = resolve(&corpus, &registry);
+        let out = resolve(&corpus, &registry, a_world(), &Witnesses::new());
         let text = render_matrix(&[(&corpus, &out)], &registry);
 
         assert!(
@@ -1210,7 +1359,7 @@ mod tests {
         )
         .expect("corpus parses");
         let registry = hornvale_kernel::ConceptRegistry::default();
-        let out = resolve(&corpus, &registry);
+        let out = resolve(&corpus, &registry, a_world(), &Witnesses::new());
         let text = render_matrix(&[(&corpus, &out)], &registry);
 
         // One situation of two, not two of two — and not 100%.

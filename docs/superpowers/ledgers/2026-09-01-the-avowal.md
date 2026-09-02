@@ -380,3 +380,112 @@ after `make rebaseline` — this task rewires how `resolve` looks a token up
 without moving any verdict (see `cli/tests/suite/provision.rs`'s
 `ledger_home_still_matches_committed_reports_for_both_corpora`, which fails
 loudly on either committed report if one moved).
+
+---
+
+#8 [G5] — **Task 4: what counts as "the actants fail to stage" vs "a
+relation fails to resolve," and how a witness failure renders in `Outcome`.**
+
+*Question.* The brief's step 2 asks for two DISTINCT failing-witness tests
+("a witness whose tableau fails to stage the actants is refused" and "a
+witness whose relations do not all resolve is refused") without prescribing
+what makes them distinct, and does not say whether a witness failure is a
+new `Outcome` variant or folds into the existing `Blocked` shape.
+
+*Decision.* **Two failure modes, one shape.** "Fails to stage the actants"
+is a `StagedThing` naming a `held_by` cast index nobody placed — the prop
+cannot be put in anyone's hands, so the whole tableau is refused before any
+fact is committed (`Session::start`'s `"tableau stages a {kind} held by cast
+member {N}, but the cast has {M} member(s)"` path). "Relations do not all
+resolve" is a `StagedRelation` naming a predicate the concept registry does
+not hold — the cast stages fine, and `Ledger::check`'s `UnknownPredicate` is
+what refuses (`Session::start`'s `"staging a {predicate} relation: {e:?}"`
+path). Both are genuinely different code paths inside `Session::start`,
+confirmed by `cli/tests/suite/trope_witness.rs`'s
+`a_witness_whose_tableau_fails_to_stage_the_actants_is_refused` (an
+out-of-range `with_thing` holder) and
+`a_witness_whose_relations_do_not_all_resolve_is_refused` (an unregistered
+relation predicate) exercising them separately. A witness failure folds into
+the EXISTING `Outcome::Blocked(Vec<String>)` — no new variant — using two
+sentinel strings, `"witness:absent"` (no row in the table) and
+`"witness:refused"` (a row exists but `Session::start` errored), rather than
+propagating the raw `VesselError` text: every `Outcome` consumer already
+treats `Blocked`'s vector as "here are the reasons," and a witness failure
+is exactly that kind of reason, not a new kind of verdict — see decision
+0577.
+
+*Why sentinels rather than the raw error message.* The report is a
+byte-ratcheted artifact. `VesselError`'s `Display` text is not itself
+part of any save-format or determinism contract, so pinning it verbatim into
+a committed report would make a future, behavior-preserving refactor of
+`windows/vessel`'s error wording a silent report diff. A fixed two-value
+sentinel is deliberately coarser and stable across such refactors; since the
+witness branch is unreached by both frozen corpora today (§4.2's zero
+migration cost), this cost nothing to get right immediately rather than
+patching it after a report drift someone had to explain.
+
+*Order of the AND.* The witness check runs only once the token check's
+`missing` list is empty — never unconditionally. Confirmed by inspection
+(`resolve`'s `if !missing.is_empty() { Blocked(missing) } else {
+witness_stages(...) }`) and by the fact that `make rebaseline` produced a
+byte-identical demand table for both corpora: if the witness check ran
+first, or independently, a corpus whose tokens are missing WOULD ALSO gain
+a `"witness:absent"` entry in its `missing` list the moment this task
+landed, which the report ratchet would have caught as a verdict change and
+did not.
+
+*Step 1's captured red.* Ran `cli/tests/suite/trope_witness.rs`'s
+`a_situation_with_no_witness_cannot_be_stageable` against `tropes::resolve`'s
+UNMODIFIED two-argument signature (before `cli/src/tropes.rs` was touched at
+all): a one-situation corpus with an empty `requires` list resolved
+`Stageable` unconditionally, since no witness concept existed yet to refuse
+it. `assert_ne!(out.get("s1"), Some(&Outcome::Stageable), ...)` failed with
+`left: Some(Stageable), right: Some(Stageable)` — a genuine behavioural red
+on the live surface, not a compile error standing in for one.
+
+*Step 5's mutation.* Hypothesized a naive-but-plausible implementation bug:
+`witness_stages` checking only that the witness TABLE contains an entry for
+the situation id, never actually attempting `Session::start` — "an
+implementation that satisfies every assertion while not exercising the
+staging machinery a witnessed situation is credited for." Applied via
+`scripts/mutate.py` (replacing the function body with
+`witnesses.get(id).map(|_| ()).ok_or("witness:absent")`), ran the suite:
+three tests went genuinely red (`a_witness_whose_tableau_fails_to_stage_the_
+actants_is_refused`, `a_witness_whose_relations_do_not_all_resolve_is_
+refused`, `witness_stages_reports_refused_for_a_witness_that_fails_to_
+stage`), each a real assertion failure (`left: Ok(()), right: Err
+("witness:refused")` and the corresponding `Stageable` in place of
+`Blocked`), not a compile error. Restored with `git checkout -- cli/src/
+tropes.rs` and confirmed by md5 (`a1dc2ed0c70225f7a031d23032d98778` both
+before and after) — **note for a future reader of this ledger: `git
+checkout` restores to the last COMMIT, which discarded this task's entire
+uncommitted implementation the first time this was tried, not merely the
+mutation; the implementation had to be re-applied from scratch before the
+checksum could be re-verified. A scratch-copy-and-restore (or `mutate.py
+--to`) is the safer sequence when the file under mutation carries
+uncommitted work, and this ledger entry exists partly so the next session
+does not repeat it.**
+
+*Alternatives discarded.* A new `Outcome::WitnessMissing`/`WitnessRefused`
+variant — rejected because every consumer (`render`, `render_matrix`,
+`tally`, the per-situation report row) already branches on `Blocked` as "a
+list of reasons," and a fourth variant would need its own match arm
+everywhere `Outcome` is matched for a distinction no consumer currently
+needs to make differently. Embedding the raw `VesselError` text in the
+`Blocked` reason — rejected per the sentinel-vs-raw-text reasoning above.
+Checking the witness unconditionally (before or independent of the token
+check) — rejected because it would have moved the report for both corpora
+today (every blocked situation would gain a spurious `"witness:absent"`
+entry), directly contradicting spec §4.2's "migration cost is zero."
+
+*Ideonomy passes / overturns.* None — the brief's two failure-mode tests
+admit more than one code-level distinction; the one chosen is the one the
+staging code already draws for unrelated reasons (things vs. relations are
+handled by separate blocks in `Session::start_held`), so no invention was
+needed, only recognition.
+
+*Capture actions.* `cli/src/tropes.rs` (`Witnesses`, `witnesses`,
+`witness_stages`, `resolve`); `cli/tests/suite/trope_witness.rs`;
+`docs/decisions/0577-the-realization-witness.md`; no situation's `Outcome`
+variant changed on either frozen corpus, confirmed by `make rebaseline`
+producing a byte-identical demand table (only report header prose moved).

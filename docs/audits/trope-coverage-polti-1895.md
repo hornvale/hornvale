@@ -16,6 +16,18 @@ A low score is the expected reading at this stage: the report is a baseline
 taken before the machinery it measures exists. What carries information is
 movement between runs, not the absolute number.
 
+**Stageable now means witnessed, not merely named (decision 0577).** A
+situation scores Stageable only when a committed tableau actually places its
+actants and stages every relation it stipulates — a corpus token naming a
+registry entry is necessary but no longer sufficient. This number is **not
+comparable across that boundary**: a coverage figure taken before this gate
+existed was measuring token membership alone, and a figure taken after it
+measures a strictly harder claim. Migration cost was zero at the moment this
+gate was wired (spec §4.2) — no situation here had a witness to lose — so
+this run's counts are unchanged from the last pre-witness run, but that is a
+fact about today's corpus, not a property of the two numbers that would let a
+future reader diff them meaningfully.
+
 ## Demand
 
 Stageable 0 of 36 (1 inapplicable).
