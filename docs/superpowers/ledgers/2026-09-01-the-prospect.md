@@ -730,3 +730,77 @@ boundaries exist to provide.
 multiple implementers in parallel" as being about two *tasks*, and treated a fix
 round as something other than an implementer. It is not — a fix round is an
 implementer with a narrower brief, and it holds the same file locks.
+
+### #31 [G5, MY ERROR] — I read a dirty tree and told an agent its own work was somebody else's
+
+Mid-task I messaged Task 7 that the name plumbing at `brief.rs:212-227`,
+`Terrain::settlement_name`, and the live "settlement of Doaba" were "already
+done, from a different agent's fix round." **They were Task 7's own uncommitted
+edits from minutes earlier.** `git log` never moved: `ef78b068c` at dispatch and
+`ef78b068c` when my message arrived.
+
+What was genuinely uncommitted from the other agent was only Ruling 29's
+`candidates`/`max_by_key(salience)` array and its test. I saw one dirty tree
+holding two agents' work and assigned all of it to the wrong one — then reported
+that misattribution to Nathan, praising the other agent for a trap-avoidance
+comment that Task 7 had written about itself.
+
+**The agent's own framing is the lesson and it is sharper than mine:** *"a
+controller reading a subagent's dirty tree as landed work can conclude a task is
+done when nobody has done it."* I nearly told Task 7 to stand down on the
+strength of its own unfinished work.
+
+**The habit: attribute from `git log`, never from the working tree.** A dirty
+tree has no authorship. `git log` never moved and I never looked at it.
+
+### #32 [G5, MY ERROR] — I dispatched two agents at briefs that do not exist
+
+Tasks 6 and 7 were both dispatched with "read this first — it is your
+requirements: `…/task-N-brief.md`". Neither file exists; I ran the extraction
+for Tasks 1-5 only and then wrote 6 and 7 by hand while still citing the path.
+
+Task 6's agent said nothing and worked from the dispatch text, which happened to
+carry the substance. Task 7's agent reported it. **The dispatch text being
+sufficient is luck, not design** — an agent that trusted the citation and found
+nothing could reasonably have gone looking for requirements elsewhere, or
+stopped.
+
+### #33 [G5] — my parallel dispatch destroyed an unstaged test, which was reconstructed and re-verified
+
+`git checkout -- windows/vessel/tests/suite/the_prospect.rs`, clearing Task 7's
+scratch probe, also removed Ruling 29's
+`salience_decides_the_winner_when_a_facet_holds_two_sites`. Never staged, so
+unrecoverable. Task 7 reconstructed it, disclosing that the body is verbatim and
+the opening doc lines are paraphrase.
+
+**I verified the reconstruction rather than accepting it**, because a test
+rebuilt from memory is exactly the kind of thing that looks right and does
+nothing. Inverting `Settlement => 1` / `Cave => 3` in `site.rs`:
+
+```
+FAIL  left: Some(Cave)  right: Some(Settlement)
+```
+
+restored, passes, tree clean. The reconstruction genuinely discriminates.
+
+This is the concrete cost of ruling #30 — the dispatching skill's warning
+("never hand a half-applied edit to a successor agent", "preserve its partial
+diff rather than discarding it") describes exactly what happened.
+
+### #34 [G5] — the twelfth vacuous test, DEMONSTRATED rather than suspected
+
+Task 7 fault-injected the wrong wiring — sourcing the name from
+`village_or_fallback` (the possession) instead of the place — and found:
+
+**under that wrong wiring the flagship still reads "A small room in Doaba."**
+
+So the plan's own Step-1 test, `contains("Doaba")` at the flagship, **would have
+passed the possession-derived implementation.** Twelfth instance of the pattern
+this campaign, and the first proven by injecting the defect rather than reasoned
+about.
+
+The divergence case turned out to be reachable after all: a `Tableau` staging a
+village-less cast at the flagship's own facet makes the possession read "the
+wilds" while the place reads "Doaba". The test asserts that divergence live
+before asserting the chamber names Doaba — so it cannot pass by the two
+agreeing.
