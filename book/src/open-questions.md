@@ -4882,3 +4882,58 @@ the three did not exist when the arm was designed. This chapter's own warning
 about ablations applies with the sign reversed: an ablation on a channel almost
 nobody reads is a null with no power, and an ablation that misses a channel
 entirely is a null with a hole in it.
+
+### The fourth look at cost found the quadratic and removed it (2026-09-02)
+
+Two sections above record that cost in this project is scored "when a campaign
+chooses to look", that on the first two occasions each look found an
+unpredicted quadratic, and that a third found a distribution instead. This is
+the fourth, and it is the first one that closes a loop rather than opening one:
+[The Pawl](./chronicle/the-pawl.md) migrated the creature-drive reads off the
+raw position history and onto a session-owned store of advancing accumulators,
+and measured the thirst and hunger reads two hundred and thirty times cheaper,
+the whole tick a quarter cheaper at two hundred ticks, and the level about four
+per cent lower.
+
+**What that does to the accounting is smaller than the numbers suggest, and
+saying so is the point of re-scoring rather than celebrating.** Three things
+are worth carrying forward.
+
+**First, the quadratic that was found is gone and the shape that found it is
+not.** There is still no cost gate on the simulation — no ceiling, no slope
+check, nothing that runs per commit — and the two instruments that exist are
+still the ones the two campaigns that needed them built. A fourth look
+succeeding does not change the base rate of an unwatched dimension; it changes
+one number in it.
+
+**Second, and sharper: the campaign's frozen success criteria could not see
+its own result, and both instruments were working correctly.** Five of six
+preregistered criteria came back not met on the first readout, while a
+synthetic sweep over a thousandfold range of history reported that the order of
+the computation had changed — a ninety-nine-fold saving at ten thousand facts.
+The reconciliation is arithmetic: at the depth an ordinary session reaches, the
+predicted saving was smaller than the ecological instrument's own run-to-run
+spread on the very column being measured, and the criterion had asked that
+instrument to resolve it. **A criterion written against an ecological bench
+cannot see a change of order that the ecological range does not reach.** This
+chapter's standing floor is that a check is only worth what it can be made to
+fail on; the companion is that a *criterion* is only worth the range its
+instrument samples, and neither of those is visible in the criterion's own
+wording.
+
+**Third, the failure that remained is more interesting than the one that was
+fixed, and it was invisible until the fix landed.** Three criteria still fail
+after the campaign, all of them on one fold — the fear memory, which costs 93
+milliseconds per call at the deepest band measured and is 84% of the six timed
+reads' total, against the repaired thirst and hunger pair's combined
+five-thousandths of a per cent. Before the repair, that dominance was hidden
+inside a total that two folds shared. **Removing the largest known cost is what
+makes the next one legible**, which argues for iterating the measurement rather
+than treating a single readout as a verdict on a subsystem.
+
+One further note for this chapter's own honesty. The campaign made exactly one
+change to production code after seeing its first readout, and reports both
+readouts rather than only the second — the first stands unedited, and the
+second is explicitly not blind. Nothing in the standing gate would have caught
+a quieter version of that ordering, and nothing here claims otherwise; it was
+disclosed because the campaign chose to disclose it.

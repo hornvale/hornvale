@@ -212,6 +212,7 @@ clients/game/core/tests/fixtures/	artifacts
 # new one is invisible. Naming the file directly is what makes
 # cli/tests/suite/generated_paths.rs refuse until it is `git add`-ed.
 docs/audits/underworld-lattice-seed-panel.md	artifacts
+docs/audits/underworld-circuit-seed-panel.md	artifacts
 docs/audits/the-confidant-report.md	artifacts
 docs/audits/the-reticence-report.md	artifacts
 docs/audits/glyph-specimen-sheet.txt	artifacts

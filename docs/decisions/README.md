@@ -268,6 +268,12 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0514](0514-a-census-refresh-needs-no-authorization.md) | A census refresh needs no per-run authorization (retires the AWS-spend carve-out outright) | Accepted |
 | [0515](0515-a-diagonal-step-reaches-root-two-as-well-as-costing-it.md) | A diagonal step REACHES √2, as well as costing it (The Pavement; the index row was omitted at landing) | Accepted |
 | [0516](0516-a-reachable-lock-implies-a-reachable-key-is-left-empirical.md) | "A reachable lock implies a reachable key" is left empirical, deliberately — wait for the residents | Accepted |
+| [0536](0536-the-resident-fold-store-is-session-owned-and-never-serialized.md) | The resident fold store is session-owned and never serialized | Accepted |
+| [0537](0537-a-reader-never-observes-a-fold-behind-its-ledger.md) | A reader never observes a fold behind its ledger — the seam is at read | Accepted |
+| [0538](0538-the-trail-is-a-resident-index-not-a-cached-hub.md) | The trail is a resident index, not a cached hub | Accepted |
+| [0539](0539-a-past-instant-read-resumes-from-the-reset-checkpoint.md) | A past-instant read resumes from the reset checkpoint, over a per-reset prefix accumulator | Accepted |
+| [0540](0540-the-past-day-affect-path-preserves-the-unfiltered-reset.md) | The past-day affect path preserves the unfiltered reset, knowingly | Accepted |
+| [0541](0541-a-campaign-time-hash-constant-witness-retires-at-close.md) | A campaign-time hash-constant witness retires at close | Accepted |
 | [0546](0546-the-roll-is-a-pure-function-of-the-observers-room-and-it-is-diegetic.md) | The roll is a pure function of the observer's room, and it is diegetic | Accepted |
 | [0547](0547-a-resident-is-a-living-person-derived-on-demand-and-never-generated.md) | A resident is a living person, derived on demand and never generated | Accepted |
 | [0548](0548-individual-deviation-is-the-kinds-dispersion-drawn-per-resident.md) | Individual deviation is the kind's dispersion, drawn per resident | Accepted |
@@ -275,6 +281,9 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0556](0556-totality-by-registry-replaces-totality-by-compiler.md) | Totality by registry replaces totality by compiler, and every check names its direction | Accepted |
 | [0557](0557-a-handle-is-a-convenience-where-a-variant-was-a-requirement.md) | A handle is a convenience where a variant was a requirement | Accepted |
 | [0558](0558-sleep-is-never-gated-the-place-grades-it.md) | Sleep is never gated — the place grades it | Accepted |
+| [0566](0566-a-place-is-a-graph-before-it-is-a-map.md) | A place is a graph before it is a map, and the grammar is series-parallel | Accepted |
+| [0567](0567-stairs-pair-by-coordinate.md) | Stairs pair by coordinate: a stairway's two ends share a cell | Accepted |
+| [0568](0568-cycle-density-is-derived-not-authored.md) | Cycle density is derived from rock and workmanship, never authored | Accepted |
 | [0576](0576-the-capability-provision-table.md) | The capability provision table spans all three homes; ledger wired first | Accepted |
 | [0577](0577-the-realization-witness.md) | The realization witness | Superseded by 0581 |
 | [0578](0578-kinship-a-genesis-fact.md) | Kinship as a genesis fact | Superseded by 0584 |

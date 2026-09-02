@@ -118,7 +118,7 @@ run_one() {
             "all stage phases rc=0 in ${ELAPSED}s; main unchanged at ${AFTER}.")
     elif [ "$RC" = "0" ] && [ "$KIND" = "census" ]; then
         (cd "$repo_root" && bash scripts/sluice-queue.sh set-state "$ID" reported \
-            "census rc=0 in ${ELAPSED}s; main unchanged at ${AFTER}. Goldens delivered on a census/* branch — see the run log for the branch name and the make sluice line.")
+            "census rc=0 in ${ELAPSED}s; main unchanged at ${AFTER}. $(census_note "$LOG")")
     elif [ "$RC" = "0" ]; then
         (cd "$repo_root" && bash scripts/sluice-queue.sh set-state "$ID" landed \
             "all merge phases rc=0 in ${ELAPSED}s; main ${BEFORE}..${AFTER}.")
@@ -134,6 +134,29 @@ run_one() {
         git -C "$repo_root" log --oneline "${BEFORE}..${AFTER}" 2>/dev/null | sed 's/^/  /'
     fi
     return 0
+}
+
+# The queue row's census verdict, READ FROM THE RUN rather than asserted.
+#
+# This row said "Goldens delivered on a census/* branch" for every rc=0 census,
+# unconditionally. That is the same defect scripts/sluice-census.sh carried until
+# 4a2fc72d7 -- and fixing the run log left this copy of the claim standing, on the
+# surface operators actually read (`make sluice-status`). campaign/the-pawl's
+# census on 2026-09-02 printed "NO GOLDENS MOVED" in its log and "Goldens
+# delivered" in its row, in the same minute.
+#
+# FAILS TOWARD "MOVED", deliberately. A missing or unreadable log yields the
+# goldens-moved wording, because the two errors are not symmetric: claiming
+# movement that did not happen costs a reader one `git diff --stat`, while
+# claiming a null that did not happen invites them to skip a delivery branch
+# they needed to merge.
+census_note() {
+    local log="${1:-}"
+    if [ -n "$log" ] && grep -q 'NO GOLDENS MOVED' "$log" 2>/dev/null; then
+        printf '%s' "NO GOLDENS MOVED — the census agrees with the ref; the census/* branch carries the run's timings row only, so there is nothing to merge for goldens' sake."
+    else
+        printf '%s' "Goldens moved and are delivered on a census/* branch — see the run log for the branch name and the make sluice line."
+    fi
 }
 
 main() {
