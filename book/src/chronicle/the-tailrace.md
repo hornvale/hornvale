@@ -251,3 +251,14 @@ one was closing, and the way is now clear. The honest headline is that nothing
 got faster. What changed is that the argument for making it faster is now a
 measurement with a number on it, in two independent forms, one of which nobody
 had predicted.
+
+
+---
+
+*Dated note, 2026-09-02.* The paragraph above is left as it was written. The
+half it says was held off is no longer held off: [The Pawl](./the-pawl.md)
+migrated the folds onto the primitive, into one session-owned resident store
+rather than six private accumulators, and measured the thirst and hunger reads
+two hundred and thirty times cheaper. Read this chapter as the state of the
+work on the day it closed; the sentence about no fold having been migrated was
+true then and is not true now.

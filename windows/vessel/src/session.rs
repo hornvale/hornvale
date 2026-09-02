@@ -980,6 +980,37 @@ pub struct Session<'w> {
     // `driven_overrides` below is NOT one of them and does not move: it is a
     // running count across the WHOLE possession, not a per-tick resolution,
     // and the roster deliberately holds only the latter.
+    /// The session-lived resident fold store (The Pawl, spec §2.1): the
+    /// per-entity accumulation of what the session's own ledger already
+    /// determines, advanced on read and never serialized.
+    ///
+    /// Owned here, beside `mesh_memo` and `home_nav_cache`, for the same
+    /// reason they are — a store rebuilt per tick would be the O(history)
+    /// walk it exists to remove — and behind interior mutability because The
+    /// Pawl's readers needed it so. **The Rack narrowed which readers those
+    /// are, and did not touch the store.** The Pawl's own doc named
+    /// [`Self::snapshot`] as one of the two places this field is handed out,
+    /// because at that time the snapshot folded; it no longer does. The turn
+    /// (`snapshot`, `needs`, `colocated_npcs`, `narrate_motion`) reads the
+    /// roster's written `position`/`felt` columns and reaches no fold at all,
+    /// so the only paths that reach this store now are the TICK
+    /// ([`DriveMovements::step_with_occupancy`] and
+    /// `step_one_with_controller`, through [`Self::wait`]) and the two
+    /// felt-SEEDING sites (`start_held` and `seed_felts`), which fold once to
+    /// fill a column the turn thereafter only reads. Interior mutability is
+    /// therefore no longer load-bearing for a `&self` reader; it is kept
+    /// because the store is The Pawl's and this campaign moved none of it.
+    ///
+    /// It holds nothing the ledger does not re-determine, so discarding the
+    /// whole store between any two turns is unobservable.
+    ///
+    /// **Every migrated read goes through it** (The Pawl, Tasks 2-5c). The
+    /// read sites that reach this store are
+    /// [`crate::liveness::drive_at`], [`crate::liveness::hunger_at`],
+    /// `decide_step`, [`crate::liveness::believed_water`] and
+    /// [`crate::liveness::hazard_memory_memo`] together with the emitter
+    /// chain behind the fear path.
+    folds: crate::resident::OwnedFolds,
     /// Every drive this body's own arbitration wanted and did not pursue,
     /// counted across the WHOLE possession (The Reticence, Task 2) — unlike
     /// the roster's `felt` column, whose `suppressed` is a per-decision read
@@ -1790,6 +1821,13 @@ impl<'w> Session<'w> {
         // that has committed no `agent-at` fact yet, so the column and the
         // ledger agree from the first read.
         let mut roster = Roster::new(Slot(driven));
+        // The Pawl's resident fold store, built HERE rather than in the struct
+        // literal below, because the `felt` seeding two lines down is itself a
+        // fold and this is the store it should advance: a throwaway store for
+        // the seed would make the session's own start the one whole-history
+        // rebuild The Pawl exists to remove (its spec §2.2 refuses exactly that
+        // on the read path). Moved into the session's `folds` field unchanged.
+        let folds = crate::resident::OwnedFolds::new(crate::resident::ResidentFolds::new());
         {
             let seed_terrain = LocaleTerrain::with_fields(
                 ctx,
@@ -1808,6 +1846,7 @@ impl<'w> Session<'w> {
                 .map(|body| Felt {
                     affect: affect_of_memo(
                         &ledger,
+                        &folds,
                         body,
                         &bodies,
                         opts.day,
@@ -1850,6 +1889,7 @@ impl<'w> Session<'w> {
             underground: None,
             mesh_memo,
             home_nav_cache: HomeNavCache::new(),
+            folds,
             driven_overrides: std::collections::BTreeMap::new(),
             settlement_rooms,
             herd_rooms,
@@ -2156,6 +2196,7 @@ impl<'w> Session<'w> {
                     self.turn_work.bump_affect_folds();
                     affect_of_memo(
                         &self.ledger,
+                        &self.folds,
                         body,
                         &band,
                         self.day,
@@ -2864,6 +2905,230 @@ impl<'w> Session<'w> {
     /// type-audit: bare-ok(count: return)
     pub fn committed_fact_count_for(&self, who: EntityId) -> usize {
         self.ledger.iter().filter(|f| f.subject == who).count()
+    }
+
+    /// The session's resident fold store's position — how many of this
+    /// session's committed facts every tenant has absorbed (The Pawl,
+    /// spec §2.2).
+    ///
+    /// A test-visible accessor for the currency invariant on the SESSION's own
+    /// store, which nothing outside the session can otherwise reach: the store
+    /// is advanced on read, so after any turn that read it this must equal
+    /// [`Self::committed_fact_count`], and reading it twice must not move it.
+    /// It is narrow on purpose — handing out `&OwnedFolds` would let a caller
+    /// mutate the session's store, and while a store IS discardable, a
+    /// half-advanced one handed back is not.
+    /// type-audit: bare-ok(count: return)
+    pub fn resident_position(&self) -> u64 {
+        self.folds.borrow().position()
+    }
+
+    /// How many integral SEGMENTS the session's sustenance reads have summed,
+    /// ever — the cost witness (The Pawl, spec §2.4). Sampled around a turn,
+    /// its difference is that turn's integration work.
+    /// type-audit: bare-ok(count: return)
+    pub fn resident_segments_integrated(&self) -> u64 {
+        self.folds.borrow().witness().segments_integrated()
+    }
+
+    /// The same, for ONE creature — the per-entity number the cost property is
+    /// actually about, since a creature that has never reset accrues segments
+    /// with its history by construction and would swamp a roster total.
+    /// type-audit: bare-ok(count: return)
+    pub fn resident_segments_integrated_for(&self, who: EntityId) -> u64 {
+        self.folds.borrow().witness().segments_integrated_for(who)
+    }
+
+    /// Every creature's segment count, keyed — see
+    /// [`crate::resident::ReadWitness::segments_by_entity`] for why the
+    /// per-entity shape is the one the cost property needs. Cloned rather than
+    /// borrowed because the store lives behind interior mutability and the
+    /// guard cannot outlive this call.
+    /// type-audit: bare-ok(count: return)
+    pub fn resident_segments_by_entity(&self) -> std::collections::BTreeMap<EntityId, u64> {
+        self.folds.borrow().witness().segments_by_entity().clone()
+    }
+
+    /// Every creature's TERRAIN-TEMPERATURE sample count, keyed — the second
+    /// half of the cost witness (The Pawl, Task 5b). Sampled around a turn,
+    /// its difference is the terrain work that turn's sustenance reads did.
+    /// type-audit: bare-ok(count: return)
+    pub fn resident_terrain_samples_by_entity(&self) -> std::collections::BTreeMap<EntityId, u64> {
+        self.folds
+            .borrow()
+            .witness()
+            .terrain_samples_by_entity()
+            .clone()
+    }
+
+    /// Every creature's INTEGRATING sustenance reads, keyed — the denominator
+    /// [`Self::resident_unbounded_reads_by_entity`] is a count out of.
+    /// type-audit: bare-ok(count: return)
+    pub fn resident_sustenance_reads_by_entity(&self) -> std::collections::BTreeMap<EntityId, u64> {
+        self.folds
+            .borrow()
+            .witness()
+            .sustenance_reads_by_entity()
+            .clone()
+    }
+
+    /// Every creature's reads that sampled terrain more times than the ledger
+    /// grew for it since the previous read of the same drive, keyed — see
+    /// [`crate::resident::ReadWitness::unbounded_reads_by_entity`].
+    /// type-audit: bare-ok(count: return)
+    pub fn resident_unbounded_reads_by_entity(&self) -> std::collections::BTreeMap<EntityId, u64> {
+        self.folds
+            .borrow()
+            .witness()
+            .unbounded_reads_by_entity()
+            .clone()
+    }
+
+    /// The first read that exceeded its allowance, as `(entity, samples taken,
+    /// samples allowed)` — the evidence the cost witness prints.
+    /// type-audit: bare-ok(count: return)
+    pub fn resident_first_unbounded_read(&self) -> Option<(EntityId, u64, u64)> {
+        self.folds.borrow().witness().first_unbounded_read()
+    }
+
+    /// Every derived body's HAZARD MEMORY at this session's current day, read
+    /// through the session's own terrain, roster and resident store — the
+    /// determinism seam for the half of the walk that `session_ledger_json`
+    /// cannot see on its own.
+    ///
+    /// **Why it exists.** The Pawl's first byte-identity witness hashes the
+    /// committed ledger, which is the right instrument for a fold that changes
+    /// where a creature WALKS. The hazard fold's transient half also produces
+    /// something a creature FEELS — `HazardMemory::dread`, the remembered
+    /// alarm magnitude per room — and a change there only reaches the ledger
+    /// if it happens to flip a route on the seeds a witness runs. So the
+    /// second witness hashes this as well, on a world whose hazard fold
+    /// actually replays an emitter's affect at a past visit day (see
+    /// `Self::resident_alarm_replays`). Reading it costs a full hazard
+    /// re-derivation per body and nothing in the sim calls it.
+    pub fn hazard_memories(&self) -> Vec<(EntityId, crate::liveness::HazardMemory)> {
+        let terrain = LocaleTerrain::with_fields(
+            &self.wctx.ctx,
+            self.calendar.as_ref(),
+            self.predator.as_ref(),
+            self.prey.as_ref(),
+            Some(&self.built),
+            Some(&self.mesh_memo),
+        );
+        let mut memo = PrimaryAfraidMemo::new();
+        // `bodies` is the ROSTER's `body` column now (The Rack, spec §3.1), not
+        // a `Vec<Body>` field — the accessor answers exactly what the field did.
+        let bodies = self.bodies();
+        let mut memo_out = Vec::with_capacity(bodies.len());
+        for npc in bodies {
+            let mem = crate::liveness::hazard_memory_memo(
+                &self.ledger,
+                &self.folds,
+                npc,
+                self.day,
+                &terrain,
+                bodies,
+                &mut memo,
+            );
+            memo_out.push((npc.entity, mem));
+        }
+        memo_out
+    }
+
+    /// How many EMITTER SCANS this session has built — the denominator
+    /// [`Self::resident_emitter_scans_with_emitters`] is a count out of.
+    /// type-audit: bare-ok(count: return)
+    pub fn resident_emitter_scans(&self) -> u64 {
+        self.folds.borrow().witness().emitter_scans()
+    }
+
+    /// How many of this session's emitter scans found a member that could ever
+    /// raise an alarm. Zero means the hazard fold's TRANSIENT path — the
+    /// past-day affect replay — was never entered, which is the settled
+    /// world's case and seed 42's.
+    /// type-audit: bare-ok(count: return)
+    pub fn resident_emitter_scans_with_emitters(&self) -> u64 {
+        self.folds.borrow().witness().emitter_scans_with_emitters()
+    }
+
+    /// How many PAST-DAY AFFECT REPLAYS this session's hazard fold performed —
+    /// spec §3 rule 5's own denominator.
+    /// type-audit: bare-ok(count: return)
+    pub fn resident_alarm_replays(&self) -> u64 {
+        self.folds.borrow().witness().alarm_replays()
+    }
+
+    /// How many unfiltered reset lookups this session has made — the
+    /// denominator [`Self::resident_resets_in_the_future`] is a count out of,
+    /// and the number that says whether that witness measured anything.
+    /// type-audit: bare-ok(count: return)
+    pub fn resident_reset_lookups(&self) -> u64 {
+        self.folds.borrow().witness().reset_lookups()
+    }
+
+    /// How many of this session's `drive_at`/`hunger_at` reads ran with a
+    /// reset of the same entity strictly AFTER the instant read — spec §3
+    /// rule 1's witness, taken on the real path rather than re-derived beside
+    /// it. Zero means today's unfiltered reset lookup and a fold's own
+    /// filtered one cannot have disagreed on any path this session reached.
+    /// type-audit: bare-ok(count: return)
+    pub fn resident_resets_in_the_future(&self) -> u64 {
+        self.folds.borrow().witness().resets_in_the_future()
+    }
+
+    /// The first such read as `(entity, instant read, the reset that lies
+    /// after it)`, for a witness that needs to PRINT its evidence rather than
+    /// only count it.
+    pub fn resident_first_reset_in_the_future(&self) -> Option<(EntityId, WorldTime, WorldTime)> {
+        self.folds.borrow().witness().first_reset_in_the_future()
+    }
+
+    /// How many BELIEF lookups this session has made — `believed_water` calls,
+    /// the denominator [`Self::resident_beliefs_in_the_past`] is a count out
+    /// of, and the number that says whether that witness measured anything.
+    /// type-audit: bare-ok(count: return)
+    pub fn resident_belief_lookups(&self) -> u64 {
+        self.folds.borrow().witness().belief_lookups()
+    }
+
+    /// How many of this session's belief reads ran at an instant strictly
+    /// before a committed sighting of the same entity — spec §3 rule 6's
+    /// witness, taken on the real path. Non-zero means
+    /// [`crate::resident::KnownWater`]'s first-visit filter is what keeps the
+    /// answer identical to the scan it replaced.
+    /// type-audit: bare-ok(count: return)
+    pub fn resident_beliefs_in_the_past(&self) -> u64 {
+        self.folds.borrow().witness().beliefs_in_the_past()
+    }
+
+    /// The first such read as `(entity, instant read, the sighting that lies
+    /// after it)`, for a witness that PRINTS its evidence.
+    pub fn resident_first_belief_in_the_past(&self) -> Option<(EntityId, WorldTime, WorldTime)> {
+        self.folds.borrow().witness().first_belief_in_the_past()
+    }
+
+    /// How many HAZARD-MEMORY lookups this session has made —
+    /// `hazard_memory_memo` calls, the denominator
+    /// [`Self::resident_hazards_in_the_past`] is a count out of. Kept apart
+    /// from the belief pair because the two functions do not share a caller
+    /// set — see [`crate::resident::ReadWitness::note_hazard`].
+    /// type-audit: bare-ok(count: return)
+    pub fn resident_hazard_lookups(&self) -> u64 {
+        self.folds.borrow().witness().hazard_lookups()
+    }
+
+    /// How many of this session's hazard-memory reads ran at an instant
+    /// strictly before a committed sighting of the same entity — spec §3
+    /// rule 6's quantity for the `LatestVisit` tenant.
+    /// type-audit: bare-ok(count: return)
+    pub fn resident_hazards_in_the_past(&self) -> u64 {
+        self.folds.borrow().witness().hazards_in_the_past()
+    }
+
+    /// The first such read as `(entity, instant read, the sighting that lies
+    /// after it)`, for a witness that PRINTS its evidence.
+    pub fn resident_first_hazard_in_the_past(&self) -> Option<(EntityId, WorldTime, WorldTime)> {
+        self.folds.borrow().witness().first_hazard_in_the_past()
     }
 
     /// The driven body's own stable identity as a ledger `EntityId` — the
@@ -7471,6 +7736,11 @@ impl<'w> Session<'w> {
             // tidally-locked world, which the rotation pin admits.
             day_ticks: self.day_ticks(),
             terrain: &terrain,
+            // The session's own store, shared across BOTH evaluations of this
+            // walk (the `step_with_occupancy` call below and the
+            // `hornvale_kernel::tick` call after it) — advance-on-read is
+            // idempotent in position, so the second absorbs nothing.
+            folds: &self.folds,
         };
         // Recover this tick's within-room `Occupancy` alongside the SAME
         // walk's `facts` (The Roll, Task 11: one walk per wait). This used
@@ -18241,6 +18511,9 @@ mod tests {
             params: SUSTENANCE,
             day_ticks: session.day_ticks(),
             terrain: &terrain,
+            // The SESSION's own store, not a throwaway: this test stands in for
+            // `wait`'s own construction (line 7713), which passes exactly this.
+            folds: &session.folds,
         };
         assert!(
             !sys.npcs.is_empty(),
@@ -18383,6 +18656,9 @@ mod tests {
             params: SUSTENANCE,
             day_ticks: session.day_ticks(),
             terrain: &terrain,
+            // The SESSION's own store, not a throwaway: this test stands in for
+            // `wait`'s own construction (line 7713), which passes exactly this.
+            folds: &session.folds,
         };
         let driven_body = session.driven_body().clone();
         let (driven_facts, driven_written) = sys.step_one_with_controller(

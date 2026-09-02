@@ -28,6 +28,7 @@ pub mod liveness;
 pub mod passage;
 pub mod plan;
 mod purview;
+pub mod resident;
 pub mod residents;
 pub mod roll;
 pub mod roster;

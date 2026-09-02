@@ -380,6 +380,17 @@ fn run_rung(
 
     let mut mesh_memo = RoomMeshMemo::new();
     let mut home_nav_cache = HomeNavCache::new();
+    // The resident fold store (The Pawl, spec §2.1), owned at exactly the
+    // scope `home_nav_cache` is — one per run, never per tick — because a
+    // store rebuilt each tick would be the O(history) walk it exists to
+    // remove. Interior mutability because it is advanced on read (spec §2.2).
+    // The migrated reads all go through it: `drive_at`, `hunger_at`,
+    // `decide_step`, `believed_water` and `hazard_memory_memo` with the
+    // emitter chain behind it, reached through `step_with_occupancy` and
+    // `snapshot`. This driver threads it so the store it exercises is the one
+    // production owns.
+    let folds =
+        hornvale_vessel::resident::OwnedFolds::new(hornvale_vessel::resident::ResidentFolds::new());
     let mut day = WorldTime::from_std_days(0.5).expect("0.5 is finite");
 
     let facts_before = ledger.len();
@@ -412,6 +423,7 @@ fn run_rung(
             params: SUSTENANCE,
             day_ticks,
             terrain: &terrain,
+            folds: &folds,
         };
         let (facts, _occupancy, _written) =
             sys.step_with_occupancy(&ledger, &mut mesh_memo, &mut home_nav_cache);
