@@ -4932,3 +4932,7 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-02T13:42:07Z | sluice:artifacts | 78.278 | 663.120 | 26.154 | 8.81 | 0 | 682d1e9a7 |  | lefford | 40 |
 | 2026-09-02T13:43:05Z | sluice:outboard | 57.371 | 31.942 | 37.743 | 1.21 | 0 | 06be7999b |  | lefford | 40 |
 | 2026-09-02T13:52:50Z | sluice:gate | 585.155 | 17988.019 | 515.669 | 31.62 | 0 | 2cb56e03e |  | lefford | 40 |
+| 2026-09-02T14:21:07Z | gate-commit | 117.280 | 661.533 | 64.406 | 6.19 | 0 | 4c4a9a76a | campaign/the-pawl | MacBookPro | 10 |
+| 2026-09-02T14:21:39Z | gate-commit | 22.874 | 53.104 | 14.009 | 2.93 | 0 | 4c4a9a76a | campaign/the-pawl | MacBookPro | 10 |
+| 2026-09-02T14:30:08Z | gate-commit | 25.494 | 54.957 | 14.312 | 2.72 | 0 | 9294fda86 | campaign/the-pawl | MacBookPro | 10 |
+| 2026-09-02T14:53:52Z | rebaseline | 70.174 | 272.932 | 14.468 | 4.10 | 0 | 0c5ef34b1 | campaign/the-pawl | MacBookPro | 10 |

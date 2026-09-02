@@ -58,6 +58,47 @@
 //! differs from the sim's), so the column measures the production shape and the
 //! claim is true rather than intended.
 //!
+//! **RE-MEASURED, as the paragraph above asks (The Pawl, at the absorption of
+//! `2c34f9e4c`).** One run, seed 42, 50 agents, 200 ticks, on a box at load
+//! 1.97/4.17/7.39 before and 2.85/3.40/6.15 after:
+//!
+//! ```text
+//!   fatigue_at   k = 0.09651 us/call per fact   r^2 = 0.964
+//!                elasticity 0.31 over history 101.0 -> 260.0 (2.57x)
+//!                C = 34.795 us/call floor; history term 41.9% of the last band
+//!                final band 60.88 us/call
+//! ```
+//!
+//! **The finding is that it IS a trail-walker and is NOT history-proportional,
+//! and both halves matter.** The `r^2` of 0.964 says the relationship is real
+//! and clean — the "no stable elasticity sign" sentence above genuinely does
+//! not describe this fold any more, and the fold went from the cheapest of the
+//! six to 60.88 us/call against `drive_at`'s 2.53, a 24x gap. But 0.31 is well
+//! under proportional, which is what Task 10's own two bounds predict: the
+//! trail is walked ONCE per fold as an ordered merge against the bout list, not
+//! once per bout, and the four `room_affords_rest` calls behind it are memoised
+//! on `(is_built, is_cold)` rather than on the room.
+//!
+//! **So `position_timeline` is deliberately NOT migrated onto the resident
+//! store's `Trail`, and this paragraph is the record of that choice rather than
+//! an omission.** The Pawl's standing rule for the migration was an elasticity
+//! above 0.5 with an `r^2` of at least 0.5; this reading meets the second
+//! condition and fails the first, and a fold at 0.31 does not need a
+//! permutation index to stop it growing with history. The number to re-measure
+//! against is 0.31, and the condition to re-measure on is the bout list growing
+//! faster than the trail — a species that rests often, or a script long enough
+//! that a body's bouts outnumber its postings.
+//!
+//! For contrast in the same run: `drive_at` reads 0.02 elasticity at
+//! `r^2 = 0.062` (the campaign's own result — a floor, not a slope), while
+//! `believed_water`, `shared_believed_water` and `hazard_memory_memo` still
+//! read 0.96/0.96/0.93. Those three are bounded by DISTINCT ROOMS VISITED
+//! rather than by history, and this probe agent is a wanderer whose distinct
+//! rooms grow with its postings, so a near-unity elasticity here is the two
+//! quantities coinciding on this agent and not evidence that the bound is
+//! absent. Reading it as the latter would be the same error the `fatigue_us`
+//! column's own history records.
+//!
 //! ## Why there are TWO instruments, and why neither may be deleted
 //!
 //! This bench and `fold_depth_sweep.rs` are complements, not duplicates, and
