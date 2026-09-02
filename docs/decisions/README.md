@@ -267,3 +267,7 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0513](0513-a-quadrilateral-lattice-carries-no-third-axis-or-orientation-flag.md) | A quadrilateral lattice carries no third axis or orientation flag | Accepted |
 | [0514](0514-a-census-refresh-needs-no-authorization.md) | A census refresh needs no per-run authorization (retires the AWS-spend carve-out outright) | Accepted |
 | [0516](0516-a-reachable-lock-implies-a-reachable-key-is-left-empirical.md) | "A reachable lock implies a reachable key" is left empirical, deliberately — wait for the residents | Accepted |
+| [0546](0546-the-roll-is-a-pure-function-of-the-observers-room-and-it-is-diegetic.md) | The roll is a pure function of the observer's room, and it is diegetic | Accepted |
+| [0547](0547-a-resident-is-a-living-person-derived-on-demand-and-never-generated.md) | A resident is a living person, derived on demand and never generated | Accepted |
+| [0548](0548-individual-deviation-is-the-kinds-dispersion-drawn-per-resident.md) | Individual deviation is the kind's dispersion, drawn per resident | Accepted |
+| [0549](0549-a-body-off-the-roll-is-frozen-at-its-committed-facts-and-caught-up-on-return.md) | A body off the roll is frozen at its committed facts and caught up on return | Accepted |
