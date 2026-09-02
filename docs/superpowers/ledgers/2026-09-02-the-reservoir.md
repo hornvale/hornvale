@@ -303,6 +303,73 @@ design choice.
 
 ---
 
+#9 [G5] — **DETERMINISM-ADJACENT: the fixture loader widens decision 0090's
+build-path embedding set by one file. Accepted, with the cost stated.**
+
+*This entry leads the G6 digest, per campaign-autopilot's rule that
+determinism-contract entries lead.*
+
+*What happened.* `windows/worldgen/src/fixture.rs` resolves the fixture with
+`concat!(env!("CARGO_MANIFEST_DIR"), "/../../cli/tests/fixtures/world-seed-42.json")`.
+Every `env!("CARGO_MANIFEST_DIR")` in production `src/` bakes the absolute build
+directory into the shipped binary, which is why two builds of one commit in
+different directories do not hash the same. Decision **0090 amendment 2** freezes
+the list of such sites in `cli/tests/fixtures/manifest-dir-uses.txt` and says it
+"may shrink freely; growing it is a deliberate act that should say what it does
+to the oracle." The spec did not anticipate this consequence; the gate caught it.
+
+*The list went from two entries to three:*
+
+```
+  cli/src/main.rs                  2
+  windows/lab/src/blackbox.rs      1
+  windows/worldgen/src/fixture.rs  2   <-- new
+```
+
+*Ruling: accepted.* Three reasons, in order of weight.
+
+1. **It does not change what 0090's oracle REQUIRES**, only how many ways there
+   are to violate it. The oracle qualifies a candidate host by comparing one
+   sha256sum instead of running a census, and it holds only while both hosts
+   build at the same absolute path — the condition the container it is designed
+   around satisfies for free. Two sites already violated it for anyone building
+   outside one. A third changes the count, not the shape.
+2. **The alternative is worse.** Removing the `env!` means resolving the
+   workspace root at runtime by walking up from `current_dir()`. That trades a
+   *documented, guarded, compile-time* fact for an *undocumented runtime
+   dependency on CWD* — and routing around a guard whose whole purpose is to
+   make this class of change visible is the wrong instinct.
+3. **The repo's nearest precedent does not settle it.** `kernel/src/golden.rs`
+   is test support in production source and avoids `env!` by taking a `&Path`,
+   leaving callers to supply `concat!(env!(...))` from their own test code. That
+   would work here only if every caller had the right prefix, and the prefix is
+   crate-depth-dependent — one level from `cli`/`kernel`, two from every
+   `windows/*` and `domains/*` crate. Ledger #3's probe proved `cli`'s own
+   `../../` resolves outside the repository. One loader with one prefix is the
+   reason this design exists.
+
+*The implementer discharged 0090's own requirement unprompted*, in the commit
+message for `b44db18ee`: "This widens the set of absolute build paths hornvale's
+binaries embed by one file; it does not change what decision 0090's cross-host
+binary-identity oracle requires (both hosts building at the same absolute path)."
+That is what amendment 2 asks for, and it was written without being asked.
+
+*One imprecision, noted not fixed.* The row reads 2, but only ONE of those is a
+real embedding (`fixture.rs:35`); the other is the doc comment at `:27` naming
+the macro it uses, counted because `build_path_embedding.rs` is a textual scan
+too. Ruling: **keep the doc comment.** Prose explaining why the macro is there
+is high value for exactly the reader auditing this exposure, and rewording it to
+dodge a counter would be the tail wagging the dog. Flagged for the reviewer to
+weigh; a clarifying comment in the roster file would be a cheap improvement.
+
+*Cost if wrong.* A future campaign wanting 0090's oracle to hold outside a
+container has one more file to fix. The fix is mechanical and the roster names it.
+
+*Capture.* This entry; decision 0607 must repeat the oracle statement, since a
+commit message is not where a durable consequence belongs.
+
+---
+
 ## Parked findings
 
 ### P1 — `scene_surrounds_colour_cli.rs` uses a fixed temp path and flakes
