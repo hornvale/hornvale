@@ -264,7 +264,51 @@ const START_BUDGET_MS: f64 = 10500.0;
 /// `#[ignore]`d test on the Mac by default. A future task should either
 /// explain the growth or take the explicit raise this rule requires; this
 /// one does neither.
-const TURN_BUDGET_MS: f64 = 9.0;
+///
+/// **RAISED 9.0 → 36.0, and the basis 3.906 → 17.959, on the control run the
+/// paragraph above asked for (The Rack, Task 6, 2026-09-02).** The growth is
+/// now attributed, and it is not this campaign's. The same test was run on the
+/// same quiet lefford in the same dev profile against **main's tip**
+/// (`0dccce029` — The Roll plus The Pawl, no Rack) and against this
+/// campaign's tip (`813c74726`):
+///
+/// ```text
+/// reading                          main 0dccce029   the-rack 813c74726   pre-Roll basis
+/// Session::start                       1752.8 ms                    —          3442.2
+/// pooled turn handle+snapshot+json       81.490 ms   17.706–17.959 ms           3.906
+/// indoor snapshot()+json                 78.416 ms   21.384–21.607 ms          18.720
+/// ```
+///
+/// **The Roll moved this control ~21× over its seven-body basis** (a session
+/// now holds 68 bodies, each re-folded per snapshot) **and nothing that runs
+/// ever saw it**: the test PASSED at main's tip, at 81.490 ms, against this
+/// 9.0 ms ceiling, because [`BASIS_HOST`] gates the millisecond asserts to
+/// `aarch64-10` while the heavy tier runs only on `x86_64-40` (decision 0133).
+/// A ceiling a nine-fold overshoot walks through is not slack; it is a ceiling
+/// that is not running. **The Rack then cut the pooled turn 4.6× and the
+/// indoor snapshot 3.6× from there** — it regressed nothing and recovered most
+/// of a regression this gate was built to catch and could not.
+///
+/// So the raise is what an honest re-pin looks like from here: the basis is
+/// the slowest of Task 5's three quiet lefford runs (17.959) and the ceiling
+/// is this file's customary ~2× margin over it (36.0). **This is a reviewed
+/// raise, ruled in `docs/superpowers/ledgers/2026-09-02-the-rack.md`, not a
+/// silent one** — the ratchet at the top of this file requires exactly that,
+/// and the previous paragraph is left standing as the record of the task that
+/// correctly declined to make it without the control.
+///
+/// **What it does NOT fix, deliberately.** The vacuity — a `BASIS_HOST`-keyed
+/// assertion on a tier that never runs on that host — is untouched, because
+/// closing it means recalibrating `START_*` and `INDOOR_SNAPSHOT_*` together
+/// against a new host (the precedent is `scene_cost.rs`'s own
+/// `BASIS_HOST = "x86_64-40"`). It is the standing follow-up
+/// `TOOL-session-cost-has-no-canonical-basis`, whose registry row now carries
+/// this table. And this instrument is no longer the only one: decision 0598
+/// puts per-turn work under a COUNTED budget
+/// (`windows/vessel/tests/suite/turn_budget.rs`) which is identical on every
+/// box, cannot flap, and went red the moment a fold was added — the thing a
+/// wall clock on a host-gated tier could not do.
+const TURN_BUDGET_MS: f64 = 36.0;
 
 /// Ceiling for one **indoor** `snapshot()+json`, ms — the cut fix round 1
 /// review found and `TURN_BUDGET_MS` cannot see.
@@ -520,11 +564,25 @@ const WALK_BYTES_BUDGET: usize = 86000;
 /// failure path can compute a ratio, the same pattern as
 /// `scene_cost.rs::GENESIS_BASIS_MS`.
 const START_BASIS_MS: f64 = 3442.192;
-/// The measured basis for `TURN_BUDGET_MS`: 3.906 ms, slowest of three runs,
-/// same box/date/profile as `START_BASIS_MS`. The Sighting's Task 6
-/// re-measure (3.939 ms) was read as "essentially flat" and left the ceiling
-/// unchanged — see `TURN_BUDGET_MS`'s own doc.
-const TURN_BASIS_MS: f64 = 3.906;
+/// The measured basis for `TURN_BUDGET_MS`: **17.959 ms**, slowest of three
+/// quiet runs on lefford (`x86_64-40`), dev profile, 2026-09-02, at The Rack's
+/// tip `813c74726`.
+///
+/// **Moved 3.906 → 17.959 (The Rack, Task 6)**, in the same reviewed act that
+/// raised `TURN_BUDGET_MS` 9.0 → 36.0 — read that constant's doc for the
+/// control run and the attribution, which are stated once, there. The retired
+/// 3.906 was measured on host `MacBookPro` on 2026-08-06 against a
+/// seven-body session, so it predates The Roll's sixty-eight-body roster
+/// entirely; The Sighting's Task 6 re-measure (3.939 ms) was read as
+/// "essentially flat" and left it alone, correctly, because The Roll had not
+/// landed yet.
+///
+/// **Like `INDOOR_SNAPSHOT_BASIS_MS`, this is now an `x86_64-40` figure in a
+/// file whose [`BASIS_HOST`] is `aarch64-10`**, which is safe for the same
+/// reason: the ratio verdict it feeds is host-guarded and prints as
+/// not-computed off the basis host, while the absolute ceiling above is
+/// unconditional. `START_BASIS_MS` is the one `aarch64-10` figure left.
+const TURN_BASIS_MS: f64 = 17.959;
 /// The measured basis for `INDOOR_SNAPSHOT_BUDGET_MS`.
 ///
 /// **Moved by The Assize, 8.910 -> 18.720**, in the same reviewed act that
@@ -571,17 +629,21 @@ const CONTROL_TOLERANCE: f64 = 1.5;
 /// reports 64-bit ARM as `aarch64` regardless of OS — confirmed empirically
 /// on this box during The Assize — hence `aarch64-10`, not `arm64-10`.
 ///
-/// **One exception, deliberate, since The Rack, Task 5:**
-/// `INDOOR_SNAPSHOT_BASIS_MS` is a `lefford` (`x86_64-40`) figure, not an
-/// `aarch64-10` one — see that constant's own doc for why. Its ratio and
-/// `CONTROL_TOLERANCE` check are consequently uninformative on a Mac run
-/// even though `bases_apply` reads true there (a Mac `got` against an
+/// **TWO exceptions now, both deliberate, since The Rack:**
+/// `INDOOR_SNAPSHOT_BASIS_MS` (Task 5) and `TURN_BASIS_MS` (Task 6) are both
+/// `lefford` (`x86_64-40`) figures, not `aarch64-10` ones — see those
+/// constants' own docs for why. **This paragraph read "one exception" until
+/// Task 6 moved the second, and the count is the whole point of restating
+/// it**: only `START_BASIS_MS` is still an `aarch64-10` figure, so a reader
+/// can no longer treat "this file's bases" as a single-host set. Both
+/// exceptions' ratio and `CONTROL_TOLERANCE` checks are uninformative on a
+/// Mac run even though `bases_apply` reads true there (a Mac `got` against an
 /// `x86_64-40` basis is the exact cross-machine comparison this paragraph
 /// otherwise argues against); the unconditional `INDOOR_SNAPSHOT_BUDGET_MS`
-/// assert is what still protects a Mac run for that one metric, not the
-/// ratio. `TURN_BASIS_MS` and `START_BASIS_MS` were left as `aarch64-10`
-/// figures on purpose — see `TURN_BUDGET_MS`'s own Task 5 paragraph for why
-/// a matching move was not available there.
+/// and `TURN_BUDGET_MS` asserts are what still protect a Mac run for those
+/// two metrics, not the ratios. Task 5 left `TURN_BASIS_MS` alone on purpose,
+/// because no downward move was available and a raise needed a control run;
+/// Task 6 ran the control and took the raise.
 ///
 /// A ratio computed against this basis from any OTHER host measures the
 /// machines, not the code (The Assize) — see the verdict logic in the test

@@ -1092,6 +1092,18 @@ pub struct Session<'w> {
 /// Anything a sighting reads that is not here must be immovable within a
 /// turn — the structure's own geometry, the room's interior graph, the
 /// terrain at a fixed day.
+///
+/// **The fields are not independent, and `day` is the one carrying the
+/// coupling.** `occupancy_writes` is a counter on an [`Occupancy`] that
+/// `Session::wait` REPLACES wholesale, so the count restarts with the new
+/// value rather than continuing to advance across a tick — two occupancies on
+/// either side of a `wait` can present the same write count while holding
+/// different creatures in different squares. What
+/// separates them is `day`, which a tick always advances. So cross-tick
+/// correctness rests on `day` strictly advancing over a `wait`; within a
+/// turn, where `day` is fixed, `occupancy_writes` is the discriminator. A
+/// future span that advanced no day would break that division of labour, and
+/// this is where to look when it does.
 #[derive(PartialEq)]
 struct SightingKey {
     /// [`Session::turn`] as of the derivation.

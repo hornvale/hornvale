@@ -1996,11 +1996,11 @@ pub struct Resolution {
 /// by every reader.
 ///
 /// **The ruling behind this — that `felt` is CONTENT rather than a view — is
-/// due as a decision record at the campaign's close**, out of the block that
-/// campaign reserved. It is deliberately not cited by number here: the record
-/// does not exist yet, and `cli/tests/suite/docs_consistency.rs` refuses a
-/// cite that resolves to nothing, which is the right behaviour and caught
-/// this on its first commit.
+/// decision 0596.** The cite was withheld through Tasks 2-5 because the
+/// record did not exist yet and `cli/tests/suite/docs_consistency.rs` refuses
+/// a cite that resolves to nothing, which is the right behaviour and caught
+/// this on its first commit; the record landed at the campaign's close and the
+/// cite is restored here.
 ///
 /// **Content, not a view.** A `Felt` is what the body's own arbitration
 /// concluded; between ticks a body does not re-feel, so a reader that finds a
