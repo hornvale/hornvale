@@ -3413,6 +3413,57 @@ its honest size.
    bet is properly gated on an UNSTAGED market being worth standing in, and
    staging is the instrument that lets us find out what such a market would
    have to contain.
+   **Annotated by [The Wicket](./chronicle/the-wicket.md) (2026-09-01), on the
+   traversal half, and the honest half of it is a NEW limit rather than a
+   gain.** Two things a body does now come back different. A room can offer a
+   fire to warm at without being a hearthroom — the one room type in any world
+   that could offer it before — because the object vocabulary stopped being a
+   closed list and a brazier reached the loomroom every reachable structure
+   has. And sleep stopped being a flag cleared by any rest: it is a stock, paid
+   down over the span a body was actually down, at a rate that differs between
+   dozing watchfully and going under, on the planet's own day rather than a
+   nominal one. Both are traversal in this row's exact sense — an act reaching
+   through the stack and coming back changed — and neither is evidence about
+   the taste half.
+   **What is worth recording here rather than only in the decision log is the
+   ceiling the second one hit.** Where a body sleeps grades how much the sleep
+   repays, and the grade can be no finer than the LOCALE, because the ledger
+   records the room a body was in and never the spot in it. So a player who
+   passes out in the street is repaid exactly as one who found the bed — inside
+   the same built, cold locale the two are indistinguishable to the fold. That
+   is a texture failure of precisely the kind this row is about, sitting
+   underneath a mechanism that scores green, and it is not a rough edge that
+   can be tightened: lifting it is a decision about whether fine position is
+   serialized at all. **The score does not move.** One more act with a
+   consequence is not a market worth standing in, and a limit named is not a
+   limit closed.
+   **Re-scored by [The Roll](./chronicle/the-roll.md) (2026-09-02): the
+   unstaged market now assembles, and the score still does not move.** The
+   gate the annotation above named is discharged. A settlement derives as many
+   residents as its committed population — named people, drawn apart on their
+   own dials, not eighty copies — and the walk ticks the ones within call, so
+   the moment assembles because the world is populous rather than because a
+   fixture arranged it. The readings this row has collected, each on its own
+   instrument: The Company found `sensed.present` empty in **24 of 24**
+   witnesses — twelve seeds across both possession targets, the annotation
+   above; The Hand, having deleted the player's own twin, measured **0 of 64**
+   on the 64-seed probe; and this campaign re-ran that same probe before
+   changing anything and read **3 of 64**. After the roll, a fresh possession
+   stands in company in **64 of 64** seeds, which is every seed whose home
+   settlement can hold company at all. At seed 42 that is 67 neighbours in one
+   room, four of them named in the presence line and 63 counted. **Three of the four sentences this row has carried since The
+   Company are now spent** — the moment does not assemble; it assembles only
+   when staged; a staged moment is the weakest possible evidence. What
+   survives is the fourth and always the real one: *a human still has to sit in
+   the market and report what they noticed.* The score stays **low** because
+   the axis of this chapter is checkability, and nothing about sixty-seven
+   people makes the taste half self-scorable — 64 of 64 is a count of company,
+   and this row exists in part to refuse exactly that substitution. The change
+   is in the standing, not the score: the question can now be asked of a world
+   left to itself, at any seed, which is the condition its two previous
+   annotations said it was waiting on. It moves when a human plays and says it
+   moved, and for the first time there is nothing structural in the way of
+   playing.
 
 ## The standing horizon
 

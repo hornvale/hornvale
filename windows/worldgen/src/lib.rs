@@ -94,12 +94,14 @@ pub mod gazetteer;
 pub mod graph_derive;
 pub mod harvest;
 pub mod hazard;
+pub mod herds;
 pub mod history_bake;
 pub mod history_emit;
 pub mod knownness;
 pub mod observer;
 pub mod person_promote;
 pub mod render;
+pub mod residents;
 pub mod resolve;
 pub mod schedule;
 pub mod seed_sweep;
@@ -2491,35 +2493,13 @@ pub fn wild_concentrations_from(
         .map(|(kind, _)| kind.0.to_string())
         .collect();
     let biosphere = hornvale_species::biosphere_registry();
-    let is_mobile_beast = |label: &str| -> bool {
-        // A mobile beast: a WILD, non-sessile, non-settling kind — `social_form`
-        // is `Solitary` or `Gregarious` (not `Settled`, the peoplehood axis; not
-        // `Sessile`, a rooted phototroph that is placed but never agentified).
-        //
-        // …and not a SEA creature. The Vacancy opened the ocean to the habitat
-        // model, but the walk layer this feeds is a terrestrial surface game:
-        // there is no underwater locale, and every agent it mints carries a
-        // freshwater thirst drive it satisfies by pathing to drinkable water. A
-        // shark minted here is therefore permanently, unsatisfiably thirsty —
-        // measured, not theorised: agentifying the reef shark drove the health
-        // battery's null control to 0.94 thirst-caused distress and fired its
-        // bug alarm.
-        //
-        // The test is *predominantly* marine (majority uptake), not marine at
-        // all, so the amphibious kind still walks: a crocodile hauls out, and
-        // its 0.4 sea / 0.6 land vector is exactly the case the surface game
-        // can represent. A real habitat-medium axis (MAP-11) would state this
-        // properly; until then, what a creature eats is the honest proxy for
-        // where it lives, which is the same reasoning the supply mask uses.
-        biosphere.get_by_label(label).is_some_and(|b| {
-            let mobile = matches!(
-                b.social_form,
-                hornvale_species::SocialForm::Solitary | hornvale_species::SocialForm::Gregarious
-            );
-            let predominantly_marine = b.niche.weight(hornvale_kernel::MARINE_FORAGE) > 0.5;
-            mobile && !predominantly_marine
-        })
-    };
+    // The mobile-beast filter — shared with `herds::wild_herds_near` (The
+    // Roll) so the two questions ("the world's top-k beasts" vs "which
+    // beasts stand within call of HERE") cannot silently disagree on what
+    // counts as a wild, walkable beast. See `herds::is_mobile_beast`'s doc
+    // for the full rationale (settling-peoplehood and sea-creature
+    // exclusions).
+    let is_mobile_beast = |label: &str| -> bool { herds::is_mobile_beast(&biosphere, label) };
     // Each mobile beast's DENSEST home — the stack settlement where its local
     // abundance (its composition fraction × the catchment biomass) peaks. So a
     // charismatic beast present but never *dominant* (an apex over a wide range,

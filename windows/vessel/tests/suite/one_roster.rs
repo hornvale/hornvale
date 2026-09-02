@@ -27,15 +27,24 @@ fn the_driven_body_is_a_member_of_the_roster_not_a_twin_of_one() {
         "the driven body appears exactly once in the roster"
     );
 
-    // And no OTHER body shares its home and species — which is what the
-    // pre-Hand duplicate looked like from the outside.
-    let twins = session
-        .bodies()
-        .iter()
-        .filter(|b| b.entity != driven.entity)
-        .filter(|b| b.home == driven.home && b.species == driven.species)
-        .count();
-    assert_eq!(twins, 0, "no twin of the driven body stands in its home");
+    // And no roster slot repeats an entity.
+    //
+    // **This used to read "no OTHER body shares its home and species", which
+    // is what the pre-Hand duplicate looked like from the outside. The Roll
+    // (Task 7) made that predicate meaningless**: a settlement's roll is its
+    // whole population, so sixty-seven bodies now legitimately share the
+    // driven body's home and species — they are its neighbours, not twins of
+    // it. The duplicate this test exists to forbid was always an entity
+    // repeated in the roster, and that is what is asserted now: a
+    // second-representation bug would put the same `EntityId` in two slots,
+    // which the housemates never do.
+    let entities: std::collections::BTreeSet<_> =
+        session.bodies().iter().map(|b| b.entity).collect();
+    assert_eq!(
+        entities.len(),
+        session.bodies().len(),
+        "no entity appears twice in the roster"
+    );
 }
 
 #[test]
@@ -58,7 +67,7 @@ fn any_creature_in_the_roster_can_be_driven() {
         "precondition: seed 42 derives 2+ bodies"
     );
     let second = a.bodies()[1].entity;
-    let flagship_home = a.driven_body().home.clone();
+    let flagship_driven = a.driven_body().entity;
     drop(a);
 
     let (b, _) = Session::start(
@@ -71,10 +80,19 @@ fn any_creature_in_the_roster_can_be_driven() {
     .expect("possessing a named creature starts");
 
     assert_eq!(b.agent_entity(), second, "the second creature is driven");
+    // **The discriminator is the ENTITY, not the home room.** It used to
+    // compare `driven_body().home` against the flagship's, which worked only
+    // while the roster's second body belonged to a DIFFERENT settlement.
+    // Since The Roll (Task 7) the roster is the flagship's own residents, so
+    // every member shares that home and the old assertion would fail while
+    // the feature it guards works perfectly. What "otherwise this test proves
+    // nothing" always meant is that a different creature is being driven, and
+    // an entity comparison says exactly that.
     assert_ne!(
-        b.driven_body().home,
-        flagship_home,
-        "and it is not the flagship — otherwise this test proves nothing"
+        b.agent_entity(),
+        flagship_driven,
+        "and it is not the body a default possession drives — otherwise this \
+         test proves nothing"
     );
 }
 

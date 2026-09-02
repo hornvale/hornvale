@@ -570,6 +570,26 @@ fn every_kind_with_a_mind_carries_a_dispersion() {
     }
 }
 
+/// The Wicket, Task 9, fix round 1 (Important 1): `fatigue_rise_registry`
+/// must be a TOTAL map over `biosphere_registry`'s roster, every kind
+/// included — a missing row used to mean "does not sleep", and review found
+/// that indistinguishable from "not yet authored" for exactly the reason
+/// [`every_kind_with_a_mind_carries_a_dispersion`] above already guards
+/// against for the mind/dispersion pair: a coverage GAP a caller-side
+/// fallback quietly papers over is invisible to every reader except this
+/// kind of ratchet. `xorn` (`ThermalStrategy::Absent`) is not exempt — it
+/// carries an explicit `0.0` row instead of being left off the table.
+#[test]
+fn every_biosphere_kind_carries_a_fatigue_rise_row() {
+    let fatigue = hornvale_species::fatigue_rise_registry();
+    for (k, _) in hornvale_species::biosphere_registry().iter() {
+        assert!(
+            fatigue.contains(k),
+            "biosphere kind {k:?} has no fatigue-rise row"
+        );
+    }
+}
+
 #[test]
 fn dispersion_is_a_ratio_on_every_axis() {
     for (k, d) in hornvale_species::dispersion_registry().iter() {
