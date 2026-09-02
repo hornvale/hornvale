@@ -242,6 +242,72 @@ mod tests {
         assert_eq!(shared, 0, "the reason must key the draw, not decorate it");
     }
 
+    /// The key's spelling is a save-format contract, pinned here rather than
+    /// discovered by a world that silently reseeds — the guard `volcano_key`,
+    /// `event_key` and `chamber_key` all carry. A refactor of the `format!`
+    /// that looks like tidying moves every site in every world.
+    #[test]
+    fn the_placement_key_spelling_is_pinned() {
+        // lexicon: both literals below are the frozen wire spelling of a
+        // VERTEX in a derivation key (decision 0246) — the very spelling this
+        // test exists to hold still — never the mesh-area sense of the word.
+        assert_eq!(placement_key(Vertex(0), SiteReason::Cave), "cell/0/cave"); // lexicon: as above
+        assert_eq!(
+            placement_key(Vertex(4127), SiteReason::Exotic),
+            "cell/4127/exotic" // lexicon: as above
+        );
+    }
+
+    /// **The byte golden.** One measured address, pasted in, for the one
+    /// combination every other test in this module reads around rather than
+    /// through: seed 42, vertex 1953, exotic, walk depth 13 on the canonical
+    /// level-6 grid.
+    ///
+    /// It exists because the four property tests above are all
+    /// self-consistency checks *within a single run* — they hold under a
+    /// changed [`PLACEMENT_DEPTH_BELOW_GRID`] and under a reordered draw,
+    /// because both sides of each assertion move together. And an address is
+    /// DERIVED, never stored, so no committed artifact witnesses one either:
+    /// without this literal, `PLACEMENT_DEPTH_BELOW_GRID` and the digit loop
+    /// jointly decide every site's address forever with nothing pinning them.
+    ///
+    /// **It discriminates, and that was verified rather than assumed.**
+    /// Changing `PLACEMENT_DEPTH_BELOW_GRID` from 2 to 3 reds this test and
+    /// only this test: the address becomes
+    /// `[2, 3, 0, 3, 3, 3, 1, 0, 1, 1, 1, 2, 0]`, a nine-digit head and a
+    /// four-digit tail, so the same drawn digits `1, 1, 2, 0` land one place
+    /// later and the trailing `3` is gone. Every other test in this module —
+    /// including `a_placement_stays_inside_its_vertexs_own_quad` and
+    /// `a_placement_is_not_just_the_vertexs_own_facet` — stays green under
+    /// that change, which is exactly why this literal has to exist.
+    ///
+    /// Note what the counterexample also shows: `path[8]` reads `1` under
+    /// BOTH constants, because the kept head's own digit there happens to
+    /// equal the digit the draw put in. A pin that checked one position would
+    /// have missed it; this one compares the whole address.
+    ///
+    /// The two halves of the literal are worth reading separately. The first
+    /// eight digits are the KEPT head, the quad `Facet::containing` put the
+    /// vertex in — they move only if the mesh or the depth constant moves. The
+    /// last five are the DRAWN tail — they move if the key spelling, the label,
+    /// the draw order, or `range_u32`'s semantics move. A red says which by
+    /// where it differs.
+    #[test]
+    fn the_seed_42_placement_is_byte_pinned() {
+        let geo = grid();
+        let placed = site_facet_for(Vertex(1953), SiteReason::Exotic, Seed(42), &geo, 13);
+        assert_eq!(
+            placed,
+            Facet {
+                face: 3,
+                //         the kept head (8)          the drawn tail (5)
+                path: vec![2, 3, 0, 3, 3, 3, 1, 0, /**/ 1, 1, 2, 0, 3],
+            },
+            "the placed address moved — see this test's doc for which half of \
+             the path says what"
+        );
+    }
+
     /// A depth with no room below the quad draws nothing and returns the
     /// vertex's own facet, rather than panicking on an empty path slice.
     #[test]
