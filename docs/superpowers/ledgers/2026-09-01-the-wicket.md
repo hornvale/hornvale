@@ -1202,3 +1202,43 @@ is locale-granular, so a player passing out in the street is repaid exactly as
 one who found the bed. Score unmoved: one more act with a consequence is not a
 market worth standing in, and this row moves only when a human plays and says
 it moved.
+
+#60 [G5] — **Instance FIFTEEN, and it is the sharpest: the campaign's own
+lesson failed in the same file as its own correction.**
+`interior/pattern.rs:104-114` — the `at_locale` **field** doc — still says a
+pattern with `at_locale: false` *"cannot move a world: no live read can reach
+it."* That is the exact claim ledger #25/#28 corrected on the `INVENTORY` doc
+**thirty lines below it**, and it is falsified by this campaign's own proof
+kind: `the-brazier` is `at_locale: false` and reached
+`book/src/gallery/possession-carry-seed-14.md`. The field doc has been untouched
+since The Blocking (`f2cfb0974`, 2026-07-28).
+
+We corrected the sentence we grepped for and left its twin one screen away. The
+lesson this campaign wrote down — *grep the claim, not the identifier* — is
+exactly what would have caught it, and we did not apply it to our own
+correction. Of every instance, this is the one to lead the retrospective with.
+
+#61 [G5] — **Two decision records carry a stale census, and append-only means
+now or never.** `0556` and `0557` both state "58 occurrences" of bare
+`KindId("`, and `0556` adds that a guard "would have shipped pre-loaded with a
+**two-table** allow-list". Re-measured at HEAD: **78**, across **three**
+authoring tables — `chamber_prose_registry()` went from 1 occurrence to 18 when
+Task 4 turned prose into a component table. The substantive ruling is unaffected
+(still zero at a production consumer site), so the decision is right and only
+its evidence is wrong. Neither record names the census's scope either; a reader
+running the bare grep workspace-wide gets **671**.
+
+The mechanism is plain: a Task-3-era measurement was transcribed into a
+closing document without re-measuring, in a campaign whose entire finding is
+that transcribed claims outrun their support. Fixable before the merge and not
+afterwards.
+
+#62 [G5] — **Compressing a chain produced a false code citation.**
+`MAP-wilderness-affords-no-rest`'s rewrite says the heat carriers are confined
+by "`the-fire` requires `Alcove`, `roles: [Hearthroom]`". `the-fire` is
+`roles: EVERY_ROLE` (`pattern.rs:256`), under a comment written to prevent
+exactly this reading — *"NO ROLE WITHHOLDS THE FIRE… it is confined to the
+hearthroom by the GRAMMAR rather than by a rule anyone wrote"*. The role gate is
+on `the-alcove`. **The previous version of the row stated the three-link chain
+correctly**; the DoD compressed it to two links and made it false. Same shape as
+the known hazard that compressing a branch table deletes a branch.
