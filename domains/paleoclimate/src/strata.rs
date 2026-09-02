@@ -9,22 +9,23 @@ use hornvale_kernel::{Geosphere, ReferenceElevation, Temperature, VertexMap};
 /// composition root after re-running climate at the era's sea level and
 /// applying the era's albedo cooling offset to the temperature field.
 ///
-/// **`day` stays a bare `f64` because it is not one axis** — see the idea
-/// registry's `DOM-era-day-axis` and The Hallmark's ledger entry #10. The
-/// composition root has two producers and they disagree about the unit:
-/// `paleoclimate_from` writes absolute standard days
-/// (`windows/worldgen/src/lib.rs:3733`), while `bake_eras` writes bake YEARS
-/// (`:3876`, `:3921`) which `history_bake.rs:1651` then compares against a
-/// year stepped by `epoch_years`. Retyping to `WorldTime` would have to pick
-/// one, and every choice either reinterprets a year as a day (365.25x) or
-/// moves the bake's era boundaries. Repair the axis first; the tag below
-/// stays until then.
+/// **`day` is one axis on every producer, since The Hallmark's Task 13** — the
+/// idea registry's `DOM-era-day-axis`, ledger entries #10 (the diagnosis) and
+/// #15 (the fix). It was not, and the history is worth keeping because the
+/// field looked healthy the whole time it was wrong: `paleoclimate_from` wrote
+/// absolute standard days while `bake_eras` wrote bake YEARS into the same
+/// slot, and nothing objected, because the two paths never met at one
+/// consumer. Both producers now derive `day` from the identical deep-time
+/// expression; the history bake's own `[start_year, end_year)` window travels
+/// beside the era series as `history_bake::bake`'s `era_years` argument, which
+/// is where a bake-side quantity belongs.
+///
+/// The `pending(wave-2: day)` tag below therefore no longer records a blocker
+/// — only that the `WorldTime` retype has not been done yet.
 /// type-audit: pending(wave-2: day), bare-ok(flag: ice), bare-ok(flag: habitable), bare-ok(ratio: ice_fraction)
 #[derive(Debug, Clone)]
 pub struct EraClimate {
-    /// Absolute standard day of the era **on the deep-time path only** — the
-    /// history bake fills this slot with a bake YEAR instead. See the struct
-    /// doc above and `DOM-era-day-axis`; do not read a unit off this line.
+    /// Absolute standard day of the era, on every producer path.
     pub day: f64,
     /// This era's precomputed ice-ADVANCE mask: land iced this era that is
     /// NOT iced at present (see the composition root's `climate_at_era`).
@@ -80,10 +81,13 @@ pub fn glaciated(
 
 /// The extracted strata of a world. Non-serialized; re-derived on demand.
 ///
-/// **`glacial_maximum_day` inherits [`EraClimate::day`]'s two-axis ambiguity**
-/// — `extract` copies it straight out of the peak era below — so it cannot be
-/// typed `WorldTime` while its source is two-valued, even though it reaches
-/// the ledger (`facts::genesis`). See `DOM-era-day-axis` in the idea registry.
+/// **`glacial_maximum_day` is exactly [`EraClimate::day`]'s axis** — `extract`
+/// copies it straight out of the peak era below, and it reaches the ledger
+/// from there (`facts::genesis`). That inheritance is why the field could not
+/// be typed `WorldTime` while `EraClimate::day` carried two axes; The
+/// Hallmark's Task 13 repaired the source, so the only thing left between this
+/// and a `WorldTime` is the retype itself. See `DOM-era-day-axis` in the idea
+/// registry.
 /// type-audit: bare-ok(flag: envelope), bare-ok(flag: shoreline), bare-ok(flag: refugia), pending(wave-2: glacial_maximum_day), bare-ok(ratio: max_ice_fraction)
 #[derive(Debug, Clone)]
 pub struct PaleoRecord {

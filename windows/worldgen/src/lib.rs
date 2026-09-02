@@ -3790,10 +3790,20 @@ pub fn paleoclimate_from(
 ///   and turns high-latitude vertices hostile, forcing migration — and it costs
 ///   one mean-temperature field per era (no moisture/biome work), the same
 ///   order the coarse ice diagnostic already pays.
-/// - **The day-axis is re-based onto the bake's `[start_year, end_year)`
-///   window** (oldest era → `start_year`, present → `end_year`), so `bake`'s
-///   `era_index_for` marches the glacial cycles forward across the simulated
-///   millennia rather than seeing every era stamped in deep-negative time.
+/// - **The bake's year axis is returned BESIDE the series, not inside it**
+///   (The Hallmark, Task 13). The bake needs the glacial cycles re-based onto
+///   its own `[start_year, end_year)` window (oldest era → `start_year`,
+///   present → `end_year`) so `bake`'s `era_index_for` marches them forward
+///   across the simulated millennia rather than seeing every era stamped in
+///   deep-negative time. That re-basing used to be written into
+///   [`EraClimate::day`], a paleoclimate field whose contract is **standard
+///   days** — so the field carried bake YEARS here and absolute days on
+///   `paleoclimate_from`'s path, two axes in one slot (registry row
+///   `DOM-era-day-axis`). The window is now a third return value, a bake-side
+///   `Vec<f64>` of years in era order, exactly as `EraAdjust` is already
+///   returned rather than added to a domain type this window does not own.
+///   `EraClimate.day` gets the era's true deep-time day on BOTH paths, from
+///   the identical expression.
 ///
 /// On the constant sky (no orbital forcing) there is no deep time: a single
 /// present-era mask is returned and the bake sees a stable world — no vertex
@@ -3807,17 +3817,20 @@ pub fn paleoclimate_from(
 /// into `habitable` (an iced vertex reads below-freezing, hence not habitable),
 /// so `factor` gates purely on habitability and never double-counts ice.
 // Returns the era series AND the per-era `EraAdjust` beside it (The Tense
-// §3.1). `EraClimate` carries `sea_level` but NOT the albedo temperature
+// §3.1) AND the per-era bake YEAR beside that (The Hallmark, Task 13).
+// `EraClimate` carries `sea_level` but NOT the albedo temperature
 // offset — it is consumed inside this function to build `habitable` and then
 // discarded — so the adjusts are returned as a parallel vector rather than
-// added as a field to a domain type this window does not own. The two vectors
-// are built in one pass and are the same length by construction.
+// added as a field to a domain type this window does not own. The years are
+// returned for the same reason and are the same shape of thing: a bake-side
+// quantity with no home in a paleoclimate type. All three vectors are built in
+// one pass and are the same length by construction.
 #[allow(clippy::type_complexity)]
 fn bake_eras(
     world: &World,
     terrain: &GeneratedTerrain,
     cfg: &history_bake::BakeConfig,
-) -> Result<(Vec<EraClimate>, Vec<EraAdjust>), BuildError> {
+) -> Result<(Vec<EraClimate>, Vec<EraAdjust>, Vec<f64>), BuildError> {
     let sky = sky_of(world)?;
     let geo = terrain.geosphere();
     let elevation = terrain.globe().elevation.clone();
@@ -3873,7 +3886,11 @@ fn bake_eras(
         );
         return Ok((
             vec![EraClimate {
-                day: cfg.start_year,
+                // The present, in absolute standard days — the same instant
+                // `paleoclimate_from`'s newest era carries (`-WINDOW + 24 *
+                // WINDOW / 24` is exactly `0.0`). This slot used to hold
+                // `cfg.start_year`, a bake YEAR; see the doc above.
+                day: 0.0,
                 ice: hornvale_kernel::VertexMap::from_fn(geo, |_| false),
                 habitable,
                 sea_level: present_sea_level,
@@ -3881,6 +3898,10 @@ fn bake_eras(
             }],
             // No forcing to replay: the one era IS the present.
             vec![EraAdjust::present(terrain)],
+            // ...and it opens the bake window. With one era, `era_index_for`
+            // returns 0 for every year regardless, so this value binds
+            // nothing; it is here because the vectors are parallel.
+            vec![cfg.start_year],
         ));
     };
     let forcing = &system.forcing;
@@ -3905,6 +3926,7 @@ fn bake_eras(
 
     let mut eras: Vec<EraClimate> = Vec::with_capacity(CLIMATE_ERAS);
     let mut adjusts: Vec<EraAdjust> = Vec::with_capacity(CLIMATE_ERAS);
+    let mut years: Vec<f64> = Vec::with_capacity(CLIMATE_ERAS);
     for e in 0..CLIMATE_ERAS {
         let era_day = -DEEP_TIME_WINDOW_DAYS
             + (e as f64) * DEEP_TIME_WINDOW_DAYS / (CLIMATE_ERAS as f64 - 1.0);
@@ -3917,11 +3939,15 @@ fn bake_eras(
                 .expect("present sea level plus a finite eustatic change is finite");
         let habitable = livable_mask(sea_level, state.temp_offset);
         // Re-base the deep-time era onto the bake window (oldest → start,
-        // present → end), preserving order so `era_for` advances monotonically.
-        let bake_day = cfg.start_year
+        // present → end), preserving order so `era_for` advances
+        // monotonically. This is a bake YEAR and it goes in the bake's own
+        // vector — `EraClimate.day` below takes the era's real `era_day`, the
+        // absolute standard day the ice lookup above already ran against.
+        let bake_year = cfg.start_year
             + (e as f64) * (cfg.end_year - cfg.start_year) / (CLIMATE_ERAS as f64 - 1.0);
+        years.push(bake_year);
         eras.push(EraClimate {
-            day: bake_day,
+            day: era_day,
             ice: hornvale_kernel::VertexMap::from_fn(geo, |_| false),
             habitable,
             sea_level,
@@ -3934,7 +3960,7 @@ fn bake_eras(
             sea_level,
         });
     }
-    Ok((eras, adjusts))
+    Ok((eras, adjusts, years))
 }
 
 /// Headline biome/habitability lines for the almanac's Land section.
@@ -7731,7 +7757,7 @@ fn bake_history_from(
         hornvale_terrain::river_proximity(geo, &water_kind, hornvale_terrain::RIVER_REACH);
     let paleo = paleoclimate_from(world, terrain)?;
     let mut cfg = history_bake::BakeConfig::default_millennia();
-    let (eras, era_adjusts) = bake_eras(world, terrain, &cfg)?;
+    let (eras, era_adjusts, era_years) = bake_eras(world, terrain, &cfg)?;
     let peoples: Vec<KindId> = species_set.iter().map(|&n| KindId(n)).collect();
 
     // THE PER-PEOPLE CAPACITY FIELDS, and the one ordering that ties them to
@@ -7931,6 +7957,7 @@ fn bake_history_from(
         &river_prox,
         &prospectivity,
         &eras,
+        &era_years,
         &paleo.refugia,
         &peoples,
         &seating_rungs,

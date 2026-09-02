@@ -52,12 +52,13 @@ pub fn sea_level_change_m(volume: f64) -> f64 {
 
 /// One integrated moment of the ice history.
 ///
-/// **Unlike [`crate::strata::EraClimate::day`], this `day` IS unambiguously a
-/// standard day on every path** — both producers sample `-k * ICE_STEP_DAYS`
-/// and compare against a day-valued `era_day`. It is still `pending` only
-/// because The Hallmark's Task 5 scoped the three paleoclimate day fields as
-/// one migration and stopped on the ambiguous one; see `DOM-era-day-axis` in
-/// the idea registry and ledger entry #10 for the residual scope.
+/// **This `day` is a standard day on every path** — both producers sample
+/// `-k * ICE_STEP_DAYS` and compare against a day-valued `era_day`. It was
+/// unambiguous even while [`crate::strata::EraClimate::day`] was not, and is
+/// still `pending` only because The Hallmark's Task 5 scoped the three
+/// paleoclimate day fields as one migration and stopped on the ambiguous one.
+/// Task 13 repaired that one (`DOM-era-day-axis`, ledger entries #10 and #15),
+/// so all three are now blocked on nothing but the retype.
 /// type-audit: pending(wave-2: day)
 #[derive(Debug, Clone, PartialEq)]
 pub struct IceState {
@@ -75,9 +76,9 @@ pub struct IceState {
 /// March the ice sheet over `(day, caloric_index)` samples in ascending day
 /// order, starting from ice-free. One `IceState` out per sample in.
 ///
-/// The `day` half of each sample carries [`IceState::day`]'s unambiguous
-/// standard-day axis; it is `pending` for the same scoping reason recorded
-/// there (`DOM-era-day-axis`, ledger #10), not because the unit is unclear.
+/// The `day` half of each sample carries [`IceState::day`]'s standard-day
+/// axis; it is `pending` for the same scoping reason recorded there
+/// (`DOM-era-day-axis`, ledger #10 and #15), not because the unit is unclear.
 /// type-audit: pending(wave-2: samples)
 pub fn integrate_ice(samples: &[(f64, f64)]) -> Vec<IceState> {
     let mut volume = 0.0_f64;

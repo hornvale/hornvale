@@ -15,6 +15,21 @@ fn e(m: f64) -> ReferenceElevation {
     ReferenceElevation::new(m).unwrap()
 }
 
+/// A fixture's bake-side year axis: `n` eras, `step` years apart, opening at
+/// year 0 — the year each era comes into force, on `BakeConfig`'s axis.
+///
+/// This is a SEPARATE slice from the fixture's `EraClimate` series, and that
+/// is the point (The Hallmark, Task 13). These fixtures used to let
+/// `EraClimate.day` carry the bake year, which is a paleoclimate field whose
+/// contract is an absolute standard DAY; `bake` now takes the year axis
+/// explicitly. The numbers here are exactly the `.day` values the fixtures
+/// used to pass, so every era selection these tests exercise is unchanged.
+/// The `.day` values themselves survive only as the `min_by` ordering key that
+/// picks the oldest era, which reads no unit off them.
+fn era_years(n: usize, step: f64) -> Vec<f64> {
+    (0..n).map(|i| i as f64 * step).collect()
+}
+
 /// The biome-class map every bake fixture is handed (The Granary T2): all
 /// `Grassland`, so each community's harvest curve carries the grassland
 /// amplitude and no pre-campaign expectation moves. The bake reads this map
@@ -236,6 +251,7 @@ fn same_seed_bakes_byte_identical_history() {
         &river,
         &barren(&geo),
         &eras,
+        &era_years(8, 250.0),
         &refugia,
         &people,
         &surface_seating(&geo, &people),
@@ -250,6 +266,7 @@ fn same_seed_bakes_byte_identical_history() {
         &river,
         &barren(&geo),
         &eras,
+        &era_years(8, 250.0),
         &refugia,
         &people,
         &surface_seating(&geo, &people),
@@ -273,6 +290,7 @@ fn different_seeds_diverge() {
         &river,
         &barren(&geo),
         &eras,
+        &era_years(8, 250.0),
         &refugia,
         &people,
         &surface_seating(&geo, &people),
@@ -287,6 +305,7 @@ fn different_seeds_diverge() {
         &river,
         &barren(&geo),
         &eras,
+        &era_years(8, 250.0),
         &refugia,
         &people,
         &surface_seating(&geo, &people),
@@ -316,6 +335,7 @@ fn the_workload_fires_climate_displacement_at_volume_without_conflict() {
         &river,
         &barren(&geo),
         &eras,
+        &era_years(8, 250.0),
         &refugia,
         &people,
         &surface_seating(&geo, &people),
@@ -395,6 +415,7 @@ fn a_strong_community_raids_a_weaker_richer_neighbour_with_land_to_spare() {
         &river,
         &barren(&geo),
         &eras,
+        &[0.0],
         &refugia,
         &people,
         &surface_seating(&geo, &people),
@@ -525,6 +546,7 @@ fn a_displaced_people_rolls_downhill_and_the_cascade_is_recorded() {
         &river,
         &barren(&geo),
         &eras,
+        &[0.0],
         &refugia,
         &people,
         &surface_seating(&geo, &people),
@@ -634,6 +656,7 @@ fn a_hostile_vertex_in_a_full_world_starves_instead_of_cascading() {
         &river,
         &barren(&geo),
         &eras,
+        &era_years(2, 1000.0),
         &refugia,
         &people,
         &surface_seating(&geo, &people),
@@ -665,6 +688,7 @@ fn a_hostile_vertex_in_a_full_world_starves_instead_of_cascading() {
         &river,
         &barren(&geo),
         &eras,
+        &era_years(2, 1000.0),
         &refugia,
         &people,
         &surface_seating(&geo, &people),
@@ -824,6 +848,7 @@ fn value_flat_history_seeded_with(
         &river,
         &barren(&geo),
         &eras,
+        &[0.0],
         &refugia,
         &people,
         &surface_seating(&geo, &people),
@@ -1166,6 +1191,7 @@ fn ocean_sunders_and_a_lane_leapfrogs() {
         &river,
         &barren(&geo),
         &eras,
+        &era_years(8, 250.0),
         &refugia,
         &people,
         &surface_seating(&geo, &people),
@@ -1187,6 +1213,7 @@ fn ocean_sunders_and_a_lane_leapfrogs() {
         &river,
         &barren(&geo),
         &eras,
+        &era_years(8, 250.0),
         &refugia,
         &people,
         &surface_seating(&geo, &people),

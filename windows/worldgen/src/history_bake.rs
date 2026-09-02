@@ -1643,12 +1643,20 @@ impl<'a> Bake<'a> {
             .expect("every people the bake places has a capacity field at the same index")
     }
 
-    /// The index of the era in force for `year`: the last era whose `day` is at
-    /// or before `year`, or 0 for years before the first.
-    fn era_index_for(&self, eras: &[EraClimate], year: f64) -> usize {
+    /// The index of the era in force for `year`: the last era whose bake year
+    /// is at or before `year`, or 0 for years before the first.
+    ///
+    /// **Both sides of the comparison are bake years** (The Hallmark, Task 13).
+    /// They used to be `EraClimate.day` against `year`, which read a
+    /// paleoclimate DAY field as a bake YEAR and only worked because the
+    /// composition root wrote a year into it. `era_years` carries the identical
+    /// numbers that field used to carry — the same `start_year + e * span /
+    /// (n - 1)` expression, unconverted — so every `<=` outcome, exact
+    /// equalities included, is bit-for-bit what it was.
+    fn era_index_for(&self, era_years: &[f64], year: f64) -> usize {
         let mut chosen = 0;
-        for (i, e) in eras.iter().enumerate() {
-            if e.day <= year {
+        for (i, &era_year) in era_years.iter().enumerate() {
+            if era_year <= year {
                 chosen = i;
             }
         }
@@ -4205,7 +4213,17 @@ impl<'a> Bake<'a> {
 /// property of the ground rather than of the pairing.
 /// There is no longer a species-blind capacity field: every site that once read
 /// one now asks the question per-people, including genesis siting.
-/// type-audit: bare-ok(ratio: river_prox), bare-ok(ratio: prospectivity), bare-ok(flag: refugia)
+///
+/// `era_years` is **the bake's own time axis**, one bake YEAR per entry of
+/// `eras`, in era order — the year at which that era comes into force, on the
+/// same axis as `cfg.start_year` / `end_year` and every `Occupation` value
+/// this crate records. It is a separate slice, not a field on `EraClimate`,
+/// because `EraClimate` is a `hornvale_paleoclimate` type whose `day` is an
+/// absolute standard DAY: the composition root used to re-base its era window
+/// into that slot, which put bake years and deep-time days in one field (The
+/// Hallmark, Task 13; registry row `DOM-era-day-axis`). [`Bake::era_index_for`]
+/// is the only reader.
+/// type-audit: bare-ok(ratio: river_prox), bare-ok(ratio: prospectivity), bare-ok(flag: refugia), bare-ok(count: era_years)
 // The bake reads several independent composition-root fields (geo, capacity,
 // river proximity, era series, refugia, roster, span); each is a distinct
 // world input with no coherent grouping into a single struct, so they stay
@@ -4219,6 +4237,7 @@ pub fn bake(
     river_prox: &VertexMap<f64>,
     prospectivity: &VertexMap<f64>,
     eras: &[EraClimate],
+    era_years: &[f64],
     refugia: &VertexMap<bool>,
     peoples: &[KindId],
     seating: &[VertexMap<Band>],
@@ -4226,6 +4245,11 @@ pub fn bake(
     graphs: &[ConnectionGraph],
 ) -> History {
     assert_eq!(graphs.len(), eras.len(), "one graph per era");
+    assert_eq!(
+        era_years.len(),
+        eras.len(),
+        "one bake year per era, in era order"
+    );
     // Same alignment contract, same reason, same boundary as `caps_by_era`'s
     // below: a mismatch would silently seat some people at another's rung, and
     // nothing downstream can detect it.
@@ -4283,6 +4307,13 @@ pub fn bake(
     //    after the peoples before it have taken theirs. Each people draws from
     //    the vertices still vacant when its turn comes, retrying past a collision
     //    rather than wasting the draw, so its `count` sites really do open.
+    // The oldest era, by its own absolute standard day. This is an ORDERING
+    // read, never a magnitude one — it selects an element, and the day's
+    // numeric value is used for nothing else — so it is indifferent to the
+    // axis the field carries, and it picked `eras[0]` before The Hallmark's
+    // Task 13 (ascending bake years) and picks `eras[0]` after it (ascending
+    // deep-time days, most negative first). `min_by` returns the first
+    // minimum, so a one-era series resolves the same way on both paths.
     let earliest = eras
         .iter()
         .min_by(|a, b| a.day.total_cmp(&b.day))
@@ -4354,7 +4385,7 @@ pub fn bake(
     //    stream-draw order stays deterministic).
     let mut year = cfg.start_year;
     while year < cfg.end_year {
-        let era_idx = bake.era_index_for(eras, year);
+        let era_idx = bake.era_index_for(era_years, year);
         bake.cur_graph = era_idx;
         let era = eras[era_idx].clone();
         // Last epoch's increments are spent: nothing may be taxed twice.

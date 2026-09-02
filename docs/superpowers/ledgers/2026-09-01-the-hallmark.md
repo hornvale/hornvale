@@ -290,3 +290,53 @@ the deferrals were controller adjudications, not spec constraints, and the
 decider values the unification and the axis repair over the deferral's
 safety margin · Capture: plan addendum Tasks 13-14; `DOM-era-day-axis`
 re-scored at close.
+
+#15 [T13] — How should the bake path stop writing bake YEARS into
+`EraClimate.day`, a paleoclimate field whose contract is absolute standard
+days (ledger #10's defect; ruling #14 orders it fixed now)? · Decision: the
+bake path keeps its year axis in a **bake-owned parallel vector**, and
+`EraClimate.day` takes the era's true deep-time day on both producers.
+`bake_eras` returns a third `Vec<f64>` of bake years beside the existing
+`Vec<EraClimate>` and `Vec<EraAdjust>`; `history_bake::bake` takes it as a
+new `era_years: &[f64]` argument with a length assert; `Bake::era_index_for`
+compares that slice against the epoch loop's `year`, so both sides of its
+`<=` are bake years. `EraClimate.day` on the forced arm becomes the
+`era_day` the ice lookup in the same loop already ran against — the
+identical `-DEEP_TIME_WINDOW_DAYS + e * DEEP_TIME_WINDOW_DAYS /
+(CLIMATE_ERAS - 1)` expression `paleoclimate_from` uses — and `0.0` (the
+present) on the constant-sky arm, replacing `cfg.start_year` · Why: the
+consumer table decided it. Bake-path `EraClimate.day` has exactly two
+readers, both inside `bake`: `era_index_for`'s comparison against a bake
+year, and the `min_by` that picks the oldest era. No bake-path value reaches
+`strata::extract`, `facts.rs`, the ledger, or any artifact — `extract` is
+only ever called on `paleoclimate_from`'s day-valued series. So the only
+reader that needs a UNIT needs years, and the only other reader needs an
+ORDERING. Converting the field to days and converting the comparand back
+(the `day_of_bake_year` sibling-crossing shape ruling #14's wording
+anticipates, and which the brief lists as its option (a)) would have been a
+smaller diff, but it buys unit-consistency by storing `bake_year × 365.25`
+— the bake's year axis in a day costume. A reader would then find an era
+stamped "day 91312.5 after genesis" that is physically a glacial state
+750,000 years BEFORE genesis: single-axis in unit, still false in referent.
+It also needs a floating-point monotonicity argument (multiplying both sides
+of a `<=` by a constant is non-decreasing but not injective on doubles, so
+`x > y` collapsing to `f(x) == f(y)` is a real, if unreachable, failure
+mode) · Selection semantics: preserved BY CONSTRUCTION, not by argument.
+`era_years[e]` holds the identical `cfg.start_year + e * (end - start) /
+(CLIMATE_ERAS - 1)` f64 the field used to hold, unconverted, and `year` is
+untouched, so every `<=` outcome — exact-equality grid alignments included
+(e.g. era 3 at exactly `250.0` against the epoch loop's exactly `250.0`) —
+is bit-for-bit what it was. The `min_by` is an ordering read whose numeric
+value is used for nothing else: bake days ascend (most negative first) where
+bake years ascended, `min_by` returns the first minimum, so it selects
+`eras[0]` before and after · Constraint 4 (comparator twins) not engaged:
+neither `strata::extract`'s peak comparator nor worldgen's `:3763-3764` twin
+was touched · Verification: seed-42 world byte-IDENTICAL (sha256
+`e70ca3d0d782f095ded80071bbafe11e64f19b61ecffa127414ed5a57e9970ef` before
+and after); `cargo nextest run -p hornvale-worldgen -p hornvale-paleoclimate`
+— 822 passed, 0 failed; `git status --porcelain book/ clients/` empty ·
+Capture: this entry; the `DOM-era-day-axis` registry row re-scored to
+`shipped`; the `EraClimate.day` / `glacial_maximum_day` / `IceState.day`
+doc comments corrected. The `pending(wave-2: day)` type-audit tags are
+deliberately UNCHANGED — the blocker is discharged, the `WorldTime` retype
+is Task 15's job and this task retyped nothing.
