@@ -1,7 +1,15 @@
 # The Pawl: The Resident Fold Store — A Campaign Design
 
-> **STATUS: DRAFT, awaiting G3.** Branch `campaign/the-pawl`; decision block
-> 0536–0545; ledger `docs/superpowers/ledgers/2026-09-01-the-pawl.md`.
+> **STATUS: SHIPPED (2026-09-02), merge pending.** Branch `campaign/the-pawl`;
+> decision block 0536–0545, of which 0536–0541 were ratified and 0542–0545 stay
+> unused; ledger `docs/superpowers/ledgers/2026-09-01-the-pawl.md`; chronicle
+> `book/src/chronicle/the-pawl.md`; retrospective
+> `docs/retrospectives/the-pawl.md`. **The measured result is §11 (the first
+> readout) and §12 (the second, after the accumulator) — read both; §11 is not
+> superseded and §4 was never edited.** §12.4 carries the verdict table: H2 (a)
+> and (b) met, H2 (c) and both H4 clauses not met, H3 held by construction.
+> §12.8 names the remaining quarry. Awaiting the merge queue at the time this
+> line was written.
 
 Program: **The Penstock** (`docs/superpowers/specs/2026-08-22-the-penstock-metaplan.md`),
 stage 7a's tenants — the stages The Tailrace
