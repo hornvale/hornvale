@@ -87,6 +87,77 @@ EOF
     [ "$seen" = "1" ]
 }
 
+# Is EVERY path here authored by the `artifacts` phase? — the question that
+# decides whether a merge conflict is real work or bookkeeping.
+#
+# WHY IT EXISTS. Six candidates were refused at the mouth in one session over
+# `docs/audits/type-audit-report.md`, and THREE conflicted in nothing else
+# (the-hallmark 0e21ed0c6843, the-rack d5bee7a1e3de, the-brattice 91e40b0669ba).
+# That file is 68 lines of repo-wide AGGREGATE COUNTS, so any pub-boundary change
+# moves the same lines and ~10% of commits landing on main touch it. Splitting it
+# per crate does not help (the totals collide regardless) and `merge=union` is
+# wrong for it: a rendered table is not an append-only list, and union would
+# interleave two renderings silently.
+#
+# WHY RESOLVING SUCH A CONFLICT IS SAFE, the load-bearing claim: `sluice-run.sh`
+# runs `artifacts` FIRST on every candidate and commits tracked drift after every
+# phase. For a path that phase authors, taking either side is not a resolution —
+# it is a placeholder the regeneration overwrites before anything is gated.
+#
+# THE AUTHOR COLUMN IS THE AUTHORITY, not a guess about paths. Since The
+# Attestation, docs/generated-paths.txt's second column names each path's author,
+# and only ONE value is safe to auto-resolve:
+#   artifacts  the phase the chamber runs on every stage AND merge   -> resolve
+#   census     authored by a census run, which the chamber NEVER runs -> refuse
+#   heavy      authored by the heavy tier, which a STAGE gate does not run -> refuse
+#   none       hand-written; the regeneration would not touch it      -> refuse
+#
+# EXACT ROWS BEAT DIRECTORY ROWS, and this is not cosmetic: `book/src/gallery/` is
+# `artifacts`, but `book/src/gallery/almanac.md` inside it is `none` — a
+# hand-written page in a generated directory. Longest match wins, so the file's
+# own row governs. An earlier draft took the LAST match and happened to be right
+# only because the exact rows sit after the directory row in the file; reordering
+# the file would have flipped it silently.
+#
+# Returns 0 only if the list is NON-EMPTY and every member qualifies. An empty
+# list returns 1: "nothing conflicts" is not "every conflict is regenerable".
+sluice_is_regenerated_only() {
+    local changed="$1" root="${2:-.}" pth seen=0
+    [ -n "$changed" ] || return 1
+    local declared="$root/docs/generated-paths.txt"
+    [ -f "$declared" ] || return 1
+    while IFS= read -r pth; do
+        [ -n "$pth" ] || continue
+        seen=1
+        [ "$(sluice_path_author "$pth" "$declared")" = "artifacts" ] || return 1
+    done <<EOF
+$changed
+EOF
+    [ "$seen" = "1" ]
+}
+
+# The author of the MOST SPECIFIC declared row matching this path, or empty when
+# nothing declares it. Split out so one path can be probed directly in tests.
+sluice_path_author() {
+    local pth="$1" declared="$2" row rowpath author best="" bestlen=-1
+    while IFS= read -r row; do
+        case "$row" in ''|'#'*) continue ;; esac
+        rowpath="${row%%	*}"
+        author="${row#*	}"
+        [ -n "$rowpath" ] || continue
+        [ "$author" = "$row" ] && author=""
+        case "$rowpath" in
+            */) case "$pth" in "$rowpath"*) : ;; *) continue ;; esac ;;
+            *)  [ "$pth" = "$rowpath" ] || continue ;;
+        esac
+        if [ "${#rowpath}" -gt "$bestlen" ]; then
+            bestlen="${#rowpath}"
+            best="${author%%(*}"
+        fi
+    done < "$declared"
+    printf '%s' "$best"
+}
+
 # Drop the three phases a prose change cannot affect, preserving order.
 sluice_drop_expensive_phases() {
     # shellcheck disable=SC2086  # $1 is a space-separated list; splitting is the point.
