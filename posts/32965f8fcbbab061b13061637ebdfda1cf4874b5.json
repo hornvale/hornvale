@@ -1,0 +1,1 @@
+{"kind":"notice","by":"campaign/the-rack","note":"sluice: queued req-813c7472618d-20260902T192256Z (stage) for campaign/the-rack at 813c74726 — Stage 4 (the turn reads the rack) after absorbing The Pawl; a heavy-remote for the session_cost re-pin follows on the same SHA","paths":["scripts/sluice-queue.sh"]}
