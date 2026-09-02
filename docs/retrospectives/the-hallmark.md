@@ -145,8 +145,10 @@ Three measurements from this campaign, all on the Mac, warm tree:
 | edit | measured wall |
 | --- | --- |
 | Task 2 — `UnitError` in `domains/astronomy` + `domains/paleoclimate` | **614 s** |
+| an absorption of main, gated | 631.8 s |
 | final wave — doc comments only, `domains/climate` + `windows/vessel` | 259.8 s |
 | delta wave — doc comments only, `windows/worldgen` | 274.2 s |
+| this close — **one** doc comment in one `windows/vessel` test file | 221.7 s |
 
 The root `CLAUDE.md` prices a domains-layer edit at ~84 s and a warm-tree gate
 at ~25 s. The comment-only runs are the sharper datum: a doc-comment change
