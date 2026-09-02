@@ -100,15 +100,16 @@ impl Site {
     /// vertex by a seeded draw, its facts committed to the ledger.
     ///
     /// **There is no bare `Site::new` and no third `tier` parameter on this
-    /// constructor.** Every call site The Prospect has (26, all in this
-    /// crate) wants exactly this — a settlement, cave, or exotic site placed
-    /// from a vertex — and a bare `new` would give a future author a
-    /// shorter, more familiar name to reach for than [`Site::derived`],
-    /// silently defaulting new call sites to the wrong tier once derived
-    /// sites are actually built. Naming the two constructors symmetrically
-    /// forces a conscious choice instead: `placed` and `derived` read the
-    /// same weight at a call site, so picking one is a decision rather than
-    /// a habit. See [`Site::derived`], decision 0539.
+    /// constructor.** Every call site The Prospect has, all in this crate,
+    /// wants exactly this — a settlement, cave, or exotic site placed from a
+    /// vertex — and a bare `new` would give a future author a shorter, more
+    /// familiar name to reach for than [`Site::derived`], silently
+    /// defaulting new call sites to the wrong tier once derived sites are
+    /// actually built. Naming the two constructors symmetrically forces a
+    /// conscious choice instead: `placed` and `derived` read the same
+    /// weight at a call site, so picking one is a decision rather than a
+    /// habit. This holds at one call site or a hundred, so none is counted
+    /// here. See [`Site::derived`], decision 0539.
     /// type-audit: bare-ok(identifier-text: name)
     pub fn placed(kind: SiteKind, name: Option<String>) -> Self {
         Self {
