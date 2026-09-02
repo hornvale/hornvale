@@ -322,6 +322,7 @@ fn probe_fatigue_us(ledger: &Ledger, entity: EntityId, t: WorldTime) -> f64 {
 /// history intersected with water-truth.
 fn probe_believed_water_us(
     ledger: &Ledger,
+    folds: &hornvale_vessel::resident::OwnedFolds,
     npc: &Body,
     t: WorldTime,
     terrain: &dyn Terrain,
@@ -331,7 +332,7 @@ fn probe_believed_water_us(
     let t0 = Instant::now();
     let mut some_count: u64 = 0;
     for _ in 0..FOLD_REPS {
-        if believed_water(ledger, npc, t, terrain, budget).is_some() {
+        if believed_water(ledger, folds, npc, t, terrain, budget).is_some() {
             some_count += 1;
         }
     }
@@ -352,8 +353,10 @@ fn probe_believed_water_us(
 /// `FOLD_REPS` back-to-back calls. Threaded the full `band` slice deliberately
 /// — that is what `step_with_occupancy` passes in production, so this is
 /// production cost, not a cheaper single-agent proxy.
+#[allow(clippy::too_many_arguments)]
 fn probe_shared_believed_water_us(
     ledger: &Ledger,
+    folds: &hornvale_vessel::resident::OwnedFolds,
     npc: &Body,
     band: &[Body],
     t: WorldTime,
@@ -364,7 +367,7 @@ fn probe_shared_believed_water_us(
     let t0 = Instant::now();
     let mut some_count: u64 = 0;
     for _ in 0..FOLD_REPS {
-        if shared_believed_water(ledger, npc, band, t, terrain, budget).is_some() {
+        if shared_believed_water(ledger, folds, npc, band, t, terrain, budget).is_some() {
             some_count += 1;
         }
     }
@@ -1145,9 +1148,10 @@ fn run(
             );
             let fatigue_us = probe_fatigue_us(&ledger, p_entity, day);
             let believed_water_us =
-                probe_believed_water_us(&ledger, npc, day, &probe_terrain, PROBE_BUDGET);
+                probe_believed_water_us(&ledger, &folds, npc, day, &probe_terrain, PROBE_BUDGET);
             let shared_believed_water_us = probe_shared_believed_water_us(
                 &ledger,
+                &folds,
                 npc,
                 &npcs,
                 day,

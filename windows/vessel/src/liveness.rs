@@ -1027,24 +1027,42 @@ pub fn drive_at(
 /// by ascending `Facet`), else `None` (ignorant). BELIEF == FOLD-OVER-PERCEIVED:
 /// no stored belief — it re-derives from facts already committed (the matrix
 /// verdict; UNI-20). Nearness anchors to home (nearest-to-current is a followup).
+///
+/// The candidate set comes off the caller-owned resident store (The Pawl):
+/// [`crate::resident::KnownWater`] holds each entity's DISTINCT visited rooms
+/// with the first instant each was seen, so this read is O(distinct rooms)
+/// where it was O(history). Nothing else moves — the `day <= t` admission, the
+/// `is_water` intersection, the home-anchored `plan_to_room` ranking and the
+/// `(hops, Facet)` tie-break are the same ones this function has always
+/// applied, in the same order over the same ascending-`Facet` candidates.
+///
+/// The store guard is DROPPED before the ranking: `plan_to_room` is a budgeted
+/// A* over terrain and touches no fold, so holding the borrow across it would
+/// buy nothing and would make any future fold read inside the planner a
+/// runtime panic rather than a compile error.
 /// type-audit: bare-ok(count: budget)
 pub fn believed_water(
     ledger: &Ledger,
+    folds: &OwnedFolds,
     npc: &Body,
     t: WorldTime,
     terrain: &dyn Terrain,
     budget: usize,
 ) -> Option<Facet> {
-    let mut seen: std::collections::BTreeSet<Facet> = std::collections::BTreeSet::new();
-    for f in ledger.facts_of(npc.entity, AGENT_AT) {
-        let sighted = f.day.map(|d| d <= t).unwrap_or(false);
-        if sighted && let Value::Text(s) = &f.object {
-            let room = room_from_text(s);
-            if is_water(&room, terrain) {
-                seen.insert(room);
-            }
-        }
-    }
+    let seen: Vec<Facet> = {
+        let mut store = folds.borrow_mut();
+        let (known, trail, witness) = store.known_water_and_trail(ledger);
+        // Spec §3 rule 6's witness, taken where the read actually happens: is
+        // this instant behind a sighting the store has already absorbed? See
+        // `ReadWitness::note_belief` for what the count means now that the
+        // rule has fired and the tenant carries a first-visit instant.
+        witness.note_belief(
+            npc.entity,
+            t,
+            trail.of(npc.entity).last().map(|(day, _)| *day),
+        );
+        known.water_at(npc.entity, t, terrain)
+    };
     seen.into_iter()
         .filter_map(|r| {
             plan_to_room(&npc.home, &r, budget, &std::collections::BTreeSet::new())
@@ -1450,15 +1468,17 @@ pub fn hazard_memory_memo(
 /// could never admit. Order-independent by construction (`BTreeSet` union +
 /// deterministic `min`); no RNG. BELIEF == FOLD (UNI-20): stores nothing.
 /// type-audit: bare-ok(count: budget)
+#[allow(clippy::too_many_arguments)]
 pub fn shared_believed_water(
     frozen: &Ledger,
+    folds: &OwnedFolds,
     npc: &Body,
     band: &[Body],
     t: WorldTime,
     terrain: &dyn Terrain,
     budget: usize,
 ) -> Option<Facet> {
-    let own = believed_water(frozen, npc, t, terrain, budget);
+    let own = believed_water(frozen, folds, npc, t, terrain, budget);
     let here = agent_position(frozen, npc, t);
     let mut pool: std::collections::BTreeSet<Facet> = std::collections::BTreeSet::new();
     let mut has_peer = false;
@@ -1466,7 +1486,7 @@ pub fn shared_believed_water(
     for other in band {
         if other.entity != npc.entity && agent_position(frozen, other, t) == here {
             has_peer = true;
-            if let Some(w) = believed_water(frozen, other, t, terrain, budget) {
+            if let Some(w) = believed_water(frozen, folds, other, t, terrain, budget) {
                 pool.insert(w);
             }
         }
@@ -3944,7 +3964,7 @@ pub fn affect_of_memo_occupied(
         .last_reset(npc.entity)
         .unwrap_or(WorldTime::GENESIS)
         .max(WorldTime::GENESIS);
-    let believed = shared_believed_water(frozen, npc, band, day, terrain, PLAN_BUDGET);
+    let believed = shared_believed_water(frozen, folds, npc, band, day, terrain, PLAN_BUDGET);
     let drive = drive_at(
         frozen,
         folds,
@@ -5400,7 +5420,7 @@ impl WalkState {
         // pre-tick history; grow it whenever the agent stands in water.
         // The Tidings: seed from the BAND's pooled belief (co-located
         // members share what they know), not the creature's alone.
-        let believed = shared_believed_water(frozen, npc, band, from, terrain, PLAN_BUDGET);
+        let believed = shared_believed_water(frozen, folds, npc, band, from, terrain, PLAN_BUDGET);
         let mut visited: std::collections::BTreeSet<Facet> = std::collections::BTreeSet::new();
         visited.insert(pos.clone());
         let steps = 0usize;
@@ -6729,6 +6749,7 @@ mod tests {
         assert_eq!(
             believed_water(
                 &ledger,
+                &test_folds(),
                 &npc,
                 WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
@@ -6741,6 +6762,7 @@ mod tests {
         assert_eq!(
             believed_water(
                 &ledger,
+                &test_folds(),
                 &npc,
                 WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
@@ -6782,6 +6804,7 @@ mod tests {
         assert_eq!(
             believed_water(
                 &ledger,
+                &test_folds(),
                 &npc,
                 WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
@@ -6831,6 +6854,7 @@ mod tests {
         assert_eq!(
             believed_water(
                 &ledger,
+                &test_folds(),
                 &npc,
                 WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
@@ -6842,6 +6866,7 @@ mod tests {
         assert_eq!(
             believed_water(
                 &ledger,
+                &test_folds(),
                 &npc,
                 WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
@@ -6884,6 +6909,7 @@ mod tests {
         assert_eq!(
             believed_water(
                 &ledger,
+                &test_folds(),
                 &npc,
                 WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
@@ -6928,6 +6954,7 @@ mod tests {
         assert_eq!(
             believed_water(
                 &ledger,
+                &test_folds(),
                 &npc,
                 WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
@@ -6939,6 +6966,7 @@ mod tests {
         commit_agent_at(&mut ledger, &reg, e, &water, 3.0);
         let a = believed_water(
             &ledger,
+            &test_folds(),
             &npc,
             WorldTime::from_std_days(5.0).expect("a day value is finite"),
             &t,
@@ -6949,6 +6977,7 @@ mod tests {
         assert_eq!(
             believed_water(
                 &reloaded,
+                &test_folds(),
                 &npc,
                 WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
@@ -7002,6 +7031,7 @@ mod tests {
         commit_agent_at(&mut ledger, &reg, e, &smaller, 3.0);
         let got = believed_water(
             &ledger,
+            &test_folds(),
             &npc,
             WorldTime::from_std_days(5.0).expect("a day value is finite"),
             &t,
@@ -7017,6 +7047,7 @@ mod tests {
         assert_eq!(
             believed_water(
                 &reloaded,
+                &test_folds(),
                 &npc,
                 WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
@@ -7439,10 +7470,13 @@ mod tests {
         let now = WorldTime::from_std_days(1.0).expect("a day value is finite");
 
         // Alone, `lost` is ignorant.
-        assert_eq!(believed_water(&ledger, &lost, now, &t, 10_000), None);
+        assert_eq!(
+            believed_water(&ledger, &test_folds(), &lost, now, &t, 10_000),
+            None
+        );
         // Co-located with `knower`, it learns the water.
         assert_eq!(
-            shared_believed_water(&ledger, &lost, &band, now, &t, 10_000),
+            shared_believed_water(&ledger, &test_folds(), &lost, &band, now, &t, 10_000),
             Some(water.clone())
         );
     }
@@ -7619,11 +7653,11 @@ mod tests {
         let now = WorldTime::from_std_days(1.0).expect("a day value is finite");
         let ab = [knower.clone(), lost.clone()];
         let ba = [lost.clone(), knower.clone()];
-        let result = shared_believed_water(&ledger, &lost, &ab, now, &t, 10_000);
+        let result = shared_believed_water(&ledger, &test_folds(), &lost, &ab, now, &t, 10_000);
         assert_eq!(result, Some(water));
         assert_eq!(
             result,
-            shared_believed_water(&ledger, &lost, &ba, now, &t, 10_000),
+            shared_believed_water(&ledger, &test_folds(), &lost, &ba, now, &t, 10_000),
             "permuting the band must not change the pooled belief"
         );
     }
@@ -7643,17 +7677,18 @@ mod tests {
         commit_agent_at(&mut ledger, &reg, knower_e, &water, 0.0);
         commit_agent_at(&mut ledger, &reg, knower_e, &here, 1.0);
         let now = WorldTime::from_std_days(1.0).expect("a day value is finite");
-        let solo = believed_water(&ledger, &knower, now, &t, 10_000);
+        let solo = believed_water(&ledger, &test_folds(), &knower, now, &t, 10_000);
         assert_eq!(solo, Some(water));
 
         assert_eq!(
-            shared_believed_water(&ledger, &knower, &[], now, &t, 10_000),
+            shared_believed_water(&ledger, &test_folds(), &knower, &[], now, &t, 10_000),
             solo,
             "an empty band changes nothing"
         );
         assert_eq!(
             shared_believed_water(
                 &ledger,
+                &test_folds(),
                 &knower,
                 std::slice::from_ref(&knower),
                 now,
@@ -7691,12 +7726,12 @@ mod tests {
 
         // sanity: knower does know water when consulted directly...
         assert_eq!(
-            believed_water(&ledger, &knower, now, &t, 10_000),
+            believed_water(&ledger, &test_folds(), &knower, now, &t, 10_000),
             Some(water)
         );
         // ...but lost gains nothing, since knower is in a different room.
         assert_eq!(
-            shared_believed_water(&ledger, &lost, &band, now, &t, 10_000),
+            shared_believed_water(&ledger, &test_folds(), &lost, &band, now, &t, 10_000),
             None
         );
     }
@@ -13119,6 +13154,7 @@ mod tests {
         assert_eq!(
             believed_water(
                 &next,
+                &test_folds(),
                 &npc,
                 WorldTime::from_std_days(40.0).expect("a day value is finite"),
                 &terrain,

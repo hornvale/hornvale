@@ -33,7 +33,7 @@ use hornvale_vessel::liveness::{
     DriveParams, HomeNavCache, PrimaryAfraidMemo, SUSTENANCE, Terrain, affect_of_memo_occupied,
     sustenance_at,
 };
-use hornvale_vessel::resident::{ReadWitness, ResidentFolds, Trail};
+use hornvale_vessel::resident::{KnownWater, ReadWitness, ResidentFolds, Trail};
 use hornvale_vessel::{PossessOpts, Session};
 
 /// `agent-at`'s exact on-disk spelling, written as a literal rather than
@@ -438,6 +438,12 @@ fn store_discard_schedule(every: usize) {
                 resident.trail(&prefix).of(e),
                 "{e:?}'s trail diverged at prefix {i} under a discard-every-{every} schedule"
             );
+            assert_eq!(
+                chaotic.known_water(&prefix).of(e),
+                resident.known_water(&prefix).of(e),
+                "{e:?}'s visited-room index diverged at prefix {i} under a \
+                 discard-every-{every} schedule"
+            );
         }
     }
 
@@ -446,9 +452,12 @@ fn store_discard_schedule(every: usize) {
     let scan = fold_one_by_one(&full);
     let _ = resident.trail(&full);
     let _ = chaotic.trail(&full);
+    let water_scan = fold_known_water_one_by_one(&full);
     for e in [a, b] {
         assert_eq!(resident.trail(&full).of(e), scan.state().of(e));
         assert_eq!(chaotic.trail(&full).of(e), scan.state().of(e));
+        assert_eq!(resident.known_water(&full).of(e), water_scan.state().of(e));
+        assert_eq!(chaotic.known_water(&full).of(e), water_scan.state().of(e));
     }
 }
 
@@ -1503,5 +1512,447 @@ fn segments_integrated_per_turn_does_not_grow_with_the_tick_index_for_a_creature
         "segments integrated per turn must not grow with the tick index for a creature \
          that has drunk: first {BAND} turns mean {first}, last {BAND} mean {last_band} \
          (allowance 1.5x)"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// The Pawl, Task 4: `KnownWater` — the belief tenant.
+//
+// Step 1 is the rule-6 witness; steps 2 and 3 are FOLD equals SCAN against a
+// VERBATIM copy of `believed_water`'s own set-building loop, plus both chaos
+// schedules. The oracle is a copy for `scan_oracle`'s reason: the production
+// loop is deleted by this task, and an oracle that shares code with the thing
+// under test cannot falsify it.
+// ---------------------------------------------------------------------------
+
+/// A terrain whose water rooms are a fixed set — [`RippleTerrain`] reports
+/// nothing wet, so every `is_water` filter over it would pass vacuously.
+struct PoolTerrain {
+    /// The rooms `is_fresh_water` says yes to.
+    wet: std::collections::BTreeSet<Facet>,
+}
+
+impl Terrain for PoolTerrain {
+    fn elevation(&self, _room: &Facet) -> f64 {
+        0.0
+    }
+    fn is_fresh_water(&self, room: &Facet) -> bool {
+        self.wet.contains(room)
+    }
+    fn temperature(&self, _room: &Facet, _day: WorldTime) -> f64 {
+        20.0
+    }
+}
+
+/// A VERBATIM COPY of `liveness.rs`'s `believed_water` set-building loop — the
+/// SCAN half of FOLD equals SCAN for [`KnownWater`].
+///
+/// Only the loop: the `plan_to_room` ranking below it is untouched by this
+/// migration and is not what the tenant replaced. Copied rather than called
+/// because the production loop is GONE as of this task, so this is now the
+/// only statement of the old set-building anywhere, and nothing regenerates
+/// it.
+fn known_water_scan_oracle(
+    ledger: &Ledger,
+    entity: EntityId,
+    t: WorldTime,
+    terrain: &dyn Terrain,
+) -> std::collections::BTreeSet<Facet> {
+    let mut seen: std::collections::BTreeSet<Facet> = std::collections::BTreeSet::new();
+    for f in ledger.facts_of(entity, AGENT_AT) {
+        let sighted = f.day.map(|d| d <= t).unwrap_or(false);
+        if sighted && let Value::Text(s) = &f.object {
+            let room = room_from_text_copy(s);
+            if hornvale_vessel::liveness::is_water(&room, terrain) {
+                seen.insert(room);
+            }
+        }
+    }
+    seen
+}
+
+/// The fold half for [`KnownWater`], reached through `absorb_at` one fact at a
+/// time — the path independent of `advance_to`, for the reason
+/// [`fold_one_by_one`] states.
+fn fold_known_water_one_by_one(ledger: &Ledger) -> Folded<KnownWater> {
+    let mut f: Folded<KnownWater> = Folded::new();
+    for (i, fact) in ledger.iter().enumerate() {
+        f.absorb_at(i as u64, fact);
+    }
+    f
+}
+
+/// The fixture's wet rooms: SOME of the rooms [`SCRIPT`] visits, never all of
+/// them, so the `is_water` filter is exercised in both directions.
+///
+/// [`SCRIPT`] posts to `(face 0, [0])`, `(face 0, [1])`, `(face 1, [2])` and
+/// `(face 0, [3])` across its two entities; three are wet here and one — plus
+/// a room nobody ever stood in — is not.
+fn pool_terrain() -> PoolTerrain {
+    PoolTerrain {
+        wet: [room(0, &[0]), room(1, &[2]), room(0, &[3]), room(5, &[7])]
+            .into_iter()
+            .collect(),
+    }
+}
+
+/// Guards every `is_water` assertion below from being vacuous the way
+/// [`the_hand_built_ledger_is_not_already_in_sorted_order`] guards the
+/// ordering ones: the fixture must visit both wet and dry rooms, or a fold
+/// that ignored terrain entirely would pass.
+#[test]
+fn the_fixture_visits_both_wet_and_dry_rooms() {
+    let (l, a, b) = hand_built();
+    let terrain = pool_terrain();
+    let far = WorldTime::from_ticks(9_999_999);
+    let visited: std::collections::BTreeSet<Facet> = [a, b]
+        .into_iter()
+        .flat_map(|e| {
+            l.facts_of(e, AGENT_AT)
+                .filter(|f| f.day.is_some())
+                .map(|f| match &f.object {
+                    Value::Text(s) => room_from_text_copy(s),
+                    other => panic!("an agent-at object is always text, got {other:?}"),
+                })
+                .collect::<Vec<_>>()
+        })
+        .collect();
+    let wet: Vec<&Facet> = visited
+        .iter()
+        .filter(|r| hornvale_vessel::liveness::is_water(r, &terrain))
+        .collect();
+    let dry: Vec<&Facet> = visited
+        .iter()
+        .filter(|r| !hornvale_vessel::liveness::is_water(r, &terrain))
+        .collect();
+    assert!(
+        !wet.is_empty() && !dry.is_empty(),
+        "the fixture must visit at least one wet and one dry room, or the water filter \
+         is never exercised: wet {wet:?}, dry {dry:?}"
+    );
+    // And the oracle must actually drop something at the whole-history instant.
+    for e in [a, b] {
+        let scanned = known_water_scan_oracle(&l, e, far, &terrain);
+        assert!(
+            scanned.len() < visited.len(),
+            "the oracle must drop at least one visited room as dry for {e:?}, or the \
+             filter is vacuous"
+        );
+    }
+}
+
+#[test]
+fn known_water_folded_one_fact_at_a_time_equals_the_scan_oracle() {
+    let (l, a, b) = hand_built();
+    let terrain = pool_terrain();
+    let folded = fold_known_water_one_by_one(&l);
+    let far = WorldTime::from_ticks(9_999_999);
+
+    for e in [a, b] {
+        let scanned = known_water_scan_oracle(&l, e, far, &terrain);
+        assert_eq!(
+            folded.state().water_at(e, far, &terrain),
+            scanned.into_iter().collect::<Vec<_>>(),
+            "the fold's water set for {e:?} must equal the scan oracle's, ascending"
+        );
+    }
+}
+
+#[test]
+fn known_water_at_every_past_instant_equals_the_oracle_at_that_instant() {
+    let (l, a, b) = hand_built();
+    let terrain = pool_terrain();
+    let folded = fold_known_water_one_by_one(&l);
+
+    for e in [a, b] {
+        // Every instant the script names, plus one strictly before the first
+        // and one strictly after the last, so the empty and full answers are
+        // both covered — and the ones in between are exactly where an
+        // unfiltered set read would differ.
+        let mut probes: Vec<WorldTime> = SCRIPT
+            .iter()
+            .map(|(_, t, _, _)| WorldTime::from_ticks(*t))
+            .collect();
+        probes.push(WorldTime::from_ticks(0));
+        probes.push(WorldTime::from_ticks(9_999_999));
+        for t in probes {
+            let scanned: Vec<Facet> = known_water_scan_oracle(&l, e, t, &terrain)
+                .into_iter()
+                .collect();
+            assert_eq!(
+                folded.state().water_at(e, t, &terrain),
+                scanned,
+                "the fold's water set for {e:?} at {t:?} must equal the oracle's at that \
+                 instant -- this is spec §3 rule 6's first-visit filter"
+            );
+        }
+    }
+}
+
+#[test]
+fn a_room_visited_twice_keeps_its_first_instant() {
+    // The read admits a room when SOME sighting of it is at or before `t`,
+    // which is the MINIMUM over its sightings. A tenant that kept the latest
+    // would forget the room at every instant between the two visits.
+    let mut reg = ConceptRegistry::default();
+    reg.register_predicate(AGENT_AT, false, "pos").unwrap();
+    let mut l = Ledger::default();
+    let e = l.mint_entity(test_lineage(0));
+    let wet = room(0, &[0]);
+    for ticks in [500_000_i64, 100_000] {
+        l.commit(
+            Fact {
+                subject: e,
+                predicate: AGENT_AT.to_string(),
+                object: Value::Text(room_text(&wet)),
+                place: None,
+                day: Some(WorldTime::from_ticks(ticks)),
+                provenance: "t".to_string(),
+            },
+            &reg,
+        )
+        .unwrap();
+    }
+    let terrain = PoolTerrain {
+        wet: [wet.clone()].into_iter().collect(),
+    };
+    let folded = fold_known_water_one_by_one(&l);
+    assert_eq!(
+        folded.state().of(e).get(&wet),
+        Some(&WorldTime::from_ticks(100_000)),
+        "the LATER commit of an EARLIER instant must win: the first visit is the minimum"
+    );
+    assert_eq!(
+        folded
+            .state()
+            .water_at(e, WorldTime::from_ticks(200_000), &terrain),
+        vec![wet],
+        "a room first seen at 100_000 is known at 200_000, whichever order the two \
+         sightings committed in"
+    );
+}
+
+#[test]
+fn an_entity_that_never_moved_knows_no_water() {
+    let (l, _a, _b) = hand_built();
+    let terrain = pool_terrain();
+    let folded = fold_known_water_one_by_one(&l);
+    let stranger = EntityId::new(9_999).expect("9999 is non-zero");
+    assert!(folded.state().of(stranger).is_empty());
+    assert!(
+        folded
+            .state()
+            .water_at(stranger, WorldTime::from_ticks(9_999_999), &terrain)
+            .is_empty()
+    );
+}
+
+#[test]
+fn discarding_known_water_at_every_position_is_unobservable() {
+    let (l, _a, _b) = hand_built();
+    let resident = fold_known_water_one_by_one(&l);
+
+    let mut chaotic: Folded<KnownWater> = Folded::new();
+    for (i, f) in l.iter().enumerate() {
+        chaotic.absorb_at(i as u64, f);
+        chaotic = Folded::rebuild_upto(&l, chaotic.position());
+    }
+
+    assert_eq!(chaotic.state(), resident.state());
+    assert_eq!(chaotic.position(), resident.position());
+}
+
+#[test]
+fn discarding_known_water_at_every_third_position_is_unobservable() {
+    let (l, _a, _b) = hand_built();
+    let resident = fold_known_water_one_by_one(&l);
+
+    let mut chaotic: Folded<KnownWater> = Folded::new();
+    for (i, f) in l.iter().enumerate() {
+        chaotic.absorb_at(i as u64, f);
+        if i % 3 == 0 {
+            chaotic = Folded::rebuild_upto(&l, chaotic.position());
+        }
+    }
+
+    assert_eq!(chaotic.state(), resident.state());
+    assert_eq!(chaotic.position(), resident.position());
+}
+
+// ---------------------------------------------------------------------------
+// Task 4, step 1: the rule-6 witness.
+// ---------------------------------------------------------------------------
+
+/// Spec §3 rule 6, executed on the real thing: does any `believed_water` read
+/// run at an instant STRICTLY BEFORE a committed sighting of the same entity?
+///
+/// That is the exact condition under which an unfiltered set fold — one
+/// holding a `BTreeSet<Facet>` of every water room ever visited, advanced to
+/// the ledger's end — would answer differently from `believed_water`'s own
+/// `day <= t` loop. The coarser question the spec words the rule with ("`t`
+/// strictly before the ledger's last committed day") is a proxy for it: it
+/// fires on reads where nothing about the answer could have changed, because
+/// the entity gained no sighting in the interval. Both are printed; the
+/// EXACT one is what the branch was taken on, and it is the one asserted.
+///
+/// **The branch taken, stated exactly, because the number alone would be read
+/// two ways.** On the paths seed 42 actually REACHES — the session's own 568
+/// belief lookups, and the present-instant `affect_of_memo_occupied` shape —
+/// the exact count is ZERO. [`KnownWater`] carries a first-visit instant
+/// anyway, for two reasons neither of which is that number:
+///
+/// 1. `emitter_arousal` (`liveness.rs`) replays `affect_of` at a creature's
+///    own PAST visit day, and that call reaches `believed_water` at that past
+///    instant. It is production code, not a test shape; it is merely gated
+///    behind a non-empty emitter scan, and seed 42 has no primary-afraid
+///    emitter. The sweep below runs exactly that shape and every one of its
+///    reads is a past-instant read.
+/// 2. `believed_water` is a public function keyed on `t`, and its own
+///    `believed_water_only_counts_sightings_at_or_before_t` test commits a
+///    sighting in the read's future. A plain set could only answer that by
+///    rebuilding the fold to the position `t` implies — the O(history)
+///    per-call rebuild spec §2.2 refuses, on the production path, to serve a
+///    test.
+///
+/// So the assertion below is on the SWEEP, not on the session: it says the
+/// first-visit filter is exercised in anger somewhere, because a filter that
+/// no test ever drives is indistinguishable from dead code.
+#[test]
+fn rule_six_witness_belief_reads_run_at_past_instants() {
+    let world = common::build(42).expect("seed 42 always builds a world");
+    let (mut session, _opening) =
+        Session::start(&world, &PossessOpts::default()).expect("seed 42 always starts a session");
+    for _ in 0..40 {
+        session.handle("wait");
+        let _ = session.snapshot().expect("seed 42's session snapshots");
+    }
+
+    println!("--- rule 6 witness: belief reads (seed 42, 40 waits + snapshots) ---");
+    println!(
+        "the SESSION itself: {} facts absorbed, {} belief lookups, {} at an instant before \
+         a committed sighting",
+        session.resident_position(),
+        session.resident_belief_lookups(),
+        session.resident_beliefs_in_the_past()
+    );
+    assert!(
+        session.committed_fact_count() > 0,
+        "the 40-wait seed-42 script must commit facts, or this witness measured nothing"
+    );
+
+    // The shape `windows/lab`'s `run_simulation` uses: `affect_of_memo_occupied`
+    // per body over one store — first at the PRESENT instant, then at each
+    // body's own past visit days, which is the instant `emitter_arousal`
+    // (`liveness.rs`, the `hazard_memory_memo -> frightened_at -> alarm_at ->
+    // alarm_field -> emitter_arousal -> affect_of` chain) replays affect at.
+    let ledger: Ledger = serde_json::from_str(&session.session_ledger_json())
+        .expect("the session's own ledger accessor round-trips");
+    let bodies: Vec<hornvale_vessel::body::Body> = session.bodies().to_vec();
+    let terrain = RippleTerrain;
+    let now = session.day();
+    let last_committed_day = ledger.iter().filter_map(|f| f.day).max();
+
+    let present = hornvale_vessel::resident::OwnedFolds::new(ResidentFolds::new());
+    {
+        let mut afraid = PrimaryAfraidMemo::new();
+        let mut mesh = hornvale_kernel::RoomMeshMemo::new();
+        let mut nav = HomeNavCache::new();
+        for npc in &bodies {
+            let _ = affect_of_memo_occupied(
+                &ledger,
+                npc,
+                &bodies,
+                now,
+                &terrain,
+                &mut afraid,
+                None,
+                &mut mesh,
+                &mut nav,
+                &present,
+            );
+        }
+    }
+    let present_lookups = present.borrow().witness().belief_lookups();
+    let present_past = present.borrow().witness().beliefs_in_the_past();
+    println!(
+        "the PRESENT read shape (`affect_of_memo_occupied` at {now:?}, {} bodies, ledger's \
+         last committed day {last_committed_day:?}): {present_lookups} belief lookups, \
+         {present_past} at a past instant",
+        bodies.len()
+    );
+
+    let past = hornvale_vessel::resident::OwnedFolds::new(ResidentFolds::new());
+    let mut past_calls_before_last_committed_day = 0_u64;
+    {
+        let mut afraid = PrimaryAfraidMemo::new();
+        let mut mesh = hornvale_kernel::RoomMeshMemo::new();
+        let mut nav = HomeNavCache::new();
+        for npc in &bodies {
+            let days: Vec<WorldTime> = ledger
+                .facts_of(npc.entity, AGENT_AT)
+                .filter_map(|f| f.day)
+                .collect();
+            for day in days.into_iter().step_by(37) {
+                if last_committed_day.is_some_and(|last| day < last) {
+                    past_calls_before_last_committed_day += 1;
+                }
+                let _ = affect_of_memo_occupied(
+                    &ledger,
+                    npc,
+                    &bodies,
+                    day,
+                    &terrain,
+                    &mut afraid,
+                    None,
+                    &mut mesh,
+                    &mut nav,
+                    &past,
+                );
+            }
+        }
+    }
+    let past_lookups = past.borrow().witness().belief_lookups();
+    let past_offenders = past.borrow().witness().beliefs_in_the_past();
+    println!(
+        "the PAST read shape (the same call at each body's own visit days): {past_lookups} \
+         belief lookups, {past_offenders} at an instant before a committed sighting of the \
+         same entity; {past_calls_before_last_committed_day} of this sweep's OUTER calls \
+         were at a `t` strictly before the ledger's last committed day (the spec's coarser \
+         proxy)"
+    );
+    if let Some((entity, t, sighting)) = past.borrow().witness().first_belief_in_the_past() {
+        println!(
+            "first past-instant read: entity {entity:?} read at {t:?} with a sighting at {sighting:?}"
+        );
+    }
+    println!(
+        "--- verdict: spec §3 rule 6 {} ---",
+        if present_past + past_offenders == 0 {
+            "found NO past-instant belief read on a reached path"
+        } else {
+            "FIRED -- a production belief read runs at a past instant, so KnownWater carries \
+             a first-visit instant and filters by it"
+        }
+    );
+    println!(
+        "NOT counted here, and named so the number is not read as complete: the belief reads \
+         NESTED inside `emitter_arousal`'s own `affect_of` go to the THROWAWAY store \
+         `affect_of_memo` builds (liveness.rs, `affect_of_memo`), so their witness dies with \
+         it. They are past-instant by construction -- `emitter_arousal` passes the visit day \
+         it is replaying -- and they are unreached on seed 42, which has no primary-afraid \
+         emitter"
+    );
+
+    assert!(
+        past_lookups > 0,
+        "the sweep must actually REACH `believed_water`, or a verdict of zero past-instant \
+         reads is zero out of zero and says nothing"
+    );
+    assert!(
+        past_offenders > 0,
+        "spec §3 rule 6's branch: `KnownWater` carries a first-visit instant BECAUSE a \
+         production read runs at an instant before a committed sighting. If this is ever \
+         zero, that filter is unexercised and the tenant is carrying a day map nothing \
+         proves it needs"
     );
 }

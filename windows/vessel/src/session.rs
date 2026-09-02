@@ -2222,6 +2222,30 @@ impl<'w> Session<'w> {
         self.folds.borrow().witness().first_reset_in_the_future()
     }
 
+    /// How many BELIEF lookups this session has made — `believed_water` calls,
+    /// the denominator [`Self::resident_beliefs_in_the_past`] is a count out
+    /// of, and the number that says whether that witness measured anything.
+    /// type-audit: bare-ok(count: return)
+    pub fn resident_belief_lookups(&self) -> u64 {
+        self.folds.borrow().witness().belief_lookups()
+    }
+
+    /// How many of this session's belief reads ran at an instant strictly
+    /// before a committed sighting of the same entity — spec §3 rule 6's
+    /// witness, taken on the real path. Non-zero means
+    /// [`crate::resident::KnownWater`]'s first-visit filter is what keeps the
+    /// answer identical to the scan it replaced.
+    /// type-audit: bare-ok(count: return)
+    pub fn resident_beliefs_in_the_past(&self) -> u64 {
+        self.folds.borrow().witness().beliefs_in_the_past()
+    }
+
+    /// The first such read as `(entity, instant read, the sighting that lies
+    /// after it)`, for a witness that PRINTS its evidence.
+    pub fn resident_first_belief_in_the_past(&self) -> Option<(EntityId, WorldTime, WorldTime)> {
+        self.folds.borrow().witness().first_belief_in_the_past()
+    }
+
     /// The driven body's own stable identity as a ledger `EntityId` — the
     /// object a hostile NPC's `turned-hostile` fact points at.
     ///

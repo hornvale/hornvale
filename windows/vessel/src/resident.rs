@@ -17,7 +17,7 @@
 //! and holds only values the ledger re-determines, so discarding it at any
 //! instant is unobservable and a save written mid-session contains none of it.
 
-use crate::liveness::{AGENT_AT, DRANK, EATEN, room_from_text};
+use crate::liveness::{AGENT_AT, DRANK, EATEN, Terrain, is_water, room_from_text};
 use hornvale_kernel::fold::{Folded, LedgerFold};
 use hornvale_kernel::{EntityId, Facet, Fact, Ledger, Value, WorldTime};
 use std::collections::BTreeMap;
@@ -90,6 +90,97 @@ impl LedgerFold for Trail {
         // `sort_by` the scan half uses.
         let at = trail.partition_point(|e| *e < entry);
         trail.insert(at, entry);
+    }
+}
+
+/// Every entity's DISTINCT visited rooms, each keyed to the FIRST instant it
+/// was sighted there — the state `believed_water`'s per-call set build becomes
+/// (spec §2.4). A resident permutation index, like [`Trail`]: its contents are
+/// a strict subset of what the ledger already says, each fact is absorbed
+/// exactly once, and no read rebuilds a set.
+///
+/// **It holds every visited room, not only the wet ones, and the name is about
+/// the job rather than the contents.** Whether a room is water is a fact about
+/// TERRAIN, and terrain is not in the ledger: [`LedgerFold::absorb`] is handed
+/// a [`Fact`] and nothing else, deliberately (a fold that consulted terrain
+/// would stop being a pure function of the ledger prefix, and FOLD-equals-SCAN
+/// would be comparing two readings of a mutable world). So the intersection
+/// with water-truth happens at READ, in [`Self::water_at`], over a set bounded
+/// by the DISTINCT rooms the entity has visited — not by its history's length,
+/// which is the whole point.
+///
+/// **The value is the FIRST sighting instant, and that is what lets a read at
+/// a past `t` be exact rather than approximate.** `believed_water` admits a
+/// room when the entity has SOME dated `agent-at` there with `day <= t`, which
+/// is precisely `first_visit(room) <= t` — the minimum over that room's
+/// sightings. A plain `BTreeSet<Facet>` would have had to be rebuilt to the
+/// position `t` implies to answer the same question (spec §3 rule 6's
+/// fallback, taken: see [`ReadWitness::note_belief`] for the witness that
+/// measured it, and the day filter in [`Self::water_at`] for where it is
+/// spent).
+#[derive(Debug, PartialEq, Default)]
+pub struct KnownWater {
+    /// Each entity's visited rooms, keyed to the first instant it was sighted
+    /// in each.
+    rooms: BTreeMap<EntityId, BTreeMap<Facet, WorldTime>>,
+}
+
+impl KnownWater {
+    /// Every room the entity has stood in, keyed to the FIRST instant it was
+    /// sighted there, ascending by room; empty if it was never seen.
+    pub fn of(&self, entity: EntityId) -> &BTreeMap<Facet, WorldTime> {
+        static EMPTY: BTreeMap<Facet, WorldTime> = BTreeMap::new();
+        self.rooms.get(&entity).unwrap_or(&EMPTY)
+    }
+
+    /// The WATER rooms the entity had stood in at or before `t`, ascending —
+    /// `believed_water`'s candidate set, and the only read this tenant has.
+    ///
+    /// Both filters are here rather than in `absorb` for the reasons the type
+    /// doc gives: `first_visit <= t` because a fold cannot go backwards, and
+    /// `is_water` because terrain is not a ledger fact. The cost is O(distinct
+    /// rooms visited) — never O(history).
+    pub fn water_at(&self, entity: EntityId, t: WorldTime, terrain: &dyn Terrain) -> Vec<Facet> {
+        self.of(entity)
+            .iter()
+            .filter(|(room, first)| **first <= t && is_water(room, terrain))
+            .map(|(room, _)| room.clone())
+            .collect()
+    }
+}
+
+impl LedgerFold for KnownWater {
+    fn empty() -> Self {
+        KnownWater::default()
+    }
+
+    fn absorb(&mut self, fact: &Fact) {
+        if fact.predicate != AGENT_AT {
+            return;
+        }
+        let Value::Text(s) = &fact.object else {
+            return;
+        };
+        // An UNDATED `agent-at` is not a sighting. `believed_water`'s own loop
+        // reads `f.day.map(|d| d <= t).unwrap_or(false)`, so an undated fact
+        // is never admitted at any `t`; dropping it here is the same answer,
+        // and keeping it would need a sentinel instant that no `t` could
+        // exclude.
+        let Some(day) = fact.day else {
+            return;
+        };
+        let rooms = self.rooms.entry(fact.subject).or_default();
+        rooms
+            .entry(room_from_text(s))
+            // FIRST sighting, not latest: the read asks whether ANY sighting
+            // of the room is at or before `t`, which the minimum answers and
+            // the maximum would not.
+            .and_modify(|first| {
+                if day < *first {
+                    *first = day;
+                }
+            })
+            .or_insert(day);
     }
 }
 
@@ -254,6 +345,17 @@ pub struct ReadWitness {
     resets_in_the_future: u64,
     /// The first such read, kept for the witness's own evidence line.
     first_reset_in_the_future: Option<(EntityId, WorldTime, WorldTime)>,
+    /// How many BELIEF lookups have been made — `believed_water` calls, and
+    /// nothing else. The denominator below is a count out of, for the reason
+    /// the reset pair above states.
+    belief_lookups: u64,
+    /// How many of those ran at an instant STRICTLY BEFORE a committed
+    /// sighting of the same entity — spec §3 rule 6's quantity, and the exact
+    /// condition under which an unfiltered set read would have answered
+    /// differently from `believed_water`'s `day <= t` loop.
+    beliefs_in_the_past: u64,
+    /// The first such read, kept for the witness's own evidence line.
+    first_belief_in_the_past: Option<(EntityId, WorldTime, WorldTime)>,
 }
 
 impl ReadWitness {
@@ -274,6 +376,53 @@ impl ReadWitness {
             self.first_reset_in_the_future
                 .get_or_insert((entity, t, reset));
         }
+    }
+
+    /// Record what a BELIEF read of `entity` at `t` stood against — spec §3
+    /// rule 6's witness, taken on the real path at `believed_water`'s own
+    /// call. `latest_sighting` is that entity's last committed `agent-at`
+    /// instant, which [`Trail`] holds at O(1).
+    ///
+    /// **This counter survives the branch it decided, and its job changed
+    /// when it did.** Before the tenant existed it asked whether a plain
+    /// `BTreeSet` fold could serve every reached read; it could not, so
+    /// [`KnownWater`] carries a first-visit instant and filters. What the
+    /// count says NOW is that the filter is LOAD-BEARING — a day filter that
+    /// never fired would be indistinguishable from dead code, and the next
+    /// reader would have no way to tell.
+    pub fn note_belief(
+        &mut self,
+        entity: EntityId,
+        t: WorldTime,
+        latest_sighting: Option<WorldTime>,
+    ) {
+        self.belief_lookups += 1;
+        if let Some(latest) = latest_sighting.filter(|d| *d > t) {
+            self.beliefs_in_the_past += 1;
+            self.first_belief_in_the_past
+                .get_or_insert((entity, t, latest));
+        }
+    }
+
+    /// How many belief lookups have been made — the DENOMINATOR
+    /// [`Self::beliefs_in_the_past`] is a count out of.
+    /// type-audit: bare-ok(count: return)
+    pub fn belief_lookups(&self) -> u64 {
+        self.belief_lookups
+    }
+
+    /// How many belief reads ran at an instant strictly before a committed
+    /// sighting of the same entity (spec §3 rule 6). Non-zero means
+    /// [`KnownWater`]'s first-visit filter is reached in anger.
+    /// type-audit: bare-ok(count: return)
+    pub fn beliefs_in_the_past(&self) -> u64 {
+        self.beliefs_in_the_past
+    }
+
+    /// The first such read as `(entity, instant read, the sighting that lies
+    /// after it)` — the evidence the rule-6 witness prints.
+    pub fn first_belief_in_the_past(&self) -> Option<(EntityId, WorldTime, WorldTime)> {
+        self.first_belief_in_the_past
     }
 
     /// Every entity's segments summed — the whole store's integration cost.
@@ -340,8 +489,8 @@ pub type OwnedFolds = std::cell::RefCell<ResidentFolds>; // lexicon: std::cell::
 /// The session-owned resident fold store: one [`Folded`] per tenant,
 /// advance-on-read.
 ///
-/// [`Trail`], [`ThirstResets`] and [`HungerResets`] are its tenants; later
-/// tasks add the believed-water set, the latest-visit map and the alarm rooms
+/// [`Trail`], [`ThirstResets`], [`HungerResets`] and [`KnownWater`] are its
+/// tenants; later tasks add the latest-visit map and the alarm rooms
 /// (spec §2.4). The store knows nothing about what a tenant's state means — a
 /// future tenant is a new [`LedgerFold`] impl and a new field, never a new
 /// store.
@@ -360,6 +509,8 @@ pub struct ResidentFolds {
     thirst: Folded<ThirstResets>,
     /// Every entity's `eaten` days.
     hunger: Folded<HungerResets>,
+    /// Every entity's distinct visited rooms and when each was first seen.
+    known_water: Folded<KnownWater>,
     /// What the reads above have cost and seen — not a tenant, and not folded
     /// state; see [`ReadWitness`].
     witness: ReadWitness,
@@ -381,6 +532,7 @@ impl ResidentFolds {
         self.trail.advance_to(ledger);
         self.thirst.advance_to(ledger);
         self.hunger.advance_to(ledger);
+        self.known_water.advance_to(ledger);
     }
 
     /// The trail, current with `ledger`.
@@ -432,6 +584,31 @@ impl ResidentFolds {
         )
     }
 
+    /// The visited-room index, current with `ledger` — the plain accessor,
+    /// for a reader that is not taking the rule-6 witness (the property tests,
+    /// and any future consumer of the same index).
+    pub fn known_water(&mut self, ledger: &Ledger) -> &KnownWater {
+        self.advance(ledger);
+        self.known_water.state()
+    }
+
+    /// The visited-room index and the read witness together, from ONE guard —
+    /// see the type doc for why one guard rather than two. [`Trail`] rides
+    /// along because the witness's own question ("is `t` before this entity's
+    /// last committed sighting?") is answered from the trail's last entry at
+    /// O(1), and a second `borrow_mut` to ask it would panic.
+    pub fn known_water_and_trail(
+        &mut self,
+        ledger: &Ledger,
+    ) -> (&KnownWater, &Trail, &mut ReadWitness) {
+        self.advance(ledger);
+        (
+            self.known_water.state(),
+            self.trail.state(),
+            &mut self.witness,
+        )
+    }
+
     /// What the reads have cost and seen.
     pub fn witness(&self) -> &ReadWitness {
         &self.witness
@@ -457,6 +634,12 @@ impl ResidentFolds {
             self.hunger.position(),
             "every tenant advances on every read, so the trail and the hunger resets \
              must stand at the same position"
+        );
+        assert_eq!(
+            position,
+            self.known_water.position(),
+            "every tenant advances on every read, so the trail and the visited-room \
+             index must stand at the same position"
         );
         position
     }
