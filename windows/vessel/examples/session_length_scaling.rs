@@ -994,6 +994,14 @@ fn run(
     let npcs = derive_npcs(world, ctx, &mut ledger, AGENTS, home_settlement);
     let mut mesh_memo = RoomMeshMemo::new();
     let mut home_nav_cache = HomeNavCache::new();
+    // The resident fold store (The Pawl, spec §2.1), owned at exactly the
+    // scope `home_nav_cache` is — one per run, never per tick — because a
+    // store rebuilt each tick would be the O(history) walk it exists to
+    // remove. Interior mutability because it is advanced on read (spec §2.2).
+    // Nothing reads it yet; this driver threads it so the store it exercises
+    // is the one production owns.
+    let folds =
+        hornvale_vessel::resident::OwnedFolds::new(hornvale_vessel::resident::ResidentFolds::new());
     let mut day = WorldTime::from_std_days(0.5).expect("0.5 is a finite day count");
 
     // NO SINGLE PROBE AGENT. An earlier draft reported one agent's own
@@ -1043,6 +1051,7 @@ fn run(
             params: SUSTENANCE,
             day_ticks,
             terrain: &terrain,
+            folds: &folds,
         };
         // Timed span: the drive evaluation AND the commits it produces, the
         // same pair `agent_scaling.rs` times as one. The `npcs.clone()` and

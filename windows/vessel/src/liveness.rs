@@ -112,7 +112,7 @@ fn room_to_text(r: &Facet) -> String {
 /// [`crate::thing::room_key`]. Panics on a
 /// malformed committed value — a corrupted save is a bug, not a runtime case
 /// to route around.
-fn room_from_text(s: &str) -> Facet {
+pub(crate) fn room_from_text(s: &str) -> Facet {
     let id: u64 = s
         .parse()
         .unwrap_or_else(|_| panic!("agent-at text '{s}' is not a decimal FacetId"));
@@ -4252,6 +4252,29 @@ pub struct DriveMovements<'a> {
     pub day_ticks: Option<TickSpan>,
     /// The elevation field belief and exploration read.
     pub terrain: &'a dyn Terrain,
+    /// The caller-owned resident fold store (The Pawl, spec §2.1) — the
+    /// session's, or a bench's, or a test's.
+    ///
+    /// **It is a field rather than a `step_with_occupancy` parameter, and
+    /// that is the whole point.** `TickSystem::step`'s signature is fixed by
+    /// the kernel's scheduler and cannot carry one, so a store reached only
+    /// through a parameter would be a throwaway on that path — and
+    /// `Session::wait` evaluates this very walk TWICE (once through
+    /// `step_with_occupancy` for the occupancy read, once through
+    /// `hornvale_kernel::tick` for the facts it commits). Holding the store on
+    /// the struct is what lets the second evaluation share the first's, which
+    /// is exactly what `Folded::advance_to`'s position-idempotence makes safe:
+    /// the second read absorbs nothing.
+    ///
+    /// Interior mutability, because the store is advanced on READ and several
+    /// of this walk's readers hold only `&self` (spec §2.2). It holds nothing
+    /// the ledger does not already determine, so it is never serialized and
+    /// discarding it at any instant is unobservable.
+    ///
+    /// **No production read site consults it yet** (The Pawl, Task 2): this
+    /// task threads the store and changes no behaviour; later tasks migrate
+    /// the read sites onto it.
+    pub folds: &'a crate::resident::OwnedFolds,
 }
 
 /// The day `npc` entered the room it occupies as of `t` — the day of the
@@ -5084,6 +5107,13 @@ impl<'a> TickSystem for DriveMovements<'a> {
         // `throwaway_nav` (Task 4) carries the identical carve-out: this path
         // pays a fresh `plan_to_room` per creature per pop, exactly what
         // EVERY call paid before this task.
+        //
+        // THE RESIDENT FOLD STORE IS THE EXCEPTION, and it is why it lives on
+        // the struct rather than beside these two (The Pawl, spec §2.1):
+        // `self.folds` is the CALLER's store on this path as much as on the
+        // direct one, so the tick's two evaluations of the same walk share it.
+        // A throwaway here would put an O(history) rebuild back on exactly the
+        // path the store exists to take it off.
         let mut throwaway = RoomMeshMemo::new();
         let mut throwaway_nav = HomeNavCache::new();
         self.step_with_occupancy(frozen, &mut throwaway, &mut throwaway_nav)
@@ -6322,6 +6352,16 @@ mod tests {
     use crate::action::{is_movement, precondition_reads_committed_state};
     use hornvale_kernel::{ConceptRegistry, Seed, test_lineage};
 
+    /// A fixture-owned resident fold store for a `DriveMovements` literal.
+    ///
+    /// Every construction site in this module needs one because the field is
+    /// required; NOTHING in this task reads it, so a throwaway per fixture is
+    /// exactly right. It is a helper rather than the expression written out 34
+    /// times because 34 copies of one expression is 34 places to change.
+    fn test_folds() -> crate::resident::OwnedFolds {
+        crate::resident::OwnedFolds::new(crate::resident::ResidentFolds::new())
+    }
+
     /// Test-only helper: fits the coexistence stack once and reads the `k`
     /// densest wild concentrations — the prelude `derive_wild_npcs` used to
     /// run internally (The Weir, Stage 1b), now the caller's job.
@@ -7520,6 +7560,7 @@ mod tests {
         commit_agent_at(&mut ledger, &reg, knower_e, &here, 1.0);
         commit_agent_at(&mut ledger, &reg, lost_e, &here, 1.0);
 
+        let folds = test_folds();
         let sys = DriveMovements {
             npcs: vec![knower, lost],
             from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
@@ -7529,6 +7570,7 @@ mod tests {
             // base rate (spec §4.1).
             day_ticks: None,
             terrain: &t,
+            folds: &folds,
         };
         // The subject prints as its ROLE in this fixture, not as its raw id.
         // The golden's claim is about which creature emitted what, in what
@@ -7860,6 +7902,7 @@ mod tests {
         let moves = |mass_kg: f64| {
             let mut npc = base.clone();
             npc.mass_kg = mass_kg;
+            let folds = test_folds();
             let sys = DriveMovements {
                 npcs: vec![npc],
                 from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
@@ -7867,6 +7910,7 @@ mod tests {
                 params: SUSTENANCE,
                 day_ticks: None,
                 terrain: &terrain,
+                folds: &folds,
             };
             sys.step(&ledger)
                 .iter()
@@ -7899,6 +7943,7 @@ mod tests {
         // time, so it lands strictly later, by exactly its cost.
         let (ledger, terrain, npc) = charged_walk_fixture();
         let mass = npc.mass_kg;
+        let folds = test_folds();
         let sys = DriveMovements {
             npcs: vec![npc],
             from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
@@ -7906,6 +7951,7 @@ mod tests {
             params: SUSTENANCE,
             day_ticks: None,
             terrain: &terrain,
+            folds: &folds,
         };
         let facts = sys.step(&ledger);
         let drank_day = facts
@@ -7992,6 +8038,7 @@ mod tests {
         // input-derived, reversing the vector would show it immediately.
         let (ledger, terrain, npcs) = interleaving_fixture(&[4.375, 70.0, 1_120.0]);
         let run = |npcs: Vec<Body>| {
+            let folds = test_folds();
             let sys = DriveMovements {
                 npcs,
                 from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
@@ -7999,6 +8046,7 @@ mod tests {
                 params: SUSTENANCE,
                 day_ticks: None,
                 terrain: &terrain,
+                folds: &folds,
             };
             sys.step(&ledger)
                 .iter()
@@ -8042,6 +8090,7 @@ mod tests {
         let (ledger, terrain, npcs) = interleaving_fixture(&[4.375, 70.0, 1_120.0]);
         let from = WorldTime::from_std_days(1.0).expect("a day value is finite");
         let to = WorldTime::from_std_days(20.0).expect("a day value is finite");
+        let folds = test_folds();
         let sys = DriveMovements {
             npcs,
             from,
@@ -8049,6 +8098,7 @@ mod tests {
             params: SUSTENANCE,
             day_ticks: None,
             terrain: &terrain,
+            folds: &folds,
         };
         let facts = sys.step(&ledger);
         assert!(
@@ -8084,6 +8134,7 @@ mod tests {
         // tolerance. The fixture must not depend on which creature is lighter.
         for masses in [[4.375_f64, 70.0], [70.0, 4.375]] {
             let (ledger, terrain, npcs) = interleaving_fixture(&masses);
+            let folds = test_folds();
             let sys = DriveMovements {
                 npcs,
                 from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
@@ -8091,6 +8142,7 @@ mod tests {
                 params: SUSTENANCE,
                 day_ticks: None,
                 terrain: &terrain,
+                folds: &folds,
             };
             let facts = sys.step(&ledger);
             let seq: Vec<EntityId> = facts
@@ -8178,6 +8230,7 @@ mod tests {
                 .iter()
                 .map(|n| (n.entity, (n.mass_kg * 1000.0).round() as u64))
                 .collect();
+            let folds = test_folds();
             let sys = DriveMovements {
                 npcs,
                 from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
@@ -8185,6 +8238,7 @@ mod tests {
                 params: SUSTENANCE,
                 day_ticks: None,
                 terrain: &terrain,
+                folds: &folds,
             };
             let mut rows: Vec<(u64, String, i64, String, String)> = sys
                 .step(&ledger)
@@ -8280,6 +8334,7 @@ mod tests {
 
         let day1_from = WorldTime::from_std_days(1.0).expect("a day value is finite");
         let day1_to = WorldTime::from_std_days(2.0).expect("a day value is finite");
+        let folds = test_folds();
         let sys1 = DriveMovements {
             npcs: npcs.clone(),
             from: day1_from,
@@ -8287,6 +8342,7 @@ mod tests {
             params: SUSTENANCE,
             day_ticks: None,
             terrain: &terrain,
+            folds: &folds,
         };
         let (facts1, _occ1) =
             sys1.step_with_occupancy(&ledger, &mut mesh_memo, &mut home_nav_cache);
@@ -8304,6 +8360,7 @@ mod tests {
         // this property depends on.
         let day2_from = day1_to;
         let day2_to = WorldTime::from_std_days(3.0).expect("a day value is finite");
+        let folds = test_folds();
         let sys2 = DriveMovements {
             npcs: npcs.clone(),
             from: day2_from,
@@ -8311,6 +8368,7 @@ mod tests {
             params: SUSTENANCE,
             day_ticks: None,
             terrain: &terrain,
+            folds: &folds,
         };
         let (facts2, _occ2) =
             sys2.step_with_occupancy(&ledger2, &mut mesh_memo, &mut home_nav_cache);
@@ -8386,6 +8444,7 @@ mod tests {
         // lost has only ever been at `here`.
         commit_agent_at(&mut ledger, &reg, lost_e, &here, 1.0);
 
+        let folds = test_folds();
         let sys = DriveMovements {
             npcs: vec![knower.clone(), lost.clone()],
             from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
@@ -8395,6 +8454,7 @@ mod tests {
             // base rate (spec §4.1).
             day_ticks: None,
             terrain: &t,
+            folds: &folds,
         };
         let next =
             hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).expect("tick");
@@ -8687,6 +8747,7 @@ mod tests {
             label: "measure".into(),
         };
         let ledger = Ledger::default();
+        let folds = test_folds();
         let sys = DriveMovements {
             npcs: vec![npc.clone()],
             from: WorldTime::GENESIS,
@@ -8698,6 +8759,7 @@ mod tests {
             // base rate (spec §4.1).
             day_ticks: None,
             terrain: &terrain,
+            folds: &folds,
         };
         let next =
             hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &world_reg).unwrap();
@@ -9293,6 +9355,7 @@ mod tests {
             fresh: [water.clone()].into_iter().collect(),
             ..Default::default()
         };
+        let folds = test_folds();
         let sys = DriveMovements {
             npcs: vec![npc.clone()],
             from: WorldTime::GENESIS,
@@ -9302,6 +9365,7 @@ mod tests {
             // base rate (spec §4.1).
             day_ticks: None,
             terrain: &t,
+            folds: &folds,
         };
         let next =
             hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &world_reg).unwrap();
@@ -9376,6 +9440,7 @@ mod tests {
             fresh: [water.clone()].into_iter().collect(),
             ..Default::default()
         };
+        let folds = test_folds();
         let sys = DriveMovements {
             npcs: vec![npc.clone()],
             from: WorldTime::GENESIS,
@@ -9383,6 +9448,7 @@ mod tests {
             params: SUSTENANCE,
             day_ticks: None,
             terrain: &t,
+            folds: &folds,
         };
 
         let (default_facts, _mode, _affect, _suppressed) = sys.step_one_with_controller(
@@ -9454,6 +9520,7 @@ mod tests {
     #[test]
     fn h3_the_act_trail_under_an_imposed_controller_is_byte_identical_to_the_default_controller() {
         let (ledger, terrain, npc) = charged_walk_fixture();
+        let folds = test_folds();
         let sys = DriveMovements {
             npcs: vec![npc.clone()],
             from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
@@ -9461,6 +9528,7 @@ mod tests {
             params: SUSTENANCE,
             day_ticks: None,
             terrain: &terrain,
+            folds: &folds,
         };
 
         let (default_facts, default_mode, default_affect, default_suppressed) = sys
@@ -9601,6 +9669,7 @@ mod tests {
         // `drinking_and_eating_now_cost_time`, which asserts all three
         // predicates appear on this exact fixture).
         let (ledger_a, terrain_a, npc_a) = charged_walk_fixture();
+        let folds = test_folds();
         let sys_a = DriveMovements {
             npcs: vec![npc_a.clone()],
             from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
@@ -9608,6 +9677,7 @@ mod tests {
             params: SUSTENANCE,
             day_ticks: None,
             terrain: &terrain_a,
+            folds: &folds,
         };
         let (default_facts_a, ..) = sys_a.step_one_with_controller(
             &ledger_a,
@@ -9657,6 +9727,7 @@ mod tests {
             fresh: [water_b.clone()].into_iter().collect(),
             ..Default::default()
         };
+        let folds = test_folds();
         let sys_b = DriveMovements {
             npcs: vec![npc_b.clone()],
             from: WorldTime::GENESIS,
@@ -9664,6 +9735,7 @@ mod tests {
             params: SUSTENANCE,
             day_ticks: None,
             terrain: &t_b,
+            folds: &folds,
         };
         let (default_facts_b, ..) = sys_b.step_one_with_controller(
             &ledger_b,
@@ -9761,6 +9833,7 @@ mod tests {
             label: "herder".into(),
         };
         let t = PlantedTerrain::default();
+        let folds = test_folds();
         let sys = DriveMovements {
             npcs: vec![npc.clone()],
             from: WorldTime::from_std_days(3.0).expect("a day value is finite"),
@@ -9772,6 +9845,7 @@ mod tests {
             params: SUSTENANCE,
             day_ticks: None,
             terrain: &t,
+            folds: &folds,
         };
         let mut player = PlayerController::new();
         player.queue(Action::Drink);
@@ -9875,6 +9949,7 @@ mod tests {
             fresh: [water.clone()].into_iter().collect(),
             ..Default::default()
         };
+        let folds = test_folds();
         let sys = DriveMovements {
             npcs: vec![npc],
             from: WorldTime::GENESIS,
@@ -9884,6 +9959,7 @@ mod tests {
             // base rate (spec §4.1).
             day_ticks: None,
             terrain: &t,
+            folds: &folds,
         };
         world.ledger = hornvale_kernel::tick(
             &world.ledger,
@@ -9953,6 +10029,7 @@ mod tests {
         // A long wait: the MAX_STEPS cap (not the wait) must be what bounds
         // this — if it weren't a real backstop, work would scale with the
         // wait instead.
+        let folds = test_folds();
         let sys = DriveMovements {
             npcs: vec![npc],
             from: WorldTime::GENESIS,
@@ -9962,6 +10039,7 @@ mod tests {
             // base rate (spec §4.1).
             day_ticks: None,
             terrain: &t,
+            folds: &folds,
         };
         let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
         // Never drinks (no water exists); the walk is bounded by MAX_STEPS —
@@ -10048,6 +10126,7 @@ mod tests {
         // spin forever (this test's own short harness timeout is additional
         // proof it didn't hang; the assertion below is the load-bearing
         // one).
+        let folds = test_folds();
         let sys = DriveMovements {
             npcs: vec![npc],
             from: WorldTime::GENESIS,
@@ -10057,6 +10136,7 @@ mod tests {
             // base rate (spec §4.1).
             day_ticks: None,
             terrain: &t,
+            folds: &folds,
         };
         let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
         // The load-bearing proof is that the call above RETURNED at all — with
@@ -10115,6 +10195,7 @@ mod tests {
             label: "herder".into(),
         };
         let t = PlantedTerrain::fresh_only([resource.clone()]);
+        let folds = test_folds();
         let sys = DriveMovements {
             npcs: vec![npc],
             from: WorldTime::GENESIS,
@@ -10124,6 +10205,7 @@ mod tests {
             // base rate (spec §4.1).
             day_ticks: None,
             terrain: &t,
+            folds: &folds,
         };
         let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
         let first = next.find(AGENT_AT).find(|f| f.subject == e).unwrap();
@@ -10398,6 +10480,7 @@ mod tests {
                 commit_agent_at(&mut ledger, &reg, e, &x, 0.15); // frightened here → remembers X
             }
             commit_agent_at(&mut ledger, &reg, e, &start, 0.2); // now at start
+            let folds = test_folds();
             let sys = DriveMovements {
                 npcs: vec![npc_at(e)],
                 from: WorldTime::from_std_days(1.0).expect("a day value is finite"), // after the seeded history
@@ -10407,6 +10490,7 @@ mod tests {
                 // base rate (spec §4.1).
                 day_ticks: None,
                 terrain: &terrain,
+                folds: &folds,
             };
             let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
             (next, e)
@@ -10640,6 +10724,7 @@ mod tests {
                 commit_agent_at(&mut ledger, &reg, b, &far, 0.40);
                 npcs.push(emitter_npc(b));
             }
+            let folds = test_folds();
             let sys = DriveMovements {
                 npcs,
                 from: WorldTime::from_std_days(from_day).expect("a day value is finite"),
@@ -10649,6 +10734,7 @@ mod tests {
                 // base rate (spec §4.1).
                 day_ticks: None,
                 terrain: &terrain,
+                folds: &folds,
             };
             let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
             (next, a, from_day)
@@ -10834,6 +10920,7 @@ mod tests {
         // homeward walk carries it back onto the ground it feared, with no emitter
         // anywhere near: the most-recent verdict at X is SAFE, and the phantom
         // leaves BOTH halves of the memory.
+        let folds = test_folds();
         let sys = DriveMovements {
             npcs: band.to_vec(),
             from: now,
@@ -10843,6 +10930,7 @@ mod tests {
             // base rate (spec §4.1).
             day_ticks: None,
             terrain: &terrain,
+            folds: &folds,
         };
         let next =
             hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).expect("tick");
@@ -12136,6 +12224,7 @@ mod tests {
 
         // TICK 1 — the daytime window (both awake). The alarm field haloes A's
         // neighbourhood (B's room included), so B bolts.
+        let folds = test_folds();
         let sys1 = DriveMovements {
             npcs: vec![a.clone(), b.clone()],
             from: WorldTime::from_std_days(t0).expect("a day value is finite"),
@@ -12145,6 +12234,7 @@ mod tests {
             // base rate (spec §4.1).
             day_ticks: None,
             terrain: &terrain,
+            folds: &folds,
         };
         let after1 = hornvale_kernel::tick(&ledger, &[&sys1], &["drive-movements"], &reg).unwrap();
 
@@ -12185,6 +12275,7 @@ mod tests {
         // the halo. The alarm no longer reaches B, so it settles: no new move.
         // TERMINATION (spec §3): the wave dies not because the source vanished
         // (A still screams) but because B escaped the one-hop halo.
+        let folds = test_folds();
         let sys2 = DriveMovements {
             npcs: vec![a.clone(), b.clone()],
             from: WorldTime::from_std_days(t1).expect("a day value is finite"),
@@ -12194,6 +12285,7 @@ mod tests {
             // base rate (spec §4.1).
             day_ticks: None,
             terrain: &terrain,
+            folds: &folds,
         };
         let after2 = hornvale_kernel::tick(&after1, &[&sys2], &["drive-movements"], &reg).unwrap();
         let b_moves_2 = after2
@@ -12213,6 +12305,7 @@ mod tests {
         let mut control = Ledger::default();
         let cb = build_b(&mut control);
         let cb_entity = cb.entity;
+        let folds = test_folds();
         let csys = DriveMovements {
             npcs: vec![cb.clone()],
             from: WorldTime::from_std_days(t0).expect("a day value is finite"),
@@ -12222,6 +12315,7 @@ mod tests {
             // base rate (spec §4.1).
             day_ticks: None,
             terrain: &terrain,
+            folds: &folds,
         };
         let cafter = hornvale_kernel::tick(&control, &[&csys], &["drive-movements"], &reg).unwrap();
         let c_fear = cafter
@@ -12689,6 +12783,7 @@ mod tests {
             };
             // from > both seed days so the frozen ledger holds no future facts and the
             // agent starts at home, not yet thirsty.
+            let folds = test_folds();
             let sys = DriveMovements {
                 npcs: vec![npc],
                 from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
@@ -12698,6 +12793,7 @@ mod tests {
                 // base rate (spec §4.1).
                 day_ticks: None,
                 terrain: &terrain,
+                folds: &folds,
             };
             let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
             // the rooms it drank at (its believed destinations)
@@ -12781,6 +12877,7 @@ mod tests {
             mass_kg: crate::clock::REFERENCE_MASS_KG,
             label: "h".into(),
         };
+        let folds = test_folds();
         let sys = DriveMovements {
             npcs: vec![npc.clone()],
             from: WorldTime::GENESIS,
@@ -12790,6 +12887,7 @@ mod tests {
             // base rate (spec §4.1).
             day_ticks: None,
             terrain: &terrain,
+            folds: &folds,
         };
         let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
         // It drank at least twice (multiple cycles) and reached the water room.
@@ -14933,6 +15031,7 @@ mod tests {
         };
         let mut ledger = Ledger::default();
         let e1 = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
+        let folds = test_folds();
         let sys = DriveMovements {
             npcs: vec![build_npc(e1)],
             // Start mid-morning (`waking_offset(Diurnal)`), not midnight: The
@@ -14943,6 +15042,7 @@ mod tests {
             params: SUSTENANCE,
             day_ticks: None,
             terrain: &hearth_terrain,
+            folds: &folds,
         };
         let (_facts, occ) =
             sys.step_with_occupancy(&ledger, &mut RoomMeshMemo::new(), &mut HomeNavCache::new());
@@ -14980,6 +15080,7 @@ mod tests {
         };
         let mut ledger2 = Ledger::default();
         let e2 = ledger2.mint_entity(test_lineage(ledger2.entity_count() as u16));
+        let folds = test_folds();
         let sys2 = DriveMovements {
             npcs: vec![build_npc(e2)],
             // Start mid-morning (`waking_offset(Diurnal)`), not midnight: The
@@ -14990,6 +15091,7 @@ mod tests {
             params: SUSTENANCE,
             day_ticks: None,
             terrain: &wild_terrain,
+            folds: &folds,
         };
         let (_facts2, occ2) =
             sys2.step_with_occupancy(&ledger2, &mut RoomMeshMemo::new(), &mut HomeNavCache::new());
@@ -15370,6 +15472,7 @@ mod tests {
         // 0.3/day ⇒ ~2.8 days) and competes for the arbitration this test
         // means to isolate to Thermal.
         let now = WorldTime::from_std_days(entry_day + 1.0).expect("a day value is finite");
+        let folds = test_folds();
         let sys = DriveMovements {
             npcs: vec![npc],
             from: now,
@@ -15377,6 +15480,7 @@ mod tests {
             params: SUSTENANCE,
             day_ticks: None,
             terrain: &terrain,
+            folds: &folds,
         };
         let (facts, occ) =
             sys.step_with_occupancy(&ledger, &mut RoomMeshMemo::new(), &mut HomeNavCache::new());
@@ -15629,6 +15733,7 @@ mod tests {
         // generous for the 3-hop journey, short of Fatigue's own act
         // threshold.
         let now = WorldTime::from_std_days(entry_day + 1.0).expect("a day value is finite");
+        let folds = test_folds();
         let forward = DriveMovements {
             npcs: vec![
                 cold_thermal_npc(a, home.clone(), niche),
@@ -15639,6 +15744,7 @@ mod tests {
             params: SUSTENANCE,
             day_ticks: None,
             terrain: &terrain,
+            folds: &folds,
         };
         let (_f1, occ_forward) = forward.step_with_occupancy(
             &ledger,
@@ -15646,6 +15752,7 @@ mod tests {
             &mut HomeNavCache::new(),
         );
 
+        let folds = test_folds();
         let reversed = DriveMovements {
             npcs: vec![
                 cold_thermal_npc(b, home.clone(), niche),
@@ -15656,6 +15763,7 @@ mod tests {
             params: SUSTENANCE,
             day_ticks: None,
             terrain: &terrain,
+            folds: &folds,
         };
         let (_f2, occ_reversed) = reversed.step_with_occupancy(
             &ledger,

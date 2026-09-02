@@ -87,6 +87,8 @@ mod possess_target;
 mod possession_facts;
 #[path = "suite/possession_moves.rs"]
 mod possession_moves;
+#[path = "suite/resident_folds.rs"]
+mod resident_folds;
 #[path = "suite/session.rs"]
 mod session;
 #[path = "suite/session_snapshot.rs"]

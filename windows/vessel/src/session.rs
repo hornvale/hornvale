@@ -956,6 +956,22 @@ pub struct Session<'w> {
     /// `wait` after its first, which requires the cache itself, not merely
     /// its backing memo, to outlive one tick. See `HomeNavCache`'s own doc.
     home_nav_cache: HomeNavCache,
+    /// The session-lived resident fold store (The Pawl, spec §2.1): the
+    /// per-entity accumulation of what the session's own ledger already
+    /// determines, advanced on read and never serialized.
+    ///
+    /// Owned here, beside `mesh_memo` and `home_nav_cache`, for the same
+    /// reason they are — a store rebuilt per tick would be the O(history)
+    /// walk it exists to remove — and behind interior mutability for a reason
+    /// they do not share: several of its readers hold only `&self`
+    /// (`snapshot`, `needs`), and spec §2.2 refuses a throwaway rebuild on
+    /// that path. It holds nothing the ledger does not re-determine, so
+    /// discarding the whole store between any two turns is unobservable.
+    ///
+    /// **Nothing reads it yet** (The Pawl, Task 2): the field and the
+    /// threading land first, byte-identically; later tasks migrate the read
+    /// sites onto it.
+    folds: crate::resident::OwnedFolds,
     /// The driven body's own commitment mode as of the most recent `!wait`
     /// (The Hand, Task 5 fix round 1, spec §2.3) — `None` before the first
     /// one. Set by [`Self::wait`], the only place the driven body's own
@@ -1516,6 +1532,7 @@ impl<'w> Session<'w> {
             underground: None,
             mesh_memo: hornvale_kernel::RoomMeshMemo::new(),
             home_nav_cache: HomeNavCache::new(),
+            folds: crate::resident::OwnedFolds::new(crate::resident::ResidentFolds::new()),
             driven_mode: None,
             driven_affect: None,
             driven_suppressed: Vec::new(),
@@ -6552,6 +6569,11 @@ impl<'w> Session<'w> {
             // tidally-locked world, which the rotation pin admits.
             day_ticks: self.day_ticks(),
             terrain: &terrain,
+            // The session's own store, shared across BOTH evaluations of this
+            // walk (the `step_with_occupancy` call below and the
+            // `hornvale_kernel::tick` call after it) — advance-on-read is
+            // idempotent in position, so the second absorbs nothing.
+            folds: &self.folds,
         };
         // Recover this tick's within-room `Occupancy` alongside the facts
         // `tick()` (below) commits — the same walk, read twice, exactly the

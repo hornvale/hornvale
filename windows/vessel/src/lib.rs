@@ -27,6 +27,7 @@ pub mod liveness;
 pub mod passage;
 pub mod plan;
 mod purview;
+pub mod resident;
 mod session;
 pub mod snapshot;
 pub mod stance;
