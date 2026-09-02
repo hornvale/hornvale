@@ -2246,6 +2246,30 @@ impl<'w> Session<'w> {
         self.folds.borrow().witness().first_belief_in_the_past()
     }
 
+    /// How many HAZARD-MEMORY lookups this session has made —
+    /// `hazard_memory_memo` calls, the denominator
+    /// [`Self::resident_hazards_in_the_past`] is a count out of. Kept apart
+    /// from the belief pair because the two functions do not share a caller
+    /// set — see [`crate::resident::ReadWitness::note_hazard`].
+    /// type-audit: bare-ok(count: return)
+    pub fn resident_hazard_lookups(&self) -> u64 {
+        self.folds.borrow().witness().hazard_lookups()
+    }
+
+    /// How many of this session's hazard-memory reads ran at an instant
+    /// strictly before a committed sighting of the same entity — spec §3
+    /// rule 6's quantity for the `LatestVisit` tenant.
+    /// type-audit: bare-ok(count: return)
+    pub fn resident_hazards_in_the_past(&self) -> u64 {
+        self.folds.borrow().witness().hazards_in_the_past()
+    }
+
+    /// The first such read as `(entity, instant read, the sighting that lies
+    /// after it)`, for a witness that PRINTS its evidence.
+    pub fn resident_first_hazard_in_the_past(&self) -> Option<(EntityId, WorldTime, WorldTime)> {
+        self.folds.borrow().witness().first_hazard_in_the_past()
+    }
+
     /// The driven body's own stable identity as a ledger `EntityId` — the
     /// object a hostile NPC's `turned-hostile` fact points at.
     ///

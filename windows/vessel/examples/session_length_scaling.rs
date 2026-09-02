@@ -391,8 +391,10 @@ fn probe_shared_believed_water_us(
 /// the first from cache, so the loop would measure the memo's hit rate, not
 /// the fold — and it would read as this fold being nearly free, which is
 /// the wrong conclusion for the right-looking reason.
+#[allow(clippy::too_many_arguments)]
 fn probe_hazard_memory_memo_us(
     ledger: &Ledger,
+    folds: &hornvale_vessel::resident::OwnedFolds,
     npc: &Body,
     band: &[Body],
     t: WorldTime,
@@ -403,7 +405,7 @@ fn probe_hazard_memory_memo_us(
     let mut sink: u64 = 0;
     for _ in 0..FOLD_REPS {
         let mut memo = PrimaryAfraidMemo::new();
-        let mem = hazard_memory_memo(ledger, npc, t, terrain, band, &mut memo);
+        let mem = hazard_memory_memo(ledger, folds, npc, t, terrain, band, &mut memo);
         sink += (mem.shunned.len() + mem.dread.len()) as u64;
     }
     let us = t0.elapsed().as_secs_f64() * 1e6 / FOLD_REPS as f64;
@@ -1159,7 +1161,7 @@ fn run(
                 PROBE_BUDGET,
             );
             let hazard_memory_memo_us =
-                probe_hazard_memory_memo_us(&ledger, npc, &npcs, day, &probe_terrain);
+                probe_hazard_memory_memo_us(&ledger, &folds, npc, &npcs, day, &probe_terrain);
             let calib_ms = calibrate();
             let searches_after = home_nav_cache.searches();
             let ticks_elapsed = (tick + 1) as f64;

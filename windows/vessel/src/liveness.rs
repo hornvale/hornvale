@@ -1281,12 +1281,13 @@ pub struct HazardMemory {
 /// [`HazardMemory::dread`].
 pub fn believed_hazard(
     ledger: &Ledger,
+    folds: &OwnedFolds,
     npc: &Body,
     t: WorldTime,
     terrain: &dyn Terrain,
     roster: &[Body],
 ) -> std::collections::BTreeSet<Facet> {
-    hazard_memory(ledger, npc, t, terrain, roster).shunned
+    hazard_memory(ledger, folds, npc, t, terrain, roster).shunned
 }
 
 /// [`believed_hazard`] sharing a caller-owned [`PrimaryAfraidMemo`] across the
@@ -1294,42 +1295,65 @@ pub fn believed_hazard(
 ///
 /// The planner half of [`hazard_memory_memo`]; the transient half is
 /// [`HazardMemory::dread`].
+#[allow(clippy::too_many_arguments)]
 pub fn believed_hazard_memo(
     ledger: &Ledger,
+    folds: &OwnedFolds,
     npc: &Body,
     t: WorldTime,
     terrain: &dyn Terrain,
     roster: &[Body],
     memo: &mut PrimaryAfraidMemo,
 ) -> std::collections::BTreeSet<Facet> {
-    hazard_memory_memo(ledger, npc, t, terrain, roster, memo).shunned
+    hazard_memory_memo(ledger, folds, npc, t, terrain, roster, memo).shunned
 }
 
 /// [`hazard_memory_memo`] with a throwaway memo — a lone read gains nothing
 /// from caching (the hot sim paths thread a shared one).
 pub fn hazard_memory(
     ledger: &Ledger,
+    folds: &OwnedFolds,
     npc: &Body,
     t: WorldTime,
     terrain: &dyn Terrain,
     roster: &[Body],
 ) -> HazardMemory {
     let mut memo = PrimaryAfraidMemo::new();
-    hazard_memory_memo(ledger, npc, t, terrain, roster, &mut memo)
+    hazard_memory_memo(ledger, folds, npc, t, terrain, roster, &mut memo)
 }
 
 /// The ONE hazard fold (see [`believed_hazard`] for the belief, the staleness
 /// rule and the cost argument), returning BOTH provenances as a
 /// [`HazardMemory`] and sharing a caller-owned [`PrimaryAfraidMemo`] across the
 /// many re-derivations of a single tick.
+#[allow(clippy::too_many_arguments)]
 pub fn hazard_memory_memo(
     ledger: &Ledger,
+    folds: &OwnedFolds,
     npc: &Body,
     t: WorldTime,
     terrain: &dyn Terrain,
     roster: &[Body],
     memo: &mut PrimaryAfraidMemo,
 ) -> HazardMemory {
+    // Spec §3 rule 6's witness for the LATEST-VISIT map, taken FIRST so that
+    // every call is counted -- the emitter-free fast path below returns early,
+    // and a counter placed after it would silently measure only the worlds
+    // that have an emitter. The store is read for the trail's last instant and
+    // the guard is dropped immediately: this function recurses (through
+    // `frightened_at` -> `alarm_at` -> `alarm_field` -> `emitter_arousal` ->
+    // `affect_of`), and although that path builds its own throwaway store, a
+    // guard held across it would be a runtime panic waiting for the day it
+    // does not.
+    {
+        let mut store = folds.borrow_mut();
+        let (trail, witness) = store.trail_and_witness(ledger);
+        witness.note_hazard(
+            npc.entity,
+            t,
+            trail.of(npc.entity).last().map(|(day, _)| *day),
+        );
+    }
     // Most-recent visit per room (day ≤ t): the room is judged at its LATEST
     // visit, so a later safe visit clears an earlier phantom (the staleness rule).
     let mut latest: std::collections::BTreeMap<Facet, f64> = std::collections::BTreeMap::new();
@@ -3983,7 +4007,7 @@ pub fn affect_of_memo_occupied(
     // frightened creature ⇒ byte-identical). The roster is this call's `band`;
     // `alarm_field` invokes `affect_of` with `band = &[]`, so its replay reads
     // a terrain-only memory and the transient re-derivation never recurses.
-    let memory = hazard_memory_memo(frozen, npc, day, terrain, band, memo);
+    let memory = hazard_memory_memo(frozen, folds, npc, day, terrain, band, memo);
     let view = Perceived {
         position: pos,
         drive,
@@ -5125,6 +5149,7 @@ impl<'a> DriveMovements<'a> {
             // identical (no primary-afraid emitter on the settled worlds).
             let memory = hazard_memory_memo(
                 frozen,
+                self.folds,
                 npc,
                 self.from,
                 self.terrain,
@@ -5810,6 +5835,7 @@ impl<'a> DriveMovements<'a> {
         let alarm = alarm_field_memo(frozen, &band, self.terrain, self.from, &mut afraid_memo);
         let memory = hazard_memory_memo(
             frozen,
+            self.folds,
             body,
             self.from,
             self.terrain,
@@ -7129,6 +7155,7 @@ mod tests {
         assert!(
             believed_hazard(
                 &ledger,
+                &test_folds(),
                 &npc,
                 WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
@@ -7159,6 +7186,7 @@ mod tests {
         commit_agent_at(&mut ledger, &reg, e, &scary, 2.0); // frightened here
         let got = believed_hazard(
             &ledger,
+            &test_folds(),
             &npc,
             WorldTime::from_std_days(5.0).expect("a day value is finite"),
             &t,
@@ -7189,6 +7217,7 @@ mod tests {
         commit_agent_at(&mut ledger, &reg, e, &scary, 4.0); // still frightened
         let got = believed_hazard(
             &ledger,
+            &test_folds(),
             &npc,
             WorldTime::from_std_days(5.0).expect("a day value is finite"),
             &t,
@@ -7232,13 +7261,13 @@ mod tests {
         let roster = [b.clone()];
         // A's most-recent visit to X was safe → the phantom is cleared.
         assert!(
-            !believed_hazard(&ledger, &a, now, &terrain, &roster).contains(&x),
+            !believed_hazard(&ledger, &test_folds(), &a, now, &terrain, &roster).contains(&x),
             "a safe revisit clears the disproven phantom"
         );
         // C never revisited → the phantom persists (re-derived from B's PAST
         // room — requires the day-aware position lookup).
         assert!(
-            believed_hazard(&ledger, &c, now, &terrain, &roster).contains(&x),
+            believed_hazard(&ledger, &test_folds(), &c, now, &terrain, &roster).contains(&x),
             "without a corrective revisit, the phantom is still shunned"
         );
     }
@@ -7270,6 +7299,7 @@ mod tests {
 
         let mem = hazard_memory(
             &ledger,
+            &test_folds(),
             &a,
             WorldTime::from_std_days(10.0).expect("a day value is finite"),
             &terrain,
@@ -7315,6 +7345,7 @@ mod tests {
 
         let mem = hazard_memory(
             &ledger,
+            &test_folds(),
             &a,
             WorldTime::from_std_days(10.0).expect("a day value is finite"),
             &terrain,
@@ -7352,8 +7383,8 @@ mod tests {
         let now = WorldTime::from_std_days(10.0).expect("a day value is finite");
         let roster = [b];
         assert_eq!(
-            believed_hazard(&ledger, &a, now, &terrain, &roster),
-            hazard_memory(&ledger, &a, now, &terrain, &roster).shunned
+            believed_hazard(&ledger, &test_folds(), &a, now, &terrain, &roster),
+            hazard_memory(&ledger, &test_folds(), &a, now, &terrain, &roster).shunned
         );
     }
 
@@ -7436,9 +7467,16 @@ mod tests {
         // so an empty field at X is the contagion block, not an empty memory.
         let now = WorldTime::from_std_days(0.6).expect("a day value is finite");
         assert!(
-            hazard_memory(&ledger, &a, now, &terrain, &[a.clone(), b.clone()])
-                .dread
-                .contains_key(&x),
+            hazard_memory(
+                &ledger,
+                &test_folds(),
+                &a,
+                now,
+                &terrain,
+                &[a.clone(), b.clone()]
+            )
+            .dread
+            .contains_key(&x),
             "fixture check: the shudderer must actually dread X"
         );
         let field = alarm_field(&ledger, &[a, b], &terrain, now);
@@ -10758,6 +10796,7 @@ mod tests {
             let n = npc_at(fe);
             let hz = believed_hazard(
                 &fl,
+                &test_folds(),
                 &n,
                 WorldTime::from_std_days(1.0).expect("a day value is finite"),
                 &terrain,
@@ -10906,6 +10945,7 @@ mod tests {
             assert!(
                 believed_hazard(
                     &fl,
+                    &test_folds(),
                     &an,
                     WorldTime::from_std_days(1.0).expect("a day value is finite"),
                     &terrain,
@@ -10916,6 +10956,7 @@ mod tests {
             );
             let hz = believed_hazard(
                 &fl,
+                &test_folds(),
                 &an,
                 WorldTime::from_std_days(1.0).expect("a day value is finite"),
                 &terrain,
@@ -11131,7 +11172,7 @@ mod tests {
             ),
             "dread with an outlet is wariness, not distress: {felt:?}"
         );
-        let memory = hazard_memory(&ledger, &a, now, &terrain, &band);
+        let memory = hazard_memory(&ledger, &test_folds(), &a, now, &terrain, &band);
         assert!(
             memory.dread.contains_key(&x),
             "fixture check: X really is a phantom, not a Haunt: {:?}",
@@ -11199,6 +11240,7 @@ mod tests {
         );
         let after = hazard_memory(
             &next,
+            &test_folds(),
             &a,
             WorldTime::from_std_days(now.as_std_days() + 1.0).expect("a day value is finite"),
             &terrain,

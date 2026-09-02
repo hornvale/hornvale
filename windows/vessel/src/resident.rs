@@ -356,6 +356,21 @@ pub struct ReadWitness {
     beliefs_in_the_past: u64,
     /// The first such read, kept for the witness's own evidence line.
     first_belief_in_the_past: Option<(EntityId, WorldTime, WorldTime)>,
+    /// How many HAZARD-MEMORY lookups have been made — `hazard_memory_memo`
+    /// calls, and nothing else. Its own denominator, kept separate from the
+    /// belief pair because the two functions do NOT share a caller set: four
+    /// of `hazard_memory_memo`'s five callers make no paired belief read at
+    /// all (`believed_hazard`/`believed_hazard_memo`/`hazard_memory` are their
+    /// own public entry points, and the two walk-path calls precede the
+    /// `WalkState::begin` that reads belief), so counting one and inferring
+    /// the other is an inference dressed as a measurement.
+    hazard_lookups: u64,
+    /// How many of those ran at an instant STRICTLY BEFORE a committed
+    /// sighting of the same entity — spec §3 rule 6's quantity for the
+    /// latest-visit map, and what decides `LatestVisit`'s own branch.
+    hazards_in_the_past: u64,
+    /// The first such read, kept for the witness's own evidence line.
+    first_hazard_in_the_past: Option<(EntityId, WorldTime, WorldTime)>,
 }
 
 impl ReadWitness {
@@ -383,6 +398,15 @@ impl ReadWitness {
     /// call. `latest_sighting` is that entity's last committed `agent-at`
     /// instant, which [`Trail`] holds at O(1).
     ///
+    /// **The condition is an UPPER BOUND, conservative in the safe
+    /// direction.** It fires when the entity's LATEST sighting of ANY room
+    /// lies after `t`; what would actually change a belief answer is a WATER
+    /// room whose FIRST visit lies after `t`. Every read that could differ is
+    /// therefore counted, and some that could not are counted too. A cheaper
+    /// bound was chosen deliberately: the exact test is the tenant's own read,
+    /// and running it twice to witness itself would make the counter a copy of
+    /// the thing it is checking.
+    ///
     /// **This counter survives the branch it decided, and its job changed
     /// when it did.** Before the tenant existed it asked whether a plain
     /// `BTreeSet` fold could serve every reached read; it could not, so
@@ -402,6 +426,50 @@ impl ReadWitness {
             self.first_belief_in_the_past
                 .get_or_insert((entity, t, latest));
         }
+    }
+
+    /// Record what a HAZARD-MEMORY read of `entity` at `t` stood against —
+    /// [`Self::note_belief`]'s twin, taken at `hazard_memory_memo`'s own call
+    /// and answering the same question about the same `agent-at` history.
+    ///
+    /// `hazard_memory_memo` folds a most-recent-visit-per-room map filtered to
+    /// `day <= t`, so an unfiltered latest-visit fold would answer differently
+    /// under exactly this condition. The count is what spec §3 rule 6's branch
+    /// for the `LatestVisit` tenant turns on, and it is measured HERE rather
+    /// than inferred from the belief count beside it.
+    pub fn note_hazard(
+        &mut self,
+        entity: EntityId,
+        t: WorldTime,
+        latest_sighting: Option<WorldTime>,
+    ) {
+        self.hazard_lookups += 1;
+        if let Some(latest) = latest_sighting.filter(|d| *d > t) {
+            self.hazards_in_the_past += 1;
+            self.first_hazard_in_the_past
+                .get_or_insert((entity, t, latest));
+        }
+    }
+
+    /// How many hazard-memory lookups have been made — the DENOMINATOR
+    /// [`Self::hazards_in_the_past`] is a count out of.
+    /// type-audit: bare-ok(count: return)
+    pub fn hazard_lookups(&self) -> u64 {
+        self.hazard_lookups
+    }
+
+    /// How many hazard-memory reads ran at an instant strictly before a
+    /// committed sighting of the same entity (spec §3 rule 6, for
+    /// `LatestVisit`).
+    /// type-audit: bare-ok(count: return)
+    pub fn hazards_in_the_past(&self) -> u64 {
+        self.hazards_in_the_past
+    }
+
+    /// The first such read as `(entity, instant read, the sighting that lies
+    /// after it)` — the evidence the rule-6 witness prints.
+    pub fn first_hazard_in_the_past(&self) -> Option<(EntityId, WorldTime, WorldTime)> {
+        self.first_hazard_in_the_past
     }
 
     /// How many belief lookups have been made — the DENOMINATOR

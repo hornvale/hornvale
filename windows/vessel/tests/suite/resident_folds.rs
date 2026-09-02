@@ -1630,13 +1630,25 @@ fn the_fixture_visits_both_wet_and_dry_rooms() {
         "the fixture must visit at least one wet and one dry room, or the water filter \
          is never exercised: wet {wet:?}, dry {dry:?}"
     );
-    // And the oracle must actually drop something at the whole-history instant.
+    // And the oracle must actually drop something at the whole-history instant
+    // -- compared against THAT ENTITY's own visited rooms, not the union over
+    // both, which is a larger denominator and would let the assertion pass on
+    // an entity whose rooms are all wet.
     for e in [a, b] {
+        let mine: std::collections::BTreeSet<Facet> = l
+            .facts_of(e, AGENT_AT)
+            .filter(|f| f.day.is_some())
+            .map(|f| match &f.object {
+                Value::Text(s) => room_from_text_copy(s),
+                other => panic!("an agent-at object is always text, got {other:?}"),
+            })
+            .collect();
         let scanned = known_water_scan_oracle(&l, e, far, &terrain);
         assert!(
-            scanned.len() < visited.len(),
-            "the oracle must drop at least one visited room as dry for {e:?}, or the \
-             filter is vacuous"
+            scanned.len() < mine.len(),
+            "the oracle must drop at least one of {e:?}'s OWN {} visited rooms as dry, or \
+             the filter is vacuous for it: kept {scanned:?}",
+            mine.len()
         );
     }
 }
@@ -1675,10 +1687,17 @@ fn known_water_at_every_past_instant_equals_the_oracle_at_that_instant() {
             .collect();
         probes.push(WorldTime::from_ticks(0));
         probes.push(WorldTime::from_ticks(9_999_999));
+        // The floor below counts these: a probe where the oracle returned a
+        // NON-EMPTY set. Comparing two empty sets is agreement about nothing,
+        // and at the early probes that is exactly what happens.
+        let mut non_empty = 0_usize;
         for t in probes {
             let scanned: Vec<Facet> = known_water_scan_oracle(&l, e, t, &terrain)
                 .into_iter()
                 .collect();
+            if !scanned.is_empty() {
+                non_empty += 1;
+            }
             assert_eq!(
                 folded.state().water_at(e, t, &terrain),
                 scanned,
@@ -1686,6 +1705,16 @@ fn known_water_at_every_past_instant_equals_the_oracle_at_that_instant() {
                  instant -- this is spec §3 rule 6's first-visit filter"
             );
         }
+        // MEASURED against this fixture: 8 of the 10 probes for the first
+        // entity, 5 of 10 for the second (taken by raising this floor until it
+        // reported each entity's own count). The floor is 4 — under the
+        // smaller of the two, so a fixture edit that costs a probe is not a
+        // red, and one that empties the comparison is.
+        assert!(
+            non_empty >= 4,
+            "at least 3 of {e:?}'s probes must compare NON-EMPTY sets, or the equality \
+             above is two empty sets agreeing: got {non_empty}"
+        );
     }
 }
 
@@ -1954,5 +1983,201 @@ fn rule_six_witness_belief_reads_run_at_past_instants() {
          production read runs at an instant before a committed sighting. If this is ever \
          zero, that filter is unexercised and the tenant is carrying a day map nothing \
          proves it needs"
+    );
+}
+
+/// Spec §3 rule 6 for the OTHER set-shaped read: does any `hazard_memory_memo`
+/// call run at an instant strictly before a committed sighting of the same
+/// entity?
+///
+/// **This is measured here rather than inferred from the belief witness above,
+/// and the first draft of this campaign's report did infer it.** That report
+/// argued the two counts must agree "call for call" because
+/// `affect_of_memo_occupied` passes its `day` to both. That is true of ONE of
+/// `hazard_memory_memo`'s five callers. The other four are:
+///
+/// - `believed_hazard_memo` — a public entry point with its own `t`; no
+///   caller anywhere in the tree today.
+/// - `hazard_memory` and `believed_hazard` (which delegates to it) — public
+///   entry points with their own `t`; every call site in the tree is inside
+///   `liveness.rs`'s own test module.
+/// - `DriveMovements::step_with_occupancy`'s per-creature preamble and
+///   `step_one_with_controller`, both at `t = self.from`.
+///
+/// And the counts are measured unequal, in the direction the inference did not
+/// predict either: on the seed-42 session, 520 hazard lookups against 568
+/// belief lookups. (Arithmetically consistent with one hazard read and one
+/// `own` belief read per walk, plus 48 extra belief reads from
+/// `shared_believed_water`'s per-co-located-peer loop, which makes no hazard
+/// read — stated as consistency, not as a separately measured decomposition.)
+///
+/// The number `LatestVisit` (Task 5) branches on is this one, so it is taken
+/// on its own counter. The belief counts are printed beside it precisely so
+/// the two caller sets can be seen NOT to agree.
+#[test]
+fn rule_six_witness_hazard_memory_reads_run_at_past_instants() {
+    let world = common::build(42).expect("seed 42 always builds a world");
+    let (mut session, _opening) =
+        Session::start(&world, &PossessOpts::default()).expect("seed 42 always starts a session");
+    for _ in 0..40 {
+        session.handle("wait");
+        let _ = session.snapshot().expect("seed 42's session snapshots");
+    }
+
+    println!("--- rule 6 witness: hazard-memory reads (seed 42, 40 waits + snapshots) ---");
+    println!(
+        "the SESSION itself: {} facts absorbed, {} hazard lookups, {} at an instant before a \
+         committed sighting (and {} belief lookups beside them, {} past-instant -- the two \
+         counts are NOT equal, which is the point)",
+        session.resident_position(),
+        session.resident_hazard_lookups(),
+        session.resident_hazards_in_the_past(),
+        session.resident_belief_lookups(),
+        session.resident_beliefs_in_the_past()
+    );
+    if let Some((entity, t, sighting)) = session.resident_first_hazard_in_the_past() {
+        println!(
+            "first past-instant hazard read in the session: entity {entity:?} read at {t:?} \
+             with a sighting at {sighting:?}"
+        );
+    }
+    assert!(
+        session.resident_hazard_lookups() > 0,
+        "the seed-42 session must REACH `hazard_memory_memo` -- it is called from the walk \
+         preamble of every tick -- or a verdict of zero past-instant reads is zero out of \
+         zero and says nothing"
+    );
+
+    let ledger: Ledger = serde_json::from_str(&session.session_ledger_json())
+        .expect("the session's own ledger accessor round-trips");
+    let bodies: Vec<hornvale_vessel::body::Body> = session.bodies().to_vec();
+    let terrain = RippleTerrain;
+    let now = session.day();
+
+    // Shape 2: `affect_of_memo_occupied` per body at the PRESENT instant --
+    // the `windows/lab` `run_simulation` shape. This is the one caller that
+    // does pair a hazard read with a belief read at the same `t`.
+    let present = hornvale_vessel::resident::OwnedFolds::new(ResidentFolds::new());
+    {
+        let mut afraid = PrimaryAfraidMemo::new();
+        let mut mesh = hornvale_kernel::RoomMeshMemo::new();
+        let mut nav = HomeNavCache::new();
+        for npc in &bodies {
+            let _ = affect_of_memo_occupied(
+                &ledger,
+                npc,
+                &bodies,
+                now,
+                &terrain,
+                &mut afraid,
+                None,
+                &mut mesh,
+                &mut nav,
+                &present,
+            );
+        }
+    }
+    println!(
+        "the PRESENT read shape (`affect_of_memo_occupied` at {now:?}, {} bodies): {} hazard \
+         lookups, {} at a past instant (belief: {} / {})",
+        bodies.len(),
+        present.borrow().witness().hazard_lookups(),
+        present.borrow().witness().hazards_in_the_past(),
+        present.borrow().witness().belief_lookups(),
+        present.borrow().witness().beliefs_in_the_past()
+    );
+    assert!(
+        present.borrow().witness().hazard_lookups() > 0,
+        "the present-instant sweep must reach `hazard_memory_memo`, or its zero says nothing"
+    );
+
+    // Shape 3: the same call at each body's own PAST visit days -- the instant
+    // `emitter_arousal` replays affect at.
+    let past = hornvale_vessel::resident::OwnedFolds::new(ResidentFolds::new());
+    {
+        let mut afraid = PrimaryAfraidMemo::new();
+        let mut mesh = hornvale_kernel::RoomMeshMemo::new();
+        let mut nav = HomeNavCache::new();
+        for npc in &bodies {
+            let days: Vec<WorldTime> = ledger
+                .facts_of(npc.entity, AGENT_AT)
+                .filter_map(|f| f.day)
+                .collect();
+            for day in days.into_iter().step_by(37) {
+                let _ = affect_of_memo_occupied(
+                    &ledger,
+                    npc,
+                    &bodies,
+                    day,
+                    &terrain,
+                    &mut afraid,
+                    None,
+                    &mut mesh,
+                    &mut nav,
+                    &past,
+                );
+            }
+        }
+    }
+    let past_lookups = past.borrow().witness().hazard_lookups();
+    let past_offenders = past.borrow().witness().hazards_in_the_past();
+    println!(
+        "the PAST read shape (the same call at each body's own visit days): {past_lookups} \
+         hazard lookups, {past_offenders} at a past instant (belief: {} / {})",
+        past.borrow().witness().belief_lookups(),
+        past.borrow().witness().beliefs_in_the_past()
+    );
+
+    // Shape 4: the three public entry points that take their own `t` and have
+    // NO production caller. They are unreachable from shapes 1-3, so their
+    // count there is a measured zero with a denominator, not an absence of
+    // evidence -- and this drives one directly to show the counter does fire
+    // on them when something calls them.
+    let entry = hornvale_vessel::resident::OwnedFolds::new(ResidentFolds::new());
+    let mut entry_probe_calls = 0_u64;
+    for npc in &bodies {
+        let first_day = ledger
+            .facts_of(npc.entity, AGENT_AT)
+            .filter_map(|f| f.day)
+            .min();
+        if let Some(day) = first_day {
+            entry_probe_calls += 1;
+            let _ = hornvale_vessel::liveness::hazard_memory(
+                &ledger, &entry, npc, day, &terrain, &bodies,
+            );
+        }
+    }
+    println!(
+        "the ENTRY-POINT shape (`hazard_memory` at each body's FIRST visit day -- a shape \
+         nothing in production performs, driven here so the counter is shown to fire): \
+         {entry_probe_calls} calls made, {} hazard lookups, {} at a past instant",
+        entry.borrow().witness().hazard_lookups(),
+        entry.borrow().witness().hazards_in_the_past()
+    );
+
+    println!(
+        "--- verdict: spec §3 rule 6 for the latest-visit map {} ---",
+        if session.resident_hazards_in_the_past()
+            + present.borrow().witness().hazards_in_the_past()
+            + past_offenders
+            == 0
+        {
+            "found NO past-instant hazard read on any shape measured"
+        } else {
+            "FIRED -- a hazard read runs at an instant before a committed sighting, so an \
+             unfiltered latest-visit map would answer differently there"
+        }
+    );
+
+    assert!(
+        past_lookups > 0,
+        "the past-day sweep must REACH `hazard_memory_memo`, or its verdict is zero out of \
+         zero"
+    );
+    assert!(
+        entry.borrow().witness().hazard_lookups() == entry_probe_calls,
+        "every `hazard_memory` entry-point call must be counted once: {entry_probe_calls} \
+         calls made, {} counted",
+        entry.borrow().witness().hazard_lookups()
     );
 }
