@@ -289,3 +289,38 @@ would not move.
 dimension.
 
 **Capture.** None beyond the spec.
+
+---
+
+## #5 [G2] — spec self-review
+
+**Checked.** Placeholders: none. Internal consistency: §2.1 owns the memo on
+the session and §2.2 puts the index in the resident store — both behind
+interior mutability, both discardable; §6's stage table carries every §3
+rule to a stage. Scope: one plan. Ambiguity: "10×" in H4 is stated against
+BOTH the frozen figure and the same-box control, with the readout required
+to name which.
+
+**Claims verified by command rather than reasoning.** (i) `Terrain::hazards`
+takes no `day` — the trait signature at `liveness.rs`. (ii) The predator
+field is computed once — `Session.predator`'s own doc ("computed once at").
+(iii) The bench builds a FRESH `PrimaryAfraidMemo` per probe call —
+`probe_hazard_memory_memo_us`, read. (iv) The counts in §1 — the probe's
+output, verbatim. (v) `docs_consistency` green after the registry edits
+(28 passed).
+
+**Fixed inline.** Three sentences: the-rack's diffstat misread as `+933/−252`
+(it is 933 lines changed); a `tests/suite/common` directory that does not
+exist in `windows/vessel`; a "two sites that would have wanted"
+`believed_hazard_memo` when it has no caller at all.
+
+**One process slip, recorded.** The registry edit script asserted a 600-
+character cap and aborted before writing, and the spec commit went in with a
+message claiming registry edits that had not happened. Caught by `grep -c`
+on the next command (0 matches), fixed, and the unpushed commit amended so
+the message is true. The lesson is the standing one: verify the artifact,
+not the script's exit path — a heredoc that fails after the commit command
+was already queued in the same shell line reads as success.
+
+**Ideonomy passes / overturns:** none run for this entry; it is a review of
+the artifact the G1 pass produced, not a new decision.
