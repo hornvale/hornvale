@@ -107,8 +107,23 @@ git -C "$wt" add -A -- book/src/laboratory/ 2>/dev/null || true
 git -C "$wt" add -u 2>/dev/null || true
 
 if [ -z "$(git -C "$wt" diff --cached --name-only)" ]; then
-    echo "sluice-census: nothing staged at all — not even a timings row."
-    echo "sluice-census: that is not the ordinary null; the run left no trace to deliver."
+    # STILL SAYS "NO GOLDENS MOVED", and that is load-bearing rather than
+    # cosmetic. scripts/test-sluice.sh greps for exactly this line, and its own
+    # comment explains why it must: "no new branch" alone is VACUOUS, because
+    # `git commit` refuses an empty commit, so deleting the guard entirely also
+    # pushes nothing and the test would pass for a reason unrelated to the
+    # behaviour it claims to check. The distinctive line is the only thing only
+    # the guard can produce.
+    #
+    # THIS IS ALSO WHY THE PRODUCTION BUG SURVIVED A TEST THAT LOOKS LIKE IT
+    # COVERS IT. That harness stubs the census and writes NO timings row, so its
+    # "nothing moved" is an EMPTY index — this branch. Production always stages
+    # the row, so its "nothing moved" is the branch below, which nothing
+    # exercised. The fixture did not reproduce the staging, and a test over the
+    # wrong case reads exactly like coverage.
+    echo "sluice-census: NO GOLDENS MOVED — the census agrees with $ref."
+    echo "sluice-census: nothing staged at all, not even a timings row, so there is"
+    echo "sluice-census: nothing to deliver and no branch is pushed."
     exit 0
 fi
 
