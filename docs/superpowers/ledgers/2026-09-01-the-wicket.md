@@ -1286,3 +1286,53 @@ more carefully.
 
 Consequence for the merge: **there are no census goldens to land.** The census
 branch carries only its own timings row.
+
+#64 [G5] — **The final whole-branch review found instances 19-23, and a
+MECHANISM the previous eighteen did not contain.**
+
+Four of the five sit in doc blocks this campaign edited in the same pass. But
+19 and 20 share a cause the catalogue has no entry for: **a fix round changed
+the code, updated one paragraph of a doc block, and left the block's HEADLINE
+stating the design it had just superseded.**
+
+Concretely: the campaign deleted `const FATIGUE_RISE` and left its 16-line doc
+comment in place with no separator, so that comment is now the head of
+**`FATIGUE_FALL`'s** doc. `FATIGUE_FALL`'s rustdoc summary therefore documents
+the *rise* rate; `:2228` states the `0.0`-on-miss convention that ledger #41
+**inverted**; and `:2236` states the fall terms are on the **standard** day,
+which fix round 1 (#42) converted — contradicted twelve lines later inside the
+same block.
+
+That is not a claim that decayed, nor one that was never true. It is **an
+amendment leaving its own preamble executing the superseded design**, and it
+happened in the campaign's most-reviewed file. It is the highest-consequence
+finding here: `FATIGUE_FALL` is the constant a future tuner opens, and the
+actionable misreading is a double conversion.
+
+The other three: `RadiatesHeat` "has exactly one mechanically-supported
+carrier", falsified 45 lines below by the row this campaign added; "seven of the
+**fourteen** kinds a room's grammar can place", a stale count carried through a
+deliberate rewrite of that very sentence (instance 16's exact twin, same file,
+missed by the sweep that caught the other); and a verb-dispatch comment saying
+"no new predicate" two lines above the arm Task 8 repointed, where `SLEPT` is a
+new predicate.
+
+#65 [G5] — **`REST_BOUT`'s stated weakness is bounded in the WRONG DIRECTION.**
+The ledger registered it as a fixed 0.25 std days awaiting local conversion.
+`REST_BOUT`'s own doc asserts the calibration *"a quarter-day at `REST_FALL`
+repays 0.125"*, which must exceed `HYSTERESIS_H`. Since fix round 1 the
+repayment is `REST_FALL * 0.25/L` local days, so it falls below the band at any
+**L > 1.25 std days** — a slow-rotating world — reintroducing the measured
+nap-fragmentation pathology Task 8 exists to remove. `fatigue_from_rests`'s note
+frames the open question as *"a fast-rotating world"*, the opposite direction,
+and `REST_BOUT`'s doc — where the calibration claim actually lives — does not
+mention `L` at all.
+
+#66 — **Operational, and nothing in the campaign's documents says it: none of
+this campaign's own gates runs in `make gate-commit` today.**
+`docs/timings/subfloor-roster.tsv` carries **zero** `kind_totality::*`, **zero**
+`fatigue_stock::*` and 2 of 5 `action_module::*`. That is by design — a test
+with no recorded baseline duration is excluded — and it self-heals when the
+chamber's `gate` phase rewrites the roster on the merge run. But between now and
+that run, G-a..G-f and the 916-line fatigue-stock suite are invisible to the
+gate a developer actually types.
