@@ -98,12 +98,27 @@ struct Reading {
     /// Of those, the ones whose PLACED facet lands on a land facet — the
     /// numerator of a rate whose denominator is land facets.
     placed_on_land: usize,
-    /// Of those, the ones whose PLACED facet lands on WATER, which is the
-    /// registered residual defect and not a rounding error: `cave_at` refuses
-    /// an ocean VERTEX in its first three lines, but `site_facet_for` moves
-    /// the address up to ~39 km, and nothing re-checks water at the facet it
-    /// lands on. Printed so the number is visible in the instrument rather
-    /// than only in a report.
+    /// Of those, the ones whose PLACED facet lands on WATER — **a flooded sea
+    /// cave, and INTENDED since 2026-09-02, not the defect this field was
+    /// added to count.**
+    ///
+    /// The mechanism is unchanged and worth stating, because it is what makes
+    /// the feature free: `cave_at` refuses an ocean VERTEX in its first three
+    /// lines, but `site_facet_for` moves the address up to ~39 km and nothing
+    /// re-checks water at the facet it lands on. That was reported as a
+    /// residual defect and Nathan ruled it a feature — a cave whose mouth
+    /// opens under water is a real thing and worth having.
+    ///
+    /// **What is NOT yet built, and is the reason this number is worth
+    /// watching:** the project has no swimming, no drowning and no water prose
+    /// anywhere, so entering one of these today gives the ordinary dry-chamber
+    /// description. That gap is accepted deliberately and tracked as
+    /// `PLAY-water-traversal-and-prose`; this column is how anyone checks how
+    /// much of the world is waiting on it.
+    ///
+    /// Flooded-ness is deliberately NOT stored on the `Site`: it is derivable
+    /// from the placed facet at any time, so a field would be a second source
+    /// of truth for a fact the mesh already holds.
     placed_on_water: usize,
     /// How many of the [`SAMPLE`] sampled land facets held a cave.
     sampled_with_cave: usize,

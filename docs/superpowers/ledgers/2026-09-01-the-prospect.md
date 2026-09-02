@@ -603,3 +603,37 @@ thing and would be a fine feature — but it is enterable today with no swimming
 no drowning and no water prose, so the world would be offering a door into the
 sea floor and describing it as a small room. Accepting it needs the fiction
 built first; refusing it needs one predicate at one seam.
+
+### #27 [Q, Nathan] — flooded sea caves are a FEATURE, and the placement-seam task is CANCELLED
+
+Nathan, 2026-09-02: *"I think flooded sea caves are great; let's keep them. We
+don't have swimming, drowning, or water prose anywhere, so let's just treat that
+as Yet Another Thing We Need to Do."*
+
+**Decision:** the 426 underwater placements stay. Ruling #26's placement-seam
+task is cancelled — water was its only live defect, so removing the defect
+removes the task. `site_facet_for` is unchanged and no placed address moves.
+
+**What changed and what did not:**
+
+- `cave_rate_calibration`'s `placed_on_water` column survives, with its meaning
+  **inverted**: it was added as a defect counter and is now a feature metric —
+  how much of the world is waiting on water traversal. Reported, never asserted,
+  so no test needed changing.
+- The gap is filed as `PLAY-water-traversal-and-prose`. Until it lands, entering
+  a flooded cave gives the ordinary dry-chamber description, which IS a lie the
+  project is knowingly carrying.
+- **Flooded-ness is deliberately NOT stored on the `Site`.** It is derivable
+  from the placed facet whenever prose needs it, so a field would be a second
+  source of truth for a fact the mesh already holds — the same reasoning that
+  made two cave predicates a bug.
+
+**Why this is a good trade rather than a shortcut:** the alternative was one
+predicate at one seam, and it would have deleted a real feature to satisfy a
+consistency the world does not yet need. A pre-alpha world is allowed to contain
+places it cannot yet describe; it is not allowed to contain two disagreeing
+answers about whether they exist. The first is a gap, the second was the bug.
+
+**Cost if wrong:** a player finds a dry room under the sea and it reads as
+broken rather than unfinished. Mitigated by the row and by the column that
+counts them.
