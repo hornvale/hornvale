@@ -1248,7 +1248,13 @@ dominates what those 43 tests each checked in slices."
   tier `gate-commit` executes, and the guard's module doc cites 0606. Without
   the stub, every intermediate task's commit gate would have reddened until this
   task landed. Your job is to flip it to `Accepted` and finish its content.
-- Create: `docs/decisions/0607-the-seed-42-fixture-is-an-input.md`
+- **Modify** (NOT create): `docs/decisions/0607-the-seed-42-fixture-is-an-input.md`
+  — Task 2 already created it as `Status: Proposed`, for the same reason Task 1
+  created 0606: the loader's module doc cites 0607, and
+  `docs_consistency::decision_cites_in_sources_resolve` runs in the sub-floor
+  tier. Flip it to `Accepted`, finish its content, and update its row in
+  `docs/decisions/README.md`'s Index table (Task 2 added the row with status
+  `Proposed`).
 - Create: `book/src/chronicle/the-reservoir.md`
 - Create: `docs/retrospectives/the-reservoir.md`
 - Modify: `book/src/SUMMARY.md` (chronicle entry)
@@ -1280,7 +1286,11 @@ mechanism ruling from spec §3.1-§3.2 — a source-scan ratchet rather than a
 taxonomy; and `unmigrated`-never-grows. State the measured ceiling the campaign
 started at and ended at.
 
-- [ ] **Step 2: Write decision 0607**
+- [ ] **Step 2: Finish decision 0607 — it already exists as `Proposed`**
+
+Edit it; do not create it, and do not mint a second record for the number.
+Flip the status, finish the content per the guidance below, and update its
+Index row in `docs/decisions/README.md` from `Proposed` to `Accepted`.
 
 Content: the seed-42 fixture is an input as well as an assertion. Cite decision
 0032 (calibration loads the census fixture) as the pattern, and record the
