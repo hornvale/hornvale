@@ -1405,3 +1405,29 @@ already, so either the finding names a different passage or it no longer
 applies. Recorded rather than guessed at: inventing a target for a
 cosmetic finding, in the campaign about statements outrunning their support,
 would be the twenty-fourth instance. The brief permitted skipping it.
+
+#68 [G5] — **INSTANCE 24, and it is in the rationale for declining to fix
+instance 23's neighbour.** Ledger #67 declined a cosmetic em-dash finding on the
+grounds that the paragraph it names "already carries **four** em-dashes", so the
+finding either targets a different passage or no longer applies. The fix-wave
+re-reviewer recounted three independent ways: it carries **three**.
+
+The decision to decline stands — it is correct at three, and the implementer's
+reasoning that *inventing a target for a cosmetic finding in this campaign would
+itself have been an instance* is exactly right. What failed is the count offered
+as its evidence. Corrected in place, and recorded rather than silently amended,
+because a campaign whose subject is statements outrunning their support cannot
+quietly fix its own.
+
+**Final tally: 24 instances.** The distribution is the durable part — they are
+spread across the controller's plan text, implementers' code and comments,
+reviewers' findings, and now a rationale for a non-fix. No role was exempt, and
+no amount of review made the next one less likely; what changed was only how
+fast each was caught.
+
+## Campaign close
+
+Eleven tasks, two green sluice stage gates, one census refresh that correctly
+moved nothing, one 63-commit absorption, a whole-branch review, and one fix
+wave. `make gate-commit` green at 1002 tests; drift clean; no artifact moved by
+the closing wave. **No merge-blocking residual.**
