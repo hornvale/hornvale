@@ -78,7 +78,7 @@ windows/lab/tests/suite/the_mire_calibration.rs	1	unmigrated:1
 windows/locale/tests/suite/surface_mixture.rs	1	unmigrated:1
 windows/scene/src/lib.rs	7	unmigrated:7
 windows/scene/src/region.rs	2	unmigrated:2
-windows/scene/src/surrounds.rs	2	unmigrated:2
+windows/scene/src/surrounds.rs	1	identity:1
 windows/scene/tests/common/mod.rs	1	unmigrated:1
 windows/scene/tests/suite/golden.rs	2	unmigrated:2
 windows/vessel/src/agent.rs	1	unmigrated:1
@@ -154,7 +154,7 @@ windows/worldgen/tests/suite/doctrine.rs	1	unmigrated:1
 windows/worldgen/tests/suite/drift_reach_probe.rs	1	unmigrated:1
 windows/worldgen/tests/suite/era_substrate.rs	1	unmigrated:1
 windows/worldgen/tests/suite/explanations.rs	1	unmigrated:1
-windows/worldgen/tests/suite/exposure.rs	5	unmigrated:5
+windows/worldgen/tests/suite/exposure.rs	4	identity:4
 windows/worldgen/tests/suite/fathom_column_probe.rs	1	unmigrated:1
 windows/worldgen/tests/suite/fixture.rs	1	build-path:1
 windows/worldgen/tests/suite/founder_collision.rs	1	unmigrated:1
