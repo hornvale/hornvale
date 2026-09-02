@@ -169,7 +169,11 @@ what "sim first, game as lens" requires of a thing the player can meet.
 **3.2 Tier 2 — the roll.** One named, pure function:
 
 ```text
-  roll(world, observer_room: Facet, t: WorldTime) -> Vec<RollEntry>
+  roll(world, observer_room: Facet) -> Vec<RollEntry>
+    -- `t: WorldTime` was in this signature until Task 7 found membership is
+       time-invariant by construction (a body's HOME decides it, §3.2 below),
+       so the function is strictly purer without it; ledger #16/#17 and the
+       Task 7 review record the amendment.
     = every resident of every settlement whose room is within R walk-band
       hops of observer_room,
     + every wild body of every stack attractor within R hops, headcount-
