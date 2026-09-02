@@ -14130,10 +14130,15 @@ mod tests {
     }
 
     /// The property that matters (The Gallery, Task 5's own brief):
-    /// descending from rung `n` and climbing back arrives on rung `n` —
-    /// not necessarily the same CELL, since `place_connections` sites the
-    /// down-stairs and the up-stairs independently (first leaf vs last
-    /// leaf), so this asserts on the RUNG alone, never the cell.
+    /// descending from rung `n` and climbing back arrives on rung `n` — and,
+    /// since The Crosscut, on the exact same CELL too: stairs pair by
+    /// COORDINATE, so a `StairsDown` at `c` on rung `n` has its `StairsUp`
+    /// at the same `c` on rung `n + 1` (spec §3.3), and climbing the same
+    /// stairway back retraces that coordinate exactly. This test still
+    /// asserts on the RUNG alone — a cross-floor cycle through two
+    /// DIFFERENT stairways
+    /// (`a_cross_floor_cycle_is_walked_down_along_and_back_up_another_stair`,
+    /// below) is where the cell-level distinction actually bites.
     ///
     /// Reaching a stairs cell by walking is impractical from a test — the
     /// same reason `delve_at` exists as a seam
@@ -14754,9 +14759,11 @@ mod tests {
         );
     }
 
-    /// The descent's own deepest rung still carries a `StairsDown` cell
-    /// (`place_connections` never special-cases the last rung), but nothing
-    /// generated lies beneath it — `Underground::peek_stairs`'s own
+    /// The descent's own deepest rung still carries a `StairsDown` cell —
+    /// the plan's own terminus, cut by `generate_level_with_origin`'s
+    /// terminus block with no rung below to pair with, since coordinate
+    /// pairing (spec §3.3) has nothing on the far side to point at — but
+    /// nothing generated lies beneath it — `Underground::peek_stairs`'s own
     /// boundary check. Reached here by forcing `rung` to the bottom rather
     /// than walking a full descent down: this task's own scope is the
     /// stairs verb, not a fifth end-to-end walk of the ladder.
