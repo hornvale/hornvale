@@ -30,6 +30,7 @@ pub mod plan;
 mod purview;
 pub mod residents;
 pub mod roll;
+pub mod roster;
 mod session;
 pub mod snapshot;
 pub mod stance;

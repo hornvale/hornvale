@@ -1708,6 +1708,41 @@ pub struct Resolution {
     pub suppressed: Vec<DriveKind>,
 }
 
+/// A body's felt state as its own last resolution left it (The Rack, spec
+/// §3.4) — the three fields of a [`Resolution`] that OUTLIVE the tick that
+/// produced them, kept in the roster's `felt` column rather than re-derived
+/// by every reader.
+///
+/// **The ruling behind this — that `felt` is CONTENT rather than a view — is
+/// due as a decision record at the campaign's close**, out of the block that
+/// campaign reserved. It is deliberately not cited by number here: the record
+/// does not exist yet, and `cli/tests/suite/docs_consistency.rs` refuses a
+/// cite that resolves to nothing, which is the right behaviour and caught
+/// this on its first commit.
+///
+/// **Content, not a view.** A `Felt` is what the body's own arbitration
+/// concluded; between ticks a body does not re-feel, so a reader that finds a
+/// stale-looking value is reading a real fact about a body that has not been
+/// advanced, never a cache miss. That is the whole difference from the
+/// `position` column beside it, which is a VIEW of the ledger and must agree
+/// with `agent_position` at every read.
+///
+/// **Not [`Resolution`] itself**, which also carries the `Intent` the tick
+/// acted on — an instantaneous choice with no meaning after the tick that
+/// made it. `Felt` is the durable residue and nothing more.
+///
+/// Derives `PartialEq` but not `Eq`, because [`Affect`] carries two `f64`s
+/// and does not derive it either.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Felt {
+    /// The felt state the resolution expressed (its point on the circumplex).
+    pub affect: Affect,
+    /// The commitment mode the resolution carried forward (hysteresis).
+    pub mode: Mode,
+    /// The drives the resolution found active and did not pursue.
+    pub suppressed: Vec<DriveKind>,
+}
+
 /// Thirst — the one authored (sustenance) drive, Drive #1. `urgency` is the
 /// `drive_at` fold surfaced on the view; `proposal` is the existing
 /// belief→`plan_to_water`-first-step / `explore_step` chain. Parameterized by
