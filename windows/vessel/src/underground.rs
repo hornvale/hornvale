@@ -54,12 +54,15 @@ const UNDERGROUND_ROCK_REFUSAL: &str =
 const NOT_ON_STAIRS_REFUSAL: &str = "There is no stairway underfoot to take.";
 
 /// The physical reason the descent's own deepest rung refuses a `StairsDown`
-/// (The Gallery, Task 5). `place_connections`
-/// (`windows/vessel/src/underworld_level/mod.rs`) cuts a `StairsDown` cell
-/// into every rung unconditionally — the bottom rung included — but the
-/// generated descent itself stops at the last rung [`Underground::enter`]
-/// built, so that rung's own down-stairs lead to a rung nothing has
-/// generated yet.
+/// (The Gallery, Task 5; realizer replaced under The Crosscut).
+/// `generate_level_with_origin`'s own terminus block
+/// (`windows/vessel/src/underworld_level/mod.rs`) cuts one dangling
+/// `StairsDown` cell into [`hornvale_worldgen::circuit::DescentPlan::terminus`]'s
+/// own region on the LAST rung only — the generated descent itself stops
+/// there, so that cell's own down-stairs lead to a rung nothing has
+/// generated yet. Every other `StairsDown` cell in the descent pairs by
+/// coordinate with a `StairsUp` one rung down ([`Underground::peek_stairs`]),
+/// so this is the one cell in the whole descent with no such twin.
 const STAIRS_LEAD_NOWHERE_REFUSAL: &str =
     "The stairs continue down into unbroken dark, but nothing has delved that far yet.";
 
@@ -224,14 +227,30 @@ pub(crate) struct Underground {
     /// underground_level` reads `depths_m[rung]` to fill
     /// `SessionLevel::depth_m`.
     pub(crate) depths_m: Vec<f64>,
+    /// The series-parallel plan this descent was realized from (The
+    /// Crosscut). FRAME-tier like everything else here; kept so stairs can
+    /// be paired and tests can read the structure a walk should exhibit.
+    ///
+    /// **Unread outside tests, the same shape [`Underground::seed`] already
+    /// carries.** `peek_stairs` pairs stairs by coordinate alone and needs
+    /// no plan lookup at all — `session.rs`'s own
+    /// `a_cross_floor_cycle_is_walked_down_along_and_back_up_another_stair`
+    /// is this field's only production-code reader today.
+    #[allow(dead_code)]
+    pub(crate) plan: hornvale_worldgen::circuit::DescentPlan,
 }
 
 impl Underground {
     /// Enter a cave system at its topmost rung: build the whole descent
     /// through [`generate_descent_for_character`] and stand the possession
-    /// on the entrance rung's first standable cell — the first `Floor` or
-    /// `Flooded` cell in the level's own ascending-`(x, y)` order
-    /// ([`crate::underworld_level::CellGrid::iter`]).
+    /// on the plan's own entrance REGION — the first `Floor` or `Flooded`
+    /// cell inside [`hornvale_worldgen::circuit::DescentPlan::region_of`]'s
+    /// answer for `plan.entrance`, in the level's own ascending-`(x, y)`
+    /// order ([`crate::underworld_level::CellGrid::iter`]) — rather than the
+    /// level's first standable cell anywhere (The Crosscut): the entrance
+    /// NODE is the plan's own arrival point, and a rung can carry more than
+    /// one region, so the level's ascending-order first standable cell need
+    /// not lie in it at all.
     ///
     /// **The descent's inputs are the production recipe**, copied the way
     /// `windows/vessel/tests/suite/underworld_level_generation.rs`'s
@@ -254,10 +273,11 @@ impl Underground {
     /// caller (`Session::delve_at`) already resolved: no second,
     /// independently-chosen lookup is introduced here.
     ///
-    /// Panics if the entrance rung's generated level has no `Floor` or
-    /// `Flooded` cell at all. That is an invariant of the generator, not a
-    /// case this task designs a refusal for — Task 9's own connectivity
-    /// sweep (`every_walkable_cell_is_reachable_from_every_other`,
+    /// Panics if the entrance region has no `Floor` or `Flooded` cell at
+    /// all. That is an invariant of the generator's own `ensure_standable`
+    /// pass over every leaf region, not a case this task designs a refusal
+    /// for — Task 9's own connectivity sweep
+    /// (`every_walkable_cell_is_reachable_from_every_other`,
     /// `windows/vessel/src/underworld_level/mod.rs`) holds it for every
     /// level this generator produces.
     pub(crate) fn enter(
@@ -286,6 +306,13 @@ impl Underground {
             })
             .collect();
         let origins = vec![hornvale_worldgen::chamber::ChamberOrigin::Found; rungs.len()];
+        let plan = hornvale_worldgen::circuit::plan_descent(
+            seed,
+            vertex,
+            &rungs,
+            cave.kind,
+            hornvale_worldgen::character::Character::WildCave,
+        );
         let descent = generate_descent_for_character(
             &rungs,
             cave.kind,
@@ -293,16 +320,27 @@ impl Underground {
             &depths_m,
             water_table_m,
             hornvale_worldgen::character::Character::WildCave,
+            &plan,
             seed,
         );
+        let entrance_rect = {
+            let r = plan.region_of(plan.entrance);
+            Rect {
+                x: r.x,
+                y: r.y,
+                w: r.w,
+                h: r.h,
+            }
+        };
         let cell = descent[0]
             .cells
             .iter()
+            .filter(|(c, _)| entrance_rect.contains(*c))
             .find(|(_, k)| matches!(k, LevelCellKind::Floor | LevelCellKind::Flooded))
             .map(|(c, _)| c)
             .expect(
-                "a generated level has at least one standable cell \
-                 (Task 9's connectivity invariant)",
+                "the entrance region always has a standable cell \
+                 (ensure_standable)",
             );
         // Task 6's fog-of-war: one all-unseen bitset per rung, sized to
         // that rung's own extent (deeper rungs are wider — see
@@ -325,6 +363,7 @@ impl Underground {
             seed,
             seen,
             depths_m,
+            plan,
         }
     }
 
@@ -443,62 +482,41 @@ impl Underground {
     /// method alone cannot refuse "wrong direction", only "no direction at
     /// all" or "no destination for the direction there is".
     ///
-    /// **The landing cell is the connecting stairway's own cell on the far
-    /// side, never a fresh scan for "somewhere standable"**: descending from
-    /// rung `n` lands on rung `n + 1`'s own `StairsUp` cell, and ascending
-    /// from rung `n` lands on rung `n - 1`'s own `StairsDown` cell — the same
-    /// physical stairway, named from its other end. Both are guaranteed to
-    /// exist by the generator's own invariant — every rung has exactly one
-    /// `StairsDown` cell, and every rung but the first has exactly one
-    /// `StairsUp` cell (`place_connections`' `has_up = i > 0`;
-    /// `windows/vessel/src/underworld_level/mod.rs`), asserted across 200
-    /// seeds by that module's own `stairs_down_and_stairs_up_never_share_a_
-    /// cell` — so descending always has somewhere to land on any rung but
-    /// the last, and ascending always has somewhere to land on any rung but
-    /// the first (which has no `StairsUp` cell to be standing on in the
-    /// first place, so that arm is never reached from rung `0`).
+    /// **Stairs pair by COORDINATE (The Crosscut, spec §3.3).** A
+    /// stairway's two ends share one cell: descending from `StairsDown` at
+    /// `c` on rung `n` lands on `c` of rung `n + 1`, which the realizer
+    /// guarantees is that rung's `StairsUp`; ascending is the mirror. No
+    /// scan, no ordinal, no table — `stairs_pair_by_coordinate_across_adjacent_rungs`
+    /// (`underworld_level/mod.rs`) pins the guarantee over 200 seeds. The
+    /// one `StairsDown` with no twin is the deepest rung's terminus, which
+    /// still refuses with `STAIRS_LEAD_NOWHERE_REFUSAL`.
     ///
     /// Refuses when the current cell is not a stairs cell at all
-    /// ([`NOT_ON_STAIRS_REFUSAL`]), or when the current cell is a
-    /// `StairsDown` on the descent's own deepest rung — the one rung
-    /// `place_connections` still cuts a down-stairs into (it never
-    /// special-cases the last rung) even though [`Underground::enter`]
-    /// generated nothing beneath it ([`STAIRS_LEAD_NOWHERE_REFUSAL`]).
+    /// ([`NOT_ON_STAIRS_REFUSAL`]), or when the current cell is the
+    /// descent's own deepest rung's terminus `StairsDown`
+    /// ([`STAIRS_LEAD_NOWHERE_REFUSAL`]).
     pub(crate) fn peek_stairs(&self) -> Result<(usize, Cell), &'static str> {
         match self.descent[self.rung].cells.get(self.cell) {
             Some(LevelCellKind::StairsDown) => {
                 let next = self.rung + 1;
-                if next >= self.descent.len() {
+                if next >= self.descent.len()
+                    || self.descent[next].cells.get(self.cell) != Some(LevelCellKind::StairsUp)
+                {
                     return Err(STAIRS_LEAD_NOWHERE_REFUSAL);
                 }
-                let landing = self.descent[next]
-                    .cells
-                    .iter()
-                    .find(|(_, k)| matches!(k, LevelCellKind::StairsUp))
-                    .map(|(c, _)| c)
-                    .expect(
-                        "every rung but the first has a StairsUp cell \
-                         (place_connections' has_up = i > 0), and `next` \
-                         is never 0",
-                    );
-                Ok((next, landing))
+                Ok((next, self.cell))
             }
             Some(LevelCellKind::StairsUp) => {
                 let next = self.rung.checked_sub(1).expect(
-                    "a StairsUp cell only exists at rung > 0 \
-                     (place_connections' has_up = i > 0), so its own rung \
-                     always has a predecessor",
+                    "a StairsUp cell only exists at rung > 0 (the realizer \
+                     emits none on rung 0)",
                 );
-                let landing = self.descent[next]
-                    .cells
-                    .iter()
-                    .find(|(_, k)| matches!(k, LevelCellKind::StairsDown))
-                    .map(|(c, _)| c)
-                    .expect(
-                        "every rung has a StairsDown cell — place_connections \
-                         cuts one unconditionally, the last rung included",
-                    );
-                Ok((next, landing))
+                debug_assert_eq!(
+                    self.descent[next].cells.get(self.cell),
+                    Some(LevelCellKind::StairsDown),
+                    "stairs pair by coordinate"
+                );
+                Ok((next, self.cell))
             }
             _ => Err(NOT_ON_STAIRS_REFUSAL),
         }

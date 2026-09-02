@@ -15074,10 +15074,15 @@ mod tests {
     }
 
     /// The property that matters (The Gallery, Task 5's own brief):
-    /// descending from rung `n` and climbing back arrives on rung `n` —
-    /// not necessarily the same CELL, since `place_connections` sites the
-    /// down-stairs and the up-stairs independently (first leaf vs last
-    /// leaf), so this asserts on the RUNG alone, never the cell.
+    /// descending from rung `n` and climbing back arrives on rung `n` — and,
+    /// since The Crosscut, on the exact same CELL too: stairs pair by
+    /// COORDINATE, so a `StairsDown` at `c` on rung `n` has its `StairsUp`
+    /// at the same `c` on rung `n + 1` (spec §3.3), and climbing the same
+    /// stairway back retraces that coordinate exactly. This test still
+    /// asserts on the RUNG alone — a cross-floor cycle through two
+    /// DIFFERENT stairways
+    /// (`a_cross_floor_cycle_is_walked_down_along_and_back_up_another_stair`,
+    /// below) is where the cell-level distinction actually bites.
     ///
     /// Reaching a stairs cell by walking is impractical from a test — the
     /// same reason `delve_at` exists as a seam
@@ -15113,7 +15118,7 @@ mod tests {
                 .iter()
                 .find(|(_, k)| *k == crate::underworld_level::LevelCellKind::StairsDown)
                 .map(|(c, _)| c)
-                .expect("every rung has exactly one StairsDown cell")
+                .expect("every rung has at least one StairsDown cell")
         };
         session.underground.as_mut().expect("descended").cell = down_cell;
 
@@ -15142,6 +15147,194 @@ mod tests {
         );
     }
 
+    /// A breadth-first route over the CURRENT rung's standable cells, from
+    /// `from` to `to`, in the fixed neighbour order N, E, S, W — the cells a
+    /// body can actually cross, endpoints included. Used by the cross-floor
+    /// walk below for both of its legs: the level-1 traverse between the two
+    /// stairways, and rung 0's own return route back along the other side of
+    /// the cycle.
+    fn standable_route(
+        ug: &crate::underground::Underground,
+        from: crate::lattice::Cell,
+        to: crate::lattice::Cell,
+    ) -> Vec<crate::lattice::Cell> {
+        use crate::underworld_level::LevelCellKind;
+        let level = ug.level();
+        let passable = |c: crate::lattice::Cell| {
+            matches!(
+                level.cells.get(c),
+                Some(
+                    LevelCellKind::Floor
+                        | LevelCellKind::Flooded
+                        | LevelCellKind::StairsUp
+                        | LevelCellKind::StairsDown
+                )
+            )
+        };
+        let mut prev = std::collections::BTreeMap::new();
+        let mut q = std::collections::VecDeque::from([from]);
+        prev.insert(from, from);
+        while let Some(c) = q.pop_front() {
+            if c == to {
+                break;
+            }
+            for (dx, dy) in [(0, -1), (1, 0), (0, 1), (-1, 0)] {
+                let n = crate::lattice::Cell(c.0 + dx, c.1 + dy);
+                if passable(n) && !prev.contains_key(&n) {
+                    prev.insert(n, c);
+                    q.push_back(n);
+                }
+            }
+        }
+        assert!(
+            prev.contains_key(&to),
+            "this rung must connect {from:?} to {to:?}"
+        );
+        let mut route = vec![to];
+        while *route.last().unwrap() != from {
+            let p = prev[route.last().unwrap()];
+            route.push(p);
+        }
+        route.reverse();
+        route
+    }
+
+    /// Walk a route computed by [`standable_route`] one `go <dir>` at a
+    /// time, asserting the possession actually lands on each cell — a step
+    /// the session refuses would otherwise leave the walk silently short.
+    fn walk_route(session: &mut Session<'_>, route: &[crate::lattice::Cell]) {
+        for w in route.windows(2) {
+            let (dx, dy) = (w[1].0 - w[0].0, w[1].1 - w[0].1);
+            let dir = match (dx, dy) {
+                (0, -1) => "north",
+                (1, 0) => "east",
+                (0, 1) => "south",
+                (-1, 0) => "west",
+                _ => unreachable!("a breadth-first route steps one cell at a time"),
+            };
+            session.handle(&format!("go {dir}"));
+            assert_eq!(
+                session.underground.as_ref().unwrap().cell,
+                w[1],
+                "step {dir} refused mid-route"
+            );
+        }
+    }
+
+    /// THE CROSSCUT, spec §7 acceptances 1 AND 2, in one walk.
+    ///
+    /// **§7.2**: a stairway down leads to a floor whose route returns you to
+    /// the floor above by a DIFFERENT stairway — walked through `down`,
+    /// `go <dir>` and `up`, never read off the graph. Searches seed 42's
+    /// open cave mouths for a plan whose level-0 realm crosses to level 1;
+    /// the sweep must find one (the plan's own
+    /// `some_seed_produces_a_cross_floor_realm` says the move is reachable).
+    ///
+    /// **§7.1** (added at the final review, which found acceptance 1
+    /// undemonstrated): the walk does not stop at the top of the second
+    /// stairway. Having gone OUT by `path_b` — down at `down_at`, along
+    /// level 1, up at `up_at` — it comes BACK along `path_a`, walking rung 0
+    /// from `up_at` to `down_at` step by step and landing on the cell it
+    /// first descended from. That is the cycle a player can choose between,
+    /// closed: two routes between the same two regions, both walked, in one
+    /// possession, by the session's own verbs.
+    ///
+    /// claim: invariant(vertex: every open cave mouth of seed 42, first hit)
+    #[test]
+    fn a_cross_floor_cycle_is_walked_down_along_and_back_up_another_stair() {
+        use hornvale_worldgen::circuit::EdgeKind;
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let pins = hornvale_worldgen::BarrierPins::default();
+        let candidates: Vec<_> = cave_entrance_states(&terrain, world.seed)
+            .filter(|(vertex, _, is_open)| {
+                *is_open
+                    && seeded_entrance_barrier(world.seed, *vertex, &pins)
+                        == hornvale_worldgen::BarrierState::Open
+            })
+            .map(|(v, c, _)| (v, c))
+            .collect();
+        let mut walked = false;
+        for (vertex, cave) in candidates {
+            session.delve_at(vertex, cave);
+            let (down_at, up_at) = {
+                let ug = session.underground.as_ref().expect("descended");
+                let Some(realm) = ug.plan.realms.iter().find(|r| {
+                    r.anchor_level == 0 && r.path_b.iter().any(|&n| ug.plan.nodes[n].level == 1)
+                }) else {
+                    session.underground = None;
+                    continue;
+                };
+                // path_b = [u, lu, ..., le, end]: the stairs are u->lu and end->le.
+                let u = realm.path_b[0];
+                let end = *realm.path_b.last().unwrap();
+                let stair_of = |upper| {
+                    ug.plan
+                        .edges
+                        .iter()
+                        .find_map(|e| match e.kind {
+                            EdgeKind::Stair { x, y } if e.a == upper => {
+                                Some(crate::lattice::Cell(x, y))
+                            }
+                            _ => None,
+                        })
+                        .expect("a cross-floor realm's endpoints each carry a stairway")
+                };
+                (stair_of(u), stair_of(end))
+            };
+            assert_ne!(
+                down_at, up_at,
+                "a cross-floor cycle uses two different stairways"
+            );
+            session.underground.as_mut().expect("descended").cell = down_at;
+            let _ = session.handle("down");
+            assert_eq!(session.underground.as_ref().unwrap().rung, 1);
+            assert_eq!(
+                session.underground.as_ref().unwrap().cell,
+                down_at,
+                "lands on the same coordinate"
+            );
+            // Walk level 1 from the landing to the other stairway's foot with
+            // `go <dir>`, along a path the test computes over standable cells.
+            let route = standable_route(session.underground.as_ref().unwrap(), down_at, up_at);
+            walk_route(&mut session, &route);
+            let _ = session.handle("up");
+            {
+                let ug = session.underground.as_ref().unwrap();
+                assert_eq!(ug.rung, 0, "back on the upper floor");
+                assert_eq!(ug.cell, up_at, "by the OTHER stairway");
+            }
+            // §7.1: close the loop. Out by `path_b` (down, along level 1,
+            // up); back by `path_a` — rung 0's own route between the two
+            // stairways, walked the same way, one `go` at a time.
+            let home = standable_route(session.underground.as_ref().unwrap(), up_at, down_at);
+            assert!(
+                home.len() > 1,
+                "the two stairways are distinct cells, so the return route has at least one step"
+            );
+            walk_route(&mut session, &home);
+            {
+                let ug = session.underground.as_ref().unwrap();
+                assert_eq!(
+                    ug.cell, down_at,
+                    "the return leg must arrive at the stairway the descent started from"
+                );
+                assert_eq!(ug.rung, 0, "the return leg never leaves the upper floor");
+            }
+            walked = true;
+            break;
+        }
+        assert!(
+            walked,
+            "no open cave on seed 42 offered a level-0 cross-floor realm — widen the search before weakening this test"
+        );
+    }
+
     /// The direction is checked against the CURRENT cell, not merely
     /// "is this any stairs cell" — typing `up` while standing on a
     /// `StairsDown` cell must refuse rather than silently taking the
@@ -15166,7 +15359,7 @@ mod tests {
                 .iter()
                 .find(|(_, k)| *k == crate::underworld_level::LevelCellKind::StairsDown)
                 .map(|(c, _)| c)
-                .expect("every rung has exactly one StairsDown cell")
+                .expect("every rung has at least one StairsDown cell")
         };
         session.underground.as_mut().expect("descended").cell = down_cell;
         let before = session.underground.as_ref().expect("descended").rung;
@@ -15246,7 +15439,7 @@ mod tests {
                 .iter()
                 .find(|(_, k)| *k == crate::underworld_level::LevelCellKind::StairsDown)
                 .map(|(c, _)| c)
-                .expect("every rung has exactly one StairsDown cell")
+                .expect("every rung has at least one StairsDown cell")
         };
         session.underground.as_mut().expect("descended").cell = down_cell;
 
@@ -15503,7 +15696,7 @@ mod tests {
                 .iter()
                 .find(|(_, k)| *k == crate::underworld_level::LevelCellKind::StairsDown)
                 .map(|(c, _)| c)
-                .expect("every rung has exactly one StairsDown cell")
+                .expect("every rung has at least one StairsDown cell")
         };
         session.underground.as_mut().expect("descended").cell = down_cell;
 
@@ -15558,9 +15751,11 @@ mod tests {
         );
     }
 
-    /// The descent's own deepest rung still carries a `StairsDown` cell
-    /// (`place_connections` never special-cases the last rung), but nothing
-    /// generated lies beneath it — `Underground::peek_stairs`'s own
+    /// The descent's own deepest rung still carries a `StairsDown` cell —
+    /// the plan's own terminus, cut by `generate_level_with_origin`'s
+    /// terminus block with no rung below to pair with, since coordinate
+    /// pairing (spec §3.3) has nothing on the far side to point at — but
+    /// nothing generated lies beneath it — `Underground::peek_stairs`'s own
     /// boundary check. Reached here by forcing `rung` to the bottom rather
     /// than walking a full descent down: this task's own scope is the
     /// stairs verb, not a fifth end-to-end walk of the ladder.
@@ -15637,7 +15832,7 @@ mod tests {
                 .iter()
                 .find(|(_, k)| *k == crate::underworld_level::LevelCellKind::StairsDown)
                 .map(|(c, _)| c)
-                .expect("every rung has exactly one StairsDown cell")
+                .expect("every rung has at least one StairsDown cell")
         };
         session.underground.as_mut().expect("descended").cell = down_cell;
         let before = session.day;

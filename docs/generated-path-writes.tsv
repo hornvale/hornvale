@@ -65,7 +65,7 @@ book/src/laboratory/the-terminator-probe.md	0	1
 book/src/laboratory/census-of-coasts-ii.md	0	1
 book/src/laboratory/census-of-coasts-iii.md	0	1
 book/src/laboratory/census-of-coasts-iv.md	0	1
-docs/audits/	13	19
+docs/audits/	16	22
 docs/audits/heavy-tier-adjudication.md	0	1
 docs/audits/land-elevation-attribution.md	0	1
 docs/audits/the-assay-build-volume-audit.md	0	1
@@ -76,6 +76,7 @@ docs/digest/facts.jsonl	0	1
 book/src/domesday/	14	14
 clients/game/core/tests/fixtures/	4	4
 docs/audits/underworld-lattice-seed-panel.md	1	1
+docs/audits/underworld-circuit-seed-panel.md	1	1
 docs/audits/the-confidant-report.md	1	1
 docs/audits/the-reticence-report.md	1	1
 docs/audits/glyph-specimen-sheet.txt	1	1
