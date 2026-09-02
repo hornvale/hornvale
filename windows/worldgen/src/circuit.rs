@@ -367,6 +367,41 @@ struct Builder {
 }
 
 impl Builder {
+    /// Does `level` still have room for a loop of its own — some passage
+    /// `(a, b)` on it whose endpoints a free detour can join
+    /// (`free_path(level, ca, cb, 1)`)? The capability invariant (Task 2
+    /// review, second pass): a level with no anchored realm always has at
+    /// least one feasible same-floor cycle. Every operation that spends
+    /// `level`'s cells while it still has no realm of its own checks this —
+    /// via [`Builder::would_still_cycle`] — BEFORE committing the spend, so
+    /// the deterministic fallback in `plan_descent` succeeds by
+    /// construction rather than by chance.
+    fn level_can_cycle(&self, level: u8) -> bool {
+        self.plan
+            .passages_on(level as usize)
+            .into_iter()
+            .any(|(a, b)| {
+                let (ca, cb) = (self.plan.nodes[a].cell, self.plan.nodes[b].cell);
+                self.free_path(level, ca, cb, 1).is_some()
+            })
+    }
+
+    /// Evaluate [`Builder::level_can_cycle`] on `level` AS IF `cells` were
+    /// already spent there, without actually spending them: tentatively
+    /// mark `cells` used, check, then unmark. `cells` must currently be
+    /// free (the caller's own candidate spend), so unmarking exactly
+    /// restores the prior state.
+    fn would_still_cycle(&mut self, level: u8, cells: &[GridCell]) -> bool {
+        for &c in cells {
+            self.used[level as usize].insert(c);
+        }
+        let can = self.level_can_cycle(level);
+        for &c in cells {
+            self.used[level as usize].remove(&c);
+        }
+        can
+    }
+
     fn add_node(&mut self, level: u8, cell: GridCell) -> NodeId {
         let id = self.plan.nodes.len();
         self.plan.nodes.push(Node {
@@ -656,6 +691,27 @@ pub fn plan_descent(
                 try_extend(&mut b, level, u, v);
             }
         }
+        // Deterministic fallback (Task 2 review, Critical): the random
+        // budget loop above is best-effort — a cross-floor cycle from a
+        // shallower level can leave this one starved of free cells before
+        // it gets a turn. If the level still holds no loop at all, walk its
+        // passages in order and attempt one draw-free same-floor cycle at
+        // the first one that admits it, so `MIN_CYCLES_PER_LEVEL` holds by
+        // construction rather than by chance. Spends no stream draw, so
+        // `dof` is unaffected.
+        if anchored_realms(&b.plan, level as usize) == 0 {
+            let passages = b.plan.passages_on(level as usize);
+            for (u, v) in passages {
+                let path_a = b.segment(u, v, 0);
+                if try_same_floor_cycle(&mut b, level, u, v, path_a) {
+                    break;
+                }
+            }
+        }
+        debug_assert!(
+            anchored_realms(&b.plan, level as usize) >= 1,
+            "the capability invariant guarantees the fallback a cycle"
+        );
     }
 
     // 3. Attributes.
@@ -677,46 +733,88 @@ fn try_cycle(
     let hops = draw_index(cycle, 3, dof);
     let path_a = b.segment(u, v, hops);
     let end = *path_a.last().unwrap();
+    // Minor (Task 2 review): a degenerate segment can close back onto `u`
+    // (a short walk through degree-two nodes that loops back to its own
+    // start); that would give `cu == ce` and a duplicated edge, so refuse
+    // it outright rather than let either branch below act on it.
+    if end == u {
+        return;
+    }
     let (cu, ce) = (b.plan.nodes[u].cell, b.plan.nodes[end].cell);
     let cross = draw_index(cycle, 100, dof) < 35
         && (level as usize) + 1 < b.plan.rungs.len()
         && cu != ce
         && !b.used[level as usize + 1].contains(&cu)
         && !b.used[level as usize + 1].contains(&ce);
-    let parent = b.realm_containing(u, end);
-    if cross {
-        let Some(interior) = b.free_path(level + 1, cu, ce, 0) else {
+    if cross && let Some(interior) = b.free_path(level + 1, cu, ce, 0) {
+        // Capability invariant (Task 2 review, second pass): if level
+        // `ℓ + 1` still has no realm of its own, check — AS IF this
+        // landing's cells (`cu`, `ce`, `interior`) were already spent —
+        // that it would still have a feasible same-floor cycle of its own.
+        // Refuse the cross-floor attachment and fall through to the
+        // same-floor branch below (do not `return`) if it would not. This
+        // replaces the earlier count-based `CROSS_FLOOR_RESERVE`: a count of
+        // free cells says nothing about whether they are reachable from any
+        // of the level's own passages, and a count-based reserve left 9 of
+        // 72,000 swept plans starved regardless of its value.
+        let mut spend: Vec<GridCell> = interior.clone();
+        spend.push(cu);
+        spend.push(ce);
+        let ok = anchored_realms(&b.plan, level as usize + 1) > 0
+            || b.would_still_cycle(level + 1, &spend);
+        if ok {
+            let parent = b.realm_containing(u, end);
+            let lu = b.add_node(level + 1, cu);
+            let le = b.add_node(level + 1, ce);
+            b.add_stair(u, lu, stair, dof);
+            let mut path_b = vec![u];
+            path_b.extend(b.lay_path(level + 1, lu, &interior, le));
+            b.add_stair(end, le, stair, dof);
+            path_b.push(end);
+            let class = length_class(path_a.len() - 1, path_b.len() - 1);
+            b.plan.realms.push(Realm {
+                parent,
+                anchor_level: level,
+                path_a,
+                path_b,
+                class,
+            });
             return;
-        };
-        let lu = b.add_node(level + 1, cu);
-        let le = b.add_node(level + 1, ce);
-        b.add_stair(u, lu, stair, dof);
-        let mut path_b = vec![u];
-        path_b.extend(b.lay_path(level + 1, lu, &interior, le));
-        b.add_stair(end, le, stair, dof);
-        path_b.push(end);
-        let class = length_class(path_a.len() - 1, path_b.len() - 1);
-        b.plan.realms.push(Realm {
-            parent,
-            anchor_level: level,
-            path_a,
-            path_b,
-            class,
-        });
-    } else {
-        let Some(interior) = b.free_path(level, cu, ce, 1) else {
-            return;
-        };
-        let path_b = b.lay_path(level, u, &interior, end);
-        let class = length_class(path_a.len() - 1, path_b.len() - 1);
-        b.plan.realms.push(Realm {
-            parent,
-            anchor_level: level,
-            path_a,
-            path_b,
-            class,
-        });
+        }
+        // The invariant refuses: fall through to the same-floor branch
+        // below rather than spending level `ℓ + 1`'s last feasible cycle.
     }
+    try_same_floor_cycle(b, level, u, end, path_a);
+}
+
+/// The same-floor half of a cycle attachment: given the pre-existing
+/// segment `path_a` from `u` to `end` (endpoints included), lay a
+/// node-disjoint detour through free cells on the same level and record the
+/// realm. Touches no stream — shared by `try_cycle`'s own same-floor branch
+/// (drawn) and the deterministic, draw-free fallback in `plan_descent`
+/// (Task 2 review, Critical). Returns whether a realm was added.
+fn try_same_floor_cycle(
+    b: &mut Builder,
+    level: u8,
+    u: NodeId,
+    end: NodeId,
+    path_a: Vec<NodeId>,
+) -> bool {
+    let (cu, ce) = (b.plan.nodes[u].cell, b.plan.nodes[end].cell);
+    let Some(interior) = b.free_path(level, cu, ce, 1) else {
+        return false;
+    };
+    let parent = b.realm_containing(u, end);
+    let path_b = b.lay_path(level, u, &interior, end);
+    let class = length_class(path_a.len() - 1, path_b.len() - 1);
+    b.plan.realms.push(Realm {
+        parent,
+        anchor_level: level,
+        path_a,
+        path_b,
+        class,
+    });
+    true
 }
 
 fn try_extend(b: &mut Builder, level: u8, u: NodeId, v: NodeId) {
@@ -724,6 +822,12 @@ fn try_extend(b: &mut Builder, level: u8, u: NodeId, v: NodeId) {
     let Some(interior) = b.free_path(level, cu, cv, 1) else {
         return;
     };
+    // Capability invariant (Task 2 review, second pass): if this level
+    // still has no realm of its own, refuse to spend the detour's cells if
+    // doing so would leave it with no feasible same-floor cycle at all.
+    if anchored_realms(&b.plan, level as usize) == 0 && !b.would_still_cycle(level, &interior) {
+        return;
+    }
     // Every realm path that ran through u-v now runs through the detour.
     b.remove_passage(u, v);
     let path = b.lay_path(level, u, &interior, v);
@@ -1017,25 +1121,44 @@ mod tests {
         }
     }
 
-    /// claim: invariant(seed: 0..100) — Spec §3.4 (3) and §3.2 step 5: every
-    /// realm adds exactly one to the Kirchhoff mesh count, and every level
-    /// sits inside the clip.
+    /// claim: invariant(kind: [LavaTube, Fracture, Karst], character:
+    /// [WildCave, FungalGardens, DrowTier], vertex: [1, 7, 42, 1000], seed:
+    /// 0..400) — Spec §3.4 (3) and §3.2 step 5: every realm adds exactly one
+    /// to the Kirchhoff mesh count, and every level sits inside the clip,
+    /// swept across every kind/character/vertex combination and 400 seeds
+    /// each (Task 2 review: the narrower `plan(s, 7)`-only, 0..100 sweep
+    /// missed a starved level that first appears at seed 242).
     #[test]
     fn realms_are_the_mesh_count_and_every_level_is_inside_the_clip() {
-        for s in 0..100u64 {
-            let p = plan(s, 7);
-            let cyclomatic = p.edges.len() as i64 - p.nodes.len() as i64 + 1;
-            assert_eq!(
-                cyclomatic,
-                p.realms.len() as i64,
-                "seed {s}: E-V+1 != realms"
-            );
-            for level in 0..p.rungs.len() {
-                let n = anchored_realms(&p, level);
-                assert!(
-                    n >= MIN_CYCLES_PER_LEVEL as usize && n <= MAX_CYCLES_PER_LEVEL as usize,
-                    "seed {s} level {level}: {n} realms"
-                );
+        let kinds = [CaveKind::LavaTube, CaveKind::Fracture, CaveKind::Karst];
+        let characters = [
+            Character::WildCave,
+            Character::FungalGardens,
+            Character::DrowTier,
+        ];
+        let vertices = [1u32, 7, 42, 1000];
+        let rungs = habitation_rungs();
+        for &kind in &kinds {
+            for &character in &characters {
+                for &vertex in &vertices {
+                    for s in 0..400u64 {
+                        let p = plan_descent(Seed(s), Vertex(vertex), &rungs, kind, character);
+                        let cyclomatic = p.edges.len() as i64 - p.nodes.len() as i64 + 1;
+                        assert_eq!(
+                            cyclomatic,
+                            p.realms.len() as i64,
+                            "kind {kind:?} character {character:?} vertex {vertex} seed {s}: E-V+1 != realms"
+                        );
+                        for level in 0..p.rungs.len() {
+                            let n = anchored_realms(&p, level);
+                            assert!(
+                                n >= MIN_CYCLES_PER_LEVEL as usize
+                                    && n <= MAX_CYCLES_PER_LEVEL as usize,
+                                "kind {kind:?} character {character:?} vertex {vertex} seed {s} level {level}: {n} realms"
+                            );
+                        }
+                    }
+                }
             }
         }
     }
