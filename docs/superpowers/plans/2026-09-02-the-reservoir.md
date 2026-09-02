@@ -1356,26 +1356,30 @@ git commit -m "docs(reservoir): ratify 0606/0607, chronicle, retrospective"
 
 - [ ] **Step 7: Regenerate artifacts and check drift**
 
-Adding `pub fn seed_42_world` moves the committed type-audit report, and adding
-two decision records moves the digest's in-force decision index. Both are
-drift-checked, and both are commonly missed.
+**This step originally PREDICTED which artifacts would move, and the prediction
+was half wrong.** It said `pub fn seed_42_world` moves the committed type-audit
+report. It does not — measured at `c3f35ef9e`, after every code task had landed:
+`make type-audit-report` exits 0 and `make placement-audit-report` exits 0, and
+`git diff` over every declared path in `docs/generated-paths.txt` is empty.
+`seed_42_world() -> World` exposes no primitive at a `pub` boundary, so there is
+nothing for the audit to tag, and `FIXTURE` is a private const.
+
+So: **a branch table, not a prediction.** Run the regeneration and the drift
+check, then act on what you actually see.
 
 ```bash
 make rebaseline
-git diff --exit-code -- $(grep -v '^#' docs/generated-paths.txt | grep -v '^$' | cut -f1)
+git diff --stat -- $(grep -v '^#' docs/generated-paths.txt | grep -v '^$' | cut -f1)
 ```
 
-Expected: **non-empty** diff in `docs/audits/` (the type-audit report) and
-`docs/digest/` (the decision index). Commit the regenerated artifacts:
+| what moved | what it means | what to do |
+| --- | --- | --- |
+| `docs/digest/` only | Expected. Flipping 0606/0607 from `Proposed` to `Accepted` adds them to the in-force index — verified absent from it while `Proposed`. | `git add docs/digest/` and commit. |
+| `docs/digest/` **and** `docs/audits/` | Something in the campaign changed a `pub`-boundary primitive after all. Not impossible — check what. | Regenerate, read the audit diff, and say in the commit what boundary moved. |
+| nothing at all | Also possible: if you did not flip both statuses, or the digest does not index them the way this table assumes. | Do not commit an empty change. Verify 0606/0607 read `Accepted`, then re-run. |
+| `book/src/gallery/` or **any byte-golden** | **STOP.** World bytes moved. This campaign has no mandate for an epoch event, and `make rebaseline` must never be used to accept one. | Report BLOCKED with the file list. |
 
-```bash
-git add docs/audits/ docs/digest/
-git commit -m "chore(artifacts): regenerate after the reservoir"
-```
-
-Then re-run the drift check and expect an empty diff. **If `book/src/gallery/` or
-any byte-golden moved, STOP** — that is a world-bytes change, this campaign has no
-mandate for one, and `make rebaseline` must not be used to accept it.
+Then re-run the drift check and confirm it is empty.
 
 ---
 
