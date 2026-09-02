@@ -1073,6 +1073,76 @@ had ever claimed `Stageable` under the old membership-only reading, so the
 new gate retrofitted no false claims — which will not be true of the next
 corpus that adds a witness after its own number has already moved.
 
+**[The Reservoir](./chronicle/the-reservoir.md) (2026-09-02) supplies the
+clause's own worked example, on a claim this chapter has repeatedly named as
+its hardest shape — a helper that silently still does the expensive thing
+looking identical, in a green suite, to one that does not.** Migrating
+`worldgen::generated(seed)` to read the fixture only on its seed-42 arm left
+every other arm building exactly as before; a suite run proves nothing about
+which arm a passing test actually took. So `FIXTURE` was edited to a
+nonexistent filename and the target test run again, and it panicked naming
+the missing path *from inside the seed-42 branch* — the only way that panic
+fires is if the branch under test is the one reading the fixture, which a
+build-path panic could not produce. **The positive control was then run
+twice, independently**: the implementer's report carries the transcript, and
+the reviewer reproduced it from a fresh copy-and-mutate rather than trusting
+the pasted output, matching it byte for byte modulo the thread id. Two
+independent firings of the same control is a stronger claim than the clause
+has asked for anywhere else in this chapter.
+
+**And then the same campaign supplied the control's own boundary, which is
+worth more to this chapter than the success is.** The instrument was correct,
+run twice, and pointed at *one* test. Two other seed-42 callers of the same
+migrated helper existed to compare **two independent builds** of the world,
+and routing seed 42 to the fixture left them comparing two reads of one file:
+green, correctly named, and asserting nothing about a build. The control that
+would have exposed both immediately — break `FIXTURE`, watch which branch
+panics — was already built and simply was not aimed at them. What caught them
+was a **clock**: the pair ran in 0.06 s for what should have been four ~3.0-
+second builds, noticed only from a whole-branch vantage no per-task review
+had. So the lesson is not "build the positive control"; the campaign did that,
+well. It is that **a positive control proves a branch is reached at the site
+you aim it, and choosing the sites is a separate act with its own failure
+mode** — here, migrating at a helper's body and never enumerating the 43
+callers whose behaviour changed. When a suite gives no signal either way, the
+remaining instrument is cost: a test that got 50x faster and asserts the same
+thing did not get faster.
+
+**And the same campaign is a fresh instance of the standing diagnosis, from
+the controller's own hand, with a sting the earlier instances lack: the
+"correction" made the number worse.** Re-deriving call-site counts with
+`grep -o '<helper>()' | wc -l` counts *substrings*, not calls —
+`seam_world()` also matches inside `played_world()`, `_world()`-suffixed
+names throughout the file — so the instrument inflated exactly the two files
+carrying such identifiers while looking, at every intermediate total, exactly
+as plausible as a real correction would. A reviewer's independent recount
+with a word-boundary regex is what caught it, and the honest arithmetic
+reads worse than doing nothing: the broken grep's aggregate (244) landed
+*further* from the measured truth (239) than the plan's original, uncorrected
+figure (240) already was. **Two further, smaller instances from the same
+hand make it three, not two.** One read `tail`'s exit status out of
+`make type-audit-report | tail; echo $?` and reported the pipeline green on
+that basis — the status a shell pipe returns by default is its last
+command's, never the one that actually does the work being checked. The
+other was a path-existence check run against bare basenames rather than
+repo-relative paths, testing each against the repository root and reporting
+five legitimate prose references as `MISSING` — a false negative in the
+alarming direction, caught before it reached a permanent record only because
+the same session re-checked with the correct paths.
+
+**Score: the bet does not move, and the campaign is worth citing for exactly
+opposite reasons on its several halves.** The positive control, run twice by
+two people, is this chapter's practice working as intended — proof that a
+branch is reached, not merely proof that a suite stays green — and its
+un-aimed siblings, found by a timing, are the reminder that the practice is
+per-site. The broken `grep` is
+the practice's target, not its exception: an "observing tool answering a
+neighbouring question" is a shape this chapter's own reader has named before
+committing it, in the same campaign, while warning three implementers about
+it in their own dispatches. A correction is not evidence of correctness; it
+is a second claim, checkable exactly like the first, and this one shipped
+unchecked until someone else's count disagreed.
+
 ## What the world can already check itself on (high confidence)
 
 **The kernel substrate.** Hash-based seeding, coherent noise, append-only

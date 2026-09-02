@@ -4936,6 +4936,28 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-02T14:57:38Z | sluice:gate | 593.316 | 18003.943 | 516.793 | 31.22 | 0 | 02feee1c3 |  | lefford | 40 |
 | 2026-09-02T15:00:09Z | sluice:clients | 150.725 | 2266.844 | 206.028 | 16.41 | 0 | 14722bf02 |  | lefford | 40 |
 | 2026-09-02T15:07:29Z | sluice:heavy | 439.118 | 9637.904 | 156.597 | 22.30 | 0 | 96d96d43e |  | lefford | 40 |
+| 2026-09-02T16:05:01Z | gate-commit | 569.742 | 1127.969 | 188.272 | 2.31 | 0 | 91cb603b6 | campaign/the-reservoir | ambrose | 12 |
+| 2026-09-02T16:13:48Z | gate-commit | 302.274 | 75.324 | 37.340 | 0.37 | 0 | 91cb603b6 | campaign/the-reservoir | ambrose | 12 |
+| 2026-09-02T16:17:19Z | gate-commit | 176.097 | 76.736 | 38.197 | 0.65 | 0 | 91cb603b6 | campaign/the-reservoir | ambrose | 12 |
+| 2026-09-02T16:34:31Z | gate-commit | 246.882 | 71.771 | 38.138 | 0.45 | 0 | 7ae56abd9 | campaign/the-reservoir | ambrose | 12 |
+| 2026-09-02T16:37:48Z | gate-commit | 183.392 | 76.503 | 37.626 | 0.62 | 0 | 7ae56abd9 | campaign/the-reservoir | ambrose | 12 |
+| 2026-09-02T17:03:19Z | gate-commit | 391.283 | 415.021 | 116.035 | 1.36 | 0 | 2b29e5871 | campaign/the-reservoir | ambrose | 12 |
+| 2026-09-02T17:07:13Z | gate-commit | 170.447 | 64.361 | 30.041 | 0.55 | 0 | 2b29e5871 | campaign/the-reservoir | ambrose | 12 |
+| 2026-09-02T17:11:01Z | gate-commit | 123.345 | 70.203 | 39.478 | 0.89 | 0 | 2b29e5871 | campaign/the-reservoir | ambrose | 12 |
+| 2026-09-02T17:13:57Z | gate-commit | 123.910 | 70.895 | 38.097 | 0.88 | 0 | 2b29e5871 | campaign/the-reservoir | ambrose | 12 |
+| 2026-09-02T17:35:50Z | gate-commit | 129.217 | 78.094 | 50.061 | 0.99 | 0 | 329add1f3 | campaign/the-reservoir | ambrose | 12 |
+| 2026-09-02T17:37:31Z | gate-commit | 97.706 | 66.152 | 34.924 | 1.03 | 0 | 329add1f3 | campaign/the-reservoir | ambrose | 12 |
+| 2026-09-02T17:39:53Z | gate-commit | 96.084 | 65.598 | 34.421 | 1.04 | 0 | 329add1f3 | campaign/the-reservoir | ambrose | 12 |
+| 2026-09-02T17:58:18Z | gate-commit | 168.902 | 89.376 | 67.450 | 0.93 | 0 | 28b1c592f | campaign/the-reservoir | ambrose | 12 |
+| 2026-09-02T18:00:19Z | gate-commit | 98.316 | 65.425 | 34.840 | 1.02 | 0 | 28b1c592f | campaign/the-reservoir | ambrose | 12 |
+| 2026-09-02T18:46:43Z | gate-commit | 337.078 | 139.451 | 109.649 | 0.74 | 0 | e74190516 | campaign/the-reservoir | ambrose | 12 |
+| 2026-09-02T18:52:12Z | gate-commit | 213.976 | 76.582 | 38.512 | 0.54 | 0 | e74190516 | campaign/the-reservoir | ambrose | 12 |
+| 2026-09-02T19:49:42Z | rebaseline | 528.409 | 298.086 | 29.117 | 0.62 | 0 | 7f77d3cb2 | campaign/the-reservoir | ambrose | 12 |
+| 2026-09-02T19:54:13Z | rebaseline | 232.072 | 299.507 | 26.648 | 1.41 | 0 | 7f77d3cb2 | campaign/the-reservoir | ambrose | 12 |
+| 2026-09-02T20:20:02Z | gate-commit | 484.815 | 151.302 | 119.431 | 0.56 | 0 | a73ac266a | campaign/the-reservoir | ambrose | 12 |
+| 2026-09-02T20:22:37Z | gate-commit | 123.424 | 69.677 | 37.284 | 0.87 | 0 | a73ac266a | campaign/the-reservoir | ambrose | 12 |
+| 2026-09-02T21:13:59Z | gate-commit | 440.068 | 144.776 | 119.593 | 0.60 | 0 | 04284a5f8 | campaign/the-reservoir | ambrose | 12 |
+| 2026-09-02T21:20:43Z | gate-commit | 202.346 | 77.511 | 37.775 | 0.57 | 0 | 04284a5f8 | campaign/the-reservoir | ambrose | 12 |
 | 2026-09-02T15:20:14Z | gate-commit | 141.543 | 860.455 | 69.777 | 6.57 | 0 | 591efea36 | campaign/the-pawl | MacBookPro | 10 |
 | 2026-09-02T15:58:45Z | gate-commit | 27.108 | 57.936 | 14.954 | 2.69 | 0 | 73d2f28a6 | campaign/the-pawl | MacBookPro | 10 |
 | 2026-09-02T16:00:45Z | rebaseline | 116.565 | 279.394 | 15.643 | 2.53 | 0 | b857cd172 | campaign/the-pawl | MacBookPro | 10 |
@@ -5002,3 +5024,6 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-02T18:31:05Z | sluice:gate | 651.654 | 19767.212 | 577.014 | 31.22 | 0 | f3f932d58 |  | lefford | 40 |
 | 2026-09-02T18:33:10Z | sluice:clients | 124.648 | 2010.378 | 192.966 | 17.68 | 0 | ac3c8af1e |  | lefford | 40 |
 | 2026-09-02T18:40:48Z | sluice:heavy | 457.893 | 9776.031 | 169.251 | 21.72 | 0 | e96dfba9d |  | lefford | 40 |
+| 2026-09-02T21:49:20Z | rebaseline | 440.631 | 368.563 | 34.551 | 0.91 | 0 | 9bcdaf184 | campaign/the-reservoir | ambrose | 12 |
+| 2026-09-02T22:00:39Z | gate-commit | 526.766 | 866.404 | 159.789 | 1.95 | 0 | 9bcdaf184 | campaign/the-reservoir | ambrose | 12 |
+| 2026-09-02T22:02:54Z | gate-commit | 120.625 | 67.747 | 35.911 | 0.86 | 0 | 9bcdaf184 | campaign/the-reservoir | ambrose | 12 |
