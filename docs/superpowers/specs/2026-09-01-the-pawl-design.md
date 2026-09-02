@@ -139,11 +139,15 @@ Two reader shapes exist and both must satisfy the invariant:
 
 `decide_step` folds `frozen` + `out`. With the store, the tick reads a
 tenant's state at `frozen`'s end (advanced there — nothing commits during a
-bulk-synchronous tick, so `frozen` *is* the ledger), clones it, and absorbs
-this tick's `out` facts for the agent into the clone. `Folded<S>` must
-therefore be `Clone` where `S: Clone` — a one-line additive kernel change,
-and the only kernel edit this campaign makes. (A kernel-layer edit rebuilds
-more units at `gate-commit`; the plan pays that once, early.)
+bulk-synchronous tick, so `frozen` *is* the ledger) and passes this tick's
+`out` facts for the agent to the read as an **overlay slice**, exactly the
+`(day, room)` list `decide_step` builds from `out` today. The overlay is a
+read-side argument, never absorbed: a tenant's state is keyed by entity
+inside one fold, so cloning it per creature per tick would be O(agents) per
+creature — the O(agents²) shape this campaign is removing. **No kernel edit.**
+(An earlier draft of this section said `Folded<S>` must become `Clone`; the
+plan's G4 self-review found the overlay-as-argument shape needs no clone and
+the ledger records the change, #5.)
 
 ### 2.4 The tenants
 
@@ -296,8 +300,8 @@ stage 2 and it is the larger quarry.
 
 ## 7. In / out
 
-**In:** the store; five tenants; the six read sites; the `Folded: Clone`
-kernel line; the instruments re-run; the witnesses in §3.
+**In:** the store; five tenants; the read sites named in §2.4; the
+instruments re-run; the witnesses in §3. No kernel edit.
 **Out:** 7b and 7c (0238); hysteresis (`PSY-drive-arbitration-limit-cycle`);
 `fatigue_at`; the commit site; `Ledger`; the `afraid` memo's lifetime; the
 O(agents²) roster term as such — Trail removes one of its two factors and the
@@ -350,8 +354,8 @@ readout says how much, but no separate roster-scaling claim is made.
   `windows/vessel/tests/suite/thing.rs`). Absorb main at every stage boundary
   through `make sluice-stage`.
 - New `pub` items need `type-audit:` tags and regenerate
-  `docs/audits/type-audit-report.md` in the same commit; the stage-1 kernel
-  line makes that commit's `gate-commit` a kernel-layer one.
+  `docs/audits/type-audit-report.md` in the same commit. Every edit is in
+  `windows/vessel`, so `gate-commit` stays a windows-layer cost.
 - Both benches run `--release` only, and their module docs explain why the
   two instruments are complements (internal vs ecological validity). Neither
   may be deleted.
