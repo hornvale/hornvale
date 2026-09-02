@@ -262,10 +262,16 @@ fn walk_a_script(seed: u64) -> (bool, bool) {
     for verb in ["look", "go north", "wait 30", "enter", "go north"] {
         let _ = session.handle(verb);
         check_view_equals_scan(&session, verb);
-        let roster = session.roster();
-        for i in 0..roster.len() {
-            let moved = roster.positions()[i] != roster.bodies()[i].home;
-            if i == roster.driven().0 {
+        // THE GUARDS READ THE LEDGER, NOT THE COLUMN. Asking whether the
+        // COLUMN has left home would take the answer from the very thing
+        // under test: a writer that never wrote would report "nobody moved",
+        // which reads as a fixture that failed to exercise the code rather
+        // than as the bug it is. `position_of` is the independent half.
+        let (driven, len) = (session.roster().driven(), session.roster().len());
+        for i in 0..len {
+            let home = session.roster().bodies()[i].home.clone();
+            let moved = session.position_of(hornvale_vessel::roster::Slot(i)) != home;
+            if i == driven.0 {
                 driven_moved |= moved;
             } else {
                 other_moved |= moved;
@@ -273,6 +279,70 @@ fn walk_a_script(seed: u64) -> (bool, bool) {
         }
     }
     (driven_moved, other_moved)
+}
+
+/// The invariant under POSSESSION, which the free-session sweep above cannot
+/// reach — and the case that broke it (Task 3 fix round 1).
+///
+/// **Why possession is a different question.** `Session::wait` runs the driven
+/// body through `step_one_with_controller` and discards `_driven_facts`
+/// UNCONDITIONALLY: the player's verbs are what the body DOES, and that walk
+/// only ever supplies what the host WANTS. Free, the walk is asked through a
+/// `PlayerController` that always Holds, and `Hold` never moves `st.pos` — so
+/// the walk's ending room and the ledger's agree by accident. Possessed, it is
+/// asked through an `ImposedController`, which acts: the body walks to water
+/// and drinks mid-wait (`session.rs`'s own comment at the call site says so).
+/// Its ending room is then a room **the ledger never recorded**, because the
+/// facts that would have recorded it were thrown away one line later.
+///
+/// Writing that room into the `position` column is what fix round 1 removed.
+/// The column is a VIEW: it may only ever be written from something the
+/// ledger agrees with, and for the driven slot that is `commit_agent_at`'s
+/// own `Roster::place`, never the discarded walk.
+///
+/// Seed 7 because seed 42's flagship population never moves at all (see
+/// `every_slots_position_is_the_ledgers`), and a possessed body that never
+/// walks cannot exhibit this.
+///
+/// MUTATION THIS MUST FAIL AGAINST — and this one is not hypothetical, it is
+/// the code as it stood before this fix round: write the driven slot's
+/// position from the solo walk (`self.roster.write(driven_slot,
+/// driven_written.position, driven_written.felt);` in place of the
+/// `resolve`). Run and observed:
+/// `assertion `left == right` failed: after "!wait 5", slot 0 (Zhaqbwawshow) —
+/// the column and the ledger's own fold disagree
+///   left: Facet { face: 1, path: [3, 0, 3, 1, 3, 2, 2, 1, 1, 3, 1, 3, 3] }
+///  right: Facet { face: 1, path: [3, 0, 3, 1, 3, 2, 2, 1, 1, 1, 2, 3, 0] }`
+#[test]
+fn a_possessed_sessions_columns_are_the_ledgers_too() {
+    let world = hornvale_worldgen::build_world(
+        hornvale_kernel::Seed(7),
+        &Default::default(),
+        hornvale_worldgen::SkyChoice::Generated,
+        &Default::default(),
+        &Default::default(),
+    )
+    .expect("seed 7 builds");
+    let (mut session, _) = Session::start(&world, &PossessOpts::default()).expect("starts");
+    let _ = session.handle("!possess");
+    assert!(
+        session.possessor().is_some(),
+        "possession must actually be open, or this is the free sweep again"
+    );
+    check_view_equals_scan(&session, "!possess");
+    for verb in ["!wait 1", "!wait 5", "!wait 30"] {
+        let _ = session.handle(verb);
+        check_view_equals_scan(&session, verb);
+    }
+    // The felt column must have been written, or the driven walk never ran
+    // and this test proves nothing about it. (Position is deliberately NOT
+    // asserted to have moved: the whole point is that the possessed body's
+    // own walk moves nothing the ledger records.)
+    assert!(
+        session.driven_mode().is_some(),
+        "the driven body's own walk must have resolved something across three \
+         waits, or nothing here exercised the driven writer"
+    );
 }
 
 /// Every slot's `position` column against the ledger's own fold, at one

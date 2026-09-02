@@ -255,6 +255,14 @@ impl Roster {
     /// Write one slot's tick-owned columns — the position the tick left the
     /// body at, and the felt state its resolution expressed.
     ///
+    /// **For a walk whose facts were COMMITTED, and only such a walk.** This
+    /// is [`Self::place`] and [`Self::resolve`] together, and the pairing is
+    /// only honest when the ledger was told about the move: the population
+    /// tick's facts are committed by `Session::wait` a few lines before it
+    /// calls this, so the position it writes is one `agent_position` will
+    /// agree with. The driven body's solo walk is NOT such a walk — its facts
+    /// are discarded — so it calls `resolve` alone. See that method.
+    ///
     /// Static columns (`bodies`, `keys`) are deliberately not writable: a
     /// body's identity, home and roll key are settled at derivation.
     ///
@@ -264,7 +272,29 @@ impl Roster {
     /// [`Self::push`] or [`Self::slot_of`], so an out-of-range one is a
     /// caller mixing two rosters, which has no honest recovery.
     pub fn write(&mut self, slot: Slot, position: Facet, felt: Felt) {
-        self.position[slot.0] = position;
+        self.place(slot, position);
+        self.resolve(slot, felt);
+    }
+
+    /// Write one slot's `felt` column and NOTHING else — the write for a body
+    /// whose own arbitration resolved something the ledger did not record.
+    ///
+    /// **The driven body is that case, and it is not an edge one** (Task 3
+    /// fix round 1). `Session::wait` runs the possessed body through
+    /// `step_one_with_controller` and DISCARDS the facts it returns: the
+    /// player's verbs are what the body does, and that walk only ever
+    /// supplies what the host wants. Under an `ImposedController` the walk
+    /// really acts — it can cross rooms to reach water mid-wait — so its
+    /// ending room is one the ledger never heard of. Its `felt` is a genuine
+    /// resolution and belongs in the column; its `position` is not a view of
+    /// anything and must never be written here. The driven slot's `position`
+    /// moves only through [`Self::place`], from `Session::commit_agent_at`,
+    /// which is the one thing that commits that body's `agent-at` facts.
+    ///
+    /// # Panics
+    ///
+    /// If `slot` is not a slot of this roster — see [`Self::write`].
+    pub fn resolve(&mut self, slot: Slot, felt: Felt) {
         self.felt[slot.0] = felt;
         self.written[slot.0] = true;
     }

@@ -1947,6 +1947,10 @@ impl<'w> Session<'w> {
                 }
             }
         }
+        // Everyone coming within call on this tick, collected before any of
+        // them is seeded — see the seeding call below for why they must be
+        // one batch.
+        let mut arrivals: Vec<(Body, RollKeyStatic)> = Vec::new();
         for village in villages {
             // `wc` is `None` only on the degraded path, where residents
             // cannot be drawn at all (see `start_held`'s own comment); a
@@ -1967,10 +1971,8 @@ impl<'w> Session<'w> {
                 &village,
                 self.day,
             );
-            let felts = self.seed_felts(&residents);
-            for (i, (body, felt)) in residents.into_iter().zip(felts).enumerate() {
-                self.roster
-                    .push(body, RollKeyStatic::resident(village.id, i as u16), felt);
+            for (i, body) in residents.into_iter().enumerate() {
+                arrivals.push((body, RollKeyStatic::resident(village.id, i as u16)));
             }
             self.derived_settlements.insert(village.id);
         }
@@ -1980,8 +1982,26 @@ impl<'w> Session<'w> {
             self.derived_herds
                 .insert((herd.species.clone(), herd.vertex));
         }
-        let felts = self.seed_felts(&wild);
-        for ((body, key), felt) in wild.into_iter().zip(wild_keys).zip(felts) {
+        arrivals.extend(wild.into_iter().zip(wild_keys));
+        // ONE SEEDING CALL FOR THE WHOLE TICK'S ARRIVALS (Task 3 fix round 1).
+        // This used to be one call per village plus one for the herds, so a
+        // village's residents were seeded against a band that excluded both
+        // the LATER villages' residents and the wild bodies arriving in the
+        // same breath — three or four different bands for one instant, and
+        // which one a body got was decided by the order `villages` happened
+        // to be iterated. `seed_felts` already extends the band with its own
+        // `arrivals`, so collecting them first is the whole fix: every body
+        // that comes within call on this tick is seeded against the same
+        // roster, the one the pushes below produce.
+        //
+        // Derivation order is unchanged and still matters — `derive_residents`
+        // and `derive_herd_bodies` commit to `self.ledger` in the order they
+        // always did, and the pushes below preserve it exactly (residents in
+        // village order, then wild), which is what keeps a slot's identity
+        // stable (decision 0546).
+        let bodies: Vec<Body> = arrivals.iter().map(|(body, _)| body.clone()).collect();
+        let felts = self.seed_felts(&bodies);
+        for ((body, key), felt) in arrivals.into_iter().zip(felts) {
             self.roster.push(body, key, felt);
         }
         self.recompute_roll_mask_at(observer);
@@ -7328,13 +7348,16 @@ impl<'w> Session<'w> {
         // intent to `Do` here still leaves the ledger untouched, because the
         // facts never reach the ledger either way. The player's verbs (`go`,
         // `drink`, …) are what the body DOES; this walk only ever supplies
-        // what the host WANTS (`self.driven_mode`) — spec §5.2 is being
-        // corrected at Task 8 to say so.
+        // what the host WANTS (`Session::driven_mode`, which reads the driven
+        // slot's `felt` column) — spec §5.2 is being corrected at Task 8 to
+        // say so.
         //
-        // **The ledger is inert to this swap; `driven_mode`/`driven_affect`/
-        // `driven_suppressed` are NOT (The Coercion, Task 4 fix round,
-        // checked directly rather than assumed).** Those three are read
-        // back from `st.mode`/`st.affect`/`st.suppressed` on the LAST
+        // **The ledger is inert to this swap; the driven slot's `felt` is NOT
+        // (The Coercion, Task 4 fix round, checked directly rather than
+        // assumed).** Its three parts — mode, affect, suppressed ranks; three
+        // separate `Session` fields until The Rack collapsed them into one
+        // `Felt` at the driven slot — are read back from
+        // `st.mode`/`st.affect`/`st.suppressed` on the LAST
         // `advance_one` iteration of this call, and while each iteration
         // sets them from that iteration's OWN `resolution` — before
         // `controller.intend` is even invoked, so intent cannot change what
@@ -7448,14 +7471,31 @@ impl<'w> Session<'w> {
                 .expect("the tick walked a body this session's roster never appended");
             self.roster.write(slot, w.position, w.felt);
         }
-        // The driven body's own walk, into its own slot. It is not in
-        // `written` above — `step_one_with_controller` is a separate,
-        // band-of-one walk, and `on_roll_others` excludes the driven slot by
-        // construction — so this is the only writer of that one slot, and the
-        // two can never disagree about it.
+        // The driven body's own walk — ITS FELT STATE ONLY, never its
+        // position (Task 3 fix round 1). It is not in `written` above:
+        // `step_one_with_controller` is a separate, band-of-one walk and
+        // `on_roll_others` excludes the driven slot by construction, so this
+        // is the only writer of that slot's `felt`.
+        //
+        // **`driven_written.position` IS NOT A VIEW OF ANYTHING, and writing
+        // it broke the campaign's headline invariant.** `_driven_facts` is
+        // discarded unconditionally a few dozen lines above — deliberately,
+        // and see that site's own comment — so nothing this walk did reaches
+        // the ledger. Free, that is invisible: the walk is asked through a
+        // `PlayerController` that always Holds and `Hold` never moves
+        // `st.pos`, so the walk's room and the ledger's coincide. Possessed,
+        // an `ImposedController` genuinely acts, and the walk ends in a room
+        // the ledger never recorded — measured at seed 7 under `!wait 5`,
+        // where the column named `path[…, 3, 1, 3, 3]` and the ledger's own
+        // fold named `path[…, 1, 2, 3, 0]`.
+        //
+        // The driven slot's position moves through `Roster::place`, from
+        // `Session::commit_agent_at` — the single writer of this body's
+        // `agent-at` facts — so the column follows the ledger by construction
+        // rather than by a second fold that could drift from it.
+        // `a_possessed_sessions_columns_are_the_ledgers_too` holds this.
         let driven_slot = self.roster.driven();
-        self.roster
-            .write(driven_slot, driven_written.position, driven_written.felt);
+        self.roster.resolve(driven_slot, driven_written.felt);
         // The First Mark, one-hop forward integration: after the NPC
         // drive tick settles, any co-located-or-not NPC whose
         // grievance has crossed the hostility threshold commits its
@@ -17854,15 +17894,135 @@ mod tests {
             "the driven slot holds what its OWN walk resolved, not what the \
              population walk did"
         );
+        // ONLY BECAUSE THIS SESSION IS FREE. The column is never written
+        // from the solo walk (Task 3 fix round 1 — that walk's facts are
+        // discarded, so its ending room is a view of nothing); the two agree
+        // here because a free session asks through `PlayerController`, which
+        // always Holds, and `HoldStep` only ever advances `st.day`. Under
+        // possession they genuinely differ, which is what
+        // `a_possessed_walk_ends_where_the_ledger_never_recorded` below is
+        // for — the same comparison with the sign flipped.
         assert_eq!(
             session.roster.positions()[driven.0],
             driven_written.position,
-            "…and stands where that walk left it"
+            "a held walk never moves, so its room is still the ledger's"
         );
         assert!(
             !written.iter().any(|w| w.entity == driven_body.entity),
             "the population walk must not include the driven body, or the two \
              writers could disagree about one slot"
+        );
+    }
+    /// The mechanism behind Task 3 fix round 1, stated directly: under
+    /// possession the driven body's solo walk ENDS IN A ROOM THE LEDGER NEVER
+    /// RECORDED, and the `position` column follows the ledger rather than the
+    /// walk.
+    ///
+    /// **Why this needs saying in a test rather than a comment.** `wait`
+    /// discards `_driven_facts` unconditionally — the player's verbs are what
+    /// the body does; that walk only supplies what the host wants. Free, an
+    /// always-Holding `PlayerController` never moves `st.pos`, so the walk's
+    /// room and the ledger's coincide and writing either into the column
+    /// looks correct. Possessed, an `ImposedController` acts, and the two
+    /// diverge. The first assertion below is the NON-VACUITY guard for the
+    /// second: if a future change stopped the possessed walk from moving, the
+    /// column-follows-the-ledger check would pass for a reason that has
+    /// nothing to do with the writer, and this test says so loudly instead.
+    ///
+    /// Seed 7, because seed 42's flagship population never leaves its room at
+    /// all (measured: 0 `agent-at` facts across 500 days).
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST: in `Session::wait`, restore the
+    /// pre-fix write for the driven slot — `self.roster.write(driven_slot,
+    /// driven_written.position, driven_written.felt);` in place of the
+    /// `resolve`. Run and observed:
+    /// `assertion `left == right` failed: the driven slot's column follows
+    /// the LEDGER, not the discarded walk
+    ///   left: Facet { face: 1, path: [3, 0, 3, 1, 3, 2, 2, 1, 1, 3, 1, 3, 3] }
+    ///  right: Facet { face: 1, path: [3, 0, 3, 1, 3, 2, 2, 1, 1, 1, 2, 3, 0] }`
+    #[test]
+    fn a_possessed_walk_ends_where_the_ledger_never_recorded() {
+        let world = build_world(
+            Seed(7),
+            &SkyPins::default(),
+            SkyChoice::Generated,
+            &TerrainPins::default(),
+            &SettlementPins::default(),
+        )
+        .expect("seed 7 builds");
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let _ = session.handle("!possess");
+        assert!(
+            session.possessor().is_some(),
+            "possession must be open, or the walk is asked through \
+             PlayerController and cannot move at all"
+        );
+        // The same prefix the integration sweep uses: the divergence needs a
+        // body whose thirst has had time to grow, and the driven walk's own
+        // drinks are never recorded, so it grows monotonically with the
+        // session's age.
+        let _ = session.handle("!wait 1");
+        let frozen = session.ledger.clone();
+        let from = session.day;
+        let _ = session.handle("!wait 5");
+        let to = session.day;
+
+        let terrain = LocaleTerrain::with_fields(
+            &session.wctx.ctx,
+            session.calendar.as_ref(),
+            session.predator.as_ref(),
+            session.prey.as_ref(),
+            Some(&session.built),
+            Some(&session.mesh_memo),
+        );
+        let sys = DriveMovements {
+            npcs: Vec::new(),
+            from,
+            to,
+            params: SUSTENANCE,
+            day_ticks: session.day_ticks(),
+            terrain: &terrain,
+        };
+        let driven_body = session.driven_body().clone();
+        let (driven_facts, driven_written) = sys.step_one_with_controller(
+            &frozen,
+            &driven_body,
+            &mut hornvale_kernel::RoomMeshMemo::new(),
+            &mut HomeNavCache::new(),
+            &mut ImposedController::new(),
+        );
+        let driven = session.roster.driven();
+        let scanned = agent_position(&session.ledger, &driven_body, session.day);
+
+        // NON-VACUITY: the imposed walk really did go somewhere, and really
+        // did not tell the ledger about it.
+        assert!(
+            !driven_facts.is_empty(),
+            "the imposed walk must actually act, or there is nothing for the \
+             ledger to have missed"
+        );
+        assert_ne!(
+            driven_written.position, scanned,
+            "the imposed walk must END somewhere the ledger does not know \
+             about, or this test's subject does not arise"
+        );
+        // AND THE COLUMN FOLLOWS THE LEDGER.
+        assert_eq!(
+            session.roster.positions()[driven.0],
+            scanned,
+            "the driven slot's column follows the LEDGER, not the discarded \
+             walk"
+        );
+        // …while its FELT is the walk's own, which is the half that must
+        // still be written.
+        assert_eq!(
+            session.roster.felts()[driven.0],
+            driven_written.felt,
+            "the driven slot's felt IS that same walk's resolution"
+        );
+        assert!(
+            session.roster.resolved_felt(driven).is_some(),
+            "…and the tick flipped the slot's `written` flag doing it"
         );
     }
 }
