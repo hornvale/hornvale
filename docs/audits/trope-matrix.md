@@ -12,26 +12,28 @@ taken through that bias and nothing more. The finding a single column cannot
 carry is where the instruments **disagree** — which is what the demand table
 below is for.
 
-**Stageable now means witnessed, not merely named (decisions 0577/0581).** A
+**Stageable now means witnessed, not merely named (decisions 0577/0582).** A
 situation scores Stageable only when every requirement token resolves, a
-tableau is registered under its id, that tableau's staged relations each
-name a predicate the situation's own requirements actually ask for, and the
-tableau stages successfully — its cast places as entities and its relations
-commit without contradiction. Binding a witness's relations to the specific
-situation it is filed under is what stops one tableau silently witnessing
-every situation it happens to sit under. It does **not** check that the
+tableau is registered under its id, and the tableau stages successfully —
+its cast places as entities and its relations commit without contradiction.
+The witness's staged-relation predicates and the situation's own required
+`predicate:` tokens must be the SAME SET, not merely one a subset of the
+other: every predicate the tableau relates by is one the situation requires,
+AND every `predicate:` token the situation requires is realized by at least
+one staged relation — so neither an extraneous relation nor an uncovered
+requirement can pass silently, and a witness with no relations at all can
+bind only to a situation that requires none. It does **not** check that the
 tableau's cast fills the situation's actant ROLES — `actants` is
-prose-valued, and role assignment is unchecked — and a witness that stages
-no relations at all binds to any situation whose requirements name no
-predicate token.
+prose-valued, and role assignment is unchecked, which is the one limit that
+remains.
 
-This number is **not comparable across that boundary**: a coverage figure
-taken before this gate existed was measuring token membership alone, and a
-figure taken after it measures a strictly harder claim. Migration cost was
-zero at the moment this gate was wired (spec §4.2) — no situation here had a
-witness to lose — so this run's counts are unchanged from the last
-pre-witness run, but that is a fact about today's corpus, not a property of
-the two numbers that would let a future reader diff them meaningfully.
+**A count taken before this gate existed is not comparable to one taken
+after it.** Before, a count measured token membership alone; after, it
+measures the strictly harder, bound claim above. Migration cost was zero at
+the moment this gate was wired (spec §4.2) — no situation here had a witness
+to lose — so counts taken today are unchanged from the last pre-witness run,
+but that is a fact about today's corpus, not a property that would let a
+future reader diff the two eras' counts meaningfully.
 
 ## Columns
 

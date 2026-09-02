@@ -1,6 +1,6 @@
 # 0581. The witness is bound to its situation
 
-**Status:** Accepted (2026-09-01) · **Decider:** Nathan · **Campaign:** The Avowal · **Supersedes:** 0577
+**Status:** Superseded by [0582](0582-the-witness-binding-is-bidirectional.md) (2026-09-02, same review cycle — a probe proved the one-directional check let a relation-less tableau bind to any situation) · **Decider:** Nathan · **Campaign:** The Avowal · **Supersedes:** 0577
 
 ## Context
 

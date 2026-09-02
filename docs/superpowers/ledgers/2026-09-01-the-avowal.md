@@ -489,3 +489,178 @@ needed, only recognition.
 `docs/decisions/0577-the-realization-witness.md`; no situation's `Outcome`
 variant changed on either frozen corpus, confirmed by `make rebaseline`
 producing a byte-identical demand table (only report header prose moved).
+
+---
+
+#9 [G5] — **Task 4 review round 1: five fixes, and a decision-editing
+mistake caught and reversed mid-round.**
+
+*What happened.* The first review of Task 4 returned four Important
+findings (F1-F4) plus two minor ones (F5-F6). F1: `witness_stages` looked a
+tableau up by situation id alone, so a tableau relating two goblins by
+`instance-of` witnessed any situation it happened to be filed under — fixed
+with `witness_binds`, requiring every relation predicate a witness states
+to be among the tokens its situation's own `requires` names. F2: the
+committed report headers claimed more than the code checked — rewritten
+into shared constants (`WITNESS_BOUNDARY_WHAT`/`COMPARABILITY`) so `render`
+and `render_matrix` cannot state the claim two different ways. F3: a
+witness-blocked `Blocked` reason rendered as a missing corpus token, and
+the Leverage section's `closest`/`blocked` figures would have printed a
+self-contradicting "still missing 0 bundles" the moment a witness-blocked
+situation existed — both fixed, with the pre-existing tvtropes-2012
+pluralization defect ("missing 1 bundles") confirmed unchanged rather than
+fixed (out of scope, per instruction). F4: `Witnesses` stored only the
+tableau, never decision 0330's mandatory distance record — `Witnesses` is
+now `BTreeMap<String, WitnessEntry>` with a `realized: String` field
+`WitnessEntry::new` refuses to leave empty. F5: decision 0577 and a doc
+comment both claimed `Provision` is "supplied by the caller, never rebuilt
+inside" — backwards; `resolve` builds it itself every call. F6: the report
+overstated the new test count (said 14, meant 10).
+
+*The mistake.* Fixing F5 by editing decision 0577's body in place, with an
+inline "this record was amended" paragraph explaining why. `docs/CLAUDE.md`
+states plainly: "Decisions are append-only. Never edit a ratified decision's
+substance; supersede it with a new record" — with no carve-out for
+"not yet merged to `main`". Caught on a self-review pass before reporting
+back: 0577 was restored to its exact original text (verified against `git
+show <round-1-commit>:docs/decisions/0577-the-realization-witness.md`) with
+only its **Status** line changed to `Superseded by 0581`, and the corrected
+design was written as a fresh, freestanding decision, 0581, following the
+project's own `0014`→`0126` precedent exactly (a full restatement, not a
+diff against the superseded record).
+
+*Decision-number provenance.* 0581 is free inside this campaign's already-
+reserved `0576`-`0585` block (spec §header) — 0578/0579/0580 are reserved
+for Tasks 5/6/7's Kinship/Affect/Acts, confirmed by grepping the spec for
+every `decision 057*` mention before claiming the number, per the standing
+"decision numbers are reserved in blocks" rule.
+
+*Verification.* Zero verdicts moved on either frozen corpus (still 0/36,
+0/409) — confirmed by regenerating both reports and the matrix and diffing
+against the previously committed artifacts before committing: every
+per-situation row and the fan-in table are byte-identical; only header
+prose changed. Full workspace: `HV_TEST_OK=1 cargo nextest run --workspace
+--no-fail-fast` → 4953 passed, 0 failed, 211 skipped; doctests all green.
+A side effect of the fix diff itself (a new doc line using "cell" in the
+Markdown-table-cell, AREA sense) tripped `lexicon_guard::no_vertex_sense_
+cell_comes_back` — waived inline with a reason, confirmed the count returns
+to its pre-fix value.
+
+*This entry itself is late.* Both decision 0577 and decision 0581's "See
+also" sections cite "ledger entries #8 and #9" — #9 did not exist until
+this entry was written, during round 2's own self-review. The citation was
+written on the assumption a ledger entry would follow the same commit; it
+did not, and nothing mechanical checks a ledger-entry-number citation
+inside a decision record's prose (`docs_consistency` validates decision
+NUMBER cites against `docs/decisions/`, not ledger-entry cites against this
+file), so the gap was silent until re-read. Recorded here, in place, rather
+than silently back-dated.
+
+*Alternatives discarded.* Leaving 0577 edited in place with the amendment
+paragraph, treating "not yet merged" as an implicit exception to
+append-only — rejected on a second reading of the rule, which states no
+such exception, and because the whole point of append-only is that a reader
+should never have to ask whether an edit happened before or after some
+merge boundary to trust a record's history.
+
+*Ideonomy passes / overturns.* None — a review-response round, not a design
+question.
+
+*Capture actions.* `cli/src/tropes.rs` (`witness_binds`, `WitnessEntry`,
+the rendering and Leverage fixes); `cli/tests/suite/trope_witness.rs`;
+`docs/decisions/0577-the-realization-witness.md` (restored, marked
+superseded); `docs/decisions/0581-the-witness-is-bound-to-its-situation.md`
+(new); this entry, written late.
+
+---
+
+#10 [G5] — **Task 4 review round 2: the binding is bidirectional.**
+
+*What happened.* The second review reopened F1 and F2 with a probe, not a
+re-read: `Tableau::new().with_cast(["goblin","drow"])` — two creatures,
+ZERO relations — filed under a situation requiring FIVE predicate tokens it
+never touches, resolved `Stageable`, `witness_stages` returned `Ok(())`.
+Round 1's `witness_binds` was `tableau.relations.iter().all(|rel|
+required.contains(...))`, one direction only; `all()` over an empty
+iterator is `true` whatever `required` holds, so the disclosed limit
+("binds vacuously to any situation whose requirements name no predicate
+token") was FALSE — the hole was universal, not confined to
+no-predicate situations, and a tableau covering only SOME of a situation's
+required predicates was an undisclosed sibling of the same gap.
+
+*The fix.* `witness_binds` now requires SET EQUALITY between the
+situation's required `predicate:` tokens and the predicates the tableau
+states as relations (both directions at once), scoped to `predicate:`
+tokens only since `concept:`/`phenomenon:` tokens cannot be stated by a
+`StagedRelation` at all. This closes the empty case and the partial-
+coverage family in one move, and makes `WITNESS_BOUNDARY_WHAT`'s claim true
+by construction rather than requiring the prose to be narrowed to match a
+thin check — the ruling the coordinator gave explicitly, and the one this
+entry's decision (0582) follows.
+
+*Verification the fix actually closes the reopened hole.* Two new tests —
+`a_relation_less_tableau_does_not_bind_to_a_situation_requiring_predicates`
+(the review's exact probe) and `a_tableau_covering_only_some_required_
+predicates_is_unbound` (the partial-coverage sibling) — were run against
+round 1's ONE-DIRECTIONAL `witness_binds` via `scripts/mutate.py` before
+being accepted as passing: both went genuinely red (`Some(Stageable)`
+where `Some(Blocked(["witness:unbound"]))` was expected), proving the
+tests actually exercise the gap the review found rather than merely
+asserting the new behavior in the abstract. Restored and reverified by
+md5 (`0d9c5c8cc84a06261619667d7f83b60b` both before the mutation and after
+restoration) — the SAME `git checkout --` trap entry #9 already named bit
+again here (it discards uncommitted work, not just the mutation), so the
+whole round-2 diff to `cli/src/tropes.rs` had to be reapplied from the
+saved python scripts rather than merely reverting a small edit; noted so a
+third occurrence does not recur.
+
+*F3's three residual edges, closed in the same pass.* `closest`'s
+`unwrap_or(0)` reintroduced the corrupted "still missing 0 bundles"
+sentence in a narrower window (every blocked situation witness-blocked);
+now kept as `Option<usize>` with an explicit `None` sentence. `blocked`
+(the Leverage denominator) and the Demand table's total disagreed with no
+reconciliation once witness-blocked situations existed to exclude; the
+paragraph now states `witness_blocked` and reconciles all four counts
+(`stageable + inapplicable + blocked + witness_blocked = out.len()`), the
+same discipline the `inapplicable` disclosure already used.
+`blocked_by_witness`'s doc claimed a collision-proof guarantee `expand`
+does not actually provide (`expand`'s `None` arm returns any non-`bundle:`
+token unchanged, unvalidated) — corrected to state it as true-by-inspection
+for the two frozen corpora today, not a guarantee.
+
+*N1: a drift-checked artifact the previous round missed.*
+`docs/digest/decisions-in-force.md` was stale — decision 0581 never
+appeared in it, because nothing in `docs_consistency` checks that file
+against `docs/decisions/`; it surfaces only at the `digest render
+decisions` regenerate-and-diff step, which round 1 never ran. Regenerated
+here (`cargo run --manifest-path tools/digest/Cargo.toml -- render
+decisions > docs/digest/decisions-in-force.md`); now lists `0576` and
+`0582` as in force, correctly omitting `0577` and `0581` as superseded.
+`docs/digest/intent-vs-reality.md` was also regenerated and found
+unchanged.
+
+*N2.* `describe_witness_reason`'s `_` catch-all now panics on an
+unrecognized sentinel instead of silently describing it as
+`"the registered witness failed to stage"` — a `&str` match cannot be
+exhaustive in the type-checked sense, so this converts the "silently wrong"
+failure mode the reviewer named into a loud one.
+
+*Alternatives discarded.* The reviewer's own cheaper suggestion
+(`!tableau.relations.is_empty()`) — explicitly rejected by the reviewer's
+own ruling before this round began ("close it with the bidirectional
+binding, not the cheap guard"), since it would have caught only the
+zero-relation case and left the partial-coverage family (a tableau covering
+some but not all required predicates) open. Requiring the FULL required-
+token set (including `concept:`/`phenomenon:`) to equal the staged-relation
+set — rejected because neither token kind can be stated by a
+`StagedRelation` at all, which would make every situation requiring one
+permanently unwitnessable.
+
+*Ideonomy passes / overturns.* None — a review-response round.
+
+*Capture actions.* `cli/src/tropes.rs` (`witness_binds`,
+`blocked_by_witness`, `describe_witness_reason`, the Leverage section);
+`cli/tests/suite/trope_witness.rs` (two new tests, both mutation-verified);
+`docs/decisions/0581-the-witness-is-bound-to-its-situation.md` (restored,
+marked superseded); `docs/decisions/0582-the-witness-binding-is-
+bidirectional.md` (new); `docs/digest/decisions-in-force.md` (regenerated).

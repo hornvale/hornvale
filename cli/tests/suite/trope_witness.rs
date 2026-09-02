@@ -1,4 +1,4 @@
-//! The realization witness (decisions 0577/0581): `Stageable` requires a
+//! The realization witness (decisions 0577/0582): `Stageable` requires a
 //! committed tableau that actually stages a situation's actants and every
 //! relation it stipulates, AND that tableau's relations are mechanically
 //! BOUND to the situation it is filed under — not merely a corpus token
@@ -23,6 +23,20 @@
 //! would stage successfully. `a_tableau_bound_under_one_situation_is_unbound_
 //! under_another_that_lacks_its_predicate` is the property test proving
 //! that a witness filed for one situation cannot silently witness another.
+//!
+//! **Fix round 2 (decision 0582) makes the binding BIDIRECTIONAL.** Round
+//! 1's `witness_binds` only ever checked that the tableau's relations were
+//! a SUBSET of the situation's required predicates — `all()` over an EMPTY
+//! relations list is vacuously `true`, so a review probe built a
+//! two-creature, ZERO-relation tableau, filed it under a situation
+//! requiring five predicate tokens, and it bound and staged.
+//! `a_relation_less_tableau_does_not_bind_to_a_situation_requiring_
+//! predicates` reproduces that exact probe; `a_tableau_covering_only_some_
+//! required_predicates_is_unbound` covers the same family's non-empty
+//! member (a tableau relating by only SOME of what the situation
+//! requires). Both were run against the round-1 (one-directional) check
+//! via `scripts/mutate.py` and confirmed genuinely red before this fix
+//! landed — see `task-4-report.md`.
 
 use hornvale::provision::Provision;
 use hornvale::tropes::{
@@ -314,6 +328,93 @@ fn a_tableau_bound_under_one_situation_is_unbound_under_another_that_lacks_its_p
         Some(&Outcome::Blocked(vec!["witness:unbound".to_string()])),
         "the SAME tableau filed under s6 must be refused as unbound, since s6's \
          requires never names instance-of: {out:?}"
+    );
+}
+
+/// **The exact probe the review built to reopen F1.** A cast with no
+/// relations at all, filed under a situation requiring FIVE predicate
+/// tokens it never touches. Before decision 0582's bidirectional check,
+/// `witness_binds` was `tableau.relations.iter().all(...)`, and `all()`
+/// over an EMPTY iterator is `true` regardless of what the situation
+/// requires — this resolved `Stageable` and `witness_stages` returned
+/// `Ok(())`. This is not the degenerate edge of the binding hole; the
+/// review's own framing is that it IS the hole.
+#[test]
+fn a_relation_less_tableau_does_not_bind_to_a_situation_requiring_predicates() {
+    let mut registry = ConceptRegistry::default();
+    let five = ["alpha", "beta", "gamma", "delta", "epsilon"];
+    for p in five {
+        registry
+            .register_predicate(p, false, "test predicate")
+            .expect("registers");
+    }
+    let world = a_world();
+    let requires: Vec<String> = five.iter().map(|p| format!("predicate:{p}")).collect();
+    let corpus = a_corpus("probe", requires);
+    let mut table = BTreeMap::new();
+    table.insert(
+        "probe".to_string(),
+        WitnessEntry::new(
+            Tableau::new().with_cast(["goblin", "drow"]),
+            "deliberately broken: two cast members, zero relations -- must not bind to \
+             a situation requiring five predicate tokens it never touches",
+        ),
+    );
+    let out = resolve(&corpus, &registry, world, &table);
+    assert_eq!(
+        out.get("probe"),
+        Some(&Outcome::Blocked(vec!["witness:unbound".to_string()])),
+        "a relation-less tableau must not bind to a situation that requires predicates: {out:?}"
+    );
+    assert_eq!(
+        witness_stages(&corpus, &corpus.situations[0], world, &table),
+        Err("witness:unbound")
+    );
+}
+
+/// **The subset-family case, the other half of the bidirectional fix.** A
+/// tableau relating by only ONE of a situation's TWO required predicates
+/// is refused the same as the zero-relation case — one direction of
+/// `witness_binds` alone (the tableau's relations all appear in
+/// `requires`) was already satisfied here before 0582; only the added
+/// direction (every required predicate is realized by some relation)
+/// catches it.
+#[test]
+fn a_tableau_covering_only_some_required_predicates_is_unbound() {
+    let mut registry = ConceptRegistry::default();
+    registry
+        .register_predicate("instance-of", true, "test")
+        .expect("registers");
+    registry
+        .register_predicate("parent-of", true, "test")
+        .expect("registers");
+    let world = a_world();
+    let corpus = a_corpus(
+        "partial",
+        vec![
+            "predicate:instance-of".to_string(),
+            "predicate:parent-of".to_string(),
+        ],
+    );
+    let mut table = BTreeMap::new();
+    table.insert(
+        "partial".to_string(),
+        WitnessEntry::new(
+            Tableau::new().with_cast(["goblin", "drow"]).with_relation(
+                hornvale_kernel::INSTANCE_OF,
+                0,
+                1,
+            ),
+            "deliberately partial: relates by only one of the situation's two required \
+             predicates -- the subset-family case decision 0582 also closes",
+        ),
+    );
+    let out = resolve(&corpus, &registry, world, &table);
+    assert_eq!(
+        out.get("partial"),
+        Some(&Outcome::Blocked(vec!["witness:unbound".to_string()])),
+        "a tableau covering only SOME of a situation's required predicates must not \
+         bind: {out:?}"
     );
 }
 

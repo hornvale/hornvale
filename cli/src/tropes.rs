@@ -12,13 +12,14 @@
 //! 0095 deferred until a second catalogue existed — one column says what this
 //! world supplies, and only the matrix can say what the catalogues ask for.
 //!
-//! **The witness (decisions 0577/0581, spec §4.2).** Token membership was
+//! **The witness (decisions 0577/0582, spec §4.2).** Token membership was
 //! never hard to satisfy — `PredicateDef` is `{ name, functional, doc }`
 //! with no object-type constraint — so `Stageable` now also requires a
 //! committed [`hornvale_vessel::Tableau`] that both BINDS to the situation
-//! it is filed under (0581: every relation predicate it stages must be
-//! among that situation's own required tokens — see [`witness_binds`]) and
-//! actually stages successfully. Looked up by situation id in a
+//! it is filed under (0582: the situation's own required `predicate:`
+//! tokens and the predicates the tableau stages as relations must be the
+//! SAME SET, not merely one a subset of the other — see [`witness_binds`])
+//! and actually stages successfully. Looked up by situation id in a
 //! caller-supplied [`Witnesses`] table ([`witnesses`] is the production
 //! roster), each entry pairing the tableau with a mandatory prose distance
 //! record (0581's [`WitnessEntry`], closing the gap decision 0330's own
@@ -184,15 +185,33 @@ pub fn witnesses() -> Witnesses {
 }
 
 /// Whether `tableau`'s staged relations are actually BOUND to `situation`
-/// — the mechanical half of decision 0581's "against that staged scene"
-/// (spec §4.2): every predicate `tableau` stages as a relation must be
-/// among the tokens `situation`'s own (expanded) `requires` list names.
-/// A tableau relating two cast members by `instance-of` cannot witness a
-/// situation whose requirements never ask for `predicate:instance-of`, so
-/// a tableau filed under situation A is refused under situation B
-/// whenever A and B ask for different relation predicates — the property
-/// that closes the hole a bare id lookup left open (a witness filed under
-/// any id would previously stage identically for every other).
+/// — the mechanical half of decision 0582's "against that staged scene"
+/// (spec §4.2), and BIDIRECTIONAL: the situation's own required
+/// `predicate:` tokens and the predicates `tableau` states as relations
+/// must be the SAME SET, not merely the tableau's side a subset of the
+/// situation's.
+///
+/// **Why one direction was not enough, proved live.** `tableau.relations
+/// .iter().all(...)` over an EMPTY `relations` list is `true` regardless
+/// of what `required` contains — a review probe built
+/// `Tableau::new().with_cast(["goblin","drow"])`, zero relations, filed it
+/// under a situation requiring five predicate tokens it never touches, and
+/// it staged and bound. That is not the degenerate edge of the hole; it is
+/// the whole hole. A one-relation tableau binding to a ten-predicate
+/// situation is the same failure with the count moved: `all()` only ever
+/// asks "does the tableau overstate", never "does it understate". Set
+/// equality asks both, closing the empty case and every partial-coverage
+/// case in the same move — a tableau filed under situation A is refused
+/// under situation B whenever A and B's required predicate sets differ AT
+/// ALL, not merely when the tableau's own relations happen to name
+/// something B never asked for.
+///
+/// **Scoped to `predicate:` tokens only.** A `concept:`/`phenomenon:`
+/// token cannot be stated by a `StagedRelation` at all — nothing in
+/// [`Tableau`] represents either — so requiring the FULL required-token set
+/// (including those) to match the staged-relation set would make every
+/// situation requiring a `concept:`/`phenomenon:` token permanently
+/// unwitnessable, which is not what this check is for.
 ///
 /// **What this does NOT prove, stated so a reader cannot infer more than
 /// it checks.** It does not verify that the tableau's cast fills the
@@ -201,23 +220,22 @@ pub fn witnesses() -> Witnesses {
 /// mechanical role check available the way there is for a predicate
 /// token — role assignment stays entirely unverified, which is exactly
 /// the limit spec §4.2 itself states for the whole witness bar ("does not
-/// prove any world produces the situation"). And a witness that stages NO
-/// relations at all binds VACUOUSLY to any situation whose requirements
-/// name no predicate token at all (`Iterator::all` over an empty iterator
-/// is `true`) — a real gap, of the same class 0330 already accepted for
-/// its own narrower claim, and one this function cannot close without a
-/// role-typed corpus this project does not have.
+/// prove any world produces the situation"). This is the one limit that
+/// remains once the set-equality check above closes the binding gap.
 /// type-audit: bare-ok(identifier-text: corpus), bare-ok(flag: return)
 fn witness_binds(corpus: &Corpus, situation: &Situation, tableau: &Tableau) -> bool {
-    let required: BTreeSet<String> = situation
+    let required_predicates: BTreeSet<String> = situation
         .requires
         .iter()
         .flat_map(|r| expand(corpus, r))
+        .filter(|t| t.starts_with("predicate:"))
         .collect();
-    tableau
+    let staged_predicates: BTreeSet<String> = tableau
         .relations
         .iter()
-        .all(|rel| required.contains(&format!("predicate:{}", rel.predicate)))
+        .map(|rel| format!("predicate:{}", rel.predicate))
+        .collect();
+    required_predicates == staged_predicates
 }
 
 /// Whether `situation`'s registered witness both BINDS to it
@@ -394,32 +412,45 @@ pub fn regenerate_command(path: &str) -> String {
 }
 
 /// Shared header prose for the witnessed-`Stageable` boundary (decisions
-/// 0577/0581), used verbatim by both [`render`] and [`render_matrix`] so the two
-/// committed artifacts cannot state the claim two different ways — the
+/// 0577/0582), used verbatim by both [`render`] and [`render_matrix`] so the
+/// two committed artifacts cannot state the claim two different ways — the
 /// exact failure class (an artifact asserting more than the code checks,
 /// spec's own "the failure this project documents most") this constant
 /// exists to close off structurally, not just by care. States precisely
 /// what the gate checks — token resolution, a filed witness, the
-/// witness's relations bound to THIS situation's own required predicates
-/// (`witness_binds`), and a successful stage — and precisely what it does
-/// not: actant ROLE assignment is never checked, and a witness with no
-/// relations binds vacuously to any situation asking for no predicate.
-const WITNESS_BOUNDARY_WHAT: &str = "**Stageable now means witnessed, not merely named (decisions 0577/0581).** A situation scores Stageable only when every requirement token resolves, a tableau is registered under its id, that tableau's staged relations each name a predicate the situation's own requirements actually ask for, and the tableau stages successfully — its cast places as entities and its relations commit without contradiction. Binding a witness's relations to the specific situation it is filed under is what stops one tableau silently witnessing every situation it happens to sit under. It does **not** check that the tableau's cast fills the situation's actant ROLES — `actants` is prose-valued, and role assignment is unchecked — and a witness that stages no relations at all binds to any situation whose requirements name no predicate token.";
+/// witness's staged-relation predicates and the situation's own required
+/// `predicate:` tokens matching EXACTLY (`witness_binds`, decision 0582),
+/// and a successful stage — and precisely what it does not: actant ROLE
+/// assignment is never checked, which is the one limit that remains once
+/// the binding check is bidirectional.
+const WITNESS_BOUNDARY_WHAT: &str = "**Stageable now means witnessed, not merely named (decisions 0577/0582).** A situation scores Stageable only when every requirement token resolves, a tableau is registered under its id, and the tableau stages successfully — its cast places as entities and its relations commit without contradiction. The witness's staged-relation predicates and the situation's own required `predicate:` tokens must be the SAME SET, not merely one a subset of the other: every predicate the tableau relates by is one the situation requires, AND every `predicate:` token the situation requires is realized by at least one staged relation — so neither an extraneous relation nor an uncovered requirement can pass silently, and a witness with no relations at all can bind only to a situation that requires none. It does **not** check that the tableau's cast fills the situation's actant ROLES — `actants` is prose-valued, and role assignment is unchecked, which is the one limit that remains.";
 
-/// The second half of the same disclosure: why a `Stageable` count from
-/// before this gate is not comparable to one taken after it.
-const WITNESS_BOUNDARY_COMPARABILITY: &str = "This number is **not comparable across that boundary**: a coverage figure taken before this gate existed was measuring token membership alone, and a figure taken after it measures a strictly harder claim. Migration cost was zero at the moment this gate was wired (spec §4.2) — no situation here had a witness to lose — so this run's counts are unchanged from the last pre-witness run, but that is a fact about today's corpus, not a property of the two numbers that would let a future reader diff them meaningfully.";
+/// The second half of the same disclosure: why a count from before this
+/// gate is not comparable to one taken after it. Phrased to read correctly
+/// both where [`render`] uses it once (a single corpus's count) and where
+/// [`render_matrix`] uses it per column (several counts, one per corpus) —
+/// an earlier draft said "This number", which read as singular prose
+/// pasted under a multi-column table.
+const WITNESS_BOUNDARY_COMPARABILITY: &str = "**A count taken before this gate existed is not comparable to one taken after it.** Before, a count measured token membership alone; after, it measures the strictly harder, bound claim above. Migration cost was zero at the moment this gate was wired (spec §4.2) — no situation here had a witness to lose — so counts taken today are unchanged from the last pre-witness run, but that is a fact about today's corpus, not a property that would let a future reader diff the two eras' counts meaningfully.";
 
 /// Whether a `Blocked` reason list is a witness refusal rather than a
 /// list of missing corpus tokens.
 ///
 /// By construction (`resolve`), a witness refusal is always EXACTLY one
-/// sentinel string prefixed `witness:`, and no real corpus token can ever
-/// collide with that prefix — `expand` only ever produces tokens
-/// namespaced `predicate:`/`phenomenon:`/`concept:`, or a dangling
-/// `bundle:` reference (which expands to itself). This is what lets the
-/// demand table and the Leverage figures tell the two reasons apart
-/// without a new `Outcome` variant.
+/// sentinel string prefixed `witness:`. **This is a fact about the two
+/// frozen corpora today, verified by inspection, not a guarantee `expand`
+/// enforces** — an earlier version of this doc claimed the opposite
+/// ("no real corpus token can ever collide with that prefix") because
+/// `expand` "only ever produces tokens namespaced `predicate:`/
+/// `phenomenon:`/`concept:`", which is false: `expand`'s `None` arm
+/// returns any non-`bundle:` requirement UNCHANGED, with no namespace
+/// validation at all (see `expand`'s own doc). A corpus that hand-authored
+/// a requirement literally spelled `"witness:something"` would collide
+/// with this detector silently. Unreachable on `tropes/polti.trope.json`
+/// and `tropes/tvtropes-2012.trope.json` as authored today; not something
+/// this function can rule out for a future corpus. Overstating this was
+/// the same class of defect decision 0577's `Provision` claim was — a
+/// record asserting more than the code guarantees.
 /// type-audit: bare-ok(identifier-text: missing), bare-ok(prose: return)
 fn blocked_by_witness(missing: &[String]) -> Option<&str> {
     match missing {
@@ -430,13 +461,27 @@ fn blocked_by_witness(missing: &[String]) -> Option<&str> {
 
 /// Prose for one of [`witness_stages`]'s three sentinel reasons — see that
 /// function's own doc for what each one means.
+///
+/// **Exhaustive by panic, not by the type system.** `reason` is a bare
+/// `&str` (the sentinels are string constants, not an enum — see
+/// `witness_stages`'s own `Result<(), &'static str>`), so the match cannot
+/// be exhaustive in the sense the compiler checks. A silent `_` fallback
+/// mapping any unrecognized reason to `"the registered witness failed to
+/// stage"` would make a FOURTH sentinel, added later without updating this
+/// function, render a wrong description instead of failing anything — so
+/// the fallback arm panics instead, converting that mistake into a loud
+/// one the moment it is exercised.
 fn describe_witness_reason(reason: &str) -> &'static str {
     match reason {
         "witness:absent" => "no witness is registered for this situation",
         "witness:unbound" => {
             "the registered witness does not name this situation's required relations"
         }
-        _ => "the registered witness failed to stage",
+        "witness:refused" => "the registered witness failed to stage",
+        other => panic!(
+            "describe_witness_reason: unrecognized witness sentinel {other:?} — add an \
+             arm for it here rather than falling through"
+        ),
     }
 }
 
@@ -536,14 +581,19 @@ pub fn render(
     let mut ranked: Vec<_> = fan.into_iter().collect();
     ranked.sort_by(|a, b| b.1.len().cmp(&a.1.len()).then(a.0.cmp(&b.0)));
 
-    // How close is the closest blocked situation? If this is ever 1, a single
-    // bundle really would unlock something and the caveat below should change.
+    // How close is the closest TOKEN-blocked situation? If this is ever 1,
+    // a single bundle really would unlock something and the caveat below
+    // should change.
     //
     // A witness-blocked situation is EXCLUDED from this figure — it has
     // ZERO unheld bundles by construction (see the fan-in note above), so
     // including it would report "the closest blocked situation is still
     // missing 0 bundles" the moment one exists, contradicting the very
-    // sentence it sits in.
+    // sentence it sits in. Kept as `Option`, not collapsed with
+    // `unwrap_or(0)`: if EVERY blocked situation turns out to be
+    // witness-blocked, this iterator is empty too, and `unwrap_or(0)`
+    // would reprint the exact same corrupted sentence in a narrower
+    // window — `None` is handled explicitly below instead.
     let closest = corpus
         .situations
         .iter()
@@ -555,36 +605,58 @@ pub fn render(
                 .filter(|r| expand(corpus, r).iter().any(|t| !held.contains(t)))
                 .count()
         })
-        .min()
-        .unwrap_or(0);
+        .min();
     // Same exclusion as `closest`: this is the denominator of "missing
     // bundles ranked ... over the N blocked situations" below, and a
     // witness-blocked situation contributes no bundle to that ranking at
     // all, so counting it here would overstate the denominator the
-    // sentence is actually about.
+    // sentence is actually about. `witness_blocked` is the excluded
+    // count, disclosed and reconciled in the same paragraph instead of
+    // left to silently disagree with the Demand table's own total.
     let blocked = out
         .values()
         .filter(|o| matches!(o, Outcome::Blocked(m) if blocked_by_witness(m).is_none()))
+        .count();
+    let witness_blocked = out
+        .values()
+        .filter(|o| matches!(o, Outcome::Blocked(m) if blocked_by_witness(m).is_some()))
         .count();
     let inapplicable_noun = if inapplicable == 1 {
         "situation is"
     } else {
         "situations are"
     };
+    let witness_blocked_noun = if witness_blocked == 1 {
+        "situation is"
+    } else {
+        "situations are"
+    };
     s.push_str("\n## Leverage\n\n");
     s.push_str(&wrap(&format!(
-        "Missing bundles ranked by fan-in over the {blocked} **blocked** situations. The \
-         {inapplicable} inapplicable {inapplicable_noun} excluded from this ranking, but not \
-         from the report: the Supply section below still counts its requirements as demand, \
-         which keeps those tokens off the orphan list. The **corpus** column counts all {} \
-         situations.",
+        "Missing bundles ranked by fan-in over the {blocked} situations **blocked by a \
+         missing token** — the denominator this section is actually about. The {inapplicable} \
+         inapplicable {inapplicable_noun} excluded from this ranking, but not from the report: \
+         the Supply section below still counts its requirements as demand, which keeps those \
+         tokens off the orphan list. {witness_blocked} more {witness_blocked_noun} blocked by \
+         a missing or unbound witness rather than a missing token, excluded from this ranking \
+         for the same reason (no bundle here can resolve one). Reconciled: the **corpus** \
+         column counts all {} situations, which is {stageable} stageable + {inapplicable} \
+         inapplicable + {blocked} blocked by a missing token + {witness_blocked} blocked by a \
+         missing or unbound witness.",
         out.len()
     )));
     s.push_str("\n\n");
-    s.push_str(&wrap(&format!(
-        "Fan-in is **not** an unlock count: the closest blocked situation is still missing \
-         {closest} bundles, so no single row makes anything stageable on its own."
-    )));
+    s.push_str(&match closest {
+        Some(c) => wrap(&format!(
+            "Fan-in is **not** an unlock count: the closest blocked situation is still missing \
+             {c} bundles, so no single row makes anything stageable on its own."
+        )),
+        None => wrap(
+            "Fan-in is **not** an unlock count, and there is no missing-token-blocked \
+             situation to measure it against here — see the Demand table above for whichever \
+             situations remain blocked, if any, for a different reason.",
+        ),
+    });
     // A bundle required ONLY by inapplicable situations never enters the fan
     // map above, so a genuinely missing capability can vanish from the
     // ranking. This is the mirror image of the defect that put seven
