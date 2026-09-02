@@ -5449,6 +5449,11 @@ impl<'w> Session<'w> {
             &self.position(),
             &terrain,
             self.walk_depth(),
+            // Derived from the context the session already holds, not stored
+            // beside `self.built`: the placed-site roster is a pure read over
+            // the budget the `LocaleContext` built once at `start`, so a second
+            // copy in `Session` would be state to keep honest for no gain.
+            &self.wctx.ctx.strange_sites(),
         )
     }
 

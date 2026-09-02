@@ -31,6 +31,8 @@
 use crate::site::{Site, SiteKind};
 use hornvale_history::record::{Function, Notability, TechHorizon};
 use hornvale_kernel::{Facet, Geosphere, KindId, NearestVertexIndex, Vertex, World};
+use hornvale_locale::StrangeSite;
+use hornvale_worldgen::{SiteReason, site_facet_for};
 
 /// What macro history says about a place, reduced to the axes micro generation
 /// indexes. A COORDINATE in a small orthogonal space — never a label drawn from
@@ -56,8 +58,9 @@ pub struct Brief {
     /// Whether warmth matters here — `Terrain::is_cold` at the WALK band.
     pub cold: bool,
     /// The site here, if any — the gate every enterable place hangs off.
-    /// Decision 0536. For a settlement this mirrors [`Self::built`]; caves
-    /// and exotic sites arrive in Tasks 4 and 5.
+    /// Decision 0536. For a settlement this mirrors [`Self::built`]; an exotic
+    /// site is the placed address `hornvale_worldgen::site_facet_for` gives it
+    /// (Task 5), and a cave joins them through the same mechanism in Task 4.
     pub site: Option<Site>,
 }
 
@@ -146,6 +149,23 @@ pub(crate) fn containing_vertex(
 /// Derive the brief for `place`. Every read is taken at the walk band, so a
 /// chamber and its locale yield the same brief — which is what makes a
 /// structure's chambers agree about what building they are in.
+///
+/// `exotic_sites` is the world's placed exotic regimes
+/// (`hornvale_locale::LocaleContext::strange_sites`). It is a parameter rather
+/// than something derived here because a `LocaleContext` is expensive and the
+/// caller already holds one; the same reason `geo` and `index` are parameters.
+///
+/// **The exotic read runs site→facet, not facet→site, and that direction is
+/// deliberate.** The cheap-looking alternative — resolve `locale`'s containing
+/// vertex, then ask whether that vertex holds a site — is O(1) but silently
+/// wrong at the edges: `hornvale_worldgen::site_facet_for` places an address
+/// inside a cube-sphere quad around the vertex, and the cube-sphere quad mesh
+/// and the icosphere vertex mesh have been unrelated since The Pavement, so an
+/// address may land where [`containing_vertex`] answers with a NEIGHBOUR. Under
+/// that direction such a site would exist in the world's own listing and be
+/// unreachable at every facet, forever, with nothing red. The membership test
+/// below has no such edge, and it is the shape `Terrain::is_built` already uses
+/// for settlement territory.
 /// type-audit: bare-ok(count: walk_depth)
 pub fn brief_of(
     world: &World,
@@ -154,11 +174,34 @@ pub fn brief_of(
     place: &Facet,
     terrain: &dyn crate::liveness::Terrain,
     walk_depth: u32,
+    exotic_sites: &[StrangeSite],
 ) -> Brief {
     let locale = crate::depth::truncate_to_walk(place, walk_depth);
     let built = terrain.is_built(&locale);
     let cold = terrain.is_cold(&locale);
-    let site = built.then(|| Site::new(SiteKind::Settlement, None));
+    // Settlement wins where both hold — `Site::salience` is the presentation
+    // ordering and this is its production consequence (spec §6, Task 1).
+    //
+    // NOTE ON COST: like the occupation map below, this re-derives every placed
+    // site's address on every call — the budget caps placement at 1% of land
+    // vertices, so a miss walks the whole list. Same remedy if a profile ever
+    // shows it: hoist the placed set to the caller (`Session` already holds
+    // `built` exactly that way), never a cache inside a derivation.
+    let site = if built {
+        Some(Site::new(SiteKind::Settlement, None))
+    } else if exotic_sites.iter().any(|site| {
+        site_facet_for(
+            Vertex(site.vertex),
+            SiteReason::Exotic,
+            world.seed,
+            geo,
+            walk_depth,
+        ) == locale
+    }) {
+        Some(Site::new(SiteKind::Exotic, None))
+    } else {
+        None
+    };
     let alive = containing_vertex(&locale, geo, index)
         .and_then(|vertex| {
             // NOTE ON COST: this derives the whole per-vertex occupation map on

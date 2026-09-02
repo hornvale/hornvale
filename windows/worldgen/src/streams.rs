@@ -329,4 +329,48 @@ hornvale_kernel::stream_labels! {
     /// (decision 0102, The Salt, The Tolerance). `crate::hazard`'s private
     /// `event_key` is the one place the composed key is spelled.
     HAZARD_EVENT = "hazard/event/v1" => "the per-vertex hazard-event draw, keyed on (vertex, process, world-time block)";
+    /// Where a placed site lands within its geosphere vertex's territory (The
+    /// Prospect, Task 5) — the ADDRESS a site has, as against the vertex that
+    /// warrants it. Spelled by `crate::placement`'s private `placement_key`.
+    ///
+    /// **Why a draw and not a derivation.** A site is warranted at a geosphere
+    /// vertex, and level-6 vertices are 110-132 km apart; the facet a walker
+    /// stands on at the walk band is 1.126 km across. So a predicate that asks
+    /// "is a site here?" by thresholding the nearest vertex answers for the
+    /// whole 110 km neighbourhood at once. That is not a hypothetical: it is
+    /// `CLIM-water-label-resolution-vs-walk-band`, where all 81 facets of seed
+    /// 42's 6.4905 km flagship band draw the river glyph because `WaterKind` is
+    /// a per-vertex label read nearest-vertex rather than interpolated. The
+    /// project has already measured that failure once, so reproducing it for
+    /// sites would be adopting it knowingly. A site therefore gets a real
+    /// address — and an address the coarse fields cannot derive has to be
+    /// drawn. Decision 0537.
+    ///
+    /// **It serves caves as well as exotic sites, and that is why the label is
+    /// `site/` and not `exotic/`.** The campaign's spec claimed a cave needed
+    /// no draw because `hornvale_terrain::cave_proneness` is a pure function.
+    /// That is true of the function and false of its data: `material_at` and
+    /// `cave_proneness_at` are both `Vertex`-bound, so proneness exists only at
+    /// the same 110-132 km spacing everything else here does. One placement
+    /// mechanism serves both kinds rather than two mechanisms that would have
+    /// to agree.
+    ///
+    /// **Keyed on the VERTEX INDEX and the REASON.** The vertex index is a
+    /// fixed position in the geosphere lattice, never the order sites happen to
+    /// be enumerated in (decision 0102, and the fourth time this project has
+    /// met that wall). The reason — cave or exotic — is a role word, the same
+    /// discipline [`ENTRANCE_MOUTH`] and [`BAND_DESCENT`] apply when one place
+    /// answers two independent questions: without it a vertex that warrants
+    /// both a cave and an exotic site would place both at the identical facet,
+    /// every time, which is a regularity of exactly the kind the draw exists to
+    /// destroy.
+    ///
+    /// **A NEW LABEL, so nothing is an epoch under it.** Nothing derived from
+    /// `site/placement/*` before this campaign, so no world that exists today
+    /// consumed a draw under it, and no existing stream's consumption order
+    /// moves (`domains/CLAUDE.md`: a new label is safe, a changed or reused one
+    /// is an epoch). What DOES change is downstream of the label, not through
+    /// it: a `Brief` now reports an exotic site at one facet per placed vertex
+    /// instead of at none.
+    SITE_PLACEMENT = "site/placement/v1" => "where a placed site lands within its vertex's territory, keyed on (vertex, reason)";
 }

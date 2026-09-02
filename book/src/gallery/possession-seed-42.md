@@ -114,7 +114,7 @@ No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
   legend: Doaba, buttressed canopy, sun-warmed, damp, tropical seasonal forest
 
 > enter
-Nothing here is built; there is nothing to enter.
+There is nothing here to enter.
 > look
 [room 3733134593, day 0.16425]
 Tropical seasonal forest — a liana tangle, sun-warmed, damp, in a hollow — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.

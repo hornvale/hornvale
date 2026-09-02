@@ -237,6 +237,7 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `chamber/band-descent/v1` | which branches of an adjacent band one branch connects to, keyed on (vertex, branch, band, role) |
 | `volcano/v1` | the volcano-identity derivation, keyed on the edifice's source contact vertex |
 | `hazard/event/v1` | the per-vertex hazard-event draw, keyed on (vertex, process, world-time block) |
+| `site/placement/v1` | where a placed site lands within its vertex's territory, keyed on (vertex, reason) |
 
 ### hornvale-kernel (internal)
 
