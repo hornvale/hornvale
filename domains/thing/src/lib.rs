@@ -610,17 +610,22 @@ mod tests {
     /// unconditional registration (delete the whole `match
     /// registry.concept(label) { ... }` and go back to registering every
     /// `THING_KINDS` label under domain `thing` regardless of what is
-    /// already there). Red observed (via `concept_doc`'s own
-    /// `unreachable!`, since it has no gloss for `hearth` any more --
-    /// `hearth` never reaches it under the real guard, so restoring
-    /// unconditional registration trips that safety net before it can even
-    /// reach the `ConflictingDefinition` `register_manifest` would
-    /// otherwise return):
+    /// already there). Red observed (via `register_concepts`'s own doc-lookup
+    /// `unreachable!`, since `hearth`'s row carries no gloss -- `hearth`
+    /// never reaches it under the real guard, so restoring unconditional
+    /// registration trips that safety net before it can even reach the
+    /// `ConflictingDefinition` `register_manifest` would otherwise return).
+    ///
+    /// **Correction (Fix Round 1): this red used to quote `concept_doc`'s own
+    /// `unreachable!` message verbatim. Task 1 deleted that function and
+    /// moved its safety net into `register_concepts`'s doc-lookup -- the
+    /// quoted text below is what the mutation actually produces now,
+    /// re-run at HEAD:**
     ///
     /// ```text
-    /// thread 'tests::hearth_maps_to_an_existing_owner_instead_of_conflicting' panicked at domains/thing/src/lib.rs:218:18:
-    /// internal error: entered unreachable code: concept_doc has no gloss for thing-kind "hearth" -- it is either missing from THING_KINDS/concept_doc, or it is BORROWED and should never reach this function
-    /// test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1 filtered out
+    /// thread 'tests::hearth_maps_to_an_existing_owner_instead_of_conflicting' panicked at domains/thing/src/lib.rs:365:17:
+    /// internal error: entered unreachable code: "hearth" reached thing's own registration with no gloss -- it is either missing from THING_KINDS/thing_registry, or it is BORROWED and should never reach this branch
+    /// test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 10 filtered out
     /// ```
     #[test]
     fn hearth_maps_to_an_existing_owner_instead_of_conflicting() {
@@ -754,19 +759,27 @@ mod tests {
     ///
     /// MUTATION THIS MUST FAIL AGAINST: revert `register_concepts` to the
     /// bare `if registry.concept(label).is_some() { continue; }` skip
-    /// (Fix Round 1's original shape). Under that mutation this test's
-    /// `#[should_panic]` fails: `hearth` is absent from a fresh registry, so
-    /// the bare skip's condition is false and the old code falls through to
-    /// `concept_doc("hearth")` -- which panics too, but on the wrong thing
-    /// (its own `unreachable!`, since `concept_doc` no longer glosses a
-    /// BORROWED label), so `#[should_panic(expected = "delete the stale
-    /// declaration")]` still fails to match. Red observed:
+    /// (an earlier fix round's original shape). Under that mutation this
+    /// test's `#[should_panic]` fails: `hearth` is absent from a fresh
+    /// registry, so the bare skip's condition is false and the code falls
+    /// through to the doc-lookup for `hearth`'s row -- which panics too, but
+    /// on the wrong thing (`register_concepts`'s own `unreachable!`, since
+    /// `hearth`'s row carries no gloss), so `#[should_panic(expected =
+    /// "delete the stale declaration")]` still fails to match.
+    ///
+    /// **Correction (Fix Round 1): this red used to quote `concept_doc`'s own
+    /// `unreachable!` message verbatim. Task 1 deleted that function and
+    /// moved its safety net into `register_concepts`'s doc-lookup -- the
+    /// quoted text below is what the mutation actually produces now,
+    /// re-run at HEAD:**
     ///
     /// ```text
-    /// thread 'tests::stale_declaration_panics_if_nothing_collides' panicked at domains/thing/src/lib.rs:218:18:
-    /// internal error: entered unreachable code: concept_doc has no gloss for thing-kind "hearth" -- it is either missing from THING_KINDS/concept_doc, or it is BORROWED and should never reach this function
+    /// thread 'tests::stale_declaration_panics_if_nothing_collides' panicked at domains/thing/src/lib.rs:368:17:
+    /// internal error: entered unreachable code: "hearth" reached thing's own registration with no gloss -- it is either missing from THING_KINDS/thing_registry, or it is BORROWED and should never reach this branch
     /// note: panic did not contain expected string
-    /// test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1 filtered out
+    ///       panic message: "internal error: entered unreachable code: \"hearth\" reached thing's own registration with no gloss -- it is either missing from THING_KINDS/thing_registry, or it is BORROWED and should never reach this branch"
+    ///  expected substring: "delete the stale declaration"
+    /// test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 10 filtered out
     /// ```
     #[test]
     #[should_panic(expected = "delete the stale declaration")]
