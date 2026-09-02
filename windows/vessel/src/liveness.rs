@@ -2854,9 +2854,9 @@ pub(crate) fn next_awake_day(
     // task's conversion, still present here on the sleep side (a fidelity
     // finding this campaign reports rather than converts; see [`REST_BOUT`]'s
     // own doc for the measured near-miss at the legal extreme).
-    /// plumb: per-world(caps a physical search duration in STANDARD days rather than the world's own local day — the same axis REST_BOUT was on before its conversion)
+    /// plumb: per-world(caps a physical search duration in STANDARD days rather than the world's own local day — the same axis REST_BOUT was on before its conversion; falsifier: a_rest_and_a_sleep_on_the_slowest_legal_world_are_measured_not_assumed)
     const SCAN_LIMIT: TickSpan = TickSpan::from_ticks(WorldTime::TICKS_PER_STD_DAY * 3 / 2);
-    /// plumb: per-world(the give-up fallback's own span, also denominated in a STANDARD day rather than the world's own local day)
+    /// plumb: per-world(the give-up fallback's own span, also denominated in a STANDARD day rather than the world's own local day; this is the constant the measured rest/sleep inversion actually names — falsifier: a_rest_and_a_sleep_on_the_slowest_legal_world_are_measured_not_assumed)
     const ONE_DAY: TickSpan = TickSpan::from_ticks(WorldTime::TICKS_PER_STD_DAY);
     let limit = day + SCAN_LIMIT;
     let mut t = day + WAKE_SCAN_STEP;
