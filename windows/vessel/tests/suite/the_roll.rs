@@ -27,6 +27,11 @@ fn company_at(seed: u64) -> Option<(bool, bool)> {
 /// `seed_42_starts_in_company` below, which replaced the
 /// `seed_42_starts_alone_today` pin this sentence used to point at.
 ///
+/// **The Task 14 reading, 2026-09-02, after the roll: seeds built 64, with
+/// company 64, population>=2 64.** The prediction held exactly — every seed
+/// whose home settlement can hold company now does, and there is no seed at
+/// which the two numbers disagree.
+///
 /// Ignored for cost: 64 world builds is ~4 min (`ooc_objective.rs:572`
 /// measured a full miss at 233.72 s). Run by hand at Task 1 and Task 14.
 ///
@@ -46,6 +51,82 @@ fn company_across_the_sight_seeds() {
         could += usize::from(can);
     }
     println!("M1: seeds built {built}, with company {with_company}, population>=2 {could}");
+}
+
+/// One seed's reading for M5: after three unattended days at the flagship, do
+/// two residents of the home settlement stand in different rooms?
+///
+/// The observable is co-location with the driven body, which is itself a
+/// resident (ordinal 0, decision 0227): `Session::colocated_entities` is the
+/// unfiltered "who is at my room" read — `agent_position(..) == position()`,
+/// the same predicate `sensed.present` keys on, without sight's narrowing —
+/// so a resident missing from it stands somewhere the driven one does not.
+/// That is "two residents in different rooms" stated in the only terms an
+/// integration test can ask: the session's own ledger is private, so
+/// `liveness::agent_position` cannot be called from out here.
+///
+/// `None` for a seed that does not build or has no flagship village;
+/// `Some(false)` for a settlement of one, which cannot separate at all.
+fn separated_at(seed: u64) -> Option<bool> {
+    let world = common::build(seed)?;
+    let (mut session, _) = Session::start(&world, &PossessOpts::default()).ok()?;
+    // Three bare `wait`s: one world day each (`Session::wait`'s empty-argument
+    // default), so this is spec §8's "by the end of day 3".
+    for _ in 0..3 {
+        let _ = session.handle("wait");
+    }
+    let driven = session.driven_body().entity;
+    let home = session.driven_body().village.as_ref()?.id;
+    let residents: Vec<_> = session
+        .bodies()
+        .iter()
+        .filter(|b| b.village.as_ref().is_some_and(|v| v.id == home))
+        .map(|b| b.entity)
+        .collect();
+    if residents.len() < 2 {
+        return Some(false);
+    }
+    let here = session.colocated_entities();
+    Some(residents.iter().any(|e| *e != driven && !here.contains(e)))
+}
+
+/// M5, the preregistered count (spec §8): across `SIGHT_SEEDS`, the number of
+/// seeds in which the drawn per-resident deviation (§3.3) has visibly pulled
+/// the settlement apart by the end of day 3 — two residents of the home
+/// settlement standing in different rooms.
+///
+/// **No prediction beyond `> 0`, and a zero is a finding rather than a
+/// failure**: the mechanism perturbs deliberation and boldness, not
+/// destination, so it may well be that the dials alone do not separate a
+/// blob. Task 7 already measured one reason a seed can read zero that has
+/// nothing to do with individuation — seed 42's flagship condenses onto fresh
+/// water, so its residents drink in place and never commit a position at all.
+///
+/// **The reading, 2026-09-02: seeds built 64, residents-separated 16.** The
+/// null did not occur; a quarter of the probe's worlds show a settlement that
+/// has come apart across a room boundary within three days. What the count
+/// does NOT establish is attribution — it is separation, which is what §8
+/// preregistered, not a controlled comparison against an unperturbed roll.
+///
+/// Ignored for the same cost as `company_across_the_sight_seeds` above (64
+/// world builds; the three waits per seed are ~0.2 s beside a ~4 s build) and
+/// carrying the identical reason string, so the frozen untokenised-ignore
+/// roster (`cli/tests/suite/heavy_tier.rs`) is a set this does not widen.
+///
+/// claim: rate(M5: two residents in different rooms by day 3, over SIGHT_SEEDS)
+#[test]
+#[ignore = "cost: 64 world builds (~4 min); run by hand at stage boundaries, results in the ledger"]
+fn separation_across_the_sight_seeds() {
+    let mut separated = 0usize;
+    let mut built = 0usize;
+    for seed in common::SIGHT_SEEDS {
+        let Some(apart) = separated_at(seed) else {
+            continue;
+        };
+        built += 1;
+        separated += usize::from(apart);
+    }
+    println!("M5: seeds built {built}, residents-separated {separated}");
 }
 
 /// Seed 42's world, locale context, world components, and flagship village —
