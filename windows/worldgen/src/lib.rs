@@ -674,9 +674,7 @@ pub fn biome_class_of_formation(
         | Formation::Vent
         | Formation::Upwelling
         | Formation::OpenWater
-        | Formation::KarstCave
-        | Formation::LavaTube
-        | Formation::FractureCave => BiomeClass::Barren,
+        | Formation::Cave(_) => BiomeClass::Barren,
     }
 }
 

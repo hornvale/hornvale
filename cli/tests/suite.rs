@@ -25,8 +25,6 @@ mod branches_coverage;
 mod branches_identity;
 #[path = "suite/build_path_embedding.rs"]
 mod build_path_embedding;
-#[path = "suite/cave_kind_correspondence.rs"]
-mod cave_kind_correspondence;
 #[path = "suite/census_duration.rs"]
 mod census_duration;
 #[path = "suite/claim_shape.rs"]

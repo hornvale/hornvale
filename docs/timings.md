@@ -4748,3 +4748,5 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-02T01:54:59Z | quick | 19.926 | 14.255 | 0.902 | 0.76 | 0 | eab196319 | campaign/the-hallmark | ambrose | 12 |
 | 2026-09-02T02:07:22Z | quick | 28.177 | 15.920 | 1.009 | 0.60 | 0 | 6db1a664a | campaign/the-hallmark | ambrose | 12 |
 | 2026-09-02T02:23:10Z | gate-commit | 259.802 | 120.717 | 90.747 | 0.81 | 0 | 6db1a664a | campaign/the-hallmark | ambrose | 12 |
+| 2026-09-02T10:22:52Z | gate-commit | 200.543 | 106.330 | 62.395 | 0.84 | 0 | 430477da3 | campaign/the-hallmark | ambrose | 12 |
+| 2026-09-02T10:46:57Z | quick | 20.195 | 14.350 | 0.870 | 0.75 | 0 | 4a11f087a | campaign/the-hallmark | ambrose | 12 |

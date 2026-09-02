@@ -741,7 +741,7 @@ pub fn variant_pool(
         // their own once something distinguishes karst/lava-tube/fracture
         // interiors by prose. An empty pool is the documented "not yet"
         // (`variant_at_vertex` already treats an empty pool as `None`).
-        (Formation::KarstCave | Formation::LavaTube | Formation::FractureCave, _) => &[],
+        (Formation::Cave(_), _) => &[],
     }
 }
 

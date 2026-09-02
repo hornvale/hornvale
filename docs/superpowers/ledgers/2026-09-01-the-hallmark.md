@@ -340,3 +340,60 @@ Capture: this entry; the `DOM-era-day-axis` registry row re-scored to
 doc comments corrected. The `pending(wave-2: day)` type-audit tags are
 deliberately UNCHANGED — the blocker is discharged, the `WorldTime` retype
 is Task 15's job and this task retyped nothing.
+
+#16 [T14] — Executing ruling #14's second half: `Formation`'s cave half
+(ledger #11's projection) is UNIFIED with the kernel's `CaveKind`
+structurally, as `Formation::Cave(CaveKind)`, replacing the three-variant
+`KarstCave`/`LavaTube`/`FractureCave` roster · Action taken:
+`domains/climate/src/facets.rs` — the three variants collapse into one
+`Cave(CaveKind)` tuple variant, doc-commented to cite decision 0517 clause
+(a) and this ruling, superseding ledger #11's projection rationale, and to
+state explicitly that the frozen corpus spellings
+(`"karst-cave"`/`"lava-tube"`/`"fracture-cave"` in `axes.rs`/
+`underworld.rs`) are freestanding literals with zero linkage to the enum
+and do not move; `use hornvale_kernel::CaveKind;` added. Every grouped arm
+the compiler named followed: `facets.rs`'s `biome()` `unreachable!` arm,
+`variants.rs:744`'s empty-pool arm, `windows/worldgen/src/lib.rs:677-679`'s
+`BiomeClass::Barren` arm, `windows/locale/src/surface.rs:148-150`'s `0.0`
+arm — all four collapse their three-variant patterns to
+`Formation::Cave(_)`. The compiler surfaced no other site: a full
+`cargo build --workspace --all-targets` after the edit found nothing
+further to fix · Step 3 (the correspondence test): DELETED
+`cli/tests/suite/cave_kind_correspondence.rs` (and its `mod` wiring in
+`cli/tests/suite.rs`) with a pointer to
+`windows/worldgen/src/delve_seating.rs`'s `every_cave_kind_matches_a_corpus_genus`
+and `the_genus_extends_the_cave_kinds_own_name` tests in the commit
+message. Judgment: the deleted test asserted only that `CaveKind`'s three
+values map to three *distinct* `Formation` values — a claim the embed now
+makes structurally true (two different `CaveKind`s wrapped in the same
+`Formation::Cave` variant are unequal by construction), so the test had
+become an assertion about the type system rather than about the program.
+It never touched the corpus-spelling join (`genus_of`), which operates on
+`CaveKind` directly and was untouched by this change; that join's coverage
+— every `CaveKind` reaches a genus string (`genus_of`'s exhaustive, no
+wildcard, match), every emitted genus occurs in the corpus
+(`every_cave_kind_matches_a_corpus_genus`'s `rows > 0` per kind), and the
+mapping is not transposed (`the_genus_extends_the_cave_kinds_own_name`) —
+already pinned the map in both directions asked about, independent of
+`Formation`'s shape, both before and after this task · Lexicon check:
+`book/src/reference/lexicon-of-place.md` names none of the three variants
+(`grep` empty), so nothing to update there and `docs_consistency` needed
+no re-run beyond the full suite pass below · Verdicts (Step 4): `git status
+--porcelain book/src/laboratory/generated/
+docs/audits/system-coverage-wolverson-2021.md clients/` — empty;
+`cargo run --quiet --manifest-path tools/placement-audit/Cargo.toml --
+check` — exit 0 (`Formation` and `CaveKind` still differ in member sets:
+`Formation` carries ~19 other variants beside `Cave`, so embedding one
+inside the other does not make the two enums shape twins) · Verification:
+`cargo build --workspace --all-targets` clean; `cargo fmt --check` and
+`cargo clippy --workspace --all-targets -- -D warnings` clean; `make
+quick` rc=0; `cargo run --manifest-path tools/type-audit/Cargo.toml --
+report` and the `placement-audit` report both diffed byte-identical
+against their committed artifacts (no new bare primitive at the pub
+boundary — `CaveKind` is a typed enum, not a primitive); `cargo nextest
+run -p hornvale-climate -p hornvale-worldgen -p hornvale-locale -p
+hornvale-vessel` — 1916 passed, 0 failed, 121 skipped; `cargo nextest run
+-p hornvale` (the workspace-wide enforcement suite, including
+`architecture`, `docs_consistency`, `generated_paths`) — 414 passed, 0
+failed, 11 skipped; doctests for all four scoped crates — 0 tests, all
+green (none carry doc examples) · Capture: this entry.

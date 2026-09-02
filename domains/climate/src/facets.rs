@@ -4,7 +4,7 @@
 //! unaffected.
 
 use crate::Biome;
-use hornvale_kernel::Horizon;
+use hornvale_kernel::{CaveKind, Horizon};
 
 /// What fills a realm. A realm is `(medium, access, strata)`, never an
 /// enumerated world, so a later sky realm — or an elemental plane — is a new
@@ -203,24 +203,22 @@ pub enum Formation {
     Upwelling,
     /// Open sea with no distinguishing community — the marine default.
     OpenWater,
-    /// Carbonate dissolution (wet limestone). Mirrors
-    /// `hornvale_kernel::CaveKind::Karst` — kept as climate's own corpus
-    /// vocabulary; the spellings genuinely differ (see
-    /// `windows/worldgen`'s `genus_of`), so this is a deliberate projection
-    /// under decision 0517 clause (a), not a forced duplicate (climate may
-    /// not import terrain, and the corpus strings this variant feeds —
-    /// `axes.rs`/`underworld.rs`'s `"karst-cave"` etc. — are hand-authored
-    /// across a 22-row corpus, not produced by a spelling table an embed
-    /// could preserve mechanically).
-    KarstCave,
-    /// A drained basaltic/volcanic tube. Mirrors
-    /// `hornvale_kernel::CaveKind::LavaTube` — see [`Formation::KarstCave`]
-    /// for why this stays a projection rather than an embed.
-    LavaTube,
-    /// A fault/fracture void in tectonically active rock. Mirrors
-    /// `hornvale_kernel::CaveKind::Fracture` — see [`Formation::KarstCave`]
-    /// for why this stays a projection rather than an embed.
-    FractureCave,
+    /// A cave, by the lithologic process that opened it — the kernel's own
+    /// [`CaveKind`] roster, embedded directly rather than mirrored.
+    ///
+    /// This supersedes the three-variant projection (`KarstCave`/`LavaTube`/
+    /// `FractureCave`) ledger #11 chose when `CaveKind` first moved to the
+    /// kernel under decision 0517 clause (a): Nathan's G6 unification ruling
+    /// (ledger #14, 2026-09-02) overrides that adjudication and unifies the
+    /// two structurally, since `Formation` and `CaveKind` now name the same
+    /// three cave kinds and nothing about the embed touches the corpus.
+    /// **The frozen corpus spellings stay climate's own** — `"karst-cave"`/
+    /// `"lava-tube"`/`"fracture-cave"` in `axes.rs`/`underworld.rs` are
+    /// freestanding string literals with zero linkage to this variant (the
+    /// join from a `CaveKind` to its corpus genus is
+    /// `windows/worldgen`'s `genus_of`, untouched by this change) — so no
+    /// committed byte moves.
+    Cave(CaveKind),
 }
 
 /// A room's biome as a faceted expression. This is the truth; [`crate::Biome`]
@@ -311,7 +309,7 @@ impl BiomeExpr {
             // through it — caves are a new realm outside the pre-Stratum
             // taxonomy `Biome` projects (The Deep Realm, decision 0094).
             // Named explicitly, rather than wildcarded.
-            Formation::KarstCave | Formation::LavaTube | Formation::FractureCave => unreachable!(
+            Formation::Cave(_) => unreachable!(
                 "cave formations have no legacy Biome projection; biome() is \
                  never called with one"
             ),
