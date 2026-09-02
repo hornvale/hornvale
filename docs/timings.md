@@ -4737,3 +4737,8 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-02T04:30:31Z | gate-commit | 25.787 | 84.517 | 14.869 | 3.85 | 0 | c6bf4601a | campaign/the-avowal | MacBookPro | 10 |
 | 2026-09-02T05:04:03Z | gate-commit | 43.183 | 90.829 | 15.963 | 2.47 | 0 | 1eb78c640 | campaign/the-avowal | MacBookPro | 10 |
 | 2026-09-02T05:36:52Z | gate-commit | 44.656 | 91.054 | 16.115 | 2.40 | 0 | e49e15311 | campaign/the-avowal | MacBookPro | 10 |
+| 2026-09-02T01:38:25Z | sluice:artifacts | 137.149 | 1243.523 | 63.869 | 9.53 | 0 | 74e4ebf52 |  | lefford | 40 |
+| 2026-09-02T01:39:19Z | sluice:outboard | 54.032 | 32.135 | 43.537 | 1.40 | 0 | d5bebe970 |  | lefford | 40 |
+| 2026-09-02T01:48:52Z | sluice:gate | 572.052 | 17213.745 | 574.068 | 31.09 | 0 | c7e722b19 |  | lefford | 40 |
+| 2026-09-02T01:58:44Z | sluice:clients | 592.319 | 10119.347 | 111.023 | 17.27 | 0 | cde46aaf9 |  | lefford | 40 |
+| 2026-09-02T02:06:30Z | sluice:heavy | 465.141 | 9640.624 | 172.688 | 21.10 | 0 | 300f31fad |  | lefford | 40 |
