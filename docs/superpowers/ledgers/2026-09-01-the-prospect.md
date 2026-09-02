@@ -327,3 +327,72 @@ scope for without following the consequence through to the key.
 
 **Cost if wrong:** none; both changes are strictly more correct than what I
 wrote.
+
+### #16 [G5] — the reverse lookup would have silently lost a THIRD of every world's sites
+
+Task 5's implementer avoided an O(1) facet→site reverse and used a membership
+test, flagging that the reverse would be "silently wrong at territory edges."
+The reviewer instrumented it against seed 42 rather than accepting the note:
+
+```
+reverse_mismatch = 37 of 103   (36%)
+naive_center_mismatch = 37     (same 36%)
+found_exotic = 103, shadowed = 0
+```
+
+**36%, not an edge case.** And the second number is the important one: even
+placing a site at the facet containing its own vertex resolves back to a
+DIFFERENT vertex 36% of the time, so the draw is not the cause. `containing_vertex`
+takes the max of `Facet::corner_weights` — a cube-sphere quad interpolation, not
+a nearest-vertex query — and since The Pavement the quad mesh and the vertex
+mesh are unrelated objects.
+
+So the rejected shortcut would have dropped a third of every world's exotic
+sites with nothing red, in a campaign whose entire subject is findability. The
+membership direction has no such hole: all 103 found at their exact facet, none
+shadowed.
+
+**Kept because the reasoning generalises:** any facet→vertex→answer lookup in
+this repo now inherits a 36% error, and `CLIM-water-label-resolution-vs-walk-band`
+is the same defect from the other side. Two campaigns have now been bitten by
+the two meshes being unrelated; the next one should assume it rather than
+discover it.
+
+### #17 [G5] — I1 and I2 enter the fix loop; I3 is a plan gap I am ruling into Task 8
+
+**I1 — `placement_key`'s wire spelling is an unpinned save-format contract.**
+Its own doc says the spelling is a contract, and five sibling keys in the same
+crate each pin theirs (`volcano.rs:579`, `hazard.rs:1129`, `chamber.rs:1768`,
+`:2524`, `:3397`). This one does not. A refactor of `"cell/{}/{}"` would move
+every site in every world with nothing red. **Fix.**
+
+**I2 — nothing pins the placement DRAW.** All four unit tests are
+self-consistency checks that stay green under a changed depth constant or a
+reordered draw, and because addresses are derived-not-stored, no committed
+artifact witnesses one. **Fix** with the one-line golden the reviewer names.
+
+**I3 — two readouts of one site now disagree by a mean 19.7 km (max 42.5 km),
+and no task closes it.** `strange_site_rows` and the CLI's `--strange` listing
+report a site at its VERTEX's lat/lon; the walker finds it only at the placed
+facet. Task 8 covers the game map and nothing covers the textual listing.
+
+**Ruling:** I3 goes into Task 8, whose scope widens from "the map draws sites"
+to "every readout of a site agrees on where it is." Not deferred: for a campaign
+about findability, shipping a prose readout that points 20 km from the only
+facet where a site exists would be the exact failure the campaign exists to
+remove, and it is a gap this campaign CREATED.
+
+**Cost if wrong:** Task 8 grows. Cheaper than a follow-on campaign to reconcile
+two readouts nobody noticed disagreed.
+
+### #18 [G5] — Task 3 closed without rebaselining a rendered string
+
+Verified, not inferred: Task 3 changed the `enter` refusal at `session.rs:5163`
+and `book/src/gallery/possession-seed-42.md` carries exactly that one line,
+first touched since by Task 5's rebaseline. Task 5's attribution is correct.
+
+The finding is a process one: **a task that changes rendered output owes a
+rebaseline before it closes**, and Task 3's review did not ask for one because
+the plan's verify list did not name it. Task 3 is complete and this is not worth
+reopening — but every remaining task that touches prose or the map (6, 7, 8)
+gets a rebaseline in its dispatch, and the final review inherits the check.
