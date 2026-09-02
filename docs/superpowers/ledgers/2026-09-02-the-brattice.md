@@ -561,3 +561,69 @@ prose uses were reworded to "entry" (the file leaves the inventory) and
 
 Commits: `9bde38c54` (the pass) and `118058d51` (the gate's timings rows).
 `gate-commit` rc=0, wall 352.190 s, 3,881 tests green.
+
+## Task 1 - fix round 2 (controller rulings D, E) - COMPLETE
+
+`cargo test -p hornvale-worldgen` -> **488 passed, 0 failed** (lib) plus 3 / 348 / 0;
+`cargo clippy --workspace --all-targets -- -D warnings` clean; type-audit rc=0.
+The seed-42 circuit panel is **byte-identical** to its post-Ruling-A state, so
+neither D nor E moves a readout - they change what is stamped, never the graph.
+
+**Ruling D - `Side::Descending`, a third side naming `path_b` by GEOMETRY
+rather than by length; row 8 `the-chute`'s `GateSpec` moved onto it** - **why:**
+naming the chute's side by length was the defect. Under `ShortLong`, `sides()`
+puts `Side::Short` on `path_a` - the same-floor existing segment, all `Passage`
+edges, never a `Stair` - so `DownFreeUpNeeds` refused 717 of the row's 823
+draws with `NoRoom` and 55 more with `Claimed`, while the row sat in the
+inventory looking live. Only `path_b` ever leaves the anchor level, so the
+drop belongs on the path that descends whatever its length - **cost if wrong:**
+a row that claims a same-floor passage as if it were a stair. Guarded by
+`every_key_row_places_a_key_and_no_natural_row_does`, which now also refuses
+any row using `Side::Descending` on a span that is not `CrossFloor` (checked
+across `gates`, `key`, `hazard` and `persistence`, not just `gates`).
+
+Measured: row 8 goes from **51 applied / 55 Claimed / 717 NoRoom** to
+**823 applied / 0 / 0**, and the chute count in the failing test's own slice
+(60 seeds, LavaTube, WildCave, vertex 2) goes from **1 to 31** - the "thin by
+a margin of one placement" concern is closed, not merely passed.
+
+**Ruling E - row 10 `the-landing-hall` removed; the inventory is nine rows** -
+**why:** `ShortShort x CrossFloor` is structurally empty. A cross-floor
+`path_b` is laid with at least 3 edges (`[u, lu, ...interior..., le, end]`), so
+a realm that crosses a floor can never have both paths short, and spec §3.2
+forbids a row nothing selects ("a pattern nothing selects is dead data, not
+inventory") - **cost if wrong:** an inventory row that reads as coverage and
+provides none. `the_inventory_is_frozen_at_ten_rows` is renamed
+`the_inventory_is_frozen_at_nine_rows`, asserts 9, and additionally refuses the
+removed name reappearing without the count moving. The module doc and the
+`CYCLE_PATTERNS` doc both record the removal and its reason.
+
+**The standard is now mechanical, not a one-off measurement.** New test
+`no_row_is_dead_data` (`claim: structural(seed: 0..100)`, 100 seeds x 3 kinds x
+3 characters x 2 vertices = 1,800 plans) asserts every row index appears at
+least once among `Outcome::Applied`. It passes on all nine. A row that goes
+dead under a later grammar change now reds here instead of sitting in a
+healthy-looking table - which is exactly the failure mode Task 1 found by hand
+and could only find by hand.
+
+### Per-row outcome table after D and E, same 4,412-realm sample
+
+```
+  #  row                           drew  applied  Claimed  NoRoom  Unsolvable
+  1  two-alternative-paths          137      137        0       0           0
+  2  hidden-shortcut                 24       24        0       0           0
+  3  dangerous-route                 39       39        0       0           0
+  4  lock-and-key-cycle             506      464       42       0           0
+  5  the-sump                       810      759       51       0           0
+  6  patrol-path                    333      318       15       0           0
+  7  blocked-retreat               1341     1334        7       0           0
+  8  the-chute                      823      823        0       0           0
+  9  key-downstairs-lock-upstairs   399      362       37       0           0
+     Inadmissible (no row admitted the realm):  0
+```
+
+4,260 of 4,412 realms carry an applied pattern; the remaining 152 are
+`Claimed` - a nested realm reaching for an edge its parent already took, which
+is the mechanism working. **`NoRoom` and `Unsolvable` are now zero across the
+whole sample**, so both rollback paths remain exercised only by construction;
+that is unchanged from round 1 and still worth knowing before trusting them.

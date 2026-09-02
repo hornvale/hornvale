@@ -11,6 +11,11 @@
 //! FRAME-tier (decision 0069): derived with the plan, never serialized. The
 //! one save-format consequence (spec §5) is that a descent key's IDENTITY is
 //! a plan position, so a later grammar change is a real epoch.
+//!
+//! The inventory is **nine** rows, not the ten the spec froze at G3: the
+//! tenth, `the-landing-hall`, named a combination (`ShortShort` x cross-floor)
+//! that the growth grammar cannot produce, and spec §3.2 forbids a row nothing
+//! selects. `no_row_is_dead_data` holds every surviving row to that standard.
 
 use crate::character::Character;
 use crate::circuit::{DescentPlan, EdgeKind, LengthClass, NodeId, Realm};
@@ -140,6 +145,10 @@ pub enum Side {
     Long,
     /// The shorter path (or `path_b` on a tie).
     Short,
+    /// The path that changes floor: `path_b` of a cross-floor realm. Only
+    /// meaningful with [`Span::CrossFloor`]; the drop belongs on the path
+    /// that descends, whichever length it has.
+    Descending,
 }
 
 /// Which end of a path, by `depth`: the shared endpoint nearer the entrance
@@ -219,7 +228,14 @@ pub struct CyclePattern {
 
 use LengthClass::{LongLong, LongShort, ShortLong, ShortShort};
 
-/// The inventory, frozen at G3 (spec §3.2). Ten rows; the count is asserted.
+/// The inventory, frozen at G3 (spec §3.2). **Nine rows; the count is
+/// asserted.** The tenth, `the-landing-hall` (`ShortShort` x
+/// [`Span::CrossFloor`]), was removed in execution because that combination is
+/// empty by construction — a cross-floor `path_b` is laid with at least 3 edges,
+/// so a realm that crosses a floor can never have both paths short — and spec
+/// §3.2 forbids a row nothing selects ("a pattern nothing selects is dead
+/// data, not inventory"). [`ShortShort`] survives on `patrol-path`, which is
+/// same-floor. Every surviving row is pinned live by `no_row_is_dead_data`.
 pub const CYCLE_PATTERNS: &[CyclePattern] = &[
     CyclePattern {
         name: "two-alternative-paths",
@@ -302,19 +318,24 @@ pub const CYCLE_PATTERNS: &[CyclePattern] = &[
         hazard: None,
         persistence: Some((Side::Long, Slot::Near, Persistence::Collapsing)),
     },
-    // Ruling B (The Brattice): widened from the organon's single `LongShort`
-    // entry to every cross-floor class. A drop needs a floor below, not a
-    // short lower path, and that entry is structurally rare — a
+    // Rulings B and D (The Brattice): widened from the organon's single
+    // `LongShort` entry to every cross-floor class, and the gate moved from
+    // `Side::Short` to `Side::Descending`. A drop needs a floor below, not a
+    // short lower path, and the organon's entry is structurally rare — a
     // cross-floor `path_b` is laid with at least 3 edges against a `path_a`
-    // of at most 3, so `LongShort` is 20 of 4,412 realms. `name` and
-    // `source` are provenance and are unchanged; the count stays 10.
+    // of at most 3, so `LongShort` is 20 of 4,412 realms. Naming the side by
+    // LENGTH was the defect Ruling D closes: under `ShortLong`, `sides()`
+    // puts `Side::Short` on `path_a`, the same-floor existing segment, which
+    // is all `Passage` edges and never a `Stair` — so 717 of the row's 823
+    // draws refused with `NoRoom` while looking like inventory. `name` and
+    // `source` are provenance and are unchanged.
     CyclePattern {
         name: "the-chute",
         source: "Crosscut organon, PREDICTED (long a / short b, two floors)",
         classes: &[LongShort, ShortLong, LongLong],
         span: Span::CrossFloor,
         gates: &[GateSpec {
-            side: Side::Short,
+            side: Side::Descending,
             slot: Slot::Near,
             way: WaySpec::DownFreeUpNeeds(ReqKind::Natural),
         }],
@@ -339,16 +360,6 @@ pub const CYCLE_PATTERNS: &[CyclePattern] = &[
         hazard: None,
         persistence: None,
     },
-    CyclePattern {
-        name: "the-landing-hall",
-        source: "Crosscut organon, PREDICTED (short a / short b, two floors); Alexander 133",
-        classes: &[ShortShort],
-        span: Span::CrossFloor,
-        gates: &[],
-        key: None,
-        hazard: None,
-        persistence: None,
-    },
 ];
 
 /// Which side each path is, from the class (spec §3.2: ties give `path_a`
@@ -361,6 +372,13 @@ pub fn sides(class: LengthClass) -> (Side, Side) {
 }
 
 fn path_of(realm: &Realm, side: Side, class: LengthClass) -> &[NodeId] {
+    // The descending side is named by its geometry, not by its length: only
+    // `path_b` ever leaves the anchor level (`try_cycle`'s cross-floor
+    // branch is the sole constructor that does), so a row asking for the
+    // path that drops asks for `path_b` at any class.
+    if side == Side::Descending {
+        return &realm.path_b;
+    }
     let (a_side, _) = sides(class);
     if side == a_side {
         &realm.path_a
@@ -789,16 +807,20 @@ mod tests {
     }
 
     #[test]
-    fn the_inventory_is_frozen_at_ten_rows() {
+    fn the_inventory_is_frozen_at_nine_rows() {
         assert_eq!(
             CYCLE_PATTERNS.len(),
-            10,
-            "spec §3.2: ten rows, frozen at G3"
+            9,
+            "spec §3.2 froze ten at G3; `the-landing-hall` was removed in execution because ShortShort x CrossFloor is empty by construction"
         );
         let mut names: Vec<&str> = CYCLE_PATTERNS.iter().map(|p| p.name).collect();
         names.sort_unstable();
         names.dedup();
-        assert_eq!(names.len(), 10, "pattern names are unique");
+        assert_eq!(names.len(), 9, "pattern names are unique");
+        assert!(
+            !names.contains(&"the-landing-hall"),
+            "the removed row is back without the count moving"
+        );
     }
 
     #[test]
@@ -826,7 +848,64 @@ mod tests {
                     p.name
                 );
             }
+            // Ruling D: `Side::Descending` names `path_b` by its GEOMETRY,
+            // and only a cross-floor realm has a path that descends. A row
+            // asking for it on a same-floor span would silently resolve to
+            // an ordinary passage.
+            let descends = p.gates.iter().any(|g| g.side == Side::Descending)
+                || p.key.is_some_and(|k| k.side == Side::Descending)
+                || p.hazard.is_some_and(|(sd, _)| sd == Side::Descending)
+                || p.persistence
+                    .is_some_and(|(sd, _, _)| sd == Side::Descending);
+            if descends {
+                assert_eq!(
+                    p.span,
+                    Span::CrossFloor,
+                    "{}: Side::Descending is only meaningful on a cross-floor realm",
+                    p.name
+                );
+            }
         }
+    }
+
+    /// claim: structural(seed: 0..100) — every row of the frozen inventory is
+    /// SELECTABLE: it is applied to at least one realm somewhere in the
+    /// sweep. Spec §3.2's own standard ("a pattern nothing selects is dead
+    /// data, not inventory"), asserted rather than assumed — four rows failed
+    /// it when Task 1 first measured, which is what Rulings A, B, D and E
+    /// exist to fix. A row that goes dead under a later grammar change reds
+    /// here instead of sitting in a healthy-looking table.
+    #[test]
+    fn no_row_is_dead_data() {
+        let mut applied = vec![0usize; CYCLE_PATTERNS.len()];
+        for seed in 0..100u64 {
+            for kind in [CaveKind::LavaTube, CaveKind::Fracture, CaveKind::Karst] {
+                for ch in [
+                    Character::WildCave,
+                    Character::FungalGardens,
+                    Character::DrowTier,
+                ] {
+                    for vertex in [1u32, 5] {
+                        let p = plan(seed, vertex, kind, ch);
+                        for o in &p.patterns {
+                            if let Outcome::Applied { pattern } = o {
+                                applied[*pattern] += 1;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        let dead: Vec<&str> = CYCLE_PATTERNS
+            .iter()
+            .enumerate()
+            .filter(|(i, _)| applied[*i] == 0)
+            .map(|(_, p)| p.name)
+            .collect();
+        assert!(
+            dead.is_empty(),
+            "dead rows — never applied to any realm in the sweep: {dead:?}"
+        );
     }
 
     /// claim: invariant(seed: 0..200) — every plan on every kind × character
