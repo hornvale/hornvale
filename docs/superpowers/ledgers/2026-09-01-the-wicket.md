@@ -1132,3 +1132,19 @@ cycle. Benign, and attributable to the other parent.
 
 Recorded because the hypothesis was reasonable and wrong, and a report's
 uncertain aside is exactly the kind of sentence a later reader promotes to fact.
+
+#56 — **SECOND STAGE GATE: GREEN.** `req-71087ce452a6-20260902T010745Z` →
+`reported`, all stage phases rc=0 in **1386 s**, main unchanged at `18f63ebfa`.
+
+Both boundaries Nathan asked for are now clean, and the pairing did what it was
+designed to do. The first gate (`747be7000d13`, 1325 s against main at
+`2d84e1b71`) established that stages 1-4 — the enum retired, the totality gates,
+prose as a component table, a new kind placed in a real world — merge and pass
+in isolation from the acts work. The second gate tested stage 5 **plus** a
+63-commit absorption that included `the-pavement` rewriting every packed
+`FacetId` in the world. Had this one reddened, the first gate's green would have
+narrowed the candidate causes to the acts and the absorption rather than leaving
+ten tasks in scope.
+
+Remaining before merge: Task 11's DoD, one census refresh on lefford (mine to
+dispatch, not an implementer's), and Nathan's G6 review.
