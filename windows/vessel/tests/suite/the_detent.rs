@@ -159,6 +159,13 @@ pub struct ProbeCounts {
     pub with_emitters_delta: u64,
     pub replays_delta: u64,
     pub shunned: usize,
+    /// Field samples (room-memo misses) the FIRST read took — the fresh
+    /// `PrimaryAfraidMemo`, over whatever `shape.ground` already held
+    /// coming in (typically warm already, from the bench's own tick loop).
+    /// Kept and exposed so a reader can see the delta arithmetic
+    /// `warm_samples`/`second_fresh_samples` depend on, not just their
+    /// (zero) result.
+    pub first_fresh_samples: u64,
     /// Field samples (room-memo misses) the SECOND read took — the same
     /// `PrimaryAfraidMemo`, already warm.
     pub warm_samples: u64,
@@ -184,6 +191,7 @@ pub fn probe_counts(shape: &BenchShape) -> ProbeCounts {
         )
     };
     let mut memo = PrimaryAfraidMemo::new();
+    let samples_before_first = shape.ground.borrow().misses();
     let first = hazard_memory_memo(
         &shape.ledger,
         &shape.folds,
@@ -250,6 +258,7 @@ pub fn probe_counts(shape: &BenchShape) -> ProbeCounts {
         with_emitters_delta: w1.1 - w0.1,
         replays_delta: w1.2 - w0.2,
         shunned: first.shunned.len(),
+        first_fresh_samples: samples_after_first - samples_before_first,
         warm_samples: samples_after_second - samples_after_first,
         second_fresh_samples: samples_after_third - samples_after_second,
     }
@@ -271,19 +280,42 @@ fn h5_witness_the_hazard_reads_terrain_samples_on_the_bench_shape() {
     println!("--- H5 witness: seed {H5_SEED}, {H5_AGENTS} agents, tick {H5_TICKS} ---");
     println!(
         "probe: FRESH memo {} hazards() calls, WARM memo {}, scans +{} (with emitters +{}), \
-         alarm replays +{}, shunned {}, warm samples {}, second-fresh samples {}",
+         alarm replays +{}, shunned {}, first-fresh samples {}, warm samples {}, \
+         second-fresh samples {}",
         counts.fresh_hazards,
         counts.warm_hazards,
         counts.scans_delta,
         counts.with_emitters_delta,
         counts.replays_delta,
         counts.shunned,
+        counts.first_fresh_samples,
         counts.warm_samples,
         counts.second_fresh_samples,
     );
     println!(
         "whole tick {H5_TICKS}: {last_tick} hazards() calls, {} facts committed; roster distinct rooms {distinct_rooms}",
         shape.facts_per_tick.last().copied().unwrap_or(0)
+    );
+    // The memo's own shape, so a reader sees it was actually exercised —
+    // NOT trusted from the zero deltas above, which an unthreaded terrain
+    // (`.with_ground` dropped from `bench_shape`'s or `probe_counts`'s
+    // construction) would also produce, vacuously.
+    let ground_misses = shape.ground.borrow().misses();
+    let ground_hits = shape.ground.borrow().hits();
+    let ground_len = shape.ground.borrow().len();
+    println!("ground memo: {ground_misses} misses, {ground_hits} hits, {ground_len} rooms held");
+    assert!(
+        ground_misses > 0,
+        "the memo was never filled — is the terrain built with .with_ground?"
+    );
+    assert!(
+        ground_hits > 0,
+        "the memo was never READ on a hit — the second read did not go through the memo"
+    );
+    assert_eq!(
+        ground_misses as usize, ground_len,
+        "every miss inserts exactly one room and nothing evicts here — a mismatch means a \
+         second memo or a leak"
     );
     // Denominators: the path was reached, the population is the one the
     // mechanism is worst for, and the tick did real work.
