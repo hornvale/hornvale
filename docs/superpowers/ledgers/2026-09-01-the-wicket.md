@@ -1466,3 +1466,21 @@ designed to catch them, which is the honest note to end on: the shape is not
 eliminable by care, only by mechanisms that fail loudly, and the mechanism that
 caught 24 was a re-reviewer recounting, while the mechanism that would have
 caught 25 is simply not chaining a claim to its own proof.
+
+#70 — **The headline check caught a chore commit about to name the campaign.**
+`sluice-headline.sh` takes the **newest** non-empty `Sluice-Headline:` trailer
+in `origin/main..REF`. Four commits in this range carry one, and the newest was
+`1a7951fbd`, a timings chore:
+
+```text
+  1a7951fbd  two green gate-commit rows from the final fix wave   <- would have won
+  b10c7b8d7  an amendment that changed the code and left its own headline …
+  7a2a269b0  the grammar's kinds and the room's prose are checked against each other
+  9a273bcea  the interior grammar is keyed on a roster row, not a variant
+```
+
+That string would have become `main`'s merge subject **and** the permanent
+census epoch label, because nothing refuses a *wrong* headline — only a missing
+or placeholder one. The skill's instruction is to run the helper and read what
+it returns rather than trusting the last trailer you wrote; doing so is the only
+reason this was caught, and it is the same near-miss The Governor recorded.
