@@ -1050,3 +1050,44 @@ ROOMS. Cite the column. The lesson is small and general: when a task needs to
 establish reachability, look for the committed census column before writing a
 probe, because a standing measurement at n=1000 outlives the task and a
 throwaway at n=5 does not.
+
+#52 — **SECOND STAGE GATE SUBMITTED**, `req-81fe0788700e-20260902T000515Z`,
+kind=stage, branch `campaign/the-wicket`, ref `81fe0788700e`. Main has moved
+since the first gate — **2d84e1b71 → 18f63ebfa** (three `the-pavement` landings
+plus others) — so this gate tests a genuinely different merge product than the
+first, which is the whole reason the stage gate merges main in the chamber
+rather than gating a branch tip in isolation.
+
+#53 [G4] — **Board intelligence that binds Task 11's DoD, read at submission.**
+Three standing hold-off notices matter to a campaign that is about to mint
+decision records:
+
+1. **Decision numbers must be reserved, not inferred.** `make decision-block
+   NAME=<branch>` hands out a range. Taking max+1 against the main you branched
+   from is invisible to every mechanical check until the block's owner mints the
+   same number — differing slugs raise no merge conflict and the digest renders
+   one line per FILE, so a duplicate reads as a normal entry. Decision 0139's
+   own context records two campaigns minting 0134 exactly that way, through
+   green gates. A guard now exists (`docs_consistency` asserts no two records
+   share a leading number) but it catches the collision only once both are
+   committed; the block is the prevention.
+2. **Three generated aggregates conflict for EVERY campaign that mints a
+   decision while another lands**: `docs/audits/type-audit-report.md`,
+   `docs/decisions/README.md`, `docs/digest/decisions-in-force.md`. Resolve by
+   REGENERATION in this order — absorb main, regenerate (the `>` redirect is
+   what writes the file; running the command bare regenerates nothing and the
+   drift check then reads clean), `make rebaseline`, commit. A rebaseline taken
+   BEFORE the absorb reverts main's half and bounces again.
+3. **A conflict-free merge of a generated file can still be WRONG.**
+   `campaign/the-radiation` measured it: absorbing 56 commits produced four
+   loud conflicts and **two silent ones** — `concept-registry-generated.md`
+   merged cleanly and dropped all four person predicates. Only `make rebaseline`
+   found it. So: no-conflict and correctly-merged are unrelated properties for
+   generated files. Always regenerate after an absorption; never infer freshness
+   from a clean merge.
+
+Also noted, for our own byte-goldens: `windows/vessel/tests/fixtures/` is
+deliberately NOT declared generated, and `make rebaseline` does not write it —
+only `make rebaseline-goldens` does. This campaign moved those fixtures in Tasks
+7-9 and accepted them deliberately, which is the act that separate command
+exists to force.
