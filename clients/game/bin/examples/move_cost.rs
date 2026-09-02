@@ -76,6 +76,53 @@
 //! `Driver::start` moved 27,522 ms -> 3,730 ms (dev) / 3,486 ms (release) —
 //! a ~7.4-7.9x win from the profile alone, dev now within ~7% of release.
 //! Turns moved from 300-630 ms to single digits through tens of ms.
+//!
+//! ### AFTER The Rack, default (`dev`) profile — P6
+//!
+//! 2026-09-02, MacBookPro, this campaign's tip. **CONTENDED** (`uptime`
+//! before: `load averages: 4.71 4.69 6.93`, after: `5.06 4.77 6.93` — all
+//! three over The Repose's quiet-box threshold of 4), taken anyway per the
+//! same diagnostic fallback the blocks above invoke; this file is
+//! INFORMATIVE and gates nothing.
+//!
+//! ```text
+//! game driver: profile DEBUG; Driver::start 3843 ms
+//!     look    10.103 ms
+//!      map    14.102 ms
+//!     go n    10.264 ms
+//!     go n    10.221 ms
+//!     back    10.339 ms
+//!     back    10.391 ms
+//!    needs     9.969 ms
+//!    enter    47.377 ms
+//!     look    29.163 ms
+//!      map    19.171 ms
+//!     go n    18.717 ms
+//!     go e    19.818 ms
+//!     go s    20.046 ms
+//!     go w    19.750 ms
+//!     look    29.450 ms
+//!      out    10.287 ms
+//!     go n    10.387 ms
+//!     back    10.363 ms
+//! ```
+//!
+//! **P6 (spec §4: every movement turn ≤ 15 ms) MISSED on this reading.**
+//! Outdoor turns (10.1-14.1 ms) clear it; every indoor turn does not —
+//! `enter` 47.377 ms, the two post-`enter` `look`s 29.163/29.450 ms, and
+//! `map`/`go n/e/s/w` inside the chamber 18.7-20.0 ms. That is the same
+//! shadowcast cost `windows/vessel/examples/move_cost.rs`'s own AFTER-Rack
+//! block already measured (8.4-16.8 ms per indoor `snapshot()+json` there,
+//! release profile) surfacing again here on top of `handle`, on a slower
+//! dev-profile build, under a contended box — three reasons a MISS here is
+//! not a surprise. **Not tuned**: the task this block closes is measure and
+//! report, not chase the ceiling. The comparison against the pre-Rack
+//! dev-profile block above (9.6-87.2 ms) still holds turn-for-turn: every
+//! verb here reads faster than the same verb there, indoor and outdoor
+//! alike (`enter` 87.199 ms -> 47.377 ms, chamber `look` 66.578/67.454 ms ->
+//! 29.163/29.450 ms, chamber `map`/`go *` 43.3-51.0 ms -> 18.7-20.0 ms) —
+//! the win is real, it is just short of the P6 line under today's
+//! contention.
 
 use hornvale_game::driver::Driver;
 use hornvale_vessel::PossessTarget;
