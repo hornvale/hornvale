@@ -231,6 +231,10 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `chamber/run-floors/v2` | how many levels one run realizes, keyed on (vertex, branch, band) |
 | `chamber/branch-character/v2` | which character one branch carries, keyed on (vertex, branch, band) |
 | `chamber/branch-barrier/v2` | the barrier thinness of one branch, keyed on (vertex, branch, band) |
+| `underworld/plan/v1/spine` | entrance and per-level stair cells of a descent's spine |
+| `underworld/plan/v1/cycle` | cycle attachment, segment length and same- or cross-floor choice |
+| `underworld/plan/v1/extend` | which passage a series extension lengthens |
+| `underworld/plan/v1/stair` | the coordinate a stairway shares between two floors |
 | `chamber/branch-count/v2` | how many branches one cave system realizes, keyed on (vertex, band) |
 | `chamber/entrance-count/v2` | how large one cave system's FREE aperture set is, keyed on vertex (the shipped count is this raised to the top band's branch width) |
 | `chamber/entrance-mouth/v2` | which top-band branch one aperture opens on, keyed on (vertex, aperture, role) |

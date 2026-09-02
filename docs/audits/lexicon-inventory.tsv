@@ -7,7 +7,7 @@
 cli/src/concepts.rs	14
 cli/src/main.rs	2
 cli/src/repl.rs	1
-cli/src/streams.rs	4
+cli/src/streams.rs	5
 cli/src/systems.rs	12
 cli/src/tropes.rs	23
 cli/tests/suite/branches_coverage.rs	1
@@ -87,7 +87,7 @@ windows/locale/src/lib.rs	4
 windows/locale/src/surface.rs	1
 windows/scene/examples/illumination_probe.rs	22
 windows/scene/src/lib.rs	2
-windows/scene/src/surrounds.rs	259
+windows/scene/src/surrounds.rs	252
 windows/scene/src/surrounds_ascii.rs	190
 windows/scene/tests/common/mod.rs	17
 windows/scene/tests/suite/golden.rs	11
@@ -137,6 +137,7 @@ windows/vessel/tests/suite/the_blocking.rs	13
 windows/vessel/tests/suite/underworld_level_generation.rs	101
 windows/vessel/tests/suite/world_context.rs	2
 windows/worldgen/src/chamber.rs	2
+windows/worldgen/src/circuit.rs	35
 windows/worldgen/src/delve_seating.rs	1
 windows/worldgen/src/disposition.rs	3
 windows/worldgen/src/graph_derive.rs	3
@@ -144,7 +145,7 @@ windows/worldgen/src/hazard.rs	3
 windows/worldgen/src/history_bake.rs	1
 windows/worldgen/src/history_emit.rs	1
 windows/worldgen/src/lib.rs	14
-windows/worldgen/src/streams.rs	1
+windows/worldgen/src/streams.rs	4
 windows/worldgen/src/volcano.rs	5
 windows/worldgen/tests/suite/beta_calibration_sweep.rs	2
 windows/worldgen/tests/suite/confluence.rs	1

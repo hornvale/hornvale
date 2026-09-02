@@ -84,6 +84,7 @@ pub mod alchemy;
 pub mod chamber;
 pub mod character;
 pub mod chorus;
+pub mod circuit;
 pub mod color_naming;
 pub mod components;
 pub mod delve_seating;
