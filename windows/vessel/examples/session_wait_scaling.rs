@@ -35,8 +35,10 @@
 //!
 //! (Task 13 appends the post-roll, post-tick-stage reading.)
 
-#![allow(clippy::disallowed_types)] // wall-clock is the instrument here, never sim logic
-
+// The wall-clock is the instrument here, never sim logic -- exempt from the
+// wall-clock ban (clippy.toml / decision 0001), same pattern as
+// `windows/vessel/examples/turn_cost.rs` and `agent_scaling.rs`.
+#[allow(clippy::disallowed_types)]
 use std::time::Instant;
 
 use hornvale_vessel::{PossessOpts, Session};
@@ -69,6 +71,7 @@ fn main() {
     let mut facts = Vec::with_capacity(TICKS);
     for _ in 0..TICKS {
         let before = session.committed_fact_count();
+        #[allow(clippy::disallowed_types)] // benchmark harness
         let t0 = Instant::now();
         session.handle("wait");
         ms.push(t0.elapsed().as_secs_f64() * 1000.0);
