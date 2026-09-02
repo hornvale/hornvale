@@ -59,10 +59,36 @@ rather than `EVERY_HANDLE`: the roster cannot go short, the handle list can
 placeable.** `cave-mouth` is a rostered kind that is a `Vertex`/`ChamberAddr`
 and never an anchor, and inventing an exemption list to keep such a check green
 would be a list nobody maintains. The same reasoning declined a source-text
-guard against bare `KindId("…")` literals: the census found **58** occurrences
-and **zero** at a production consumer site — every one is an authoring table, a
-test, or a doc comment — so the guard would have shipped pre-loaded with a
-two-table allow-list (ledger #22).
+guard against bare `KindId("…")` literals.
+
+**The census, with its scope named, because the scope is load-bearing:**
+
+```text
+  git grep -n 'KindId("' -- windows/vessel/src domains/thing/src \
+    | grep -v 'kinds::' | wc -l                                    78
+  git grep -h 'KindId("' -- '*.rs' | wc -l   (every Rust source)  671
+```
+
+**78** occurrences in the two crates a guard would police, and **zero** at a
+production consumer site: every one is an authoring table, a test, or a doc
+comment. So the guard would have shipped pre-loaded with a **three**-table
+allow-list — `thing_registry` plus the `kinds` handles
+(`domains/thing/src/lib.rs`, 35 outside tests), `object_registry`
+(`windows/vessel/src/affordance.rs`, 20), and `chamber_prose_registry`
+(`windows/vessel/src/chamber_prose.rs`, 17 outside tests) — which is a list
+nobody maintains, on the same argument.
+
+> **Corrected before merge, and the correction is this campaign's own finding
+> happening to this record.** Both figures above were first written as ledger
+> #22's Task-3-era census — "58 occurrences", "two-table allow-list" — and
+> transcribed into a closing document without re-measuring, in a campaign whose
+> entire product is that a transcribed claim outruns its support. The ruling
+> never depended on the number and is unaffected; only the evidence was wrong.
+> Task 4 is what moved it: turning prose into a component table took
+> `chamber_prose_registry` from **1** occurrence to **18** and made the third
+> table. The workspace-wide figure is stated because a reader who runs the bare
+> grep without the two-path restriction gets 671 and cannot reconcile it
+> (ledger #22, #61).
 
 **A miss is a refusal, not a default.** `unwrap_or(default)` is the failure
 mode a map has that a match does not, so the prose lookup refuses by naming the

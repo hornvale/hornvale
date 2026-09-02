@@ -64,10 +64,18 @@ optionally an `object_registry` row, and (for a placeable kind) an appended
   observation.
 - **The bare-literal residual is accepted and named.** A `KindId("…")` written
   inline at a genuine future consumer site compiles silently. The census found
-  no such site: all 58 occurrences are authoring tables, tests, or doc comments,
-  and G-a and G-e already check every literal the two authoring tables hold,
-  from the other direction — against the roster, rather than by forbidding the
-  literal (ledger #22).
+  no such site: over `windows/vessel/src` and `domains/thing/src`, discounting
+  lines that already name a handle, all **78** occurrences are authoring
+  tables, tests, or doc comments. G-a, G-b/G-c and G-e already check every
+  literal the **three** authoring tables hold, from the other direction —
+  against the roster, rather than by forbidding the literal (ledger #22, #61;
+  the scoping matters, since the same bare pattern over every Rust source in
+  the workspace is 671, and decision 0556 carries the commands).
+
+  *Corrected before merge: this bullet first read "58 occurrences" and "the two
+  authoring tables", carried over from a Task-3-era census rather than
+  re-measured. Task 4 made prose a component table, which took
+  `chamber_prose_registry` from 1 occurrence to 18 and made it the third.*
 - **A handle is not a concept.** Registering a kind still obligates a
   `concept_doc` arm and an accession cohort (decision 0556's consequences), and
   neither of those is a handle. The convenience this record ratifies buys

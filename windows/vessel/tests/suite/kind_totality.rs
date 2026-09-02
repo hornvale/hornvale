@@ -136,6 +136,28 @@ fn every_propertied_kind_is_a_roster_row() {
 ///
 /// MUTATION THIS MUST FAIL AGAINST: delete the `"log"` row from
 /// `chamber_prose_registry()`.
+///
+/// Red observed (Task 4; `cp` backup, mutate, run
+/// `-E 'test(kind_totality) or test(chamber_prose)'`, `cp` restore, re-run
+/// green 21/21):
+/// ```text
+/// FAIL [   0.012s] (12/21) hornvale-vessel chamber_prose::tests::no_detail_speaks_of_terrain
+/// thread 'chamber_prose::tests::no_detail_speaks_of_terrain' panicked at windows/vessel/src/chamber_prose.rs:230:28:
+/// no chamber prose for kind "log"
+///
+/// FAIL [   0.018s] (21/21) hornvale-vessel::suite kind_totality::every_roster_kind_has_chamber_prose
+/// thread 'kind_totality::every_roster_kind_has_chamber_prose' panicked at windows/vessel/tests/suite/kind_totality.rs:136:9:
+/// roster names "log", chamber prose does not
+///
+/// Summary [ 0.043s] 21 tests run: 18 passed, 3 failed
+/// ```
+/// The targeted test reddened as specified; two siblings
+/// (`every_kind_has_a_detail`, `no_detail_speaks_of_terrain`) reddened too,
+/// via `detail`'s own refusal, because both now sweep the full roster and
+/// would have hit the deleted row as well. **Pasted here at the campaign's
+/// close** — G-b and G-c were the only two of the six gates whose reds lived
+/// solely in a task report, which dies with its scratch while decision 0556's
+/// claim that both directions were reddened by hand persists.
 #[test]
 fn every_roster_kind_has_chamber_prose() {
     let prose = hornvale_vessel::chamber_prose::chamber_prose_registry();
@@ -154,6 +176,17 @@ fn every_roster_kind_has_chamber_prose() {
 /// MUTATION THIS MUST FAIL AGAINST: add a `KindId("brasier")` row to
 /// `chamber_prose_registry()` (the plausible misspelling of the kind Task 5
 /// adds).
+///
+/// Red observed (Task 4, same procedure as the check above):
+/// ```text
+/// FAIL [   0.008s] (18/21) hornvale-vessel::suite kind_totality::every_chamber_prose_row_is_a_roster_kind
+/// thread 'kind_totality::every_chamber_prose_row_is_a_roster_kind' panicked at windows/vessel/tests/suite/kind_totality.rs:154:9:
+/// chamber prose has "brasier", the roster does not
+///
+/// Summary [ 0.027s] 21 tests run: 20 passed, 1 failed
+/// ```
+/// Exactly the targeted test failed, alone — the sharper of the pair's two
+/// mutations, which is what a converse check should look like.
 #[test]
 fn every_chamber_prose_row_is_a_roster_kind() {
     let prose = hornvale_vessel::chamber_prose::chamber_prose_registry();

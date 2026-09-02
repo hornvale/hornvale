@@ -80,9 +80,16 @@ use crate::common;
 /// asserting totality is not that, so it wants the set that cannot go short,
 /// not the set of names someone happened to write code against. The swap
 /// needs no new mechanism, and it is strictly stronger: `EVERY_HANDLE` and
-/// `THING_KINDS` name the same 16 kinds in the same order today (both
-/// alphabetical by label), so this table is unchanged by the swap — see the
+/// `THING_KINDS` name the same **17** kinds in the same order today (both
+/// alphabetical by label), so this table was unchanged by the swap — see the
 /// ledger entry ruling on this at plan time.
+///
+/// (**That count read 16 until The Wicket's close.** It was correct when Task
+/// 3 wrote it and Task 5 falsified it two tasks later by appending `brazier`
+/// to both lists, which is why the sentence stayed true-looking: the two lists
+/// agree, so the *claim* survived and only its *number* died. Nothing reddens
+/// on a count written into prose — ledger #58, #60, and the reason this file's
+/// own guarantees are asserted in code rather than described here.)
 fn every_named_kind() -> Vec<KindId> {
     hornvale_thing::THING_KINDS
         .iter()

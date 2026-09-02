@@ -108,10 +108,25 @@ pub struct Pattern {
     /// [`selection`] admits only patterns with `at_locale: true`. A creature
     /// stands at a LOCALE, and its thermal drive reads the warmth of the
     /// interior composed there, which is committed history. So a pattern with
-    /// `at_locale: false` **cannot** move a world: no live read can reach it.
-    /// Setting one to `true` is what turns a latent pattern into an epoch, and
+    /// `at_locale: false` cannot move a **world file**: no read that writes a
+    /// [`hornvale_kernel::Fact`] can reach it, and decision 0069 keeps
+    /// `Interior` unserialized. Setting one to `true` is what turns a latent
+    /// pattern into an epoch, and
     /// `a_locale_composition_is_untouched_by_the_role_layer` is the check that
     /// makes that deliberate rather than accidental.
+    ///
+    /// **IT CAN STILL MOVE A RENDERED ARTIFACT, AND THIS SENTENCE SAID
+    /// OTHERWISE UNTIL THE WICKET'S CLOSE.** It read *"a pattern with
+    /// `at_locale: false` **cannot** move a world: no live read can reach
+    /// it"* — the same over-broad reading of "commits" that [`INVENTORY`]'s
+    /// own rule 3, thirty lines below, exists to correct, and it is falsified
+    /// by this very file: `the-brazier` is `at_locale: false` and renders in
+    /// `book/src/gallery/possession-carry-seed-14.md`. **Read rule 3 for the
+    /// full statement; do not restate it here.** The two must not drift
+    /// apart, and they did: The Wicket corrected the `INVENTORY` doc it had
+    /// grepped for and left this twin one screen away untouched since The
+    /// Blocking (`f2cfb0974`, 2026-07-28) — its own lesson, *grep the claim
+    /// and not the identifier*, unapplied to its own correction (ledger #60).
     pub at_locale: bool,
     /// Whether this pattern is drawn only where the place held more people than
     /// a hamlet ([`crate::brief::Brief::is_populous`]). The `needs_cold` of
@@ -200,6 +215,13 @@ pub struct Pattern {
 ///    a property of those readers, not a guarantee 0069 issues), but because
 ///    0069 keeps `Interior` unserialized, so no world FILE — census or
 ///    otherwise — can move on account of a room gaining furniture.
+///
+///    **This clause has a twin, and keeping them in step is the point.**
+///    [`Pattern::at_locale`]'s own field doc states the same latency, and
+///    until The Wicket's close it stated it in the retired over-broad form
+///    (*"cannot move a world: no live read can reach it"*) — thirty lines
+///    above a rule that had already been corrected twice. Whoever edits
+///    either one edits both, or the pair drifts again exactly as it did.
 ///
 /// Sized near its intended scale deliberately, all the same: growth is cheap
 /// today and will not stay cheap.
