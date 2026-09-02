@@ -35,6 +35,12 @@ fn company_at(seed: u64) -> Option<(bool, bool)> {
 /// Ignored for cost: 64 world builds is ~4 min (`ooc_objective.rs:572`
 /// measured a full miss at 233.72 s). Run by hand at Task 1 and Task 14.
 ///
+/// No `MUTATION THIS MUST FAIL AGAINST:` line, and the absence is deliberate:
+/// this probe carries no assertion at all — it prints a count. Its instrument
+/// is the print, and the reading is recorded in the campaign ledger and the
+/// chronicle, where a wrong number is caught by a reader rather than by a
+/// mutation.
+///
 /// claim: rate(M1: company-on-first-look, and population>=2, over SIGHT_SEEDS)
 #[test]
 #[ignore = "cost: 64 world builds (~4 min); run by hand at stage boundaries, results in the ledger"]
@@ -112,6 +118,12 @@ fn separated_at(seed: u64) -> Option<bool> {
 /// world builds; the three waits per seed are ~0.2 s beside a ~4 s build) and
 /// carrying the identical reason string, so the frozen untokenised-ignore
 /// roster (`cli/tests/suite/heavy_tier.rs`) is a set this does not widen.
+///
+/// No `MUTATION THIS MUST FAIL AGAINST:` line, and the absence is deliberate:
+/// this probe carries no assertion at all — it prints a count. Its instrument
+/// is the print, and the reading is recorded in the campaign ledger and the
+/// chronicle, where a wrong number is caught by a reader rather than by a
+/// mutation.
 ///
 /// claim: rate(M5: two residents in different rooms by day 3, over SIGHT_SEEDS)
 #[test]

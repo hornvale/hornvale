@@ -3419,12 +3419,15 @@ its honest size.
    residents as its committed population — named people, drawn apart on their
    own dials, not eighty copies — and the walk ticks the ones within call, so
    the moment assembles because the world is populous rather than because a
-   fixture arranged it. Measured on the same 64-seed probe The Company found
-   empty in 24 of 24 witnesses and The Hand re-read at 3 of 64: a fresh
-   possession now stands in company in **64 of 64** seeds, which is every seed
-   whose home settlement can hold company at all. At seed 42 that is 67
-   neighbours in one room, four of them named in the presence line and 63
-   counted. **Three of the four sentences this row has carried since The
+   fixture arranged it. The readings this row has collected, each on its own
+   instrument: The Company found `sensed.present` empty in **24 of 24**
+   witnesses — twelve seeds across both possession targets, the annotation
+   above; The Hand, having deleted the player's own twin, measured **0 of 64**
+   on the 64-seed probe; and this campaign re-ran that same probe before
+   changing anything and read **3 of 64**. After the roll, a fresh possession
+   stands in company in **64 of 64** seeds, which is every seed whose home
+   settlement can hold company at all. At seed 42 that is 67 neighbours in one
+   room, four of them named in the presence line and 63 counted. **Three of the four sentences this row has carried since The
    Company are now spent** — the moment does not assemble; it assembles only
    when staged; a staged moment is the weakest possible evidence. What
    survives is the fourth and always the real one: *a human still has to sit in

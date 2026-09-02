@@ -14,10 +14,16 @@ holds about **265 settlements** and **7,400 abstract inhabitants**, at a mean
 population of 27. A settlement of eighty held one creature; a world-wide herd
 of woolly mammoths was one body at one vertex.
 
-The measured consequence, from the two campaigns before this one: a fresh
-possession had **no other creature present in 0 of 64 seeds** — later
-re-measured at 3 of 64 once the player stopped standing beside a twin of their
-own body. The world was populous on paper and empty to walk through.
+The measured consequence, from the campaigns before this one. Until The Hand,
+a possessed player always stood beside a twin of their own body, and that
+artifact was the entire supply of company; The Hand deleted the twin and
+measured what was left — **no other creature present in 0 of 64 seeds**. This
+campaign's own first task re-ran the same 64-seed probe before changing
+anything and read **3 of 64**, which is the baseline every number below is
+measured against. What separates the two readings is not explained here and no
+mechanism is claimed for it: the 3 is a fresh measurement taken at a later
+commit, not a correction of the 0. Either way the world was populous on paper
+and empty to walk through.
 
 ## What a resident is
 
@@ -76,10 +82,11 @@ construction — a home does not move — so the argument was dropped.
 
 ## The numbers
 
-At seed 42's flagship the roll is **68 bodies**: 67 residents and the driven
-one, no wild members at all, because the nearest herd attractor sits roughly a
-hundred rooms out. The budget of 128 has never bound in a live session, which
-is why the truncation is exercised by tests asking for three.
+At seed 42's flagship the roll is **68 residents, one of them the driven
+body** — the settlement's whole population, since ordinal 0 is a resident like
+any other — and no wild members at all, because the nearest herd attractor sits
+roughly a hundred rooms out. The budget of 128 has never bound in a live
+session, which is why the truncation is exercised by tests asking for three.
 
 `look` now says who is here. It names a few and counts the rest:
 
@@ -101,8 +108,11 @@ At the roll as it actually occurs, 68 bodies cost **72.0 ms per wait**; at the
 pessimistic case of a hundred dispersed walkers, one per settlement, **726.6
 ms per tick**; at two hundred, 1708.0 ms, reported rather than targeted. Both
 readings were taken **contended** — the box never showed a quiet load in
-thirty-three minutes of polling — so both are upper bounds, and the verdict
-clears them by an order of magnitude either way.
+thirty-three minutes of polling — so both are upper bounds. The two margins
+are not the same size and are worth stating on their own numbers rather than
+under one adjective: the roll as it actually occurs clears the budget by
+**13.9x**, the pessimistic dispersed hundred by **1.38x**. The verdict is met
+on both instances; only the first has an order of magnitude in hand.
 
 **M3 — the roll is pure.** Two independent sessions of one seed running one
 script produce identical rolls and identical body sequences; no settlement
@@ -160,7 +170,9 @@ that premise is simply gone — the rust monster is not within call.
 What replaced it is worth reporting as a finding rather than a rebaseline.
 Re-measured at the flagship roll: **no limit cycle at all.** The loudest single
 subject accounts for 20 facts of 1,319 in the last half — 1.5% — and all 67
-residents contribute, at 19 to 20 facts each, within one fact of one another.
+of the driven body's neighbours contribute, at 19 to 20 facts each, within one
+fact of one another (67, not 68: the battery counts the bodies the walk
+advances, which is the roll minus the one the player is driving).
 Zero fear-tagged and zero belonging-tagged facts appear anywhere in the run.
 The commit load that one creature's pathology used to carry is now the settled
 roster's own even churn of thirst, hunger and sleep. The pathology is not
@@ -176,7 +188,7 @@ that spectrum — one decision per day while off the roll — is named in the
 frontier registry and deliberately not built.
 
 **A crowd indoors is sensed and not drawn.** A chamber seats one body per
-anchor cell; sixty-seven residents in one settlement room means most of them
+anchor cell; sixty-seven neighbours in one settlement room means most of them
 are present, examinable and unseated. That is what already happened to a
 surplus, and the presence line says so in words rather than letting the count
 and the picture disagree. The real fix is a settlement wider than one room and

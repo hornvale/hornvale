@@ -21,7 +21,9 @@ The spec's first draft said a new per-kind spread registry would be added.
 The plan's survey found one already there: `hornvale_species::Dispersion.mind`
 (The Tolerance) and `windows/worldgen/src/disposition.rs`'s `perturb`, which
 draws a *settlement's* disposition around its people's mean by exactly the
-mechanism a resident needs.
+mechanism a resident needs (ledger #7, #9: individuation is in scope, bounded
+to the dials a `Body` already carries, and the spread it draws from is the
+registry that exists rather than a new one).
 
 ## The rule
 
