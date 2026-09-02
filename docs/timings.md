@@ -4788,6 +4788,45 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-02T04:30:31Z | gate-commit | 25.787 | 84.517 | 14.869 | 3.85 | 0 | c6bf4601a | campaign/the-avowal | MacBookPro | 10 |
 | 2026-09-02T05:04:03Z | gate-commit | 43.183 | 90.829 | 15.963 | 2.47 | 0 | 1eb78c640 | campaign/the-avowal | MacBookPro | 10 |
 | 2026-09-02T05:36:52Z | gate-commit | 44.656 | 91.054 | 16.115 | 2.40 | 0 | e49e15311 | campaign/the-avowal | MacBookPro | 10 |
+| 2026-09-01T23:51:40Z | prewarm | 269.584 | 1249.626 | 44.994 | 4.80 | 0 | 18f63ebfa | campaign/the-roll | MacBookPro | 10 |
+| 2026-09-02T00:33:57Z | gate-commit | 49.942 | 95.237 | 16.415 | 2.24 | 0 | 5679df562 | campaign/the-roll | MacBookPro | 10 |
+| 2026-09-02T00:36:15Z | gate-commit | 41.391 | 78.333 | 15.521 | 2.27 | 0 | 5679df562 | campaign/the-roll | MacBookPro | 10 |
+| 2026-09-02T00:41:54Z | gate-commit | 23.360 | 53.343 | 13.555 | 2.86 | 0 | d22242a60 | campaign/the-roll | MacBookPro | 10 |
+| 2026-09-02T01:06:56Z | gate-commit | 23.205 | 54.746 | 13.980 | 2.96 | 0 | 0d72f37b7 | campaign/the-roll | MacBookPro | 10 |
+| 2026-09-02T01:13:14Z | gate-commit | 22.299 | 53.067 | 13.669 | 2.99 | 0 | 991cb29b3 | campaign/the-roll | MacBookPro | 10 |
+| 2026-09-02T01:24:14Z | gate-commit | 60.349 | 273.554 | 26.989 | 4.98 | 0 | 0b80cacad | campaign/the-roll | MacBookPro | 10 |
+| 2026-09-02T01:25:22Z | gate-commit | 24.666 | 54.148 | 14.402 | 2.78 | 0 | 0b80cacad | campaign/the-roll | MacBookPro | 10 |
+| 2026-09-02T01:36:31Z | gate-commit | 32.127 | 72.593 | 27.727 | 3.12 | 0 | d7a515162 | campaign/the-roll | MacBookPro | 10 |
+| 2026-09-02T01:41:27Z | gate-commit | 49.488 | 83.700 | 29.104 | 2.28 | 0 | d7a515162 | campaign/the-roll | MacBookPro | 10 |
+| 2026-09-02T01:55:44Z | gate-commit | 30.442 | 55.331 | 14.735 | 2.30 | 0 | 3b30bd11c | campaign/the-roll | MacBookPro | 10 |
+| 2026-09-02T02:07:01Z | gate-commit | 26.005 | 58.903 | 19.184 | 3.00 | 0 | 6de94314f | campaign/the-roll | MacBookPro | 10 |
+| 2026-09-02T02:19:51Z | gate-commit | 78.564 | 284.470 | 32.420 | 4.03 | 0 | 8a88a3031 | campaign/the-roll | MacBookPro | 10 |
+| 2026-09-02T02:22:05Z | gate-commit | 40.876 | 78.879 | 28.821 | 2.63 | 0 | 8a88a3031 | campaign/the-roll | MacBookPro | 10 |
+| 2026-09-02T02:31:33Z | gate-commit | 60.886 | 82.533 | 32.437 | 1.89 | 0 | b87c45e7e | campaign/the-roll | MacBookPro | 10 |
+| 2026-09-02T02:42:36Z | gate-commit | 53.116 | 120.913 | 20.002 | 2.65 | 0 | 56af11743 | campaign/the-roll | MacBookPro | 10 |
+| 2026-09-02T02:52:21Z | gate-commit | 57.328 | 113.235 | 21.968 | 2.36 | 0 | bfbc991ee | campaign/the-roll | MacBookPro | 10 |
+| 2026-09-02T04:44:18Z | gate-commit | 25.501 | 61.015 | 16.095 | 3.02 | 0 | 8340e96bc | campaign/the-roll | MacBookPro | 10 |
+| 2026-09-02T04:45:08Z | gate-commit | 23.405 | 54.609 | 14.000 | 2.93 | 0 | 8340e96bc | campaign/the-roll | MacBookPro | 10 |
+| 2026-09-02T05:14:39Z | gate-commit | 32.571 | 118.114 | 19.371 | 4.22 | 0 | 7f3acfb2a | campaign/the-roll | MacBookPro | 10 |
+| 2026-09-02T05:15:23Z | gate-commit | 21.759 | 53.595 | 13.976 | 3.11 | 0 | 7f3acfb2a | campaign/the-roll | MacBookPro | 10 |
+| 2026-09-02T05:25:23Z | rebaseline | 141.985 | 282.132 | 14.356 | 2.09 | 0 | be4b0d6e3 | campaign/the-roll | MacBookPro | 10 |
+| 2026-09-02T05:51:03Z | game-check | 544.369 | 3873.636 | 27.008 | 7.17 | 0 | be4b0d6e3 | campaign/the-roll | MacBookPro | 10 |
+| 2026-09-02T05:54:07Z | gate-commit | 22.608 | 54.164 | 14.295 | 3.03 | 0 | be4b0d6e3 | campaign/the-roll | MacBookPro | 10 |
+| 2026-09-02T06:04:12Z | gate-commit | 43.866 | 61.190 | 15.431 | 1.75 | 0 | 98a4fca11 | campaign/the-roll | MacBookPro | 10 |
+| 2026-09-02T06:29:06Z | rebaseline | 69.734 | 289.518 | 15.310 | 4.37 | 0 | ed71b5ba8 | campaign/the-roll | MacBookPro | 10 |
+| 2026-09-02T06:33:48Z | gate-commit | 36.552 | 145.745 | 19.271 | 4.51 | 0 | ed71b5ba8 | campaign/the-roll | MacBookPro | 10 |
+| 2026-09-02T06:34:59Z | gate-commit | 24.297 | 56.332 | 14.388 | 2.91 | 0 | ed71b5ba8 | campaign/the-roll | MacBookPro | 10 |
+| 2026-09-02T06:35:56Z | gate-commit | 21.749 | 53.432 | 13.949 | 3.10 | 0 | ed71b5ba8 | campaign/the-roll | MacBookPro | 10 |
+| 2026-09-02T06:50:51Z | gate-commit | 26.239 | 60.213 | 21.031 | 3.10 | 0 | cb902c0d4 | campaign/the-roll | MacBookPro | 10 |
+| 2026-09-02T07:09:24Z | gate-commit | 37.460 | 127.725 | 25.149 | 4.08 | 0 | f23a09a96 | campaign/the-roll | MacBookPro | 10 |
+| 2026-09-02T07:25:21Z | gate-commit | 38.595 | 125.166 | 22.083 | 3.82 | 0 | e058a24db | campaign/the-roll | MacBookPro | 10 |
+| 2026-09-02T08:07:25Z | gate-commit | 22.887 | 54.303 | 14.238 | 2.99 | 0 | 5cb768310 | campaign/the-roll | MacBookPro | 10 |
+| 2026-09-02T08:31:56Z | gate-commit | 25.228 | 71.642 | 14.647 | 3.42 | 0 | bd9157562 | campaign/the-roll | MacBookPro | 10 |
+| 2026-09-02T08:42:04Z | rebaseline | 62.231 | 279.205 | 14.455 | 4.72 | 0 | 17e4f3387 | campaign/the-roll | MacBookPro | 10 |
+| 2026-09-02T08:50:57Z | game-check | 522.537 | 3862.226 | 28.409 | 7.45 | 0 | 17e4f3387 | campaign/the-roll | MacBookPro | 10 |
+| 2026-09-02T09:04:44Z | gate-commit | 36.230 | 74.535 | 15.281 | 2.48 | 0 | 44e729b0e | campaign/the-roll | MacBookPro | 10 |
+| 2026-09-02T09:09:12Z | census | 872.445 | 27512.819 | 288.851 | 31.87 | 0 | f1b21b58c |  | lefford | 40 |
+| 2026-09-02T09:22:51Z | gate-commit | 29.381 | 67.437 | 22.223 | 3.05 | 0 | 908d86a8f | campaign/the-roll | MacBookPro | 10 |
 | 2026-09-02T00:52:33Z | rebaseline | 101.235 | 316.181 | 15.946 | 3.28 | 0 | 8e2e59c3d | campaign/the-wicket | MacBookPro | 10 |
 | 2026-09-02T00:58:58Z | gate-commit | 116.606 | 559.873 | 107.989 | 5.73 | 0 | 8e2e59c3d | campaign/the-wicket | MacBookPro | 10 |
 | 2026-09-02T01:05:22Z | gate-commit | 22.760 | 53.673 | 13.746 | 2.96 | 0 | 8e2e59c3d | campaign/the-wicket | MacBookPro | 10 |
@@ -4845,3 +4884,12 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-02T10:59:14Z | gate-commit | 23.369 | 37.452 | 9.019 | 1.99 | 0 | a5fa2ed6b | campaign/the-avowal | MacBookPro | 10 |
 | 2026-09-02T11:01:59Z | gate-commit | 140.148 | 686.413 | 47.106 | 5.23 | 0 | a5fa2ed6b | campaign/the-avowal | MacBookPro | 10 |
 | 2026-09-02T11:03:29Z | rebaseline | 81.944 | 271.046 | 14.241 | 3.48 | 0 | 8aacf6c57 | campaign/the-avowal | MacBookPro | 10 |
+| 2026-09-02T09:58:19Z | rebaseline | 150.937 | 318.487 | 14.935 | 2.21 | 0 | bf607ae8f | campaign/the-roll | MacBookPro | 10 |
+| 2026-09-02T10:17:11Z | game-check | 768.836 | 3823.152 | 28.156 | 5.01 | 0 | bf607ae8f | campaign/the-roll | MacBookPro | 10 |
+| 2026-09-02T10:19:36Z | gate-commit | 88.879 | 272.577 | 35.392 | 3.47 | 0 | bf607ae8f | campaign/the-roll | MacBookPro | 10 |
+| 2026-09-02T10:20:29Z | gate-commit | 34.340 | 57.299 | 14.128 | 2.08 | 0 | bf607ae8f | campaign/the-roll | MacBookPro | 10 |
+| 2026-09-02T10:31:13Z | sluice:artifacts | 141.889 | 1337.777 | 63.618 | 9.88 | 0 | 2399b468f |  | lefford | 40 |
+| 2026-09-02T10:32:11Z | sluice:outboard | 57.428 | 32.842 | 46.922 | 1.39 | 0 | 002b3267c |  | lefford | 40 |
+| 2026-09-02T10:43:16Z | sluice:gate | 664.804 | 18788.588 | 592.733 | 29.15 | 0 | a5227858b |  | lefford | 40 |
+| 2026-09-02T10:52:28Z | sluice:clients | 552.315 | 10008.950 | 104.588 | 18.31 | 0 | 3e0272f28 |  | lefford | 40 |
+| 2026-09-02T11:00:13Z | sluice:heavy | 464.044 | 9738.719 | 179.835 | 21.37 | 0 | 33ad86787 |  | lefford | 40 |

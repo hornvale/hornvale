@@ -439,6 +439,7 @@
 - [The Tableau](./chronicle/the-tableau.md)
 - [The Avowal](./chronicle/the-avowal.md)
 - [The Wicket](./chronicle/the-wicket.md)
+- [The Roll](./chronicle/the-roll.md)
 
 # Appendix: The Frontier
 

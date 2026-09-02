@@ -454,7 +454,7 @@ fn the_heavy_roster_is_exactly_this_fixture() {
 /// outside **both**: outside `preregistration_guard`'s path filter, and
 /// outside this file's adjudication unless its reason happens to carry a
 /// token. Four of the seven blind spots listed above are exactly that case.
-const EXPECTED_UNTOKENISED: [&str; 35] = [
+const EXPECTED_UNTOKENISED: [&str; 36] = [
     "...",
     "PREREGISTERED, cannot adjudicate at n=120: awaits TOOL-anomaly-ranking-concentrates-injection (recall@10 = 0.6000 over 120 pairs, exactly ON the 0.60 bar; six census epochs of one unchanged report read 0.5667, 0.6083, 0.6000, 0.6083, 0.6083 and 0.6000, all inside one SE of the bar, so the battery separates nothing. The sixth is the first taken after the evaluable surface grew, 117 -> 118 columns; an ablation dropping the new column re-reads 72/120 arm for arm, so the surface contributed nothing and the reading stays comparable)",
     "PREREGISTERED, not met: awaits BIO-gause-distinctness-vacuous (the corrected climate collapsed all three arms of the cv-ratio instrument - real 0.9945, goblin-niche-substituted 0.9964, width-only 0.9964 against 0.9747 when last authored - so the real gap 0.0055 no longer clears the 0.007 floor and the statistic can no longer separate human from a goblin-substituted human; lowering the floor would retune away the very vacuity it exists to announce)",
@@ -472,6 +472,7 @@ const EXPECTED_UNTOKENISED: [&str; 35] = [
     "calibration: run by hand, prints the approach_ease quantiles",
     "calibration: run by hand, prints the promoted-forebear yield panel",
     "compiles the workspace in release; CI runs it with -- --ignored",
+    "cost: 64 world builds (~4 min); run by hand at stage boundaries, results in the ledger",
     "failing — investigate later",
     "flaky after the refactor",
     "measurement: builds eight full worlds; run explicitly with --ignored",
