@@ -412,7 +412,10 @@ substrate, none an object:
   a doorway.** The Thing's place is the threshold cell of its edge; it goes
   on the wire as a mark at that cell. A threshold with no door is a squeeze
   and needs no Thing — `examine` of a bare squeeze is a captured follow-up,
-  not a promoted kind.
+  not a promoted kind. The anchor rule is deliberately no tighter than the
+  building lattice's (an anchor may sit at a wall cell), so a door onto rock
+  — the tomb's false door — is admissible later without a new class
+  (`MAP-false-door`); this campaign places none.
 - **The verbs reach underground.** `look` on a cell whose region holds a
   key, latent or dropped, says so; on a cell adjacent to a threshold with a
   door says so and names the bearing; `examine`, `take`, `open`, `close` resolve those nouns.
@@ -448,6 +451,17 @@ spine between cycles), because a gate on a bridge is unsolvable for the
 default body by definition; place two keys for one lock, or one key for two;
 make a same-floor passage one-way (no natural substance exists for it — a
 scree slope is a captured follow-up with the true valve).
+
+**And the assumption the whole model rests on, named so it can be held to
+(G3, ledger #8):** a requirement is a predicate on the *traverser's own state
+at the threshold* — what it holds, what it is, what it knows — and on
+nothing else. That is what makes solvability a proof over `(node, keys)`. A
+door that reads the world's clock (moonrise, a tide), another body (a
+pressure plate for two), the path taken (a sequence), or whose far end
+depends on state (a portal) is not a gate in this model; the first is
+captured (`MAP-world-conditional-gate`), the last is the Crosscut's own wall
+(an edge whose endpoint is a function is not series-parallel), and the middle
+two are limits stated rather than ideas kept.
 
 ## 4. Preregistration
 

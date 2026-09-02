@@ -295,3 +295,29 @@ used broadly (what satisfies a requirement) and narrowly (the Thing kind);
 the spec now says which at each use where it matters · Capture: spec §3.5,
 §3.6, §3.7, §3.8, §6, §7.1, §8 task 3, §9 (0616) amended and say so; the two
 rows above.
+
+#8 [Q, ruled with Nathan at G3] — Do doors from literature and games fit
+the four-part model, and where do they not? · **They fit wherever the
+requirement reads the traverser's own state; every exception reads something
+else, and that boundary is the solvability proof's** · Cases: Zork I's trap
+door (known + collapsing + valve: fits, stamped half); Durin's password
+(known); Alice's door (bodily); consumed keys and keys left in the lock (a
+KEY persistence, Dormans' single-use key — cheap, not needed); the twisted
+candlestick (a switch: `Switched(node)`, a key you act on and do not carry —
+fits the solver); the false door and the mimic (an object with no way —
+admissible once the door's anchor rule is the lattice's "at a wall cell",
+which the spec now says); the Hawkmouth (a Thing that is a Body — The Plat's
+question, not forced). Breaks: the curtain of light and Howl's door (the far
+end is a function of state — not a gate, not series-parallel); moonlight,
+tides, shutters, the Room of Requirement (a requirement on the WORLD —
+Hornvale's cheapest and most valuable extension, and a different proof);
+co-op plates (two bodies); the Lost Woods (path history) · Discarded: adding
+`When`/`Switched`/`Faced` variants now — each would be a reserved seam with
+no constructor (0398) until something realizes it · Ideonomy: this WAS the
+pass — Nathan supplied the cross-domain corpus (literature × games) and the
+model was read backwards as a capability probe, the tropes/ discipline;
+convergence in one pass, no overturn, one relaxation (the anchor rule) ·
+Capture: spec §3.7 (anchor rule), §3.8 (the assumption named); rows
+`MAP-world-conditional-gate`, `MAP-false-door`; the remote switch folded
+into the false-door row; the portal and the co-op plate recorded as stated
+limits in §3.8, not as rows.
