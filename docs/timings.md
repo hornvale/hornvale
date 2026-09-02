@@ -4968,3 +4968,4 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-02T16:13:48Z | gate-commit | 302.274 | 75.324 | 37.340 | 0.37 | 0 | 91cb603b6 | campaign/the-reservoir | ambrose | 12 |
 | 2026-09-02T16:17:19Z | gate-commit | 176.097 | 76.736 | 38.197 | 0.65 | 0 | 91cb603b6 | campaign/the-reservoir | ambrose | 12 |
 | 2026-09-02T16:34:31Z | gate-commit | 246.882 | 71.771 | 38.138 | 0.45 | 0 | 7ae56abd9 | campaign/the-reservoir | ambrose | 12 |
+| 2026-09-02T16:37:48Z | gate-commit | 183.392 | 76.503 | 37.626 | 0.62 | 0 | 7ae56abd9 | campaign/the-reservoir | ambrose | 12 |
