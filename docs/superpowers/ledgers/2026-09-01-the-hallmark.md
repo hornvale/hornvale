@@ -288,7 +288,7 @@ frozen corpus strings ("karst-cave"/"lava-tube"/"fracture-cave"); committed
 bytes still may not move without escalation · Why: decider's call at G6 —
 the deferrals were controller adjudications, not spec constraints, and the
 decider values the unification and the axis repair over the deferral's
-safety margin · Capture: plan addendum Tasks 13-14; `DOM-era-day-axis`
+safety margin · Capture: plan addendum Tasks 13-15; `DOM-era-day-axis`
 re-scored at close.
 
 #15 [T13] — How should the bake path stop writing bake YEARS into
@@ -383,8 +383,8 @@ no re-run beyond the full suite pass below · Verdicts (Step 4): `git status
 docs/audits/system-coverage-wolverson-2021.md clients/` — empty;
 `cargo run --quiet --manifest-path tools/placement-audit/Cargo.toml --
 check` — exit 0 (`Formation` and `CaveKind` still differ in member sets:
-`Formation` carries ~19 other variants beside `Cave`, so embedding one
-inside the other does not make the two enums shape twins) · Verification:
+`Formation` carries 18 other variants beside `Cave` (19 total), so embedding
+one inside the other does not make the two enums shape twins) · Verification:
 `cargo build --workspace --all-targets` clean; `cargo fmt --check` and
 `cargo clippy --workspace --all-targets -- -D warnings` clean; `make
 quick` rc=0; `cargo run --manifest-path tools/type-audit/Cargo.toml --
@@ -448,10 +448,19 @@ days, not `TickSpan`s.** `paleoclimate_from` (~lib.rs:3736) and `bake_eras`
 because it keeps the SAME doubles being compared as before this task's
 edit — `a.day` was already an f64 field before the retype, and
 `a.day.as_std_days()` round-trips it losslessly at every magnitude this
-window ever samples (ticks→days is exact below ~2.47e8 years; the deep-time
-window here is 1 Myr) — so nearest-selection is bit-for-bit identical by
-construction, not merely argued to be. The seed-42 diff is the check on
-that argument, not a substitute for it, and it came back identical (below)
+window ever samples. **That states the safe direction only** (ticks→days
+is exact below ~2.47e8 years; the deep-time window here is 1 Myr) — the
+real invariant this argument leans on is the OTHER direction: `f64`→ticks,
+which the `WorldTime::from_std_days` calls building `samples` and
+`era_day`'s comparands perform, always ROUNDS, and is a no-op here only
+because every era day this window constructs lands on an exact whole-day
+integer (`ICE_STEP_DAYS = 730500.0`; `era_day = -365_250_000 + e ×
+15_218_750` for `e` in `0..CLIMATE_ERAS`). So nearest-selection is
+bit-for-bit identical by construction, not merely argued to be — but a
+future non-integral step (a fractional `ICE_STEP_DAYS`, say) would need
+this argument re-verified, not assumed to still hold. The seed-42 diff is
+the check on that argument, not a substitute for it, and it came back
+identical (below)
 · Verdicts: seed-42 world before/after — `sha256sum` **identical**,
 `e70ca3d0d782f095ded80071bbafe11e64f19b61ecffa127414ed5a57e9970ef` both
 sides, matching ledger #15's own recorded hash (the tree's only paleoclimate
