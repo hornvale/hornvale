@@ -33,7 +33,7 @@ use hornvale_vessel::liveness::{
     DriveParams, HomeNavCache, PrimaryAfraidMemo, SUSTENANCE, Terrain, affect_of_memo_occupied,
     sustenance_at,
 };
-use hornvale_vessel::resident::{KnownWater, ReadWitness, ResidentFolds, Trail};
+use hornvale_vessel::resident::{KnownWater, LatestVisit, ReadWitness, ResidentFolds, Trail};
 use hornvale_vessel::{PossessOpts, Session};
 
 /// `agent-at`'s exact on-disk spelling, written as a literal rather than
@@ -2213,5 +2213,579 @@ fn rule_six_witness_hazard_memory_reads_run_at_past_instants() {
         "every `hazard_memory` entry-point call must be counted once: {entry_probe_calls} \
          calls made, {} counted",
         entry.borrow().witness().hazard_lookups()
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Task 5, step 1: LatestVisit -- FOLD equals SCAN, the past-instant sweep, and
+// the two chaos schedules.
+// ---------------------------------------------------------------------------
+
+/// A VERBATIM COPY of `liveness.rs`'s `hazard_memory_memo` `latest` loop — the
+/// SCAN half of FOLD equals SCAN for [`LatestVisit`].
+///
+/// Copied rather than called, for [`scan_oracle`]'s reason and one more: the
+/// production loop is GONE as of this task, so this is the only statement of
+/// it left anywhere, and nothing regenerates it. The `f64` day is the copy's
+/// own — the loop really did fold standard days, and comparing the tenant's
+/// tick-keyed answer against it is what pins the retype as well as the fold.
+fn latest_visit_scan_oracle(
+    ledger: &Ledger,
+    entity: EntityId,
+    t: WorldTime,
+) -> std::collections::BTreeMap<Facet, f64> {
+    let mut latest: std::collections::BTreeMap<Facet, f64> = std::collections::BTreeMap::new();
+    for f in ledger.facts_of(entity, AGENT_AT) {
+        if let Some(fday) = f.day.filter(|d| *d <= t).map(WorldTime::as_std_days)
+            && let Value::Text(s) = &f.object
+        {
+            latest
+                .entry(room_from_text_copy(s))
+                .and_modify(|d| {
+                    if fday > *d {
+                        *d = fday;
+                    }
+                })
+                .or_insert(fday);
+        }
+    }
+    latest
+}
+
+/// The fold half for [`LatestVisit`], reached through `absorb_at` one fact at
+/// a time — the path independent of `advance_to`.
+fn fold_latest_visit_one_by_one(ledger: &Ledger) -> Folded<LatestVisit> {
+    let mut f: Folded<LatestVisit> = Folded::new();
+    for (i, fact) in ledger.iter().enumerate() {
+        f.absorb_at(i as u64, fact);
+    }
+    f
+}
+
+/// The tenant's answer lifted to the oracle's `f64`-day shape, so the two
+/// compare directly.
+fn latest_as_days(
+    latest: std::collections::BTreeMap<Facet, WorldTime>,
+) -> std::collections::BTreeMap<Facet, f64> {
+    latest
+        .into_iter()
+        .map(|(r, d)| (r, d.as_std_days()))
+        .collect()
+}
+
+/// Guards the latest-wins assertions from being vacuous: the fixture must
+/// visit at least one room TWICE for the same entity, or a fold that kept the
+/// FIRST instant (which is exactly what [`KnownWater`] does, one tenant over)
+/// would pass every comparison below.
+#[test]
+fn the_fixture_visits_at_least_one_room_twice() {
+    let (l, a, b) = hand_built();
+    let mut revisited = 0;
+    for e in [a, b] {
+        let mut per_room: std::collections::BTreeMap<Facet, usize> =
+            std::collections::BTreeMap::new();
+        for f in l.facts_of(e, AGENT_AT) {
+            if f.day.is_some()
+                && let Value::Text(s) = &f.object
+            {
+                *per_room.entry(room_from_text_copy(s)).or_default() += 1;
+            }
+        }
+        revisited += per_room.values().filter(|n| **n > 1).count();
+    }
+    assert!(
+        revisited > 0,
+        "the fixture must visit some room more than once, or LatestVisit's latest-wins \
+         rule is never exercised and a first-wins fold would pass every test below"
+    );
+}
+
+#[test]
+fn latest_visit_folded_one_fact_at_a_time_equals_the_scan_oracle() {
+    let (l, a, b) = hand_built();
+    let folded = fold_latest_visit_one_by_one(&l);
+    let far = WorldTime::from_ticks(i64::MAX / 4);
+    for e in [a, b] {
+        assert_eq!(
+            latest_as_days(folded.state().latest_at(e, far)),
+            latest_visit_scan_oracle(&l, e, far),
+            "the fold's latest-visit map must equal the scan's for {e:?}"
+        );
+    }
+}
+
+/// The past-instant sweep, which is the whole reason this tenant is a VISIT
+/// LIST rather than a latest-day map (spec §3 rule 6's fallback, taken on the
+/// number `rule_six_witness_hazard_memory_reads_run_at_past_instants`
+/// measured: 9 of 9 hazard reads at past instants on the emitter-gated replay
+/// shape).
+///
+/// A latest-day map advanced to the ledger's end cannot answer at any earlier
+/// `t` at all; this asserts the list does, at EVERY instant the fixture can
+/// distinguish — each committed day, and the instants either side of it.
+#[test]
+fn latest_visit_at_every_past_instant_equals_the_oracle_at_that_instant() {
+    let (l, a, b) = hand_built();
+    let folded = fold_latest_visit_one_by_one(&l);
+
+    let mut instants: Vec<WorldTime> = Vec::new();
+    for f in l.iter() {
+        if let Some(d) = f.day {
+            for delta in [-1_i64, 0, 1] {
+                instants.push(WorldTime::from_ticks(d.ticks() + delta));
+            }
+        }
+    }
+    instants.push(WorldTime::GENESIS);
+    instants.sort();
+    instants.dedup();
+
+    let mut non_empty = 0;
+    let mut distinct_answers: std::collections::BTreeSet<Vec<(Facet, i64)>> =
+        std::collections::BTreeSet::new();
+    for e in [a, b] {
+        for t in &instants {
+            let got = folded.state().latest_at(e, *t);
+            if !got.is_empty() {
+                non_empty += 1;
+            }
+            distinct_answers.insert(got.iter().map(|(r, d)| (r.clone(), d.ticks())).collect());
+            assert_eq!(
+                latest_as_days(got),
+                latest_visit_scan_oracle(&l, e, *t),
+                "the fold's latest-visit map at {t:?} must equal the scan truncated there \
+                 for {e:?}"
+            );
+        }
+    }
+    assert!(
+        non_empty >= instants.len(),
+        "the sweep must reach non-empty answers on most of its {} instants, or it is \
+         comparing two empty maps: only {non_empty} were non-empty",
+        instants.len()
+    );
+    assert!(
+        distinct_answers.len() >= 4,
+        "the sweep must see the map GROW across its instants, or a fold ignoring `t` \
+         entirely would pass: {} distinct answers",
+        distinct_answers.len()
+    );
+}
+
+#[test]
+fn a_room_visited_twice_reports_its_latest_visit_not_its_first() {
+    let (l, a, _b) = hand_built();
+    let folded = fold_latest_visit_one_by_one(&l);
+    // `SCRIPT` posts entity `a` to (face 0, [0]) at ticks 700_000 and 300_000.
+    let twice = room(0, &[0]);
+    let far = WorldTime::from_ticks(i64::MAX / 4);
+    let latest = folded.state().latest_at(a, far);
+    assert_eq!(
+        latest.get(&twice).copied(),
+        Some(WorldTime::from_ticks(700_000)),
+        "the LATEST visit wins, not the first — the whole staleness rule the hazard fold \
+         reads this map for"
+    );
+    // And at an instant between the two visits, the EARLIER one is the answer.
+    let between = WorldTime::from_ticks(500_000);
+    assert_eq!(
+        folded.state().latest_at(a, between).get(&twice).copied(),
+        Some(WorldTime::from_ticks(300_000)),
+        "at an instant between the two visits the earlier one is the most recent"
+    );
+    // The distinct-rooms read agrees about membership at both instants.
+    assert!(folded.state().rooms_at(a, between).contains(&twice));
+    assert!(
+        !folded
+            .state()
+            .rooms_at(a, WorldTime::from_ticks(200_000))
+            .contains(&twice),
+        "a room is not in the set before its FIRST visit"
+    );
+}
+
+#[test]
+fn an_entity_that_never_moved_has_no_visits() {
+    let (l, _a, _b) = hand_built();
+    let folded = fold_latest_visit_one_by_one(&l);
+    let stranger = EntityId(std::num::NonZeroU64::new(9_999_999).expect("non-zero"));
+    assert!(folded.state().of(stranger).is_empty());
+    assert!(
+        folded
+            .state()
+            .latest_at(stranger, WorldTime::from_ticks(i64::MAX / 4))
+            .is_empty()
+    );
+    assert!(
+        folded
+            .state()
+            .rooms_at(stranger, WorldTime::from_ticks(i64::MAX / 4))
+            .is_empty()
+    );
+}
+
+#[test]
+fn discarding_latest_visit_at_every_position_is_unobservable() {
+    let (l, _a, _b) = hand_built();
+    let resident = fold_latest_visit_one_by_one(&l);
+
+    let mut chaotic: Folded<LatestVisit> = Folded::new();
+    for (i, f) in l.iter().enumerate() {
+        chaotic.absorb_at(i as u64, f);
+        chaotic = Folded::rebuild_upto(&l, chaotic.position());
+    }
+
+    assert_eq!(chaotic.state(), resident.state());
+    assert_eq!(chaotic.position(), resident.position());
+}
+
+#[test]
+fn discarding_latest_visit_at_every_third_position_is_unobservable() {
+    let (l, _a, _b) = hand_built();
+    let resident = fold_latest_visit_one_by_one(&l);
+
+    let mut chaotic: Folded<LatestVisit> = Folded::new();
+    for (i, f) in l.iter().enumerate() {
+        chaotic.absorb_at(i as u64, f);
+        if i % 3 == 0 {
+            chaotic = Folded::rebuild_upto(&l, chaotic.position());
+        }
+    }
+
+    assert_eq!(chaotic.state(), resident.state());
+    assert_eq!(chaotic.position(), resident.position());
+}
+
+/// The retype the hazard fold's day made when it stopped round-tripping
+/// through `f64` standard days.
+///
+/// The old loop stored `WorldTime::as_std_days()` and handed the result back
+/// to `WorldTime::from_std_days` at every use; the new one carries the instant
+/// itself. The two agree only if that round trip is the identity, and it is at
+/// every reachable magnitude — `from_std_days` rounds `(days × 100 000)` to
+/// the nearest tick, and the division-then-multiplication error stays far
+/// below half a tick until `|ticks|` approaches `2^53`. This asserts it on the
+/// instants the sim actually produces (a real session's committed days, which
+/// run to ~7×10^10 ticks) rather than on a hand-picked few.
+#[test]
+fn the_tick_to_standard_day_round_trip_is_exact_at_every_instant_the_hazard_fold_reads() {
+    let world = common::build(42).expect("seed 42 always builds a world");
+    let (mut session, _opening) =
+        Session::start(&world, &PossessOpts::default()).expect("seed 42 always starts a session");
+    for _ in 0..5 {
+        session.handle("wait");
+    }
+    let ledger: Ledger = serde_json::from_str(&session.session_ledger_json())
+        .expect("the session's own ledger accessor round-trips");
+    let days: Vec<WorldTime> = ledger.iter().filter_map(|f| f.day).collect();
+    assert!(
+        days.len() > 100,
+        "the session must commit enough dated facts for this to mean anything: {}",
+        days.len()
+    );
+    let biggest = days.iter().map(|d| d.ticks().abs()).max().unwrap_or(0);
+    assert!(
+        biggest > 1_000_000_000,
+        "the sweep must reach the magnitudes the sim really uses, or it proves the round \
+         trip only near genesis: largest |ticks| seen was {biggest}"
+    );
+    for d in days {
+        assert_eq!(
+            WorldTime::from_std_days(d.as_std_days()).expect("a session day is finite"),
+            d,
+            "the tick -> standard-day -> tick round trip must be exact at {d:?}"
+        );
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Task 5, step 2: the one place Trail's order and the ledger's could part.
+// ---------------------------------------------------------------------------
+
+/// `build_emitter_scan`'s timeline used to be sorted by day ALONE, stably, so
+/// sightings sharing an instant kept COMMIT order; `Trail` sorts by
+/// `(day, room)`, so they are in ROOM order there. `position_at` reads the last
+/// entry with `day <= q`, so the two answers differ exactly when one entity has
+/// two sightings at the SAME instant in DIFFERENT rooms.
+///
+/// This pins that the divergence is REAL rather than hypothetical, on the
+/// hand-built fixture that deliberately commits such a pair out of room order
+/// — so nobody has to rediscover it — and the test one below measures that the
+/// walk cannot produce one.
+#[test]
+fn a_same_day_pair_committed_in_descending_room_order_is_where_the_two_orders_part() {
+    let (l, a, _b) = hand_built();
+    let day = WorldTime::from_ticks(300_000);
+
+    // Commit order at that instant, which is what the old day-only stable sort
+    // preserved and what `agent_position` still reads.
+    let commit_order: Vec<Facet> = l
+        .facts_of(a, AGENT_AT)
+        .filter(|f| f.day == Some(day))
+        .filter_map(|f| match &f.object {
+            Value::Text(s) => Some(room_from_text_copy(s)),
+            _ => None,
+        })
+        .collect();
+    assert!(
+        commit_order.len() > 1,
+        "the fixture must commit more than one sighting of {a:?} at {day:?}, or this test \
+         measures nothing: {commit_order:?}"
+    );
+
+    let trail = fold_one_by_one(&l);
+    let upto = trail.state().prefix_len(a, day);
+    let trail_last = trail.state().of(a)[upto - 1].1.clone();
+    let commit_last = commit_order.last().expect("checked non-empty").clone();
+    assert_ne!(
+        trail_last, commit_last,
+        "the fixture must commit its same-instant pair OUT of room order, or the two \
+         orderings agree here by accident and the divergence this test names is untested"
+    );
+    assert_eq!(
+        trail_last,
+        commit_order
+            .iter()
+            .max()
+            .expect("checked non-empty")
+            .clone(),
+        "the trail's answer at a same-instant tie is the LARGEST room, because it sorts \
+         by (day, room)"
+    );
+}
+
+/// The other half: the walk cannot commit such a pair, so the divergence above
+/// is unreachable in production.
+///
+/// `WalkState` advances `st.day` by `clock::cost_of` — which floors at one
+/// tick — before every emitted `agent-at`, so a walker's sightings are strictly
+/// increasing in day. That is a structural argument; this measures it, with
+/// the denominator, on a real session.
+#[test]
+fn the_walk_never_commits_two_sightings_of_one_entity_at_one_instant() {
+    let world = common::build(42).expect("seed 42 always builds a world");
+    let (mut session, _opening) =
+        Session::start(&world, &PossessOpts::default()).expect("seed 42 always starts a session");
+    for _ in 0..20 {
+        session.handle("wait");
+    }
+    let ledger: Ledger = serde_json::from_str(&session.session_ledger_json())
+        .expect("the session's own ledger accessor round-trips");
+
+    let subjects: std::collections::BTreeSet<EntityId> = ledger
+        .iter()
+        .filter(|f| f.predicate == AGENT_AT)
+        .map(|f| f.subject)
+        .collect();
+    let mut pairs = 0_u64;
+    let mut same_instant = 0_u64;
+    let mut same_instant_different_room = 0_u64;
+    for e in &subjects {
+        let sightings: Vec<(WorldTime, Facet)> = ledger
+            .facts_of(*e, AGENT_AT)
+            .filter_map(|f| match (&f.day, &f.object) {
+                (Some(d), Value::Text(s)) => Some((*d, room_from_text_copy(s))),
+                _ => None,
+            })
+            .collect();
+        for w in sightings.windows(2) {
+            pairs += 1;
+            if w[0].0 == w[1].0 {
+                same_instant += 1;
+                if w[0].1 != w[1].1 {
+                    same_instant_different_room += 1;
+                }
+            }
+        }
+    }
+    println!(
+        "--- Trail order versus commit order (seed 42, 20 waits, {} subjects) ---\n\
+         {pairs} adjacent sighting pairs, {same_instant} at the same instant, \
+         {same_instant_different_room} at the same instant in DIFFERENT rooms",
+        subjects.len()
+    );
+    assert!(
+        pairs > 100,
+        "the script must commit enough sightings for this to be a measurement: {pairs} \
+         adjacent pairs"
+    );
+    assert_eq!(
+        same_instant_different_room, 0,
+        "a walker committed two sightings at one instant in different rooms, so the \
+         Trail's (day, room) order and the ledger's commit order CAN disagree on the \
+         emitter scan's `position_at` — see the test above for what that costs"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Task 5, step 4: H4's cost witness.
+// ---------------------------------------------------------------------------
+
+/// One measurement of a hazard read's integration cost: the segments summed,
+/// the past-day replays performed, and the ledger position it was taken at.
+struct HazardCost {
+    /// Integral segments summed inside the hazard read.
+    segments: u64,
+    /// Past-day affect replays performed inside it.
+    replays: u64,
+    /// How many facts the store had absorbed when it was taken.
+    position: u64,
+    /// How many facts the ROSTER has committed by then — the history the fold
+    /// would have walked, and the quantity the scaling claim is really about.
+    ///
+    /// The store's `position` is NOT that quantity and reading it as one is a
+    /// trap this witness fell into first: a fresh session's ledger already
+    /// holds ~23,000 facts of world history before a single creature moves, so
+    /// 150 turns of walking move it by under 2%, and a guard demanding the
+    /// ledger double would fail on a session whose walk history quadrupled.
+    trail_facts: usize,
+}
+
+/// Walk `session` to `turns`, then take ONE whole-roster hazard read and
+/// measure what it integrated.
+///
+/// **A roster pass rather than a single `hazard_memory_memo` call, and the
+/// difference is deliberate.** The scaling question is the same either way,
+/// and a single call would have to name its creature BEFORE the run — but
+/// which body reaches the past-day replay is a property of the world, not
+/// something a test can choose in advance, so pinning one would be a good way
+/// to measure a body that never enters the path. The pass shares one
+/// `PrimaryAfraidMemo` across the roster exactly as the tick does, so it is
+/// also the shape the sim actually pays for.
+fn hazard_cost_at(session: &mut Session<'_>, turns: usize) -> HazardCost {
+    for _ in 0..turns {
+        session.handle("wait");
+    }
+    let trail_facts: usize = session
+        .bodies()
+        .iter()
+        .map(|b| session.committed_fact_count_for(b.entity))
+        .sum();
+    let before_segments = session.resident_segments_integrated();
+    let before_replays = session.resident_alarm_replays();
+    let _ = session.hazard_memories();
+    HazardCost {
+        segments: session.resident_segments_integrated() - before_segments,
+        replays: session.resident_alarm_replays() - before_replays,
+        position: session.resident_position(),
+        trail_facts,
+    }
+}
+
+/// H4's cost witness: the hazard fold's integration work does not scale with
+/// the tick index.
+///
+/// The Tailrace measured `hazard_memory_memo` at 73–97 ms/call at its final
+/// band with elasticity 1.06–1.21 against history — the most expensive fold in
+/// the stack, and history-proportional. Two mechanisms produced that (spec §1):
+/// a `latest` map rebuilt from every `agent-at` fact the creature ever
+/// committed, and an emitter scan that rebuilt every roster member's whole
+/// timeline. Both are now reads off the resident store, so what remains is the
+/// PAST-DAY affect replay, whose own sustenance reads resume from a reset.
+///
+/// Stated as a COUNT rather than a duration, for the reason the Task-3 witness
+/// beside it gives: a timing here would measure the box.
+///
+/// **Both shapes are measured and only one is asserted on.** Seed 42 never
+/// reaches the past-day replay at all (see `EMITTER_SEED`'s doc in
+/// `ledger_hash_witness.rs` for what it does and does not have), so its
+/// number would be a claim about the terrain-only path. The assertion is on
+/// the emitter-bearing world, with the replay count asserted non-zero at both
+/// tick indices so the ratio cannot be a ratio of two untaken branches.
+#[test]
+fn the_hazard_folds_integration_does_not_grow_with_the_tick_index() {
+    const EARLY: usize = 50;
+    const LATE: usize = 200;
+
+    println!("--- H4 cost witness: segments integrated inside one hazard read ---");
+
+    // Shape 1, printed not asserted: seed 42, the terrain-only path.
+    let plain = common::build(42).expect("seed 42 always builds a world");
+    let (mut plain_session, _) =
+        Session::start(&plain, &PossessOpts::default()).expect("seed 42 always starts a session");
+    let plain_early = hazard_cost_at(&mut plain_session, EARLY);
+    let plain_late = hazard_cost_at(&mut plain_session, LATE - EARLY);
+    println!(
+        "seed 42 (NO past-day replay): turn {EARLY} {} segments over {} roster facts \
+         ({} replays); turn {LATE} {} segments over {} roster facts ({} replays) -- \
+         segment ratio {:.3} against a {:.2}x longer roster history",
+        plain_early.segments,
+        plain_early.trail_facts,
+        plain_early.replays,
+        plain_late.segments,
+        plain_late.trail_facts,
+        plain_late.replays,
+        plain_late.segments as f64 / plain_early.segments.max(1) as f64,
+        plain_late.trail_facts as f64 / plain_early.trail_facts.max(1) as f64
+    );
+
+    // Shape 2, the one asserted on: the emitter-bearing world, whose hazard
+    // fold really does replay an emitter's affect at a past visit day.
+    let (seed, world) = common::world_where(
+        "the hazard fold replays an emitter's affect at a past visit day",
+        |session| {
+            for _ in 0..8 {
+                session.handle("wait");
+            }
+            session.resident_alarm_replays() > 0
+        },
+    );
+    let (mut session, _) = Session::start(&world, &PossessOpts::default())
+        .expect("the found world always starts a session");
+    let early = hazard_cost_at(&mut session, EARLY);
+    let late = hazard_cost_at(&mut session, LATE - EARLY);
+    println!(
+        "seed {seed} (past-day replay LIVE): turn {EARLY} {} segments over {} roster \
+         facts ({} replays); turn {LATE} {} segments over {} roster facts ({} replays) -- \
+         segment ratio {:.3} against a {:.2}x longer roster history (store positions {} \
+         and {}, most of which is world history that predates the walk)",
+        early.segments,
+        early.trail_facts,
+        early.replays,
+        late.segments,
+        late.trail_facts,
+        late.replays,
+        late.segments as f64 / early.segments.max(1) as f64,
+        late.trail_facts as f64 / early.trail_facts.max(1) as f64,
+        early.position,
+        late.position
+    );
+
+    // THE GROWTH GUARD, and its threshold is stated rather than round. The
+    // claim's axis is the TICK INDEX, which is 4x here by construction (50
+    // against 200) and so guards nothing on its own; what has to be true for
+    // the comparison to mean anything is that real history accrued in
+    // between. An earlier draft demanded the roster's history DOUBLE and
+    // failed on a world whose creatures simply walk less (1.48x over the same
+    // 150 turns) — a fact about that world, not about the fold. So the guard
+    // is an absolute floor on facts accrued, which does not assume how busy a
+    // given world's roster is, and the ratio is printed beside it.
+    const MIN_FACTS_ACCRUED: usize = 200;
+    assert!(
+        late.trail_facts >= early.trail_facts + MIN_FACTS_ACCRUED,
+        "the roster must commit at least {MIN_FACTS_ACCRUED} more facts between the two \
+         samples, or 'does not scale with the tick index' is untested: {} facts then {}",
+        early.trail_facts,
+        late.trail_facts
+    );
+    assert!(
+        early.replays > 0 && late.replays > 0,
+        "the measured hazard read must enter the PAST-DAY replay at BOTH tick indices, or \
+         the ratio compares two untaken branches: {} replays early, {} late",
+        early.replays,
+        late.replays
+    );
+    assert!(
+        early.segments > 0,
+        "the measured hazard read must integrate something early, or the ratio is vacuous"
+    );
+    assert!(
+        late.segments as f64 <= early.segments as f64 * 1.5,
+        "the hazard fold's integration must not scale with the tick index: {} segments at \
+         turn {EARLY} against {} at turn {LATE} (allowance 1.5x), with the roster's own \
+         history {:.2}x longer",
+        early.segments,
+        late.segments,
+        late.trail_facts as f64 / early.trail_facts.max(1) as f64
     );
 }

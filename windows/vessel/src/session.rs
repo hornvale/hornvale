@@ -2197,6 +2197,71 @@ impl<'w> Session<'w> {
         self.folds.borrow().witness().segments_by_entity().clone()
     }
 
+    /// Every derived body's HAZARD MEMORY at this session's current day, read
+    /// through the session's own terrain, roster and resident store — the
+    /// determinism seam for the half of the walk that `session_ledger_json`
+    /// cannot see on its own.
+    ///
+    /// **Why it exists.** The Pawl's first byte-identity witness hashes the
+    /// committed ledger, which is the right instrument for a fold that changes
+    /// where a creature WALKS. The hazard fold's transient half also produces
+    /// something a creature FEELS — `HazardMemory::dread`, the remembered
+    /// alarm magnitude per room — and a change there only reaches the ledger
+    /// if it happens to flip a route on the seeds a witness runs. So the
+    /// second witness hashes this as well, on a world whose hazard fold
+    /// actually replays an emitter's affect at a past visit day (see
+    /// `Self::resident_alarm_replays`). Reading it costs a full hazard
+    /// re-derivation per body and nothing in the sim calls it.
+    pub fn hazard_memories(&self) -> Vec<(EntityId, crate::liveness::HazardMemory)> {
+        let terrain = LocaleTerrain::with_fields(
+            &self.wctx.ctx,
+            self.calendar.as_ref(),
+            self.predator.as_ref(),
+            self.prey.as_ref(),
+            Some(&self.built),
+            Some(&self.mesh_memo),
+        );
+        let mut memo = PrimaryAfraidMemo::new();
+        self.bodies
+            .iter()
+            .map(|npc| {
+                let mem = crate::liveness::hazard_memory_memo(
+                    &self.ledger,
+                    &self.folds,
+                    npc,
+                    self.day,
+                    &terrain,
+                    &self.bodies,
+                    &mut memo,
+                );
+                (npc.entity, mem)
+            })
+            .collect()
+    }
+
+    /// How many EMITTER SCANS this session has built — the denominator
+    /// [`Self::resident_emitter_scans_with_emitters`] is a count out of.
+    /// type-audit: bare-ok(count: return)
+    pub fn resident_emitter_scans(&self) -> u64 {
+        self.folds.borrow().witness().emitter_scans()
+    }
+
+    /// How many of this session's emitter scans found a member that could ever
+    /// raise an alarm. Zero means the hazard fold's TRANSIENT path — the
+    /// past-day affect replay — was never entered, which is the settled
+    /// world's case and seed 42's.
+    /// type-audit: bare-ok(count: return)
+    pub fn resident_emitter_scans_with_emitters(&self) -> u64 {
+        self.folds.borrow().witness().emitter_scans_with_emitters()
+    }
+
+    /// How many PAST-DAY AFFECT REPLAYS this session's hazard fold performed —
+    /// spec §3 rule 5's own denominator.
+    /// type-audit: bare-ok(count: return)
+    pub fn resident_alarm_replays(&self) -> u64 {
+        self.folds.borrow().witness().alarm_replays()
+    }
+
     /// How many unfiltered reset lookups this session has made — the
     /// denominator [`Self::resident_resets_in_the_future`] is a count out of,
     /// and the number that says whether that witness measured anything.

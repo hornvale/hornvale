@@ -1122,7 +1122,7 @@ impl PrimaryAfraidMemo {
 /// alarms could reach. Shared across every creature's re-derivation at one time.
 struct EmitterScan {
     /// The ever-terrain-afraid members and their day-sorted position timelines.
-    emitters: Vec<(Body, Vec<(f64, Facet)>)>,
+    emitters: Vec<(Body, Vec<(WorldTime, Facet)>)>,
     /// Every room within one hop of some emitter's frightening position.
     alarm_source_rooms: std::collections::BTreeSet<Facet>,
 }
@@ -1131,32 +1131,76 @@ struct EmitterScan {
 /// possible alarm emitters), building each one's day-sorted position timeline
 /// (day ≤ `t`) and the union of rooms their alarms could reach. Pure over
 /// `(roster, ledger, terrain, t)`; cached per `t` in [`PrimaryAfraidMemo`].
+///
+/// # This is spec §2.4's `Alarm`, and it reads the store rather than the ledger
+///
+/// It used to rebuild every roster member's whole sorted timeline from
+/// `ledger.facts_of` on every call — O(roster × history), the O(agents²)-shaped
+/// term spec §1 names as this fold's second cost. It now takes two reads off
+/// the caller's resident store (The Pawl, spec §2.4):
+///
+/// - **which rooms a member has stood in** comes from
+///   [`crate::resident::LatestVisit::rooms_at`], which is O(distinct rooms
+///   visited) rather than O(history). The `ever`/halo test only ever asked
+///   *whether* a member had stood somewhere frightening and *where*, and both
+///   are set questions: the old loop walked every sighting and inserted into a
+///   `BTreeSet`, so re-visits contributed nothing after the first.
+/// - **an emitter's position timeline** comes from
+///   [`crate::resident::Trail`], sliced to its `day <= t` prefix by binary
+///   search, and is copied only for the members that turn out to be emitters
+///   — rare, and the reason the copy is affordable at all.
+///
+/// **The tenant holds the visits and the READ applies the predicate**, exactly
+/// as [`crate::resident::KnownWater`] does for `is_water`: `frightening` needs
+/// terrain and the member's own threat niche, neither of which is a ledger
+/// fact, so none of what this function accumulates could live inside a
+/// `LedgerFold`. The result is memoised per `t` in [`PrimaryAfraidMemo`],
+/// unchanged.
+///
+/// **One ordering caveat, stated because it is the only place the store's
+/// order and the ledger's could part.** The old timeline was sorted by day
+/// alone, stably, so sightings sharing a day kept COMMIT order; `Trail` sorts
+/// by `(day, room)`, so they are in room order there. `position_at` reads the
+/// LAST entry with `day <= q`, so the two disagree exactly when one entity has
+/// two sightings on the SAME instant in DIFFERENT rooms. In production they
+/// cannot: `WalkState` advances `st.day` by `clock::cost_of`, which floors at
+/// one tick, before every emitted `agent-at`, so a walker's sightings are
+/// strictly increasing in day. That is a structural argument, and it is
+/// measured too — see `the_walk_never_commits_two_sightings_of_one_entity_at_
+/// one_instant` and `a_same_day_pair_committed_in_descending_room_order_is_
+/// where_the_two_orders_part` in
+/// `windows/vessel/tests/suite/resident_folds.rs`, which pin both halves.
 fn build_emitter_scan(
     roster: &[Body],
     ledger: &Ledger,
+    folds: &OwnedFolds,
     terrain: &dyn Terrain,
     t: WorldTime,
 ) -> EmitterScan {
-    let mut emitters: Vec<(Body, Vec<(f64, Facet)>)> = Vec::new();
+    // Pass 1: the rooms each member has stood in by `t`, off the store. The
+    // guard is taken once for the whole pass and dropped before the predicate
+    // runs — not because `terrain` could re-enter the store (it cannot), but
+    // because keeping every borrow to the smallest block that needs it is what
+    // makes the recursion further down this chain safe by construction rather
+    // than by inspection.
+    let visited: Vec<Vec<Facet>> = {
+        let mut store = folds.borrow_mut();
+        let (visits, _) = store.latest_visit_and_trail(ledger);
+        roster
+            .iter()
+            .map(|m| visits.rooms_at(m.entity, t))
+            .collect()
+    };
+
+    // Pass 2: apply the frightening predicate, which needs terrain and each
+    // member's own threat niche — the half no fold can hold.
     let mut alarm_source_rooms: std::collections::BTreeSet<Facet> =
         std::collections::BTreeSet::new();
-    for m in roster {
+    let mut is_emitter: Vec<bool> = Vec::with_capacity(roster.len());
+    for (m, rooms) in roster.iter().zip(&visited) {
         let mettle = mettle_factor(m.boldness);
         let frightening =
             |room: &Facet| threat_field(room, &m.threat_niche, terrain) * mettle >= DANGER_ACT;
-        let mut timeline: Vec<(f64, Facet)> = ledger
-            .facts_of(m.entity, AGENT_AT)
-            .filter_map(|f| {
-                let d = f.day.filter(|d| *d <= t)?.as_std_days();
-                match &f.object {
-                    Value::Text(s) => Some((d, room_from_text(s))),
-                    _ => None,
-                }
-            })
-            .collect();
-        // Sort by day (stable: equal days keep commit order, matching
-        // `agent_position`'s last-committed-≤-day read on the monotonic timeline).
-        timeline.sort_by(|a, b| a.0.total_cmp(&b.0));
         let mut ever = false;
         let mut note_halo = |p: &Facet| {
             alarm_source_rooms.insert(p.clone());
@@ -1168,16 +1212,37 @@ fn build_emitter_scan(
             ever = true;
             note_halo(&m.home);
         }
-        for (_, p) in &timeline {
+        for p in rooms {
             if frightening(p) {
                 ever = true;
                 note_halo(p);
             }
         }
-        if ever {
-            emitters.push((m.clone(), timeline));
+        is_emitter.push(ever);
+    }
+
+    // Pass 3: copy the timelines of the members that are actually emitters.
+    let mut emitters: Vec<(Body, Vec<(WorldTime, Facet)>)> = Vec::new();
+    {
+        let mut store = folds.borrow_mut();
+        let trail = store.trail(ledger);
+        for (m, ever) in roster.iter().zip(&is_emitter) {
+            if *ever {
+                let upto = trail.prefix_len(m.entity, t);
+                emitters.push((m.clone(), trail.of(m.entity)[..upto].to_vec()));
+            }
         }
     }
+
+    // The scan's own witness: how many scans were built and how many found an
+    // emitter. The DENOMINATOR is the point — "no emitter" and "no scan" are
+    // different findings, and the seed-42 ledger hash is blind to this whole
+    // path precisely because every one of its scans is empty.
+    folds
+        .borrow_mut()
+        .witness_mut(ledger)
+        .note_emitter_scan(emitters.len());
+
     EmitterScan {
         emitters,
         alarm_source_rooms,
@@ -1352,57 +1417,59 @@ pub fn hazard_memory_memo(
     roster: &[Body],
     memo: &mut PrimaryAfraidMemo,
 ) -> HazardMemory {
-    // Spec §3 rule 6's witness for the LATEST-VISIT map, taken FIRST so that
-    // every call is counted -- the emitter-free fast path below returns early,
-    // and a counter placed after it would silently measure only the worlds
-    // that have an emitter. The store is read for the trail's last instant and
-    // the guard is dropped immediately: this function recurses (through
-    // `frightened_at` -> `alarm_at` -> `alarm_field` -> `emitter_arousal` ->
-    // `affect_of`), and although that path builds its own throwaway store, a
-    // guard held across it would be a runtime panic waiting for the day it
-    // does not.
-    {
+    // MOST-RECENT VISIT PER ROOM (day ≤ t), off the resident store: the room is
+    // judged at its LATEST visit, so a later safe visit clears an earlier
+    // phantom (the staleness rule). This used to walk EVERY `agent-at` fact the
+    // creature had ever committed, on every call, to build a map bounded by the
+    // rooms it has stood in — the O(history)-per-tick term spec §1 names as this
+    // fold's first cost. `LatestVisit` holds the same visits indexed by room, so
+    // the read is one `partition_point` per room (spec §2.4).
+    //
+    // Spec §3 rule 6's witness is taken in the same guard, and FIRST, so that
+    // every call is counted: the emitter-free fast path below returns early, and
+    // a counter placed after it would silently measure only the worlds that have
+    // an emitter.
+    //
+    // ONE guard, and it is DROPPED before anything below runs. This function
+    // recurses — `frightened_at` -> `alarm_at` -> `alarm_field` ->
+    // `emitter_arousal` -> `affect_of` -> back here — and since stage 2 that
+    // path reads THIS store rather than a throwaway one, so a guard held across
+    // it is a runtime panic rather than a latent one. The shape every read site
+    // on this chain uses is the same: borrow, copy out what is needed, drop,
+    // then compute.
+    let latest: std::collections::BTreeMap<Facet, WorldTime> = {
         let mut store = folds.borrow_mut();
-        let (trail, witness) = store.trail_and_witness(ledger);
+        let (visits, trail, witness) = store.latest_visit_and_witness(ledger);
         witness.note_hazard(
             npc.entity,
             t,
             trail.of(npc.entity).last().map(|(day, _)| *day),
         );
-    }
-    // Most-recent visit per room (day ≤ t): the room is judged at its LATEST
-    // visit, so a later safe visit clears an earlier phantom (the staleness rule).
-    let mut latest: std::collections::BTreeMap<Facet, f64> = std::collections::BTreeMap::new();
-    for f in ledger.facts_of(npc.entity, AGENT_AT) {
-        if let Some(fday) = f.day.filter(|d| *d <= t).map(WorldTime::as_std_days)
-            && let Value::Text(s) = &f.object
-        {
-            latest
-                .entry(room_from_text(s))
-                .and_modify(|d| {
-                    if fday > *d {
-                        *d = fday;
-                    }
-                })
-                .or_insert(fday);
-        }
-    }
+        visits.latest_at(npc.entity, t)
+    };
 
     // The emitter scan (which members could ever raise an alarm, their position
     // timelines, and the rooms any alarm could reach) is IDENTICAL for every
     // creature's re-derivation at this time over this ledger — build it once and
     // cache it per `t` (see [`PrimaryAfraidMemo`]).
-    memo.scans
-        .entry(t)
-        .or_insert_with(|| build_emitter_scan(roster, ledger, terrain, t));
+    if let std::collections::btree_map::Entry::Vacant(slot) = memo.scans.entry(t) {
+        // Built BEFORE the entry is occupied rather than inside
+        // `or_insert_with`: the closure form would hold the store guard for as
+        // long as the map is borrowed, and the whole discipline on this chain
+        // is that a guard lives in the smallest block that needs it.
+        slot.insert(build_emitter_scan(roster, ledger, folds, terrain, t));
+    }
     // Disjoint field borrows: the scan (read) and the affect memo (write).
     let PrimaryAfraidMemo { afraid, scans } = memo;
     let scan = &scans[&t];
 
     // The emitter's committed position AT `day`: the latest entry with day ≤ it,
     // else its home (the pre-history fallback) — `agent_position` over the
-    // precomputed timeline.
-    let position_at = |m: &Body, timeline: &[(f64, Facet)], day: f64| -> Facet {
+    // precomputed timeline. The timeline is `Trail`'s own slice now, so the
+    // comparison is an exact tick comparison where it used to be an `f64` day
+    // comparison; `WorldTime::as_std_days` is strictly increasing at every
+    // reachable magnitude, so the `partition_point` lands in the same place.
+    let position_at = |m: &Body, timeline: &[(WorldTime, Facet)], day: WorldTime| -> Facet {
         let idx = timeline.partition_point(|(d, _)| *d <= day);
         if idx == 0 {
             m.home.clone()
@@ -1421,15 +1488,7 @@ pub fn hazard_memory_memo(
         // BEFORE any dread is ever recorded, so byte-identity costs not one
         // instruction.
         for (room, day) in latest {
-            if frightened_at(
-                &room,
-                npc,
-                terrain,
-                WorldTime::from_std_days(day).expect("a day value is finite"),
-                &[],
-                ledger,
-                folds,
-            ) {
+            if frightened_at(&room, npc, terrain, day, &[], ledger, folds) {
                 mem.shunned.insert(room);
             }
         }
@@ -1473,14 +1532,13 @@ pub fn hazard_memory_memo(
                 // Confirm the emitter's Danger drive WINS (primary-afraid) via the
                 // memoized, alarm-free `affect_of` — the same read `alarm_field`
                 // performs, cached per `(emitter, day)` over this fixed ledger.
-                alarm += emitter_arousal(
-                    afraid,
-                    ledger,
-                    folds,
-                    m,
-                    WorldTime::from_std_days(day).expect("a day value is finite"),
-                    terrain,
-                );
+                // Spec §3 rule 5's denominator, recorded HERE rather than
+                // inside `emitter_arousal`: this is the PAST-DAY replay (the
+                // room's remembered visit instant), and the same function's
+                // other caller — `alarm_field_memo`'s present-day emitter
+                // probe — is not that path at all.
+                folds.borrow_mut().witness_mut(ledger).note_alarm_replay();
+                alarm += emitter_arousal(afraid, ledger, folds, m, day, terrain);
             }
         }
         // Hoisted so the value RECORDED as dread is byte-for-byte the value that
@@ -7639,6 +7697,430 @@ mod tests {
                 "the mild room never frightens on day {day}"
             );
         }
+    }
+
+    /// The old scan's emitter list: each ever-terrain-afraid member with its
+    /// day-sorted `f64` timeline, exactly as `EmitterScan` held it before this
+    /// campaign. Named only because the tuple is too wide to spell inline.
+    type OracleEmitters = Vec<(Body, Vec<(f64, Facet)>)>;
+
+    /// A VERBATIM COPY of the OLD `build_emitter_scan` body — the SCAN half of
+    /// the emitter scan's equivalence, before it read the resident store.
+    ///
+    /// Copied rather than called, the same rule every other oracle in this
+    /// campaign follows (spec §5, and the pre-flight ruling in the campaign
+    /// ledger): the production body is gone, so this is the only statement of
+    /// the old one left, and an oracle sharing code with the thing under test
+    /// cannot falsify it.
+    fn emitter_scan_oracle(
+        roster: &[Body],
+        ledger: &Ledger,
+        terrain: &dyn Terrain,
+        t: WorldTime,
+    ) -> (OracleEmitters, std::collections::BTreeSet<Facet>) {
+        let mut emitters: Vec<(Body, Vec<(f64, Facet)>)> = Vec::new();
+        let mut alarm_source_rooms: std::collections::BTreeSet<Facet> =
+            std::collections::BTreeSet::new();
+        for m in roster {
+            let mettle = mettle_factor(m.boldness);
+            let frightening =
+                |room: &Facet| threat_field(room, &m.threat_niche, terrain) * mettle >= DANGER_ACT;
+            let mut timeline: Vec<(f64, Facet)> = ledger
+                .facts_of(m.entity, AGENT_AT)
+                .filter_map(|f| {
+                    let d = f.day.filter(|d| *d <= t)?.as_std_days();
+                    match &f.object {
+                        Value::Text(s) => Some((d, room_from_text(s))),
+                        _ => None,
+                    }
+                })
+                .collect();
+            timeline.sort_by(|a, b| a.0.total_cmp(&b.0));
+            let mut ever = false;
+            let mut note_halo = |p: &Facet| {
+                alarm_source_rooms.insert(p.clone());
+                for n in p.neighbors() {
+                    alarm_source_rooms.insert(n);
+                }
+            };
+            if frightening(&m.home) {
+                ever = true;
+                note_halo(&m.home);
+            }
+            for (_, p) in &timeline {
+                if frightening(p) {
+                    ever = true;
+                    note_halo(p);
+                }
+            }
+            if ever {
+                emitters.push((m.clone(), timeline));
+            }
+        }
+        (emitters, alarm_source_rooms)
+    }
+
+    /// The OLD `position_at`, copied for the same reason — it reads an `f64`
+    /// timeline where the production one now reads `Trail`'s ticks.
+    fn position_at_oracle(m: &Body, timeline: &[(f64, Facet)], day: f64) -> Facet {
+        let idx = timeline.partition_point(|(d, _)| *d <= day);
+        if idx == 0 {
+            m.home.clone()
+        } else {
+            timeline[idx - 1].1.clone()
+        }
+    }
+
+    /// A roster ledger with THREE members, walking rooms of both kinds, with
+    /// strictly increasing days per member — the shape a real walk commits
+    /// (`clock::cost_of` floors at one tick, so a walker's sightings never
+    /// share an instant; measured in
+    /// `windows/vessel/tests/suite/resident_folds.rs`'s
+    /// `the_walk_never_commits_two_sightings_of_one_entity_at_one_instant`).
+    ///
+    /// Returns the roster, the ledger and the terrain. The middle member never
+    /// stands anywhere frightening, so the `ever` test is exercised in BOTH
+    /// directions — an oracle and a production scan that both returned every
+    /// member would agree vacuously.
+    fn emitter_scan_fixture() -> (Vec<Body>, Ledger, PlantedTerrain) {
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let (d_room, hazard, x) = phantom_triple();
+        let terrain = PlantedTerrain::hazard(std::iter::empty(), [(hazard.clone(), 0.8)]);
+
+        // A: walks onto the hazard and off again, revisiting one room.
+        let a_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
+        let a = haunt_npc(a_e, x.clone());
+        commit_agent_at(&mut ledger, &reg, a_e, &d_room, 0.5);
+        commit_agent_at(&mut ledger, &reg, a_e, &hazard, 1.5);
+        commit_agent_at(&mut ledger, &reg, a_e, &d_room, 2.5);
+        commit_agent_at(&mut ledger, &reg, a_e, &x, 7.5);
+
+        // B: never leaves safe ground, and its home is safe — never an emitter.
+        // NOT `d_room`: `threat_field` is the maximum over a room AND its
+        // neighbours, and `d_room` is one hop from the hazard, so standing
+        // there frightens. (That is what makes `d_room` an alarm SOURCE for A
+        // above; putting B there made every member of the fixture an emitter
+        // and the equivalence below vacuous.)
+        let far = raddr(-1.0);
+        let b_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
+        let b = haunt_npc(b_e, x.clone());
+        commit_agent_at(&mut ledger, &reg, b_e, &x, 0.5);
+        commit_agent_at(&mut ledger, &reg, b_e, &far, 3.5);
+        commit_agent_at(&mut ledger, &reg, b_e, &x, 5.5);
+
+        // C: never committed a sighting at all, but LIVES on the hazard — the
+        // `frightening(&m.home)` arm, which the timeline loop cannot reach.
+        let c_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
+        let c = haunt_npc(c_e, hazard.clone());
+
+        (vec![a, b, c], ledger, terrain)
+    }
+
+    #[test]
+    fn the_emitter_scan_fixture_separates_emitters_from_non_emitters() {
+        // The anti-vacuity guard: if every member (or none) were an emitter,
+        // the equivalence below would hold for a scan that ignored terrain.
+        let (roster, ledger, terrain) = emitter_scan_fixture();
+        let t = WorldTime::from_std_days(10.0).expect("a day value is finite");
+        let (emitters, rooms) = emitter_scan_oracle(&roster, &ledger, &terrain, t);
+        assert_eq!(
+            emitters.len(),
+            2,
+            "the fixture must hold both emitters and non-emitters: {} of {} members emit",
+            emitters.len(),
+            roster.len()
+        );
+        assert!(
+            !rooms.is_empty(),
+            "the fixture must produce a non-empty alarm halo, or the set comparison below \
+             compares two empty sets"
+        );
+    }
+
+    #[test]
+    fn the_emitter_scan_read_off_the_store_equals_the_old_ledger_scan() {
+        let (roster, ledger, terrain) = emitter_scan_fixture();
+        // Every instant the fixture can distinguish, and the ones either side.
+        let mut instants: Vec<WorldTime> = Vec::new();
+        for f in ledger.iter() {
+            if let Some(d) = f.day {
+                for delta in [-1_i64, 0, 1] {
+                    instants.push(WorldTime::from_ticks(d.ticks() + delta));
+                }
+            }
+        }
+        instants.push(WorldTime::GENESIS);
+        instants.push(WorldTime::from_std_days(100.0).expect("a day value is finite"));
+        instants.sort();
+        instants.dedup();
+
+        let mut compared = 0_u64;
+        let mut non_empty_scans = 0_u64;
+        for t in &instants {
+            let folds = test_folds();
+            let got = build_emitter_scan(&roster, &ledger, &folds, &terrain, *t);
+            let (want_emitters, want_rooms) = emitter_scan_oracle(&roster, &ledger, &terrain, *t);
+
+            assert_eq!(
+                got.alarm_source_rooms, want_rooms,
+                "the alarm halo at {t:?} must equal the old ledger scan's"
+            );
+            assert_eq!(
+                got.emitters
+                    .iter()
+                    .map(|(m, _)| m.entity)
+                    .collect::<Vec<_>>(),
+                want_emitters
+                    .iter()
+                    .map(|(m, _)| m.entity)
+                    .collect::<Vec<_>>(),
+                "the emitter roster at {t:?} must equal the old ledger scan's, in order"
+            );
+            if !got.emitters.is_empty() {
+                non_empty_scans += 1;
+            }
+
+            // And `position_at` must answer identically at every instant, for
+            // every emitter — the read the timeline exists for.
+            for ((m, new_tl), (om, old_tl)) in got.emitters.iter().zip(want_emitters.iter()) {
+                assert_eq!(m.entity, om.entity);
+                for q in &instants {
+                    let idx = new_tl.partition_point(|(d, _)| *d <= *q);
+                    let new_pos = if idx == 0 {
+                        m.home.clone()
+                    } else {
+                        new_tl[idx - 1].1.clone()
+                    };
+                    let old_pos = position_at_oracle(om, old_tl, q.as_std_days());
+                    assert_eq!(
+                        new_pos, old_pos,
+                        "the emitter {:?}'s position at {q:?} (scan built at {t:?}) must \
+                         equal the old timeline's",
+                        m.entity
+                    );
+                    compared += 1;
+                }
+            }
+        }
+        assert!(
+            non_empty_scans > 0,
+            "no instant produced an emitter, so no `position_at` answer was compared"
+        );
+        assert!(
+            compared >= 100,
+            "the sweep must make a real number of position comparisons: {compared}"
+        );
+    }
+
+    /// Spec §3 rule 5, executed: a creature's DREAD of a room depends on an
+    /// emitter's thirst at a past day, and that thirst depends on WHICH reset
+    /// the read resumes from.
+    ///
+    /// # Why this test had to be written rather than found
+    ///
+    /// Rule 5 says to mutate the past-day read to resume from the WRONG reset
+    /// — the one before the correct one — and confirm a hazard test reddens; a
+    /// green under that mutation means the campaign has not proven what it
+    /// claims. The mutation was applied to `Sustenance::last_reset` (return
+    /// `resets[len - 2]` when there is one, else the last) and the whole
+    /// vessel suite run under it. **Two tests reddened and neither was about
+    /// hazard**: the seed-42 ledger hash, and the reset-lookup scan
+    /// equivalence. The emitter-bearing hazard witness stayed GREEN, because
+    /// no creature on that world drinks twice inside the script — so the
+    /// mutation was a no-op for every entity the hazard path reads.
+    ///
+    /// So this is rule 5's own fixture, built to the shape the rule names. It
+    /// was written under the mutation, watched to FAIL ("A must shun x on the
+    /// strength of the remembered alarm: shunned {}"), and only then was the
+    /// mutation restored and the test watched to pass — that order is the
+    /// point, because a test written against a restored tree can pass for
+    /// reasons that have nothing to do with the path it claims to cover.
+    ///
+    /// # The construction
+    ///
+    /// B is an emitter: it stands at `d_room`, one hop from a hazard, so its
+    /// own terrain threat crosses act. A is a coward whose home is `x` — safe
+    /// ground inside B's one-hop alarm halo — and A stood there on the same
+    /// day. Whether A REMEMBERS `x` as frightening therefore turns on whether
+    /// B's Danger drive WON on that day, which is `emitter_arousal`'s
+    /// `affect_of(B, day)` — a past-day read.
+    ///
+    /// B drank TWICE: once at genesis, once AFTER the remembered day. Today's
+    /// unfiltered reset lookup takes the LATER drink, which lies in the read's
+    /// own future, so the thirst integral short-circuits to zero and Danger
+    /// wins. Resuming from the EARLIER drink instead integrates a hundred days
+    /// of thirst, Thirst wins the arbitration, B emits nothing, and A's dread
+    /// disappears. The two readings differ in the only place a player could
+    /// ever see: what ground a creature is afraid of.
+    ///
+    /// That the CORRECT answer here is the unfiltered one is this campaign's
+    /// deliberate choice, not an accident — see `emitter_arousal`'s doc and
+    /// spec §3 rule 1. This test pins the behaviour as it is; a future campaign
+    /// that adopts decision 0237's filtered rule will move this constant and
+    /// should say so.
+    #[test]
+    fn a_cowards_dread_depends_on_which_reset_the_emitters_past_day_thirst_resumes_from() {
+        let mut reg = agent_at_reg();
+        reg.register_predicate(DRANK, false, "drank").unwrap();
+        reg.register_predicate(EATEN, false, "eaten").unwrap();
+        reg.register_predicate(RESTED, false, "rested").unwrap();
+        let mut ledger = Ledger::default();
+        let (d_room, hazard, x) = phantom_triple();
+        let terrain = PlantedTerrain::hazard(std::iter::empty(), [(hazard.clone(), 0.8)]);
+
+        // The remembered day, and the two drinks that straddle it.
+        // The remembered day is at MIDDAY, not on a day boundary, and that is
+        // load-bearing rather than cosmetic. A `Diurnal` creature's
+        // arbitration is wake-cycle dependent: probed across days 0.5..2.0
+        // this same emitter reads `Danger` at 0.5 and 1.5 and `Fatigue` at
+        // 0.8, 0.9, 1.0 and 2.0, with `fatigue_at` flat at ZERO throughout —
+        // so the winner oscillates with the sun, not with the fatigue fold.
+        // The first draft of this fixture used day 100.0 and measured a
+        // creature that was asleep.
+        let remembered = 100.5_f64;
+        let early_drink = 0.0_f64;
+        let late_drink = 150.0_f64;
+        let read_at = td(200.0);
+
+        // B, the emitter: at `d_room` on the remembered day, far away after.
+        let b_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
+        let b = haunt_npc(b_e, d_room.clone());
+        commit_agent_at(&mut ledger, &reg, b_e, &d_room, remembered);
+        commit_agent_at(&mut ledger, &reg, b_e, &raddr(-1.0), 180.0);
+        ledger
+            .commit(drank_fact(b_e, td(early_drink), "test"), &reg)
+            .unwrap();
+        ledger
+            .commit(drank_fact(b_e, td(late_drink), "test"), &reg)
+            .unwrap();
+        // ONE meal, after the remembered day. Hunger is the other stock drive
+        // and it integrates from GENESIS when a creature has never eaten — so
+        // without this it saturates at 1.0 by day 100 and WINS the arbitration
+        // outright, hiding the thirst effect this test is about behind a
+        // starving emitter. One `eaten` (not two) keeps the rule-5 mutation
+        // isolated to thirst: with a single reset in the list, "the one before
+        // the correct one" does not exist and the hunger read is unmoved.
+        ledger
+            .commit(eaten_fact(b_e, td(late_drink), "test"), &reg)
+            .unwrap();
+        // And one sleep, for the same reason: `fatigue_at` folds the unfiltered
+        // maximum over `rested` and saturates from GENESIS otherwise, so an
+        // unslept emitter reads `Eager`/Fatigue at arousal 1.0 on day 100 and
+        // never gets as far as its Danger drive. (Measured, not assumed: the
+        // first draft of this fixture printed exactly that.)
+        ledger
+            .commit(rested_fact(b_e, td(late_drink), "test"), &reg)
+            .unwrap();
+
+        // A, the coward rememberer, stood at `x` on the remembered day.
+        let a_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
+        let mut a = haunt_npc(a_e, x.clone());
+        a.boldness = 0.0;
+        commit_agent_at(&mut ledger, &reg, a_e, &x, remembered);
+
+        let roster = [b.clone(), a.clone()];
+
+        // GUARD 1: the fixture really does straddle. Two resets, one on each
+        // side of the remembered day — without this the mutation rule 5 asks
+        // for is a no-op and a green under it would mean nothing, which is
+        // exactly what happened on the emitter-bearing world.
+        let resets: Vec<f64> = ledger
+            .facts_of(b_e, DRANK)
+            .filter_map(|f| f.day.map(|d| d.as_std_days()))
+            .collect();
+        assert_eq!(
+            resets.len(),
+            2,
+            "the emitter must have TWO committed resets, or resuming from 'the one before \
+             the correct one' cannot differ from resuming from the correct one: {resets:?}"
+        );
+        assert!(
+            resets[0] < remembered && resets[1] > remembered,
+            "the emitter's two resets must straddle the remembered day {remembered}: \
+             {resets:?}"
+        );
+
+        // GUARD 2: `x` is terrain-safe, so any dread there is the phantom's.
+        assert!(
+            !frightened_at(
+                &x,
+                &a,
+                &terrain,
+                td(remembered),
+                &[],
+                &ledger,
+                &test_folds()
+            ),
+            "x must be terrain-safe, or the dread below is ordinary present danger"
+        );
+
+        // The claim: A dreads `x`, at the magnitude B's Danger drive emitted.
+        let folds = test_folds();
+        let mem = hazard_memory(&ledger, &folds, &a, read_at, &terrain, &roster);
+        assert!(
+            folds.borrow().witness().alarm_replays() > 0,
+            "the read must have entered the PAST-DAY affect replay, or this test is not \
+             about the path rule 5 names at all"
+        );
+        assert!(
+            mem.shunned.contains(&x),
+            "A must shun x on the strength of the remembered alarm: shunned {:?}",
+            mem.shunned
+        );
+        let magnitude = mem
+            .dread
+            .get(&x)
+            .copied()
+            .expect("x is dreaded, not merely shunned — the phantom's own provenance");
+        assert!(
+            magnitude > 0.0,
+            "the remembered alarm's magnitude must be positive: {magnitude}"
+        );
+
+        // And the mechanism, stated as an assertion rather than as prose: with
+        // the LATER drink governing (today's unfiltered lookup) B's thirst at
+        // the remembered day is zero, and with the EARLIER one it is not. That
+        // is the whole difference the mutation exercises.
+        let store = test_folds();
+        let thirst_unfiltered = drive_at(
+            &ledger,
+            &store,
+            b_e,
+            &b.home,
+            td(remembered),
+            &SUSTENANCE,
+            &terrain,
+            b.thermal_strategy,
+        );
+        assert_eq!(
+            thirst_unfiltered, 0.0,
+            "today's unfiltered lookup takes the LATER drink, which lies after the \
+             remembered day, so the integral short-circuits to zero"
+        );
+        let witness = &mut ReadWitness::default();
+        let thirst_from_the_earlier_drink = {
+            let mut s = store.borrow_mut();
+            let (trail, _, _) = s.trail_and_thirst(&ledger);
+            sustenance_at(
+                trail,
+                b_e,
+                &b.home,
+                td(early_drink),
+                &[],
+                td(remembered),
+                &terrain,
+                b.thermal_strategy,
+                &SUSTENANCE,
+                witness,
+            )
+        };
+        assert!(
+            thirst_from_the_earlier_drink > 0.9,
+            "resuming from the EARLIER drink integrates a hundred days of thirst, which is \
+             what makes B lose its Danger arbitration under the rule-5 mutation: \
+             {thirst_from_the_earlier_drink}"
+        );
     }
 
     #[test]

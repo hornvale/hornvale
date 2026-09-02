@@ -490,6 +490,25 @@ pub struct ReadWitness {
     hazards_in_the_past: u64,
     /// The first such read, kept for the witness's own evidence line.
     first_hazard_in_the_past: Option<(EntityId, WorldTime, WorldTime)>,
+    /// How many EMITTER SCANS have been built (`build_emitter_scan`) — the
+    /// denominator the count below is out of, and the reason it exists: a
+    /// world with no scan and a world whose every scan is empty are different
+    /// findings that a single number cannot tell apart.
+    emitter_scans: u64,
+    /// How many of those found at least one member that could ever raise an
+    /// alarm. ZERO on every settled world, seed 42 included, which is exactly
+    /// why the seed-42 ledger hash is blind to the hazard chain's past-day
+    /// path and a second byte-identity witness needs an emitter-bearing world.
+    emitter_scans_with_emitters: u64,
+    /// How many PAST-DAY AFFECT REPLAYS the hazard fold has performed — the
+    /// `emitter_arousal` calls made from inside `hazard_memory_memo`'s
+    /// transient loop, at a room's remembered visit day. This is the path
+    /// spec §3 rule 5 is about, and the one whose reset semantics the campaign
+    /// preserved deliberately; a witness for it that counted `emitter_arousal`
+    /// calls in general would be counting `alarm_field_memo`'s present-day
+    /// emitter probe too, which seed 42 makes 320 of and which is not this
+    /// path at all.
+    alarm_replays: u64,
 }
 
 impl ReadWitness {
@@ -568,6 +587,44 @@ impl ReadWitness {
             self.first_hazard_in_the_past
                 .get_or_insert((entity, t, latest));
         }
+    }
+
+    /// Record that an emitter scan was built and how many emitters it found.
+    /// type-audit: bare-ok(count: emitters)
+    pub fn note_emitter_scan(&mut self, emitters: usize) {
+        self.emitter_scans += 1;
+        if emitters > 0 {
+            self.emitter_scans_with_emitters += 1;
+        }
+    }
+
+    /// Record one PAST-DAY AFFECT REPLAY — an `emitter_arousal` call made from
+    /// inside the hazard fold's transient loop. See the field doc for why this
+    /// is counted separately from the alarm field's present-day probe.
+    pub fn note_alarm_replay(&mut self) {
+        self.alarm_replays += 1;
+    }
+
+    /// How many emitter scans have been built — the DENOMINATOR
+    /// [`Self::emitter_scans_with_emitters`] is a count out of.
+    /// type-audit: bare-ok(count: return)
+    pub fn emitter_scans(&self) -> u64 {
+        self.emitter_scans
+    }
+
+    /// How many of those found at least one possible alarm emitter. Zero means
+    /// the hazard fold's transient path was never entered, whatever else the
+    /// world did.
+    /// type-audit: bare-ok(count: return)
+    pub fn emitter_scans_with_emitters(&self) -> u64 {
+        self.emitter_scans_with_emitters
+    }
+
+    /// How many past-day affect replays the hazard fold has performed — spec
+    /// §3 rule 5's own denominator.
+    /// type-audit: bare-ok(count: return)
+    pub fn alarm_replays(&self) -> u64 {
+        self.alarm_replays
     }
 
     /// How many hazard-memory lookups have been made — the DENOMINATOR
@@ -836,6 +893,16 @@ impl ResidentFolds {
             self.trail.state(),
             &mut self.witness,
         )
+    }
+
+    /// The read witness alone, mutably — for the two hazard-path counters that
+    /// record an event rather than a read (`note_emitter_scan`,
+    /// `note_alarm_replay`). It still advances every tenant first: a caller
+    /// holding this guard is inside a read, and the currency invariant is the
+    /// store's, not any one accessor's.
+    pub fn witness_mut(&mut self, ledger: &Ledger) -> &mut ReadWitness {
+        self.advance(ledger);
+        &mut self.witness
     }
 
     /// What the reads have cost and seen.

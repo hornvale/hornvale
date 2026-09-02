@@ -117,3 +117,174 @@ fn the_seed_42_walk_commits_the_same_ledger_bytes() {
          some committed fact's bytes moved for the fixed seed-42 script"
     );
 }
+
+// ---------------------------------------------------------------------------
+// The SECOND byte-identity witness (The Pawl, Task 5): an emitter-bearing
+// world, and the hazard memories the seed-42 hash cannot see.
+// ---------------------------------------------------------------------------
+
+/// How many `wait`s the emitter script takes. Kept small on purpose: the
+/// search below pays a world build per candidate seed, and the property it
+/// searches for appears within a handful of ticks or not at all.
+const EMITTER_SCRIPT_WAITS: usize = 8;
+
+/// The fixed script for the emitter-bearing witness.
+fn run_emitter_script(session: &mut Session<'_>) {
+    for _ in 0..EMITTER_SCRIPT_WAITS {
+        session.handle("wait");
+    }
+}
+
+/// The first seed whose hazard fold actually REPLAYS an emitter's affect at a
+/// past visit day — the path this campaign's stage 2 rebuilt and the seed-42
+/// hash is blind to.
+///
+/// Searched rather than pinned, for `common`'s own stated reason: a hardcoded
+/// seed stops exercising the feature the first time the world moves under it,
+/// silently. [`EMITTER_SEED`] records which seed the search lands on today, so
+/// a move is loud rather than invisible, but the search — not the constant —
+/// is what selects the world.
+fn emitter_bearing_world() -> (u64, hornvale_kernel::World) {
+    common::world_where(
+        "the hazard fold replays an emitter's affect at a past visit day",
+        |session| {
+            run_emitter_script(session);
+            session.resident_alarm_replays() > 0
+        },
+    )
+}
+
+/// The seed [`emitter_bearing_world`] lands on today.
+///
+/// **Seed 42 is not it, and the reason corrects a claim this campaign carried
+/// through four tasks.** The ledger and several doc comments said seed 42's
+/// "emitter scan is empty". Measured over `common::SIGHT_SEEDS` with the
+/// store's own counters: seed 42 builds 70 emitter scans in a ten-wait script
+/// and **20 of them find an emitter** — the scan is not empty at all. What
+/// seed 42 has none of is a past-day REPLAY: every remembered room is either
+/// already terrain-frightening (the terrain shortcut `continue`s) or outside
+/// `alarm_source_rooms` (the halo pre-filter), so `emitter_arousal` is never
+/// reached from inside the hazard fold. Of the 64 seeds swept, exactly **two**
+/// reach it — 28 with 14 replays and 55 with 20 — which is why this witness
+/// searches instead of assuming.
+const EMITTER_SEED: u64 = 28;
+
+/// The emitter-bearing world's final ledger hash, recorded from two agreeing
+/// runs before being committed.
+const EMITTER_LEDGER_HASH: u64 = 0x64ae_b2f9_3e38_d328;
+
+/// The emitter-bearing world's final HAZARD hash — every derived body's
+/// `shunned` set and `dread` map, rendered canonically (see
+/// [`hazard_digest`]). This is the half [`EXPECTED`] cannot see: `dread` is
+/// felt rather than committed, so a change to the past-day affect path that
+/// did not happen to flip a route would move nothing in the ledger.
+const EMITTER_HAZARD_HASH: u64 = 0x8cf6_2f13_ee70_98f5;
+
+/// A canonical, order-fixed rendering of every body's hazard memory.
+///
+/// `f64` dread magnitudes go in as their exact bit patterns rather than as
+/// formatted text: this is a byte-identity witness, and a decimal rendering
+/// would quietly absorb a change in the last ulp — the one place a past-day
+/// affect read is most likely to move.
+fn hazard_digest(
+    memories: &[(
+        hornvale_kernel::EntityId,
+        hornvale_vessel::liveness::HazardMemory,
+    )],
+) -> String {
+    let mut out = String::new();
+    for (entity, mem) in memories {
+        out.push_str(&format!("e{}|", entity.0.get()));
+        for room in &mem.shunned {
+            out.push_str(&format!("s{room:?}|"));
+        }
+        for (room, magnitude) in &mem.dread {
+            out.push_str(&format!("d{room:?}={:016x}|", magnitude.to_bits()));
+        }
+        out.push('\n');
+    }
+    out
+}
+
+#[test]
+fn the_emitter_bearing_walk_commits_the_same_ledger_and_hazard_bytes() {
+    let (seed, world) = emitter_bearing_world();
+    println!("--- the emitter-bearing byte-identity witness: seed {seed} ---");
+    assert_eq!(
+        seed, EMITTER_SEED,
+        "the search moved off the seed this witness's constants were recorded on. That is \
+         a finding about the sim, not a broken test: re-record both hashes on the new \
+         seed, and say in the campaign record what changed about which worlds replay an \
+         emitter's affect at a past day"
+    );
+
+    let (mut session, _opening) =
+        Session::start(&world, &PossessOpts::default()).expect("the found world starts a session");
+    run_emitter_script(&mut session);
+
+    // THE DENOMINATOR. Without this the two hashes below could be pinning a
+    // world whose hazard fold never entered the transient path at all, which
+    // is exactly the blindness this second witness exists to remove.
+    let replays = session.resident_alarm_replays();
+    let scans = session.resident_emitter_scans();
+    let with_emitters = session.resident_emitter_scans_with_emitters();
+    println!(
+        "{scans} emitter scans, {with_emitters} with an emitter, {replays} PAST-DAY affect \
+         replays inside the hazard fold"
+    );
+    assert!(
+        replays > 0,
+        "the script must reach the hazard fold's past-day affect replay on this world, or \
+         both hashes below are witnessing the same terrain-only path seed 42 already \
+         covers"
+    );
+
+    let ledger_hash = fnv1a(session.session_ledger_json().as_bytes());
+    let memories = session.hazard_memories();
+    let hazard_hash = fnv1a(hazard_digest(&memories).as_bytes());
+    let shunned: usize = memories.iter().map(|(_, m)| m.shunned.len()).sum();
+    let dread: usize = memories.iter().map(|(_, m)| m.dread.len()).sum();
+    println!(
+        "ledger {ledger_hash:#018x}, hazard {hazard_hash:#018x} over {} bodies \
+         ({shunned} shunned rooms, {dread} dreaded)",
+        memories.len()
+    );
+    // The dread magnitudes themselves, printed because they are the one
+    // quantity here that ONLY the past-day affect replay can produce: a
+    // remembered alarm's magnitude is `emitter_arousal`'s return value at the
+    // room's remembered visit day. A hash that moved could have moved for a
+    // route change; a moved magnitude cannot have.
+    for (entity, mem) in &memories {
+        for (room, magnitude) in &mem.dread {
+            println!(
+                "  dread: entity {} at {room:?} = {magnitude:?} ({:#018x})",
+                entity.0.get(),
+                magnitude.to_bits()
+            );
+        }
+    }
+    assert!(
+        shunned > 0,
+        "the hazard digest must have something in it, or its hash is the hash of a list of \
+         empty sets and would not move for any change to this path"
+    );
+    assert!(
+        dread > 0,
+        "the digest must carry at least one DREAD entry, or the past-day affect replay \
+         reached nothing that the hash could witness: dread is the only part of a hazard \
+         memory that a remembered alarm — and so the replay's own reset semantics — can \
+         put there"
+    );
+
+    assert_eq!(
+        ledger_hash, EMITTER_LEDGER_HASH,
+        "the emitter-bearing ledger hash changed: got {ledger_hash:#018x}, expected \
+         {EMITTER_LEDGER_HASH:#018x}"
+    );
+    assert_eq!(
+        hazard_hash, EMITTER_HAZARD_HASH,
+        "the emitter-bearing HAZARD hash changed: got {hazard_hash:#018x}, expected \
+         {EMITTER_HAZARD_HASH:#018x} — some creature's remembered-frightening ground or \
+         its dread magnitude moved for the fixed script"
+    );
+}
