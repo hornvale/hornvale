@@ -540,9 +540,25 @@ mod tests {
         );
 
         let anonymous = describe_chamber(&interior, &brief());
+        // `!anonymous.contains(" in ")` used to stand here alone. That is a
+        // substring test of ENGLISH, not of the clause `describe_chamber`
+        // builds — it only ever held because no anchor noun in this
+        // fixture's roster contains the two characters " in ", and a future
+        // anchor that does (a "shrine" is fine; a "dining hall" is not)
+        // would fail this assertion for a reason unrelated to the site's
+        // name. Two narrower checks replace it: a SHAPE check that the
+        // sentence has no in-clause at all between the room word and the
+        // period that follows (`describe_chamber`'s own `" in {name}"` vs
+        // `""` branch, `chamber_prose.rs`), and a check that the specific
+        // borrowed name this test would catch does not appear.
         assert!(
-            !anonymous.contains(" in "),
-            "a site with no name must not acquire one, and must not leave an              empty clause behind: {anonymous}"
+            anonymous.starts_with("A small room. "),
+            "an unnamed site must leave no in-clause between the room word \
+             and the sentence that follows: {anonymous}"
+        );
+        assert!(
+            !anonymous.contains(" in Nornholm"),
+            "a site with no name must not acquire one: {anonymous}"
         );
     }
 

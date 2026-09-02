@@ -5584,21 +5584,30 @@ impl<'w> Session<'w> {
     ///
     /// At most one `Site` ever reaches here: `Brief::site` is `Option<Site>`,
     /// already reduced to the single most-salient candidate by `brief_of`'s
-    /// own settlement-over-exotic-over-cave priority (spec §6,
-    /// `Site::salience`'s production consequence). The spec's own §6 language
-    /// ("ranks what gets named when a facet holds more than one") describes a
-    /// data shape — several co-located sites at one facet — that Decision
-    /// 0539's tier fold never built: nothing constructs more than one `Site`
-    /// per facet today, so there is never a second candidate to rank against
-    /// or a `strangeness` tie to break here. Building that machinery ahead of
-    /// the data it would rank is exactly the premature abstraction this
-    /// project's own standards warn against.
+    /// own `Site::salience`-ranked `max_by_key` (spec §6, Ruling 29). The
+    /// spec's own §6 language ("ranks what gets named when a facet holds
+    /// more than one") describes a data shape — several co-located sites at
+    /// one facet — and that shape DOES occur at construction, not only in
+    /// the abstract: `brief_of` assembles up to three `Site` candidates per
+    /// facet (settlement, exotic, cave — `windows/vessel/src/brief.rs`)
+    /// before reducing them to one winner. **This paragraph used to say
+    /// "nothing constructs more than one `Site` per facet today", which is
+    /// false at that construction site.** What is true, and narrower: at
+    /// most one candidate ever SURVIVES the reduction to reach
+    /// `Brief::site`, and therefore to reach `site_clause` here — never that
+    /// only one is ever built.
     ///
-    /// `Site::name` is `None` for every kind as of this task — a cave and an
-    /// exotic site never carry one (`Site::name`'s own doc), and a
-    /// settlement's real name is attached by a later task — so this reads as
-    /// generic kind-only prose today and sharpens automatically the day a
-    /// `Site` actually carries a name.
+    /// `Site::name` carries a real value for a settlement as of this task:
+    /// `brief_of` attaches the name the injected settlement-territory map
+    /// keys to the facet's own room (`Terrain::settlement_name`), the same
+    /// lookup `is_built` tests membership in — see
+    /// `entering_a_named_site_names_the_place_and_not_the_possession` and
+    /// `a_settlement_sites_name_is_keyed_to_the_room`
+    /// (`windows/vessel/tests/suite/the_prospect.rs`). A cave and an exotic
+    /// site still carry `None` — neither has a name and neither may borrow
+    /// one (`Site::placed`'s own call sites in `brief.rs`) — so this clause
+    /// reads as generic kind-only prose for those two kinds, and names the
+    /// place itself for a settlement.
     fn site_clause(site: &Site) -> String {
         let noun = match site.kind {
             SiteKind::Settlement => "settlement",

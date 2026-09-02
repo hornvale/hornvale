@@ -205,10 +205,24 @@ pub fn brief_of(
     // shape the two cave predicates this campaign found and fixed earlier
     // were. Assembling every candidate the facet could hold and taking the
     // maximum BY `Site::salience` makes that function load-bearing rather
-    // than aspirational, and leaves exactly one place that states the order.
+    // than aspirational, and reduces this call site to consulting exactly
+    // one AUTHORITY for the order. It is not the only STATEMENT of it —
+    // `SiteKind`'s own `derive(Ord)` (`site.rs`) declares
+    // `Cave < Exotic < Settlement`, identical to this ranking, and nothing
+    // enforces that the two agree if either changes. Two statements, one
+    // authority: this call site reads only `Site::salience`, never the
+    // derived `Ord`.
     // `salience` returns `u8`, so the comparison is exact — no float, no
     // `total_cmp` — and no tie is reachable today: each kind contributes at
     // most one candidate here, and every kind's own salience is distinct.
+    //
+    // NOTE ON COST: this array's three elements are evaluated unconditionally,
+    // where the if/else chain it replaced short-circuited — a BUILT facet used
+    // to stop at the settlement arm and never touch the `exotic_sites` or
+    // `cave_sites` scans, and now runs both `.any(…)` scans regardless. Measured
+    // at or under noise (~0.2-0.3 s over 300 turns, interleaved release
+    // binaries) and judged not worth fixing at this campaign's scale; recorded
+    // here so the next reader does not re-derive it.
     let candidates = [
         // THE NAME COMES FROM THE PLACE, NOT FROM THE POSSESSION (Task 7).
         // `Terrain::settlement_name` reads the injected settlement-territory
