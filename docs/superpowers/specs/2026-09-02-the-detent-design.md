@@ -350,6 +350,15 @@ independent, and gated in the commit tier):
   `history_growth`/`segment_growth` guard states it, with the margin
   printed).
 
+- **M1, a measurement with no threshold (Nathan, 2026-09-02, at G3).** The
+  bytes the two structures hold at the final band, on all three shapes:
+  the room memo's entry count × entry size, and the per-creature index's
+  total entries × entry size, reported beside the count of distinct rooms
+  the roster has visited. Nothing evicts either structure in this campaign
+  — Penstock stage 4 (the lifecycle) is gated on stage 3 producing exactly
+  this number — so the readout carries it as the figure stage 4 enters on,
+  not as a criterion.
+
 Three instruments, all run: `session_length_scaling` (H4, H2 (c), the
 falsifier), `agent_scaling` (the level, paired and interleaved against the
 control, ms/tick at 200 agents over 20 ticks), and `fold_depth_sweep`
@@ -404,7 +413,7 @@ baseline; the readout's control is measured fresh.
 | 1 | The instruments | the counting `Terrain` wrapper as a test utility; the counting witness on all three shapes with floors, RED on the merge base (H5's 22,302 and 44,694 re-taken and printed); the campaign-time hash constants with their positive control; `alarm_replays` and past-instant counts per shape (rules 2 and 5) | `make sluice-stage`; absorb main (rule 6) |
 | 2 | The room memo | `GroundHazards` on the session, the benches and the lab; the two-terrain test (rule 3); chaos eviction; re-count (rule 1) | stage gate |
 | 3 | The index and the scan | `FrighteningGround`; the scan and the emitter-free read over it; FOLD-equals-SCAN; the rides (§2.4); rule 4 | stage gate |
-| 4 | The readout | §11: the three instruments, the same-box control, every criterion separately; the registry row corrected with the number; retire the constants; chronicle, retro, decisions, Confidence Gradient re-score | `make sluice` |
+| 4 | The readout | §11: the three instruments, the same-box control, every criterion separately, M1's bytes on all three shapes; the registry row corrected with the number; retire the constants; chronicle, retro, decisions, Confidence Gradient re-score | `make sluice` |
 
 ## 7. In / out
 

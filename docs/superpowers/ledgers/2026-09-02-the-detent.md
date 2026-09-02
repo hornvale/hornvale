@@ -324,3 +324,14 @@ was already queued in the same shell line reads as success.
 
 **Ideonomy passes / overturns:** none run for this entry; it is a review of
 the artifact the G1 pass produced, not a new decision.
+
+---
+
+## G3 — approved (Nathan, 2026-09-02)
+
+Spec approved as presented, with one addition Nathan asked for after the
+lifetime question: **M1**, the bytes the room memo and the per-creature
+index hold at the final band on all three shapes, reported without a
+threshold as the number Penstock stage 4 (the lifecycle) is gated on. Nothing
+in this campaign evicts either structure; that is stage 4's job and it now
+has a measurement to enter on. Added to spec §4 and the stage-4 row.
