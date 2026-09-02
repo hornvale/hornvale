@@ -235,7 +235,7 @@ The Vngoashngovngo settles down to rest.
 The Kvoshngovnga settles down to rest.
 The Vngavngoshnga settles down to rest.
 > wait 1
-Time passes. You sense movement nearby (134 stirred).
+Time passes. You sense movement nearby (147 stirred).
 > look
 [room 3733133217, day 6]
 Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast.
@@ -310,7 +310,7 @@ The Vngoashngovngo settles down to rest.
 The Kvoshngovnga settles down to rest.
 The Vngavngoshnga settles down to rest.
 > wait 1
-Time passes. You sense movement nearby (67 stirred).
+Time passes. You sense movement nearby (245 stirred).
 > look
 [room 3733133217, day 7]
 Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: Night. The sky is a low grey rain-deck.
@@ -322,34 +322,34 @@ The Qvoshngavngo eats its fill.
 The Shngovngo grows restless.
 The Shngoqvo grows restless.
 The Vngaobvo grows restless.
-The Vngaavnga grows restless.
+The Vngaavnga settles down to rest.
 The Kvoavnga 8 grows restless.
-The Vngootvo eats its fill.
+The Vngootvo seems content.
 The Vngaoshngoshngo grows restless.
 The Vngovngoqvo grows restless.
 The Vngoaqvashngo grows restless.
-The Kvashnga grows restless.
+The Kvashnga settles down to rest.
 The Gvoshngoshnga grows restless.
 The Vngokvavngo grows restless.
 The Shngaavngo grows restless.
 The Bvotvoshngo grows restless.
-The Vngodva grows restless.
+The Vngodva settles down to rest.
 The Gvoavngashnga grows restless.
-The Kvovngashnga grows restless.
+The Kvovngashnga settles down to rest.
 The Shngashngovngo eats its fill.
 The Shngoovngo grows restless.
 The Tvoadvovnga grows restless.
 The Shngoshngobva grows restless.
 The Vngoshnga grows restless.
 The Bvaavngovngo grows restless.
-The Gvaqvoshnga grows restless.
+The Gvaqvoshnga settles down to rest.
 The Vngotvashnga grows restless.
-The Shngoashngabva grows restless.
+The Shngoashngabva settles down to rest.
 The Vngoshngoshngo grows restless.
 The Shngaqvovnga grows restless.
 The Shngoovngo 32 grows restless.
 The Vngaoshngoshngo 33 grows restless.
-The Dvooshngovnga grows restless.
+The Dvooshngovnga settles down to rest.
 The Dvoadvavnga grows restless.
 The Gvavngadvo grows restless.
 The Vngavngo grows restless.
@@ -361,24 +361,24 @@ The Kvoashngadvo grows restless.
 The Vngaovngovngo grows restless.
 The Vngovngoshnga grows restless.
 The Shngaashnga 45 grows restless.
-The Gvokvavnga eats its fill.
+The Gvokvavnga seems content.
 The Qvavngovnga grows restless.
 The Vngavngavnga grows restless.
-The Vngobva grows restless.
+The Vngobva settles down to rest.
 The Shngaovngoshngo grows restless.
 The Gvoavngoqva grows restless.
-The Shngoatvo grows restless.
+The Shngoatvo settles down to rest.
 The Vngashnga grows restless.
 The Vngoovngashngo grows restless.
-The Qvoogvo grows restless.
-The Vngaavngo grows restless.
-The Vngavngadvo grows restless.
+The Qvoogvo settles down to rest.
+The Vngaavngo settles down to rest.
+The Vngavngadvo settles down to rest.
 The Dvoashnga grows restless.
 The Vngakva eats its fill.
 The Qvavngodvo grows restless.
 The Shngoshngoqvo grows restless.
-The Dvashngo grows restless.
-The Shngoobvovngo eats its fill.
+The Dvashngo settles down to rest.
+The Shngoobvovngo seems content.
 The Shngoavnga grows restless.
 The Dvoaqvokva grows restless.
 The Vngoashngovngo grows restless.
@@ -387,7 +387,7 @@ The Vngavngoshnga grows restless.
 > !why hobgoblin
 No one here answers to 'hobgoblin' (see 'npcs').
 > wait 90
-Time passes. You sense movement nearby (2564 stirred).
+Time passes. You sense movement nearby (3823 stirred).
 > look
 [room 3733133217, day 97]
 Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
@@ -395,13 +395,13 @@ Here: Dvoashngashngo, Qvoshngavngo, Shngovngo and Shngoqvo, and 63 others.
 No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > needs
 The Dvoashngashngo casts about for water.
-The Qvoshngavngo seems content.
+The Qvoshngavngo grows restless.
 The Shngovngo casts about for water.
 The Shngoqvo casts about for water.
 The Vngaobvo casts about for water.
 The Vngaavnga settles down to rest.
 The Kvoavnga 8 casts about for water.
-The Vngootvo seems content.
+The Vngootvo grows restless.
 The Vngaoshngoshngo casts about for water.
 The Vngovngoqvo casts about for water.
 The Vngoaqvashngo casts about for water.
@@ -413,7 +413,7 @@ The Bvotvoshngo casts about for water.
 The Vngodva settles down to rest.
 The Gvoavngashnga casts about for water.
 The Kvovngashnga casts about for water.
-The Shngashngovngo seems content.
+The Shngashngovngo grows restless.
 The Shngoovngo casts about for water.
 The Tvoadvovnga casts about for water.
 The Shngoshngobva casts about for water.
@@ -438,10 +438,10 @@ The Kvoashngadvo casts about for water.
 The Vngaovngovngo casts about for water.
 The Vngovngoshnga casts about for water.
 The Shngaashnga 45 casts about for water.
-The Gvokvavnga seems content.
+The Gvokvavnga grows restless.
 The Qvavngovnga casts about for water.
 The Vngavngavnga casts about for water.
-The Vngobva settles down to rest.
+The Vngobva casts about for water.
 The Shngaovngoshngo casts about for water.
 The Gvoavngoqva casts about for water.
 The Shngoatvo casts about for water.
@@ -451,11 +451,11 @@ The Qvoogvo casts about for water.
 The Vngaavngo casts about for water.
 The Vngavngadvo casts about for water.
 The Dvoashnga casts about for water.
-The Vngakva seems content.
+The Vngakva grows restless.
 The Qvavngodvo casts about for water.
 The Shngoshngoqvo casts about for water.
 The Dvashngo casts about for water.
-The Shngoobvovngo seems content.
+The Shngoobvovngo grows restless.
 The Shngoavnga casts about for water.
 The Dvoaqvokva casts about for water.
 The Vngoashngovngo casts about for water.

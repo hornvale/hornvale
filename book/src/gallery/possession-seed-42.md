@@ -135,7 +135,7 @@ No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 Tropical seasonal forest — a liana tangle, sun-warmed, damp, in a hollow — in the lands of Doaba. The sky above: The sun, a yellow dwarf (G), stands high in the sky. The light is golden. The days are near their longest. The sky is a flat overcast.
 No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > wait 90
-Time passes. You sense movement nearby (2546 stirred).
+Time passes. You sense movement nearby (3411 stirred).
 > examine sky
 Twilight. The horizon glows gold. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
 > knows

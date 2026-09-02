@@ -20,7 +20,8 @@
 //! Hearth's §2.1 forbids reaching for one (outcomes read topology, never
 //! metrics). The forced answer being the metric-free one is a good sign.
 
-use super::anchor::{AnchorId, AnchorKind, Interior};
+use super::anchor::{AnchorId, Interior};
+use hornvale_thing::kinds;
 
 /// Whether passage between two rooms is a chokepoint or the whole shared edge.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -58,12 +59,12 @@ pub fn landing(interior: &Interior, kind: SeamKind) -> Option<AnchorId> {
     if kind == SeamKind::Narrow
         && let Some(&t) = ids
             .iter()
-            .find(|&&a| interior.anchor(a).kind == AnchorKind::Threshold)
+            .find(|&&a| interior.anchor(a).kind == kinds::THRESHOLD)
     {
         return Some(t);
     }
     ids.iter()
-        .find(|&&a| interior.anchor(a).kind == AnchorKind::Ground)
+        .find(|&&a| interior.anchor(a).kind == kinds::GROUND)
         .copied()
         .or_else(|| ids.first().copied())
 }
@@ -71,13 +72,13 @@ pub fn landing(interior: &Interior, kind: SeamKind) -> Option<AnchorId> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::interior::anchor::{AnchorKind, Interior};
+    use crate::interior::anchor::Interior;
 
     /// A built interior: a threshold and a hearth, hub-composed.
     fn built() -> Interior {
         let mut i = Interior::new();
-        let t = i.push(AnchorKind::Threshold, None);
-        let h = i.push(AnchorKind::Hearth, None);
+        let t = i.push(kinds::THRESHOLD, None);
+        let h = i.push(kinds::HEARTH, None);
         i.connect(t, h);
         i
     }
@@ -88,8 +89,8 @@ mod tests {
     /// patched with a fake doorway.
     fn wild() -> Interior {
         let mut i = Interior::new();
-        let g = i.push(AnchorKind::Ground, None);
-        let p = i.push(AnchorKind::Pool, None);
+        let g = i.push(kinds::GROUND, None);
+        let p = i.push(kinds::POOL, None);
         i.connect(g, p);
         i
     }
@@ -97,8 +98,8 @@ mod tests {
     /// An interior with no `Ground` at all — the fallback path.
     fn groundless() -> Interior {
         let mut i = Interior::new();
-        let p = i.push(AnchorKind::Pool, None);
-        let l = i.push(AnchorKind::Log, None);
+        let p = i.push(kinds::POOL, None);
+        let l = i.push(kinds::LOG, None);
         i.connect(p, l);
         i
     }
@@ -107,7 +108,7 @@ mod tests {
     fn a_narrow_seam_lands_at_the_threshold() {
         let i = built();
         let at = landing(&i, SeamKind::Narrow).expect("a built interior has a landing");
-        assert_eq!(i.anchor(at).kind, AnchorKind::Threshold);
+        assert_eq!(i.anchor(at).kind, kinds::THRESHOLD);
     }
 
     #[test]
@@ -117,7 +118,7 @@ mod tests {
         // the only available answer.
         let i = wild();
         let at = landing(&i, SeamKind::Broad).expect("a wilderness interior has a landing");
-        assert_eq!(i.anchor(at).kind, AnchorKind::Ground);
+        assert_eq!(i.anchor(at).kind, kinds::GROUND);
     }
 
     #[test]
@@ -125,8 +126,8 @@ mod tests {
         // Ground leads INVENTORY today, so hub and ids()[0] coincide. Build an
         // interior where they do NOT, and assert we followed the kind.
         let mut i = Interior::new();
-        let p = i.push(AnchorKind::Pool, None);
-        let g = i.push(AnchorKind::Ground, None);
+        let p = i.push(kinds::POOL, None);
+        let g = i.push(kinds::GROUND, None);
         i.connect(p, g);
         assert_eq!(landing(&i, SeamKind::Broad), Some(g));
         assert_ne!(landing(&i, SeamKind::Broad), Some(i.ids()[0]));

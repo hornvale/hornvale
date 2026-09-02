@@ -41,12 +41,16 @@ mod corner_rule;
 mod display_handle;
 #[path = "suite/doctrine.rs"]
 mod doctrine;
+#[path = "suite/fatigue_stock.rs"]
+mod fatigue_stock;
 #[path = "suite/felt_state_concepts.rs"]
 mod felt_state_concepts;
 #[path = "suite/furnishing_marks.rs"]
 mod furnishing_marks;
 #[path = "suite/gate_table.rs"]
 mod gate_table;
+#[path = "suite/kind_totality.rs"]
+mod kind_totality;
 #[path = "suite/lantern_fabric.rs"]
 mod lantern_fabric;
 #[path = "suite/lantern_lens.rs"]
