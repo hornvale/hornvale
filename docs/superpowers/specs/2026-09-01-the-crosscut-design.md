@@ -336,7 +336,7 @@ byte-identical; `DescentPlan.dof` is counted at every draw site, and
 of the decomposition tree". That recount cannot exist — a failed `cycle`
 or `extend` attempt spends its draws and leaves nothing in the tree — so
 the check is a derived FLOOR and CEILING instead: `dof ≥ 1 + levels +
-stairs + 4·realms + 2·extensions` (one entrance row, one stair cell per
+stairs + 4·(realms − fallback_realms) + 2·extensions` (one entrance row, one stair cell per
 level, ONE coordinate per stairway, op + edge + hops + cross per realm,
 op + edge per extension) and `dof ≤ floor + 4 · 80 · levels` (at most 80
 attempts per level of at most four draws). **One coordinate per stairway,
