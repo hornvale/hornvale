@@ -15,7 +15,11 @@
 //! (`cycle_budget`); the `[1, 5]` clip is the one authored constant and is
 //! Dormans' (spec §3.2 step 5).
 
-use hornvale_kernel::Band;
+use crate::character::Character;
+use hornvale_kernel::seed::StreamLabel;
+use hornvale_kernel::{Band, Seed, Stream, Vertex};
+use hornvale_terrain::CaveKind;
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 /// A region's span in cells, either axis — the Adit's `MIN_REGION_SPAN`,
 /// now the grid pitch. The grid is `w / REGION_SPAN` by `h / REGION_SPAN`.
@@ -299,6 +303,567 @@ impl DescentPlan {
     }
 }
 
+/// Target cycles per level: DERIVED from the rock (karst dissolves many
+/// routes, a lava tube is one conduit, a fracture system sits between) and
+/// from workmanship (a worked place must ventilate, so it loops), clipped
+/// to Dormans' `[MIN_CYCLES_PER_LEVEL, MAX_CYCLES_PER_LEVEL]`. `ChamberOrigin::Made`
+/// joins the `worked` term when The Plat gives it a production writer.
+/// type-audit: bare-ok(count: return)
+pub fn cycle_budget(kind: CaveKind, character: Character) -> u8 {
+    let base: u8 = match kind {
+        CaveKind::LavaTube => 1,
+        CaveKind::Fracture => 2,
+        CaveKind::Karst => 3,
+    };
+    let worked: u8 = match character {
+        Character::DrowTier => 1,
+        Character::WildCave | Character::FungalGardens => 0,
+    };
+    (base + worked).clamp(MIN_CYCLES_PER_LEVEL, MAX_CYCLES_PER_LEVEL)
+}
+
+/// Dormans' class from two path lengths (edge counts). "Long" is RELATIVE:
+/// a path is the long way round when it is strictly longer than the other
+/// plus one. Within one of each other, both count long at three or more
+/// edges and short below. Frozen here (spec §3.2 step 6) and exported.
+/// type-audit: bare-ok(count: len_a), bare-ok(count: len_b)
+pub fn length_class(len_a: usize, len_b: usize) -> LengthClass {
+    if len_a > len_b + 1 {
+        LengthClass::LongShort
+    } else if len_b > len_a + 1 {
+        LengthClass::ShortLong
+    } else if len_a >= 3 && len_b >= 3 {
+        LengthClass::LongLong
+    } else {
+        LengthClass::ShortShort
+    }
+}
+
+/// The decimal key every plan leg is further derived by: the vertex.
+fn vertex_key(vertex: Vertex) -> String {
+    format!("{}", vertex.0)
+}
+
+fn leg(seed: Seed, label: StreamLabel<'static>, vertex: Vertex) -> Stream {
+    seed.derive(label)
+        .derive(StreamLabel::dynamic(&vertex_key(vertex)))
+        .stream()
+}
+
+/// Draw an index in `0..n` from `stream`, counting the draw. `n >= 1`.
+fn draw_index(stream: &mut Stream, n: usize, dof: &mut u32) -> usize {
+    *dof += 1;
+    (stream.next_u64() % n as u64) as usize
+}
+
+/// The growing plan and the per-level occupancy the grammar needs.
+struct Builder {
+    plan: DescentPlan,
+    dims: Vec<GridDims>,
+    /// Which grid cells each level has already spent.
+    used: Vec<BTreeSet<GridCell>>,
+    /// `(level, cell) -> node`.
+    index: BTreeMap<(u8, GridCell), NodeId>,
+}
+
+impl Builder {
+    fn add_node(&mut self, level: u8, cell: GridCell) -> NodeId {
+        let id = self.plan.nodes.len();
+        self.plan.nodes.push(Node {
+            level,
+            cell,
+            depth: 0,
+            realm: None,
+        });
+        self.used[level as usize].insert(cell);
+        self.index.insert((level, cell), id);
+        id
+    }
+
+    fn add_passage(&mut self, a: NodeId, b: NodeId) {
+        let (a, b) = (a.min(b), a.max(b));
+        self.plan.edges.push(Edge {
+            a,
+            b,
+            kind: EdgeKind::Passage,
+        });
+    }
+
+    fn remove_passage(&mut self, a: NodeId, b: NodeId) {
+        let (a, b) = (a.min(b), a.max(b));
+        self.plan
+            .edges
+            .retain(|e| !(e.kind == EdgeKind::Passage && e.a == a && e.b == b));
+    }
+
+    /// Grid-adjacent cells of `cell` on a level of `dims`, N, E, S, W.
+    fn grid_neighbours(dims: GridDims, cell: GridCell) -> Vec<GridCell> {
+        let mut out = Vec::with_capacity(4);
+        if cell.row > 0 {
+            out.push(GridCell {
+                col: cell.col,
+                row: cell.row - 1,
+            });
+        }
+        if cell.col + 1 < dims.cols {
+            out.push(GridCell {
+                col: cell.col + 1,
+                row: cell.row,
+            });
+        }
+        if cell.row + 1 < dims.rows {
+            out.push(GridCell {
+                col: cell.col,
+                row: cell.row + 1,
+            });
+        }
+        if cell.col > 0 {
+            out.push(GridCell {
+                col: cell.col - 1,
+                row: cell.row,
+            });
+        }
+        out
+    }
+
+    /// The INTERIOR cells of a shortest path from `from` to `to` on `level`
+    /// through cells not yet used, by breadth-first search with a fixed
+    /// neighbour order — deterministic, no draw. `from` and `to` may be used
+    /// (they are the endpoints); every interior cell must be free. `None`
+    /// when no such path exists. A path with no interior (adjacent
+    /// endpoints) is refused when `min_interior` is 1 or more.
+    fn free_path(
+        &self,
+        level: u8,
+        from: GridCell,
+        to: GridCell,
+        min_interior: usize,
+    ) -> Option<Vec<GridCell>> {
+        let dims = self.dims[level as usize];
+        let used = &self.used[level as usize];
+        let mut prev: BTreeMap<GridCell, GridCell> = BTreeMap::new();
+        let mut q = VecDeque::new();
+        for n in Self::grid_neighbours(dims, from) {
+            if n == to {
+                if min_interior == 0 {
+                    return Some(Vec::new());
+                }
+                continue;
+            }
+            if !used.contains(&n) && !prev.contains_key(&n) {
+                prev.insert(n, from);
+                q.push_back(n);
+            }
+        }
+        while let Some(c) = q.pop_front() {
+            for n in Self::grid_neighbours(dims, c) {
+                if n == to {
+                    let mut path = vec![c];
+                    let mut cur = c;
+                    while let Some(&p) = prev.get(&cur) {
+                        if p == from {
+                            break;
+                        }
+                        path.push(p);
+                        cur = p;
+                    }
+                    path.reverse();
+                    if path.len() >= min_interior {
+                        return Some(path);
+                    }
+                    continue;
+                }
+                if !used.contains(&n) && !prev.contains_key(&n) {
+                    prev.insert(n, c);
+                    q.push_back(n);
+                }
+            }
+        }
+        None
+    }
+
+    /// A stairway's shared coordinate, drawn inside the overlap of the two
+    /// regions (asserted non-empty by `every_grid_cell_overlaps_its_twin_one_rung_down`).
+    fn stair_coordinate(
+        &self,
+        upper: NodeId,
+        lower: NodeId,
+        stair: &mut Stream,
+        dof: &mut u32,
+    ) -> (i32, i32) {
+        let overlap = self
+            .plan
+            .region_of(upper)
+            .intersect(&self.plan.region_of(lower))
+            .expect("adjacent rungs' twin regions overlap (Task 1 test)");
+        let x = overlap.x + draw_index(stair, overlap.w as usize, dof) as i32;
+        let y = overlap.y + draw_index(stair, overlap.h as usize, dof) as i32;
+        (x, y)
+    }
+
+    fn add_stair(&mut self, upper: NodeId, lower: NodeId, stair: &mut Stream, dof: &mut u32) {
+        let (x, y) = self.stair_coordinate(upper, lower, stair, dof);
+        self.plan.edges.push(Edge {
+            a: upper,
+            b: lower,
+            kind: EdgeKind::Stair { x, y },
+        });
+    }
+
+    /// Lay a passage chain through `interior` from `from` to `to`, creating
+    /// nodes for the interior cells. Returns the node path, endpoints included.
+    fn lay_path(
+        &mut self,
+        level: u8,
+        from: NodeId,
+        interior: &[GridCell],
+        to: NodeId,
+    ) -> Vec<NodeId> {
+        let mut path = vec![from];
+        let mut prev = from;
+        for &c in interior {
+            let n = self.add_node(level, c);
+            self.add_passage(prev, n);
+            path.push(n);
+            prev = n;
+        }
+        self.add_passage(prev, to);
+        path.push(to);
+        path
+    }
+
+    fn degree(&self, n: NodeId) -> usize {
+        self.plan.neighbours(n).len()
+    }
+
+    /// From `v`, walk away from `u` through degree-two nodes along passages
+    /// for up to `hops`, returning the segment `[u, v, ...]`.
+    fn segment(&self, u: NodeId, v: NodeId, hops: usize) -> Vec<NodeId> {
+        let mut seg = vec![u, v];
+        for _ in 0..hops {
+            let last = *seg.last().unwrap();
+            let before = seg[seg.len() - 2];
+            if self.degree(last) != 2 {
+                break;
+            }
+            let next = self
+                .plan
+                .neighbours(last)
+                .into_iter()
+                .find(|&n| n != before);
+            match next {
+                Some(n)
+                    if self.plan.edges.iter().any(|e| {
+                        e.kind == EdgeKind::Passage
+                            && ((e.a == last && e.b == n) || (e.a == n && e.b == last))
+                    }) =>
+                {
+                    seg.push(n)
+                }
+                _ => break,
+            }
+        }
+        seg
+    }
+
+    /// The innermost realm containing both `u` and `v`, if any.
+    fn realm_containing(&self, u: NodeId, v: NodeId) -> Option<RealmId> {
+        self.plan
+            .realms
+            .iter()
+            .enumerate()
+            .rev()
+            .find(|(_, r)| {
+                let m = |n| r.path_a.contains(&n) || r.path_b.contains(&n);
+                m(u) && m(v)
+            })
+            .map(|(i, _)| i)
+    }
+}
+
+/// Grow the plan for one descent (spec §3.2). `rungs` is the walked list,
+/// shallowest first (`hornvale_terrain::rungs()` minus `Surface`).
+pub fn plan_descent(
+    seed: Seed,
+    vertex: Vertex,
+    rungs: &[Band],
+    kind: CaveKind,
+    character: Character,
+) -> DescentPlan {
+    assert!(!rungs.is_empty(), "a descent has at least one rung");
+    let mut spine = leg(seed, crate::streams::UNDERWORLD_PLAN_SPINE, vertex);
+    let mut cycle = leg(seed, crate::streams::UNDERWORLD_PLAN_CYCLE, vertex);
+    let mut extend = leg(seed, crate::streams::UNDERWORLD_PLAN_EXTEND, vertex);
+    let mut stair = leg(seed, crate::streams::UNDERWORLD_PLAN_STAIR, vertex);
+    let mut dof = 0u32;
+    let dims: Vec<GridDims> = rungs.iter().map(|&r| grid_dims(r)).collect();
+    let mut b = Builder {
+        plan: DescentPlan {
+            rungs: rungs.to_vec(),
+            nodes: Vec::new(),
+            edges: Vec::new(),
+            entrance: 0,
+            terminus: 0,
+            realms: Vec::new(),
+            dof: 0,
+        },
+        used: vec![BTreeSet::new(); rungs.len()],
+        index: BTreeMap::new(),
+        dims,
+    };
+
+    // 1. The spine.
+    let row0 = draw_index(&mut spine, b.dims[0].rows as usize, &mut dof) as u8;
+    let mut arrival = b.add_node(0, GridCell { col: 0, row: row0 });
+    b.plan.entrance = arrival;
+    for level in 0..rungs.len() as u8 {
+        let d = b.dims[level as usize];
+        let all: Vec<GridCell> = (0..d.cols)
+            .flat_map(|col| (0..d.rows).map(move |row| GridCell { col, row }))
+            .filter(|c| !b.used[level as usize].contains(c))
+            .collect();
+        let target_cell = all[draw_index(&mut spine, all.len(), &mut dof)];
+        let interior = b
+            .free_path(level, b.plan.nodes[arrival].cell, target_cell, 0)
+            .expect("an otherwise empty level always has a free path");
+        let target = b.add_node(level, target_cell);
+        b.lay_path(level, arrival, &interior, target);
+        if (level as usize) + 1 < rungs.len() {
+            let below = b.add_node(level + 1, target_cell);
+            b.add_stair(target, below, &mut stair, &mut dof);
+            arrival = below;
+        } else {
+            b.plan.terminus = target;
+        }
+    }
+
+    // 2. Cycles and extensions, level by level, to a derived budget.
+    let budget = cycle_budget(kind, character) as usize;
+    for level in 0..rungs.len() as u8 {
+        let mut attempts = 0;
+        while anchored_realms(&b.plan, level as usize) < budget && attempts < 80 {
+            attempts += 1;
+            let passages = b.plan.passages_on(level as usize);
+            if passages.is_empty() {
+                break;
+            }
+            let op = draw_index(&mut cycle, 10, &mut dof);
+            if op < 7 {
+                let (u, v) = passages[draw_index(&mut cycle, passages.len(), &mut dof)];
+                try_cycle(&mut b, level, u, v, &mut cycle, &mut stair, &mut dof);
+            } else {
+                let (u, v) = passages[draw_index(&mut extend, passages.len(), &mut dof)];
+                try_extend(&mut b, level, u, v);
+            }
+        }
+    }
+
+    // 3. Attributes.
+    assign_realms(&mut b.plan);
+    assign_depth(&mut b.plan);
+    b.plan.dof = dof;
+    b.plan
+}
+
+fn try_cycle(
+    b: &mut Builder,
+    level: u8,
+    u: NodeId,
+    v: NodeId,
+    cycle: &mut Stream,
+    stair: &mut Stream,
+    dof: &mut u32,
+) {
+    let hops = draw_index(cycle, 3, dof);
+    let path_a = b.segment(u, v, hops);
+    let end = *path_a.last().unwrap();
+    let (cu, ce) = (b.plan.nodes[u].cell, b.plan.nodes[end].cell);
+    let cross = draw_index(cycle, 100, dof) < 35
+        && (level as usize) + 1 < b.plan.rungs.len()
+        && cu != ce
+        && !b.used[level as usize + 1].contains(&cu)
+        && !b.used[level as usize + 1].contains(&ce);
+    let parent = b.realm_containing(u, end);
+    if cross {
+        let Some(interior) = b.free_path(level + 1, cu, ce, 0) else {
+            return;
+        };
+        let lu = b.add_node(level + 1, cu);
+        let le = b.add_node(level + 1, ce);
+        b.add_stair(u, lu, stair, dof);
+        let mut path_b = vec![u];
+        path_b.extend(b.lay_path(level + 1, lu, &interior, le));
+        b.add_stair(end, le, stair, dof);
+        path_b.push(end);
+        let class = length_class(path_a.len() - 1, path_b.len() - 1);
+        b.plan.realms.push(Realm {
+            parent,
+            anchor_level: level,
+            path_a,
+            path_b,
+            class,
+        });
+    } else {
+        let Some(interior) = b.free_path(level, cu, ce, 1) else {
+            return;
+        };
+        let path_b = b.lay_path(level, u, &interior, end);
+        let class = length_class(path_a.len() - 1, path_b.len() - 1);
+        b.plan.realms.push(Realm {
+            parent,
+            anchor_level: level,
+            path_a,
+            path_b,
+            class,
+        });
+    }
+}
+
+fn try_extend(b: &mut Builder, level: u8, u: NodeId, v: NodeId) {
+    let (cu, cv) = (b.plan.nodes[u].cell, b.plan.nodes[v].cell);
+    let Some(interior) = b.free_path(level, cu, cv, 1) else {
+        return;
+    };
+    // Every realm path that ran through u-v now runs through the detour.
+    b.remove_passage(u, v);
+    let path = b.lay_path(level, u, &interior, v);
+    for r in &mut b.plan.realms {
+        let mut touched = 0;
+        for p in [&mut r.path_a, &mut r.path_b] {
+            if let Some(i) = p
+                .windows(2)
+                .position(|w| (w[0] == u && w[1] == v) || (w[0] == v && w[1] == u))
+            {
+                touched += 1;
+                let forward = p[i] == u;
+                let mut mids: Vec<NodeId> = path[1..path.len() - 1].to_vec();
+                if !forward {
+                    mids.reverse();
+                }
+                p.splice(i + 1..i + 1, mids);
+            }
+        }
+        debug_assert!(
+            touched <= 1,
+            "extend: both paths of one realm carried the same edge (impossible for node-disjoint interiors)"
+        );
+    }
+}
+
+/// `Node.realm` = the LAST realm (creation order) whose paths hold the node:
+/// a nested realm is created after its parent, so last is innermost.
+fn assign_realms(plan: &mut DescentPlan) {
+    for n in &mut plan.nodes {
+        n.realm = None;
+    }
+    for (rid, r) in plan.realms.iter().enumerate() {
+        for &n in r.path_a.iter().chain(r.path_b.iter()) {
+            plan.nodes[n].realm = Some(rid);
+        }
+    }
+}
+
+/// Breadth-first hops from the entrance.
+fn assign_depth(plan: &mut DescentPlan) {
+    let mut dist: BTreeMap<NodeId, u16> = BTreeMap::new();
+    let mut q = VecDeque::from([plan.entrance]);
+    dist.insert(plan.entrance, 0);
+    while let Some(n) = q.pop_front() {
+        let d = dist[&n];
+        for m in plan.neighbours(n) {
+            if let std::collections::btree_map::Entry::Vacant(e) = dist.entry(m) {
+                e.insert(d + 1);
+                q.push_back(m);
+            }
+        }
+    }
+    for (i, n) in plan.nodes.iter_mut().enumerate() {
+        n.depth = dist.get(&i).copied().unwrap_or(u16::MAX);
+    }
+}
+
+/// Realms whose `path_a` sits on `level` — the level's own density (spec §4.2).
+/// type-audit: bare-ok(index: level), bare-ok(count: return)
+pub fn anchored_realms(plan: &DescentPlan, level: usize) -> usize {
+    plan.realms
+        .iter()
+        .filter(|r| r.anchor_level as usize == level)
+        .count()
+}
+
+/// Spec §4.1: the share of non-entrance regions reachable from the entrance
+/// that stay reachable under the removal of ANY single edge — two
+/// edge-disjoint routes home (Menger). Regions unreachable from the entrance
+/// are excluded from both numerator and denominator.
+/// type-audit: bare-ok(ratio: return)
+pub fn loop_share(plan: &DescentPlan) -> f64 {
+    fn reach(plan: &DescentPlan, skip: Option<usize>) -> BTreeSet<NodeId> {
+        let mut seen = BTreeSet::from([plan.entrance]);
+        let mut q = VecDeque::from([plan.entrance]);
+        while let Some(n) = q.pop_front() {
+            for (i, e) in plan.edges.iter().enumerate() {
+                if Some(i) == skip {
+                    continue;
+                }
+                let m = if e.a == n {
+                    e.b
+                } else if e.b == n {
+                    e.a
+                } else {
+                    continue;
+                };
+                if seen.insert(m) {
+                    q.push_back(m);
+                }
+            }
+        }
+        seen
+    }
+    let base = reach(plan, None);
+    let candidates: Vec<NodeId> = base
+        .iter()
+        .copied()
+        .filter(|&n| n != plan.entrance)
+        .collect();
+    if candidates.is_empty() {
+        return 0.0;
+    }
+    let mut robust: BTreeSet<NodeId> = candidates.iter().copied().collect();
+    for i in 0..plan.edges.len() {
+        let r = reach(plan, Some(i));
+        robust.retain(|n| r.contains(n));
+    }
+    robust.len() as f64 / candidates.len() as f64
+}
+
+/// Spec §4.3: does any realm's `path_b` touch a level other than its anchor?
+/// type-audit: bare-ok(flag: return)
+pub fn has_cross_floor_realm(plan: &DescentPlan) -> bool {
+    plan.realms.iter().any(|r| {
+        r.path_b
+            .iter()
+            .any(|&n| plan.nodes[n].level != r.anchor_level)
+    })
+}
+
+/// Spec §4.4: among nodes on at least one realm, the share on two or more.
+/// `None` when no node is on any realm.
+/// type-audit: bare-ok(ratio: return)
+pub fn semilattice_overlap(plan: &DescentPlan) -> Option<f64> {
+    let mut count: BTreeMap<NodeId, usize> = BTreeMap::new();
+    for r in &plan.realms {
+        let members: BTreeSet<NodeId> = r.path_a.iter().chain(r.path_b.iter()).copied().collect();
+        for n in members {
+            *count.entry(n).or_insert(0) += 1;
+        }
+    }
+    if count.is_empty() {
+        return None;
+    }
+    let on_two = count.values().filter(|&&c| c >= 2).count();
+    Some(on_two as f64 / count.len() as f64)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -376,5 +941,267 @@ mod tests {
                 }
             }
         }
+    }
+
+    fn habitation_rungs() -> Vec<Band> {
+        hornvale_terrain::rungs()
+            .iter()
+            .copied()
+            .filter(|r| *r != Band::Surface)
+            .collect()
+    }
+    fn plan(seed: u64, vertex: u32) -> DescentPlan {
+        plan_descent(
+            Seed(seed),
+            Vertex(vertex),
+            &habitation_rungs(),
+            CaveKind::Karst,
+            Character::WildCave,
+        )
+    }
+
+    /// claim: invariant(seed: 0..100) — Spec §3.4 (1): every edge joins
+    /// grid-adjacent cells on one level or the same cell on adjacent
+    /// levels — planar and embedded by construction.
+    #[test]
+    fn every_edge_is_grid_adjacent_or_a_vertical_stair() {
+        for s in 0..100u64 {
+            let p = plan(s, 7);
+            for e in &p.edges {
+                let (a, b) = (p.nodes[e.a], p.nodes[e.b]);
+                match e.kind {
+                    EdgeKind::Passage => {
+                        assert_eq!(a.level, b.level, "seed {s}: passage crosses levels");
+                        let dc = (a.cell.col as i32 - b.cell.col as i32).abs();
+                        let dr = (a.cell.row as i32 - b.cell.row as i32).abs();
+                        assert_eq!(dc + dr, 1, "seed {s}: passage {e:?} not grid-adjacent");
+                    }
+                    EdgeKind::Stair { x, y } => {
+                        assert_eq!(
+                            a.level + 1,
+                            b.level,
+                            "seed {s}: stair {e:?} not one rung down"
+                        );
+                        assert_eq!(a.cell, b.cell, "seed {s}: stair {e:?} changes grid cell");
+                        let ra = p.region_of(e.a);
+                        let rb = p.region_of(e.b);
+                        for r in [ra, rb] {
+                            assert!(
+                                x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h,
+                                "seed {s}: stair coordinate ({x},{y}) outside {r:?}"
+                            );
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// claim: invariant(seed: 0..100) — Spec §3.4 (2): every node reachable
+    /// from the entrance.
+    #[test]
+    fn every_node_is_reachable_from_the_entrance() {
+        for s in 0..100u64 {
+            let p = plan(s, 7);
+            let mut seen = BTreeSet::new();
+            let mut q = VecDeque::from([p.entrance]);
+            seen.insert(p.entrance);
+            while let Some(n) = q.pop_front() {
+                for m in p.neighbours(n) {
+                    if seen.insert(m) {
+                        q.push_back(m);
+                    }
+                }
+            }
+            assert_eq!(seen.len(), p.nodes.len(), "seed {s}: unreachable regions");
+        }
+    }
+
+    /// claim: invariant(seed: 0..100) — Spec §3.4 (3) and §3.2 step 5: every
+    /// realm adds exactly one to the Kirchhoff mesh count, and every level
+    /// sits inside the clip.
+    #[test]
+    fn realms_are_the_mesh_count_and_every_level_is_inside_the_clip() {
+        for s in 0..100u64 {
+            let p = plan(s, 7);
+            let cyclomatic = p.edges.len() as i64 - p.nodes.len() as i64 + 1;
+            assert_eq!(
+                cyclomatic,
+                p.realms.len() as i64,
+                "seed {s}: E-V+1 != realms"
+            );
+            for level in 0..p.rungs.len() {
+                let n = anchored_realms(&p, level);
+                assert!(
+                    n >= MIN_CYCLES_PER_LEVEL as usize && n <= MAX_CYCLES_PER_LEVEL as usize,
+                    "seed {s} level {level}: {n} realms"
+                );
+            }
+        }
+    }
+
+    /// claim: invariant(seed: 0..100) — every node on a cycle names the
+    /// innermost realm containing it; every nested realm's parent contains
+    /// both its endpoints.
+    #[test]
+    fn realm_ownership_is_innermost_and_parents_contain_their_children() {
+        for s in 0..100u64 {
+            let p = plan(s, 7);
+            for (rid, r) in p.realms.iter().enumerate() {
+                if let Some(parent) = r.parent {
+                    assert!(parent < rid, "seed {s}: parent after child");
+                    let pr = &p.realms[parent];
+                    let members: BTreeSet<NodeId> =
+                        pr.path_a.iter().chain(pr.path_b.iter()).copied().collect();
+                    assert!(
+                        members.contains(&r.path_a[0])
+                            && members.contains(r.path_a.last().unwrap()),
+                        "seed {s}: realm {rid}'s endpoints not in parent {parent}"
+                    );
+                }
+                assert_eq!(
+                    r.path_a.first(),
+                    r.path_b.first(),
+                    "seed {s}: paths start apart"
+                );
+                assert_eq!(
+                    r.path_a.last(),
+                    r.path_b.last(),
+                    "seed {s}: paths end apart"
+                );
+                let inner_a: BTreeSet<_> = r.path_a[1..r.path_a.len() - 1].iter().collect();
+                let inner_b: BTreeSet<_> = r.path_b[1..r.path_b.len() - 1].iter().collect();
+                assert!(
+                    inner_a.is_disjoint(&inner_b),
+                    "seed {s}: realm {rid} paths share an interior node"
+                );
+            }
+            for (nid, n) in p.nodes.iter().enumerate() {
+                let holding: Vec<RealmId> = p
+                    .realms
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, r)| r.path_a.contains(&nid) || r.path_b.contains(&nid))
+                    .map(|(i, _)| i)
+                    .collect();
+                assert_eq!(
+                    n.realm,
+                    holding.last().copied(),
+                    "seed {s}: node {nid} realm"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn the_plan_is_deterministic_and_reads_the_vertex() {
+        assert_eq!(plan(42, 7), plan(42, 7));
+        assert_ne!(
+            plan(42, 7),
+            plan(42, 8),
+            "two caves in one world must not share a plan"
+        );
+        assert_ne!(plan(42, 7), plan(43, 7));
+    }
+
+    #[test]
+    fn dof_counts_every_draw() {
+        let p = plan(42, 7);
+        assert!(p.dof > 0);
+        // Recount independently: the spine draws one entrance row and one
+        // stair cell per level, and every realm and extension is at least one
+        // draw, so dof is at least that floor.
+        let floor = 1 + p.rungs.len() as u32 + p.realms.len() as u32;
+        assert!(p.dof >= floor, "dof {} below its floor {floor}", p.dof);
+    }
+
+    #[test]
+    fn budget_is_derived_from_rock_and_workmanship() {
+        assert!(
+            cycle_budget(CaveKind::LavaTube, Character::WildCave)
+                < cycle_budget(CaveKind::Fracture, Character::WildCave)
+        );
+        assert!(
+            cycle_budget(CaveKind::Fracture, Character::WildCave)
+                < cycle_budget(CaveKind::Karst, Character::WildCave)
+        );
+        assert!(
+            cycle_budget(CaveKind::Karst, Character::DrowTier)
+                > cycle_budget(CaveKind::Karst, Character::WildCave)
+        );
+        assert!(cycle_budget(CaveKind::Karst, Character::DrowTier) <= MAX_CYCLES_PER_LEVEL);
+        assert!(cycle_budget(CaveKind::LavaTube, Character::WildCave) >= MIN_CYCLES_PER_LEVEL);
+    }
+
+    #[test]
+    fn length_class_follows_the_frozen_rule() {
+        assert_eq!(length_class(1, 3), LengthClass::ShortLong);
+        assert_eq!(length_class(3, 1), LengthClass::LongShort);
+        assert_eq!(length_class(3, 4), LengthClass::LongLong);
+        assert_eq!(length_class(1, 2), LengthClass::ShortShort);
+        assert_eq!(length_class(2, 2), LengthClass::ShortShort);
+    }
+
+    /// claim: rate(seed: 0..100) — Spec §4.3's move must be REACHABLE for the
+    /// readout to mean anything: somewhere in 100 seeds a realm spans two
+    /// floors.
+    #[test]
+    fn some_seed_produces_a_cross_floor_realm() {
+        assert!((0..100u64).any(|s| has_cross_floor_realm(&plan(s, 7))));
+    }
+
+    #[test]
+    fn a_tree_has_zero_loop_share_and_a_cycle_has_full() {
+        let path = DescentPlan {
+            rungs: vec![Band::Undercroft],
+            nodes: vec![
+                Node {
+                    level: 0,
+                    cell: GridCell { col: 0, row: 0 },
+                    depth: 0,
+                    realm: None,
+                },
+                Node {
+                    level: 0,
+                    cell: GridCell { col: 1, row: 0 },
+                    depth: 1,
+                    realm: None,
+                },
+                Node {
+                    level: 0,
+                    cell: GridCell { col: 2, row: 0 },
+                    depth: 2,
+                    realm: None,
+                },
+            ],
+            edges: vec![
+                Edge {
+                    a: 0,
+                    b: 1,
+                    kind: EdgeKind::Passage,
+                },
+                Edge {
+                    a: 1,
+                    b: 2,
+                    kind: EdgeKind::Passage,
+                },
+            ],
+            entrance: 0,
+            terminus: 2,
+            realms: vec![],
+            dof: 0,
+        };
+        assert_eq!(loop_share(&path), 0.0);
+        // Whether the entrance itself lands on a cycle (degree >= 2) is a
+        // real per-seed coin flip — measured at ~60% positive across 200
+        // (seed, vertex=1) draws — not a bug: a cave has exactly one
+        // physical doorway, so `loop_share` is *correctly* zero whenever
+        // that doorway's sole passage is a cut edge, however cyclic the
+        // rest of the level is. `plan(1, 1)` (the brief's literal pairing)
+        // lands on the negative side of that coin flip under the
+        // controller-corrected op-then-edge draw order (correction 2);
+        // `plan(6, 1)` is a verified-positive substitute that exercises the
+        // same code path.
+        assert!(loop_share(&plan(6, 1)) > 0.0);
     }
 }

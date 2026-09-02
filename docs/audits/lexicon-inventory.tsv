@@ -137,7 +137,7 @@ windows/vessel/tests/suite/the_blocking.rs	13
 windows/vessel/tests/suite/underworld_level_generation.rs	101
 windows/vessel/tests/suite/world_context.rs	2
 windows/worldgen/src/chamber.rs	2
-windows/worldgen/src/circuit.rs	35
+windows/worldgen/src/circuit.rs	104
 windows/worldgen/src/delve_seating.rs	1
 windows/worldgen/src/disposition.rs	3
 windows/worldgen/src/graph_derive.rs	3

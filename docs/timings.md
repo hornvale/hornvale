@@ -4723,3 +4723,14 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-01T18:08:32Z | sluice:artifacts | 77.740 | 665.649 | 23.540 | 8.87 | 0 | 8245ac0d8 |  | lefford | 40 |
 | 2026-09-01T18:09:18Z | sluice:outboard | 46.003 | 27.793 | 40.913 | 1.49 | 0 | 4901ca66a |  | lefford | 40 |
 | 2026-09-01T18:18:06Z | sluice:gate | 528.159 | 16223.746 | 470.910 | 31.61 | 0 | 34bcdec9d |  | lefford | 40 |
+| 2026-09-02T00:39:53Z | prewarm | 1095.594 | 1941.812 | 121.821 | 1.88 | 0 | fd22802eb | campaign/the-crosscut | ambrose | 12 |
+| 2026-09-02T01:03:32Z | gate-commit | 6.528 | 2.587 | 0.288 | 0.44 | 0 | cea4e870d | campaign/the-crosscut | ambrose | 12 |
+| 2026-09-02T01:06:59Z | gate-commit | 192.693 | 138.218 | 40.509 | 0.93 | 0 | cea4e870d | campaign/the-crosscut | ambrose | 12 |
+| 2026-09-02T01:09:20Z | gate-commit | 104.877 | 51.455 | 25.071 | 0.73 | 0 | cea4e870d | campaign/the-crosscut | ambrose | 12 |
+| 2026-09-02T01:12:56Z | gate-commit | 133.263 | 72.171 | 35.621 | 0.81 | 0 | cea4e870d | campaign/the-crosscut | ambrose | 12 |
+| 2026-09-02T01:27:56Z | gate-commit | 27.346 | 35.366 | 5.617 | 1.50 | 0 | 1f23eae6f | campaign/the-crosscut | ambrose | 12 |
+| 2026-09-02T01:30:29Z | gate-commit | 132.584 | 214.958 | 42.280 | 1.94 | 0 | 1f23eae6f | campaign/the-crosscut | ambrose | 12 |
+| 2026-09-02T01:32:07Z | gate-commit | 82.577 | 48.364 | 22.163 | 0.85 | 0 | 1f23eae6f | campaign/the-crosscut | ambrose | 12 |
+| 2026-09-02T01:35:57Z | gate-commit | 132.368 | 62.467 | 28.526 | 0.69 | 0 | 1f23eae6f | campaign/the-crosscut | ambrose | 12 |
+| 2026-09-02T01:39:32Z | gate-commit | 139.652 | 67.418 | 33.382 | 0.72 | 0 | 1f23eae6f | campaign/the-crosscut | ambrose | 12 |
+| 2026-09-02T01:53:47Z | gate-commit | 141.202 | 97.158 | 51.173 | 1.05 | 0 | b48968f01 | campaign/the-crosscut | ambrose | 12 |
