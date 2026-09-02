@@ -58,18 +58,30 @@ pub struct Slot(pub usize);
 ///   Between ticks a body does not re-feel, so an unchanged value is a fact
 ///   about a body that was not advanced.
 ///
-/// `on_roll` is the mask the tick recomputes wholesale, so it is neither
-/// appended to independently nor written per-slot: [`Roster::set_on_roll`]
-/// replaces it as a unit, and refuses a mask that is not the roster's own
-/// length.
+/// `on_roll` is the mask the tick recomputes wholesale, so it is never
+/// written PER-SLOT: [`Roster::set_on_roll`] replaces it as a unit, and
+/// refuses a mask that is not the roster's own length. It is still pushed by
+/// [`Roster::push`] like every other column, so that "every column is
+/// [`Roster::len`] long at all times" holds without exception — the earlier
+/// shape left it EMPTY until the first `set_on_roll`, which made the
+/// invariant one a reader had to qualify, and a qualified invariant is one a
+/// later writer can talk itself out of. A pushed body is off the roll until a
+/// mask says otherwise, which is also the safer default: it is advanced by no
+/// tick until the roll has actually been computed.
+///
+/// `written` is the same shape for the same reason, and it carries the
+/// contract [`Roster::resolved_felt`] states: `false` until the tick has
+/// written this slot, so a seeded `felt` can never be mistaken for a
+/// resolution the body actually reached.
 pub struct Roster {
     /// Every body this session has derived, in derivation order.
     bodies: Vec<Body>,
     /// The static half of each body's roll key (see [`RollKeyStatic`]).
     keys: Vec<RollKeyStatic>,
     /// The roll's mask as of the most recent recompute — `true` is "the tick
-    /// advances this body", `false` is dormant (spec §3.7). Empty until the
-    /// first [`Self::set_on_roll`].
+    /// advances this body", `false` is dormant (spec §3.7). Pushed `false` by
+    /// [`Self::push`] and replaced wholesale by [`Self::set_on_roll`], which
+    /// every append site calls before anything reads the mask again.
     ///
     /// **Only `DriveMovements.npcs` reads it.** Everything else in
     /// `Session::wait` — the `before` snapshot, `sensed_before`, the
@@ -84,6 +96,17 @@ pub struct Roster {
     /// Each body's felt state as its own last resolution left it. Seeded at
     /// the append with the stateless read and written by the tick.
     felt: Vec<Felt>,
+    /// Whether the tick has written this slot yet — `false` from the append
+    /// until the first [`Self::write`], and never `false` again after it.
+    ///
+    /// The `felt` column is never a placeholder (the append seeds it with the
+    /// stateless read), so this is not a validity flag: it is the difference
+    /// between "this is what the body's own arbitration concluded" and "this
+    /// is what a stateless read of the body says, because no tick has advanced
+    /// it yet". [`Self::resolved_felt`] is the only reader, and
+    /// `Session::driven_mode`/`driven_affect`'s documented `None` before the
+    /// first `!wait` is exactly this distinction surfaced.
+    written: Vec<bool>,
     /// Which slot each appended entity took — the reverse of `bodies`, so a
     /// caller holding an [`EntityId`] does not linear-scan for it.
     slot_of: BTreeMap<EntityId, Slot>,
@@ -108,6 +131,7 @@ impl Roster {
             on_roll: Vec::new(),
             position: Vec::new(),
             felt: Vec::new(),
+            written: Vec::new(),
             slot_of: BTreeMap::new(),
             driven,
         }
@@ -122,6 +146,13 @@ impl Roster {
     /// at its home — that is what `liveness::agent_position` returns for it,
     /// so the seed and the view agree from the first read.
     ///
+    /// `on_roll` and `written` are pushed `false` for the same reason
+    /// `position` is seeded rather than left absent: every column is
+    /// [`Self::len`] long at all times, with no "except before the first X"
+    /// carve-out. Both are then set by the writers that own them
+    /// ([`Self::set_on_roll`], [`Self::write`]), and every append site
+    /// recomputes the mask before anything reads it.
+    ///
     /// A repeated entity keeps the slot it first took. Appending the same
     /// entity twice would be a derivation bug (`derived_settlements` /
     /// `derived_herds` exist to make it impossible), and if one ever happens
@@ -134,6 +165,8 @@ impl Roster {
         self.bodies.push(body);
         self.keys.push(key);
         self.felt.push(felt);
+        self.on_roll.push(false);
+        self.written.push(false);
         slot
     }
 
@@ -159,8 +192,8 @@ impl Roster {
         &self.keys
     }
 
-    /// The roll's mask, in slot order — empty before the first
-    /// [`Self::set_on_roll`].
+    /// The roll's mask, in slot order — all `false` before the first
+    /// [`Self::set_on_roll`], one entry per body from the first append.
     /// type-audit: bare-ok(flag: return)
     pub fn on_roll(&self) -> &[bool] {
         &self.on_roll
@@ -233,6 +266,44 @@ impl Roster {
     pub fn write(&mut self, slot: Slot, position: Facet, felt: Felt) {
         self.position[slot.0] = position;
         self.felt[slot.0] = felt;
+        self.written[slot.0] = true;
+    }
+
+    /// Move one slot's `position` column and NOTHING else — the write for a
+    /// body whose room changed without any resolution being reached.
+    ///
+    /// **Why this is separate from [`Self::write`], and why it must be.**
+    /// `position` is a VIEW: it has to agree with `liveness::agent_position`
+    /// at every read, so EVERY commit of an `agent-at` fact owes this column
+    /// an update, not only the tick's. The player's own verbs are the case
+    /// that matters — `go`, `retrace`, `enter` commit a move through
+    /// `Session::commit_agent_at` and reach no arbitration at all — and the
+    /// two `Session::place_creature_*` seams are the same shape for another
+    /// body. `felt` is CONTENT and none of those produced any, so routing
+    /// them through `write` would be a lie twice over: it would invent a
+    /// resolution, and it would flip `written`, promoting the append's
+    /// stateless seed into "what this body's own arbitration concluded".
+    ///
+    /// # Panics
+    ///
+    /// If `slot` is not a slot of this roster — see [`Self::write`].
+    pub fn place(&mut self, slot: Slot, position: Facet) {
+        self.position[slot.0] = position;
+    }
+
+    /// This slot's felt state ONLY if a tick has actually written it —
+    /// `None` for a body no tick has advanced since it was appended.
+    ///
+    /// The distinction is not staleness. [`Self::felts`] always answers, and
+    /// its answer for an unwritten slot is the stateless read the append
+    /// seeded, which is a real description of the body. What it is NOT is the
+    /// body's own resolution, because the body has not resolved anything yet
+    /// — and the driven body's accessors (`Session::driven_mode`,
+    /// `Session::driven_affect`) promise a caller precisely that: `None`
+    /// before the first `!wait`, `Some` after. This is where that promise is
+    /// kept.
+    pub fn resolved_felt(&self, slot: Slot) -> Option<&Felt> {
+        self.written[slot.0].then(|| &self.felt[slot.0])
     }
 
     /// How many bodies are on the roll, the driven one included.
@@ -391,7 +462,10 @@ mod tests {
         }
     }
 
-    /// Every column has one length after any sequence of pushes; `slot_of`
+    /// Every column has one length after any sequence of pushes — the
+    /// `on_roll` and `written` masks included, which is what makes "every
+    /// column is `len()` long AT ALL TIMES" hold with no carve-out for the
+    /// window between an append and the roll's next recompute. `slot_of`
     /// answers each pushed entity with its slot.
     ///
     /// MUTATION THIS MUST FAIL AGAINST: push `keys` twice in `push`
@@ -419,6 +493,19 @@ mod tests {
         assert_eq!(roster.keys().len(), 3, "keys column");
         assert_eq!(roster.positions().len(), 3, "position column");
         assert_eq!(roster.felts().len(), 3, "felt column");
+        assert_eq!(roster.on_roll().len(), 3, "on_roll column");
+        assert_eq!(roster.written.len(), 3, "written column");
+        assert!(
+            roster.on_roll().iter().all(|on| !on),
+            "a pushed body is off the roll until a mask says otherwise"
+        );
+        for i in 0..3usize {
+            assert_eq!(
+                roster.resolved_felt(Slot(i)),
+                None,
+                "slot {i} holds a seed, not a resolution, until the tick writes it"
+            );
+        }
         for i in 0..3u32 {
             let entity = EntityId(std::num::NonZeroU64::new(u64::from(i) + 1).expect("nonzero"));
             assert_eq!(

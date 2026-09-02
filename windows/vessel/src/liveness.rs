@@ -1743,6 +1743,37 @@ pub struct Felt {
     pub suppressed: Vec<DriveKind>,
 }
 
+/// What one body's walk left behind, for the caller that owns the roster to
+/// write back (The Rack, spec §3.4) — the two tick-owned columns and the
+/// entity they belong to.
+///
+/// **Why the walk returns this rather than writing it.** `DriveMovements` is
+/// handed a `Vec<Body>` and a frozen [`Ledger`]; it has never had, and must
+/// not acquire, a reference to the `Session` that owns the roster — the walk
+/// is also driven through [`TickSystem::step`] by the kernel's scheduler and
+/// by `windows/lab`'s health battery, neither of which has a roster at all.
+/// So the walk reports and the session writes, which also keeps the write to
+/// exactly one site (`Session::wait`) rather than one per emission path.
+///
+/// **`entity`, not a slot.** A [`crate::roster::Slot`] is the roster's own
+/// coordinate and this module knows nothing about it. The caller maps back
+/// through `Roster::slot_of`, which is the reverse index that exists for
+/// precisely this.
+///
+/// `position` is the room the walk ENDED at, and it is the same value the
+/// walk's own last `agent-at` fact carries — which is what keeps the
+/// roster's `position` column a true VIEW of the ledger rather than a second
+/// opinion about where a body is.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Written {
+    /// Whose walk this was.
+    pub entity: EntityId,
+    /// The room the walk left the body standing in.
+    pub position: Facet,
+    /// The felt state the walk's last resolution expressed.
+    pub felt: Felt,
+}
+
 /// Thirst — the one authored (sustenance) drive, Drive #1. `urgency` is the
 /// `drive_at` fold surfaced on the view; `proposal` is the existing
 /// belief→`plan_to_water`-first-step / `explore_step` chain. Parameterized by
@@ -6057,7 +6088,7 @@ impl<'a> DriveMovements<'a> {
         frozen: &Ledger,
         mesh_memo: &mut RoomMeshMemo,
         home_nav_cache: &mut HomeNavCache,
-    ) -> (Vec<Fact>, Occupancy) {
+    ) -> (Vec<Fact>, Occupancy, Vec<Written>) {
         let mut out: Vec<Fact> = Vec::new();
         // THE THRESHOLD's crossing (task 6): which anchor each creature
         // stands at, tracked across this tick's own walk. Shared across
@@ -6295,7 +6326,36 @@ impl<'a> DriveMovements<'a> {
         // or constructs a `Fact` directly with `day: None` — would not fail
         // loudly here; it would just reorder silently.
         out.sort_by_key(|f| f.day);
-        (out, occupancy)
+        // WHAT EACH WALK LEFT BEHIND (The Rack, spec §3.4). `states` is this
+        // tick's own per-creature scratch, and its three surviving fields —
+        // where the creature ended, what its last resolution felt, and which
+        // drives that resolution discarded — are exactly the roster's two
+        // tick-owned columns. Read here, at the one moment they are all still
+        // in scope, rather than re-derived by the caller: a second derivation
+        // is a second answer, and the whole point of the column is that it is
+        // the tick's own.
+        //
+        // Every creature `self.npcs` named has an entry, whether or not its
+        // walk went anywhere: an entry is inserted for each npc in the setup
+        // loop and nothing ever removes one, so a creature whose walk halted
+        // on its first pop reports its (unchanged) starting position and the
+        // resolution that halted it, which is the honest answer for it.
+        //
+        // `BTreeMap` order, so the vector is a pure function of the frozen
+        // ledger — the same reason the queue is keyed by `(ticks, EntityId)`.
+        let written: Vec<Written> = states
+            .into_iter()
+            .map(|(entity, (_body, st, _memory))| Written {
+                entity,
+                position: st.pos,
+                felt: Felt {
+                    affect: st.affect,
+                    mode: st.mode,
+                    suppressed: st.suppressed,
+                },
+            })
+            .collect();
+        (out, occupancy, written)
     }
 }
 
@@ -6817,16 +6877,26 @@ impl<'a> DriveMovements<'a> {
     /// Returns the facts this body's OWN walk would commit (empty under
     /// [`crate::controller::PlayerController`] with nothing queued — see that
     /// controller's own doc for why nothing here ever double-moves a body the
-    /// player drives through the verb loop), the LAST commitment mode its own
-    /// arbitration reached this call, the [`Affect`] that SAME resolution
-    /// carried (The Confidant, Task 2) — the host's felt state, independent
-    /// of whether the controller let it act on it — and that SAME
-    /// resolution's discarded ranks (The Confidant, Task 5): the drives that
-    /// were active but not pursued, present so a caller can retrieve them
-    /// without a second arbitration. `advance_one`'s loop always runs at
-    /// least once whenever any time has elapsed (see [`WalkState`]'s own
-    /// `affect` field doc), so both always reflect a live decision this call
-    /// made, never `begin`'s placeholders.
+    /// player drives through the verb loop), and the [`Written`] its walk
+    /// left behind: where it ended, and the [`Felt`] its LAST resolution
+    /// expressed — the commitment mode its own arbitration reached this call,
+    /// the [`Affect`] that same resolution carried (The Confidant, Task 2 —
+    /// the host's felt state, independent of whether the controller let it
+    /// act on it), and that same resolution's discarded ranks (The Confidant,
+    /// Task 5: the drives that were active but not pursued, present so a
+    /// caller can retrieve them without a second arbitration).
+    ///
+    /// **One `Written`, the same type [`Self::step_with_occupancy`] returns
+    /// one of per creature** (The Rack, Task 3), so the possessed body's own
+    /// walk and every other body's walk report through one shape and
+    /// `Session::wait` writes them into the roster through one method. The
+    /// three loose fields this used to return were the same three values in
+    /// a tuple only this caller knew how to read.
+    ///
+    /// `advance_one`'s loop always runs at least once whenever any time has
+    /// elapsed (see [`WalkState`]'s own `affect` field doc), so the felt
+    /// state always reflects a live decision this call made, never `begin`'s
+    /// placeholders.
     pub(crate) fn step_one_with_controller(
         &self,
         frozen: &Ledger,
@@ -6834,7 +6904,7 @@ impl<'a> DriveMovements<'a> {
         mesh_memo: &mut RoomMeshMemo,
         home_nav_cache: &mut HomeNavCache,
         controller: &mut dyn Controller,
-    ) -> (Vec<Fact>, Mode, Affect, Vec<DriveKind>) {
+    ) -> (Vec<Fact>, Written) {
         let band = [body.clone()];
         let mut occupancy = Occupancy::default();
         let mut afraid_memo = PrimaryAfraidMemo::new();
@@ -6923,7 +6993,18 @@ impl<'a> DriveMovements<'a> {
             home_nav_cache,
             controller,
         ) {}
-        (out, st.mode, st.affect, st.suppressed)
+        (
+            out,
+            Written {
+                entity: body.entity,
+                position: st.pos,
+                felt: Felt {
+                    affect: st.affect,
+                    mode: st.mode,
+                    suppressed: st.suppressed,
+                },
+            },
+        )
     }
 }
 
@@ -9780,7 +9861,7 @@ mod tests {
             day_ticks: None,
             terrain: &terrain,
         };
-        let (facts1, _occ1) =
+        let (facts1, _occ1, _written1) =
             sys1.step_with_occupancy(&ledger, &mut mesh_memo, &mut home_nav_cache);
         assert!(
             !facts1.is_empty(),
@@ -9804,7 +9885,7 @@ mod tests {
             day_ticks: None,
             terrain: &terrain,
         };
-        let (facts2, _occ2) =
+        let (facts2, _occ2, _written2) =
             sys2.step_with_occupancy(&ledger2, &mut mesh_memo, &mut home_nav_cache);
         assert!(
             !facts2.is_empty(),
@@ -10883,7 +10964,7 @@ mod tests {
             terrain: &t,
         };
 
-        let (default_facts, _mode, _affect, _suppressed) = sys.step_one_with_controller(
+        let (default_facts, _written) = sys.step_one_with_controller(
             &ledger,
             &npc,
             &mut RoomMeshMemo::new(),
@@ -10896,7 +10977,7 @@ mod tests {
              (which wants water) — it must act: {default_facts:?}"
         );
 
-        let (player_facts, _mode, _affect, _suppressed) = sys.step_one_with_controller(
+        let (player_facts, _written) = sys.step_one_with_controller(
             &ledger,
             &npc,
             &mut RoomMeshMemo::new(),
@@ -10961,22 +11042,20 @@ mod tests {
             terrain: &terrain,
         };
 
-        let (default_facts, default_mode, default_affect, default_suppressed) = sys
-            .step_one_with_controller(
-                &ledger,
-                &npc,
-                &mut RoomMeshMemo::new(),
-                &mut HomeNavCache::new(),
-                &mut DefaultController,
-            );
-        let (imposed_facts, imposed_mode, imposed_affect, imposed_suppressed) = sys
-            .step_one_with_controller(
-                &ledger,
-                &npc,
-                &mut RoomMeshMemo::new(),
-                &mut HomeNavCache::new(),
-                &mut crate::controller::ImposedController::new(),
-            );
+        let (default_facts, default_written) = sys.step_one_with_controller(
+            &ledger,
+            &npc,
+            &mut RoomMeshMemo::new(),
+            &mut HomeNavCache::new(),
+            &mut DefaultController,
+        );
+        let (imposed_facts, imposed_written) = sys.step_one_with_controller(
+            &ledger,
+            &npc,
+            &mut RoomMeshMemo::new(),
+            &mut HomeNavCache::new(),
+            &mut crate::controller::ImposedController::new(),
+        );
 
         assert!(
             !default_facts.is_empty(),
@@ -10991,16 +11070,20 @@ mod tests {
              in the walk reads which controller is live"
         );
         assert_eq!(
-            default_mode, imposed_mode,
+            default_written.felt.mode, imposed_written.felt.mode,
             "H3: the same last commitment mode either way"
         );
         assert_eq!(
-            default_affect, imposed_affect,
+            default_written.felt.affect, imposed_written.felt.affect,
             "H3: the same last resolution's felt state either way"
         );
         assert_eq!(
-            default_suppressed, imposed_suppressed,
+            default_written.felt.suppressed, imposed_written.felt.suppressed,
             "H3: the same discarded drive ranks either way"
+        );
+        assert_eq!(
+            default_written.position, imposed_written.position,
+            "H3: the same room at the end of the walk either way"
         );
     }
 
@@ -11277,7 +11360,7 @@ mod tests {
         };
         let mut player = PlayerController::new();
         player.queue(Action::Drink);
-        let (facts, _mode, _affect, _suppressed) = sys.step_one_with_controller(
+        let (facts, _written) = sys.step_one_with_controller(
             &ledger,
             &npc,
             &mut RoomMeshMemo::new(),
@@ -16146,7 +16229,7 @@ mod tests {
             day_ticks: None,
             terrain: &terrain,
         };
-        let (facts, _occ) =
+        let (facts, _occ, _written) =
             sys.step_with_occupancy(&ledger, &mut RoomMeshMemo::new(), &mut HomeNavCache::new());
         // `slept`, not `rested`: the phase decides the act, and this fixture
         // put the body in its off-phase deliberately. A walk that had gone back
@@ -17303,7 +17386,7 @@ mod tests {
             day_ticks: None,
             terrain: &hearth_terrain,
         };
-        let (_facts, occ) =
+        let (_facts, occ, _written) =
             sys.step_with_occupancy(&ledger, &mut RoomMeshMemo::new(), &mut HomeNavCache::new());
         let interior = interior_of(&home, &hearth_terrain);
         let landing_anchor = landing(&interior, seam_kind(true)).expect("a built room lands");
@@ -17350,7 +17433,7 @@ mod tests {
             day_ticks: None,
             terrain: &wild_terrain,
         };
-        let (_facts2, occ2) =
+        let (_facts2, occ2, _written) =
             sys2.step_with_occupancy(&ledger2, &mut RoomMeshMemo::new(), &mut HomeNavCache::new());
         let wild_interior = interior_of(&home, &wild_terrain);
         let wild_landing = landing(&wild_interior, seam_kind(false)).expect("wilderness lands too");
@@ -17756,7 +17839,7 @@ mod tests {
             day_ticks: None,
             terrain: &terrain,
         };
-        let (facts, occ) =
+        let (facts, occ, _written) =
             sys.step_with_occupancy(&ledger, &mut RoomMeshMemo::new(), &mut HomeNavCache::new());
         assert!(
             facts.is_empty(),
@@ -18016,7 +18099,7 @@ mod tests {
             day_ticks: None,
             terrain: &terrain,
         };
-        let (_f1, occ_forward) = forward.step_with_occupancy(
+        let (_f1, occ_forward, _w1) = forward.step_with_occupancy(
             &ledger,
             &mut RoomMeshMemo::new(),
             &mut HomeNavCache::new(),
@@ -18033,7 +18116,7 @@ mod tests {
             day_ticks: None,
             terrain: &terrain,
         };
-        let (_f2, occ_reversed) = reversed.step_with_occupancy(
+        let (_f2, occ_reversed, _w2) = reversed.step_with_occupancy(
             &ledger,
             &mut RoomMeshMemo::new(),
             &mut HomeNavCache::new(),

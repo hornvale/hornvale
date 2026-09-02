@@ -177,3 +177,245 @@ fn a_non_zero_driven_slot_names_its_own_body() {
         "the driven body is always on the roll"
     );
 }
+
+/// P3 — **VIEW ≡ SCAN**: at every read, every slot's `position` column equals
+/// the ledger's own fold for that body (spec §3.4, and the global constraint
+/// this campaign carries: "a disagreement is a writer bug"). Checked after
+/// each verb of a real script — `look`, `go north`, `wait 30`, `enter`, `go
+/// north` — so the invariant is asserted on a stationary turn, a walking
+/// turn, a tick that advances the whole population, and a band change.
+///
+/// **The two halves are independently derived.** The column is written by
+/// `Session::wait` from what the walk returned (`liveness::Written`) and by
+/// `Session::commit_agent_at` for the driven body's own verbs; the scan is
+/// `Session::position_of`, which folds `agent-at` facts out of the ledger
+/// through `liveness::agent_position` and never consults the column. They
+/// agree only if every writer is right.
+///
+/// **TWO SEEDS, AND THE SECOND ONE IS NOT DECORATION.** Seed 42's flagship —
+/// this module's world everywhere else — commits **zero** `agent-at` facts
+/// for its 68 bodies across 500 simulated days (measured directly: spans of
+/// 1, 5, 30, 100 and 365 all report 0). Its population never changes room at
+/// all, so on seed 42 alone every non-driven slot's column still holds the
+/// seed its append wrote, the ledger fold returns that same home, and
+/// DELETING the tick's entire write-back leaves this test green. Seed 7's
+/// population does walk — 74 of its 102 bodies leave home inside 30 days —
+/// so that is where the tick's half is actually witnessed. The two assertions
+/// at the end refuse to let either half go vacuous again without saying so.
+///
+/// **Not in the commit gate today** — see this module's own header.
+///
+/// MUTATION THIS MUST FAIL AGAINST (the tick's half): in `Session::wait`,
+/// drop the write-back — replace the `for w in written` loop's body with
+/// `let _ = w;`. Run and observed, on the seed-7 pass:
+/// `assertion `left == right` failed: after "wait 30", slot 1
+/// (Kwawkwapzow) — the column and the ledger's own fold disagree
+///   left: Facet { face: 1, path: [3, 0, 3, 1, 3, 2, 2, 1, 1, 1, 2, 3, 0] }
+///  right: Facet { face: 1, path: [3, 0, 3, 3, 1, 0, 1, 1, 1, 1, 0, 1, 1] }`
+/// — and the SAME mutation is a NULL on seed 42 alone (run: green), which is
+/// what the two-seed paragraph above exists for.
+///
+/// MUTATION THIS MUST FAIL AGAINST (the driven body's half): in
+/// `Session::commit_agent_at`, drop `self.roster.place(driven,
+/// position.clone());` (`let _ = driven;` in its place). Run and observed, on
+/// the seed-42 pass: `assertion `left == right` failed: after "go north",
+/// slot 0 (Kvoavnga) — the column and the ledger's own fold disagree
+///   left: Facet { face: 1, path: [2, 3, 3, 1, 0, 0, 1, 2, 0, 2, 3, 3, 1] }
+///  right: Facet { face: 1, path: [2, 3, 3, 1, 0, 0, 1, 2, 0, 3, 2, 2, 0] }`
+#[test]
+fn every_slots_position_is_the_ledgers() {
+    // Seed 42's flagship: the driven body's own writer, which its `go north`
+    // exercises and nothing else in this suite pins.
+    let (driven_moved, _) = walk_a_script(42);
+    assert!(
+        driven_moved,
+        "seed 42's script must move the DRIVEN body, or `commit_agent_at`'s \
+         write is untested"
+    );
+    // Seed 7: a population that actually walks, which is the only way to
+    // witness the tick's own write-back.
+    let (_, other_moved) = walk_a_script(7);
+    assert!(
+        other_moved,
+        "seed 7's script must move somebody the TICK walks, or the tick's \
+         write-back is untested"
+    );
+}
+
+/// Walk one seed's session through the script, checking VIEW ≡ SCAN after
+/// every verb, and report whether the driven body and any other body actually
+/// left home — the two vacuity questions the caller asserts on.
+fn walk_a_script(seed: u64) -> (bool, bool) {
+    let world = hornvale_worldgen::build_world(
+        hornvale_kernel::Seed(seed),
+        &Default::default(),
+        hornvale_worldgen::SkyChoice::Generated,
+        &Default::default(),
+        &Default::default(),
+    )
+    .expect("the seed builds");
+    let (mut session, _) = Session::start(&world, &PossessOpts::default()).expect("starts");
+    // The invariant must already hold before anything moves, or a later
+    // agreement could be an accident of nothing having happened.
+    check_view_equals_scan(&session, "start");
+    let (mut driven_moved, mut other_moved) = (false, false);
+    for verb in ["look", "go north", "wait 30", "enter", "go north"] {
+        let _ = session.handle(verb);
+        check_view_equals_scan(&session, verb);
+        let roster = session.roster();
+        for i in 0..roster.len() {
+            let moved = roster.positions()[i] != roster.bodies()[i].home;
+            if i == roster.driven().0 {
+                driven_moved |= moved;
+            } else {
+                other_moved |= moved;
+            }
+        }
+    }
+    (driven_moved, other_moved)
+}
+
+/// Every slot's `position` column against the ledger's own fold, at one
+/// moment. The scan half is deliberately a separate call per slot rather than
+/// a batch: `Session::position_of` is the ledger fold, and calling it once
+/// per slot is what makes the comparison per-slot rather than aggregate.
+fn check_view_equals_scan(session: &Session, after: &str) {
+    let roster = session.roster();
+    for i in 0..roster.len() {
+        assert_eq!(
+            roster.positions()[i],
+            session.position_of(hornvale_vessel::roster::Slot(i)),
+            "after {after:?}, slot {i} ({}) — the column and the ledger's \
+             own fold disagree",
+            roster.bodies()[i].label
+        );
+    }
+}
+
+/// The driven slot carries what the three deleted side-fields carried: the
+/// accessors are `None` before the first `!wait` and `Some` after it, they
+/// report the driven body's OWN tick (not a neighbour's), and
+/// `override_record` still accumulates across ticks.
+///
+/// **`None` before the first `!wait` is the contract, and it is not free.**
+/// The `felt` column is SEEDED at the append (Task 2), so a naive
+/// `felts()[driven]` would answer `Some` from the moment a session starts —
+/// silently promoting a stateless read into "the host's own resolution", the
+/// exact confusion `Felt`'s doc says the column must not create. The `written`
+/// flag is what keeps the promise; this test is what holds it to it.
+/// `controller_swap.rs` and `ask_verb.rs` exercise the `Some` arm heavily and
+/// would not notice the `None` arm going wrong in either direction.
+///
+/// MUTATION THIS MUST FAIL AGAINST (the accumulation): in `Session::wait`,
+/// empty the `driven_overrides` fold (`let _ = drive;` as the loop body).
+/// Run and observed: `the rider's overrides must accumulate across the
+/// possession, got 0 then 0`.
+///
+/// MUTATION THIS MUST FAIL AGAINST (the `None` arm): make
+/// `Roster::resolved_felt` unconditional (`Some(&self.felt[slot.0])`). Run
+/// and observed: `assertion `left == right` failed: no tick has run, so the
+/// driven body has reached no commitment mode / left: Some(Idle) / right:
+/// None` — the append's stateless seed reported as a resolution.
+#[test]
+fn the_driven_slot_carries_what_the_side_fields_did() {
+    let world = world();
+    let (mut session, _) = Session::start(&world, &PossessOpts::default()).expect("starts");
+    assert_eq!(
+        session.driven_mode(),
+        None,
+        "no tick has run, so the driven body has reached no commitment mode"
+    );
+    assert_eq!(
+        session.driven_affect(),
+        None,
+        "…nor expressed a felt state of its own"
+    );
+    assert_eq!(
+        session.driven_affect_object(),
+        None,
+        "…nor felt anything ABOUT a drive"
+    );
+    assert!(
+        session.suppressed_drives().is_empty(),
+        "…and has discarded no ranks: {:?}",
+        session.suppressed_drives()
+    );
+    assert!(
+        session.override_record().is_empty(),
+        "…and overridden nothing: {:?}",
+        session.override_record()
+    );
+
+    let _ = session.handle("!wait 30");
+    let mode = session
+        .driven_mode()
+        .expect("one tick has run, so the driven body has a mode");
+    let affect = session
+        .driven_affect()
+        .expect("…and a felt state its own arbitration expressed");
+    let after_first: u32 = session.override_record().values().sum();
+
+    let driven = session.roster().driven();
+    assert_eq!(
+        session.roster().felts()[driven.0].mode,
+        mode,
+        "driven_mode() reads the driven slot's own column"
+    );
+    assert_eq!(
+        session.roster().felts()[driven.0].affect.label,
+        affect,
+        "driven_affect() reads the driven slot's own column"
+    );
+    assert_eq!(
+        session.roster().felts()[driven.0].suppressed,
+        session.suppressed_drives(),
+        "suppressed_drives() reads the driven slot's own column"
+    );
+
+    let _ = session.handle("!wait 30");
+    let after_second: u32 = session.override_record().values().sum();
+    assert!(
+        after_second > after_first && after_second > 0,
+        "the rider's overrides must accumulate across the possession, got \
+         {after_first} then {after_second}"
+    );
+
+    // THE DRIVEN SLOT, NOT SLOT 0. Every assertion above runs on a flagship
+    // session, whose driven slot IS 0 — so a mis-indexed accessor reading
+    // `felts()[0]` would pass every one of them. A `PossessTarget::Creature`
+    // session drives a body from the middle of the roster, where slot 0 is
+    // somebody else entirely, and slot 0 has been written by the population
+    // walk on the same tick (it is on the roll), so the wrong read returns a
+    // real, plausible felt state rather than a `None` that would give itself
+    // away.
+    let ctx = WorldContext::build(&world).expect("seed 42 builds a context");
+    let (flagship, _) = Session::start_in(&ctx, &PossessOpts::default()).expect("starts");
+    let target = flagship.bodies()[flagship.bodies().len() / 2].clone();
+    let (mut ridden, _) = Session::start_in(
+        &ctx,
+        &PossessOpts {
+            target: PossessTarget::Creature(target.entity),
+            ..Default::default()
+        },
+    )
+    .expect("a derived creature is possessable");
+    let _ = ridden.handle("!wait 30");
+    let driven = ridden.roster().driven();
+    assert_ne!(driven.0, 0, "the ridden body is not slot 0");
+    assert_eq!(
+        ridden.driven_mode(),
+        Some(ridden.roster().felts()[driven.0].mode),
+        "driven_mode() reads slot {} — the body being ridden",
+        driven.0
+    );
+    assert_eq!(
+        ridden.driven_affect(),
+        Some(ridden.roster().felts()[driven.0].affect.label),
+        "driven_affect() reads the ridden body's slot"
+    );
+    assert_eq!(
+        ridden.suppressed_drives(),
+        ridden.roster().felts()[driven.0].suppressed,
+        "suppressed_drives() reads the ridden body's slot"
+    );
+}

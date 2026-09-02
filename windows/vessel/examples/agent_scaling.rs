@@ -413,7 +413,7 @@ fn run_rung(
             day_ticks,
             terrain: &terrain,
         };
-        let (facts, _occupancy) =
+        let (facts, _occupancy, _written) =
             sys.step_with_occupancy(&ledger, &mut mesh_memo, &mut home_nav_cache);
         for fact in facts {
             ledger
