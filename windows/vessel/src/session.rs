@@ -977,9 +977,15 @@ pub struct Session<'w> {
     /// that path. It holds nothing the ledger does not re-determine, so
     /// discarding the whole store between any two turns is unobservable.
     ///
-    /// **Nothing reads it yet** (The Pawl, Task 2): the field and the
-    /// threading land first, byte-identically; later tasks migrate the read
-    /// sites onto it.
+    /// **Every migrated read goes through it** (The Pawl, Tasks 2-5c). The
+    /// field and the threading landed first and byte-identically; the read
+    /// sites then moved onto it, and the ones that reach this store are
+    /// [`crate::liveness::drive_at`], [`crate::liveness::hunger_at`],
+    /// `decide_step`, [`crate::liveness::believed_water`] and
+    /// [`crate::liveness::hazard_memory_memo`] together with the emitter
+    /// chain behind the fear path — reached from here through
+    /// [`DriveMovements::step_with_occupancy`] and [`Self::snapshot`], which
+    /// are the two places this field is handed out.
     folds: crate::resident::OwnedFolds,
     /// The driven body's own commitment mode as of the most recent `!wait`
     /// (The Hand, Task 5 fix round 1, spec §2.3) — `None` before the first

@@ -1,8 +1,12 @@
 //! The resident fold store: the session-owned, per-entity accumulation of
 //! what the ledger already determines (The Pawl, spec §2). The decisions this
-//! layer will be ratified under are named in that spec's §8 and are not cited
-//! by number here: none is written yet, and a cite to an unratified record is
-//! a dangling reference the docs-consistency gate refuses.
+//! layer is ratified under are `decision 0536` (the store is session-owned and
+//! never serialized), `decision 0537` (a reader never observes a fold behind
+//! its ledger), `decision 0538` (the trail is a resident index, not a cached
+//! hub), `decision 0539` (a past-instant read resumes from the reset
+//! checkpoint), `decision 0540` (the past-day affect path preserves the
+//! unfiltered reset, knowingly) and `decision 0541` (a campaign-time
+//! hash-constant witness retires at close).
 //!
 //! **The currency invariant is that a reader never observes a fold behind the
 //! ledger it is given** (spec §2.2). The seam is at READ, not at commit:

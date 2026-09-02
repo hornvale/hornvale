@@ -1358,11 +1358,33 @@ fn a_past_instant_read_between_two_resets_equals_the_scan_at_that_instant() {
 /// rotated — because `decide_step` builds it from `out` in emission order and
 /// then sorts by `(day, room)`. An implementation that concatenated without
 /// sorting would pass on an already-ordered overlay and fail here.
+///
+/// **Swept under BOTH reset rules, with a non-vacuity floor on each**, the same
+/// shape [`sweep_against_the_oracle`] needed and for the same reason. Under
+/// [`ResetRule::Unfiltered`] this fixture's reset is tick 850 000 whatever `t`
+/// is, so 15 of the 19 probe instants take `sustenance_at`'s
+/// `t <= last_reset` short-circuit and assert `0.0 == 0.0` — measured, 16 of
+/// 76 probes across the four overlay widths integrated anything at all, and
+/// every one of the fixture's traps sits inside that dead zone. The filtered
+/// rule is the load-bearing half: every probe strictly between two resets
+/// integrates a real interval, so the withheld facts are actually inside the
+/// sum being compared, and it measures 60 of 76. The floors below are
+/// asserted on the number of probes that returned a strictly POSITIVE
+/// integral, so the sweep cannot go quiet if the fixture's resets move.
 #[test]
 fn holding_facts_back_as_an_overlay_equals_the_scan_over_the_full_ledger() {
     let (full, e, home) = sustenance_fixture();
     let terrain = RippleTerrain;
     let mut witness = ReadWitness::default();
+    let mut probes_u = 0usize;
+    let mut nonzero_u = 0usize;
+    let mut probes_f = 0usize;
+    let mut nonzero_f = 0usize;
+    // Measured on the current fixture, not estimated. See the printed
+    // coverage line: if the fixture's resets or probe grid move, these are
+    // the two numbers to re-derive.
+    const FLOOR_U: usize = 16;
+    const FLOOR_F: usize = 60;
 
     // Every `agent-at` fact of `e`, in commit order.
     let all: Vec<(WorldTime, Facet)> = full
@@ -1416,47 +1438,89 @@ fn holding_facts_back_as_an_overlay_equals_the_scan_over_the_full_ledger() {
             );
         }
 
-        let mut store = ResidentFolds::new();
-        for t in probe_instants() {
-            let (trail, resets, memo, _w) = store.trail_and_thirst(&partial);
-            let reset = resets
-                .last_reset(e)
+        for rule in [ResetRule::Unfiltered, ResetRule::AtOrBefore] {
+            let mut store = ResidentFolds::new();
+            for t in probe_instants() {
+                let (trail, resets, memo, _w) = store.trail_and_thirst(&partial);
+                let reset = match rule {
+                    ResetRule::Unfiltered => resets.last_reset(e),
+                    ResetRule::AtOrBefore => resets.last_reset_at_or_before(e, t),
+                }
                 .unwrap_or(WorldTime::GENESIS)
                 .max(WorldTime::GENESIS);
-            // The overlay carries only facts at or before `t`, exactly the
-            // filter `decide_step` applies when it builds one from `out`.
-            let visible: Vec<(WorldTime, Facet)> =
-                overlay.iter().filter(|(d, _)| *d <= t).cloned().collect();
-            let got = sustenance_at(
-                trail,
-                e,
-                &home,
-                reset,
-                &visible,
-                t,
-                &terrain,
-                ThermalStrategy::Endothermic,
-                &SUSTENANCE,
-                memo,
-                &mut witness,
-            );
-            let sightings = scan_oracle(&full, e, t.as_std_days());
-            let expected = integrate_thirst_oracle(
-                &sightings,
-                &home,
-                reset.as_std_days(),
-                t.as_std_days(),
-                &terrain,
-                ThermalStrategy::Endothermic,
-                &SUSTENANCE,
-            );
-            assert_eq!(
-                got, expected,
-                "with the last {k} facts held back as a SHUFFLED overlay, the read at \
-                 {t:?} must equal the scan over the full ledger"
-            );
+                // The overlay carries only facts at or before `t`, exactly the
+                // filter `decide_step` applies when it builds one from `out`.
+                let visible: Vec<(WorldTime, Facet)> =
+                    overlay.iter().filter(|(d, _)| *d <= t).cloned().collect();
+                let got = sustenance_at(
+                    trail,
+                    e,
+                    &home,
+                    reset,
+                    &visible,
+                    t,
+                    &terrain,
+                    ThermalStrategy::Endothermic,
+                    &SUSTENANCE,
+                    memo,
+                    &mut witness,
+                );
+                let sightings = scan_oracle(&full, e, t.as_std_days());
+                let expected = integrate_thirst_oracle(
+                    &sightings,
+                    &home,
+                    reset.as_std_days(),
+                    t.as_std_days(),
+                    &terrain,
+                    ThermalStrategy::Endothermic,
+                    &SUSTENANCE,
+                );
+                assert_eq!(
+                    got, expected,
+                    "with the last {k} facts held back as a SHUFFLED overlay, the read at \
+                     {t:?} must equal the scan over the full ledger under {rule:?}"
+                );
+                match rule {
+                    ResetRule::Unfiltered => {
+                        probes_u += 1;
+                        if got > 0.0 {
+                            nonzero_u += 1;
+                        }
+                    }
+                    ResetRule::AtOrBefore => {
+                        probes_f += 1;
+                        if got > 0.0 {
+                            nonzero_f += 1;
+                        }
+                    }
+                }
+            }
         }
     }
+    println!("--- overlay-equals-scan sweep coverage ---");
+    println!("Unfiltered: {nonzero_u} of {probes_u} probes integrated a non-zero interval");
+    println!("AtOrBefore: {nonzero_f} of {probes_f} probes integrated a non-zero interval");
+
+    assert_eq!(probes_u, probes_f, "both sweeps must probe the same grid");
+    // The unfiltered sweep's own floor. It is LOW on purpose and is not the
+    // load-bearing one: with a single unfiltered reset at tick 850 000, only
+    // the 4 probes past it can integrate anything at all, over 4 values of k:
+    // 16 of 76, measured.
+    assert!(
+        nonzero_u >= FLOOR_U,
+        "the unfiltered overlay sweep must integrate a real interval at least {FLOOR_U} \
+         times (4 live probes x 4 overlay widths), or it is asserting 0.0 == 0.0 \
+         throughout: got {nonzero_u} of {probes_u}"
+    );
+    // The load-bearing floor: under the filtered rule the overlay's facts sit
+    // inside an interval that is actually integrated -- 15 of the 19 probes
+    // over each of the 4 overlay widths, 60 of 76, measured.
+    assert!(
+        nonzero_f >= FLOOR_F,
+        "the filtered overlay sweep must integrate a real interval at least {FLOOR_F} \
+         times, or the withheld facts have drifted out of every integrated interval \
+         and the overlay is not being exercised at all: got {nonzero_f} of {probes_f}"
+    );
 }
 
 /// The sustenance tenants owe the same two chaos schedules [`Trail`] does:
