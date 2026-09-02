@@ -4990,3 +4990,8 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-02T14:57:38Z | sluice:gate | 593.316 | 18003.943 | 516.793 | 31.22 | 0 | 02feee1c3 |  | lefford | 40 |
 | 2026-09-02T15:00:09Z | sluice:clients | 150.725 | 2266.844 | 206.028 | 16.41 | 0 | 14722bf02 |  | lefford | 40 |
 | 2026-09-02T15:07:29Z | sluice:heavy | 439.118 | 9637.904 | 156.597 | 22.30 | 0 | 96d96d43e |  | lefford | 40 |
+| 2026-09-02T15:54:39Z | gate-commit | 938.865 | 1199.765 | 158.023 | 1.45 | 0 | 88b1916f6 | campaign/the-prospect | ambrose | 12 |
+| 2026-09-02T16:22:35Z | rebaseline | 318.410 | 293.050 | 26.699 | 1.00 | 0 | 576284a55 | campaign/the-prospect | ambrose | 12 |
+| 2026-09-02T16:54:56Z | gate-commit | 131.300 | 60.576 | 30.859 | 0.70 | 0 | 576284a55 | campaign/the-prospect | ambrose | 12 |
+| 2026-09-02T16:57:41Z | gate-commit | 140.482 | 91.331 | 53.438 | 1.03 | 0 | 576284a55 | campaign/the-prospect | ambrose | 12 |
+| 2026-09-02T17:12:15Z | gate-commit | 162.076 | 86.610 | 46.376 | 0.82 | 0 | 576284a55 | campaign/the-prospect | ambrose | 12 |

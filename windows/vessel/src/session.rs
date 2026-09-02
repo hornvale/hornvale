@@ -15,6 +15,7 @@ use crate::liveness::{
 };
 use crate::residents::derive_residents;
 use crate::roll::{ROLL_BUDGET, ROLL_HOPS, RollKeyStatic, roll_of, rooms_within};
+use crate::site::{Site, SiteKind};
 use crate::snapshot::{
     KnownChannel, KnownEntry, Narration, NounEntry, PresentEntry, SESSION_SCHEMA, SelfChannel,
     SensedChannel, SessionSnapshot, SocialEntry, SpatialChannel,
@@ -5487,6 +5488,26 @@ impl<'w> Session<'w> {
             vantage,
         )?;
         let f = self.focalizer.render(&v);
+        // The site clause (spec §4, Task 6, The Prospect): a facet holding a
+        // site gains a clause naming it; a facet with none says NOTHING —
+        // silence is honest, and it is what makes the density gap visible
+        // rather than papered over (most facets stay silent after this
+        // task, by design). Reads `brief_here().site`, the SAME predicate
+        // `Self::enter` gates on, so the prose and what `enter` will
+        // actually do can never disagree — H1's own claim ("surfacing does
+        // not change what is enterable") holds by construction rather than
+        // by two independently-written predicates staying in sync.
+        //
+        // NOTE ON COST: this re-derives the whole brief on every `look`, the
+        // same accepted cost `brief_of`'s own doc names for `enter` and
+        // `Self::brief_here`'s cost note — hoist only if a profile shows it
+        // mattering.
+        let site_clause = self
+            .brief_here()
+            .site
+            .as_ref()
+            .map(Self::site_clause)
+            .unwrap_or_default();
         // F1 (The Rhumb, final review): this render doubles as the SUBMERGED
         // vantage's (see the `"look"`/`dive`/`surface` arms above), and while
         // under, `go` and a bare compass token both refuse EVERY lateral
@@ -5545,11 +5566,44 @@ impl<'w> Session<'w> {
             .map(|line| format!("{line}\n"))
             .unwrap_or_default();
         Ok(format!(
-            "[room {}, day {}]\n{}\n{presence}{closing}",
+            "[room {}, day {}]\n{}{site_clause}\n{presence}{closing}",
             v.locale.id,
             self.day.as_std_days(),
             f.prose,
         ))
+    }
+
+    /// The walk-band clause naming a facet's site (spec §4, Decision 0536):
+    /// **kind and name only, never contents** — a facet is not a manifest of
+    /// what stands on it.
+    ///
+    /// At most one `Site` ever reaches here: `Brief::site` is `Option<Site>`,
+    /// already reduced to the single most-salient candidate by `brief_of`'s
+    /// own settlement-over-exotic-over-cave priority (spec §6,
+    /// `Site::salience`'s production consequence). The spec's own §6 language
+    /// ("ranks what gets named when a facet holds more than one") describes a
+    /// data shape — several co-located sites at one facet — that Decision
+    /// 0539's tier fold never built: nothing constructs more than one `Site`
+    /// per facet today, so there is never a second candidate to rank against
+    /// or a `strangeness` tie to break here. Building that machinery ahead of
+    /// the data it would rank is exactly the premature abstraction this
+    /// project's own standards warn against.
+    ///
+    /// `Site::name` is `None` for every kind as of this task — a cave and an
+    /// exotic site never carry one (`Site::name`'s own doc), and a
+    /// settlement's real name is attached by a later task — so this reads as
+    /// generic kind-only prose today and sharpens automatically the day a
+    /// `Site` actually carries a name.
+    fn site_clause(site: &Site) -> String {
+        let noun = match site.kind {
+            SiteKind::Settlement => "settlement",
+            SiteKind::Exotic => "site",
+            SiteKind::Cave => "cave",
+        };
+        match &site.name {
+            Some(name) => format!(" You can enter the {noun} of {name}."),
+            None => format!(" You can enter the {noun} here."),
+        }
     }
 
     /// A lateral step at the walk band. Reached only out of doors: `handle`

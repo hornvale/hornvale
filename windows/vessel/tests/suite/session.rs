@@ -73,6 +73,66 @@ fn go_moves_and_back_retraces() {
     assert_eq!(s.position(), home, "back retraces");
 }
 
+/// Spec §4, Task 6 (The Prospect): a facet holding a site gains a clause
+/// naming it in the walk-band prose; a facet with no site says NOTHING.
+/// Silence is honest — it makes the density gap visible instead of papering
+/// over it, and most facets are expected to stay silent after this campaign.
+///
+/// **Deliberately not asserted on "Doaba".** The plan's own Step 1 test (and
+/// this task's dispatch) checked `flagship.text().contains("Doaba")`, but
+/// "in the lands of Doaba" is ALREADY in the flagship's prose before this
+/// task — it comes from `Vantage::village` (the possession's own home
+/// settlement), a wholly different mechanism from `Site`. A `Site`'s own
+/// `name` stays `None` for every kind until a later task attaches one (see
+/// `windows/vessel/src/site.rs`'s doc on `Site::name`: caves and exotic
+/// sites never carry one, and a settlement's is wired in Task 7), so a
+/// "Doaba" check would pass whether or not this task's clause exists at all
+/// — exactly the vacuous-test shape this campaign has repeatedly caught
+/// (progress ledger, Ruling B / Task 3). Asserted on the clause's own marker
+/// text instead, which the empty facet must never emit.
+#[test]
+fn a_sited_locale_names_it_and_an_empty_one_stays_silent() {
+    let world = seam_world();
+    let (mut s, opening) = Session::start(&world, &opts()).unwrap();
+    // `Session::start` mints the flagship inside its own settlement's built
+    // territory (`entering_leaves_the_walk_band_position_alone` already
+    // relies on this), so the walk-band opening must announce a site.
+    assert!(
+        opening.contains("You can enter"),
+        "a built facet must announce its site: {opening:?}"
+    );
+
+    // Three steps east of the flagship — ~3.4 km at this walk resolution —
+    // is the spec's own §1 example of a facet holding nothing (`enter`
+    // refuses there: "There is nothing here to enter."). Verified live
+    // rather than merely assumed: `enter`'s own gate (`Session::enter`) reads
+    // the SAME `brief_here().site` this test's assertion below depends on, so
+    // the refusal is direct evidence the facet is siteless of every kind, not
+    // only unsettled.
+    for _ in 0..3 {
+        match s.handle("go e") {
+            Turn::Out(_) => {}
+            _ => panic!("go must not release"),
+        }
+    }
+    let enter = match s.handle("enter") {
+        Turn::Out(t) => t,
+        _ => panic!("enter must not release"),
+    };
+    assert!(
+        enter.contains("nothing here to enter"),
+        "fixture assumption failed: three tiles east must hold no site: {enter:?}"
+    );
+    let here = match s.handle("look") {
+        Turn::Out(t) => t,
+        _ => panic!("look must not release"),
+    };
+    assert!(
+        !here.contains("You can enter"),
+        "a siteless facet must stay silent about entering: {here:?}"
+    );
+}
+
 /// The refusal is DIRECTIONAL as of The Lintel: coarse-ward (`exit`, toward
 /// possessing a settlement or a culture) is still refused with the byte-pinned
 /// sentence, but fine-ward (`enter`) now descends — see
