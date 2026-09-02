@@ -42,6 +42,16 @@ pub struct BenchShape {
     pub samples_per_tick: Vec<u64>,
     /// Per tick, the facts committed.
     pub facts_per_tick: Vec<usize>,
+    /// Per tick, the ROOMS the frightening-verdict index judged — the delta of
+    /// `ReadWitness::ground_judged()` across the tick (The Detent, spec §4's
+    /// H6). A room already judged is skipped inside
+    /// `FrighteningGround::advance` and adds nothing here, so this IS the
+    /// "new sightings" H6 claims the scan's work is proportional to.
+    pub judged_per_tick: Vec<u64>,
+    /// Per tick, the roster's DISTINCT visited rooms summed over its members
+    /// (`LatestVisit::of(e).len()`) — H6's denominator, the quantity the
+    /// pre-index scan judged in full on every tick.
+    pub distinct_rooms_per_tick: Vec<usize>,
 }
 
 /// `session_length_scaling.rs`'s construction, counted: the world at `seed`,
@@ -85,6 +95,8 @@ pub fn bench_shape(seed: u64, ticks: usize, agents: usize) -> BenchShape {
     let mut hazards_per_tick = Vec::with_capacity(ticks);
     let mut samples_per_tick = Vec::with_capacity(ticks);
     let mut facts_per_tick = Vec::with_capacity(ticks);
+    let mut judged_per_tick = Vec::with_capacity(ticks);
+    let mut distinct_rooms_per_tick = Vec::with_capacity(ticks);
     for _ in 0..ticks {
         let from = day;
         day = WorldTime::from_ticks(day.ticks() + WorldTime::TICKS_PER_STD_DAY);
@@ -102,6 +114,7 @@ pub fn bench_shape(seed: u64, ticks: usize, agents: usize) -> BenchShape {
             folds: &folds,
         };
         let samples_before = ground.borrow().misses();
+        let judged_before = folds.borrow().witness().ground_judged();
         let (facts, _occupancy) =
             sys.step_with_occupancy(&ledger, &mut mesh_memo, &mut home_nav_cache);
         facts_per_tick.push(facts.len());
@@ -112,6 +125,15 @@ pub fn bench_shape(seed: u64, ticks: usize, agents: usize) -> BenchShape {
         }
         hazards_per_tick.push(terrain.hazards_calls());
         samples_per_tick.push(ground.borrow().misses() - samples_before);
+        judged_per_tick.push(folds.borrow().witness().ground_judged() - judged_before);
+        // The roster's distinct visited rooms, AFTER this tick's facts are
+        // committed — read under `borrow_mut` because `latest_visit_and_trail`
+        // advances the store's tenants to the ledger's end first.
+        distinct_rooms_per_tick.push({
+            let mut store = folds.borrow_mut();
+            let (visits, _) = store.latest_visit_and_trail(&ledger);
+            npcs.iter().map(|b| visits.of(b.entity).len()).sum()
+        });
     }
     BenchShape {
         world,
@@ -126,6 +148,8 @@ pub fn bench_shape(seed: u64, ticks: usize, agents: usize) -> BenchShape {
         hazards_per_tick,
         samples_per_tick,
         facts_per_tick,
+        judged_per_tick,
+        distinct_rooms_per_tick,
     }
 }
 
@@ -365,6 +389,78 @@ fn h5_witness_the_hazard_reads_terrain_samples_on_the_bench_shape() {
         last_samples <= 4_469,
         "H5: at most 4,469 field samples in tick 60 (from 44,694)"
     );
+
+    // H5, SECOND READING (Task 6, spec §4): not just the field samples — the
+    // `hazards()` CALLS are gone too, because the verdict index answers
+    // without asking the terrain at all. Task 4 made the memo absorb the
+    // samples; this task removes the questions.
+    assert_eq!(
+        counts.warm_hazards, 0,
+        "H5: a repeated read makes no hazards() calls at all"
+    );
+    assert!(
+        last_tick <= 4_469,
+        "H5: the whole tick makes at most 4,469 hazards() calls (from 44,694), saw {last_tick}"
+    );
+
+    // H6 (spec §4): the scan's work per tick is O(new sightings). Across
+    // ticks 15 -> 60 the rooms the index JUDGES per tick grow strictly slower
+    // than the roster's distinct visited rooms; the margin is printed.
+    //
+    // **THE LATE COMPARISON POINT IS NOT TICK 60, AND THAT IS A FINDING
+    // RATHER THAN A CONVENIENCE.** H6 was frozen against tick 60 and tick 60
+    // judges ZERO rooms on this shape: the roster stops discovering ground it
+    // has never stood on well before then, so `judged_per_tick` reaches 0 and
+    // stays there. A ratio with a zero numerator is 0, which would satisfy the
+    // inequality below for the wrong reason — "the scan did no work" is not
+    // "the scan's work grew slowly", and an instrument that cannot tell them
+    // apart is measuring nothing. So the late point is the LAST tick that
+    // judged anything at all, named in the print and in the failure message,
+    // and the zero-numerator guard stays as the thing that forced the choice
+    // into the open. The whole profile is printed so a reader can see the
+    // decay rather than take two points on trust.
+    let judged_15 = shape.judged_per_tick[14];
+    let rooms_15 = shape.distinct_rooms_per_tick[14];
+    let late = shape
+        .judged_per_tick
+        .iter()
+        .rposition(|j| *j > 0)
+        .expect("some tick judged a room, or the index was never advanced at all");
+    let judged_late = shape.judged_per_tick[late];
+    let rooms_late = shape.distinct_rooms_per_tick[late];
+    println!("H6: judged/tick profile {:?}", shape.judged_per_tick);
+    println!(
+        "H6: tick 60 judged {} rooms; the last tick that judged anything is tick {} \
+         ({judged_late} rooms). Comparison: tick 15 -> tick {}: judged {judged_15} -> \
+         {judged_late}; distinct rooms {rooms_15} -> {rooms_late}",
+        shape.judged_per_tick[59],
+        late + 1,
+        late + 1,
+    );
+    assert!(
+        late + 1 > 15,
+        "H6: the last judging tick ({}) is not after tick 15, so there is no interval to \
+         measure growth over",
+        late + 1
+    );
+    assert!(
+        judged_15 > 0 && judged_late > 0,
+        "H6 denominator: the scan must have judged rooms on BOTH comparison ticks, saw \
+         {judged_15} and {judged_late} — a zero numerator makes the ratio below undefined, \
+         not favourable"
+    );
+    let judged_growth = judged_late as f64 / judged_15 as f64;
+    let rooms_growth = rooms_late as f64 / rooms_15 as f64;
+    println!(
+        "H6: judged growth {judged_growth:.4}x against distinct-room growth {rooms_growth:.4}x \
+         (margin {:.4}x)",
+        rooms_growth / judged_growth
+    );
+    assert!(
+        judged_growth < rooms_growth,
+        "H6: judged rooms per tick must grow slower than the roster's distinct rooms \
+         ({judged_growth:.4}x vs {rooms_growth:.4}x)"
+    );
 }
 
 use crate::ledger_hash_witness::{EMITTER_SEED, fnv1a, run_emitter_witness, run_fixed_script};
@@ -475,26 +571,52 @@ fn ground_memo_survives_chaos_eviction() {
         "an eviction must force at least one recompute, or this test denominates nothing"
     );
 
-    // The independent comparator: the EXACT set of rooms a fresh read
-    // samples, derived from `build_emitter_scan`'s own two passes (read, not
-    // assumed) rather than from `GroundHazards` itself. The scan judges
-    // EVERY roster member (seed 42 emits no alarms, so `hazard_memory_memo`
-    // takes the emitter-free branch and samples nothing beyond this): each
-    // member's `home` plus its neighbours, and each room the member has
-    // stood in by `shape.day` (`LatestVisit::rooms_at`) plus ITS neighbours
-    // — `threat_field` samples a room and `room.neighbors()` together, every
-    // time it is asked about a room.
-    let expected_rooms: std::collections::BTreeSet<hornvale_kernel::Facet> = {
+    // The index is fully advanced before the comparator below is stated,
+    // which is the fact that makes it what it is. Asserted, not assumed: the
+    // bench's own tick loop reads the hazard fold for every member, so by the
+    // time the 30 reads above run, `FrighteningGround` holds a verdict for
+    // every room every member has stood in.
+    {
         let mut store = shape.folds.borrow_mut();
         let (visits, _) = store.latest_visit_and_trail(&shape.ledger);
+        let rooms: Vec<usize> = shape
+            .npcs
+            .iter()
+            .map(|m| visits.of(m.entity).len())
+            .collect();
+        drop(store);
+        let store = shape.folds.borrow();
+        let ground_index = store.frightening_ground();
+        for (m, visited) in shape.npcs.iter().zip(&rooms) {
+            assert_eq!(
+                ground_index.judged(m.entity),
+                *visited,
+                "the verdict index must hold a verdict for every room this member has stood in, \
+                 or the comparator below is measuring a half-warm index"
+            );
+        }
+    }
+
+    // The independent comparator: the EXACT set of rooms a fresh read
+    // samples, derived from `build_emitter_scan`'s own pass (read, not
+    // assumed) rather than from `GroundHazards` itself.
+    //
+    // **It used to be the whole visited set and its halo, and The Detent's
+    // verdict index is why it is not any more.** The scan judges every roster
+    // member, and each member's VISITED rooms are now answered out of
+    // `FrighteningGround` — judged once, held, never re-asked — so a read
+    // over a warm index asks the terrain about exactly one room per member:
+    // its `home`, which is not a sighting and so is deliberately not held in
+    // the index (see `build_emitter_scan`). `threat_field` samples a room and
+    // `room.neighbors()` together, so the expected set is each member's home
+    // plus its neighbours, and nothing else. Emptying the room memo does not
+    // change that: the index is in the STORE, and `evict_all` touches only the
+    // memo.
+    let expected_rooms: std::collections::BTreeSet<hornvale_kernel::Facet> = {
         let mut rooms = std::collections::BTreeSet::new();
         for m in &shape.npcs {
             rooms.insert(m.home.clone());
             rooms.extend(m.home.neighbors());
-            for room in visits.rooms_at(m.entity, shape.day) {
-                rooms.extend(room.neighbors());
-                rooms.insert(room);
-            }
         }
         rooms
     };

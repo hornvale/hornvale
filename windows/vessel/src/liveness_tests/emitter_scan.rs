@@ -1,0 +1,568 @@
+//! FOLD-equals-SCAN for the fear path's verdict index (The Detent, spec §5).
+//!
+//! The oracles below are VERBATIM COPIES of `build_emitter_scan`'s pass 1+2
+//! and of `hazard_memory_memo`'s emitter-free loop as they stood immediately
+//! before The Detent's Task 6 rewrote both to read
+//! [`crate::resident::FrighteningGround`]. Copied rather than called, for the
+//! reason every other oracle in this campaign is copied (spec §5, and The
+//! Pawl's `emitter_scan_oracle` beside them): once the production body is
+//! rewritten this is the only statement of the old one left, and an oracle
+//! sharing code with the thing under test cannot falsify it.
+//!
+//! **Why the file is under `src/` and not `tests/suite/`.** The registry row
+//! `TOOL-emitter-scan-tests-out-of-liveness` asks for these to live beside
+//! their siblings in `windows/vessel/tests/suite/resident_folds.rs`. They
+//! cannot: `EmitterScan`, `build_emitter_scan`, `threat_field`,
+//! `mettle_factor`, `feels_frightening` and `DANGER_ACT` are private to
+//! `crate::liveness`, and an integration-test crate cannot see even
+//! `pub(crate)`. Splitting the file out of `liveness.rs` — which is what the
+//! row is really about — is done by giving the module its own FILE and
+//! wiring it with `#[path]`; the visibility half of the row is not
+//! achievable as written and is ledgered as such.
+
+use super::*;
+use crate::ground::{GroundHazards, OwnedGround};
+use crate::resident::{OwnedFolds, ResidentFolds};
+
+// ---------------------------------------------------------------------------
+// The oracles (pre-Task-6 production bodies, verbatim)
+// ---------------------------------------------------------------------------
+
+/// A VERBATIM COPY of the pre-Task-6 `build_emitter_scan` pass 1 + pass 2 —
+/// the per-member `is_emitter` verdict and the union of alarm-source rooms,
+/// computed by judging `LatestVisit::rooms_at(m, t)` and `m.home` directly.
+///
+/// The witness call (`note_emitter_scan`) and pass 3 (the emitter timeline
+/// copy) are omitted: pass 3 is untouched by this task, and the witness is
+/// not part of the value under comparison.
+fn scan_oracle(
+    roster: &[Body],
+    ledger: &Ledger,
+    folds: &OwnedFolds,
+    terrain: &dyn Terrain,
+    t: WorldTime,
+) -> (Vec<bool>, std::collections::BTreeSet<Facet>) {
+    let visited: Vec<Vec<Facet>> = {
+        let mut store = folds.borrow_mut();
+        let (visits, _) = store.latest_visit_and_trail(ledger);
+        roster
+            .iter()
+            .map(|m| visits.rooms_at(m.entity, t))
+            .collect()
+    };
+
+    let mut alarm_source_rooms: std::collections::BTreeSet<Facet> =
+        std::collections::BTreeSet::new();
+    let mut is_emitter: Vec<bool> = Vec::with_capacity(roster.len());
+    for (m, rooms) in roster.iter().zip(&visited) {
+        let mettle = mettle_factor(m.boldness);
+        let frightening =
+            |room: &Facet| threat_field(room, &m.threat_niche, terrain) * mettle >= DANGER_ACT;
+        let mut ever = false;
+        let mut note_halo = |p: &Facet| {
+            alarm_source_rooms.insert(p.clone());
+            for n in p.neighbors() {
+                alarm_source_rooms.insert(n);
+            }
+        };
+        if frightening(&m.home) {
+            ever = true;
+            note_halo(&m.home);
+        }
+        for p in rooms {
+            if frightening(p) {
+                ever = true;
+                note_halo(p);
+            }
+        }
+        is_emitter.push(ever);
+    }
+    (is_emitter, alarm_source_rooms)
+}
+
+/// A VERBATIM COPY of the pre-Task-6 emitter-free loop of
+/// `hazard_memory_memo`: every room of the most-recent-visit map judged by
+/// `frightened_at` over an EMPTY roster (which short-circuits `alarm_at` to
+/// `0.0`, so the verdict is terrain-only).
+///
+/// `ledger`/`folds` ride along because `frightened_at` takes them; with an
+/// empty roster neither is read.
+fn emitter_free_oracle(
+    latest: &std::collections::BTreeMap<Facet, WorldTime>,
+    npc: &Body,
+    terrain: &dyn Terrain,
+    ledger: &Ledger,
+    folds: &OwnedFolds,
+) -> std::collections::BTreeSet<Facet> {
+    let mut shunned: std::collections::BTreeSet<Facet> = std::collections::BTreeSet::new();
+    for (room, day) in latest {
+        if frightened_at(room, npc, terrain, *day, &[], ledger, folds) {
+            shunned.insert(room.clone());
+        }
+    }
+    shunned
+}
+
+/// How many `(member, room)` pairs the oracle's predicate judges FRIGHTENING
+/// at `t` — the anti-vacuity floor for the comparisons below (two scans that
+/// found nothing frightening anywhere would agree without measuring
+/// anything). Computed with the oracle's own predicate, off `rooms_at`, so it
+/// is independent of the index under test.
+fn oracle_frightening_pairs(
+    roster: &[Body],
+    ledger: &Ledger,
+    folds: &OwnedFolds,
+    terrain: &dyn Terrain,
+    t: WorldTime,
+) -> usize {
+    let visited: Vec<Vec<Facet>> = {
+        let mut store = folds.borrow_mut();
+        let (visits, _) = store.latest_visit_and_trail(ledger);
+        roster
+            .iter()
+            .map(|m| visits.rooms_at(m.entity, t))
+            .collect()
+    };
+    roster
+        .iter()
+        .zip(&visited)
+        .map(|(m, rooms)| {
+            let mettle = mettle_factor(m.boldness);
+            rooms
+                .iter()
+                .filter(|room| threat_field(room, &m.threat_niche, terrain) * mettle >= DANGER_ACT)
+                .count()
+        })
+        .sum()
+}
+
+// ---------------------------------------------------------------------------
+// The predicate-agreement sweep
+// ---------------------------------------------------------------------------
+
+/// The scan's predicate and the read's are the SAME function, which is what
+/// lets one index per entity serve both callers (spec §2.3).
+///
+/// The scan asked `threat_field × mettle_factor ≥ DANGER_ACT`; the read asked
+/// `feels_frightening(threat, 0.0, boldness)`, which is
+/// `(threat × mettle_factor).clamp(0, 1) ≥ DANGER_ACT`. They differ only
+/// where the clamp bites, and `DANGER_ACT` is `0.3`: a product above `1.0`
+/// clamps to `1.0`, still ≥ `0.3`, and a product below `0.0` is unreachable
+/// (`threat_value` is a dot of non-negative niche and hazard axes and
+/// `mettle_factor` is `max(0, …)`). The sweep asserts it rather than arguing
+/// it, and floors BOTH the clamp region and both verdicts so the equality is
+/// not vacuous.
+#[test]
+fn the_scan_predicate_and_the_read_predicate_agree_over_the_whole_range() {
+    let mut checked = 0_u64;
+    let mut trues = 0_u64;
+    let mut clamped = 0_u64;
+    for ti in 0..=300_u32 {
+        let threat = f64::from(ti) / 100.0;
+        for bi in 0..=100_u32 {
+            let boldness = f64::from(bi) / 100.0;
+            let scan = threat * mettle_factor(boldness) >= DANGER_ACT;
+            let read = feels_frightening(threat, 0.0, boldness);
+            assert_eq!(
+                scan, read,
+                "the scan predicate and the read predicate disagree at threat {threat}, \
+                 boldness {boldness} — one index cannot serve both callers"
+            );
+            checked += 1;
+            if scan {
+                trues += 1;
+            }
+            if threat * mettle_factor(boldness) > 1.0 {
+                clamped += 1;
+            }
+        }
+    }
+    println!(
+        "predicate sweep: {checked} points, {trues} frightening, {clamped} in the clamp region"
+    );
+    assert!(
+        trues > 0 && trues < checked,
+        "the sweep must contain both verdicts, or the equality is vacuous"
+    );
+    assert!(
+        clamped > 0,
+        "the sweep must reach the clamp region, or it never tests where the two could differ"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// The bench shape, in-crate
+// ---------------------------------------------------------------------------
+
+/// A deterministic UNCANNY overlay on top of a live `LocaleTerrain` — the one
+/// input that gives these shapes any frightening ground at all.
+///
+/// **Why the test cannot use the world's own hazards, measured rather than
+/// assumed.** The first two drafts of this file ran the bench shape on the
+/// world's terrain — once with `predator: None` (exactly
+/// `tests/suite/the_detent.rs`'s `bench_shape`) and once with the real
+/// predator-pressure field `Session::start` builds — and both printed
+/// `0 emitter slots, 0 frightening (member, room) pairs` on seeds 42 AND 6.
+/// The settled peoples `derive_npcs` returns never stand on ground that
+/// frightens them (which is the whole reason the seed-42 ledger hash is blind
+/// to the fear path); seed 6's emitter is a WILD HERD body, and
+/// `derive_herd_bodies` is private to `crate::session`, so the herd half of a
+/// session's roster is not reachable from here. An equality test over two
+/// empty sets proves nothing, so the hazard is planted instead: every 29th
+/// packed room reads UNCANNY, which `threat_field`'s max-over-neighbours
+/// spreads to roughly a third of the map and leaves the rest safe — both
+/// verdicts present, in one deterministic rule with no world dependence.
+///
+/// The overlay sits OUTSIDE the room memo (`LocaleTerrain::with_ground`), so
+/// the memoised half is still the live field blend and this adds to it.
+struct HauntedTerrain<'a> {
+    /// The live terrain (with its room memo) this adds to.
+    inner: &'a dyn Terrain,
+}
+
+/// One in every `HAUNT_MODULUS` packed rooms is uncanny. Sparse on purpose:
+/// `threat_field` takes the maximum over a room AND its neighbours, so a
+/// denser rule would make every roster member an emitter and the
+/// non-emitter half of the comparison vacuous.
+const HAUNT_MODULUS: u64 = 29;
+
+/// The UNCANNY magnitude a haunted room carries — well above `DANGER_ACT`
+/// (0.3) at steady boldness, so the verdict is not sitting on the threshold.
+const HAUNT_UNCANNY: f64 = 0.8;
+
+impl Terrain for HauntedTerrain<'_> {
+    fn elevation(&self, room: &Facet) -> f64 {
+        self.inner.elevation(room)
+    }
+    fn is_fresh_water(&self, room: &Facet) -> bool {
+        self.inner.is_fresh_water(room)
+    }
+    fn temperature(&self, room: &Facet, day: WorldTime) -> f64 {
+        self.inner.temperature(room, day)
+    }
+    fn solar_altitude(&self, room: &Facet, day: WorldTime) -> Option<f64> {
+        self.inner.solar_altitude(room, day)
+    }
+    fn day_ticks(&self) -> Option<TickSpan> {
+        self.inner.day_ticks()
+    }
+    fn forage_value(&self, room: &Facet) -> f64 {
+        self.inner.forage_value(room)
+    }
+    fn hazards(&self, room: &Facet) -> Hazards {
+        let mut h = self.inner.hazards(room);
+        if room.pack().is_ok_and(|id| id.0 % HAUNT_MODULUS == 0) {
+            h.uncanny = h.uncanny.max(HAUNT_UNCANNY);
+        }
+        h
+    }
+    fn is_built(&self, room: &Facet) -> bool {
+        self.inner.is_built(room)
+    }
+    fn is_cold(&self, room: &Facet) -> bool {
+        self.inner.is_cold(room)
+    }
+    fn prey_value(&self, room: &Facet) -> f64 {
+        self.inner.prey_value(room)
+    }
+}
+
+/// The in-crate mirror of `windows/vessel/tests/suite/the_detent.rs`'s
+/// `bench_shape`, minus the counting terrain and the per-tick counters: the
+/// world at `seed`, `agents` derived bodies, `ticks` ticks of
+/// `DriveMovements::step_with_occupancy` over ONE caller-owned resident store,
+/// mesh memo, nav cache and room memo. An integration test's `common::build`
+/// is not reachable from `src/`, so the construction is repeated here.
+///
+/// Borrowed rather than owned, so a probe sees the LIVE store and room memo
+/// the walk has been filling — the production shape, where the verdict index
+/// is already warm when the scan is asked.
+struct ScanShape<'a> {
+    /// The locale context the terrain reads.
+    ctx: &'a LocaleContext,
+    /// The world's predator-pressure field — the reason any ground on these
+    /// worlds is frightening at all (see `run_scan_shape`).
+    predator: Option<&'a hornvale_kernel::VertexMap<f64>>,
+    /// The ledger as of the probed tick.
+    ledger: &'a Ledger,
+    /// The derived roster.
+    npcs: &'a [Body],
+    /// The walk's own resident store (the verdict index lives here).
+    folds: &'a OwnedFolds,
+    /// The walk's own room mesh memo.
+    mesh_memo: &'a RoomMeshMemo,
+    /// The walk's own room memo.
+    ground: &'a OwnedGround,
+    /// The probed tick's instant.
+    day: WorldTime,
+}
+
+/// Run the shape, calling `probe` after every tick whose 1-based index is in
+/// `probe_at` — the ledger is the tick's own, so the probes see a growing
+/// history rather than only the final one.
+fn run_scan_shape(
+    seed: u64,
+    ticks: usize,
+    agents: usize,
+    probe_at: &[usize],
+    probe: &mut dyn FnMut(&ScanShape<'_>),
+) {
+    let world = hornvale_worldgen::build_world(
+        hornvale_kernel::Seed(seed),
+        &Default::default(),
+        hornvale_worldgen::SkyChoice::Generated,
+        &Default::default(),
+        &Default::default(),
+    )
+    .expect("the seed builds a world");
+    // The world-scoped derivation `Session::start` itself performs, so the
+    // terrain below carries the PREDATOR-PRESSURE field (The Quarry).
+    //
+    // Without it there is no frightening ground anywhere on these worlds:
+    // `tests/suite/the_detent.rs`'s `bench_shape` passes `predator: None` and
+    // its roster's every room reads as safe, so an oracle comparison run over
+    // that shape would compare two empty sets on both seeds and both
+    // predicates. Measured, not assumed — the first draft of this test did
+    // exactly that and printed `0 emitter slots, 0 frightening pairs` on
+    // seeds 42 and 6 alike. The field is the one input that makes the
+    // comparison bite, so it is built here.
+    let wctx = crate::session::WorldContext::build(&world).expect("the world context builds");
+    let predator = match (
+        wctx.wc.as_ref(),
+        wctx.terrain.as_ref(),
+        wctx.report.as_ref(),
+    ) {
+        (Some(wc), Some(t), Some(r)) => Some(hornvale_worldgen::predator_pressure_from(wc, t, r)),
+        _ => None,
+    };
+    assert!(
+        predator.is_some(),
+        "seed {seed}'s predator field must build, or this shape has no frightening ground"
+    );
+    let ctx = &wctx.ctx;
+    let home_settlement = hornvale_settlement::village_info(&world)
+        .expect("the flagship always exists")
+        .id;
+    let day_ticks = hornvale_worldgen::sky_of(&world)
+        .ok()
+        .and_then(|sky| sky.calendar().cloned())
+        .and_then(|c| c.day_ticks());
+    let mut ledger = world.ledger.clone();
+    let mut registry = world.registry.clone();
+    for (pred, doc) in [
+        (AGENT_AT, "an agent's position on a day"),
+        (DRANK, "an agent satisfied its sustenance goal"),
+        (RESTED, "an agent rested on a day, for this many ticks"),
+        (SLEPT, "an agent slept on a day, for this many ticks"),
+        (EATEN, "an agent ate (eased its hunger) on a day"),
+    ] {
+        registry
+            .register_predicate(pred, false, doc)
+            .expect("the drive predicates register identically every run");
+    }
+    let npcs = derive_npcs(&world, ctx, &mut ledger, agents, home_settlement);
+    let mut mesh_memo = RoomMeshMemo::new();
+    let mut home_nav_cache = HomeNavCache::new();
+    let folds = OwnedFolds::new(ResidentFolds::new());
+    let ground: OwnedGround = OwnedGround::new(GroundHazards::new());
+    let mut day = WorldTime::from_std_days(0.5).expect("0.5 is a finite day count");
+    for tick in 1..=ticks {
+        let from = day;
+        day = WorldTime::from_ticks(day.ticks() + WorldTime::TICKS_PER_STD_DAY);
+        let mesh_snapshot = mesh_memo.clone();
+        {
+            let base = LocaleTerrain::with_fields(
+                ctx,
+                None,
+                predator.as_ref(),
+                None,
+                None,
+                Some(&mesh_snapshot),
+            )
+            .with_ground(&ground);
+            let terrain = HauntedTerrain { inner: &base };
+            let sys = DriveMovements {
+                npcs: npcs.clone(),
+                from,
+                to: day,
+                params: SUSTENANCE,
+                day_ticks,
+                terrain: &terrain,
+                folds: &folds,
+            };
+            let (facts, _occupancy) =
+                sys.step_with_occupancy(&ledger, &mut mesh_memo, &mut home_nav_cache);
+            for fact in facts {
+                ledger
+                    .commit(fact, &registry)
+                    .expect("a drive-movements fact commits");
+            }
+        }
+        if probe_at.contains(&tick) {
+            probe(&ScanShape {
+                ctx,
+                predator: predator.as_ref(),
+                ledger: &ledger,
+                npcs: &npcs,
+                folds: &folds,
+                mesh_memo: &mesh_memo,
+                ground: &ground,
+                day,
+            });
+        }
+    }
+}
+
+/// One probe: the new scan and the new emitter-free read must equal the
+/// oracles at `t`, for every roster member. Returns
+/// `(emitters_found, frightening_pairs, emitter_free_comparisons, shunned_rooms)`.
+fn compare_at(shape: &ScanShape<'_>, t: WorldTime) -> (usize, usize, usize, usize) {
+    let mesh = shape.mesh_memo.clone();
+    let base = LocaleTerrain::with_fields(shape.ctx, None, shape.predator, None, None, Some(&mesh))
+        .with_ground(shape.ground);
+    let terrain = HauntedTerrain { inner: &base };
+
+    let (want_is_emitter, want_rooms) =
+        scan_oracle(shape.npcs, shape.ledger, shape.folds, &terrain, t);
+    let pairs = oracle_frightening_pairs(shape.npcs, shape.ledger, shape.folds, &terrain, t);
+
+    let got = build_emitter_scan(shape.npcs, shape.ledger, shape.folds, &terrain, t);
+    let got_is_emitter: Vec<bool> = shape
+        .npcs
+        .iter()
+        .map(|m| got.emitters.iter().any(|(b, _)| b.entity == m.entity))
+        .collect();
+    assert_eq!(
+        got_is_emitter, want_is_emitter,
+        "the indexed scan's is_emitter vector at {t:?} must equal the oracle's"
+    );
+    assert_eq!(
+        got.alarm_source_rooms, want_rooms,
+        "the indexed scan's alarm halo at {t:?} must equal the oracle's"
+    );
+
+    // The emitter-free read. Two rosters reach it, and this compares both:
+    //
+    // - the EMPTY roster — the recursion's own base case (`alarm_field`'s
+    //   inner `affect_of` passes an empty band, which threads through here),
+    //   and the only one the haunted shape can reach, since the overlay makes
+    //   most members emitters under the full roster;
+    // - the FULL roster, wherever the scan finds no emitter in it at all
+    //   (the settled world's common case).
+    let mut compared = 0_usize;
+    let mut shunned_total = 0_usize;
+    let mut rosters: Vec<&[Body]> = vec![&[]];
+    if got.emitters.is_empty() {
+        rosters.push(shape.npcs);
+    }
+    for roster in rosters {
+        for npc in shape.npcs {
+            let latest = {
+                let mut store = shape.folds.borrow_mut();
+                let (visits, _) = store.latest_visit_and_trail(shape.ledger);
+                visits.latest_at(npc.entity, t)
+            };
+            let want = emitter_free_oracle(&latest, npc, &terrain, shape.ledger, shape.folds);
+            let mut memo = PrimaryAfraidMemo::new();
+            let mem = hazard_memory_memo(
+                shape.ledger,
+                shape.folds,
+                npc,
+                t,
+                &terrain,
+                roster,
+                &mut memo,
+            );
+            assert_eq!(
+                mem.shunned, want,
+                "the indexed emitter-free read's shunned set at {t:?} must equal the oracle's"
+            );
+            assert!(
+                mem.dread.is_empty(),
+                "the emitter-free path records no dread — it returns before dread exists"
+            );
+            shunned_total += mem.shunned.len();
+            compared += 1;
+        }
+    }
+    (got.emitters.len(), pairs, compared, shunned_total)
+}
+
+/// FOLD-equals-SCAN on the bench shape, at the tick's own instant and one
+/// standard day earlier (the lab's past-instant read), on TWO seeds: 42,
+/// whose derived roster has no emitter, and 6, whose roster has one.
+///
+/// `6` is `EMITTER_SEED` in `windows/vessel/tests/suite/ledger_hash_witness.rs`
+/// — hard-coded here because an integration test's constant is not reachable
+/// from `src/`.
+///
+/// claim: invariant(forall-seed) — FOLD-equals-SCAN is a per-seed identity,
+/// not a rate: the indexed scan must equal the oracle at EVERY probe on
+/// EVERY seed, and one disagreement anywhere falsifies it. The two seeds are
+/// pinned rather than swept because they cover the two shapes the equality
+/// has to survive (a roster with an emitter and one without), and adding
+/// seeds would buy repetition rather than coverage.
+#[test]
+fn the_indexed_scan_and_read_equal_the_pre_index_oracles() {
+    let mut emitters_total = 0_usize;
+    let mut slots_total = 0_usize;
+    let mut pairs_total = 0_usize;
+    let mut emitter_free_reads = 0_usize;
+    let mut shunned_total = 0_usize;
+    let mut probes = 0_usize;
+    let mut per_seed: Vec<(u64, usize, usize)> = Vec::new();
+
+    for seed in [42_u64, 6_u64] {
+        let mut seed_emitters = 0_usize;
+        let mut seed_pairs = 0_usize;
+        run_scan_shape(seed, 15, 10, &[5, 10, 15], &mut |shape| {
+            let day_earlier =
+                WorldTime::from_ticks(shape.day.ticks() - WorldTime::TICKS_PER_STD_DAY);
+            for t in [shape.day, day_earlier] {
+                let (e, p, c, sh) = compare_at(shape, t);
+                shunned_total += sh;
+                slots_total += shape.npcs.len();
+                seed_emitters += e;
+                seed_pairs += p;
+                emitter_free_reads += c;
+                probes += 1;
+            }
+        });
+        println!(
+            "seed {seed}: {seed_emitters} emitter slots across the probes, \
+             {seed_pairs} (member, room) pairs judged frightening"
+        );
+        per_seed.push((seed, seed_emitters, seed_pairs));
+        emitters_total += seed_emitters;
+        pairs_total += seed_pairs;
+    }
+
+    println!(
+        "FOLD-equals-SCAN: {probes} probes, {emitters_total} emitter slots of {slots_total}, \
+         {pairs_total} frightening (member, room) pairs, {emitter_free_reads} emitter-free reads \
+         compared over {shunned_total} shunned rooms"
+    );
+    assert!(
+        emitters_total < slots_total,
+        "EVERY member was an emitter at every probe ({emitters_total} of {slots_total}) — the \
+         is_emitter comparison cannot see a false verdict"
+    );
+    assert!(
+        emitters_total > 0,
+        "no probe found an emitter across seeds 42 and 6 — the is_emitter comparison is vacuous \
+         (per seed: {per_seed:?})"
+    );
+    assert!(
+        pairs_total > 0,
+        "no room was judged frightening across seeds 42 and 6 — the halo comparison is vacuous \
+         (per seed: {per_seed:?})"
+    );
+    assert!(
+        emitter_free_reads > 0,
+        "the emitter-free read was never compared — the second half of the equality is vacuous"
+    );
+    assert!(
+        shunned_total > 0,
+        "every emitter-free read returned an EMPTY shunned set — the set comparison is vacuous"
+    );
+}

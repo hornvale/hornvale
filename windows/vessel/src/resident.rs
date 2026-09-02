@@ -968,6 +968,18 @@ pub struct ReadWitness {
     /// emitter probe too, which seed 42 makes 320 of and which is not this
     /// path at all.
     alarm_replays: u64,
+    /// How many ROOMS the frightening-verdict index has judged, ever — the
+    /// `judge` calls [`FrighteningGround::advance`] actually made, summed over
+    /// every advance on this store.
+    ///
+    /// It is H6's instrument (spec §4): the campaign's claim is that the
+    /// scan's per-tick work is O(NEW sightings), and "new" is exactly what
+    /// this counts — a room already judged is skipped inside `advance` and
+    /// adds nothing here. A count of `advance` CALLS would not say it (the
+    /// number of calls is the roster size either way), and a count of
+    /// `hazards()` calls would fold in the room memo's own hit rate, which is
+    /// a different mechanism measured by a different number.
+    ground_judged: u64,
     /// Per entity, how many TERRAIN TEMPERATURE samples its sustenance reads
     /// have taken, ever.
     ///
@@ -1144,6 +1156,14 @@ impl ReadWitness {
         self.alarm_replays += 1;
     }
 
+    /// Record that the frightening-verdict index judged `n` new rooms — the
+    /// return of one [`FrighteningGround::advance`]. See the field doc for why
+    /// the quantity is judged ROOMS rather than advance calls.
+    /// type-audit: bare-ok(count: n)
+    pub fn note_ground_judged(&mut self, n: u64) {
+        self.ground_judged += n;
+    }
+
     /// How many emitter scans have been built — the DENOMINATOR
     /// [`Self::emitter_scans_with_emitters`] is a count out of.
     /// type-audit: bare-ok(count: return)
@@ -1164,6 +1184,13 @@ impl ReadWitness {
     /// type-audit: bare-ok(count: return)
     pub fn alarm_replays(&self) -> u64 {
         self.alarm_replays
+    }
+
+    /// How many rooms the frightening-verdict index has judged, ever — H6's
+    /// numerator (see the field doc).
+    /// type-audit: bare-ok(count: return)
+    pub fn ground_judged(&self) -> u64 {
+        self.ground_judged
     }
 
     /// How many hazard-memory lookups have been made — the DENOMINATOR
