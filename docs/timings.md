@@ -4996,3 +4996,7 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-02T16:57:41Z | gate-commit | 140.482 | 91.331 | 53.438 | 1.03 | 0 | 576284a55 | campaign/the-prospect | ambrose | 12 |
 | 2026-09-02T17:12:15Z | gate-commit | 162.076 | 86.610 | 46.376 | 0.82 | 0 | 576284a55 | campaign/the-prospect | ambrose | 12 |
 | 2026-09-02T17:15:03Z | gate-commit | 129.932 | 71.817 | 37.117 | 0.84 | 0 | 576284a55 | campaign/the-prospect | ambrose | 12 |
+| 2026-09-02T18:45:22Z | quick | 54.568 | 19.563 | 7.725 | 0.50 | 0 | ef78b068c | campaign/the-prospect | ambrose | 12 |
+| 2026-09-02T18:46:30Z | quick | 42.308 | 30.041 | 6.967 | 0.87 | 0 | ef78b068c | campaign/the-prospect | ambrose | 12 |
+| 2026-09-02T18:52:35Z | rebaseline | 359.151 | 345.145 | 35.833 | 1.06 | 0 | ef78b068c | campaign/the-prospect | ambrose | 12 |
+| 2026-09-02T19:19:02Z | gate-commit | 128.629 | 66.597 | 35.928 | 0.80 | 0 | 7d3c1ed91 | campaign/the-prospect | ambrose | 12 |

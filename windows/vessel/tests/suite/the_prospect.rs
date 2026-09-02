@@ -218,3 +218,228 @@ fn a_placed_cave_is_a_site_and_is_enterable() {
          address, not a 110 km neighbourhood"
     );
 }
+
+/// Where a facet holds more than one candidate site, `Site::salience` decides
+/// which one `brief_of` reports — Ruling 29's whole point being that the
+/// settlement > exotic > cave order is now stated in exactly ONE place, and
+/// that this assertion is therefore over the outcome of
+/// that call, not of an if/else chain that no longer exists.
+///
+/// The collision is REAL, not asserted from the type system: the same
+/// facet a real seed-42 cave is placed at
+/// (`a_placed_cave_is_a_site_and_is_enterable`'s own fixture) is
+/// additionally forced BUILT through `LocaleTerrain`'s injected
+/// settlement-territory set, so this facet genuinely carries two
+/// candidates — a settlement and a cave — and the assertion is which one
+/// `brief_of` reports.
+#[test]
+fn salience_decides_the_winner_when_a_facet_holds_two_sites() {
+    let world = hornvale_worldgen::build_world(
+        Seed(42),
+        &Default::default(),
+        hornvale_worldgen::SkyChoice::Generated,
+        &Default::default(),
+        &Default::default(),
+    )
+    .expect("seed 42 builds");
+    let ctx = LocaleContext::build(&world).expect("seed 42 builds a locale context");
+    let geo = ctx.climate().geosphere();
+    let walk = hornvale_locale::walk_depth(&ctx);
+    let caves = ctx.terrain().cave_site_vertices();
+    assert!(!caves.is_empty(), "seed 42 must hold at least one cave");
+    let sites = ctx.strange_sites();
+    let placed = site_facet_for(caves[0], SiteReason::Cave, world.seed, geo, walk);
+
+    // Force the SAME facet a real cave sits at to also read built, so it
+    // genuinely holds two candidates rather than one asserted by fiat. The
+    // injected map is `built_rooms`' own shape since Task 7 — room to the
+    // settlement's name — so this fixture also names the forced settlement.
+    let mut built_set = std::collections::BTreeMap::new();
+    built_set.insert(
+        placed.pack().expect("a walk-band facet packs"),
+        "Testhollow".to_string(),
+    );
+    let terrain = LocaleTerrain::with_fields(&ctx, None, None, None, Some(&built_set), None);
+
+    let here = brief_of(
+        &world,
+        geo,
+        ctx.nearest_index(),
+        &placed,
+        &terrain,
+        walk,
+        &sites,
+        &caves,
+    );
+    assert!(
+        here.built,
+        "fixture check: the forced facet must itself read built"
+    );
+    assert_eq!(
+        here.site.as_ref().map(|site| site.kind),
+        Some(SiteKind::Settlement),
+        "settlement salience (3) must beat cave salience (1) at a genuine \
+         two-site collision: {:?}",
+        here.site
+    );
+}
+
+/// Task 7: what you enter has a name, and the name is the PLACE's.
+///
+/// **A test at the default flagship could not tell those two apart**, which
+/// is why this one stages a cast. A default possession starts in its OWN
+/// village, so `Vantage::village` (the possessed body's home, via
+/// `liveness::village_or_fallback`) and the settlement standing at the facet
+/// are the same word — "Doaba" — and an implementation that resolved the
+/// site's name from the creature would pass. It would then announce the
+/// player's home village at every settlement they ever walked into: a
+/// one-turn observable falsehood.
+///
+/// A staged cast is the divergence. `Tableau` bodies go through
+/// `derive_staged_npcs`, which is `derive_wild_npcs`' shape — village-LESS —
+/// so `village_or_fallback` reads "the wilds", while the cast is stood at
+/// `settlement_room(village)`, the flagship settlement's own facet. So here
+/// the possession says one thing and the place says another, and the test can
+/// see which one the chamber names. The divergence is ASSERTED LIVE below,
+/// not assumed: the walk-band line must actually say "the wilds" for the
+/// chamber assertions to mean anything.
+#[test]
+fn entering_a_named_site_names_the_place_and_not_the_possession() {
+    let world = crate::common::build(42).expect("seed 42 builds");
+    let opts = PossessOpts {
+        tableau: Some(hornvale_vessel::Tableau::new().with_cast(["drow"])),
+        ..PossessOpts::default()
+    };
+    let (mut s, _) = Session::start(&world, &opts).expect("a staged session starts");
+
+    let outdoors = match s.handle("look") {
+        Turn::Out(t) => t,
+        Turn::Released(t) => panic!("look must not release the session: {t}"),
+    };
+    // FIXTURE CHECK, and the load-bearing half of this test: the staged body
+    // has no village, so the walk band names "the wilds" where a derived
+    // possession would have named Doaba. Without this the two assertions
+    // below could both hold in a world where the names simply agree.
+    assert!(
+        outdoors.contains("in the lands of the wilds"),
+        "fixture check: a staged cast must be village-less, so the \
+         possession-derived clause says \"the wilds\" and diverges from the \
+         settlement at this facet: {outdoors}"
+    );
+    assert!(
+        outdoors.contains("You can enter the settlement"),
+        "fixture check: the staged cast must be standing in the flagship \
+         settlement's own room, so there is a named site here at all: \
+         {outdoors}"
+    );
+
+    let inside = match s.handle("enter") {
+        Turn::Out(t) => t,
+        Turn::Released(t) => panic!("enter must not release the session: {t}"),
+    };
+    assert!(
+        inside.contains("Doaba"),
+        "entering the settlement must name the SETTLEMENT: {inside}"
+    );
+    assert!(
+        !inside.contains("the wilds"),
+        "the chamber must not name the possessed creature's own home — that \
+         is `village_or_fallback`'s answer, and it is the wrong one for a \
+         place: {inside}"
+    );
+}
+
+/// A site whose kind has no name keeps `None`, and its prose keeps the
+/// sentence it always had — no borrowed name, and no empty clause.
+///
+/// The cave is the case that matters: it is enterable (Task 4) and it reaches
+/// the same `describe_chamber` branch the settlement does, so a name derived
+/// from anything but the site itself would surface here.
+#[test]
+fn a_cave_site_carries_no_name() {
+    let world = hornvale_worldgen::build_world(
+        Seed(42),
+        &Default::default(),
+        hornvale_worldgen::SkyChoice::Generated,
+        &Default::default(),
+        &Default::default(),
+    )
+    .expect("seed 42 builds");
+    let ctx = LocaleContext::build(&world).expect("seed 42 builds a locale context");
+    let geo = ctx.climate().geosphere();
+    let walk = hornvale_locale::walk_depth(&ctx);
+    let caves = ctx.terrain().cave_site_vertices();
+    assert!(!caves.is_empty(), "seed 42 must hold at least one cave");
+    let sites = ctx.strange_sites();
+    let placed = site_facet_for(caves[0], SiteReason::Cave, world.seed, geo, walk);
+    let terrain = LocaleTerrain::new(&ctx);
+
+    let here = brief_of(
+        &world,
+        geo,
+        ctx.nearest_index(),
+        &placed,
+        &terrain,
+        walk,
+        &sites,
+        &caves,
+    );
+    assert_eq!(
+        here.site.as_ref().map(|site| site.kind),
+        Some(SiteKind::Cave),
+        "fixture check: this facet must hold the cave, or the name assertion \
+         below is vacuous: {:?}",
+        here.site
+    );
+    assert_eq!(
+        here.site.as_ref().and_then(|site| site.name.as_deref()),
+        None,
+        "a cave has no name and must not be given one: {:?}",
+        here.site
+    );
+}
+
+/// The name `brief_of` attaches to a settlement site is the one keyed to the
+/// ROOM in the injected settlement-territory map — the same entry
+/// `Terrain::is_built` reads — and not any other name in the world.
+///
+/// "Nornholm" occurs nowhere in seed 42, so a `Some("Nornholm")` here can
+/// only have come through the map this test injected. That is what makes the
+/// assertion discriminating rather than a restatement of the fixture: a name
+/// resolved from a body, a settlement roster, or the locale would produce
+/// some other word (or none).
+#[test]
+fn a_settlement_sites_name_is_keyed_to_the_room() {
+    let world = crate::common::build(42).expect("seed 42 builds");
+    let ctx = LocaleContext::build(&world).expect("seed 42 builds a locale context");
+    let geo = ctx.climate().geosphere();
+    let walk = hornvale_locale::walk_depth(&ctx);
+    let caves = ctx.terrain().cave_site_vertices();
+    let sites = ctx.strange_sites();
+    // A facet with no site of its own, forced built and named through the map.
+    let plain =
+        site_facet_for(caves[0], SiteReason::Cave, world.seed, geo, walk).neighbors()[0].clone();
+    let mut rooms = std::collections::BTreeMap::new();
+    rooms.insert(
+        plain.pack().expect("a walk-band facet packs"),
+        "Nornholm".to_string(),
+    );
+    let terrain = LocaleTerrain::with_fields(&ctx, None, None, None, Some(&rooms), None);
+
+    let here = brief_of(
+        &world,
+        geo,
+        ctx.nearest_index(),
+        &plain,
+        &terrain,
+        walk,
+        &sites,
+        &caves,
+    );
+    assert_eq!(
+        here.site.as_ref().and_then(|site| site.name.as_deref()),
+        Some("Nornholm"),
+        "the site's name must be the one keyed to this room: {:?}",
+        here.site
+    );
+}

@@ -189,7 +189,7 @@ pub fn run_simulation(
 /// the ONLY caller that can do this (it alone has a real `LocaleContext` to
 /// rebuild from), so it is a separate function rather than a `run_simulation`
 /// parameter that every other caller would have to thread `None` through.
-/// type-audit: bare-ok(count: ticks), bare-ok(ratio: predator), bare-ok(ratio: prey)
+/// type-audit: bare-ok(count: ticks), bare-ok(ratio: predator), bare-ok(ratio: prey), bare-ok(identifier-text: built)
 #[allow(clippy::too_many_arguments)]
 pub fn run_simulation_with_locale(
     seed_ledger: &Ledger,
@@ -199,7 +199,7 @@ pub fn run_simulation_with_locale(
     calendar: Option<&hornvale_astronomy::Calendar>,
     predator: Option<&hornvale_kernel::VertexMap<f64>>,
     prey: Option<&hornvale_kernel::VertexMap<f64>>,
-    built: Option<&std::collections::BTreeSet<hornvale_kernel::FacetId>>,
+    built: Option<&std::collections::BTreeMap<hornvale_kernel::FacetId, String>>,
     ticks: usize,
     day_ticks: Option<hornvale_kernel::units::TickSpan>,
 ) -> Vec<Vec<Affect>> {

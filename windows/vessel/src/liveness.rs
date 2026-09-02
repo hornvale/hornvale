@@ -455,6 +455,32 @@ pub trait Terrain {
         false
     }
 
+    /// The name of the settlement whose territory this room IS — the name of
+    /// the PLACE, never of the creature standing in it (The Prospect, Task
+    /// 7). `None` where the room is not a settlement's own room, and `None`
+    /// for a kind of site that has no name (a cave, an exotic site): a place
+    /// with no name must read as unnamed rather than borrow one.
+    ///
+    /// **The distinction from `village_or_fallback` is the whole point of
+    /// this method existing.** That function resolves a *body*'s home
+    /// settlement, and `Vantage::village` renders it as "in the lands of
+    /// {name}". At the flagship the two answers agree, because a possession
+    /// starts in its own village — and they diverge the moment it walks, or
+    /// the moment a staged cast with no village at all stands in someone
+    /// else's room. A site's name resolved from the possession would then be
+    /// a one-turn observable falsehood, so this reads the injected
+    /// settlement-territory map instead ([`built_rooms`]), which is keyed by
+    /// the ROOM.
+    ///
+    /// Defaults to `None` for the same reason [`Terrain::is_built`] defaults
+    /// to `false`: an implementation with no world to read one from reads as
+    /// nameless wilderness, and the default is self-contained rather than
+    /// calling back into another method.
+    /// type-audit: bare-ok(identifier-text: return)
+    fn settlement_name(&self, _room: &Facet) -> Option<&str> {
+        None
+    }
+
     /// Whether warmth matters in this room — whether its people build around a
     /// fire. Read at a CANONICAL day rather than the current one: a room's
     /// furnishing must not flicker with the seasons, so this is a stable
@@ -597,8 +623,11 @@ pub struct LocaleTerrain<'a> {
     /// `built_rooms`), injected the same way (a domain/window can't reach up
     /// to `hornvale_settlement`); `None` → every room reads unbuilt (a
     /// throwaway read with no world), the same fail-safe-to-wilderness
-    /// posture `Terrain::is_built`'s own default takes.
-    built: Option<&'a std::collections::BTreeSet<FacetId>>,
+    /// posture `Terrain::is_built`'s own default takes. Since The Prospect
+    /// (Task 7) it maps each such room to its settlement's NAME, which is
+    /// what [`Terrain::settlement_name`] reads — one structure, so the flag
+    /// and the name cannot disagree.
+    built: Option<&'a std::collections::BTreeMap<FacetId, String>>,
     /// A PREFILLED, READ-ONLY [`hornvale_kernel::RoomMeshMemo`] (the-waymark
     /// fix round, Finding 1): every `corner_weights`-backed read below
     /// consults it first, falling through to a fresh recompute on a miss.
@@ -670,13 +699,19 @@ impl<'a> LocaleTerrain<'a> {
     /// prefilled, read-only [`hornvale_kernel::RoomMeshMemo`] (the-waymark
     /// fix round, Finding 1) — `None` for a caller with nothing prefilled
     /// (byte-identical to the pre-Finding-1 behaviour).
-    /// type-audit: bare-ok(ratio: predator), bare-ok(ratio: prey)
+    ///
+    /// `built`'s map VALUE is a settlement's own name — `identifier-text`
+    /// under decision 0028 ("a name, label, or key whose contract is being
+    /// plain text"), the same class [`Terrain::settlement_name`] and
+    /// `Site::name` carry for the same string. Not `prose`: it is a proper
+    /// name a consumer matches and prints, never free-form description.
+    /// type-audit: bare-ok(ratio: predator), bare-ok(ratio: prey), bare-ok(identifier-text: built)
     pub fn with_fields(
         ctx: &'a LocaleContext,
         calendar: Option<&'a hornvale_astronomy::Calendar>,
         predator: Option<&'a hornvale_kernel::VertexMap<f64>>,
         prey: Option<&'a hornvale_kernel::VertexMap<f64>>,
-        built: Option<&'a std::collections::BTreeSet<FacetId>>,
+        built: Option<&'a std::collections::BTreeMap<FacetId, String>>,
         cache: Option<&'a hornvale_kernel::RoomMeshMemo>,
     ) -> Self {
         Self {
@@ -778,7 +813,18 @@ impl<'a> Terrain for LocaleTerrain<'a> {
         // read here, so no cache to consult.
         self.built
             .zip(room.pack().ok())
-            .is_some_and(|(set, id)| set.contains(&id))
+            .is_some_and(|(rooms, id)| rooms.contains_key(&id))
+    }
+    fn settlement_name(&self, room: &Facet) -> Option<&str> {
+        // The same entry `is_built` tests for membership in, read for its
+        // value — so a name exists at exactly the rooms that read built, and
+        // the two answers are one lookup apart rather than two derivations
+        // apart. `None` on the no-set and pack-failure paths for the reasons
+        // `is_built` gives above.
+        self.built
+            .zip(room.pack().ok())
+            .and_then(|(rooms, id)| rooms.get(&id))
+            .map(String::as_str)
     }
 }
 
@@ -7455,11 +7501,47 @@ pub(crate) fn settlement_room(world: &World, ctx: &LocaleContext, settlement: En
 /// module takes toward world-derived data. `BTreeSet`, never `HashSet`
 /// (constitutional): `FacetId` is the packed, `Ord` form of a `Facet`, the
 /// natural key.
-pub fn built_rooms(world: &World, ctx: &LocaleContext) -> std::collections::BTreeSet<FacetId> {
-    hornvale_settlement::all_settlements(world)
-        .iter()
-        .filter_map(|v| settlement_room(world, ctx, v.id).pack().ok())
-        .collect()
+///
+/// **It is a `BTreeMap` to the settlement's NAME, not a bare `BTreeSet`
+/// (The Prospect, Task 7).** The name was in hand here all along —
+/// `hornvale_settlement::VillageInfo` carries `{ id, name, population }` and
+/// this function was discarding all three — and `Site::name` needs it, so
+/// entering a settlement can say which one. Widening the one structure
+/// rather than adding a sibling `settlement_names` beside it is deliberate:
+/// two structures derived from the same roster would be two sources of truth
+/// for one fact, and they could disagree (over a pack failure, over a
+/// settlement added to one derivation and not the other) with nothing red —
+/// the exact defect shape this campaign has already found three times. Here,
+/// [`Terrain::is_built`] and [`Terrain::settlement_name`] read the identical
+/// entry, so a named site exists exactly where a built room does.
+/// **Membership is still O(log n)** — `contains_key` on a map costs what
+/// `contains` on a set did, which is what keeps the interactive path (`enter`
+/// asks this per turn through `brief_of`) unchanged.
+///
+/// The VALUE is the name alone rather than the whole `VillageInfo`, on the
+/// same rule `brief.rs`'s module doc states for `Brief` itself: carry what a
+/// consumer reads, because an unread field reads as evidence of intent. The
+/// id and the population have no reader here.
+///
+/// **A room two settlements share keeps the FIRST in
+/// `hornvale_settlement::all_settlements` order** (`or_insert`, not
+/// `insert`). Deterministic, because that roster is a deterministic read over
+/// the committed ledger — and a set could not have expressed the question at
+/// all, so this is a new answer rather than a changed one. The KEY SET is
+/// byte-for-byte what the set held, which is why the census metric reading
+/// `built.len()` (`windows/lab/src/metrics.rs`) does not move.
+/// type-audit: bare-ok(identifier-text: return)
+pub fn built_rooms(
+    world: &World,
+    ctx: &LocaleContext,
+) -> std::collections::BTreeMap<FacetId, String> {
+    let mut rooms = std::collections::BTreeMap::new();
+    for v in hornvale_settlement::all_settlements(world) {
+        if let Ok(id) = settlement_room(world, ctx, v.id).pack() {
+            rooms.entry(id).or_insert(v.name);
+        }
+    }
+    rooms
 }
 
 /// The species' activity-cycle, from its committed `SPECIES_ACTIVITY_CYCLE`

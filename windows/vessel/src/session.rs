@@ -882,7 +882,12 @@ pub struct Session<'w> {
     /// `Session::start` requires `mint_flagship` to resolve a settlement
     /// first, so in practice this always carries at least the possessed
     /// agent's own home room by the time a session exists.
-    built: std::collections::BTreeSet<FacetId>,
+    ///
+    /// A MAP to each such room's settlement NAME since The Prospect (Task 7),
+    /// so `enter` can say which settlement it entered — see
+    /// [`crate::liveness::built_rooms`] for why the name rides on this one
+    /// structure rather than a second one beside it.
+    built: std::collections::BTreeMap<FacetId, String>,
     /// The vertices holding a cave (The Prospect, Task 4), computed once at
     /// `start` the same way `built` is.
     ///

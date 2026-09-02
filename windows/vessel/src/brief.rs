@@ -188,8 +188,6 @@ pub fn brief_of(
     let locale = crate::depth::truncate_to_walk(place, walk_depth);
     let built = terrain.is_built(&locale);
     let cold = terrain.is_cold(&locale);
-    // Settlement wins where both hold — `Site::salience` is the presentation
-    // ordering and this is its production consequence (spec §6, Task 1).
     //
     // NOTE ON COST: like the occupation map below, this re-derives every placed
     // site's address on every call — the budget caps placement at 1% of land
@@ -199,24 +197,44 @@ pub fn brief_of(
     let placed_at = |vertex: Vertex, reason: SiteReason| {
         site_facet_for(vertex, reason, world.seed, geo, walk_depth) == locale
     };
-    // Salience order (spec §6): settlement, then exotic, then cave. A facet
-    // holding more than one is named by the strongest, and `Site::salience` is
-    // the presentation half of the same ordering.
-    let site = if built {
-        Some(Site::placed(SiteKind::Settlement, None))
-    } else if exotic_sites
-        .iter()
-        .any(|site| placed_at(Vertex(site.vertex), SiteReason::Exotic))
-    {
-        Some(Site::placed(SiteKind::Exotic, None))
-    } else if cave_sites
-        .iter()
-        .any(|&vertex| placed_at(vertex, SiteReason::Cave))
-    {
-        Some(Site::placed(SiteKind::Cave, None))
-    } else {
-        None
-    };
+    // Where a facet holds more than one candidate, `Site::salience` — and
+    // ONLY `Site::salience` — decides which one wins (spec §6). This used to
+    // be an if/else chain (settlement, then exotic, then cave) that stated
+    // the same order `Site::salience` states, independently: change one and
+    // the other silently keeps the old order, the same two-sources-of-truth
+    // shape the two cave predicates this campaign found and fixed earlier
+    // were. Assembling every candidate the facet could hold and taking the
+    // maximum BY `Site::salience` makes that function load-bearing rather
+    // than aspirational, and leaves exactly one place that states the order.
+    // `salience` returns `u8`, so the comparison is exact — no float, no
+    // `total_cmp` — and no tie is reachable today: each kind contributes at
+    // most one candidate here, and every kind's own salience is distinct.
+    let candidates = [
+        // THE NAME COMES FROM THE PLACE, NOT FROM THE POSSESSION (Task 7).
+        // `Terrain::settlement_name` reads the injected settlement-territory
+        // map, keyed by ROOM — the same entry `is_built` just tested — so the
+        // name belongs to the facet. The tempting alternative,
+        // `liveness::village_or_fallback`, resolves the possessed BODY's own
+        // home village: identical at the flagship, because a possession
+        // starts in its own village, and a one-turn observable falsehood
+        // anywhere else. A cave and an exotic site take `None`: neither has a
+        // name and neither may borrow one.
+        built.then(|| {
+            Site::placed(
+                SiteKind::Settlement,
+                terrain.settlement_name(&locale).map(str::to_string),
+            )
+        }),
+        exotic_sites
+            .iter()
+            .any(|site| placed_at(Vertex(site.vertex), SiteReason::Exotic))
+            .then(|| Site::placed(SiteKind::Exotic, None)),
+        cave_sites
+            .iter()
+            .any(|&vertex| placed_at(vertex, SiteReason::Cave))
+            .then(|| Site::placed(SiteKind::Cave, None)),
+    ];
+    let site = candidates.into_iter().flatten().max_by_key(Site::salience);
     let alive = containing_vertex(&locale, geo, index)
         .and_then(|vertex| {
             // NOTE ON COST: this derives the whole per-vertex occupation map on
