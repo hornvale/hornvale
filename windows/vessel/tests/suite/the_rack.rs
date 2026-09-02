@@ -40,9 +40,24 @@ fn world() -> hornvale_kernel::World {
 /// IS the ledger fold — the only one of the two readings this crate exposes
 /// to an integration test.
 ///
-/// MUTATION THIS MUST FAIL AGAINST: seed `position` with `body.resource`
-/// instead of `body.home` in `Roster::push`
-/// (`self.position.push(body.resource.clone());`).
+/// **What this test canNOT see, measured rather than assumed.** At seed 42's
+/// flagship the roster is 68 bodies with exactly ONE distinct `home` room
+/// between them, and `home == resource` for all 68. So this test pins *which
+/// room* the seed reads, and cannot discriminate one slot's seed from
+/// another's at all. The plan's prescribed mutation — seed `position` from
+/// `body.resource` — is a NULL here for exactly that reason: run, and this
+/// test stayed green. It reddens `roster.rs`'s
+/// `a_write_moves_one_slot_only` instead, whose hand-built bodies have
+/// distinct homes and a shared resource on purpose; that unit test is where
+/// the per-slot discrimination actually lives.
+///
+/// MUTATION THIS MUST FAIL AGAINST: seed `position` one refinement level
+/// coarser than the body's home in `Roster::push`
+/// (`self.position.push(body.home.parent().unwrap_or_else(|| body.home.clone()));`).
+/// Run and observed: `assertion left == right failed: slot 0 (Kvoavnga)
+/// stands at its home / left: Facet { face: 1, path: [2, 3, 3, 1, 0, 0, 1, 2,
+/// 0, 2, 3, 3] } / right: Facet { … , 1] }` — the seed names a room the body
+/// is not in.
 #[test]
 fn at_turn_zero_every_slot_stands_at_home() {
     let world = world();
@@ -80,9 +95,9 @@ fn at_turn_zero_every_slot_stands_at_home() {
 /// herds). `slot_of` answers every one of them.
 ///
 /// MUTATION THIS MUST FAIL AGAINST: drop the `self.felt.push(felt);` line
-/// from `Roster::push` and push it twice in `Roster::new`'s place — see the
-/// report; the recorded red is `felts()` reading 0 against the 71 every other
-/// column reads.
+/// from `Roster::push` (`let _ = felt;` in its place, so the parameter stays
+/// used). Run and observed: `assertion left == right failed: felts / left: 0
+/// / right: 68`.
 #[test]
 fn a_live_sessions_columns_are_aligned() {
     let world = world();
@@ -115,8 +130,9 @@ fn a_live_sessions_columns_are_aligned() {
 /// there must be forced on (spec §3.8: the body you are is always advanced).
 ///
 /// MUTATION THIS MUST FAIL AGAINST: return `Slot(0)` from `Roster::driven()`.
-/// Verified: `driven_body()` then reports the flagship's own body where this
-/// test expects the creature it possessed.
+/// Run and observed: `assertion left != right failed: the chosen body is not
+/// slot 0 / left: 0 / right: 0` — the roster reports the flagship's slot for
+/// a session that possessed something else.
 #[test]
 fn a_non_zero_driven_slot_names_its_own_body() {
     let world = world();

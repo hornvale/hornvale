@@ -395,8 +395,9 @@ mod tests {
     /// answers each pushed entity with its slot.
     ///
     /// MUTATION THIS MUST FAIL AGAINST: push `keys` twice in `push`
-    /// (`self.keys.push(key.clone()); self.keys.push(key);`) — `keys()` reads
-    /// 6 against the 3 every other column reads.
+    /// (`self.keys.push(key.clone()); self.keys.push(key);`). Run and
+    /// observed: `assertion left == right failed: keys column / left: 6 /
+    /// right: 3`.
     #[test]
     fn every_column_shares_one_length() {
         let mut roster = Roster::new(Slot(0));
@@ -438,9 +439,10 @@ mod tests {
     /// entity in place (decision 0546).
     ///
     /// MUTATION THIS MUST FAIL AGAINST: sort `bodies` by label at the end of
-    /// `push` (`self.bodies.sort_by(|a, b| a.label.cmp(&b.label));`) — slot 0
-    /// holds "zulu" where the test expects "alpha", and `slot_of` then points
-    /// at the wrong body.
+    /// `push` (`self.bodies.sort_by(|a, b| a.label.cmp(&b.label));`). Run and
+    /// observed: `assertion left == right failed / left: "alpha" / right:
+    /// "zulu"` — the body pushed into slot 0 has been displaced by the one
+    /// pushed after it, and `slot_of` then points at the wrong body.
     #[test]
     fn a_slot_never_moves() {
         let mut roster = Roster::new(Slot(0));
@@ -474,8 +476,9 @@ mod tests {
     /// as "dormant" for every body past its end.
     ///
     /// MUTATION THIS MUST FAIL AGAINST: relax the `assert_eq!` in
-    /// `set_on_roll` to `assert!(mask.len() <= self.bodies.len(), "mask")` —
-    /// the short mask is accepted and no panic occurs.
+    /// `set_on_roll` to `assert!(mask.len() <= self.bodies.len(), "mask")`.
+    /// Run and observed: `note: test did not panic as expected` — the short
+    /// mask is accepted.
     #[test]
     #[should_panic(expected = "mask")]
     fn a_short_mask_is_refused() {
@@ -490,8 +493,20 @@ mod tests {
     /// defined rather than at its first caller.
     ///
     /// MUTATION THIS MUST FAIL AGAINST: write `self.position[0] = position;`
-    /// instead of `self.position[slot.0] = position;` — slot 1's position is
-    /// unchanged and slot 0's is clobbered.
+    /// instead of `self.position[slot.0] = position;`. Run and observed:
+    /// `assertion left == right failed: slot 0 is untouched / left: Facet {
+    /// face: 0, path: [1, 2] } / right: Facet { face: 0, path: [1, 0] }` —
+    /// slot 0 was clobbered and slot 1 never moved.
+    ///
+    /// **This test is also the one that catches a mis-seeded `position`
+    /// column**, and that matters because the integration test written for
+    /// exactly that job cannot: seeding `position` from `body.resource`
+    /// instead of `body.home` reddens the "seeded from home" assertion here
+    /// (`left: path [0, 0] / right: path [1, 0]`, run and observed), while
+    /// leaving `the_rack.rs::at_turn_zero_every_slot_stands_at_home` GREEN,
+    /// because at seed 42's flagship all 68 bodies have `home == resource`.
+    /// The hand-built fixture gives each body a distinct home and a shared
+    /// resource on purpose.
     #[test]
     fn a_write_moves_one_slot_only() {
         let mut roster = Roster::new(Slot(0));
@@ -508,9 +523,10 @@ mod tests {
     /// `on_roll_others` narrows that to the mask.
     ///
     /// MUTATION THIS MUST FAIL AGAINST: filter `*i != driven.0` to
-    /// `*i != 0` in `other_bodies` — with `driven` at slot 1 the driven body
-    /// is returned and body 0 is dropped, so the labels read `["one",
-    /// "three"]` against the expected `["zero", "three"]`.
+    /// `*i != 0` in `other_bodies`. Run and observed: `assertion left ==
+    /// right failed: the driven slot is dropped / left: ["one", "three"] /
+    /// right: ["zero", "three"]` — with `driven` at slot 1 the driven body is
+    /// returned and body 0 is dropped.
     #[test]
     fn the_driven_slot_is_the_one_dropped() {
         let mut roster = Roster::new(Slot(1));
