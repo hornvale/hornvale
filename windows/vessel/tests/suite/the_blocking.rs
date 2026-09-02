@@ -6,23 +6,13 @@
 //! floor plan and the chamber, which is the pane The Panes will later draw with
 //! pixels. If it fails, they are two pipelines wearing one name.
 
-use hornvale_astronomy::SkyPins;
-use hornvale_kernel::{Seed, World};
-use hornvale_terrain::TerrainPins;
+use hornvale_kernel::World;
 use hornvale_vessel::{PossessOpts, Session, SpatialChannel, Turn};
-use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
 
 use crate::common;
 
 fn world() -> World {
-    build_world(
-        Seed(42),
-        &SkyPins::default(),
-        SkyChoice::Generated,
-        &TerrainPins::default(),
-        &SettlementPins::default(),
-    )
-    .expect("seed 42 builds")
+    hornvale_worldgen::seed_42_world()
 }
 
 fn out(t: Turn) -> String {

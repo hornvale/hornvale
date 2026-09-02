@@ -13,3 +13,4 @@
 # Format: <workspace-relative path> <count>
 cli/src/main.rs 2
 windows/lab/src/blackbox.rs 1
+windows/worldgen/src/fixture.rs 2

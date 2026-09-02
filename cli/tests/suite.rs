@@ -108,3 +108,5 @@ mod trope_coverage;
 mod trope_witness;
 #[path = "suite/walk_depth_agreement.rs"]
 mod walk_depth_agreement;
+#[path = "suite/world_build_sites.rs"]
+mod world_build_sites;

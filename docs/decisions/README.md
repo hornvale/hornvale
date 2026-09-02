@@ -294,3 +294,5 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0583](0583-the-witness-limits-list-is-open-not-closed.md) | The witness limits list is open, not closed (supersedes 0582) | Accepted |
 | [0584](0584-kinship-direction-and-the-parent-of-generation-cut.md) | Kinship direction and the `parent-of` generation cut (supersedes 0578) | Accepted |
 | [0585](0585-act-chronology-completes-too-and-the-method-is-act-handle.md) | `bundle:act-chronology` completes too, and the method is `Act::handle` (supersedes 0580) | Accepted |
+| [0606](0606-a-world-build-is-a-named-site.md) | A world build is a named site on a bidirectional roster | Accepted |
+| [0607](0607-the-seed-42-fixture-is-an-input.md) | The seed-42 world fixture is an input as well as an assertion | Accepted |

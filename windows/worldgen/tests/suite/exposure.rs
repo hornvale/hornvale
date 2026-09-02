@@ -32,14 +32,7 @@ use hornvale_worldgen::{
 /// (`each_placed_species_holds_a_root_for_every_placed_species_kind`)
 /// hardcodes goblin/hobgoblin at seed 1, which this shift does not touch.
 fn world() -> hornvale_kernel::World {
-    build_world(
-        hornvale_kernel::Seed(42),
-        &hornvale_astronomy::SkyPins::default(),
-        SkyChoice::Generated,
-        &hornvale_terrain::TerrainPins::default(),
-        &SettlementPins::default(),
-    )
-    .unwrap()
+    hornvale_worldgen::seed_42_world()
 }
 
 #[test]
