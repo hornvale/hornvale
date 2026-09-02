@@ -396,3 +396,79 @@ rebaseline before it closes**, and Task 3's review did not ask for one because
 the plan's verify list did not name it. Task 3 is complete and this is not worth
 reopening — but every remaining task that touches prose or the map (6, 7, 8)
 gets a rebaseline in its dispatch, and the final review inherits the check.
+
+### #19 [G5, H2 FALSIFIED — and it is the campaign's real result]
+
+**H2 is falsified structurally, at any threshold, and the implementer correctly
+did not adjust the constant even once.**
+
+The arithmetic, which I re-derived independently:
+
+```
+  level-6 vertices    40,962
+  walk facets         402,653,184   (6 x 4^13)
+  max sites per facet 1 in 9,830  = 0.0102%
+  H2's floor          1.0000%      = 98.3x higher
+```
+
+Placement emits at most one facet per vertex, so **any** point-site kind is
+capped at 0.0102% of facets before a seed is built. H2 asked for 1-8%. No
+threshold reaches it.
+
+**Why the hypothesis died: my own ruling killed it.** H2 was frozen (spec §9)
+when a cave was a per-facet DERIVATION — a predicate every facet could satisfy
+independently, where a percentage is a meaningful quantity. Ruling 13 replaced
+that with a placed POINT PROCESS, which cannot express a per-facet percentage at
+all. I changed the mechanism and did not re-read the hypothesis that measured
+it.
+
+**Decision:** H2 stands falsified and is NOT re-derived. The threshold stays at
+its measured value. Spec §9 is corrected to record the falsification and its
+cause. The implementer's `the_band_is_unreachable_at_any_threshold` pins the
+structural fact so it reds if the mechanism or the mesh resolution changes,
+which is a better instrument than the band it replaces.
+
+This is decision 0016 working exactly as written: a falsified prediction is a
+finding, and retuning a constant to rescue one after unblinding is what the rule
+forbids. The implementer had the opportunity — I explicitly allowed one
+adjustment — and correctly reported that no adjustment could help.
+
+### #20 [G5] — the same arithmetic answers H3 before Task 9 measures it, and it is the answer Nathan needs
+
+H3 asks what fraction of land facets hold any site. **The cap above answers it:
+at most 0.0102%, and that is a property of the model, not of this world.**
+
+So the follow-on question Nathan framed — "is the gap rendering or generation?"
+— has a third answer neither of us offered: **it is the SHAPE of the model.**
+One site per vertex over 40,962 vertices cannot populate 402 million facets.
+Meeting "every square mile, something interesting" with point sites would need
+roughly 402 million sites; the mesh offers 40,962 anchors.
+
+**Decision:** Task 9 still measures H3 and reports the number, because a
+measured 0.0102% against a structural prediction of 0.0102% is a confirmation
+that the model is understood. But its framing changes from "how dense is the
+world" to "what the point-site model can and cannot reach", and the chronicle
+leads with the ceiling rather than the sample.
+
+**This is why `Extent` was worth carving out.** A region-extent site is the only
+shape in the current design that can cover ground without one anchor per facet.
+Decision 0538 looked like cheap insurance when Nathan raised it; it is now the
+identified route to the campaign's stated promise.
+
+**Cost if wrong:** none — the measurement still happens; only its reading
+changes.
+
+### #21 [G5] — two brief constants were wrong, and the second would have shipped near-empty worlds
+
+Both caught by measurement rather than review.
+
+**The threshold: 0.12, not my 0.35.** Cave proneness is bimodal — the lower mode
+tops out at 0.02201, the upper starts at 0.22343, and nothing lies between. 0.12
+is the midpoint of the empty gap; my 0.35 sat *inside* the upper mode, cutting it
+arbitrarily.
+
+**The elevation floor is FREEBOARD, not absolute elevation**, and this is the one
+that mattered. Sea level in these worlds is **-1328 to -2032 m**, not 0. My
+`elevation_m > 5.0` cut seed 42's cave roster from 2084 to **8**, and gave seeds
+7 and 1 **zero caves in the entire world**. I assumed a sea level the project
+does not have.
