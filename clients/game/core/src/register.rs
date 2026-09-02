@@ -30,7 +30,9 @@ pub enum Population {
     /// fixed point worth marking, whether or not it happens to be
     /// discovery-gated). A river delta was a third landform here briefly
     /// and was removed in fix round 1 — see [`REGISTER`]'s own doc on the
-    /// `:` collision that forced it out.
+    /// `:` collision that forced it out. The Prospect, Task 8 adds the
+    /// placed EXOTIC site, the third of `hornvale_vessel`'s three
+    /// `SiteKind`s — the population's membership rule is unchanged by it.
     PointSite,
     /// Interface furniture that is not part of the world.
     Chrome,
@@ -177,6 +179,36 @@ pub const REGISTER: &[Binding] = &[
         glyph: '*',
         population: Population::PointSite,
         means: "cave mouth",
+    },
+    // The Prospect, Task 8: the placed EXOTIC site — a fungal canopy, a
+    // mineral-crystal flat, a place whose biota is found nowhere else
+    // (`hornvale_locale`'s strangeness budget, 103 of them on seed 42).
+    // Until that task the world map had no mark for one at all, so the
+    // whole tier was generated and undrawable.
+    //
+    // `$` is a PICKED mark, not a derived one, and it is picked the same way
+    // `!` and `|` were: the register's allocation rule offers ORDER or
+    // IDENTITY, an exotic site has no ordinal to carry, and its noun's
+    // initial (`s`, "site" — `hornvale_vessel`'s own `site_clause`) is in
+    // the `a`-`z`/`A`-`Z` codespace `Population::Creature` owns by rule.
+    // That leaves an evocative choice among unclaimed punctuation, and `$`
+    // is the one mark in it that already reads, by long convention, as
+    // "something here is worth the trip" — which is exactly the invitation
+    // this campaign exists to put on the map. Nathan owns glyph assignments
+    // (Task 7's `o`/`O`/`*` were his); this is a reviewable stand-in, and
+    // moving it costs one line here and one in `plate.rs`.
+    //
+    // `means` is the bare noun phrase every sibling point-site row uses
+    // ("cave mouth", "settlement", "volcano"), and it is the same noun
+    // `hornvale_vessel::site::SiteKind::Exotic` and `hornvale locale
+    // --strange` already give the thing. Its LENGTH is load-bearing in one
+    // place: `bin/examples/specimen_sheet.rs` packs this whole table into a
+    // fixed 80x24 sheet and asserts the height exactly, so a longer phrase
+    // here spills the sheet — see that file's own packing comment.
+    Binding {
+        glyph: '$',
+        population: Population::PointSite,
+        means: "exotic site",
     },
     Binding {
         glyph: 'o',

@@ -395,6 +395,17 @@ fn main() {
         "REGISTER LEGEND (hornvale_game_core::register::REGISTER, {} rows)",
         REGISTER.len()
     ));
+    // THE SEPARATOR IS ONE SPACE, NOT TWO, SINCE THE PROSPECT'S TASK 8, and
+    // that is the line this campaign spent. `REGISTER` grew a 24th row (the
+    // placed exotic site, `$`) and the packed legend went to six lines
+    // against a sheet that asserts exactly `HEIGHT`. Narrowing the
+    // separator repacks the same 24 entries into five WITHOUT shortening a
+    // single `means` string — the alternative was editing another
+    // campaign's wording to buy room, which would have made this sheet's
+    // layout a reason to change the register's own vocabulary. The fourth
+    // line now sits at exactly 80 columns: there is no slack left, and the
+    // 25th row will redden the assertion below, which is what it is for.
+    //
     // Fix round 1: REGISTER grew from 11 rows (this sheet's original
     // budget) to 16 across Tasks 6-7, and one row per line no longer fits
     // the fixed 24-line floor — this is the exact maintenance the HEIGHT
@@ -411,7 +422,7 @@ fn main() {
         let candidate = if register_line.is_empty() {
             entry.clone()
         } else {
-            format!("{register_line}  {entry}")
+            format!("{register_line} {entry}")
         };
         if visible_width(&candidate) > WIDTH {
             lines.push(std::mem::take(&mut register_line));

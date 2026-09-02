@@ -82,7 +82,7 @@ use crate::mercator::{self, Frame};
 use crate::plate::{self, BAND_B_RUNG, GLOBE_RUNG, Window};
 use hornvale_astronomy::SkyPins;
 use hornvale_game_core::{CandidateSource, Cursor, Focus};
-use hornvale_kernel::{FacetId, NearestVertexIndex, Seed, Vertex, World};
+use hornvale_kernel::{Facet, FacetId, NearestVertexIndex, Seed, Vertex, World};
 use hornvale_language::{MorphOptions, Phonology};
 use hornvale_terrain::GeneratedTerrain;
 use hornvale_terrain::TerrainPins;
@@ -94,7 +94,7 @@ use hornvale_worldgen::{
     BuildError, SettlementPins, SkyChoice, WorldComponents, build_world, gazetteer_features,
     language_of_in, morph_options, resolve_chain_at, terrain_of,
 };
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 
 /// What the strip says, with the map focused, over a band this campaign has
 /// no resolver for (walk and chamber both draw a real plate; only the
@@ -386,20 +386,22 @@ pub struct Driver {
     /// The Portolan part II Task 5's original shape) — built ONCE here at
     /// `start`, the same "derive once, never per-turn" discipline
     /// `index`/`nearest` already follow. Not itself a discovery record:
-    /// this is the plate's own point-site ROSTER (where a settlement
-    /// stands and how big it is, ground truth, always known to the client
-    /// that draws the map), gated by [`Self::discovered`] at draw time,
-    /// never here. The population is what
+    /// this is the plate's own point-site ROSTER (where each site stands
+    /// and, for a settlement, how big it is — ground truth, always known to
+    /// the client that draws the map), gated by [`Self::discovered`] at draw
+    /// time, never here. The population is what
     /// [`plate::draw_feature_layer`]'s own viewport-relative major/minor
     /// ranking reads.
-    settlements: BTreeMap<Vertex, u64>,
-    /// Every vertex carrying a cave mouth, scanned once here at `start` for
-    /// the same reason `settlements` is: `plate::draw_feature_layer`
-    /// PROJECTS each site rather than asking every screen cell whether its
-    /// sample happens to be one, so it needs the roster up front. A
-    /// per-render scan of all 40,962 vertices would be the cost the projection
-    /// exists to avoid.
-    caves: BTreeSet<Vertex>,
+    ///
+    /// **One roster over all three `SiteKind`s since The Prospect's Task 8,
+    /// where it was two (`settlements`, `caves`) and the third kind had
+    /// none.** A settlement stands at its own committed coordinate; a cave
+    /// or an exotic site stands on the facet
+    /// `hornvale_worldgen::site_facet_for` places it on
+    /// ([`plate::MapSite::placed`]) — which is also what
+    /// [`Self::update_discovery`] matches a possession's own room against,
+    /// so the roster that DRAWS a site is the roster that DISCOVERS it.
+    sites: Vec<plate::MapSite>,
     /// Every volcano's own anchor vertex (Task 7), read once from the same
     /// `features` list `index` is built from. Discovery is the EXISTING
     /// extent-feature mechanism (`Self::index`/`Self::discovered`'s own
@@ -409,8 +411,7 @@ pub struct Driver {
     /// Every waterfall vertex `GeneratedTerrain::waterfalls()` reports
     /// (Task 7), scanned once at `start`. Drawn UNCONDITIONALLY by
     /// [`plate::draw_feature_layer`] — see that function's own doc for why
-    /// this roster carries no discovery gate, unlike `caves`/`settlements`/
-    /// `volcanoes`.
+    /// this roster carries no discovery gate, unlike `sites`/`volcanoes`.
     waterfalls: Vec<Vertex>,
     /// Every walk-band room the possession has stood in this session
     /// (spec Amendment 1 §A4a: "where have I been"). Never consulted by
@@ -761,17 +762,35 @@ impl Driver {
         // of [`plate::draw_with`] share the one derivation, population
         // included, so a future change to the skip-on-missing or
         // tie-breaking rule cannot land on one caller and not the other.
-        let settlements: BTreeMap<Vertex, u64> = plate::settlements_of(world_ref, &geo, &nearest);
-
-        // The cave roster, scanned once. `cave_at` is a pure read of the
-        // vertex's own stratigraphic column, so this is a scan of the mesh
-        // rather than a derivation — and doing it here rather than per
-        // render is the whole point of projecting sites instead of
-        // sampling for them.
-        let caves: BTreeSet<Vertex> = (0..geo.vertex_count())
-            .map(|i| Vertex(i as u32))
-            .filter(|&c| terrain.cave_at(c).is_some())
+        //
+        // THE PROSPECT, TASK 8: one roster over all three site kinds. The
+        // cave half used to be an inline `(0..geo.vertex_count()).filter(|c|
+        // terrain.cave_at(c).is_some())` scan here — a second copy of
+        // `GeneratedTerrain::cave_site_vertices`, which is what `Session`
+        // itself reads and therefore what decides enterability. Two copies of
+        // "where is there a cave" is the exact defect shape Task 4's own
+        // correction deleted one level down (it removed an invented second
+        // predicate); reintroducing it at the client would have let the map
+        // and the walker disagree about which caves exist.
+        let caves: Vec<Vertex> = terrain.cave_site_vertices();
+        // The exotic roster: the vertices `hornvale_locale`'s strangeness
+        // budget warrants a site at. A cheap read over a budget the
+        // `LocaleContext` already built at `start` — the same call
+        // `Session::brief_here` makes per turn, so this is not a second
+        // derivation, and the vertices are all this needs (the facet comes
+        // from `site_facet_for`, below, inside `sites_of`).
+        let exotics: Vec<Vertex> = session
+            .context()
+            .strange_sites()
+            .iter()
+            .map(|site| Vertex(site.vertex))
             .collect();
+        // The world's own walk band — the resolution a placed site's address
+        // is minted at, so it must be the world's value and never this
+        // module's `plate::BAND_B_RUNG` constant, which restates the
+        // canonical-globe answer only.
+        let walk = hornvale_vessel::walk_depth(session.context());
+        let sites = plate::sites_of(world_ref, &geo, &nearest, &caves, &exotics, walk);
 
         // The Legend, Task 7: the volcano roster — every volcano's ANCHOR
         // vertex (`hornvale_terrain::landscape::Feature::anchor`, the
@@ -867,8 +886,7 @@ impl Driver {
             window,
             tiles: crate::tiles::TileCache::default(),
             seed: world_ref.seed,
-            settlements,
-            caves,
+            sites,
             volcanoes,
             waterfalls,
             visited: Visited::default(),
@@ -1073,8 +1091,7 @@ impl Driver {
             &self.window,
             plate_width,
             plate_height,
-            &self.settlements,
-            &self.caves,
+            &self.sites,
             &self.volcanoes,
             &self.waterfalls,
             &self.discovered,
@@ -1188,8 +1205,7 @@ impl Driver {
             &self.frame,
             &self.window,
             plate::colour_allowed(),
-            &self.settlements,
-            &self.caves,
+            &self.sites,
             &self.volcanoes,
             &self.waterfalls,
             &self.discovered,
@@ -2693,6 +2709,33 @@ impl Driver {
     ///   the turn's own narration text is the only signal available for
     ///   it. Both checks read `self.cached`, the same plain JSON string
     ///   every other client read already uses.
+    /// - **Discovered, PLACED point sites (The Prospect, Task 8)**: a cave
+    ///   or an exotic site is discovered when the possession stands in the
+    ///   walk-band ROOM it was placed in — [`plate::MapSite::placed`],
+    ///   matched against `truncate_to_walk(position)`.
+    ///
+    ///   **This is an encounter, not co-location, and the distinction is
+    ///   the room's size.** The `discovery` module's own doc refuses to
+    ///   infer knowledge from sharing a VERTEX, which spans 110-132 km
+    ///   ("going to Paris is not visiting the Catacombs"). A placed site's
+    ///   facet is 1.126 km, it is the only room the site is in, and
+    ///   `Session::describe_here`'s own site clause has just told the
+    ///   player "You can enter the cave here." — so a map that still
+    ///   withheld the mark would be hiding what the prose in the same
+    ///   snapshot said. The `delve`-narration rule above is KEPT rather
+    ///   than replaced: it is a second, independent route to the same
+    ///   record for a cave, and discovery is monotonic (H6), so two routes
+    ///   cannot conflict.
+    ///
+    ///   **It matches on the FACET and keys on the VERTEX**, both taken
+    ///   from the same [`plate::MapSite`] the glyph is drawn from. The
+    ///   older shape — resolve the position's nearest vertex and record
+    ///   `Cave(that vertex)` — happens to be right on seed 42 (measured: 0
+    ///   of 874 caves and 0 of 103 exotic sites resolve to a neighbour) but
+    ///   rests on a guarantee `hornvale_worldgen::site_facet_for` expressly
+    ///   declines to make, since the cube-sphere quad mesh and the
+    ///   icosphere vertex mesh have been unrelated since The Pavement. A
+    ///   site discovered through the roster is drawable by construction.
     fn update_discovery(&mut self) {
         let position = self.session.position();
         self.visited.record(position.clone());
@@ -2705,6 +2748,9 @@ impl Driver {
             self.discovered.record(FeatureId::Extent(*id));
         }
 
+        let walk = hornvale_vessel::walk_depth(self.session.context());
+        self.discover_placed_sites_at(&hornvale_vessel::truncate_to_walk(&position, walk));
+
         if let Ok(snap) = hornvale_game_core::Snapshot::parse(&self.cached) {
             if matches!(snap.spatial, hornvale_game_core::Spatial::Chamber { .. }) {
                 self.discovered.record(FeatureId::Settlement(vertex));
@@ -2712,6 +2758,26 @@ impl Driver {
             if snap.narration.prose.starts_with(DELVE_SUCCESS_PREFIX) {
                 self.discovered.record(FeatureId::Cave(vertex));
             }
+        }
+    }
+
+    /// Record every PLACED site standing in the walk-band room `here`
+    /// ([`plate::sites_standing_in`], which owns the rule; this method owns
+    /// only the recording).
+    ///
+    /// **Separate from [`Self::update_discovery`] so a test can supply the
+    /// one input it cannot walk to.** A placed site occupies about one facet
+    /// in 9,830 (decision 0539's ceiling), so no sequence of `go` commands
+    /// reaches one inside a test, and a feature nothing can exercise is a
+    /// feature nothing has checked — this campaign's own progress ledger
+    /// records three tests that turned out vacuous for exactly that shape of
+    /// reason. Everything downstream of `here` is the shipped path: the real
+    /// roster, the real identities, and the real plate.
+    fn discover_placed_sites_at(&mut self, here: &Facet) {
+        // Collected before recording because `self.sites` and
+        // `self.discovered` are two fields of the same `&mut self`.
+        for id in plate::sites_standing_in(&self.sites, here) {
+            self.discovered.record(id);
         }
     }
 
@@ -2803,7 +2869,170 @@ mod portolan_tests {
         Driver::start(42, PossessTarget::Flagship).expect("seed 42 generates")
     }
 
-    /// The opening clause of `Driver::resolution_disclosure`'s message —
+    /// **The roster the map draws from holds all three site kinds, and the
+    /// counts are the campaign's own headline.** The Prospect exists because
+    /// a world's caves and exotic sites were invisible; before Task 8 this
+    /// client's rosters were 389 settlement vertices and 874 cave vertices
+    /// in two separate structures, with NO representation of an exotic site
+    /// at all — so the 103 asserted here are the sites the map could not
+    /// draw at any rung, in any window, however much a reader explored.
+    ///
+    /// **The three numbers are goldens, deliberately.** They move on a
+    /// terrain epoch, on a change to `GeneratedTerrain::cave_at`, on a
+    /// change to `hornvale_locale`'s strangeness budget, and on a change to
+    /// settlement siting — every one of which is a change somebody should
+    /// have to look at. 874 and 103 are the same figures the campaign spec
+    /// and `book/src/gallery/strange-sites-seed-42.md` carry; a red here
+    /// against a green artifact means the client and the listing have come
+    /// apart, which is the whole class of defect this task was fixing.
+    #[test]
+    fn the_site_roster_carries_every_kind_and_only_placed_kinds_carry_a_facet() {
+        use hornvale_vessel::site::SiteKind;
+        let d = test_driver();
+        let count = |kind: SiteKind| d.sites.iter().filter(|site| site.kind == kind).count();
+
+        assert_eq!(count(SiteKind::Cave), 874, "seed 42's cave roster moved");
+        assert_eq!(
+            count(SiteKind::Exotic),
+            103,
+            "seed 42's exotic-site roster moved — this is the tier the map \
+             could not draw at all before The Prospect's Task 8"
+        );
+        assert_eq!(
+            count(SiteKind::Settlement),
+            389,
+            "seed 42's settlement-vertex roster moved"
+        );
+        assert_eq!(
+            d.sites.len(),
+            874 + 103 + 389,
+            "the roster holds nothing else"
+        );
+
+        for site in &d.sites {
+            match site.kind {
+                // A cave or an exotic site is ADDRESSED by
+                // `hornvale_worldgen::site_facet_for`, so the roster must
+                // carry that address or the map is back to drawing the
+                // vertex.
+                SiteKind::Cave | SiteKind::Exotic => assert!(
+                    site.placed.is_some(),
+                    "a placed {:?} reached the roster with no facet",
+                    site.kind
+                ),
+                // A settlement's address is its own committed coordinate and
+                // `site_facet_for` is expressly not its authority.
+                SiteKind::Settlement => assert!(
+                    site.placed.is_none(),
+                    "a settlement was given a placement address it does not have"
+                ),
+            }
+        }
+    }
+
+    /// **The whole feature, end to end: standing in a placed site's own room
+    /// discovers it, and the map then draws it — where it stands.**
+    ///
+    /// This is the test that keeps Task 8 from being vacuous. Every other
+    /// assertion about the exotic glyph is about a hand-built roster or a
+    /// hand-built `Discovered`; this one takes the real seed-42 driver, its
+    /// real roster, the real recording path
+    /// ([`Driver::discover_placed_sites_at`]) and the real
+    /// [`Driver::world_plate`], and injects nothing but the possession's
+    /// position. It has to inject that: a placed site occupies about one
+    /// facet in 9,830, so no sequence of `go` commands in a test reaches one.
+    ///
+    /// The BEFORE assertion is the load-bearing half — it proves the glyph
+    /// was genuinely absent, so the AFTER assertion is a change and not a
+    /// restatement of the plate's resting state.
+    #[test]
+    fn standing_in_a_placed_sites_room_discovers_it_and_the_map_draws_it() {
+        use hornvale_vessel::site::SiteKind;
+        for (kind, glyph) in [
+            (SiteKind::Cave, plate::CAVE_GLYPH),
+            (SiteKind::Exotic, plate::EXOTIC_GLYPH),
+        ] {
+            let mut d = test_driver();
+            enter_world_view(&mut d);
+            let (w, h) = (104u16, 56u16);
+            let (plate_w, plate_h) = Driver::world_plate_dims(w, h);
+            let site = centre_on_a_placed_site(&mut d, kind, plate_w, plate_h);
+            let here = site
+                .placed
+                .clone()
+                .expect("a placed kind carries its facet");
+
+            let before = d.world_plate(w, h);
+            assert!(
+                !before.to_plain_text().contains(glyph),
+                "guard: {kind:?}'s glyph {glyph:?} is already on the plate before \
+                 anything is discovered, so the assertion below would be vacuous"
+            );
+
+            d.discover_placed_sites_at(&here);
+            assert!(
+                d.discovered().contains(site.feature_id()),
+                "standing in a {kind:?}'s own room did not discover it"
+            );
+            assert!(
+                d.world_plate(w, h).to_plain_text().contains(glyph),
+                "a discovered {kind:?} is still not drawn — the roster that \
+                 records a site and the roster that draws it have come apart"
+            );
+        }
+    }
+
+    /// **The wiring, pinned separately from the rule.**
+    /// [`Driver::discover_placed_sites_at`] holds the recording and
+    /// `plate::sites_standing_in` holds the matching, and both are tested on
+    /// their own — but the one line in [`Driver::update_discovery`] that
+    /// derives `here` from the possession's position and calls them is not
+    /// covered by either. Delete that line and every other Task 8 test stays
+    /// green while no site is ever discovered by walking, which is the whole
+    /// feature.
+    ///
+    /// So this test comes at it from the other end: it puts a site's placed
+    /// address AT the possession's own starting room and drives the real
+    /// `update_discovery`. A test cannot walk the possession to a placed
+    /// site (about one facet in 9,830), so it moves the site to the
+    /// possession instead — the same injection, from the opposite side.
+    #[test]
+    fn update_discovery_records_a_placed_site_the_possession_stands_in() {
+        use hornvale_vessel::site::SiteKind;
+        let mut d = test_driver();
+        let walk = hornvale_vessel::walk_depth(d.session.context());
+        let here = hornvale_vessel::truncate_to_walk(&d.session.position(), walk);
+
+        // A vertex the real exotic roster does not use, so the identity
+        // asserted below can only have come from the entry injected here.
+        let vertex = Vertex(0);
+        let injected = plate::MapSite {
+            kind: SiteKind::Exotic,
+            vertex,
+            placed: Some(here),
+            population: 0,
+        };
+        assert!(
+            !d.sites
+                .iter()
+                .any(|site| site.feature_id() == injected.feature_id()),
+            "guard: seed 42's own roster must not already hold this identity"
+        );
+        assert!(
+            !d.discovered().contains(injected.feature_id()),
+            "guard: it must not already be discovered"
+        );
+
+        d.sites.push(injected.clone());
+        d.update_discovery();
+        assert!(
+            d.discovered().contains(injected.feature_id()),
+            "the possession is standing in this site's own room and \
+             update_discovery did not record it"
+        );
+    }
+
+    /// The opening clause of `Driver::resolution_disclosure`'s message —    /// The opening clause of `Driver::resolution_disclosure`'s message —
     /// the substring the two tests below match on. Named once so neither
     /// repeats the shipped wording's own vertex-sense noun, which
     /// `cli/tests/suite/lexicon_guard.rs` ratchets against.
@@ -2870,23 +3099,46 @@ mod portolan_tests {
     }
 
     /// Move `d`'s window onto a real cave mouth out of `d`'s OWN roster —
-    /// the roster `plate::draw_feature_layer` projects from — and return it.
+    /// the roster `plate::draw_feature_layer` projects from — and return its
+    /// warranting vertex, which is the key its
+    /// [`crate::discovery::FeatureId`] carries.
     ///
-    /// The first cave the projection actually PLACES: a vertex above the
+    /// The first cave the projection actually PLACES: a position above the
     /// polar clamp is on no chart at all, and skipping those is the clamp's
     /// own rule, not a search for a convenient answer.
+    ///
+    /// **Centred on the site's DRAWN coordinate, never its vertex's** (The
+    /// Prospect, Task 8). A cave stands on a facet up to ~40 walk-facet
+    /// edges from the vertex that warrants it, so a window centred on the
+    /// vertex is not reliably a window the glyph lands in — and the two
+    /// tests below both depend on the mark actually being on screen.
+    /// `plate::MapSite::coord` is the one route from a site to a position;
+    /// this asks it rather than reconstructing one.
     fn centre_on_a_cave(d: &mut Driver, plate_w: u16, plate_h: u16) -> Vertex {
+        centre_on_a_placed_site(d, hornvale_vessel::site::SiteKind::Cave, plate_w, plate_h).vertex
+    }
+
+    /// [`centre_on_a_cave`] over any placed [`hornvale_vessel::site::
+    /// SiteKind`], returning the whole roster entry so a caller can reach
+    /// the placed facet as well as the identity.
+    fn centre_on_a_placed_site(
+        d: &mut Driver,
+        kind: hornvale_vessel::site::SiteKind,
+        plate_w: u16,
+        plate_h: u16,
+    ) -> plate::MapSite {
         let site = d
-            .caves
+            .sites
             .iter()
-            .copied()
-            .find(|&v| {
-                let c = d.geo.coord(v);
+            .filter(|site| site.kind == kind)
+            .find(|candidate| {
+                let c = candidate.coord(&d.geo);
                 let (vw, vh) = plate::virtual_dims(d.window.depth);
                 mercator::project(&d.frame, c.latitude, c.longitude, vw, vh).is_some()
             })
-            .expect("seed 42 has at least one cave mouth inside the projection's clamp");
-        let c = d.geo.coord(site);
+            .cloned()
+            .expect("seed 42 has at least one such site inside the projection's clamp");
+        let c = site.coord(&d.geo);
         d.centre_window_on(c.latitude, c.longitude, plate_w, plate_h)
             .expect("the site just passed the clamp above");
         site
@@ -4378,7 +4630,8 @@ mod portolan_tests {
         let coord = start.coord();
         let vertex = d.nearest.nearest(&d.geo, coord.latitude, coord.longitude);
         assert!(
-            d.settlements.contains_key(&vertex),
+            d.sites.iter().any(|site| site.vertex == vertex
+                && site.kind == hornvale_vessel::site::SiteKind::Settlement),
             "sanity: seed 42's flagship starts at a settlement vertex"
         );
         let site = FeatureId::Settlement(vertex);

@@ -11,6 +11,8 @@
 
 #[path = "suite/column_delegation.rs"]
 mod column_delegation;
+#[path = "suite/site_address_agreement.rs"]
+mod site_address_agreement;
 #[path = "suite/surface_mixture.rs"]
 mod surface_mixture;
 #[path = "suite/water_reading.rs"]

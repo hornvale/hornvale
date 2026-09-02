@@ -36,7 +36,7 @@ use hornvale_terrain::GeneratedTerrain;
 use hornvale_terrain::branch::{CatchmentCut, rill_reading};
 pub use hornvale_terrain::channel::Transverse;
 pub use hornvale_terrain::{CaveKind, WaterKind};
-use hornvale_worldgen::{climate_from, terrain_of};
+use hornvale_worldgen::{SiteReason, climate_from, site_facet_for, terrain_of};
 use serde::Serialize;
 
 /// The versioned semantic schema this window emits (save-format class; a
@@ -59,16 +59,32 @@ const CHANNEL_RESOLUTION_FIELDS: [&str; 1] = ["channel_bands"];
 /// type-audit: bare-ok(index: vertex), pending(wave-3: latitude), pending(wave-3: longitude), bare-ok(prose: biome), bare-ok(prose: descriptor)
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct StrangeSiteRow {
-    /// Canonical-grid vertex index.
+    /// Canonical-grid vertex index — the site's IDENTITY, and what
+    /// [`StrangeSiteRow::biome`] is read at. It is not where the site
+    /// stands: see [`StrangeSiteRow::latitude`].
     ///
     /// **Wire name frozen at `cell`** (decision 0246): it is a key of
     /// `locale/room/v2`, present in every committed locale JSON and in
     /// `tests/fixtures/pre-stage-2-rooms.jsonl`.
     #[serde(rename = "cell")]
     pub vertex: u32,
-    /// Site latitude, degrees (quantized).
+    /// Site latitude, degrees (quantized) — of the PLACED FACET's own
+    /// centroid, never of [`StrangeSiteRow::vertex`].
+    ///
+    /// **It reported the vertex's coordinate until The Prospect's Task 8,
+    /// and that was a disagreement between two readouts of one site.** A
+    /// site is warranted at a geosphere vertex and *stands* on the facet
+    /// `hornvale_worldgen::site_facet_for` addresses — the one facet
+    /// `hornvale_vessel`'s `brief_of` will let a walker enter, up to a
+    /// placement quad away. Measured over seed 42's 103 sites, the vertex
+    /// and the placed facet sit a mean 0.003086 rad apart and a maximum
+    /// 0.006671 rad — 18.9 and 40.8 walk-facet edges respectively — so this
+    /// column pointed a reader at open ground roughly twenty walk-band rooms
+    /// from the only room the site is in. For a listing whose whole job is
+    /// findability that is the failure it exists to remove.
     pub latitude: f64,
-    /// Site longitude, degrees (quantized).
+    /// Site longitude, degrees (quantized) — of the placed facet's own
+    /// centroid. See [`StrangeSiteRow::latitude`].
     pub longitude: f64,
     /// The base biome the site interrupts.
     pub biome: String,
@@ -705,12 +721,30 @@ impl LocaleContext {
     /// The descriptor is not decoration. Sites are differentiated by their
     /// negation vector (energy × kingdom × endemic), so a listing of bare
     /// coordinates would render a world's worth of wonders as identical rows.
+    ///
+    /// **The coordinates are the PLACED FACET's, not the vertex's** (The
+    /// Prospect, Task 8) — see [`StrangeSiteRow::latitude`] for the measured
+    /// gap this closed. [`hornvale_worldgen::site_facet_for`] is the one
+    /// authority on where a placed site stands, and this reads it rather
+    /// than deriving a second answer: the same call
+    /// `hornvale_vessel::brief`'s own enterability gate makes, with the same
+    /// `(seed, vertex, reason)`, so the listing and the walker cannot
+    /// disagree about which facet holds the site.
+    ///
+    /// The BIOME stays a per-vertex read, and deliberately: it is the base
+    /// biome the site *interrupts*, a canonical-grid field with no finer
+    /// resolution to offer, and reading it at the placed facet would be the
+    /// resolution lie `crate::LocaleContext::describe`'s own grid-resolution
+    /// list exists to keep visible.
     pub fn strange_site_rows(&self) -> Vec<StrangeSiteRow> {
+        let geo = self.climate.geosphere();
+        let walk = walk_depth(self);
         self.strange_sites()
             .into_iter()
             .map(|s| {
                 let vertex = Vertex(s.vertex);
-                let coord = self.climate.geosphere().coord(vertex);
+                let coord =
+                    site_facet_for(vertex, SiteReason::Exotic, self.seed, geo, walk).coord();
                 StrangeSiteRow {
                     vertex: s.vertex,
                     latitude: quantize(coord.latitude),
