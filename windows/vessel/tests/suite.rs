@@ -17,6 +17,8 @@
 
 mod common;
 
+#[path = "suite/act.rs"]
+mod act;
 #[path = "suite/action_module.rs"]
 mod action_module;
 #[path = "suite/action_mood.rs"]

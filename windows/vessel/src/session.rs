@@ -1558,6 +1558,60 @@ impl<'w> Session<'w> {
                             VesselError::Build(format!("staging a {}: {e:?}", thing.kind))
                         })?;
                 }
+                // Relations, between the cast members the tableau named.
+                // Out-of-range indices are a corpus error, the same as an
+                // out-of-range `held_by` above. An unregistered predicate is
+                // refused too, but not by a check written here: committing
+                // the fact through the session's own `registry` already
+                // resolves the predicate against the concept registry
+                // (`Ledger::check`'s `UnknownPredicate`), so a tableau may
+                // only state a relation the world's own registries could
+                // represent — the same principle `StagedBody`'s species-only
+                // shape states for a cast member.
+                for relation in &tableau.relations {
+                    let subject = staged
+                        .get(relation.subject)
+                        .ok_or_else(|| {
+                            VesselError::Build(format!(
+                                "tableau stages a {} relation from cast member {}, but \
+                             the cast has {} member(s)",
+                                relation.predicate,
+                                relation.subject,
+                                staged.len()
+                            ))
+                        })?
+                        .entity;
+                    let object = staged
+                        .get(relation.object)
+                        .ok_or_else(|| {
+                            VesselError::Build(format!(
+                                "tableau stages a {} relation to cast member {}, but \
+                             the cast has {} member(s)",
+                                relation.predicate,
+                                relation.object,
+                                staged.len()
+                            ))
+                        })?
+                        .entity;
+                    ledger
+                        .commit(
+                            Fact {
+                                subject,
+                                predicate: relation.predicate.clone(),
+                                object: Value::Entity(object),
+                                place: None,
+                                day: Some(opts.day),
+                                provenance: "staged by tableau".to_string(),
+                            },
+                            &registry,
+                        )
+                        .map_err(|e| {
+                            VesselError::Build(format!(
+                                "staging a {} relation: {e:?}",
+                                relation.predicate
+                            ))
+                        })?;
+                }
                 staged
             }
             // The Roll, Task 7: the home settlement's RESIDENTS — as many

@@ -204,6 +204,34 @@ fn load(corpus: &str) -> Vec<Scene> {
         .collect()
 }
 
+/// A scratch directory name unique to ONE [`run_at`] call.
+///
+/// **This was keyed `(pid, seed)`, and that was a race.** Two tests running
+/// concurrently inside one process — `every_founding_scene_passes_every_beat`
+/// and `no_scene_has_fallen_below_its_recorded_floor`, which both iterate
+/// `the-founding.scene.json` — share a pid, so at a shared seed they wrote the
+/// same `script.txt` and read back the same `snapshot.json`, each receiving the
+/// other's run. The scene then failed a beat it passes in isolation and scored
+/// [`Verdict::Absent`], which the floor test reports as a regression that never
+/// happened.
+///
+/// It was invisible to every gate for a structural reason worth keeping: this
+/// project gates with **nextest, which is process-per-test**, so every test
+/// holds its own pid and these paths cannot collide there. Only libtest's
+/// default — threads inside a single process — reproduces it. Measured at
+/// commit `4400e3081`, one tree, the concurrency the only variable: serial
+/// gives 11 passed in 138.3 s, parallel gives 9 passed and 2 failed in 12.9 s.
+/// The failure is therefore not a world regression and never was, which is how
+/// it survived: it looked exactly like one.
+///
+/// The counter makes the name unique per CALL rather than per test or per
+/// scene, so no caller needs to know which other caller might share its seed.
+fn scratch_name(seed: u64) -> String {
+    static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let n = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    format!("hv-repertory-{}-{}-{}", std::process::id(), seed, n)
+}
+
 /// Drive one possession at `witness`, feeding `script` to `--script`, and
 /// return the `vessel/session/v2` snapshot it writes.
 ///
@@ -211,11 +239,7 @@ fn load(corpus: &str) -> Vec<Scene> {
 /// declaration in the corpus file. Measured cost is ~5.4 s per call against a
 /// warm binary.
 fn run_at(witness: &Witness, script: &[String]) -> Value {
-    let dir = std::env::temp_dir().join(format!(
-        "hv-repertory-{}-{}",
-        std::process::id(),
-        witness.seed
-    ));
+    let dir = std::env::temp_dir().join(scratch_name(witness.seed));
     std::fs::create_dir_all(&dir).expect("scratch dir");
     let script_path = dir.join("script.txt");
     let snap_path = dir.join("snapshot.json");
@@ -349,6 +373,26 @@ fn verdict_of(scene: &Scene) -> Verdict {
         (Err(beat), false) => Verdict::Absent(beat),
         (Err(_), true) => Verdict::Declared,
     }
+}
+
+/// Two `run_at` calls at the SAME seed must not share a scratch directory.
+///
+/// This is the regression pin for the race [`scratch_name`] documents: the old
+/// `(pid, seed)` name made this assertion false for any two concurrent callers
+/// at one seed, and two committed tests really do iterate the same corpus at the
+/// same seeds. Asserting on the NAME rather than on an observed interleaving is
+/// deliberate — a test that races to prove a race is itself flaky, while this one
+/// fails deterministically against the old scheme and cannot pass by luck.
+#[test]
+fn a_scratch_name_is_unique_per_call_even_at_one_seed() {
+    let names: std::collections::BTreeSet<String> = (0..64).map(|_| scratch_name(42)).collect();
+    assert_eq!(
+        names.len(),
+        64,
+        "scratch names collided at one seed; run_at callers would clobber \
+         each other's script.txt and snapshot.json, and a scene would score \
+         Absent for a beat it actually passes"
+    );
 }
 
 /// Every scene the repertory commits, across all corpora. The floor test
