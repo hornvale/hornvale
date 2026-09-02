@@ -134,14 +134,36 @@ including everything the 80.8% climate+settlements stage commits) but **not** th
 terrain sculpt or the climate fit.
 
 Consequence: the payoff is a spread, not a single number, and this spec will not
-pretend otherwise:
+pretend otherwise. **The figures below are now MEASURED, and they replace an
+estimate that was invalidly derived** — see the correction after the table.
 
 ```
-  a test that reads only facts          3,000 ms -> ~15 ms          ~200x
-  a test that then needs terrain        3,000 ms -> ~1,110 ms        ~2.7x
+  a test that reads only facts       3,000 ms -> ~15 ms                 ~200x
+  a module that also needs artifacts, measured (user CPU, Task 4):
+    windows/scene surrounds          132.95 -> 32.97 CPU-s              ~4.0x
+    windows/worldgen exposure         77.12 -> 18.34 CPU-s              ~4.2x
+  a module dominated by fact reads, measured (user CPU, Task 3):
+    windows/vessel session::tests    549.53 -> 324.81 CPU-s     41% (~1.7x)
 ```
 
-Both are worth having. Neither is 200x across the board.
+Both ends are worth having. Neither end is ~200x across a real module.
+
+**The correction, stated loudly because it is the error this spec's own appendix
+warned about.** The estimate here originally read
+`3,000 ms -> ~1,110 ms = ~2.7x`. That ratio is invalid: its numerator came from
+the **quiet** profile run of §1 and its denominator from the **contended**
+single-build run of §1.2, whose absolutes §10 already records as inflated ~3x.
+Dividing one by the other compares different ground — the exact fault
+`docs/timings.md`'s own header exists to prevent, and `windows/scene`'s
+`scene_cost.rs` module doc names as its discriminator.
+
+Derived properly from one run, the quiet profile's per-world stage totals give
+Full 2.996 s and the terrain stage 0.337 s, so a terrain-needing test estimates
+at 2.996 → ~0.352 s, or **~8.5x**. The measured 4.0x/4.2x sits between the two
+bad estimates, because these tests need the climate fit and a locale context as
+well as the sculpt. The lesson is not that one estimate was closer: it is that
+**both were guesses about a cost the campaign could simply measure**, and the
+measurement was two commits away the whole time.
 
 ---
 

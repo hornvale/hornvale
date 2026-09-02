@@ -370,6 +370,51 @@ commit message is not where a durable consequence belongs.
 
 ---
 
+#10 [G5] — **The spec's own payoff estimate was invalidly derived. Replaced with
+measurement.**
+
+*What happened.* §2.2 estimated an artifact-needing test at
+`3,000 ms -> ~1,110 ms = ~2.7x`. Task 4 measured 4.0x and 4.2x on the two
+modules that fit that description, which prompted a re-derivation rather than a
+celebration — a prediction beaten deserves the same scrutiny as one missed.
+
+*The defect.* The ratio mixed two runs. Its numerator (3,000 ms) came from the
+QUIET profile run of §1; its denominator (1,094 ms) came from the CONTENDED
+single-build run of §1.2, taken at load 24-32. §10 of this very spec already
+recorded those absolutes as inflated roughly 3x and instructed the reader to
+trust only the ratios — and then §2.2 built a ratio across the two anyway. That
+is the fault `docs/timings.md`'s header exists to prevent ("read host/cores/
+cpu_ratio, not the raw seconds, across different machines") and that
+`scene_cost.rs`'s module doc names as its own discriminator.
+
+*Derived properly from one run:* the quiet profile's per-world stage totals are
+Full 2.996 s and terrain 0.337 s, giving 2.996 -> ~0.352 s, or **~8.5x**.
+
+*So both estimates were wrong in opposite directions*, and the measured 4.0x/4.2x
+sits between them because these tests need the climate fit and a locale context
+as well as the sculpt.
+
+*Decision.* Replace the estimate with the measured table (Task 3's 41% on a
+fact-read-dominated module, Task 4's 4.0x/4.2x on artifact-needing ones), keep
+the ~200x figure only where it is what was actually measured — a bare fixture
+read against a bare build — and record the derivation error in the spec rather
+than quietly restating the number.
+
+*The lesson, which is not "one estimate was closer".* Both were guesses about a
+cost this campaign could measure, and the measurement was two commits away the
+whole time. The estimate existed only because it was written before the loader
+did.
+
+*Cost if wrong.* None; the measured figures are reproducible from the timings
+rows the tasks recorded.
+
+*ideonomy passes / overturns.* n/a — an arithmetic correction.
+
+*Capture.* Spec §2.2 (rewritten, with the correction stated); this entry. The
+chronicle must carry the measured numbers, never the estimate.
+
+---
+
 ## Parked findings
 
 ### P1 — `scene_surrounds_colour_cli.rs` uses a fixed temp path and flakes
