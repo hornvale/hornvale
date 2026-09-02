@@ -6,25 +6,32 @@
 pub mod args;
 pub mod detect;
 pub mod extract;
+pub mod fingerprint;
+pub mod tag;
+pub mod verdict;
 pub mod walk;
 
 use args::{Command, parse_args};
 
 /// Run the tool with `argv` (without the program name); returns the process
-/// exit code (0 = no twins found, 1 = twin group(s) found, 2 = usage or scan
-/// error).
+/// exit code (0 = no findings, 1 = untagged/stale/malformed twin(s) found,
+/// 2 = usage or scan error).
 pub fn run(args: &[String]) -> i32 {
     match parse_args(args) {
         Ok(Command::Check { paths }) => match walk::scan(&paths) {
             Ok(crates) => {
                 let twins = detect::twins(&crates);
-                for line in render_twin_lines(&twins) {
-                    println!("{line}");
+                let findings = verdict::judge(&twins);
+                for f in &findings {
+                    println!(
+                        "{}:{}: {} ({})",
+                        f.crate_name, f.line, f.message, f.type_name
+                    );
                 }
-                if twins.is_empty() {
+                if findings.is_empty() {
                     0
                 } else {
-                    eprintln!("{} shape-twin group(s) found", twins.len());
+                    eprintln!("{} untagged/stale/malformed twin(s) found", findings.len());
                     1
                 }
             }
@@ -48,21 +55,6 @@ pub fn run(args: &[String]) -> i32 {
             2
         }
     }
-}
-
-/// One diagnostic line per member of every twin group, in the groups'
-/// already-deterministic order.
-fn render_twin_lines(twins: &[detect::TwinGroup]) -> Vec<String> {
-    let mut lines = Vec::new();
-    for group in twins {
-        let names: Vec<String> = group
-            .members
-            .iter()
-            .map(|t| format!("{}::{}", t.crate_name, t.name))
-            .collect();
-        lines.push(format!("twin: {}", names.join(" == ")));
-    }
-    lines
 }
 
 /// Render a minimal Markdown report of every twin group found. Verdict tags
