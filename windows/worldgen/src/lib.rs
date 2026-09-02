@@ -12065,7 +12065,15 @@ mod tests {
         .unwrap()
     }
 
+    /// A generated-sky world at `seed`. Seed 42 — 43 of this helper's 53
+    /// callers — is read from the committed fixture rather than rebuilt
+    /// (decision 0607); it is byte-identical to the build, pinned by
+    /// `windows/worldgen/tests/suite/fixture.rs`. Every other seed still
+    /// builds, because no fixture exists for it.
     fn generated(seed: u64) -> World {
+        if seed == 42 {
+            return crate::seed_42_world();
+        }
         build_world(
             Seed(seed),
             &SkyPins::default(),

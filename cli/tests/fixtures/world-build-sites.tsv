@@ -107,10 +107,9 @@ windows/vessel/tests/suite/player_acts_commit.rs	1	unmigrated:1
 windows/vessel/tests/suite/possess_target.rs	1	unmigrated:1
 windows/vessel/tests/suite/possession_moves.rs	1	unmigrated:1
 windows/vessel/tests/suite/session.rs	2	identity:2
-windows/vessel/tests/suite/session_snapshot.rs	2	unmigrated:2
+windows/vessel/tests/suite/session_snapshot.rs	1	identity:1
 windows/vessel/tests/suite/strongbox_reachability.rs	1	unmigrated:1
 windows/vessel/tests/suite/submerged_before_arm.rs	1	unmigrated:1
-windows/vessel/tests/suite/the_blocking.rs	1	unmigrated:1
 windows/vessel/tests/suite/the_first_mark.rs	1	unmigrated:1
 windows/vessel/tests/suite/the_handle.rs	1	unmigrated:1
 windows/vessel/tests/suite/the_lintel.rs	1	unmigrated:1
