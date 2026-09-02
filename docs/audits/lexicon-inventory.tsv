@@ -112,13 +112,13 @@ windows/vessel/src/light.rs	150
 windows/vessel/src/liveness.rs	12
 windows/vessel/src/plan.rs	150
 windows/vessel/src/purview.rs	39
-windows/vessel/src/session.rs	614
+windows/vessel/src/session.rs	625
 windows/vessel/src/snapshot.rs	3
 windows/vessel/src/streams.rs	6
 windows/vessel/src/underground.rs	149
 windows/vessel/src/underworld_level/carve.rs	143
 windows/vessel/src/underworld_level/dense.rs	58
-windows/vessel/src/underworld_level/mod.rs	289
+windows/vessel/src/underworld_level/mod.rs	284
 windows/vessel/src/underworld_level/region.rs	1
 windows/vessel/tests/common/mod.rs	2
 windows/vessel/tests/suite/corner_rule.rs	79
@@ -137,7 +137,7 @@ windows/vessel/tests/suite/the_blocking.rs	13
 windows/vessel/tests/suite/underworld_level_generation.rs	119
 windows/vessel/tests/suite/world_context.rs	2
 windows/worldgen/src/chamber.rs	2
-windows/worldgen/src/circuit.rs	122
+windows/worldgen/src/circuit.rs	124
 windows/worldgen/src/delve_seating.rs	1
 windows/worldgen/src/disposition.rs	3
 windows/worldgen/src/graph_derive.rs	3

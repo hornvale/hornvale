@@ -216,7 +216,7 @@ pub struct Realm {
 }
 
 /// The plan for one descent: a series-parallel graph over grid regions.
-/// type-audit: bare-ok(count: dof)
+/// type-audit: bare-ok(count: dof), bare-ok(count: extensions), bare-ok(count: fallback_realms), bare-ok(count: failed_draws)
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DescentPlan {
     /// The rungs, shallowest first; `level ℓ` is `rungs[ℓ]`.
@@ -233,6 +233,20 @@ pub struct DescentPlan {
     pub realms: Vec<Realm>,
     /// Draws made while growing, counted at each draw.
     pub dof: u32,
+    /// How many `extend` (series) moves succeeded. Each cost exactly two
+    /// draws (the op selector and the edge index), so [`DescentPlan::dof`]
+    /// can be recounted exactly rather than merely bounded (spec §4.5).
+    pub extensions: u32,
+    /// How many realms were closed by `plan_descent`'s deterministic,
+    /// DRAW-FREE fallback pass rather than by a drawn `cycle` move. They
+    /// carry no `4 ·` term in the §4.5 recount precisely because they spend
+    /// nothing.
+    pub fallback_realms: u32,
+    /// Draws spent by attempts that added neither a realm nor an
+    /// extension — the one term §4.5's floor could not predict, counted at
+    /// the failure site rather than reconstructed from the derivation tree
+    /// (a failed attempt leaves nothing in the tree to walk).
+    pub failed_draws: u32,
 }
 
 impl DescentPlan {
@@ -518,8 +532,26 @@ impl Builder {
         None
     }
 
-    /// A stairway's shared coordinate, drawn inside the overlap of the two
-    /// regions (asserted non-empty by `every_grid_cell_overlaps_its_twin_one_rung_down`).
+    /// A stairway's shared coordinate: **ONE draw** into the overlap of the
+    /// two regions (asserted non-empty by
+    /// `every_grid_cell_overlaps_its_twin_one_rung_down`) MINUS every
+    /// coordinate a stairway already touching either endpoint holds.
+    ///
+    /// **One draw, not two, since the final review (spec §3.3/§4.5
+    /// amendment).** Drawing `x` and `y` independently cannot express the
+    /// exclusion, and without it two stairways could coincide: a node on a
+    /// middle rung is the upper end of one stairway and the lower end of
+    /// another, the two coordinates were drawn independently from
+    /// overlapping intersections, and on ~9% of five-rung descents they
+    /// landed on the same cell — whereupon the realizer wrote a `StairsUp`
+    /// over the `StairsDown` it had just written and left an orphan
+    /// `StairsUp` on the floor below. `dof` therefore counts one draw per
+    /// stairway, not two.
+    ///
+    /// The candidate list is never empty: the smallest intersection any
+    /// adjacent rung pair admits is several cells across, and a node carries
+    /// at most one stairway up and one down, so at most two coordinates are
+    /// ever excluded.
     fn stair_coordinate(
         &self,
         upper: NodeId,
@@ -532,9 +564,29 @@ impl Builder {
             .region_of(upper)
             .intersect(&self.plan.region_of(lower))
             .expect("adjacent rungs' twin regions overlap (Task 1 test)");
-        let x = overlap.x + draw_index(stair, overlap.w as usize, dof) as i32;
-        let y = overlap.y + draw_index(stair, overlap.h as usize, dof) as i32;
-        (x, y)
+        let taken: BTreeSet<(i32, i32)> = self
+            .plan
+            .edges
+            .iter()
+            .filter_map(|e| match e.kind {
+                EdgeKind::Stair { x, y }
+                    if e.a == upper || e.b == upper || e.a == lower || e.b == lower =>
+                {
+                    Some((x, y))
+                }
+                _ => None,
+            })
+            .collect();
+        let candidates: Vec<(i32, i32)> = (overlap.x..overlap.x + overlap.w)
+            .flat_map(|x| (overlap.y..overlap.y + overlap.h).map(move |y| (x, y)))
+            .filter(|c| !taken.contains(c))
+            .collect();
+        assert!(
+            !candidates.is_empty(),
+            "a stairway always has a free coordinate: nodes {upper}/{lower} overlap in {overlap:?} and hold only {taken:?}"
+        );
+        let i = draw_index(stair, candidates.len(), dof);
+        candidates[i]
     }
 
     fn add_stair(&mut self, upper: NodeId, lower: NodeId, stair: &mut Stream, dof: &mut u32) {
@@ -642,6 +694,9 @@ pub fn plan_descent(
             terminus: 0,
             realms: Vec::new(),
             dof: 0,
+            extensions: 0,
+            fallback_realms: 0,
+            failed_draws: 0,
         },
         used: vec![BTreeSet::new(); rungs.len()],
         index: BTreeMap::new(),
@@ -683,13 +738,25 @@ pub fn plan_descent(
             if passages.is_empty() {
                 break;
             }
+            // §4.5's exact recount: an attempt that lands spends a fixed
+            // number of draws (four for a cycle, two for an extension), so
+            // only the FAILURES need counting, and they are counted here,
+            // at the site, from `dof` itself — never inferred later.
+            let before = dof;
             let op = draw_index(&mut cycle, 10, &mut dof);
-            if op < 7 {
+            let landed = if op < 7 {
                 let (u, v) = passages[draw_index(&mut cycle, passages.len(), &mut dof)];
-                try_cycle(&mut b, level, u, v, &mut cycle, &mut stair, &mut dof);
+                try_cycle(&mut b, level, u, v, &mut cycle, &mut stair, &mut dof)
             } else {
                 let (u, v) = passages[draw_index(&mut extend, passages.len(), &mut dof)];
-                try_extend(&mut b, level, u, v);
+                let ok = try_extend(&mut b, level, u, v);
+                if ok {
+                    b.plan.extensions += 1;
+                }
+                ok
+            };
+            if !landed {
+                b.plan.failed_draws += dof - before;
             }
         }
         // Deterministic fallback (Task 2 review, Critical): the random
@@ -705,6 +772,7 @@ pub fn plan_descent(
             for (u, v) in passages {
                 let path_a = b.segment(u, v, 0);
                 if try_same_floor_cycle(&mut b, level, u, v, path_a) {
+                    b.plan.fallback_realms += 1;
                     break;
                 }
             }
@@ -722,6 +790,9 @@ pub fn plan_descent(
     b.plan
 }
 
+/// One drawn `cycle` attempt. Returns whether a realm was added — the
+/// caller charges a failure's draws to [`DescentPlan::failed_draws`]
+/// (spec §4.5).
 fn try_cycle(
     b: &mut Builder,
     level: u8,
@@ -730,7 +801,7 @@ fn try_cycle(
     cycle: &mut Stream,
     stair: &mut Stream,
     dof: &mut u32,
-) {
+) -> bool {
     let hops = draw_index(cycle, 3, dof);
     let path_a = b.segment(u, v, hops);
     let end = *path_a.last().unwrap();
@@ -739,7 +810,7 @@ fn try_cycle(
     // start); that would give `cu == ce` and a duplicated edge, so refuse
     // it outright rather than let either branch below act on it.
     if end == u {
-        return;
+        return false;
     }
     let (cu, ce) = (b.plan.nodes[u].cell, b.plan.nodes[end].cell);
     let cross = draw_index(cycle, 100, dof) < 35
@@ -780,12 +851,12 @@ fn try_cycle(
                 path_b,
                 class,
             });
-            return;
+            return true;
         }
         // The invariant refuses: fall through to the same-floor branch
         // below rather than spending level `ℓ + 1`'s last feasible cycle.
     }
-    try_same_floor_cycle(b, level, u, end, path_a);
+    try_same_floor_cycle(b, level, u, end, path_a)
 }
 
 /// The same-floor half of a cycle attachment: given the pre-existing
@@ -818,16 +889,19 @@ fn try_same_floor_cycle(
     true
 }
 
-fn try_extend(b: &mut Builder, level: u8, u: NodeId, v: NodeId) {
+/// One drawn `extend` attempt. Returns whether the series move landed —
+/// the caller counts a success in [`DescentPlan::extensions`] and charges a
+/// failure's draws to [`DescentPlan::failed_draws`] (spec §4.5).
+fn try_extend(b: &mut Builder, level: u8, u: NodeId, v: NodeId) -> bool {
     let (cu, cv) = (b.plan.nodes[u].cell, b.plan.nodes[v].cell);
     let Some(interior) = b.free_path(level, cu, cv, 1) else {
-        return;
+        return false;
     };
     // Capability invariant (Task 2 review, second pass): if this level
     // still has no realm of its own, refuse to spend the detour's cells if
     // doing so would leave it with no feasible same-floor cycle at all.
     if anchored_realms(&b.plan, level as usize) == 0 && !b.would_still_cycle(level, &interior) {
-        return;
+        return false;
     }
     // Every realm path that ran through u-v now runs through the detour.
     b.remove_passage(u, v);
@@ -853,6 +927,7 @@ fn try_extend(b: &mut Builder, level: u8, u: NodeId, v: NodeId) {
             "extend: both paths of one realm carried the same edge (impossible for node-disjoint interiors)"
         );
     }
+    true
 }
 
 /// `Node.realm` = the LAST realm (creation order) whose paths hold the node:
@@ -1186,6 +1261,54 @@ mod tests {
         }
     }
 
+    /// claim: invariant(kind: [LavaTube, Fracture, Karst], character:
+    /// [WildCave, FungalGardens, DrowTier], vertex: [1, 7, 42, 1000], seed:
+    /// 0..400) — Spec §3.3's execution amendment (final review): a node on a
+    /// middle rung can be the UPPER end of one stairway and the LOWER end of
+    /// another, and two coordinates drawn independently from overlapping
+    /// intersections coincided on ~9% of five-rung descents, whereupon the
+    /// realizer's `stairs_into` loop overwrote the `StairsDown` the
+    /// `stairs_from` loop had written and left an orphan `StairsUp` below.
+    /// So: no two `Stair` edges may share a `(level, x, y)` at EITHER end,
+    /// over the real habitation ladder rather than a two-rung stub.
+    #[test]
+    fn no_two_stairways_share_a_coordinate_at_either_end() {
+        let kinds = [CaveKind::LavaTube, CaveKind::Fracture, CaveKind::Karst];
+        let characters = [
+            Character::WildCave,
+            Character::FungalGardens,
+            Character::DrowTier,
+        ];
+        let vertices = [1u32, 7, 42, 1000];
+        let rungs = habitation_rungs();
+        for &kind in &kinds {
+            for &character in &characters {
+                for &vertex in &vertices {
+                    for s in 0..400u64 {
+                        let p = plan_descent(Seed(s), Vertex(vertex), &rungs, kind, character);
+                        let mut held: BTreeMap<(u8, i32, i32), usize> = BTreeMap::new();
+                        for (i, e) in p.edges.iter().enumerate() {
+                            let EdgeKind::Stair { x, y } = e.kind else {
+                                continue;
+                            };
+                            for end in [e.a, e.b] {
+                                let key = (p.nodes[end].level, x, y);
+                                if let Some(other) = held.insert(key, i) {
+                                    panic!(
+                                        "kind {kind:?} character {character:?} vertex {vertex} \
+                                         seed {s}: stairways {other} and {i} both stand on \
+                                         level {} ({x},{y})",
+                                        p.nodes[end].level
+                                    );
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     /// claim: invariant(seed: 0..100) — every node on a cycle names the
     /// innermost realm containing it; every nested realm's parent contains
     /// both its endpoints.
@@ -1250,15 +1373,86 @@ mod tests {
         assert_ne!(plan(42, 7), plan(43, 7));
     }
 
+    /// The §4.5 recount, as amended at the final review. The G3 draft asked
+    /// for an independent walk of the decomposition tree; that walk cannot
+    /// exist, because a failed `cycle` or `extend` attempt spends its draws
+    /// and leaves nothing in the tree. So the count is taken at the FAILURE
+    /// SITE instead ([`DescentPlan::failed_draws`]) and the identity below
+    /// is exact rather than a bound:
+    ///
+    /// ```text
+    ///   dof = 1                      the entrance row
+    ///       + levels                 one spine stair cell per level
+    ///       + stairs                 ONE coordinate per stairway (§3.3)
+    ///       + 4 · drawn realms       op + edge + hops + cross
+    ///       + 2 · extensions         op + edge
+    ///       + failed_draws           counted where they are spent
+    /// ```
+    ///
+    /// `drawn realms` excludes the deterministic fallback pass's realms,
+    /// which are draw-free by construction. The loose `floor <= dof <=
+    /// ceiling` bracket §4.5 states is asserted too, so the published
+    /// bounds stay honest, and `dof == floor` is asserted outright on a plan
+    /// where nothing failed — which is what makes the floor an exact count
+    /// and not merely a lower bound nothing ever touches.
+    ///
+    /// claim: invariant(kind: [LavaTube, Fracture, Karst], vertex: [1, 7,
+    /// 42, 1000], seed: 0..400)
     #[test]
     fn dof_counts_every_draw() {
-        let p = plan(42, 7);
-        assert!(p.dof > 0);
-        // Recount independently: the spine draws one entrance row and one
-        // stair cell per level, and every realm and extension is at least one
-        // draw, so dof is at least that floor.
-        let floor = 1 + p.rungs.len() as u32 + p.realms.len() as u32;
-        assert!(p.dof >= floor, "dof {} below its floor {floor}", p.dof);
+        let rungs = habitation_rungs();
+        let mut saw_a_flawless_plan = false;
+        let mut saw_a_fallback_realm = false;
+        for kind in [CaveKind::LavaTube, CaveKind::Fracture, CaveKind::Karst] {
+            for vertex in [1u32, 7, 42, 1000] {
+                for s in 0..400u64 {
+                    let p =
+                        plan_descent(Seed(s), Vertex(vertex), &rungs, kind, Character::WildCave);
+                    assert!(
+                        p.dof > 0,
+                        "{kind:?} vertex {vertex} seed {s}: no draw counted"
+                    );
+                    let levels = p.rungs.len() as u32;
+                    let stairs = p
+                        .edges
+                        .iter()
+                        .filter(|e| matches!(e.kind, EdgeKind::Stair { .. }))
+                        .count() as u32;
+                    let drawn_realms = p.realms.len() as u32 - p.fallback_realms;
+                    let floor = 1 + levels + stairs + 4 * drawn_realms + 2 * p.extensions;
+                    let ceiling = floor + 4 * 80 * levels;
+                    assert_eq!(
+                        p.dof,
+                        floor + p.failed_draws,
+                        "{kind:?} vertex {vertex} seed {s}: dof is not floor {floor} plus the {} draws its failed attempts spent",
+                        p.failed_draws
+                    );
+                    assert!(
+                        floor <= p.dof && p.dof <= ceiling,
+                        "{kind:?} vertex {vertex} seed {s}: dof {} outside [{floor}, {ceiling}]",
+                        p.dof
+                    );
+                    if p.failed_draws == 0 {
+                        assert_eq!(
+                            p.dof, floor,
+                            "{kind:?} vertex {vertex} seed {s}: a plan with no failed attempt must spend exactly its floor"
+                        );
+                        saw_a_flawless_plan = true;
+                    }
+                    if p.fallback_realms > 0 {
+                        saw_a_fallback_realm = true;
+                    }
+                }
+            }
+        }
+        assert!(
+            saw_a_flawless_plan,
+            "no swept plan grew without a failed attempt — the `dof == floor` equality above was never actually checked"
+        );
+        assert!(
+            saw_a_fallback_realm,
+            "no swept plan used the draw-free fallback — the `- fallback_realms` term above was never actually exercised"
+        );
     }
 
     #[test]
@@ -1342,6 +1536,9 @@ mod tests {
             terminus: 2,
             realms: vec![],
             dof: 0,
+            extensions: 0,
+            fallback_realms: 0,
+            failed_draws: 0,
         }
     }
 

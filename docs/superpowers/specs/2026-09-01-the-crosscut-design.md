@@ -336,12 +336,32 @@ byte-identical; `DescentPlan.dof` is counted at every draw site, and
 of the decomposition tree". That recount cannot exist — a failed `cycle`
 or `extend` attempt spends its draws and leaves nothing in the tree — so
 the check is a derived FLOOR and CEILING instead: `dof ≥ 1 + levels +
-2·stairs + 4·realms + 2·extensions` (one entrance row, one stair cell per
-level, two coordinates per stairway, op + edge + hops + cross per realm,
+stairs + 4·realms + 2·extensions` (one entrance row, one stair cell per
+level, ONE coordinate per stairway, op + edge + hops + cross per realm,
 op + edge per extension) and `dof ≤ floor + 4 · 80 · levels` (at most 80
-attempts per level of at most four draws). The floor is exact for a plan
-in which no attempt failed, and the test says so. Standard, and the
-campaign does not close without it.
+attempts per level of at most four draws). **One coordinate per stairway,
+not two** — §3.3's amendment replaced the independent `x` and `y` draws
+with a single index into the intersection MINUS the coordinates the
+endpoints' other stairways already hold, because two independent draws
+cannot express that exclusion at all; the term is `stairs`, not
+`2·stairs`, for that reason and no other.
+
+**And the floor is an exact count, not merely a bound.** The plan exposes
+the three quantities the formula could not otherwise know — `extensions`
+(successful series moves), `fallback_realms` (realms closed by the
+deterministic, draw-free pass, which therefore carry no `4 ·` term) and
+`failed_draws` (draws spent by attempts that added nothing, counted AT THE
+FAILURE SITE, which is what makes the G3 draft's impossible tree-walk
+unnecessary) — so the identity
+
+```
+  dof = 1 + levels + stairs + 4·(realms − fallback_realms)
+      + 2·extensions + failed_draws
+```
+
+holds on EVERY plan and is asserted as an equality, with `dof == floor`
+asserted outright on the swept plans where nothing failed. Standard, and
+the campaign does not close without it.
 
 ## 5. Save-format and determinism consequences
 

@@ -32,6 +32,18 @@ fn median(v: &mut [f64]) -> Option<f64> {
     Some(v[v.len() / 2])
 }
 
+/// One median, rendered the one way every line on the page renders one:
+/// four decimal places, and `n/a` when the input was empty. Never `Debug` —
+/// a `Some(0.30612244897959184)` on a published page leaks both the wrapper
+/// and seventeen digits of float nobody can read (final review, Minor 2).
+/// type-audit: bare-ok(prose: return)
+fn show(median: Option<f64>) -> String {
+    match median {
+        Some(v) => format!("{v:.4}"),
+        None => "n/a".to_string(),
+    }
+}
+
 /// Render the panel for one seed: the four preregistered readouts of spec
 /// §4, over every cave-bearing, non-ocean vertex.
 ///
@@ -124,9 +136,9 @@ pub fn render_circuit_panel(seed: Seed, terrain: &GeneratedTerrain) -> String {
     out.push_str("density ordering (median anchored realms per level):\n");
     for k in kinds {
         out.push_str(&format!(
-            "  {k:<9} WildCave {:?}  DrowTier {:?}\n",
-            med(k, "WildCave"),
-            med(k, "DrowTier")
+            "  {k:<9} WildCave {}  DrowTier {}\n",
+            show(med(k, "WildCave")),
+            show(med(k, "DrowTier"))
         ));
     }
     out.push_str(&format!(
@@ -179,8 +191,8 @@ pub fn render_circuit_panel(seed: Seed, terrain: &GeneratedTerrain) -> String {
 
     // §4.4 semilattice overlap (report only).
     out.push_str(&format!(
-        "semilattice overlap: median {:?} (report only)\n",
-        median(&mut overlaps)
+        "semilattice overlap: median {} (report only)\n",
+        show(median(&mut overlaps))
     ));
 
     out

@@ -176,6 +176,10 @@ fn choose_leaf_style(
 /// `derive once, thread &mut Stream through every draw` shape
 /// `lattice::allocate`/`lattice::grow` already use.
 /// type-audit: bare-ok(ratio: inherited_worked_bias), bare-ok(index: level)
+// Eight arguments because a level is realized from eight independent
+// givens — extent, rock, origin, character, the inherited worked bias, the
+// plan, which rung of it, and the seed. Bundling them into a struct would
+// only rename the same eight at every call site.
 #[allow(clippy::too_many_arguments)]
 pub fn generate_level_with_origin(
     extent: Rect,
@@ -1217,24 +1221,59 @@ mod tests {
         assert_eq!(levels.len(), 2);
     }
 
+    /// A plan over the REAL habitation ladder (`hornvale_terrain::rungs()`
+    /// minus `Surface`, five rungs today) — the object `Underground::enter`
+    /// actually walks. The two-rung stub below it cannot see the defect the
+    /// stairs-pairing test exists for: a coordinate collision needs a
+    /// MIDDLE rung, where one node is the upper end of one stairway and the
+    /// lower end of another.
+    fn habitation_ladder() -> Vec<hornvale_kernel::Band> {
+        hornvale_terrain::rungs()
+            .iter()
+            .copied()
+            .filter(|r| *r != hornvale_kernel::Band::Surface)
+            .collect()
+    }
+
+    fn full_ladder_plan(seed: u64) -> hornvale_worldgen::circuit::DescentPlan {
+        hornvale_worldgen::circuit::plan_descent(
+            Seed(seed),
+            hornvale_kernel::Vertex(0),
+            &habitation_ladder(),
+            hornvale_terrain::CaveKind::Fracture,
+            Character::WildCave,
+        )
+    }
+
     /// claim: invariant(seed: 0..200) — THE CROSSCUT's stairs contract
     /// (spec §3.3): every `StairsDown` on rung `i` (below the last)
     /// has a `StairsUp` at the SAME coordinate on rung `i+1` and vice versa;
     /// rung 0 has no `StairsUp`; the last rung has exactly one `StairsDown`,
-    /// the dangling terminus; no cell carries both kinds. Replaces
+    /// the dangling terminus. Replaces
     /// `stairs_down_and_stairs_up_never_share_a_cell`, whose "exactly one"
     /// the plan deliberately breaks.
+    ///
+    /// **Swept over the FULL habitation ladder since the final review**, not
+    /// a two-rung stub: a stair-coordinate collision requires a middle rung
+    /// (a node that is the upper end of one stairway and the lower end of
+    /// another), so the two-rung version could not observe the defect at
+    /// all — the realizer's `stairs_into` loop overwrote a `StairsDown` the
+    /// `stairs_from` loop had written, leaving an orphan `StairsUp` below.
     #[test]
     fn stairs_pair_by_coordinate_across_adjacent_rungs() {
-        use hornvale_kernel::Band;
         use hornvale_terrain::CaveKind;
         use hornvale_worldgen::chamber::ChamberOrigin;
-        let rungs = [Band::Undercroft, Band::Shallows];
-        let origins = [ChamberOrigin::Found, ChamberOrigin::Found];
-        let depths_m = [20.0, 60.0];
+        let rungs = habitation_ladder();
+        let origins = vec![ChamberOrigin::Found; rungs.len()];
+        let depths_m = [20.0, 60.0, 120.0, 250.0, 500.0];
+        assert_eq!(
+            depths_m.len(),
+            rungs.len(),
+            "the depth ladder must have one entry per habitation rung"
+        );
         let mut paired_stairs_seen = 0usize;
         for s in 0..200u64 {
-            let plan = two_rung_plan(s);
+            let plan = full_ladder_plan(s);
             let levels = generate_descent(
                 &rungs,
                 CaveKind::Fracture,
@@ -1255,27 +1294,25 @@ mod tests {
                 cells_of(&levels[0], LevelCellKind::StairsUp).is_empty(),
                 "seed {s}: rung 0 has stairs up"
             );
-            let downs0 = cells_of(&levels[0], LevelCellKind::StairsDown);
-            let ups1 = cells_of(&levels[1], LevelCellKind::StairsUp);
-            assert_eq!(
-                downs0, ups1,
-                "seed {s}: stairs down on rung 0 must equal stairs up on rung 1, by coordinate"
-            );
-            assert!(!downs0.is_empty(), "seed {s}: no stairway at all");
-            paired_stairs_seen += downs0.len();
-            let downs1 = cells_of(&levels[1], LevelCellKind::StairsDown);
-            assert_eq!(
-                downs1.len(),
-                1,
-                "seed {s}: the last rung carries exactly the dangling terminus: {downs1:?}"
-            );
-            for l in &levels {
-                for (c, k) in l.cells.iter() {
-                    if k == LevelCellKind::StairsDown {
-                        assert_ne!(l.cells.get(c), Some(LevelCellKind::StairsUp));
-                    }
-                }
+            for i in 0..levels.len() - 1 {
+                let downs = cells_of(&levels[i], LevelCellKind::StairsDown);
+                let ups = cells_of(&levels[i + 1], LevelCellKind::StairsUp);
+                assert_eq!(
+                    downs,
+                    ups,
+                    "seed {s}: stairs down on rung {i} must equal stairs up on rung {} by coordinate",
+                    i + 1
+                );
+                assert!(!downs.is_empty(), "seed {s}: no stairway off rung {i}");
+                paired_stairs_seen += downs.len();
             }
+            let last = levels.len() - 1;
+            let downs_last = cells_of(&levels[last], LevelCellKind::StairsDown);
+            assert_eq!(
+                downs_last.len(),
+                1,
+                "seed {s}: the last rung carries exactly the dangling terminus: {downs_last:?}"
+            );
         }
         assert!(
             paired_stairs_seen > 200,
