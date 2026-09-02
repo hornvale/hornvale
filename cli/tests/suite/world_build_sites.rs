@@ -18,10 +18,15 @@
 //! **Reason codes** (spec §3.2). `build-path` asserts on the build itself
 //! (byte-identity, stream consumption order, pin isolation). `artifacts`
 //! needs `GeneratedTerrain`/`GeneratedClimate`, which are `Clone` but not
-//! `Serialize`, so no fixture can supply them. `identity` needs a seed or pin
-//! set with no committed fixture. `production` is a real build on a real code
-//! path. `unmigrated` is grandfathered — **the only reason that may not
-//! grow**, and `UNMIGRATED_CEILING` is what stops it.
+//! `Serialize`, so no fixture can supply them — **declared and currently
+//! unused**, because the artifact-needing callers were migrated by
+//! re-deriving both from the *loaded* world, so nothing reaches for a build
+//! on those grounds today. `identity` needs a world identity with no
+//! committed fixture: a seed, a pin set, a build depth, or a component set
+//! (only seed 42 at default pins, generated sky, full depth and the shipped
+//! roster has a fixture). `production` is a real build on a real code path.
+//! `unmigrated` is grandfathered — **the only reason that may not grow**, and
+//! `UNMIGRATED_CEILING` is what stops it.
 //!
 //! **Direction, and imprecision, stated rather than implied.** This asserts
 //! *live ⊆ roster* and *roster ⊆ live*. It does NOT assert a row's reason is
@@ -36,7 +41,17 @@
 //! `cli/tests/fixtures/world-build-sites.tsv` in the same commit, with a
 //! reason that is not `unmigrated`, and say in the commit message why the
 //! fixture could not serve it. **To migrate one:** lower the row's
-//! `unmigrated` tally and lower `UNMIGRATED_CEILING` by the same amount.
+//! `unmigrated` tally and lower `UNMIGRATED_CEILING` by the same amount — in
+//! the same commit, because the tally is asserted by EQUALITY, not as an
+//! upper bound (see [`UNMIGRATED_CEILING`]).
+//!
+//! **And sweep a migrated helper's callers for double-call comparisons.**
+//! A helper that returns the fixture at seed 42 makes any caller comparing
+//! *two of its calls* vacuous — it compares two reads of one file. Two tests
+//! in `windows/worldgen/src/lib.rs` were made vacuous exactly this way,
+//! passing in 0.06 s for what should have been four ~3.0 s builds, and both
+//! now keep local builders instead. Migrating at the helper body is one edit
+//! and N behaviour changes; the N is what needs reading.
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -44,7 +59,7 @@ use std::path::{Path, PathBuf};
 /// The build entry points a roster row can name. Any call to one of these in
 /// workspace source is a world build.
 ///
-/// **Five, and `simulate_world` is deliberately not the sixth.**
+/// **Six, and `simulate_world` is deliberately not the seventh.**
 /// `hornvale_lab::health::simulate_world(world: &World) -> Vec<AffectTrace>`
 /// takes an ALREADY-BUILT world and derives terrain and climate from it, so
 /// it is a decision-0092 weir site — already governed by clippy's
@@ -53,7 +68,34 @@ use std::path::{Path, PathBuf};
 /// world; this roster governs construction *of* one. Adding it here would
 /// add 5 spurious rows across 3 files and blur two mechanisms that are
 /// separate on purpose. Do not "complete" this list with it.
+///
+/// **`build_world_from_components` was the missing sixth, and the way it went
+/// missing is the lesson.** It is the full build `build_world` wraps
+/// (`windows/worldgen/src/lib.rs`). A needle is a name plus an open paren,
+/// and `build_world` is not a prefix of the longer name *at the paren*, so
+/// `build_world`'s needle could never match a call to it: a list that
+/// *looked* audited, having adjudicated `simulate_world` explicitly, silently
+/// omitted 9 live sites across 5 files, one of which (`repose_exposure.rs`)
+/// carried a full-depth build helper and no roster row at all. Adjudicating
+/// one candidate is not the same as enumerating the entry points; the second
+/// requires reading the composition root's `pub fn`s, which is what found
+/// this. Added 2026-09-02 by The Reservoir's final whole-branch review.
+///
+/// (Both names are spelled here without a following paren, deliberately.
+/// Writing either as an adjacent `<name>(` literal would make this very
+/// comment a build site by the scan's own textual rule — which is exactly
+/// what happened while this paragraph was being drafted, and the module doc's
+/// stated remedy is to reword the comment rather than start parsing Rust.)
+///
+/// **Scope, stated so it is not read wider than it is.** Only `src/` and
+/// `tests/` are scanned (see [`scanned_dirs`]); `examples/` is not, so build
+/// sites in the four `examples/` trees that carry them are invisible to this
+/// roster. Examples compile under `--all-targets` but never run, so they
+/// cost no test time — the reason the exclusion is tolerable, and the reason
+/// it is stated here rather than left to be inferred, exactly as the
+/// textual-scan imprecision above is stated.
 const ENTRY_POINTS: &[&str] = &[
+    "build_world_from_components",
     "build_world_to_with_artifacts",
     "build_world_observed",
     "build_world_to",
@@ -61,8 +103,18 @@ const ENTRY_POINTS: &[&str] = &[
     "history_for",
 ];
 
-/// The number of `unmigrated` sites the roster may still carry. Lower it as
-/// migrations land; never raise it.
+/// The number of `unmigrated` sites the roster carries — asserted by
+/// EQUALITY, not as an upper bound. Lower it as migrations land; never raise
+/// it.
+///
+/// **Equality closes a laundering path an inequality left open.** Under
+/// `total <= CEILING`, reclassifying N sites away from `unmigrated` lowers
+/// `total` and leaves the constant untouched, silently minting N points of
+/// headroom that a later commit could spend on new grandfathered debt without
+/// any human deciding to. Equality makes the documented workflow ("lower the
+/// row's tally and lower this constant by the same amount") mandatory instead
+/// of aspirational: a migration and its ceiling drop land in one commit, or
+/// the guard reddens.
 const UNMIGRATED_CEILING: usize = 334;
 
 /// The workspace root — the parent of `cli/`, where this test crate lives.
@@ -278,14 +330,20 @@ fn the_unmigrated_tally_never_grows() {
         .values()
         .filter_map(|r| r.reasons.get("unmigrated"))
         .sum();
-    assert!(
-        total <= UNMIGRATED_CEILING,
-        "the roster carries {total} `unmigrated` sites, ceiling is \
-         {UNMIGRATED_CEILING}.\n\n\
-         `unmigrated` is the one reason that may not grow: it means \
-         'grandfathered, nobody has looked yet'. A genuinely necessary build \
-         gets a real reason ({REASONS:?}) instead. Raising this ceiling \
-         undoes the campaign that set it."
+    assert_eq!(
+        total, UNMIGRATED_CEILING,
+        "the roster carries {total} `unmigrated` sites, UNMIGRATED_CEILING \
+         says {UNMIGRATED_CEILING}.\n\n\
+         The tally is the SUM of every row's `unmigrated:N`, not a count of \
+         rows, and it is checked by equality in both directions.\n\n\
+         If the tally GREW: `unmigrated` is the one reason that may not grow \
+         — it means 'grandfathered, nobody has looked yet'. A genuinely \
+         necessary build gets a real reason ({REASONS:?}) instead. Raising \
+         this ceiling undoes the campaign that set it.\n\n\
+         If the tally SHRANK: good news — lower UNMIGRATED_CEILING by the \
+         same amount in this commit. Leaving it high would bank the \
+         difference as headroom for future debt nobody adjudicated, which is \
+         exactly what the equality exists to prevent."
     );
 }
 
@@ -350,4 +408,22 @@ fn the_scan_actually_resolves_the_workspace() {
         "longest-first counting must not count build_world_to twice"
     );
     assert_eq!(count_sites("// nothing here"), 0);
+
+    // The sixth entry point, pinned two ways: that the scan sees a file whose
+    // ONLY build site is a `build_world_from_components` call (so dropping it
+    // from ENTRY_POINTS makes this file vanish and reddens the roster rather
+    // than passing quietly), and that it counts once rather than also as a
+    // `build_world`. Names assembled at runtime for the same reason as above.
+    assert!(
+        live.contains_key("windows/worldgen/tests/suite/repose_exposure.rs"),
+        "the scan must see repose_exposure's build_world_from_components \
+         helper — its only build site; got {} entries",
+        live.len()
+    );
+    let from_components = format!("{}(a);", "build_world_from_components");
+    assert_eq!(
+        count_sites(&from_components),
+        1,
+        "build_world_from_components counts once, never also as build_world"
+    );
 }

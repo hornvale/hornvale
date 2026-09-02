@@ -1090,6 +1090,24 @@ the pasted output, matching it byte for byte modulo the thread id. Two
 independent firings of the same control is a stronger claim than the clause
 has asked for anywhere else in this chapter.
 
+**And then the same campaign supplied the control's own boundary, which is
+worth more to this chapter than the success is.** The instrument was correct,
+run twice, and pointed at *one* test. Two other seed-42 callers of the same
+migrated helper existed to compare **two independent builds** of the world,
+and routing seed 42 to the fixture left them comparing two reads of one file:
+green, correctly named, and asserting nothing about a build. The control that
+would have exposed both immediately — break `FIXTURE`, watch which branch
+panics — was already built and simply was not aimed at them. What caught them
+was a **clock**: the pair ran in 0.06 s for what should have been four ~3.0-
+second builds, noticed only from a whole-branch vantage no per-task review
+had. So the lesson is not "build the positive control"; the campaign did that,
+well. It is that **a positive control proves a branch is reached at the site
+you aim it, and choosing the sites is a separate act with its own failure
+mode** — here, migrating at a helper's body and never enumerating the 43
+callers whose behaviour changed. When a suite gives no signal either way, the
+remaining instrument is cost: a test that got 50x faster and asserts the same
+thing did not get faster.
+
 **And the same campaign is a fresh instance of the standing diagnosis, from
 the controller's own hand, with a sting the earlier instances lack: the
 "correction" made the number worse.** Re-deriving call-site counts with
@@ -1113,9 +1131,11 @@ alarming direction, caught before it reached a permanent record only because
 the same session re-checked with the correct paths.
 
 **Score: the bet does not move, and the campaign is worth citing for exactly
-opposite reasons on its two halves.** The positive control, run twice by two
-people, is this chapter's practice working as intended — proof that a branch
-is reached, not merely proof that a suite stays green. The broken `grep` is
+opposite reasons on its several halves.** The positive control, run twice by
+two people, is this chapter's practice working as intended — proof that a
+branch is reached, not merely proof that a suite stays green — and its
+un-aimed siblings, found by a timing, are the reminder that the practice is
+per-site. The broken `grep` is
 the practice's target, not its exception: an "observing tool answering a
 neighbouring question" is a shape this chapter's own reader has named before
 committing it, in the same campaign, while warning three implementers about

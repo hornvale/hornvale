@@ -32,10 +32,20 @@ tests already in the gate rather than by a step nothing runs anymore.
 
 **What the fixture cannot carry.** `GeneratedTerrain` and `GeneratedClimate`
 are `Clone` but deliberately not `Serialize` ("recomputed on demand, never
-serialized"), so a disk fixture structurally cannot supply them — a caller
-that needs those objects still calls a build entry point and carries an
-`artifacts` reason on the `world-build-sites.tsv` roster (decision 0606).
-This is why the loader's saving is not uniform, and the design spec's own
+serialized"), so a disk fixture structurally cannot supply them. Decision
+0606's `artifacts` reason is **reserved for a caller that needs those objects
+and cannot obtain them from a loaded world; no such caller exists today, and
+no roster row carries that reason.** Both artifact-needing modules this
+campaign migrated (`windows/scene`'s surrounds, `windows/worldgen`'s exposure
+suite) re-derive terrain and climate from the *loaded* world — `terrain_of(&w)`
+then `climate_from(&w, &terrain)`, the same derivation they ran before — so
+the read serves them and both carry `identity`, not `artifacts`. This
+paragraph asserted an `artifacts` row in the present tense as ratified, which
+was checkable against `world-build-sites.tsv` and false; the reason code is
+kept, unused and declared, because the taxonomy should name the case that a
+future non-`Serialize` consumer would fall into. What is true either way is
+that a caller needing those objects pays the sculpt and the fit on top of the
+read, which is why the loader's saving is not uniform, and the design spec's own
 first estimate of the spread (`~3,000 ms -> ~1,110 ms`, "~2.7x") was invalidly
 derived — it divided a quiet-box numerator by a contended-box denominator from
 two different measurement runs — and is superseded by measurement, not

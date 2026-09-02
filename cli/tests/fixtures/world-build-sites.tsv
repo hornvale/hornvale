@@ -1,4 +1,13 @@
-# Every world-build call site in the workspace, by file (decision 0606).
+# Every call site of a world-build entry point named in ENTRY_POINTS
+# (cli/tests/suite/world_build_sites.rs), by file, under the `src/` and
+# `tests/` trees of every workspace crate (decision 0606).
+#
+# THE SCOPE IS THAT LIST AND THOSE TREES, NOT "the workspace". This header
+# said "every world-build call site in the workspace" until 2026-09-02, and
+# it was false twice over: `build_world_from_components` was missing from
+# ENTRY_POINTS (9 live sites across 5 files, one of them with no row here at
+# all), and `examples/` is not scanned at all. Both are stated in
+# world_build_sites.rs; state the scope, never the aspiration.
 #
 # Format: <repo-relative path>\t<count>\t<reason:N ...>
 #
@@ -8,16 +17,20 @@
 # per test, forever.
 #
 # Reasons: build-path (asserts on the build itself), artifacts (needs
-# GeneratedTerrain/GeneratedClimate, which are not Serialize), identity
-# (a seed or pin set with no committed fixture), production (a real code
+# GeneratedTerrain/GeneratedClimate, which are not Serialize -- declared and
+# currently UNUSED, no row carries it), identity (a seed, pin set, build
+# depth or component set with no committed fixture), production (a real code
 # path), unmigrated (grandfathered -- the ONLY reason that may not grow).
 #
 # Keyed by count per file, never by line number: a line-keyed row
 # invalidates on any edit above it, which would redden this guard on
 # unrelated commits and get it trained away.
 #
-# Generated 2026-09-02 at campaign start: 200 files, 350 sites,
-# every one `unmigrated` by construction. Reclassification is a human act.
+# Generated 2026-09-02 at campaign start: 200 files, 350 sites, every one
+# `unmigrated` by construction. Reclassification is a human act. The
+# campaign's migrations took `unmigrated` to 334; admitting the sixth entry
+# point at campaign close added 9 sites and one file, all classified on their
+# merits, so `unmigrated` did not move and UNMIGRATED_CEILING stayed 334.
 #
 cli/src/dictionary.rs	1	unmigrated:1
 cli/src/main.rs	9	unmigrated:9
@@ -61,7 +74,7 @@ windows/hearsay/tests/suite/probe_teller_relations.rs	4	unmigrated:4
 windows/hearsay/tests/suite/retelling_readout_seed42.rs	1	unmigrated:1
 windows/hearsay/tests/traced_walk.rs	1	unmigrated:1
 windows/hearsay/tests/undertow_readout.rs	1	unmigrated:1
-windows/lab/src/metrics.rs	1	unmigrated:1
+windows/lab/src/metrics.rs	2	unmigrated:1 production:1
 windows/lab/tests/suite/affect_trace_golden.rs	1	unmigrated:1
 windows/lab/tests/suite/disposition_calibration.rs	1	unmigrated:1
 windows/lab/tests/suite/gathering_calibration.rs	1	unmigrated:1
@@ -122,7 +135,7 @@ windows/worldgen/src/chorus.rs	1	unmigrated:1
 windows/worldgen/src/graph_derive.rs	1	unmigrated:1
 windows/worldgen/src/herds.rs	1	unmigrated:1
 windows/worldgen/src/history_emit.rs	1	unmigrated:1
-windows/worldgen/src/lib.rs	42	unmigrated:42
+windows/worldgen/src/lib.rs	48	unmigrated:42 build-path:3 production:2 identity:1
 windows/worldgen/src/render.rs	1	unmigrated:1
 windows/worldgen/src/residents.rs	1	unmigrated:1
 windows/worldgen/src/underworld_readout.rs	1	unmigrated:1
@@ -146,7 +159,7 @@ windows/worldgen/tests/suite/delver_depth_probe.rs	1	unmigrated:1
 windows/worldgen/tests/suite/delver_distinctness.rs	1	unmigrated:1
 windows/worldgen/tests/suite/delver_readout.rs	4	unmigrated:4
 windows/worldgen/tests/suite/demesne.rs	3	unmigrated:3
-windows/worldgen/tests/suite/depth.rs	7	unmigrated:7
+windows/worldgen/tests/suite/depth.rs	8	unmigrated:7 build-path:1
 windows/worldgen/tests/suite/descent_graph.rs	1	unmigrated:1
 windows/worldgen/tests/suite/diachronic.rs	1	unmigrated:1
 windows/worldgen/tests/suite/doctrine.rs	1	unmigrated:1
@@ -191,6 +204,7 @@ windows/worldgen/tests/suite/raid_attribution_probe.rs	1	unmigrated:1
 windows/worldgen/tests/suite/range_affinity.rs	1	unmigrated:1
 windows/worldgen/tests/suite/range_identity.rs	1	unmigrated:1
 windows/worldgen/tests/suite/range_readout.rs	3	unmigrated:3
+windows/worldgen/tests/suite/repose_exposure.rs	1	identity:1
 windows/worldgen/tests/suite/soil_attribution_probe.rs	1	unmigrated:1
 windows/worldgen/tests/suite/solitary_tongue.rs	1	unmigrated:1
 windows/worldgen/tests/suite/species_worlds.rs	5	unmigrated:5
@@ -214,7 +228,7 @@ windows/worldgen/tests/suite/underworld_separation.rs	1	unmigrated:1
 windows/worldgen/tests/suite/underworld_water_table_probe.rs	2	unmigrated:2
 windows/worldgen/tests/suite/warren_gate.rs	1	unmigrated:1
 windows/worldgen/tests/suite/warren_liebig_probe.rs	1	unmigrated:1
-windows/worldgen/tests/suite/warren_readout.rs	1	unmigrated:1
+windows/worldgen/tests/suite/warren_readout.rs	3	unmigrated:1 identity:2
 windows/worldgen/tests/suite/waterline_probe.rs	1	unmigrated:1
 windows/worldgen/tests/suite/watershed_measure.rs	2	unmigrated:2
 windows/worldgen/tests/suite/winze_energy_probe.rs	1	unmigrated:1

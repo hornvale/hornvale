@@ -19,8 +19,18 @@
 //! ("Recomputed on demand, never serialized"). A caller needing those pays
 //! the sculpt and the fit on top of the read, so its saving is measured, not
 //! the ~200x above: 4.0x-4.2x for the two artifact-needing modules measured
-//! (decision 0607 has the full spread), and it keeps an `artifacts` row on
-//! the build-site roster.
+//! (decision 0607 has the full spread).
+//!
+//! **That does NOT mean a caller wanting those objects must build, and the
+//! `artifacts` roster reason has no rows.** This paragraph asserted one in
+//! the present tense until 2026-09-02; a reader could go look for it and not
+//! find it. Both artifact-needing modules re-derive from the *loaded* world
+//! instead — `terrain_of(&w)` and `climate_from(&w, &terrain)` — which is the
+//! same derivation they always ran, so the read serves them and neither
+//! carries a build site. The reason code stays available for a caller that
+//! genuinely cannot get there from a loaded world; no such caller exists
+//! today, and the roster (`cli/tests/fixtures/world-build-sites.tsv`) is the
+//! place to check, never this comment.
 
 use hornvale_kernel::World;
 

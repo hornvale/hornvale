@@ -473,7 +473,26 @@ axis, the golden dominates the redundancy it replaces.
    and which no committed artifact currently pins byte-for-byte;
 3. a non-determinism that manifests only under some process/thread interleaving
    — though builds are deterministic and single-threaded per test, so this is
-   the weakest of the three.
+   the weakest of the three;
+4. **a comparison of two builds that becomes a comparison of two reads** —
+   added after the fact, because this list had no entry for it and the class
+   materialized twice inside this campaign, in the module this campaign
+   edited. A test calling a migrated helper *twice* and asserting the two
+   agree loses its subject entirely: it no longer builds anything, and it
+   passes faster than before while keeping its name. Nothing fails, so nothing
+   reports it. **The remedy is procedural, and it belongs to whoever migrates
+   a helper rather than to whoever reviews the diff: sweep the helper's
+   callers for double-call comparisons, and give each one a local builder.**
+   `windows/vessel/src/session.rs`'s
+   `the_same_seed_and_pins_produce_a_byte_identical_descent_and_pane` is the
+   worked example — it kept a local builder deliberately, and its file carries
+   a `build-path` roster row for it. The two instances here
+   (`generated_worlds_are_deterministic` and
+   `glossed_names_are_stable_across_two_builds`) were caught by a whole-branch
+   review noticing they ran in 0.06 s.
+
+Items (1), (3) and (4) are bounded by naming them; item (4) additionally
+carries the procedural remedy above, which no gate enforces.
 
 Item (2) is the one worth watching, and it is pre-existing rather than created
 here: nothing today pins the terrain sculpt's bytes. This spec does not fix it

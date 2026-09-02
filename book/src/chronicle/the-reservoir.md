@@ -81,7 +81,7 @@ wrong.
 
 For enforcement, a source-scan ratchet in `cli/tests/suite/` — the shipped
 idiom `test_binary_ratchet.rs` already established for a structurally
-identical problem — scans every crate's `src/**` and `tests/**` for the five
+identical problem — scans every crate's `src/**` and `tests/**` for the six
 real world-build entry points and checks a roster
 (`cli/tests/fixtures/world-build-sites.tsv`) in **both directions**: a site
 present but not rostered fails ("a new world build needs a reason"), and a
@@ -89,10 +89,13 @@ rostered row whose site no longer exists also fails ("delete the row"). The
 second direction is what keeps a roster from rotting into a document nobody
 trusts — 0092's own stated objection to a roster file ("never a second
 document to keep in sync") is sound against a one-directional list and
-dissolves once a stale row is itself an error. Each row carries a reason —
-`build-path`, `artifacts`, `identity`, `production`, or `unmigrated(<why>)` —
-and the ratchet is one assertion: the count of `unmigrated` rows may never
-grow. Scanning `src/` and not only `tests/` mattered concretely: the single
+dissolves once a stale row is itself an error. Each row carries a tally of reasons —
+`build-path`, `artifacts`, `identity`, `production` and `unmigrated`, each as
+`reason:N` — and the ratchet is one assertion over the **sum** of every row's
+`unmigrated:N`, which is a count of sites and not of rows: that sum may never
+grow, and since the campaign's final review it must match its constant
+exactly, so retiring debt and lowering the ceiling are one commit rather than
+two. Scanning `src/` and not only `tests/` mattered concretely: the single
 largest call site, 84 callers of `seam_world` in `windows/vessel`, lives
 inside a `#[cfg(test)] mod tests` block *inside* production `src/`, and a
 tests-only scan would have missed the flagship entirely.
@@ -145,10 +148,12 @@ campaign is most likely to be misread by, so it is worth stating plainly:
 **the roster counts sites textually present in a file, never callers reached
 at runtime.** A single helper's row gates however many call sites route
 through it. The sharpest instance is `windows/worldgen/src/lib.rs::generated`:
-migrating it to read the fixture behind an `if seed == 42` guard stopped 43
-call sites from building for every seed *other* than 42 — and the file's own
-roster row did not move at all, because `build_world(` is still textually
-present in the source. Reading "350 → 334" as "the campaign closed 4.6% of
+migrating it to read the fixture behind an `if seed == 42` guard stopped the
+43 of its 53 call sites that pass seed 42 from building at all, while the ten
+that pass another seed still build, because no fixture exists for them — and
+the file's own roster row did not move, because the helper's single
+`build_world` call is still textually present in the source, now inside the
+guard's other arm. Reading "350 → 334" as "the campaign closed 4.6% of
 the redundancy" mistakes a debt counter for a performance metric; the payoff
 is the 567.0 CPU-seconds measured directly, and the roster's job is only ever
 to stop the debt from growing back.
@@ -185,11 +190,48 @@ grep-based one — the open-questions chapter's standing bet about checks that
 cannot fail carries the full account, because this is an instance of it from
 the controlling side rather than the code.
 
+## What a whole-branch reading found that six task reviews could not
+
+A migration performed at a helper's body is one edit and N behaviour changes,
+and the N is what needs reading. Two of `generated`'s seed-42 callers existed
+specifically to compare *two independent builds* —
+`generated_worlds_are_deterministic` and
+`glossed_names_are_stable_across_two_builds` — so routing seed 42 to the
+fixture left them comparing two reads of one file. Neither failed. Both
+passed, together, in 0.06 seconds, for what should have been four ~3.0-second
+builds, and the timing is what exposed them: a determinism test in the
+composition root of a determinism-first project, permanently green for a
+reason unrelated to its name. Each now keeps a local builder and takes ~11
+seconds again. The remedy already existed one crate over, applied
+deliberately at the time (`windows/vessel/src/session.rs` kept exactly such a
+builder for exactly this reason) — what was missing was anyone enumerating
+the migrated helper's callers for the shape.
+
+The same reading found the roster's own entry-point list incomplete. It named
+five; the composition root exports six, and the sixth,
+`build_world_from_components`, is the full build the first is a thin wrapper
+over. Because a needle is a name plus an open paren, the shorter name could
+never match a call to the longer one, so nine live build sites across five
+files were invisible — one whole file among them, holding a full-depth build
+helper and no row at all. The list had *looked* audited because it explicitly
+adjudicated a candidate it correctly excluded; adjudicating one candidate and
+enumerating a set are different acts, and only the second would have caught
+this. All nine were classified on their merits, so the debt counter did not
+move: a scan-coverage correction is not new debt.
+
+Both belong in this record rather than in a fix commit's message, because the
+campaign's own retrospective counts defects by origin, and these two move that
+census from zero implementer-code defects to one. That is the more useful
+number. It says a whole-branch vantage sees a class of defect that per-task
+review structurally cannot — a helper migrated in one task, whose callers were
+written in five others.
+
 ## What was ratified
 
 **Decision 0606** records the mechanism: a source-scan ratchet rather than a
 `disallowed-methods` entry, the five reason codes, and the rule that
-`unmigrated` may only ever shrink. **Decision 0607** records that the seed-42
+`unmigrated` may only ever shrink — held by equality to its constant, so
+retiring debt and lowering the ceiling are one commit. **Decision 0607** records that the seed-42
 fixture is now an input a test may consume and not only an assertion target,
 extends decision 0032's pattern to a world rather than a study summary, and
 states the improvement on it — the freshness guarantee now lives entirely in

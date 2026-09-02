@@ -242,6 +242,14 @@ are corrected, and the plan's `ENTRY_POINTS` const carries a doc comment telling
 a future reader — or a future implementer tempted to "complete" the list — why
 the sixth is absent.
 
+*Amended by entry #15 (final review).* The ruling on `simulate_world` stands
+unchanged and is still correct. The **count** does not: the scan is **six**
+entry points, because `build_world_from_components` was missing from the list
+this entry was adjudicating. Rejecting one candidate is not enumerating the
+set, and this entry is the exact place that distinction went unnoticed — it
+reasoned carefully about the wrong sixth. "Why the sixth is absent" now reads
+as being about `simulate_world`, which is a seventh.
+
 *Why it matters beyond the count.* The arithmetic is small: 355 sites across 201
 files becomes **350 across 200**, the difference landing entirely in
 `windows/lab` (`health.rs` leaves the roster; `affect_trace_golden.rs` 2→1,
@@ -600,12 +608,114 @@ dressed as a compliment.
 streak entirely, and carries Chattel's denominator warning. No replacement
 count.
 
+*Amended by entry #15.* The reasoning above stands and the number it defended
+does not. A seventh review — the whole-branch one — found an implementer-code
+defect, so the census reads **1**, not 0. The hedge this entry argued for was
+honest and correctly scoped, and it was still guarding the wrong figure: what
+"six reviews found" was a real statement about six reviews, and a seventh
+existed. Read that as support for the hedge rather than against it — the
+number moved the moment a new vantage was applied, exactly as the hedge said
+it might.
+
 *Cost if wrong.* None; a weaker claim cannot be falsified by the next campaign
 the way a streak can.
 
 *ideonomy passes / overturns.* n/a — a factual correction.
 
 *Capture.* This entry; the retrospective's opening rewritten in fix round 2.
+
+---
+
+#15 [G1] — **The final whole-branch review's five findings, and the two
+judgement calls its fix wave had to make.**
+
+*Question.* The final review (CHANGES REQUESTED) found one implementer-code
+defect and three prose defects in permanent records, plus two minors. Two of
+its remedies needed a judgement call rather than a transcription.
+
+*Findings, and what was done.*
+
+1. **Two determinism tests made vacuous by Task 5's migration** (code).
+   `generated_worlds_are_deterministic` and
+   `glossed_names_are_stable_across_two_builds` in
+   `windows/worldgen/src/lib.rs` compare two builds; `generated(42)` returns
+   the fixture, so both compared two reads of one file and passed together in
+   **0.06 s**. Each now keeps a local `build_world` builder, the remedy
+   `windows/vessel/src/session.rs` already applied deliberately. Measured
+   after: **11.115 s and 11.142 s** (nextest, per test, two builds each).
+   The roster row moved `42 unmigrated:42` → part of `48` with
+   `build-path:2` added for these.
+2. **`ENTRY_POINTS` omitted `build_world_from_components`** — 9 live sites
+   across 5 files, one file (`repose_exposure.rs`) with no row at all. Added;
+   sorted before `build_world` so longest-first counting is unaffected.
+3. **`fixture.rs` and 0607 asserted an `artifacts` roster row that has no
+   rows.** Both now say the reason code is declared and unused, and why it is
+   unreachable today (the artifact-needing callers re-derive from the loaded
+   world).
+4. **0606 and the chronicle inverted which seeds stopped building.** The 43
+   seed-42 sites stopped; the ~10 other-seed callers still build. Both match
+   `generated`'s own doc comment now.
+5. **The retrospective census is 11 / 2 / 1**, not 11 / 2 / 0, with a code
+   table naming the timing as what caught it.
+
+*Decision — the ceiling route for finding 2.* Two honest routes existed:
+classify the 9 newly-admitted sites on their merits, or raise
+`UNMIGRATED_CEILING` with a comment calling it a scan-coverage correction.
+**Classified on their merits; the ceiling stays 334.** The sites justified it
+individually, which is the deciding fact and not a convenience: two are
+production delegations (`windows/lab/src/metrics.rs`'s view-chain root,
+`build_world`'s own delegation in `lib.rs`), two assert byte-identity between
+this entry point and `build_world` (`build-path`), and five build an identity
+no fixture carries — `goblin_solo`'s single-kind component set,
+`warren_readout`'s emptied-realm-registry pair, and `repose_exposure`'s seed
+sweep. Raising the ceiling would have been the wrong record even though the
+sites are genuinely not new debt: `unmigrated` means "nobody has looked yet",
+and by the time the question was asked somebody had.
+
+*Consequence — `identity`'s gloss widened by two words.* Its definition was
+"a seed or pin set with no committed fixture", and three of the five sites
+above are distinguished by a **component set**, not a seed or a pin. The
+review had already flagged the same hole one axis over (a `build_world_to`
+site at default pins distinguished only by **depth**). The gloss now reads "a
+seed, a pin set, a build depth or a component set", in the module doc, the TSV
+header and 0606. This is a taxonomy correction, not a reclassification: no
+row's reason changed.
+
+*Decision — the roster's stated scope.* Three documents claimed the roster
+covered "every world-build call site in the workspace". It never did, in two
+independent ways: the missing entry point, and `examples/` being unscanned
+(17 sites, zero test-time cost, four of them golden-authoring). Both are now
+**stated** rather than implied, in the TSV header and the guard's module doc.
+The scan itself is unchanged — extending it to `examples/` is a separate,
+larger question about a tree that never runs.
+
+*Decision — finding 6 (minor), the laundering hole.* `total <=
+UNMIGRATED_CEILING` permits headroom created by reclassification. Changed to
+`assert_eq!`. This makes the documented workflow mandatory and cost nothing
+today (334 == 334, zero slack).
+
+*Closed as a non-issue.* The deferred "TSV sort-order violation at ~line 32".
+`LC_ALL=C sort` on the path column yields zero differing lines; the report
+came from a locale-aware collation that ignores `_` and `.`, and `roster()`
+reads into a `BTreeMap`, so file order is not load-bearing at all. **No
+committed document carried the claim**, so nothing needed correcting — it
+lived only in review scratch. Re-verified after this wave's edits (the new
+`repose_exposure.rs` row sorts correctly under `LC_ALL=C`).
+
+*Cost if wrong.* The ceiling route is the reversible half — a later campaign
+that disagrees can reclassify any of the 9 to `unmigrated` and raise the
+constant, and the roster will tell it exactly which rows to look at. The
+`assert_eq!` is the irreversible-feeling half and is not: it only ever forces
+a number to be edited in the commit that earned the edit.
+
+*ideonomy passes / overturns.* n/a — remediation of a review, not a design
+choice, except for the ceiling route, where the deciding argument was that
+`unmigrated`'s meaning ("nobody has looked") is falsified by the act of
+asking.
+
+*Capture.* This entry; decisions 0606 and 0607; the chronicle's new
+whole-branch section; the retrospective's code table; spec §5 residue item
+(4); `world_build_sites.rs` and the TSV header.
 
 ---
 

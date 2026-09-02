@@ -2,27 +2,30 @@
 
 **Merged:** 2026-09-02
 
-## The honest census: 11 controller-text, 2 implementer-prose, 0 implementer-code
+## The honest census: 11 controller-text, 2 implementer-prose, 1 implementer-code
 
 This section originally opened by claiming every defect this campaign found
 was in controlling-session text, full stop. **That claim was false, and false
 in the flattering direction** — checked and corrected during this task's own
 third fix round, after two of this document's own permanent records (decision
 0606 and the chronicle) turned out to carry defects that were neither in the
-spec, the plan, nor a dispatch, but in this task's own prose. The honest
-count:
+spec, the plan, nor a dispatch, but in this task's own prose. **It was then
+corrected a second time, in the other direction that matters: the
+implementer-code count is one, not zero.** The final whole-branch review found
+a code defect all six task reviews missed. The honest count:
 
 ```
   controller text (spec, plan, dispatches, ledger)   11
   implementer prose (decision + chronicle text)       2
-  implementer CODE                                    0
+  implementer CODE                                    1
 ```
 
-Zero implementer-code defects still holds, and is worth keeping exactly at
-that width — a statement about what this campaign's reviews found in the code
-Tasks 1 through 5 wrote, not a claim that every kind of prose in the campaign
-was clean. Two kinds of prose were not: the controlling session's, and — new
-to this campaign's accounting — this closing task's own.
+**Each count is still a statement about what this campaign's reviews
+*found*** — not a claim that any of the three is exhaustive. Two kinds of
+prose were not clean: the controlling session's, and — new to this campaign's
+accounting — this closing task's own. And the code was not clean either,
+which is the more useful record: a campaign that reports one defect found from
+a vantage its own review structure lacked says something a zero cannot.
 
 **A related claim was also false, and it is worth naming separately because
 it was supplied by the coordinator's own dispatch, not authored here.** An
@@ -43,10 +46,38 @@ enumerated exhaustively — while its implementer count was a *floor*, because
 three tasks' reviews were never triaged into the ledger. "Read the
 denominators before the ratio": the two sides of any such count are rarely
 measured the same way, in any campaign, including this one. This campaign's
-zero implementer-code defects is a statement about what its reviews *found*,
-not a claim that implementer code in general produces none, or that this
-campaign's own reviews were exhaustive in the way Chattel's pre-dispatch
-brief check was. No streak is asserted.
+**one** implementer-code defect is a statement about what its reviews *found*,
+not a bound on what its code contains — and the way it was found is direct
+evidence for that reading, since it was invisible to six reviews that were
+each doing their job correctly on the diff in front of them. An earlier draft
+of this section headlined a zero here and hedged it carefully; the hedge was
+honest and the number was still the wrong one to publish. No streak is
+asserted.
+
+### The one implementer-code defect
+
+| # | defect, in implementer code | what caught it |
+| --- | --- | --- |
+| I | Task 5 migrated `windows/worldgen/src/lib.rs`'s `generated(seed)` helper to return the committed fixture at seed 42. Two of its 43 seed-42 callers — `generated_worlds_are_deterministic` and `glossed_names_are_stable_across_two_builds` — existed to compare **two independent builds**, and became comparisons of two reads of one file: the first then asserted only that `World::from_json(x).to_json()` is a pure function of `x`, and the second performed zero builds. Both stayed green | the **final whole-branch review**, from a **timing**: the pair passed together in **0.06 s** for what should have been four ~3.0 s builds. No assertion could fail, so no assertion could report it; the clock was the only witness. Fixed by giving each test a local builder (the remedy Task 3 had already applied one crate over, in `windows/vessel/src/session.rs`), after which they run ~11 s each |
+
+**Why a per-task review could not have found it.** The migration is one edit
+in one file, reviewed as one edit; the damage is distributed across callers
+written by five other tasks, and is visible only as an absence — a test that
+still passes, faster. Task 3's review had handled the identical shape
+correctly in `windows/vessel`, which is the sharpest part of the record: the
+project already knew the hazard and had the remedy in the tree. What was
+missing was the step of enumerating a migrated helper's callers, which is a
+whole-branch act. The campaign's own positive-control instrument (breaking
+`FIXTURE` to a nonexistent path and watching the panic fire from inside the
+seed-42 arm) would have exposed both tests immediately had they been among
+its targets.
+
+The same review found two prose defects of the same origin —
+`ENTRY_POINTS` omitting a sixth real entry point, and two documents asserting
+an `artifacts` roster row that has no rows — which are counted in neither
+table above because they were **found and fixed on this branch before merge**,
+in the same commit as row I. They are recorded in decisions 0606 and 0607
+where a reader will actually meet them.
 
 ### The eleven controller-text defects
 
@@ -231,9 +262,9 @@ worth this campaign's time to build.
 
 ## What this campaign confirms about the practice, not just the product
 
-Nothing above is a new category of process failure. Every row in both defect
-tables is an instance of a diagnosis this book's Confidence Gradient chapter
-has been refining for two months: verify a brief against the tree before
+Nothing above is a new category of process failure. Every row in all three
+defect tables is an instance of a diagnosis this book's Confidence Gradient
+chapter has been refining for two months: verify a brief against the tree before
 dispatch, treat a correction as a claim requiring its own check, and prefer a
 decision-log search to a fresh derivation when the shape of the problem looks
 familiar. What this campaign adds is not a longer streak — Chattel's own
@@ -250,7 +281,12 @@ half, which its first draft nearly erased.** A defect count that reports
 zero on every axis it is capable of producing a nonzero on is not a clean
 result — it is a count that has not looked hard enough, and this document's
 own first draft demonstrated the failure it was trying to describe by
-claiming exactly that. The two implementer-prose rows exist because a
+claiming exactly that. The two implementer-prose rows, and the one
+implementer-code row, exist because a
 coordinator's review kept checking after the controller-text table looked
 complete, which is the same practice the table itself argues for, aimed one
-level up.
+level up. The implementer-code row went further: it needed a *different
+vantage*, not more diligence at the same one. Six task reviews each read a
+correct diff correctly; the defect lived in the relation between one task's
+edit and five other tasks' callers, and only a whole-branch reading — and, in
+the end, a clock — could see it.
