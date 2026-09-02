@@ -4,6 +4,8 @@
 (`elaborated`, high) · **Essay:**
 [frontier §the orange problem](../../../book/src/frontier/frontier.md#the-orange-problem--one-kind-model-not-two)
 · **Ledger:** `docs/superpowers/ledgers/2026-09-01-the-wicket.md`
+· **Decision block:** 0556-0565 (main ceiling 0516 at reservation) — used:
+0556, 0557, 0558
 
 A wicket is a small gate set in front of open ground. This campaign takes one
 down — and then finds the same fence built out of a number instead of an enum,
