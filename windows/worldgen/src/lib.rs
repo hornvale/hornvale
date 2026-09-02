@@ -90,6 +90,7 @@ pub mod delve_seating;
 mod descent;
 pub mod disposition;
 pub mod energy;
+pub mod fixture;
 pub mod gazetteer;
 pub mod graph_derive;
 pub mod harvest;
@@ -125,6 +126,7 @@ pub use chorus::{
 };
 pub use components::WorldComponents;
 pub use descent::{clan_root_of, forebear_of, founder_of, generation_length_of, name_pattern};
+pub use fixture::seed_42_world;
 pub use gazetteer::{feature_name, feature_salt, gazetteer_features};
 pub use graph_derive::{
     GraphConfig, connection_graph, connection_graph_at, connection_graph_from, connection_graph_of,

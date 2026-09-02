@@ -156,6 +156,7 @@ windows/worldgen/tests/suite/era_substrate.rs	1	unmigrated:1
 windows/worldgen/tests/suite/explanations.rs	1	unmigrated:1
 windows/worldgen/tests/suite/exposure.rs	5	unmigrated:5
 windows/worldgen/tests/suite/fathom_column_probe.rs	1	unmigrated:1
+windows/worldgen/tests/suite/fixture.rs	1	build-path:1
 windows/worldgen/tests/suite/founder_collision.rs	1	unmigrated:1
 windows/worldgen/tests/suite/generalist_baseline.rs	1	unmigrated:1
 windows/worldgen/tests/suite/generalist_distinctness.rs	1	unmigrated:1
