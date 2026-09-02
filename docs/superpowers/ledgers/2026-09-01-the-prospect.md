@@ -517,3 +517,43 @@ A link check caught it every time, which is why it has never shipped — but the
 rate is the finding. **The habit to adopt: `ls docs/decisions/NNNN-*.md` before
 writing any citation.** The title in my head is not the slug on disk, and the
 number being right is what makes the wrong slug survive a skim.
+
+### #24 [G5] — I fabricated a count with a grep, and an implementer wrote it into permanent source
+
+The tier fold's doc comment claimed "every call site The Prospect has (26, all
+in this crate)". The real figure is 23. **I supplied the 26.**
+
+The cause, exactly:
+
+```
+git grep -c 'Site::new'  -- '*.rs'   ->  26   (lines MENTIONING the string)
+git grep -c 'Site::new(' -- '*.rs'   ->  23   (actual invocations)
+```
+
+The three extras are doc comments *talking about* the constructor:
+
+```
+site.rs:92   /// `Site::new` must not silently drop or alter what it is given
+site.rs:107  /// `Extent` has exactly one variant, so any `Site::new` that compiles
+site.rs:109  /// catch a future `Site::new` that defaults to a `Region` variant
+```
+
+**Two of those three are prose I asked for in Task 1's forward-guard fix.** My
+own earlier instruction inflated the number I then quoted back as a fact, and an
+implementer trusting me committed it to permanent source where it formed part of
+the doc's own justification.
+
+**Ninth instance in two campaigns of the observing tool answering a neighbouring
+question.** `grep 'Site::new'` answers "how many lines mention this", not "how
+many call sites exist". One character — the open paren — separates the two
+questions.
+
+**Resolution:** the implementer dropped the count rather than correcting it,
+reasoning that the paired-constructor argument holds at one call site or a
+hundred, so a figure there was a maintenance liability rather than evidence.
+That is the better answer and I did not think of it.
+
+**The habit this earns:** when a count is going into durable prose, grep for the
+SYNTAX of the thing (`foo(`), not its NAME (`foo`) — and ask whether the prose
+needs the number at all. A count in a doc comment has to stay true forever; this
+one was false within the hour.
