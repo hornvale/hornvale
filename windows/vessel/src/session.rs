@@ -7749,9 +7749,9 @@ impl<'w> Session<'w> {
     /// `!examine` would say is here, not with who merely stands here.
     ///
     /// **Grouped by species, resident groups (`Body.village.is_some()`)
-    /// before wild, each group in roll order** — `perceived_npcs`' own
-    /// order, never re-sorted by name, so "who gets named" tracks the roll
-    /// budget's own priority rather than alphabetizing a crowd. A resident
+    /// before wild, each group in roster order** — `perceived_npcs`' own
+    /// order (the order it yields; append order), which coincides with roll
+    /// order only within one settlement — never re-sorted by name. A resident
     /// group names its first [`N_NAMED`] labels through
     /// [`crate::chamber_prose::listed`] and appends `", and {n} others"` for
     /// whatever is left; a wild group has no individual names to give, so it

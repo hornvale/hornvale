@@ -140,12 +140,16 @@ Each with its reason, because a follow-up without one is a wish.
    is a second visible mechanism carrying its own purity obligation under
    0546, and it is not needed to answer the brief. Build it when a returning
    player's frozen village is the finding.
-3. **The lab health battery still walks twice per tick.**
-   `windows/lab/src/health.rs:122-150` calls `step_with_occupancy` and then
-   `tick()` on the same frozen ledger — the exact shape Task 11 removed from
-   `Session::wait`, still in place, untouched here because it is an
-   instrument's cost and not the walk's. Its own comment documents the double
-   read as deliberate; whether it can take Task 11's treatment is unexamined.
+3. **The lab health battery still walks twice per tick, at TWO sites, not
+   one.** `windows/lab/src/health.rs:122-150` (`run_simulation`) calls
+   `step_with_occupancy` and then `tick()` on the same frozen ledger — the
+   exact shape Task 11 removed from `Session::wait`, still in place,
+   untouched here because it is an instrument's cost and not the walk's. Its
+   own comment documents the double read as deliberate. A second, identical
+   pair sits at `health.rs:249-251` (`run_simulation_with_locale`), and it
+   carries no such comment — nothing there says the double walk is
+   deliberate, so a reader has no way to tell it apart from an oversight.
+   Whether either can take Task 11's treatment is unexamined.
 4. **Four unimplemented perf levers**, retired by the plan's own preregistered
    rule once M2 was met four levers early. Their shares, as far as the two
    existing instruments can attribute them:
@@ -170,13 +174,21 @@ Each with its reason, because a follow-up without one is a wish.
    unbounded session ledger. The commit-rate battery's ceiling and non-growth
    assertions both hold with room; what the campaign did not do is bound the
    log.
-6. **A settlement wider than one room** (`SOC-settlement-wider-than-one-room`,
+6. **Decision 0549's second half is unpinned.** The decision is titled
+   "frozen … and caught up on return"; `a_body_off_the_roll_is_frozen`
+   (`windows/vessel/tests/suite/the_roll.rs`) pins the first half, and no
+   test composes the full sequence — off-roll, then back on the roll, then
+   caught up — the mechanism is inherited untested from
+   `catch_up_does_not_consume_the_controllers_pending_action`
+   (`windows/vessel/src/liveness.rs`) rather than pinned for a roll-departed
+   body.
+7. **A settlement wider than one room** (`SOC-settlement-wider-than-one-room`,
    new, raw). A chamber seats one body per anchor kind, so 67 residents in one
    room are mostly present, examinable and undrawn. Ruled deliberately: the
    alternative ("placed or lit" sensed) would hide bodies that are in the room,
    which The Sighting rejected for the same reason. The presence line names the
    remainder in words instead. The real fix is the room count.
-7. **`body_at` re-resolves `species_of` per resident** — an inherited
+8. **`body_at` re-resolves `species_of` per resident** — an inherited
    signature, now called `population` times per settlement instead of once.
    Never measured; it is the cheapest of the perf follow-ups to check and
    nobody checked it.

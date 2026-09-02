@@ -170,6 +170,14 @@ Residents are **derived, not generated**. The world ledger does not change;
 derivation is a pure function of (world, settlement) and any window may
 call it — the almanac could list a village's residents tomorrow — which is
 what "sim first, game as lens" requires of a thing the player can meet.
+**Amended at close (Task 4's review, ledger): the bodies returned are pure,
+but the FIRST derivation of a settlement writes each resident's
+`person-born` and name to the session ledger, and every later derivation of
+that same settlement reads them back rather than re-drawing them — a
+window that derives residents on a later day gets the same people, not
+people re-aged to that day.** The ledger, not the call site's `now`, is
+authoritative for a resident's birth, exactly as it already is for a
+founder's.
 
 **3.2 Tier 2 — the roll.** One named, pure function:
 
@@ -186,6 +194,14 @@ what "sim first, game as lens" requires of a thing the player can meet.
       marine excluded exactly as wild_concentrations_from excludes it today),
     ordered by (hop distance ascending, parent EntityId ascending, ordinal
       ascending),
+    -- amended: the shipped order key is (hops, wild, parent, species,
+       ordinal) — residents sort before wild bodies at equal hop distance
+       (`wild` is false for a resident, true for a wild body), then by
+       `parent` (a resident's settlement id, or a wild body's attractor
+       vertex — not always an `EntityId`, so "parent EntityId" above is
+       corrected in full rather than reworded), then by `species` (empty
+       for a resident), then by `ordinal`; per the Task 7 review ruling,
+       ledger.
     truncated to the first B entries.
 ```
 
@@ -262,10 +278,15 @@ they have today; §4 groups them in prose.
 `Stream` per resident, salted from the world seed by the resident's
 lineage (parent id, ordinal) under one new label declared in the deriving
 crate's `streams` module and published through `stream_labels()` into the
-generated manifest. The stream is fresh — no existing consumer's draw
+generated manifest. **Amended at close (Task 3's ruling; ledger #16/#17):
+the key is (settlement site vertex, ordinal), never an `EntityId` — the
+same discipline `disposition.rs` already keys its own draw by (site,
+founded year) rather than by an entity, and `residents.rs`'s module doc
+states the rule for this rung, "keyed on the site and never on an
+`EntityId`."** The stream is fresh — no existing consumer's draw
 order changes, which is what keeps every committed world byte-identical.
 Consumption order *within* the resident stream is a save-format contract
-from the day it lands: name, then birth day, then the four deviations, in
+from the day it lands: name, then birth day, then the three deviations, in
 that order, pinned by a test.
 
 **3.7 Dormancy.** A resident not on the roll is not ticked. Its state is
