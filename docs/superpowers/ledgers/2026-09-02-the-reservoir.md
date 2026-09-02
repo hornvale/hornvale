@@ -477,6 +477,47 @@ measurement; the call-site count is colour.
 
 ---
 
+#12 [G6] — **Task 6 close: decisions accepted, book written, retrospective
+filed.**
+
+*What happened.* Decisions 0606 and 0607 were flipped from `Proposed` to
+`Accepted`, their content finished (0606 gains the closing ceiling — 350 to
+334, sixteen points — and the explicit debt-counter-not-performance-metric
+statement obligation #2 of the dispatch demanded; 0607 gains the corrected
+measured spread replacing the invalid ~2.7x estimate, and the decision-0090
+consequence that previously lived only in `b44db18ee`'s commit message), and
+their `docs/decisions/README.md` Index rows updated to match. The chronicle
+(`book/src/chronicle/the-reservoir.md`) and retrospective
+(`docs/retrospectives/the-reservoir.md`) were written and
+`book/src/SUMMARY.md` updated. `book/src/open-questions.md`'s "make it fail on
+command" bet (scored last by The Avowal, 2026-09-01) was re-scored with this
+campaign's two instances — the `FIXTURE`-repointed-to-nonexistent-path
+positive control, run twice independently (Task 5), and the controller's own
+substring-matching `grep -o` miscounting call sites and making the aggregate
+worse (this ledger's own entry #11).
+
+*Freshness sweep.* `grep -rn "build_world\|seed 42" book/src --include=*.md |
+grep -v chronicle` turned up only references to seed 42 as an example world
+(introduction, religion, language, open-questions) and to `build_world_to`/
+`build_world` as historical or production-path facts (`laboratory/overview.md`'s
+depth-ladder description, two idea-registry rows). None describe test-suite
+build redundancy as current fact, so none needed correction; nothing was
+edited beyond the open-questions re-score.
+
+*Step 7 — the branch table.* Measured at this task's own commit, after
+0606/0607 flipped to `Accepted`: `make rebaseline` moved `docs/digest/`
+only — the in-force decision index and delta report, which is exactly what
+adding two newly-`Accepted` decisions to the index does — and nothing in
+`docs/audits/`, no byte-golden, and no `book/src/gallery/` path. The first row
+of the brief's branch table fired. See this task's report for the pasted
+`git diff --stat`.
+
+*Cost if wrong.* Nil — this entry documents completed work, not a decision.
+
+*Capture.* This entry; `.superpowers/sdd/2026-09-02-the-reservoir/task-6-report.md`.
+
+---
+
 ## Parked findings
 
 ### P1 — `scene_surrounds_colour_cli.rs` uses a fixed temp path and flakes

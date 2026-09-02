@@ -441,6 +441,7 @@
 - [The Wicket](./chronicle/the-wicket.md)
 - [The Roll](./chronicle/the-roll.md)
 - [The Hallmark](./chronicle/the-hallmark.md)
+- [The Reservoir](./chronicle/the-reservoir.md)
 
 # Appendix: The Frontier
 

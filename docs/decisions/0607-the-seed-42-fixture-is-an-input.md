@@ -1,6 +1,6 @@
 # 0607. The seed-42 world fixture is an input as well as an assertion
 
-**Status:** Proposed (2026-09-02) · **Decider:** Nathan · **Relates to:**
+**Status:** Accepted (2026-09-02) · **Decider:** Nathan · **Relates to:**
 [0032](0032-calibration-loads-the-census-fixture.md),
 [0125](0125-github-actions-is-retired.md),
 [0606](0606-a-world-build-is-a-named-site.md)
@@ -35,10 +35,19 @@ are `Clone` but deliberately not `Serialize` ("recomputed on demand, never
 serialized"), so a disk fixture structurally cannot supply them — a caller
 that needs those objects still calls a build entry point and carries an
 `artifacts` reason on the `world-build-sites.tsv` roster (decision 0606).
-This is why the loader's saving is not uniform: a caller that only reads
-committed facts sees the full ~200x (~3.0s to ~15ms), while a caller that
-also needs the derived terrain/climate objects pays the sculpt and the fit on
-top of the read, recovering only ~2.7x.
+This is why the loader's saving is not uniform, and the design spec's own
+first estimate of the spread (`~3,000 ms -> ~1,110 ms`, "~2.7x") was invalidly
+derived — it divided a quiet-box numerator by a contended-box denominator from
+two different measurement runs — and is superseded by measurement, not
+repeated here. The measured spread runs from **~200x** for a bare fixture read
+against a bare build (~15 ms vs ~3.0 s) at one end, through **~4.0x-4.2x**
+for the two modules measured that also need the derived terrain/climate
+objects (`windows/scene` surrounds, `windows/worldgen` exposure), down to
+**25%-48%** (roughly 1.3x-1.9x) for larger modules where the fixture read sits
+beside a fixed cost of its own (`windows/vessel` `session::tests` 41%,
+`session_snapshot` 48%, `the_blocking` 33%, `windows/worldgen --lib` 25% —
+`docs/superpowers/ledgers/2026-09-02-the-reservoir.md` entry #10 has the full
+derivation and names the arithmetic fault the first estimate made).
 
 **Consequence.** `seed_42_world()` is read at runtime
 (`std::fs::read_to_string` against a path built from
@@ -50,6 +59,26 @@ in `windows/worldgen` (the composition root) rather than in `cli`, so
 from any crate that calls it, verified by a cross-crate probe from
 `windows/vessel`. The world-seed-42.json fixture itself does not move: this
 decision changes who reads it, never what it contains.
+
+**Consequence for decision 0090's cross-host binary-identity oracle.** Every
+production `env!("CARGO_MANIFEST_DIR")` expansion bakes the absolute build
+directory into the shipped binary, which is why 0090 amendment 2 freezes the
+set of such sites in `cli/tests/fixtures/manifest-dir-uses.txt` and requires a
+grower to say what it does to the oracle — the list "may shrink freely;
+growing it is a deliberate act that should say what it does to the oracle."
+`windows/worldgen/src/fixture.rs`'s loader adds one, taking that list from two
+entries to three (`cli/src/main.rs`, `windows/lab/src/blackbox.rs`, now
+`windows/worldgen/src/fixture.rs`). This is **accepted**, recorded here rather
+than only in the landing commit message (`b44db18ee`), because a commit
+message is not where a durable consequence belongs: it does not change what
+the oracle *requires* — both hosts still qualify by building at the same
+absolute path, a condition two sites already made necessary for anyone
+building outside a fixed-path image — only how many sites there are to keep
+that condition true at. The alternative (resolving the workspace root at
+runtime by walking up from `current_dir()`) trades a documented,
+compile-time-visible fact for an undocumented runtime dependency on the
+working directory, which is the wrong direction to route around a guard whose
+purpose is exactly this visibility.
 
 **See also.** Decision 0032 (the pattern this extends); decision 0125 (why
 the freshness split moved entirely into the suite); decision 0606 (the

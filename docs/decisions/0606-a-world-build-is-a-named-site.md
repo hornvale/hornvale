@@ -1,6 +1,6 @@
 # 0606. A world build is a named site on a bidirectional roster
 
-**Status:** Proposed (2026-09-02) · **Decider:** Nathan · **Relates to:**
+**Status:** Accepted (2026-09-02) · **Decider:** Nathan · **Relates to:**
 [0092](0092-derivation-at-named-sites.md),
 [0041](0041-libm-for-portable-transcendentals.md),
 `cli/tests/suite/test_binary_ratchet.rs`
@@ -46,9 +46,29 @@ itself.
 `unmigrated` by construction: 350 sites across 200 files, `UNMIGRATED_CEILING`
 set to 350. A generated file that size invites rubber-stamping, so no row may
 carry a permanent reason code except by a human reclassifying it — the ratchet
-starts at its maximum and only ever shrinks. The closing ceiling, after this
-campaign's migrations land, is recorded here when this record is finalized at
-campaign close.
+starts at its maximum and only ever shrinks. This campaign's three migration
+tasks moved it to **334** (16 points), and the roster now stands at 345 sites
+across 200 files.
+
+**`UNMIGRATED_CEILING` is a debt counter, not a performance metric, and reading
+it as the latter is this campaign's most misreadable number.** The roster
+counts *sites textually present in a file*, not *call sites reached at
+runtime* — a single row can gate dozens of callers through a shared helper.
+This campaign's own migrations moved 239 call sites (measured at `c3f35ef9e`
+with a word-boundary regex: 110 in `windows/vessel`, 54 in `windows/scene` and
+`windows/worldgen`'s exposure suite, 75 in `windows/worldgen`'s remaining
+seed-42 helpers) while the ceiling moved only 16 points. Task 5 is the
+sharpest case: 43 call sites through `windows/book/src/lib.rs::generated`
+stopped building for every seed **other** than 42, but the file's own row did
+not move at all, because `generated()`'s single `build_world(` call is still
+textually present in the source, now behind an `if seed == 42` guard that
+routes only the seed-42 arm to the fixture. A reader who takes "350 → 334" as
+"the campaign closed 4.6% of the redundancy" has mistaken the debt counter for
+the payoff. The payoff is measured separately, in CPU-seconds
+(`docs/timings.md`), and stood at **567.0 CPU-seconds** across six modules at
+campaign close — see the chronicle and `docs/superpowers/ledgers/2026-09-02-the-reservoir.md`
+entry #11 for the full derivation and a caution about how that call-site count
+was itself twice miscounted before landing.
 
 **See also.** Spec `docs/superpowers/specs/2026-09-02-the-reservoir-design.md`
 §3.1-§3.2 and §8; decision 0032 (the census's identical nextest-process-model
