@@ -1,0 +1,291 @@
+# The Detent — decision ledger
+
+Campaign: `campaign/the-detent` · Spec:
+`docs/superpowers/specs/2026-09-02-the-detent-design.md` · Plan: (not yet
+written) · Decision block: 0626–0635 (reserved on lefford 2026-09-02; main
+ceiling was 0585 at reservation).
+
+A detent is the catch that holds a mechanism in a position until something
+deliberately releases it. The name is the mechanism: a verdict about the
+ground — *is this room frightening to this creature* — is a pure function of
+a terrain that never changes within a session, so once taken it is held, and
+nothing about the passage of ticks releases it.
+
+Committed per The Cartulary (decision 0486): every ruling is written here as
+it happens, on this branch, in this worktree.
+
+---
+
+## #1 [G1] — which campaign follows The Pawl on the derived-working-set thread?
+
+**Question.** Nathan's ranking to argue with: (a) the hazard fold's
+cross-tick affect memo keyed by the emitter's reset partition; (b) 7b, the
+typed intention; (c) the small consolidation (`KnownWater` into
+`LatestVisit`, `EmitterScan` to `pub(crate)` with its tests out of
+`liveness.rs`). Campaign 7 (spatial partition) is excluded by instruction.
+
+**Decision.** (a)'s *target* — the hazard fold, the only thing that can move
+H4 — with (a)'s *mechanism* replaced by the measured one, plus the half of
+(c) that the rewrite touches anyway. The campaign builds a session-lived
+memo of the fear path's terrain verdicts (a `Pure` derived component,
+Penstock stage 3's territory, keyed by room) and makes the emitter scan and
+the emitter-free hazard read advance over new sightings instead of
+re-sampling every visited room of every roster member every tick. The
+reset-partition affect memo is **not built**: no measured shape reaches the
+path it would serve (below). 7b stays the recommended epoch after this.
+
+**Why — the registry row's mechanism is reached zero times.**
+`TOOL-hazard-affect-cross-tick-memo` says the remaining 93 ms/call is "per
+tick, for every visited room × every emitter, the emitter's affect at that
+room's latest-visit day is re-evaluated", and The Pawl's chronicle says that
+mechanism is "legible from the code rather than merely suspected". It was
+read, not measured, and the same campaign's own retrospective names that
+defect shape twice. A throwaway counting probe on the H4 instrument's own
+shape (`session_length_scaling`'s construction: seed 42, `derive_npcs(50)`,
+`DriveMovements::step_with_occupancy`, one resident store; source parked at
+the session scratchpad, to be rebuilt as Task 1's committed witness):
+
+```
+seed 42, 50 agents, one hazard_memory_memo call on the max-history probe
+                       tick 15   tick 30   tick 60   tick 100   tick 200
+FRESH memo (the bench's shape)
+  terrain.hazards()    14,004    16,758    22,302    29,097     43,164
+  alarm_replays             0         0         0         0          0
+  scans with emitters       0         0         0         0          0
+  wall (loaded box)     42 ms     35 ms     46 ms     59 ms      87 ms
+WARM memo (production's per-creature read once the tick's scan exists)
+  terrain.hazards()       684       819     1,089     1,449        729*
+  wall                  1.4 ms    1.8 ms    2.3 ms    3.1 ms     1.5 ms
+roster: distinct rooms   1,430     1,721     2,307     3,022      4,665
+        rooms ∪ halo     7,006     8,357    10,832        —          —
+whole tick, all 50 walks + reads
+  terrain.hazards()    29,250    34,146    44,694        —          —
+  facts committed         181        35        31        —          —
+seed 6 (the emitter seed), 50 agents: 1 emitter in every scan, alarm_replays 0,
+  hazards() 22,671 fresh / 1,152 warm at tick 60.
+(* the tick-200 probe is a different body: the probe re-selects per checkpoint
+   in the spike; the bench fixes it once. 87 ms against §12's 93 ms/call at
+   the same band is the cross-check that this is the bench's cost.)
+```
+
+Every `hazards()` sample is a pure function of the room: `Terrain::hazards`
+takes no `day` by contract ("a slow field"), `LocaleContext::hazards_at` reads
+climate and regime, and the predator field is "computed once at" session
+start. So the fold's cost is **static terrain re-sampled per tick**, ~95% of
+it in `build_emitter_scan`'s pass 2 (roster × distinct rooms × the room and
+its neighbours, ~9.7 samples per room), and the cross-tick affect memo would
+move H4 by nothing on the instrument H4 is measured on. The emitter-free
+production read is ~1,000 samples per creature per tick on top of the scan:
+44,694 per tick on 50 agents while the walk commits 31 facts.
+
+**Why not (b) first.** 7b is an epoch and a fidelity call (0238); H4 is a
+measured, byte-identical quarry that the last campaign left carrying a
+wrong mechanism in a committed registry row. Leaving that row as it is
+would send the next reader to build the wrong thing.
+
+**Why not (c) alone.** `KnownWater`→`LatestVisit` costs memory and advance
+work, never a wrong answer, and moves no criterion. The `EmitterScan`
+visibility and test move ride along here because the scan is rewritten.
+
+**Alternatives discarded.**
+- The reset-partition affect memo as the campaign (Nathan's (a) verbatim):
+  reached 0 times on every measured shape; kept as a decision rule in the
+  spec (build it only where a shape's `alarm_replays` is measured non-zero
+  and its cost material — the seed-6 possession shape reaches it 9 of 9
+  times at past instants per The Pawl, cost unmeasured).
+- Putting the memo inside `LocaleTerrain`: the benches and the lab rebuild
+  the terrain per tick, so a terrain-scoped memo is cold every tick on
+  exactly the instruments the criteria run on. Overturned by the ideonomy
+  pass (below); the memo is session-scoped, beside `mesh_memo` and the
+  resident store.
+- A whole-history spatial partition (Campaign 7): trigger unmet; excluded.
+- Merging the three trail indexes now: deferred, row stands.
+
+**Ideonomy passes / overturns: 2 / 1** (`ideonomy-plain`, tuple:
+substitution + dimension-identification, organon cycle, prompts
+distribution / size / connectivity). Pass 1 overturned the memo's scope
+(terrain-object → session) and split the work into two levels; pass 2
+(negation + abstraction lift, run by hand) added the neighbour-dedupe
+observation and named the pattern; a third pass was judged to add nothing
+material. The artifact:
+
+```
+The tick cycle, and where static terrain is re-sampled on it
+(seed 42, 50 agents, tick 60; every phase's samples are of a field that
+ does not change between phases or between ticks)
+
+  freeze ledger
+      |
+      v
+  [1] alarm field, present day        ~450 samples   (roster x 9 at position)
+      |
+      v
+  [2] emitter scan, once per tick   22,302 samples   (roster x visited x 9.7)
+      |
+      v
+  [3] per-creature hazard read      ~1,000 x 50      (visited x 9, each body)
+      |
+      v
+  [4] the walk's own Danger drive     small           (31 facts committed)
+      |
+      v
+  commit 31 facts ------> next tick: [1] again, on ground that did not move
+                                      ^
+  anti-phase: NOTHING samples hazards between ticks (the snapshot did, until
+  The Rack); nothing samples them on the same room twice within [2] either,
+  because [2] never asks the same (room) twice for the same member -- the
+  repetition is ACROSS members (a shared room is sampled once per member
+  that visited it) and ACROSS ticks (every room, every tick).
+
+  Dimensions surfaced, and the value chosen:
+    key granularity   room | (room, niche) | (entity, room) verdict | the scan
+                      -> room for the field (shared by every reader), and a
+                         per-entity verdict INDEX for the scan's monotone half
+    lifetime          call | tick | SESSION | world   -> session (one terrain)
+    ownership         terrain object | session | resident store
+                      -> session-owned, threaded like mesh_memo; the verdict
+                         index lives with the entity in the resident store
+    invalidation      never (Pure) | dependency (Ledger)  -> Pure; the one
+                      thing that could release it is a different terrain, and
+                      a store already assumes one LocaleContext (SustenanceMemo)
+    scan shape        rebuild per tick | advancing over new sightings
+                      -> advancing: is_emitter and alarm halos are MONOTONE
+                         because the verdict per (entity, room) never changes
+    size x1000        the scan is O(roster x rooms) per tick; at 1000x agents
+                      the memo alone leaves it O(roster x rooms) LOOKUPS, so
+                      the advancing form is what scales, not the memo
+    connectivity      who else reads hazards(): the Danger drive per step,
+                      alarm_field, serviceability -- all served by the room
+                      memo; is_fresh_water has the same shape in believed_water
+                      (121 samples/call, 4.4 ms) but its cost is the A* per
+                      water room, not the sampling -- out of scope, recorded
+  Negation (pass 2): no memo at all -- sample the union of rooms and halo once
+    (10,832 distinct against 44,694 samples, a 4.1x) is a pure algorithmic
+    win; it is subsumed by the room memo, which pays each distinct room once
+    per SESSION rather than once per tick.
+  Abstraction lift: "a fold over visits x a static predicate over places" --
+    KnownWater/is_water, LatestVisit/frightening, forage. The tenant holds the
+    visits, the read applies the predicate, and the predicate's answer per
+    place is a Pure derived component. That sentence is the campaign.
+```
+
+**Capture actions.** Registry: `TOOL-hazard-affect-cross-tick-memo` is
+corrected in place at spec time (the measured mechanism, the number, and the
+row's original claim kept as history); a new row for the place-predicate
+index pattern (the abstraction above) as `raw`; the `believed_water` A*-per-
+water-room cost is added to the followup register. The neighbour-dedupe
+observation is recorded in the spec's §1 as subsumed. Nothing else raised.
+
+---
+
+## #2 [Q] — where does the room memo live, and how does a `&self` reader reach it?
+
+**Question.** `Terrain::hazards(&self)` is read through `&dyn Terrain` by
+every caller, so a memo behind it needs either interior mutability or a
+prefill step; and the benches, the lab and `Session::wait` all rebuild
+`LocaleTerrain` per tick, so the memo cannot live in the terrain value.
+
+**Decision.** Session-scoped, beside `mesh_memo` and the resident store, and
+threaded into `LocaleTerrain::with_fields` the way `Some(&self.mesh_memo)`
+already is. Interior mutability (`RefCell`, the `OwnedFolds` shape) rather
+than prefill, because the set of rooms a tick will ask about is the union of
+every roster member's visited rooms and their halos, which is not known
+before the reads run — the mesh memo's prefill works because "each NPC's
+current position and neighbours" is known in advance; this one is not.
+
+**Why (precedent).** The Pawl §2.2 put the seam at read and refused the
+throwaway rebuild for exactly the `&self` reader case (`Session::snapshot`);
+decision 0537 (a reader never observes a fold behind its ledger) is about
+ledger folds, but its shape — advance on read, idempotent — is the one a
+fill-on-read memo has. The Forebay's `RoomMeshMemo` is the precedent for a
+session-owned `Pure` derived store read through `Option<&…>` by `&self`
+terrain methods.
+
+**Alternatives discarded.** Prefill per tick from the resident store's
+visited sets (known at advance time): correct, but O(roster × rooms) map
+work per tick on the prefill path and a second place that has to know which
+rooms a hazard read will touch. A memo inside `LocaleContext` (locale layer):
+the predator field is a vessel-side blend, so half the value would be
+computed outside the memo anyway; and locale is a window other windows read
+without a session.
+
+**Ideonomy passes / overturns: 1 / 0** — the G1 pass's ownership dimension
+is this question; its row stands.
+
+**Capture.** None beyond the spec.
+
+---
+
+## #3 [Q] — what is the memo's key, and what makes it complete?
+
+**Question.** Decision 0206 makes key-completeness the typed obligation:
+the key must carry every parameter the derivation reads. `hazards(room)`
+reads the room, the `LocaleContext` (climate, regime budget, geosphere
+level, nearest-vertex index) and the session's predator field.
+
+**Decision.** Key by `Facet` alone, with the terrain's identity supplied by
+OWNERSHIP rather than by the key: one memo per `(LocaleContext, predator
+field)`, owned by the session that owns both, documented on the type the way
+`SustenanceMemo` documents "one `LocaleContext` per store", and pressured by
+the chaos-eviction property (`Derived::evict_all` at every step, output
+unchanged) plus a two-terrain test that asserts a memo handed a second
+terrain with a different predator field is a DIFFERENT memo, not a shared
+one.
+
+**Why (precedent).** `RoomMeshMemo` folded `Geosphere::level()` into the
+key because that is one `u32`; a `LocaleContext` is not a key-sized value.
+`SustenanceMemo` already takes the second road — its integrals depend on
+the temperature field and the memo's doc says "one `LocaleContext` per
+store; a caller that must change the field builds a new store" — so the
+resident layer already carries this assumption and the room memo adds no
+new one. Decision 0206's own text allows it: "world-derived" is `Pure`
+with the world's identity folded in, and here the identity is the owner.
+
+**Alternatives discarded.** A `u64` fingerprint of the context in the key:
+would need a stable hash of a large struct for a property ownership already
+guarantees. `Validity::Ledger`: the field is not a fold over the ledger.
+
+**Ideonomy passes / overturns: 1 / 0** — the G1 pass's invalidation and
+size dimensions; the "what could release it" question came back with only
+"a different terrain", which is what this entry answers.
+
+**Capture.** A future day-dependent hazard (seasonal heat/cold) would make
+`Terrain::hazards` take a `day`, which is a signature change the memo's key
+would have to absorb; noted in the spec's determinism section as the one
+thing that would make this memo wrong, and it cannot happen silently
+because the trait method's signature is the contract.
+
+---
+
+## #4 [Q] — is the advancing scan a tenant, a read, or a memo?
+
+**Question.** The Pawl ruled `Alarm` is not a tenant: everything the scan
+accumulates from the ledger is already held by `Trail` and `LatestVisit`,
+and the predicate needs terrain, which no `LedgerFold::absorb` may read.
+Making the scan advance over new sightings seems to reopen that.
+
+**Decision.** It does not. The scan stays a READ over the two tenants plus
+the predicate; what changes is that the predicate's answer per `(entity,
+room)` is remembered at the read side — a per-entity **verdict index**
+(frightening rooms, ascending by first visit; `ever` as its non-emptiness;
+the halo union as a derived set) advanced from the trail by a consumed-prefix
+cursor, the `MemoPartition` shape. `absorb` still sees only facts; the
+verdict index is a read-side memo of a pure predicate, exactly what The
+Pawl's ruling said KnownWater's `is_water` is, with the one difference that
+the answer is kept rather than re-asked.
+
+**Why (precedent).** The Pawl ledger #4 and the `Alarm`-is-not-a-tenant
+ruling (Task 5); `SustenanceMemo` as the precedent for a read-side memo that
+lives in the store, keyed by entity, advanced by a consumed index against
+the trail.
+
+**Alternatives discarded.** A tenant whose `absorb` takes terrain: refused
+by the purity rule the FOLD-equals-SCAN battery depends on. Recomputing the
+scan per tick over the room memo alone: O(roster × rooms) lookups per tick;
+the counting witness would still read ~22,000 per call and the elasticity
+would not move.
+
+**Ideonomy passes / overturns: 1 / 0** — the G1 pass's scan-shape
+dimension.
+
+**Capture.** None beyond the spec.
