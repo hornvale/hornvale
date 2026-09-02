@@ -83,7 +83,40 @@
 //! carry the same 68-body, 68-on-roll population and the same worktree, so
 //! the only thing that changed between them is this task's code.
 //!
-//! (Task 13 appends the post-roll, post-tick-stage reading.)
+//! ### Task 13 readout (CONTENDED, load 4.07 4.96 5.77), after Task 11
+//!
+//! 2026-09-02, MacBookPro, `5cb7683107aa1babf4c99cc87c8ace306a1c7c71`.
+//!
+//! `uptime` was polled in the foreground for ~33 minutes (07:30–08:03Z);
+//! the box never satisfied The Repose's all-three-under-4 rule — the
+//! 1-minute average dipped under 4 several times (as low as 1.36) while
+//! the 5- and 15-minute averages stayed elevated, and a fresh spike (a
+//! 1-minute average of 28.64) arrived in the final stretch. This reading
+//! was taken anyway per the task brief's fallback, at load `4.07 4.96
+//! 5.77` — the lowest three-average reading reached in the poll and the
+//! one nearest to quiet. The `on_roll` column now reads
+//! `session.roll_len()` (Task 13) rather than the `bodies` duplicate it
+//! printed before; at seed 42 the two agree (the whole population is on
+//! the roll at this world's scale).
+//!
+//! ```text
+//! session_wait_scaling: seed 42, 20 waits
+//!   bodies  on_roll    ms/wait  facts/wait
+//!       68       68     71.994      62.25
+//! per-wait ms: [58.2975, 58.798667, 58.059583, 39.177375, 73.884208,
+//! 63.178334, 80.947792, 90.167084, 84.838125, 82.1865, 74.47375,
+//! 59.017041, 77.902875, 58.723375, 83.214209, 100.177834, 91.525792,
+//! 64.247583, 59.264833, 81.79725]
+//! ```
+//!
+//! `ms/wait` fell further, 83.487 -> 71.994 (a ~14% drop on a
+//! contended-vs-contended comparison, both readings taken on the same
+//! 68-body/68-on-roll population); the box was measurably quieter for
+//! this reading (load 4.07/4.96/5.77 vs the prior reading's 4.27/5.66/8.82)
+//! so part of the drop is plausibly box noise rather than code — no code
+//! changed between Task 11's reading and this one. Well under M2's 1000 ms
+//! budget either way. See the campaign report (Task 13) for the
+//! `agent_scaling` 100-/200-agent readout and the M2 verdict.
 
 // The wall-clock is the instrument here, never sim logic -- exempt from the
 // wall-clock ban (clippy.toml / decision 0001), same pattern as
@@ -136,7 +169,7 @@ fn main() {
     println!(
         "{:>8} {:>8} {:>10.3} {:>10.2}",
         bodies,
-        bodies,
+        session.roll_len(), // Task 13: session.roll_len()
         mean(&ms),
         mean(&facts)
     );
