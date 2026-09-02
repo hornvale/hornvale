@@ -1,0 +1,1 @@
+{"kind":"notice","by":"campaign/the-roll","note":"sluice: queued stage request for campaign/the-roll at bd9157562 -- Stage 5 boundary (the tick): one population walk per wait, facts committed in place; M2 met at 72 ms/wait for a 68-body roll.","paths":["scripts/sluice-queue.sh"]}
