@@ -47,11 +47,26 @@ fn resident_stream(seed: Seed, site: u32, ordinal: u16) -> Stream {
 
 /// The residents of `village`, `village.population` of them, ordinal ==
 /// index. `species` is the settlement's `peopled-by` label (read with
-/// `hornvale_species::species_of`). TOTAL, never absent: a kind with no
-/// language, psyche or site yields residents named `"{species} {ordinal+1}"`
-/// with the manikin mind and age zero, the same neutral posture `body_at`'s
+/// `hornvale_species::species_of`). TOTAL over the KIND lookups, never
+/// absent: a kind with no language row draws no name (falls to
+/// `"{species} {ordinal+1}"`), no psyche row draws the manikin mind, and no
+/// biosphere row draws age zero — the same neutral posture `body_at`'s
 /// lookups take on a miss, so a `Body.species` typo reads as a neutral
-/// resident rather than a missing one.
+/// resident rather than a missing one. The SITE is not part of that
+/// fallback (see `# Panics`): every settlement is minted at genesis with a
+/// `cell-id` fact (lexicon: frozen predicate VALUE, decision 0246), so its
+/// absence (`domains/settlement/src/genesis.rs`) is a corrupted world, not
+/// a degraded-but-total read.
+///
+/// # Panics
+///
+/// Panics if `village.id` carries no `VERTEX_ID` (the frozen predicate
+/// `cell-id`, lexicon: decision 0246) fact, or a non-numeric one. A
+/// resident's stream is keyed on its settlement's site; silently
+/// defaulting to vertex 0 would alias that settlement's residents onto
+/// vertex 0's own stream — a real vertex, not a sentinel — which is
+/// exactly the (site, ordinal) contract's aliasing hazard this fails
+/// loudly against instead.
 /// type-audit: bare-ok(identifier-text: species)
 pub fn resident_draws(
     world: &World,
@@ -61,7 +76,10 @@ pub fn resident_draws(
 ) -> Vec<ResidentDraw> {
     let site = match world.ledger.value_of(village.id, VERTEX_ID) {
         Some(Value::Number(n)) => *n as u32,
-        _ => 0,
+        _ => panic!(
+            "settlement {:?} ({}) carries no cell-id fact; a resident's stream is keyed on its site and cannot be derived without one", // lexicon: frozen predicate VALUE, decision 0246
+            village.id, village.name
+        ),
     };
     let kind: Option<&'static str> = wc
         .biosphere
@@ -259,5 +277,30 @@ mod tests {
         assert_eq!(d.mind.threat_response, 0.6016664724049925);
         assert_eq!(d.mind.deliberation_latency, 0.5346607350443859);
         assert_eq!(d.mind.time_horizon, 0.5453806270496363);
+    }
+
+    /// A settlement with no `cell-id` fact (lexicon: frozen predicate
+    /// VALUE, decision 0246) is a corrupted world (every settlement is
+    /// minted with one at genesis, `domains/settlement/src/genesis.rs`),
+    /// and `resident_draws` fails loudly rather than silently aliasing its
+    /// residents onto vertex 0's own stream.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST: restore the `_ => 0` arm in
+    /// `resident_draws`' site match; this test then reddens because nothing
+    /// panics (an aliased vertex-0 read instead).
+    #[test]
+    #[should_panic(expected = "carries no cell-id")] // lexicon: frozen predicate VALUE, decision 0246
+    fn a_settlement_with_no_site_fails_loudly() {
+        let (w, wc, _village, species) = fixture();
+        let mut ghost_world = w.clone();
+        let ghost_id = ghost_world
+            .ledger
+            .mint_entity(hornvale_kernel::test_lineage(u16::MAX));
+        let ghost_village = VillageInfo {
+            id: ghost_id,
+            name: "Ghost Camp".to_string(),
+            population: 1,
+        };
+        resident_draws(&ghost_world, &wc, &ghost_village, &species);
     }
 }
