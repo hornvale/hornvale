@@ -157,3 +157,125 @@ fn a_thing_held_by_a_cast_member_that_does_not_exist_is_refused() {
          scene its author meant"
     );
 }
+
+/// An unspecified `relations` is EMPTY, not inherited — the same rule
+/// `a_tableau_with_no_cast_stages_nobody` pins for the cast.
+///
+/// The world's own ledger already carries `instance-of` facts of its own
+/// (settlement roster kinds, promoted props elsewhere) that have nothing to
+/// do with this session's cast, so the check is scoped to facts naming a
+/// freshly staged cast member as SUBJECT — none of those may carry the
+/// predicate a relation would have staged, since none was.
+#[test]
+fn a_tableau_with_no_relations_stages_none() {
+    let world = common::build(42).expect("seed 42 builds");
+    let opts = PossessOpts {
+        tableau: Some(Tableau::new().with_cast(["goblin", "drow"])),
+        ..PossessOpts::default()
+    };
+    let (session, _) = Session::start(&world, &opts).expect("a staged session starts");
+    let cast: Vec<u64> = session.bodies().iter().map(|b| b.entity.get()).collect();
+
+    let ledger: serde_json::Value =
+        serde_json::from_str(&session.session_ledger_json()).expect("the ledger is JSON");
+    let staged_a_relation = ledger
+        .get("facts")
+        .and_then(|f| f.as_array())
+        .expect("a ledger serializes its facts as an array")
+        .iter()
+        .any(|f| {
+            f.get("predicate").and_then(|p| p.as_str()) == Some(hornvale_kernel::INSTANCE_OF)
+                && f.get("subject")
+                    .and_then(|s| s.as_u64())
+                    .is_some_and(|s| cast.contains(&s))
+        });
+    assert!(
+        !staged_a_relation,
+        "an unspecified relations list is EMPTY, never inherited: no fact of \
+         the predicate a relation would have staged may name a freshly \
+         staged cast member as subject: {ledger}"
+    );
+}
+
+/// A stated relation between two cast members is readable from the session
+/// after staging.
+///
+/// `INSTANCE_OF` is used here only because it is a predicate the concept
+/// registry always carries (kernel-core) and no other staging path commits
+/// it for a cast member's own entity — the point under test is the
+/// MACHINERY (a tableau's relation reaches the ledger, subject/predicate/
+/// object exactly as named), not this predicate's usual meaning.
+#[test]
+fn a_staged_relation_is_readable_from_the_session() {
+    let world = common::build(42).expect("seed 42 builds");
+    let opts = PossessOpts {
+        tableau: Some(Tableau::new().with_cast(["drow", "goblin"]).with_relation(
+            hornvale_kernel::INSTANCE_OF,
+            0,
+            1,
+        )),
+        ..PossessOpts::default()
+    };
+    let (session, _) = Session::start(&world, &opts).expect("a staged relation stages");
+    let subject = session.bodies()[0].entity.get();
+    let object = session.bodies()[1].entity.get();
+
+    let ledger: serde_json::Value =
+        serde_json::from_str(&session.session_ledger_json()).expect("the ledger is JSON");
+    let found = ledger
+        .get("facts")
+        .and_then(|f| f.as_array())
+        .expect("a ledger serializes its facts as an array")
+        .iter()
+        .any(|f| {
+            f.get("predicate").and_then(|p| p.as_str()) == Some(hornvale_kernel::INSTANCE_OF)
+                && f.get("subject").and_then(|s| s.as_u64()) == Some(subject)
+                && f.get("object")
+                    .and_then(|o| o.get("Entity"))
+                    .and_then(|e| e.as_u64())
+                    == Some(object)
+        });
+    assert!(
+        found,
+        "the staged relation must be readable back out of the session's ledger: {ledger}"
+    );
+}
+
+/// A relation naming a cast index that does not exist is refused, not
+/// ignored — mirroring `a_thing_held_by_a_cast_member_that_does_not_exist_is_refused`.
+/// The refusal names the offending index, the same as `held_by`'s does.
+#[test]
+fn a_relation_naming_a_cast_index_that_does_not_exist_is_refused() {
+    let world = common::build(42).expect("seed 42 builds");
+    let opts = PossessOpts {
+        tableau: Some(Tableau::new().with_cast(["drow"]).with_relation(
+            hornvale_kernel::INSTANCE_OF,
+            0,
+            7,
+        )),
+        ..PossessOpts::default()
+    };
+    let err = Session::start(&world, &opts)
+        .err()
+        .expect("a relation naming a cast member it never staged must be refused");
+    let message = format!("{err}");
+    assert!(
+        message.contains('7'),
+        "the refusal must name the offending index: {message}"
+    );
+}
+
+/// The file is a FRONT-END over the builder for relations too, not a second
+/// way to make one.
+#[test]
+fn a_tableau_read_from_json_round_trips_relations() {
+    let built = Tableau::new()
+        .with_cast(["drow", "goblin"])
+        .with_relation("instance-of", 0, 1);
+    let read = Tableau::from_json(
+        r#"{"cast":[{"species":"drow"},{"species":"goblin"}],
+            "relations":[{"predicate":"instance-of","subject":0,"object":1}]}"#,
+    )
+    .expect("a well-formed tableau parses");
+    assert_eq!(built, read);
+}
