@@ -100,6 +100,7 @@ pub mod knownness;
 pub mod observer;
 pub mod person_promote;
 pub mod render;
+pub mod residents;
 pub mod resolve;
 pub mod schedule;
 pub mod seed_sweep;

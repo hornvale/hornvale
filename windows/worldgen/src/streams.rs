@@ -28,6 +28,12 @@ hornvale_kernel::stream_labels! {
     /// [`crate::disposition`] for why that key, and not the settlement's
     /// `EntityId`, its `BakeId`, or its bare current `cell-id`.
     SETTLEMENT_DISPOSITION = "settlement/disposition/v1" => "the per-settlement disposition draw, keyed on the occupation's (site, founded-year)";
+    /// The per-resident draw (The Roll): name salt, age and the three mind
+    /// dials, keyed on the settlement's site vertex and the resident's
+    /// ordinal — never its `EntityId` — for the reason
+    /// [`SETTLEMENT_DISPOSITION`] gives. Flat, like it, because the draw
+    /// needs `hornvale_species::Dispersion` and the settlement's own site.
+    SETTLEMENT_RESIDENT = "settlement/resident/v1" => "the per-resident draw, keyed on (site, ordinal)";
     /// Whether one expansion out of [`crate::history_bake::Bake::grow`] is a
     /// **working** rather than a farm (The Winze, spec §B.3). A flat path,
     /// like [`SETTLEMENT_DISPOSITION`] beside it and for the same reason: the
