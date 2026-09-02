@@ -4954,3 +4954,8 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-02T14:28:18Z | sluice:gate | 663.963 | 19713.617 | 653.942 | 30.68 | 0 | 5eeea051d |  | lefford | 40 |
 | 2026-09-02T14:37:38Z | sluice:clients | 560.043 | 10144.784 | 115.919 | 18.32 | 0 | dd9eece3c |  | lefford | 40 |
 | 2026-09-02T14:45:13Z | sluice:heavy | 454.948 | 9610.597 | 170.308 | 21.50 | 0 | 7fba9a0c7 |  | lefford | 40 |
+| 2026-09-02T14:27:52Z | game-check | 0.365 | 0.282 | 0.048 | 0.90 | 0 | 2c34f9e4c | campaign/the-hone | MacBookPro | 10 |
+| 2026-09-02T14:30:03Z | game-check | 115.602 | 685.885 | 27.831 | 6.17 | 0 | 2c34f9e4c | campaign/the-hone | MacBookPro | 10 |
+| 2026-09-02T14:31:53Z | gate-commit | 62.060 | 332.903 | 26.184 | 5.79 | 0 | 2c34f9e4c | campaign/the-hone | MacBookPro | 10 |
+| 2026-09-02T14:32:37Z | gate-commit | 22.588 | 53.048 | 13.838 | 2.96 | 0 | 2c34f9e4c | campaign/the-hone | MacBookPro | 10 |
+| 2026-09-02T14:33:18Z | gate-commit | 22.775 | 53.328 | 14.238 | 2.97 | 0 | 5f73f9356 | campaign/the-hone | MacBookPro | 10 |
