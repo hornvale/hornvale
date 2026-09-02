@@ -209,7 +209,14 @@ that produces the truth the realizer must not exceed.
   where `c` is drawn (from the `stair` leg, at plan time, so the vessel
   spends no draw) inside the intersection of the two regions' rectangles.
   That intersection is asserted non-empty for every rung pair the ladder
-  admits, as a test, not assumed. A landing cell is set walkable even if
+  admits, as a test, not assumed. **Execution amendment (final review):** a node
+  on a middle level can be the upper end of one stairway and the lower end
+  of another, and two coordinates drawn independently can coincide — on
+  ~9% of five-rung descents they did, and the realizer overwrote one stair
+  with the other. A stair coordinate is therefore drawn from the
+  intersection MINUS every coordinate another stairway touching either
+  endpoint already holds, and the pairing test sweeps the full habitation
+  ladder, not two rungs. A landing cell is set walkable even if
   the carve left it rock: a stairway has a foot.
 - **Stairs pair by coordinate.** `peek_stairs` stops relying on "exactly
   one" and lands on the cell with the same coordinates one rung over — the
@@ -323,10 +330,18 @@ Lab metric" gets its first column.
 ### 4.5 Determinism and fidelity
 
 Two independent builds of every plan and level on the panel are
-byte-identical; `BranchPlan.dof` equals the number of draws the four legs
-made (counted at the draw, compared to a recount by an independent walk of
-the decomposition tree), and `Level.dof` no longer includes a partition
-draw. Standard, and the campaign does not close without it.
+byte-identical; `DescentPlan.dof` is counted at every draw site, and
+`Level.dof` no longer includes a partition draw. **Execution amendment
+(final review):** the G3 draft promised a recount "by an independent walk
+of the decomposition tree". That recount cannot exist — a failed `cycle`
+or `extend` attempt spends its draws and leaves nothing in the tree — so
+the check is a derived FLOOR and CEILING instead: `dof ≥ 1 + levels +
+2·stairs + 4·realms + 2·extensions` (one entrance row, one stair cell per
+level, two coordinates per stairway, op + edge + hops + cross per realm,
+op + edge per extension) and `dof ≤ floor + 4 · 80 · levels` (at most 80
+attempts per level of at most four draws). The floor is exact for a plan
+in which no attempt failed, and the test says so. Standard, and the
+campaign does not close without it.
 
 ## 5. Save-format and determinism consequences
 
