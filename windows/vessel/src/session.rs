@@ -1248,6 +1248,43 @@ fn other_bodies(bodies: &[Body], driven: usize) -> Vec<&Body> {
         .collect()
 }
 
+/// The body among `bodies` that `needle` (already lowercased-and-compared
+/// case-insensitively) names — the shared resolution three matchers
+/// (`why`, `npc_grievance`, `colocated_npc`) apply to a typed label. An
+/// EXACT case-insensitive match wins outright; failing that, the LONGEST
+/// label merely CONTAINING `needle` wins.
+///
+/// **The Roll, Task 10.** Before this, each site took the first roster-order
+/// substring hit, which let a shorter resident's name be shadowed by a
+/// longer one sharing its prefix whenever the longer one happened to sit
+/// earlier in the roster — measured live: seed 42 with residents "Toska"
+/// (ordinal 1) and "Tosk" (ordinal 2), typing `tosk` resolved to "Toska"
+/// (`"toska".contains("tosk")` is true), not the body actually named
+/// "Tosk". Preferring an exact match first fixes the query that names one
+/// resident outright; preferring the longest of the remaining matches is
+/// the least-surprising tiebreak among genuine prefix collisions ("goblin"
+/// should not out-rank "goblin chief" for a query that types neither in
+/// full, but an exact query for either must still win outright — the exact
+/// check above is what guarantees that).
+///
+/// MUTATION THIS MUST FAIL AGAINST: drop the exact-match branch and fall
+/// straight to `.find()` (first roster-order substring hit) —
+/// `the_roll.rs::a_prefix_name_does_not_shadow_a_longer_one` reddens.
+fn body_by_needle<'a>(bodies: &[&'a Body], needle: &str) -> Option<&'a Body> {
+    let needle = needle.to_lowercase();
+    let exact = bodies
+        .iter()
+        .find(|n| n.label.to_lowercase() == needle)
+        .copied();
+    exact.or_else(|| {
+        bodies
+            .iter()
+            .filter(|n| n.label.to_lowercase().contains(&needle))
+            .max_by_key(|n| n.label.len())
+            .copied()
+    })
+}
+
 impl<'w> Session<'w> {
     /// Begin a possession, deriving a fresh [`WorldContext`] for it: build the
     /// locale context, mint the flagship agent, absorb the first projection,
@@ -2575,8 +2612,10 @@ impl<'w> Session<'w> {
     /// is exactly zero). Unlike `would_turn_hostile`, this resolves among
     /// ALL derived NPCs, not only co-located ones — grievance is a ledger
     /// fold over that NPC's own facts, not a proximity check — matched by
-    /// the `npcs` listing's 1-based handle or case-insensitive label
-    /// substring; `None` if no derived NPC matches `who`.
+    /// the `npcs` listing's 1-based handle or [`body_by_needle`] (The
+    /// Roll, Task 10: exact label match first, then the longest containing
+    /// label — never merely the first substring hit in roster order);
+    /// `None` if no derived NPC matches `who`.
     /// type-audit: bare-ok(identifier-text: who), bare-ok(diagnostic-value: return)
     pub fn npc_grievance(&self, who: &str) -> Option<f64> {
         let others = other_bodies(&self.bodies, self.driven);
@@ -2584,12 +2623,8 @@ impl<'w> Session<'w> {
             .ok()
             .filter(|n| *n >= 1)
             .and_then(|n| others.get(n - 1))
-            .or_else(|| {
-                let needle = who.to_lowercase();
-                others
-                    .iter()
-                    .find(|n| n.label.to_lowercase().contains(&needle))
-            })
+            .copied()
+            .or_else(|| body_by_needle(&others, who))
             .map(|npc| grievance(&self.ledger, npc.entity))
     }
 
@@ -7511,13 +7546,15 @@ impl<'w> Session<'w> {
     /// T4): the world remembers, so `why` over an NPC that has moved names
     /// each committed `agent-at` with the day it was asserted (`recount` in
     /// `windows/historiography` renders the day suffix). `who` is matched
-    /// first as the `npcs` listing's 1-based handle, else as a
-    /// case-insensitive substring of an NPC's label — this mirrors the CLI
-    /// repl's `why <id>` (see `cli/src/repl.rs`) over the one kind of subject
-    /// a possess session actually has on hand without a prior listing step:
-    /// a name. The handle is deliberately NOT the NPC's `EntityId` (The
-    /// Signet) — it is a short-lived, session-local position a player can
-    /// type back, resolved fresh from `other_bodies` on every call.
+    /// first as the `npcs` listing's 1-based handle, else by
+    /// [`body_by_needle`] (The Roll, Task 10: exact label match first, then
+    /// the longest containing label — never merely the first substring hit
+    /// in roster order) — this mirrors the CLI repl's `why <id>` (see
+    /// `cli/src/repl.rs`) over the one kind of subject a possess session
+    /// actually has on hand without a prior listing step: a name. The
+    /// handle is deliberately NOT the NPC's `EntityId` (The Signet) — it is
+    /// a short-lived, session-local position a player can type back,
+    /// resolved fresh from `other_bodies` on every call.
     fn why(&self, who: &str) -> String {
         let who = who.trim();
         if who.is_empty() {
@@ -7529,12 +7566,8 @@ impl<'w> Session<'w> {
             .ok()
             .filter(|n| *n >= 1)
             .and_then(|n| others.get(n - 1))
-            .or_else(|| {
-                let needle = who.to_lowercase();
-                others
-                    .iter()
-                    .find(|n| n.label.to_lowercase().contains(&needle))
-            });
+            .copied()
+            .or_else(|| body_by_needle(&others, who));
         let Some(npc) = target else {
             return format!("No one here answers to '{who}' (see 'npcs').");
         };
@@ -7742,8 +7775,9 @@ impl<'w> Session<'w> {
     /// Resolve `who` to one **sensed** co-located NPC (The First Mark): an empty
     /// argument selects the first such NPC (the common case — a lone co-located
     /// NPC needs no name), otherwise `who` is matched as the `npcs` listing's
-    /// 1-based handle or a case-insensitive substring of an NPC's label,
-    /// mirroring `why`'s resolution but restricted to NPCs actually here.
+    /// 1-based handle or by [`body_by_needle`] (The Roll, Task 10: exact
+    /// label match first, then the longest containing label), mirroring
+    /// `why`'s resolution but restricted to NPCs actually here.
     /// The handle is resolved against `other_bodies` (so it means the same
     /// number `npcs` printed) and then re-checked against `here` — resolving
     /// it directly against `here`'s own positions would let a handle's
@@ -7784,12 +7818,10 @@ impl<'w> Session<'w> {
             // return a reference into it.
             .and_then(|n| other_bodies(&self.bodies, self.driven).get(n - 1).copied())
             .filter(|npc| here.iter().any(|h| h.entity == npc.entity))
-            .or_else(|| {
-                let needle = who.to_lowercase();
-                here.iter()
-                    .find(|n| n.label.to_lowercase().contains(&needle))
-                    .copied()
-            })
+            // The Roll, Task 10: [`body_by_needle`] — exact label match
+            // first, then the longest containing label — never merely the
+            // first substring hit in roster order.
+            .or_else(|| body_by_needle(&here, who))
     }
 
     /// Commit the first player-authored fact: a signed disposition shift on

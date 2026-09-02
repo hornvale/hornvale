@@ -1445,3 +1445,213 @@ fn a_wild_group_collapses_and_follows_the_residents() {
         "still exactly one separator with two groups: {line:?}"
     );
 }
+
+// ---------------------------------------------------------------------------
+// Task 10: names reach the verbs. Residents are labelled by their drawn
+// names now, and nothing until this task proved each of the four matchers
+// that read a label actually resolves a resident BY NAME, indoors and
+// outdoors, through the listing, through provenance, and through a
+// substring collision. This section is tests only unless one reddens.
+// ---------------------------------------------------------------------------
+
+/// `examine <name>` answers the resident's `creature_datum` line outdoors
+/// (via the chart legend's word match) and indoors (via `examine_chamber`'s
+/// exact matcher), and the two lines are byte-equal —
+/// `the_blocking.rs::a_creatures_noun_answers_the_same_line_on_both_sides_of_a_doorway`'s
+/// contract, now specifically for a body labelled by a drawn NAME rather
+/// than the old `"<species> of <village>"` template.
+///
+/// MUTATION THIS MUST FAIL AGAINST: lowercase only one side of the exact
+/// match in `examine_chamber`'s creature arm (`session.rs`, the
+/// `.find(|npc| npc.label.to_lowercase() == wanted)` line) — drop the
+/// `.to_lowercase()` off `npc.label`.
+#[test]
+fn examine_resolves_a_resident_by_name_on_both_bands() {
+    let w = common::build(42).expect("seed 42 builds");
+    let (mut session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
+    session.handle("wait");
+    let companion = session.bodies()[1].entity;
+    let label = session.bodies()[1].label.clone();
+    assert!(
+        !label.contains(" of "),
+        "precondition: a resident's label is a drawn name, not the old \
+         '<species> of <village>' template: {label:?}"
+    );
+    session.place_creature_at_me(companion);
+
+    let outdoors = out(session.handle(&format!("examine {label}")));
+    assert!(
+        !outdoors.starts_with("You see no"),
+        "precondition: the name answers OUT of doors: {outdoors}"
+    );
+
+    let reply = out(session.handle("enter"));
+    assert!(
+        reply.starts_with("[chamber "),
+        "the possession did not get indoors, so nothing below is tested: {reply}"
+    );
+    common::deepen_until_the_plan_draws(&mut session, companion);
+    assert!(
+        common::marks_of(&session).iter().any(|m| m.noun == label),
+        "precondition: '{label}' must be drawn on the plan indoors — without a \
+         mark, examine refusing it is correct, not a bug"
+    );
+    let indoors = out(session.handle(&format!("examine {label}")));
+    assert_eq!(
+        indoors, outdoors,
+        "'{label}' is drawn on the plan inside; examine must answer it by \
+         name, and answer it with the SAME line the walk band gives"
+    );
+}
+
+/// `npcs` lists a resident's drawn name, never the old
+/// `"<species> of <village>"` template, and `why <name>` resolves the same
+/// resident — a resident's `NAME`/`is-person`/`person-born` facts (`the-
+/// roll`'s own commits, `derive_residents`) are themselves recorded
+/// provenance, so `why` answers `recount`'s "{label}:\n- …" narration
+/// rather than the "nothing recorded" refusal, and it must be THIS body's
+/// narration: it names the label on its very first line.
+///
+/// MUTATION THIS MUST FAIL AGAINST: in `derive_residents`, keep `body_at`'s
+/// label instead of the drawn name (delete the `body.label = name;` line) —
+/// `list_npcs` and `why` then answer the generic species template.
+#[test]
+fn the_roster_listing_and_why_use_names() {
+    let w = common::build(42).expect("seed 42 builds");
+    let (session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
+    let label = session.bodies()[1].label.clone();
+    assert!(
+        !label.contains(" of "),
+        "precondition: a resident's label is a drawn name: {label:?}"
+    );
+
+    let listed = session.npc_labels();
+    assert!(
+        listed.contains(&label.as_str()),
+        "npcs' own label roster must carry the drawn name '{label}': {listed:?}"
+    );
+    assert!(
+        !listed.iter().any(|l| l.contains(" of ")),
+        "no listed label may be the old '<species> of <village>' template: {listed:?}"
+    );
+
+    let mut session = session;
+    let why = out(session.handle(&format!("!why {label}")));
+    assert!(
+        why.starts_with(&format!("{label}:\n")),
+        "why must resolve '{label}' to the SAME body the roster names it \
+         for, narrated by its own drawn name: {why:?}"
+    );
+}
+
+/// Two residents whose names share a prefix ("Tosk", "Toska") do not
+/// collide in the substring matchers: typing the SHORTER name ("tosk") must
+/// resolve the resident actually named "Tosk", not the resident named
+/// "Toska" whose longer label also contains "tosk" as a substring.
+///
+/// **Route taken**: seed 42's own draw has no such pair (residents 1/2 in
+/// Task 4's fixture draw ordinary generated names), so the pair is
+/// constructed with the seam `a_committed_name_wins_over_the_draw` shows —
+/// a NAME fact committed by hand, before derivation, for two ordinals. This
+/// has to happen on the LEDGER, before `Session::start` derives labels
+/// (`Body.label` is set once, at derivation, inside `derive_residents`) —
+/// `Session::start`'s signature takes only `world: &World` and clones
+/// `world.ledger` internally, so the pre-seeded facts are committed onto a
+/// clone of the built world's own ledger, and that modified `World` (not
+/// the original) is handed to `Session::start`. The entity for a given
+/// ordinal is computed the same way `derive_residents` computes it —
+/// `reuse_or_mint_entity` derives an id purely from `Lineage`, independent
+/// of ledger state, so minting it on a throwaway clone first and committing
+/// NAME there, then folding that ledger into the `World` passed to
+/// `Session::start`, yields exactly the entity `derive_residents` will
+/// later resolve to the same lineage — this is a full integration-level
+/// test through `Session::handle`, not a bare call to the matcher helper.
+///
+/// Placed with Toska at the LOWER ordinal (1, so roster position 0 of
+/// `other_bodies`) and Tosk at the higher one (2, roster position 1): a
+/// first-match-in-roster-order matcher checks Toska before Tosk, and
+/// "toska".contains("tosk") is true, so a query of "tosk" wrongly matches
+/// Toska first under that shape — the collision this test is built to
+/// catch.
+///
+/// MUTATION THIS MUST FAIL AGAINST: in `colocated_npc`'s (a.k.a.
+/// `resolve_here`) substring fallback, sort matches by label length
+/// ascending and prefer the shortest — i.e. always prefer the shorter
+/// label over roster order, which behaves identically to correct
+/// exact-match-first resolution for the "tosk" query used here (since
+/// "Tosk" is both the exact match and the shorter label) and so is NOT
+/// this test's discriminator; the mutation this test actually catches is
+/// leaving `.find()` at plain roster order with no exact-match preference,
+/// which is exactly what a shared `body_by_needle` helper (exact match
+/// first, then longest) fixes.
+#[test]
+fn a_prefix_name_does_not_shadow_a_longer_one() {
+    let mut w = common::build(42).expect("seed 42 builds");
+    let village = village_info(&w).expect("seed 42 places a flagship");
+    assert!(
+        village.population >= 3,
+        "need at least two other residents besides the driven body: population {}",
+        village.population
+    );
+
+    let mut ledger = w.ledger.clone();
+    let toska = ledger.reuse_or_mint_entity(hornvale_kernel::Lineage {
+        parent: Some(village.id),
+        role: "npc",
+        ordinal: 1,
+    });
+    ledger
+        .commit(
+            hornvale_kernel::Fact {
+                subject: toska,
+                predicate: hornvale_kernel::NAME.to_string(),
+                object: hornvale_kernel::Value::Text("Toska".to_string()),
+                place: None,
+                day: None,
+                provenance: "test".to_string(),
+            },
+            &w.registry,
+        )
+        .expect("a hand-committed NAME on a freshly minted entity commits");
+    let tosk = ledger.reuse_or_mint_entity(hornvale_kernel::Lineage {
+        parent: Some(village.id),
+        role: "npc",
+        ordinal: 2,
+    });
+    ledger
+        .commit(
+            hornvale_kernel::Fact {
+                subject: tosk,
+                predicate: hornvale_kernel::NAME.to_string(),
+                object: hornvale_kernel::Value::Text("Tosk".to_string()),
+                place: None,
+                day: None,
+                provenance: "test".to_string(),
+            },
+            &w.registry,
+        )
+        .expect("a hand-committed NAME on a freshly minted entity commits");
+    w.ledger = ledger;
+
+    let (mut session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
+    assert_eq!(
+        session.bodies()[1].label,
+        "Toska",
+        "precondition: ordinal 1 carries the committed name 'Toska'"
+    );
+    assert_eq!(
+        session.bodies()[2].label,
+        "Tosk",
+        "precondition: ordinal 2 carries the committed name 'Tosk'"
+    );
+
+    session.place_creature_at_me(toska);
+    session.place_creature_at_me(tosk);
+
+    let why = out(session.handle("!why tosk"));
+    assert!(
+        why.starts_with("Tosk:\n"),
+        "'why tosk' must resolve the resident actually named 'Tosk', not \
+         'Toska' merely because 'toska' also contains 'tosk': {why:?}"
+    );
+}
