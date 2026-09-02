@@ -156,14 +156,23 @@ mod tests {
     /// rather than by calling `is_mobile_beast`, so a regression in the
     /// shared function is visible even though both
     /// `wild_concentrations_from` and `wild_herds_near` now call the same
-    /// code and can never disagree WITH EACH OTHER. Every species
-    /// `wild_concentrations_from(wc, report, 100)` names satisfies the
-    /// independent predicate, and every herd `wild_herds_near(.., |_| true)`
-    /// names does too.
+    /// code and can never disagree WITH EACH OTHER. Two halves: (1) every
+    /// species `wild_concentrations_from(wc, report, 100)` names satisfies
+    /// the independent predicate, and every herd `wild_herds_near(..,
+    /// |_| true)` names does too (catches OVER-inclusion); (2) for EVERY
+    /// kind in `biosphere_registry()` — not only the ones seed 42 happens
+    /// to place — `is_mobile_beast(&biosphere, label) == oracle(label)`
+    /// (catches UNDER-inclusion: a kind the shared filter wrongly excludes
+    /// never appears in `wild`/`herds` at all, so half (1) alone cannot see
+    /// it).
     ///
-    /// MUTATION THIS MUST FAIL AGAINST: flip `!predominantly_marine` to
-    /// `predominantly_marine` in `is_mobile_beast`; the shared function then
-    /// disagrees with this test's independent oracle.
+    /// MUTATION THIS MUST FAIL AGAINST (both directions, independently):
+    /// (a) drop `SocialForm::Gregarious` from `is_mobile_beast`'s
+    /// `matches!` (under-inclusion — excludes dire-wolf, giant-elk, every
+    /// other gregarious beast); (b) flip `!predominantly_marine` to
+    /// `predominantly_marine` in `is_mobile_beast` (over-inclusion — the
+    /// shared function then disagrees with this test's independent
+    /// oracle).
     #[test]
     fn the_filter_is_shared() {
         let world = roll_world();
@@ -203,6 +212,24 @@ mod tests {
                 herd.species
             );
         }
+
+        // The symmetric half: every REGISTERED kind (not only the ones
+        // seed 42 happens to place) must agree between the shared filter
+        // and the independent oracle. This is the only check that can see
+        // UNDER-inclusion — a kind the shared filter wrongly excludes never
+        // shows up in `wild` or `herds` at all, so the two loops above
+        // cannot detect its absence. Needs no world or report.
+        let mut checked_kinds = 0;
+        for (kind, _traits) in biosphere.iter() {
+            let label = kind.0;
+            assert_eq!(
+                is_mobile_beast(&biosphere, label),
+                oracle(label),
+                "{label}: is_mobile_beast and the independent oracle disagree"
+            );
+            checked_kinds += 1;
+        }
+        assert!(checked_kinds > 0, "the biosphere registry is non-empty");
     }
 
     /// A herd's headcount is its attractor's rendered count, exactly:
