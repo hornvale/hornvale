@@ -179,9 +179,20 @@ mod tests` block *inside* `windows/vessel/src/session.rs`. A tests-only scan
 would miss the flagship. Scanning all of `src/` also avoids having to locate a
 test module's textual span, which would be fragile.
 
-Entry points scanned: `build_world`, `build_world_to`,
-`build_world_to_with_artifacts`, `build_world_observed`, `history_for`,
-`simulate_world`.
+Entry points scanned — **five, and the sixth candidate was rejected on
+inspection**: `build_world`, `build_world_to`,
+`build_world_to_with_artifacts`, `build_world_observed`, `history_for`.
+
+`hornvale_lab::health::simulate_world` was on the list until it was read.
+Its signature is `simulate_world(world: &World) -> Vec<AffectTrace>` — it takes
+an **already-built** world and derives terrain and climate from it, which makes
+it a **decision-0092 weir site, already governed by clippy's
+`disallowed-methods`**, not a world-build site at all. It carries 0092's scoped
+`#[allow]` and the comment "Named construction site (decision 0092)". Including
+it would have added 5 spurious rows across 3 files and, worse, blurred two
+governance mechanisms that are deliberately separate: 0092 governs *derivation
+from* a world, 0606 governs *construction of* one. Caught at pre-dispatch
+verification.
 
 **Three-valued, checked in both directions** — the shape `tropes check`, the
 timings baseline, type-audit's `waiver(...)` and seam-guard all use:
@@ -243,16 +254,19 @@ Roster size, measured across the workspace at `25ee1d830`:
   windows/vessel         15      36      51
   cli                    20      26      46
   windows/hearsay         0      21      21
-  windows/lab             2      18      20
+  windows/lab             1      14      15
   windows/scene          11       3      14
   windows/book            3       0       3
-  windows/locale          0       1       1
   windows/almanac         0       1       1
+  windows/locale          0       1       1
   ------------------------------------------
-  TOTAL                 102     253     355
+  TOTAL                 101     249     350
 ```
 
-355 rows, generated once and then frozen. Bounded and reviewable.
+**350 sites across 200 files**, generated once and then frozen. Bounded and
+reviewable. (An earlier draft read 355/201 because it counted
+`simulate_world`, which §3.1 now excludes as a 0092 derivation site rather
+than a build; `windows/lab` is where the difference lands.)
 
 ### 3.3 The fixture as a declared input
 

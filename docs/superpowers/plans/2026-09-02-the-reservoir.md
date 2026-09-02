@@ -134,7 +134,7 @@ Create `cli/tests/suite/world_build_sites.rs`:
 //!
 //! So this is a **ratchet, not a wall** — the shape `tropes check`, the
 //! timings baseline, type-audit's `waiver(...)` and seam-guard all use. A
-//! guard that failed on the mere existence of 355 grandfathered sites would
+//! guard that failed on the mere existence of 350 grandfathered sites would
 //! be red on day one and trained away by day two.
 //!
 //! **Reason codes** (spec §3.2). `build-path` asserts on the build itself
@@ -165,13 +165,22 @@ use std::path::{Path, PathBuf};
 
 /// The build entry points a roster row can name. Any call to one of these in
 /// workspace source is a world build.
+///
+/// **Five, and `simulate_world` is deliberately not the sixth.**
+/// `hornvale_lab::health::simulate_world(world: &World) -> Vec<AffectTrace>`
+/// takes an ALREADY-BUILT world and derives terrain and climate from it, so
+/// it is a decision-0092 weir site — already governed by clippy's
+/// `disallowed-methods`, and carrying 0092's scoped `#[allow]` and its
+/// "Named construction site" comment. 0092 governs derivation *from* a
+/// world; this roster governs construction *of* one. Adding it here would
+/// add 5 spurious rows across 3 files and blur two mechanisms that are
+/// separate on purpose. Do not "complete" this list with it.
 const ENTRY_POINTS: &[&str] = &[
     "build_world_to_with_artifacts",
     "build_world_observed",
     "build_world_to",
     "build_world",
     "history_for",
-    "simulate_world",
 ];
 
 /// The number of `unmigrated` sites the roster may still carry. Lower it as
@@ -494,7 +503,7 @@ cd "$(git rev-parse --show-toplevel)"
 python3 - <<'PY'
 import os, re
 EP = ["build_world_to_with_artifacts","build_world_observed","build_world_to",
-      "build_world","history_for","simulate_world"]
+      "build_world","history_for"]
 def count(text):
     total = 0
     for ep in EP:
@@ -551,10 +560,10 @@ Then set the ceiling in `cli/tests/suite/world_build_sites.rs` to the printed
 site total:
 
 ```rust
-const UNMIGRATED_CEILING: usize = 355; // replace with the number just printed
+const UNMIGRATED_CEILING: usize = 350; // replace with the number just printed
 ```
 
-**Use the number the script prints, not 355.** 355 was measured at `25ee1d830`;
+**Use the number the script prints, not 350.** 350 was measured at `25ee1d830`;
 the branch may have moved.
 
 - [ ] **Step 4: Run the tests to verify all five pass**

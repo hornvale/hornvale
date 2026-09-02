@@ -216,6 +216,53 @@ inference from ranking to reachability was the defect.
 
 ---
 
+#7 [G5] — **`simulate_world` is not a build entry point. Removed from the scan
+before Task 1 was dispatched.**
+
+*Question.* The spec's §3.1 and the plan's Task 1 both listed six build entry
+points to scan. Pre-dispatch verification greps every named identifier. Do all
+six actually build a world?
+
+*Finding.* **Five do; the sixth does not.**
+`hornvale_lab::health::simulate_world` is
+`simulate_world(world: &World) -> Vec<AffectTrace>` — it takes an
+**already-built** world and derives terrain and climate from it:
+
+```rust
+    let Ok(terrain) = hornvale_worldgen::terrain_of(world) else { … };
+    let Ok(climate) = hornvale_worldgen::climate_from(world, &terrain) else { … };
+```
+
+It already carries decision 0092's scoped `#[allow(clippy::disallowed_methods)]`
+and the comment "Named construction site (decision 0092)". It is a **weir site,
+governed by clippy**, not a build site.
+
+*Decision.* Drop it. The scan is five entry points. Both the spec and the plan
+are corrected, and the plan's `ENTRY_POINTS` const carries a doc comment telling
+a future reader — or a future implementer tempted to "complete" the list — why
+the sixth is absent.
+
+*Why it matters beyond the count.* The arithmetic is small: 355 sites across 201
+files becomes **350 across 200**, the difference landing entirely in
+`windows/lab` (`health.rs` leaves the roster; `affect_trace_golden.rs` 2→1,
+`health_calibration.rs` 4→1). The real cost would have been conceptual —
+**0606 governs construction OF a world, 0092 governs derivation FROM one**, and
+folding a 0092 site into 0606's roster would have given two mechanisms
+overlapping jurisdiction over the same call, with no rule for which wins. That
+is the kind of defect that reads as thoroughness.
+
+*Cost if wrong.* Nil in the other direction: if a future campaign decides
+derivation sites belong on this roster too, adding them is additive and 0092's
+clippy entries would then be the redundant half.
+
+*ideonomy passes / overturns.* n/a — a factual correction.
+
+*Capture.* Spec §3.1 (entry-point list plus the rejection rationale), §3.2
+(roster table 355→350); plan Task 1 (`ENTRY_POINTS`, the generator script,
+`UNMIGRATED_CEILING`, the module doc); this entry.
+
+---
+
 ## Parked findings
 
 ### P1 — `scene_surrounds_colour_cli.rs` uses a fixed temp path and flakes
