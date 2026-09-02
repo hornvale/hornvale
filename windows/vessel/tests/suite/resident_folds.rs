@@ -33,23 +33,40 @@
 //! settlement's whole roll now (59 bodies at [`WALKING_SEED`]), so the same
 //! wait count buys ten times the work it did when these scripts were written.
 //!
-//! Measured on this box, `cargo nextest run -p hornvale-vessel` in full
-//! (so both columns carry the same parallel contention):
+//! Measured on this box with a full `nextest` run of this crate, so every
+//! column carries the same parallel contention. The AFTER column is two
+//! independent runs rather than one, because this box was carrying another
+//! session's work throughout (`vm.loadavg` ranged from 11 to 91 on ten cores)
+//! and a single number would read as a precision the measurement does not have:
 //!
 //! ```text
-//! witness                                          before    after   script
-//! rule_six_witness_hazard_memory_reads...          343.453s  30.852s  40 -> 12 waits
-//! rule_six_witness_belief_reads...                 342.947s  30.907s  40 -> 12 waits
-//! rule_two_witness_agent_at_commit_order...        342.433s  29.275s  40 -> 12 waits
-//! the_hazard_folds_integration_does_not_grow...    339.000s  52.442s  5/20 -> 2/6 turns
-//! the_walk_never_commits_two_sightings...          126.175s   9.825s  20 -> 8 waits
-//! rule_one_witness_no_read_runs_before_a_reset...   11.532s   8.845s  unchanged
+//! witness                                          before   after (2 runs)  script
+//! rule_six_witness_hazard_memory_reads...          343.453s  39.265 45.085   40 -> 12 waits
+//! rule_six_witness_belief_reads...                 342.947s  39.116 45.473   40 -> 12 waits
+//! rule_two_witness_agent_at_commit_order...        342.433s  37.365 43.172   40 -> 12 waits
+//! the_hazard_folds_integration_does_not_grow...    339.000s  66.186 75.770   5/20 -> 2/6 turns
+//! the_walk_never_commits_two_sightings...          126.175s  12.726 13.943   20 -> 8 waits
+//! rule_one_witness_no_read_runs_before_a_reset...   11.532s  11.165 12.257   unchanged
+//! whole-crate wall                                 489.643s 265.161 290.971
 //! ```
 //!
 //! `rule_one_witness` walks seed 42, whose residents condense onto fresh water
 //! and commit no positional fact, so it was never expensive and its script is
-//! untouched; it moves only because [`PAST_DAY_STRIDE`] is now a named
-//! constant shared with the two sweeps below.
+//! untouched; it appears only for completeness, and [`PAST_DAY_STRIDE`] is now
+//! a named constant it shares with the two sweeps below.
+//!
+//! **[`the_hazard_folds_integration_does_not_grow_with_the_tick_index`] IS
+//! STILL OVER THE CEILING AND IS LEFT THAT WAY DELIBERATELY.** It is 5.1x
+//! cheaper than it was and it is not under 60 s: 52.4 s in a light eight-test
+//! run, 66.2 s and 75.8 s in the two full runs above, 71.5 s alone on a box at
+//! load 15. Two of its costs are irreducible without dropping evidence — the
+//! search that SELECTS the emitter-bearing world (seven world builds, and a
+//! hardcoded seed is the thing that search exists to avoid), and the seed-42
+//! contrast shape that shows the same measurement on a world with no past-day
+//! replay at all. `EARLY` is already at 2, the smallest window in which the
+//! replay is entered at both ends. Cutting further would remove one of those
+//! two, which is weakening the witness rather than shortening it, so it stays
+//! long and this paragraph says so.
 //!
 //! **What a shorter script costs, stated rather than waved at.** Every
 //! assertion in this file is either a floor on a denominator or a comparison
@@ -140,7 +157,7 @@ const EMITTER_SEARCH_WAITS: usize = 2;
 /// campaign records it rather than assuming it.
 ///
 /// **Re-measured on the shortened script** ([`WITNESS_WAITS`] = 12, down from
-/// 40; 342.433 s to 29.275 s): 58 entities, 46 `agent-at` facts each, **0
+/// 40; 342.433 s to 37.4-43.2 s in a full parallel crate run): 58 entities, 46 `agent-at` facts each, **0
 /// out-of-order pairs** — the same verdict the forty-wait script returned, and
 /// the floor below (at least one `agent-at` fact) is cleared by 2,668.
 #[test]
@@ -2324,7 +2341,7 @@ fn discarding_known_water_at_every_third_position_is_unobservable() {
 /// **Re-measured on the shortened script** ([`WITNESS_WAITS`] = 12, down from
 /// 40, and [`PAST_DAY_STRIDE`] = 9, down from 37 so the sweep still samples
 /// about six of each body's own visit days rather than one; 342.947 s to
-/// 30.907 s). The session: 23,665 facts absorbed, 49,391 belief lookups, **0**
+/// 39.1-45.5 s in a full parallel crate run). The session: 23,665 facts absorbed, 49,391 belief lookups, **0**
 /// at an instant before a committed sighting. The present-instant shape: 3,365
 /// lookups, 0 past-instant. The past-day sweep: **19,379 lookups, 16,015 at an
 /// instant before a committed sighting**, over 348 outer calls. Both asserted
@@ -2514,7 +2531,8 @@ fn rule_six_witness_belief_reads_run_at_past_instants() {
 /// the two caller sets can be seen NOT to agree.
 ///
 /// **Re-measured on the shortened script** ([`WITNESS_WAITS`] = 12, down from
-/// 40; 343.453 s to 30.852 s), because the disagreement above is a RATIO and a
+/// 40; 343.453 s to 39.3-45.1 s in a full parallel crate run), because the
+/// disagreement above is a RATIO and a
 /// ratio read off a script this test no longer runs is a guess. The twelve-wait
 /// session reads **905 hazard lookups against 49,391 belief lookups — a factor
 /// of 54.6**, against the forty-wait session's 2,557 against 143,611, a factor
@@ -3044,7 +3062,7 @@ fn a_same_day_pair_committed_in_descending_room_order_is_where_the_two_orders_pa
 /// the denominator, on a real session.
 ///
 /// **Re-measured on the shortened script** ([`SIGHTING_WAITS`] = 8, down from
-/// 20; 126.175 s to 9.825 s): 58 subjects, **986 adjacent sighting pairs, 0 at
+/// 20; 126.175 s to 12.7-13.9 s in a full parallel crate run): 58 subjects, **986 adjacent sighting pairs, 0 at
 /// the same instant**, so the `pairs > 100` floor is cleared by 886 and the
 /// verdict is the same one the twenty-wait script returned. This is the witness
 /// the shortening costs the most reach: a same-instant pair the walk cannot
@@ -3211,7 +3229,10 @@ fn the_hazard_folds_integration_does_not_grow_with_the_tick_index() {
     // thing this test does not assert on.
     //
     // **CUT AGAIN AT THE CAMPAIGN'S CLOSE, 5/20 -> 2/6, for the 60 s witness
-    // ceiling** (339.000 s -> 52.442 s in a full parallel vessel run). The tick
+    // ceiling -- WHICH IT STILL DOES NOT MEET, and the module doc says why it
+    // is left that way rather than cut again** (339.000 s -> 66.186 s and
+    // 75.770 s in two full parallel crate runs; 52.442 s in a light one). The
+    // tick
     // index moves 3x, and the accrual floor is cleared by 3.5x rather than by
     // the three orders of magnitude a twenty-turn `WALKING_SEED` roster gave:
     // seed 6 commits 549 roster facts by turn 2 and 1,251 by turn 6, an accrual

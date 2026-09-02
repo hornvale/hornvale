@@ -249,9 +249,10 @@ fn ledger_hash_of_a_fresh_walk(world: &hornvale_kernel::World) -> u64 {
 /// every run, so a campaign that wants to compare two trees has the number
 /// without this file asserting on it.
 ///
-/// **Runtime.** 12.953 s for the single-run form on the merged tree; 24.8 s for
-/// the two runs this test now takes, against the campaign's own 60 s ceiling
-/// for a witness. That measurement replaces a mangled sentence this doc used
+/// **Runtime.** 12.953 s for the single-run form on the merged tree; 22.500 s
+/// and 22.333 s for the two-run form in two full parallel runs of this crate,
+/// against the campaign's own 60 s ceiling for a witness. That measurement
+/// replaces a mangled sentence this doc used
 /// to carry, which folded a `/// ` into the middle of a backticked identifier
 /// (`controller_swap::the_driven_bodys_suppressed_drive_is_retrievable_but_absent_from_what_it_says`,
 /// 27.9 s, the slowest vessel test this campaign did not write).
@@ -282,9 +283,9 @@ fn the_seed_42_walk_commits_the_same_ledger_bytes() {
 /// searches for appears within a handful of ticks or not at all.
 ///
 /// **It was 8 until the campaign's close and it is 2 now**, for the 60 s
-/// witness ceiling — this test cost 137.033 s in a full parallel vessel run and
-/// costs 35.9 s alone (61.5 s under the same parallel contention) with the cut
-/// and the second determinism run together. Two is not a guess: sweeping
+/// witness ceiling — this test cost 137.033 s in a full parallel run of this
+/// crate and costs 46.269 s and 47.889 s in two such runs with the cut and the
+/// second determinism run together (35.9 s alone). Two is not a guess: sweeping
 /// `common::SIGHT_SEEDS` (0..64) at each wait count, **one wait finds no world
 /// in the range at all**, and two, three, four, six and eight all land on seed
 /// 6 — so two is the cheapest script that still selects the world the
