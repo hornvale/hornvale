@@ -1,0 +1,222 @@
+# Every world-build call site in the workspace, by file (decision 0606).
+#
+# Format: <repo-relative path>\t<count>\t<reason:N ...>
+#
+# A full build costs ~3.0 s in a debug build (80.8% of it in the
+# climate+settlements stage); reading the committed seed-42 world costs
+# ~15 ms. nextest is process-per-test, so every site pays in full, once
+# per test, forever.
+#
+# Reasons: build-path (asserts on the build itself), artifacts (needs
+# GeneratedTerrain/GeneratedClimate, which are not Serialize), identity
+# (a seed or pin set with no committed fixture), production (a real code
+# path), unmigrated (grandfathered -- the ONLY reason that may not grow).
+#
+# Keyed by count per file, never by line number: a line-keyed row
+# invalidates on any edit above it, which would redden this guard on
+# unrelated commits and get it trained away.
+#
+# Generated 2026-09-02 at campaign start: 201 files, 352 sites,
+# every one `unmigrated` by construction. Reclassification is a human act.
+#
+cli/src/dictionary.rs	1	unmigrated:1
+cli/src/main.rs	9	unmigrated:9
+cli/src/repl.rs	9	unmigrated:9
+cli/src/tropes.rs	1	unmigrated:1
+cli/tests/suite/branches_coverage.rs	1	unmigrated:1
+cli/tests/suite/branches_identity.rs	1	unmigrated:1
+cli/tests/suite/common_is_total.rs	1	unmigrated:1
+cli/tests/suite/graph_cost.rs	5	unmigrated:5
+cli/tests/suite/history_battery.rs	1	unmigrated:1
+cli/tests/suite/id_shift_invariance.rs	1	unmigrated:1
+cli/tests/suite/id_stability_under_insertion.rs	3	unmigrated:3
+cli/tests/suite/lens_purity.rs	1	unmigrated:1
+cli/tests/suite/prose_is_not_a_contract.rs	1	unmigrated:1
+cli/tests/suite/provision.rs	1	unmigrated:1
+cli/tests/suite/repertory_corpus.rs	1	unmigrated:1
+cli/tests/suite/repose_byte_identity.rs	2	unmigrated:2
+cli/tests/suite/scene_context_discipline.rs	1	unmigrated:1
+cli/tests/suite/scene_cost.rs	1	unmigrated:1
+cli/tests/suite/session_cost.rs	1	unmigrated:1
+cli/tests/suite/star_class_is_a_concept.rs	1	unmigrated:1
+cli/tests/suite/the_unnameable.rs	2	unmigrated:2
+cli/tests/suite/trope_witness.rs	1	unmigrated:1
+cli/tests/suite/world_build_sites.rs	2	unmigrated:2
+windows/almanac/tests/suite/interlinear.rs	1	unmigrated:1
+windows/book/src/lib.rs	3	unmigrated:3
+windows/hearsay/tests/common/mod.rs	1	unmigrated:1
+windows/hearsay/tests/probe_argmin_defect_crossing_arms.rs	1	unmigrated:1
+windows/hearsay/tests/probe_crossing_scale.rs	1	unmigrated:1
+windows/hearsay/tests/probe_seam_direction.rs	1	unmigrated:1
+windows/hearsay/tests/probe_tiebreak_rules.rs	1	unmigrated:1
+windows/hearsay/tests/suite/hop_depth_seed42.rs	1	unmigrated:1
+windows/hearsay/tests/suite/palimpsest_readout.rs	1	unmigrated:1
+windows/hearsay/tests/suite/palimpsest_readout_units.rs	1	unmigrated:1
+windows/hearsay/tests/suite/parley_readout.rs	1	unmigrated:1
+windows/hearsay/tests/suite/probe_contact_substrate.rs	1	unmigrated:1
+windows/hearsay/tests/suite/probe_filter_mismatch.rs	1	unmigrated:1
+windows/hearsay/tests/suite/probe_filter_variation.rs	1	unmigrated:1
+windows/hearsay/tests/suite/probe_lossy_quadrants.rs	1	unmigrated:1
+windows/hearsay/tests/suite/probe_stance_cost.rs	1	unmigrated:1
+windows/hearsay/tests/suite/probe_teller_relations.rs	4	unmigrated:4
+windows/hearsay/tests/suite/retelling_readout_seed42.rs	1	unmigrated:1
+windows/hearsay/tests/traced_walk.rs	1	unmigrated:1
+windows/hearsay/tests/undertow_readout.rs	1	unmigrated:1
+windows/lab/src/metrics.rs	1	unmigrated:1
+windows/lab/tests/suite/affect_trace_golden.rs	1	unmigrated:1
+windows/lab/tests/suite/disposition_calibration.rs	1	unmigrated:1
+windows/lab/tests/suite/gathering_calibration.rs	1	unmigrated:1
+windows/lab/tests/suite/health_calibration.rs	1	unmigrated:1
+windows/lab/tests/suite/hearth_population_calibration.rs	1	unmigrated:1
+windows/lab/tests/suite/reticence_calibration.rs	1	unmigrated:1
+windows/lab/tests/suite/roster_parity.rs	1	unmigrated:1
+windows/lab/tests/suite/terminator_acceptance.rs	2	unmigrated:2
+windows/lab/tests/suite/the_dial.rs	1	unmigrated:1
+windows/lab/tests/suite/the_doctrine.rs	1	unmigrated:1
+windows/lab/tests/suite/the_explanations.rs	1	unmigrated:1
+windows/lab/tests/suite/the_fare_calibration.rs	1	unmigrated:1
+windows/lab/tests/suite/the_mire_calibration.rs	1	unmigrated:1
+windows/locale/tests/suite/surface_mixture.rs	1	unmigrated:1
+windows/scene/src/lib.rs	7	unmigrated:7
+windows/scene/src/region.rs	2	unmigrated:2
+windows/scene/src/surrounds.rs	2	unmigrated:2
+windows/scene/tests/common/mod.rs	1	unmigrated:1
+windows/scene/tests/suite/golden.rs	2	unmigrated:2
+windows/vessel/src/agent.rs	1	unmigrated:1
+windows/vessel/src/focalize.rs	1	unmigrated:1
+windows/vessel/src/knowledge.rs	2	unmigrated:2
+windows/vessel/src/liveness.rs	6	unmigrated:6
+windows/vessel/src/purview.rs	1	unmigrated:1
+windows/vessel/src/session.rs	3	unmigrated:3
+windows/vessel/src/snapshot.rs	1	unmigrated:1
+windows/vessel/tests/common/mod.rs	1	unmigrated:1
+windows/vessel/tests/suite/act.rs	1	unmigrated:1
+windows/vessel/tests/suite/body_fields.rs	1	unmigrated:1
+windows/vessel/tests/suite/controller_swap.rs	1	unmigrated:1
+windows/vessel/tests/suite/display_handle.rs	1	unmigrated:1
+windows/vessel/tests/suite/furnishing_marks.rs	1	unmigrated:1
+windows/vessel/tests/suite/lantern_fabric.rs	1	unmigrated:1
+windows/vessel/tests/suite/lantern_lens.rs	2	unmigrated:2
+windows/vessel/tests/suite/lantern_light.rs	1	unmigrated:1
+windows/vessel/tests/suite/lantern_night.rs	1	unmigrated:1
+windows/vessel/tests/suite/lantern_seam.rs	2	unmigrated:2
+windows/vessel/tests/suite/liveness_genesis.rs	2	unmigrated:2
+windows/vessel/tests/suite/ooc_namespace.rs	1	unmigrated:1
+windows/vessel/tests/suite/ooc_objective.rs	1	unmigrated:1
+windows/vessel/tests/suite/passage.rs	1	unmigrated:1
+windows/vessel/tests/suite/player_acts_commit.rs	1	unmigrated:1
+windows/vessel/tests/suite/possess_target.rs	1	unmigrated:1
+windows/vessel/tests/suite/possession_moves.rs	1	unmigrated:1
+windows/vessel/tests/suite/session.rs	3	unmigrated:3
+windows/vessel/tests/suite/session_snapshot.rs	2	unmigrated:2
+windows/vessel/tests/suite/strongbox_reachability.rs	1	unmigrated:1
+windows/vessel/tests/suite/submerged_before_arm.rs	1	unmigrated:1
+windows/vessel/tests/suite/the_blocking.rs	1	unmigrated:1
+windows/vessel/tests/suite/the_first_mark.rs	1	unmigrated:1
+windows/vessel/tests/suite/the_handle.rs	1	unmigrated:1
+windows/vessel/tests/suite/the_lintel.rs	1	unmigrated:1
+windows/vessel/tests/suite/the_purview.rs	1	unmigrated:1
+windows/vessel/tests/suite/underworld_level_generation.rs	1	unmigrated:1
+windows/vessel/tests/suite/walker_battery.rs	1	unmigrated:1
+windows/vessel/tests/suite/world_context.rs	1	unmigrated:1
+windows/worldgen/src/alchemy.rs	1	unmigrated:1
+windows/worldgen/src/chorus.rs	1	unmigrated:1
+windows/worldgen/src/graph_derive.rs	1	unmigrated:1
+windows/worldgen/src/herds.rs	1	unmigrated:1
+windows/worldgen/src/history_emit.rs	1	unmigrated:1
+windows/worldgen/src/lib.rs	42	unmigrated:42
+windows/worldgen/src/render.rs	1	unmigrated:1
+windows/worldgen/src/residents.rs	1	unmigrated:1
+windows/worldgen/src/underworld_readout.rs	1	unmigrated:1
+windows/worldgen/src/vestige.rs	1	unmigrated:1
+windows/worldgen/tests/suite/approach_ease_calibration.rs	1	unmigrated:1
+windows/worldgen/tests/suite/artifacts.rs	3	unmigrated:3
+windows/worldgen/tests/suite/beta_calibration_freeze.rs	1	unmigrated:1
+windows/worldgen/tests/suite/beta_calibration_sweep.rs	1	unmigrated:1
+windows/worldgen/tests/suite/breach.rs	2	unmigrated:2
+windows/worldgen/tests/suite/capacity_cost_probe.rs	4	unmigrated:4
+windows/worldgen/tests/suite/chorus_params.rs	1	unmigrated:1
+windows/worldgen/tests/suite/confluence.rs	5	unmigrated:5
+windows/worldgen/tests/suite/consonance_properties.rs	1	unmigrated:1
+windows/worldgen/tests/suite/deep_grammar.rs	1	unmigrated:1
+windows/worldgen/tests/suite/deep_realm_mutation.rs	1	unmigrated:1
+windows/worldgen/tests/suite/deep_realm_rehome.rs	2	unmigrated:2
+windows/worldgen/tests/suite/deep_realm_substrate.rs	2	unmigrated:2
+windows/worldgen/tests/suite/delve_depth.rs	1	unmigrated:1
+windows/worldgen/tests/suite/delver_bind_audit.rs	1	unmigrated:1
+windows/worldgen/tests/suite/delver_depth_probe.rs	1	unmigrated:1
+windows/worldgen/tests/suite/delver_distinctness.rs	1	unmigrated:1
+windows/worldgen/tests/suite/delver_readout.rs	4	unmigrated:4
+windows/worldgen/tests/suite/demesne.rs	3	unmigrated:3
+windows/worldgen/tests/suite/depth.rs	7	unmigrated:7
+windows/worldgen/tests/suite/descent_graph.rs	1	unmigrated:1
+windows/worldgen/tests/suite/diachronic.rs	1	unmigrated:1
+windows/worldgen/tests/suite/doctrine.rs	1	unmigrated:1
+windows/worldgen/tests/suite/drift_reach_probe.rs	1	unmigrated:1
+windows/worldgen/tests/suite/era_substrate.rs	1	unmigrated:1
+windows/worldgen/tests/suite/explanations.rs	1	unmigrated:1
+windows/worldgen/tests/suite/exposure.rs	5	unmigrated:5
+windows/worldgen/tests/suite/fathom_column_probe.rs	1	unmigrated:1
+windows/worldgen/tests/suite/founder_collision.rs	1	unmigrated:1
+windows/worldgen/tests/suite/generalist_baseline.rs	1	unmigrated:1
+windows/worldgen/tests/suite/generalist_distinctness.rs	1	unmigrated:1
+windows/worldgen/tests/suite/graph_byte_identity.rs	1	unmigrated:1
+windows/worldgen/tests/suite/history_byte_identity.rs	1	unmigrated:1
+windows/worldgen/tests/suite/history_emit.rs	2	unmigrated:2
+windows/worldgen/tests/suite/history_gates.rs	2	unmigrated:2
+windows/worldgen/tests/suite/history_placement.rs	1	unmigrated:1
+windows/worldgen/tests/suite/history_shape_probe.rs	3	unmigrated:3
+windows/worldgen/tests/suite/history_sundering.rs	1	unmigrated:1
+windows/worldgen/tests/suite/history_tithe.rs	1	unmigrated:1
+windows/worldgen/tests/suite/history_tumult.rs	4	unmigrated:4
+windows/worldgen/tests/suite/history_units.rs	2	unmigrated:2
+windows/worldgen/tests/suite/hollow_readout.rs	1	unmigrated:1
+windows/worldgen/tests/suite/insolation_probe.rs	2	unmigrated:2
+windows/worldgen/tests/suite/keeping_probe.rs	1	unmigrated:1
+windows/worldgen/tests/suite/kinship_facts.rs	1	unmigrated:1
+windows/worldgen/tests/suite/mines_exist.rs	2	unmigrated:2
+windows/worldgen/tests/suite/niche_breadth_probe.rs	1	unmigrated:1
+windows/worldgen/tests/suite/non_void_roster.rs	1	unmigrated:1
+windows/worldgen/tests/suite/occupancy_readout.rs	1	unmigrated:1
+windows/worldgen/tests/suite/off_lithology_decorrelation_probe.rs	1	unmigrated:1
+windows/worldgen/tests/suite/ore_separation_probe.rs	1	unmigrated:1
+windows/worldgen/tests/suite/ore_siting_probe.rs	1	unmigrated:1
+windows/worldgen/tests/suite/ore_viability_probe.rs	1	unmigrated:1
+windows/worldgen/tests/suite/person_promotion.rs	1	unmigrated:1
+windows/worldgen/tests/suite/pin_enumeration.rs	1	unmigrated:1
+windows/worldgen/tests/suite/profile.rs	1	unmigrated:1
+windows/worldgen/tests/suite/promoted_forebear_yield.rs	1	unmigrated:1
+windows/worldgen/tests/suite/radiation_language.rs	1	unmigrated:1
+windows/worldgen/tests/suite/radiation_readout.rs	2	unmigrated:2
+windows/worldgen/tests/suite/raid_attribution_probe.rs	1	unmigrated:1
+windows/worldgen/tests/suite/range_affinity.rs	1	unmigrated:1
+windows/worldgen/tests/suite/range_identity.rs	1	unmigrated:1
+windows/worldgen/tests/suite/range_readout.rs	3	unmigrated:3
+windows/worldgen/tests/suite/soil_attribution_probe.rs	1	unmigrated:1
+windows/worldgen/tests/suite/solitary_tongue.rs	1	unmigrated:1
+windows/worldgen/tests/suite/species_worlds.rs	5	unmigrated:5
+windows/worldgen/tests/suite/stope_variety_probe.rs	1	unmigrated:1
+windows/worldgen/tests/suite/subterranean_energy_probe.rs	1	unmigrated:1
+windows/worldgen/tests/suite/survivorship_probe.rs	1	unmigrated:1
+windows/worldgen/tests/suite/tense_shadow.rs	2	unmigrated:2
+windows/worldgen/tests/suite/termination_probe.rs	2	unmigrated:2
+windows/worldgen/tests/suite/threading_equivalence.rs	1	unmigrated:1
+windows/worldgen/tests/suite/tilth_probe.rs	1	unmigrated:1
+windows/worldgen/tests/suite/tolerance_draw.rs	1	unmigrated:1
+windows/worldgen/tests/suite/tolerance_mutation.rs	2	unmigrated:2
+windows/worldgen/tests/suite/tribute_stock_agreement_probe.rs	2	unmigrated:2
+windows/worldgen/tests/suite/underworld_capacity_probe.rs	4	unmigrated:4
+windows/worldgen/tests/suite/underworld_chamber_reach.rs	2	unmigrated:2
+windows/worldgen/tests/suite/underworld_conditions_probe.rs	2	unmigrated:2
+windows/worldgen/tests/suite/underworld_ladder_probe.rs	2	unmigrated:2
+windows/worldgen/tests/suite/underworld_lithology_probe.rs	1	unmigrated:1
+windows/worldgen/tests/suite/underworld_per_rung_switch.rs	1	unmigrated:1
+windows/worldgen/tests/suite/underworld_separation.rs	1	unmigrated:1
+windows/worldgen/tests/suite/underworld_water_table_probe.rs	2	unmigrated:2
+windows/worldgen/tests/suite/warren_gate.rs	1	unmigrated:1
+windows/worldgen/tests/suite/warren_liebig_probe.rs	1	unmigrated:1
+windows/worldgen/tests/suite/warren_readout.rs	1	unmigrated:1
+windows/worldgen/tests/suite/waterline_probe.rs	1	unmigrated:1
+windows/worldgen/tests/suite/watershed_measure.rs	2	unmigrated:2
+windows/worldgen/tests/suite/winze_energy_probe.rs	1	unmigrated:1
+windows/worldgen/tests/suite/winze_scale_probe.rs	1	unmigrated:1
