@@ -4841,11 +4841,27 @@ pub fn arbitrate(
 /// from the frozen ledger: the same arbitration a walk step runs, but stateless
 /// (belief and last-drank are folded from history; exploration starts fresh, no
 /// incumbent mode, so no sticky `Helpless` — persistence is the caller's, e.g.
-/// the health metric's continuous loop). The narration seam
-/// (`Session::needs`) reads a creature's `Affect` through this. `band` is the
-/// same cohort the paired `DriveMovements` moves (The Tidings band-consistency
-/// invariant) — a sampled felt state must reflect the belief the creature
-/// acted on, not a poorer solo one.
+/// the health metric's continuous loop). `band` is the same cohort the paired
+/// `DriveMovements` moves (The Tidings band-consistency invariant) — a
+/// sampled felt state must reflect the belief the creature acted on, not a
+/// poorer solo one.
+///
+/// **THIS IS NO LONGER THE SESSION'S READ** (The Rack, Task 4, spec §3.4).
+/// This doc said "the narration seam (`Session::needs`) reads a creature's
+/// `Affect` through this", and that was true of `needs`, of
+/// `sensed.present[*].felt`, and of nothing else — both of them re-derived
+/// every present body's felt state on every call, from a session that had
+/// thrown away the tick's own answer.
+///
+/// A creature now feels what its own last resolution felt: the arbitration
+/// that actually moved it, with its alarm field, its mode hysteresis and its
+/// own belief, written into the roster's `felt` column by the tick and read
+/// back by the turn. This family survives for three callers that genuinely
+/// have no resolution to read — `windows/lab`'s health battery (a continuous
+/// sampling loop over worlds it never ticks through a session), the roster's
+/// own append seeding (a body no tick has walked yet), and tests. It is a
+/// *re-imagining* of a body without its own history, which is exactly right
+/// for those three and was never right for the session.
 pub fn affect_of(
     frozen: &Ledger,
     npc: &Body,
@@ -7642,10 +7658,30 @@ fn parse_activity(t: &str) -> ActivityCycle {
 /// [`affect_of_memo_occupied`]) verify the anchor it is about to read still
 /// belongs to the room it is about to pair it with, via [`Self::anchor_in`],
 /// before ever handing it to [`crate::interior::warmth_at`].
+///
+/// The second field is a monotone **write counter** (The Rack, Task 4), and
+/// it exists for one reader: `Session::sighting`'s per-turn memo, which must
+/// know whether a within-room re-anchoring has happened since it derived. A
+/// re-anchoring moves nothing else a caller can cheaply observe — not the
+/// day, not the possession's room, not the band — so without it the memo
+/// would hand out a shadowcast that no longer says where anybody stands. It
+/// counts WRITES rather than hashing content deliberately: a re-anchoring
+/// that happens to restore a previous arrangement is still a write, and
+/// re-deriving after one costs a shadowcast where getting it wrong costs a
+/// creature drawn in the wrong square.
 #[derive(Debug, Default)]
-pub struct Occupancy(std::collections::BTreeMap<EntityId, (Facet, AnchorId)>);
+pub struct Occupancy(std::collections::BTreeMap<EntityId, (Facet, AnchorId)>, u64);
 
 impl Occupancy {
+    /// How many times this `Occupancy` has been written — see the struct's
+    /// own doc. Monotone for the life of one value; a caller comparing two
+    /// readings must hold the same `Occupancy`, not two (replacing the value
+    /// wholesale, as `Session::wait` does, resets the count with it).
+    /// type-audit: bare-ok(count: return)
+    pub fn writes(&self) -> u64 {
+        self.1
+    }
+
     /// Where `who` currently stands, or `None` if it has not arrived (or has
     /// since departed). Both ends of a creature's stay in a room are
     /// legitimately "nowhere in particular" — there is no sentinel anchor for
@@ -7686,6 +7722,7 @@ impl Occupancy {
     pub fn arrive(&mut self, who: EntityId, room: &Facet, interior: &Interior, kind: SeamKind) {
         if let Some(at) = landing(interior, kind) {
             self.0.insert(who, (room.clone(), at));
+            self.1 += 1;
         }
     }
 
@@ -7716,6 +7753,7 @@ impl Occupancy {
             return false;
         }
         self.0.insert(who, (room, to));
+        self.1 += 1;
         true
     }
 
@@ -7733,6 +7771,7 @@ impl Occupancy {
     /// stepping through is what the budget was spent trying to avoid.
     pub fn place(&mut self, who: EntityId, room: &Facet, at: AnchorId) {
         self.0.insert(who, (room.clone(), at));
+        self.1 += 1;
     }
 
     /// Forget `who` entirely. This is the bubble collapsing (or a creature
@@ -7741,6 +7780,7 @@ impl Occupancy {
     /// through this type rather than by simply dropping it.
     pub fn depart(&mut self, who: EntityId) {
         self.0.remove(&who);
+        self.1 += 1;
     }
 }
 

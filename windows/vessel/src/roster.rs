@@ -341,23 +341,6 @@ impl Roster {
     pub fn on_roll_len(&self) -> usize {
         self.on_roll.iter().filter(|on| **on).count()
     }
-
-    /// One slot's body, mutably — **a test seam and nothing else**, which is
-    /// why it is `#[cfg(test)]` rather than merely `pub(crate)`.
-    ///
-    /// The static columns are otherwise unwritable on purpose (see
-    /// [`Self::write`]). The one thing that needs to reach past that is
-    /// `session.rs`'s
-    /// `examine_reports_a_genuine_lens_failure_loudly_not_as_an_absence`,
-    /// which corrupts the driven body's `home` in place to make
-    /// `Session::position` describe nowhere real — the only way to prove the
-    /// lens fails LOUDLY rather than silently reporting an absence. It does
-    /// not reorder and it does not append, so no column can fall out of
-    /// alignment through it.
-    #[cfg(test)]
-    pub(crate) fn body_mut(&mut self, slot: Slot) -> &mut Body {
-        &mut self.bodies[slot.0]
-    }
 }
 
 /// Every derived body other than the one being driven — what `Session::npcs`

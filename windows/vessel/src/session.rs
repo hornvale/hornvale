@@ -10,9 +10,8 @@ use crate::gate::{BodyState, Verdict, verdict};
 use crate::liveness::{
     AGENT_AT, Affect, AffectLabel, DRANK, DriveKind, DriveMovements, EATEN, Felt, HomeNavCache,
     LocaleTerrain, Mode, Occupancy, PrimaryAfraidMemo, RESTED, SLEPT, SUSTENANCE, Terrain,
-    act_span, affect_of_memo, affect_of_memo_occupied, agent_at_fact, agent_position, built_rooms,
-    derive_npcs, derive_wild_herds, renders_unconscious, slept_fact, species_activity,
-    village_or_fallback,
+    act_span, affect_of_memo, agent_at_fact, agent_position, built_rooms, derive_npcs,
+    derive_wild_herds, renders_unconscious, slept_fact, species_activity, village_or_fallback,
 };
 use crate::residents::derive_residents;
 use crate::roll::{ROLL_BUDGET, ROLL_HOPS, RollKeyStatic, roll_of, rooms_within};
@@ -1019,6 +1018,68 @@ pub struct Session<'w> {
     /// snapshot and tick paths still perform. The instrument for the budget
     /// tests in `windows/vessel/tests/suite/turn_budget.rs`.
     turn_work: TurnWork,
+    /// The turn's shadowcast, derived at most once (The Rack, Task 4, spec
+    /// §3.3), with the world-state it was derived against beside it.
+    ///
+    /// **Why a stamped memo and not a plain per-turn one.** The obvious
+    /// design — one slot, cleared at the top of [`Self::handle`] — is WRONG,
+    /// and wrong in a way no seed-42 test would catch. `Session::wait` reads
+    /// the sighting TWICE inside one turn with the whole tick between them:
+    /// `sensed_before` (who could be seen while they were still here) and
+    /// `narrate_motion`'s `sensed_now` (who can be seen having arrived). A
+    /// memo cleared only per turn would hand the second read the first's
+    /// answer, making every chamber arrival and departure unnarratable — a
+    /// silent deletion, since both halves would agree.
+    ///
+    /// So the memo carries a [`SightingKey`] and is used only when the world
+    /// still stands where it was derived. The key is COMPLETE over what a
+    /// sighting reads — including `Occupancy`'s own write counter, which is
+    /// there for exactly this and nothing else, because a within-room
+    /// re-anchoring moves nothing else observable. Three in-module tests
+    /// found the incomplete version within one run of writing it (a creature
+    /// re-anchored past the shadowcast, the embedding's negative control,
+    /// and the lens-failure seam), which is why the key is complete rather
+    /// than a list of sites that must remember to invalidate.
+    sighting_memo: std::cell::RefCell<Option<(SightingKey, Option<Sighting>)>>, // lexicon: std::cell::RefCell, the Rust interior-mutability type, not the mesh sense
+}
+
+/// What a memoised [`Sighting`] was derived against (The Rack, Task 4): the
+/// world-state a second read in the same turn must still stand in for the
+/// first's answer to be its answer.
+///
+/// Every field is something that can move mid-turn. `turn` invalidates across
+/// a verb boundary; `day` catches `wait`'s tick, which is the case that made
+/// a bare per-turn memo unsafe; `position` catches a walk-band `go`; `inside`
+/// catches `enter`/`leave`, a chamber step (which moves the standing square
+/// without moving the room) and the embedding's own seed, which is the lever
+/// The Sighting's negative control perturbs and nothing else would show;
+/// `occupancy_writes` catches a within-room re-anchoring, which moves none of
+/// the others.
+///
+/// **It is a complete key, not a heuristic one, and that is the difference
+/// between this and the version that did not survive its first test run.**
+/// Anything a sighting reads that is not here must be immovable within a
+/// turn — the structure's own geometry, the room's interior graph, the
+/// terrain at a fixed day.
+#[derive(PartialEq)]
+struct SightingKey {
+    /// [`Session::turn`] as of the derivation.
+    turn: u64,
+    /// [`Session::day`] as of the derivation.
+    day: WorldTime,
+    /// The possession's room as of the derivation.
+    position: Facet,
+    /// [`Occupancy::writes`] as of the derivation — see that method.
+    occupancy_writes: u64,
+    /// Which chamber of the structure, the square the possession stands on
+    /// in it, and the seed its geometry was embedded from — or `None` out of
+    /// doors, which is also what makes the out-of-doors `None` sighting
+    /// memoisable at all. The seed is here because it is the ONE lever The
+    /// Sighting's negative control moves
+    /// (`perturbing_the_embedding_moves_what_is_drawn_and_not_what_is_known`
+    /// XORs `Inside::seed` in place and asserts the plan moves); without it
+    /// that control would have gone quiet, which is how it was found.
+    inside: Option<(usize, crate::lattice::Cell, Seed)>, // lexicon: AREA-sense chamber-lattice square, never a mesh vertex
 }
 
 /// Where the possession is while indoors. `FRAME`-tier in its entirety: derived
@@ -1079,11 +1140,22 @@ type FurnishingSpot = (hornvale_kernel::KindId, crate::lattice::Cell); // lexico
 /// possession can see from where it stands.
 ///
 /// `FRAME`-tier in its entirety, like everything else in this band (decision
-/// 0069): derived inside one [`Session::snapshot`] call and dropped when it
-/// returns. Nothing here is committed, and that is the campaign's central
-/// constraint rather than an implementation detail — the embedding may decide
-/// what a client is SHOWN, never what an agent comes to BELIEVE (spec §2.1).
-/// `Session::knowledge` is not read or written on this path.
+/// 0069): derived inside one turn and dropped at the next. Nothing here is
+/// committed, and that is the campaign's central constraint rather than an
+/// implementation detail — the embedding may decide what a client is SHOWN,
+/// never what an agent comes to BELIEVE (spec §2.1). `Session::knowledge` is
+/// not read or written on this path.
+///
+/// **`Clone`, and the memo hands out clones rather than borrows** (The Rack,
+/// Task 4). [`Session::sighting_memo`] holds one of these behind an
+/// interior-mutability wrapper, and a caller that borrowed out of it would
+/// hold that borrow across `sensed_npcs`/`snapshot`, which is a runtime
+/// panic waiting for the first `&mut` neighbour rather than a compile
+/// error. The clone is a
+/// `BTreeSet` of at most `(2·SIGHT_RADIUS+1)²` squares, a small `BTreeMap`
+/// and a short `Vec` — measured against the shadowcast it saves, it is not
+/// close.
+#[derive(Clone)]
 struct Sighting {
     /// Every cell the possession can see, [`SIGHT_RADIUS`] Chebyshev cells out
     /// and stopping at the fabric.
@@ -1784,6 +1856,7 @@ impl<'w> Session<'w> {
             derived_settlements,
             derived_herds,
             turn_work: TurnWork::default(),
+            sighting_memo: std::cell::RefCell::new(None), // lexicon: std::cell::RefCell interior-mutability construction, not the mesh sense
         };
         // The opening mask: every slot's `on_roll` entry is the `false` its
         // append pushed until here, because computing the real mask needs
@@ -2012,15 +2085,18 @@ impl<'w> Session<'w> {
     /// terrain, with the roster AS IT WILL STAND AFTER THE PUSHES as the
     /// band.
     ///
-    /// **Seeding, not measurement.** Nothing reads the `felt` column yet (the
-    /// tick's writer is Task 3 and the turn's reader is Task 4); this exists
-    /// so a body's column is never a placeholder that a later reader could
-    /// mistake for a real resolution. For the same reason it deliberately
-    /// does NOT bump [`TurnWork::affect_folds`]: those counters measure
-    /// per-turn work, and an append is not a turn — `turn_budget.rs`'s
-    /// `today_a_snapshot_folds_every_present_body` reads the counter after a
-    /// bare `snapshot()` with no intervening reset, so a seeding bump would
-    /// be attributed to the snapshot.
+    /// **Seeding, not measurement** — but it IS the last drive fold a session
+    /// performs, and since The Rack's Task 4 it is the only one, so it bumps
+    /// [`TurnWork::affect_folds`]. Task 2 deliberately did not, on the
+    /// reasoning that an append is not a turn and a seeding bump would be
+    /// attributed to a bare `snapshot()` by
+    /// `today_a_snapshot_folds_every_present_body`. That test is gone (Task 4
+    /// deleted it; the reader it pinned no longer exists), and the reasoning
+    /// inverted with it: with `snapshot` and `needs` reading the rack, a
+    /// counter nothing ever bumps is a zero that cannot fail, which is worse
+    /// than a number attributed to the wrong caller. Every remaining reader
+    /// resets first (`Session::snapshot_work`, `Session::handle`), so the
+    /// attribution concern no longer has a subject.
     ///
     /// **One band, whichever append site calls this** (The Rack, Task 3).
     /// The band is the existing roster PLUS `arrivals` — that is, the roster
@@ -2064,30 +2140,55 @@ impl<'w> Session<'w> {
         arrivals
             .iter()
             .map(|body| Felt {
-                affect: affect_of_memo(
-                    &self.ledger,
-                    body,
-                    &band,
-                    self.day,
-                    &terrain,
-                    &mut afraid_memo,
-                    &mut mesh_memo,
-                ),
+                // THE ONE SURVIVING DRIVE FOLD ON THE SESSION PATH (The Rack,
+                // Task 4, spec §3.2/§3.4), and therefore the one thing that
+                // bumps this counter now that `snapshot` and `needs` read the
+                // rack instead of folding. Counting it is what keeps
+                // `TurnWork::affect_folds` a live instrument rather than a
+                // permanently green zero: `turn_budget.rs` asserts a snapshot
+                // performs NO folds, and an assertion against a counter with
+                // no writer anywhere cannot tell "nothing folds" from "the
+                // instrument is dead". A `wait` that brings a settlement
+                // within call really does fold once per newly appended body,
+                // and `a_wait_folds_the_roll_and_nothing_more`'s
+                // `<= roll_len` bound is where that shows up.
+                affect: {
+                    self.turn_work.bump_affect_folds();
+                    affect_of_memo(
+                        &self.ledger,
+                        body,
+                        &band,
+                        self.day,
+                        &terrain,
+                        &mut afraid_memo,
+                        &mut mesh_memo,
+                    )
+                },
                 mode: Mode::Idle,
                 suppressed: Vec::new(),
             })
             .collect()
     }
 
-    /// The driven body's current position: a ledger-derived read
-    /// (`liveness::agent_position`), the same one a creature's own position
-    /// uses — spec §3.1 says committing the `agent-at` fact **is** the
-    /// position update, so there is no separate mutable field to go stale
-    /// against it. Every `.agent().position` reader from before The Hand
-    /// reads through here now.
+    /// The driven body's current position: **the driven slot's `position`
+    /// column** (The Rack, Task 4, spec §3.3), no longer a ledger fold.
+    ///
+    /// It is the same value the fold returned, and that is an invariant
+    /// rather than a hope: `position` is a VIEW, so
+    /// `roster.positions()[slot] == agent_position(&ledger, body, day)` at
+    /// every read, held for the driven slot by `Session::commit_agent_at` —
+    /// the one thing that commits this body's `agent-at` facts — calling
+    /// `Roster::place` in the same statement, and pinned across a real
+    /// script by `the_rack.rs::a_possessed_sessions_columns_are_the_ledgers_too`.
+    /// [`Self::position_of`] is the SCAN half a test compares against.
+    ///
+    /// **It bumps no counter now** (spec §3.5). `TurnWork::position_folds`
+    /// counts ledger folds, and this is an array index: leaving the bump
+    /// here would have made a snapshot's budget read 1 for work that no
+    /// longer happens, which is worse than a missing number because it
+    /// looks like a measurement.
     pub fn position(&self) -> Facet {
-        self.turn_work.bump_position_folds();
-        agent_position(&self.ledger, self.driven_body(), self.day)
+        self.roster.positions()[self.roster.driven().0].clone()
     }
 
     /// Any slot's position, folded from the ledger — the SCAN half of the
@@ -2104,17 +2205,62 @@ impl<'w> Session<'w> {
     /// production code reads the column, which is the whole point of having
     /// one.
     ///
-    /// **It does NOT bump [`TurnWork::position_folds`]**, unlike
-    /// [`Self::position`] beside it. Those counters measure what a TURN
-    /// costs (`turn_budget.rs`), and a test's audit of the column is not the
-    /// turn's work; bumping here would put the auditor's own cost into the
-    /// number the audit is checking.
+    /// **This is now the ONLY thing that bumps
+    /// [`TurnWork::position_folds`]** (The Rack, Task 4). It is the inverse
+    /// of the arrangement that shipped with Task 1, and deliberately so: the
+    /// counter's job is to catch a ledger fold creeping back onto a turn
+    /// path, and after this task no turn path performs one — `position`,
+    /// `colocated_npcs`, `narrate_motion` and `wait`'s `before` all read the
+    /// column. A counter with no remaining call site would be a permanently
+    /// green zero that could not distinguish "nothing folds" from "the
+    /// instrument is dead", so the scan half keeps it live: every
+    /// `agent_position` call left in this module is here, and the budget
+    /// tests assert a snapshot performs none.
+    ///
+    /// A test that audits the column therefore pays a visible fold, which is
+    /// correct — it IS folding — and no turn's own budget sees it, because
+    /// nothing on a turn path calls this.
     ///
     /// # Panics
     ///
     /// If `slot` is not a slot of this session's roster.
     pub fn position_of(&self, slot: Slot) -> Facet {
+        self.turn_work.bump_position_folds();
         agent_position(&self.ledger, &self.roster.bodies()[slot.0], self.day)
+    }
+
+    /// One body's felt state as the turn renders it (The Rack, Task 4, spec
+    /// §3.3/§3.4): its slot's `felt` column, which is that body's **own last
+    /// resolution** — the arbitration that actually moved it, with its alarm
+    /// field, its mode hysteresis and its own belief, at the walk's own
+    /// instant. It replaces the per-read `affect_of_memo_occupied` fold that
+    /// `snapshot` and `needs` each performed once per present body.
+    ///
+    /// **[`Roster::felts`], not [`Roster::resolved_felt`], and the choice is
+    /// the ruling rather than a shortcut.** A slot no tick has written holds
+    /// the seed the append put there — the stateless read of that body — and
+    /// for a body that has never been walked that IS its own last
+    /// resolution: it has reached none, and the stateless read is the honest
+    /// description of a body with no history yet (spec §3.4's own "carries
+    /// the stateless seed until its first tick"). `resolved_felt`'s `None`
+    /// exists for a different question — the driven body's accessors promise
+    /// "nothing to report before the first `!wait`" — and answering it here
+    /// would mean rendering a creature with no felt phrase at all, which no
+    /// channel has a shape for.
+    ///
+    /// # Panics
+    ///
+    /// If `body` is not one this session's roster appended. Every caller
+    /// derives its bodies from `roster.bodies()` (through `other_bodies` and
+    /// `sensed_npcs`), so an absent one would mean two rosters had been
+    /// mixed; a stale felt state silently rendered as a real one is the
+    /// worse failure.
+    fn felt_of(&self, body: &Body) -> &Felt {
+        let slot = self
+            .roster
+            .slot_of(body.entity)
+            .expect("every body a turn renders came from this session's own roster");
+        &self.roster.felts()[slot.0]
     }
 
     /// The driven body's own commitment mode, as of the most recent `!wait`
@@ -2241,32 +2387,15 @@ impl<'w> Session<'w> {
         // `last_text` (this turn's real response), not from here.
         let focalized = self.focalizer.render(&vantage);
 
-        // `&self`-only: can read whatever `self.mesh_memo` already holds
-        // (Finding 1's cache field is a shared borrow, not a mutation) but
-        // cannot prefill it fresh — `wait`'s tick is where that happens.
-        let terrain = LocaleTerrain::with_fields(
-            &self.wctx.ctx,
-            self.calendar.as_ref(),
-            self.predator.as_ref(),
-            self.prey.as_ref(),
-            Some(&self.built),
-            Some(&self.mesh_memo),
-        );
-        let mut afraid_memo = PrimaryAfraidMemo::new();
-        // A throwaway `RoomMeshMemo` for `affect_of_memo_occupied`'s own
-        // `neighbors_memo` write-through (rider (b)): `&self` here cannot
-        // reach `&mut self.mesh_memo`, so this specific read does not grow
-        // the session-owned memo — it still benefits from `terrain`'s
-        // prefilled `corner_weights` cache above, just not from a warm
-        // `neighbors` cache of its own.
-        let mut mesh_memo = hornvale_kernel::RoomMeshMemo::new();
-        // A throwaway `HomeNavCache` (the-waymark, Task 4 fix round): `&self`
-        // cannot reach a session-lived one, same as `mesh_memo` above. Unlike
-        // `mesh_memo`, this buys no in-call sharing either — the cache is
-        // keyed by `EntityId`, so distinct colocated NPCs never share an
-        // entry regardless of scope; it is exactly as cheap as the
-        // pre-Task-4 unconditional search, never cheaper, for this call.
-        let mut home_nav_cache = HomeNavCache::new();
+        // THE THREE COLD MEMOS AND THE BAND CLONE ARE GONE (The Rack, Task 4,
+        // spec §3.3). This call used to build a `LocaleTerrain`, a
+        // `PrimaryAfraidMemo`, a throwaway `RoomMeshMemo` and a throwaway
+        // `HomeNavCache` — every one of them cold, every one of them existing
+        // only to feed `affect_of_memo_occupied` one re-derivation of each
+        // present body's drive state — plus an owned clone of every other
+        // body for that call's `band: &[Body]`. A snapshot no longer folds
+        // anything: it reads `roster.felts()[slot]`, which is what the tick
+        // that actually moved each creature resolved (spec §3.4).
         // The fine layer, derived ONCE per snapshot: `anchor_cells` costs 42 us
         // at the median and 410 us at p99 against this call's own measured
         // 1.249 ms, so a second derivation — or one per creature — would be a
@@ -2285,40 +2414,17 @@ impl<'w> Session<'w> {
         // The species rides along beside the `PresentEntry` because a creature's
         // MARK datum is an identity line (`purview::creature_datum`), not the
         // felt state `present` carries — and `PresentEntry` has no species field.
-        //
-        // `band` is cloned ONCE here, outside the `.map()` below, rather than
-        // re-derived per creature: `other_bodies` (The Hand, Task 4 fix round
-        // 1) now filters and allocates rather than slicing a fixed front, and
-        // `affect_of_memo_occupied`'s `band: &[Body]` — shared with
-        // `windows/lab`'s health metric, so not a signature this scope can
-        // narrow to `&[&Body]` alone — needs owned data to borrow from.
-        let band: Vec<Body> = other_bodies(self.roster.bodies(), self.roster.driven())
-            .into_iter()
-            .cloned()
-            .collect();
         let here: Vec<(EntityId, String, PresentEntry)> = self
             .sensed_npcs(sighting.as_ref())
             .iter()
             .map(|npc| {
-                self.turn_work.bump_affect_folds();
-                let affect = affect_of_memo_occupied(
-                    &self.ledger,
-                    npc,
-                    &band,
-                    self.day,
-                    &terrain,
-                    &mut afraid_memo,
-                    Some(&self.occupancy),
-                    &mut mesh_memo,
-                    &mut home_nav_cache,
-                );
                 (
                     npc.entity,
                     npc.species.clone(),
                     PresentEntry {
                         entity: npc.entity.0.get(),
                         label: npc.label.clone(),
-                        felt: felt_phrase(&affect),
+                        felt: felt_phrase(&self.felt_of(npc).affect),
                         carrying: self
                             .carried_by(npc.entity)
                             .into_iter()
@@ -4855,8 +4961,19 @@ impl<'w> Session<'w> {
     /// (discarding it — only the WORK it performed is being measured), and
     /// read the counters back. Isolates `snapshot`'s own cost from whatever
     /// a preceding `handle` already counted.
+    ///
+    /// **It forgets this turn's memoised sighting first** (The Rack, Task 4).
+    /// Without that, `shadowcasts` here would report `0` or `1` depending on
+    /// whether the verb that ran before it happened to derive one — a number
+    /// that reads as "the snapshot's cost" while actually reporting the
+    /// caller's history. A COLD snapshot is the thing this method claims to
+    /// measure, so it measures one. `Session::sighting`'s real per-turn
+    /// sharing is measured the other way round, by
+    /// `turn_budget.rs::a_turn_derives_one_shadowcast`, which uses
+    /// `snapshot()` and `turn_work()` directly and never comes through here.
     pub fn snapshot_work(&self) -> TurnWorkRead {
         self.turn_work.reset(self.home_nav_cache.searches());
+        *self.sighting_memo.borrow_mut() = None;
         let _ = self.snapshot();
         self.turn_work()
     }
@@ -6910,7 +7027,44 @@ impl<'w> Session<'w> {
     /// any other, and `you` is already drawn there. A creature whose cell is
     /// taken (by the possession, or by a creature earlier in `other_bodies`'
     /// own derivation order) is left unplaced rather than stacked.
+    ///
+    /// # Derived at most once per turn (The Rack, Task 4, spec §3.3)
+    ///
+    /// A turn used to derive this two or three times — `look`'s presence
+    /// line and then the client's `snapshot`; `needs` and then `snapshot`;
+    /// `wait`'s two ends and then `snapshot` — and each derivation is a fresh
+    /// `anchor_cells` plus a fresh shadowcast. It is now memoised against
+    /// [`SightingKey`], so a second read in the same world-state is free and
+    /// a second read in a MOVED one (the `wait` case) still derives. See that
+    /// type and [`Session::sighting_memo`] for why the key is not just the
+    /// turn number.
     fn sighting(&self) -> Option<Sighting> {
+        let key = self.sighting_key();
+        if let Some((seen, sighting)) = self.sighting_memo.borrow().as_ref()
+            && *seen == key
+        {
+            return sighting.clone();
+        }
+        let derived = self.derive_sighting();
+        *self.sighting_memo.borrow_mut() = Some((key, derived.clone()));
+        derived
+    }
+
+    /// The world-state [`Self::sighting`] memoises against — see
+    /// [`SightingKey`].
+    fn sighting_key(&self) -> SightingKey {
+        SightingKey {
+            turn: self.turn,
+            day: self.day,
+            position: self.position(),
+            occupancy_writes: self.occupancy.writes(),
+            // lexicon: AREA-sense chamber-lattice square, never a mesh vertex
+            inside: self.inside.as_ref().map(|i| (i.at, i.cell, i.seed)),
+        }
+    }
+
+    /// [`Self::sighting`]'s uncached half: the derivation itself.
+    fn derive_sighting(&self) -> Option<Sighting> {
         self.turn_work.bump_shadowcasts();
         let inside = self.inside.as_ref()?;
         // The chamber's interior, through the SAME accessor `chamber_nouns_here`
@@ -7206,12 +7360,24 @@ impl<'w> Session<'w> {
         // before advancing — the "before" half of the departure/arrival
         // comparison `narrate_motion` needs to name a specific transition
         // rather than just count facts.
-        let before: Vec<Facet> = other_bodies(self.roster.bodies(), self.roster.driven())
+        //
+        // **A copy of the `position` column, not a fold of it** (The Rack,
+        // Task 4, spec §3.3). The column IS `agent_position` at every read,
+        // so the values are the ones this loop used to derive; what changed
+        // is that the tick's own write-back (Task 3) is what will move them,
+        // which is why this must be COPIED here rather than borrowed — the
+        // whole point of the comparison is to hold a value the tick is about
+        // to overwrite. The driven slot is skipped by the same rule
+        // `other_bodies` applies, so the vector `narrate_motion` zips
+        // against stays exactly as long, and in exactly the order, as it was.
+        let before_driven = self.roster.driven().0;
+        let before: Vec<Facet> = self
+            .roster
+            .positions()
             .iter()
-            .map(|npc| {
-                self.turn_work.bump_position_folds();
-                agent_position(&self.ledger, npc, self.day)
-            })
+            .enumerate()
+            .filter(|&(slot, _)| slot != before_driven)
+            .map(|(_, position)| position.clone())
             .collect();
         // ...and WHO the possession could sense as of that same moment (The
         // Sighting, fix round 4). A departure is narrated about a creature that
@@ -7613,13 +7779,31 @@ impl<'w> Session<'w> {
             .collect();
         let mut arrived: Vec<&str> = Vec::new();
         let mut departed: Vec<&str> = Vec::new();
-        for (npc, prior) in other_bodies(self.roster.bodies(), self.roster.driven())
+        // BEFORE and AFTER are now the same column read at two instants (The
+        // Rack, Task 4, spec §3.3): `before` is the copy `wait` took ahead of
+        // the tick, `positions()[slot]` is what the tick's write-back left
+        // there. The re-fold this loop used to perform per body — and the
+        // TWO `self.position()` folds it performed per body beside it, one
+        // for each side of the comparison — are gone; the possession's own
+        // room is read once, outside the loop, because it cannot move while
+        // the loop runs.
+        //
+        // Slot-indexed for the same reason `colocated_npcs` is: `before` is
+        // the others in slot order with the driven entry removed, so it zips
+        // against exactly this skipping walk and against nothing else.
+        let driven = self.roster.driven().0;
+        let positions = self.roster.positions();
+        let here = &positions[driven];
+        for ((slot, npc), prior) in self
+            .roster
+            .bodies()
             .iter()
+            .enumerate()
+            .filter(|&(slot, _)| slot != driven)
             .zip(before)
         {
-            let was_here = *prior == self.position();
-            self.turn_work.bump_position_folds();
-            let is_here = agent_position(&self.ledger, npc, self.day) == self.position();
+            let was_here = prior == here;
+            let is_here = &positions[slot] == here;
             match (was_here, is_here) {
                 (false, true) if sensed_now.contains(&npc.entity) => {
                     arrived.push(npc.label.as_str())
@@ -8000,19 +8184,42 @@ impl<'w> Session<'w> {
     /// `ExcludeFromWhoElse`-like marker, served by an indexed query and
     /// iterated as an array (the Infocom/Inform scenery-flag pattern). That
     /// is Penstock-lineage work, not this task's.
+    ///
+    /// **AN ARRAY SCAN, NOT A LEDGER FOLD** (The Rack, Task 4, spec §3.3).
+    /// This was two folds per other body — one `agent_position` for the body
+    /// and one for the possession, inside the filter — 136 of them at seed
+    /// 42's flagship on every single call. It is now a comparison of two
+    /// entries in the `position` column, which is a VIEW of exactly those
+    /// folds (`Roster::positions`' own doc), so the ANSWER is unchanged and
+    /// only its cost moved. `TurnWork::bodies_scanned` still counts the
+    /// scan; nothing here bumps `position_folds` any more, because nothing
+    /// here folds.
+    ///
+    /// **The slot-indexed loop, rather than [`other_bodies`] filtered.** The
+    /// comparison needs each body's SLOT to reach its aligned column entry,
+    /// and `other_bodies` returns bodies with the slots dropped — zipping its
+    /// result against `positions()` (which still holds the driven entry)
+    /// would be off by one from the driven slot onward, silently reading one
+    /// body's room for another's. So the driven slot is skipped here by the
+    /// same rule `other_bodies` applies, over the index it needs anyway, and
+    /// the ORDER is identical to that function's: append order with exactly
+    /// the driven slot removed, which is what `list_npcs`/`why`/
+    /// `colocated_npc` number their handles by.
     fn colocated_npcs(&self) -> Vec<&Body> {
-        // `.into_iter()`, not `.iter()`: `other_bodies` returns an owned
-        // `Vec<&Body>` now (The Hand, Task 4 fix round 1), so `.into_iter()`
-        // yields `&Body` directly — `.iter()` would yield `&&Body` and this
-        // could no longer collect into `Vec<&Body>`.
-        other_bodies(self.roster.bodies(), self.roster.driven())
-            .into_iter()
-            .filter(|npc| {
-                self.turn_work.bump_bodies_scanned();
-                self.turn_work.bump_position_folds();
-                agent_position(&self.ledger, npc, self.day) == self.position()
-            })
-            .collect()
+        let driven = self.roster.driven().0;
+        let positions = self.roster.positions();
+        let here = &positions[driven];
+        let mut out: Vec<&Body> = Vec::new();
+        for (slot, body) in self.roster.bodies().iter().enumerate() {
+            if slot == driven {
+                continue;
+            }
+            self.turn_work.bump_bodies_scanned();
+            if &positions[slot] == here {
+                out.push(body);
+            }
+        }
+        out
     }
 
     /// Who else is here, as stable entity identities — [`Self::colocated_npcs`]
@@ -8375,51 +8582,26 @@ impl<'w> Session<'w> {
         if here.is_empty() {
             return "No one else is here to read.".to_string();
         }
-        // Read each co-located NPC's felt state through the SAME arbitration
-        // that drives it (spec §7) — the affect label coloured by what the
-        // feeling is about (its intentional object), not a bare thirst scalar.
-        // `&self`-only: shares whatever `self.mesh_memo` already holds
-        // (free — no mutation), same posture as `snapshot`.
-        let terrain = LocaleTerrain::with_fields(
-            &self.wctx.ctx,
-            self.calendar.as_ref(),
-            self.predator.as_ref(),
-            self.prey.as_ref(),
-            Some(&self.built),
-            Some(&self.mesh_memo),
-        );
-        let mut afraid_memo = PrimaryAfraidMemo::new();
-        // A throwaway `RoomMeshMemo` for `affect_of_memo_occupied`'s own
-        // `neighbors_memo` write-through (rider (b)) — see `snapshot`'s
-        // identical comment for why `&self` cannot reach the session-owned
-        // one here.
-        let mut mesh_memo = hornvale_kernel::RoomMeshMemo::new();
-        // A throwaway `HomeNavCache` (the-waymark, Task 4) — see `snapshot`'s
-        // identical comment.
-        let mut home_nav_cache = HomeNavCache::new();
-        // Cloned once, outside the `.map()` below — see `snapshot`'s
-        // identical comment on why (`other_bodies` now allocates, and
-        // `affect_of_memo_occupied`'s shared `band: &[Body]` needs owned data
-        // to borrow from).
-        let band: Vec<Body> = other_bodies(self.roster.bodies(), self.roster.driven())
-            .into_iter()
-            .cloned()
-            .collect();
+        // Read each co-located NPC's felt state as ITS OWN LAST RESOLUTION
+        // left it (The Rack, Task 4, spec §3.4) — the affect label coloured
+        // by what the feeling is about (its intentional object), not a bare
+        // thirst scalar. Verbatim the phrase `sensed.present[*].felt` carries,
+        // because both go through [`Self::felt_of`] and [`felt_phrase`]: a
+        // pane and a verb disagreeing about how a creature feels is the same
+        // class of defect as disagreeing about who is here, which
+        // `sensed_npcs` exists to prevent.
+        //
+        // The four cold memos this used to build (a `LocaleTerrain`, a
+        // `PrimaryAfraidMemo`, a throwaway `RoomMeshMemo`, a throwaway
+        // `HomeNavCache`) and the owned band clone that fed them are gone
+        // with the fold — see `snapshot`'s own note.
         here.iter()
             .map(|npc| {
-                self.turn_work.bump_affect_folds();
-                let affect = affect_of_memo_occupied(
-                    &self.ledger,
-                    npc,
-                    &band,
-                    self.day,
-                    &terrain,
-                    &mut afraid_memo,
-                    Some(&self.occupancy),
-                    &mut mesh_memo,
-                    &mut home_nav_cache,
-                );
-                format!("The {} {}.", npc.label, felt_phrase(&affect))
+                format!(
+                    "The {} {}.",
+                    npc.label,
+                    felt_phrase(&self.felt_of(npc).affect)
+                )
             })
             .collect::<Vec<_>>()
             .join("\n")
@@ -12141,14 +12323,20 @@ mod tests {
     /// than reaching for a public setter that would let ordinary callers
     /// corrupt a session's position too.
     ///
-    /// **The Hand, Task 3: position is a ledger-derived read, not a mutable
-    /// field.** At turn 0 (before any `go`/`back` has committed an
-    /// `agent-at`), [`Session::position`] falls back to the driven body's
-    /// `home` (`liveness::agent_position`), so corrupting `home` in place
-    /// achieves the same "position now describes nowhere real" effect
-    /// `session.agent.position.path.push(99)` used to — mutating the
-    /// TEMPORARY `session.position()` now returns would compile but corrupt
-    /// nothing, since nothing holds onto it past this statement.
+    /// **The corruption moved from the body's `home` to the roster's
+    /// `position` column (The Rack, Task 4), because that is where
+    /// [`Session::position`] reads now.** The history is worth keeping,
+    /// because each step relocated the same corruption rather than changing
+    /// what it proves. Originally it pushed the digit onto a mutable
+    /// `session.agent.position`; The Hand made position a ledger-derived
+    /// read, so it pushed onto the driven body's `home` instead (at turn 0,
+    /// `liveness::agent_position` falls back to `home`); The Rack makes it
+    /// the driven slot's `position` column, so it writes there through
+    /// [`Roster::place`] — the same method `Session::commit_agent_at` uses.
+    /// Corrupting `home` no longer breaks anything, which is the correct
+    /// consequence of the turn reading the rack and not a regression: the
+    /// column is the answer, and the column is what a test that wants a
+    /// broken position must break.
     #[test]
     fn examine_reports_a_genuine_lens_failure_loudly_not_as_an_absence() {
         let w = seam_world();
@@ -12159,7 +12347,9 @@ mod tests {
             "the fixture session must start in a healthy state"
         );
         let driven_slot = session.roster.driven();
-        session.roster.body_mut(driven_slot).home.path.push(99);
+        let mut nowhere = session.position();
+        nowhere.path.push(99);
+        session.roster.place(driven_slot, nowhere);
         assert!(
             session.focalized().is_err(),
             "the corrupted position must actually break the lens, or this \
@@ -16766,12 +16956,28 @@ mod tests {
     /// rationale. This is the paired deletion spec §1 asks the second merger to
     /// make — a workaround outliving its cause, the same shape as The Hand's
     /// `quantize(t.day())`.
+    /// **It places the roster's `position` column too (The Rack, Task 4), and
+    /// that is not bookkeeping — it is the invariant.** `position` is a VIEW:
+    /// `roster.positions()[slot] == agent_position(&ledger, body, day)` at
+    /// every read, and every commit of an `agent-at` fact owes the column an
+    /// update. Production has three such writers and all three pay
+    /// (`Session::commit_agent_at`, the two `place_creature_*` seams); this
+    /// helper was a fourth, reaching past them into `session.ledger`
+    /// directly, and it was the ONE ledger writer in the crate that left the
+    /// column behind. That was invisible while nothing read the column, and
+    /// Task 3's report flagged it as the thing Task 4 must not assume away.
+    /// It stopped being invisible the moment `colocated_npcs` became an
+    /// array scan: `a_creature_beyond_sight_appears_neither_in_sensed_nor_in_marks`
+    /// moved a creature to another room and the scan still found it here.
     fn place_agent_now(session: &mut Session<'_>, who: EntityId, room: &Facet) {
         let fact = crate::liveness::place_agent(who, room, session.day);
         session
             .ledger
             .commit(fact, &session.registry)
             .expect("agent-at is registered");
+        if let Some(slot) = session.roster.slot_of(who) {
+            session.roster.place(slot, room.clone());
+        }
     }
 
     /// The marks this session's snapshot draws.

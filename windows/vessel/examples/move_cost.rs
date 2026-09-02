@@ -8,7 +8,71 @@
 //! (and once WITHOUT `--release`, because `cargo run -p hornvale -- possess`
 //! is a debug build and that is what a player at the CLI actually feels).
 //!
-//! ## Measured
+//! ## Measured — AFTER The Rack (Task 4)
+//!
+//! 2026-09-02, MacBookPro, `--release`, the turn reading the rack.
+//! **CONTENDED** (`uptime` before: `load averages: 14.10 17.75 21.58`, after:
+//! `13.21 17.50 21.47` — all three far over The Repose's quiet-box threshold
+//! of 4). A contended reading is an UPPER bound, which makes the two budgets
+//! it clears conclusive and the two it misses inconclusive as to how much.
+//!
+//! Against spec §4's P1 budgets:
+//!
+//! | reading | before | after | budget | verdict |
+//! | --- | ---: | ---: | ---: | --- |
+//! | `needs` handle | 27.559 ms | **0.022 ms** | 2 ms | MET (1250x) |
+//! | `snapshot` in the home room | 32.242 ms | **4.1-4.9 ms** | 3 ms | MISSED (7.4x better) |
+//! | `snapshot` in a chamber | 44.374 ms | **8.4-16.8 ms** | 3 ms | MISSED (2.7-5.3x better) |
+//!
+//! **The residue was already visible in the BEFORE run, and it is the JSON
+//! and the chart.** Read the pre-change block below by ROW rather than as an
+//! average: its two `go n` rows and its first `back` row cost 4.2-4.4 ms
+//! while every other walk-band row cost 31-32 ms. Those three are exactly
+//! the rows where the possession had stepped OUT of its settlement's room,
+//! so `sensed.present` was empty and the call folded nothing. 4.2 ms was
+//! therefore already the fold-free floor of a walk-band snapshot, and the
+//! after-run's 4.1-4.9 ms in the SETTLEMENT room is that same floor now
+//! reached with 67 bodies present. The 3 ms budget was set below a floor
+//! this campaign never touched: what remains is the spatial channel and the
+//! ~70 KB of JSON, which spec §4 already said it expected to be inside the
+//! budget and which this measurement says is not.
+//!
+//! **The chamber band shows what a shadowcast costs, because the memo makes
+//! it visible.** 8.4 ms after `enter`/`look`, 16.3-16.8 ms after `map` or a
+//! chamber `go` — same chamber, same turn shape. `look` derives a
+//! `Session::sighting` for its presence line and the snapshot on that turn
+//! reuses it (The Rack, Task 4); `map` and `go n` derive none, so the
+//! snapshot pays for its own. The difference, ~8 ms, is one shadowcast, and
+//! it is the largest single item left in a chamber snapshot.
+//!
+//! ```text
+//! move_cost: seed 42, profile release; build_world 2422 ms
+//! Session::start 845 ms
+//! --- fresh session: bodies 68 on roll 68 facts 21932
+//!                   look handle     0.220 ms  snapshot     4.876 ms    69252 B
+//!                    map handle     3.917 ms  snapshot     4.176 ms    70454 B
+//!                   go n handle     0.495 ms  snapshot     4.141 ms    64685 B
+//!                   go n handle     0.479 ms  snapshot     4.111 ms    66601 B
+//!                   back handle     0.381 ms  snapshot     4.116 ms    66927 B
+//!                   back handle     0.381 ms  snapshot     4.155 ms    73645 B
+//! examine Dvoashngashngo handle     3.912 ms  snapshot     4.163 ms    73285 B
+//!                  needs handle     0.022 ms  snapshot     4.157 ms    75849 B
+//!                  enter handle    33.747 ms  snapshot     9.144 ms    25172 B
+//!                   look handle    16.540 ms  snapshot     8.516 ms    25173 B
+//!                    map handle     0.019 ms  snapshot    16.547 ms    25476 B
+//!                   go n handle     0.005 ms  snapshot    16.541 ms    24944 B
+//!                   go e handle     0.005 ms  snapshot    16.766 ms    25089 B
+//!                   go s handle     0.006 ms  snapshot    16.542 ms    25232 B
+//!                   go w handle     0.005 ms  snapshot    16.383 ms    25035 B
+//!                   look handle    16.125 ms  snapshot     8.388 ms    25171 B
+//!                    out handle     0.258 ms  snapshot     4.311 ms    73649 B
+//! 20 waits 1828 ms
+//! --- after 20 waits: bodies 68 on roll 68 facts 23487
+//! (the second block repeats the first within noise; `needs` reads 0.022 ms
+//! there too, and the home-room snapshot 4.15-4.62 ms)
+//! ```
+//!
+//! ## Measured — BEFORE The Rack
 //!
 //! 2026-09-02, MacBookPro, `2c34f9e4c64fae3230a751cfca061c4bcdf3bb37`, `--release`.
 //! **CONTENDED** (`uptime`: `load averages: 9.27 12.44 9.86` — all three
