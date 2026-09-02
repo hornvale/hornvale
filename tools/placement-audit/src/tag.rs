@@ -142,12 +142,37 @@ fn collapse_whitespace(s: &str) -> String {
     s.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
+/// Find the byte offset where [`MARKER`] *starts* a doc line (after
+/// trimming leading whitespace) — never merely appears mid-sentence.
+///
+/// Mirrors type-audit's `find_tag_line`, which iterates doc lines and
+/// `strip_prefix`es the trimmed line: ordinary prose that happens to contain
+/// the literal text "placement:" (e.g. "This type's placement: is decided by
+/// the astronomy domain.") must not be misread as a tag. Unlike
+/// type-audit's one-line grammar, a placement tag's body may still wrap
+/// across further doc lines — the one-paragraph rule in [`parse`] decides
+/// where the body actually ends, so this function only needs to anchor
+/// where it *begins*.
+fn find_marker_start(doc: &str) -> Option<usize> {
+    let mut offset = 0usize;
+    for line in doc.split_inclusive('\n') {
+        let content = line.strip_suffix('\n').unwrap_or(line);
+        let trimmed = content.trim_start();
+        if trimmed.starts_with(MARKER) {
+            return Some(offset + (content.len() - trimmed.len()));
+        }
+        offset += line.len();
+    }
+    None
+}
+
 /// Parse the portion of a doc comment after [`MARKER`].
 ///
-/// Returns `Ok(None)` when the text carries no marker at all — that is an
-/// ordinary doc comment, not an error.
+/// Returns `Ok(None)` when the text carries no *line-anchored* marker at
+/// all — that is either an ordinary doc comment, or prose that merely
+/// mentions the word, neither of which is an error.
 pub fn parse(doc: &str) -> Result<Option<PlacementTag>, TagError> {
-    let Some(idx) = doc.find(MARKER) else {
+    let Some(idx) = find_marker_start(doc) else {
         return Ok(None);
     };
     // The tag is ONE PARAGRAPH. Stop at the first blank doc line so ordinary
@@ -207,6 +232,60 @@ mod tests {
     #[test]
     fn an_ordinary_doc_comment_is_not_a_tag() {
         assert_eq!(parse("Just prose about the type.").unwrap(), None);
+    }
+
+    #[test]
+    fn prose_mentioning_the_word_placement_mid_line_is_not_a_tag() {
+        // Finding 1: `doc.find(MARKER)` used to be an unanchored substring
+        // match, so ordinary prose containing the literal text "placement:"
+        // was cut into a fake tag body and misreported as malformed
+        // (MissingVerdict) instead of Ok(None). The marker only counts when
+        // it STARTS a doc line (after trimming leading whitespace) — the
+        // same discipline type-audit's `find_tag_line` uses.
+        assert_eq!(
+            parse("This type's placement: is decided by the astronomy domain.").unwrap(),
+            None
+        );
+        assert_eq!(
+            parse(
+                "Some background.\n\
+                 The placement: of this type is still undecided prose, not a tag."
+            )
+            .unwrap(),
+            None
+        );
+        assert_eq!(
+            parse("See also placement: elsewhere in the book for context.").unwrap(),
+            None
+        );
+    }
+
+    #[test]
+    fn a_real_tag_still_parses_when_anchored_at_a_doc_lines_start() {
+        // The other direction of Finding 1's fix: a genuine tag — including
+        // one preceded by ordinary prose lines, and one carrying the
+        // leading space `doc_text` actually produces from a `/// ` comment —
+        // must still be found.
+        let p = parse(
+            "Some background prose first.\n\
+             placement: deliberate(kept apart on purpose) shape(a1b2c3)",
+        )
+        .unwrap()
+        .unwrap();
+        assert_eq!(
+            p.verdict,
+            TagVerdict::Deliberate("kept apart on purpose".to_string())
+        );
+        assert_eq!(p.shape.as_deref(), Some("a1b2c3"));
+
+        // A leading space (as `/// placement: ...` actually extracts to).
+        let p = parse(" placement: promote(spec anchor S-9) shape(a1b2c3)")
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            p.verdict,
+            TagVerdict::Promote("spec anchor S-9".to_string())
+        );
     }
 
     #[test]
@@ -271,6 +350,17 @@ mod tests {
         assert_eq!(
             parse("placement: promote(x) deliberate(y) shape(a1b2c3)"),
             Err(TagError::DuplicateClause("deliberate".to_string()))
+        );
+    }
+
+    #[test]
+    fn the_same_verdict_clause_repeated_literally_is_a_duplicate_error() {
+        // Finding 3: the same clause NAME given twice (not just two
+        // different verdict clauses) must also be rejected — the tool would
+        // otherwise silently honour whichever `promote(...)` came last.
+        assert_eq!(
+            parse("placement: promote(x) promote(y) shape(a1b2c3)"),
+            Err(TagError::DuplicateClause("promote".to_string()))
         );
     }
 

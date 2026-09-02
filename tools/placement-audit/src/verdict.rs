@@ -139,6 +139,28 @@ mod tests {
         }
     }
 
+    /// Like [`shape`], but with an explicit file path — for pinning the
+    /// file/line tie-breaks independently of the crate-name ordering, which
+    /// `shape`'s one-file-per-crate convention cannot exercise.
+    fn shape_at(
+        crate_name: &str,
+        name: &str,
+        doc: &str,
+        members: &[&str],
+        file: &str,
+        line: usize,
+    ) -> TypeShape {
+        TypeShape {
+            crate_name: crate_name.to_string(),
+            name: name.to_string(),
+            kind: ShapeKind::Enum,
+            members: members.iter().map(|m| m.to_string()).collect(),
+            doc: doc.to_string(),
+            file: PathBuf::from(file),
+            line,
+        }
+    }
+
     #[test]
     fn an_untagged_member_is_a_finding_naming_the_twins_other_members() {
         let group = TwinGroup {
@@ -274,5 +296,55 @@ mod tests {
         let mut sorted = crates.clone();
         sorted.sort();
         assert_eq!(crates, sorted);
+    }
+
+    #[test]
+    fn findings_sort_by_file_then_line_once_the_crate_ties() {
+        // Finding 2: the crate-only assertion above cannot distinguish a
+        // correct sort from one that ignores file/line entirely, since its
+        // fixture never ties on crate_name. Pin both tie-breaks directly.
+
+        // Same crate, different files: file ordering breaks the tie.
+        let group_files = TwinGroup {
+            members: vec![
+                shape_at("m", "Zeta", "", &["x", "y"], "domains/m/src/z.rs", 1),
+                shape_at("m", "Alpha", "", &["x", "y"], "domains/m/src/a.rs", 1),
+            ],
+        };
+        // Same crate AND file, different lines: line ordering is the final
+        // tie-break.
+        let group_lines = TwinGroup {
+            members: vec![
+                shape_at("m", "Late", "", &["p", "q"], "domains/m/src/lib.rs", 50),
+                shape_at("m", "Early", "", &["p", "q"], "domains/m/src/lib.rs", 3),
+            ],
+        };
+
+        let findings = judge(&[group_files, group_lines]);
+
+        let files: Vec<&std::path::Path> = findings
+            .iter()
+            .filter(|f| f.file.ends_with("a.rs") || f.file.ends_with("z.rs"))
+            .map(|f| f.file.as_path())
+            .collect();
+        assert_eq!(
+            files,
+            vec![
+                std::path::Path::new("domains/m/src/a.rs"),
+                std::path::Path::new("domains/m/src/z.rs"),
+            ],
+            "file ties break alphabetically once crate_name matches"
+        );
+
+        let lines: Vec<usize> = findings
+            .iter()
+            .filter(|f| f.file.ends_with("lib.rs"))
+            .map(|f| f.line)
+            .collect();
+        assert_eq!(
+            lines,
+            vec![3, 50],
+            "line ties break ascending once crate and file both match"
+        );
     }
 }
