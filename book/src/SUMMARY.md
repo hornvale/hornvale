@@ -55,7 +55,7 @@
 - [The Strange Sites of Seed 42](./gallery/strange-sites-seed-42.md)
 - [The Look of the World — Seed 42](./gallery/room-sample-seed-42.md)
 - [A Possession of Seed 42 — over time](./gallery/possession-over-time-seed-42.md)
-- [A Possession of Seed 1 — a thing carried](./gallery/possession-carry-seed-1.md)
+- [A Possession of Seed 14 — a thing carried](./gallery/possession-carry-seed-14.md)
 - [A Possession, Live](./gallery/possession-live.md)
 - [The Purview of Seed 42](./gallery/surrounds-seed-42.md)
 
@@ -435,6 +435,7 @@
 - [The Cartulary](./chronicle/the-cartulary.md)
 - [The Repertory](./chronicle/the-repertory.md)
 - [The Company](./chronicle/the-company.md)
+- [The Pavement](./chronicle/the-pavement.md)
 - [The Tableau](./chronicle/the-tableau.md)
 
 # Appendix: The Frontier

@@ -127,7 +127,7 @@ mod tests {
     use crate::brief::Brief;
     use hornvale_kernel::Seed;
 
-    const WALK: u32 = 12;
+    const WALK: u32 = 13;
 
     fn locale() -> hornvale_kernel::Facet {
         hornvale_kernel::Facet {

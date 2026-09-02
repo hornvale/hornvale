@@ -380,8 +380,16 @@ cargo nextest run --workspace 2>&1 | tee /tmp/hv-test.txt   # then grep the file
 # reasons, so even a full census run (`scripts/census-run.sh`, the dispatch
 # line below) skips them; the everyday commit gate never pays for them.
 #
-# THE STANDING RULE IS UNCHANGED: the census is refreshed ONCE PER CAMPAIGN, at
-# the pre-merge close, by a human on lefford — see the dispatch line below.
+# THE CADENCE IS UNCHANGED; WHO MAY START IT IS NOT (decision 0514,
+# 2026-09-01). The census is still refreshed ONCE PER CAMPAIGN, at the pre-merge
+# close, on lefford — see the dispatch line below. What changed is that it no
+# longer needs a human's per-run authorization: `make sluice-census
+# BRANCH=<branch> REF=<full-sha>` is ordinary queued work, and any session may
+# submit it. The old rule was written when a census ran on metered AWS
+# hardware and could grab the box out from under a queued merge; 0063, 0079,
+# 0133, 0139 and 0146 closed those hazards one at a time, and the authorization
+# requirement outlived every one of them. Cost is ~15 min at the six most recent
+# runs — read it from docs/timings.md, never from this block.
 #
 # A NIGHTLY ALTERNATIVE EXISTS BUT IS NOT INSTALLED. The Sexton wrote
 # `scripts/scheduled/` (a systemd user timer that runs the census on lefford
@@ -398,8 +406,14 @@ cargo nextest run --workspace 2>&1 | tee /tmp/hv-test.txt   # then grep the file
 # is installed AND has been observed producing correct diffs over several
 # nights, an absent notice means the job is not running, not that the census
 # agrees with main — and an earlier draft of this block told you the opposite.
-# Committing a moved column is a deliberate human act on the canonical box
-# either way; that part never changes.
+# LANDING a moved column is still gated, and that part never changes — but say
+# it exactly, because the older phrasing ("a deliberate human act on the
+# canonical box") predates both the queue and 0514 and now reads as forbidding
+# what 0514 permits. `census-run.sh` COMMITS the regenerated goldens itself and
+# pushes a `census/<ref>-<stamp>` branch; it never pushes `main`. The deliberate
+# act is the MERGE of that branch, which goes through the queue like any other
+# candidate and lands under a campaign-close stop. Starting the run is not the
+# gated step; moving the reference the calibration batteries assert against is.
 #
 # THE CENSUS RUNS ON lefford. "LOCAL" IN 0063 MEANS *NOT AWS* — NOT "on
 # whatever box you are sitting at". That ambiguity is the whole trap, and it

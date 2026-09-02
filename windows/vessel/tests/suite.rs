@@ -12,7 +12,7 @@
 //! `tests/common/` is shared test-only scaffolding declared once here
 //! (ordinary module resolution, since this file sits directly in
 //! `tests/`, sibling to `common/`) and reached from each consuming file
-//! (course_properties, session_snapshot, the_blocking) via
+//! (session_snapshot, the_blocking, tick_commit_budget) via
 //! `use crate::common;` rather than its own `mod common;`.
 
 mod common;
@@ -35,8 +35,8 @@ mod clock_lattice;
 mod coercion_calibration;
 #[path = "suite/controller_swap.rs"]
 mod controller_swap;
-#[path = "suite/course_properties.rs"]
-mod course_properties;
+#[path = "suite/corner_rule.rs"]
+mod corner_rule;
 #[path = "suite/display_handle.rs"]
 mod display_handle;
 #[path = "suite/doctrine.rs"]
@@ -69,6 +69,8 @@ mod liveness_genesis;
 mod noun_entity;
 #[path = "suite/object_property_concepts.rs"]
 mod object_property_concepts;
+#[path = "suite/octile_cost.rs"]
+mod octile_cost;
 #[path = "suite/one_roster.rs"]
 mod one_roster;
 #[path = "suite/ooc_namespace.rs"]

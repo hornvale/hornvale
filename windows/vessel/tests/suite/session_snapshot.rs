@@ -495,7 +495,8 @@ fn a_creature_standing_in_the_chamber_reaches_the_plan() {
     let world = world();
     let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
     common::step_inside(&mut session);
-    session.place_creature_at_me(session.bodies()[1].entity);
+    let companion = session.bodies()[1].entity;
+    common::deepen_until_the_plan_draws(&mut session, companion);
     let snap = session.snapshot().expect("a live session snapshots");
     let SpatialChannel::Chamber { plan } = &snap.spatial else {
         panic!("`enter` puts the possession inside")

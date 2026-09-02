@@ -4,88 +4,86 @@
 the same world in your browser — same crates, same bytes.)*
 
 ```text
-[room 896860167, day 0]
-Tropical rainforest — buttressed canopy, damp — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
-No direction here is closed; the nearest ground lies E, NW, SW.
+[room 3733133217, day 0]
+Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
+No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > look
-[room 896860167, day 0]
-Tropical rainforest — buttressed canopy, damp — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
-No direction here is closed; the nearest ground lies E, NW, SW.
+[room 3733133217, day 0]
+Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
+No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > map
-[lens: colour · depth 12 · radius 4 · north-up]
-  placement: north-up, one row per ring, east doubled for the character cell — 31 of 31 cells drawn, 0 occluded where two fell in one box (the more salient kept it).
-  colour: each cell's surface cover, tinted only where the glyph draws that ground — 0 tinted, 31 withheld (water, a mark, or you), 0 carrying no colour.
+[lens: colour · depth 13 · radius 4 · north-up]
+  placement: north-up, one row per ring, east doubled for the character cell — 53 of 81 cells drawn, 28 occluded where two fell in one box (the more salient kept it).
+  colour: each cell's surface cover, tinted only where the glyph draws that ground — 0 tinted, 53 withheld (water, a mark, or you), 0 carrying no colour.
   sight: bugbear · 3 channels (2 chromatic) · yellow-blue projection, preserving the short-to-long opposition; the red-green axis is not carried.
-      +
-   + +   +
-+ +   + +   +
-   + +   + +
-+ +   @ +   +
-   + +   + +
-+ +   + +   +
-   + +   +
-      +
-  ways on: E, NW, SW
-  legend: Doaba, buttressed canopy, damp, tropical rainforest
+        ++ ++
+++ ++ + ++ ++
+++ ++ + ++ ++
+++ ++ @ ++ ++
+++ ++ + ++ ++
+++ ++ + ++ ++
+++ ++
+  ways on: N, NE, E, SE, S, SW, W, NW
+  legend: Doaba, buttressed canopy, sun-warmed, damp, on a rise, tropical seasonal forest
 
 > examine a fern-choked draw shaded dry in a hollow
 You see no a fern-choked draw shaded dry in a hollow here.
 > examine sky
 Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
 > !whoami
-A bugbear of Doaba (agent 3286669968037249024), day 0, room 896860167.
+A bugbear of Doaba (agent 3286669968037249024), day 0, room 3733133217.
 > enter
-[chamber 235106516365287, day 0.01172]
+[chamber 978618474718145, day 0.01172]
 A small room, holding a doorway and a screen.
 Ways on: out, further in.
 > enter further in
-[chamber 235106515360871, day 0.02344]
+[chamber 978618475907617, day 0.02344]
 A small room, holding a doorway and an alcove.
 Ways on: out, further in.
 > map
-[plan: chamber 235106515360871, 2 of 3]
+[plan: chamber 978618475907617, 2 of 3]
 ###################
-#....#............#
-#....#............#
-#....+@...........#
-#....#............#
-#....#............#
-#....#######+######
-#....#............#
-#....#............#
-#....#............#
-#....#............#
-#....#............#
-#....#............#
-#....#............#
-#....#............#
-#....#............#
-#....#............#
-#....#............#
+#........#........#
+#........#........#
+#........#........#
+#........#........#
+#........#........#
+#........+@.......#
+#........#........#
+#........#........#
+#........#........#
+#........#........#
+#........#####+####
+#........#........#
+#........#........#
+#........#........#
+#........#........#
+#........#........#
+#........#........#
 ###################
   legend: . the floor, # a wall, + a doorway, @ you
 > go n
-You step north. Ways on: N, E, S.
+You step north. Ways on: N, NE, E, SE, S. There is a doorway to the SW.
 > map
-[plan: chamber 235106515360871, 2 of 3]
+[plan: chamber 978618475907617, 2 of 3]
 ###################
-#....#............#
-#....#@...........#
-#....+............#
-#....#............#
-#....#............#
-#....#######+######
-#....#............#
-#....#............#
-#....#............#
-#....#............#
-#....#............#
-#....#............#
-#....#............#
-#....#............#
-#....#............#
-#....#............#
-#....#............#
+#........#........#
+#........#........#
+#........#........#
+#........#........#
+#........#@.......#
+#........+........#
+#........#........#
+#........#........#
+#........#........#
+#........#........#
+#........#####+####
+#........#........#
+#........#........#
+#........#........#
+#........#........#
+#........#........#
+#........#........#
 ###################
   legend: . the floor, # a wall, + a doorway, @ you
 > examine an alcove
@@ -93,55 +91,53 @@ A recess cut back from the main space, deep enough to sit in.
 > examine a wall
 Set close and plumb, with no gap in it wide enough to pass.
 > out
-[room 896860167, day 0.04688]
-Tropical rainforest — buttressed canopy, damp — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
-No direction here is closed; the nearest ground lies E, NW, SW.
+[room 3733133217, day 0.04688]
+Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
+No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > go n
-[room 896958471, day 0.16419]
-Tropical rainforest — a stream gully, shaded, damp, in a hollow — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
-No direction here is closed; the nearest ground lies NE, W, SE.
+[room 3733134593, day 0.16425]
+Tropical seasonal forest — a liana tangle, sun-warmed, damp, in a hollow — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
+No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > map out 2
-[lens: colour · depth 10 · radius 4 · north-up]
-  placement: north-up, one row per ring, east doubled for the character cell — 31 of 31 cells drawn, 0 occluded where two fell in one box (the more salient kept it).
-  colour: each cell's surface cover, tinted only where the glyph draws that ground — 0 tinted, 31 withheld (water, a mark, or you), 0 carrying no colour.
+[lens: colour · depth 11 · radius 4 · north-up]
+  placement: north-up, one row per ring, east doubled for the character cell — 53 of 81 cells drawn, 28 occluded where two fell in one box (the more salient kept it).
+  colour: each cell's surface cover, tinted only where the glyph draws that ground — 13 tinted, 40 withheld (water, a mark, or you), 0 carrying no colour.
   sight: bugbear · 3 channels (2 chromatic) · yellow-blue projection, preserving the short-to-long opposition; the red-green axis is not carried.
-      +
-   +   + +
-+   + +   + +
- + +   + +
-+   + @   + +
- + +   [2m#[0m +
-+   + +   + +
-   +   + +
-      +
-  ways on: NE, W, SE
-  legend: Doaba, a stream gully, shaded, damp, on a rise, tropical rainforest
+        ++ ++
+++ ++ + ++ ++
+++ ++ + ++ ++
+++ ++ @ ++ ++
+++ ++ [2m#[0m ++ ++
+[38;2;36;36;1m.[0m[38;2;33;33;1m:[0m [38;2;36;36;1m:[0m[38;2;33;33;1m:[0m [38;2;39;39;1m.[0m [38;2;39;39;1m.[0m[38;2;36;36;1m:[0m [38;2;36;36;1m:[0m[38;2;36;36;1m:[0m
+[38;2;36;36;1m.[0m[38;2;33;33;1m:[0m [38;2;39;39;1m.[0m[38;2;33;33;1m:[0m
+  ways on: N, NE, E, SE, S, SW, W, NW
+  legend: Doaba, buttressed canopy, sun-warmed, damp, tropical seasonal forest
 
 > enter
 Nothing here is built; there is nothing to enter.
 > look
-[room 896958471, day 0.16419]
-Tropical rainforest — a stream gully, shaded, damp, in a hollow — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
-No direction here is closed; the nearest ground lies NE, W, SE.
+[room 3733134593, day 0.16425]
+Tropical seasonal forest — a liana tangle, sun-warmed, damp, in a hollow — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
+No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > out
 You are already out of doors.
 > go ne
-[room 896958567, day 0.28137]
-Tropical rainforest — a liana tangle, sun-warmed, damp — in the lands of Doaba. The sky above: Twilight. The horizon glows gold. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
-No direction here is closed; the nearest ground lies NW, SW, E.
+[room 3733134689, day 0.32997]
+Tropical seasonal forest — a liana tangle, shaded, damp, in a hollow — in the lands of Doaba. The sky above: The sun, a yellow dwarf (G), climbs the morning sky. The light is golden. The days are near their longest. The sky is a flat overcast.
+No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > back
-[room 896958471, day 0.39858]
-Tropical rainforest — a stream gully, shaded, damp, in a hollow — in the lands of Doaba. The sky above: The sun, a yellow dwarf (G), climbs the morning sky. The light is golden. The days are near their longest. The sky is a flat overcast.
-No direction here is closed; the nearest ground lies NE, W, SE.
+[room 3733134593, day 0.49631]
+Tropical seasonal forest — a liana tangle, sun-warmed, damp, in a hollow — in the lands of Doaba. The sky above: The sun, a yellow dwarf (G), stands high in the sky. The light is golden. The days are near their longest. The sky is a flat overcast.
+No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > wait 90
-Time passes. You sense movement nearby (261 stirred).
+Time passes. You sense movement nearby (644 stirred).
 > examine sky
-The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are shrinking. The sky is a flat overcast.
+Twilight. The horizon glows gold. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
 > knows
 5 things seen:
-  room/896860167 = {"schema":"locale/room/v2","id":896860167,"face":7,"path"…
-  room/896958471 = {"schema":"locale/room/v2","id":896958471,"face":7,"path"…
-  room/896958567 = {"schema":"locale/room/v2","id":896958567,"face":7,"path"…
+  room/3733133217 = {"schema":"locale/room/v2","id":3733133217,"face":1,"path…
+  room/3733134593 = {"schema":"locale/room/v2","id":3733134593,"face":1,"path…
+  room/3733134689 = {"schema":"locale/room/v2","id":3733134689,"face":1,"path…
   settlement/10760661430244474881/name = Doaba
   settlement/10760661430244474881/population = 68
 > release

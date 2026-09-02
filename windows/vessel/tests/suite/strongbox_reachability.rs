@@ -40,6 +40,23 @@ use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
 /// change to what the player is told, which is a thing worth reddening.
 const LOCKED: &str = "It is locked, and you are carrying nothing that would open it.";
 
+/// The seed whose flagship dwelling draws the shape this file walks: a
+/// loomroom with a key, and a `Store` room with a locked strongbox and its own
+/// key inside.
+///
+/// **14, not 1, since The Pavement.** Seed 1 was the lowest of the 48-seed
+/// sweep's eight qualifying seeds on the icosphere; on the cube-sphere mesh it
+/// draws three chambers — screen, alcove, loomroom — and no `Store` room, so
+/// this file's own premise guard fired with exactly the message it was written
+/// to print. A structure's chambers are drawn from its room's seed and the
+/// epoch moved every room address, so which seeds qualify is not preserved by
+/// an epoch. Re-measured over seeds 1..=20 through `Session::handle`: five
+/// qualify (7, 8, 11, 14, 15), a rate consistent with decision 0398's 8/48,
+/// and 14 is the lowest that ALSO draws the separate loomroom the sibling test
+/// below needs. Written down rather than searched at run time for the reason
+/// the module doc gives about the sweep: a world build is the expensive part.
+const CHAMBERED_SEED: u64 = 14;
+
 fn world_at(seed: u64) -> World {
     build_world(
         Seed(seed),
@@ -147,21 +164,21 @@ fn nouns_by_depth(session: &mut Session) -> Vec<Vec<String>> {
 /// strongbox in the fourth would always have satisfied the two separately).
 #[test]
 fn a_possession_walks_to_a_strongbox_and_finds_it_locked() {
-    let world = world_at(1);
+    let world = world_at(CHAMBERED_SEED);
     let (mut session, _) =
-        Session::start(&world, &PossessOpts::default()).expect("seed 1 possesses");
+        Session::start(&world, &PossessOpts::default()).expect("the chambered seed possesses");
     let per_chamber = nouns_by_depth(&mut session);
     assert!(
         per_chamber.len() > 1,
-        "seed 1's structure has one chamber, so nothing here walks anywhere: \
-         {per_chamber:?}"
+        "the chambered seed's structure has one chamber, so nothing here walks \
+         anywhere: {per_chamber:?}"
     );
 
     let holds = |n: &str| per_chamber.iter().any(|c| c.iter().any(|x| x == n));
     assert!(
         holds("a strongbox"),
-        "no chamber of seed 1's structure composes a strongbox, so the \
-         capability is unreachable again: {per_chamber:?}"
+        "no chamber of the chambered seed's structure composes a strongbox, so \
+         the capability is unreachable again: {per_chamber:?}"
     );
     assert!(
         holds("a key"),
@@ -245,13 +262,13 @@ fn a_possession_walks_to_a_strongbox_and_finds_it_locked() {
 /// record has ever typed `take` — every one carries `"carrying":[]`, which
 /// is what a neutralised fold emits too. A byte-golden can only hold a field
 /// it has a non-empty value for, and the one that does
-/// (`session-seed-1-carrying.json`) is a CLIENT fixture this vessel test
+/// (`session-seed-14-carrying.json`) is a CLIENT fixture this vessel test
 /// does not read.
 #[test]
 fn the_snapshot_carries_what_the_body_holds() {
-    let world = world_at(1);
+    let world = world_at(CHAMBERED_SEED);
     let (mut session, _) =
-        Session::start(&world, &PossessOpts::default()).expect("seed 1 possesses");
+        Session::start(&world, &PossessOpts::default()).expect("the chambered seed possesses");
 
     assert!(
         session
@@ -266,7 +283,7 @@ fn the_snapshot_carries_what_the_body_holds() {
     let per_chamber = nouns_by_depth(&mut session);
     assert!(
         per_chamber.iter().any(|c| c.iter().any(|x| x == "a key")),
-        "seed 1's structure no longer composes a key, so nothing below is \
+        "the chambered seed's structure no longer composes a key, so nothing below is \
          tested: {per_chamber:?}"
     );
     // Back out to the LOOMROOM to pick one up. `nouns_by_depth` leaves the
@@ -285,7 +302,7 @@ fn the_snapshot_carries_what_the_body_holds() {
     for _ in 0..2 {
         assert!(
             out(session.handle("enter further in")).starts_with("[chamber "),
-            "seed 1's structure no longer reaches the loomroom"
+            "the chambered seed's structure no longer reaches the loomroom"
         );
     }
     assert_eq!(

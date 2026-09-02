@@ -180,20 +180,111 @@ impl CellKind {
     }
 }
 
-/// The four steps a mover — or a growing blob, or a flood — may take between
-/// cells. Orthogonal only: a diagonal step through the corner where two walls
-/// meet is not a way through a building.
+/// The eight steps a mover — or a growing blob, or a flood — may take between
+/// cells: four orthogonal, then four diagonal.
+///
+/// **The first four are always the four orthogonal headings, and every caller
+/// that has never had reason to consider a corner may go on indexing or slicing
+/// just those** — the same first-four contract [`hornvale_kernel::Facet::neighbors`]
+/// states for the cube's own quads. A diagonal step alone says nothing about
+/// whether it is a legal move: stepping between two cells that meet only at a
+/// point can cut through solid fabric, and whether it does is [`Lattice`]
+/// geometry, not [`HEADINGS`] geometry — see [`diagonal_is_blocked`].
+///
+/// **Two step paths DO wire diagonal movement now** (The Pavement, Task 6):
+/// `crate::session::Session::step` and `crate::underground::Underground::peek`
+/// both walk all eight bearings with [`diagonal_is_blocked`] applied. The
+/// sentence here used to read "nothing wires diagonal movement into a step path
+/// yet", and it was the load-bearing sentence for the 4-vs-8 decision below, so
+/// leaving it would have made that decision look like an accident of timing
+/// rather than a choice.
+///
+/// **Every consumer in this crate that floods or checks reachability through the
+/// lattice still reads only the first four entries, and now does so on purpose
+/// rather than by default.** The reason is not that nothing moves diagonally; it
+/// is that these floods describe what the GENERATOR built, and the generator
+/// builds orthogonally — `grow`'s flood, its separation rule, and its tunnels
+/// alike. The argument is written out once, in `classify`'s module note "Why the
+/// structural rules stay 4-connected while movement is 8-connected"; a flood that
+/// quietly started admitting diagonals here would report adjacency no rule
+/// sanctioned.
 ///
 /// A heading is a CELL DELTA, which is the same quantity `Rect`'s `w` and `h` are
 /// and tagged the same way. Not `index`: a `Cell` is a position and these are the
 /// differences between positions, so a newtype over them would be a different one
-/// from `Cell`'s and neither is earned at four constants.
+/// from `Cell`'s and neither is earned at eight constants.
 /// type-audit: bare-ok(count)
-pub const HEADINGS: [(i32, i32); 4] = [(1, 0), (0, 1), (-1, 0), (0, -1)];
+pub const HEADINGS: [(i32, i32); 8] = [
+    (1, 0),
+    (0, 1),
+    (-1, 0),
+    (0, -1),
+    (1, 1),
+    (1, -1),
+    (-1, -1),
+    (-1, 1),
+];
 
-/// `cell`'s four orthogonal neighbours, in [`HEADINGS`] order.
-pub fn neighbours(cell: Cell) -> [Cell; 4] {
+/// `cell`'s eight neighbours, in [`HEADINGS`] order: the four orthogonal ones
+/// first, then the four diagonal ones. A caller that wants only the orthogonal
+/// four — every flood in this crate, today — takes `neighbours(cell)[..4]`.
+pub fn neighbours(cell: Cell) -> [Cell; 8] {
     HEADINGS.map(|(dx, dy)| Cell(cell.0 + dx, cell.1 + dy))
+}
+
+/// Would stepping diagonally by `d` from `from` cut through the corner where
+/// two walls meet, given `open` as the passability oracle for a single cell?
+///
+/// **A passability CLOSURE, not a `Lattice`, because two different `Cell`-
+/// addressed representations both need this rule.** Interiors are a
+/// [`Lattice`], queried through [`kind_of`]/[`CellKind::passable`]; the
+/// underground level is a `CellGrid<LevelCellKind>`
+/// (`crate::underworld_level::CellGrid`), queried through
+/// `crate::underworld_level::movement_mode` — never a `Lattice` and never a
+/// `CellKind`. The geometry this function computes (which two cells flank a
+/// diagonal, and whether both are closed) does not depend on which
+/// representation is asking, so it is written once here rather than
+/// duplicated per band. This is the shared implementation
+/// [`crate::session::cell_delta`]'s own doc already promises: "a diagonal is
+/// a diagonal whether the walls around it are built or natural rock."
+///
+/// A diagonal step passes between the two cells that flank it — for
+/// `d = (1, 1)` those are the cells one step east and one step south of
+/// `from`. **Refused only when BOTH flanks are impassable** (`open` returns
+/// `false` for both). Brushing past a single standing corner is physical,
+/// the way a shoulder can lean past one doorjamb; passing between two walls
+/// that meet at a point is not. Reading only one flank would refuse a
+/// diagonal no wall actually blocks — a one-directional check, structurally
+/// blind to over-refusal, the same failure shape root `CLAUDE.md`'s
+/// STALE-DECL rule names for a one-directional acknowledgement ("can only
+/// ever be satisfied, so it rots") and decision 0456 names generally for a
+/// rule stated in two places without a test that checks them against each
+/// other — and `a_diagonal_is_refused_only_when_both_flanks_are_walls`
+/// checks both directions for exactly that reason.
+///
+/// **What counts as "impassable" — including anything outside a band's own
+/// bounds — is entirely `open`'s call, not this function's.** It asks the
+/// same two cells either way and trusts the closure's answer.
+///
+/// **Checks only the two flanks, never the destination `from + d` itself.**
+/// `!diagonal_is_blocked(...)` means "the corner does not refuse this step",
+/// not "this step is walkable" — a caller must still ask `open(from + d)` (or
+/// whatever the destination's own passability check is) separately, or it
+/// can walk a mover straight into a wall the corner rule was never meant to
+/// gate.
+///
+/// `d` is meant to be one of [`HEADINGS`]'s four diagonal entries (`dx != 0
+/// && dy != 0`); called with an orthogonal delta there is no corner to cut,
+/// so this returns `false`.
+/// type-audit: bare-ok(count: d), bare-ok(flag: return)
+pub fn diagonal_is_blocked(from: Cell, d: (i32, i32), open: impl Fn(Cell) -> bool) -> bool {
+    let (dx, dy) = d;
+    if dx == 0 || dy == 0 {
+        return false;
+    }
+    let flank_a = Cell(from.0 + dx, from.1);
+    let flank_b = Cell(from.0, from.1 + dy);
+    !open(flank_a) && !open(flank_b)
 }
 
 /// The side of one chamber's nominal INTERIOR, in cells — the standing room,
@@ -318,7 +409,7 @@ mod tests {
     use crate::structure::structure_at;
     use hornvale_kernel::{Facet, Seed};
 
-    const WALK: u32 = 12;
+    const WALK: u32 = 13;
 
     fn locale() -> Facet {
         Facet {
@@ -423,7 +514,11 @@ mod tests {
             );
             for (chamber, other) in [(a, b), (b, a)] {
                 assert!(
-                    neighbours(cell)
+                    // First four: a mover reaches a doorway ORTHOGONALLY (see
+                    // `cell_beyond`), so a diagonal touch must not count here
+                    // either — that would let a defect that only reaches this
+                    // chamber diagonally read as faithful.
+                    neighbours(cell)[..4]
                         .iter()
                         .any(|n| kind_of(&l, *n) == Some(CellKind::Floor(chamber))),
                     "the doorway at {cell:?} has no {chamber} floor beside it, so \
@@ -497,6 +592,13 @@ mod tests {
         assert_eq!(l.doorways.len(), s.links.len());
     }
 
+    /// claim: structural(forall-seed) — the seed loop below is not a world
+    /// sweep: it embeds the SAME hand-built structure under eight different
+    /// embedding seeds and asserts the results are not all identical, which is
+    /// a statement about the embedder's purity and seed-sensitivity rather
+    /// than about any world. (The second, smaller loop searches seeds for a
+    /// multi-chamber structure; it is a fixture search, and the assertion
+    /// beside it is the premise guard, not a claim over seeds.)
     #[test]
     fn growing_is_pure_and_reads_the_seed() {
         // The structure must have MORE THAN ONE chamber for the second half to
@@ -505,12 +607,28 @@ mod tests {
         // "the seed is ignored" would be a false accusation rather than a finding.
         // Asserted rather than assumed, because the count is `structure_at`'s
         // business and could move under this test.
-        let s = structure_at(&locale(), &built(), Seed(42), WALK).expect("built");
+        // The seed is SEARCHED, not written down. `structure_at` draws its
+        // chamber count from the locale's own seed, and the locale is built
+        // from `WALK` — so when the walk band moved to `globe_level + 7`, seed
+        // 42 started drawing a ONE-chamber structure here and this test's own
+        // premise guard fired. The premise is "a structure with residual
+        // freedom to fill", never "seed 42", so this asks for it.
+        let (seed, s) = (0u64..64)
+            .find_map(|sd| {
+                structure_at(&locale(), &built(), Seed(sd), WALK)
+                    .filter(|s| s.chambers.len() > 1)
+                    .map(|s| (sd, s))
+            })
+            .expect(
+                "no seed in 0..64 draws a multi-chamber structure at this locale, so the \
+                 seed-sensitivity half of this test cannot be exercised at all",
+            );
         assert!(
             s.chambers.len() > 1,
             "this test needs a structure with residual freedom to fill; {} chambers has none",
             s.chambers.len()
         );
+        let _ = seed;
         let a = embed_with(&s, &wild(), extent_for(&s), Seed(7));
         let b = embed_with(&s, &wild(), extent_for(&s), Seed(7));
         assert_eq!(a, b);

@@ -53,24 +53,55 @@ Deno.test("the observer is marked, and exactly once", () => {
 Deno.test("the ball is symmetric about the observer, not sheared", () => {
   // Under the lattice projection this guarded the `+ w` term, which
   // cancelled a shear. North-up has no such term — a shear is impossible by
-  // construction — but the assertion still earns its place, because it now
-  // catches the projection getting the SIGN of a component wrong. Flip
-  // `-cos` to `+cos` and the band still draws; mirror its rows and it does
-  // not.
+  // construction — but the assertion still earns its place, because it
+  // catches the projection displacing cells: a sign error on one component,
+  // a transposed axis, an offset applied to part of the block.
   //
-  // What it measures is each row's *leading*-space count. A band drawn
-  // about its own observer has leading-space counts that mirror around the
-  // centre row: row i and row (n-1-i) indent equally.
+  // WHAT IT MEASURES CHANGED AT THE PAVEMENT, AND THE OLD MEASURE WAS A
+  // PROXY THAT HAD NEVER BEEN DISTINGUISHABLE FROM THE PROPERTY. It counted
+  // each row's *leading* spaces and required row i and row (n-1-i) to indent
+  // equally — a VERTICAL MIRROR. The band was a 31-cell triangular ring
+  // then, which draws as a diamond, and a diamond is symmetric under the
+  // vertical mirror, the horizontal mirror AND the 180-degree rotation all
+  // at once; the three collapsed to one value and no assertion over the
+  // fixture could tell them apart.
+  //
+  // The epoch pulled them apart. The band is an 81-room square block now and
+  // draws (measured, seed 42's walk fixture) as
+  //
+  //     "        ~~ ~~"      <- row 0, eight leading spaces
+  //     "~~ ~~ ~ ~~ ~~"
+  //     "~~ ~~ ~ ~~ ~~"
+  //     "~~ ~~ @ ~~ ~~"      <- the observer
+  //     "~~ ~~ ~ ~~ ~~"
+  //     "~~ ~~ ~ ~~ ~~"
+  //     "~~ ~~        "      <- row 6, eight TRAILING spaces
+  //
+  // which has exact 180-degree rotational symmetry about `@` and neither
+  // axis mirror. The projection is right; "indents mirror" was the stale
+  // half, and it failed on row 0 (8) against row 6 (0).
+  //
+  // So this now asserts the property the test's own NAME states — symmetric
+  // ABOUT THE OBSERVER, which for a band that is not axis-aligned can only
+  // mean the point reflection: row i read backwards is row (n-1-i). That
+  // constrains every character of every row rather than one integer per row.
+  //
+  // WHAT IT STILL DOES NOT CATCH, stated rather than implied: a FULL mirror
+  // of the whole picture maps a point-symmetric band to another
+  // point-symmetric band, so this passes under one. The measure it replaces
+  // did not catch that either (a mirror permutes the leading-space counts
+  // symmetrically), so nothing is lost — but the old comment claimed
+  // otherwise, and that claim is retired here rather than carried forward.
   const rows = glyphRows(chartCells(parseSnapshot(WALK)!))!;
-  const lead = rows.map((r) => r.length - r.trimStart().length);
-  const n = lead.length;
+  const n = rows.length;
   for (let i = 0; i < n; i++) {
+    const mirrored = rows[n - 1 - i].split("").reverse().join("");
     assertEquals(
-      lead[i],
-      lead[n - 1 - i],
-      `row ${i}'s indent (${lead[i]}) does not mirror row ${n - 1 - i}'s (${
-        lead[n - 1 - i]
-      }): the ball is sheared`,
+      rows[i],
+      mirrored,
+      `row ${i} (${JSON.stringify(rows[i])}) is not row ${n - 1 - i} read backwards (${
+        JSON.stringify(mirrored)
+      }): the ball is not symmetric about the observer`,
     );
   }
 });

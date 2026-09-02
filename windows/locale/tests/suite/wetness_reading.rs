@@ -87,88 +87,182 @@ use hornvale_climate::BiomeExpr;
 use hornvale_climate::variants::{GroundKind, Variant, variant_pool};
 use hornvale_kernel::{Facet, Seed, World, WorldTime};
 use hornvale_locale::{Locale, LocaleContext, grounded_wetness, wetness_is_grounded};
-use hornvale_terrain::branch::{CatchmentCut, rill_reading};
-use serde_json::Value;
+use hornvale_terrain::branch::{CatchmentCut, RillReading, rill_reading};
 
-/// The before-arm: one record per sampled room.
-const FIXTURE: &str = include_str!("../fixtures/pre-rill-wetness.jsonl");
-
-/// The Ford's before-arm, reused here for one thing only: it carries
-/// `relief`, `aspect` and `openness` for 200 rooms, captured by a different
-/// campaign long before this one, which is what makes it a credible witness
-/// that the `LOCALE_MICRO` draw order did not move.
-const FORD_FIXTURE: &str = include_str!("../fixtures/pre-stage-2-rooms.jsonl");
+// THE COMMITTED FIXTURES HAVE NO READER IN THIS FILE ANY MORE, AND THAT IS
+// THE END STATE OF THE PAVEMENT'S TASK 11 RULING RATHER THAN AN OVERSIGHT.
+//
+// `FIXTURE` (`pre-rill-wetness.jsonl`), `FORD_FIXTURE` (`pre-stage-2-rooms.
+// jsonl`), the `Row` struct and the `rows()` parser stood here and are gone.
+// The mesh epoch replaced twenty triangular base faces with six quads, so an
+// address on face 7 names no room at all and `describe` refused every one of
+// them as `Unaddressable("Invalid")` — one error accounting for twelve test
+// failures across this file and `water_reading.rs`.
+//
+// Each consumer was rebuilt on what it actually needed, and every one came out
+// STRONGER than the capture it replaced, because a captured before-arm can
+// only ever hold for the world it froze:
+//
+//   walk heads          -> `walk_heads`, read live off the channel network
+//   the land sample     -> `sampled_rooms`, a live land-filtered lat/lon grid
+//   the sea/ice sample  -> `sphere_sample`, its unfiltered complement
+//   the draw-order pin  -> a same-world differential over `micro_field`
+//   the scope guard     -> the same, against the raw address draw
+//   the R-8 witness     -> re-measured over `sampled_rooms`, re-stated at all
+//                          four of its sites
+//
+// `pre-stage-2-rooms.jsonl` still has ONE reader, in `water_reading.rs`, where
+// the fixture LINE is a genuine before-arm for the document's key shape and
+// only its address had to be rebuilt. `pre-rill-wetness.jsonl` now has none
+// anywhere in the tree. It is LEFT COMMITTED rather than deleted: it is the
+// only record of what that world said, and discarding a provenance artifact is
+// a decision for the campaign that wants the space, not for a fix round that
+// merely stopped reading it.
 
 /// R-7's floor: the share of descending steps that must not get drier.
 const R7_FLOOR: f64 = 0.80;
-
-/// One captured room.
-///
-/// **Four captured fields are gone from this struct, and their absence is the
-/// point.** `descriptor`, `height_asl_m` and `biome` recorded what the pre-Rill
-/// world said about a room, and decision 0134's terrain epoch made all three
-/// false; nothing reads them any more, so carrying them would leave stale
-/// world-state in a fixture reader that no longer claims anything about it (and
-/// clippy's `dead_code` says so). What remains is either address data — `kind`,
-/// `id`, `step`, `room` — or the one captured VALUE that is still a legitimate
-/// before-arm: `wetness`, which outside the grounded scope is a pure function of
-/// the room address and is still compared byte for byte by
-/// [`only_the_ground_is_grounded`].
-struct Row {
-    kind: String,
-    id: u64,
-    step: u64,
-    room: Facet,
-    wetness: f64,
-}
-
-/// Parse the fixture once.
-fn rows() -> Vec<Row> {
-    FIXTURE
-        .lines()
-        .map(|l| {
-            let v: Value = serde_json::from_str(l).expect("fixture line is JSON");
-            Row {
-                kind: v["kind"].as_str().expect("kind").to_string(),
-                id: v["id"].as_u64().expect("id"),
-                step: v["step"].as_u64().expect("step"),
-                room: Facet {
-                    face: v["face"].as_u64().expect("face") as u8,
-                    path: v["path"]
-                        .as_array()
-                        .expect("path")
-                        .iter()
-                        .map(|d| d.as_u64().expect("path digit") as u8)
-                        .collect(),
-                },
-                wetness: v["wetness"].as_f64().expect("wetness"),
-            }
-        })
-        .collect()
-}
 
 /// The world every claim here is made on.
 fn world() -> World {
     World::new(Seed(42))
 }
 
-/// The rooms each captured walk STARTED from, in walk order.
+/// The rooms the R-7 walks start from: rill polyline heads, **read live off
+/// the channel network** rather than out of the fixture.
 ///
-/// This is all the fixture is still used for on the R-7 side: 28 room
-/// addresses, chosen in the pre-Rill world at rill polyline heads. A room
-/// address is a position on the sphere and carries no world state, so it
-/// survives an epoch intact — but the *walk* the fixture recorded from each
-/// head does not, which is why [`descend_from`] rebuilds it live.
-fn walk_heads(rows: &[Row]) -> Vec<Facet> {
-    let mut out: Vec<Option<Facet>> = Vec::new();
-    for r in rows.iter().filter(|r| r.kind == "walk" && r.step == 0) {
-        while out.len() <= r.id as usize {
-            out.push(None);
+/// # The fixture's heads did not survive the epoch, and its own doc said they
+/// would
+///
+/// This function used to return 28 addresses captured in the pre-Rill world,
+/// under a doc that read: *"A room address is a position on the sphere and
+/// carries no world state, so it survives an epoch intact."* **That sentence
+/// is false now, and The Pavement is what falsified it.** A `Facet` is a base
+/// FACE plus a descent path, and the base mesh changed from twenty triangular
+/// faces to six quads — so a captured address on face 7 is not a room in a
+/// different place, it is not a room at all, and `describe` refuses it as
+/// `Unaddressable("Invalid")`. An address is a position on the sphere only
+/// relative to a fixed base mesh; the epoch moved the base mesh.
+///
+/// The heads were never the claim. The fixture chose them at rill polyline
+/// heads because that is where a descending walk begins, so that is what this
+/// asks the live network for. `descend_from` already rebuilt the walk itself
+/// live for the same reason one epoch earlier
+/// (`PROC-before-arm-dies-with-an-epoch`); this is that argument arriving at
+/// the head as well as the walk.
+fn walk_heads(ctx: &LocaleContext) -> Vec<Facet> {
+    let geo = ctx.climate().geosphere();
+    let depth = hornvale_locale::walk_depth(ctx);
+    let mut out = Vec::new();
+    for run in ctx.terrain().channels().run_vertices.iter() {
+        let Some(&head) = run.first() else { continue };
+        out.push(Facet::containing(geo.position(head), depth));
+        if out.len() == HEADS {
+            break;
         }
-        out[r.id as usize] = Some(r.room.clone());
     }
-    out.into_iter().flatten().collect()
+    out
 }
+
+/// A fixed live sample of walk-band rooms, spread evenly over all six base
+/// faces — the "1,048 room addresses" this file used to take out of the
+/// fixture.
+///
+/// **The fixture's addresses did not survive the epoch, and the sentence that
+/// said they would is the one to delete.** Two doc comments in this file read
+/// *"A room address is a position on the sphere; it names no world state and
+/// survives an epoch intact"* — true across a terrain epoch, which is what
+/// they were written about, and false across a MESH epoch. A `Facet` is a base
+/// face plus a descent path; The Pavement replaced twenty triangular faces
+/// with six quads, so a captured address on face 7 names nothing at all and
+/// `describe` refuses it as `Unaddressable("Invalid")`.
+///
+/// This sample is a FIXED sample, not a before-arm: the claim it serves is a
+/// statement about one world (a damp room below the sample's own median
+/// moisture must sit in a valley), and the sample only has to be large,
+/// spread, and the same every run.
+fn sampled_rooms(ctx: &LocaleContext) -> Vec<Facet> {
+    // A LAT/LON GRID FILTERED TO LAND, not a path enumeration and not the
+    // whole sphere. Two earlier shapes were wrong in ways the assertions here
+    // caught at once, and both are worth recording because they are what
+    // "rebuild the sample" actually costs:
+    //
+    //   - varying the leading four base-4 digits and zero-filling the rest
+    //     puts every address in one deep corner of its face — 1,050 rooms in
+    //     six tiny clusters;
+    //   - a whole-sphere grid is ~71% ocean, and the fixture's sample was the
+    //     `land` rows. `trunk_in_land` came back 30 of 1050 against the walks'
+    //     96 of 448, so the "independent land sample" was less representative
+    //     of land than the walks it is compared against.
+    //
+    // So: a dense grid, described, and kept where the room is above sea level,
+    // to the fixture's own sample size. Deterministic, spread over the whole
+    // globe, and land by the same reading every other test here uses.
+    let depth = hornvale_locale::walk_depth(ctx);
+    let mut out = Vec::with_capacity(LAND_SAMPLE);
+    'grid: for a in 0..90u32 {
+        // Avoid the poles exactly: the grid runs -87 to +87 degrees.
+        let lat = -87.0 + 174.0 * f64::from(a) / 89.0;
+        for b in 0..90u32 {
+            let lon = -180.0 + 360.0 * f64::from(b) / 90.0;
+            let room = Facet::containing(
+                hornvale_kernel::math::unit_sphere_from_lat_lon(lat, lon),
+                depth,
+            );
+            let Ok(loc) = ctx.describe(&room, WorldTime::GENESIS) else {
+                continue;
+            };
+            if loc.fields.height_asl_m.get() <= 0.0 {
+                continue;
+            }
+            out.push(room);
+            if out.len() == LAND_SAMPLE {
+                break 'grid;
+            }
+        }
+    }
+    assert!(
+        out.len() == LAND_SAMPLE,
+        "the grid found only {} land rooms of the {LAND_SAMPLE} this sample needs — \
+         either the world lost its land or the grid is too coarse to find it",
+        out.len()
+    );
+    out
+}
+
+/// An UNFILTERED lat/lon sample of walk-band rooms — sea, ice and rock column
+/// included.
+///
+/// [`sampled_rooms`] is filtered to land, because the claims it serves are
+/// about land. The scope guard is the exact complement: it is about the rooms
+/// where wetness is NOT grounded, which are the ones that filter removes. Two
+/// samplers rather than one parameterised one, because a caller that passed
+/// the wrong flag would get a test that reads as coverage and asserts nothing
+/// — measured: run against the land sample, the guard found 33 ungrounded
+/// rooms against its own floor of 100 and said so.
+fn sphere_sample(ctx: &LocaleContext) -> Vec<Facet> {
+    let depth = hornvale_locale::walk_depth(ctx);
+    let mut out = Vec::with_capacity(40 * 40);
+    for a in 0..40u32 {
+        let lat = -87.0 + 174.0 * f64::from(a) / 39.0;
+        for b in 0..40u32 {
+            let lon = -180.0 + 360.0 * f64::from(b) / 40.0;
+            out.push(Facet::containing(
+                hornvale_kernel::math::unit_sphere_from_lat_lon(lat, lon),
+                depth,
+            ));
+        }
+    }
+    out
+}
+
+/// How many land rooms the independent sample holds — the fixture's own
+/// count, kept so the populations this file compares stay the size The Rill
+/// measured them at.
+const LAND_SAMPLE: usize = 1_048;
+
+/// How many walk heads to take — the fixture's own count, kept so the live
+/// population is the same size as the one The Rill measured.
+const HEADS: usize = 28;
 
 /// How many rooms a walk holds at most — the fixture's own length, kept so the
 /// live population is the same size as the one The Rill measured.
@@ -330,8 +424,7 @@ fn reads_dry(descriptor: &str) -> bool {
 fn descending_walks_of_the_required_length_exist() {
     let world = world();
     let ctx = LocaleContext::build(&world).unwrap();
-    let rows = rows();
-    let heads = walk_heads(&rows);
+    let heads = walk_heads(&ctx);
     assert!(!heads.is_empty(), "the fixture carries walk heads");
     let walks: Vec<Vec<Facet>> = heads.iter().map(|h| descend_from(&ctx, h)).collect();
     let steps: usize = walks.iter().map(|w| w.len() - 1).sum();
@@ -428,17 +521,49 @@ fn descending_walks_of_the_required_length_exist() {
 /// 0.5018, and adding the coarse trunk's own `channel_distance`/`channel_bands`
 /// to the allocation changes nothing.
 ///
-/// **That trunk result is conditional on this walk population, and the
-/// condition is not incidental.** The walks are seeded at rill polyline *heads*,
-/// so they sample headwater terrain, where a trunk is exactly what one does not
-/// expect to find. This test therefore prints how many rooms fall inside a
-/// trunk band in the walk sample *and* in the fixture's independent `land`
-/// sample, and asserts the two disagree — the world does contain rooms inside a
-/// trunk's floodplain (seed 42's flagship room 750518284 has a
-/// `channel_distance` of 5.27e-4 rad against a terrace/dry edge of 2.30e-3),
-/// and the walks simply do not visit them. The honest claim is "adding the
-/// trunk changes nothing **on walks seeded at rill heads**", not "the trunk is
-/// inert".
+/// # The trunk null was falsified by The Pavement, in the direction nobody
+/// # was watching
+///
+/// **The paragraph this replaces said the trunk result was conditional on the
+/// walk population, and both halves of that are now measured false.** It read:
+/// *"The walks are seeded at rill polyline heads, so they sample headwater
+/// terrain, where a trunk is exactly what one does not expect to find … the
+/// walks simply do not visit them. The honest claim is 'adding the trunk
+/// changes nothing on walks seeded at rill heads', not 'the trunk is inert'."*
+/// It is left quoted rather than deleted, because it is a true statement about
+/// the icosphere walk band at `globe_level + 6` and it is what a reader of The
+/// Rill's chronicle will arrive holding.
+///
+/// On the cube-sphere walk band at `globe_level + 7` (decisions 0506, 0511):
+///
+/// 1. **The attribution is reversed, not merely weakened.** Rill-head walks
+///    enter a coarse trunk's band on **96 of 448** rooms (21.4%) against an
+///    independent 1,048-room land spread's **74** (7.1%) — **3.0x** the rate,
+///    where the old reading needed them to be trunk-poor. Both figures are
+///    printed by this test.
+/// 2. **"Adding the trunk changes nothing" is false.** The trunk term is
+///    active on 96 walk rooms and reverses **49 of 420** step verdicts. It is
+///    not near-inert the way the rill allocation is (65 rooms, 55 flips, whose
+///    reversals nearly cancel); the trunk's do not cancel.
+/// 3. **It changes things for the worse.** The descending-step fraction goes
+///    0.7405 (rill only) to **0.6452** (trunk swapped in) and **0.6286**
+///    (whichever watercourse is nearer as a fraction of its own valley) —
+///    further from R-7's 0.80 floor, not nearer. The supply alone still leads
+///    every arm at 0.7714.
+///
+/// **So the conclusion The Rill's null was carrying survives and is
+/// strengthened, while the null itself does not.** "The coarse trunk does not
+/// rescue R-7" is no longer a statement about a term nobody could reach on
+/// this population; it is a measured cost, taken on a population enriched in
+/// exactly the rooms the term needs. That is the stronger claim, and it is
+/// asserted below rather than reported.
+///
+/// **One reading of the mechanism, marked as unmeasured.** A trunk's valley is
+/// far wider than a rill's, so along a walk that lies inside one the proximity
+/// term saturates and stops varying, flattening the rill signal the arm was
+/// carrying. Plausible, consistent with all three numbers above, and NOT
+/// measured here — a campaign wanting it should measure the term's variance
+/// along a walk, not cite this sentence.
 ///
 /// # The obstacle is a scale measurement, not a choice of constant
 ///
@@ -463,10 +588,13 @@ fn descending_walks_of_the_required_length_exist() {
 /// What replaces them is the claim itself rather than a witness to it, asserted
 /// on a population rebuilt live: R-7's floor is now **asserted to be missed**
 /// rather than merely reported (the null is the headline, so it should be the
-/// assertion), the allocation is asserted non-inert, the trunk conditionality
-/// is asserted as before, and the supply-beats-chance-and-beats-emitted claim
-/// is asserted where the measurement supports it. All four are world-
-/// independent: none of them names a count this world happens to produce.
+/// assertion), the allocation is asserted non-inert, and the
+/// supply-beats-chance-and-beats-emitted claim is asserted where the
+/// measurement supports it. All are world-independent: none of them names a
+/// count this world happens to produce. **The trunk conditionality is no
+/// longer among them** — The Pavement measured it false and replaced it with
+/// the trunk term's own materiality and floor-miss; see the trunk section
+/// above.
 ///
 /// The `before (noise)` arm is also gone. It read the fixture's captured
 /// `wetness` — pure pre-Rill address noise — and there is no way to re-derive
@@ -505,11 +633,10 @@ fn a_walk_gets_damper_as_it_descends() {
     let ctx = LocaleContext::build(&world).unwrap();
     let globe = ctx.terrain().globe();
     let cut = CatchmentCut::Drawn(globe.rill_partition_seed());
-    let rows = rows();
     // The walk population is rebuilt LIVE from the captured heads. See
     // `descending_walks_of_the_required_length_exist` for why the fixture's own
     // walks can no longer be used.
-    let walks: Vec<Vec<Facet>> = walk_heads(&rows)
+    let walks: Vec<Vec<Facet>> = walk_heads(&ctx)
         .iter()
         .map(|h| descend_from(&ctx, h))
         .collect();
@@ -522,6 +649,14 @@ fn a_walk_gets_damper_as_it_descends() {
         grounded: f64,
         /// The budget alone — this campaign's allocation term deleted.
         supply_only: f64,
+        /// The allocation fed the **coarse trunk's** own reading instead of
+        /// the sub-vertex rill's — the arm The Rill's "adding the trunk
+        /// changes nothing" was measured on.
+        trunk_only: f64,
+        /// The allocation fed whichever of the two watercourses is nearer as
+        /// a fraction of its own valley: the "add the trunk to the
+        /// allocation" arm, rather than "swap it in".
+        rill_or_trunk: f64,
         /// Whether the grounding writes to this room at all.
         in_scope: bool,
     }
@@ -530,6 +665,14 @@ fn a_walk_gets_damper_as_it_descends() {
     // supply. If this is zero the "supply beats chance" assertion below is
     // being satisfied by a term that predates this campaign entirely.
     let mut allocation_active = 0usize;
+    // The same materiality question asked of the TRUNK term: rooms where
+    // feeding the allocation the coarse trunk's reading moves the value away
+    // from the supply at all. If this is zero, "the trunk arm misses R-7's
+    // floor" is satisfied by an arm that is a copy of the supply, and the
+    // claim below is vacuous. This is the premise the dead
+    // `trunk_in_land > trunk_in_walks` guard used to carry, stated in the
+    // TERM rather than in the SAMPLE — see this test's doc comment.
+    let mut trunk_active = 0usize;
     let mut trunk_in_walks = 0usize;
     let mut per_walk: Vec<Vec<Reading>> = Vec::new();
     for w in &walks {
@@ -553,8 +696,19 @@ fn a_walk_gets_damper_as_it_descends() {
                 ),
             );
             let supply_only = grounded_wetness(loc.fields.moisture, None);
+            let trunk_only = grounded_wetness(loc.fields.moisture, trunk_reading(&loc));
+            // `grounded_wetness` is monotone increasing in its proximity term
+            // for a fixed supply (`2*(s + (1-s)*p) - 1`), so the greater of
+            // the two grounded values IS the value the greater of the two
+            // proximities would give. Taking the max here rather than
+            // reimplementing a two-watercourse proximity keeps this arm
+            // inside the model's own function.
+            let rill_or_trunk = grounded.max(trunk_only);
             if grounded != supply_only {
                 allocation_active += 1;
+            }
+            if trunk_only != supply_only {
+                trunk_active += 1;
             }
             if inside_a_trunk_band(&loc) {
                 trunk_in_walks += 1;
@@ -563,6 +717,8 @@ fn a_walk_gets_damper_as_it_descends() {
                 emitted: loc.regime.micro.wetness,
                 grounded,
                 supply_only,
+                trunk_only,
+                rill_or_trunk,
                 in_scope: wetness_is_grounded(BiomeExpr::for_legacy(loc.biome_kind)),
             });
         }
@@ -571,19 +727,26 @@ fn a_walk_gets_damper_as_it_descends() {
     let walk_rooms: usize = per_walk.iter().map(Vec::len).sum();
 
     // (kept, total) per arm, over all steps and over in-scope steps only.
-    let mut all = [(0usize, 0usize); 3];
-    let mut scoped = [(0usize, 0usize); 3];
+    let mut all = [(0usize, 0usize); 5];
+    let mut scoped = [(0usize, 0usize); 5];
     let mut allocation_flips = 0usize;
+    let mut trunk_flips = 0usize;
     for w in &per_walk {
         for p in w.windows(2) {
             let arms = [
                 p[1].emitted >= p[0].emitted,
                 p[1].grounded >= p[0].grounded,
                 p[1].supply_only >= p[0].supply_only,
+                p[1].trunk_only >= p[0].trunk_only,
+                p[1].rill_or_trunk >= p[0].rill_or_trunk,
             ];
             // Does deleting the allocation reverse this step's verdict?
             if arms[1] != arms[2] {
                 allocation_flips += 1;
+            }
+            // Does ADDING the coarse trunk to it reverse this step's verdict?
+            if arms[4] != arms[1] {
+                trunk_flips += 1;
             }
             for (i, kept) in arms.iter().enumerate() {
                 all[i].1 += 1;
@@ -596,13 +759,20 @@ fn a_walk_gets_damper_as_it_descends() {
         }
     }
     let f = |(k, t): (usize, usize)| k as f64 / t as f64;
-    let names = ["emitted axis   ", "grounded value ", "supply only    "];
+    let names = [
+        "emitted axis   ",
+        "grounded value ",
+        "supply only    ",
+        "trunk only     ",
+        "rill or trunk  ",
+    ];
     println!(
-        "R-7 (seed 42, walk depth 12, {} live walks, {walk_rooms} rooms), \
+        "R-7 (seed 42, walk depth {}, {} live walks, {walk_rooms} rooms), \
          steps that do not get drier:",
+        hornvale_locale::walk_depth(&ctx),
         walks.len()
     );
-    for i in 0..3 {
+    for i in 0..names.len() {
         println!(
             "  {}  in-scope {:>3}/{:<3} = {:.4}   all steps {:>3}/{:<3} = {:.4}",
             names[i],
@@ -627,17 +797,29 @@ fn a_walk_gets_damper_as_it_descends() {
          and flips {allocation_flips} of {} step verdicts",
         all[0].1
     );
+    println!(
+        "  coarse trunk: active on {trunk_active} of {walk_rooms} walk rooms, \
+         and flips {trunk_flips} of {} step verdicts",
+        all[0].1
+    );
 
     // How many rooms sit inside the COARSE trunk's own bands, in the walk
-    // sample and in the fixture's independent land sample. The trunk null was
-    // measured on the first; the second is what says the first is a property of
-    // the population and not of the world.
-    let trunk_in_land = rows
+    // sample and in an INDEPENDENT land sample. The trunk null was measured on
+    // the first; the second is what says the first is a property of the
+    // population and not of the world.
+    //
+    // The independent sample is `sampled_rooms` now, not the fixture's `land`
+    // rows: those are pre-cube addresses and name no room at all (see that
+    // helper's doc). It serves the same purpose — a spread of ordinary rooms
+    // chosen without reference to the channel network — and this is a printed
+    // comparison rather than an assertion, so the population's identity
+    // matters less here than that it is independent of the walks.
+    let land_sample = sampled_rooms(&ctx);
+    let trunk_in_land = land_sample
         .iter()
-        .filter(|r| r.kind == "land")
-        .filter(|r| inside_a_trunk_band(&ctx.describe(&r.room, WorldTime::GENESIS).unwrap()))
+        .filter(|r| inside_a_trunk_band(&ctx.describe(r, WorldTime::GENESIS).unwrap()))
         .count();
-    let land_rooms = rows.iter().filter(|r| r.kind == "land").count();
+    let land_rooms = land_sample.len();
     println!(
         "  inside a coarse trunk band: {trunk_in_walks} of {walk_rooms} walk rooms \
          (seeded at rill heads), {trunk_in_land} of {land_rooms} land-sample rooms"
@@ -654,15 +836,65 @@ fn a_walk_gets_damper_as_it_descends() {
         "the allocation term is inert on all {walk_rooms} walk rooms — every arm \
          above is measuring moisture alone"
     );
-    // The trunk null is conditional on the walk population, and this is what
-    // makes that conditionality checkable rather than a caveat in prose: the
-    // world does contain rooms inside a trunk's valley, and these walks — seeded
-    // at rill heads — do not visit them.
+    // **THE TRUNK NULL'S ATTRIBUTION IS DEAD AND ITS GUARD IS GONE WITH IT
+    // (The Pavement, task 10).** This read
+    // `assert!(trunk_in_land > trunk_in_walks, …)`: a premise guard making The
+    // Rill's *conditional* trunk null checkable, on the reading that walks
+    // seeded at rill heads sample headwater terrain and therefore do not enter
+    // a trunk's valley. On the finer walk band that is false, and reversed —
+    // the rates are printed above. It was NOT flipped: flipping it would
+    // assert the opposite conditionality and mean a claim nobody made, and the
+    // finding is not a reversed conditional at all. It is that the null the
+    // conditional was protecting has itself been measured and falsified, so
+    // there is no conditional left to guard. The comparison is still computed
+    // and printed; only the direction is no longer asserted, because no claim
+    // here rests on it any more.
+    //
+    // What replaces it is the materiality premise the trunk arm actually
+    // needs, in the same shape as `allocation_active` above: the trunk term
+    // must be doing something to these rooms, or the two assertions below are
+    // satisfied by an arm that is a copy of the supply. This also covers the
+    // case the old guard was reaching for from the other side — walks that
+    // entered no trunk band at all would leave the term inert and redden here.
     assert!(
-        trunk_in_land > trunk_in_walks,
-        "the land sample has no more trunk-band rooms than the rill-head walks \
-         ({trunk_in_land} vs {trunk_in_walks}), so the trunk null cannot be \
-         attributed to the walk population"
+        trunk_active > 0,
+        "the coarse trunk's reading is inert on all {walk_rooms} walk rooms — \
+         the two trunk arms above are copies of the supply arm and the claims \
+         below are vacuous"
+    );
+    // **The trunk does not rescue R-7, and it is no longer a null that says
+    // so.** Both trunk arms miss the preregistered floor, and by more than the
+    // rill arm does. Asserted as a floor miss rather than as a fraction: the
+    // fractions are this world's, the miss is not.
+    assert!(
+        f(all[3]) < R7_FLOOR
+            && f(all[4]) < R7_FLOOR
+            && f(scoped[3]) < R7_FLOOR
+            && f(scoped[4]) < R7_FLOOR,
+        "a coarse-trunk arm reached R-7's preregistered floor of {R7_FLOOR}: \
+         trunk-only in-scope {:.4} / all {:.4}, rill-or-trunk in-scope {:.4} / \
+         all {:.4}. The Rill's discarded alternative is back on the table and \
+         this test's doc comment needs re-reading, not re-pinning.",
+        f(scoped[3]),
+        f(all[3]),
+        f(scoped[4]),
+        f(all[4]),
+    );
+    // **And it makes the direction WORSE, which is why the null is falsified
+    // rather than confirmed.** "Adding the trunk changes nothing" was The
+    // Rill's wording; adding it moves the fraction down, away from the floor.
+    // Asserted as an inequality between two arms of the same run — a
+    // world-independent statement about the model, not a count this world
+    // happens to produce.
+    assert!(
+        f(all[4]) < f(all[1]),
+        "adding the coarse trunk to the allocation no longer costs the \
+         descending-step fraction: rill-or-trunk {:.4} against rill-only \
+         {:.4}. The Rill's 'changes nothing' was falsified downward by The \
+         Pavement; if it now points the other way that is a new finding, not a \
+         constant to bump.",
+        f(all[4]),
+        f(all[1]),
     );
 
     // **R-7 IS FALSIFIED, AND THAT IS NOW AN ASSERTION.** The Rill reported the
@@ -692,6 +924,39 @@ fn a_walk_gets_damper_as_it_descends() {
         f(scoped[2]),
         f(scoped[0]),
     );
+}
+
+/// The coarse trunk's own reading, shaped as the allocation's input: the
+/// document's `channel_distance` (unsigned — the allocation asks how far, the
+/// sign says which bank) against its `channel_bands`. `None` where the room's
+/// vertex has no trunk at all, which is [`grounded_wetness`]'s own
+/// "no watercourse" arm.
+///
+/// **This is the arm The Rill's discarded alternative was measured on**, and
+/// it lived only in prose until The Pavement: "adding the coarse trunk's own
+/// `channel_distance`/`channel_bands` to the allocation changes nothing" was
+/// a measurement nobody could re-run, so when The Pavement's walk band moved
+/// and the null's stated *attribution* died with it, there was nothing to
+/// re-read. Now there is.
+///
+/// **`catchment` and `vertex` are filler, and that is a disclosed
+/// blindness.** [`grounded_wetness`] reads exactly `distance` and
+/// `band_edges` off a [`RillReading`] and nothing else, so the two remaining
+/// fields cannot reach the value — the same filler
+/// `windows/locale/src/micro.rs`'s own unit tests use for the same reason. If
+/// that function ever grows a dependency on either, this arm starts lying
+/// silently; there is no assertion that can catch it from here, so it is
+/// written down instead.
+fn trunk_reading(loc: &Locale) -> Option<RillReading> {
+    match (loc.channel_distance, loc.channel_bands) {
+        (Some(distance), Some(band_edges)) => Some(RillReading {
+            distance: distance.abs(),
+            band_edges,
+            catchment: 0.0,
+            vertex: hornvale_kernel::Vertex(0),
+        }),
+        _ => None,
+    }
 }
 
 /// Whether a room stands inside the **coarse trunk's** valley — the reading the
@@ -769,14 +1034,16 @@ fn damp_below_the_median_is_always_inside_a_valley() {
     let ctx = LocaleContext::build(&world).unwrap();
     let globe = ctx.terrain().globe();
     let cut = CatchmentCut::Drawn(globe.rill_partition_seed());
-    let rows = rows();
+    // A LIVE spread, not the fixture's captured addresses — see
+    // `sampled_rooms` for why those stopped being addresses at all.
+    let rows: Vec<Facet> = sampled_rooms(&ctx);
     let mut riparian_damp: Vec<String> = Vec::new();
     let mut damp_rooms = 0usize;
 
     // The median moisture of the rooms whose axis this campaign grounds.
     let mut supplies: Vec<f64> = rows
         .iter()
-        .map(|r| ctx.describe(&r.room, WorldTime::GENESIS).unwrap())
+        .map(|r| ctx.describe(r, WorldTime::GENESIS).unwrap())
         .filter(|l| wetness_is_grounded(BiomeExpr::for_legacy(l.biome_kind)))
         .map(|l| l.fields.moisture)
         .collect();
@@ -792,7 +1059,7 @@ fn damp_below_the_median_is_always_inside_a_valley() {
          is high enough that supply plus draw could reach the damp clause"
     );
     for r in &rows {
-        let loc = ctx.describe(&r.room, WorldTime::GENESIS).unwrap();
+        let loc = ctx.describe(r, WorldTime::GENESIS).unwrap();
         if wet_clause(&loc.regime.descriptor) != "damp" {
             continue;
         }
@@ -808,7 +1075,7 @@ fn damp_below_the_median_is_always_inside_a_valley() {
             continue;
         }
         let rill = rill_reading(
-            r.room.centroid(),
+            r.centroid(),
             ctx.terrain().channels(),
             globe,
             ctx.terrain().geosphere(),
@@ -819,11 +1086,11 @@ fn damp_below_the_median_is_always_inside_a_valley() {
         assert!(
             inside,
             "{:?} reads damp with moisture {} and no watercourse to explain it",
-            r.room, loc.fields.moisture
+            r, loc.fields.moisture
         );
         riparian_damp.push(format!(
             "    {:?} moisture {} rill {:?} rad inside a valley {:?} rad wide",
-            r.room,
+            r,
             loc.fields.moisture,
             rill.map(|x| x.distance),
             rill.map(|x| x.band_edges[3]),
@@ -908,18 +1175,18 @@ fn damp_below_the_median_is_always_inside_a_valley() {
 ///    when its threshold turned out to sit inside its own sampling noise.
 ///
 /// Tracked as `LOC-riparian-dry-overlap`.
-#[ignore = "PREREGISTERED, not met: awaits LOC-riparian-dry-overlap (1 of 35 riparian rooms on seed 42 reads dry; the riparian noun and the dry clause are two different functions of moisture, which R-8's by-construction wording assumed away, and at n=1 a tolerance is indistinguishable from switching the test off)"]
+#[ignore = "PREREGISTERED, not met: awaits LOC-riparian-dry-overlap (3 of 138 riparian rooms on seed 42 read dry; the riparian noun and the dry clause are two different functions of moisture, which R-8's by-construction wording assumed away, and a tolerance at this count is indistinguishable from switching the test off. RE-MEASURED over a REBUILT POPULATION at The Pavement: the committed pre-cube fixture's addresses stopped naming rooms at the mesh epoch, so the sample is a live 1,048-room land spread now and the reading moved 1-of-35 to 3-of-138 - 2.86% to 2.17%, so the overlap persists at the same rate and it is the population that changed, not the defect)"]
 #[test]
 fn no_room_reads_riparian_and_dry() {
     let world = world();
     let ctx = LocaleContext::build(&world).unwrap();
-    let rows = rows();
+    let rows = sampled_rooms(&ctx);
     let prose = riparian_prose();
     assert!(!prose.is_empty(), "the pool has riparian varieties");
     let mut riparian = 0usize;
     let mut offenders: Vec<String> = Vec::new();
     for r in &rows {
-        let loc: Locale = ctx.describe(&r.room, WorldTime::GENESIS).unwrap();
+        let loc: Locale = ctx.describe(r, WorldTime::GENESIS).unwrap();
         if !prose
             .iter()
             .any(|p| loc.regime.descriptor_noun.starts_with(p.as_str()))
@@ -929,8 +1196,8 @@ fn no_room_reads_riparian_and_dry() {
         riparian += 1;
         if reads_dry(&loc.regime.descriptor) {
             offenders.push(format!(
-                "{:?}: {:?} (moisture {}, wetness {})",
-                r.room, loc.regime.descriptor, loc.fields.moisture, loc.regime.micro.wetness
+                "{r:?}: {:?} (moisture {}, wetness {})",
+                loc.regime.descriptor, loc.fields.moisture, loc.regime.micro.wetness
             ));
         }
     }
@@ -968,16 +1235,42 @@ fn no_room_reads_riparian_and_dry() {
 /// predicate should drive `offenders` to 0 and leave `riparian` alone; a
 /// change that merely shrinks the riparian pool would move both, and that is
 /// not the repair.
+///
+/// # RE-STATED AT THE PAVEMENT: `(35, 1)` -> `(138, 3)`, AND THE POPULATION IS
+/// A RULE NOW
+///
+/// This witness sampled the committed `pre-rill-wetness.jsonl`, whose 200
+/// addresses name nothing on the cube-sphere mesh. The sample is
+/// [`sampled_rooms`] now — a live 1,048-room land spread, regenerated from the
+/// world every run — so **what became epoch-invariant is the population RULE,
+/// not the integers**. Both necessarily moved, and moving them triggered this
+/// pin's own four-site re-statement, performed in this commit: the pin below,
+/// the `#[ignore]` reason on [`no_room_reads_riparian_and_dry`], that reason's
+/// verbatim copy in `cli/tests/suite/heavy_tier.rs`, and the
+/// `LOC-riparian-dry-overlap` registry row.
+///
+/// **The defect did not move; the sample did.** The overlap rate is the
+/// comparable quantity across a population change, and it is essentially
+/// unchanged:
+///
+/// ```text
+///   before   1 of  35 riparian rooms read dry   2.86%
+///   after    3 of 138 riparian rooms read dry   2.17%
+/// ```
+///
+/// A reader who takes `1 -> 3` as the defect tripling has compared two
+/// different populations. A reader who takes `35 -> 138` as the riparian pool
+/// quadrupling has done the same. Both integers scale with `LAND_SAMPLE`.
 #[test]
 fn the_riparian_dry_overlap_is_pinned_as_a_witness() {
     let world = world();
     let ctx = LocaleContext::build(&world).unwrap();
-    let rows = rows();
+    let rows = sampled_rooms(&ctx);
     let prose = riparian_prose();
     let mut riparian = 0usize;
     let mut offenders = 0usize;
     for r in &rows {
-        let loc: Locale = ctx.describe(&r.room, WorldTime::GENESIS).unwrap();
+        let loc: Locale = ctx.describe(r, WorldTime::GENESIS).unwrap();
         if !prose
             .iter()
             .any(|p| loc.regime.descriptor_noun.starts_with(p.as_str()))
@@ -991,12 +1284,14 @@ fn the_riparian_dry_overlap_is_pinned_as_a_witness() {
     }
     assert_eq!(
         (riparian, offenders),
-        (35, 1),
+        (138, 3),
         "the R-8 overlap moved: {offenders} of {riparian} riparian rooms read dry, against the \
-         pinned (35, 1). This is NOT a number to update — re-read the overlap, then re-state \
+         pinned (138, 3). This is NOT a number to update — re-read the overlap, then re-state \
          this witness, the #[ignore] reason on no_room_reads_riparian_and_dry, its roster entry \
-         in cli/tests/heavy_tier.rs and the LOC-riparian-dry-overlap registry row in the SAME \
-         commit."
+         in cli/tests/suite/heavy_tier.rs and the LOC-riparian-dry-overlap registry row in the \
+         SAME commit. Read the RATE before deciding what moved: the population is a rule now \
+         (`sampled_rooms`), not a captured list, so both integers scale with LAND_SAMPLE while \
+         the overlap rate is the quantity with a meaning."
     );
 }
 
@@ -1004,28 +1299,61 @@ fn the_riparian_dry_overlap_is_pinned_as_a_witness() {
 /// ice and in the rock column the axis is read as current, snow cover and seep
 /// — none of which a river's proximity governs — so those rooms must keep the
 /// value the address draw alone gives them, byte for byte.
+///
+/// # IT IS A SAME-WORLD DIFFERENTIAL NOW, AND THAT IS STRICTLY STRONGER
+///
+/// It used to compare each room's `wetness` against a value captured in the
+/// pre-Rill world and committed to `pre-rill-wetness.jsonl`. The mesh epoch
+/// turned those 200 addresses into addresses of nothing (`Unaddressable`), and
+/// there was no honest repair: re-capturing compares current code against
+/// itself, which this file's own docs say proves nothing, and the value is a
+/// function of the address so it cannot be carried across.
+///
+/// **The before-arm was never the claim.** The claim is that OUTSIDE the
+/// grounded scope, `describe`'s wetness IS the raw address draw — and the raw
+/// address draw is available live, from `micro_field(seed, None)`, the very
+/// function `describe` calls. So the comparison is against the thing itself
+/// rather than against a photograph of it, and it holds for **every room of
+/// every world** instead of for 200 rooms of one. A fixture could only ever
+/// have caught a regression in the world it froze.
+///
+/// The room seed is rebuilt exactly as `describe` builds it
+/// (`addr.seed(world.seed)`), so a change to that derivation reddens here too.
+///
+/// The sample is [`sphere_sample`], not [`sampled_rooms`]: this guard is about
+/// the rooms the land filter removes.
 #[test]
 fn only_the_ground_is_grounded() {
     let world = world();
     let ctx = LocaleContext::build(&world).unwrap();
-    let rows = rows();
     let mut checked = 0usize;
-    for r in &rows {
-        let loc = ctx.describe(&r.room, WorldTime::GENESIS).unwrap();
+    let mut grounded_seen = 0usize;
+    for room in sphere_sample(&ctx) {
+        let loc = ctx.describe(&room, WorldTime::GENESIS).unwrap();
         // The grounded arm, and only it — the same predicate `describe`
         // itself branches on, not a restatement of it.
         if wetness_is_grounded(BiomeExpr::for_legacy(loc.biome_kind)) {
+            grounded_seen += 1;
             continue;
         }
+        let raw = hornvale_locale::micro_field(room.seed(world.seed), None);
         assert_eq!(
-            loc.regime.micro.wetness, r.wetness,
-            "{:?} is not bare ground, so its wetness must be the address draw unchanged",
-            r.room
+            loc.regime.micro.wetness, raw.wetness,
+            "{room:?} is not bare ground, so its wetness must be the address draw \
+             unchanged"
         );
         checked += 1;
     }
-    println!("scope guard: {checked} non-land rooms unchanged");
+    println!("scope guard: {checked} non-land rooms unchanged, {grounded_seen} grounded");
     assert!(checked >= 100, "the control arm is populated: {checked}");
+    // ANTI-VACUITY, which the fixture form never had: if nothing in the sample
+    // were grounded, every room would trivially read the raw draw and this
+    // test would pass while asserting nothing about SCOPE at all.
+    assert!(
+        grounded_seen > 0,
+        "no room in the sample is inside the grounded scope, so this guard is not \
+         separating grounded from ungrounded — it is just re-reading the draw"
+    );
 }
 
 /// **The draw-order witness.** `micro_field` draws four axes off one
@@ -1033,45 +1361,83 @@ fn only_the_ground_is_grounded() {
 /// consuming that draw would shift `openness` in every room of every world —
 /// a save-format break, not a style choice.
 ///
-/// The reference is The Ford's `pre-stage-2-rooms.jsonl`, captured by another
-/// campaign before this one existed. Its `relief`, `aspect` and `openness` must
-/// still match exactly, for all 200 rooms, which they can only do if the draw
-/// order is untouched.
+/// # THE FIXTURE IS GONE AND THE REPLACEMENT IS A DIFFERENTIAL
+///
+/// The reference used to be The Ford's `pre-stage-2-rooms.jsonl`, whose
+/// `relief`, `aspect` and `openness` had to match for 200 rooms. Those 200
+/// addresses do not exist on the cube-sphere mesh, and re-capturing them would
+/// have compared the current code against itself.
+///
+/// **What the fixture was standing in for is a property of the FUNCTION, and
+/// the function can be asked directly.** `micro_field(seed, grounded)` draws
+/// `relief`, `aspect`, the third axis, `openness` — in that order,
+/// unconditionally — and grounding changes only what is DONE with the third
+/// draw. So:
+///
+/// - the three ungrounded axes must be **identical** between a grounded and an
+///   ungrounded call on the same seed; and
+/// - the grounded `openness` must NOT equal the ungrounded `wetness`.
+///
+/// The second clause is the one that carries the claim. If grounding ever
+/// stopped consuming the third draw, every axis after it would shift up by
+/// one and `openness` would come back reading what `wetness` used to — which
+/// is precisely the save-format break, and precisely what a first-clause-only
+/// test would miss.
+///
+/// This is strictly stronger than the fixture: it holds over every room seed
+/// in every world, at every grounded value, rather than over 200 rooms of the
+/// world one campaign happened to freeze.
 #[test]
 fn the_micro_draw_order_is_unchanged() {
     let world = world();
     let ctx = LocaleContext::build(&world).unwrap();
     let mut checked = 0usize;
-    for line in FORD_FIXTURE.lines() {
-        let v: Value = serde_json::from_str(line).expect("fixture line is JSON");
-        let room = Facet {
-            face: v["face"].as_u64().expect("face") as u8,
-            path: v["path"]
-                .as_array()
-                .expect("path")
-                .iter()
-                .map(|d| d.as_u64().expect("path digit") as u8)
-                .collect(),
-        };
-        let micro = ctx
-            .describe(&room, WorldTime::GENESIS)
-            .unwrap()
-            .regime
-            .micro;
-        let old = &v["regime"]["micro"];
-        for (name, now) in [
-            ("relief", micro.relief),
-            ("aspect", micro.aspect),
-            ("openness", micro.openness),
-        ] {
-            assert_eq!(
-                now,
-                old[name].as_f64().expect(name),
-                "{room:?}: {name} moved — the LOCALE_MICRO draw order changed"
-            );
+    let mut shift_would_show = 0usize;
+    for room in sampled_rooms(&ctx) {
+        let seed = room.seed(world.seed);
+        let raw = hornvale_locale::micro_field(seed, None);
+        // Several grounded values, including both extremes' neighbourhoods, so
+        // the clamp arm is exercised as well as the ordinary one.
+        for g in [-0.9_f64, -0.3, 0.0, 0.4, 0.95] {
+            let grounded = hornvale_locale::micro_field(seed, Some(g));
+            for (name, a, b) in [
+                ("relief", raw.relief, grounded.relief),
+                ("aspect", raw.aspect, grounded.aspect),
+                ("openness", raw.openness, grounded.openness),
+            ] {
+                assert_eq!(
+                    a, b,
+                    "{room:?} at grounded {g}: {name} moved between the grounded and \
+                     ungrounded draw — grounding must consume the same stream draws \
+                     either way, and this is the LOCALE_MICRO draw order breaking"
+                );
+            }
+            // The clause that catches a DROPPED draw rather than a moved one.
+            // Only meaningful where the two adjacent raw draws differ, which is
+            // counted so a run where they never do cannot pass silently.
+            if raw.wetness != raw.openness {
+                shift_would_show += 1;
+                assert_ne!(
+                    grounded.openness, raw.wetness,
+                    "{room:?} at grounded {g}: openness came back reading the third \
+                     draw — the axes have shifted up by one, so grounding has stopped \
+                     consuming the wetness draw"
+                );
+            }
+            checked += 1;
         }
-        checked += 1;
     }
-    println!("draw order: {checked} rooms x 3 unmoved axes");
-    assert_eq!(checked, 200, "the whole Ford fixture was checked");
+    println!(
+        "draw order: {checked} (room, grounded) pairs, {shift_would_show} able to show a shift"
+    );
+    assert!(
+        checked > 500,
+        "too few pairs checked to trust this: {checked}"
+    );
+    assert!(
+        shift_would_show * 2 > checked,
+        "in most pairs the third and fourth draws are equal, so a one-axis shift \
+         would be invisible and this witness is not witnessing: {shift_would_show} \
+         of {checked}"
+    );
 }

@@ -16,7 +16,7 @@ const CHAMBER_FIXTURE: &str = include_str!("fixtures/session-seed-42-chamber.jso
 /// `self.carrying` is non-empty: every seed-42 fixture records a possession
 /// that never typed `take`, and seed 42's flagship structure has no strongbox
 /// to take a key from in the first place (decision 0398).
-const CARRYING_FIXTURE: &str = include_str!("fixtures/session-seed-1-carrying.json");
+const CARRYING_FIXTURE: &str = include_str!("fixtures/session-seed-14-carrying.json");
 
 #[test]
 fn the_fixture_parses() {
@@ -93,7 +93,7 @@ fn no_id_in_the_fixture_is_a_bare_number_a_javascript_client_would_round() {
         // different pair. Corrected together (The Chattel, Task 13 fix
         // round) against `grep -n u64_as_decimal_string
         // windows/vessel/src/snapshot.rs`, which lists four.
-        ("session-seed-1-carrying.json", CARRYING_FIXTURE),
+        ("session-seed-14-carrying.json", CARRYING_FIXTURE),
     ] {
         let raw: serde_json::Value = serde_json::from_str(body).unwrap();
 

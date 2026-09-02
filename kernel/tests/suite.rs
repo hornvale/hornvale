@@ -9,6 +9,8 @@
 //! `tests/suite/`). This collapses 2 separate integration-test
 //! binaries into 1.
 
+#[path = "suite/cube_adjacency.rs"]
+mod cube_adjacency;
 #[path = "suite/derived.rs"]
 mod derived;
 #[path = "suite/determinism.rs"]

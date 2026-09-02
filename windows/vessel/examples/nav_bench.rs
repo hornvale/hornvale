@@ -15,8 +15,9 @@
 //!
 //! **One real seed-42 world.** `build_world` (the same call `profile_build`
 //! makes) plus [`LocaleContext::build`] — the sanctioned derivation site
-//! (decision 0092) — give a real `walk_depth` (`globe_level() + 6`, the
-//! production constant [`hornvale_vessel::walk_depth`] computes) so the
+//! (decision 0092) — give a real `walk_depth` (whatever
+//! [`hornvale_vessel::walk_depth`] computes; the offset is stated once, in
+//! `hornvale_locale`, and deliberately not restated here) so the
 //! synthetic room mesh this bench walks is the SAME depth production nav
 //! addresses live at, not an arbitrary one. Neither `build_world` nor
 //! `LocaleContext::build` is itself one of the three 0092-banned methods

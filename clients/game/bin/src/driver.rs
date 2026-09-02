@@ -3294,13 +3294,19 @@ mod portolan_tests {
         for _ in 0..20 {
             d.apply(Action::Zoom(1));
         }
+        // DERIVED, not pinned: the ladder is `GLOBE_RUNG..=BAND_B_RUNG`, so
+        // its length is a function of the two constants. It read a literal 6
+        // and a literal 7 until The Pavement moved `BAND_B_RUNG` to 13, and
+        // then failed with "left: 7, right: 6" — a count nobody could read as
+        // a band. Whichever end moves next, this follows.
+        let rungs = (plate::BAND_B_RUNG - plate::GLOBE_RUNG + 1) as usize;
         let mut seen = std::collections::BTreeSet::new();
         seen.insert(d.window().depth);
-        for _ in 0..6 {
+        for _ in 0..rungs - 1 {
             d.apply(Action::Zoom(-1));
             assert!(seen.insert(d.window().depth), "a rung repeated");
         }
-        assert_eq!(seen.len(), 7, "expected 7 rungs, saw {seen:?}");
+        assert_eq!(seen.len(), rungs, "expected {rungs} rungs, saw {seen:?}");
         assert_eq!(*seen.iter().next().unwrap(), plate::GLOBE_RUNG);
         assert_eq!(*seen.iter().next_back().unwrap(), plate::BAND_B_RUNG);
     }
@@ -4047,16 +4053,23 @@ mod portolan_tests {
     /// Depth 5 is BELOW the shipped ladder's floor and reachable only by
     /// constructing a [`Window`] directly, which is exactly the point: what
     /// is under test is the ratio arithmetic, not the ladder. A rung-5 chart
-    /// is 182x181 tiles for seed 42's 40,962 vertices — 1.243 vertices per
+    /// is 128x128 tiles for seed 42's 40,962 vertices — 2.501 vertices per
     /// character — so the strip must say so, through the same `strip_text`
     /// instrument its silent sibling above reads.
+    ///
+    /// **It was 182x181 (1.243 per character) until fix round 1**, when
+    /// `plate::base_facet_arc_rad` stopped returning the ICOSAHEDRON's edge
+    /// angle on a cube-sphere mesh. The chart is `4 * 2^depth` columns wide
+    /// now, exactly, so a rung-5 chart is 128 wide rather than 182 and this
+    /// rung is coarser than the mesh by MORE than it used to claim — which
+    /// only strengthens what this test is here for.
     #[test]
     fn the_resolution_disclosure_speaks_at_a_rung_coarser_than_the_mesh() {
         let mut d = test_driver();
         enter_world_view(&mut d);
 
         let (w, h) = plate::virtual_dims(5);
-        assert_eq!((w, h), (182, 181), "sanity: the rung-5 chart");
+        assert_eq!((w, h), (128, 128), "sanity: the rung-5 chart");
         let ratio = d.geo.vertex_count() as f64 / (u64::from(w) * u64::from(h)) as f64;
         assert!(
             ratio > 1.0,
@@ -4696,7 +4709,23 @@ mod portolan_tests {
             facets.len(),
             "every facet of the band must have been placed and checked"
         );
-        assert_eq!(checked, 31, "seed 42's flagship band is 31 facets");
+        // DERIVED FROM THE WIRE'S OWN RADIUS, not pinned. This read
+        // `assert_eq!(checked, 31, "seed 42's flagship band is 31 facets")`
+        // — the count a radius-4 purview held on the old 3-connected
+        // triangular mesh. The Pavement's 8-connected square lattice makes
+        // the same radius a full `(2r+1)^2` block, so the literal was 31
+        // against a live 81 and the vacuity guard it was standing in for had
+        // silently become a fixture pin. A seed whose purview straddles a
+        // cube corner would legitimately hold FEWER than the full square; if
+        // this ever fires for that reason, weaken it to a floor and say so,
+        // rather than re-pinning a second literal.
+        let full_square = (2 * scene.radius as usize + 1).pow(2);
+        assert_eq!(
+            checked, full_square,
+            "a radius-{} purview on the 8-connected lattice is the full {full_square}-facet \
+             square; the band held {checked}",
+            scene.radius
+        );
     }
 
     /// THE STANDING WITNESS that the equality above has teeth: the rejected
@@ -5985,6 +6014,28 @@ mod prose_pane_tests {
         scene
     }
 
+    /// Drop every SGR escape from `s`, leaving the glyphs they wrapped in
+    /// their own columns — the sim's picture as the prose channel is supposed
+    /// to receive it. `\x1b[` through the terminating `m`, and nothing else:
+    /// this exists to derive an expectation from the sim's own output, never
+    /// to filter what the client draws.
+    fn strip_sgr(s: &str) -> String {
+        let mut out = String::with_capacity(s.len());
+        let mut chars = s.chars();
+        while let Some(c) = chars.next() {
+            if c != '\u{1b}' {
+                out.push(c);
+                continue;
+            }
+            for c in chars.by_ref() {
+                if c == 'm' {
+                    break;
+                }
+            }
+        }
+        out
+    }
+
     /// What this client's prose channel would show for `scene`: the sim's
     /// own chart, drawn through the lens the session picks for a possession
     /// with eyes, laid out by the prose pane and read back off the grid.
@@ -6071,15 +6122,51 @@ mod prose_pane_tests {
             out.contains('@'),
             "the observer's own glyph did not survive, got {out:?}"
         );
-        // And the picture's SHAPE with it: this row is six columns of
-        // indent and one glyph in the sim's output, and it must still be
-        // six columns of indent and one glyph on the grid. Dropping the
-        // escapes and then collapsing the spaces would be the same defect
-        // wearing the fix's clothes.
+        // And the picture's SHAPE with it: an indented picture row must
+        // reach the grid with its indent intact. Dropping the escapes and
+        // then collapsing the spaces would be the same defect wearing the
+        // fix's clothes.
+        //
+        // **RE-DERIVED FROM THE SIM, not pinned.** This read
+        // `out.lines().any(|l| l.starts_with("      _"))` — six columns then
+        // an underscore, which was the old triangular chart's own top row.
+        // The Pavement's square lattice draws a different row shape (eight
+        // columns then `::`), so the literal went stale and the assertion
+        // failed for a reason that had nothing to do with escapes. The indent
+        // now comes from the sim's own output with the SGR stripped, which is
+        // exactly the thing the client is supposed to reproduce.
+        let sim = strip_sgr(&hornvale_scene::render_surrounds_ascii(
+            &scene,
+            "colour",
+            &[],
+        ));
+        let indented: Vec<(usize, char)> = sim
+            .lines()
+            .filter_map(|l| {
+                let indent = l.chars().take_while(|c| *c == ' ').count();
+                let first = l.trim_start().chars().next()?;
+                // PICTURE rows only. A caption carries lowercase letters and
+                // is reflowed by the pane at 120 columns, so its line shape
+                // is the pane's business and not this assertion's; the chart's
+                // own glyph vocabulary carries no lowercase letter at all.
+                if indent == 0 || l.chars().any(|c| c.is_ascii_lowercase()) {
+                    return None;
+                }
+                Some((indent, first))
+            })
+            .collect();
         assert!(
-            out.lines().any(|l| l.starts_with("      _")),
-            "the picture's indent did not survive, got {out:?}"
+            !indented.is_empty(),
+            "the sim's own picture has no indented row, so this assertion would check \
+             nothing. Got {sim:?}"
         );
+        for (indent, first) in indented {
+            let want = format!("{}{first}", " ".repeat(indent));
+            assert!(
+                out.lines().any(|l| l.starts_with(&want)),
+                "the picture's indent did not survive: no line starts with {want:?}, got {out:?}"
+            );
+        }
     }
 
     /// **The premise [`hornvale_game_core`]'s prose-vs-picture classifier

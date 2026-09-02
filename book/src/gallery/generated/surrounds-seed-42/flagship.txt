@@ -1,15 +1,13 @@
 $ hornvale scene surrounds --world world.json --render ascii
-[lens: terrain · depth 12 · radius 4 · north-up]
-  placement: north-up, one row per ring, east doubled for the character cell — 31 of 31 cells drawn, 0 occluded where two fell in one box (the more salient kept it).
-  epistemic: this lens carries no weight channel, so remembered cells draw identically to sensed ones — 0 of 31 placed.
-      +
-   + +   +
-+ +   + +   +
-   + +   + +
-+ +   @ +   +
-   + +   + +
-+ +   + +   +
-   + +   +
-      +
-  ways on: E, NW, SW
-  legend: Doaba, buttressed canopy, damp, tropical rainforest
+[lens: terrain · depth 13 · radius 4 · north-up]
+  placement: north-up, one row per ring, east doubled for the character cell — 53 of 81 cells drawn, 28 occluded where two fell in one box (the more salient kept it).
+  epistemic: this lens carries no weight channel, so remembered cells draw identically to sensed ones — 0 of 53 placed.
+        ++ ++
+++ ++ + ++ ++
+++ ++ + ++ ++
+++ ++ @ ++ ++
+++ ++ + ++ ++
+++ ++ + ++ ++
+++ ++
+  ways on: N, NE, E, SE, S, SW, W, NW
+  legend: Doaba, buttressed canopy, sun-warmed, damp, on a rise, tropical seasonal forest

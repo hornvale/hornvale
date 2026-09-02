@@ -110,14 +110,29 @@ fn entering_where_nothing_is_built_gives_a_physical_reason() {
     // least one point was always available whichever triad the room offered.
     //
     // Since decision 0141, `go` resolves all eight compass points from every
-    // walk-band room via a carried rhumb course rather than exact-matching a
-    // labelled triad — there is no longer a triad a direction can be "absent"
-    // from, so the loop below's `starts_with("No way ")` branch (and the
-    // identical one in `enter_somewhere_built` above) is now dead: `go`
-    // never emits that sentence outdoors. Left as three directions rather
-    // than trimmed back to a bare `go n`, because the loop still needs to
-    // reach wilderness and the bias is harmless, not because it is still
-    // load-bearing.
+    // walk-band room rather than exact-matching a labelled triad — there is no
+    // longer a triad a direction can be "absent" from, so the loop below's
+    // `starts_with("No way ")` branch (and the identical one in
+    // `enter_somewhere_built` above) is dead: `go` never emits that sentence
+    // outdoors. Left as three directions rather than trimmed back to a bare
+    // `go n`, because the loop still needs to reach wilderness and the bias is
+    // harmless, not because it is still load-bearing.
+    //
+    // **The MECHANISM in that sentence has changed and the conclusion has not**
+    // (The Pavement). It read "via a carried rhumb course"; there is no course
+    // any more — a compass word names one of the room's own eight neighbours
+    // directly (spec section 3.4). `go` gained exactly one refusal in the
+    // exchange, `CORNER_BEARING_REFUSAL` at the 24 cube-corner rooms, and it
+    // is not "No way ..." either, so the dead branch stays dead.
+    //
+    // **CORNERS: 8. ROOMS TOUCHING THEM: 24.** Three quads meet at each of the
+    // cube's eight corners, so eight corners are touched by twenty-four rooms.
+    // Collapsing those two numbers into one is what produced seven wrong sites
+    // across three generations of this campaign's own documents — this line said
+    // "the eight cube-corner rooms" until fix round 2 — so the distinction is
+    // written out here, where the number lives, rather than left to be re-derived.
+    // `all_twenty_four_cube_corner_rooms_refuse_exactly_one_bearing_each`
+    // (`session.rs`) asserts the 24.
     let mut refusal = None;
     for _ in 0..12 {
         let reply = out(session.handle("enter"));

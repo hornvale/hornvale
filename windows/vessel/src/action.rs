@@ -391,9 +391,64 @@ pub struct PlanState {
     pub hydrated: bool,
 }
 
+/// How many of a room's [`Facet::neighbors`] are EDGE-adjacent: the pinned
+/// prefix `[..4]`. See [`crate::clock::step_factor`]'s own copy of this
+/// reliance — the kernel's [`Facet::neighbor_steps`] states the invariant and
+/// `the_first_four_neighbours_are_always_the_four_edge_neighbours` (in
+/// `kernel/tests/suite/cube_adjacency.rs`) pins it, including that the step a
+/// cube corner drops always lands in the diagonal tail, so the prefix survives
+/// the short arity.
+/// type-audit: bare-ok(count)
+const EDGE_ADJACENT_NEIGHBOURS: usize = 4;
+
+/// The planner's edge cost for one ORTHOGONAL (edge-adjacent) step: the unit
+/// every other planner cost is expressed in.
+///
+/// # Why the baseline is no longer `1`
+///
+/// It was `1`, uniformly, for all eight neighbours — and once The Pavement made
+/// the mesh 8-connected that was the clock's own 41% exploit in the PLANNER: a
+/// diagonal covers `√2 ≈ 1.414` times the ground, so a flat edge cost made a
+/// diagonal-heavy route strictly cheaper per unit distance and A* preferred it.
+/// A physics falsehood, not a preference. (Measured on the lattice actually
+/// walked, not assumed: the mean diagonal/edge centroid separation at walk
+/// depth is 1.411786, so the exploit was 41.18% against the ideal 41.42% — see
+/// [`crate::clock::DIAGONAL_STEP_FACTOR`].)
+///
+/// A* needs integer costs (`kernel/src/astar.rs`, for an exact total order), so
+/// a literal `√2` is unavailable and the ratio has to be a rational. `12`/`17`
+/// is the pair, chosen and not tuned:
+///
+/// - `17/12 = 1.416667` is the **third continued-fraction convergent of `√2`**
+///   (the sequence is `3/2`, `7/5`, `17/12`, `41/29`), so it is the best
+///   rational approximation at its denominator, not an authored number.
+/// - It is the **smallest** convergent whose error — `+0.173%` against `√2`,
+///   `+0.346%` against the lattice's own measured 1.411786 — lands inside the
+///   **0.5%** tolerance the campaign preregistered for octile cost (spec §7,
+///   H2). The two cheaper convergents miss it: `3/2` (orthogonal 2, diagonal 3)
+///   is `+6.07%`, and `7/5` (5, 7) is `-1.01%`.
+/// - Scaling further buys nothing measurable. The planner's job is to not
+///   prefer a route the clock will charge more for, and the clock's own ratio
+///   is `√2`; a residual six times under the campaign's stated tolerance is
+///   already below the projection distortion the lattice itself carries
+///   (per-room ratios span 1.366086–1.434180).
+///
+/// The scale is uniform, so it changes no exploration ORDER by itself: A* runs
+/// Dijkstra-mode here and multiplying every cost by 12 leaves the frontier's
+/// order untouched. What changes behaviour is the diagonal's `17`, which is the
+/// intended fix.
+/// type-audit: bare-ok(count)
+pub(crate) const ORTHOGONAL_STEP: u64 = 12;
+
+/// The planner's edge cost for one DIAGONAL (corner-adjacent) step —
+/// [`ORTHOGONAL_STEP`] times `17/12`, the octile ratio derived there.
+/// type-audit: bare-ok(count)
+pub(crate) const DIAGONAL_STEP: u64 = 17;
+
 /// The extra `MoveTo` cost the planners charge for stepping INTO a
 /// remembered-dangerous room (The Haunt): a finite detour budget over the
-/// baseline edge cost of `1`, so the A* routes AROUND remembered-bad ground
+/// baseline edge cost of one [`ORTHOGONAL_STEP`], so the A* routes AROUND
+/// remembered-bad ground
 /// whenever a detour is cheaper than the penalty, yet still braves it when the
 /// detour would exceed the penalty (survival-override for free — the finite cost
 /// IS the override, never a wall). Deliberately SMALL (decision-ledger #4): the
@@ -401,22 +456,78 @@ pub struct PlanState {
 /// expansions), so a LARGE penalty makes A* exhaust its budget exploring the
 /// cost-radius around a chokepoint remembered room and return `None` — the
 /// creature freezes instead of detouring (the over-avoidance failure; `20` froze
-/// ~900 seed-42 fauna). `5` keeps the cost-radius within budget so avoidance is
+/// ~900 seed-42 fauna). `5` orthogonal steps keeps the cost-radius within budget
+/// so avoidance is
 /// graceful (the seed-42 possession `stirred` count barely moves — a handful of
 /// beasts detour, none freeze). Decoupling magnitude from budget via an
 /// admissible geometric heuristic (for STRONG avoidance) is reserved.
+///
+/// # RE-EXPRESSED, NOT RE-TUNED — AND THE BALL IT BUYS IS 40% SMALLER
+///
+/// This was the literal `5` against a baseline edge cost of `1`. The octile
+/// rescale above moved the unit under it, so the literal is now written as the
+/// quantity it always meant — **five orthogonal steps' worth of detour
+/// budget**. Had it stayed the bare `5` it would silently have become a detour
+/// budget of five TWELFTHS of a step, an avoidance penalty a single sidestep
+/// beats, which is the "silently changes weight relative to distance" failure
+/// the rescale had to answer for.
+///
+/// **What is preserved is the ratio, NOT the set of rooms, and an earlier
+/// draft of this doc claimed otherwise.** It argued that "a uniform rescale of
+/// every cost leaves the cost-radius untouched". The rescale is *not* uniform:
+/// orthogonals went ×12 and diagonals ×14.1667, which is the whole point of the
+/// change. The metric moved from **Chebyshev** (every one of eight neighbours
+/// at cost 1, so graph distance is `max(|dx|, |dy|)`) to **octile**, so the
+/// constant is now calibrated against a different SET:
+///
+/// | | reach along an axis | reach on the pure diagonal | rooms inside |
+/// |---|---|---|---|
+/// | before: Chebyshev radius 5 | 5 | 5 | **121** |
+/// | after: octile cost ≤ 60 | 5 | 3 | **73** |
+///
+/// Forty percent fewer rooms. The quotient `60 / 12 = 5 / 1` is exact and the
+/// axis reach is unchanged at five steps — that half really is preserved — but
+/// the corners of the old square are gone, because reaching them was never
+/// worth five steps of real ground and the old metric only said it was.
+///
+/// **The direction is safe, and arguably better, which is why it ships.** The
+/// failure this constant's doc names is OVER-avoidance: a large penalty makes
+/// A\* exhaust `PLAN_BUDGET` exploring the cost-radius and freeze the creature.
+/// A smaller ball is strictly less budget pressure, never more. And "a fixed
+/// amount of distance" is the more principled reading of what a detour budget
+/// should buy than "a fixed hop count" — under Chebyshev, five diagonal hops
+/// bought `5√2` of ground for the same price as five orthogonal ones, which is
+/// the same falsehood the edge costs above exist to remove.
+///
+/// `the_remembered_penalty_still_buys_five_steps_along_an_axis` pins the
+/// quotient (which was never the half in doubt) AND both ball sizes, so this
+/// claim is enforceable rather than merely written down.
 /// type-audit: bare-ok(count)
-const REMEMBERED_PENALTY: u64 = 5;
+const REMEMBERED_PENALTY: u64 = 5 * ORTHOGONAL_STEP;
 
-/// The `MoveTo` edge cost into `n` given the remembered-danger set: the baseline
-/// `1`, plus [`REMEMBERED_PENALTY`] when `n` is remembered-dangerous. For an
-/// EMPTY `avoid` set every edge stays `1` — the byte-identity property both
-/// planners share.
-fn move_cost(n: &Facet, avoid: &std::collections::BTreeSet<Facet>) -> u64 {
-    if avoid.contains(n) {
-        1 + REMEMBERED_PENALTY
+/// The `MoveTo` edge cost of the step from `from`'s neighbour at index
+/// `neighbour_index` into `n`, given the remembered-danger set: the octile
+/// baseline ([`ORTHOGONAL_STEP`] for `neighbour_index < 4`,
+/// [`DIAGONAL_STEP`] beyond it), plus [`REMEMBERED_PENALTY`] when `n` is
+/// remembered-dangerous. For an EMPTY `avoid` set every edge is its bare
+/// geometric cost — the byte-identity property both planners share.
+///
+/// **`neighbour_index` is a position in the caller's [`Facet::neighbors`]
+/// list, so the caller must pass that list UNFILTERED.** The pinned order is
+/// what carries the geometry (see [`EDGE_ADJACENT_NEIGHBOURS`]); a caller that
+/// filtered or reordered first would hand this function indices that mean
+/// nothing and get an orthogonal price for a diagonal step, silently. Both
+/// callers here pass `neighbors()`/`neighbors_memo()` straight through.
+fn move_cost(neighbour_index: usize, n: &Facet, avoid: &std::collections::BTreeSet<Facet>) -> u64 {
+    let base = if neighbour_index < EDGE_ADJACENT_NEIGHBOURS {
+        ORTHOGONAL_STEP
     } else {
-        1
+        DIAGONAL_STEP
+    };
+    if avoid.contains(n) {
+        base + REMEMBERED_PENALTY
+    } else {
+        base
     }
 }
 
@@ -425,7 +536,8 @@ pub struct GoapSpace<'a> {
     /// The water room the `Drink` action requires.
     pub water: Facet,
     /// The remembered-dangerous rooms to route around (The Haunt) — a `MoveTo`
-    /// into one costs `1 + REMEMBERED_PENALTY`. Empty ⇒ byte-identical.
+    /// into one costs its octile baseline ([`ORTHOGONAL_STEP`] or
+    /// [`DIAGONAL_STEP`]) plus [`REMEMBERED_PENALTY`]. Empty ⇒ byte-identical.
     pub avoid: &'a std::collections::BTreeSet<Facet>,
 }
 impl<'a> SearchSpace for GoapSpace<'a> {
@@ -439,8 +551,9 @@ impl<'a> SearchSpace for GoapSpace<'a> {
             .position
             .neighbors()
             .into_iter()
-            .map(|n| {
-                let cost = move_cost(&n, self.avoid);
+            .enumerate()
+            .map(|(i, n)| {
+                let cost = move_cost(i, &n, self.avoid);
                 (
                     Action::MoveTo(n.clone()),
                     PlanState {
@@ -458,6 +571,25 @@ impl<'a> SearchSpace for GoapSpace<'a> {
                     position: s.position.clone(),
                     hydrated: true,
                 },
+                // DELIBERATELY LEFT AT `1` BY THE OCTILE RESCALE, and said out
+                // loud because it is a relative weight that changed. It used
+                // to equal one step exactly (both were `1`); it is now a
+                // twelfth of one. Three reasons that is the better answer
+                // rather than an oversight:
+                //
+                // 1. It is not a DISTANCE. `ORTHOGONAL_STEP`/`DIAGONAL_STEP`
+                //    exist to price ground covered; drinking covers none, so
+                //    the octile scale has nothing to say about it.
+                // 2. A twelfth of a move is far closer to what the CLOCK
+                //    charges than parity ever was — `clock::base_cost` prices
+                //    `Drink` at 150 ticks against `MoveTo`'s 10,000, i.e. 1.5%
+                //    of a move, so 8.3% is a large improvement on 100%.
+                // 3. It cannot change which route is chosen: this is the only
+                //    goal-reaching edge and it is appended at one fixed state,
+                //    so its cost adds a constant to the goal's `g`. Being
+                //    SMALLER than before relative to a step, it makes the goal
+                //    pop EARLIER, i.e. strictly fewer expansions against
+                //    `PLAN_BUDGET`, never more.
                 1,
             ));
         }
@@ -498,7 +630,8 @@ pub fn plan_to_water(
 struct NavSpace<'a> {
     dest: Facet,
     /// The remembered-dangerous rooms to route around (The Haunt) — a `MoveTo`
-    /// into one costs `1 + REMEMBERED_PENALTY`. Empty ⇒ byte-identical.
+    /// into one costs its octile baseline ([`ORTHOGONAL_STEP`] or
+    /// [`DIAGONAL_STEP`]) plus [`REMEMBERED_PENALTY`]. Empty ⇒ byte-identical.
     avoid: &'a std::collections::BTreeSet<Facet>,
 }
 impl<'a> NavSpace<'a> {
@@ -508,11 +641,12 @@ impl<'a> NavSpace<'a> {
     /// never accidentally also change how an edge's cost is computed — the
     /// memo boundary is `neighbors`/`neighbors_memo` ALONE, never the
     /// successor list this builds from it.
-    fn edges_from(&self, neighbors: [Facet; 3]) -> Vec<(Action, Facet, u64)> {
+    fn edges_from(&self, neighbors: Vec<Facet>) -> Vec<(Action, Facet, u64)> {
         neighbors
             .into_iter()
-            .map(|n| {
-                let cost = move_cost(&n, self.avoid);
+            .enumerate()
+            .map(|(i, n)| {
+                let cost = move_cost(i, &n, self.avoid);
                 (Action::MoveTo(n.clone()), n, cost)
             })
             .collect()
@@ -526,7 +660,7 @@ impl<'a> SearchSpace for NavSpace<'a> {
     }
     /// Ledger #7's re-plan (the-waymark, Task 6): consults a caller-owned
     /// [`RoomMeshMemo`] for the neighbor lookup instead of recomputing the
-    /// icosphere lattice arithmetic on every `astar` expansion — this is the
+    /// cube-lattice/seam arithmetic on every `astar` expansion — this is the
     /// specific hot path (`Facet::neighbors` inside `NavSpace::successors`
     /// → `astar` expansions) Task 3's memo was built for but could not reach,
     /// because `SearchSpace::successors(&self, ...)` alone had no way to
@@ -534,7 +668,20 @@ impl<'a> SearchSpace for NavSpace<'a> {
     /// either way ([`Facet::neighbors_memo`] is a cache of the same pure
     /// function `neighbors` computes), and the `edges_from` cost rule is
     /// untouched — only which of `neighbors`/`neighbors_memo` supplies the
-    /// three rooms it costs.
+    /// rooms it costs. HOW MANY it costs is no longer fixed: The Pavement made
+    /// the walk 8-connected, so it is eight rooms in the interior and seven at
+    /// one of the cube's eight corners (see [`Facet::neighbors`]).
+    ///
+    /// **The memo now has to preserve ORDER as well as content**, and that is
+    /// a strictly stronger demand than it carried before Task 7. `edges_from`
+    /// reads a neighbour's POSITION to price it (the pinned edge prefix — see
+    /// [`move_cost`]), so a memo that returned the same eight rooms in a
+    /// different order would charge an orthogonal price for a diagonal step
+    /// while every membership-based assertion stayed green.
+    /// [`Facet::neighbors_memo`] caches the whole `Vec` as `neighbors`
+    /// produced it and `neighbors_memo_bit_equals_recomputation` pins that,
+    /// so the demand is met; it is stated here because nothing about the old
+    /// cost rule required it.
     fn successors_memo(
         &self,
         s: &Facet,
@@ -595,4 +742,196 @@ pub fn plan_to_room(
     avoid: &std::collections::BTreeSet<Facet>,
 ) -> Option<Vec<Action>> {
     plan_to_room_memo(from, dest, budget, avoid, None)
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// **The planner and the clock must not disagree about what a diagonal
+    /// costs**, or A* will choose routes the clock then charges more for.
+    ///
+    /// A* takes integer costs, so the planner approximates the clock's exact
+    /// `√2` with `DIAGONAL_STEP / ORTHOGONAL_STEP`. This holds the pair to the
+    /// 0.5% the campaign preregistered for octile cost (spec §7, H2) — the
+    /// same bar `ORTHOGONAL_STEP`'s doc uses to pick `12/17` over the two
+    /// cheaper convergents of `√2`.
+    #[test]
+    fn the_planner_and_the_clock_price_a_diagonal_alike() {
+        let planner = DIAGONAL_STEP as f64 / ORTHOGONAL_STEP as f64;
+        let clock = crate::clock::DIAGONAL_STEP_FACTOR;
+        let rel = (planner - clock).abs() / clock;
+        assert!(
+            rel < 0.005,
+            "the planner prices a diagonal at {planner} and the clock at {clock} \
+             — {:.4}% apart, past the preregistered 0.5%",
+            rel * 100.0
+        );
+        // And the pair is the convergent it claims to be, not a number that
+        // merely lands inside the band: 17/12 is the third continued-fraction
+        // convergent of sqrt(2), so no smaller denominator does better.
+        assert_eq!((ORTHOGONAL_STEP, DIAGONAL_STEP), (12, 17));
+        for (o, d) in [(2u64, 3u64), (5, 7)] {
+            let cheaper = (d as f64 / o as f64 - clock).abs() / clock;
+            assert!(
+                cheaper > rel,
+                "{d}/{o} is not worse than 17/12; the choice's premise has moved"
+            );
+        }
+    }
+
+    /// **`REMEMBERED_PENALTY` was RE-EXPRESSED, and this pins BOTH halves of
+    /// what that did** — the one that is preserved and the one that is not.
+    ///
+    /// PRESERVED: the quotient. Five orthogonal steps of detour budget,
+    /// `60 / 12 = 5 / 1`, so the reach along an axis is unchanged.
+    ///
+    /// NOT PRESERVED: the SET. The metric moved from Chebyshev to octile, so
+    /// the ball the constant is calibrated against shrinks from 121 rooms to
+    /// 73. That is a real change of effect and the constant's doc argues why
+    /// its direction is safe (less `PLAN_BUDGET` pressure, never more); this
+    /// test exists so the claim cannot rot into an assertion nobody checks.
+    #[test]
+    fn the_remembered_penalty_still_buys_five_steps_along_an_axis() {
+        assert_eq!(REMEMBERED_PENALTY, 5 * ORTHOGONAL_STEP);
+        assert_eq!(REMEMBERED_PENALTY / ORTHOGONAL_STEP, 5, "five steps");
+        assert_eq!(REMEMBERED_PENALTY % ORTHOGONAL_STEP, 0, "an exact radius");
+        // Had it stayed the literal `5` the radius would have collapsed to
+        // five twelfths of a step — an avoidance penalty one sidestep beats.
+        // Stated as the arithmetic rather than `assert!(5 < ORTHOGONAL_STEP)`,
+        // which clippy reads (correctly) as an assertion on a constant.
+        assert_eq!(5 / ORTHOGONAL_STEP, 0, "the bare literal would be sub-step");
+
+        // The two balls, counted rather than asserted from memory. `dx`/`dy`
+        // range well past either reach so neither count can be clipped by the
+        // window it is counted over.
+        let span = -8i64..=8;
+        let chebyshev = span
+            .clone()
+            .flat_map(|dx| span.clone().map(move |dy| (dx, dy)))
+            .filter(|(dx, dy)| dx.abs().max(dy.abs()) <= 5)
+            .count();
+        let octile = span
+            .clone()
+            .flat_map(|dx| span.clone().map(move |dy| (dx, dy)))
+            .filter(|(dx, dy)| {
+                let (hi, lo) = (dx.abs().max(dy.abs()), dx.abs().min(dy.abs()));
+                // The octile cost of reaching (dx, dy): `lo` diagonal steps
+                // then `hi - lo` orthogonal ones.
+                (DIAGONAL_STEP as i64) * lo + (ORTHOGONAL_STEP as i64) * (hi - lo)
+                    <= REMEMBERED_PENALTY as i64
+            })
+            .count();
+        assert_eq!(chebyshev, 121, "the pre-Task-7 detour ball");
+        assert_eq!(octile, 73, "the octile detour ball");
+        assert!(
+            octile < chebyshev,
+            "the octile ball must be the SMALLER one — a larger one would put \
+             MORE pressure on PLAN_BUDGET, which is the over-avoidance freeze \
+             this constant exists to avoid"
+        );
+    }
+
+    /// **`NavSpace` must hand `move_cost` the neighbour list UNFILTERED and
+    /// UNREORDERED**, because the cost is now keyed on a neighbour's INDEX.
+    ///
+    /// This is the composed claim nothing else holds. `move_cost` is pinned by
+    /// index, and `Facet::neighbors`' order is pinned in the kernel — but a
+    /// `successors` that filtered impassable rooms out before `.enumerate()`,
+    /// or sorted them, would slide every diagonal into the edge prefix and
+    /// charge it as an orthogonal. Every membership-based assertion in the
+    /// crate would stay green, and the planner would quietly resume preferring
+    /// diagonals.
+    ///
+    /// Both paths are checked: `successors` and `successors_memo`, the latter
+    /// with a live [`RoomMeshMemo`], since the memo is the one place the list
+    /// could be rebuilt differently.
+    #[test]
+    fn nav_space_costs_the_whole_unfiltered_neighbour_list_in_order() {
+        // An interior room: path digits give lattice (13, 21) at scale 64, so
+        // all eight neighbours exist and none of the arity cases are in play.
+        let room = Facet {
+            face: 0,
+            path: vec![0, 1, 2, 3, 0, 1],
+        };
+        let ns = room.neighbors();
+        assert_eq!(ns.len(), 8, "precondition: an interior room");
+        let empty = std::collections::BTreeSet::new();
+        let space = NavSpace {
+            dest: room.clone(),
+            avoid: &empty,
+        };
+        let mut memo = RoomMeshMemo::new();
+        for (label, edges) in [
+            ("successors", space.successors(&room)),
+            (
+                "successors_memo",
+                space.successors_memo(&room, Some(&mut memo)),
+            ),
+        ] {
+            assert_eq!(
+                edges.len(),
+                ns.len(),
+                "{label} dropped or added a neighbour: the list must reach \
+                 move_cost unfiltered, or an index means nothing"
+            );
+            for (i, (action, dest, cost)) in edges.iter().enumerate() {
+                assert_eq!(dest, &ns[i], "{label}: edge {i} is not neighbour {i}");
+                assert_eq!(action, &Action::MoveTo(ns[i].clone()), "{label}: edge {i}");
+                let want = if i < EDGE_ADJACENT_NEIGHBOURS {
+                    ORTHOGONAL_STEP
+                } else {
+                    DIAGONAL_STEP
+                };
+                assert_eq!(*cost, want, "{label}: edge {i} is priced by position");
+            }
+        }
+    }
+
+    /// The edge cost is octile in both directions, and the remembered penalty
+    /// rides on top of whichever baseline the step's geometry names.
+    #[test]
+    fn move_cost_is_octile_and_the_penalty_rides_on_top() {
+        let room = Facet {
+            face: 0,
+            path: vec![0, 1, 2],
+        };
+        let empty = std::collections::BTreeSet::new();
+        let mut avoid = std::collections::BTreeSet::new();
+        avoid.insert(room.clone());
+        for i in 0..EDGE_ADJACENT_NEIGHBOURS {
+            assert_eq!(move_cost(i, &room, &empty), ORTHOGONAL_STEP);
+            assert_eq!(
+                move_cost(i, &room, &avoid),
+                ORTHOGONAL_STEP + REMEMBERED_PENALTY
+            );
+        }
+        for i in EDGE_ADJACENT_NEIGHBOURS..8 {
+            assert_eq!(move_cost(i, &room, &empty), DIAGONAL_STEP);
+            assert_eq!(
+                move_cost(i, &room, &avoid),
+                DIAGONAL_STEP + REMEMBERED_PENALTY
+            );
+        }
+    }
+
+    /// The prefix this module indexes against is the kernel's own pinned one —
+    /// asserted here, so a kernel reordering fails in `windows/vessel` too
+    /// rather than only in `kernel/tests`.
+    #[test]
+    fn the_edge_prefix_is_the_kernels_pinned_prefix() {
+        assert_eq!(EDGE_ADJACENT_NEIGHBOURS, 4);
+        let steps = Facet::neighbor_steps();
+        for (dx, dy) in &steps[..EDGE_ADJACENT_NEIGHBOURS] {
+            assert!(
+                (dx.abs() + dy.abs()) == 1,
+                "({dx}, {dy}) is not an edge step but sits in the edge prefix"
+            );
+        }
+        for (dx, dy) in &steps[EDGE_ADJACENT_NEIGHBOURS..] {
+            assert!(
+                dx.abs() == 1 && dy.abs() == 1,
+                "({dx}, {dy}) is not a diagonal step but sits in the diagonal tail"
+            );
+        }
+    }
 }

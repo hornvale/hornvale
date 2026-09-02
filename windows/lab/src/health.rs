@@ -218,7 +218,7 @@ pub fn run_simulation_with_locale(
     let index = ctx.nearest_index();
     for _ in 0..ticks {
         // Prefill THIS tick's geometry cache for every NPC's CURRENT
-        // position and its three neighbours (Finding 1) — under `&mut`,
+        // position and its neighbours (Finding 1) — under `&mut`,
         // strictly before the `LocaleTerrain`/drives built from it exist.
         // Mirrors `Session::wait`'s per-tick `before` prefill exactly.
         for npc in npcs {

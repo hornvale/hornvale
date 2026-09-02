@@ -51,9 +51,9 @@
 //! follows the same idiom rather than caching one internally.
 //!
 //! **What the index is still FOR is one question, asked a few dozen times
-//! per plate instead of a few million: which three `Vertex` ids are the
-//! corners of a grid-level triangle.** That is
-//! [`hornvale_kernel::Facet::corner_weights`]'s three
+//! per plate instead of a few million: which four `Vertex` ids the corners of
+//! a grid-level QUAD resolve to.** That is
+//! [`hornvale_kernel::Facet::corner_weights`]'s four
 //! `nearest_to_position` scans, and it is memoized per grid-level facet
 //! through a [`hornvale_kernel::RoomMeshMemo`] [`draw_with`] owns for the
 //! length of one draw. Thousands of band-B tiles share one grid-level
@@ -187,43 +187,86 @@ pub struct Window {
 }
 
 /// The mesh depth band B is drawn at: the walk band, one tile per facet.
-/// Matches `hornvale_vessel::agent::walk_depth` (`globe_level + 6`) for the
-/// canonical globe level of 6; a world pinned to another globe level moves
-/// both together.
+/// Matches `hornvale_locale::walk_depth` (`hornvale_vessel::walk_depth` is a
+/// re-export of it, not a second definition) for the canonical globe level of
+/// 6; a world pinned to another globe level moves both together.
+///
+/// **13, not 12, since The Pavement (decision 0511).** That campaign moved the
+/// walk band one rung finer to preserve the ground covered by one step when
+/// the lattice became an 8-connected cube-sphere quad grid — see
+/// `hornvale_locale::walk_depth`'s own doc for the measured step lengths. This
+/// constant restates that depth ABSOLUTELY, which is invisible to any scan
+/// looking for the arithmetic, so it is pinned against the running function by
+/// `tests/walk_band_agreement.rs` in this crate and by
+/// `cli/tests/suite/walk_depth_agreement.rs`'s absolute roster in the
+/// workspace.
 /// type-audit: bare-ok(count)
-pub const BAND_B_RUNG: u32 = 12;
+pub const BAND_B_RUNG: u32 = 13;
 
 /// The coarsest rung: the canonical grid level, below which the terrain
 /// fields have no resolution to disclose (decision 0196).
 /// type-audit: bare-ok(count)
 pub const GLOBE_RUNG: u32 = 6;
 
-/// The central angle an icosahedron's own base-face edge subtends at the
-/// centre of its circumsphere, in radians — `acos(1/sqrt(5))`, about
-/// 63.4349°. Every refinement level halves it, which is the whole content of
+/// The central angle one base FACE of the cube-sphere subtends along a great
+/// circle through four face centres: `pi/2` exactly, 90°. Every refinement
+/// level halves it, which is the whole content of
 /// [`tiles_around_a_great_circle`].
 ///
-/// Derived, never tabulated: `hornvale_kernel::math` (the `libm` route
-/// `mercator.rs` already uses for every transcendental in this client) is
-/// asked for the `acos` rather than a rounded literal being pasted here.
-fn base_edge_rad() -> f64 {
-    hornvale_kernel::math::acos(1.0 / 5.0f64.sqrt())
+/// # IT WAS THE ICOSAHEDRON'S NUMBER UNTIL FIX ROUND 1, AND BAND B WAS DRAWN 1.4188x TOO FINE
+///
+/// This function returned `acos(1/sqrt(5))` = 1.1071487 rad — 63.4349°, the
+/// central angle an ICOSAHEDRON's base-face edge subtends at the centre of its
+/// circumsphere — and its caller's doc justified the halving with "the facet
+/// count is `20 << (2 * depth)`". Both premises died with the base mesh
+/// (decision 0506): the count is `6 << (2 * depth)`, and the chart's width is
+/// a property of the CUBE. At rung 13 the old arithmetic produced
+/// `TAU / (1.1071487 / 2^13)` = **46,490** columns over a band that has
+/// **32,768** facets around its equator — a factor of 1.4188 — so
+/// [`terrain_at_tile`] and `driver.rs`'s cursor resolver mapped ~1.42 chart
+/// columns onto each walk-band room and moving the cursor one column
+/// frequently did not change room. `plate.rs`'s own "one tile per facet" and
+/// `driver.rs`'s "the finest rung is band B: one tile per facet" were both
+/// false by 42%.
+///
+/// # WHERE `pi/2` COMES FROM, and why it is exact rather than derived
+///
+/// A cube has six faces and four of them meet the equator, each spanning a
+/// quarter of it; a great circle through four face centres therefore crosses
+/// four base facets, so one base facet subtends `TAU/4 = pi/2` along that
+/// circle. Refining `depth` levels splits each facet into `4^depth` children,
+/// `2^depth` of them along each axis, so the count around the circle is
+/// `4 * 2^depth` — 32,768 at rung 13, which
+/// [`the_chart_width_is_the_meshs_own_equatorial_facet_count`] checks against
+/// the mesh itself rather than against this derivation.
+///
+/// **No transcendental, and that is a simplification rather than a loss.** The
+/// icosahedral figure needed an `acos` and a comment explaining why it was not
+/// tabulated; the cube's is a quarter turn, so `FRAC_PI_2` IS the derivation.
+/// The tangent warp redistributes facets WITHIN a face and does not change how
+/// many of them a face has, so the count is exact even though the individual
+/// facet arcs are not equal.
+fn base_facet_arc_rad() -> f64 {
+    std::f64::consts::FRAC_PI_2
 }
 
-/// How many facet edges fit around a great circle at mesh depth `depth`.
+/// How many facets fit around a great circle at mesh depth `depth`.
 ///
-/// **Derived from the icosahedron's own geometry, not a hardcoded ladder.**
-/// A table becomes a tuned number the first time the globe level moves —
-/// the mistake `hornvale_vessel::course::step_length_rad`'s own doc records
-/// avoiding. The base-face edge subtends [`base_edge_rad`]; each of the
-/// `depth` refinement levels halves it (the facet count is `20 << (2 *
-/// depth)`, i.e. four facets per facet per level, so the edge halves), so
-/// the count around a great circle is `2*pi` divided by that angle.
+/// **Derived from the cube-sphere's own geometry, not a hardcoded ladder.**
+/// A table becomes a tuned number the first time the globe level moves. (This
+/// sentence used to cite `hornvale_vessel::course::step_length_rad`'s own doc as
+/// the precedent for avoiding that; The Pavement deleted the whole `course`
+/// module along with the rhumb it served, so the principle is stated here
+/// directly rather than pointed at a path that no longer resolves.) One base
+/// facet subtends [`base_facet_arc_rad`]; each of the `depth` refinement
+/// levels halves it (the facet count is `6 << (2 * depth)`, i.e. four facets
+/// per facet per level, so each axis doubles), so the count around a great
+/// circle is `2*pi` divided by that angle — `4 * 2^depth`.
 ///
 /// `2.0^depth` is computed through `math::powf` rather than a shift, so a
 /// depth at or past 32 saturates instead of overflowing.
 fn tiles_around_a_great_circle(depth: u32) -> u32 {
-    let edge = base_edge_rad() / hornvale_kernel::math::powf(2.0, f64::from(depth));
+    let edge = base_facet_arc_rad() / hornvale_kernel::math::powf(2.0, f64::from(depth));
     ((std::f64::consts::TAU / edge).round() as u32).max(1)
 }
 
@@ -583,14 +626,29 @@ pub(crate) fn colour_allowed() -> bool {
 /// unqualified is the mistake this sentence used to make.** The memo saves
 /// exactly the reuse the rung offers, which is how many tiles share a
 /// grid-level facet. Measured on a 200x200 plate (`examples/rung_bench.rs`,
-/// 2026-08-26), against the 1,960,000 scans the 49-point vote cost at every
-/// rung: **90 at [`BAND_B_RUNG`]** (three orders of magnitude, because
-/// thousands of tiles share one grid-level facet) but **88,986 at
-/// [`GLOBE_RUNG`]** (about 1.4 orders, because there a chart tile is already
-/// about the size of a facet and there is almost nothing to share). The
-/// mechanism holds at every rung — the coarse end is still 22x — but the
-/// magnitude does not, and `GLOBE_RUNG` is a shipped rung a player reaches
-/// by holding `-`. The module doc states the rule this is an instance of.
+/// **re-measured 2026-09-01 by The Pavement — BOTH figures moved, for two
+/// independent reasons**), against the 1,960,000 scans the 49-point vote cost
+/// at every rung: **12 at [`BAND_B_RUNG`]** (a 163,000x reduction, because
+/// tens of thousands of tiles share one grid-level facet — 4 memo misses
+/// against 39,996 hits over 40,000 tiles) but **38,496 at [`GLOBE_RUNG`]**
+/// (50.9x, because there a chart tile is already about the size of a facet
+/// and there is little to share — 12,832 misses against 27,168 hits). The
+/// mechanism holds at every rung — the coarse end is 51x — but the magnitude
+/// does not, and `GLOBE_RUNG` is a shipped rung a player reaches by holding
+/// `-`. The module doc states the rule this is an instance of.
+///
+/// **Why both moved, stated because only one of the two causes is obvious.**
+/// The fine figure (90 -> 12) moved because `BAND_B_RUNG` itself moved
+/// 12 -> 13 with the walk band (decision 0511): a finer rung means smaller
+/// tiles, so a 200x200 plate spans fewer grid-level facets and shares each of
+/// them harder. The coarse figure (88,986 -> 38,496) moved even though
+/// `GLOBE_RUNG` did not, because the *base geometry* did — a cube-sphere
+/// carries 6*4^6 = 24,576 facets at level 6 where the icosphere carried
+/// 20*4^6 = 81,920, so a grid-level facet is about 3.3x larger and a chart
+/// tile covers proportionally less of one. A figure keyed to a named constant
+/// goes stale when the constant moves; a figure keyed to the MESH goes stale
+/// when the mesh moves, and nothing in its label says which kind it is. Hence
+/// the re-measurement date beside the original.
 ///
 /// **`w`/`h` are the drawn plate's own size — the screen window —
 /// never the virtual chart's.** [`virtual_dims`]`(win.depth)` gives the
@@ -1373,16 +1431,27 @@ pub struct TileTerrain {
 /// 1. the tile's centre unprojects to a position, and
 ///    [`Facet::containing`] turns that position into an ADDRESS by
 ///    descending the mesh — no search over vertices;
-/// 2. the address's grid-level ancestor names the triangle terrain is
-///    actually defined on ([`hornvale_terrain::GLOBE_LEVEL`]), and
-///    [`Facet::corner_weights_memo`] gives that triangle's three corner
+/// 2. the address's grid-level ancestor names the QUAD whose corners resolve
+///    to the grid vertices terrain is defined on
+///    ([`hornvale_terrain::GLOBE_LEVEL`]), and
+///    [`Facet::corner_weights_memo`] gives that quad's FOUR corner
 ///    vertices, memoized;
-/// 3. the tile's class is the nearest of those three corners.
+/// 3. the tile's class is the nearest of those four corners.
 ///
-/// **Step 3 is three dot products, and it is not an approximation of the
-/// old query — it is the same answer.** A point inside a grid-level
-/// triangle has its nearest mesh vertex among that triangle's own three
-/// corners, so this reproduces what
+/// **THE "SAME ANSWER, NOT AN APPROXIMATION" CLAIM BELOW RESTS ON A PREMISE
+/// THE PAVEMENT RETIRED, and this paragraph is a pointer, not a verdict.** It
+/// argued that a point inside a grid-level TRIANGLE has its nearest mesh
+/// vertex among that triangle's three corners, which held while a facet's
+/// corners WERE geosphere vertices (decision 0287's corner-is-a-vertex
+/// corollary). A cube-sphere quad's corners are not geosphere vertices at all,
+/// so the argument no longer runs. Spec section 7's H3a owns the consequence
+/// and Task 10 step 3 reports it; nothing here measures or re-states a result.
+/// The counts above (a quad, four corners) are corrected because they are
+/// facts about the code as it now stands.
+///
+/// **Step 3 is four dot products.** The retired argument was that a point
+/// inside a grid-level triangle has its nearest mesh vertex among that
+/// triangle's own three corners, so this reproduced what
 /// [`NearestVertexIndex::nearest`] would have returned at the tile's centre
 /// without asking it. `mesh_addressing_agrees_with_the_spatial_search`
 /// ASSERTS that agreement exactly — `assert_eq!(agree, total)`, 5,000 of
@@ -1397,11 +1466,13 @@ pub struct TileTerrain {
 /// windowed scan, captured separately and deliberately not fixed here).
 ///
 /// **The weights [`Facet::corner_weights_memo`] also returns are
-/// deliberately unused.** They are the barycentric position of the ADDRESSED
-/// facet's own centroid; at the grid level they are uniform (`1,1,1`), which
-/// would make every tile inside one triangle identical and blocky. The tile's
-/// own centre is a strictly finer thing to compare against, and comparing
-/// against it costs three dot products rather than a memo key per tile.
+/// deliberately unused.** They are the bilinear position of the ADDRESSED
+/// facet's own centroid; at the grid level they are uniform (`1,1,1,1` — the
+/// centroid of the ancestor is the quad's own centre, equidistant from all four
+/// corners), which would make every tile inside one quad identical and blocky.
+/// The tile's own centre is a strictly finer thing to compare against, and
+/// comparing against it costs four dot products rather than a memo key per
+/// tile.
 ///
 /// A rung COARSER than the grid has no ancestor at the grid level, so the
 /// tile's own centre is re-addressed at the grid level instead. Nothing on
@@ -1445,7 +1516,7 @@ pub fn terrain_at_tile(
         .corner_weights_memo(geo, index, memo)
         .expect("a facet AT the grid's own level is never coarser than the grid");
 
-    // The nearest of the triangle's three corners to the tile's own centre.
+    // The nearest of the quad's four corners to the tile's own centre.
     // Ties break to the lower `Vertex`, the same direction
     // `NearestVertexIndex`'s own scan breaks them.
     let mut vertex = corners[0].0;
@@ -1482,6 +1553,92 @@ mod tests {
     use hornvale_kernel::Seed;
     use hornvale_terrain::TerrainPins;
 
+    /// The bound clause 1 of [`mesh_addressing_agrees_with_the_spatial_search`]
+    /// asserts: how many grid spacings farther from a tile's own centre the
+    /// mesh-addressed vertex may sit than the true nearest vertex does, one
+    /// spacing being [`min_edge_rad`] — the GEOSPHERE's own smallest edge.
+    ///
+    /// **Measured max 1.0622, mean 0.2409** on that test's own window
+    /// (fix round 2; the test prints both). **THE BOUND IS ABOVE ONE SPACING,
+    /// AND THAT IS THE HONEST STATEMENT OF IT** — the measurement itself is,
+    /// so a doc claiming the addressed vertex lands within a single spacing
+    /// would be false about a number printed two lines away. What the bound
+    /// does exclude is a WHOLE FACET's worth of error: one cube-sphere facet
+    /// arc at this rung is `(pi/2)/64 / 0.01729920 = 1.4188` of these
+    /// spacings, and 1.25 sits below that, so a misresolution that reached
+    /// into a neighbouring facet's corners cannot pass. That is the ceiling
+    /// this value is capped by; the 17.7% it leaves over the measurement is
+    /// what is left after the cap, not a comfort margin chosen first.
+    ///
+    /// # THE HISTORY, BECAUSE THE UNIT MOVED TWICE AND THE VALUE DID NOT
+    ///
+    /// The Pavement's Task 8 measured **1.1051** against `acos(1/sqrt(5))/
+    /// 2^depth` — the icosphere's minimum edge, i.e. the same unit as today —
+    /// on a chart 1.4188x finer than the mesh. Fix round 1 corrected the
+    /// chart's resolution and, as collateral, switched this divisor to the
+    /// CUBE's `pi/2` facet arc, reporting **0.7487** and reading it as a 32%
+    /// tightening. It was not: the raw angular excess fell only 3.9%
+    /// (0.019119 -> 0.018378 rad) and the rest was a 1.4188x larger unit. In
+    /// real spacings the figure went 1.1051 -> 1.0622, and the unchanged
+    /// threshold of 1.5 silently came to admit 2.13 real spacings — a ~42%
+    /// loosening invisible in a diff, which is why the unit is now measured
+    /// off the mesh ([`min_edge_rad`]) rather than derived from a base angle
+    /// that belongs to the other lattice. 1.25 is the first value this
+    /// constant has carried that was set FROM a measurement in the unit it
+    /// is stated in.
+    ///
+    /// **Not a ratchet** — a breach means addressing resolved the wrong facet,
+    /// which is a defect and not a drift. If another seed or window ever
+    /// exceeds 1.25, the thing to do is find out which facet it resolved, not
+    /// to raise this number.
+    const MAX_ADDRESSING_EXCESS_SPACINGS: f64 = 1.25;
+
+    /// The floor clause 2 of [`mesh_addressing_agrees_with_the_spatial_search`]
+    /// asserts: the fraction of tiles on which mesh addressing and a plain
+    /// `nearest()` query pick the SAME vertex. Exact agreement was guaranteed
+    /// on the icosphere and is not on the cube-sphere.
+    ///
+    /// **Measured 0.5036 (2,518 of 5,000) at fix round 1, down from 0.5824 at
+    /// The Pavement's Task 8, and the drop is the CHART getting coarser rather
+    /// than the addressing getting worse.** `base_facet_arc_rad` was returning
+    /// the icosahedron's edge angle, so this window's chart was 1.4188x finer
+    /// than the band it drew; a smaller tile keeps its centre nearer a facet
+    /// corner, so nearest-of-four-corners agreed with true-nearest more often.
+    /// Drawing at the mesh's own resolution doubles a tile's area and spreads
+    /// its centre further from any corner.
+    ///
+    /// # WHY THE LOWERING IS DEFENSIBLE, STATED CORRECTLY THIS TIME
+    ///
+    /// This doc used to carry the argument that **clause 1 tightened 32% over
+    /// the same change**, which was false: 1.1051 -> 0.7487 was mostly a
+    /// 1.4188x larger denominator (see
+    /// [`MAX_ADDRESSING_EXCESS_SPACINGS`]). The true reasons, all three
+    /// measured rather than argued:
+    ///
+    /// 1. **The real geometric error did not worsen — it improved 3.9%.**
+    ///    Raw angular excess 0.019119 -> 0.018378 rad; in the mesh's own
+    ///    spacings, 1.1051 -> 1.0622. So the quantity that actually matters
+    ///    for whether a tile is painted with the right terrain moved in the
+    ///    GOOD direction while this proxy fell.
+    /// 2. **`a_tile_resolves_to_the_facet_that_contains_it` still holds
+    ///    exactly**, so nothing about which facet is resolved has moved; what
+    ///    changed is only which of that facet's four corners wins a
+    ///    tie-adjacent comparison.
+    /// 3. **This floor is a proxy whose value tracks the chart's resolution
+    ///    relative to the mesh, not the addressing's quality.** It fell
+    ///    because the chart stopped being finer than the mesh it draws —
+    ///    which was itself the fix. A floor that refused to move here would
+    ///    be pinning the old resolution bug, not guarding the addressing.
+    ///
+    /// The measurement has 18 tiles of headroom over 0.50 and is
+    /// deterministic — a fixed seed-42 world and a fixed 5,000-tile window,
+    /// so it cannot flap.
+    ///
+    /// **A ratchet**: raising it is always allowed and is the direction of
+    /// travel. This is the second time it has been lowered, and both times for
+    /// a stated geometric reason rather than to make a run pass.
+    const MIN_ADDRESSING_AGREEMENT: f64 = 0.50;
+
     /// A committed-seed world, built the same way the spike builds one
     /// (`windows/worldgen/examples/portolan_spike.rs`'s own `main`,
     /// deleted at this campaign's close -- git history at `0292de87f^`)
@@ -1510,6 +1667,65 @@ mod tests {
             .expect("default pins generate seed 42");
         let terrain = GeneratedTerrain::new(geo.clone(), outcome);
         (terrain, geo)
+    }
+
+    /// One grid spacing of the GEOSPHERE, in radians of central angle —
+    /// the unit clause 1 of
+    /// [`mesh_addressing_agrees_with_the_spatial_search`] reports its excess
+    /// in, measured off the mesh being normalised rather than derived from a
+    /// base angle.
+    ///
+    /// # WHY THIS IS NOT [`base_facet_arc_rad`] OVER `2^depth`
+    ///
+    /// **The two meshes came apart at decision 0506 and this quantity
+    /// belongs to the one that did not move.** 0506 replaced the walk band's
+    /// OCCUPANCY lattice with an 8-connected cube-sphere and deliberately
+    /// kept the icosphere as the FIELD substrate;
+    /// [`hornvale_kernel::Geosphere`]'s own first sentence still says
+    /// "icosphere region graph". Clause 1 measures a distance from a tile
+    /// centre to a geosphere VERTEX, so its unit is a geosphere edge. Fix
+    /// round 1 switched this divisor to the cube's `pi/2` facet arc along
+    /// with the chart's width, where it does not belong: at level 6 that is
+    /// `(pi/2)/64 = 0.02454369` rad, **18.7% above the largest edge the
+    /// geosphere has**, so it is not any spacing of the mesh under
+    /// measurement and it silently loosened the assertion ~42% in real units
+    /// while the threshold constant looked unchanged.
+    ///
+    /// # WHY THE MINIMUM EDGE, AND NOT THE MEAN OR THE MAX
+    ///
+    /// **An icosphere's edges are not uniform, so the choice is a real one:**
+    /// at level 6 (40,962 vertices) the central angles run min `0.01729920`,
+    /// mean `0.01888557`, max `0.02067341` — the max is 19.5% above the min,
+    /// so the same raw excess reports as three visibly different numbers.
+    /// The minimum is taken for two reasons. It is the CONSERVATIVE choice:
+    /// the smallest real spacing yields the largest ratio, so a bound stated
+    /// against it is the strongest of the three and cannot be satisfied by
+    /// picking a generous unit. And it is the HISTORICAL unit — the divisor
+    /// this test used before fix round 1, `acos(1/sqrt(5))/2^depth`, is
+    /// exactly the icosphere's minimum edge, so the figure recorded on
+    /// [`MAX_ADDRESSING_EXCESS_SPACINGS`] stays comparable across the whole
+    /// campaign instead of resetting its meaning a second time.
+    ///
+    /// Each undirected edge is visited once (`n > v`); the minimum is
+    /// unaffected by that either way, and it halves the `acos` count.
+    fn min_edge_rad(geo: &Geosphere) -> f64 {
+        let mut min = f64::INFINITY;
+        for v in geo.vertices() {
+            let p = geo.position(v);
+            for &n in geo.neighbors(v) {
+                if n <= v {
+                    continue;
+                }
+                let q = geo.position(n);
+                let d = hornvale_kernel::math::acos(
+                    (p[0] * q[0] + p[1] * q[1] + p[2] * q[2]).clamp(-1.0, 1.0),
+                );
+                if d < min {
+                    min = d;
+                }
+            }
+        }
+        min
     }
 
     /// A window at `depth` positioned so the virtual chart's tile
@@ -1555,10 +1771,17 @@ mod tests {
 
         // Coarser rung => half the tiles. Each mesh level halves the edge length.
         // Tolerance is +/-1 IN EITHER DIRECTION because each rung rounds
-        // independently: at the real numbers, rung 11 gives 11,623 and rung 12
-        // gives 23,245, so doubling the coarse rung OVERSHOOTS by one. A
-        // one-sided tolerance fails here, which is what the first draft of this
-        // assertion did.
+        // independently. **The rounding no longer bites at all, and the history
+        // is worth keeping**: on the ICOSAHEDRAL base angle this function used
+        // until fix round 1, rung 11 gave 11,623 and rung 12 gave 23,245, so
+        // doubling THAT coarse rung OVERSHOT by one -- a one-sided tolerance
+        // failed there, which is what the first draft of this assertion did. On
+        // the cube-sphere's own quarter turn the width is `4 * 2^depth`
+        // exactly, an integer at every rung (rung 12 gives 16,384 and rung 13
+        // gives 32,768), so nothing rounds anywhere. The two-sided tolerance
+        // stays: which pair is exact is a property of the arithmetic and not of
+        // the rule being asserted, and a future projection whose base angle is
+        // not a quarter turn would want it back.
         let (w_coarse, _) = virtual_dims(BAND_B_RUNG - 1);
         assert!(
             (w_coarse * 2).abs_diff(w_a) <= 1,
@@ -1592,6 +1815,67 @@ mod tests {
             (ratio - 0.9967).abs() < 0.01,
             "clamped-Mercator aspect came out {ratio}, expected ~0.9967"
         );
+    }
+
+    /// **THE CHART'S WIDTH IS THE MESH'S OWN EQUATORIAL FACET COUNT** — asked
+    /// of the mesh, never of this module's derivation.
+    ///
+    /// This is the assertion whose absence let band B be drawn **1.4188x too
+    /// fine** for the whole of The Pavement. [`base_facet_arc_rad`] returned
+    /// the ICOSAHEDRON's base-face edge angle after decision 0506 replaced the
+    /// icosahedron, so `virtual_dims(13)` sized a 46,490-column chart over a
+    /// 32,768-facet band and every claim of "one tile per facet" in this crate
+    /// was false by 42%. Nothing caught it because
+    /// `tests/walk_band_agreement.rs` and
+    /// `cli/tests/suite/walk_depth_agreement.rs` pin the depth INTEGER, and
+    /// nothing compared chart RESOLUTION to mesh spacing.
+    ///
+    /// The reference is `Facet::containing`, walked along the equator at 4x the
+    /// expected column count and counted as a set — the mesh answering the
+    /// question in its own terms rather than this module restating its own
+    /// arithmetic. Every rung from the base face to [`BAND_B_RUNG`] must agree
+    /// EXACTLY, not within a tolerance: the count is an integer property of the
+    /// lattice.
+    ///
+    /// **What it is blind to.** It measures the EQUATOR, which on this base
+    /// mesh is a great circle through four face centres — the circle
+    /// [`base_facet_arc_rad`] is defined against and the one a Mercator chart's
+    /// width is. It says nothing about the chart's HEIGHT (that is
+    /// [`the_clamped_mercator_is_nearly_square_in_tiles`]'s job), nothing about
+    /// whether individual facets are equal in arc (the tangent warp makes them
+    /// unequal, and the COUNT is exact anyway), and nothing about a meridian,
+    /// where the two polar faces make facets-per-degree vary.
+    #[test]
+    fn the_chart_width_is_the_meshs_own_equatorial_facet_count() {
+        for depth in [0u32, 1, 2, 3, GLOBE_RUNG, BAND_B_RUNG] {
+            let expect = 4u32 << depth;
+            // 4x oversampling: the tangent warp makes equatorial facets unequal
+            // in arc, so a 2x walk could step over a narrow one and undercount.
+            let samples = 4u64 * u64::from(expect);
+            let mut seen: std::collections::BTreeSet<hornvale_kernel::Facet> =
+                std::collections::BTreeSet::new();
+            for k in 0..samples {
+                let lon = -180.0 + 360.0 * (k as f64) / (samples as f64);
+                let pos = hornvale_kernel::math::unit_sphere_from_lat_lon(0.0, lon);
+                seen.insert(hornvale_kernel::Facet::containing(pos, depth));
+            }
+            assert_eq!(
+                seen.len() as u32,
+                expect,
+                "the mesh has {} facets around its equator at depth {depth}, not the {expect} \
+                 this module's arithmetic assumes",
+                seen.len()
+            );
+            let (w, _) = virtual_dims(depth);
+            assert_eq!(
+                w,
+                expect,
+                "virtual_dims({depth}) sizes a {w}-column chart over a band with {expect} \
+                 facets around its equator. One tile per facet is what this client claims; a \
+                 ratio of {:.4} is what it would be drawing.",
+                f64::from(w) / f64::from(expect)
+            );
+        }
     }
 
     /// THE TASK'S OWN POINT: a narrow plate draws a SUBRECT of a wide one,
@@ -1928,14 +2212,57 @@ mod tests {
         );
     }
 
-    /// **Mesh addressing answers the question the spatial search answered.**
+    /// **Mesh addressing is a BOUNDED approximation of the spatial search,
+    /// and was an exact replacement for it until The Pavement.**
     /// [`terrain_at_tile`] never calls [`NearestVertexIndex::nearest`]: it
-    /// addresses the tile's grid-level triangle and takes the nearest of
-    /// that triangle's own three corners. The claim that makes this a
-    /// replacement rather than an approximation is that a point inside a
-    /// grid-level triangle HAS its nearest mesh vertex among those three
-    /// corners — so every drawn cell's glyph must equal the glyph a plain
-    /// `nearest()` query at that same cell's own centre would produce.
+    /// addresses the tile's grid-level facet and takes the nearest of that
+    /// facet's own corners.
+    ///
+    /// **The claim this test used to make is DISSOLVED, and this is the
+    /// deliberate call The Pavement's Task 8 took on it.** The claim was
+    /// exact equality on every tile — sound because on the icosphere a
+    /// grid-level triangle's corners WERE geosphere vertices, so a point
+    /// inside a facet had its nearest mesh vertex among that facet's corners
+    /// by construction. A cube-sphere quad's corners are not geosphere
+    /// vertices ([`terrain_at_tile`]'s own doc says so), so the guarantee is
+    /// gone: measured on this test's own 5,000-tile equatorial window, the
+    /// two methods now agree on **2,518 of 5,000 tiles (50.36%)** — it was
+    /// 2,912 (58.24%) until fix round 1 corrected the chart's resolution, and
+    /// [`MIN_ADDRESSING_AGREEMENT`]'s doc has the mechanism. Deleting
+    /// the test would drop the only coverage `terrain_at_tile`'s addressing
+    /// has; re-pinning the exact equality would pin a claim the geometry no
+    /// longer supports. So the assertion is replaced by the two claims that
+    /// ARE true, both measured before being written down:
+    ///
+    /// 1. **The error is bounded well inside one FACET, though not inside one
+    ///    grid spacing.** The addressed vertex is at most
+    ///    [`MAX_ADDRESSING_EXCESS_SPACINGS`] grid spacings farther from the
+    ///    tile's own centre than the true nearest vertex is — measured max
+    ///    **1.0622**, mean **0.2409**, one grid spacing being
+    ///    [`min_edge_rad`], the geosphere's own smallest edge at its level.
+    ///    The max exceeding 1.0 is stated rather than smoothed over: a
+    ///    handful of tiles do land a vertex past their immediate neighbour,
+    ///    and the bound's job is to keep that inside one cube facet (1.4188
+    ///    of these spacings) rather than to claim it never happens. That is
+    ///    what makes this an approximation rather than a wrong answer: the
+    ///    client samples a NEARBY vertex, never a distant one, so no tile is
+    ///    ever painted with terrain from across the map.
+    /// 2. **Exact agreement stays above a recorded floor**
+    ///    ([`MIN_ADDRESSING_AGREEMENT`]), a ratchet in the direction of
+    ///    travel: lowering it is a deliberate act, and raising it is always
+    ///    allowed.
+    ///
+    /// The two halves catch different failures, which is why both are here.
+    /// Clause 1 catches an addressing that resolves the wrong facet
+    /// altogether. Clause 2 catches one that resolves the right facet and
+    /// then picks badly among its corners — a mutation returning the first
+    /// corner unconditionally stays inside clause 1's bound and would sail
+    /// through it.
+    ///
+    /// **What this no longer proves, stated plainly:** the drawn terrain is
+    /// NOT guaranteed to be the terrain at the tile's nearest mesh vertex.
+    /// Spec section 7's H3a owns whether that matters visually; this test
+    /// bounds it rather than deciding it.
     ///
     /// **Retargeted, not renamed away.** This test was
     /// `at_a_fine_enough_window_area_majority_agrees_with_point_sampling`,
@@ -1982,6 +2309,11 @@ mod tests {
         let mut agree = 0u32;
         let mut total = 0u32;
         let mut land = 0u32;
+        let mut max_excess = 0.0f64;
+        // The MEAN excess is accumulated as well as the max, because this
+        // test's own doc quotes both and a figure a doc quotes should be a
+        // figure the test prints.
+        let mut sum_excess = 0.0f64;
         for row in 0..u32::from(h) {
             for col in 0..u32::from(w) {
                 let (lat, lon) = crate::mercator::unproject(
@@ -1992,6 +2324,7 @@ mod tests {
                     vh,
                 );
                 let point_vertex = index.nearest(&geo, lat, lon);
+                let pos = hornvale_kernel::math::unit_sphere_from_lat_lon(lat, lon);
                 let tile = terrain_at_tile(
                     &terrain, &geo, &index, &mut memo, &f, &win, vw, vh, row, col,
                 );
@@ -2002,11 +2335,26 @@ mod tests {
                 if !terrain.is_ocean(point_vertex) {
                     land += 1;
                 }
+                // How much FARTHER the addressed vertex sits from this tile's
+                // own centre than the true nearest one does — clause 1's
+                // quantity. Central angle, so it is comparable to the mesh's
+                // own edge length without a length scale anywhere in it.
+                let angle_to = |v| {
+                    let q: [f64; 3] = geo.position(v);
+                    hornvale_kernel::math::acos(
+                        (q[0] * pos[0] + q[1] * pos[1] + q[2] * pos[2]).clamp(-1.0, 1.0),
+                    )
+                };
+                let ex = angle_to(tile.vertex) - angle_to(point_vertex);
+                if ex > max_excess {
+                    max_excess = ex;
+                }
+                sum_excess += ex;
             }
         }
         // THE VACUITY GUARD. An all-ocean (or all-land) patch would make
         // every comparison trivially agree by construction. The compared
-        // region must straddle a real coastline for the equality below to
+        // region must straddle a real coastline for the comparison below to
         // discriminate.
         let total_cells = u32::from(w) * u32::from(h);
         assert!(
@@ -2014,10 +2362,49 @@ mod tests {
             "the compared region must straddle a coastline or this test proves \
              nothing: land={land} of {total_cells}"
         );
-        assert_eq!(
-            agree, total,
-            "mesh addressing must reproduce the spatial search exactly: \
-             {agree}/{total} cells agreed"
+
+        // CLAUSE 1: the error is bounded by about one grid spacing.
+        // The GEOSPHERE's own smallest edge, measured off the mesh whose
+        // vertices the excess above is a distance between — NOT the cube's
+        // facet arc, which is the occupancy lattice's unit and 18.7% above
+        // the largest edge this mesh has. `min_edge_rad`'s doc has the
+        // whole of why.
+        let spacing = min_edge_rad(&geo);
+        assert!(
+            spacing.is_finite() && spacing > 0.0,
+            "the measured grid spacing must be a real angle, got {spacing}"
+        );
+        let excess = max_excess / spacing;
+        let mean_excess = sum_excess / f64::from(total) / spacing;
+        // Printed, not merely asserted: both quantities are the ones the two
+        // recorded constants below were set from, and fix round 1 moved both
+        // (the chart's width, and the spacing's own base angle). A number a
+        // test computes and never shows is a number nobody can re-record.
+        eprintln!(
+            "mesh addressing: agree {agree}/{total} ({:.4}), max excess {excess:.4} grid \
+             spacings, mean {mean_excess:.4} (one spacing = the geosphere's min edge, \
+             {spacing:.8} rad at grid depth {})",
+            f64::from(agree) / f64::from(total),
+            geo.depth()
+        );
+        assert!(
+            excess <= MAX_ADDRESSING_EXCESS_SPACINGS,
+            "the mesh-addressed vertex sat {excess:.4} grid spacings farther from a tile's \
+             own centre than the true nearest vertex, over the bound of \
+             {MAX_ADDRESSING_EXCESS_SPACINGS}. Addressing resolved the wrong facet, or the \
+             grid level it resolves through is not the one terrain lives on — this is not a \
+             ratchet to loosen."
+        );
+
+        // CLAUSE 2: exact agreement stays above the recorded floor.
+        let rate = f64::from(agree) / f64::from(total);
+        assert!(
+            rate >= MIN_ADDRESSING_AGREEMENT,
+            "mesh addressing agreed with the spatial search on {agree}/{total} tiles \
+             ({rate:.4}), under the recorded floor of {MIN_ADDRESSING_AGREEMENT}. Exact \
+             agreement is no longer guaranteed (see this test's own doc), but a drop this \
+             far means the corner chosen inside the facet is wrong, not that the geometry \
+             changed. Lowering this floor is a deliberate act; say why."
         );
     }
 
@@ -2041,12 +2428,24 @@ mod tests {
         let mut memo = RoomMeshMemo::default();
         let f = mercator::frame_for(false);
         for depth in [GLOBE_RUNG, GLOBE_RUNG + 3, BAND_B_RUNG] {
+            let (vw, vh) = virtual_dims(depth);
+            // PARKED AT THE EQUATOR, and the row offset is load-bearing.
+            // This sampled the chart's top-left corner (`origin_row: 0`),
+            // which is the north pole, where Mercator's stretch is at its
+            // most extreme: on the square lattice a 4x4 block of tiles up
+            // there falls entirely inside ONE grid-level facet, and the
+            // discrimination guard below fired correctly — 1 distinct facet
+            // over 16 tiles — the moment the mesh became a cube-sphere. The
+            // equator is where the chart is closest to the mesh's own
+            // spacing, which is both the honest place to sample and the
+            // hardest place for the two addressing methods to agree; it is
+            // where `mesh_addressing_agrees_with_the_spatial_search` parks
+            // for the same reason.
             let win = Window {
                 depth,
                 origin_col: 0,
-                origin_row: 0,
+                origin_row: vh / 2,
             };
-            let (vw, vh) = virtual_dims(win.depth);
             // A DISCRIMINATION GUARD, not decoration: the assertion below is
             // vacuous if every tile lands in the same facet (a gutted
             // `terrain_at_tile` returning a constant facet would pass). Count
@@ -2062,7 +2461,14 @@ mod tests {
                         depth,
                         "tile ({row},{col}) resolved at the wrong rung"
                     );
-                    let (lat, lon) = mercator::unproject(&f, row, col, vw, vh);
+                    // THROUGH THE WINDOW ORIGIN, exactly as `terrain_at_tile`
+                    // does. While `origin_row` was 0 the two forms were the
+                    // same expression and nothing could tell them apart; the
+                    // equator offset above pulls them apart, which makes this
+                    // a real comparison against the function's own input
+                    // rather than a coincidence of the fixture.
+                    let (lat, lon) =
+                        mercator::unproject(&f, win.origin_row + row, win.origin_col + col, vw, vh);
                     let pos = hornvale_kernel::math::unit_sphere_from_lat_lon(lat, lon);
                     assert_eq!(
                         got.facet,

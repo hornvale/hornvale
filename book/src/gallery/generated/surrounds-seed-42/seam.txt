@@ -1,13 +1,12 @@
-$ hornvale scene surrounds --world world.json --room 724698318 --render ascii
-[lens: terrain · depth 12 · radius 4 · north-up]
-  placement: north-up, one row per ring, east doubled for the character cell — 31 of 31 cells drawn, 0 occluded where two fell in one box (the more salient kept it).
-  epistemic: this lens carries no weight channel, so remembered cells draw identically to sensed ones — 0 of 31 placed.
-      ~~  ~
-    ~  ~ ~
-~  ~~ ~   ~  ~~
-~  ~   @ ~    ~
-    ~ ~   ~  ~
-~  ~   ~ ~    ~
-    ~ ~~  ~
-  ways on: NW, SW, E
-  legend: bathypelagic, marine snow, drifting down, in slack water, over a trough
+$ hornvale scene surrounds --world world.json --room 2290649216 --render ascii
+[lens: terrain · depth 13 · radius 4 · north-up]
+  placement: north-up, one row per ring, east doubled for the character cell — 48 of 81 cells drawn, 33 occluded where two fell in one box (the more salient kept it).
+  epistemic: this lens carries no weight channel, so remembered cells draw identically to sensed ones — 0 of 48 placed.
+^ AA A^^ A^ ^
+^ ^A ^^A ^^ A
+^ ^^ ^@^ A^ A
+^ ^^ AA^ AA ^
+A ^A A^A A^ A
+^         A ^
+  ways on: N, NE, E, SE, S, SW, W, NW
+  legend: a deadfall tangle, sun-warmed, in a hollow, temperate forest

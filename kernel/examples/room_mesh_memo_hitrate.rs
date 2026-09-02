@@ -102,7 +102,10 @@ const ROOM_LEVEL: u32 = 10;
 /// every creature at that settlement) versus the creature's own offset from
 /// it.
 const SETTLEMENT_DEPTH: usize = 4;
-/// How many settlement clusters to scatter across the base icosahedron.
+/// How many settlement clusters to scatter across the base cube.
+///
+/// Five, against the cube's six faces, so [`settlement_anchor`]'s `% 6` still
+/// yields a distinct face per settlement.
 const SETTLEMENTS: usize = 5;
 /// Creatures per settlement — each gets its own home address near the
 /// settlement anchor and its own walk.
@@ -117,8 +120,18 @@ const STEPS_PER_EXPEDITION: usize = 10;
 
 /// The settlement anchor address for settlement `s`: a fixed face and a
 /// deterministic `SETTLEMENT_DEPTH`-digit path, distinct per settlement.
+///
+/// **`% 6`, not `% 20`, since fix round 1.** The modulus was the
+/// ICOSAHEDRON's face count, and decision 0506 made the base mesh a
+/// cube-sphere with six faces — so `s = 1` minted face 7 and
+/// `cube::face_unit`'s unconditional `assert!` killed the whole run
+/// (`rc=101`, five of the six settlements out of range). Nothing gates
+/// `examples/`: `cargo clippy --all-targets` COMPILES them and never RUNS
+/// them, so all three gates were green with this instrument permanently
+/// dead. `% 6` over `SETTLEMENTS = 5` still gives a distinct face per
+/// settlement (0, 1, 2, 3, 4), which is the property the name claims.
 fn settlement_anchor(s: usize) -> Facet {
-    let face = ((s * 7) % 20) as u8;
+    let face = ((s * 7) % 6) as u8;
     let mut seed = 0xA5A5_5A5A_0000_0001u64 ^ (s as u64);
     Facet {
         face,

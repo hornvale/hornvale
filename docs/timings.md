@@ -4547,6 +4547,51 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-08-30T21:48:43Z | sluice:gate | 537.099 | 15906.115 | 497.554 | 30.54 | 0 | be7fe3ac5 |  | lefford | 40 |
 | 2026-08-30T21:57:31Z | sluice:clients | 527.948 | 9823.485 | 107.780 | 18.81 | 0 | 5686bb940 |  | lefford | 40 |
 | 2026-08-30T22:05:11Z | sluice:heavy | 459.901 | 9583.135 | 178.631 | 21.23 | 0 | 115aec3da |  | lefford | 40 |
+| 2026-08-31T11:48:44Z | gate-commit | 34.029 | 67.801 | 11.338 | 2.33 | 0 | cec3603e5 | campaign/the-pavement | ambrose | 12 |
+| 2026-08-31T11:51:20Z | gate-commit | 29.162 | 39.206 | 10.761 | 1.71 | 0 | cec3603e5 | campaign/the-pavement | ambrose | 12 |
+| 2026-08-31T11:57:36Z | gate-commit | 354.396 | 1140.879 | 95.545 | 3.49 | 0 | cec3603e5 | campaign/the-pavement | ambrose | 12 |
+| 2026-08-31T12:04:46Z | gate-commit | 152.591 | 119.496 | 67.353 | 1.22 | 0 | cec3603e5 | campaign/the-pavement | ambrose | 12 |
+| 2026-08-31T12:07:55Z | gate-commit | 138.034 | 58.381 | 29.247 | 0.63 | 0 | cec3603e5 | campaign/the-pavement | ambrose | 12 |
+| 2026-08-31T13:11:16Z | gate-commit | 56.842 | 46.885 | 16.052 | 1.11 | 0 | c93a5e04e | campaign/the-pavement | ambrose | 12 |
+| 2026-08-31T13:14:21Z | gate-commit | 167.326 | 146.890 | 55.583 | 1.21 | 0 | c93a5e04e | campaign/the-pavement | ambrose | 12 |
+| 2026-08-31T15:13:57Z | gate-commit | 76.075 | 48.547 | 20.074 | 0.90 | 0 | c93a5e04e | campaign/the-pavement | ambrose | 12 |
+| 2026-08-31T15:17:57Z | gate-commit | 215.444 | 108.087 | 63.617 | 0.80 | 0 | c93a5e04e | campaign/the-pavement | ambrose | 12 |
+| 2026-08-31T21:48:52Z | gate-commit | 15.622 | 11.598 | 0.657 | 0.78 | 0 | c93a5e04e | campaign/the-pavement | ambrose | 12 |
+| 2026-08-31T21:51:32Z | gate-commit | 110.118 | 60.533 | 30.444 | 0.83 | 0 | c93a5e04e | campaign/the-pavement | ambrose | 12 |
+| 2026-08-31T23:05:56Z | gate-commit | 91.445 | 61.739 | 34.379 | 1.05 | 0 | c93a5e04e | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T00:59:00Z | rebaseline | 50.977 | 122.430 | 13.054 | 2.66 | 0 | c93a5e04e | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T01:39:02Z | quick | 47.907 | 78.751 | 40.967 | 2.50 | 0 | c93a5e04e | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T01:40:09Z | quick | 28.372 | 21.810 | 10.600 | 1.14 | 0 | c93a5e04e | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T01:40:36Z | quick | 15.809 | 11.718 | 0.676 | 0.78 | 0 | c93a5e04e | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T03:02:06Z | quick | 10.057 | 7.286 | 5.261 | 1.25 | 0 | c93a5e04e | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T03:04:29Z | quick | 45.674 | 45.713 | 40.725 | 1.89 | 0 | c93a5e04e | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T03:04:56Z | quick | 14.710 | 11.469 | 0.592 | 0.82 | 0 | c93a5e04e | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T03:22:03Z | quick | 16.143 | 12.024 | 0.835 | 0.80 | 0 | c93a5e04e | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T03:47:12Z | quick | 16.316 | 11.867 | 0.749 | 0.77 | 0 | c93a5e04e | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T04:16:01Z | rebaseline | 56.089 | 246.260 | 9.695 | 4.56 | 0 | c93a5e04e | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T04:17:59Z | rebaseline | 45.127 | 250.362 | 9.803 | 5.77 | 0 | c93a5e04e | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T04:32:38Z | gate-commit | 61.406 | 43.241 | 15.872 | 0.96 | 0 | c93a5e04e | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T04:44:09Z | rebaseline | 43.817 | 248.387 | 9.335 | 5.88 | 0 | c93a5e04e | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T04:58:06Z | gate-commit | 69.880 | 40.473 | 13.811 | 0.78 | 0 | c93a5e04e | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T05:22:38Z | rebaseline | 58.137 | 249.380 | 10.311 | 4.47 | 0 | c93a5e04e | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T05:24:01Z | game-check | 6.582 | 6.897 | 3.690 | 1.61 | 0 | c93a5e04e | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T05:25:36Z | game-check | 0.984 | 0.446 | 0.206 | 0.66 | 0 | c93a5e04e | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T05:26:57Z | game-check | 2.065 | 0.710 | 0.424 | 0.55 | 0 | c93a5e04e | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T05:32:25Z | game-check | 276.713 | 2754.526 | 17.841 | 10.02 | 0 | c93a5e04e | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T05:34:21Z | vessel-check | 69.904 | 49.173 | 3.828 | 0.76 | 0 | c93a5e04e | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T05:36:27Z | vessel-check | 0.490 | 0.092 | 0.112 | 0.42 | 0 | c93a5e04e | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T05:37:14Z | vessel-check | 40.770 | 39.318 | 4.018 | 1.06 | 0 | c93a5e04e | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T05:38:32Z | world-check | 70.680 | 75.728 | 6.864 | 1.17 | 0 | c93a5e04e | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T05:44:24Z | rebaseline | 43.767 | 248.280 | 9.537 | 5.89 | 0 | c93a5e04e | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T05:46:22Z | gate-commit | 109.379 | 47.818 | 20.830 | 0.63 | 0 | c93a5e04e | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T05:58:41Z | game-check | 266.366 | 2713.859 | 10.868 | 10.23 | 0 | c93a5e04e | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T05:58:58Z | vessel-check | 16.024 | 15.967 | 0.643 | 1.04 | 0 | c93a5e04e | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T05:59:20Z | world-check | 21.923 | 19.758 | 0.763 | 0.94 | 0 | c93a5e04e | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T06:10:57Z | game-check | 264.912 | 2711.257 | 9.465 | 10.27 | 0 | c93a5e04e | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T06:11:46Z | vessel-check | 0.410 | 0.153 | 0.093 | 0.60 | 0 | c93a5e04e | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T06:12:10Z | vessel-check | 15.599 | 15.894 | 0.584 | 1.06 | 0 | c93a5e04e | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T06:14:13Z | gate-commit | 95.968 | 41.573 | 14.728 | 0.59 | 0 | c93a5e04e | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T06:26:32Z | gate-commit | 52.296 | 40.481 | 13.898 | 1.04 | 0 | c93a5e04e | campaign/the-pavement | ambrose | 12 |
 | 2026-08-30T23:27:20Z | rebaseline | 57.407 | 268.183 | 13.431 | 4.91 | 0 | f1cc95ba6 | campaign/the-company | MacBookPro | 10 |
 | 2026-08-30T23:32:22Z | gate-commit | 27.711 | 62.069 | 17.674 | 2.88 | 0 | f1cc95ba6 | campaign/the-company | MacBookPro | 10 |
 | 2026-08-30T23:32:55Z | gate-commit | 23.339 | 53.959 | 13.584 | 2.89 | 0 | b4d58d0fd | campaign/the-company | MacBookPro | 10 |
@@ -4621,6 +4666,34 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-01T03:21:48Z | sluice:gate | 513.586 | 15891.460 | 467.275 | 31.85 | 0 | 1d651c153 |  | lefford | 40 |
 | 2026-09-01T03:30:51Z | sluice:clients | 543.642 | 9918.289 | 110.024 | 18.45 | 0 | 47a36edcf |  | lefford | 40 |
 | 2026-09-01T03:38:22Z | sluice:heavy | 450.131 | 9467.067 | 158.732 | 21.38 | 0 | 94e2d39ae |  | lefford | 40 |
+| 2026-09-01T06:33:35Z | rebaseline | 65.274 | 273.408 | 11.605 | 4.37 | 0 | e8130ceeb | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T06:37:33Z | gate-commit | 100.995 | 120.169 | 32.833 | 1.51 | 0 | e8130ceeb | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T06:51:06Z | gate-commit | 91.740 | 41.514 | 14.938 | 0.62 | 0 | e8130ceeb | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T07:14:37Z | gate-commit | 79.171 | 35.151 | 11.692 | 0.59 | 0 | 386f31a60 | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T07:16:50Z | gate-commit | 54.211 | 41.782 | 14.368 | 1.04 | 0 | 386f31a60 | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T07:20:46Z | game-check | 7.284 | 9.134 | 4.187 | 1.83 | 0 | 2b6b54480 | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T07:30:45Z | gate-commit | 90.199 | 42.780 | 15.720 | 0.65 | 0 | 2b6b54480 | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T07:42:04Z | game-check | 0.179 | 0.076 | 0.036 | 0.63 | 0 | c6004339b | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T07:46:42Z | game-check | 271.978 | 2734.754 | 17.222 | 10.12 | 0 | c6004339b | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T08:00:14Z | game-check | 446.070 | 3689.247 | 18.968 | 8.31 | 0 | c6004339b | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T08:01:46Z | gate-commit | 83.795 | 36.516 | 12.942 | 0.59 | 0 | c6004339b | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T08:03:18Z | gate-commit | 53.305 | 42.095 | 14.210 | 1.06 | 0 | c6004339b | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T08:11:44Z | gate-commit | 55.399 | 42.057 | 14.708 | 1.02 | 0 | c6004339b | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T08:19:29Z | game-check | 448.344 | 3685.287 | 19.388 | 8.26 | 0 | 97a4a02de | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T08:27:46Z | game-check | 444.649 | 3675.558 | 14.273 | 8.30 | 0 | 639563fa2 | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T09:53:00Z | gate-commit | 73.728 | 49.874 | 23.634 | 1.00 | 0 | 8626c0e41 | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T10:03:29Z | gate-commit | 79.498 | 56.988 | 26.983 | 1.06 | 0 | 8626c0e41 | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T10:08:14Z | gate-commit | 90.880 | 59.049 | 29.212 | 0.97 | 0 | bb76584d8 | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T11:21:17Z | gate-commit | 29.263 | 22.472 | 11.900 | 1.17 | 0 | fd00e0cde | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T11:24:36Z | gate-commit | 170.881 | 311.161 | 54.246 | 2.14 | 0 | fd00e0cde | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T11:27:29Z | gate-commit | 120.915 | 83.227 | 55.081 | 1.14 | 0 | fd00e0cde | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T11:54:49Z | game-check | 806.627 | 4009.500 | 86.609 | 5.08 | 0 | 3d8f95c24 | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T12:26:17Z | gate-commit | 120.864 | 87.666 | 53.835 | 1.17 | 0 | 3d8f95c24 | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T12:28:42Z | rebaseline | 135.870 | 290.095 | 21.642 | 2.29 | 0 | cc97ffce2 | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T13:02:13Z | game-check | 816.686 | 4041.568 | 88.809 | 5.06 | 0 | a10ef2a49 | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T13:54:28Z | gate-commit | 133.307 | 58.384 | 29.289 | 0.66 | 0 | aaf74f9dd | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T14:10:18Z | gate-commit | 154.790 | 102.282 | 61.532 | 1.06 | 0 | 361fbefde | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T14:46:22Z | gate-commit | 121.684 | 58.500 | 28.560 | 0.72 | 0 | 63523c7b5 | campaign/the-pavement | ambrose | 12 |
 | 2026-09-01T09:32:15Z | gate-commit | 29.966 | 79.265 | 15.653 | 3.17 | 0 | 29eef338a | campaign/the-tableau | MacBookPro | 10 |
 | 2026-09-01T09:33:11Z | rebaseline | 47.173 | 272.375 | 14.251 | 6.08 | 0 | 79e5c287c | campaign/the-tableau | MacBookPro | 10 |
 | 2026-09-01T09:37:45Z | gate-commit | 22.227 | 53.805 | 13.732 | 3.04 | 0 | c5c058f99 | campaign/the-tableau | MacBookPro | 10 |
@@ -4681,3 +4754,24 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-01T23:53:03Z | rebaseline | 61.379 | 272.803 | 14.286 | 4.68 | 0 | 433bb8e0c | campaign/the-wicket | MacBookPro | 10 |
 | 2026-09-01T23:54:32Z | gate-commit | 22.241 | 53.588 | 13.877 | 3.03 | 0 | 433bb8e0c | campaign/the-wicket | MacBookPro | 10 |
 | 2026-09-01T23:55:14Z | gate-commit | 21.880 | 53.434 | 13.964 | 3.08 | 0 | 433bb8e0c | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T15:19:25Z | rebaseline | 154.052 | 337.027 | 23.639 | 2.34 | 0 | 8a3286a03 | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T15:23:01Z | gate-commit | 205.221 | 286.823 | 54.748 | 1.66 | 0 | 8a3286a03 | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T15:38:47Z | census | 878.437 | 27753.712 | 301.147 | 31.94 | 0 | ceba5b077 |  | lefford | 40 |
+| 2026-09-01T15:42:23Z | rebaseline | 92.080 | 299.855 | 20.289 | 3.48 | 0 | 3ec2b827d | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T16:24:22Z | game-check | 1237.263 | 4056.197 | 130.914 | 3.38 | 0 | 19595524b | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T16:25:35Z | vessel-check | 73.152 | 47.105 | 4.277 | 0.70 | 0 | 19595524b | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T16:26:43Z | world-check | 67.532 | 38.981 | 4.212 | 0.64 | 0 | 19595524b | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T17:08:49Z | gate-commit | 129.884 | 51.325 | 25.357 | 0.59 | 0 | cf8ca7a29 | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T17:12:26Z | gate-commit | 93.793 | 59.648 | 30.320 | 0.96 | 0 | cf8ca7a29 | campaign/the-pavement | ambrose | 12 |
+| 2026-09-01T17:19:25Z | sluice:artifacts | 128.161 | 1044.906 | 59.561 | 8.62 | 0 | f9d20628b |  | lefford | 40 |
+| 2026-09-01T17:20:13Z | sluice:outboard | 47.304 | 27.706 | 33.407 | 1.29 | 0 | 15bc48094 |  | lefford | 40 |
+| 2026-09-01T17:29:35Z | sluice:gate | 561.863 | 16385.856 | 547.578 | 30.14 | 0 | b5259f661 |  | lefford | 40 |
+| 2026-09-01T17:38:55Z | sluice:clients | 559.386 | 10073.746 | 108.607 | 18.20 | 0 | 100a1c968 |  | lefford | 40 |
+| 2026-09-01T17:46:42Z | sluice:heavy | 467.115 | 9683.460 | 146.079 | 21.04 | 0 | 2467249ec |  | lefford | 40 |
+| 2026-09-01T17:54:08Z | sluice:artifacts | 75.694 | 657.966 | 23.002 | 9.00 | 0 | 81e6cd050 |  | lefford | 40 |
+| 2026-09-01T17:54:55Z | sluice:outboard | 46.555 | 28.347 | 40.708 | 1.48 | 0 | 365e81c42 |  | lefford | 40 |
+| 2026-09-01T18:03:41Z | sluice:gate | 525.624 | 16234.071 | 471.516 | 31.78 | 0 | a9f3ab38b |  | lefford | 40 |
+| 2026-09-01T18:08:32Z | sluice:artifacts | 77.740 | 665.649 | 23.540 | 8.87 | 0 | 8245ac0d8 |  | lefford | 40 |
+| 2026-09-01T18:09:18Z | sluice:outboard | 46.003 | 27.793 | 40.913 | 1.49 | 0 | 4901ca66a |  | lefford | 40 |
+| 2026-09-01T18:18:06Z | sluice:gate | 528.159 | 16223.746 | 470.910 | 31.61 | 0 | 34bcdec9d |  | lefford | 40 |
+| 2026-09-02T00:52:33Z | rebaseline | 101.235 | 316.181 | 15.946 | 3.28 | 0 | 8e2e59c3d | campaign/the-wicket | MacBookPro | 10 |

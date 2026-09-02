@@ -1,9 +1,9 @@
-# A Possession of Seed 1 — a thing carried
+# A Possession of Seed 14 — a thing carried
 
 *(This transcript is frozen. It is the only gallery page that types the
 custody verbs — `take`, `drop`, `put`, `open`, `close`, `carrying` — and it
 is the campaign's thesis end to end: a key is picked up beside a loom two
-chambers into a hamlet dwelling, carried one room further, refused by a shut
+chambers into a village dwelling, carried one room further, refused by a shut
 lid, and then used to open that chest. Two refusals are the evidence, not
 the noise. `take a key` in the very first room answers "You see no a key
 here." — that room composes none, since The Custodian moved the key pattern
@@ -34,14 +34,24 @@ rather than unnoticed.*
 
 *One more thing not to mistake for a bug: `close` does not re-lock. A lid
 and a lock are separate states, so the second `open` needs no key
-(decision 0399).)*
+(decision 0399).*
+
+*Seed 14, and it was seed 1 until The Pavement. A dwelling's chambers are
+drawn from its room's seed, and that campaign moved every room address, so
+which seeds draw a strongbox is not preserved across an epoch — seed 1's
+flagship dwelling now draws three chambers and no chest, and this page
+regenerated onto it with every beat below the loomroom answering "You see no
+a strongbox here." The seed moved to the one
+`windows/vessel/tests/suite/strongbox_reachability.rs` had already moved to
+for the same reason, so the test that guards this shape and the page that
+publishes it now name the same world.)*
 
 ```text
-[room 540999680, day 0]
-Tropical seasonal forest — buttressed canopy — in the lands of Babobokoxaba. The sky above: The sun, a yellow-white dwarf (F), sinks toward evening. The light is hard and white, edged with blue. The days are growing. The sky is fair, with scattered cumulus.
-No direction here is closed; the nearest ground lies W, SE, N.
+[room 4189198211, day 0]
+Temperate forest — old-growth timber, sun-warmed, in a hollow — in the lands of Vapatkapak. The sky above: Twilight. The horizon shines pale blue-white. The small, distant moon shows its last-quarter face. The sky is fair, with scattered cumulus.
+No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > enter
-[chamber 141819825979456, day 0.01172]
+[chamber 1098173175083363, day 0.00985]
 A small room, holding a doorway and a screen.
 Ways on: out, further in.
 > carrying
@@ -49,11 +59,11 @@ You are carrying nothing.
 > take a key
 You see no a key here.
 > enter further in
-[chamber 141819824331616, day 0.02344]
+[chamber 1098173178103715, day 0.0197]
 A small room, holding a doorway and an alcove.
 Ways on: out, further in.
 > enter further in
-[chamber 141819826634816, day 0.03516]
+[chamber 1098173182570403, day 0.02955]
 A small room, holding a doorway, a water jar, a loom, a key and a brazier.
 Ways on: out, further in.
 > take a key
@@ -61,7 +71,7 @@ You take the key.
 > carrying
 You are carrying a key.
 > enter further in
-[chamber 141819827403296, day 0.0586]
+[chamber 1098173179279043, day 0.04925]
 A small room, holding a doorway, a water jar, a strongbox and a key.
 Ways on: out.
 > examine a strongbox
@@ -83,11 +93,11 @@ You close the strongbox.
 > open a strongbox
 You open the strongbox. Within it: a key.
 > out
-[room 540999680, day 0.12892]
-Tropical seasonal forest — buttressed canopy — in the lands of Babobokoxaba. The sky above: The sun, a yellow-white dwarf (F), sinks toward evening. The light is hard and white, edged with blue. The days are growing. The sky is fair, with scattered cumulus.
-No direction here is closed; the nearest ground lies W, SE, N.
+[room 4189198211, day 0.10835]
+Temperate forest — old-growth timber, sun-warmed, in a hollow — in the lands of Vapatkapak. The sky above: Night. The small, distant moon shows its last-quarter face. The sky is fair, with scattered cumulus.
+No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > enter
-[chamber 141819825979456, day 0.14064]
+[chamber 1098173175083363, day 0.1182]
 A small room, holding a doorway and a screen.
 Ways on: out, further in.
 > carrying

@@ -35,7 +35,7 @@ use hornvale_vessel::{
 use std::collections::BTreeSet;
 
 /// The walk depth the vessel's own lattice fixtures use.
-const WALK: u32 = 12;
+const WALK: u32 = 13;
 
 /// A built place; the brief `allocate` is selected by.
 fn built() -> Brief {
@@ -271,21 +271,39 @@ fn a_floor_cell_four_cells_out_renders_brighter_under_the_wick_torch() {
     // A coloured FLOOR cell at Chebyshev distance 4 from the standing cell:
     // far enough that attenuation has eaten most of the torch, near enough
     // that SIGHT_RADIUS still lights it.
+    //
+    // **THE BRIGHTEST such cell, not the first one the scan meets.** The old
+    // form took whichever cell row-major order reached first, and that made
+    // the reading a function of where the chamber's floor happens to sit as
+    // much as of the torch: a plan cell's colour is the surface's own albedo
+    // TONE-MAPPED by the light on it, so two floor cells the same distance
+    // out render very differently. Measured on the chamber seed 42 enters
+    // after The Pavement's epoch, the twenty-three lit floor cells at
+    // distance 4 span **135 to 460** in channel sum — the first-scanned one is
+    // 135 and the brightest is 460, against a floor of 172. Nothing about the
+    // torch moved; the epoch moved the chamber, and the scan's arbitrary
+    // choice landed on a dark surface.
+    //
+    // The claim is that the ×4 torch REACHES distance 4, and one cell
+    // witnesses that. Taking the brightest states which cell is the witness
+    // instead of leaving it to iteration order.
     let e = &plan.extent;
     let mut probe = None;
-    'outer: for y in e.y..e.y + e.h {
+    for y in e.y..e.y + e.h {
         for x in e.x..e.x + e.w {
             let entry = &plan.palette[plan.cells[plan_index(&plan, x, y)] as usize];
             if entry.kind == "floor"
                 && let Some(color) = entry.color
                 && cheb(hornvale_vessel::Cell(x, y), Cell(plan.you.x, plan.you.y)) == 4
             {
-                probe = Some((x, y, color));
-                break 'outer;
+                let sum: u32 = color.iter().map(|&c| c as u32).sum();
+                if probe.map(|(_, _, _, s)| sum > s).unwrap_or(true) {
+                    probe = Some((x, y, color, sum));
+                }
             }
         }
     }
-    let (x, y, color) =
+    let (x, y, color, _) =
         probe.unwrap_or_else(|| panic!("seed 42: no lit floor cell at Chebyshev distance 4"));
     let sum: u32 = color.iter().map(|&c| c as u32).sum();
     eprintln!("wick probe: floor ({x},{y}) renders {color:?}, channel sum {sum}");

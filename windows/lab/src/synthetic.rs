@@ -393,7 +393,7 @@ pub fn a_heat_wave_that_passes() -> Scenario {
     ledger
         .commit(place_agent(e, &spring, WorldTime::GENESIS), &registry)
         .expect("place at spring");
-    // The spring and its three neighbours are equally blistering — no kinder
+    // The spring and its neighbours are equally blistering — no kinder
     // neighbour, so comfort is unservable (a local thermal pit) until the wave
     // breaks.
     let mut temps = BTreeMap::new();
@@ -434,7 +434,7 @@ pub fn a_forager_in_a_food_desert() -> Scenario {
     ledger
         .commit(place_agent(e, &spring, WorldTime::GENESIS), &registry)
         .expect("place at spring");
-    // The spring and its three neighbours are all barren — no room feeds the
+    // The spring and its neighbours are all barren — no room feeds the
     // creature and no neighbour is richer, so hunger has no affordance and it
     // Holds (a local food pit, the hunger twin of the heat-wave's thermal pit).
     let mut forage = BTreeMap::new();

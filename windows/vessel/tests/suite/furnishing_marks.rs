@@ -21,7 +21,32 @@
 //! main was precisely such a change: seed 35's hearth moved, and the fixed
 //! step counts pointed at the wrong cells.
 //!
-//! So neither geometry fact is hardcoded any more:
+//! **The Pavement's 159-commit absorption (2026-08-30/31) hit the SAME
+//! prediction a second time, from a different direction.** That campaign
+//! moved the walk band to `globe_level + 7` (12 → 13), which moved the
+//! sampled locale for every seed and dropped seed 35 below
+//! `Terrain::is_cold`'s threshold there. `the-alcove` (`needs_cold: false`)
+//! still draws; `the-fire` (`needs_cold: true`, see
+//! `crate::interior::pattern`) no longer does, so seed 35's Hearthroom
+//! composes "a doorway and an alcove" with no hearth in it at all — this
+//! file's own depth-first floor search, described below, could not save it,
+//! because the anchor does not exist anywhere in that room at all.
+//!
+//! **The obvious fix — search seeds, not just floor positions, for one whose
+//! Hearthroom still has a hearth — was measured and rejected.** A bounded
+//! probe over seeds 0..60 found the first cold-at-chamber-1 seed at 13, but
+//! paid ~2.6s per candidate `build_world` + session walk, ~36.6s total to
+//! land on it. That is roughly 8-13x this file's own per-test cost (see the
+//! `world()` doc below), which the campaign brief that fixed this
+//! explicitly gated against ("if a bounded search pushes either test
+//! materially slower, the acceptable fallback is a pinned seed"). So this
+//! file pins to **seed 13** instead — already confirmed, live, to compose a
+//! hearth in chamber 1 — and leans on a premise assertion
+//! (`assert_seed_has_a_hearth`) to fail loudly, naming the seed, the moment
+//! a future genesis or walk-band change drops seed 13 below the cold
+//! threshold too.
+//!
+//! So neither within-room geometry fact is hardcoded any more:
 //!
 //! - **Which chamber is the Hearthroom** is never found by walking a
 //!   compass direction a fixed number of times. `Session::handle("enter
@@ -48,15 +73,25 @@ use hornvale_vessel::{PlanMark, PossessOpts, Session, SessionPlan, SpatialChanne
 use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
 use std::collections::BTreeSet;
 
+/// PINNED PREMISE: seed 13, chosen (2026-08-31, absorbing The Pavement) as
+/// the first seed a bounded 0..60 probe found whose chamber-1 Hearthroom
+/// still composes a hearth after the walk band moved to `globe_level + 7` —
+/// see the module doc for why a live seed search wasn't kept instead
+/// (measured ~36.6s to find one vs. ~4-5s per test today). If this ever
+/// starts failing at `assert_seed_has_a_hearth` below, seed 13 has fallen
+/// below `Terrain::is_cold`'s threshold at the (possibly again-relocated)
+/// walk-band locale, the same way seed 35 did; re-run a bounded seed probe
+/// (or re-derive climate) to find the next cold one, rather than assuming
+/// this is a geometry regression elsewhere.
 fn world() -> World {
     build_world(
-        Seed(35),
+        Seed(13),
         &SkyPins::default(),
         SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
     )
-    .expect("seed 35 builds")
+    .expect("seed 13 builds")
 }
 
 fn out(t: Turn) -> String {
@@ -93,6 +128,29 @@ fn enter_the_hearthroom(session: &mut Session) {
          Hearthroom, so this would mean that contract broke, not that a \
          seed's geometry drifted",
         plan.at
+    );
+}
+
+/// Assert the pinned-seed premise `world()`'s own doc comment states: seed
+/// 13's chamber-1 Hearthroom actually composes a hearth (`examine "a
+/// hearth"` answers, unconditional of sight, exactly as it does for every
+/// other anchor). Called once per test, before either the negative or
+/// positive DFS runs, so a failure here reads as "the pinned seed's premise
+/// broke" rather than being buried in the DFS's own per-step assertion of
+/// the same fact.
+fn assert_seed_has_a_hearth(session: &mut Session) {
+    let reply = out(session.handle("examine a hearth"));
+    assert!(
+        !reply.starts_with("You see no"),
+        "PINNED PREMISE BROKEN: seed 13's chamber-1 Hearthroom no longer \
+         composes a hearth ({reply:?}). This file pins to seed 13 because a \
+         bounded seed probe found it cold at the walk-band-sampled locale \
+         after The Pavement moved the walk band to `globe_level + 7` — see \
+         this file's module doc. If seed 13 has since fallen below \
+         `Terrain::is_cold`'s threshold too (most likely because the walk \
+         band moved again), re-run a bounded seed probe to find the next \
+         cold seed and re-pin; do not weaken this test to tolerate an unlit \
+         room instead."
     );
 }
 
@@ -228,6 +286,7 @@ fn an_unlit_hearth_is_not_emitted() {
     let w = world();
     let (mut session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
     enter_the_hearthroom(&mut session);
+    assert_seed_has_a_hearth(&mut session);
 
     let mut visited = BTreeSet::new();
     let found = seek_hearth_view(&mut session, 1, false, &mut visited);
@@ -265,6 +324,7 @@ fn a_chamber_with_a_hearth_emits_a_furnishing_mark() {
     let w = world();
     let (mut session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
     enter_the_hearthroom(&mut session);
+    assert_seed_has_a_hearth(&mut session);
 
     // The SAME hearth as the negative test above, now sought from a
     // position inside the shadowcast — the only thing that changes between

@@ -195,7 +195,21 @@ pub fn grow(structure: &Structure, extent: Rect, seed: Seed) -> Lattice {
             let Some(from) = mine.pop_front() else {
                 continue;
             };
-            for next in neighbours(from) {
+            // First four only: the flood is orthogonal-only, same as ever.
+            // `neighbours` also carries the four diagonals (the corner rule,
+            // `mod.rs`), and the two step paths DO walk them now — but not this
+            // construction pass, and the reason is `rotated`'s below: a
+            // one-cell-wide diagonal corridor is unwalkable under that very
+            // corner rule, so a grower that spread diagonally would produce
+            // geometry no walker can traverse. See `classify`'s module note "Why
+            // the structural rules stay 4-connected while movement is
+            // 8-connected".
+            //
+            // (This comment said "nothing wires diagonal movement into the
+            // grower — that stays Task 6's job". Task 6 did it, for the two step
+            // paths only, so the sentence described a pending state that has
+            // passed; the restriction here is a decision, not a wait.)
+            for next in neighbours(from).into_iter().take(4) {
                 if !claimable(next, &owner, &reserved, interior, i) {
                     continue;
                 }
@@ -287,7 +301,9 @@ fn claimable(
     i: usize,
 ) -> bool {
     is_free(cell, owner, reserved, interior)
-        && neighbours(cell).iter().all(|n| {
+        // First four: the separation rule is over orthogonal adjacency, same
+        // as the flood above (see its comment).
+        && neighbours(cell)[..4].iter().all(|n| {
             owner.get(n).is_none_or(|&o| o == i)
                 && reserved.get(n).is_none_or(|&(a, b)| a == i || b == i)
         })
@@ -314,20 +330,57 @@ fn reservable(
     b: usize,
 ) -> bool {
     is_free(cell, owner, reserved, interior)
-        && neighbours(cell)
+        // First four: same orthogonal-only adjacency as `claimable`.
+        && neighbours(cell)[..4]
             .iter()
             .all(|n| owner.get(n).is_none_or(|&o| o == a || o == b) && !reserved.contains_key(n))
 }
 
-/// [`HEADINGS`] rotated to start at `draw`.
+/// The four ORTHOGONAL [`HEADINGS`] entries, rotated to start at `draw`.
 ///
 /// All four in a reproducible order, so a direction is CHOSEN from one draw while
 /// the choice stays total: a blocked direction falls through to the next rather
 /// than costing a second draw, which is what keeps rule 7's budget at two per
 /// chamber however the collisions fall.
+///
+/// **Hardcoded to 4, not `HEADINGS.len()`.** The Pavement widened `HEADINGS` to
+/// 8 entries (four diagonals, for the corner rule) without moving the four
+/// orthogonal ones or their order, so the ORTHOGONAL constant below reproduces
+/// exactly what `HEADINGS.len()` used to mean here. Reading the live `len()`
+/// again would silently fold the four diagonal headings into this rotation —
+/// same `draw`, different direction, since `draw % 8` picks a different starting
+/// offset than `draw % 4` and the four-wide window can land on a diagonal
+/// entirely.
+///
+/// # Why a tunnel is dug orthogonally — the argument, not the axiom
+///
+/// This doc used to end "A tunnel is dug orthogonally", asserted, with the
+/// draw-modulus hazard above standing in for a reason. The hazard is real and
+/// worth keeping, but it is not the reason: **the project does not mind changing
+/// generated worlds pre-alpha**, so "it would move every seed" settles nothing
+/// on its own.
+///
+/// The reason that survives that is this campaign's own corner rule
+/// ([`super::diagonal_is_blocked`], spec section 3.3): **a one-cell-wide diagonal
+/// corridor is unwalkable.** Every step along such a corridor has both flanking
+/// cells as fabric — that is what makes it one cell wide — so the corner rule
+/// refuses every one of them. A generator free to dig diagonal tunnels would
+/// carve corridors no walker can traverse: not more variety, garbage. The
+/// four-wide rotation is therefore a CONCLUSION from the movement rule, and the
+/// two are consistent by argument rather than by coincidence.
+///
+/// # The deferral, and its true precondition
+///
+/// Chamber tunnels staying orthogonal-only is a **deliberate deferral, not a
+/// leftover.** Widening it is not a matter of raising this constant: a diagonal
+/// tunnel would have to be **at least two cells wide** to be walkable at all, so
+/// that each step has an open flank. That is a different generator — a corridor
+/// carver with a width, not a direction-picking rotation — and it is a design
+/// change with its own epoch, not a widening of this one.
 fn rotated(draw: u64) -> [(i32, i32); 4] {
-    let start = (draw % HEADINGS.len() as u64) as usize;
-    [0, 1, 2, 3].map(|k| HEADINGS[(start + k) % HEADINGS.len()])
+    const ORTHOGONAL: usize = 4;
+    let start = (draw % ORTHOGONAL as u64) as usize;
+    [0, 1, 2, 3].map(|k| HEADINGS[(start + k) % ORTHOGONAL])
 }
 
 /// The first cell in row-major order that chamber `i` may claim. Consumes no

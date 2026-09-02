@@ -1,6 +1,7 @@
 # 0141. Compass navigation is an overlay, never the graph
 
-**Status:** Accepted (2026-08-16) · **Decider:** Nathan · **Relates:**
+**Status:** Superseded by [0506](0506-the-occupancy-lattice-is-a-cube-sphere.md)
+(2026-08-31) · **Decider:** Nathan · **Relates:**
 [0016](0016-studies-preregister-hypotheses.md),
 [0077](0077-zoom-in-the-room-mesh-is-path-truncation.md),
 [0105](0105-water-keeps-bands-rock-becomes-a-graph.md),

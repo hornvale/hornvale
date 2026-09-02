@@ -37,6 +37,24 @@ const FIXTURE: &str = include_str!("fixtures/session-seed-42-turn-0.json");
 /// then not overwritten because the synthetic plate is blank there). This
 /// was verified to actually discriminate — see the task report's "fix
 /// round 1" section for the red/green mutation proof.
+///
+/// **THE PROBE IS NOW ASKED FOR, NOT WRITTEN DOWN (The Pavement, 2026-09-01),
+/// AND THE PARAGRAPH ABOVE IS WHY IT HAD TO BE.** `(20, 6)` was a real
+/// coordinate found by probing a real render, and it stopped being one: the
+/// epoch moved the walk band from `globe_level + 6` to `+ 7` and the
+/// occupancy lattice onto a cube-sphere, so the chart this fixture draws is a
+/// dense 9x9 block where it was a sparse 31-room ring, and `(20, 6)` reads
+/// `Unattributed` in `without` — the test failed on its PRECONDITION, before
+/// reaching the behaviour it exists to check.
+///
+/// A coordinate that satisfies a property is not the same thing as the
+/// property, and this file now asks for the property: scan the plate region
+/// in row-major order for the first box that is `Source::Chart` in `without`
+/// and is not the one the synthetic plate fills, and use that. Same
+/// discrimination, same two assertions, no fixture-dependent literal — and it
+/// panics loudly if no such box exists at all, because "the chart drew
+/// nothing outside the plate's one filled box" would make the check vacuous
+/// rather than passing.
 #[test]
 fn a_supplied_world_plate_replaces_the_band_view_and_nothing_else() {
     let plate = {
@@ -74,19 +92,30 @@ fn a_supplied_world_plate_replaces_the_band_view_and_nothing_else() {
     .unwrap();
     assert_eq!(with.get(20, 10).unwrap().source, Source::World);
     assert_eq!(without.get(20, 10).unwrap().source, Source::Chart);
-    // The discriminating probe: (20, 6) is Chart in `without` (confirmed
-    // by probing the real render) and blank in the synthetic plate, so a
-    // merge bug (draw chart, then blit world on top) would leave it
-    // `Chart` in `with` too. The correct either/or leaves it
-    // `Unattributed`: the chart was never drawn into `with`'s plate at
-    // all.
-    assert_eq!(without.get(20, 6).unwrap().source, Source::Chart);
+    // The discriminating probe, ASKED FOR rather than written down (see the
+    // doc above): the first box of the plate region that the real `without`
+    // render draws as `Chart` and that the synthetic plate leaves blank. A
+    // merge bug (draw chart, then blit world on top) would leave such a box
+    // `Chart` in `with` too, because `blit` skips blank sources. The correct
+    // either/or leaves it `Unattributed`: the chart was never drawn into
+    // `with`'s plate at all.
+    let (px, py) = (0..20u16)
+        .flat_map(|y| (0..40u16).map(move |x| (x, y)))
+        .find(|&(x, y)| {
+            (x, y) != (20, 10) && without.get(x, y).is_some_and(|c| c.source == Source::Chart)
+        })
+        .expect(
+            "no box of the plate region is `Chart` in the chart-only render outside the one \
+             the synthetic plate fills — the probe below would be vacuous, so this is a \
+             finding about the fixture's chart, not a passing test",
+        );
+    assert_eq!(without.get(px, py).unwrap().source, Source::Chart);
     assert_eq!(
-        with.get(20, 6).unwrap().source,
+        with.get(px, py).unwrap().source,
         Source::Unattributed,
         "the band's chart must not be drawn at all when a world plate is \
-         supplied — a cell the synthetic plate leaves blank must stay \
-         blank in `with`, not fall through to the chart underneath"
+         supplied — a box the synthetic plate leaves blank ({px}, {py}) must \
+         stay blank in `with`, not fall through to the chart underneath"
     );
     // The entry pane is untouched by the lens.
     for y in 0..24 {

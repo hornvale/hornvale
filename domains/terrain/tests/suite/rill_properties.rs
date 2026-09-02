@@ -61,8 +61,19 @@ const FIXTURE: &str = include_str!("../fixtures/rill-width-law-seed-42-level-6.t
 /// if somebody edits the file, which is exactly the event worth failing on.
 const FIXTURE_ROWS: usize = 661;
 
-/// Level 6 to level 12 — the walk-depth span this campaign needs. Each step is
-/// one subdivision: four times the vertices, half the spacing.
+/// Six subdivisions of the canonical level-6 grid. Each step is one
+/// subdivision: four times the vertices, half the spacing.
+///
+/// **This is a span over the LAW, not a walk-band restatement, and the line it
+/// replaces conflated the two.** It read "Level 6 to level 12 — the walk-depth
+/// span this campaign needs", which was true while the walk band was
+/// `globe_level + 6`; The Pavement moved it to `globe_level + 7`, so the span
+/// this constant covers is now one doubling short of the walk band. The
+/// scale-free claim below does not depend on reaching it — the law either is a
+/// function of drained area at every level or it is not — so the constant, the
+/// test's name and its `4096`/`64` assertions are left where they are rather
+/// than churned. What is removed is the sentence that tied a number with no
+/// walk band in it to the walk band by name.
 const DOUBLINGS: u32 = 6;
 
 /// One fixture row: the width law's three inputs and the four band edges they
@@ -1254,6 +1265,24 @@ const PACKING: f64 = 1.07824;
 /// constant that is level-free cannot be checked at one level.
 const ANCHOR_LEVELS: [u32; 2] = [5, 6];
 
+/// Subdivisions between the globe level and the walk band, as
+/// `hornvale_locale::walk_depth` states it (`globe level + 7` since The
+/// Pavement, spec section 2.3).
+///
+/// **Restated here because it cannot be called here.** The layering is
+/// `kernel -> domains -> windows -> cli`, so `domains/terrain` may not depend
+/// on `windows/locale`, and the mispairing control below genuinely needs the
+/// walk band rather than some other depth.
+///
+/// It is therefore a restatement, and `cli/tests/suite/walk_depth_agreement.
+/// rs` cannot see it: that scan's offset arm looks for the literal
+/// `globe_level()` (absent here) and its absolute arm reads constants named
+/// `WALK` against a single canonical value (this one is an OFFSET, so it has
+/// no single right value to compare against). Named and documented so a
+/// reader can find it; disclosed so nobody reads the green scan as covering
+/// it.
+const WALK_BELOW_GLOBE: u32 = 7;
+
 /// claim: invariant(the width law's caller-side pairing, absolutely and over
 /// two grid levels) — with a mispairing control that must move.
 ///
@@ -1283,8 +1312,9 @@ const ANCHOR_LEVELS: [u32; 2] = [5, 6];
 /// **The control is the load-bearing half**, for the same reason it was
 /// before: without it, a width law that had stopped depending on discharge
 /// would satisfy the anchor at a single point and fail nothing. The control
-/// pairs the same drained area with a **walk-depth room's** spacing, six
-/// levels down, and must land at ~1/64.
+/// pairs the same drained area with a **walk-depth room's** spacing —
+/// [`WALK_BELOW_GLOBE`] levels down, so a factor of `2^-7` at level 6 and
+/// `2^-7` again at level 5 — and must land far under 1.
 #[test]
 fn a_branchs_width_is_anchored_to_its_drained_area_not_to_a_level() {
     let expected = 0.5 * hornvale_terrain::CHANNEL_WIDTH_COEFF * PACKING;
@@ -1303,30 +1333,51 @@ fn a_branchs_width_is_anchored_to_its_drained_area_not_to_a_level() {
         let net = ChannelNetwork::build(globe, &geo, globe.channel_noise_seed());
         let cut = CatchmentCut::Drawn(globe.rill_partition_seed());
 
-        // THE ABSOLUTE DEPTH ANCHOR on `room_spacing` itself, carried forward
-        // from the construction this replaces because the hazard is unchanged:
-        // a spacing that answered for the wrong depth is invisible to every
-        // ratio. A globe-level room's three corners ARE three vertices, so its
-        // three edges are three vertex-to-vertex separations — read here off
-        // `Geosphere::position` alone, with `Facet::corners` nowhere in it.
+        // THE ABSOLUTE DEPTH ANCHOR on `room_spacing` itself. The hazard is
+        // unchanged from the construction this replaces — a spacing that
+        // answered for the wrong DEPTH is invisible to every ratio, because
+        // the factor cancels — but the ruler had to change, and the old one
+        // is now not merely stale but unbuildable.
+        //
+        // It read a globe-level room's corners as three `Geosphere` vertices
+        // and averaged the three vertex-to-vertex arcs. That was decision
+        // 0287's corner-is-a-vertex COROLLARY, which The Pavement retires: a
+        // room is a quad of the tangent-warped cube-sphere and its four
+        // corners are not geosphere vertices at any level, so there is no
+        // mesh to read the answer off. (0287's CORE — a tile at rung `d` is a
+        // facet at depth `d` — survives untouched, and is what the ruler
+        // below leans on.)
+        //
+        // The replacement ruler is the sphere itself, and it is deliberately
+        // independent of `Facet::corners`, which is what `room_spacing`
+        // reads: a depth-`d` quadtree over the cube's six faces has exactly
+        // `6·4^d` quads tiling `4π` steradians, so a quad's side is
+        // `√(4π / (6·4^d))` up to the projection's local area distortion.
+        // The tangent warp holds that to 1.41x max/min AREA across a WHOLE
+        // face (spec §2.0), i.e. 1.19x in linear scale between the extremes,
+        // and this quad — `face: 3`, path all-1s, so lattice `(0, 2^level−1)`
+        // — is a face CORNER quad, one end of that spread. One level of depth
+        // error is a factor of TWO, which no tolerance in that band can
+        // absorb.
+        //
+        // MEASURED, not assumed: this quad's side runs 1.539% over the ruler
+        // at level 5 and 1.925% over it at level 6 (this test's own run,
+        // 2026-08-31). The bound below is 10% — 5.2x the largest observed
+        // excess, and 5x under the 50% one level of error costs.
         let face = Facet {
             face: 3,
             path: vec![1; level as usize],
         };
-        let vertices = face
-            .corner_weights(&geo, &index)
-            .expect("a globe-level room has corner vertices");
-        let mesh = (arc(geo.position(vertices[0].0), geo.position(vertices[1].0))
-            + arc(geo.position(vertices[1].0), geo.position(vertices[2].0))
-            + arc(geo.position(vertices[2].0), geo.position(vertices[0].0)))
-            / 3.0;
-        let drift = (hornvale_terrain::room_spacing(&face) - mesh).abs() / mesh;
+        let quads = 6u64 << (2 * level);
+        let ruler = (4.0 * std::f64::consts::PI / quads as f64).sqrt();
+        let spacing = hornvale_terrain::room_spacing(&face);
+        let drift = (spacing - ruler).abs() / ruler;
         assert!(
-            drift < 1e-9,
-            "at level {level}, room_spacing({face:?}) is {} against the {mesh} the mesh's own \
-             vertex positions give — relative {drift:.3e}. The spacing is being derived at the \
-             wrong DEPTH, which no parent/child ratio can see because the factor cancels",
-            hornvale_terrain::room_spacing(&face)
+            drift < 0.10,
+            "at level {level}, room_spacing({face:?}) is {spacing} against the {ruler} that \
+             `6·4^{level}` quads tiling 4π steradians allow — relative {drift:.3e}. The \
+             spacing is being derived at the wrong DEPTH, which no parent/child ratio can see \
+             because the factor cancels"
         );
 
         for vertex in sampled_vertices(globe, &geo) {
@@ -1340,7 +1391,7 @@ fn a_branchs_width_is_anchored_to_its_drained_area_not_to_a_level() {
                 .map(|&n| arc(geo.position(vertex), geo.position(n)))
                 .sum::<f64>()
                 / neighbors.len() as f64;
-            let room = room_of_depth(&face, 12);
+            let room = room_of_depth(&face, level + WALK_BELOW_GLOBE);
             for rill in rills_of(vertex, &net, &geo, &cut).iter().take(64) {
                 let half = channel_half_width(rill.catchment / unit, spacing);
                 let k = half / rill.catchment.sqrt();
@@ -1399,7 +1450,7 @@ fn a_branchs_width_is_anchored_to_its_drained_area_not_to_a_level() {
     assert!(
         worst_mispaired < 1.0 / 32.0,
         "pairing a branch's drained area with a WALK-DEPTH room's spacing changed the width by \
-         {worst_mispaired:.5}x — it should be ~1/64 at level 6 and ~1/128 at level 5, and this \
+         {worst_mispaired:.5}x — it should be ~1/128 at both anchor levels, and this \
          is the smaller of the two. The anchor above is therefore not \
          discriminating: it would pass for a width law that had stopped depending on the \
          spacing at all"

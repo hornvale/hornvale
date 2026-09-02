@@ -111,7 +111,8 @@ impl Brief {
 }
 
 /// The geosphere vertex a place sits in: the maximum-weight corner of its
-/// barycentric blend, tie-broken by ascending `Vertex`.
+/// four-corner bilinear blend, tie-broken by ascending `Vertex` (a
+/// three-corner barycentric blend before The Pavement).
 ///
 /// Integer weights only (`corner_weights` returns `u64` numerators), so the
 /// choice is cross-platform exact — no float comparison enters world identity.

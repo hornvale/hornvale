@@ -31,7 +31,7 @@ use hornvale_worldgen::{
 
 /// The walk depth the vessel's own lattice fixtures use — the same constant
 /// `lantern_light.rs` draws its geometry at.
-const WALK: u32 = 12;
+const WALK: u32 = 13;
 
 /// The seeds H2 sweeps. Four worlds rather than one: one world is an anecdote,
 /// and seed 42 alone has given four wrong readings in this project's history.

@@ -6,16 +6,25 @@
 
 use crate::VesselError;
 use hornvale_kernel::{Value, World, math};
-use hornvale_locale::LocaleContext;
 use hornvale_settlement::{LATITUDE, LONGITUDE, VillageInfo};
 use hornvale_species::{perception_registry, species_of};
 
-/// The canonical walk depth: six levels below the canonical grid — the
-/// same default as `hornvale locale`.
-/// type-audit: bare-ok(count: return)
-pub fn walk_depth(ctx: &LocaleContext) -> u32 {
-    ctx.globe_level() + 6
-}
+/// The canonical walk depth — **a re-export of
+/// [`hornvale_locale::walk_depth`], not a second definition.**
+///
+/// It was defined here until The Pavement, and that placement was the cause
+/// of a defect rather than a neutral choice: the dependency chain is
+/// `locale -> scene -> vessel -> cli`, so a definition in this crate was
+/// unreachable from `windows/locale` and `windows/scene`, and sixteen sites
+/// across those crates restated `globe_level() + 6` instead of calling it —
+/// including `hornvale locale`'s and `hornvale surrounds`' production
+/// `--depth` defaults, which fell a whole band behind when the offset moved
+/// and reddened nothing, because the stale copies were consistent with each
+/// other. The function reads nothing but `LocaleContext::globe_level`, so it
+/// belongs in the crate that owns that type. The name stays exported here
+/// because `hornvale_vessel::walk_depth` is what this window's own callers
+/// (and `cli`) already spell.
+pub use hornvale_locale::walk_depth;
 
 /// Fail loudly if `village`'s species is unknown to the perception registry —
 /// the same two-step check `mint_at` used to run ahead of minting an `Agent`,
@@ -135,7 +144,10 @@ mod tests {
         let world = World::new(Seed(42));
         let ctx = LocaleContext::build(&world).unwrap();
         assert!(hornvale_settlement::village_info(&world).is_none());
-        // `walk_depth` has no settlement dependency at all.
-        assert_eq!(walk_depth(&ctx), ctx.globe_level() + 6);
+        // `walk_depth` has no settlement dependency at all. Compared against
+        // the re-export's source rather than a restated `+ 7`: this crate no
+        // longer states the arithmetic anywhere, which is the whole point of
+        // the move (see the re-export's doc above).
+        assert_eq!(walk_depth(&ctx), hornvale_locale::walk_depth(&ctx));
     }
 }

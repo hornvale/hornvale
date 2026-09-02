@@ -171,7 +171,7 @@ mod tests {
     use hornvale_kernel::{Facet, Seed};
     use hornvale_thing::kinds;
 
-    const WALK: u32 = 12;
+    const WALK: u32 = 13;
     const SEEDS: std::ops::Range<u64> = 0..48;
 
     fn locale(n: u64) -> Facet {
