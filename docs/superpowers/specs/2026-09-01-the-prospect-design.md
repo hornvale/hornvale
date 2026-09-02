@@ -132,10 +132,26 @@ would make every facet for tens of kilometres a cave — reproducing
 `CLIM-water-label-resolution-vs-walk-band` exactly.
 
 So a cave is PLACED, through §7's mechanism, with a distinct reason so a cave
-and an exotic site at one vertex do not collocate. The threshold on proneness
-still decides WHETHER a vertex warrants a cave, and is **calibrated, not
-guessed** — preregistered in §9. What changed is that it no longer decides
-where.
+and an exotic site at one vertex do not collocate.
+
+**CORRECTED AGAIN 2026-09-02: there is no threshold, because there was already a
+cave model and I did not look for it.** This paragraph said "the threshold on
+proneness still decides WHETHER a vertex warrants a cave, and is calibrated, not
+guessed." Both halves are void. `GeneratedTerrain::cave_at`
+(`domains/terrain/src/provider.rs:413`) already answers whether a cave exists,
+and answers it far better than a proneness threshold: it refuses ocean, runs
+`cave_process` over material, drainage, **crust age** and **plate-boundary
+distance**, weights by a tectonic belt term, and gates the result against a
+**noise field** so caves cluster coherently.
+
+Measured: `cave_at` yields 874/1647/1681/1116/2440 caves on seeds
+42/13/7/1/100. The invented threshold yielded 1564/970/1638/1355/2772 — it
+disagreed in BOTH directions, which is a better argument for deleting it than
+any comparison of magnitudes. The correction is a net −72 lines, with
+`features.rs` down 129 by pure deletion.
+
+**A cave is still PLACED**, because `cave_at` answers per-VERTEX and a vertex
+spans 110-132 km. Existence comes from the model; the address comes from §7.
 
 The error is worth keeping: I checked that the function was pure and inferred
 its answer was available anywhere, without checking where its inputs live.

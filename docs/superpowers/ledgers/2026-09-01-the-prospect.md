@@ -557,3 +557,49 @@ That is the better answer and I did not think of it.
 SYNTAX of the thing (`foo(`), not its NAME (`foo`) — and ask whether the prose
 needs the number at all. A count in a doc comment has to stay true forever; this
 one was false within the hour.
+
+### #25 [G5] — ruling #19's "the threshold stays at its measured value" is void, and two more of my claims were refuted
+
+**Ruling #19 said the cave threshold stays at its measured value.** There is no
+threshold: `cave_at` already existed and decides existence, so the constant is
+deleted rather than kept. H2's falsification is unaffected — it was always a
+property of placement, not of the predicate — and
+`the_band_is_unreachable_at_any_threshold` survives with its doc now explaining
+why the name outlived the threshold it was named for.
+
+**Two claims I made in the re-aim dispatch, both refuted by measurement:**
+
+1. **"1,528 vs 874 — 75% more, by cruder criteria."** True of seed 42 only. Over
+   five seeds the invented predicate gave 1564/970/1638/1355/2772 against
+   `cave_at`'s 874/1647/1681/1116/2440 — **lower on seeds 13 and 7.** They
+   disagree in both directions. The implementer's framing is better than mine:
+   two predicates disagreeing in both directions is a stronger case for deleting
+   one than either being bigger. I generalised from n=1 in a dispatch that
+   another agent then acted on.
+
+2. **"It fixes the underwater defect for free."** False, and backwards.
+   Underwater placements went **300 → 426**. `cave_at`'s guard is
+   `is_ocean(v)` = `elevation < sea_level`; my invented guard was
+   `elevation - sea_level > 5.0`, which is **strictly stronger**. Replacing mine
+   loosened the water test. I asserted a consequence of a deletion without
+   comparing the two guards I was choosing between.
+
+### #26 [G5] — the live defect is the PLACEMENT SEAM, not either predicate
+
+426 of 7,758 placed caves sit on water facets and are enterable there.
+
+**Neither predicate can fix it, and that is the finding.** Both check water at
+the VERTEX; `site_facet_for` then moves the address up to ~39 km and nothing
+re-checks the facet it lands on. Two predicates, two different guards, the same
+bug. **Exotic sites share the seam** — nothing about this is cave-specific.
+
+**Ruling:** this is its own task with its own declaration, exactly as the
+implementer proposed. A fix inside `site_facet_for` moves every placed address
+for every seed, so it wants to be a deliberate act rather than a rider on a
+deletion. Filed as the next task.
+
+**Why not accept underwater caves as flavour:** a flooded sea cave is a real
+thing and would be a fine feature — but it is enterable today with no swimming,
+no drowning and no water prose, so the world would be offering a door into the
+sea floor and describing it as a small room. Accepting it needs the fiction
+built first; refusing it needs one predicate at one seam.
