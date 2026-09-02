@@ -864,3 +864,30 @@ this is disproportionate, and a derive nothing consumes is not a second
 authority. But the doc must stop claiming one home and say there are two
 statements of the order with one authority — otherwise the next reader repeats
 Ruling 29's mistake in the other direction.
+
+### #38 [G5] — the delegation is pinned, and my own fix instruction named the wrong fixture
+
+Verified independently: injecting the reviewer's exact hardcode
+(`Settlement => 3, Exotic => 0, Cave => 1`) now reddens
+`salience_decides_the_winner_at_an_exotic_cave_collision` with
+`left: Some(Cave), right: Some(Exotic)`, while
+`salience_decides_the_winner_when_a_facet_holds_two_sites` still PASSES under
+it — exactly the reviewer's diagnosis. Restored, both green.
+
+**My fix instruction named the wrong collision.** I asked for a
+settlement+exotic fixture. The implementer worked out that it cannot
+discriminate — settlement wins under both the real and the mutated ordering
+(3 vs 2, and 3 vs 0) — and built an **exotic vs cave** collision instead, which
+is the only pair the mutation inverts (real 2 vs 1 → Exotic; mutated 0 vs 1 →
+Cave). It scanned all 40,962 vertices for a coincident Exotic/Cave placement to
+construct it.
+
+So the discriminating pair is determined by the mutation, not by which
+collision is easiest to build — and I picked the easy one. Fifth time this
+campaign an implementer has corrected my specification of a test.
+
+**Part (a) is the durable half:** the test now computes its expected winner via
+`candidates.into_iter().max_by_key(Site::salience)` and asserts equality, which
+fails for ANY implementation that stops consulting salience, regardless of which
+rung a future mutation inverts. That is the assertion shape ruling 35 was asking
+for, and it does not depend on guessing the right pair.
