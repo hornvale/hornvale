@@ -5017,3 +5017,4 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-02T19:07:48Z | rebaseline | 114.611 | 325.862 | 16.733 | 2.99 | 0 | 23acb7a25 | campaign/the-rack | MacBookPro | 10 |
 | 2026-09-02T19:17:33Z | game-check | 99.535 | 627.296 | 26.519 | 6.57 | 0 | 23acb7a25 | campaign/the-rack | MacBookPro | 10 |
 | 2026-09-02T19:19:39Z | gate-commit | 60.441 | 247.995 | 31.424 | 4.62 | 0 | 23acb7a25 | campaign/the-rack | MacBookPro | 10 |
+| 2026-09-02T19:32:15Z | heavy | 542.325 | 12788.682 | 346.654 | 24.22 | 0 | 813c74726 |  | lefford | 40 |
