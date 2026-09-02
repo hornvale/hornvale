@@ -4316,7 +4316,7 @@ pub fn bake(
     // minimum, so a one-era series resolves the same way on both paths.
     let earliest = eras
         .iter()
-        .min_by(|a, b| a.day.total_cmp(&b.day))
+        .min_by(|a, b| a.day.cmp(&b.day))
         .expect("at least one era");
     let admissible: Vec<Vertex> = geo
         .vertices()
@@ -4473,6 +4473,7 @@ pub fn bake(
 mod tests {
     use super::*;
     use hornvale_culture::BiomeClass;
+    use hornvale_kernel::WorldTime;
     use hornvale_topology::{ConnectionGraph, Edge, EdgeKind};
     use std::cmp::Ordering;
 
@@ -4501,7 +4502,7 @@ mod tests {
         let refugia = VertexMap::from_fn(&geo, |_| false);
         let caps = caps_from_fn(&geo, |_| 100.0);
         let era = EraClimate {
-            day: 0.0,
+            day: WorldTime::GENESIS,
             ice: VertexMap::from_fn(&geo, |_| false),
             habitable: VertexMap::from_fn(&geo, |_| true),
             sea_level: ReferenceElevation::new(0.0).unwrap(),
@@ -4732,7 +4733,7 @@ mod tests {
         let river_prox = VertexMap::from_fn(&geo, |_| 0.0);
         let refugia = VertexMap::from_fn(&geo, |_| false);
         let era = EraClimate {
-            day: 0.0,
+            day: WorldTime::GENESIS,
             ice: VertexMap::from_fn(&geo, |_| false),
             habitable: VertexMap::from_fn(&geo, |_| true),
             sea_level: ReferenceElevation::new(0.0).unwrap(),
@@ -4875,7 +4876,7 @@ mod tests {
         let river_prox = VertexMap::from_fn(&geo, |_| 0.0);
         let refugia = VertexMap::from_fn(&geo, |_| false);
         let era = EraClimate {
-            day: 0.0,
+            day: WorldTime::GENESIS,
             ice: VertexMap::from_fn(&geo, |_| false),
             habitable: VertexMap::from_fn(&geo, |_| true),
             sea_level: ReferenceElevation::new(0.0).unwrap(),
@@ -5024,7 +5025,7 @@ mod tests {
         let river_prox = VertexMap::from_fn(&geo, |_| 0.0);
         let refugia = VertexMap::from_fn(&geo, |_| false);
         let era = EraClimate {
-            day: 0.0,
+            day: WorldTime::GENESIS,
             ice: VertexMap::from_fn(&geo, |_| false),
             habitable: VertexMap::from_fn(&geo, |_| true),
             sea_level: ReferenceElevation::new(0.0).unwrap(),
@@ -5258,7 +5259,7 @@ mod tests {
         use hornvale_kernel::ReferenceElevation;
         let geo = Geosphere::new(1);
         EraClimate {
-            day,
+            day: WorldTime::from_std_days(day).expect("test era day within tick range"),
             ice: VertexMap::from_fn(&geo, |_| false),
             habitable: VertexMap::from_fn(&geo, |_| true),
             sea_level: ReferenceElevation::new(0.0).unwrap(),
@@ -5729,7 +5730,7 @@ mod tests {
         let river_prox = VertexMap::from_fn(&geo, |_| 0.0);
         let refugia = VertexMap::from_fn(&geo, |_| false);
         let era = EraClimate {
-            day: 0.0,
+            day: WorldTime::GENESIS,
             ice: VertexMap::from_fn(&geo, |_| false),
             habitable: VertexMap::from_fn(&geo, |_| true),
             sea_level: ReferenceElevation::new(0.0).unwrap(),
@@ -7366,7 +7367,7 @@ mod tests {
         let era = {
             use hornvale_kernel::ReferenceElevation;
             EraClimate {
-                day: 0.0,
+                day: WorldTime::GENESIS,
                 ice: VertexMap::from_fn(&geo, |_| false),
                 habitable: VertexMap::from_fn(&geo, |_| true),
                 sea_level: ReferenceElevation::new(0.0).unwrap(),

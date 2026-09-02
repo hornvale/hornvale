@@ -85,7 +85,7 @@ pub fn genesis(
         fact(
             subject,
             GLACIAL_MAXIMUM_ERA,
-            Value::Number(record.glacial_maximum_day),
+            Value::Number(record.glacial_maximum_day.as_std_days()),
         ),
         &world.registry,
     )?;
@@ -141,7 +141,7 @@ mod tests {
     use super::*;
     use crate::strata::{EraClimate, extract};
     use hornvale_kernel::test_lineage;
-    use hornvale_kernel::{ReferenceElevation, Seed, VertexMap, World};
+    use hornvale_kernel::{ReferenceElevation, Seed, VertexMap, World, WorldTime};
 
     /// Test-only helper: a validated `ReferenceElevation`.
     fn e(m: f64) -> ReferenceElevation {
@@ -151,7 +151,7 @@ mod tests {
     fn cold_world_record(geo: &Geosphere) -> PaleoRecord {
         let elev = VertexMap::from_fn(geo, |_| e(100.0));
         let eras = vec![EraClimate {
-            day: 500_000.0,
+            day: WorldTime::from_std_days(500_000.0).expect("test era day within tick range"),
             ice: VertexMap::from_fn(geo, |_| true),
             habitable: VertexMap::from_fn(geo, |c| geo.coord(c).latitude.abs() < 30.0),
             sea_level: e(-60.0),
@@ -190,7 +190,7 @@ mod tests {
         let geo = Geosphere::new(3);
         let elev = VertexMap::from_fn(&geo, |_| e(100.0));
         let eras = vec![EraClimate {
-            day: 0.0,
+            day: WorldTime::GENESIS,
             ice: VertexMap::from_fn(&geo, |_| false),
             habitable: VertexMap::from_fn(&geo, |_| true),
             sea_level: e(0.0),

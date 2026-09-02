@@ -3554,7 +3554,7 @@ fn climate_at_era(ctx: &EraContext, inputs: &EraInputs) -> EraClimate {
         advanced as f64 / land as f64
     };
     EraClimate {
-        day: inputs.day,
+        day: WorldTime::from_std_days(inputs.day).expect("era day within tick range"),
         ice: advance,
         // Placeholder — see the doc comment above. Filled in for the
         // glacial-maximum era only, by `glacial_maximum_habitable`.
@@ -3707,7 +3707,7 @@ pub fn paleoclimate_from(
     // t = 0 is the present (newest); we look back to −WINDOW. Samples ascend
     // in absolute day so integration runs oldest → present.
     let n_steps = (DEEP_TIME_WINDOW_DAYS / ICE_STEP_DAYS).round() as usize;
-    let mut samples: Vec<(f64, f64)> = Vec::with_capacity(n_steps + 1);
+    let mut samples: Vec<(WorldTime, f64)> = Vec::with_capacity(n_steps + 1);
     for k in (0..=n_steps).rev() {
         let t = -(k as f64) * ICE_STEP_DAYS; // oldest (most negative) first
         let g = caloric_summer_index(
@@ -3716,7 +3716,10 @@ pub fn paleoclimate_from(
             forcing.eccentricity_at(t),
             forcing.precession_at(t),
         );
-        samples.push((t, g));
+        samples.push((
+            WorldTime::from_std_days(t).expect("ice sample day within tick range"),
+            g,
+        ));
     }
     let history = integrate_ice(&samples);
 
@@ -3730,10 +3733,18 @@ pub fn paleoclimate_from(
     for e in 0..CLIMATE_ERAS {
         let era_day = -DEEP_TIME_WINDOW_DAYS
             + (e as f64) * DEEP_TIME_WINDOW_DAYS / (CLIMATE_ERAS as f64 - 1.0);
-        // Nearest ice state by day (samples ascend).
+        // Nearest ice state by day (samples ascend). Compared in f64 standard
+        // days, not as `TickSpan`s: this keeps the exact same doubles being
+        // compared as before the `WorldTime` retype (`a.day`/`b.day` round-
+        // tripped losslessly at these magnitudes), so nearest-selection is
+        // bit-identical rather than merely equivalent.
         let state = history
             .iter()
-            .min_by(|a, b| (a.day - era_day).abs().total_cmp(&(b.day - era_day).abs()))
+            .min_by(|a, b| {
+                (a.day.as_std_days() - era_day)
+                    .abs()
+                    .total_cmp(&(b.day.as_std_days() - era_day).abs())
+            })
             .expect("history is non-empty");
         era_inputs.push(EraInputs {
             day: era_day,
@@ -3759,7 +3770,7 @@ pub fn paleoclimate_from(
         eras[i]
             .ice_fraction
             .total_cmp(&eras[j].ice_fraction)
-            .then(eras[j].day.total_cmp(&eras[i].day))
+            .then(eras[j].day.cmp(&eras[i].day))
     }) {
         eras[peak_idx].habitable = glacial_maximum_habitable(&ctx, &era_inputs[peak_idx]);
     }
@@ -3888,7 +3899,9 @@ fn bake_eras(
                 // `paleoclimate_from`'s newest era carries (`-WINDOW + 24 *
                 // WINDOW / 24` is exactly `0.0`). This slot used to hold
                 // `cfg.start_year`, a bake YEAR; see the doc above.
-                day: 0.0,
+                // `WorldTime::GENESIS` is the same committed value (0.0 days)
+                // by construction.
+                day: WorldTime::GENESIS,
                 ice: hornvale_kernel::VertexMap::from_fn(geo, |_| false),
                 habitable,
                 sea_level: present_sea_level,
@@ -3909,7 +3922,7 @@ fn bake_eras(
     // temperature offsets and eustatic sea levels the bake replays are the
     // same states the strata are extracted from.
     let n_steps = (DEEP_TIME_WINDOW_DAYS / ICE_STEP_DAYS).round() as usize;
-    let mut samples: Vec<(f64, f64)> = Vec::with_capacity(n_steps + 1);
+    let mut samples: Vec<(WorldTime, f64)> = Vec::with_capacity(n_steps + 1);
     for k in (0..=n_steps).rev() {
         let t = -(k as f64) * ICE_STEP_DAYS;
         let g = caloric_summer_index(
@@ -3918,7 +3931,10 @@ fn bake_eras(
             forcing.eccentricity_at(t),
             forcing.precession_at(t),
         );
-        samples.push((t, g));
+        samples.push((
+            WorldTime::from_std_days(t).expect("ice sample day within tick range"),
+            g,
+        ));
     }
     let history = integrate_ice(&samples);
 
@@ -3928,9 +3944,15 @@ fn bake_eras(
     for e in 0..CLIMATE_ERAS {
         let era_day = -DEEP_TIME_WINDOW_DAYS
             + (e as f64) * DEEP_TIME_WINDOW_DAYS / (CLIMATE_ERAS as f64 - 1.0);
+        // Compared in f64 standard days, not `TickSpan`s — see the identical
+        // note on `paleoclimate_from`'s nearest-sample search above.
         let state = history
             .iter()
-            .min_by(|a, b| (a.day - era_day).abs().total_cmp(&(b.day - era_day).abs()))
+            .min_by(|a, b| {
+                (a.day.as_std_days() - era_day)
+                    .abs()
+                    .total_cmp(&(b.day.as_std_days() - era_day).abs())
+            })
             .expect("history is non-empty");
         let sea_level =
             ReferenceElevation::new(present_sea_level.get() + state.sea_level_change.get())
@@ -3945,7 +3967,7 @@ fn bake_eras(
             + (e as f64) * (cfg.end_year - cfg.start_year) / (CLIMATE_ERAS as f64 - 1.0);
         years.push(bake_year);
         eras.push(EraClimate {
-            day: era_day,
+            day: WorldTime::from_std_days(era_day).expect("era day within tick range"),
             ice: hornvale_kernel::VertexMap::from_fn(geo, |_| false),
             habitable,
             sea_level,
@@ -4369,7 +4391,7 @@ fn deep_time_lines_from(
     }
     Ok(vec![format!(
         "The frost retreated: at the glacial maximum (day {:.0}), ice advanced over {:.0}% of the land.",
-        record.glacial_maximum_day,
+        record.glacial_maximum_day.as_std_days(),
         record.max_ice_fraction * 100.0
     )])
 }

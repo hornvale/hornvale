@@ -3,30 +3,29 @@
 //! composition root. The full fields live here on the non-serialized
 //! `PaleoRecord`; only summaries become facts (see `facts`).
 
-use hornvale_kernel::{Geosphere, ReferenceElevation, Temperature, VertexMap};
+use hornvale_kernel::{Geosphere, ReferenceElevation, Temperature, VertexMap, WorldTime};
 
-/// One coarse era's climate fields, all bare kernel types, filled by the
-/// composition root after re-running climate at the era's sea level and
-/// applying the era's albedo cooling offset to the temperature field.
+/// One coarse era's climate fields, filled by the composition root after
+/// re-running climate at the era's sea level and applying the era's albedo
+/// cooling offset to the temperature field.
 ///
-/// **`day` is one axis on every producer, since The Hallmark's Task 13** — the
-/// idea registry's `DOM-era-day-axis`, ledger entries #10 (the diagnosis) and
-/// #15 (the fix). It was not, and the history is worth keeping because the
-/// field looked healthy the whole time it was wrong: `paleoclimate_from` wrote
-/// absolute standard days while `bake_eras` wrote bake YEARS into the same
-/// slot, and nothing objected, because the two paths never met at one
-/// consumer. Both producers now derive `day` from the identical deep-time
-/// expression; the history bake's own `[start_year, end_year)` window travels
-/// beside the era series as `history_bake::bake`'s `era_years` argument, which
-/// is where a bake-side quantity belongs.
-///
-/// The `pending(wave-2: day)` tag below therefore no longer records a blocker
-/// — only that the `WorldTime` retype has not been done yet.
-/// type-audit: pending(wave-2: day), bare-ok(flag: ice), bare-ok(flag: habitable), bare-ok(ratio: ice_fraction)
+/// **`day` is one axis on every producer, since The Hallmark's Task 13, and a
+/// typed [`WorldTime`] since Task 15** — the idea registry's
+/// `DOM-era-day-axis`, ledger entries #10 (the diagnosis), #15's own record
+/// (the source fix), and #17 (the retype). It was not always so, and the
+/// history is worth keeping because the field looked healthy the whole time
+/// it was wrong: `paleoclimate_from` wrote absolute standard days while
+/// `bake_eras` wrote bake YEARS into the same slot, and nothing objected,
+/// because the two paths never met at one consumer. Both producers now derive
+/// `day` from the identical deep-time expression, converted to `WorldTime`
+/// once at the crossing; the history bake's own `[start_year, end_year)`
+/// window travels beside the era series as `history_bake::bake`'s
+/// `era_years` argument, which is where a bake-side quantity belongs.
+/// type-audit: bare-ok(flag: ice), bare-ok(flag: habitable), bare-ok(ratio: ice_fraction)
 #[derive(Debug, Clone)]
 pub struct EraClimate {
     /// Absolute standard day of the era, on every producer path.
-    pub day: f64,
+    pub day: WorldTime,
     /// This era's precomputed ice-ADVANCE mask: land iced this era that is
     /// NOT iced at present (see the composition root's `climate_at_era`).
     /// Advance, not raw glaciation, is what strata preserve — it is what
@@ -85,10 +84,9 @@ pub fn glaciated(
 /// copies it straight out of the peak era below, and it reaches the ledger
 /// from there (`facts::genesis`). That inheritance is why the field could not
 /// be typed `WorldTime` while `EraClimate::day` carried two axes; The
-/// Hallmark's Task 13 repaired the source, so the only thing left between this
-/// and a `WorldTime` is the retype itself. See `DOM-era-day-axis` in the idea
-/// registry.
-/// type-audit: bare-ok(flag: envelope), bare-ok(flag: shoreline), bare-ok(flag: refugia), pending(wave-2: glacial_maximum_day), bare-ok(ratio: max_ice_fraction)
+/// Hallmark's Task 13 repaired the source and Task 15 did the retype itself.
+/// See `DOM-era-day-axis` in the idea registry.
+/// type-audit: bare-ok(flag: envelope), bare-ok(flag: shoreline), bare-ok(flag: refugia), bare-ok(ratio: max_ice_fraction)
 #[derive(Debug, Clone)]
 pub struct PaleoRecord {
     /// Union of every era's ice mask ("this valley was under ice").
@@ -98,7 +96,7 @@ pub struct PaleoRecord {
     /// Vertices habitable through the glacial maximum.
     pub refugia: VertexMap<bool>,
     /// Absolute standard day of peak ice.
-    pub glacial_maximum_day: f64,
+    pub glacial_maximum_day: WorldTime,
     /// Land fraction under ice at the maximum.
     pub max_ice_fraction: f64,
 }
@@ -141,11 +139,11 @@ pub fn extract(
     let peak = eras.iter().max_by(|a, b| {
         a.ice_fraction
             .total_cmp(&b.ice_fraction)
-            .then(b.day.total_cmp(&a.day))
+            .then(b.day.cmp(&a.day))
     });
     let (glacial_maximum_day, max_ice_fraction, refugia) = match peak {
         Some(e) => (e.day, e.ice_fraction, e.habitable.clone()),
-        None => (0.0, 0.0, VertexMap::from_fn(geo, |_| false)),
+        None => (WorldTime::GENESIS, 0.0, VertexMap::from_fn(geo, |_| false)),
     };
 
     PaleoRecord {
@@ -231,7 +229,7 @@ mod tests {
 
     fn era(geo: &Geosphere, day: f64, ice_all: bool, sea: f64, ice_fraction: f64) -> EraClimate {
         EraClimate {
-            day,
+            day: WorldTime::from_std_days(day).expect("test era day within tick range"),
             ice: VertexMap::from_fn(geo, |_| ice_all),
             habitable: VertexMap::from_fn(geo, |c| geo.coord(c).latitude.abs() < 45.0),
             sea_level: e(sea),
@@ -253,7 +251,10 @@ mod tests {
             "cold era ices every land vertex"
         );
         assert_eq!(rec.max_ice_fraction, 0.9);
-        assert_eq!(rec.glacial_maximum_day, 1.0);
+        assert_eq!(
+            rec.glacial_maximum_day,
+            WorldTime::from_std_days(1.0).expect("finite")
+        );
     }
 
     #[test]

@@ -889,7 +889,7 @@ fn cmd_paleo_map(args: &[String]) -> Result<(), String> {
     let mut doc = format!("# The Deep Time of Seed {}\n\n", world.seed.0);
     doc.push_str(&format!(
         "Glacial maximum at day {:.0}; {:.0}% of the land lay under ice.\n\n",
-        record.glacial_maximum_day,
+        record.glacial_maximum_day.as_std_days(),
         record.max_ice_fraction * 100.0
     ));
     doc.push_str("Legend: `#` ice envelope, `*` refugium, `~` fossil shoreline.\n\n");

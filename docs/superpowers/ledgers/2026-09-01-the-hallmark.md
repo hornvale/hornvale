@@ -397,3 +397,81 @@ hornvale-vessel` — 1916 passed, 0 failed, 121 skipped; `cargo nextest run
 `architecture`, `docs_consistency`, `generated_paths`) — 414 passed, 0
 failed, 11 skipped; doctests for all four scoped crates — 0 tests, all
 green (none carry doc examples) · Capture: this entry.
+
+#17 [T15] — Task 15: retype `EraClimate.day`, `PaleoRecord.
+glacial_maximum_day`, `IceState.day` and `integrate_ice`'s `samples` to
+`hornvale_kernel::WorldTime`, unblocked by Task 13's source fix (ledger
+#15) · Action taken: `domains/paleoclimate/src/strata.rs` —
+`EraClimate.day: WorldTime`, `PaleoRecord.glacial_maximum_day: WorldTime`;
+the peak comparator's `b.day.total_cmp(&a.day)` becomes `b.day.cmp(&a.day)`
+(`WorldTime` derives `Ord`); the `None` sentinel becomes
+`WorldTime::GENESIS` (the same committed value, 0.0 days, by construction);
+both `pending(wave-2: day)`/`pending(wave-2: glacial_maximum_day)` tags
+removed (the fields are no longer bare primitives) · `domains/paleoclimate/
+src/ice.rs` — `IceState.day: WorldTime`; `integrate_ice(samples: &[(f64,
+f64)])` becomes `&[(WorldTime, f64)]`; `(day - p) / DAYS_PER_KYR` becomes
+`(day - p).as_std_days() / DAYS_PER_KYR` (`Sub` yields `TickSpan`); the
+struct's `pending(wave-2: day)` tag is deleted outright (no bare primitive
+remains on `IceState`) and `integrate_ice`'s `pending(wave-2: samples)`
+becomes `bare-ok(ratio: samples)` (the tuple's second element, the caloric
+index, stays a bare dimensionless ratio — `type-audit check` demanded
+exactly this after the edit, confirming the classification rather than
+assuming it) · `domains/paleoclimate/src/facts.rs` —
+`Value::Number(record.glacial_maximum_day)` becomes
+`Value::Number(record.glacial_maximum_day.as_std_days())`, the same f64
+back out · `windows/worldgen/src/lib.rs` — every construction site converts
+once at the crossing with `WorldTime::from_std_days(_).expect("era day
+within tick range")`: `climate_at_era`'s `EraClimate` (from `EraInputs.day`,
+which stays a private, untyped worldgen-internal field — out of the
+brief's scope), both ice-sample-builder loops (`paleoclimate_from` and
+`bake_eras`), and `bake_eras`'s forced-arm `EraClimate`; `bake_eras`'s
+constant-sky arm's `day: 0.0` becomes `WorldTime::GENESIS`; the worldgen
+twin of the peak comparator (`eras[j].day.total_cmp(&eras[i].day)` inside
+`paleoclimate_from`'s glacial-maximum selection) becomes `.cmp(&...)`,
+matching `strata.rs`'s comparator exactly, as the twin's comment requires ·
+`windows/worldgen/src/history_bake.rs` — the `earliest` era's
+`a.day.total_cmp(&b.day)` becomes `a.day.cmp(&b.day)`; every test-fixture
+`EraClimate { day: 0.0, .. }` (6 sites) becomes `day: WorldTime::GENESIS`;
+the two `|day: f64| EraClimate { day, .. }` closures (3 sites: 2 identical
+two-argument forms plus one one-argument form) and the `era_at(day: f64)`
+helper wrap with `WorldTime::from_std_days(day).expect(...)` · Test
+fixtures elsewhere followed the compiler the same way:
+`windows/worldgen/tests/suite/history_bake.rs` (9 sites: 6 literal
+`day: 0.0`, 3 closures) and `domains/paleoclimate/tests/paleo_properties.rs`
+(the `series` helper's return type and the sawtooth test's era-shift, which
+needed `TickSpan::from_std_days` since `WorldTime` has no `Add<f64>` — only
+`Add<TickSpan>`) · **The nearest-sample search form chosen: f64 standard
+days, not `TickSpan`s.** `paleoclimate_from` (~lib.rs:3736) and `bake_eras`
+(~lib.rs:3933) each pick the ice-history sample nearest an f64 `era_day` via
+`min_by` on `|history sample day − era_day|`. Converting `era_day` to
+`WorldTime` and comparing `TickSpan`s was the alternative; f64 was chosen
+because it keeps the SAME doubles being compared as before this task's
+edit — `a.day` was already an f64 field before the retype, and
+`a.day.as_std_days()` round-trips it losslessly at every magnitude this
+window ever samples (ticks→days is exact below ~2.47e8 years; the deep-time
+window here is 1 Myr) — so nearest-selection is bit-for-bit identical by
+construction, not merely argued to be. The seed-42 diff is the check on
+that argument, not a substitute for it, and it came back identical (below)
+· Verdicts: seed-42 world before/after — `sha256sum` **identical**,
+`e70ca3d0d782f095ded80071bbafe11e64f19b61ecffa127414ed5a57e9970ef` both
+sides, matching ledger #15's own recorded hash (the tree's only paleoclimate
+state has not moved since Task 13) · `cargo build -p hornvale-paleoclimate
+-p hornvale-worldgen -p hornvale --tests` clean, no warnings · `cargo fmt`
+clean · `cargo clippy --workspace --all-targets -- -D warnings` clean ·
+`cargo run --manifest-path tools/type-audit/Cargo.toml -- check` rc=0 (no
+stale tag positions, no missing tags) · `cargo run --quiet
+--manifest-path tools/placement-audit/Cargo.toml -- check` rc=0 · `cargo
+nextest run -p hornvale-worldgen -p hornvale-paleoclimate --no-fail-fast` —
+822 passed, 0 failed, 115 skipped · `cargo nextest run -p hornvale -p
+hornvale-lab --no-fail-fast` — 917 passed, 0 failed, 45 skipped · `cargo
+test -p hornvale --test suite -- docs_consistency` — 28 passed · type-audit
+report regenerated (`docs/audits/type-audit-report.md`: `pending` 311→307,
+`bare-ok(ratio)` 671→672, `paleoclimate` row 26/0/9/35 → 27/0/5/32,
+`wave-2` 105→101) · `git diff --exit-code` against
+`docs/generated-paths.txt`'s declared paths shows only the type-audit
+report moving; `git status --porcelain book/src/laboratory/generated/
+book/src/domesday/ clients/` empty · Docs updated: `strata.rs`/`ice.rs`
+field and struct docs re-worded from "the retype has not been done yet" to
+recording Task 15's completion; `DOM-era-day-axis`'s Where cell (idea
+registry) now cites this entry and states the retype is done · Capture:
+this entry.
