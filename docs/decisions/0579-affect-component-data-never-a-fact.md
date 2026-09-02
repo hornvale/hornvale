@@ -129,6 +129,25 @@ to prevent.
   gate); nothing in the codebase ever compares `Home` values by equality
   (every caller constructs or pattern-matches), so the fix removes the
   unused derive rather than suppressing the warning.
+- **A future `feels-toward` registration would not silently reopen the
+  grain question, and the direction this fails in is the safe one.**
+  `Provision::declare` overwrites any existing row for the same token, and
+  `Provision::build` runs `from_registry`'s ledger scan first and the
+  explicit `predicate:feels-toward` `Absent` declaration last — so if a
+  later campaign registers `feels-toward` as an ordinary
+  `register_predicate` row (giving it a real `Home::Ledger` row via
+  `from_registry`), `Provision::build`'s hardcoded `Absent` declaration
+  still overwrites it and wins. `bundle:felt-affect` would stay 2/3 and
+  both honesty tests (`feels_toward_does_not_resolve`,
+  `bundle_felt_affect_reads_two_of_three_and_stays_blocked`) would stay
+  green even though a real producer now exists — a tripwire that fires by
+  BLOCKING a legitimate landing rather than admitting an illegitimate one,
+  with the reason discoverable at the row
+  (`Unserved::NotServed`'s string) for whoever debugs why a newly
+  registered predicate is not moving the trope score. Completing
+  `felt-affect` at the person grain therefore requires deleting this
+  explicit `Absent` declaration from `Provision::build`, not merely
+  registering the predicate elsewhere.
 
 ## Alternatives discarded
 

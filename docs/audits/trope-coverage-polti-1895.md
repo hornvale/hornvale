@@ -141,7 +141,7 @@ that is the difference.
 
 ## Supply
 
-350 registered tokens no situation in this corpus requires.
+350 served tokens no situation in this corpus requires.
 
 **Demand-side only.** Spec §4 L2.4 asks for tokens no situation requires
 *and no readout consumes*; the second half is not implemented. So this list

@@ -1240,3 +1240,88 @@ Task 6 tests); `docs/decisions/0579-affect-component-data-never-a-fact.md`
 (new); `docs/audits/trope-coverage-*.md`, `docs/audits/trope-matrix.md`,
 `docs/audits/type-audit-report.md`, `docs/digest/decisions-in-force.md`,
 `book/src/reference/layering-generated.md` (regenerated).
+
+---
+
+#16 [G5] — **Task 6 review round 1: a stale doc sentence, a missing
+negative control, and a word the code no longer earns.**
+
+*Question.* Reviewer found three small things after approving Task 6 spec
+and quality: (1) `ComponentResolver`'s own doc claims `Home` "keeps its
+existing derives unchanged", thirty lines above `Home`'s own doc stating the
+opposite (it dropped `PartialEq`/`Eq`); (2) the component home has no
+negative control — the ledger home's `declared_but_unserved_token_is_refused`
+proves a declared-but-refused row stays missing, and nothing proves the same
+for `Home::Component`, whose one real resolver can never itself return
+`false` (`hornvale_sentiment::catalog()` reads a hardcoded fifteen-people
+table); (3) the Supply section's rendered text still says "registered
+tokens" when its input (`held`) is now `Provision::served_tokens`, which can
+include a token no `ConceptRegistry` row names.
+
+*Decision.*
+
+1. Deleted the stale sentence in `ComponentResolver`'s doc; replaced with a
+   pointer to `Home`'s own (correct) doc rather than restating the reasoning
+   a second place it could rot again.
+2. Added a component-home negative control test, beside the ledger home's
+   own in `cli/src/provision.rs`'s in-module test block — declares a row
+   with a non-capturing closure (coercible to `ComponentResolver`) that
+   always answers "no" as its resolver, and asserts `serves` refuses it.
+   **Verified it actually fires, not merely added green**: inverted the
+   resolver to always answer "yes" (kept a `cp`-backup, restored by `cp`
+   after — not `git checkout --`, per the standing trap), re-ran, watched
+   it fail its own assertion, restored, and confirmed it passes again with
+   an `md5` match against the backup.
+3. Changed the Supply header's rendered text from "N registered tokens" to
+   "N served tokens", and updated the adjacent code comment the same way.
+4. Documented the `Absent`-row-overwrite tripwire in decision 0579's
+   Consequences section (it was verified correct at spec/quality review but
+   not yet written down anywhere durable): `Provision::declare` overwrites
+   same-token rows, `Provision::build` runs the ledger scan first and the
+   `feels-toward` `Absent` declaration last, so a future person-scale
+   registration would NOT surface — the audit and both honesty tests would
+   stay green with a real producer sitting unused. The direction is safe
+   (blocks a legitimate landing rather than admitting an illegitimate one)
+   and the reason is discoverable at the row; completing `felt-affect` at
+   person grain requires deleting the hardcoded `Absent` declaration in
+   `Provision::build`, not merely registering the predicate elsewhere.
+
+*Why.* All three were exactly what the reviewer found, verified rather than
+taken on faith: (1) by reading both doc comments side by side and confirming
+the derive line carries only two traits, not four, against the source; (2)
+by the standard TDD proof-of-life (red before green); (3) by re-reading the
+Supply block's rendered prose after decision 0579 changed what its input
+computes, which is exactly the class of drift this campaign exists to catch
+(a wrong word surviving in a committed artifact after its input changed
+meaning).
+
+*Verified, not assumed.* Formatting, linting and the type audit all clean.
+The full `provision`-scoped test set (unit tests plus the integration suite
+plus one doctest) all green, including the new negative control. A
+regeneration pass moved only the two trope-coverage reports, each by exactly
+one word on one line (the Supply count itself unchanged, confirming the
+wording fix changed no computation). The commit gate is green at its full
+sub-floor roster. The full workspace enforcement suite passes except the
+same two pre-existing scene failures already flagged in entry #15
+(coordinator independently verified these fail on pristine `origin/main` and
+confirmed they are not this task's).
+
+*Alternatives discarded.* Restating the `PartialEq`/`Eq` reasoning in
+`ComponentResolver`'s doc instead of deleting and pointing at `Home`'s —
+rejected, since the reviewer's own diagnosis of the original defect was that
+the SAME fact stated in two places let one copy rot while the other stayed
+correct; a pointer has nothing to rot. Verifying the negative control by
+inspection alone (reading the resolver's call site) rather than an
+inversion — rejected per the coordinator's explicit ask and per this
+campaign's own recurring lesson that a green test nobody has watched fail is
+not yet evidence.
+
+*Ideonomy passes / overturns.* None — a review-response round.
+
+*Capture actions.* `cli/src/provision.rs` (`ComponentResolver` doc fix; new
+component-home negative-control test); `cli/src/tropes.rs` (Supply header
+wording and its adjacent comment); `docs/decisions/0579-affect-component-
+data-never-a-fact.md` (Consequences bullet documenting the `Absent`-row-
+overwrite tripwire); `docs/audits/trope-coverage-{polti-1895,tvtropes-2012}.
+md` (regenerated, one word each); `.superpowers/sdd/2026-09-01-the-avowal/
+task-6-report.md` (fix-round appendix).

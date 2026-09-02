@@ -759,7 +759,7 @@ pub fn render(
         .cloned()
         .collect();
     s.push_str(&format!(
-        "\n## Supply\n\n{} registered tokens no situation in this corpus requires.\n\n",
+        "\n## Supply\n\n{} served tokens no situation in this corpus requires.\n\n",
         orphans.len()
     ));
     s.push_str(&wrap(
@@ -774,9 +774,11 @@ pub fn render(
     s.push_str("\n\n");
     // Annotate `concept:` orphans with their owning domain. Many come from
     // the language lexicon and are WORDS, not modelled capabilities; an
-    // unannotated list invites reading every orphan as a registered-but-
+    // unannotated list invites reading every orphan as a served-but-
     // unused mechanism, which is the opposite of what the Supply count is
-    // for (spec D5).
+    // for (spec D5). "Served", not "registered": `held` is now `Provision::
+    // served_tokens` (decision 0579), which can include a component-home
+    // token no `ConceptRegistry` row names at all.
     let domains: BTreeMap<String, String> = registry
         .concepts()
         .map(|c| (format!("concept:{}", c.name), c.domain.clone()))

@@ -69,8 +69,10 @@ pub enum Unwired {}
 /// (`windows/sentiment`). An enum with one variant is an abstraction with no
 /// second case to justify it; a function pointer keeps a second component
 /// producer a `declare` call away rather than a match arm added here later.
-/// `fn` pointers implement `Clone`/`Debug`/`PartialEq`/`Eq` in `core`, so
-/// [`Home`] keeps its existing derives unchanged.
+/// `fn` pointers do implement `Clone`/`Debug`/`PartialEq`/`Eq` in `core`,
+/// but [`Home`]'s own derive line narrows to `Clone, Debug` only — see that
+/// type's doc for why (comparing this payload by address is not a
+/// meaningful comparison, and `rustc` warns on it under `-D warnings`).
 pub type ComponentResolver = fn() -> bool;
 
 /// Why a token is absent from every home that could serve it. Closed on
@@ -320,6 +322,27 @@ mod tests {
         table.declare("predicate:ghost", Correspondent::Present(Home::Ledger));
         let r = a_registry();
         assert!(!table.serves("predicate:ghost", &r));
+    }
+
+    /// **The component home's own negative control.** The ledger home has
+    /// one immediately above (`declared_but_unserved_token_is_refused`);
+    /// the component home had none, and its one real resolver
+    /// (`sentiment_affect_holds`) can never itself return `false` in
+    /// practice — `hornvale_sentiment::catalog()` reads a hardcoded
+    /// fifteen-people table, so nothing else in this crate ever exercises
+    /// `Provision::serves`'s `resolver()` branch answering "no". A
+    /// non-capturing closure coerces to `ComponentResolver` (`fn() ->
+    /// bool`), so a synthetic always-refuses resolver costs nothing to
+    /// declare here.
+    #[test]
+    fn declared_component_row_whose_resolver_refuses_is_not_served() {
+        let mut table = Provision::new();
+        table.declare(
+            "predicate:never-served",
+            Correspondent::Present(Home::Component(|| false)),
+        );
+        let r = a_registry();
+        assert!(!table.serves("predicate:never-served", &r));
     }
 
     #[test]
