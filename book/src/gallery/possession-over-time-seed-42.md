@@ -310,7 +310,7 @@ The Vngoashngovngo settles down to rest.
 The Kvoshngovnga settles down to rest.
 The Vngavngoshnga settles down to rest.
 > wait 1
-Time passes. You sense movement nearby (245 stirred).
+Time passes. You sense movement nearby (246 stirred).
 > look
 [room 3733133217, day 7]
 Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: Night. The sky is a low grey rain-deck.
@@ -336,7 +336,7 @@ The Bvotvoshngo grows restless.
 The Vngodva settles down to rest.
 The Gvoavngashnga grows restless.
 The Kvovngashnga settles down to rest.
-The Shngashngovngo eats its fill.
+The Shngashngovngo seems content.
 The Shngoovngo grows restless.
 The Tvoadvovnga grows restless.
 The Shngoshngobva grows restless.
@@ -387,7 +387,7 @@ The Vngavngoshnga grows restless.
 > !why hobgoblin
 No one here answers to 'hobgoblin' (see 'npcs').
 > wait 90
-Time passes. You sense movement nearby (3823 stirred).
+Time passes. You sense movement nearby (3891 stirred).
 > look
 [room 3733133217, day 97]
 Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
@@ -441,7 +441,7 @@ The Shngaashnga 45 casts about for water.
 The Gvokvavnga grows restless.
 The Qvavngovnga casts about for water.
 The Vngavngavnga casts about for water.
-The Vngobva casts about for water.
+The Vngobva settles down to rest.
 The Shngaovngoshngo casts about for water.
 The Gvoavngoqva casts about for water.
 The Shngoatvo casts about for water.

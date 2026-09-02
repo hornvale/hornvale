@@ -153,8 +153,8 @@ bare count would hide a quantity someone had wrongly denied.
 | per-individual | 2 |
 | per-people | 1 |
 | per-species | 19 |
-| per-world | 2 |
-| universal | 81 |
+| per-world | 4 |
+| universal | 79 |
 | **undeclared** | **0** |
 | **malformed tag** | **0** |
 | _total_ | 686 |
@@ -169,7 +169,7 @@ converted.** Every row below is a constant judged to vary along an axis
 the code does not yet have -- nothing about the world changed to produce
 this table, and nothing here is scheduled for conversion by this
 campaign. `universal` and `pending(wave-N)` constants are excluded; their
-counts are already the Coverage table above. 24 finding(s).
+counts are already the Coverage table above. 26 finding(s).
 
 | File:line | Constant | Rung | Reason |
 |------|------|------|------|
@@ -190,10 +190,12 @@ counts are already the Coverage table above. 24 finding(s).
 | `windows/vessel/src/liveness.rs:2523` | `TWILIGHT_DEG` | per-species | how wide a solar-altitude band a crepuscular species is active in is a property of that species' own activity biology -- currently one width for every crepuscular species |
 | `windows/vessel/src/liveness.rs:2591` | `FATIGUE_FALL` | per-species | a creature's own physiology should set how fast rest repays fatigue debt, symmetric to the now-per-species RISE rate -- currently one recovery rate for every species; the doc's own text names this asymmetry |
 | `windows/vessel/src/liveness.rs:2638` | `REST_FALL` | per-species | a creature's own physiology should set how fast a conscious rest repays fatigue, half of FATIGUE_FALL's own rate -- currently one recovery rate for every species |
-| `windows/vessel/src/liveness.rs:2706` | `REST_BOUT` | per-world | doc's own analysis: a fixed wall-clock span that breaks for slow-rotating worlds — must scale with the world's local day length L; Task 5 converts this |
-| `windows/vessel/src/liveness.rs:2745` | `SLEEP_BOUT` | per-world | the same wall-clock/local-day-length TickSpan shape as REST_BOUT — a world-scale property |
-| `windows/vessel/src/liveness.rs:3759` | `HUNGER` | per-species | a creature's own metabolism sets how fast hunger accrues -- currently one authored rate for every species, the same shape FATIGUE_RISE was before its per-species conversion |
-| `windows/vessel/src/liveness.rs:4325` | `LONELY_SCALE_HOPS` | per-species | a creature's own territorial range and wander tolerance sets how many hops from home feel isolating -- currently one distance for every species |
+| `windows/vessel/src/liveness.rs:2721` | `REST_BOUT` | per-world | a rest's length is a fraction of the local day, not of the standard one |
+| `windows/vessel/src/liveness.rs:2760` | `SLEEP_BOUT` | per-world | the same wall-clock/local-day-length TickSpan shape as REST_BOUT — a world-scale property |
+| `windows/vessel/src/liveness.rs:2858` | `SCAN_LIMIT` | per-world | caps a physical search duration in STANDARD days rather than the world's own local day — the same axis REST_BOUT was on before its conversion |
+| `windows/vessel/src/liveness.rs:2860` | `ONE_DAY` | per-world | the give-up fallback's own span, also denominated in a STANDARD day rather than the world's own local day |
+| `windows/vessel/src/liveness.rs:3803` | `HUNGER` | per-species | a creature's own metabolism sets how fast hunger accrues -- currently one authored rate for every species, the same shape FATIGUE_RISE was before its per-species conversion |
+| `windows/vessel/src/liveness.rs:4369` | `LONELY_SCALE_HOPS` | per-species | a creature's own territorial range and wander tolerance sets how many hops from home feel isolating -- currently one distance for every species |
 | `windows/vessel/src/purview.rs:19` | `PURVIEW_RADIUS` | per-species | a creature's own senses set its purview radius -- doc states explicitly: the seam for a per-species radius is Body::perception EXP-3, untouched here |
 | `windows/vessel/src/session.rs:481` | `GRIEVANCE_GAIN` | per-individual | how readily one NPC's grievance accumulates from a slight is a personality trait -- currently one gain for every NPC, not derived from Lineage |
 | `windows/vessel/src/session.rs:491` | `HOSTILITY_THRESHOLD` | per-individual | how many net provokes it takes before one NPC turns hostile is a personality trait -- currently one threshold for every NPC, not derived from Lineage |

@@ -10,7 +10,7 @@ use crate::action::{
 };
 use crate::agent::{settlement_position, walk_depth};
 use crate::body::Body;
-use crate::clock::{climb_factor, cost_of, step_factor};
+use crate::clock::{climb_factor, cost_of, step_factor, ticks_per_local_day};
 use crate::controller::{Controller, DefaultController, PlayerController};
 use crate::interior::{
     AnchorId, Interior, SeamKind, interior_of, landing, route_within, seam_kind, warmth_at,
@@ -2655,9 +2655,11 @@ const _: () = assert!(
      per day down than a sleep, or the two acts differ only in name"
 );
 
-/// How long a conscious rest lasts: [`Action::Rest`]'s own span, and the first
-/// thing about a rest that is a property of the ACT rather than of the clock
-/// (The Wicket, Task 8).
+/// How long a conscious rest lasts at `L = 1` (a standard-length local day) —
+/// the ANCHOR value [`act_span`]'s `Action::Rest` arm now computes generally
+/// as a quarter of the world's own local day, and the value the fold-level
+/// tests below hold the arithmetic against (The Wicket, Task 8; converted to
+/// local days by The Plumb, Task 5).
 ///
 /// **This constant exists because of a measured pathology, not a preference.**
 /// Task 7 made fatigue a stock and every rest took its length from
@@ -2670,39 +2672,52 @@ const _: () = assert!(
 /// drive proposes again on the next step and the ledger fills with a body
 /// blinking.
 ///
-/// **A quarter of a standard day (~6 hours).** Two constraints pick it. It must
-/// be long enough that one rest carries a body from [`FATIGUE_ACT`] clear of
-/// the hysteresis band the drive re-engages inside (`FATIGUE_ACT -
-/// HYSTERESIS_H` = 0.75, so the repayment must exceed 0.1; a quarter-day at
-/// [`REST_FALL`] repays 0.125). And it must stay clearly under [`SLEEP_BOUT`],
-/// because a rest that outlasts a sleep would make the shorter act the more
-/// restorative one and invert the ruling.
+/// **A quarter of the local day (~6 hours on an Earth-like world).** Two
+/// constraints pick the fraction. It must be long enough that one rest
+/// carries a body from [`FATIGUE_ACT`] clear of the hysteresis band the drive
+/// re-engages inside (`FATIGUE_ACT - HYSTERESIS_H` = 0.75, so the repayment
+/// must exceed 0.1; a quarter-day at [`REST_FALL`] repays 0.125). And it must
+/// stay clearly under [`SLEEP_BOUT`], because a rest that outlasts a sleep
+/// would make the shorter act the more restorative one and invert the ruling.
 ///
-/// **THAT FIRST CONSTRAINT HOLDS ONLY AT `L ≈ 1`, AND THIS DOC DID NOT SAY SO
-/// UNTIL THE FINAL REVIEW.** The span is a fixed WALL-CLOCK quarter of a
-/// STANDARD day, but [`fatigue_from_rests`] converts every bout at the point
-/// of use through `to_local_days` (fix round 1), so with `L` the world's local
-/// day in standard days the repayment is `REST_FALL * 0.25/L` = `0.125/L`, not
-/// a flat 0.125. It clears [`HYSTERESIS_H`] only while `L < 1.25` std days —
-/// **a SLOW-rotating world breaks it**, `--day-hours` above 30, and
-/// `RotationPin::PeriodHours` admits up to 100 h (`L = 4.17`, repaying 0.03,
-/// four times under the floor). Past the bound a rest no longer discharges the
-/// drive that proposed it and the seven-minute nap fragmentation Task 8 exists
-/// to remove comes back, with every test green — because
-/// `a_rest_bout_repays_more_than_the_hysteresis_band_it_must_clear` asserts the
-/// `L = 1` arithmetic (`REST_BOUT.as_std_days() * REST_FALL`) and nothing sweeps
-/// `L`.
+/// **THE FIRST CONSTRAINT USED TO HOLD ONLY AT `L ≈ 1`, AND THIS WAS A NAMED
+/// REGRESSION UNTIL THE PLUMB, TASK 5.** `act_span` used to return this
+/// constant VERBATIM regardless of the terrain, a fixed WALL-CLOCK quarter of
+/// a STANDARD day; [`fatigue_from_rests`] then converts every bout at the
+/// point of use through `to_local_days` (fix round 1), so with `L` the
+/// world's local day in standard days a flat quarter-standard-day rest repaid
+/// `REST_FALL * 0.25/L` = `0.125/L`, not a flat 0.125. That cleared
+/// [`HYSTERESIS_H`] only while `L < 1.25` std days — a SLOW-rotating world
+/// broke it, `--day-hours` above 30, and `RotationPin::PeriodHours` admits up
+/// to 100 h (`L = 4.17`, repaying 0.03, four times under the floor). Past the
+/// bound a rest no longer discharged the drive that proposed it and the
+/// seven-minute nap fragmentation Task 8 exists to remove came back, with
+/// every test green — because
+/// `a_rest_bout_repays_more_than_the_hysteresis_band_it_must_clear` asserts
+/// only the `L = 1` arithmetic (`REST_BOUT.as_std_days() * REST_FALL`) and
+/// nothing swept `L`.
 ///
-/// **The fix is a bout expressed in LOCAL days, not a different number here**,
-/// and it is deliberately left to a later campaign rather than taken in the
-/// commit that converted the rate terms: it changes what a rest IS (a fraction
-/// of the body's own cycle rather than a wall-clock duration), which is a
-/// design question Nathan's per-species ruling did not reach. Recorded as this
-/// campaign's follow-up in [`fatigue_from_rests`]'s own doc — where it was
-/// registered, until the final review, with the bound in the OPPOSITE
-/// direction ("a fast-rotating world"), borrowed from the unconverted-fall-term
-/// bug it sat beside.
-/// plumb: per-world(doc's own analysis: a fixed wall-clock span that breaks for slow-rotating worlds — must scale with the world's local day length L; Task 5 converts this)
+/// **The fix is a bout expressed in LOCAL days, and `act_span` now computes
+/// it that way**: `ticks_per_local_day(terrain.day_ticks()) / 4`, reached
+/// through the `terrain` argument the function already carried. This
+/// constant remains as the `L = 1` anchor — the value that computation
+/// reduces to on a standard-length (or tidally locked, `day_ticks() ==
+/// None`) world, which is exactly what makes the existing fold-level tests
+/// below still hold: they compare against THIS constant on terrain that
+/// reports no calendar of its own, and `ticks_per_local_day`'s own "no day to
+/// divide" convention answers the base (standard-day) rate there, byte-
+/// identical to the pre-conversion arithmetic. The discriminating case — a
+/// slow-rotating world, where the two now differ — is
+/// `a_rest_taken_on_a_100_hour_world_repays_more_than_the_hysteresis_band_it_must_clear`.
+/// plumb: per-world(a rest's length is a fraction of the local day, not of the standard one)
+// Only test code reads this now (The Plumb, Task 5) — the L = 1 anchor the
+// fold-level tests compare against — so an ordinary (non-test) build sees it
+// as genuinely unreferenced. (Deliberately not spelling out the cfg
+// attribute itself in this comment: `production_reaches_fatigue_through_
+// exactly_one_door` finds the FIRST literal occurrence of that attribute
+// text in this file to mark where "production" ends for its own text scan,
+// and this constant sits well before the real test module.)
+#[allow(dead_code)]
 const REST_BOUT: TickSpan = TickSpan::from_ticks(WorldTime::TICKS_PER_STD_DAY / 4);
 
 /// The shortest span that counts as SLEEPING rather than dozing:
@@ -2827,9 +2842,21 @@ pub(crate) fn next_awake_day(
     // The scan's bound and its give-up fallback as EXACT spans: `day + 1.5`
     // and `day + 1.0` were instant-plus-duration all along, and an instant is
     // a tick count now, so the durations are spans rather than float days.
-    /// plumb: universal(the wake-scan loop's own bound, an algorithm-internal quantity)
+    //
+    // BOTH ARE TAGGED per-world, NOT universal (The Plumb, Task 5 review).
+    // They used to read `universal`, on the grounds that the bound is "the
+    // wake-scan loop's own", an algorithm-internal quantity — a claim about
+    // where the number came from, standing in for a claim about what it
+    // varies along. What each actually caps is a PHYSICAL DURATION (how long
+    // a body may go on searching for a waking moment, and how long it sleeps
+    // when none is found) expressed in STANDARD days rather than the world's
+    // own local day — the same defect [`REST_BOUT`] carried before this
+    // task's conversion, still present here on the sleep side (a fidelity
+    // finding this campaign reports rather than converts; see [`REST_BOUT`]'s
+    // own doc for the measured near-miss at the legal extreme).
+    /// plumb: per-world(caps a physical search duration in STANDARD days rather than the world's own local day — the same axis REST_BOUT was on before its conversion)
     const SCAN_LIMIT: TickSpan = TickSpan::from_ticks(WorldTime::TICKS_PER_STD_DAY * 3 / 2);
-    /// plumb: universal(a direct alias of the kernel's own std-day tick constant)
+    /// plumb: per-world(the give-up fallback's own span, also denominated in a STANDARD day rather than the world's own local day)
     const ONE_DAY: TickSpan = TickSpan::from_ticks(WorldTime::TICKS_PER_STD_DAY);
     let limit = day + SCAN_LIMIT;
     let mut t = day + WAKE_SCAN_STEP;
@@ -2899,9 +2926,11 @@ pub fn renders_unconscious(action: &Action) -> bool {
 /// rule anywhere; if one is ever needed for the player, it belongs here as
 /// another arm, not beside the caller.
 ///
-/// - [`Action::Rest`] lasts [`REST_BOUT`] — a flat, act-owned span. It does not
-///   consult the clock at all, which is exactly why it cannot collapse to a
-///   scan step.
+/// - [`Action::Rest`] lasts a quarter of the world's own LOCAL day
+///   ([`REST_BOUT`] is the `L = 1` value this reduces to), an act-owned span
+///   that consults the TERRAIN's day length but never the `day`/`WorldTime`
+///   clock argument — which is exactly why it cannot collapse to a scan step
+///   (The Plumb, Task 5).
 /// - [`Action::Sleep`] runs until the body's own cycle wakes it
 ///   ([`next_awake_day`]), floored at [`SLEEP_BOUT`]. The cycle decides on the
 ///   ordinary path; the floor decides when the body goes under off-cycle.
@@ -2916,7 +2945,18 @@ pub(crate) fn act_span(
     day: WorldTime,
 ) -> Option<TickSpan> {
     match action {
-        Action::Rest => Some(REST_BOUT),
+        // A quarter of the world's own LOCAL day, not of the kernel's fixed
+        // standard day (The Plumb, Task 5) — `REST_BOUT` was a flat span
+        // reached through `terrain` not at all, which is what let a rest
+        // under-repay on any world whose local day runs long
+        // (`RotationPin::PeriodHours` legally reaches 100 std hours; see
+        // `REST_BOUT`'s own doc for the measured bound). `ticks_per_local_day`
+        // is the same "no day to divide" convention `to_local_days` folds the
+        // repayment back through, so a tidally locked or synthetic terrain
+        // (`day_ticks() == None`) reduces to exactly the old flat span.
+        Action::Rest => Some(TickSpan::from_ticks(
+            ticks_per_local_day(terrain.day_ticks()) / 4,
+        )),
         Action::Sleep => {
             // The body's own cycle answers first, and it is AUTHORITATIVE
             // whenever the body is already in its off-phase: it knows when dawn
@@ -3397,17 +3437,21 @@ fn to_local_days(span: TickSpan, day: Option<TickSpan>) -> f64 {
 /// `--day-hours 4` world could never recover once saturated. Converting
 /// both terms restores the fixed margin between them at every `L` — the
 /// property the pre-Task-9 model had for free because both terms carried
-/// the SAME (kernel) day. [`REST_BOUT`]'s own span stays a fixed 0.25
-/// standard days regardless of `L`, and that residue is the campaign's
-/// registered follow-up. **Its bound runs the OTHER WAY from this
-/// paragraph's, which is why the two are stated separately**: converting
-/// the fall terms fixed the fast-rotating (`small L`) failure described
-/// above, but a fixed wall-clock bout converted at the point of use repays
-/// `REST_FALL * 0.25/L`, which falls BELOW [`HYSTERESIS_H`] for `L > 1.25`
-/// std days — a SLOW-rotating world, `--day-hours` above 30. This note read
-/// "a fast-rotating world" until the final review, borrowing the direction
-/// of the bug beside it. The derivation, and what goes wrong past the
-/// bound, live at [`REST_BOUT`] where the calibration claim itself is.
+/// the SAME (kernel) day. **[`REST_BOUT`]'s own span used to stay a fixed
+/// 0.25 standard days regardless of `L`, and that residue was this
+/// campaign's registered follow-up until The Plumb, Task 5 converted it.**
+/// Its bound ran the OTHER WAY from this paragraph's, which is why the two
+/// were stated separately: converting the fall terms fixed the
+/// fast-rotating (`small L`) failure described above, but a fixed
+/// wall-clock bout converted at the point of use repaid `REST_FALL *
+/// 0.25/L`, which fell BELOW [`HYSTERESIS_H`] for `L > 1.25` std days — a
+/// SLOW-rotating world, `--day-hours` above 30 (this note read "a
+/// fast-rotating world" until the final review, borrowing the direction of
+/// the bug beside it). `act_span`'s `Action::Rest` arm now computes the
+/// bout as a quarter of the LOCAL day, so this term is `L`-invariant the
+/// same way the rise term and the sleep fall term already are. The
+/// derivation, the measured bound, and the discriminating test all live at
+/// [`REST_BOUT`] where the calibration claim itself is.
 fn fatigue_from_rests(
     rests: &[(WorldTime, TickSpan, BoutKind, SiteGrade)],
     t: WorldTime,
@@ -17460,6 +17504,182 @@ mod tests {
         // than a sleep of the same span, is
         // `action_module::sleeping_renders_the_body_unconscious_and_restores_
         // strictly_more_than_resting`.
+    }
+
+    /// A terrain identical to [`PlantedTerrain`] except for its LOCAL DAY
+    /// LENGTH, and optionally the sun — the fixture The Plumb's Task 5 needs
+    /// to test [`REST_BOUT`]'s conversion on a slow-rotating world, since
+    /// `PlantedTerrain` itself never overrides `day_ticks` (it reads the "no
+    /// calendar" default, `None`, exactly as production's `LocaleTerrain`
+    /// would for a tidally locked world).
+    struct SlowWorldTerrain {
+        /// Everything but the day length and (optionally) the sun delegates
+        /// here.
+        inner: PlantedTerrain,
+        /// The world's own local day, reported through
+        /// [`Terrain::day_ticks`].
+        local_day: TickSpan,
+        /// When true, [`Terrain::solar_altitude`] reports permanent night for
+        /// every room and instant — the case `next_awake_day`'s own doc
+        /// names ("polar night for a diurnal creature"): no wake is ever
+        /// found, so the scan exhausts its bound and falls back to the
+        /// give-up span with no [`SLEEP_BOUT`] floor in the arithmetic at
+        /// all (the body is off-phase throughout).
+        permanent_night: bool,
+    }
+
+    impl Terrain for SlowWorldTerrain {
+        fn elevation(&self, room: &Facet) -> f64 {
+            self.inner.elevation(room)
+        }
+        fn is_fresh_water(&self, room: &Facet) -> bool {
+            self.inner.is_fresh_water(room)
+        }
+        fn temperature(&self, room: &Facet, day: WorldTime) -> f64 {
+            self.inner.temperature(room, day)
+        }
+        fn day_ticks(&self) -> Option<TickSpan> {
+            Some(self.local_day)
+        }
+        fn solar_altitude(&self, room: &Facet, day: WorldTime) -> Option<f64> {
+            if self.permanent_night {
+                Some(-1.0)
+            } else {
+                self.inner.solar_altitude(room, day)
+            }
+        }
+    }
+
+    /// **THE DISCRIMINATING CASE (The Plumb, Task 5).** [`REST_BOUT`]'s own
+    /// doc names the bound: a rest converted at the point of use through
+    /// `to_local_days` clears [`HYSTERESIS_H`] only while `L < 1.25` std
+    /// days, and `RotationPin::PeriodHours` legally reaches 100 standard
+    /// hours (`L = 4.17`) — nearly 3.5x past that bound. This is the sibling
+    /// of `a_rest_bout_repays_more_than_the_hysteresis_band_it_must_clear` at
+    /// the world that constant's own `L = 1` arithmetic cannot see: it calls
+    /// [`act_span`] itself, on a terrain whose local day is 100 standard
+    /// hours, and folds the result through the SAME `to_local_days` the
+    /// production fold uses — never `REST_BOUT` directly — so a revert of
+    /// the conversion is exactly what this test is built to catch. The
+    /// `L = 1` sibling above stays green either way (its terrain reports no
+    /// calendar, so `ticks_per_local_day` answers the base rate before and
+    /// after the conversion) — which is why only THIS test witnesses the
+    /// mutation.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST: revert `act_span`'s `Action::Rest`
+    /// arm to `Some(REST_BOUT)`. Before the conversion a 100-hour world's
+    /// rest repays `REST_FALL * (REST_BOUT.as_std_days() / L)` ≈ 0.03, four
+    /// times under `HYSTERESIS_H` — see the failing run pasted in this
+    /// task's report.
+    #[test]
+    fn a_rest_taken_on_a_100_hour_world_repays_more_than_the_hysteresis_band_it_must_clear() {
+        let home = raddr(1.0);
+        let local_day =
+            TickSpan::from_std_days(100.0 / 24.0).expect("100 standard hours is finite");
+        let terrain = SlowWorldTerrain {
+            inner: PlantedTerrain::thermal([(home.clone(), 20.0)]),
+            local_day,
+            permanent_night: false,
+        };
+        let noon = WorldTime::from_std_days(3.5).expect("a day value is finite");
+        let span = act_span(&Action::Rest, ActivityCycle::Diurnal, &terrain, &home, noon)
+            .expect("Rest always has a span");
+        let repaid = to_local_days(span, terrain.day_ticks()) * REST_FALL;
+        assert!(
+            repaid > HYSTERESIS_H,
+            "a rest on a 100-standard-hour world (local day {local_day:?}, L = \
+             {:.4} std days) must still clear HYSTERESIS_H ({HYSTERESIS_H}) \
+             after the conversion to a local-day quarter: span {span:?} \
+             repays {repaid}",
+            local_day.as_std_days()
+        );
+    }
+
+    /// **THE SLEEP-SIDE ORDERING CHECK (The Plumb, Task 5) — MEASURED, not
+    /// assumed.** `REST_BOUT`'s conversion makes a rest `L/4` long; the
+    /// [`Action::Sleep`] side is deliberately NOT converted this campaign (a
+    /// fidelity finding, not this task's work — see `SCAN_LIMIT`/`ONE_DAY`'s
+    /// own tags), and both of its bounds stay denominated in STANDARD days
+    /// regardless of `L`. At the slowest legal world
+    /// (`RotationPin::PeriodHours(100.0)`, `L = 100/24 = 4.1\overline{6}` std
+    /// days) a converted rest is `L/4 = 100/96 ≈ 1.0417` std days — close
+    /// enough to `next_awake_day`'s own give-up fallback (`ONE_DAY`, exactly
+    /// 1 std day) that whether a rest still stays SHORTER than a sleep at
+    /// this legal extreme is not obvious from either constant's own doc, and
+    /// is worth measuring rather than assuming (campaign ledger #34's
+    /// withdrawn ruling reasoned about this exact comparison from the wrong
+    /// end — see ledger #36, which is explicit that comparing against
+    /// [`SLEEP_BOUT`], a floor that "usually does not bind" and is a MINIMUM
+    /// rather than the sleep's own typical duration, is the wrong
+    /// comparison).
+    ///
+    /// So this isolates the SCAN's own worst case instead: [`SlowWorldTerrain`]
+    /// with `permanent_night: true` forces `next_awake_day` to exhaust its
+    /// scan and fall back to `day + ONE_DAY` with no `SLEEP_BOUT` floor in
+    /// the arithmetic at all (the body is off-phase the whole time, so
+    /// `act_span`'s `Sleep` arm takes the bare-cycle branch, never the
+    /// `.max(SLEEP_BOUT)` one).
+    ///
+    /// **Result: the ordering INVERTS.** Measured, not predicted:
+    /// `rest=TickSpan(104166)` (1.041660 std days) against
+    /// `sleep=TickSpan(100000)` (1.000000 std days) — a converted rest is
+    /// LONGER than the sleep-scan's own give-up fallback at the legal
+    /// extreme, by 4,166 ticks (~1 hour). Per this task's brief this is a
+    /// STOP condition: the conversion is not fixed by converting the sleep
+    /// path or by weakening this assertion, so neither happens here — the
+    /// finding is reported to the controller for re-ruling (this task's
+    /// report) and this test is left `#[ignore]`d as its falsifier, the same
+    /// licensed exit `reverse_field_matches_forward_search_for_every_empty_
+    /// avoid_room` uses for a disproven hypothesis.
+    #[ignore = "The Plumb, Task 5: MEASURED finding, not a bug in this test. \
+                At the slowest legal world (RotationPin::PeriodHours(100.0)) \
+                a converted REST_BOUT (L/4 = 1.041660 std days) is LONGER \
+                than next_awake_day's own give-up fallback for a permanently \
+                off-phase sleeper (ONE_DAY = 1.000000 std days exactly) -- \
+                the ordering Nathan's ruling requires (a rest must stay \
+                shorter than a sleep) INVERTS by 4,166 ticks (~1 hour) at \
+                this legal extreme. Converting SLEEP_BOUT/SCAN_LIMIT/ONE_DAY \
+                is explicitly out of this campaign's scope; the finding is \
+                reported to the controller for re-ruling rather than fixed \
+                or weakened here. Kept as a falsifier for whatever the \
+                sleep-side conversion turns out to be."]
+    #[test]
+    fn a_rest_and_a_sleep_on_the_slowest_legal_world_are_measured_not_assumed() {
+        let home = raddr(1.0);
+        let local_day =
+            TickSpan::from_std_days(100.0 / 24.0).expect("100 standard hours is finite");
+        let terrain = SlowWorldTerrain {
+            inner: PlantedTerrain::thermal([(home.clone(), 20.0)]),
+            local_day,
+            permanent_night: true,
+        };
+        let day = WorldTime::from_std_days(3.0).expect("a day value is finite");
+        assert!(
+            !is_awake(ActivityCycle::Diurnal, &terrain, &home, day),
+            "fixture precondition: the permanent-night override must actually \
+             read as off-phase, or this measures the awake (floored) branch \
+             instead of the scan's own give-up fallback"
+        );
+        let rest = act_span(&Action::Rest, ActivityCycle::Diurnal, &terrain, &home, day)
+            .expect("Rest always has a span");
+        let sleep = act_span(&Action::Sleep, ActivityCycle::Diurnal, &terrain, &home, day)
+            .expect("Sleep always has a span");
+        println!(
+            "measured at the 100-hour legal extreme (permanent night): \
+             rest={rest:?} ({:.6} std days), sleep={sleep:?} ({:.6} std days)",
+            rest.as_std_days(),
+            sleep.as_std_days()
+        );
+        assert!(
+            rest < sleep,
+            "a rest must stay shorter than a sleep on every legal world, or the \
+             shorter act would be the more restorative one and Nathan's ruling \
+             inverts: measured rest {rest:?} ({:.6} std days) against sleep \
+             {sleep:?} ({:.6} std days) at the 100-hour legal extreme, \
+             permanent-night scenario (next_awake_day's own give-up fallback)",
+            rest.as_std_days(),
+            sleep.as_std_days()
+        );
     }
 
     /// A SLEEP'S LENGTH IS THE CYCLE'S IN-PHASE AND THE FLOOR'S OUT-OF-PHASE,
