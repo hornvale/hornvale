@@ -153,6 +153,27 @@ Deferred minors, each disclosed by a review and accepted with the cost named:
 - The membership metric's test re-derives the share the same way the
   implementation computes it, line for line. It witnesses that the function
   runs; it does not independently witness the number.
+- The realm-ownership test's node half restates the implementation's rule
+  rather than deriving it another way (Task 2 review). Same shape as the
+  bullet above; accepted with the same cost.
+- The walk test resets the session's underground on its skip branch when
+  nothing has set it (Task 4 review). Harmless; accepted.
+- A kind that carried neither character on a seed renders NOT MEASURABLE in
+  the worked-vs-wild half of the readout (Task 5 review). Sensible, and
+  unspecced — §4.2 is silent on the case. Accepted; the page says what it did.
+- `docs/generated-path-writes.tsv` records the gallery directory's tracked
+  count as 45 where the previous row read 46, with no gallery file differing
+  (Task 5). Pre-existing, unexplained, triaged may-land by the final review;
+  recorded here so the next regeneration that moves it has a prior sighting.
+
+Two more were disclosed and then closed before merge, so they owe an outcome
+rather than a cost:
+
+- Task 0's tree-premise test carried a helper that duplicated a tree walk; Task
+  3 deleted the test along with the tree it pinned.
+- Task 2's `dof` floor (`1 + rungs + realms`) sat far below the observed count
+  and would not have caught a dropped draw site; the final fix wave replaced it
+  with an exact identity counted at the failure site (ledger #14).
 
 ## The sweep that could not see the defect
 
