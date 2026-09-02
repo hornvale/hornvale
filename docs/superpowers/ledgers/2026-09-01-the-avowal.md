@@ -1325,3 +1325,150 @@ data-never-a-fact.md` (Consequences bullet documenting the `Absent`-row-
 overwrite tripwire); `docs/audits/trope-coverage-{polti-1895,tvtropes-2012}.
 md` (regenerated, one word each); `.superpowers/sdd/2026-09-01-the-avowal/
 task-6-report.md` (fix-round appendix).
+
+---
+
+#17 [G5] — **Task 7: acts through the session home — the derived act view,
+a real collision the tests caught rather than a hazard merely avoided, and
+the `bundle:witnessing` null.**
+
+*Question.* Three things the brief left the implementer to settle: (1) what
+`ActHandle`'s hashing scheme actually is, given only the precedent shapes
+(`RoleHandle`, `barrier_of`) and a named hazard (`ancestor()`'s fixed-point
+collapse) to work from; (2) what the session home's resolver reads, given it
+is asked with a bare `&ConceptRegistry` and never a live `Session` — the
+same constraint `sentiment_affect_holds` already lives under; (3) whether
+the hard constraint against editing `windows/vessel/src/session.rs` was
+actually satisfiable, or whether this task needed to refuse and hand back a
+`BLOCKED`.
+
+*Decision.*
+
+1. **`ActHandle` folds four constituents (`actor`, `deed`, `patient`,
+   `day`) through four separate `mix` steps, never the same step iterated —
+   structurally closing the class of hazard `ancestor()`'s doc names.**
+   `windows/vessel/src/act.rs` (new file, chosen over editing `session.rs`
+   at all — see decision 3).
+2. **The session home's resolver (`session_act_view_holds`,
+   `cli/src/provision.rs`) is a self-contained, deterministic proof over
+   fixed constituents — exactly `sentiment_affect_holds`'s shape** — because
+   `Provision::build`/`serves` never have a live `Session` to hand it, the
+   same way they never have a live `World` for the component home. One
+   resolver serves all five tokens (`witnessed`, `present-at`, `deed-of`,
+   `act-precedes`, `act-occurred-on`), mirroring how both affect tokens
+   share one resolver. `predicate:history-now` — the `act-chronology`
+   bundle's fourth token — is declared through the LEDGER home instead: it
+   is already a committed genesis fact
+   (`hornvale_history::HISTORY_NOW`), not a derived session read, and this
+   task does not move it.
+3. **`session.rs` was not touched.** `Session::day`, `::agent_entity` and
+   `::purview` were sufficient: `windows/vessel/tests/suite/act.rs` builds
+   real `Act`s off a live session using only those three, and
+   `anyone_present` reads `SurroundsScene`'s own `Mark`s (kind `"agent"`)
+   for a co-presence signal — proving the public surface really was
+   enough, not merely asserting it. The constraint held; no `BLOCKED` was
+   needed.
+
+*Why.* (1) is the load-bearing engineering choice, and it produced a real
+finding rather than a clean pass: an early draft folded the patient-
+presence tag directly against the raw `EntityId` (`mix(1, entity.get())`).
+`mix`'s first step is a bare XOR, so `mix(a, a) == 0` for *any* `a`, and
+`EntityId::new(1)` — the smallest legal entity id, certainly reachable —
+collided with the literal tag `1` the FIRST time the property-test sweep
+ran, not on inspection (`no_patient_never_collides_with_a_real_one`,
+`a_combinatorial_sweep_has_no_collisions` and the degenerate-case test all
+failed together, with the exact collision printed:
+`ActHandle(16602847279475233179)` on both sides). This is the same
+methodological point `ancestor()`'s own doc makes — the hazard is avoided
+STRUCTURALLY where possible (no iterated fixed permutation here) and
+verified EMPIRICALLY regardless, because "structurally avoided" is a
+claim about the mix's shape, not a proof about its constants. The fix
+folds each presence tag against the already-avalanched accumulator instead
+of a raw id (`PATIENT_SOME_TAG`/`PATIENT_NONE_TAG`), closing the specific
+collision and leaving the degenerate-all-zero-shaped test in place as a
+permanent regression guard. (2) follows Task 6's own precedent exactly —
+proportionality, not novelty, once `ComponentResolver`'s constraint
+("neither home ever has live state to read") was recognized as identical
+for the session home. (3) was the task's stated hard constraint, honoured
+by design rather than negotiated: `act.rs` never imports anything from
+`session.rs` beyond its three public methods, verified by grep before
+reporting.
+
+*Verified, not assumed.* `cargo test -p hornvale-vessel act::` (14 unit
+tests, `windows/vessel/src/act.rs`'s own `mod tests`) and
+`cargo test -p hornvale-vessel --test suite -- act` (5 integration tests,
+`windows/vessel/tests/suite/act.rs`) both green, including the caught-
+then-fixed collision above. `cargo test -p hornvale --test suite --
+provision` (13 tests: the 8 pre-existing plus 5 Task 7 tests) green,
+including `no_fact_is_committed_serving_act_tokens` (a real world's ledger
+serialized before/after `Provision::build`/`serves`/a full `resolve` run
+requiring all five tokens: byte-identical) and
+`bundle_witnessing_reads_two_of_two_but_stays_blocked_on_absent_witness`
+(`Outcome::Blocked(["witness:absent"])` exactly — both tokens resolve,
+only the witness itself is missing). **The positive control the brief's
+own trap-list warns about** (an empty diff needs a positive control, not
+just an empty diff): `generating_many_acts_commits_nothing_and_the_ledger_
+comparison_can_detect_a_real_commit` derives 400 acts and every read this
+task ships off one live session, asserts byte-identity, and only THEN
+performs a real in-character walk — the fact count and serialized ledger
+both move, proving the earlier byte-identity assertions were not vacuous.
+The same test's tail proves decision 0368's mechanism still carries a real
+commit through `into_played_world`, even though no act-derived read ever
+produces one for it to carry. `make rebaseline`: `docs/audits/trope-
+coverage-{polti-1895,tvtropes-2012}.md` moved — `predicate:present-at` and
+`predicate:witnessed` vanished from every `missing` list that named them
+(e.g. polti-06-disaster's `missing` shrank from 6 tokens to 4; polti-19,
+27, 32, 33 and 36 each lost the same two). No situation in either frozen
+corpus requires `bundle:witnessing` alone — every one that named it also
+named at least one still-missing bundle — so none crossed into
+`witness:absent` territory; that reason only appears in this task's own
+synthetic corpus test
+(`bundle_witnessing_reads_two_of_two_but_stays_blocked_on_absent_witness`).
+`docs/audits/trope-matrix.md`'s Columns preamble moved from "399
+served tokens" to "404" (399 + 5). **`Stageable` moved on neither
+corpus**, confirmed by grepping `^Stageable` in both regenerated reports
+before and after: `polti-1895` **0 of 36** both times, `tvtropes-2012`
+**0 of 409** both times — spec §5's preregistered null, held. `make
+gate-commit`: green, 1010/1010 sub-floor tests. `HV_TEST_OK=1 cargo
+nextest run --workspace --no-fail-fast`: **4992 passed, 0 failed, 211
+skipped** (no pre-existing failures observed, unlike Task 6's entry —
+whatever produced those two scene failures there is not present at this
+commit). `HV_TEST_OK=1 cargo test --workspace --doc`: all green.
+`cargo run --manifest-path tools/type-audit/Cargo.toml -- check`: clean
+after tagging `ActHandle`'s tuple field and `Act::deed` (both
+`identifier-text`) and four new `bool` returns (`flag`) —
+`docs/audits/type-audit-report.md`'s vessel row moved 397→403 tagged
+primitives, exactly +6.
+
+*Alternatives discarded.* Folding the patient-presence tag into the
+`Act`'s own field order instead of a discriminant (would not distinguish
+`patient: None` from a `patient: Some(_)` whose id happens to fold to the
+same intermediate state — the exact bug found); reading co-location by
+resolving `Mark::noun` strings against a name catalog rather than naming
+the limit and taking an explicit `&[EntityId]` pool (a string match is not
+an identity — two same-named NPCs would be indistinguishable, and the
+honest answer is that the chart cannot say who, not a fragile workaround
+pretending it can — recorded as `SCN-marks-carry-no-entity-id`); building
+a full `Session` inside the session-home resolver itself (no `Provision`
+caller ever hands it a world or session, so this would have required
+either changing `Provision::serves`'s signature — out of scope and a
+change Task 6 did not make either — or constructing a throwaway world on
+every resolve call, which is neither what the component-home precedent
+does nor affordable at the report-generation call sites).
+
+*Ideonomy passes / overturns.* None — an implementation task closing
+questions the brief posed, not a design question.
+
+*Capture actions.* `windows/vessel/src/act.rs` (new: `ActHandle`, `Act`,
+`witnessed`, `present_at`, `deed_of`, `act_precedes`, `act_occurred_on`,
+`anyone_present`); `windows/vessel/src/lib.rs` (`pub mod act;`);
+`windows/vessel/tests/suite/act.rs` (new, 5 tests) and
+`windows/vessel/tests/suite.rs` (registers it); `cli/src/provision.rs`
+(`Unwired` replaced by `SessionResolver`; `Home::Session` payload;
+`Provision::build`'s five new rows; `session_act_view_holds`); `cli/tests/
+suite/provision.rs` (5 new Task 7 tests); `docs/decisions/0580-acts-are-
+addressable-without-being-stored.md` (new); `book/src/frontier/idea-
+registry.md` (`SCN-marks-carry-no-entity-id`, per spec §7's "anything §4.5
+defers"); `docs/audits/trope-coverage-*.md`, `docs/audits/trope-matrix.md`,
+`docs/audits/type-audit-report.md`, `docs/digest/decisions-in-force.md`
+(regenerated).

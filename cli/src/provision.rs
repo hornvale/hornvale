@@ -10,16 +10,20 @@
 //! fact. [`Provision`] is the fix: `resolve` now consults it instead, and it
 //! can see every home once each is wired.
 //!
-//! Task 5 wired the **ledger home**. **Task 6 wires the component home**
-//! (decision 0579): `Home::Component` now carries [`ComponentResolver`], a
-//! real zero-argument resolver, instead of the uninhabited [`Unwired`]
-//! placeholder Task 5 left it with — `windows/sentiment`'s per-people snap
-//! judgment (`predicate:affect-kind`, `predicate:affect-intensity`) is
-//! served this way. The session home ([`Home::Session`]) is still
-//! **unreachable by construction** — it carries [`Unwired`], an empty enum
-//! no value of which can ever exist — so a table built by this task cannot
-//! accidentally score that home as serving anything. Task 7 wires it the
-//! same way this task wired the component home.
+//! Task 5 wired the **ledger home**. Task 6 wired the **component home**
+//! (decision 0579): `Home::Component` carries [`ComponentResolver`], a real
+//! zero-argument resolver — `windows/sentiment`'s per-people snap judgment
+//! (`predicate:affect-kind`, `predicate:affect-intensity`) is served this
+//! way. **Task 7 wires the session home** (decision 0580): `Home::Session`
+//! now carries [`SessionResolver`] — the same shape as `ComponentResolver`,
+//! since [`Provision::serves`] never has a live `Session` to hand a
+//! resolver (it is built from `registry: &ConceptRegistry` alone, exactly
+//! like the component home's own resolver) — instead of the uninhabited
+//! `Unwired` placeholder Tasks 5 and 6 left it with. `windows/vessel::act`'s
+//! derived act view (`ActHandle`, `witnessed`, `present_at`, `deed_of`,
+//! `act_precedes`, `act_occurred_on`) is served this way for
+//! `predicate:witnessed`, `predicate:present-at`, `predicate:deed-of`,
+//! `predicate:act-precedes` and `predicate:act-occurred-on`.
 //!
 //! **Direction, stated per the standing rule (spec §4.1):** the table
 //! asserts *declared ⊆ served*, never the reverse. A token with no row is
@@ -48,15 +52,16 @@ use hornvale_kernel::ConceptRegistry;
 pub use hornvale_kernel::Correspondent;
 use std::collections::{BTreeMap, BTreeSet};
 
-/// An uninhabited placeholder payload. No value of this type can ever be
-/// constructed (it has zero variants), so a [`Home`] variant that carries
-/// one — [`Home::Session`], until Task 7 — cannot be constructed either.
-/// This is what makes the session home "exist and be unreachable by
-/// construction" rather than merely undocumented: the compiler enforces it,
-/// the same way `Void`'s closed variant list enforces that a `Manifest`
-/// absence always names a reason.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum Unwired {}
+/// The session home's resolver (decision 0580): a zero-argument predicate
+/// over the derived act view's own machinery — `windows/vessel::act` —
+/// answering whether the token it is declared against is served right now.
+/// Exactly [`ComponentResolver`]'s shape, for the same reason: neither home
+/// has a live world or session to hand its resolver, since
+/// [`Provision::build`]/[`Provision::serves`] are asked with a bare
+/// `&ConceptRegistry`. "Session state" names WHERE the capability would
+/// live if a caller ever committed it (never the ledger, see
+/// `windows/vessel::act`'s module doc), not an object this resolver reads.
+pub type SessionResolver = fn() -> bool;
 
 /// The component home's resolver (decision 0579): a zero-argument predicate
 /// over build-state — `KindId`-keyed data assembled fresh each run, never
@@ -114,9 +119,10 @@ pub enum Home {
     /// persisted. Carries a real [`ComponentResolver`] as of Task 6
     /// (decision 0579).
     Component(ComponentResolver),
-    /// Session state, persisted only when asked. Unreachable by
-    /// construction until Task 7 gives [`Unwired`] a real payload.
-    Session(Unwired),
+    /// Session state, persisted only when a snapshot asks (decision 0368)
+    /// — never a ledger commit for the derived act view this home serves
+    /// (decision 0580). Carries a real [`SessionResolver`] as of Task 7.
+    Session(SessionResolver),
 }
 
 /// The provision table: a declared row per namespaced token, naming which
@@ -178,12 +184,12 @@ impl Provision {
     }
 
     /// Build the **full** provision table: every home wired so far —
-    /// `from_registry`'s ledger rows, plus the component-home rows this task
-    /// adds. This is what [`crate::tropes::resolve`] and the coverage
-    /// report's Leverage/Columns sections actually consult (decision 0579);
-    /// `from_registry` alone stays ledger-only for the callers (a `trope_
-    /// witness.rs` fixture, `Provision`'s own tests) that want that
-    /// narrower scope.
+    /// `from_registry`'s ledger rows, the component-home rows Task 6 added,
+    /// and the session-home rows this task adds. This is what
+    /// [`crate::tropes::resolve`] and the coverage report's Leverage/Columns
+    /// sections actually consult (decision 0579); `from_registry` alone
+    /// stays ledger-only for the callers (a `trope_witness.rs` fixture,
+    /// `Provision`'s own tests) that want that narrower scope.
     ///
     /// `predicate:affect-kind` and `predicate:affect-intensity` are
     /// declared `Present(Home::Component(sentiment_affect_holds))` —
@@ -195,6 +201,17 @@ impl Provision {
     /// (`KindId × KindId`), the corpus's `feels-toward` is person-to-person,
     /// and no person-scale producer ships this campaign
     /// (`docs/superpowers/ledgers/2026-09-01-the-avowal.md` entry #2).
+    ///
+    /// `predicate:witnessed`, `predicate:present-at`, `predicate:deed-of`,
+    /// `predicate:act-precedes` and `predicate:act-occurred-on` are all
+    /// declared `Present(Home::Session(session_act_view_holds))` (decision
+    /// 0580) — one shared resolver, the same way both affect tokens share
+    /// `sentiment_affect_holds`, since all five read the one derived act
+    /// view `windows/vessel::act` provides. `predicate:history-now` (the
+    /// `act-chronology` bundle's fourth token) is not declared here: it is
+    /// already a registered predicate the ledger home serves (see
+    /// `hornvale_history::HISTORY_NOW`), committed by the deep-history bake
+    /// rather than derived over a live session.
     pub fn build(registry: &ConceptRegistry) -> Self {
         let mut table = Self::from_registry(registry);
         table.declare(
@@ -213,6 +230,18 @@ impl Provision {
                  Nathan's grain ruling)",
             )),
         );
+        for token in [
+            "predicate:witnessed",
+            "predicate:present-at",
+            "predicate:deed-of",
+            "predicate:act-precedes",
+            "predicate:act-occurred-on",
+        ] {
+            table.declare(
+                token,
+                Correspondent::Present(Home::Session(session_act_view_holds)),
+            );
+        }
         table
     }
 
@@ -239,7 +268,8 @@ impl Provision {
     /// declaration alone, so a row naming a home that turns out not to
     /// actually serve the token is refused, not waved through: declared ⊆
     /// served, never the reverse. A declared `Present(Home::Component(_))`
-    /// row is asked the same way — its resolver is called, not trusted.
+    /// or `Present(Home::Session(_))` row is asked the same way — its
+    /// resolver is called, not trusted.
     /// type-audit: bare-ok(identifier-text: token), bare-ok(flag: return)
     pub fn serves(&self, token: &str, registry: &ConceptRegistry) -> bool {
         match self.rows.get(token) {
@@ -247,9 +277,7 @@ impl Provision {
             Some(Correspondent::Absent(_reason)) => false,
             Some(Correspondent::Present(Home::Ledger)) => ledger_holds(registry, token),
             Some(Correspondent::Present(Home::Component(resolver))) => resolver(),
-            // Unreachable: no `Home::Session` row can exist while `Unwired`
-            // has zero variants — see the module doc. Task 7 replaces this.
-            Some(Correspondent::Present(Home::Session(unwired))) => match *unwired {},
+            Some(Correspondent::Present(Home::Session(resolver))) => resolver(),
         }
     }
 }
@@ -273,6 +301,65 @@ fn sentiment_affect_holds() -> bool {
         }
         _ => false,
     }
+}
+
+/// The session home's resolver for the acts bundle (decision 0580): proves
+/// `windows/vessel::act`'s derived act view — [`ActHandle`](
+/// hornvale_vessel::act::ActHandle), `witnessed`, `present_at`, `deed_of`,
+/// `act_precedes`, `act_occurred_on`, `anyone_present` — end to end on
+/// fixed, deterministic constituents. Mirrors [`sentiment_affect_holds`]'s
+/// shape exactly: neither resolver has a live world or session to read
+/// (`Provision::build`/`serves` are asked with a bare `&ConceptRegistry`
+/// alone), so both prove their machinery is real the same way — by
+/// exercising it, not by checking that some catalog is non-empty. Every
+/// comparison below is deliberate: distinct fixed inputs must produce a
+/// consistent chain of derived answers, or the machinery is not what it
+/// claims to be.
+fn session_act_view_holds() -> bool {
+    use hornvale_kernel::{EntityId, WorldTime};
+    use hornvale_vessel::act::{
+        Act, act_occurred_on, act_precedes, anyone_present, deed_of, present_at, witnessed,
+    };
+
+    let actor = match EntityId::new(1) {
+        Some(e) => e,
+        None => return false,
+    };
+    let witness = match EntityId::new(2) {
+        Some(e) => e,
+        None => return false,
+    };
+    let earlier = Act {
+        actor,
+        deed: "founded",
+        patient: None,
+        day: WorldTime::from_ticks(0),
+    };
+    let later = Act {
+        actor,
+        deed: "avowed",
+        patient: Some(witness),
+        day: WorldTime::from_ticks(1),
+    };
+    let present = [witness];
+    let agent_mark = hornvale_scene::Mark {
+        noun: "someone".to_string(),
+        kind: "agent".to_string(),
+        datum: "present".to_string(),
+        salience: 0,
+    };
+
+    deed_of(&earlier) == actor
+        && act_occurred_on(&later) == later.day
+        && act_precedes(&earlier, &later)
+        && !act_precedes(&later, &earlier)
+        && present_at(witness, &present)
+        && !present_at(actor, &present)
+        && witnessed(&later, witness, &present)
+        && !witnessed(&later, actor, &present)
+        && earlier.handle() != later.handle()
+        && anyone_present(&[agent_mark])
+        && !anyone_present(&[])
 }
 
 /// The ledger home's resolver: does `registry` actually hold this exact
@@ -343,6 +430,25 @@ mod tests {
         );
         let r = a_registry();
         assert!(!table.serves("predicate:never-served", &r));
+    }
+
+    /// **The session home's own negative control (Task 7), the same
+    /// shape as the component home's** immediately above: `session_act_
+    /// view_holds` cannot itself return `false` in practice (its inputs are
+    /// fixed, deterministic constituents, not read from any world), so
+    /// nothing else in this crate exercises `Provision::serves`'s
+    /// `Home::Session` branch answering "no". A synthetic always-refuses
+    /// resolver costs nothing to declare here, the same way it did for the
+    /// component home.
+    #[test]
+    fn declared_session_row_whose_resolver_refuses_is_not_served() {
+        let mut table = Provision::new();
+        table.declare(
+            "predicate:never-witnessed",
+            Correspondent::Present(Home::Session(|| false)),
+        );
+        let r = a_registry();
+        assert!(!table.serves("predicate:never-witnessed", &r));
     }
 
     #[test]

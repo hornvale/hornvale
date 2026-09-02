@@ -251,3 +251,118 @@ fn bundle_felt_affect_reads_two_of_three_and_stays_blocked() {
         "exactly one of felt-affect's three tokens (feels-toward) should still be missing"
     );
 }
+
+// ---------------------------------------------------------------------
+// Task 7: the session home (decision 0580) — `windows/vessel::act`'s
+// derived act view.
+// ---------------------------------------------------------------------
+
+/// Every token this task wires resolves through `Home::Session`, whose
+/// resolver (`session_act_view_holds`) is real — `windows/vessel::act`
+/// end to end on fixed constituents, no ledger or world involved.
+#[test]
+fn act_tokens_resolve_through_session_home() {
+    let registry = ConceptRegistry::default();
+    let table = Provision::build(&registry);
+    for token in [
+        "predicate:witnessed",
+        "predicate:present-at",
+        "predicate:deed-of",
+        "predicate:act-precedes",
+        "predicate:act-occurred-on",
+    ] {
+        assert!(
+            table.serves(token, &registry),
+            "{token} should resolve through the session home"
+        );
+        match table.row(token) {
+            Some(Correspondent::Present(Home::Session(_))) => {}
+            other => panic!("{token}: expected a Present(Home::Session(_)) row, got {other:?}"),
+        }
+    }
+}
+
+/// `predicate:history-now` (the fourth `act-chronology` token) is served
+/// through the LEDGER home, unlike its three siblings — it is a genesis
+/// fact the deep-history bake commits (`hornvale_history::HISTORY_NOW`),
+/// not a derived session read. Pinned here so a future change to where
+/// `history-now` lives is a deliberate edit to this test, not a silent
+/// re-scoping.
+#[test]
+fn history_now_resolves_through_the_ledger_home_not_the_session_home() {
+    let world = a_world();
+    let table = Provision::build(&world.registry);
+    assert!(
+        table.serves("predicate:history-now", &world.registry),
+        "history-now should already resolve (it is a committed genesis fact)"
+    );
+    match table.row("predicate:history-now") {
+        Some(Correspondent::Present(Home::Ledger)) => {}
+        other => panic!("expected a Present(Home::Ledger) row, got {other:?}"),
+    }
+}
+
+/// **No fact is committed** — the same claim Task 6 pinned for the
+/// component home, restated for the session home: serialize a real world's
+/// ledger before and after every way this task exercises it
+/// (`Provision::build`, `serves`, and a full `resolve` run over a corpus
+/// requiring all five act tokens, which reaches `witness_stages` since
+/// every token now resolves) and assert byte-identity.
+#[test]
+fn no_fact_is_committed_serving_act_tokens() {
+    let world = a_world();
+    let before =
+        serde_json::to_string(&world.ledger).expect("a real world's ledger should serialize");
+
+    let table = Provision::build(&world.registry);
+    for token in [
+        "predicate:witnessed",
+        "predicate:present-at",
+        "predicate:deed-of",
+        "predicate:act-precedes",
+        "predicate:act-occurred-on",
+    ] {
+        assert!(table.serves(token, &world.registry));
+    }
+
+    let corpus = a_corpus(vec![
+        "predicate:witnessed".to_string(),
+        "predicate:present-at".to_string(),
+        "predicate:deed-of".to_string(),
+        "predicate:act-precedes".to_string(),
+        "predicate:act-occurred-on".to_string(),
+    ]);
+    let _ = resolve(&corpus, &world.registry, &world, &witnesses());
+
+    let after =
+        serde_json::to_string(&world.ledger).expect("a real world's ledger should serialize");
+    assert_eq!(
+        before, after,
+        "serving the five act tokens must never commit a fact — the ledger moved"
+    );
+}
+
+/// **`bundle:witnessing` reads 2/2 tokens, and the situation still does NOT
+/// become Stageable on token completion alone.** Both of `bundle:witnessing`'s
+/// tokens (`present-at`, `witnessed`) now resolve, so a situation requiring
+/// only them is no longer `Blocked` on a MISSING token — but `resolve` still
+/// runs `witness_stages` (decision 0577), and no witness is registered under
+/// this synthetic situation's id, so the outcome is `Blocked(["witness:
+/// absent"])` rather than `Stageable`. This is the spec §5 null working as
+/// designed: token completion is necessary, not sufficient.
+#[test]
+fn bundle_witnessing_reads_two_of_two_but_stays_blocked_on_absent_witness() {
+    let registry = ConceptRegistry::default();
+    let world = a_world();
+    let corpus = a_corpus(vec![
+        "predicate:present-at".to_string(),
+        "predicate:witnessed".to_string(),
+    ]);
+    let out = resolve(&corpus, &registry, &world, &witnesses());
+    assert_eq!(
+        out.get("s1"),
+        Some(&Outcome::Blocked(vec!["witness:absent".to_string()])),
+        "both witnessing tokens should resolve, leaving only the (unregistered) \
+         witness itself as the reason this situation is not Stageable"
+    );
+}
