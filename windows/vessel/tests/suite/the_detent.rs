@@ -8,7 +8,7 @@ use hornvale_vessel::body::Body;
 use hornvale_vessel::ground::{GroundHazards, OwnedGround};
 use hornvale_vessel::liveness::{
     AGENT_AT, DRANK, DriveMovements, EATEN, HazardMemory, HomeNavCache, LocaleTerrain,
-    PrimaryAfraidMemo, RESTED, SLEPT, SUSTENANCE, derive_npcs, hazard_memory_memo,
+    PrimaryAfraidMemo, RESTED, SLEPT, SUSTENANCE, Terrain, derive_npcs, hazard_memory_memo,
 };
 use hornvale_vessel::resident::{OwnedFolds, ResidentFolds};
 
@@ -31,8 +31,15 @@ pub struct BenchShape {
     pub mesh_memo: RoomMeshMemo,
     pub day: WorldTime,
     pub day_ticks: Option<hornvale_kernel::units::TickSpan>,
+    /// The bench's own room memo (The Detent, spec §2.1): one per bench run,
+    /// handed to every tick's terrain, so H5's witnesses can read its
+    /// `misses()` — the field samples the memo actually took.
+    pub ground: OwnedGround,
     /// Per tick, the `hazards()` calls the tick's own walk made, in order.
     pub hazards_per_tick: Vec<u64>,
+    /// Per tick, the `ground` memo's `misses()` delta — the field samples the
+    /// tick's own walk took, once the memo exists.
+    pub samples_per_tick: Vec<u64>,
     /// Per tick, the facts committed.
     pub facts_per_tick: Vec<usize>,
 }
@@ -73,14 +80,17 @@ pub fn bench_shape(seed: u64, ticks: usize, agents: usize) -> BenchShape {
     let mut mesh_memo = RoomMeshMemo::new();
     let mut home_nav_cache = HomeNavCache::new();
     let folds = OwnedFolds::new(ResidentFolds::new());
+    let ground: OwnedGround = OwnedGround::new(GroundHazards::new());
     let mut day = WorldTime::from_std_days(0.5).expect("0.5 is a finite day count");
     let mut hazards_per_tick = Vec::with_capacity(ticks);
+    let mut samples_per_tick = Vec::with_capacity(ticks);
     let mut facts_per_tick = Vec::with_capacity(ticks);
     for _ in 0..ticks {
         let from = day;
         day = WorldTime::from_ticks(day.ticks() + WorldTime::TICKS_PER_STD_DAY);
         let mesh_snapshot = mesh_memo.clone();
-        let base = LocaleTerrain::with_fields(&ctx, None, None, None, None, Some(&mesh_snapshot));
+        let base = LocaleTerrain::with_fields(&ctx, None, None, None, None, Some(&mesh_snapshot))
+            .with_ground(&ground);
         let terrain = common::CountingTerrain::new(&base);
         let sys = DriveMovements {
             npcs: npcs.clone(),
@@ -91,6 +101,7 @@ pub fn bench_shape(seed: u64, ticks: usize, agents: usize) -> BenchShape {
             terrain: &terrain,
             folds: &folds,
         };
+        let samples_before = ground.borrow().misses();
         let (facts, _occupancy) =
             sys.step_with_occupancy(&ledger, &mut mesh_memo, &mut home_nav_cache);
         facts_per_tick.push(facts.len());
@@ -100,6 +111,7 @@ pub fn bench_shape(seed: u64, ticks: usize, agents: usize) -> BenchShape {
                 .expect("a drive-movements fact commits");
         }
         hazards_per_tick.push(terrain.hazards_calls());
+        samples_per_tick.push(ground.borrow().misses() - samples_before);
     }
     BenchShape {
         world,
@@ -110,7 +122,9 @@ pub fn bench_shape(seed: u64, ticks: usize, agents: usize) -> BenchShape {
         mesh_memo,
         day,
         day_ticks,
+        ground,
         hazards_per_tick,
+        samples_per_tick,
         facts_per_tick,
     }
 }
@@ -131,8 +145,13 @@ pub fn probe_index(shape: &BenchShape) -> usize {
 }
 
 /// The counts one `hazard_memory_memo` call makes on the probe, with a FRESH
-/// `PrimaryAfraidMemo` (the bench's shape) and then a second call on the same
-/// memo (production's per-creature read after the tick's scan exists).
+/// `PrimaryAfraidMemo` (the bench's shape), a second call on the SAME memo
+/// (production's per-creature read after the tick's scan exists), and a
+/// THIRD call on ANOTHER fresh `PrimaryAfraidMemo` (production's own
+/// per-tick shape: a new memo every tick, over the SAME room memo). All
+/// three read through `shape.ground` (The Detent, spec §2.1), so
+/// `warm_samples`/`second_fresh_samples` are the FIELD samples (room-memo
+/// misses) the second and third reads took — H5's first clause's subject.
 pub struct ProbeCounts {
     pub fresh_hazards: u64,
     pub warm_hazards: u64,
@@ -140,13 +159,20 @@ pub struct ProbeCounts {
     pub with_emitters_delta: u64,
     pub replays_delta: u64,
     pub shunned: usize,
+    /// Field samples (room-memo misses) the SECOND read took — the same
+    /// `PrimaryAfraidMemo`, already warm.
+    pub warm_samples: u64,
+    /// Field samples (room-memo misses) the THIRD read took — a fresh
+    /// `PrimaryAfraidMemo` over the same, already-warm room memo.
+    pub second_fresh_samples: u64,
 }
 
 pub fn probe_counts(shape: &BenchShape) -> ProbeCounts {
     let pi = probe_index(shape);
     let npc = &shape.npcs[pi];
     let mesh = shape.mesh_memo.clone();
-    let base = LocaleTerrain::with_fields(&shape.ctx, None, None, None, None, Some(&mesh));
+    let base = LocaleTerrain::with_fields(&shape.ctx, None, None, None, None, Some(&mesh))
+        .with_ground(&shape.ground);
     let terrain = common::CountingTerrain::new(&base);
     let w0 = {
         let s = shape.folds.borrow();
@@ -168,6 +194,7 @@ pub fn probe_counts(shape: &BenchShape) -> ProbeCounts {
         &mut memo,
     );
     let fresh_hazards = terrain.hazards_calls();
+    let samples_after_first = shape.ground.borrow().misses();
     let w1 = {
         let s = shape.folds.borrow();
         let w = s.witness();
@@ -191,13 +218,40 @@ pub fn probe_counts(shape: &BenchShape) -> ProbeCounts {
         first, second,
         "two reads of one instant over one ledger must agree"
     );
+    let warm_hazards = terrain.hazards_calls();
+    let samples_after_second = shape.ground.borrow().misses();
+
+    // A THIRD read, on ANOTHER fresh `PrimaryAfraidMemo` — production's own
+    // per-tick shape (a new memo every tick, over the same session-lived
+    // room memo). H5's first clause is about THIS read: a second FRESH-memo
+    // read in the same tick must take no field samples either, once the
+    // room memo already holds everything the walk touches.
+    terrain.reset();
+    let mut second_memo = PrimaryAfraidMemo::new();
+    let third = hazard_memory_memo(
+        &shape.ledger,
+        &shape.folds,
+        npc,
+        shape.day,
+        &terrain,
+        &shape.npcs,
+        &mut second_memo,
+    );
+    assert_eq!(
+        first, third,
+        "a third read of the same instant, with a fresh PrimaryAfraidMemo, must agree too"
+    );
+    let samples_after_third = shape.ground.borrow().misses();
+
     ProbeCounts {
         fresh_hazards,
-        warm_hazards: terrain.hazards_calls(),
+        warm_hazards,
         scans_delta: w1.0 - w0.0,
         with_emitters_delta: w1.1 - w0.1,
         replays_delta: w1.2 - w0.2,
         shunned: first.shunned.len(),
+        warm_samples: samples_after_second - samples_after_first,
+        second_fresh_samples: samples_after_third - samples_after_second,
     }
 }
 
@@ -217,13 +271,15 @@ fn h5_witness_the_hazard_reads_terrain_samples_on_the_bench_shape() {
     println!("--- H5 witness: seed {H5_SEED}, {H5_AGENTS} agents, tick {H5_TICKS} ---");
     println!(
         "probe: FRESH memo {} hazards() calls, WARM memo {}, scans +{} (with emitters +{}), \
-         alarm replays +{}, shunned {}",
+         alarm replays +{}, shunned {}, warm samples {}, second-fresh samples {}",
         counts.fresh_hazards,
         counts.warm_hazards,
         counts.scans_delta,
         counts.with_emitters_delta,
         counts.replays_delta,
-        counts.shunned
+        counts.shunned,
+        counts.warm_samples,
+        counts.second_fresh_samples,
     );
     println!(
         "whole tick {H5_TICKS}: {last_tick} hazards() calls, {} facts committed; roster distinct rooms {distinct_rooms}",
@@ -250,6 +306,32 @@ fn h5_witness_the_hazard_reads_terrain_samples_on_the_bench_shape() {
     assert!(
         shape.facts_per_tick.iter().sum::<usize>() > 0,
         "no facts committed over the run"
+    );
+
+    // H5, first clause (spec §4): field samples. A second fresh-memo read
+    // in the same tick samples the field ZERO times once the memo exists.
+    assert_eq!(
+        counts.warm_samples, 0,
+        "H5: a repeated read must take no field samples"
+    );
+    assert_eq!(
+        counts.second_fresh_samples, 0,
+        "H5: a second FRESH-memo read must take no field samples either"
+    );
+
+    // H5, whole-tick clause: the tick's own field samples against its
+    // hazards() calls, on the LAST tick — the same one `last_tick` reads.
+    let last_samples = *shape.samples_per_tick.last().expect("ticks ran");
+    println!(
+        "whole tick {H5_TICKS}: {last_samples} field samples against {last_tick} hazards() calls"
+    );
+    assert!(
+        last_samples * 10 <= last_tick,
+        "H5: the tick's field samples must be at most a tenth of its hazards() calls ({last_samples} vs {last_tick})"
+    );
+    assert!(
+        last_samples <= 4_469,
+        "H5: at most 4,469 field samples in tick 60 (from 44,694)"
     );
 }
 
@@ -397,5 +479,59 @@ fn ground_memo_survives_chaos_eviction() {
         expected_rooms.len(),
         "the memo's resident room count must equal the independently computed sample set, \
          or GroundHazards is keyed on something other than the room `hazards()` actually reads"
+    );
+}
+
+/// The room memo belongs to one `(LocaleContext, predator field)` pair, not
+/// to a `LocaleTerrain` value (The Detent, spec §2.1's ownership rule): two
+/// terrains over DIFFERENT fields, each with its own memo, must answer as
+/// themselves; two terrains SHARING one memo alias, which is exactly the
+/// shape the ownership rule forbids and this test demonstrates rather than
+/// assumes.
+#[test]
+fn a_room_memo_belongs_to_one_predator_field_and_a_second_field_gets_its_own() {
+    let world = common::build(42).expect("seed 42 builds");
+    let (session, _) = Session::start(&world, &PossessOpts::default()).expect("seed 42 starts");
+    let ctx = LocaleContext::build(&world).expect("ctx");
+    // A room where the predator field is non-zero: search the flagship's
+    // neighbourhood through the session's own predator-bearing terrain.
+    let with_field = session.terrain_for_tests();
+    let probe = session
+        .bodies()
+        .iter()
+        .flat_map(|b| std::iter::once(b.home.clone()).chain(b.home.neighbors()))
+        .find(|r| with_field.hazards(r).predator > 0.0)
+        .expect(
+            "some room near the roster carries predator pressure — the field is non-zero on \
+             the flagship since The Quarry",
+        );
+    let without = LocaleTerrain::with_fields(&ctx, None, None, None, None, None);
+    let field_only = with_field.hazards(&probe);
+    let bare = without.hazards(&probe);
+    assert!(
+        field_only.predator > bare.predator,
+        "the two terrains must disagree on this room, or the test cannot see sharing"
+    );
+
+    // Ownership: each terrain its own memo -> each answers as itself.
+    let g1: OwnedGround = OwnedGround::new(GroundHazards::new());
+    let g2: OwnedGround = OwnedGround::new(GroundHazards::new());
+    let t1 = session.terrain_for_tests().with_ground(&g1);
+    let t2 = LocaleTerrain::with_fields(&ctx, None, None, None, None, None).with_ground(&g2);
+    assert_eq!(t1.hazards(&probe), field_only);
+    assert_eq!(t2.hazards(&probe), bare);
+    assert_eq!((g1.borrow().misses(), g2.borrow().misses()), (1, 1));
+
+    // The refused shape, demonstrated: one memo handed to both terrains makes
+    // the second terrain answer with the first's field. This is the aliasing
+    // the ownership rule forbids, shown rather than assumed.
+    let shared: OwnedGround = OwnedGround::new(GroundHazards::new());
+    let s1 = session.terrain_for_tests().with_ground(&shared);
+    let s2 = LocaleTerrain::with_fields(&ctx, None, None, None, None, None).with_ground(&shared);
+    let _ = s1.hazards(&probe);
+    assert_eq!(
+        s2.hazards(&probe),
+        field_only,
+        "a shared memo aliases — which is why a memo is owned by one (context, field)"
     );
 }

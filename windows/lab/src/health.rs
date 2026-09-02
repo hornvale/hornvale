@@ -234,6 +234,12 @@ pub fn run_simulation_with_locale(
     // owns it.
     let folds =
         hornvale_vessel::resident::OwnedFolds::new(hornvale_vessel::resident::ResidentFolds::new());
+    // The session-lived room memo (The Detent, spec §2.1), owned at exactly
+    // the scope `folds` is — one per run, so every tick's fresh
+    // `LocaleTerrain` (below) reads and fills the SAME memo rather than
+    // starting cold each tick.
+    let ground =
+        hornvale_vessel::ground::OwnedGround::new(hornvale_vessel::ground::GroundHazards::new());
     let geo = ctx.climate().geosphere();
     let index = ctx.nearest_index();
     for _ in 0..ticks {
@@ -257,7 +263,8 @@ pub fn run_simulation_with_locale(
         // `neighbors` threading) — see `Session::wait`'s identical comment.
         let mesh_snapshot = mesh_memo.clone();
         let terrain =
-            LocaleTerrain::with_fields(ctx, calendar, predator, prey, built, Some(&mesh_snapshot));
+            LocaleTerrain::with_fields(ctx, calendar, predator, prey, built, Some(&mesh_snapshot))
+                .with_ground(&ground);
         let sys = DriveMovements {
             npcs: npcs.to_vec(),
             from: WorldTime::from_std_days(day).expect("a day value is finite"),

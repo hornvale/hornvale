@@ -987,6 +987,12 @@ pub struct Session<'w> {
     /// [`DriveMovements::step_with_occupancy`] and [`Self::snapshot`], which
     /// are the two places this field is handed out.
     folds: crate::resident::OwnedFolds,
+    /// The session-lived room memo (The Detent, spec §2.1): what the terrain
+    /// determines about a room, held for the session and read by every
+    /// `LocaleTerrain` this session builds. World-derived, never serialized,
+    /// discardable at any instant. One per `(LocaleContext, predator field)`,
+    /// which this session owns both of.
+    ground: crate::ground::OwnedGround,
     /// The driven body's own commitment mode as of the most recent `!wait`
     /// (The Hand, Task 5 fix round 1, spec §2.3) — `None` before the first
     /// one. Set by [`Self::wait`], the only place the driven body's own
@@ -1817,6 +1823,7 @@ impl<'w> Session<'w> {
             mesh_memo,
             home_nav_cache: HomeNavCache::new(),
             folds: crate::resident::OwnedFolds::new(crate::resident::ResidentFolds::new()),
+            ground: crate::ground::OwnedGround::new(crate::ground::GroundHazards::new()),
             driven_mode: None,
             driven_affect: None,
             driven_suppressed: Vec::new(),
@@ -2139,7 +2146,8 @@ impl<'w> Session<'w> {
             self.prey.as_ref(),
             Some(&self.built),
             Some(&self.mesh_memo),
-        );
+        )
+        .with_ground(&self.ground);
         let mut afraid_memo = PrimaryAfraidMemo::new();
         // A throwaway `RoomMeshMemo` for `affect_of_memo_occupied`'s own
         // `neighbors_memo` write-through (rider (b)): `&self` here cannot
@@ -2742,7 +2750,8 @@ impl<'w> Session<'w> {
             self.prey.as_ref(),
             Some(&self.built),
             Some(&self.mesh_memo),
-        );
+        )
+        .with_ground(&self.ground);
         let mut memo = PrimaryAfraidMemo::new();
         self.bodies
             .iter()
@@ -2782,6 +2791,24 @@ impl<'w> Session<'w> {
     /// type-audit: bare-ok(count: return)
     pub fn resident_alarm_replays(&self) -> u64 {
         self.folds.borrow().witness().alarm_replays()
+    }
+
+    /// Rooms the session's room memo holds.
+    /// type-audit: bare-ok(count: return)
+    pub fn resident_ground_len(&self) -> usize {
+        self.ground.borrow().len()
+    }
+
+    /// Room-memo reads served without a field sample, ever.
+    /// type-audit: bare-ok(count: return)
+    pub fn resident_ground_hits(&self) -> u64 {
+        self.ground.borrow().hits()
+    }
+
+    /// Room-memo reads that sampled the field, ever.
+    /// type-audit: bare-ok(count: return)
+    pub fn resident_ground_misses(&self) -> u64 {
+        self.ground.borrow().misses()
     }
 
     /// How many unfiltered reset lookups this session has made — the
@@ -6222,6 +6249,12 @@ impl<'w> Session<'w> {
             // holds (free — no mutation), same posture as `snapshot`.
             Some(&self.mesh_memo),
         )
+        .with_ground(&self.ground)
+    }
+
+    /// The terrain this session reads, for tests that need the same one.
+    pub fn terrain_for_tests(&self) -> LocaleTerrain<'_> {
+        self.terrain_here()
     }
 
     /// The brief for wherever the possession currently stands.
@@ -7335,7 +7368,8 @@ impl<'w> Session<'w> {
             self.prey.as_ref(),
             Some(&self.built),
             Some(&mesh_snapshot),
-        );
+        )
+        .with_ground(&self.ground);
         let sys = DriveMovements {
             // `DriveMovements.npcs: Vec<Body>` is a widely-shared field
             // (28+ construction sites across `windows/vessel`/`windows/lab`),
@@ -8375,7 +8409,8 @@ impl<'w> Session<'w> {
             self.prey.as_ref(),
             Some(&self.built),
             Some(&self.mesh_memo),
-        );
+        )
+        .with_ground(&self.ground);
         let mut afraid_memo = PrimaryAfraidMemo::new();
         // A throwaway `RoomMeshMemo` for `affect_of_memo_occupied`'s own
         // `neighbors_memo` write-through (rider (b)) — see `snapshot`'s

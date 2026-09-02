@@ -1137,6 +1137,11 @@ fn run(
     // THIS store — the one production owns, at the scope production owns it.
     let folds =
         hornvale_vessel::resident::OwnedFolds::new(hornvale_vessel::resident::ResidentFolds::new());
+    // The session-lived room memo (The Detent, spec §2.1), owned at exactly
+    // the scope `folds` is — one per run, so every tick's terrain reads and
+    // fills the SAME memo rather than starting cold each tick.
+    let ground =
+        hornvale_vessel::ground::OwnedGround::new(hornvale_vessel::ground::GroundHazards::new());
     let mut day = WorldTime::from_std_days(0.5).expect("0.5 is a finite day count");
 
     // NO SINGLE PROBE AGENT. An earlier draft reported one agent's own
@@ -1178,7 +1183,8 @@ fn run(
         // it replaces was only accidentally exact for whole-day steps.
         day = WorldTime::from_ticks(day.ticks() + WorldTime::TICKS_PER_STD_DAY);
         let mesh_snapshot = mesh_memo.clone();
-        let terrain = LocaleTerrain::with_fields(ctx, None, None, None, None, Some(&mesh_snapshot));
+        let terrain = LocaleTerrain::with_fields(ctx, None, None, None, None, Some(&mesh_snapshot))
+            .with_ground(&ground);
         let sys = DriveMovements {
             npcs: npcs.clone(),
             from,
@@ -1237,7 +1243,8 @@ fn run(
                 .count();
             let mesh_for_probe = mesh_memo.clone();
             let probe_terrain =
-                LocaleTerrain::with_fields(ctx, None, None, None, None, Some(&mesh_for_probe));
+                LocaleTerrain::with_fields(ctx, None, None, None, None, Some(&mesh_for_probe))
+                    .with_ground(&ground);
             let fold_us = probe_fold_us(
                 &ledger,
                 &folds,
@@ -1268,7 +1275,8 @@ fn run(
                 None,
                 Some(&built_set),
                 Some(&mesh_for_probe),
-            );
+            )
+            .with_ground(&ground);
             let fatigue_us = probe_fatigue_us(&ledger, npc, day, &fatigue_terrain);
             let believed_water_us =
                 probe_believed_water_us(&ledger, &folds, npc, day, &probe_terrain, PROBE_BUDGET);
