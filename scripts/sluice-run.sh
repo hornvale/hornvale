@@ -655,9 +655,51 @@ main was $base_sha at test time."
 # finding: nothing today is named `merge` or `dirty-tree`, but "impossible"
 # costs nothing here and doesn't rely on that staying true).
 if ! run_bg git merge --no-ff --no-edit -m "$merge_msg" "$sha"; then
-    echo "sluice-run: MERGE CONFLICT — holding. A human resolves this." >&2
-    phase_failed="<merge>"
-    git merge --abort || true
+    # A CONFLICT ONLY IN `artifacts`-AUTHORED PATHS IS RESOLVED HERE, NOT HELD.
+    # This is the chamber half of what `sluice-mouth.sh` admits; the two call the
+    # SAME classifier so they cannot disagree, and a disagreement would be the
+    # worst outcome available — a candidate admitted at the mouth and then killed
+    # at this step, having already taken the box the mouth exists to protect.
+    #
+    # WHY TAKING A SIDE IS SOUND HERE AND NOT IN A MERGE DRIVER. Decision 0166
+    # retired `merge=hv-regenerate` because git invokes a driver BEFORE the merge
+    # product exists on disk, so it regenerates against the wrong tree and
+    # silently emits one side as the FINAL answer. Here the merge has already
+    # run: the tree below is the product, `--ours` is a placeholder rather than
+    # an answer, and the `artifacts` phase — which runs FIRST, on every
+    # candidate — overwrites every one of these paths from source before
+    # anything is gated. 0166's own "Alternatives considered" names exactly this
+    # moment as "the one worth pursuing".
+    conflicted="$(git diff --name-only --diff-filter=U 2>/dev/null)"
+    if [ -n "$conflicted" ] && sluice_is_regenerated_only "$conflicted" "$(pwd)"; then
+        n="$(printf '%s\n' "$conflicted" | grep -c .)"
+        echo "sluice-run: $n conflict(s), all artifacts-authored — resolving by regeneration."
+        printf '%s\n' "$conflicted" | sed 's/^/sluice-run:   regenerating: /'
+        resolve_failed=""
+        while IFS= read -r cpath; do
+            [ -n "$cpath" ] || continue
+            if ! git checkout --ours -- "$cpath" 2>/dev/null || ! git add -- "$cpath"; then
+                resolve_failed="$cpath"; break
+            fi
+        done <<RESOLVE
+$conflicted
+RESOLVE
+        if [ -n "$resolve_failed" ]; then
+            echo "sluice-run: could not stage $resolve_failed — holding." >&2
+            phase_failed="<merge>"
+            git merge --abort || true
+        elif ! git -c core.hooksPath=/dev/null commit -q --no-edit; then
+            echo "sluice-run: the resolved merge would not commit — holding." >&2
+            phase_failed="<merge>"
+            git merge --abort || true
+        else
+            echo "sluice-run: merged with $n artifact conflict(s) resolved; artifacts phase will rewrite them."
+        fi
+    else
+        echo "sluice-run: MERGE CONFLICT — holding. A human resolves this." >&2
+        phase_failed="<merge>"
+        git merge --abort || true
+    fi
 fi
 
 # PHASE ORDER IS BY EXPECTED TIME-TO-RED, not by tree hygiene. `git clean -fd`
