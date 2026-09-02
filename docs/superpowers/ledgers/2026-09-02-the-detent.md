@@ -512,3 +512,17 @@ deferred to the final review: hardcoded tick indices; the growth assertion's
 message not naming its late tick, and `late` being data-selected; the chaos
 comparator's reach shrinking to 90 rooms once the index is warm; the
 oracle test comparing the full-roster emitter-free branch zero times.
+
+## Task 7 — complete (`e289368d7`, review clean)
+
+The Pawl's `EmitterScan` equivalence tests moved out of `liveness.rs` into
+the sibling `liveness_tests/emitter_scan.rs` (bodies identical, names
+unchanged; `PlantedTerrain` and seven helpers made `pub(super)` rather than
+duplicated); `believed_hazard_memo` deleted and its three doc mentions
+rewritten with their caller counts corrected. `liveness.rs` 19,809 → 19,577
+lines. **A consequence recorded rather than discovered later:** the two
+moved tests were listed in `docs/timings/subfloor-roster.tsv` by their old
+path (`liveness::tests::…`), so the commit gate now runs 1,096 sub-floor
+tests instead of 1,098 until the Stage 3 gate's chamber run rewrites the
+roster with the new paths — the "renaming a test is a commit-gate change"
+rule, in its path form. The stage gate runs the full suite either way.
