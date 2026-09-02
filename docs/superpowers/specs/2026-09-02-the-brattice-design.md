@@ -266,26 +266,38 @@ awaiting residents. A descent gate is a different object: the plan places
 both its ends, so its rule is structural, and 0516's own text scopes itself
 to the strongbox clause (ledger #5).
 
-### 3.5 Realization: three cell kinds
+### 3.5 Realization: a place, a run, a hole — and the door is not a cell
 
-`LevelCellKind` gains three variants, each a state or a substrate a cell can
-carry rather than a catalogue entry — the test the building lattice's
-`CellKind` doc sets for admitting one (`windows/vessel/src/lattice/mod.rs:
-131-137`):
+**A gate is four things co-located, and the realizer keeps them apart**
+(G3 ruling, ledger #7): the *requirement* lives on the plan; the *place* is
+a cell kind; the *object* is a Thing, carried on the wire as a mark; the
+*judgment* is the walk's. The building lattice already draws this line —
+`CellKind::Threshold` is a designed opening and "a window is an ANCHOR at a
+wall cell, never `CellKind::Window`" (`windows/vessel/src/lattice/mod.rs:
+131-137`) — and the first draft of this section crossed it with a `Door`
+cell kind. `LevelCellKind` gains three variants, each a place or a
+substrate, none an object:
 
 ```
-  Door   a doorway that may be shut and locked; movement_mode -> Walk (the footing
-         is fine; the LOCK is the thing's fold, asked by the walk's second seam)
-  Deep   standing water too deep to wade; movement_mode -> Swim (Flooded's sibling)
-  Drop   the lip of a chute; movement_mode -> Walk (you may stand at the edge);
-         `down` takes it, `up` from beneath it needs Fly
+  Threshold  the one cell where a passage breaches the wall between two regions —
+             EVERY passage has one, gated or not. In a cave it is a squeeze; in a
+             building a doorway. movement_mode -> Walk. Passable unless a shut door
+             Thing is anchored here (§3.7)
+  Deep       standing water too deep to wade, on a passage's RUN (its corridor
+             cells); movement_mode -> Swim (Flooded's sibling)
+  Drop       the lip of a chute — the vertical threshold; movement_mode -> Walk
+             (you may stand at the edge); `down` takes it, `up` from beneath it
+             needs Fly
 ```
 
-- **A door** is placed on the one corridor cell that lies on the divider
-  line between the two regions' rectangles (`region_rect` keeps a one-cell
-  wall on every side, `circuit.rs:131-136`; `connect_cells` carves an L that
-  crosses that line once). That the crossing is unique is asserted by a
-  test, not assumed. The corridor's other cells stay `Floor`.
+- **A threshold** is the one corridor cell that lies on the divider line
+  between the two regions' rectangles (`region_rect` keeps a one-cell wall on
+  every side, `circuit.rs:131-136`; `connect_cells` carves an L that crosses
+  that line once). That the crossing is unique is asserted by a test, not
+  assumed. It is stamped for every passage, so a cave map shows where its
+  chambers narrow, and it is what a door Thing is anchored at. The client
+  draws a threshold as a **squeeze, not a doorway**: the `+` of a built
+  doorway is the door's, and the door is a mark (§3.7).
 - **A sump** turns into `Deep` every cell of the L-corridor `connect_cells`
   carves for that edge that was **rock before the carve** — the corridor
   proper, never the two walkable endpoints inside the regions or any floor
@@ -301,20 +313,35 @@ carry rather than a catalogue entry — the test the building lattice's
   non-stair cell at the same coordinate one rung down; no `StairsUp` ever sits
   under a `Drop`.
 - **Repairs respect gates.** `shortest_route_within_rect` never overwrites a
-  `Door`, `Deep` or `Drop` cell, as it never overwrites a stair today
-  (`mod.rs:485-490`); `standable_cells_in_rect` counts `Door` and `Drop` as
-  footing. A repair that carved around a door would defeat it, which is the
+  `Threshold`, `Deep` or `Drop` cell, as it never overwrites a stair today
+  (`mod.rs:485-490`); `standable_cells_in_rect` counts `Threshold` and `Drop`
+  as footing. A repair that carved around a door would defeat it, which is the
   same defect the Crosscut found in a repair that carved through a wall.
 - **`unlinked_neighbours_keep_their_wall` is unchanged.** A gate is placed on
   an edge the plan has; it is never a second way through, and the test that
   flood-fills between unlinked neighbours must stay green without edits.
-- **The wire.** `vessel/level/v1`'s palette gains kinds `"door"`, `"deep"`,
-  `"drop"` beside the five it has (`level_doc.rs::entry_for`). Additive:
-  the palette is a sparse list of `(kind, state)` pairs and the client draws
-  an unrecognised kind as rock (`clients/game/core/src/level.rs:150-185`), so
-  an old client shows a wall where a door stands and nothing breaks. The
-  client is taught the three glyphs as a task in the `clients` lane set, and
+- **The wire.** `vessel/level/v1`'s palette gains kinds `"threshold"`,
+  `"deep"`, `"drop"` beside the five it has (`level_doc.rs::entry_for`); a
+  door travels in the document's existing `marks` (a `PlanMark` at a cell,
+  `level_doc.rs:241`), never as a palette kind. Additive: the palette is a
+  sparse list of `(kind, state)` pairs and the client draws an unrecognised
+  kind as rock (`clients/game/core/src/level.rs:150-185`), so an old client
+  shows a wall where a squeeze is and nothing breaks. The client is taught
+  the three glyphs and the door mark as a task in the `clients` lane set, and
   the committed seed-42 fixtures regenerate with the branch table of §5.
+  Because `Threshold` is stamped on EVERY passage, the fixtures WILL move if a
+  snapshot holds an underworld level; the branch table's middle arm is the
+  expected one, not the first.
+- **The realization witness** (decision 0577's word; the lattice's
+  `doorways` ↔ `Threshold(a, b)` correspondence is its precedent): a test
+  asserts, for every plan, that each `Passage` edge realizes exactly one
+  `Threshold` cell on its divider; each `Needs(Key(_))` gate has exactly one
+  door Thing anchored at that threshold and each key node one key Thing;
+  each `Needs(Mode(Swim))` gate has a `Deep` run and each `Needs(Mode(Fly))`
+  stair a `Drop`; and nothing of the kind exists that no gate asked for — in
+  both directions. The walk never reads the plan's requirement (§3.6); it
+  reads the realization, so solvability proved on the plan is a proof about
+  the walked level only while this witness is green.
 
 ### 3.6 The walk: a body, two seams, three refusals
 
@@ -331,11 +358,12 @@ carry rather than a catalogue entry — the test the building lattice's
   `Swim` for `Deep`, so The Gallery's reserved variant is reached. Beside it,
   one actor-aware seam answers "may *this* body cross *from here to there*":
   it composes the mode against the body's `locomotion`, and for a `Door`
-  asks the door thing's openness fold (§3.7). `Underground::peek` calls it
-  where it calls `movement_mode(..).is_some()` today (`underground.rs:
-  427-451`); the corner rule keeps asking `movement_mode` alone — a doorway
-  is an opening in the wall whether the door in it is shut or not, so a
-  diagonal past one is not a two-walled corner.
+  for a `Threshold` asks whether a door Thing is anchored there and, if so,
+  its openness fold (§3.7). `Underground::peek` calls it where it calls
+  `movement_mode(..).is_some()` today (`underground.rs:427-451`); the corner
+  rule keeps asking `movement_mode` alone — a threshold is an opening in the
+  wall whether a door in it is shut or not, so a diagonal past one is not a
+  two-walled corner.
 - **Three refusals**, named constants beside `UNDERGROUND_ROCK_REFUSAL`:
   deep water for a body that cannot swim; a locked door; no way up beneath a
   chute for a body that cannot fly. `StepOutcome::Blocked` stays unused —
@@ -380,9 +408,14 @@ carry rather than a catalogue entry — the test the building lattice's
   `take` posts custody; `drop` underground posts `located-in` with the
   possession's current plan node as the place, so `look` can list it — the
   region, never the cell, is the committed grain.
+- **A door is anchored at a threshold and is the only thing that makes one
+  a doorway.** The Thing's place is the threshold cell of its edge; it goes
+  on the wire as a mark at that cell. A threshold with no door is a squeeze
+  and needs no Thing — `examine` of a bare squeeze is a captured follow-up,
+  not a promoted kind.
 - **The verbs reach underground.** `look` on a cell whose region holds a
-  key, latent or dropped, says so; on a cell adjacent to a `Door` says so and
-  names the bearing; `examine`, `take`, `open`, `close` resolve those nouns.
+  key, latent or dropped, says so; on a cell adjacent to a threshold with a
+  door says so and names the bearing; `examine`, `take`, `open`, `close` resolve those nouns.
   `carrying` already works. No new verb: `unlock` does not exist and is not
   added.
 
@@ -402,7 +435,9 @@ Each pinned by a unit test or a sweep, not measured:
   gates cost the resident nothing.
 - **A drop has a floor under it and no stair under it**; a stair still pairs
   with a stair.
-- **A door cell is unique per gated passage** and lies on the divider line.
+- **Every passage has exactly one threshold cell**, on the divider line;
+  every gate realizes exactly what its requirement names and nothing more
+  (the realization witness, §3.5).
 - **The Crosscut's four properties and its dof identity survive**, the
   identity extended by exactly `+ realms`:
   `dof = 1 + levels + stairs + 4·(realms − fallback_realms) + 2·extensions +
@@ -525,7 +560,9 @@ Task 0 re-runs the Crosscut's epoch grep with its branch table, and adds:
 Realizing danger (The Plat's hoarder), secrecy (a `Door` or passage hidden
 until found — needs the fog/render seam; `MAP-secret-door-rendering`), a
 collapsing gate (`MAP-collapsing-gate`), a true one-way passage on one floor
-(`MAP-true-valve`); a `lock` or `unlock` verb; the strongbox's `Portable`
+(`MAP-true-valve`); a requirement of the KNOWN kind — a word, a face — on
+the model of 0397's knowledge gate (`MAP-knowledge-key`); a shut door
+blocking sight (`MAP-doors-occlude`); a `lock` or `unlock` verb; the strongbox's `Portable`
 literal (`PLAY-strongbox-lock-wants-an-unlocks-property`); wiring the walk
 to the lattice or reading `character_of` in `Underground::enter`
 (`MAP-walk-ignores-the-lattice`, untouched, ledger #3); the carve streams'
@@ -537,7 +574,8 @@ intimacy reading (The Plat); junctions, vaults, viewport, dressing prose
 ## 7. Acceptance
 
 1. **A locked door, walked.** A session test on a worked descent drives the
-   verbs: refused at a `Door` with the locked-door refusal; walks the long
+   verbs: refused at a threshold whose door is shut, with the locked-door
+   refusal; walks the long
    side; `look` names the key; `take key`; returns; `open door`; passes.
    The door stays open on the way back.
 2. **A chute, walked.** On a wild descent: `down` on a `Drop` lands one rung
@@ -567,9 +605,10 @@ intimacy reading (The Plat); junctions, vaults, viewport, dressing prose
    construction-property tests and the 400-seed sweep.
 2. `worldgen` + `cli`: the four readouts in `circuit_readout.rs`; the audit
    page regenerated with its diff read against §4's preamble.
-3. `vessel` realizer: three cell kinds; door, sump and chute placement;
-   repair exclusions; the pairing test amended; the wire palette; the
-   client's three glyphs (`clients` lane set).
+3. `vessel` realizer: three cell kinds; threshold, sump and chute
+   placement; repair exclusions; the pairing test amended; the realization
+   witness; the wire palette and the door mark; the client's three glyphs
+   and the mark (`clients` lane set).
 4. `species` + `vessel` walk: `locomotion_registry`, `Body.locomotion`; the
    actor-aware seam beside `movement_mode`; three refusals; `down`/`up`
    through a chute; narration.
@@ -584,8 +623,11 @@ Stage gates after 2, 4 and 6.
 ## 9. Decisions this campaign expects to mint
 
 - **0616** — A gate is a requirement on a way, stamped on the finished plan
-  after growth; valve and asymmetric are one gate seen by two bodies (0347
-  extended to traversal).
+  after growth, and realized as four co-located parts kept apart: a
+  requirement on the plan, a place in the rock, an object in the ledger, a
+  judgment in the walk; valve and asymmetric are one gate seen by two bodies
+  (0347 extended to traversal); a door is an object at a threshold, never a
+  cell kind.
 - **0617** — A lock's substance is derived from rock and work: a door needs a
   maker, a sump needs karst or fracture, a chute needs a floor below; the
   pattern chooses where, never what.

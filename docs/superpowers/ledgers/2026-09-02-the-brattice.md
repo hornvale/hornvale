@@ -262,3 +262,36 @@ not a ruling; the rulings it touched are #2 and #4.
   (Task 3 touches the terminus write; take it); the CELLULAR rustdoc obituary
   (Task 3, `carve.rs`, take it if the file is open); the membership test's
   re-derivation and the gallery 45↔46 wobble — not in the path, leave them.
+
+#7 [Q, ruled with Nathan at G3] — A gate is four things stacked; should they
+be four things co-located? · **Yes: requirement on the plan, PLACE as a cell
+kind, OBJECT as a Thing carried on the wire as a mark, judgment in the walk —
+and the draft's `Door` cell kind is replaced by `Threshold`, stamped on EVERY
+passage's divider cell, with the door a Thing anchored at one** · Why: the
+building lattice already separates place from object (`CellKind::Threshold`
+plus anchors; "never `CellKind::Window`", `lattice/mod.rs:131-137`) and keeps
+a `doorways` list with a both-directions correspondence check (`lattice/mod.rs:
+373-376`); sumps and chutes already showed requirement and substrate without
+an object; the level document already carries `marks` for a thing at a cell
+(`level_doc.rs:241`) · Discarded: `Threshold` only where a door is (place
+exists only where the object does — the conflation in smaller type); a
+`Door` glyph as a cell kind (paints built doorways across a wild cave, the
+side-effect pass's finding); splitting the requirement off the edge as its
+own node (bipartite, no longer series-parallel) · Ideonomy: 1 pass (tuple:
+combination × organon-construction; dictionary; prompts age, side-effect,
+animacy). **One correction, two enrichments, two captures.** Correction: the
+threshold-everywhere proposal as first stated would have rendered a doorway
+at every crossing of a natural cave — the place is real (a squeeze) but the
+doorway is the door's, so the door goes on the wire as a mark. Enrichments:
+(i) requirement × judgment is the one non-independent pair — the walk never
+reads the plan, only the realization — so a REALIZATION WITNESS test (0577's
+word) is required, not optional; (ii) `hazard` is not orthogonal to
+`requirement`: Dormans' dangerous lock is a requirement of the FACED kind,
+which The Plat may promote into the enum — kept a stamp here because nothing
+reads it, and said so. Captures: `MAP-knowledge-key` (the KNOWN requirement,
+0397's half-built mechanism), `MAP-doors-occlude` (a shut door should block
+sight; fog has no occlusion input). Dictionary blur to fix in prose: "key" is
+used broadly (what satisfies a requirement) and narrowly (the Thing kind);
+the spec now says which at each use where it matters · Capture: spec §3.5,
+§3.6, §3.7, §3.8, §6, §7.1, §8 task 3, §9 (0616) amended and say so; the two
+rows above.
