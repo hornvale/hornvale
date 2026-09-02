@@ -2388,7 +2388,7 @@ mod tests {
                 crate::globe::generate(Seed(seed), &geo, &crate::pins::TerrainPins::default())
                     .unwrap();
             let net =
-                ChannelNetwork::build(&outcome.globe, &geo, outcome.globe.channel_noise_seed());
+                ChannelNetwork::build(&outcome.value, &geo, outcome.value.channel_noise_seed());
             // The same owner map `build` uses, rebuilt from the published
             // `run_vertices` rather than from anything private.
             let mut owner: Vec<Option<(usize, usize)>> = vec![None; geo.vertex_count()];
@@ -2436,9 +2436,9 @@ mod tests {
             crate::globe::generate(Seed(42), &geo, &crate::pins::TerrainPins::default()).unwrap();
         // The real production seed: the globe's own already-derived
         // CHANNEL_MEANDER leg, exactly as `GeneratedTerrain::new` passes it.
-        let meander_seed = outcome.globe.channel_noise_seed();
-        let net = ChannelNetwork::build(&outcome.globe, &geo, meander_seed);
-        let again = ChannelNetwork::build(&outcome.globe, &geo, meander_seed);
+        let meander_seed = outcome.value.channel_noise_seed();
+        let net = ChannelNetwork::build(&outcome.value, &geo, meander_seed);
+        let again = ChannelNetwork::build(&outcome.value, &geo, meander_seed);
         assert_eq!(net.polylines, again.polylines, "build is not deterministic");
         assert_eq!(net.band_edges, again.band_edges);
         assert!(
@@ -2457,7 +2457,7 @@ mod tests {
             // rendering OF that run rather than an unrelated line beside it.
             for pair in vertices.windows(2) {
                 assert_eq!(
-                    *outcome.globe.downhill.get(pair[0]),
+                    *outcome.value.downhill.get(pair[0]),
                     Some(pair[1]),
                     "run vertices are not a downhill chain"
                 );
@@ -2481,7 +2481,7 @@ mod tests {
         let on_line: BTreeSet<Vertex> = geo
             .vertices()
             .filter(|&c| {
-                matches!(*outcome.globe.water_kind.get(c), WaterKind::River)
+                matches!(*outcome.value.water_kind.get(c), WaterKind::River)
                     && matches!(net.transverse_at(geo.position(c)).0, Transverse::Channel)
             })
             .collect();

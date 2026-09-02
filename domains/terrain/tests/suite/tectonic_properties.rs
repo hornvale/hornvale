@@ -15,14 +15,14 @@ fn pin_isolation_holds_at_the_globe_level() {
     // (the notes gain a metering entry — Task 7 — since the pin is `Some`
     // regardless of whether its value matches the drawn one; metering is
     // pin-only, not value-only, by design).
-    let summary = summarize(&default.globe);
+    let summary = summarize(&default.value);
     let pins = TerrainPins {
         plates: Some(summary.plate_count),
         ..TerrainPins::default()
     };
     assert_eq!(
-        generate(Seed(42), &geo, &pins).unwrap().globe,
-        default.globe
+        generate(Seed(42), &geo, &pins).unwrap().value,
+        default.value
     );
 
     // Re-affirming the drawn ocean fraction (recovered by replaying its
@@ -39,8 +39,8 @@ fn pin_isolation_holds_at_the_globe_level() {
         ..TerrainPins::default()
     };
     assert_eq!(
-        generate(Seed(42), &geo, &pins).unwrap().globe,
-        default.globe
+        generate(Seed(42), &geo, &pins).unwrap().value,
+        default.value
     );
 
     // supercontinent=false re-affirms the drawn scattered layout.
@@ -54,25 +54,25 @@ fn pin_isolation_holds_at_the_globe_level() {
     // globe byte-identical too — same pin-isolation caveat as plates and
     // ocean-fraction above.
     let pins = TerrainPins {
-        continents: Some(default.globe.cratons.len() as u32),
+        continents: Some(default.value.cratons.len() as u32),
         ..TerrainPins::default()
     };
     assert_eq!(
-        generate(Seed(42), &geo, &pins).unwrap().globe,
-        default.globe
+        generate(Seed(42), &geo, &pins).unwrap().value,
+        default.value
     );
 
     // supercontinent on cratons (Crust epoch, Task 8): scattered vs
     // supercontinent=false is byte-identical (the same re-affirmation
     // guarantee as plates', now on the craton draw).
     let pins = TerrainPins {
-        continents: Some(default.globe.cratons.len() as u32),
+        continents: Some(default.value.cratons.len() as u32),
         supercontinent: Some(false),
         ..TerrainPins::default()
     };
     assert_eq!(
-        generate(Seed(42), &geo, &pins).unwrap().globe,
-        default.globe
+        generate(Seed(42), &geo, &pins).unwrap().value,
+        default.value
     );
 }
 
@@ -95,16 +95,16 @@ fn pin_isolation_extends_to_new_streams() {
     let default = generate(Seed(42), &geo, &TerrainPins::default()).unwrap();
 
     let plates_pin = TerrainPins {
-        plates: Some(default.globe.plates.len() as u32),
+        plates: Some(default.value.plates.len() as u32),
         ..TerrainPins::default()
     };
     let pinned = generate(Seed(42), &geo, &plates_pin).unwrap();
     assert_eq!(
-        pinned.globe.terranes, default.globe.terranes,
+        pinned.value.terranes, default.value.terranes,
         "plates pin perturbed terranes"
     );
     assert_eq!(
-        pinned.globe.microcontinents, default.globe.microcontinents,
+        pinned.value.microcontinents, default.value.microcontinents,
         "plates pin perturbed microcontinents"
     );
 
@@ -121,11 +121,11 @@ fn pin_isolation_extends_to_new_streams() {
     };
     let pinned = generate(Seed(42), &geo, &ocean_pin).unwrap();
     assert_eq!(
-        pinned.globe.terranes, default.globe.terranes,
+        pinned.value.terranes, default.value.terranes,
         "ocean-fraction pin perturbed terranes"
     );
     assert_eq!(
-        pinned.globe.microcontinents, default.globe.microcontinents,
+        pinned.value.microcontinents, default.value.microcontinents,
         "ocean-fraction pin perturbed microcontinents"
     );
 
@@ -135,25 +135,25 @@ fn pin_isolation_extends_to_new_streams() {
     };
     let pinned = generate(Seed(42), &geo, &super_pin).unwrap();
     assert_eq!(
-        pinned.globe.terranes, default.globe.terranes,
+        pinned.value.terranes, default.value.terranes,
         "supercontinent pin perturbed terranes"
     );
     assert_eq!(
-        pinned.globe.microcontinents, default.globe.microcontinents,
+        pinned.value.microcontinents, default.value.microcontinents,
         "supercontinent pin perturbed microcontinents"
     );
 
     let continents_pin = TerrainPins {
-        continents: Some(default.globe.cratons.len() as u32),
+        continents: Some(default.value.cratons.len() as u32),
         ..TerrainPins::default()
     };
     let pinned = generate(Seed(42), &geo, &continents_pin).unwrap();
     assert_eq!(
-        pinned.globe.terranes, default.globe.terranes,
+        pinned.value.terranes, default.value.terranes,
         "continents pin perturbed terranes"
     );
     assert_eq!(
-        pinned.globe.microcontinents, default.globe.microcontinents,
+        pinned.value.microcontinents, default.value.microcontinents,
         "continents pin perturbed microcontinents"
     );
 }
@@ -181,14 +181,14 @@ fn ocean_fraction_pin_conditions_cratons_but_not_the_plate_skeleton() {
     )
     .unwrap();
     assert_eq!(
-        pinned.globe.plates, default.globe.plates,
+        pinned.value.plates, default.value.plates,
         "plate skeleton perturbed"
     );
     assert_eq!(
-        pinned.globe.plate_of, default.globe.plate_of,
+        pinned.value.plate_of, default.value.plate_of,
         "plate assignment perturbed"
     );
-    for (a, b) in default.globe.cratons.iter().zip(&pinned.globe.cratons) {
+    for (a, b) in default.value.cratons.iter().zip(&pinned.value.cratons) {
         assert_eq!(a.id, b.id);
         assert_eq!(
             a.age, b.age,
@@ -197,11 +197,11 @@ fn ocean_fraction_pin_conditions_cratons_but_not_the_plate_skeleton() {
         );
     }
     assert_ne!(
-        pinned.globe.crust, default.globe.crust,
+        pinned.value.crust, default.value.crust,
         "ocean-fraction pin should move craton radii (and therefore crust)"
     );
     assert_ne!(
-        pinned.globe.sea_level, default.globe.sea_level,
+        pinned.value.sea_level, default.value.sea_level,
         "ocean-fraction pin should move sea level"
     );
 }
@@ -232,7 +232,7 @@ fn every_default_globe_satisfies_every_invariant() {
     for seed in 0..64u64 {
         let outcome = generate(Seed(seed), &geo, &TerrainPins::default())
             .unwrap_or_else(|e| panic!("seed {seed} failed default genesis: {e}"));
-        let globe = &outcome.globe;
+        let globe = &outcome.value;
         let plate_count = globe.plates.len() as u32;
         assert!(
             (8..=40).contains(&plate_count),
@@ -353,7 +353,7 @@ fn convergent_boundaries_stand_above_continental_interiors_on_average() {
     let mut interior = Vec::new();
     for seed in 0..16u64 {
         let pins = TerrainPins::default();
-        let globe = generate(Seed(seed), &geo, &pins).unwrap().globe;
+        let globe = generate(Seed(seed), &geo, &pins).unwrap().value;
         let distances = boundary_distance(&geo, &globe.plate_of, &globe.boundary);
         for (vertex, contact) in globe.boundary.iter() {
             let continental = *globe.crust.get(vertex) >= CONTINENTAL_THRESHOLD_KM;
@@ -409,7 +409,7 @@ fn single_craton_worlds_have_shelves_and_bimodal_hypsometry_across_the_sweep() {
             "seed {seed}: fallback never engaged: {:?}",
             outcome.notes
         );
-        let globe = &outcome.globe;
+        let globe = &outcome.value;
         let d =
             hypsometric_bimodality(&globe.elevation, globe.sea_level).expect("has land and ocean");
         assert!(d > 1.5, "seed {seed}: hypsometry not bimodal: D = {d}");
@@ -535,13 +535,13 @@ fn rift_pin_isolation_supercontinent_consumes_identical_draws() {
         );
         // One spreading-rate draw off `terrain/rift`, position-independent.
         assert_eq!(
-            outcome.globe.rift.spreading_rate, none.globe.rift.spreading_rate,
+            outcome.value.rift.spreading_rate, none.value.rift.spreading_rate,
             "supercontinent={label} perturbed the rift spreading-rate draw"
         );
         // Craton radii and ages are pure draws (repulsion and the center
         // replacement touch only centers), so they match across all three.
-        assert_eq!(outcome.globe.cratons.len(), none.globe.cratons.len());
-        for (a, b) in none.globe.cratons.iter().zip(&outcome.globe.cratons) {
+        assert_eq!(outcome.value.cratons.len(), none.value.cratons.len());
+        for (a, b) in none.value.cratons.iter().zip(&outcome.value.cratons) {
             assert_eq!(a.id, b.id);
             assert_eq!(
                 a.radius_rad, b.radius_rad,
@@ -558,11 +558,11 @@ fn rift_pin_isolation_supercontinent_consumes_identical_draws() {
         // the terrane stream draws the same values regardless of the pin;
         // only the geometric placement (center/along) rides craton positions.
         assert_eq!(
-            outcome.globe.terranes.len(),
-            none.globe.terranes.len(),
+            outcome.value.terranes.len(),
+            none.value.terranes.len(),
             "supercontinent={label}: terrane count consumed differently"
         );
-        for (a, b) in none.globe.terranes.iter().zip(&outcome.globe.terranes) {
+        for (a, b) in none.value.terranes.iter().zip(&outcome.value.terranes) {
             assert_eq!(a.half_len_rad, b.half_len_rad);
             assert_eq!(a.half_wid_rad, b.half_wid_rad);
             assert_eq!(a.age, b.age);
@@ -633,7 +633,7 @@ fn pinned_supercontinent_is_sutured() {
             },
         )
         .unwrap();
-        let cratons = &on.globe.cratons;
+        let cratons = &on.value.cratons;
         if cratons.len() > 1 {
             multi_major_seeds += 1;
         }
@@ -681,12 +681,12 @@ fn default_world_carries_a_rift_history() {
     let geo = Geosphere::new(4);
     let outcome = generate(Seed(42), &geo, &TerrainPins::default()).unwrap();
     assert!(
-        !outcome.globe.rift.seams.is_empty(),
+        !outcome.value.rift.seams.is_empty(),
         "seed 42's default globe drew no rift seams"
     );
     assert_eq!(
-        outcome.globe.rift.assembly.len(),
-        outcome.globe.cratons.len(),
+        outcome.value.rift.assembly.len(),
+        outcome.value.cratons.len(),
         "rift assembly must align index-for-index with the major cratons"
     );
 }
@@ -706,7 +706,7 @@ fn the_clip_reshapes_real_coastlines_on_seed_42() {
     let geo = Geosphere::new(5);
     let g = &generate(Seed(42), &geo, &TerrainPins::default())
         .unwrap()
-        .globe;
+        .value;
     let terrain_seed = Seed(42).derive(streams::ROOT);
     let all = [g.cratons.clone(), g.microcontinents.clone()].concat();
     let clipped = CrustField::new_with_rift(
@@ -774,10 +774,10 @@ fn features_seed_is_derived_and_perturbs_no_existing_draw() {
     let geo = Geosphere::new(4);
     let a = generate(Seed(42), &geo, &TerrainPins::default())
         .unwrap()
-        .globe;
+        .value;
     let b = generate(Seed(42), &geo, &TerrainPins::default())
         .unwrap()
-        .globe;
+        .value;
     // deterministic
     assert_eq!(a.features_noise_seed(), b.features_noise_seed());
     // distinct from the lithology seed (a different label)
@@ -799,10 +799,10 @@ fn channel_seed_is_the_derived_leaf_and_matches_the_old_internal_derivation() {
     let geo = Geosphere::new(4);
     let a = generate(Seed(42), &geo, &TerrainPins::default())
         .unwrap()
-        .globe;
+        .value;
     let b = generate(Seed(42), &geo, &TerrainPins::default())
         .unwrap()
-        .globe;
+        .value;
     // Deterministic.
     assert_eq!(a.channel_noise_seed(), b.channel_noise_seed());
     // Distinct from its siblings (different labels).

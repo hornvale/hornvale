@@ -223,6 +223,13 @@ the `KindId` newtype. **Domains** own their component registries. **Worldgen**
 composes the population and derives the schedule. The kernel grows but stays
 domain-agnostic; no new layer is introduced.
 
+**Amended by decision 0517 (The Hallmark, 2026-09-01):** the placement rule
+above is silent on the *types a registered component's schema is made of*.
+0517 clause (c) closes that: a type appearing in the wire schema of a
+component registered for cross-domain query belongs in the kernel. Domains
+still own their registries; the kernel additionally owns the wire
+vocabulary those registries speak.
+
 ## 5. The campaign carve (strangler-fig; each shippable, reversible, shadowed)
 
 Each step ships value, is reversible, and lands behind an equivalence shadow

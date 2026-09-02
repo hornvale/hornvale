@@ -3,8 +3,7 @@
 //! climate/terrain signals; everything else is `Ordinary`. A real lithology
 //! field later replaces this function without touching any consumer.
 
-use crate::regime::Substrate;
-use hornvale_climate::GeneratedClimate;
+use hornvale_climate::{GeneratedClimate, GroundKind};
 use hornvale_kernel::{Vertex, quantize};
 use hornvale_terrain::GeneratedTerrain;
 
@@ -14,14 +13,14 @@ pub(crate) fn substrate_at(
     climate: &GeneratedClimate,
     terrain: &GeneratedTerrain,
     vertex: Vertex,
-) -> Substrate {
+) -> GroundKind {
     let globe = terrain.globe();
     let elevation = quantize(globe.elevation.get(vertex).get());
     let sea_level = quantize(globe.sea_level.get());
     if elevation <= sea_level {
         // Underwater vertices keep the ordinary substrate; marine biomes carry
         // their own identity via the base biome.
-        return Substrate::Ordinary;
+        return GroundKind::Ordinary;
     }
     let unrest = quantize(*globe.unrest.get(vertex));
     let moisture = quantize(climate.moisture_at(vertex));
@@ -30,21 +29,21 @@ pub(crate) fn substrate_at(
     // Volcanic: high tectonic unrest → basalt (high relief) or ash (low).
     if unrest > 0.6 {
         return if relief > 500.0 {
-            Substrate::Basaltic
+            GroundKind::Basaltic
         } else {
-            Substrate::Ashen
+            GroundKind::Ashen
         };
     }
     // Evaporite: very dry + flat (a salt pan / playa).
     if moisture < 0.15 && relief < 200.0 {
-        return Substrate::Evaporite;
+        return GroundKind::Evaporite;
     }
     // Sand: arid lowland where sand seas / dunes form (the drier, flatter
     // Evaporite branch above catches salt pans; this is the broader arid case).
     if moisture < 0.25 && relief < 100.0 {
-        return Substrate::Sand;
+        return GroundKind::Sand;
     }
-    Substrate::Ordinary
+    GroundKind::Ordinary
 }
 
 #[cfg(test)]
@@ -87,7 +86,7 @@ mod tests {
                 assert!(
                     matches!(
                         substrate_at(&climate, &terrain, c),
-                        Substrate::Basaltic | Substrate::Ashen
+                        GroundKind::Basaltic | GroundKind::Ashen
                     ),
                     "high-unrest land vertex {c:?} must read volcanic"
                 );

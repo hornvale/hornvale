@@ -1102,6 +1102,33 @@ would have made a wrong reading unsayable. So the tier is right about what it
 measures and should not be read as covering coverage: the substrate scores
 *changes* against itself honestly, and does not yet score its own gaps.
 
+[The Hallmark](./chronicle/the-hallmark.md) (2026-09-02) widens what sits at
+this tier and finds another edge of it in the same pass. Decision 0044 — the
+doctrine this entry credits — was scoped to coherent physical *quantities*.
+Decision 0517 generalizes the placement test to any type, and six shared
+vocabularies moved on it in one campaign: three definitions of one error type
+collapsing to one, two verbatim copies of a genesis error, a three-valued
+sentiment, and a rock roster and a cave roster leaving the domain that only
+*named* them. Each of those migrations made this tier's central claim — *this
+changed nothing* — and each was scored the same way: a seed-42 world is
+byte-identical across all of them, reproduced three times. So the entry is
+right about a wider class than it was written for, and for the same reason.
+
+The edge is that the survey licensing those moves also turned up a defect the
+byte comparison could not have seen, and it is The Benchmark's point arriving
+in a second shape. A deep-time field documented as an absolute day had two
+producers, one of which wrote a *year* into it — smaller by a factor of
+365.25 — and nothing was broken: the two paths never met at one consumer, so
+each was internally consistent, every artifact was byte-identical, and no
+assertion anywhere could have been red. Byte-identity scores whether a change
+moved the world; it is structurally silent on whether a quantity means one
+thing, because a field that means two things *consistently* is perfectly
+stable. The tier's boundary therefore sharpens once more: the substrate scores
+its changes honestly, is learning to score its gaps, and does not score its
+own **coherence** — for that, someone has to read a field's documentation
+against each of its producers, which is what a consolidation survey turned out
+to be good for and was not built for.
+
 The same substrate now scores its
 own *completeness*: [The Correspondence](./chronicle/the-correspondence.md) made
 every modeled concept account for its manifestation across the lexical,

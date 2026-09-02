@@ -36,3 +36,15 @@ lto = true
 codegen-units = 1
 panic = "abort"
 strip = true
+
+# Profiles are per workspace root: the root's Whetstone profile does not
+# reach an excluded workspace. Measured 2026-09-02 (The Hone): `Driver::start`
+# 27.5 s and 300-630 ms per turn at opt-level 0, 3.8 s and 10-80 ms optimised.
+[profile.dev]
+opt-level = 2
+
+[profile.dev.package."*"]
+opt-level = 2
+
+[profile.dev.package.libm]
+opt-level = 3

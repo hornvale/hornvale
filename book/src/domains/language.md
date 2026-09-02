@@ -275,12 +275,19 @@ campaign stops that. Religion commits **meaning** instead of prose: a
 deity's generated name and epithet,
 the phenomenon it mythologizes (already committed), its periodicity
 (eternal, or cyclic with a period), its sentiment (watched, mourned and
-feasted, or feared), and its rank. A renderer living in `domains/language`
+feasted, or felt through the ambient world), and its rank. A renderer living
+in `domains/language`
 turns that structured content into voiced text through one function,
 `render_line`, taking a content struct and a voice-parameter struct that
 language defines and owns — language never imports religion, the same
 constitutional posture that keeps perception's phenomena blind to their own
-producers. The composition root maps a belief's committed facts into that
+producers. Language kept its own copy of that three-valued sentiment for as
+long as it had nowhere else to read one; since
+[The Hallmark](../chronicle/the-hallmark.md) the vocabulary itself lives in
+the kernel beside the `Phenomenon` it is derived from, so both domains now
+speak one roster and the composition root's translating shim is gone. The
+posture is unchanged — language still never imports religion — but obeying it
+no longer costs a duplicate. The composition root maps a belief's committed facts into that
 content struct, derives a species' voice parameters from its psychology
 vector, and calls the renderer; the almanac and the REPL render every tenet
 this way, at display time, from facts rather than from a frozen sentence.

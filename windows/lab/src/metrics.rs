@@ -2918,7 +2918,9 @@ pub fn registry() -> Vec<Metric> {
                 };
                 let beliefs = hornvale_religion::beliefs_held_by(v.world(), info.id);
                 match beliefs.first() {
-                    Some(head) => MetricValue::Text(head.sentiment.as_str().to_string()),
+                    Some(head) => MetricValue::Text(
+                        hornvale_religion::sentiment_tag(head.sentiment).to_string(),
+                    ),
                     None => MetricValue::Absent,
                 }
             }),
@@ -5903,7 +5905,9 @@ fn pantheon_sig(v: &FullView, species: &str) -> Option<PantheonSig> {
 fn species_head_sentiment(v: &FullView, species: &str) -> Option<String> {
     let flagship = flagship_of(v.world(), species)?;
     let beliefs = hornvale_religion::beliefs_held_by(v.world(), flagship.id);
-    beliefs.first().map(|b| b.sentiment.as_str().to_string())
+    beliefs
+        .first()
+        .map(|b| hornvale_religion::sentiment_tag(b.sentiment).to_string())
 }
 
 /// The fixed blind-attribution rule (spec §9.2, preregistered): given two

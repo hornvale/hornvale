@@ -1,7 +1,7 @@
 //! Tectonic genesis facts: summary truths only, never per-vertex data — the
 //! ledger keeps singular authored truths and saves stay small (spec §3).
 
-use crate::globe::{GenesisOutcome, summarize};
+use crate::globe::{GenesisOutcome, TectonicGlobe, summarize};
 use crate::rift;
 use hornvale_kernel::{EntityId, Fact, LedgerError, Value, World, WorldTime};
 
@@ -59,9 +59,9 @@ fn fact(subject: EntityId, predicate: &str, object: Value) -> Fact {
 pub fn genesis(
     world: &mut World,
     subject: EntityId,
-    outcome: &GenesisOutcome,
+    outcome: &GenesisOutcome<TectonicGlobe>,
 ) -> Result<(), LedgerError> {
-    let summary = summarize(&outcome.globe);
+    let summary = summarize(&outcome.value);
     world.ledger.commit(
         fact(
             subject,
@@ -97,7 +97,7 @@ pub fn genesis(
         )?;
     }
 
-    let rift = &outcome.globe.rift;
+    let rift = &outcome.value.rift;
     if !rift.seams.is_empty() {
         world.ledger.commit(
             fact(subject, SPREADING_RATE, Value::Number(rift.spreading_rate)),
@@ -113,9 +113,9 @@ pub fn genesis(
         // Majors are id-indexed by construction (`crust::draw_cratons`
         // assigns `id: i` by position), so a seam's craton ids double as
         // indices into both `rift.assembly` (the pre-rift contact frame)
-        // and `outcome.globe.cratons` (the final, post-rift centers).
-        let (_, angle_a) = rift::rotation_for(rift.assembly[a], outcome.globe.cratons[a].center);
-        let (_, angle_b) = rift::rotation_for(rift.assembly[b], outcome.globe.cratons[b].center);
+        // and `outcome.value.cratons` (the final, post-rift centers).
+        let (_, angle_a) = rift::rotation_for(rift.assembly[a], outcome.value.cratons[a].center);
+        let (_, angle_b) = rift::rotation_for(rift.assembly[b], outcome.value.cratons[b].center);
         let breakup_age = (angle_a + angle_b) / rift.spreading_rate;
         world.ledger.commit(
             fact(
@@ -149,7 +149,7 @@ mod tests {
         let geo = hornvale_kernel::Geosphere::new(3);
         let outcome = crate::generate(Seed(42), &geo, &crate::TerrainPins::default()).unwrap();
         genesis(&mut world, subject, &outcome).unwrap();
-        let summary = crate::summarize(&outcome.globe);
+        let summary = crate::summarize(&outcome.value);
         assert_eq!(
             world.ledger.value_of(subject, PLATE_COUNT),
             Some(&Value::Number(f64::from(summary.plate_count)))
@@ -198,7 +198,7 @@ mod tests {
         let geo = hornvale_kernel::Geosphere::new(3);
         let outcome = crate::generate(Seed(42), &geo, &crate::TerrainPins::default()).unwrap();
         assert!(
-            !outcome.globe.rift.seams.is_empty(),
+            !outcome.value.rift.seams.is_empty(),
             "seed 42's default assembly must seam"
         );
         genesis(&mut world, subject, &outcome).unwrap();
@@ -206,7 +206,7 @@ mod tests {
         assert!(!rifted.is_empty(), "expected at least one rifted-from fact");
         assert_eq!(
             rifted.len(),
-            outcome.globe.rift.seams.len(),
+            outcome.value.rift.seams.len(),
             "one rifted-from fact per seam"
         );
         let ages: Vec<_> = world.ledger.find(BREAKUP_AGE).collect();
@@ -215,7 +215,7 @@ mod tests {
         assert_eq!(rates.len(), 1, "exactly one spreading-rate fact");
         assert_eq!(
             rates[0].object,
-            Value::Number(hornvale_kernel::quantize(outcome.globe.rift.spreading_rate))
+            Value::Number(hornvale_kernel::quantize(outcome.value.rift.spreading_rate))
         );
     }
 
@@ -233,7 +233,7 @@ mod tests {
         };
         let outcome = crate::generate(Seed(3), &geo, &pins).unwrap();
         assert!(
-            outcome.globe.rift.seams.is_empty(),
+            outcome.value.rift.seams.is_empty(),
             "a lone craton must not seam"
         );
         genesis(&mut world, subject, &outcome).unwrap();

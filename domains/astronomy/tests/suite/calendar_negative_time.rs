@@ -32,7 +32,7 @@ use hornvale_kernel::Seed;
 /// window any more than its source may.
 fn earthlike() -> Calendar {
     let outcome = generate(Seed(42), &SkyPins::default()).expect("seed 42 builds");
-    calendar_of(&outcome.system)
+    calendar_of(&outcome.value)
 }
 
 /// A tidally locked world has no local day, so several methods answer `None`.
@@ -44,7 +44,7 @@ fn locked() -> Calendar {
         ..Default::default()
     };
     let outcome = generate(Seed(42), &pins).expect("a locked pin builds");
-    calendar_of(&outcome.system)
+    calendar_of(&outcome.value)
 }
 
 /// Instants spanning genesis, so every assertion sees both signs and the

@@ -6,7 +6,7 @@
 
 use hornvale_kernel::{
     ConceptDef, ConceptKind, ConceptRegistry, Correspondent, EntityId, Fact, LedgerError, Lineage,
-    Manifest, Phenomenon, RegistryError, Value, Venue, Void, World, WorldTime,
+    Manifest, Phenomenon, RegistryError, Value, Void, World, WorldTime,
 };
 
 /// Predicate marking an entity as a belief.
@@ -175,56 +175,28 @@ pub struct SocietySummary {
     pub has_priesthood: bool,
 }
 
-/// A belief's felt relationship to the phenomenon it mythologizes —
-/// watched (eternal), mourned-and-feasted (cyclic), or felt through the
-/// ambient world rather than watched (ambient). Derived from the source
-/// phenomenon's venue and periodicity (spec §6).
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Sentiment {
-    /// An unchanging presence in the day or night sky: always watched.
-    Eternal,
-    /// A presence that departs and returns: mourned in absence, feasted on
-    /// return.
-    Cyclic,
-    /// Felt through the ambient world (air, seasons) rather than watched.
-    Ambient,
+pub use hornvale_kernel::Sentiment;
+
+/// The lowercase tag committed to the ledger's `sentiment` fact — a
+/// save-format spelling contract (religion's meaning of the kernel's
+/// [`Sentiment`], per decision 0517's roster/meaning split).
+/// type-audit: bare-ok(identifier-text: return)
+pub fn sentiment_tag(sentiment: Sentiment) -> &'static str {
+    match sentiment {
+        Sentiment::Eternal => "eternal",
+        Sentiment::Cyclic => "cyclic",
+        Sentiment::Ambient => "ambient",
+    }
 }
 
-impl Sentiment {
-    /// Derive a sentiment from a phenomenon's venue and periodicity:
-    /// `Venue::Ambient` is always `Ambient`; otherwise an aperiodic
-    /// phenomenon (`period_days: None`) is `Eternal` and a periodic one is
-    /// `Cyclic`.
-    pub fn of(phenomenon: &Phenomenon) -> Self {
-        if phenomenon.venue == Venue::Ambient {
-            Sentiment::Ambient
-        } else if phenomenon.period_days.is_none() {
-            Sentiment::Eternal
-        } else {
-            Sentiment::Cyclic
-        }
-    }
-
-    /// The lowercase tag committed to the ledger's `sentiment` fact.
-    /// type-audit: bare-ok(identifier-text)
-    pub fn as_str(self) -> &'static str {
-        match self {
-            Sentiment::Eternal => "eternal",
-            Sentiment::Cyclic => "cyclic",
-            Sentiment::Ambient => "ambient",
-        }
-    }
-
-    /// Parse the lowercase tag committed to the ledger's `sentiment` fact.
-    /// `None` for anything else (a legacy save with no `sentiment` fact,
-    /// for instance).
-    fn parse(tag: &str) -> Option<Self> {
-        match tag {
-            "eternal" => Some(Sentiment::Eternal),
-            "cyclic" => Some(Sentiment::Cyclic),
-            "ambient" => Some(Sentiment::Ambient),
-            _ => None,
-        }
+/// Parse the lowercase tag committed to the ledger's `sentiment` fact.
+/// `None` for anything else (a legacy save with no `sentiment` fact).
+fn parse_sentiment(tag: &str) -> Option<Sentiment> {
+    match tag {
+        "eternal" => Some(Sentiment::Eternal),
+        "cyclic" => Some(Sentiment::Cyclic),
+        "ambient" => Some(Sentiment::Ambient),
+        _ => None,
     }
 }
 
@@ -344,7 +316,7 @@ pub fn genesis(
             &world.registry,
         )?;
         world.ledger.commit(
-            fact(SENTIMENT, Value::Text(sentiment.as_str().to_string())),
+            fact(SENTIMENT, Value::Text(sentiment_tag(sentiment).to_string())),
             &world.registry,
         )?;
         world
@@ -398,7 +370,7 @@ pub fn beliefs_of(world: &World) -> Vec<Belief> {
             sentiment: world
                 .ledger
                 .text_of(id, SENTIMENT)
-                .and_then(Sentiment::parse)
+                .and_then(parse_sentiment)
                 .unwrap_or(Sentiment::Ambient),
             high_god: matches!(world.ledger.value_of(id, HIGH_GOD), Some(Value::Flag(true))),
         })
@@ -443,6 +415,7 @@ pub fn cult_form_held_by(world: &World, community: EntityId) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use hornvale_kernel::Venue;
     use hornvale_kernel::test_lineage;
     use hornvale_kernel::{Referent, Seed};
 
