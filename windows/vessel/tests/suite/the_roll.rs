@@ -22,8 +22,10 @@ fn company_at(seed: u64) -> Option<(bool, bool)> {
 /// settlement could hold company at all. Prediction: equal after the roll.
 /// Today's reading, measured at Task 1: seeds built 64, with company 3,
 /// population>=2 64 — most fresh possessions start alone even though every
-/// built seed's home settlement could hold company; seed 42 is one of the 61
-/// that starts alone (see `seed_42_starts_alone_today` below).
+/// built seed's home settlement could hold company; seed 42 was one of the 61
+/// that started alone. Task 7 inverted that for seed 42 — see
+/// `seed_42_starts_in_company` below, which replaced the
+/// `seed_42_starts_alone_today` pin this sentence used to point at.
 ///
 /// Ignored for cost: 64 world builds is ~4 min (`ooc_objective.rs:572`
 /// measured a full miss at 233.72 s). Run by hand at Task 1 and Task 14.
@@ -44,24 +46,6 @@ fn company_across_the_sight_seeds() {
         could += usize::from(can);
     }
     println!("M1: seeds built {built}, with company {with_company}, population>=2 {could}");
-}
-
-/// Today's state, pinned so that Task 8 has a red to turn green: seed 42's
-/// flagship possession starts with nobody else present. When the roll lands
-/// this assertion inverts (see `seed_42_starts_in_company`, Task 8).
-///
-/// MUTATION THIS MUST FAIL AGAINST: call
-/// `session.place_creature_at_me(session.bodies()[1].entity)` before the
-/// snapshot inside `company_at`; `present` turns non-empty and this reddens.
-#[test]
-fn seed_42_starts_alone_today() {
-    let (has, can) = company_at(42).expect("seed 42 builds and starts");
-    assert!(can, "seed 42's flagship holds at least two people");
-    assert!(
-        !has,
-        "today a fresh possession at seed 42 stands alone; 3 of 64 seeds have \
-         company, The Roll Task 1"
-    );
 }
 
 /// Seed 42's world, locale context, world components, and flagship village —
@@ -455,4 +439,385 @@ fn a_herd_is_its_headcount() {
     let mut ledger = world.ledger.clone();
     let bodies = hornvale_vessel::liveness::derive_wild_herds(&world, &ctx, &mut ledger, &[herd]);
     assert_eq!(bodies.len(), 5, "a herd yields exactly its headcount");
+}
+
+// ---------------------------------------------------------------------------
+// Task 7: the roll itself, and the session that reads it.
+// ---------------------------------------------------------------------------
+
+use hornvale_kernel::RoomMeshMemo;
+use hornvale_vessel::roll::{ROLL_BUDGET, ROLL_HOPS, RollKeyStatic, roll_of, rooms_within};
+
+/// Unwrap a turn's text; a possession under test never releases.
+fn out(turn: hornvale_vessel::Turn) -> String {
+    match turn {
+        hornvale_vessel::Turn::Out(text) => text,
+        hornvale_vessel::Turn::Released(text) => {
+            panic!("the possession released unexpectedly: {text}")
+        }
+    }
+}
+
+/// A seed whose flagship roll actually WALKS: its residents must leave home
+/// for water, so a tick that reaches them commits `agent-at` facts and a tick
+/// that does not commits none. Seed 42 cannot serve — its flagship stands on
+/// a river and its residents drink in place — and the difference is exactly
+/// what makes `a_body_off_the_roll_is_frozen`'s mutation non-null. Measured
+/// over seeds 0..16 (possess, wait seven days, read
+/// `committed_agent_at_count`): eleven walk, and seed 14 is the cheapest of
+/// those whose residents never reach water at all (59 bodies, 673 positional
+/// facts, no drink) — which matters here specifically, because a settlement
+/// that walks ONCE and then drinks is dormant on the second wait whether or
+/// not the roll filtered it, and that is a null mutation. A settlement that
+/// keeps wandering is the one where "ticked" and "frozen" differ every tick.
+/// `possession_moves.rs` pins the same number with the fuller note.
+/// type-audit: bare-ok(index)
+const WALKING_SEED: u64 = 14;
+
+/// A live seed-42 flagship possession with the world's fauna on — the fixture
+/// Task 7's session-level tests share.
+fn flagship_session(world: &hornvale_kernel::World) -> Session<'_> {
+    Session::start(world, &PossessOpts::default())
+        .expect("seed 42 builds and possesses")
+        .0
+}
+
+/// M3: the roll is a function — two calls agree — and it is bounded: no
+/// settlement contributes more than its population, and never more than the
+/// asked-for budget in total.
+///
+/// The herd half of "bounded" is held one layer down, by Task 6's
+/// `a_herd_is_its_headcount`: a herd yields exactly `headcount` bodies, so a
+/// roll cannot contain more of one than the world says stand there. Asserting
+/// it again here would need the herd key a `Body` deliberately does not
+/// carry, and would re-measure `derive_wild_herds` rather than `roll_of`.
+///
+/// MUTATION THIS MUST FAIL AGAINST: `budget + 1` in the truncation.
+#[test]
+fn the_roll_is_pure_and_bounded() {
+    let world = common::build(42).expect("seed 42 builds");
+    let session = flagship_session(&world);
+    let observer = session.position();
+
+    let mut memo_a = RoomMeshMemo::new();
+    let mut memo_b = RoomMeshMemo::new();
+    let a = roll_of(
+        session.bodies(),
+        session.roll_keys(),
+        &observer,
+        ROLL_HOPS,
+        ROLL_BUDGET,
+        &mut memo_a,
+    );
+    let b = roll_of(
+        session.bodies(),
+        session.roll_keys(),
+        &observer,
+        ROLL_HOPS,
+        ROLL_BUDGET,
+        &mut memo_b,
+    );
+    assert_eq!(a, b, "the roll is a function of (homes, observer room)");
+    assert_eq!(
+        a.len(),
+        session.bodies().len(),
+        "the mask covers the roster"
+    );
+
+    // No settlement contributes more than its committed population.
+    let mut per_settlement: std::collections::BTreeMap<hornvale_kernel::EntityId, usize> =
+        std::collections::BTreeMap::new();
+    for (body, on) in session.bodies().iter().zip(&a) {
+        if !on {
+            continue;
+        }
+        if let Some(village) = body.village.as_ref() {
+            *per_settlement.entry(village.id).or_default() += 1;
+        }
+    }
+    for body in session.bodies() {
+        if let Some(village) = body.village.as_ref() {
+            let held = per_settlement.get(&village.id).copied().unwrap_or(0);
+            assert!(
+                held <= village.population as usize,
+                "{}: the roll holds {held} of a settlement whose population is {}",
+                village.name,
+                village.population
+            );
+        }
+    }
+
+    // The budget truncates. A budget of three is well under seed 42's
+    // flagship roster, so this arm actually exercises the cut rather than
+    // passing vacuously.
+    let mut memo_c = RoomMeshMemo::new();
+    let tight = roll_of(
+        session.bodies(),
+        session.roll_keys(),
+        &observer,
+        ROLL_HOPS,
+        3,
+        &mut memo_c,
+    );
+    assert_eq!(
+        tight.iter().filter(|on| **on).count(),
+        3,
+        "a budget of three admits exactly three bodies"
+    );
+    assert!(
+        a.iter().filter(|on| **on).count() <= ROLL_BUDGET,
+        "the roll never exceeds ROLL_BUDGET"
+    );
+}
+
+/// The order is (distance, residents first, parent, ordinal): with a budget
+/// of two at a room holding both residents and a herd, the roll is the two
+/// lowest-ordinal residents, not the herd.
+///
+/// The herd is placed at the settlement's own room so that it TIES the
+/// residents on hop distance. Without the tie the distance term would decide
+/// the order by itself and the residents-first term would be untested — a
+/// null mutation dressed as a passing test.
+///
+/// MUTATION THIS MUST FAIL AGAINST: sort wild before settled (swap the
+/// `wild` field's sense in `RollKey`'s construction).
+#[test]
+fn the_roll_orders_home_first() {
+    let (world, ctx, wc, village) = residents_fixture();
+    let mut ledger = world.ledger.clone();
+    let residents = hornvale_vessel::residents::derive_residents(
+        &world,
+        &ctx,
+        &mut ledger,
+        &wc,
+        &village,
+        frozen_now(),
+    );
+    assert!(
+        residents.len() >= 2,
+        "precondition: the flagship holds at least two residents"
+    );
+    let room = residents[0].home.clone();
+
+    let herd = hornvale_worldgen::herds::WildHerd {
+        species: "wolf".to_string(),
+        position: room.centroid(),
+        vertex: 4242,
+        headcount: 3,
+    };
+    let wild = hornvale_vessel::liveness::derive_wild_herds(&world, &ctx, &mut ledger, &[herd]);
+    assert_eq!(
+        wild[0].home.pack().ok(),
+        room.pack().ok(),
+        "precondition: the staged herd shares the settlement's room, so it \
+         ties the residents on hop distance"
+    );
+
+    let mut bodies: Vec<hornvale_vessel::body::Body> = residents.clone();
+    let mut keys: Vec<RollKeyStatic> = residents
+        .iter()
+        .enumerate()
+        .map(|(i, b)| RollKeyStatic::of(b, i as u16))
+        .collect();
+    // The wild bodies go FIRST in the roster after the residents' own two, so
+    // that a mask that merely followed roster order could not pass either.
+    for (i, body) in wild.iter().enumerate() {
+        bodies.insert(i, body.clone());
+        keys.insert(i, RollKeyStatic::of(body, i as u16));
+    }
+
+    let mut memo = RoomMeshMemo::new();
+    let mask = roll_of(&bodies, &keys, &room, ROLL_HOPS, 2, &mut memo);
+    let chosen: Vec<&hornvale_vessel::body::Body> = bodies
+        .iter()
+        .zip(&mask)
+        .filter(|(_, on)| **on)
+        .map(|(b, _)| b)
+        .collect();
+    assert_eq!(chosen.len(), 2, "a budget of two admits two bodies");
+    assert!(
+        chosen.iter().all(|b| b.village.is_some()),
+        "residents sort before wild at equal distance; got {:?}",
+        chosen.iter().map(|b| b.label.as_str()).collect::<Vec<_>>()
+    );
+    assert_eq!(
+        chosen.iter().map(|b| b.entity).collect::<Vec<_>>(),
+        vec![residents[0].entity, residents[1].entity],
+        "and within a settlement the order is by ordinal"
+    );
+}
+
+/// Seed 42's flagship possession starts in company (M1, inverted from Task
+/// 1's pin): `sensed.present` is non-empty on the first look, and it holds
+/// every OTHER resident of the home settlement — `population - 1` of them,
+/// since everyone is home at day 0.
+///
+/// The assertion is stated as containment plus that count rather than as
+/// `present.len() == population - 1`, because `sensed.present` is the whole
+/// co-located roster: a wild herd standing on the settlement's own room would
+/// legitimately make it longer, and an equality would then be pinning where
+/// seed 42's fauna happens to sit rather than that the player has company.
+///
+/// MUTATION THIS MUST FAIL AGAINST: derive `1` resident in `start_held`
+/// (`derive_npcs(world, ctx, &mut ledger, 1, village.id)` in place of
+/// `derive_residents`).
+#[test]
+fn seed_42_starts_in_company() {
+    let world = common::build(42).expect("seed 42 builds");
+    let village = village_info(&world).expect("seed 42 places a flagship");
+    let session = flagship_session(&world);
+    let snap = session.snapshot().expect("a live session snapshots");
+
+    assert!(
+        village.population >= 2,
+        "precondition: seed 42's flagship could hold company"
+    );
+    assert!(
+        !snap.sensed.present.is_empty(),
+        "a fresh possession at seed 42 no longer stands alone"
+    );
+
+    let driven = session.driven_body().entity;
+    let housemates: Vec<u64> = session
+        .bodies()
+        .iter()
+        .filter(|b| b.entity != driven)
+        .filter(|b| b.village.as_ref().is_some_and(|v| v.id == village.id))
+        .map(|b| b.entity.0.get())
+        .collect();
+    assert_eq!(
+        housemates.len(),
+        village.population as usize - 1,
+        "the flagship's roll is its population, less the body you are"
+    );
+    let present: std::collections::BTreeSet<u64> =
+        snap.sensed.present.iter().map(|p| p.entity).collect();
+    for who in &housemates {
+        assert!(
+            present.contains(who),
+            "every other resident is present on the first look; {who} is not"
+        );
+    }
+}
+
+/// Dormancy (§3.7): a body off the roll commits no `agent-at` across a wait.
+/// The observer walks until its settlement's room is outside `ROLL_HOPS`,
+/// which takes the settlement's residents off the roll; a resident's
+/// committed `agent-at` count is then unchanged by a wait that would
+/// otherwise have moved it.
+///
+/// **At `WALKING_SEED`, not 42, and the reason is what makes the mutation
+/// below real.** Seed 42's flagship stands on a river: its residents drink in
+/// place and commit no positional fact whether they are ticked or not, so the
+/// same assertions pass with the roll's filter REMOVED — a null mutation
+/// dressed as a passing test, measured directly before this test was moved. A
+/// world whose residents must leave home for water is the only one where
+/// "frozen" and "ticked" have different observable consequences. The first
+/// wait below is what establishes that they are the ticking kind.
+///
+/// MUTATION THIS MUST FAIL AGAINST: hand `other_bodies` unfiltered to
+/// `DriveMovements` in `wait`.
+#[test]
+fn a_body_off_the_roll_is_frozen() {
+    let world = common::build(WALKING_SEED).expect("the walking seed builds");
+    let mut session = flagship_session(&world);
+    let home = session.driven_body().home.clone();
+    let driven = session.driven_body().entity;
+    let resident = session
+        .bodies()
+        .iter()
+        .find(|b| b.entity != driven && b.village.is_some())
+        .expect("the flagship's roll holds a second resident")
+        .entity;
+
+    // Cross the sustenance seek threshold (world day ~5.667) while everyone is
+    // still within call, so the roster is demonstrably the ticking kind.
+    let _ = out(session.handle("!wait 7"));
+    assert!(
+        session.committed_agent_at_count() >= 1,
+        "precondition: seed {WALKING_SEED}'s residents walk when they are \
+         ticked; if this is 0 an epoch has moved the seed"
+    );
+
+    // Walk out of the window. Every direction is tried in turn so that one
+    // blocked heading does not strand the walk; the assertion below is what
+    // makes a failed walk loud rather than vacuous.
+    let mut memo = RoomMeshMemo::new();
+    let window = rooms_within(&home, ROLL_HOPS, &mut memo);
+    for _ in 0..12 {
+        if !window.contains(&session.position().pack().expect("a walk-band room packs")) {
+            break;
+        }
+        for dir in ["n", "e", "s", "w"] {
+            let before = session.position();
+            let _ = out(session.handle(&format!("go {dir}")));
+            if session.position() != before {
+                break;
+            }
+        }
+    }
+    assert!(
+        !window.contains(&session.position().pack().expect("a walk-band room packs")),
+        "precondition: the observer walked outside ROLL_HOPS of the flagship"
+    );
+
+    let before = session.committed_agent_at_count_for(resident);
+    let session_before = session.committed_agent_at_count();
+    let _ = out(session.handle("!wait 7"));
+    assert_eq!(
+        before,
+        session.committed_agent_at_count_for(resident),
+        "a resident whose settlement is out of call commits nothing across a wait"
+    );
+    assert_eq!(
+        session_before,
+        session.committed_agent_at_count(),
+        "and neither does any of its neighbours — the whole settlement is dormant"
+    );
+    assert!(
+        !session.on_roll().iter().any(|b| b.entity == resident),
+        "and it is off the roll the wait read"
+    );
+}
+
+/// Handles are stable: `bodies()` never reorders across waits — it only ever
+/// grows at the end — and the driven index never moves
+/// (`possessing_a_creature_does_not_renumber_other_bodies_handles`'s lesson,
+/// session.rs:809-818). `wait`'s `before`/`narrate_motion` zip depends on it.
+///
+/// MUTATION THIS MUST FAIL AGAINST: `self.bodies.reverse()` at the end of
+/// `refresh_roll`.
+///
+/// **Not the brief's "sort `self.bodies` by `on_roll`", because that is a
+/// NULL here and the null is worth recording.** At seed 42's flagship every
+/// derived body is within call, so the mask is all-`true`, and a stable sort
+/// on a constant key permutes nothing at all — the test would pass against a
+/// `refresh_roll` that really did reorder by the roll. Reversing is the same
+/// defect stated in a form the world can actually exhibit.
+#[test]
+fn the_roster_never_reorders() {
+    let world = common::build(42).expect("seed 42 builds");
+    let mut session = flagship_session(&world);
+    let before: Vec<String> = session.bodies().iter().map(|b| b.label.clone()).collect();
+    let driven = session.driven_body().entity;
+
+    for _ in 0..3 {
+        let _ = out(session.handle("!wait 1"));
+    }
+
+    let after: Vec<String> = session.bodies().iter().map(|b| b.label.clone()).collect();
+    assert!(
+        after.len() >= before.len(),
+        "the roster is append-only: it may grow, never shrink"
+    );
+    assert_eq!(
+        &after[..before.len()],
+        &before[..],
+        "no body ever changes index; a wait only appends"
+    );
+    assert_eq!(
+        session.driven_body().entity,
+        driven,
+        "the driven index never moves"
+    );
 }

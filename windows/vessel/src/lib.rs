@@ -28,6 +28,7 @@ pub mod passage;
 pub mod plan;
 mod purview;
 pub mod residents;
+pub mod roll;
 mod session;
 pub mod snapshot;
 pub mod stance;
