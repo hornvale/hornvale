@@ -276,3 +276,17 @@ green against the new/flipped rows) · Capture: this entry is the capture —
 the chronicle entry, book freshness sweep, and retrospective remain
 campaign-close work under the `closing-a-campaign` skill, out of this
 task's scope per the plan's Interfaces note.
+
+#14 [G6] — Nathan's rulings at the merge stop (2026-09-02), overriding two
+execution-time adjudications: (1) the `EraClimate.day` two-axes defect
+(ledger #10, `DOM-era-day-axis`) is fixed IN THIS CAMPAIGN — the bake path
+converts years to days at the named crossing so the field holds one axis,
+then the blocked `WorldTime` migration proceeds; (2) `Formation`'s cave
+half (ledger #11) is UNIFIED with the kernel's `CaveKind` — structurally,
+as `Formation::Cave(CaveKind)` with an explicit spelling map preserving the
+frozen corpus strings ("karst-cave"/"lava-tube"/"fracture-cave"); committed
+bytes still may not move without escalation · Why: decider's call at G6 —
+the deferrals were controller adjudications, not spec constraints, and the
+decider values the unification and the axis repair over the deferral's
+safety margin · Capture: plan addendum Tasks 13-14; `DOM-era-day-axis`
+re-scored at close.
