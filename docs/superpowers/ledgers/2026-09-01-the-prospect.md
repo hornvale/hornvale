@@ -891,3 +891,43 @@ campaign an implementer has corrected my specification of a test.
 fails for ANY implementation that stops consulting salience, regardless of which
 rung a future mutation inverts. That is the assertion shape ruling 35 was asking
 for, and it does not depend on guessing the right pair.
+
+### #39 [G5, MY ERROR] — "the map only knows settlements" was false; it knew everything except exotic sites
+
+I told Nathan, and later a subagent, that `plate.rs` draws settlements and
+nothing else. Verified against main:
+
+```
+origin/main clients/game/bin/src/plate.rs  — cave references:   88
+origin/main clients/game/bin/src/plate.rs  — exotic references:  0
+```
+
+The map already drew caves, volcanoes and waterfalls. What was genuinely absent
+was **exotic sites** — no roster, no `FeatureId` arm, no glyph — so seed 42's
+103 were generated, named, enterable, and undrawable at every rung.
+
+**How I got it wrong:** I grepped for settlement functions, found
+`settlements_of -> BTreeMap<Vertex, u64>`, and generalised one function's
+signature to the whole drawing path. Fourteenth instance of the observing tool
+answering a neighbouring question — the query answers "what settlement functions
+exist", not "what does the map draw".
+
+**And it made my diagnosis of Nathan's complaint wrong.** He said he sees "only
+the flagship settlement and nothing else at any zoom". That is not the roster: it
+is the **discovery gate** working as designed — an undiscovered site is not
+drawn, and I explicitly told the implementer to preserve that. So the roster fix
+was necessary (exotic sites had nothing) but is NOT the answer to what he
+actually asked about. That is his call to make and it is now surfaced.
+
+**Two more things this task found that are worth the record:**
+
+- **A fourth two-sources-of-truth, collapsed.** `driver.rs` carried its own
+  inline cave scan; it now calls `cave_site_vertices`, the same function
+  `Session` uses to decide enterability. So the map and the door agree by
+  construction rather than by coincidence.
+- **Caves were drawn at their warranting VERTEX**, so the map carried the same
+  ~19.7 km displacement half two was dispatched to remove — the defect was
+  wider than ruling 17 recorded.
+
+My 19.7 km / 42.5 km figures reproduced exactly: mean 0.003086059 rad, max
+0.006671012 rad at R=6371.
