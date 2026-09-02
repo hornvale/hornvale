@@ -136,10 +136,21 @@ Verified by running commands, not by reading (the four entries of ledger #3):
 
 ## 4. Design
 
-### 4.1 The capability manifest (decision 0576)
+### 4.1 The capability provision table (decision 0576)
 
 A declared table mapping each corpus token to the resolver that serves it,
-spanning all three homes:
+spanning all three homes. **It is `Provision`, never `Manifest`:**
+`kernel/src/manifest.rs` already defines a `Manifest`, registered through
+`ConceptRegistry::register_manifest`, and it is a different object — the
+record that a *concept* is carried across lexicon, perception and cognition.
+Reusing the word would alias two unrelated tables.
+
+**But its `Correspondent<T, V>` — `Present(payload) | Absent(reason)`, where
+an absence must name why — is exactly the discipline this table needs, and
+the implementer must decide whether to reuse it rather than re-derive it.**
+State the decision either way in the ledger. Note that `manifest.rs` says
+"Stage 1 lands the types only — nothing constructs a `Manifest` yet", so this
+is a third instance of the pattern §3 documents: built and unwired.
 
 ```
   token                     home         resolver
@@ -148,19 +159,19 @@ spanning all three homes:
   predicate:witnessed       session      derived read over the act view
 ```
 
-`resolve` consults the manifest instead of `registry_tokens()` alone. A token
-with no manifest row is **missing**, exactly as today — the change is
+`resolve` consults the provision table instead of `registry_tokens()` alone. A
+token with no provision row is **missing**, exactly as today — the change is
 default-deny in the same direction, widened to see two homes it was blind to.
 
 **The direction this check enforces, stated per the standing rule:** the
-manifest asserts *declared ⊆ served*. It is structurally blind to a capability
+table asserts *declared ⊆ served*. It is structurally blind to a capability
 that exists and is undeclared, and that blindness is deliberate — an
 undeclared capability scores absent, which is the safe error.
 
 ### 4.2 The witness (decision 0577)
 
 A situation earns `Stageable` only when a committed tableau places its actants
-and every token its requirements name **resolves through the manifest against
+and every token its requirements name **resolves through the provision table against
 that staged scene**.
 
 `Tableau` gains a stated-relations layer, obeying its existing rule that
@@ -225,7 +236,7 @@ project has ever fully satisfied.
 
 `snap_judgment` is kind × kind and world-invariant. Committing it would store
 ~840 facts identical in every world ever generated — precisely the second
-source of truth 0366 objects to. It is declared through the manifest against
+source of truth 0366 objects to. It is declared through the provision table against
 the component layer and **no fact is committed**.
 
 **The grain ruling (Nathan, at brainstorm).** The corpus's `feels-toward` is
@@ -273,7 +284,7 @@ A stageable count above 0 is **a finding requiring investigation, not a
 success** — under §4.2's bar it would mean a situation was witnessed, which
 none of these bundles alone should achieve.
 
-**Required probe before Task 2 commits to §4.3.** The 46% promoted-forebear
+**Required probe before the kinship task commits to §4.3** (plan Task 1). The 46% promoted-forebear
 yield is measured on one seed, and one world is an anecdote. The implementer
 measures the yield across a seed panel and reports the distribution. **Kill
 criterion:** if the median yield is under 10%, §4.3 does not ship and the
