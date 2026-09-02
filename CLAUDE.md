@@ -357,6 +357,7 @@ make doctor        # the repo self-map — run this first in a fresh session
 cargo fmt --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo run --manifest-path tools/type-audit/Cargo.toml -- check   # a LINT, not an artifact
+cargo run --quiet --manifest-path tools/placement-audit/Cargo.toml -- check   # shape-twin placement tags, default-deny
 cargo nextest run --workspace -E "$(bash scripts/subfloor-roster.sh)"   # the sub-floor tier only
 
 # The stage gate's own suite runs the full thing, unchanged in content from

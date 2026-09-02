@@ -149,7 +149,7 @@ site instead would move the bake's own era boundaries relative to
 `era_index_for`'s unconverted `year`, changing behaviour and committed bytes;
 converting both is a repair of the bake's whole time axis, not a type
 migration. `PaleoRecord.glacial_maximum_day` inherits the ambiguity rather
-than escaping it — `strata.rs:126` copies it straight out of a peak era's
+than escaping it — `strata.rs:142` copies it straight out of a peak era's
 `day` — so the committed-ledger surface at `facts.rs:88` cannot be soundly
 typed while its source is two-valued · Residual scope, recorded not taken:
 `IceState.day` and `integrate_ice`'s `samples: &[(f64, f64)]`

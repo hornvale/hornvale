@@ -728,7 +728,10 @@ pub fn variant_pool(
                 },
             ],
             // The rock bands never pair with `OpenWater` — see the matching
-            // note in `facets.rs::BiomeExpr::biome`. Named explicitly.
+            // note in `facets.rs::BiomeExpr::biome`. Named explicitly rather
+            // than wildcarded, so a future non-Rock `Stratum` variant still
+            // has to justify itself here; a new `Horizon` is absorbed by
+            // this arm's wildcard and is the kernel roster's job now.
             Stratum::Rock(_) => unreachable!(
                 "OpenWater never pairs with a rock stratum; caves carry \
                  their own Formation"
