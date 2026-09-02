@@ -1824,8 +1824,14 @@ fn a_registered_multi_property_kind_discriminates_subset_from_equality() {
 }
 
 /// Sleeping is NOT gated on an object, and this test exists so it stays that
-/// way. `Session::sleep` refuses a non-empty argument, charges the clock,
-/// commits `rested` and sets `wake_at`; it asks nothing about the room.
+/// way (decision 0558). `Session::sleep` refuses a non-empty argument, charges
+/// the clock, commits a `slept` fact carrying the bout's span, and sets
+/// `wake_at` if the act renders the body unconscious; it asks nothing about
+/// the room.
+///
+/// (This paragraph said "commits `rested`" until the Definition-of-Done
+/// sweep. Task 8's act split moved the method onto `slept` and nothing about
+/// a doc comment reddens when the predicate under it changes.)
 ///
 /// The tripwire is for a specific future mistake: someone reads
 /// `OfferedVerb::Sleep`'s doc, sees "gates on SupportsRest", and makes the

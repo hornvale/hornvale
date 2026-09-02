@@ -186,9 +186,15 @@ const WALKED_PROVENANCE: &str = "walked on (its own errand)";
 /// [`WALKED_PROVENANCE`], naming the retrace rather than the retracer.
 const RETRACED_PROVENANCE: &str = "turned back the way it came";
 
-/// The provenance `sleep` commits its `rested` fact under, in the same
-/// register `liveness.rs` uses for a creature's own Rest ("slept at home
+/// The provenance `sleep` commits its `slept` fact under, in the same
+/// register `liveness.rs` uses for a creature's own Sleep ("slept at home
 /// (fatigue eased)").
+///
+/// **It said `rested` fact / own Rest until the Definition-of-Done sweep, and
+/// the drift was this campaign's own.** The Wicket's Task 8 split
+/// `Action::Sleep` from `Action::Rest` and moved this method onto the `slept`
+/// predicate; the constant's name and value were already right, so nothing
+/// reddened and the sentence beside them kept naming the retired fact.
 const SLEPT_PROVENANCE: &str = "lay down and slept (fatigue eased)";
 
 /// What `sleep` says. It names `!wait` on purpose: an in-character `wait` is
