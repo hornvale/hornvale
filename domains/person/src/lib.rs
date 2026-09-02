@@ -78,6 +78,24 @@ pub const PERSON_DIED: &str = "person-died";
 /// upstream of this campaign asserted it was deliberate, so it is written
 /// down here rather than left to be inferred from the emit site
 /// (`windows/worldgen/src/person_promote.rs`).
+///
+/// **This is an inferred relationship, not a recorded one — for `Ancestor(1)`
+/// exactly as much as for any other remove.** Decision 0584 restricted this
+/// predicate to a remove of exactly one generation because the registered
+/// concept `parent` means "one's father or mother," and a remove of 37
+/// generations plainly fails that test — but that same test was never
+/// applied at `n = 1`, and it fails there too. `domains/history::descent`'s
+/// own module doc says the ledger "does not commit a genealogy… What the
+/// edge encodes is descent at an unknown remove": seed 42's founding gaps
+/// run to a median of 50 years and a maximum of 975, and `remove()` derives
+/// the generation count by rounding `gap_years / generation_length_years` to
+/// the nearest integer. So a `parent-of` fact means only that two
+/// communities' founding years sit between half and one-and-a-half
+/// generation-lengths apart — nobody recorded, and nothing here asserts,
+/// that the object was literally the subject's father or mother. The
+/// registered predicate text below is already exact about this ("settled
+/// from this person's community, one generation removed"); what was missing
+/// was saying so at the definition a consumer actually reads.
 /// type-audit: bare-ok(identifier-text)
 pub const PARENT_OF: &str = "parent-of";
 

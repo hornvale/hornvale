@@ -88,6 +88,27 @@ and Y" survives discovering a Z; "X is the only limit" does not survive any,
 found or not. That is not a stronger enumeration — it is refusing to make
 the claim that kept failing.
 
+## A truth standard applied at n > 1, and never checked at n = 1
+
+Decision 0584 restricted `parent-of` to `Ancestor(1)` on the ground that
+"37 generations removed" fails the registered concept `parent`'s own
+definition ("one's father or mother"). That test was never run at `n = 1`,
+and it fails there too. `domains/history::descent`'s own module doc says the
+ledger "does not commit a genealogy… What the edge encodes is descent at an
+unknown remove" — seed 42's founding gaps run to a median of 50 years and a
+maximum of 975, and `remove()` only rounds `gap_years /
+generation_length_years` to the nearest integer. `Ancestor(1)` is exactly as
+much an inference as `Ancestor(37)` was; it is a narrower one, not a
+different kind of claim. Nothing in decision 0578, decision 0584, the
+chronicle, or this file said so — a `grep -i "genealog\|gap_years\|
+generation length"` across all four returned zero hits — until the final
+whole-branch review caught it. Not fixed by amending 0584: the campaign's
+decision block (0576-0585) is exhausted, and a clarifying paragraph would
+edit an in-force record in place, which this campaign has been careful never
+to do elsewhere. Disclosed instead where a reader of the fact actually meets
+the claim — `PARENT_OF`'s own doc comment in `domains/person/src/lib.rs` —
+and in the chronicle.
+
 ## A property test caught a real hash collision inspection had missed
 
 `ActHandle` folds four constituents (`actor`, `deed`, `patient`, `day`)

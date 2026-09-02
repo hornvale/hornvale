@@ -89,6 +89,25 @@ backwards (the descendant as the parent of their own ancestor). Both are
 fixed in the shipped predicate; `bundle:consanguineal-kin` is the first
 bundle this project has ever fully satisfied.
 
+**Disclosed, not fixed: `parent-of` records inferred descent, not recorded
+parentage — at `Ancestor(1)` exactly as much as at any other remove.**
+Decision 0584 restricted the predicate to a remove of exactly one generation
+because the registered concept `parent` means "one's father or mother," and
+37 generations removed plainly fails that test. The same test was never
+applied at `n = 1`. `domains/history::descent`'s own module doc says the
+ledger "does not commit a genealogy… What the edge encodes is descent at an
+unknown remove": seed 42's founding gaps run to a median of 50 years and a
+maximum of 975, and `remove()` derives the generation count by rounding
+`gap_years / generation_length_years` to the nearest integer. So a
+`parent-of` fact means only that two communities' founding years sit between
+half and one-and-a-half generation-lengths apart — nobody recorded, and
+nothing commits, that the object was literally the subject's father or
+mother. The registered predicate text was already exact about this
+("settled from this person's community, one generation removed"); what was
+missing was saying so where a reader of the fact — not just the registry
+row — actually meets the claim, now fixed at `PARENT_OF`'s own doc comment
+in `domains/person/src/lib.rs`.
+
 **Affect (the component layer, decision 0579).** `windows/sentiment::
 snap_judgment` computes a people-to-people warmth/competence/emotion
 appraisal and was already correct; committing it would have written roughly
@@ -139,7 +158,7 @@ exists precisely so that registering vocabulary can never substitute for one.
 ## What stays unwired, and one thing that turned out already wired
 
 Three mechanisms this campaign touched were already built and already silent
-before it started, and all three got wired this time in one home or another.
+before it started.
 `descent.rs::ancestor()`'s own doc still calls itself "reserved and
 currently unconsumed" — its sibling `kinship()` is now spoken through
 `parent-of`/`kin-of`, but `ancestor()` itself has no caller yet. `snap_
@@ -150,7 +169,7 @@ passing and is not this campaign's to fix.
 
 The fourth candidate on this list was wrong, and finding out why is its own
 small instance of the campaign's recurring lesson. `kernel/src/manifest.rs`'s
-module doc still reads "Stage 1 lands the types only — nothing constructs a
+module doc read "Stage 1 lands the types only — nothing constructs a
 `Manifest` yet," and the spec quoted that sentence (§4.1) as a reason
 `Provision` reuses `Correspondent`'s *shape* without reusing `Manifest`
 itself. The sentence is false: `register_manifest` is "the only public path

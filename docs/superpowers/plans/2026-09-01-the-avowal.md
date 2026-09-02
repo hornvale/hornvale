@@ -526,6 +526,10 @@ Worth recording: this campaign found **four** built-and-unwired mechanisms —
 (commits nothing), `kernel/src/manifest.rs` ("nothing constructs a `Manifest`
 yet"), and the tone tier (`tonality` is 0.0 on all 23 authored rows). That is a
 pattern, not four coincidences, and it is what this campaign is really about.
+[Corrected by the campaign's own close: `kernel/src/manifest.rs` was never
+unwired — `register_manifest` is the live, sole concept-registration path,
+called by nine domains every genesis. See the chronicle's "What stays
+unwired" section and the retrospective's opening section.]
 
 - [ ] **Step 4: Idea-registry rows**
 

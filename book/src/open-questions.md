@@ -1066,7 +1066,7 @@ pairing a generator with a verifier is a property that must itself be
 checked for completeness, not assumed once built.** The headline number
 stayed at 0 of 36 and 0 of 409 throughout, which is the preregistered null
 (spec §5) and not a shortfall: token completion is necessary and was never
-sufficient, and three of the campaign's four bundle completions
+sufficient, and the campaign's three bundle completions
 (`consanguineal-kin`, `witnessing`, `act-chronology`) shortened `Blocked`
 reasons without ever reaching the witness. Migration cost was zero — nothing
 had ever claimed `Stageable` under the old membership-only reading, so the
