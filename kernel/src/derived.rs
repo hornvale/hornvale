@@ -232,6 +232,14 @@ impl<K: Ord + Clone, V: Clone> Derived<K, V> {
     pub fn evict(&mut self, key: &K) {
         self.entries.remove(key);
     }
+
+    /// Every key currently held, in `K`'s own `Ord` order — a byte-size
+    /// estimate's own read (The Detent, spec §4 M1), which needs each key's
+    /// shape to size the entry it names but has no other reason to touch the
+    /// store's internals.
+    pub fn keys(&self) -> impl Iterator<Item = &K> {
+        self.entries.keys()
+    }
 }
 
 impl<K: Ord + Clone, V: Clone> Default for Derived<K, V> {

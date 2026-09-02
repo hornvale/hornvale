@@ -1360,14 +1360,21 @@ fn build_emitter_scan(
     }
 
     // Pass 3: copy the timelines of the members that are actually emitters.
+    // Spec §3 rule 4's own witness is taken HERE, at the exact copy the rule
+    // is about (`[..upto].to_vec()`), not inferred from the roster size: a
+    // member's copied prefix can be shorter than its whole trail once a scan
+    // has run before, and rule 4's branch turns on whether that copy GROWS
+    // with history, which only a count taken at the copy itself can show.
     let mut emitters: Vec<(Body, Vec<(WorldTime, Facet)>)> = Vec::new();
     {
         let mut store = folds.borrow_mut();
-        let trail = store.trail(ledger);
+        let (trail, _sustenance_memo, witness) = store.trail_and_witness(ledger);
         for (m, ever) in roster.iter().zip(&is_emitter) {
             if *ever {
                 let upto = trail.prefix_len(m.entity, t);
-                emitters.push((m.clone(), trail.of(m.entity)[..upto].to_vec()));
+                let copied = trail.of(m.entity)[..upto].to_vec();
+                witness.note_emitter_timeline_copied(upto as u64);
+                emitters.push((m.clone(), copied));
             }
         }
     }

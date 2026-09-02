@@ -2811,6 +2811,20 @@ impl<'w> Session<'w> {
         self.ground.borrow().misses()
     }
 
+    /// Every entity's judged-room count summed, held by the session's
+    /// frightening-verdict index — M1's second entry count (spec §4).
+    /// type-audit: bare-ok(count: return)
+    pub fn resident_ground_judged_entries(&self) -> usize {
+        self.folds.borrow().frightening_ground().entries()
+    }
+
+    /// How many `(WorldTime, Facet)` entries this session's emitter scans
+    /// have copied out of a trail, ever — spec §3 rule 4's own numerator.
+    /// type-audit: bare-ok(count: return)
+    pub fn resident_emitter_timeline_copied(&self) -> u64 {
+        self.folds.borrow().witness().emitter_timeline_copied()
+    }
+
     /// How many unfiltered reset lookups this session has made — the
     /// denominator [`Self::resident_resets_in_the_future`] is a count out of,
     /// and the number that says whether that witness measured anything.

@@ -905,6 +905,34 @@ impl FrighteningGround {
     pub fn entries(&self) -> usize {
         self.by_entity.values().map(|e| e.judged.len()).sum()
     }
+
+    /// An estimate of the bytes this index holds, over every entity: every
+    /// JUDGED room's key size (`size_of::<Facet>()` plus its `path`'s heap
+    /// length) plus one `size_of::<bool>()` verdict, PLUS every FRIGHTENING
+    /// entry's `size_of::<(WorldTime, Facet)>()` plus its own room's `path`
+    /// heap length (The Detent, spec §4 M1) — the two collections
+    /// [`GroundEntry`] actually holds, summed the same way
+    /// [`crate::ground::GroundHazards::held_bytes`] sums its own key set. An
+    /// ESTIMATE of held data, not an allocator measurement: it counts
+    /// neither `BTreeMap`/`Vec` overhead nor any allocator slack.
+    /// type-audit: bare-ok(count: return)
+    pub fn held_bytes(&self) -> usize {
+        let judged: usize = self
+            .by_entity
+            .values()
+            .flat_map(|e| e.judged.keys())
+            .map(|room| {
+                std::mem::size_of::<Facet>() + room.path.len() + std::mem::size_of::<bool>()
+            })
+            .sum();
+        let frightening: usize = self
+            .by_entity
+            .values()
+            .flat_map(|e| e.frightening.iter())
+            .map(|(_, room)| std::mem::size_of::<(WorldTime, Facet)>() + room.path.len())
+            .sum();
+        judged + frightening
+    }
 }
 
 /// What the store's reads have cost and what they have seen — the counters two
@@ -1014,6 +1042,10 @@ pub struct ReadWitness {
     /// `hazards()` calls would fold in the room memo's own hit rate, which is
     /// a different mechanism measured by a different number.
     ground_judged: u64,
+    /// How many `(WorldTime, Facet)` entries `build_emitter_scan`'s pass 3
+    /// has copied out of the trail, ever — spec §3 rule 4's own numerator,
+    /// taken at the exact `[..upto].to_vec()` the rule is about.
+    emitter_timeline_copied: u64,
     /// Per entity, how many TERRAIN TEMPERATURE samples its sustenance reads
     /// have taken, ever.
     ///
@@ -1198,6 +1230,13 @@ impl ReadWitness {
         self.ground_judged += n;
     }
 
+    /// Record that `build_emitter_scan`'s pass 3 copied `entries` sightings
+    /// out of one emitter's trail — spec §3 rule 4's own instrument.
+    /// type-audit: bare-ok(count: entries)
+    pub fn note_emitter_timeline_copied(&mut self, entries: u64) {
+        self.emitter_timeline_copied += entries;
+    }
+
     /// How many emitter scans have been built — the DENOMINATOR
     /// [`Self::emitter_scans_with_emitters`] is a count out of.
     /// type-audit: bare-ok(count: return)
@@ -1225,6 +1264,13 @@ impl ReadWitness {
     /// type-audit: bare-ok(count: return)
     pub fn ground_judged(&self) -> u64 {
         self.ground_judged
+    }
+
+    /// How many `(WorldTime, Facet)` entries the emitter scan's pass 3 has
+    /// copied out of a trail, ever — spec §3 rule 4's own numerator.
+    /// type-audit: bare-ok(count: return)
+    pub fn emitter_timeline_copied(&self) -> u64 {
+        self.emitter_timeline_copied
     }
 
     /// How many hazard-memory lookups have been made — the DENOMINATOR

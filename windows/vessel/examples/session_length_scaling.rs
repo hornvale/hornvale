@@ -702,6 +702,27 @@ struct Band {
     drank_roster_max: usize,
     /// How many roster members have drunk zero times as of this band.
     drank_roster_zero_count: usize,
+
+    // ---- Task 8: M1 (spec §4) -- the bytes the room memo and the
+    // per-creature verdict index hold at this band's end. No threshold: this
+    // is the figure stage 4 (the lifecycle) enters on, not a criterion, and
+    // nothing in this campaign evicts either structure. ----
+    /// Rooms the room memo holds at this band's end
+    /// (`GroundHazards::len()`).
+    ground_len: usize,
+    /// An estimate of the room memo's held bytes at this band's end
+    /// (`GroundHazards::held_bytes()`) -- every held room's key size
+    /// (`size_of::<Facet>()` plus its `path` heap length) summed, plus one
+    /// `size_of::<Hazards>()` per held room. An ESTIMATE of held data, not
+    /// an allocator measurement, the same caveat `ledger_bytes` states.
+    ground_bytes: usize,
+    /// Every entity's judged-room count summed, held by the frightening-
+    /// verdict index at this band's end (`FrighteningGround::entries()`).
+    index_entries: usize,
+    /// An estimate of the verdict index's held bytes at this band's end
+    /// (`FrighteningGround::held_bytes()`) -- same estimate caveat as
+    /// `ground_bytes`.
+    index_bytes: usize,
 }
 
 fn main() {
@@ -766,6 +787,26 @@ fn main() {
             b.folded_len,
             b.probe_drank_per_tick,
             b.ledger_len
+        );
+    }
+
+    // Task 8: M1 (spec §4) -- a SECOND, small table so the main one's
+    // existing columns stay untouched. No threshold: nothing evicts either
+    // structure in this campaign, so these are the figures stage 4 (the
+    // lifecycle) enters on, not a criterion.
+    println!();
+    println!(
+        "{:>5} {:>10} {:>12} {:>13} {:>12}",
+        "band", "ground_len", "ground_bytes", "index_entries", "index_bytes"
+    );
+    println!(
+        "  (M1, spec §4: the room memo's and the per-creature verdict index's held entries \
+         and an ESTIMATE of their held bytes -- not an allocator measurement.)"
+    );
+    for b in &bands {
+        println!(
+            "{:>5} {:>10} {:>12} {:>13} {:>12}",
+            b.index, b.ground_len, b.ground_bytes, b.index_entries, b.index_bytes
         );
     }
 
@@ -1328,6 +1369,10 @@ fn run(
                 drank_roster_median,
                 drank_roster_max,
                 drank_roster_zero_count,
+                ground_len: ground.borrow().len(),
+                ground_bytes: ground.borrow().held_bytes(),
+                index_entries: folds.borrow().frightening_ground().entries(),
+                index_bytes: folds.borrow().frightening_ground().held_bytes(),
             });
             band_facts_before = facts_after;
             band_searches_before = searches_after;

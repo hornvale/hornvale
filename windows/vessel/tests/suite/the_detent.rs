@@ -7,9 +7,9 @@ use hornvale_locale::LocaleContext;
 use hornvale_vessel::body::Body;
 use hornvale_vessel::ground::{GroundHazards, OwnedGround};
 use hornvale_vessel::liveness::{
-    AGENT_AT, DRANK, DriveMovements, EATEN, HazardMemory, HomeNavCache, LocaleTerrain,
-    PrimaryAfraidMemo, RESTED, SLEPT, SUSTENANCE, Terrain, alarm_field_memo, derive_npcs,
-    hazard_memory_memo,
+    AGENT_AT, DRANK, DriveMovements, EATEN, HazardMemory, HomeNavCache, LocaleTerrain, Occupancy,
+    PrimaryAfraidMemo, RESTED, SLEPT, SUSTENANCE, Terrain, affect_of_memo_occupied,
+    alarm_field_memo, derive_npcs, hazard_memory_memo, waking_offset,
 };
 use hornvale_vessel::resident::{OwnedFolds, ResidentFolds};
 
@@ -53,6 +53,10 @@ pub struct BenchShape {
     /// (`LatestVisit::of(e).len()`) — H6's denominator, the quantity the
     /// pre-index scan judged in full on every tick.
     pub distinct_rooms_per_tick: Vec<usize>,
+    /// Per tick, the delta of `ReadWitness::emitter_timeline_copied()` — spec
+    /// §3 rule 4's own numerator, the `(WorldTime, Facet)` entries
+    /// `build_emitter_scan`'s pass 3 copied out of a trail that tick.
+    pub copied_per_tick: Vec<u64>,
 }
 
 /// `session_length_scaling.rs`'s construction, counted: the world at `seed`,
@@ -98,6 +102,7 @@ pub fn bench_shape(seed: u64, ticks: usize, agents: usize) -> BenchShape {
     let mut facts_per_tick = Vec::with_capacity(ticks);
     let mut judged_per_tick = Vec::with_capacity(ticks);
     let mut distinct_rooms_per_tick = Vec::with_capacity(ticks);
+    let mut copied_per_tick = Vec::with_capacity(ticks);
     for _ in 0..ticks {
         let from = day;
         day = WorldTime::from_ticks(day.ticks() + WorldTime::TICKS_PER_STD_DAY);
@@ -116,6 +121,7 @@ pub fn bench_shape(seed: u64, ticks: usize, agents: usize) -> BenchShape {
         };
         let samples_before = ground.borrow().misses();
         let judged_before = folds.borrow().witness().ground_judged();
+        let copied_before = folds.borrow().witness().emitter_timeline_copied();
         let (facts, _occupancy) =
             sys.step_with_occupancy(&ledger, &mut mesh_memo, &mut home_nav_cache);
         facts_per_tick.push(facts.len());
@@ -127,6 +133,7 @@ pub fn bench_shape(seed: u64, ticks: usize, agents: usize) -> BenchShape {
         hazards_per_tick.push(terrain.hazards_calls());
         samples_per_tick.push(ground.borrow().misses() - samples_before);
         judged_per_tick.push(folds.borrow().witness().ground_judged() - judged_before);
+        copied_per_tick.push(folds.borrow().witness().emitter_timeline_copied() - copied_before);
         // The roster's distinct visited rooms, AFTER this tick's facts are
         // committed — read under `borrow_mut` because `latest_visit_and_trail`
         // advances the store's tenants to the ledger's end first.
@@ -151,6 +158,7 @@ pub fn bench_shape(seed: u64, ticks: usize, agents: usize) -> BenchShape {
         facts_per_tick,
         judged_per_tick,
         distinct_rooms_per_tick,
+        copied_per_tick,
     }
 }
 
@@ -756,5 +764,233 @@ fn a_room_memo_belongs_to_one_predator_field_and_a_second_field_gets_its_own() {
         s2.hazards(&probe),
         field_only,
         "a shared memo aliases — which is why a memo is owned by one (context, field)"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Task 8: rules 2, 4, 5 — the numbers the readout and stage 4 need. Each
+// witness decides nothing; it prints the count spec §3 asks for and asserts
+// only its own denominator (the shape reached the path at all).
+// ---------------------------------------------------------------------------
+
+/// How many `wait`s spec §3 rule 2's own witness takes, on the seed the
+/// affect-replay path is reached on ([`EMITTER_SEED`]). More than the hash
+/// witness's [`crate::ledger_hash_witness::EMITTER_SCRIPT_WAITS`] (2) on
+/// purpose — this witness wants a per-tick profile, not a single hash.
+const RULE_TWO_WAITS: usize = 4;
+
+/// Spec §3 rule 2: the affect replay's share of the hazard read, on the
+/// seed-6 possession shape. Counts `resident_alarm_replays()` per tick
+/// against the room memo's own hit/miss split, then reads the whole roster's
+/// hazard memory twice over an already-warm memo and index — the second
+/// call's ground-memo deltas are the per-read lookup cost of the whole
+/// roster, and any further `resident_alarm_replays()` increments are the
+/// replay path's OWN reads inside `emitter_arousal -> affect_of`, not the
+/// scan that warmed the index. No threshold: the share printed here decides
+/// rule 2's branch in the ledger, not this assertion.
+#[test]
+fn rule_two_witness_the_affect_replay_share_of_the_hazard_read() {
+    let world = common::build(EMITTER_SEED).expect("the emitter seed builds");
+    let (mut session, _opening) =
+        Session::start(&world, &PossessOpts::default()).expect("the emitter seed starts a session");
+
+    println!("--- rule 2 witness: seed {EMITTER_SEED}, {RULE_TWO_WAITS} waits ---");
+    for i in 0..RULE_TWO_WAITS {
+        let replays_before = session.resident_alarm_replays();
+        let hits_before = session.resident_ground_hits();
+        let misses_before = session.resident_ground_misses();
+        session.handle("wait");
+        println!(
+            "tick {i}: alarm replays +{}, ground hits +{}, ground misses +{}",
+            session.resident_alarm_replays() - replays_before,
+            session.resident_ground_hits() - hits_before,
+            session.resident_ground_misses() - misses_before,
+        );
+    }
+
+    // First whole-roster read: whatever is left cold gets filled in here.
+    let replays_a = session.resident_alarm_replays();
+    let hits_a = session.resident_ground_hits();
+    let misses_a = session.resident_ground_misses();
+    let _first = session.hazard_memories();
+    let replays_b = session.resident_alarm_replays();
+    let hits_b = session.resident_ground_hits();
+    let misses_b = session.resident_ground_misses();
+    println!(
+        "first whole-roster hazard read: alarm replays +{}, ground hits +{}, ground misses +{}",
+        replays_b - replays_a,
+        hits_b - hits_a,
+        misses_b - misses_a,
+    );
+
+    // Second whole-roster read: the room memo and index are now warm, so this
+    // is the per-read lookup cost of the whole roster plus whatever the
+    // replay path itself asks.
+    let bodies = session.bodies().len();
+    let second = session.hazard_memories();
+    let replays_delta = session.resident_alarm_replays() - replays_b;
+    let hits_delta = session.resident_ground_hits() - hits_b;
+    let misses_delta = session.resident_ground_misses() - misses_b;
+    let shunned: usize = second.iter().map(|(_, m)| m.shunned.len()).sum();
+    println!(
+        "second whole-roster hazard read (warm): alarm replays +{replays_delta}, ground hits \
+         +{hits_delta}, ground misses +{misses_delta}, over {bodies} bodies, {shunned} shunned \
+         rooms total"
+    );
+    let replays_per_read = replays_delta as f64 / bodies as f64;
+    let lookups_per_read = (hits_delta + misses_delta) as f64 / bodies as f64;
+    println!(
+        "rule 2 share: {replays_per_read:.4} replays per hazard read, {lookups_per_read:.4} memo \
+         lookups per hazard read"
+    );
+
+    assert!(
+        session.resident_alarm_replays() > 0,
+        "rule 2 denominator: this shape must reach the past-day affect replay at all, or the \
+         share above is zero out of zero"
+    );
+    assert!(
+        shunned > 0,
+        "rule 2 denominator: the warm read's hazard memories must hold something shunned"
+    );
+}
+
+/// Spec §3 rule 4: the emitter scan's pass-3 timeline copy, on seed 6's
+/// 50-agent, 60-tick roster — the same shape H5/H6 measure over. Prints the
+/// entries copied per tick at 15/30/60 beside the roster's own trail sum, so
+/// a reader can see whether the copy grows with history or stays flat. No
+/// threshold: the branch (spec §3 rule 4) is decided in the ledger from this
+/// print, not from an assertion here.
+#[test]
+fn rule_four_witness_the_emitter_timeline_copy() {
+    let shape = bench_shape(EMITTER_SEED, 60, 50);
+    println!("--- rule 4 witness: seed {EMITTER_SEED}, 50 agents, 60 ticks ---");
+    println!("copied/tick profile: {:?}", shape.copied_per_tick);
+    let copied_15 = shape.copied_per_tick[14];
+    let copied_30 = shape.copied_per_tick[29];
+    let copied_60 = shape.copied_per_tick[59];
+    let trail_sum: usize = {
+        let mut store = shape.folds.borrow_mut();
+        let trail = store.trail(&shape.ledger);
+        shape.npcs.iter().map(|b| trail.of(b.entity).len()).sum()
+    };
+    println!(
+        "entries copied at tick 15: {copied_15}, tick 30: {copied_30}, tick 60: {copied_60}; \
+         roster trail sum {trail_sum}"
+    );
+    let with_emitters = shape.folds.borrow().witness().emitter_scans_with_emitters();
+    println!("rule 4 denominator: {with_emitters} scans found an emitter over the whole run");
+    assert!(
+        with_emitters > 0,
+        "rule 4 denominator: this shape must build at least one scan that finds an emitter, or \
+         pass 3 never copies anything"
+    );
+    println!(
+        "rule 4 verdict input: tick 15 -> tick 60 copied {copied_15} -> {copied_60} (grows with \
+         history: {})",
+        copied_60 > copied_15,
+    );
+}
+
+/// Spec §4 rule 5's shape: seed 42, 10 derived agents, 10 ticks — the lab's
+/// `run_simulation` shape (`windows/lab/src/health.rs`'s waking-instant read),
+/// reproduced over [`bench_shape`]'s pieces rather than a real
+/// `windows/lab` run.
+pub const RULE_FIVE_SEED: u64 = 42;
+pub const RULE_FIVE_AGENTS: usize = 10;
+pub const RULE_FIVE_TICKS: usize = 10;
+
+/// Spec §3 rule 5: the lab's waking-instant reads must be served by the
+/// verdict index's first-visit prefix. For each of [`bench_shape`]'s
+/// [`RULE_FIVE_AGENTS`] agents, reads `hazard_memory_memo` (via
+/// `affect_of_memo_occupied`, `health.rs`'s own call shape) at the same
+/// waking instant `health.rs:169-186` computes — strictly before the
+/// roster's last committed sighting — and asserts the read is served
+/// identically whether the store is WARM (the bench's own tick loop already
+/// populated it) or FRESH (rebuilt from scratch at that past instant): the
+/// index's prefix machinery must not depend on which sightings after the
+/// read instant happen to already be folded in.
+#[test]
+fn rule_five_witness_past_instant_reads_on_the_lab_shape() {
+    let shape = bench_shape(RULE_FIVE_SEED, RULE_FIVE_TICKS, RULE_FIVE_AGENTS);
+    let mesh = shape.mesh_memo.clone();
+    let base = LocaleTerrain::with_fields(&shape.ctx, None, None, None, None, Some(&mesh))
+        .with_ground(&shape.ground);
+
+    let before = shape.folds.borrow().witness().hazards_in_the_past();
+    let mut compared = 0usize;
+    for npc in &shape.npcs {
+        // `health.rs`'s own instant: `(day - 1.0) + waking_offset(activity)`,
+        // with `day` there the tick counter AFTER increment (so `day - 1.0`
+        // is the start of the tick just simulated) — `shape.day` plays that
+        // role here, as `bench_shape`'s own loop advances it the same way.
+        let past_t =
+            WorldTime::from_std_days(shape.day.as_std_days() - 1.0 + waking_offset(npc.activity))
+                .expect("a day value derived from a finite day count is finite");
+
+        // The read itself, through `affect_of_memo_occupied` — `health.rs`'s
+        // own entry point — over the bench's WARM store.
+        let mut afraid = PrimaryAfraidMemo::new();
+        let mut mesh_memo = shape.mesh_memo.clone();
+        let mut nav = HomeNavCache::new();
+        let _ = affect_of_memo_occupied(
+            &shape.ledger,
+            npc,
+            &shape.npcs,
+            past_t,
+            &base,
+            &mut afraid,
+            Some(&Occupancy::default()),
+            &mut mesh_memo,
+            &mut nav,
+            &shape.folds,
+        );
+
+        // The discard check: the same `hazard_memory_memo` call, served by
+        // the WARM store above against a FRESH one rebuilt from scratch at
+        // this same past instant, must agree byte for byte.
+        let mut warm_memo = PrimaryAfraidMemo::new();
+        let warm = hazard_memory_memo(
+            &shape.ledger,
+            &shape.folds,
+            npc,
+            past_t,
+            &base,
+            &shape.npcs,
+            &mut warm_memo,
+        );
+        let fresh_folds = OwnedFolds::new(ResidentFolds::new());
+        let mut fresh_memo = PrimaryAfraidMemo::new();
+        let fresh = hazard_memory_memo(
+            &shape.ledger,
+            &fresh_folds,
+            npc,
+            past_t,
+            &base,
+            &shape.npcs,
+            &mut fresh_memo,
+        );
+        assert_eq!(
+            warm, fresh,
+            "entity {:?} at past instant {past_t:?}: a warm store and a store discarded and \
+             rebuilt from scratch at this instant must agree, or the verdict index depends on \
+             sightings after the instant being read",
+            npc.entity
+        );
+        compared += 1;
+    }
+    let after = shape.folds.borrow().witness().hazards_in_the_past();
+    println!(
+        "--- rule 5 witness: seed {RULE_FIVE_SEED}, {RULE_FIVE_AGENTS} agents, \
+         {RULE_FIVE_TICKS} ticks ---"
+    );
+    println!(
+        "past-instant reads: {compared} compared (warm vs fresh), hazards_in_the_past delta {}",
+        after - before
+    );
+    assert!(
+        after - before > 0,
+        "rule 5 denominator: at least one of these reads must land strictly before a committed \
+         sighting, or the index's prefix machinery has no production caller on this shape"
     );
 }

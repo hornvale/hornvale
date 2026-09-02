@@ -80,6 +80,22 @@ impl GroundHazards {
     pub fn evict_all(&mut self) {
         self.memo.evict_all()
     }
+
+    /// An estimate of the bytes this memo holds: every held room's key size
+    /// (`size_of::<Facet>()` plus its `path`'s heap length) summed, plus one
+    /// `size_of::<Hazards>()` per held entry (The Detent, spec §4 M1). An
+    /// ESTIMATE of held data, not an allocator measurement — it counts
+    /// neither the `BTreeMap`'s own node overhead nor any allocator slack,
+    /// the same caveat `session_length_scaling.rs`'s `ledger_bytes` states.
+    /// type-audit: bare-ok(count: return)
+    pub fn held_bytes(&self) -> usize {
+        let rooms: usize = self
+            .memo
+            .keys()
+            .map(|room| std::mem::size_of::<Facet>() + room.path.len())
+            .sum();
+        rooms + self.memo.len() * std::mem::size_of::<Hazards>()
+    }
 }
 
 /// The memo behind interior mutability, so `&self` terrain readers can fill
