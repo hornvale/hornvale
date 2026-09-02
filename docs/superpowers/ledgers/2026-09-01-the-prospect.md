@@ -472,3 +472,48 @@ that mattered. Sea level in these worlds is **-1328 to -2032 m**, not 0. My
 `elevation_m > 5.0` cut seed 42's cave roster from 2084 to **8**, and gave seeds
 7 and 1 **zero caves in the entire world**. I assumed a sea level the project
 does not have.
+
+### #22 [Q, ideonomy] — decision 0539: the tier is `placed`/`derived`, and my naming argument was overturned
+
+Nathan asked for an ideonomy pass on the naming rather than accepting my
+suggestion. 2 passes, **1 overturn — of my premise, not my answer**, which is
+what these passes are for.
+
+**What broke:** I argued the type should name the CRITERION (participation in
+the record) rather than the mechanism — `chronicled`/`uncharted`. The inversion
+pass refuted it: **promotion makes participation MUTABLE.** A derived site a
+player enters joins the record, so `chronicled`/`uncharted` names a STATE while
+the generation tier is IMMUTABLE. I conflated two orthogonal axes and proposed
+naming one with the other's vocabulary.
+
+**What the pass found that neither of us had:** three states, not two kinds. A
+promoted derived site is in the ledger but **never shaped the world's past** —
+it can shape the future and not the history. Only visible once the axes are
+separated. And symmetry-hunting showed the asymmetry is free rather than
+enforced: the ledger is append-only, so standing is monotone by construction.
+
+**Collision checks disqualified my own suggestion**, before taste entered:
+`chronicled` collides with `windows/chronicle`, the derived-history engine, 58
+files. `attested` is partly spoken for by The Attestation. `uncharted` is
+genuinely free (0 occurrences) and is reserved for the standing axis.
+
+**`placed`/`derived` wins because the project already owns both words** for
+exactly this: the CLI prints "103 **placed** exotic sites", and `derived`
+appears in 377 files as the word for computed-not-stored. Zero new vocabulary.
+
+**The standing axis is deliberately left unnamed** — The Prospect does not
+implement promotion, and naming an axis before building it burns a good word and
+invites the exact confusion the inversion found.
+
+### #23 [G5] — I guessed decision filenames from titles for the THIRD time
+
+0539's first draft cited two records by filenames I inferred from their titles;
+both were wrong (`0038-the-canonical-grid-bears-identity` is really
+`0038-identity-computes-on-the-canonical-grid`, and `0102-a-stream-keys-on-a-
+lattice-position` is really `0102-one-per-cell-was-an-index-artifact`). Five
+were wrong the same way in 0514, and one in the campaign before.
+
+A link check caught it every time, which is why it has never shipped — but the
+rate is the finding. **The habit to adopt: `ls docs/decisions/NNNN-*.md` before
+writing any citation.** The title in my head is not the slug on disk, and the
+number being right is what makes the wrong slug survive a skim.
