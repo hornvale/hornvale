@@ -330,7 +330,7 @@ const FEAR_OR_BELONGING_CEILING: usize = 5;
 /// got quieter", it is "the cycle's carrier is not on the roll any more".
 ///
 /// **Measured, seed 42, `TICKS` = 40, deterministic, `agents = roll_len() -
-/// 1 = 67`:**
+/// 1 = 67`, 2026-09-02:**
 ///
 /// ```text
 /// total facts, first half -> last half             1245 -> 1319
@@ -383,6 +383,50 @@ const FEAR_OR_BELONGING_CEILING: usize = 5;
 ///   floor goes red first, before the aggregate rate in the first test ever
 ///   moves, which is the whole point of pinning a shape rather than only a
 ///   scalar.
+///
+/// **Three mutations, one per assertion, each observed red 2026-09-02 and
+/// reverted (`diff` confirmed byte-identical to the pre-mutation file
+/// afterward):**
+///
+/// MUTATION THIS MUST FAIL AGAINST (1): drop [`MAX_SHARE_CEILING_PCT`] from
+/// 10.0 to 1.0, below the measured 1.5163% share. Red observed:
+///
+/// ```text
+/// thread 'tick_commit_budget::the_commit_rate_is_carried_by_the_settled_rosters_even_churn'
+/// panicked at windows/vessel/tests/suite/tick_commit_budget.rs:443:5:
+/// one subject (3286669968037249089) carries 1.5163% of the last-half commit
+/// rate, past 1% — measured 1.5163% when this witness was re-measured for
+/// The Roll. A share this high means a creature-carried drive cycle (the
+/// shape PSY-drive-arbitration-limit-cycle names) may have re-entered seed
+/// 42's derived roll
+/// ```
+///
+/// MUTATION THIS MUST FAIL AGAINST (2): raise [`MIN_CONTRIBUTING_RESIDENTS`]
+/// from 60 to 68, one past the measured 67 of 67. Red observed:
+///
+/// ```text
+/// thread 'tick_commit_budget::the_commit_rate_is_carried_by_the_settled_rosters_even_churn'
+/// panicked at windows/vessel/tests/suite/tick_commit_budget.rs:453:5:
+/// only 67 distinct subjects committed anything in the last half, under the
+/// floor of 68 — measured 67 of 67 when this witness was re-measured for
+/// The Roll. The steady-state rate STEADY_STATE_CEILING gates on would then
+/// be resting on a handful of residents rather than the settled roster this
+/// doc claims
+/// ```
+///
+/// MUTATION THIS MUST FAIL AGAINST (3): in the drive-fact count, replace the
+/// `(fear)`/`(belonging)` filter with `|_p| true`, counting every committed
+/// provenance string as a hit against [`FEAR_OR_BELONGING_CEILING`]. Red
+/// observed:
+///
+/// ```text
+/// thread 'tick_commit_budget::the_commit_rate_is_carried_by_the_settled_rosters_even_churn'
+/// panicked at windows/vessel/tests/suite/tick_commit_budget.rs:466:5:
+/// 24403 (fear)/(belonging)-tagged facts were committed over the run, past
+/// the ceiling of 5 (measured 0 when this witness was re-measured for The
+/// Roll) — a wild body's drive cycle looks to have re-entered seed 42's
+/// derived roll
+/// ```
 #[test]
 fn the_commit_rate_is_carried_by_the_settled_rosters_even_churn() {
     let world = common::build(42).expect("seed 42 always builds a world");
