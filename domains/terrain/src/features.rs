@@ -8,6 +8,7 @@ use crate::RockClass;
 use crate::boundaries::BoundaryKind;
 use crate::lithology::MaterialBuffer;
 use crate::strata::Horizon;
+use hornvale_kernel::units::ReferenceElevation;
 
 /// A cave type, by the lithologic process that opened the void.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -456,6 +457,74 @@ pub fn band_at_depth(column: &crate::strata::StratigraphicColumn, depth_m: f64) 
         .unwrap_or(Horizon::Regolith)
 }
 
+/// Whether a vertex warrants a cave site — a mouth a walker can find and enter.
+///
+/// **This decides WHETHER, never WHERE.** Its inputs are vertex-bound
+/// (`GeneratedTerrain::cave_proneness_at`, `elevation_at`), so they exist only
+/// at the canonical grid's 110-132 km spacing. Reading this predicate at the
+/// nearest vertex of a 1.126 km walk facet would answer "cave" for every facet
+/// for tens of kilometres, which is the registered defect
+/// `CLIM-water-label-resolution-vs-walk-band` exactly, and is the same sentence
+/// as "no cave anywhere". A warranted vertex is turned into a specific address
+/// by `hornvale_worldgen::site_facet_for`, which is where the resolution seam
+/// lives. Decision 0537.
+///
+/// **Not a second answer to `GeneratedTerrain::cave_at`**, which asks a
+/// different question: that is the fluid-flow point process that decides
+/// whether a *subsurface void* exists in the column, with a kind and a depth,
+/// and it is what the terrain map's cave glyph draws. This predicate asks
+/// whether the surface here is karst enough to open a *mouth* that a walker can
+/// stand in front of. The two agree in shape and are not required to agree
+/// vertex by vertex; see this function's caller in `windows/vessel`'s brief for
+/// the consequence.
+///
+/// The freeboard floor keeps mouths out of the sea: a cave below the waterline
+/// is not a place a walker can enter, and the walk band has no swimming.
+/// **Freeboard, not elevation** — `sea_level` is a world-specific
+/// [`ReferenceElevation`] around -1300 to -2000 m across the five calibration
+/// seeds, so an absolute-metres floor is not the same question at all. Measured
+/// with the absolute reading, a floor of 5 m cut the roster from 2084 to 8
+/// vertices on seed 42 and to 0 on two of the five seeds; with freeboard the
+/// same floor costs ~2%.
+/// type-audit: bare-ok(ratio: proneness), bare-ok(flag: return)
+pub fn cave_site_at(
+    proneness: f64,
+    elevation: ReferenceElevation,
+    sea_level: ReferenceElevation,
+) -> bool {
+    proneness >= CAVE_PRONENESS_THRESHOLD
+        && elevation.get() - sea_level.get() > CAVE_MIN_FREEBOARD_M
+}
+
+/// The proneness a vertex must clear to warrant a cave mouth.
+///
+/// **Derived from the distribution, not chosen and not fitted.** Cave proneness
+/// on land is sharply bimodal, because [`crate::lithology::carbonate_at`] is
+/// itself two-valued (0.7 on a warm shallow shelf, 0.05 elsewhere): measured
+/// over land vertices on seeds 42, 13, 7, 1 and 100, the lower mode tops out at
+/// **0.02201** and the upper mode starts at **0.22343**, with not one vertex in
+/// between. Any threshold inside that gap selects the identical roster; this
+/// value is its midpoint (0.1227, rounded), which is the placement farthest
+/// from flipping when terrain next moves — the same widest-margin argument
+/// `lithology.rs`'s `CLASTIC_AQUIFER_MIN_POROSITY` carries, and the opposite
+/// of the edge-hugging 0.35 the plan proposed, which sits *inside* the upper
+/// mode and discards 10-30% of the karst vertices for no stated reason.
+///
+/// Moving this number moves the roster; re-measure rather than reasoning about
+/// it. `windows/lab`'s `cave_rate_calibration` is the instrument.
+/// type-audit: bare-ok(ratio)
+const CAVE_PRONENESS_THRESHOLD: f64 = 0.12;
+
+/// Metres of freeboard — height above the world's own sea level — a vertex
+/// needs before a cave mouth is placed from it.
+///
+/// Five, which is a margin against the waterline rather than a calibration: the
+/// roster is flat in this parameter (0 m and 100 m differ by ~4% across the
+/// five calibration seeds), so nothing downstream is sensitive to the exact
+/// value and a larger one would buy nothing.
+/// type-audit: waiver(elevation-convention: a DIFFERENCE of two ReferenceElevations, not a reading on that scale)
+const CAVE_MIN_FREEBOARD_M: f64 = 5.0;
+
 /// Lineament proximity weight: features cluster into belts near plate contacts.
 /// `hops` is boundary distance (fewer = closer); `None` = cratonic interior,
 /// which is the floor — boundaries only *raise* the weight above it, so a
@@ -710,6 +779,66 @@ mod tests {
     /// A contact of the reference (extensional) regime, `hops` away.
     fn rift(hops: u32) -> Option<(u32, BoundaryKind)> {
         Some((hops, BoundaryKind::ContinentalRift))
+    }
+
+    /// A [`ReferenceElevation`], for the freeboard tests below.
+    fn elev(m: f64) -> ReferenceElevation {
+        ReferenceElevation::new(m).expect("a finite elevation")
+    }
+
+    /// The threshold sits in the empty gap between cave proneness's two modes,
+    /// so both modes answer unambiguously and the boundary itself is inclusive.
+    #[test]
+    fn the_cave_site_threshold_separates_the_two_proneness_modes() {
+        let sea = elev(-1820.3); // seed 42's measured sea level
+        assert!(
+            !cave_site_at(0.0220, elev(-1000.0), sea),
+            "the lower mode's top"
+        );
+        assert!(
+            cave_site_at(0.2234, elev(-1000.0), sea),
+            "the upper mode's floor"
+        );
+        assert!(
+            cave_site_at(CAVE_PRONENESS_THRESHOLD, elev(-1000.0), sea),
+            "the threshold itself warrants a cave — the comparison is >="
+        );
+    }
+
+    /// **The freeboard trap, pinned.** The floor is a height above the world's
+    /// OWN sea level, not a reading on the absolute elevation scale. Sea level
+    /// is around -1300 to -2000 m on the five calibration seeds, so a vertex at
+    /// -1000 m absolute is 800 m of dry land above the waterline; reading the
+    /// floor absolutely rejected it, and cut seed 42's roster from 2084 to 8.
+    ///
+    /// Both directions are asserted. The first alone would pass under the
+    /// absolute reading too whenever sea level happened to be positive.
+    #[test]
+    fn the_freeboard_floor_is_measured_from_sea_level_not_from_zero() {
+        let sea = elev(-1820.3);
+        assert!(
+            cave_site_at(0.5, elev(-1000.0), sea),
+            "820 m above this world's sea level is dry land, whatever the sign"
+        );
+        assert!(
+            !cave_site_at(0.5, elev(-1819.0), sea),
+            "1.3 m of freeboard is under the floor — a mouth at the waterline"
+        );
+        assert!(
+            !cave_site_at(0.5, elev(-2000.0), sea),
+            "below sea level is not a place a walker can enter"
+        );
+    }
+
+    /// Proneness and freeboard are both required; neither alone warrants a
+    /// cave. Without this a predicate that dropped one conjunct would still
+    /// pass every other test in this file.
+    #[test]
+    fn a_cave_site_needs_both_karst_and_dry_land() {
+        let sea = elev(0.0);
+        assert!(cave_site_at(0.5, elev(100.0), sea));
+        assert!(!cave_site_at(0.0, elev(100.0), sea), "dry, but not karst");
+        assert!(!cave_site_at(0.5, elev(-100.0), sea), "karst, but drowned");
     }
 
     fn buf(carbonate: f64, silica: f64) -> MaterialBuffer {

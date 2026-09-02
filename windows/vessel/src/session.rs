@@ -873,6 +873,15 @@ pub struct Session<'w> {
     /// first, so in practice this always carries at least the possessed
     /// agent's own home room by the time a session exists.
     built: std::collections::BTreeSet<FacetId>,
+    /// The world's cave-warranting vertices (The Prospect, Task 4), computed
+    /// once at `start` the same way `built` is.
+    ///
+    /// Held rather than re-derived per turn because
+    /// `GeneratedTerrain::cave_site_vertices` scans the whole canonical grid —
+    /// ~41,000 vertices — while `LocaleContext::strange_sites`, the roster
+    /// beside it in `brief_here`, is a cheap read over a budget the context
+    /// already built. The two look alike at the call site and are not.
+    cave_sites: Vec<hornvale_kernel::Vertex>,
     /// Each NPC's within-room anchor as of the most recent `wait` tick's own
     /// walk (The Threshold whole-branch review, Important 4) — recovered via
     /// [`DriveMovements::step_with_occupancy`] the same way the lab's health
@@ -1470,6 +1479,11 @@ impl<'w> Session<'w> {
         // this. Built once here, the same one-shot-at-start discipline as
         // `calendar`/`predator`/`prey`.
         let built = built_rooms(world, ctx);
+        // The cave roster (The Prospect, Task 4), on the same
+        // one-shot-at-start discipline. `cave_site_at` decides WHETHER a
+        // vertex warrants a cave; `hornvale_worldgen::site_facet_for` decides
+        // where, per facet, when `brief_of` asks.
+        let cave_sites = ctx.terrain().cave_site_vertices();
         // The possessed body's own mass, through the ONE shared derivation
         // (The Tackle): read here, once, exactly as `derive_npcs` reads a
         // creature's. Bound before the struct literal because `bodies` is
@@ -1506,6 +1520,7 @@ impl<'w> Session<'w> {
             predator,
             prey,
             built,
+            cave_sites,
             occupancy: Occupancy::default(),
             wake_at: None,
             body_mass_kg: mass_for_species(&species_for_mass, Some(&biosphere_for_mass)),
@@ -5454,6 +5469,12 @@ impl<'w> Session<'w> {
             // the budget the `LocaleContext` built once at `start`, so a second
             // copy in `Session` would be state to keep honest for no gain.
             &self.wctx.ctx.strange_sites(),
+            // The cave roster is NOT free the same way — it is a whole-grid
+            // scan of `cave_site_at`, ~41k vertices, on every call. Held on
+            // `Session` for the possession's life rather than re-scanned,
+            // which is the remedy `brief_of`'s own cost note prescribes and
+            // the one `built` already uses.
+            &self.cave_sites,
         )
     }
 

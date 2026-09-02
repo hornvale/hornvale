@@ -5,6 +5,7 @@ use hornvale_kernel::{Facet, Geosphere, Seed, Vertex};
 use hornvale_locale::LocaleContext;
 use hornvale_vessel::liveness::LocaleTerrain;
 use hornvale_vessel::site::SiteKind;
+use hornvale_vessel::structure::structure_at;
 use hornvale_vessel::{PossessOpts, Session, Turn, brief_of};
 use hornvale_worldgen::{SiteReason, site_facet_for};
 
@@ -89,6 +90,9 @@ fn an_exotic_site_stands_at_one_facet_and_not_at_its_neighbour() {
     let geo = ctx.climate().geosphere();
     let walk = hornvale_locale::walk_depth(&ctx);
     let terrain = LocaleTerrain::new(&ctx);
+    // The real roster, not an empty one: an empty slice would make the
+    // neighbour assertion below pass for a reason this test is not about.
+    let caves = ctx.terrain().cave_site_vertices();
     let placed = site_facet_for(
         Vertex(sites[0].vertex),
         SiteReason::Exotic,
@@ -105,6 +109,7 @@ fn an_exotic_site_stands_at_one_facet_and_not_at_its_neighbour() {
         &terrain,
         walk,
         &sites,
+        &caves,
     );
     assert_eq!(
         // `site`, not `s`: `cli/tests/suite/claim_shape.rs` reads a closure
@@ -126,10 +131,86 @@ fn an_exotic_site_stands_at_one_facet_and_not_at_its_neighbour() {
         &terrain,
         walk,
         &sites,
+        &caves,
     );
     assert_eq!(
         there.site, None,
         "the facet beside a site must hold nothing — a site is an address, \
          not a neighbourhood"
+    );
+}
+
+/// **Task 4's production wiring, end to end.** A facet a cave was placed at
+/// carries `SiteKind::Cave` in its brief, and `structure_at` — the enterability
+/// gate Decision 0536 moved onto `site` — returns a structure there.
+///
+/// Both halves are load-bearing and the first alone would not have caught the
+/// defect that matters. `brief_of` could set the site correctly while nothing
+/// downstream read it, and the campaign's H1 is scoped around exactly this
+/// number changing; asserting the brief without asserting the gate would let a
+/// cave be "a site" that no walker can ever open.
+///
+/// The neighbour assertion is the resolution guard, the same one the exotic
+/// test carries: a cave read at the nearest VERTEX rather than the placed facet
+/// would answer yes for every facet within ~55 km.
+#[test]
+fn a_placed_cave_is_a_site_and_is_enterable() {
+    let world = hornvale_worldgen::build_world(
+        Seed(42),
+        &Default::default(),
+        hornvale_worldgen::SkyChoice::Generated,
+        &Default::default(),
+        &Default::default(),
+    )
+    .expect("seed 42 builds");
+    let ctx = LocaleContext::build(&world).expect("seed 42 builds a locale context");
+    let geo = ctx.climate().geosphere();
+    let walk = hornvale_locale::walk_depth(&ctx);
+    let terrain = LocaleTerrain::new(&ctx);
+    let caves = ctx.terrain().cave_site_vertices();
+    assert!(!caves.is_empty(), "seed 42 must warrant at least one cave");
+    let sites = ctx.strange_sites();
+    let placed = site_facet_for(caves[0], SiteReason::Cave, world.seed, geo, walk);
+
+    let here = brief_of(
+        &world,
+        geo,
+        ctx.nearest_index(),
+        &placed,
+        &terrain,
+        walk,
+        &sites,
+        &caves,
+    );
+    assert_eq!(
+        here.site.as_ref().map(|site| site.kind),
+        Some(SiteKind::Cave),
+        "the placed facet must carry the cave"
+    );
+    assert!(
+        !here.built,
+        "this fixture wants an UNBUILT cave facet, so that the settlement arm \
+         of the salience order is not what is being read"
+    );
+    assert!(
+        structure_at(&placed, &here, world.seed, walk).is_some(),
+        "a cave is enterable — Decision 0536 hangs the gate on the site"
+    );
+
+    let next: Facet = placed.neighbors()[0].clone();
+    let there = brief_of(
+        &world,
+        geo,
+        ctx.nearest_index(),
+        &next,
+        &terrain,
+        walk,
+        &sites,
+        &caves,
+    );
+    assert_eq!(
+        there.site, None,
+        "the facet beside a cave must hold nothing — a cave mouth is an \
+         address, not a 110 km neighbourhood"
     );
 }

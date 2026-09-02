@@ -9,7 +9,11 @@
 /// What kind of place a site is.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum SiteKind {
-    /// A cave mouth, derived from `cave_proneness` — no seeded draw.
+    /// A cave mouth. Warranted by `hornvale_terrain::cave_site_at` at a
+    /// geosphere vertex and PLACED at a facet by
+    /// `hornvale_worldgen::site_facet_for`, exactly as an exotic site is —
+    /// this doc read "derived from `cave_proneness` — no seeded draw" until
+    /// Task 4 measured that proneness exists only at the 110-132 km grid.
     Cave,
     /// A placed exotic site: strange biota, mineral crystal, a fungal canopy.
     Exotic,

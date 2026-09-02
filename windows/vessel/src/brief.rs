@@ -59,8 +59,10 @@ pub struct Brief {
     pub cold: bool,
     /// The site here, if any — the gate every enterable place hangs off.
     /// Decision 0536. For a settlement this mirrors [`Self::built`]; an exotic
-    /// site is the placed address `hornvale_worldgen::site_facet_for` gives it
-    /// (Task 5), and a cave joins them through the same mechanism in Task 4.
+    /// site and a cave are each the placed address
+    /// `hornvale_worldgen::site_facet_for` gives them, under their own
+    /// `hornvale_worldgen::SiteReason` so that a vertex warranting both does
+    /// not put them at one facet.
     pub site: Option<Site>,
 }
 
@@ -151,9 +153,13 @@ pub(crate) fn containing_vertex(
 /// structure's chambers agree about what building they are in.
 ///
 /// `exotic_sites` is the world's placed exotic regimes
-/// (`hornvale_locale::LocaleContext::strange_sites`). It is a parameter rather
-/// than something derived here because a `LocaleContext` is expensive and the
-/// caller already holds one; the same reason `geo` and `index` are parameters.
+/// (`hornvale_locale::LocaleContext::strange_sites`) and `cave_sites` is its
+/// cave-warranting vertices (`GeneratedTerrain::cave_site_vertices`). Both are
+/// parameters rather than something derived here because a `LocaleContext` is
+/// expensive and the caller already holds one; the same reason `geo` and
+/// `index` are parameters. `cave_sites` is much the longer roster of the two —
+/// ~1000-2800 vertices against ~100 — so a caller that asks per turn should
+/// hold it rather than re-scan the grid.
 ///
 /// **The exotic read runs site→facet, not facet→site, and that direction is
 /// deliberate.** The cheap-looking alternative — resolve `locale`'s containing
@@ -167,6 +173,7 @@ pub(crate) fn containing_vertex(
 /// below has no such edge, and it is the shape `Terrain::is_built` already uses
 /// for settlement territory.
 /// type-audit: bare-ok(count: walk_depth)
+#[allow(clippy::too_many_arguments)] // `cave_sites` (Task 4, The Prospect) pushed this to 8; every parameter is a value the CALLER already holds and must not re-derive — bundling them into a struct would add a public type whose only content is "the four things `Session` keeps" and whose only reader is this function
 pub fn brief_of(
     world: &World,
     geo: &Geosphere,
@@ -175,6 +182,7 @@ pub fn brief_of(
     terrain: &dyn crate::liveness::Terrain,
     walk_depth: u32,
     exotic_sites: &[StrangeSite],
+    cave_sites: &[Vertex],
 ) -> Brief {
     let locale = crate::depth::truncate_to_walk(place, walk_depth);
     let built = terrain.is_built(&locale);
@@ -187,18 +195,24 @@ pub fn brief_of(
     // vertices, so a miss walks the whole list. Same remedy if a profile ever
     // shows it: hoist the placed set to the caller (`Session` already holds
     // `built` exactly that way), never a cache inside a derivation.
+    let placed_at = |vertex: Vertex, reason: SiteReason| {
+        site_facet_for(vertex, reason, world.seed, geo, walk_depth) == locale
+    };
+    // Salience order (spec §6): settlement, then exotic, then cave. A facet
+    // holding more than one is named by the strongest, and `Site::salience` is
+    // the presentation half of the same ordering.
     let site = if built {
         Some(Site::new(SiteKind::Settlement, None))
-    } else if exotic_sites.iter().any(|site| {
-        site_facet_for(
-            Vertex(site.vertex),
-            SiteReason::Exotic,
-            world.seed,
-            geo,
-            walk_depth,
-        ) == locale
-    }) {
+    } else if exotic_sites
+        .iter()
+        .any(|site| placed_at(Vertex(site.vertex), SiteReason::Exotic))
+    {
         Some(Site::new(SiteKind::Exotic, None))
+    } else if cave_sites
+        .iter()
+        .any(|&vertex| placed_at(vertex, SiteReason::Cave))
+    {
+        Some(Site::new(SiteKind::Cave, None))
     } else {
         None
     };

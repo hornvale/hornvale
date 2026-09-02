@@ -56,8 +56,8 @@ pub use delve::{
     rungs,
 };
 pub use features::{
-    Cave, CaveKind, Commodity, Deposit, DepositProcess, cave_process, fracture_proneness,
-    lavatube_proneness,
+    Cave, CaveKind, Commodity, Deposit, DepositProcess, cave_process, cave_site_at,
+    fracture_proneness, lavatube_proneness,
 };
 pub use globe::{GenesisOutcome, GlobeSummary, TectonicGlobe, generate, summarize};
 pub use lithology::{

@@ -30,6 +30,8 @@ mod branches_family_calibration;
 mod calibration;
 #[path = "suite/cascade_firing.rs"]
 mod cascade_firing;
+#[path = "suite/cave_rate_calibration.rs"]
+mod cave_rate_calibration;
 #[path = "suite/census_sentinel.rs"]
 mod census_sentinel;
 #[path = "suite/depth_ladder.rs"]

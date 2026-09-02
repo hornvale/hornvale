@@ -372,6 +372,33 @@ impl GeneratedTerrain {
         crate::lithology::cave_proneness(&self.material_at(id), self.drainage_at(id))
     }
 
+    /// The vertices that warrant a cave site, ascending.
+    ///
+    /// The roster half of [`crate::features::cave_site_at`]: a whole-globe scan
+    /// of the predicate, hoisted here because the predicate's inputs are this
+    /// provider's own fields and because every consumer needs the SET, not a
+    /// single vertex's answer. A site consumer asks "is my facet one of the
+    /// placed facets?" — a membership test over placed addresses — rather than
+    /// "which site does my vertex hold?", which would silently lose any site
+    /// whose address landed across a mesh boundary (see
+    /// `hornvale_worldgen::site_facet_for`).
+    ///
+    /// Derived, never stored: it costs one pass over the grid and no facts.
+    /// A caller that asks per turn should hold the result, not re-scan.
+    pub fn cave_site_vertices(&self) -> Vec<Vertex> {
+        let sea_level = self.sea_level();
+        self.geosphere
+            .vertices()
+            .filter(|&v| {
+                crate::features::cave_site_at(
+                    self.cave_proneness_at(v),
+                    self.elevation_at(v),
+                    sea_level,
+                )
+            })
+            .collect()
+    }
+
     /// The cave at a vertex, if the fluid-flow point process places one.
     ///
     /// Kind is selected BEFORE existence is tested (`features::cave_process`),
