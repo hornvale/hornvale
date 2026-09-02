@@ -11,6 +11,7 @@
 //! reader can check.
 
 use crate::audit::{Judgement, judge};
+use crate::tag::{Rung, parse_tag_full};
 use crate::walk::{AUDITED_ROOTS, KIND_MARKERS, NON_QUANTITY_TYPES, SPEC_GREP_TYPES, Scan, Site};
 use std::collections::BTreeMap;
 
@@ -203,6 +204,54 @@ pub fn render_report(scan: &Scan) -> String {
         "\nDeclared: **{declared} of {total}**. Undeclared is backlog; a malformed\n\
          tag is a defect.\n\n",
     ));
+
+    // ---- fidelity findings: the durable, committed list of what varies ----
+    //
+    // The Plumb, Task 4 fix round 2 (finding F2): the curated list of WHICH
+    // constants are on the wrong rung, and WHY, used to live only in a
+    // git-ignored scratch report -- gone the moment the worktree recycles.
+    // This is the campaign's actual deliverable for the project owner, so it
+    // belongs in the committed artifact, generated from the tags themselves
+    // rather than copied prose. Every `Declared` verdict above `universal`
+    // and below `pending` -- `per-world`, `per-people`, `per-species`,
+    // `per-individual` -- gets a row; `universal` and `pending(wave-N)` are
+    // excluded (their counts are the Coverage table above, and interleaving
+    // them would bury the handful of rows that are actually actionable).
+    let mut findings: Vec<(String, usize, String, String, String)> = Vec::new();
+    for c in &scan.consts {
+        if let Ok(tag) = parse_tag_full(&c.doc)
+            && !matches!(tag.rung, Rung::Universal | Rung::Pending(_))
+        {
+            findings.push((
+                c.path.display().to_string(),
+                c.line,
+                c.name.clone(),
+                tag.rung.label(),
+                tag.reason.unwrap_or_default(),
+            ));
+        }
+    }
+    // Sorted by (path, line) -- deterministic and, unlike a name sort, reads
+    // in the order a reviewer would encounter the constants walking the tree.
+    findings.sort_by(|a, b| (a.0.as_str(), a.1).cmp(&(b.0.as_str(), b.1)));
+
+    s.push_str("## Fidelity findings\n\n");
+    s.push_str(&format!(
+        "**These are findings for the project owner, not defects the campaign\n\
+         converted.** Every row below is a constant judged to vary along an axis\n\
+         the code does not yet have -- nothing about the world changed to produce\n\
+         this table, and nothing here is scheduled for conversion by this\n\
+         campaign. `universal` and `pending(wave-N)` constants are excluded; their\n\
+         counts are already the Coverage table above. {} finding(s).\n\n",
+        findings.len()
+    ));
+    s.push_str("| File:line | Constant | Rung | Reason |\n|------|------|------|------|\n");
+    for (path, line, name, rung, reason) in &findings {
+        s.push_str(&format!(
+            "| `{path}:{line}` | `{name}` | {rung} | {reason} |\n"
+        ));
+    }
+    s.push('\n');
 
     // ---- the contested middle ---------------------------------------------
     s.push_str("## The contested middle\n\n");
@@ -441,5 +490,119 @@ mod tests {
     #[test]
     fn the_report_is_deterministic() {
         assert_eq!(render_report(&sample()), render_report(&sample()));
+    }
+
+    /// **The Fidelity findings table is the campaign's durable, committed
+    /// deliverable** (The Plumb, Task 4 fix round 2, finding F2): the four
+    /// judged, non-`universal`, non-`pending` rungs, sorted by `(path, line)`,
+    /// each with its own tag's reason text. `universal` and `pending` must
+    /// not leak in -- their counts already live in the Coverage table -- and
+    /// neither must an undeclared or malformed constant, since only a
+    /// well-formed `Declared` tag reaches this table at all.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST: drop the
+    /// `!matches!(tag.rung, Rung::Universal | Rung::Pending(_))` filter, so
+    /// every declared constant (including `universal`/`pending`) leaks into
+    /// the table the brief says must stay to the handful that matter.
+    ///
+    /// ```text
+    /// assertion failed: !findings_section.contains("UNIV")
+    /// ```
+    #[test]
+    fn fidelity_findings_lists_every_non_universal_non_pending_verdict_sorted_by_path_then_line() {
+        let scan = Scan {
+            consts: vec![
+                // Lexically first PATH but the largest line number: proves
+                // the sort key is (path, line), not line alone.
+                AuthoredConst {
+                    path: PathBuf::from("domains/aaa/src/lib.rs"),
+                    line: 999,
+                    name: "AAAFIRST".into(),
+                    doc: "plumb: per-species(a lexically first path)".into(),
+                    ..c("AAAFIRST", "", Site::File, false)
+                },
+                AuthoredConst {
+                    line: 40,
+                    name: "ZWORLD".into(),
+                    doc: "plumb: per-world(breaks on a slow-rotating world)".into(),
+                    ..c("ZWORLD", "", Site::File, false)
+                },
+                AuthoredConst {
+                    line: 10,
+                    name: "ASPECIES".into(),
+                    doc: "plumb: per-species(a creature's own metabolism)".into(),
+                    ..c("ASPECIES", "", Site::File, false)
+                },
+                AuthoredConst {
+                    line: 20,
+                    name: "BPEOPLE".into(),
+                    doc: "plumb: per-people(a people's own custom)".into(),
+                    ..c("BPEOPLE", "", Site::File, false)
+                },
+                AuthoredConst {
+                    line: 30,
+                    name: "CINDIVIDUAL".into(),
+                    doc: "plumb: per-individual(a personality trait)".into(),
+                    ..c("CINDIVIDUAL", "", Site::File, false)
+                },
+                AuthoredConst {
+                    line: 5,
+                    name: "UNIV".into(),
+                    doc: "plumb: universal(a lattice constant)".into(),
+                    ..c("UNIV", "", Site::File, false)
+                },
+                AuthoredConst {
+                    line: 6,
+                    name: "PEND".into(),
+                    doc: "plumb: pending(wave-1)".into(),
+                    ..c("PEND", "", Site::File, false)
+                },
+                AuthoredConst {
+                    line: 7,
+                    name: "BROKEN".into(),
+                    doc: "plumb: universal".into(),
+                    ..c("BROKEN", "", Site::File, false)
+                },
+            ],
+            ..Scan::default()
+        };
+        let out = render_report(&scan);
+        assert!(out.contains("## Fidelity findings"));
+        assert!(out.contains("5 finding(s)"));
+
+        let section_start = out.find("## Fidelity findings").unwrap();
+        let section_end = out.find("## The contested middle").unwrap();
+        let section = &out[section_start..section_end];
+
+        // Sort order: path first (domains/aaa/... before domains/probe/...),
+        // then line within a path.
+        let aaa_pos = section.find("AAAFIRST").unwrap();
+        let a_pos = section.find("ASPECIES").unwrap();
+        let b_pos = section.find("BPEOPLE").unwrap();
+        let c_pos = section.find("CINDIVIDUAL").unwrap();
+        let z_pos = section.find("ZWORLD").unwrap();
+        assert!(
+            aaa_pos < a_pos,
+            "path sorts before line: aaa/ must come first"
+        );
+        assert!(a_pos < b_pos && b_pos < c_pos && c_pos < z_pos);
+
+        // Every finding's own reason text is present.
+        assert!(section.contains("a lexically first path"));
+        assert!(section.contains("a creature's own metabolism"));
+        assert!(section.contains("a people's own custom"));
+        assert!(section.contains("a personality trait"));
+        assert!(section.contains("breaks on a slow-rotating world"));
+
+        // All four judged rungs appear.
+        assert!(section.contains("per-species"));
+        assert!(section.contains("per-people"));
+        assert!(section.contains("per-individual"));
+        assert!(section.contains("per-world"));
+
+        // universal, pending, and malformed must not leak into this table.
+        assert!(!section.contains("UNIV"));
+        assert!(!section.contains("PEND"));
+        assert!(!section.contains("BROKEN"));
     }
 }
