@@ -211,19 +211,35 @@ sound against a unidirectional list and dissolves under bidirectional checking.
 
 ### 3.2 The roster and its reason codes
 
-`cli/tests/fixtures/world-build-sites.tsv`, one row per site:
+`cli/tests/fixtures/world-build-sites.tsv`, **one row per file**, with a count
+and a per-reason tally that must sum to it:
 
 ```
-  <repo-relative path>  <site key>  <entry point>  <reason>
+  <repo-relative path>	<count>	<reason:N ...>
 ```
 
-**The site key is deliberately not a line number** — see §9. A line-keyed row
+**The key is deliberately not a line number** — see §9. A line-keyed row
 invalidates on any edit above it, so the bidirectional check would redden on
 unrelated commits and be trained away exactly as `test_binary_ratchet.rs` warns.
-The plan chooses the key against the real scan (enclosing function name is the
-obvious candidate, since §3.4 shows the sites are already funnelled through named
-helpers); this spec fixes the requirement — **stable under edits elsewhere in the
-file** — and not the mechanism.
+
+**This paragraph originally left the key open and named the wrong candidate.**
+It said the plan would choose against the real scan, "enclosing function name
+[being] the obvious candidate, since §3.4 shows the sites are already funnelled
+through named helpers." What shipped is per-file with a reason tally, and that is
+better for a reason the draft missed: `cli/tests/suite/build_path_embedding.rs`
+— the guard this one is modelled on — had already solved the same problem the
+same way, by counting occurrences per file. An enclosing-function key would also
+have needed the scan to identify the enclosing function of a match, which a
+textual scan cannot do without parsing Rust. The requirement the spec was right
+to fix is **stability under edits elsewhere in the file**; per-file counting
+satisfies it with strictly less machinery.
+
+The consequence to keep in mind: a row's count is **sites in that file**, not
+call sites reached. §3.4's seven helpers hold one site each but carry 240 calls
+between them, so migrating a helper drops its row by one while retiring dozens of
+builds. §6.7 and the chronicle report the win in call sites and measured
+CPU-seconds for that reason; the roster and the ceiling are a debt counter, never
+a performance metric.
 
 Reasons — this is where the *why does this build* taxonomy lives, which is the
 right key for an allowlist rather than "does this call site memoise":
