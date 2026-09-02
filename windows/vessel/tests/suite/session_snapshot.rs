@@ -676,17 +676,30 @@ fn a_co_located_creature_reports_what_it_carries_and_reports_an_empty_hand_as_em
     let world = world();
     let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
     common::step_inside(&mut session);
-    let companion = session.bodies()[1].entity;
-    session.place_creature_at_me(companion);
 
-    // Empty-handed first: the negative direction, before anything is placed.
+    // **THE COMPANION IS CHOSEN FROM `present`, NOT PLACED, SINCE THE ROLL
+    // (Task 7).** This used to take `bodies()[1]` and put it here through
+    // `place_creature_at_me`, because nothing was co-located with a fresh
+    // possession by default. The roll makes the settlement's own residents
+    // co-located by construction — sixty-six of them appear in `present` at
+    // seed 42 — so the placement is no longer needed. It is also no longer
+    // harmless: indoors the seam seats its subject at the room-interior
+    // anchor matching a LIT chamber anchor's kind, and `sighting`'s own join
+    // can resolve that anchor to a lattice square the shadowcast does not
+    // reach, at which point the unplaced/unlit rule filters the very body
+    // the test placed. Measured directly: after placing, `present` held 66
+    // creatures and the placed one was not among them. Asking `present` who
+    // is here — the same channel the assertions below are about — cannot
+    // disagree with itself that way.
     let snap = session.snapshot().expect("a live session snapshots");
     let seen = snap
         .sensed
         .present
-        .iter()
-        .find(|p| p.entity == companion.0.get())
-        .expect("the placed companion is present");
+        .first()
+        .cloned()
+        .expect("a possession at a settlement senses its residents");
+    let companion = hornvale_kernel::EntityId::new(seen.entity)
+        .expect("a sensed creature's entity is a real id");
     assert!(
         seen.carrying.is_empty(),
         "a creature holding nothing reports an empty list, not a populated \

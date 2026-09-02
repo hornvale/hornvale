@@ -33,7 +33,7 @@ fn every_spinning_worlds_day_is_a_whole_number_of_ticks() {
     for seed in 0..128 {
         let outcome = generate(Seed(seed), &SkyPins::default())
             .unwrap_or_else(|e| panic!("seed {seed} failed default genesis: {e}"));
-        if let Rotation::Spinning { day, .. } = &outcome.system.anchor.rotation {
+        if let Rotation::Spinning { day, .. } = &outcome.value.anchor.rotation {
             spinning += 1;
             let ticks = day.ticks();
             assert!(ticks > 0, "seed {seed}: a spinning day is positive");
@@ -62,7 +62,7 @@ fn a_pinned_day_length_is_quantized_too() {
         ..Default::default()
     };
     let outcome = generate(Seed(42), &pins).expect("12.5 hours is a legal pin");
-    let Rotation::Spinning { day, .. } = &outcome.system.anchor.rotation else {
+    let Rotation::Spinning { day, .. } = &outcome.value.anchor.rotation else {
         panic!("a pinned period produces a spinning world");
     };
     assert_eq!(
@@ -85,10 +85,10 @@ fn the_continuous_day_length_round_trips_through_the_lattice() {
     for seed in 0..64 {
         let outcome = generate(Seed(seed), &SkyPins::default())
             .unwrap_or_else(|e| panic!("seed {seed} failed default genesis: {e}"));
-        let Rotation::Spinning { day, .. } = &outcome.system.anchor.rotation else {
+        let Rotation::Spinning { day, .. } = &outcome.value.anchor.rotation else {
             continue;
         };
-        let calendar = calendar_of(&outcome.system);
+        let calendar = calendar_of(&outcome.value);
         let continuous = calendar
             .day_length()
             .expect("a spinning world has a day length");

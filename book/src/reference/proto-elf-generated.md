@@ -52,6 +52,7 @@ The shared ancestral language desert-elf, drow, high-elf, sea-elf, snow-elf, and
 | `blue` | the color term for blue | *Shraeng | /ʃraeŋ/ |
 | `bone` | the rigid frame of a body | *Ngengtaang | /ŋeŋtaaŋ/ |
 | `boreal-stand` | A stand of northern conifers. | *Geangngaong | /geaŋŋaoŋ/ |
+| `brazier` | a metal basin that holds a fire apart from a hearth | *Paangsraeng | /paaŋsraeŋ/ |
 | `brown` | the color term for brown | *Zraangteng | /zraaŋteŋ/ |
 | `bugbear-kind` | a bugbear | *Sreng | /sreŋ/ |
 | `burn` | Ground recovering from fire. | *Sruung | /sruuŋ/ |

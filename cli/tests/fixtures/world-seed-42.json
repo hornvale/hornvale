@@ -207,6 +207,11 @@
         "functional": true,
         "doc": "subject is a settlement"
       },
+      "kin-of": {
+        "name": "kin-of",
+        "functional": false,
+        "doc": "a person whose community descended or spun off from this person's community, at any remove other than one generation"
+      },
       "latitude": {
         "name": "latitude",
         "functional": true,
@@ -396,6 +401,11 @@
         "name": "ocean-fraction",
         "functional": true,
         "doc": "fraction of globe cells below sea level"
+      },
+      "parent-of": {
+        "name": "parent-of",
+        "functional": false,
+        "doc": "a person whose community was settled from this person's community, one generation removed"
       },
       "pays-tribute-to": {
         "name": "pays-tribute-to",
@@ -770,6 +780,12 @@
         "domain": "climate",
         "kind": "Substance",
         "doc": "A stand of northern conifers."
+      },
+      "brazier": {
+        "name": "brazier",
+        "domain": "thing",
+        "kind": "Object",
+        "doc": "a metal basin that holds a fire apart from a hearth"
       },
       "brown": {
         "name": "brown",
@@ -218533,6 +218549,936 @@
         },
         "place": 10760661430244475126,
         "day": 25928674266,
+        "provenance": "person"
+      },
+      {
+        "subject": 7122200663316758528,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 6455257698731098112
+        },
+        "place": 10760661430244475125,
+        "day": 16436250000,
+        "provenance": "person"
+      },
+      {
+        "subject": 11533924818126503936,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 4860473869838778368
+        },
+        "place": 10760661430244475565,
+        "day": 48395625000,
+        "provenance": "person"
+      },
+      {
+        "subject": 5184502419939917824,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 4809589093923684352
+        },
+        "place": 10760661430244475178,
+        "day": 21915000000,
+        "provenance": "person"
+      },
+      {
+        "subject": 11646001501795450880,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 16185577703186694144
+        },
+        "place": 10760661430244475602,
+        "day": 52048125000,
+        "provenance": "person"
+      },
+      {
+        "subject": 1486305235066028032,
+        "predicate": "parent-of",
+        "object": {
+          "Entity": 14764511529061711872
+        },
+        "place": 10760661430244475079,
+        "day": 13696875000,
+        "provenance": "person"
+      },
+      {
+        "subject": 13882619451787771904,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 1486305235066028032
+        },
+        "place": 10760661430244475027,
+        "day": 10957500000,
+        "provenance": "person"
+      },
+      {
+        "subject": 1486305235066028032,
+        "predicate": "parent-of",
+        "object": {
+          "Entity": 3918375745943306240
+        },
+        "place": 10760661430244475112,
+        "day": 15523125000,
+        "provenance": "person"
+      },
+      {
+        "subject": 13948234363937882112,
+        "predicate": "parent-of",
+        "object": {
+          "Entity": 3105210683290353664
+        },
+        "place": 10760661430244475005,
+        "day": 9131250000,
+        "provenance": "person"
+      },
+      {
+        "subject": 15227425047769841664,
+        "predicate": "parent-of",
+        "object": {
+          "Entity": 17172362982383222784
+        },
+        "place": 10760661430244475016,
+        "day": 10044375000,
+        "provenance": "person"
+      },
+      {
+        "subject": 17197051924701052928,
+        "predicate": "parent-of",
+        "object": {
+          "Entity": 13948234363937882112
+        },
+        "place": 10760661430244474977,
+        "day": 6391875000,
+        "provenance": "person"
+      },
+      {
+        "subject": 3105210683290353664,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 17434086001919131648
+        },
+        "place": 10760661430244475140,
+        "day": 18262500000,
+        "provenance": "person"
+      },
+      {
+        "subject": 12164729184500842496,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 15227425047769841664
+        },
+        "place": 10760661430244474983,
+        "day": 7305000000,
+        "provenance": "person"
+      },
+      {
+        "subject": 15905258168173330432,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 11903057811109773312
+        },
+        "place": 10760661430244475253,
+        "day": 28306875000,
+        "provenance": "person"
+      },
+      {
+        "subject": 13882619451787771904,
+        "predicate": "parent-of",
+        "object": {
+          "Entity": 17197051924701052928
+        },
+        "place": 10760661430244474940,
+        "day": 2739375000,
+        "provenance": "person"
+      },
+      {
+        "subject": 17197051924701052928,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 6675831506813321216
+        },
+        "place": 10760661430244474951,
+        "day": 3652500000,
+        "provenance": "person"
+      },
+      {
+        "subject": 11903057811109773312,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 4027450721776631808
+        },
+        "place": 10760661430244475335,
+        "day": 35611875000,
+        "provenance": "person"
+      },
+      {
+        "subject": 4698427316384432128,
+        "predicate": "parent-of",
+        "object": {
+          "Entity": 11478358094175141888
+        },
+        "place": 10760661430244474965,
+        "day": 5478750000,
+        "provenance": "person"
+      },
+      {
+        "subject": 1478068783358541824,
+        "predicate": "parent-of",
+        "object": {
+          "Entity": 4698427316384432128
+        },
+        "place": 10760661430244474941,
+        "day": 2739375000,
+        "provenance": "person"
+      },
+      {
+        "subject": 7172928682312531968,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 3946752878145634304
+        },
+        "place": 10760661430244475511,
+        "day": 44743125000,
+        "provenance": "person"
+      },
+      {
+        "subject": 11368624507821228032,
+        "predicate": "parent-of",
+        "object": {
+          "Entity": 17314802313060483072
+        },
+        "place": 10760661430244475012,
+        "day": 10044375000,
+        "provenance": "person"
+      },
+      {
+        "subject": 15025485816239751168,
+        "predicate": "parent-of",
+        "object": {
+          "Entity": 6442773223246659584
+        },
+        "place": 10760661430244475134,
+        "day": 17349375000,
+        "provenance": "person"
+      },
+      {
+        "subject": 1611731136620462080,
+        "predicate": "parent-of",
+        "object": {
+          "Entity": 9663609103200354304
+        },
+        "place": 10760661430244474952,
+        "day": 3652500000,
+        "provenance": "person"
+      },
+      {
+        "subject": 9539822813589667840,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 11368624507821228032
+        },
+        "place": 10760661430244474953,
+        "day": 3652500000,
+        "provenance": "person"
+      },
+      {
+        "subject": 17314802313060483072,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 9709640050390597632
+        },
+        "place": 10760661430244475030,
+        "day": 10957500000,
+        "provenance": "person"
+      },
+      {
+        "subject": 11368624507821228032,
+        "predicate": "parent-of",
+        "object": {
+          "Entity": 7454939395080126464
+        },
+        "place": 10760661430244475028,
+        "day": 10957500000,
+        "provenance": "person"
+      },
+      {
+        "subject": 9709640050390597632,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 15025485816239751168
+        },
+        "place": 10760661430244475049,
+        "day": 12783750000,
+        "provenance": "person"
+      },
+      {
+        "subject": 7454939395080126464,
+        "predicate": "parent-of",
+        "object": {
+          "Entity": 1699222227744915456
+        },
+        "place": 10760661430244475080,
+        "day": 13696875000,
+        "provenance": "person"
+      },
+      {
+        "subject": 7454939395080126464,
+        "predicate": "parent-of",
+        "object": {
+          "Entity": 8244217975148249088
+        },
+        "place": 10760661430244475100,
+        "day": 14610000000,
+        "provenance": "person"
+      },
+      {
+        "subject": 1611731136620462080,
+        "predicate": "parent-of",
+        "object": {
+          "Entity": 9539822813589667840
+        },
+        "place": 10760661430244474946,
+        "day": 3652500000,
+        "provenance": "person"
+      },
+      {
+        "subject": 16993288066867265536,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 4973482735037120512
+        },
+        "place": 10760661430244475477,
+        "day": 42916875000,
+        "provenance": "person"
+      },
+      {
+        "subject": 15069952954971914240,
+        "predicate": "parent-of",
+        "object": {
+          "Entity": 11874747369623453696
+        },
+        "place": 10760661430244475114,
+        "day": 15523125000,
+        "provenance": "person"
+      },
+      {
+        "subject": 15069952954971914240,
+        "predicate": "parent-of",
+        "object": {
+          "Entity": 544680773861900288
+        },
+        "place": 10760661430244475135,
+        "day": 17349375000,
+        "provenance": "person"
+      },
+      {
+        "subject": 8933224147339640832,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 3789362709383872512
+        },
+        "place": 10760661430244475193,
+        "day": 23741250000,
+        "provenance": "person"
+      },
+      {
+        "subject": 4849001063188463616,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 11932344868957782016
+        },
+        "place": 10760661430244475478,
+        "day": 42916875000,
+        "provenance": "person"
+      },
+      {
+        "subject": 2653316495441723392,
+        "predicate": "parent-of",
+        "object": {
+          "Entity": 4419892203446075392
+        },
+        "place": 10760661430244475060,
+        "day": 12783750000,
+        "provenance": "person"
+      },
+      {
+        "subject": 260791855647883264,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 17143536035740057600
+        },
+        "place": 10760661430244475322,
+        "day": 34698750000,
+        "provenance": "person"
+      },
+      {
+        "subject": 919895907405856768,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 14865040458344300544
+        },
+        "place": 10760661430244474970,
+        "day": 5478750000,
+        "provenance": "person"
+      },
+      {
+        "subject": 3921778793558114304,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 2052443971290923008
+        },
+        "place": 10760661430244475510,
+        "day": 44743125000,
+        "provenance": "person"
+      },
+      {
+        "subject": 12953019894352052224,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 13164855789322502144
+        },
+        "place": 10760661430244475168,
+        "day": 20088750000,
+        "provenance": "person"
+      },
+      {
+        "subject": 14162600537335136256,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 12953019894352052224
+        },
+        "place": 10760661430244474971,
+        "day": 5478750000,
+        "provenance": "person"
+      },
+      {
+        "subject": 12953019894352052224,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 3921778793558114304
+        },
+        "place": 10760661430244475239,
+        "day": 27393750000,
+        "provenance": "person"
+      },
+      {
+        "subject": 919895907405856768,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 14162600537335136256
+        },
+        "place": 10760661430244474963,
+        "day": 5478750000,
+        "provenance": "person"
+      },
+      {
+        "subject": 15857876063242944512,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 14311129932060098560
+        },
+        "place": 10760661430244475241,
+        "day": 27393750000,
+        "provenance": "person"
+      },
+      {
+        "subject": 3310512119477436416,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 17147540173631913984
+        },
+        "place": 10760661430244475047,
+        "day": 12783750000,
+        "provenance": "person"
+      },
+      {
+        "subject": 3310512119477436416,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 11888362579258769408
+        },
+        "place": 10760661430244475066,
+        "day": 12783750000,
+        "provenance": "person"
+      },
+      {
+        "subject": 4269786045683793920,
+        "predicate": "parent-of",
+        "object": {
+          "Entity": 12086825285079269376
+        },
+        "place": 10760661430244475067,
+        "day": 12783750000,
+        "provenance": "person"
+      },
+      {
+        "subject": 1530355289213370368,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 3310512119477436416
+        },
+        "place": 10760661430244475003,
+        "day": 9131250000,
+        "provenance": "person"
+      },
+      {
+        "subject": 3310512119477436416,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 4269786045683793920
+        },
+        "place": 10760661430244475042,
+        "day": 11870625000,
+        "provenance": "person"
+      },
+      {
+        "subject": 10560156890783547392,
+        "predicate": "parent-of",
+        "object": {
+          "Entity": 12088642002056839168
+        },
+        "place": 10760661430244474947,
+        "day": 3652500000,
+        "provenance": "person"
+      },
+      {
+        "subject": 15594208789765816320,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 5977061097750986752
+        },
+        "place": 10760661430244475051,
+        "day": 12783750000,
+        "provenance": "person"
+      },
+      {
+        "subject": 17314328655982559232,
+        "predicate": "parent-of",
+        "object": {
+          "Entity": 1369416751213969408
+        },
+        "place": 10760661430244475203,
+        "day": 24654375000,
+        "provenance": "person"
+      },
+      {
+        "subject": 79353513295544320,
+        "predicate": "parent-of",
+        "object": {
+          "Entity": 17859476654155431936
+        },
+        "place": 10760661430244475456,
+        "day": 41090625000,
+        "provenance": "person"
+      },
+      {
+        "subject": 13344933002363600896,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 4724107327160385536
+        },
+        "place": 10760661430244475359,
+        "day": 36525000000,
+        "provenance": "person"
+      },
+      {
+        "subject": 9778721331650101248,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 14768161351877001216
+        },
+        "place": 10760661430244475360,
+        "day": 36525000000,
+        "provenance": "person"
+      },
+      {
+        "subject": 17314328655982559232,
+        "predicate": "parent-of",
+        "object": {
+          "Entity": 17315356801714356224
+        },
+        "place": 10760661430244475196,
+        "day": 23741250000,
+        "provenance": "person"
+      },
+      {
+        "subject": 16439291747224977408,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 13344933002363600896
+        },
+        "place": 10760661430244475206,
+        "day": 24654375000,
+        "provenance": "person"
+      },
+      {
+        "subject": 2835154799138701312,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 17983148303501230080
+        },
+        "place": 10760661430244474993,
+        "day": 8218125000,
+        "provenance": "person"
+      },
+      {
+        "subject": 79353513295544320,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 11996847003999141888
+        },
+        "place": 10760661430244475514,
+        "day": 45656250000,
+        "provenance": "person"
+      },
+      {
+        "subject": 14354736584250228736,
+        "predicate": "parent-of",
+        "object": {
+          "Entity": 79353513295544320
+        },
+        "place": 10760661430244475324,
+        "day": 34698750000,
+        "provenance": "person"
+      },
+      {
+        "subject": 16439291747224977408,
+        "predicate": "parent-of",
+        "object": {
+          "Entity": 15218496879603548160
+        },
+        "place": 10760661430244474948,
+        "day": 3652500000,
+        "provenance": "person"
+      },
+      {
+        "subject": 17983148303501230080,
+        "predicate": "parent-of",
+        "object": {
+          "Entity": 17260344784561504256
+        },
+        "place": 10760661430244475078,
+        "day": 13696875000,
+        "provenance": "person"
+      },
+      {
+        "subject": 17315356801714356224,
+        "predicate": "parent-of",
+        "object": {
+          "Entity": 14354736584250228736
+        },
+        "place": 10760661430244475270,
+        "day": 29220000000,
+        "provenance": "person"
+      },
+      {
+        "subject": 79353513295544320,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 10144848757233352704
+        },
+        "place": 10760661430244475571,
+        "day": 49308750000,
+        "provenance": "person"
+      },
+      {
+        "subject": 10144848757233352704,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 15090878368454672384
+        },
+        "place": 10760661430244475773,
+        "day": 60266250000,
+        "provenance": "person"
+      },
+      {
+        "subject": 3394647080180318208,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 1751774449160421376
+        },
+        "place": 10760661430244475853,
+        "day": 63918750000,
+        "provenance": "person"
+      },
+      {
+        "subject": 10137526660188471296,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 3260805220019011584
+        },
+        "place": 10760661430244475857,
+        "day": 63918750000,
+        "provenance": "person"
+      },
+      {
+        "subject": 4640058309079072768,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 15422999983502000128
+        },
+        "place": 10760661430244475855,
+        "day": 63918750000,
+        "provenance": "person"
+      },
+      {
+        "subject": 5049803018906632192,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 8912873962778525696
+        },
+        "place": 10760661430244475212,
+        "day": 24654375000,
+        "provenance": "person"
+      },
+      {
+        "subject": 8843716736877854720,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 2411262052661919744
+        },
+        "place": 10760661430244475054,
+        "day": 12783750000,
+        "provenance": "person"
+      },
+      {
+        "subject": 3529111377644093440,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 1231700005398511616
+        },
+        "place": 10760661430244475355,
+        "day": 36525000000,
+        "provenance": "person"
+      },
+      {
+        "subject": 7551706366521901056,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 4693308488216346624
+        },
+        "place": 10760661430244475063,
+        "day": 12783750000,
+        "provenance": "person"
+      },
+      {
+        "subject": 17655063873505329152,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 1811011891462995968
+        },
+        "place": 10760661430244475062,
+        "day": 12783750000,
+        "provenance": "person"
+      },
+      {
+        "subject": 4252697108943011840,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 3529111377644093440
+        },
+        "place": 10760661430244475314,
+        "day": 33785625000,
+        "provenance": "person"
+      },
+      {
+        "subject": 1811011891462995968,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 14418581853552705536
+        },
+        "place": 10760661430244475113,
+        "day": 15523125000,
+        "provenance": "person"
+      },
+      {
+        "subject": 11706119180990808064,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 17655063873505329152
+        },
+        "place": 10760661430244474972,
+        "day": 5478750000,
+        "provenance": "person"
+      },
+      {
+        "subject": 3139097760208846848,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 4252697108943011840
+        },
+        "place": 10760661430244475243,
+        "day": 27393750000,
+        "provenance": "person"
+      },
+      {
+        "subject": 4138847645846994944,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 7551706366521901056
+        },
+        "place": 10760661430244474973,
+        "day": 5478750000,
+        "provenance": "person"
+      },
+      {
+        "subject": 11706119180990808064,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 4138847645846994944
+        },
+        "place": 10760661430244474964,
+        "day": 5478750000,
+        "provenance": "person"
+      },
+      {
+        "subject": 14288870767775449088,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 1150989953135214592
+        },
+        "place": 10760661430244475242,
+        "day": 27393750000,
+        "provenance": "person"
+      },
+      {
+        "subject": 10131547702424961024,
+        "predicate": "parent-of",
+        "object": {
+          "Entity": 11414444510944493568
+        },
+        "place": 10760661430244474942,
+        "day": 2739375000,
+        "provenance": "person"
+      },
+      {
+        "subject": 280497176561451008,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 12258256204803080192
+        },
+        "place": 10760661430244475045,
+        "day": 12783750000,
+        "provenance": "person"
+      },
+      {
+        "subject": 12258256204803080192,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 16636006403440967680
+        },
+        "place": 10760661430244475082,
+        "day": 13696875000,
+        "provenance": "person"
+      },
+      {
+        "subject": 16636006403440967680,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 16872268526487601152
+        },
+        "place": 10760661430244475102,
+        "day": 14610000000,
+        "provenance": "person"
+      },
+      {
+        "subject": 16872268526487601152,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 5522108981605564416
+        },
+        "place": 10760661430244475202,
+        "day": 24654375000,
+        "provenance": "person"
+      },
+      {
+        "subject": 873668610864447488,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 11806985195215716352
+        },
+        "place": 10760661430244475043,
+        "day": 11870625000,
+        "provenance": "person"
+      },
+      {
+        "subject": 5084134241133658112,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 12651599519000821760
+        },
+        "place": 10760661430244475240,
+        "day": 27393750000,
+        "provenance": "person"
+      },
+      {
+        "subject": 6858083609369706496,
+        "predicate": "parent-of",
+        "object": {
+          "Entity": 16475749530675707904
+        },
+        "place": 10760661430244475337,
+        "day": 35611875000,
+        "provenance": "person"
+      },
+      {
+        "subject": 9758692685953302528,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 1795931080657338368
+        },
+        "place": 10760661430244475412,
+        "day": 38351250000,
+        "provenance": "person"
+      },
+      {
+        "subject": 16337329001874587648,
+        "predicate": "parent-of",
+        "object": {
+          "Entity": 6858083609369706496
+        },
+        "place": 10760661430244475303,
+        "day": 32872500000,
+        "provenance": "person"
+      },
+      {
+        "subject": 15745186078029316096,
+        "predicate": "parent-of",
+        "object": {
+          "Entity": 873668610864447488
+        },
+        "place": 10760661430244475013,
+        "day": 10044375000,
+        "provenance": "person"
+      },
+      {
+        "subject": 7455593286960939008,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 5084134241133658112
+        },
+        "place": 10760661430244475056,
+        "day": 12783750000,
+        "provenance": "person"
+      },
+      {
+        "subject": 9732380722239504384,
+        "predicate": "parent-of",
+        "object": {
+          "Entity": 3644984735925272576
+        },
+        "place": 10760661430244475169,
+        "day": 20088750000,
+        "provenance": "person"
+      },
+      {
+        "subject": 324962173261250560,
+        "predicate": "kin-of",
+        "object": {
+          "Entity": 16337329001874587648
+        },
+        "place": 10760661430244475232,
+        "day": 26480625000,
         "provenance": "person"
       }
     ],

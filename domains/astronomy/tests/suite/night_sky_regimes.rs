@@ -26,7 +26,7 @@ fn locked_worlds_freeze_the_instrument() {
             rotation: Some(RotationPin::Locked),
             ..SkyPins::default()
         };
-        let system = generate(Seed(seed), &pins).unwrap().system;
+        let system = generate(Seed(seed), &pins).unwrap().value;
         let calendar = calendar_of(&system);
         let t = StdInstant::new(5.0).unwrap();
 
@@ -68,7 +68,7 @@ fn zero_obliquity_keeps_heliacal_events_but_kills_seasons() {
             forcing: Some(ForcingPin::Zero),
             ..SkyPins::default()
         };
-        let system = generate(Seed(seed), &pins).unwrap().system;
+        let system = generate(Seed(seed), &pins).unwrap().value;
         let calendar = calendar_of(&system);
         let year = calendar.year_length().get();
 
@@ -123,7 +123,7 @@ fn retrograde_flips_wheeling_not_dates() {
                 spin: Some(spin),
                 ..SkyPins::default()
             };
-            generate(Seed(seed), &pins).unwrap().system
+            generate(Seed(seed), &pins).unwrap().value
         };
 
         let pro = system_with_spin(SpinPin::Prograde);
@@ -180,7 +180,7 @@ fn epoch_drift_moves_the_equinox_referenced_and_spares_the_orbital() {
             wanderers: Some(2),
             ..SkyPins::default()
         };
-        let system = generate(Seed(seed), &pins).unwrap().system;
+        let system = generate(Seed(seed), &pins).unwrap().value;
         let calendar = calendar_of(&system);
 
         let t0 = StdInstant::new(0.0).unwrap();

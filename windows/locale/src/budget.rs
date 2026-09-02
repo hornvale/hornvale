@@ -4,9 +4,9 @@
 //! are on quantized values (decision 0041). Placement is *repulsive*; the
 //! future negative wing will be *excitatory* — do not bake repulsion deeper.
 
-use crate::regime::{EnergySource, Kingdom, Negations, Substrate};
+use crate::regime::{EnergySource, Kingdom, Negations};
 use crate::streams::LOCALE_PLACE;
-use hornvale_climate::GeneratedClimate;
+use hornvale_climate::{GeneratedClimate, GroundKind};
 use hornvale_kernel::{Seed, Vertex, quantize};
 use hornvale_terrain::GeneratedTerrain;
 use serde::Serialize;
@@ -202,7 +202,7 @@ impl StrangenessBudget {
     /// The negation vector a placed vertex carries, if any.
     pub(crate) fn regime_at(&self, vertex: Vertex) -> Option<Negations> {
         self.sites.get(&vertex.0).map(|s| Negations {
-            substrate: Substrate::Ordinary, // substrate comes from the derived proxy
+            substrate: GroundKind::Ordinary, // substrate comes from the derived proxy
             energy: s.energy,
             kingdom: s.kingdom,
             endemic: s.endemic,

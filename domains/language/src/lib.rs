@@ -133,6 +133,7 @@ pub use grammar::{
     realize_tongue_coordination, realize_tongue_deep, realize_tongue_deep_coordination,
     realize_tongue_polar_question, tongue_grammar,
 };
+pub use hornvale_kernel::Sentiment;
 pub use lexicon::{
     ExposureClass, GapReason, Headedness, LexEntry, Lexicon, WordViews, build_lexicon,
     draw_headedness, proto_root_universe,
@@ -158,7 +159,7 @@ pub use phonology::{
     Envelope, ExoticSeg, Phonology, distinguishable_capacity, draw_phonology, permits,
     tone_inventory,
 };
-pub use register::{LineContent, LineSentiment, VoiceParams, render_line};
+pub use register::{LineContent, VoiceParams, render_line};
 pub use typology::{
     ALL_BUNDLE_NAMES, CodaLaw, Harmony, Morphology, OnsetLaw, Orthography, Typology,
     family_typology, typology_for,

@@ -55,8 +55,12 @@ fn stay_put_npc(session: &mut Session, labels: &[String]) -> String {
 }
 
 fn world() -> hornvale_kernel::World {
+    world_at(42)
+}
+
+fn world_at(seed: u64) -> hornvale_kernel::World {
     hornvale_worldgen::build_world(
-        hornvale_kernel::Seed(42),
+        hornvale_kernel::Seed(seed),
         &hornvale_astronomy::SkyPins::default(),
         hornvale_worldgen::SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
@@ -64,6 +68,47 @@ fn world() -> hornvale_kernel::World {
     )
     .unwrap()
 }
+
+/// A seed whose flagship roll actually WALKS — at least one resident commits
+/// an `agent-at` across a seven-day wait — and which also drinks.
+///
+/// **New at The Roll (Task 7), and it exists because the roster changed
+/// MEANING, not because the drive layer moved.** Before the roll a session
+/// derived one body per each of three settlements plus four world-top wild
+/// beasts, so seed 42's roster always contained somebody off the river: the
+/// variable the caller below calls `flagship` was in fact a NEIGHBOURING
+/// settlement's NPC, and that is the body that walked. The roll derives the
+/// residents of the settlement you are standing IN, and seed 42's flagship
+/// stands on a river (`"water":"river"` in the committed walk snapshot), so
+/// all sixty-seven of its residents drink in place and the session commits
+/// ZERO positional facts, ever — measured, not inferred.
+///
+/// Measured rather than searched at run time, the same trade
+/// `session.rs`'s `CHAMBERED_SEED` records: seeds 0..16 each possessed and
+/// waited seven days, reading `committed_agent_at_count`/
+/// `committed_drank_count`. Eleven of the sixteen walk, so the property is
+/// ordinary and it is seed 42 that is special. Seed 14 is the cheapest of
+/// them (59 bodies, 673 positional facts) and its residents never reach water
+/// at all, which is the stronger property `the_roll.rs`'s dormancy test needs
+/// — that file pins the same number for that reason. The precondition below
+/// fails loudly if an epoch moves it.
+/// type-audit: bare-ok(index)
+const WALKING_SEED: u64 = 14;
+
+/// A seed whose flagship roll actually holds WILD bodies — a herd attractor
+/// within `ROLL_HOPS` of the settlement you possess.
+///
+/// **Also new at The Roll (Task 7), and for the sibling reason.** The roll
+/// derives the fauna standing within call rather than the world's top four
+/// concentrations, so a wild body is no longer guaranteed: seed 42's flagship
+/// has no herd attractor within two hops (the nearest is ~0.0197 of a unit
+/// sphere away, ~125 km, and the world's 12,657 herd entries occupy 917
+/// distinct walk-band rooms out of a depth-13 mesh's hundreds of millions).
+/// It is not rare in general — 13 of seeds 0..23 do derive wild bodies — so
+/// this is once again a fact about seed 42 rather than about the feature.
+/// Seed 3 is the cheapest of them (71 bodies, 14 of them wild).
+/// type-audit: bare-ok(index)
+const WILD_SEED: u64 = 3;
 
 #[test]
 fn day_zero_session_is_unchanged_until_you_wait() {
@@ -111,20 +156,57 @@ fn waiting_moves_an_npc_and_it_is_observed() {
         session.committed_drank_count() >= 1,
         "the world moved on wait (a drank fact committed)"
     );
-    // **THE WINZE T2b: THE FLAGSHIP WALKS AGAIN, AND THIS TEST RECOVERS THE
-    // CLAIM ITS OWN NAME MAKES.** The paragraph above records that The
-    // Confluence's condensation put seed 42's flagship settlement directly on
-    // fresh water, so "the world moved on wait" had to be proved through
-    // `drank` rather than through a real walk. Spec amendment E's working ring
-    // scan re-places every settlement and this one landed off the river: the
-    // flagship's own NPC now walks to water, so the stronger, original witness
-    // — an observed `agent-at` — is available again and is asserted here.
-    // Both halves are kept: the drink above and the walk below are separate
-    // facts and this test wants the walk.
+    // **THE WALK MOVED TO ANOTHER WORLD AT THE ROLL (Task 7), AND THE CLAIM
+    // IS UNCHANGED.** The Winze T2b recovered a real `agent-at` witness here
+    // by observing that spec amendment E's ring scan had re-placed seed 42's
+    // settlements and one of them landed off the river. What it was actually
+    // observing was a NEIGHBOUR: `npc_labels().first()` used to be another
+    // settlement's single NPC, because a session derived one body from each of
+    // three settlements. The roll derives the residents of the settlement you
+    // are standing in, and seed 42's flagship is ON the river — all
+    // sixty-seven of its residents drink in place and the session commits zero
+    // positional facts. So the witness is taken where the property lives (see
+    // `WALKING_SEED`'s own note), rather than asserted where it no longer
+    // does. Both halves are still kept, and both are still separate facts:
+    // the drink above, at seed 42, and the walk here.
     assert!(
-        walked(&mut session, &flagship),
-        "measured: seed 42's flagship settlement is off the river again, so its \
-         own NPC walks to reach water and commits a positional fact"
+        !walked(&mut session, &flagship),
+        "measured: seed 42's flagship stands on a river, so its own residents \
+         drink in place and never commit a positional fact"
+    );
+    //
+    // The witness is `walked()` — the per-NPC `!why` recount — and not
+    // `committed_agent_at_count()`, which is what an earlier version of this
+    // fix reached for. This test's name says "and it is observed", and a
+    // session-wide fact count observes nothing about any particular
+    // creature: it is exactly the proxy `walked()`'s own doc records
+    // narrowing away from. The subject is chosen BY THE PROPERTY, the way
+    // `stay_put_npc` chooses its own — a hardcoded label is what The Winze
+    // T2b already had to correct here once.
+    let walking = world_at(WALKING_SEED);
+    let (mut walker, _) = Session::start(&walking, &opts).unwrap();
+    let walker_labels: Vec<String> = walker
+        .npc_labels()
+        .into_iter()
+        .map(str::to_string)
+        .collect();
+    walker.handle("wait 7");
+    let moved = walker_labels
+        .iter()
+        .find(|label| walked(&mut walker, label))
+        .cloned()
+        .unwrap_or_else(|| {
+            panic!(
+                "no resident of seed {WALKING_SEED}'s flagship recounts a positional \
+                 fact after a full drive cycle — a settlement whose people must leave \
+                 home for water is the whole reason this seed is pinned, so an epoch \
+                 has moved it and WALKING_SEED must be re-measured"
+            )
+        });
+    assert!(
+        walked(&mut walker, &moved),
+        "measured: {moved} walks to reach water, and its own `why` recount \
+         names the positional fact it committed"
     );
     // The wait output mentions motion (non-empty, references an NPC/movement).
     match out {
@@ -278,19 +360,29 @@ fn why_recounts_an_npcs_dated_history_after_it_drinks() {
         Turn::Released(_) => panic!("why never releases"),
     };
 
-    // Before any wait, NO NPC has a committed agent-at yet (day-0 pin):
-    // recounting one either says nothing is recorded, or (since the entity was
-    // minted this session) never mentions "day". Checked over the WHOLE roster
-    // rather than one member — the subject of the recount below is chosen
-    // after the wait, by which NPC drank in place, so the day-0 pin has to
-    // hold for whichever that turns out to be.
-    for label in &labels {
-        let before = out_text(session.handle(&format!("!why {label}")));
-        assert!(
-            !before.contains("day"),
-            "before any wait, no dated agent-at exists to recount: {before}"
-        );
-    }
+    // Before any wait, NO NPC has a committed agent-at or `drank` yet (the
+    // day-0 pin), so the recount below has nothing of the kind to name.
+    //
+    // **Asked of the LEDGER rather than of the prose, since The Roll (Task
+    // 7).** This used to run `!why <label>` over the whole roster and assert
+    // the answer never contains the word "day". Two things broke that. The
+    // roster is a settlement's whole population now, so the loop was 67
+    // recounts; and a RESIDENT carries dated identity facts of its own —
+    // `derive_residents` commits `is-person` and `person-born`, whose doc
+    // line is literally "the day this person was born" — so the substring
+    // probe now fires on a fact that has nothing to do with a walk. The
+    // claim was always "no positional or drink fact has been committed yet",
+    // and the two counters say exactly that, cheaply and without a proxy.
+    assert_eq!(
+        session.committed_agent_at_count(),
+        0,
+        "before any wait, no NPC has committed a positional fact"
+    );
+    assert_eq!(
+        session.committed_drank_count(),
+        0,
+        "before any wait, no NPC has committed a drink either"
+    );
 
     // Advance across a full drive cycle (the-wanting: ~5.667 days to the
     // seek crossing) so the tick commits a dated fact. THE CONFLUENCE,
@@ -368,16 +460,26 @@ fn needs_reports_a_colocated_npcs_felt_state_and_it_differs_across_the_drive_cyc
     };
 
     // Day 0.5 (PossessOpts::default, before any wait), measured against
-    // `bodies()[1]` (The Hand, Task 3's manufactured companion, not the
-    // pre-Hand flagship twin): its drive state at day 0.5 reads "seems
-    // content", not any of the fatigue/hunger/thirst readings a different
-    // companion has read here across earlier campaigns' re-measurements —
-    // the specific reading is a fact about WHICH creature is placed, never
-    // the claim; only the "changes over the drive cycle" shape below is.
+    // `bodies()[1]`: its drive state at day 0.5 reads "settles down to rest",
+    // not any of the content/hunger/thirst readings a different companion has
+    // read here across earlier campaigns' re-measurements — the specific
+    // reading is a fact about WHICH creature is placed, never the claim; only
+    // the "changes over the drive cycle" shape below is.
+    //
+    // **RE-MEASURED at The Roll, Task 7, and the reason is the roster rather
+    // than the drive.** `bodies()[1]` used to be another settlement's single
+    // NPC, which read "seems content"; it is now the flagship's own resident
+    // ordinal 1, whose fatigue at day 0.5 wins its arbitration. The reading
+    // moved because a different creature is being asked, exactly as this
+    // comment's own caveat anticipated. `place_creature_at_me` above is now
+    // redundant — a resident of the settlement you are standing in is
+    // co-located by construction — and is kept because the test's claim is
+    // about a CO-LOCATED creature's felt state, and asking for the placement
+    // explicitly keeps that premise stated rather than incidental.
     let early = out_text(session.handle("needs"));
     assert!(
-        early.contains("seems content"),
-        "the co-located NPC reads as content at day 0.5: {early}"
+        early.contains("settles down to rest"),
+        "the co-located NPC reads as tired at day 0.5: {early}"
     );
     assert!(
         !early.contains("No one else is here"),
@@ -534,7 +636,12 @@ fn a_wild_beast_walks_away_from_water_and_is_observed() {
     // so crossing a full drive cycle commits real `agent-at` walks. This is the
     // population that DOES move: The Quarry's predator niche and the drive layer,
     // finally exercised by a live agent in possession.
-    let w = world();
+    // **AT `WILD_SEED`, NOT SEED 42, SINCE THE ROLL (Task 7).** The roll
+    // derives the fauna standing within call rather than the world's top four
+    // concentrations, and seed 42's flagship has no herd attractor within two
+    // hops — see `WILD_SEED`'s own note for the measurement and for why this
+    // is a fact about seed 42 rather than about the feature.
+    let w = world_at(WILD_SEED);
     let (mut wild_session, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
 
     // Wild agents enlarge the roster over the peoples-only session, and read as
@@ -643,14 +750,21 @@ fn a_wild_beast_walks_away_from_water_and_is_observed() {
 ///
 /// **The Hand, Task 3: no longer the flagship's own twin.** The pre-Hand
 /// `GRIEVANCE_NPC` (`bugbear of Doaba`) WAS the possessed-body duplicate this
-/// task deletes, co-located by construction. `bodies()[1]` (`hobgoblin of
-/// Naabeena` at seed 42) is placed explicitly through the test seam
+/// task deletes, co-located by construction. `bodies()[1]` is placed
+/// explicitly through the test seam
 /// (`Session::place_creature_at_me`, see docs/retrospectives/the-hand.md) instead, and is
 /// RE-placed before every `!provoke`/`!soothe` below rather than trusted to
 /// stay put across a `wait` — its own drive-seeking is free to walk it away
 /// from the flagship the moment a tick runs, unlike the twin, whose home
 /// WAS the flagship.
-const GRIEVANCE_NPC: &str = "hobgoblin of Naabeena";
+///
+/// **An ELEVENTH move, and it changed the KIND of label rather than its
+/// spelling** (The Roll, Task 7): `bodies()[1]` is now a RESIDENT of the
+/// flagship, and a resident is a named person, so the label went from
+/// `hobgoblin of Naabeena` (a species of a place) to `Dvoashngashngo` (a name
+/// its settlement's namer drew). See `the_first_mark.rs`'s copy of this
+/// constant for the fuller note; both moved together as always.
+const GRIEVANCE_NPC: &str = "Dvoashngashngo";
 
 #[test]
 fn grievance_accumulates_across_waits_and_crosses_the_hostility_threshold() {

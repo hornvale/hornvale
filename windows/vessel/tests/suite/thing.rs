@@ -25,15 +25,20 @@
 //! interior alone (`chamber_prose::describe_chamber`), so a room's PROSE does
 //! not yet drop what was carried out of it; only its verbs do.
 //!
-//! **The `AnchorKind` -> thing-kind spelling here is a STAND-IN.** Task 7 owns
-//! the real, total mapping (spec §3.6, one property table keyed on `KindId`);
-//! until it lands there is nothing to import, so `kind_name` derives a name
-//! from the anchor's own `Debug`. Nothing in this file asserts on the
-//! spelling — only that whatever spelling the caller uses on both entries
-//! addresses the same thing.
+//! **The anchor -> thing-kind spelling here was a STAND-IN and is not one any
+//! more (The Wicket, Task 2).** This paragraph read: *"Task 7 owns the real,
+//! total mapping (spec §3.6, one property table keyed on `KindId`); until it
+//! lands there is nothing to import, so `kind_name` derives a name from the
+//! anchor's own `Debug`."* Task 7 landed the mapping, and The Wicket removed
+//! the need for one — an anchor's `kind` IS a `KindId`, so the spelling this
+//! file needs is `kind.0` and there is nothing left to derive or to import.
+//! Nothing here asserts on the spelling regardless; what it asserts is that
+//! whatever spelling the caller uses on both entries addresses the same
+//! thing.
 
 use hornvale_kernel::{ConceptRegistry, Facet, Ledger, WorldTime};
-use hornvale_vessel::interior::{AnchorId, AnchorKind, Interior, interior_of};
+use hornvale_thing::kinds;
+use hornvale_vessel::interior::{AnchorId, Interior, interior_of};
 use hornvale_vessel::liveness::Terrain;
 use hornvale_vessel::thing::{
     LOCATED_IN, LOCATED_IN_DOC, held_by, is_latent, located_in_holder_fact, located_in_room_fact,
@@ -61,18 +66,24 @@ impl Terrain for ColdBuilt {
     }
 }
 
-/// The stand-in thing-kind spelling for an anchor kind — see the module doc.
-/// **Why this must not ship as the real mapping, which Task 7 owns.** It is
-/// injective today, so a non-injective replacement would red this file rather
-/// than pass quietly — but `thing_role` makes the kind string an input to a
-/// derived `EntityId` and its own doc calls that a save-format contract,
-/// while `#[derive(Debug)]` output is not one: a variant rename would
-/// silently renumber every thing in every saved world. This stand-in also
-/// exercises 7 of 14 `AnchorKind` variants (built + cold, locale band only),
-/// so it cannot witness a mapping that is partial over the chamber-band
-/// seven.
-fn kind_name(kind: AnchorKind) -> String {
-    format!("{kind:?}").to_lowercase()
+/// The thing-kind spelling for an anchor — now a plain read of the label the
+/// anchor carries.
+///
+/// **It was `format!("{kind:?}").to_lowercase()` over the anchor-kind enum,
+/// and that was flagged in its own doc as a thing that must not ship as the
+/// real mapping** — because `thing_role` makes the kind string an input to a
+/// derived `EntityId`, which its own doc calls a save-format contract, while
+/// `#[derive(Debug)]` output is not one: a variant rename would silently
+/// renumber every thing in every saved world. The Wicket removed the hazard
+/// rather than the warning's subject being fixed some other way: an anchor's
+/// kind is the authored label itself, so no derivation stands between the
+/// roster and the id.
+///
+/// It stays a named function rather than being inlined at the four call
+/// sites because the call sites want a `String` and `thing_id`/`is_latent`
+/// take a `&str`.
+fn kind_name(kind: hornvale_kernel::KindId) -> String {
+    kind.0.to_string()
 }
 
 /// **The join**: the grammar's offer list, minus everything the ledger says
@@ -84,7 +95,7 @@ fn offers_of(
     room: &Facet,
     interior: &Interior,
     day: WorldTime,
-) -> Vec<(AnchorId, AnchorKind)> {
+) -> Vec<(AnchorId, hornvale_kernel::KindId)> {
     interior
         .ids()
         .into_iter()
@@ -152,7 +163,7 @@ fn a_room_stops_offering_what_was_carried_out_of_it() {
         interior
             .ids()
             .into_iter()
-            .any(|id| interior.anchor(id).kind == AnchorKind::Vessel),
+            .any(|id| interior.anchor(id).kind == kinds::VESSEL),
         "a built, cold locale must compose `the-water-jar`; if the grammar \
          moved, this test needs a different anchor, not a rebaseline"
     );
@@ -165,7 +176,7 @@ fn a_room_stops_offering_what_was_carried_out_of_it() {
     );
 
     // Something takes the water jar to the next room.
-    let jar = thing_id(&here, &kind_name(AnchorKind::Vessel), 0).expect("a shallow facet packs");
+    let jar = thing_id(&here, &kind_name(kinds::VESSEL), 0).expect("a shallow facet packs");
     ledger
         .commit(
             located_in_room_fact(jar, &elsewhere, at(2.0)).expect("a shallow facet packs"),
@@ -174,14 +185,14 @@ fn a_room_stops_offering_what_was_carried_out_of_it() {
         .expect("the location predicate is registered");
 
     let entry_two = offers_of(&ledger, &here, &interior, at(3.0));
-    let gone: Vec<AnchorKind> = entry_one
+    let gone: Vec<hornvale_kernel::KindId> = entry_one
         .iter()
         .filter(|(id, _)| !entry_two.iter().any(|(kept, _)| kept == id))
         .map(|(_, kind)| *kind)
         .collect();
     assert_eq!(
         gone,
-        vec![AnchorKind::Vessel],
+        vec![kinds::VESSEL],
         "entry 2 must offer exactly the anchors entry 1 did, minus the one \
          that left"
     );
@@ -242,7 +253,7 @@ fn a_room_offers_again_what_was_brought_back() {
         path: vec![2],
     };
     let interior = interior_of(&here, &ColdBuilt);
-    let jar = thing_id(&here, &kind_name(AnchorKind::Vessel), 0).expect("a shallow facet packs");
+    let jar = thing_id(&here, &kind_name(kinds::VESSEL), 0).expect("a shallow facet packs");
 
     ledger
         .commit(

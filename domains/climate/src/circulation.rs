@@ -11,6 +11,9 @@ use hornvale_kernel::{Geosphere, Vertex};
 /// astronomy rotation; mapped at the composition root so climate imports no
 /// domain).
 /// type-audit: pending(wave-2)
+/// placement: deliberate(lossy projection, not a forced duplicate — climate's
+/// copy drops spin direction and carries day_std; the worldgen shim genuinely
+/// converts; see the-hallmark ledger #3) shape(606e60)
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum RotationRegime {
     /// Ordinary spin with a solar day of this many standard days.

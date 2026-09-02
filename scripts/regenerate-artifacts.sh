@@ -992,6 +992,10 @@ spawn run --manifest-path tools/type-audit/Cargo.toml -- report > docs/audits/ty
 # every `expect(survives: …)` declaration under review pressure: a diff is
 # harder to leave lying around than a doc comment.
 spawn run --manifest-path tools/seam-guard/Cargo.toml -- report > docs/audits/seam-guard-roster.md
+# The placement-audit roster: one section per shape-twin group across
+# kernel/domains, each member's verdict and shape fingerprint (decision
+# 0517; The Hallmark spec §3).
+spawn run --manifest-path tools/placement-audit/Cargo.toml -- report > docs/audits/placement-audit-roster.md
 spawn run -p hornvale -- tropes report > docs/audits/trope-coverage-polti-1895.md
 spawn run -p hornvale -- tropes --corpus tropes/tvtropes-2012.trope.json report \
   > docs/audits/trope-coverage-tvtropes-2012.md

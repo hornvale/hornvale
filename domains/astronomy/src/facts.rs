@@ -7,7 +7,7 @@
 
 use crate::anchor::Rotation;
 use crate::streams;
-use crate::system::GenesisOutcome;
+use crate::system::{GenesisOutcome, StarSystem};
 use hornvale_kernel::{EntityId, Fact, LedgerError, Lineage, Value, World, WorldTime};
 
 /// The host star's spectral class, committed as its registered concept id
@@ -268,9 +268,9 @@ fn formation_name(formation: crate::moons::Formation) -> &'static str {
 pub fn genesis(
     world: &mut World,
     subject: EntityId,
-    outcome: &GenesisOutcome,
+    outcome: &GenesisOutcome<StarSystem>,
 ) -> Result<(), LedgerError> {
-    let system = &outcome.system;
+    let system = &outcome.value;
 
     world.ledger.commit(
         fact(
@@ -694,7 +694,7 @@ mod tests {
     /// idiom): generate `seed`'s unpinned system, commit its genesis facts,
     /// and hand back the world, the subject entity, and the outcome for
     /// per-moon fact assertions.
-    fn committed_world(seed: u64) -> (World, EntityId, GenesisOutcome) {
+    fn committed_world(seed: u64) -> (World, EntityId, GenesisOutcome<StarSystem>) {
         let outcome = generate(Seed(seed), &SkyPins::default()).unwrap();
         let mut w = world_with(seed);
         let subject = w
@@ -769,13 +769,13 @@ mod tests {
         assert_eq!(
             w.ledger.value_of(subject, ECCENTRICITY_MEAN),
             Some(&Value::Number(hornvale_kernel::quantize(
-                outcome.system.forcing.ecc_mean
+                outcome.value.forcing.ecc_mean
             )))
         );
         assert_eq!(
             w.ledger.value_of(subject, OBLIQUITY_AMPLITUDE),
             Some(&Value::Number(hornvale_kernel::quantize(
-                outcome.system.forcing.obliquity_amp
+                outcome.value.forcing.obliquity_amp
             )))
         );
     }
@@ -834,7 +834,7 @@ mod tests {
             })
             .collect();
         let expected: Vec<f64> = outcome
-            .system
+            .value
             .moons
             .iter()
             .map(|m| hornvale_kernel::quantize(m.tide_rel))
@@ -867,7 +867,7 @@ mod tests {
             })
             .collect();
         let expected: Vec<f64> = outcome
-            .system
+            .value
             .moons
             .iter()
             .map(|m| hornvale_kernel::quantize(m.inclination_deg))
@@ -923,7 +923,7 @@ mod tests {
 
         let outcome = generate(Seed(1), &SkyPins::default()).unwrap();
         assert!(matches!(
-            outcome.system.anchor.rotation,
+            outcome.value.anchor.rotation,
             crate::anchor::Rotation::Spinning {
                 retrograde: false,
                 ..
@@ -976,7 +976,7 @@ mod tests {
         genesis(&mut w, subject, &outcome).unwrap();
 
         let neighbor_ids: Vec<_> = w.ledger.find(IS_NEIGHBOR).map(|f| f.subject).collect();
-        assert_eq!(neighbor_ids.len(), outcome.system.neighbors.len());
+        assert_eq!(neighbor_ids.len(), outcome.value.neighbors.len());
         for id in neighbor_ids {
             assert!(w.ledger.value_of(id, NEIGHBOR_CLASS).is_some());
             assert!(w.ledger.value_of(id, NEIGHBOR_DISTANCE_LY).is_some());
@@ -1015,13 +1015,13 @@ mod tests {
         assert_eq!(
             w.ledger.value_of(subject, GREENHOUSE_FORCING_K),
             Some(&Value::Number(hornvale_kernel::quantize(
-                outcome.system.anchor.greenhouse_residual
+                outcome.value.anchor.greenhouse_residual
             )))
         );
         assert_eq!(
             w.ledger.value_of(subject, INSOLATION_REL),
             Some(&Value::Number(hornvale_kernel::quantize(
-                crate::star::insolation_rel(&outcome.system.star, &outcome.system.anchor)
+                crate::star::insolation_rel(&outcome.value.star, &outcome.value.anchor)
             )))
         );
     }
@@ -1053,8 +1053,8 @@ mod tests {
                 .mint_entity(test_lineage(w.ledger.entity_count() as u16));
             genesis(&mut w, subject, &outcome).unwrap();
 
-            let calendar = crate::calendar::calendar_of(&outcome.system);
-            let sky = night_sky_at(&outcome.system, &calendar, 0.0, StdInstant(0.0));
+            let calendar = crate::calendar::calendar_of(&outcome.value);
+            let sky = night_sky_at(&outcome.value, &calendar, 0.0, StdInstant(0.0));
 
             let north = w.ledger.value_of(subject, POLE_STAR_NORTH).cloned();
             let south = w.ledger.value_of(subject, POLE_STAR_SOUTH).cloned();
@@ -1085,7 +1085,7 @@ mod tests {
             }
 
             let min_sep = outcome
-                .system
+                .value
                 .neighbors
                 .iter()
                 .map(|n| {
@@ -1131,9 +1131,9 @@ mod tests {
             ..SkyPins::default()
         };
         let outcome = generate(Seed(118), &pins).unwrap();
-        assert_eq!(outcome.system.wanderers.len(), 2);
+        assert_eq!(outcome.value.wanderers.len(), 2);
         assert_ne!(
-            outcome.system.wanderers[0].class, outcome.system.wanderers[1].class,
+            outcome.value.wanderers[0].class, outcome.value.wanderers[1].class,
             "test setup must exercise two distinct wanderer classes"
         );
         let mut w = world_with(118);
@@ -1157,7 +1157,7 @@ mod tests {
             })
             .collect();
         let expected_orbits: Vec<f64> = outcome
-            .system
+            .value
             .wanderers
             .iter()
             .map(|wd| hornvale_kernel::quantize(wd.orbit.get()))
@@ -1174,7 +1174,7 @@ mod tests {
             })
             .collect();
         let expected_periods: Vec<f64> = outcome
-            .system
+            .value
             .wanderers
             .iter()
             .map(|wd| hornvale_kernel::quantize(wd.period.get()))
@@ -1191,7 +1191,7 @@ mod tests {
             })
             .collect();
         let expected_classes: Vec<String> = outcome
-            .system
+            .value
             .wanderers
             .iter()
             .map(|wd| {
@@ -1214,7 +1214,7 @@ mod tests {
         for seed in 0..16u64 {
             let outcome = generate(Seed(seed), &SkyPins::default()).unwrap();
             let astronomy_seed = Seed(seed).derive(streams::ROOT);
-            let expected = crate::figures::figures(astronomy_seed, &outcome.system).len();
+            let expected = crate::figures::figures(astronomy_seed, &outcome.value).len();
 
             let mut w = world_with(seed);
             let subject = w
@@ -1245,7 +1245,7 @@ mod tests {
         for seed in 0..64u64 {
             let outcome = generate(Seed(seed), &SkyPins::default()).unwrap();
             let astronomy_seed = Seed(seed).derive(streams::ROOT);
-            let figs = crate::figures::figures(astronomy_seed, &outcome.system);
+            let figs = crate::figures::figures(astronomy_seed, &outcome.value);
             if figs.len() < 2 {
                 continue;
             }
@@ -1299,7 +1299,7 @@ mod tests {
         for seed in 0..16u64 {
             let outcome = generate(Seed(seed), &SkyPins::default()).unwrap();
             let astronomy_seed = Seed(seed).derive(streams::ROOT);
-            let figs = crate::figures::figures(astronomy_seed, &outcome.system);
+            let figs = crate::figures::figures(astronomy_seed, &outcome.value);
             let any_on_ecliptic = figs.iter().any(|f| f.on_ecliptic);
 
             let mut w = world_with(seed);
@@ -1334,7 +1334,7 @@ mod tests {
     #[test]
     fn each_moon_commits_node_facts() {
         let (world, subject, outcome) = committed_world(42);
-        let moons = outcome.system.moons.len();
+        let moons = outcome.value.moons.len();
         assert!(moons > 0);
         for predicate in [MOON_NODE_LONGITUDE_DEGREES, MOON_NODE_PERIOD_DAYS] {
             let count = world
@@ -1354,7 +1354,7 @@ mod tests {
         assert_eq!(
             world.ledger.value_of(subject, STAR_AGE_GYR),
             Some(&Value::Number(hornvale_kernel::quantize(
-                outcome.system.star.age.get()
+                outcome.value.star.age.get()
             )))
         );
     }
@@ -1365,7 +1365,7 @@ mod tests {
     #[test]
     fn each_moon_commits_formation_age_and_density_facts() {
         let (world, subject, outcome) = committed_world(42);
-        let moons = outcome.system.moons.len();
+        let moons = outcome.value.moons.len();
         assert!(moons > 0);
         for predicate in [MOON_FORMATION, MOON_AGE_GYR, MOON_DENSITY] {
             let count = world
@@ -1383,7 +1383,7 @@ mod tests {
     #[test]
     fn moon_formation_age_and_density_facts_match_the_generated_moons_in_order() {
         let (world, subject, outcome) = committed_world(42);
-        assert!(!outcome.system.moons.is_empty());
+        assert!(!outcome.value.moons.is_empty());
 
         let formations: Vec<String> = world
             .ledger
@@ -1395,7 +1395,7 @@ mod tests {
             })
             .collect();
         let expected_formations: Vec<String> = outcome
-            .system
+            .value
             .moons
             .iter()
             .map(|m| formation_name(m.formation).to_string())
@@ -1412,7 +1412,7 @@ mod tests {
             })
             .collect();
         let expected_ages: Vec<f64> = outcome
-            .system
+            .value
             .moons
             .iter()
             .map(|m| hornvale_kernel::quantize(m.age.get()))
@@ -1429,7 +1429,7 @@ mod tests {
             })
             .collect();
         let expected_densities: Vec<f64> = outcome
-            .system
+            .value
             .moons
             .iter()
             .map(|m| hornvale_kernel::quantize(m.density.get()))
@@ -1449,7 +1449,7 @@ mod tests {
         for seed in 0..64u64 {
             let (world, subject, outcome) = committed_world(seed);
             if !outcome
-                .system
+                .value
                 .moons
                 .iter()
                 .any(|m| m.formation == crate::moons::Formation::Capture)
@@ -1492,10 +1492,10 @@ mod tests {
         let mut verified = false;
         for seed in 1u64..=200 {
             let outcome = crate::system::generate(Seed(seed), &SkyPins::default()).unwrap();
-            if outcome.system.moons.len() < 2 {
+            if outcome.value.moons.len() < 2 {
                 continue;
             }
-            let periods: Vec<_> = outcome.system.moons.iter().map(|m| m.period).collect();
+            let periods: Vec<_> = outcome.value.moons.iter().map(|m| m.period).collect();
             let Some(expected) = crate::resonance::detect_moon_period_ratio(&periods) else {
                 continue;
             };
@@ -1527,7 +1527,7 @@ mod tests {
         let mut verified = false;
         for seed in 1u64..=200 {
             let outcome = crate::system::generate(Seed(seed), &SkyPins::default()).unwrap();
-            let periods: Vec<_> = outcome.system.moons.iter().map(|m| m.period).collect();
+            let periods: Vec<_> = outcome.value.moons.iter().map(|m| m.period).collect();
             if crate::resonance::detect_moon_period_ratio(&periods).is_some() {
                 continue;
             }

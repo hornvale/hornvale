@@ -607,6 +607,15 @@ mod tests {
                 // settlement's mind. See
                 // `windows/worldgen/src/disposition.rs`.
                 "settlement/disposition v1",
+                // The Roll, Task 3: the per-resident draw — a name salt, an
+                // age and three MindVector dial deviations, on one fresh
+                // stream per resident. Additive at v1 — a NEW label, so it
+                // perturbs no existing stream — and versioned from birth for
+                // the same reason `settlement/disposition v1` above is: the
+                // draw shape (mirroring `disposition::perturb`) and the
+                // (site, ordinal) key are both save-format contracts. See
+                // `windows/worldgen/src/residents.rs`.
+                "settlement/resident v1",
                 // The Winze, Task 2: whether one expansion out of
                 // `Bake::grow` is a WORKING rather than a farm — the
                 // second siting objective that makes `Function::Mine`

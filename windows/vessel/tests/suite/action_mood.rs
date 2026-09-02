@@ -16,12 +16,12 @@
 
 use hornvale_vessel::action::{Action, Mood};
 
-/// The five creature (GOAP-planned) variants — everything `Action::all()`
-/// carried before Task 5. Enumerated directly rather than derived from
-/// `Action::all()` by exclusion, so this test does not silently start
-/// passing an empty set if a future task ever removes every creature
-/// variant (an anti-vacuity floor of the same shape the roster's other
-/// reverse audits use).
+/// The SIX creature (GOAP-planned) variants — the five `Action::all()`
+/// carried before Task 5, plus `Sleep` (The Wicket, Task 8). Enumerated
+/// directly rather than derived from `Action::all()` by exclusion, so this
+/// test does not silently start passing an empty set if a future task ever
+/// removes every creature variant (an anti-vacuity floor of the same shape
+/// the roster's other reverse audits use).
 fn creature_actions() -> Vec<Action> {
     vec![
         Action::MoveTo(hornvale_kernel::Facet {
@@ -30,6 +30,7 @@ fn creature_actions() -> Vec<Action> {
         }),
         Action::Drink,
         Action::Rest,
+        Action::Sleep,
         Action::Eat,
         Action::MoveWithin(hornvale_vessel::interior::AnchorId(0)),
     ]

@@ -71,8 +71,8 @@ question, tracked as `PROC-three-ladder-vocabulary` in the idea registry.
 | word | crate | what its rungs are | what it answers |
 |---|---|---|---|
 | **`Band`** | `kernel` | Surface, Undercroft, Shallows, Deeps, Underdeep, Nadir | how deep into the underworld — a habitability ladder |
-| **`Stratum`** | `domains/climate` | Surface; Epipelagic…Hadal; Regolith…Underneath | where in *this column*, relative to its realm |
-| **`Horizon`** | `domains/terrain` | Regolith, Cover, Basement, Roots, Underneath | which rock layer, geologically |
+| **`Stratum`** | `domains/climate` | Surface; Epipelagic…Hadal; `Rock(Horizon)` | where in *this column*, relative to its realm |
+| **`Horizon`** | `kernel` (re-exported by `domains/terrain`) | Regolith, Cover, Basement, Roots, Underneath | which rock layer, geologically |
 
 The distinctions that matter:
 
@@ -81,13 +81,20 @@ The distinctions that matter:
   at a band. A fish sits in a stratum. A rock sample belongs to a horizon.
 - **`Stratum` spans both media and `Horizon` does not.** A stratum is
   realm-relative, so it covers the water column (`Epipelagic` down to `Hadal`)
-  and the rock column alike; its rock members deliberately *mirror*
-  `Horizon`'s roster, name for name. That mirroring is a shared roster and
-  never a shared derivation — climate may not import terrain.
+  and the rock column alike; its rock half is `Horizon` directly
+  (`Stratum::Rock(Horizon)`), not a mirrored roster of its own. `Horizon` was
+  the same forced-duplicate shape `Band` corrected: climate cannot import
+  terrain, so before this it carried five variants that named the same rock
+  units under their own spellings, kept honest only by a name-by-name test.
+  Moving `Horizon` to the kernel (decision 0517 clause (a)) let `Stratum`
+  embed it structurally instead, so the two can no longer drift apart by
+  construction and the composition root's `stratum_of_band` identity match
+  had nothing left to do.
 - `Band` was consolidated into the kernel from three separate models — a rung
   enum in terrain, a mirrored zone enum in climate, and a bare rank on a
-  chamber address — one day before this vocabulary was written. Renaming it
-  again would relitigate a deliberate recent decision without new information.
+  chamber address — before this vocabulary was written, and `Horizon`
+  followed the same path for the same reason. Renaming either again would
+  relitigate a deliberate recent decision without new information.
 
 The registry row notes what is still unsatisfying: `Horizon` is a
 soil-science word doing a crustal job, and `Stratum`'s water members are

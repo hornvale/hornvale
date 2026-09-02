@@ -77,7 +77,7 @@
 //! directly rather than through [`draw`] with a real furnishing mark on the
 //! plan. [`draw_mark`] now draws a `"furnishing"` kind mark as
 //! [`FURNISHING_GLYPH`] — **one glyph for every furnishing kind**, not one
-//! per `AnchorKind`: `CLIENT-glyphs-22-rejected` already settled that a
+//! per thing-kind: `CLIENT-glyphs-22-rejected` already settled that a
 //! nominal mark per kind does not self-legend, letters are unavailable
 //! (`Population::Creature` owns `a`-`z`/`A`-`Z`, and a hearth drawing `h`
 //! would collide with a human or hobgoblin standing in the same room), and
@@ -99,7 +99,7 @@ const THRESHOLD_GLYPH: char = '+';
 /// character too), one "you are here" mark to learn.
 const YOU_GLYPH: char = '@';
 /// The glyph for a `"furnishing"` mark — a hearth, a bed, an alcove, and
-/// every other `AnchorKind` `windows/vessel/src/session.rs::Session::
+/// every other thing-kind `windows/vessel/src/session.rs::Session::
 /// sighting` emits. ONE glyph for every kind (fix round 1, see the module
 /// doc): the mark means "a furnishing is here," and `examine` — reading
 /// the mark's own `datum` — carries which one. Registered in
@@ -206,7 +206,7 @@ pub fn draw(plan: &Plan, into: &mut crate::Grid, origin: (u16, u16)) {
 /// function of the noun alone since fix round 2 — see `lexicon.rs`'s module
 /// doc). A `"furnishing"` mark draws [`FURNISHING_GLYPH`] (fix round 1 —
 /// see the module doc: one glyph for every furnishing kind, never a glyph
-/// per `AnchorKind`). Any other kind (a settlement, say) is a point site,
+/// per thing-kind). Any other kind (a settlement, say) is a point site,
 /// not a creature or a furnishing, and re-draws the glyph its own cell's
 /// palette entry already names — the original structural no-op; see the
 /// module doc.
