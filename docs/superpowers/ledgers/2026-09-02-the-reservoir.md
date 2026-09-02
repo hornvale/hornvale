@@ -767,6 +767,62 @@ left to Nathan.
 
 ---
 
+#17 [G6] — **The ratchet caught two world builds that landed on `main` during
+this campaign. The branch cannot be submitted until it absorbs them.**
+
+*How this was found.* `git merge-tree origin/main HEAD` reports **CLEAN** — no
+textual conflict across the 108 commits `main` has taken since our base
+`25ee1d830`. That is exactly the reassurance CLAUDE.md warns not to trust:
+"No gate has an opinion about whether two campaigns changed the same idea in
+incompatible ways." So the campaign's own instrument was run against the merge
+product's inputs instead, scanning `origin/main` for build sites and comparing
+three ways — base, main, ours.
+
+*Two genuinely new sites on `main`, neither visible to merge-tree:*
+
+```
+  cli/src/main.rs                          base 9  ->  main 10   (+1)
+  windows/worldgen/src/circuit_readout.rs  base 0  ->  main  1   (NEW FILE)
+```
+
+Six other rows differ only because **we** migrated them and `main` has not seen
+that work — `surrounds.rs`, `session.rs` (both), `session_snapshot.rs`,
+`the_blocking.rs`, `exposure.rs`. Those are not conflicts; separating them from
+the two real ones required comparing against the base rather than against our
+roster, which is why the first pass read eight and the correct answer is two.
+
+*Consequence.* After the merge, `world_build_sites::no_unrostered_world_build_appears`
+will refuse the product: one file with a build and no row, one row one short of
+its file. The merge queue would have found this — on the canonical box, after
+taking the staff, in the `gate` phase.
+
+**This is the mechanism working, and it is the campaign's first live proof.**
+The ratchet exists to refuse a world build that arrives without a reason. Two
+arrived on `main` while this campaign ran, from other sessions that had no way
+to know the roster existed, and the guard caught both before a merge attempt.
+The instrument found its own first real defect on the day it shipped.
+
+*Ruling: absorb `main` before submitting, then add the two rows on their merits
+— and expect `UNMIGRATED_CEILING` to RISE.* Unlike Fix 2's scan-coverage
+correction, this is **genuinely new debt**: two builds that did not exist when
+the ceiling was set. A ratchet that cannot admit new debt arriving from
+elsewhere is not a ratchet, it is a wall that the next merge breaks. So the
+ceiling rises by however many of the two are `unmigrated` after a human reads
+them, and the commit says so.
+
+*Not done here.* Absorbing 108 commits is a merge, and G6 is a hard stop. The
+absorb, the two rows, and the re-gate are presented to Nathan as the campaign's
+one outstanding action rather than performed unasked.
+
+*Cost if wrong.* If the absorb surfaces further semantic drift beyond these two
+rows, it surfaces locally and cheaply rather than in the queue.
+
+*ideonomy passes / overturns.* n/a — a mechanism result.
+
+*Capture.* This entry; the G6 package's lead action item.
+
+---
+
 ## Parked findings
 
 ### P1 — `scene_surrounds_colour_cli.rs` uses a fixed temp path and flakes
