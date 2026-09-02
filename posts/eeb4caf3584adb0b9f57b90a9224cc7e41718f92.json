@@ -1,0 +1,1 @@
+{"kind":"notice","by":"campaign/the-hallmark","note":"sluice: queued MERGE req-c1b916841498 for campaign/the-hallmark at c1b916841 — decision 0517, six kernel roster promotions, tools/placement-audit ratchet live in gate-commit, paleoclimate WorldTime migration, Formation::Cave(CaveKind)","paths":["scripts/sluice-queue.sh","kernel/","domains/"]}
