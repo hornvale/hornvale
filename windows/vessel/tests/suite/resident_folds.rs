@@ -23,6 +23,41 @@
 //!    Both are needed — the every-position schedule gives no signal on
 //!    `absorb`'s purity, because a bug confined to it cancels when the rebuild
 //!    happens immediately after every single absorb.
+//!
+//! # THE SCRIPTS WERE SHORTENED AT THE CAMPAIGN'S CLOSE (2026-09-02)
+//!
+//! Every number in this file was re-measured on the shortened script it is
+//! written beside; none was carried over from the long one. The campaign's
+//! standing rule is that a witness costs at most 60 s, and The Roll had put
+//! five of this file's witnesses far outside it — a tick advances a
+//! settlement's whole roll now (59 bodies at [`WALKING_SEED`]), so the same
+//! wait count buys ten times the work it did when these scripts were written.
+//!
+//! Measured on this box, `cargo nextest run -p hornvale-vessel` in full
+//! (so both columns carry the same parallel contention):
+//!
+//! ```text
+//! witness                                          before    after   script
+//! rule_six_witness_hazard_memory_reads...          343.453s  30.852s  40 -> 12 waits
+//! rule_six_witness_belief_reads...                 342.947s  30.907s  40 -> 12 waits
+//! rule_two_witness_agent_at_commit_order...        342.433s  29.275s  40 -> 12 waits
+//! the_hazard_folds_integration_does_not_grow...    339.000s  52.442s  5/20 -> 2/6 turns
+//! the_walk_never_commits_two_sightings...          126.175s   9.825s  20 -> 8 waits
+//! rule_one_witness_no_read_runs_before_a_reset...   11.532s   8.845s  unchanged
+//! ```
+//!
+//! `rule_one_witness` walks seed 42, whose residents condense onto fresh water
+//! and commit no positional fact, so it was never expensive and its script is
+//! untouched; it moves only because [`PAST_DAY_STRIDE`] is now a named
+//! constant shared with the two sweeps below.
+//!
+//! **What a shorter script costs, stated rather than waved at.** Every
+//! assertion in this file is either a floor on a denominator or a comparison
+//! between two samples; none of them names an absolute tick index, and each
+//! one's re-measured value is recorded at the assertion itself. What is lost is
+//! the length of walk the verdicts are read over — a same-instant sighting
+//! pair, say, has fewer chances to appear in 986 adjacent pairs than in the
+//! long script's — and that is a real reduction in reach, not a free lunch.
 
 use crate::common;
 use hornvale_kernel::fold::Folded;
@@ -71,6 +106,25 @@ const AGENT_AT: &str = "agent-at";
 /// type-audit: bare-ok(index)
 const WALKING_SEED: u64 = 14;
 
+/// How many `wait`s each [`WALKING_SEED`] witness's script takes.
+/// type-audit: bare-ok(count)
+const WITNESS_WAITS: usize = 12;
+
+/// The stride the past-instant sweeps take through each body's own visit days.
+/// type-audit: bare-ok(count)
+const PAST_DAY_STRIDE: usize = 9;
+
+/// How many `wait`s the same-instant sighting witness's script takes.
+/// type-audit: bare-ok(count)
+const SIGHTING_WAITS: usize = 8;
+
+/// How many `wait`s the emitter-bearing world search gives each candidate seed
+/// before asking whether its hazard fold replayed an emitter's affect at a past
+/// visit day. Kept in step with `ledger_hash_witness.rs`'s
+/// `EMITTER_SCRIPT_WAITS`, which searches for the same property.
+/// type-audit: bare-ok(count)
+const EMITTER_SEARCH_WAITS: usize = 2;
+
 // ---------------------------------------------------------------------------
 // Step 1: the rule-2 witness.
 // ---------------------------------------------------------------------------
@@ -84,12 +138,17 @@ const WALKING_SEED: u64 = 14;
 /// nothing here gates the tenant. What the witness buys is the ledger entry —
 /// whether the insert is ever not an append is a fact about the walk, and the
 /// campaign records it rather than assuming it.
+///
+/// **Re-measured on the shortened script** ([`WITNESS_WAITS`] = 12, down from
+/// 40; 342.433 s to 29.275 s): 58 entities, 46 `agent-at` facts each, **0
+/// out-of-order pairs** — the same verdict the forty-wait script returned, and
+/// the floor below (at least one `agent-at` fact) is cleared by 2,668.
 #[test]
 fn rule_two_witness_agent_at_commit_order_versus_day_order() {
     let world = common::build(WALKING_SEED).expect("the walking seed always builds a world");
     let (mut session, _opening) = Session::start(&world, &PossessOpts::default())
         .expect("the walking seed always starts a session");
-    for _ in 0..40 {
+    for _ in 0..WITNESS_WAITS {
         session.handle("wait");
     }
 
@@ -110,8 +169,8 @@ fn rule_two_witness_agent_at_commit_order_versus_day_order() {
     let mut inverted_entities = 0usize;
     let mut inversions = 0usize;
     println!(
-        "--- rule 2 witness: agent-at commit order vs day order (seed {WALKING_SEED}, 40 \
-         waits) ---"
+        "--- rule 2 witness: agent-at commit order vs day order (seed {WALKING_SEED}, \
+         {WITNESS_WAITS} waits) ---"
     );
     for (e, days) in &by_entity {
         let n = days.windows(2).filter(|w| w[1] < w[0]).count();
@@ -138,7 +197,7 @@ fn rule_two_witness_agent_at_commit_order_versus_day_order() {
 
     assert!(
         !by_entity.is_empty(),
-        "the 40-wait seed-{WALKING_SEED} script must commit at least one agent-at fact, or \
+        "the {WITNESS_WAITS}-wait seed-{WALKING_SEED} script must commit at least one agent-at fact, or \
          this witness measured nothing"
     );
 }
@@ -2261,19 +2320,33 @@ fn discarding_known_water_at_every_third_position_is_unobservable() {
 /// So the assertion below is on the SWEEP, not on the session: it says the
 /// first-visit filter is exercised in anger somewhere, because a filter that
 /// no test ever drives is indistinguishable from dead code.
+///
+/// **Re-measured on the shortened script** ([`WITNESS_WAITS`] = 12, down from
+/// 40, and [`PAST_DAY_STRIDE`] = 9, down from 37 so the sweep still samples
+/// about six of each body's own visit days rather than one; 342.947 s to
+/// 30.907 s). The session: 23,665 facts absorbed, 49,391 belief lookups, **0**
+/// at an instant before a committed sighting. The present-instant shape: 3,365
+/// lookups, 0 past-instant. The past-day sweep: **19,379 lookups, 16,015 at an
+/// instant before a committed sighting**, over 348 outer calls. Both asserted
+/// floors — `past_lookups > 0` and `past_offenders > 0` — are cleared on the
+/// shortened script by four orders of magnitude, and the verdict is unchanged:
+/// rule 6 FIRES.
 #[test]
 fn rule_six_witness_belief_reads_run_at_past_instants() {
     let world = common::build(WALKING_SEED).expect("the walking seed always builds a world");
     let (mut session, _opening) = Session::start(&world, &PossessOpts::default())
         .expect("the walking seed always starts a session");
-    for _ in 0..40 {
+    for _ in 0..WITNESS_WAITS {
         session.handle("wait");
         let _ = session
             .snapshot()
             .expect("the walking seed's session snapshots");
     }
 
-    println!("--- rule 6 witness: belief reads (seed {WALKING_SEED}, 40 waits + snapshots) ---");
+    println!(
+        "--- rule 6 witness: belief reads (seed {WALKING_SEED}, {WITNESS_WAITS} waits + \
+         snapshots) ---"
+    );
     println!(
         "the SESSION itself: {} facts absorbed, {} belief lookups, {} at an instant before \
          a committed sighting",
@@ -2283,7 +2356,7 @@ fn rule_six_witness_belief_reads_run_at_past_instants() {
     );
     assert!(
         session.committed_fact_count() > 0,
-        "the 40-wait seed-{WALKING_SEED} script must commit facts, or this witness \
+        "the {WITNESS_WAITS}-wait seed-{WALKING_SEED} script must commit facts, or this witness \
          measured nothing"
     );
 
@@ -2339,7 +2412,7 @@ fn rule_six_witness_belief_reads_run_at_past_instants() {
                 .facts_of(npc.entity, AGENT_AT)
                 .filter_map(|f| f.day)
                 .collect();
-            for day in days.into_iter().step_by(37) {
+            for day in days.into_iter().step_by(PAST_DAY_STRIDE) {
                 if last_committed_day.is_some_and(|last| day < last) {
                     past_calls_before_last_committed_day += 1;
                 }
@@ -2439,12 +2512,24 @@ fn rule_six_witness_belief_reads_run_at_past_instants() {
 /// The number `LatestVisit` (Task 5) branches on is this one, so it is taken
 /// on its own counter. The belief counts are printed beside it precisely so
 /// the two caller sets can be seen NOT to agree.
+///
+/// **Re-measured on the shortened script** ([`WITNESS_WAITS`] = 12, down from
+/// 40; 343.453 s to 30.852 s), because the disagreement above is a RATIO and a
+/// ratio read off a script this test no longer runs is a guess. The twelve-wait
+/// session reads **905 hazard lookups against 49,391 belief lookups — a factor
+/// of 54.6**, against the forty-wait session's 2,557 against 143,611, a factor
+/// of 56. The two scripts agree on the shape and very nearly on the size, which
+/// is the point being made: the gap is a factor, not the difference of 48 the
+/// pre-Roll seed-42 numbers suggested. Every floor below is cleared on the
+/// shortened script — the session reaches `hazard_memory_memo` 905 times, the
+/// present-instant sweep 59, the past-day sweep 348 (290 of them at a past
+/// instant), and the entry-point probe's 58 calls are counted 58 times.
 #[test]
 fn rule_six_witness_hazard_memory_reads_run_at_past_instants() {
     let world = common::build(WALKING_SEED).expect("the walking seed always builds a world");
     let (mut session, _opening) = Session::start(&world, &PossessOpts::default())
         .expect("the walking seed always starts a session");
-    for _ in 0..40 {
+    for _ in 0..WITNESS_WAITS {
         session.handle("wait");
         let _ = session
             .snapshot()
@@ -2452,8 +2537,8 @@ fn rule_six_witness_hazard_memory_reads_run_at_past_instants() {
     }
 
     println!(
-        "--- rule 6 witness: hazard-memory reads (seed {WALKING_SEED}, 40 waits + \
-         snapshots) ---"
+        "--- rule 6 witness: hazard-memory reads (seed {WALKING_SEED}, {WITNESS_WAITS} waits \
+         + snapshots) ---"
     );
     println!(
         "the SESSION itself: {} facts absorbed, {} hazard lookups, {} at an instant before a \
@@ -2533,7 +2618,7 @@ fn rule_six_witness_hazard_memory_reads_run_at_past_instants() {
                 .facts_of(npc.entity, AGENT_AT)
                 .filter_map(|f| f.day)
                 .collect();
-            for day in days.into_iter().step_by(37) {
+            for day in days.into_iter().step_by(PAST_DAY_STRIDE) {
                 let _ = affect_of_memo_occupied(
                     &ledger,
                     npc,
@@ -2957,12 +3042,21 @@ fn a_same_day_pair_committed_in_descending_room_order_is_where_the_two_orders_pa
 /// tick — before every emitted `agent-at`, so a walker's sightings are strictly
 /// increasing in day. That is a structural argument; this measures it, with
 /// the denominator, on a real session.
+///
+/// **Re-measured on the shortened script** ([`SIGHTING_WAITS`] = 8, down from
+/// 20; 126.175 s to 9.825 s): 58 subjects, **986 adjacent sighting pairs, 0 at
+/// the same instant**, so the `pairs > 100` floor is cleared by 886 and the
+/// verdict is the same one the twenty-wait script returned. This is the witness
+/// the shortening costs the most reach: a same-instant pair the walk cannot
+/// commit has fewer chances to appear in 986 pairs than in the long script's,
+/// and the structural argument above — not this count — is what makes the zero
+/// believable.
 #[test]
 fn the_walk_never_commits_two_sightings_of_one_entity_at_one_instant() {
     let world = common::build(WALKING_SEED).expect("the walking seed always builds a world");
     let (mut session, _opening) = Session::start(&world, &PossessOpts::default())
         .expect("the walking seed always starts a session");
-    for _ in 0..20 {
+    for _ in 0..SIGHTING_WAITS {
         session.handle("wait");
     }
     let ledger: Ledger = serde_json::from_str(&session.session_ledger_json())
@@ -2995,7 +3089,8 @@ fn the_walk_never_commits_two_sightings_of_one_entity_at_one_instant() {
         }
     }
     println!(
-        "--- Trail order versus commit order (seed {WALKING_SEED}, 20 waits, {} subjects) ---\n\
+        "--- Trail order versus commit order (seed {WALKING_SEED}, {SIGHTING_WAITS} waits, {} \
+         subjects) ---\n\
          {pairs} adjacent sighting pairs, {same_instant} at the same instant, \
          {same_instant_different_room} at the same instant in DIFFERENT rooms",
         subjects.len()
@@ -3110,14 +3205,27 @@ fn the_hazard_folds_integration_does_not_grow_with_the_tick_index() {
     // 10 and 40 still cost 862.9 s, which is where these numbers come from
     // rather than from an estimate. Both things the
     // assertions below actually need survive the cut untouched — the tick
-    // index still moves 4x by construction, and `MIN_FACTS_ACCRUED` is still
-    // the floor that decides whether the comparison means anything (a
-    // `WALKING_SEED` roster commits ~4,400 positional facts in twenty turns,
-    // so 200 is cleared with three orders of magnitude to spare). What is lost
-    // is the absolute tick index the ratio is read at, and that is the one
+    // index still moves by construction, and `MIN_FACTS_ACCRUED` is still
+    // the floor that decides whether the comparison means anything. What is
+    // lost is the absolute tick index the ratio is read at, and that is the one
     // thing this test does not assert on.
-    const EARLY: usize = 5;
-    const LATE: usize = 20;
+    //
+    // **CUT AGAIN AT THE CAMPAIGN'S CLOSE, 5/20 -> 2/6, for the 60 s witness
+    // ceiling** (339.000 s -> 52.442 s in a full parallel vessel run). The tick
+    // index moves 3x, and the accrual floor is cleared by 3.5x rather than by
+    // the three orders of magnitude a twenty-turn `WALKING_SEED` roster gave:
+    // seed 6 commits 549 roster facts by turn 2 and 1,251 by turn 6, an accrual
+    // of 702 against `MIN_FACTS_ACCRUED`'s 200. That is a smaller margin than
+    // before and it is stated rather than left implied.
+    //
+    // The emitter-bearing world's SEARCH is the other half of this test's cost
+    // and it was cut too, from eight waits per candidate seed to
+    // [`EMITTER_SEARCH_WAITS`] (2). Measured over seeds 0..64: one wait finds
+    // NO world in the range that replays an emitter's affect at a past visit
+    // day, and every wait count from two upward lands on seed 6 — so two is the
+    // cheapest search that still selects the same world the eight-wait one did.
+    const EARLY: usize = 2;
+    const LATE: usize = 6;
 
     println!("--- H4 cost witness: segments integrated inside one hazard read ---");
 
@@ -3146,7 +3254,7 @@ fn the_hazard_folds_integration_does_not_grow_with_the_tick_index() {
     let (seed, world) = common::world_where(
         "the hazard fold replays an emitter's affect at a past visit day",
         |session| {
-            for _ in 0..8 {
+            for _ in 0..EMITTER_SEARCH_WAITS {
                 session.handle("wait");
             }
             session.resident_alarm_replays() > 0
@@ -3226,21 +3334,39 @@ fn the_hazard_folds_integration_does_not_grow_with_the_tick_index() {
     // of how many rooms a longer walk has left an emitter remembering — not of
     // the store.
     //
-    // On the 5/20 script this test actually runs, the same seed gives 962
-    // segments over 374 replays at turn 5 and 2,251 over 3,481 at turn 20: the
-    // total grows 2.340x and the per-replay quotient FALLS from 2.572 to 0.647.
-    // The early sample is the noisier one of the two — 374 replays against
-    // 2,031 — and the quotient falling rather than holding is the emitter
-    // scan's own warm-up, not a second effect: what the guard has to exclude is
-    // the quotient RISING, which is the only shape a return to an O(history)
-    // read could take.
+    // The 5/20 script this test ran next gave 962 segments over 374 replays at
+    // turn 5 and 2,251 over 3,481 at turn 20 — total 2.340x, quotient FALLING
+    // from 2.572 to 0.647.
+    //
+    // On the 2/6 script it actually runs now, seed 6 gives **598 segments over
+    // 223 replays at turn 2 and 806 over 373 at turn 6**: the total grows
+    // **1.348x** and the per-replay quotient falls from **2.682 to 2.161
+    // (0.81x)**, against the 1.5x allowance. All three cuts report the same two
+    // shapes — a flat-or-falling quotient and a total growing slower than the
+    // history — which is what makes the reading a property of the fold rather
+    // than of a script length. The quotient falling rather than holding is the
+    // emitter scan's own warm-up, not a second effect: what the guard has to
+    // exclude is the quotient RISING, which is the only shape a return to an
+    // O(history) read could take.
     //
     // Asserting on the quotient is naming the right denominator, not relaxing
     // the guard, and the total is guarded too, one assertion down, by the
     // comparison that actually discriminates: pre-store the total was
-    // O(replays x history) and would have grown ~7.3x here (2.09 x 3.50), so a
+    // O(replays x history) and would have grown ~3.8x here (1.67 x 2.28), so a
     // total that grows STRICTLY SLOWER than the roster's own history still
     // fails loudly if the per-replay cost ever goes back to walking it.
+    //
+    // THAT GUARD'S MARGIN, WHICH WAS RECORDED NOWHERE UNTIL NOW, and it is the
+    // Task 5c review's one carried Important. The total guard is the only
+    // discriminating half of this witness once the quotient is asserted against
+    // a moving denominator, so a bare `segment_growth < history_growth` says
+    // nothing about how much room it has. Measured on the 2/6 script:
+    // **`history_growth` = 2.28x (549 roster facts at turn 2, 1,251 at turn 6)
+    // against `segment_growth` = 1.348x (598 segments, 806)** — the total sits
+    // at 59% of its ceiling, so the guard trips once the fold's integration
+    // work grows 1.7x faster than it does today. That is a real margin and not
+    // a generous one, and it is the number to re-read after any change to the
+    // replay path.
     let early_per_replay = early.segments as f64 / early.replays as f64;
     let late_per_replay = late.segments as f64 / late.replays as f64;
     let history_growth = late.trail_facts as f64 / early.trail_facts.max(1) as f64;
