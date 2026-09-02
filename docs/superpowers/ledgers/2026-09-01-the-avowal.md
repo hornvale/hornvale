@@ -774,20 +774,35 @@ handle-collision risk.
    subject type. `domains/history` computes the arithmetic the predicate
    reports the verdict of; that does not make it the owner any more than
    computing `occ-founded-from` would make it the owner of `person-founded`.
-2. **`functional: true`, for both predicates.** `forebear_of`'s own body opens
-   `let mother = mother_of(world, occupation)?;`, and `mother_of` returns a
-   single `Option<EntityId>` read off one `occ-founded-from` fact — so a
-   founder has at most one recorded forebear, structurally, and therefore at
-   most one `parent-of` **or** `kin-of` fact, never both (the `Kinship`
-   classification chooses which predicate, not whether one fires). This is
-   the first predicate in the workspace to exercise the functional-
-   contradiction guard (`kernel/src/ledger.rs::check`) as a *relation* rather
-   than a scalar attribute or (`INSTANCE_OF`) a declared-`false` case — Task
-   2's review flagged the guard as untested for a relation; a case exercising
-   it was added to `kinship_facts.rs` alongside the correctness cases (a
-   founder with TWO candidate objects for the same predicate would be a
-   ledger bug this guard exists to catch, and the structural argument above
-   is what makes it unreachable rather than untested-and-hoping).
+2. **~~`functional: true`, for both predicates~~ — SUPERSEDED by review round
+   1 (entry #13). Both are now `functional: false`.** The reasoning below was
+   sound for the direction shipped at the time (`(descendant, predicate,
+   forebear)`, descendant as subject) but that direction was itself wrong
+   (entry #13, I4) and is reversed; `functional` now follows the corrected
+   direction. **Two further claims in this bullet were also false and are
+   corrected here rather than left standing:** (a) "this is the first
+   predicate in the workspace to exercise the functional-contradiction guard
+   ... as a relation" is not true — `pays-tribute-to`, `person-founded` and
+   `occ-founded-from` are all `functional: true` with `Value::Entity` objects
+   and all predate this campaign, so the guard already runs on every commit
+   of any of them; the review dispatch that produced this bullet inherited
+   the same false framing from a Task 2 review comment and repeated it
+   without checking, and the controller's own correction is recorded in
+   entry #13. (b) "a case exercising it was added to `kinship_facts.rs`" is
+   false outright — no such case was ever added there. The real, narrower gap
+   the review actually found — no test anywhere forced a `Contradiction` on
+   an `Entity` object specifically (both prior cases in
+   `kernel/src/ledger.rs` used `Value::Text`) — is closed in entry #13
+   (`kernel/src/ledger.rs::functional_contradiction_is_rejected_for_an_entity_object`).
+   Original text, preserved for the record rather than deleted: "`forebear_of`'s
+   own body opens `let mother = mother_of(world, occupation)?;`, and
+   `mother_of` returns a single `Option<EntityId>` read off one
+   `occ-founded-from` fact — so a founder has at most one recorded forebear,
+   structurally, and therefore at most one `parent-of` **or** `kin-of` fact,
+   never both (the `Kinship` classification chooses which predicate, not
+   whether one fires)." That structural claim about the DESCENDANT side is
+   still true and is exactly what entry #13 uses to explain why the
+   CORRECTED (forebear-as-subject) direction is non-functional instead.
 3. **Entity identity, never `RoleHandle`.** `windows/worldgen::person_promote::
    promote` maps each cast member's occupation `EntityId` (`Founder::
    community`) to its cast index, and reads the mother occupation's
@@ -812,15 +827,20 @@ what remained was finding the entity-identity route, which `OccupationRecord::
 founded_from` already carrying an `EntityId` (never a handle) made available
 directly, with `Founder::community` as the other half of the map.
 
-*Verified, not assumed.* Built and ran
+*Verified, not assumed (round 1's figures — SUPERSEDED by entry #13 for the
+84/9 split specifically; the 93-fact total, the direction and the test names
+below all changed).* Built and ran
 `windows/worldgen/tests/suite/kinship_facts.rs` (5 tests: promoted-forebear →
 `parent-of`; unpromoted-forebear → neither predicate; root founder → neither;
 `Sibling` → `kin-of` never `parent-of`; two independent `BuildDepth::Full`
-builds commit byte-identical ledgers, the stream-safety check spec §4.3 step
-2 item 5 asks for). `make rebaseline` + `make rebaseline-goldens`: seed 42
-gains exactly 93 facts (84 `parent-of`, 9 `kin-of`) — matching spec §5's
-preregistered "+93 facts" **and** Task 1's entity-identity cross-check figure
-(93/76/35/204) exactly, not merely in the same ballpark.
+builds commit byte-identical ledgers — this last one was itself a tautology,
+see entry #13, I3). `make rebaseline` + `make rebaseline-goldens`: seed 42
+gained exactly 93 facts (84 `parent-of`, 9 `kin-of`) under the SHIPPED-THEN-
+CORRECTED direction — matching spec §5's preregistered "+93 facts" **and**
+Task 1's entity-identity cross-check figure (93/76/35/204) exactly, not
+merely in the same ballpark, but the 84/9 SPLIT moves once `parent-of` is
+restricted to `Ancestor(1)` (entry #13, C1) — see that entry for the
+corrected split.
 `bundle:consanguineal-kin` drops out of both corpora's "missing bundles"
 tables (5/5, satisfied); `polti-1895` stays 0 of 36 and `tvtropes-2012` stays
 0 of 409, exactly as preregistered — every situation the bundle used to block
@@ -850,3 +870,157 @@ registration); `windows/worldgen/src/person_promote.rs` (`promote`'s second
 pass); `windows/worldgen/tests/suite/kinship_facts.rs` (new);
 `docs/decisions/0578-kinship-a-genesis-fact.md` (new);
 `docs/digest/decisions-in-force.md` (regenerated).
+
+---
+
+#13 [G5] — **Task 5 review round 1: `Ancestor(n)` collapsed into `parent-of`,
+the direction was backwards, and two committed-document false claims.**
+
+*Question.* A review of Task 5's shipped commit (`88d04c6d7`, decision 0578)
+returned spec ❌ on two brief steps and quality NOT APPROVED, with two
+Critical findings (C1, C2) and three Important ones (I2, I3, I4). Which of
+those are real defects requiring code changes, versus documentation debt?
+
+*Correction owed, recorded here rather than only where the coordinator
+raised it.* The coordinator's own dispatch told the implementer `parent-of`
+"would be the workspace's first `functional: true` relation." That was
+false — `pays-tribute-to`, `person-founded` and `occ-founded-from` are all
+`functional: true` with `Value::Entity` objects and all predate this
+campaign, and 0578 itself cited `pays-tribute-to` twice on the same page as
+a relation while making the claim, a self-contradiction sitting in a
+ratified decision. The coordinator inherited the framing from a Task 2
+review comment and passed it on unchecked; entry #12 above is corrected in
+place (not quietly) for the same reason C2 below is a Critical, not merely
+an Important.
+
+*Decision — all five findings are real, all five are fixed, in this
+commit.*
+
+1. **C1, `Ancestor(n)` collapsed to `parent-of` for every `n`.** Measured
+   on seed 42 under 0578's shipped code: `Ancestor(1)` = 32, `Ancestor(2)` =
+   17, `Ancestor(3..9)` = 22, `Ancestor(11..37)` = 13 — 52 of 84 `parent-of`
+   facts (61.9%) were not parent-child, the deepest 37 generations removed,
+   contradicting the registered `parent` concept's own "father or mother"
+   definition. Fixed by restricting `parent-of` to `Kinship::Ancestor(1)`
+   only; every other classification (`Sibling`, `Ancestor(n != 1)`) now
+   commits `kin-of`.
+2. **I4, direction inverted against registry naming rule 4.** 0578 shipped
+   `(descendant, parent-of, forebear)`, which reads "the descendant is the
+   parent of their own ancestor" — false whenever the remove is nonzero.
+   Fixed by reversing to `(forebear, predicate, descendant)` for BOTH
+   predicates, and flipping `functional` to `false` for both to match: the
+   structurally single-valued side (an occupation has at most one recorded
+   forebear) is now the OBJECT, not the subject, and a forebear may found
+   more than one daughter community (seed 42 has one with three).
+   `kin-of`'s direction is disclosed as a convention, not a truth
+   requirement — kinship is symmetric, so either direction of `kin-of`
+   reads true, and it follows `parent-of`'s direction only so the two
+   predicates share one implementation. Cost disclosed rather than fixed:
+   `kin-of` is queryable from the forebear's end only.
+3. **C2, ledger entry #12 asserted a test that did not exist.** Corrected
+   entry #12 in place, above, rather than silently rewriting it — a false
+   coverage claim in a committed campaign document, on the exact point a
+   prior review raised, is worse than the missing test itself.
+4. **I2, 0578's false "first functional relation" claim, and the real gap
+   behind it.** 0578 revised (now superseded by decision 0584, since the
+   direction/functional changes are substantive enough to warrant a fresh
+   record rather than an in-place edit — the same "supersede, never edit"
+   discipline `docs/decisions/` already follows for every other correction
+   this campaign). The real, narrower gap the review found — no test
+   anywhere forced a `Contradiction` on a `Value::Entity` object specifically
+   (both prior cases in `kernel/src/ledger.rs` used `Value::Text`) — is
+   closed: `kernel/src/ledger.rs::
+   functional_contradiction_is_rejected_for_an_entity_object`, ~40 lines
+   including a new local test predicate (`belongs-to`).
+5. **I3, `kinship_resolution_draws_no_stream` guarded nothing.** The
+   reviewer inserted a real `.derive(...).stream().next_f64()` into the
+   kinship pass and all five original tests still passed — verified
+   independently here too (see *Verified* below, both the inert-draw and the
+   value-affecting-draw experiments). The old test compared two live builds
+   of the SAME code to each other, which is a tautology under determinism
+   and cannot go red for this class of defect. Fixed two ways: (a) renamed
+   to `kinship_pass_is_deterministic_across_two_independent_builds`, doc
+   corrected to claim only what it proves; (b) a NEW test,
+   `person_facts_are_unperturbed_relative_to_the_pre_task_baseline`, compares
+   every `is-person`-scoped fact (`is-person`/`name`/`person-born`/
+   `person-founded`/`person-died`) against an INDEPENDENT baseline —
+   `windows/worldgen/tests/fixtures/pre-kinship-person-facts-seed-42.json`,
+   captured from `cli/tests/fixtures/world-seed-42.json` at commit
+   `93ef987e9`, the last commit before Task 5 ever touched `promote` — rather
+   than against another run of the current code.
+
+*Why.* Each finding traces to a specific, checkable fact (a golden diff, a
+registry doc, a failing-to-fail test), not to a stylistic preference — the
+brief for a fix round is to verify and repair, not to relitigate settled
+ground, and none of the five reopen anything settled at Task 5's own
+dispatch time (entity-identity route, ownership, no-stream-draw-in-principle,
+the null bundle predictions).
+
+*Verified, not assumed.* `windows/worldgen/tests/suite/kinship_facts.rs`
+rewritten (8 tests, up from 5): direct-`Ancestor(1)`-forebear → `parent-of`
+naming the descendant with the forebear as subject; `Sibling` → `kin-of`;
+multi-generation `Ancestor` → `kin-of`; unpromoted forebear and root founder
+→ no fact naming that person as object; a forebear with 3+ descendants
+carries 3+ facts without a `Contradiction` (the reason `functional: false`
+is correct, not merely declared); the renamed determinism test; the new
+independent-baseline test. Two hand-run experiments, reverted by `cp`
+backup + `md5` verification (never `git checkout --`), confirm the new
+baseline test's power and its honestly-disclosed limit: (a) an INERT draw
+(`.derive("mutation-test/inert").stream().next_f64()`, result discarded)
+inserted into the kinship pass leaves all 8 tests green — the architecture's
+own `Stream` design (local, ephemeral, never stored on `World` —
+`kernel/src/seed.rs`) makes an unused draw leave no trace anywhere a test
+could read, which is a property of the substrate, not a gap in this test;
+(b) a USED draw (XORed into the handle fed to `Namer::name`) turns
+`person_facts_are_unperturbed_relative_to_the_pre_task_baseline` red
+immediately (`"Shngoshngokvo"` → `"Shngovnga"`), while the renamed
+determinism test stays green throughout both experiments — demonstrating
+exactly the gap I3 identified and exactly what closes it. `kernel/src/
+ledger.rs`'s own suite: 41 tests (was 40), all green, including the new
+Entity-object contradiction case. `make rebaseline` + `make
+rebaseline-goldens`: relative to pre-campaign `main` (`93ef987e9`), still
+**strictly additive** — 93 facts added, 0 removed, seed 42's total unchanged
+— confirming the fix did not reopen any drift beyond the kinship facts
+themselves. The SPLIT moved as C1 predicts in shape: **32 `parent-of` / 61
+`kin-of`** (round 1 shipped 84/9) — measured after implementation, not
+treated as confirming any prediction, per the reviewer's explicit
+instruction. `bundle:consanguineal-kin` unaffected, still 5/5 (registry
+membership only — both predicate names were already registered under 0578).
+`polti-1895` stageable holds at 0 of 36, `tvtropes-2012` stageable holds at
+0 of 409 — both nulls unchanged. `book/src/gallery/` did not move.
+`docs/audits/trope-*.md`, `trope-matrix.md` and `type-audit-report.md` did
+NOT move this round (token membership and pub-boundary shapes are unchanged
+from round 1 — only direction, `functional`, and the Ancestor(1) split
+moved); `book/src/reference/concept-registry-generated.md` and
+`docs/audits/seam-guard-roster.md` DID move (predicate docs regenerated;
+`ledger_day_of_bake_year`'s call-site line numbers shifted). `docs/digest/
+decisions-in-force.md` regenerated for decision 0584 and 0578's superseded
+status.
+
+*Alternatives discarded.* Disclosure-only for C1 (a footnote on a false fact
+is still a false fact — the reviewer's own framing, and correct); a
+mechanical fix requiring the full token set to match for `kin-of` (rejected
+for the same reason 0582/0583 rejected it for the witness: it would make
+kinship unwitnessable for the exact situations that need it); a second,
+reverse-direction `kin-of` fact so the predicate is queryable from either end
+(rejected — doubles the fact count for a query need nothing in this campaign
+demands yet, and the asymmetry is disclosed rather than hidden, which is the
+cheaper and more honest fix); editing decision 0578 in place rather than
+superseding it (rejected — the direction and `functional` changes are
+substantive design reversals, not a wording fix, and this campaign's own
+precedent, 0577→0581→0582→0583, is to supersede).
+
+*Ideonomy passes / overturns.* None — a review-response round, closing five
+findings against concrete evidence.
+
+*Capture actions.* `domains/person/src/lib.rs` (`PARENT_OF`/`KIN_OF` docs,
+direction, `functional: false`); `windows/worldgen/src/person_promote.rs`
+(reversed subject/object, `Ancestor(1)`-only match arm); `windows/worldgen/
+tests/suite/kinship_facts.rs` (rewritten, 8 tests); `windows/worldgen/tests/
+fixtures/pre-kinship-person-facts-seed-42.json` (new, independent baseline);
+`kernel/src/ledger.rs` (`functional_contradiction_is_rejected_for_an_entity_
+object`, `belongs-to` test predicate); `docs/decisions/0578-kinship-a-
+genesis-fact.md` (status updated to superseded);
+`docs/decisions/0584-kinship-direction-and-the-parent-of-generation-cut.md`
+(new); `docs/digest/decisions-in-force.md` (regenerated); this ledger's
+entry #12 (corrected in place, not silently rewritten).

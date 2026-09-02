@@ -3,17 +3,33 @@
 //!
 //! `domains/history::descent` has always computed `Kinship` between a
 //! founder and their forebear; until this campaign nothing committed it.
-//! `windows/worldgen::person_promote::promote` now resolves, for every
-//! promoted founder, whether the community it descended from was ALSO
-//! promoted — through entity identity (`records[i].founded_from`, an
-//! `EntityId`), never through `founder_of`'s `RoleHandle`, which collides on
-//! ~3.5% of seed 42's occupations (Task 1's ledger entry #6) and would
-//! misattribute roughly 1 in 100 forebear edges if used to match promoted
-//! founders.
+//! `windows/worldgen::person_promote::promote` resolves, for every promoted
+//! founder, whether the community it descended from was ALSO promoted —
+//! through entity identity (`records[i].founded_from`, an `EntityId`), never
+//! through `founder_of`'s `RoleHandle`, which collides on ~3.5% of seed 42's
+//! occupations (Task 1's ledger entry #6) and would misattribute roughly 1
+//! in 100 forebear edges if used to match promoted founders.
+//!
+//! **Review round 1 correction (`docs/superpowers/ledgers/
+//! 2026-09-01-the-avowal.md` entry #13).** Two defects shipped in the first
+//! round and are what this file now tests directly:
+//!
+//! 1. `Kinship::Ancestor(n)` collapsed to `parent-of` for every `n`, so a
+//!    fact meaning "37 generations removed" read as "parent" — false under
+//!    the registered `parent` concept. Fixed: `parent-of` now fires ONLY for
+//!    `Ancestor(1)`; everything else (`Sibling`, `Ancestor(n)` for `n != 1`)
+//!    commits `kin-of`.
+//! 2. The fact was committed `(descendant, parent-of, forebear)`, which
+//!    reads (registry naming rule 4, left-to-right from the subject) as "the
+//!    descendant is the parent of their own ancestor" — false whenever the
+//!    remove is nonzero. Fixed: both predicates now commit
+//!    `(forebear, predicate, descendant)`, and both are `functional: false`
+//!    to match (a forebear may found more than one daughter community).
 
 use hornvale_astronomy::SkyPins;
+use hornvale_history::descent::Kinship;
 use hornvale_history::record::Founding;
-use hornvale_kernel::{EntityId, Seed, Value, World};
+use hornvale_kernel::{EntityId, Fact, Seed, Value, World};
 use hornvale_person::{KIN_OF, PARENT_OF};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::person_promote::select_founders;
@@ -48,159 +64,111 @@ fn person_of_community(world: &World, community: EntityId) -> Option<EntityId> {
         .map(|f| f.subject)
 }
 
-#[test]
-fn a_promoted_forebear_yields_a_parent_of_fact_naming_that_entity() {
-    let w = seed42();
-    let records = occupation_records(&w);
+/// Whether `world` carries a `(subject, predicate, object)` fact naming
+/// `object` exactly — `predicate` is no longer functional, so this checks
+/// membership across every fact for `subject`, not just the last one.
+fn has_fact(world: &World, subject: EntityId, predicate: &str, object: EntityId) -> bool {
+    world
+        .ledger
+        .facts_of(subject, predicate)
+        .any(|f| f.object == Value::Entity(object))
+}
+
+/// Every `(subject, community_index)` pair this seed's cast resolves, plus
+/// the entity-identity map every test below needs — factored out so each
+/// test states only what makes its case distinctive.
+struct Resolved {
+    records: Vec<hornvale_history::record::OccupationRecord>,
+    cast: Vec<hornvale_worldgen::person_promote::Founder>,
+    community_to_cast: BTreeMap<EntityId, usize>,
+}
+
+fn resolve(w: &World) -> Resolved {
+    let records = occupation_records(w);
     let cast = select_founders(&records).remembered;
     let community_to_cast: BTreeMap<EntityId, usize> = cast
         .iter()
         .enumerate()
         .map(|(i, f)| (f.community, i))
         .collect();
+    Resolved {
+        records,
+        cast,
+        community_to_cast,
+    }
+}
+
+#[test]
+fn a_direct_forebear_ancestor_1_yields_a_parent_of_fact_with_the_forebear_as_subject() {
+    let w = seed42();
+    let r = resolve(&w);
 
     let mut found = false;
-    for f in &cast {
-        let Founding::From(mother) = records[f.occupation].founded_from else {
+    for f in &r.cast {
+        let Founding::From(mother) = r.records[f.occupation].founded_from else {
             continue;
         };
-        if !community_to_cast.contains_key(&mother) {
+        let Some(&j) = r.community_to_cast.get(&mother) else {
+            continue;
+        };
+        if !matches!(
+            forebear_of(&w, f.community),
+            Some((_, Kinship::Ancestor(1)))
+        ) {
             continue;
         }
-        let Some((_, hornvale_history::descent::Kinship::Ancestor(_))) =
-            forebear_of(&w, f.community)
-        else {
-            continue;
-        };
-        let person =
+        let descendant =
             person_of_community(&w, f.community).expect("a cast member is always promoted");
-        let parent = person_of_community(&w, mother).expect("the mother founder is promoted too");
-        assert_eq!(
-            w.ledger.value_of(person, PARENT_OF),
-            Some(&Value::Entity(parent)),
-            "founder of {:?} must carry parent-of naming its promoted forebear",
-            f.community
+        let parent = person_of_community(&w, r.cast[j].community)
+            .expect("the mother founder is promoted too");
+        assert!(
+            has_fact(&w, parent, PARENT_OF, descendant),
+            "the FOREBEAR must be the subject of parent-of, naming the descendant as object"
         );
-        assert_eq!(
-            w.ledger.value_of(person, KIN_OF),
-            None,
-            "an Ancestor edge must not also carry kin-of"
+        assert!(
+            !has_fact(&w, descendant, PARENT_OF, parent),
+            "parent-of must not also run the other direction"
+        );
+        assert!(
+            !has_fact(&w, parent, KIN_OF, descendant),
+            "an Ancestor(1) edge must not also carry kin-of"
         );
         found = true;
         break;
     }
     assert!(
         found,
-        "seed 42 has no promoted-ancestor edge — spec §4.3's reference reads 93 at this seed"
+        "seed 42 has no Ancestor(1) edge between two promoted founders"
     );
 }
 
 #[test]
-fn an_unpromoted_forebear_yields_no_parent_of_fact() {
+fn a_sibling_edge_renders_as_kin_of_never_as_parent_of() {
     let w = seed42();
-    let records = occupation_records(&w);
-    let cast = select_founders(&records).remembered;
-    let community_to_cast: BTreeMap<EntityId, usize> = cast
-        .iter()
-        .enumerate()
-        .map(|(i, f)| (f.community, i))
-        .collect();
+    let r = resolve(&w);
 
     let mut found = false;
-    for f in &cast {
-        let Founding::From(mother) = records[f.occupation].founded_from else {
+    for f in &r.cast {
+        let Founding::From(mother) = r.records[f.occupation].founded_from else {
             continue;
         };
-        if community_to_cast.contains_key(&mother) {
-            continue; // the forebear WAS promoted — not this case
-        }
-        let person =
-            person_of_community(&w, f.community).expect("a cast member is always promoted");
-        assert_eq!(
-            w.ledger.value_of(person, PARENT_OF),
-            None,
-            "a founder whose forebear was never promoted must carry no parent-of — \
-             the ledger says what is remembered (spec §4.3)"
-        );
-        assert_eq!(w.ledger.value_of(person, KIN_OF), None);
-        found = true;
-        break;
-    }
-    assert!(
-        found,
-        "seed 42 has no promoted-founder-with-unpromoted-forebear — spec §4.3's \
-         reference reads 76 at this seed"
-    );
-}
-
-#[test]
-fn a_root_founder_carries_neither_predicate() {
-    let w = seed42();
-    let records = occupation_records(&w);
-    let cast = select_founders(&records).remembered;
-
-    let mut found = false;
-    for f in &cast {
-        if !matches!(records[f.occupation].founded_from, Founding::Genesis(_)) {
-            continue;
-        }
-        let person =
-            person_of_community(&w, f.community).expect("a cast member is always promoted");
-        assert_eq!(
-            w.ledger.value_of(person, PARENT_OF),
-            None,
-            "a root founder (no occ-founded-from) must carry no parent-of"
-        );
-        assert_eq!(
-            w.ledger.value_of(person, KIN_OF),
-            None,
-            "a root founder must carry no kin-of either"
-        );
-        found = true;
-        break;
-    }
-    assert!(
-        found,
-        "seed 42 has no promoted root founder — spec §4.3's reference reads 35 at this seed"
-    );
-}
-
-#[test]
-fn a_sibling_edge_renders_as_kin_of_never_as_descent() {
-    let w = seed42();
-    let records = occupation_records(&w);
-    let cast = select_founders(&records).remembered;
-    let community_to_cast: BTreeMap<EntityId, usize> = cast
-        .iter()
-        .enumerate()
-        .map(|(i, f)| (f.community, i))
-        .collect();
-
-    let mut found = false;
-    for f in &cast {
-        let Founding::From(mother) = records[f.occupation].founded_from else {
+        let Some(&j) = r.community_to_cast.get(&mother) else {
             continue;
         };
-        if !community_to_cast.contains_key(&mother) {
+        if !matches!(forebear_of(&w, f.community), Some((_, Kinship::Sibling))) {
             continue;
         }
-        let Some((_, hornvale_history::descent::Kinship::Sibling)) = forebear_of(&w, f.community)
-        else {
-            continue;
-        };
-        let person =
+        let descendant =
             person_of_community(&w, f.community).expect("a cast member is always promoted");
-        let sibling = person_of_community(&w, mother).expect("the mother founder is promoted");
-        assert_eq!(
-            w.ledger.value_of(person, KIN_OF),
-            Some(&Value::Entity(sibling)),
-            "a Sibling edge must commit kin-of, naming the contemporary forebear"
+        let sibling = person_of_community(&w, r.cast[j].community)
+            .expect("the mother founder is promoted too");
+        assert!(
+            has_fact(&w, sibling, KIN_OF, descendant),
+            "a Sibling edge must commit kin-of, forebear as subject"
         );
-        assert_eq!(
-            w.ledger.value_of(person, PARENT_OF),
-            None,
-            "a Sibling edge must NEVER render as descent (spec §4.3) — it must not \
-             also carry parent-of"
+        assert!(
+            !has_fact(&w, sibling, PARENT_OF, descendant),
+            "a Sibling edge must NEVER render as parent-of (spec §4.3)"
         );
         found = true;
         break;
@@ -212,30 +180,219 @@ fn a_sibling_edge_renders_as_kin_of_never_as_descent() {
     );
 }
 
+#[test]
+fn an_ancestor_more_than_one_generation_removed_renders_as_kin_of_never_as_parent_of() {
+    let w = seed42();
+    let r = resolve(&w);
+
+    let mut found = false;
+    for f in &r.cast {
+        let Founding::From(mother) = r.records[f.occupation].founded_from else {
+            continue;
+        };
+        let Some(&j) = r.community_to_cast.get(&mother) else {
+            continue;
+        };
+        let Some((_, Kinship::Ancestor(n))) = forebear_of(&w, f.community) else {
+            continue;
+        };
+        if n == 1 {
+            continue; // that is `a_direct_forebear_...`'s case, not this one
+        }
+        let descendant =
+            person_of_community(&w, f.community).expect("a cast member is always promoted");
+        let forebear = person_of_community(&w, r.cast[j].community)
+            .expect("the mother founder is promoted too");
+        assert!(
+            has_fact(&w, forebear, KIN_OF, descendant),
+            "Ancestor({n}) with n != 1 must commit kin-of, forebear as subject"
+        );
+        assert!(
+            !has_fact(&w, forebear, PARENT_OF, descendant),
+            "Ancestor({n}) with n != 1 must NEVER render as parent-of — only \
+             Ancestor(1) is a true parent under the registered `parent` concept"
+        );
+        found = true;
+        break;
+    }
+    assert!(
+        found,
+        "seed 42 has no multi-generation Ancestor edge between two promoted founders"
+    );
+}
+
+#[test]
+fn an_unpromoted_forebear_yields_no_fact_naming_the_descendant() {
+    let w = seed42();
+    let r = resolve(&w);
+
+    let mut found = false;
+    for f in &r.cast {
+        let Founding::From(mother) = r.records[f.occupation].founded_from else {
+            continue;
+        };
+        if r.community_to_cast.contains_key(&mother) {
+            continue; // the forebear WAS promoted — not this case
+        }
+        let descendant =
+            person_of_community(&w, f.community).expect("a cast member is always promoted");
+        assert!(
+            !w.ledger
+                .find(PARENT_OF)
+                .chain(w.ledger.find(KIN_OF))
+                .any(|fact| fact.object == Value::Entity(descendant)),
+            "a founder whose forebear was never promoted must appear as nobody's \
+             parent-of/kin-of object — the ledger says what is remembered (spec §4.3)"
+        );
+        found = true;
+        break;
+    }
+    assert!(
+        found,
+        "seed 42 has no promoted-founder-with-unpromoted-forebear — spec §4.3's \
+         reference reads 76 at this seed"
+    );
+}
+
+#[test]
+fn a_root_founder_appears_as_no_ones_object() {
+    let w = seed42();
+    let r = resolve(&w);
+
+    let mut found = false;
+    for f in &r.cast {
+        if !matches!(r.records[f.occupation].founded_from, Founding::Genesis(_)) {
+            continue;
+        }
+        let root = person_of_community(&w, f.community).expect("a cast member is always promoted");
+        assert!(
+            !w.ledger
+                .find(PARENT_OF)
+                .chain(w.ledger.find(KIN_OF))
+                .any(|fact| fact.object == Value::Entity(root)),
+            "a root founder (no occ-founded-from) must appear as nobody's \
+             parent-of/kin-of object"
+        );
+        found = true;
+        break;
+    }
+    assert!(
+        found,
+        "seed 42 has no promoted root founder — spec §4.3's reference reads 35 at this seed"
+    );
+}
+
+#[test]
+fn a_forebear_with_more_than_one_descendant_carries_more_than_one_fact_without_contradiction() {
+    // The reason PARENT_OF/KIN_OF are `functional: false`: with the forebear
+    // as subject, a forebear who founded more than one daughter community
+    // must be able to carry more than one fact for the SAME predicate. If
+    // either predicate were still `functional: true`, the second commit
+    // would fail `Ledger::check`'s contradiction guard. This world's build
+    // already succeeded (`seed42()` would have returned `Err` otherwise), so
+    // this test only needs to confirm the multi-fact case actually occurs on
+    // seed 42 rather than being vacuously true.
+    let w = seed42();
+    let mut counts: BTreeMap<EntityId, usize> = BTreeMap::new();
+    for f in w.ledger.find(PARENT_OF).chain(w.ledger.find(KIN_OF)) {
+        *counts.entry(f.subject).or_insert(0) += 1;
+    }
+    assert!(
+        counts.values().any(|&n| n > 1),
+        "seed 42 must have at least one forebear named as the subject of more \
+         than one parent-of/kin-of fact combined — otherwise functional: false \
+         is unexercised on this seed"
+    );
+}
+
 /// Save-format contract (spec §4.3, step 2 item 5): resolving and committing
 /// `parent-of`/`kin-of` consumes no `Stream` draw.
 ///
-/// `promote()`'s only draw is `Namer::new(&world.seed, ...).name(...)`, once
-/// per founder, in the FIRST pass — byte-for-byte unchanged by this
-/// campaign. The kinship pass is a SECOND pass that runs strictly after
-/// `hornvale_person::genesis` has already returned every id, and everything
-/// it touches (`records`, already materialized before either pass starts;
-/// `community_to_cast`, a plain map over in-memory `Founder` values;
-/// `forebear_of`, a total function of already-committed founding years and
-/// the species allometry table per its own doc) never reaches
-/// `hornvale_kernel::Seed` or `Stream`. Demonstrated by determinism: two
-/// independent `BuildDepth::Full` builds of the same seed — which exercises
-/// the kinship pass in full — commit byte-identical ledgers. A stray or
-/// reordered draw anywhere in `promote()` would perturb this exactly as
-/// readily as a real defect in the resolution logic would.
+/// **Review round 1 correction (I3).** The previous version of this test
+/// compared two live builds of the SAME code to each other, which is a
+/// tautology under determinism: a reviewer inserted a real
+/// `.derive(...).stream().next_f64()` into the kinship pass and every
+/// assertion here still passed, because nothing about that insertion made
+/// the (still-deterministic) code produce two DIFFERENT builds. This
+/// version is renamed to say only what it actually proves — reproducibility
+/// — and the real "no draw was added" evidence now lives in
+/// `person_facts_are_unperturbed_relative_to_the_pre_task_baseline` below,
+/// which compares against an INDEPENDENT baseline captured before this
+/// campaign's code existed, not against another run of the current code.
 #[test]
-fn kinship_resolution_draws_no_stream() {
+fn kinship_pass_is_deterministic_across_two_independent_builds() {
     let a = seed42();
     let b = seed42();
     assert_eq!(
         serde_json::to_string(&a.ledger).unwrap(),
         serde_json::to_string(&b.ledger).unwrap(),
-        "seed 42 must build a byte-identical ledger twice, kinship facts included — \
-         a Stream draw hidden anywhere in promote() would break this"
+        "seed 42 must build a byte-identical ledger twice, kinship facts included"
     );
+}
+
+/// The real "no Stream draw" evidence (spec §4.3 step 2 item 5, review round
+/// 1 fix for I3): every `is-person`-scoped fact
+/// (`is-person`/`name`/`person-born`/`person-founded`/`person-died`)
+/// committed by `promote`'s FIRST pass — the only place it draws
+/// (`Namer::new(&world.seed, ...).name(...)`) — is unchanged relative to an
+/// INDEPENDENT baseline: `tests/fixtures/pre-kinship-person-facts-seed-42.json`
+/// is every such fact from `cli/tests/fixtures/world-seed-42.json` **at
+/// commit `93ef987e9`**, the last commit before Task 5 ever touched
+/// `promote`. Unlike comparing two live builds of the current code to each
+/// other (which is true regardless of what the kinship pass does, since
+/// both builds run the SAME code), this compares against a frozen snapshot
+/// from BEFORE the kinship pass existed — a perturbed name, birth day,
+/// founding day or death day would fail this test even though it would not
+/// fail the determinism test above.
+///
+/// `name` is the only value here that is actually `Stream`-drawn; the other
+/// four predicates are pure arithmetic over already-committed ledger facts.
+/// All five are compared, not just `name`, because `promote`'s only draw
+/// happens inside the SAME loop that computes birth/death — a stray draw
+/// consumed at the wrong point could just as easily desync `birth_day`
+/// (subtracted from the SAME `Namer`-adjacent computation) as the name
+/// itself, and comparing only `name` would miss that.
+///
+/// This does not, and structurally cannot, detect a draw whose result is
+/// never used for anything observable (`Stream` state is local and
+/// ephemeral in this codebase — see `kernel/src/seed.rs`'s `Stream`, never
+/// stored on `World` — so an inert draw leaves no trace anywhere a test
+/// could read). What it proves is exactly what the reviewer's own manual
+/// check established for round 1's fix: the regenerated golden is strictly
+/// additive over the pre-task golden (941 added lines, zero removed
+/// content, every pre-existing stream-drawn founder name byte-identical) —
+/// this test makes that check permanent and automatic instead of a
+/// one-time manual diff read.
+#[test]
+fn person_facts_are_unperturbed_relative_to_the_pre_task_baseline() {
+    let pre_task: Vec<Fact> = serde_json::from_str(include_str!(
+        "../fixtures/pre-kinship-person-facts-seed-42.json"
+    ))
+    .expect("fixture parses as Vec<Fact>");
+    assert_eq!(
+        pre_task.len(),
+        1019,
+        "the captured pre-task baseline itself must not have drifted — if this \
+         fails, the fixture file was edited, not the code under test"
+    );
+
+    let w = seed42();
+    for f in &pre_task {
+        let current: Vec<&Fact> = w.ledger.facts_of(f.subject, &f.predicate).collect();
+        assert_eq!(
+            current.len(),
+            1,
+            "expected exactly one {} fact for subject {:?}, found {}",
+            f.predicate,
+            f.subject,
+            current.len()
+        );
+        assert_eq!(
+            current[0], f,
+            "a pre-existing person fact moved relative to the pre-Task-5 baseline \
+             (subject {:?}, predicate {}) — a Stream draw was perturbed somewhere \
+             in promote()'s first pass",
+            f.subject, f.predicate
+        );
+    }
 }

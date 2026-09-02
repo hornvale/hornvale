@@ -29,30 +29,68 @@ pub const PERSON_BORN: &str = "person-born";
 /// type-audit: bare-ok(identifier-text)
 pub const PERSON_DIED: &str = "person-died";
 
-/// The promoted founder this person's community descended from, at least a
-/// generation removed (spec §4.3, decision 0578).
+/// A promoted founder's PARENT — the forebear their community was settled
+/// from, when that founding is exactly one generation removed (spec §4.3,
+/// decision 0578, `Kinship::Ancestor(1)`).
 ///
 /// Owned here rather than in `domains/history`, which computes the descent
 /// arithmetic (`Kinship`, `kinship()`) this predicate reports the verdict
 /// of: both ends of the relation are `is-person` entities, this crate's own
 /// subject type, the same reasoning that keeps `pays-tribute-to` (an
 /// occupation-to-occupation relation) in `domains/history` rather than here.
-/// **Functional**, because the underlying edge is: an occupation carries at
-/// most one `occ-founded-from`, so a founder has at most one recorded
-/// forebear (`forebear_of`'s doc, `windows/worldgen/src/descent.rs`) —
-/// verified, not assumed, before this was declared `true`.
+///
+/// **Committed `(forebear, parent-of, descendant)` — the forebear is the
+/// SUBJECT.** Registry naming rule 4 reads a predicate strictly left-to-right
+/// from its subject, so this is what makes the sentence TRUE: "the forebear
+/// is the parent of the descendant." The reverse direction was shipped and
+/// corrected in review round 1 (`docs/superpowers/ledgers/
+/// 2026-09-01-the-avowal.md` entry #13) — it asserted the descendant was the
+/// parent of their own ancestor, which is false whenever a remove is
+/// nonzero, and seed 42's golden shows the shape (84 facts, 84 distinct
+/// subjects, only 69 distinct objects under the old direction — repeats,
+/// once reversed into subjects, are exactly what makes this **not**
+/// functional).
+///
+/// **Restricted to exactly one generation removed.** The registered lexical
+/// concept `parent` means "one's father or mother"; `Ancestor(n)` for `n >
+/// 1` is a grandparent, great-grandparent, and so on, which is a different,
+/// TRUE fact but not this one — committing it as `parent-of` was a false
+/// fact in the ledger (61.9% of the original, uncorrected count on seed 42,
+/// up to 37 generations removed). Every other classification commits
+/// [`KIN_OF`] instead.
+///
+/// **`functional: false`.** A forebear may found more than one daughter
+/// community — seed 42 has one with three — so the subject side here is not
+/// structurally single-valued the way the DESCENDANT side is (an occupation
+/// carries at most one `occ-founded-from`, which is what made the
+/// pre-reversal, descendant-as-subject direction functional; the direction
+/// changed, so the flag has to follow it).
 /// type-audit: bare-ok(identifier-text)
 pub const PARENT_OF: &str = "parent-of";
 
-/// This person's forebear is the same generation as they are — the daughter
-/// community was settled within about half a generation of the mother's own
-/// founding, so the two founders are contemporaries rather than ancestor and
-/// descendant (spec §4.3, decision 0578, `Kinship::Sibling`).
+/// A promoted founder's more distant kin — a forebear at any generational
+/// remove OTHER than exactly one (a `Sibling`, contemporary founding, or an
+/// `Ancestor(n)` for `n != 1`), whose community theirs descends or spun off
+/// from (spec §4.3, decision 0578).
 ///
 /// **Deliberately distinct from [`PARENT_OF`]**: spec §4.3 requires a
-/// `Sibling` edge never render as descent, so the same underlying
-/// `occ-founded-from` edge commits under one predicate or the other, never
-/// both. Functional for the same structural reason `PARENT_OF` is.
+/// `Sibling` edge never render as descent, and review round 1 added that a
+/// remove of more than one generation must not render as `parent-of` either
+/// — "37 generations removed" is not what the registered `parent` concept
+/// means. The same underlying `occ-founded-from` edge commits under exactly
+/// one of the two predicates, never both.
+///
+/// **Committed `(forebear, kin-of, descendant)`, matching [`PARENT_OF`]'s
+/// direction** — not because direction is forced here the way it is for
+/// `PARENT_OF` (kinship is symmetric: "the forebear is kin of the
+/// descendant" and "the descendant is kin of the forebear" are both true at
+/// any remove), but so the two predicates share one implementation and one
+/// convention. **Disclosed, not fixed**: this makes `kin-of` queryable from
+/// the forebear's end only — a descendant cannot look up their own kin
+/// through this predicate without walking every forebear's facts and
+/// checking objects. `functional: false` for the same structural reason
+/// `PARENT_OF` is (post-reversal): a forebear may be named by more than one
+/// `kin-of` fact.
 /// type-audit: bare-ok(identifier-text)
 pub const KIN_OF: &str = "kin-of";
 
@@ -76,13 +114,13 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
     registry.register_predicate(PERSON_DIED, true, "the day this person died")?;
     registry.register_predicate(
         PARENT_OF,
-        true,
-        "the promoted founder this person's community descended from",
+        false,
+        "the forebear whose community this person's community was settled from, one generation removed",
     )?;
     registry.register_predicate(
         KIN_OF,
-        true,
-        "the promoted founder this person's community was settled alongside, at the same generation",
+        false,
+        "a more distant kin: the forebear whose community this person's community descended or spun off from, at any remove other than one generation",
     )?;
     Ok(())
 }

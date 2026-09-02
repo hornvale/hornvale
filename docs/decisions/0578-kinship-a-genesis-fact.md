@@ -1,6 +1,6 @@
 # 0578. Kinship as a genesis fact
 
-**Status:** Ratified (2026-09-02) · **Decider:** Nathan (autopilot) · **Campaign:** The Avowal
+**Status:** Superseded by [0584](0584-kinship-direction-and-the-parent-of-generation-cut.md) (2026-09-02, same review cycle — the reviewer found the emitted direction backwards against registry naming rule 4 and `Ancestor(n)` collapsing onto `parent-of` for every remove) · **Decider:** Nathan (autopilot) · **Campaign:** The Avowal
 
 ## Context
 
