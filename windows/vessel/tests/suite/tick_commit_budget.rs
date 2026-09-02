@@ -25,6 +25,16 @@
 //! `after.len() - before.len()` the brief asks for, through the accessor
 //! that already exists rather than a hand-rolled `Ledger` diff.
 //!
+//! **The denominator (The Roll, Task 8).** The rate's `agents` divisor is
+//! `Session::roll_len() - 1` — the bodies the walk actually advances, minus
+//! the driven one — not `Session::npc_labels().len()`, which reports every
+//! derived body regardless of roll membership. At seed 42 today the two
+//! happen to agree (every derived body is on the roll, so both read 67), so
+//! this is a correctness fix with no effect on the numbers below; a world
+//! where some derived body sits off the roll (out of the walk band) is
+//! exactly the case the two would disagree on, and `roll_len` is the
+//! accessor this battery's own opening paragraph says it is measuring.
+//!
 //! Deterministic only: no `Instant`, no wall-clock. Fact counts are
 //! byte-stable across runs and machines, which is exactly why this gate can
 //! assert a ceiling where a timing budget could not.
@@ -218,7 +228,7 @@ fn facts_committed_per_agent_per_tick_stays_bounded() {
     let world = common::build(42).expect("seed 42 always builds a world");
     let (mut session, _opening) =
         Session::start(&world, &PossessOpts::default()).expect("seed 42 always starts a session");
-    let agents = session.npc_labels().len();
+    let agents = session.roll_len() - 1;
     assert!(
         agents > 0,
         "a default session always derives at least the flagship's own NPC"
@@ -272,89 +282,118 @@ fn facts_committed_per_agent_per_tick_stays_bounded() {
     );
 }
 
-/// How much the cycling agent's own commit count may grow across the run,
-/// as a percentage of its first half.
-///
-/// **Measured 103 -> 104, i.e. 101%.** 130 is a few-times-the-noise margin in
-/// the same shape [`NON_GROWTH_MARGIN`] carries, not slack sized to make
-/// anything pass: the point of an upper arm is that a materially tighter cycle
-/// reddens here, where the cause is named, rather than only at
-/// [`STEADY_STATE_CEILING`], where it is invisible.
-const LOUD_GROWTH_MARGIN_PCT: usize = 130;
+/// The share of the last-half commit total the single loudest subject may
+/// carry, as a percentage of `total_last`. **Measured 1.5163%** (20 of
+/// 1319 — see [`the_commit_rate_is_carried_by_the_settled_rosters_even_churn`]).
+/// 10% is a few-times margin above that (~6.6x) in the same shape every
+/// other constant in this file uses: sized to catch a creature-carried cycle
+/// re-emerging (the old pathology put one creature at 52.5% of the last
+/// half) long before the share gets anywhere near that, not to certify
+/// today's near-zero share as a ceiling worth approaching.
+const MAX_SHARE_CEILING_PCT: f64 = 10.0;
 
-/// The ceiling on either drive leg's fact count over [`TICKS`] ticks.
-/// Measured 57 (fear) and 60 (belonging); 90 is ~1.5x the larger.
-const LEG_CEILING: usize = 90;
+/// The floor on how many distinct residents must each commit at least one
+/// fact in the last half, out of [`Session::roll_len`]` - 1` residents on
+/// the roll. **Measured 67 of 67** — every resident on the roll contributes.
+/// Set a few residents under that rather than pinning the exact count, so
+/// this is a spread witness rather than an accidental pin on a coincidence
+/// (a resident asleep through an entire 20-tick window is plausible and not
+/// the failure this floor exists to catch).
+const MIN_CONTRIBUTING_RESIDENTS: usize = 60;
 
-/// The ceiling on how many times the cycling agent switches between its two
-/// drives over [`TICKS`] ticks. Measured 43; 70 is ~1.6x.
-///
-/// A LOWER bound alone says "this is a cycle"; the pair says "this is the
-/// cycle that was measured". A run that switched 200 times would be a
-/// different, faster pathology wearing the same name.
-const SWITCH_CEILING: usize = 70;
+/// The ceiling on how many `(fear)`- or `(belonging)`-tagged provenance
+/// facts may appear across the whole [`TICKS`]-tick run, summed over every
+/// subject. **Measured 0.** Seed 42's roll carries no wild body (the
+/// nearest attractor sits roughly 100 rooms out — see the module doc), so
+/// the two-place fear/belonging pair this file used to pin as a limit cycle
+/// cannot be produced by anything on today's roll at all. A small ceiling
+/// rather than a literal zero, so an unrelated future predicate reusing one
+/// of these two parenthetical tags for an ordinary resident emotion does not
+/// false-fail this witness; more than a handful is the shape this exists to
+/// catch returning (the old cycle produced 117 such facts and 43 switches
+/// between them).
+const FEAR_OR_BELONGING_CEILING: usize = 5;
 
-/// **The witness that keeps [`STEADY_STATE_CEILING`]'s raise honest.**
+/// **THE PREMISE THIS WITNESS PINNED IS GONE (The Roll, Task 8) — RE-MEASURED,
+/// NOT WIDENED.** This test used to be named
+/// `the_commit_rate_is_carried_by_one_creatures_two_place_drive_cycle` and
+/// pinned exactly that: a wild rust-monster on seed 42's derived roster
+/// carrying 52.5% of the last-half commit rate through an unbroken
+/// fear/belonging drive cycle. Task 7 changed what a possession derives at
+/// seed 42 — the roll is now 67 named residents of Doaba (`is-person`/
+/// `person-born` lineage, not `derive_npcs`-authored wild beasts) plus the
+/// driven body, and **the nearest wild attractor sits roughly 100 rooms
+/// out**, so no wild body is on the roll to carry a cycle at all. This is a
+/// re-measurement of the premise, exactly as this file's own standing rule
+/// for [`NON_GROWTH_MARGIN`] requires ("investigate which per-tick values
+/// moved and why… never widen the margin") — the finding is not "the cycle
+/// got quieter", it is "the cycle's carrier is not on the roll any more".
 ///
-/// The ceiling above was raised rather than the defect fixed, and a raised
-/// ceiling with nothing beside it is a number that stops meaning anything the
-/// moment the world moves again. So the CAUSE is pinned here, behaviourally.
-///
-/// **It is deliberately not a fact count.** A count cannot tell a limit cycle
-/// from healthy churn — that is exactly the blindness that let "needs cycling"
-/// stand as the explanation for a rate one agent's unbroken drive cycle was
-/// carrying. What this asserts instead is the SHAPE: one creature dominates
-/// the commit stream, its own rate does not fall while everyone else's does,
-/// and its facts oscillate between two named drive legs many times over the
-/// window rather than settling into either.
-///
-/// **Measured, seed 42, `TICKS` = 40, deterministic** — the numbers below are
-/// what this world produces today and the floors are set well under them, so
-/// this fails on a change of KIND (the cycle broken, or a second creature
-/// joining it) rather than on ordinary movement:
+/// **Measured, seed 42, `TICKS` = 40, deterministic, `agents = roll_len() -
+/// 1 = 67`:**
 ///
 /// ```text
-/// loudest agent            a wild rust-monster, 207 facts over 40 ticks
-///   fled the uncanny ground (fear)                57
-///   drifted homeward, missing its people (belonging)  60
-///   switches between the two legs                 43
-///   its own first half -> last half              103 -> 104
-/// every other agent, summed, first -> last       150 ->  94
+/// total facts, first half -> last half             1245 -> 1319
+/// loudest subject's share of the last half          20 of 1319 = 1.5163%
+/// distinct residents contributing in the last half   67 of 67
+/// per-resident last-half count                       19-20 (min-max), dead even
+/// (fear)/(belonging)-tagged facts, whole run              0
+/// provenance carrying the total (both halves, all subjects):
+/// "drank from the river (thirst sated)" 482
+/// "grazed the productive ground (hunger sated)" 294
+/// "slept at home (fatigue eased)" 1788
 /// ```
 ///
-/// **EVERY ASSERTION IS TWO-SIDED, and the upper half is the point (fix round
-/// 1).** The first version of this witness was one-directional throughout, so
-/// the one thing it was specifically asked to catch — the cycle getting WORSE
-/// — would have passed it. With [`STEADY_STATE_CEILING`] raised to 2.5 that
-/// left a tightening cycle detectable only by the scalar aggregate gate this
-/// same file documents as blind to cause, on 1.52x of headroom. The idiom is
-/// `GROWN_RELAXATIONS` in `lattice::anchor_cells`, one crate over — lexicon: that
-/// name means lattice SQUARES, which are areas — a bound nothing can cross in
-/// EITHER direction quietly.
+/// **The honest new shape: no limit cycle at all.** The commit rate is
+/// carried by the settled roster's own ordinary resource cycling — thirst,
+/// hunger and fatigue drives firing on schedule — spread almost perfectly
+/// evenly across all 67 residents rather than concentrated in one creature.
+/// That is exactly the "needs cycling" reading this module's own doc names
+/// as the wrong attribution when a rust-monster's cycle was hiding inside
+/// the aggregate — and it turns out to be the RIGHT reading now that the
+/// pathological carrier is gone. This is a finding, not a failure: the
+/// underlying defect this file exists to witness
+/// (`PSY-drive-arbitration-limit-cycle`) has not been fixed, it has simply
+/// left seed 42's derived roster; the corpus work that carries it
+/// (`PSY-oscillation-corpus`) is unaffected, because it was never scoped to
+/// this one seed's wild-beast roster in the first place.
 ///
-/// WHAT MAKES IT FAIL, and each is a real outcome rather than noise:
-/// - hysteresis lands on drive arbitration and the cycle stops — the floors on
-///   the leg counts and on the switch count go red, which is the SIGNAL that
-///   `PSY-drive-arbitration-limit-cycle` is done and the ceiling above may
-///   come back down;
-/// - **the cycle TIGHTENS** — [`LOUD_GROWTH_MARGIN_PCT`], [`LEG_CEILING`] or
-///   [`SWITCH_CEILING`] goes red, naming the cause, instead of the defect
-///   being absorbed silently by the ceiling's headroom;
-/// - a SECOND agent joins the cycle — the "one creature carries it" share
-///   assertion goes red, and the ceiling's whole justification with it;
-/// - the rest of the world stops settling — the aggregate-fall assertion goes
-///   red, which would mean the raise is covering something wider than one
-///   creature.
+/// **What this witness asserts instead, kept two-sided in the same idiom as
+/// before:**
+/// - no single resident carries a disproportionate share of the commit rate
+///   ([`MAX_SHARE_CEILING_PCT`]) — the direct opposite of the old "one
+///   creature carries at least 40%" floor, because the pathology it detects
+///   has flipped from concentration to (correctly) even spread;
+/// - the churn is genuinely spread across the roster, not merely absent
+///   ([`MIN_CONTRIBUTING_RESIDENTS`]) — distinguishes "everyone churns a
+///   little" from "the roll commits almost nothing", which this measurement
+///   is not: 2564 facts over 40 ticks is the same steady-state rate
+///   [`STEADY_STATE_CEILING`]'s own doc records;
+/// - no `(fear)`/`(belonging)` drive facts reappear in force
+///   ([`FEAR_OR_BELONGING_CEILING`]) — the direct witness that the old
+///   two-place cycle, or something wearing its shape, has not quietly
+///   rejoined the roll.
+///
+/// **WHAT MAKES IT FAIL**, and each is a real outcome rather than noise:
+/// - a wild body re-enters seed 42's derived roll (a settlement/dispersion
+///   change, a mesh change, anything that moves the nearest attractor back
+///   in range) and resumes an unbroken drive cycle — the share ceiling
+///   catches it directly, the fear/belonging ceiling names the mechanism;
+/// - the roll's own residents stop settling evenly — the contributing-count
+///   floor goes red first, before the aggregate rate in the first test ever
+///   moves, which is the whole point of pinning a shape rather than only a
+///   scalar.
 #[test]
-fn the_commit_rate_is_carried_by_one_creatures_two_place_drive_cycle() {
+fn the_commit_rate_is_carried_by_the_settled_rosters_even_churn() {
     let world = common::build(42).expect("seed 42 always builds a world");
     let (mut session, _opening) =
         Session::start(&world, &PossessOpts::default()).expect("seed 42 always starts a session");
 
     // Facts per subject, read out of the session's own committed ledger. The
     // JSON is the only public read of a fact's SUBJECT and PROVENANCE from an
-    // integration test, and provenance is the whole point here: the drive that
-    // committed a fact is what distinguishes a cycle from churn.
+    // integration test, and provenance is the whole point here: the drive
+    // that committed a fact is what would distinguish a cycle from churn, if
+    // one existed.
     let by_subject = |s: &Session<'_>| -> std::collections::BTreeMap<String, Vec<String>> {
         let doc: serde_json::Value =
             serde_json::from_str(&s.session_ledger_json()).expect("a ledger serializes");
@@ -367,7 +406,6 @@ fn the_commit_rate_is_carried_by_one_creatures_two_place_drive_cycle() {
         out
     };
 
-    let at_start = by_subject(&session);
     let half = TICKS / 2;
     for _ in 0..half {
         session.handle("wait");
@@ -381,10 +419,8 @@ fn the_commit_rate_is_carried_by_one_creatures_two_place_drive_cycle() {
     let len = |m: &std::collections::BTreeMap<String, Vec<String>>, k: &String| {
         m.get(k).map(Vec::len).unwrap_or(0)
     };
-    let mut first: std::collections::BTreeMap<String, usize> = Default::default();
     let mut last: std::collections::BTreeMap<String, usize> = Default::default();
     for k in at_end.keys() {
-        first.insert(k.clone(), len(&at_half, k) - len(&at_start, k));
         last.insert(k.clone(), len(&at_end, k) - len(&at_half, k));
     }
     let total_last: usize = last.values().sum();
@@ -392,97 +428,43 @@ fn the_commit_rate_is_carried_by_one_creatures_two_place_drive_cycle() {
         total_last > 0,
         "the world committed nothing in the second half, so nothing below is tested"
     );
+    println!("total_last = {total_last}");
 
-    // (1) ONE creature carries the rate.
+    // (1) NO single resident carries a disproportionate share — the direct
+    //     opposite of what this witness used to assert, because the
+    //     pathology it pins has flipped from concentration to even spread.
     let (loud, loud_last) = last
         .iter()
         .max_by_key(|(_, n)| **n)
         .map(|(k, n)| (k.clone(), *n))
         .expect("some subject committed");
+    let loud_share_pct = 100.0 * loud_last as f64 / total_last as f64;
+    println!("loudest subject {loud}: {loud_last} of {total_last} ({loud_share_pct:.4}%)");
     assert!(
-        loud_last * 100 >= total_last * 40,
-        "no single agent carries the commit rate ({loud_last} of {total_last} in the \
-         last half) — the ceiling's raise is justified by ONE creature's cycle, so if \
-         the load has spread the justification has lapsed: {last:?}"
+        loud_share_pct <= MAX_SHARE_CEILING_PCT,
+        "one subject ({loud}) carries {loud_share_pct:.4}% of the last-half commit rate, past {MAX_SHARE_CEILING_PCT}% — measured 1.5163% when this witness was re-measured for The Roll. A share this high means a creature-carried drive cycle (the shape PSY-drive-arbitration-limit-cycle names) may have re-entered seed 42's derived roll"
     );
 
-    // (2) ITS rate does not fall while EVERYONE ELSE's does. Stated over the
-    //     aggregate of the others rather than per-agent, because a single
-    //     agent's half-to-half count is noisy at this window length (measured:
-    //     one of the four rose 42 -> 44 while the four together fell 150 -> 94).
-    let loud_first = first[&loud];
+    // (2) The churn is genuinely SPREAD, not merely quiet — distinguishes
+    //     "everyone on the roll churns a little" from "the roll commits
+    //     almost nothing", which this measurement is not.
+    let contributing = last.values().filter(|n| **n > 0).count();
+    println!("residents contributing in the last half = {contributing}");
     assert!(
-        loud_last * 10 >= loud_first * 9,
-        "the loud agent's own rate FELL ({loud_first} -> {loud_last}) — the cycle this \
-         witness exists to pin has broken, which is good news and means \
-         STEADY_STATE_CEILING should come back down rather than stay raised"
-    );
-    // THE UPPER ARM (fix round 1). Everything above was one-directional, and
-    // "the cycle got WORSE" is the one thing this witness was asked to catch:
-    // with the ceiling raised to 2.5, a tightening cycle would otherwise be
-    // caught only by `STEADY_STATE_CEILING` — the scalar-blind-to-cause gate
-    // this very file documents as the weakness — sitting on 1.52x headroom.
-    // Two-sided, in the `GROWN_RELAXATIONS` idiom next door.
-    assert!(
-        loud_last * 100 <= loud_first * LOUD_GROWTH_MARGIN_PCT,
-        "the loud agent's own rate GREW by more than {LOUD_GROWTH_MARGIN_PCT}% of its \
-         first half ({loud_first} -> {loud_last}) — the deferred limit cycle is \
-         TIGHTENING, not merely persisting. That is a worsening of \
-         PSY-drive-arbitration-limit-cycle, and raising STEADY_STATE_CEILING again to \
-         absorb it is exactly what this witness exists to prevent"
-    );
-    let others_first: usize = first
-        .iter()
-        .filter(|(k, _)| **k != loud)
-        .map(|(_, n)| n)
-        .sum();
-    let others_last: usize = last
-        .iter()
-        .filter(|(k, _)| **k != loud)
-        .map(|(_, n)| n)
-        .sum();
-    assert!(
-        others_last < others_first,
-        "every other agent taken together did NOT settle ({others_first} -> \
-         {others_last}) — the raised ceiling is then covering something wider than \
-         one creature's drive cycle, which is a different finding entirely"
+        contributing >= MIN_CONTRIBUTING_RESIDENTS,
+        "only {contributing} distinct subjects committed anything in the last half, under the floor of {MIN_CONTRIBUTING_RESIDENTS} — measured 67 of 67 when this witness was re-measured for The Roll. The steady-state rate STEADY_STATE_CEILING gates on would then be resting on a handful of residents rather than the settled roster this doc claims"
     );
 
-    // (3) THE CYCLE ITSELF: two named legs, both substantial, switching often.
-    let stream: Vec<&str> = at_end[&loud].iter().map(String::as_str).collect();
-    let fear = stream.iter().filter(|p| p.contains("(fear)")).count();
-    let belonging = stream.iter().filter(|p| p.contains("(belonging)")).count();
-    assert!(
-        fear >= 20 && belonging >= 20,
-        "the loud agent's two drive legs are no longer both substantial (fear {fear}, \
-         belonging {belonging}) — measured 57 and 60. Either the cycle broke or a \
-         different drive is now carrying the rate, and either way the ceiling's \
-         justification needs re-reading rather than re-raising"
-    );
-    assert!(
-        fear <= LEG_CEILING && belonging <= LEG_CEILING,
-        "a drive leg GREW past {LEG_CEILING} (fear {fear}, belonging {belonging}, \
-         measured 57 and 60) — the cycle is committing more per leg than when the \
-         ceiling was raised for it"
-    );
-    let legs: Vec<char> = stream
-        .iter()
+    // (3) No (fear)/(belonging) drive facts — the direct witness that the
+    //     old two-place limit cycle has not quietly rejoined the roll.
+    let fear_or_belonging: usize = at_end
+        .values()
+        .flatten()
         .filter(|p| p.contains("(fear)") || p.contains("(belonging)"))
-        .map(|p| if p.contains("(fear)") { 'F' } else { 'B' })
-        .collect();
-    let switches = legs.windows(2).filter(|w| w[0] != w[1]).count();
+        .count();
+    println!("(fear)/(belonging) facts over the whole run = {fear_or_belonging}");
     assert!(
-        switches >= 15,
-        "the loud agent switched between its two drives only {switches} times over \
-         {TICKS} ticks (measured 43) — a two-place LIMIT CYCLE is what justifies \
-         calling this a defect rather than churn, and few switches means it is \
-         something else"
-    );
-    assert!(
-        switches <= SWITCH_CEILING,
-        "the loud agent switched between its two drives {switches} times over {TICKS} \
-         ticks, past the ceiling of {SWITCH_CEILING} (measured 43) — the cycle is \
-         running FASTER than the one the ceiling was raised for, which is the \
-         worsening this witness is here to make visible rather than absorb"
+        fear_or_belonging <= FEAR_OR_BELONGING_CEILING,
+        "{fear_or_belonging} (fear)/(belonging)-tagged facts were committed over the run, past the ceiling of {FEAR_OR_BELONGING_CEILING} (measured 0 when this witness was re-measured for The Roll) — a wild body's drive cycle looks to have re-entered seed 42's derived roll"
     );
 }
