@@ -1091,3 +1091,44 @@ deliberately NOT declared generated, and `make rebaseline` does not write it —
 only `make rebaseline-goldens` does. This campaign moved those fixtures in Tasks
 7-9 and accepted them deliberately, which is the act that separate command
 exists to force.
+
+#54 [G5] — **Main absorbed: 63 commits, `the-pavement`'s cube-sphere lattice,
+eight conflicts, no silent mis-merge.** Merge `22191f93e`, gate green at 1002
+tests. Three things worth keeping:
+
+**The golden literal was COMPOSED and PREDICTED, not pasted.** Both sides had
+edited the same fact roster for different reasons — we moved the fact SHAPE
+(`rested`/`Flag(true)` → `slept`/`Number(span)`, 80 → 108 rows), main moved every
+room ID with the lattice. Neither side was correct for the merge product. The
+absorber proved each side moved exactly one column — main's edit byte-identical
+after normalising three ids, multiplicities 24/12/12 on both sides; ours moving
+predicates only, with agent-at/drank/eaten unchanged at 48/12/6 — then **wrote
+the composed 108 rows before running the test**, and got green with zero
+adjustments. That ordering is the whole discipline: a third kind of difference
+would have reddened that run, whereas resolve-then-paste would have absorbed it
+silently.
+
+**Nothing moved beyond the four conflicted files.** The Radiation's failure mode
+— generated files merging cleanly and *wrongly*, dropping content with no
+conflict — did not occur here, and it was checked for rather than assumed.
+
+**A genuine cross-campaign semantic collision, contained.** Main wrote new code
+calling `thing_kind_of`, which this campaign deleted in Task 2. One live line;
+now zero. Main's real improvement at that site (`CHAMBERED_SEED` = 14, a seed
+that actually has chambers, against our `world_at(1)`) was kept.
+
+#55 [G5] — **A hypothesis in the absorption report, checked and refuted.** The
+absorber flagged that our gallery carried `slept … 40000` where the regenerated
+file reads `45000`, and suggested "our tip's gallery hadn't been regenerated
+after the Task 8 fix round" — i.e. that this campaign had shipped stale
+artifacts and its own drift checks had missed them. **Not so.** The gallery's
+last pre-merge touch on our branch is `85c8cf5ac` (Task 9's fix round); the only
+commits after it are Task 10's, and Task 10 verified zero artifact drift with a
+mechanism its own review corrected and confirmed — seed 42's flagship Doaba is
+`built=true cold=false` at 26.16 °C, so no rest grade fires there at all. The
+span moved because **main** moved it: the cube-sphere lattice relocated every
+room, so `next_awake_day` reads a different terrain and returns a different
+cycle. Benign, and attributable to the other parent.
+
+Recorded because the hypothesis was reasonable and wrong, and a report's
+uncertain aside is exactly the kind of sentence a later reader promotes to fact.
