@@ -339,7 +339,7 @@ fn cmd_scout(args: &[String]) -> Result<(), String> {
     for seed in from..from.saturating_add(max_scan) {
         scanned += 1;
         if let Ok(outcome) = hornvale_astronomy::generate(hornvale_kernel::Seed(seed), &pins) {
-            let system = &outcome.system;
+            let system = &outcome.value;
             let day = match system.anchor.rotation {
                 hornvale_astronomy::Rotation::Spinning { day, .. } => {
                     format!("{:.1}h day", day.as_std_days() * 24.0)
@@ -889,7 +889,7 @@ fn cmd_paleo_map(args: &[String]) -> Result<(), String> {
     let mut doc = format!("# The Deep Time of Seed {}\n\n", world.seed.0);
     doc.push_str(&format!(
         "Glacial maximum at day {:.0}; {:.0}% of the land lay under ice.\n\n",
-        record.glacial_maximum_day,
+        record.glacial_maximum_day.as_std_days(),
         record.max_ice_fraction * 100.0
     ));
     doc.push_str("Legend: `#` ice envelope, `*` refugium, `~` fossil shoreline.\n\n");
@@ -1125,17 +1125,18 @@ fn cmd_tropes(args: &[String]) -> Result<(), String> {
         &world_builder::SettlementPins::default(),
     )
     .map_err(|e| e.to_string())?;
-    let outcomes = tropes::resolve(&corpus, &world.registry);
+    let witnesses = tropes::witnesses();
+    let outcomes = tropes::resolve(&corpus, &world.registry, &world, &witnesses);
     match mode {
         Some("report") | None => {
             print!(
                 "{}",
-                tropes::render(&corpus, &outcomes, &world.registry, path)
+                tropes::render(&corpus, &outcomes, &world.registry, &witnesses, path)
             );
             Ok(())
         }
         Some("check") => {
-            let live = tropes::render(&corpus, &outcomes, &world.registry, path);
+            let live = tropes::render(&corpus, &outcomes, &world.registry, &witnesses, path);
             let artifact = tropes::artifact_path(&corpus);
             let committed =
                 std::fs::read_to_string(&artifact).map_err(|e| format!("{artifact}: {e}"))?;
@@ -1177,9 +1178,10 @@ fn cmd_tropes_matrix() -> Result<(), String> {
         let json = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
         corpora.push(tropes::load(&json)?);
     }
+    let witnesses = tropes::witnesses();
     let resolved: Vec<_> = corpora
         .iter()
-        .map(|c| (c, tropes::resolve(c, &world.registry)))
+        .map(|c| (c, tropes::resolve(c, &world.registry, &world, &witnesses)))
         .collect();
     let columns: Vec<_> = resolved.iter().map(|(c, out)| (*c, out)).collect();
     print!("{}", tropes::render_matrix(&columns, &world.registry));

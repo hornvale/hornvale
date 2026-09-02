@@ -580,6 +580,26 @@ pub const EPOCH_COHORTS: &[&[&str]] = &[
     // size of the epoch-15 cohort they were NOT added to. The epoch index
     // was right; only the count was wrong.
     &["lockable", "openable", "portable"],
+    // Epoch 18 — The Wicket, Task 5: `brazier`, the first `THING_KINDS` label
+    // added after epoch 16's hand-copied snapshot of that roster. A
+    // single-concept cohort, appended per this module's absolute rule rather
+    // than seated inside epoch 16 beside the other made, portable kinds —
+    // which is where it belongs by KIND and where placing it would re-sort
+    // fifteen concepts that already have proto-root assignments.
+    //
+    // **This is the campaign's own thesis landing here too.** The Wicket
+    // replaced a closed `AnchorKind` enum with an open kind registry so that
+    // adding a kind costs data rows, never a dispatcher edit; `brazier`
+    // proves it in `windows/vessel` (`domains/thing::kinds::BRAZIER`, a
+    // `Pattern` in `windows/vessel::interior::pattern::INVENTORY`, an
+    // `ObjectProperty::RadiatesHeat` row) with no `match` arm anywhere in
+    // that path. What this cohort states is the cost the campaign's own
+    // "five data rows" description leaves out: `domains/thing::
+    // register_concepts` registers every `THING_KINDS` label as a concept
+    // (decision 0025's check-then-map rule), so adding a kind also mints an
+    // accession-register entry and everything `hornvale_language` derives
+    // from it — a sixth row, not a sixth edit to an existing one.
+    &["brazier"],
 ];
 
 /// The accession epoch of `concept`: the index of the cohort listing it, or

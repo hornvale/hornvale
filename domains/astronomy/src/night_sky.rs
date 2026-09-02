@@ -153,7 +153,7 @@ mod tests {
             moons: Some(MoonsPin::exact(1).unwrap()),
             ..SkyPins::default()
         };
-        generate(Seed(42), &pins).unwrap().system
+        generate(Seed(42), &pins).unwrap().value
     }
 
     fn locked_system() -> StarSystem {
@@ -161,7 +161,7 @@ mod tests {
             rotation: Some(RotationPin::Locked),
             ..SkyPins::default()
         };
-        generate(Seed(42), &pins).unwrap().system
+        generate(Seed(42), &pins).unwrap().value
     }
 
     #[test]
@@ -227,7 +227,7 @@ mod tests {
                 spin: Some(spin),
                 ..SkyPins::default()
             };
-            generate(Seed(42), &pins).unwrap().system
+            generate(Seed(42), &pins).unwrap().value
         };
         let retro = system_with_spin(crate::pins::SpinPin::Retrograde);
         let sky = night_sky_at(&retro, &calendar_of(&retro), 30.0, StdInstant(0.0));

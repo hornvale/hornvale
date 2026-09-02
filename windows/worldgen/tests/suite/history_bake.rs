@@ -4,7 +4,7 @@
 //! the paleoclimate era swing, never by a floor (measure-don't-narrate).
 
 use hornvale_history::record::{CauseOfEnd, Ended, Founding};
-use hornvale_kernel::{Geosphere, KindId, ReferenceElevation, Seed, Vertex, VertexMap};
+use hornvale_kernel::{Geosphere, KindId, ReferenceElevation, Seed, Vertex, VertexMap, WorldTime};
 use hornvale_paleoclimate::EraClimate;
 use hornvale_topology::{ConnectionGraph, Edge, EdgeKind};
 use hornvale_worldgen::history_bake::{BakeConfig, bake, census};
@@ -13,6 +13,21 @@ use std::collections::BTreeSet;
 /// Test-only helper: a validated `ReferenceElevation`.
 fn e(m: f64) -> ReferenceElevation {
     ReferenceElevation::new(m).unwrap()
+}
+
+/// A fixture's bake-side year axis: `n` eras, `step` years apart, opening at
+/// year 0 — the year each era comes into force, on `BakeConfig`'s axis.
+///
+/// This is a SEPARATE slice from the fixture's `EraClimate` series, and that
+/// is the point (The Hallmark, Task 13). These fixtures used to let
+/// `EraClimate.day` carry the bake year, which is a paleoclimate field whose
+/// contract is an absolute standard DAY; `bake` now takes the year axis
+/// explicitly. The numbers here are exactly the `.day` values the fixtures
+/// used to pass, so every era selection these tests exercise is unchanged.
+/// The `.day` values themselves survive only as the `min_by` ordering key that
+/// picks the oldest era, which reads no unit off them.
+fn era_years(n: usize, step: f64) -> Vec<f64> {
+    (0..n).map(|i| i as f64 * step).collect()
 }
 
 /// The biome-class map every bake fixture is handed (The Granary T2): all
@@ -203,7 +218,7 @@ fn fixture(
     // The mask is now uniformly permissive: it is kept in the fixture only
     // because `EraClimate` still carries the field, and it binds nothing.
     let era = |day: f64, glacial: bool| EraClimate {
-        day,
+        day: WorldTime::from_std_days(day).expect("test era day within tick range"),
         ice: VertexMap::from_fn(&geo, |_| false),
         habitable: VertexMap::from_fn(&geo, |_| true),
         sea_level: e(0.0),
@@ -236,6 +251,7 @@ fn same_seed_bakes_byte_identical_history() {
         &river,
         &barren(&geo),
         &eras,
+        &era_years(8, 250.0),
         &refugia,
         &people,
         &surface_seating(&geo, &people),
@@ -250,6 +266,7 @@ fn same_seed_bakes_byte_identical_history() {
         &river,
         &barren(&geo),
         &eras,
+        &era_years(8, 250.0),
         &refugia,
         &people,
         &surface_seating(&geo, &people),
@@ -273,6 +290,7 @@ fn different_seeds_diverge() {
         &river,
         &barren(&geo),
         &eras,
+        &era_years(8, 250.0),
         &refugia,
         &people,
         &surface_seating(&geo, &people),
@@ -287,6 +305,7 @@ fn different_seeds_diverge() {
         &river,
         &barren(&geo),
         &eras,
+        &era_years(8, 250.0),
         &refugia,
         &people,
         &surface_seating(&geo, &people),
@@ -316,6 +335,7 @@ fn the_workload_fires_climate_displacement_at_volume_without_conflict() {
         &river,
         &barren(&geo),
         &eras,
+        &era_years(8, 250.0),
         &refugia,
         &people,
         &surface_seating(&geo, &people),
@@ -362,7 +382,7 @@ fn land_to_spare_fixture() -> (
     let river_prox = VertexMap::from_fn(&geo, |_| 0.0);
     let refugia = VertexMap::from_fn(&geo, |_| false);
     let era = EraClimate {
-        day: 0.0,
+        day: WorldTime::GENESIS,
         ice: VertexMap::from_fn(&geo, |_| false),
         habitable: VertexMap::from_fn(&geo, |_| true),
         sea_level: e(0.0),
@@ -395,6 +415,7 @@ fn a_strong_community_raids_a_weaker_richer_neighbour_with_land_to_spare() {
         &river,
         &barren(&geo),
         &eras,
+        &[0.0],
         &refugia,
         &people,
         &surface_seating(&geo, &people),
@@ -494,7 +515,7 @@ fn escarpment_fixture() -> (
     let river_prox = VertexMap::from_fn(&geo, |_| 0.0);
     let refugia = VertexMap::from_fn(&geo, |_| false);
     let era = EraClimate {
-        day: 0.0,
+        day: WorldTime::GENESIS,
         ice: VertexMap::from_fn(&geo, |_| false),
         habitable: VertexMap::from_fn(&geo, |_| true),
         sea_level: e(0.0),
@@ -525,6 +546,7 @@ fn a_displaced_people_rolls_downhill_and_the_cascade_is_recorded() {
         &river,
         &barren(&geo),
         &eras,
+        &[0.0],
         &refugia,
         &people,
         &surface_seating(&geo, &people),
@@ -603,7 +625,7 @@ fn saturating_fixture() -> (
         })
     };
     let era = |day: f64| EraClimate {
-        day,
+        day: WorldTime::from_std_days(day).expect("test era day within tick range"),
         ice: VertexMap::from_fn(&geo, |_| false),
         habitable: VertexMap::from_fn(&geo, |_| true),
         sea_level: e(0.0),
@@ -634,6 +656,7 @@ fn a_hostile_vertex_in_a_full_world_starves_instead_of_cascading() {
         &river,
         &barren(&geo),
         &eras,
+        &era_years(2, 1000.0),
         &refugia,
         &people,
         &surface_seating(&geo, &people),
@@ -665,6 +688,7 @@ fn a_hostile_vertex_in_a_full_world_starves_instead_of_cascading() {
         &river,
         &barren(&geo),
         &eras,
+        &era_years(2, 1000.0),
         &refugia,
         &people,
         &surface_seating(&geo, &people),
@@ -708,7 +732,7 @@ fn value_flat_fixture() -> (
     let river_prox = VertexMap::from_fn(&geo, |_| 0.0);
     let refugia = VertexMap::from_fn(&geo, |_| false);
     let era = EraClimate {
-        day: 0.0,
+        day: WorldTime::GENESIS,
         ice: VertexMap::from_fn(&geo, |_| false),
         habitable: VertexMap::from_fn(&geo, |_| true),
         sea_level: e(0.0),
@@ -824,6 +848,7 @@ fn value_flat_history_seeded_with(
         &river,
         &barren(&geo),
         &eras,
+        &[0.0],
         &refugia,
         &people,
         &surface_seating(&geo, &people),
@@ -1145,7 +1170,7 @@ fn ocean_sunders_and_a_lane_leapfrogs() {
         })
     };
     let era = |day: f64, glacial: bool| EraClimate {
-        day,
+        day: WorldTime::from_std_days(day).expect("test era day within tick range"),
         ice: VertexMap::from_fn(&geo, |_| false),
         habitable: VertexMap::from_fn(&geo, |_| true),
         sea_level: e(0.0),
@@ -1166,6 +1191,7 @@ fn ocean_sunders_and_a_lane_leapfrogs() {
         &river,
         &barren(&geo),
         &eras,
+        &era_years(8, 250.0),
         &refugia,
         &people,
         &surface_seating(&geo, &people),
@@ -1187,6 +1213,7 @@ fn ocean_sunders_and_a_lane_leapfrogs() {
         &river,
         &barren(&geo),
         &eras,
+        &era_years(8, 250.0),
         &refugia,
         &people,
         &surface_seating(&geo, &people),

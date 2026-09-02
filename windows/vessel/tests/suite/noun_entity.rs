@@ -21,7 +21,7 @@
 //! `Vantage`'s `locale` carries `face: u8` and `path: Vec<u8>`, which are
 //! exactly `Facet`'s two public fields, and `Session::position` returns a
 //! `Facet` outright; `Session::underground_resident` already yields the same
-//! `hornvale_kernel::KindId` `affordance::thing_kind_of` returns, and the
+//! `hornvale_kernel::KindId` an anchor carries, and the
 //! resident branch already passes `kind.0` into `Noun::new`. What is missing
 //! is a **promotion**. `thing::promote` has zero production callers
 //! workspace-wide — every call is in `thing.rs`'s own tests, and
@@ -35,21 +35,22 @@
 //! it needs a promotion at a catalog site rather than a signature or
 //! plumbing change. The nearest thing in the tree to a real name → entity
 //! lookup is `Session::examine_chamber`, which builds no `Noun` at all: it
-//! resolves a typed word against a live `AnchorKind` through
+//! resolves a typed word against a live anchor's own kind through
 //! `chamber_prose::noun`. That is the shape a resolved thing wants, missing
 //! only a minted identity to answer with. What this file pins is that the
 //! field carries a **real** identity when a site does claim one, so the
 //! caller that arrives has something true to inherit.
 //!
-//! The kind spelling is `affordance::thing_kind_of`'s — the same public
-//! mapping the rest of the campaign resolves anchors through — so the word a
+//! The kind spelling is `hornvale_thing::kinds`' own handle — the same
+//! roster the rest of the campaign resolves anchors through — so the word a
 //! player types and the kind the entity was minted under come from one
-//! source and cannot drift apart inside this test.
+//! source and cannot drift apart inside this test. It was
+//! `affordance::thing_kind_of`'s until The Wicket deleted that mapping; the
+//! source is one step nearer now, not one step further.
 
 use hornvale_kernel::{ConceptRegistry, Facet, INSTANCE_OF, Ledger, WorldTime};
+use hornvale_thing::kinds;
 use hornvale_vessel::Noun;
-use hornvale_vessel::affordance::thing_kind_of;
-use hornvale_vessel::interior::AnchorKind;
 use hornvale_vessel::thing::{promote, thing_id};
 
 fn at(days: f64) -> WorldTime {
@@ -99,7 +100,7 @@ fn a_typed_word_resolves_to_a_things_entity() {
         face: 0,
         path: vec![2],
     };
-    let kind = thing_kind_of(AnchorKind::Vessel).0;
+    let kind = kinds::VESSEL.0;
 
     // Real promotions, in two rooms. The ids are what the ledger MINTED, not
     // values this test chose: a test that stores an invented `EntityId` and

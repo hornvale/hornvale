@@ -15,7 +15,7 @@ pub mod relation;
 pub mod route;
 pub mod seam;
 
-pub use anchor::{Anchor, AnchorId, AnchorKind, Interior};
+pub use anchor::{Anchor, AnchorId, Interior};
 pub use derive::{chamber_interior_of, interior_of};
 pub use field::{HEARTH_WARMTH, WARMTH_DECAY, warmth_at};
 pub use pattern::{

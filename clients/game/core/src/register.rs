@@ -35,7 +35,8 @@ pub enum Population {
     /// Interface furniture that is not part of the world.
     Chrome,
     /// A furnishing anchor within a chamber — a hearth, a bed, an alcove,
-    /// and so on (`windows/vessel/src/interior/anchor.rs::AnchorKind`).
+    /// and so on. Each carries a `hornvale_kernel::KindId`; the roster is
+    /// `domains/thing`'s `THING_KINDS`.
     /// One glyph covers every kind (fix round 1, The Legend Task 10): see
     /// [`REGISTER`]'s own furnishing row for why a glyph per kind was
     /// rejected. Do not read a future furnishing kind as license to add a
@@ -242,7 +243,7 @@ pub const REGISTER: &[Binding] = &[
     // structural no-op and redrew the ordinary floor underneath it.
     //
     // The fix is ONE glyph for every furnishing kind, not one row per
-    // `AnchorKind` (14 variants and rising with Delving 2's own furniture).
+    // thing-kind (16 rostered and rising with Delving 2's own furniture).
     // `CLIENT-glyphs-22-rejected` already settled the general shape of this
     // question for biome glyphs: a nominal mark per kind does not
     // self-legend, and a reader would need a permanent key just to tell a

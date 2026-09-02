@@ -15,16 +15,18 @@
 //! Together they give a room depth — a hub composition, where everything hangs
 //! off the centre, is the degenerate case and is what the anti-hub test forbids.
 
-use super::anchor::{AnchorId, AnchorKind, Interior};
+use super::anchor::{AnchorId, Interior};
+use hornvale_kernel::KindId;
+use hornvale_thing::kinds;
 
 /// Where a pattern's anchor attaches to what is already composed.
 pub enum Attach {
-    /// To the room's [`AnchorKind::Ground`] — the open middle.
+    /// To the room's [`kinds::GROUND`] — the open middle.
     Hub,
     /// Adjacent to the first anchor of this kind (`Ec`).
-    Beside(AnchorKind),
+    Beside(KindId),
     /// Strictly inside the first anchor of this kind (`Ntpp`).
-    Within(AnchorKind),
+    Within(KindId),
 }
 
 /// What a chamber is FOR. A role admits a different pattern subset — the pattern
@@ -85,12 +87,12 @@ pub struct Pattern {
     /// [`selection`]).
     pub name: &'static str,
     /// The anchor this pattern contributes.
-    pub kind: AnchorKind,
+    pub kind: KindId,
     /// Where that anchor attaches.
     pub attach: Attach,
     /// A kind that must ALREADY be present for this pattern to be admissible —
     /// Alexander's "patterns complete other patterns", made checkable.
-    pub requires: Option<AnchorKind>,
+    pub requires: Option<KindId>,
     /// Whether this pattern is drawn only where warmth matters.
     pub needs_cold: bool,
     /// Whether this pattern belongs to BUILT rooms (false = wilderness).
@@ -106,10 +108,25 @@ pub struct Pattern {
     /// [`selection`] admits only patterns with `at_locale: true`. A creature
     /// stands at a LOCALE, and its thermal drive reads the warmth of the
     /// interior composed there, which is committed history. So a pattern with
-    /// `at_locale: false` **cannot** move a world: no live read can reach it.
-    /// Setting one to `true` is what turns a latent pattern into an epoch, and
+    /// `at_locale: false` cannot move a **world file**: no read that writes a
+    /// [`hornvale_kernel::Fact`] can reach it, and decision 0069 keeps
+    /// `Interior` unserialized. Setting one to `true` is what turns a latent
+    /// pattern into an epoch, and
     /// `a_locale_composition_is_untouched_by_the_role_layer` is the check that
     /// makes that deliberate rather than accidental.
+    ///
+    /// **IT CAN STILL MOVE A RENDERED ARTIFACT, AND THIS SENTENCE SAID
+    /// OTHERWISE UNTIL THE WICKET'S CLOSE.** It read *"a pattern with
+    /// `at_locale: false` **cannot** move a world: no live read can reach
+    /// it"* — the same over-broad reading of "commits" that [`INVENTORY`]'s
+    /// own rule 3, thirty lines below, exists to correct, and it is falsified
+    /// by this very file: `the-brazier` is `at_locale: false` and renders in
+    /// `book/src/gallery/possession-carry-seed-14.md`. **Read rule 3 for the
+    /// full statement; do not restate it here.** The two must not drift
+    /// apart, and they did: The Wicket corrected the `INVENTORY` doc it had
+    /// grepped for and left this twin one screen away untouched since The
+    /// Blocking (`f2cfb0974`, 2026-07-28) — its own lesson, *grep the claim
+    /// and not the identifier*, unapplied to its own correction (ledger #60).
     pub at_locale: bool,
     /// Whether this pattern is drawn only where the place held more people than
     /// a hamlet ([`crate::brief::Brief::is_populous`]). The `needs_cold` of
@@ -150,20 +167,69 @@ pub struct Pattern {
 /// 2. **Appending a pattern with `at_locale: true` is an epoch.** A locale
 ///    composition feeds [`crate::interior::warmth_at`], which feeds a creature's
 ///    thermal drive, which is committed history.
-/// 3. **Appending a pattern with `at_locale: false` is LATENT.** No live read can
-///    reach it: [`selection`] filters it out, and the only other consumer is
-///    [`selection_for`], whose output is read by the chamber renderer and by
-///    nothing that commits. It becomes an epoch on the day something that
-///    commits reads a chamber — the first in-chamber mark — and that is the day
-///    the gate opens, not the day the pattern was written.
+/// 3. **Appending a pattern with `at_locale: false` is LATENT — and "commits"
+///    here means one specific thing, stated precisely because the word used
+///    to do double duty.** No live read reaches it through the LEDGER:
+///    [`selection`] filters it out, and the only other consumer is
+///    [`selection_for`], whose output feeds the chamber renderer and nothing
+///    that writes a [`hornvale_kernel::Fact`]. A chamber's composed content
+///    is never serialized into a `World`'s ledger (decision 0069 keeps
+///    `Interior` unserialized — derived per room, bubble-scoped, discarded
+///    with the bubble), so no world FILE moves when a pattern is appended
+///    here: no saved world's determinism and no previously-committed fact
+///    changes. That half is permanent and does not decay.
+///
+///    **The other half of "commits" already decayed by the time this
+///    sentence first named a date, and a first correction got the date right
+///    and the mechanism wrong.** The sentence used to read "read by the
+///    chamber renderer and by nothing that commits", meaning nothing
+///    GIT-committed either — and a first fix (The Wicket's Task 5) dated
+///    that claim's death to **2026-08-30**, attributing it to `b8fc0cd02`/
+///    `26ebaf7e4` "landing `the-loom` and `the-key-by-the-loom`". Checked
+///    and wrong: `the-loom` landed **2026-07-28** (`f2cfb0974`, The
+///    Blocking) — a month earlier. `b8fc0cd02` did not land a pattern; it
+///    CREATED `book/src/gallery/possession-carry-seed-1.md`, and that
+///    transcript's very first version already rendered `a loom`, `a
+///    strongbox` and `a key` — three `at_locale: false` anchors that had
+///    existed since July.
+///
+///    **So the reviewable act is not "a pattern is appended" — that is the
+///    very act this clause declares LATENT, and saying it opened the gate
+///    contradicts the clause it sits in.** The act that opens the gate is *a
+///    new committed artifact walking a chamber deep enough to render one*:
+///    the day `book/src/gallery/possession-carry-seed-1.md` was created and
+///    scripted to delve past the threshold, every `at_locale: false` pattern
+///    already in `INVENTORY` became visible in a committed file at once,
+///    `the-loom` included, with no edit to `INVENTORY` itself. A successor
+///    reviewing "did this change open the gate" should watch for a new (or
+///    newly deepened) committed transcript/fixture, not for an append here.
+///
+///    So: appending an `at_locale: false` pattern is LATENT with respect to
+///    the LEDGER — this remains the guarantee that matters, and is why such
+///    an append is not an epoch — but it is **not** latent with respect to a
+///    RENDERED artifact like a gallery transcript, which may show anything
+///    the world now contains and is expected to move. A census column or
+///    `book/src/domesday/` moving would be the real signal something has
+///    changed — not because decision 0069 promises those readers never touch
+///    a chamber (that a census or `book/src/domesday/` does not walk one is
+///    a property of those readers, not a guarantee 0069 issues), but because
+///    0069 keeps `Interior` unserialized, so no world FILE — census or
+///    otherwise — can move on account of a room gaining furniture.
+///
+///    **This clause has a twin, and keeping them in step is the point.**
+///    [`Pattern::at_locale`]'s own field doc states the same latency, and
+///    until The Wicket's close it stated it in the retired over-broad form
+///    (*"cannot move a world: no live read can reach it"*) — thirty lines
+///    above a rule that had already been corrected twice. Whoever edits
+///    either one edits both, or the pair drifts again exactly as it did.
 ///
 /// Sized near its intended scale deliberately, all the same: growth is cheap
 /// today and will not stay cheap.
-pub const INVENTORY: [Pattern; 16] = [
+pub const INVENTORY: [Pattern; 17] = [
     // --- built, drawn at BOTH bands ---
     Pattern {
         name: "the-ground",
-        kind: AnchorKind::Ground,
+        kind: kinds::GROUND,
         attach: Attach::Hub,
         requires: None,
         needs_cold: false,
@@ -174,7 +240,7 @@ pub const INVENTORY: [Pattern; 16] = [
     },
     Pattern {
         name: "the-threshold",
-        kind: AnchorKind::Threshold,
+        kind: kinds::THRESHOLD,
         attach: Attach::Hub,
         requires: None,
         needs_cold: false,
@@ -187,7 +253,7 @@ pub const INVENTORY: [Pattern; 16] = [
     },
     Pattern {
         name: "the-alcove",
-        kind: AnchorKind::Alcove,
+        kind: kinds::ALCOVE,
         attach: Attach::Hub,
         requires: None,
         needs_cold: false,
@@ -199,9 +265,9 @@ pub const INVENTORY: [Pattern; 16] = [
     },
     Pattern {
         name: "the-fire",
-        kind: AnchorKind::Hearth,
-        attach: Attach::Within(AnchorKind::Alcove),
-        requires: Some(AnchorKind::Alcove),
+        kind: kinds::HEARTH,
+        attach: Attach::Within(kinds::ALCOVE),
+        requires: Some(kinds::ALCOVE),
         needs_cold: true,
         built: true,
         // NO ROLE WITHHOLDS THE FIRE, and it still burns in exactly one room.
@@ -215,9 +281,9 @@ pub const INVENTORY: [Pattern; 16] = [
     },
     Pattern {
         name: "the-fireside-bed",
-        kind: AnchorKind::Bed,
-        attach: Attach::Beside(AnchorKind::Hearth),
-        requires: Some(AnchorKind::Hearth),
+        kind: kinds::BED,
+        attach: Attach::Beside(kinds::HEARTH),
+        requires: Some(kinds::HEARTH),
         needs_cold: true,
         built: true,
         // Confined the same way, one link further along the chain: a bed by the
@@ -228,8 +294,8 @@ pub const INVENTORY: [Pattern; 16] = [
     },
     Pattern {
         name: "the-water-jar",
-        kind: AnchorKind::Vessel,
-        attach: Attach::Beside(AnchorKind::Ground),
+        kind: kinds::VESSEL,
+        attach: Attach::Beside(kinds::GROUND),
         requires: None,
         needs_cold: false,
         built: true,
@@ -239,9 +305,9 @@ pub const INVENTORY: [Pattern; 16] = [
     },
     Pattern {
         name: "the-screen",
-        kind: AnchorKind::Screen,
-        attach: Attach::Beside(AnchorKind::Threshold),
-        requires: Some(AnchorKind::Threshold),
+        kind: kinds::SCREEN,
+        attach: Attach::Beside(kinds::THRESHOLD),
+        requires: Some(kinds::THRESHOLD),
         needs_cold: false,
         built: true,
         // A screen affords nothing and shapes sightlines, which is a thing worth
@@ -253,7 +319,7 @@ pub const INVENTORY: [Pattern; 16] = [
     // --- wild ---
     Pattern {
         name: "the-clearing",
-        kind: AnchorKind::Ground,
+        kind: kinds::GROUND,
         attach: Attach::Hub,
         requires: None,
         needs_cold: false,
@@ -266,8 +332,8 @@ pub const INVENTORY: [Pattern; 16] = [
     },
     Pattern {
         name: "the-pool",
-        kind: AnchorKind::Pool,
-        attach: Attach::Beside(AnchorKind::Ground),
+        kind: kinds::POOL,
+        attach: Attach::Beside(kinds::GROUND),
         requires: None,
         needs_cold: false,
         built: false,
@@ -288,9 +354,9 @@ pub const INVENTORY: [Pattern; 16] = [
     // strongbox stands in a room for keeping things, beside the water jar.
     Pattern {
         name: "the-strongbox",
-        kind: AnchorKind::Strongbox,
-        attach: Attach::Beside(AnchorKind::Vessel),
-        requires: Some(AnchorKind::Vessel),
+        kind: kinds::STRONGBOX,
+        attach: Attach::Beside(kinds::VESSEL),
+        requires: Some(kinds::VESSEL),
         needs_cold: false,
         built: true,
         roles: &[Role::Store],
@@ -299,9 +365,9 @@ pub const INVENTORY: [Pattern; 16] = [
     },
     Pattern {
         name: "the-high-seat",
-        kind: AnchorKind::HighSeat,
-        attach: Attach::Beside(AnchorKind::Threshold),
-        requires: Some(AnchorKind::Threshold),
+        kind: kinds::HIGH_SEAT,
+        attach: Attach::Beside(kinds::THRESHOLD),
+        requires: Some(kinds::THRESHOLD),
         needs_cold: false,
         built: true,
         // A high seat is set where whoever sits in it sees who comes in. That is
@@ -312,9 +378,9 @@ pub const INVENTORY: [Pattern; 16] = [
     },
     Pattern {
         name: "the-loom",
-        kind: AnchorKind::Loom,
-        attach: Attach::Beside(AnchorKind::Threshold),
-        requires: Some(AnchorKind::Threshold),
+        kind: kinds::LOOM,
+        attach: Attach::Beside(kinds::THRESHOLD),
+        requires: Some(kinds::THRESHOLD),
         needs_cold: false,
         built: true,
         // Weaving wants light, and in a building with no windows the doorway is
@@ -325,9 +391,9 @@ pub const INVENTORY: [Pattern; 16] = [
     },
     Pattern {
         name: "the-anvil",
-        kind: AnchorKind::Anvil,
-        attach: Attach::Beside(AnchorKind::Vessel),
-        requires: Some(AnchorKind::Vessel),
+        kind: kinds::ANVIL,
+        attach: Attach::Beside(kinds::VESSEL),
+        requires: Some(kinds::VESSEL),
         needs_cold: false,
         built: true,
         // The quench. An anvil without water within arm's reach is a smithy
@@ -339,9 +405,9 @@ pub const INVENTORY: [Pattern; 16] = [
     },
     Pattern {
         name: "the-altar",
-        kind: AnchorKind::Altar,
-        attach: Attach::Beside(AnchorKind::Vessel),
-        requires: Some(AnchorKind::Vessel),
+        kind: kinds::ALTAR,
+        attach: Attach::Beside(kinds::VESSEL),
+        requires: Some(kinds::VESSEL),
         needs_cold: false,
         built: true,
         // The washing the rite asks for before it begins.
@@ -382,9 +448,9 @@ pub const INVENTORY: [Pattern; 16] = [
     // strongbox or it is nowhere.
     Pattern {
         name: "the-key-in-the-strongbox",
-        kind: AnchorKind::Key,
-        attach: Attach::Within(AnchorKind::Strongbox),
-        requires: Some(AnchorKind::Strongbox),
+        kind: kinds::KEY,
+        attach: Attach::Within(kinds::STRONGBOX),
+        requires: Some(kinds::STRONGBOX),
         needs_cold: false,
         built: true,
         roles: &[Role::Store],
@@ -478,9 +544,53 @@ pub const INVENTORY: [Pattern; 16] = [
     // kind is present, and `the-loom` is index 11.
     Pattern {
         name: "the-key-by-the-loom",
-        kind: AnchorKind::Key,
-        attach: Attach::Beside(AnchorKind::Loom),
-        requires: Some(AnchorKind::Loom),
+        kind: kinds::KEY,
+        attach: Attach::Beside(kinds::LOOM),
+        requires: Some(kinds::LOOM),
+        needs_cold: false,
+        built: true,
+        roles: &[Role::Loomroom],
+        at_locale: false,
+        needs_populous: false,
+    },
+    // --- The Wicket, Task 5: the brazier ---
+    //
+    // The proof kind: a kind that could not have existed under the closed
+    // `AnchorKind` enum this campaign deleted, arriving as five data rows
+    // and no dispatcher edit. `RadiatesHeat` gates `warm` the same way
+    // `hearth`'s row does (`affordance::object_registry`); this is simply a
+    // second carrier, outside a hearthroom.
+    //
+    // **Placed in the loomroom, not the shrine.** An earlier draft of this
+    // task placed it in a shrine; `Role::Shrine` measures **zero** across the
+    // 48-seed sweep this file's own comments record (`role_for` reaches it
+    // only through `Function::Cult`, which no flagship a possession starts
+    // at carries), so that placement would have been a brazier in no world —
+    // decision 0398's own finding, repeated on a third field after the two
+    // key patterns above it already state it once each. `Role::Loomroom` is
+    // the one role the sweep found at chamber index 2 in 24 of 24 structures
+    // that have an index 2 at all, and Step 1's own probe (seeds 42, 7, 1234)
+    // confirms both existence (all three) and reachability (seed 42's
+    // flagship walks straight to it).
+    //
+    // `attach: Attach::Beside(kinds::LOOM)` and `requires: Some(kinds::LOOM)`
+    // for the same reason `the-key-by-the-loom` above it takes both: the
+    // grammar confines this to the loomroom without a rule anyone wrote, the
+    // way `requires: Some(Alcove)` confines the fire to the hearthroom.
+    // `Attach::Beside`, not `Within`: a brazier is not a container, so this
+    // composes no new (container, contained) pair.
+    //
+    // **Append, never insert.** `draw` admits a pattern only once its
+    // `requires` kind is present, so `the-loom` must precede this row or the
+    // brazier is silently dropped from every composition it would otherwise
+    // join. `at_locale: false` keeps the append LATENT under `INVENTORY`'s
+    // own three-part epoch rule (the chamber renderer reads it; nothing that
+    // commits does).
+    Pattern {
+        name: "the-brazier",
+        kind: kinds::BRAZIER,
+        attach: Attach::Beside(kinds::LOOM),
+        requires: Some(kinds::LOOM),
         needs_cold: false,
         built: true,
         roles: &[Role::Loomroom],
@@ -559,7 +669,7 @@ fn draw_from(
     admits: impl Fn(&'static Pattern) -> bool,
 ) -> Vec<&'static Pattern> {
     let mut out: Vec<&'static Pattern> = Vec::new();
-    let mut present: std::collections::BTreeSet<AnchorKind> = std::collections::BTreeSet::new();
+    let mut present: std::collections::BTreeSet<KindId> = std::collections::BTreeSet::new();
     for p in inventory.iter() {
         if p.built != built {
             continue;
@@ -628,7 +738,7 @@ pub fn compose(selected: &[&Pattern]) -> Interior {
     let mut interior = Interior::new();
     let mut hub: Option<AnchorId> = None;
     // First placed anchor of each kind — the attachment target.
-    let mut first_of: std::collections::BTreeMap<AnchorKind, AnchorId> =
+    let mut first_of: std::collections::BTreeMap<KindId, AnchorId> =
         std::collections::BTreeMap::new();
 
     for p in selected {
@@ -648,7 +758,7 @@ pub fn compose(selected: &[&Pattern]) -> Interior {
         {
             interior.connect(t, id);
         }
-        if hub.is_none() && p.kind == AnchorKind::Ground {
+        if hub.is_none() && p.kind == kinds::GROUND {
             hub = Some(id);
         }
         first_of.entry(p.kind).or_insert(id);
@@ -688,7 +798,7 @@ mod tests {
             "climate must change which patterns a people uses"
         );
         assert!(
-            cold.iter().any(|p| p.kind == AnchorKind::Hearth),
+            cold.iter().any(|p| p.kind == kinds::HEARTH),
             "a cold people builds around a fire"
         );
     }
@@ -701,7 +811,7 @@ mod tests {
         // other patterns" made checkable.
         let warm = selection(true, false);
         assert!(
-            !warm.iter().any(|p| p.kind == AnchorKind::Hearth),
+            !warm.iter().any(|p| p.kind == kinds::HEARTH),
             "no fire in a warm room (fixture precondition)"
         );
         assert!(
@@ -727,7 +837,7 @@ mod tests {
             "an unbuilt room contains no built patterns"
         );
         assert!(
-            !wild.iter().any(|p| p.kind == AnchorKind::Threshold),
+            !wild.iter().any(|p| p.kind == kinds::THRESHOLD),
             "wilderness needs no doorway"
         );
     }
@@ -793,15 +903,15 @@ mod tests {
         // Not merely SOME 3-hop route: the route the grammar was designed to
         // produce. threshold -> ground -> alcove -> hearth -> bed.
         let interior = compose(&selection(true, true));
-        let find = |k: AnchorKind| {
+        let find = |k: KindId| {
             interior
                 .ids()
                 .into_iter()
                 .find(|id| interior.anchor(*id).kind == k)
                 .unwrap_or_else(|| panic!("a cold built room has a {k:?}"))
         };
-        let door = find(AnchorKind::Threshold);
-        let bed = find(AnchorKind::Bed);
+        let door = find(kinds::THRESHOLD);
+        let bed = find(kinds::BED);
         let plan = crate::interior::route_within(&interior, door, bed, 256)
             .expect("the bed is reachable from the door");
         assert!(
@@ -885,7 +995,7 @@ mod tests {
     /// thing that made a pattern addition safe has stopped holding.
     /// `windows/vessel/src/thing.rs` keys a thing's `EntityId` on
     /// `(room facet, kind, ordinal)` and every caller hardcodes ordinal `0`,
-    /// which is legitimate ONLY while each `AnchorKind` occurs at most once per
+    /// which is legitimate ONLY while each kind occurs at most once per
     /// composed interior. The moment one occurs twice, two distinct things in
     /// one room derive the SAME entity id: every fact about either keys to the
     /// other, and no gate in this tree can see it — a derived id has no
@@ -914,7 +1024,7 @@ mod tests {
         let mut census = |label: String, selected: Vec<&'static Pattern>| {
             combinations += 1;
             let interior: Interior = compose(&selected);
-            let mut counts: std::collections::BTreeMap<AnchorKind, usize> =
+            let mut counts: std::collections::BTreeMap<KindId, usize> =
                 std::collections::BTreeMap::new();
             for id in interior.ids() {
                 *counts.entry(interior.anchor(id).kind).or_insert(0) += 1;
@@ -996,7 +1106,7 @@ mod tests {
     #[test]
     fn the_grammar_puts_exactly_these_things_inside_other_things() {
         let mut combinations = 0usize;
-        let mut pairs: std::collections::BTreeSet<(AnchorKind, AnchorKind)> =
+        let mut pairs: std::collections::BTreeSet<(KindId, KindId)> =
             std::collections::BTreeSet::new();
 
         let mut census = |selected: Vec<&'static Pattern>| {
@@ -1032,13 +1142,13 @@ mod tests {
         );
         assert_eq!(combinations, 60, "the census swept {combinations}, not 60");
 
-        let expected: std::collections::BTreeSet<(AnchorKind, AnchorKind)> = [
+        let expected: std::collections::BTreeSet<(KindId, KindId)> = [
             // The Offer's Task 6 finding, unchanged: a fire within an alcove.
-            (AnchorKind::Alcove, AnchorKind::Hearth),
+            (kinds::ALCOVE, kinds::HEARTH),
             // The Chattel's Task 11 addition, and the whole point of it: a
             // production room that actually holds something inside a
             // container `open` can open.
-            (AnchorKind::Strongbox, AnchorKind::Key),
+            (kinds::STRONGBOX, kinds::KEY),
         ]
         .into_iter()
         .collect();
@@ -1072,7 +1182,7 @@ mod tests {
         for &role in EVERY_ROLE {
             let has_fire = selection_for(role, true, true, true)
                 .iter()
-                .any(|p| p.kind == AnchorKind::Hearth);
+                .any(|p| p.kind == kinds::HEARTH);
             assert_eq!(
                 has_fire,
                 role == Role::Hearthroom,
@@ -1357,10 +1467,7 @@ mod tests {
         let stands_a_container = selection_for(Role::Loomroom, true, false, false)
             .iter()
             .any(|p| {
-                crate::affordance::carries(
-                    crate::affordance::thing_kind_of(p.kind),
-                    crate::affordance::ObjectProperty::Encloses,
-                )
+                crate::affordance::carries(p.kind, crate::affordance::ObjectProperty::Encloses)
             });
         assert!(
             !stands_a_container,
@@ -1441,7 +1548,7 @@ mod tests {
         static SYNTHETIC: [Pattern; 2] = [
             Pattern {
                 name: "test-ground",
-                kind: AnchorKind::Ground,
+                kind: kinds::GROUND,
                 attach: Attach::Hub,
                 requires: None,
                 needs_cold: false,
@@ -1452,8 +1559,8 @@ mod tests {
             },
             Pattern {
                 name: "test-town-only",
-                kind: AnchorKind::Strongbox,
-                attach: Attach::Beside(AnchorKind::Ground),
+                kind: kinds::STRONGBOX,
+                attach: Attach::Beside(kinds::GROUND),
                 requires: None,
                 needs_cold: false,
                 built: true,
@@ -1517,8 +1624,8 @@ mod tests {
         // The first well-formedness rule (spec §6): an unreachable anchor means
         // part of the room cannot be used, so the composition is ill-formed.
         let mut broken = Interior::new();
-        broken.push(AnchorKind::Hearth, None);
-        broken.push(AnchorKind::Bed, None); // no edge — orphaned
+        broken.push(kinds::HEARTH, None);
+        broken.push(kinds::BED, None); // no edge — orphaned
         assert!(
             !permits(&broken),
             "the validator rejects an unreachable anchor"

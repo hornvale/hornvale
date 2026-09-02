@@ -11,8 +11,6 @@
 
 #[path = "suite/accession.rs"]
 mod accession;
-#[path = "suite/anchor_thing_correspondence.rs"]
-mod anchor_thing_correspondence;
 #[path = "suite/architecture.rs"]
 mod architecture;
 #[path = "suite/attest.rs"]
@@ -25,8 +23,6 @@ mod branches_coverage;
 mod branches_identity;
 #[path = "suite/build_path_embedding.rs"]
 mod build_path_embedding;
-#[path = "suite/cave_kind_correspondence.rs"]
-mod cave_kind_correspondence;
 #[path = "suite/census_duration.rs"]
 mod census_duration;
 #[path = "suite/claim_shape.rs"]
@@ -70,6 +66,8 @@ mod locale_cli;
 mod no_entity_id_values_in_prose;
 #[path = "suite/prose_is_not_a_contract.rs"]
 mod prose_is_not_a_contract;
+#[path = "suite/provision.rs"]
+mod provision;
 #[path = "suite/release_determinism.rs"]
 mod release_determinism;
 #[path = "suite/repertory_corpus.rs"]
@@ -106,5 +104,7 @@ mod the_unnameable;
 mod timings_alarm;
 #[path = "suite/trope_coverage.rs"]
 mod trope_coverage;
+#[path = "suite/trope_witness.rs"]
+mod trope_witness;
 #[path = "suite/walk_depth_agreement.rs"]
 mod walk_depth_agreement;

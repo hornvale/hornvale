@@ -68,7 +68,7 @@ pub const FLOOR_NOUN: &str = "the floor";
 /// type-audit: bare-ok(prose)
 pub const WALL_NOUN: &str = "a wall";
 /// What the legend calls [`DOORWAY`]. The SAME words
-/// `chamber_prose::noun(AnchorKind::Threshold)` uses, asserted by
+/// `chamber_prose::noun(kinds::THRESHOLD.0)` uses, asserted by
 /// `the_plans_word_for_a_doorway_is_the_chambers_word` — two words for one thing
 /// is the drift §6 exists to prevent, and a player who reads `a doorway` off the
 /// plan will type exactly that.
@@ -170,6 +170,7 @@ mod tests {
     use crate::site::{Site, SiteKind};
     use crate::structure::structure_at;
     use hornvale_kernel::{Facet, Seed};
+    use hornvale_thing::kinds;
 
     const WALK: u32 = 13;
     const SEEDS: std::ops::Range<u64> = 0..48;
@@ -357,7 +358,7 @@ mod tests {
         // resolves it against the chamber's anchors.
         assert_eq!(
             Some(DOORWAY_NOUN),
-            crate::chamber_prose::noun(crate::interior::AnchorKind::Threshold)
+            crate::chamber_prose::noun(kinds::THRESHOLD.0)
         );
     }
 

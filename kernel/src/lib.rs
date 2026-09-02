@@ -7,6 +7,7 @@
 
 pub mod astar;
 pub mod band;
+pub mod cave;
 pub mod claim;
 pub mod color;
 pub mod component;
@@ -17,8 +18,10 @@ pub mod ecology;
 mod fact_index;
 pub mod field;
 pub mod fold;
+pub mod genesis;
 pub mod geosphere;
 pub mod golden;
+pub mod horizon;
 pub mod ledger;
 pub mod manifest;
 pub mod math;
@@ -40,6 +43,7 @@ pub mod world;
 
 pub use astar::{AStarSolver, FieldSolver, SearchSpace, Solver, astar};
 pub use band::Band;
+pub use cave::CaveKind;
 pub use claim::Claim;
 pub use color::{
     BAND_CENTERS_NM, BANDS, ChannelRole, Illuminant, Mixture, Observer, Projection, Reflectance,
@@ -55,15 +59,17 @@ pub use ecology::{
     environment_v1_basis, sovereignty_floor, v1_basis,
 };
 pub use field::{ConstantField, Field, NoiseField, Position, WorldTime};
+pub use genesis::{GenesisError, GenesisOutcome};
 pub use geosphere::{GeoCoord, Geosphere, NearestVertexIndex, Vertex, VertexMap};
+pub use horizon::Horizon;
 pub use ledger::{
     EntityId, Fact, KindId, Ledger, LedgerError, Lineage, Value, derive_entity_id, test_lineage,
 };
 pub use manifest::{CognitiveHandle, Correspondent, Lexicalization, Manifest, PerceptKind, Void};
 pub use noise::{Fbm, fbm_2d, value_noise_2d};
 pub use phenomena::{
-    ObserverContext, PerceptionLens, PhenomenaSource, Phenomenon, Referent, VISIBILITY_FLOOR,
-    Venue, Visibility, observe,
+    ObserverContext, PerceptionLens, PhenomenaSource, Phenomenon, Referent, Sentiment,
+    VISIBILITY_FLOOR, Venue, Visibility, observe,
 };
 pub use polyline::{SphericalPolyline, band};
 pub use precision::Precision;

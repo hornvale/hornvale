@@ -212,15 +212,7 @@ impl TectonicGlobe {
     }
 }
 
-/// What tectonic genesis produced: the globe plus degradation notes.
-/// type-audit: bare-ok(prose: notes)
-#[derive(Debug, Clone, PartialEq)]
-pub struct GenesisOutcome {
-    /// The generated globe.
-    pub globe: TectonicGlobe,
-    /// Degradation notes (empty when genesis was untroubled).
-    pub notes: Vec<String>,
-}
+pub use hornvale_kernel::genesis::GenesisOutcome;
 
 /// Generate a tectonic globe. Derives the terrain root stream from the
 /// world seed exactly once; every sub-step consumes its own labeled child
@@ -231,7 +223,7 @@ pub fn generate(
     world_seed: Seed,
     geosphere: &Geosphere,
     pins: &TerrainPins,
-) -> Result<GenesisOutcome, GenesisError> {
+) -> Result<GenesisOutcome<TectonicGlobe>, GenesisError> {
     pins::validate(pins)?;
     let terrain_seed = world_seed.derive(streams::ROOT);
     let mut notes = Vec::new();
@@ -580,7 +572,10 @@ pub fn generate(
     };
     globe.lithology = crate::lithology::assemble_material(geosphere, &globe);
 
-    Ok(GenesisOutcome { globe, notes })
+    Ok(GenesisOutcome {
+        value: globe,
+        notes,
+    })
 }
 
 /// Headline numbers of a globe, for facts and the almanac.
@@ -628,7 +623,7 @@ mod tests {
     fn the_globe_retains_the_post_carve_downhill_graph() {
         let geo = Geosphere::new(4);
         let outcome = generate(Seed(42), &geo, &TerrainPins::default()).unwrap();
-        let g = &outcome.globe;
+        let g = &outcome.value;
         // Every land vertex either has a downhill target or is a terminal sink.
         let mut with_target = 0usize;
         for c in geo.vertices() {
@@ -652,7 +647,7 @@ mod tests {
         // elevation/sea level must reproduce it exactly.
         let geo = Geosphere::new(4);
         let outcome = generate(Seed(42), &geo, &TerrainPins::default()).unwrap();
-        let g = &outcome.globe;
+        let g = &outcome.value;
         let fresh = crate::drainage::downhill_targets(&geo, &g.elevation, g.sea_level);
         for c in geo.vertices() {
             assert_eq!(*g.downhill.get(c), fresh[c.0 as usize], "vertex {c:?}");
@@ -665,8 +660,8 @@ mod tests {
         let outcome = generate(Seed(42), &geo, &TerrainPins::default()).unwrap();
         for vertex in geo.vertices() {
             assert_eq!(
-                *outcome.globe.induration.get(vertex),
-                outcome.globe.lithology.get(vertex).induration,
+                *outcome.value.induration.get(vertex),
+                outcome.value.lithology.get(vertex).induration,
                 "seam and buffer disagree at {vertex:?}"
             );
         }
@@ -685,17 +680,17 @@ mod tests {
         let geo = Geosphere::new(3);
         let a = generate(Seed(1), &geo, &TerrainPins::default()).unwrap();
         let b = generate(Seed(2), &geo, &TerrainPins::default()).unwrap();
-        assert_ne!(a.globe.elevation, b.globe.elevation);
+        assert_ne!(a.value.elevation, b.value.elevation);
     }
 
     #[test]
     fn summary_reports_the_globe() {
         let geo = Geosphere::new(3);
         let outcome = generate(Seed(42), &geo, &TerrainPins::default()).unwrap();
-        let s = summarize(&outcome.globe);
-        assert_eq!(s.plate_count as usize, outcome.globe.plates.len());
+        let s = summarize(&outcome.value);
+        assert_eq!(s.plate_count as usize, outcome.value.plates.len());
         assert!((0.4..=0.8).contains(&s.ocean_fraction));
-        assert_eq!(s.sea_level_m, outcome.globe.sea_level.get());
+        assert_eq!(s.sea_level_m, outcome.value.sea_level.get());
         assert!(s.highest_elevation_m > s.sea_level_m);
     }
 
@@ -762,7 +757,7 @@ mod tests {
     fn the_carved_globe_has_a_shelf_mode_and_consistent_drainage() {
         let geo = Geosphere::new(5);
         let outcome = generate(Seed(42), &geo, &TerrainPins::default()).unwrap();
-        let g = &outcome.globe;
+        let g = &outcome.value;
         // Shelf: some ocean vertices sit in the near-sea band the wedge builds.
         let band = g
             .elevation

@@ -17,10 +17,13 @@
 //! (`windows/locale/src/lib.rs:651-665`, "KNOWN WRONG... kept byte-for-byte
 //! because The Fathom may not move behaviour") hands a rock stratum to
 //! `BiomeExpr::biome()` paired with `Formation::OpenWater`, which panics
-//! (`domains/climate/src/facets.rs:305`, `unreachable!("OpenWater never
-//! pairs with a rock stratum...")`). So executing unmodified `observable_at`
-//! with `Some(Stratum::Basement)` at the flagship's (surface) position does
-//! not silently return the wrong `submerged` — it CRASHES, for a reason this
+//! (`domains/climate/src/facets.rs`, `BiomeExpr::biome`'s
+//! `unreachable!("OpenWater never pairs with a rock stratum...")` arm —
+//! named by symbol rather than by line, which The Hallmark's own retrospective
+//! explains at length). So executing unmodified `observable_at`
+//! with `Some(Stratum::Rock(Horizon::Basement))` at the flagship's
+//! (surface) position does not silently return the wrong `submerged` — it
+//! CRASHES, for a reason this
 //! task does not touch (tracked as followup F-10). This is independent,
 //! stronger evidence for the controller's Correction 2 (the defect is
 //! LATENT, not live): no real call site can even hand a rock stratum through

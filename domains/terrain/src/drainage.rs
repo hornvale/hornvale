@@ -141,7 +141,7 @@ mod tests {
         let geo = Geosphere::new(4);
         let globe = generate(Seed(42), &geo, &TerrainPins::default())
             .unwrap()
-            .globe;
+            .value;
         let (a, ea) = drainage_field(&geo, &globe.elevation, globe.sea_level);
         let (b, _eb) = drainage_field(&geo, &globe.elevation, globe.sea_level);
         assert_eq!(a, b, "drainage must be deterministic");
@@ -178,7 +178,7 @@ mod tests {
         let geo = Geosphere::new(4);
         let globe = generate(Seed(7), &geo, &TerrainPins::default())
             .unwrap()
-            .globe;
+            .value;
         let (d, _e) = drainage_field(&geo, &globe.elevation, globe.sea_level);
         let land: Vec<Vertex> = geo
             .vertices()

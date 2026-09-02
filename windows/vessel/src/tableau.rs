@@ -34,14 +34,28 @@ use serde::{Deserialize, Serialize};
 /// One thing a tableau puts in a creature's hands.
 ///
 /// `kind` is a thing-kind the world already knows (`"key"`, `"loaf"`), not a
-/// free noun. A tableau may stage anything the world can REPRESENT, and the
-/// vocabulary of things is currently a closed enum — see
-/// `MAP-one-kind-model`, which is where that fence gets retired. Until then a
+/// free noun. A tableau may stage anything the world can REPRESENT, and a
 /// staged prop is one of the world's own kinds.
+///
+/// **THE CLOSED-ENUM FENCE IS GONE (The Wicket, Task 2), and this sentence
+/// said the opposite.** It read: *"the vocabulary of things is currently a
+/// closed enum — see `MAP-one-kind-model`, which is where that fence gets
+/// retired. Until then a staged prop is one of the world's own kinds."* True
+/// when written and false now: an anchor carries a
+/// [`hornvale_kernel::KindId`], the vocabulary is
+/// `hornvale_thing::THING_KINDS`, and adding a kind is a row rather than a
+/// variant. What bounds a staged prop today is that roster — open, but
+/// ratcheted — not a type.
+///
+/// `MAP-one-kind-model` is NOT thereby discharged, and reading it that way is
+/// the over-read this correction invites. Its first addition (kinds as data)
+/// is what landed; the other two — kind-to-kind EDGES, and per-instance
+/// components DERIVED from `Lineage` — are untouched, and the registry row is
+/// still open.
 /// type-audit: bare-ok(identifier-text: kind), bare-ok(index: held_by)
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct StagedThing {
-    /// The thing-kind, as `thing_kind_of` labels it.
+    /// The thing-kind, as `hornvale_thing::THING_KINDS` spells it.
     pub kind: String,
     /// Whose hands it is in, as an index into the cast.
     pub held_by: usize,
@@ -60,6 +74,26 @@ pub struct StagedBody {
     pub species: String,
 }
 
+/// A relation the tableau stipulates between two cast members.
+///
+/// `predicate` names a predicate the concept registry already knows — a
+/// tableau may state only what the world could represent (the same rule
+/// [`StagedBody`]'s doc states for species), so a relation naming a
+/// predicate the registry does not hold is refused at apply time, the same
+/// moment an out-of-range [`StagedThing::held_by`] is. `subject` and
+/// `object` mirror [`hornvale_kernel::Fact`]'s own field names: the relation
+/// reads `predicate(subject, object)`.
+/// type-audit: bare-ok(identifier-text: predicate), bare-ok(index: subject), bare-ok(index: object)
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct StagedRelation {
+    /// The predicate, as the concept registry names it.
+    pub predicate: String,
+    /// The relation's subject, as an index into the cast.
+    pub subject: usize,
+    /// The relation's object, as an index into the cast.
+    pub object: usize,
+}
+
 /// A staged situation: what the caller has stipulated, and nothing else.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
@@ -69,6 +103,9 @@ pub struct Tableau {
     pub cast: Vec<StagedBody>,
     /// What they are holding. Empty stages nothing, on the same rule.
     pub things: Vec<StagedThing>,
+    /// Who relates to whom, and how. Empty stages none, on the same rule —
+    /// never "inherit the world's relations".
+    pub relations: Vec<StagedRelation>,
 }
 
 impl Tableau {
@@ -109,6 +146,22 @@ impl Tableau {
         self.things.push(StagedThing {
             kind: kind.into(),
             held_by,
+        });
+        self
+    }
+
+    /// Stage a relation: `predicate(subject, object)`, both cast indices.
+    /// type-audit: bare-ok(index: subject), bare-ok(index: object)
+    pub fn with_relation(
+        mut self,
+        predicate: impl Into<String>,
+        subject: usize,
+        object: usize,
+    ) -> Self {
+        self.relations.push(StagedRelation {
+            predicate: predicate.into(),
+            subject,
+            object,
         });
         self
     }

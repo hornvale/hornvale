@@ -91,7 +91,17 @@ fn world() -> hornvale_kernel::World {
 /// from `book/src/gallery/possession-seed-42.md`, regenerated at this
 /// commit. Both copies moved together — see `the_two_grievance_npc_copies_
 /// agree` below, which is exactly the guard the ninth rename asked for.
-const GRIEVANCE_NPC: &str = "hobgoblin of Naabeena";
+///
+/// **The ELEVENTH is not a rename at all — the KIND of label changed** (The
+/// Roll, Task 7). A settlement's roll is now its residents, and a resident is
+/// a named person rather than a species-and-village phrase, so
+/// `bodies()[1].label` went from `hobgoblin of Naabeena` (a species of a
+/// place) to `Dvoashngashngo` (a name the settlement's own namer drew).
+/// Re-read the same way every earlier rename was: `bodies()[1].label` from a
+/// fresh seed-42 session. It will keep moving with settlement placement
+/// exactly as before; what will NOT come back is the `"<species> of
+/// <village>"` shape, which spec §5 retires for residents.
+const GRIEVANCE_NPC: &str = "Dvoashngashngo";
 
 /// Places the `GRIEVANCE_NPC` body at the possessed body's own room, through
 /// the test seam (`Session::place_creature_at_me`, see

@@ -820,6 +820,12 @@ mod tests {
             .unwrap();
         r.register_predicate("located-in", false, "spatial containment")
             .unwrap();
+        // Functional AND `Value::Entity`-typed — every functional predicate
+        // above uses `Value::Text`. Exists so a test can force
+        // `check`'s contradiction guard on the object shape
+        // `parent-of`/`kin-of` (`domains/person`) actually commit.
+        r.register_predicate("belongs-to", true, "an entity this subject belongs to")
+            .unwrap();
         r
     }
 
@@ -926,6 +932,55 @@ mod tests {
             subject,
             predicate: "name".to_string(),
             object: Value::Text("Bolnar".to_string()),
+            place: None,
+            day: None,
+            provenance: "test".to_string(),
+        };
+        assert!(matches!(
+            l.commit(contradiction, &r),
+            Err(LedgerError::Contradiction { .. })
+        ));
+    }
+
+    #[test]
+    fn functional_contradiction_is_rejected_for_an_entity_object() {
+        // The two existing functional-contradiction tests in this module
+        // (`functional_contradiction_is_rejected`,
+        // `index_backed_commit_matches_naive_semantics`) both use
+        // `Value::Text` objects, so the guard had never been exercised
+        // against `Value::Entity` — the exact object shape `parent-of` and
+        // `kin-of` (`domains/person`, spec §4.3) commit. Closes that gap
+        // directly.
+        let r = registry();
+        let mut l = Ledger::default();
+        let subject = l.mint_entity(Lineage {
+            parent: None,
+            role: "entity-contradiction-subject",
+            ordinal: 0,
+        });
+        let a = l.mint_entity(Lineage {
+            parent: None,
+            role: "entity-contradiction-object",
+            ordinal: 0,
+        });
+        let b = l.mint_entity(Lineage {
+            parent: None,
+            role: "entity-contradiction-object",
+            ordinal: 1,
+        });
+        let f = Fact {
+            subject,
+            predicate: "belongs-to".to_string(),
+            object: Value::Entity(a),
+            place: None,
+            day: None,
+            provenance: "test".to_string(),
+        };
+        l.commit(f, &r).unwrap();
+        let contradiction = Fact {
+            subject,
+            predicate: "belongs-to".to_string(),
+            object: Value::Entity(b),
             place: None,
             day: None,
             provenance: "test".to_string(),

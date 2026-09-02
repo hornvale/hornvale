@@ -45,6 +45,7 @@
 | `is-place` | yes | subject is a traversable place |
 | `is-ruin` | yes | subject is a ruin (a dead occupation) |
 | `is-settlement` | yes | subject is a settlement |
+| `kin-of` | no | a person whose community descended or spun off from this person's community, at any remove other than one generation |
 | `latitude` | yes | settlement latitude, degrees |
 | `longitude` | yes | settlement longitude, degrees |
 | `max-ice-fraction` | yes | land fraction under ice at the glacial maximum |
@@ -83,6 +84,7 @@
 | `occ-site` | yes | the Geosphere cell the occupation sits on |
 | `occ-tech` | yes | the occupation's technological horizon |
 | `ocean-fraction` | yes | fraction of globe cells below sea level |
+| `parent-of` | no | a person whose community was settled from this person's community, one generation removed |
 | `pays-tribute-to` | yes | the community this community pays standing tribute to |
 | `peopled-by` | yes | the species that peoples a settlement |
 | `person-born` | yes | the day this person was born; negative if before the history record began |
@@ -174,6 +176,7 @@
 | `blue-giant` | astronomy | celestial | a hot, brilliant, short-lived star |
 | `bone` | language | body | the rigid frame of a body |
 | `boreal-stand` | climate | substance | A stand of northern conifers. |
+| `brazier` | thing | object | a metal basin that holds a fire apart from a hearth |
 | `brown` | language | quality | the color term for brown |
 | `bugbear-kind` | species | living | a bugbear |
 | `burn` | climate | substance | Ground recovering from fire. |

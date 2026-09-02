@@ -106,7 +106,7 @@ fn draw_stream(seed: Seed, site: Vertex, founded_year: i64) -> Stream {
 /// **Consumes exactly one draw**, which is what lets a caller that needs only
 /// the *first* axis ([`drawn_threat_response`]) reach the identical value the
 /// three-axis [`people_disposition`] would put there.
-fn perturb(stream: &mut Stream, location: f64, spread: f64) -> f64 {
+pub(crate) fn perturb(stream: &mut Stream, location: f64, spread: f64) -> f64 {
     // `next_f64` is [0, 1), so this is [−1, 1) — asymmetric by one ULP at
     // the top, which is standard for a uniform built this way and is not
     // worth a rejection loop.

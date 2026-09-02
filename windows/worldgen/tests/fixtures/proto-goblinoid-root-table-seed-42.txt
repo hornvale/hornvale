@@ -14,6 +14,7 @@ blood: Tae /tae/
 blue: Ta /ta/
 bone: Padea /padea/
 boreal-stand: Doane /doane/
+brazier: Teo /teo/
 brown: Paane /paane/
 bugbear-kind: Deetee /deetee/
 burn: Pa /pa/

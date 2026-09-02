@@ -12,11 +12,38 @@ taken through that bias and nothing more. The finding a single column cannot
 carry is where the instruments **disagree** — which is what the demand table
 below is for.
 
+**Stageable now means witnessed, not merely named (decisions 0577/0583).** A
+situation scores Stageable only when every requirement token resolves, a
+tableau is registered under its id, and the tableau stages successfully —
+its cast places as entities and its relations commit without contradiction.
+The witness's staged-relation predicates and the situation's own required
+`predicate:` tokens must be the SAME SET, not merely one a subset of the
+other: every predicate the tableau relates by is one the situation requires,
+AND every `predicate:` token the situation requires is realized by at least
+one staged relation — so neither an extraneous relation nor an uncovered
+requirement can pass silently, and a witness with no relations at all can
+bind only to a situation that requires none. **Known limits, named as an
+open list, not a closed one:** actant ROLE assignment is never checked
+(`actants` is prose-valued); a `concept:`/`phenomenon:` requirement is never
+realized by a relation at all, since nothing a tableau stages can represent
+one, so such a requirement is never actually witnessed even on a Stageable
+situation; and the bar is name-level, not aptness-level — a relation naming
+a registered predicate counts as realizing it whatever its actual arguments
+are.
+
+**A count taken before this gate existed is not comparable to one taken
+after it.** Before, a count measured token membership alone; after, it
+measures the strictly harder, bound claim above. Migration cost was zero at
+the moment this gate was wired (spec §4.2) — no situation here had a witness
+to lose — so counts taken today are unchanged from the last pre-witness run,
+but that is a fact about today's corpus, not a property that would let a
+future reader diff the two eras' counts meaningfully.
+
 ## Columns
 
-All columns resolve against one registry of 395 tokens, built once per run,
-so a difference between columns is a difference between catalogues and never
-between two worlds.
+All columns resolve against one provision table of 405 served tokens, built
+once per run, so a difference between columns is a difference between
+catalogues and never between two worlds.
 
 | Corpus | Stageable | Inapplicable | Report |
 |---|---|---|---|
