@@ -474,3 +474,41 @@ with a `debug_assert!` naming the invariant (append-only trail; cursor set
 only to its length; the index is discarded with the store it lives in) so a
 violation panics on the slice instead of being clamped silently. Nothing
 calls the index yet; the hash constants held.
+
+## Stage 2 gate — green (`req-062811a20e79`, all stage phases rc=0 in 952 s, main unchanged at `0dccce029`)
+
+## Task 6 — complete (`1292b3748`, fix `9b5a54203`; one fix round)
+
+The scan and the emitter-free read advance over the index. Byte-identity
+was proven site by site at review (opus): the emitter-free domain ("some
+visit ≤ t") equals the index's ("first visit ≤ t") because a room's visit
+days are ascending and its first is the minimum; the scan's `ever` and halo
+are the same set in a different insertion order into a `BTreeSet`; the one
+shared predicate `feels_frightening(threat, 0.0, boldness)` agrees with the
+scan's old `threat × mettle ≥ DANGER_ACT` on EVERY `f64`, not only the
+30,401-point sweep, because the clamp can only move a value across 1.0 or
+0.0 and the threshold is 0.3; the witness-first ordering and the emitter
+path are untouched. Oracles are verbatim pre-rewrite bodies (diffed against
+`fb9e6d94d`): 12 probes × 2 seeds, 69 of 120 emitter slots, 497 frightening
+pairs, identical. `frightened_at`/`alarm_at` are `#[cfg(test)]` now — their
+only production caller was the replaced loop.
+
+**H5, second reading (calls):** RED on the pre-Task-6 tree — warm read
+1,089, tick 60 44,694; GREEN — warm read **0**, tick 60 **3,168** (≤ 4,469).
+**H6:** judged rooms per tick grow 2.42× slower than the roster's distinct
+rooms, taken at tick 57 because tick 60 judges zero rooms (disclosed, not
+picked). **The 3,168 remaining calls, measured, not reasoned** (fix round
+1): `alarm_field_memo`'s per-member gate 450 + the scan's per-member home
+judgement 450 + the walk's own `Danger::urgency` per-step sampling 2,268.
+The fear fold is now 28% of the tick's terrain questions; the live drive's
+per-step sampling is the other 72% — carried to the followup register as
+the next quarry on this axis.
+
+Two Importants at review, both fixed: the index had no stated
+terrain-ownership rule (now the same `(LocaleContext, predator field)` rule
+`GroundHazards` and `SustenanceMemo` carry, with a test that OBSERVES the
+aliasing it forbids); the remainder above was unattributed. Four minors
+deferred to the final review: hardcoded tick indices; the growth assertion's
+message not naming its late tick, and `late` being data-selected; the chaos
+comparator's reach shrinking to 90 rooms once the index is warm; the
+oracle test comparing the full-roster emitter-free branch zero times.
