@@ -43,7 +43,16 @@ ruling per task boundary; it is a committed file, not scratch (The Cartulary).
   event and this campaign has no mandate for one.
 - **Commit gate:** `make gate-commit` before each commit that stages a Rust path.
   Docs-only commits skip it automatically (the `pre-commit` hook says so).
-- **Never `--no-verify`.** Never disable a test to make it pass.
+- **Never bypass the commit hooks.** Never disable a test to make it pass.
+- **LINE NUMBERS AND CALLER COUNTS IN THIS PLAN ARE STALE BY CONSTRUCTION.**
+  They were measured at `25ee1d830` from a checkout nine commits behind
+  `origin/main`, and `windows/vessel/src/session.rs` alone has since moved
+  `seam_world` from line 7938 to 9124. **Grep for every symbol; never navigate
+  by a line number this plan gives you, and re-derive every count before you
+  record it.** Where a step says "recompute rather than assume", that is not
+  boilerplate. Figures re-derived at Task 3's branch point: `seam_world` has 86
+  callers in `src/session.rs` and 24 in `tests/suite/session.rs`;
+  `surrounds.rs::world` has 35; `generated(42)` is 43 of 54.
 
 ---
 
@@ -61,10 +70,10 @@ ruling per task boundary; it is a committed file, not scratch (The Cartulary).
 - `cli/tests/suite.rs` — declare the new module (one `#[path]` + `mod` pair).
 - `windows/worldgen/src/lib.rs` — `pub mod fixture;` and a re-export; later, its
   own test helpers `generated`/`constant`.
-- `windows/vessel/src/session.rs:7938` — `seam_world` body.
-- `windows/scene/src/surrounds.rs:929` — `world` body.
+- `windows/vessel/src/session.rs` — `seam_world` body.
+- `windows/scene/src/surrounds.rs` — `world` body.
 - `windows/worldgen/tests/suite/exposure.rs` — `world` body.
-- `windows/vessel/tests/suite/session.rs:9` — `seam_world` body.
+- `windows/vessel/tests/suite/session.rs` — `seam_world` body.
 - `windows/vessel/tests/suite/session_snapshot.rs` — `world` body.
 - `windows/vessel/tests/suite/the_blocking.rs` — `world` body.
 - `docs/decisions/0606-*.md`, `docs/decisions/0607-*.md` — new records.
@@ -898,8 +907,8 @@ Its own byte-identity test is a build-path roster row, not a migration."
 ## Task 3: Migrate the flagship — vessel's `seam_world` (84 + 24 callers)
 
 **Files:**
-- Modify: `windows/vessel/src/session.rs:7938` (`seam_world`)
-- Modify: `windows/vessel/tests/suite/session.rs:9` (`seam_world`)
+- Modify: `windows/vessel/src/session.rs` (`seam_world`)
+- Modify: `windows/vessel/tests/suite/session.rs` (`seam_world`)
 - Modify: `cli/tests/fixtures/world-build-sites.tsv`
 - Modify: `cli/tests/suite/world_build_sites.rs` (lower `UNMIGRATED_CEILING`)
 
@@ -1025,7 +1034,7 @@ Replace `<before>`, `<after>` and `<N>` with the real measurements.
 ## Task 4: Migrate scene and worldgen's exposure suite (58 callers)
 
 **Files:**
-- Modify: `windows/scene/src/surrounds.rs:929` (`world`)
+- Modify: `windows/scene/src/surrounds.rs` (`world`)
 - Modify: `windows/worldgen/tests/suite/exposure.rs` (`world`)
 - Modify: `cli/tests/fixtures/world-build-sites.tsv`
 - Modify: `cli/tests/suite/world_build_sites.rs` (`UNMIGRATED_CEILING`)
@@ -1116,7 +1125,7 @@ No test body changed. Roster and ceiling lowered to match."
 **Files:**
 - Modify: `windows/vessel/tests/suite/session_snapshot.rs` (`world`, 16 callers)
 - Modify: `windows/vessel/tests/suite/the_blocking.rs` (`world`, 15 callers)
-- Modify: `windows/worldgen/src/lib.rs:12066` (`generated`, 43 of 53 callers)
+- Modify: `windows/worldgen/src/lib.rs` (`generated`, 43 of 54 callers)
 - Modify: `cli/tests/fixtures/world-build-sites.tsv`
 - Modify: `cli/tests/suite/world_build_sites.rs` (`UNMIGRATED_CEILING`)
 
@@ -1183,7 +1192,7 @@ replacement:
 message and pin arguments — the non-42 arm must remain byte-identical to what it
 was, or tests at other seeds change meaning.
 
-**Do not touch `constant(seed)` at line 12055.** It builds under
+**Do not touch `constant(seed)`.** It builds under
 `SkyChoice::Constant`, a different pin signature the seed-42 fixture does not
 hold. It keeps its `identity` row. Spec §3.4.
 
