@@ -56,9 +56,10 @@ counts *sites textually present in a file*, not *call sites reached at
 runtime* — a single row can gate dozens of callers through a shared helper.
 This campaign's own migrations moved 239 call sites (measured at `c3f35ef9e`
 with a word-boundary regex: 110 in `windows/vessel`, 54 in `windows/scene` and
-`windows/worldgen`'s exposure suite, 75 in `windows/worldgen`'s remaining
-seed-42 helpers) while the ceiling moved only 16 points. Task 5 is the
-sharpest case: 43 call sites through `windows/book/src/lib.rs::generated`
+`windows/worldgen`'s exposure suite, 75 across Task 5's remaining seed-42
+helpers — 32 in `windows/vessel` (`session_snapshot.rs` and `the_blocking.rs`)
+and 43 in `windows/worldgen`) while the ceiling moved only 16 points. Task 5
+is the sharpest case: 43 call sites through `windows/worldgen/src/lib.rs::generated`
 stopped building for every seed **other** than 42, but the file's own row did
 not move at all, because `generated()`'s single `build_world(` call is still
 textually present in the source, now behind an `if seed == 42` guard that

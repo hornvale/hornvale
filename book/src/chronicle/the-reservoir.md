@@ -135,15 +135,16 @@ below is a lower bound, never a best case:
 ```
 
 239 call sites moved across the three migration tasks (110 in `windows/vessel`,
-54 across `windows/scene` and `windows/worldgen`'s exposure suite, 75 in
-`windows/worldgen`'s remaining seed-42 helpers), and `UNMIGRATED_CEILING`
-dropped from 350 to 334 — sixteen points.
+54 across `windows/scene` and `windows/worldgen`'s exposure suite, 75 across
+Task 5's remaining seed-42 helpers — 32 in `windows/vessel`
+(`session_snapshot.rs` and `the_blocking.rs`) and 43 in `windows/worldgen`),
+and `UNMIGRATED_CEILING` dropped from 350 to 334 — sixteen points.
 
 That gap between 239 call sites and 16 roster points is the number this
 campaign is most likely to be misread by, so it is worth stating plainly:
 **the roster counts sites textually present in a file, never callers reached
 at runtime.** A single helper's row gates however many call sites route
-through it. The sharpest instance is `windows/book/src/lib.rs::generated`:
+through it. The sharpest instance is `windows/worldgen/src/lib.rs::generated`:
 migrating it to read the fixture behind an `if seed == 42` guard stopped 43
 call sites from building for every seed *other* than 42 — and the file's own
 roster row did not move at all, because `build_world(` is still textually
