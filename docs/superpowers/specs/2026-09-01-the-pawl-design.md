@@ -675,3 +675,313 @@ rather than a surprise.**
   only in appearance. A future preregistration for a change-of-order fix
   should state its shape criterion on `fold_depth_sweep.rs` and its share
   criterion here, rather than asking one bench for both.
+
+## 12. The second readout, after the accumulator
+
+Every number below is a fresh run on the development Mac, `--release`, taken
+2026-09-02 between 07:13 and 08:20 local (11:13–12:20 UTC), paired and
+interleaved against the same merge-base control §11.1 introduced. **§4 is not
+edited and §11 is not rewritten**; both readouts are reported, and §11 stands
+exactly as it was measured.
+
+### 12.0 Exactly one post-unblinding change was made, and what kind of change it was
+
+Between §11 and §12 the campaign made **one** change to production code:
+Task 5b (`5124b9bba`, with the doc correction `f29768d56`), the `Sustenance`
+prefix accumulator.
+
+**It is mechanism-completing, not constant-tuning, and the distinction is
+checkable rather than rhetorical.** §2.4 specified `Sustenance`'s state as
+"accumulated integral `A`, last sighting, segment-start position, last reset,
+plus the checkpoint list". Stage 1 shipped the checkpoint list alone and
+**re-integrated from the last reset on every read**. For the 21 of 50 agents
+on this bench that never drink — H2's probe agent among them — "the last
+reset" is genesis, so that read was `O(history)` with a terrain sample per
+segment, and it was the unattributed ~99% of `drive_at`'s ecological cost that
+§11.7 named as its leading candidate and explicitly declined to claim. Task 5b
+built the accumulator §2.4 described. **No threshold moved, no constant was
+retuned, and no criterion was rewritten**: §4 is byte-for-byte what it was
+when frozen on 2026-08-24, and every verdict below is stated against it and
+against the same-box control.
+
+The change was gated on determinism the way stages 1–2 were — bit-identity
+preserved by keeping today's summation order — and the readout's own
+byte-identity witness (§12.5) confirms the workload did not move.
+
+**The honest cost of this ordering:** the second readout is not blind. §11's
+verdicts were taken without knowing what the fix would be; §12's were taken
+knowing exactly what had been repaired and where to look. That is why §11 is
+reported in full rather than superseded, and why the falsifier and the level —
+the two results that could have gone against the campaign — are stated below
+before the ones that went for it.
+
+### 12.1 The quiet-box rule, and how it was applied
+
+§4's rule, applied exactly as §11.0 applied it: all three load averages
+recorded immediately before and immediately after each run, and a run set
+aside if the **1-minute** average is above 10 at either end. The box was
+quieter than §11's session but not quiet on demand — it began the morning at
+load 41 and was polled down in bounded stretches rather than measured through.
+**One of eight `session_length_scaling` runs was set aside** — a control run
+(load 17.81 after); none on the campaign branch — against §11's five of
+eight. **One `agent_scaling` pair of three was set aside.** Every run taken is
+listed below with its loads, including the discarded ones.
+
+### 12.2 `session_length_scaling` — the decisive column (`drive_at`)
+
+50 agents, 200 ticks, bands of 20, seed 42, probe agent fixed at the
+max-`agent-at` roster member, history 101 → 260 (2.57×) across the warm bands.
+The probe agent still commits **ZERO `drank` facts** across 200 ticks, and 21
+of 50 agents (42.0%) are the same — the single-reset regime is still what this
+column measures, unchanged from §11.
+
+**Campaign branch (`57e30acf9`).**
+
+| run | start (UTC) | load before (1/5/15) | load after | k (µs/call/fact) | r² | elasticity | C (µs/call) | final-band µs/call |
+|---|---|---|---|---|---|---|---|---|
+| P1 | 11:13:03 | 6.40 / 16.60 / 29.78 | 4.25 / 9.06 / 22.66 | 0.00081 | 0.500 | **0.05** | **+2.439** | 2.73 |
+| P2 | 11:39:52 | 6.25 / 6.26 / 10.67 | 5.73 / 5.84 / 9.23 | 0.00066 | 0.337 | **0.04** | **+2.505** | 2.66 |
+| P3 | 11:50:30 | 3.95 / 4.42 / 7.34 | 5.00 / 5.04 / 6.79 | 0.00114 | 0.846 | **0.07** | **+2.384** | 2.72 |
+| P4 | 12:01:03 | 5.87 / 4.95 / 6.02 | 3.30 / 4.19 / 5.40 | 0.00132 | 0.790 | **0.09** | **+2.353** | 2.68 |
+
+**Control at `18f63ebfa` (pre-campaign, same box, same session, interleaved).**
+
+| run | start (UTC) | load before | load after | k | r² | elasticity | C | final-band µs/call |
+|---|---|---|---|---|---|---|---|---|
+| B1 — **SET ASIDE** | 11:17:43 | 4.25 / 9.06 / 22.66 | **17.81** / 12.72 / 18.93 | 2.86783 | 0.928 | 1.14 | −52.944 | 663.27 |
+| B2 | 11:33:46 | 4.36 / 8.04 / 13.57 | 6.25 / 6.26 / 10.67 | 2.39830 | 0.997 | **1.00** | −0.293 | 628.92 |
+| B3 | 11:44:38 | 5.43 / 5.78 / 9.19 | 3.95 / 4.42 / 7.34 | 2.37151 | 0.999 | **1.01** | −4.626 | 619.37 |
+| B4 | 11:55:11 | 4.84 / 5.01 / 6.76 | 5.87 / 4.95 / 6.02 | 2.38529 | 0.999 | **1.02** | −5.669 | 620.34 |
+
+**Medians: elasticity 1.01 before, 0.07 after. `C` −4.626 before (negative,
+not identifiable), +2.411 after. Final-band cost 620.34 → 2.70 µs/call, a
+factor of 229.8.** The column that did not move in §11 moved by more than two
+orders of magnitude.
+
+**The `r² ≥ 0.5` filter needs stating rather than applying silently.** §4
+counts only runs whose `drive_at` fit clears r² 0.5, and post-fix two of the
+four runs sit at or below it (0.500 and 0.337). **That is the criterion's own
+success condition showing through its filter, not a noisy run**: the fit's r²
+is low because the cost is now flat in history, so a line through history
+explains almost none of the residual variance — the exact opposite of §11's
+0.991–0.999, where history explained nearly all of it. The verdict does not
+depend on how the boundary is read:
+
+| reading of the filter | qualifying runs | median elasticity |
+|---|---|---|
+| as printed, r² ≥ 0.5 | P1, P3, P4 | **0.07** |
+| strict, dropping P1 at the floor | P3, P4 | **0.08** |
+| ignore the filter, all four | P1–P4 | **0.06** |
+
+All three are below 0.20 by more than a factor of two.
+
+### 12.3 `session_length_scaling` — the whole tick, and attribution
+
+| | k (ms/tick/fact) | r² | C (ms/tick) | history share at band 10 | band-2 ms/tick* | band-10 ms/tick* |
+|---|---|---|---|---|---|---|
+| campaign P1 | 2.51717 | 0.998 | 253.147 | 60.2% | 368.85 | 631.80 |
+| campaign P2 | 1.94967 | 0.665 | 336.030 | 46.8% | 387.47 | 622.92 |
+| campaign P3 | 2.35998 | 0.998 | 264.281 | 57.6% | 371.77 | 617.54 |
+| campaign P4 | 2.39394 | 0.995 | 258.443 | 58.4% | 363.95 | 612.48 |
+| control B2 | 4.26061 | 0.993 | 222.286 | 74.4% | 429.98 | 876.59 |
+| control B3 | 4.03390 | 0.999 | 216.239 | 73.9% | 403.66 | 823.35 |
+| control B4 | 4.11788 | 1.000 | 212.370 | 74.6% | 409.86 | 839.21 |
+
+**Medians: `k` 4.118 → 2.377 (−42%). `C` 216.239 → 261.362 (+45.1 ms/tick).
+Share 74.4% → 58.0% (−16.4 points). Band-10 ms/tick 839.21 → 620.23 (−26.1%).
+Band-2 ms/tick 409.86 → 370.31 (−9.6%).** For §11's comparable figures: `k`
+−28%, share −11.5 points, band-10 −16.0%, band-2 −2.3%.
+
+Final-band µs/call by fold, medians of the valid runs a side:
+
+| fold | control (pre) | campaign (post) | ratio | pre elasticity | post elasticity |
+|---|---|---|---|---|---|
+| **`drive_at`** | **620.34** | **2.70** | **229.8×** | 1.01 | **0.06** |
+| **`hunger_at`** | **618.58** | **2.51** | **246.5×** | 1.01 | **0.04** |
+| `fatigue_at` | 0.14 | 0.14 | 1.00× | 0.00 | −0.04 |
+| `believed_water` | 8 686.28 | 8 702.08 | 1.00× | 0.96 | 0.96 |
+| `shared_believed_water` | 8 805.54 | 8 836.45 | 1.00× | 0.95 | 0.96 |
+| `hazard_memory_memo` | 146 550.13 | 93 153.03 | 1.57× | 1.21 | 0.92 |
+
+The two Sustenance reads collapsed together and nothing else did. That is the
+signature of the accumulator and of nothing else: `believed_water` and
+`shared_believed_water` are KnownWater tenants and are untouched at
+1.00×, exactly as in §11.4.
+
+### 12.4 The verdicts, against §4, side by side with §11
+
+| criterion | §4 threshold | §11 measured | §11 verdict | §12 measured | §12 verdict |
+|---|---|---|---|---|---|
+| **H2 (a)** `drive_at` median elasticity, runs with r² ≥ 0.5 | < 0.20, from 0.86–1.24 | 1.01 (control 1.01) | **NOT MET** | **0.07** (0.06–0.08 under every reading of the filter; control 1.01) | **MET** |
+| **H2 (b)** `C` identifiable and positive on the decisive column | positive | −0.074 / −10.259 / −3.050 | **NOT MET** | **+2.439 / +2.505 / +2.384 / +2.353**, positive on all four (control negative on all four) | **MET** |
+| **H2 (c)** whole-tick history share | < 20%, from 70–80% | 62.4% (control 73.9%) | **NOT MET** | **58.0%** (control 74.4%) | **NOT MET** |
+| **H3** no world-state artifact moves | — | held by construction (§5) + Tasks 1–5 ledger-hash witnesses; readout adds a byte-identity witness | **held, not re-measured** | unchanged; the byte-identity witness re-taken and still holding (§12.5) | **held, not re-measured** |
+| **H4 (a)** `hazard_memory_memo` median elasticity | < 0.20, from 1.06–1.21 | 0.92 (control 1.20) | **NOT MET** | **0.92** (0.92 / 0.90 / 0.93 / 0.92; control 1.21) | **NOT MET** |
+| **H4 (b)** `hazard_memory_memo` final-band cost | ≥ 10× down, from 73–97 ms/call | 1.52× (143.7 → 94.4 ms/call); vs §4's own 73–97, no reduction | **NOT MET** | **1.57×** (146.55 → 93.15 ms/call, same box); against §4's own 73–97 ms/call, **still no reduction at all** | **NOT MET** |
+
+**Two of the five failed criteria are now met, three are not, and nothing was
+averaged across a failure.** H2's two decisive clauses — the elasticity and
+the identifiable positive floor — pass on all four runs. H2 (c), H4 (a) and
+H4 (b) fail by margins that did not meaningfully move.
+
+**Why the three that failed still fail, stated as attribution rather than
+excuse.** The whole tick's remaining history term and the whole of H4 belong
+to folds the accumulator does not touch. At the final band the ecological
+per-call costs are `drive_at` 2.70 µs, `hunger_at` 2.51 µs,
+`believed_water` 8 702 µs, `shared_believed_water` 8 836 µs and
+`hazard_memory_memo` 93 153 µs. The Sustenance pair is now **0.005%** of that
+sum; the hazard memo alone is **84.2%** of it. A fix to Sustenance cannot move
+a share the hazard memo dominates, and H4 (b)'s 10× was always, in §4's own
+words, "the weaker of the two claims". The hazard memo remains
+history-proportional at elasticity 0.92 and is the campaign's clearest
+handoff.
+
+### 12.5 The byte-identity witness, re-taken
+
+The deterministic columns are **identical across all fourteen runs and both
+trees** — checked by hashing the extracted columns rather than by eye:
+
+- `session_length_scaling`, all 8 runs (4 campaign, 4 control), the
+  (facts, searches, folded/a, ledger_len) tuple for every one of the 10 bands:
+  one md5 (`ee88c747…`) across all eight files. Band 1 reads
+  `facts 2800 · searches 1825 · folded/a 35.5 · ledger_len 24485` and band 10
+  reads `1587 · 650 · 151.9 · 38711`, matching §11.1 exactly. `drank/t` is
+  `0.0000` at every band on every run.
+- `agent_scaling`, all 6 runs (3 campaign, 3 control), the
+  (facts/a/tick, search/a/tick, bytes/agent, total_bytes, facts, searches)
+  tuple for all four rungs: one md5 (`a0126aeb…`). The largest rung reads
+  `facts 9769 · searches 6825 · total_bytes 4413684` on both trees, matching
+  §11.1.
+
+The workload did not move across the accumulator, and it did not move across
+the merge base either. That is what makes the pairing legitimate, and it is
+the readout's own small witness for H3.
+
+### 12.6 The falsifier, and the level
+
+Both are stated before the campaign's favourable synthetic result, because
+both are the results that could have gone against it.
+
+**The falsifier — `C` still rises, and it still does not fire.** From the
+whole-tick affine fits (§12.3 medians):
+
+```
+pre:  ms/tick = 216.239 + 4.118 h
+post: ms/tick = 261.362 + 2.377 h
+```
+
+`C` rose by **45.123 ms/tick**; `k` fell by **1.741 ms/tick per fact**. The
+lines cross at `h = 45.123 / 1.741 = 25.9` facts of mean per-agent history.
+**That crossover is now BELOW the sampled range entirely** (the bands span
+h = 47.9 to 151.9), where in §11 it sat at h ≈ 49.4, just inside the shallow
+end. So there is no measured band in which the pre-campaign tree is faster.
+
+| session length | h | pre | post | verdict |
+|---|---|---|---|---|
+| 50 ticks | ≈ 55 | 442.72 ms/tick | 392.09 ms/tick | post **11.4% faster** (§11: 1.5%) |
+| 200 ticks | 151.9 | 841.74 ms/tick | 622.42 ms/tick | post **26.1% faster** (§11: 12.7%) |
+
+The two independent checks §11.6 used both strengthen:
+
+1. **At the shallowest band actually measured the post tree is now ahead, not
+   level.** Band-2 `ms/tick*` is 409.86 before and 370.31 after — post 9.6%
+   faster, where §11 measured a 2.3% wash.
+2. **`agent_scaling` measures the short-session regime directly** — 20 ticks,
+   h ≈ 35 — and no longer finds the two indistinguishable. The affine fits
+   *predict* post 4.4% faster at h = 35; the bench *measures* 3.8–4.1% (below).
+   A prediction from one instrument landing inside half a point of another
+   instrument's measurement is the strongest single piece of evidence in this
+   readout that the two lines describe the same thing.
+
+**Verdict on the falsifier: it does not fire, and it fires less than it did
+in §11.** The fitted intercept rise is real as a fit parameter and remains
+unobserved as a cost at any session length either bench can reach.
+
+**The level — reported, not predicted.** `agent_scaling`, ms/tick at 200
+agents over 20 ticks, paired and interleaved, against Penstock §6.3's
+pre-campaign 1712–1752.
+
+| run | tree | start (UTC) | load before | load after | 10 | 50 | 100 | **200** |
+|---|---|---|---|---|---|---|---|---|
+| BA1 | control | 12:06:35 | 2.78 / 3.93 / 5.22 | 2.73 / 3.67 / 5.03 | 59.621 | 427.031 | 713.502 | **1678.101** |
+| A1 | campaign | 12:07:40 | 2.73 / 3.67 / 5.03 | 3.36 / 3.71 / 4.95 | 56.637 | 414.841 | 687.975 | **1609.841** |
+| BA2 — **SET ASIDE** | control | 12:08:43 | 3.36 / 3.71 / 4.95 | **12.12** / 7.08 / 6.16 | 102.902 | 639.998 | 964.546 | 1771.331 |
+| A2 — **SET ASIDE** | campaign | 12:10:01 | **12.12** / 7.08 / 6.16 | 7.53 / 6.69 / 6.08 | 59.204 | 430.337 | 712.992 | 1656.294 |
+| BA3 | control | 12:17:53 | 3.35 / 5.63 / 5.92 | 3.04 / 5.06 / 5.68 | 58.755 | 445.894 | 724.296 | **1731.837** |
+| A3 | campaign | 12:18:59 | 3.04 / 5.06 / 5.68 | 3.68 / 4.89 / 5.57 | 59.386 | 429.742 | 715.531 | **1666.461** |
+
+**At 200 agents, paired: 1678.101 → 1609.841 (−4.07%) and 1731.837 →
+1666.461 (−3.77%).** Two independent pairs agreeing to within 0.3 points.
+**The level moved, by about 4%, in the campaign's favour** — where §11
+measured +0.1% to +0.25%, i.e. nothing. Both trees still sit below Penstock
+§6.3's 1712–1752, which is a box-and-date difference, not a campaign effect.
+The fitted log-log slope is 1.10 on both trees, unchanged; the campaign
+lowered the level without changing the shape of the agent-count scaling,
+which is the expected signature of a per-agent read getting cheaper.
+
+### 12.7 `fold_depth_sweep` — the shape, re-run on a quiet box
+
+One run each tree, back to back inside the same quiet window (control
+3.44/4.80/5.53 → 3.32/4.75/5.51; campaign 3.32/4.75/5.51 unchanged).
+µs/call, median of 6 alternating-direction passes.
+
+| depth | PERIODIC pre | PERIODIC post | ratio | SINGLE-RESET pre | SINGLE-RESET post | ratio |
+|---|---|---|---|---|---|---|
+| 10 | 0.786 | 0.108 | 7.3× | 0.754 | 0.106 | 7.1× |
+| 32 | 1.277 | 0.160 | 8.0× | 1.529 | 0.158 | 9.7× |
+| 100 | 2.553 | 0.266 | 9.6× | 5.237 | 0.294 | 17.8× |
+| 320 | 6.539 | 0.535 | 12.2× | 28.005 | 0.578 | 48.5× |
+| 1 000 | 20.047 | 1.440 | 13.9× | 205.249 | 1.546 | 132.8× |
+| 3 200 | 68.039 | 4.777 | 14.2× | 1 777.183 | 5.093 | 349.0× |
+| 10 000 | 219.398 | 14.917 | 14.7× | **19 631.876** | **15.460** | **1 269.8×** |
+
+| | pre | post |
+|---|---|---|
+| PERIODIC `k` (µs/call/fact) | 0.02191 (r² 1.000) | 0.00148 (r² 1.000) |
+| PERIODIC raw elasticity, top third | 1.028 | 0.999 |
+| SINGLE-RESET `k` | 1.94528 (r² 0.949) | 0.00154 (r² 1.000) |
+| **SINGLE-RESET raw elasticity, top third** | **2.108** | **0.975** |
+| SINGLE-RESET raw elasticity, top half | 1.981 | 1.000 |
+
+**The single-reset column now sits ON TOP of the periodic one** — 15.460 vs
+14.917 µs/call at depth 10 000, a 3.6% gap where the pre-campaign trees
+differ by 89× at the same depth. `S` no longer costs anything the periodic
+regime does not also pay, which is the accumulator's whole claim expressed as
+a measurement. The residual linearity in both columns is the bench's own
+shape, not the read's: `fold_depth_sweep` rebuilds the ledger per depth and
+amortises one cold advance over 50 reps, so each reading is
+`(O(depth) first touch + 50 × O(1)) / 50`.
+
+Against §11.7's numbers, taken on the same instrument at the same merge base:
+the control agrees to within 2% (19 631.876 here vs 19 215.004 there at depth
+10 000; 219.398 vs 210.609 periodic), and the campaign side improved a further
+**12.6×** on top of the 98.8× §11.7 measured after stage 2.
+
+### 12.8 What the second readout hands forward
+
+- **The instrument still needed no change**, and none was made. No example
+  file differs from the one §11 ran on either tree; the control worktree is a
+  detached checkout of `18f63ebfa` whose three benches carry the identical
+  `AGENTS = 50` / `TICKS = 200` / `FOLD_REPS = 200` / `BAND = 20` constants
+  and no resident store (`grep -n 'resident::\|OwnedFolds'` returns nothing
+  there).
+- **The ~200× gap §11.7 named is closed, and it was what §11.7 guessed.**
+  That section wrote that the ecological `drive_at` cost ~597 µs at h = 260
+  where the synthetic one cost ~3 µs, named `sustenance_at`'s per-segment
+  terrain sample as the leading candidate, and said "no probe isolates it and
+  this readout does not claim it; it is the followup." The accumulator removes
+  that per-segment sample and the ecological figure lands at **2.70 µs/call**,
+  on top of the ~3.05 µs/call the synthetic sweep interpolated for depth 260.
+  A named-but-unclaimed hypothesis was tested and held.
+- **The remaining quarry is the hazard memo, and it is bigger than what was
+  fixed.** `hazard_memory_memo` is 93 153 µs/call at the final band — 84% of
+  the six probes' total, elasticity 0.92, and only 1.57× down from the
+  merge base. H4 was written against it and H4 is the criterion that did not
+  move. Anything that wants H2 (c)'s 20% share must go there next.
+- **§11's methodological finding survives unchanged**, and this readout is
+  its confirmation rather than its refutation: a criterion written against an
+  ecological bench could not see the change of order the synthetic bench
+  measured at stage 2, and it took a *further* fix — one that made the
+  ecological cost fall 230× — before the same criterion could. A future
+  preregistration for a change-of-order fix should still state its shape
+  criterion on `fold_depth_sweep.rs` and its share criterion here.
