@@ -1023,7 +1023,7 @@ fn sweep_against_the_oracle(rule: ResetRule) -> (usize, usize, std::collections:
         ThermalStrategy::Unmodelled,
     ] {
         for t in probe_instants() {
-            let (trail, resets, _w) = store.trail_and_thirst(&l);
+            let (trail, resets, memo, _w) = store.trail_and_thirst(&l);
             // The ONE reset instant both halves see. The `GENESIS` floor is
             // what `drive_at`'s old `fold(0.0, f64::max)` did and what
             // `catch_up` names at its own call site for `None`.
@@ -1044,6 +1044,7 @@ fn sweep_against_the_oracle(rule: ResetRule) -> (usize, usize, std::collections:
                 &terrain,
                 class,
                 &SUSTENANCE,
+                memo,
                 &mut witness,
             );
             // The scan half: the exact pair of functions production used, fed
@@ -1152,7 +1153,7 @@ fn a_past_instant_read_between_two_resets_equals_the_scan_at_that_instant() {
         WorldTime::from_ticks(430_000),
         WorldTime::from_ticks(700_000),
     ] {
-        let (trail, resets, _w) = store.trail_and_thirst(&l);
+        let (trail, resets, memo, _w) = store.trail_and_thirst(&l);
         let reset = resets
             .last_reset_at_or_before(e, t)
             .expect("both probes lie after the first reset");
@@ -1166,6 +1167,7 @@ fn a_past_instant_read_between_two_resets_equals_the_scan_at_that_instant() {
             &terrain,
             ThermalStrategy::Endothermic,
             &SUSTENANCE,
+            memo,
             &mut witness,
         );
         let sightings = scan_oracle(&l, e, t.as_std_days());
@@ -1257,7 +1259,7 @@ fn holding_facts_back_as_an_overlay_equals_the_scan_over_the_full_ledger() {
 
         let mut store = ResidentFolds::new();
         for t in probe_instants() {
-            let (trail, resets, _w) = store.trail_and_thirst(&partial);
+            let (trail, resets, memo, _w) = store.trail_and_thirst(&partial);
             let reset = resets
                 .last_reset(e)
                 .unwrap_or(WorldTime::GENESIS)
@@ -1276,6 +1278,7 @@ fn holding_facts_back_as_an_overlay_equals_the_scan_over_the_full_ledger() {
                 &terrain,
                 ThermalStrategy::Endothermic,
                 &SUSTENANCE,
+                memo,
                 &mut witness,
             );
             let sightings = scan_oracle(&full, e, t.as_std_days());
@@ -1300,10 +1303,27 @@ fn holding_facts_back_as_an_overlay_equals_the_scan_over_the_full_ledger() {
 /// The sustenance tenants owe the same two chaos schedules [`Trail`] does:
 /// discarding the accumulated state and rebuilding it from the ledger is
 /// unobservable, at every position and at every third.
+///
+/// **The read-side accumulator is inside this schedule, not beside it** (The
+/// Pawl, Task 5b). It is not a [`hornvale_kernel::fold::LedgerFold`] — it is a
+/// function of terrain as well as the ledger — so comparing the tenants' reset
+/// lists alone would leave the one piece of state that carries `f64`
+/// arithmetic entirely untested against discard. So each prefix also takes a
+/// full [`sustenance_at`] read through BOTH stores and compares them with `==`
+/// on `f64`: the discarded store rebuilds its accumulator from scratch, the
+/// resident one resumes from a checkpoint, and the two must agree bit for bit.
+/// One terrain for both stores, which is the invariant the memo states.
 fn sustenance_discard_schedule(every: usize) {
-    let (l, e, _home) = sustenance_fixture();
+    let (l, e, home) = sustenance_fixture();
+    let terrain = RippleTerrain;
+    let mut witness = ReadWitness::default();
     let mut resident = ResidentFolds::new();
     let mut chaotic = ResidentFolds::new();
+    // The anti-vacuity counter: a schedule in which every read short-circuited
+    // to zero would compare `0.0 == 0.0` throughout and prove nothing about
+    // the accumulator, which is the exact hole the FOLD-equals-SCAN sweep
+    // found in its own first draft.
+    let mut nonzero = 0usize;
 
     // Prefixes are built by replaying, since `Ledger` cannot be truncated.
     let mut reg = ConceptRegistry::default();
@@ -1330,7 +1350,49 @@ fn sustenance_discard_schedule(every: usize) {
             resident.position(),
             "position diverged at prefix {n} under a discard-every-{every} schedule"
         );
+        // And the accumulator itself, at every probe instant, under both reset
+        // rules — the state a reset-list comparison cannot see.
+        for t in probe_instants() {
+            for rule in [ResetRule::Unfiltered, ResetRule::AtOrBefore] {
+                let mut read = |store: &mut ResidentFolds| -> f64 {
+                    let (trail, resets, memo, _w) = store.trail_and_thirst(&prefix);
+                    let reset = match rule {
+                        ResetRule::Unfiltered => resets.last_reset(e),
+                        ResetRule::AtOrBefore => resets.last_reset_at_or_before(e, t),
+                    }
+                    .unwrap_or(WorldTime::GENESIS)
+                    .max(WorldTime::GENESIS);
+                    sustenance_at(
+                        trail,
+                        e,
+                        &home,
+                        reset,
+                        &[],
+                        t,
+                        &terrain,
+                        ThermalStrategy::Endothermic,
+                        &SUSTENANCE,
+                        memo,
+                        &mut witness,
+                    )
+                };
+                let (discarded, kept) = (read(&mut chaotic), read(&mut resident));
+                if kept > 0.0 {
+                    nonzero += 1;
+                }
+                assert_eq!(
+                    discarded, kept,
+                    "the sustenance accumulator diverged at prefix {n}, instant {t:?}, \
+                     rule {rule:?}, under a discard-every-{every} schedule"
+                );
+            }
+        }
     }
+    assert!(
+        nonzero >= 100,
+        "the discard schedule must compare a strictly POSITIVE integral at least 100 \
+         times, or it is asserting 0.0 == 0.0 throughout: got {nonzero}"
+    );
 }
 
 #[test]
@@ -1546,6 +1608,163 @@ fn segments_integrated_per_turn_does_not_grow_with_the_tick_index_for_a_creature
         "segments integrated per turn must not grow with the tick index for a creature \
          that has drunk: first {BAND} turns mean {first}, last {BAND} mean {last_band} \
          (allowance 1.5x)"
+    );
+}
+
+/// Task 5b's cost witness: the read is O(what the ledger newly determined),
+/// not O(history) — measured on the population the campaign's first readout
+/// found it had never measured.
+///
+/// **The Task 3 witness above measures the busiest DRINKER, and that is the
+/// wrong population for this claim.** A creature that resets integrates from
+/// its last reset, so its read is bounded by the interval since that reset
+/// whatever the store does — which is why that witness read 0.889 (an 11%
+/// constant-factor saving) and could not see that a creature which NEVER
+/// resets was still paying O(history) on every read. Spec §11.7 measured what
+/// that costs on the real bench: 21 of 50 agents commit zero `drank` facts
+/// across 200 ticks, including the probe agent H2's decisive column is taken
+/// on, and for those `S` equals `H` forever.
+///
+/// So the subject here is chosen from the complement: a creature with NO
+/// committed reset of either sustenance drive. Both quantities the read
+/// spends are asserted, and both are stated as counts rather than durations
+/// for the Task 3 witness's reason (a timing measures the box):
+///
+/// 1. **Segments integrated per turn** must not grow with the tick index.
+/// 2. **Terrain samples per turn** must not either — the quantity spec §11.7
+///    named as the leading candidate for the ~200x ecological-versus-synthetic
+///    gap, counted rather than inferred.
+/// 3. **No read may sample terrain more times than the ledger grew for that
+///    creature since the previous read of the same drive**, plus the in-tick
+///    overlay's own boundaries, plus the one open segment. This is the
+///    per-read form of the same property, taken on the production path by
+///    [`ReadWitness::note_sustenance_read`], with its denominator asserted
+///    beneath it.
+#[test]
+fn the_cost_of_a_read_does_not_grow_with_the_tick_index_for_a_creature_that_never_resets() {
+    const TURNS: usize = 200;
+    const BAND: usize = 50;
+    const EATEN: &str = "eaten";
+
+    let world = common::build(42).expect("seed 42 always builds a world");
+    let (mut session, _opening) =
+        Session::start(&world, &PossessOpts::default()).expect("seed 42 always starts a session");
+
+    let mut segments: Vec<std::collections::BTreeMap<EntityId, u64>> =
+        Vec::with_capacity(TURNS + 1);
+    let mut samples: Vec<std::collections::BTreeMap<EntityId, u64>> = Vec::with_capacity(TURNS + 1);
+    segments.push(session.resident_segments_by_entity());
+    samples.push(session.resident_terrain_samples_by_entity());
+    for _ in 0..TURNS {
+        session.handle("wait");
+        let _ = session.snapshot().expect("seed 42's session snapshots");
+        segments.push(session.resident_segments_by_entity());
+        samples.push(session.resident_terrain_samples_by_entity());
+    }
+
+    let ledger: Ledger = serde_json::from_str(&session.session_ledger_json())
+        .expect("the session's own ledger accessor round-trips");
+    let mut resetters: std::collections::BTreeSet<EntityId> = std::collections::BTreeSet::new();
+    for f in ledger.iter() {
+        if f.predicate == DRANK || f.predicate == EATEN {
+            resetters.insert(f.subject);
+        }
+    }
+
+    let last = segments.last().expect("TURNS + 1 samples exist");
+    println!("--- Task 5b cost witness: the NON-RESETTING population (seed 42, {TURNS} waits) ---");
+    println!(
+        "{} creatures reset at least once; {} creatures were read at all",
+        resetters.len(),
+        last.len()
+    );
+    // The hardest case for the claim among creatures that never reset — the
+    // one whose reads have done the most work, chosen from the ledger AFTER
+    // the run rather than named in advance.
+    let subject = last
+        .iter()
+        .filter(|(e, _)| !resetters.contains(e))
+        .max_by_key(|(_, segs)| **segs)
+        .map(|(e, _)| *e);
+    let Some(subject) = subject else {
+        panic!(
+            "every creature read in {TURNS} turns of seed 42 reset at least once, so this \
+             witness has no subject and measured nothing -- the fixture, not the property, \
+             is what failed"
+        );
+    };
+
+    let per_turn = |xs: &[std::collections::BTreeMap<EntityId, u64>]| -> Vec<u64> {
+        xs.windows(2)
+            .map(|w| {
+                w[1].get(&subject).copied().unwrap_or(0) - w[0].get(&subject).copied().unwrap_or(0)
+            })
+            .collect()
+    };
+    let mean = |xs: &[u64]| xs.iter().sum::<u64>() as f64 / xs.len() as f64;
+
+    let seg_turns = per_turn(&segments);
+    let sam_turns = per_turn(&samples);
+    let seg_first = mean(&seg_turns[..BAND]);
+    let seg_last = mean(&seg_turns[seg_turns.len() - BAND..]);
+    let sam_first = mean(&sam_turns[..BAND]);
+    let sam_last = mean(&sam_turns[sam_turns.len() - BAND..]);
+    println!(
+        "subject {subject:?} (zero `drank`, zero `eaten`): segments/turn first {BAND} mean \
+         {seg_first:.3}, last {BAND} mean {seg_last:.3} -- ratio {:.3}",
+        seg_last / seg_first
+    );
+    println!(
+        "subject {subject:?}: terrain samples/turn first {BAND} mean {sam_first:.3}, \
+         last {BAND} mean {sam_last:.3} -- ratio {:.3}",
+        sam_last / sam_first
+    );
+
+    let reads = session
+        .resident_sustenance_reads_by_entity()
+        .get(&subject)
+        .copied()
+        .unwrap_or(0);
+    let unbounded = session
+        .resident_unbounded_reads_by_entity()
+        .get(&subject)
+        .copied()
+        .unwrap_or(0);
+    println!("subject {subject:?}: {reads} integrating reads, {unbounded} of them unbounded");
+    if let Some((entity, taken, allowed)) = session.resident_first_unbounded_read() {
+        println!(
+            "first unbounded read anywhere in the roster: entity {entity:?} sampled terrain \
+             {taken} times against an allowance of {allowed}"
+        );
+    }
+
+    assert!(
+        seg_first > 0.0 && sam_first > 0.0,
+        "the subject must integrate something in the first {BAND} turns, or the ratios \
+         above are vacuous: segments {seg_first}, samples {sam_first}"
+    );
+    assert!(
+        seg_last <= seg_first * 1.5,
+        "segments integrated per turn must not grow with the tick index for a creature \
+         that never resets: first {BAND} mean {seg_first}, last {BAND} mean {seg_last} \
+         (allowance 1.5x)"
+    );
+    assert!(
+        sam_last <= sam_first * 1.5,
+        "terrain samples per turn must not grow with the tick index for a creature that \
+         never resets: first {BAND} mean {sam_first}, last {BAND} mean {sam_last} \
+         (allowance 1.5x)"
+    );
+    assert!(
+        reads > 0,
+        "the subject must actually be read, or a verdict of zero unbounded reads is zero \
+         out of zero and says nothing"
+    );
+    assert_eq!(
+        unbounded, 0,
+        "every read of a creature that never resets must cost the segments the ledger \
+         newly determined for it (plus this tick's overlay and the one open segment), not \
+         the whole history: {unbounded} of {reads} reads exceeded that allowance"
     );
 }
 

@@ -20,6 +20,7 @@
 use crate::liveness::{AGENT_AT, DRANK, EATEN, Terrain, is_water, room_from_text};
 use hornvale_kernel::fold::{Folded, LedgerFold};
 use hornvale_kernel::{EntityId, Facet, Fact, Ledger, Value, WorldTime};
+use hornvale_species::ThermalStrategy;
 use std::collections::BTreeMap;
 
 /// One entity's committed `agent-at` trail, in the order `agent_sightings`
@@ -436,6 +437,299 @@ impl LedgerFold for HungerResets {
     }
 }
 
+/// Which sustenance integral a read is accumulating: the thermal class and
+/// base rate the rate function was asked for, paired with the reset the
+/// integral resumes from.
+///
+/// **Every field is one the answer depends on, and none of them is the
+/// ledger.** `rise_at` reads exactly two things about a drive — the thermal
+/// strategy and `DriveParams::rise` — and the integral's zero is the reset,
+/// so two reads that agree on all three accumulate the identical prefix and
+/// two that differ on any of them do not. Thirst and hunger of one creature
+/// are therefore different keys (their `rise` differs), and so are the same
+/// creature's reads before and after it drinks.
+///
+/// The base rate is carried as its exact `f64` bit pattern rather than as an
+/// `f64`, because this is a `BTreeMap` key and the ordering must be total.
+/// Bit equality is STRICTER than numeric equality (`-0.0` and `0.0` are
+/// different keys), which is the safe direction: a spurious miss costs a
+/// recomputation, a spurious hit would return the wrong number.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct DriveKey {
+    /// The thermal strategy, as the ordinal [`drive_class_ordinal`] assigns.
+    class: u8,
+    /// [`crate::liveness::DriveParams::rise`]'s exact bit pattern.
+    rise: u64,
+}
+
+/// The ordinal [`DriveKey`] carries a [`ThermalStrategy`] as.
+///
+/// A hand-written total match rather than a cast, so that widening the enum is
+/// a compile error here instead of a silently-merged key.
+/// type-audit: bare-ok(index: return)
+fn drive_class_ordinal(class: ThermalStrategy) -> u8 {
+    match class {
+        ThermalStrategy::Endothermic => 0,
+        ThermalStrategy::Ectothermic => 1,
+        ThermalStrategy::Unmodelled => 2,
+        ThermalStrategy::Absent => 3,
+    }
+}
+
+impl DriveKey {
+    /// The key for a read of `class` at base rate `rise`.
+    /// type-audit: bare-ok(ratio: rise)
+    pub fn new(class: ThermalStrategy, rise: f64) -> Self {
+        DriveKey {
+            class: drive_class_ordinal(class),
+            rise: rise.to_bits(),
+        }
+    }
+}
+
+/// How many reset partitions one `(entity, drive)` keeps memoised at once.
+///
+/// Two, because two is what the live shapes ask for and a third would only
+/// ever be a stale one: `drive_at`/`hunger_at` read from the UNFILTERED last
+/// reset while the tick's own walk reads from a LOCAL reset it has already
+/// advanced past a `drank` it is about to commit, so a creature that drinks
+/// mid-tick is read from exactly two instants in the same turn. Evicting is
+/// unobservable — a partition is a pure function of `(ledger prefix, terrain)`
+/// and is rebuilt on demand — so this bounds memory without bounding
+/// correctness; it costs a rebuild, never an answer.
+const MEMO_PARTITIONS_PER_DRIVE: usize = 2;
+
+/// One boundary of a memoised integral: a distinct sighting instant, the
+/// integral accumulated from the partition's reset THROUGH it, and how many
+/// trail entries lie at or before it.
+///
+/// The governing position is NOT stored: it is `trail[consumed - 1]` (the
+/// entity's latest sighting at or before this instant, which is what a reverse
+/// scan of the sorted trail finds), so an index answers what a cloned
+/// [`Facet`] would and cannot fall out of step with the trail it came from.
+#[derive(Debug)]
+struct MemoBoundary {
+    /// The distinct sighting instant this boundary sits at.
+    day: WorldTime,
+    /// The integral from the partition's reset through `day` — the same `f64`
+    /// additions, in the same order, the un-memoised loop made.
+    acc: f64,
+    /// How many trail entries lie at or before `day`.
+    consumed: usize,
+}
+
+/// One reset partition's prefix accumulator: the integral from a reset,
+/// checkpointed at every distinct sighting instant after it.
+///
+/// **Prefix sums restart at zero at each reset and are never subtracted.**
+/// `acc` at boundary `i` is literally the running total the un-memoised loop
+/// held when it reached that boundary, so resuming from it and adding the
+/// remaining windows performs the identical additions in the identical order.
+/// Differencing two partitions' accumulators would be arithmetically
+/// equivalent and NOT bit-identical, which is why each reset gets its own
+/// zero.
+#[derive(Debug)]
+struct MemoPartition {
+    /// The reset the integral resumes from — its own zero.
+    reset: WorldTime,
+    /// How many trail entries lie at or before `reset`.
+    reset_consumed: usize,
+    /// One entry per distinct sighting instant strictly after `reset`,
+    /// ascending.
+    boundaries: Vec<MemoBoundary>,
+}
+
+impl MemoPartition {
+    /// An empty partition anchored at `reset`, against the trail as it stands.
+    fn new(reset: WorldTime, trail: &[(WorldTime, Facet)]) -> Self {
+        MemoPartition {
+            reset,
+            reset_consumed: trail.partition_point(|(d, _)| *d <= reset),
+            boundaries: Vec::new(),
+        }
+    }
+
+    /// The last boundary reached: its instant, the integral through it, and
+    /// the trail entries consumed by it.
+    fn frontier(&self) -> (WorldTime, f64, usize) {
+        match self.boundaries.last() {
+            Some(b) => (b.day, b.acc, b.consumed),
+            None => (self.reset, 0.0, self.reset_consumed),
+        }
+    }
+
+    /// Whether this partition still describes `trail` — EXACTLY, not
+    /// heuristically.
+    ///
+    /// [`Trail::absorb`] inserts at the sorted position, so a fact committed
+    /// out of day order lands BEFORE the frontier and silently changes both a
+    /// boundary set and a governing position. The test for that is one binary
+    /// search: the number of trail entries at or before the frontier instant
+    /// must still be the number this partition consumed to reach it. An
+    /// insertion at or before the frontier moves that count and is caught; an
+    /// insertion after it is simply unconsumed, and the next advance takes it
+    /// in sorted position like any other.
+    fn is_current_with(&self, trail: &[(WorldTime, Facet)]) -> bool {
+        let (day, _, consumed) = self.frontier();
+        trail.partition_point(|(d, _)| *d <= day) == consumed
+    }
+
+    /// Absorb every sighting the trail has gained since the frontier, one
+    /// boundary per DISTINCT instant, and return how many windows that
+    /// integrated.
+    ///
+    /// `rate` is the caller's own rate function — `(governing position,
+    /// segment start in standard days) -> per-day rate` — so this type never
+    /// sees terrain, a thermal class or a drive's parameters, and the
+    /// arithmetic below is the caller's arithmetic verbatim.
+    fn advance(
+        &mut self,
+        trail: &[(WorldTime, Facet)],
+        home: &Facet,
+        rate: &mut dyn FnMut(&Facet, f64) -> f64,
+    ) -> u64 {
+        let (mut b, mut acc, mut consumed) = self.frontier();
+        let mut integrated = 0u64;
+        let mut i = consumed;
+        while i < trail.len() {
+            // The run of entries sharing this instant — the `dedup` the
+            // un-memoised bounds list applied to coincident sightings.
+            let u = trail[i].0;
+            let mut j = i + 1;
+            while j < trail.len() && trail[j].0 == u {
+                j += 1;
+            }
+            // The governing position for the window that STARTS at `b`: the
+            // latest sighting at or before it, else `home`.
+            let pos = if consumed > 0 {
+                &trail[consumed - 1].1
+            } else {
+                home
+            };
+            let s = b.as_std_days();
+            let e = u.as_std_days();
+            acc += rate(pos, s) * (e - s);
+            self.boundaries.push(MemoBoundary {
+                day: u,
+                acc,
+                consumed: j,
+            });
+            b = u;
+            consumed = j;
+            i = j;
+            integrated += 1;
+        }
+        integrated
+    }
+
+    /// The boundary a read at `t` may resume from: the last one strictly
+    /// before `t` that the overlay cannot have disturbed.
+    ///
+    /// `cut` is the earliest instant this tick's uncommitted overlay carries.
+    /// A memoised window is valid only if the overlay could neither split it
+    /// (an overlay instant strictly inside it) nor change the position
+    /// governing it (an overlay sighting at or before its start), and both are
+    /// excluded by keeping only boundaries at or before `cut` — see
+    /// [`SustenanceMemo`]'s type doc.
+    fn resume_at(&self, cut: Option<WorldTime>, t: WorldTime) -> (WorldTime, f64) {
+        let mut usable = self.boundaries.partition_point(|b| b.day < t);
+        if let Some(c) = cut {
+            usable = usable.min(self.boundaries.partition_point(|b| b.day <= c));
+        }
+        match usable {
+            0 => (self.reset, 0.0),
+            k => (self.boundaries[k - 1].day, self.boundaries[k - 1].acc),
+        }
+    }
+}
+
+/// The read-side accumulator spec §2.4 named and Task 3 did not build: per
+/// entity, per drive, per reset, the sustenance integral checkpointed at every
+/// sighting.
+///
+/// **What it buys.** [`Sustenance`] holds reset instants only, so a read had
+/// to re-integrate from the last reset every time — O(sightings since the
+/// reset), with one terrain sample each. For a creature that never resets that
+/// is O(history) per read forever, which is 21 of 50 agents on the seed-42
+/// bench and the mechanism behind spec §11.7's ~200x
+/// ecological-versus-synthetic gap. With the accumulator a live read costs the
+/// sightings absorbed since the previous read of that drive, and a past-instant
+/// read is a binary search into the partition plus the one open segment.
+///
+/// **It is a pure function of `(ledger prefix, terrain)`, and NOT a
+/// [`LedgerFold`].** The rate at a segment needs a temperature, and terrain is
+/// not a ledger fact — the same argument [`KnownWater`]'s doc makes for
+/// `is_water`. So this cannot live inside a fold whose FOLD-equals-SCAN
+/// property is stated over the ledger alone; it sits beside them, advanced
+/// lazily at read, and [`LedgerFold::absorb`] stays terrain-free.
+///
+/// **ONE TERRAIN PER STORE.** A partition's accumulated `f64`s are the answers
+/// one terrain gave; reading the same store through a second, disagreeing
+/// terrain would resume from a prefix that terrain never produced. A store
+/// belongs to one session and one world, which is how production owns it
+/// (`Session`, and the lab's `run_simulation`), and every test keeps one
+/// terrain per store instance. Discarding the memo is unobservable at any
+/// instant, so a caller that must change terrain builds a new store.
+///
+/// **Bit-identity is by construction.** The un-memoised loop summed the
+/// windows `[reset, s1], [s1, s2], ..., [sn, t]` in order and clamped the
+/// total once. A partition's `acc` is that same running total frozen at each
+/// `si`; a read resumes from it and adds the remaining windows with the
+/// caller's own rate function. Same terms, same order, same clamp — the
+/// FOLD-equals-SCAN sweeps in `windows/vessel/tests/suite/resident_folds.rs`
+/// compare with `==` on `f64` and are the proof.
+#[derive(Debug, Default)]
+pub struct SustenanceMemo {
+    /// Per `(entity, drive)`, the memoised reset partitions, ascending by
+    /// reset instant and capped at [`MEMO_PARTITIONS_PER_DRIVE`].
+    partitions: BTreeMap<(EntityId, DriveKey), BTreeMap<WorldTime, MemoPartition>>,
+}
+
+impl SustenanceMemo {
+    /// Advance the `(entity, drive, reset)` partition to the trail's end and
+    /// answer where a read at `t` may resume: `(boundary, integral through it,
+    /// windows integrated by the advance)`.
+    ///
+    /// `cut` is the earliest instant the caller's overlay carries, or `None`
+    /// for a read over the committed history alone. `rate` is the caller's own
+    /// rate function — see [`MemoPartition::advance`].
+    /// type-audit: bare-ok(count: return)
+    #[allow(clippy::too_many_arguments)]
+    pub fn resume(
+        &mut self,
+        entity: EntityId,
+        drive: DriveKey,
+        reset: WorldTime,
+        trail: &[(WorldTime, Facet)],
+        home: &Facet,
+        cut: Option<WorldTime>,
+        t: WorldTime,
+        rate: &mut dyn FnMut(&Facet, f64) -> f64,
+    ) -> (WorldTime, f64, u64) {
+        let slots = self.partitions.entry((entity, drive)).or_default();
+        let stale = slots.get(&reset).is_none_or(|p| !p.is_current_with(trail));
+        if stale {
+            slots.insert(reset, MemoPartition::new(reset, trail));
+        }
+        let partition = slots
+            .get_mut(&reset)
+            .expect("the partition was just inserted if it was missing");
+        let integrated = partition.advance(trail, home, rate);
+        let (boundary, acc) = partition.resume_at(cut, t);
+        // Evict the oldest reset this drive still holds, never the one just
+        // read — see [`MEMO_PARTITIONS_PER_DRIVE`] for why this cannot change
+        // an answer.
+        while slots.len() > MEMO_PARTITIONS_PER_DRIVE {
+            let oldest = *slots
+                .keys()
+                .find(|k| **k != reset)
+                .expect("more partitions than the cap means at least one is not `reset`");
+            slots.remove(&oldest);
+        }
+        (boundary, acc, integrated)
+    }
+}
+
 /// What the store's reads have cost and what they have seen — the counters two
 /// of this campaign's decision rules are asserted through.
 ///
@@ -531,6 +825,46 @@ pub struct ReadWitness {
     /// emitter probe too, which seed 42 makes 320 of and which is not this
     /// path at all.
     alarm_replays: u64,
+    /// Per entity, how many TERRAIN TEMPERATURE samples its sustenance reads
+    /// have taken, ever.
+    ///
+    /// Counted apart from [`Self::segments`] although the two coincide today —
+    /// one sample per integrated window, taken at the window's start — because
+    /// the two witnesses assert different things about them, and a rate
+    /// function that sampled terrain twice per segment (or memoised a sample
+    /// across segments) would separate them without changing either
+    /// assertion's meaning. It is the quantity the ~200x
+    /// ecological-versus-synthetic gap of spec §11.7 was attributed to, so it
+    /// is measured rather than inferred from the segment count beside it.
+    terrain_samples: BTreeMap<EntityId, u64>,
+    /// Per entity, how many sustenance reads actually INTEGRATED something —
+    /// the denominator [`Self::unbounded_reads`] is a count out of. A read
+    /// that short-circuits (`t <= last_reset`) is not one of these: it
+    /// advances nothing and samples nothing, so bounding its work says
+    /// nothing.
+    sustenance_reads: BTreeMap<EntityId, u64>,
+    /// Per entity, how many of those sampled terrain MORE times than the
+    /// ledger grew for it since the previous integrating read of the same
+    /// drive — the quantity the cost property is stated on.
+    ///
+    /// The allowance is `new sightings + overlay entries + 1`: a read may
+    /// integrate the segments the ledger has newly determined, the boundaries
+    /// this tick's own uncommitted overlay introduces, and the one OPEN
+    /// segment that runs from the last boundary to the instant being read.
+    /// Anything above that is work proportional to history rather than to what
+    /// changed.
+    unbounded_reads: BTreeMap<EntityId, u64>,
+    /// The first such read as `(entity, samples taken, samples allowed)` — the
+    /// evidence the cost witness prints.
+    first_unbounded_read: Option<(EntityId, u64, u64)>,
+    /// Per `(entity, drive)`, the entity's trail length as of the previous
+    /// INTEGRATING read of that drive — the mark the allowance above is
+    /// measured from.
+    ///
+    /// Kept here rather than inside the accumulator it checks, deliberately:
+    /// a bound derived from the memo's own bookkeeping would be satisfied by
+    /// construction, and the point of the count is that it can fail.
+    read_marks: BTreeMap<(EntityId, DriveKey, WorldTime), usize>,
 }
 
 impl ReadWitness {
@@ -539,6 +873,40 @@ impl ReadWitness {
     pub fn note_segments(&mut self, entity: EntityId, segments: u64) {
         *self.segments.entry(entity).or_default() += segments;
         self.reads += 1;
+    }
+
+    /// Record one INTEGRATING sustenance read: what it cost, and what the
+    /// ledger had newly determined for that entity since the previous read of
+    /// the same drive.
+    ///
+    /// `key` and `reset` together name the integral (see [`DriveKey`]);
+    /// `trail_len` is the entity's committed sighting count at this read;
+    /// `overlay` is the number of uncommitted in-tick sightings folded on top.
+    /// `segments` and `samples` are the work the read actually did.
+    /// type-audit: bare-ok(count: trail_len), bare-ok(count: overlay), bare-ok(count: segments), bare-ok(count: samples)
+    #[allow(clippy::too_many_arguments)]
+    pub fn note_sustenance_read(
+        &mut self,
+        entity: EntityId,
+        key: DriveKey,
+        reset: WorldTime,
+        trail_len: usize,
+        overlay: usize,
+        segments: u64,
+        samples: u64,
+    ) {
+        self.note_segments(entity, segments);
+        *self.terrain_samples.entry(entity).or_default() += samples;
+        *self.sustenance_reads.entry(entity).or_default() += 1;
+        let mark = self.read_marks.entry((entity, key, reset)).or_insert(0);
+        let grown = trail_len.saturating_sub(*mark) as u64;
+        *mark = trail_len;
+        let allowed = grown + overlay as u64 + 1;
+        if samples > allowed {
+            *self.unbounded_reads.entry(entity).or_default() += 1;
+            self.first_unbounded_read
+                .get_or_insert((entity, samples, allowed));
+        }
     }
 
     /// Record what the UNFILTERED reset lookup answered for a read of `entity`
@@ -739,6 +1107,35 @@ impl ReadWitness {
     pub fn first_reset_in_the_future(&self) -> Option<(EntityId, WorldTime, WorldTime)> {
         self.first_reset_in_the_future
     }
+
+    /// Every entity's terrain-temperature samples, keyed — the per-creature
+    /// shape for [`Self::segments_by_entity`]'s reason.
+    /// type-audit: bare-ok(count: return)
+    pub fn terrain_samples_by_entity(&self) -> &BTreeMap<EntityId, u64> {
+        &self.terrain_samples
+    }
+
+    /// Every entity's INTEGRATING sustenance reads, keyed — the denominator
+    /// [`Self::unbounded_reads_by_entity`] is a count out of.
+    /// type-audit: bare-ok(count: return)
+    pub fn sustenance_reads_by_entity(&self) -> &BTreeMap<EntityId, u64> {
+        &self.sustenance_reads
+    }
+
+    /// Every entity's reads that sampled terrain more times than the ledger
+    /// grew for it, keyed. Zero for a creature means every one of its reads
+    /// cost what changed rather than what accumulated.
+    /// type-audit: bare-ok(count: return)
+    pub fn unbounded_reads_by_entity(&self) -> &BTreeMap<EntityId, u64> {
+        &self.unbounded_reads
+    }
+
+    /// The first read that exceeded its allowance, as `(entity, samples taken,
+    /// samples allowed)`.
+    /// type-audit: bare-ok(count: return)
+    pub fn first_unbounded_read(&self) -> Option<(EntityId, u64, u64)> {
+        self.first_unbounded_read
+    }
 }
 
 /// A [`ResidentFolds`] behind interior mutability — what a caller OWNS and
@@ -782,6 +1179,10 @@ pub struct ResidentFolds {
     /// Every entity's visits, indexed by room — the hazard fold's latest-visit
     /// map and the alarm scan's room domain.
     latest_visit: Folded<LatestVisit>,
+    /// The sustenance integral's read-side accumulator — not a tenant either,
+    /// because it is a function of terrain as well as the ledger; see
+    /// [`SustenanceMemo`].
+    sustenance_memo: SustenanceMemo,
     /// What the reads above have cost and seen — not a tenant, and not folded
     /// state; see [`ReadWitness`].
     witness: ReadWitness,
@@ -829,29 +1230,44 @@ impl ResidentFolds {
     /// that already knows the reset it is integrating from (the tick's own
     /// walk carries a local one, updated as it emits `drank`/`eaten` facts,
     /// which the committed ledger cannot yet know about).
-    pub fn trail_and_witness(&mut self, ledger: &Ledger) -> (&Trail, &mut ReadWitness) {
+    pub fn trail_and_witness(
+        &mut self,
+        ledger: &Ledger,
+    ) -> (&Trail, &mut SustenanceMemo, &mut ReadWitness) {
         self.advance(ledger);
-        (self.trail.state(), &mut self.witness)
+        (
+            self.trail.state(),
+            &mut self.sustenance_memo,
+            &mut self.witness,
+        )
     }
 
     /// The trail, the `drank` resets and the read witness together, from ONE
     /// guard — see the type doc for why one guard rather than three.
-    pub fn trail_and_thirst(&mut self, ledger: &Ledger) -> (&Trail, &Sustenance, &mut ReadWitness) {
+    pub fn trail_and_thirst(
+        &mut self,
+        ledger: &Ledger,
+    ) -> (&Trail, &Sustenance, &mut SustenanceMemo, &mut ReadWitness) {
         self.advance(ledger);
         (
             self.trail.state(),
             self.thirst.state().get(),
+            &mut self.sustenance_memo,
             &mut self.witness,
         )
     }
 
     /// The trail, the `eaten` resets and the read witness together, from ONE
     /// guard.
-    pub fn trail_and_hunger(&mut self, ledger: &Ledger) -> (&Trail, &Sustenance, &mut ReadWitness) {
+    pub fn trail_and_hunger(
+        &mut self,
+        ledger: &Ledger,
+    ) -> (&Trail, &Sustenance, &mut SustenanceMemo, &mut ReadWitness) {
         self.advance(ledger);
         (
             self.trail.state(),
             self.hunger.state().get(),
+            &mut self.sustenance_memo,
             &mut self.witness,
         )
     }

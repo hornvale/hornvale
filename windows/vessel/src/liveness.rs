@@ -15,7 +15,7 @@ use crate::controller::{Controller, DefaultController, PlayerController};
 use crate::interior::{
     AnchorId, Interior, SeamKind, interior_of, landing, route_within, seam_kind, warmth_at,
 };
-use crate::resident::{OwnedFolds, ReadWitness, Trail};
+use crate::resident::{DriveKey, OwnedFolds, ReadWitness, SustenanceMemo, Trail};
 use hornvale_kernel::units::TickSpan;
 use hornvale_kernel::{
     ANIMAL_PREY, ConditionResponse, EntityId, Facet, FacetId, Fact, Ledger, Lineage, PHOTOSYNTHATE,
@@ -871,6 +871,7 @@ pub fn sustenance_at(
     terrain: &dyn Terrain,
     class: ThermalStrategy,
     p: &DriveParams,
+    memo: &mut SustenanceMemo,
     witness: &mut ReadWitness,
 ) -> f64 {
     if t <= last_reset {
@@ -914,20 +915,51 @@ pub fn sustenance_at(
         }
     }
 
+    // The rate for a window: sampled ONCE, at the window's start, from the
+    // position governing it. Held as one closure because the accumulator and
+    // the tail loop below must perform the identical arithmetic — a second
+    // spelling of it is exactly how a bit-identity claim rots.
+    let rate_of = |pos: &Facet, s: f64| {
+        rise_at(
+            terrain.temperature(
+                pos,
+                WorldTime::from_std_days(s).expect("a day value is finite"),
+            ),
+            class,
+            p,
+        )
+    };
+
+    // THE ACCUMULATOR (spec §2.4, built by Task 5b). The memo carries the
+    // integral from `last_reset` forward, checkpointed at every distinct
+    // sighting instant, so this read resumes from the last checkpoint it may
+    // use instead of re-summing the whole interval. `cut` is the earliest
+    // instant the overlay carries: a memoised window is disqualified if the
+    // overlay could split it or change the position governing it, and both are
+    // excluded by resuming at or before `cut` (see `SustenanceMemo`).
+    let drive = DriveKey::new(class, p.rise);
+    let cut = extra.first().map(|(d, _)| *d);
+    let (resume, base, advanced) = {
+        let mut rate = rate_of;
+        memo.resume(
+            entity, drive, last_reset, sightings, home, cut, t, &mut rate,
+        )
+    };
+
     // The interior boundaries: the DISTINCT instants strictly inside
-    // `(last_reset, t)`, ascending, merged across the two sequences. The
-    // slices are found by binary search, so the walk is O(sightings since the
-    // reset) rather than O(history).
+    // `(resume, t)`, ascending, merged across the two sequences. The slices
+    // are found by binary search, so the walk is O(sightings the accumulator
+    // has not already folded) rather than O(history).
     let inner = |seq: &[(WorldTime, Facet)]| -> (usize, usize) {
         (
-            seq.partition_point(|(d, _)| *d <= last_reset),
+            seq.partition_point(|(d, _)| *d <= resume),
             seq.partition_point(|(d, _)| *d < t),
         )
     };
     let (ts, te) = inner(sightings);
     let (os, oe) = inner(&extra);
     let mut bounds: Vec<WorldTime> = Vec::with_capacity((te - ts) + (oe - os) + 2);
-    bounds.push(last_reset);
+    bounds.push(resume);
     let (mut i, mut j) = (ts, os);
     while i < te || j < oe {
         let next = if j >= oe {
@@ -953,21 +985,30 @@ pub fn sustenance_at(
     }
     bounds.push(t);
 
-    let mut total = 0.0_f64;
+    // Resuming from the accumulator's own running total — never from a
+    // difference of two of them, which would be arithmetically equal and not
+    // bit-identical (see `SustenanceMemo`).
+    let mut total = base;
     for w in bounds.windows(2) {
         let (s, e) = (w[0].as_std_days(), w[1].as_std_days());
         let pos = governing(sightings, &extra, home, w[0]);
-        let rate = rise_at(
-            terrain.temperature(
-                pos,
-                WorldTime::from_std_days(s).expect("a day value is finite"),
-            ),
-            class,
-            p,
-        );
-        total += rate * (e - s);
+        total += rate_of(pos, s) * (e - s);
     }
-    witness.note_segments(entity, (bounds.len() - 1) as u64);
+    // One terrain sample per window, taken at the window's start — the
+    // quantity the cost witness bounds, counted where it is spent rather than
+    // inferred from the segment count beside it. Both halves count: the
+    // windows the accumulator folded on this read, and the tail this one
+    // summed itself.
+    let integrated = advanced + (bounds.len() - 1) as u64;
+    witness.note_sustenance_read(
+        entity,
+        drive,
+        last_reset,
+        sightings.len(),
+        extra.len(),
+        integrated,
+        integrated,
+    );
     total.clamp(0.0, 1.0)
 }
 
@@ -997,7 +1038,7 @@ pub fn drive_at(
     class: ThermalStrategy,
 ) -> f64 {
     let mut store = folds.borrow_mut();
-    let (trail, resets, witness) = store.trail_and_thirst(ledger);
+    let (trail, resets, memo, witness) = store.trail_and_thirst(ledger);
     let last_reset = resets.last_reset(entity);
     witness.note_reset(entity, t, last_reset);
     // `max(GENESIS)` reproduces the `fold(0.0, f64::max)` this replaced,
@@ -1017,6 +1058,7 @@ pub fn drive_at(
         terrain,
         class,
         p,
+        memo,
         witness,
     )
 }
@@ -2706,7 +2748,7 @@ pub fn hunger_at(
     class: ThermalStrategy,
 ) -> f64 {
     let mut store = folds.borrow_mut();
-    let (trail, resets, witness) = store.trail_and_hunger(ledger);
+    let (trail, resets, memo, witness) = store.trail_and_hunger(ledger);
     let last_reset = resets.last_reset(entity);
     witness.note_reset(entity, t, last_reset);
     // The GENESIS floor, for `drive_at`'s reason — see there.
@@ -2723,6 +2765,7 @@ pub fn hunger_at(
         terrain,
         class,
         &HUNGER,
+        memo,
         witness,
     )
 }
@@ -4760,7 +4803,7 @@ fn decide_step(
         .collect();
     let (drive, hunger_urgency) = {
         let mut store = folds.borrow_mut();
-        let (trail, witness) = store.trail_and_witness(frozen);
+        let (trail, memo, witness) = store.trail_and_witness(frozen);
         let drive = sustenance_at(
             trail,
             npc.entity,
@@ -4771,6 +4814,7 @@ fn decide_step(
             terrain,
             npc.thermal_strategy,
             params,
+            memo,
             witness,
         );
         let hunger_urgency = sustenance_at(
@@ -4783,6 +4827,7 @@ fn decide_step(
             terrain,
             npc.thermal_strategy,
             &HUNGER,
+            memo,
             witness,
         );
         (drive, hunger_urgency)
@@ -8125,7 +8170,7 @@ mod tests {
         let witness = &mut ReadWitness::default();
         let thirst_from_the_earlier_drink = {
             let mut s = store.borrow_mut();
-            let (trail, _, _) = s.trail_and_thirst(&ledger);
+            let (trail, _, memo, _) = s.trail_and_thirst(&ledger);
             sustenance_at(
                 trail,
                 b_e,
@@ -8136,6 +8181,7 @@ mod tests {
                 &terrain,
                 b.thermal_strategy,
                 &SUSTENANCE,
+                memo,
                 witness,
             )
         };
@@ -9897,7 +9943,14 @@ mod tests {
         let empty = crate::resident::Trail::default();
         let e = EntityId::new(1).expect("1 is non-zero");
         let mut witness = crate::resident::ReadWitness::default();
+        // A FRESH accumulator per call, because this test deliberately reads
+        // the same history through TWO terrains and the memo is a function of
+        // terrain as well as the ledger (`SustenanceMemo`'s one-terrain-per-
+        // store invariant). Nothing would differ today — an empty trail
+        // memoises no window at all — and relying on that would be relying on
+        // the fixture rather than on the rule.
         let at = |terrain: &dyn Terrain, witness: &mut crate::resident::ReadWitness| {
+            let mut memo = crate::resident::SustenanceMemo::default();
             sustenance_at(
                 &empty,
                 e,
@@ -9908,6 +9961,7 @@ mod tests {
                 terrain,
                 ThermalStrategy::Endothermic,
                 &p,
+                &mut memo,
                 witness,
             )
         };

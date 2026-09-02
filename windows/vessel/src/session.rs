@@ -2197,6 +2197,48 @@ impl<'w> Session<'w> {
         self.folds.borrow().witness().segments_by_entity().clone()
     }
 
+    /// Every creature's TERRAIN-TEMPERATURE sample count, keyed — the second
+    /// half of the cost witness (The Pawl, Task 5b). Sampled around a turn,
+    /// its difference is the terrain work that turn's sustenance reads did.
+    /// type-audit: bare-ok(count: return)
+    pub fn resident_terrain_samples_by_entity(&self) -> std::collections::BTreeMap<EntityId, u64> {
+        self.folds
+            .borrow()
+            .witness()
+            .terrain_samples_by_entity()
+            .clone()
+    }
+
+    /// Every creature's INTEGRATING sustenance reads, keyed — the denominator
+    /// [`Self::resident_unbounded_reads_by_entity`] is a count out of.
+    /// type-audit: bare-ok(count: return)
+    pub fn resident_sustenance_reads_by_entity(&self) -> std::collections::BTreeMap<EntityId, u64> {
+        self.folds
+            .borrow()
+            .witness()
+            .sustenance_reads_by_entity()
+            .clone()
+    }
+
+    /// Every creature's reads that sampled terrain more times than the ledger
+    /// grew for it since the previous read of the same drive, keyed — see
+    /// [`crate::resident::ReadWitness::unbounded_reads_by_entity`].
+    /// type-audit: bare-ok(count: return)
+    pub fn resident_unbounded_reads_by_entity(&self) -> std::collections::BTreeMap<EntityId, u64> {
+        self.folds
+            .borrow()
+            .witness()
+            .unbounded_reads_by_entity()
+            .clone()
+    }
+
+    /// The first read that exceeded its allowance, as `(entity, samples taken,
+    /// samples allowed)` — the evidence the cost witness prints.
+    /// type-audit: bare-ok(count: return)
+    pub fn resident_first_unbounded_read(&self) -> Option<(EntityId, u64, u64)> {
+        self.folds.borrow().witness().first_unbounded_read()
+    }
+
     /// Every derived body's HAZARD MEMORY at this session's current day, read
     /// through the session's own terrain, roster and resident store — the
     /// determinism seam for the half of the walk that `session_ledger_json`
