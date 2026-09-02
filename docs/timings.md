@@ -4750,3 +4750,8 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-02T02:23:10Z | gate-commit | 259.802 | 120.717 | 90.747 | 0.81 | 0 | 6db1a664a | campaign/the-hallmark | ambrose | 12 |
 | 2026-09-02T10:22:52Z | gate-commit | 200.543 | 106.330 | 62.395 | 0.84 | 0 | 430477da3 | campaign/the-hallmark | ambrose | 12 |
 | 2026-09-02T10:46:57Z | quick | 20.195 | 14.350 | 0.870 | 0.75 | 0 | 4a11f087a | campaign/the-hallmark | ambrose | 12 |
+| 2026-09-02T11:09:34Z | gate-commit | 199.824 | 68.081 | 31.536 | 0.50 | 0 | 4a11f087a | campaign/the-hallmark | ambrose | 12 |
+| 2026-09-02T12:03:07Z | gate-commit | 291.883 | 188.733 | 60.677 | 0.85 | 0 | 8c17a1b2c | campaign/the-hallmark | ambrose | 12 |
+| 2026-09-02T12:07:03Z | gate-commit | 98.759 | 59.869 | 29.924 | 0.91 | 0 | 8c17a1b2c | campaign/the-hallmark | ambrose | 12 |
+| 2026-09-02T12:17:35Z | quick | 20.316 | 14.515 | 0.916 | 0.76 | 0 | b12f8ec6c | campaign/the-hallmark | ambrose | 12 |
+| 2026-09-02T12:36:34Z | gate-commit | 274.151 | 142.092 | 104.624 | 0.90 | 0 | b12f8ec6c | campaign/the-hallmark | ambrose | 12 |
