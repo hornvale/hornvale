@@ -128,6 +128,7 @@ usage:
                                             witness: chamber counts by band and by rock, plus the
                                             first three cave systems run by run). Builds only to
                                             BuildDepth::Terrain.
+  hornvale circuit --seed <N>              dump one seed's descent-plan readouts (The Crosscut witness)
   hornvale phonology                       dump per-species phonology as markdown
   hornvale dictionary [--world <PATH>]     dump per-species dictionary as markdown
   hornvale proto [FAMILY]                  dump a language family's proto inventory/phonotactics/proto-root table
@@ -202,6 +203,7 @@ fn main() -> ExitCode {
         Some("systems") => cmd_systems(&args),
         Some("streams") => cmd_streams(),
         Some("underworld") => cmd_underworld(&args),
+        Some("circuit") => cmd_circuit(&args),
         Some("phonology") => cmd_phonology(),
         Some("dictionary") => cmd_dictionary(&args),
         Some("proto") => cmd_proto(&args),
@@ -1347,6 +1349,45 @@ fn cmd_underworld(args: &[String]) -> Result<(), String> {
     print!(
         "{}",
         world_builder::underworld_readout::render_underworld(Seed(seed), &terrain)
+    );
+    Ok(())
+}
+
+/// Render one seed's descent-plan readouts — The Crosscut's committed witness.
+///
+/// **A thin command, deliberately**, mirroring [`cmd_underworld`] exactly.
+/// Every number it prints comes from
+/// `hornvale_worldgen::circuit_readout::render_circuit_panel`, which reads
+/// the shipped `plan_descent` and its readout functions; this function only
+/// builds the world and hands it over. The committed artifact is written by
+/// the `>` redirect in `scripts/regenerate-artifacts.sh` — running this bare
+/// prints to stdout and regenerates nothing, which is the trap
+/// `docs/generated-paths.txt`'s own header records.
+///
+/// `BuildDepth::Terrain`, the shallowest rung a descent plan needs: it wants
+/// a cave's kind and its vertex, and nothing above terrain.
+fn cmd_circuit(args: &[String]) -> Result<(), String> {
+    let seed: u64 = flag_value(args, "--seed")
+        .ok_or("circuit requires --seed <N>")?
+        .parse()
+        .map_err(|e| format!("--seed must be a u64: {e}"))?;
+    let wc = world_builder::WorldComponents::assemble().map_err(|e| e.to_string())?;
+    let artifacts = world_builder::build_world_to_with_artifacts(
+        Seed(seed),
+        &SkyPins::default(),
+        world_builder::SkyChoice::Generated,
+        &hornvale_terrain::TerrainPins::default(),
+        &world_builder::SettlementPins::default(),
+        &wc,
+        world_builder::BuildDepth::Terrain,
+    )
+    .map_err(|e| e.to_string())?;
+    let terrain = artifacts
+        .terrain
+        .ok_or("BuildDepth::Terrain must hand back a terrain")?;
+    print!(
+        "{}",
+        world_builder::circuit_readout::render_circuit_panel(Seed(seed), &terrain)
     );
     Ok(())
 }

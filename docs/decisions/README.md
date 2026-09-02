@@ -281,6 +281,9 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0556](0556-totality-by-registry-replaces-totality-by-compiler.md) | Totality by registry replaces totality by compiler, and every check names its direction | Accepted |
 | [0557](0557-a-handle-is-a-convenience-where-a-variant-was-a-requirement.md) | A handle is a convenience where a variant was a requirement | Accepted |
 | [0558](0558-sleep-is-never-gated-the-place-grades-it.md) | Sleep is never gated — the place grades it | Accepted |
+| [0566](0566-a-place-is-a-graph-before-it-is-a-map.md) | A place is a graph before it is a map, and the grammar is series-parallel | Accepted |
+| [0567](0567-stairs-pair-by-coordinate.md) | Stairs pair by coordinate: a stairway's two ends share a cell | Accepted |
+| [0568](0568-cycle-density-is-derived-not-authored.md) | Cycle density is derived from rock and workmanship, never authored | Accepted |
 | [0576](0576-the-capability-provision-table.md) | The capability provision table spans all three homes; ledger wired first | Accepted |
 | [0577](0577-the-realization-witness.md) | The realization witness | Superseded by 0581 |
 | [0578](0578-kinship-a-genesis-fact.md) | Kinship as a genesis fact | Superseded by 0584 |
