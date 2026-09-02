@@ -21,6 +21,7 @@ dependencies = [
  "hornvale-paleoclimate",
  "hornvale-religion",
  "hornvale-scene",
+ "hornvale-sentiment",
  "hornvale-settlement",
  "hornvale-species",
  "hornvale-terrain",

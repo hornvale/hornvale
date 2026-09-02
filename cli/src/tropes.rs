@@ -89,21 +89,6 @@ pub fn load(json: &str) -> Result<Corpus, String> {
     serde_json::from_str(json).map_err(|e| format!("corpus parse: {e}"))
 }
 
-/// Every token the registry holds, namespaced.
-fn registry_tokens(r: &ConceptRegistry) -> BTreeSet<String> {
-    let mut t = BTreeSet::new();
-    for p in r.predicates() {
-        t.insert(format!("predicate:{}", p.name));
-    }
-    for (kind, _doc) in r.phenomenon_kinds() {
-        t.insert(format!("phenomenon:{kind}"));
-    }
-    for c in r.concepts() {
-        t.insert(format!("concept:{}", c.name));
-    }
-    t
-}
-
 /// Expand a requirement into concrete tokens, following one `bundle:` level.
 ///
 /// A dangling `bundle:` reference expands to the reference itself, which no
@@ -300,15 +285,18 @@ pub fn witness_stages(
 /// situation `id`.
 ///
 /// Consults the [`crate::provision::Provision`] table (decision 0576)
-/// instead of `registry_tokens` alone: a token is present only if some
+/// instead of a bare registry scan: a token is present only if some
 /// declared home actually serves it. **This function BUILDS `Provision`
 /// itself, from the `registry` it is given** — unlike `witnesses`, which
 /// arrives already built by the caller (see that parameter's own doc; an
 /// earlier draft of decision 0577 stated this the other way round, and
-/// decision 0581 corrects it). `Provision::from_registry` declares exactly the
-/// tokens `registry_tokens` used to compute, and its ledger resolver
-/// checks the same three namespaces. The widening (component and session
-/// homes) arrives in Tasks 6 and 7 without `resolve` changing again.
+/// decision 0581 corrects it). `Provision::build` (decision 0579) declares
+/// every home wired so far — the ledger rows the pre-Avowal `registry_
+/// tokens` scan used to compute, plus the component-home rows Task 6 added
+/// — so a widened home changes what `resolve` sees without `resolve` itself
+/// changing again. `render`/`render_matrix` call the same `Provision::build`
+/// rather than re-deriving "what's served" from the registry a second way —
+/// see `provision.rs`'s module doc for why the two used to disagree.
 ///
 /// **`Stageable` now ALSO requires a witness (decision 0577)**, checked only
 /// once every requirement token already resolves — a situation still
@@ -325,7 +313,7 @@ pub fn resolve(
     world: &World,
     witnesses: &Witnesses,
 ) -> BTreeMap<String, Outcome> {
-    let table = crate::provision::Provision::from_registry(registry);
+    let table = crate::provision::Provision::build(registry);
     let mut out = BTreeMap::new();
     for s in &corpus.situations {
         if let Some(reason) = s.excluded_by.first() {
@@ -604,8 +592,16 @@ pub fn render(
     // it reached the witness check only because every one of its bundles
     // is ALREADY held (`missing.is_empty()` in `resolve`), so
     // `expand(...).any(|t| !held.contains(t))` is false for all of them —
-    // nothing to exclude by hand.
-    let held = registry_tokens(registry);
+    // nothing to exclude by hand. **This invariant needs `held` to be built
+    // the SAME WAY `resolve` decides "served"** (decision 0579): `held` used
+    // to be a raw registry scan (`registry_tokens`), which agreed with
+    // `Provision::serves` only by coincidence — a component-served token
+    // (`predicate:affect-kind`, `predicate:affect-intensity`) would pass
+    // `resolve`'s `missing.is_empty()` while still failing `held.contains`,
+    // reaching this loop and falsifying the very comment above it. `held` is
+    // now `Provision::served_tokens`, the same table `resolve` itself
+    // consults, so the two can no longer disagree.
+    let held = crate::provision::Provision::build(registry).served_tokens(registry);
     let mut fan: BTreeMap<String, Vec<String>> = BTreeMap::new();
     for st in &corpus.situations {
         if let Some(Outcome::Blocked(_)) = out.get(&st.id) {
@@ -1011,11 +1007,16 @@ pub fn render_matrix(
             out.len()
         ));
     }
+    // `Provision::build`, not a bare registry scan — see the `held` note in
+    // `render` (decision 0579). This table now spans every wired home, so
+    // "tokens" here means "tokens served", not "tokens the registry holds".
+    let served_count = crate::provision::Provision::build(registry)
+        .served_tokens(registry)
+        .len();
     s.push_str(&wrap(&format!(
-        "All columns resolve against one registry of {} tokens, built once per run, so a \
-         difference between columns is a difference between catalogues and never between \
-         two worlds.",
-        registry_tokens(registry).len()
+        "All columns resolve against one provision table of {served_count} served tokens, \
+         built once per run, so a difference between columns is a difference between \
+         catalogues and never between two worlds."
     )));
     s.push_str("\n\n| Corpus | Stageable | Inapplicable | Report |\n|---|---|---|---|\n");
     s.push_str(&rows);

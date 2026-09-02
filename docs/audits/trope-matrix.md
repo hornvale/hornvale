@@ -41,9 +41,9 @@ future reader diff the two eras' counts meaningfully.
 
 ## Columns
 
-All columns resolve against one registry of 397 tokens, built once per run,
-so a difference between columns is a difference between catalogues and never
-between two worlds.
+All columns resolve against one provision table of 399 served tokens, built
+once per run, so a difference between columns is a difference between
+catalogues and never between two worlds.
 
 | Corpus | Stageable | Inapplicable | Report |
 |---|---|---|---|

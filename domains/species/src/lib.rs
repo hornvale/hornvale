@@ -99,6 +99,28 @@ pub const SPECIES_EXOTIC_MANNER: &str = "species-exotic-manner";
 /// type-audit: bare-ok(identifier-text)
 pub const SPECIES_TONALITY: &str = "species-tonality";
 
+/// Token: the Stereotype-Content-Model quadrant (warmth × competence) a
+/// `windows/sentiment::snap_judgment` classifies to between two peoples
+/// (decision 0579). **Never registered with `register_predicate`, and no
+/// `Fact` is ever committed under this name** — `snap_judgment` is
+/// world-invariant, people-to-people (`KindId × KindId`) data recomputed the
+/// same on every run, so committing it would store the same ~840 values in
+/// every world ever generated, the second source of truth decision 0366
+/// objects to. It is served only through `hornvale::provision::Provision`
+/// against the component home. Owned here rather than by `windows/sentiment`
+/// (a window may not declare vocabulary a domain must own) because this
+/// crate already owns the `psyche_registry`/`society_registry` component
+/// data the judgment is computed from, and windows/sentiment already depends
+/// on this crate for exactly that data.
+/// type-audit: bare-ok(identifier-text)
+pub const AFFECT_KIND: &str = "affect-kind";
+
+/// Token: the magnitude half of the same `windows/sentiment::Judgment`
+/// (warmth/competence distance from baseline) between two peoples. See
+/// [`AFFECT_KIND`] for why this is component-home only and owned here.
+/// type-audit: bare-ok(identifier-text)
+pub const AFFECT_INTENSITY: &str = "affect-intensity";
+
 /// How a species organizes authority.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Sociality {

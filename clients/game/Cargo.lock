@@ -110,6 +110,7 @@ dependencies = [
  "hornvale-paleoclimate",
  "hornvale-religion",
  "hornvale-scene",
+ "hornvale-sentiment",
  "hornvale-settlement",
  "hornvale-species",
  "hornvale-terrain",
@@ -340,6 +341,16 @@ dependencies = [
  "hornvale-worldgen",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "hornvale-sentiment"
+version = "0.1.0"
+dependencies = [
+ "hornvale-demography",
+ "hornvale-kernel",
+ "hornvale-language",
+ "hornvale-species",
 ]
 
 [[package]]

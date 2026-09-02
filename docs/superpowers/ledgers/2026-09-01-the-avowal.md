@@ -1108,3 +1108,135 @@ independently); `docs/decisions/0584-kinship-direction-and-the-parent-of-
 generation-cut.md` (place/day disclosure added); `cli/tests/fixtures/
 world-seed-42.json`, `book/src/reference/concept-registry-generated.md`
 (regenerated).
+
+---
+
+#15 [G5] — **Task 6: affect through the component home — predicate
+ownership, the `Home::Component` payload, and the `registry_tokens`-vs-
+`serves` reconciliation.**
+
+*Question.* Three things the task brief left open: (1) who owns
+`affect-kind`/`affect-intensity` given `windows/sentiment` cannot ("a window
+may not declare vocabulary a domain must own"); (2) what real payload
+replaces `Unwired` on `Home::Component`; (3) `cli/src/tropes.rs` calls a
+private `registry_tokens` scan at two sites (the Leverage fan-in `held` set,
+and the Columns section's token count) that agrees with `Provision::serves`
+only as long as every served token is also a registry token — a component-
+home row breaks that.
+
+*Decision.*
+
+1. **Owner: `domains/species`.** It already owns the `psyche_registry`/
+   `society_registry` component data `snap_judgment` is computed from, is
+   kernel-only (satisfies `domains/CLAUDE.md`'s one rule), and
+   `windows/sentiment` already depends on it for exactly that data — so
+   declaring the two constants there keeps `windows/sentiment` purely
+   presentational. Same subject-type precedent entry #12 used for
+   `parent-of`/`kin-of` in `domains/person`. Both are plain `pub const &str`,
+   never passed to `register_predicate` — there is no `ConceptRegistry` row
+   for either, on purpose, since neither is ever fact-worthy (§4.4: "no fact
+   is committed").
+2. **`Home::Component` carries `ComponentResolver = fn() -> bool`**, not an
+   enum naming each producer. The only consumer (`Provision::serves`) needs
+   nothing about a producer except "call it and see"; there is exactly one
+   producer today, and an enum with one variant is an abstraction with
+   nothing to justify it yet. A second component-home token later is a
+   `declare` call away, not a match arm here. This required dropping
+   `Home`'s `PartialEq`/`Eq` derive — a derived comparison of the `fn`
+   payload by address is not meaningful and `rustc` warns on it under
+   `-D warnings` (`unpredictable_function_pointer_comparisons`); nothing in
+   the codebase ever compares `Home` values (every caller constructs or
+   pattern-matches), so the fix removes the unused derive rather than
+   suppressing the warning.
+3. **`registry_tokens` is deleted outright, not kept alongside a second
+   computation.** Both call sites (`tropes.rs`'s `held` set and the
+   Columns-section token count) now read a new `Provision::served_tokens`
+   — every token the table's rows currently serve, home-blind, computed by
+   the same `serves()` the resolver itself calls. This is a real property
+   fix, not tidiness: `render`'s `held.contains(t)` invariant comment ("a
+   witness-blocked situation reached the witness check only because every
+   one of its bundles is ALREADY held") is stated as true "by construction"
+   of `resolve`'s `missing.is_empty()` check — and that construction breaks
+   the moment `held` and `serves` are computed two different ways, which is
+   exactly what a component-home row does. No witness touches `felt-affect`
+   yet, so nothing was actually miscounted today; this closes the
+   invariant before a future witness could expose it.
+
+*Why.* (1) follows `domains/CLAUDE.md`'s one rule (a domain owns kernel-only
+vocabulary; a window presents, never declares) and entry #12's precedent
+directly — there was no live alternative once the layering rule is taken
+seriously. (2) is a proportionality call: the brief says "give the component
+home its own resolver", and a bare `fn` pointer is the smallest thing that
+satisfies "call it and see" without inventing structure the codebase does
+not need yet (Decision Framework: simplicity, reversibility — a second
+producer only ever needs a `declare` call, never a new enum variant). (3) was
+flagged explicitly by the review that wrote this task's brief, and verifying
+it by hand (rather than trusting the "it hasn't broken yet" observation)
+confirmed the reasoning: `render`'s `held` was a raw registry scan
+independent of `Provision`, and would have silently disagreed with `serves`
+for exactly the two tokens this task adds.
+
+*Verified, not assumed.* `cargo test -p hornvale --test suite provision` (13
+tests, all green) including the two honesty-guarantee tests named in the
+brief: `feels_toward_does_not_resolve` (asserts `!serves` and that the row's
+`Unserved::NotServed` reason names the grain ruling) and
+`bundle_felt_affect_reads_two_of_three_and_stays_blocked` (asserts
+`Outcome::Blocked(["predicate:feels-toward"])` exactly — the other two
+tokens no longer appear as missing). **No fact committed**, verified on a
+real world (`no_fact_is_committed_serving_affect_tokens`): serialize
+`world.ledger` to JSON before and after `Provision::build`, `serves` (both
+tokens), and a full `resolve` run requiring both tokens — byte-identical.
+(`resolve` only ever takes `world: &World`, a shared reference, so the
+borrow checker already forbids a mutation through this path; the test is the
+executable record of that property, not a probe that could plausibly catch
+what the type system missed.) `make rebaseline` + `make rebaseline-goldens`:
+`bundle:felt-affect` moved **0/3 → 2/3** in both corpora's rendered `Blocked`
+lists (every `affect-intensity`/`affect-kind` pair vanished from every
+`missing` list; `feels-toward` remained in each); `polti-1895` stageable
+stayed **0 of 36**, `tvtropes-2012` stayed **0 of 409** — the preregistered
+null, confirmed by grepping `^Stageable` in both regenerated reports.
+`trope-matrix.md`'s Columns preamble moved from "397 tokens" to "399 served
+tokens" (397 registry + 2 component), and its own wording changed from
+"registry" to "provision table" to stay honest about what it now counts.
+`book/src/reference/layering-generated.md` gained exactly one dependency
+edge (`cli → hornvale-sentiment`) and nothing else. `make gate-commit`:
+green, 1010/1010 sub-floor tests, `cargo fmt --check` and
+`cargo clippy --workspace --all-targets -- -D warnings` both clean, `type-
+audit check` clean after tagging `served_tokens`'s `BTreeSet<String>` return
+(`bare-ok(identifier-text: return)`). `cargo test -p hornvale --test suite`
+(the full workspace-enforcement suite, per `cli/CLAUDE.md`'s "a crate-scoped
+green is not a branch-green"): 286 passed, 2 failed — both
+`repertory_corpus::every_founding_scene_passes_every_beat` and
+`::no_scene_has_fallen_below_its_recorded_floor` (`walk-changes-the-room`),
+**confirmed pre-existing on `main` at `8818619e4`** by running the identical
+command in a disposable worktree checked out to that commit before this
+task touched anything — same two failures, same `Err("b2")`. Unrelated to
+this task (nothing here touches session state, walking, or room
+perception); flagged rather than silently worked around, and left for
+whoever owns that surface.
+
+*Alternatives discarded.* Registering the two tokens as ordinary
+`register_predicate` rows (would make them appear in `hornvale concepts` and
+the registry-generated reference as if a fact could carry them, which is
+false — the whole point is that no commit path exists at all, not merely
+that it is discouraged); owning the constants in `windows/sentiment`
+(forecloses by the layering rule itself); an enum-per-producer
+`ComponentResolver` (premature abstraction — see decision above); leaving
+`predicate:feels-toward` simply undeclared rather than an explicit `Absent`
+row (would resolve identically, `Blocked`, but hides *why* from a reader of
+`Provision::build` who has not also read this ledger or the decision).
+
+*Ideonomy passes / overturns.* None — an implementation task closing
+questions the brief posed, not a design question.
+
+*Capture actions.* `cli/src/provision.rs` (`Home::Component` payload,
+`ComponentResolver`, `Provision::build`, `Provision::served_tokens`,
+`sentiment_affect_holds`, `Home`'s dropped `PartialEq`/`Eq`); `cli/src/
+tropes.rs` (`registry_tokens` deleted; both call sites read `Provision::
+served_tokens`; `resolve` calls `Provision::build`); `domains/species/
+src/lib.rs` (`AFFECT_KIND`, `AFFECT_INTENSITY`); `cli/Cargo.toml`
+(`hornvale-sentiment` dependency); `cli/tests/suite/provision.rs` (4 new
+Task 6 tests); `docs/decisions/0579-affect-component-data-never-a-fact.md`
+(new); `docs/audits/trope-coverage-*.md`, `docs/audits/trope-matrix.md`,
+`docs/audits/type-audit-report.md`, `docs/digest/decisions-in-force.md`,
+`book/src/reference/layering-generated.md` (regenerated).

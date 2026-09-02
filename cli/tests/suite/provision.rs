@@ -1,7 +1,11 @@
 //! The provision table (decision 0576): `tropes::resolve` now consults
 //! [`hornvale::provision::Provision`] instead of asking the concept
-//! registry alone. This task wires the ledger home only; the four tests
-//! below are the ones the task brief names.
+//! registry alone. The first block of tests below is Task 5's (ledger home
+//! only); the block headed "Task 6" wires the component home
+//! (`windows/sentiment`'s per-people snap judgment, decision 0579) and pins
+//! Nathan's grain ruling (`docs/superpowers/ledgers/2026-09-01-the-avowal.md`
+//! entry #2): `feels-toward` stays unserved, so `bundle:felt-affect` reads
+//! 2/3 and stays blocked, deliberately.
 
 use hornvale::provision::{Correspondent, Home, Provision, Unserved};
 use hornvale::tropes::{Corpus, Outcome, Situation, resolve, witnesses};
@@ -131,4 +135,119 @@ fn declared_absent_row_carries_its_reason() {
         }
         other => panic!("expected an Absent row carrying a reason, got {other:?}"),
     }
+}
+
+// ---------------------------------------------------------------------
+// Task 6: the component home (decision 0579).
+// ---------------------------------------------------------------------
+
+/// **`affect-kind` and `affect-intensity` resolve through the component
+/// home.** `Provision::build` (the table `resolve` now actually consults —
+/// see that function's own doc) declares both against
+/// `Home::Component`, and the component resolver (`windows/sentiment`'s
+/// per-people snap judgment) answers "served" without any ledger or world
+/// at all.
+#[test]
+fn affect_kind_and_affect_intensity_resolve_through_component_home() {
+    let registry = ConceptRegistry::default();
+    let table = Provision::build(&registry);
+    assert!(
+        table.serves("predicate:affect-kind", &registry),
+        "affect-kind should resolve through the component home"
+    );
+    assert!(
+        table.serves("predicate:affect-intensity", &registry),
+        "affect-intensity should resolve through the component home"
+    );
+    for token in ["predicate:affect-kind", "predicate:affect-intensity"] {
+        match table.row(token) {
+            Some(Correspondent::Present(Home::Component(_))) => {}
+            other => panic!("{token}: expected a Present(Home::Component(_)) row, got {other:?}"),
+        }
+    }
+}
+
+/// **No fact is committed** — spec §4.4's whole point. Serialize a real
+/// world's ledger before and after every way this task exercises the
+/// component home (`Provision::build`, `serves`, and a full `resolve` run
+/// over a corpus that requires both affect tokens), and assert byte-identity.
+/// `resolve` only ever takes `world: &World`, so Rust's own borrow checker
+/// already forbids a mutation through this path — this test is the
+/// executable record of that property, not a probe that could plausibly
+/// catch a violation the type system missed.
+#[test]
+fn no_fact_is_committed_serving_affect_tokens() {
+    let world = a_world();
+    let before =
+        serde_json::to_string(&world.ledger).expect("a real world's ledger should serialize");
+
+    let table = Provision::build(&world.registry);
+    assert!(table.serves("predicate:affect-kind", &world.registry));
+    assert!(table.serves("predicate:affect-intensity", &world.registry));
+
+    let corpus = a_corpus(vec![
+        "predicate:affect-kind".to_string(),
+        "predicate:affect-intensity".to_string(),
+    ]);
+    let _ = resolve(&corpus, &world.registry, &world, &witnesses());
+
+    let after =
+        serde_json::to_string(&world.ledger).expect("a real world's ledger should serialize");
+    assert_eq!(
+        before, after,
+        "serving affect-kind/affect-intensity must never commit a fact — the ledger moved"
+    );
+}
+
+/// **`feels-toward` does not resolve — deliberately unregistered.** Nathan's
+/// grain ruling (ledger #2): `snap_judgment` is people-to-people,
+/// `feels-toward` is person-to-person, and no person-scale producer ships
+/// this campaign. The absence carries a reason naming the ruling, not a bare
+/// "no row" — a future implementer reading this row should see WHY, not just
+/// THAT.
+///
+/// **This is one of the campaign's honesty-guarantee tests.** If a later
+/// change ever makes `feels-toward` resolve without a person-scale producer
+/// actually landing, this test is what must catch it.
+#[test]
+fn feels_toward_does_not_resolve() {
+    let registry = ConceptRegistry::default();
+    let table = Provision::build(&registry);
+    assert!(
+        !table.serves("predicate:feels-toward", &registry),
+        "feels-toward must stay unserved until a person-scale producer exists"
+    );
+    match table.row("predicate:feels-toward") {
+        Some(Correspondent::Absent(Unserved::NotServed(reason))) => {
+            assert!(
+                reason.contains("people-to-people") || reason.contains("grain"),
+                "the absence reason should name the grain ruling, got {reason:?}"
+            );
+        }
+        other => panic!("expected an explicit Absent row naming the grain ruling, got {other:?}"),
+    }
+}
+
+/// **`bundle:felt-affect` reads 2/3 and stays blocked.** The other
+/// honesty-guarantee test: a situation requiring all three `felt-affect`
+/// tokens resolves `Blocked` on exactly `predicate:feels-toward` — the two
+/// component-served tokens no longer appear as missing, and the third never
+/// does until a person-scale producer lands.
+#[test]
+fn bundle_felt_affect_reads_two_of_three_and_stays_blocked() {
+    let registry = ConceptRegistry::default();
+    let world = a_world();
+    let corpus = a_corpus(vec![
+        "predicate:affect-kind".to_string(),
+        "predicate:affect-intensity".to_string(),
+        "predicate:feels-toward".to_string(),
+    ]);
+    let out = resolve(&corpus, &registry, &world, &witnesses());
+    assert_eq!(
+        out.get("s1"),
+        Some(&Outcome::Blocked(vec![
+            "predicate:feels-toward".to_string()
+        ])),
+        "exactly one of felt-affect's three tokens (feels-toward) should still be missing"
+    );
 }
