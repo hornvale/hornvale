@@ -150,8 +150,8 @@ apostrophe in `-m "$(cat <<'EOF' ...)"` breaks the shell.
 **Files:**
 - Modify: `windows/vessel/src/tableau.rs`
 - Modify: `windows/vessel/src/session.rs` (apply staged relations)
-- Test: the existing tableau test file — check `windows/vessel/tests/suite.rs`
-  first rather than assuming a filename
+- Test: `windows/vessel/tests/suite/tableau.rs` (exists; registered at
+  `windows/vessel/tests/suite.rs:100`)
 
 **Interfaces:**
 - Consumes: `Tableau { cast: Vec<StagedBody>, things: Vec<StagedThing> }`;
@@ -270,8 +270,10 @@ behaviour change you did not intend. If one moves, STOP and report which and why
 
 **Interfaces:**
 - Consumes: Task 2's `Tableau.relations`; Task 3's provision lookup;
-  `hornvale_vessel::Tableau::from_json`; `SessionConfig.tableau: Option<Tableau>`
-  (`windows/vessel/src/lib.rs:217`).
+  `hornvale_vessel::Tableau::from_json` (`tableau.rs:102`); **`PossessOpts.tableau:
+  Option<Tableau>`** (`windows/vessel/src/lib.rs:217`) — the struct is
+  `PossessOpts`, NOT `SessionConfig`; an earlier draft of this plan had the line
+  number right and the name wrong.
 - Produces: a witness table keyed by situation id, in the shape of decision
   0330's `MERCHANT_WITNESS`. Read `cli/tests/suite/sentence_corpus.rs` for that
   precedent before designing this one.
