@@ -637,3 +637,60 @@ answers about whether they exist. The first is a gap, the second was the bug.
 **Cost if wrong:** a player finds a dry room under the sea and it reads as
 broken rather than unfinished. Mitigated by the row and by the column that
 counts them.
+
+### #28 [G5] — I specified a vacuous test for the third time, and the implementer caught it by probing first
+
+Task 6's dispatch told the implementer to assert the flagship's prose contains
+"Doaba". It probed live before implementing and found **`"in the lands of
+Doaba"` already appears there** via `Vantage::village`, an unrelated mechanism.
+So the assertion would have passed whether or not the new code did anything.
+
+It asserted on the clause's own marker text instead, and confirmed
+red-before/green-after.
+
+**Eleventh instance of the pattern this campaign, and the third where the
+vacuous test was MY specification** (after Task 1's `a_new_site_is_a_point` and
+Task 3's inverted step-2). The shape is always the same: I pick an observable
+that the desired behaviour would produce, without checking whether something
+else already produces it.
+
+**The habit that caught it, and it is cheap: probe the observable BEFORE writing
+the assertion.** One CLI run would have told me. The implementer did exactly
+that unprompted, which is the second time this campaign an agent has protected
+me from my own test design.
+
+### #29 [G5] — `Site::salience()` has no production consumer, and duplicates an ordering `brief_of` hardcodes
+
+Surfaced by Task 6 reporting that "at most two sites, ranked by salience" is not
+exercisable: `Brief::site` is a singular `Option<Site>`, already reduced by
+`brief_of`.
+
+Verified:
+
+```
+salience() callers in production : NONE
+  (site.rs:177,178,188 are its own tests; purview.rs and
+   portolan_resolution.rs are a DIFFERENT salience — agent/class, unrelated)
+brief_of's ordering             : an if/else chain, brief.rs:206/211/216
+brief_of's comments             : brief.rs:191, 203 cite `Site::salience` as the authority
+```
+
+So the settlement > exotic > cave order is stated **twice, independently**, and
+the prose claims one copy is canonical while the code uses the other. Change
+`salience()` and `brief_of` silently keeps the old order; change `brief_of` and
+salience's test still passes.
+
+**This is the `cave_at` / `cave_site_at` bug in miniature — two sources of truth
+for one fact — and it is the third instance in this campaign.** I specced
+`salience()` in Task 1 for a ranking consumer that a singular `Option<Site>`
+means never arrives.
+
+**Ruling: make `brief_of` USE `salience()`** — assemble the candidates and take
+the max — rather than deleting salience or leaving the duplication. That makes
+salience load-bearing, deletes the second copy of the ordering, and honours the
+comments already claiming it is the authority. Deleting it instead would leave
+the spec's "at most two named" intent with no home the moment `Brief` carries
+more than one site.
+
+**Cost if wrong:** a slightly less direct expression of a three-way priority.
+Cheaper than a third occurrence of the two-sources-of-truth defect.
