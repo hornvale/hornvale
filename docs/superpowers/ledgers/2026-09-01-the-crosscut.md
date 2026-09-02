@@ -174,3 +174,44 @@ rather than buried here.
 - scope: level / run (here) / system (junctions, captured) / world
 - predictability: recognizable vocabulary, unrecognizable instance (the
   Hearth's "houses of one people look alike")
+
+## Post-G3 entries (lead the G6 digest)
+
+#7 [G4] — The G3 draft keyed the plan to a `RunAddr` refining
+`passages_from`; the walked descent is not that object · **Re-key to the
+five-rung descent `Underground::enter` builds under `(seed, vertex)`** ·
+Why: `enter` generates one level per habitation rung and never reads
+`levels_in_branch`, `passages_from` or a branch (`MAP-chamber-occupancy`
+records that the lattice's edge half has no walking consumer); a plan per
+run would describe a place nobody stands in, and wiring the walk to the
+lattice is its own campaign · Discarded: widening this campaign to do the
+wiring — a second epoch of scope with one gate · Ideonomy: 1 pass (scope
+prompt re-run against the code rather than the docs) — the per-run /
+per-descent substitution is exactly where the draft's reading and the
+code's reality diverged · Capture: spec §3.1 rewritten and says so;
+followup below for the wiring gap.
+
+#8 [G4] — Readout sample · **Three-seed panel over every cave-bearing
+vertex, as `hornvale underworld` does; drop the 60-seed sweep from the
+committed page** · Why: a committed artifact must regenerate in seconds
+(the lattice page precedent), and 3 seeds × every cave vertex is ~3,800
+descents against the sweep's 60 · Ideonomy: 1 pass (scope) — the sweep's
+value was terrain variety, which every-vertex already supplies within a
+seed · Capture: spec §4.
+
+#9 [G4] — Acceptance 2's "scripted fixture" · **A session test driving the
+verbs, not a committed transcript** · Why: a gallery page adds two
+generated paths and a regeneration step for one acceptance criterion; the
+verbs are what the criterion cares about · Capture: spec §7.
+
+## Followups (added post-G3)
+
+- **The walk and the lattice disagree.** `Underground::enter` builds one
+  level per rung; The Stope/Drift's runs, branches, entrances and junctions
+  have no walking consumer. A campaign that wires `delve` to the lattice
+  would give the plan a `RunAddr` again; until then `MAP-chamber-occupancy`
+  is the standing record.
+- `generate_descent_for_character` is seeded from the WORLD seed with no
+  vertex, so every cave system in a world carves identical level interiors
+  (only kind, depth and water differ). The plan is per-vertex; the carves
+  are not. Pre-existing; not this campaign's to fix, and worth a row.

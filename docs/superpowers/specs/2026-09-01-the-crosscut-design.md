@@ -63,58 +63,81 @@ coordinate. Nothing about a level is drawn that the plan did not say.
 ### 3.1 The plan graph
 
 ```
-  BranchPlan { run: RunAddr, levels: u8, nodes: Vec<Node>, edges: Vec<Edge>,
-               entrance: NodeId, terminus: NodeId, realms: Vec<Realm>, dof: u32 }
+  DescentPlan { rungs: Vec<Band>, nodes: Vec<Node>, edges: Vec<Edge>,
+                entrance: NodeId, terminus: NodeId, realms: Vec<Realm>,
+                dof: u32 }
 
-  Node  { id, level: u8, cell: GridCell(i, j),
+  Node  { level: u8, cell: GridCell { col, row },
           depth: u16,            hops from entrance along shortest path
-          realm: RealmId }       innermost parallel composition containing it
-  Edge  { a: NodeId, b: NodeId, kind: Passage | Stair }
+          realm: Option<RealmId> }  innermost parallel composition holding
+                                 it; None for a spine node on no cycle
+  Edge  { a: NodeId, b: NodeId, kind: Passage | Stair { at: (x, y) } }
           Passage: same level, grid-adjacent cells
-          Stair:   adjacent levels, SAME grid cell
-  Realm { id, parent: Option<RealmId>, paths: (Vec<NodeId>, Vec<NodeId>),
+          Stair:   adjacent levels, SAME grid cell, one shared coordinate
+  Realm { parent: Option<RealmId>, path_a: Vec<NodeId>, path_b: Vec<NodeId>,
           class: LengthClass }   Dormans' four: LongLong | LongShort |
                                  ShortLong | ShortShort, from |a| vs |b|
 ```
 
-`RunAddr` is `(vertex, band, branch)` as The Stope defined it; `levels` is
-`levels_in_branch`. The grid for level `ℓ` has `cols × rows` cells with
-`cols = extent.w / REGION_W`, `rows = extent.h / REGION_H`, where the extent
-is `generate_level_extent(rung)` unchanged and `REGION_W`/`REGION_H` are
-chosen at implementation so a region is at least `MIN_REGION_SPAN` (8) on
-either axis — a level at rank 0 (40×24) yields 5×3, the deepest rank more.
-The constants are named once; the grid is a *derived* shape of the extent,
-not an authored count.
+**The unit is the descent a player walks, and this corrects the draft
+Nathan approved.** The G3 draft keyed the plan to a `RunAddr` and said it
+refined `passages_from`. Reading `Underground::enter`
+(`windows/vessel/src/underground.rs`) for the plan showed that the walked
+object is different: `enter` builds **one level per habitation rung**
+(`hornvale_terrain::rungs()` minus `Surface`, five today) under one
+vertex, and reads neither `levels_in_branch`, `passages_from` nor any
+branch — the Stope/Drift lattice has no walking consumer, which
+`MAP-chamber-occupancy` already records. A plan keyed to a run would have
+described an object nobody stands in. So the plan is keyed to
+`(seed, vertex)` and covers the five rungs `enter` generates, in that
+order; `level ℓ` is `habitation_rungs()[ℓ]`. Wiring the walk to the branch
+lattice is a real gap and a separate campaign; this one does not widen
+into it (ledger #7).
 
-**Coarse constrains fine.** The plan never adds a connection the chamber
-lattice lacks: a `Stair` edge exists between levels `ℓ` and `ℓ+1` only
-where `passages_from` already names `ℓ+1` as `ℓ`'s successor, and the run's
-bottom level connects downward exactly as today (one terminus stair to the
-next band's floor 0, unchanged). The plan *refines* `passages_from` into
-"which stairways", never contradicts it.
+The grid for level `ℓ` has `cols × rows` cells with `cols = w / REGION_SPAN`
+and `rows = h / REGION_SPAN`, where `(w, h)` is the extent
+`generate_level_extent(rung)` already gives (its formula moves to
+`worldgen` unchanged so the plan can read it) and `REGION_SPAN = 8`
+matches the Adit's `MIN_REGION_SPAN`. A level at rank 0 (40×24) yields 5×3;
+the deepest rank (56×32) yields 7×4. The constant is named once; the grid is
+a *derived* shape of the extent, not an authored count.
+
+**Coarse constrains fine.** The plan never adds a vertical connection the
+descent lacks: a `Stair` edge joins level `ℓ` to `ℓ+1` only, never skipping
+a rung, and the deepest level's terminus carries the same dangling
+`StairsDown` it does today, so `STAIRS_LEAD_NOWHERE_REFUSAL` keeps its one
+firing case. The plan *refines* "down one rung" into "which stairways",
+never contradicts it.
 
 ### 3.2 Growth: two operations, one budget, one stream
 
 From one derived stream `underworld/plan/v1` with four legs (`spine`,
 `cycle`, `extend`, `stair`), each named in `windows/worldgen/src/streams.rs`
-and published through `stream_labels()`:
+and published through `stream_labels()`, each further keyed by the vertex
+the way `character_of` keys its draw (`StreamLabel::dynamic`):
 
-1. **Spine.** Choose the entrance cell on level 0's edge and a terminus cell
-   on level `n − 1`. Lay a monotone path: on each level, a grid path from the
-   arrival cell to a drawn stair cell; a `Stair` edge to the same cell on
-   the next level. The spine is one series composition and touches every
-   level once. (`spine` leg.)
-2. **Parallel — `cycle(edge)`.** Pick an edge `u–v` on the current graph.
-   Find a second grid path from `u` to `v`, node-disjoint from the existing
-   path except at its endpoints, through cells not yet used. If `u` and `v`
-   are on different levels, or the draw says so and a free stair cell
-   exists, the second path may **descend, run along the level below, and
-   climb back** — a cross-floor cycle, realized as two stairways. Record a
-   `Realm` with the two paths and its `LengthClass`. (`cycle` and `stair`
-   legs.)
-3. **Series — `extend(edge)`.** Insert a node on an edge by routing it
-   through one adjacent free cell. Lengthens a path so that later cycles
-   have somewhere to attach and so length classes vary. (`extend` leg.)
+1. **Spine.** Choose the entrance cell on level 0's west edge and, on each
+   level, a drawn stair cell distinct from the arrival cell. Lay a grid path
+   from arrival to stair cell (a deterministic breadth-first search over
+   free cells, fixed neighbour order N, E, S, W); add a `Stair` edge to the
+   same grid cell on the next level, which is that level's arrival. On the
+   deepest level the drawn cell is the terminus. The spine is one series
+   composition and touches every level once. (`spine` leg.)
+2. **Parallel — `cycle(u, v)`.** Pick a `Passage` edge `u–v` on the level
+   and walk from `v` away from `u` along degree-two nodes for a drawn 0–2
+   further hops to `v'`; `path_a` is that existing segment (length 1–3).
+   Find `path_b`: a grid path from `u` to `v'` through cells not yet used,
+   node-disjoint from `path_a` except at its endpoints. **Same-floor** when
+   the draw says so and the search succeeds on this level; **cross-floor**
+   when the draw says so, `ℓ+1` exists, and both `u`'s and `v'`'s grid cells
+   are free on `ℓ+1`: then `path_b` descends at `u`, runs along level `ℓ+1`,
+   and climbs at `v'` — two stairways, one cycle across two floors. Record a
+   `Realm` with both paths and its `LengthClass`; a realm anchored on level
+   `ℓ` counts toward `ℓ`'s budget. (`cycle` and `stair` legs.)
+3. **Series — `extend(u, v)`.** Replace a `Passage` edge with a grid path
+   `u → … → v` of two or more hops through free cells, removing the direct
+   edge. Lengthens a path so later cycles have somewhere to attach and so
+   length classes vary. (`extend` leg.)
 4. **Nesting is not a third operation.** Applying `cycle` to an edge that is
    already inside a realm produces Dormans' nested cycle (Fig. 9.2) and the
    new realm's `parent` is set. The derivation tree that results *is* the
@@ -208,11 +231,16 @@ follow-up, not an accident of scope.
 
 ## 4. Preregistration
 
-Measured over the standing seed panel (42, 7, 1234) and the 60-seed sweep
-The Gallery used, by a probe test in `windows/worldgen/tests/suite/` that
-writes a committed audit page `docs/audits/underworld-circuit-seed-panel.md`
-(declared **as a file** in `docs/generated-paths.txt`, per the
-already-declared-directory hazard). Frozen here, before the code.
+Measured over the standing seed panel (42, 7, 1234), every cave-bearing
+vertex of each, by a readout `hornvale circuit --seed <N>` that
+`scripts/regenerate-artifacts.sh` writes to the committed audit page
+`docs/audits/underworld-circuit-seed-panel.md` — the exact shape
+`hornvale underworld` and `docs/audits/underworld-lattice-seed-panel.md`
+already have — declared **as a file** in `docs/generated-paths.txt`, per the
+already-declared-directory hazard. (The G3 draft also named The Gallery's
+60-seed sweep; a committed page must regenerate in seconds, and the
+three-seed panel over every cave vertex is 3,821 descents, which is the
+larger sample anyway.) Frozen here, before the code.
 
 ### 4.1 Loop share
 
@@ -229,8 +257,9 @@ run.
 
 ### 4.2 Density ordering
 
-Cyclomatic number `E − V + 1` per level (the Kirchhoff mesh count), grouped
-by `CaveKind` and by workmanship.
+Realms anchored per level (each realm adds exactly one to the descent's
+Kirchhoff mesh count `E − V + 1`, so the sum over levels is the cyclomatic
+number), grouped by `CaveKind` and by workmanship.
 
 - **Prediction:** panel medians strictly ordered
   `LavaTube < Fracture < Karst`, and `DrowTier > WildCave` within each kind
@@ -243,10 +272,10 @@ by `CaveKind` and by workmanship.
 
 ### 4.3 Cross-floor cycles
 
-Share of runs with ≥ 2 levels holding at least one realm whose two paths
-touch different levels.
+Share of descents holding at least one realm whose two paths touch
+different levels.
 
-- **Prediction:** ≥ **0.25** of multi-level runs. This is the multi-floor
+- **Prediction:** ≥ **0.25** of descents. This is the multi-floor
   claim of the whole program made falsifiable; a null here means the
   cross-floor move is drawn too rarely to matter and is a finding, not a
   tuning invitation.
@@ -316,7 +345,8 @@ Prose for what a cycle looks like (`MAP-underworld-dressing`).
    than read off the graph.
 2. Somewhere on the panel, a stairway down leads to a floor whose route
    returns you to the floor above by a *different* stairway — a cross-floor
-   cycle walked end to end in a scripted fixture, not inferred from a graph.
+   cycle walked end to end through the session's own `down`, direction and
+   `up` verbs in a test, not inferred from a graph.
 3. `up` and `down` land on the paired stairway's own cell on every stair of
    every level of the panel, and `STAIRS_LEAD_NOWHERE_REFUSAL` still fires
    only on the terminus of a run whose band admits nothing below.
