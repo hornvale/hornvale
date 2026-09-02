@@ -180,6 +180,14 @@ what "sim first, game as lens" requires of a thing the player can meet.
     truncated to the first B entries.
 ```
 
+A wild body's identity is keyed by (species, attractor vertex, member
+index), never by its position in a list, so a herd is the same herd from
+every direction of approach; today's `derive_wild_npcs` keys by list
+position and stays for the benches and the health battery. Membership of
+the roll is decided by a body's **home** (its settlement's room, or its
+herd's attractor), not by where it has wandered, so the roll is a function
+of world state rather than of a body's own history.
+
 `R` and `B` are two named constants in `windows/vessel`, with doc comments
 stating that they are *budgets*, not world facts, and pointing here.
 `Session::wait` derives its `bodies` from the roll at the observer's room
@@ -200,19 +208,25 @@ flagship-sized 70–90 — and the budget is a backstop for a dense coast or a
 large herd, not the normal case.
 
 **3.3 Individuation.** Every resident draws, from its own stream (§3.6),
-a deviation on each of the four authored dials a `Body` carries from its
-species — `deliberation_latency`, `time_horizon`, `boldness`, and (since The
-Wicket, if it has landed) the fatigue rate — as
-`species_mean + spread_kind × z`, clamped to the dial's own range, where
-`spread_kind` is one row per kind in a new species component store built on
-the pattern `hornvale_species::fatigue_rise_registry` and the dispersion
-registry already use, total over `biosphere_registry`'s roster and
-ratcheted total by a coverage test. The spread rows are authored data
-(models author, dice roll). A timid goblin and a rash one are now possible;
+a deviation on each of the three mind dials a `Body` carries from its
+species — `deliberation_latency`, `time_horizon`, `boldness` — as
+`species_mean + spread × unit`, where `unit` is one uniform draw on
+`[-√3, √3]` (matching standard deviation) and `spread` is the kind's
+**existing** `Dispersion.mind` row (`hornvale_species::dispersion_registry`,
+The Tolerance), clamped to `[0, 1]`. This is byte-for-byte the mechanism
+`windows/worldgen/src/disposition.rs` already uses to draw a *settlement's*
+disposition around its people's mean (`perturb`, `UNIT_SD_HALFWIDTH`); the
+resident draw is its next rung, keyed by the resident rather than the
+occupation. No new registry is added — an earlier draft of this section
+said one would be, before the survey found `Dispersion` — and the coverage
+tests that already ratchet the dispersion roster total over every minded
+kind carry over unchanged. A timid goblin and a rash one are now possible;
 a settlement's residents no longer move as one blob because their
 deliberation and their tolerance for threat differ. Whether that
 difference is *large enough to see* in the walk is a preregistered
-measurement (§8, M5), and a null there is a finding, not a failure.
+measurement (§8, M5), and a null there is a finding, not a failure. The
+fatigue rate is not perturbed: The Wicket's per-kind row is unmerged and
+this campaign does not reach into it.
 
 **3.4 Age.** A resident's birth day is drawn uniformly over its species'
 lifespan, back from the session's start day, so the roll is a population
@@ -271,8 +285,11 @@ The snapshot's `sensed.present` (`snapshot.rs:179`) stays **one entry per
 body** — the wire carries data, and a client may count, sort or hide as it
 likes (0022). The prose is where scale is handled:
 
-- Up to a small threshold `N_NAMED` (initial value 4, a named constant),
-  present creatures are listed as today, by label.
+- Today `look` names nobody at all: the co-located roster reaches the
+  player only through the wire, the chart marks and the verbs (found while
+  planning; an earlier draft of this section said "as today"). So the
+  presence line is new prose. Up to a small threshold `N_NAMED` (initial
+  value 4, a named constant), present creatures are listed by label.
 - Beyond it, prose groups by kind with a count and names the first
   `N_NAMED` in roll order: *"Gribble, Tosk, Marn and Ulla, and eleven more
   goblins of Googo; a herd of nine giant elk."* The count is the roll's,
@@ -291,7 +308,10 @@ and is out of scope (§9).
 
 **The chart** draws one glyph per cell already (`purview.rs:198`); the
 legend dedupes by noun, which with names means one entry per named
-resident. The legend takes the same `N_NAMED` grouping as the prose.
+resident. The legend is **not** grouped: every depicted noun must answer
+`examine` (§6 of The Sighting's contract), and a synthetic "eleven more"
+row would be a noun nothing resolves. One row per name is the stronger
+contract and it is kept.
 
 ## 5. What retires, what stays
 
@@ -328,10 +348,13 @@ lands on them:
 
 Each is a behaviour-preserving change: the session snapshot fixture must
 not move a byte across this stage, and §8's M4 positive control is the
-roster stage, where it must. The kernel site is a kernel-layer edit and
-pays the kernel-layer commit gate; it is one line and the metaplan's §5.5
-already names the missing seam it exposes (a tick contract with nowhere to
-hang state). The preregistered target is §8's M2. If the target is met
+roster stage, where it must. **The kernel site is not edited.** The wait
+already evaluates `step_with_occupancy` once for its occupancy and then
+calls `kernel::tick`, which clones the ledger and evaluates the same walk
+again; committing the first walk's facts in place — what
+`agent_scaling.rs:398-415` already does — removes both the second walk and
+the clone in `session.rs` alone. The metaplan's §5.5 seam (a tick contract
+with nowhere to hang state) stays open and unneeded here. The preregistered target is §8's M2. If the target is met
 before all five are touched, the rest are recorded as follow-ups with
 their measured share, not done for completeness.
 
@@ -389,7 +412,8 @@ Decision rules, so the implementer acts rather than predicts:
 
 ```text
   after `make rebaseline` in the roster stage
-    world-seed-42.json or any book/src/ artifact moved  -> STOP: an epoch, not this campaign
+    world-seed-42.json, any almanac, laboratory or domesday artifact moved -> STOP: an epoch, not this campaign
+    book/src/gallery/possession-*.md moved               -> expected: they are session renders (M4 control)
     only docs/audits/ + the stream manifest moved        -> expected; commit in the same commit
     vessel/game session fixtures moved                   -> expected (M4 control); commit
   after §6 (each lever)
