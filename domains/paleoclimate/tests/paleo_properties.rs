@@ -3,16 +3,19 @@
 //! root's determinism and the zero-forcing null control live in
 //! `windows/worldgen` tests (Task 7).
 
-use hornvale_kernel::math;
+use hornvale_kernel::{TickSpan, WorldTime, math};
 use hornvale_paleoclimate::{caloric_summer_index, integrate_ice};
 
 const DAYS_PER_KYR: f64 = 1_000.0 * 365.25;
 
-fn series(g: impl Fn(f64) -> f64, steps: usize) -> Vec<(f64, f64)> {
+fn series(g: impl Fn(f64) -> f64, steps: usize) -> Vec<(WorldTime, f64)> {
     (0..steps)
         .map(|k| {
             let day = k as f64 * 2.0 * DAYS_PER_KYR;
-            (day, g(day))
+            (
+                WorldTime::from_std_days(day).expect("test day within tick range"),
+                g(day),
+            )
         })
         .collect()
 }
@@ -51,10 +54,11 @@ fn flat_forcing_never_glaciates() {
 fn sustained_cold_then_warm_makes_a_sawtooth() {
     // Cold long enough to build ice, then warm: melt must outrun growth.
     let mut s = series(|_| -1.0, 400);
+    let offset = TickSpan::from_std_days(400.0 * 2.0 * DAYS_PER_KYR).expect("finite");
     s.extend(
         series(|_| 1.0, 200)
             .into_iter()
-            .map(|(d, g)| (d + 400.0 * 2.0 * DAYS_PER_KYR, g)),
+            .map(|(d, g)| (d + offset, g)),
     );
     let h = integrate_ice(&s);
     let peak = h.iter().map(|st| st.volume.get()).fold(0.0_f64, f64::max);

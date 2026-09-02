@@ -528,7 +528,7 @@ pub(crate) fn luna_sol() -> (crate::system::StarSystem, Calendar) {
         forcing: Some(ForcingPin::Zero),
         ..SkyPins::default()
     };
-    let mut system = generate(Seed(42), &pins).unwrap().system;
+    let mut system = generate(Seed(42), &pins).unwrap().value;
     // Force Sol/Luna numbers onto the generated skeleton.
     system.star.mass = SolarMasses(1.0);
     system.star.luminosity = SolarLuminosities(1.0);

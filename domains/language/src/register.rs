@@ -1,9 +1,9 @@
 //! The register renderer: the permanent content→render seam. `render_line`
 //! voices a belief's structured [`LineContent`] into a tenet string,
 //! parameterized by per-species [`VoiceParams`]. This module never imports
-//! `hornvale-religion` — [`LineSentiment`] is language's own copy of the
-//! eternal/cyclic/ambient distinction; the composition root maps religion's
-//! `Sentiment` onto it.
+//! `hornvale-religion` — it uses the kernel's [`Sentiment`](hornvale_kernel::Sentiment)
+//! directly, the same eternal/cyclic/ambient distinction religion's ledger
+//! spelling shares (decision 0517 clause (b)).
 //!
 //! **This function signature is the campaign's permanent contribution.** v1
 //! fills it with small, legible templates assembled purely from the
@@ -11,6 +11,8 @@
 //! generative oral-formulaic grammar reoccupies the same signature without
 //! callers changing. `render_line` therefore only ever reads structured
 //! fields — it never post-processes a finished English string.
+
+use hornvale_kernel::Sentiment;
 
 /// Per-species voice knobs the composition root derives from the psychology
 /// vector. Every field lives in `[0, 1]`; `0.5` on every field is the
@@ -30,19 +32,6 @@ pub struct VoiceParams {
     pub epithet_density: f64,
 }
 
-/// Language's own copy of a belief's periodicity/character. The composition
-/// root maps `hornvale_religion::Sentiment` onto this; language never
-/// imports religion.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum LineSentiment {
-    /// The deity is watched, unchanging, always-present.
-    Eternal,
-    /// The deity returns on a period (see [`LineContent::period_days`]).
-    Cyclic,
-    /// The deity is felt rather than tracked — mood, not motion.
-    Ambient,
-}
-
 /// The structured meaning of a tenet, as the composition root assembles it
 /// from a belief's committed facts. `render_line` reads only these fields —
 /// never a pre-rendered string.
@@ -55,8 +44,8 @@ pub struct LineContent {
     /// controls whether/how one is added at render time).
     pub epithet: String,
     /// The tenet's periodicity/character.
-    pub sentiment: LineSentiment,
-    /// For [`LineSentiment::Cyclic`], the period in standard days. `None`
+    pub sentiment: Sentiment,
+    /// For [`Sentiment::Cyclic`], the period in standard days. `None`
     /// for eternal/ambient tenets.
     pub period_days: Option<f64>,
     /// Whether this deity is a high god (already committed via the
@@ -99,16 +88,16 @@ fn core_proposition(content: &LineContent, voice: &VoiceParams) -> String {
     let epithet = epithet_clause(&content.epithet, voice.epithet_density);
     let subject = format!("{} {epithet}", content.deity);
     match content.sentiment {
-        LineSentiment::Eternal => {
+        Sentiment::Eternal => {
             let watched = register_word(voice.formality, "watches unceasing", "is always watching");
             format!("{subject} {is}: {subject} {watched}.")
         }
-        LineSentiment::Cyclic => {
+        Sentiment::Cyclic => {
             let period = content.period_days.unwrap_or(0.0);
             let returns = register_word(voice.formality, "returns", "comes back");
             format!("{subject} {returns} every {period} days.")
         }
-        LineSentiment::Ambient => {
+        Sentiment::Ambient => {
             let felt = register_word(
                 voice.formality,
                 "is felt, not counted",
@@ -172,7 +161,7 @@ mod tests {
         LineContent {
             deity: deity.into(),
             epithet: ep.into(),
-            sentiment: LineSentiment::Cyclic,
+            sentiment: Sentiment::Cyclic,
             period_days: Some(29.0),
             high_god: true,
         }

@@ -330,6 +330,15 @@ pub struct VariantEntry {
 /// The substrate a vertex's ground is made of, as the variant pool distinguishes
 /// it. Mirrors `locale`'s own substrate classes; passed in so this table can
 /// live below the window that computes it.
+///
+/// Deliberately does not derive `Serialize`: `hornvale-climate`, like every
+/// domain, depends on `hornvale-kernel` and nothing else (decision 0002,
+/// enforced by `cli/tests/suite/architecture.rs::domains_depend_only_on_the_kernel`
+/// as an *exact* match on normal deps — the crate-external allowlist that
+/// admits `serde` elsewhere does not override this stricter per-layer rule).
+/// `windows/locale::Negations` needs this type to serialize by variant name;
+/// see `regime::serialize_ground_kind` for how it gets that without adding a
+/// serde dependency here.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum GroundKind {
     /// Rock and soil — the mundane default.
@@ -719,12 +728,11 @@ pub fn variant_pool(
                 },
             ],
             // The rock bands never pair with `OpenWater` — see the matching
-            // note in `facets.rs::BiomeExpr::biome`. Named explicitly.
-            Stratum::Regolith
-            | Stratum::Cover
-            | Stratum::Basement
-            | Stratum::Roots
-            | Stratum::Underneath => unreachable!(
+            // note in `facets.rs::BiomeExpr::biome`. Named explicitly rather
+            // than wildcarded, so a future non-Rock `Stratum` variant still
+            // has to justify itself here; a new `Horizon` is absorbed by
+            // this arm's wildcard and is the kernel roster's job now.
+            Stratum::Rock(_) => unreachable!(
                 "OpenWater never pairs with a rock stratum; caves carry \
                  their own Formation"
             ),
@@ -733,7 +741,7 @@ pub fn variant_pool(
         // their own once something distinguishes karst/lava-tube/fracture
         // interiors by prose. An empty pool is the documented "not yet"
         // (`variant_at_vertex` already treats an empty pool as `None`).
-        (Formation::KarstCave | Formation::LavaTube | Formation::FractureCave, _) => &[],
+        (Formation::Cave(_), _) => &[],
     }
 }
 

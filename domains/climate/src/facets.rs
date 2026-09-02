@@ -4,6 +4,7 @@
 //! unaffected.
 
 use crate::Biome;
+use hornvale_kernel::{CaveKind, Horizon};
 
 /// What fills a realm. A realm is `(medium, access, strata)`, never an
 /// enumerated world, so a later sky realm — or an elemental plane — is a new
@@ -57,6 +58,18 @@ pub enum Access {
     Dive,
 }
 
+/// The rock strata, in [`Horizon::all`]'s order, each wrapped in
+/// [`Stratum::Rock`]. `Horizon::all()` is not const-callable in an array
+/// literal, so this is written out by hand; the correspondence test in
+/// `domains/climate/tests/suite/facets.rs` asserts the two agree.
+const ROCK_STRATA: [Stratum; 5] = [
+    Stratum::Rock(Horizon::Regolith),
+    Stratum::Rock(Horizon::Cover),
+    Stratum::Rock(Horizon::Basement),
+    Stratum::Rock(Horizon::Roots),
+    Stratum::Rock(Horizon::Underneath),
+];
+
 /// A realm: a medium, the way in, and the column of strata it holds.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Realm {
@@ -98,13 +111,7 @@ impl Realm {
                 Stratum::Abyssal,
                 Stratum::Hadal,
             ],
-            Medium::Rock => &[
-                Stratum::Regolith,
-                Stratum::Cover,
-                Stratum::Basement,
-                Stratum::Roots,
-                Stratum::Underneath,
-            ],
+            Medium::Rock => &ROCK_STRATA,
         }
     }
 }
@@ -126,28 +133,14 @@ pub enum Stratum {
     Abyssal,
     /// Trench depths, below 6000 m.
     Hadal,
-    /// The living skin: soil / weathered regolith. A rock depth *register* —
-    /// explicitly not something a chamber moves between (The Stratum §3).
-    /// Mirrors `hornvale_terrain::Horizon::Regolith` (decision 0094: a
-    /// shared roster, never a shared derivation — climate may not import
-    /// terrain).
-    Regolith,
-    /// Deposited / volcanic surface rock — the legible archive. Mirrors
-    /// `hornvale_terrain::Horizon::Cover`.
-    Cover,
-    /// Crystalline craton (terrain's inherited `Basement`). Mirrors
-    /// `hornvale_terrain::Horizon::Basement`.
-    Basement,
-    /// Deep crust: hot, high-pressure. Mirrors
-    /// `hornvale_terrain::Horizon::Roots`.
-    Roots,
-    /// The primordial substrate / threshold to the not-here. Measured empty
-    /// (0 of 55,947 caves — Task 0) but included regardless: rule 1a makes
-    /// `ChamberAddr.band` index this ladder, and the open
-    /// `MAP-cave-depth-weld` fix may make this band occur — omitting it
-    /// would relocate every address the day that fix lands. Mirrors
-    /// `hornvale_terrain::Horizon::Underneath`.
-    Underneath,
+    /// A band of the rock column (the kernel's shared roster — decision
+    /// 0517; terrain derives which band a depth falls in). A rock depth
+    /// *register*, explicitly not something a chamber moves between (The
+    /// Stratum §3). Measured note kept from the mirror era: `Underneath`
+    /// was empty in 55,947 caves (Task 0) but stays representable — rule 1a
+    /// makes `ChamberAddr.band` index the delve ladder, and the open
+    /// `MAP-cave-depth-weld` fix may make it occur.
+    Rock(Horizon),
 }
 
 impl Stratum {
@@ -210,16 +203,22 @@ pub enum Formation {
     Upwelling,
     /// Open sea with no distinguishing community — the marine default.
     OpenWater,
-    /// Carbonate dissolution (wet limestone). Mirrors
-    /// `hornvale_terrain::CaveKind::Karst` (decision 0094: a shared roster,
-    /// never a shared derivation — climate may not import terrain).
-    KarstCave,
-    /// A drained basaltic/volcanic tube. Mirrors
-    /// `hornvale_terrain::CaveKind::LavaTube`.
-    LavaTube,
-    /// A fault/fracture void in tectonically active rock. Mirrors
-    /// `hornvale_terrain::CaveKind::Fracture`.
-    FractureCave,
+    /// A cave, by the lithologic process that opened it — the kernel's own
+    /// [`CaveKind`] roster, embedded directly rather than mirrored.
+    ///
+    /// This supersedes the three-variant projection (`KarstCave`/`LavaTube`/
+    /// `FractureCave`) ledger #11 chose when `CaveKind` first moved to the
+    /// kernel under decision 0517 clause (a): Nathan's G6 unification ruling
+    /// (ledger #14, 2026-09-02) overrides that adjudication and unifies the
+    /// two structurally, since `Formation` and `CaveKind` now name the same
+    /// three cave kinds and nothing about the embed touches the corpus.
+    /// **The frozen corpus spellings stay climate's own** — `"karst-cave"`/
+    /// `"lava-tube"`/`"fracture-cave"` in `axes.rs`/`underworld.rs` are
+    /// freestanding string literals with zero linkage to this variant (the
+    /// join from a `CaveKind` to its corpus genus is
+    /// `windows/worldgen`'s `genus_of`, untouched by this change) — so no
+    /// committed byte moves.
+    Cave(CaveKind),
 }
 
 /// A room's biome as a faceted expression. This is the truth; [`crate::Biome`]
@@ -295,14 +294,11 @@ impl BiomeExpr {
                 Stratum::Epipelagic | Stratum::Surface => Biome::Epipelagic,
                 // The rock bands never pair with `OpenWater`: it is a marine
                 // formation, and the rock strata only ever accompany a cave
-                // `Formation` (handled below). Named explicitly, rather than
-                // wildcarded, so a future stratum still has to justify
-                // itself here.
-                Stratum::Regolith
-                | Stratum::Cover
-                | Stratum::Basement
-                | Stratum::Roots
-                | Stratum::Underneath => unreachable!(
+                // `Formation` (handled below). Named explicitly rather than
+                // wildcarded, so a future non-Rock `Stratum` variant still
+                // has to justify itself here; a new `Horizon` is absorbed by
+                // this arm's wildcard and is the kernel roster's job now.
+                Stratum::Rock(_) => unreachable!(
                     "OpenWater never pairs with a rock stratum; caves carry \
                      their own Formation"
                 ),
@@ -313,7 +309,7 @@ impl BiomeExpr {
             // through it — caves are a new realm outside the pre-Stratum
             // taxonomy `Biome` projects (The Deep Realm, decision 0094).
             // Named explicitly, rather than wildcarded.
-            Formation::KarstCave | Formation::LavaTube | Formation::FractureCave => unreachable!(
+            Formation::Cave(_) => unreachable!(
                 "cave formations have no legacy Biome projection; biome() is \
                  never called with one"
             ),

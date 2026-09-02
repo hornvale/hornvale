@@ -23,7 +23,7 @@
 //!   be constructed.
 
 use hornvale_climate::{Realm, Stratum};
-use hornvale_kernel::{Seed, Vertex, World};
+use hornvale_kernel::{Horizon, Seed, Vertex, World};
 use hornvale_locale::LocaleContext;
 use std::fmt::Write as _;
 
@@ -37,11 +37,11 @@ const ALL_STRATA: [Stratum; 11] = [
     Stratum::Bathypelagic,
     Stratum::Abyssal,
     Stratum::Hadal,
-    Stratum::Regolith,
-    Stratum::Cover,
-    Stratum::Basement,
-    Stratum::Roots,
-    Stratum::Underneath,
+    Stratum::Rock(Horizon::Regolith),
+    Stratum::Rock(Horizon::Cover),
+    Stratum::Rock(Horizon::Basement),
+    Stratum::Rock(Horizon::Roots),
+    Stratum::Rock(Horizon::Underneath),
 ];
 
 /// The before-arm, captured on unmodified `water_column_at`/`expr_at_stratum`

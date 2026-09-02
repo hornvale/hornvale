@@ -1,56 +1,52 @@
 //! Integration coverage for the underworld realm (The Deep Realm, Task 1):
 //! `Medium::Rock`, the graduated `Access` ladder, and the five-band rock
-//! column. `domains/climate` may not import `hornvale_terrain` (a sibling
-//! domain), so the roster correspondence this file asserts is checked by
-//! NAME against a hardcoded mirror of `hornvale_terrain::Horizon` — the
-//! only thing keeping the deliberate duplicate (decision 0094) honest here.
+//! column. Since Task 7 (decision 0517 clause (a)) `Horizon` is the
+//! kernel's shared roster and `Stratum::Rock(Horizon)` embeds it directly,
+//! so the roster correspondence this file asserts is now structural rather
+//! than a hand-maintained name mirror — the ordering claim survives as an
+//! assertion that `Realm::UNDERDARK`'s rock strata are `Horizon::all()`
+//! wrapped in `Rock`, in order.
+
+use hornvale_kernel::Horizon;
 
 #[test]
 fn the_underworld_is_a_realm_with_a_rock_column() {
     let r = hornvale_climate::Realm::UNDERDARK;
     assert_eq!(r.medium, hornvale_climate::Medium::Rock);
-    // FIVE bands, mirroring hornvale_terrain::Horizon exactly. See ledger
+    // FIVE bands, mirroring hornvale_kernel::Horizon exactly. See ledger
     // #18A / rule 1a: a four-band ladder cannot absorb the open depth-weld
     // fix without relocating every ChamberAddr.
     assert_eq!(
         r.strata(),
         &[
-            hornvale_climate::Stratum::Regolith,
-            hornvale_climate::Stratum::Cover,
-            hornvale_climate::Stratum::Basement,
-            hornvale_climate::Stratum::Roots,
-            hornvale_climate::Stratum::Underneath,
+            hornvale_climate::Stratum::Rock(Horizon::Regolith),
+            hornvale_climate::Stratum::Rock(Horizon::Cover),
+            hornvale_climate::Stratum::Rock(Horizon::Basement),
+            hornvale_climate::Stratum::Rock(Horizon::Roots),
+            hornvale_climate::Stratum::Rock(Horizon::Underneath),
         ]
     );
 }
 
 #[test]
-fn the_rock_ladder_matches_terrains_band_roster_one_for_one() {
-    // Decision 0094: a shared roster, never a shared derivation. Climate may
-    // not import terrain, so this is the only thing keeping the duplicate
-    // honest. If terrain adds a sixth Horizon, this reddens rather than
-    // silently giving the underworld a band it has no rock for.
-    //
-    // hornvale_terrain::Horizon, mirrored here as of ledger #18A: five
-    // variants, this order — Regolith, Cover, Basement, Roots, Underneath.
-    //
-    // Assert the COUNT and the ORDER by name. Do not cast either enum to an
-    // integer -- that would weld the ladder to a declaration position.
-    const TERRAIN_BAND_ROSTER: [&str; 5] = ["Regolith", "Cover", "Basement", "Roots", "Underneath"];
-    let strata = hornvale_climate::Realm::UNDERDARK.strata();
+fn the_rock_ladder_matches_horizons_roster_one_for_one_in_order() {
+    // The mirror is now structural (Task 7): `Stratum::Rock` embeds
+    // `Horizon` directly, so there is no name to drift out of sync. What
+    // still needs asserting is the ORDERING claim the old name-mirror test
+    // carried — that `Realm::UNDERDARK`'s rock strata are `Horizon::all()`
+    // wrapped in `Rock`, in the same order — since nothing about embedding
+    // a type guarantees a caller assembled the list in ladder order.
+    let strata: Vec<hornvale_climate::Stratum> =
+        hornvale_climate::Realm::UNDERDARK.strata().to_vec();
+    let expected: Vec<hornvale_climate::Stratum> = Horizon::all()
+        .iter()
+        .map(|&h| hornvale_climate::Stratum::Rock(h))
+        .collect();
     assert_eq!(
-        strata.len(),
-        TERRAIN_BAND_ROSTER.len(),
-        "the rock column must carry exactly as many bands as \
-         hornvale_terrain::Horizon has variants"
+        strata, expected,
+        "Realm::UNDERDARK's rock strata must be Horizon::all() wrapped in \
+         Rock, in order"
     );
-    for (stratum, name) in strata.iter().zip(TERRAIN_BAND_ROSTER.iter()) {
-        assert_eq!(
-            &format!("{stratum:?}"),
-            name,
-            "Stratum's rock bands must mirror Horizon's names, in order"
-        );
-    }
 }
 
 #[test]

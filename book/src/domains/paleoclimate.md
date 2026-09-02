@@ -86,7 +86,27 @@ the kernel as the shared temperature vocabulary every domain can speak
 `IceVolume` (a dimensionless fraction in `[0, 1]`) and `SeaLevelChange`
 (metres of eustatic rise or fall — a deep-time delta, distinct from the
 elevation datum) remain the coherent quantities this crate keeps as its
-own.
+own. The crate's error type went the same way as its temperatures: the
+`UnitError` its validating constructors return is the kernel's one, not a
+third byte-identical copy of it
+([The Hallmark](../chronicle/the-hallmark.md)).
+
+**The deep-time axis is a tick count now, and one field had been holding two
+units.** Every day in this model — an era's day, the glacial maximum's day,
+the ice march's sample days — is a `WorldTime`: an exact integer tick count
+that needs no rounding at any magnitude, which matters more here than
+anywhere else in the world model because these instants sit a million years
+from genesis, where significant-digit rounding of a floating-point day was
+losing resolution fastest. Getting there first required repairing something
+the migration exposed: `EraClimate.day` is documented as an absolute standard
+day, and it has two producers, one of which — the history bake's coarse
+climate re-run — was writing a *bake year* into the same slot, a number
+smaller by a factor of 365.25. Neither path was broken, because they never
+met at one consumer; the field simply meant different things depending on who
+filled it. The bake's year window now rides beside the era series as its own
+axis, both producers write the same deep-time day, and the retype the
+ambiguity had blocked landed behind it — with every generated world
+byte-identical throughout.
 
 ## The model card
 

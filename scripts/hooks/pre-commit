@@ -341,7 +341,7 @@ fi
 # markdown and `golden-pins.sql` is SQL, so hanging the whole hook on "is Rust
 # staged" (as the root hook's early `exit 0` did) would have disabled both
 # guards on precisely the commits that trip them.
-rust_relevant='\.rs$|(^|/)Cargo\.(toml|lock)$|(^|/)clippy\.toml$|(^|/)rustfmt\.toml$|(^|/)rust-toolchain\.toml$|(^|/)\.cargo/|(^|/)tools/type-audit/|(^|/)docs/audits/type-audit-report\.md$'
+rust_relevant='\.rs$|(^|/)Cargo\.(toml|lock)$|(^|/)clippy\.toml$|(^|/)rustfmt\.toml$|(^|/)rust-toolchain\.toml$|(^|/)\.cargo/|(^|/)tools/type-audit/|(^|/)tools/placement-audit/|(^|/)docs/audits/type-audit-report\.md$|(^|/)docs/audits/placement-audit-roster\.md$'
 if ! git diff --cached --name-only --diff-filter=ACMR | grep -qE "$rust_relevant"; then
     echo "pre-commit: no Rust-relevant paths staged — skipping 'make gate-commit'." >&2
     exit 0

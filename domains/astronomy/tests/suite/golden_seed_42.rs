@@ -8,7 +8,7 @@ use hornvale_kernel::Seed;
 #[test]
 fn seed_42_default_system_matches_the_pre_retrofit_golden_values() {
     let outcome = generate(Seed(42), &SkyPins::default()).unwrap();
-    let s = &outcome.system;
+    let s = &outcome.value;
 
     assert_eq!(s.star.mass.get(), 0.9034065100014939);
     assert_eq!(s.star.luminosity.get(), 0.7007954206338779);

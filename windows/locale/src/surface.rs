@@ -145,9 +145,7 @@ fn vegetation_ceiling(formation: Formation) -> f64 {
         | Formation::Vent
         | Formation::Upwelling
         | Formation::OpenWater
-        | Formation::KarstCave
-        | Formation::LavaTube
-        | Formation::FractureCave => 0.0,
+        | Formation::Cave(_) => 0.0,
     }
 }
 

@@ -90,7 +90,7 @@ fn witnessed_access_and_explanation_hold_over_a_real_world() {
             &hornvale_astronomy::SkyPins::default(),
         )
         .unwrap();
-        let periods: Vec<_> = outcome.system.moons.iter().map(|m| m.period).collect();
+        let periods: Vec<_> = outcome.value.moons.iter().map(|m| m.period).collect();
         if detect_moon_period_ratio(&periods).is_none() {
             continue;
         }
