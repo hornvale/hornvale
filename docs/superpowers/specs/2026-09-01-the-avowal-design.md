@@ -27,7 +27,9 @@ Hornvale builds worlds well and represents no dramatic situation at all.
 ### 1.1 The leverage curve, computed against the live registry
 
 Greedy over both corpora (Polti weighted 4x for its smaller denominator),
-resolved against the 395 tokens the registry holds today:
+resolved against the 395 tokens the registry holds today. **Abridged** — steps
+2, 4, 6, 11, 13 and 14 are omitted for width, which is why the `#` column
+skips:
 
 ```
  #  bundle                      new preds  cum  tv/409  po/36
@@ -208,6 +210,14 @@ has no entity and gets no fact — `RoleHandle`'s own documented intent ("never
 materialized until something actually observes one"). The ledger says what is
 remembered.
 
+`kinship()` returns `Sibling | Ancestor(n)`, and this spec does **not**
+prescribe how those map onto `parent-of` and `kin-of`. The property required:
+the two predicates must be distinguishable in the ledger, `parent-of` must be
+`functional` if and only if a founder can have at most one recorded forebear
+(check `forebear_of`'s signature before assuming it), and a `Sibling` edge must
+not silently render as descent. The implementer settles the mapping from inside
+the code and records it in the ledger.
+
 This completes `bundle:consanguineal-kin` at 5/5 — the first bundle this
 project has ever fully satisfied.
 
@@ -236,6 +246,12 @@ does not imply storage: `witnessed`, `deed-of`, `act-precedes` and
 `act-occurred-on` are **derived reads over session state**, and persist only
 when a snapshot asks (0366, 0368).
 
+`present-at` ships with this section rather than separately: it is co-location,
+already answered by session state, and it is the cheaper half of
+`bundle:witnessing`. **If §4.5 is cut at G3, `present-at` goes with it** and
+`bundle:witnessing` stays 0/2 — it is not salvageable on its own, because the
+bundle needs `witnessed` too and `witnessed` needs an addressable act.
+
 This is the section most likely to be split into its own campaign at G3.
 
 ---
@@ -248,7 +264,7 @@ Frozen before any code. **The headline prediction is a null**, deliberately:
 |---|---|
 | `bundle:consanguineal-kin` | 3/5 → **5/5** |
 | `bundle:felt-affect` | 0/3 → **2/3**, still blocked |
-| `bundle:witnessing` | 0/2 → **2/2** if §4.5 ships, else 0/2 |
+| `bundle:witnessing` | 0/2 → **2/2** if §4.5 ships (both tokens), else **0/2** |
 | `polti-1895` stageable | **0 of 36 → 0 of 36** |
 | `tvtropes-2012` stageable | **0 of 409 → 0 of 409** |
 | seed-42 ledger growth | +93 facts (+0.43%), kinship only |
