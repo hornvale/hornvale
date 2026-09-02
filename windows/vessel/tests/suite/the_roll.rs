@@ -347,3 +347,66 @@ fn a_residents_birth_is_fixed_at_first_derivation() {
         "a resident's committed person-born day does not move when now moves"
     );
 }
+
+/// A herd's identity does not depend on the order herds are listed in or on
+/// which other herds are present: deriving `[a, b]` and `[b]` yields the same
+/// entities for `b`.
+///
+/// MUTATION THIS MUST FAIL AGAINST: key the role on the herd's INDEX in
+/// `herds` instead of its vertex; `b`'s ids move.
+#[test]
+fn a_herds_identity_is_its_attractor_and_species() {
+    let (world, ctx, _wc, _village) = residents_fixture();
+    let herd_a = hornvale_worldgen::herds::WildHerd {
+        species: "wolf".to_string(),
+        position: [1.0, 0.0, 0.0],
+        vertex: 10,
+        headcount: 2,
+    };
+    let herd_b = hornvale_worldgen::herds::WildHerd {
+        species: "elk".to_string(),
+        position: [0.0, 1.0, 0.0],
+        vertex: 20,
+        headcount: 3,
+    };
+
+    let mut ledger_ab = world.ledger.clone();
+    let bodies_ab = hornvale_vessel::liveness::derive_wild_herds(
+        &world,
+        &ctx,
+        &mut ledger_ab,
+        &[herd_a, herd_b.clone()],
+    );
+    let b_entities_from_ab: Vec<_> = bodies_ab
+        .iter()
+        .filter(|b| b.species == "elk")
+        .map(|b| b.entity)
+        .collect();
+
+    let mut ledger_b = world.ledger.clone();
+    let bodies_b =
+        hornvale_vessel::liveness::derive_wild_herds(&world, &ctx, &mut ledger_b, &[herd_b]);
+    let b_entities_from_b: Vec<_> = bodies_b.iter().map(|b| b.entity).collect();
+
+    assert_eq!(
+        b_entities_from_ab, b_entities_from_b,
+        "herd b's entities are identical whether or not herd a is present"
+    );
+}
+
+/// A herd yields exactly `headcount` bodies (coarse constrains fine).
+///
+/// MUTATION THIS MUST FAIL AGAINST: `0..=herd.headcount`.
+#[test]
+fn a_herd_is_its_headcount() {
+    let (world, ctx, _wc, _village) = residents_fixture();
+    let herd = hornvale_worldgen::herds::WildHerd {
+        species: "wolf".to_string(),
+        position: [1.0, 0.0, 0.0],
+        vertex: 7,
+        headcount: 5,
+    };
+    let mut ledger = world.ledger.clone();
+    let bodies = hornvale_vessel::liveness::derive_wild_herds(&world, &ctx, &mut ledger, &[herd]);
+    assert_eq!(bodies.len(), 5, "a herd yields exactly its headcount");
+}

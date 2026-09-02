@@ -17,8 +17,9 @@ use crate::interior::{
 };
 use hornvale_kernel::units::TickSpan;
 use hornvale_kernel::{
-    ANIMAL_PREY, ConditionResponse, EntityId, Facet, FacetId, Fact, Ledger, Lineage, PHOTOSYNTHATE,
-    PLANT_FORAGE, ResourceVector, RoomMeshMemo, TickSystem, Value, World, WorldTime,
+    ANIMAL_PREY, ComponentStore, ConditionResponse, EntityId, Facet, FacetId, Fact, KindId, Ledger,
+    Lineage, PHOTOSYNTHATE, PLANT_FORAGE, ResourceVector, RoomMeshMemo, TickSystem, Value, World,
+    WorldTime,
 };
 use hornvale_locale::LocaleContext;
 use hornvale_species::{ActivityCycle, ThermalStrategy};
@@ -5993,51 +5994,6 @@ fn derive_bodies_at(
         .into_iter()
         .enumerate()
         .map(|(i, (species, position))| {
-            let home = Facet::containing(position, walk_depth(ctx));
-            let resource = nearest_water(&home, &LocaleTerrain::new(ctx), PLAN_BUDGET)
-                .unwrap_or_else(|| home.clone());
-            let activity = species_activity(world, &species);
-            let temperature_niche = biosphere
-                .get_by_label(&species)
-                .map(|t| t.condition_niche.temperature)
-                .unwrap_or(DEFAULT_TEMPERATURE_NICHE);
-            let thermal_strategy = biosphere
-                .get_by_label(&species)
-                .map(|t| t.thermal_strategy)
-                .unwrap_or(ThermalStrategy::Endothermic);
-            let niche = biosphere
-                .get_by_label(&species)
-                .map(|t| t.niche.clone())
-                .unwrap_or_else(default_diet_niche);
-            // Body mass (The Action Clock), as in `derive_npcs`: the fauna are
-            // most of the health battery's population, so the wild path must
-            // carry the trait too or the tempo spread collapses. Same shared
-            // derivation, deliberately — a second copy here is exactly what
-            // this call replaced.
-            let mass_kg = crate::clock::mass_for_species(&species, Some(&biosphere));
-            let deliberation_latency = psyche
-                .get_by_label(&species)
-                .map(|p| p.deliberation_latency)
-                .unwrap_or(0.5);
-            let time_horizon = psyche
-                .get_by_label(&species)
-                .map(|p| p.time_horizon)
-                .unwrap_or(0.5);
-            let boldness = psyche
-                .get_by_label(&species)
-                .map(|p| p.threat_response)
-                .unwrap_or(BOLDNESS_STEADY);
-            let threat_niche = derive_threat_niche(&temperature_niche, thermal_strategy, &niche);
-            // A wild species is plain fauna, not one of the six settling
-            // peoples or the three dragons `perception_registry` actually
-            // rosters (see `agent::mint_at`'s comment on that roster), so this
-            // almost always misses and falls back to the manikin's neutral
-            // perception — same fallback shape as every other per-species
-            // trait above.
-            let perception = perception
-                .get_by_label(&species)
-                .copied()
-                .unwrap_or(hornvale_species::PerceptionVector::MANIKIN);
             // A herd or lair has no ledger entity — a concentration is a
             // (species, position) pair, not an entity — so a wild NPC roots.
             // Two concentrations can share a species, so the ordinal is the
@@ -6061,33 +6017,174 @@ fn derive_bodies_at(
                     &world.registry,
                 )
                 .expect("a freshly minted wild NPC's first NAME fact always commits");
-            Body {
+            wild_body(
+                world,
+                ctx,
+                &biosphere,
+                &psyche,
+                &perception,
+                &species,
+                position,
                 entity,
-                home,
-                resource,
-                species,
-                activity,
-                temperature_niche,
-                deliberation_latency,
-                time_horizon,
-                thermal_strategy,
-                niche,
-                boldness,
-                threat_niche,
-                mass_kg,
                 label,
-                perception,
-                // The Hand ruling: a wild NPC has no settlement —
-                // `derive_wild_npcs` iterates beast concentrations (herds,
-                // lairs), not settlements, so there is genuinely no
-                // `VillageInfo` here. `None`, not a fabricated placeholder:
-                // a placeholder `population`/`id` would be indistinguishable
-                // from a real measurement to any later consumer (a future
-                // possessed-beast session's prose, in particular).
-                village: None,
-            }
+            )
         })
         .collect()
+}
+
+/// The body-building half of [`derive_bodies_at`] (The Roll, Task 6):
+/// everything about a wild body EXCEPT minting its entity and committing its
+/// NAME fact, which stay with each caller — a caller decides how an entity is
+/// keyed (a concentration's list position for `derive_wild_npcs`/
+/// `derive_staged_npcs`, a herd's (species, attractor vertex, member) for
+/// `derive_wild_herds`) before this function ever runs, so the identity
+/// decision is never made twice.
+///
+/// `biosphere`/`psyche`/`perception` are the same three registries
+/// `derive_bodies_at` has always built once per call, threaded through
+/// rather than rebuilt per body.
+#[allow(clippy::too_many_arguments)]
+fn wild_body(
+    world: &World,
+    ctx: &LocaleContext,
+    biosphere: &ComponentStore<KindId, hornvale_species::BiosphereTraits>,
+    psyche: &ComponentStore<KindId, hornvale_species::MindVector>,
+    perception: &ComponentStore<KindId, hornvale_species::PerceptionVector>,
+    species: &str,
+    position: [f64; 3],
+    entity: EntityId,
+    label: String,
+) -> Body {
+    let home = Facet::containing(position, walk_depth(ctx));
+    let resource =
+        nearest_water(&home, &LocaleTerrain::new(ctx), PLAN_BUDGET).unwrap_or_else(|| home.clone());
+    let activity = species_activity(world, species);
+    let temperature_niche = biosphere
+        .get_by_label(species)
+        .map(|t| t.condition_niche.temperature)
+        .unwrap_or(DEFAULT_TEMPERATURE_NICHE);
+    let thermal_strategy = biosphere
+        .get_by_label(species)
+        .map(|t| t.thermal_strategy)
+        .unwrap_or(ThermalStrategy::Endothermic);
+    let niche = biosphere
+        .get_by_label(species)
+        .map(|t| t.niche.clone())
+        .unwrap_or_else(default_diet_niche);
+    // Body mass (The Action Clock), as in `derive_npcs`: the fauna are
+    // most of the health battery's population, so the wild path must
+    // carry the trait too or the tempo spread collapses. Same shared
+    // derivation, deliberately — a second copy here is exactly what
+    // this call replaced.
+    let mass_kg = crate::clock::mass_for_species(species, Some(biosphere));
+    let deliberation_latency = psyche
+        .get_by_label(species)
+        .map(|p| p.deliberation_latency)
+        .unwrap_or(0.5);
+    let time_horizon = psyche
+        .get_by_label(species)
+        .map(|p| p.time_horizon)
+        .unwrap_or(0.5);
+    let boldness = psyche
+        .get_by_label(species)
+        .map(|p| p.threat_response)
+        .unwrap_or(BOLDNESS_STEADY);
+    let threat_niche = derive_threat_niche(&temperature_niche, thermal_strategy, &niche);
+    // A wild species is plain fauna, not one of the six settling
+    // peoples or the three dragons `perception_registry` actually
+    // rosters (see `agent::mint_at`'s comment on that roster), so this
+    // almost always misses and falls back to the manikin's neutral
+    // perception — same fallback shape as every other per-species
+    // trait above.
+    let perception = perception
+        .get_by_label(species)
+        .copied()
+        .unwrap_or(hornvale_species::PerceptionVector::MANIKIN);
+    Body {
+        entity,
+        home,
+        resource,
+        species: species.to_string(),
+        activity,
+        temperature_niche,
+        deliberation_latency,
+        time_horizon,
+        thermal_strategy,
+        niche,
+        boldness,
+        threat_niche,
+        mass_kg,
+        label,
+        perception,
+        // The Hand ruling: a wild NPC has no settlement —
+        // `derive_wild_npcs` iterates beast concentrations (herds,
+        // lairs), not settlements, so there is genuinely no
+        // `VillageInfo` here. `None`, not a fabricated placeholder:
+        // a placeholder `population`/`id` would be indistinguishable
+        // from a real measurement to any later consumer (a future
+        // possessed-beast session's prose, in particular).
+        village: None,
+    }
+}
+
+/// Derive the bodies of `herds` (The Roll, spec §3.2): `headcount` bodies per
+/// herd, each keyed by (species, attractor vertex, member) so a herd is the
+/// same herd from every direction of approach — unlike `derive_wild_npcs`,
+/// which keys by the concentration's position in its input list and stays
+/// unchanged for the health battery and the benches. The two share
+/// `wild_body`; only the identity (the `Lineage` each mints) differs.
+///
+/// type-audit: bare-ok(identifier-text: species)
+pub fn derive_wild_herds(
+    world: &World,
+    ctx: &LocaleContext,
+    ledger: &mut Ledger,
+    herds: &[hornvale_worldgen::herds::WildHerd],
+) -> Vec<Body> {
+    let biosphere = hornvale_species::biosphere_registry();
+    let psyche = hornvale_species::psyche_registry();
+    let perception = hornvale_species::perception_registry();
+    let mut out = Vec::new();
+    for herd in herds {
+        // The herd's identity is (species, attractor vertex) — NOT this
+        // herd's position in `herds`, so `derive_wild_herds(&[a, b])` and
+        // `derive_wild_herds(&[b])` mint identical entities for `b`.
+        let role = format!("wild/{}/{}", herd.species, herd.vertex);
+        let member_count = herd.headcount.min(u32::from(u16::MAX)) as u16;
+        for i in 0..member_count {
+            let entity = ledger.reuse_or_mint_entity(Lineage {
+                parent: None,
+                role: &role,
+                ordinal: i,
+            });
+            let label = format!("a wild {}", herd.species);
+            ledger
+                .commit(
+                    Fact {
+                        subject: entity,
+                        predicate: hornvale_kernel::NAME.to_string(),
+                        object: Value::Text(label.clone()),
+                        place: None,
+                        day: None,
+                        provenance: "the-wilding".to_string(),
+                    },
+                    &world.registry,
+                )
+                .expect("a wild herd body's first NAME fact always commits");
+            out.push(wild_body(
+                world,
+                ctx,
+                &biosphere,
+                &psyche,
+                &perception,
+                &herd.species,
+                herd.position,
+                entity,
+                label,
+            ));
+        }
+    }
+    out
 }
 
 /// The diet-niche fallback for a species missing from the biosphere registry
