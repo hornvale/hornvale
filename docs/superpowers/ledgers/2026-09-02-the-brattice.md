@@ -715,3 +715,124 @@ wrong:** a lost gate with no skip recorded, invisible in every readout.
 `character::bands_of`'s convention - **why:** a sixth character must fail to
 compile here rather than inherit "unworked" from a wildcard and quietly lose
 its doors.
+
+## Task 2 - complete
+
+Five readout helpers added to `windows/worldgen/src/brattice.rs`
+(`gate_yield`, `detour_cost`, `realized_requirements`, `return_differs`,
+`skip_histogram`), TDD per the brief (Step 1's three tests written first,
+confirmed RED with six `E0425: cannot find function` errors, then made
+green by the implementation). Four sections added to
+`render_circuit_panel` in `windows/worldgen/src/circuit_readout.rs`, plus
+the `verdict()` helper exactly as specified. `docs/audits/underworld-
+circuit-seed-panel.md` regenerated via `make rebaseline`.
+
+**Which plan each section reads, since the brief left it to me.** Every
+Brattice section (gate yield, detour cost, the solvability guard, the
+`gates: doors/sumps/chutes` line, `return differs`, and `patterns by class
+and span`) reads the SAME per-vertex `Character::WildCave` plan the
+Crosscut's own sections already read (`plan`, built once per vertex). The
+one exception is "worked descents with a door", which by the controller's
+own definition needs a `Character::DrowTier` plan — reused from the density
+loop's per-character `p`, so no extra descent is built. **Consequence, and
+it's a real finding, not a bug:** `gates: doors 0 ...` on the page for every
+seed is correct — a Key row is inadmissible unless `worked(character)`
+(`brattice.rs::admissible`), and `Character::WildCave` is never worked, so
+the panel's own descent set never carries a door. The door count only shows
+up on the DrowTier line right next to it, which is exactly the disclosure
+the frozen wording points at ("the production walk reaches none yet, spec
+§1"): doors exist in worked descents, the production (WildCave) walk isn't
+one.
+
+**Ruling I - `return_differs`'s path reconstruction is a fresh BFS-with-
+parents over the product graph, not a reuse of the existing distance-only
+`bfs`.** The brief's own spec (BFS parent-chain outbound, then back,
+compare edge sets as `BTreeSet<(NodeId, NodeId)>` normalized `(min, max)`)
+needs the actual path, not just its length, and the existing private `bfs`
+in `brattice.rs` records only `(node, keys) -> distance`. Added `PathState`/
+`PathInfo` type aliases (clippy's `type_complexity` refused the inline
+tuple-of-tuple) and a private `shortest_path` that also records a
+predecessor state per node, deterministic by construction: BFS visits
+states in nondecreasing distance, and among equal-distance arrivals at the
+target the smallest key bitset wins (replace the pick only on strictly
+smaller distance, ascending `BTreeMap` iteration order does the rest). Cost
+if wrong: a nondeterministic pick would make `return_differs` disagree
+between two byte-identical builds of the same seed - the renderer test's
+two-render equality check would have caught it, and did not fire, across
+seeds 42/7/1234.
+
+**Three medians and their verdict words, one line per seed (the numbers on
+the committed page, spec §4):**
+
+| seed | gate yield (floor 0.70) | detour cost (floor 1.10) | solvability guard |
+|---|---|---|---|
+| 42   | median 1.0000 -> PASSED | median 1.2143 over 866 gated descents -> PASSED | 874 of 874 |
+| 7    | median 1.0000 -> PASSED | median 1.2069 over 1673 gated descents -> PASSED | 1681 of 1681 |
+| 1234 | median 1.0000 -> PASSED | median 1.2000 over 1249 gated descents -> PASSED | 1266 of 1266 |
+
+**Skip histogram (§4.1, report only), `[Inadmissible, Claimed, NoRoom,
+Unsolvable]`:**
+
+| seed | inadmissible | claimed | no-room | unsolvable |
+|---|---|---|---|---|
+| 42   | 0 | 198 | 0 | 1 |
+| 7    | 0 | 390 | 0 | 0 |
+| 1234 | 0 | 269 | 0 | 0 |
+
+Seed 42's single `Unsolvable` is worth flagging past the ledger: Task 1's
+report measured zero `Unsolvable` skips across its whole 4,412-realm and
+1,200-plan sample and called the rollback path "exercised only by
+construction, not by data." The full 874-descent seed-42 panel exercises it
+once for real. Not a defect - `try_apply`'s rollback exists for exactly
+this case and the panel stays solvable (874 of 874) - but it means the path
+is live, not merely reachable.
+
+**Doors/sumps/chutes and worked-door share (§4.4, report only):**
+
+| seed | doors | sumps | chutes | worked descents with a door |
+|---|---|---|---|---|
+| 42   | 0 | 3169 | 3224 | 872 of 874 |
+| 7    | 0 | 5753 | 5439 | 1676 of 1681 |
+| 1234 | 0 | 4223 | 4123 | 1263 of 1266 |
+
+`return differs from outbound`: 159/866 (seed 42), 289/1673 (seed 7),
+199/1249 (seed 1234) gated descents - report only, expected high wherever a
+chute lands (Dormans' "unknown return path"), not predicted.
+
+**The Crosscut's four numbers, old -> new, per seed (spec §4 preamble's
+execution amendment, ruling C) - verdict words unchanged, descent counts
+unchanged:**
+
+| seed | descents (unchanged) | loop share | cycle membership | cross-floor | semilattice overlap |
+|---|---|---|---|---|---|
+| 42   | 874  | 0.1233 -> 0.1077 (FALSIFIED, FALSIFIED) | 0.8548 -> 0.8442 | 841/874 -> 839/874 (PASSED, PASSED) | 0.3061 -> 0.3030 |
+| 7    | 1681 | 0.1111 -> 0.0893 (FALSIFIED, FALSIFIED) | 0.8533 -> 0.8421 | 1581/1681 -> 1595/1681 (PASSED, PASSED) | 0.2857 -> 0.2794 |
+| 1234 | 1266 | 0.1042 -> 0.0794 (FALSIFIED, FALSIFIED) | 0.8511 -> 0.8413 | 1193/1266 -> 1200/1266 (PASSED, PASSED) | 0.2812 -> 0.2766 |
+
+Every descent count is byte-identical to the pre-Task-2 baseline (874 /
+1,681 / 1,266) - the pass adds no node, edge, realm or stair, exactly as
+the amended branch table requires. Seed 42's four movements match Task 1's
+own measurement of the same ruling exactly (0.1233->0.1077, 0.8548->0.8442,
+841->839 of 874, 0.3061->0.3030); seeds 7 and 1234 move by comparable small
+amounts, confirming this is one attributable movement (Ruling C's
+`try_extend` capability-invariant fix), not new drift from this task.
+
+**Patterns by class and span (§4.4, report only) sum consistently with the
+totals above** - checked, not merely trusted: seed 42's `the-sump` row
+(3169) equals its `sumps` total exactly, and its three `the-chute` rows
+(96 + 37 + 3091 = 3224) equal its `chutes` total exactly. No `lock-and-key-
+cycle` or `key-downstairs-lock-upstairs` row appears in any seed's
+breakdown, consistent with `doors: 0` - both are Key rows, inadmissible for
+`Character::WildCave`.
+
+**Artifacts regenerated:** `docs/audits/underworld-circuit-seed-panel.md`
+(the four new sections per seed, plus the Crosscut's expected one-time
+movement), `docs/audits/type-audit-report.md` (five new tagged pub items:
+`gate_yield`, `realized_requirements`, `detour_cost`, `skip_histogram`,
+`return_differs`, each `bare-ok`), `docs/generated-path-writes.tsv` and
+`docs/timings.md` (the run's own bookkeeping). `clients/game/core/tests/
+fixtures/` and `book/` are untouched, confirmed by `git status`.
+
+**Stage gate submission:** `git push -u origin campaign/the-brattice` then
+`make sluice-stage BRANCH=campaign/the-brattice REF=<full-sha>` - see the
+task report for the queue row and `sluice-status` output.

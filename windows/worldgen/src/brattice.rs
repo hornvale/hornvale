@@ -24,7 +24,7 @@ use crate::character::Character;
 use crate::circuit::{DescentPlan, EdgeKind, LengthClass, NodeId, Realm};
 use hornvale_kernel::Stream;
 use hornvale_terrain::CaveKind;
-use std::collections::{BTreeMap, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 /// What a body must BE to take a way (spec §3.1). Worldgen's own enum — the
 /// vessel maps it onto its `MovementMode`, never the reverse (layering).
@@ -828,6 +828,184 @@ pub fn ungated_round_trip(plan: &DescentPlan) -> u32 {
     2 * plan.nodes[plan.terminus].depth as u32
 }
 
+/// Spec §4.1: from the realms whose draw selected an admissible row, to the
+/// realms whose row was applied in full. `None` when no realm drew an
+/// admissible row at all (every draw was [`Outcome::Inadmissible`]).
+/// type-audit: bare-ok(ratio: return)
+pub fn gate_yield(plan: &DescentPlan) -> Option<f64> {
+    let applied = plan
+        .patterns
+        .iter()
+        .filter(|o| matches!(o, Outcome::Applied { .. }))
+        .count();
+    let skipped = plan
+        .patterns
+        .iter()
+        .filter(|o| matches!(o, Outcome::Skipped { .. }))
+        .count();
+    if applied + skipped == 0 {
+        None
+    } else {
+        Some(applied as f64 / (applied + skipped) as f64)
+    }
+}
+
+/// Realized requirements on the plan's edges: `(doors, sumps, chutes)`, read
+/// from `toward_a` — the direction a `DownFreeUpNeeds` gate actually
+/// constrains (spec §4.4).
+/// type-audit: bare-ok(count: return)
+pub fn realized_requirements(plan: &DescentPlan) -> (usize, usize, usize) {
+    let mut doors = 0usize;
+    let mut sumps = 0usize;
+    let mut chutes = 0usize;
+    for e in &plan.edges {
+        let Some(g) = &e.gate else { continue };
+        match g.toward_a {
+            Way::Needs(Requirement::Key(_)) => doors += 1,
+            Way::Needs(Requirement::Mode(Capability::Swim)) => sumps += 1,
+            Way::Needs(Requirement::Mode(Capability::Fly)) => chutes += 1,
+            Way::Open => {}
+        }
+    }
+    (doors, sumps, chutes)
+}
+
+/// Spec §4.2: the default body's gated round trip over its ungated one,
+/// over descents holding at least one realized requirement. `None` when the
+/// plan realizes no requirement at all — a round trip through an entirely
+/// open graph has nothing to measure.
+/// type-audit: bare-ok(ratio: return)
+pub fn detour_cost(plan: &DescentPlan) -> Option<f64> {
+    let (doors, sumps, chutes) = realized_requirements(plan);
+    if doors + sumps + chutes == 0 {
+        return None;
+    }
+    let gated = gated_round_trip(plan, DEFAULT_BODY)?;
+    let ungated = ungated_round_trip(plan);
+    Some(gated as f64 / ungated as f64)
+}
+
+/// Spec §4.2's skip histogram, report-only: `[Inadmissible, Claimed, NoRoom,
+/// Unsolvable]`, in that order.
+/// type-audit: bare-ok(count: return)
+pub fn skip_histogram(plan: &DescentPlan) -> [u32; 4] {
+    let mut h = [0u32; 4];
+    for o in &plan.patterns {
+        match o {
+            Outcome::Inadmissible => h[0] += 1,
+            Outcome::Skipped {
+                why: Skip::Claimed, ..
+            } => h[1] += 1,
+            Outcome::Skipped {
+                why: Skip::NoRoom, ..
+            } => h[2] += 1,
+            Outcome::Skipped {
+                why: Skip::Unsolvable,
+                ..
+            } => h[3] += 1,
+            Outcome::Applied { .. } => {}
+        }
+    }
+    h
+}
+
+/// A product-graph state: a node plus the key bitset held there.
+type PathState = (NodeId, u64);
+/// Per state: the BFS distance from the path's start, and the predecessor
+/// state on a shortest path (`None` for the start itself).
+type PathInfo = BTreeMap<PathState, (u32, Option<PathState>)>;
+
+/// Shortest path over the product graph from `(start, body.keys)` to any
+/// `(target, _)` state: the edge set, normalized to `(min, max)` node pairs,
+/// and the keys held on arrival. Deterministic — BFS visits states in
+/// nondecreasing distance, and among equal-distance arrivals at `target` the
+/// smallest key bitset wins (ascending scan, replace only on strictly
+/// smaller distance).
+fn shortest_path(
+    plan: &DescentPlan,
+    start: NodeId,
+    target: NodeId,
+    body: Body,
+) -> Option<(BTreeSet<(NodeId, NodeId)>, u64)> {
+    let keys = key_nodes(plan);
+    let mut held = body.keys;
+    if let Some(bit) = keys.iter().position(|&k| k == start) {
+        held |= 1 << bit;
+    }
+    let start_state = (start, held);
+    // state -> (distance, predecessor state)
+    let mut info: PathInfo = BTreeMap::new();
+    info.insert(start_state, (0, None));
+    let mut q = VecDeque::new();
+    q.push_back(start_state);
+    while let Some((n, held)) = q.pop_front() {
+        let d = info[&(n, held)].0;
+        let here = Body { keys: held, ..body };
+        for e in plan.edges.iter() {
+            let (to, way) = if e.a == n {
+                (e.b, e.gate.map_or(Way::Open, |g| g.toward_b))
+            } else if e.b == n {
+                (e.a, e.gate.map_or(Way::Open, |g| g.toward_a))
+            } else {
+                continue;
+            };
+            if !passes(way, here, &keys) {
+                continue;
+            }
+            let mut next_held = held;
+            if let Some(bit) = keys.iter().position(|&k| k == to) {
+                next_held |= 1 << bit;
+            }
+            let next_state = (to, next_held);
+            if info.contains_key(&next_state) {
+                continue;
+            }
+            info.insert(next_state, (d + 1, Some((n, held))));
+            q.push_back(next_state);
+        }
+    }
+    let mut best: Option<(PathState, u32)> = None;
+    for (&state, &(d, _)) in info.iter() {
+        if state.0 != target {
+            continue;
+        }
+        match best {
+            None => best = Some((state, d)),
+            Some((_, bd)) if d < bd => best = Some((state, d)),
+            _ => {}
+        }
+    }
+    let (mut cur, _) = best?;
+    let held_final = cur.1;
+    let mut edges = BTreeSet::new();
+    while let Some(prev) = info[&cur].1 {
+        edges.insert((cur.0.min(prev.0), cur.0.max(prev.0)));
+        cur = prev;
+    }
+    Some((edges, held_final))
+}
+
+/// Spec §4.4, Dormans' "unknown return path": whether the default body's
+/// shortest outbound path (entrance → terminus) and shortest return path
+/// (terminus → entrance, holding whatever the outbound trip gained) differ
+/// as edge sets. `None` when [`realized_requirements`] is all zero — with no
+/// gate on the graph there is nothing for the two directions to disagree
+/// about.
+/// type-audit: bare-ok(flag: return)
+pub fn return_differs(plan: &DescentPlan) -> Option<bool> {
+    let (doors, sumps, chutes) = realized_requirements(plan);
+    if doors + sumps + chutes == 0 {
+        return None;
+    }
+    let (out_edges, held) = shortest_path(plan, plan.entrance, plan.terminus, DEFAULT_BODY)?;
+    let back_body = Body {
+        keys: held,
+        ..DEFAULT_BODY
+    };
+    let (back_edges, _) = shortest_path(plan, plan.terminus, plan.entrance, back_body)?;
+    Some(out_edges != back_edges)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1165,5 +1343,75 @@ mod tests {
             "tie-break: path_a is Long"
         );
         assert_eq!(sides(LengthClass::ShortShort), (Side::Long, Side::Short));
+    }
+
+    // --- Task 2: readout helpers (spec §4) ---
+
+    #[test]
+    fn gate_yield_is_a_ratio_and_none_without_an_admissible_realm() {
+        let p = plan(42, 1, CaveKind::Karst, Character::DrowTier);
+        if let Some(y) = gate_yield(&p) {
+            assert!((0.0..=1.0).contains(&y));
+        }
+        let applied = p
+            .patterns
+            .iter()
+            .filter(|o| matches!(o, Outcome::Applied { .. }))
+            .count();
+        let skipped = p
+            .patterns
+            .iter()
+            .filter(|o| matches!(o, Outcome::Skipped { .. }))
+            .count();
+        if applied + skipped == 0 {
+            assert!(gate_yield(&p).is_none());
+        } else {
+            assert_eq!(
+                gate_yield(&p),
+                Some(applied as f64 / (applied + skipped) as f64)
+            );
+        }
+    }
+
+    /// claim: invariant(seed: 0..30) — every seed is checked against the
+    /// same either/or: `None` iff no requirement is realized, `Some(r)` with
+    /// `r >= 1.0` otherwise. No existence half; nothing here needs a
+    /// nonvacuous count.
+    #[test]
+    fn detour_cost_is_at_least_one_and_none_without_a_realized_requirement() {
+        for seed in 0..30u64 {
+            let p = plan(seed, 1, CaveKind::Karst, Character::DrowTier);
+            let (d, s, c) = realized_requirements(&p);
+            match detour_cost(&p) {
+                None => assert_eq!(d + s + c, 0, "seed {seed}: gates exist but no cost"),
+                Some(r) => {
+                    assert!(d + s + c > 0);
+                    assert!(
+                        r >= 1.0,
+                        "seed {seed}: a gated trip shorter than the ungated one"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn a_plan_with_no_gates_has_unit_detour_and_no_return_difference() {
+        let mut p = plan(7, 1, CaveKind::Karst, Character::WildCave);
+        for e in &mut p.edges {
+            e.gate = None;
+        }
+        for n in &mut p.nodes {
+            n.key = None;
+        }
+        assert_eq!(
+            gated_round_trip(&p, DEFAULT_BODY),
+            Some(ungated_round_trip(&p))
+        );
+        assert_eq!(
+            return_differs(&p),
+            None,
+            "no realized requirement, no reading"
+        );
     }
 }

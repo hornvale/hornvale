@@ -6,6 +6,10 @@
 use hornvale_kernel::{Band, Seed};
 use hornvale_terrain::GeneratedTerrain;
 
+use crate::brattice::{
+    CYCLE_PATTERNS, DEFAULT_BODY, Outcome, detour_cost, gate_yield, realized_requirements,
+    return_differs, skip_histogram, solvable,
+};
 use crate::character::Character;
 use crate::circuit::{
     anchored_realms, cycle_membership_share, has_cross_floor_realm, loop_share, plan_descent,
@@ -44,6 +48,17 @@ fn show(median: Option<f64>) -> String {
     }
 }
 
+/// The Brattice's frozen verdict words (spec §4), against a `None` median —
+/// a seed with nothing to measure — rendered as `NOT MEASURABLE` rather than
+/// forced into either frozen word.
+fn verdict(m: Option<f64>, floor: f64) -> &'static str {
+    match m {
+        None => "NOT MEASURABLE",
+        Some(v) if v >= floor => "PASSED",
+        Some(_) => "FALSIFIED",
+    }
+}
+
 /// Render the panel for one seed: the four preregistered readouts of spec
 /// §4, over every cave-bearing, non-ocean vertex.
 ///
@@ -64,6 +79,26 @@ pub fn render_circuit_panel(seed: Seed, terrain: &GeneratedTerrain) -> String {
     let mut density: std::collections::BTreeMap<(String, String), Vec<f64>> =
         std::collections::BTreeMap::new();
 
+    // The Brattice §4.1-4.4, over the same per-vertex WildCave `plan` every
+    // other section here reads. "Worked descents with a door" is the one
+    // exception (below): a door only ever hangs on a DrowTier descent, so
+    // it reads the DrowTier plan the density loop already builds.
+    let mut yields = Vec::new();
+    let mut costs = Vec::new();
+    let mut gated_descents = 0usize;
+    let mut skip_totals = [0u32; 4];
+    let mut doors_total = 0usize;
+    let mut sumps_total = 0usize;
+    let mut chutes_total = 0usize;
+    let mut solvable_count = 0usize;
+    let mut return_differs_count = 0usize;
+    let mut worked_descents = 0usize;
+    let mut worked_with_door = 0usize;
+    let mut pattern_counts: std::collections::BTreeMap<
+        (crate::circuit::LengthClass, &'static str, &'static str),
+        u32,
+    > = std::collections::BTreeMap::new();
+
     for vertex in terrain.geosphere().vertices() {
         let Some(cave) = terrain.cave_at(vertex) else {
             continue;
@@ -81,6 +116,47 @@ pub fn render_circuit_panel(seed: Seed, terrain: &GeneratedTerrain) -> String {
         if let Some(o) = semilattice_overlap(&plan) {
             overlaps.push(o);
         }
+
+        if let Some(y) = gate_yield(&plan) {
+            yields.push(y);
+        }
+        let h = skip_histogram(&plan);
+        for i in 0..skip_totals.len() {
+            skip_totals[i] += h[i];
+        }
+        let (doors, sumps, chutes) = realized_requirements(&plan);
+        doors_total += doors;
+        sumps_total += sumps;
+        chutes_total += chutes;
+        if doors + sumps + chutes > 0 {
+            gated_descents += 1;
+            if let Some(dc) = detour_cost(&plan) {
+                costs.push(dc);
+            }
+            if let Some(true) = return_differs(&plan) {
+                return_differs_count += 1;
+            }
+        }
+        let reach = solvable(&plan, DEFAULT_BODY);
+        if reach.terminus.is_some() && reach.keys.iter().all(|k| k.is_some()) {
+            solvable_count += 1;
+        }
+        for (realm, outcome) in plan.realms.iter().zip(plan.patterns.iter()) {
+            if let Outcome::Applied { pattern } = outcome {
+                let cross_floor = realm
+                    .path_b
+                    .iter()
+                    .any(|&n| plan.nodes[n].level != realm.anchor_level);
+                let span = if cross_floor {
+                    "CrossFloor"
+                } else {
+                    "SameFloor"
+                };
+                let name = CYCLE_PATTERNS[*pattern].name;
+                *pattern_counts.entry((realm.class, span, name)).or_insert(0) += 1;
+            }
+        }
+
         for character in [Character::WildCave, Character::DrowTier] {
             let p = if character == Character::WildCave {
                 plan.clone()
@@ -91,6 +167,13 @@ pub fn render_circuit_panel(seed: Seed, terrain: &GeneratedTerrain) -> String {
             let entry = density.entry(key).or_default();
             for level in 0..rungs.len() {
                 entry.push(anchored_realms(&p, level) as f64);
+            }
+            if character == Character::DrowTier {
+                worked_descents += 1;
+                let (doors, _, _) = realized_requirements(&p);
+                if doors > 0 {
+                    worked_with_door += 1;
+                }
             }
         }
     }
@@ -194,6 +277,43 @@ pub fn render_circuit_panel(seed: Seed, terrain: &GeneratedTerrain) -> String {
         "semilattice overlap: median {} (report only)\n",
         show(median(&mut overlaps))
     ));
+    out.push('\n');
+
+    // The Brattice §4.1 gate yield (frozen floor 0.70).
+    let gy = median(&mut yields);
+    out.push_str(&format!(
+        "gate yield: median {} (frozen floor 0.70; FROM realms with an admissible drawn row TO rows applied in full) -> {}\n",
+        show(gy), verdict(gy, 0.70)
+    ));
+    out.push_str(&format!(
+        "  skips: inadmissible {} claimed {} no-room {} unsolvable {} (report only)\n",
+        skip_totals[0], skip_totals[1], skip_totals[2], skip_totals[3]
+    ));
+
+    // The Brattice §4.2 detour cost (frozen floor 1.10), round trip, descents
+    // with >=1 realized requirement.
+    let dc = median(&mut costs);
+    out.push_str(&format!(
+        "detour cost: median {} over {gated_descents} gated descents (frozen floor 1.10; default body's round trip gated / ungated) -> {}\n",
+        show(dc), verdict(dc, 1.10)
+    ));
+
+    // The Brattice §4.3 solvability — a guard: printed, never a verdict word.
+    out.push_str(&format!(
+        "solvable for a body holding nothing: {solvable_count} of {descents} descents (a guard; a miss is a red test, not a number)\n"
+    ));
+
+    // The Brattice §4.4 report only.
+    out.push_str(&format!(
+        "gates: doors {doors_total} sumps {sumps_total} chutes {chutes_total}; worked descents with a door {worked_with_door} of {worked_descents} (the production walk reaches none yet, spec §1)\n"
+    ));
+    out.push_str(&format!(
+        "return differs from outbound: {return_differs_count} of {gated_descents} gated descents (report only; follows from a chute by construction)\n"
+    ));
+    out.push_str("patterns by class and span (report only):\n");
+    for ((class, span, name), count) in &pattern_counts {
+        out.push_str(&format!("  {class:?} {span} {name}: {count}\n"));
+    }
 
     out
 }
@@ -242,6 +362,12 @@ mod tests {
             "density ordering",
             "cross-floor",
             "semilattice overlap",
+            "gate yield",
+            "detour cost",
+            "solvable for a body holding nothing",
+            "gates: doors",
+            "return differs from outbound",
+            "patterns by class and span",
         ] {
             assert!(a.contains(heading), "missing section {heading}");
         }
