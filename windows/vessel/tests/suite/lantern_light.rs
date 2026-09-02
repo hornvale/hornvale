@@ -48,7 +48,7 @@ fn built() -> Brief {
         0,
         true,
         true,
-        Some(Site::new(SiteKind::Settlement, None)),
+        Some(Site::placed(SiteKind::Settlement, None)),
     )
 }
 

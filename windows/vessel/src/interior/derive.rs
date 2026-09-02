@@ -241,7 +241,7 @@ mod tests {
     /// A brief matching [`WalkKeyedTerrain`]'s reads (which are always cold), so
     /// `chamber_interior_of`'s debug assertions hold.
     fn brief(built: bool) -> crate::brief::Brief {
-        let site = built.then(|| Site::new(SiteKind::Settlement, None));
+        let site = built.then(|| Site::placed(SiteKind::Settlement, None));
         crate::brief::Brief::from_parts(None, None, None, None, 0, built, true, site)
     }
 

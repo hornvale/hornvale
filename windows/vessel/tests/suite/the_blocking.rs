@@ -687,7 +687,7 @@ fn the_role_table_reads_a_different_room_for_every_role() {
             0,
             true,
             cold,
-            Some(Site::new(SiteKind::Settlement, None)),
+            Some(Site::placed(SiteKind::Settlement, None)),
         )
     };
     let mut seen: std::collections::BTreeMap<String, Role> = std::collections::BTreeMap::new();

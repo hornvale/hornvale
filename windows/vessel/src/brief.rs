@@ -202,17 +202,17 @@ pub fn brief_of(
     // holding more than one is named by the strongest, and `Site::salience` is
     // the presentation half of the same ordering.
     let site = if built {
-        Some(Site::new(SiteKind::Settlement, None))
+        Some(Site::placed(SiteKind::Settlement, None))
     } else if exotic_sites
         .iter()
         .any(|site| placed_at(Vertex(site.vertex), SiteReason::Exotic))
     {
-        Some(Site::new(SiteKind::Exotic, None))
+        Some(Site::placed(SiteKind::Exotic, None))
     } else if cave_sites
         .iter()
         .any(|&vertex| placed_at(vertex, SiteReason::Cave))
     {
-        Some(Site::new(SiteKind::Cave, None))
+        Some(Site::placed(SiteKind::Cave, None))
     } else {
         None
     };
@@ -315,7 +315,7 @@ mod tests {
     /// computes it, exactly as `brief_of` does in production.
     #[test]
     fn a_built_brief_carries_a_settlement_site_and_an_unbuilt_one_carries_none() {
-        let built_site = Some(Site::new(SiteKind::Settlement, None));
+        let built_site = Some(Site::placed(SiteKind::Settlement, None));
         let built = Brief::from_parts(None, None, None, None, 0, true, false, built_site);
         let wild = Brief::from_parts(None, None, None, None, 0, false, false, None);
         assert_eq!(

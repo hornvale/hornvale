@@ -33,6 +33,50 @@ pub enum Extent {
     Point,
 }
 
+/// Which of the two ways a site came to exist, and what that costs.
+///
+/// Decision 0539 measured a ceiling nobody had computed: 40,962 level-6
+/// vertices cannot populate 402,653,184 walk facets (a placed site at
+/// every facet would need one placed per 9,830 — 0.0102% coverage). So a
+/// per-facet surface must eventually come from noise interacting with macro
+/// features rather than from placement, and the two mechanisms carry
+/// genuinely different costs and guarantees — this type names that split
+/// rather than blurring it into one `Site`.
+///
+/// **This is `Extent::Region`'s situation again.** Everything The Prospect
+/// builds is [`Tier::Placed`]; [`Tier::Derived`] is modelled now, unused,
+/// so the surface tier a later campaign builds is a fill-in against an
+/// already-widened type rather than a migration of every `Site` consumer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Tier {
+    /// Generated from a level-6 vertex by a seeded draw. Bounded — roughly
+    /// 10^2 to 10^4 sites planet-wide — and its facts live in the ledger:
+    /// a placed site is deterministic by **record**, replayed from committed
+    /// facts rather than recomputed, which is what lets it be read, invaded,
+    /// or destroyed by another system and have that outcome persist. A
+    /// placed delve can be a Dwarven Kingdom whose fall through a dimensional
+    /// gate other systems go on to read as history.
+    ///
+    /// Everything The Prospect emits is `Placed`.
+    Placed,
+    /// Computed from noise at facet resolution: unbounded (~10^6+ planet-
+    /// wide), stored nowhere, and deterministic by **derivation** — a pure
+    /// function of `(seed, position)` that costs no stream label, no
+    /// save-format contract, and no storage, recomputed identically on every
+    /// read. A derived site may be every bit as large and as complex as a
+    /// placed one, but it cannot shape world history: nothing records its
+    /// fate, so no later system can read what became of it. (A derived site
+    /// a player *enters* may later be promoted into the record — decision
+    /// 0539 deliberately leaves that mutable state unnamed; it is a
+    /// separate axis from this one, not a third `Tier` variant.)
+    ///
+    /// **Modelled and unused, exactly as [`Extent::Region`] is** — no
+    /// constructor in this campaign builds a `Derived` site. Kept as a
+    /// declared forward guard (see the `tests` module below) rather than a
+    /// silently-vacuous one.
+    Derived,
+}
+
 /// Something at a facet with an interior worth entering.
 /// type-audit: bare-ok(identifier-text: name)
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -43,16 +87,53 @@ pub struct Site {
     pub name: Option<String>,
     /// How much ground it covers. Always [`Extent::Point`] in this campaign.
     pub extent: Extent,
+    /// Whether this site was placed from a vertex or derived from noise.
+    /// Always [`Tier::Placed`] in this campaign — decision 0539. Orthogonal
+    /// to [`Site::salience`]: a derived cave and a placed cave are equally
+    /// salient *as caves*, because salience ranks what gets NAMED in prose
+    /// and tier is never presentation.
+    pub tier: Tier,
 }
 
 impl Site {
-    /// A point site of the given kind.
+    /// A placed point site of the given kind — generated from a level-6
+    /// vertex by a seeded draw, its facts committed to the ledger.
+    ///
+    /// **There is no bare `Site::new` and no third `tier` parameter on this
+    /// constructor.** Every call site The Prospect has (26, all in this
+    /// crate) wants exactly this — a settlement, cave, or exotic site placed
+    /// from a vertex — and a bare `new` would give a future author a
+    /// shorter, more familiar name to reach for than [`Site::derived`],
+    /// silently defaulting new call sites to the wrong tier once derived
+    /// sites are actually built. Naming the two constructors symmetrically
+    /// forces a conscious choice instead: `placed` and `derived` read the
+    /// same weight at a call site, so picking one is a decision rather than
+    /// a habit. See [`Site::derived`], decision 0539.
     /// type-audit: bare-ok(identifier-text: name)
-    pub fn new(kind: SiteKind, name: Option<String>) -> Self {
+    pub fn placed(kind: SiteKind, name: Option<String>) -> Self {
         Self {
             kind,
             name,
             extent: Extent::Point,
+            tier: Tier::Placed,
+        }
+    }
+
+    /// A derived point site of the given kind — computed from noise at
+    /// facet resolution, recorded nowhere.
+    ///
+    /// **Modelled and unused, exactly as [`Extent::Region`] is.** No call
+    /// site in The Prospect calls this; it exists so the surface tier a
+    /// later campaign builds is a fill-in against an already-widened
+    /// constructor pair rather than a migration of every `Site` consumer.
+    /// Decision 0539.
+    /// type-audit: bare-ok(identifier-text: name)
+    pub fn derived(kind: SiteKind, name: Option<String>) -> Self {
+        Self {
+            kind,
+            name,
+            extent: Extent::Point,
+            tier: Tier::Derived,
         }
     }
 
@@ -64,6 +145,10 @@ impl Site {
     /// [`SiteKind`] (decision 0028's `index` class: "a position into a
     /// structure whose type carries the meaning"), the same reasoning
     /// `Band::rank` in `kernel/src/band.rs` uses for its own rank return.
+    /// Ranked over [`SiteKind`] alone — [`Tier`] never enters this ordering.
+    /// A derived cave and a placed cave are equally salient *as caves*:
+    /// tier is a generation-and-persistence fact, salience is a
+    /// presentation fact, and this campaign keeps the two axes orthogonal.
     /// type-audit: bare-ok(index: return)
     pub fn salience(&self) -> u8 {
         match self.kind {
@@ -82,34 +167,63 @@ mod tests {
     /// (spec §6). It is presentation only and never world-state.
     #[test]
     fn salience_ranks_settlement_over_exotic_over_cave() {
-        let s = Site::new(SiteKind::Settlement, Some("Doaba".into()));
-        let x = Site::new(SiteKind::Exotic, None);
-        let c = Site::new(SiteKind::Cave, None);
+        let s = Site::placed(SiteKind::Settlement, Some("Doaba".into()));
+        let x = Site::placed(SiteKind::Exotic, None);
+        let c = Site::placed(SiteKind::Cave, None);
         assert!(s.salience() > x.salience());
         assert!(x.salience() > c.salience());
     }
 
-    /// `Site::new` must not silently drop or alter what it is given — a
+    /// Tier is orthogonal to salience: a derived and a placed site of the
+    /// same kind rank identically, because salience ranks `SiteKind` alone
+    /// (decision 0539 — tier must never leak into presentation).
+    #[test]
+    fn salience_ignores_tier() {
+        let placed_cave = Site::placed(SiteKind::Cave, None);
+        let derived_cave = Site::derived(SiteKind::Cave, None);
+        assert_eq!(placed_cave.salience(), derived_cave.salience());
+    }
+
+    /// `Site::placed` must not silently drop or alter what it is given — a
     /// regression that swapped or discarded `kind`/`name` would still
     /// compile and would still pass every other test in this module.
     #[test]
-    fn new_round_trips_kind_and_name() {
-        let named = Site::new(SiteKind::Settlement, Some("Doaba".into()));
+    fn placed_round_trips_kind_and_name() {
+        let named = Site::placed(SiteKind::Settlement, Some("Doaba".into()));
         assert_eq!(named.kind, SiteKind::Settlement);
         assert_eq!(named.name, Some("Doaba".to_string()));
 
-        let unnamed = Site::new(SiteKind::Cave, None);
+        let unnamed = Site::placed(SiteKind::Cave, None);
         assert_eq!(unnamed.kind, SiteKind::Cave);
         assert_eq!(unnamed.name, None);
     }
 
     /// This campaign emits `Point` only (spec §7). **Currently vacuous**:
-    /// `Extent` has exactly one variant, so any `Site::new` that compiles
+    /// `Extent` has exactly one variant, so any `Site::placed` that compiles
     /// necessarily sets it. Kept anyway as a FORWARD guard — it exists to
-    /// catch a future `Site::new` that defaults to a `Region` variant once
-    /// one lands, not to discriminate today.
+    /// catch a future `Site::placed` that defaults to a `Region` variant
+    /// once one lands, not to discriminate today.
     #[test]
-    fn a_new_site_is_a_point() {
-        assert_eq!(Site::new(SiteKind::Cave, None).extent, Extent::Point);
+    fn a_placed_site_is_a_point() {
+        assert_eq!(Site::placed(SiteKind::Cave, None).extent, Extent::Point);
+    }
+
+    /// `Site::placed` sets [`Tier::Placed`] — the only tier this campaign
+    /// emits (decision 0539).
+    #[test]
+    fn placed_sets_tier_placed() {
+        assert_eq!(Site::placed(SiteKind::Cave, None).tier, Tier::Placed);
+    }
+
+    /// `Site::derived` sets [`Tier::Derived`]. **Declared forward guard, not
+    /// a discriminating test today**: no production call site in The
+    /// Prospect calls `Site::derived` at all (decision 0539 — modelled and
+    /// unused, exactly as [`Extent::Region`] is), so this only pins the
+    /// constructor's own behaviour against a future edit that collapses
+    /// both constructors to the same tier, the same role
+    /// `a_placed_site_is_a_point` plays for `Extent`.
+    #[test]
+    fn derived_sets_tier_derived() {
+        assert_eq!(Site::derived(SiteKind::Cave, None).tier, Tier::Derived);
     }
 }

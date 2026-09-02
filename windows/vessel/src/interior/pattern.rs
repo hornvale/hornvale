@@ -673,7 +673,7 @@ mod tests {
     /// `brief_of` performs, kept here so every fixture below stays a real
     /// (built, site) pairing rather than an untested combination.
     fn settlement_site() -> Option<Site> {
-        Some(Site::new(SiteKind::Settlement, None))
+        Some(Site::placed(SiteKind::Settlement, None))
     }
 
     #[test]
