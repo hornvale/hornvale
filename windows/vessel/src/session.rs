@@ -20,6 +20,7 @@ use crate::snapshot::{
     SensedChannel, SessionSnapshot, SocialEntry, SpatialChannel,
 };
 use crate::testimony::{FeltStateWord, Testimony, testify_with_stance};
+use crate::turn_work::{TurnWork, TurnWorkRead};
 use crate::{
     Focalized, Focalizer, IdentityProjection, Knowledge, PossessOpts, PossessTarget, Projection,
     TemplateFocalizer, Turn, VesselError, absorb_common, most_populous_settlement, observable,
@@ -1035,6 +1036,11 @@ pub struct Session<'w> {
     /// The same guard for herds, keyed the way a herd's identity is keyed
     /// (species, attractor vertex).
     derived_herds: std::collections::BTreeSet<(String, u32)>,
+    /// Per-turn work counters (The Rack, spec §3.5): reset by [`Self::handle`]
+    /// for every non-empty verb line, bumped at every ledger fold/scan the
+    /// snapshot and tick paths still perform. The instrument for the budget
+    /// tests in `windows/vessel/tests/suite/turn_budget.rs`.
+    turn_work: TurnWork,
 }
 
 /// Where the possession is while indoors. `FRAME`-tier in its entirety: derived
@@ -1808,6 +1814,7 @@ impl<'w> Session<'w> {
             herd_rooms,
             derived_settlements,
             derived_herds,
+            turn_work: TurnWork::default(),
         };
         // The opening mask, through the SAME `roll_of` every tick uses rather
         // than an all-true vector. Everything derived above is within call by
@@ -1998,6 +2005,7 @@ impl<'w> Session<'w> {
     /// against it. Every `.agent().position` reader from before The Hand
     /// reads through here now.
     pub fn position(&self) -> Facet {
+        self.turn_work.bump_position_folds();
         agent_position(&self.ledger, self.driven_body(), self.day)
     }
 
@@ -2165,6 +2173,7 @@ impl<'w> Session<'w> {
             .sensed_npcs(sighting.as_ref())
             .iter()
             .map(|npc| {
+                self.turn_work.bump_affect_folds();
                 let affect = affect_of_memo_occupied(
                     &self.ledger,
                     npc,
@@ -4392,6 +4401,10 @@ impl<'w> Session<'w> {
         let verb_present = !verb.is_empty();
         if verb_present {
             self.turn += 1;
+            // The Rack, spec §3.5: a fresh budget for THIS turn's own work,
+            // anchored against the cache's own lifetime search count (it
+            // never resets on its own — see `HomeNavCache::searches`).
+            self.turn_work.reset(self.home_nav_cache.searches());
         }
         // `!` selects the out-of-character namespace (The Deed, spec
         // §2.1/§3.2): stripped here, before verb lookup, so the sigil
@@ -4674,6 +4687,23 @@ impl<'w> Session<'w> {
             };
         }
         turn
+    }
+
+    /// This turn's work counters (The Rack, spec §3.5), read as of NOW.
+    /// `Self::handle` is the only writer of a reset; this is read AFTER a
+    /// `handle` or a `snapshot` to see what that call actually folded.
+    pub fn turn_work(&self) -> TurnWorkRead {
+        self.turn_work.read(self.home_nav_cache.searches())
+    }
+
+    /// The test's one-call instrument: reset the budget, take a snapshot
+    /// (discarding it — only the WORK it performed is being measured), and
+    /// read the counters back. Isolates `snapshot`'s own cost from whatever
+    /// a preceding `handle` already counted.
+    pub fn snapshot_work(&self) -> TurnWorkRead {
+        self.turn_work.reset(self.home_nav_cache.searches());
+        let _ = self.snapshot();
+        self.turn_work()
     }
 
     /// The water column at the room the possession stands on, shallowest
@@ -6726,6 +6756,7 @@ impl<'w> Session<'w> {
     /// taken (by the possession, or by a creature earlier in `other_bodies`'
     /// own derivation order) is left unplaced rather than stacked.
     fn sighting(&self) -> Option<Sighting> {
+        self.turn_work.bump_shadowcasts();
         let inside = self.inside.as_ref()?;
         // The chamber's interior, through the SAME accessor `chamber_nouns_here`
         // and `examine_chamber` read it through — the plan asked for reuse rather
@@ -7022,7 +7053,10 @@ impl<'w> Session<'w> {
         // rather than just count facts.
         let before: Vec<Facet> = other_bodies(&self.bodies, self.driven)
             .iter()
-            .map(|npc| agent_position(&self.ledger, npc, self.day))
+            .map(|npc| {
+                self.turn_work.bump_position_folds();
+                agent_position(&self.ledger, npc, self.day)
+            })
             .collect();
         // ...and WHO the possession could sense as of that same moment (The
         // Sighting, fix round 4). A departure is narrated about a creature that
@@ -7367,6 +7401,7 @@ impl<'w> Session<'w> {
         let mut departed: Vec<&str> = Vec::new();
         for (npc, prior) in other_bodies(&self.bodies, self.driven).iter().zip(before) {
             let was_here = *prior == self.position();
+            self.turn_work.bump_position_folds();
             let is_here = agent_position(&self.ledger, npc, self.day) == self.position();
             match (was_here, is_here) {
                 (false, true) if sensed_now.contains(&npc.entity) => {
@@ -7755,7 +7790,11 @@ impl<'w> Session<'w> {
         // could no longer collect into `Vec<&Body>`.
         other_bodies(&self.bodies, self.driven)
             .into_iter()
-            .filter(|npc| agent_position(&self.ledger, npc, self.day) == self.position())
+            .filter(|npc| {
+                self.turn_work.bump_bodies_scanned();
+                self.turn_work.bump_position_folds();
+                agent_position(&self.ledger, npc, self.day) == self.position()
+            })
             .collect()
     }
 
@@ -8144,6 +8183,7 @@ impl<'w> Session<'w> {
             .collect();
         here.iter()
             .map(|npc| {
+                self.turn_work.bump_affect_folds();
                 let affect = affect_of_memo_occupied(
                     &self.ledger,
                     npc,

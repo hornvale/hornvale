@@ -123,6 +123,8 @@ mod the_roll;
 mod thing;
 #[path = "suite/tick_commit_budget.rs"]
 mod tick_commit_budget;
+#[path = "suite/turn_budget.rs"]
+mod turn_budget;
 #[path = "suite/underworld_level_generation.rs"]
 mod underworld_level_generation;
 #[path = "suite/walker_battery.rs"]
