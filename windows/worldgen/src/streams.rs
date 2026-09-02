@@ -215,6 +215,17 @@ hornvale_kernel::stream_labels! {
     /// stay one object (B.5) rather than splitting across two. `chamber/
     /// branch-barrier/v1` is retired and must never be reused.
     BRANCH_BARRIER = "chamber/branch-barrier/v2" => "the barrier thinness of one branch, keyed on (vertex, branch, band)";
+    /// The Crosscut: the descent plan's spine — the entrance cell and each
+    /// level's stair cell. Additive at v1; keyed further by vertex at the
+    /// call, the way `BRANCH_CHARACTER` is.
+    UNDERWORLD_PLAN_SPINE = "underworld/plan/v1/spine" => "entrance and per-level stair cells of a descent's spine";
+    /// The Crosscut: which edge a cycle attaches to, how long its existing
+    /// segment is, and whether it runs on this floor or the one below.
+    UNDERWORLD_PLAN_CYCLE = "underworld/plan/v1/cycle" => "cycle attachment, segment length and same- or cross-floor choice";
+    /// The Crosscut: which edge a series extension replaces.
+    UNDERWORLD_PLAN_EXTEND = "underworld/plan/v1/extend" => "which passage a series extension lengthens";
+    /// The Crosscut: which shared coordinate a stairway's two ends land on.
+    UNDERWORLD_PLAN_STAIR = "underworld/plan/v1/stair" => "the coordinate a stairway shares between two floors";
     /// How many of the lattice's four branch columns one cave system
     /// realizes (The Stope, Task 3; amendment C.1) — the drawn realization
     /// half of the lattice-ceiling/drawn-realization split, with
