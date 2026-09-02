@@ -443,6 +443,7 @@
 - [The Roll](./chronicle/the-roll.md)
 - [The Hallmark](./chronicle/the-hallmark.md)
 - [The Pawl](./chronicle/the-pawl.md)
+- [The Rack](./chronicle/the-rack.md)
 
 # Appendix: The Frontier
 
