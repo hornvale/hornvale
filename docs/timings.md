@@ -4755,3 +4755,4 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-02T05:33:54Z | gate-commit | 46.791 | 34.904 | 11.561 | 0.99 | 0 | ae33907c1 | campaign/the-crosscut | ambrose | 12 |
 | 2026-09-02T05:37:38Z | gate-commit | 77.297 | 64.387 | 35.742 | 1.30 | 0 | ae33907c1 | campaign/the-crosscut | ambrose | 12 |
 | 2026-09-02T05:38:48Z | gate-commit | 54.007 | 40.160 | 14.247 | 1.01 | 0 | ae33907c1 | campaign/the-crosscut | ambrose | 12 |
+| 2026-09-02T05:50:30Z | gate-commit | 80.456 | 63.113 | 39.917 | 1.28 | 0 | 2d38e0348 | campaign/the-crosscut | ambrose | 12 |

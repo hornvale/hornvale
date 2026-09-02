@@ -267,3 +267,6 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0513](0513-a-quadrilateral-lattice-carries-no-third-axis-or-orientation-flag.md) | A quadrilateral lattice carries no third axis or orientation flag | Accepted |
 | [0514](0514-a-census-refresh-needs-no-authorization.md) | A census refresh needs no per-run authorization (retires the AWS-spend carve-out outright) | Accepted |
 | [0516](0516-a-reachable-lock-implies-a-reachable-key-is-left-empirical.md) | "A reachable lock implies a reachable key" is left empirical, deliberately — wait for the residents | Accepted |
+| [0566](0566-a-place-is-a-graph-before-it-is-a-map.md) | A place is a graph before it is a map, and the grammar is series-parallel | Accepted |
+| [0567](0567-stairs-pair-by-coordinate.md) | Stairs pair by coordinate: a stairway's two ends share a cell | Accepted |
+| [0568](0568-cycle-density-is-derived-not-authored.md) | Cycle density is derived from rock and workmanship, never authored | Accepted |

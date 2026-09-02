@@ -437,6 +437,7 @@
 - [The Company](./chronicle/the-company.md)
 - [The Pavement](./chronicle/the-pavement.md)
 - [The Tableau](./chronicle/the-tableau.md)
+- [The Crosscut](./chronicle/the-crosscut.md)
 
 # Appendix: The Frontier
 

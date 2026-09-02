@@ -405,3 +405,52 @@ is embedded in any committed fixture.
 Branch table (brief step 4): no committed fixture embeds a level ->
 **nothing to rebaseline**; Task 5 needs no `REBASELINE=1` pass for this
 reason.
+
+#11 [G5] — The `[1, 5]` lower bound was claimed "by construction" and is not ·
+**Replace the count reserve with a capability invariant; the bound stays
+asserted** · Why: a 400-seed × 12-vertex × 9-combination sweep (72,000 levels)
+found 24 starved levels, because a cross-floor cycle anchored on ℓ spends ℓ+1's
+cells; a free-cell count reserve cut that to 9 and the residue was *geometric
+enclosure*, not scarcity, which no count can see. The capability test — "a level
+with no realm of its own always keeps at least one feasible same-floor cycle" —
+is maintained by every move that spends a level's cells, and with it the
+exhaustive fallback succeeds by construction · Discarded: renegotiating the
+spec's §4.2 lower bound downward (it would have made a real defect a documented
+one); tuning the budget (the bound is a guard, not a prediction) · Capture:
+spec §3.2 step 2 and §3.4 amended in execution and say so; decision 0566;
+measured cost 29.8% → 27.3% cross-floor realm share, 0/72,000 starved.
+
+#12 [G5] — The loop-share metric is blunt and was seen to be blunt before any
+verdict existed · **The frozen metric stays frozen and may FALSIFY; a
+report-only companion is printed beside it** · Why: decision 0016 — a metric's
+bluntness is a finding, and redefining a preregistered readout after seeing its
+behaviour is exactly what preregistration exists to prevent; the companion
+(`cycle_membership_share`) is disclosed as added after the fact and is never
+gated · Discarded: re-phrasing §4.1 to ask "lies on any cycle" (would have
+turned a FALSIFIED headline into a PASSED one by redefinition) · Capture: spec
+§4.1's disclosure paragraph; audit page; chronicle. Result: median 0.11 against
+a 0.50 floor → FALSIFIED; companion 0.85.
+
+#13 [G6] — What the density PASS actually measured · **Record the weakness
+inside the decision the pass supports, not beside it** · Why: the panel medians
+equal the derived budget exactly in every cell of the table on every seed,
+because the grammar reaches its target on essentially every level — so the
+readout confirms the budget is derived and reached and does not independently
+witness that the world varies as the rule claims (the "test collapses to the
+parameter" shape) · Capture: decision 0568's Consequence section; chronicle.
+
+## Close record (G6)
+
+Decisions minted: **0566** (a place is a graph before it is a map; the grammar
+is series-parallel), **0567** (stairs pair by coordinate), **0568** (cycle
+density is derived from rock and workmanship). Block 0566–0575 reserved; three
+of ten used, 0569–0575 unspent.
+
+Book: `book/src/chronicle/the-crosscut.md` plus its `SUMMARY.md` line.
+Frontier sweep: `MAP-cycle-density-is-derived` → shipped (verdict and the
+"measured the budget" caveat appended), `MAP-underworld-traversal-grammar`
+gains the structural half, `CLIENT-semilattice-caution` gains its first
+measurement (~0.29–0.31), `TOOL-underworld-embedder-unification` → shipped, and
+two new rows from the followups above: `MAP-walk-ignores-the-lattice`,
+`MAP-descent-carves-are-per-world`.
+Retrospective: `docs/retrospectives/the-crosscut.md`.
