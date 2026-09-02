@@ -3462,6 +3462,30 @@ its honest size.
    bet is properly gated on an UNSTAGED market being worth standing in, and
    staging is the instrument that lets us find out what such a market would
    have to contain.
+   **Annotated by [The Wicket](./chronicle/the-wicket.md) (2026-09-01), on the
+   traversal half, and the honest half of it is a NEW limit rather than a
+   gain.** Two things a body does now come back different. A room can offer a
+   fire to warm at without being a hearthroom — the one room type in any world
+   that could offer it before — because the object vocabulary stopped being a
+   closed list and a brazier reached the loomroom every reachable structure
+   has. And sleep stopped being a flag cleared by any rest: it is a stock, paid
+   down over the span a body was actually down, at a rate that differs between
+   dozing watchfully and going under, on the planet's own day rather than a
+   nominal one. Both are traversal in this row's exact sense — an act reaching
+   through the stack and coming back changed — and neither is evidence about
+   the taste half.
+   **What is worth recording here rather than only in the decision log is the
+   ceiling the second one hit.** Where a body sleeps grades how much the sleep
+   repays, and the grade can be no finer than the LOCALE, because the ledger
+   records the room a body was in and never the spot in it. So a player who
+   passes out in the street is repaid exactly as one who found the bed — inside
+   the same built, cold locale the two are indistinguishable to the fold. That
+   is a texture failure of precisely the kind this row is about, sitting
+   underneath a mechanism that scores green, and it is not a rough edge that
+   can be tightened: lifting it is a decision about whether fine position is
+   serialized at all. **The score does not move.** One more act with a
+   consequence is not a market worth standing in, and a limit named is not a
+   limit closed.
 
 ## The standing horizon
 

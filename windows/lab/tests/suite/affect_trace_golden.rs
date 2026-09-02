@@ -45,6 +45,39 @@
 //! drive integration carries the sub-second shift into arousal. Spec §2.1
 //! ratified exactly this ("committed artifacts move") before the flip.
 //!
+//! **Regenerated again by The Wicket, Task 9** (the sleep-debt rate becomes
+//! per-species and per-PLANETARY-day rather than one constant applied per
+//! standard day). Adjudicated, not merely accepted, because this move
+//! crossed labels — unlike The Escapement's arousal-digits-only move above.
+//! Measured (fix round 1 review): **10 of 410 lines moved in label** (Eager
+//! → Content x3, Frustrated → Lost x3, Content → Eager x2, Eager →
+//! Searching x1, Frustrated → Eager x1), 7 object changes, 2 valence
+//! changes, max arousal delta 0.35652593. Three transitions land IN `Lost`,
+//! which `health.rs`'s distress classification counts, and one LEAVES it —
+//! so the health metric's own distress count and by-cause attribution moved
+//! along with this fixture, not merely its raw numbers. The mechanism is
+//! the SAME chain the section below already documents for a niche edit:
+//! seed 42's real rotation period is not exactly one standard day, so
+//! `fatigue_from_rests`'s local-day conversion (new this task) answers a
+//! genuinely different question than the old `TickSpan::as_std_days()` did,
+//! for every creature whose Fatigue drive is ever live.
+//!
+//! **Regenerated again by The Wicket, fix round 1** (Important 2: the FALL
+//! terms — `FATIGUE_FALL`/`REST_FALL` — now convert through the same
+//! local-day arithmetic the RISE term already did; leaving them on
+//! `as_std_days()` was a rotation-dependent recovery bug, not a scope
+//! boundary — see `fatigue_from_rests`'s own doc). Measured against the
+//! Task-9 fixture immediately above (not against pre-Task-9): **123 of 410
+//! lines moved**, 15 in label (Content → Eager x5, Eager → Content x4,
+//! Lost → Frustrated x3, Eager → Frustrated x2, Searching → Eager x1), 12
+//! object changes, 3 valence changes, max arousal delta 0.39576761. The
+//! coverage floor below still holds after this move (both `Lost` and
+//! `Frustrated` remain reachable). Same mechanism as Task 9's own move,
+//! entered at the fold's other term: seed 42's local day is not one
+//! standard day, so a `rested`/`slept` bout's REPAYMENT — previously still
+//! measured in standard days — now scales with the same local day its
+//! accrual does, for every creature whose Fatigue drive is ever live.
+//!
 //! ## Why a change to ONE species' niche drifts EVERY creature's trace
 //!
 //! Recorded because it is not obvious and it has now cost one investigation

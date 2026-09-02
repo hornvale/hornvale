@@ -176,6 +176,7 @@
 | `blue-giant` | astronomy | celestial | a hot, brilliant, short-lived star |
 | `bone` | language | body | the rigid frame of a body |
 | `boreal-stand` | climate | substance | A stand of northern conifers. |
+| `brazier` | thing | object | a metal basin that holds a fire apart from a hearth |
 | `brown` | language | quality | the color term for brown |
 | `bugbear-kind` | species | living | a bugbear |
 | `burn` | climate | substance | Ground recovering from fire. |

@@ -64,11 +64,16 @@ use hornvale_worldgen::{BarrierPins, BarrierState, barrier_of};
 
 /// The thing-kind a cave mouth is — the label `hornvale_thing::THING_KINDS`
 /// carries and `affordance::object_registry` gives `Openable` and
-/// `AffordsPassage`. Spelled once here so the lineage role below and the
+/// `AffordsPassage`. Spelled once so the lineage role below and the
 /// `instance-of` object [`crate::thing::promote_role`] commits cannot drift
 /// apart from each other.
+///
+/// Re-exported from the roster's own handle rather than spelled again here
+/// (The Wicket): a second literal is a second thing to keep in step, and the
+/// check that used to keep them in step (`anchor_thing_correspondence`) is
+/// retired by Task 3.
 /// type-audit: bare-ok(identifier-text)
-pub const CAVE_MOUTH: &str = "cave-mouth";
+pub const CAVE_MOUTH: &str = hornvale_thing::kinds::CAVE_MOUTH.0;
 
 /// A chamber address as text. Injective across every field of
 /// [`ChamberAddr`]: two distinct addresses never share a key, or opening one

@@ -266,7 +266,11 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0512](0512-the-projection-is-tangent-warped-and-there-is-one-of-it.md) | The cube-sphere projection is tangent-warped, and there is one of it | Accepted |
 | [0513](0513-a-quadrilateral-lattice-carries-no-third-axis-or-orientation-flag.md) | A quadrilateral lattice carries no third axis or orientation flag | Accepted |
 | [0514](0514-a-census-refresh-needs-no-authorization.md) | A census refresh needs no per-run authorization (retires the AWS-spend carve-out outright) | Accepted |
+| [0515](0515-a-diagonal-step-reaches-root-two-as-well-as-costing-it.md) | A diagonal step REACHES √2, as well as costing it (The Pavement; the index row was omitted at landing) | Accepted |
 | [0516](0516-a-reachable-lock-implies-a-reachable-key-is-left-empirical.md) | "A reachable lock implies a reachable key" is left empirical, deliberately — wait for the residents | Accepted |
+| [0556](0556-totality-by-registry-replaces-totality-by-compiler.md) | Totality by registry replaces totality by compiler, and every check names its direction | Accepted |
+| [0557](0557-a-handle-is-a-convenience-where-a-variant-was-a-requirement.md) | A handle is a convenience where a variant was a requirement | Accepted |
+| [0558](0558-sleep-is-never-gated-the-place-grades-it.md) | Sleep is never gated — the place grades it | Accepted |
 | [0576](0576-the-capability-provision-table.md) | The capability provision table spans all three homes; ledger wired first | Accepted |
 | [0577](0577-the-realization-witness.md) | The realization witness | Superseded by 0581 |
 | [0578](0578-kinship-a-genesis-fact.md) | Kinship as a genesis fact | Superseded by 0584 |

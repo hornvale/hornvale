@@ -438,6 +438,7 @@
 - [The Pavement](./chronicle/the-pavement.md)
 - [The Tableau](./chronicle/the-tableau.md)
 - [The Avowal](./chronicle/the-avowal.md)
+- [The Wicket](./chronicle/the-wicket.md)
 
 # Appendix: The Frontier
 

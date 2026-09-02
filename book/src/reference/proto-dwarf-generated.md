@@ -50,6 +50,7 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `blue` | the color term for blue | *Qanas | /qanas/ |
 | `bone` | the rigid frame of a body | *Jagab | /jagab/ |
 | `boreal-stand` | A stand of northern conifers. | *Vadat | /vadat/ |
+| `brazier` | a metal basin that holds a fire apart from a hearth | *Shasax | /ʃasax/ |
 | `brown` | the color term for brown | *Zanash | /zanaʃ/ |
 | `bugbear-kind` | a bugbear | *Xaqad | /xaqad/ |
 | `burn` | Ground recovering from fire. | *Tavan | /tavan/ |

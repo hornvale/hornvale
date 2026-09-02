@@ -65,17 +65,18 @@ pub fn route_within(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::interior::{AnchorKind, Interior};
+    use crate::interior::Interior;
+    use hornvale_thing::kinds;
 
     #[test]
     fn a_creature_routes_across_the_room_to_the_hearth() {
         // door — hall — hearth: the shortest path is two steps, and it is the
         // path A* returns. No coordinates exist anywhere in this test.
         let mut i = Interior::new();
-        let door = i.push(AnchorKind::Threshold, None);
-        let hall = i.push(AnchorKind::Pool, None);
-        let hearth = i.push(AnchorKind::Hearth, None);
-        let bed = i.push(AnchorKind::Bed, None);
+        let door = i.push(kinds::THRESHOLD, None);
+        let hall = i.push(kinds::POOL, None);
+        let hearth = i.push(kinds::HEARTH, None);
+        let bed = i.push(kinds::BED, None);
         i.connect(door, hall);
         i.connect(hall, hearth);
         i.connect(hall, bed);
@@ -91,8 +92,8 @@ mod tests {
     #[test]
     fn an_unreachable_anchor_yields_no_route() {
         let mut i = Interior::new();
-        let a = i.push(AnchorKind::Threshold, None);
-        let b = i.push(AnchorKind::Hearth, None);
+        let a = i.push(kinds::THRESHOLD, None);
+        let b = i.push(kinds::HEARTH, None);
         // deliberately unconnected
         assert_eq!(route_within(&i, a, b, 64), None);
     }
@@ -100,7 +101,7 @@ mod tests {
     #[test]
     fn standing_at_the_goal_is_an_empty_route() {
         let mut i = Interior::new();
-        let a = i.push(AnchorKind::Hearth, None);
+        let a = i.push(kinds::HEARTH, None);
         assert_eq!(route_within(&i, a, a, 64), Some(Vec::new()));
     }
 }

@@ -39,7 +39,7 @@ No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > needs
 No one else is here to read.
 > wait 1
-Time passes. You sense movement nearby (15 stirred).
+Time passes. You sense movement nearby (18 stirred).
 > look
 [room 3733133217, day 6]
 Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast.
@@ -47,7 +47,7 @@ No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > needs
 No one else is here to read.
 > wait 1
-Time passes. You sense movement nearby (12 stirred).
+Time passes. You sense movement nearby (14 stirred).
 > look
 [room 3733133217, day 7]
 Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: Night. The sky is a low grey rain-deck.
@@ -58,7 +58,7 @@ No one else is here to read.
 hobgoblin of Neene:
 - canonical name of an entity: hobgoblin of Neene (asserted by the-quickening)
 - an agent's position on a day: 3687997857 (asserted by wandered, having found no water yet (thirst), day 5.14379)
-- an agent rested (eased its fatigue) on a day: true (asserted by slept at home (fatigue eased), day 5.14532)
+- an agent slept on a day, for this many ticks: 45000 (asserted by slept through its off-phase (fatigue eased), day 5.14532)
 - an agent's position on a day: 3687997633 (asserted by wandered, having found no water yet (thirst), day 5.73911)
 - an agent's position on a day: 3687997473 (asserted by wandered, having found no water yet (thirst), day 5.8829)
 - an agent's position on a day: 3687986497 (asserted by wandered, having found no water yet (thirst), day 6.14379)
@@ -69,7 +69,7 @@ hobgoblin of Neene:
 - an agent's position on a day: 3687979425 (asserted by wandered, having found no water yet (thirst), day 6.86274)
 
 > wait 90
-Time passes. You sense movement nearby (597 stirred).
+Time passes. You sense movement nearby (652 stirred).
 > look
 [room 3733133217, day 97]
 Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.

@@ -51,6 +51,7 @@ The shared ancestral language bugbear, goblin, and hobgoblin all descend from (s
 | `blue` | the color term for blue | *Ta | /ta/ |
 | `bone` | the rigid frame of a body | *Padea | /padea/ |
 | `boreal-stand` | A stand of northern conifers. | *Doane | /doane/ |
+| `brazier` | a metal basin that holds a fire apart from a hearth | *Teo | /teo/ |
 | `brown` | the color term for brown | *Paane | /paane/ |
 | `bugbear-kind` | a bugbear | *Deetee | /deetee/ |
 | `burn` | Ground recovering from fire. | *Pa | /pa/ |

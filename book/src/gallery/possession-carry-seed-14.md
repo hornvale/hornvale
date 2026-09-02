@@ -64,7 +64,7 @@ A small room, holding a doorway and an alcove.
 Ways on: out, further in.
 > enter further in
 [chamber 1098173182570403, day 0.02955]
-A small room, holding a doorway, a water jar, a loom and a key.
+A small room, holding a doorway, a water jar, a loom, a key and a brazier.
 Ways on: out, further in.
 > take a key
 You take the key.
