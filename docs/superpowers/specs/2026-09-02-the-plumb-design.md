@@ -85,8 +85,23 @@ The cohort list is **not** made derivable, and that refusal is the design. An
 epoch is a *historical* fact — when a concept entered the world — and history is
 not recomputable from the present registry. Deriving it would mean inventing it.
 
-Instead: a **default-deny gate** asserting every registered concept appears in
-exactly one cohort. Omission then fails loudly at test time instead of
+**CORRECTED 2026-09-02, during Task 2: that gate already exists.**
+`cli/tests/suite/accession.rs::every_registered_concept_has_an_accession_epoch`
+shipped with The Accession, and `cli/CLAUDE.md:48` indexes the file as *"parity
+between the concept registry and the authored"* cohorts — a one-line description
+of the exact deliverable this section called new. It has already fired in
+production: The Wicket's ledger #27 records an epoch-18 cohort *"found only by
+running"*, which was this gate catching it.
+
+So the work is **strengthening, not building**: decision-0556 direction tags, a
+pasted-red mutation block, a population-equivalence proof, and an anti-vacuity
+floor that measures the swept set rather than an unrelated one — the old floor
+was `>= 76`, the size of the epoch-0 *cohort*, so the gate could have swept 76
+of 253+ concepts and passed.
+
+The original text of this paragraph, kept because the error is instructive:
+*a **default-deny gate** asserting every registered concept appears in
+exactly one cohort.* Omission then fails loudly at test time instead of
 defaulting silently at runtime. This is The Wicket's totality-gate pattern
 applied unchanged, and like those gates it must **state the direction it
 enforces** in its own doc comment.
