@@ -1292,3 +1292,156 @@ fn the_count_is_the_sensed_roster() {
          merely co-located one: {line:?}"
     );
 }
+
+/// The wild-group render branch (`presence_line`'s `resident == false` arm —
+/// collapse to `"a wild {species}"`/`"{n} wild {species}"`) and the
+/// multi-group join/ordering (resident group first, `"; "` between groups),
+/// in one test (review fix round 1 of Task 9).
+///
+/// **No natural seed conveniently isolates ONE wild group beside
+/// residents at a fresh look**, so this test builds the scene by hand
+/// rather than searching further. Seed 3 (`WILD_SEED` in
+/// `possession_moves.rs`) was the first candidate tried and rejected: its
+/// fresh flagship possession already shows all FOURTEEN of its wild
+/// species simultaneously (measured: `Here: <4 named>, and 52 others; a
+/// wild black-dragon; a wild carrion-crawler; …` — fifteen groups), which
+/// exercises the collapse but not a clean single-semicolon ordering check.
+/// So instead: walk seed 0's possession to an empty room (the same
+/// technique `an_empty_room_says_nothing_about_company` uses — a dormant
+/// body's `agent-at` never follows), then place exactly the bodies wanted
+/// with `Session::place_creature_at_me`. Seed 0 was chosen because its
+/// roster derives two bodies of the SAME wild species within call — found
+/// by scanning seeds 0..40 for a species appearing at least twice among
+/// `village.is_none()` bodies, since a herd's individual members are not
+/// otherwise guaranteed to survive the roll's own within-call filter (most
+/// of seed 3's fourteen wild species have exactly one member within call).
+///
+/// MUTATION THIS MUST FAIL AGAINST: the `resident == false` arm's `n == 1`
+/// case rendering the plural form unconditionally, i.e. swapping
+/// `format!("a wild {species}")` for `format!("1 wild {species}")`.
+/// Performed by hand: made that swap, ran this test alone, and it went red
+/// — `assertion `left == right` failed: a single wild body must collapse
+/// to `a wild {species}` …`, left `"Here: Kmompmon; 1 wild otyugh."`, right
+/// `"Here: Kmompmon; a wild otyugh."` (species and resident name are
+/// seed-0-specific and read off the live session, not hardcoded) — then
+/// reverted the edit.
+#[test]
+fn a_wild_group_collapses_and_follows_the_residents() {
+    let world = common::build(0).expect("seed 0 builds");
+    let mut session = flagship_session(&world);
+    // Two bodies of one wild species within call — the precondition this
+    // test needs to exercise the `n > 1` collapse. If this seed's roll ever
+    // stops deriving a same-species pair, that is a finding about the sim,
+    // not a flaky fixture (the same discipline `common::world_where` states
+    // for its own searches).
+    let wild_species = session
+        .bodies()
+        .iter()
+        .find(|a| {
+            a.village.is_none()
+                && session
+                    .bodies()
+                    .iter()
+                    .filter(|b| b.village.is_none() && b.species == a.species)
+                    .count()
+                    >= 2
+        })
+        .map(|b| b.species.clone())
+        .unwrap_or_else(|| {
+            panic!(
+                "precondition: seed 0 must derive at least two wild bodies of                  the same species within call; if it does not, an epoch has                  moved the seed"
+            )
+        });
+    let same_species: Vec<hornvale_kernel::EntityId> = session
+        .bodies()
+        .iter()
+        .filter(|b| b.village.is_none() && b.species == wild_species)
+        .map(|b| b.entity)
+        .collect();
+    assert!(
+        same_species.len() >= 2,
+        "precondition: at least two `{wild_species}` bodies within call"
+    );
+
+    // Walk to an empty room — exactly `an_empty_room_says_nothing_about_company`'s
+    // technique — so the scene below is built entirely by the seam, not by
+    // whatever the roll happens to sense at the flagship itself.
+    let mut empty = false;
+    'walk: for _ in 0..3 {
+        for dir in ["n", "e", "s", "w"] {
+            let before = session.position();
+            let _ = out(session.handle(&format!("go {dir}")));
+            if session.position() == before {
+                continue;
+            }
+            empty = session
+                .snapshot()
+                .expect("a live session snapshots")
+                .sensed
+                .present
+                .is_empty();
+            if empty {
+                break 'walk;
+            }
+        }
+    }
+    assert!(
+        empty,
+        "precondition: a short walk away from the flagship must reach an          empty room to build a controlled scene on"
+    );
+
+    let driven = session.driven_body().entity;
+    let resident_idx = session
+        .bodies()
+        .iter()
+        .position(|b| b.village.is_some() && b.entity != driven)
+        .expect("seed 0 has a resident besides the driven body");
+    let resident = session.bodies()[resident_idx].entity;
+    let resident_label = session.bodies()[resident_idx].label.clone();
+    session.place_creature_at_me(resident);
+
+    // One resident, no wild yet: a single group, no separator.
+    let looked = out(session.handle("look"));
+    let line = here_line(&looked).unwrap_or_else(|| panic!("no presence line: {looked:?}"));
+    assert_eq!(
+        line,
+        format!("Here: {resident_label}."),
+        "one resident alone must be a single un-joined group"
+    );
+
+    // One wild body of the target species: the singular collapse, and the
+    // FIRST group boundary — residents must precede it.
+    session.place_creature_at_me(same_species[0]);
+    let looked = out(session.handle("look"));
+    let line = here_line(&looked).unwrap_or_else(|| panic!("no presence line: {looked:?}"));
+    assert_eq!(
+        line,
+        format!("Here: {resident_label}; a wild {wild_species}."),
+        "a single wild body must collapse to `a wild {{species}}`, joined          after the resident group by exactly one `; `"
+    );
+    assert_eq!(
+        line.matches("; ").count(),
+        1,
+        "two groups must be joined by exactly one separator: {line:?}"
+    );
+    assert!(
+        line.find(&resident_label) < line.find("wild"),
+        "the resident group must precede the wild group: {line:?}"
+    );
+
+    // A second body of the SAME species: the plural collapse — count first,
+    // the species word never pluralised.
+    session.place_creature_at_me(same_species[1]);
+    let looked = out(session.handle("look"));
+    let line = here_line(&looked).unwrap_or_else(|| panic!("no presence line: {looked:?}"));
+    assert_eq!(
+        line,
+        format!("Here: {resident_label}; 2 wild {wild_species}."),
+        "two wild bodies of one species must collapse to `{{n}} wild          {{species}}`, count first, the species word unpluralised"
+    );
+    assert_eq!(
+        line.matches("; ").count(),
+        1,
+        "still exactly one separator with two groups: {line:?}"
+    );
+}
