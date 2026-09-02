@@ -9,6 +9,11 @@ the gate §6 wrote for it (see §2.4). · **Ledger:**
 
 Decision block: 0546–0555.
 
+**Campaign complete (2026-09-02).** Merged; the chronicle is
+`book/src/chronicle/the-roll.md`, the retrospective
+`docs/retrospectives/the-roll.md`, and the amendments this document took
+during execution are marked in place and recorded in the ledger.
+
 A roll is two things at once: the register of who belongs to a place, and
 the call that establishes who is present. This campaign builds both. Every
 settlement gets a **roll of residents** — as many as its committed
@@ -305,8 +310,15 @@ anchor kind and keeps the rest in `sensed.present` unseated
 (`session.rs:6263`, the fourth documented absence). A crowd larger than the
 chamber's anchor cells is therefore *present and not drawn*, which is what
 happens today for a surplus and is not a regression. The prose says so —
-"and eleven more, about the room" — rather than letting the count and the
-picture disagree silently. Widening a settlement beyond one room and one
+"and eleven more" — rather than letting the count and the
+picture disagree silently. **Amended at close (Task 9's review, ledger):
+this paragraph wrote a DISTINCT indoor wording, "and eleven more, about the
+room", that no task carried and that the implementation does not render.
+One wording stands on both bands**, which is The Sighting's "same sentence
+on both sides of a doorway" contract applied to a new line; the cost, stated
+rather than hidden, is that an indoor reader is not told the uncounted are
+unseated, which the chart already shows by not drawing them. Widening a
+settlement beyond one room and one
 structure is a real question (`liveness.rs:6125` says so in its own words)
 and is out of scope (§9).
 

@@ -3413,6 +3413,30 @@ its honest size.
    bet is properly gated on an UNSTAGED market being worth standing in, and
    staging is the instrument that lets us find out what such a market would
    have to contain.
+   **Re-scored by [The Roll](./chronicle/the-roll.md) (2026-09-02): the
+   unstaged market now assembles, and the score still does not move.** The
+   gate the annotation above named is discharged. A settlement derives as many
+   residents as its committed population — named people, drawn apart on their
+   own dials, not eighty copies — and the walk ticks the ones within call, so
+   the moment assembles because the world is populous rather than because a
+   fixture arranged it. Measured on the same 64-seed probe The Company found
+   empty in 24 of 24 witnesses and The Hand re-read at 3 of 64: a fresh
+   possession now stands in company in **64 of 64** seeds, which is every seed
+   whose home settlement can hold company at all. At seed 42 that is 67
+   neighbours in one room, four of them named in the presence line and 63
+   counted. **Three of the four sentences this row has carried since The
+   Company are now spent** — the moment does not assemble; it assembles only
+   when staged; a staged moment is the weakest possible evidence. What
+   survives is the fourth and always the real one: *a human still has to sit in
+   the market and report what they noticed.* The score stays **low** because
+   the axis of this chapter is checkability, and nothing about sixty-seven
+   people makes the taste half self-scorable — 64 of 64 is a count of company,
+   and this row exists in part to refuse exactly that substitution. The change
+   is in the standing, not the score: the question can now be asked of a world
+   left to itself, at any seed, which is the condition its two previous
+   annotations said it was waiting on. It moves when a human plays and says it
+   moved, and for the first time there is nothing structural in the way of
+   playing.
 
 ## The standing horizon
 
