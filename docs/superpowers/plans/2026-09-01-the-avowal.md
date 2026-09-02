@@ -303,10 +303,16 @@ build is the one you test.
 
 - [ ] **Step 6: Run the full cli suite, regenerate, inspect**
 
-The trope artifacts **do** move here. The report must now say it measures
-witnessed capability and that the number is **not comparable across this
-boundary** (a G3 flagged item). Write that into the report's own header, not
-only into the chronicle.
+The trope artifacts move here, **but as PROSE, not as a verdict.** Zero
+situations are stageable, so gating `Stageable` on a witness changes no
+situation's outcome. What must change is the report's own header, stating that
+it now measures witnessed capability and that the number is **not comparable
+across this boundary** (a G3 flagged item) — write that into the report itself,
+not only the chronicle.
+
+**If any situation's VERDICT changes, STOP and report it.** A verdict moving
+here would mean the witness gate admitted or refused something the registry
+lookup did not, which is a finding, not a success.
 
 - [ ] **Step 7: Format, type-audit report, gate, commit**
 
@@ -318,7 +324,13 @@ only into the chronicle.
 ledger.
 
 **Files:**
-- Modify: `domains/history/src/lib.rs` (register `kin-of`, `parent-of`)
+- Modify: whichever domain crate owns `kin-of` / `parent-of` — **you decide,
+  with both files open.** `domains/person/src/lib.rs` owns the fact's SUBJECT
+  (`is-person`, `person-born`); `domains/history/src/lib.rs` owns the descent
+  arithmetic that computes the RELATION. Both already have `register_concepts`,
+  and `register_predicate` takes only `&str`s, so either works mechanically and
+  neither needs its sibling's types. The choice is semantic. Justify it in the
+  campaign ledger.
 - Modify: the promotion emit path — read `windows/worldgen/src/person_promote.rs`
   first; the emitter may live elsewhere
 - Test: `windows/worldgen/tests/suite/kinship_facts.rs`
@@ -358,8 +370,19 @@ Record the mapping and its justification in the ledger.
 `make rebaseline` does **not** write byte-goldens. Registering predicates and
 adding facts moves the keystone golden `cli/tests/fixtures/world-seed-42.json`,
 which only `make rebaseline-goldens` accepts. Run both, then inspect the
-whole-tree diff — expect ~93 new facts on seed 42 and the census-reading
-batteries to redden.
+whole-tree diff and branch on what you see — **do not treat any count as
+predicted**:
+
+- **`world-seed-42.json` gains `parent-of` facts and census batteries redden** →
+  expected; accept, and report the count you actually got.
+- **The count is far from the ~93 the fixture probe suggested** → a finding, not
+  an error. Report it with the number; Task 1's panel is the reference, and a
+  large gap means the emit path differs from the probe's reading.
+- **`book/src/gallery/` moves** → STOP. That is an epoch event, not this task.
+- **Only `docs/audits/` moves** → regenerate and commit in the same commit.
+- **Nothing moves at all** → STOP and report. Registering two predicates and
+  emitting facts cannot leave the keystone golden untouched; a null here means
+  the emit path never ran.
 
 - [ ] **Step 6: Add a provision row and confirm the bundle completes**
 
