@@ -4794,3 +4794,4 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-02T03:14:15Z | gate-commit | 77.417 | 58.780 | 14.904 | 0.95 | 0 | c3c508336 | campaign/the-wicket | MacBookPro | 10 |
 | 2026-09-02T09:15:56Z | gate-commit | 22.097 | 54.022 | 14.100 | 3.08 | 0 | 0d15c168b | campaign/the-wicket | MacBookPro | 10 |
 | 2026-09-02T09:19:26Z | sluice:artifacts | 131.707 | 1113.978 | 55.312 | 8.88 | 0 | cfe0389e6 |  | lefford | 40 |
+| 2026-09-02T09:20:28Z | sluice:outboard | 61.995 | 35.768 | 49.971 | 1.38 | 0 | 92025d37a |  | lefford | 40 |
