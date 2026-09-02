@@ -719,6 +719,54 @@ whole-branch section; the retrospective's code table; spec §5 residue item
 
 ---
 
+#16 [G6] — **In-place edits to this campaign's own decision records: allowed,
+with the boundary named.**
+
+*Question.* The final fix wave edited decisions 0606 and 0607 in place.
+`docs/CLAUDE.md` and `docs/decisions/README.md` both say decisions are
+append-only: "never edit a ratified decision's substance; supersede it with a
+new record." Was that permitted, or does it need a 0608 erratum?
+
+*Ruling: the in-place edits stand.* Three reasons, and the third is the one that
+decides it.
+
+1. These are **this campaign's own records, authored hours earlier on an
+   unmerged branch**. They have never existed on `main`; nothing in the
+   repository or outside it can have read or cited them.
+2. The edits **correct statements that were false at ratification** — a wrong
+   filename, an inverted claim about which call sites stopped building, a
+   present-tense assertion about an `artifacts` roster row that has zero rows.
+   They do not revise a choice that was right and later became wrong.
+3. **That distinction is what append-only exists to protect.** The rule guards
+   against rewriting a record a reader relied on, so that the log stays a
+   truthful history of what was decided when. A record that was never published
+   and was wrong on the day it was written has no such history to protect; an
+   erratum correcting a same-day, never-merged 0606 would make the log *harder*
+   to read while adding no fidelity.
+
+*The boundary, stated so nobody re-derives it.* This holds **pre-merge only**.
+Once these records land on `main`, they are immutable: any later correction —
+including of something that was false all along — needs a superseding record.
+The fix-wave implementer and the final re-reviewer reached this independently,
+and the re-reviewer suggested a one-line addendum to `docs/CLAUDE.md`'s
+append-only rule naming "not yet merged to `main`" as the boundary.
+
+*That addendum is NOT made here.* `docs/CLAUDE.md` is shared substrate that
+every campaign reads, this campaign has no mandate to amend it, and a rule
+change wants its own review rather than riding in on a fix wave. Captured as a
+follow-up for Nathan instead — see the G6 package.
+
+*Cost if wrong.* Bounded and visible: if Nathan reads the rule strictly, a 0608
+erratum can be added on top without unwinding anything, because the edited text
+is honest about being a correction.
+
+*ideonomy passes / overturns.* n/a — a governance ruling on precedent.
+
+*Capture.* This entry; flagged in the G6 package; the `docs/CLAUDE.md` addendum
+left to Nathan.
+
+---
+
 ## Parked findings
 
 ### P1 — `scene_surrounds_colour_cli.rs` uses a fixed temp path and flakes
