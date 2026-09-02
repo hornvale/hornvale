@@ -434,3 +434,30 @@ roster member of visited rooms, their neighbours, home and its neighbours —
 what `build_emitter_scan` samples), which matched exactly (1,339 = 1,339).
 No ideonomy pass: the task's one ruling (which set the comparator is) was
 settled by reading the sampler, not by design.
+
+## Stage 1 gate — green (`req-289cd34771d3`, all stage phases rc=0 in 964 s, main unchanged at `0dccce029`)
+
+## Task 4 — complete (`49187febf`, fix `3517089a5`; one fix round)
+
+One memo each for the session (five `with_fields` sites, not the plan's
+six — the grep is the count), the lab's `run_simulation_with_locale` (the
+function that actually rebuilds terrain per tick; `run_simulation` takes a
+caller's terrain and builds none — a brief defect the implementer corrected
+by reading), and both benches. The hazard probe keeps its fresh memo per
+call. H5's first clause, spec §3 rule 1's re-count: on the H5 shape the
+repeated read and the second fresh read take **0 field samples**; tick 60
+takes **0** against 44,694 `hazards()` calls; across the whole 60-tick run
+the memo recorded **11,149 misses against 1,934,552 hits** and holds 11,149
+rooms — so the memo answers 99.4% of the fear path's terrain questions from
+one session-lifetime fill, and the CALL count is untouched, exactly as spec
+§1 item 5 predicted. **Rule 1's branch: samples fell ≥ 10× (to zero on the
+measured tick); proceed to Stage 3 for the elasticity.**
+
+**One Important at review, and it is this campaign's own lesson landing on
+its own witness:** every H5 assertion (`== 0`, `≤ 4,469`) was satisfiable by
+a memo nobody had wired in — drop `.with_ground` and the deltas read zero and
+the test stays green. Fixed with absolute floors (`misses > 0`, `hits > 0`,
+`misses == len`) and a printed shape line. Recorded because a witness
+written by the campaign that named the defect still shipped the defect on
+its first draft; only the reviewer's "what if the plumbing were absent"
+question found it. **Stage 2 closes here.**
