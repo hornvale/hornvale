@@ -211,4 +211,31 @@ mod tests {
         assert_eq!(leaves(&a), leaves(&b));
         assert_eq!(dof_a, dof_b);
     }
+
+    /// claim: invariant(seed: 0..200) — THE CROSSCUT, Task 0: the campaign's
+    /// premise, measured rather than read: a level's region graph is a tree.
+    /// `connect_split_boundaries` carves exactly one passage per `Split`, so
+    /// passages == leaves - 1 and the cyclomatic number E - V + 1 is 0.
+    /// Deleted with the tree in Task 3; its result is recorded in the
+    /// campaign ledger.
+    #[test]
+    fn the_region_graph_is_a_tree_today() {
+        fn splits(region: &Region) -> usize {
+            match region {
+                Region::Leaf(_) => 0,
+                Region::Split(a, b) => 1 + splits(a) + splits(b),
+            }
+        }
+        for seed_value in 0..200u64 {
+            let (region, _dof) = build_region(EXTENT, Seed(seed_value));
+            let v = leaves(&region).len();
+            let e = splits(&region);
+            assert_eq!(e + 1, v, "seed {seed_value}: passages must be leaves - 1");
+            assert_eq!(
+                e as i64 - v as i64 + 1,
+                0,
+                "seed {seed_value}: cyclomatic number"
+            );
+        }
+    }
 }
