@@ -16,7 +16,7 @@
 # invalidates on any edit above it, which would redden this guard on
 # unrelated commits and get it trained away.
 #
-# Generated 2026-09-02 at campaign start: 201 files, 352 sites,
+# Generated 2026-09-02 at campaign start: 200 files, 350 sites,
 # every one `unmigrated` by construction. Reclassification is a human act.
 #
 cli/src/dictionary.rs	1	unmigrated:1
@@ -41,7 +41,6 @@ cli/tests/suite/session_cost.rs	1	unmigrated:1
 cli/tests/suite/star_class_is_a_concept.rs	1	unmigrated:1
 cli/tests/suite/the_unnameable.rs	2	unmigrated:2
 cli/tests/suite/trope_witness.rs	1	unmigrated:1
-cli/tests/suite/world_build_sites.rs	2	unmigrated:2
 windows/almanac/tests/suite/interlinear.rs	1	unmigrated:1
 windows/book/src/lib.rs	3	unmigrated:3
 windows/hearsay/tests/common/mod.rs	1	unmigrated:1

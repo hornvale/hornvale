@@ -43,8 +43,8 @@ as a site — the same accepted imprecision `build_path_embedding.rs` states of
 itself.
 
 **Consequence.** At ratification the roster was generated in full, every row
-`unmigrated` by construction: 352 sites across 201 files, `UNMIGRATED_CEILING`
-set to 352. A generated file that size invites rubber-stamping, so no row may
+`unmigrated` by construction: 350 sites across 200 files, `UNMIGRATED_CEILING`
+set to 350. A generated file that size invites rubber-stamping, so no row may
 carry a permanent reason code except by a human reclassifying it — the ratchet
 starts at its maximum and only ever shrinks. The closing ceiling, after this
 campaign's migrations land, is recorded here when this record is finalized at

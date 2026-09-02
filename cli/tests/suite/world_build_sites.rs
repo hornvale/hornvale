@@ -63,7 +63,7 @@ const ENTRY_POINTS: &[&str] = &[
 
 /// The number of `unmigrated` sites the roster may still carry. Lower it as
 /// migrations land; never raise it.
-const UNMIGRATED_CEILING: usize = 352;
+const UNMIGRATED_CEILING: usize = 350;
 
 /// The workspace root — the parent of `cli/`, where this test crate lives.
 fn workspace_root() -> PathBuf {
@@ -336,9 +336,16 @@ fn the_scan_actually_resolves_the_workspace() {
         live.len()
     );
 
-    // `build_world_to` must not double-count as `build_world`.
+    // `build_world_to` must not double-count as `build_world`. Assembled
+    // from fragments at runtime, rather than spelled as an adjacent
+    // `<name>(` literal, so this test's own source is not itself mistaken
+    // for a build site by the very scan it exercises -- the module doc's
+    // own stated remedy for a comment or string forcing a spurious row
+    // ("reword the comment, not to start parsing Rust") applies just as
+    // much to this file's source as to any other.
+    let two_calls = format!("{}(a); {}(b);", "build_world_to", "build_world");
     assert_eq!(
-        count_sites("build_world_to(a); build_world(b);"),
+        count_sites(&two_calls),
         2,
         "longest-first counting must not count build_world_to twice"
     );
