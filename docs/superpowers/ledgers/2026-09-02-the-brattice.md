@@ -627,3 +627,29 @@ and could only find by hand.
 is the mechanism working. **`NoRoom` and `Unsolvable` are now zero across the
 whole sample**, so both rollback paths remain exercised only by construction;
 that is unchanged from round 1 and still worth knowing before trusting them.
+
+#10 [G5, controller rulings during Task 1] — Five rulings, each measured
+before it was made (the implementer's sample: 4,412 realms) · **A:** recompute
+`Realm.class` after growth from the realized paths (frozen-at-creation class
+made `LongShort` unreachable, 0/4,412, and described pre-extension paths — a
+Crosscut latent defect nothing had read; `length_class_follows_the_frozen_rule`
+tested the function, not the plan's classes: the "input collapses to one
+value" shape) · **B:** widen `the-chute` to every cross-floor class but
+`ShortShort` (the organon's cell is structurally rare: 20/4,412) · **C:** keep
+the `try_extend` post-extend fix and accept the Crosscut's four numbers moving
+once, attributed by revert (0618 makes this the last free grammar change) ·
+**D:** `Side::Descending` for the chute's gate (under `ShortLong`, `Short` was
+`path_a`, a same-floor path: 717/823 `NoRoom` → 823/823 applied) · **E:**
+remove `the-landing-hall` (`ShortShort × CrossFloor` never occurs; count 9;
+`no_row_is_dead_data` sweeps the rest) · Why: spec §3.2's own rule against
+dead rows, and the spec's §4 preamble intent (the PASS must not move the
+graph) satisfied by attribution rather than by forbidding a fix that would
+otherwise cost an epoch · Discarded: narrowing the chute to `[LongShort,
+LongLong]` (loses the drop on a long lower path for no reason); keeping the
+landing hall as a named-but-dead row (the spec forbids it); deferring the
+extend fix (an epoch later) · Ideonomy: none — rulings on measured defects,
+not open questions · Capture: spec §3.2 (Side, rows, amendments paragraph),
+§4 preamble; the G6 digest leads with C (plan bytes) and E (a post-G3 change
+to a count Nathan approved). Deferred minor: `Skip::NoRoom` and
+`Skip::Unsolvable` are 0 across the sample, so their rollback paths run only
+by construction — a hand-built plan that forces each would cover them.

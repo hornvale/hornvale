@@ -151,6 +151,9 @@ source. Its length is asserted by a test; changing it is a deliberate act
   Span     = SameFloor | CrossFloor | Either
   Side     = Long | Short          the realm's two paths by its class; for
                                    LongLong / ShortShort, Long = path_a
+           | Descending            path_b of a CrossFloor realm — the path that
+                                   changes floor, whichever length it has
+                                   (execution amendment, Task 1 ruling D)
   Slot     = Near | Far            by `depth`: the shared endpoint with the
                                    smaller depth is Near
   GateSpec { side, slot, way: Symmetric(ReqKind) | DownFreeUpNeeds(ReqKind) }
@@ -163,7 +166,8 @@ A gate at `(side, Near)` sits on the edge of that path adjacent to the near
 endpoint; `DownFreeUpNeeds` is legal only on a `Stair` edge, which a
 cross-floor realm's short side has at both ends.
 
-**The rows frozen by this spec.** Ten, each with a source the repository can
+**The rows frozen by this spec.** Nine — ten as approved at G3, less one
+removed in execution (below) — each with a source the repository can
 attest; the schema admits more. Dormans' Fig. 9.8 names are transcribed at
 spec time and **Nathan confirms them against the figure at G3** — the repo
 holds the count "fourteen" and no list (metaplan §5), so the rows below are
@@ -184,17 +188,38 @@ after that they are an epoch of `underworld/gate/v1` (§5).
   6  patrol-path                 Fig. 9.8          ShortShort  Same    hazard Dangerous on both
   7  blocked-retreat             Fig. 9.8          LongLong,   Same    persistence Collapsing,
                                                    ShortLong           Long/Near, ways Open
-  8  the-chute                   organon PREDICTED LongShort   Cross   Short/Near
-                                 (ledger, Crosscut)                    DownFreeUpNeeds(Natural)
+  8  the-chute                   organon PREDICTED LongShort,  Cross   Descending/Near
+                                 (ledger, Crosscut) ShortLong,          DownFreeUpNeeds(Natural)
+                                                   LongLong
   9  key-downstairs-lock-        organon PREDICTED ShortLong   Cross   Short/Near Symmetric(Key);
      upstairs                                                          key Long/Far (on l+1)
- 10  the-landing-hall            organon PREDICTED ShortShort  Cross   none (named for The Plat)
 ```
+
+**Execution amendments to the table (Task 1, ledger #10), each measured
+before it was made.** (i) `Realm.class` was frozen at a realm's CREATION,
+where `path_a` has at most three edges and `path_b` at least two, so
+`LongShort` could never occur — zero of 4,412 realms — and `try_extend`
+later splices chains into both paths, so the exported class described a
+graph that no longer existed. A Crosscut latent defect nothing had read: the
+class is now recomputed after growth from the realized paths, by the same
+rule. (ii) The chute's gate was specified on the `Short` side, which under
+`ShortLong` is `path_a`, a same-floor path with no stair: 717 of 823 chute
+draws skipped `NoRoom`. The drop belongs on the path that descends, so
+`Side::Descending` names it and the row admits every cross-floor class but
+`ShortShort`; after the change 823 of 823 apply. (iii) The tenth row, `the-
+landing-hall` (`ShortShort × CrossFloor`), drew zero times: a cross-floor
+`path_b` is created with at least three edges, so both paths cannot be short.
+The cell is empty by construction, this section's own rule forbids a row
+nothing selects, and the row is removed; the count is **nine**, asserted, and
+a `no_row_is_dead_data` sweep asserts every remaining row is applied somewhere.
+The landing hall stays The Plat's name for a stair pair one region apart, on
+whatever realm class carries one.
 
 The organon's two whole-run cells (the delving's shaft, the key at the
 bottom) and its hub column are The Plat's spine and heart readings; no realm
 spans more than two floors, so a row for them would match nothing, and a
-pattern nothing selects is dead data, not inventory.
+pattern nothing selects is dead data, not inventory — the rule that removed
+the landing hall above.
 
 **The pass.** After growth, in realm creation order (a parent precedes its
 children, so an outer pattern claims before an inner one):
@@ -469,10 +494,18 @@ Frozen here, before the code, over the standing panel (seeds 42, 7, 1234),
 every cave-bearing vertex, in the readout `hornvale circuit --seed <N>`
 already writes to `docs/audits/underworld-circuit-seed-panel.md`. The page
 gains a section per readout below; the Crosscut's four sections are
-unchanged, and their numbers **may not move** — the pass adds no node, edge,
-realm or stair, and the four are functions of those alone. That is asserted
-by regenerating the page in Task 1 and reading the diff: only the new
-sections and the `dof` line may differ. Each readout says what it measures
+unchanged, and their numbers **may not move because of the pass** — the pass
+adds no node, edge, realm or stair, and the four are functions of those alone.
+**Execution amendment (Task 1, ruling C):** they DO move once, by the
+Crosscut's own deferred minor taken in this campaign — `try_extend` now tests
+its capability invariant against the post-extend passage set — and the
+attribution is by revert: with that one change reverted the panel is
+byte-identical to the baseline; with the gate pass and the class recompute
+alone it is byte-identical too. Loop share 0.1233 → 0.1077, membership
+0.8548 → 0.8442, cross-floor 841 → 839 of 874, overlap 0.3061 → 0.3030 on
+seed 42; every verdict word unchanged. Taken now rather than deferred because
+decision 0618 makes every later plan-grammar change an epoch, so this is the
+last campaign that can take it for free. Each readout says what it measures
 *to* and *from*, the lesson of the Crosscut's loop-share.
 
 ### 4.1 Gate yield
