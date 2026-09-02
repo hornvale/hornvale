@@ -1,0 +1,1 @@
+{"kind":"notice","by":"campaign/the-detent","note":"sluice: queued a stage request for campaign/the-detent at 1ea0998d0 -- Stage 3, the emitter scan and the emitter-free read advance over the verdict index; main 4b82e544d absorbed; byte-identical, the three hash constants reproduced main-first","paths":["scripts/sluice-queue.sh"]}
