@@ -213,3 +213,52 @@ of walker meets everywhere and another class must go and fetch.*
 - complexity: simplest = one pattern ("two alternative paths") stamping
   nothing, which every LongLong realm may still draw; richest = nested
   patterns on nested realms, which creation order already sequences
+
+#6 [G2] — Spec self-review against the code, at drafting time · **Three
+claims corrected before commit; six verified with their commands** · Corrected:
+(i) §3.5's sump would have turned the corridor's two walkable ENDPOINTS
+(`nearest_pair` returns cells inside each region, `underworld_level/mod.rs:
+503-514`) into `Deep`, severing region floor — now only cells that were rock
+before the carve; (ii) §3.6 said the corner rule keeps asking `movement_mode`
+"because a shut door is still a solid corner", which is the opposite of what
+that seam answers (`Door -> Walk`) — reworded: a doorway is an opening whether
+the door is shut or not; (iii) acceptance 2's return leg named the wrong end
+of the realm. Verified: the client draws an unrecognised palette kind as rock
+(`clients/game/core/src/level.rs:150-185`, the `_` arm), so three new kinds
+are additive on the wire and a client task; `entry_for`'s match is exhaustive
+(`level_doc.rs:351-357`), so a new variant will not compile without its wire
+string; `Node {`/`Edge {` literal sites for the circuit types are all inside
+`circuit.rs` (10; the other 34 hits are other crates' `Node`s); the L-corridor
+crosses the one-cell divider exactly once for both adjacency directions
+(`connect_cells`, `mod.rs:520-527`: horizontal at `a.1` then vertical at
+`b.0`, with grid-adjacent rects sharing the orthogonal range) — stated in the
+spec as a tested claim, not a fact; `Underground::enter` passes
+`Character::WildCave` at two sites (`underground.rs:314, 322`); nine species
+carry a plausible locomotion (grep of `KindId("…")` in
+`domains/species/src/lib.rs`). Not verifiable here and flagged for G3: the
+Fig. 9.8 names · Ideonomy: none for this entry — it is a verification pass,
+not a ruling; the rulings it touched are #2 and #4.
+
+## Followups (promoted into the retrospective at close)
+
+- **The production walk reaches no door.** `Underground::enter` hardcodes
+  `WildCave`; `character_of` needs a branch the walk does not have
+  (`MAP-walk-ignores-the-lattice`). The Plat's `ChamberOverrides` writer is
+  the metaplan's own answer; if Nathan wants doors reachable sooner, the
+  cheapest route is `enter` reading `character_of(seed, vertex, band, 0)` with
+  branch 0 as a stated convention — a one-line change with a convention debt.
+- **The strongbox's `Portable` literal** —
+  `PLAY-strongbox-lock-wants-an-unlocks-property` (ledger #5).
+- **Stale prose in `session.rs:3747`** names `the-key-on-the-ledge`, a pattern
+  that does not exist (the shipped one is `the-key-by-the-loom`). Found by the
+  reconnaissance; not this campaign's file to rewrite unless Task 5 touches
+  that function, in which case fix it in passing.
+- **The Chattel's chronicle** says `lock` and `unlock` shipped beside the six
+  verbs; neither exists. A one-line correction in the book's freshness sweep
+  at close.
+- **The Crosscut's deferred minors** in the Brattice's path: `try_extend`'s
+  pre-extend capability test (Task 1 touches `circuit.rs`; take it); the
+  terminus debug_assert when a region's only walkable cell is a landing
+  (Task 3 touches the terminus write; take it); the CELLULAR rustdoc obituary
+  (Task 3, `carve.rs`, take it if the file is open); the membership test's
+  re-derivation and the gallery 45↔46 wobble — not in the path, leave them.
