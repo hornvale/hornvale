@@ -364,3 +364,314 @@ readout says how much, but no separate roster-scaling claim is made.
   hit rate, not a fold.
 - `make prewarm` was started in this worktree at G1; the worktree was
   created cold (no recyclable pool member was clean).
+
+## 11. What shipped, measured
+
+Stage 3, the readout. Every number below is a run on the development Mac,
+`--release`, taken 2026-09-02 between 02:17 and 05:01 local. **§4 is not
+edited**; this section reports against it.
+
+### 11.0 The quiet-box rule, and how it was applied
+
+§4 requires all three load averages recorded per run and any run above load
+10 set aside. The three averages are recorded immediately BEFORE and
+immediately AFTER each run. A run is set aside if the 1-minute average is
+above 10 at either end — the 1-minute figure is the one that describes the
+box *during* a six-minute run; the 15-minute figure was still carrying an
+unrelated neighbour's build for most of the session and would have excluded
+everything.
+
+The box was not quiet on demand. A sibling campaign worktree
+(`campaign/the-roll`) ran release builds intermittently throughout, and
+**five of the eight `session_length_scaling` runs taken were set aside for
+load** — one on the campaign branch (load 23.83 after) and four on the
+control. Every run taken is listed below, including the discarded ones, with
+its loads.
+
+### 11.1 A same-box control was added, and it is not in §4
+
+§4 compares against the Tailrace's own §4 tables, taken 2026-08-24 on a box
+at load average 7.0–16.3. Those tables report `k`, `r²`, elasticity and the
+share, but **no per-run `C`** — §4 of the Tailrace says so explicitly — and
+the falsifier is a claim about `C`. Reconstructing `C` from the printed
+share is arithmetically possible and was tried; it is not trustworthy,
+because the `ms/tick*` column is normalised to *each run's own* band 1, so
+two runs taken a week apart on differently-loaded boxes are not calibrated
+to one another.
+
+So the pre-campaign side was **re-measured on the same box, in the same
+session, interleaved with the post-campaign runs**: a detached worktree at
+the campaign's merge base `18f63ebfa`, whose
+`windows/vessel/examples/session_length_scaling.rs` carries the identical
+`AGENTS`/`TICKS`/`FOLD_REPS`/`BAND` constants and no resident store
+(`grep -n 'resident::\|OwnedFolds'` returns nothing there). This is the
+paired control §4 could not have specified, because the code it controls
+against did not exist when §4 was frozen.
+
+**It is a control, not a re-freezing of a criterion.** The thresholds below
+are §4's, unchanged, and every verdict is stated against §4's own
+pre-campaign numbers as well as against the control.
+
+**The deterministic columns are byte-identical across the control and the
+campaign branch**, on both benches, which is what makes the pairing legitimate:
+`session_length_scaling` band 1 reads `facts 2800 · searches 1825 · folded/a
+35.5 · ledger_len 24485` and band 10 reads `1587 · 650 · 151.9 · 38711` on
+every run of both trees; `agent_scaling`'s largest rung reads `facts 9769 ·
+searches 6825` on both. The workload did not move. That is also the readout's
+own small witness for H3.
+
+### 11.2 `session_length_scaling` — the decisive column (`drive_at`)
+
+50 agents, 200 ticks, bands of 20, seed 42, probe agent fixed at the
+max-`agent-at` roster member, history 101 → 260 (2.57×) across the warm
+bands.
+
+**Campaign branch (`6538428a3`).**
+
+| run | load before (1/5/15) | load after | k (µs/call/fact) | r² | elasticity | C (µs/call) | final-band µs/call | monotone |
+|---|---|---|---|---|---|---|---|---|
+| 1 | 3.78 / 6.92 / 16.08 | 2.24 / 4.33 / 12.30 | 2.27532 | 0.999 | **1.00** | −0.074 | 597.42 | 8/8 |
+| 2 — **SET ASIDE** | 2.09 / 3.99 / 11.76 | **23.83** / 20.56 / 16.90 | 3.88036 | 0.829 | 1.09 | −47.792 | 946.05 | 6/8 |
+| 3 | 3.41 / 9.15 / 13.35 | 5.41 / 8.21 / 11.72 | 2.30474 | 0.997 | **1.03** | −10.259 | 596.53 | 8/8 |
+| 4 | 5.05 / 8.09 / 11.65 | 5.68 / 6.43 / 9.75 | 2.34758 | 0.991 | **1.01** | −3.050 | 594.27 | 8/8 |
+
+**Control at `18f63ebfa` (pre-campaign, same box, same session).**
+
+| run | load before | load after | k | r² | elasticity | C | final-band µs/call | monotone |
+|---|---|---|---|---|---|---|---|---|
+| B1 — **SET ASIDE** | 3.67 / 5.32 / 8.87 | **11.19** / 7.90 / 8.53 | 4.17622 | 0.690 | 1.75 | −265.520 | 1159.12 | 8/8 |
+| B2 — **SET ASIDE** | **14.40** / 8.95 / 8.90 | **29.50** / 23.64 / 15.32 | 1.77930 | 0.354 | 0.68 | 133.430 | 625.61 | 5/8 |
+| B3 — **SET ASIDE** | **29.50** / 23.64 / 15.32 | 1.88 / 8.89 / 11.00 | 1.90456 | 0.760 | 0.74 | 105.176 | 613.27 | 7/8 |
+| B4 — **SET ASIDE** | 1.95 / 4.82 / 9.05 | **28.64** / 11.48 / 9.90 | 3.43276 | 0.671 | 1.42 | −154.550 | 614.71 | 7/8 |
+| B5 — **SET ASIDE** | **28.64** / 11.48 / 9.90 | 2.63 / 6.19 / 7.94 | 2.58837 | 0.847 | 1.14 | −47.631 | 685.99 | 7/8 |
+| B6 | 2.63 / 6.19 / 7.94 | 3.03 / 4.04 / 6.32 | 2.32428 | 0.998 | **1.01** | −4.204 | 607.27 | 8/8 |
+| B7 | 2.74 / 3.89 / 6.20 | 6.93 / 5.76 / 6.15 | 2.33624 | 0.999 | **1.01** | −2.255 | 611.54 | 8/8 |
+| B8 | 6.93 / 5.76 / 6.15 | 4.58 / 5.74 / 5.97 | 2.30746 | 0.995 | **0.99** | +1.898 | 593.30 | 8/8 |
+
+Three valid runs a side, every one clearing the `r² ≥ 0.5` floor.
+
+**Medians: elasticity 1.01 before, 1.01 after. `k` 2.324 before, 2.305
+after. Final-band cost 607.27 µs/call before, 596.53 µs/call after (1.8%).**
+`drive_at`'s cost on this bench did not move.
+
+Band by band, the two are the same curve (`fold us*`, campaign run 1 against
+control B6): 233.61/233.26 · 269.98/276.08 · 327.56/326.56 · 366.29/368.27 ·
+407.20/419.62 · 452.68/449.55 · 499.23/509.87 · 545.03/550.97 ·
+597.42/607.27.
+
+### 11.3 `session_length_scaling` — the whole tick
+
+| | k (ms/tick/fact) | r² | C (ms/tick) | history share at band 10 | band-2 ms/tick* | band-10 ms/tick* |
+|---|---|---|---|---|---|---|
+| campaign run 1 | 2.86447 | 0.994 | 264.299 | 62.2% | 396.05 | 686.08 |
+| campaign run 3 | 2.92731 | 0.909 | 267.301 | 62.4% | 386.17 | 699.01 |
+| campaign run 4 | 2.85724 | 0.915 | 285.308 | 60.3% | 403.96 | 685.57 |
+| control B6 | 3.92091 | 0.995 | 219.016 | 73.1% | 405.24 | 817.04 |
+| control B7 | 3.97251 | 0.999 | 212.560 | 73.9% | 400.12 | 813.16 |
+| control B8 | 4.44790 | 0.891 | 204.854 | 76.7% | 411.17 | 874.02 |
+
+**Medians: `k` 3.973 → 2.864 (−28%). `C` 212.560 → 267.301 (+54.7 ms/tick).
+Share 73.9% → 62.4% (−11.5 points). Band-10 ms/tick 817.04 → 686.08
+(−16.0%). Band-2 ms/tick 405.24 → 396.05 (−2.3%).**
+
+### 11.4 `session_length_scaling` — attribution, final-band µs/call
+
+Medians of the three valid runs a side.
+
+| fold | control (pre) | campaign (post) | ratio | post elasticity (median) | post r² |
+|---|---|---|---|---|---|
+| `drive_at` | 607.27 | 596.53 | 1.02× | 1.01 | 0.991–0.999 |
+| `hunger_at` | 611.42 | 596.03 | 1.03× | 1.04 | 0.541–0.917 |
+| `fatigue_at` | 0.13 | 0.15 | 0.87× | 0.00–0.06 | 0.002–0.244 |
+| `believed_water` | 8579.24 | 8752.98 | 0.98× | 1.04 | 0.403–0.852 |
+| `shared_believed_water` | 8700.51 | 8926.99 | 0.97× | 1.02 | 0.254–0.921 |
+| **`hazard_memory_memo`** | **143668.28** | **94362.17** | **1.52×** | **0.92** | 0.677–0.985 |
+
+`hazard_memory_memo`'s own fits: elasticity 1.20/1.28/1.19 (r² 0.997/0.981/
+0.986) before, 0.92/0.79/1.03 (r² 0.985/0.677/0.931) after.
+
+### 11.5 The verdicts against §4
+
+| criterion | threshold | measured | verdict |
+|---|---|---|---|
+| **H2 (a)** `drive_at` median elasticity, runs with r² ≥ 0.5 | < 0.20, from 0.86–1.24 | **1.01** (1.00 / 1.03 / 1.01; control 1.01) | **NOT MET** |
+| **H2 (b)** `C` identifiable and positive on the decisive column | positive | **−0.074 / −10.259 / −3.050** — negative on all three | **NOT MET** |
+| **H2 (c)** whole-tick history share | < 20%, from 70–80% | **62.4%** median (73.9% on the same-box control) | **NOT MET** |
+| **H3** no world-state artifact moves | — | not this task's instrument; established by construction (§5) and by the ledger-hash witnesses of Tasks 1–5. The readout adds one small witness: both benches' deterministic columns are byte-identical across the control and the campaign branch (§11.1) | **held, not re-measured here** |
+| **H4 (a)** `hazard_memory_memo` median elasticity | < 0.20, from 1.06–1.21 | **0.92** (0.92 / 0.79 / 1.03; control 1.20) | **NOT MET** |
+| **H4 (b)** `hazard_memory_memo` final-band cost | ≥ 10× down, from 73–97 ms/call | **1.52×** down (143.7 → 94.4 ms/call, same box); against §4's own 73–97 ms/call figure, **no reduction at all** | **NOT MET** |
+
+Five of six preregistered criteria NOT MET, and none of them is averaged
+away or rescued. §11.7 is why, and it is a finding rather than a failure.
+
+### 11.6 The level, and the falsifier
+
+**The level — reported, not predicted.** `agent_scaling`, ms/tick at 200
+agents over 20 ticks, against Penstock §6.3's pre-campaign 1712–1752.
+
+| run | tree | load before | load after | 10 | 50 | 100 | **200** |
+|---|---|---|---|---|---|---|---|
+| A1 — **SET ASIDE** | campaign | 3.15 / 5.12 / 5.72 | **10.72** / 7.93 / 6.80 | 80.853 | 625.514 | 817.741 | 1680.564 |
+| A2 | campaign | 9.94 / 7.82 / 6.76 | 4.02 / 6.48 / 6.33 | 60.482 | 428.131 | 712.752 | 1682.660 |
+| A3 — **SET ASIDE** | campaign | 4.02 / 6.48 / 6.33 | **54.42** / 19.81 / 11.30 | 60.776 | 464.723 | 1011.751 | 2461.183 |
+| BA1 | control | 1.95 / 5.72 / 11.38 | 2.00 / 5.04 / 10.74 | 59.336 | 426.823 | 709.138 | **1664.025** |
+| BA2 | control | 2.00 / 5.04 / 10.74 | 1.77 / 4.35 / 10.06 | 59.187 | 425.021 | 703.091 | **1663.496** |
+| A4 | campaign | 1.81 / 4.28 / 9.97 | 2.22 / 3.88 / 9.40 | 58.739 | 421.072 | 698.870 | **1667.657** |
+| A5 | campaign | 2.22 / 3.88 / 9.40 | 3.17 / 4.02 / 9.05 | 60.712 | 449.341 | 709.662 | **1664.894** |
+
+BA1/BA2/A4/A5 are four runs inside one tight quiet window (04:56–05:00),
+alternating tree, and they are the comparison to read. **At 200 agents:
+1663.5–1664.0 ms/tick before, 1664.9–1667.7 ms/tick after — a difference of
++0.1% to +0.25%, which is noise.** The level did not move. A2, valid but
+taken 45 minutes earlier at a busier moment, reads 1682.660 and is 1.1%
+above the window; the spread between windows is larger than the spread
+between trees, which is the usual reason this bench is read paired.
+Both sit ~3–5% below Penstock §6.3's 1712–1752, a box-and-date difference,
+not a campaign effect. The fitted log-log slope is 1.10 on both trees.
+
+**The falsifier — `C` DID rise, and it does not falsify the fix at either
+named session length.** From the whole-tick affine fits (§11.3 medians):
+
+```
+pre:  ms/tick = 212.560 + 3.973 h
+post: ms/tick = 267.301 + 2.864 h
+```
+
+`C` rose by **54.741 ms/tick**; `k` fell by **1.109 ms/tick per fact**. The
+two lines cross at `h = 54.741 / 1.109 = 49.4` facts of mean per-agent
+history — between band 2 (h = 47.9, tick 39) and band 3 (h = 61.1, tick 59),
+so **around tick 45**. Evaluating each run's own fit and taking medians:
+
+| session length | h | pre | post | verdict |
+|---|---|---|---|---|
+| 50 ticks | ≈ 55 | 434.67 ms/tick | 428.30 ms/tick | post 1.5% faster — a wash |
+| 200 ticks | 151.9 | 815.98 ms/tick | 711.96 ms/tick | post **12.7% faster** |
+
+**So: NOT a pessimisation at 50 ticks, and a clear gain at 200.** Three things
+must be said with it rather than after it.
+
+1. **The fitted `C` is an extrapolation to `h = 0`, and `h = 0` is outside
+   the data** (the sampled range is 47.9–151.9). §4's own text and the
+   instrument's `report_affine` both say the intercept is not trustworthy at
+   this depth, which is why H2 (b) is written as "becomes identifiable" — it
+   did not.
+2. **At the shallowest band actually measured the two are equal**: band-2
+   `ms/tick*` is 405.24 before and 396.05 after (post 2.3% faster). The
+   crossover the fit predicts sits just below the data and is not observed
+   inside it.
+3. **`agent_scaling` measures the short-session regime directly** — 20 ticks,
+   h ≈ 35 — and finds the two indistinguishable (+0.1% to +0.25%). That is a
+   measurement, not an extrapolation, and it is the strongest evidence
+   against the pessimisation reading.
+
+**Verdict on the falsifier: the store is not a pessimisation at any session
+length this campaign can measure.** The intercept rise the fit reports is
+real as a fit parameter and unobserved as a cost.
+
+### 11.7 Why five criteria failed, and what the campaign actually bought
+
+The ecological bench says `drive_at` did not move. The synthetic bench says
+its **order changed**. Both are right, and reconciling them is this readout's
+real result.
+
+`windows/vessel/examples/fold_depth_sweep.rs`, one run each tree, same quiet
+window (campaign: loads 3.17/3.98/8.95 → 3.08/3.95/8.91; control:
+2.72/3.80/8.75 → 2.46/3.71/8.65). µs/call, median of 6 passes:
+
+| depth | PERIODIC pre | PERIODIC post | ratio | SINGLE-RESET pre | SINGLE-RESET post | ratio |
+|---|---|---|---|---|---|---|
+| 10 | 0.747 | 0.131 | 5.7× | 0.749 | 0.125 | 6.0× |
+| 32 | 1.249 | 0.200 | 6.2× | 1.481 | 0.342 | 4.3× |
+| 100 | 2.492 | 0.220 | 11.3× | 5.141 | 1.059 | 4.9× |
+| 320 | 6.473 | 0.503 | 12.9× | 27.593 | 3.832 | 7.2× |
+| 1 000 | 19.867 | 1.405 | 14.1× | 194.648 | 13.331 | 14.6× |
+| 3 200 | 68.380 | 4.662 | 14.7× | 1 734.082 | 51.738 | 33.5× |
+| 10 000 | 210.609 | 15.729 | 13.4× | **19 215.004** | **194.490** | **98.8×** |
+
+| | pre | post |
+|---|---|---|
+| PERIODIC `k` (µs/call/fact) | 0.02106 (r² 1.000) | 0.00156 (r² 0.999) |
+| PERIODIC raw elasticity, top third | 0.987 | 1.067 |
+| SINGLE-RESET `k` | 1.90398 (r² 0.949) | 0.01947 (r² 0.997) |
+| **SINGLE-RESET raw elasticity, top third** | **2.111** | **1.162** |
+| SINGLE-RESET raw elasticity, top half | 1.994 | 1.164 |
+
+**In the single-reset regime the campaign changed the order: elasticity
+1.99–2.11 (quadratic, `O(S·H)`) became 1.16 (linear), and cost at depth
+10 000 fell 98.8×.** That is precisely what §0 set out to do, and it is not
+visible on `session_length_scaling` for a reason that is arithmetic, not
+interpretive.
+
+**The reconciliation.** At depth 260 — the probe agent's history at band 10 —
+the synthetic single-reset sweep interpolates (log-log, off the 100 and 320
+readings) to **20.44 µs/call before and 3.05 µs/call after: a predicted
+saving of 17.4 µs**. The ecological bench at that same history measures
+607.27 → 596.53 µs/call, a saving of **10.7 µs**. **The two instruments do
+not disagree: the predicted saving is smaller than this bench's own
+run-to-run spread on that very column** (final-band `drive_at` reads
+593.30–611.54 µs/call across the three control runs, a spread of 18.2 µs).
+An effect the size of the noise is not resolvable, and §4's criterion asked
+this bench to resolve it. It is ~2–3% of a ~600 µs/call figure — and the
+*other* ~99%, whatever it is, is itself history-proportional, so the
+elasticity stays at 1.0.
+
+**What that ~99% is, is not established here, and the leading candidate is
+named rather than asserted.** The ecological `drive_at` costs ~597 µs at
+h = 260 where the synthetic one costs ~3 µs — a ~200× gap between the same
+function on the same history depth. The difference between the two call sites
+is the terrain: the sweep passes a trivial `Terrain`, the session passes a
+real `LocaleTerrain` backed by `RoomMeshMemo`, and `sustenance_at` samples
+temperature once per segment boundary. That per-segment sample is `O(segments
+since the reset)` — the *same* order as the trail scan the store removed, on
+the same segments, which is exactly the signature the elasticity shows. **No
+probe isolates it and this readout does not claim it; it is the followup.**
+
+**Three further facts that make the H2 result a property of the instrument
+rather than a surprise.**
+
+1. **The probe agent never drinks.** `session_length_scaling` chooses the
+   roster member with the MOST `agent-at` postings, and the bench reports of
+   it: "the probe agent committed ZERO `drank` facts across 200 ticks",
+   with 21 of 50 agents (42.0%) the same. Its `S` equals its `H` for the
+   whole run. So H2's decisive column measures the single-reset regime — the
+   worst case for a fix whose saving is `O(S)` in place of `O(H)` — by
+   construction of the probe's selection, not by chance. The instrument was
+   frozen before the fix existed and this is not a criticism of it; it is a
+   fact about what its number can mean.
+2. **`drive_at` is `O(S)`, and the campaign's own deterministic witnesses
+   said so before this stage.** The ledger records segments-integrated ratios
+   of **0.889** (Task 3, busiest drinker, 1391 → 1238 segments per turn) and
+   **0.683** (Task 5, the past-day shape, 120 → 82). Those are constant-factor
+   savings of 11% and 32% on the *count of segments*, never a change of order
+   on a single-reset agent — and the readout is consistent with them to
+   within noise. Nothing about §11.2 contradicts what stages 1–2 measured.
+3. **The 70–80% share in §4 was never `drive_at` alone.** It fell 73.9% →
+   62.4% on the same-box control, and the fold that moved is
+   `hazard_memory_memo` (1.52×), not `drive_at` (1.02×). The whole tick is
+   16.0% faster at band 10. That is the campaign's ecological gain, and it is
+   real, modest, and far from H2 (c)'s 20%.
+
+### 11.8 What the readout hands forward
+
+- **The instrument needed no change.** `probe_fold_us` and its five siblings
+  thread the run's own `OwnedFolds` — the store production owns, at the scope
+  production owns it — and their doc comments say why a fresh store per
+  reading would time an `O(ledger)` advance instead. Verified by reading, not
+  assumed. `probe_hazard_memory_memo_us` still builds a fresh
+  `PrimaryAfraidMemo` per repetition, which is correct and matches §4's
+  baseline construction. No commit touched an example.
+- **The open question is the ~98%.** A seventh probe that times
+  `sustenance_at` against a trivial terrain on the real session's trail would
+  settle in one run whether the residual is the per-segment terrain sample.
+  Until then, `drive_at`'s ecological cost has an unattributed dominant term
+  and any future H2-shaped criterion written against this bench will fail the
+  same way.
+- **A criterion written against an ecological bench cannot see a change of
+  order that the ecological range does not reach.** §4 froze H2 on the
+  instrument that produces the share, because the share is what makes the
+  campaign worth doing — and `session_length_scaling.rs`'s own module doc
+  already says the sweep is the instrument for a shape finding and this one is
+  the instrument for a share finding. The two were both run and they disagree
+  only in appearance. A future preregistration for a change-of-order fix
+  should state its shape criterion on `fold_depth_sweep.rs` and its share
+  criterion here, rather than asking one bench for both.
