@@ -1,12 +1,35 @@
-//! Walking the source tree for authored numeric constants.
+//! Walking the source tree for authored constants.
 //!
-//! **The visibility rule is the one place this tool deliberately differs from
-//! `type-audit`.** That tool audits primitives at a *`pub` boundary*, because
-//! its subject is an API contract. This tool's subject is an authored number,
-//! and the motivating instance — `FATIGUE_RISE`, one sleep-debt rate for every
-//! species in every world — was a **private** constant, as is `REST_BOUT`. A
-//! `pub` filter would have walked straight past both. So visibility is ignored
-//! entirely here, and that is a deliberate widening, not an oversight.
+//! **Two filters `type-audit` applies are deliberately absent here, and they
+//! are absent for two different reasons.** Conflating them is what an earlier
+//! draft of this paragraph did — it claimed the visibility argument covered
+//! both, which was true of visibility and false of type.
+//!
+//! **1. Visibility is ignored.** `type-audit` audits primitives at a *`pub`
+//! boundary* because its subject is an API contract. This tool's subject is an
+//! authored number wherever it sits. The campaign's motivating instance —
+//! `FATIGUE_RISE`, one sleep-debt rate for every species in every world — was
+//! a **private** constant; it was deleted in The Slumber's Task 9 and its live
+//! successor, `windows/vessel/src/liveness.rs`'s `DEFAULT_FATIGUE_RISE`, is
+//! likewise not `pub`. So is `REST_BOUT`. A `pub` filter would walk past all
+//! three, which is what mutation M6 demonstrates.
+//!
+//! **2. The type filter is a DENYLIST, not an allowlist** (decision ledger
+//! #19). The first draft admitted five numeric primitives, and that was wrong
+//! in a way that would have got worse over time:
+//!
+//! - It could not see `REST_BOUT`, a `TickSpan` — the constant the campaign's
+//!   own spec titles *"the worked example"*.
+//! - **The blind zone would grow as the code improved.** This repo pushes bare
+//!   numbers toward typed newtypes; `type-audit` exists to do exactly that. An
+//!   allowlist of primitives therefore goes blind to every crate that gets
+//!   better, and an audit whose silence tracks code quality reads as a clean
+//!   bill when it is a missing measurement.
+//!
+//! So every `const` is judged except one whose type is *declared* a
+//! non-quantity — text, truth values, containers, markers. A newtype over a
+//! number is the most quantity-like thing in the tree: `Gyr` is a duration and
+//! `TickSpan` is a span, and the rung question applies to both unchanged.
 
 use crate::tag::doc_text_of;
 use std::path::{Path, PathBuf};
@@ -21,13 +44,80 @@ use syn::visit::Visit;
 /// may widen the default when it closes the ratchet.
 pub const AUDITED_ROOTS: &[&str] = &["domains", "windows"];
 
-/// The constant types this tool judges.
+/// Named types that are **not** quantities, and so carry no rung.
 ///
-/// Numeric only, and deliberately not `bool`/`&str`/`char`: a rung is a
-/// statement about what a *quantity* varies with. Types outside this list are
-/// counted as excluded rather than silently dropped, so the denominator the
-/// report prints can be reconciled against the tree.
-pub const NUMERIC_TYPES: &[&str] = &["f64", "i64", "u64", "u32", "usize"];
+/// This is a denylist and the direction is load-bearing (ledger #19): a rung is
+/// a statement about what a *quantity* varies with, and everything that is not
+/// on this list — `f64`, `i32`, `u8`, `u128`, and every newtype over a number —
+/// is a quantity. Naming the exceptions rather than the admissions is what
+/// keeps the tool from going blind as bare primitives become newtypes.
+///
+/// A path type is matched on its **last** segment, so a qualified
+/// `kernel::TickSpan` is judged exactly as a bare `TickSpan` is.
+pub const NON_QUANTITY_TYPES: &[&str] = &["str", "String", "bool", "char"];
+
+/// The five primitive names the campaign spec's line grep could match.
+///
+/// **This is not a filter and nothing in the walk consults it.** It exists so
+/// [`crate::report`] can reconstruct the one figure that is actually comparable
+/// to the spec's 610 — the walk's population is now defined by
+/// [`NON_QUANTITY_TYPES`], which is a different population, and comparing a
+/// denylist total against an allowlist grep would be comparing two things that
+/// merely share a unit.
+pub const SPEC_GREP_TYPES: &[&str] = &["f64", "i64", "u64", "u32", "usize"];
+
+/// A type's short label, used both to report a judged constant's type and to
+/// tally an excluded one. Deterministic and shape-based; never the full source
+/// text, which would make the report churn on whitespace.
+pub fn type_label(ty: &syn::Type) -> String {
+    match ty {
+        syn::Type::Path(tp) => match tp.path.segments.last() {
+            Some(seg) => {
+                let name = seg.ident.to_string();
+                if matches!(seg.arguments, syn::PathArguments::None) {
+                    name
+                } else {
+                    format!("{name}<…>")
+                }
+            }
+            None => "path".to_string(),
+        },
+        syn::Type::Reference(r) => format!("&{}", type_label(&r.elem)),
+        syn::Type::Array(a) => format!("[{}; …]", type_label(&a.elem)),
+        syn::Type::Slice(s) => format!("[{}]", type_label(&s.elem)),
+        syn::Type::Tuple(t) if t.elems.is_empty() => "()".to_string(),
+        syn::Type::Tuple(_) => "(…)".to_string(),
+        syn::Type::Paren(p) => type_label(&p.elem),
+        syn::Type::Group(g) => type_label(&g.elem),
+        syn::Type::Ptr(_) => "*…".to_string(),
+        syn::Type::BareFn(_) => "fn(…)".to_string(),
+        syn::Type::TraitObject(_) => "dyn …".to_string(),
+        syn::Type::ImplTrait(_) => "impl …".to_string(),
+        syn::Type::Never(_) => "!".to_string(),
+        _ => "other".to_string(),
+    }
+}
+
+/// True when `ty` is a quantity — everything except the declared non-quantities
+/// and the container/marker shapes.
+///
+/// A **generic** path (`Option<f64>`, `BTreeMap<_, _>`, `[f64; 3]`, a tuple, a
+/// reference) is a container: it may hold quantities but is not one, and the
+/// rung question would have no single answer for it.
+pub fn is_quantity(ty: &syn::Type) -> bool {
+    match ty {
+        syn::Type::Path(tp) => match tp.path.segments.last() {
+            Some(seg) => {
+                matches!(seg.arguments, syn::PathArguments::None)
+                    && !NON_QUANTITY_TYPES.contains(&seg.ident.to_string().as_str())
+            }
+            None => false,
+        },
+        syn::Type::Paren(p) => is_quantity(&p.elem),
+        syn::Type::Group(g) => is_quantity(&g.elem),
+        _ => false,
+    }
+}
 
 /// Substrings whose presence in a file's text marks it **kind-adjacent** — the
 /// creature-modelling middle where a rung is genuinely arguable.
@@ -68,7 +158,7 @@ impl Site {
     }
 }
 
-/// One authored numeric constant found in production source.
+/// One authored quantity-typed constant found in production source.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AuthoredConst {
     /// Crate label (`terrain`, `vessel`, …).
@@ -79,7 +169,7 @@ pub struct AuthoredConst {
     pub line: usize,
     /// The constant's identifier.
     pub name: String,
-    /// The numeric type, one of [`NUMERIC_TYPES`].
+    /// The type's short label (see [`type_label`]) — `f64`, `TickSpan`, `Gyr`.
     pub ty: String,
     /// Concatenated doc-comment text (where a `plumb:` line may live).
     pub doc: String,
@@ -98,12 +188,24 @@ pub struct Scan {
     pub files_parsed: usize,
     /// How many of those files were kind-adjacent.
     pub kind_adjacent_files: usize,
-    /// Every production numeric constant found.
+    /// Every production quantity-typed constant found.
     pub consts: Vec<AuthoredConst>,
-    /// Numeric constants skipped because they are test-only.
+    /// Constants skipped because they are test-only.
     pub test_only_consts: usize,
-    /// Production constants skipped because their type is not numeric.
-    pub non_numeric_consts: usize,
+    /// Production constants skipped because their type is a declared
+    /// non-quantity, tallied **by type label** rather than as a bare number.
+    ///
+    /// A bare count would let the exclusion bucket hide a quantity someone had
+    /// wrongly denied, which is the failure the denylist ruling (#19) exists to
+    /// prevent; a per-type tally makes every exclusion legible in the report.
+    pub excluded_types: std::collections::BTreeMap<String, usize>,
+}
+
+impl Scan {
+    /// How many production constants were excluded as non-quantities.
+    pub fn non_quantity_consts(&self) -> usize {
+        self.excluded_types.values().sum()
+    }
 }
 
 /// Derive a crate label from a source-file path (same rule as `type-audit`).
@@ -164,12 +266,14 @@ pub fn scan(roots: &[PathBuf]) -> Result<Scan, String> {
             test_depth: 0,
             consts: Vec::new(),
             test_only: 0,
-            non_numeric: 0,
+            excluded_types: std::collections::BTreeMap::new(),
         };
         collector.visit_file(&file);
         out.consts.extend(collector.consts);
         out.test_only_consts += collector.test_only;
-        out.non_numeric_consts += collector.non_numeric;
+        for (label, n) in collector.excluded_types {
+            *out.excluded_types.entry(label).or_default() += n;
+        }
     }
     Ok(out)
 }
@@ -201,9 +305,15 @@ fn collect_rs_files(root: &Path, out: &mut Vec<PathBuf>) -> Result<(), String> {
     Ok(())
 }
 
-/// True for a directory named `tests`, `examples`, `benches`, `target`, or
-/// `studies` — pruned entirely so its contents are never walked. A constant in
-/// a test fixture is not an authored world parameter.
+/// True for a directory named `tests`, `examples`, `benches` or `target` —
+/// pruned entirely so its contents are never walked. A constant in a test
+/// fixture is not an authored world parameter.
+///
+/// The four names here and the four in this sentence are the whole list; an
+/// earlier draft of this doc named a fifth (`studies`) that the `matches!` arm
+/// below never had. Inert, since no such directory exists under a crate's
+/// `src/` — but a doc asserting behaviour the code lacks is how a reader comes
+/// to believe a sweep excluded something it walked.
 fn is_excluded_dir(path: &Path) -> bool {
     path.is_dir()
         && matches!(
@@ -228,18 +338,6 @@ pub fn has_test_attr(attrs: &[syn::Attribute]) -> bool {
     attrs.iter().any(|a| a.path().is_ident("test"))
 }
 
-/// The numeric type name, if `ty` is exactly one of [`NUMERIC_TYPES`].
-pub fn numeric_type_name(ty: &syn::Type) -> Option<&'static str> {
-    let syn::Type::Path(tp) = ty else {
-        return None;
-    };
-    if tp.qself.is_some() || tp.path.segments.len() != 1 {
-        return None;
-    }
-    let ident = tp.path.segments[0].ident.to_string();
-    NUMERIC_TYPES.iter().copied().find(|n| *n == ident)
-}
-
 struct Collector {
     crate_name: String,
     path: PathBuf,
@@ -249,7 +347,7 @@ struct Collector {
     test_depth: usize,
     consts: Vec<AuthoredConst>,
     test_only: usize,
-    non_numeric: usize,
+    excluded_types: std::collections::BTreeMap<String, usize>,
 }
 
 impl Collector {
@@ -272,16 +370,17 @@ impl Collector {
         attrs: &[syn::Attribute],
         associated: bool,
     ) {
-        let Some(ty_name) = numeric_type_name(ty) else {
-            // A non-numeric constant is counted, not dropped, so the report's
-            // denominator can be reconciled against a grep of the tree.
-            if self.test_depth == 0 && !has_cfg_test(attrs) {
-                self.non_numeric += 1;
-            }
-            return;
-        };
+        // Test-only is decided FIRST, so a fixture never lands in the
+        // non-quantity tally the report publishes as a reviewable list.
         if self.test_depth > 0 || has_cfg_test(attrs) {
             self.test_only += 1;
+            return;
+        }
+        if !is_quantity(ty) {
+            // A non-quantity is counted under its own type label, not dropped,
+            // so the report's denominator reconciles against the tree and the
+            // denylist's own judgement stays reviewable.
+            *self.excluded_types.entry(type_label(ty)).or_default() += 1;
             return;
         }
         self.consts.push(AuthoredConst {
@@ -289,7 +388,7 @@ impl Collector {
             path: self.path.clone(),
             line: ident.span().start().line,
             name: ident.to_string(),
-            ty: ty_name.to_string(),
+            ty: type_label(ty),
             doc: doc_text_of(attrs),
             site: self.site(associated),
             kind_adjacent: self.kind_adjacent,
@@ -409,10 +508,14 @@ mod tests {
         scan.consts.iter().map(|c| c.name.as_str()).collect()
     }
 
-    /// The motivating instance is PRIVATE. `FATIGUE_RISE` carried no `pub`, and
-    /// neither does `REST_BOUT`; a `pub`-boundary filter — the rule
-    /// `type-audit` correctly uses for its own subject — would walk past both
-    /// and the sweep would report a clean tree.
+    /// The motivating instance was PRIVATE. `FATIGUE_RISE` carried no `pub`;
+    /// it was deleted in The Slumber's Task 9 and its live successor,
+    /// `windows/vessel/src/liveness.rs:3282`'s `DEFAULT_FATIGUE_RISE`, is
+    /// likewise not `pub` — and IS swept, verified against the real tree. Nor
+    /// is `REST_BOUT`. A `pub`-boundary filter — the rule `type-audit`
+    /// correctly uses for its own subject — would walk past all three and the
+    /// sweep would report a clean tree. The fixture below keeps the historical
+    /// name because that is the constant the campaign exists because of.
     ///
     /// MUTATION THIS MUST FAIL AGAINST (confirmed 2026-09-02, The Plumb Task 3): add a `pub` filter —
     /// `if !matches!(c.vis, syn::Visibility::Public(_)) { return; }` at the top
@@ -512,30 +615,131 @@ mod tests {
         );
     }
 
-    /// A rung is a statement about a QUANTITY, so non-numeric constants are out
-    /// of scope — but they are counted rather than dropped, because a
-    /// denominator a reader cannot reconcile is the defect this project has
-    /// catalogued most.
+    /// **The type filter is a denylist** (ledger #19): every `const` is judged
+    /// unless its type is a declared non-quantity. `u8` and `i32` are
+    /// quantities the first draft's five-name allowlist silently dropped.
+    /// Exclusions are tallied BY TYPE rather than summed, because the denylist
+    /// is a judgement and a bare count would hide a quantity someone had
+    /// wrongly denied.
     ///
-    /// MUTATION THIS MUST FAIL AGAINST (confirmed 2026-09-02, The Plumb Task 3): make
-    /// `numeric_type_name`'s final expression `Some("f64")`, so every
-    /// path-shaped type is judged numeric.
+    /// MUTATION THIS MUST FAIL AGAINST (confirmed 2026-09-02, The Plumb Task 3,
+    /// fix round 1): invert the denylist — make `is_quantity`'s path arm
+    /// `NON_QUANTITY_TYPES.contains(...)` instead of `!...contains(...)`.
     ///
     /// ```text
     /// assertion `left == right` failed
-    ///   left: ["N", "ON", "B"]
+    ///   left: ["ON", "NAME", "C"]
+    ///  right: ["N", "B", "SMALL"]
+    /// ```
+    #[test]
+    fn the_type_filter_is_a_denylist_and_its_exclusions_are_tallied_by_type() {
+        let s = scan_src(
+            "/// Num.\nconst N: f64 = 1.0;\n\
+             /// Byte.\nconst B: u8 = 1;\n\
+             /// Small.\nconst SMALL: i32 = -1;\n\
+             /// Text.\nconst LABEL: &str = \"x\";\n\
+             /// Flag.\nconst ON: bool = true;\n\
+             /// Owned.\nconst NAME: String = String::new();\n\
+             /// Letter.\nconst C: char = 'x';\n",
+        );
+        assert_eq!(names(&s), vec!["N", "B", "SMALL"]);
+        assert_eq!(
+            s.excluded_types
+                .iter()
+                .map(|(k, v)| (k.as_str(), *v))
+                .collect::<Vec<_>>(),
+            vec![("&str", 1), ("String", 1), ("bool", 1), ("char", 1)]
+        );
+        assert_eq!(s.non_quantity_consts(), 4);
+    }
+
+    /// **A newtype over a number is a quantity**, and this is the half the
+    /// first draft got wrong: `REST_BOUT: TickSpan` is the constant the
+    /// campaign's own spec titles "the worked example", and an allowlist of
+    /// primitives could not see it. The blind zone would have grown as bare
+    /// numbers became newtypes — which is what this repo's `type-audit`
+    /// exists to make happen.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST (confirmed 2026-09-02, The Plumb Task 3,
+    /// fix round 1): restore the allowlist — make `is_quantity`'s path arm
+    /// `["f64", "i64", "u64", "u32", "usize"].contains(&seg.ident.to_string().as_str())`.
+    ///
+    /// ```text
+    /// assertion `left == right` failed
+    ///   left: []
+    ///  right: ["REST_BOUT", "AGE", "WETNESS", "SPAN"]
+    /// ```
+    #[test]
+    fn a_newtype_over_a_number_is_a_quantity() {
+        let s = scan_src(
+            "/// A rest bout.\nconst REST_BOUT: TickSpan = TickSpan::from_ticks(25_000);\n\
+             /// An age.\nconst AGE: Gyr = Gyr(4.5);\n\
+             /// Wetness.\nconst WETNESS: SurfaceWetness = SurfaceWetness(0.5);\n\
+             /// Qualified.\nconst SPAN: kernel::TickSpan = kernel::TickSpan(1);\n",
+        );
+        assert_eq!(names(&s), vec!["REST_BOUT", "AGE", "WETNESS", "SPAN"]);
+        // The qualified path is judged on its LAST segment, so it reports the
+        // same type label a bare one would.
+        assert_eq!(s.consts[3].ty, "TickSpan");
+        assert!(s.excluded_types.is_empty());
+    }
+
+    /// A container may HOLD quantities but is not one, so the rung question has
+    /// no single answer for it. Excluded — and, like every exclusion, listed
+    /// under its own shape rather than summed away.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST (confirmed 2026-09-02, The Plumb Task 3,
+    /// fix round 1): drop the `PathArguments::None` requirement from
+    /// `is_quantity`, admitting every generic container.
+    ///
+    /// ```text
+    /// assertion `left == right` failed
+    ///   left: ["N", "MAYBE"]
     ///  right: ["N"]
     /// ```
     #[test]
-    fn non_numeric_consts_are_excluded_and_counted() {
+    fn a_container_is_not_a_quantity() {
         let s = scan_src(
             "/// Num.\nconst N: f64 = 1.0;\n\
-             /// Text.\nconst LABEL: &str = \"x\";\n\
-             /// Flag.\nconst ON: bool = true;\n\
-             /// Byte.\nconst B: u8 = 1;\n",
+             /// Maybe.\nconst MAYBE: Option<f64> = None;\n\
+             /// Table.\nconst TABLE: [f64; 3] = [0.0, 1.0, 2.0];\n\
+             /// Pair.\nconst PAIR: (f64, f64) = (0.0, 1.0);\n\
+             /// Unit.\nconst NOTHING: () = ();\n",
         );
         assert_eq!(names(&s), vec!["N"]);
-        assert_eq!(s.non_numeric_consts, 3);
+        assert_eq!(
+            s.excluded_types
+                .keys()
+                .map(|k| k.as_str())
+                .collect::<Vec<_>>(),
+            vec!["()", "(…)", "Option<…>", "[f64; …]"]
+        );
+    }
+
+    /// A test-only constant is decided BEFORE the type filter, so a fixture
+    /// never lands in the non-quantity list the report publishes for review.
+    ///
+    /// **The first draft had this ordering backwards, and it silently lost
+    /// constants from the denominator entirely**: it tested the type first and
+    /// returned without counting a test-only non-quantity in EITHER bucket, so
+    /// the row headed "every `const` the walk touched" was 44 short of the
+    /// truth on the real tree.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST (confirmed 2026-09-02, The Plumb Task 3, fix round 1): restore that
+    /// ordering — delete the `test_depth`/`has_cfg_test` early return that
+    /// precedes the `is_quantity` check in `Collector::record`.
+    ///
+    /// ```text
+    /// assertion failed: s.consts.is_empty()
+    /// ```
+    #[test]
+    fn a_test_only_const_never_enters_the_non_quantity_tally() {
+        let s = scan_src(
+            "#[cfg(test)]\nmod tests {\n    const LABEL: &str = \"x\";\n    const N: f64 = 1.0;\n}\n",
+        );
+        assert!(s.consts.is_empty());
+        assert_eq!(s.test_only_consts, 2);
+        assert!(s.excluded_types.is_empty());
     }
 
     /// The doc comment must reach the constant it documents — the other half

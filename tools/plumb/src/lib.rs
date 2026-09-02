@@ -17,6 +17,17 @@
 //! three additions seen from the numeric side — so tagging a constant
 //! `per-people` today registers it as a consumer for the kind-edge campaign
 //! that does not exist yet.
+//!
+//! ## Re-running a pasted mutation recipe in this crate
+//!
+//! Every `MUTATION THIS MUST FAIL AGAINST` block below quotes the exact string
+//! `scripts/mutate.py` was given. **Pasting the red made several of those
+//! strings non-unique**, because the doc comment now contains the anchor
+//! verbatim and `mutate.py` refuses with `TARGET NOT UNIQUE (2 occurrences)` —
+//! by design, since a pattern matching two sites mutates two things at once.
+//! Widen the anchor with a neighbouring line to re-run one. This is a general
+//! property of pasted reds in this repository, not a defect of these
+//! particular recipes.
 #![warn(missing_docs)]
 
 pub mod args;
@@ -50,7 +61,7 @@ pub fn run(args: &[String]) -> i32 {
                 }
                 let malformed = found.iter().filter(|f| f.malformed).count();
                 eprintln!(
-                    "{} numeric const(s) swept; {} undeclared, {} malformed",
+                    "{} quantity const(s) swept; {} undeclared, {} malformed",
                     scan.consts.len(),
                     found.len() - malformed,
                     malformed

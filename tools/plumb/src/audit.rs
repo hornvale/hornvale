@@ -71,7 +71,7 @@ pub fn findings(scan: &Scan) -> Vec<Finding> {
                 path: c.path.display().to_string(),
                 line: c.line,
                 name: c.name.clone(),
-                message: format!("undeclared numeric const ({})", c.ty),
+                message: format!("undeclared authored const ({})", c.ty),
                 malformed: false,
             }),
             Judgement::Malformed(why) => Some(Finding {

@@ -4,6 +4,17 @@
 //! doc comment, a single verdict keyword, and one parenthesised argument. The
 //! two tools are read by the same people in the same files, so a second syntax
 //! would be a second thing to remember for no gain.
+//!
+//! Three rules the parser enforces that are easy to miss when writing a tag:
+//!
+//! - **Exactly one verdict per constant** — a second one anywhere in the doc
+//!   comment is refused, on a new line *or* on the same line.
+//! - **The argument may not contain parentheses.** Write "the day length is
+//!   drawn per seed", not "the day length (drawn per seed)". This is what lets
+//!   the parser insist the first `(` and the final `)` are the only ones,
+//!   instead of silently absorbing trailing junk into a reason.
+//! - **A `pending` wave is digits only, with no leading zero**, so the label
+//!   the tool stores is always the label that was authored.
 
 /// Which axis an authored constant varies along.
 ///
@@ -146,20 +157,29 @@ pub fn doc_text_of(attrs: &[syn::Attribute]) -> String {
 
 /// Return the single `plumb:` payload (text after the colon), or `None`.
 ///
-/// Errors if more than one tag line is present: two verdicts on one constant
-/// is an ambiguity, and silently taking the first would let a stale one hide
+/// Errors if more than one verdict is present: two verdicts on one constant is
+/// an ambiguity, and silently taking the first would let a stale one hide
 /// behind a fresh one.
+///
+/// **A second verdict on the SAME line counts.** The first draft iterated
+/// `doc.lines()` and checked only for a second *line*, so
+/// `plumb: universal(a) plumb: per-world(b)` parsed as `Universal` with the
+/// reason `"a) plumb: per-world(b"` and produced no finding at all — the exact
+/// hiding this function's own doc claimed to prevent. The payload is now
+/// searched for a further `plumb:` as well.
 pub fn find_tag_line(doc: &str) -> Result<Option<&str>, TagError> {
+    let dup = || TagError::new(TagErrorKind::Duplicate, "more than one plumb: verdict");
     let mut found: Option<&str> = None;
     for line in doc.lines() {
         if let Some(rest) = line.trim().strip_prefix("plumb:") {
             if found.is_some() {
-                return Err(TagError::new(
-                    TagErrorKind::Duplicate,
-                    "more than one plumb: line",
-                ));
+                return Err(dup());
             }
-            found = Some(rest.trim());
+            let rest = rest.trim();
+            if rest.contains("plumb:") {
+                return Err(dup());
+            }
+            found = Some(rest);
         }
     }
     Ok(found)
@@ -210,12 +230,37 @@ pub fn parse_tag_full(doc: &str) -> Result<Tag, TagError> {
     }
     let head = payload[..open].trim();
     let arg = payload[open + 1..payload.len() - 1].trim();
+    // The first `(` and the final `)` must be the only ones. Without this,
+    // `universal(a)b)` parsed happily with the reason `"a)b"`, and any trailing
+    // junk after a closing paren was silently absorbed into the reason. The
+    // cost is that a reason may not itself contain parentheses; that is a
+    // stated rule of the grammar, not an accident.
+    if arg.contains('(') || arg.contains(')') {
+        return Err(TagError::new(
+            TagErrorKind::Malformed,
+            format!("a verdict argument may not contain parentheses: {arg:?}"),
+        ));
+    }
 
     if head == "pending" {
-        let n = arg
+        // Digits only, and no leading zero: `u32::from_str` accepts a leading
+        // `+`, so a bare `.parse()` admitted `wave-+1` and then NORMALISED it
+        // to `wave-1` — a stored label that no longer matched the authored
+        // text. The invariant asserted below is that it always does.
+        let digits = arg
             .strip_prefix("wave-")
-            .and_then(|n| n.parse::<u32>().ok())
+            .filter(|d| !d.is_empty() && d.bytes().all(|b| b.is_ascii_digit()))
+            .filter(|d| d.len() == 1 || !d.starts_with('0'))
             .ok_or_else(|| TagError::new(TagErrorKind::BadWave, format!("bad wave: {arg:?}")))?;
+        let n: u32 = digits
+            .parse()
+            .map_err(|_| TagError::new(TagErrorKind::BadWave, format!("bad wave: {arg:?}")))?;
+        // The label the tool stores is always the label that was authored; the
+        // filters above are what make that true, and
+        // `a_wave_is_digits_only_and_its_label_round_trips` is what holds it. A
+        // `debug_assert` here would be a second, weaker copy of that assertion
+        // — and it INTERCEPTED a mutation aimed at the filters, turning a kill
+        // by the test into a kill by the guard.
         return Ok(Tag {
             rung: Rung::Pending(format!("wave-{n}")),
             reason: None,
@@ -324,8 +369,10 @@ mod tests {
     /// its own well-formedness rule: an unparseable wave is a backlog entry
     /// nobody can schedule.
     ///
-    /// MUTATION THIS MUST FAIL AGAINST (confirmed 2026-09-02, The Plumb Task 3): accept any argument
-    /// for `pending` — append `.or(Some(0))` to the wave parse.
+    /// MUTATION THIS MUST FAIL AGAINST (confirmed 2026-09-02, The Plumb Task 3, fix round 1): silently accept
+    /// a malformed wave as wave-0 — replace the
+    /// `.ok_or_else(|| TagError::new(TagErrorKind::BadWave, …))?` on the
+    /// `digits` binding with `.unwrap_or("0")`.
     ///
     /// ```text
     /// called `Result::unwrap_err()` on an `Ok` value: Pending("wave-0")
@@ -411,6 +458,103 @@ mod tests {
             Some("universal(a kernel constant)")
         );
         assert_eq!(find_tag_line("no tag").unwrap(), None);
+    }
+
+    /// **Two verdicts on ONE line used to evade the duplicate check.**
+    /// `find_tag_line` iterated `doc.lines()`, so this parsed as `Universal`
+    /// with the reason `"a) plumb: per-world(b"` and produced no finding —
+    /// precisely the "stale one hiding behind a fresh one" that function's own
+    /// doc claims to prevent.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST (confirmed 2026-09-02, The Plumb Task 3,
+    /// fix round 1): delete the `if rest.contains("plumb:")` refusal from
+    /// `find_tag_line`.
+    ///
+    /// ```text
+    /// assertion `left == right` failed
+    ///   left: Malformed
+    ///  right: Duplicate
+    /// ```
+    #[test]
+    fn a_second_verdict_on_the_same_line_is_a_duplicate() {
+        assert_eq!(
+            parse_tag("plumb: universal(a) plumb: per-world(b)")
+                .unwrap_err()
+                .kind,
+            TagErrorKind::Duplicate
+        );
+        assert_eq!(
+            find_tag_line("plumb: universal(a) plumb: per-world(b)")
+                .unwrap_err()
+                .kind,
+            TagErrorKind::Duplicate
+        );
+    }
+
+    /// The first `(` and the final `)` must be the only ones. Without this,
+    /// `universal(a)b)` parsed with the reason `"a)b"`, silently absorbing
+    /// whatever followed the close.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST (confirmed 2026-09-02, The Plumb Task 3,
+    /// fix round 1): delete the `arg.contains('(') || arg.contains(')')`
+    /// refusal.
+    ///
+    /// ```text
+    /// called `Result::unwrap_err()` on an `Ok` value: Universal
+    /// ```
+    #[test]
+    fn an_argument_may_not_contain_parentheses() {
+        for bad in [
+            "plumb: universal(a)b)",
+            "plumb: universal(a(b))",
+            "plumb: per-world(the day length (drawn per seed))",
+        ] {
+            assert_eq!(
+                parse_tag(bad).unwrap_err().kind,
+                TagErrorKind::Malformed,
+                "{bad}"
+            );
+        }
+        // The rule the refusal costs, stated as a passing case.
+        assert!(parse_tag("plumb: per-world(the day length is drawn per seed)").is_ok());
+    }
+
+    /// `u32::from_str` accepts a leading `+`, so a bare `.parse()` admitted
+    /// `wave-+1` and then stored it as `wave-1` — a label that no longer
+    /// matched the authored text. Digits only, no leading zero, so the stored
+    /// label always round-trips.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST (confirmed 2026-09-02, The Plumb Task 3,
+    /// fix round 1): drop the `is_ascii_digit` filter and parse directly.
+    ///
+    /// ```text
+    /// called `Result::unwrap_err()` on an `Ok` value: Pending("wave-1")
+    /// ```
+    #[test]
+    fn a_wave_is_digits_only_and_its_label_round_trips() {
+        for bad in [
+            "plumb: pending(wave-+1)",
+            "plumb: pending(wave- 1)",
+            "plumb: pending(wave-01)",
+            "plumb: pending(wave-1x)",
+            "plumb: pending(wave-)",
+        ] {
+            assert_eq!(
+                parse_tag(bad).unwrap_err().kind,
+                TagErrorKind::BadWave,
+                "{bad}"
+            );
+        }
+        for (text, label) in [
+            ("wave-0", "wave-0"),
+            ("wave-1", "wave-1"),
+            ("wave-12", "wave-12"),
+        ] {
+            assert_eq!(
+                parse_tag(&format!("plumb: pending({text})")).unwrap(),
+                Rung::Pending(label.to_string())
+            );
+        }
     }
 
     #[test]
