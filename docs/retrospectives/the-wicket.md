@@ -332,3 +332,21 @@ the durable finding.
   `docs_consistency` and `generated_paths` read exactly those files. This was
   in memory and was not applied, and the cost fell on an implementer who had to
   prove a red was not its own.
+
+## Deferred minors, and where each landed
+
+Step 2B of `closing-a-campaign` is explicit that a minor sitting only in the
+ledger is not routed — *"it's in the ledger" is not a location*. Every deferred
+minor this campaign recorded, with its outcome and the commit that carries it:
+
+| Deferred at | Finding | Outcome |
+|---|---|---|
+| Task 2 review | `the_dispatch_scan_catches_an_anchor_kind_keyed_table` named a type that no longer exists; deferred because renaming edits `subfloor-roster.tsv`, which selects by exact name | **Taken** in the final fix wave — renamed `the_dispatch_scan_walks_a_multi_line_signature`, roster row `subfloor-roster.tsv:2994` updated, test re-run by name. `b10c7b8d7` |
+| Task 6 review | `affordance.rs`'s third correction "lost the em-dashes its neighbours use" | **Declined**, ledger #67. The named paragraph carries three em-dashes, so the finding targets a different passage or no longer applies. Inventing a target for a cosmetic finding *in this campaign* would itself have been an instance |
+| Task 7 review | Task 8 must land before pre-merge close, or the census would encode a creature dozing ~22 times over 39 days | **Discharged** — Task 8 landed (`f279c105a`) and removed the fragmentation; the census subsequently moved nothing |
+| Task 9, self-flagged | `fatigue_rise_registry` had no coverage ratchet, unlike its siblings | **Fixed** in Task 9's fix round — `every_biosphere_kind_carries_a_fatigue_rise_row`, mutation-proved by deleting `xorn`'s row. `85c8cf5ac` |
+| Task 9, self-flagged | `fatigue_rise_for` rebuilt a 38-node map per call | **Fixed** in the same round — borrowed-store `FatigueRiseTable`, needing no `Body` change. `85c8cf5ac` |
+| Task 10 → out of scope | The people half (*what a people sleeps on*) and individual half (*this one likes a sleeping bag*) of rest quality | **Parked as registry rows** — `PSY-rest-quality-is-a-grade-not-a-gate`; they need `MAP-one-kind-model`'s additions two and three |
+| Task 7 → registered | `REST_BOUT` is a fixed 0.25 std days, not converted to the local clock | **Registered follow-up**, and its *direction* corrected in the final fix wave: the repayment falls below the hysteresis band at **slow** rotation (`L > 1.25` std days), not fast, as the original note said |
+
+Nothing was parked at a fix-loop cap; no loop reached its five-round breaker.
