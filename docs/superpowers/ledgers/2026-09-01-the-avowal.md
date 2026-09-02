@@ -116,3 +116,81 @@ by running something. Backfilled at brainstorm time; no ideonomy pass applies.
    Measured in `cli/tests/fixtures/world-seed-42.json`: 21,635 facts, 118
    distinct predicates, **1,212 occupation entities** whose facts are ~60% of
    the whole ledger. Reification is already this ledger's dominant shape.
+
+---
+
+#4 [Q] — **Does an act become addressable?** (Carve-out: scale/fidelity —
+MAP-20's "drawn once, deliberately, as a spec question". Answered by Nathan.)
+
+*Question.* `witnessed`, `act-precedes`, `deed-of` and `act-occurred-on` all
+presuppose an act has identity, and no `EventId` exists in the tree. Reify
+every act, reify only remembered ones, or leave acts implicit?
+
+*Decision (Nathan).* **Reify every act — and do not commit them.** "We
+shouldn't need to commit the facts though, except in snapshotting/incremental
+persistence."
+
+*Why, and the error it corrected.* The controller had costed reification as if
+addressability implied storage, and recommended against it on that basis. It
+does not: 0366 makes passage state "a pure function of the seed and the
+committed ledger, and only the CHANGE is written", 0346 makes an affordance
+derived and never committed, and 0368 makes live-play facts persist only when
+asked for. An act therefore gets a derived identity — an `ActHandle`, the same
+shape as `RoleHandle` and `barrier_of` — at no ledger cost. The recommendation
+against C2 rested on a cost that was never real.
+
+*Alternatives discarded.* Leave acts implicit (a permanent ceiling, not a
+delay — two bundles blocked forever); reify only remembered acts (the
+promotion precedent, but an unnecessary restriction once storage is not the
+cost).
+
+*Ideonomy passes / overturns.* Covered by #1's pass. **This is the campaign's
+first genuine overturn** — the controller's own recommendation was reversed by
+Nathan on a decision-log fact the controller had not checked.
+
+*Capture actions.* Spec §4.5; decision 0580.
+
+---
+
+#5 [G2] — **The audit reads one of three homes, and that is the campaign's
+real subject.**
+
+*Question.* Chasing #4, the controller over-corrected — concluding that
+kinship and affect should also be derived rather than committed, which would
+have emptied the campaign. Where is the line?
+
+*Decision.* Three homes, three answers, established by reading the code rather
+than by reasoning from the principle:
+
+- **the ledger** (`EntityId`-keyed, saved) — kinship. 0366 and 0368 govern
+  *play-time* change; the genesis bake's job is to commit its derivations,
+  which is why `is-person`/`person-born` are facts at all.
+- **the component layer** (`KindId`-keyed, build-state, never saved) — affect.
+  `snap_judgment` is kind x kind and world-invariant; committing it would
+  store ~840 facts identical in every world ever generated.
+- **session state** (`EntityId`-keyed, persists only when asked) — acts.
+
+*Why this is the finding.* `registry_tokens()` reads the `ConceptRegistry`
+alone, so **a capability scores absent whenever it lives anywhere but the
+ledger** — which under 0001/0346/0366 is most of this architecture. Left
+unfixed the instrument rewards committing what those decisions say to derive.
+The fix is a capability manifest spanning all three homes, not a new place to
+put data.
+
+*Verified, not inferred.* `World` is `{ seed, registry, ledger,
+stream_versions }` — `WorldComponents` is not in it. Every `WorldComponents`
+field is `ComponentStore<KindId, _>`; `grep -rn 'ComponentStore<EntityId'`
+returns nothing. The registry already names one non-fact category
+(`phenomenon_kinds`, used by `bundle:celestial-portent`), so a registry token
+need not correspond to something stored — but no precedent exists for a
+predicate naming a purely derived relation.
+
+*Alternatives discarded.* A new registry storage category (invents a home when
+three exist); commit affect at genesis anyway (the duplication 0366 objects
+to); leave affect unnamed (leaves the blindness unaddressed).
+
+*Ideonomy passes / overturns.* Covered by #1's pass, whose notation organon
+named the missing `token |- producer` slot this entry fills. One
+self-correction, recorded above rather than quietly dropped.
+
+*Capture actions.* Spec §2.1, §4.1; decisions 0576, 0579.
