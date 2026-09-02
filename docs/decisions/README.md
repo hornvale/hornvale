@@ -267,3 +267,4 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0513](0513-a-quadrilateral-lattice-carries-no-third-axis-or-orientation-flag.md) | A quadrilateral lattice carries no third axis or orientation flag | Accepted |
 | [0514](0514-a-census-refresh-needs-no-authorization.md) | A census refresh needs no per-run authorization (retires the AWS-spend carve-out outright) | Accepted |
 | [0516](0516-a-reachable-lock-implies-a-reachable-key-is-left-empirical.md) | "A reachable lock implies a reachable key" is left empirical, deliberately — wait for the residents | Accepted |
+| [0576](0576-the-capability-provision-table.md) | The capability provision table spans all three homes; ledger wired first | Accepted |

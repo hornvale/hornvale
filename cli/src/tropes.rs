@@ -96,9 +96,17 @@ fn expand(corpus: &Corpus, req: &str) -> Vec<String> {
 }
 
 /// Resolve every situation against a registry. Keyed by situation `id`.
+///
+/// Consults the [`crate::provision::Provision`] table (decision 0576)
+/// instead of `registry_tokens` alone: a token is present only if some
+/// declared home actually serves it. This task wires the ledger home only,
+/// so today's behaviour is unchanged — `Provision::from_registry` declares
+/// exactly the tokens `registry_tokens` used to compute, and its ledger
+/// resolver checks the same three namespaces. The widening (component and
+/// session homes) arrives in Tasks 6 and 7 without `resolve` changing again.
 /// type-audit: bare-ok(identifier-text: return)
 pub fn resolve(corpus: &Corpus, registry: &ConceptRegistry) -> BTreeMap<String, Outcome> {
-    let held = registry_tokens(registry);
+    let table = crate::provision::Provision::from_registry(registry);
     let mut out = BTreeMap::new();
     for s in &corpus.situations {
         if let Some(reason) = s.excluded_by.first() {
@@ -110,7 +118,7 @@ pub fn resolve(corpus: &Corpus, registry: &ConceptRegistry) -> BTreeMap<String, 
         // artifact, where a repeat would misstate the count.
         let mut missing: Vec<String> = Vec::new();
         for t in s.requires.iter().flat_map(|r| expand(corpus, r)) {
-            if !held.contains(&t) && !missing.contains(&t) {
+            if !table.serves(&t, registry) && !missing.contains(&t) {
                 missing.push(t);
             }
         }

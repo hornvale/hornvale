@@ -4728,3 +4728,8 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-02T01:38:36Z | gate-commit | 35.806 | 59.079 | 14.206 | 2.05 | 0 | f417e8f85 | campaign/the-avowal | MacBookPro | 10 |
 | 2026-09-02T01:39:38Z | gate-commit | 37.659 | 56.763 | 14.354 | 1.89 | 0 | f417e8f85 | campaign/the-avowal | MacBookPro | 10 |
 | 2026-09-02T01:57:09Z | gate-commit | 44.362 | 207.067 | 21.213 | 5.15 | 0 | 43eb20d23 | campaign/the-avowal | MacBookPro | 10 |
+| 2026-09-02T01:57:49Z | gate-commit | 22.206 | 52.981 | 13.670 | 3.00 | 0 | 43eb20d23 | campaign/the-avowal | MacBookPro | 10 |
+| 2026-09-02T02:11:08Z | gate-commit | 23.178 | 48.263 | 12.068 | 2.60 | 0 | 461aeff83 | campaign/the-avowal | MacBookPro | 10 |
+| 2026-09-02T02:13:07Z | gate-commit | 23.918 | 54.166 | 13.725 | 2.84 | 0 | 461aeff83 | campaign/the-avowal | MacBookPro | 10 |
+| 2026-09-02T02:20:54Z | rebaseline | 110.051 | 276.060 | 15.266 | 2.65 | 0 | 461aeff83 | campaign/the-avowal | MacBookPro | 10 |
+| 2026-09-02T02:21:36Z | gate-commit | 24.508 | 53.898 | 13.790 | 2.76 | 0 | 461aeff83 | campaign/the-avowal | MacBookPro | 10 |

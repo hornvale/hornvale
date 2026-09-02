@@ -313,3 +313,70 @@ question.
 same finding for a reader who never opens the ledger. Task 5's implementer
 should read the "finding" paragraph above before choosing how `parent-of` is
 committed.
+
+---
+
+#7 [G5] — **Task 3: reuse `Correspondent<T, V>` or define a sibling for the
+provision table?**
+
+*Question.* Spec §4.1 says `kernel/src/manifest.rs`'s `Correspondent<T, V>` —
+`Present(payload) | Absent(reason)`, where an absence must name why — is
+"exactly the discipline this table needs," and asks the implementer to decide
+whether to reuse it or re-derive a sibling type, and to record the choice.
+
+*Decision.* **Reuse `Correspondent<T, V>` generically; define a project-local
+`V`.** `Provision`'s rows are `BTreeMap<String, Correspondent<Home, Unserved>>`
+— `hornvale_kernel::Correspondent` used as-is (it is already re-exported from
+the kernel root, so reuse costs nothing across the `kernel/` → `cli/`
+layering), with a new `cli::provision::Unserved` enum standing in for
+`Manifest`'s `Void`.
+
+*Why not `Void` itself.* Confirmed by reading `manifest.rs` in full: `Void`'s
+four variants (`Unnamed`, `Gap`, `Imperceptible`, `Uncognized { pending_wave
+}`) all name lexicon/perception/cognition reasons — none describes "no
+storage home serves this token," which is what a `Provision` absence means.
+Reusing `Void` would either force a token's reason into a vocabulary it does
+not fit, or add provision-shaped variants to a type `manifest.rs` owns for a
+different correspondence (concept ↔ lexicon/perception/cognition), coupling
+two unrelated tables' vocabularies. `Correspondent<T, V>` itself carries no
+such coupling — it is already generic over the reason type, which is the
+whole point of parameterizing it — so reusing the *shape* while defining a
+fresh *reason type* is not a compromise between the two options; it is what
+the generic was built to let a second caller do.
+
+*What `Unserved` had to guarantee, and how.* Spec's Step 2 test 4 requires
+"a reasonless absence is a construction error." `Unserved` has exactly one
+variant, `NotServed(&'static str)`, whose field is mandatory — `Correspondent
+::Absent(Unserved::NotServed())` does not compile (missing argument), the
+same guarantee `Void`'s mandatory-data variants give `Manifest`. A
+`compile_fail` doctest on `Unserved` (`cli/src/provision.rs`) pins this the
+same way `manifest.rs`'s PROC-13 exhibit pins `Void`.
+
+*What "unreachable by construction" for the component/session homes turned
+out to mean, concretely.* Not "no rows exist for them" (a fact about this
+task's data, easy to violate later by accident) but a type-level guarantee:
+`Home::Component`/`Home::Session` each carry an `Unwired` payload, and
+`Unwired` is an empty enum (`pub enum Unwired {}`) — no value of it can ever
+exist, so neither variant can be constructed by any code, this task's or a
+future one's, until Task 6/7 replace `Unwired` with a real payload type at
+the call site. `Provision::serves`'s match arms for those two variants are
+therefore genuinely unreachable (`match *unwired {}`), not merely undialled.
+
+*Alternatives discarded.* Extending `Void` with a fifth variant naming a
+storage-home reason (couples `manifest.rs`'s concept-correspondence
+vocabulary to `provision.rs`'s capability-home vocabulary — two different
+questions that happen to share a shape); a bespoke `Present`/`Absent` enum
+re-deriving `Correspondent`'s two variants from scratch (pure duplication of
+a type built to be reused this way, and the reviewer would have to re-verify
+by hand that it carries the same discipline).
+
+*Ideonomy passes / overturns.* None — a reuse-or-re-derive call answered by
+reading the one file the spec pointed at, not a design question.
+
+*Capture actions.* `cli/src/provision.rs` (`Home`, `Unwired`, `Unserved`,
+`Provision`); `cli/src/tropes.rs::resolve` now consults `Provision` instead
+of `registry_tokens` directly. `docs/audits/trope-*.md` confirmed unchanged
+after `make rebaseline` — this task rewires how `resolve` looks a token up
+without moving any verdict (see `cli/tests/suite/provision.rs`'s
+`ledger_home_still_matches_committed_reports_for_both_corpora`, which fails
+loudly on either committed report if one moved).
