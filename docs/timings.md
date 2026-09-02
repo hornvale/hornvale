@@ -5030,3 +5030,6 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-02T21:58:13Z | gate-commit | 66.249 | 71.427 | 15.025 | 1.30 | 0 | e89ce6298 | campaign/the-plumb | MacBookPro | 10 |
 | 2026-09-02T23:09:39Z | gate-commit | 49.377 | 80.648 | 34.606 | 2.33 | 0 | 57d9b91e0 | campaign/the-plumb | MacBookPro | 10 |
 | 2026-09-02T23:10:44Z | gate-commit | 34.056 | 64.859 | 14.433 | 2.33 | 0 | 57d9b91e0 | campaign/the-plumb | MacBookPro | 10 |
+| 2026-09-02T23:38:57Z | rebaseline | 109.923 | 295.280 | 15.701 | 2.83 | 0 | fd736fd24 | campaign/the-plumb | MacBookPro | 10 |
+| 2026-09-02T23:40:34Z | gate-commit | 78.751 | 156.164 | 40.830 | 2.50 | 0 | fd736fd24 | campaign/the-plumb | MacBookPro | 10 |
+| 2026-09-02T23:48:46Z | gate-commit | 35.492 | 65.108 | 14.473 | 2.24 | 0 | fd736fd24 | campaign/the-plumb | MacBookPro | 10 |
