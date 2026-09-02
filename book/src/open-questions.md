@@ -1101,11 +1101,16 @@ as plausible as a real correction would. A reviewer's independent recount
 with a word-boundary regex is what caught it, and the honest arithmetic
 reads worse than doing nothing: the broken grep's aggregate (244) landed
 *further* from the measured truth (239) than the plan's original, uncorrected
-figure (240) already was. A second, smaller instance from the same hand read
-`tail`'s exit status out of `make type-audit-report | tail; echo $?` and
-reported the pipeline green on that basis — the status a shell pipe returns
-by default is its last command's, never the one that actually does the work
-being checked.
+figure (240) already was. **Two further, smaller instances from the same
+hand make it three, not two.** One read `tail`'s exit status out of
+`make type-audit-report | tail; echo $?` and reported the pipeline green on
+that basis — the status a shell pipe returns by default is its last
+command's, never the one that actually does the work being checked. The
+other was a path-existence check run against bare basenames rather than
+repo-relative paths, testing each against the repository root and reporting
+five legitimate prose references as `MISSING` — a false negative in the
+alarming direction, caught before it reached a permanent record only because
+the same session re-checked with the correct paths.
 
 **Score: the bet does not move, and the campaign is worth citing for exactly
 opposite reasons on its two halves.** The positive control, run twice by two
