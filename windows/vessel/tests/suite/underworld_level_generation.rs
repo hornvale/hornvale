@@ -38,6 +38,7 @@ use hornvale_worldgen::chamber::{
     chamber_exists,
 };
 use hornvale_worldgen::character::Character;
+use hornvale_worldgen::circuit::plan_descent;
 use hornvale_worldgen::{
     BarrierPins, BarrierState, BuildDepth, SettlementPins, SkyChoice, WorldComponents, barrier_of,
     build_world_to_with_artifacts,
@@ -155,16 +156,15 @@ fn walkable_cells(level: &Level) -> BTreeSet<Cell> {
 
 /// Every cell a player could actually stand on: `walkable_cells` plus
 /// `StairsDown`/`StairsUp`. **Used for the connectivity BFS, not the
-/// non-degeneracy check above, and the difference matters**: `generate_descent`
-/// (unlike Task 9's fixture, which calls `generate_level_with_origin`
-/// directly) also runs `place_connections`, which overwrites one `Floor`
-/// cell per level with `StairsDown`/`StairsUp`. If that overwritten cell was
-/// an articulation point in the leaf-connector graph, excluding it from the
-/// connectivity search would report a false disconnection that has nothing
-/// to do with carving — first observed exactly this way when this test was
-/// written: a `Floor`-only BFS over a real descent found 176/277 cells
-/// unreachable, entirely explained by a stairs cell sitting on the level's
-/// one connecting corridor.
+/// non-degeneracy check above, and the difference matters**: a stairs cell
+/// the plan places (`place_stair`,
+/// `windows/vessel/src/underworld_level/mod.rs`) is always standable and,
+/// if the carve had left it in rock, joined to its own region — so
+/// excluding stairs cells from the connectivity search would report a false
+/// disconnection that has nothing to do with carving — first observed
+/// exactly this way when this test was written: a `Floor`-only BFS over a
+/// real descent found 176/277 cells unreachable, entirely explained by a
+/// stairs cell sitting on the level's one connecting corridor.
 fn standable_cells(level: &Level) -> BTreeSet<Cell> {
     level
         .cells
@@ -262,8 +262,32 @@ fn a_real_descent_is_deterministic_connected_and_renders() {
     // stand in until that adapter exists.
     let depths_m = [20.0, 65.0, 140.0];
 
-    let a = generate_descent(&rungs, CaveKind::Karst, &origins, &depths_m, 90.0, Seed(42));
-    let b = generate_descent(&rungs, CaveKind::Karst, &origins, &depths_m, 90.0, Seed(42));
+    let vertex = addrs[0].vertex;
+    let plan = plan_descent(
+        Seed(42),
+        vertex,
+        &rungs,
+        CaveKind::Karst,
+        Character::WildCave,
+    );
+    let a = generate_descent(
+        &rungs,
+        CaveKind::Karst,
+        &origins,
+        &depths_m,
+        90.0,
+        &plan,
+        Seed(42),
+    );
+    let b = generate_descent(
+        &rungs,
+        CaveKind::Karst,
+        &origins,
+        &depths_m,
+        90.0,
+        &plan,
+        Seed(42),
+    );
     assert_eq!(
         a, b,
         "a real descent must be byte-identical for the same seed"
@@ -300,12 +324,28 @@ fn a_second_seed_produces_a_different_shape() {
     // yet, so this stays a representative literal.
     let depths_m = [20.0];
 
+    let vertex = addrs[0].vertex;
+    let plan_a = plan_descent(
+        Seed(1),
+        vertex,
+        &rungs,
+        CaveKind::LavaTube,
+        Character::WildCave,
+    );
+    let plan_b = plan_descent(
+        Seed(2),
+        vertex,
+        &rungs,
+        CaveKind::LavaTube,
+        Character::WildCave,
+    );
     let a = generate_descent(
         &rungs,
         CaveKind::LavaTube,
         &origins,
         &depths_m,
         90.0,
+        &plan_a,
         Seed(1),
     );
     let b = generate_descent(
@@ -314,6 +354,7 @@ fn a_second_seed_produces_a_different_shape() {
         &origins,
         &depths_m,
         90.0,
+        &plan_b,
         Seed(2),
     );
     assert_ne!(
@@ -386,10 +427,30 @@ fn dry_standable_cells(level: &Level) -> BTreeSet<Cell> {
         .collect()
 }
 
-/// The cell holding `kind`, if any — `place_connections` places at most one
-/// `StairsDown` and at most one `StairsUp` per level.
+/// The FIRST cell holding `kind`; a rung may hold several since The
+/// Crosscut.
 fn find_cell_of_kind(level: &Level, kind: LevelCellKind) -> Option<Cell> {
     level.cells.iter().find(|(_, k)| *k == kind).map(|(c, _)| c)
+}
+
+/// Rung 0's entry cell (The Crosscut, Task 3): the first `Floor`/`Flooded`
+/// cell of the plan's own entrance region — the region a descending player
+/// actually stands in (`Underground::enter`'s own cell pick), used here
+/// because rung 0 carries no `StairsUp` to search for instead.
+fn entrance_cell(level: &Level, plan: &hornvale_worldgen::circuit::DescentPlan) -> Option<Cell> {
+    let r = plan.region_of(plan.entrance);
+    for x in r.x..(r.x + r.w) {
+        for y in r.y..(r.y + r.h) {
+            let cell = Cell(x, y);
+            if matches!(
+                level.cells.get(cell),
+                Some(LevelCellKind::Floor) | Some(LevelCellKind::Flooded)
+            ) {
+                return Some(cell);
+            }
+        }
+    }
+    None
 }
 
 /// Flood-fills `passable` from `start` (4-directional adjacency), returning
@@ -440,9 +501,9 @@ fn flood_fill(start: Cell, passable: &BTreeSet<Cell>) -> BTreeSet<Cell> {
 /// that is what this probe measures too.
 ///
 /// **Entry cells** (F3 in the plan's pre-flight scan): rung 0 has no
-/// `StairsUp` (`place_connections` emits one only when `has_up` is true), so
-/// its entry is its own `StairsDown` cell — the same coordinate `delve` will
-/// place the possession on, since the entrance IS where a descending player
+/// `StairsUp`, so its entry is the first walkable cell of the plan's own
+/// entrance region (`entrance_cell`) — the same region `delve` will place
+/// the possession in, since the entrance IS where a descending player
 /// stands. Every deeper rung's entry is its `StairsUp` cell.
 #[test]
 fn measure_flooded_cell_reachability_across_the_descent() {
@@ -511,6 +572,13 @@ fn measure_flooded_cell_reachability_across_the_descent() {
             .collect();
         let origins = vec![ChamberOrigin::Found; rung_count];
 
+        let plan = plan_descent(
+            seed,
+            vertex,
+            &habitation_rungs,
+            cave.kind,
+            Character::WildCave,
+        );
         let levels = generate_descent_for_character(
             &habitation_rungs,
             cave.kind,
@@ -518,6 +586,7 @@ fn measure_flooded_cell_reachability_across_the_descent() {
             &depths_m,
             water_table_m,
             Character::WildCave,
+            &plan,
             seed,
         );
 
@@ -530,7 +599,7 @@ fn measure_flooded_cell_reachability_across_the_descent() {
             let flooded_cells = standable.len() - dry.len();
 
             let entry = if i == 0 {
-                find_cell_of_kind(level, LevelCellKind::StairsDown)
+                entrance_cell(level, &plan)
             } else {
                 find_cell_of_kind(level, LevelCellKind::StairsUp)
             };

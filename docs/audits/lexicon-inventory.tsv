@@ -118,8 +118,8 @@ windows/vessel/src/streams.rs	6
 windows/vessel/src/underground.rs	150
 windows/vessel/src/underworld_level/carve.rs	143
 windows/vessel/src/underworld_level/dense.rs	58
-windows/vessel/src/underworld_level/mod.rs	216
-windows/vessel/src/underworld_level/region.rs	2
+windows/vessel/src/underworld_level/mod.rs	253
+windows/vessel/src/underworld_level/region.rs	1
 windows/vessel/tests/common/mod.rs	2
 windows/vessel/tests/suite/corner_rule.rs	79
 windows/vessel/tests/suite/furnishing_marks.rs	20
@@ -134,7 +134,7 @@ windows/vessel/tests/suite/player_acts_commit.rs	1
 windows/vessel/tests/suite/session.rs	2
 windows/vessel/tests/suite/session_snapshot.rs	8
 windows/vessel/tests/suite/the_blocking.rs	13
-windows/vessel/tests/suite/underworld_level_generation.rs	101
+windows/vessel/tests/suite/underworld_level_generation.rs	113
 windows/vessel/tests/suite/world_context.rs	2
 windows/worldgen/src/chamber.rs	2
 windows/worldgen/src/circuit.rs	122

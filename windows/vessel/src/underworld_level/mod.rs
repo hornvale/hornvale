@@ -90,28 +90,12 @@ pub struct Level {
     pub leaf_styles: Vec<LeafStyle>,
 }
 
-/// Level extent before content is carved into it. Task 1 is unscaled by
-/// rung; later tasks may widen this — see `generate_level_extent`.
-const BASE_LEVEL_W: i32 = 40;
-/// See `BASE_LEVEL_W`.
-const BASE_LEVEL_H: i32 = 24;
-
-/// The extent a level gets, scaled by how deep its rung sits (deeper rungs
-/// get more room) — spec §4.3's "`Band` modulates size", read out of
-/// the rung's position in `hornvale_terrain::rungs()` rather than a
-/// worldgen-internal rank (that function is not confirmed `pub` across the
-/// crate boundary; this one is).
+/// The extent a level gets, scaled by rung (deeper rungs get more room).
+/// The formula lives in `hornvale_worldgen::circuit::level_extent_wh` since
+/// The Crosscut so the plan's grid and this rectangle cannot disagree.
 pub fn generate_level_extent(rung: hornvale_kernel::Band) -> Rect {
-    let rank = hornvale_terrain::rungs()
-        .iter()
-        .position(|r| *r == rung)
-        .unwrap_or(0) as i32;
-    Rect {
-        x: 0,
-        y: 0,
-        w: BASE_LEVEL_W + 4 * rank,
-        h: BASE_LEVEL_H + 2 * rank,
-    }
+    let (w, h) = hornvale_worldgen::circuit::level_extent_wh(rung);
+    Rect { x: 0, y: 0, w, h }
 }
 
 /// Which content generator and worked/natural reading a leaf gets (spec
@@ -181,15 +165,17 @@ fn choose_leaf_style(
 
 /// Generate a level, choosing each leaf's style from `cave_kind`/`origin`
 /// with `inherited_worked_bias` folded in (Task 6's continuation draw).
+/// `plan`/`level` name which rung of the plan this level realizes — its
+/// nodes are this level's regions, its edges are this level's passages and
+/// stairways (The Crosscut, Task 3).
 ///
 /// **Derives one stream per algorithm family, once, before the leaf loop**
 /// — not per leaf. Two leaves can share an algorithm (composite levels are
 /// the point), so `carve`'s own doc explains why a shared, advancing
 /// stream is required rather than a fresh derive per call: the same
 /// `derive once, thread &mut Stream through every draw` shape
-/// `lattice::allocate`/`lattice::grow` already use, and this module's own
-/// `region::build_region` already follows correctly.
-/// type-audit: bare-ok(ratio: inherited_worked_bias)
+/// `lattice::allocate`/`lattice::grow` already use.
+/// type-audit: bare-ok(ratio: inherited_worked_bias), bare-ok(index: level)
 #[allow(clippy::too_many_arguments)]
 pub fn generate_level_with_origin(
     extent: Rect,
@@ -197,10 +183,17 @@ pub fn generate_level_with_origin(
     origin: hornvale_worldgen::chamber::ChamberOrigin,
     character: hornvale_worldgen::character::Character,
     inherited_worked_bias: f64,
+    plan: &hornvale_worldgen::circuit::DescentPlan,
+    level: usize,
     seed: Seed,
 ) -> Level {
-    let (tree, mut dof) = region::build_region(extent, seed);
+    debug_assert_eq!(
+        extent,
+        generate_level_extent(plan.rungs[level]),
+        "extent must be the rung's own"
+    );
     let mut cells = CellGrid::new(extent, LevelCellKind::Wall);
+    let mut dof = 0u32;
     let mut style_stream = seed.derive(crate::streams::UNDERWORLD_LEVEL_STYLE).stream();
     let mut cellular_stream = seed
         .derive(crate::streams::UNDERWORLD_LEVEL_CELLULAR)
@@ -210,7 +203,9 @@ pub fn generate_level_with_origin(
         .stream();
     let mut rooms_stream = seed.derive(crate::streams::UNDERWORLD_LEVEL_ROOMS).stream();
     let mut leaf_styles = Vec::new();
-    for rect in region::leaves(&tree) {
+    let node_ids = plan.nodes_on(level);
+    for &id in &node_ids {
+        let rect = rect_of(plan, id);
         let style = choose_leaf_style(
             cave_kind,
             origin,
@@ -227,9 +222,55 @@ pub fn generate_level_with_origin(
             }
         };
         dof += carve::carve(style.algorithm, rect, stream, &mut cells);
+        ensure_standable(rect, &mut cells);
         leaf_styles.push(style);
     }
-    connect_split_boundaries(&tree, &mut cells);
+    // Passages: one L-corridor between the nearest walkable pair of each
+    // connected region pair. Two grid-adjacent regions with NO plan edge
+    // keep their wall — the non-adjacency the partition tree could never say.
+    for (a, b) in plan.passages_on(level) {
+        let ca = walkable_cells_in_rect(rect_of(plan, a), &cells);
+        let cb = walkable_cells_in_rect(rect_of(plan, b), &cells);
+        if let Some((pa, pb)) = nearest_pair(&ca, &cb) {
+            connect_cells(pa, pb, &mut cells);
+        }
+    }
+    // Stairs: the plan's shared coordinate, made standable and joined to its
+    // region if the carve left it in rock.
+    for (upper, _lower, x, y) in plan.stairs_from(level) {
+        place_stair(
+            Cell(x, y),
+            LevelCellKind::StairsDown,
+            rect_of(plan, upper),
+            extent,
+            &mut cells,
+        );
+    }
+    for (_upper, lower, x, y) in plan.stairs_into(level) {
+        place_stair(
+            Cell(x, y),
+            LevelCellKind::StairsUp,
+            rect_of(plan, lower),
+            extent,
+            &mut cells,
+        );
+    }
+    // The deepest level's terminus keeps today's dangling stairs down, so
+    // `STAIRS_LEAD_NOWHERE_REFUSAL` keeps its one firing case (spec §3.1).
+    // `reconnect_region` repairs the same articulation-point hazard
+    // `place_stair` guards above, for the one stair this loop does not
+    // place through it.
+    if level + 1 == plan.rungs.len() {
+        let rect = rect_of(plan, plan.terminus);
+        if let Some(c) = first_walkable_cell_in(rect, &cells) {
+            cells.set(c, LevelCellKind::StairsDown);
+            // Whole-level scope, for the same reason `place_stair` uses
+            // `extent` rather than `rect`: the terminus's own region may
+            // have had exactly one physical link to the rest of the
+            // level, through the very cell just overwritten.
+            reconnect_region(extent, &mut cells);
+        }
+    }
     Level {
         extent,
         cells,
@@ -238,29 +279,196 @@ pub fn generate_level_with_origin(
     }
 }
 
-/// Every `Floor`/`Flooded` cell within `region`'s own leaf rects (not the
-/// whole level) — the candidate endpoints a connector can anchor to.
-fn walkable_cells_in(region: &region::Region, cells: &CellGrid) -> Vec<Cell> {
+/// The plan's region rectangle as the lattice's `Rect`.
+fn rect_of(
+    plan: &hornvale_worldgen::circuit::DescentPlan,
+    node: hornvale_worldgen::circuit::NodeId,
+) -> Rect {
+    let r = plan.region_of(node);
+    Rect {
+        x: r.x,
+        y: r.y,
+        w: r.w,
+        h: r.h,
+    }
+}
+
+/// Every `Floor`/`Flooded` cell inside `rect`, ascending `(x, y)`.
+fn walkable_cells_in_rect(rect: Rect, cells: &CellGrid) -> Vec<Cell> {
     let mut out = Vec::new();
-    for rect in region::leaves(region) {
-        for x in rect.x..(rect.x + rect.w) {
-            for y in rect.y..(rect.y + rect.h) {
-                let cell = Cell(x, y);
-                if matches!(
-                    cells.get(cell),
-                    Some(LevelCellKind::Floor) | Some(LevelCellKind::Flooded)
-                ) {
-                    out.push(cell);
-                }
+    for x in rect.x..(rect.x + rect.w) {
+        for y in rect.y..(rect.y + rect.h) {
+            let cell = Cell(x, y);
+            if matches!(
+                cells.get(cell),
+                Some(LevelCellKind::Floor) | Some(LevelCellKind::Flooded)
+            ) {
+                out.push(cell);
             }
         }
     }
     out
 }
 
+/// The first `Floor`/`Flooded` cell in `rect`, column-major.
+fn first_walkable_cell_in(rect: Rect, cells: &CellGrid) -> Option<Cell> {
+    walkable_cells_in_rect(rect, cells).into_iter().next()
+}
+
+/// A region always has somewhere to stand: if a carve left `rect` all rock,
+/// open its centre cell. A guarantee, so no downstream step (passages,
+/// stairs, the entrance) can find an empty region.
+fn ensure_standable(rect: Rect, cells: &mut CellGrid) {
+    if first_walkable_cell_in(rect, cells).is_none() {
+        cells.set(
+            Cell(rect.x + rect.w / 2, rect.y + rect.h / 2),
+            LevelCellKind::Floor,
+        );
+    }
+}
+
+/// Cut a stairs cell at `at` and, if the carve had left that cell in rock,
+/// join it to the nearest walkable cell of its own region so a landing is
+/// never sealed off. A stairway has a foot (spec §3.3).
+///
+/// **Converting an existing `Floor`/`Flooded` cell can strand the rest of
+/// the level** if that cell was an articulation point — either within its
+/// own region (a Karst seed's carve left a one-cell-wide corridor, and
+/// overwriting its middle cell marooned four cells beyond it) or, more
+/// severely, the region's ONLY passage link to every other region on the
+/// level (a Karst seed's terminus sat on exactly such a cell, severing an
+/// entire fourteen-cell region). `reconnect_region` repairs both, scoped to
+/// the whole level (`extent`) rather than just `region`, after every write —
+/// cheap (one BFS over the level) and a no-op whenever the cell was not a
+/// bridge.
+fn place_stair(at: Cell, kind: LevelCellKind, region: Rect, extent: Rect, cells: &mut CellGrid) {
+    let was_walkable = matches!(
+        cells.get(at),
+        Some(LevelCellKind::Floor) | Some(LevelCellKind::Flooded)
+    );
+    if !was_walkable {
+        let walkable = walkable_cells_in_rect(region, cells);
+        if let Some((_, target)) = nearest_pair(&[at], &walkable) {
+            connect_cells(at, target, cells);
+        }
+    }
+    cells.set(at, kind);
+    // Scoped to the WHOLE level, not just `region`: `at` may have been the
+    // region's only physical link to the rest of the level (a passage
+    // corridor routes through exactly one of the region's own cells), so a
+    // repair confined to `region` alone would see nothing to fix while the
+    // region sits severed from everything else.
+    reconnect_region(extent, cells);
+}
+
+/// If overwriting one cell split `region`'s own walkable cells into more
+/// than one component, stitch every extra component back to the first by
+/// routing AROUND the blocking cell — `shortest_route_within_rect` walks
+/// the whole region, including rock, and never steps onto an existing
+/// stair, so it finds a detour even where a straight line between the two
+/// nearest cells would have to cross back over the very cell that caused
+/// the split. A no-op whenever `region` was already one component (the
+/// common case).
+fn reconnect_region(region: Rect, cells: &mut CellGrid) {
+    loop {
+        let remaining = walkable_cells_in_rect(region, cells);
+        if remaining.len() < 2 {
+            return;
+        }
+        let all: std::collections::BTreeSet<Cell> = remaining.iter().copied().collect();
+        let mut seen = std::collections::BTreeSet::new();
+        let mut queue = std::collections::VecDeque::new();
+        seen.insert(remaining[0]);
+        queue.push_back(remaining[0]);
+        while let Some(Cell(x, y)) = queue.pop_front() {
+            for (dx, dy) in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
+                let next = Cell(x + dx, y + dy);
+                if all.contains(&next) && seen.insert(next) {
+                    queue.push_back(next);
+                }
+            }
+        }
+        if seen.len() == remaining.len() {
+            return;
+        }
+        let targets: std::collections::BTreeSet<Cell> = remaining
+            .iter()
+            .copied()
+            .filter(|c| !seen.contains(c))
+            .collect();
+        // Route AROUND the stair rather than across it: `connect_cells`'s
+        // straight L can only fail to bridge because the stair sits ON that
+        // exact L, which is precisely the case that needs a detour, not a
+        // second attempt at the same line — a BFS over the whole region,
+        // through rock if need be, is the general fix `nearest_pair` alone
+        // could not give.
+        match shortest_route_within_rect(region, cells, &seen, &targets) {
+            Some(path) => {
+                for c in path {
+                    if !matches!(
+                        cells.get(c),
+                        Some(LevelCellKind::StairsDown) | Some(LevelCellKind::StairsUp)
+                    ) {
+                        cells.set(c, LevelCellKind::Floor);
+                    }
+                }
+            }
+            // No route exists within the rect at all (the stair severed a
+            // corridor exactly one cell wide, with no room to go around) —
+            // stop rather than loop forever retrying an impossible repair.
+            None => return,
+        }
+    }
+}
+
+/// BFS over every cell of `region` (never leaving it, never stepping onto
+/// an existing stair) from any of `sources`, returning the shortest path
+/// (inclusive of both ends) to the nearest cell in `targets`, or `None` if
+/// no such route exists within the rect.
+fn shortest_route_within_rect(
+    region: Rect,
+    cells: &CellGrid,
+    sources: &std::collections::BTreeSet<Cell>,
+    targets: &std::collections::BTreeSet<Cell>,
+) -> Option<Vec<Cell>> {
+    let mut parent: std::collections::BTreeMap<Cell, Cell> = std::collections::BTreeMap::new();
+    let mut seen: std::collections::BTreeSet<Cell> = sources.clone();
+    let mut queue: std::collections::VecDeque<Cell> = sources.iter().copied().collect();
+    while let Some(cur) = queue.pop_front() {
+        if targets.contains(&cur) {
+            let mut path = vec![cur];
+            let mut at = cur;
+            while let Some(&p) = parent.get(&at) {
+                path.push(p);
+                at = p;
+            }
+            path.reverse();
+            return Some(path);
+        }
+        let Cell(x, y) = cur;
+        for (dx, dy) in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
+            let next = Cell(x + dx, y + dy);
+            if !region.contains(next) {
+                continue;
+            }
+            if matches!(
+                cells.get(next),
+                Some(LevelCellKind::StairsDown) | Some(LevelCellKind::StairsUp)
+            ) {
+                continue;
+            }
+            if seen.insert(next) {
+                parent.insert(next, cur);
+                queue.push_back(next);
+            }
+        }
+    }
+    None
+}
+
 /// The closest pair of cells (Manhattan distance) between two sets —
 /// O(len(a) * len(b)), fine for a one-time generation step at level-sized
-/// cell counts (a handful of splits, at most `MAX_COMPOSITE_DEPTH` deep).
+/// cell counts.
 fn nearest_pair(a: &[Cell], b: &[Cell]) -> Option<(Cell, Cell)> {
     let mut best: Option<(Cell, Cell, i32)> = None;
     for &pa in a {
@@ -287,40 +495,31 @@ fn connect_cells(a: Cell, b: Cell, cells: &mut CellGrid) {
     }
 }
 
-/// Post-order walk of the partition tree: connect each `Split`'s two
-/// children to each other, after first recursing into both — so by the
-/// time a split connects its own two sides, each side is already fully
-/// connected internally (by induction), and joining any one point from
-/// each side joins the whole subtrees. This is the fix for the gap named
-/// in this task's own header: `region::cut` leaves a permanent wall gap
-/// between siblings, and nothing else in this module ever carves through
-/// it.
-fn connect_split_boundaries(region: &region::Region, cells: &mut CellGrid) {
-    if let region::Region::Split(a, b) = region {
-        connect_split_boundaries(a, cells);
-        connect_split_boundaries(b, cells);
-        let a_cells = walkable_cells_in(a, cells);
-        let b_cells = walkable_cells_in(b, cells);
-        if let Some((pa, pb)) = nearest_pair(&a_cells, &b_cells) {
-            connect_cells(pa, pb, cells);
-        }
-    }
-}
-
-/// Generate a level over `extent`: build the partition tree, then carve each
-/// leaf's interior with one content generator over a rock background.
+/// Generate a level over `extent` for one rung of a single-rung
+/// [`hornvale_worldgen::circuit::DescentPlan`], test-and-example helper.
 ///
 /// **Delegates to `generate_level_with_origin`** with a fixed default
 /// kind/origin — this simple entry point's own callers are the only thing
-/// that default matters for; Task 8's integration tests exercise real
+/// that default matters for; the integration tests exercise real
 /// `Chamber` values through `generate_level_with_origin` directly.
+/// `extent` MUST equal `generate_level_extent(Band::Undercroft)`
+/// (debug-asserted by the callee).
 pub fn generate_level(extent: Rect, seed: Seed) -> Level {
+    let plan = hornvale_worldgen::circuit::plan_descent(
+        seed,
+        hornvale_kernel::Vertex(0),
+        &[hornvale_kernel::Band::Undercroft],
+        hornvale_terrain::CaveKind::Karst,
+        hornvale_worldgen::character::Character::WildCave,
+    );
     generate_level_with_origin(
         extent,
         hornvale_terrain::CaveKind::Karst,
         hornvale_worldgen::chamber::ChamberOrigin::Found,
         hornvale_worldgen::character::Character::WildCave,
         NEUTRAL_WORKED_BIAS,
+        &plan,
+        0,
         seed,
     )
 }
@@ -343,12 +542,13 @@ pub fn generate_level(extent: Rect, seed: Seed) -> Level {
 /// the chamber-wide origin) decide whether IT floods.
 ///
 /// **The alignment this depends on**: `generate_level_with_origin` builds
-/// `leaf_styles` in one pass over `region::leaves(&tree)`, pushing one
-/// style per leaf in the same order — so `level.leaf_styles[i]` is always
-/// `leaves()[i]`'s own style, and re-deriving the tree here (rather than
-/// threading it through, `FRAME`-tier re-derivation being exactly what
-/// decision 0069 calls for) is safe to zip against it.
-/// type-audit: bare-ok(diagnostic-value: depth_m), bare-ok(diagnostic-value: water_table_m), bare-ok(ratio: inherited_worked_bias)
+/// `leaf_styles` in one pass over `plan.nodes_on(level)`, pushing one style
+/// per node in the same order — so `level.leaf_styles[i]` is always
+/// `plan.nodes_on(level)[i]`'s own style, and re-deriving that node list
+/// here from the same `plan`/`level` (rather than threading it through,
+/// `FRAME`-tier re-derivation being exactly what decision 0069 calls for)
+/// is safe to zip against it.
+/// type-audit: bare-ok(diagnostic-value: depth_m), bare-ok(diagnostic-value: water_table_m), bare-ok(ratio: inherited_worked_bias), bare-ok(index: level)
 #[allow(clippy::too_many_arguments)]
 pub fn generate_level_with_water(
     extent: Rect,
@@ -358,25 +558,32 @@ pub fn generate_level_with_water(
     depth_m: f64,
     water_table_m: f64,
     inherited_worked_bias: f64,
+    plan: &hornvale_worldgen::circuit::DescentPlan,
+    level: usize,
     seed: Seed,
 ) -> Level {
-    let mut level = generate_level_with_origin(
+    let mut lvl = generate_level_with_origin(
         extent,
         cave_kind,
         origin,
         character,
         inherited_worked_bias,
+        plan,
+        level,
         seed,
     );
     if hornvale_terrain::is_phreatic(depth_m, water_table_m) {
-        let (tree, _dof) = region::build_region(extent, seed);
-        let leaves = region::leaves(&tree);
+        let rects: Vec<Rect> = plan
+            .nodes_on(level)
+            .iter()
+            .map(|&id| rect_of(plan, id))
+            .collect();
         debug_assert_eq!(
-            leaves.len(),
-            level.leaf_styles.len(),
-            "leaves() and leaf_styles must stay index-aligned"
+            rects.len(),
+            lvl.leaf_styles.len(),
+            "nodes_on(level) and leaf_styles must stay index-aligned"
         );
-        for (rect, style) in leaves.iter().zip(level.leaf_styles.iter()) {
+        for (rect, style) in rects.iter().zip(lvl.leaf_styles.iter()) {
             if style.worked {
                 // Drained by whoever cut it — the same reading `is_sump`
                 // already gives `ChamberOrigin::Made`, now applied per leaf
@@ -386,14 +593,14 @@ pub fn generate_level_with_water(
             for x in rect.x..(rect.x + rect.w) {
                 for y in rect.y..(rect.y + rect.h) {
                     let cell = Cell(x, y);
-                    if level.cells.get(cell) == Some(LevelCellKind::Floor) {
-                        level.cells.set(cell, LevelCellKind::Flooded);
+                    if lvl.cells.get(cell) == Some(LevelCellKind::Floor) {
+                        lvl.cells.set(cell, LevelCellKind::Flooded);
                     }
                 }
             }
         }
     }
-    level
+    lvl
 }
 
 /// The realized worked-fraction of a level's leaves — Task 6's own
@@ -406,62 +613,6 @@ fn realized_worked_fraction(level: &Level) -> f64 {
     worked as f64 / level.leaf_styles.len() as f64
 }
 
-/// Place a stairs-down cell in the first leaf and, if `has_up`, a
-/// stairs-up cell in the last leaf — deterministic picks off the same
-/// partition tree `generate_level_with_water` already built, matching
-/// `region_first_leaf_rect`'s re-derivation pattern.
-///
-/// **Inlines `build_region`/`leaves()` rather than calling
-/// `region_first_leaf_rect`**, deliberately: that helper only returns the
-/// *first* leaf, and this function also needs the *last* one for
-/// `StairsUp`, so reusing it would mean a second `build_region` call over
-/// the same extent/seed for no benefit — this way the tree is built once.
-///
-/// **Order matters for the single-leaf case.** When the partition tree has
-/// exactly one leaf, `first == last`, and both stairs are searched for in
-/// the same rect. The down-stairs write below happens first and mutates
-/// `level.cells` in place, so the up-stairs search below it reads that
-/// mutation live — `first_walkable_cell` no longer matches the just-placed
-/// `StairsDown` cell against `Floor`/`Flooded`, so it lands on a *different*
-/// walkable cell (or, correctly, none, if the leaf had only one). Do not
-/// refactor `first_walkable_cell` to read a cached/snapshotted cell state:
-/// that would let the up-stairs silently overwrite the down-stairs (or vice
-/// versa) on any single-leaf rung whose leaf has exactly one walkable cell.
-/// Pinned by `stairs_down_and_stairs_up_never_share_a_cell` below.
-fn place_connections(level: &mut Level, extent: Rect, has_up: bool, seed: Seed) {
-    let (tree, _dof) = region::build_region(extent, seed);
-    let leaf_rects = region::leaves(&tree);
-    if let Some(&first) = leaf_rects.first()
-        && let Some(cell) = first_walkable_cell(level, first)
-    {
-        level.cells.set(cell, LevelCellKind::StairsDown);
-    }
-    if has_up
-        && let Some(&last) = leaf_rects.last()
-        && let Some(cell) = first_walkable_cell(level, last)
-    {
-        level.cells.set(cell, LevelCellKind::StairsUp);
-    }
-}
-
-/// The first `Floor`/`Flooded` cell found in `rect`, in column-major order
-/// within the rectangle (x outer, y inner) — `place_connections`' own
-/// search for somewhere standable to put a stairs cell.
-fn first_walkable_cell(level: &Level, rect: Rect) -> Option<Cell> {
-    for x in rect.x..(rect.x + rect.w) {
-        for y in rect.y..(rect.y + rect.h) {
-            let cell = Cell(x, y);
-            if matches!(
-                level.cells.get(cell),
-                Some(LevelCellKind::Floor) | Some(LevelCellKind::Flooded)
-            ) {
-                return Some(cell);
-            }
-        }
-    }
-    None
-}
-
 /// Generate every rung of one descent under one entrance (spec §4.5).
 /// `CaveKind` is fixed for the whole descent (a cave system has one kind —
 /// see the spec's §4.5 correction); `origins`/`depths_m` vary per rung,
@@ -472,17 +623,19 @@ fn first_walkable_cell(level: &Level, rect: Rect) -> Option<Cell> {
 ///
 /// **Draws a fresh per-rung `Seed` from `UNDERWORLD_LEVEL_DESCENT`, once
 /// per rung, rather than passing the same top-level `seed` to every rung's
-/// `generate_level_with_water` call.** Every stream a level's own
-/// generation derives (`UNDERWORLD_LEVEL_PARTITION`, `_STYLE`, `_CELLULAR`,
-/// `_TUNNELER`, `_ROOMS`) is derived fresh from whatever `Seed` it's given
-/// — so two rungs handed the identical `seed` would restart their own
-/// generation from identical stream state and produce correlated,
-/// near-duplicate shapes, the same defect class `carve`'s per-leaf fix
-/// (this file, Task 3/4) exists to prevent, one level up. A drawn `u64`
-/// re-wrapped as `Seed(..)` is fully reproducible (still a pure function
-/// of the original `seed`) without needing `generate_level_with_origin`'s
-/// whole call chain restructured to thread a persistent stream across
-/// rungs the way it already does across leaves within one level.
+/// `generate_level_with_water` call.** Every stream a level's own carving
+/// derives (`_STYLE`, `_CELLULAR`, `_TUNNELER`, `_ROOMS`) is derived fresh
+/// from whatever `Seed` it's given — so two rungs handed the identical
+/// `seed` would restart their own carving from identical stream state and
+/// produce correlated, near-duplicate shapes, the same defect class
+/// `carve`'s per-leaf fix (this file, Task 3/4) exists to prevent, one
+/// level up. A drawn `u64` re-wrapped as `Seed(..)` is fully reproducible
+/// (still a pure function of the original `seed`) without needing
+/// `generate_level_with_origin`'s whole call chain restructured to thread a
+/// persistent stream across rungs the way it already does across leaves
+/// within one level. `plan` is grown separately, once, from `seed` and its
+/// own vertex/rungs — its own streams (`UNDERWORLD_PLAN_*`) are independent
+/// of this per-rung carving draw.
 /// type-audit: bare-ok(diagnostic-value: depths_m), bare-ok(diagnostic-value: water_table_m)
 pub fn generate_descent(
     rungs: &[hornvale_kernel::Band],
@@ -490,6 +643,7 @@ pub fn generate_descent(
     origins: &[hornvale_worldgen::chamber::ChamberOrigin],
     depths_m: &[f64],
     water_table_m: f64,
+    plan: &hornvale_worldgen::circuit::DescentPlan,
     seed: Seed,
 ) -> Vec<Level> {
     generate_descent_for_character(
@@ -499,6 +653,7 @@ pub fn generate_descent(
         depths_m,
         water_table_m,
         hornvale_worldgen::character::Character::WildCave,
+        plan,
         seed,
     )
 }
@@ -534,6 +689,7 @@ fn engine_worked_bias(character: hornvale_worldgen::character::Character) -> f64
 /// consumption order is exactly `generate_descent`'s, so the WildCave path
 /// is byte-identical to it and no stream contract moves.
 /// type-audit: bare-ok(diagnostic-value: depths_m), bare-ok(diagnostic-value: water_table_m)
+#[allow(clippy::too_many_arguments)]
 pub fn generate_descent_for_character(
     rungs: &[hornvale_kernel::Band],
     cave_kind: hornvale_terrain::CaveKind,
@@ -541,10 +697,16 @@ pub fn generate_descent_for_character(
     depths_m: &[f64],
     water_table_m: f64,
     character: hornvale_worldgen::character::Character,
+    plan: &hornvale_worldgen::circuit::DescentPlan,
     seed: Seed,
 ) -> Vec<Level> {
     assert_eq!(rungs.len(), origins.len(), "one origin per rung");
     assert_eq!(rungs.len(), depths_m.len(), "one depth per rung");
+    assert_eq!(
+        plan.rungs.as_slice(),
+        rungs,
+        "the plan was grown for these rungs"
+    );
     let mut descent_stream = seed
         .derive(crate::streams::UNDERWORLD_LEVEL_DESCENT)
         .stream();
@@ -553,7 +715,7 @@ pub fn generate_descent_for_character(
     for (i, &rung) in rungs.iter().enumerate() {
         let extent = generate_level_extent(rung);
         let rung_seed = Seed(descent_stream.next_u64());
-        let mut level = generate_level_with_water(
+        let level = generate_level_with_water(
             extent,
             cave_kind,
             origins[i],
@@ -561,9 +723,10 @@ pub fn generate_descent_for_character(
             depths_m[i],
             water_table_m,
             bias,
+            plan,
+            i,
             rung_seed,
         );
-        place_connections(&mut level, extent, i > 0, rung_seed);
         bias = realized_worked_fraction(&level);
         levels.push(level);
     }
@@ -575,6 +738,35 @@ mod tests {
     use super::*;
     use hornvale_worldgen::character::Character;
     use std::collections::BTreeMap;
+
+    /// A single-rung plan over `Band::Undercroft` for `kind`, `WildCave` —
+    /// the fixture every direct `generate_level_with_origin` test below
+    /// threads through since The Crosscut retired the partition tree.
+    fn one_rung_plan(
+        seed: u64,
+        kind: hornvale_terrain::CaveKind,
+    ) -> hornvale_worldgen::circuit::DescentPlan {
+        hornvale_worldgen::circuit::plan_descent(
+            Seed(seed),
+            hornvale_kernel::Vertex(0),
+            &[hornvale_kernel::Band::Undercroft],
+            kind,
+            Character::WildCave,
+        )
+    }
+
+    fn two_rung_plan(seed: u64) -> hornvale_worldgen::circuit::DescentPlan {
+        hornvale_worldgen::circuit::plan_descent(
+            Seed(seed),
+            hornvale_kernel::Vertex(0),
+            &[
+                hornvale_kernel::Band::Undercroft,
+                hornvale_kernel::Band::Shallows,
+            ],
+            hornvale_terrain::CaveKind::Fracture,
+            Character::WildCave,
+        )
+    }
 
     /// The movement-mode seam (The Gallery, Task 4; spec §3.2 part 3),
     /// pinned kind by kind: `Wall` is the one impassable kind, `Flooded`
@@ -603,12 +795,7 @@ mod tests {
 
     #[test]
     fn generation_is_deterministic() {
-        let extent = Rect {
-            x: 0,
-            y: 0,
-            w: 20,
-            h: 12,
-        };
+        let extent = generate_level_extent(hornvale_kernel::Band::Undercroft);
         let a = generate_level(extent, hornvale_kernel::Seed(42));
         let b = generate_level(extent, hornvale_kernel::Seed(42));
         assert_eq!(a, b, "same seed must produce byte-identical levels");
@@ -616,12 +803,7 @@ mod tests {
 
     #[test]
     fn every_cell_of_the_extent_has_a_kind() {
-        let extent = Rect {
-            x: 0,
-            y: 0,
-            w: 20,
-            h: 12,
-        };
+        let extent = generate_level_extent(hornvale_kernel::Band::Undercroft);
         let level = generate_level(extent, hornvale_kernel::Seed(1));
         for x in extent.x..(extent.x + extent.w) {
             for y in extent.y..(extent.y + extent.h) {
@@ -643,25 +825,24 @@ mod tests {
     /// mean-property claim, not a per-seed-without-exception invariant.
     #[test]
     fn made_chambers_lean_worked_found_chambers_lean_natural() {
+        use hornvale_kernel::Band;
         use hornvale_terrain::CaveKind;
         use hornvale_worldgen::chamber::ChamberOrigin;
 
         let mut made_worked = 0;
         let mut found_worked = 0;
         const TRIALS: u64 = 200;
+        let extent = generate_level_extent(Band::Undercroft);
         for s in 0..TRIALS {
-            let extent = Rect {
-                x: 0,
-                y: 0,
-                w: 40,
-                h: 24,
-            };
+            let plan = one_rung_plan(s, CaveKind::Karst);
             let made = generate_level_with_origin(
                 extent,
                 CaveKind::Karst,
                 ChamberOrigin::Made,
                 Character::WildCave,
                 NEUTRAL_WORKED_BIAS,
+                &plan,
+                0,
                 Seed(s),
             );
             let found = generate_level_with_origin(
@@ -670,6 +851,8 @@ mod tests {
                 ChamberOrigin::Found,
                 Character::WildCave,
                 NEUTRAL_WORKED_BIAS,
+                &plan,
+                0,
                 Seed(s),
             );
             if made.leaf_styles.iter().any(|s| s.worked) {
@@ -692,15 +875,12 @@ mod tests {
     /// statistical claim over a range.
     #[test]
     fn chamber_origin_is_never_mutated_by_geometry() {
+        use hornvale_kernel::Band;
         use hornvale_terrain::CaveKind;
         use hornvale_worldgen::chamber::ChamberOrigin;
 
-        let extent = Rect {
-            x: 0,
-            y: 0,
-            w: 40,
-            h: 24,
-        };
+        let extent = generate_level_extent(Band::Undercroft);
+        let plan = one_rung_plan(4, CaveKind::Fracture);
         let origin = ChamberOrigin::Found;
         let _ = generate_level_with_origin(
             extent,
@@ -708,6 +888,8 @@ mod tests {
             origin,
             Character::WildCave,
             NEUTRAL_WORKED_BIAS,
+            &plan,
+            0,
             Seed(4),
         );
         // `origin` is Copy and untouched by the call above — this test
@@ -729,29 +911,21 @@ mod tests {
     /// stays fully drained and at least one natural leaf floods; above the
     /// water table, nothing floods regardless of the worked/natural mix.
     ///
-    /// **`Seed(4)` is load-bearing, not arbitrary.** The fixture this test
-    /// carried before (`Seed(2)`) partitions this 40x24 extent into exactly
-    /// ONE leaf, and that leaf is natural — so `if style.worked` never ran
-    /// at all, and the whole test degenerated to "some cell somewhere is
-    /// flooded." Deleting the `worked`-skip from the flooding pass left it
-    /// green. `Seed(4)` partitions into two leaves, one of each kind (a
-    /// worked 11x24 strip and a natural 28x24 strip, verified by printing
-    /// `leaves()`/`leaf_styles` directly), so both `if`/`else` arms of the
-    /// loop below actually execute — `any_worked_leaf` and
-    /// `any_natural_leaf_flooded` below assert that they did, so a future
-    /// regression back to a single-leaf-only fixture fails loudly here
+    /// **`Seed(4)` is load-bearing, not arbitrary**, re-verified against the
+    /// plan-grid regions The Crosscut introduced: it grows into more than
+    /// one region, at least one of each worked/natural kind, so both
+    /// `if`/`else` arms of the loop below actually execute — `any_worked_leaf`
+    /// and `any_natural_leaf_flooded` below assert that they did, so a future
+    /// regression back to a single-region-only fixture fails loudly here
     /// rather than silently passing again.
     #[test]
     fn a_phreatic_level_floods_its_natural_leaves_and_drains_its_worked_ones() {
+        use hornvale_kernel::Band;
         use hornvale_terrain::CaveKind;
         use hornvale_worldgen::chamber::ChamberOrigin;
 
-        let extent = Rect {
-            x: 0,
-            y: 0,
-            w: 40,
-            h: 24,
-        };
+        let extent = generate_level_extent(Band::Undercroft);
+        let plan = one_rung_plan(4, CaveKind::Karst);
         // depth_m > water_table_m => phreatic (is_phreatic's own contract).
         let sump = generate_level_with_water(
             extent,
@@ -761,18 +935,20 @@ mod tests {
             100.0,
             10.0,
             NEUTRAL_WORKED_BIAS,
+            &plan,
+            0,
             Seed(4),
         );
-        let (tree, _dof) = region::build_region(extent, Seed(4));
-        let leaves = region::leaves(&tree);
+        let node_ids = plan.nodes_on(0);
         assert_eq!(
-            leaves.len(),
+            node_ids.len(),
             sump.leaf_styles.len(),
-            "leaves() and leaf_styles must stay index-aligned"
+            "nodes_on(level) and leaf_styles must stay index-aligned"
         );
         let mut any_worked_leaf = false;
         let mut any_natural_leaf_flooded = false;
-        for (rect, style) in leaves.iter().zip(sump.leaf_styles.iter()) {
+        for (&id, style) in node_ids.iter().zip(sump.leaf_styles.iter()) {
+            let rect = rect_of(&plan, id);
             let leaf_has_flood = (rect.x..(rect.x + rect.w)).any(|x| {
                 (rect.y..(rect.y + rect.h))
                     .any(|y| sump.cells.get(Cell(x, y)) == Some(LevelCellKind::Flooded))
@@ -805,6 +981,8 @@ mod tests {
             5.0,
             10.0,
             NEUTRAL_WORKED_BIAS,
+            &plan,
+            0,
             Seed(4),
         );
         assert!(
@@ -820,6 +998,20 @@ mod tests {
     /// two runs is how many leaves read as worked. Asserts the DIRECTION
     /// and a MARGIN, not a fixed percentage: the percentage is a
     /// calibration this task does not own.
+    ///
+    /// **The margin shrank under The Crosscut's realizer, measured rather
+    /// than assumed.** A passage/stair corridor is carved OUTSIDE every
+    /// leaf's own rect, so it never floods regardless of that leaf's
+    /// worked/natural mix — and `cycle_budget` gives `DrowTier` one more
+    /// cycle than `WildCave` (spec §3.2 step 5), so a drow-tier plan grows
+    /// more nodes and proportionally more never-floodable corridor floor.
+    /// That dilutes BOTH means toward zero and narrows the gap between
+    /// them: measured directly against this realizer, a 200-seed sweep gave
+    /// drow=0.039, wild=0.069 (diff 0.030), and the 30-seed sweep this test
+    /// actually runs gives the same diff (0.030). The old 0.05 margin
+    /// predates that dilution and no longer holds; 0.02 stays comfortably
+    /// under the measured 0.030 while still asserting the same direction
+    /// with room for seed-to-seed noise.
     ///
     /// claim: rate(seed: 0..30) — a mean-flooded-fraction comparison across
     /// a 30-seed sweep, not a per-seed-without-exception invariant.
@@ -856,6 +1048,20 @@ mod tests {
         let mut drow_total = 0.0;
         let mut wild_total = 0.0;
         for s in 0..TRIALS {
+            let drow_plan = hornvale_worldgen::circuit::plan_descent(
+                Seed(s),
+                hornvale_kernel::Vertex(0),
+                &rungs,
+                CaveKind::Karst,
+                Character::DrowTier,
+            );
+            let wild_plan = hornvale_worldgen::circuit::plan_descent(
+                Seed(s),
+                hornvale_kernel::Vertex(0),
+                &rungs,
+                CaveKind::Karst,
+                Character::WildCave,
+            );
             let drow = generate_descent_for_character(
                 &rungs,
                 CaveKind::Karst,
@@ -863,6 +1069,7 @@ mod tests {
                 &depths_m,
                 water_table_m,
                 Character::DrowTier,
+                &drow_plan,
                 Seed(s),
             );
             let wild = generate_descent_for_character(
@@ -872,6 +1079,7 @@ mod tests {
                 &depths_m,
                 water_table_m,
                 Character::WildCave,
+                &wild_plan,
                 Seed(s),
             );
             drow_total += flooded_fraction(&drow);
@@ -880,7 +1088,7 @@ mod tests {
         let drow_mean = drow_total / TRIALS as f64;
         let wild_mean = wild_total / TRIALS as f64;
         assert!(
-            drow_mean < wild_mean - 0.05,
+            drow_mean < wild_mean - 0.02,
             "a drow-tier descent must come out substantially drier than a \
              wild-cave one: drow={drow_mean:.3}, wild={wild_mean:.3}"
         );
@@ -910,8 +1118,22 @@ mod tests {
                 ChamberOrigin::Made,
             ];
             let depths_m = [20.0, 60.0, 120.0];
-            let levels =
-                generate_descent(&rungs, CaveKind::Karst, &origins, &depths_m, 500.0, Seed(s));
+            let plan = hornvale_worldgen::circuit::plan_descent(
+                Seed(s),
+                hornvale_kernel::Vertex(0),
+                &rungs,
+                CaveKind::Karst,
+                Character::WildCave,
+            );
+            let levels = generate_descent(
+                &rungs,
+                CaveKind::Karst,
+                &origins,
+                &depths_m,
+                500.0,
+                &plan,
+                Seed(s),
+            );
             let deepest = levels.last().expect("three rungs requested");
             let worked = deepest.leaf_styles.iter().filter(|s| s.worked).count() as f64;
             let total = deepest.leaf_styles.len().max(1) as f64;
@@ -935,170 +1157,88 @@ mod tests {
         let rungs = [Band::Undercroft, Band::Shallows];
         let origins = [ChamberOrigin::Found, ChamberOrigin::Found];
         let depths_m = [20.0, 60.0];
+        let plan = hornvale_worldgen::circuit::plan_descent(
+            Seed(1),
+            hornvale_kernel::Vertex(0),
+            &rungs,
+            CaveKind::LavaTube,
+            Character::WildCave,
+        );
         let levels = generate_descent(
             &rungs,
             CaveKind::LavaTube,
             &origins,
             &depths_m,
             500.0,
+            &plan,
             Seed(1),
         );
         assert_eq!(levels.len(), 2);
     }
 
-    /// claim: invariant(seed: single) — asserts a connectivity invariant
-    /// (every level down-connected, every level but the shallowest also
-    /// up-connected) at one representative seed.
+    /// claim: invariant(seed: 0..200) — THE CROSSCUT's stairs contract
+    /// (spec §3.3): every `StairsDown` on rung `i` (below the last)
+    /// has a `StairsUp` at the SAME coordinate on rung `i+1` and vice versa;
+    /// rung 0 has no `StairsUp`; the last rung has exactly one `StairsDown`,
+    /// the dangling terminus; no cell carries both kinds. Replaces
+    /// `stairs_down_and_stairs_up_never_share_a_cell`, whose "exactly one"
+    /// the plan deliberately breaks.
     #[test]
-    fn every_level_but_the_first_has_stairs_up_every_level_has_stairs_down() {
+    fn stairs_pair_by_coordinate_across_adjacent_rungs() {
         use hornvale_kernel::Band;
         use hornvale_terrain::CaveKind;
         use hornvale_worldgen::chamber::ChamberOrigin;
-
-        let rungs = [Band::Undercroft, Band::Shallows, Band::Deeps];
-        let origins = [ChamberOrigin::Found; 3];
-        let depths_m = [20.0, 60.0, 120.0];
-        let levels = generate_descent(
-            &rungs,
-            CaveKind::Fracture,
-            &origins,
-            &depths_m,
-            500.0,
-            Seed(6),
-        );
-
-        for (i, level) in levels.iter().enumerate() {
-            let has_down = level
-                .cells
-                .iter()
-                .any(|(_, k)| k == LevelCellKind::StairsDown);
-            let has_up = level
-                .cells
-                .iter()
-                .any(|(_, k)| k == LevelCellKind::StairsUp);
-            assert!(has_down, "level {i} is missing its stairs down");
-            if i == 0 {
-                assert!(
-                    !has_up,
-                    "the shallowest level must not have stairs up (it leads to Surface, not a generated level)"
-                );
-            } else {
-                assert!(has_up, "level {i} is missing its stairs up");
-            }
-        }
-    }
-
-    /// claim: invariant(seed: 0..200) — down-stairs and up-stairs never
-    /// share a cell, on any level of any seed in the sweep, including the
-    /// common case (`region::split_probability(0) == 0.35`, so a
-    /// no-split single-leaf partition is the majority outcome at depth 0)
-    /// where the partition tree has exactly one leaf and both stairs are
-    /// searched for in the very same rect. A prior review traced
-    /// `place_connections` and confirmed this holds today because
-    /// `first_walkable_cell` reads `level.cells`' LIVE state — the
-    /// down-stairs write happens first and mutates the map, so the
-    /// up-stairs search no longer matches that cell against
-    /// `Floor`/`Flooded` — but nothing pinned it: reordering the two writes,
-    /// or refactoring the walkable-cell search to read a cached/snapshotted
-    /// state instead of live `level.cells`, could silently make one
-    /// placement overwrite the other with no test catching it.
-    ///
-    /// Asserts THREE things, deliberately, not just non-collision: (1)
-    /// every level has *exactly one* `StairsDown` cell — guaranteed by
-    /// `carve::tests::every_algorithm_produces_at_least_one_floor_cell`'s
-    /// own contract (every leaf gets >= 1 `Floor` cell, and the first leaf
-    /// always exists), so this must never be zero; (2) every level but the
-    /// first has *exactly one* `StairsUp` cell (the shallowest level, which
-    /// has none, is checked separately against zero-or-one so the loop stays
-    /// correct there too) — a `<=` bound here would silently accept a level
-    /// missing its up-stairs entirely, the reversed-write-order twin of the
-    /// down-stairs-overwritten defect assertion (1) exists to catch; (3)
-    /// when both are present, they differ. (1) is the one that actually
-    /// catches a collision that
-    /// silently overwrites the down-stairs — a bare non-collision check
-    /// (`assert_ne!` only, guarded by non-empty loops) passes vacuously
-    /// when a collision empties one side's `Vec` via `BTreeMap` overwrite,
-    /// which is exactly what happened when this was verified against a
-    /// deliberately reintroduced cached-snapshot mutation of
-    /// `place_connections` (both writes read a pre-mutation clone instead of
-    /// live `level.cells`): the mutation compiled, every level still got a
-    /// `StairsUp` cell, but `level 2`'s `StairsDown` cell vanished (silently
-    /// overwritten by the `StairsUp` write to the same cell) — caught by
-    /// assertion (1) here, and separately by the pre-existing
-    /// `every_level_but_the_first_has_stairs_up_every_level_has_stairs_down`
-    /// test at `Seed(6)`, which is not guaranteed to hit the single-leaf
-    /// path on every future edit the way this sweep is. Also asserts the
-    /// sweep actually exercises the single-leaf case (a positive control),
-    /// so it cannot pass vacuously if the extent or seed range ever changes
-    /// to avoid that path.
-    #[test]
-    fn stairs_down_and_stairs_up_never_share_a_cell() {
-        use hornvale_kernel::Band;
-        use hornvale_terrain::CaveKind;
-        use hornvale_worldgen::chamber::ChamberOrigin;
-
         let rungs = [Band::Undercroft, Band::Shallows];
         let origins = [ChamberOrigin::Found, ChamberOrigin::Found];
         let depths_m = [20.0, 60.0];
-        const TRIALS: u64 = 200;
-        let mut single_leaf_levels_probed = 0;
-        for s in 0..TRIALS {
+        let mut paired_stairs_seen = 0usize;
+        for s in 0..200u64 {
+            let plan = two_rung_plan(s);
             let levels = generate_descent(
                 &rungs,
                 CaveKind::Fracture,
                 &origins,
                 &depths_m,
                 500.0,
+                &plan,
                 Seed(s),
             );
-            for (i, level) in levels.iter().enumerate() {
-                let down_cells: Vec<Cell> = level
-                    .cells
+            let cells_of = |l: &Level, k: LevelCellKind| -> Vec<Cell> {
+                l.cells
                     .iter()
-                    .filter(|(_, k)| *k == LevelCellKind::StairsDown)
+                    .filter(|(_, kk)| *kk == k)
                     .map(|(c, _)| c)
-                    .collect();
-                let up_cells: Vec<Cell> = level
-                    .cells
-                    .iter()
-                    .filter(|(_, k)| *k == LevelCellKind::StairsUp)
-                    .map(|(c, _)| c)
-                    .collect();
-                assert_eq!(
-                    down_cells.len(),
-                    1,
-                    "seed {s} level {i}: expected exactly one StairsDown cell, found {down_cells:?}"
-                );
-                if i > 0 {
-                    assert_eq!(
-                        up_cells.len(),
-                        1,
-                        "seed {s} level {i}: expected exactly one StairsUp cell, found {up_cells:?}"
-                    );
-                } else {
-                    assert!(
-                        up_cells.len() <= 1,
-                        "seed {s} level {i}: expected at most one StairsUp cell, found {up_cells:?}"
-                    );
-                }
-                for down in &down_cells {
-                    for up in &up_cells {
-                        assert_ne!(
-                            down, up,
-                            "seed {s} level {i}: down-stairs and up-stairs share cell {down:?}"
-                        );
+                    .collect()
+            };
+            assert!(
+                cells_of(&levels[0], LevelCellKind::StairsUp).is_empty(),
+                "seed {s}: rung 0 has stairs up"
+            );
+            let downs0 = cells_of(&levels[0], LevelCellKind::StairsDown);
+            let ups1 = cells_of(&levels[1], LevelCellKind::StairsUp);
+            assert_eq!(
+                downs0, ups1,
+                "seed {s}: stairs down on rung 0 must equal stairs up on rung 1, by coordinate"
+            );
+            assert!(!downs0.is_empty(), "seed {s}: no stairway at all");
+            paired_stairs_seen += downs0.len();
+            let downs1 = cells_of(&levels[1], LevelCellKind::StairsDown);
+            assert_eq!(
+                downs1.len(),
+                1,
+                "seed {s}: the last rung carries exactly the dangling terminus: {downs1:?}"
+            );
+            for l in &levels {
+                for (c, k) in l.cells.iter() {
+                    if k == LevelCellKind::StairsDown {
+                        assert_ne!(l.cells.get(c), Some(LevelCellKind::StairsUp));
                     }
-                }
-                if level.leaf_styles.len() == 1 && i > 0 {
-                    single_leaf_levels_probed += 1;
                 }
             }
         }
         assert!(
-            single_leaf_levels_probed > 0,
-            "this sweep never exercised the single-leaf (first-leaf-equals-last-leaf) \
-             case both stairs must share a rect in — widen the seed range or rung \
-             count so the test is not vacuous"
+            paired_stairs_seen > 200,
+            "the sweep must exercise multi-stair rungs, not one stair each"
         );
     }
 
@@ -1123,12 +1263,20 @@ mod tests {
         let rungs = [Band::Undercroft, Band::Undercroft];
         let origins = [ChamberOrigin::Found, ChamberOrigin::Found];
         let depths_m = [20.0, 20.0];
+        let plan = hornvale_worldgen::circuit::plan_descent(
+            Seed(13),
+            hornvale_kernel::Vertex(0),
+            &rungs,
+            CaveKind::Karst,
+            Character::WildCave,
+        );
         let levels = generate_descent(
             &rungs,
             CaveKind::Karst,
             &origins,
             &depths_m,
             500.0,
+            &plan,
             Seed(13),
         );
         assert_ne!(
@@ -1167,6 +1315,13 @@ mod tests {
         for s in 0..TRIALS as u64 {
             let mut cell_sets = BTreeMap::new();
             for character in hornvale_worldgen::character::CHARACTERS {
+                let plan = hornvale_worldgen::circuit::plan_descent(
+                    Seed(s),
+                    hornvale_kernel::Vertex(0),
+                    &rungs,
+                    CaveKind::Karst,
+                    *character,
+                );
                 let levels = generate_descent_for_character(
                     &rungs,
                     CaveKind::Karst,
@@ -1174,6 +1329,7 @@ mod tests {
                     &depths_m,
                     500.0,
                     *character,
+                    &plan,
                     Seed(s),
                 );
                 let first = &levels[0];
@@ -1214,11 +1370,28 @@ mod tests {
     }
 
     /// claim: invariant(seed: 0..12 x all characters x all kinds) — Task 4
-    /// step 4: the connectivity invariant holds for EVERY engine the
-    /// selector can pick, i.e. for every character. Flood-fills the
-    /// standable cells (stairs included — `place_connections` runs on this
-    /// path too) of every level of every descent. Positive control counts
-    /// multi-leaf levels so the cross-leaf connector is actually exercised.
+    /// step 4, reframed for The Crosscut: the connectivity invariant holds
+    /// for EVERY engine the selector can pick, i.e. for every character —
+    /// but the invariant itself is now over the WHOLE DESCENT, not one
+    /// level in isolation.
+    ///
+    /// **Why the scope widened.** The plan's own graph connectivity
+    /// (`every_node_is_reachable_from_the_entrance`,
+    /// `windows/worldgen/src/circuit.rs`) is proven across ALL edges —
+    /// same-level passages AND cross-level stairs together — never
+    /// per-level. A `cycle` (`Realm`) is free to close through a
+    /// neighbouring rung, so a region can end up with no SAME-LEVEL
+    /// passage at all, reachable only by taking its stair to the level
+    /// above or below and back — observed directly for a real descent
+    /// (`WildCave`/`Karst` seed 0: three level-1 nodes shared no passage
+    /// with the other eleven, connected only through stairs to level 0 and
+    /// level 2). Asserting per-level connectivity would fail on exactly
+    /// this correct behaviour, not a defect. Flood-fills every level's
+    /// standable cells AND crosses a `StairsDown`/`StairsUp` cell into the
+    /// paired cell one rung over (`stairs_pair_by_coordinate_across_
+    /// adjacent_rungs` pins that pairing), so the search graph matches the
+    /// plan's own. Positive control counts multi-node levels so the
+    /// cross-region connector is actually exercised.
     #[test]
     fn every_character_engine_keeps_every_level_connected() {
         use hornvale_kernel::Band;
@@ -1237,6 +1410,13 @@ mod tests {
         for cave_kind in [CaveKind::Karst, CaveKind::LavaTube, CaveKind::Fracture] {
             for character in hornvale_worldgen::character::CHARACTERS {
                 for s in 0..12u64 {
+                    let plan = hornvale_worldgen::circuit::plan_descent(
+                        Seed(s),
+                        hornvale_kernel::Vertex(0),
+                        &rungs,
+                        cave_kind,
+                        *character,
+                    );
                     let levels = generate_descent_for_character(
                         &rungs,
                         cave_kind,
@@ -1244,58 +1424,81 @@ mod tests {
                         &depths_m,
                         500.0,
                         *character,
+                        &plan,
                         Seed(s),
                     );
-                    for (i, level) in levels.iter().enumerate() {
-                        if level.leaf_styles.len() > 1 {
-                            composite_levels_probed += 1;
-                        }
-                        let standable: BTreeSet<Cell> = level
-                            .cells
-                            .iter()
-                            .filter(|(_, k)| {
-                                matches!(
-                                    k,
-                                    LevelCellKind::Floor
-                                        | LevelCellKind::Flooded
-                                        | LevelCellKind::StairsDown
-                                        | LevelCellKind::StairsUp
-                                )
-                            })
-                            .map(|(c, _)| c)
-                            .collect();
-                        assert!(
-                            !standable.is_empty(),
-                            "{character:?} seed {s} level {i}: no standable cells"
-                        );
-                        let start = *standable.iter().next().expect("non-empty above");
-                        let mut seen = BTreeSet::new();
-                        let mut queue = VecDeque::new();
-                        seen.insert(start);
-                        queue.push_back(start);
-                        while let Some(Cell(x, y)) = queue.pop_front() {
-                            for (dx, dy) in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
-                                let next = Cell(x + dx, y + dy);
-                                if standable.contains(&next) && seen.insert(next) {
-                                    queue.push_back(next);
-                                }
+                    let standables: Vec<BTreeSet<Cell>> = levels
+                        .iter()
+                        .enumerate()
+                        .map(|(i, level)| {
+                            if level.leaf_styles.len() > 1 {
+                                composite_levels_probed += 1;
+                            }
+                            let standable: BTreeSet<Cell> = level
+                                .cells
+                                .iter()
+                                .filter(|(_, k)| {
+                                    matches!(
+                                        k,
+                                        LevelCellKind::Floor
+                                            | LevelCellKind::Flooded
+                                            | LevelCellKind::StairsDown
+                                            | LevelCellKind::StairsUp
+                                    )
+                                })
+                                .map(|(c, _)| c)
+                                .collect();
+                            assert!(
+                                !standable.is_empty(),
+                                "{character:?} seed {s} level {i}: no standable cells"
+                            );
+                            standable
+                        })
+                        .collect();
+                    let total: usize = standables.iter().map(|s| s.len()).sum();
+                    let start = (
+                        0usize,
+                        *standables[0].iter().next().expect("non-empty above"),
+                    );
+                    let mut seen: BTreeSet<(usize, Cell)> = BTreeSet::new();
+                    let mut queue = VecDeque::new();
+                    seen.insert(start);
+                    queue.push_back(start);
+                    while let Some((lvl, Cell(x, y))) = queue.pop_front() {
+                        for (dx, dy) in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
+                            let next = (lvl, Cell(x + dx, y + dy));
+                            if standables[lvl].contains(&next.1) && seen.insert(next) {
+                                queue.push_back(next);
                             }
                         }
-                        assert_eq!(
-                            seen.len(),
-                            standable.len(),
-                            "{character:?}/{cave_kind:?} seed {s} level {i}: {} of {} standable \
-                             cells unreachable from {start:?}",
-                            standable.len() - seen.len(),
-                            standable.len()
-                        );
+                        let kind = levels[lvl].cells.get(Cell(x, y));
+                        if kind == Some(LevelCellKind::StairsDown) && lvl + 1 < levels.len() {
+                            let below = (lvl + 1, Cell(x, y));
+                            if standables[lvl + 1].contains(&below.1) && seen.insert(below) {
+                                queue.push_back(below);
+                            }
+                        }
+                        if kind == Some(LevelCellKind::StairsUp) && lvl > 0 {
+                            let above = (lvl - 1, Cell(x, y));
+                            if standables[lvl - 1].contains(&above.1) && seen.insert(above) {
+                                queue.push_back(above);
+                            }
+                        }
                     }
+                    assert_eq!(
+                        seen.len(),
+                        total,
+                        "{character:?}/{cave_kind:?} seed {s}: {} of {} standable cells \
+                         unreachable across the whole descent",
+                        total - seen.len(),
+                        total
+                    );
                 }
             }
         }
         assert!(
             composite_levels_probed > 0,
-            "this sweep never generated a composite level — the cross-leaf \
+            "this sweep never generated a composite level — the cross-region \
              connector would go unexercised"
         );
     }
@@ -1319,30 +1522,27 @@ mod tests {
     /// a positive control (`composite_levels_probed > 0`): the
     /// cross-leaf-connectivity property this sweep guards (Task 9) is only
     /// meaningfully tested if at least some generated levels actually have
-    /// more than one leaf, mirroring the `single_leaf_levels_probed`
-    /// positive control in `stairs_down_and_stairs_up_never_share_a_cell`
-    /// above.
+    /// more than one leaf.
     fn every_walkable_cell_is_reachable_from_every_other() {
+        use hornvale_kernel::Band;
         use hornvale_terrain::CaveKind;
         use hornvale_worldgen::chamber::ChamberOrigin;
         use std::collections::{BTreeSet, VecDeque};
 
         let mut composite_levels_probed = 0;
+        let extent = generate_level_extent(Band::Undercroft);
         for cave_kind in [CaveKind::Karst, CaveKind::LavaTube, CaveKind::Fracture] {
             for origin in [ChamberOrigin::Found, ChamberOrigin::Made] {
                 for seed_value in 0..20u64 {
-                    let extent = Rect {
-                        x: 0,
-                        y: 0,
-                        w: 40,
-                        h: 24,
-                    };
+                    let plan = one_rung_plan(seed_value, cave_kind);
                     let level = generate_level_with_origin(
                         extent,
                         cave_kind,
                         origin,
                         Character::WildCave,
                         NEUTRAL_WORKED_BIAS,
+                        &plan,
+                        0,
                         Seed(seed_value),
                     );
                     if level.leaf_styles.len() > 1 {

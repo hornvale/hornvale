@@ -286,6 +286,13 @@ impl Underground {
             })
             .collect();
         let origins = vec![hornvale_worldgen::chamber::ChamberOrigin::Found; rungs.len()];
+        let plan = hornvale_worldgen::circuit::plan_descent(
+            seed,
+            vertex,
+            &rungs,
+            cave.kind,
+            hornvale_worldgen::character::Character::WildCave,
+        );
         let descent = generate_descent_for_character(
             &rungs,
             cave.kind,
@@ -293,6 +300,7 @@ impl Underground {
             &depths_m,
             water_table_m,
             hornvale_worldgen::character::Character::WildCave,
+            &plan,
             seed,
         );
         let cell = descent[0]

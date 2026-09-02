@@ -33,19 +33,20 @@ pub const MAX_CYCLES_PER_LEVEL: u8 = 5;
 /// type-audit: bare-ok(count: MIN_CYCLES_PER_LEVEL)
 pub const MIN_CYCLES_PER_LEVEL: u8 = 1;
 
-/// Level width before rank scaling, duplicated verbatim from
-/// `windows/vessel/src/underworld_level/mod.rs`'s `BASE_LEVEL_W` — see
-/// [`level_extent_wh`]'s doc for why the two must currently agree.
+/// Level width before rank scaling. Since The Crosscut, Task 3,
+/// `windows/vessel/src/underworld_level/mod.rs`'s `generate_level_extent`
+/// DELEGATES to [`level_extent_wh`] rather than carrying its own copy of
+/// this constant, so there is exactly one authored value left to agree
+/// with.
 const BASE_LEVEL_W: i32 = 40;
 /// See `BASE_LEVEL_W`.
 const BASE_LEVEL_H: i32 = 24;
 
 /// The extent a level of `rung` gets, `(w, h)` in cells: deeper rungs get
-/// more room. The formula is duplicated here verbatim from
-/// `windows/vessel/src/underworld_level/mod.rs`'s `generate_level_extent`;
-/// the two must agree until the realizer is rewired to call this one
-/// instead (The Crosscut, Task 3). `the_rank_zero_grid_is_five_by_three`
-/// pins this copy.
+/// more room. Since The Crosscut, Task 3, this is the ONE place the
+/// formula lives — `windows/vessel/src/underworld_level/mod.rs`'s
+/// `generate_level_extent` delegates to this function rather than carrying
+/// a duplicate copy. `the_rank_zero_grid_is_five_by_three` pins the result.
 /// type-audit: bare-ok(count: return)
 pub fn level_extent_wh(rung: Band) -> (i32, i32) {
     let rank = hornvale_terrain::rungs()
