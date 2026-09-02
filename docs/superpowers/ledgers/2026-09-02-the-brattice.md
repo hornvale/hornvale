@@ -334,3 +334,23 @@ companion's screen 3 recorded no click, so the freeze is by Nathan's word in
 the terminal, not the A/B. One capture action taken on approval: the
 metaplan's §4 gains a line naming the world-conditional gate as the first
 extension after this campaign, so The Plat does not meet it unplanned.
+
+#9 [G4] — Plan self-reviewed against the approved spec · **Proceed; three
+readings recorded where the plan departs from the spec's letter** · (i) spec
+§3.6 "`Body` gains `locomotion`, threaded at derivation" is implemented as an
+accessor reading the species store by label, because the value is a pure
+function of `species` and a stored field would touch the ~43 `Body {` literal
+sites Task 0 counts for no new information; (ii) spec §3.5 "every passage has
+one `Threshold`" — a sump's crossing cell is `Deep` (a drowned squeeze), since
+one cell has one kind and a one-cell corridor's sump would otherwise realize no
+`Deep` at all; the witness test states the rule; (iii) spec §3.2 row 6
+"hazard Dangerous on both" — a row stamps one side (`path_a`); the realm is
+the unit of the reading and nothing reads the stamp · Why: each is the spec's
+intent met by a cheaper mechanism, and each is written into the plan where the
+implementer meets it rather than left for a review to find · Discarded: a
+`locomotion` field (43 edits); `Threshold` AND `Deep` on one cell (no such
+cell kind); two hazard stamps (a redundant claim on unread data) · Ideonomy:
+none — a self-review, not a ruling; the rulings it records are readings of
+#2 and #7 · Capture: plan header, Tasks 1/3/4; spec unchanged (the plan says
+where it departs and why, which is the Crosscut's "amended in execution and
+says so" discipline applied one gate earlier).
