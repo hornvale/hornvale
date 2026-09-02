@@ -948,12 +948,12 @@ pub struct ReadWitness {
     first_belief_in_the_past: Option<(EntityId, WorldTime, WorldTime)>,
     /// How many HAZARD-MEMORY lookups have been made — `hazard_memory_memo`
     /// calls, and nothing else. Its own denominator, kept separate from the
-    /// belief pair because the two functions do NOT share a caller set: four
-    /// of `hazard_memory_memo`'s five callers make no paired belief read at
-    /// all (`believed_hazard`/`believed_hazard_memo`/`hazard_memory` are their
-    /// own public entry points, and the two walk-path calls precede the
-    /// `WalkState::begin` that reads belief), so counting one and inferring
-    /// the other is an inference dressed as a measurement.
+    /// belief pair because the two functions do NOT share a caller set: three
+    /// of `hazard_memory_memo`'s four callers make no paired belief read at
+    /// all (`believed_hazard`/`hazard_memory` are their own public entry
+    /// points, and the two walk-path calls precede the `WalkState::begin`
+    /// that reads belief), so counting one and inferring the other is an
+    /// inference dressed as a measurement.
     hazard_lookups: u64,
     /// How many of those ran at an instant STRICTLY BEFORE a committed
     /// sighting of the same entity — spec §3 rule 6's quantity for the
