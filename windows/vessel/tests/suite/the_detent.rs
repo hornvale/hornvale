@@ -260,6 +260,18 @@ use hornvale_vessel::{PossessOpts, Session};
 /// They equal "the whole walk's behaviour on one seed" and redden on ANY
 /// behaviour change by any campaign; that is their job for exactly as long
 /// as this campaign's pre-fix code exists to diverge from.
+///
+/// **`DETENT_SEED_42_LEDGER` is BLIND to the fear path.** It witnesses the
+/// walk's byte-identity, not the fear fold: seed 42's residents carry no
+/// fear verdict that ever reaches a route, for the reason
+/// `ledger_hash_witness.rs`'s own "Seed 42 is not it" note (around lines
+/// 359-368) already gives in full — do not restate the mechanism here, read
+/// it there. This campaign's own control (Task 2's report) confirms it
+/// empirically: moving `DANGER_ACT` from 0.3 to 0.05 moved both emitter
+/// hashes and left this one unchanged. A green
+/// `the_detent_seed_42_walk_matches_the_campaign_time_constant` is therefore
+/// NOT evidence the fear path is unchanged — `DETENT_EMITTER_LEDGER` and
+/// `DETENT_EMITTER_HAZARD` are the load-bearing pair for that claim.
 pub(crate) const DETENT_SEED_42_LEDGER: u64 = 0xabc4_731e_5cf1_ab21;
 pub(crate) const DETENT_EMITTER_LEDGER: u64 = 0xc851_e64b_0105_38b2;
 pub(crate) const DETENT_EMITTER_HAZARD: u64 = 0xa9f1_7d82_c183_2854;
@@ -273,7 +285,7 @@ fn the_detent_seed_42_walk_matches_the_campaign_time_constant() {
     println!("the-detent seed-42 ledger hash: {hash:#018x}");
     assert_eq!(
         hash, DETENT_SEED_42_LEDGER,
-        "the seed-42 walk moved — a fold changed a creature's route"
+        "the seed-42 walk moved — a fold changed a creature's route (this witness is BLIND to the fear path; see the doc comment above and DETENT_EMITTER_LEDGER/DETENT_EMITTER_HAZARD)"
     );
 }
 
