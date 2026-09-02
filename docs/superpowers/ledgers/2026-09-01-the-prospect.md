@@ -804,3 +804,63 @@ village-less cast at the flagship's own facet makes the possession read "the
 wilds" while the place reads "Doaba". The test asserts that divergence live
 before asserting the chamber names Doaba — so it cannot pass by the two
 agreeing.
+
+### #35 [G5, IMPORTANT] — the salience fix is NOT pinned, and MY verification could not have told
+
+The combined review re-introduced the defect Ruling 29 deleted — a hardcoded
+order in `brief_of` agreeing with salience on settlement/cave and disagreeing on
+exotic/cave — and got **980/980 green with `Site::salience` at zero production
+callers.** So Ruling 29's property is unpinned: salience can be removed from
+production entirely and the suite stays green.
+
+**And my own verification could not have caught it.** I inverted
+`Settlement => 1` / `Cave => 3`, saw the test red, and concluded the delegation
+was pinned. The reviewer's point is exact: that mutation flips the settlement/cave
+pair, which is the only pair the fixture exercises, so it cannot distinguish
+"`brief_of` consults salience" from "`brief_of` hardcodes settlement-first". A
+red proves the outcome changed, not that the authority is consulted.
+
+**Thirteenth instance of the campaign's pattern, and the first where the vacuous
+thing was my VERIFICATION METHOD rather than a test.** I have been demanding
+mutation proofs all campaign and then accepted one that could not discriminate.
+
+**Ruling: fix it, with the cross-check the reviewer names.** Assert that
+`brief_of`'s winner EQUALS `candidates.max_by_key(Site::salience)` — that pins
+delegation rather than one rung of the outcome — plus a second collision fixture
+on `SiteReason::Exotic`, since settlement-vs-exotic and exotic-vs-cave are
+currently unexercised in production ordering.
+
+**The general rule this earns: a mutation must be able to distinguish the
+mechanism from the outcome.** Ask, before trusting a red: is there an
+implementation that fails this mutation and still lacks the property? Here there
+was, and the reviewer wrote it.
+
+### #36 [G5, IMPORTANT] — a doc says its own diff's work is "a later task"
+
+`session.rs:5598-5601` states `Site::name` "is `None` for every kind as of this
+task" and "a settlement's real name is attached by a later task". That later
+task landed **three commits later in the same diff**, and the committed fixture
+now reads `You can enter the settlement of Doaba.`
+
+So a reader reaches `match &site.name { Some(name) => … }` and concludes the
+`Some` arm is dead. Task 6's report was honest about the timing; Task 7 did not
+sweep it. Same paragraph also says "nothing constructs more than one `Site` per
+facet today", which `brief.rs:212-237` now falsifies at the construction site —
+up to three candidates are built before reducing.
+
+**Ruling: fix both sentences.** This is the record-outliving-its-subject rot that
+this campaign has now hit in a spec (four times), a CLAUDE.md paragraph, a
+decision record, and now a doc comment describing its own commit range.
+
+### #37 [G5] — the salience order is stated THREE times, not one
+
+`SiteKind` derives `Ord` with declaration order `Cave < Exotic < Settlement` —
+identical to the salience ranking (`site.rs:10`). Nothing consumes it, but
+`max_by_key(|s| s.kind)` would silently produce the same answers, and Ruling 29's
+claim that the order now lives in "exactly ONE place" is false.
+
+**Ruling: leave the derive, document it.** Removing `Ord` from a public enum for
+this is disproportionate, and a derive nothing consumes is not a second
+authority. But the doc must stop claiming one home and say there are two
+statements of the order with one authority — otherwise the next reader repeats
+Ruling 29's mistake in the other direction.
