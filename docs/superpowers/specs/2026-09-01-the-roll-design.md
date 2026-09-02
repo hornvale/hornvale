@@ -278,7 +278,7 @@ they have today; §4 groups them in prose.
 `Stream` per resident, salted from the world seed by the resident's
 lineage (parent id, ordinal) under one new label declared in the deriving
 crate's `streams` module and published through `stream_labels()` into the
-generated manifest. **Amended at close (Task 3's ruling; ledger #16/#17):
+generated manifest. **Amended at close (Task 3's ruling — the ledger's "Task 3 — ruling: the stream-stamp roster" entry and the final whole-branch review's §3.6 finding; the (site, ordinal) key follows `disposition.rs`'s rule):
 the key is (settlement site vertex, ordinal), never an `EntityId` — the
 same discipline `disposition.rs` already keys its own draw by (site,
 founded year) rather than by an entity, and `residents.rs`'s module doc
