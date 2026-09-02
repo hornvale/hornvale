@@ -72,7 +72,12 @@ so it runs first.
 
 **Files:**
 - Create: `windows/worldgen/tests/suite/promoted_forebear_yield.rs` (probe,
-  `#[ignore]`d with a reason naming its cost, per PROC-6)
+  `#[ignore]`d with a reason naming its cost). **Not "per PROC-6"** — that
+  guard is `windows/lab/tests/suite/preregistration_guard.rs` and its own doc
+  says its crate root is `windows/lab`, so it does not reach this crate.
+  Nothing mechanically enforces the reason here; follow the local convention
+  instead, e.g. `approach_ease_calibration.rs:249`:
+  `#[ignore = "calibration: run by hand, prints the approach_ease quantiles"]`.
 - Modify: `windows/worldgen/tests/suite.rs` (register the module)
 
 **Interfaces:**
