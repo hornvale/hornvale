@@ -1242,3 +1242,47 @@ hearthroom by the GRAMMAR rather than by a rule anyone wrote"*. The role gate is
 on `the-alcove`. **The previous version of the row stated the three-link chain
 correctly**; the DoD compressed it to two links and made it false. Same shape as
 the known hazard that compressing a branch table deletes a branch.
+
+#63 [G5] — **CENSUS REFRESH: rc=0 in 865 s, and it moved NOTHING. Our own
+prediction was wrong, and the reason is a misattribution that survived three
+tasks and two reviews.**
+
+`req-a73d8ce3c9b4`, branch `census/a73d8ce3c9b4-20260902T022056Z`. Diff against
+the SHA it ran on: **one line, `docs/timings.md`**. No golden moved.
+
+This campaign predicted the opposite, repeatedly. Task 7's review said to
+"budget for it at pre-merge close rather than being surprised by it"; Task 9
+wrote that "a refresh should be expected to move health/affect columns"; Task 10
+measured seed 13 at 20,020 vs 20,050 facts with a different ledger digest and
+warned *"do not read the empty rebaseline diff as a null"*.
+
+**An empty diff needs a positive control, so I checked whether the census could
+have moved rather than accepting that it did not:**
+
+```text
+  studies/the-census.study.json   "metrics": "all", seeds 0-999
+  columns produced                230
+  columns naming creature/agent/walk/tick    0
+  `health::` in windows/lab/src/metrics.rs   0 hits — health is NOT registered
+  the one regex hit, `unrest-coverage`       social unrest, not creature rest
+```
+
+`health.rs` runs the vessel drive-simulation forward and reads affect per tick,
+but it is a **battery**, not a census metric — it never reaches
+`metrics::registry()`, which is what `"all"` expands. The census measures world
+GENERATION over 1,000 worlds; creature behaviour is not in it.
+
+So the empty result is correct and expected, and the behaviour surface we did
+move was covered where it actually lives — `affect-trace-seed-42.txt` and the
+snapshot goldens, which moved during Tasks 7-10 and were refreshed there.
+
+**The finding is the prediction, not the null.** "The census will move
+health/affect columns" is a claim whose form outran its support: nobody checked
+whether health metrics are census-registered, and it passed through three task
+reports and two reviews unchallenged because it sounded like a cost estimate
+rather than an assertion. It is the campaign's shape once more — and consistent
+with the refined lesson, it was settled by RUNNING the census, not by reading
+more carefully.
+
+Consequence for the merge: **there are no census goldens to land.** The census
+branch carries only its own timings row.
