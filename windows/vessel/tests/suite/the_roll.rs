@@ -63,3 +63,223 @@ fn seed_42_starts_alone_today() {
          company, The Roll Task 1"
     );
 }
+
+/// Seed 42's world, locale context, world components, and flagship village —
+/// the fixture Task 4's tests share. Named construction site (decision
+/// 0092): `WorldComponents::assemble()` is called here, once per test.
+#[allow(clippy::disallowed_methods)]
+fn residents_fixture() -> (
+    hornvale_kernel::World,
+    hornvale_locale::LocaleContext,
+    hornvale_worldgen::WorldComponents,
+    hornvale_settlement::VillageInfo,
+) {
+    let world = common::build(42).expect("seed 42 builds");
+    let ctx = hornvale_locale::LocaleContext::build(&world).expect("a context builds");
+    let wc = hornvale_worldgen::WorldComponents::assemble()
+        .expect("canonical registries are well-formed");
+    let village = village_info(&world).expect("seed 42 places a flagship");
+    (world, ctx, wc, village)
+}
+
+/// A frozen "now" for Task 4's tests — arbitrary but far enough from day 0
+/// that a drawn age never pushes a resident's birth implausibly negative.
+fn frozen_now() -> hornvale_kernel::WorldTime {
+    hornvale_kernel::WorldTime::from_std_days(20_000.0).expect("finite")
+}
+
+/// Ordinal 0 of the roll IS today's body: the same lineage, the same
+/// `EntityId` `derive_npcs` mints, so a possession selects the same creature
+/// it did before this campaign (decision 0227, spec §2.1).
+///
+/// MUTATION THIS MUST FAIL AGAINST: change `role: "npc"` to `role:
+/// "resident"` in `derive_residents`; every id moves and this reddens.
+#[test]
+fn ordinal_zero_is_the_body_derive_npcs_mints() {
+    let (world, ctx, wc, village) = residents_fixture();
+
+    let mut npc_ledger = world.ledger.clone();
+    let npc = hornvale_vessel::liveness::derive_npcs(&world, &ctx, &mut npc_ledger, 1, village.id)
+        .into_iter()
+        .next()
+        .expect("derive_npcs yields the home settlement's body");
+
+    let mut resident_ledger = world.ledger.clone();
+    let residents = hornvale_vessel::residents::derive_residents(
+        &world,
+        &ctx,
+        &mut resident_ledger,
+        &wc,
+        &village,
+        frozen_now(),
+    );
+
+    assert_eq!(
+        residents[0].entity, npc.entity,
+        "ordinal 0's entity must be the lineage derive_npcs has always minted"
+    );
+}
+
+/// A settlement's roll is exactly its committed population, no more (coarse
+/// constrains fine, spec §2.2).
+///
+/// MUTATION THIS MUST FAIL AGAINST: `village.population + 1` in the loop
+/// bound of `resident_draws`.
+#[test]
+fn the_roll_is_the_population() {
+    let (world, ctx, wc, village) = residents_fixture();
+    let mut ledger = world.ledger.clone();
+    let residents = hornvale_vessel::residents::derive_residents(
+        &world,
+        &ctx,
+        &mut ledger,
+        &wc,
+        &village,
+        frozen_now(),
+    );
+    assert_eq!(residents.len(), village.population as usize);
+}
+
+/// Re-deriving over a ledger that already holds the residents mints nothing
+/// new and commits nothing new: the derivation is idempotent, which is what
+/// lets a saved session reload (`reuse_or_mint_entity`'s contract).
+///
+/// MUTATION THIS MUST FAIL AGAINST: replace `reuse_or_mint_entity` with
+/// `mint_entity`; the second derivation panics on the collision.
+#[test]
+fn deriving_twice_is_idempotent() {
+    let (world, ctx, wc, village) = residents_fixture();
+    let mut ledger = world.ledger.clone();
+    let now = frozen_now();
+
+    let first =
+        hornvale_vessel::residents::derive_residents(&world, &ctx, &mut ledger, &wc, &village, now);
+    let len_after_first = ledger.len();
+
+    let second =
+        hornvale_vessel::residents::derive_residents(&world, &ctx, &mut ledger, &wc, &village, now);
+
+    let first_entities: Vec<_> = first.iter().map(|b| b.entity).collect();
+    let second_entities: Vec<_> = second.iter().map(|b| b.entity).collect();
+    assert_eq!(
+        first_entities, second_entities,
+        "the same call yields the same roster of entities"
+    );
+    assert_eq!(
+        ledger.len(),
+        len_after_first,
+        "a second derivation over the same ledger commits nothing new"
+    );
+}
+
+/// A name the ledger already carries wins over a fresh draw (`NAME` is
+/// functional; a recommit with a different value would contradict). Commit a
+/// NAME for ordinal 1 by hand first, then derive: the body's label is the
+/// hand-committed one.
+///
+/// MUTATION THIS MUST FAIL AGAINST: drop the `ledger.text_of(entity, NAME)`
+/// read in `derive_residents` and always use the draw; the commit returns a
+/// `Contradiction` and the `expect` panics.
+#[test]
+fn a_committed_name_wins_over_the_draw() {
+    let (world, ctx, wc, village) = residents_fixture();
+    let mut ledger = world.ledger.clone();
+
+    let entity = ledger.reuse_or_mint_entity(hornvale_kernel::Lineage {
+        parent: Some(village.id),
+        role: "npc",
+        ordinal: 1,
+    });
+    ledger
+        .commit(
+            hornvale_kernel::Fact {
+                subject: entity,
+                predicate: hornvale_kernel::NAME.to_string(),
+                object: hornvale_kernel::Value::Text("Hand-Named".to_string()),
+                place: None,
+                day: None,
+                provenance: "test".to_string(),
+            },
+            &world.registry,
+        )
+        .expect("a hand-committed NAME on a freshly minted entity commits");
+
+    let residents = hornvale_vessel::residents::derive_residents(
+        &world,
+        &ctx,
+        &mut ledger,
+        &wc,
+        &village,
+        frozen_now(),
+    );
+
+    assert_eq!(
+        residents[1].label, "Hand-Named",
+        "the ledger's own name wins over the draw"
+    );
+}
+
+/// Every resident is a person: `is-person` and `person-born` are committed
+/// on it, with `place` = the settlement and `person-born`'s day = `now` less
+/// its drawn age.
+///
+/// MUTATION THIS MUST FAIL AGAINST: delete the `PERSON_BORN` commit.
+#[test]
+fn a_resident_is_a_person() {
+    let (world, ctx, wc, village) = residents_fixture();
+    let mut ledger = world.ledger.clone();
+    let residents = hornvale_vessel::residents::derive_residents(
+        &world,
+        &ctx,
+        &mut ledger,
+        &wc,
+        &village,
+        frozen_now(),
+    );
+
+    for r in &residents {
+        assert_eq!(
+            ledger.value_of(r.entity, hornvale_person::IS_PERSON),
+            Some(&hornvale_kernel::Value::Flag(true)),
+            "{}: every resident is a committed person",
+            r.label
+        );
+        assert!(
+            ledger
+                .value_of(r.entity, hornvale_person::PERSON_BORN)
+                .is_some(),
+            "{}: every resident carries a person-born day",
+            r.label
+        );
+    }
+}
+
+/// Two residents of one settlement differ: on at least one dial, and in
+/// label. (The blob finding, spec §1.)
+///
+/// MUTATION THIS MUST FAIL AGAINST: keep `body_at`'s dials instead of the
+/// draw's (delete the three field overrides); every dial is the species
+/// mean and this reddens on the dial half.
+#[test]
+fn residents_of_one_settlement_are_not_copies() {
+    let (world, ctx, wc, mut village) = residents_fixture();
+    village.population = village.population.max(2);
+    let mut ledger = world.ledger.clone();
+    let residents = hornvale_vessel::residents::derive_residents(
+        &world,
+        &ctx,
+        &mut ledger,
+        &wc,
+        &village,
+        frozen_now(),
+    );
+
+    assert!(residents.len() >= 2, "precondition: at least two residents");
+    let a = &residents[0];
+    let b = &residents[1];
+    assert_ne!(a.label, b.label, "two residents share a label");
+    let dial_differs = a.boldness != b.boldness
+        || a.deliberation_latency != b.deliberation_latency
+        || a.time_horizon != b.time_horizon;
+    assert!(dial_differs, "residents 0 and 1 share every mind dial");
+}
