@@ -1334,7 +1334,6 @@ hornvale-lab::hornvale_lab$domesday::detect::tests::d8_fires_on_exactly_alchemy_
 hornvale-lab::hornvale_lab$domesday::detect::tests::defensibility_capacity_rank_corr_still_exists_in_the_registry
 hornvale-lab::hornvale_lab$domesday::detect::tests::direct_references_match_measured_crates
 hornvale-lab::hornvale_lab$domesday::detect::tests::domain_crates_are_still_exactly_this_list
-hornvale-lab::hornvale_lab$domesday::detect::tests::findings_are_sorted_by_detector_then_metric
 hornvale-lab::hornvale_lab$domesday::detect::tests::pearson_reads_a_nontrivial_correlation_and_its_sign
 hornvale-lab::hornvale_lab$domesday::detect::tests::pearson_returns_none_for_a_constant_column
 hornvale-lab::hornvale_lab$domesday::detect::tests::the_live_census_reproduces_the_preregistered_findings
@@ -3679,6 +3678,7 @@ hornvale::suite$accession::the_rootable_toponymic_concepts_are_core
 hornvale::suite$accession::the_toponymic_concepts_are_registered_and_accessioned
 hornvale::suite$architecture::a_new_concept_and_phenomenon_kind_need_no_god_enum_or_domain_edit
 hornvale::suite$architecture::domains_depend_only_on_the_kernel
+hornvale::suite$architecture::every_client_workspace_declares_an_optimised_dev_profile
 hornvale::suite$architecture::external_dependencies_are_allowlisted
 hornvale::suite$architecture::the_kernel_depends_on_no_workspace_crate
 hornvale::suite$architecture::the_layering_page_matches_the_enforced_graph

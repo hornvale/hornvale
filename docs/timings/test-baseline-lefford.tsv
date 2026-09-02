@@ -1,4 +1,4 @@
-# Hornvale test-duration baseline (The Timekeeper). Recorded at 5eeea051d.
+# Hornvale test-duration baseline (The Timekeeper). Recorded at 02feee1c3.
 # One row per test: <test-id>\t<seconds, millisecond precision>.
 # The reserved id <below-floor> carries a THIRD field instead:
 # <below-floor>\t<summed seconds>\t<count of tests folded in>.
@@ -59,6 +59,7 @@ hornvale-lab::burr_calibration$the_baseline_sits_between_chance_and_certainty	7.
 hornvale-lab::hornvale_lab$blackbox::tests::record_failure_writes_a_world_that_round_trips_to_the_directly_built_one	27.915
 hornvale-lab::hornvale_lab$census_claim::tests::a_timeout_names_the_holder_and_what_to_do	3.016
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::partitioning_columns_are_all_covered_by_d2_or_d4	1.044
+hornvale-lab::hornvale_lab$domesday::detect::tests::findings_are_sorted_by_detector_then_metric	1.064
 hornvale-lab::hornvale_lab$domesday::render::tests::a_metric_that_trips_two_detectors_is_grouped_under_one_heading_not_two	1.161
 hornvale-lab::hornvale_lab$domesday::render::tests::d8_findings_appear_on_the_index_and_not_on_any_domain_page	1.122
 hornvale-lab::hornvale_lab$domesday::render::tests::no_domain_page_or_the_index_cites_the_registry	1.219
@@ -151,7 +152,7 @@ hornvale-lab::suite$depth_ladder::depth_scoped_metrics_match_full_build	25.894
 hornvale-lab::suite$fixture_staleness::a_stale_fixture_fails_with_the_regeneration_instruction	13.463
 hornvale-lab::suite$gathering_calibration::world_level_population_conserves_against_total_capacity	12.815
 hornvale-lab::suite$health_calibration::a_stranded_creature_is_scored_chronic_end_to_end	1.673
-hornvale-lab::suite$health_calibration::a_stranded_creature_learns_helplessness_end_to_end	1.374
+hornvale-lab::suite$health_calibration::a_stranded_creature_learns_helplessness_end_to_end	1.792
 hornvale-lab::suite$health_calibration::by_species_separates_a_stricken_people_end_to_end	1.512
 hornvale-lab::suite$health_calibration::heat_hastens_thirst_end_to_end	2.635
 hornvale-lab::suite$health_calibration::the_harness_scenarios_are_deterministic	3.164
@@ -187,7 +188,7 @@ hornvale-locale::hornvale_locale$surface::tests::a_frozen_vertex_carries_snow_an
 hornvale-locale::hornvale_locale$surface::tests::an_unfrozen_open_water_vertex_is_bare	1.334
 hornvale-locale::hornvale_locale$surface::tests::covered_fraction_never_exceeds_the_bare_ground_budget	1.653
 hornvale-locale::hornvale_locale$surface::tests::openness_moves_the_chlorophyll_litter_split_but_not_the_total	1.264
-hornvale-locale::hornvale_locale$tests::a_locale_reports_height_above_sea_level_not_the_raw_reading	1.644
+hornvale-locale::hornvale_locale$tests::a_locale_reports_height_above_sea_level_not_the_raw_reading	2.586
 hornvale-locale::hornvale_locale$tests::blend_and_inheritance_pin_exact_values	1.607
 hornvale-locale::hornvale_locale$tests::cached_readers_assert_against_geo_level_aliasing_on_read	2.225
 hornvale-locale::hornvale_locale$tests::describe_above_the_grid_errors	1.721
@@ -203,7 +204,7 @@ hornvale-locale::hornvale_locale$tests::mineral_weights_sum_to_one_across_a_buff
 hornvale-locale::hornvale_locale$tests::regime_is_deterministic_and_siblings_differ	1.885
 hornvale-locale::hornvale_locale$tests::room_water_is_conserved_when_aggregated_over_a_canonical_vertex	2.472
 hornvale-locale::hornvale_locale$tests::schema_is_v2_and_regime_present	1.862
-hornvale-locale::hornvale_locale$tests::strange_site_rows_carry_their_own_descriptor	2.165
+hornvale-locale::hornvale_locale$tests::strange_site_rows_carry_their_own_descriptor	1.664
 hornvale-locale::hornvale_locale$tests::strange_sites_are_exposed	1.925
 hornvale-locale::hornvale_locale$tests::the_five_cached_readers_bit_equal_their_recomputing_siblings_with_a_partial_prefill	2.103
 hornvale-locale::hornvale_locale$tests::the_worst_compass_word_is_within_the_measured_ceiling	14.101
@@ -224,7 +225,7 @@ hornvale-locale::suite$water_reading::the_ordinal_is_recoverable_as_a_function_o
 hornvale-locale::suite$water_reading::the_room_declares_which_fields_are_grid_and_channel_resolution	1.984
 hornvale-locale::suite$water_reading::the_width_clause_binds_when_the_step_shrinks	2.420
 hornvale-locale::suite$wetness_reading::a_walk_gets_damper_as_it_descends	3.550
-hornvale-locale::suite$wetness_reading::damp_below_the_median_is_always_inside_a_valley	3.404
+hornvale-locale::suite$wetness_reading::damp_below_the_median_is_always_inside_a_valley	4.212
 hornvale-locale::suite$wetness_reading::descending_walks_of_the_required_length_exist	2.267
 hornvale-locale::suite$wetness_reading::only_the_ground_is_grounded	2.350
 hornvale-locale::suite$wetness_reading::the_micro_draw_order_is_unchanged	2.793
@@ -1062,7 +1063,7 @@ hornvale-worldgen::suite$solitary_tongue::peoples_lexicons_are_unchanged_from_th
 hornvale-worldgen::suite$species_worlds::default_world_carries_all_four_peoples_with_their_own_flagships	9.187
 hornvale-worldgen::suite$species_worlds::every_registry_people_can_flagship_when_pinned_alone	18.140
 hornvale-worldgen::suite$species_worlds::genesis_commits_one_instance_of_fact_per_placed_people	9.846
-hornvale-worldgen::suite$species_worlds::species_pin_restricts_and_unknown_species_fail_loudly	5.577
+hornvale-worldgen::suite$species_worlds::species_pin_restricts_and_unknown_species_fail_loudly	6.734
 hornvale-worldgen::suite$subterranean_energy_probe::every_field_entry_reproduces_the_pure_function_at_its_own_rung	2.704
 hornvale-worldgen::suite$survivorship_probe::breached_delvings_are_deeper_with_overlap	69.776
 hornvale-worldgen::suite$survivorship_probe::the_four_seed_control_agrees_in_direction_and_cannot_decide	26.951
