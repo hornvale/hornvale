@@ -321,3 +321,16 @@ Capture: spec §3.7 (anchor rule), §3.8 (the assumption named); rows
 `MAP-world-conditional-gate`, `MAP-false-door`; the remote switch folded
 into the false-door row; the portal and the co-op plate recorded as stated
 limits in §3.8, not as rows.
+
+## G3 record
+
+Nathan approved the spec at `f2488619f` (2026-09-02) after two rulings made
+with him present (#7, #8). Of the three flagged items: the Fig. 9.8 names
+stand as transcribed, so the inventory is **frozen at ten rows** and Task 1
+asserts that count; the save-format contract a descent key's identity creates
+is accepted (decision 0618 will record it); doors being unreachable in the
+production walk until The Plat is accepted as the program's own ordering. The
+companion's screen 3 recorded no click, so the freeze is by Nathan's word in
+the terminal, not the A/B. One capture action taken on approval: the
+metaplan's §4 gains a line naming the world-conditional gate as the first
+extension after this campaign, so The Plat does not meet it unplanned.
