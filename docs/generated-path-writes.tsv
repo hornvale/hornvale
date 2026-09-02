@@ -9,7 +9,7 @@
 # docs/generated-path-writes.tsv is declared but excluded from the rows below: this
 # file's own output redirect stamps its mtime before this loop ever runs, so a
 # self-observed count would be guaranteed true by construction, not measured.
-book/src/gallery/	45	57
+book/src/gallery/	46	57
 book/src/gallery/almanac.md	0	1
 book/src/gallery/atlas.md	0	1
 book/src/gallery/first-light.md	0	1
@@ -65,7 +65,7 @@ book/src/laboratory/the-terminator-probe.md	0	1
 book/src/laboratory/census-of-coasts-ii.md	0	1
 book/src/laboratory/census-of-coasts-iii.md	0	1
 book/src/laboratory/census-of-coasts-iv.md	0	1
-docs/audits/	13	19
+docs/audits/	14	20
 docs/audits/heavy-tier-adjudication.md	0	1
 docs/audits/land-elevation-attribution.md	0	1
 docs/audits/the-assay-build-volume-audit.md	0	1
