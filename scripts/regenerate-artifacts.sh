@@ -860,6 +860,38 @@ gen_underworld_lattice() {
     printf '```\n'
 }
 
+# The Crosscut's committed witness (spec §4): the four preregistered readouts
+# — loop share, density ordering, cross-floor cycles, semilattice overlap —
+# over every cave-bearing, non-ocean vertex of the same standing seed panel.
+#
+# Framing lines are hand-authored (the redirect replaces the whole file body,
+# so re-emit them here); the fenced blocks are the `circuit` verb's exact,
+# drift-checked output.
+gen_underworld_circuit() {
+    printf '# The Circuits of Seeds 42, 7 and 1234\n\n'
+    printf 'What this page witnesses: for each seed'"'"'s every cave-bearing,\n'
+    printf 'non-ocean vertex, a descent plan is grown (spec §3) and the four\n'
+    printf 'preregistered readouts of spec §4 are measured against it, then\n'
+    printf 'reduced to a panel median. A descent plan is never stored -- it is a\n'
+    # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
+    printf 'pure function of `(seed, vertex, rungs, kind, character)`, so this page\n'
+    printf 'is a witness, not a record: every number here is re-derived from the\n'
+    printf 'seed on each regeneration.\n\n'
+    printf 'The verdict words PASSED / FALSIFIED are frozen by spec §4, decided\n'
+    printf 'before this code existed, and nothing here is tuned to reach one -- a\n'
+    printf 'FALSIFIED verdict is a finding the campaign publishes, not a bug to fix\n'
+    printf 'by moving the threshold. A comparison that cannot be made for a seed\n'
+    printf '(no cave of some kind exists there) prints NOT MEASURABLE rather than a\n'
+    printf 'vacuous PASSED.\n\n'
+    printf '```text\n'
+    run -p hornvale -- circuit --seed 42
+    printf '\n'
+    run -p hornvale -- circuit --seed 7
+    printf '\n'
+    run -p hornvale -- circuit --seed 1234
+    printf '```\n'
+}
+
 # The atlas bundle. Without this line book/src/gallery/ is in the drift-check
 # list but atlas.js is never rebuilt, so `git diff --exit-code` compares the
 # committed file against itself and reports clean forever (The Staff, Task
@@ -980,6 +1012,7 @@ spawn run -p hornvale -- lab reticence > docs/audits/the-reticence-report.md
 spawn run --manifest-path tools/digest/Cargo.toml -- render delta \
   > docs/digest/intent-vs-reality.md
 spawn gen_underworld_lattice > docs/audits/underworld-lattice-seed-panel.md
+spawn gen_underworld_circuit > docs/audits/underworld-circuit-seed-panel.md
 spawn build_atlas
 
 # Group B: readers of $w42/$wsky/$wlocked.

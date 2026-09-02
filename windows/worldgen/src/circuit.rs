@@ -969,6 +969,28 @@ pub fn semilattice_overlap(plan: &DescentPlan) -> Option<f64> {
     Some(on_two as f64 / count.len() as f64)
 }
 
+/// Report-only companion to [`loop_share`] (spec §4.1, ledger amendment): the
+/// share of non-entrance nodes lying on at least one realm — i.e. carrying
+/// `Some` in [`Node::realm`]. Disclosed after Task 2 showed the entrance
+/// doorway is a bridge on ~40% of seeds, so the reader can tell "the entrance
+/// is a bridge" from "the levels have no loops". Carries no verdict word and
+/// is never gated.
+/// type-audit: bare-ok(ratio: return)
+pub fn cycle_membership_share(plan: &DescentPlan) -> f64 {
+    let candidates: Vec<&Node> = plan
+        .nodes
+        .iter()
+        .enumerate()
+        .filter(|&(i, _)| i != plan.entrance)
+        .map(|(_, n)| n)
+        .collect();
+    if candidates.is_empty() {
+        return 0.0;
+    }
+    let on_realm = candidates.iter().filter(|n| n.realm.is_some()).count();
+    on_realm as f64 / candidates.len() as f64
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1274,9 +1296,15 @@ mod tests {
         assert!((0..100u64).any(|s| has_cross_floor_realm(&plan(s, 7))));
     }
 
-    #[test]
-    fn a_tree_has_zero_loop_share_and_a_cycle_has_full() {
-        let path = DescentPlan {
+    /// A bare 3-node, 2-edge single-level path: no cycle, so no node's
+    /// `realm` is ever `Some`. Shared by the loop-share and
+    /// cycle-membership tests below — factored out (rather than duplicated)
+    /// so the lexicon guard's per-file token ceiling
+    /// (`docs/audits/lexicon-inventory.tsv`) does not grow every time a new
+    /// test wants the same fixture; growing it requires a rebaseline a human
+    /// agrees with, not a second copy of an existing literal.
+    fn bare_three_node_path() -> DescentPlan {
+        DescentPlan {
             rungs: vec![Band::Undercroft],
             nodes: vec![
                 Node {
@@ -1314,8 +1342,12 @@ mod tests {
             terminus: 2,
             realms: vec![],
             dof: 0,
-        };
-        assert_eq!(loop_share(&path), 0.0);
+        }
+    }
+
+    #[test]
+    fn a_tree_has_zero_loop_share_and_a_cycle_has_full() {
+        assert_eq!(loop_share(&bare_three_node_path()), 0.0);
         // Whether the entrance itself lands on a cycle (degree >= 2) is a
         // real per-seed coin flip — measured at ~60% positive across 200
         // (seed, vertex=1) draws — not a bug: a cave has exactly one
@@ -1327,5 +1359,20 @@ mod tests {
         // `plan(6, 1)` is a verified-positive substitute that exercises the
         // same code path.
         assert!(loop_share(&plan(6, 1)) > 0.0);
+    }
+
+    /// claim: rate(seed: 0..50) — [`cycle_membership_share`] is always a
+    /// well-formed share, and the frozen hand-built 3-node path (no realm
+    /// touches any node) gives exactly 0.0.
+    #[test]
+    fn cycle_membership_share_is_a_ratio_and_zero_on_a_bare_path() {
+        assert_eq!(cycle_membership_share(&bare_three_node_path()), 0.0);
+        for s in 0..50u64 {
+            let share = cycle_membership_share(&plan(s, 3));
+            assert!(
+                (0.0..=1.0).contains(&share),
+                "seed {s}: share {share} out of [0,1]"
+            );
+        }
     }
 }
