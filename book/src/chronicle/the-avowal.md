@@ -188,3 +188,37 @@ because it is durable.
 A project this large accretes capability faster than it accretes the words
 for it; this campaign is one pass at closing that gap, not the last
 one it will need.
+
+## A red that was not a red
+
+One thing this campaign fixed was not in its plan, and finding it was an
+accident of running the whole suite by hand rather than through a gate.
+
+Two `repertory_corpus` tests failed — `walk-changes-the-room`, one of four
+scenes the repertory holds as positive controls, reporting `ABSENT` against a
+floor of `AUTHORED`. The assertion's own message says what such a red means: the
+resolver is broken, or the world changed under a scene that used to play.
+Neither had happened.
+
+`run_at` built its scratch directory as `hv-repertory-<pid>-<seed>`. Two tests
+iterate the same corpus — one directly, one through `every_committed_scene` —
+and libtest runs them as threads in a single process, so at a shared seed they
+wrote the same script file and read back the same snapshot. Each received the
+other's run. The scene failed a beat it passes in isolation, and a harness
+collision was reported in the vocabulary of a world regression.
+
+It had been invisible to every gate for a reason worth stating plainly, because
+it inverts the usual worry: this project gates with nextest, which runs each
+test in its own process, so the paths cannot collide there. The bug existed only
+under the configuration no gate uses. Measured on one tree with concurrency as
+the only variable, the serial run passed all eleven tests in 138 seconds and the
+parallel run failed two in thirteen — **the broken configuration is the fast
+one**, because a test that aborts early never runs its scene. That inversion,
+not the failure, is what identifies it.
+
+The fix names the directory per call. The interesting residue is diagnostic
+rather than technical: the first three explanations offered for the failure — a
+world regression, a specific campaign's walk-band change, a later campaign's
+incidental repair — were all false, and each was disproved by running something
+rather than by reasoning further. The last of them died only when the exact
+commit that had failed was run a second time and passed.

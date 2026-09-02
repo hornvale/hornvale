@@ -218,8 +218,42 @@ Recorded as `SCN-marks-carry-no-entity-id`.
 - **The tone tier is entirely at its default.** Not this campaign's to fix;
   recorded so the next campaign that touches `windows/sentiment` or the
   concept registry's tone axis does not rediscover it from zero.
-- **The `repertory_corpus` red on `main`** (see above) needs an owner and an
-  investigation, not a fix folded into an unrelated campaign's close.
+- **The `repertory_corpus` red on `main` was investigated and fixed after this
+  section was first written, and the original text — *"needs an owner and an
+  investigation"* — was left standing for several hours while the fix sat on
+  `main`.** That is this retrospective's own subject happening to this
+  retrospective: a committed record asserting something the code had stopped
+  saying. Recorded rather than quietly rewritten, because the interval is the
+  finding. What it actually was: not a world regression and not a red `main`,
+  but a **race in the test harness**. `run_at` named its scratch directory
+  `hv-repertory-<pid>-<seed>`, and the two tests that both iterate
+  `the-founding.scene.json` — `every_founding_scene_passes_every_beat` directly
+  and `no_scene_has_fallen_below_its_recorded_floor` through
+  `every_committed_scene` — run concurrently in one process, so at a shared seed
+  they wrote the same `script.txt` and read back the same `snapshot.json`. Each
+  received the other's run; the scene failed a beat it passes alone and scored
+  `Absent`, which the floor test reports as a regression that never happened.
+
+  **Why no gate ever saw it, which is the durable part:** this project gates
+  with nextest, which is **process-per-test**, so every test holds its own pid
+  and those paths cannot collide there. Only libtest's default — threads inside
+  one process — reproduces it. Measured at commit `4400e3081`, one tree,
+  concurrency the only variable: `--test-threads=1` gives 11 passed in 138.3 s;
+  the default gives 9 passed, 2 failed in 12.9 s. **The failing run is faster,
+  because the scene tests abort early instead of running their scenes**, and
+  that inversion is the tell.
+
+  Fixed by naming the scratch directory per *call* through an atomic counter,
+  with `a_scratch_name_is_unique_per_call_even_at_one_seed` demonstrated red
+  against the restored `(pid, seed)` scheme before being accepted.
+
+  **The controller error worth keeping is separate from the bug.** A red was
+  reported to the board from a *single* observation, with an unbisected cause
+  attached (The Pavement's walk band) that four green probes later disproved.
+  The truth only surfaced on re-running the exact commit that had failed, which
+  passed. A symptom this convincing — a positive control reporting `ABSENT`
+  under an assertion whose own message says a red means the world changed —
+  deserves a second run before it deserves a diagnosis.
 - **A decision-to-ledger citation has no drift check.** `docs_consistency`
   checks source-to-decision citations; a decision-to-ledger-entry citation
   (like 0577's and 0581's own "see ledger entries #8 and #9") can point at
