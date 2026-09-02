@@ -793,6 +793,40 @@ struct GroundEntry {
 /// `frightening` is ordered by first visit so that "the frightening rooms
 /// at a past `t`" is a `partition_point` prefix — the lab's waking-instant
 /// reads need exactly that (spec §2.2).
+///
+/// # ONE INDEX PER `(LocaleContext, predator field)` — the same rule the room
+/// # memo states, and it is this type's only correctness precondition
+///
+/// A held verdict is the answer ONE hazard field gave. The predicate is
+/// `feels_frightening(threat_field(room, niche, terrain), 0.0, boldness)`,
+/// and `threat_field` reads `Terrain::hazards` over the room and its
+/// neighbours — so the verdict is a function of the ROOM, the creature, and
+/// the terrain's hazard field. The first two are keyed; **the third is
+/// supplied by ownership**, exactly as [`crate::ground::GroundHazards`]
+/// supplies it and for the same reason. The store that holds this index
+/// belongs to one session and one world; its owner builds every terrain the
+/// index is advanced through over one `LocaleContext` and one predator field,
+/// which do not change after `Session::start`.
+///
+/// It is NOT one `Terrain` VALUE per store — production builds many
+/// (`Session` at five sites, the lab one per tick) — for the reason
+/// [`SustenanceMemo`]'s doc gives in full for the temperature field: two
+/// `LocaleTerrain` values over the same context and the same field are
+/// interchangeable here however their mesh or room memos differ, because both
+/// are faithful caches of a pure function rather than parameters of it.
+///
+/// **A caller that must read under a DIFFERENT hazard field builds a new
+/// store.** Discarding this index is unobservable at any instant (it is a
+/// pure function of `(ledger prefix, terrain)` and rebuilds on demand), so
+/// that is always available and always cheap. Advancing one index under two
+/// disagreeing fields is the one thing that makes it wrong, and the failure
+/// is SILENT and byte-visible: the second field's read returns the first
+/// field's verdict, no room is re-judged, and nothing anywhere objects.
+/// `liveness_tests/emitter_scan.rs`'s
+/// `a_verdict_index_belongs_to_one_terrain_and_a_second_field_reads_the_first_ones_verdict`
+/// demonstrates that aliasing rather than asserting it cannot happen — the
+/// same shape as the room memo's own two-terrain test in
+/// `tests/suite/the_detent.rs`.
 #[derive(Debug, Default)]
 pub struct FrighteningGround {
     /// Every entity's held verdicts, keyed by entity.

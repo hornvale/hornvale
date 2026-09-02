@@ -8,7 +8,8 @@ use hornvale_vessel::body::Body;
 use hornvale_vessel::ground::{GroundHazards, OwnedGround};
 use hornvale_vessel::liveness::{
     AGENT_AT, DRANK, DriveMovements, EATEN, HazardMemory, HomeNavCache, LocaleTerrain,
-    PrimaryAfraidMemo, RESTED, SLEPT, SUSTENANCE, Terrain, derive_npcs, hazard_memory_memo,
+    PrimaryAfraidMemo, RESTED, SLEPT, SUSTENANCE, Terrain, alarm_field_memo, derive_npcs,
+    hazard_memory_memo,
 };
 use hornvale_vessel::resident::{OwnedFolds, ResidentFolds};
 
@@ -196,6 +197,12 @@ pub struct ProbeCounts {
     /// Field samples (room-memo misses) the THIRD read took — a fresh
     /// `PrimaryAfraidMemo` over the same, already-warm room memo.
     pub second_fresh_samples: u64,
+    /// `hazards()` calls ONE `alarm_field_memo` over the whole roster makes,
+    /// with a fresh `PrimaryAfraidMemo` — the tick's OTHER fear-path caller,
+    /// measured so the tick's remaining calls are attributed rather than
+    /// reasoned about. `DriveMovements::step_with_occupancy` builds exactly
+    /// one of these per tick, before any creature moves.
+    pub alarm_field_hazards: u64,
 }
 
 pub fn probe_counts(shape: &BenchShape) -> ProbeCounts {
@@ -275,6 +282,25 @@ pub fn probe_counts(shape: &BenchShape) -> ProbeCounts {
     );
     let samples_after_third = shape.ground.borrow().misses();
 
+    // COMPONENT ATTRIBUTION (Task 6 fix round 1): the tick's other fear-path
+    // caller, measured on the same terrain and the same instant as the probe
+    // reads above. `alarm_field_memo` walks the whole roster and applies the
+    // cheap gate (`threat_field` at each creature's position), which is where
+    // its `hazards()` calls come from; `step_with_occupancy` builds one per
+    // tick at the interval START, so this is that component's size, taken at
+    // `shape.day` because that is the instant this witness instruments.
+    terrain.reset();
+    let mut alarm_memo = PrimaryAfraidMemo::new();
+    let _alarm = alarm_field_memo(
+        &shape.ledger,
+        &shape.folds,
+        &shape.npcs,
+        &terrain,
+        shape.day,
+        &mut alarm_memo,
+    );
+    let alarm_field_hazards = terrain.hazards_calls();
+
     ProbeCounts {
         fresh_hazards,
         warm_hazards,
@@ -285,6 +311,7 @@ pub fn probe_counts(shape: &BenchShape) -> ProbeCounts {
         first_fresh_samples: samples_after_first - samples_before_first,
         warm_samples: samples_after_second - samples_after_first,
         second_fresh_samples: samples_after_third - samples_after_second,
+        alarm_field_hazards,
     }
 }
 
@@ -401,6 +428,48 @@ fn h5_witness_the_hazard_reads_terrain_samples_on_the_bench_shape() {
     assert!(
         last_tick <= 4_469,
         "H5: the whole tick makes at most 4,469 hazards() calls (from 44,694), saw {last_tick}"
+    );
+
+    // WHAT THE SURVIVING CALLS ARE (Task 6 fix round 1). An unattributed
+    // remainder is how a mechanism gets read wrong, so the tick's `hazards()`
+    // calls are decomposed by MEASUREMENT rather than by argument:
+    //
+    //   (a) `alarm_field_memo` over the roster — one per tick, built by
+    //       `step_with_occupancy` before anyone moves; its `hazards()` come
+    //       from the cheap gate's `threat_field` at each creature's position.
+    //   (b) one fresh-memo `hazard_memory_memo` on the probe — which is the
+    //       tick's emitter scan (`build_emitter_scan` judging every member's
+    //       `home` through `threat_field`) plus the probe's own read. The
+    //       tick makes 50 such reads but they share one `PrimaryAfraidMemo`,
+    //       so only the FIRST builds a scan and the other 49 pay the warm
+    //       price this witness measures as zero.
+    //   (c) the whole `step_with_occupancy`.
+    //
+    // The remainder (c - a - b) is the Danger drive's per-step sampling in
+    // `advance_one`'s decide loop (`Danger::threat_at` / `threat_field`,
+    // once per candidate room per step) and anything else the walk asks.
+    let attributed = counts.alarm_field_hazards + counts.fresh_hazards;
+    println!(
+        "H5 attribution of tick {H5_TICKS}'s {last_tick} hazards() calls: \
+         (a) alarm_field_memo over the roster {}, (b) one fresh-memo hazard read {}, \
+         (a)+(b) = {attributed}, walk remainder (c-a-b) = {}",
+        counts.alarm_field_hazards,
+        counts.fresh_hazards,
+        last_tick as i64 - attributed as i64,
+    );
+    assert!(
+        counts.alarm_field_hazards > 0,
+        "attribution denominator: the alarm field must sample terrain at all"
+    );
+    assert!(
+        counts.fresh_hazards > 0,
+        "attribution denominator: the fresh hazard read must sample terrain at all"
+    );
+    assert!(
+        attributed <= last_tick,
+        "the two measured fear-path components ({attributed}) cannot exceed the whole tick \
+         ({last_tick}) — if they do, they are not components of it and the decomposition is \
+         measuring different work"
     );
 
     // H6 (spec §4): the scan's work per tick is O(new sightings). Across

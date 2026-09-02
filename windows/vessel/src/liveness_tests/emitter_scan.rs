@@ -22,7 +22,7 @@
 
 use super::*;
 use crate::ground::{GroundHazards, OwnedGround};
-use crate::resident::{OwnedFolds, ResidentFolds};
+use crate::resident::{FrighteningGround, OwnedFolds, ResidentFolds};
 
 // ---------------------------------------------------------------------------
 // The oracles (pre-Task-6 production bodies, verbatim)
@@ -187,6 +187,141 @@ fn the_scan_predicate_and_the_read_predicate_agree_over_the_whole_range() {
     assert!(
         clamped > 0,
         "the sweep must reach the clamp region, or it never tests where the two could differ"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// The index's terrain-ownership rule, demonstrated
+// ---------------------------------------------------------------------------
+
+/// A terrain whose UNCANNY hazard is planted by hand and whose every other
+/// reading is a constant — the two-field pair the ownership test needs, with
+/// no world to build.
+struct PlantedGround {
+    /// The rooms that read UNCANNY.
+    uncanny: std::collections::BTreeSet<Facet>,
+}
+
+impl Terrain for PlantedGround {
+    fn elevation(&self, _room: &Facet) -> f64 {
+        0.0
+    }
+    fn is_fresh_water(&self, _room: &Facet) -> bool {
+        false
+    }
+    fn temperature(&self, _room: &Facet, _day: WorldTime) -> f64 {
+        15.0
+    }
+    fn hazards(&self, room: &Facet) -> Hazards {
+        Hazards {
+            uncanny: if self.uncanny.contains(room) {
+                0.8
+            } else {
+                0.0
+            },
+            ..Hazards::ZERO
+        }
+    }
+}
+
+/// [`FrighteningGround`] belongs to ONE `(LocaleContext, predator field)`, and
+/// this shows the aliasing that rule forbids rather than asserting it cannot
+/// happen — the same shape as the room memo's own two-terrain test
+/// (`a_room_memo_belongs_to_one_predator_field_and_a_second_field_gets_its_own`
+/// in `windows/vessel/tests/suite/the_detent.rs`).
+///
+/// Two halves. **The rule obeyed:** an index per terrain, each answering as
+/// itself — which is also the anti-vacuity floor, since two terrains that
+/// agreed about the room could not show sharing at all. **The rule broken:**
+/// one index advanced under the haunted field and then advanced again under
+/// the safe one judges NOTHING (the cursor is at the trail's end and the room
+/// is already in `judged`), so the safe field reads back the haunted field's
+/// verdict. Nothing objects; the answer is simply wrong, and byte-visibly so.
+#[test]
+fn a_verdict_index_belongs_to_one_terrain_and_a_second_field_reads_the_first_ones_verdict() {
+    let entity = EntityId::new(11).expect("11 is a valid entity id");
+    let scary = Facet {
+        face: 0,
+        path: vec![1],
+    };
+    let day = WorldTime::from_ticks(WorldTime::TICKS_PER_STD_DAY);
+    let trail = vec![(day, scary.clone())];
+    // A mortal's niche: UNCANNY weighted 1, everything else 0. Steady
+    // boldness leaves the felt threat unscaled (`mettle_factor(0.5) == 1`).
+    let niche = ThreatNiche {
+        uncanny: 1.0,
+        heat: 0.0,
+        cold: 0.0,
+        predator: 0.0,
+    };
+    let boldness = 0.5;
+
+    let haunted = PlantedGround {
+        uncanny: std::iter::once(scary.clone()).collect(),
+    };
+    let safe = PlantedGround {
+        uncanny: std::collections::BTreeSet::new(),
+    };
+    let judge = |terrain: &dyn Terrain, room: &Facet| {
+        feels_frightening(threat_field(room, &niche, terrain), 0.0, boldness)
+    };
+
+    // The two fields genuinely disagree about this room, or nothing below can
+    // see sharing. (`threat_field` is the maximum over the room AND its
+    // neighbours, so the safe field must plant nothing anywhere near it — it
+    // plants nothing at all.)
+    assert!(
+        judge(&haunted, &scary),
+        "the haunted field must frighten here, or the test has no positive case"
+    );
+    assert!(
+        !judge(&safe, &scary),
+        "the safe field must NOT frighten here, or the two fields agree and the aliasing \
+         below would be invisible"
+    );
+
+    // THE RULE OBEYED: one index per field, each answers as itself.
+    for (terrain, want) in [
+        (&haunted as &dyn Terrain, true),
+        (&safe as &dyn Terrain, false),
+    ] {
+        let mut own = FrighteningGround::default();
+        let judged = own.advance(entity, &trail, &mut |room| judge(terrain, room));
+        assert_eq!(judged, 1, "the room is judged exactly once");
+        assert_eq!(
+            own.verdict(entity, &scary),
+            Some(want),
+            "an index of its own must answer as its own terrain"
+        );
+        assert_eq!(
+            own.frightening_at(entity, day).is_empty(),
+            !want,
+            "the held prefix must agree with the verdict"
+        );
+    }
+
+    // THE RULE BROKEN: one index, two fields. Advanced under the haunted
+    // field first, then handed the safe field's judge.
+    let mut shared = FrighteningGround::default();
+    shared.advance(entity, &trail, &mut |room| judge(&haunted, room));
+    let judged_again = shared.advance(entity, &trail, &mut |room| judge(&safe, room));
+    assert_eq!(
+        judged_again, 0,
+        "the second field's judge is never CALLED — the cursor is at the trail's end and the \
+         room already carries a verdict, which is why the staleness is silent"
+    );
+    assert_eq!(
+        shared.verdict(entity, &scary),
+        Some(true),
+        "one index shared across two hazard fields returns the FIRST field's verdict under \
+         the second — this is the aliasing the ownership rule forbids: an index belongs to \
+         one (LocaleContext, predator field), and a caller reading under a different field \
+         builds a new store (see FrighteningGround's type doc)"
+    );
+    assert_eq!(
+        shared.frightening_at(entity, day).len(),
+        1,
+        "and the shunned set the safe field would read is the haunted field's, not its own"
     );
 }
 
