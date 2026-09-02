@@ -12,17 +12,21 @@
 //! 0095 deferred until a second catalogue existed — one column says what this
 //! world supplies, and only the matrix can say what the catalogues ask for.
 //!
-//! **The witness (decision 0577, spec §4.2).** Token membership was never
-//! hard to satisfy — `PredicateDef` is `{ name, functional, doc }` with no
-//! object-type constraint — so `Stageable` now also requires a committed
-//! [`hornvale_vessel::Tableau`] that actually places a situation's actants
-//! and stages every relation it stipulates, looked up by situation id in a
-//! caller-supplied witness table ([`witnesses`] is the production roster).
-//! An absent witness and a witness that fails to stage are refused
-//! identically: neither can claim `Stageable` on a corpus token alone. See
-//! `cli/tests/suite/trope_witness.rs` for what this proves and does not, and
-//! decision 0330 for the sibling precedent (`sentence_corpus.rs`'s
-//! `MERCHANT_WITNESS`) this design follows.
+//! **The witness (decisions 0577/0581, spec §4.2).** Token membership was
+//! never hard to satisfy — `PredicateDef` is `{ name, functional, doc }`
+//! with no object-type constraint — so `Stageable` now also requires a
+//! committed [`hornvale_vessel::Tableau`] that both BINDS to the situation
+//! it is filed under (0581: every relation predicate it stages must be
+//! among that situation's own required tokens — see [`witness_binds`]) and
+//! actually stages successfully. Looked up by situation id in a
+//! caller-supplied [`Witnesses`] table ([`witnesses`] is the production
+//! roster), each entry pairing the tableau with a mandatory prose distance
+//! record (0581's [`WitnessEntry`], closing the gap decision 0330's own
+//! module doc names). An absent witness, an unbound one, and one that fails
+//! to stage are refused identically: none can claim `Stageable` on a corpus
+//! token alone. See `cli/tests/suite/trope_witness.rs` for what this proves
+//! and does not, and decision 0330 for the sibling precedent
+//! (`sentence_corpus.rs`'s `MERCHANT_WITNESS`) this design follows.
 
 use hornvale_kernel::{ConceptRegistry, World};
 use hornvale_vessel::{PossessOpts, Session, Tableau};
@@ -112,14 +116,56 @@ fn expand(corpus: &Corpus, req: &str) -> Vec<String> {
     }
 }
 
+/// One realization witness (decision 0581): the tableau staged, plus the
+/// distance record decision 0330 makes mandatory rather than optional —
+/// how this staged scene differs from, or falls short of, the corpus
+/// situation's own prose, honestly, including the ugly parts.
+/// `sentence_corpus.rs`'s `MERCHANT_WITNESS` is the precedent: it pairs an
+/// id with the realized SURFACE and per-entry prose recording the gap
+/// (m06 drops the "why", m07 substitutes a gerund). A trope situation
+/// stages a SCENE rather than an utterance, so there is no single
+/// "realized surface" to diff against a literal sentence the way the
+/// merchant corpus does — the record here is free prose instead — but the
+/// FIELD is mandatory: [`WitnessEntry::new`] refuses an empty one, so the
+/// first author of a real row cannot construct one without writing it.
+/// type-audit: bare-ok(prose: realized)
+#[derive(Clone, Debug)]
+pub struct WitnessEntry {
+    /// The tableau staged.
+    pub tableau: Tableau,
+    /// How this staged scene differs from, or falls short of, the corpus
+    /// situation it witnesses. Never empty — see [`WitnessEntry::new`].
+    pub realized: String,
+}
+
+impl WitnessEntry {
+    /// Build a witness entry. Panics on an empty (or whitespace-only)
+    /// `realized` record: an empty distance record is indistinguishable
+    /// from an omitted one, and decision 0330's whole point is that
+    /// omitting it is what turns a witness into a rubber stamp with a file
+    /// attached.
+    pub fn new(tableau: Tableau, realized: impl Into<String>) -> Self {
+        let realized = realized.into();
+        assert!(
+            !realized.trim().is_empty(),
+            "a WitnessEntry's realized-scene record must not be empty (decision 0581, \
+             following decision 0330's MERCHANT_WITNESS precedent)"
+        );
+        Self { tableau, realized }
+    }
+}
+
 /// The realization witness roster (decision 0577): a hand-authored
-/// [`Tableau`] per situation id that `world` must stage successfully before
-/// that situation may resolve `Stageable`. Threaded through [`resolve`]
-/// rather than looked up internally, the same way [`crate::provision::
-/// Provision`] is passed by the caller rather than rebuilt inside — a test
-/// can substitute a synthetic table without touching either frozen corpus.
+/// [`WitnessEntry`] per situation id that `world` must stage successfully
+/// before that situation may resolve `Stageable`. Threaded through
+/// [`resolve`] rather than looked up internally, the same way a caller
+/// supplies its own [`crate::provision::Provision`] table — a test can
+/// substitute a synthetic roster without touching either frozen corpus.
+/// (`resolve` itself builds `Provision` from the `registry` it is given,
+/// which is a *different* thing from `Witnesses`: this table arrives
+/// already built, `Provision` does not — see `resolve`'s own doc.)
 /// type-audit: bare-ok(identifier-text: Witnesses)
-pub type Witnesses = BTreeMap<String, Tableau>;
+pub type Witnesses = BTreeMap<String, WitnessEntry>;
 
 /// The production witness roster for the two frozen corpora
 /// (`tropes::CORPORA`).
@@ -137,21 +183,71 @@ pub fn witnesses() -> Witnesses {
     BTreeMap::new()
 }
 
-/// Whether `id`'s registered witness stages successfully against `world`:
-/// its actants place as real entities and every stated relation resolves
-/// and passes contradiction-checking *together*, exactly the path a real
-/// possession commits through (`Session::start`) — never a per-token check.
+/// Whether `tableau`'s staged relations are actually BOUND to `situation`
+/// — the mechanical half of decision 0581's "against that staged scene"
+/// (spec §4.2): every predicate `tableau` stages as a relation must be
+/// among the tokens `situation`'s own (expanded) `requires` list names.
+/// A tableau relating two cast members by `instance-of` cannot witness a
+/// situation whose requirements never ask for `predicate:instance-of`, so
+/// a tableau filed under situation A is refused under situation B
+/// whenever A and B ask for different relation predicates — the property
+/// that closes the hole a bare id lookup left open (a witness filed under
+/// any id would previously stage identically for every other).
 ///
-/// An absent witness (`"witness:absent"`) and a witness whose tableau or
-/// relations fail to stage (`"witness:refused"`) are distinguished so a
-/// `Blocked` reason tells a reader "nobody wrote one" from "one was written
-/// and the world refuses it" — but both are refused identically by
-/// [`resolve`]: neither may claim `Stageable`.
-/// type-audit: bare-ok(identifier-text: id), bare-ok(prose: return)
-pub fn witness_stages(id: &str, world: &World, witnesses: &Witnesses) -> Result<(), &'static str> {
-    let tableau = witnesses.get(id).ok_or("witness:absent")?;
+/// **What this does NOT prove, stated so a reader cannot infer more than
+/// it checks.** It does not verify that the tableau's cast fills the
+/// situation's actant ROLES: [`Situation::actants`] is prose-valued (a
+/// Greimas role name mapped to a free-text description), so there is no
+/// mechanical role check available the way there is for a predicate
+/// token — role assignment stays entirely unverified, which is exactly
+/// the limit spec §4.2 itself states for the whole witness bar ("does not
+/// prove any world produces the situation"). And a witness that stages NO
+/// relations at all binds VACUOUSLY to any situation whose requirements
+/// name no predicate token at all (`Iterator::all` over an empty iterator
+/// is `true`) — a real gap, of the same class 0330 already accepted for
+/// its own narrower claim, and one this function cannot close without a
+/// role-typed corpus this project does not have.
+/// type-audit: bare-ok(identifier-text: corpus), bare-ok(flag: return)
+fn witness_binds(corpus: &Corpus, situation: &Situation, tableau: &Tableau) -> bool {
+    let required: BTreeSet<String> = situation
+        .requires
+        .iter()
+        .flat_map(|r| expand(corpus, r))
+        .collect();
+    tableau
+        .relations
+        .iter()
+        .all(|rel| required.contains(&format!("predicate:{}", rel.predicate)))
+}
+
+/// Whether `situation`'s registered witness both BINDS to it
+/// ([`witness_binds`]) and stages successfully against `world`: its
+/// actants place as real entities and every stated relation resolves and
+/// passes contradiction-checking *together*, exactly the path a real
+/// possession commits through (`Session::start`) — never a per-token
+/// check.
+///
+/// Three refusal reasons, distinguished so a `Blocked` cell (lexicon: a Markdown table cell, the AREA sense) tells a
+/// reader which of three different things is missing rather than
+/// collapsing them into one: `"witness:absent"` (no row filed under this
+/// id at all), `"witness:unbound"` (a row exists but its relations do not
+/// name this situation's own required predicates — see
+/// [`witness_binds`]), and `"witness:refused"` (a bound witness whose
+/// tableau or relations still fail to stage). All three are refused
+/// identically by [`resolve`]: none may claim `Stageable`.
+/// type-audit: bare-ok(prose: return)
+pub fn witness_stages(
+    corpus: &Corpus,
+    situation: &Situation,
+    world: &World,
+    witnesses: &Witnesses,
+) -> Result<(), &'static str> {
+    let entry = witnesses.get(&situation.id).ok_or("witness:absent")?;
+    if !witness_binds(corpus, situation, &entry.tableau) {
+        return Err("witness:unbound");
+    }
     let opts = PossessOpts {
-        tableau: Some(tableau.clone()),
+        tableau: Some(entry.tableau.clone()),
         ..PossessOpts::default()
     };
     Session::start(world, &opts)
@@ -164,11 +260,14 @@ pub fn witness_stages(id: &str, world: &World, witnesses: &Witnesses) -> Result<
 ///
 /// Consults the [`crate::provision::Provision`] table (decision 0576)
 /// instead of `registry_tokens` alone: a token is present only if some
-/// declared home actually serves it. This task wires the ledger home only,
-/// so today's behaviour is unchanged — `Provision::from_registry` declares
-/// exactly the tokens `registry_tokens` used to compute, and its ledger
-/// resolver checks the same three namespaces. The widening (component and
-/// session homes) arrives in Tasks 6 and 7 without `resolve` changing again.
+/// declared home actually serves it. **This function BUILDS `Provision`
+/// itself, from the `registry` it is given** — unlike `witnesses`, which
+/// arrives already built by the caller (see that parameter's own doc; an
+/// earlier draft of decision 0577 stated this the other way round, and
+/// decision 0581 corrects it). `Provision::from_registry` declares exactly the
+/// tokens `registry_tokens` used to compute, and its ledger resolver
+/// checks the same three namespaces. The widening (component and session
+/// homes) arrives in Tasks 6 and 7 without `resolve` changing again.
 ///
 /// **`Stageable` now ALSO requires a witness (decision 0577)**, checked only
 /// once every requirement token already resolves — a situation still
@@ -204,7 +303,7 @@ pub fn resolve(
         let outcome = if !missing.is_empty() {
             Outcome::Blocked(missing)
         } else {
-            match witness_stages(&s.id, world, witnesses) {
+            match witness_stages(corpus, s, world, witnesses) {
                 Ok(()) => Outcome::Stageable,
                 Err(reason) => Outcome::Blocked(vec![reason.to_string()]),
             }
@@ -294,12 +393,60 @@ pub fn regenerate_command(path: &str) -> String {
     format!("hornvale tropes --corpus {path} report")
 }
 
+/// Shared header prose for the witnessed-`Stageable` boundary (decisions
+/// 0577/0581), used verbatim by both [`render`] and [`render_matrix`] so the two
+/// committed artifacts cannot state the claim two different ways — the
+/// exact failure class (an artifact asserting more than the code checks,
+/// spec's own "the failure this project documents most") this constant
+/// exists to close off structurally, not just by care. States precisely
+/// what the gate checks — token resolution, a filed witness, the
+/// witness's relations bound to THIS situation's own required predicates
+/// (`witness_binds`), and a successful stage — and precisely what it does
+/// not: actant ROLE assignment is never checked, and a witness with no
+/// relations binds vacuously to any situation asking for no predicate.
+const WITNESS_BOUNDARY_WHAT: &str = "**Stageable now means witnessed, not merely named (decisions 0577/0581).** A situation scores Stageable only when every requirement token resolves, a tableau is registered under its id, that tableau's staged relations each name a predicate the situation's own requirements actually ask for, and the tableau stages successfully — its cast places as entities and its relations commit without contradiction. Binding a witness's relations to the specific situation it is filed under is what stops one tableau silently witnessing every situation it happens to sit under. It does **not** check that the tableau's cast fills the situation's actant ROLES — `actants` is prose-valued, and role assignment is unchecked — and a witness that stages no relations at all binds to any situation whose requirements name no predicate token.";
+
+/// The second half of the same disclosure: why a `Stageable` count from
+/// before this gate is not comparable to one taken after it.
+const WITNESS_BOUNDARY_COMPARABILITY: &str = "This number is **not comparable across that boundary**: a coverage figure taken before this gate existed was measuring token membership alone, and a figure taken after it measures a strictly harder claim. Migration cost was zero at the moment this gate was wired (spec §4.2) — no situation here had a witness to lose — so this run's counts are unchanged from the last pre-witness run, but that is a fact about today's corpus, not a property of the two numbers that would let a future reader diff them meaningfully.";
+
+/// Whether a `Blocked` reason list is a witness refusal rather than a
+/// list of missing corpus tokens.
+///
+/// By construction (`resolve`), a witness refusal is always EXACTLY one
+/// sentinel string prefixed `witness:`, and no real corpus token can ever
+/// collide with that prefix — `expand` only ever produces tokens
+/// namespaced `predicate:`/`phenomenon:`/`concept:`, or a dangling
+/// `bundle:` reference (which expands to itself). This is what lets the
+/// demand table and the Leverage figures tell the two reasons apart
+/// without a new `Outcome` variant.
+/// type-audit: bare-ok(identifier-text: missing), bare-ok(prose: return)
+fn blocked_by_witness(missing: &[String]) -> Option<&str> {
+    match missing {
+        [reason] if reason.starts_with("witness:") => Some(reason.as_str()),
+        _ => None,
+    }
+}
+
+/// Prose for one of [`witness_stages`]'s three sentinel reasons — see that
+/// function's own doc for what each one means.
+fn describe_witness_reason(reason: &str) -> &'static str {
+    match reason {
+        "witness:absent" => "no witness is registered for this situation",
+        "witness:unbound" => {
+            "the registered witness does not name this situation's required relations"
+        }
+        _ => "the registered witness failed to stage",
+    }
+}
+
 /// Render the coverage report. Four sections, provenance first (spec §4 L2).
 /// type-audit: bare-ok(identifier-text: out), bare-ok(prose: return), bare-ok(identifier-text: path)
 pub fn render(
     corpus: &Corpus,
     out: &BTreeMap<String, Outcome>,
     registry: &ConceptRegistry,
+    witnesses: &Witnesses,
     path: &str,
 ) -> String {
     let mut s = String::new();
@@ -312,8 +459,12 @@ pub fn render(
     s.push_str(&format!("- **Source:** {}\n", corpus.provenance));
     s.push_str(&format!("- **Frozen:** {}\n", corpus.frozen));
     s.push_str(
-        "\nThis measures reach against *that* catalogue. It is not a verdict on the\nworld, and it scores **representability only** — whether an agent could plan\nor recognise a situation is not measured here.\n\nA low score is the expected reading at this stage: the report is a baseline\ntaken before the machinery it measures exists. What carries information is\nmovement between runs, not the absolute number.\n\n**Stageable now means witnessed, not merely named (decision 0577).** A\nsituation scores Stageable only when a committed tableau actually places its\nactants and stages every relation it stipulates — a corpus token naming a\nregistry entry is necessary but no longer sufficient. This number is **not\ncomparable across that boundary**: a coverage figure taken before this gate\nexisted was measuring token membership alone, and a figure taken after it\nmeasures a strictly harder claim. Migration cost was zero at the moment this\ngate was wired (spec §4.2) — no situation here had a witness to lose — so\nthis run's counts are unchanged from the last pre-witness run, but that is a\nfact about today's corpus, not a property of the two numbers that would let a\nfuture reader diff them meaningfully.\n\n",
+        "\nThis measures reach against *that* catalogue. It is not a verdict on the\nworld, and it scores **representability only** — whether an agent could plan\nor recognise a situation is not measured here.\n\nA low score is the expected reading at this stage: the report is a baseline\ntaken before the machinery it measures exists. What carries information is\nmovement between runs, not the absolute number.\n\n",
     );
+    s.push_str(&wrap(WITNESS_BOUNDARY_WHAT));
+    s.push_str("\n\n");
+    s.push_str(&wrap(WITNESS_BOUNDARY_COMPARABILITY));
+    s.push_str("\n\n");
 
     let (stageable, inapplicable) = tally(out);
     s.push_str("## Demand\n\n");
@@ -338,9 +489,21 @@ pub fn render(
         .collect();
     for (id, o) in out {
         let cell = match o {
-            Outcome::Stageable => "stageable".to_string(),
+            // A Stageable row carries its witness's distance record
+            // (decision 0330/0577) when one is on file — `resolve` never
+            // reaches `Stageable` without a witness entry existing, so the
+            // `None` arm here is unreached in practice and exists only so
+            // this render never panics on a hand-built `out` map a test
+            // constructs directly.
+            Outcome::Stageable => match witnesses.get(id.as_str()) {
+                Some(entry) => format!("stageable — {}", entry.realized),
+                None => "stageable".to_string(),
+            },
             Outcome::Inapplicable(r) => format!("inapplicable — {r}"),
-            Outcome::Blocked(m) => format!("blocked — missing `{}`", m.join("`, `")),
+            Outcome::Blocked(m) => match blocked_by_witness(m) {
+                Some(reason) => format!("blocked — {}", describe_witness_reason(reason)),
+                None => format!("blocked — missing `{}`", m.join("`, `")),
+            },
         };
         s.push_str(&format!(
             "| {} ({id}) | {} | {cell} |\n",
@@ -353,6 +516,12 @@ pub fn render(
     // requires bundles the world already holds; counting those put seven
     // satisfied bundles in a table headed "missing", and the backlog
     // ordering IS the deliverable here (spec D3, P1).
+    //
+    // A witness-blocked situation never contributes here: by construction
+    // it reached the witness check only because every one of its bundles
+    // is ALREADY held (`missing.is_empty()` in `resolve`), so
+    // `expand(...).any(|t| !held.contains(t))` is false for all of them —
+    // nothing to exclude by hand.
     let held = registry_tokens(registry);
     let mut fan: BTreeMap<String, Vec<String>> = BTreeMap::new();
     for st in &corpus.situations {
@@ -369,10 +538,16 @@ pub fn render(
 
     // How close is the closest blocked situation? If this is ever 1, a single
     // bundle really would unlock something and the caveat below should change.
+    //
+    // A witness-blocked situation is EXCLUDED from this figure — it has
+    // ZERO unheld bundles by construction (see the fan-in note above), so
+    // including it would report "the closest blocked situation is still
+    // missing 0 bundles" the moment one exists, contradicting the very
+    // sentence it sits in.
     let closest = corpus
         .situations
         .iter()
-        .filter(|st| matches!(out.get(&st.id), Some(Outcome::Blocked(_))))
+        .filter(|st| matches!(out.get(&st.id), Some(Outcome::Blocked(m)) if blocked_by_witness(m).is_none()))
         .map(|st| {
             st.requires
                 .iter()
@@ -382,9 +557,14 @@ pub fn render(
         })
         .min()
         .unwrap_or(0);
+    // Same exclusion as `closest`: this is the denominator of "missing
+    // bundles ranked ... over the N blocked situations" below, and a
+    // witness-blocked situation contributes no bundle to that ranking at
+    // all, so counting it here would overstate the denominator the
+    // sentence is actually about.
     let blocked = out
         .values()
-        .filter(|o| matches!(o, Outcome::Blocked(_)))
+        .filter(|o| matches!(o, Outcome::Blocked(m) if blocked_by_witness(m).is_none()))
         .count();
     let inapplicable_noun = if inapplicable == 1 {
         "situation is"
@@ -697,14 +877,9 @@ pub fn render_matrix(
          instruments **disagree** — which is what the demand table below is for.",
     ));
     s.push_str("\n\n");
-    s.push_str(&wrap(
-        "**Stageable now means witnessed, not merely named (decision 0577).** A situation \
-         scores Stageable only when a committed tableau actually places its actants and \
-         stages every relation it stipulates — a corpus token naming a registry entry is \
-         necessary but no longer sufficient. Every column's number is **not comparable \
-         across that boundary**: a figure taken before this gate existed measured token \
-         membership alone, and a figure taken after it measures a strictly harder claim.",
-    ));
+    s.push_str(&wrap(WITNESS_BOUNDARY_WHAT));
+    s.push_str("\n\n");
+    s.push_str(&wrap(WITNESS_BOUNDARY_COMPARABILITY));
     s.push_str("\n\n");
 
     // Per column: what its own report says, and a pointer to it. The counts
@@ -1012,10 +1187,14 @@ mod tests {
         let mut witnesses = Witnesses::new();
         witnesses.insert(
             "s1".to_string(),
-            Tableau::new().with_cast(["goblin", "drow"]).with_relation(
-                hornvale_kernel::INSTANCE_OF,
-                0,
-                1,
+            WitnessEntry::new(
+                Tableau::new().with_cast(["goblin", "drow"]).with_relation(
+                    hornvale_kernel::INSTANCE_OF,
+                    0,
+                    1,
+                ),
+                "exact: two cast members related by instance-of, matching the situation's \
+                 sole required token one-for-one",
             ),
         );
         assert_eq!(
@@ -1162,7 +1341,13 @@ mod tests {
         let corpus = load(json).expect("corpus parses");
         let registry = hornvale_kernel::ConceptRegistry::default();
         let out = resolve(&corpus, &registry, a_world(), &Witnesses::new());
-        let text = render(&corpus, &out, &registry, "tropes/test.trope.json");
+        let text = render(
+            &corpus,
+            &out,
+            &registry,
+            &Witnesses::new(),
+            "tropes/test.trope.json",
+        );
         assert!(text.contains("a catalogue with known bias"));
         for section in ["## Provenance", "## Demand", "## Leverage", "## Supply"] {
             assert!(text.contains(section), "missing {section}");
@@ -1193,7 +1378,13 @@ mod tests {
         let corpus = load(json).expect("corpus parses");
         let registry = hornvale_kernel::ConceptRegistry::default();
         let out = resolve(&corpus, &registry, a_world(), &Witnesses::new());
-        let text = render(&corpus, &out, &registry, "tropes/test.trope.json");
+        let text = render(
+            &corpus,
+            &out,
+            &registry,
+            &Witnesses::new(),
+            "tropes/test.trope.json",
+        );
 
         // Disclosed in prose, with the arithmetic that gets a reader from the
         // row count to the true total.

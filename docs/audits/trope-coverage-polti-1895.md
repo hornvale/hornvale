@@ -16,17 +16,26 @@ A low score is the expected reading at this stage: the report is a baseline
 taken before the machinery it measures exists. What carries information is
 movement between runs, not the absolute number.
 
-**Stageable now means witnessed, not merely named (decision 0577).** A
-situation scores Stageable only when a committed tableau actually places its
-actants and stages every relation it stipulates — a corpus token naming a
-registry entry is necessary but no longer sufficient. This number is **not
-comparable across that boundary**: a coverage figure taken before this gate
-existed was measuring token membership alone, and a figure taken after it
-measures a strictly harder claim. Migration cost was zero at the moment this
-gate was wired (spec §4.2) — no situation here had a witness to lose — so
-this run's counts are unchanged from the last pre-witness run, but that is a
-fact about today's corpus, not a property of the two numbers that would let a
-future reader diff them meaningfully.
+**Stageable now means witnessed, not merely named (decisions 0577/0581).** A
+situation scores Stageable only when every requirement token resolves, a
+tableau is registered under its id, that tableau's staged relations each
+name a predicate the situation's own requirements actually ask for, and the
+tableau stages successfully — its cast places as entities and its relations
+commit without contradiction. Binding a witness's relations to the specific
+situation it is filed under is what stops one tableau silently witnessing
+every situation it happens to sit under. It does **not** check that the
+tableau's cast fills the situation's actant ROLES — `actants` is
+prose-valued, and role assignment is unchecked — and a witness that stages
+no relations at all binds to any situation whose requirements name no
+predicate token.
+
+This number is **not comparable across that boundary**: a coverage figure
+taken before this gate existed was measuring token membership alone, and a
+figure taken after it measures a strictly harder claim. Migration cost was
+zero at the moment this gate was wired (spec §4.2) — no situation here had a
+witness to lose — so this run's counts are unchanged from the last
+pre-witness run, but that is a fact about today's corpus, not a property of
+the two numbers that would let a future reader diff them meaningfully.
 
 ## Demand
 

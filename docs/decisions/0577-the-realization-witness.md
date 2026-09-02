@@ -1,6 +1,6 @@
 # 0577. The realization witness
 
-**Status:** Accepted (2026-09-01) · **Decider:** Nathan · **Campaign:** The Avowal
+**Status:** Superseded by [0581](0581-the-witness-is-bound-to-its-situation.md) (2026-09-01, same review cycle — the first review found the gate checked only that a tableau was filed under a situation's id, never that its content had anything to do with that situation) · **Decider:** Nathan · **Campaign:** The Avowal
 
 ## Context
 
