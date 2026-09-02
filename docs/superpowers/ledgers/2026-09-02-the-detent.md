@@ -419,3 +419,18 @@ message, pointing at `ledger_hash_witness.rs`'s existing seed-42 note.
 Re-review: addressed, no new breakage. **Stage 1 closes here.** `origin/main`
 has not moved since the branch was cut (`0dccce029`); `campaign/the-rack` is
 still at its stage gate, so rule 6's absorption is not yet due.
+
+## Task 3 — complete (`d2af9a6e9`, fix `3e8b9029d`; one fix round)
+
+`GroundHazards` (`windows/vessel/src/ground.rs`), `OwnedGround`, and
+`LocaleTerrain::with_ground`; `hazards()` computes through one closure and
+the memo owns the call when present. The implementer found a THIRD
+`LocaleTerrain` constructor (`with_calendar`) the brief's count missed —
+caught by the compiler, which is the enumeration a struct literal gets for
+free. The three hash constants held (byte-identity). One Important at
+review: the chaos-eviction test printed the memo's `len()` without asserting
+it; fixed with an independently computed comparator (the union over every
+roster member of visited rooms, their neighbours, home and its neighbours —
+what `build_emitter_scan` samples), which matched exactly (1,339 = 1,339).
+No ideonomy pass: the task's one ruling (which set the comparator is) was
+settled by reading the sampler, not by design.
