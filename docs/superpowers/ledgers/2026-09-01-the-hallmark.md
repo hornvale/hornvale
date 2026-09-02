@@ -199,3 +199,44 @@ cave_kind_correspondence.rs` left exactly as the exhaustive-match guard it
 already was (decision 0094) · Capture: this entry; no idea-registry row
 opened — 0094 already covers the "why a duplicate roster" question and
 nothing new was learned about it.
+
+#12 [R] — Task 11 Step 3's decision rule: does placement-audit's warm `check`
+land at or under the ~12.8 s threshold (2× type-audit's measured ~6.3-6.4 s),
+which decides full commit-gate wiring vs. lane-outboard-only? · **Under —
+full commit-gate wiring.** Measured on this Mac, `time cargo run --quiet
+--manifest-path tools/placement-audit/Cargo.toml -- check` against the real
+tree (post-baseline-adjudication, zero findings): first run 4.882 s, second
+(warm) 5.418 s; two further warm runs 4.817 s and 4.483 s — settling in the
+~4.5-5.8 s band, comfortably under the ~12.8 s threshold and even under
+type-audit's own ~6.3-6.4 s, despite scanning `kernel`+`domains` non-recursively
+against type-audit's four roots (the brief's own caveat held: "the
+expectation decides nothing; the measurement does" — the smaller-root
+expectation and the measurement agreed here, but only the measurement was
+load-bearing) · Action taken: `placement-audit`/`placement-audit-report`
+Makefile targets added, modeled on the type-audit pair (Makefile ~486-511);
+both names added to `.PHONY` and to **both** `quick-run` and `style-run`
+prerequisite lists, keeping the four-then-six-name lockstep the brief
+required; `cargo build --manifest-path tools/placement-audit/Cargo.toml`
+added beside type-audit's in `prewarm-run`; `tools/placement-audit/` (and,
+by the same rationale as `type-audit-report.md`'s existing entry, the
+generated `docs/audits/placement-audit-roster.md`) added to
+`scripts/hooks/pre-commit`'s Rust-relevant staged-path filter;
+`run "tools/placement-audit" cargo test --manifest-path
+tools/placement-audit/Cargo.toml` added to `scripts/lane-outboard.sh` beside
+type-audit's line; `scripts/regenerate-artifacts.sh` Group C gained the
+report-emit line directly below the seam-guard roster line, output path
+literal; `docs/generated-paths.txt` gained
+`docs/audits/placement-audit-roster.md	artifacts` beside the other
+individually-declared `docs/audits/` files (tracked-count comment updated
+16→17 / 11→12 to match), and the file was `git add`-ed in the same commit as
+its declaration · Verified both directions: `make quick` green end to end
+(fmt-check, clippy, type-audit, type-audit-report, placement-audit,
+placement-audit-report all pass, rc=0); `cargo run --quiet --manifest-path
+tools/placement-audit/Cargo.toml -- check tools/placement-audit/tests/
+fixtures/verdicts` prints its two known fixture findings and exits 1,
+proving the binary `make placement-audit`'s bare `cargo run` recipe calls
+fails the target on findings by make's own semantics · `cargo test -p
+hornvale --test suite -- generated_paths lane_sets` — 15 passed, 0 failed ·
+Capture: this entry; no idea-registry row opened — the decision rule and its
+threshold were already spec'd in the brief, and the measurement confirmed
+rather than revised it.

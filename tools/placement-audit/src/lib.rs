@@ -7,6 +7,7 @@ pub mod args;
 pub mod detect;
 pub mod extract;
 pub mod fingerprint;
+pub mod report;
 pub mod tag;
 pub mod verdict;
 pub mod walk;
@@ -42,7 +43,7 @@ pub fn run(args: &[String]) -> i32 {
         },
         Ok(Command::Report) => match walk::scan(&[]) {
             Ok(crates) => {
-                print!("{}", render_report(&detect::twins(&crates)));
+                print!("{}", report::render_report(&detect::twins(&crates)));
                 0
             }
             Err(e) => {
@@ -55,26 +56,6 @@ pub fn run(args: &[String]) -> i32 {
             2
         }
     }
-}
-
-/// Render a minimal Markdown report of every twin group found. Verdict tags
-/// (Task 10) and gate wiring (Task 11) are not implemented yet — this is a
-/// findings dump, not the drift-checked committed artifact.
-fn render_report(twins: &[detect::TwinGroup]) -> String {
-    let mut out = String::from("# Placement audit report\n\n");
-    if twins.is_empty() {
-        out.push_str("No shape twins found.\n");
-        return out;
-    }
-    for group in twins {
-        let names: Vec<String> = group
-            .members
-            .iter()
-            .map(|t| format!("`{}::{}`", t.crate_name, t.name))
-            .collect();
-        out.push_str(&format!("- {}\n", names.join(" == ")));
-    }
-    out
 }
 
 #[cfg(test)]
