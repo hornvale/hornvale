@@ -240,3 +240,39 @@ hornvale --test suite -- generated_paths lane_sets` — 15 passed, 0 failed ·
 Capture: this entry; no idea-registry row opened — the decision rule and its
 threshold were already spec'd in the brief, and the measurement confirmed
 rather than revised it.
+
+#13 [G] — Task 12's capture close-out: re-score `DOM-kernel-owns-vocabulary`
+and record the spec's §5 Batch C deferrals · **Flip applied**:
+`DOM-kernel-owns-vocabulary` (`book/src/frontier/idea-registry.md:1794`)
+`raw` → `ratified (0517)`, Where cell appended (never rewritten) with
+[decision 0517](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0517-the-kernel-membership-criterion.md)
+and this campaign's spec, matching how `PROC-kernel-units` shows its 0044
+ratification · **Four Batch C rows added**, all `raw`, each citing The
+Hallmark spec §5 plus file:line evidence: `DOM-two-environment-bases` (the
+kernel's `environment_v1_basis()` six-axis basis vs the hard-coded
+temperature/moisture/insolation/elevation quartet spelled twice in
+`species::ConditionNiche` and worldgen's `Substrate`; flags that
+campaign/the-sources is concurrently claiming `ResourceAxis` id 6 and
+extending the basis, so any consolidation coordinates with or follows it,
+not ahead of it), `DOM-manikin-vectors` (`species::MindVector`/
+`SocietyVector` shadowed as bare scalars/bools by `culture::PsychSummary`,
+which hard-codes species defaults as literals; candidate kernel citizen on
+the `kernel/src/color.rs::Observer` analogy), `DOM-object-property-altitude`
+(`ObjectProperty` is window-owned (`windows/vessel`) but hand-mirrored by
+`domains/thing` and `domains/language`, whose own doc states it cannot
+import the type because layering runs backwards there; candidate promotion
+under decision 0517 clause (a)), and `DOM-biome-name-roster`
+(`species::BiomeAffinity` string-keys against `climate::Biome::name()` and
+silently falls to `default` on a miss; narrow fix a kernel biome-name
+roster or `BiomeId` newtype, decision 0517 clause (a) the applicable route
+since 0044 fenced "biome" out of the units library) · **Step 3 needed no
+action**: Task 5's STOP branch already registered `DOM-era-day-axis`
+(`idea-registry.md:1614`) — no duplicate opened; Task 8's Formation
+adjudication stayed ledger-only per entry #11 (no descope, so no registry
+row) · Verification: `cargo test -p hornvale --test suite -- docs_consistency
+2>&1 | tail -3` — `test result: ok. 28 passed; 0 failed` (registry row-form,
+status vocabulary, Idea-cell budget, and Where-link resolution checks all
+green against the new/flipped rows) · Capture: this entry is the capture —
+the chronicle entry, book freshness sweep, and retrospective remain
+campaign-close work under the `closing-a-campaign` skill, out of this
+task's scope per the plan's Interfaces note.
