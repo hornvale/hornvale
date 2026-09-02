@@ -174,14 +174,39 @@ fn waiting_moves_an_npc_and_it_is_observed() {
         "measured: seed 42's flagship stands on a river, so its own residents \
          drink in place and never commit a positional fact"
     );
+    //
+    // The witness is `walked()` — the per-NPC `!why` recount — and not
+    // `committed_agent_at_count()`, which is what an earlier version of this
+    // fix reached for. This test's name says "and it is observed", and a
+    // session-wide fact count observes nothing about any particular
+    // creature: it is exactly the proxy `walked()`'s own doc records
+    // narrowing away from. The subject is chosen BY THE PROPERTY, the way
+    // `stay_put_npc` chooses its own — a hardcoded label is what The Winze
+    // T2b already had to correct here once.
     let walking = world_at(WALKING_SEED);
     let (mut walker, _) = Session::start(&walking, &opts).unwrap();
+    let walker_labels: Vec<String> = walker
+        .npc_labels()
+        .into_iter()
+        .map(str::to_string)
+        .collect();
     walker.handle("wait 7");
+    let moved = walker_labels
+        .iter()
+        .find(|label| walked(&mut walker, label))
+        .cloned()
+        .unwrap_or_else(|| {
+            panic!(
+                "no resident of seed {WALKING_SEED}'s flagship recounts a positional \
+                 fact after a full drive cycle — a settlement whose people must leave \
+                 home for water is the whole reason this seed is pinned, so an epoch \
+                 has moved it and WALKING_SEED must be re-measured"
+            )
+        });
     assert!(
-        walker.committed_agent_at_count() >= 1,
-        "a settlement whose residents must leave home for water commits real \
-         walks across a drive cycle (seed {WALKING_SEED}); if this is 0 an \
-         epoch has moved the seed and WALKING_SEED must be re-measured"
+        walked(&mut walker, &moved),
+        "measured: {moved} walks to reach water, and its own `why` recount \
+         names the positional fact it committed"
     );
     // The wait output mentions motion (non-empty, references an NPC/movement).
     match out {

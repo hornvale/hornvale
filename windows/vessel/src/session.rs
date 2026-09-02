@@ -1153,6 +1153,57 @@ enum Perceiving {
     Objectively,
 }
 
+/// Derive `herds` into bodies AND the roll keys those bodies carry, in one
+/// pass (The Roll, Task 7).
+///
+/// One herd per `derive_wild_herds` call, so the member index this records is
+/// the ordinal that call itself minted. Reconstructing it afterwards from a
+/// flat `Vec<Body>` — re-deriving where each herd's run started — is exactly
+/// the parallel bookkeeping [`RollKeyStatic`] exists to keep honest, and a
+/// herd's identity is its (species, vertex) rather than its position in the
+/// input slice, so splitting the call changes nothing about what is minted
+/// (`the_roll.rs`'s `a_herds_identity_is_its_attractor_and_species`).
+fn derive_herd_bodies(
+    world: &World,
+    ctx: &LocaleContext,
+    ledger: &mut Ledger,
+    herds: &[hornvale_worldgen::herds::WildHerd],
+) -> (Vec<Body>, Vec<RollKeyStatic>) {
+    let mut bodies: Vec<Body> = Vec::new();
+    let mut keys: Vec<RollKeyStatic> = Vec::new();
+    for herd in herds {
+        let derived = derive_wild_herds(world, ctx, ledger, std::slice::from_ref(herd));
+        for member in 0..derived.len() {
+            // Keyed on the herd's OWN (vertex, species, member), never on
+            // `RollKeyStatic::of` — a `Body` carries no attractor, so that
+            // fallback would give every herd `parent: 0` and leave two herds
+            // at equal distance tied on the whole key, breaking the order's
+            // tie on roster index (i.e. on the route walked). See
+            // [`RollKeyStatic::of`]'s own doc.
+            keys.push(RollKeyStatic::herd_member(
+                herd.vertex,
+                &herd.species,
+                member as u16,
+            ));
+        }
+        bodies.extend(derived);
+    }
+    (bodies, keys)
+}
+
+/// Every other body ON THE ROLL: [`other_bodies`] narrowed to the mask
+/// `wait` recomputed this tick (The Roll, spec §3.2/§3.7). The DRIVEN body is
+/// excluded here exactly as it is there — it has its own arbitration —
+/// even though its own mask slot is always `true`.
+fn on_roll_others<'a>(bodies: &'a [Body], on_roll: &[bool], driven: usize) -> Vec<&'a Body> {
+    bodies
+        .iter()
+        .enumerate()
+        .filter(|(i, _)| *i != driven && on_roll.get(*i).copied().unwrap_or(true))
+        .map(|(_, npc)| npc)
+        .collect()
+}
+
 /// Every derived body other than the one being driven — what `self.npcs`
 /// meant before The Hand collapsed the two representations (Task 3): every
 /// occupancy/social/perception/tick read that used to exclude the possessed
@@ -1180,47 +1231,6 @@ enum Perceiving {
 /// handle between the old and new driven slots, a user-visible regression
 /// no test caught until spec review measured it directly
 /// (`possessing_a_creature_does_not_renumber_other_bodies_handles`).
-/// Derive `herds` into bodies AND the roll keys those bodies carry, in one
-/// pass (The Roll, Task 7).
-///
-/// One herd per `derive_wild_herds` call, so the member index this records is
-/// the ordinal that call itself minted. Reconstructing it afterwards from a
-/// flat `Vec<Body>` — re-deriving where each herd's run started — is exactly
-/// the parallel bookkeeping [`RollKeyStatic`] exists to keep honest, and a
-/// herd's identity is its (species, vertex) rather than its position in the
-/// input slice, so splitting the call changes nothing about what is minted
-/// (`the_roll.rs`'s `a_herds_identity_is_its_attractor_and_species`).
-fn derive_herd_bodies(
-    world: &World,
-    ctx: &LocaleContext,
-    ledger: &mut Ledger,
-    herds: &[hornvale_worldgen::herds::WildHerd],
-) -> (Vec<Body>, Vec<RollKeyStatic>) {
-    let mut bodies: Vec<Body> = Vec::new();
-    let mut keys: Vec<RollKeyStatic> = Vec::new();
-    for herd in herds {
-        let derived = derive_wild_herds(world, ctx, ledger, std::slice::from_ref(herd));
-        for (member, body) in derived.iter().enumerate() {
-            keys.push(RollKeyStatic::of(body, member as u16));
-        }
-        bodies.extend(derived);
-    }
-    (bodies, keys)
-}
-
-/// Every other body ON THE ROLL: [`other_bodies`] narrowed to the mask
-/// `wait` recomputed this tick (The Roll, spec §3.2/§3.7). The DRIVEN body is
-/// excluded here exactly as it is there — it has its own arbitration —
-/// even though its own mask slot is always `true`.
-fn on_roll_others<'a>(bodies: &'a [Body], on_roll: &[bool], driven: usize) -> Vec<&'a Body> {
-    bodies
-        .iter()
-        .enumerate()
-        .filter(|(i, _)| *i != driven && on_roll.get(*i).copied().unwrap_or(true))
-        .map(|(_, npc)| npc)
-        .collect()
-}
-
 fn other_bodies(bodies: &[Body], driven: usize) -> Vec<&Body> {
     bodies
         .iter()
@@ -1503,7 +1513,16 @@ impl<'w> Session<'w> {
         let mut roll_keys: Vec<RollKeyStatic> = bodies
             .iter()
             .enumerate()
-            .map(|(i, body)| RollKeyStatic::of(body, i as u16))
+            .map(|(i, body)| match opts.tableau {
+                // A staged cast is village-less and never grows, so
+                // `RollKeyStatic::of`'s incomplete wild key is the honest
+                // reading there and there is no herd to read a better one
+                // from.
+                Some(_) => RollKeyStatic::of(body, i as u16),
+                // Everything above is a resident of `village`, in roster
+                // order — on the degraded path too, which derives one.
+                None => RollKeyStatic::resident(village.id, i as u16),
+            })
             .collect();
         // The settlement and herd indexes, built ONCE: `refresh_roll` reads
         // them every tick and must never re-site every settlement on the
@@ -1745,10 +1764,16 @@ impl<'w> Session<'w> {
     /// body stopped being ticked would be a bug with no honest reading.
     fn recompute_roll_mask(&mut self) {
         let observer = self.position();
+        self.recompute_roll_mask_at(&observer);
+    }
+
+    /// [`Self::recompute_roll_mask`] at an arbitrary observer room — the mask
+    /// half of [`Self::refresh_roll_at`], split out for the same reason.
+    fn recompute_roll_mask_at(&mut self, observer: &Facet) {
         self.on_roll = roll_of(
             &self.bodies,
             &self.roll_keys,
-            &observer,
+            observer,
             ROLL_HOPS,
             ROLL_BUDGET,
             &mut self.mesh_memo,
@@ -1774,7 +1799,28 @@ impl<'w> Session<'w> {
     /// ROSTER.
     fn refresh_roll(&mut self) {
         let observer = self.position();
-        let window = rooms_within(&observer, ROLL_HOPS, &mut self.mesh_memo);
+        self.refresh_roll_at(&observer);
+    }
+
+    /// [`Self::refresh_roll`] at an arbitrary observer room.
+    ///
+    /// **A test seam, not a verb — `handle` never reaches this**, and it is
+    /// the seam the append path needs for the same reason
+    /// [`Self::place_creature_at_me`] is the seam co-location needs. The
+    /// derive-on-first-entry half of the roll only fires when a settlement or
+    /// a herd ENTERS the observer's window, and a possession begins standing
+    /// in its own settlement's room: the nearest other settlement on seed 42
+    /// is a hundred-odd rooms away, so every reachable session test runs
+    /// where the roster never grows at all. Walking there in a test would
+    /// cost a hundred `go` turns and would still be a fact about one seed's
+    /// geography rather than about the derivation.
+    ///
+    /// So a test asks for the window it wants. Everything below this line is
+    /// the code `wait` itself runs — one body, not a parallel path — so what
+    /// a test observes through here is what a tick would have done on the
+    /// turn that window came within call.
+    pub fn refresh_roll_at(&mut self, observer: &Facet) {
+        let window = rooms_within(observer, ROLL_HOPS, &mut self.mesh_memo);
         // Collected first: the maps are borrowed from `self`, and deriving
         // needs `&mut self.ledger` and `&mut self.bodies`.
         let mut villages: Vec<hornvale_settlement::VillageInfo> = Vec::new();
@@ -1798,34 +1844,32 @@ impl<'w> Session<'w> {
                 }
             }
         }
-        // `wc` is `None` only on the degraded path, where residents cannot be
-        // drawn at all (see `start_held`'s own comment); a settlement is then
-        // left underived rather than half-derived, and is picked up if a
-        // later session has the components.
-        {
-            for village in villages {
-                // `wc` is `None` only on the degraded path; the `let ... else`
-                // is per-iteration rather than hoisted so that the immutable
-                // borrow of `self.wctx` and the mutable borrow of
-                // `self.ledger`/`self.bodies` below stay disjoint field
-                // borrows rather than one borrow of all of `self`.
-                let Some(wc) = self.wctx.wc.as_ref() else {
-                    break;
-                };
-                let residents = derive_residents(
-                    self.world,
-                    &self.wctx.ctx,
-                    &mut self.ledger,
-                    wc,
-                    &village,
-                    self.day,
-                );
-                for (i, body) in residents.iter().enumerate() {
-                    self.roll_keys.push(RollKeyStatic::of(body, i as u16));
-                }
-                self.bodies.extend(residents);
-                self.derived_settlements.insert(village.id);
+        for village in villages {
+            // `wc` is `None` only on the degraded path, where residents
+            // cannot be drawn at all (see `start_held`'s own comment); a
+            // settlement is then left underived rather than half-derived,
+            // and is picked up if a later session has the components. The
+            // `let ... else` is per-iteration rather than hoisted so that
+            // the immutable borrow of `self.wctx` and the mutable borrow of
+            // `self.ledger`/`self.bodies` below stay disjoint FIELD borrows
+            // rather than one borrow of all of `self`.
+            let Some(wc) = self.wctx.wc.as_ref() else {
+                break;
+            };
+            let residents = derive_residents(
+                self.world,
+                &self.wctx.ctx,
+                &mut self.ledger,
+                wc,
+                &village,
+                self.day,
+            );
+            for i in 0..residents.len() {
+                self.roll_keys
+                    .push(RollKeyStatic::resident(village.id, i as u16));
             }
+            self.bodies.extend(residents);
+            self.derived_settlements.insert(village.id);
         }
         let (wild, wild_keys) =
             derive_herd_bodies(self.world, &self.wctx.ctx, &mut self.ledger, &herds);
@@ -1835,7 +1879,7 @@ impl<'w> Session<'w> {
         }
         self.bodies.extend(wild);
         self.roll_keys.extend(wild_keys);
-        self.recompute_roll_mask();
+        self.recompute_roll_mask_at(observer);
     }
 
     /// The driven body's current position: a ledger-derived read

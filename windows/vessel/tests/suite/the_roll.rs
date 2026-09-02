@@ -482,9 +482,101 @@ fn flagship_session(world: &hornvale_kernel::World) -> Session<'_> {
         .0
 }
 
-/// M3: the roll is a function — two calls agree — and it is bounded: no
-/// settlement contributes more than its population, and never more than the
-/// asked-for budget in total.
+/// The entity of every body in `bodies`, in roster order — the sequence two
+/// sessions of one world must agree on.
+fn entities(bodies: &[hornvale_vessel::body::Body]) -> Vec<hornvale_kernel::EntityId> {
+    bodies.iter().map(|b| b.entity).collect()
+}
+
+/// The same, for a borrowed roster (what `Session::on_roll` returns).
+fn borrowed_entities(bodies: &[&hornvale_vessel::body::Body]) -> Vec<hornvale_kernel::EntityId> {
+    bodies.iter().map(|b| b.entity).collect()
+}
+
+/// The heading that undoes `dir`.
+fn opposite(dir: &str) -> &'static str {
+    match dir {
+        "n" => "s",
+        "s" => "n",
+        "e" => "w",
+        _ => "e",
+    }
+}
+
+/// M3, the purity half: the roll is a function of (the bodies' homes, the
+/// observer's room) and of NOTHING ELSE — measured across two independent
+/// SESSIONS, not across two calls.
+///
+/// **The two-call version this replaces was vacuous, and worth naming as
+/// such.** It called `roll_of` twice with identical arguments and asserted
+/// the results matched, which is satisfied by any deterministic function of
+/// its arguments — including one that read the whole ledger, as long as it
+/// read the same ledger twice. Purity is a claim about what the roll may
+/// depend on, so the instrument has to be two states that differ in
+/// everything the roll may NOT read while agreeing on the two things it may.
+///
+/// So the second possession reaches the same room by a detour — one step out
+/// and one step back — which leaves its ledger two `agent-at` facts longer,
+/// its day advanced by two walks and its turn counter four higher, while
+/// every settlement and every herd stands exactly where it did. `bodies()`
+/// and `on_roll()` must agree entity-for-entity after each of three waits.
+///
+/// MUTATION THIS MUST FAIL AGAINST: make the mask read the ledger — append
+/// `let n = self.on_roll.len(); if n > 0 { self.on_roll[self.ledger.len() % n] = false; }`
+/// to `Session::recompute_roll_mask_at`.
+#[test]
+fn the_roll_agrees_across_two_independent_sessions() {
+    let world = common::build(42).expect("seed 42 builds");
+    let mut still = flagship_session(&world);
+    let mut detoured = flagship_session(&world);
+
+    let home = detoured.position();
+    let mut stepped = false;
+    for dir in ["n", "e", "s", "w"] {
+        let _ = out(detoured.handle(&format!("go {dir}")));
+        if detoured.position() != home {
+            let _ = out(detoured.handle(&format!("go {}", opposite(dir))));
+            if detoured.position() == home {
+                stepped = true;
+                break;
+            }
+        }
+    }
+    assert!(
+        stepped,
+        "precondition: the second possession must reach the same room by a \
+         different route, or the two sessions differ in nothing and this test \
+         is the vacuous one it replaces"
+    );
+    assert_ne!(
+        still.committed_agent_at_count(),
+        detoured.committed_agent_at_count(),
+        "precondition: and the detour must actually have moved the ledger"
+    );
+    assert_eq!(
+        still.position(),
+        detoured.position(),
+        "precondition: while leaving both possessions in the same room"
+    );
+
+    for step in 0..3 {
+        let _ = out(still.handle("!wait 1"));
+        let _ = out(detoured.handle("!wait 1"));
+        assert_eq!(
+            entities(still.bodies()),
+            entities(detoured.bodies()),
+            "wait {step}: the roster is a function of the world, not of the route"
+        );
+        assert_eq!(
+            borrowed_entities(&still.on_roll()),
+            borrowed_entities(&detoured.on_roll()),
+            "wait {step}: and so is the roll"
+        );
+    }
+}
+
+/// M3, the bounded half: no settlement contributes more than its population,
+/// and never more than the asked-for budget in total.
 ///
 /// The herd half of "bounded" is held one layer down, by Task 6's
 /// `a_herd_is_its_headcount`: a herd yields exactly `headcount` bodies, so a
@@ -494,32 +586,22 @@ fn flagship_session(world: &hornvale_kernel::World) -> Session<'_> {
 ///
 /// MUTATION THIS MUST FAIL AGAINST: `budget + 1` in the truncation.
 #[test]
-fn the_roll_is_pure_and_bounded() {
+fn the_roll_is_bounded() {
     let world = common::build(42).expect("seed 42 builds");
     let session = flagship_session(&world);
     let observer = session.position();
 
-    let mut memo_a = RoomMeshMemo::new();
-    let mut memo_b = RoomMeshMemo::new();
-    let a = roll_of(
+    let mut memo = RoomMeshMemo::new();
+    let full = roll_of(
         session.bodies(),
         session.roll_keys(),
         &observer,
         ROLL_HOPS,
         ROLL_BUDGET,
-        &mut memo_a,
+        &mut memo,
     );
-    let b = roll_of(
-        session.bodies(),
-        session.roll_keys(),
-        &observer,
-        ROLL_HOPS,
-        ROLL_BUDGET,
-        &mut memo_b,
-    );
-    assert_eq!(a, b, "the roll is a function of (homes, observer room)");
     assert_eq!(
-        a.len(),
+        full.len(),
         session.bodies().len(),
         "the mask covers the roster"
     );
@@ -527,7 +609,7 @@ fn the_roll_is_pure_and_bounded() {
     // No settlement contributes more than its committed population.
     let mut per_settlement: std::collections::BTreeMap<hornvale_kernel::EntityId, usize> =
         std::collections::BTreeMap::new();
-    for (body, on) in session.bodies().iter().zip(&a) {
+    for (body, on) in session.bodies().iter().zip(&full) {
         if !on {
             continue;
         }
@@ -550,14 +632,14 @@ fn the_roll_is_pure_and_bounded() {
     // The budget truncates. A budget of three is well under seed 42's
     // flagship roster, so this arm actually exercises the cut rather than
     // passing vacuously.
-    let mut memo_c = RoomMeshMemo::new();
+    let mut memo_tight = RoomMeshMemo::new();
     let tight = roll_of(
         session.bodies(),
         session.roll_keys(),
         &observer,
         ROLL_HOPS,
         3,
-        &mut memo_c,
+        &mut memo_tight,
     );
     assert_eq!(
         tight.iter().filter(|on| **on).count(),
@@ -565,12 +647,183 @@ fn the_roll_is_pure_and_bounded() {
         "a budget of three admits exactly three bodies"
     );
     assert!(
-        a.iter().filter(|on| **on).count() <= ROLL_BUDGET,
+        full.iter().filter(|on| **on).count() <= ROLL_BUDGET,
         "the roll never exceeds ROLL_BUDGET"
     );
 }
 
-/// The order is (distance, residents first, parent, ordinal): with a budget
+/// A wild body's place in the order is its herd's (species, attractor
+/// vertex), never its position in the roster — so two herds tied on hop
+/// distance keep the same order whichever of them was derived first.
+///
+/// **The tie is the whole test.** Two herds AT ONE VERTEX of DIFFERENT
+/// species agree on every earlier term of the key (hops, wild, parent), so
+/// only `species` can separate them; drop it and they tie on the whole key
+/// and fall through to the body's roster INDEX, which is derivation order —
+/// which is the order they entered the observer's window, which is the route
+/// the player walked. Under a binding budget that makes the MASK
+/// route-dependent, and spec §3.2 says a wild body is keyed "never by its
+/// position in a list".
+///
+/// MUTATION THIS MUST FAIL AGAINST: drop `species` from the key —
+/// `species: statics.species` becomes `species: String::new()` in
+/// `roll_of`'s `RollKey` construction.
+#[test]
+fn two_herds_at_one_vertex_do_not_depend_on_derivation_order() {
+    let (world, ctx, _wc, village) = residents_fixture();
+    let mut ledger = world.ledger.clone();
+    let anchor =
+        hornvale_vessel::liveness::derive_npcs(&world, &ctx, &mut ledger, 1, village.id)[0].clone();
+    let room = anchor.home.clone();
+
+    // Both herds stand at ONE attractor, so they agree on hops and on parent.
+    let vertex = 4242u32;
+    let wolf = hornvale_worldgen::herds::WildHerd {
+        species: "wolf".to_string(),
+        position: room.centroid(),
+        vertex,
+        headcount: 1,
+    };
+    let elk = hornvale_worldgen::herds::WildHerd {
+        species: "elk".to_string(),
+        position: room.centroid(),
+        vertex,
+        headcount: 1,
+    };
+
+    // Derive each herd on its own ledger clone, so neither derivation order
+    // can influence the other's entities either.
+    let derive = |herd: &hornvale_worldgen::herds::WildHerd| {
+        let mut l = world.ledger.clone();
+        hornvale_vessel::liveness::derive_wild_herds(
+            &world,
+            &ctx,
+            &mut l,
+            std::slice::from_ref(herd),
+        )
+        .remove(0)
+    };
+    let wolf_body = derive(&wolf);
+    let elk_body = derive(&elk);
+    let wolf_key = RollKeyStatic::herd_member(wolf.vertex, &wolf.species, 0);
+    let elk_key = RollKeyStatic::herd_member(elk.vertex, &elk.species, 0);
+    assert_eq!(
+        wolf_body.home.pack().ok(),
+        elk_body.home.pack().ok(),
+        "precondition: both herds stand in one room, so they tie on hops"
+    );
+
+    let admitted = |bodies: &[hornvale_vessel::body::Body], keys: &[RollKeyStatic]| {
+        let mut memo = RoomMeshMemo::new();
+        let mask = roll_of(bodies, keys, &room, ROLL_HOPS, 1, &mut memo);
+        assert_eq!(
+            mask.iter().filter(|on| **on).count(),
+            1,
+            "a budget of one admits exactly one body"
+        );
+        bodies
+            .iter()
+            .zip(&mask)
+            .find(|(_, on)| **on)
+            .map(|(b, _)| b.entity)
+            .expect("one body is admitted")
+    };
+
+    let wolf_first = admitted(
+        &[wolf_body.clone(), elk_body.clone()],
+        &[wolf_key.clone(), elk_key.clone()],
+    );
+    let elk_first = admitted(&[elk_body.clone(), wolf_body.clone()], &[elk_key, wolf_key]);
+    assert_eq!(
+        wolf_first, elk_first,
+        "the same herd is admitted whichever order the two were derived in"
+    );
+}
+
+/// The append path (spec §3.2): a settlement whose room comes within call has
+/// its residents derived ONCE, appended to every parallel vector, and read by
+/// the mask that same refresh.
+///
+/// **Through the `refresh_roll_at` test seam, because no reachable session
+/// exercises this.** A possession begins standing in its own settlement's
+/// room and the nearest other settlement on seed 42 is a hundred-odd rooms
+/// away, so every other session test in this campaign runs where the roster
+/// never grows at all — the guards and the append would be untested code
+/// sitting inside a green suite. See the seam's own doc.
+///
+/// MUTATION THIS MUST FAIL AGAINST: delete the `derived_settlements` guard in
+/// `refresh_roll_at` (the `!self.derived_settlements.contains(&village.id)`
+/// test); the second call appends the settlement a second time.
+#[test]
+fn a_settlement_coming_within_call_is_derived_once_and_only_appended() {
+    let world = common::build(42).expect("seed 42 builds");
+    let ctx = hornvale_locale::LocaleContext::build(&world).expect("a context builds");
+    let flagship = village_info(&world).expect("seed 42 places a flagship");
+    let neighbour = hornvale_settlement::all_settlements(&world)
+        .into_iter()
+        .filter(|v| v.id != flagship.id)
+        .max_by_key(|v| v.population)
+        .expect("seed 42 places more than one settlement");
+
+    // That settlement's own room, and the entity `derive_npcs` mints for it —
+    // read off a THROWAWAY ledger, so nothing here is what the session under
+    // test derives.
+    let mut probe = world.ledger.clone();
+    let probe_body =
+        hornvale_vessel::liveness::derive_npcs(&world, &ctx, &mut probe, 1, neighbour.id)[0]
+            .clone();
+    let room = probe_body.home.clone();
+
+    let mut session = flagship_session(&world);
+    let before = session.bodies().len();
+    let before_keys = session.roll_keys().len();
+    assert_eq!(
+        before, before_keys,
+        "precondition: the roster and its keys start in step"
+    );
+
+    session.refresh_roll_at(&room);
+
+    assert_eq!(
+        session.bodies().len(),
+        before + neighbour.population as usize,
+        "a settlement coming within call appends exactly its population"
+    );
+    assert_eq!(
+        session.roll_keys().len(),
+        session.bodies().len(),
+        "and its keys are appended in the same breath"
+    );
+    assert_eq!(
+        session.bodies()[before].entity,
+        probe_body.entity,
+        "the first body appended is that settlement's ordinal 0 — the same \
+         lineage `derive_npcs` mints"
+    );
+    // The mask was recomputed AT that room, so it holds the newcomers and not
+    // the flagship's own residents, a hundred rooms away — plus the driven
+    // body, whose slot is forced true wherever it stands.
+    assert_eq!(
+        session.roll_len(),
+        neighbour.population as usize + 1,
+        "the refresh's own mask reads the bodies it just appended"
+    );
+
+    let after_first = session.bodies().len();
+    session.refresh_roll_at(&room);
+    assert_eq!(
+        session.bodies().len(),
+        after_first,
+        "a second refresh at the same room appends nothing"
+    );
+    assert_eq!(
+        session.roll_keys().len(),
+        after_first,
+        "and adds no key either"
+    );
+}
+
+/// The order is (distance, residents first, parent, species, ordinal): with a budget
 /// of two at a room holding both residents and a herd, the roll is the two
 /// lowest-ordinal residents, not the herd.
 ///
