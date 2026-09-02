@@ -2665,7 +2665,7 @@ const _: () = assert!(
 /// Task 7 made fatigue a stock and every rest took its length from
 /// `next_awake_day`, which answers "the next moment this species is awake". For
 /// a body lying down while it is ALREADY awake that is the next scan step —
-/// [`WAKE_SCAN_STEP`], 7.2 minutes — so an exhausted creature dozed repeatedly
+/// [`WAKE_SCAN_STEP`], 72 minutes — so an exhausted creature dozed repeatedly
 /// through its own afternoon: 44 of the 68 `rested` facts in the hoisted-walk
 /// golden were one scan step long. A doze that short repays
 /// `REST_FALL * 0.05`, which cannot clear the drive that proposed it, so the
@@ -2701,8 +2701,10 @@ const _: () = assert!(
 /// it that way**: `ticks_per_local_day(terrain.day_ticks()) / 4`, reached
 /// through the `terrain` argument the function already carried. This
 /// constant remains as the `L = 1` anchor — the value that computation
-/// reduces to on a standard-length (or tidally locked, `day_ticks() ==
-/// None`) world, which is exactly what makes the existing fold-level tests
+/// reduces to on a standard-length world and on any world whose terrain
+/// reports no usable day at all (`ticks_per_local_day` falls back on
+/// `day.filter(|d| d.ticks() > 0)`, so a `None`, a zero and a negative day
+/// all take the base rate), which is exactly what makes the existing fold-level tests
 /// below still hold: they compare against THIS constant on terrain that
 /// reports no calendar of its own, and `ticks_per_local_day`'s own "no day to
 /// divide" convention answers the base (standard-day) rate there, byte-
@@ -2728,7 +2730,7 @@ const REST_BOUT: TickSpan = TickSpan::from_ticks(WorldTime::TICKS_PER_STD_DAY / 
 /// the wake-gate has always used). That answer is authoritative in the
 /// off-phase — the cycle knows where dawn is — and useless while the body is
 /// awake, where the same scan means "the next moment you are awake" and usually
-/// returns a single [`WAKE_SCAN_STEP`], 7.2 minutes. The floor supplies a
+/// returns a single [`WAKE_SCAN_STEP`], 72 minutes. The floor supplies a
 /// length for that second case and **only** that case, which is what makes a
 /// sleep's length a property of the act rather than of the scan lattice.
 ///
@@ -2969,8 +2971,10 @@ pub(crate) fn act_span(
         // (`RotationPin::PeriodHours` legally reaches 100 std hours; see
         // `REST_BOUT`'s own doc for the measured bound). `ticks_per_local_day`
         // is the same "no day to divide" convention `to_local_days` folds the
-        // repayment back through, so a tidally locked or synthetic terrain
-        // (`day_ticks() == None`) reduces to exactly the old flat span.
+        // repayment back through: it falls back to the standard-day rate on
+        // `day.filter(|d| d.ticks() > 0)`, so a terrain reporting NO day at
+        // all AND one reporting a zero or negative day both reduce to exactly
+        // the old flat span.
         Action::Rest => Some(TickSpan::from_ticks(
             ticks_per_local_day(terrain.day_ticks()) / 4,
         )),
@@ -10142,7 +10146,7 @@ mod tests {
         //
         // WHAT THE SPANS BELOW SAY, and it is the whole nap-fragmentation
         // story in one column. There is no `Number(5000.0)` anywhere — one
-        // `WAKE_SCAN_STEP`, 7.2 minutes, which was 44 of Task 7's 68 bouts and
+        // `WAKE_SCAN_STEP`, 72 minutes, which was 44 of Task 7's 68 bouts and
         // is the pathology Task 8 exists to remove. Every `rested` is exactly
         // `REST_BOUT` (25,000), the flat act-owned span. Every `slept` is a
         // real remaining night the body's own cycle timed (10,000 / 15,000 /
@@ -17352,7 +17356,7 @@ mod tests {
     /// This is the nap-fragmentation fix stated directly, at the one function
     /// that decides it. Task 7 left every bout taking its span from
     /// `next_awake_day`, which for a body lying down while it is ALREADY awake
-    /// answers `WAKE_SCAN_STEP` — 7.2 minutes. The golden and the commit-rate
+    /// answers `WAKE_SCAN_STEP` — 72 minutes. The golden and the commit-rate
     /// battery both notice the consequence, but only in aggregate; this pins
     /// the mechanism, and it pins it at the instant where the two rules
     /// disagree most.
@@ -17361,6 +17365,21 @@ mod tests {
     /// step here.** Without that, the two `assert_eq!`s below would be
     /// satisfied by a world where the floor never binds, and the test would
     /// pass while claiming a crossing it never made.
+    ///
+    /// **WHAT THIS TEST DOES NOT REACH, stated because The Plumb moved the
+    /// boundary out from under it.** Since Task 5 a rest's runtime span is
+    /// `ticks_per_local_day(...) / 4`, which varies with the local day length
+    /// `L`; the `REST_BOUT > WAKE_SCAN_STEP` and `REST_BOUT < SLEEP_BOUT`
+    /// assertions below read the two CONSTANTS, so they pin the `L = 1`
+    /// anchor and nothing else. The limit was measured rather than assumed
+    /// and is benign across the legal range: `RotationPin::PeriodHours`
+    /// admits 4-100 standard hours, the repayment is `L`-invariant at ~0.125
+    /// against the 0.1 hysteresis floor over all of it, and only a world
+    /// between roughly 4.0 and 4.8 hours puts a runtime rest under a single
+    /// `WAKE_SCAN_STEP`. Deliberately left as a doc rather than a new
+    /// assertion (The Plumb, deferred minor M5): the discriminating
+    /// `L`-varying case already has its own test,
+    /// `a_rest_taken_on_a_100_hour_world_repays_more_than_the_hysteresis_band_it_must_clear`.
     #[test]
     fn a_bouts_length_is_a_property_of_the_act_not_of_the_next_scan_step() {
         let home = raddr(1.0);
