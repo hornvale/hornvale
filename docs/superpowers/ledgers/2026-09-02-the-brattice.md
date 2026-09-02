@@ -545,3 +545,19 @@ call.
 seeds, LavaTube, WildCave, vertex 2) there is **exactly one chute**. The test
 passes verbatim, as ruled, but by a margin of one placement; any later grammar
 change can flip it red without any chute logic being wrong.
+
+**Gate guards met on the way in** (none named by the brief; Task 2 will meet
+the same ones): the staged `src/streams.rs` forced a regeneration of
+`book/src/reference/stream-manifest-generated.md`; the new public surface
+forced one of `docs/audits/type-audit-report.md`; `claim_shape` required
+`/// claim: <shape>(...)` lines on the three brief-verbatim seed-looping tests
+(added as `rate(seed: 0..60)` on the two existence claims and
+`invariant(seed: 0..60)` on the conditional one, test bodies untouched); and
+`lexicon_guard` refused 11 new `cell`-bearing tokens. The lexicon ceiling was
+NOT raised - raising it needs a human's agreement - so `brattice.rs`'s three
+prose uses were reworded to "entry" (the file leaves the inventory) and
+`circuit.rs`'s eight real `GridCell` uses carry the sanctioned per-line
+`// lexicon: <why this one is an area>` waiver, ceiling unchanged at 124.
+
+Commits: `9bde38c54` (the pass) and `118058d51` (the gate's timings rows).
+`gate-commit` rc=0, wall 352.190 s, 3,881 tests green.
