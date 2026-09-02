@@ -29,6 +29,46 @@
 //! Hashing is hand-rolled FNV-1a (the workspace has no hashing crate;
 //! `kernel/src/seed.rs` keeps the same two constants private, so they are
 //! duplicated here rather than exposed).
+//!
+//! # ALL THREE CONSTANTS WERE RE-RECORDED AT THE ABSORPTION OF `2c34f9e4c`
+//!
+//! The Wicket (fatigue is a stock, rest split from sleep, a bout graded by
+//! the room it was taken in), The Roll (a session ticks the settlement's
+//! whole roll) and The Avowal (kinship facts at genesis) all move what a
+//! seeded walk commits, so every hash here moved. **The point of this section
+//! is that the new numbers are MAIN'S, not this campaign's**, and that was
+//! established main-first rather than inferred:
+//!
+//! A detached worktree of `origin/main` at `2c34f9e4c` — no campaign code in
+//! it at all — was given this file's two scripts verbatim (the seed-42
+//! 30-wait/`look`/30-wait script, and the eight-wait emitter script on the
+//! seed the search lands on today), plus a throwaway port of
+//! `Session::hazard_memories` minus its `folds` argument, and asked for the
+//! same three hashes. Then the merged tree was asked. They agree exactly:
+//!
+//! ```text
+//! witness              old constant          main @2c34f9e4c       merged
+//! seed-42 ledger       0x214db29cf4668067    0xabc4731e5cf1ab21    0xabc4731e5cf1ab21
+//! emitter ledger       0x64aeb2f93e38d328    0x9f9094408637b815    0x9f9094408637b815
+//! emitter hazard       0x8cf62f13ee7098f5    0x0f999463ce4836a3    0x0f999463ce4836a3
+//! ```
+//!
+//! The two seed-42 columns are the same seed and the same script, so that row
+//! is a direct comparison. The emitter rows are NOT: the old pair was recorded
+//! on seed 28 and the search lands on seed 6 now (see [`EMITTER_SEED`]), so
+//! "old" there is a different world and the load-bearing comparison is the
+//! main-vs-merged pair, which is one seed and one script. The hazard digest's
+//! own denominators agree between the two trees as well — 127 bodies, 532
+//! shunned rooms, 13 dreaded, and every dread magnitude bit-for-bit — which is
+//! a stronger statement than the hash alone, since a hash that matched over
+//! two empty digests would match for the wrong reason.
+//!
+//! **What this does and does not prove.** It proves that The Pawl's fold
+//! store, threaded through the resolution of a 261-commit absorption,
+//! reproduces main's own walk byte for byte on both scripts — which is the
+//! only thing the resolution could have broken. It does not prove the
+//! constants will survive main's next campaign; nothing can, and that is what
+//! this test is for.
 
 use crate::common;
 use hornvale_vessel::{PossessOpts, Session};
@@ -96,10 +136,18 @@ fn run_fixed_script(session: &mut Session<'_>) {
 }
 
 /// The byte-identity witness itself: the seed-42 `possess` script's final
-/// ledger, hashed. `EXPECTED` was recorded from two consecutive runs of this
-/// test agreeing (determinism first, per the module doc's positive control),
-/// before being committed as a literal.
-const EXPECTED: u64 = 0x214d_b29c_f466_8067;
+/// ledger, hashed. Re-recorded at the absorption of `2c34f9e4c`; main's own
+/// hash on the same script was `0xabc4731e5cf1ab21`, and the merged tree
+/// reproduces it. The value it replaces, `0x214db29cf4668067`, was recorded
+/// before The Wicket, The Roll and The Avowal. See the module doc for the
+/// procedure and the full table.
+///
+/// **The script's runtime was checked against the rule that would have
+/// shortened it and does not trip it.** It costs 10.1 s on the merged tree
+/// against 27.9 s for the slowest vessel test this campaign did not write
+/// (`controller_swap::the_driven_bodys_suppressed_drive_is_retrievable_but_/// absent_from_what_it_says`), so the sixty waits stand unchanged even though
+/// each one now advances sixty-eight bodies rather than seven.
+const EXPECTED: u64 = 0xabc4_731e_5cf1_ab21;
 
 #[test]
 fn the_seed_42_walk_commits_the_same_ledger_bytes() {
@@ -155,6 +203,26 @@ fn emitter_bearing_world() -> (u64, hornvale_kernel::World) {
 }
 
 /// The seed [`emitter_bearing_world`] lands on today.
+///
+/// **IT WAS 28 UNTIL THE ABSORPTION OF `2c34f9e4c` AND IT IS 6 NOW, AND THIS
+/// CONSTANT EXISTS SO THAT MOVE IS LOUD.** The assertion beneath the search
+/// fired exactly as its own message asks it to: "that is a finding about the
+/// sim, not a broken test". The finding is that WHICH worlds replay an
+/// emitter's affect at a past visit day is not what it was, because The Roll
+/// changed who is on the roll at all — a session ticks the settlement's whole
+/// roll now, so the emitter-scan population a walk builds is a different
+/// population, and the halo pre-filter and terrain shortcut that used to keep
+/// seed 42's replay count at zero now let a great many more rooms through on
+/// the seeds that reach the path at all. The magnitude is worth stating rather
+/// than the fact alone: the eight-wait script that reported **10** past-day
+/// replays on seed 28 reports **2,125** on seed 6, over 127 bodies, from 2,565
+/// emitter scans of which 8 find an emitter. This is a re-measurement of a
+/// different world, not a like-for-like ratio, and the search — not the
+/// constant — is still what selects it.
+///
+/// The paragraphs below are the pre-absorption record and are kept because the
+/// reasoning is what makes the search a search. Their COUNTS are pre-Roll and
+/// must not be read forward.
 ///
 /// **Seed 42 is not it, and the reason corrects a claim this campaign carried
 /// through four tasks.** The ledger and several doc comments said seed 42's
@@ -216,14 +284,39 @@ const EMITTER_SEED: u64 = 6;
 /// route. Restored with `scripts/mutate.py`, REBUILT, and both constants
 /// reconfirmed green before this doc was written (a restored source with a
 /// stale binary is a known trap).
-const EMITTER_LEDGER_HASH: u64 = 0x64ae_b2f9_3e38_d328;
+///
+/// # RE-RECORDED AT THE ABSORPTION OF `2c34f9e4c`
+///
+/// On seed 6, the world the search lands on now. Main's own hash on the same
+/// eight-wait script on the same seed was `0x9f9094408637b815`, and the merged
+/// tree reproduces it. The value it replaces, `0x64aeb2f93e38d328`, was
+/// recorded on seed 28 and is a different world, so it is not a comparison —
+/// see the module doc's table, which says so in the same words.
+///
+/// The positive control below was taken on seed 28 before the absorption and
+/// has NOT been re-run on seed 6. It is kept because what it established is a
+/// property of the instrument rather than of the world — that both hashes move
+/// under a mutation to the past-day replay, and that the dread magnitude moves
+/// by exactly the mutated factor — and because a control deleted for being old
+/// leaves nothing at all. Its printed numbers are seed 28's.
+const EMITTER_LEDGER_HASH: u64 = 0x9f90_9440_8637_b815;
 
 /// The emitter-bearing world's final HAZARD hash — every derived body's
 /// `shunned` set and `dread` map, rendered canonically (see
 /// [`hazard_digest`]). This is the half [`EXPECTED`] cannot see: `dread` is
 /// felt rather than committed, so a change to the past-day affect path that
 /// did not happen to flip a route would move nothing in the ledger.
-const EMITTER_HAZARD_HASH: u64 = 0x8cf6_2f13_ee70_98f5;
+///
+/// Re-recorded at the absorption of `2c34f9e4c`; main's own hash on the same
+/// script was `0x0f999463ce4836a3`, and the merged tree reproduces it. **This
+/// is the strongest single line of the absorption's evidence**, because the
+/// two trees agree not merely on the digest's hash but on everything the
+/// digest is built from — 127 bodies, 532 shunned rooms, 13 dread entries, and
+/// each magnitude's exact bit pattern (twelve at `0x3ff0000000000000` and one
+/// at `0x3fdababa2c43f7ee`). Dread is the half [`EXPECTED`] cannot see, and it
+/// is produced only by the past-day affect replay, which is precisely the path
+/// The Pawl rebuilt.
+const EMITTER_HAZARD_HASH: u64 = 0x0f99_9463_ce48_36a3;
 
 /// A canonical, order-fixed rendering of every body's hazard memory.
 ///
