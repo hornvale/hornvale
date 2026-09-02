@@ -415,3 +415,78 @@ fn person_facts_are_unperturbed_relative_to_the_pre_task_baseline() {
         );
     }
 }
+
+/// `place`/`day` on a `parent-of`/`kin-of` fact are the DESCENDANT's
+/// community and founding day, not the forebear-subject's — `PARENT_OF`'s
+/// own doc and decision 0584 say so explicitly (review round 2). Nothing
+/// checked the `day` half of that until now: `make seam-guard` came back
+/// with `ledger_day_of_bake_year`'s call at `person_promote.rs:433`
+/// UNGUARDED — mutating that call's argument (`identity(0)`, so it returns
+/// `f.founded` unconverted) left the whole suite green, meaning every
+/// committed `day` on all 93 `parent-of`/`kin-of` facts could be wrong with
+/// nothing to notice.
+///
+/// This test reads each fact's `day` back against the SAME descendant's own
+/// `person-founded` day — stamped independently, in `promote`'s FIRST pass,
+/// from the identical `founded_day` value before the kinship pass (second
+/// pass) ever runs — rather than recomputing the expected value with the
+/// function under test, which would make the assertion circular.
+///
+/// **Non-vacuous by construction, not just by assumption.** A test that
+/// only compared against the descendant's day would still pass if the code
+/// used the FOREBEAR's day instead, on any seed where every forebear and
+/// its descendant happen to found on the same day — so this also confirms
+/// at least one checked fact's day differs from its own forebear's founding
+/// day, which is the exact case a subject/object day swap would get wrong.
+#[test]
+fn a_kinship_facts_day_is_the_descendants_founding_day_not_the_forebears() {
+    let w = seed42();
+
+    let founding_day_of = |person: EntityId| -> hornvale_kernel::WorldTime {
+        w.ledger
+            .find(hornvale_person::PERSON_FOUNDED)
+            .find(|f| f.subject == person)
+            .and_then(|f| f.day)
+            .expect("every promoted founder carries a person-founded day")
+    };
+
+    let mut checked = 0usize;
+    let mut saw_a_day_that_differs_from_the_forebears = false;
+    for f in w.ledger.find(PARENT_OF).chain(w.ledger.find(KIN_OF)) {
+        let Value::Entity(descendant) = f.object else {
+            panic!(
+                "a {} fact's object is always the descendant's EntityId",
+                f.predicate
+            );
+        };
+        let expected = founding_day_of(descendant);
+        assert_eq!(
+            f.day,
+            Some(expected),
+            "a {} fact's day must be the DESCENDANT's founding day \
+             (PARENT_OF's own doc, decision 0584), not the forebear-subject's \
+             — subject {:?}, object {:?}",
+            f.predicate,
+            f.subject,
+            descendant
+        );
+
+        let forebear_day = founding_day_of(f.subject);
+        if Some(forebear_day) != f.day {
+            saw_a_day_that_differs_from_the_forebears = true;
+        }
+        checked += 1;
+    }
+
+    assert!(
+        checked > 0,
+        "seed 42 has no parent-of/kin-of facts to check"
+    );
+    assert!(
+        saw_a_day_that_differs_from_the_forebears,
+        "every checked fact's day equals BOTH the descendant's and the \
+         forebear's founding day on this seed, so this test could not have \
+         caught a subject/object day swap — it needs at least one edge where \
+         the two differ"
+    );
+}
