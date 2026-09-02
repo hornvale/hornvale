@@ -43,16 +43,21 @@ nowhere else"), reachable only through a debugging flag.
 | thing | where | shape |
 | --- | --- | --- |
 | `Terrain::is_built(&Facet) -> bool` | `windows/vessel/src/brief.rs:53` | **already facet-resolution**, gates `structure_at` and all chamber generation |
-| `cave_proneness(&MaterialBuffer, f64) -> f64` | `domains/terrain/src/lithology.rs:452` | **continuous, positional** — a pure function of two fields, no roster |
+| `cave_proneness(&MaterialBuffer, f64) -> f64` | `domains/terrain/src/lithology.rs:452` | a pure function — but its INPUTS are Vertex-bound (`provider.rs:319`, `:371`), so proneness exists only at 110-132 km. See §6's correction. |
 | `LocaleContext::strange_site_rows()` | `windows/locale` | 103 vertex-placed sites, unreachable in play |
 | `strangeness` | per-room scalar in `[0,1]` | already in every locale's regime line |
 | `Attach::{Hub, Beside(Ec), Within(Ntpp)}` | `windows/vessel/src/interior/pattern.rs:21` | an **RCC-8 pattern language**, scale-free |
 | settlement roster | `clients/game/bin/src/plate.rs:106` | the **only** thing the map draws |
 
-Two of these are better news than expected. `is_built` already takes a
-`Facet`, so the widened predicate does not inherit the 120 km resolution defect
-that `CLIM-water-label-resolution-vs-walk-band` records. And `cave_proneness`
-is positional, so caves need no roster and no seeded draw to place.
+`is_built` already takes a `Facet`, so the widened predicate does not inherit
+the 120 km resolution defect that `CLIM-water-label-resolution-vs-walk-band`
+records — though its real implementation turns out to be a membership test over
+a precomputed set of settlement-territory facet ids (`liveness.rs:745`), not a
+field read.
+
+**The second claim in this paragraph was wrong and is corrected in §6.** It read
+"`cave_proneness` is positional, so caves need no roster and no seeded draw to
+place." That is true of the FUNCTION and false of its DATA.
 
 ## 3. `built` is the wrong name, and the rename carries meaning
 
@@ -119,9 +124,21 @@ against population is out of scope.
 
 ## 6. Widening: caves and exotic sites become sites
 
-**Caves.** Derived, no draw. A facet holds a cave where `cave_proneness`
-clears a threshold and the local relief admits a mouth. The threshold is
-**calibrated, not guessed** — preregistered in §9.
+**Caves. CORRECTED 2026-09-01 — they need the placement draw after all.** This
+section read "Derived, no draw", reasoning from `cave_proneness` being a pure
+function. Its inputs are Vertex-bound (`material_at`, `cave_proneness_at`), so
+proneness exists only at 110-132 km spacing, and thresholding the nearest vertex
+would make every facet for tens of kilometres a cave — reproducing
+`CLIM-water-label-resolution-vs-walk-band` exactly.
+
+So a cave is PLACED, through §7's mechanism, with a distinct reason so a cave
+and an exotic site at one vertex do not collocate. The threshold on proneness
+still decides WHETHER a vertex warrants a cave, and is **calibrated, not
+guessed** — preregistered in §9. What changed is that it no longer decides
+where.
+
+The error is worth keeping: I checked that the function was pure and inferred
+its answer was available anywhere, without checking where its inputs live.
 
 **Exotic sites.** The 103 already exist; they become `SiteKind::Exotic` and
 gain an interior. Their strangeness descriptor is already authored ("under a
@@ -167,8 +184,13 @@ pub enum Extent {
 Nathan's observation is that exotic sites are not uniform in scale — a
 wasteland or a cursed land is miles across with components inside it. Modelling
 extent now costs one enum and one match arm; **not** modelling it makes
-multi-facet sites a migration of every consumer later. Since §7 mints an epoch
-anyway, carving the shape out now is free.
+multi-facet sites a migration of every consumer later.
+
+The original justification here was "since §7 mints an epoch anyway, carving the
+shape out now is free." §7 mints no epoch, so that argument is withdrawn — but
+the conclusion stands on its own and is cheaper than it looked: one enum and one
+match arm against a migration of every consumer, with no determinism cost at
+all.
 
 ## 8. Non-goals, stated so the boundary is legible
 
