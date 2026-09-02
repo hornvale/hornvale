@@ -27,7 +27,7 @@ use crate::{
 };
 use hornvale_kernel::{
     ConceptRegistry, EntityId, Facet, FacetId, Fact, Ledger, Seed, TickSpan, Value, World,
-    WorldTime, tick,
+    WorldTime,
 };
 use hornvale_locale::{Compass, Direction, ExitKind, LocaleContext};
 
@@ -7008,16 +7008,17 @@ impl<'w> Session<'w> {
             day_ticks: self.day_ticks(),
             terrain: &terrain,
         };
-        // Recover this tick's within-room `Occupancy` alongside the facts
-        // `tick()` (below) commits — the same walk, read twice, exactly the
-        // pattern the lab's health battery uses (task 6b): a second, PURE
-        // re-evaluation of the identical frozen `self.ledger` and `sys`,
-        // not a second simulation with different consequences. Without
-        // this, `needs()` and the snapshot's present-entry read sampled a
-        // colder felt state than the NPC actually experienced — warmth at
-        // the room's landing anchor, never wherever its own walk carried it
-        // (Important 4, The Threshold whole-branch review).
-        let (_facts, occupancy) =
+        // Recover this tick's within-room `Occupancy` alongside the SAME
+        // walk's `facts` (The Roll, Task 11: one walk per wait). This used
+        // to be a PURE re-evaluation kept only for its `Occupancy` half,
+        // with `kernel::tick` (below) re-running the identical walk a
+        // second time — against the same frozen `self.ledger` and `sys`,
+        // through throwaway memos — purely to get facts this call had
+        // already computed once. `occupancy` still feeds `needs()` and the
+        // snapshot's present-entry read the way it always has (Important 4,
+        // The Threshold whole-branch review); `facts` is now committed
+        // directly below instead of being thrown away and recomputed.
+        let (facts, occupancy) =
             sys.step_with_occupancy(&self.ledger, &mut self.mesh_memo, &mut self.home_nav_cache);
         // The driven body's OWN arbitration (The Hand, Task 5 fix round 1,
         // spec §2.3/§3.3): the SAME `advance_one` every other body's walk
@@ -7047,7 +7048,7 @@ impl<'w> Session<'w> {
         // `Do`, nothing on `Hold` argument spec §5.2 makes" — checked
         // directly (fix round 2) and that claim is false: forcing the
         // intent to `Do` here still leaves the ledger untouched, because the
-        // facts never reach `tick()` either way. The player's verbs (`go`,
+        // facts never reach the ledger either way. The player's verbs (`go`,
         // `drink`, …) are what the body DOES; this walk only ever supplies
         // what the host WANTS (`self.driven_mode`) — spec §5.2 is being
         // corrected at Task 8 to say so.
@@ -7100,63 +7101,97 @@ impl<'w> Session<'w> {
         for drive in &self.driven_suppressed {
             *self.driven_overrides.entry(*drive).or_insert(0) += 1;
         }
-        match tick(&self.ledger, &[&sys], &["drive-movements"], &self.registry) {
-            Ok(next) => {
-                let moved = next.len() - self.ledger.len();
-                self.ledger = next;
-                self.occupancy = occupancy;
-                // The First Mark, one-hop forward integration: after the NPC
-                // drive tick settles, any co-located-or-not NPC whose
-                // grievance has crossed the hostility threshold commits its
-                // `turned-hostile` fact — a discrete social consequence of
-                // the player's own acts, not an ambient drive. Iterating
-                // `other_bodies` in its existing (derivation) order keeps the
-                // commit sequence deterministic. A free function, not a
-                // `self.npcs.iter()` field read, but the same disjoint-field
-                // borrow: it borrows only `self.bodies`, leaving `self.ledger`
-                // (mutated below, inside this very loop) free.
-                let player = self.agent_entity();
-                for npc in other_bodies(&self.bodies, self.driven) {
-                    // The `value_of(...).is_none()` check below is the SOLE
-                    // idempotency guarantee for this fact, not a second
-                    // layer atop `TURNED_HOSTILE`'s `functional: true`
-                    // registration: `Ledger::commit` only dedups via an
-                    // exact full-envelope match, and `day` advances every
-                    // tick, so a later-day re-fire is never an exact dup;
-                    // and the functional flag only rejects a *different*
-                    // object for the same subject/predicate, but `object`
-                    // here is always the same constant `player`, so that
-                    // flag can never trip either. Remove this guard and the
-                    // loop silently refires (a new `turned-hostile` fact,
-                    // same subject/predicate/object, only `day` differing)
-                    // on every subsequent `wait` the NPC is still past
-                    // threshold for.
-                    if grievance(&self.ledger, npc.entity) >= HOSTILITY_THRESHOLD
-                        && self.ledger.value_of(npc.entity, TURNED_HOSTILE).is_none()
-                    {
-                        let fact = Fact {
-                            subject: npc.entity,
-                            predicate: TURNED_HOSTILE.to_string(),
-                            object: Value::Entity(player),
-                            place: None,
-                            day: Some(self.day),
-                            provenance: "player-provoked".to_string(),
-                        };
-                        self.ledger
-                            .commit(fact, &self.registry)
-                            .expect("turned-hostile is registered and finite");
-                    }
-                }
-                // Re-absorb the (possibly changed) here into knowledge; the
-                // possessed agent's own scenery is still read from the
-                // frozen `self.world`, so this cannot change day-0 output.
-                if let Err(e) = self.absorb_here() {
-                    return Turn::Out(format!("error: {e}"));
-                }
-                Turn::Out(self.narrate_motion(moved, &before, &sensed_before, how))
+        // One walk per wait (The Roll, Task 11): commit `facts` — the SAME
+        // vector `kernel::tick` used to recompute by re-running this exact
+        // walk a second time — straight into `self.ledger`, in order,
+        // instead of handing them to `tick`, which only ever cloned
+        // `self.ledger` (`kernel/src/schedule.rs`'s `tick`: `let mut next =
+        // frozen.clone()`), replayed `sys.step(frozen)` — itself
+        // `step_with_occupancy(frozen, throwaway, throwaway).0`, the
+        // identical walk against the identical frozen ledger, just without
+        // this session's warm `mesh_memo`/`home_nav_cache` — and committed
+        // its facts into that clone in the same order. The memos are
+        // caches, not inputs the facts vector depends on for its content,
+        // so the vector committed here is byte-identical to the one `tick`
+        // used to commit; see `session_snapshot::v2_bytes_are_pinned` and
+        // `the_client_fixtures_are_current`, which pin exactly that.
+        //
+        // `moved` used to be `next.len() - self.ledger.len()` — the count of
+        // facts that changed the ledger's length, i.e. actually appended.
+        // `Ledger::commit`'s `Ok(true)` is that same condition stated
+        // per-fact (`Ok(true)` = appended; `Ok(false)` = an identical fact
+        // already present, an idempotent no-op that must NOT be counted),
+        // so counting `Ok(true)` reproduces the old count exactly.
+        let mut moved = 0usize;
+        for fact in facts {
+            match self.ledger.commit(fact, &self.registry) {
+                Ok(true) => moved += 1,
+                Ok(false) => {}
+                // A deliberate change of failure shape from the old
+                // `tick`-based path, not an oversight: `tick` committed into
+                // a CLONE, so an error mid-way left `self.ledger` completely
+                // untouched. Committing straight into `self.ledger` means an
+                // error here leaves every fact committed BEFORE it in place.
+                // `wait` already treats this arm as fatal to the turn either
+                // way (the caller sees `Turn::Out`, nothing more this tick),
+                // and a registry contradiction on a `drive-movements` fact
+                // is not expected to occur at all on the fixed seed-42
+                // registry this suite pins against — but if it ever does,
+                // the ledger this session keeps from here on is a partial
+                // tick's worth of facts rather than none.
+                Err(e) => return Turn::Out(format!("Time falters: {e}")),
             }
-            Err(e) => Turn::Out(format!("Time falters: {e}")),
         }
+        self.occupancy = occupancy;
+        // The First Mark, one-hop forward integration: after the NPC
+        // drive tick settles, any co-located-or-not NPC whose
+        // grievance has crossed the hostility threshold commits its
+        // `turned-hostile` fact — a discrete social consequence of
+        // the player's own acts, not an ambient drive. Iterating
+        // `other_bodies` in its existing (derivation) order keeps the
+        // commit sequence deterministic. A free function, not a
+        // `self.npcs.iter()` field read, but the same disjoint-field
+        // borrow: it borrows only `self.bodies`, leaving `self.ledger`
+        // (mutated below, inside this very loop) free.
+        let player = self.agent_entity();
+        for npc in other_bodies(&self.bodies, self.driven) {
+            // The `value_of(...).is_none()` check below is the SOLE
+            // idempotency guarantee for this fact, not a second
+            // layer atop `TURNED_HOSTILE`'s `functional: true`
+            // registration: `Ledger::commit` only dedups via an
+            // exact full-envelope match, and `day` advances every
+            // tick, so a later-day re-fire is never an exact dup;
+            // and the functional flag only rejects a *different*
+            // object for the same subject/predicate, but `object`
+            // here is always the same constant `player`, so that
+            // flag can never trip either. Remove this guard and the
+            // loop silently refires (a new `turned-hostile` fact,
+            // same subject/predicate/object, only `day` differing)
+            // on every subsequent `wait` the NPC is still past
+            // threshold for.
+            if grievance(&self.ledger, npc.entity) >= HOSTILITY_THRESHOLD
+                && self.ledger.value_of(npc.entity, TURNED_HOSTILE).is_none()
+            {
+                let fact = Fact {
+                    subject: npc.entity,
+                    predicate: TURNED_HOSTILE.to_string(),
+                    object: Value::Entity(player),
+                    place: None,
+                    day: Some(self.day),
+                    provenance: "player-provoked".to_string(),
+                };
+                self.ledger
+                    .commit(fact, &self.registry)
+                    .expect("turned-hostile is registered and finite");
+            }
+        }
+        // Re-absorb the (possibly changed) here into knowledge; the
+        // possessed agent's own scenery is still read from the
+        // frozen `self.world`, so this cannot change day-0 output.
+        if let Err(e) = self.absorb_here() {
+            return Turn::Out(format!("error: {e}"));
+        }
+        Turn::Out(self.narrate_motion(moved, &before, &sensed_before, how))
     }
 
     /// Narrate what the tick committed: silence if nothing moved, else name

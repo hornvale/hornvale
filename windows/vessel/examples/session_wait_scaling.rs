@@ -33,6 +33,56 @@
 //! 193.732708, 203.708458, 204.049000]
 //! ```
 //!
+//! ### before Task 11 (CONTENDED), `e058a24db122a8fbec75db186528310c6f275a89`
+//!
+//! 2026-09-02, MacBookPro. `uptime`: `load averages: 3.72 5.73 8.96` — the
+//! 1-minute average is under 4, but the 5- and 15-minute averages are not,
+//! so this is CONTENDED per The Repose's all-three rule, taken anyway per
+//! this task's fallback. Old code: `wait` ran the population walk twice
+//! (`step_with_occupancy` for occupancy, `kernel::tick` for facts).
+//!
+//! ```text
+//! session_wait_scaling: seed 42, 20 waits
+//!   bodies  on_roll    ms/wait  facts/wait
+//!       68       68    157.225      62.25
+//! per-wait ms: [131.1315, 129.427, 127.600667, 89.339834, 157.9785,
+//! 138.922791, 170.594208, 190.637583, 178.461875, 174.146917, 160.983167,
+//! 132.328375, 169.054125, 130.424833, 192.354209, 216.837417, 199.843916,
+//! 143.568125, 131.817125, 179.051875]
+//! ```
+//!
+//! ### after Task 11 (CONTENDED), one walk per wait
+//!
+//! 2026-09-02, MacBookPro, same worktree, immediately after the reading
+//! above (Task 11's `session.rs` change applied, uncommitted at the moment
+//! of this reading — it lands in the commit immediately following this
+//! one). `uptime`: `load averages: 4.27 5.66 8.82` — still CONTENDED (now
+//! all three averages are over 4), so this is a contended-vs-contended
+//! comparison, not a contended-vs-quiet one; the box's load did not fall
+//! between the two readings, it rose slightly. New code: the same
+//! `step_with_occupancy` call as before, but its `facts` are now committed
+//! directly into `self.ledger` instead of being discarded and recomputed a
+//! second time through `kernel::tick`.
+//!
+//! ```text
+//! session_wait_scaling: seed 42, 20 waits
+//!   bodies  on_roll    ms/wait  facts/wait
+//!       68       68     83.487      62.25
+//! per-wait ms: [60.467542, 60.582583, 59.993542, 40.535542, 77.2725,
+//! 64.757791, 82.038083, 93.859125, 84.122834, 84.725458, 76.887999,
+//! 68.577333, 120.198458, 74.087083, 86.112708, 137.653625, 104.703459,
+//! 80.868709, 105.32825, 106.964292]
+//! ```
+//!
+//! `facts/wait` is unchanged (62.25 both readings — the same facts commit
+//! either way, just once now instead of twice, so the count moves by
+//! nothing). `ms/wait` fell from 157.225 to 83.487, a 1.88x speedup,
+//! **despite the box's load rising slightly between the two runs** (see
+//! above) — a contended-favouring-the-old-code direction, which makes the
+//! measured speedup a conservative one, not an inflated one. Both runs
+//! carry the same 68-body, 68-on-roll population and the same worktree, so
+//! the only thing that changed between them is this task's code.
+//!
 //! (Task 13 appends the post-roll, post-tick-stage reading.)
 
 // The wall-clock is the instrument here, never sim logic -- exempt from the
