@@ -360,10 +360,42 @@ fn ground_memo_survives_chaos_eviction() {
         a_miss_grew_on_eviction,
         "an eviction must force at least one recompute, or this test denominates nothing"
     );
+
+    // The independent comparator: the EXACT set of rooms a fresh read
+    // samples, derived from `build_emitter_scan`'s own two passes (read, not
+    // assumed) rather than from `GroundHazards` itself. The scan judges
+    // EVERY roster member (seed 42 emits no alarms, so `hazard_memory_memo`
+    // takes the emitter-free branch and samples nothing beyond this): each
+    // member's `home` plus its neighbours, and each room the member has
+    // stood in by `shape.day` (`LatestVisit::rooms_at`) plus ITS neighbours
+    // — `threat_field` samples a room and `room.neighbors()` together, every
+    // time it is asked about a room.
+    let expected_rooms: std::collections::BTreeSet<hornvale_kernel::Facet> = {
+        let mut store = shape.folds.borrow_mut();
+        let (visits, _) = store.latest_visit_and_trail(&shape.ledger);
+        let mut rooms = std::collections::BTreeSet::new();
+        for m in &shape.npcs {
+            rooms.insert(m.home.clone());
+            rooms.extend(m.home.neighbors());
+            for room in visits.rooms_at(m.entity, shape.day) {
+                rooms.extend(room.neighbors());
+                rooms.insert(room);
+            }
+        }
+        rooms
+    };
     // The last of the 30 reads (i = 29, odd) ran with no eviction: its
-    // resident room count is what the un-evicted memo actually holds.
+    // resident room count is what the un-evicted memo actually holds, and
+    // every read samples the SAME deterministic set over this fixed ledger.
     println!(
-        "ground memo len after the final un-evicted read: {}",
-        ground.borrow().len()
+        "ground memo len after the final un-evicted read: {} (independently computed: {})",
+        ground.borrow().len(),
+        expected_rooms.len()
+    );
+    assert_eq!(
+        ground.borrow().len(),
+        expected_rooms.len(),
+        "the memo's resident room count must equal the independently computed sample set, \
+         or GroundHazards is keyed on something other than the room `hazards()` actually reads"
     );
 }
