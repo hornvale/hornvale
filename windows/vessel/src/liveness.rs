@@ -2804,9 +2804,26 @@ const SURVIVAL_OVERRIDE: f64 = 0.9;
 /// The resolution at which the tick scans for the next wake transition — one
 /// twentieth of a standard day (the historical `0.05` days), held as an EXACT
 /// tick span so the scan walks the lattice itself rather than re-rounding an
-/// accumulating `f64` day at every step. Fine enough to catch a crepuscular
-/// creature's narrow dawn/dusk bands.
-/// plumb: universal(the tick-scan resolution for the wake-transition search, an algorithm-internal quantity)
+/// accumulating `f64` day at every step.
+///
+/// **RETAGGED per-world (The Plumb, Task 5 review), and the third of three
+/// constants in this neighbourhood carrying the same defect.** The tag used
+/// to read `universal`, on the same provenance-shaped grounds `SCAN_LIMIT`
+/// and `ONE_DAY` did — "the tick-scan resolution", an algorithm-internal
+/// quantity — rather than stating what the number varies along. What this
+/// step actually samples is [`is_awake`]'s own signal, `solar_altitude`,
+/// whose PERIOD is the world's LOCAL day; the step itself is a fixed
+/// fraction of the STANDARD day. "Fine enough to catch a crepuscular
+/// creature's narrow dawn/dusk bands" is therefore a claim that holds only
+/// near `L = 1` — on a fast-rotating world it degrades directly: at the
+/// legal minimum (`RotationPin::PeriodHours(4.0)`, a 4-standard-hour local
+/// day) this step samples only ~3.3 times per local day (16,666.67 local-day
+/// ticks / 5,000 tick step), which is not obviously "fine enough" to resolve
+/// a dawn or dusk band at all. Not converted this campaign for the same
+/// reason `SCAN_LIMIT`/`ONE_DAY` are not (a fidelity finding, not this
+/// task's work) — see [`REST_BOUT`]'s own doc for the boundary this
+/// campaign DID convert.
+/// plumb: per-world(a fixed-standard-day sample rate over a signal whose real period is the world's own local day — degrades on a fast-rotating world, ~3.3 samples/local-day at the legal 4-standard-hour PeriodHours minimum)
 const WAKE_SCAN_STEP: TickSpan = TickSpan::from_ticks(WorldTime::TICKS_PER_STD_DAY / 20);
 
 /// A representative AWAKE fraction of the day for `activity` — where the health
@@ -2854,9 +2871,9 @@ pub(crate) fn next_awake_day(
     // task's conversion, still present here on the sleep side (a fidelity
     // finding this campaign reports rather than converts; see [`REST_BOUT`]'s
     // own doc for the measured near-miss at the legal extreme).
-    /// plumb: per-world(caps a physical search duration in STANDARD days rather than the world's own local day — the same axis REST_BOUT was on before its conversion; falsifier: a_rest_and_a_sleep_on_the_slowest_legal_world_are_measured_not_assumed)
+    /// plumb: per-world(caps a physical search duration in STANDARD days rather than the world's own local day — the same axis REST_BOUT was on before its conversion; falsifier: a_rest_still_outlasts_the_sleep_scans_give_up_fallback_at_the_100_hour_legal_extreme)
     const SCAN_LIMIT: TickSpan = TickSpan::from_ticks(WorldTime::TICKS_PER_STD_DAY * 3 / 2);
-    /// plumb: per-world(the give-up fallback's own span, also denominated in a STANDARD day rather than the world's own local day; this is the constant the measured rest/sleep inversion actually names — falsifier: a_rest_and_a_sleep_on_the_slowest_legal_world_are_measured_not_assumed)
+    /// plumb: per-world(the give-up fallback's own span, also denominated in a STANDARD day rather than the world's own local day; this is the constant the measured rest/sleep inversion actually names — falsifier: a_rest_still_outlasts_the_sleep_scans_give_up_fallback_at_the_100_hour_legal_extreme)
     const ONE_DAY: TickSpan = TickSpan::from_ticks(WorldTime::TICKS_PER_STD_DAY);
     let limit = day + SCAN_LIMIT;
     let mut t = day + WAKE_SCAN_STEP;
@@ -17595,56 +17612,54 @@ mod tests {
         );
     }
 
-    /// **THE SLEEP-SIDE ORDERING CHECK (The Plumb, Task 5) — MEASURED, not
-    /// assumed.** `REST_BOUT`'s conversion makes a rest `L/4` long; the
-    /// [`Action::Sleep`] side is deliberately NOT converted this campaign (a
-    /// fidelity finding, not this task's work — see `SCAN_LIMIT`/`ONE_DAY`'s
-    /// own tags), and both of its bounds stay denominated in STANDARD days
-    /// regardless of `L`. At the slowest legal world
-    /// (`RotationPin::PeriodHours(100.0)`, `L = 100/24 = 4.1\overline{6}` std
-    /// days) a converted rest is `L/4 = 100/96 ≈ 1.0417` std days — close
-    /// enough to `next_awake_day`'s own give-up fallback (`ONE_DAY`, exactly
-    /// 1 std day) that whether a rest still stays SHORTER than a sleep at
-    /// this legal extreme is not obvious from either constant's own doc, and
-    /// is worth measuring rather than assuming (campaign ledger #34's
-    /// withdrawn ruling reasoned about this exact comparison from the wrong
-    /// end — see ledger #36, which is explicit that comparing against
-    /// [`SLEEP_BOUT`], a floor that "usually does not bind" and is a MINIMUM
-    /// rather than the sleep's own typical duration, is the wrong
-    /// comparison).
+    /// **THE SLEEP-SIDE ORDERING DEFECT (The Plumb, Task 5 fix round 1) — A
+    /// KNOWN-WRONG REALITY, PINNED RUNNING, NOT AN IGNORED FALSIFIER.** An
+    /// earlier draft of this test asserted the ORDER Nathan's ruling
+    /// requires (`rest < sleep`) and shipped `#[ignore]`d when that
+    /// assertion turned out false — which the review correctly rejected:
+    /// nothing runs an `#[ignore]`d test in this crate, the `plumb` tool
+    /// does not validate a `falsifier:` citation (it is free text), and a
+    /// LATER campaign converting the sleep side would make the inversion
+    /// below vanish with NOTHING turning red, while two roster rows kept
+    /// citing this test as their proof obligation — the `STALE-DECL` shape
+    /// CLAUDE.md warns about for the seam-guard roster, reached by a
+    /// different mechanism.
     ///
-    /// So this isolates the SCAN's own worst case instead: [`SlowWorldTerrain`]
-    /// with `permanent_night: true` forces `next_awake_day` to exhaust its
-    /// scan and fall back to `day + ONE_DAY` with no `SLEEP_BOUT` floor in
-    /// the arithmetic at all (the body is off-phase the whole time, so
-    /// `act_span`'s `Sleep` arm takes the bare-cycle branch, never the
-    /// `.max(SLEEP_BOUT)` one).
+    /// So this asserts the INVERSE — the defect exactly as measured, `rest >
+    /// sleep` — which makes it a ratchet instead of a hope: the day someone
+    /// converts `SLEEP_BOUT`/`SCAN_LIMIT`/`ONE_DAY`/`WAKE_SCAN_STEP` (any of
+    /// [`REST_BOUT`]'s three per-world-tagged sleep-side siblings) and the
+    /// inversion goes away, THIS test reddens on the changed inequality
+    /// rather than silently continuing to pass on an assumption nobody is
+    /// checking any more. **The reader who fixes the sleep side deletes this
+    /// test — does not adjust its assertion.** A red run here is the
+    /// intended signal that the deletion is due, not a bug in the fixture.
     ///
-    /// **Result: the ordering INVERTS.** Measured, not predicted:
-    /// `rest=TickSpan(104166)` (1.041660 std days) against
-    /// `sleep=TickSpan(100000)` (1.000000 std days) — a converted rest is
-    /// LONGER than the sleep-scan's own give-up fallback at the legal
-    /// extreme, by 4,166 ticks (~1 hour). Per this task's brief this is a
-    /// STOP condition: the conversion is not fixed by converting the sleep
-    /// path or by weakening this assertion, so neither happens here — the
-    /// finding is reported to the controller for re-ruling (this task's
-    /// report) and this test is left `#[ignore]`d as its falsifier, the same
-    /// licensed exit `reverse_field_matches_forward_search_for_every_empty_
-    /// avoid_room` uses for a disproven hypothesis.
-    #[ignore = "The Plumb, Task 5: MEASURED finding, not a bug in this test. \
-                At the slowest legal world (RotationPin::PeriodHours(100.0)) \
-                a converted REST_BOUT (L/4 = 1.041660 std days) is LONGER \
-                than next_awake_day's own give-up fallback for a permanently \
-                off-phase sleeper (ONE_DAY = 1.000000 std days exactly) -- \
-                the ordering Nathan's ruling requires (a rest must stay \
-                shorter than a sleep) INVERTS by 4,166 ticks (~1 hour) at \
-                this legal extreme. Converting SLEEP_BOUT/SCAN_LIMIT/ONE_DAY \
-                is explicitly out of this campaign's scope; the finding is \
-                reported to the controller for re-ruling rather than fixed \
-                or weakened here. Kept as a falsifier for whatever the \
-                sleep-side conversion turns out to be."]
+    /// **Mechanism** (`REST_BOUT`'s conversion makes a rest `L/4` long; the
+    /// [`Action::Sleep`] side is deliberately NOT converted this campaign —
+    /// see [`SCAN_LIMIT`]/[`ONE_DAY`]/[`WAKE_SCAN_STEP`]'s own `per-world`
+    /// tags, all fidelity findings rather than this task's work). At the
+    /// slowest legal world (`RotationPin::PeriodHours(100.0)`, `L = 100/24 =
+    /// 4.1\overline{6}` std days) a converted rest is `L/4 = 100/96 ≈
+    /// 1.0417` std days. [`SlowWorldTerrain`] with `permanent_night: true`
+    /// forces `next_awake_day` to exhaust its scan and fall back to `day +
+    /// ONE_DAY` (exactly 1 std day) with no `SLEEP_BOUT` floor in the
+    /// arithmetic at all (the body is off-phase throughout, so `act_span`'s
+    /// `Sleep` arm takes the bare-cycle branch, never `.max(SLEEP_BOUT)`) —
+    /// the scenario `next_awake_day`'s own doc names ("polar night for a
+    /// diurnal creature"). Comparing against [`SLEEP_BOUT`] itself would be
+    /// the wrong instrument (ledger #36: it is a floor that "usually does
+    /// not bind", a MINIMUM, not the sleep's own typical duration) — this
+    /// isolates the SCAN's own worst case instead.
+    ///
+    /// **Measured** (not predicted — campaign ledger #34's withdrawn ruling
+    /// reasoned about this exact comparison from the wrong end): `rest =
+    /// TickSpan(104166)` (1.041660 std days) against `sleep =
+    /// TickSpan(100000)` (1.000000 std days) — the converted rest is LONGER
+    /// than the sleep-scan's own give-up fallback by 4,166 ticks (~1 hour),
+    /// at exactly the legal extreme.
     #[test]
-    fn a_rest_and_a_sleep_on_the_slowest_legal_world_are_measured_not_assumed() {
+    fn a_rest_still_outlasts_the_sleep_scans_give_up_fallback_at_the_100_hour_legal_extreme() {
         let home = raddr(1.0);
         let local_day =
             TickSpan::from_std_days(100.0 / 24.0).expect("100 standard hours is finite");
@@ -17670,13 +17685,21 @@ mod tests {
             rest.as_std_days(),
             sleep.as_std_days()
         );
+        // THE INVERSE OF NATHAN'S RULING, ASSERTED ON PURPOSE. This pins
+        // today's DEFECT, not the design intent: a rest must stay shorter
+        // than a sleep, and at this legal extreme it currently does not. If
+        // this assertion ever fails, the sleep side has been fixed (or
+        // REST_BOUT's own fraction changed) -- delete this test, do not
+        // adjust the inequality to match whatever the new numbers are.
         assert!(
-            rest < sleep,
-            "a rest must stay shorter than a sleep on every legal world, or the \
-             shorter act would be the more restorative one and Nathan's ruling \
-             inverts: measured rest {rest:?} ({:.6} std days) against sleep \
-             {sleep:?} ({:.6} std days) at the 100-hour legal extreme, \
-             permanent-night scenario (next_awake_day's own give-up fallback)",
+            rest > sleep,
+            "this test pins a KNOWN DEFECT (The Plumb, Task 5 fix round 1): \
+             at the 100-hour legal extreme, permanent-night scenario, a \
+             converted rest currently outlasts next_awake_day's own give-up \
+             fallback (ONE_DAY). If `rest > sleep` no longer holds, the \
+             defect this test exists to ratchet is gone -- DELETE this test \
+             rather than flip its assertion: measured rest {rest:?} \
+             ({:.6} std days) against sleep {sleep:?} ({:.6} std days)",
             rest.as_std_days(),
             sleep.as_std_days()
         );
