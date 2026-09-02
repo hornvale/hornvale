@@ -9944,11 +9944,13 @@ mod tests {
         let e = EntityId::new(1).expect("1 is non-zero");
         let mut witness = crate::resident::ReadWitness::default();
         // A FRESH accumulator per call, because this test deliberately reads
-        // the same history through TWO terrains and the memo is a function of
-        // terrain as well as the ledger (`SustenanceMemo`'s one-terrain-per-
-        // store invariant). Nothing would differ today — an empty trail
-        // memoises no window at all — and relying on that would be relying on
-        // the fixture rather than on the rule.
+        // the same history through TWO temperature fields and the memo is a
+        // function of the temperature field as well as the ledger (see
+        // `SustenanceMemo`: the invariant production satisfies is one
+        // `LocaleContext` per store, and these two `PlantedTerrain`s are two
+        // different fields, not two views of one). Nothing would differ today
+        // — an empty trail memoises no window at all — and relying on that
+        // would be relying on the fixture rather than on the rule.
         let at = |terrain: &dyn Terrain, witness: &mut crate::resident::ReadWitness| {
             let mut memo = crate::resident::SustenanceMemo::default();
             sustenance_at(

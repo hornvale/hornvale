@@ -1306,13 +1306,15 @@ fn holding_facts_back_as_an_overlay_equals_the_scan_over_the_full_ledger() {
 ///
 /// **The read-side accumulator is inside this schedule, not beside it** (The
 /// Pawl, Task 5b). It is not a [`hornvale_kernel::fold::LedgerFold`] — it is a
-/// function of terrain as well as the ledger — so comparing the tenants' reset
+/// function of the temperature field as well as the ledger — so comparing the
+/// tenants' reset
 /// lists alone would leave the one piece of state that carries `f64`
 /// arithmetic entirely untested against discard. So each prefix also takes a
 /// full [`sustenance_at`] read through BOTH stores and compares them with `==`
 /// on `f64`: the discarded store rebuilds its accumulator from scratch, the
 /// resident one resumes from a checkpoint, and the two must agree bit for bit.
-/// One terrain for both stores, which is the invariant the memo states.
+/// One temperature field for both stores, which is the invariant the memo
+/// states.
 fn sustenance_discard_schedule(every: usize) {
     let (l, e, home) = sustenance_fixture();
     let terrain = RippleTerrain;
@@ -1611,6 +1613,114 @@ fn segments_integrated_per_turn_does_not_grow_with_the_tick_index_for_a_creature
     );
 }
 
+/// The accumulator's EVICTION is unobservable: a third reset value for one
+/// `(entity, drive)` drops a memoised partition, and every read still equals
+/// the scan oracle bit for bit.
+///
+/// `MEMO_PARTITIONS_PER_DRIVE` is 2, so reading one entity's thirst integral
+/// from three different reset instants must evict. The eviction is a pure
+/// recomputation — a partition is a function of `(ledger prefix, temperature
+/// field, home)` and nothing else — but that is an ARGUMENT, and the chaos
+/// schedules only ever discard the WHOLE store, never one slot inside a live
+/// one. This drives the narrower case directly: the same store, cycled across
+/// three resets many times over, compared against the verbatim
+/// `integrate_thirst` oracle at every step.
+///
+/// The cycle is deliberately NOT monotone. A rising sequence of resets would
+/// evict only the oldest slot and would never ask a partition to come BACK
+/// after being dropped, which is the case an off-by-one in the eviction guard
+/// would survive.
+///
+/// It carries a POSITIVE CONTROL, because an equality sweep on its own could
+/// not tell an eviction that rebuilt correctly from a cap that never fired —
+/// see the comment beside it at the end of the body.
+#[test]
+fn evicting_a_memoised_reset_partition_is_unobservable() {
+    let (l, e, home) = sustenance_fixture();
+    let terrain = RippleTerrain;
+    let mut store = ResidentFolds::new();
+    let mut witness = ReadWitness::default();
+
+    // The fixture's three resets, cycled out of order so a dropped partition
+    // is asked for again after eviction rather than merely aged out.
+    let r: Vec<WorldTime> = [200_000_i64, 600_000, 850_000]
+        .into_iter()
+        .map(WorldTime::from_ticks)
+        .collect();
+    let mut probes = 0usize;
+    let mut nonzero = 0usize;
+    for _round in 0..3 {
+        for reset in [r[0], r[2], r[1], r[0], r[2]] {
+            for t in probe_instants() {
+                let (trail, _resets, memo, _w) = store.trail_and_thirst(&l);
+                let got = sustenance_at(
+                    trail,
+                    e,
+                    &home,
+                    reset,
+                    &[],
+                    t,
+                    &terrain,
+                    ThermalStrategy::Endothermic,
+                    &SUSTENANCE,
+                    memo,
+                    &mut witness,
+                );
+                let sightings = scan_oracle(&l, e, t.as_std_days());
+                let expected = integrate_thirst_oracle(
+                    &sightings,
+                    &home,
+                    reset.as_std_days(),
+                    t.as_std_days(),
+                    &terrain,
+                    ThermalStrategy::Endothermic,
+                    &SUSTENANCE,
+                );
+                assert_eq!(
+                    got, expected,
+                    "cycling the reset across more partitions than the memo keeps must \
+                     still equal the oracle at {t:?} from reset {reset:?}"
+                );
+                probes += 1;
+                if got > 0.0 {
+                    nonzero += 1;
+                }
+            }
+        }
+    }
+    println!(
+        "--- eviction witness: {nonzero} of {probes} probes integrated a non-zero interval, \
+         3 resets cycled 15 times through a 2-slot memo ---"
+    );
+    assert!(
+        nonzero >= 100,
+        "the eviction sweep must integrate a real interval at least 100 times, or it is \
+         asserting 0.0 == 0.0 throughout: got {nonzero} of {probes}"
+    );
+    // THE POSITIVE CONTROL, and this test needs one badly: eviction is
+    // VALUE-invariant by design, so an equality sweep alone cannot tell a
+    // memo that evicted and rebuilt correctly from one that never evicted at
+    // all. The witness can. With the trail fixed for the whole test, a
+    // partition is only ever rebuilt because it was DROPPED, and a rebuild is
+    // exactly a read whose terrain samples exceed what the ledger grew since
+    // the previous read of that same reset -- an "unbounded" read. So a
+    // non-zero count here is the evidence that the cap fired; a zero would
+    // mean this test swept three resets through a memo that kept all of them
+    // and proved nothing about eviction.
+    let rebuilt = witness
+        .unbounded_reads_by_entity()
+        .get(&e)
+        .copied()
+        .unwrap_or(0);
+    println!("eviction witness: {rebuilt} reads had to rebuild a dropped partition");
+    assert!(
+        rebuilt > 0,
+        "no read ever rebuilt a dropped partition, so the {} cap never fired and this \
+         sweep tested equality without testing eviction at all",
+        "MEMO_PARTITIONS_PER_DRIVE"
+    );
+}
+
 /// Task 5b's cost witness: the read is O(what the ledger newly determined),
 /// not O(history) — measured on the population the campaign's first readout
 /// found it had never measured.
@@ -1633,7 +1743,14 @@ fn segments_integrated_per_turn_does_not_grow_with_the_tick_index_for_a_creature
 /// 1. **Segments integrated per turn** must not grow with the tick index.
 /// 2. **Terrain samples per turn** must not either — the quantity spec §11.7
 ///    named as the leading candidate for the ~200x ecological-versus-synthetic
-///    gap, counted rather than inferred.
+///    gap, counted rather than inferred. **This is not independent evidence
+///    from (1).** `sustenance_at` samples terrain exactly once per integrated
+///    window, so it hands the SAME expression to the witness as both counts,
+///    and the two lines below will print the same numbers until some future
+///    rate function separates them (see
+///    [`ReadWitness::terrain_samples_by_entity`]'s field doc). The second
+///    assertion buys a claim stated on the quantity §11.7 named rather than on
+///    a proxy for it; it does not buy a second observation.
 /// 3. **No read may sample terrain more times than the ledger grew for that
 ///    creature since the previous read of the same drive**, plus the in-tick
 ///    overlay's own boundaries, plus the one open segment. This is the

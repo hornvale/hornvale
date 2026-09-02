@@ -494,9 +494,9 @@ impl DriveKey {
 /// reset while the tick's own walk reads from a LOCAL reset it has already
 /// advanced past a `drank` it is about to commit, so a creature that drinks
 /// mid-tick is read from exactly two instants in the same turn. Evicting is
-/// unobservable — a partition is a pure function of `(ledger prefix, terrain)`
-/// and is rebuilt on demand — so this bounds memory without bounding
-/// correctness; it costs a rebuild, never an answer.
+/// unobservable — a partition is a pure function of `(ledger prefix,
+/// temperature field, home)` and is rebuilt on demand — so this bounds memory
+/// without bounding correctness; it costs a rebuild, never an answer.
 const MEMO_PARTITIONS_PER_DRIVE: usize = 2;
 
 /// One boundary of a memoised integral: a distinct sighting instant, the
@@ -582,6 +582,18 @@ impl MemoPartition {
     /// segment start in standard days) -> per-day rate` — so this type never
     /// sees terrain, a thermal class or a drive's parameters, and the
     /// arithmetic below is the caller's arithmetic verbatim.
+    ///
+    /// **It walks to the trail's END, not to the instant being read, and that
+    /// is the one case where a read can cost MORE than the un-memoised one
+    /// did.** A read at a past `t` on a partition that is fresh (or was
+    /// evicted) integrates `reset -> end of trail` where the old code
+    /// integrated `reset -> t`. The extra work is bounded by the trail beyond
+    /// `t` and is amortised away by the very next read of that partition,
+    /// which finds the frontier already there; in practice the catch-up window
+    /// is what the ledger grew since the previous read. Advancing to the trail
+    /// end rather than to `t` is what makes the memo `t`-independent, which is
+    /// what lets one partition serve the live read and every past-instant
+    /// replay of the same drive.
     fn advance(
         &mut self,
         trail: &[(WorldTime, Facet)],
@@ -656,20 +668,44 @@ impl MemoPartition {
 /// sightings absorbed since the previous read of that drive, and a past-instant
 /// read is a binary search into the partition plus the one open segment.
 ///
-/// **It is a pure function of `(ledger prefix, terrain)`, and NOT a
-/// [`LedgerFold`].** The rate at a segment needs a temperature, and terrain is
-/// not a ledger fact — the same argument [`KnownWater`]'s doc makes for
-/// `is_water`. So this cannot live inside a fold whose FOLD-equals-SCAN
+/// **It is a pure function of `(ledger prefix, temperature field, home)`, and
+/// NOT a [`LedgerFold`].** The rate at a segment needs a temperature, and
+/// terrain is not a ledger fact — the same argument [`KnownWater`]'s doc makes
+/// for `is_water`. So this cannot live inside a fold whose FOLD-equals-SCAN
 /// property is stated over the ledger alone; it sits beside them, advanced
-/// lazily at read, and [`LedgerFold::absorb`] stays terrain-free.
+/// lazily at read, and [`LedgerFold::absorb`] stays terrain-free. **`home` is
+/// the third input and is easy to miss**: it is the position governing any
+/// window that starts before the entity's first sighting, so it is baked into
+/// `acc` exactly as a temperature is. Every production call site passes
+/// `&npc.home` off a [`crate::body::Body`] derived once, so it is stable per
+/// entity for a store's whole life; a caller that varied it per read would be
+/// reading a prefix it never produced, and this is the sentence that says so.
 ///
-/// **ONE TERRAIN PER STORE.** A partition's accumulated `f64`s are the answers
-/// one terrain gave; reading the same store through a second, disagreeing
-/// terrain would resume from a prefix that terrain never produced. A store
-/// belongs to one session and one world, which is how production owns it
-/// (`Session`, and the lab's `run_simulation`), and every test keeps one
-/// terrain per store instance. Discarding the memo is unobservable at any
-/// instant, so a caller that must change terrain builds a new store.
+/// **ONE TEMPERATURE FUNCTION PER STORE — which is NOT the same as one
+/// `Terrain` VALUE per store, and an earlier draft of this doc claimed the
+/// stronger thing and was wrong about production.** A partition's accumulated
+/// `f64`s are the answers one temperature field gave; resuming from them under
+/// a field that disagrees would resume from a prefix that field never
+/// produced. What production actually does is build MANY `LocaleTerrain`
+/// values against ONE store: `Session` constructs one at five sites
+/// (`snapshot`, `hazard_memories`, `terrain_here`, `wait`, `needs`), and the
+/// lab's `run_simulation_with_locale` rebuilds one every tick while its
+/// `folds` is created once per run. The invariant those satisfy is the
+/// context-level one, and it holds for a reason worth stating rather than
+/// assuming: [`crate::liveness::LocaleTerrain`]'s `temperature` reads only
+/// `LocaleContext::temperature_at_cached`, which resolves corner weights
+/// through `corner_weights_for` — a cache HIT returns the memoised integer
+/// `[(Vertex, u64); 4]`, a MISS recomputes the same pure function of
+/// `(addr, geosphere, index)` — and then blends them in
+/// `temperature_with_weights`. The `RoomMeshMemo` is therefore a faithful
+/// cache of a pure function, not a parameter of it, so two `LocaleTerrain`
+/// values over the same `LocaleContext` are interchangeable here however their
+/// mesh memos differ. **So: one `LocaleContext` per store.** A store belongs
+/// to one session and one world, which is how production owns it. Discarding
+/// the memo is unobservable at any instant, so a caller that must change the
+/// temperature field itself — a different context, or a stub terrain beside a
+/// real one — builds a new store; the test fixtures that read two terrains do
+/// exactly that.
 ///
 /// **Bit-identity is by construction.** The un-memoised loop summed the
 /// windows `[reset, s1], [s1, s2], ..., [sn, t]` in order and clamped the
@@ -828,14 +864,20 @@ pub struct ReadWitness {
     /// Per entity, how many TERRAIN TEMPERATURE samples its sustenance reads
     /// have taken, ever.
     ///
-    /// Counted apart from [`Self::segments`] although the two coincide today —
-    /// one sample per integrated window, taken at the window's start — because
-    /// the two witnesses assert different things about them, and a rate
-    /// function that sampled terrain twice per segment (or memoised a sample
-    /// across segments) would separate them without changing either
-    /// assertion's meaning. It is the quantity the ~200x
-    /// ecological-versus-synthetic gap of spec §11.7 was attributed to, so it
-    /// is measured rather than inferred from the segment count beside it.
+    /// **Today this is the SAME EXPRESSION as [`Self::segments`], passed
+    /// twice**, and saying so plainly matters more than the reason the two
+    /// fields exist. `sustenance_at` computes `advanced + tail` once and hands
+    /// it to [`Self::note_sustenance_read`] as both `segments` and `samples`,
+    /// because the rate function samples terrain exactly once per integrated
+    /// window. So the cost witness's segments-growth assertion and its
+    /// terrain-samples-growth assertion are NOT independent evidence — they
+    /// are one measurement asserted twice, and a reader who counts them as two
+    /// is over-counting. What the second name buys is only that the
+    /// per-read allowance below is stated on the quantity spec §11.7 named
+    /// (the terrain sample) rather than on a proxy for it, and that a future
+    /// rate function which sampled terrain twice per segment, or memoised a
+    /// sample across segments, would separate the two without either
+    /// assertion needing to be rewritten.
     terrain_samples: BTreeMap<EntityId, u64>,
     /// Per entity, how many sustenance reads actually INTEGRATED something —
     /// the denominator [`Self::unbounded_reads`] is a count out of. A read
@@ -1180,8 +1222,8 @@ pub struct ResidentFolds {
     /// map and the alarm scan's room domain.
     latest_visit: Folded<LatestVisit>,
     /// The sustenance integral's read-side accumulator — not a tenant either,
-    /// because it is a function of terrain as well as the ledger; see
-    /// [`SustenanceMemo`].
+    /// because it is a function of the temperature field and `home` as well as
+    /// the ledger; see [`SustenanceMemo`].
     sustenance_memo: SustenanceMemo,
     /// What the reads above have cost and seen — not a tenant, and not folded
     /// state; see [`ReadWitness`].
