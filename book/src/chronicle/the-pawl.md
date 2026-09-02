@@ -286,6 +286,16 @@ no other: the fatigue read, the water belief and its shared sibling all sit at
 a ratio of 1.00, exactly as they did in the first readout, and the fear memory
 sits at 1.57 — moved, but by the store rather than by the accumulator.
 
+**Those factors are per-call ratios, and per-call is the narrow reading.**
+Each is the mean of 200 back-to-back calls on one frozen ledger, so every call
+after the first is a WARM read that finds the fold already advanced — which is
+the number the store's claim is about, and is not the number a session
+experiences. The whole-workload figures are the ones two paragraphs down: the
+whole tick is 26.1% cheaper at 200 ticks (839.21 → 620.23 milliseconds per
+tick at band 10), and the level fell about four per cent. A factor of 230 on a
+read and 26% on the tick are both true of the same change, because the read
+was never the whole of the tick.
+
 The synthetic sweep's never-drinks column, which had been eighty-nine times
 slower than its periodic sibling before the campaign, now sits *on top* of
 it — 15.5 microseconds against 14.9 at ten thousand facts.
@@ -432,12 +442,22 @@ measured without knowing where to look should read the first readout, which
 stands unedited.
 
 **Two things were not measured at all.** The accumulator bounds how many reset
-partitions it keeps per drive, and that eviction path has no direct test and
-no production measurement — nothing here says how often it fires in a long
-session. And the positive control for the emitter-bearing identity witness was
-demonstrated on a seed that the witness no longer selects: the search moved to
-a different world when the roster changed, and the control has never been
-re-run there. It is kept because what it established is a property of the
+partitions it keeps per drive, and that eviction path has no production
+measurement — nothing here says how often it fires in a long session. It does
+have a direct test: `evicting_a_memoised_reset_partition_is_unobservable`
+cycles three resets fifteen times through a two-slot memo and asserts the read
+still equals the oracle, and because eviction is value-invariant by design
+that equality alone could not tell a memo that evicted and rebuilt from one
+that never evicted, so the test carries a positive control — a non-zero
+`unbounded_reads_by_entity` for the probed entity, which with the trail fixed
+can only mean a partition was dropped and rebuilt. Decision 0539 states the
+same limit in the same terms: the cost accepted is an eviction bound "whose
+rate in production is not yet measured".
+
+The second is that the positive control for the emitter-bearing identity
+witness was demonstrated on a seed that the witness no longer selects: the
+search moved to a different world when the roster changed, and the control has
+never been re-run there. It is kept because what it established is a property of the
 instrument rather than of a world, and a control deleted for being old leaves
 nothing in its place — but a constant-free witness guarantees determinism plus
 its floors and nothing more, and cannot detect a behaviour change by any
@@ -452,7 +472,7 @@ was allowed to ship and why it is written down.
 
 The headline is that the read side of the log now stands on catches rather
 than on walks: the thirst and hunger reads are two hundred and thirty times
-cheaper, the whole tick is a quarter cheaper at two hundred ticks, and the
-level fell four per cent. The second headline is that the largest fold in the
+cheaper per warm call, and on the whole workload the tick is a quarter cheaper
+at two hundred ticks and the level fell four per cent. The second headline is that the largest fold in the
 stack was barely touched, and the campaign ends by pointing at it with a
 number instead of a hunch.

@@ -264,9 +264,21 @@ Promoted verbatim from the campaign's own register.
    deliberately NOT applied (ledger, Task 3); applying it is a behaviour change
    on emitter-bearing worlds and moves census columns; needs its own campaign
    and a census refresh.
+10. **Lift `EmitterScan` to `pub(crate)` and move its equivalence tests out of
+    `liveness.rs`** — the type's privacy is why those tests live inside the
+    19,675-line file they test rather than beside every sibling equivalence
+    test in `tests/suite/resident_folds.rs`.
+11. **`believed_hazard_memo` has no caller anywhere** and still compiles into
+    the library — the condition this campaign gated `last_fact_day_at_or_before`
+    for. Gate it behind the caller that was meant to exist, or delete it.
+12. **A third home for the `resident`/`liveness` shared vocabulary** —
+    `resident.rs` imports `AGENT_AT`/`DRANK`/`EATEN`/`Terrain`/`is_water`/
+    `room_from_text` from `liveness.rs` while `liveness.rs` imports back from
+    `resident`. The predicate constants and the `Terrain` trait are the
+    movable half.
 
-Items 1, 2, 7 and the hazard fold's remaining cost carry idea-registry rows;
-the rest live here.
+Items 1, 2, 7, 10, 11, 12 and the hazard fold's remaining cost carry
+idea-registry rows; the rest live here.
 
 ## Deferred minors, and where each landed
 
@@ -322,11 +334,21 @@ because a private type's tests must live beside it — **accepted**, not moved.
 
 **Task 5b.** The advance walking to the trail's end rather than to the instant —
 **accepted** (a fresh partition pays reset-to-end once). An unkeyed memo input,
-stable per entity today — **accepted**, and named in decision 0539. Two witness
-counters that are the same expression twice — **fixed in the same fix round**
-(declared one measurement). The eviction path having no direct test —
-**accepted and disclosed**: it is one of the two things the chronicle's honest
-limits say was never measured.
+stable per entity today — **accepted**, and its durable home is
+`SustenanceMemo`'s own type doc, which names `home` as the third input and says
+why a caller varying it per read would be resuming from a prefix it never
+produced. (An earlier draft of this line said the minor was "named in decision
+0539". It is not: 0539 records the accumulator and its memo invariant, not this
+input.) Two witness counters that are the same expression twice — **fixed in
+the same fix round** (declared one measurement). The eviction path having no
+direct test — **fixed in Task 5b fix round 1 (`f29768d56`); the close prose
+transcribed the list rather than the tree**.
+`evicting_a_memoised_reset_partition_is_unobservable` cycles three resets
+through a two-slot memo and carries a positive control (a non-zero
+`unbounded_reads_by_entity`, which proves the cap fired), and it existed before
+either the chronicle or the first draft of this retrospective was written. What
+remains unmeasured is the eviction RATE in production, which is what the
+chronicle's honest limits now say.
 
 **Task 5c.** A mangled doc line — **fixed at 7a**. A merge message asserting a
 count the artifact does not carry — **corrected in the ledger**, artifact left
