@@ -231,8 +231,19 @@ fn calibrate() -> f64 {
 ///
 /// The `t` passed is the band's current day, so the fold walks every posting
 /// the agent has, exactly as the live tick's own call does.
+///
+/// **`folds` is the RUN's store, not a fresh one per reading, and that is the
+/// production shape** (The Pawl). The store is advanced on read and never
+/// invalidated, so the run's own ticks have already brought it current before
+/// this probe is called; the `FOLD_REPS` back-to-back calls are therefore WARM
+/// reads, each absorbing nothing, which is exactly what the live tick's
+/// repeated reads over one frozen ledger are. Handing this a fresh store per
+/// reading would time an O(ledger) advance instead — a number about the
+/// harness, not about the read.
+#[allow(clippy::too_many_arguments)]
 fn probe_fold_us(
     ledger: &Ledger,
+    folds: &hornvale_vessel::resident::OwnedFolds,
     entity: EntityId,
     home: &Facet,
     t: WorldTime,
@@ -243,7 +254,7 @@ fn probe_fold_us(
     let t0 = Instant::now();
     let mut sink = 0.0_f64;
     for _ in 0..FOLD_REPS {
-        sink += drive_at(ledger, entity, home, t, &SUSTENANCE, terrain, class);
+        sink += drive_at(ledger, folds, entity, home, t, &SUSTENANCE, terrain, class);
     }
     let us = t0.elapsed().as_secs_f64() * 1e6 / FOLD_REPS as f64;
     // Consume `sink` so the calls cannot be optimized away.
@@ -258,9 +269,12 @@ fn probe_fold_us(
 /// and the `HUNGER` params instead of `SUSTENANCE`. Same reasoning: nothing
 /// inside the timed span scales with anything but the length of history
 /// walked, and `&dyn Terrain` blocks the devirtualization that would let the
-/// optimizer hoist the identical-argument calls out of the loop.
+/// optimizer hoist the identical-argument calls out of the loop. `folds` is
+/// the RUN's store and the reads are warm — see [`probe_fold_us`].
+#[allow(clippy::too_many_arguments)]
 fn probe_hunger_us(
     ledger: &Ledger,
+    folds: &hornvale_vessel::resident::OwnedFolds,
     entity: EntityId,
     home: &Facet,
     t: WorldTime,
@@ -271,7 +285,7 @@ fn probe_hunger_us(
     let t0 = Instant::now();
     let mut sink = 0.0_f64;
     for _ in 0..FOLD_REPS {
-        sink += hunger_at(ledger, entity, home, t, terrain, class);
+        sink += hunger_at(ledger, folds, entity, home, t, terrain, class);
     }
     let us = t0.elapsed().as_secs_f64() * 1e6 / FOLD_REPS as f64;
     // Consume `sink` so the calls cannot be optimized away.
@@ -998,8 +1012,8 @@ fn run(
     // scope `home_nav_cache` is — one per run, never per tick — because a
     // store rebuilt each tick would be the O(history) walk it exists to
     // remove. Interior mutability because it is advanced on read (spec §2.2).
-    // Nothing reads it yet; this driver threads it so the store it exercises
-    // is the one production owns.
+    // The thirst and hunger reads below, and the tick's own walk, all read
+    // THIS store — the one production owns, at the scope production owns it.
     let folds =
         hornvale_vessel::resident::OwnedFolds::new(hornvale_vessel::resident::ResidentFolds::new());
     let mut day = WorldTime::from_std_days(0.5).expect("0.5 is a finite day count");
@@ -1103,9 +1117,24 @@ fn run(
             let mesh_for_probe = mesh_memo.clone();
             let probe_terrain =
                 LocaleTerrain::with_fields(ctx, None, None, None, None, Some(&mesh_for_probe));
-            let fold_us = probe_fold_us(&ledger, p_entity, &p_home, day, &probe_terrain, p_class);
-            let hunger_us =
-                probe_hunger_us(&ledger, p_entity, &p_home, day, &probe_terrain, p_class);
+            let fold_us = probe_fold_us(
+                &ledger,
+                &folds,
+                p_entity,
+                &p_home,
+                day,
+                &probe_terrain,
+                p_class,
+            );
+            let hunger_us = probe_hunger_us(
+                &ledger,
+                &folds,
+                p_entity,
+                &p_home,
+                day,
+                &probe_terrain,
+                p_class,
+            );
             let fatigue_us = probe_fatigue_us(&ledger, p_entity, day);
             let believed_water_us =
                 probe_believed_water_us(&ledger, npc, day, &probe_terrain, PROBE_BUDGET);

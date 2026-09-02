@@ -21,6 +21,21 @@
 //! history effect -- which is exactly what happened there: three runs of its
 //! whole-tick column disagreed about the sign.
 //!
+//! ## The store is warm, and the readout depends on knowing that
+//!
+//! Since The Pawl, `drive_at` reads a caller-owned resident fold store rather
+//! than re-scanning the ledger. This bench builds ONE store per depth reading
+//! and reuses it across all `FOLD_REPS` repetitions, so the FIRST repetition
+//! pays the advance over that depth's synthetic ledger and the rest are warm.
+//! That is the production shape — a session's store is advanced once per
+//! committed fact, ever, and every read after that absorbs nothing — and it is
+//! the shape the readout stage's numbers are about. A fresh store per
+//! repetition would measure an O(ledger) advance `FOLD_REPS` times over and
+//! report it as the read's cost, which is a number about this file rather than
+//! about the code. The amortised first advance is `O(ledger)/FOLD_REPS` and is
+//! stated rather than hidden: it is why a depth's first reading is not
+//! identical to its later ones.
+//!
 //! ## Why there are TWO instruments, and why neither may be deleted
 //!
 //! The distinction is **internal vs ecological validity**, and it is the
@@ -615,11 +630,27 @@ fn run_sweep(
             // this depth's `depth` segments.
             let t = WorldTime::from_std_days(depth as f64 + 1.0).expect("depth + 1 is finite");
 
+            // ONE store for this depth's whole reading, reused across every
+            // one of the `FOLD_REPS` repetitions — the production shape (The
+            // Pawl). See the module doc's own paragraph on why the reads are
+            // deliberately WARM.
+            let folds = hornvale_vessel::resident::OwnedFolds::new(
+                hornvale_vessel::resident::ResidentFolds::new(),
+            );
             #[allow(clippy::disallowed_types)] // benchmark harness
             let t0 = Instant::now();
             let mut sink = 0.0_f64;
             for _ in 0..FOLD_REPS {
-                sink += drive_at(&ledger, entity, &home, t, &SUSTENANCE, &terrain, class);
+                sink += drive_at(
+                    &ledger,
+                    &folds,
+                    entity,
+                    &home,
+                    t,
+                    &SUSTENANCE,
+                    &terrain,
+                    class,
+                );
             }
             let us = t0.elapsed().as_secs_f64() * 1e6 / f64::from(FOLD_REPS);
             // Consume `sink` so the calls cannot be optimized away.

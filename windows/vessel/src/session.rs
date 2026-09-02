@@ -1743,6 +1743,7 @@ impl<'w> Session<'w> {
                     Some(&self.occupancy),
                     &mut mesh_memo,
                     &mut home_nav_cache,
+                    &self.folds,
                 );
                 (
                     npc.entity,
@@ -2152,6 +2153,73 @@ impl<'w> Session<'w> {
     /// type-audit: bare-ok(count: return)
     pub fn committed_fact_count_for(&self, who: EntityId) -> usize {
         self.ledger.iter().filter(|f| f.subject == who).count()
+    }
+
+    /// The session's resident fold store's position — how many of this
+    /// session's committed facts every tenant has absorbed (The Pawl,
+    /// spec §2.2).
+    ///
+    /// A test-visible accessor for the currency invariant on the SESSION's own
+    /// store, which nothing outside the session can otherwise reach: the store
+    /// is advanced on read, so after any turn that read it this must equal
+    /// [`Self::committed_fact_count`], and reading it twice must not move it.
+    /// It is narrow on purpose — handing out `&OwnedFolds` would let a caller
+    /// mutate the session's store, and while a store IS discardable, a
+    /// half-advanced one handed back is not.
+    /// type-audit: bare-ok(count: return)
+    pub fn resident_position(&self) -> u64 {
+        self.folds.borrow().position()
+    }
+
+    /// How many integral SEGMENTS the session's sustenance reads have summed,
+    /// ever — the cost witness (The Pawl, spec §2.4). Sampled around a turn,
+    /// its difference is that turn's integration work.
+    /// type-audit: bare-ok(count: return)
+    pub fn resident_segments_integrated(&self) -> u64 {
+        self.folds.borrow().witness().segments_integrated()
+    }
+
+    /// The same, for ONE creature — the per-entity number the cost property is
+    /// actually about, since a creature that has never reset accrues segments
+    /// with its history by construction and would swamp a roster total.
+    /// type-audit: bare-ok(count: return)
+    pub fn resident_segments_integrated_for(&self, who: EntityId) -> u64 {
+        self.folds.borrow().witness().segments_integrated_for(who)
+    }
+
+    /// Every creature's segment count, keyed — see
+    /// [`crate::resident::ReadWitness::segments_by_entity`] for why the
+    /// per-entity shape is the one the cost property needs. Cloned rather than
+    /// borrowed because the store lives behind interior mutability and the
+    /// guard cannot outlive this call.
+    /// type-audit: bare-ok(count: return)
+    pub fn resident_segments_by_entity(&self) -> std::collections::BTreeMap<EntityId, u64> {
+        self.folds.borrow().witness().segments_by_entity().clone()
+    }
+
+    /// How many unfiltered reset lookups this session has made — the
+    /// denominator [`Self::resident_resets_in_the_future`] is a count out of,
+    /// and the number that says whether that witness measured anything.
+    /// type-audit: bare-ok(count: return)
+    pub fn resident_reset_lookups(&self) -> u64 {
+        self.folds.borrow().witness().reset_lookups()
+    }
+
+    /// How many of this session's `drive_at`/`hunger_at` reads ran with a
+    /// reset of the same entity strictly AFTER the instant read — spec §3
+    /// rule 1's witness, taken on the real path rather than re-derived beside
+    /// it. Zero means today's unfiltered reset lookup and a fold's own
+    /// filtered one cannot have disagreed on any path this session reached.
+    /// type-audit: bare-ok(count: return)
+    pub fn resident_resets_in_the_future(&self) -> u64 {
+        self.folds.borrow().witness().resets_in_the_future()
+    }
+
+    /// The first such read as `(entity, instant read, the reset that lies
+    /// after it)`, for a witness that needs to PRINT its evidence rather than
+    /// only count it.
+    pub fn resident_first_reset_in_the_future(&self) -> Option<(EntityId, WorldTime, WorldTime)> {
+        self.folds.borrow().witness().first_reset_in_the_future()
     }
 
     /// The driven body's own stable identity as a ledger `EntityId` — the
@@ -7515,6 +7583,7 @@ impl<'w> Session<'w> {
                     Some(&self.occupancy),
                     &mut mesh_memo,
                     &mut home_nav_cache,
+                    &self.folds,
                 );
                 format!("The {} {}.", npc.label, felt_phrase(&affect))
             })

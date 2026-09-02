@@ -15,6 +15,7 @@ use crate::controller::{Controller, DefaultController, PlayerController};
 use crate::interior::{
     AnchorId, Interior, SeamKind, interior_of, landing, route_within, seam_kind, warmth_at,
 };
+use crate::resident::{OwnedFolds, ReadWitness, Trail};
 use hornvale_kernel::units::TickSpan;
 use hornvale_kernel::{
     ANIMAL_PREY, ConditionResponse, EntityId, Facet, FacetId, Fact, Ledger, Lineage, PHOTOSYNTHATE,
@@ -816,71 +817,146 @@ fn rise_at(temp: f64, class: ThermalStrategy, p: &DriveParams) -> f64 {
     }
 }
 
-/// The committed `agent-at` sightings of `entity` at or before day `upto`, as
-/// `(arrival_day, room)` sorted ascending — the occupancy timeline the thirst
-/// integral reads.
-fn agent_sightings(ledger: &Ledger, entity: EntityId, upto: f64) -> Vec<(f64, Facet)> {
-    let mut v: Vec<(f64, Facet)> = ledger
-        .facts_of(entity, AGENT_AT)
-        .filter_map(|f| {
-            let d = f.day?.as_std_days();
-            if d > upto {
-                return None;
-            }
-            match &f.object {
-                Value::Text(s) => Some((d, room_from_text(s))),
-                _ => None,
-            }
-        })
-        .collect();
-    v.sort_by(|a, b| a.0.total_cmp(&b.0).then_with(|| a.1.cmp(&b.1)));
-    v
-}
-
-/// The thirst drive as a PATH INTEGRAL of the dehydration rate over the
-/// creature's occupancy since its last drink (The Kindling, spec §3/§4): for
-/// each segment during which it stood at one room, `rise_at(temp(room,
-/// segment_start), class) × segment_length`, summed and clamped `[0, 1]`.
-/// Position at any day is the latest sighting arriving at or before it, else
-/// `home`; temperature is sampled once per segment at its start (so a held room
-/// couples at a fixed rate — the Hold-jump stays closed-form). DRIVE == FOLD:
-/// pure over the committed occupancy + terrain, so the tick (which folds
-/// `frozen + out`) and `affect_of` (which folds the final ledger) compute it
-/// identically. `sightings` must be ascending and ≤ `t`.
+/// The sustenance path integral at `t`, read off the resident store — thirst
+/// when `p` is [`SUSTENANCE`] and the reset is a `drank`, hunger when `p` is
+/// [`HUNGER`] and the reset is an `eaten`.
+///
+/// **This is `integrate_thirst(agent_sightings(..), ..)` with the two scans
+/// replaced by binary searches, and nothing else.** Both of those functions
+/// are gone (The Pawl, spec §2.4: the hub is deleted, not cached); their
+/// bodies survive VERBATIM as the oracle in
+/// `windows/vessel/tests/suite/resident_folds.rs`, which pins this function
+/// against them bit-for-bit. The arithmetic below is deliberately identical to
+/// what they computed, term for term and in the same order:
+///
+/// - segment boundaries are `last_reset`, then every DISTINCT sighting instant
+///   strictly inside `(last_reset, t)`, then `t` — the same list
+///   `integrate_thirst` built and then `dedup`ed, which is why the distinct-day
+///   iteration below needs no separate dedup pass;
+/// - the position governing the segment that STARTS at `s` is the latest
+///   sighting at or before `s` — which for the first segment is EARLIER than
+///   the reset, and which at a tie (several sightings on one day) is the last
+///   of them in `(day, room)` order, exactly what a reverse scan of the sorted
+///   timeline finds;
+/// - temperature is sampled once per segment, at the segment's START, and the
+///   crossing to `f64` standard days happens at the same place it always did
+///   (see `decide_step`'s own comment: the edge of a continuous integral);
+/// - the clamp is applied once, at the end, to the accumulated total.
+///
+/// **`last_reset` is a parameter rather than a lookup**, and that is not an
+/// accident of shape. The tick's own walk carries a LOCAL reset instant that
+/// it updates as it emits `drank`/`eaten` facts (`WalkState::last_drank`), so
+/// mid-tick the authoritative reset is one the committed ledger does not know
+/// about yet. Deriving the reset here from the store would silently drop that
+/// and change what a creature feels for the rest of the tick it drank in.
+/// [`crate::resident::Sustenance`] answers WHEN the reset was for the callers
+/// that read it from the ledger; this function only integrates.
+///
+/// `overlay` is this tick's own emitted `agent-at` sightings for `entity`,
+/// folded VIRTUALLY on top of the resident trail: never absorbed, because the
+/// tick's facts are not committed yet, and merged rather than concatenated
+/// because `decide_step` sorts the combined timeline by `(day, room)` before
+/// integrating it. It is sorted here rather than trusted, so a caller that
+/// builds it in emission order gets the same answer as one that does not.
+/// Pass `&[]` for a read over the committed history alone.
+/// type-audit: bare-ok(ratio: return)
 #[allow(clippy::too_many_arguments)]
-fn integrate_thirst(
-    sightings: &[(f64, Facet)],
+pub fn sustenance_at(
+    trail: &Trail,
+    entity: EntityId,
     home: &Facet,
-    last_drank: f64,
-    t: f64,
+    last_reset: WorldTime,
+    overlay: &[(WorldTime, Facet)],
+    t: WorldTime,
     terrain: &dyn Terrain,
     class: ThermalStrategy,
     p: &DriveParams,
+    witness: &mut ReadWitness,
 ) -> f64 {
-    if t <= last_drank {
+    if t <= last_reset {
+        // `integrate_thirst`'s own short-circuit. Compared on the tick lattice
+        // rather than in standard days: `WorldTime::as_std_days` is strictly
+        // increasing at every reachable magnitude, so the two orderings agree,
+        // and comparing instants as instants keeps the float crossing at the
+        // integral's edge where the rest of this function puts it.
+        witness.note_segments(entity, 0);
         return 0.0;
     }
-    // Segment boundaries: last_drank, each sighting arrival strictly inside
-    // (last_drank, t), then t.
-    let mut bounds: Vec<f64> = vec![last_drank];
-    for (d, _) in sightings {
-        if *d > last_drank && *d < t {
-            bounds.push(*d);
+    let sightings = trail.of(entity);
+    let mut extra: Vec<(WorldTime, Facet)> = overlay.to_vec();
+    extra.sort_by(|a, b| a.0.cmp(&b.0).then_with(|| a.1.cmp(&b.1)));
+
+    // The governing position for a segment starting at `s`: the latest
+    // sighting at or before `s` across BOTH sequences, else `home`. Each half
+    // is the last element of its own `day <= s` prefix (a binary search), and
+    // the merged timeline's last such element is whichever of the two is
+    // greater in `(day, room)` order — which is what a reverse scan of the
+    // merged vector returned.
+    fn governing<'a>(
+        sightings: &'a [(WorldTime, Facet)],
+        overlay: &'a [(WorldTime, Facet)],
+        home: &'a Facet,
+        s: WorldTime,
+    ) -> &'a Facet {
+        let a = sightings[..sightings.partition_point(|(d, _)| *d <= s)].last();
+        let b = overlay[..overlay.partition_point(|(d, _)| *d <= s)].last();
+        match (a, b) {
+            (Some(a), Some(b)) => {
+                if (b.0, &b.1) > (a.0, &a.1) {
+                    &b.1
+                } else {
+                    &a.1
+                }
+            }
+            (Some(a), None) => &a.1,
+            (None, Some(b)) => &b.1,
+            (None, None) => home,
+        }
+    }
+
+    // The interior boundaries: the DISTINCT instants strictly inside
+    // `(last_reset, t)`, ascending, merged across the two sequences. The
+    // slices are found by binary search, so the walk is O(sightings since the
+    // reset) rather than O(history).
+    let inner = |seq: &[(WorldTime, Facet)]| -> (usize, usize) {
+        (
+            seq.partition_point(|(d, _)| *d <= last_reset),
+            seq.partition_point(|(d, _)| *d < t),
+        )
+    };
+    let (ts, te) = inner(sightings);
+    let (os, oe) = inner(&extra);
+    let mut bounds: Vec<WorldTime> = Vec::with_capacity((te - ts) + (oe - os) + 2);
+    bounds.push(last_reset);
+    let (mut i, mut j) = (ts, os);
+    while i < te || j < oe {
+        let next = if j >= oe {
+            let d = sightings[i].0;
+            i += 1;
+            d
+        } else if i >= te {
+            let d = extra[j].0;
+            j += 1;
+            d
+        } else if sightings[i].0 <= extra[j].0 {
+            let d = sightings[i].0;
+            i += 1;
+            d
+        } else {
+            let d = extra[j].0;
+            j += 1;
+            d
+        };
+        if bounds.last() != Some(&next) {
+            bounds.push(next);
         }
     }
     bounds.push(t);
-    bounds.dedup();
+
     let mut total = 0.0_f64;
     for w in bounds.windows(2) {
-        let (s, e) = (w[0], w[1]);
-        // Position governing the segment starting at `s`: the latest sighting
-        // arriving at or before `s`, else home.
-        let pos = sightings
-            .iter()
-            .rev()
-            .find(|(d, _)| *d <= s)
-            .map(|(_, r)| r)
-            .unwrap_or(home);
+        let (s, e) = (w[0].as_std_days(), w[1].as_std_days());
+        let pos = governing(sightings, &extra, home, w[0]);
         let rate = rise_at(
             terrain.temperature(
                 pos,
@@ -891,6 +967,7 @@ fn integrate_thirst(
         );
         total += rate * (e - s);
     }
+    witness.note_segments(entity, (bounds.len() - 1) as u64);
     total.clamp(0.0, 1.0)
 }
 
@@ -898,10 +975,20 @@ fn integrate_thirst(
 /// Kindling) over `entity`'s committed occupancy since its last drink, at its
 /// thermal-strategy `class`. Reduces to the old flat `rise × elapsed` at a
 /// thermoneutral (or unreadable) climate. DRIVE == FOLD — over `drank` (the
-/// reset) and `agent-at` (the occupancy).
+/// reset) and `agent-at` (the occupancy), both now read off the caller-owned
+/// resident store (The Pawl) rather than re-scanned per call.
+///
+/// The reset lookup is UNFILTERED — the latest `drank` in the whole committed
+/// history, not the latest at or before `t` — because that is what this
+/// function has always computed, and spec §3 rule 1 makes changing it a
+/// deliberate act rather than a side effect of the migration. Every read here
+/// records what that lookup answered, so the rule's witness is taken on the
+/// real path rather than re-derived beside it.
 /// type-audit: bare-ok(ratio: return)
+#[allow(clippy::too_many_arguments)]
 pub fn drive_at(
     ledger: &Ledger,
+    folds: &OwnedFolds,
     entity: EntityId,
     home: &Facet,
     t: WorldTime,
@@ -909,19 +996,28 @@ pub fn drive_at(
     terrain: &dyn Terrain,
     class: ThermalStrategy,
 ) -> f64 {
-    let last_drank = ledger
-        .facts_of(entity, DRANK)
-        .filter_map(|f| f.day)
-        .fold(0.0_f64, |acc, d| acc.max(d.as_std_days()));
-    let sightings = agent_sightings(ledger, entity, t.as_std_days());
-    integrate_thirst(
-        &sightings,
+    let mut store = folds.borrow_mut();
+    let (trail, resets, witness) = store.trail_and_thirst(ledger);
+    let last_reset = resets.last_reset(entity);
+    witness.note_reset(entity, t, last_reset);
+    // `max(GENESIS)` reproduces the `fold(0.0, f64::max)` this replaced,
+    // byte for byte: that fold floored a pre-genesis reset at genesis, and
+    // fixing THAT is a behaviour change (decision 0126) deliberately out of
+    // this migration's scope — see `last_fact_day_at_or_before`'s doc.
+    let last_reset = last_reset
+        .unwrap_or(WorldTime::GENESIS)
+        .max(WorldTime::GENESIS);
+    sustenance_at(
+        trail,
+        entity,
         home,
-        last_drank,
-        t.as_std_days(),
+        last_reset,
+        &[],
+        t,
         terrain,
         class,
         p,
+        witness,
     )
 }
 
@@ -2451,29 +2547,39 @@ fn forage_step(
 /// last meal, at its thermal-strategy `class` — the structural twin of thirst's
 /// [`drive_at`], folding `eaten` (the reset) and `agent-at` (the occupancy)
 /// with the `HUNGER` params. HUNGER == FOLD, so the tick and `affect_of`
-/// compute it identically.
+/// compute it identically. Both folds are read off the caller-owned resident
+/// store (The Pawl), and the reset lookup is UNFILTERED for exactly
+/// [`drive_at`]'s reason — see there, including the rule-1 witness.
 /// type-audit: bare-ok(ratio: return)
+#[allow(clippy::too_many_arguments)]
 pub fn hunger_at(
     ledger: &Ledger,
+    folds: &OwnedFolds,
     entity: EntityId,
     home: &Facet,
     t: WorldTime,
     terrain: &dyn Terrain,
     class: ThermalStrategy,
 ) -> f64 {
-    let last_ate = ledger
-        .facts_of(entity, EATEN)
-        .filter_map(|f| f.day)
-        .fold(0.0_f64, |acc, d| acc.max(d.as_std_days()));
-    let sightings = agent_sightings(ledger, entity, t.as_std_days());
-    integrate_thirst(
-        &sightings,
+    let mut store = folds.borrow_mut();
+    let (trail, resets, witness) = store.trail_and_hunger(ledger);
+    let last_reset = resets.last_reset(entity);
+    witness.note_reset(entity, t, last_reset);
+    // The GENESIS floor, for `drive_at`'s reason — see there.
+    let last_reset = last_reset
+        .unwrap_or(WorldTime::GENESIS)
+        .max(WorldTime::GENESIS);
+    sustenance_at(
+        trail,
+        entity,
         home,
-        last_ate,
-        t.as_std_days(),
+        last_reset,
+        &[],
+        t,
         terrain,
         class,
         &HUNGER,
+        witness,
     )
 }
 
@@ -3724,6 +3830,16 @@ pub fn affect_of_memo(
     mesh_memo: &mut RoomMeshMemo,
 ) -> Affect {
     let mut home_nav_cache = HomeNavCache::new();
+    // A throwaway resident store (The Pawl), for exactly the reason the
+    // throwaway `HomeNavCache` beside it is one: this signature is what every
+    // existing caller expects, and a caller that HAS a session-lived store to
+    // share calls `affect_of_memo_occupied` directly — which is what the
+    // session, both benches and the lab's headless sim now do. A throwaway
+    // costs one advance over the whole ledger, so it is never cheaper than the
+    // per-call scans it replaced on this path; making it cheaper means
+    // threading the store through the hazard re-derivation, which is stage 2's
+    // work (spec §6) and not this one's.
+    let folds = OwnedFolds::new(crate::resident::ResidentFolds::new());
     affect_of_memo_occupied(
         frozen,
         npc,
@@ -3734,6 +3850,7 @@ pub fn affect_of_memo(
         None,
         mesh_memo,
         &mut home_nav_cache,
+        &folds,
     )
 }
 
@@ -3802,6 +3919,7 @@ pub fn affect_of_memo_occupied(
     occupancy: Option<&Occupancy>,
     mesh_memo: &mut RoomMeshMemo,
     home_nav_cache: &mut HomeNavCache,
+    folds: &OwnedFolds,
 ) -> Affect {
     let pos = agent_position(frozen, npc, day);
     // BEHAVIOUR-PRESERVING, AND THE NEGATIVE CASE IS DELIBERATELY NOT HANDLED.
@@ -3816,13 +3934,20 @@ pub fn affect_of_memo_occupied(
     // fixing it means returning `Option` and making each caller name its
     // default, the way `last_fact_day_at_or_before` now does, which is a
     // BEHAVIOUR change and is deliberately out of this retype's scope.
-    let last_drank = frozen
-        .facts_of(npc.entity, DRANK)
-        .filter_map(|f| f.day)
-        .fold(WorldTime::GENESIS, WorldTime::max);
+    //
+    // Read off the resident store (The Pawl): `Sustenance::last_reset` is the
+    // same UNFILTERED maximum, and `.max(GENESIS)` reproduces the fold's
+    // genesis floor byte for byte.
+    let last_drank = folds
+        .borrow_mut()
+        .sustenance_thirst(frozen)
+        .last_reset(npc.entity)
+        .unwrap_or(WorldTime::GENESIS)
+        .max(WorldTime::GENESIS);
     let believed = shared_believed_water(frozen, npc, band, day, terrain, PLAN_BUDGET);
     let drive = drive_at(
         frozen,
+        folds,
         npc.entity,
         &npc.home,
         day,
@@ -3877,6 +4002,7 @@ pub fn affect_of_memo_occupied(
     let hunger = Hunger {
         urgency: hunger_at(
             frozen,
+            folds,
             npc.entity,
             &npc.home,
             day,
@@ -4271,9 +4397,11 @@ pub struct DriveMovements<'a> {
     /// the ledger does not already determine, so it is never serialized and
     /// discarding it at any instant is unobservable.
     ///
-    /// **No production read site consults it yet** (The Pawl, Task 2): this
-    /// task threads the store and changes no behaviour; later tasks migrate
-    /// the read sites onto it.
+    /// **The thirst and hunger path integrals read it** (The Pawl, Task 3):
+    /// `decide_step` folds the resident trail plus this tick's own emitted
+    /// `agent-at` facts as a read-side overlay, and `WalkState::begin` and
+    /// `catch_up` take their `drank`/`eaten` reset instants from it. The
+    /// belief, hazard and alarm folds are stage 2's work and still scan.
     pub folds: &'a crate::resident::OwnedFolds,
 }
 
@@ -4427,6 +4555,7 @@ fn decide_step(
     out: &[Fact],
     mesh_memo: &mut RoomMeshMemo,
     home_nav_cache: &mut HomeNavCache,
+    folds: &OwnedFolds,
 ) -> (Resolution, f64) {
     // Standing in water forms/updates belief (nearest-to-home wins) — the
     // live walk's own first step of every iteration.
@@ -4439,54 +4568,66 @@ fn decide_step(
     // HERE, at the integrals' own edge, rather than the walk carrying a float
     // clock upstream to suit them. Lossless below ~2.47e8 years (decision
     // 0186). Everything above and below this block compares ticks exactly.
-    let day_days = day.as_std_days();
-    let last_drank_days = last_drank.as_std_days();
-    let last_ate_days = last_ate.as_std_days();
-    // AND THE CROSSING STOPS HERE, ON PURPOSE. `agent_sightings`' `upto` and
-    // its returned `(day, room)` timeline, and `integrate_thirst`'s
-    // `sightings`/`last_drank`/`t`, are all genuinely INSTANTS and are all
-    // deliberately left as `f64` standard days. Retyping them would push the
-    // crossing INWARD, past the integral's own edge, so the integral would
-    // cross back out to `f64` per segment to multiply a rate by a span — more
-    // crossings than the one that belongs here, and the opposite of the seam
-    // principle. The edge of a continuous integral is where an instant stops
-    // being a lattice point and starts being a limit of integration.
-    // The temperature-coupled thirst integral, re-derived over the committed
-    // history (`frozen`) PLUS this tick's own emitted moves (`out`) — see the
-    // live walk's own doc for why both are folded together.
-    let mut sightings = agent_sightings(frozen, npc.entity, day_days);
-    for f in out {
-        if f.subject == npc.entity
-            && f.predicate == AGENT_AT
-            && let Value::Text(s) = &f.object
-            && let Some(d) = f.day
+    // AND THE CROSSING STOPS THERE, ON PURPOSE — it now lives inside
+    // [`sustenance_at`], which is the integral's own edge and therefore where
+    // it belongs. This block used to build an `f64`-dayed sightings vector for
+    // `agent_sightings`/`integrate_thirst`; both are gone, and the instants
+    // below stay instants right up to the multiplication of a rate by a span.
+    // The edge of a continuous integral is where an instant stops being a
+    // lattice point and starts being a limit of integration.
+    //
+    // The temperature-coupled thirst and hunger integrals, re-derived over the
+    // committed history (`frozen`, held resident in the store) PLUS this
+    // tick's own emitted moves (`out`, folded virtually as the overlay) — see
+    // the live walk's own doc for why both are folded together.
+    //
+    // The reset instants are the walk's OWN locals, not a store lookup: the
+    // walk updates them as it emits `drank`/`eaten` facts, which `frozen`
+    // cannot yet know about (see `sustenance_at`'s doc).
+    let overlay: Vec<(WorldTime, Facet)> = out
+        .iter()
+        .filter_map(|f| {
+            if f.subject != npc.entity || f.predicate != AGENT_AT {
+                return None;
+            }
+            let Value::Text(s) = &f.object else {
+                return None;
+            };
             // An exact tick comparison — the emitted fact's day and `day` are
             // both instants, so this no longer round-trips either through
             // `f64` merely to order them.
-            && d <= day
-        {
-            sightings.push((d.as_std_days(), room_from_text(s)));
-        }
-    }
-    sightings.sort_by(|a, b| a.0.total_cmp(&b.0).then_with(|| a.1.cmp(&b.1)));
-    let drive = integrate_thirst(
-        &sightings,
-        &npc.home,
-        last_drank_days,
-        day_days,
-        terrain,
-        npc.thermal_strategy,
-        params,
-    );
-    let hunger_urgency = integrate_thirst(
-        &sightings,
-        &npc.home,
-        last_ate_days,
-        day_days,
-        terrain,
-        npc.thermal_strategy,
-        &HUNGER,
-    );
+            f.day.filter(|d| *d <= day).map(|d| (d, room_from_text(s)))
+        })
+        .collect();
+    let (drive, hunger_urgency) = {
+        let mut store = folds.borrow_mut();
+        let (trail, witness) = store.trail_and_witness(frozen);
+        let drive = sustenance_at(
+            trail,
+            npc.entity,
+            &npc.home,
+            last_drank,
+            &overlay,
+            day,
+            terrain,
+            npc.thermal_strategy,
+            params,
+            witness,
+        );
+        let hunger_urgency = sustenance_at(
+            trail,
+            npc.entity,
+            &npc.home,
+            last_ate,
+            &overlay,
+            day,
+            terrain,
+            npc.thermal_strategy,
+            &HUNGER,
+            witness,
+        );
+        (drive, hunger_urgency)
+    };
     let explore_step = lowest_unvisited_neighbor_memo(pos, visited, terrain, mesh_memo);
     // The fatigue ramp is continuous too, but the SPAN it reads is exact: two
     // instants subtract on the lattice and only their difference crosses.
@@ -4676,6 +4817,7 @@ fn catch_up(
     // statement that the two lattices have merged.
     mesh_memo: &mut RoomMeshMemo,
     home_nav_cache: &mut HomeNavCache,
+    folds: &OwnedFolds,
     controller: &mut dyn Controller,
 ) -> Mode {
     let mut day = entry_day;
@@ -4704,10 +4846,24 @@ fn catch_up(
         // has never drunk has been accruing thirst since the world began.
         // Naming it at the call site is what keeps "no fact" and "a fact at
         // genesis" distinguishable everywhere else.
-        let last_drank = last_fact_day_at_or_before(frozen, DRANK, npc.entity, day)
-            .unwrap_or(WorldTime::GENESIS);
-        let last_ate = last_fact_day_at_or_before(frozen, EATEN, npc.entity, day)
-            .unwrap_or(WorldTime::GENESIS);
+        //
+        // The two sustenance resets come off the resident store (The Pawl);
+        // `last_reset_at_or_before` IS `last_fact_day_at_or_before` for
+        // `drank`/`eaten`, filter for filter, over a resident sorted list
+        // instead of a per-call scan. `rested` stays a ledger read: fatigue is
+        // not history-proportional and is deliberately left alone (spec §1).
+        let (last_drank, last_ate) = {
+            let mut store = folds.borrow_mut();
+            let drank = store
+                .sustenance_thirst(frozen)
+                .last_reset_at_or_before(npc.entity, day)
+                .unwrap_or(WorldTime::GENESIS);
+            let ate = store
+                .sustenance_hunger(frozen)
+                .last_reset_at_or_before(npc.entity, day)
+                .unwrap_or(WorldTime::GENESIS);
+            (drank, ate)
+        };
         let last_rested = last_fact_day_at_or_before(frozen, RESTED, npc.entity, day)
             .unwrap_or(WorldTime::GENESIS);
         let (resolution, drive) = decide_step(
@@ -4730,6 +4886,7 @@ fn catch_up(
             out,
             mesh_memo,
             home_nav_cache,
+            folds,
         );
         mode = resolution.mode;
         // THE CONTROLLER SEAM, extended to catch-up (The Hand, Task 5 fix
@@ -4925,7 +5082,8 @@ impl<'a> DriveMovements<'a> {
         let to_ticks = local_ticks_of(self.to);
         let from_ticks = local_ticks_of(self.from);
         for npc in &self.npcs {
-            let mut st = WalkState::begin(frozen, npc, &self.npcs, self.from, self.terrain);
+            let mut st =
+                WalkState::begin(frozen, npc, &self.npcs, self.from, self.terrain, self.folds);
             // THE THRESHOLD's crossing: arrive at the landing anchor of the
             // interior `WalkState::begin` just derived — the entry point for a
             // creature crossing INTO the room from the coarse (room-graph)
@@ -4995,6 +5153,7 @@ impl<'a> DriveMovements<'a> {
                 CATCH_UP_STEP_CAP,
                 mesh_memo,
                 home_nav_cache,
+                self.folds,
                 // Every body here is GOAP-driven (the driven body's own
                 // catch-up runs separately — see `step_one_with_controller`),
                 // so a fresh, stateless pass-through changes nothing.
@@ -5189,6 +5348,7 @@ impl WalkState {
         band: &[Body],
         from: WorldTime,
         terrain: &dyn Terrain,
+        folds: &OwnedFolds,
     ) -> WalkState {
         let pos = agent_position(frozen, npc, from);
         // The interval start, carried as the instant it already is — the walk
@@ -5208,20 +5368,31 @@ impl WalkState {
         // returning `Option` and making each caller name its default (as
         // `last_fact_day_at_or_before` now does), which is a behaviour change
         // and is deliberately out of this retype's scope.
-        let last_drank = frozen
-            .facts_of(npc.entity, DRANK)
-            .filter_map(|f| f.day)
-            .fold(WorldTime::GENESIS, WorldTime::max);
+        //
+        // The two sustenance resets come off the resident store (The Pawl).
+        // `Sustenance::last_reset` is the same UNFILTERED maximum the fold
+        // this replaces took, and `.max(GENESIS)` reproduces that fold's
+        // genesis floor exactly — see `drive_at` for why the floor is kept
+        // rather than fixed here. `rested` stays a ledger read: fatigue is not
+        // history-proportional and is deliberately left alone (spec §1).
+        let (last_drank, last_ate) = {
+            let mut store = folds.borrow_mut();
+            let drank = store
+                .sustenance_thirst(frozen)
+                .last_reset(npc.entity)
+                .unwrap_or(WorldTime::GENESIS)
+                .max(WorldTime::GENESIS);
+            let ate = store
+                .sustenance_hunger(frozen)
+                .last_reset(npc.entity)
+                .unwrap_or(WorldTime::GENESIS)
+                .max(WorldTime::GENESIS);
+            (drank, ate)
+        };
         // Likewise the last rest day (The Slumber): fatigue is time since it,
         // reset when a `rested` fact is emitted.
         let last_rested = frozen
             .facts_of(npc.entity, RESTED)
-            .filter_map(|f| f.day)
-            .fold(WorldTime::GENESIS, WorldTime::max);
-        // Likewise the last meal day (The Provender): hunger is a path
-        // integral since it, reset when an `eaten` fact is emitted.
-        let last_ate = frozen
-            .facts_of(npc.entity, EATEN)
             .filter_map(|f| f.day)
             .fold(WorldTime::GENESIS, WorldTime::max);
         // Belief and exploration state, evolved locally across the walk (the
@@ -5348,6 +5519,7 @@ impl<'a> DriveMovements<'a> {
             &*out,
             mesh_memo,
             home_nav_cache,
+            self.folds,
         );
         st.mode = resolution.mode;
         // The felt state this same resolution carries (The Confidant, Task 2):
@@ -5624,7 +5796,7 @@ impl<'a> DriveMovements<'a> {
             &band,
             &mut afraid_memo,
         );
-        let mut st = WalkState::begin(frozen, body, &band, self.from, self.terrain);
+        let mut st = WalkState::begin(frozen, body, &band, self.from, self.terrain, self.folds);
         occupancy.arrive(
             body.entity,
             &st.pos,
@@ -5686,6 +5858,7 @@ impl<'a> DriveMovements<'a> {
             CATCH_UP_STEP_CAP,
             mesh_memo,
             home_nav_cache,
+            self.folds,
             &mut PlayerController::new(),
         );
         while self.advance_one(
@@ -6352,12 +6525,19 @@ mod tests {
     use crate::action::{is_movement, precondition_reads_committed_state};
     use hornvale_kernel::{ConceptRegistry, Seed, test_lineage};
 
-    /// A fixture-owned resident fold store for a `DriveMovements` literal.
+    /// A fixture-owned resident fold store — for a `DriveMovements` literal,
+    /// and for the reads this module's own tests drive directly.
     ///
-    /// Every construction site in this module needs one because the field is
-    /// required; NOTHING in this task reads it, so a throwaway per fixture is
-    /// exactly right. It is a helper rather than the expression written out 34
-    /// times because 34 copies of one expression is 34 places to change.
+    /// A THROWAWAY PER FIXTURE IS RIGHT HERE AND NOWHERE ELSE, and the reason
+    /// changed with The Pawl's Task 3: the store is read now, so a fresh one
+    /// is no longer merely a required field but a real (empty) fold that the
+    /// first read advances over the whole ledger. That is exactly what these
+    /// tests want — they assert what a read RETURNS, and advance-on-read makes
+    /// a fresh store's answer identical to a warm one's. Production, both
+    /// benches and the lab's headless sim own ONE store for a whole run
+    /// instead, because there the point is the cost rather than the value.
+    /// It is a helper rather than the expression written out dozens of times
+    /// because that would be dozens of places to change.
     fn test_folds() -> crate::resident::OwnedFolds {
         crate::resident::OwnedFolds::new(crate::resident::ResidentFolds::new())
     }
@@ -8922,6 +9102,7 @@ mod tests {
         assert!(
             (drive_at(
                 &ledger,
+                &test_folds(),
                 e,
                 &home,
                 WorldTime::from_std_days(2.0).expect("a day value is finite"),
@@ -8949,6 +9130,7 @@ mod tests {
         assert!(
             (drive_at(
                 &ledger,
+                &test_folds(),
                 e,
                 &home,
                 WorldTime::from_std_days(6.0).expect("a day value is finite"),
@@ -8990,6 +9172,7 @@ mod tests {
         assert_eq!(
             drive_at(
                 &ledger,
+                &test_folds(),
                 e,
                 &home,
                 WorldTime::from_std_days(1_000.0).expect("a day value is finite"),
@@ -9065,16 +9248,31 @@ mod tests {
         let home = raddr(1.0);
         let hot = PlantedTerrain::thermal([(home.clone(), 45.0)]); // 2× rate (endotherm)
         let temperate = PlantedTerrain::thermal([(home.clone(), 20.0)]); // < thermoneutral → base
-        let d_hot = integrate_thirst(&[], &home, 0.0, 3.0, &hot, ThermalStrategy::Endothermic, &p);
-        let d_temp = integrate_thirst(
-            &[],
-            &home,
-            0.0,
-            3.0,
-            &temperate,
-            ThermalStrategy::Endothermic,
-            &p,
-        );
+        // Read through `sustenance_at` over an EMPTY trail and an empty
+        // overlay: no sighting, so the whole span is one segment governed by
+        // `home`, which is what the `&[]` sightings argument meant when this
+        // test called `integrate_thirst` directly (that function is gone —
+        // The Pawl; its body survives verbatim as the oracle in
+        // `tests/suite/resident_folds.rs`).
+        let empty = crate::resident::Trail::default();
+        let e = EntityId::new(1).expect("1 is non-zero");
+        let mut witness = crate::resident::ReadWitness::default();
+        let at = |terrain: &dyn Terrain, witness: &mut crate::resident::ReadWitness| {
+            sustenance_at(
+                &empty,
+                e,
+                &home,
+                WorldTime::GENESIS,
+                &[],
+                td(3.0),
+                terrain,
+                ThermalStrategy::Endothermic,
+                &p,
+                witness,
+            )
+        };
+        let d_hot = at(&hot, &mut witness);
+        let d_temp = at(&temperate, &mut witness);
         assert!(
             d_hot > d_temp,
             "the desert dehydrates faster: {d_hot} vs {d_temp}"
@@ -9118,6 +9316,7 @@ mod tests {
         let t = WorldTime::from_std_days(12.3).expect("a day value is finite");
         let a = drive_at(
             &ledger,
+            &test_folds(),
             e,
             &home,
             t,
@@ -9127,6 +9326,7 @@ mod tests {
         );
         let b = drive_at(
             &ledger,
+            &test_folds(),
             e,
             &home,
             t,
@@ -9140,6 +9340,7 @@ mod tests {
         assert_eq!(
             drive_at(
                 &reloaded,
+                &test_folds(),
                 e,
                 &home,
                 t,
@@ -11466,6 +11667,7 @@ mod tests {
         let t = PlantedTerrain::forage(std::iter::empty());
         let before = hunger_at(
             &ledger,
+            &test_folds(),
             e,
             &home,
             WorldTime::from_std_days(5.0).expect("a day value is finite"),
@@ -11477,6 +11679,7 @@ mod tests {
         ledger.commit(eaten_fact(e, td(5.0), "ate"), &reg).unwrap();
         let after = hunger_at(
             &ledger,
+            &test_folds(),
             e,
             &home,
             WorldTime::from_std_days(5.0).expect("a day value is finite"),
@@ -11542,8 +11745,24 @@ mod tests {
         let mut ledger = Ledger::default(); // no eaten, no sightings → held at home
         let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let day = WorldTime::from_std_days(3.0).expect("a day value is finite");
-        let hot_h = hunger_at(&ledger, e, &home, day, &hot, ThermalStrategy::Endothermic);
-        let mild_h = hunger_at(&ledger, e, &home, day, &mild, ThermalStrategy::Endothermic);
+        let hot_h = hunger_at(
+            &ledger,
+            &test_folds(),
+            e,
+            &home,
+            day,
+            &hot,
+            ThermalStrategy::Endothermic,
+        );
+        let mild_h = hunger_at(
+            &ledger,
+            &test_folds(),
+            e,
+            &home,
+            day,
+            &mild,
+            ThermalStrategy::Endothermic,
+        );
         assert!(
             hot_h.total_cmp(&mild_h).is_gt(),
             "heat hastens hunger for an endotherm"
@@ -15516,7 +15735,8 @@ mod tests {
         // day is wrong whenever that fold's own maximum lands INSIDE the
         // replay window — a day chronologically BEFORE the drink would
         // wrongly read as already-discharged, because
-        // `integrate_thirst`'s `t <= last_drank` short-circuit sees a
+        // `sustenance_at`'s `t <= last_reset` short-circuit (inherited
+        // verbatim from `integrate_thirst`, which it replaced) sees a
         // `last_drank` from the future. `last_fact_day_at_or_before` fixes
         // this by filtering to `<= day` at each iteration; this test pins
         // both the correct answer AND the exact wrong one the naive
@@ -15580,6 +15800,7 @@ mod tests {
             &[],
             &mut RoomMeshMemo::new(),
             &mut HomeNavCache::new(),
+            &test_folds(),
         );
         assert!(
             correct_thirst > 0.0,
@@ -15619,10 +15840,11 @@ mod tests {
             &[],
             &mut RoomMeshMemo::new(),
             &mut HomeNavCache::new(),
+            &test_folds(),
         );
         assert_eq!(
             buggy_thirst, 0.0,
-            "pinning the wrong answer: `integrate_thirst`'s `t <= last_drank` \
+            "pinning the wrong answer: the integral's `t <= last_reset` \
              short-circuit reads the future drink as already-discharged and \
              zeroes out thirst that should have accrued"
         );
@@ -15687,6 +15909,7 @@ mod tests {
             CATCH_UP_STEP_CAP,
             &mut RoomMeshMemo::new(),
             &mut HomeNavCache::new(),
+            &test_folds(),
             &mut DefaultController,
         );
         let after = ledger.len();
@@ -15891,6 +16114,7 @@ mod tests {
                 CAP,
                 &mut RoomMeshMemo::new(),
                 &mut HomeNavCache::new(),
+                &test_folds(),
                 &mut DefaultController,
             );
             occ.at(npc.entity)

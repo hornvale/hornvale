@@ -123,8 +123,9 @@ pub fn run_simulation(
     // scope `home_nav_cache` is — one per run, never per tick — because a
     // store rebuilt each tick would be the O(history) walk it exists to
     // remove. Interior mutability because it is advanced on read (spec §2.2).
-    // Nothing reads it yet; this driver threads it so the store it exercises
-    // is the one production owns.
+    // Both the tick's own walk and this run's per-creature affect reads go
+    // through THIS store — the one production owns, at the scope production
+    // owns it.
     let folds =
         hornvale_vessel::resident::OwnedFolds::new(hornvale_vessel::resident::ResidentFolds::new());
     for _ in 0..ticks {
@@ -179,6 +180,7 @@ pub fn run_simulation(
                 Some(&occupancy),
                 &mut mesh_memo,
                 &mut home_nav_cache,
+                &folds,
             ));
         }
     }
@@ -227,8 +229,9 @@ pub fn run_simulation_with_locale(
     // scope `home_nav_cache` is — one per run, never per tick — because a
     // store rebuilt each tick would be the O(history) walk it exists to
     // remove. Interior mutability because it is advanced on read (spec §2.2).
-    // Nothing reads it yet; this driver threads it so the store it exercises
-    // is the one production owns.
+    // Both the tick's own walk and this run's per-creature affect reads go
+    // through THIS store — the one production owns, at the scope production
+    // owns it.
     let folds =
         hornvale_vessel::resident::OwnedFolds::new(hornvale_vessel::resident::ResidentFolds::new());
     let geo = ctx.climate().geosphere();
@@ -285,6 +288,7 @@ pub fn run_simulation_with_locale(
                 Some(&occupancy),
                 &mut mesh_memo,
                 &mut home_nav_cache,
+                &folds,
             ));
         }
     }
