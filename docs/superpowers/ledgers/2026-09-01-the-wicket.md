@@ -1400,7 +1400,7 @@ is clean, so no artifact moved.
 **DECLINED: Task 6's em-dash minor (item 10 of the brief).** The finding was
 that `affordance.rs`'s third Task-6 correction "lost the em-dashes its
 neighbours use". Read against the file, the paragraph in question
-(`object_registry`'s `key`/`cave-mouth` correction) carries four em-dashes
+(`object_registry`'s `key`/`cave-mouth` correction) carries three em-dashes
 already, so either the finding names a different passage or it no longer
 applies. Recorded rather than guessed at: inventing a target for a
 cosmetic finding, in the campaign about statements outrunning their support,
@@ -1408,14 +1408,14 @@ would be the twenty-fourth instance. The brief permitted skipping it.
 
 #68 [G5] — **INSTANCE 24, and it is in the rationale for declining to fix
 instance 23's neighbour.** Ledger #67 declined a cosmetic em-dash finding on the
-grounds that the paragraph it names "already carries **four** em-dashes", so the
+grounds that the paragraph it names "carries **four** em-dashes", so the
 finding either targets a different passage or no longer applies. The fix-wave
 re-reviewer recounted three independent ways: it carries **three**.
 
 The decision to decline stands — it is correct at three, and the implementer's
 reasoning that *inventing a target for a cosmetic finding in this campaign would
 itself have been an instance* is exactly right. What failed is the count offered
-as its evidence. Corrected in place, and recorded rather than silently amended,
+as its evidence. Corrected, and recorded rather than silently amended,
 because a campaign whose subject is statements outrunning their support cannot
 quietly fix its own.
 
@@ -1431,3 +1431,38 @@ Eleven tasks, two green sluice stage gates, one census refresh that correctly
 moved nothing, one 63-commit absorption, a whole-branch review, and one fix
 wave. `make gate-commit` green at 1002 tests; drift clean; no artifact moved by
 the closing wave. **No merge-blocking residual.**
+
+#69 [G5] — **INSTANCE 25, mine, in the entry recording instance 24 — and the
+mechanism is the most reusable one in this ledger.**
+
+Entry #68 said the miscount was *"corrected in place"*. It was not. My
+replacement string did not match the file's actual wording, the substitution
+touched **zero** occurrences, and the entry asserting the correction was
+committed anyway.
+
+**Why it landed: I chained the edit, the assertion and the commit into one shell
+command.** The `python3` substitution printed `corrected occurrences: 0`, the
+`cat >>` appended a paragraph claiming success, and `git commit` ran — all
+before I read a single line of output. A command list is not a conditional. The
+claim could not have been falsified by its own evidence, because the evidence
+arrived after the claim was already committed.
+
+This is the twenty-fourth instance's own shape reproduced one entry later, by
+the person cataloguing it, while cataloguing it. It is also the cheapest to
+prevent of any instance here:
+
+**Do differently — never chain a correction to its own assertion.** Apply the
+edit, print the verification, *stop*. Commit in a second command, after reading
+the first. Two commands where one would do is the entire fix, and every earlier
+instance in this ledger that involved a stale number would have been caught by
+it.
+
+Now genuinely corrected and verified before committing: the paragraph carries
+**three** em-dashes, `grep -c "carries three em-dashes"` = 1 and
+`grep -c "carries four em-dashes"` = 0, both read before this entry was written.
+
+**Final tally: 25 instances.** The last two were produced by the process
+designed to catch them, which is the honest note to end on: the shape is not
+eliminable by care, only by mechanisms that fail loudly, and the mechanism that
+caught 24 was a re-reviewer recounting, while the mechanism that would have
+caught 25 is simply not chaining a claim to its own proof.
