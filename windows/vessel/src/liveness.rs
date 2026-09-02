@@ -616,6 +616,10 @@ pub struct LocaleTerrain<'a> {
     /// here is not merely undesired but borrow-checker-infeasible without
     /// restructuring `arbitrate` — see the-waymark Task 3's report).
     cache: Option<&'a hornvale_kernel::RoomMeshMemo>,
+    /// The session-owned room memo (The Detent, spec §2.1), if the caller
+    /// has one: `hazards` reads and fills it. `None` is byte-identical to
+    /// `Some` — the memo holds exactly the values the field blend returns.
+    ground: Option<&'a crate::ground::OwnedGround>,
 }
 impl<'a> LocaleTerrain<'a> {
     /// Build the adapter over `ctx` with the fractional-day (Tier-0) sun and no
@@ -629,6 +633,7 @@ impl<'a> LocaleTerrain<'a> {
             prey: None,
             built: None,
             cache: None,
+            ground: None,
         }
     }
     /// Build with the world's `calendar` (if any), so `solar_altitude` (and thus
@@ -647,6 +652,7 @@ impl<'a> LocaleTerrain<'a> {
             prey: None,
             built: None,
             cache: None,
+            ground: None,
         }
     }
     /// Build with the world's `calendar` AND its predator-pressure field (The
@@ -687,7 +693,15 @@ impl<'a> LocaleTerrain<'a> {
             prey,
             built,
             cache,
+            ground: None,
         }
+    }
+    /// [`Self::with_fields`] plus the session's room memo (The Detent).
+    /// Additive: every existing construction site is unchanged and reads
+    /// the field unmemoised.
+    pub fn with_ground(mut self, ground: &'a crate::ground::OwnedGround) -> Self {
+        self.ground = Some(ground);
+        self
     }
 }
 impl<'a> Terrain for LocaleTerrain<'a> {
@@ -739,25 +753,34 @@ impl<'a> Terrain for LocaleTerrain<'a> {
             .unwrap_or(0.0)
     }
     fn hazards(&self, room: &Facet) -> Hazards {
-        // The real climate's per-axis hazard field (The Bane: the uncanny plus
-        // graded heat/cold); an undescribable/above-grid room reads all-zero
-        // (safe) — the never-feared fallback, the dual of `forage_value`'s 0.
-        let (uncanny, heat, cold) = self
-            .ctx
-            .hazards_at_cached(room, self.cache)
-            .unwrap_or((0.0, 0.0, 0.0));
-        // The PREDATOR axis (The Quarry): the injected carnivore-pressure field,
-        // corner-blended per room; `0` where no field is injected or the room is
-        // above the grid.
-        let predator = self
-            .predator
-            .and_then(|field| self.ctx.blend_at_cached(room, field, self.cache))
-            .unwrap_or(0.0);
-        Hazards {
-            uncanny,
-            heat,
-            cold,
-            predator,
+        let compute = || {
+            // The real climate's per-axis hazard field (The Bane: the uncanny
+            // plus graded heat/cold); an undescribable/above-grid room reads
+            // all-zero (safe) — the never-feared fallback, the dual of
+            // `forage_value`'s 0.
+            let (uncanny, heat, cold) = self
+                .ctx
+                .hazards_at_cached(room, self.cache)
+                .unwrap_or((0.0, 0.0, 0.0));
+            // The PREDATOR axis (The Quarry): the injected carnivore-pressure
+            // field, corner-blended per room; `0` where no field is injected
+            // or the room is above the grid.
+            let predator = self
+                .predator
+                .and_then(|field| self.ctx.blend_at_cached(room, field, self.cache))
+                .unwrap_or(0.0);
+            Hazards {
+                uncanny,
+                heat,
+                cold,
+                predator,
+            }
+        };
+        match self.ground {
+            // One guard, dropped before anything else runs: `compute` never
+            // re-enters this memo, so the borrow cannot nest.
+            Some(ground) => ground.borrow_mut().hazards_or_insert_with(room, compute),
+            None => compute(),
         }
     }
     fn prey_value(&self, room: &Facet) -> f64 {

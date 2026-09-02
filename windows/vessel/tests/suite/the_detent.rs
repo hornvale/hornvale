@@ -5,9 +5,10 @@ use crate::common;
 use hornvale_kernel::{Ledger, RoomMeshMemo, WorldTime};
 use hornvale_locale::LocaleContext;
 use hornvale_vessel::body::Body;
+use hornvale_vessel::ground::{GroundHazards, OwnedGround};
 use hornvale_vessel::liveness::{
-    AGENT_AT, DRANK, DriveMovements, EATEN, HomeNavCache, LocaleTerrain, PrimaryAfraidMemo, RESTED,
-    SLEPT, SUSTENANCE, derive_npcs, hazard_memory_memo,
+    AGENT_AT, DRANK, DriveMovements, EATEN, HazardMemory, HomeNavCache, LocaleTerrain,
+    PrimaryAfraidMemo, RESTED, SLEPT, SUSTENANCE, derive_npcs, hazard_memory_memo,
 };
 use hornvale_vessel::resident::{OwnedFolds, ResidentFolds};
 
@@ -304,4 +305,65 @@ fn the_detent_emitter_walk_matches_the_campaign_time_constants() {
     assert!(run.shunned > 0, "the hazard digest must be non-empty");
     assert_eq!(run.ledger_hash, DETENT_EMITTER_LEDGER);
     assert_eq!(run.hazard_hash, DETENT_EMITTER_HAZARD);
+}
+
+/// Chaos eviction on the room memo (The Detent, spec §2.1's own remedy for the
+/// key-completeness bug `GroundHazards::hazards_or_insert_with` cannot itself
+/// rule out): drop the memo at every legal opportunity and assert the fold's
+/// answer is unchanged. 30 reads of [`hazard_memory_memo`] on the bench
+/// shape's probe, `evict_all` alternated on and off, each read taking a FRESH
+/// `PrimaryAfraidMemo` (production's own per-tick shape) but the SAME
+/// `GroundHazards` — every result must equal the first, byte for byte.
+#[test]
+fn ground_memo_survives_chaos_eviction() {
+    let shape = bench_shape(H5_SEED, 20, 10);
+    let pi = probe_index(&shape);
+    let npc = &shape.npcs[pi];
+    let mesh = shape.mesh_memo.clone();
+    let ground: OwnedGround = OwnedGround::new(GroundHazards::new());
+    let terrain = LocaleTerrain::with_fields(&shape.ctx, None, None, None, None, Some(&mesh))
+        .with_ground(&ground);
+
+    let mut first: Option<HazardMemory> = None;
+    let mut last_misses = 0u64;
+    let mut a_miss_grew_on_eviction = false;
+    for i in 0..30 {
+        let evicted = i % 2 == 0;
+        if evicted {
+            ground.borrow_mut().evict_all();
+        }
+        let mut memo = PrimaryAfraidMemo::new();
+        let result = hazard_memory_memo(
+            &shape.ledger,
+            &shape.folds,
+            npc,
+            shape.day,
+            &terrain,
+            &shape.npcs,
+            &mut memo,
+        );
+        match &first {
+            None => first = Some(result.clone()),
+            Some(f) => assert_eq!(
+                &result, f,
+                "read {i} (evicted={evicted}) must equal the first read — a room memo with an \
+                 incomplete key would diverge exactly here"
+            ),
+        }
+        let misses_now = ground.borrow().misses();
+        if evicted && misses_now > last_misses {
+            a_miss_grew_on_eviction = true;
+        }
+        last_misses = misses_now;
+    }
+    assert!(
+        a_miss_grew_on_eviction,
+        "an eviction must force at least one recompute, or this test denominates nothing"
+    );
+    // The last of the 30 reads (i = 29, odd) ran with no eviction: its
+    // resident room count is what the un-evicted memo actually holds.
+    println!(
+        "ground memo len after the final un-evicted read: {}",
+        ground.borrow().len()
+    );
 }
