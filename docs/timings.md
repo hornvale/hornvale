@@ -5010,3 +5010,4 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-02T20:24:52Z | gate-commit | 59.539 | 260.428 | 27.261 | 4.83 | 0 | 60c2021a8 | campaign/the-detent | MacBookPro | 10 |
 | 2026-09-02T20:34:50Z | gate-commit | 26.537 | 58.412 | 14.714 | 2.76 | 0 | 66c5bc5b6 | campaign/the-detent | MacBookPro | 10 |
 | 2026-09-02T20:43:32Z | gate-commit | 60.522 | 278.642 | 27.844 | 5.06 | 0 | 062811a20 | campaign/the-detent | MacBookPro | 10 |
+| 2026-09-02T20:48:09Z | gate-commit | 32.005 | 66.432 | 22.364 | 2.77 | 0 | 21c7672e4 | campaign/the-detent | MacBookPro | 10 |
