@@ -1242,7 +1242,12 @@ dominates what those 43 tests each checked in slices."
 ## Task 6: Decisions, book, retrospective
 
 **Files:**
-- Create: `docs/decisions/0606-a-world-build-is-a-named-site.md`
+- **Modify** (NOT create): `docs/decisions/0606-a-world-build-is-a-named-site.md`
+  — Task 1 already created it as `Status: Proposed`, because
+  `docs_consistency::decision_cites_in_sources_resolve` runs in the subfloor
+  tier `gate-commit` executes, and the guard's module doc cites 0606. Without
+  the stub, every intermediate task's commit gate would have reddened until this
+  task landed. Your job is to flip it to `Accepted` and finish its content.
 - Create: `docs/decisions/0607-the-seed-42-fixture-is-an-input.md`
 - Create: `book/src/chronicle/the-reservoir.md`
 - Create: `docs/retrospectives/the-reservoir.md`
@@ -1257,7 +1262,14 @@ dominates what those 43 tests each checked in slices."
 chronicle entry plus a freshness sweep of stale chapters, and a re-score of any
 Confidence Gradient bet this campaign moved (decision 0030).
 
-- [ ] **Step 1: Write decision 0606**
+- [ ] **Step 1: Finish decision 0606 — it already exists as `Proposed`**
+
+`docs/decisions/0606-a-world-build-is-a-named-site.md` was created by Task 1 (see
+this task's Files list for why). **Edit it; do not create it, and do not create a
+second record for the same number.** Flip `Status: Proposed (2026-09-02)` to
+`Accepted (2026-09-02)`, fill in the measured ceiling the campaign started at and
+ended at, and confirm it carries a row in `docs/decisions/README.md`'s index
+table. Then continue with the content guidance below.
 
 Slug filename per decision 0026. Follow the format of
 `docs/decisions/0092-derivation-at-named-sites.md`, which is this decision's

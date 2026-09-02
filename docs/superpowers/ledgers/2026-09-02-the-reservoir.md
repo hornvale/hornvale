@@ -263,6 +263,46 @@ clippy entries would then be the redundant half.
 
 ---
 
+#8 [G5] — **A decision citation in Task 1's source needed the record to exist
+before Task 6 wrote it. Plan defect, caught by the implementer.**
+
+*Question.* Task 1's guard module doc cites "decision 0606", and the plan
+scheduled Task 6 to create that record at campaign close. Does anything object
+in between?
+
+*Finding.* Yes, and it would have objected on every intermediate commit.
+`cli/tests/suite/docs_consistency.rs:1210`'s
+`decision_cites_in_sources_resolve` runs inside the sub-floor tier that
+`make gate-commit` executes, and it fails on any decision citation in source
+that does not resolve to a record. So Tasks 1 through 5 would each have hit a
+red commit gate for a reason unrelated to their own work — the kind of red that
+gets worked around rather than read.
+
+*Decision.* **The stub stands.** Task 1 created
+`docs/decisions/0606-a-world-build-is-a-named-site.md` with
+`Status: Proposed (2026-09-02)`, drawing its content from spec §8.
+`docs/decisions/README.md` explicitly permits that status — "`Accepted`,
+`Superseded by NNNN`, or (rarely) `Proposed`" — and three records already carry
+it, so this is a sanctioned state and not an invented one. Decisions are
+append-only *once Accepted*; a `Proposed` record is still editable, which is
+exactly the affordance this needs.
+
+Task 6 now **edits** 0606 to `Accepted` rather than creating it. The plan's
+Task 6 Files list and Step 1 have both been rewritten to say so, in bold, along
+with the reason — the failure mode otherwise is a second record minted for the
+same number, which is the shape CLAUDE.md records two campaigns hitting on 0134.
+
+*Cost if wrong.* Immaterial. If the campaign were abandoned, a `Proposed` record
+describing a mechanism nobody built would sit in the log — which is what
+`Proposed` means, and what the three existing ones already do.
+
+*ideonomy passes / overturns.* n/a — a mechanical consequence of a guard, not a
+design choice.
+
+*Capture.* Plan Task 6 Files list and Step 1 (rewritten); this entry.
+
+---
+
 ## Parked findings
 
 ### P1 — `scene_surrounds_colour_cli.rs` uses a fixed temp path and flakes
