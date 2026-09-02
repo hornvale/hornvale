@@ -288,3 +288,42 @@ that `cave_proneness` was a pure function and inferred that its answer was
 available anywhere. I did not check where its INPUTS live. That is the same move
 as reading a ratio without its denominator, in a spec written the same day I
 catalogued that failure.
+
+### #14 [G5, CORRECTION — mine] — the campaign mints NO epoch, and I said otherwise repeatedly
+
+Task 5's implementer reported that calling this an epoch is a misnomer.
+Checked against the project's own rule and it is right —
+`domains/CLAUDE.md:34`: *"New label = safe; changed/reused label = an epoch."*
+
+A NEW label consumes no draws from any existing stream, so nothing that exists
+re-derives; and site placement is new behaviour, so there is no prior placement
+to move. Measured, not argued: both pin-isolation suites stayed green
+(genesis_properties 20/20, tectonic_properties 20/20) and
+`make rebaseline-goldens` was a **no-op** — no world artifact moved at all.
+
+**This corrects ruling #3, spec §7, and what I told Nathan at the G3 stop**,
+where the epoch led the flagged section and he approved it as a deliberate cost.
+The real answer is strictly better than the one he approved, so nothing needs
+re-approving — but the record was wrong in the direction of sounding more
+expensive and more dangerous than it is, and a spec that overstates a
+determinism cost trains the next reader to discount the ones that are real.
+
+Spec §7 is corrected in place with the measurement.
+
+**My error:** I reasoned "new stream label" → "save-format contract" → "epoch"
+without checking the rule that distinguishes a NEW label from a CHANGED one. The
+distinction is one line in a guide I had already read this session.
+
+### #15 [G5] — two brief signatures I specified were unimplementable
+
+`site_facet_for(vertex: u32, seed, walk_depth)` cannot work: a bare vertex index
+locates nothing without the mesh it indexes into. The implementer took
+`&Geosphere` and a typed `Vertex` instead. Correct.
+
+It also added a `reason` parameter, because a cave and an exotic site at the
+same vertex would otherwise be placed at the identical facet — a direct
+consequence of ruling 13 folding caves into this mechanism, which I extended the
+scope for without following the consequence through to the key.
+
+**Cost if wrong:** none; both changes are strictly more correct than what I
+wrote.

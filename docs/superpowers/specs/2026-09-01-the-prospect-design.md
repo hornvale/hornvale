@@ -139,9 +139,20 @@ would reproduce it exactly: every facet for tens of kilometres would claim the
 same cave.
 
 **Decision 0537 (proposed): a site is re-sited to a specific facet by a seeded
-draw from its originating vertex.** This is a new stream label and therefore an
-**epoch** — every world's site placement moves. That is the cost of a site
-having a real address rather than being "somewhere within 120 km".
+draw from its originating vertex.**
+
+**CORRECTED 2026-09-01, after Task 5 measured it: this is NOT an epoch.** This
+section originally read "a new stream label and therefore an epoch — every
+world's site placement moves." That is wrong on the project's own rule, which
+`domains/CLAUDE.md:34` states plainly: *"New label = safe; changed/reused label
+= an epoch."* A new label consumes no draws from any existing stream, so nothing
+that exists today re-derives — and site placement is new behaviour, so there is
+no prior placement to move. Task 5 confirmed it: both pin-isolation suites stayed
+green (astronomy 20/20, terrain 20/20) and `make rebaseline-goldens` was a no-op.
+
+The campaign therefore costs no epoch at all. Everything below about a site
+having a real address rather than being "somewhere within 120 km" stands
+unchanged; only the price was overstated.
 
 **Decision 0538 (proposed): `Site` carries an `Extent`, and this campaign only
 ever emits `Extent::Point`.**
