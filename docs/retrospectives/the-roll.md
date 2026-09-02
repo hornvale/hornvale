@@ -125,6 +125,28 @@ derivation. **The general form: a functional predicate plus a re-derivation at
 a later day is a contradiction waiting for a calendar**, and the fix is always
 to read what is committed rather than to constrain who may call.
 
+## The merge was refused at the mouth, and the stage gates could not have said so
+
+Five stage gates in two days, every one green, and the merge submission
+bounced in milliseconds: main had moved from the branch's base to The
+Wicket's merge in the hours between the Stage 5 gate and the close, and
+the merge product conflicted on three gallery transcripts and the
+Confidence Gradient. The stage gates were not wrong — each gated the
+merge product against the main of its moment — but a stage gate is a
+statement about a moment, and the close is a later one. The absorption
+followed the rules this repo has already paid for: generated artifacts
+regenerated rather than text-merged, the timings ledger unioned, the
+hand-edited tables carrying both sides, and the two shared vessel files
+merged by hand against The Wicket's chronicle rather than its diff — which
+is where the three real semantic supersessions were (sleep facts and
+`act_span` theirs; wild herds ours). The gate then caught one thing the
+absorber had reasoned past: `layering-generated.md` is a byte-golden that
+`make rebaseline` does not write, and the first merge attempt went red on
+it — a REBASELINE=1 file, like the session goldens. The lesson is not
+"absorb more often" (the cadence held); it is that the close should
+absorb main *first*, before the DoD artifacts are written, so the
+retrospective and chronicle are written against the tree that lands.
+
 ## Follow-ups
 
 Each with its reason, because a follow-up without one is a wish.
