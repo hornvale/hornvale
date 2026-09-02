@@ -86,7 +86,7 @@ windows/vessel/src/focalize.rs	1	unmigrated:1
 windows/vessel/src/knowledge.rs	2	unmigrated:2
 windows/vessel/src/liveness.rs	6	unmigrated:6
 windows/vessel/src/purview.rs	1	unmigrated:1
-windows/vessel/src/session.rs	3	unmigrated:3
+windows/vessel/src/session.rs	2	identity:1 build-path:1
 windows/vessel/src/snapshot.rs	1	unmigrated:1
 windows/vessel/tests/common/mod.rs	1	unmigrated:1
 windows/vessel/tests/suite/act.rs	1	unmigrated:1
@@ -106,7 +106,7 @@ windows/vessel/tests/suite/passage.rs	1	unmigrated:1
 windows/vessel/tests/suite/player_acts_commit.rs	1	unmigrated:1
 windows/vessel/tests/suite/possess_target.rs	1	unmigrated:1
 windows/vessel/tests/suite/possession_moves.rs	1	unmigrated:1
-windows/vessel/tests/suite/session.rs	3	unmigrated:3
+windows/vessel/tests/suite/session.rs	2	identity:2
 windows/vessel/tests/suite/session_snapshot.rs	2	unmigrated:2
 windows/vessel/tests/suite/strongbox_reachability.rs	1	unmigrated:1
 windows/vessel/tests/suite/submerged_before_arm.rs	1	unmigrated:1

@@ -63,7 +63,7 @@ const ENTRY_POINTS: &[&str] = &[
 
 /// The number of `unmigrated` sites the roster may still carry. Lower it as
 /// migrations land; never raise it.
-const UNMIGRATED_CEILING: usize = 350;
+const UNMIGRATED_CEILING: usize = 344;
 
 /// The workspace root — the parent of `cli/`, where this test crate lives.
 fn workspace_root() -> PathBuf {
