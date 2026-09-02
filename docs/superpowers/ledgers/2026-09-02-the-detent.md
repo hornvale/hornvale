@@ -409,3 +409,13 @@ that reaches a route, exactly as The Pawl found — so the seed-42 constant
 witnesses the walk's byte-identity and is blind to this campaign's path;
 the emitter constants are the load-bearing pair. Recorded here so no later
 reader takes a green seed-42 witness as evidence about the fear fold.
+
+## Task 2 — complete (`a23deff1c`, fix `78fe6da08`; one fix round)
+
+One Important at review: the constants' doc carried no caveat that the
+seed-42 constant is blind to the fear path (the fact was only in the task
+report, which is scratch). Fixed in the committed doc and the assert
+message, pointing at `ledger_hash_witness.rs`'s existing seed-42 note.
+Re-review: addressed, no new breakage. **Stage 1 closes here.** `origin/main`
+has not moved since the branch was cut (`0dccce029`); `campaign/the-rack` is
+still at its stage gate, so rule 6's absorption is not yet due.
