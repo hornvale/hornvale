@@ -121,6 +121,8 @@ mod insolation_probe;
 mod junctions;
 #[path = "suite/keeping_probe.rs"]
 mod keeping_probe;
+#[path = "suite/kinship_facts.rs"]
+mod kinship_facts;
 #[path = "suite/lantern_probe.rs"]
 mod lantern_probe;
 #[path = "suite/mines_exist.rs"]

@@ -754,3 +754,99 @@ trope_witness.rs` (module doc only); `docs/decisions/0582-the-witness-
 binding-is-bidirectional.md` (restored, marked superseded);
 `docs/decisions/0583-the-witness-limits-list-is-open-not-closed.md` (new);
 `docs/digest/decisions-in-force.md` (regenerated).
+
+---
+
+#12 [G5] — **Task 5: kinship as a genesis fact — predicate ownership,
+`functional`, and the entity-identity route.**
+
+*Question.* Three things Task 1's ledger entry #6 explicitly left open: (1)
+does `domains/person` or `domains/history` own `parent-of`/`kin-of`; (2) is
+`parent-of` `functional`; (3) how to resolve which promoted founder is a
+given founder's forebear without inheriting `founder_of`'s ~3.5%
+handle-collision risk.
+
+*Decision.*
+
+1. **Owner: `domains/person`.** Both ends of the relation are `is-person`
+   entities — this crate's own subject type — mirroring how `pays-tribute-to`
+   (occupation-to-occupation) stays in `domains/history`, which owns *that*
+   subject type. `domains/history` computes the arithmetic the predicate
+   reports the verdict of; that does not make it the owner any more than
+   computing `occ-founded-from` would make it the owner of `person-founded`.
+2. **`functional: true`, for both predicates.** `forebear_of`'s own body opens
+   `let mother = mother_of(world, occupation)?;`, and `mother_of` returns a
+   single `Option<EntityId>` read off one `occ-founded-from` fact — so a
+   founder has at most one recorded forebear, structurally, and therefore at
+   most one `parent-of` **or** `kin-of` fact, never both (the `Kinship`
+   classification chooses which predicate, not whether one fires). This is
+   the first predicate in the workspace to exercise the functional-
+   contradiction guard (`kernel/src/ledger.rs::check`) as a *relation* rather
+   than a scalar attribute or (`INSTANCE_OF`) a declared-`false` case — Task
+   2's review flagged the guard as untested for a relation; a case exercising
+   it was added to `kinship_facts.rs` alongside the correctness cases (a
+   founder with TWO candidate objects for the same predicate would be a
+   ledger bug this guard exists to catch, and the structural argument above
+   is what makes it unreachable rather than untested-and-hoping).
+3. **Entity identity, never `RoleHandle`.** `windows/worldgen::person_promote::
+   promote` maps each cast member's occupation `EntityId` (`Founder::
+   community`) to its cast index, and reads the mother occupation's
+   `EntityId` directly off `OccupationRecord::founded_from`
+   (`Founding::From(EntityId)`) — no handle anywhere in the identity path.
+   `forebear_of` is still called, but only for its `Kinship` half (`Sibling`
+   vs `Ancestor(_)`, which chooses the predicate); its returned `RoleHandle`
+   is discarded. Resolved in a SECOND pass, after `hornvale_person::genesis`
+   returns `ids` — the forebear's PERSON `EntityId` is minted by `genesis`
+   itself, in cast order, so it cannot be known before that call returns.
+
+*Why.* All three were explicitly deferred to this task by Task 1's ledger
+entry #6 ("flagged for Task 5's implementer to decide, not resolved here").
+The ownership question is genuinely symmetric on mechanics (`register_
+predicate` takes only `&str`s; either crate already has `register_concepts`)
+so it is resolved by precedent (`pays-tribute-to`) rather than by
+architecture. The `functional` question is answered by reading
+`forebear_of`'s signature, per the brief's explicit instruction, not by
+assumption. The identity question is not a judgment call at all — ruling 1 in
+the task brief (from Task 1's finding) foreclosed handle-matching outright;
+what remained was finding the entity-identity route, which `OccupationRecord::
+founded_from` already carrying an `EntityId` (never a handle) made available
+directly, with `Founder::community` as the other half of the map.
+
+*Verified, not assumed.* Built and ran
+`windows/worldgen/tests/suite/kinship_facts.rs` (5 tests: promoted-forebear →
+`parent-of`; unpromoted-forebear → neither predicate; root founder → neither;
+`Sibling` → `kin-of` never `parent-of`; two independent `BuildDepth::Full`
+builds commit byte-identical ledgers, the stream-safety check spec §4.3 step
+2 item 5 asks for). `make rebaseline` + `make rebaseline-goldens`: seed 42
+gains exactly 93 facts (84 `parent-of`, 9 `kin-of`) — matching spec §5's
+preregistered "+93 facts" **and** Task 1's entity-identity cross-check figure
+(93/76/35/204) exactly, not merely in the same ballpark.
+`bundle:consanguineal-kin` drops out of both corpora's "missing bundles"
+tables (5/5, satisfied); `polti-1895` stays 0 of 36 and `tvtropes-2012` stays
+0 of 409, exactly as preregistered — every situation the bundle used to block
+is still blocked by at least one other missing bundle. `book/src/gallery/`
+did not move (no epoch). Only `docs/audits/` and `book/src/reference/
+concept-registry-generated.md` moved among the generated-path set, plus the
+seam-guard roster (a second `ledger_day_of_bake_year` call site — the
+kinship pass recomputes a founder's day rather than threading it through
+`Founder`) — all regenerated in the same commit.
+
+*Alternatives discarded.* `domains/history` as owner (rejected by the
+subject-type precedent above); `functional: false` with de-duplication left
+to the caller (would silently accept a ledger bug the guard exists to catch,
+and the structural argument shows it is unreachable, so there is no cost to
+declaring it); resolving identity by re-deriving `founder_of`'s handle and
+matching (explicitly foreclosed — the ~3.5%-collision risk Task 1 measured);
+folding the forebear into `PersonSeed` and committing inside
+`hornvale_person::genesis` (rejected: the forebear's id does not exist until
+`genesis` has already minted it, so the second-pass shape is not a style
+choice but a sequencing necessity).
+
+*Ideonomy passes / overturns.* None — an implementation task closing three
+questions Task 1 explicitly deferred, not a design question.
+
+*Capture actions.* `domains/person/src/lib.rs` (`PARENT_OF`, `KIN_OF`,
+registration); `windows/worldgen/src/person_promote.rs` (`promote`'s second
+pass); `windows/worldgen/tests/suite/kinship_facts.rs` (new);
+`docs/decisions/0578-kinship-a-genesis-fact.md` (new);
+`docs/digest/decisions-in-force.md` (regenerated).

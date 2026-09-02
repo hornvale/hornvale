@@ -5,9 +5,10 @@
 //! it reads `domains/history`'s occupation records, and a domain crate may
 //! reach only the kernel (decision 0002).
 
+use hornvale_history::descent::Kinship;
 use hornvale_history::flesh::{RoleHandle, founder_handle};
-use hornvale_history::record::OccupationRecord;
-use hornvale_kernel::{EntityId, KindId};
+use hornvale_history::record::{Founding, OccupationRecord};
+use hornvale_kernel::{EntityId, Fact, KindId, Value, WorldTime};
 use std::collections::BTreeMap;
 
 use crate::{language_of_wc, morph_options};
@@ -244,6 +245,22 @@ pub fn select_founders(records: &[OccupationRecord]) -> FounderCast {
 /// living person is the absence of one. A species with no lifespan
 /// (ametabolic) yields no death fact either, which reads as "not known to have
 /// died", and one with no maturity falls back to founding day as birth.
+///
+/// **Also commits `parent-of`/`kin-of` (spec §4.3, decision 0578)**, in a
+/// second pass after every founder has an `EntityId`. Resolved through
+/// ENTITY IDENTITY, never `RoleHandle` equality: `founder_of`'s handle space
+/// collides on ~3.5% of seed 42's occupations (Task 1's ledger entry #6,
+/// `founding_key_from` with no discrimination tail), so matching a promoted
+/// founder by handle would misattribute roughly 1 in 100 forebear edges — a
+/// wrong fact in a saved world. `records[i].founded_from` already carries the
+/// mother occupation's `EntityId` directly, with no handle in the path, and
+/// `Founder::community` is that same occupation's id for whichever cast
+/// member founded it, so a plain `EntityId -> cast index` map answers "is
+/// this founder's forebear ALSO promoted" without ever computing a handle.
+/// Consumes no `Stream`: the classification (`Sibling` vs `Ancestor`, which
+/// chooses `kin-of` vs `parent-of`) comes from [`forebear_of`], itself a
+/// total function of already-committed founding years and the species
+/// allometry table — no `Seed`, no draw.
 pub fn promote(
     world: &mut hornvale_kernel::World,
     wc: &crate::components::WorldComponents,
@@ -278,6 +295,16 @@ pub fn promote(
         remembered: cast,
         unremembered: _,
     } = select_founders(&records);
+
+    // occupation EntityId -> cast index, for the entity-identity forebear
+    // resolution below. Built once, before minting, from `Founder::community`
+    // — the occupation each cast member founded — never from a `RoleHandle`.
+    let community_to_cast: BTreeMap<EntityId, usize> = cast
+        .iter()
+        .enumerate()
+        .map(|(i, f)| (f.community, i))
+        .collect();
+
     let mut seeds = Vec::with_capacity(cast.len());
     for f in &cast {
         let life = wc
@@ -337,7 +364,54 @@ pub fn promote(
             death_day: death,
         });
     }
-    hornvale_person::genesis(world, &seeds).map_err(crate::BuildError::from)
+    let ids = hornvale_person::genesis(world, &seeds).map_err(crate::BuildError::from)?;
+
+    // Second pass: `parent-of`/`kin-of`, now that every founder has an
+    // `EntityId` (`ids[i]` is `cast[i]`'s person — `hornvale_person::genesis`'s
+    // own contract, ids pushed in seed order). Deliberately after `genesis`
+    // rather than folded into `PersonSeed`: the forebear's PERSON id is
+    // minted by `genesis` itself, so it cannot be known before that call
+    // returns.
+    for (i, f) in cast.iter().enumerate() {
+        let Founding::From(mother_occupation) = records[f.occupation].founded_from else {
+            continue; // a genesis occupation has no forebear at all
+        };
+        let Some(&j) = community_to_cast.get(&mother_occupation) else {
+            continue; // forebear exists but nobody promoted it — the ledger
+            // says what is remembered (spec §4.3)
+        };
+        // The classification alone, never the handle `forebear_of` also
+        // returns: identity above already came from `records`/`community_to_cast`,
+        // entity-keyed throughout.
+        let Some((_, kinship)) = crate::forebear_of(world, f.community) else {
+            continue; // no generation length to classify by (an ametabolic
+            // or unrostered species) — honest absence, not a guess
+        };
+        let predicate = match kinship {
+            Kinship::Sibling => hornvale_person::KIN_OF,
+            Kinship::Ancestor(_) => hornvale_person::PARENT_OF,
+        };
+        let founded_day = crate::history_emit::ledger_day_of_bake_year(f.founded);
+        world
+            .ledger
+            .commit(
+                Fact {
+                    subject: ids[i],
+                    predicate: predicate.to_string(),
+                    object: Value::Entity(ids[j]),
+                    place: Some(f.community),
+                    day: Some(
+                        WorldTime::from_std_days(founded_day)
+                            .expect("a founder's day derives from an already-committed world time"),
+                    ),
+                    provenance: "person".to_string(),
+                },
+                &world.registry,
+            )
+            .map_err(crate::BuildError::from)?;
+    }
+
+    Ok(ids)
 }
 
 #[cfg(test)]

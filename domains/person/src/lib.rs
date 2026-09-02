@@ -29,6 +29,33 @@ pub const PERSON_BORN: &str = "person-born";
 /// type-audit: bare-ok(identifier-text)
 pub const PERSON_DIED: &str = "person-died";
 
+/// The promoted founder this person's community descended from, at least a
+/// generation removed (spec §4.3, decision 0578).
+///
+/// Owned here rather than in `domains/history`, which computes the descent
+/// arithmetic (`Kinship`, `kinship()`) this predicate reports the verdict
+/// of: both ends of the relation are `is-person` entities, this crate's own
+/// subject type, the same reasoning that keeps `pays-tribute-to` (an
+/// occupation-to-occupation relation) in `domains/history` rather than here.
+/// **Functional**, because the underlying edge is: an occupation carries at
+/// most one `occ-founded-from`, so a founder has at most one recorded
+/// forebear (`forebear_of`'s doc, `windows/worldgen/src/descent.rs`) —
+/// verified, not assumed, before this was declared `true`.
+/// type-audit: bare-ok(identifier-text)
+pub const PARENT_OF: &str = "parent-of";
+
+/// This person's forebear is the same generation as they are — the daughter
+/// community was settled within about half a generation of the mother's own
+/// founding, so the two founders are contemporaries rather than ancestor and
+/// descendant (spec §4.3, decision 0578, `Kinship::Sibling`).
+///
+/// **Deliberately distinct from [`PARENT_OF`]**: spec §4.3 requires a
+/// `Sibling` edge never render as descent, so the same underlying
+/// `occ-founded-from` edge commits under one predicate or the other, never
+/// both. Functional for the same structural reason `PARENT_OF` is.
+/// type-audit: bare-ok(identifier-text)
+pub const KIN_OF: &str = "kin-of";
+
 /// Register this domain's predicates.
 ///
 /// No concepts are registered: `person` already exists as a *lexical* concept
@@ -47,6 +74,16 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         "the day this person was born; negative if before the history record began",
     )?;
     registry.register_predicate(PERSON_DIED, true, "the day this person died")?;
+    registry.register_predicate(
+        PARENT_OF,
+        true,
+        "the promoted founder this person's community descended from",
+    )?;
+    registry.register_predicate(
+        KIN_OF,
+        true,
+        "the promoted founder this person's community was settled alongside, at the same generation",
+    )?;
     Ok(())
 }
 
