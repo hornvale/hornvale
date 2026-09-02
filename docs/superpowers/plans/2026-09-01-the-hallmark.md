@@ -1180,3 +1180,62 @@ git commit -m "docs(the-hallmark): registry capture — DOM-kernel-owns-vocabula
 - **Spec coverage:** §2 → Task 1; §3 → Tasks 9-11; §4 Batch A → Tasks 2-5; §4 Batch B → Tasks 6-8; §5 → Task 12 (+ per-task ledger notes); §6.1 → Task 1, §6.2 → Tasks 10-11, §6.3 → Tasks 2-8, §6.4 → Task 11 Step 5, §6.5 → campaign close (out of plan scope, per Task 12's note).
 - **Known deviations from the survey, deliberate:** `genus_of` is kept (spec's "Formation cave half" gets a decision-rule branch in Task 8 because the corpus spellings genuinely differ); the paleoclimate migration is diagnosis-gated (the day/year conflation found at plan time); the tool lands after the promotions so the baseline is clean (ledger #5).
 - **Type consistency:** `GenesisOutcome<T>.value` (Tasks 3), `Sentiment`/`sentiment_tag` (Task 6), `Stratum::Rock(Horizon)` (Task 7), `TypeShape`/`TwinGroup`/`PlacementTag` (Tasks 9-11) — names match across their producing and consuming tasks.
+
+---
+
+## Addendum (2026-09-02): Nathan's G6 rulings — Tasks 13-15
+
+Nathan overrode two execution-time adjudications at the merge stop (ledger
+#14): the `EraClimate.day` two-axes defect is fixed in this campaign and the
+`WorldTime` migration then proceeds; `Formation`'s cave half is structurally
+unified with the kernel's `CaveKind`. Committed spellings and bytes remain
+inviolate: frozen corpora keep `"karst-cave"`-style strings, and any
+committed-byte movement is escalated to Nathan as a diff, never landed
+silently.
+
+### Task 13: one axis in the slot — the bake path stops writing years into EraClimate.day
+
+**Files:**
+- Modify: `windows/worldgen/src/lib.rs` (bake-path `EraClimate` construction, ~:3876, :3921-3924; possibly the second `era_day` region :3909-3913)
+- Modify: `windows/worldgen/src/history_bake.rs` (`era_index_for` ~:1651 and its callers; the `.min_by` at ~:4288; test fixtures)
+- Possibly create: a named, UNQUANTIZED year-to-day crossing beside `ledger_day_of_bake_year` (see constraints)
+- Modify: `docs/superpowers/ledgers/2026-09-01-the-hallmark.md` (entry #15: the design taken)
+
+**Interfaces:**
+- Consumes: the Task 5 diagnosis (task-5-report.md; registry row `DOM-era-day-axis`): `paleoclimate_from` writes deep-time DAYS (`lib.rs:3733`, `-DEEP_TIME_WINDOW_DAYS + ...`); `bake_eras` writes bake YEARS (`day: cfg.start_year` at :3876; `bake_day` from the start/end-year linspace at :3921-3924); `era_index_for(eras, year)` compares `e.day <= year` (`history_bake.rs:1651`).
+- Produces: `EraClimate.day` holds standard days on EVERY producer path; `DOM-era-day-axis`'s blocker is discharged; Task 15 can retype the field.
+
+**Design constraints (the property is fixed; the edit is the implementer's):**
+1. **The Ell's design stands**: the bake reasons in years internally (`BakeConfig::start_year`/`end_year`, `Occupation` values stay years). What changes is only the foreign-type boundary — a bake year may not be stored in `EraClimate.day`, a paleoclimate type whose contract is days.
+2. **Quantize-at-emit only**: `ledger_day_of_bake_year` QUANTIZES (decision 0033) and is the LEDGER crossing — do not reuse it for an in-memory field. If a year-to-day conversion is needed for the field, it is a new named, unquantized crossing (one function, doc'd as the sibling of `ledger_day_of_bake_year` with the quantization difference stated), or the bake path carries its own era container and converts where it hands data to paleoclimate-typed consumers. Choose by reading who consumes bake-path `EraClimate` values and in which unit — enumerate those consumers in the report before editing.
+3. **Selection semantics preserved**: `era_index_for`'s era choice for every input must be provably unchanged (convert both sides of a comparison identically, or keep the comparison in years inside the bake and convert at the container boundary). State in the report why the transform preserves every `<=` outcome, including exact-equality grid alignments.
+4. **The comparator twins stay twins**: if `strata::extract`'s peak comparator or worldgen's `:3763-3764` twin is touched, both change identically.
+
+- [ ] **Step 1: scope.** Enumerate every reader of a bake-path-produced `EraClimate` (grep `bake_eras` callers and what they do with `.day`; `era_index_for` call sites with the unit of each `year` argument; whether bake-path eras ever reach `hornvale_paleoclimate::extract` or `facts.rs`). Write the table into the report FIRST.
+- [ ] **Step 2: capture baselines.** Generate the before-world (`cargo run -p hornvale -- new --seed 42 --out /tmp/hallmark-t13-before.json`) and capture the worldgen history-bake suites' green state to a log file (one run, grep the log).
+- [ ] **Step 3: implement** per the constraints; smallest change that makes the field single-axis.
+- [ ] **Step 4: verdicts.** Regenerate `/tmp/hallmark-t13-after.json`; `diff` must be IDENTICAL. Re-run the worldgen suite once to a log and grep the result line; same for paleoclimate. `git status --porcelain book/ clients/ | head` must be empty. ANY committed byte or fixture moved: STOP, do not commit, report the diff verbatim (Nathan adjudicates).
+- [ ] **Step 5: docs.** Update the `EraClimate.day` field doc and the `DOM-era-day-axis` registry row (blocker discharged — re-word the row to record the fix and point at this commit; run the docs_consistency suite). Ledger entry #15 records the design chosen and the consumer table's conclusion.
+- [ ] **Step 6: fmt, type-audit report if pub surfaces changed, commit.** Kernel-adjacent worldgen edit: slow gate, foreground.
+
+### Task 14: Formation's cave half embeds the kernel CaveKind
+
+**Files:**
+- Modify: `domains/climate/src/facets.rs` (replace `KarstCave`/`LavaTube`/`FractureCave` (~:215-223) with one `Cave(CaveKind)` variant; the grouped arm at :314)
+- Modify: `domains/climate/src/variants.rs:744` (grouped arm)
+- Modify: `windows/worldgen/src/lib.rs:677-679`, `windows/locale/src/surface.rs:148-150` (grouped arms become `Formation::Cave(_)`)
+- Modify: `cli/tests/suite/cave_kind_correspondence.rs` (the exhaustive map becomes structural — see Step 3)
+- Modify: `book/src/reference/lexicon-of-place.md` if it names the three variants
+- Modify: `docs/superpowers/ledgers/2026-09-01-the-hallmark.md` (entry #16)
+
+**Controller-verified blast radius:** NO production code constructs the three variants (workspace grep: only the two unreachable/empty grouped arms, the two downstream grouped arms, and the correspondence test). The corpus strings (`axes.rs:288-290`, `underworld.rs:194-198`) are freestanding literals with zero linkage to the enum — they do not move.
+
+- [ ] **Step 1:** Replace the three variants with one `Cave(CaveKind)` variant whose doc cites decision 0517 and Nathan's G6 unification ruling (ledger #14) and states the corpus spellings ("karst-cave"...) stay climate's own. Add `use hornvale_kernel::CaveKind;`.
+- [ ] **Step 2:** Follow the compiler: grouped arms become `Formation::Cave(_)`; any exhaustive `Formation` match the compiler names gets the one new arm. The compiler is the site list.
+- [ ] **Step 3:** The correspondence test: the CaveKind-to-Formation variant map is now structural, so the cli test's exhaustive match is obsolete. Verify worldgen's `every_cave_kind_matches_a_corpus_genus` (delve_seating.rs tests) still pins the corpus-spelling map in both directions; if it does, delete the cli test with a pointer to it in the commit message; if it does not, extend it first.
+- [ ] **Step 4: verdicts.** `git status --porcelain book/src/laboratory/generated/ docs/audits/system-coverage-wolverson-2021.md clients/ | head` empty; workspace check clean; climate/worldgen/locale/vessel scoped suites green (one run each, logged and grepped); the placement-audit check stays green (Formation and CaveKind are still not shape twins — member sets differ).
+- [ ] **Step 5:** lexicon page + docs_consistency if touched; ledger #16; type-audit report regen (pub enum variants changed); fmt; commit (kernel-consumer edit: slow gate).
+
+### Task 15: the WorldTime migration, unblocked (original Task 5 migration branch)
+
+Precondition: Task 13 landed. Scope: `EraClimate.day`, `IceState.day`, `PaleoRecord.glacial_maximum_day` become `WorldTime`; `integrate_ice` samples `&[(WorldTime, f64)]`; both peak comparators become `b.day.cmp(&a.day)` (identically, both files); `(day - p).as_std_days() / DAYS_PER_KYR`; every construction site converts once at the crossing with the rounding rule named (`WorldTime::from_std_days(...).expect("era day within tick range")`); `facts.rs:88` commits `Value::Number(record.glacial_maximum_day.as_std_days())`; remove the migrated `pending(wave-2: ...)` tag positions; person's waivered DTO stays out of scope. Verdicts: the seed-42 before/after byte diff is non-negotiable (IDENTICAL or STOP-and-report); worldgen + paleoclimate suites green; porcelain check on committed artifact paths empty; type-audit report regen; docs: field docs and ledger #17. If Task 13 chose a bake-local era container (so `EraClimate` only ever has days-producers), say so in the report and migrate accordingly.
