@@ -485,7 +485,7 @@ pub const DISPOSITION_SHIFT: &str = "disposition-shift";
 /// direct social, not an ambient drive tip). A game-design coefficient, not
 /// a tuned physical constant.
 /// type-audit: bare-ok(ratio)
-/// plumb: universal(doc states explicitly: a game-design coefficient, not a tuned physical constant)
+/// plumb: per-individual(how readily one NPC's grievance accumulates from a slight is a personality trait -- currently one gain for every NPC, not derived from Lineage)
 pub const GRIEVANCE_GAIN: f64 = 1.0;
 
 /// Net grievance at which a neutral NPC turns hostile toward the player —
@@ -495,7 +495,7 @@ pub const GRIEVANCE_GAIN: f64 = 1.0;
 /// homeostatic drive layer (`liveness.rs`), and there is no seed-42
 /// calibration behind it.
 /// type-audit: bare-ok(ratio)
-/// plumb: universal(doc states explicitly: a game-design constant, not an empirical drive value)
+/// plumb: per-individual(how many net provokes it takes before one NPC turns hostile is a personality trait -- currently one threshold for every NPC, not derived from Lineage)
 pub const HOSTILITY_THRESHOLD: f64 = 3.0;
 
 /// The one-hop forward integration (The First Mark): an NPC whose grievance

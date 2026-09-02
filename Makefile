@@ -514,15 +514,22 @@ type-audit-report: ## Fail if the committed type-audit report is stale (regen cm
 
 # In the gate for the same reason type-audit is (The Plumb, Task 4, decision
 # ledger #29): default-deny over every authored numeric constant in
-# domains/*/src and windows/*/src, ~3.5s warm on this tree (measured
-# 2026-09-02, debug `cargo run`, 681 constants over 290 files) — costlier than
-# type-audit's own ~1.2s but still a source scan with no workspace build, and
-# the whole point of this campaign is that nothing else runs it: unlike
-# seam-guard (whose cost is a scoped TEST RUN per call site, not a scan, and
-# whose declared-survivor grammar makes an occasional manual run adequate),
-# an untagged constant here is a silent regression the campaign's own
-# motivating bug (FATIGUE_RISE) shipped as. A scanner nothing schedules
-# guards nothing.
+# domains/*/src and windows/*/src. THE PAIR (this target plus plumb-report
+# below) IS WHAT style-run ACTUALLY PAYS, and a fix-round review measurement
+# (confirmed by re-measurement 2026-09-02, `/usr/bin/time -p make <target>`,
+# warm tree, 681 constants over 290 files) corrected an earlier draft of this
+# comment that quoted a single-target 3.5s number against type-audit's
+# single-target ~1.2s — both wrong for this crate and not the comparison that
+# matters. The real pair costs: `make plumb` + `make plumb-report` ~7.1s
+# (7.09/7.06/7.11s across three runs) against `make type-audit` +
+# `make type-audit-report` ~10.9s (10.88/10.90/11.0s) — plumb is roughly
+# TWO-THIRDS the incumbent's cost, not costlier than it. Still a source scan
+# with no workspace build, and the whole point of this campaign is that
+# nothing else runs it: unlike seam-guard (whose cost is a scoped TEST RUN
+# per call site, not a scan, and whose declared-survivor grammar makes an
+# occasional manual run adequate), an untagged constant here is a silent
+# regression the campaign's own motivating bug (FATIGUE_RISE) shipped as. A
+# scanner nothing schedules guards nothing.
 plumb: ## Verify every authored numeric constant carries a plumb: rung (default-deny)
 	cargo run --quiet --manifest-path tools/plumb/Cargo.toml -- check
 

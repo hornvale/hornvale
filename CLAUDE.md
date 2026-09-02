@@ -357,6 +357,12 @@ make doctor        # the repo self-map — run this first in a fresh session
 cargo fmt --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo run --manifest-path tools/type-audit/Cargo.toml -- check   # a LINT, not an artifact
+cargo run --manifest-path tools/plumb/Cargo.toml -- check   # default-deny over every authored numeric constant (The Plumb, Task 4)
+# plumb's own report-freshness check (mirrors type-audit-report's shape,
+# `make plumb-report`) joined this list too since The Plumb Task 4 fix round
+# 1: regenerate to a temp file, diff against docs/audits/plumb-roster.md,
+# fail on drift. Neither report-freshness check is spelled out as a single
+# raw command here -- both regenerate-then-diff, see their Makefile targets.
 cargo nextest run --workspace -E "$(bash scripts/subfloor-roster.sh)"   # the sub-floor tier only
 
 # The stage gate's own suite runs the full thing, unchanged in content from

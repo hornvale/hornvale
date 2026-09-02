@@ -4094,7 +4094,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
 /// in.
 /// type-audit: bare-ok(identifier-text), bare-ok(ratio: return)
 pub fn fatigue_rise_registry() -> ComponentStore<KindId, f64> {
-    /// plumb: pending(wave-1)
+    /// plumb: per-species(a creature's own physiology sets how fast fatigue accrues -- doc's own words: differentiating any OTHER kind's rate away from human's is a fidelity decision left for whoever authors it next; every kind but xorn shares this identical 0.3)
     const RATE: f64 = 0.3;
     [
         (KindId("goblin"), RATE),
@@ -5822,25 +5822,25 @@ fn drow_niche() -> EnvironmentNiche {
 /// Drow's preferred void form: standing structure. AUTHORED — see
 /// [`drow_niche`].
 /// type-audit: bare-ok(ratio)
-/// plumb: per-species(already authored specifically for the drow kind — the correct per-species axis, encoded by name rather than a formal table entry)
+/// plumb: per-species(a species' own niche preference -- authored for drow specifically, by constant name rather than entered into a KindId-keyed species table; the data is per-species, the shape is not)
 const DROW_PHYSIOGNOMY: f64 = 0.6;
 /// Drow's preferred energy base: a working one. AUTHORED — see [`drow_niche`].
 /// type-audit: bare-ok(ratio)
-/// plumb: per-species(already authored specifically for the drow kind, encoded by name rather than a formal per-species table entry)
+/// plumb: per-species(a species' own niche preference -- authored for drow specifically, by constant name rather than entered into a KindId-keyed species table; the data is per-species, the shape is not)
 const DROW_ENERGY: f64 = 0.5;
 /// Drow's preferred moisture: fracture-borne seepage. AUTHORED — see
 /// [`drow_niche`].
 /// type-audit: bare-ok(ratio)
-/// plumb: per-species(already authored specifically for the drow kind, encoded by name rather than a formal per-species table entry)
+/// plumb: per-species(a species' own niche preference -- authored for drow specifically, by constant name rather than entered into a KindId-keyed species table; the data is per-species, the shape is not)
 const DROW_WATER: f64 = 0.4;
 /// Drow's accepted substrate class: bare rock. A class index, never a
 /// magnitude. AUTHORED — see [`drow_niche`].
 /// type-audit: bare-ok(index)
-/// plumb: per-species(already authored specifically for the drow kind, encoded by name rather than a formal per-species table entry)
+/// plumb: per-species(a species' own niche preference -- authored for drow specifically, by constant name rather than entered into a KindId-keyed species table; the data is per-species, the shape is not)
 const DROW_SUBSTRATE: f64 = 0.6;
 /// Drow's preferred light level: aphotic. AUTHORED — see [`drow_niche`].
 /// type-audit: bare-ok(ratio)
-/// plumb: per-species(already authored specifically for the drow kind, encoded by name rather than a formal per-species table entry)
+/// plumb: per-species(a species' own niche preference -- authored for drow specifically, by constant name rather than entered into a KindId-keyed species table; the data is per-species, the shape is not)
 const DROW_LIGHT: f64 = 0.0;
 
 #[cfg(test)]

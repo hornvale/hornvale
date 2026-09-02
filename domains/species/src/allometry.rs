@@ -20,9 +20,9 @@ const ANCHOR_LIFESPAN_YR: f64 = 60.0;
 const ANCHOR_MATURITY_YR: f64 = 12.0;
 
 // Metabolic normalization (W·kg^-0.75).
-/// plumb: per-species(a class-uniform metabolic normalization constant for every endotherm species — module doc says "per-class coefficients"; per-species is finer than per-class)
+/// plumb: per-species(a species' own metabolic normalization is a physiological trait -- module doc: universal exponents, per-CLASS coefficients; per-species is finer than the per-class granularity implemented today)
 const B0_ENDOTHERM: f64 = 3.4;
-/// plumb: per-species(a class-uniform metabolic coefficient for every ectotherm species — same per-class-not-per-species gap as B0_ENDOTHERM)
+/// plumb: per-species(the same physiological-trait axis as B0_ENDOTHERM -- per-class today, finer than the per-species granularity the ladder asks about)
 const ECTOTHERM_METABOLIC_FRACTION: f64 = 1.0 / 8.0;
 
 /// The largest value the **class** component (`pace_multiplier`) returns —

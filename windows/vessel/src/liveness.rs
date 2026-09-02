@@ -148,7 +148,7 @@ pub struct DriveParams {
 /// spans a few days. (The old `sated` felt-state threshold is retired — since
 /// The Temperament, `Session::needs` renders the affect read, spec §7, not a
 /// bare thirst scalar.)
-/// plumb: per-species(one authored thirst/foraging drive rate for every species — the same shape FATIGUE_RISE was before its per-species conversion)
+/// plumb: per-species(a creature's own metabolism sets how fast thirst/foraging need accrues -- currently one authored rate for every species, the same shape FATIGUE_RISE was before its per-species conversion)
 pub const SUSTENANCE: DriveParams = DriveParams {
     rise: 0.15,
     act: 0.85,
@@ -226,7 +226,7 @@ pub const FURNISHING_REFERENCE_DAY: WorldTime = WorldTime::GENESIS;
 /// Below this mean temperature (°C) a room's people build around a fire.
 /// A first-pass value; changing it is a `room/furnishing/v1` epoch.
 /// type-audit: pending(wave-3)
-/// plumb: universal(a fixed climate threshold for room furnishing, not a species property)
+/// plumb: per-people(whether a room's people build around a fire tracks that people's own cold tolerance and culture, not a fixed climate cutoff for every people -- doc: a room's people build around a fire)
 pub const FURNISHING_COLD_C: f64 = 5.0;
 
 /// A room's per-axis HAZARD field in `[0, 1]` (The Bane) — the raw, creature-
@@ -310,7 +310,7 @@ const HEAT_FEAR_REF_C: f64 = 30.0;
 const COLD_FEAR_REF_C: f64 = 0.0;
 /// The optimum span (°C) over which the derived HEAT/COLD threat weights slide
 /// from `0` to `1`. Authored.
-/// plumb: universal(the shared slope span of the fear-weighting formula, applied uniformly once species niche optima already differ)
+/// plumb: per-species(how WIDE a creature's comfort band is before fear ramps to full weight is a trait separate from where the band is centered -- a stenotherm and a eurytherm can share an optimum and differ entirely in span)
 const THERMAL_FEAR_SPAN_C: f64 = 40.0;
 
 /// Derive a creature's [`ThreatNiche`] from what it already is (The Bane — no
@@ -815,20 +815,20 @@ const HEAT_SCALE_C: f64 = 20.0;
 /// fast at `THERMONEUTRAL_C + HEAT_SCALE_C` (≈45 °C). Heat-only (asymmetric):
 /// an endotherm thermoregulates, so cold does not slow its water need below
 /// base. Authored.
-/// plumb: per-species(one heat-coupling coefficient for every endotherm species — currently class-uniform, not species-tuned)
+/// plumb: per-species(how strongly heat drives extra dehydration is a property of a species' own thermoregulation -- currently one coefficient shared by the whole endotherm class)
 const ENDOTHERM_HEAT_K: f64 = 1.0;
 
 /// Ectotherm coupling: the realized rate TRACKS ambient (CAP-1), symmetric
 /// about thermoneutral — `1.5` makes a hot ectotherm dehydrate 2.5× at ≈45 °C
 /// and a cold one torpid. Stronger than the endotherm's, because a
 /// cold-blooded creature's whole metabolism follows the climate. Authored.
-/// plumb: per-species(one heat-coupling coefficient for every ectotherm species — currently class-uniform, not species-tuned)
+/// plumb: per-species(how strongly ambient heat drives dehydration tracks a species' own thermal biology -- currently one coefficient shared by the whole ectotherm class)
 const ECTOTHERM_K: f64 = 1.5;
 
 /// The floor on the ectotherm rate multiplier: a torpid (deeply cold)
 /// ectotherm's metabolism slows but never stops — it still needs SOME water.
 /// Authored.
-/// plumb: per-species(a torpor-tolerance floor uniform across every ectotherm species — plausibly a per-species trait)
+/// plumb: per-species(a species' own torpor tolerance sets how far its metabolism can slow in the cold -- currently one floor shared by the whole ectotherm class)
 const ECTOTHERM_FLOOR: f64 = 0.2;
 
 /// The per-day thirst (dehydration) RATE at ambient temperature `temp` (°C) for
@@ -2236,7 +2236,7 @@ pub const SLEPT: &str = "slept";
 /// The solar-altitude band (degrees around the horizon) a CREPUSCULAR creature
 /// is awake in — dawn and dusk, when the sun is near the horizon (civil
 /// twilight). Diurnal wakes above it, nocturnal below (The Slumber Tier-1).
-/// plumb: per-species(the crepuscular activity window's width, uniform across every crepuscular species)
+/// plumb: per-species(how wide a solar-altitude band a crepuscular species is active in is a property of that species' own activity biology -- currently one width for every crepuscular species)
 const TWILIGHT_DEG: f64 = 6.0;
 
 /// Fatigue REPAID per LOCAL day ASLEEP (The Wicket, Task 7; on the LOCAL day
@@ -2304,7 +2304,7 @@ const TWILIGHT_DEG: f64 = 6.0;
 /// A rate large enough to clear ANY debt in one night would be the old flag
 /// wearing a rate's clothes; this one is not — a half-night repays half the
 /// scale, so a body three days awake still wakes in debt.
-/// plumb: per-species(the recovery half symmetric to the now-per-species RISE rate is still one constant for every species — the doc's own text names this asymmetry)
+/// plumb: per-species(a creature's own physiology should set how fast rest repays fatigue debt, symmetric to the now-per-species RISE rate -- currently one recovery rate for every species; the doc's own text names this asymmetry)
 const FATIGUE_FALL: f64 = 1.0;
 
 /// Fatigue repaid per LOCAL day spent in a CONSCIOUS rest (The Wicket, Task 8;
@@ -2351,7 +2351,7 @@ const FATIGUE_FALL: f64 = 1.0;
 /// doc asserts it must clear, and the nap fragmentation this task exists to
 /// remove would return with every test still green. The calibration test states
 /// that inequality directly.
-/// plumb: per-species(authored as half of FATIGUE_FALL, so it inherits the same per-species gap: one recovery rate for every species)
+/// plumb: per-species(a creature's own physiology should set how fast a conscious rest repays fatigue, half of FATIGUE_FALL's own rate -- currently one recovery rate for every species)
 const REST_FALL: f64 = 0.5;
 
 /// The ORDER half of [`REST_FALL`]'s bracket, as a compile-time assertion
@@ -3472,7 +3472,7 @@ pub const EATEN: &str = "eaten";
 /// thirst it couples to metabolism and room temperature through the SAME
 /// `rise_at`/path-integral machinery (The Kindling, a second consumer), so a
 /// hot endotherm burns — and hungers — faster. Authored.
-/// plumb: per-species(one authored hunger drive rate for every species — the same shape FATIGUE_RISE was before its per-species conversion)
+/// plumb: per-species(a creature's own metabolism sets how fast hunger accrues -- currently one authored rate for every species, the same shape FATIGUE_RISE was before its per-species conversion)
 const HUNGER: DriveParams = DriveParams {
     rise: 0.1,
     act: 0.85,
@@ -3483,7 +3483,7 @@ const HUNGER: DriveParams = DriveParams {
 /// forage toward a richer neighbour. Low, so any ordinarily productive room
 /// (an inhabited settlement's surroundings) feeds; only genuine barrens
 /// (desert/ice, a planted wasteland) starve. Authored.
-/// plumb: universal(a terrain food-value threshold — a property of the room, not the creature)
+/// plumb: universal(a dimensionless threshold on food_value, which is already creature-relative -- the niche dot product bakes in each species' own diet weights, so the shared cutoff needs no separate per-species value)
 const EAT_THRESHOLD: f64 = 0.15;
 
 /// The scale of the prey-presence term in [`food_value`] (The Teeth) — how
@@ -4024,7 +4024,7 @@ fn flee_step(
 /// Belonging) — a creature this many mesh-hops from its people (while home is
 /// still REACHABLE) feels maximal isolation. Authored, modest so a creature that
 /// strays a little from home already feels the homeward pull.
-/// plumb: per-species(the loneliness saturation distance, uniform across every species' own territorial range)
+/// plumb: per-species(a creature's own territorial range and wander tolerance sets how many hops from home feel isolating -- currently one distance for every species)
 const LONELY_SCALE_HOPS: f64 = 20.0;
 
 /// The loneliness seek threshold: at/above this the social drive engages (heads

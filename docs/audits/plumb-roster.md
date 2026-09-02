@@ -149,9 +149,11 @@ bare count would hide a quantity someone had wrongly denied.
 | Verdict | Count |
 |---------|------:|
 | pending(wave-1) | 572 |
-| per-species | 17 |
+| per-individual | 2 |
+| per-people | 1 |
+| per-species | 19 |
 | per-world | 2 |
-| universal | 90 |
+| universal | 85 |
 | **undeclared** | **0** |
 | **malformed tag** | **0** |
 | _total_ | 681 |

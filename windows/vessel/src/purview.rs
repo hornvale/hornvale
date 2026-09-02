@@ -15,7 +15,7 @@ use hornvale_scene::{Mark, Sight, SurroundsScene, surrounds_scene_colored_in, su
 /// The chart's sense radius, in BFS rings. A constant this slice; the seam
 /// for a per-species radius is `Body::perception` (EXP-3), untouched here.
 /// type-audit: bare-ok(count)
-/// plumb: per-species(doc states explicitly: the seam for a per-species radius is Body::perception EXP-3, untouched here)
+/// plumb: per-species(a creature's own senses set its purview radius -- doc states explicitly: the seam for a per-species radius is Body::perception EXP-3, untouched here)
 pub const PURVIEW_RADIUS: u32 = 4;
 
 /// The salience of an NPC standing on a cell — above every settlement mark
