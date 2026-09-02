@@ -7,7 +7,7 @@
 //! no RNG draws.
 
 use crate::units::{IceVolume, SeaLevelChange};
-use hornvale_kernel::TempAnomaly;
+use hornvale_kernel::{TempAnomaly, WorldTime};
 
 /// Index below which ice grows.
 /// plumb: pending(wave-1)
@@ -58,11 +58,19 @@ pub fn sea_level_change_m(volume: f64) -> f64 {
 }
 
 /// One integrated moment of the ice history.
-/// type-audit: pending(wave-2: day)
+///
+/// **This `day` is a standard day on every path, and a typed [`WorldTime`]
+/// since The Hallmark's Task 15** — both producers sample `-k *
+/// ICE_STEP_DAYS` and compare against a day-valued `era_day`. It was
+/// unambiguous even while [`crate::strata::EraClimate::day`] was not, and was
+/// `pending` only because Task 5 scoped the three paleoclimate day fields as
+/// one migration and stopped on the ambiguous one. Task 13 repaired that one
+/// (`DOM-era-day-axis`, ledger entries #10 and #15) and Task 15 retyped all
+/// three together.
 #[derive(Debug, Clone, PartialEq)]
 pub struct IceState {
     /// Absolute standard day of this sample.
-    pub day: f64,
+    pub day: WorldTime,
     /// Global ice volume fraction at this day.
     pub volume: IceVolume,
     /// Global temperature offset from albedo feedback (≤ 0), as an anomaly
@@ -74,14 +82,18 @@ pub struct IceState {
 
 /// March the ice sheet over `(day, caloric_index)` samples in ascending day
 /// order, starting from ice-free. One `IceState` out per sample in.
-/// type-audit: pending(wave-2: samples)
-pub fn integrate_ice(samples: &[(f64, f64)]) -> Vec<IceState> {
+///
+/// The `day` half of each sample carries [`IceState::day`]'s standard-day
+/// axis, typed since The Hallmark's Task 15 (`DOM-era-day-axis`, ledger #10,
+/// #15, #17); the caloric-index half stays a bare dimensionless ratio.
+/// type-audit: bare-ok(ratio: samples)
+pub fn integrate_ice(samples: &[(WorldTime, f64)]) -> Vec<IceState> {
     let mut volume = 0.0_f64;
     let mut out = Vec::with_capacity(samples.len());
-    let mut prev_day: Option<f64> = None;
+    let mut prev_day: Option<WorldTime> = None;
     for &(day, g) in samples {
         let dt_kyr = match prev_day {
-            Some(p) => (day - p) / DAYS_PER_KYR,
+            Some(p) => (day - p).as_std_days() / DAYS_PER_KYR,
             None => 0.0,
         };
         if g < GROWTH_THRESHOLD {
@@ -105,9 +117,15 @@ pub fn integrate_ice(samples: &[(f64, f64)]) -> Vec<IceState> {
 mod tests {
     use super::*;
 
-    fn constant_forcing(g: f64, steps: usize) -> Vec<(f64, f64)> {
+    fn constant_forcing(g: f64, steps: usize) -> Vec<(WorldTime, f64)> {
         (0..steps)
-            .map(|k| (k as f64 * DAYS_PER_KYR * 2.0, g))
+            .map(|k| {
+                (
+                    WorldTime::from_std_days(k as f64 * DAYS_PER_KYR * 2.0)
+                        .expect("test day within tick range"),
+                    g,
+                )
+            })
             .collect()
     }
 
@@ -121,7 +139,11 @@ mod tests {
         // Feed the built-up ice a warm signal and watch it melt faster than it grew.
         let mut warm_samples = constant_forcing(-1.0, 200);
         for k in 200..260 {
-            warm_samples.push((k as f64 * DAYS_PER_KYR * 2.0, 1.0));
+            warm_samples.push((
+                WorldTime::from_std_days(k as f64 * DAYS_PER_KYR * 2.0)
+                    .expect("test day within tick range"),
+                1.0,
+            ));
         }
         let warm = integrate_ice(&warm_samples);
         assert!(warm.last().unwrap().volume.get() < cold.last().unwrap().volume.get());

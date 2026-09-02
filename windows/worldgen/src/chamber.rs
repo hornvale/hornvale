@@ -425,21 +425,6 @@ fn stratum_at(rung: Band, gradient: GeothermalGradient, column: &StratigraphicCo
     hornvale_terrain::features::band_at_depth(column, depth_m)
 }
 
-/// The one explicit mapping from terrain's [`Horizon`] to climate's
-/// [`hornvale_climate::Stratum`] — the two enums name the same five rock units
-/// from two domains that may not depend on each other, so the composition root
-/// is the only place allowed to state the correspondence. Exhaustive on both
-/// sides: a sixth variant on either fails this to compile.
-fn stratum_of_band(band: Horizon) -> hornvale_climate::Stratum {
-    match band {
-        Horizon::Regolith => hornvale_climate::Stratum::Regolith,
-        Horizon::Cover => hornvale_climate::Stratum::Cover,
-        Horizon::Basement => hornvale_climate::Stratum::Basement,
-        Horizon::Roots => hornvale_climate::Stratum::Roots,
-        Horizon::Underneath => hornvale_climate::Stratum::Underneath,
-    }
-}
-
 /// The one place the `chamber/v3` stream key is spelled — mirrors
 /// `deity_base_seed`'s discipline (`windows/worldgen/src/lib.rs`): "the one
 /// place the stream label is spelled, so [every caller] can never diverge."
@@ -1410,7 +1395,7 @@ pub fn chamber_at(
     // `chamber_exists` has already refused `Band::Surface`, and `addr.band`
     // is now the rung directly — no rank lookup needed.
     let rung = addr.band;
-    let stratum = stratum_of_band(stratum_at(rung, gradient, column));
+    let stratum = hornvale_climate::Stratum::Rock(stratum_at(rung, gradient, column));
     let origin = resolve_origin(ChamberOrigin::Found, overrides.get(&addr).copied());
     Some(Chamber {
         addr,
@@ -1907,7 +1892,12 @@ mod tests {
 
         let mapped: Vec<(Band, hornvale_climate::Stratum)> = (0..5u8)
             .filter_map(Band::from_rank)
-            .map(|rung| (rung, stratum_of_band(stratum_at(rung, gradient, &column))))
+            .map(|rung| {
+                (
+                    rung,
+                    hornvale_climate::Stratum::Rock(stratum_at(rung, gradient, &column)),
+                )
+            })
             .collect();
         assert_eq!(mapped.len(), 5, "every rank 0..=4 must map to a stratum");
 
@@ -1922,12 +1912,12 @@ mod tests {
              relabelling of `stratum`: {mapped:?}"
         );
 
-        let cool = stratum_of_band(stratum_at(
+        let cool = hornvale_climate::Stratum::Rock(stratum_at(
             Band::Deeps,
             GeothermalGradient::new(15.0),
             &column,
         ));
-        let hot = stratum_of_band(stratum_at(
+        let hot = hornvale_climate::Stratum::Rock(stratum_at(
             Band::Deeps,
             GeothermalGradient::new(30.0),
             &column,

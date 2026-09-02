@@ -49,10 +49,12 @@ publishes it now name the same world.)*
 ```text
 [room 4189198211, day 0]
 Temperate forest — old-growth timber, sun-warmed, in a hollow — in the lands of Vapatkapak. The sky above: Twilight. The horizon shines pale blue-white. The small, distant moon shows its last-quarter face. The sky is fair, with scattered cumulus.
+Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
 No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > enter
 [chamber 1098173175083363, day 0.00985]
 A small room, holding a doorway and a screen.
+Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
 Ways on: out, further in.
 > carrying
 You are carrying nothing.
@@ -61,10 +63,12 @@ You see no a key here.
 > enter further in
 [chamber 1098173178103715, day 0.0197]
 A small room, holding a doorway and an alcove.
+Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
 Ways on: out, further in.
 > enter further in
 [chamber 1098173182570403, day 0.02955]
 A small room, holding a doorway, a water jar, a loom, a key and a brazier.
+Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
 Ways on: out, further in.
 > take a key
 You take the key.
@@ -73,6 +77,7 @@ You are carrying a key.
 > enter further in
 [chamber 1098173179279043, day 0.04925]
 A small room, holding a doorway, a water jar, a strongbox and a key.
+Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
 Ways on: out.
 > examine a strongbox
 A banded chest, low and heavier than it looks, its lid seated flush.
@@ -95,10 +100,12 @@ You open the strongbox. Within it: a key.
 > out
 [room 4189198211, day 0.10835]
 Temperate forest — old-growth timber, sun-warmed, in a hollow — in the lands of Vapatkapak. The sky above: Night. The small, distant moon shows its last-quarter face. The sky is fair, with scattered cumulus.
+Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
 No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > enter
 [chamber 1098173175083363, day 0.1182]
 A small room, holding a doorway and a screen.
+Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
 Ways on: out, further in.
 > carrying
 You are carrying a key.

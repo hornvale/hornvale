@@ -84,6 +84,8 @@ pub mod alchemy;
 pub mod chamber;
 pub mod character;
 pub mod chorus;
+pub mod circuit;
+pub mod circuit_readout;
 pub mod color_naming;
 pub mod components;
 pub mod delve_seating;
@@ -94,12 +96,14 @@ pub mod gazetteer;
 pub mod graph_derive;
 pub mod harvest;
 pub mod hazard;
+pub mod herds;
 pub mod history_bake;
 pub mod history_emit;
 pub mod knownness;
 pub mod observer;
 pub mod person_promote;
 pub mod render;
+pub mod residents;
 pub mod resolve;
 pub mod schedule;
 pub mod seed_sweep;
@@ -674,9 +678,7 @@ pub fn biome_class_of_formation(
         | Formation::Vent
         | Formation::Upwelling
         | Formation::OpenWater
-        | Formation::KarstCave
-        | Formation::LavaTube
-        | Formation::FractureCave => BiomeClass::Barren,
+        | Formation::Cave(_) => BiomeClass::Barren,
     }
 }
 
@@ -2506,35 +2508,13 @@ pub fn wild_concentrations_from(
         .map(|(kind, _)| kind.0.to_string())
         .collect();
     let biosphere = hornvale_species::biosphere_registry();
-    let is_mobile_beast = |label: &str| -> bool {
-        // A mobile beast: a WILD, non-sessile, non-settling kind — `social_form`
-        // is `Solitary` or `Gregarious` (not `Settled`, the peoplehood axis; not
-        // `Sessile`, a rooted phototroph that is placed but never agentified).
-        //
-        // …and not a SEA creature. The Vacancy opened the ocean to the habitat
-        // model, but the walk layer this feeds is a terrestrial surface game:
-        // there is no underwater locale, and every agent it mints carries a
-        // freshwater thirst drive it satisfies by pathing to drinkable water. A
-        // shark minted here is therefore permanently, unsatisfiably thirsty —
-        // measured, not theorised: agentifying the reef shark drove the health
-        // battery's null control to 0.94 thirst-caused distress and fired its
-        // bug alarm.
-        //
-        // The test is *predominantly* marine (majority uptake), not marine at
-        // all, so the amphibious kind still walks: a crocodile hauls out, and
-        // its 0.4 sea / 0.6 land vector is exactly the case the surface game
-        // can represent. A real habitat-medium axis (MAP-11) would state this
-        // properly; until then, what a creature eats is the honest proxy for
-        // where it lives, which is the same reasoning the supply mask uses.
-        biosphere.get_by_label(label).is_some_and(|b| {
-            let mobile = matches!(
-                b.social_form,
-                hornvale_species::SocialForm::Solitary | hornvale_species::SocialForm::Gregarious
-            );
-            let predominantly_marine = b.niche.weight(hornvale_kernel::MARINE_FORAGE) > 0.5;
-            mobile && !predominantly_marine
-        })
-    };
+    // The mobile-beast filter — shared with `herds::wild_herds_near` (The
+    // Roll) so the two questions ("the world's top-k beasts" vs "which
+    // beasts stand within call of HERE") cannot silently disagree on what
+    // counts as a wild, walkable beast. See `herds::is_mobile_beast`'s doc
+    // for the full rationale (settling-peoplehood and sea-creature
+    // exclusions).
+    let is_mobile_beast = |label: &str| -> bool { herds::is_mobile_beast(&biosphere, label) };
     // Each mobile beast's DENSEST home — the stack settlement where its local
     // abundance (its composition fraction × the catchment biomass) peaks. So a
     // charismatic beast present but never *dominant* (an apex over a wide range,
@@ -3578,7 +3558,7 @@ fn climate_at_era(ctx: &EraContext, inputs: &EraInputs) -> EraClimate {
         advanced as f64 / land as f64
     };
     EraClimate {
-        day: inputs.day,
+        day: WorldTime::from_std_days(inputs.day).expect("era day within tick range"),
         ice: advance,
         // Placeholder — see the doc comment above. Filled in for the
         // glacial-maximum era only, by `glacial_maximum_habitable`.
@@ -3731,7 +3711,7 @@ pub fn paleoclimate_from(
     // t = 0 is the present (newest); we look back to −WINDOW. Samples ascend
     // in absolute day so integration runs oldest → present.
     let n_steps = (DEEP_TIME_WINDOW_DAYS / ICE_STEP_DAYS).round() as usize;
-    let mut samples: Vec<(f64, f64)> = Vec::with_capacity(n_steps + 1);
+    let mut samples: Vec<(WorldTime, f64)> = Vec::with_capacity(n_steps + 1);
     for k in (0..=n_steps).rev() {
         let t = -(k as f64) * ICE_STEP_DAYS; // oldest (most negative) first
         let g = caloric_summer_index(
@@ -3740,7 +3720,10 @@ pub fn paleoclimate_from(
             forcing.eccentricity_at(t),
             forcing.precession_at(t),
         );
-        samples.push((t, g));
+        samples.push((
+            WorldTime::from_std_days(t).expect("ice sample day within tick range"),
+            g,
+        ));
     }
     let history = integrate_ice(&samples);
 
@@ -3754,10 +3737,18 @@ pub fn paleoclimate_from(
     for e in 0..CLIMATE_ERAS {
         let era_day = -DEEP_TIME_WINDOW_DAYS
             + (e as f64) * DEEP_TIME_WINDOW_DAYS / (CLIMATE_ERAS as f64 - 1.0);
-        // Nearest ice state by day (samples ascend).
+        // Nearest ice state by day (samples ascend). Compared in f64 standard
+        // days, not as `TickSpan`s: this keeps the exact same doubles being
+        // compared as before the `WorldTime` retype (`a.day`/`b.day` round-
+        // tripped losslessly at these magnitudes), so nearest-selection is
+        // bit-identical rather than merely equivalent.
         let state = history
             .iter()
-            .min_by(|a, b| (a.day - era_day).abs().total_cmp(&(b.day - era_day).abs()))
+            .min_by(|a, b| {
+                (a.day.as_std_days() - era_day)
+                    .abs()
+                    .total_cmp(&(b.day.as_std_days() - era_day).abs())
+            })
             .expect("history is non-empty");
         era_inputs.push(EraInputs {
             day: era_day,
@@ -3783,7 +3774,7 @@ pub fn paleoclimate_from(
         eras[i]
             .ice_fraction
             .total_cmp(&eras[j].ice_fraction)
-            .then(eras[j].day.total_cmp(&eras[i].day))
+            .then(eras[j].day.cmp(&eras[i].day))
     }) {
         eras[peak_idx].habitable = glacial_maximum_habitable(&ctx, &era_inputs[peak_idx]);
     }
@@ -3812,10 +3803,20 @@ pub fn paleoclimate_from(
 ///   and turns high-latitude vertices hostile, forcing migration — and it costs
 ///   one mean-temperature field per era (no moisture/biome work), the same
 ///   order the coarse ice diagnostic already pays.
-/// - **The day-axis is re-based onto the bake's `[start_year, end_year)`
-///   window** (oldest era → `start_year`, present → `end_year`), so `bake`'s
-///   `era_index_for` marches the glacial cycles forward across the simulated
-///   millennia rather than seeing every era stamped in deep-negative time.
+/// - **The bake's year axis is returned BESIDE the series, not inside it**
+///   (The Hallmark, Task 13). The bake needs the glacial cycles re-based onto
+///   its own `[start_year, end_year)` window (oldest era → `start_year`,
+///   present → `end_year`) so `bake`'s `era_index_for` marches them forward
+///   across the simulated millennia rather than seeing every era stamped in
+///   deep-negative time. That re-basing used to be written into
+///   [`EraClimate::day`], a paleoclimate field whose contract is **standard
+///   days** — so the field carried bake YEARS here and absolute days on
+///   `paleoclimate_from`'s path, two axes in one slot (registry row
+///   `DOM-era-day-axis`). The window is now a third return value, a bake-side
+///   `Vec<f64>` of years in era order, exactly as `EraAdjust` is already
+///   returned rather than added to a domain type this window does not own.
+///   `EraClimate.day` gets the era's true deep-time day on BOTH paths, from
+///   the identical expression.
 ///
 /// On the constant sky (no orbital forcing) there is no deep time: a single
 /// present-era mask is returned and the bake sees a stable world — no vertex
@@ -3829,17 +3830,20 @@ pub fn paleoclimate_from(
 /// into `habitable` (an iced vertex reads below-freezing, hence not habitable),
 /// so `factor` gates purely on habitability and never double-counts ice.
 // Returns the era series AND the per-era `EraAdjust` beside it (The Tense
-// §3.1). `EraClimate` carries `sea_level` but NOT the albedo temperature
+// §3.1) AND the per-era bake YEAR beside that (The Hallmark, Task 13).
+// `EraClimate` carries `sea_level` but NOT the albedo temperature
 // offset — it is consumed inside this function to build `habitable` and then
 // discarded — so the adjusts are returned as a parallel vector rather than
-// added as a field to a domain type this window does not own. The two vectors
-// are built in one pass and are the same length by construction.
+// added as a field to a domain type this window does not own. The years are
+// returned for the same reason and are the same shape of thing: a bake-side
+// quantity with no home in a paleoclimate type. All three vectors are built in
+// one pass and are the same length by construction.
 #[allow(clippy::type_complexity)]
 fn bake_eras(
     world: &World,
     terrain: &GeneratedTerrain,
     cfg: &history_bake::BakeConfig,
-) -> Result<(Vec<EraClimate>, Vec<EraAdjust>), BuildError> {
+) -> Result<(Vec<EraClimate>, Vec<EraAdjust>, Vec<f64>), BuildError> {
     let sky = sky_of(world)?;
     let geo = terrain.geosphere();
     let elevation = terrain.globe().elevation.clone();
@@ -3895,7 +3899,13 @@ fn bake_eras(
         );
         return Ok((
             vec![EraClimate {
-                day: cfg.start_year,
+                // The present, in absolute standard days — the same instant
+                // `paleoclimate_from`'s newest era carries (`-WINDOW + 24 *
+                // WINDOW / 24` is exactly `0.0`). This slot used to hold
+                // `cfg.start_year`, a bake YEAR; see the doc above.
+                // `WorldTime::GENESIS` is the same committed value (0.0 days)
+                // by construction.
+                day: WorldTime::GENESIS,
                 ice: hornvale_kernel::VertexMap::from_fn(geo, |_| false),
                 habitable,
                 sea_level: present_sea_level,
@@ -3903,6 +3913,10 @@ fn bake_eras(
             }],
             // No forcing to replay: the one era IS the present.
             vec![EraAdjust::present(terrain)],
+            // ...and it opens the bake window. With one era, `era_index_for`
+            // returns 0 for every year regardless, so this value binds
+            // nothing; it is here because the vectors are parallel.
+            vec![cfg.start_year],
         ));
     };
     let forcing = &system.forcing;
@@ -3912,7 +3926,7 @@ fn bake_eras(
     // temperature offsets and eustatic sea levels the bake replays are the
     // same states the strata are extracted from.
     let n_steps = (DEEP_TIME_WINDOW_DAYS / ICE_STEP_DAYS).round() as usize;
-    let mut samples: Vec<(f64, f64)> = Vec::with_capacity(n_steps + 1);
+    let mut samples: Vec<(WorldTime, f64)> = Vec::with_capacity(n_steps + 1);
     for k in (0..=n_steps).rev() {
         let t = -(k as f64) * ICE_STEP_DAYS;
         let g = caloric_summer_index(
@@ -3921,29 +3935,43 @@ fn bake_eras(
             forcing.eccentricity_at(t),
             forcing.precession_at(t),
         );
-        samples.push((t, g));
+        samples.push((
+            WorldTime::from_std_days(t).expect("ice sample day within tick range"),
+            g,
+        ));
     }
     let history = integrate_ice(&samples);
 
     let mut eras: Vec<EraClimate> = Vec::with_capacity(CLIMATE_ERAS);
     let mut adjusts: Vec<EraAdjust> = Vec::with_capacity(CLIMATE_ERAS);
+    let mut years: Vec<f64> = Vec::with_capacity(CLIMATE_ERAS);
     for e in 0..CLIMATE_ERAS {
         let era_day = -DEEP_TIME_WINDOW_DAYS
             + (e as f64) * DEEP_TIME_WINDOW_DAYS / (CLIMATE_ERAS as f64 - 1.0);
+        // Compared in f64 standard days, not `TickSpan`s — see the identical
+        // note on `paleoclimate_from`'s nearest-sample search above.
         let state = history
             .iter()
-            .min_by(|a, b| (a.day - era_day).abs().total_cmp(&(b.day - era_day).abs()))
+            .min_by(|a, b| {
+                (a.day.as_std_days() - era_day)
+                    .abs()
+                    .total_cmp(&(b.day.as_std_days() - era_day).abs())
+            })
             .expect("history is non-empty");
         let sea_level =
             ReferenceElevation::new(present_sea_level.get() + state.sea_level_change.get())
                 .expect("present sea level plus a finite eustatic change is finite");
         let habitable = livable_mask(sea_level, state.temp_offset);
         // Re-base the deep-time era onto the bake window (oldest → start,
-        // present → end), preserving order so `era_for` advances monotonically.
-        let bake_day = cfg.start_year
+        // present → end), preserving order so `era_for` advances
+        // monotonically. This is a bake YEAR and it goes in the bake's own
+        // vector — `EraClimate.day` below takes the era's real `era_day`, the
+        // absolute standard day the ice lookup above already ran against.
+        let bake_year = cfg.start_year
             + (e as f64) * (cfg.end_year - cfg.start_year) / (CLIMATE_ERAS as f64 - 1.0);
+        years.push(bake_year);
         eras.push(EraClimate {
-            day: bake_day,
+            day: WorldTime::from_std_days(era_day).expect("era day within tick range"),
             ice: hornvale_kernel::VertexMap::from_fn(geo, |_| false),
             habitable,
             sea_level,
@@ -3956,7 +3984,7 @@ fn bake_eras(
             sea_level,
         });
     }
-    Ok((eras, adjusts))
+    Ok((eras, adjusts, years))
 }
 
 /// Headline biome/habitability lines for the almanac's Land section.
@@ -4369,7 +4397,7 @@ fn deep_time_lines_from(
     }
     Ok(vec![format!(
         "The frost retreated: at the glacial maximum (day {:.0}), ice advanced over {:.0}% of the land.",
-        record.glacial_maximum_day,
+        record.glacial_maximum_day.as_std_days(),
         record.max_ice_fraction * 100.0
     )])
 }
@@ -7761,7 +7789,7 @@ fn bake_history_from(
         hornvale_terrain::river_proximity(geo, &water_kind, hornvale_terrain::RIVER_REACH);
     let paleo = paleoclimate_from(world, terrain)?;
     let mut cfg = history_bake::BakeConfig::default_millennia();
-    let (eras, era_adjusts) = bake_eras(world, terrain, &cfg)?;
+    let (eras, era_adjusts, era_years) = bake_eras(world, terrain, &cfg)?;
     let peoples: Vec<KindId> = species_set.iter().map(|&n| KindId(n)).collect();
 
     // THE PER-PEOPLE CAPACITY FIELDS, and the one ordering that ties them to
@@ -7961,6 +7989,7 @@ fn bake_history_from(
         &river_prox,
         &prospectivity,
         &eras,
+        &era_years,
         &paleo.refugia,
         &peoples,
         &seating_rungs,
@@ -9973,18 +10002,6 @@ pub fn genesis_notes(world: &World) -> Result<Vec<String>, BuildError> {
     })
 }
 
-/// Map religion's `Sentiment` onto language's own copy of the same
-/// distinction (spec §6): `domains/language` never imports
-/// `hornvale-religion`, so this conversion lives only here, at the
-/// composition root.
-fn line_sentiment_of(sentiment: hornvale_religion::Sentiment) -> hornvale_language::LineSentiment {
-    match sentiment {
-        hornvale_religion::Sentiment::Eternal => hornvale_language::LineSentiment::Eternal,
-        hornvale_religion::Sentiment::Cyclic => hornvale_language::LineSentiment::Cyclic,
-        hornvale_religion::Sentiment::Ambient => hornvale_language::LineSentiment::Ambient,
-    }
-}
-
 /// Build one belief's `LineContent` (spec §6). Every field but the period
 /// comes straight off the belief's own committed facts; `period_days` is
 /// **not** itself a committed fact (`religion::genesis` never stores one on
@@ -10000,7 +10017,7 @@ fn line_content_for(
     hornvale_language::LineContent {
         deity: belief.deity.clone(),
         epithet: belief.epithet.clone(),
-        sentiment: line_sentiment_of(belief.sentiment),
+        sentiment: belief.sentiment,
         period_days: phenomenon.and_then(|p| p.period_days),
         high_god: belief.high_god,
     }

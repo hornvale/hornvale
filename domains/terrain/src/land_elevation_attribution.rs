@@ -332,7 +332,7 @@ fn the_land_elevation_terms_attribute_their_variance() {
     for seed in 0..SEED_COUNT {
         let outcome = generate(Seed(seed), &geo, &TerrainPins::default())
             .expect("default pins never refuse a world");
-        let globe = &outcome.globe;
+        let globe = &outcome.value;
         let terms = globe_elevation_terms(&geo, globe, Seed(seed));
         let sea = globe.sea_level.get();
         sea_levels.push(sea);

@@ -1539,7 +1539,7 @@ mod tests {
         let geo = Geosphere::new(4);
         let outcome =
             crate::globe::generate(Seed(42), &geo, &crate::pins::TerrainPins::default()).unwrap();
-        let g = &outcome.globe;
+        let g = &outcome.value;
         let carbonate = VertexMap::from_fn(&geo, |c| g.lithology.get(c).carbonate);
         let inc = carve_incision(
             &geo,
@@ -1588,7 +1588,7 @@ mod tests {
         let geo = Geosphere::new(3);
         let outcome =
             crate::globe::generate(Seed(7), &geo, &crate::pins::TerrainPins::default()).unwrap();
-        let g = &outcome.globe;
+        let g = &outcome.value;
         let p = CarveParams::default();
         let adjusted = apply_repose(&geo, &g.elevation, g.sea_level, &p);
         let total: f64 = adjusted.iter().map(|(_, d)| *d).sum();
@@ -1620,7 +1620,7 @@ mod tests {
         let geo = Geosphere::new(3);
         let outcome =
             crate::globe::generate(Seed(7), &geo, &crate::pins::TerrainPins::default()).unwrap();
-        let g = &outcome.globe;
+        let g = &outcome.value;
         let p = CarveParams::default();
         let carbonate = VertexMap::from_fn(&geo, |c| g.lithology.get(c).carbonate);
         let incision = carve_incision(
@@ -1659,7 +1659,7 @@ mod tests {
         let geo = Geosphere::new(4);
         let outcome =
             crate::globe::generate(Seed(42), &geo, &crate::pins::TerrainPins::default()).unwrap();
-        let g = &outcome.globe;
+        let g = &outcome.value;
         let p = CarveParams::default();
         let carbonate = VertexMap::from_fn(&geo, |c| g.lithology.get(c).carbonate);
         let incision = carve_incision(
@@ -1722,7 +1722,7 @@ mod tests {
         let geo = Geosphere::new(4);
         let outcome =
             crate::globe::generate(Seed(3), &geo, &crate::pins::TerrainPins::default()).unwrap();
-        let g = &outcome.globe;
+        let g = &outcome.value;
         let p = CarveParams::default();
         let carbonate = VertexMap::from_fn(&geo, |c| g.lithology.get(c).carbonate);
         let incision = carve_incision(
@@ -1807,7 +1807,7 @@ mod tests {
         let geo = Geosphere::new(4);
         let outcome =
             crate::globe::generate(Seed(12), &geo, &crate::pins::TerrainPins::default()).unwrap();
-        let g = &outcome.globe;
+        let g = &outcome.value;
         let p = CarveParams::default();
         // Shelf mode, post-trim: every non-delta, non-atoll marine
         // sediment vertex was re-capped by `trim_to_sea` to exactly
@@ -2559,7 +2559,7 @@ mod tests {
             let outcome =
                 crate::globe::generate(Seed(seed), &geo, &crate::pins::TerrainPins::default())
                     .unwrap();
-            total += outcome.globe.waterfall_sites.len();
+            total += outcome.value.waterfall_sites.len();
         }
         assert!(total > 0, "no waterfalls found across seeds 1..=8 at L6");
     }
@@ -2569,7 +2569,7 @@ mod tests {
         let geo = Geosphere::new(3);
         let g = crate::globe::generate(Seed(11), &geo, &crate::pins::TerrainPins::default())
             .unwrap()
-            .globe;
+            .value;
         let (drainage, _) = crate::drainage::drainage_field(&geo, &g.elevation, g.sea_level);
         let downhill = crate::drainage::downhill_targets(&geo, &g.elevation, g.sea_level);
         // Feed the same drainage/downhill/sea-level in as both "pre" and
@@ -2594,7 +2594,7 @@ mod tests {
         let geo = Geosphere::new(3);
         let g = crate::globe::generate(Seed(11), &geo, &crate::pins::TerrainPins::default())
             .unwrap()
-            .globe;
+            .value;
         let (drainage, _) = crate::drainage::drainage_field(&geo, &g.elevation, g.sea_level);
         let downhill = crate::drainage::downhill_targets(&geo, &g.elevation, g.sea_level);
         let fraction = rerouted_flow_fraction(
@@ -2621,7 +2621,7 @@ mod tests {
         let geo = Geosphere::new(3);
         let g = crate::globe::generate(Seed(11), &geo, &crate::pins::TerrainPins::default())
             .unwrap()
-            .globe;
+            .value;
         let (drainage, _) = crate::drainage::drainage_field(&geo, &g.elevation, g.sea_level);
         let downhill = crate::drainage::downhill_targets(&geo, &g.elevation, g.sea_level);
 

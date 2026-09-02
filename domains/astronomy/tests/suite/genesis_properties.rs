@@ -13,7 +13,7 @@ fn every_default_system_satisfies_every_invariant() {
     for seed in 0..128 {
         let outcome = generate(Seed(seed), &SkyPins::default())
             .unwrap_or_else(|e| panic!("seed {seed} failed default genesis: {e}"));
-        let system = &outcome.system;
+        let system = &outcome.value;
         let (inner, outer) = (
             system.star.habitable_zone.inner(),
             system.star.habitable_zone.outer(),
@@ -50,7 +50,7 @@ fn the_pin_matrix_is_honored() {
             ..SkyPins::default()
         };
         assert_eq!(
-            generate(Seed(42), &pins).unwrap().system.moons.len() as u32,
+            generate(Seed(42), &pins).unwrap().value.moons.len() as u32,
             moons
         );
     }
@@ -59,7 +59,7 @@ fn the_pin_matrix_is_honored() {
         ..SkyPins::default()
     };
     assert_eq!(
-        generate(Seed(42), &pins).unwrap().system.anchor.rotation,
+        generate(Seed(42), &pins).unwrap().value.anchor.rotation,
         Rotation::Locked
     );
     let pins = SkyPins {
@@ -69,7 +69,7 @@ fn the_pin_matrix_is_honored() {
     assert_eq!(
         generate(Seed(42), &pins)
             .unwrap()
-            .system
+            .value
             .anchor
             .obliquity
             .get(),
@@ -80,7 +80,7 @@ fn the_pin_matrix_is_honored() {
         ..SkyPins::default()
     };
     assert_eq!(
-        generate(Seed(42), &pins).unwrap().system.neighbors[0].class,
+        generate(Seed(42), &pins).unwrap().value.neighbors[0].class,
         NeighborClass::BlueGiant
     );
 }
@@ -112,13 +112,13 @@ fn unsatisfiable_pins_fail_loudly_with_the_physical_reason() {
 #[test]
 fn wanderers_pin_leaves_the_rest_of_the_sky_untouched() {
     for seed in [1u64, 7, 42, 99] {
-        let unpinned = generate(Seed(seed), &SkyPins::default()).unwrap().system;
+        let unpinned = generate(Seed(seed), &SkyPins::default()).unwrap().value;
         for n in 0..=4u32 {
             let pins = SkyPins {
                 wanderers: Some(n),
                 ..SkyPins::default()
             };
-            let pinned = generate(Seed(seed), &pins).unwrap().system;
+            let pinned = generate(Seed(seed), &pins).unwrap().value;
             assert_eq!(pinned.wanderers.len() as u32, n);
             assert_eq!(unpinned.star, pinned.star);
             assert_eq!(unpinned.anchor, pinned.anchor);
@@ -132,12 +132,12 @@ fn wanderers_pin_leaves_the_rest_of_the_sky_untouched() {
 #[test]
 fn pinned_worlds_differ_from_unpinned_only_downstream_of_the_pin() {
     // Same seed, moons pinned to the drawn count => identical system.
-    let default = generate(Seed(42), &SkyPins::default()).unwrap().system;
+    let default = generate(Seed(42), &SkyPins::default()).unwrap().value;
     let pinned_same = SkyPins {
         moons: Some(MoonsPin::exact(default.moons.len() as u32).unwrap()),
         ..SkyPins::default()
     };
-    assert_eq!(generate(Seed(42), &pinned_same).unwrap().system, default);
+    assert_eq!(generate(Seed(42), &pinned_same).unwrap().value, default);
 }
 
 #[test]
@@ -145,13 +145,13 @@ fn pin_isolation_holds_at_the_system_level() {
     // A Normal rotation pin re-affirms the drawn regime; it must not perturb
     // any other draw. Seed 42's default anchor draws Spinning, so the pinned
     // system must be byte-for-byte identical to the default.
-    let default = generate(Seed(42), &SkyPins::default()).unwrap().system;
+    let default = generate(Seed(42), &SkyPins::default()).unwrap().value;
     assert!(matches!(default.anchor.rotation, Rotation::Spinning { .. }));
     let pins = SkyPins {
         rotation: Some(RotationPin::Normal),
         ..SkyPins::default()
     };
-    assert_eq!(generate(Seed(42), &pins).unwrap().system, default);
+    assert_eq!(generate(Seed(42), &pins).unwrap().value, default);
 
     // A neighbor pin overrides the showpiece's class only; the rest of the
     // neighborhood (count and distance draws) must be untouched. Compare the
@@ -163,11 +163,11 @@ fn pin_isolation_holds_at_the_system_level() {
         ..SkyPins::default()
     };
     let pinned = generate(Seed(42), &pins).unwrap();
-    assert_eq!(default.neighbors.len(), pinned.system.neighbors.len());
+    assert_eq!(default.neighbors.len(), pinned.value.neighbors.len());
     let mut default_distances: Vec<f64> =
         default.neighbors.iter().map(|n| n.distance.get()).collect();
     let mut pinned_distances: Vec<f64> = pinned
-        .system
+        .value
         .neighbors
         .iter()
         .map(|n| n.distance.get())
@@ -177,7 +177,7 @@ fn pin_isolation_holds_at_the_system_level() {
     assert_eq!(default_distances, pinned_distances);
     assert!(
         pinned
-            .system
+            .value
             .neighbors
             .iter()
             .any(|n| n.class == NeighborClass::BlueGiant)
@@ -194,7 +194,7 @@ fn obliquity_at_zero_matches_the_anchor_drift_anchor_identity() {
     for seed in 0..64u64 {
         let system = generate(Seed(seed), &SkyPins::default())
             .unwrap_or_else(|e| panic!("seed {seed} failed default genesis: {e}"))
-            .system;
+            .value;
         assert_eq!(
             system.forcing.obliquity_at(0.0),
             system.anchor.obliquity.get(),
@@ -215,7 +215,7 @@ fn forcing_is_pin_isolated() {
     for seed in 0..64u64 {
         let base = generate(Seed(seed), &SkyPins::default())
             .unwrap_or_else(|e| panic!("seed {seed} failed default genesis: {e}"))
-            .system;
+            .value;
         let zeroed = generate(
             Seed(seed),
             &SkyPins {
@@ -224,7 +224,7 @@ fn forcing_is_pin_isolated() {
             },
         )
         .unwrap_or_else(|e| panic!("seed {seed} failed zeroed genesis: {e}"))
-        .system;
+        .value;
         assert_eq!(
             base.star, zeroed.star,
             "seed {seed}: star drifted under the pin"
@@ -290,7 +290,7 @@ fn forcing_zero_pin_yields_zeroed_amplitudes() {
         };
         let forcing = generate(Seed(seed), &pins)
             .unwrap_or_else(|e| panic!("seed {seed} failed zeroed genesis: {e}"))
-            .system
+            .value
             .forcing;
         assert_eq!(forcing.ecc_mean, 0.0, "seed {seed}: ecc_mean not zeroed");
         assert_eq!(
@@ -315,7 +315,7 @@ fn equatorial_daylight_is_flat_and_every_latitude_stays_in_range() {
             },
         )
         .unwrap()
-        .system;
+        .value;
         let cal = calendar_of(&system);
         let year = system.anchor.year.get();
         for k in 0..8 {
@@ -457,13 +457,13 @@ fn neighbor_pin_does_not_move_any_star() {
     )
     .unwrap();
     let mut a: Vec<(f64, f64)> = unpinned
-        .system
+        .value
         .neighbors
         .iter()
         .map(|n| (n.declination, n.right_ascension))
         .collect();
     let mut b: Vec<(f64, f64)> = pinned
-        .system
+        .value
         .neighbors
         .iter()
         .map(|n| (n.declination, n.right_ascension))
@@ -481,7 +481,7 @@ fn neighbor_pin_does_not_move_any_star() {
 #[test]
 fn pinned_moon_counts_draw_identical_node_longitudes() {
     for seed in 0..32u64 {
-        let unpinned = generate(Seed(seed), &SkyPins::default()).unwrap().system;
+        let unpinned = generate(Seed(seed), &SkyPins::default()).unwrap().value;
         let n = unpinned.moons.len() as u32;
         if n == 0 {
             continue;
@@ -490,7 +490,7 @@ fn pinned_moon_counts_draw_identical_node_longitudes() {
             moons: Some(MoonsPin::exact(n).unwrap()),
             ..SkyPins::default()
         };
-        let pinned = generate(Seed(seed), &pins).unwrap().system;
+        let pinned = generate(Seed(seed), &pins).unwrap().value;
         let a: Vec<f64> = unpinned
             .moons
             .iter()
@@ -577,7 +577,7 @@ fn anchor_battery_orbit_kepler_and_rotation_invariants() {
     let mut saw_retrograde = false;
     for seed in 0..256u64 {
         let outcome = generate(hornvale_kernel::Seed(seed), &SkyPins::default()).unwrap();
-        let s = &outcome.system;
+        let s = &outcome.value;
         let zone = s.star.habitable_zone;
         assert!(
             (zone.inner().get()..=zone.outer().get()).contains(&s.anchor.orbit.get()),
@@ -624,7 +624,7 @@ fn neighbor_battery_counts_coordinates_and_determinism() {
         let a = generate(hornvale_kernel::Seed(seed), &SkyPins::default()).unwrap();
         let b = generate(hornvale_kernel::Seed(seed), &SkyPins::default()).unwrap();
         assert_eq!(a, b, "seed {seed}: regeneration must be byte-identical");
-        let n = &a.system.neighbors;
+        let n = &a.value.neighbors;
         assert!(
             (2..=5).contains(&n.len()),
             "seed {seed}: {} neighbors",
@@ -647,7 +647,7 @@ fn alignment_battery_dating_round_trip() {
     use hornvale_astronomy::{Rotation, SkyPins, calendar_of, generate};
     for seed in 0..128u64 {
         let outcome = generate(hornvale_kernel::Seed(seed), &SkyPins::default()).unwrap();
-        let s = &outcome.system;
+        let s = &outcome.value;
         if matches!(s.anchor.rotation, Rotation::Locked) || s.forcing.obliquity_amp == 0.0 {
             continue;
         }
@@ -676,12 +676,12 @@ fn alignment_battery_dating_round_trip() {
 fn the_greenhouse_residual_is_drawn_and_isolated() {
     for seed in 0..100u64 {
         let outcome = generate(Seed(seed), &SkyPins::default()).unwrap();
-        let a = &outcome.system.anchor;
+        let a = &outcome.value.anchor;
         assert_eq!(
             *a,
             generate(Seed(seed), &SkyPins::default())
                 .unwrap()
-                .system
+                .value
                 .anchor
         );
         assert!(a.greenhouse_residual.is_finite());

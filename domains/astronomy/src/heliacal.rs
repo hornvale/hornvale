@@ -188,7 +188,7 @@ mod tests {
             forcing: Some(ForcingPin::Zero),
             ..SkyPins::default()
         };
-        let mut system = generate(Seed(42), &pins).unwrap().system;
+        let mut system = generate(Seed(42), &pins).unwrap().value;
         system.neighbors.truncate(1);
         system.neighbors[0].declination = -10.0; // rises and sets at mid-northern latitudes
         system.neighbors[0].right_ascension = 45.0;
@@ -201,7 +201,7 @@ mod tests {
             rotation: Some(RotationPin::Locked),
             ..SkyPins::default()
         };
-        generate(Seed(42), &pins).unwrap().system
+        generate(Seed(42), &pins).unwrap().value
     }
 
     #[test]

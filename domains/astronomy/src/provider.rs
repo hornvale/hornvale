@@ -430,7 +430,7 @@ mod tests {
             wanderers: vec![],
         };
         let sky = GeneratedSky::new(GenesisOutcome {
-            system,
+            value: system,
             notes: Vec::new(),
         });
         assert!(sky.calendar().moon_phase(StdInstant(0.0), 0).is_none());
@@ -496,7 +496,7 @@ mod tests {
             wanderers: vec![],
         };
         GeneratedSky::new(GenesisOutcome {
-            system,
+            value: system,
             notes: Vec::new(),
         })
     }
@@ -695,7 +695,7 @@ mod tests {
         use crate::eclipses::{EclipseBody, eclipse_events, ground_track, sub_solar_longitude_deg};
         let (system, calendar) = crate::eclipses::luna_sol();
         let sky = GeneratedSky::new(crate::system::GenesisOutcome {
-            system: system.clone(),
+            value: system.clone(),
             notes: Vec::new(),
         });
         let events = eclipse_events(
@@ -743,7 +743,7 @@ mod tests {
         use crate::eclipses::{EclipseBody, eclipse_events, sub_solar_longitude_deg};
         let (system, calendar) = crate::eclipses::luna_sol();
         let sky = GeneratedSky::new(crate::system::GenesisOutcome {
-            system: system.clone(),
+            value: system.clone(),
             notes: Vec::new(),
         });
         let events = eclipse_events(
@@ -1547,10 +1547,10 @@ const STAR_VISIBILITY: f64 = 0.75;
 
 impl GeneratedSky {
     /// Wrap a genesis outcome as a live provider.
-    pub fn new(outcome: GenesisOutcome) -> GeneratedSky {
-        let calendar = calendar_of(&outcome.system);
+    pub fn new(outcome: GenesisOutcome<StarSystem>) -> GeneratedSky {
+        let calendar = calendar_of(&outcome.value);
         GeneratedSky {
-            system: outcome.system,
+            system: outcome.value,
             calendar,
             notes: outcome.notes,
         }

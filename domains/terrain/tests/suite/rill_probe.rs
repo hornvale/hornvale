@@ -248,7 +248,7 @@ fn containment_and_channel_area_of_the_branch_network() {
     );
     for seed in SEEDS {
         let outcome = generate(Seed(seed), &geo, &TerrainPins::default()).expect("seed generates");
-        let globe = &outcome.globe;
+        let globe = &outcome.value;
         let net = ChannelNetwork::build(globe, &geo, globe.channel_noise_seed());
         let cut = CatchmentCut::Drawn(globe.rill_partition_seed());
 
@@ -609,7 +609,7 @@ fn horton_ratios_of_the_branch_network() {
     let geo = Geosphere::new(LEVEL);
     for seed in SEEDS {
         let outcome = generate(Seed(seed), &geo, &TerrainPins::default()).expect("seed generates");
-        let globe = &outcome.globe;
+        let globe = &outcome.value;
         let net = ChannelNetwork::build(globe, &geo, globe.channel_noise_seed());
 
         // Basins: group reaches by the vertex their downhill chain terminates in.

@@ -1,17 +1,7 @@
 //! Typed quantities for paleoclimate (decision 0008): coherent units as
 //! validating newtypes; dimensionless ratios stay bare f64.
 
-/// Why a quantity constructor refused a value.
-/// type-audit: bare-ok(identifier-text: unit), bare-ok(diagnostic-value: value), bare-ok(identifier-text: reason)
-#[derive(Debug, Clone, PartialEq)]
-pub struct UnitError {
-    /// Human name of the unit.
-    pub unit: &'static str,
-    /// The rejected value.
-    pub value: f64,
-    /// The rule it violates.
-    pub reason: &'static str,
-}
+pub use hornvale_kernel::UnitError;
 
 /// Global ice volume as a dimensionless fraction of the maximum, in `[0, 1]`.
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]

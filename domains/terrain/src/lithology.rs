@@ -1109,7 +1109,7 @@ mod tests {
         for seed in [1u64, 7, 42, 99] {
             let geo = Geosphere::new(4);
             let outcome = generate(Seed(seed), &geo, &TerrainPins::default()).unwrap();
-            let lith = assemble_material(&geo, &outcome.globe);
+            let lith = assemble_material(&geo, &outcome.value);
             for vertex in geo.vertices() {
                 match lith.get(vertex).margin {
                     MarginPolarity::Active => saw_active = true,
@@ -1126,7 +1126,7 @@ mod tests {
     fn buffer_axes_are_bounded_and_thaumic_is_zero() {
         let geo = Geosphere::new(4);
         let outcome = generate(Seed(42), &geo, &TerrainPins::default()).unwrap();
-        let lith = assemble_material(&geo, &outcome.globe);
+        let lith = assemble_material(&geo, &outcome.value);
         for vertex in geo.vertices() {
             let b = *lith.get(vertex);
             for v in [
@@ -1314,11 +1314,11 @@ mod tests {
     fn oceanic_vertices_are_mafic_active_margins_are_labeled() {
         let geo = Geosphere::new(4);
         let outcome = generate(Seed(42), &geo, &TerrainPins::default()).unwrap();
-        let lith = assemble_material(&geo, &outcome.globe);
+        let lith = assemble_material(&geo, &outcome.value);
         // Oceanic floor (thin crust) reads low-silica (mafic) and Oceanic margin.
         let ocean = geo
             .vertices()
-            .find(|c| *outcome.globe.crust.get(*c) < crate::crust::CONTINENTAL_THRESHOLD_KM)
+            .find(|c| *outcome.value.crust.get(*c) < crate::crust::CONTINENTAL_THRESHOLD_KM)
             .unwrap();
         assert!(lith.get(ocean).silica < 0.5);
         assert_eq!(lith.get(ocean).margin, MarginPolarity::Oceanic);

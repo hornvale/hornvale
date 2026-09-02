@@ -9,32 +9,11 @@ use crate::boundaries::BoundaryKind;
 use crate::lithology::MaterialBuffer;
 use crate::strata::Horizon;
 
-/// A cave type, by the lithologic process that opened the void.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum CaveKind {
-    /// Carbonate dissolution (wet limestone).
-    Karst,
-    /// Drained basaltic/volcanic tube.
-    LavaTube,
-    /// Fault/fracture void in tectonically active rock.
-    Fracture,
-}
-
-impl CaveKind {
-    /// The three cave-kind names in stable order — the self-describing
-    /// legend for scene emission (mirrors `WaterKind::LEGEND`).
-    pub const LEGEND: [&'static str; 3] = ["karst", "lava-tube", "fracture"];
-
-    /// Stable name, for scene emission.
-    /// type-audit: bare-ok(identifier-text: return)
-    pub fn name(self) -> &'static str {
-        match self {
-            CaveKind::Karst => "karst",
-            CaveKind::LavaTube => "lava-tube",
-            CaveKind::Fracture => "fracture",
-        }
-    }
-}
+/// The cave-kind roster now lives in the kernel (decision 0517 clause (a)):
+/// shared by terrain (which derives it) and any window that names a void by
+/// the process that opened it. Re-exported here so every existing
+/// `hornvale_terrain::CaveKind` reference compiles unchanged.
+pub use hornvale_kernel::CaveKind;
 
 /// A located cave at a vertex.
 ///

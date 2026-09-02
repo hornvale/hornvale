@@ -607,6 +607,15 @@ mod tests {
                 // settlement's mind. See
                 // `windows/worldgen/src/disposition.rs`.
                 "settlement/disposition v1",
+                // The Roll, Task 3: the per-resident draw — a name salt, an
+                // age and three MindVector dial deviations, on one fresh
+                // stream per resident. Additive at v1 — a NEW label, so it
+                // perturbs no existing stream — and versioned from birth for
+                // the same reason `settlement/disposition v1` above is: the
+                // draw shape (mirroring `disposition::perturb`) and the
+                // (site, ordinal) key are both save-format contracts. See
+                // `windows/worldgen/src/residents.rs`.
+                "settlement/resident v1",
                 // The Winze, Task 2: whether one expansion out of
                 // `Bake::grow` is a WORKING rather than a farm — the
                 // second siting objective that makes `Function::Mine`
@@ -632,14 +641,11 @@ mod tests {
                 // `windows/vessel/src/underworld_level/mod.rs`'s
                 // `generate_descent`.
                 "underworld/level/descent v1",
-                // The Adit, Task 2: the underworld level generator's
-                // partition-tree split-or-leaf decisions. Versioned from
-                // birth like the other entries in this golden. Task 1's
-                // `underworld/level/placeholder v1` label is retired
-                // outright and never reused for a different meaning; this
-                // is the label that replaces its one call site. See
-                // `windows/vessel/src/underworld_level/region.rs`.
-                "underworld/level/partition v1",
+                // **underworld/level/partition v1 is GONE** (The Crosscut,
+                // Task 3): the partition tree it drew is retired, nothing
+                // derives from it, and a leg nothing reads must not sit in
+                // a stamp claiming a world reads it — retired and never
+                // reused, as chamber/branch-root/v1 was.
                 // The Adit, Task 3: the partitioned-rooms content
                 // generator, shared by the angular (Fracture-biased) and
                 // rooms-and-corridors (worked) leaf styles — one label
@@ -658,6 +664,21 @@ mod tests {
                 // generator (LavaTube-biased leaves). See
                 // `windows/vessel/src/underworld_level/carve.rs`.
                 "underworld/level/tunneler v1",
+                // The Crosscut, Task 1: the descent plan's four growth
+                // legs — the spine (entrance and per-level stair cells), a
+                // cycle's attachment/segment-length/floor choice, which
+                // passage a series extension lengthens, and the shared
+                // coordinate a stairway's two ends land on. All four are
+                // NEW labels, additive at v1: each derives its own
+                // independent stream and perturbs none of the others, so no
+                // existing world's draws move. Versioned from birth like
+                // every sibling here, because each key is a save-format
+                // contract the moment growth reads it. See
+                // `windows/worldgen/src/streams.rs`.
+                "underworld/plan/cycle v1",
+                "underworld/plan/extend v1",
+                "underworld/plan/spine v1",
+                "underworld/plan/stair v1",
                 // The Repose: the volcano-identity derivation. Additive at
                 // v1 — a NEW label, so it perturbs no existing stream, and
                 // C0 commits nothing at all (spec §3.2 puts the whole object

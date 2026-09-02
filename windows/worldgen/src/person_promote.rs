@@ -5,9 +5,10 @@
 //! it reads `domains/history`'s occupation records, and a domain crate may
 //! reach only the kernel (decision 0002).
 
+use hornvale_history::descent::Kinship;
 use hornvale_history::flesh::{RoleHandle, founder_handle};
-use hornvale_history::record::OccupationRecord;
-use hornvale_kernel::{EntityId, KindId};
+use hornvale_history::record::{Founding, OccupationRecord};
+use hornvale_kernel::{EntityId, Fact, KindId, Value, WorldTime};
 use std::collections::BTreeMap;
 
 use crate::{language_of_wc, morph_options};
@@ -245,6 +246,34 @@ pub fn select_founders(records: &[OccupationRecord]) -> FounderCast {
 /// living person is the absence of one. A species with no lifespan
 /// (ametabolic) yields no death fact either, which reads as "not known to have
 /// died", and one with no maturity falls back to founding day as birth.
+///
+/// **Also commits `parent-of`/`kin-of` (spec §4.3, decision 0578)**, in a
+/// second pass after every founder has an `EntityId`. Resolved through
+/// ENTITY IDENTITY, never `RoleHandle` equality: `founder_of`'s handle space
+/// collides on ~3.5% of seed 42's occupations (Task 1's ledger entry #6,
+/// `founding_key_from` with no discrimination tail), so matching a promoted
+/// founder by handle would misattribute roughly 1 in 100 forebear edges — a
+/// wrong fact in a saved world. `records[i].founded_from` already carries the
+/// mother occupation's `EntityId` directly, with no handle in the path, and
+/// `Founder::community` is that same occupation's id for whichever cast
+/// member founded it, so a plain `EntityId -> cast index` map answers "is
+/// this founder's forebear ALSO promoted" without ever computing a handle.
+/// Consumes no `Stream`: the classification (`Sibling` vs `Ancestor`, which
+/// chooses `kin-of` vs `parent-of`) comes from [`forebear_of`], itself a
+/// total function of already-committed founding years and the species
+/// allometry table — no `Seed`, no draw.
+///
+/// `parent-of` fires ONLY for `Ancestor(1)` (one generation removed — a
+/// true parent under the registered `parent` concept's own "father or
+/// mother" definition); every other classification (`Sibling`, or
+/// `Ancestor(n)` for `n != 1`) commits `kin-of` instead. Both are committed
+/// `(forebear, predicate, descendant)` — the forebear is the SUBJECT — so
+/// the sentence reads true left-to-right under registry naming rule 4, and
+/// both are `functional: false`: a forebear may found more than one
+/// daughter community (seed 42 has one with three), so the subject side is
+/// not structurally single-valued the way the descendant side is. See
+/// review round 1 (`docs/superpowers/ledgers/2026-09-01-the-avowal.md`
+/// entry #13) for the full correction history.
 pub fn promote(
     world: &mut hornvale_kernel::World,
     wc: &crate::components::WorldComponents,
@@ -279,6 +308,16 @@ pub fn promote(
         remembered: cast,
         unremembered: _,
     } = select_founders(&records);
+
+    // occupation EntityId -> cast index, for the entity-identity forebear
+    // resolution below. Built once, before minting, from `Founder::community`
+    // — the occupation each cast member founded — never from a `RoleHandle`.
+    let community_to_cast: BTreeMap<EntityId, usize> = cast
+        .iter()
+        .enumerate()
+        .map(|(i, f)| (f.community, i))
+        .collect();
+
     let mut seeds = Vec::with_capacity(cast.len());
     for f in &cast {
         let life = wc
@@ -338,7 +377,81 @@ pub fn promote(
             death_day: death,
         });
     }
-    hornvale_person::genesis(world, &seeds).map_err(crate::BuildError::from)
+    let ids = hornvale_person::genesis(world, &seeds).map_err(crate::BuildError::from)?;
+
+    // Second pass: `parent-of`/`kin-of`, now that every founder has an
+    // `EntityId` (`ids[i]` is `cast[i]`'s person — `hornvale_person::genesis`'s
+    // own contract, ids pushed in seed order). Deliberately after `genesis`
+    // rather than folded into `PersonSeed`: the forebear's PERSON id is
+    // minted by `genesis` itself, so it cannot be known before that call
+    // returns.
+    //
+    // **Direction, and why it reversed (review round 1, C1/I4).** The fact
+    // is committed `(forebear, predicate, descendant)` — subject `ids[j]`,
+    // object `ids[i]` — never the other way. Registry naming rule 4 reads a
+    // predicate strictly left-to-right from the subject: `(descendant,
+    // parent-of, forebear)` asserts the DESCENDANT is the parent of their
+    // own ancestor, which is false whenever the remove is more than zero.
+    // Reversing makes the sentence true, and it is why `PARENT_OF`/`KIN_OF`
+    // are `functional: false` — a forebear may found more than one daughter
+    // community (seed 42 has one with three), so the SUBJECT here can repeat
+    // across facts; it is the DESCENDANT side (`records[i].founded_from`)
+    // that is structurally single-valued, and that fact now lives in the
+    // OBJECT position.
+    //
+    // **`parent-of` restricted to `Ancestor(1)` (review round 1, C1).** The
+    // registered lexical concept `parent` means "one's father or mother" —
+    // `Ancestor(n)` for `n > 1` is a grandparent, great-grandparent, etc.,
+    // and committing it as `parent-of` was a false fact in every world this
+    // project generates (61.9% of the original 84 `parent-of` facts on seed
+    // 42, up to 37 generations removed). Every other classification —
+    // `Sibling` and `Ancestor(n)` for `n != 1` — commits `kin-of` instead,
+    // which is true at any remove (kinship is not generation-scoped) and,
+    // by the same token, is not reversed-out-of by direction: either
+    // direction of `kin-of` reads true, so it keeps `parent-of`'s direction
+    // for a single implementation rather than for any reason of its own
+    // (disclosed below, `kin-of` is committed asymmetrically and is not
+    // queryable from the descendant's end).
+    for (i, f) in cast.iter().enumerate() {
+        let Founding::From(mother_occupation) = records[f.occupation].founded_from else {
+            continue; // a genesis occupation has no forebear at all
+        };
+        let Some(&j) = community_to_cast.get(&mother_occupation) else {
+            continue; // forebear exists but nobody promoted it — the ledger
+            // says what is remembered (spec §4.3)
+        };
+        // The classification alone, never the handle `forebear_of` also
+        // returns: identity above already came from `records`/`community_to_cast`,
+        // entity-keyed throughout.
+        let Some((_, kinship)) = crate::forebear_of(world, f.community) else {
+            continue; // no generation length to classify by (an ametabolic
+            // or unrostered species) — honest absence, not a guess
+        };
+        let predicate = match kinship {
+            Kinship::Ancestor(1) => hornvale_person::PARENT_OF,
+            Kinship::Sibling | Kinship::Ancestor(_) => hornvale_person::KIN_OF,
+        };
+        let founded_day = crate::history_emit::ledger_day_of_bake_year(f.founded);
+        world
+            .ledger
+            .commit(
+                Fact {
+                    subject: ids[j],
+                    predicate: predicate.to_string(),
+                    object: Value::Entity(ids[i]),
+                    place: Some(f.community),
+                    day: Some(
+                        WorldTime::from_std_days(founded_day)
+                            .expect("a founder's day derives from an already-committed world time"),
+                    ),
+                    provenance: "person".to_string(),
+                },
+                &world.registry,
+            )
+            .map_err(crate::BuildError::from)?;
+    }
+
+    Ok(ids)
 }
 
 #[cfg(test)]

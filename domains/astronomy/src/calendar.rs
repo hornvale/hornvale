@@ -23,7 +23,7 @@ mod tests {
             moons: Some(MoonsPin::exact(1).unwrap()),
             ..SkyPins::default()
         };
-        generate(Seed(42), &pins).unwrap().system
+        generate(Seed(42), &pins).unwrap().value
     }
 
     fn locked_system() -> StarSystem {
@@ -31,7 +31,7 @@ mod tests {
             rotation: Some(RotationPin::Locked),
             ..SkyPins::default()
         };
-        generate(Seed(42), &pins).unwrap().system
+        generate(Seed(42), &pins).unwrap().value
     }
 
     /// A minimal calendar with one moon at the given sidereal period, in a
@@ -133,7 +133,7 @@ mod tests {
             forcing: Some(crate::pins::ForcingPin::Zero),
             ..SkyPins::default()
         };
-        let system = generate(Seed(42), &pins).unwrap().system;
+        let system = generate(Seed(42), &pins).unwrap().value;
         let cal = calendar_of(&system);
         let year = cal.year_length().get();
         let obliquity = system.anchor.obliquity.get();
@@ -154,7 +154,7 @@ mod tests {
             forcing: Some(crate::pins::ForcingPin::Zero),
             ..SkyPins::default()
         };
-        let cal = calendar_of(&generate(Seed(42), &pins).unwrap().system);
+        let cal = calendar_of(&generate(Seed(42), &pins).unwrap().value);
         let t = StdInstant::new(100.0).unwrap();
         assert!(cal.season_phase(t).is_none());
         assert_eq!(cal.daylight_fraction(t).unwrap(), 0.5);
@@ -170,7 +170,7 @@ mod tests {
             forcing: Some(crate::pins::ForcingPin::Zero),
             ..SkyPins::default()
         };
-        let cal = calendar_of(&generate(Seed(42), &pins).unwrap().system);
+        let cal = calendar_of(&generate(Seed(42), &pins).unwrap().value);
         assert_eq!(
             cal.daylight_fraction(StdInstant::new(0.0).unwrap())
                 .unwrap(),
@@ -281,7 +281,7 @@ mod tests {
             forcing: Some(crate::pins::ForcingPin::Zero),
             ..SkyPins::default()
         };
-        let cal = calendar_of(&generate(Seed(42), &pins).unwrap().system);
+        let cal = calendar_of(&generate(Seed(42), &pins).unwrap().value);
         let year = cal.year_length().get();
         let (mut max, mut min) = (0.0_f64, 1.0_f64);
         for k in 0..365 {
@@ -313,7 +313,7 @@ mod tests {
             forcing: Some(crate::pins::ForcingPin::Zero),
             ..SkyPins::default()
         };
-        let cal = calendar_of(&generate(Seed(42), &pins).unwrap().system);
+        let cal = calendar_of(&generate(Seed(42), &pins).unwrap().value);
         let year = cal.year_length().get();
         // The genesis year-phase offset (SKY-4) shifts which absolute day
         // each year phase falls on — solve for it, as the daylight tests do.
@@ -335,7 +335,7 @@ mod tests {
             forcing: Some(crate::pins::ForcingPin::Zero),
             ..SkyPins::default()
         };
-        let cal = calendar_of(&generate(Seed(42), &pins).unwrap().system);
+        let cal = calendar_of(&generate(Seed(42), &pins).unwrap().value);
         // The genesis day-phase offset (SKY-4) shifts where in absolute
         // time noon falls — solve for the local-day fraction wanted.
         let at_fraction =
@@ -359,7 +359,7 @@ mod tests {
                 spin: Some(spin),
                 ..SkyPins::default()
             };
-            calendar_of(&generate(Seed(42), &pins).unwrap().system)
+            calendar_of(&generate(Seed(42), &pins).unwrap().value)
         };
         let pro = cal_with_spin(crate::pins::SpinPin::Prograde);
         // The spin pin draws from its own stream, so both calendars share
@@ -431,7 +431,7 @@ mod tests {
             forcing: Some(crate::pins::ForcingPin::Zero),
             ..SkyPins::default()
         };
-        let cal = calendar_of(&generate(Seed(42), &pins).unwrap().system);
+        let cal = calendar_of(&generate(Seed(42), &pins).unwrap().value);
         let year = cal.year_length().get();
         let at_phase =
             |p: f64| StdInstant((p - cal.forcing.year_phase_offset).rem_euclid(1.0) * year);
@@ -473,7 +473,7 @@ mod tests {
             forcing: Some(crate::pins::ForcingPin::Zero),
             ..SkyPins::default()
         };
-        let cal = calendar_of(&generate(Seed(42), &pins).unwrap().system);
+        let cal = calendar_of(&generate(Seed(42), &pins).unwrap().value);
         let at_fraction =
             |f: f64| StdInstant(10.0 + (f - cal.forcing.day_phase_offset).rem_euclid(1.0));
         assert_eq!(cal.sky_band(at_fraction(0.5), 0.0), Some(SkyBand::Day));
@@ -510,7 +510,7 @@ mod tests {
     /// and home again after a full one.
     #[test]
     fn alignment_drift_is_the_obliquity_wobble() {
-        let cal = calendar_of(&generate(Seed(42), &SkyPins::default()).unwrap().system);
+        let cal = calendar_of(&generate(Seed(42), &SkyPins::default()).unwrap().value);
         if cal.day_length().is_none() {
             return; // a locked draw can't test drift; seed 42 spins today
         }
@@ -530,7 +530,7 @@ mod tests {
     /// refuses to date an unmoving sky (zero amplitude).
     #[test]
     fn alignment_epoch_round_trips() {
-        let cal = calendar_of(&generate(Seed(42), &SkyPins::default()).unwrap().system);
+        let cal = calendar_of(&generate(Seed(42), &SkyPins::default()).unwrap().value);
         if cal.day_length().is_none() {
             return;
         }
@@ -551,7 +551,7 @@ mod tests {
             forcing: Some(ForcingPin::Zero),
             ..SkyPins::default()
         };
-        let frozen = calendar_of(&generate(Seed(42), &pins).unwrap().system);
+        let frozen = calendar_of(&generate(Seed(42), &pins).unwrap().value);
         let az0 = frozen
             .solstice_rise_azimuth_at(40.0, StdInstant(0.0))
             .unwrap();

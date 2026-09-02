@@ -10,9 +10,10 @@ pub use micro::{grounded_wetness, wetness_is_grounded};
 // scope-guard witnesses in `tests/suite/wetness_reading.rs` can call the
 // function they are about. See its own doc for why a test seam beats the
 // committed fixture it replaces.
+pub use hornvale_climate::GroundKind;
 #[doc(hidden)]
 pub use micro::micro_field;
-pub use regime::{EnergySource, Kingdom, MicroField, Negations, Regime, Substrate};
+pub use regime::{EnergySource, Kingdom, MicroField, Negations, Regime};
 
 mod substrate;
 
@@ -721,7 +722,7 @@ impl LocaleContext {
                     // the ROOM's, from its derived regime), so `Ordinary` here
                     // is lossless rather than a stand-in.
                     descriptor: crate::grammar::exotic_clause(Negations {
-                        substrate: Substrate::Ordinary,
+                        substrate: GroundKind::Ordinary,
                         energy: s.energy,
                         kingdom: s.kingdom,
                         endemic: s.endemic,

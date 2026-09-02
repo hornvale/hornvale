@@ -17,7 +17,7 @@
 use hornvale_climate::{
     ClimateInputs, Formation, GeneratedClimate, Realm, RotationRegime, Stratum,
 };
-use hornvale_kernel::{Geosphere, ReferenceElevation, Seed, VertexMap};
+use hornvale_kernel::{Geosphere, Horizon, ReferenceElevation, Seed, VertexMap};
 
 /// A small mixed land/ocean, spinning world — the same land/ocean split and
 /// scalar inputs `hornvale_climate::provider::test_support::sample_world`
@@ -176,5 +176,8 @@ fn a_rung_from_another_realms_ladder_is_absent() {
         .find(|c| climate.biome_expr_at(*c).realm == Realm::OVERWORLD)
         .expect("this fixture has land");
     assert_eq!(climate.biome_expr_at_stratum(land, Stratum::Abyssal), None);
-    assert_eq!(climate.biome_expr_at_stratum(land, Stratum::Basement), None);
+    assert_eq!(
+        climate.biome_expr_at_stratum(land, Stratum::Rock(Horizon::Basement)),
+        None
+    );
 }

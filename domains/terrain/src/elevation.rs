@@ -1182,7 +1182,7 @@ mod tests {
             ..TerrainPins::default()
         };
         let outcome = crate::globe::generate(Seed(3), &geo, &pins).expect("genesis");
-        let globe = outcome.globe;
+        let globe = outcome.value;
         let d = crate::shape::hypsometric_bimodality(&globe.elevation, globe.sea_level)
             .expect("has land and ocean");
         assert!(d > 1.5, "hypsometry not bimodal: D = {d}");
@@ -1241,7 +1241,7 @@ mod tests {
         // The globe built fine with relief wired in (the `.unwrap()` above
         // already proves it); a non-empty elevation map confirms the term
         // didn't panic on any vertex.
-        assert!(a.globe.elevation.iter().next().is_some());
+        assert!(a.value.elevation.iter().next().is_some());
     }
 
     #[test]
@@ -1314,7 +1314,7 @@ mod tests {
         let geo = Geosphere::new(5);
         let outcome =
             crate::globe::generate(Seed(42), &geo, &crate::pins::TerrainPins::default()).unwrap();
-        let g = &outcome.globe;
+        let g = &outcome.value;
         // Above-sea arc vertices at IslandArc boundaries form >1 connected
         // component somewhere (discreteness), across land at arc boundaries.
         let arc_land: BTreeSet<hornvale_kernel::Vertex> = geo

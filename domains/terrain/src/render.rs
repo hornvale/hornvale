@@ -516,7 +516,7 @@ mod tests {
         let geo = Geosphere::new(4);
         let globe = generate(Seed(42), &geo, &TerrainPins::default())
             .unwrap()
-            .globe;
+            .value;
         let a = elevation_png(&geo, &globe, Seed(42));
         assert_eq!(a, elevation_png(&geo, &globe, Seed(42)));
         assert!(a.starts_with(&[0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A]));
@@ -530,7 +530,7 @@ mod tests {
         let geo = Geosphere::new(4);
         let globe = generate(Seed(42), &geo, &TerrainPins::default())
             .unwrap()
-            .globe;
+            .value;
         let a = lithology_png(&geo, &globe);
         assert_eq!(a, lithology_png(&geo, &globe));
         assert!(a.starts_with(&[0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A]));
@@ -543,7 +543,7 @@ mod tests {
         let geo = Geosphere::new(4);
         let globe = generate(Seed(42), &geo, &TerrainPins::default())
             .unwrap()
-            .globe;
+            .value;
         let a = sediment_png(&geo, &globe);
         assert_eq!(a, sediment_png(&geo, &globe));
         assert!(a.starts_with(&[0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A]));
@@ -556,7 +556,7 @@ mod tests {
         let geo = Geosphere::new(3);
         let globe = crate::generate(Seed(42), &geo, &crate::TerrainPins::default())
             .unwrap()
-            .globe;
+            .value;
         let a = column_png(&geo, &globe);
         assert_eq!(a, column_png(&geo, &globe));
         assert!(a.starts_with(&[0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A]));
@@ -629,7 +629,7 @@ mod tests {
         let geo = Geosphere::new(4);
         let globe = generate(Seed(42), &geo, &TerrainPins::default())
             .unwrap()
-            .globe;
+            .value;
         let map = elevation_ascii(&geo, &globe);
         assert_eq!(map.lines().count(), ASCII_HEIGHT as usize);
         for line in map.lines() {
@@ -648,7 +648,7 @@ mod tests {
             let geo = Geosphere::new(4);
             let globe = generate(Seed(seed), &geo, &TerrainPins::default())
                 .unwrap()
-                .globe;
+                .value;
             let index = NearestVertexIndex::new(&geo);
             let noise_seed = Seed(seed)
                 .derive(crate::streams::ROOT)
@@ -683,7 +683,7 @@ mod tests {
         let geo = Geosphere::new(4);
         let globe = generate(Seed(7), &geo, &TerrainPins::default())
             .unwrap()
-            .globe;
+            .value;
         let index = NearestVertexIndex::new(&geo);
         for (latitude, longitude) in [(0.0, 0.0), (45.5, -120.25), (-67.0, 13.0), (89.0, 179.0)] {
             let interp = interpolated_elevation(&geo, &index, &globe, latitude, longitude);

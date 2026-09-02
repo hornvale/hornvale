@@ -29,6 +29,9 @@ use std::collections::BTreeMap;
 /// functions beyond this task own that guard); it is defined here, and
 /// matched exhaustively wherever [`Evidential`] is consumed, purely so a
 /// future readout can construct it without touching this enum again.
+/// placement: deliberate(epistemic fact vs grammatical category — sharing
+/// variant names is a coincidence of English; hearsay design 2026-08-13 §3.2)
+/// shape(49883f)
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Evidential {
     /// Grounded in the speaker's own lived experience.

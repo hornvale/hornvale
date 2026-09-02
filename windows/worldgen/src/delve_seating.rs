@@ -102,8 +102,20 @@ fn zone_of(rung: Band) -> Option<Band> {
     }
 }
 
-/// The corpus's spelling of one cave formation — the third leg of decision
-/// 0094's duplicate roster, and the one nobody had joined.
+/// The corpus's spelling of one cave formation. Until The Hallmark
+/// (2026-09-02) this was the third leg of decision 0094's duplicate roster —
+/// the one nobody had joined, alongside `hornvale_terrain::CaveKind` and a
+/// second, hand-written `CaveKind` → `Formation` variant map. Task 14 made
+/// that second map unnecessary by making the join STRUCTURAL
+/// (`Formation::Cave(CaveKind)`, ledger #14/#16), which deleted decision
+/// 0094's canonical map at `cli/tests/suite/cave_kind_correspondence.rs`
+/// outright — two different `CaveKind`s wrapped in `Formation::Cave` are
+/// unequal by construction, so there is no longer a second hand-written
+/// variant map to duplicate. **The roster now has two legs, not three**:
+/// the kernel's `CaveKind`, embedded directly in `Formation::Cave`, and the
+/// corpus's spellings, joined by this function. What this function still
+/// guards is that second leg — the spelling join, which stays hand-written
+/// because nothing structural could carry it (see below).
 ///
 /// **This exists because the two spellings are genuinely different words.**
 /// `hornvale_terrain::CaveKind::name` answers `"karst"` / `"lava-tube"` /
@@ -113,12 +125,17 @@ fn zone_of(rung: Band) -> Option<Band> {
 /// `"fracture-cave"` — because an underworld community is a community *of* one
 /// of the formations The Axes already named. One of the three agrees by
 /// coincidence, which is exactly why the mismatch survived: `lava-tube` matched
-/// and looked like the rule working.
+/// and looked like the rule working. Embedding `CaveKind` inside `Formation`
+/// changed nothing about this: `Formation` carries no name of its own (the
+/// corpus's `genera` are raw `&'static str` literals in `climate::axes`, not a
+/// derived reading of the enum), so the spelling correspondence is still a
+/// fact about the *strings*, joinable only by a function like this one.
 ///
-/// Exhaustive over `CaveKind` with no wildcard, following
-/// `cli/tests/cave_kind_correspondence.rs`'s own enforcement pattern: a fourth
-/// formation fails to compile here rather than silently falling through
-/// [`chamber_fit`]'s genus-blind branch.
+/// Exhaustive over `CaveKind` with no wildcard, following this module's own
+/// enforcement pattern: a fourth formation fails to compile here rather than
+/// silently falling through [`chamber_fit`]'s genus-blind branch, and
+/// `every_cave_kind_matches_a_corpus_genus` asserts every emitted genus
+/// actually occurs in the corpus.
 ///
 /// See [`chamber_fit`]'s "Genus first" paragraph for what went wrong while this
 /// function did not exist, and `every_cave_kind_matches_a_corpus_genus` for the
@@ -673,16 +690,25 @@ mod tests {
     /// five non-identity permutations of the mapping breaks it.
     ///
     /// **Why this rather than a structural join through
-    /// `hornvale_climate::Formation`**, which would be better and was
-    /// considered first: `Formation` carries no name. The corpus's `genera` are
-    /// raw `&'static str` literals in `climate::axes`, so joining structurally
-    /// means adding a `const fn Formation::name`, re-pointing three corpus
-    /// constants at it, and deciding where a second `CaveKind` → `Formation`
-    /// map may live given that decision 0094 puts the canonical one in
-    /// `cli/tests/cave_kind_correspondence.rs` precisely to stop it being
-    /// duplicated. That is a domain-crate API change and an 0094 question, not
-    /// a guard; it is the right shape and it is recorded here rather than done
-    /// under a fix round.
+    /// `hornvale_climate::Formation`, and why that is still true after The
+    /// Hallmark (2026-09-02) made the *variant* half of this join
+    /// structural.** Task 14 folded the three-variant `KarstCave`/
+    /// `LavaTube`/`FractureCave` roster into `Formation::Cave(CaveKind)`
+    /// (ledger #14/#16), which deleted decision 0094's canonical map at
+    /// `cli/tests/suite/cave_kind_correspondence.rs` — that file asserted
+    /// only that `CaveKind`'s three values reach three distinct `Formation`
+    /// values, a claim the embed now makes true by construction (two
+    /// different `CaveKind`s wrapped in `Formation::Cave` are unequal by
+    /// construction), so nothing there needed re-homing. **This test guards
+    /// a different join that the embed left untouched: the *spelling*, not
+    /// the *variant*.** `Formation` still carries no name — the corpus's
+    /// `genera` are raw `&'static str` literals in `climate::axes`, sitting
+    /// beside `Formation::Cave(CaveKind)` rather than derived from it — so
+    /// there is no `const fn Formation::name` for a structural join to route
+    /// through, embed or no embed. `genus_of` is still the one hand-written
+    /// correspondence between a `CaveKind` and the corpus's string for it,
+    /// and this test is still what would catch that correspondence being
+    /// transposed.
     #[test]
     fn the_genus_extends_the_cave_kinds_own_name() {
         let mut seen: BTreeSet<&'static str> = BTreeSet::new();

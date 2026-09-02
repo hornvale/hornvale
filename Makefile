@@ -4,7 +4,7 @@
 # stops being tribal knowledge re-derived each session. `just` is not a repo
 # dependency; this uses `make`, already present everywhere.
 #
-#   make quick        # cheap half: fmt --check + clippy + type-audit + plumb
+#   make quick        # cheap half: fmt --check + clippy + type-audit
 #   make gate-commit  # THE PRE-COMMIT GATE: lints, tripwires, and the sub-floor test tier
 #                     # (local; ~10-16 s on a clean tree, up to ~470 s after a
 #                     # kernel/-layer edit — cost is the edit's blast radius in
@@ -33,17 +33,17 @@
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: decision-block decision-blocks help quick quick-run gate-commit gate-commit-run style-run subfloor-run gate-stage gate-campaign gate-suite-run gate gate-run gate-fast gate-full ci seam-guard seam-guard-list heavy-remote heavy-status heavy-log lane lane-status lane-log lane-roster lane-wait sluice sluice-stage sluice-census sluice-status sluice-log nextest-check prewarm prewarm-run worktree-take fmt fmt-check clippy type-audit type-audit-report plumb plumb-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor shapecheck install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run game-check game-check-run atlas-check clients-check-run board board-digest board-post board-redact board-sync
+.PHONY: decision-block decision-blocks help quick quick-run gate-commit gate-commit-run style-run subfloor-run gate-stage gate-campaign gate-suite-run gate gate-run gate-fast gate-full ci seam-guard seam-guard-list heavy-remote heavy-status heavy-log lane lane-status lane-log lane-roster lane-wait sluice sluice-stage sluice-census sluice-status sluice-log nextest-check prewarm prewarm-run worktree-take fmt fmt-check clippy type-audit type-audit-report placement-audit placement-audit-report plumb plumb-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor shapecheck install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run game-check game-check-run atlas-check clients-check-run board board-digest board-post board-redact board-sync
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
 		| sort \
 		| awk 'BEGIN {FS = ":.*?## "} {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
 
-quick: ## Cheap half of the gate (fmt-check + clippy + type-audit + type-audit-report + plumb + plumb-report)
+quick: ## Cheap half of the gate (fmt-check + clippy + type-audit + type-audit-report + placement-audit + placement-audit-report + plumb + plumb-report)
 	@bash scripts/timed.sh quick -- make --no-print-directory quick-run
 
-quick-run: fmt-check clippy type-audit type-audit-report plumb plumb-report
+quick-run: fmt-check clippy type-audit type-audit-report placement-audit placement-audit-report plumb plumb-report
 
 gate-commit: ## THE COMMIT GATE: lints, tripwires and the sub-floor test tier (local; ~10-16 s clean, up to ~470 s after a kernel/-layer edit — see spec §4.2b)
 	@bash scripts/timed.sh gate-commit -- make --no-print-directory gate-commit-run
@@ -57,7 +57,7 @@ gate-commit-run: style-run subfloor-run
 # gate — a third of the whole budget, paid continuously, for a condition that
 # arises exactly once, at worktree-take's `mv`. Task 1 placed the call in
 # scripts/worktree-take.sh instead, which is where the condition is created.
-style-run: fmt-check clippy type-audit type-audit-report plumb plumb-report
+style-run: fmt-check clippy type-audit type-audit-report placement-audit placement-audit-report plumb plumb-report
 
 # THE SUB-FLOOR TIER. Selection is EXCLUDE-UNKNOWN: a test absent from the
 # roster is not run here, and enters on the next green chamber `gate` phase
@@ -512,6 +512,28 @@ type-audit-report: ## Fail if the committed type-audit report is stale (regen cm
 		exit 1; \
 	fi
 
+# In the gate for the same reason type-audit is: a lint, not an artifact —
+# default-deny on undeclared shape twins across kernel/domains (decision
+# 0517; The Hallmark spec §3). Warm ~4.5-5.8s on this Mac (The Hallmark,
+# 2026-09-01) — well under type-audit's ~6.3-6.4s, so it joins the same
+# commit-gate rung rather than being pushed to the stage gate.
+placement-audit: ## Verify shape-twin placement tags (default-deny; decision 0517)
+	cargo run --quiet --manifest-path tools/placement-audit/Cargo.toml -- check
+
+placement-audit-report: ## Fail if the committed placement roster is stale (regen cmd in the message)
+	@tmp="$$(mktemp /tmp/hv-placement-audit-report.XXXXXX)"; \
+	trap 'rm -f "$$tmp"' EXIT; \
+	cargo run --quiet --manifest-path tools/placement-audit/Cargo.toml -- report > "$$tmp"; \
+	if ! diff -q "$$tmp" docs/audits/placement-audit-roster.md >/dev/null 2>&1; then \
+		echo "placement-audit-report: docs/audits/placement-audit-roster.md is stale. Regenerate it with:" >&2; \
+		echo "  cargo run --manifest-path tools/placement-audit/Cargo.toml -- report > docs/audits/placement-audit-roster.md" >&2; \
+		exit 1; \
+	fi
+
+# The Cairn (tools/board): a git-native message board for parallel agent
+# sessions, outside the cargo workspace like type-audit and the digest above
+# (so `make gate` never builds it — its own tests run under
+# `cargo test --manifest-path tools/board/Cargo.toml`).
 # In the gate for the same reason type-audit is (The Plumb, Task 4, decision
 # ledger #31): default-deny over every authored numeric constant in
 # domains/*/src and windows/*/src. THE PAIR (this target plus plumb-report
@@ -548,6 +570,7 @@ plumb-report: ## Fail if the committed plumb roster is stale (regen cmd in the m
 # sessions, outside the cargo workspace like type-audit and the digest above
 # (so `make gate` never builds it — its own tests run under
 # `cargo test --manifest-path tools/board/Cargo.toml`).
+
 board: ## The Cairn: read the board (full, unfiltered)
 	@cargo run --quiet --manifest-path tools/board/Cargo.toml -- read
 
@@ -614,6 +637,7 @@ prewarm-run:
 	cargo build --workspace --all-targets
 	cargo build --release -p hornvale
 	cargo build --manifest-path tools/type-audit/Cargo.toml
+	cargo build --manifest-path tools/placement-audit/Cargo.toml
 	# The Cairn's binary, without which THREE of its four read seams are
 	# silently inert in a fresh worktree: `scripts/board-render.sh` (the
 	# SessionStart hook), `doctor`, and `sluice-request.sh`'s hold-off

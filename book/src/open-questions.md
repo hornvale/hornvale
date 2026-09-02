@@ -1024,6 +1024,55 @@ three points below the composite the report would otherwise have led with
 exists is a finding about the instrument, not a license to report the number
 that instrument happens to produce.
 
+**[The Avowal](./chronicle/the-avowal.md) (2026-09-01) is the clearest
+instance of this chapter's founding clause the trope corpus has produced,
+because the unpaired check was the corpus's *entire instrument*.**
+`cli/src/tropes.rs::resolve` reported a dramatic situation "stageable" the
+moment every one of its required tokens was a name in the concept registry —
+a generator with no verifier anywhere behind it. Registry membership is
+append-only, so the number it produced could only ever climb, and nothing
+distinguished a capability the world actually computes from a predicate
+somebody typed into `register_predicate` on optimism. Decision 0330 had
+already named this exact hazard on the sibling sentence corpus and answered
+it with a **realization witness** — a committed artifact that must
+demonstrate the capability, built to fail before it is made to pass. The
+trope corpus had no equivalent, and the campaign's own leverage arithmetic
+showed why that mattered: 38 predicates registered on the strength of
+membership alone would have carried the headline from 0/409 to 140/409 with
+not one of them witnessed.
+
+The witness this campaign built (decisions 0577→0581→0582→0583, one
+supersession per review round) is a small, hard instance of "pair the
+generator with a verifier": a situation is `Stageable` only when a committed
+`Tableau` stages its actants and the tableau's staged relations equal —
+by *set*, not merely by subset — the situation's own required `predicate:`
+tokens. It shipped red first, against a one-situation corpus with no witness
+registered at all, exactly as 0330 asks. And the pairing survived being
+probed three times by three different review rounds, each of which found the
+gate's own disclosure of its limits was itself an unpaired claim: 0577 said a
+witness "binds vacuously" only in the no-predicate case, and a live probe
+showed it bound to *any* situation, predicates or not; 0582's fix then closed
+that and declared actant-role assignment "the ONLY disclosed limit," and a
+third probe produced a `phenomenon:eclipse` requirement that resolved
+`Stageable` while nothing staged an eclipse. The record that finally held
+(0583) is the one that stopped asserting completeness at all — "the limits
+include X and Y" survives discovering a Z; "X is the only limit" does not,
+found or not — which is this chapter's own diagnosis landing a second time,
+one layer *inside* the very check built to close the first instance of it.
+
+**Score: the bet does not move — this was always a self-scorable claim, not
+a taste-gated one — but the campaign is the strongest confirmation yet that
+pairing a generator with a verifier is a property that must itself be
+checked for completeness, not assumed once built.** The headline number
+stayed at 0 of 36 and 0 of 409 throughout, which is the preregistered null
+(spec §5) and not a shortfall: token completion is necessary and was never
+sufficient, and the campaign's three bundle completions
+(`consanguineal-kin`, `witnessing`, `act-chronology`) shortened `Blocked`
+reasons without ever reaching the witness. Migration cost was zero — nothing
+had ever claimed `Stageable` under the old membership-only reading, so the
+new gate retrofitted no false claims — which will not be true of the next
+corpus that adds a witness after its own number has already moved.
+
 ## What the world can already check itself on (high confidence)
 
 **The kernel substrate.** Hash-based seeding, coherent noise, append-only
@@ -1052,6 +1101,33 @@ byte-identically correct at every step and still be missing the term that
 would have made a wrong reading unsayable. So the tier is right about what it
 measures and should not be read as covering coverage: the substrate scores
 *changes* against itself honestly, and does not yet score its own gaps.
+
+[The Hallmark](./chronicle/the-hallmark.md) (2026-09-02) widens what sits at
+this tier and finds another edge of it in the same pass. Decision 0044 — the
+doctrine this entry credits — was scoped to coherent physical *quantities*.
+Decision 0517 generalizes the placement test to any type, and six shared
+vocabularies moved on it in one campaign: three definitions of one error type
+collapsing to one, two verbatim copies of a genesis error, a three-valued
+sentiment, and a rock roster and a cave roster leaving the domain that only
+*named* them. Each of those migrations made this tier's central claim — *this
+changed nothing* — and each was scored the same way: a seed-42 world is
+byte-identical across all of them, reproduced three times. So the entry is
+right about a wider class than it was written for, and for the same reason.
+
+The edge is that the survey licensing those moves also turned up a defect the
+byte comparison could not have seen, and it is The Benchmark's point arriving
+in a second shape. A deep-time field documented as an absolute day had two
+producers, one of which wrote a *year* into it — smaller by a factor of
+365.25 — and nothing was broken: the two paths never met at one consumer, so
+each was internally consistent, every artifact was byte-identical, and no
+assertion anywhere could have been red. Byte-identity scores whether a change
+moved the world; it is structurally silent on whether a quantity means one
+thing, because a field that means two things *consistently* is perfectly
+stable. The tier's boundary therefore sharpens once more: the substrate scores
+its changes honestly, is learning to score its gaps, and does not score its
+own **coherence** — for that, someone has to read a field's documentation
+against each of its producers, which is what a consolidation survey turned out
+to be good for and was not built for.
 
 The same substrate now scores its
 own *completeness*: [The Correspondence](./chronicle/the-correspondence.md) made
@@ -3437,6 +3513,33 @@ its honest size.
    serialized at all. **The score does not move.** One more act with a
    consequence is not a market worth standing in, and a limit named is not a
    limit closed.
+   **Re-scored by [The Roll](./chronicle/the-roll.md) (2026-09-02): the
+   unstaged market now assembles, and the score still does not move.** The
+   gate the annotation above named is discharged. A settlement derives as many
+   residents as its committed population — named people, drawn apart on their
+   own dials, not eighty copies — and the walk ticks the ones within call, so
+   the moment assembles because the world is populous rather than because a
+   fixture arranged it. The readings this row has collected, each on its own
+   instrument: The Company found `sensed.present` empty in **24 of 24**
+   witnesses — twelve seeds across both possession targets, the annotation
+   above; The Hand, having deleted the player's own twin, measured **0 of 64**
+   on the 64-seed probe; and this campaign re-ran that same probe before
+   changing anything and read **3 of 64**. After the roll, a fresh possession
+   stands in company in **64 of 64** seeds, which is every seed whose home
+   settlement can hold company at all. At seed 42 that is 67 neighbours in one
+   room, four of them named in the presence line and 63 counted. **Three of the four sentences this row has carried since The
+   Company are now spent** — the moment does not assemble; it assembles only
+   when staged; a staged moment is the weakest possible evidence. What
+   survives is the fourth and always the real one: *a human still has to sit in
+   the market and report what they noticed.* The score stays **low** because
+   the axis of this chapter is checkability, and nothing about sixty-seven
+   people makes the taste half self-scorable — 64 of 64 is a count of company,
+   and this row exists in part to refuse exactly that substitution. The change
+   is in the standing, not the score: the question can now be asked of a world
+   left to itself, at any seed, which is the condition its two previous
+   annotations said it was waiting on. It moves when a human plays and says it
+   moved, and for the first time there is nothing structural in the way of
+   playing.
 
 ## The standing horizon
 
@@ -4709,3 +4812,58 @@ the three did not exist when the arm was designed. This chapter's own warning
 about ablations applies with the sign reversed: an ablation on a channel almost
 nobody reads is a null with no power, and an ablation that misses a channel
 entirely is a null with a hole in it.
+
+### The fourth look at cost found the quadratic and removed it (2026-09-02)
+
+Two sections above record that cost in this project is scored "when a campaign
+chooses to look", that on the first two occasions each look found an
+unpredicted quadratic, and that a third found a distribution instead. This is
+the fourth, and it is the first one that closes a loop rather than opening one:
+[The Pawl](./chronicle/the-pawl.md) migrated the creature-drive reads off the
+raw position history and onto a session-owned store of advancing accumulators,
+and measured the thirst and hunger reads two hundred and thirty times cheaper,
+the whole tick a quarter cheaper at two hundred ticks, and the level about four
+per cent lower.
+
+**What that does to the accounting is smaller than the numbers suggest, and
+saying so is the point of re-scoring rather than celebrating.** Three things
+are worth carrying forward.
+
+**First, the quadratic that was found is gone and the shape that found it is
+not.** There is still no cost gate on the simulation — no ceiling, no slope
+check, nothing that runs per commit — and the two instruments that exist are
+still the ones the two campaigns that needed them built. A fourth look
+succeeding does not change the base rate of an unwatched dimension; it changes
+one number in it.
+
+**Second, and sharper: the campaign's frozen success criteria could not see
+its own result, and both instruments were working correctly.** Five of six
+preregistered criteria came back not met on the first readout, while a
+synthetic sweep over a thousandfold range of history reported that the order of
+the computation had changed — a ninety-nine-fold saving at ten thousand facts.
+The reconciliation is arithmetic: at the depth an ordinary session reaches, the
+predicted saving was smaller than the ecological instrument's own run-to-run
+spread on the very column being measured, and the criterion had asked that
+instrument to resolve it. **A criterion written against an ecological bench
+cannot see a change of order that the ecological range does not reach.** This
+chapter's standing floor is that a check is only worth what it can be made to
+fail on; the companion is that a *criterion* is only worth the range its
+instrument samples, and neither of those is visible in the criterion's own
+wording.
+
+**Third, the failure that remained is more interesting than the one that was
+fixed, and it was invisible until the fix landed.** Three criteria still fail
+after the campaign, all of them on one fold — the fear memory, which costs 93
+milliseconds per call at the deepest band measured and is 84% of the six timed
+reads' total, against the repaired thirst and hunger pair's combined
+five-thousandths of a per cent. Before the repair, that dominance was hidden
+inside a total that two folds shared. **Removing the largest known cost is what
+makes the next one legible**, which argues for iterating the measurement rather
+than treating a single readout as a verdict on a subsystem.
+
+One further note for this chapter's own honesty. The campaign made exactly one
+change to production code after seeing its first readout, and reports both
+readouts rather than only the second — the first stands unedited, and the
+second is explicitly not blind. Nothing in the standing gate would have caught
+a quieter version of that ordering, and nothing here claims otherwise; it was
+disclosed because the campaign chose to disclose it.

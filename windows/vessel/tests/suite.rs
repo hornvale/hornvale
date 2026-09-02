@@ -17,6 +17,8 @@
 
 mod common;
 
+#[path = "suite/act.rs"]
+mod act;
 #[path = "suite/action_module.rs"]
 mod action_module;
 #[path = "suite/action_mood.rs"]
@@ -61,6 +63,8 @@ mod lantern_light;
 mod lantern_night;
 #[path = "suite/lantern_seam.rs"]
 mod lantern_seam;
+#[path = "suite/ledger_hash_witness.rs"]
+mod ledger_hash_witness;
 #[path = "suite/ledger_query_equivalence.rs"]
 mod ledger_query_equivalence;
 #[path = "suite/liveness_genesis.rs"]
@@ -89,6 +93,8 @@ mod possess_target;
 mod possession_facts;
 #[path = "suite/possession_moves.rs"]
 mod possession_moves;
+#[path = "suite/resident_folds.rs"]
+mod resident_folds;
 #[path = "suite/session.rs"]
 mod session;
 #[path = "suite/session_snapshot.rs"]
@@ -115,6 +121,8 @@ mod the_handle;
 mod the_lintel;
 #[path = "suite/the_purview.rs"]
 mod the_purview;
+#[path = "suite/the_roll.rs"]
+mod the_roll;
 #[path = "suite/thing.rs"]
 mod thing;
 #[path = "suite/tick_commit_budget.rs"]

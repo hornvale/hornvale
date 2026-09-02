@@ -156,7 +156,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use hornvale_kernel::{Band, Seed, quantize};
+use hornvale_kernel::{Band, Horizon, Seed, quantize};
 use hornvale_terrain::GeneratedTerrain;
 
 use crate::chamber::{
@@ -308,11 +308,11 @@ fn stratum_word(stratum: hornvale_climate::Stratum) -> &'static str {
         hornvale_climate::Stratum::Bathypelagic => "bathypelagic",
         hornvale_climate::Stratum::Abyssal => "abyssal",
         hornvale_climate::Stratum::Hadal => "hadal",
-        hornvale_climate::Stratum::Regolith => "regolith",
-        hornvale_climate::Stratum::Cover => "cover",
-        hornvale_climate::Stratum::Basement => "basement",
-        hornvale_climate::Stratum::Roots => "roots",
-        hornvale_climate::Stratum::Underneath => "underneath",
+        hornvale_climate::Stratum::Rock(Horizon::Regolith) => "regolith",
+        hornvale_climate::Stratum::Rock(Horizon::Cover) => "cover",
+        hornvale_climate::Stratum::Rock(Horizon::Basement) => "basement",
+        hornvale_climate::Stratum::Rock(Horizon::Roots) => "roots",
+        hornvale_climate::Stratum::Rock(Horizon::Underneath) => "underneath",
     }
 }
 
@@ -322,11 +322,11 @@ fn stratum_word(stratum: hornvale_climate::Stratum) -> &'static str {
 /// finding, so it is counted separately rather than silently dropped.
 fn rock_rank(stratum: hornvale_climate::Stratum) -> Option<usize> {
     match stratum {
-        hornvale_climate::Stratum::Regolith => Some(0),
-        hornvale_climate::Stratum::Cover => Some(1),
-        hornvale_climate::Stratum::Basement => Some(2),
-        hornvale_climate::Stratum::Roots => Some(3),
-        hornvale_climate::Stratum::Underneath => Some(4),
+        hornvale_climate::Stratum::Rock(Horizon::Regolith) => Some(0),
+        hornvale_climate::Stratum::Rock(Horizon::Cover) => Some(1),
+        hornvale_climate::Stratum::Rock(Horizon::Basement) => Some(2),
+        hornvale_climate::Stratum::Rock(Horizon::Roots) => Some(3),
+        hornvale_climate::Stratum::Rock(Horizon::Underneath) => Some(4),
         _ => None,
     }
 }

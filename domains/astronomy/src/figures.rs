@@ -297,8 +297,8 @@ mod tests {
         let seed = Seed(42);
         let astronomy_seed = seed.derive(streams::ROOT);
         let outcome = generate(seed, &SkyPins::default()).unwrap();
-        let a = figures(astronomy_seed, &outcome.system);
-        let b = figures(astronomy_seed, &outcome.system);
+        let a = figures(astronomy_seed, &outcome.value);
+        let b = figures(astronomy_seed, &outcome.value);
         assert_eq!(a, b);
     }
 
@@ -308,7 +308,7 @@ mod tests {
         for seed in 0..32u64 {
             let astronomy_seed = Seed(seed).derive(streams::ROOT);
             let outcome = generate(Seed(seed), &SkyPins::default()).unwrap();
-            for figure in figures(astronomy_seed, &outcome.system) {
+            for figure in figures(astronomy_seed, &outcome.value) {
                 assert!(
                     figure.member_count >= FIGURE_MIN_MEMBERS,
                     "seed {seed}: figure has {} members, floor is {}",
@@ -325,7 +325,7 @@ mod tests {
         for seed in 0..32u64 {
             let astronomy_seed = Seed(seed).derive(streams::ROOT);
             let outcome = generate(Seed(seed), &SkyPins::default()).unwrap();
-            for figure in figures(astronomy_seed, &outcome.system) {
+            for figure in figures(astronomy_seed, &outcome.value) {
                 let text = describe(&figure);
                 assert!(
                     !text.chars().any(|c| c.is_ascii_digit()),
@@ -383,8 +383,8 @@ mod tests {
         for seed in 0..32u64 {
             let astronomy_seed = Seed(seed).derive(streams::ROOT);
             let outcome = generate(Seed(seed), &SkyPins::default()).unwrap();
-            let obliquity_mean = outcome.system.forcing.obliquity_mean;
-            for figure in figures(astronomy_seed, &outcome.system) {
+            let obliquity_mean = outcome.value.forcing.obliquity_mean;
+            for figure in figures(astronomy_seed, &outcome.value) {
                 let ecliptic = ecliptic_of(&figure.centroid, obliquity_mean);
                 let expected = ecliptic.lat_deg.abs() <= figure.span_deg / 2.0 + 8.0;
                 assert_eq!(

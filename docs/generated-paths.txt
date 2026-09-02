@@ -189,7 +189,7 @@ book/src/laboratory/census-of-coasts-ii.md	none(hand-written prose, never regene
 book/src/laboratory/census-of-coasts-iii.md	none(hand-written prose, never regenerated)
 book/src/laboratory/census-of-coasts-iv.md	none(hand-written prose, never regenerated)
 
-# --- docs/audits/ — 16 tracked, 11 `artifacts`-written; 5 exceptions ---
+# --- docs/audits/ — 21 tracked, 13 `artifacts`-written by name; 5 exceptions ---
 docs/audits/	artifacts
 docs/audits/heavy-tier-adjudication.md	none(hand-written one-off campaign finding -- The Governor -- never regenerated)
 docs/audits/land-elevation-attribution.md	none(hand-written one-off campaign finding -- The Glasshouse -- never regenerated)
@@ -212,9 +212,11 @@ clients/game/core/tests/fixtures/	artifacts
 # new one is invisible. Naming the file directly is what makes
 # cli/tests/suite/generated_paths.rs refuse until it is `git add`-ed.
 docs/audits/underworld-lattice-seed-panel.md	artifacts
+docs/audits/underworld-circuit-seed-panel.md	artifacts
 docs/audits/the-confidant-report.md	artifacts
 docs/audits/the-reticence-report.md	artifacts
 docs/audits/glyph-specimen-sheet.txt	artifacts
+docs/audits/placement-audit-roster.md	artifacts
 docs/audits/plumb-roster.md	artifacts
 
 # `docs/generated-path-writes.tsv` (Task 4, The Attestation) is Task 1's

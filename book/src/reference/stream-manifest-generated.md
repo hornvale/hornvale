@@ -207,7 +207,6 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `room/layout/v1/rectilinear` | where the rectilinear method places chambers |
 | `room/layout/v1/grown` | where the growing method places chambers |
 | `room/layout/v1/anchors` | where a chamber's anchors land in its cells |
-| `underworld/level/v1/partition` | split-or-leaf decisions in a generated underworld level |
 | `underworld/level/v1/cellular` | cellular-automata cave carving within a leaf |
 | `underworld/level/v1/tunneler` | drunkard's-walk tunnel carving within a leaf |
 | `underworld/level/v1/rooms` | partitioned-rooms carving within a leaf |
@@ -225,12 +224,17 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `doctrine-lexeme` | the doctrine-voice twin of the lexeme leg |
 | `religion/deity/v2` | the deity-naming stream, epoch v2 |
 | `settlement/disposition/v1` | the per-settlement disposition draw, keyed on the occupation's (site, founded-year) |
+| `settlement/resident/v1` | the per-resident draw, keyed on (site, ordinal) |
 | `settlement/working/v1` | whether one expansion is a working rather than a farm, keyed on the parent's (vertex, band, year) |
 | `settlement/breach/v1` | whether one epoch's advance of a working breaks through, keyed on the working's (vertex, band, year) |
 | `chamber/v3` | a display-only address formatter; the underworld's real derivation key is RUN_FLOORS and the per-branch legs |
 | `chamber/run-floors/v2` | how many levels one run realizes, keyed on (vertex, branch, band) |
 | `chamber/branch-character/v2` | which character one branch carries, keyed on (vertex, branch, band) |
 | `chamber/branch-barrier/v2` | the barrier thinness of one branch, keyed on (vertex, branch, band) |
+| `underworld/plan/v1/spine` | entrance and per-level stair cells of a descent's spine |
+| `underworld/plan/v1/cycle` | cycle attachment, segment length and same- or cross-floor choice |
+| `underworld/plan/v1/extend` | which passage a series extension lengthens |
+| `underworld/plan/v1/stair` | the coordinate a stairway shares between two floors |
 | `chamber/branch-count/v2` | how many branches one cave system realizes, keyed on (vertex, band) |
 | `chamber/entrance-count/v2` | how large one cave system's FREE aperture set is, keyed on vertex (the shipped count is this raised to the top band's branch width) |
 | `chamber/entrance-mouth/v2` | which top-band branch one aperture opens on, keyed on (vertex, aperture, role) |

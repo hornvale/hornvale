@@ -69,7 +69,7 @@
 
 use hornvale_astronomy::{Rotation, SkyPins};
 use hornvale_kernel::Seed;
-use hornvale_religion::{Sentiment, beliefs_of};
+use hornvale_religion::{Sentiment, beliefs_of, sentiment_tag};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
     BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world, build_world_to, sky_of,
@@ -158,7 +158,7 @@ fn locked_worlds_recover_ambient_presiding_belief_after_the_terminator_fix() {
         let first = beliefs
             .first()
             .unwrap_or_else(|| panic!("locked seed {seed} committed no beliefs"));
-        breakdown.push((seed, first.sentiment.as_str()));
+        breakdown.push((seed, sentiment_tag(first.sentiment)));
         match first.sentiment {
             Sentiment::Ambient => ambient += 1,
             Sentiment::Eternal => eternal += 1,

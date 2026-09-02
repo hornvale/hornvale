@@ -74,5 +74,34 @@ for k in census merge stage some-future-kind; do
     fi
 done
 
+# --- census_note: the queue row must READ the verdict, not assert one --------
+# The row said "Goldens delivered" for every rc=0 census, including the ones that
+# moved nothing. Fixing sluice-census.sh's log left this second copy of the claim
+# standing on the surface `make sluice-status` shows. campaign/the-pawl printed
+# "NO GOLDENS MOVED" in its log and "Goldens delivered" in its row, same minute.
+tmpl="$(mktemp -d)"
+trap 'rm -rf "$tmpl"' EXIT
+printf 'sluice-census: NO GOLDENS MOVED — the census agrees with abc.\n' > "$tmpl/null.log"
+printf 'sluice-census: 3 golden path(s) moved; delivering on census/x\n'  > "$tmpl/moved.log"
+
+case "$(census_note "$tmpl/null.log")" in
+    *"NO GOLDENS MOVED"*) ok "census_note reports a NULL run as no goldens moved" ;;
+    *) bad "census_note called a null run a delivery" ;;
+esac
+case "$(census_note "$tmpl/moved.log")" in
+    *"Goldens moved"*) ok "census_note reports a real move as goldens moved" ;;
+    *) bad "census_note called a real golden move a null" ;;
+esac
+# FAILS TOWARD "MOVED": a missing log must not be reported as a null, because a
+# false null invites skipping a delivery branch that was needed.
+case "$(census_note "$tmpl/does-not-exist.log")" in
+    *"Goldens moved"*) ok "a missing log fails toward 'moved', not toward a false null" ;;
+    *) bad "a missing log was reported as a null — the unsafe direction" ;;
+esac
+case "$(census_note "")" in
+    *"Goldens moved"*) ok "an empty log path also fails toward 'moved'" ;;
+    *) bad "an empty log path was reported as a null" ;;
+esac
+
 printf '\ntest-sluice-drain: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

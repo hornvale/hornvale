@@ -437,7 +437,12 @@
 - [The Company](./chronicle/the-company.md)
 - [The Pavement](./chronicle/the-pavement.md)
 - [The Tableau](./chronicle/the-tableau.md)
+- [The Crosscut](./chronicle/the-crosscut.md)
+- [The Avowal](./chronicle/the-avowal.md)
 - [The Wicket](./chronicle/the-wicket.md)
+- [The Roll](./chronicle/the-roll.md)
+- [The Hallmark](./chronicle/the-hallmark.md)
+- [The Pawl](./chronicle/the-pawl.md)
 
 # Appendix: The Frontier
 

@@ -88,20 +88,10 @@ pub enum Era {
     Primordial,
 }
 
-/// The named bands, top → bottom; resolution coarsens downward.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Horizon {
-    /// The living skin: soil / weathered regolith.
-    Regolith,
-    /// Deposited / volcanic surface rock — the legible archive.
-    Cover,
-    /// Crystalline craton (terrain's inherited `Basement`).
-    Basement,
-    /// Deep crust: hot, high-pressure.
-    Roots,
-    /// The primordial substrate / threshold to the not-here.
-    Underneath,
-}
+/// The named bands, top → bottom; resolution coarsens downward. Now the
+/// kernel's shared roster (decision 0517 clause (a)) — `domains/climate`
+/// mirrors it structurally as `Stratum::Rock(Horizon)`.
+pub use hornvale_kernel::Horizon;
 
 /// One band of a vertex's column.
 /// type-audit: bare-ok(diagnostic-value: top_depth_m)
