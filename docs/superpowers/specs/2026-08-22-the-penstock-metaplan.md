@@ -430,6 +430,8 @@ one before it.
 | 7 | **Log bounding** | a fact-lifetime mechanism: what may leave the log, and how the seed plus the surviving prefix still re-derives the world | stage 1's facts-per-agent-per-tick counter shows a long session accumulates without bound | **DEFERRED ON AVAILABILITY, NOT MERIT** — the gate is met (§6.1) and §6.3 calls this "the one item in this program with no alternative," but it lives entirely in `windows/vessel/src/liveness.rs`, held off twice over: `campaign/the-hand` holds off `windows/vessel/` and `windows/lab/`, and The Escapement's Task 9 is mid-sweep of 53 `.day()` sites in that same file. Recommended next the moment vessel frees. |
 | 8 | Storage tier (deferred) | decision 0037's address-prefix partition, disk paging, segment merging | 0037's own condition: a long-running deployment measures a ledger that will not fit | — |
 
+**2026-09-02, stage 7 progress.** 7a's primitive shipped as The Tailrace (2026-08-26) and its tenants migrated as **The Pawl** (`docs/superpowers/specs/2026-09-01-the-pawl-design.md`; chronicle `book/src/chronicle/the-pawl.md`): the `liveness.rs` folds now read a session-owned resident store, byte-identically, and the thirst and hunger reads fell 230x. 7b (the typed intention) is the recommended next campaign and 7c stays behind it per decision 0238. The stage-7 row above is left as it was written on 2026-08-23; this is an annotation, not a rewrite.
+
 **Stage 7 is not part of stage 8, and separating them is a correction this
 plan needed.** "LSM machinery" reads as one deferred bundle, but decomposing
 it gives eight parts — append-only log, sorted derived indexes, persistence,
