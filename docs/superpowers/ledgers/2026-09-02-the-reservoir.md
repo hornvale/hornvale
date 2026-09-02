@@ -823,6 +823,66 @@ rows, it surfaces locally and cheaply rather than in the queue.
 
 ---
 
+#18 [G6] — **Close-out: the absorb, and two corrections to entry #17's own
+prediction.**
+
+*Nathan's G6 ruling (2026-09-02).* Absorb `main`, include the
+`docs/CLAUDE.md` append-only addendum, and submit to the sluice.
+
+*The absorb.* `origin/main` `0dccce029` merged into the branch, 108 commits,
+textually clean. The `post-merge` hook then named six touched generated
+artifacts including `docs/audits/type-audit-report.md` — the exact file
+`campaign/the-hallmark` was refused at the mouth on, and the exact class
+`campaign/the-stylus` posted a `technique` about: the `hv-regenerate` merge
+driver can exit **zero** and write content that is a valid merge of neither
+side. So `make rebaseline` was run and the declared paths diffed, per that
+post's instruction rather than on the strength of a clean merge. **Result:
+drift check rc=0** — the driver was right this time, but the check is what
+establishes that, not the merge's exit code.
+
+*Correction 1 to #17: the ceiling did NOT rise.* #17 ruled it would, reasoning
+that main's two new sites were "genuinely new debt". Read on their merits, both
+earned real reasons and neither is `unmigrated`:
+
+```
+  cli/src/main.rs                          9 -> 10   unmigrated:9 production:1
+  windows/worldgen/src/circuit_readout.rs  new       artifacts:1
+```
+
+`cmd_circuit` is a real CLI command dispatched from `main`'s arg match, so it is
+`production`. `UNMIGRATED_CEILING` stays **334**. The ruling's *shape* was right
+— a ratchet must be able to admit debt arriving from elsewhere — and its
+prediction was wrong, because "new" and "debt" are different questions and #17
+ran them together.
+
+*Correction 2, and the better find: `artifacts` now has its first row, hours
+after two documents were corrected to say it had none.*
+`circuit_readout.rs`'s `terrain_for(seed)` **returns** a `GeneratedTerrain`, so
+no read at any seed can serve it — the fixture's own identity included. That is
+precisely the case the taxonomy reserved the code for, and **a campaign on
+another branch supplied it without knowing the code existed**, which is a better
+argument for having reserved it than the argument that reserved it.
+
+Both `windows/worldgen/src/fixture.rs`'s module doc and this decision block in
+0607 have now been wrong about this reason in *opposite* directions within one
+day: first asserting a row that did not exist, then asserting an absence that
+stopped being true. The durable fix is not a third careful sentence — it is to
+stop restating counts in prose. **The roster carries the counts; a record
+carries the meaning.**
+
+*The addendum, per Nathan.* `docs/CLAUDE.md`'s append-only rule now names
+`main` as the boundary, with two clauses the bare boundary does not imply: it
+applies to *substance* (an unmerged record that is simply wrong is repaired, not
+superseded), and it does **not** license editing *another* campaign's unmerged
+record — only its author may correct it pre-merge, or you are rewriting
+reasoning someone is still using.
+
+*ideonomy passes / overturns.* n/a — a close-out record.
+
+*Capture.* This entry; `docs/CLAUDE.md`; `fixture.rs`; 0607.
+
+---
+
 ## Parked findings
 
 ### P1 — `scene_surrounds_colour_cli.rs` uses a fixed temp path and flakes

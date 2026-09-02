@@ -33,7 +33,7 @@
 # merits, so `unmigrated` did not move and UNMIGRATED_CEILING stayed 334.
 #
 cli/src/dictionary.rs	1	unmigrated:1
-cli/src/main.rs	9	unmigrated:9
+cli/src/main.rs	10	unmigrated:9 production:1
 cli/src/repl.rs	9	unmigrated:9
 cli/src/tropes.rs	1	unmigrated:1
 cli/tests/suite/branches_coverage.rs	1	unmigrated:1
@@ -132,6 +132,7 @@ windows/vessel/tests/suite/walker_battery.rs	1	unmigrated:1
 windows/vessel/tests/suite/world_context.rs	1	unmigrated:1
 windows/worldgen/src/alchemy.rs	1	unmigrated:1
 windows/worldgen/src/chorus.rs	1	unmigrated:1
+windows/worldgen/src/circuit_readout.rs	1	artifacts:1
 windows/worldgen/src/graph_derive.rs	1	unmigrated:1
 windows/worldgen/src/herds.rs	1	unmigrated:1
 windows/worldgen/src/history_emit.rs	1	unmigrated:1

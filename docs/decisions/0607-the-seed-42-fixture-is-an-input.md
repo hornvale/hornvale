@@ -33,17 +33,29 @@ tests already in the gate rather than by a step nothing runs anymore.
 **What the fixture cannot carry.** `GeneratedTerrain` and `GeneratedClimate`
 are `Clone` but deliberately not `Serialize` ("recomputed on demand, never
 serialized"), so a disk fixture structurally cannot supply them. Decision
-0606's `artifacts` reason is **reserved for a caller that needs those objects
-and cannot obtain them from a loaded world; no such caller exists today, and
-no roster row carries that reason.** Both artifact-needing modules this
-campaign migrated (`windows/scene`'s surrounds, `windows/worldgen`'s exposure
-suite) re-derive terrain and climate from the *loaded* world — `terrain_of(&w)`
-then `climate_from(&w, &terrain)`, the same derivation they ran before — so
-the read serves them and both carry `identity`, not `artifacts`. This
-paragraph asserted an `artifacts` row in the present tense as ratified, which
-was checkable against `world-build-sites.tsv` and false; the reason code is
-kept, unused and declared, because the taxonomy should name the case that a
-future non-`Serialize` consumer would fall into. What is true either way is
+0606's `artifacts` reason names **a caller that needs those objects and cannot
+obtain them from a loaded world at any seed.** Both artifact-needing modules
+this campaign migrated (`windows/scene`'s surrounds, `windows/worldgen`'s
+exposure suite) re-derive terrain and climate from the *loaded* world —
+`terrain_of(&w)` then `climate_from(&w, &terrain)`, the same derivation they ran
+before — so the read serves them and both carry `identity`, not `artifacts`.
+
+**This paragraph has now been wrong twice, in opposite directions, and the
+second time is the more instructive.** As first ratified it asserted an
+`artifacts` row in the present tense when the roster held none — checkable and
+false. Corrected at the final review to say "no such caller exists today", it
+went stale within hours: absorbing `main` at close brought
+`windows/worldgen/src/circuit_readout.rs`, whose `terrain_for(seed)` helper
+*returns* a `GeneratedTerrain` and therefore cannot be served by a read at any
+seed. It carries the reason's first and only row. A campaign on another branch
+supplied the case this taxonomy was reserved for, without knowing the reason
+code existed — which is the better argument for having reserved it than the
+reasoning that reserved it.
+
+The durable form of the rule: **the roster carries the counts and this record
+carries the meaning.** `cli/tests/fixtures/world-build-sites.tsv` is where a
+reader checks which reasons have rows; a decision record that restates a count
+will be wrong on a long enough branch. What is true either way is
 that a caller needing those objects pays the sculpt and the fit on top of the
 read, which is why the loader's saving is not uniform, and the design spec's own
 first estimate of the spread (`~3,000 ms -> ~1,110 ms`, "~2.7x") was invalidly

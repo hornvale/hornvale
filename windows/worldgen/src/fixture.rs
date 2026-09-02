@@ -21,16 +21,25 @@
 //! the ~200x above: 4.0x-4.2x for the two artifact-needing modules measured
 //! (decision 0607 has the full spread).
 //!
-//! **That does NOT mean a caller wanting those objects must build, and the
-//! `artifacts` roster reason has no rows.** This paragraph asserted one in
-//! the present tense until 2026-09-02; a reader could go look for it and not
-//! find it. Both artifact-needing modules re-derive from the *loaded* world
-//! instead — `terrain_of(&w)` and `climate_from(&w, &terrain)` — which is the
-//! same derivation they always ran, so the read serves them and neither
-//! carries a build site. The reason code stays available for a caller that
-//! genuinely cannot get there from a loaded world; no such caller exists
-//! today, and the roster (`cli/tests/fixtures/world-build-sites.tsv`) is the
-//! place to check, never this comment.
+//! **That does NOT mean every caller wanting those objects must build.** Both
+//! artifact-needing modules this campaign migrated re-derive from the *loaded*
+//! world instead — `terrain_of(&w)` and `climate_from(&w, &terrain)`, the same
+//! derivation they always ran — so the read serves them and neither carries a
+//! build site. They are rostered `identity`, not `artifacts`.
+//!
+//! **The `artifacts` reason has exactly one row, and it arrived from
+//! elsewhere.** This paragraph twice said the wrong thing about that: first it
+//! asserted a row in the present tense when there were none, and then, having
+//! been corrected to "no such caller exists today", it went stale within hours
+//! when absorbing `main` brought `windows/worldgen/src/circuit_readout.rs` —
+//! whose `terrain_for(seed)` helper *returns* a `GeneratedTerrain` and so could
+//! not be served by a read at any seed, the fixture's own included. That is the
+//! case the taxonomy was reserved for, and a campaign on another branch supplied
+//! it without knowing the reason code existed.
+//!
+//! The lesson for this comment specifically: **a count belongs in the roster,
+//! not in prose.** `cli/tests/fixtures/world-build-sites.tsv` is the place to
+//! check which reasons carry rows, and it cannot go stale against itself.
 
 use hornvale_kernel::World;
 
