@@ -910,6 +910,52 @@ a well-designed refusal.
 
 ---
 
+#20 [G6] — **BACKFILLED at close, and the backfill is itself the finding: four
+deferred minors lived only in git-ignored scratch.**
+
+*How this surfaced.* `closing-a-campaign` step 2A walks
+`.superpowers/sdd/*/progress.md` for `deferred|parked|minor|BLOCKED|follow-up`
+rather than summarising from memory. Six deferred minors came back. Four of them
+appear **nowhere in this committed ledger**, so they would have evaporated the
+next time the worktree was recycled — the exact loss The Cartulary moved the
+ledger out of that tree to prevent, reintroduced by recording them in the
+plugin's `progress.md` instead of here.
+
+The skill names this precisely: a `progress.md` line that reads like a deferred
+minor and never reached the committed ledger "is a discipline miss, not a
+routine finding". It is, and the miss is mine — I wrote each of them into scratch
+at its task boundary while writing rulings into the durable ledger in the same
+sitting, without noticing the two files have different lifetimes.
+
+*The six, with outcomes — which is what step 2B says a minor actually needs:*
+
+| # | deferred minor | outcome |
+|---|---|---|
+| 1 | Task 1's implementer report retained the disproven "expected drift" line for the roster total | **accepted as-is.** The report is git-ignored scratch; its committed half — decision 0606's baseline — was corrected in fix round 1. |
+| 2 | `docs/timings.md` gained 3 `gate-commit` rows across 2 commits, all keyed to the pre-commit `HEAD` | **accepted as-is, pre-existing.** `ci-record` runs inside `pre-commit`, before the commit object exists, so the ref it records is structurally the parent. Not this campaign's mechanism. |
+| 3 | `manifest-dir-uses.txt`'s count of 2 for `fixture.rs` includes a doc-comment mention, not a second real embedding | **accepted as-is, deliberately.** Ledger #9 ruled the prose stays: the over-count is the guard's own documented textual tolerance and errs safe. |
+| 4 | `world-build-sites.tsv` had a sort-order violation at ~line 32 | **CLOSED AS A NON-ISSUE.** The final review disproved it: `LC_ALL=C sort` on the path column yields zero differing lines; it appeared only under locale-aware collation, and `roster()` reads into a `BTreeMap` so file order is not load-bearing. It never existed in any committed document. |
+| 5 | Task 3's commit message says "110 call sites" where the brief said 108 | **accepted as-is.** A commit message is immutable, the arithmetic is internally consistent, and the frozen figure (#11) is 239. |
+| 6 | duplicate ledger entry `#12` | **FIXED**, commit `584fff560`, renumbered to #13/#14. |
+
+*The generalisable lesson, which is not "be more careful".* Two files with
+different lifetimes sat open in the same session and I wrote to whichever was
+nearer the thought. The durable one has a per-campaign name and survives; the
+scratch one has a shared name and dies. **Nothing in the workflow makes that
+difference visible at the moment of writing** — the plugin's `progress.md` is
+where task state legitimately belongs, so it is not wrong to write there, only
+wrong to write *this* there. A closer's step-2A walk is the backstop, and it
+worked; the improvement worth wanting is that it should not have had to.
+
+*Cost if wrong.* None now — all six have a named outcome above and in the
+retrospective.
+
+*Capture.* This entry; the retrospective's deferred-minors section; and
+`PROC-docs-only-commits-skip-a-gate-that-checks-docs`, the registry row that
+ledger #13's own Capture line promised and that this walk found missing too.
+
+---
+
 ## Parked findings
 
 ### P1 — `scene_surrounds_colour_cli.rs` uses a fixed temp path and flakes
