@@ -185,8 +185,8 @@ founder's.
   roll(world, observer_room: Facet) -> Vec<RollEntry>
     -- `t: WorldTime` was in this signature until Task 7 found membership is
        time-invariant by construction (a body's HOME decides it, §3.2 below),
-       so the function is strictly purer without it; ledger #16/#17 and the
-       Task 7 review record the amendment.
+       so the function is strictly purer without it; the ledger's Task 7
+       review rulings ("ACCEPTED: `roll_of` drops `t`") record the amendment.
     = every resident of every settlement whose room is within R walk-band
       hops of observer_room,
     + every wild body of every stack attractor within R hops, headcount-
