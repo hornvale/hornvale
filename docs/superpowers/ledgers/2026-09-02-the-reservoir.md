@@ -415,6 +415,68 @@ chronicle must carry the measured numbers, never the estimate.
 
 ---
 
+#11 [G5] — **I corrected the plan's caller counts with a broken instrument and
+made the aggregate worse. The frozen number is 239.**
+
+*What happened.* From Task 3 onward I "re-derived" every caller count with
+`grep -o '<helper>()' | wc -l`, minus one for the definition, and rewrote the
+plan's figures accordingly — twice, in commits `329add1f3` and in three
+dispatches. Task 5's reviewer flagged that two of my counts disagreed with its
+own recount. Re-measured with a real word boundary
+(`(?<![A-Za-z0-9_])NAME\(\)`):
+
+```
+  helper                      plan   my grep   rigorous   who was right
+  seam_world  src/session       84        86         86   my grep
+  seam_world  tests/session      24        24         24   both
+  world       surrounds          31        35         31   THE PLAN
+  world       exposure           27        23         23   my grep
+  world       session_snapshot   16        17         17   my grep
+  world       the_blocking       15        16         15   THE PLAN
+  generated(42)                  43        43         43   both
+  ------------------------------------------------------------------
+  TOTAL                         240       244        239
+```
+
+*The defect.* `grep -o 'world()'` matches `world()` **inside** longer
+identifiers — `seam_world()`, `played_world()`, anything ending in `_world()`.
+So my instrument counted substring occurrences while I reported it as counting
+calls. It inflated exactly the two files where such identifiers exist, and my
+aggregate (244) ended up **further from the truth (239) than the plan's original
+240 was.**
+
+*Why this is worth a ledger entry rather than a quiet fix.* It is the shape my
+own standing note names — the observing tool answering a neighbouring question —
+and I committed it while warning three implementers about it in their dispatches.
+Worse, it has the specific character of being *invisible on inspection*: every
+individual number looked plausible, the totals stayed in the right range, and the
+two wrong ones were wrong in the same direction as a real correction would have
+been. Nothing about the output said "substring".
+
+*What saved it.* Not care — a reviewer's independent recount, on a Minor finding
+it could easily have left unstated. That is the second time in this campaign a
+reviewer's refusal to accept a stated number caught a controller error.
+
+*Decision.* **239 is the frozen number**, measured once with a word-boundary
+regex at `c3f35ef9e`, decomposing as T3 110 / T4 54 / T5 75. It goes in decision
+0606 and the chronicle in that form. Every earlier figure in this ledger and in
+the plan's prose — 240, 244, 248 — is superseded by it; they are left in place
+above rather than rewritten, because the drift is the point.
+
+*And the honest caveat on the caveat:* 239 is a count of syntactic call sites,
+not of tests. Several helpers are called more than once per test and some calls
+sit in non-test helpers. The number that actually matters is the measured
+**567.0 CPU-seconds**, which required no counting at all.
+
+*Cost if wrong.* Low, and bounded: the campaign's result is the CPU-second
+measurement; the call-site count is colour.
+
+*ideonomy passes / overturns.* n/a — a measurement correction.
+
+*Capture.* This entry; decision 0606 and the chronicle carry 239 and 567.0.
+
+---
+
 ## Parked findings
 
 ### P1 — `scene_surrounds_colour_cli.rs` uses a fixed temp path and flakes
