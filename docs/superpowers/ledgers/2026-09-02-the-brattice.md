@@ -354,3 +354,17 @@ none — a self-review, not a ruling; the rulings it records are readings of
 #2 and #7 · Capture: plan header, Tasks 1/3/4; spec unchanged (the plan says
 where it departs and why, which is the Crosscut's "amended in execution and
 says so" discipline applied one gate earlier).
+
+## Task 0 record
+
+Run inline by the controller (four shell commands and this note; the
+dispatch skill's "trivial exact-content changes are cheaper inline" rule).
+Epoch grep, unchanged from the Crosscut's spec §5:
+`grep -rn "Level\b\|LevelCellKind\|CellGrid" --include=*.rs windows domains kernel cli | grep -v "windows/vessel/src/underworld_level/\|windows/vessel/src/underground.rs\|/tests/\|#\[cfg(test)\]" | grep -n "commit\|Fact\|ledger"`
+→ no output, exit 1. No committing reader of a level exists; the campaign's
+one save-format consequence remains the descent key's identity (spec §5).
+Baselines copied to `.superpowers/sdd/2026-09-02-the-brattice/baselines/` at
+`aee210745`. Literal sites: `circuit.rs` `Node {`/`Edge {` = 10; vessel
+`Level {` constructions = 4 (`underworld_level/mod.rs:277`,
+`underground.rs:1109`, `:1130` (tests), `level_doc.rs:389` (test)).
+Inventory frozen at 10 (G3 record).
