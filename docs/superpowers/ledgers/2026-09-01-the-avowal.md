@@ -261,6 +261,16 @@ construction, and the test asserts it. Confirms the instrument moves.
     4: 238, 5: 121, 6: 61, 7: 24, 8: 18, 9: 14, 10: 2, 11: 1, 12: 1, 13: 1,
     14: 1, 15: 1, 16: 1}
 
+  [Task 8 correction, 2026-09-02: this histogram sums to 5125, one short of
+  the panel's own `promoted` column (5126) — a transcription slip when test
+  output was pasted here, not a re-run discrepancy. Which single bucket is
+  short is not recoverable from this record alone, and no yield number above
+  depends on this histogram (yield is computed from the per-seed
+  promoted/fb_promoted/roots columns, not from the pooled depth table), so
+  nothing else in this entry or the §4.3 kill-criterion verdict is affected.
+  Flagged rather than guess-corrected — inventing a bucket value to force the
+  sum to 5126 would replace one unverified number with another.]
+
   median yield (all promoted founders, THE KILL CRITERION): 44.9%
   median yield (excluding roots, not the kill criterion):   59.1%
 ```

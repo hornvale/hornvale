@@ -6,9 +6,20 @@
 //! of the three correspondence edges is either `Present(payload)` or
 //! `Absent(Void)`, and `Void` is closed so an absence must name why.
 //!
-//! Stage 1 lands the types only — nothing constructs a `Manifest` yet. The
-//! edge-payload types (`Lexicalization`, `PerceptKind`, `CognitiveHandle`)
-//! are deliberate placeholders whose full semantics arrive in later stages.
+//! [`crate::registry::ConceptRegistry::register_manifest`] is now the sole
+//! path onto the registry (its own doc says so): every domain's
+//! `register_concepts` constructs one `Manifest` per concept, called from
+//! the genesis composition root for every world, and `hornvale concepts
+//! --manifest` renders the result. **This paragraph used to say "Stage 1
+//! lands the types only — nothing constructs a `Manifest` yet," which was
+//! true when written and is not true now** — The Avowal (2026-09-02) found
+//! the sentence stale while citing it (decision 0576) and corrected it here
+//! rather than leaving a committed doc comment asserting something the tree
+//! had long since outgrown. Two of the three edge-payload types have real
+//! semantics today (`Lexicalization::{Expected, Word}`; `PerceptKind`,
+//! validated against a registered phenomenon kind at construction);
+//! `CognitiveHandle` alone is still the deliberate unit placeholder its own
+//! doc names — the cognition column is the one that still voids in Stage 1.
 //!
 //! # Anti-vacuity
 //!

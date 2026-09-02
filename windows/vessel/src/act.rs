@@ -45,9 +45,9 @@
 //! **What "the derived act view" reads, and what it cannot yet read.**
 //! [`Session`](crate::Session) exposes exactly three things publicly that
 //! an act view needs: [`Session::day`](crate::Session::day) (the
-//! constituent [`act_occurred_on`] returns), [`Session::agent_entity`]
-//! (crate::Session::agent_entity) (the constituent [`deed_of`] returns for
-//! the possessed body's own acts), and
+//! constituent [`act_occurred_on`] returns),
+//! [`Session::agent_entity`](crate::Session::agent_entity) (the constituent
+//! [`deed_of`] returns for the possessed body's own acts), and
 //! [`Session::purview`](crate::Session::purview) (the walk-band chart,
 //! whose squares — `hornvale_scene::SurroundsCell`, the chart's own AREA // lexicon: SurroundsCell is a chart AREA unit, never a mesh vertex
 //! unit, never a mesh vertex — carry `hornvale_scene::Mark`s of kind
@@ -166,12 +166,14 @@ impl Act {
     }
 }
 
-/// Whether `witness` was present to see `act` — co-location on the day it
-/// happened, read off the `present` pool a caller supplies. The actor
-/// witnessing their own act does not count: an act's own performer is not
-/// what `predicate:witnessed` means in the corpus this bundle serves
-/// (Polti's and tvtropes' `witnessing` bundle is about a *third party*
-/// observing).
+/// Whether `witness` was present to see `act` — co-location, read off the
+/// `present` pool a caller supplies. This function never reads `act.day`:
+/// the temporal binding (that `present` names who was actually around on
+/// the act's own day) is the caller's responsibility, established by how
+/// the pool was built, not checked here. The actor witnessing their own act
+/// does not count: an act's own performer is not what `predicate:witnessed`
+/// means in the corpus this bundle serves (Polti's and tvtropes'
+/// `witnessing` bundle is about a *third party* observing).
 ///
 /// type-audit: bare-ok(flag: return)
 pub fn witnessed(act: &Act, witness: EntityId, present: &[EntityId]) -> bool {

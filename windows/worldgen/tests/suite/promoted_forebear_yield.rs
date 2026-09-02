@@ -96,8 +96,6 @@
 //! budget — this is a calibration probe, not a census, and does not attempt
 //! `0..999` coverage.
 
-#![allow(clippy::disallowed_methods)]
-
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 
@@ -364,7 +362,6 @@ fn commit(world: &mut World, subject: EntityId, predicate: &str, object: Value) 
 /// to reconstruct it and for `generation_length_of` to resolve — "goblin" is
 /// a real roster species, per `descent_graph.rs`'s own generation-length
 /// test). `mother` links `occ-founded-from`, when given.
-#[allow(clippy::too_many_arguments)]
 fn commit_occupation(
     world: &mut World,
     site: u32,

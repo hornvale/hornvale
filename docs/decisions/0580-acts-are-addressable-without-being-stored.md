@@ -1,6 +1,6 @@
 # 0580. Acts are addressable without being stored — a derived act view, session-home wired
 
-**Status:** Accepted (2026-09-02) · **Decider:** Nathan (autopilot; the
+**Status:** Superseded by [0585](0585-act-chronology-completes-too-and-the-method-is-act-handle.md) (2026-09-02, Task 8 close review — point 2 named a method, `ActHandle::of`, that was never shipped, and point 6 reported only one of the two bundles this task actually completed) · **Decider:** Nathan (autopilot; the
 reification call itself was Nathan's, at brainstorm — see below) · **Campaign:** The Avowal
 
 ## Context
