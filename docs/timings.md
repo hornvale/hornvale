@@ -4966,3 +4966,4 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-02T15:07:29Z | sluice:heavy | 439.118 | 9637.904 | 156.597 | 22.30 | 0 | 96d96d43e |  | lefford | 40 |
 | 2026-09-02T16:05:01Z | gate-commit | 569.742 | 1127.969 | 188.272 | 2.31 | 0 | 91cb603b6 | campaign/the-reservoir | ambrose | 12 |
 | 2026-09-02T16:13:48Z | gate-commit | 302.274 | 75.324 | 37.340 | 0.37 | 0 | 91cb603b6 | campaign/the-reservoir | ambrose | 12 |
+| 2026-09-02T16:17:19Z | gate-commit | 176.097 | 76.736 | 38.197 | 0.65 | 0 | 91cb603b6 | campaign/the-reservoir | ambrose | 12 |
