@@ -578,3 +578,21 @@ The three rule witnesses and M1, decided nowhere, measured everywhere:
 Two info notes: two new `Session` accessors have no caller until the
 readout; rule 4's zero carries its mechanism. No ideonomy pass: the task
 produced numbers and no ruling.
+
+## Stage 3 boundary — main absorbed (`99d0ce2d2`), the ratchet row added (`1ea0998d0`)
+
+A clean auto-merge of `4b82e544d` (The Reservoir): no conflict anywhere,
+including `docs/audits/type-audit-report.md`, which the implementer
+regenerated regardless (a clean merge of an aggregate is not evidence it
+merged right). The Reservoir's build-site ratchet gained one row for this
+campaign's in-crate oracle helper (`windows/vessel/src/liveness_tests/
+emitter_scan.rs`, `identity:1` — it builds seed 6, which has no fixture);
+`liveness.rs`'s count stayed 6. The three constants reproduced on the
+merged tree without edit, as the main-first measurement above predicted.
+`make gate-commit` ran 1,115 sub-floor tests (main's roster additions
+merged in). **A controller slip, recorded for the retrospective:** the
+Task 8 ledger entry was committed into this worktree while the absorption
+implementer was mid-task; the merge had already auto-committed, so nothing
+was clobbered, but the rule — no controller commits while a subagent works
+in the same tree — was broken. **Stage 3 closes here**; the stage gate is
+`req-1ea0998d039c`.
