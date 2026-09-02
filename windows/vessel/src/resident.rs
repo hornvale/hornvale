@@ -811,7 +811,18 @@ impl FrighteningGround {
     ) -> u64 {
         let entry = self.by_entity.entry(entity).or_default();
         let mut judged = 0_u64;
-        for (day, room) in &trail[entry.consumed.min(trail.len())..] {
+        // The trail is append-only within a store (a `LedgerFold` only ever
+        // absorbs) and `consumed` is set only to `trail.len()`, so the cursor
+        // can never exceed the trail it indexes; a store discarded is
+        // discarded WHOLE, so this index and the trail it indexes are always
+        // rebuilt together. A violated invariant panics loudly on the slice
+        // below in release rather than being silently clamped.
+        debug_assert!(
+            entry.consumed <= trail.len(),
+            "the trail is append-only and the cursor is only ever set to its length, \
+             so a cursor past the trail's end means this index outlived the trail it indexes"
+        );
+        for (day, room) in &trail[entry.consumed..] {
             if entry.judged.contains_key(room) {
                 continue;
             }
