@@ -287,7 +287,15 @@ carries at most a handful of keys. `Reach` reports whether the terminus and
 every key node were reached, and the shortest gated distance to each.
 
 The **default body** is `{Walk, Wade}` holding nothing — the intruder. The
-pass calls `solvable` with it after every tentative stamp (§3.2 step 4). The
+pass calls `solvable` with it after every tentative stamp (§3.2 step 4).
+**Execution amendment (Task 2 review, ruling F):** solvability is the ROUND
+TRIP. The G3 text asked only that the terminus and every key be reachable
+from the entrance; a chute taken downward into a realm whose upper path a
+nested sump blocks would then leave the default body with no way back — a
+trap, which Dormans' "unknown return path" never means (the return differs;
+it is never absent). So the pass also requires `gated_round_trip(plan,
+DEFAULT_BODY)` to exist, unstamps on failure as `Unsolvable`, and the guard
+of §4.3 asserts the round trip on every descent. The
 guard test (§4.3) asserts it on the panel and on a 400-seed sweep. The
 readout (§4.2) reads its distances. **The resident** is the body holding
 every key with every capability; for it, every standable cell of the
