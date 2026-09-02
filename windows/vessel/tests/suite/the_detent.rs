@@ -251,3 +251,45 @@ fn h5_witness_the_hazard_reads_terrain_samples_on_the_bench_shape() {
         "no facts committed over the run"
     );
 }
+
+use crate::ledger_hash_witness::{EMITTER_SEED, fnv1a, run_emitter_witness, run_fixed_script};
+use hornvale_vessel::{PossessOpts, Session};
+
+/// CAMPAIGN-TIME constants (decision 0541): minted at Task 2 from the merge
+/// base, re-recorded MAIN-FIRST after every absorption, retired at close.
+/// They equal "the whole walk's behaviour on one seed" and redden on ANY
+/// behaviour change by any campaign; that is their job for exactly as long
+/// as this campaign's pre-fix code exists to diverge from.
+pub(crate) const DETENT_SEED_42_LEDGER: u64 = 0xabc4_731e_5cf1_ab21;
+pub(crate) const DETENT_EMITTER_LEDGER: u64 = 0xc851_e64b_0105_38b2;
+pub(crate) const DETENT_EMITTER_HAZARD: u64 = 0xa9f1_7d82_c183_2854;
+
+#[test]
+fn the_detent_seed_42_walk_matches_the_campaign_time_constant() {
+    let world = common::build(42).expect("seed 42 builds");
+    let (mut session, _) = Session::start(&world, &PossessOpts::default()).expect("seed 42 starts");
+    run_fixed_script(&mut session);
+    let hash = fnv1a(session.session_ledger_json().as_bytes());
+    println!("the-detent seed-42 ledger hash: {hash:#018x}");
+    assert_eq!(
+        hash, DETENT_SEED_42_LEDGER,
+        "the seed-42 walk moved — a fold changed a creature's route"
+    );
+}
+
+#[test]
+fn the_detent_emitter_walk_matches_the_campaign_time_constants() {
+    let world = common::build(EMITTER_SEED).expect("the emitter seed builds");
+    let run = run_emitter_witness(&world);
+    println!(
+        "the-detent emitter: ledger {:#018x} hazard {:#018x} over {} bodies, {} shunned, {} dread, {} replays",
+        run.ledger_hash, run.hazard_hash, run.bodies, run.shunned, run.dread, run.replays
+    );
+    assert!(
+        run.replays > 0,
+        "the emitter seed must reach the past-day affect replay or this constant witnesses the terrain-only path"
+    );
+    assert!(run.shunned > 0, "the hazard digest must be non-empty");
+    assert_eq!(run.ledger_hash, DETENT_EMITTER_LEDGER);
+    assert_eq!(run.hazard_hash, DETENT_EMITTER_HAZARD);
+}

@@ -168,7 +168,7 @@ const FNV_PRIME: u64 = 0x0000_0100_0000_01b3;
 /// Hash `bytes` with plain FNV-1a: XOR each byte into the running hash, then
 /// multiply by the prime. No relation to `Seed::derive`'s variant (which
 /// seeds the offset with a parent seed) — this is the textbook algorithm.
-fn fnv1a(bytes: &[u8]) -> u64 {
+pub(crate) fn fnv1a(bytes: &[u8]) -> u64 {
     let mut h = FNV_OFFSET_BASIS;
     for &b in bytes {
         h ^= u64::from(b);
@@ -181,7 +181,7 @@ fn fnv1a(bytes: &[u8]) -> u64 {
 /// total — enough for at least two NPCs' drives to reset at least once, which
 /// this function itself verifies via `committed_fact_count_for` before
 /// returning, rather than trusting the tick count alone).
-fn run_fixed_script(session: &mut Session<'_>) {
+pub(crate) fn run_fixed_script(session: &mut Session<'_>) {
     let entities: Vec<_> = session.bodies().iter().map(|b| b.entity).collect();
     assert!(
         entities.len() >= 2,
@@ -374,7 +374,7 @@ fn emitter_bearing_world() -> (u64, hornvale_kernel::World) {
 /// reported **10** replays on seed 28 rather than that sweep's 14. It runs
 /// [`EMITTER_SCRIPT_WAITS`] (2) today. All three are correct measurements of
 /// different scripts.
-const EMITTER_SEED: u64 = 6;
+pub(crate) const EMITTER_SEED: u64 = 6;
 
 /// A canonical, order-fixed rendering of every body's hazard memory.
 ///
@@ -407,30 +407,30 @@ fn hazard_digest(
 /// Every field is captured PER RUN. Two runs sharing a session would share
 /// their counters as well, and the determinism claim below would then be a
 /// claim about one number compared with itself.
-struct EmitterRun {
+pub(crate) struct EmitterRun {
     /// FNV-1a over the session's own committed-ledger JSON.
-    ledger_hash: u64,
+    pub(crate) ledger_hash: u64,
     /// FNV-1a over [`hazard_digest`] of every body's hazard memory.
-    hazard_hash: u64,
+    pub(crate) hazard_hash: u64,
     /// How many bodies the digest covered.
-    bodies: usize,
+    pub(crate) bodies: usize,
     /// Shunned rooms summed over every body.
-    shunned: usize,
+    pub(crate) shunned: usize,
     /// Dread entries summed over every body.
-    dread: usize,
+    pub(crate) dread: usize,
     /// Past-day affect replays the hazard fold performed.
-    replays: u64,
+    pub(crate) replays: u64,
     /// Emitter scans the walk built.
-    scans: u64,
+    pub(crate) scans: u64,
     /// How many of those scans found an emitter.
-    with_emitters: u64,
+    pub(crate) with_emitters: u64,
     /// Every dread magnitude, as `entity/room = value (bits)`.
-    dread_lines: Vec<String>,
+    pub(crate) dread_lines: Vec<String>,
 }
 
 /// One fresh session on `world`, the fixed emitter script, and everything the
 /// witness reads off it.
-fn run_emitter_witness(world: &hornvale_kernel::World) -> EmitterRun {
+pub(crate) fn run_emitter_witness(world: &hornvale_kernel::World) -> EmitterRun {
     let (mut session, _opening) =
         Session::start(world, &PossessOpts::default()).expect("the found world starts a session");
     run_emitter_script(&mut session);
