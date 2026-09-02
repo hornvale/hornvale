@@ -2903,6 +2903,14 @@ cen_origin="$tmp/cen-origin.git"; git init -q --bare -b main "$cen_origin"
     g config user.email c@c; g config user.name c
     mkdir -p book/src/laboratory/generated/the-census
     printf 'seed,value\n42,1\n' > book/src/laboratory/generated/the-census/rows.csv
+    # docs/timings.md must be TRACKED here or this fixture cannot reproduce
+    # production at all. The run's own ledger row is what the general `add -u`
+    # sweeps, and its absence from this fixture is exactly why the production
+    # null went unexercised while these tests appeared to cover it: with no
+    # row, "nothing moved" means an EMPTY index, which is a different branch
+    # of sluice-census.sh than the one real censuses actually take.
+    mkdir -p docs
+    printf 'baseline\n' > docs/timings.md
     g add -A; g commit -qm root
     g remote add origin "$cen_origin"; g push -q origin main
 )
@@ -2917,6 +2925,9 @@ write_stub() {  # $1 = moves|still|fails
 case "$1" in
   moves) printf 'seed,value\n42,2\n' > "$cen_wt/book/src/laboratory/generated/the-census/rows.csv" ;;
   still) : ;;
+  # The PRODUCTION-SHAPED null: no golden moves, but the run records its own
+  # cost, exactly as timed.sh does inside the real census worktree.
+  timings) printf 'run 879s\n' >> "$cen_wt/docs/timings.md" ;;
   fails) echo "stub census exploded" >&2; exit 9 ;;
 esac
 exit 0
@@ -2978,13 +2989,65 @@ else
 (expected rc=0, no new branch, and the NO GOLDENS MOVED line)"
 fi
 
+# THE PRODUCTION-SHAPED NULL, which nothing exercised until 2026-09-02 and
+# which is the case every real census actually takes. Above, `still` stages
+# NOTHING, so it lands on sluice-census.sh's empty-index branch. A real run
+# always stages its own docs/timings.md row, so it lands on the branch below --
+# and that branch's guard was UNREACHABLE, because the predicate asked "is
+# anything staged?" when the question was "did anything move BESIDES the row?".
+# Two censuses on 2026-09-02 delivered a branch whose entire content was
+# `docs/timings.md | 1 +` while announcing that goldens had moved.
+#
+# The delivery is deliberately KEPT on a null: dropping it would destroy the
+# run's cost measurement, reopening for census the bug The Governor's Task 7
+# closed for heavy. So this asserts the REPORT is honest, not that the push is
+# skipped.
+write_stub timings
+rc_t=$(run_census "$cen_ref")
+t_log=""
+for _f in "$tmp/cen-state"/census-*.log; do [ -e "$_f" ] && t_log="$_f"; done
+if [ "$rc_t" = "0" ] && [ -n "$t_log" ] && grep -q 'NO GOLDENS MOVED' "$t_log"; then
+    ok "a census that moves only the timings row reports NO GOLDENS MOVED"
+else
+    bad "timings-only census: rc=$rc_t, log=${t_log:-none} (expected rc=0 and NO GOLDENS MOVED)"
+fi
+# Asserts the guard's OWN output, not a branch COUNT, and the difference is not
+# stylistic. The branch name is census/<ref12>-<stamp-to-the-second>, and this
+# harness runs `moves` and `timings` against the SAME ref inside the same
+# second, so both compose an identical name and the second push fast-forwards
+# the first instead of creating a branch. A count assertion reads 1 -> 1 and
+# calls a successful delivery a dropped row. (That collision is real in
+# production too, if two censuses of one ref ever land in the same second --
+# rare, and not this test's business.)
+if [ -n "$t_log" ] && grep -q 'DELIVERED on' "$t_log"; then
+    ok "the timings row is still DELIVERED on a branch -- the cost measurement survives"
+else
+    bad "timings-only census did not deliver; the run's cost measurement was dropped"
+fi
+# The anti-vacuity half: the branch must carry the row and NOT a golden, or both
+# assertions above could pass on a branch that had actually moved goldens.
+t_branch="$(g -C "$cen_origin" for-each-ref --format='%(refname:short)' 'refs/heads/census/*' | tail -1)"
+t_files="$(g -C "$cen_origin" show --name-only --format= "$t_branch" 2>/dev/null | grep -c .)"
+if [ "$t_files" = "1" ] && g -C "$cen_origin" show --name-only --format= "$t_branch" 2>/dev/null | grep -q '^docs/timings\.md$'; then
+    ok "the delivered branch carries the timings row ALONE -- no golden rode along"
+else
+    bad "timings-only branch carried $t_files path(s), expected exactly docs/timings.md"
+fi
+
+
 write_stub fails
+# Capture the baseline HERE rather than reusing $after_n from an earlier block.
+# It was reused, and inserting a test between the two silently broke this one:
+# the new test legitimately pushed a branch, so a stale baseline reported a
+# delivery this run never made. A test whose baseline is set by a distant,
+# unrelated block is fragile to insertion in a way that reads as a real failure.
+before_fail="$(g -C "$cen_origin" for-each-ref 'refs/heads/census/*' | wc -l)"
 rc_fail=$(run_census "$cen_ref")
 after_fail="$(g -C "$cen_origin" for-each-ref 'refs/heads/census/*' | wc -l)"
-if [ "$rc_fail" != "0" ] && [ "$after_fail" = "$after_n" ]; then
+if [ "$rc_fail" != "0" ] && [ "$after_fail" = "$before_fail" ]; then
     ok "a failed census propagates non-zero and delivers nothing"
 else
-    bad "failed census: rc=$rc_fail, branches $after_n -> $after_fail (expected non-zero and no branch)"
+    bad "failed census: rc=$rc_fail, branches $before_fail -> $after_fail (expected non-zero and no branch)"
 fi
 
 echo "== request path: every kind the usage string offers is a kind it ACCEPTS =="

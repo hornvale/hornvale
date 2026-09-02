@@ -118,6 +118,12 @@ run "census guard"    bash scripts/test-census-guard.sh
 # widened to fix twice already (test-pre-push.sh, then the seam-guard suite).
 run "sluice drain"    bash scripts/test-sluice-drain.sh
 run "sluice vet"      bash scripts/test-sluice-vet.sh
+# The delivery classification, wired in the same commit that fixed it — a test
+# nothing runs is a test that does not exist, and this file has had to be
+# widened for exactly that reason three times now (test-sluice.sh,
+# test-pre-push.sh, the seam-guard suite). The arm it guards was UNREACHABLE
+# for the life of sluice-census.sh precisely because nothing exercised it.
+run "sluice census"   bash scripts/test-sluice-census.sh
 # The post-merge hook's own suite, added the same way pre-push's was:
 # nothing exercised this hook, so its own author (Task 3, The Attestation)
 # shipped a Critical that made it silent on every merge, for all ten
