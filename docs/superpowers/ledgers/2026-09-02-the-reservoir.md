@@ -518,7 +518,7 @@ of the brief's branch table fired. See this task's report for the pasted
 
 ---
 
-#12 [G5] — **The docs-only fast-path is blind to docs regressions that Rust
+#13 [G5] — **The docs-only fast-path is blind to docs regressions that Rust
 tests catch. This campaign made ~12 commits through that hole.**
 
 *What happened.* Task 6's chronicle cited registry ID `MAP-25` from
@@ -565,7 +565,7 @@ cheap and gets closed by whoever measures it.
 
 ---
 
-#13 [G5] — **I asserted a defect-distribution streak without checking it, and
+#14 [G5] — **I asserted a defect-distribution streak without checking it, and
 it nearly landed as a retrospective headline.**
 
 *What happened.* Task 6's dispatch told the implementer "**THIS CAMPAIGN IS THE
