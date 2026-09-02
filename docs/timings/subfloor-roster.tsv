@@ -2991,7 +2991,7 @@ hornvale-vessel::suite$affordance::no_thing_kind_keyed_verb_table_exists
 hornvale-vessel::suite$affordance::no_verb_by_object_table_exists
 hornvale-vessel::suite$affordance::subset_and_equality_genuinely_disagree_on_the_constructed_traits
 hornvale-vessel::suite$affordance::the_dispatch_scan_catches_a_thing_kind_keyed_table
-hornvale-vessel::suite$affordance::the_dispatch_scan_catches_an_anchor_kind_keyed_table
+hornvale-vessel::suite$affordance::the_dispatch_scan_walks_a_multi_line_signature
 hornvale-vessel::suite$affordance::the_dispatch_scan_catches_an_inner_str_keyed_table
 hornvale-vessel::suite$affordance::the_dispatch_scan_does_not_fire_on_the_registry_indirection
 hornvale-vessel::suite$affordance::the_dispatch_scan_does_not_fire_on_the_verb_roster_call

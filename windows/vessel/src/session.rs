@@ -4058,9 +4058,21 @@ impl<'w> Session<'w> {
                 "ask" => Turn::Out(self.ask()),
                 // The one verb this arc adds (The Deed, Task 7): the
                 // acceptance test needs a body that can stop obeying, and
-                // none of spec §3.2's 26 could produce one. Routed to the
-                // existing `Action::Rest` machinery — no new concept, no new
-                // cost dial, no new predicate.
+                // none of spec §3.2's 26 could produce one.
+                //
+                // TWO THIRDS OF WHAT THIS COMMENT USED TO SAY WAS UNDONE
+                // TWO LINES BELOW IT (The Wicket, Task 8). It read "Routed
+                // to the existing `Action::Rest` machinery — no new concept,
+                // no new cost dial, no new predicate." Task 8 split the act:
+                // `Session::sleep` charges `Action::Sleep` and commits
+                // `SLEPT`, a predicate this session registers itself
+                // (`register_predicate(SLEPT, …)`), so neither the routing
+                // claim nor "no new predicate" survives. What DOES survive
+                // is both bookends: no new CONCEPT (a sleep is still a
+                // recovery bout, the unconscious twin of a rest, not a
+                // fourth thing), and no new COST DIAL — `clock::cost_of`
+                // prices `Action::Rest | Action::Sleep` at the same 150
+                // ticks in one arm, unchanged by the split.
                 "sleep" => self.sleep(rest),
                 "write" => Turn::Out(self.write(rest)),
                 "consult" => Turn::Out(self.consult()),

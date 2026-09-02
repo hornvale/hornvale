@@ -90,7 +90,7 @@ use crate::common;
 /// agree, so the *claim* survived and only its *number* died. Nothing reddens
 /// on a count written into prose — ledger #58, #60, and the reason this file's
 /// own guarantees are asserted in code rather than described here.)
-fn every_named_kind() -> Vec<KindId> {
+fn every_rostered_kind() -> Vec<KindId> {
     hornvale_thing::THING_KINDS
         .iter()
         .map(|l| KindId(l))
@@ -966,8 +966,21 @@ fn the_dispatch_scan_catches_a_thing_kind_keyed_table() {
 /// before reaching the return type. That is a property of the scanner's
 /// parser rather than of any key spelling, so it survives every future
 /// re-key.
+///
+/// **Renamed at The Wicket's close, which is the third correction to this
+/// same fixture and the one its own doc had already argued for.** It was
+/// `the_dispatch_scan_catches_an_anchor_kind_keyed_table`: a name promising
+/// coverage of a KEY SPELLING for a type this campaign deleted, on a fixture
+/// whose body has never keyed on that type and whose doc, two paragraphs up,
+/// says the property is the multi-line SIGNATURE. Task 2 deferred the rename
+/// on the belief that touching a test name meant hand-editing
+/// `docs/timings/subfloor-roster.tsv`; that file is an ordinary chamber
+/// artifact the `gate` phase rewrites, and a name missing from it only means
+/// `gate-commit` skips this one test until the next green run.
+/// **`docs/decisions/0397` still names the old identifier** — decision
+/// records are append-only, so that citation stays as the dated record it is.
 #[test]
-fn the_dispatch_scan_catches_an_anchor_kind_keyed_table() {
+fn the_dispatch_scan_walks_a_multi_line_signature() {
     let src = b"pub fn offered_to_observer(\n    \
                  kind: KindId,\n    \
                  body: &Body,\n\
@@ -1621,22 +1634,30 @@ fn no_hardcoded_anchor_kind_gates_warm() {
 /// this table caught while a mapping stood in that position; the table's
 /// live job is the agreement below.
 ///
-/// **Also the agreement half for [`every_named_kind`] (Task 9), and the
+/// **Also the agreement half for [`every_rostered_kind`] (Task 9), and the
 /// agreement still has a side this table cannot follow on its own.** This
 /// table is
 /// now the ONLY hand-maintained enumeration of kinds in this file:
-/// [`every_named_kind`] reads `hornvale_thing::kinds::EVERY_HANDLE`, which is
-/// ratcheted against the roster rather than generated from an enum's own
+/// [`every_rostered_kind`] reads `hornvale_thing::THING_KINDS`, the roster
+/// itself, rather than a hand-written handle list or an enum's generated
 /// declaration. That asymmetry is what makes the first assertion below carry
-/// the campaign's add-a-kind property. An added handle lengthens the
-/// ratcheted side and not this one, so it reddens here; a row dropped from
+/// the campaign's add-a-kind property. An added ROSTER ROW lengthens the
+/// frozen side and not this one, so it reddens here; a row dropped from
 /// this table shortens it against a side that cannot follow, so that reddens
 /// here too. Neither direction can be satisfied by both lists going short
 /// together, which is exactly how the pre-fix arrangement failed. **The side
-/// that cannot follow is one step weaker than it was**: `EVERY_HANDLE` is
-/// hand-written, where `AnchorKind::ALL` was macro-generated, and what holds
-/// it honest is `the_roster_is_frozen_as_an_ordered_set` (G-f) rather than a
-/// generator. Say so rather than inheriting the old sentence's confidence.
+/// that cannot follow is not the compiler any more**: `THING_KINDS` is a
+/// hand-written slice, where `AnchorKind::ALL` was macro-generated, and what
+/// holds it honest is `the_roster_is_frozen_as_an_ordered_set` (G-f) rather
+/// than a generator. Say so rather than inheriting the old sentence's
+/// confidence.
+///
+/// (**This paragraph said `EVERY_HANDLE` until the final review**, describing
+/// the arrangement Task 2 shipped and Task 3 replaced one task later — the
+/// same shape as the count correction on [`every_rostered_kind`]'s own doc,
+/// and one screen from it. The helper's NAME carried the stale reading too,
+/// and is renamed here: a roster is not a set of names, which is the
+/// distinction decisions 0556 and 0557 make constitutional.)
 ///
 /// MUTATION THAT AGREEMENT MUST FAIL AGAINST — run because a guard written
 /// in the same commit as the thing it guards is unaudited text: drop
@@ -1740,18 +1761,19 @@ fn the_re_key_preserves_every_anchor_kinds_offer() {
     ];
     // The two rosters agree, in both directions and in order. A kind dropped
     // from either enumeration reddens here rather than quietly shrinking
-    // what some other test sweeps. The ORDER is `EVERY_HANDLE`'s, which is
-    // alphabetical by handle name; it was the enum's declaration order until
-    // The Wicket deleted the enum, and the rows themselves are unchanged.
+    // what some other test sweeps. The ORDER is `THING_KINDS`', which is
+    // alphabetical by label; it was the enum's declaration order until The
+    // Wicket deleted the enum, and the rows themselves are unchanged.
     let table_kinds: Vec<KindId> = expected.iter().map(|(k, _)| *k).collect();
     assert_eq!(
         table_kinds,
-        every_named_kind(),
-        "this table and every_named_kind() are the file's only two kind \
-         enumerations, and only the table is hand-maintained: a handle added \
-         to `hornvale_thing::kinds` lengthens every_named_kind() and not this \
-         table, and a row dropped from this table shortens it against a \
-         roster that cannot follow"
+        every_rostered_kind(),
+        "this table and every_rostered_kind() are the file's only two kind \
+         enumerations, and only the table is UNFROZEN: a kind added to \
+         `hornvale_thing::THING_KINDS` lengthens every_rostered_kind() and \
+         not this table, and a row dropped from this table shortens it \
+         against a roster the_roster_is_frozen_as_an_ordered_set (G-f) will \
+         not let follow"
     );
     for (kind, want) in expected {
         let want: BTreeSet<OfferedVerb> = want.iter().copied().collect();

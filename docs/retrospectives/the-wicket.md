@@ -2,12 +2,18 @@
 
 **Merged:** 2026-09-01
 
-## The headline: EIGHTEEN instances of ONE shape
+## The headline: TWENTY-THREE instances of ONE shape
 
 Every review round of this campaign found the same defect wearing different
 clothes: **a statement whose form outran what it could support.** Not vagueness
 — the opposite. The statements were specific, and specificity is what made them
 convincing.
+
+The numbered list below is **1-18**, the campaign's own rounds. The final
+whole-branch review added **19-23** and a mechanism the eighteen do not
+contain; they have their own section after this one rather than being
+appended here, because four of the five sit in blocks this campaign edited in
+the same pass and that is the finding, not the count.
 
 The ledger entry is cited beside each one, because the retrospective and the
 ledger number these differently and a record nobody can cross-walk is a record
@@ -143,6 +149,67 @@ Neither half is "read more carefully". Both are *go and check against
 something outside the text*, and the only difference is whether the something
 runs.
 
+## The whole-branch review found five more, and a MECHANISM the eighteen did not contain
+
+The count above is the campaign's own rounds. A final review of the branch as
+one object added instances **19-23** (ledger #64, #65), and four of the five
+sit in doc blocks this campaign had edited *in the same pass*. All five were
+found by reading a claim against the thing it names, not by running — which
+strengthens the split above rather than complicating it.
+
+19-20 are the new mechanism, and it is worth naming separately because the
+eighteen do not contain it. The other instances are claims that **decayed**
+(true when written, falsified later) or were **never true**. These are neither:
+
+> **An amendment changed the code, updated one paragraph of a doc block, and
+> left the block's HEADLINE stating the design it had just superseded.**
+
+Concretely: Task 9 deleted `const FATIGUE_RISE` from `windows/vessel/src/
+liveness.rs` and left its sixteen-line doc comment standing with no separator,
+so that comment became the head of **`FATIGUE_FALL`'s** doc. Three readings
+followed from one deletion. `FATIGUE_FALL`'s rustdoc summary documented the
+*rise* rate. The block restated a lookup-miss convention (`0.0`, never accrues)
+that review had already **inverted** — the code reads
+`unwrap_or(DEFAULT_FATIGUE_RISE)`, and that constant's own doc, a thousand
+lines below, says in as many words that `0.0` was judged inverted. And it
+asserted the fall terms deliberately stay on the STANDARD day, twelve lines
+above the paragraph in the same block saying fix round 1 converted them.
+
+Why it is the highest-consequence finding on the branch: `FATIGUE_FALL` is the
+constant a future tuner opens, and the actionable misreading is a **double
+conversion**. It happened in the campaign's most-reviewed file, and it survived
+a fix round, a stage gate and a definition-of-done sweep, because every one of
+those audits was pointed at what the amendment *changed* rather than at what
+the amendment *orphaned*.
+
+The transferable move is narrow enough to do every time: **when a deletion
+leaves a doc comment behind, the next item is not the next task — it is
+re-reading the whole block that comment now heads, from its summary line
+down.** A doc block has a headline and a body, and a diff shows you the body.
+
+The other three: `RadiatesHeat` "has exactly one mechanically-supported
+carrier", falsified 45 lines below by the `brazier` row this campaign added
+(21); "seven of the **fourteen** kinds a room's grammar can place", a stale
+count carried through a deliberate rewrite of that exact sentence and instance
+16's twin in the same file (22); and a verb-dispatch comment reading "no new
+concept, no new cost dial, no new predicate" two lines above the arm Task 8
+repointed to `Action::Sleep`, where `SLEPT` is a new predicate (23). Ledger #65
+adds a fourth kind of error the list has no other example of — a weakness
+**bounded in the wrong direction**: `REST_BOUT`'s registered follow-up named a
+fast-rotating world, and the arithmetic breaks on a slow one (`L > 1.25` std
+days), because the follow-up borrowed the direction of the bug it sat beside.
+
+## What this campaign's gates do NOT run today
+
+Worth a reader knowing before trusting a local green: **none of this
+campaign's own gates is in `docs/timings/subfloor-roster.tsv`** — zero
+`kind_totality::*` (G-a..G-f), zero `fatigue_stock::*`, and two of five
+`action_module::*` — so `make gate-commit` compiles this work and runs almost
+none of it. That is by design (a test with no recorded baseline duration is
+excluded) and it self-heals when the chamber's `gate` phase rewrites the roster
+on the merge run, but between now and then the campaign's deliverable is
+invisible to the gate a developer actually types (ledger #66).
+
 ## The answer was already committed, four times
 
 Four design questions this campaign asked had answers sitting in the repository
@@ -233,6 +300,12 @@ the durable finding.
   grepping for the *proposition* that sentence made, because a twin written by
   the same author in the same file will not contain the identifier that led you
   there.
+- **When a deletion orphans a doc comment, re-read the block it now heads —
+  from the summary line, not from the diff.** Instances 19-20: deleting
+  `const FATIGUE_RISE` left its sixteen-line doc attached to the constant
+  below it, and every audit afterwards looked at what the amendment changed
+  rather than at what it orphaned. A diff shows a block's body; a doc block's
+  damage is in its headline.
 - **Re-measure every number a closing document inherits.** Instance 17 is a
   Task-3-era census transcribed into an append-only decision record without
   re-running the command. The command was in the ledger beside the number and

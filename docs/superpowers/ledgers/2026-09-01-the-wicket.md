@@ -1336,3 +1336,72 @@ with no recorded baseline duration is excluded — and it self-heals when the
 chamber's `gate` phase rewrites the roster on the merge run. But between now and
 that run, G-a..G-f and the 916-line fatigue-stock suite are invisible to the
 gate a developer actually types.
+
+#67 [G5] — **Fix round 2 (the final wave): what was changed, and the one item
+that was declined.** Every fix below is prose or comment inside a block this
+campaign had already touched; the drift check over `docs/generated-paths.txt`
+is clean, so no artifact moved.
+
+- **Instances 19-20 (`liveness.rs`).** `FATIGUE_FALL`'s doc block rewritten
+  from its summary line down: it now documents the FALL rate, on the LOCAL
+  day, and the orphaned `FATIGUE_RISE` preamble is replaced by a paragraph
+  naming the deletion, pointing at `fatigue_rise_for` /
+  `DEFAULT_FATIGUE_RISE` for the per-species rate, and stating the mechanism
+  at the site. `REST_FALL`'s summary gains the same LOCAL-day qualifier, which
+  it lacked entirely.
+- **Instance 21 (`affordance.rs`, `book/src/chronicle/the-wicket.md`).** The
+  "exactly one mechanically-supported carrier" bullet is replaced. Heat has
+  **two dispatchers, not one**, and only one of them was abolished: the `warm`
+  VERB reads `object_registry` (so `brazier` works), while `warmth_at`
+  (`interior/field.rs:71`) is still a literal `kind != kinds::HEARTH`. The
+  brazier does not expose the disagreement because it is `at_locale: false`
+  and every production `warmth_at` caller derives its `Interior` through
+  `interior_of`, whose `selection` admits `at_locale: true` only — verified by
+  reading all three call sites (`liveness.rs:1913`, `:2069`, `:2169`) back to
+  `interior_of`. Promote the pattern one band up and the offer and the field
+  disagree. The chronicle's "arrived to find the edit already unnecessary" is
+  kept and bounded: true of `Session::warm`, false of `warmth_at`.
+- **Instance 22 (`affordance.rs`).** The DENOMINATOR was wrong, not the
+  numerator: "seven of the **fourteen** kinds a room's grammar can place" —
+  fourteen was the deleted enum's variant count, and neither candidate
+  quantity is fourteen (the roster is 17; `INVENTORY` places 15, since
+  `cave-mouth` and `log` are placed by nothing). Seven is true only against
+  the roster, so the roster is what it names now, with the seven listed by
+  name. The duplicated article two lines above it is fixed in the same edit,
+  as is the one 129-char doc line `cargo fmt` will not rewrap.
+- **Instance 23 (`session.rs`).** The `"sleep"` arm's comment. Two of its four
+  claims were undone two lines below it; the other two were re-verified rather
+  than assumed — "no new concept" holds, and "no new cost dial" holds because
+  `clock::cost_of` prices `Action::Rest | Action::Sleep` in one 150-tick arm.
+- **#65 (`liveness.rs`).** The `L`-dependence is now stated at `REST_BOUT`,
+  where the calibration claim lives, with the derivation
+  (`REST_FALL * 0.25/L`, below `HYSTERESIS_H` for `L > 1.25` std days,
+  `--day-hours` above 30, `PeriodHours` admitting 100 h) and the note that
+  `a_rest_bout_repays_more_than_the_hysteresis_band_it_must_clear` asserts the
+  `L = 1` arithmetic and nothing sweeps `L`. `fatigue_from_rests`'s registered
+  follow-up now states the SLOW direction and says it read the other way.
+- **Task 2's deferred minor, taken.** `the_dispatch_scan_catches_an_anchor_
+  kind_keyed_table` → `the_dispatch_scan_walks_a_multi_line_signature`, which
+  is what its own doc says it proves. The stated blocker (hand-editing
+  `subfloor-roster.tsv`) is not one: that file is an ordinary chamber artifact
+  and a missing name only means `gate-commit` skips one test. The roster row
+  is updated anyway. `docs/decisions/0397` still cites the old identifier and
+  is left alone — decision records are append-only.
+- **Minor 7, and its blast radius.** The assertion message claimed "a handle
+  added to `hornvale_thing::kinds` lengthens `every_named_kind()`". It does
+  not: the helper reads `THING_KINDS` (decision 0556's own ruling). Grepping
+  the CLAIM rather than the identifier found the same false statement in the
+  paragraph 120 lines above it, which still described the `EVERY_HANDLE`
+  arrangement Task 2 shipped and Task 3 replaced. Both corrected, and the
+  helper renamed `every_named_kind` → `every_rostered_kind`: a roster is not a
+  set of names, which is exactly the distinction 0556/0557 make
+  constitutional.
+
+**DECLINED: Task 6's em-dash minor (item 10 of the brief).** The finding was
+that `affordance.rs`'s third Task-6 correction "lost the em-dashes its
+neighbours use". Read against the file, the paragraph in question
+(`object_registry`'s `key`/`cave-mouth` correction) carries four em-dashes
+already, so either the finding names a different passage or it no longer
+applies. Recorded rather than guessed at: inventing a target for a
+cosmetic finding, in the campaign about statements outrunning their support,
+would be the twenty-fourth instance. The brief permitted skipping it.

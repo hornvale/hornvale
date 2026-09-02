@@ -153,8 +153,9 @@ pub struct ObjectTraits {
 /// `hearth`→`RadiatesHeat`. Task 7 adds the three properties spec §3.8
 /// earns, on the carriers §3.8 names: `key`→`Portable`,
 /// `strongbox`/`cave-mouth`→`Openable`, `strongbox`→`Lockable`; Task 8 adds
-/// `cave-mouth`→`AffordsPassage` (spec §3.7). A kind
-/// absent from this table carries no property.
+/// `cave-mouth`→`AffordsPassage` (spec §3.7); and Task 5 adds
+/// `brazier`→`RadiatesHeat`, the proof kind that arrived as data rows and no
+/// dispatcher edit. A kind absent from this table carries no property.
 ///
 /// **This paragraph used to claim "`key` and `cave-mouth` were the first
 /// rows with no anchor-kind variant behind them at all", past-tensed as a
@@ -195,7 +196,8 @@ pub struct ObjectTraits {
 /// NAMED in the query's currency at all — `offered_to_observer(KindId(
 /// "cave-mouth"), …)` is a well-typed call, where a call taking an
 /// anchor-kind variant could never have reached this row: that mapping was
-/// injective over fourteen variants and none of them was `cave-mouth`. What it did NOT buy is a production caller: chamber entry
+/// injective over fourteen variants and none of them was `cave-mouth`.
+/// What it did NOT buy is a production caller: chamber entry
 /// (`Session::delve_at`) gates on the cave mouth's own `openness` fold, not
 /// on this table, so `offered_by(KindId("cave-mouth")) == {Enter, Examine}`
 /// is still a fact only the test suite reads. That distinction is decision
@@ -227,10 +229,26 @@ pub struct ObjectTraits {
 ///   inside_other_things` is that measurement made permanent. The tenses
 ///   above are past on purpose: the sentence is a record of why the line
 ///   moved, not a live claim about today's grammar.
-/// - `warmth_at` (`interior/field.rs`) sums only over anchors whose
-///   `kind == kinds::HEARTH`; no other kind ever contributes to the
-///   warmth field, so `RadiatesHeat` has exactly one mechanically-supported
-///   carrier.
+/// - **`RadiatesHeat` has TWO carriers, and heat has TWO dispatchers that
+///   do not agree — this bullet claimed "exactly one mechanically-supported
+///   carrier" until the final review, and Task 5 falsified it 45 lines
+///   below.** The `warm` VERB reads this table
+///   ([`offered_by`] over [`required_properties`]), so `hearth` and `brazier` both
+///   afford it and a third carrier needs only a row. The warmth FIELD does
+///   not: `warmth_at` (`interior/field.rs`) is a literal
+///   `kind != kinds::HEARTH` skip, so no other kind contributes a degree of
+///   warmth however many rows this table grows — the exact kind-comparison
+///   the campaign replaced in `Session::warm`, surviving one file away.
+///   **The brazier does not expose the disagreement, and that is an accident
+///   of the BAND, not a property of the code.** Every production `warmth_at`
+///   caller (`Fatigue`/comfort urgency in `liveness.rs`) reads an `Interior`
+///   built by `interior_of`, whose `selection` admits only `at_locale: true`
+///   patterns, and `the-brazier` is `at_locale: false` — so today no body
+///   ever stands beside one while a thermal drive is scored. Promote that
+///   pattern to the locale band and the offer says "you may warm yourself
+///   here" while the field says 0.0 °C. Fixing it means reading
+///   `object_registry` from `warmth_at`; nothing in this campaign's scope
+///   asked for it, so it is named rather than taken.
 /// - `kinds::BED` is the only kind ever pushed in a rest/fatigue
 ///   context anywhere in this crate (`session.rs`'s `SLEPT_PROVENANCE`,
 ///   every `Rest`-adjacent test); `high-seat` ("a carved chair... sees the
@@ -576,14 +594,28 @@ pub fn offered(traits: &ObjectTraits) -> BTreeSet<OfferedVerb> {
 
 /// The verbs `kind` advertises — [`offered`] applied to `kind`'s registered
 /// traits (spec §3.2). Keyed on thing-kind since Task 7's re-key; an
-/// an anchor-side caller passes the anchor's own kind straight through.
+/// anchor-side caller passes the anchor's own kind straight through.
 ///
 /// A `kind` absent from [`object_registry`] is treated as carrying the empty
-/// property set (`ObjectTraits::default()`), not as offering nothing: seven
-/// of the fourteen kinds a room's grammar can place carry no property at
-/// all, and `Examine`'s universality (empty required set ⊆ empty
+/// property set (`ObjectTraits::default()`), not as offering nothing: **seven
+/// of the seventeen kinds on `hornvale_thing::THING_KINDS` carry no property
+/// at all** (`altar`, `anvil`, `ground`, `high-seat`, `log`, `loom`,
+/// `screen` — the roster minus [`object_registry`]'s ten keys), and
+/// `Examine`'s universality (empty required set ⊆ empty
 /// property set) must hold for them too, or "universal" would silently mean
 /// "universal among the kinds The Offer happened to register."
+///
+/// **The denominator, not the numerator, was wrong here until the final
+/// review, and this sentence was REWRITTEN in Task 2 with the stale figure
+/// carried straight through the rewrite.** It said "seven of the *fourteen*
+/// kinds a room's grammar can place" — fourteen was the deleted `AnchorKind`
+/// enum's variant count, and neither of the two quantities it could have
+/// meant is fourteen: the roster is seventeen and the kinds
+/// `interior::pattern::INVENTORY` actually places are fifteen (`cave-mouth`
+/// and `log` are placed by nothing). Seven is only true against the ROSTER,
+/// so the roster is what it now names; against the placeable set the count
+/// would be six, since `cave-mouth` is a registry key the grammar never
+/// places.
 ///
 /// **The re-key widened the key space from a closed enum to an arbitrary
 /// string, and that is a real loss this doc states rather than hides.**

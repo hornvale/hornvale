@@ -109,6 +109,20 @@ row — exactly the M×N dispatcher edit this campaign exists to abolish.* The
 brazier is that carrier, arriving to find the edit already unnecessary, which
 is a stronger proof than a kind chosen to suit the argument.
 
+That sentence is true of the **verb** and false of the **field**, and the final
+review made us say which. Heat has two dispatchers in this crate, not one. The
+verb asks the property table and needed no edit — the claim above, in full. The
+warmth field, which decides how many degrees an anchor is worth to a creature's
+thermal drive, is a separate function one file away, and it is still a literal
+comparison against the hearth kind: `kind != kinds::HEARTH`, skip. A brazier
+contributes nothing to it, and would not however many property rows the table
+grew. What hides the disagreement is the band, not the code — the brazier is a
+chamber pattern, and every live reader of the warmth field derives its room in
+the walk band, so no body has ever stood beside one while a drive was scored.
+Promote the pattern one band up and the offer would say *you may warm yourself
+here* over a field reading zero. The campaign abolished one M×N dispatcher and
+left its twin standing; naming it is the honest form of the proof.
+
 It reached a real world, and the published transcript is the evidence:
 
 ```text

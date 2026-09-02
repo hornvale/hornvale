@@ -2217,30 +2217,37 @@ pub const SLEPT: &str = "slept";
 /// twilight). Diurnal wakes above it, nocturnal below (The Slumber Tier-1).
 const TWILIGHT_DEG: f64 = 6.0;
 
-/// Fatigue (Process S, sleep-debt) gained per LOCAL day AWAKE since the last
-/// rest (The Slumber v2; per-species and per-planet since The Wicket, Task
-/// 9). Gentle: it stays low under normal nightly sleep (Process C, the
-/// wake-gate, drives the daily rest) and only crosses `FATIGUE_ACT` after days
-/// of PREVENTED sleep — the exhaustion backstop.
+/// Fatigue REPAID per LOCAL day ASLEEP (The Wicket, Task 7; on the LOCAL day
+/// rather than the standard one since Task 9's fix round 1, which converted
+/// this constant and [`REST_FALL`] below through `to_local_days` alongside
+/// the rise term) — the recovery half of the stock, and the constant that
+/// turns fatigue from a flag any rest clears into a debt a rest pays DOWN in
+/// proportion to its length.
 ///
-/// **This used to be a single authored constant here, `FATIGUE_RISE = 0.3`,
-/// shared by every species in every world.** The Wicket moved it to
-/// [`hornvale_species::fatigue_rise_registry`] — one row per kind that sleeps
-/// at all, a lookup miss reading `0.0` (never accrues) rather than falling
-/// back to a shared default — and made `fatigue_from_rests`'s `rate`
-/// parameter the caller-supplied result of that lookup. `0.3` survives
-/// unchanged as human's row (Nathan's ruling: "roughly a third of a planetary
-/// day"), so every claim this doc block and [`FATIGUE_FALL`]'s below make
-/// about "the rise constant's budget" still describes that same number; it is
-/// just table-driven now instead of hard-coded.
-/// Fatigue REPAID per STANDARD day ASLEEP (The Wicket, Task 7) — the recovery
-/// half of the stock, and the constant that turns fatigue from a flag any
-/// rest clears into a debt a rest pays DOWN in proportion to its length. Task
-/// 9 deliberately leaves this constant, and [`REST_FALL`] below, on the
-/// STANDARD day: neither is named by Nathan's per-species ruling, and
-/// re-deriving either against a new denominator in the same commit that fixed
-/// the rise term's units would be a second, unasked change (see
-/// `fatigue_from_rests`'s own doc).
+/// **The RISE half is no longer a constant at all, and this block used to
+/// open by describing it.** `const FATIGUE_RISE: f64 = 0.3` stood immediately
+/// above and was deleted in Task 9 — the rate is per-species now, read from
+/// [`hornvale_species::fatigue_rise_registry`] through [`fatigue_rise_for`]
+/// and passed to [`fatigue_from_rests`] as its `rate` parameter, with a
+/// lookup miss answering the NEUTRAL [`DEFAULT_FATIGUE_RISE`] (`0.3`, human's
+/// own row; see that constant's doc for why `0.0` on a miss was judged
+/// inverted in review). Its sixteen-line doc comment was left standing with
+/// no separator, so it became the HEAD of this one.
+///
+/// **Named rather than quietly deleted, because it is this campaign's own
+/// subject matter in its most-reviewed file.** The eighteen catalogued
+/// instances of a statement outrunning its support were claims that decayed
+/// or were never true; this is a third mechanism — *an amendment that changed
+/// the code, updated one paragraph of a doc block, and left the block's
+/// headline stating the design it had just superseded*. Three readings this
+/// block carried until the final review: `FATIGUE_FALL`'s rustdoc summary
+/// documented the *rise* rate ("gained per LOCAL day AWAKE"); it restated a
+/// `0.0`-on-miss convention that review had already inverted, a thousand
+/// lines above the `unwrap_or(DEFAULT_FATIGUE_RISE)` that contradicts it; and
+/// it asserted the fall terms deliberately stay on the STANDARD day, twelve
+/// lines above the paragraph saying fix round 1 converted them. The
+/// actionable misreading was a DOUBLE conversion by the next tuner to open
+/// this constant.
 ///
 /// **Derived by SYMMETRY with the rise rate's own budget, which is the only
 /// anchor either constant has.** The rise rate is authored so that exhaustion
@@ -2277,8 +2284,9 @@ const TWILIGHT_DEG: f64 = 6.0;
 /// scale, so a body three days awake still wakes in debt.
 const FATIGUE_FALL: f64 = 1.0;
 
-/// Fatigue repaid per day spent in a CONSCIOUS rest (The Wicket, Task 8) — the
-/// `Action::Rest` half of the act split, against [`FATIGUE_FALL`]'s
+/// Fatigue repaid per LOCAL day spent in a CONSCIOUS rest (The Wicket, Task 8;
+/// on the LOCAL day since Task 9's fix round 1, exactly as [`FATIGUE_FALL`] is)
+/// — the `Action::Rest` half of the act split, against [`FATIGUE_FALL`]'s
 /// `Action::Sleep` half.
 ///
 /// **Authored as half of [`FATIGUE_FALL`], and half is the whole claim.** A
@@ -2362,6 +2370,31 @@ const _: () = assert!(
 /// [`REST_FALL`] repays 0.125). And it must stay clearly under [`SLEEP_BOUT`],
 /// because a rest that outlasts a sleep would make the shorter act the more
 /// restorative one and invert the ruling.
+///
+/// **THAT FIRST CONSTRAINT HOLDS ONLY AT `L ≈ 1`, AND THIS DOC DID NOT SAY SO
+/// UNTIL THE FINAL REVIEW.** The span is a fixed WALL-CLOCK quarter of a
+/// STANDARD day, but [`fatigue_from_rests`] converts every bout at the point
+/// of use through `to_local_days` (fix round 1), so with `L` the world's local
+/// day in standard days the repayment is `REST_FALL * 0.25/L` = `0.125/L`, not
+/// a flat 0.125. It clears [`HYSTERESIS_H`] only while `L < 1.25` std days —
+/// **a SLOW-rotating world breaks it**, `--day-hours` above 30, and
+/// `RotationPin::PeriodHours` admits up to 100 h (`L = 4.17`, repaying 0.03,
+/// four times under the floor). Past the bound a rest no longer discharges the
+/// drive that proposed it and the seven-minute nap fragmentation Task 8 exists
+/// to remove comes back, with every test green — because
+/// `a_rest_bout_repays_more_than_the_hysteresis_band_it_must_clear` asserts the
+/// `L = 1` arithmetic (`REST_BOUT.as_std_days() * REST_FALL`) and nothing sweeps
+/// `L`.
+///
+/// **The fix is a bout expressed in LOCAL days, not a different number here**,
+/// and it is deliberately left to a later campaign rather than taken in the
+/// commit that converted the rate terms: it changes what a rest IS (a fraction
+/// of the body's own cycle rather than a wall-clock duration), which is a
+/// design question Nathan's per-species ruling did not reach. Recorded as this
+/// campaign's follow-up in [`fatigue_from_rests`]'s own doc — where it was
+/// registered, until the final review, with the bound in the OPPOSITE
+/// direction ("a fast-rotating world"), borrowed from the unconverted-fall-term
+/// bug it sat beside.
 const REST_BOUT: TickSpan = TickSpan::from_ticks(WorldTime::TICKS_PER_STD_DAY / 4);
 
 /// The shortest span that counts as SLEEPING rather than dozing:
@@ -3048,9 +3081,16 @@ fn to_local_days(span: TickSpan, day: Option<TickSpan>) -> f64 {
 /// both terms restores the fixed margin between them at every `L` — the
 /// property the pre-Task-9 model had for free because both terms carried
 /// the SAME (kernel) day. [`REST_BOUT`]'s own span stays a fixed 0.25
-/// standard days regardless of `L` — a fixed WALL-CLOCK rest duration on a
-/// fast-rotating world is a separate design question, deliberately left
-/// alone here (see this task's own report).
+/// standard days regardless of `L`, and that residue is the campaign's
+/// registered follow-up. **Its bound runs the OTHER WAY from this
+/// paragraph's, which is why the two are stated separately**: converting
+/// the fall terms fixed the fast-rotating (`small L`) failure described
+/// above, but a fixed wall-clock bout converted at the point of use repays
+/// `REST_FALL * 0.25/L`, which falls BELOW [`HYSTERESIS_H`] for `L > 1.25`
+/// std days — a SLOW-rotating world, `--day-hours` above 30. This note read
+/// "a fast-rotating world" until the final review, borrowing the direction
+/// of the bug beside it. The derivation, and what goes wrong past the
+/// bound, live at [`REST_BOUT`] where the calibration claim itself is.
 fn fatigue_from_rests(
     rests: &[(WorldTime, TickSpan, BoutKind, SiteGrade)],
     t: WorldTime,
