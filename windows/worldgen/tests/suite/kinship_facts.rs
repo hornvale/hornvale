@@ -292,16 +292,35 @@ fn a_forebear_with_more_than_one_descendant_carries_more_than_one_fact_without_c
     // already succeeded (`seed42()` would have returned `Err` otherwise), so
     // this test only needs to confirm the multi-fact case actually occurs on
     // seed 42 rather than being vacuously true.
+    //
+    // **Checked PER PREDICATE, not combined (review round 2 tightening).**
+    // Counting `PARENT_OF` and `KIN_OF` facts together let a subject with one
+    // fact of EACH predicate satisfy the assertion without either predicate
+    // individually ever needing a second object — which would have passed
+    // this test even if only `KIN_OF` (not `PARENT_OF`) actually needed
+    // `functional: false` on this seed. Both are measured separately below,
+    // and both are non-vacuous on seed 42 (`parent-of`: 6 subjects with 2
+    // objects; `kin-of`: 5 subjects with up to 3).
     let w = seed42();
-    let mut counts: BTreeMap<EntityId, usize> = BTreeMap::new();
-    for f in w.ledger.find(PARENT_OF).chain(w.ledger.find(KIN_OF)) {
-        *counts.entry(f.subject).or_insert(0) += 1;
+    let mut parent_of_counts: BTreeMap<EntityId, usize> = BTreeMap::new();
+    for f in w.ledger.find(PARENT_OF) {
+        *parent_of_counts.entry(f.subject).or_insert(0) += 1;
+    }
+    let mut kin_of_counts: BTreeMap<EntityId, usize> = BTreeMap::new();
+    for f in w.ledger.find(KIN_OF) {
+        *kin_of_counts.entry(f.subject).or_insert(0) += 1;
     }
     assert!(
-        counts.values().any(|&n| n > 1),
+        parent_of_counts.values().any(|&n| n > 1),
         "seed 42 must have at least one forebear named as the subject of more \
-         than one parent-of/kin-of fact combined — otherwise functional: false \
-         is unexercised on this seed"
+         than one parent-of fact on its own — otherwise parent-of's \
+         functional: false is unexercised on this seed"
+    );
+    assert!(
+        kin_of_counts.values().any(|&n| n > 1),
+        "seed 42 must have at least one forebear named as the subject of more \
+         than one kin-of fact on its own — otherwise kin-of's \
+         functional: false is unexercised on this seed"
     );
 }
 
@@ -359,7 +378,7 @@ fn kinship_pass_is_deterministic_across_two_independent_builds() {
 /// stored on `World` — so an inert draw leaves no trace anywhere a test
 /// could read). What it proves is exactly what the reviewer's own manual
 /// check established for round 1's fix: the regenerated golden is strictly
-/// additive over the pre-task golden (941 added lines, zero removed
+/// additive over the pre-task golden (940 added lines, zero removed
 /// content, every pre-existing stream-drawn founder name byte-identical) —
 /// this test makes that check permanent and automatic instead of a
 /// one-time manual diff read.

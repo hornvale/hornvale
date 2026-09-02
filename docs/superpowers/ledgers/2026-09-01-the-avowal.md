@@ -1024,3 +1024,87 @@ genesis-fact.md` (status updated to superseded);
 `docs/decisions/0584-kinship-direction-and-the-parent-of-generation-cut.md`
 (new); `docs/digest/decisions-in-force.md` (regenerated); this ledger's
 entry #12 (corrected in place, not silently rewritten).
+
+---
+
+#14 [G5] — **Task 5 review round 2: the fix's own registry doc strings
+asserted the direction the fix rejected.**
+
+*Question.* Round 1's fix (entry #13) corrected the emitted DATA's direction
+(forebear as subject) but rewrote both predicates' `register_predicate` doc
+strings in the OLD, rejected direction ("the forebear whose community this
+person's community was settled from…" — read under this file's own
+`Meaning`-names-the-object convention, that says the object is a forebear
+and the subject is the descendant, i.e. round 1's shipped-then-rejected
+shape). Is this a real defect, and does it reach a durable record?
+
+*Decision.* Yes to both. Fixed both doc strings to name the OBJECT, matching
+every neighbouring valued relation in the registry (`held-by`,
+`pays-tribute-to`, `person-founded`, `is-a`, `derived-from-phenomenon`):
+`parent-of` → "a person whose community was settled from this person's
+community, one generation removed"; `kin-of` → "a person whose community
+descended or spun off from this person's community, at any remove other
+than one generation." These strings are embedded in the keystone golden's
+`registry` block and published in `book/src/reference/
+concept-registry-generated.md`, so this needed `make rebaseline` +
+`make rebaseline-goldens`, not a docs-only edit.
+
+*Why this is the campaign's own thesis again.* The DATA was correct (round
+1 fixed it) but the one place a future consumer looks up what the predicate
+MEANS stated the inverted reading — a durable record asserting something
+the code does not do, the exact failure mode this whole campaign exists to
+close, now caught inside its own fix.
+
+*Two smaller corrections, same round.* (a) `windows/worldgen/tests/suite/
+kinship_facts.rs`'s doc comment on `person_facts_are_unperturbed_...`
+misquoted the round-1 golden diff as "941 added lines"; the actual numstat
+(`git diff --numstat 93ef987e9 88d04c6d7 --
+cli/tests/fixtures/world-seed-42.json`) is 940. Corrected. (b)
+`a_forebear_with_more_than_one_descendant_carries_more_than_one_fact_
+without_contradiction` counted `PARENT_OF` and `KIN_OF` facts together per
+subject, so a subject with one fact of EACH predicate could satisfy it
+without either predicate individually ever needing a second object —
+weaker than the name implied, though harmless (the build would already have
+failed on a real functional violation). Tightened to check each predicate
+separately; both are independently non-vacuous on seed 42 (`parent-of`: 6
+subjects with 2 objects; `kin-of`: 5 subjects with up to 3, max
+measured directly).
+
+*One disclosure, out-of-scope but written down rather than left implicit.*
+`place`/`day` on every committed fact are the DESCENDANT's community and
+founding day — the object's, not the forebear-subject's. That was the
+subject's own community before round 1's reversal; the emit code did not
+change, only which end of the edge is the subject. Defensible (the fact
+becomes observable when the daughter is founded) but never previously
+stated as deliberate. Added to `PARENT_OF`'s doc in `domains/person/src/
+lib.rs` and to decision 0584.
+
+*Verified, not assumed.* `cargo test -p hornvale-worldgen --test suite
+--release -- kinship_facts` → 8 passed (all, including the tightened
+multiplicity test, individually). `make rebaseline` + `make
+rebaseline-goldens`; relative to pre-campaign `main` (`93ef987e9`), still
+**strictly additive at both granularities**: `git diff --numstat` reads 940
+lines added / 0 removed (matching the corrected figure exactly), and the
+fact-tuple diff reads 93 added / 0 removed, same 32 `parent-of` / 61
+`kin-of` split as round 1 (doc-string-only changes do not touch fact data).
+`bundle:consanguineal-kin` still 5/5; `polti-1895` stageable still 0 of 36;
+`tvtropes-2012` stageable still 0 of 409 — none of `docs/audits/trope-*.md`
+moved this round (predicate names and registration unchanged). `make
+gate-commit` green, 1010/1010 sub-floor tests.
+
+*Alternatives discarded.* Leaving the doc strings as-is with a comment
+explaining the "actual" direction elsewhere — rejected for the same reason
+0578's original false claim was corrected in place rather than footnoted:
+the `Meaning` column IS the lookup surface, and a footnote a reader has to
+already know to search for is not a fix.
+
+*Ideonomy passes / overturns.* None — a review-response round.
+
+*Capture actions.* `domains/person/src/lib.rs` (`PARENT_OF`/`KIN_OF`
+`register_predicate` doc strings corrected to name the object; `place`/`day`
+disclosure added); `windows/worldgen/tests/suite/kinship_facts.rs` (941→940
+correction; multiplicity test tightened to check each predicate
+independently); `docs/decisions/0584-kinship-direction-and-the-parent-of-
+generation-cut.md` (place/day disclosure added); `cli/tests/fixtures/
+world-seed-42.json`, `book/src/reference/concept-registry-generated.md`
+(regenerated).

@@ -210,7 +210,7 @@
       "kin-of": {
         "name": "kin-of",
         "functional": false,
-        "doc": "a more distant kin: the forebear whose community this person's community descended or spun off from, at any remove other than one generation"
+        "doc": "a person whose community descended or spun off from this person's community, at any remove other than one generation"
       },
       "latitude": {
         "name": "latitude",
@@ -405,7 +405,7 @@
       "parent-of": {
         "name": "parent-of",
         "functional": false,
-        "doc": "the forebear whose community this person's community was settled from, one generation removed"
+        "doc": "a person whose community was settled from this person's community, one generation removed"
       },
       "pays-tribute-to": {
         "name": "pays-tribute-to",

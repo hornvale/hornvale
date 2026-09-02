@@ -65,6 +65,19 @@ pub const PERSON_DIED: &str = "person-died";
 /// carries at most one `occ-founded-from`, which is what made the
 /// pre-reversal, descendant-as-subject direction functional; the direction
 /// changed, so the flag has to follow it).
+///
+/// **`place`/`day` are the DESCENDANT's, not the subject's (disclosed, not
+/// an oversight; review round 2).** Every `parent-of`/`kin-of` fact is
+/// `place`d at the daughter community and dated at its founding day — the
+/// object's community and founding day, not the forebear-subject's. That
+/// was the SUBJECT's own community before round 1's direction reversed; it
+/// is the OBJECT's now, unchanged in the code, because what moved was which
+/// end of the edge is the subject, not where the underlying event happens.
+/// Defensible: the fact becomes true the moment the daughter is founded, and
+/// that founding is where and when it is first observable. But nothing
+/// upstream of this campaign asserted it was deliberate, so it is written
+/// down here rather than left to be inferred from the emit site
+/// (`windows/worldgen/src/person_promote.rs`).
 /// type-audit: bare-ok(identifier-text)
 pub const PARENT_OF: &str = "parent-of";
 
@@ -115,12 +128,12 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
     registry.register_predicate(
         PARENT_OF,
         false,
-        "the forebear whose community this person's community was settled from, one generation removed",
+        "a person whose community was settled from this person's community, one generation removed",
     )?;
     registry.register_predicate(
         KIN_OF,
         false,
-        "a more distant kin: the forebear whose community this person's community descended or spun off from, at any remove other than one generation",
+        "a person whose community descended or spun off from this person's community, at any remove other than one generation",
     )?;
     Ok(())
 }

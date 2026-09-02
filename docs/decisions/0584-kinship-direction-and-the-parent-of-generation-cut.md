@@ -63,6 +63,15 @@ predicate without walking every forebear's facts and checking objects for
 their own `EntityId`. No second, reverse-direction fact is committed to
 close this; the cost is accepted, not hidden.
 
+**`place`/`day` are the descendant's, disclosed (review round 2).** Every
+committed fact is `place`d at the daughter community and `day`-stamped at
+its founding — the OBJECT's community and founding day, not the
+forebear-subject's. That was the subject's own community before the
+direction reversed above; the code did not change, only which end of the
+edge is now the subject. Defensible (the fact becomes observable the moment
+the daughter is founded), but undocumented until now — see
+`domains/person/src/lib.rs`'s `PARENT_OF` doc for the full note.
+
 ## Consequences
 
 - Relative to pre-campaign `main` (commit `93ef987e9`), the change remains
