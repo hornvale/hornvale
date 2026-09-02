@@ -134,10 +134,23 @@ the way `character_of` keys its draw (`StreamLabel::dynamic`):
    and climbs at `v'` — two stairways, one cycle across two floors. Record a
    `Realm` with both paths and its `LengthClass`; a realm anchored on level
    `ℓ` counts toward `ℓ`'s budget. (`cycle` and `stair` legs.)
+   **A cross-floor cycle may not spend the floor below's last loop
+   (execution amendment, Task 2).** Before its landing nodes are created,
+   the move tentatively marks `path_b`'s cells on `ℓ+1`; if `ℓ+1` has no
+   realm of its own and would then have no passage a free detour could
+   still close, the cross-floor branch is refused and the move falls
+   through to the same-floor branch. This is the *capability invariant*:
+   a level with no anchored realm always keeps at least one feasible
+   same-floor cycle. It replaced a count reserve that left 9 of 72,000
+   levels starved by geometric enclosure; it costs ~2.5 points of
+   cross-floor realm share (29.8% → 27.3%) and nothing else measurable.
 3. **Series — `extend(u, v)`.** Replace a `Passage` edge with a grid path
    `u → … → v` of two or more hops through free cells, removing the direct
    edge. Lengthens a path so later cycles have somewhere to attach and so
-   length classes vary. (`extend` leg.)
+   length classes vary. (`extend` leg.) An `extend` on a level with no
+   realm of its own is refused if it would spend that level's last
+   feasible cycle — the same capability invariant, applied to the level
+   the extension lengthens.
 4. **Nesting is not a third operation.** Applying `cycle` to an edge that is
    already inside a realm produces Dormans' nested cycle (Fig. 9.2) and the
    new realm's `parent` is set. The derivation tree that results *is* the
@@ -151,7 +164,10 @@ the way `character_of` keys its draw (`StreamLabel::dynamic`):
    ```
 
    Growth stops when every level meets its target or no legal `cycle` move
-   remains. The `[1, 5]` clip is Dormans' own finding ("two to five cycles
+   remains. **Then the floor is enforced, not hoped for:** a level still at
+   zero realms gets one deterministic, draw-free pass over its passages in
+   edge order, closing the first same-floor cycle that fits. The capability
+   invariant guarantees one fits, and a debug assertion says so. The `[1, 5]` clip is Dormans' own finding ("two to five cycles
    give each level a distinct and recognizable shape … adding more cycles
    just seems to clutter") and is the one authored constant in the grammar;
    it is named as such. `base` is *derived from the rock*: karst is a maze
@@ -219,8 +235,14 @@ construction and are each pinned by a unit test rather than measured:
 - **Every node is reachable from the entrance**: growth only ever adds paths
   between nodes already connected. The Drift's 100% is inherited at region
   scale rather than re-won.
-- **Every node has exactly one innermost realm**: the decomposition tree is
-  a tree. The Plat's "which circulation realm am I in" and The Brattice's
+- **Every node has at most one innermost realm**: the decomposition tree is
+  a tree; a spine node on no cycle has none.
+- **Every level has at least one realm of its own**: by the capability
+  invariant plus the exhaustive fallback (§3.2), asserted over 3 kinds × 3
+  characters × 4 vertices × 400 seeds. The G3 draft claimed this "by
+  construction" from the two operations alone; execution found it was
+  not (0.25% of plans starved a level), and the invariant is what made it
+  so. The Plat's "which circulation realm am I in" and The Brattice's
   "which cycle does this lock guard" have one answer each.
 
 What the grammar **cannot** express, deliberately: a shortcut between two
@@ -254,6 +276,16 @@ run.
   see the branch table there).
 - **Prediction:** median loop share over the panel ≥ **0.50**. Below 0.50
   is FALSIFIED and is the headline.
+- **Disclosed before the readout (Task 2):** this metric is blunt in a way
+  the draft did not see. The entrance region sits on the west edge with
+  one doorway; whenever no cycle happens to attach at that doorway, the
+  doorway is a bridge and *every* region fails the two-routes-home test, so
+  the whole descent reads 0. The frozen prediction stands and may fall on
+  exactly that. A REPORT-ONLY companion, `cycle_membership_share` — the
+  share of non-entrance regions lying on at least one realm — is printed
+  beside it so the reader can tell "the entrance is a bridge" from "the
+  levels have no loops". It is not gated and was added after the metric's
+  behaviour was seen, which is why it cannot be a prediction.
 
 ### 4.2 Density ordering
 
