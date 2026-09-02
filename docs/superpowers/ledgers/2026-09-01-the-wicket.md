@@ -1148,3 +1148,57 @@ ten tasks in scope.
 
 Remaining before merge: Task 11's DoD, one census refresh on lefford (mine to
 dispatch, not an implementer's), and Nathan's G6 review.
+
+#57 [G5] — **Task 11 rulings, and one of them contradicts the brief.** The DoD
+brief named `docs/decisions/README.md` as one of three "whole-repo aggregates"
+to REGENERATE and never hand-edit. It is not generated: it appears in no branch
+of `scripts/regenerate-artifacts.sh` and in no row of
+`docs/generated-paths.txt`, so its index is hand-maintained and there is
+nothing to run. Checked rather than assumed, and the check found a live
+consequence — the index goes **0514, 0516**: `0515` (The Pavement's diagonal
+ruling) has a record and no index row, omitted when that campaign landed. Added
+here with its omission stated, because the index is the retrieval surface and a
+missing row is invisible in exactly the way a missing record is not · Decision:
+hand-edit the index, regenerate the two that ARE rendered
+(`docs/digest/decisions-in-force.md`, `docs/audits/type-audit-report.md`) ·
+Verified after `make rebaseline`: `git diff --exit-code` over every declared
+generated path moved **one file, three insertions** — the digest's three new
+decisions — and the type-audit report did not move at all, which is the right
+answer for a sweep that touched only doc comments. Cost if wrong: none; the
+regeneration was run anyway and reported an honest empty diff for the other
+paths, which is the positive control the brief's own framing would have
+skipped.
+
+#58 [G5] — **Two more instances of the campaign's own shape, found in the
+freshness sweep, and both are the campaign's own drift.** `SLEPT_PROVENANCE`'s
+doc said *"the provenance `sleep` commits its `rested` fact under ... the same
+register `liveness.rs` uses for a creature's own Rest"*, and
+`sleeping_needs_no_bed`'s doc said the method *"commits `rested` and sets
+`wake_at`"*. Task 8 moved that method onto the `slept` predicate and made
+`wake_at` conditional on `renders_unconscious`; the constant's NAME and VALUE
+were already right, so nothing reddened and the two sentences beside them kept
+naming the retired fact. That is instance thirteen and fourteen of *a statement
+whose form outran what it could support*, and the sub-shape is worth naming
+separately: **a doc comment has no ratchet when the predicate under it
+changes**, so the only thing that finds this class is a sweep run against the
+vocabulary that exists AFTER the change — the same rule decision 0556's
+consequences state for source-text gates. Both corrections say what they used
+to say rather than being edited silently, for the reason #29 gives: a quiet fix
+teaches nobody why nothing caught it.
+
+#59 — **Confidence Gradient: bet 4 annotated, score unmoved, and the annotation
+is a LIMIT rather than a gain.** Decision 0030 requires a re-score of any bet
+the campaign moved. Searched the whole chapter: there is no bet about the kind
+model, the object vocabulary or composition — `grep` for
+`composition over inheritance`, `ComponentStore`, `open vocabulary`,
+`closed enum` over `book/src/open-questions.md` returns nothing — so the
+product half moves no bet by subject. What it does touch is bet 4's
+**traversal** half, in that row's own words (*does an act reach through the
+stack and come back changed*): a body can now warm itself in a room that is not
+a hearthroom, and a sleep is paid down over its span at a rate that differs by
+act and by planet. The annotation leads with the ceiling instead, because that
+is the part a reader of a green mechanism would not otherwise see — the grade
+is locale-granular, so a player passing out in the street is repaid exactly as
+one who found the bed. Score unmoved: one more act with a consequence is not a
+market worth standing in, and this row moves only when a human plays and says
+it moved.
