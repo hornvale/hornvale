@@ -59,6 +59,7 @@ fn seed_42_starts_alone_today() {
     assert!(can, "seed 42's flagship holds at least two people");
     assert!(
         !has,
-        "today a fresh possession stands alone (The Hand, 0/64)"
+        "today a fresh possession at seed 42 stands alone; 3 of 64 seeds have \
+         company, The Roll Task 1"
     );
 }
