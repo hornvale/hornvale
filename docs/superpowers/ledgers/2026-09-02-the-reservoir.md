@@ -170,6 +170,52 @@ and approved there.
 
 ---
 
+#6 [Q] — **Correction: concentration is not reachability. The spec's own §3.4 was
+wrong, and it was caught pre-plan.**
+
+*Question.* The approved spec said "six helper bodies reach 285 call sites".
+Planning against that number required knowing which of those six actually build
+the identity the fixture holds. Do they?
+
+*Finding.* **Two of the six do not, and one of those cannot ever.** Checked
+against each helper's body and each caller's real argument, not inferred:
+
+```
+  book/src/lib.rs::generated(seed)    — 47 callers, and seed 42 appears
+                                        ZERO times: 28x seed 1, 4x seed 2,
+                                        2x seed 3. Needs a seed-1 fixture.
+  worldgen/src/lib.rs::constant(seed) — 36 callers, builds under
+                                        SkyChoice::Constant, a different pin
+                                        signature. Needs its own fixture.
+  worldgen/src/lib.rs::generated(seed)— 43 of 53 callers pass 42; only that
+                                        arm is reachable.
+```
+
+Four helpers the original table ranked *below* the top six are all seed-42
+Generated and fully reachable (`worldgen/tests/suite/exposure.rs::world` 27,
+`vessel/tests/suite/session.rs::seam_world` 24, `…/session_snapshot.rs::world`
+16, `…/the_blocking.rs::world` 15).
+
+*Decision.* Restate the surface as **240 reachable sites across seven helpers**,
+with 83 sites explicitly blocked behind a second (seed 1, Generated) and third
+(seed 42, Constant) fixture that §7 keeps out of scope. Spec §3.4 rewritten,
+retitled, and the §7 non-goal now names and sizes the two blocked fixtures
+instead of saying "the remaining 13 identities".
+
+*Why it matters more than the arithmetic.* The old number was not merely
+optimistic, it pointed the plan at the wrong two tasks. A plan built on it would
+have dispatched an implementer to migrate `book::generated` to a seed-42 fixture
+that none of its 47 callers wants, and the implementer would have discovered it
+only after editing. This is `verify-the-brief-against-the-code` doing its job at
+the pre-dispatch step the practice exists for — the ranking was real, the
+inference from ranking to reachability was the defect.
+
+*ideonomy passes / overturns.* n/a — a factual correction, not a design choice.
+
+*Capture.* Spec §3.4 (rewritten), §7 (non-goal rewritten); this entry.
+
+---
+
 ## Parked findings
 
 ### P1 — `scene_surrounds_colour_cli.rs` uses a fixed temp path and flakes

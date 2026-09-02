@@ -309,7 +309,7 @@ subsequently deleted CI entirely. Here the freshness guard is
 byte-equality against the fixture, inside the suite, on every run. Nothing
 external is relied upon.
 
-### 3.4 The migration surface: six functions, not 355 sites
+### 3.4 The migration surface: seven helpers, 240 reachable sites
 
 The builds are already funnelled through per-module helpers, which is what makes
 this tractable. **694 of 942 test-side world acquisitions (74%) route through
@@ -327,8 +327,41 @@ just 70 helper functions**, and the concentration at the top is extreme:
       24   seam_world                 windows/vessel/tests/suite/session.rs 336
 ```
 
-**Six helper bodies reach 285 call sites; fifteen reach 433.** The call sites
-themselves do not change.
+**But concentration is not reachability, and an earlier draft of this section
+conflated them.** The table above ranks helpers by caller count and says "six
+bodies reach 285 sites", which is true and was the wrong number to plan against:
+two of those six do not build the identity the fixture holds. Checked against
+each helper's actual body and each caller's actual argument:
+
+```
+  callers  helper                                    identity          reachable?
+      84   vessel/src/session.rs::seam_world         42 / Generated    YES
+   43/53   worldgen/src/lib.rs::generated(seed)      42 / Generated    YES (seed-42 arm)
+      31   scene/src/surrounds.rs::world             42 / Generated    YES
+      27   worldgen/tests/suite/exposure.rs::world   42 / Generated    YES
+      24   vessel/tests/suite/session.rs::seam_world 42 / Generated    YES
+      16   vessel/…/session_snapshot.rs::world       42 / Generated    YES
+      15   vessel/…/the_blocking.rs::world           42 / Generated    YES
+  --------------------------------------------------------------------------
+     240   reachable with the fixture that already exists
+  --------------------------------------------------------------------------
+      47   book/src/lib.rs::generated(seed)          *seed 1* / Gen.   NO
+      36   worldgen/src/lib.rs::constant(seed)       42 / *Constant*   NO
+```
+
+`book/src/lib.rs::generated` is called with seed 1 twenty-eight times, seed 2
+four times, seed 3 twice — and **seed 42 not once**. `worldgen::constant` builds
+under `SkyChoice::Constant`, a different pin signature (almost certainly the
+second-commonest identity in §1's sample, at 21 builds). Neither can read a
+seed-42-Generated fixture at all.
+
+**So: 240 call sites are reachable with the fixture that already exists, and 83
+more are blocked behind a second (seed 1, Generated) and third (seed 42,
+Constant) fixture.** Authoring those is out of scope per §7 — a committed World
+fixture becomes a determinism reference, which is a deliberate act — and they are
+recorded as the campaign's sized follow-on rather than smuggled in.
+
+The call sites themselves do not change in either case; only helper bodies do.
 
 The flagship is exact. `windows/vessel/src/session.rs:7938`:
 
@@ -439,8 +472,12 @@ Testable, in the order a plan would verify them:
 - **Serializing the derived artifacts.** Would widen the payoff from ~2.7x to
   ~200x for artifact-needing tests, and is a save-format-adjacent change
   deserving its own campaign and its own decision.
-- **The remaining 13 identities.** Only the dominant seed-42 Full identity gets a
-  fixture here.
+- **The remaining identities.** Only the dominant seed-42 Generated identity gets
+  a fixture here. The two that would unblock the most work are named and sized in
+  §3.4 — a seed-1 Generated fixture (47 sites, `book/src/lib.rs::generated`) and a
+  seed-42 Constant one (36 sites, `worldgen/src/lib.rs::constant`) — because a
+  committed World fixture becomes a determinism reference, and authoring one is a
+  deliberate act rather than a convenience.
 - **Fixing P1** (§9). Recorded, not fixed.
 
 ---
