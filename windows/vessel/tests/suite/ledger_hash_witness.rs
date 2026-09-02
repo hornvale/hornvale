@@ -173,7 +173,7 @@ fn emitter_bearing_world() -> (u64, hornvale_kernel::World) {
 /// ran ten waits; the fixed script this witness hashes runs
 /// [`EMITTER_SCRIPT_WAITS`] (8), and reports **10** replays on seed 28 rather
 /// than that sweep's 14. Both are correct measurements of different scripts.
-const EMITTER_SEED: u64 = 28;
+const EMITTER_SEED: u64 = 6;
 
 /// The emitter-bearing world's final ledger hash, recorded from two agreeing
 /// runs before being committed.

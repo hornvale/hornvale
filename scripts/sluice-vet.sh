@@ -72,6 +72,38 @@ elif [ -n "$minted" ]; then
     printf '  >> minted with no reserved block — verify the range is free and its owner finished\n'
 fi
 
+# --- cross-branch decision collisions ---------------------------------------
+# THE ONE THING NO GATE CAN SEE, and the reason this block is worth its cost.
+# `cli/tests/suite/docs_consistency.rs` reds on duplicate decision IDs WITHIN
+# the object it gates, and the chamber gates main plus ONE branch. So two
+# branches each carrying their own 0517 are individually consistent and both
+# pass green; the duplicate only becomes visible in an object containing both,
+# which is main AFTER the second merge — landed, not preventable. That is
+# exactly how two campaigns both minted 0134 through a passing gate.
+#
+# So this reads the one thing the chamber never assembles: every campaign
+# branch at once. It is a REPORT, like everything else here — the vet script
+# does not gate, and must not start. HV_VET_REFS is a test seam.
+vet_refs() {
+    # shellcheck disable=SC2086  # HV_VET_REFS is a deliberate word-split ref list
+    if [ -n "${HV_VET_REFS:-}" ]; then printf '%s\n' ${HV_VET_REFS}; return; fi
+    git for-each-ref --format='%(refname:short)' refs/remotes/origin/campaign/ 2>/dev/null
+}
+for n in $minted; do
+    d=$((10#$n)); nn="$(printf '%04d' "$d")"
+    owner="$(awk -F'\t' -v d="$d" '$3+0<=d && d<=$4+0 {print $2}' "$ledger" 2>/dev/null | tail -1)"
+    if [ -n "$owner" ] && [ "${owner#campaign/}" != "${branch#campaign/}" ]; then
+        printf '  >> %s falls inside a block reserved by %s — NOT this campaign\n' "$nn" "$owner"
+    fi
+    for r in $(vet_refs); do
+        case "$r" in origin/"${branch#origin/}"|"$branch") continue ;; esac
+        if git ls-tree -r --name-only "$r" -- docs/decisions/ 2>/dev/null \
+             | grep -q "^docs/decisions/${nn}-"; then
+            printf '  >> COLLISION: %s also exists on %s\n' "$nn" "$r"
+        fi
+    done
+done
+
 # --- the surfaces that cost a chamber run when missed ----------------------
 echo
 echo "SURFACES"

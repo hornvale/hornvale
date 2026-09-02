@@ -25,6 +25,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `blue-giant` | a hot, brilliant, short-lived star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `bone` | the rigid frame of a body | Doggood | /doggood/ | Pengkéém | Pengkéém → no change → Doggood |
 | `boreal-stand` | A stand of northern conifers. | — | — | — | gap (experiential): black-dragon has no exposure to 'boreal-stand' |
+| `brazier` | a metal basin that holds a fire apart from a hearth | — | — | — | gap (experiential): black-dragon has no exposure to 'brazier' |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 2 from night-vision 0.9 |
 | `bugbear-kind` | a bugbear | — | — | — | gap (experiential): black-dragon has no exposure to 'bugbear-kind' |
 | `burn` | Ground recovering from fire. | — | — | — | gap (experiential): black-dragon has no exposure to 'burn' |
@@ -282,6 +283,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `blue-giant` | a hot, brilliant, short-lived star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `bone` | the rigid frame of a body | Badoa | /badoa/ | Padea | Padea → lenition → Badoa |
 | `boreal-stand` | A stand of northern conifers. | — | — | — | gap (experiential): bugbear has no exposure to 'boreal-stand' |
+| `brazier` | a metal basin that holds a fire apart from a hearth | — | — | — | gap (experiential): bugbear has no exposure to 'brazier' |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.7 |
 | `bugbear-kind` | a bugbear | Doodoo | /doodoo/ | Deetee | Deetee → lenition → Doodoo |
 | `burn` | Ground recovering from fire. | — | — | — | gap (experiential): bugbear has no exposure to 'burn' |
@@ -539,6 +541,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `blue-giant` | a hot, brilliant, short-lived star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `bone` | the rigid frame of a body | Jagap | /jagap/ | Jagab | Jagab → no change → Jagap |
 | `boreal-stand` | A stand of northern conifers. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'boreal-stand' |
+| `brazier` | a metal basin that holds a fire apart from a hearth | — | — | — | gap (experiential): desert-dwarf has no exposure to 'brazier' |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.65 |
 | `bugbear-kind` | a bugbear | Xaqad | /xaqad/ | Xaqad | Xaqad → no change → Xaqad |
 | `burn` | Ground recovering from fire. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'burn' |
@@ -796,6 +799,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `blue-giant` | a hot, brilliant, short-lived star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `bone` | the rigid frame of a body | Ṅeṅpaaṅ | /ŋeŋpaaŋ/ | Ngengtaang | Ngengtaang → no change → Ṅeṅpaaṅ |
 | `boreal-stand` | A stand of northern conifers. | — | — | — | gap (experiential): desert-elf has no exposure to 'boreal-stand' |
+| `brazier` | a metal basin that holds a fire apart from a hearth | — | — | — | gap (experiential): desert-elf has no exposure to 'brazier' |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.7 |
 | `bugbear-kind` | a bugbear | Szeṅ | /szeŋ/ | Sreng | Sreng → no change → Szeṅ |
 | `burn` | Ground recovering from fire. | — | — | — | gap (experiential): desert-elf has no exposure to 'burn' |
@@ -1053,6 +1057,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `blue-giant` | a hot, brilliant, short-lived star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `bone` | the rigid frame of a body | Gogpaa | /gogpaa/ | Ngengtaang | Ngengtaang → finalloss → Gogpaa |
 | `boreal-stand` | A stand of northern conifers. | — | — | — | gap (experiential): drow has no exposure to 'boreal-stand' |
+| `brazier` | a metal basin that holds a fire apart from a hearth | — | — | — | gap (experiential): drow has no exposure to 'brazier' |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 2 from night-vision 0.95 |
 | `bugbear-kind` | a bugbear | Ro | /ro/ | Sreng | Sreng → clustersimplify → finalloss → Ro |
 | `burn` | Ground recovering from fire. | — | — | — | gap (experiential): drow has no exposure to 'burn' |
@@ -1310,6 +1315,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `blue-giant` | a hot, brilliant, short-lived star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `bone` | the rigid frame of a body | Zngogzho | /zŋogʒo/ | Zngogzho | Zngogzho → no change → Zngogzho |
 | `boreal-stand` | A stand of northern conifers. | — | — | — | gap (experiential): gnoll has no exposure to 'boreal-stand' |
+| `brazier` | a metal basin that holds a fire apart from a hearth | — | — | — | gap (experiential): gnoll has no exposure to 'brazier' |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.75 |
 | `bugbear-kind` | a bugbear | Znoosnov | /znoosnov/ | Znoosnov | Znoosnov → no change → Znoosnov |
 | `burn` | Ground recovering from fire. | — | — | — | gap (experiential): gnoll has no exposure to 'burn' |
@@ -1567,6 +1573,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `blue-giant` | a hot, brilliant, short-lived star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `bone` | the rigid frame of a body | Badea | /badea/ | Padea | Padea → no change → Badea |
 | `boreal-stand` | A stand of northern conifers. | — | — | — | gap (experiential): goblin has no exposure to 'boreal-stand' |
+| `brazier` | a metal basin that holds a fire apart from a hearth | — | — | — | gap (experiential): goblin has no exposure to 'brazier' |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 4 from night-vision 0.5 |
 | `bugbear-kind` | a bugbear | Deetee | /deetee/ | Deetee | Deetee → no change → Deetee |
 | `burn` | Ground recovering from fire. | — | — | — | gap (experiential): goblin has no exposure to 'burn' |
@@ -1824,6 +1831,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `blue-giant` | a hot, brilliant, short-lived star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `bone` | the rigid frame of a body | Jagab | /jagab/ | Jagab | Jagab → no change → Jagab |
 | `boreal-stand` | A stand of northern conifers. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'boreal-stand' |
+| `brazier` | a metal basin that holds a fire apart from a hearth | — | — | — | gap (experiential): gully-dwarf has no exposure to 'brazier' |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.7 |
 | `bugbear-kind` | a bugbear | Xaqab | /xaqab/ | Xaqad | Xaqad → no change → Xaqab |
 | `burn` | Ground recovering from fire. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'burn' |
@@ -2081,6 +2089,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `blue-giant` | a hot, brilliant, short-lived star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `bone` | the rigid frame of a body | Memdaam | /memdaam/ | Ngengtaang | Ngengtaang → lenition → Memdaam |
 | `boreal-stand` | A stand of northern conifers. | — | — | — | gap (experiential): high-elf has no exposure to 'boreal-stand' |
+| `brazier` | a metal basin that holds a fire apart from a hearth | — | — | — | gap (experiential): high-elf has no exposure to 'brazier' |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.75 |
 | `bugbear-kind` | a bugbear | Srem | /srem/ | Sreng | Sreng → no change → Srem |
 | `burn` | Ground recovering from fire. | — | — | — | gap (experiential): high-elf has no exposure to 'burn' |
@@ -2338,6 +2347,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `blue-giant` | a hot, brilliant, short-lived star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `bone` | the rigid frame of a body | Jagab | /jagab/ | Jagab | Jagab → no change → Jagab |
 | `boreal-stand` | A stand of northern conifers. | Vabat | /vabat/ | Vadat | Vadat → no change → Vabat |
+| `brazier` | a metal basin that holds a fire apart from a hearth | — | — | — | gap (experiential): hill-dwarf has no exposure to 'brazier' |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.6 |
 | `bugbear-kind` | a bugbear | Xaqab | /xaqab/ | Xaqad | Xaqad → no change → Xaqab |
 | `burn` | Ground recovering from fire. | Tavam | /tavam/ | Tavan | Tavan → no change → Tavam |
@@ -2595,6 +2605,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `blue-giant` | a hot, brilliant, short-lived star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `bone` | the rigid frame of a body | Babea | /babea/ | Padea | Padea → no change → Babea |
 | `boreal-stand` | A stand of northern conifers. | Boane | /boane/ | Doane | Doane → no change → Boane |
+| `brazier` | a metal basin that holds a fire apart from a hearth | — | — | — | gap (experiential): hobgoblin has no exposure to 'brazier' |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.6 |
 | `bugbear-kind` | a bugbear | Beetee | /beetee/ | Deetee | Deetee → no change → Beetee |
 | `burn` | Ground recovering from fire. | — | — | — | gap (experiential): hobgoblin has no exposure to 'burn' |
@@ -2852,6 +2863,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `blue-giant` | a hot, brilliant, short-lived star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `bone` | the rigid frame of a body | Re | /re/ | Re | Re → no change → Re |
 | `boreal-stand` | A stand of northern conifers. | — | — | — | gap (experiential): human has no exposure to 'boreal-stand' |
+| `brazier` | a metal basin that holds a fire apart from a hearth | — | — | — | gap (experiential): human has no exposure to 'brazier' |
 | `brown` | the color term for brown | Pea | /pea/ | Pea | Pea → no change → Pea |
 | `bugbear-kind` | a bugbear | Koreo | /koreo/ | Koreo | Koreo → no change → Koreo |
 | `burn` | Ground recovering from fire. | — | — | — | gap (experiential): human has no exposure to 'burn' |
@@ -3109,6 +3121,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `blue-giant` | a hot, brilliant, short-lived star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `bone` | the rigid frame of a body | Xaaraa | /xaaraa/ | Xaaraa | Xaaraa → no change → Xaaraa |
 | `boreal-stand` | A stand of northern conifers. | Raxaa | /raxaa/ | Raxaa | Raxaa → no change → Raxaa |
+| `brazier` | a metal basin that holds a fire apart from a hearth | — | — | — | gap (experiential): kobold has no exposure to 'brazier' |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 2 from night-vision 0.9 |
 | `bugbear-kind` | a bugbear | Roxo | /roxo/ | Roxo | Roxo → no change → Roxo |
 | `burn` | Ground recovering from fire. | Raraa | /raraa/ | Raraa | Raraa → no change → Raraa |
@@ -3366,6 +3379,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `blue-giant` | a hot, brilliant, short-lived star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `bone` | the rigid frame of a body | Kodkood | /kodkood/ | Pengkéém | Pengkéém → no change → Kodkood |
 | `boreal-stand` | A stand of northern conifers. | — | — | — | gap (experiential): red-dragon has no exposure to 'boreal-stand' |
+| `brazier` | a metal basin that holds a fire apart from a hearth | — | — | — | gap (experiential): red-dragon has no exposure to 'brazier' |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 2 from night-vision 0.9 |
 | `bugbear-kind` | a bugbear | — | — | — | gap (experiential): red-dragon has no exposure to 'bugbear-kind' |
 | `burn` | Ground recovering from fire. | — | — | — | gap (experiential): red-dragon has no exposure to 'burn' |
@@ -3623,6 +3637,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `blue-giant` | a hot, brilliant, short-lived star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `bone` | the rigid frame of a body | Nentaan | /nentaan/ | Ngengtaang | Ngengtaang → no change → Nentaan |
 | `boreal-stand` | A stand of northern conifers. | — | — | — | gap (experiential): sea-elf has no exposure to 'boreal-stand' |
+| `brazier` | a metal basin that holds a fire apart from a hearth | — | — | — | gap (experiential): sea-elf has no exposure to 'brazier' |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.7 |
 | `bugbear-kind` | a bugbear | Sren | /sren/ | Sreng | Sreng → no change → Sren |
 | `burn` | Ground recovering from fire. | — | — | — | gap (experiential): sea-elf has no exposure to 'burn' |
@@ -3880,6 +3895,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `blue-giant` | a hot, brilliant, short-lived star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `bone` | the rigid frame of a body | Ṅoṅtaaṅ | /ŋoŋtaaŋ/ | Ngengtaang | Ngengtaang → no change → Ṅoṅtaaṅ |
 | `boreal-stand` | A stand of northern conifers. | Boaṅṅaoṅ | /boaŋŋaoŋ/ | Geangngaong | Geangngaong → no change → Boaṅṅaoṅ |
+| `brazier` | a metal basin that holds a fire apart from a hearth | — | — | — | gap (experiential): snow-elf has no exposure to 'brazier' |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.8 |
 | `bugbear-kind` | a bugbear | Sroṅ | /sroŋ/ | Sreng | Sreng → no change → Sroṅ |
 | `burn` | Ground recovering from fire. | Srooṅ | /srooŋ/ | Sruung | Sruung → no change → Srooṅ |
@@ -4137,6 +4153,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `blue-giant` | a hot, brilliant, short-lived star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `bone` | the rigid frame of a body | Kongkoon | /koŋkoon/ | Pengkéém | Pengkéém → no change → Kongkoon |
 | `boreal-stand` | A stand of northern conifers. | — | — | — | gap (experiential): white-dragon has no exposure to 'boreal-stand' |
+| `brazier` | a metal basin that holds a fire apart from a hearth | — | — | — | gap (experiential): white-dragon has no exposure to 'brazier' |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 2 from night-vision 0.9 |
 | `bugbear-kind` | a bugbear | — | — | — | gap (experiential): white-dragon has no exposure to 'bugbear-kind' |
 | `burn` | Ground recovering from fire. | — | — | — | gap (experiential): white-dragon has no exposure to 'burn' |
@@ -4394,6 +4411,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `blue-giant` | a hot, brilliant, short-lived star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `bone` | the rigid frame of a body | Ṅeṅtaa | /ŋeŋtaa/ | Ngengtaang | Ngengtaang → finalloss → Ṅeṅtaa |
 | `boreal-stand` | A stand of northern conifers. | — | — | — | gap (experiential): wood-elf has no exposure to 'boreal-stand' |
+| `brazier` | a metal basin that holds a fire apart from a hearth | — | — | — | gap (experiential): wood-elf has no exposure to 'brazier' |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.75 |
 | `bugbear-kind` | a bugbear | Sde | /sde/ | Sreng | Sreng → finalloss → Sde |
 | `burn` | Ground recovering from fire. | — | — | — | gap (experiential): wood-elf has no exposure to 'burn' |

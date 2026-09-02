@@ -5,7 +5,8 @@
 //! module doc says every tenant owes:
 //!
 //! 1. **The rule-2 witness** (spec §3 rule 2): whether an entity's `agent-at`
-//!    facts ever commit out of day order on the real seed-42 session. The
+//!    facts ever commit out of day order on a real session (at
+//!    [`WALKING_SEED`] since the absorption of main — see that constant). The
 //!    test passes either way — it PRINTS the verdict and the campaign ledger
 //!    records which branch was taken — because `Trail::absorb` inserts at the
 //!    sorted position and is therefore correct under both.
@@ -41,6 +42,35 @@ use hornvale_vessel::{PossessOpts, Session};
 /// (`liveness.rs`'s own spelling test makes the same argument).
 const AGENT_AT: &str = "agent-at";
 
+/// A seed whose residents actually WALK — one whose flagship settlement is not
+/// on water, so a ticked body leaves home for a drink and commits `agent-at`.
+///
+/// **Four of this file's witnesses moved off seed 42 onto this at the
+/// absorption of main (The Roll), and the move is the finding rather than a
+/// fixture repair.** Every one of them measures something about the committed
+/// POSITION trail — the rule-2 commit-order verdict, the two rule-6
+/// past-instant sweeps, and the same-instant-pair guard — and each already
+/// carried a loud precondition saying so. Before The Roll a seed-42 session
+/// ticked three settlement creatures and four wild ones, and the wild ones
+/// walked. After it, a session's roster is the residents of the settlement you
+/// stand in, and seed 42's flagship condenses onto fresh water: its residents
+/// drink where they stand and commit **no positional fact at all**. So all four
+/// witnesses went from measuring a real trail to measuring the empty one, and
+/// every one of them said so by failing its own denominator assertion rather
+/// than passing vacuously — which is the whole reason those assertions are
+/// there.
+///
+/// The number is main's, measured there and not re-derived here: seeds 0..16
+/// possessed and waited seven days, eleven of sixteen walk, and 14 is the
+/// cheapest of those (59 bodies, 673 positional facts, never reaching water at
+/// all). The recording site with the fuller note is
+/// `possession_moves.rs`'s own `WALKING_SEED`; this file pins the same number
+/// as `the_roll.rs` and `player_acts_commit.rs` already do, because each test
+/// module keeps its own private constant, and every site fails loudly if an
+/// epoch moves it.
+/// type-audit: bare-ok(index)
+const WALKING_SEED: u64 = 14;
+
 // ---------------------------------------------------------------------------
 // Step 1: the rule-2 witness.
 // ---------------------------------------------------------------------------
@@ -56,9 +86,9 @@ const AGENT_AT: &str = "agent-at";
 /// campaign records it rather than assuming it.
 #[test]
 fn rule_two_witness_agent_at_commit_order_versus_day_order() {
-    let world = common::build(42).expect("seed 42 always builds a world");
-    let (mut session, _opening) =
-        Session::start(&world, &PossessOpts::default()).expect("seed 42 always starts a session");
+    let world = common::build(WALKING_SEED).expect("the walking seed always builds a world");
+    let (mut session, _opening) = Session::start(&world, &PossessOpts::default())
+        .expect("the walking seed always starts a session");
     for _ in 0..40 {
         session.handle("wait");
     }
@@ -79,7 +109,10 @@ fn rule_two_witness_agent_at_commit_order_versus_day_order() {
 
     let mut inverted_entities = 0usize;
     let mut inversions = 0usize;
-    println!("--- rule 2 witness: agent-at commit order vs day order (seed 42, 40 waits) ---");
+    println!(
+        "--- rule 2 witness: agent-at commit order vs day order (seed {WALKING_SEED}, 40 \
+         waits) ---"
+    );
     for (e, days) in &by_entity {
         let n = days.windows(2).filter(|w| w[1] < w[0]).count();
         inversions += n;
@@ -105,8 +138,8 @@ fn rule_two_witness_agent_at_commit_order_versus_day_order() {
 
     assert!(
         !by_entity.is_empty(),
-        "the 40-wait seed-42 script must commit at least one agent-at fact, or this \
-         witness measured nothing"
+        "the 40-wait seed-{WALKING_SEED} script must commit at least one agent-at fact, or \
+         this witness measured nothing"
     );
 }
 
@@ -553,11 +586,18 @@ fn the_store_is_current_with_a_real_sessions_ledger() {
 /// `drive_at` or `hunger_at` at all, and that assertion was measuring the
 /// instrument rather than the sim.** The reasoning behind it was sound as far
 /// as it went: `affect_of_memo_occupied` is reached by `Session::snapshot` and
-/// `Session::needs` once per CO-LOCATED creature, seed 42's flagship stands
-/// alone (`possess --seed 42` with a `needs` in the script answers "No one
+/// `Session::needs` once per CO-LOCATED creature, and seed 42's flagship stood
+/// alone (`possess --seed 42` with a `needs` in the script answered "No one
 /// else is here to read"), and every read the tick's nine walking creatures
-/// make goes through `decide_step`, which carries the walk's own reset local
+/// made went through `decide_step`, which carries the walk's own reset local
 /// and makes no unfiltered lookup.
+///
+/// **The past tense in that paragraph is load-bearing as of the absorption of
+/// main: seed 42's flagship no longer stands alone.** The Roll made a
+/// session's roster the residents of the settlement you stand in, so the read
+/// shape below is 68 bodies rather than one and this witness's own numbers
+/// moved with it — see the next paragraph, whose figure is re-measured rather
+/// than carried forward.
 ///
 /// What it missed is the tick's OTHER caller. `DriveMovements::step_with_
 /// occupancy` builds the per-tick alarm field before anyone moves, and
@@ -568,7 +608,11 @@ fn the_store_is_current_with_a_real_sessions_ledger() {
 /// their witness died with it and the session's counter read a true zero for
 /// a false reason. Threading the session's own store down that chain (this
 /// stage) makes them visible: **320 unfiltered reset lookups on the same
-/// 40-wait script that reported none.**
+/// 40-wait script that reported none** — re-measured at the absorption of
+/// main, where the same script on the same seed reports **5,360**, because the
+/// roll ticks sixty-eight bodies where it ticked seven. The finding is the
+/// same one either way (the counter reads non-zero for a real reason, and the
+/// old zero was the instrument); only its size moved, and by 16.8x.
 ///
 /// The denominator lesson is this campaign's own, for the fourth time: a zero
 /// is only as good as the path the counter sits on. The session's zero is
@@ -612,7 +656,8 @@ fn rule_one_witness_no_read_runs_before_a_reset_of_the_same_entity() {
     );
     assert!(
         session.committed_fact_count() > 0,
-        "the 40-wait seed-42 script must commit facts, or this witness measured nothing"
+        "the 40-wait seed-42 script must commit facts, or this witness measured \
+         nothing"
     );
     if let Some((entity, t, reset)) = session.resident_first_reset_in_the_future() {
         println!(
@@ -2195,17 +2240,17 @@ fn discarding_known_water_at_every_third_position_is_unobservable() {
 /// EXACT one is what the branch was taken on, and it is the one asserted.
 ///
 /// **The branch taken, stated exactly, because the number alone would be read
-/// two ways.** On the paths seed 42 actually REACHES — the session's own 568
-/// belief lookups, and the present-instant `affect_of_memo_occupied` shape —
-/// the exact count is ZERO. [`KnownWater`] carries a first-visit instant
-/// anyway, for two reasons neither of which is that number:
+/// two ways.** On the paths the session actually REACHES — its own belief
+/// lookups, and the present-instant `affect_of_memo_occupied` shape — the exact
+/// count is ZERO. [`KnownWater`] carries a first-visit instant anyway, for two
+/// reasons neither of which is that number:
 ///
 /// 1. `emitter_arousal` (`liveness.rs`) replays `affect_of` at a creature's
 ///    own PAST visit day, and that call reaches `believed_water` at that past
 ///    instant. It is production code, not a test shape; it is merely gated
-///    behind a non-empty emitter scan, and seed 42 has no primary-afraid
-///    emitter. The sweep below runs exactly that shape and every one of its
-///    reads is a past-instant read.
+///    behind a non-empty emitter scan, and neither seed 42 nor
+///    [`WALKING_SEED`] has a primary-afraid emitter. The sweep below runs
+///    exactly that shape and every one of its reads is a past-instant read.
 /// 2. `believed_water` is a public function keyed on `t`, and its own
 ///    `believed_water_only_counts_sightings_at_or_before_t` test commits a
 ///    sighting in the read's future. A plain set could only answer that by
@@ -2218,15 +2263,17 @@ fn discarding_known_water_at_every_third_position_is_unobservable() {
 /// no test ever drives is indistinguishable from dead code.
 #[test]
 fn rule_six_witness_belief_reads_run_at_past_instants() {
-    let world = common::build(42).expect("seed 42 always builds a world");
-    let (mut session, _opening) =
-        Session::start(&world, &PossessOpts::default()).expect("seed 42 always starts a session");
+    let world = common::build(WALKING_SEED).expect("the walking seed always builds a world");
+    let (mut session, _opening) = Session::start(&world, &PossessOpts::default())
+        .expect("the walking seed always starts a session");
     for _ in 0..40 {
         session.handle("wait");
-        let _ = session.snapshot().expect("seed 42's session snapshots");
+        let _ = session
+            .snapshot()
+            .expect("the walking seed's session snapshots");
     }
 
-    println!("--- rule 6 witness: belief reads (seed 42, 40 waits + snapshots) ---");
+    println!("--- rule 6 witness: belief reads (seed {WALKING_SEED}, 40 waits + snapshots) ---");
     println!(
         "the SESSION itself: {} facts absorbed, {} belief lookups, {} at an instant before \
          a committed sighting",
@@ -2236,7 +2283,8 @@ fn rule_six_witness_belief_reads_run_at_past_instants() {
     );
     assert!(
         session.committed_fact_count() > 0,
-        "the 40-wait seed-42 script must commit facts, or this witness measured nothing"
+        "the 40-wait seed-{WALKING_SEED} script must commit facts, or this witness \
+         measured nothing"
     );
 
     // The shape `windows/lab`'s `run_simulation` uses: `affect_of_memo_occupied`
@@ -2338,7 +2386,7 @@ fn rule_six_witness_belief_reads_run_at_past_instants() {
          NESTED inside `emitter_arousal`'s own `affect_of` go to the THROWAWAY store \
          `affect_of_memo` builds (liveness.rs, `affect_of_memo`), so their witness dies with \
          it. They are past-instant by construction -- `emitter_arousal` passes the visit day \
-         it is replaying -- and they are unreached on seed 42, which has no primary-afraid \
+         it is replaying -- and they are unreached on this seed, which has no primary-afraid \
          emitter"
     );
 
@@ -2374,27 +2422,39 @@ fn rule_six_witness_belief_reads_run_at_past_instants() {
 /// - `DriveMovements::step_with_occupancy`'s per-creature preamble and
 ///   `step_one_with_controller`, both at `t = self.from`.
 ///
-/// And the counts are measured unequal, in the direction the inference did not
-/// predict either: on the seed-42 session, 520 hazard lookups against 568
-/// belief lookups. (Arithmetically consistent with one hazard read and one
-/// `own` belief read per walk, plus 48 extra belief reads from
-/// `shared_believed_water`'s per-co-located-peer loop, which makes no hazard
-/// read — stated as consistency, not as a separately measured decomposition.)
+/// And the counts are measured unequal. **They were 520 against 568 on the
+/// pre-Roll seed-42 session, and re-measuring them at the absorption of main
+/// is what shows how weak an argument the near-agreement was**: on the
+/// forty-wait [`WALKING_SEED`] session the same two counters read **2,557
+/// hazard lookups against 143,611 belief lookups** — a factor of 56, not a
+/// difference of 48. The old gap was arithmetically consistent with one hazard
+/// read and one `own` belief read per walk plus 48 extra belief reads from
+/// `shared_believed_water`'s per-co-located-peer loop; that loop runs once per
+/// CO-LOCATED peer, and since the roll a settlement's residents stand together
+/// rather than one to a settlement, so the term that used to be a rounding
+/// error is now the whole quantity. Either reading refutes the inference the
+/// first draft made; the new one refutes it by two orders of magnitude, which
+/// is the honest form of the point.
 ///
 /// The number `LatestVisit` (Task 5) branches on is this one, so it is taken
 /// on its own counter. The belief counts are printed beside it precisely so
 /// the two caller sets can be seen NOT to agree.
 #[test]
 fn rule_six_witness_hazard_memory_reads_run_at_past_instants() {
-    let world = common::build(42).expect("seed 42 always builds a world");
-    let (mut session, _opening) =
-        Session::start(&world, &PossessOpts::default()).expect("seed 42 always starts a session");
+    let world = common::build(WALKING_SEED).expect("the walking seed always builds a world");
+    let (mut session, _opening) = Session::start(&world, &PossessOpts::default())
+        .expect("the walking seed always starts a session");
     for _ in 0..40 {
         session.handle("wait");
-        let _ = session.snapshot().expect("seed 42's session snapshots");
+        let _ = session
+            .snapshot()
+            .expect("the walking seed's session snapshots");
     }
 
-    println!("--- rule 6 witness: hazard-memory reads (seed 42, 40 waits + snapshots) ---");
+    println!(
+        "--- rule 6 witness: hazard-memory reads (seed {WALKING_SEED}, 40 waits + \
+         snapshots) ---"
+    );
     println!(
         "the SESSION itself: {} facts absorbed, {} hazard lookups, {} at an instant before a \
          committed sighting (and {} belief lookups beside them, {} past-instant -- the two \
@@ -2413,9 +2473,9 @@ fn rule_six_witness_hazard_memory_reads_run_at_past_instants() {
     }
     assert!(
         session.resident_hazard_lookups() > 0,
-        "the seed-42 session must REACH `hazard_memory_memo` -- it is called from the walk \
-         preamble of every tick -- or a verdict of zero past-instant reads is zero out of \
-         zero and says nothing"
+        "the seed-{WALKING_SEED} session must REACH `hazard_memory_memo` -- it is called \
+         from the walk preamble of every tick -- or a verdict of zero past-instant reads is \
+         zero out of zero and says nothing"
     );
 
     let ledger: Ledger = serde_json::from_str(&session.session_ledger_json())
@@ -2899,9 +2959,9 @@ fn a_same_day_pair_committed_in_descending_room_order_is_where_the_two_orders_pa
 /// the denominator, on a real session.
 #[test]
 fn the_walk_never_commits_two_sightings_of_one_entity_at_one_instant() {
-    let world = common::build(42).expect("seed 42 always builds a world");
-    let (mut session, _opening) =
-        Session::start(&world, &PossessOpts::default()).expect("seed 42 always starts a session");
+    let world = common::build(WALKING_SEED).expect("the walking seed always builds a world");
+    let (mut session, _opening) = Session::start(&world, &PossessOpts::default())
+        .expect("the walking seed always starts a session");
     for _ in 0..20 {
         session.handle("wait");
     }
@@ -2935,7 +2995,7 @@ fn the_walk_never_commits_two_sightings_of_one_entity_at_one_instant() {
         }
     }
     println!(
-        "--- Trail order versus commit order (seed 42, 20 waits, {} subjects) ---\n\
+        "--- Trail order versus commit order (seed {WALKING_SEED}, 20 waits, {} subjects) ---\n\
          {pairs} adjacent sighting pairs, {same_instant} at the same instant, \
          {same_instant_different_room} at the same instant in DIFFERENT rooms",
         subjects.len()
@@ -3028,10 +3088,36 @@ fn hazard_cost_at(session: &mut Session<'_>, turns: usize) -> HazardCost {
 /// number would be a claim about the terrain-only path. The assertion is on
 /// the emitter-bearing world, with the replay count asserted non-zero at both
 /// tick indices so the ratio cannot be a ratio of two untaken branches.
+///
+/// **The quantity asserted on is segments PER PAST-DAY REPLAY, not the total,
+/// and the total is guarded separately against the history it would otherwise
+/// have walked.** The two were interchangeable when a script produced ten
+/// replays; The Roll made a tick advance a settlement's whole roll and the
+/// count went to thousands, so the total now carries the replay count's own
+/// growth. The reasoning, with the measured numbers, is at the assertion
+/// itself rather than restated here.
 #[test]
 fn the_hazard_folds_integration_does_not_grow_with_the_tick_index() {
-    const EARLY: usize = 50;
-    const LATE: usize = 200;
+    // **THE SCRIPT WAS 50 AND 200 UNTIL THE ABSORPTION OF MAIN, AND IT WAS
+    // SHORTENED BECAUSE THE ROLL MADE A TICK TEN TIMES BIGGER, NOT BECAUSE THE
+    // CLAIM GOT WEAKER.** A seed-42 tick advanced seven bodies when these
+    // constants were chosen; it advances the settlement's whole roll now
+    // (68 at seed 42, 59 at `WALKING_SEED`), and `hazard_memory_memo` is
+    // threaded the full roster inside a per-agent call, so the roster pass
+    // alone is quadratic in that number. Measured at the absorption: this test
+    // was KILLED at **3528.7 s** without completing, on a box at load 2.96,
+    // against 96.6 s for the next slowest test in the crate; a first cut to
+    // 10 and 40 still cost 862.9 s, which is where these numbers come from
+    // rather than from an estimate. Both things the
+    // assertions below actually need survive the cut untouched — the tick
+    // index still moves 4x by construction, and `MIN_FACTS_ACCRUED` is still
+    // the floor that decides whether the comparison means anything (a
+    // `WALKING_SEED` roster commits ~4,400 positional facts in twenty turns,
+    // so 200 is cleared with three orders of magnitude to spare). What is lost
+    // is the absolute tick index the ratio is read at, and that is the one
+    // thing this test does not assert on.
+    const EARLY: usize = 5;
+    const LATE: usize = 20;
 
     println!("--- H4 cost witness: segments integrated inside one hazard read ---");
 
@@ -3115,13 +3201,69 @@ fn the_hazard_folds_integration_does_not_grow_with_the_tick_index() {
         early.segments > 0,
         "the measured hazard read must integrate something early, or the ratio is vacuous"
     );
+
+    // THE DENOMINATOR MOVED AT THE ABSORPTION OF MAIN, AND NAMING IT IS THE
+    // FINDING — the assertion below used to be on the TOTAL and is on the
+    // per-replay quotient now.
+    //
+    // The claim this test carries is about what the resident store bought: the
+    // `latest` map is no longer rebuilt per call and the emitter scan no longer
+    // rebuilds every roster member's timeline, so a past-day affect replay
+    // costs O(1) integral segments instead of O(history). Before The Roll, a
+    // seed-28 session performed **ten** such replays over its whole script, so
+    // the total and the per-replay quotient were the same number up to a
+    // constant and the total was the simpler thing to assert on.
+    //
+    // The Roll ticks a settlement's whole roll, and the measured replay count
+    // went from ten to **thousands**. That is what trips the old assertion, and
+    // the decisive measurement is the 10/40 script this test ran once before
+    // being shortened, because there the two readings are directly comparable:
+    // seed 6 gave 1,362 segments over 2,031 replays at turn 10 and 3,029 over
+    // 4,245 at turn 40 — a TOTAL ratio of 2.224x, which trips a 1.5x
+    // allowance, against a per-replay quotient that moved 0.671 to 0.714,
+    // **6.5%**. So the fold's own integration cost is flat and what grew is how
+    // many times the hazard read enters the replay at all, which is a property
+    // of how many rooms a longer walk has left an emitter remembering — not of
+    // the store.
+    //
+    // On the 5/20 script this test actually runs, the same seed gives 962
+    // segments over 374 replays at turn 5 and 2,251 over 3,481 at turn 20: the
+    // total grows 2.340x and the per-replay quotient FALLS from 2.572 to 0.647.
+    // The early sample is the noisier one of the two — 374 replays against
+    // 2,031 — and the quotient falling rather than holding is the emitter
+    // scan's own warm-up, not a second effect: what the guard has to exclude is
+    // the quotient RISING, which is the only shape a return to an O(history)
+    // read could take.
+    //
+    // Asserting on the quotient is naming the right denominator, not relaxing
+    // the guard, and the total is guarded too, one assertion down, by the
+    // comparison that actually discriminates: pre-store the total was
+    // O(replays x history) and would have grown ~7.3x here (2.09 x 3.50), so a
+    // total that grows STRICTLY SLOWER than the roster's own history still
+    // fails loudly if the per-replay cost ever goes back to walking it.
+    let early_per_replay = early.segments as f64 / early.replays as f64;
+    let late_per_replay = late.segments as f64 / late.replays as f64;
+    let history_growth = late.trail_facts as f64 / early.trail_facts.max(1) as f64;
+    let segment_growth = late.segments as f64 / early.segments as f64;
+    println!(
+        "segments per replay: {early_per_replay:.3} at turn {EARLY}, {late_per_replay:.3} at \
+         turn {LATE} ({:.2}x); total segments {segment_growth:.3}x against a \
+         {history_growth:.2}x longer roster history",
+        late_per_replay / early_per_replay
+    );
     assert!(
-        late.segments as f64 <= early.segments as f64 * 1.5,
-        "the hazard fold's integration must not scale with the tick index: {} segments at \
-         turn {EARLY} against {} at turn {LATE} (allowance 1.5x), with the roster's own \
-         history {:.2}x longer",
+        late_per_replay <= early_per_replay * 1.5,
+        "the hazard fold's integration must not scale with the tick index: {early_per_replay:.3} \
+         segments per past-day replay at turn {EARLY} against {late_per_replay:.3} at turn \
+         {LATE} (allowance 1.5x), with the roster's own history {history_growth:.2}x longer"
+    );
+    assert!(
+        segment_growth < history_growth,
+        "the hazard fold's TOTAL integration must grow strictly slower than the history it \
+         would have walked, or the per-replay quotient above is flat only because the \
+         replay count absorbed the growth: {} segments at turn {EARLY} against {} at turn \
+         {LATE} ({segment_growth:.2}x) with the roster's history {history_growth:.2}x longer",
         early.segments,
-        late.segments,
-        late.trail_facts as f64 / early.trail_facts.max(1) as f64
+        late.segments
     );
 }

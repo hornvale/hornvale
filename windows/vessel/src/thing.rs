@@ -29,7 +29,7 @@
 //! `selection_for(role, built, cold, populous)` over seven roles × eight
 //! boolean triples — and found the **stronger** of the spec's two green
 //! results: not merely "no duplicate of a *promotable* kind" (§3.2's branch
-//! row 2) but row 1, `CENSUS_ANY_DUPLICATE false` — every `AnchorKind` that
+//! row 2) but row 1, `CENSUS_ANY_DUPLICATE false` — every anchor kind that
 //! appears in a composed interior appears exactly once, promotable or not.
 //! So no ordering rule is needed, and `0` is the only ordinal any caller has
 //! cause to pass.
@@ -764,7 +764,7 @@ pub fn carried_nouns(
     held_by(ledger, holder, day)
         .into_iter()
         .filter_map(|thing| {
-            let noun = crate::chamber_prose::noun_for_label(ledger.kind_of(thing)?)?;
+            let noun = crate::chamber_prose::noun(ledger.kind_of(thing)?)?;
             Some((thing, noun))
         })
         .collect()
@@ -910,7 +910,7 @@ pub fn is_locked(ledger: &Ledger, thing: EntityId, day: WorldTime) -> Option<boo
 ///
 /// **That argument is asymmetric, and Task 12 inherited the gap knowingly.**
 /// The grammar ALSO expresses containment — `the-fire` is
-/// `Attach::Within(AnchorKind::Alcove)` and `compose` sets `Anchor.within`
+/// `Attach::Within(kinds::ALCOVE)` and `compose` sets `Anchor.within`
 /// from it — and `offers_of` correctly offers both the alcove and the hearth
 /// within it. But this fold suppresses a thing whose containment is stated
 /// in the LEDGER, so committing a holder fact that merely restates what the

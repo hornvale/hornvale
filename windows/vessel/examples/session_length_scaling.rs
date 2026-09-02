@@ -36,6 +36,28 @@
 //! the full roster inside a per-agent call, and `begin` re-folds `DRANK`,
 //! `RESTED` and `EATEN` from scratch per creature per tick.
 //!
+//! **`fatigue_at` IS a trail-walker as of The Wicket, Task 10, and the
+//! paragraph above no longer describes it.** A recovery bout is now graded by
+//! what the ROOM it was taken in offered the body, and the room a body was in
+//! at an instant is read off its committed `agent-at` trail — so the fold is
+//! `O(rests + trail)`, not `O(rests)`, and it belongs with the five above
+//! rather than beside them as the control. Two things bound it: the trail is
+//! walked ONCE per fold (one ordered merge against the bout list, not a scan
+//! per bout), and a creature with no rests at all returns before touching the
+//! trail. The "one fold with no stable elasticity sign" finding recorded above
+//! was measured against the pre-Task-10 shape and should not be read forward
+//! without re-measuring.
+//!
+//! **`fatigue_us` is the instrument for that, and saying so was premature until
+//! fix round 1 (Important 4).** The first draft of this paragraph named the
+//! column while `probe_fatigue_us` was still passing `sites: None` — so the
+//! trail merge never ran under it and the column could not have moved for the
+//! very change the sentence pointed at. A named mitigation that cannot fire is
+//! worse than an admitted gap, because it stops the next reader looking. The
+//! probe is graded now (see its own doc for why its terrain deliberately
+//! differs from the sim's), so the column measures the production shape and the
+//! claim is true rather than intended.
+//!
 //! ## Why there are TWO instruments, and why neither may be deleted
 //!
 //! This bench and `fold_depth_sweep.rs` are complements, not duplicates, and
@@ -116,7 +138,7 @@ use hornvale_species::ThermalStrategy;
 // writing the probes below. Named directly rather than routed around.
 use hornvale_vessel::body::Body;
 use hornvale_vessel::liveness::{
-    DriveMovements, HomeNavCache, LocaleTerrain, PrimaryAfraidMemo, SUSTENANCE, Terrain,
+    DriveMovements, HomeNavCache, LocaleTerrain, PrimaryAfraidMemo, RestSites, SUSTENANCE, Terrain,
     believed_water, derive_npcs, drive_at, fatigue_at, hazard_memory_memo, hunger_at,
     shared_believed_water,
 };
@@ -299,15 +321,53 @@ fn probe_hunger_us(
     us
 }
 
-/// Time one `fatigue_at` call, averaged over `FOLD_REPS` back-to-back calls —
-/// the simplest of the six folds: no terrain, no metabolic class, a pure fold
-/// over committed `RESTED` events.
-fn probe_fatigue_us(ledger: &Ledger, entity: EntityId, t: WorldTime) -> f64 {
+/// Time one `fatigue_at` call, averaged over `FOLD_REPS` back-to-back calls.
+///
+/// **It probes the GRADED path, and it did not until fix round 1 (Important
+/// 4).** This doc used to read "the simplest of the six folds: no terrain, no
+/// metabolic class, a pure fold over committed `RESTED` events", and the call
+/// beneath it passed `sites: None`. That was accurate before The Wicket's Task
+/// 10 and false after it: a bout is now graded by the room it was taken in, so
+/// the production fold walks the creature's committed `agent-at` trail as well
+/// as its bouts. With `None` the trail merge never runs and this column could
+/// not have moved for that change at all — a bench naming itself the
+/// instrument for a cost it cannot see.
+///
+/// `terrain` is therefore now required, and the caller hands it one carrying
+/// the world's real `built_rooms` set. **That terrain deliberately differs from
+/// the one the SIM runs on**, which passes `built: None` and always has: this
+/// is a probe of the production fold's COST, not a claim about this bench's own
+/// creatures, and re-running the simulation over built rooms would change every
+/// other column and invalidate the findings recorded in this file's header.
+/// The distinction matters for reading the result: the trail-walk cost is paid
+/// whenever the grade is on, whatever the rooms answer, while the four
+/// `room_affords_rest` calls behind it (one per `(is_built, is_cold)` slot)
+/// need a built set to compose anything but wilderness.
+fn probe_fatigue_us(ledger: &Ledger, npc: &Body, t: WorldTime, terrain: &dyn Terrain) -> f64 {
     #[allow(clippy::disallowed_types)] // benchmark harness
     let t0 = Instant::now();
     let mut sink = 0.0_f64;
+    // The rate/day-length arguments (The Wicket, Task 9) do not change the
+    // shape of this fold, only its inputs — human's rate and no calendar
+    // (base-rate) keep this probe's cost representative of the common case.
+    // The rate is read from the SAME registry production reads (fix round
+    // 1, Minor 2) rather than a hard-coded `0.3` literal: a literal made
+    // this probe exclude the per-call registry-lookup cost every production
+    // caller actually pays (`liveness::fatigue_rise_for`), understating the
+    // fold's real cost.
+    let rate = hornvale_species::fatigue_rise_registry()
+        .get_by_label("human")
+        .copied()
+        .unwrap_or(0.3);
     for _ in 0..FOLD_REPS {
-        sink += fatigue_at(ledger, entity, t);
+        sink += fatigue_at(
+            ledger,
+            npc.entity,
+            t,
+            rate,
+            None,
+            Some(&RestSites { terrain, body: npc }),
+        );
     }
     let us = t0.elapsed().as_secs_f64() * 1e6 / FOLD_REPS as f64;
     // Consume `sink` so the calls cannot be optimized away.
@@ -993,6 +1053,9 @@ fn run(
 ) -> Vec<Band> {
     let mut ledger = world.ledger.clone();
     let mut registry = world.registry.clone();
+    // The world's real settlement-territory set, for the fatigue probe's own
+    // terrain only (fix round 1, Important 4) — see `probe_fatigue_us`.
+    let built_set = hornvale_vessel::liveness::built_rooms(world, ctx);
     // The four predicates the NPC drive stack writes -- copied from
     // `agent_scaling.rs`, which copied them from `Session::start`.
     for (pred, doc) in [
@@ -1006,7 +1069,11 @@ fn run(
         ),
         (
             hornvale_vessel::liveness::RESTED,
-            "an agent rested (eased its fatigue) on a day",
+            "an agent rested on a day, for this many ticks",
+        ),
+        (
+            hornvale_vessel::liveness::SLEPT,
+            "an agent slept on a day, for this many ticks",
         ),
         (
             hornvale_vessel::liveness::EATEN,
@@ -1148,7 +1215,20 @@ fn run(
                 &probe_terrain,
                 p_class,
             );
-            let fatigue_us = probe_fatigue_us(&ledger, p_entity, day);
+            // The fatigue probe's OWN terrain: identical to `probe_terrain`
+            // except that it carries the world's real built-room set, so the
+            // graded fold composes something other than wilderness. Kept
+            // separate rather than folded into `probe_terrain` so the five
+            // other probes' inputs are untouched.
+            let fatigue_terrain = LocaleTerrain::with_fields(
+                ctx,
+                None,
+                None,
+                None,
+                Some(&built_set),
+                Some(&mesh_for_probe),
+            );
+            let fatigue_us = probe_fatigue_us(&ledger, npc, day, &fatigue_terrain);
             let believed_water_us =
                 probe_believed_water_us(&ledger, &folds, npc, day, &probe_terrain, PROBE_BUDGET);
             let shared_believed_water_us = probe_shared_believed_water_us(

@@ -25,9 +25,12 @@
 //! domains already drew.
 //!
 //! The roster is deliberately wider than the three kinds this campaign's
-//! verbs need (`cave-mouth`, `strongbox`, `key`): a later task needs a total
-//! mapping from every `AnchorKind` to a thing-kind, so every anchor kind gets
-//! a row here too, carried at no cost to a world that never places one.
+//! verbs need (`cave-mouth`, `strongbox`, `key`): every kind a room's grammar
+//! can place carries a row here too, at no cost to a world that never places
+//! one. It was written wide so that The Wicket's Task 2 could re-key
+//! `windows/vessel`'s interior grammar onto [`KindId`] without adding a row
+//! first; that task has landed, and the width is now simply what the grammar
+//! needs.
 
 #![warn(missing_docs)]
 
@@ -52,15 +55,17 @@ pub struct ThingTraits {
 ///
 /// Three kinds are earned by a verb this campaign ships (spec §3.8):
 /// `cave-mouth` and `strongbox` by `open`/`close`, `key` by `take`/`drop`.
-/// The rest give every `AnchorKind` (`windows/vessel/src/interior/anchor.rs`)
-/// a thing-kind counterpart, so a later task's `AnchorKind` → [`KindId`]
-/// mapping can be total without adding a row here first.
+/// The rest are the kinds `windows/vessel`'s pattern grammar composes into a
+/// room. They were written here first so The Wicket's Task 2 could delete the
+/// closed anchor-kind enum and point the grammar straight at these labels
+/// without adding a row in the same change.
 /// type-audit: bare-ok(identifier-text)
 pub const THING_KINDS: &[&str] = &[
     "alcove",
     "altar",
     "anvil",
     "bed",
+    "brazier",
     "cave-mouth",
     "ground",
     "hearth",
@@ -75,6 +80,88 @@ pub const THING_KINDS: &[&str] = &[
     "vessel",
 ];
 
+/// Named handles for the kinds that code names.
+///
+/// **A handle is a convenience; a variant was a requirement.** This is the
+/// asymmetry the whole campaign turns on. The closed `AnchorKind` enum that
+/// `windows/vessel` carried until The Wicket's Task 2 made a variant
+/// mandatory: a kind with no variant could not be placed in a room, however
+/// open the stores behind it were. A handle is the opposite — it exists so a
+/// predicate can say `kind == kinds::HEARTH` instead of `kind ==
+/// KindId("hearth")` and have the compiler catch the typo. A kind with **no**
+/// handle is a first-class kind that simply has no predicate written against
+/// it, and adding a kind never requires adding one here.
+///
+/// So: add a handle when you write code that names the kind. Do not add one
+/// "for completeness" — an unused handle is a name with no reader.
+pub mod kinds {
+    use hornvale_kernel::KindId;
+
+    /// A recess off the main space.
+    pub const ALCOVE: KindId = KindId("alcove");
+    /// An altar.
+    pub const ALTAR: KindId = KindId("altar");
+    /// A smith's anvil.
+    pub const ANVIL: KindId = KindId("anvil");
+    /// A place to sleep.
+    pub const BED: KindId = KindId("bed");
+    /// A vessel of fire, standing apart from a hearth.
+    pub const BRAZIER: KindId = KindId("brazier");
+    /// The mouth of a cave — a `Vertex`/`ChamberAddr`, never an anchor.
+    pub const CAVE_MOUTH: KindId = KindId("cave-mouth");
+    /// The room's open middle: the floor itself, not a thing standing on it.
+    pub const GROUND: KindId = KindId("ground");
+    /// A fire.
+    pub const HEARTH: KindId = KindId("hearth");
+    /// The seat that commands the entrance.
+    pub const HIGH_SEAT: KindId = KindId("high-seat");
+    /// A small key.
+    pub const KEY: KindId = KindId("key");
+    /// A fallen log.
+    pub const LOG: KindId = KindId("log");
+    /// An upright loom.
+    pub const LOOM: KindId = KindId("loom");
+    /// A natural pool.
+    pub const POOL: KindId = KindId("pool");
+    /// A screen or pillar: affords nothing, shapes sightlines.
+    pub const SCREEN: KindId = KindId("screen");
+    /// A locked chest.
+    pub const STRONGBOX: KindId = KindId("strongbox");
+    /// A doorway — an anchor that is also a room-graph edge.
+    pub const THRESHOLD: KindId = KindId("threshold");
+    /// A water vessel or basin.
+    pub const VESSEL: KindId = KindId("vessel");
+
+    /// Every handle with its own name, for the roster check.
+    ///
+    /// Hand-written, and that is a deliberate cost rather than an oversight:
+    /// there is no macro here because a macro generating both the constants
+    /// and this list would make the list unable to disagree with them. That
+    /// is what made the deleted `anchor_kinds!` macro's own roster safe, and
+    /// it is exactly what is NOT wanted here — this list is checked against
+    /// the ROSTER, a third party, so it must be able to go wrong.
+    /// type-audit: bare-ok(identifier-text)
+    pub const EVERY_HANDLE: &[(&str, KindId)] = &[
+        ("ALCOVE", ALCOVE),
+        ("ALTAR", ALTAR),
+        ("ANVIL", ANVIL),
+        ("BED", BED),
+        ("BRAZIER", BRAZIER),
+        ("CAVE_MOUTH", CAVE_MOUTH),
+        ("GROUND", GROUND),
+        ("HEARTH", HEARTH),
+        ("HIGH_SEAT", HIGH_SEAT),
+        ("KEY", KEY),
+        ("LOG", LOG),
+        ("LOOM", LOOM),
+        ("POOL", POOL),
+        ("SCREEN", SCREEN),
+        ("STRONGBOX", STRONGBOX),
+        ("THRESHOLD", THRESHOLD),
+        ("VESSEL", VESSEL),
+    ];
+}
+
 /// The canonical thing-kind registry: one row per [`THING_KINDS`] label,
 /// carrying the display name and nothing else. Which kinds are portable,
 /// openable or lockable is `windows/vessel`'s `object_registry`
@@ -86,6 +173,7 @@ pub fn thing_registry() -> ComponentStore<KindId, ThingTraits> {
         (KindId("altar"), ThingTraits { display: "altar" }),
         (KindId("anvil"), ThingTraits { display: "anvil" }),
         (KindId("bed"), ThingTraits { display: "bed" }),
+        (KindId("brazier"), ThingTraits { display: "brazier" }),
         (
             KindId("cave-mouth"),
             ThingTraits {
@@ -136,6 +224,7 @@ fn concept_doc(label: &str) -> &'static str {
         "altar" => "a raised surface where offerings are made",
         "anvil" => "a heavy iron block a smith hammers metal against",
         "bed" => "a place made for lying down and sleeping",
+        "brazier" => "a metal basin that holds a fire apart from a hearth",
         "cave-mouth" => "the opening where a cave meets the outside",
         "ground" => "the bare earth underfoot",
         "high-seat" => "the seat of a hall's presiding figure",
@@ -579,5 +668,107 @@ mod tests {
     fn stale_declaration_panics_if_nothing_collides() {
         let mut reg = hornvale_kernel::ConceptRegistry::default();
         let _ = register_concepts(&mut reg);
+    }
+
+    /// Every named handle resolves to a roster row (G-d, spec §5.1). The
+    /// direction this enforces is **named ⊆ rostered**: it cannot see a
+    /// rostered kind that has no handle, and deliberately so — a kind no code
+    /// names needs no handle, which is the whole difference between a handle
+    /// and a variant.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST: change `kinds::HIGH_SEAT` to
+    /// `KindId("high_seat")` (underscore for hyphen — the spelling a reader
+    /// guesses). It compiles, and every consumer keeps compiling, which is
+    /// exactly the failure a bare literal invites. Red observed:
+    ///
+    /// ```text
+    /// thread 'tests::every_named_handle_is_a_roster_row' panicked at domains/thing/src/lib.rs:680:13:
+    /// handle HIGH_SEAT is "high_seat", which the roster does not carry
+    /// test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 9 filtered out
+    /// ```
+    #[test]
+    fn every_named_handle_is_a_roster_row() {
+        for (name, id) in kinds::EVERY_HANDLE {
+            assert!(
+                THING_KINDS.contains(&id.0),
+                "handle {name} is {:?}, which the roster does not carry",
+                id.0
+            );
+        }
+    }
+
+    /// The roster is frozen as an ORDERED SET, not a count (G-f, spec §5.1).
+    ///
+    /// A length assertion passes any compensating swap — drop one kind, add
+    /// another, and a count-based ratchet reports nothing. Freezing the
+    /// sequence makes every addition, removal and reordering a visible edit to
+    /// this list. Update this list in the same commit that changes the roster,
+    /// never afterwards.
+    ///
+    /// **WHY A ROSTER NEEDS A RATCHET AT ALL, measured rather than argued.**
+    /// This paragraph is the substance of a rationale that lived on
+    /// `windows/vessel`'s `anchor_kinds!` macro until The Wicket's Task 2
+    /// deleted it with the enum, and it is the reason this test exists rather
+    /// than a length check.
+    ///
+    /// Three separate hand-written `[AnchorKind; 14]` rosters had accumulated
+    /// across the tree — in `windows/vessel/tests/suite/affordance.rs`,
+    /// `cli/tests/suite/anchor_thing_correspondence.rs` and
+    /// `windows/vessel/src/chamber_prose.rs` — and each carried a comment
+    /// saying it was "kept in step by an exhaustive match". **That claim was
+    /// false in the direction that actually happens.** The compiler forces an
+    /// ARM per variant; it says nothing about a *list* sitting beside them. A
+    /// reviewer added a fifteenth variant, wrote the arms the compiler
+    /// demanded, pointed it at `KindId("cave-mouth")`, and 1209 tests passed
+    /// — including a precondition whose own doc comment promised to stop
+    /// being evidence in exactly that case. Dropping a variant reddened a
+    /// test; adding one reddened nothing.
+    ///
+    /// No test can enumerate a member it has never heard of, so no test can
+    /// close that gap from the inside. The macro closed it by GENERATING the
+    /// roster from the same declaration that produced the enum. That route is
+    /// gone — `THING_KINDS` is authored data, not a derivation — so the
+    /// closure here is the opposite one: the roster is frozen against a
+    /// committed copy, and every addition, removal and swap has to move two
+    /// lists in one commit. `every_named_handle_is_a_roster_row` above is the
+    /// other half, checking the handles against this same roster.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST: swap the `"log"` and `"loom"` entries
+    /// in `THING_KINDS`. The length is unchanged and the set is unchanged;
+    /// only the order moves, and a count-based check would stay green. Red
+    /// observed:
+    ///
+    /// ```text
+    /// thread 'tests::the_roster_is_frozen_as_an_ordered_set' panicked at domains/thing/src/lib.rs:729:9:
+    /// assertion `left == right` failed: the thing-kind roster moved; update FROZEN in the same commit
+    ///   left: ["alcove", "altar", "anvil", "bed", "cave-mouth", "ground", "hearth", "high-seat", "key", "loom", "log", "pool", "screen", "strongbox", "threshold", "vessel"]
+    ///  right: ["alcove", "altar", "anvil", "bed", "cave-mouth", "ground", "hearth", "high-seat", "key", "log", "loom", "pool", "screen", "strongbox", "threshold", "vessel"]
+    /// test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 9 filtered out
+    /// ```
+    #[test]
+    fn the_roster_is_frozen_as_an_ordered_set() {
+        const FROZEN: &[&str] = &[
+            "alcove",
+            "altar",
+            "anvil",
+            "bed",
+            "brazier",
+            "cave-mouth",
+            "ground",
+            "hearth",
+            "high-seat",
+            "key",
+            "log",
+            "loom",
+            "pool",
+            "screen",
+            "strongbox",
+            "threshold",
+            "vessel",
+        ];
+        assert_eq!(
+            THING_KINDS, FROZEN,
+            "the thing-kind roster moved; update FROZEN in the same commit"
+        );
     }
 }

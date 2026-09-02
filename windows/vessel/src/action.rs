@@ -17,9 +17,40 @@ pub enum Action {
     MoveTo(Facet),
     /// Drink (precondition: at the water room; effect: hydrated).
     Drink,
-    /// Rest / sleep (precondition: at home; effect: fatigue reset) — The
-    /// Slumber's discharge action, the fatigue analogue of `Drink`.
+    /// Rest (precondition: none — a body rests where it stands; effect: some
+    /// fatigue eased, the body staying conscious throughout) — The Slumber's
+    /// discharge action, the fatigue analogue of `Drink`.
+    ///
+    /// **This doc used to read "Rest / sleep", and the slash is exactly what
+    /// The Wicket's Task 8 split.** Resting leaves the body conscious and
+    /// watchful and restores less per unit time; [`Action::Sleep`] renders it
+    /// unconscious and restores more. One variant could not carry both, which
+    /// is why unconsciousness had to live on the player's route instead.
+    ///
+    /// **It also used to read "(precondition: at home; effect: fatigue
+    /// reset)", and no at-home precondition has ever been enforced
+    /// anywhere**: [`precondition_reads_committed_state`] already answers
+    /// `false` for `Rest`, and the creature layer's own fatigue drive
+    /// (`liveness.rs`) says outright that a creature beds down *where it is*,
+    /// so an explorer sleeps in the field at nightfall rather than trekking
+    /// home. `home` survives as a reserved hook for a future rest-QUALITY
+    /// refinement, never a gate; see
+    /// `PSY-rest-quality-is-a-grade-not-a-gate` in the idea registry.
     Rest,
+    /// Sleep (precondition: none — a body sleeps where it stands; effect:
+    /// unconsciousness for the act's own span, and the larger of the two
+    /// fatigue recoveries). Distinct from [`Action::Rest`], which leaves the
+    /// body conscious and watchful and restores less per unit time. The
+    /// Wicket, Task 8.
+    ///
+    /// **The distinction is the act's, not the caller's.** Before this variant
+    /// existed, unconsciousness was a property of the PLAYER'S ROUTE —
+    /// `Session::sleep` set `wake_at` itself, so a creature proposing
+    /// `Action::Rest` never went under by that route even though it was
+    /// running the same act. [`renders_unconscious`](crate::liveness::
+    /// renders_unconscious) reads it off the action now, so both routes reach
+    /// the same state.
+    Sleep,
     /// Eat / graze (precondition: standing on a room rich enough to feed;
     /// effect: hunger reset) — The Provender's discharge action, the hunger
     /// analogue of `Drink`.
@@ -139,7 +170,10 @@ pub fn precondition_reads_committed_state(a: &Action) -> bool {
         // Adjacency in the anchor graph; likewise.
         Action::MoveWithin(_) => false,
         // Standing at the water / at home / on forage — all positional.
-        Action::Drink | Action::Rest | Action::Eat => false,
+        // `Sleep` (The Wicket, Task 8) has no precondition at all: a body
+        // sleeps where it stands, which is the same answer for the same
+        // reason as `Rest` beside it.
+        Action::Drink | Action::Rest | Action::Sleep | Action::Eat => false,
         // The group-A operator instruments (The Deed) have no GOAP
         // precondition at all — no creature ever plans one, so catch-up
         // never asks this question about them. `false` for the same reason
@@ -169,8 +203,8 @@ pub fn precondition_reads_committed_state(a: &Action) -> bool {
 
 /// Whether catch-up (spec §5) may replay this action. Exactly the actions
 /// whose effects are ephemeral: coarse `MoveTo` writes `agent-at`, and
-/// `Drink`/`Rest`/`Eat` each commit a fact, so only fine movement qualifies.
-/// The partition is "does it commit", not "is it movement".
+/// `Drink`/`Rest`/`Sleep`/`Eat` each commit a fact, so only fine movement
+/// qualifies. The partition is "does it commit", not "is it movement".
 /// type-audit: bare-ok(flag: return)
 pub fn is_replayable_in_catch_up(a: &Action) -> bool {
     matches!(a, Action::MoveWithin(_))
@@ -194,6 +228,7 @@ impl Action {
             }),
             Action::Drink,
             Action::Rest,
+            Action::Sleep,
             Action::Eat,
             Action::MoveWithin(crate::interior::AnchorId(0)),
             Action::Why,
@@ -227,6 +262,11 @@ impl Action {
             Action::MoveTo(_) | Action::MoveWithin(_) => "move",
             Action::Drink => "drink",
             Action::Rest => "rest",
+            // Already a registered language concept before this variant
+            // existed (`domains/language/src/accession.rs`, `packs.rs`), so
+            // naming it here mints nothing and the orphan-acts audit stays
+            // quiet — verified rather than assumed (The Wicket, Task 8).
+            Action::Sleep => "sleep",
             Action::Eat => "eat",
             // Group A's Task 2 concepts (The Deed), verbatim from the
             // derived roster: `why`->`recount`, `npcs`->`survey`,
@@ -286,7 +326,7 @@ impl Action {
     pub fn mood(&self) -> Mood {
         match self {
             Action::MoveTo(_) | Action::MoveWithin(_) => Mood::InCharacter,
-            Action::Drink | Action::Rest | Action::Eat => Mood::InCharacter,
+            Action::Drink | Action::Rest | Action::Sleep | Action::Eat => Mood::InCharacter,
             // Group A: operator instruments, out-of-character only (The
             // Deed, spec §3.2) — no in-character counterpart is meaningful.
             Action::Why
@@ -322,6 +362,7 @@ fn action_variants_must_all_be_rostered(a: &Action) -> &'static str {
         Action::MoveWithin(_) => "move",
         Action::Drink => "drink",
         Action::Rest => "rest",
+        Action::Sleep => "sleep",
         Action::Eat => "eat",
         Action::Why => "recount",
         Action::Npcs => "survey",

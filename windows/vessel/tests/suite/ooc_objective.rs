@@ -112,6 +112,24 @@ fn world() -> hornvale_kernel::World {
     world_at(42).expect("seed 42 builds")
 }
 
+/// A seed whose flagship roll holds WILD bodies that actually DEPART the
+/// entered chamber on the very next tick (The Roll, Task 7).
+///
+/// Two properties at once, and both had to be measured. The roll derives the
+/// fauna standing within call rather than the world's top four
+/// concentrations, so a wild body is no longer guaranteed at all — seed 42's
+/// flagship has none within two hops; see `possession_moves.rs`'s `WILD_SEED`
+/// for that measurement. And a crowded chamber makes the placement itself
+/// fail: `Session::place_creature_out_of_my_sight` now refuses when every
+/// unlit anchor is already claimed, which it is wherever a settlement's whole
+/// population stands in the room. Measured over the seeds that derive wild
+/// bodies (3, 12, 13, 16, 17), placing the first six unique-labelled wild
+/// candidates and reading `!wait`: 12, 13 and 17 place NOBODY; 3 places six
+/// and one departs; 16 places six and three depart. 16 is the one with room
+/// to spare, so it is this one.
+/// type-audit: bare-ok(index)
+const WILD_SEED: u64 = 16;
+
 /// The text of a turn that must not end the possession.
 fn out(session: &mut Session<'_>, line: &str) -> String {
     match session.handle(line) {
@@ -500,15 +518,49 @@ fn the_objective_wait_narrates_a_departure_the_body_could_not_see() {
     // `!wait` narrates its departure. Deterministic (roster order), and loud
     // if the world stops producing one at all — which would be a finding about
     // departures rather than about this test.
-    let w = world();
-    let roster_len = {
+    // **THE ROLL (Task 7) NARROWED BOTH THE WORLD AND THE CANDIDATE LIST, and
+    // the search above is unchanged in kind.** Two things moved. First, a
+    // session's roster is now the residents of the settlement you stand in
+    // plus the fauna within call, so seed 42 — whose flagship sits on a river
+    // and has no herd attractor within two hops — produces sixty-eight bodies
+    // that ALL drink in place and NONE of which ever departs; scanning them
+    // is 67 sessions that cannot succeed. Seed 3 derives fourteen wild bodies
+    // within call (measured over seeds 0..23: thirteen of the twenty-four
+    // do), and it is a wild body that departs, exactly as the paragraph above
+    // already recorded. Second, the scan is bounded to the WILD members and
+    // to the first few of them: a settled resident placed at the flagship
+    // stays there — that was true before the roll and is truer now that every
+    // roster resident is homed at the room the possession is standing in.
+    let w = world_at(WILD_SEED).expect("the wild seed builds");
+    //
+    // The candidate's LABEL must also be unique in the roster, and that is
+    // not fussiness: every member of a herd shares the label `a wild
+    // <species>` (`derive_wild_herds`), so `subjective.contains(&hidden)`
+    // below would match a SIBLING of the hidden creature that the possession
+    // could see perfectly well, and the sight-narrowing assertion would fail
+    // on a name collision rather than on a disclosure. Measured directly: the
+    // first run of this test at seed 3 failed exactly that way, on `a wild
+    // giant-crocodile`.
+    let candidates: Vec<usize> = {
         let (s, _) = Session::start(&w, &PossessOpts::default()).unwrap();
-        s.bodies().len()
+        let driven = s.driven_body().entity;
+        let unique = |label: &str| s.bodies().iter().filter(|b| b.label == label).count() == 1;
+        s.bodies()
+            .iter()
+            .enumerate()
+            .filter(|(_, b)| b.village.is_none() && b.entity != driven && unique(b.label.as_str()))
+            .map(|(i, _)| i)
+            .collect()
     };
+    assert!(
+        !candidates.is_empty(),
+        "precondition: seed {WILD_SEED}'s flagship must derive at least one \
+         wild body within call whose label is unique in the roster; if it does \
+         not, an epoch has moved the seed"
+    );
     let mut found = None;
-    for idx in 1..roster_len {
+    for idx in candidates {
         let (mut probe, _) = Session::start(&w, &PossessOpts::default()).unwrap();
-        probe.handle("wait");
         probe.handle("enter");
         let label = probe.bodies()[idx].label.clone();
         let who = probe.bodies()[idx].entity;
@@ -522,13 +574,12 @@ fn the_objective_wait_narrates_a_departure_the_body_could_not_see() {
         }
     }
     let wild_idx = found.expect(
-        "no creature on seed 42's roster departs the entered chamber on the very next \
+        "no wild creature on the roster departs the entered chamber on the very next \
          tick while standing outside the possession's sight — without one there is no \
          unwitnessed departure for `!wait` to narrate and nothing below is tested",
     );
 
     let (mut s, _) = Session::start(&w, &PossessOpts::default()).unwrap();
-    s.handle("wait");
     s.handle("enter");
     let hidden = s.bodies()[wild_idx].label.clone();
     let companion = s.bodies()[wild_idx].entity;
@@ -539,7 +590,6 @@ fn the_objective_wait_narrates_a_departure_the_body_could_not_see() {
     let subjective = out(&mut s, "wait");
 
     let (mut s2, _) = Session::start(&w, &PossessOpts::default()).unwrap();
-    s2.handle("wait");
     s2.handle("enter");
     assert!(s2.place_creature_out_of_my_sight(companion));
     let objective = out(&mut s2, "!wait");

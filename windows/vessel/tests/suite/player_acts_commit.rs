@@ -19,8 +19,12 @@ use hornvale_vessel::liveness::AGENT_AT;
 use hornvale_vessel::{PossessOpts, Session, Turn};
 
 fn world() -> hornvale_kernel::World {
+    world_at(42)
+}
+
+fn world_at(seed: u64) -> hornvale_kernel::World {
     hornvale_worldgen::build_world(
-        hornvale_kernel::Seed(42),
+        hornvale_kernel::Seed(seed),
         &hornvale_astronomy::SkyPins::default(),
         hornvale_worldgen::SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
@@ -28,6 +32,23 @@ fn world() -> hornvale_kernel::World {
     )
     .unwrap()
 }
+
+/// A seed whose flagship roll actually WALKS — at least one resident commits
+/// an `agent-at` across a seven-day wait.
+///
+/// **New at The Roll (Task 7).** Claim 2 below compares a creature's `agent-at`
+/// ENVELOPE against the player's, so it needs a creature that walked, and
+/// since the roll a session's roster is the residents of the settlement you
+/// stand in rather than one body from each of three settlements plus four
+/// world-top wild beasts. Seed 42's flagship stands on a river: its residents
+/// drink in place and commit no positional fact at all, so the comparison has
+/// nothing to compare against there. The measurement and the reason this seed
+/// rather than another are recorded once, in `possession_moves.rs`'s
+/// `WALKING_SEED`; this file pins the same number because a test binary cannot
+/// read a sibling's private constant, and the precondition below fails loudly
+/// if an epoch moves it.
+/// type-audit: bare-ok(index)
+const WALKING_SEED: u64 = 14;
 
 fn out(t: Turn) -> String {
     match t {
@@ -120,21 +141,35 @@ fn a_players_trail_is_shaped_exactly_like_a_creatures() {
     // not establish it. This compares the envelopes: same predicate, same
     // object arity, same field set, and a provenance that names an act in the
     // world rather than the mind that chose it (spec §3.1).
-    let w = world();
+    // At `WALKING_SEED` rather than 42: this comparison needs a creature that
+    // WALKED, and seed 42's flagship residents drink in place (see the
+    // constant's own note).
+    let w = world_at(WALKING_SEED);
     let (mut s, _) = Session::start(&w, &PossessOpts::default()).expect("possession starts");
 
-    // One tick, so the NPC layer has committed a creature's own `agent-at`
-    // facts to compare against.
-    let _ = s.handle("!wait 1");
+    // A full drive cycle, so the NPC layer has committed a creature's own
+    // `agent-at` facts to compare against. Seven days rather than one: the
+    // sustenance seek threshold is crossed at world day ~5.667, and before
+    // that a content creature holds.
+    let _ = s.handle("!wait 7");
     let creature_facts = agent_at_facts(&s);
     assert!(
         !creature_facts.is_empty(),
         "precondition: a creature must have walked, or there is nothing to \
-         compare the player's trail against"
+         compare the player's trail against; if this is empty an epoch has \
+         moved WALKING_SEED and it must be re-measured"
     );
 
     let before = creature_facts.len();
-    let _ = s.handle("go n");
+    // Whichever way out of this room is walkable — the claim is about the
+    // SHAPE of what a walk commits, never about a compass direction, and a
+    // pinned `go n` would tie it to one world's geometry.
+    for dir in ["n", "e", "s", "w"] {
+        let _ = s.handle(&format!("go {dir}"));
+        if agent_at_facts(&s).len() > before {
+            break;
+        }
+    }
     let all = agent_at_facts(&s);
     assert!(
         all.len() > before,
