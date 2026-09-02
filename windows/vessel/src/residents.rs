@@ -18,25 +18,30 @@ use crate::liveness::body_at;
 const PROVENANCE: &str = "the-roll";
 
 /// Derive `village`'s residents into `ledger`: `population` bodies, ordinal
-/// == index, each a person (`is-person`, `person-born`, `name`). Idempotent
-/// over a ledger that already holds them: entities are reused, an already
-/// committed `name` wins over the draw (it is functional, so a recommit
-/// with a different value would contradict) and is not recommitted, and
-/// `is-person`/`person-born` recommit as byte-identical no-ops
-/// (`Ledger::commit`'s dedup compares the whole [`Fact`], not merely
-/// whether it would conflict — see `kernel/src/ledger.rs`'s `contains_full`
-/// / `naive_contains`).
+/// == index, each a person (`is-person`, `person-born`, `name`).
+///
+/// **The ledger wins: a name or a birth already committed is never
+/// redrawn.** `NAME` and `PERSON_BORN` are both functional, and
+/// `Ledger::commit`'s functional check compares only `(subject, predicate,
+/// object)` — never `provenance`/`place`/`day` — so a *recommit* of either
+/// with a value that differs from what is already there (a fresh draw's
+/// name against `derive_npcs`'s generic label at ordinal 0; a birth day
+/// computed from a *different* `now` than the entity's first derivation
+/// used) is a `Contradiction`, not a silent no-op: `commit`'s idempotency
+/// dedup (`contains_full`/`naive_contains`) requires the whole [`Fact`] to
+/// match byte-for-byte, which a differing object can never do. So a
+/// resident's name and birth are each read from the ledger first
+/// (`text_of`/`value_of`) and, if already present, are never recommitted —
+/// `is-person` is committed only alongside `person-born`, at the same
+/// first-derivation moment, so it is skipped under the identical guard.
 ///
 /// Ordinal 0's `EntityId` is the exact lineage `derive_npcs` has always
 /// minted (`role: "npc", ordinal: 0`, parented on `village.id`), so a
 /// pre-campaign save's flagship possession still resolves the same
 /// creature. That save may already carry a NAME fact for that entity from
 /// `derive_npcs` (provenance `"the-quickening"`, a generic species label,
-/// not a personal name) — recommitting a *different* text there would be a
-/// functional contradiction (`Ledger::commit`'s functional check compares
-/// only the object, never the provenance), so the NAME commit below is
-/// skipped outright whenever the ledger already carries one, rather than
-/// attempting a recommit that might not be byte-equal.
+/// not a personal name); the same ledger-wins rule above covers it without
+/// a special case.
 pub fn derive_residents(
     world: &World,
     ctx: &LocaleContext,
@@ -62,9 +67,6 @@ pub fn derive_residents(
             // fresh draw.
             let existing_name = ledger.text_of(entity, NAME).map(str::to_string);
             let name = existing_name.clone().unwrap_or(draw.name);
-            let born = now.as_std_days() - draw.age_days;
-            let born_at =
-                WorldTime::from_std_days(born).expect("a resident's birth is a finite day");
             if existing_name.is_none() {
                 // `place: None, day: None`, exactly the shape `derive_npcs`
                 // commits at `liveness.rs:5900-5912` — NAME is kernel-core
@@ -84,27 +86,38 @@ pub fn derive_residents(
                     )
                     .expect("a freshly minted resident's first NAME fact always commits");
             }
-            for fact in [
-                Fact {
-                    subject: entity,
-                    predicate: IS_PERSON.to_string(),
-                    object: Value::Flag(true),
-                    place: Some(village.id),
-                    day: Some(born_at),
-                    provenance: PROVENANCE.to_string(),
-                },
-                Fact {
-                    subject: entity,
-                    predicate: PERSON_BORN.to_string(),
-                    object: Value::Number(born),
-                    place: Some(village.id),
-                    day: Some(born_at),
-                    provenance: PROVENANCE.to_string(),
-                },
-            ] {
-                ledger.commit(fact, &world.registry).expect(
-                    "a resident's identity facts are registered, finite and non-contradicting",
-                );
+            // The ledger's own birth wins too, and for the same reason:
+            // `PERSON_BORN` is functional, so a second derivation at a
+            // different `now` must not attempt to recommit a different
+            // day — a resident's birth is fixed at its FIRST derivation.
+            // `is-person` was committed alongside it that first time, so
+            // it shares this guard rather than carrying its own.
+            if ledger.value_of(entity, PERSON_BORN).is_none() {
+                let born = now.as_std_days() - draw.age_days;
+                let born_at =
+                    WorldTime::from_std_days(born).expect("a resident's birth is a finite day");
+                for fact in [
+                    Fact {
+                        subject: entity,
+                        predicate: IS_PERSON.to_string(),
+                        object: Value::Flag(true),
+                        place: Some(village.id),
+                        day: Some(born_at),
+                        provenance: PROVENANCE.to_string(),
+                    },
+                    Fact {
+                        subject: entity,
+                        predicate: PERSON_BORN.to_string(),
+                        object: Value::Number(born),
+                        place: Some(village.id),
+                        day: Some(born_at),
+                        provenance: PROVENANCE.to_string(),
+                    },
+                ] {
+                    ledger.commit(fact, &world.registry).expect(
+                        "a resident's identity facts are registered, finite and non-contradicting",
+                    );
+                }
             }
             let mut body = body_at(world, ctx, village, entity);
             body.label = name;

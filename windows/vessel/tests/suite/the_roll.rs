@@ -283,3 +283,67 @@ fn residents_of_one_settlement_are_not_copies() {
         || a.time_horizon != b.time_horizon;
     assert!(dial_differs, "residents 0 and 1 share every mind dial");
 }
+
+/// A resident's birth is fixed at its FIRST derivation: re-deriving over the
+/// same ledger at a later `now` does not redraw `person-born` — the ledger
+/// wins for a resident's birth day exactly as it does for their name
+/// (controller ruling, Task 4 fix round 1).
+///
+/// MUTATION THIS MUST FAIL AGAINST: delete the
+/// `ledger.value_of(entity, PERSON_BORN).is_none()` guard in
+/// `derive_residents`; the second derivation (at `now_b`) recommits a
+/// `person-born` that differs from the first (at `now_a`), which is a
+/// functional `Contradiction`, and the `expect` panics.
+#[test]
+fn a_residents_birth_is_fixed_at_first_derivation() {
+    let (world, ctx, wc, village) = residents_fixture();
+    let mut ledger = world.ledger.clone();
+    let now_a = frozen_now();
+    let now_b =
+        hornvale_kernel::WorldTime::from_std_days(now_a.as_std_days() + 30.0).expect("finite");
+
+    let first = hornvale_vessel::residents::derive_residents(
+        &world,
+        &ctx,
+        &mut ledger,
+        &wc,
+        &village,
+        now_a,
+    );
+    let first_born: Vec<_> = first
+        .iter()
+        .map(|b| {
+            ledger
+                .value_of(b.entity, hornvale_person::PERSON_BORN)
+                .cloned()
+        })
+        .collect();
+
+    let second = hornvale_vessel::residents::derive_residents(
+        &world,
+        &ctx,
+        &mut ledger,
+        &wc,
+        &village,
+        now_b,
+    );
+    let second_born: Vec<_> = second
+        .iter()
+        .map(|b| {
+            ledger
+                .value_of(b.entity, hornvale_person::PERSON_BORN)
+                .cloned()
+        })
+        .collect();
+
+    let first_entities: Vec<_> = first.iter().map(|b| b.entity).collect();
+    let second_entities: Vec<_> = second.iter().map(|b| b.entity).collect();
+    assert_eq!(
+        first_entities, second_entities,
+        "re-deriving at a later day yields the same roster of entities"
+    );
+    assert_eq!(
+        first_born, second_born,
+        "a resident's committed person-born day does not move when now moves"
+    );
+}
