@@ -6,7 +6,7 @@
 
 use crate::body::Body;
 use crate::eyes::Eyes;
-use crate::{Knowledge, VesselError, liveness};
+use crate::{Knowledge, VesselError};
 use hornvale_astronomy::Calendar;
 use hornvale_kernel::{Facet, FacetId, Ledger, World, WorldTime};
 use hornvale_locale::LocaleContext;
@@ -91,7 +91,23 @@ pub fn purview_scene(
     // roster rather than a contiguous owned slice, since `driven` can name
     // any index. This is the function's only call site in the workspace,
     // so widening it costs nothing elsewhere.
-    npcs: &[&Body],
+    //
+    // **Each body arrives WITH ITS ROOM (The Rack, final review), and that is
+    // a contract, not a convenience.** This function used to fold
+    // `liveness::agent_position(ledger, npc, at)` once per NPC to place its
+    // mark — ~67 ledger folds on every walk-band snapshot, in a module
+    // `TurnWork` cannot instrument, so the campaign's own
+    // `a_snapshot_performs_no_folds` read zero while they ran. The caller now
+    // hands over the roster's `position` column
+    // (`roster::other_bodies_at`), which VIEW ≡ SCAN (decision 0597) pins
+    // equal to that fold at the session's own day — so this is byte-identical
+    // by construction and the fold is deleted rather than moved.
+    //
+    // **The caller owes the instant.** These rooms are the roster's answer as
+    // of its last write; a caller passing an `at` other than the one the
+    // roster was written for is asking a question this signature cannot
+    // answer, and must fold for itself instead.
+    npcs: &[(&Body, &Facet)],
     ledger: &Ledger,
     at: WorldTime,
     zoom_out: u32,
@@ -152,13 +168,14 @@ pub fn purview_scene(
         .filter_map(|id| FacetId(id).unpack().ok())
         .collect();
 
-    // Where each NPC stands right now — the derived-view read (The
-    // Quickening): the latest committed `agent-at`, else the derived
-    // schedule. Truncated to the chart's depth so a coarse chart still
+    // Where each NPC stands right now — READ from the roster's `position`
+    // column, which the tick writes (The Rack). It is the same value the
+    // derived-view fold used to return here (The Quickening: the latest
+    // committed `agent-at`, else the derived schedule), pinned equal by
+    // VIEW ≡ SCAN. Truncated to the chart's depth so a coarse chart still
     // places them.
     let mut agent_marks: Vec<(u64, Mark)> = Vec::new();
-    for npc in npcs {
-        let at_room = liveness::agent_position(ledger, npc, at);
+    for (npc, at_room) in npcs {
         let shown = Facet {
             face: at_room.face,
             path: at_room.path[..keep.min(at_room.path.len())].to_vec(),

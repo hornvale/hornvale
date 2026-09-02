@@ -8,6 +8,76 @@
 //! (and once WITHOUT `--release`, because `cargo run -p hornvale -- possess`
 //! is a debug build and that is what a player at the CLI actually feels).
 //!
+//! ## Measured — AFTER the purview fix (The Rack, final review, 2026-09-02)
+//!
+//! The final review found that a walk-band `snapshot` still folded
+//! `agent_position` once per NPC, inside `purview_scene` — ~67 ledger folds
+//! per turn, in a module `TurnWork` could not instrument, so the campaign's
+//! own budget test read zero while they ran. The chart now reads the roster's
+//! `position` column. Re-measured here, `--release`, CONTENDED
+//! (`uptime` load averages 3.38 19.26 29.37 before, 3.56 18.77 29.08 after —
+//! comparable to the Task 4 block's 14.10 17.75 21.58, and an upper bound
+//! either way):
+//!
+//! ```text
+//!                   look handle     0.241 ms  snapshot     5.019 ms    69252 B
+//!                    map handle     4.058 ms  snapshot     4.416 ms    70454 B
+//!                   go n handle     0.516 ms  snapshot     4.441 ms    64685 B
+//!                   go n handle     0.518 ms  snapshot     4.287 ms    66601 B
+//!                   back handle     0.391 ms  snapshot     4.286 ms    66927 B
+//!                   back handle     0.405 ms  snapshot     4.251 ms    73645 B
+//! examine Dvoashngashngo handle     3.990 ms  snapshot     4.219 ms    73285 B
+//!                  needs handle     0.027 ms  snapshot     4.205 ms    75849 B
+//!                  enter handle    34.234 ms  snapshot     9.172 ms    25172 B
+//!                   look handle    16.655 ms  snapshot     9.204 ms    25173 B
+//!                    map handle     0.020 ms  snapshot    17.469 ms    25476 B
+//!                   go n handle     0.007 ms  snapshot    16.829 ms    24944 B
+//!                   go e handle     0.007 ms  snapshot    16.778 ms    25089 B
+//!                   go s handle     0.006 ms  snapshot    17.582 ms    25232 B
+//!                   go w handle     0.008 ms  snapshot    17.200 ms    25035 B
+//!                   look handle    17.150 ms  snapshot     8.741 ms    25171 B
+//!                    out handle     0.311 ms  snapshot     4.531 ms    73649 B
+//! 20 waits 1858 ms
+//! --- after 20 waits: bodies 68 on roll 68 facts 23487
+//!                   look handle     0.221 ms  snapshot     4.573 ms    73250 B
+//!                    map handle     4.160 ms  snapshot     4.545 ms    74485 B
+//!                   go n handle     0.500 ms  snapshot     4.325 ms    66931 B
+//!                   go n handle     0.670 ms  snapshot     4.544 ms    66856 B
+//!                   back handle     0.401 ms  snapshot     4.470 ms    67011 B
+//!                   back handle     0.385 ms  snapshot     4.468 ms    73146 B
+//! examine Dvoashngashngo handle     4.276 ms  snapshot     4.605 ms    72764 B
+//!                  needs handle     0.023 ms  snapshot     4.388 ms    74926 B
+//!                  enter handle    33.316 ms  snapshot     9.079 ms    24848 B
+//!                   look handle    17.048 ms  snapshot     8.888 ms    24848 B
+//!                    map handle     0.020 ms  snapshot    17.309 ms    25156 B
+//!                   go n handle     0.009 ms  snapshot    17.270 ms    24620 B
+//!                   go e handle     0.005 ms  snapshot    17.332 ms    24769 B
+//!                   go s handle     0.009 ms  snapshot    18.134 ms    24919 B
+//!                   go w handle     0.007 ms  snapshot    17.431 ms    24716 B
+//!                   look handle    16.624 ms  snapshot     8.814 ms    24848 B
+//!                    out handle     0.260 ms  snapshot     4.460 ms    73082 B
+//! ```
+//!
+//! **THE NUMBERS DID NOT MOVE, AND THAT IS THE RESULT.** Walk-band snapshot
+//! 4.205-5.019 ms against Task 4's 4.1-4.9; chamber 8.741-17.582 against
+//! 8.4-16.8; `needs` 0.023-0.027 against 0.022. Sixty-seven ledger folds
+//! per turn were removed and the wall clock is unchanged within noise, so
+//! **this fix is a correctness and instrumentation fix, not a speed-up** —
+//! and saying so is the honest reading. An `agent-at` scan over a 23,487-fact
+//! session ledger is cheap; what a walk-band snapshot actually costs is the
+//! spatial channel and ~70 KB of JSON, exactly as the residue analysis in the
+//! Task 4 block concluded. If anything this STRENGTHENS that conclusion: the
+//! largest remaining per-body loop was removed and the floor did not budge.
+//!
+//! P1 is therefore unchanged: `needs` MET (2 ms), both snapshot budgets
+//! MISSED (3 ms) by the same margins, for the same reason.
+//!
+//! What DID change is a property no timing here shows: walk-band snapshot
+//! cost is now flat in ledger length rather than carrying one per-body ledger
+//! scan that grows with it. Both blocks above sample the same two depths
+//! (day 0.5 and day 21, 23,487 facts) and agree; a longer session is where
+//! that would separate, and nothing here measures one.
+//!
 //! ## Measured — AFTER The Rack (Task 4)
 //!
 //! 2026-09-02, MacBookPro, `--release`, the turn reading the rack.

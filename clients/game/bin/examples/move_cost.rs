@@ -108,7 +108,7 @@
 //! ```
 //!
 //! **P6 (spec §4: every movement turn ≤ 15 ms) MISSED on this reading.**
-//! Outdoor turns (10.1-14.1 ms) clear it; every indoor turn does not —
+//! Outdoor turns (**9.97-14.10 ms**) clear it; every indoor turn does not —
 //! `enter` 47.377 ms, the two post-`enter` `look`s 29.163/29.450 ms, and
 //! `map`/`go n/e/s/w` inside the chamber 18.7-20.0 ms. That is the same
 //! shadowcast cost `windows/vessel/examples/move_cost.rs`'s own AFTER-Rack
@@ -116,7 +116,17 @@
 //! release profile) surfacing again here on top of `handle`, on a slower
 //! dev-profile build, under a contended box — three reasons a MISS here is
 //! not a surprise. **Not tuned**: the task this block closes is measure and
-//! report, not chase the ceiling. The comparison against the pre-Rack
+//! report, not chase the ceiling.
+//!
+//! **The outdoor range, stated once with its rule** (The Rack, final review —
+//! the ledger, the chronicle and this file had drifted to three different
+//! low endpoints): it is the min and max over EVERY outdoor row in the block
+//! above, `needs` included, rounded half-up to two decimals — `needs`
+//! 9.969 -> **9.97** and `map` 14.102 -> **14.10**. An earlier draft here
+//! read "10.1-14.1", which silently dropped `needs` from the population and
+//! rounded to one decimal; the ledger and chronicle now quote 9.97-14.10 to
+//! match this line. If a later reading replaces this block, restate the rule
+//! with it rather than leaving the next reader to infer which rows counted. The comparison against the pre-Rack
 //! dev-profile block above (9.6-87.2 ms) still holds turn-for-turn: every
 //! verb here reads faster than the same verb there, indoor and outdoor
 //! alike (`enter` 87.199 ms -> 47.377 ms, chamber `look` 66.578/67.454 ms ->

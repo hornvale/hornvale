@@ -489,3 +489,118 @@ fn the_driven_slot_carries_what_the_side_fields_did() {
         "suppressed_drives() reads the ridden body's slot"
     );
 }
+
+/// The walk-band CHART places every creature's mark from the roster's
+/// `position` column, and it follows a creature that has walked away from
+/// home (The Rack, final review).
+///
+/// **Why this test exists at all: the fold it replaces was UNPINNED.** Until
+/// the final review, `purview_scene` folded `liveness::agent_position` once
+/// per NPC to place its mark — ~67 ledger folds on every walk-band
+/// `snapshot`, since `snapshot`'s `Walk` arm calls `purview(0)`. That fold
+/// lived outside `session.rs` and therefore outside `TurnWork`, so
+/// `turn_budget.rs::a_snapshot_performs_no_folds` read zero while all
+/// sixty-seven of them ran one module over. Deleting it in favour of the
+/// column is byte-identical by VIEW ≡ SCAN (decision 0597) — and that
+/// byte-identity is exactly why nothing in the suite objected either way.
+///
+/// **MEASURED, and it is the reason this test is written rather than a doc
+/// sentence.** With the fix in place, the replacement mutation — make
+/// `purview_scene` read `&npc.home` instead of the room it is handed — was
+/// applied to a scratch copy and the WHOLE vessel crate run against it:
+/// `626 passed; 0 failed` (lib) and `399 passed; 0 failed` (suite). A NULL.
+/// Nothing anywhere asserted that a creature's chart mark follows the
+/// creature, because seed 42's flagship never leaves home (its residents
+/// condense onto fresh water) and every other chart test is at that seed.
+/// So the deleted fold could have been returning `home` all along and the
+/// suite would have stayed green. This test closes that hole at a seed whose
+/// residents actually walk.
+///
+/// MUTATION THIS MUST FAIL AGAINST: in `purview_scene`, take the mark's room
+/// from the body rather than the column —
+/// `for (npc, _at) in npcs { let at_room = &npc.home; … }`. Run and observed:
+/// `the chart drew "Bwaakkwak" on a room where no creature of that name
+/// stands — the mark did not follow the creature`. The SAME mutation against
+/// the pre-existing suite is the null recorded above; this test is the
+/// difference.
+#[test]
+fn the_chart_marks_a_creature_where_it_now_stands_not_where_it_lives() {
+    let world = hornvale_worldgen::build_world(
+        hornvale_kernel::Seed(7),
+        &Default::default(),
+        hornvale_worldgen::SkyChoice::Generated,
+        &Default::default(),
+        &Default::default(),
+    )
+    .expect("seed 7 builds");
+    let (mut session, _) = Session::start(&world, &PossessOpts::default()).expect("starts");
+    // Seed 7's residents leave home within thirty days — the same fact
+    // `every_slots_position_is_the_ledgers` relies on, and the reason this
+    // test is not written at seed 42.
+    //
+    // **SEVERAL waits, not one long one, and the difference is measured, not
+    // stylistic.** A single `wait 60` from a fresh session draws 27 marks and
+    // **zero** of them names a creature that has left home; the same sixty
+    // days taken as `1, 4, 5, 10, 10, 30` draws 25 and **fifteen** do. A body
+    // off the roll is frozen and caught up on return (The Roll), so how a
+    // span is divided changes which bodies are near enough to be drawn while
+    // they are away from home. The vacuity guard at the foot of this test is
+    // what makes that difference visible instead of silently halving the
+    // test.
+    for span in [
+        "wait 1", "wait 4", "wait 5", "wait 10", "wait 10", "wait 30",
+    ] {
+        let _ = session.handle(span);
+    }
+
+    // Read every body's true room ONCE, from the ledger fold rather than the
+    // column — the independent half of VIEW = SCAN, so a broken column
+    // cannot supply its own alibi.
+    let roster = session.roster();
+    let standing: Vec<hornvale_kernel::Facet> = (0..roster.len())
+        .map(|i| session.position_of(hornvale_vessel::roster::Slot(i)))
+        .collect();
+
+    let chart = session.purview(0).expect("the walk-band chart draws");
+    let mut checked = 0usize;
+    // Bound to a local on its OWN line so `cargo fmt` cannot reflow the waiver
+    // off it — fmt moved this waiver off its token twice while this test was
+    // being written, which is the ratchet hazard this campaign's retrospective
+    // records.
+    let drawn_squares = &chart.cells; // lexicon: SurroundsCell is a chart AREA unit, never a mesh vertex
+    for drawn in drawn_squares {
+        for mark in drawn.marks.iter().filter(|m| m.kind == "agent") {
+            // A label may name several bodies (the wild fauna are labelled by
+            // species), so the claim is "SOME body of this name really stands
+            // here" rather than "this exact body does" — which is the
+            // strongest thing a chart mark can be held to, and is still false
+            // the moment a mark is drawn from anything but a live position.
+            let here = (0..roster.len()).any(|i| {
+                roster.bodies()[i].label == mark.noun
+                    && standing[i].pack().map(|f| f.0) == Ok(drawn.room)
+            });
+            assert!(
+                here,
+                "the chart drew {:?} on a room where no creature of that name \
+                 stands — the mark did not follow the creature",
+                mark.noun
+            );
+            // Non-vacuity: this mark is only evidence if the body it names has
+            // actually left home, since at a static seed home and position are
+            // the same room and every placement rule agrees.
+            if (0..roster.len()).any(|i| {
+                roster.bodies()[i].label == mark.noun
+                    && standing[i].pack().map(|f| f.0) == Ok(drawn.room)
+                    && standing[i] != roster.bodies()[i].home
+            }) {
+                checked += 1;
+            }
+        }
+    }
+    assert!(
+        checked > 0,
+        "no drawn mark named a creature that had left home, so this test \
+         asserted nothing — pick a seed or a span where a resident walks \
+         within the chart's own radius"
+    );
+}

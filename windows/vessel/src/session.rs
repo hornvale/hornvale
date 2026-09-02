@@ -2262,13 +2262,29 @@ impl<'w> Session<'w> {
     /// [`TurnWork::position_folds`]** (The Rack, Task 4). It is the inverse
     /// of the arrangement that shipped with Task 1, and deliberately so: the
     /// counter's job is to catch a ledger fold creeping back onto a turn
-    /// path, and after this task no turn path performs one — `position`,
-    /// `colocated_npcs`, `narrate_motion` and `wait`'s `before` all read the
-    /// column. A counter with no remaining call site would be a permanently
-    /// green zero that could not distinguish "nothing folds" from "the
-    /// instrument is dead", so the scan half keeps it live: every
-    /// `agent_position` call left in this module is here, and the budget
-    /// tests assert a snapshot performs none.
+    /// path — `position`, `colocated_npcs`, `narrate_motion` and `wait`'s
+    /// `before` all read the column. A counter with no remaining call site
+    /// would be a permanently green zero that could not distinguish "nothing
+    /// folds" from "the instrument is dead", so the scan half keeps it live:
+    /// every `agent_position` call left in THIS MODULE is here, and the
+    /// budget tests assert a snapshot performs none.
+    ///
+    /// **"No turn path performs one" was written here after Task 4 and was
+    /// FALSE for the whole campaign until the final review** — recorded
+    /// rather than quietly corrected, because the shape is the point. A
+    /// walk-band `snapshot` builds the chart (`Self::purview(0)`), and
+    /// `crate::purview::purview_scene` folded `agent_position` once per NPC
+    /// to place its mark: ~67 ledger folds a turn, one module over. This
+    /// counter could not see them and neither could
+    /// `a_snapshot_performs_no_folds`, because `TurnWork` lives on the
+    /// session and the fold did not. **A counter bounds the module it is
+    /// threaded through, never "the turn"**, and the sentence above quietly
+    /// promoted the first into the second. The chart now takes the roster's
+    /// `position` column (`roster::other_bodies_at`) and the fold is deleted;
+    /// what pins that is not this counter but
+    /// `the_rack.rs::the_chart_marks_a_creature_where_it_now_stands_not_where_it_lives`,
+    /// written for it, since the same mutation against the pre-review suite
+    /// was a null.
     ///
     /// A test that audits the column therefore pays a visible fold, which is
     /// correct — it IS folding — and no turn's own budget sees it, because
@@ -3367,7 +3383,18 @@ impl<'w> Session<'w> {
             &self.wctx.ctx,
             &self.position(),
             &self.knowledge,
-            &other_bodies(self.roster.bodies(), self.roster.driven()),
+            // The bodies WITH their rooms, taken from the roster's `position`
+            // column (The Rack, final review). This used to hand over bodies
+            // alone and let `purview_scene` fold `agent_position` for each,
+            // which was the last per-NPC ledger fold on a turn path and the
+            // one `TurnWork` could not see, because it ran in another module.
+            // `self.day` below is the instant those positions are the
+            // ledger's answer for — see `other_bodies_at`'s doc.
+            &crate::roster::other_bodies_at(
+                self.roster.bodies(),
+                self.roster.positions(),
+                self.roster.driven(),
+            ),
             &self.ledger,
             self.day,
             zoom_out,

@@ -46,6 +46,32 @@ use hornvale_vessel::{PossessOpts, Session};
 /// counter: `Session::position_of` still bumps it (see that method's doc),
 /// so a zero here means "this call folded nothing", never "nothing can".
 ///
+/// # This counter's blind zone, measured rather than reasoned about
+///
+/// **A zero here bounds `session.rs`, not "the turn", and for the whole of
+/// this campaign the difference hid sixty-seven folds.** A walk-band snapshot
+/// builds the chart through `Session::purview(0)`, and
+/// `crate::purview::purview_scene` — another module — folded
+/// `liveness::agent_position` once per NPC to place its mark. `TurnWork` is a
+/// field on the session; the fold was not reachable from it; this test read
+/// **0** while **67** ran. The final review found it by reading the call
+/// graph, not by running anything.
+///
+/// The fold is now deleted: `purview_scene` takes the roster's `position`
+/// column from `roster::other_bodies_at`. **No counter was routed through to
+/// prove it, deliberately.** There is nothing left in that module to count,
+/// so a counter there would be exactly the permanently-green zero
+/// `Session::position_of`'s doc argues against — it would assert the absence
+/// of the thing it was added to measure and could never distinguish that from
+/// its own death. What pins the chart instead is a behavioural test,
+/// `the_rack.rs::the_chart_marks_a_creature_where_it_now_stands_not_where_it_lives`,
+/// at a seed whose residents walk.
+///
+/// **The rule this leaves for whoever adds the next budget assertion:** ask
+/// which MODULES a verb's work is spread across before reading a zero as
+/// "this verb is cheap". `snapshot`'s walk arm reaches `purview`, `scene` and
+/// `locale`; none of them can bump anything here.
+///
 /// Not in the commit gate until the next green chamber job rewrites
 /// `docs/timings/subfloor-roster.tsv`; runs in the stage gate from this commit.
 ///

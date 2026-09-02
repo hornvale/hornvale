@@ -382,6 +382,39 @@ pub fn other_bodies(bodies: &[Body], driven: Slot) -> Vec<&Body> {
         .collect()
 }
 
+/// [`other_bodies`] paired with each body's room, read from the `position`
+/// column rather than folded from the ledger (The Rack, final review).
+///
+/// **Why this exists at all.** `purview_scene` — the walk-band chart, drawn
+/// by every walk-band `snapshot` — folded `agent_position` once per NPC to
+/// place its mark, which is ~67 ledger folds a turn sitting OUTSIDE
+/// `session.rs` and therefore outside [`crate::turn_work::TurnWork`]'s reach:
+/// `a_snapshot_performs_no_folds` read zero while sixty-seven folds ran one
+/// module over. The chart now takes the column, and this is the pairing that
+/// lets it, with the alignment done here (where the two slices are provably
+/// the same roster) rather than at the call site.
+///
+/// Both halves borrow the SAME roster for the same lifetime, which is what
+/// keeps this a pairing rather than a copy: the caller holds `&self.roster`
+/// once and hands out two views of it.
+///
+/// **The caller owes the instant.** A `position` is only the ledger's answer
+/// *as of the roster's last write* — VIEW ≡ SCAN (decision 0597) pins it
+/// against `agent_position(ledger, body, day)` at the session's own `day`, so
+/// a consumer asking about any other instant must fold, not read this.
+pub fn other_bodies_at<'a>(
+    bodies: &'a [Body],
+    positions: &'a [Facet],
+    driven: Slot,
+) -> Vec<(&'a Body, &'a Facet)> {
+    bodies
+        .iter()
+        .enumerate()
+        .filter(|(i, _)| *i != driven.0)
+        .filter_map(|(i, npc)| positions.get(i).map(|at| (npc, at)))
+        .collect()
+}
+
 /// Every other body ON THE ROLL: [`other_bodies`] narrowed to the mask
 /// `wait` recomputed this tick (The Roll, spec §3.2/§3.7). The DRIVEN body is
 /// excluded here exactly as it is there — it has its own arbitration —
