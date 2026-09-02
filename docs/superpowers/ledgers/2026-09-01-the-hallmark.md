@@ -161,3 +161,41 @@ not a null result · Capture: idea-registry row `DOM-era-day-axis` (status
 `raw`); citations added to the four `pending(wave-2: …)` tag doc lines in
 `domains/paleoclimate` (tags themselves untouched, per the brief). No code
 retyped; Steps 3-5 (baseline, retype, byte-identity verdict) not reached.
+
+#11 [Q] — Task 8's gate: does `Formation`'s `KarstCave`/`LavaTube`/
+`FractureCave` embed into `Formation::Cave(CaveKind)` now that `CaveKind`
+moved to the kernel, or stay climate's own projection? · **Stay a
+projection — keep the three variants as they are.** The brief's embed
+condition is "matched only as enum values and their corpus strings produced
+by an explicit spelling table [an embed could preserve]." Neither half of
+that held: `grep -rn 'KarstCave\|FractureCave' domains/climate/src/ | wc -l`
+returned 4 sites, all a bare enum match (`facets.rs:209,215` the
+declarations, `facets.rs:305`'s `unreachable!` arm, `variants.rs:741`'s
+`(Formation::KarstCave | Formation::LavaTube | Formation::FractureCave, _)
+=> &[]`) — no spelling table converts a `Formation`/`CaveKind` value into a
+corpus string anywhere. The corpus strings themselves
+(`"karst-cave"`/`"lava-tube"`/`"fracture-cave"`) are hand-authored string
+*literals*: `domains/climate/src/axes.rs:288-290`'s three `a("karst-cave",
+…)` rows, and `domains/climate/src/underworld.rs:194-198`'s `KARST`/`TUBE`/
+`FRACTURE`/`KARST_AND_FRACTURE` genus-pointer constants, referenced by name
+across 22 hand-authored `c(…)` corpus rows in `underworld.rs`'s `build()`
+(the karst/lava-tube/fracture sections, `underworld.rs:254-613`). An embed
+would touch none of that data — the strings are independent of the enum
+shape — but it would also gain nothing towards the brief's stated payoff
+("keep every emitted string identical" through a single spelling-table
+edit), because no such table exists to update; the corpus's spelling is
+already decoupled from the variant name and would stay that way either
+way. Absent the payoff, the embed is pure churn against a `#[derive]`d
+`Formation` used in `BTreeMap` keys and matched exhaustively at several
+non-wildcard sites (`facets.rs::biome()`, `variants.rs::variant_pool`),
+each of which would need a new nested-pattern arm for no behavioural gain
+· Committed-artifact porcelain check (Step 4): `git status --porcelain
+book/src/laboratory/generated/ docs/audits/system-coverage-wolverson-2021.md`
+— empty, consistent with never having touched the corpus · Action taken:
+`Formation::KarstCave`/`LavaTube`/`FractureCave` doc comments
+(`domains/climate/src/facets.rs`) reworded to cite `hornvale_kernel::CaveKind`
+(post-move) and state the deliberate-projection rationale; `cli/tests/suite/
+cave_kind_correspondence.rs` left exactly as the exhaustive-match guard it
+already was (decision 0094) · Capture: this entry; no idea-registry row
+opened — 0094 already covers the "why a duplicate roster" question and
+nothing new was learned about it.

@@ -204,14 +204,22 @@ pub enum Formation {
     /// Open sea with no distinguishing community — the marine default.
     OpenWater,
     /// Carbonate dissolution (wet limestone). Mirrors
-    /// `hornvale_terrain::CaveKind::Karst` (decision 0094: a shared roster,
-    /// never a shared derivation — climate may not import terrain).
+    /// `hornvale_kernel::CaveKind::Karst` — kept as climate's own corpus
+    /// vocabulary; the spellings genuinely differ (see
+    /// `windows/worldgen`'s `genus_of`), so this is a deliberate projection
+    /// under decision 0517 clause (a), not a forced duplicate (climate may
+    /// not import terrain, and the corpus strings this variant feeds —
+    /// `axes.rs`/`underworld.rs`'s `"karst-cave"` etc. — are hand-authored
+    /// across a 22-row corpus, not produced by a spelling table an embed
+    /// could preserve mechanically).
     KarstCave,
     /// A drained basaltic/volcanic tube. Mirrors
-    /// `hornvale_terrain::CaveKind::LavaTube`.
+    /// `hornvale_kernel::CaveKind::LavaTube` — see [`Formation::KarstCave`]
+    /// for why this stays a projection rather than an embed.
     LavaTube,
     /// A fault/fracture void in tectonically active rock. Mirrors
-    /// `hornvale_terrain::CaveKind::Fracture`.
+    /// `hornvale_kernel::CaveKind::Fracture` — see [`Formation::KarstCave`]
+    /// for why this stays a projection rather than an embed.
     FractureCave,
 }
 

@@ -7,6 +7,7 @@
 
 pub mod astar;
 pub mod band;
+pub mod cave;
 pub mod claim;
 pub mod color;
 pub mod component;
@@ -42,6 +43,7 @@ pub mod world;
 
 pub use astar::{AStarSolver, FieldSolver, SearchSpace, Solver, astar};
 pub use band::Band;
+pub use cave::CaveKind;
 pub use claim::Claim;
 pub use color::{
     BAND_CENTERS_NM, BANDS, ChannelRole, Illuminant, Mixture, Observer, Projection, Reflectance,
