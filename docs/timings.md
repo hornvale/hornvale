@@ -4772,3 +4772,7 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-02T17:50:42Z | sluice:gate | 589.315 | 18006.477 | 511.381 | 31.42 | 0 | 41843b04c |  | lefford | 40 |
 | 2026-09-02T17:52:27Z | sluice:clients | 104.848 | 1797.284 | 184.339 | 18.90 | 0 | 09562f9cc |  | lefford | 40 |
 | 2026-09-02T17:59:57Z | sluice:heavy | 448.857 | 9631.777 | 166.735 | 21.83 | 0 | 587137e4c |  | lefford | 40 |
+| 2026-09-02T20:59:24Z | gate-commit | 39.932 | 16.048 | 1.384 | 0.44 | 0 | 96c1035bc | campaign/the-brattice | ambrose | 12 |
+| 2026-09-02T21:05:56Z | gate-commit | 356.848 | 804.494 | 92.150 | 2.51 | 0 | 96c1035bc | campaign/the-brattice | ambrose | 12 |
+| 2026-09-02T21:08:18Z | gate-commit | 113.123 | 60.626 | 30.335 | 0.80 | 0 | 96c1035bc | campaign/the-brattice | ambrose | 12 |
+| 2026-09-02T21:15:11Z | gate-commit | 273.266 | 145.945 | 72.904 | 0.80 | 0 | 96c1035bc | campaign/the-brattice | ambrose | 12 |

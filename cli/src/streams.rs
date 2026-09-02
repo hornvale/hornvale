@@ -632,6 +632,15 @@ mod tests {
                 // generator (Karst-biased leaves). Versioned from birth
                 // like the other entries in this golden. See
                 // `windows/vessel/src/underworld_level/carve.rs`.
+                // The Brattice: which cycle pattern a realm draws from the
+                // frozen inventory. Additive at v1 — a NEW label, so it
+                // derives its own stream and perturbs none of the four plan
+                // legs. Versioned from birth like its siblings: the key IS a
+                // save-format contract, because a descent key's identity is
+                // a plan position (spec §5). Sorts before the
+                // `underworld/level/*` block, not beside `underworld/plan/*`.
+                // See `windows/worldgen/src/streams.rs`.
+                "underworld/gate/pattern v1",
                 "underworld/level/cellular v1",
                 // The Adit, Task 6: deriving each rung's own seed within
                 // one descent, drawn once per rung so two rungs never

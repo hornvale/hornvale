@@ -368,3 +368,180 @@ Baselines copied to `.superpowers/sdd/2026-09-02-the-brattice/baselines/` at
 `Level {` constructions = 4 (`underworld_level/mod.rs:277`,
 `underground.rs:1109`, `:1130` (tests), `level_doc.rs:389` (test)).
 Inventory frozen at 10 (G3 record).
+
+## Task 1 - BLOCKED at review (implementation complete, two findings)
+
+**Built.** `windows/worldgen/src/brattice.rs` (gate types, the ten-row frozen
+inventory, the geometry helpers, the pass, the product-graph solver);
+`Node.key` / `Edge.gate` / `DescentPlan.patterns` / `DescentPlan.skipped_patterns`
+and the `edge_index` / `gate_between` accessors in `circuit.rs`; the pass hooked
+into `plan_descent` after `assign_depth`; the `UNDERWORLD_GATE_PATTERN` label
+(`underworld/gate/v1/pattern`) and its roster row; the `dof` identity extended
+by `+ realms`; the Crosscut's `try_extend` deferred minor taken.
+
+**Test evidence.** `cargo test -p hornvale-worldgen` -> **485 passed, 1 failed**
+(`brattice::tests::a_lava_tube_never_carries_a_sump_and_some_descent_carries_a_chute`).
+Green among the 485: `every_plan_is_solvable_for_a_body_holding_nothing`
+(200 seeds x 3 kinds x 3 characters), `gates_and_keys_claim_at_most_once_and_add_nothing`,
+`dof_counts_every_draw` (the amended `+ realms` identity, 4,800 plans) and
+`realms_are_the_mesh_count_and_every_level_is_inside_the_clip` (the 400-seed
+sweep - the post-extend capability test starves no level).
+`cargo clippy -p hornvale-worldgen --all-targets -- -D warnings` clean;
+type-audit `check` rc=0; the CLI's `streams` lib tests 15/15.
+
+### Finding 1 - four of the ten frozen rows are unreachable by construction
+
+Measured over 4,412 realms (60 seeds x 3 kinds x 2 characters, vertex 2), the
+class x span support of `Realm.class` is:
+
+```
+  LongLong   CrossFloor    68      LongLong   SameFloor   198
+  ShortLong  CrossFloor  1203      ShortLong  SameFloor  2518
+                                   ShortShort SameFloor   425
+```
+
+`LongShort` **never occurs at all**, and `ShortShort x CrossFloor` never occurs.
+This is structural, not statistical, and it is a property of the Crosscut, not of
+this task: `Realm.class` is frozen at creation from `length_class(len_a, len_b)`,
+where at creation `path_a` has at most 3 edges (`segment(u, v, hops)`, `hops`
+drawn from `0..3`) and `path_b` has at least 2 (`free_path(.., min_interior: 1)`),
+or at least 3 cross-floor. `LongShort` requires `len_a > len_b + 1`, i.e.
+`len_a >= 4`. Unreachable. Verified with the Step-10 change reverted as well, so
+it is not caused by this task.
+
+Consequence: rows 2 `hidden-shortcut`, 3 `dangerous-route`, 8 `the-chute` and
+10 `the-landing-hall` are dead data - exactly what spec 3.2 says the inventory
+must not contain ("the rows below are the ones whose placement the grammar can
+express"; "a pattern nothing selects is dead data, not inventory"). `the-chute`
+being dead means `Mode(Fly)` is never stamped anywhere, so spec 4's chute
+predictions and Tasks 3/4/5's chute work have no input.
+
+Outcome distribution over 1,200 plans (200 seeds x 3 kinds x 2 characters,
+vertex 3): 12,700 `Applied` (blocked-retreat 4,279; key-downstairs-lock-upstairs
+2,460; the-sump 2,484; lock-and-key-cycle 1,693; patrol-path 1,237;
+two-alternative-paths 547), 610 `Skipped(Claimed)`, 1,394 `Inadmissible`,
+**0 `NoRoom`, 0 `Unsolvable`**; 13,772 gates and 4,153 keys placed.
+
+Measured remedy, not applied (it is a Crosscut semantics change and outside a
+Task 1 ruling): recomputing `class` from the realized path lengths in the
+attributes phase - `try_extend` splices nodes into existing realm paths after
+the class is frozen, so today's stored class is stale (max realized `len_a` is
+16 against a frozen ceiling of 3). With that recompute the support becomes
+`LongShort CrossFloor 20`, `LongShort SameFloor 63`, and nine of ten rows become
+live (`the-landing-hall` stays dead). Nothing outside `circuit.rs` reads
+`LengthClass`, and none of the four Crosscut readouts reads `class`.
+
+### Finding 2 - Step 10 moves all four Crosscut readouts
+
+`cargo run -q -p hornvale -- circuit --seed 42` against
+`baselines/circuit-panel.before.md`:
+
+```
+  loop share          0.1233 -> 0.1077
+  cycle membership    0.8548 -> 0.8442
+  cross-floor         841/874 = 0.9622 -> 839/874 = 0.9600
+  semilattice overlap 0.3061 -> 0.3030
+  density ordering    unchanged; every verdict word unchanged
+```
+
+Attributed decisively: with the single line
+`would_still_cycle_after_extend(level, u, v, &interior)` reverted to
+`would_still_cycle(level, &interior)`, the panel is **byte-identical to the
+baseline**. The gate pass adds no node and no edge and moves nothing; the
+movement is entirely the Crosscut deferred minor (Step 10), which by
+construction changes which `extend` moves land. Whether to accept a moved
+committed page is the controller's call, not an implementer's.
+
+**Ruling: `patrol-path` stamps `path_a` (`Side::Long`), not both sides** - the
+realm is the unit of the reading and nothing reads the stamp; recorded in the
+row's `hazard` doc. Cost if wrong: one unread stamp missing from `path_b`.
+
+**Ruling: the roster row sorts before `underworld/level/cellular v1`, not before
+`underworld/plan/cycle v1`** as the brief said - `the_stamp_is_exactly_this_roster`
+sorts ascending and `gate` < `level`. Cost if wrong: nil; the test pins it.
+
+**Note: `Body.keys` is tagged `bare-ok(count: keys)`** - the brief proposed
+`bare-ok(bitset: keys)` and `bitset` is not one of `BARE_OK_CLASSES`
+(`tools/type-audit/src/tag.rs`). `KeyFor`'s tuple field is `bare-ok(index: 0)`.
+
+## Task 1 - fix round 1 (controller rulings A, B, C) - COMPLETE
+
+Both blockers resolved. `cargo test -p hornvale-worldgen` -> **487 passed, 0
+failed** (lib) plus 3 / 348 / 0 in the other targets; `cargo clippy --workspace
+--all-targets -- -D warnings` clean; type-audit `check` rc=0; the CLI `streams`
+lib tests 15/15.
+
+**Ruling A - `Realm.class` is recomputed after growth from the REALIZED path
+lengths** - a new `recompute_classes` pass in `plan_descent`, between
+`assign_depth` and the gate `stamp`, re-deriving `class = length_class(path_a
+.len() - 1, path_b.len() - 1)`; `length_class`'s rule is unchanged - **why:**
+the class was frozen at creation and `try_extend` splices chains into realm
+paths afterwards, so the exported class described a graph that no longer
+existed (max realized `len_a` 16 against a creation ceiling of 3), making
+`LongShort` structurally unreachable and four inventory rows dead data. A
+Crosscut latent defect that nothing read until The Brattice - **cost if
+wrong:** the pattern selector would keep reading a stale class, and rows 2, 3
+and 8 would stay dead. Pinned by
+`circuit::tests::realm_class_is_recomputed_from_the_realized_paths` (200 seeds
+x 3 kinds), which asserts the equality AND that a `LongShort` realm is actually
+sighted - an equality alone cannot tell the pass apart from one that never runs.
+
+**Ruling B - row 8 `the-chute` widened to `classes: &[LongShort, ShortLong,
+LongLong]`, `span: CrossFloor`** - **why:** a drop needs a floor below, not a
+short lower path; the organon's `LongShort` cell is structurally rare (20 of
+4,412 realms) because a cross-floor `path_b` is laid with at least 3 edges
+against a `path_a` of at most 3. `name` and `source` are provenance and are
+unchanged; `the-landing-hall` keeps `ShortShort x CrossFloor` alone; the count
+stays 10 - **cost if wrong:** the chute is placed on realms the organon did not
+name. Measured consequence in the per-row table below: **717 of the row's 823
+draws end `NoRoom`**, because under `ShortLong` `sides()` puts `Side::Short` on
+`path_a`, the same-floor existing segment, which is never a `Stair`.
+
+**Ruling C - Step 10's `try_extend` fix kept; the four Crosscut readouts are
+accepted as moved** - **why:** decision 0618 makes every later plan-grammar
+change an epoch of `underworld/plan/v1`, so this is the last campaign that can
+take the fix for free - **cost if wrong:** a committed audit page moves without
+the defect being real.
+
+Attribution, as measured: `loop share 0.1233 -> 0.1077`, `cycle membership
+0.8548 -> 0.8442`, `cross-floor 841/874 = 0.9622 -> 839/874 = 0.9600`,
+`semilattice overlap 0.3061 -> 0.3030`; density ordering and every verdict word
+unchanged. **Reverting the single call `would_still_cycle_after_extend(level,
+u, v, &interior)` to `would_still_cycle(level, &interior)` makes the panel
+byte-identical to the baseline** - so the gate pass alone moves nothing, and
+neither does Ruling A (the panel after Ruling A is byte-identical to the panel
+before it).
+
+### Per-row outcome table, 4,412 realms (60 seeds x 3 kinds x 2 characters, vertex 2)
+
+```
+  #  row                           drew  applied  Claimed  NoRoom  Unsolvable
+  1  two-alternative-paths          137      137        0       0           0
+  2  hidden-shortcut                 24       24        0       0           0
+  3  dangerous-route                 39       39        0       0           0
+  4  lock-and-key-cycle             506      464       42       0           0
+  5  the-sump                       810      759       51       0           0
+  6  patrol-path                    333      318       15       0           0
+  7  blocked-retreat               1341     1334        7       0           0
+  8  the-chute                      823       51       55     717           0
+  9  key-downstairs-lock-upstairs   399      362       37       0           0
+ 10  the-landing-hall                 0        0        0       0           0
+     Inadmissible (no row admitted the realm):  0
+```
+
+**Two things Task 2's readout must know.** Row 10 `the-landing-hall` is **still
+fully dead** - it draws zero, because `ShortShort x CrossFloor` does not occur
+even after Ruling A (a cross-floor `path_b` has at least 3 edges, so
+`ShortShort` needs `len_a == 2`, which the sample never pairs with it). And row
+8 wastes 717 of 823 draws on `NoRoom`: 16% of all realms spend their one
+pattern draw on a row that cannot apply to them, displacing rows that could
+(chiefly `key-downstairs-lock-upstairs`, the other `ShortLong x CrossFloor`
+row). Narrowing row 8 to `&[LongShort, LongLong]` - the two classes where
+`sides()` puts `Side::Short` on `path_b` - would recover all 717 at no cost to
+the 51 applied. Not done: Ruling B is explicit and this is the controller's
+call.
+
+**And the chute is thin.** In the exact slice the brief's test samples (60
+seeds, LavaTube, WildCave, vertex 2) there is **exactly one chute**. The test
+passes verbatim, as ruled, but by a margin of one placement; any later grammar
+change can flip it red without any chute logic being wrong.

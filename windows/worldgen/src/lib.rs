@@ -81,6 +81,7 @@ fn stage<T>(label: &'static str, f: impl FnOnce() -> T) -> T {
 
 pub mod ablation;
 pub mod alchemy;
+pub mod brattice;
 pub mod chamber;
 pub mod character;
 pub mod chorus;
