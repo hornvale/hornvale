@@ -927,18 +927,52 @@ fn the_sustenance_fixture_actually_contains_its_traps() {
     );
 }
 
-/// Step 2: FOLD equals SCAN for the sustenance read, at every probe instant,
-/// against the verbatim `agent_sightings` + `integrate_thirst` oracle.
+/// Which reset instant a sweep feeds to BOTH halves of the comparison.
 ///
-/// `==` on `f64`, not an epsilon: the arithmetic is meant to be the identical
-/// sequence of operations on the identical values, so any difference at all is
-/// a defect rather than a rounding budget.
-#[test]
-fn sustenance_at_equals_the_integrate_thirst_oracle_at_every_instant() {
+/// The rule is a parameter because the two live semantics differ and the
+/// campaign is migrating one of them: `drive_at`/`hunger_at` take the
+/// unfiltered maximum over every committed reset (the Tailrace's trap 5),
+/// while `catch_up` — and a fold at the position `t` implies — takes the
+/// latest reset at or before `t`. Both halves of a sweep always receive the
+/// SAME instant, so a sweep compares the fold against the scan and never one
+/// reset rule against the other.
+#[derive(Clone, Copy, Debug)]
+enum ResetRule {
+    /// Today's `drive_at`/`hunger_at` lookup: the maximum over every reset,
+    /// with no bound on `t`.
+    Unfiltered,
+    /// `last_fact_day_at_or_before`'s filter, and `catch_up`'s.
+    AtOrBefore,
+}
+
+/// One whole FOLD-equals-SCAN sweep: every probe instant × every thermal
+/// class, `sustenance_at` against the verbatim
+/// `agent_sightings` + `integrate_thirst` oracle, under one [`ResetRule`].
+///
+/// Returns `(probes, probes that returned a STRICTLY POSITIVE integral,
+/// the instants at which at least one class did)`.
+///
+/// **The second and third of those exist because the first draft of this test
+/// was three-quarters vacuous and its own guard could not see it.** It swept
+/// under [`ResetRule::Unfiltered`] only, which for this fixture is always day
+/// 8.5 (tick 850 000) whatever `t` is — so every probe at or before that
+/// instant took `sustenance_at`'s `t <= last_reset` short-circuit and asserted
+/// `0.0 == 0.0`. Fifteen of nineteen probes proved nothing, and every one of
+/// the fixture's traps lives inside that dead zone: the same-day tie at tick
+/// 250 000 and both sightings that land exactly on a reset (200 000, 600 000)
+/// were never inside an integrated interval at all. The anti-vacuity guard was
+/// `segments_integrated() > 0`, which the four live probes satisfied — and
+/// which the short-circuit ALSO feeds, since it records a zero-segment read.
+/// Counting non-zero RESULTS is the denominator that actually discriminates,
+/// the same shape the rule-1 witness needed.
+fn sweep_against_the_oracle(rule: ResetRule) -> (usize, usize, std::collections::BTreeSet<i64>) {
     let (l, e, home) = sustenance_fixture();
     let terrain = RippleTerrain;
     let mut store = ResidentFolds::new();
     let mut witness = ReadWitness::default();
+    let mut probes = 0usize;
+    let mut nonzero = 0usize;
+    let mut live: std::collections::BTreeSet<i64> = std::collections::BTreeSet::new();
 
     for class in [
         ThermalStrategy::Endothermic,
@@ -946,27 +980,17 @@ fn sustenance_at_equals_the_integrate_thirst_oracle_at_every_instant() {
         ThermalStrategy::Unmodelled,
     ] {
         for t in probe_instants() {
-            // The scan half: the exact pair of functions production used.
-            let sightings = scan_oracle(&l, e, t.as_std_days());
-            let last_drank = l
-                .facts_of(e, DRANK)
-                .filter_map(|f| f.day)
-                .fold(0.0_f64, |acc, d| acc.max(d.as_std_days()));
-            let expected = integrate_thirst_oracle(
-                &sightings,
-                &home,
-                last_drank,
-                t.as_std_days(),
-                &terrain,
-                class,
-                &SUSTENANCE,
-            );
-
             let (trail, resets, _w) = store.trail_and_thirst(&l);
-            let reset = resets
-                .last_reset(e)
-                .unwrap_or(WorldTime::GENESIS)
-                .max(WorldTime::GENESIS);
+            // The ONE reset instant both halves see. The `GENESIS` floor is
+            // what `drive_at`'s old `fold(0.0, f64::max)` did and what
+            // `catch_up` names at its own call site for `None`.
+            let reset = match rule {
+                ResetRule::Unfiltered => resets.last_reset(e),
+                ResetRule::AtOrBefore => resets.last_reset_at_or_before(e, t),
+            }
+            .unwrap_or(WorldTime::GENESIS)
+            .max(WorldTime::GENESIS);
+
             let got = sustenance_at(
                 trail,
                 e,
@@ -979,16 +1003,93 @@ fn sustenance_at_equals_the_integrate_thirst_oracle_at_every_instant() {
                 &SUSTENANCE,
                 &mut witness,
             );
+            // The scan half: the exact pair of functions production used, fed
+            // the identical reset.
+            let sightings = scan_oracle(&l, e, t.as_std_days());
+            let expected = integrate_thirst_oracle(
+                &sightings,
+                &home,
+                reset.as_std_days(),
+                t.as_std_days(),
+                &terrain,
+                class,
+                &SUSTENANCE,
+            );
             assert_eq!(
                 got, expected,
                 "sustenance_at must equal the integrate_thirst oracle bit for bit \
-                 at {t:?} for {class:?}"
+                 at {t:?} for {class:?} under {rule:?}"
             );
+            probes += 1;
+            if got > 0.0 {
+                nonzero += 1;
+                live.insert(t.ticks());
+            }
         }
     }
+    (probes, nonzero, live)
+}
+
+/// Step 2: FOLD equals SCAN for the sustenance read, at every probe instant,
+/// against the verbatim `agent_sightings` + `integrate_thirst` oracle.
+///
+/// `==` on `f64`, not an epsilon: the arithmetic is meant to be the identical
+/// sequence of operations on the identical values, so any difference at all is
+/// a defect rather than a rounding budget.
+///
+/// **Swept twice, under both live reset rules** — see [`ResetRule`] for why
+/// there are two, and [`sweep_against_the_oracle`] for what the unfiltered
+/// sweep alone could and could not see. The floors below are the point of the
+/// second sweep: they are asserted on the number of probes that returned a
+/// strictly POSITIVE integral, so the sweep cannot go quiet if the fixture's
+/// resets move.
+#[test]
+fn sustenance_at_equals_the_integrate_thirst_oracle_at_every_instant() {
+    // The fixture's own landmarks, named so the floors below are readable.
+    const FIRST_RESET: i64 = 200_000;
+    const SAME_DAY_TIE: i64 = 250_000;
+    // A probe whose integrated interval STARTS at a reset that a sighting
+    // lands exactly on (trap 3) and CONTAINS the same-day tie (trap 4).
+    const SPANS_BOTH_TRAPS: i64 = 325_000;
+
+    let (probes_u, nonzero_u, live_u) = sweep_against_the_oracle(ResetRule::Unfiltered);
+    let (probes_f, nonzero_f, live_f) = sweep_against_the_oracle(ResetRule::AtOrBefore);
+    println!("--- FOLD equals SCAN sweep coverage ---");
+    println!("Unfiltered: {nonzero_u} of {probes_u} probes integrated a non-zero interval");
+    println!("AtOrBefore: {nonzero_f} of {probes_f} probes integrated a non-zero interval");
+    println!("AtOrBefore live instants (ticks): {live_f:?}");
+
+    assert_eq!(probes_u, probes_f, "both sweeps must probe the same grid");
+    // The unfiltered sweep's own floor. It is LOW on purpose and is not the
+    // load-bearing one: with a single unfiltered reset, only probes past the
+    // last reset in the whole fixture can integrate anything at all.
     assert!(
-        witness.segments_integrated() > 0,
-        "the witness must have counted segments, or the reads above integrated nothing"
+        nonzero_u >= 12,
+        "the unfiltered sweep must integrate a real interval at least 12 times \
+         (4 probes x 3 classes), or it is asserting 0.0 == 0.0 throughout: got \
+         {nonzero_u} of {probes_u}"
+    );
+    // The load-bearing floor: under the filtered rule every probe strictly
+    // between two resets integrates, so the traps land inside the sweep.
+    assert!(
+        nonzero_f >= 45,
+        "the filtered sweep must integrate a real interval at least 45 times \
+         (15 probes x 3 classes), or the fixture's traps have drifted out of \
+         every integrated interval: got {nonzero_f} of {probes_f}"
+    );
+    assert!(
+        live_f.contains(&SPANS_BOTH_TRAPS),
+        "tick {SPANS_BOTH_TRAPS} must integrate a real interval: it is the probe whose \
+         interval starts at the reset a sighting lands exactly on (tick {FIRST_RESET}, \
+         trap 3) and contains the same-day tie (tick {SAME_DAY_TIE}, trap 4). Without it \
+         neither trap is inside this sweep at all, which is exactly the hole the \
+         unfiltered-only sweep had: {live_f:?}"
+    );
+    assert!(
+        !live_u.contains(&SPANS_BOTH_TRAPS),
+        "sanity: under the UNFILTERED rule that probe is short-circuited, which is why \
+         the second sweep exists -- if this ever stops holding the fixture has changed \
+         and both floors above need re-deriving"
     );
 }
 
@@ -1090,9 +1191,26 @@ fn holding_facts_back_as_an_overlay_equals_the_scan_over_the_full_ledger() {
             partial.commit(f.clone(), &reg).unwrap();
         }
 
+        // Deliberately out of `(day, room)` order. `reverse()` alone is a
+        // real permutation for every `k >= 2`; the rotate is only added above
+        // that, because `reverse` then `rotate_left(1)` on a PAIR returns the
+        // original list -- which is what an earlier draft did, making the
+        // shuffle a no-op at exactly the two smallest overlays.
         let mut overlay: Vec<(WorldTime, Facet)> = all[all.len() - k..].to_vec();
         overlay.reverse();
-        overlay.rotate_left(k / 2);
+        if k >= 3 {
+            overlay.rotate_left(1);
+        }
+        if k >= 2 {
+            let mut sorted = overlay.clone();
+            sorted.sort_by(|a, b| a.0.cmp(&b.0).then_with(|| a.1.cmp(&b.1)));
+            assert_ne!(
+                overlay, sorted,
+                "the overlay handed to the read must NOT already be in (day, room) order, \
+                 or this test cannot tell a sorting implementation from a concatenating \
+                 one (k = {k})"
+            );
+        }
 
         let mut store = ResidentFolds::new();
         for t in probe_instants() {

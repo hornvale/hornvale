@@ -21,6 +21,19 @@
 //! history effect -- which is exactly what happened there: three runs of its
 //! whole-tick column disagreed about the sign.
 //!
+//! ## BOTH FUNCTIONS NAMED ABOVE ARE DELETED (The Pawl, Task 3)
+//!
+//! The mechanism paragraph above is HISTORY and is kept because the regimes
+//! it explains are why this bench sweeps two of them -- but neither
+//! `agent_sightings` nor `integrate_thirst` exists any more, so do not go
+//! looking for either in `liveness.rs`. Their bodies survive verbatim as the
+//! oracle in `windows/vessel/tests/suite/resident_folds.rs`. `drive_at` now
+//! reads a caller-owned resident fold store: the trail is resident and
+//! sorted, so the `O(H)` rebuild is gone, and the backward linear scan quoted
+//! above is a binary search, so the `S*H` term is `S*log H`. The `S` regimes
+//! this bench sweeps are unchanged -- `S` is still the sightings since the
+//! last reset, and the outer loop still walks one segment per distinct one.
+//!
 //! ## The store is warm, and the readout depends on knowing that
 //!
 //! Since The Pawl, `drive_at` reads a caller-owned resident fold store rather

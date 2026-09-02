@@ -19,7 +19,11 @@
 //! So nothing in the tree measures the third axis: **FIVE production folds in
 //! `liveness.rs` walk an agent's committed `agent-at` TRAIL on every
 //! evaluation** — `agent_sightings`/`integrate_thirst` via `drive_at` (the
-//! thirst path integral), `hunger_at` (the same trail, `HUNGER` params),
+//! thirst path integral; BOTH of those functions are deleted as of The Pawl's
+//! Task 3, which is what this bench now measures the effect of — `drive_at`
+//! reads a resident trail by binary search, and the two bodies survive only
+//! as the oracle in `windows/vessel/tests/suite/resident_folds.rs`),
+//! `hunger_at` (the same trail, `HUNGER` params),
 //! `believed_water` (the water belief), `hazard_memory_memo`
 //! (latest-visit-per-facet) and `build_emitter_scan` (alarm halos). A sixth,
 //! `shared_believed_water`, walks it once per co-located peer. `fatigue_at`
@@ -516,8 +520,12 @@ struct Band {
     ledger_len: usize,
     ledger_bytes: usize,
     /// **The actual independent variable.** `Ledger::facts_of` is indexed on
-    /// `(subject, predicate)`, so a fold like `agent_sightings` walks only
-    /// THIS agent's own `agent-at` facts -- never the whole ledger. Genesis
+    /// `(subject, predicate)`, so a fold like `believed_water` walks only
+    /// THIS agent's own `agent-at` facts -- never the whole ledger. (The
+    /// example here used to be `agent_sightings`, which The Pawl deleted; the
+    /// thirst and hunger reads are bounded differently now -- by the resident
+    /// trail, and by the interval since the reset -- but the other four folds
+    /// still walk the per-agent history exactly as this column describes.) Genesis
     /// commits ~12,500 facts before the walk starts, so `ledger_len` moves
     /// only ~1.5x across this run while the per-agent history the folds
     /// actually traverse moves ~6x. Fitting against `ledger_len` therefore
