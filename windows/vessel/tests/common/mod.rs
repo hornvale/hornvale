@@ -25,7 +25,8 @@
 
 #![allow(dead_code)]
 
-use hornvale_kernel::{EntityId, Seed, World};
+use hornvale_kernel::{EntityId, Facet, Seed, World, WorldTime};
+use hornvale_vessel::liveness::{Hazards, Terrain};
 use hornvale_vessel::{PlanMark, PossessOpts, Session, SpatialChannel, Turn};
 
 /// The seeds searched. Wide enough that "no world in here draws a creature" is
@@ -168,4 +169,89 @@ pub fn world_that_draws_a_creature() -> (u64, World) {
         step_inside(s);
         is_inside(s) && !marks_of(s).is_empty()
     })
+}
+
+/// A `Terrain` that delegates every read to `inner` and counts the calls —
+/// The Detent's instrument. Counts are deterministic and load-independent,
+/// which is why the campaign's gated witnesses assert on them rather than
+/// on wall time.
+pub struct CountingTerrain<'a> {
+    inner: &'a dyn Terrain,
+    hazards: std::cell::Cell<u64>, // lexicon: std::cell::Cell is the standard library's interior-mutability counter — not a place
+    water: std::cell::Cell<u64>, // lexicon: std::cell::Cell is the standard library's interior-mutability counter — not a place
+    temperature: std::cell::Cell<u64>, // lexicon: std::cell::Cell is the standard library's interior-mutability counter — not a place
+    elevation: std::cell::Cell<u64>, // lexicon: std::cell::Cell is the standard library's interior-mutability counter — not a place
+}
+
+impl<'a> CountingTerrain<'a> {
+    /// Wrap `inner`, all counters at zero.
+    pub fn new(inner: &'a dyn Terrain) -> Self {
+        Self {
+            inner,
+            hazards: Default::default(),
+            water: Default::default(),
+            temperature: Default::default(),
+            elevation: Default::default(),
+        }
+    }
+    /// How many `hazards()` calls since construction or the last `reset`.
+    pub fn hazards_calls(&self) -> u64 {
+        self.hazards.get()
+    }
+    /// How many `is_fresh_water()` calls since construction or the last `reset`.
+    pub fn water_calls(&self) -> u64 {
+        self.water.get()
+    }
+    /// How many `temperature()` calls since construction or the last `reset`.
+    pub fn temperature_calls(&self) -> u64 {
+        self.temperature.get()
+    }
+    /// How many `elevation()` calls since construction or the last `reset`.
+    pub fn elevation_calls(&self) -> u64 {
+        self.elevation.get()
+    }
+    /// Zero every counter.
+    pub fn reset(&self) {
+        self.hazards.set(0);
+        self.water.set(0);
+        self.temperature.set(0);
+        self.elevation.set(0);
+    }
+}
+
+impl Terrain for CountingTerrain<'_> {
+    fn elevation(&self, room: &Facet) -> f64 {
+        self.elevation.set(self.elevation.get() + 1);
+        self.inner.elevation(room)
+    }
+    fn is_fresh_water(&self, room: &Facet) -> bool {
+        self.water.set(self.water.get() + 1);
+        self.inner.is_fresh_water(room)
+    }
+    fn temperature(&self, room: &Facet, day: WorldTime) -> f64 {
+        self.temperature.set(self.temperature.get() + 1);
+        self.inner.temperature(room, day)
+    }
+    fn solar_altitude(&self, room: &Facet, day: WorldTime) -> Option<f64> {
+        self.inner.solar_altitude(room, day)
+    }
+    fn day_ticks(&self) -> Option<hornvale_kernel::units::TickSpan> {
+        self.inner.day_ticks()
+    }
+    fn forage_value(&self, room: &Facet) -> f64 {
+        self.inner.forage_value(room)
+    }
+    fn hazards(&self, room: &Facet) -> Hazards {
+        self.hazards.set(self.hazards.get() + 1);
+        self.inner.hazards(room)
+    }
+    fn is_built(&self, room: &Facet) -> bool {
+        self.inner.is_built(room)
+    }
+    fn is_cold(&self, room: &Facet) -> bool {
+        self.inner.is_cold(room)
+    }
+    fn prey_value(&self, room: &Facet) -> f64 {
+        self.inner.prey_value(room)
+    }
 }
