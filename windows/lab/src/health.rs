@@ -119,6 +119,15 @@ pub fn run_simulation(
     // scaling bar (a stationary, unchanged-belief creature pays zero searches
     // after its first tick) — lives here too, one per run.
     let mut home_nav_cache = HomeNavCache::new();
+    // The resident fold store (The Pawl, spec §2.1), owned at exactly the
+    // scope `home_nav_cache` is — one per run, never per tick — because a
+    // store rebuilt each tick would be the O(history) walk it exists to
+    // remove. Interior mutability because it is advanced on read (spec §2.2).
+    // Both the tick's own walk and this run's per-creature affect reads go
+    // through THIS store — the one production owns, at the scope production
+    // owns it.
+    let folds =
+        hornvale_vessel::resident::OwnedFolds::new(hornvale_vessel::resident::ResidentFolds::new());
     for _ in 0..ticks {
         let sys = DriveMovements {
             npcs: npcs.to_vec(),
@@ -127,6 +136,7 @@ pub fn run_simulation(
             params: SUSTENANCE,
             day_ticks,
             terrain,
+            folds: &folds,
         };
         // Recover this tick's within-room `Occupancy` alongside the facts
         // `tick()` (below) commits — the same walk, read twice: once here for
@@ -170,6 +180,7 @@ pub fn run_simulation(
                 Some(&occupancy),
                 &mut mesh_memo,
                 &mut home_nav_cache,
+                &folds,
             ));
         }
     }
@@ -214,6 +225,15 @@ pub fn run_simulation_with_locale(
     let mut mesh_memo = RoomMeshMemo::new();
     // Cross-tick, one per run — see `run_simulation`'s identical comment.
     let mut home_nav_cache = HomeNavCache::new();
+    // The resident fold store (The Pawl, spec §2.1), owned at exactly the
+    // scope `home_nav_cache` is — one per run, never per tick — because a
+    // store rebuilt each tick would be the O(history) walk it exists to
+    // remove. Interior mutability because it is advanced on read (spec §2.2).
+    // Both the tick's own walk and this run's per-creature affect reads go
+    // through THIS store — the one production owns, at the scope production
+    // owns it.
+    let folds =
+        hornvale_vessel::resident::OwnedFolds::new(hornvale_vessel::resident::ResidentFolds::new());
     let geo = ctx.climate().geosphere();
     let index = ctx.nearest_index();
     for _ in 0..ticks {
@@ -245,6 +265,7 @@ pub fn run_simulation_with_locale(
             params: SUSTENANCE,
             day_ticks,
             terrain: &terrain,
+            folds: &folds,
         };
         let (_facts, occupancy) =
             sys.step_with_occupancy(&ledger, &mut mesh_memo, &mut home_nav_cache);
@@ -267,6 +288,7 @@ pub fn run_simulation_with_locale(
                 Some(&occupancy),
                 &mut mesh_memo,
                 &mut home_nav_cache,
+                &folds,
             ));
         }
     }
