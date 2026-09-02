@@ -640,8 +640,11 @@ the `try_extend` post-extend fix and accept the Crosscut's four numbers moving
 once, attributed by revert (0618 makes this the last free grammar change) ·
 **D:** `Side::Descending` for the chute's gate (under `ShortLong`, `Short` was
 `path_a`, a same-floor path: 717/823 `NoRoom` → 823/823 applied) · **E:**
-remove `the-landing-hall` (`ShortShort × CrossFloor` never occurs; count 9;
-`no_row_is_dead_data` sweeps the rest) · Why: spec §3.2's own rule against
+remove `the-landing-hall` (`ShortShort × CrossFloor` never occurs — by the
+geometric argument spec §3.2's amendment paragraph now states, after the task
+review refuted the first one given ("≥3 edges", which `length_class(2, 3) ==
+ShortShort` contradicts); count 9; `no_row_is_dead_data` sweeps the rest and
+`no_cross_floor_realm_is_short_short` witnesses the lemma) · Why: spec §3.2's own rule against
 dead rows, and the spec's §4 preamble intent (the PASS must not move the
 graph) satisfied by attribution rather than by forbidding a fix that would
 otherwise cost an epoch · Discarded: narrowing the chute to `[LongShort,

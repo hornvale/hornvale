@@ -207,10 +207,16 @@ rule. (ii) The chute's gate was specified on the `Short` side, which under
 draws skipped `NoRoom`. The drop belongs on the path that descends, so
 `Side::Descending` names it and the row admits every cross-floor class but
 `ShortShort`; after the change 823 of 823 apply. (iii) The tenth row, `the-
-landing-hall` (`ShortShort × CrossFloor`), drew zero times: a cross-floor
-`path_b` is created with at least three edges, so both paths cannot be short.
-The cell is empty by construction, this section's own rule forbids a row
-nothing selects, and the row is removed; the count is **nine**, asserted, and
+landing-hall` (`ShortShort × CrossFloor`), drew zero times, and the review
+of Task 1 corrected the first reason given for it ("a cross-floor `path_b`
+has at least three edges" — false as a lemma, since `length_class(2, 3)` is
+`ShortShort`). The true reason is geometric: a cross-floor `path_b`'s two
+landings are the SAME grid cells as the realm's endpoints, so it spans their
+grid distance plus two stairs; a one- or two-edge `path_a` has endpoints at
+grid distance equal to its length, so `len_b ≥ len_a + 2` and the class is
+`ShortLong`; a three-edge `path_a` gives `LongLong` or `ShortLong`. The cell
+is empty by that argument, witnessed by `no_cross_floor_realm_is_short_short`;
+this section's own rule forbids a row nothing selects, and the row is removed; the count is **nine**, asserted, and
 a `no_row_is_dead_data` sweep asserts every remaining row is applied somewhere.
 The landing hall stays The Plat's name for a stair pair one region apart, on
 whatever realm class carries one.
