@@ -41,8 +41,18 @@ That is asserted for every rung pair the ladder admits, as a test, not assumed.
 
 - `stairs_down_and_stairs_up_never_share_a_cell` is **replaced, not deleted**:
   its successor asserts that every `StairsDown` on rung ℓ has a `StairsUp` at
-  the same coordinate on rung ℓ+1 and the converse, and that no cell carries
-  both.
+  the same coordinate on rung ℓ+1 and the converse, over the whole habitation
+  ladder rather than a two-rung stub. (An earlier draft of this bullet also
+  claimed the successor asserts "no cell carries both"; that assertion was
+  vacuous — a cell holds exactly one kind — and the final review deleted it.)
+- **A coordinate belongs to at most one stairway.** Pairing by coordinate only
+  identifies a landing if the coordinate identifies a stairway, and a node on a
+  middle rung is the upper end of one stairway and the lower end of another. So
+  a stair coordinate is ONE draw into the two regions' intersection MINUS the
+  coordinates the endpoints' other stairways already hold. Drawn as two
+  independent `x`/`y` indices, as the first implementation did, two stairways
+  collided on ~9% of five-rung descents and the realizer wrote one over the
+  other.
 - The stair coordinate is drawn at plan time, so the level realizer spends no
   draw of its own placing one.
 - A landing is set walkable even if the carve left it rock — a stairway has a

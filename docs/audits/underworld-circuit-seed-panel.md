@@ -22,9 +22,9 @@ loop share: median 0.1233 (frozen floor 0.50) -> FALSIFIED
 cycle membership: median 0.8548 (report only; added after Task 2 showed the entrance doorway is a bridge on ~40% of seeds)
 
 density ordering (median anchored realms per level):
-  LavaTube  WildCave Some(1.0)  DrowTier Some(2.0)
-  Fracture  WildCave Some(2.0)  DrowTier Some(3.0)
-  Karst     WildCave Some(3.0)  DrowTier Some(4.0)
+  LavaTube  WildCave 1.0000  DrowTier 2.0000
+  Fracture  WildCave 2.0000  DrowTier 3.0000
+  Karst     WildCave 3.0000  DrowTier 4.0000
   LavaTube < Fracture < Karst -> PASSED
   DrowTier > WildCave within kind -> PASSED
     LavaTube: DrowTier 2 > WildCave 1 -> PASSED
@@ -33,7 +33,7 @@ density ordering (median anchored realms per level):
 
 cross-floor: 841/874 descents = 0.9622 (frozen floor 0.25) -> PASSED
 
-semilattice overlap: median Some(0.30612244897959184) (report only)
+semilattice overlap: median 0.3061 (report only)
 
 seed 7: 1681 descents
 
@@ -41,9 +41,9 @@ loop share: median 0.1111 (frozen floor 0.50) -> FALSIFIED
 cycle membership: median 0.8533 (report only; added after Task 2 showed the entrance doorway is a bridge on ~40% of seeds)
 
 density ordering (median anchored realms per level):
-  LavaTube  WildCave Some(1.0)  DrowTier Some(2.0)
-  Fracture  WildCave Some(2.0)  DrowTier Some(3.0)
-  Karst     WildCave Some(3.0)  DrowTier Some(4.0)
+  LavaTube  WildCave 1.0000  DrowTier 2.0000
+  Fracture  WildCave 2.0000  DrowTier 3.0000
+  Karst     WildCave 3.0000  DrowTier 4.0000
   LavaTube < Fracture < Karst -> PASSED
   DrowTier > WildCave within kind -> PASSED
     LavaTube: DrowTier 2 > WildCave 1 -> PASSED
@@ -52,7 +52,7 @@ density ordering (median anchored realms per level):
 
 cross-floor: 1581/1681 descents = 0.9405 (frozen floor 0.25) -> PASSED
 
-semilattice overlap: median Some(0.2857142857142857) (report only)
+semilattice overlap: median 0.2857 (report only)
 
 seed 1234: 1266 descents
 
@@ -60,9 +60,9 @@ loop share: median 0.1042 (frozen floor 0.50) -> FALSIFIED
 cycle membership: median 0.8511 (report only; added after Task 2 showed the entrance doorway is a bridge on ~40% of seeds)
 
 density ordering (median anchored realms per level):
-  LavaTube  WildCave Some(1.0)  DrowTier Some(2.0)
-  Fracture  WildCave Some(2.0)  DrowTier Some(3.0)
-  Karst     WildCave Some(3.0)  DrowTier Some(4.0)
+  LavaTube  WildCave 1.0000  DrowTier 2.0000
+  Fracture  WildCave 2.0000  DrowTier 3.0000
+  Karst     WildCave 3.0000  DrowTier 4.0000
   LavaTube < Fracture < Karst -> PASSED
   DrowTier > WildCave within kind -> PASSED
     LavaTube: DrowTier 2 > WildCave 1 -> PASSED
@@ -71,5 +71,5 @@ density ordering (median anchored realms per level):
 
 cross-floor: 1193/1266 descents = 0.9423 (frozen floor 0.25) -> PASSED
 
-semilattice overlap: median Some(0.28125) (report only)
+semilattice overlap: median 0.2812 (report only)
 ```

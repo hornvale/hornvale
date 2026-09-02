@@ -439,6 +439,28 @@ readout confirms the budget is derived and reached and does not independently
 witness that the world varies as the rule claims (the "test collapses to the
 parameter" shape) · Capture: decision 0568's Consequence section; chronicle.
 
+#14 [final review] — One coordinate per stairway, and an exact `dof` ·
+**Draw a stair coordinate once, from the intersection minus what the endpoints
+already hold; count the plan's draws exactly rather than bracketing them** ·
+Why: a middle-rung region is the upper end of one stairway and the lower end of
+another, and two independently drawn coordinates coincided on ~9% of five-rung
+descents (the review's own figure, recorded in §3.3; independently confirmed
+here by the first failing case the new sweep reports — seed 55, vertex 1,
+LavaTube/WildCave, level 2 at `(27,21)`) — the realizer then overwrote a
+`StairsDown` with a `StairsUp` and left an orphan below · Discarded: keeping two draws and
+re-drawing on collision (a retry loop makes the draw count data-dependent and
+buys nothing the exclusion does not) · Capture: spec §3.3 and §4.5 amendments,
+decision 0567's Consequence, `no_two_stairways_share_a_coordinate_at_either_end`
+(plan level) and the widened `stairs_pair_by_coordinate_across_adjacent_rungs`
+(realizer, full ladder). The §4.5 recount that the G3 draft could not have —
+a failed attempt spends draws and leaves nothing in the derivation tree — is
+obtained by counting AT THE FAILURE SITE: `DescentPlan` now exposes
+`extensions`, `fallback_realms` and `failed_draws`, and `dof` is asserted as an
+exact identity, not a bracket. Result: the four panel readouts did not move by a
+digit — they measure the graph and the stair coordinates are downstream of it —
+so no verdict changed; the audit page's only drift is the rendering fix
+(`Some(0.30612244897959184)` → `0.3061`).
+
 ## Close record (G6)
 
 Decisions minted: **0566** (a place is a graph before it is a map; the grammar

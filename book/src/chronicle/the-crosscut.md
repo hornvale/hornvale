@@ -161,6 +161,21 @@ non-empty, and that is asserted for every rung pair the ladder admits rather
 than assumed. A landing cell is made walkable even where the carve left it
 rock, because a stairway has a foot.
 
+**Pairing by coordinate only works if the coordinate names one stairway, and
+the first implementation did not guarantee that.** A region on a middle rung is
+the upper end of one stairway and the lower end of another; each end's
+coordinate was drawn as two independent indices, `x` then `y`, into
+overlapping intersections, and on roughly nine of every hundred five-rung
+descents the two landed on the same cell. The realizer then wrote the upward
+stair over the downward one, leaving an orphan upward stair on the floor below
+and a descent verb that could find no partner for it. The fix is a single
+draw into the intersection *minus* every coordinate a stairway touching either
+end already holds — an exclusion two independent draws cannot express at all.
+The test that would have caught it was swept over two rungs, where a middle
+rung does not exist; it now sweeps the whole habitation ladder. The panel's
+four readouts did not move by a digit, because they measure the graph and the
+stair coordinates are downstream of it.
+
 One guarantee genuinely weakened, and it is worth naming rather than burying: a
 level is no longer guaranteed to be connected *within itself*. A cross-floor
 cycle's landing corridor can join the rest of its floor only through its

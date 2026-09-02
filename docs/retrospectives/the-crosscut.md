@@ -154,6 +154,26 @@ Deferred minors, each disclosed by a review and accepted with the cost named:
   implementation computes it, line for line. It witnesses that the function
   runs; it does not independently witness the number.
 
+## The sweep that could not see the defect
+
+The final review found a coordinate collision: on a middle rung a region is the
+upper end of one stairway and the lower end of another, the two coordinates
+were drawn independently, and on ~9% of five-rung descents they coincided —
+after which the realizer overwrote one stairway with the other and the descent
+verb hit a debug assertion on the way back up.
+
+**A test existed for exactly this contract and passed the whole campaign**, and
+the reason is worth keeping: it swept two rungs. A two-rung descent has no
+middle rung, so the sweep's 200 seeds could not produce a single instance of
+the shape the defect needs — 200 negatives that were all vacuous. Widened to
+the real five-rung habitation ladder, it fails on the first colliding seed.
+
+The generalisation is not "sweep more seeds". It is that a fixture reduced for
+speed can quietly delete the *structural* precondition of the defect class the
+test exists for, and no amount of seed breadth recovers it. When a fixture is a
+reduced version of the real object, ask what shapes the reduction removed
+before trusting the sweep's negatives.
+
 ## Do differently next time
 
 Before writing that a campaign *refines* an existing mechanism, run one grep
