@@ -551,3 +551,30 @@ a row: `windows/vessel/src/liveness_tests/emitter_scan.rs` carries one
 `build_world(` site (the in-crate oracle's bench helper, seeds 42 and 6 —
 seed 6 has no fixture, so the reason is `identity`), and `liveness.rs`'s
 own count stays at 6 because the tests Task 7 moved build no world.
+
+## Task 8 — complete (`82f2fb21c`, review clean)
+
+The three rule witnesses and M1, decided nowhere, measured everywhere:
+
+- **Rule 2, seed-6 possession, four waits:** 2.62 past-day affect replays
+  per hazard read and 180.8 room-memo lookups per read (654 replays, 341
+  shunned rooms — both floors real). A count share, not a time share; the
+  time share is the readout's (Task 9) because it needs a quiet box.
+- **Rule 4, seed 6 × 50 agents × 60 ticks:** the emitter timeline copy is
+  **zero entries at every tick** although all 60 scans found an emitter —
+  and the mechanism is stated, not guessed: a member is an emitter when its
+  HOME is frightening, before it has committed a single dated `agent-at`,
+  so `prefix_len` is 0 and there is nothing to copy. A real measurement of
+  the cheapest case; a second shape would be needed to stress it. **Branch:
+  keep the copy.**
+- **Rule 5, the lab's waking-instant shape:** 8 past-instant hazard reads
+  over 10 ticks of 10 agents (the prefix machinery has a production caller),
+  and 10 of 10 warm-store reads at past instants equal a fresh store's.
+- **M1, `session_length_scaling` at band 10 (200 ticks, 50 agents):** the
+  room memo holds 18,902 rooms, ~1.46 MB by the stated estimate; the index
+  holds 4,665 entries, ~215 KB. This is the figure Penstock stage 4 enters
+  on.
+
+Two info notes: two new `Session` accessors have no caller until the
+readout; rule 4's zero carries its mechanism. No ideonomy pass: the task
+produced numbers and no ruling.
