@@ -461,3 +461,16 @@ the test stays green. Fixed with absolute floors (`misses > 0`, `hits > 0`,
 written by the campaign that named the defect still shipped the defect on
 its first draft; only the reviewer's "what if the plumbing were absent"
 question found it. **Stage 2 closes here.**
+
+## Task 5 — complete (`12de5c027`, fix `4e7c0723c`; one fix round)
+
+`FrighteningGround` in `resident.rs`: a read-side verdict index per entity,
+advanced from the `Trail` by a consumed-prefix cursor, NOT a `LedgerFold`
+(ledger #4), outside `advance()` and `position()`. Four unit tests, including
+the interleaved-trail one that pins "first occurrence in trail order is the
+earliest day". One Important at review: a `.min(trail.len())` clamp on the
+cursor slice that no invariant could ever exercise, undocumented — replaced
+with a `debug_assert!` naming the invariant (append-only trail; cursor set
+only to its length; the index is discarded with the store it lives in) so a
+violation panics on the slice instead of being clamped silently. Nothing
+calls the index yet; the hash constants held.
