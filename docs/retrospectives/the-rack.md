@@ -189,6 +189,68 @@ to be told to print it.
   — and `place` is already a second writer for `position`, which is worth
   watching.
 
+## The counted budget had the same blind zone it was built to close
+
+The final review found it, one commit before merge, and it is the sharpest
+lesson here because it is this campaign's own instrument failing this
+campaign's own way.
+
+`TurnWork` is a field on `Session`, so it counts what `session.rs` does. A
+walk-band `snapshot` builds the chart through `Session::purview(0)`, and
+`purview_scene` — a different module — folded `agent_position` once per NPC to
+place its mark. **`a_snapshot_performs_no_folds` read 0 while 67 folds ran.**
+The campaign then wrote "no turn path performs one" in three places, all of
+them true of `session.rs` and none of them true of a turn.
+
+Three things follow.
+
+- **A counted budget bounds the module it is threaded through, never a verb.**
+  The unit of a counter is not the thing the counter is named after.
+- **The fold was deleted, not instrumented.** Routing a counter into `purview`
+  would have asserted the absence of the thing it was added to measure — the
+  permanently-green zero this campaign had already argued against, one module
+  over.
+- **The replacement had to be a behavioural test, and writing it exposed a
+  second hole.** The obvious mutation (draw the mark from `home` instead) was
+  run against the whole vessel crate first: **626 lib + 399 integration tests,
+  all green.** Nothing anywhere asserted that a creature's chart mark follows
+  the creature, because every chart test is at seed 42, where nobody leaves
+  home. The deleted fold could have been returning `home` all along. The new
+  test runs at seed 7 and reds on that mutation with a real message.
+
+That is the seed-42 lesson for the third time in one campaign and the eighth
+across two — this time not costing a mutation but hiding a live defect for the
+campaign's whole length.
+
+## Four smaller things, each recorded because nothing else would keep them
+
+- **`lexicon_guard` counts `Cell` the type as a bare `cell` token**, and
+  `cargo fmt` can wrap a same-line `lexicon:` waiver off its line, silently
+  un-waiving it. Task 1 dodged it by keeping `Cell` out of every signature
+  behind small `bump_*` methods rather than fighting the ratchet. Worth
+  knowing before designing an API around an interior-mutable counter.
+- **The Task 3 brief under-counted `step_with_occupancy`'s callers, 2 named
+  against 4 real.** It listed the two in `windows/lab/src/health.rs`; the grep
+  also found two `windows/vessel/examples/`. Examples compile under
+  `clippy --all-targets`, so the gate would have refused. Caught at brief
+  verification. **The generalisable half: a brief that names call sites should
+  say how they were enumerated**, because "the ones I remembered" and "what
+  `grep` returns" look identical on the page.
+- **A controller ruling was reversed by an implementer on a code-grounded
+  reason, and the reversal was right.** I ruled `step_one_with_controller`
+  should go `pub` so P4 could live in `tests/suite`. The implementer showed
+  that the "same inputs" P4 must compare against are the session's private
+  context, calendar and pre-wait ledger — so an external test could only ever
+  compare against an approximation, and the visibility change would not have
+  fixed that. P4 is an in-module test and the method stayed `pub(crate)`.
+  Recorded because the healthy direction is the rare one.
+- **The heavy tier went red at `813c74726` on a test outside this campaign.**
+  `graph_cost::tumult_predation_bake_stays_within_budget`, 34.1 s against a
+  30 s wall-clock budget, on a box at cpu_ratio 24.22 with a chamber job and a
+  census queued beside it. Contention-shaped, in a worldgen bake this campaign
+  never touched. **Not discharged here** — the merge's own `heavy` phase
+  re-runs it under the serial claim, which is the only reading that settles it.
+
 ## What went right, briefly
 
 Every implementer that hit a null said so in the test's own doc rather than

@@ -145,6 +145,26 @@ the turn stopped folding, one counter had no bump site left at all and the
 compiler said so. **A counter nothing increments is a zero that cannot fail**,
 and the test asserting it would have read green while asserting nothing.
 
+And the count had a blind zone of its own, found at the campaign's final review
+and worth more than the fix it prompted. The counters live on the session, so
+they measure what the session's own module does — while a walk-band snapshot
+builds the chart in a different module, which was folding the ledger once per
+creature to place its mark. Sixty-seven more folds a turn, and the test
+asserting a snapshot performs none read zero the whole time. **A counted budget
+bounds the module it is threaded through, not the verb it is named after.** The
+chart now reads the roster's column like everything else; no counter was pushed
+into it, because there is nothing left there to count and a counter asserting
+the absence of what it was added to measure is the same dead zero as before.
+
+What pins it instead is a test that had to be written, and writing it found the
+second half of the problem. The obvious mutation — draw each mark at the
+creature's *home* rather than where it stands — was run against the whole
+vessel crate first, and **a thousand tests passed**. Nothing anywhere asserted
+that a creature's mark on the chart follows the creature, because every chart
+test stands at seed 42, where nobody ever leaves home. The deleted fold could
+have been returning the wrong room for as long as it had existed and the suite
+would have agreed.
+
 ## What the world could not be made to say
 
 Three things the campaign learned by running rather than reasoning.
@@ -194,8 +214,10 @@ page. The instrument was live; the world did not move.
 
 The client feels it too, and reports the same split verdict. Every movement
 turn is faster than its matched pre-campaign turn — `enter` fell from 87.2 ms
-to 47.4 ms — and outdoor turns met the 15 ms line at 10.0–14.1 ms, while
-`enter` and the chamber turns did not. Measured contended, reported rather
+to 47.4 ms — and outdoor turns met the 15 ms line at 9.97–14.10 ms, while
+`enter` and the chamber turns did not. (That range is the min and max over
+every outdoor turn in the reading, rounded half-up to two decimals; the rule
+is stated where the numbers live, in the client bench's own Measured block.) Measured contended, reported rather
 than tuned.
 
 ## Honest limits

@@ -149,6 +149,19 @@ slot before any tick has run.
 once per turn and shared by `snapshot` and `needs`. A turn's cost over
 present bodies becomes a scan of two dense arrays.
 
+**Amended at the final review (2026-09-02): "any turn path" reaches past
+`session.rs`, and the first reading of this clause did not.** A walk-band
+`snapshot` builds the chart through `Session::purview(0)`, and
+`windows/vessel/src/purview.rs::purview_scene` folded `agent_position` once
+per NPC to place its mark — ~67 folds per walk-band turn, in a module
+`TurnWork` cannot instrument, so §3.5's own budget test read zero while they
+ran. `purview_scene` now takes the roster's `position` column
+(`roster::other_bodies_at`) and the fold is deleted; the clause above is true
+as written only with that change in place. The general form, which §3.5's
+test doc now carries: **a counted budget bounds the module it is threaded
+through, not "a turn"** — enumerate the modules a verb's work reaches before
+reading a zero as a verdict on the verb.
+
 **3.4 The felt-state ruling — a creature feels what its own last resolution
 felt.** The array holds the tick's resolution: with the alarm field, with
 mode hysteresis, with the walk's own belief and frontier, at the walk's own

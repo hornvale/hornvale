@@ -38,6 +38,25 @@ gate that is not running. A wall-clock ceiling in the commit gate is no
 alternative either — it flaps on a contended box, which is what put this one on
 the heavy tier in the first place (The Repose).
 
+**And the counted instrument this record ratifies had a blind zone of its own,
+found by the campaign's final review and closed before merge.** `TurnWork` is a
+field on `Session`, so it bounds `session.rs` — while a walk-band `snapshot`
+builds the chart through `Session::purview(0)`, and
+`windows/vessel/src/purview.rs` folded `agent_position` once per NPC to place
+its mark. That is ~67 ledger folds per walk-band turn, in a module no counter
+reached: `a_snapshot_performs_no_folds` read **0** while **67** ran. The chart
+now takes the roster's `position` column and the fold is deleted (byte-identical
+by VIEW ≡ SCAN). **This is recorded here rather than repaired silently, because
+it is the honest scope of clause 2 below: a counted budget bounds the module it
+is threaded through, never "a turn".** No counter was routed into `purview` to
+replace it — there is nothing left there to count, and a counter asserting the
+absence of what it was added to measure is the permanently-green zero clause 3
+exists to prevent. A behavioural test pins the chart instead
+(`the_rack.rs::the_chart_marks_a_creature_where_it_now_stands_not_where_it_lives`),
+and it had to be WRITTEN: the same mutation run against the pre-review suite was
+a null across 626 lib and 399 integration tests, because every existing chart
+test sits at seed 42, where nobody ever leaves home.
+
 ## The decision
 
 1. **`TurnWork` (`windows/vessel/src/turn_work.rs`) counts a turn's work**:
@@ -58,8 +77,8 @@ the heavy tier in the first place (The Repose).
    compiler said so — a counter nothing bumps is a zero that cannot fail, and
    the test would have read green while asserting nothing. `affect_folds` is
    now bumped by `seed_felts` (the append's one surviving stateless read) and
-   `position_folds` by `position_of` (the last `agent_position` call on any
-   session path, which is the SCAN half of decision 0597's VIEW ≡ SCAN).
+   `position_folds` by `position_of` (the SCAN half of decision 0597's
+   VIEW ≡ SCAN, and the last `agent_position` call in `session.rs`).
 
 4. **The wall clock stays, demoted and honest.** `session_cost.rs` measures the
    box, not the code; its module doc points at the counted instrument, and its

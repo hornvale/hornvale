@@ -578,10 +578,15 @@ const START_BASIS_MS: f64 = 3442.192;
 /// landed yet.
 ///
 /// **Like `INDOOR_SNAPSHOT_BASIS_MS`, this is now an `x86_64-40` figure in a
-/// file whose [`BASIS_HOST`] is `aarch64-10`**, which is safe for the same
-/// reason: the ratio verdict it feeds is host-guarded and prints as
-/// not-computed off the basis host, while the absolute ceiling above is
-/// unconditional. `START_BASIS_MS` is the one `aarch64-10` figure left.
+/// file whose [`BASIS_HOST`] is `aarch64-10`.** The ratio verdict it feeds is
+/// host-guarded and prints as not-computed off the basis host; the ceiling
+/// above is unconditional WITH RESPECT TO THAT RATIO — it does not consult
+/// the basis — but it is **not** unconditional in the test, because it too
+/// sits inside `if bases_apply`, so on `x86_64-40` neither the ratio nor the
+/// ceiling fires. That is the vacuity this campaign measured (see
+/// `TURN_BUDGET_MS`'s control table); `walk_bytes` is the file's one
+/// genuinely unconditional assertion. `START_BASIS_MS` is the one
+/// `aarch64-10` figure left.
 const TURN_BASIS_MS: f64 = 17.959;
 /// The measured basis for `INDOOR_SNAPSHOT_BUDGET_MS`.
 ///
@@ -605,8 +610,13 @@ const TURN_BASIS_MS: f64 = 17.959;
 /// therefore printed but not asserted on the Mac either, in effect, since a
 /// Mac `got` compared against a `x86_64-40` basis is exactly the
 /// cross-machine comparison this file otherwise refuses to make; the
-/// unconditional `INDOOR_SNAPSHOT_BUDGET_MS` assert is what still protects
-/// a Mac run, unaffected by which host this basis was measured on.
+/// `INDOOR_SNAPSHOT_BUDGET_MS` assert is what still protects a Mac RUN,
+/// unaffected by which host this basis was measured on. **It is
+/// unconditional with respect to the RATIO only** — it consults no basis —
+/// and is still gated on [`BASIS_HOST`] like every other ms assert here, so
+/// it protects a Mac run and nothing on lefford. An earlier draft of this
+/// sentence called it "unconditional" flat, which is the same conflation
+/// that let an 81 ms turn pass a 9 ms ceiling.
 const INDOOR_SNAPSHOT_BASIS_MS: f64 = 21.607;
 
 /// How far a CONTROL metric may drift from its basis before the run stops
@@ -639,9 +649,14 @@ const CONTROL_TOLERANCE: f64 = 1.5;
 /// exceptions' ratio and `CONTROL_TOLERANCE` checks are uninformative on a
 /// Mac run even though `bases_apply` reads true there (a Mac `got` against an
 /// `x86_64-40` basis is the exact cross-machine comparison this paragraph
-/// otherwise argues against); the unconditional `INDOOR_SNAPSHOT_BUDGET_MS`
-/// and `TURN_BUDGET_MS` asserts are what still protect a Mac run for those
-/// two metrics, not the ratios. Task 5 left `TURN_BASIS_MS` alone on purpose,
+/// otherwise argues against); the `INDOOR_SNAPSHOT_BUDGET_MS` and
+/// `TURN_BUDGET_MS` asserts are what still protect a Mac run for those two
+/// metrics, not the ratios. Those two asserts are unconditional with respect
+/// to the RATIO — they consult no basis — and are nonetheless gated on this
+/// host, since every ms assert in this file sits inside `if bases_apply`.
+/// **"Unconditional" here has only ever meant the first thing, and the word
+/// on its own reads as the second**, which is precisely how a ninefold
+/// overshoot went unnoticed. Task 5 left `TURN_BASIS_MS` alone on purpose,
 /// because no downward move was available and a raise needed a control run;
 /// Task 6 ran the control and took the raise.
 ///
