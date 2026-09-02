@@ -11,8 +11,10 @@ use crate::liveness::{
     AGENT_AT, Affect, AffectLabel, DRANK, DriveKind, DriveMovements, EATEN, HomeNavCache,
     LocaleTerrain, Mode, Occupancy, PrimaryAfraidMemo, RESTED, SLEPT, SUSTENANCE, Terrain,
     act_span, affect_of_memo_occupied, agent_at_fact, agent_position, built_rooms, derive_npcs,
-    derive_wild_npcs, renders_unconscious, slept_fact, species_activity, village_or_fallback,
+    derive_wild_herds, renders_unconscious, slept_fact, species_activity, village_or_fallback,
 };
+use crate::residents::derive_residents;
+use crate::roll::{ROLL_BUDGET, ROLL_HOPS, RollKeyStatic, roll_of, rooms_within};
 use crate::snapshot::{
     KnownChannel, KnownEntry, Narration, NounEntry, PresentEntry, SESSION_SCHEMA, SelfChannel,
     SensedChannel, SessionSnapshot, SocialEntry, SpatialChannel,
@@ -25,18 +27,10 @@ use crate::{
 };
 use hornvale_kernel::{
     ConceptRegistry, EntityId, Facet, FacetId, Fact, Ledger, Seed, TickSpan, Value, World,
-    WorldTime, tick,
+    WorldTime,
 };
 use hornvale_locale::{Compass, Direction, ExitKind, LocaleContext};
 use hornvale_thing::kinds;
-
-/// How many NPCs a session derives (spec §4: a small authored constant, not
-/// every settlement — the flagship's own leader plus a couple of neighbors).
-const NPC_COUNT: usize = 3;
-
-/// How many WILD beast agents a session derives (The Wilding) — a small handful
-/// of the world's fauna (a herd, a lair) walking alongside the peoples.
-const WILD_COUNT: usize = 4;
 
 /// The closed fallback line `consult` renders when no initiated line
 /// unlocks (spec §3.2; the Global Constraints' closed-strings list).
@@ -538,6 +532,14 @@ pub const POSSESSED_BY: &str = "possessed-by";
 /// type-audit: bare-ok(identifier-text)
 pub const POSSESSION_ENDED: &str = "possession-ended";
 
+/// The presence line's naming budget (The Roll, Task 9, spec §4 "Presence at
+/// scale"): [`Session::presence_line`] names the first `N_NAMED` labels of
+/// each resident group in roll order and only counts the rest. A tuning
+/// knob for how much of a crowd `look` spells out, not a physical or
+/// derived constant.
+/// type-audit: bare-ok(count)
+pub const N_NAMED: usize = 4;
+
 /// Who currently holds `body`, if anyone (The Coercion).
 ///
 /// A single pass in LEDGER ORDER over the body's own facts: a
@@ -991,6 +993,48 @@ pub struct Session<'w> {
     /// of what the rider made this body ignore, and it is the only conduct
     /// input the host's willingness to speak reads.
     driven_overrides: std::collections::BTreeMap<DriveKind, u32>,
+    /// The roll's mask over [`Self::bodies`], same length, recomputed at the
+    /// head of every `wait` (The Roll, spec §3.2). `true` is "this body is
+    /// advanced by the tick"; `false` is dormant (§3.7).
+    ///
+    /// **Only `DriveMovements.npcs` reads it.** Everything else in `wait` —
+    /// the `before` snapshot, `sensed_before`, the turned-hostile pass,
+    /// `narrate_motion`'s positional zip — keeps iterating EVERY other body,
+    /// which is what keeps that zip correct: a dormant body's position is
+    /// constant across the wait, so it neither arrives nor departs and its
+    /// slot still lines up.
+    on_roll: Vec<bool>,
+    /// The static half of each body's [`crate::roll::RollKey`], index-aligned
+    /// with [`Self::bodies`] and appended in the same breath. See
+    /// [`RollKeyStatic`] for why it is parallel rather than three more
+    /// [`Body`] fields.
+    roll_keys: Vec<RollKeyStatic>,
+    /// Every settlement's room, packed, to the settlements homed there — built
+    /// ONCE at `start` from `hornvale_settlement::all_settlements`, so
+    /// `refresh_roll` intersects a map instead of re-siting every settlement on
+    /// the planet each tick.
+    ///
+    /// EMPTY under a staged tableau: a tableau's cast REPLACES the derived
+    /// roster (`start_held`'s own ruling), so nothing may be derived into it
+    /// later either.
+    settlement_rooms: std::collections::BTreeMap<FacetId, Vec<hornvale_settlement::VillageInfo>>,
+    /// The same, for wild herds: every attractor's room to the herds standing
+    /// there, from one `wild_herds_near(.., |_| true)` at `start`.
+    ///
+    /// EMPTY when a tableau is staged, when `PossessOpts::wild_agents` is off,
+    /// or when the world components / demography fit are absent — the three
+    /// conditions under which this session has no fauna at all, decided once
+    /// here rather than re-tested at every tick.
+    herd_rooms: std::collections::BTreeMap<FacetId, Vec<hornvale_worldgen::herds::WildHerd>>,
+    /// Which settlements have had their residents derived into
+    /// [`Self::bodies`] already. `refresh_roll` derives a settlement exactly
+    /// once: `bodies` is APPEND-ONLY for the life of a session, so a second
+    /// derivation would duplicate every resident in the ROSTER even though
+    /// `derive_residents` is itself idempotent against the LEDGER.
+    derived_settlements: std::collections::BTreeSet<EntityId>,
+    /// The same guard for herds, keyed the way a herd's identity is keyed
+    /// (species, attractor vertex).
+    derived_herds: std::collections::BTreeSet<(String, u32)>,
 }
 
 /// Where the possession is while indoors. `FRAME`-tier in its entirety: derived
@@ -1124,6 +1168,57 @@ enum Perceiving {
     Objectively,
 }
 
+/// Derive `herds` into bodies AND the roll keys those bodies carry, in one
+/// pass (The Roll, Task 7).
+///
+/// One herd per `derive_wild_herds` call, so the member index this records is
+/// the ordinal that call itself minted. Reconstructing it afterwards from a
+/// flat `Vec<Body>` — re-deriving where each herd's run started — is exactly
+/// the parallel bookkeeping [`RollKeyStatic`] exists to keep honest, and a
+/// herd's identity is its (species, vertex) rather than its position in the
+/// input slice, so splitting the call changes nothing about what is minted
+/// (`the_roll.rs`'s `a_herds_identity_is_its_attractor_and_species`).
+fn derive_herd_bodies(
+    world: &World,
+    ctx: &LocaleContext,
+    ledger: &mut Ledger,
+    herds: &[hornvale_worldgen::herds::WildHerd],
+) -> (Vec<Body>, Vec<RollKeyStatic>) {
+    let mut bodies: Vec<Body> = Vec::new();
+    let mut keys: Vec<RollKeyStatic> = Vec::new();
+    for herd in herds {
+        let derived = derive_wild_herds(world, ctx, ledger, std::slice::from_ref(herd));
+        for member in 0..derived.len() {
+            // Keyed on the herd's OWN (vertex, species, member), never on
+            // `RollKeyStatic::of` — a `Body` carries no attractor, so that
+            // fallback would give every herd `parent: 0` and leave two herds
+            // at equal distance tied on the whole key, breaking the order's
+            // tie on roster index (i.e. on the route walked). See
+            // [`RollKeyStatic::of`]'s own doc.
+            keys.push(RollKeyStatic::herd_member(
+                herd.vertex,
+                &herd.species,
+                member as u16,
+            ));
+        }
+        bodies.extend(derived);
+    }
+    (bodies, keys)
+}
+
+/// Every other body ON THE ROLL: [`other_bodies`] narrowed to the mask
+/// `wait` recomputed this tick (The Roll, spec §3.2/§3.7). The DRIVEN body is
+/// excluded here exactly as it is there — it has its own arbitration —
+/// even though its own mask slot is always `true`.
+fn on_roll_others<'a>(bodies: &'a [Body], on_roll: &[bool], driven: usize) -> Vec<&'a Body> {
+    bodies
+        .iter()
+        .enumerate()
+        .filter(|(i, _)| *i != driven && on_roll.get(*i).copied().unwrap_or(true))
+        .map(|(_, npc)| npc)
+        .collect()
+}
+
 /// Every derived body other than the one being driven — what `self.npcs`
 /// meant before The Hand collapsed the two representations (Task 3): every
 /// occupancy/social/perception/tick read that used to exclude the possessed
@@ -1158,6 +1253,43 @@ fn other_bodies(bodies: &[Body], driven: usize) -> Vec<&Body> {
         .filter(|(i, _)| *i != driven)
         .map(|(_, npc)| npc)
         .collect()
+}
+
+/// The body among `bodies` that `needle` (already lowercased-and-compared
+/// case-insensitively) names — the shared resolution three matchers
+/// (`why`, `npc_grievance`, `colocated_npc`) apply to a typed label. An
+/// EXACT case-insensitive match wins outright; failing that, the LONGEST
+/// label merely CONTAINING `needle` wins.
+///
+/// **The Roll, Task 10.** Before this, each site took the first roster-order
+/// substring hit, which let a shorter resident's name be shadowed by a
+/// longer one sharing its prefix whenever the longer one happened to sit
+/// earlier in the roster — measured live: seed 42 with residents "Toska"
+/// (ordinal 1) and "Tosk" (ordinal 2), typing `tosk` resolved to "Toska"
+/// (`"toska".contains("tosk")` is true), not the body actually named
+/// "Tosk". Preferring an exact match first fixes the query that names one
+/// resident outright; preferring the longest of the remaining matches is
+/// the least-surprising tiebreak among genuine prefix collisions ("goblin"
+/// should not out-rank "goblin chief" for a query that types neither in
+/// full, but an exact query for either must still win outright — the exact
+/// check above is what guarantees that).
+///
+/// MUTATION THIS MUST FAIL AGAINST: drop the exact-match branch and fall
+/// straight to `.find()` (first roster-order substring hit) —
+/// `the_roll.rs::a_prefix_name_does_not_shadow_a_longer_one` reddens.
+fn body_by_needle<'a>(bodies: &[&'a Body], needle: &str) -> Option<&'a Body> {
+    let needle = needle.to_lowercase();
+    let exact = bodies
+        .iter()
+        .find(|n| n.label.to_lowercase() == needle)
+        .copied();
+    exact.or_else(|| {
+        bodies
+            .iter()
+            .filter(|n| n.label.to_lowercase().contains(&needle))
+            .max_by_key(|n| n.label.len())
+            .copied()
+    })
 }
 
 impl<'w> Session<'w> {
@@ -1412,22 +1544,104 @@ impl<'w> Session<'w> {
                 }
                 staged
             }
-            None => derive_npcs(world, ctx, &mut ledger, NPC_COUNT, village.id),
+            // The Roll, Task 7: the home settlement's RESIDENTS — as many
+            // bodies as its committed population — in place of the authored
+            // `NPC_COUNT` of one-body-per-settlement. Ordinal 0 is the exact
+            // lineage `derive_npcs` has always minted, so `driven` still
+            // resolves to the same creature (decision 0227).
+            None => match wc.as_ref() {
+                Some(wc) => derive_residents(world, ctx, &mut ledger, wc, &village, opts.day),
+                // THE DEGRADED PATH: `derive_residents` needs the assembled
+                // world components (the species roster the resident draws
+                // read), and `WorldContext::build` leaves `wc` `None` when
+                // assembly fails. Rather than possess nobody, fall back to
+                // exactly today's single body for the home settlement — one
+                // creature, no draws, no herds (`herd_rooms` below is empty
+                // on the same condition).
+                None => derive_npcs(world, ctx, &mut ledger, 1, village.id),
+            },
         };
-        // The Wilding: append a few wild beast agents (a herd, a lair) so the
-        // world's fauna walks alongside its peoples — and a herbivore beast
-        // finally fears predator ground (The Quarry, live). Off only for the
-        // settled-population narration unit tests that isolate the peopled path.
-        if opts.wild_agents && opts.tableau.is_none() {
-            // The wild-concentration roster, from the same shared `report`
-            // (The Weir, Stage 1b) rather than a fourth independent fit.
-            let concentrations = match (wc.as_ref(), report.as_ref()) {
-                (Some(wc), Some(report)) => {
-                    hornvale_worldgen::wild_concentrations_from(wc, report, WILD_COUNT)
+        // The roll's static keys, appended in step with `bodies` from here on
+        // (The Roll, spec §3.2). Everything above is a resident of `village`
+        // in roster order, or — under a tableau — a village-less staged body;
+        // `RollKeyStatic::of` reads which from the body itself.
+        let mut roll_keys: Vec<RollKeyStatic> = bodies
+            .iter()
+            .enumerate()
+            .map(|(i, body)| match opts.tableau {
+                // A staged cast is village-less and never grows, so
+                // `RollKeyStatic::of`'s incomplete wild key is the honest
+                // reading there and there is no herd to read a better one
+                // from.
+                Some(_) => RollKeyStatic::of(body, i as u16),
+                // Everything above is a resident of `village`, in roster
+                // order — on the degraded path too, which derives one.
+                None => RollKeyStatic::resident(village.id, i as u16),
+            })
+            .collect();
+        // The settlement and herd indexes, built ONCE: `refresh_roll` reads
+        // them every tick and must never re-site every settlement on the
+        // planet (265 of them at the census mean) or re-fit 12,657 attractor
+        // entries to do it. Both are EMPTY under a staged tableau, because a
+        // tableau's cast replaces the derived roster — deriving into it later
+        // would reintroduce exactly the seed-dependence staging exists to
+        // remove.
+        let mut settlement_rooms: std::collections::BTreeMap<
+            FacetId,
+            Vec<hornvale_settlement::VillageInfo>,
+        > = std::collections::BTreeMap::new();
+        let mut herd_rooms: std::collections::BTreeMap<
+            FacetId,
+            Vec<hornvale_worldgen::herds::WildHerd>,
+        > = std::collections::BTreeMap::new();
+        let mut mesh_memo = hornvale_kernel::RoomMeshMemo::new();
+        if opts.tableau.is_none() {
+            for settlement in hornvale_settlement::all_settlements(world) {
+                let room = crate::liveness::settlement_room(world, ctx, settlement.id);
+                if let Ok(id) = room.pack() {
+                    settlement_rooms.entry(id).or_default().push(settlement);
                 }
-                _ => Vec::new(),
-            };
-            bodies.extend(derive_wild_npcs(world, ctx, &mut ledger, concentrations));
+            }
+            // The Wilding, re-keyed by The Roll: the world's fauna as HERDS at
+            // their attractors (headcount-rendered), rather than one body per
+            // world-top species. `wild_concentrations_from`/`derive_wild_npcs`
+            // stay for the health battery and the benches (spec §5).
+            // Off for the settled-population narration unit tests that isolate
+            // the peopled path (`wild_agents: false`).
+            if let (true, Some(wc), Some(report)) = (opts.wild_agents, wc.as_ref(), report.as_ref())
+            {
+                for herd in hornvale_worldgen::herds::wild_herds_near(wc, report, |_| true) {
+                    let room = Facet::containing(herd.position, hornvale_locale::walk_depth(ctx));
+                    if let Ok(id) = room.pack() {
+                        herd_rooms.entry(id).or_default().push(herd);
+                    }
+                }
+            }
+        }
+        // What is derived at start: the home settlement (above), plus every
+        // herd standing within call of its room. A settlement or herd that
+        // enters the window later is derived by `refresh_roll` on the tick it
+        // enters, exactly once.
+        let mut derived_settlements: std::collections::BTreeSet<EntityId> =
+            std::collections::BTreeSet::new();
+        let mut derived_herds: std::collections::BTreeSet<(String, u32)> =
+            std::collections::BTreeSet::new();
+        if opts.tableau.is_none() {
+            derived_settlements.insert(village.id);
+            let home = crate::liveness::settlement_room(world, ctx, village.id);
+            let window = rooms_within(&home, ROLL_HOPS, &mut mesh_memo);
+            let mut here: Vec<hornvale_worldgen::herds::WildHerd> = Vec::new();
+            for room in &window {
+                if let Some(herds) = herd_rooms.get(room) {
+                    here.extend(herds.iter().cloned());
+                }
+            }
+            for herd in &here {
+                derived_herds.insert((herd.species.clone(), herd.vertex));
+            }
+            let (wild, wild_keys) = derive_herd_bodies(world, ctx, &mut ledger, &here);
+            bodies.extend(wild);
+            roll_keys.extend(wild_keys);
         }
         // The Hand, Task 4: `PossessTarget::Creature` selects any already-
         // derived roster member — settled OR wild (a wild creature's
@@ -1524,15 +1738,30 @@ impl<'w> Session<'w> {
             inside: None,
             submerged: None,
             underground: None,
-            mesh_memo: hornvale_kernel::RoomMeshMemo::new(),
+            mesh_memo,
             home_nav_cache: HomeNavCache::new(),
             driven_mode: None,
             driven_affect: None,
             driven_suppressed: Vec::new(),
             driven_overrides: std::collections::BTreeMap::new(),
+            // Filled by `recompute_roll_mask` on the next line, which needs
+            // the constructed session to read `position()` — a
+            // `PossessTarget::Creature` may drive a WILD body, whose home is
+            // its herd's attractor rather than the flagship's room.
+            on_roll: Vec::new(),
+            roll_keys,
+            settlement_rooms,
+            herd_rooms,
+            derived_settlements,
+            derived_herds,
         };
+        // The opening mask, through the SAME `roll_of` every tick uses rather
+        // than an all-true vector. Everything derived above is within call by
+        // construction, so the two agree wherever the budget does not bind —
+        // and where it does bind, computing it is the honest answer.
+        session.recompute_roll_mask();
         session.absorb_here()?;
-        let opening = session.describe_here()?;
+        let opening = session.describe_here(Perceiving::Body)?;
         session.last_text = opening.clone();
         Ok((session, opening))
     }
@@ -1550,6 +1779,162 @@ impl<'w> Session<'w> {
     /// asserts the driven body appears exactly once in it.
     pub fn bodies(&self) -> &[Body] {
         &self.bodies
+    }
+
+    /// The static half of each body's roll key, index-aligned with
+    /// [`Self::bodies`] (The Roll, spec §3.2).
+    ///
+    /// Public because [`crate::roll::roll_of`] is public and needs it: a
+    /// caller re-computing the roll — this campaign's own property tests, a
+    /// future window that wants to ask who is within call — cannot rebuild an
+    /// ordinal from a `Body`, which deliberately does not carry one.
+    pub fn roll_keys(&self) -> &[RollKeyStatic] {
+        &self.roll_keys
+    }
+
+    /// The bodies on the roll as of the most recent tick, in [`Self::bodies`]
+    /// order — the driven body included, since its slot is forced `true`
+    /// (spec §3.8: the body you are is always advanced).
+    pub fn on_roll(&self) -> Vec<&Body> {
+        self.bodies
+            .iter()
+            .zip(&self.on_roll)
+            .filter(|(_, on)| **on)
+            .map(|(body, _)| body)
+            .collect()
+    }
+
+    /// How many bodies are on the roll, the driven one included.
+    /// type-audit: bare-ok(count: return)
+    pub fn roll_len(&self) -> usize {
+        self.on_roll.iter().filter(|on| **on).count()
+    }
+
+    /// Recompute [`Self::on_roll`] from the roll, and force the driven body's
+    /// slot `true`.
+    ///
+    /// The driven body is unconditional and not a special case of the roll:
+    /// the observer's own home may sit outside its own window (walk far
+    /// enough from your settlement and it does), and a possession whose own
+    /// body stopped being ticked would be a bug with no honest reading.
+    fn recompute_roll_mask(&mut self) {
+        let observer = self.position();
+        self.recompute_roll_mask_at(&observer);
+    }
+
+    /// [`Self::recompute_roll_mask`] at an arbitrary observer room — the mask
+    /// half of [`Self::refresh_roll_at`], split out for the same reason.
+    fn recompute_roll_mask_at(&mut self, observer: &Facet) {
+        self.on_roll = roll_of(
+            &self.bodies,
+            &self.roll_keys,
+            observer,
+            ROLL_HOPS,
+            ROLL_BUDGET,
+            &mut self.mesh_memo,
+        );
+        if let Some(slot) = self.on_roll.get_mut(self.driven) {
+            *slot = true;
+        }
+    }
+
+    /// Derive whatever has come within call since the last tick, then
+    /// recompute the mask (The Roll, spec §3.2). Called at the head of
+    /// [`Self::wait`], before the `before` snapshot, so that a body appended
+    /// here is present in every one of that tick's parallel vectors.
+    ///
+    /// **Append-only, and derive-once.** A settlement or herd whose room
+    /// enters the window has its bodies APPENDED to [`Self::bodies`] and its
+    /// key appended to [`Self::roll_keys`]; nothing is ever removed or
+    /// reordered, which is what keeps `list_npcs`'s 1-based handles stable
+    /// and `narrate_motion`'s positional zip correct. `derived_settlements` /
+    /// `derived_herds` make the derivation happen exactly once per settlement
+    /// or herd: `derive_residents` is idempotent against the LEDGER, but a
+    /// second call would still append a second copy of every resident to the
+    /// ROSTER.
+    fn refresh_roll(&mut self) {
+        let observer = self.position();
+        self.refresh_roll_at(&observer);
+    }
+
+    /// [`Self::refresh_roll`] at an arbitrary observer room.
+    ///
+    /// **A test seam, not a verb — `handle` never reaches this**, and it is
+    /// the seam the append path needs for the same reason
+    /// [`Self::place_creature_at_me`] is the seam co-location needs. The
+    /// derive-on-first-entry half of the roll only fires when a settlement or
+    /// a herd ENTERS the observer's window, and a possession begins standing
+    /// in its own settlement's room: the nearest other settlement on seed 42
+    /// is a hundred-odd rooms away, so every reachable session test runs
+    /// where the roster never grows at all. Walking there in a test would
+    /// cost a hundred `go` turns and would still be a fact about one seed's
+    /// geography rather than about the derivation.
+    ///
+    /// So a test asks for the window it wants. Everything below this line is
+    /// the code `wait` itself runs — one body, not a parallel path — so what
+    /// a test observes through here is what a tick would have done on the
+    /// turn that window came within call.
+    pub fn refresh_roll_at(&mut self, observer: &Facet) {
+        let window = rooms_within(observer, ROLL_HOPS, &mut self.mesh_memo);
+        // Collected first: the maps are borrowed from `self`, and deriving
+        // needs `&mut self.ledger` and `&mut self.bodies`.
+        let mut villages: Vec<hornvale_settlement::VillageInfo> = Vec::new();
+        let mut herds: Vec<hornvale_worldgen::herds::WildHerd> = Vec::new();
+        for room in &window {
+            if let Some(here) = self.settlement_rooms.get(room) {
+                for village in here {
+                    if !self.derived_settlements.contains(&village.id) {
+                        villages.push(village.clone());
+                    }
+                }
+            }
+            if let Some(here) = self.herd_rooms.get(room) {
+                for herd in here {
+                    if !self
+                        .derived_herds
+                        .contains(&(herd.species.clone(), herd.vertex))
+                    {
+                        herds.push(herd.clone());
+                    }
+                }
+            }
+        }
+        for village in villages {
+            // `wc` is `None` only on the degraded path, where residents
+            // cannot be drawn at all (see `start_held`'s own comment); a
+            // settlement is then left underived rather than half-derived,
+            // and is picked up if a later session has the components. The
+            // `let ... else` is per-iteration rather than hoisted so that
+            // the immutable borrow of `self.wctx` and the mutable borrow of
+            // `self.ledger`/`self.bodies` below stay disjoint FIELD borrows
+            // rather than one borrow of all of `self`.
+            let Some(wc) = self.wctx.wc.as_ref() else {
+                break;
+            };
+            let residents = derive_residents(
+                self.world,
+                &self.wctx.ctx,
+                &mut self.ledger,
+                wc,
+                &village,
+                self.day,
+            );
+            for i in 0..residents.len() {
+                self.roll_keys
+                    .push(RollKeyStatic::resident(village.id, i as u16));
+            }
+            self.bodies.extend(residents);
+            self.derived_settlements.insert(village.id);
+        }
+        let (wild, wild_keys) =
+            derive_herd_bodies(self.world, &self.wctx.ctx, &mut self.ledger, &herds);
+        for herd in &herds {
+            self.derived_herds
+                .insert((herd.species.clone(), herd.vertex));
+        }
+        self.bodies.extend(wild);
+        self.roll_keys.extend(wild_keys);
+        self.recompute_roll_mask_at(observer);
     }
 
     /// The driven body's current position: a ledger-derived read
@@ -2070,16 +2455,41 @@ impl<'w> Session<'w> {
         };
         let cells = crate::lattice::anchor_cells(&chamber, &inside.lattice, inside.at, inside.seed);
         let lit = crate::lattice::shadowcast(&inside.lattice, inside.cell, SIGHT_RADIUS);
+        // Which room anchors another co-located body already stands at.
+        //
+        // **This check is new at The Roll (Task 7), and without it the seam
+        // silently stopped keeping its own promise.** [`Self::sighting`]
+        // seats one body per chamber anchor, first-come-first-served in roster
+        // order, and a body that loses the race is left UNPLACED — which
+        // `sensed_npcs`' unplaced row reads as *sensed*, the opposite of what
+        // this seam was asked for. With a roster of seven that never
+        // happened; with a settlement's whole population co-located it
+        // happens to any body the loop reaches late, which is every wild one.
+        // Measured: at seed 3, `a wild giant-crocodile` placed here came back
+        // named in the sight-gated `wait` narration.
+        //
+        // So the anchor is chosen from the unlit ones NOT already claimed,
+        // and every unlit anchor is considered rather than only the first.
+        // If they are all contested the seam returns `false` — refusing to
+        // fabricate an occlusion the fine layer could not produce is this
+        // function's own stated discipline, and a caller's precondition
+        // assertion is a better failure than a silently visible creature.
+        let taken: Vec<_> = self
+            .colocated_npcs()
+            .iter()
+            .filter(|npc| npc.entity != who)
+            .filter_map(|npc| self.occupancy.anchor_in(npc.entity, &room))
+            .collect();
         let anchor = chamber
             .ids()
             .into_iter()
-            .find(|&a| cells.get(&a).is_some_and(|cell| !lit.contains(cell)))
-            .and_then(|chamber_anchor| {
+            .filter(|&a| cells.get(&a).is_some_and(|cell| !lit.contains(cell)))
+            .find_map(|chamber_anchor| {
                 let kind = chamber.anchor(chamber_anchor).kind;
                 room_interior
                     .ids()
                     .into_iter()
-                    .find(|&a| room_interior.anchor(a).kind == kind)
+                    .find(|&a| room_interior.anchor(a).kind == kind && !taken.contains(&a))
             });
         match anchor {
             Some(anchor) => {
@@ -2212,8 +2622,10 @@ impl<'w> Session<'w> {
     /// is exactly zero). Unlike `would_turn_hostile`, this resolves among
     /// ALL derived NPCs, not only co-located ones — grievance is a ledger
     /// fold over that NPC's own facts, not a proximity check — matched by
-    /// the `npcs` listing's 1-based handle or case-insensitive label
-    /// substring; `None` if no derived NPC matches `who`.
+    /// the `npcs` listing's 1-based handle or [`body_by_needle`] (The
+    /// Roll, Task 10: exact label match first, then the longest containing
+    /// label — never merely the first substring hit in roster order);
+    /// `None` if no derived NPC matches `who`.
     /// type-audit: bare-ok(identifier-text: who), bare-ok(diagnostic-value: return)
     pub fn npc_grievance(&self, who: &str) -> Option<f64> {
         let others = other_bodies(&self.bodies, self.driven);
@@ -2221,12 +2633,8 @@ impl<'w> Session<'w> {
             .ok()
             .filter(|n| *n >= 1)
             .and_then(|n| others.get(n - 1))
-            .or_else(|| {
-                let needle = who.to_lowercase();
-                others
-                    .iter()
-                    .find(|n| n.label.to_lowercase().contains(&needle))
-            })
+            .copied()
+            .or_else(|| body_by_needle(&others, who))
             .map(|npc| grievance(&self.ledger, npc.entity))
     }
 
@@ -3900,10 +4308,14 @@ impl<'w> Session<'w> {
             // difference rather than exposing one. What this namespace buys is
             // that a sleeping — later possessed, unconscious — body can still
             // be looked out of.
-            "look" if self.inside.is_some() => self.out(self.describe_chamber_here()),
-            "look" if self.submerged.is_some() => self.out(self.describe_here()),
+            "look" if self.inside.is_some() => {
+                self.out(self.describe_chamber_here(Perceiving::Objectively))
+            }
+            "look" if self.submerged.is_some() => {
+                self.out(self.describe_here(Perceiving::Objectively))
+            }
             "look" if self.underground.is_some() => Turn::Out(self.describe_underground_here()),
-            "look" => self.out(self.describe_here()),
+            "look" => self.out(self.describe_here(Perceiving::Objectively)),
             "knows" => Turn::Out(self.knows()),
             // The one out-of-character act that MOVES THE CLOCK (spec §3.4).
             // Its objective half is the departure/arrival narration, not the
@@ -3951,8 +4363,12 @@ impl<'w> Session<'w> {
                 // inside a structure it renders the chamber, out of doors the
                 // locale. Everything else reads `self.position()`, which never
                 // leaves the walk band, so nothing else changes.
-                "look" if self.inside.is_some() => self.out(self.describe_chamber_here()),
-                "look" if self.submerged.is_some() => self.out(self.describe_here()),
+                "look" if self.inside.is_some() => {
+                    self.out(self.describe_chamber_here(Perceiving::Body))
+                }
+                "look" if self.submerged.is_some() => {
+                    self.out(self.describe_here(Perceiving::Body))
+                }
                 // Underground (The Deep Realm, Task 5): the chamber lattice's
                 // content is read straight from `self.underground`, never
                 // through `describe_here`'s locale pipeline — that pipeline's
@@ -3961,7 +4377,7 @@ impl<'w> Session<'w> {
                 // `Formation::OpenWater`), so feeding it a rock `Stratum` would
                 // render nonsense rather than a chamber.
                 "look" if self.underground.is_some() => Turn::Out(self.describe_underground_here()),
-                "look" => self.out(self.describe_here()),
+                "look" => self.out(self.describe_here(Perceiving::Body)),
                 // `map` is band-aware for exactly the reason `look` is, and it is the
                 // SAME verb rather than a new one: §6's contract is that any pane
                 // capability must first BE a verb, so the fewer verbs meaning one
@@ -4278,7 +4694,7 @@ impl<'w> Session<'w> {
         match next {
             Some(st) => {
                 self.submerged = Some(st);
-                self.out(self.describe_here())
+                self.out(self.describe_here(Perceiving::Body))
             }
             None => Turn::Out(format!(
                 "You are already as deep as this water goes; the floor is {}.",
@@ -4300,7 +4716,7 @@ impl<'w> Session<'w> {
             .and_then(|i| column.get(i - 1).copied());
         self.submerged = above;
         let breaking = above.is_none();
-        match self.describe_here() {
+        match self.describe_here(Perceiving::Body) {
             Ok(d) if breaking => Turn::Out(format!("You break the surface.\n{d}")),
             other => self.out(other),
         }
@@ -4482,7 +4898,7 @@ impl<'w> Session<'w> {
             Some(_) => {}
         }
         self.underground = None;
-        match self.describe_here() {
+        match self.describe_here(Perceiving::Body) {
             Ok(d) => Turn::Out(format!("You climb back into the light.\n{d}")),
             other => self.out(other),
         }
@@ -4964,8 +5380,16 @@ impl<'w> Session<'w> {
         Ok(())
     }
 
-    /// The full room rendering: room id, prose, ways on.
-    fn describe_here(&self) -> Result<String, VesselError> {
+    /// The full room rendering: room id, prose, presence, ways on.
+    ///
+    /// `how` decides [`Self::presence_line`]'s own roster the same way it
+    /// decides every other `!`-narrowed read (The Roll, Task 9): every
+    /// caller in this crate passes [`Perceiving::Body`] except the `!look`
+    /// arms in [`Self::handle_ooc`], which pass [`Perceiving::Objectively`]
+    /// — `look` is an in-character verb, and its out-of-character twin is
+    /// the one place a wider roster than the body can sense is the honest
+    /// answer.
+    fn describe_here(&self, how: Perceiving) -> Result<String, VesselError> {
         // Unsubmerged over water, the possession is AFLOAT — on the surface,
         // not down among whatever lives on the floor. Rendering the room's own
         // expression there would put a walker "in" a coral reef while they are
@@ -5034,8 +5458,16 @@ impl<'w> Session<'w> {
             };
             format!("{lead}; the nearest ground lies {}.", ways.join(", "))
         };
+        // The presence line (The Roll, Task 9, spec §4): its own line, after
+        // the room's prose and before the ways — a room says what it looks
+        // like, then who is in it, then how to leave. `None` (nobody
+        // sensed) contributes no line at all, never a blank one.
+        let presence = self
+            .presence_line(how)
+            .map(|line| format!("{line}\n"))
+            .unwrap_or_default();
         Ok(format!(
-            "[room {}, day {}]\n{}\n{closing}",
+            "[room {}, day {}]\n{}\n{presence}{closing}",
             v.locale.id,
             self.day.as_std_days(),
             f.prose,
@@ -5098,7 +5530,7 @@ impl<'w> Session<'w> {
         if let Err(e) = self.absorb_here() {
             return Turn::Out(format!("error: {e}"));
         }
-        self.out(self.describe_here())
+        self.out(self.describe_here(Perceiving::Body))
     }
 
     /// Retrace one step of the walk-band trail. Like [`Self::go`], reached only
@@ -5130,7 +5562,7 @@ impl<'w> Session<'w> {
         if let Err(e) = self.absorb_here() {
             return Turn::Out(format!("error: {e}"));
         }
-        self.out(self.describe_here())
+        self.out(self.describe_here(Perceiving::Body))
     }
 
     /// Descend into the structure at this locale, or move to a named chamber
@@ -5207,7 +5639,7 @@ impl<'w> Session<'w> {
                 cell,
                 seed,
             });
-            return self.out(self.describe_chamber_here());
+            return self.out(self.describe_chamber_here(Perceiving::Body));
         }
         let brief = self.brief_here();
         let Some(structure) = crate::structure::structure_at(
@@ -5240,7 +5672,7 @@ impl<'w> Session<'w> {
         if self.descend(structure, at).is_none() {
             return Turn::Out("error: that chamber has no floor to stand in".to_string());
         }
-        self.out(self.describe_chamber_here())
+        self.out(self.describe_chamber_here(Perceiving::Body))
     }
 
     /// Put the possession inside `structure` at chamber `at`, standing wherever
@@ -5354,7 +5786,7 @@ impl<'w> Session<'w> {
                 let inside = self.inside.as_mut().expect("checked above");
                 inside.at = next;
                 inside.cell = cell;
-                return self.out(self.describe_chamber_here());
+                return self.out(self.describe_chamber_here(Perceiving::Body));
             }
         }
         // Another chamber's floor, reached without a doorway: refused rather than
@@ -5464,7 +5896,7 @@ impl<'w> Session<'w> {
             return Turn::Out(e);
         }
         self.inside = None;
-        self.out(self.describe_here())
+        self.out(self.describe_here(Perceiving::Body))
     }
 
     /// The world's walk depth, as this session's locale context defines it.
@@ -5606,7 +6038,11 @@ impl<'w> Session<'w> {
     /// one way where two exist — which is how the deeper chambers became
     /// unreachable under The Lintel, where the reason was starker (every chamber
     /// derived the identical interior).
-    fn describe_chamber_here(&self) -> Result<String, VesselError> {
+    ///
+    /// `how` reaches [`Self::presence_line`] the same way it reaches
+    /// [`Self::describe_here`]'s own copy — see that doc comment (The Roll,
+    /// Task 9).
+    fn describe_chamber_here(&self, how: Perceiving) -> Result<String, VesselError> {
         let Some(inside) = self.inside.as_ref() else {
             // Unreachable through `handle` (every caller checks first), but a
             // silent fabrication of chamber prose while out of doors would be
@@ -5626,8 +6062,15 @@ impl<'w> Session<'w> {
         if Self::further_in(structure, at).is_some() {
             ways.push(FURTHER_IN);
         }
+        // The presence line (The Roll, Task 9, spec §4) — same placement
+        // rule as `describe_here`'s own: its own line, after the chamber's
+        // prose and before the ways.
+        let presence = self
+            .presence_line(how)
+            .map(|line| format!("{line}\n"))
+            .unwrap_or_default();
         Ok(format!(
-            "[chamber {}, day {}]\n{}\nWays on: {}.",
+            "[chamber {}, day {}]\n{}\n{presence}Ways on: {}.",
             id,
             self.day.as_std_days(),
             crate::chamber_prose::describe_chamber(&interior, &brief),
@@ -6512,6 +6955,13 @@ impl<'w> Session<'w> {
                 _ => return Turn::Out(format!("Wait how long? '{arg}' is no span of days.")),
             }
         };
+        // The roll, before anything else this tick reads the roster (The
+        // Roll, spec §3.2): derive whatever has come within call since the
+        // last tick and recompute the mask. It runs BEFORE the `before`
+        // snapshot on purpose — a body appended here must appear in every one
+        // of this tick's parallel vectors, or `narrate_motion`'s positional
+        // zip would be short by exactly the newcomers.
+        self.refresh_roll();
         // Snapshot every NPC's position as of NOW (the day about to end),
         // before advancing — the "before" half of the departure/arrival
         // comparison `narrate_motion` needs to name a specific transition
@@ -6589,9 +7039,14 @@ impl<'w> Session<'w> {
         let sys = DriveMovements {
             // `DriveMovements.npcs: Vec<Body>` is a widely-shared field
             // (28+ construction sites across `windows/vessel`/`windows/lab`),
-            // so this clones out of `other_bodies`'s borrows rather than
+            // so this clones out of `on_roll_others`'s borrows rather than
             // widening that struct.
-            npcs: other_bodies(&self.bodies, self.driven)
+            //
+            // **This is the ONE reader of the roll's mask** (The Roll, spec
+            // §3.7): a body off the roll is handed to no drive, so it commits
+            // no `agent-at` and its position is unchanged across the wait.
+            // Every other consumer below still iterates `other_bodies`.
+            npcs: on_roll_others(&self.bodies, &self.on_roll, self.driven)
                 .into_iter()
                 .cloned()
                 .collect(),
@@ -6604,16 +7059,17 @@ impl<'w> Session<'w> {
             day_ticks: self.day_ticks(),
             terrain: &terrain,
         };
-        // Recover this tick's within-room `Occupancy` alongside the facts
-        // `tick()` (below) commits — the same walk, read twice, exactly the
-        // pattern the lab's health battery uses (task 6b): a second, PURE
-        // re-evaluation of the identical frozen `self.ledger` and `sys`,
-        // not a second simulation with different consequences. Without
-        // this, `needs()` and the snapshot's present-entry read sampled a
-        // colder felt state than the NPC actually experienced — warmth at
-        // the room's landing anchor, never wherever its own walk carried it
-        // (Important 4, The Threshold whole-branch review).
-        let (_facts, occupancy) =
+        // Recover this tick's within-room `Occupancy` alongside the SAME
+        // walk's `facts` (The Roll, Task 11: one walk per wait). This used
+        // to be a PURE re-evaluation kept only for its `Occupancy` half,
+        // with `kernel::tick` (below) re-running the identical walk a
+        // second time — against the same frozen `self.ledger` and `sys`,
+        // through throwaway memos — purely to get facts this call had
+        // already computed once. `occupancy` still feeds `needs()` and the
+        // snapshot's present-entry read the way it always has (Important 4,
+        // The Threshold whole-branch review); `facts` is now committed
+        // directly below instead of being thrown away and recomputed.
+        let (facts, occupancy) =
             sys.step_with_occupancy(&self.ledger, &mut self.mesh_memo, &mut self.home_nav_cache);
         // The driven body's OWN arbitration (The Hand, Task 5 fix round 1,
         // spec §2.3/§3.3): the SAME `advance_one` every other body's walk
@@ -6643,7 +7099,7 @@ impl<'w> Session<'w> {
         // `Do`, nothing on `Hold` argument spec §5.2 makes" — checked
         // directly (fix round 2) and that claim is false: forcing the
         // intent to `Do` here still leaves the ledger untouched, because the
-        // facts never reach `tick()` either way. The player's verbs (`go`,
+        // facts never reach the ledger either way. The player's verbs (`go`,
         // `drink`, …) are what the body DOES; this walk only ever supplies
         // what the host WANTS (`self.driven_mode`) — spec §5.2 is being
         // corrected at Task 8 to say so.
@@ -6696,63 +7152,97 @@ impl<'w> Session<'w> {
         for drive in &self.driven_suppressed {
             *self.driven_overrides.entry(*drive).or_insert(0) += 1;
         }
-        match tick(&self.ledger, &[&sys], &["drive-movements"], &self.registry) {
-            Ok(next) => {
-                let moved = next.len() - self.ledger.len();
-                self.ledger = next;
-                self.occupancy = occupancy;
-                // The First Mark, one-hop forward integration: after the NPC
-                // drive tick settles, any co-located-or-not NPC whose
-                // grievance has crossed the hostility threshold commits its
-                // `turned-hostile` fact — a discrete social consequence of
-                // the player's own acts, not an ambient drive. Iterating
-                // `other_bodies` in its existing (derivation) order keeps the
-                // commit sequence deterministic. A free function, not a
-                // `self.npcs.iter()` field read, but the same disjoint-field
-                // borrow: it borrows only `self.bodies`, leaving `self.ledger`
-                // (mutated below, inside this very loop) free.
-                let player = self.agent_entity();
-                for npc in other_bodies(&self.bodies, self.driven) {
-                    // The `value_of(...).is_none()` check below is the SOLE
-                    // idempotency guarantee for this fact, not a second
-                    // layer atop `TURNED_HOSTILE`'s `functional: true`
-                    // registration: `Ledger::commit` only dedups via an
-                    // exact full-envelope match, and `day` advances every
-                    // tick, so a later-day re-fire is never an exact dup;
-                    // and the functional flag only rejects a *different*
-                    // object for the same subject/predicate, but `object`
-                    // here is always the same constant `player`, so that
-                    // flag can never trip either. Remove this guard and the
-                    // loop silently refires (a new `turned-hostile` fact,
-                    // same subject/predicate/object, only `day` differing)
-                    // on every subsequent `wait` the NPC is still past
-                    // threshold for.
-                    if grievance(&self.ledger, npc.entity) >= HOSTILITY_THRESHOLD
-                        && self.ledger.value_of(npc.entity, TURNED_HOSTILE).is_none()
-                    {
-                        let fact = Fact {
-                            subject: npc.entity,
-                            predicate: TURNED_HOSTILE.to_string(),
-                            object: Value::Entity(player),
-                            place: None,
-                            day: Some(self.day),
-                            provenance: "player-provoked".to_string(),
-                        };
-                        self.ledger
-                            .commit(fact, &self.registry)
-                            .expect("turned-hostile is registered and finite");
-                    }
-                }
-                // Re-absorb the (possibly changed) here into knowledge; the
-                // possessed agent's own scenery is still read from the
-                // frozen `self.world`, so this cannot change day-0 output.
-                if let Err(e) = self.absorb_here() {
-                    return Turn::Out(format!("error: {e}"));
-                }
-                Turn::Out(self.narrate_motion(moved, &before, &sensed_before, how))
+        // One walk per wait (The Roll, Task 11): commit `facts` — the SAME
+        // vector `kernel::tick` used to recompute by re-running this exact
+        // walk a second time — straight into `self.ledger`, in order,
+        // instead of handing them to `tick`, which only ever cloned
+        // `self.ledger` (`kernel/src/schedule.rs`'s `tick`: `let mut next =
+        // frozen.clone()`), replayed `sys.step(frozen)` — itself
+        // `step_with_occupancy(frozen, throwaway, throwaway).0`, the
+        // identical walk against the identical frozen ledger, just without
+        // this session's warm `mesh_memo`/`home_nav_cache` — and committed
+        // its facts into that clone in the same order. The memos are
+        // caches, not inputs the facts vector depends on for its content,
+        // so the vector committed here is byte-identical to the one `tick`
+        // used to commit; see `session_snapshot::v2_bytes_are_pinned` and
+        // `the_client_fixtures_are_current`, which pin exactly that.
+        //
+        // `moved` used to be `next.len() - self.ledger.len()` — the count of
+        // facts that changed the ledger's length, i.e. actually appended.
+        // `Ledger::commit`'s `Ok(true)` is that same condition stated
+        // per-fact (`Ok(true)` = appended; `Ok(false)` = an identical fact
+        // already present, an idempotent no-op that must NOT be counted),
+        // so counting `Ok(true)` reproduces the old count exactly.
+        let mut moved = 0usize;
+        for fact in facts {
+            match self.ledger.commit(fact, &self.registry) {
+                Ok(true) => moved += 1,
+                Ok(false) => {}
+                // A deliberate change of failure shape from the old
+                // `tick`-based path, not an oversight: `tick` committed into
+                // a CLONE, so an error mid-way left `self.ledger` completely
+                // untouched. Committing straight into `self.ledger` means an
+                // error here leaves every fact committed BEFORE it in place.
+                // `wait` already treats this arm as fatal to the turn either
+                // way (the caller sees `Turn::Out`, nothing more this tick),
+                // and a registry contradiction on a `drive-movements` fact
+                // is not expected to occur at all on the fixed seed-42
+                // registry this suite pins against — but if it ever does,
+                // the ledger this session keeps from here on is a partial
+                // tick's worth of facts rather than none.
+                Err(e) => return Turn::Out(format!("Time falters: {e}")),
             }
-            Err(e) => Turn::Out(format!("Time falters: {e}")),
         }
+        self.occupancy = occupancy;
+        // The First Mark, one-hop forward integration: after the NPC
+        // drive tick settles, any co-located-or-not NPC whose
+        // grievance has crossed the hostility threshold commits its
+        // `turned-hostile` fact — a discrete social consequence of
+        // the player's own acts, not an ambient drive. Iterating
+        // `other_bodies` in its existing (derivation) order keeps the
+        // commit sequence deterministic. A free function, not a
+        // `self.npcs.iter()` field read, but the same disjoint-field
+        // borrow: it borrows only `self.bodies`, leaving `self.ledger`
+        // (mutated below, inside this very loop) free.
+        let player = self.agent_entity();
+        for npc in other_bodies(&self.bodies, self.driven) {
+            // The `value_of(...).is_none()` check below is the SOLE
+            // idempotency guarantee for this fact, not a second
+            // layer atop `TURNED_HOSTILE`'s `functional: true`
+            // registration: `Ledger::commit` only dedups via an
+            // exact full-envelope match, and `day` advances every
+            // tick, so a later-day re-fire is never an exact dup;
+            // and the functional flag only rejects a *different*
+            // object for the same subject/predicate, but `object`
+            // here is always the same constant `player`, so that
+            // flag can never trip either. Remove this guard and the
+            // loop silently refires (a new `turned-hostile` fact,
+            // same subject/predicate/object, only `day` differing)
+            // on every subsequent `wait` the NPC is still past
+            // threshold for.
+            if grievance(&self.ledger, npc.entity) >= HOSTILITY_THRESHOLD
+                && self.ledger.value_of(npc.entity, TURNED_HOSTILE).is_none()
+            {
+                let fact = Fact {
+                    subject: npc.entity,
+                    predicate: TURNED_HOSTILE.to_string(),
+                    object: Value::Entity(player),
+                    place: None,
+                    day: Some(self.day),
+                    provenance: "player-provoked".to_string(),
+                };
+                self.ledger
+                    .commit(fact, &self.registry)
+                    .expect("turned-hostile is registered and finite");
+            }
+        }
+        // Re-absorb the (possibly changed) here into knowledge; the
+        // possessed agent's own scenery is still read from the
+        // frozen `self.world`, so this cannot change day-0 output.
+        if let Err(e) = self.absorb_here() {
+            return Turn::Out(format!("error: {e}"));
+        }
+        Turn::Out(self.narrate_motion(moved, &before, &sensed_before, how))
     }
 
     /// Narrate what the tick committed: silence if nothing moved, else name
@@ -7142,13 +7632,15 @@ impl<'w> Session<'w> {
     /// T4): the world remembers, so `why` over an NPC that has moved names
     /// each committed `agent-at` with the day it was asserted (`recount` in
     /// `windows/historiography` renders the day suffix). `who` is matched
-    /// first as the `npcs` listing's 1-based handle, else as a
-    /// case-insensitive substring of an NPC's label — this mirrors the CLI
-    /// repl's `why <id>` (see `cli/src/repl.rs`) over the one kind of subject
-    /// a possess session actually has on hand without a prior listing step:
-    /// a name. The handle is deliberately NOT the NPC's `EntityId` (The
-    /// Signet) — it is a short-lived, session-local position a player can
-    /// type back, resolved fresh from `other_bodies` on every call.
+    /// first as the `npcs` listing's 1-based handle, else by
+    /// [`body_by_needle`] (The Roll, Task 10: exact label match first, then
+    /// the longest containing label — never merely the first substring hit
+    /// in roster order) — this mirrors the CLI repl's `why <id>` (see
+    /// `cli/src/repl.rs`) over the one kind of subject a possess session
+    /// actually has on hand without a prior listing step: a name. The
+    /// handle is deliberately NOT the NPC's `EntityId` (The Signet) — it is
+    /// a short-lived, session-local position a player can type back,
+    /// resolved fresh from `other_bodies` on every call.
     fn why(&self, who: &str) -> String {
         let who = who.trim();
         if who.is_empty() {
@@ -7160,12 +7652,8 @@ impl<'w> Session<'w> {
             .ok()
             .filter(|n| *n >= 1)
             .and_then(|n| others.get(n - 1))
-            .or_else(|| {
-                let needle = who.to_lowercase();
-                others
-                    .iter()
-                    .find(|n| n.label.to_lowercase().contains(&needle))
-            });
+            .copied()
+            .or_else(|| body_by_needle(&others, who));
         let Some(npc) = target else {
             return format!("No one here answers to '{who}' (see 'npcs').");
         };
@@ -7301,11 +7789,81 @@ impl<'w> Session<'w> {
         }
     }
 
+    /// Who is here, as one line (The Roll, Task 9, spec §4 "Presence at
+    /// scale"): `None` if nobody is — never `Some("Here: .")` — otherwise
+    /// `"Here: {groups joined on "; "}."`.
+    ///
+    /// Consumes exactly [`Self::perceived_npcs`]`(how)` — **the same roster a
+    /// `!`-narrowed verb reads, never [`Self::colocated_npcs`]**: indoors a
+    /// creature the embedding placed but the shadowcast does not light is
+    /// colocated but not sensed, and this line must agree with what `!needs`/
+    /// `!examine` would say is here, not with who merely stands here.
+    ///
+    /// **Grouped by species, resident groups (`Body.village.is_some()`)
+    /// before wild, each group in roster order** — `perceived_npcs`' own
+    /// order (the order it yields; append order), which coincides with roll
+    /// order only within one settlement — never re-sorted by name. A resident
+    /// group names its first [`N_NAMED`] labels through
+    /// [`crate::chamber_prose::listed`] and appends `", and {n} others"` for
+    /// whatever is left; a wild group has no individual names to give, so it
+    /// collapses entirely to a single count-first clause — `"a wild
+    /// {species}"` for one, `"{n} wild {species}"` for more, the species
+    /// word never pluralised.
+    fn presence_line(&self, how: Perceiving) -> Option<String> {
+        let roll = self.perceived_npcs(how);
+        if roll.is_empty() {
+            return None;
+        }
+        // Ordered groups keyed by (resident, species): a `Vec` scan, not a
+        // `HashMap` (no HashMap/HashSet anywhere in this workspace) — the
+        // roll a possession ever reads is small, so a linear `find` per
+        // member costs nothing. First-seen order is kept, which is what
+        // carries roll order into group order below.
+        let mut groups: Vec<(bool, &str, Vec<&str>)> = Vec::new();
+        for npc in &roll {
+            let resident = npc.village.is_some();
+            let species = npc.species.as_str();
+            match groups
+                .iter_mut()
+                .find(|(r, s, _)| *r == resident && *s == species)
+            {
+                Some((_, _, labels)) => labels.push(npc.label.as_str()),
+                None => groups.push((resident, species, vec![npc.label.as_str()])),
+            }
+        }
+        // A stable sort on residency alone: `Reverse(true) < Reverse(false)`
+        // puts every resident group ahead of every wild one while leaving
+        // each side's own relative (roll) order exactly as `sort_by_key`
+        // found it — the ordering guarantee `sort_by_key` documents.
+        groups.sort_by_key(|(resident, ..)| std::cmp::Reverse(*resident));
+        let rendered: Vec<String> = groups
+            .into_iter()
+            .map(|(resident, species, labels)| {
+                if resident {
+                    let named: Vec<&str> = labels.iter().take(N_NAMED).copied().collect();
+                    let heads = crate::chamber_prose::listed(&named)
+                        .expect("a group is never built empty — every push adds a label");
+                    if labels.len() > N_NAMED {
+                        format!("{heads}, and {} others", labels.len() - N_NAMED)
+                    } else {
+                        heads
+                    }
+                } else if labels.len() == 1 {
+                    format!("a wild {species}")
+                } else {
+                    format!("{} wild {species}", labels.len())
+                }
+            })
+            .collect();
+        Some(format!("Here: {}.", rendered.join("; ")))
+    }
+
     /// Resolve `who` to one **sensed** co-located NPC (The First Mark): an empty
     /// argument selects the first such NPC (the common case — a lone co-located
     /// NPC needs no name), otherwise `who` is matched as the `npcs` listing's
-    /// 1-based handle or a case-insensitive substring of an NPC's label,
-    /// mirroring `why`'s resolution but restricted to NPCs actually here.
+    /// 1-based handle or by [`body_by_needle`] (The Roll, Task 10: exact
+    /// label match first, then the longest containing label), mirroring
+    /// `why`'s resolution but restricted to NPCs actually here.
     /// The handle is resolved against `other_bodies` (so it means the same
     /// number `npcs` printed) and then re-checked against `here` — resolving
     /// it directly against `here`'s own positions would let a handle's
@@ -7346,12 +7904,10 @@ impl<'w> Session<'w> {
             // return a reference into it.
             .and_then(|n| other_bodies(&self.bodies, self.driven).get(n - 1).copied())
             .filter(|npc| here.iter().any(|h| h.entity == npc.entity))
-            .or_else(|| {
-                let needle = who.to_lowercase();
-                here.iter()
-                    .find(|n| n.label.to_lowercase().contains(&needle))
-                    .copied()
-            })
+            // The Roll, Task 10: [`body_by_needle`] — exact label match
+            // first, then the longest containing label — never merely the
+            // first substring hit in roster order.
+            .or_else(|| body_by_needle(&here, who))
     }
 
     /// Commit the first player-authored fact: a signed disposition shift on
@@ -11490,11 +12046,27 @@ mod tests {
             "before any `wait`, occupancy has never been populated"
         );
         session.wait("1", Perceiving::Body);
-        for npc in other_bodies(&session.bodies, session.driven) {
+        // OVER THE ROLL, not the whole roster (The Roll, Task 7). `wait` hands
+        // `DriveMovements` only the bodies on the roll, so only they walk and
+        // only they land an `Occupancy` anchor — a dormant body's absence from
+        // it is the feature (spec §3.7), not the regression this test watches
+        // for. The driven body is excluded for the reason it always was: it
+        // has its own solo arbitration, not a place in `sys.npcs`.
+        let driven = session.driven_body().entity;
+        let on_roll: Vec<(EntityId, String)> = session
+            .on_roll()
+            .into_iter()
+            .filter(|npc| npc.entity != driven)
+            .map(|npc| (npc.entity, npc.label.clone()))
+            .collect();
+        assert!(
+            !on_roll.is_empty(),
+            "precondition: the roll holds someone besides the body you are"
+        );
+        for (entity, label) in on_roll {
             assert!(
-                session.occupancy.at(npc.entity).is_some(),
-                "after `wait`, every derived npc must have a tracked within-room anchor: {}",
-                npc.label
+                session.occupancy.at(entity).is_some(),
+                "after `wait`, every npc ON THE ROLL must have a tracked within-room anchor: {label}"
             );
         }
     }
@@ -12106,7 +12678,9 @@ mod tests {
         let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
         let middle = path_structure(&session.position(), 3);
         session.descend(middle, 1).expect("a chamber to stand in");
-        let text = session.describe_chamber_here().expect("a chamber renders");
+        let text = session
+            .describe_chamber_here(Perceiving::Body)
+            .expect("a chamber renders");
         assert!(
             text.ends_with("Ways on: out, further in."),
             "a middle chamber must offer BOTH directions under distinct names: {text:?}"
@@ -12115,7 +12689,9 @@ mod tests {
         session
             .descend(innermost, 2)
             .expect("a chamber to stand in");
-        let text = session.describe_chamber_here().expect("a chamber renders");
+        let text = session
+            .describe_chamber_here(Perceiving::Body)
+            .expect("a chamber renders");
         assert!(
             text.ends_with("Ways on: out."),
             "the innermost chamber must not advertise a way that is not there: {text:?}"
@@ -15734,23 +16310,42 @@ mod tests {
         // exactly the collision this test needs, and `colocated_npcs`'s
         // derivation-order iteration (bodies()[1] before [2]) is what makes
         // the FIRST one placed win the cell in `sighting()`'s own scan.
+        //
+        // **SCOPED TO THE TWO SUBJECTS SINCE THE ROLL (Task 7).** These
+        // assertions used to be COUNTS over the whole room — one agent mark,
+        // two co-located creatures — which was exact while a session derived
+        // seven bodies and none of them lived here. The roll homes a
+        // settlement's whole population at the room the possession stands in,
+        // so both counts are now in the sixties and neither number was ever
+        // the claim: the claim is that two creatures at ONE anchor yield ONE
+        // mark, and that the refused one is still present. Every check below
+        // therefore names its subject.
         let world = seam_world();
         let mut session = possessed_where_the_plan_draws(&world);
         let room = session.position();
         let first = session.bodies[1].entity;
+        let first_label = session.bodies[1].label.clone();
+        let second_label = session.bodies[2].label.clone();
         session.place_creature_at_me(first);
         assert_eq!(
-            agent_marks_of(&session).len(),
+            agent_marks_of(&session)
+                .iter()
+                .filter(|m| m.noun == first_label)
+                .count(),
             1,
-            "precondition: the first placement alone is drawn"
+            "precondition: the first placement is drawn, once"
         );
 
         let second = session.bodies[2].entity;
         session.place_creature_at_me(second);
 
-        assert_eq!(
-            session.colocated_npcs().len(),
-            2,
+        let colocated: Vec<EntityId> = session
+            .colocated_npcs()
+            .iter()
+            .map(|npc| npc.entity)
+            .collect();
+        assert!(
+            colocated.contains(&first) && colocated.contains(&second),
             "both creatures are now in the possession's room"
         );
         assert_eq!(
@@ -15763,10 +16358,14 @@ mod tests {
         let marks = marks_of(&session);
         let agent_marks = agent_marks_of(&session);
         assert_eq!(
-            agent_marks.len(),
+            agent_marks
+                .iter()
+                .filter(|m| m.noun == first_label || m.noun == second_label)
+                .count(),
             1,
-            "one cell may hold one creature: the second must be REFUSED, not \
-             stacked — got {agent_marks:?}"
+            "one square may hold one creature: of the two placed at ONE anchor, \
+             exactly one is drawn and the second is REFUSED, not stacked — got \
+             {agent_marks:?}"
         );
         // THE UNPLACED ROW (fix round 2), and this test is the only place that
         // constructs it. The refused creature is co-located, is NOT drawn, and
@@ -15782,10 +16381,10 @@ mod tests {
             .label
             .clone();
         let snap = session.snapshot().unwrap();
-        assert_eq!(
-            snap.sensed.present.len(),
-            2,
-            "a creature refused a cell must not vanish from `sensed.present`"
+        let present: Vec<u64> = snap.sensed.present.iter().map(|p| p.entity).collect();
+        assert!(
+            present.contains(&first.0.get()) && present.contains(&second.0.get()),
+            "a creature refused a square must not vanish from `sensed.present`"
         );
         assert!(
             !marks.iter().any(|m| m.noun == refused),
@@ -15860,18 +16459,28 @@ mod tests {
             .label
             .clone();
 
+        // **SCOPED TO `who` SINCE THE ROLL (Task 7).** These four
+        // preconditions and the two assertions below used to be counts over
+        // the whole room — one present entry, one agent mark, then none of
+        // either. That was exact while a session derived seven bodies none of
+        // which lived here; the roll homes a settlement's whole population at
+        // this very room, so `present` is in the sixties before anything is
+        // placed. The claim was always about ONE creature crossing the
+        // shadowcast, so every check names it.
         session.occupancy.place(who, &room, near);
         let snap = session.snapshot().unwrap();
-        assert_eq!(
-            snap.sensed.present.len(),
-            1,
+        assert!(
+            snap.sensed.present.iter().any(|p| p.entity == who.0.get()),
             "precondition: a creature in sight IS sent"
         );
         // Agent-kind only (see `agent_marks_of`'s doc): a lit furnishing at
-        // this room's `near` anchor would otherwise inflate this count for a
-        // reason unrelated to the creature this precondition is about.
+        // this room's `near` anchor would otherwise be counted for a reason
+        // unrelated to the creature this precondition is about.
         assert_eq!(
-            agent_marks_of(&session).len(),
+            agent_marks_of(&session)
+                .iter()
+                .filter(|m| m.noun == label)
+                .count(),
             1,
             "precondition: and IS drawn"
         );
@@ -15890,7 +16499,7 @@ mod tests {
         session.occupancy.place(who, &room, far);
         let snap = session.snapshot().unwrap();
         assert!(
-            snap.sensed.present.is_empty(),
+            !snap.sensed.present.iter().any(|p| p.entity == who.0.get()),
             "a creature out of sight must not be sent: {:?}",
             snap.sensed.present
         );
@@ -15911,10 +16520,11 @@ mod tests {
         assert!(
             !marks_of(&session)
                 .iter()
-                .any(|m| m.kind == crate::purview::AGENT_MARK_KIND),
+                .any(|m| m.kind == crate::purview::AGENT_MARK_KIND && m.noun == label),
             "the creature's mark must not be drawn either — one shadowcast \
              decides both `sensed` and the agent mark (a furnishing mark is a \
-             different subject and may legitimately remain)"
+             different subject and may legitimately remain, and so is another \
+             creature's own mark)"
         );
         // THE SIDE CHANNEL, closed. `examine_chamber` answers a creature's noun
         // (fix round 1, so the noun does not stop answering at a doorway) — but

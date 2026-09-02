@@ -3437,6 +3437,33 @@ its honest size.
    serialized at all. **The score does not move.** One more act with a
    consequence is not a market worth standing in, and a limit named is not a
    limit closed.
+   **Re-scored by [The Roll](./chronicle/the-roll.md) (2026-09-02): the
+   unstaged market now assembles, and the score still does not move.** The
+   gate the annotation above named is discharged. A settlement derives as many
+   residents as its committed population — named people, drawn apart on their
+   own dials, not eighty copies — and the walk ticks the ones within call, so
+   the moment assembles because the world is populous rather than because a
+   fixture arranged it. The readings this row has collected, each on its own
+   instrument: The Company found `sensed.present` empty in **24 of 24**
+   witnesses — twelve seeds across both possession targets, the annotation
+   above; The Hand, having deleted the player's own twin, measured **0 of 64**
+   on the 64-seed probe; and this campaign re-ran that same probe before
+   changing anything and read **3 of 64**. After the roll, a fresh possession
+   stands in company in **64 of 64** seeds, which is every seed whose home
+   settlement can hold company at all. At seed 42 that is 67 neighbours in one
+   room, four of them named in the presence line and 63 counted. **Three of the four sentences this row has carried since The
+   Company are now spent** — the moment does not assemble; it assembles only
+   when staged; a staged moment is the weakest possible evidence. What
+   survives is the fourth and always the real one: *a human still has to sit in
+   the market and report what they noticed.* The score stays **low** because
+   the axis of this chapter is checkability, and nothing about sixty-seven
+   people makes the taste half self-scorable — 64 of 64 is a count of company,
+   and this row exists in part to refuse exactly that substitution. The change
+   is in the standing, not the score: the question can now be asked of a world
+   left to itself, at any seed, which is the condition its two previous
+   annotations said it was waiting on. It moves when a human plays and says it
+   moved, and for the first time there is nothing structural in the way of
+   playing.
 
 ## The standing horizon
 
