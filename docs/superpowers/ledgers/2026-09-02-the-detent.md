@@ -335,3 +335,50 @@ index hold at the final band on all three shapes, reported without a
 threshold as the number Penstock stage 4 (the lifecycle) is gated on. Nothing
 in this campaign evicts either structure; that is stage 4's job and it now
 has a measurement to enter on. Added to spec §4 and the stage-4 row.
+
+---
+
+## #6 [G4] — plan self-review against the approved spec
+
+**Plan:** `docs/superpowers/plans/2026-09-02-the-detent.md`, nine tasks,
+stage gates after Tasks 2, 4 and 8. Coverage walked section by section in
+the plan's own self-review; one gap named (rule 7's `turn_budget.rs` is
+The Rack's and unmerged — checked at absorption, not by a task).
+
+**Two rulings the plan makes that the spec did not, both recorded here so
+they are decisions and not drift:**
+
+1. **The registry row's remedy for `EmitterScan` cannot be done as
+   written.** `TOOL-emitter-scan-tests-out-of-liveness` says "make it
+   `pub(crate)` and move the tests to `tests/suite/resident_folds.rs`";
+   an integration-test binary is a separate crate and cannot see
+   `pub(crate)`. The tests leave `liveness.rs` through a `#[cfg(test)]
+   #[path = "liveness_tests/emitter_scan.rs"] mod` instead — out of the
+   19,675-line file, still in-crate, `EmitterScan` stays private and no
+   `pub` widens. The row is closed at Task 9 with this correction in its
+   Where cell. *Why:* the row's intent (the tests beside their siblings,
+   the file shorter) is met; its mechanism was wrong. *Alternatives:*
+   `pub` + `#[doc(hidden)]` on `EmitterScan` — widens the crate's surface
+   for a test's convenience, and the type-audit would then tag its fields.
+   No ideonomy pass: a visibility fact, not a design choice.
+2. **H5 has two readings and the plan asserts both, in order.** Stage 2
+   asserts on FIELD SAMPLES (the memo's misses) — 0 on a repeated read,
+   ≤ 4,469 per tick; Stage 3 asserts the same thresholds on `hazards()`
+   CALLS, which is stricter (the index answers without asking the terrain
+   at all). The spec's wording, "terrain hazard samples", is the Stage 2
+   reading; nothing is loosened. *Why:* a memo alone leaves the call count
+   at O(roster × rooms) and would pass H5 while H4 (a) stays at 0.92 —
+   spec §1 item 5 says so; asserting calls at Stage 3 is what pins the
+   advancing form. *Alternative discarded:* one reading (samples only),
+   which the memo satisfies and the index does not need to.
+
+**One methodological concession, stated.** Task 4's first H5 clause cannot
+take its red from a failing assertion, because the assertion's subject (memo
+misses) does not exist before the memo does; the plan takes Task 1's printed
+count (22,302 fresh / 1,089 warm hazards() calls, equal to field samples on
+a memo-less tree) as that clause's red. Task 6's red is a real failing
+assertion on calls, taken by swapping in the pre-Task-6 `liveness.rs` by
+copy.
+
+**Ideonomy passes / overturns:** none for this entry; the G1 pass's cycle
+artifact is what the plan's stage carve follows.
