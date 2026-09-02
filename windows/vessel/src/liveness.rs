@@ -6150,6 +6150,8 @@ pub fn derive_wild_herds(
         // herd's position in `herds`, so `derive_wild_herds(&[a, b])` and
         // `derive_wild_herds(&[b])` mint identical entities for `b`.
         let role = format!("wild/{}/{}", herd.species, herd.vertex);
+        // `Lineage.ordinal` is `u16`; today's largest headcount is 17, so
+        // this clamp is a defensive guard, not a path anything reaches.
         let member_count = herd.headcount.min(u32::from(u16::MAX)) as u16;
         for i in 0..member_count {
             let entity = ledger.reuse_or_mint_entity(Lineage {

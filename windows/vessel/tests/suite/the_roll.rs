@@ -394,6 +394,52 @@ fn a_herds_identity_is_its_attractor_and_species() {
     );
 }
 
+/// Two herds of the SAME species at two DIFFERENT attractors are two herds,
+/// not one: their bodies must be disjoint entity sets. A test with two
+/// DIFFERENT species (as above) cannot see a regression that keys identity
+/// on species alone, dropping the vertex — both herds' roles would still
+/// differ (by species), so an all-different-species test stays green even
+/// after that regression.
+///
+/// MUTATION THIS MUST FAIL AGAINST: drop `herd.vertex` from the role,
+/// i.e. `format!("wild/{}", herd.species)` in place of
+/// `format!("wild/{}/{}", herd.species, herd.vertex)`; both wolf herds then
+/// share the role `"wild/wolf"` and their ordinal-0..headcount entities
+/// collide, so the two sets are no longer disjoint.
+#[test]
+fn two_herds_of_one_species_at_different_vertices_are_disjoint() {
+    let (world, ctx, _wc, _village) = residents_fixture();
+    let herd_at_10 = hornvale_worldgen::herds::WildHerd {
+        species: "wolf".to_string(),
+        position: [1.0, 0.0, 0.0],
+        vertex: 10,
+        headcount: 2,
+    };
+    let herd_at_20 = hornvale_worldgen::herds::WildHerd {
+        species: "wolf".to_string(),
+        position: [0.0, 1.0, 0.0],
+        vertex: 20,
+        headcount: 2,
+    };
+
+    let mut ledger = world.ledger.clone();
+    let bodies = hornvale_vessel::liveness::derive_wild_herds(
+        &world,
+        &ctx,
+        &mut ledger,
+        &[herd_at_10, herd_at_20],
+    );
+    assert_eq!(bodies.len(), 4, "precondition: both herds mint");
+
+    let entities: std::collections::BTreeSet<_> = bodies.iter().map(|b| b.entity).collect();
+    assert_eq!(
+        entities.len(),
+        bodies.len(),
+        "two herds of one species at two attractors must mint two disjoint entity sets, \
+         not collide into one"
+    );
+}
+
 /// A herd yields exactly `headcount` bodies (coarse constrains fine).
 ///
 /// MUTATION THIS MUST FAIL AGAINST: `0..=herd.headcount`.
