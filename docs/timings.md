@@ -4949,3 +4949,4 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-02T13:52:50Z | sluice:gate | 585.155 | 17988.019 | 515.669 | 31.62 | 0 | 2cb56e03e |  | lefford | 40 |
 | 2026-09-02T13:49:02Z | gate-commit | 631.756 | 933.443 | 218.673 | 1.82 | 0 | da6de5874 | campaign/the-hallmark | ambrose | 12 |
 | 2026-09-02T14:07:50Z | gate-commit | 221.712 | 61.627 | 30.028 | 0.41 | 0 | 26bbb01af | campaign/the-hallmark | ambrose | 12 |
+| 2026-09-02T14:16:08Z | sluice:artifacts | 157.773 | 1595.933 | 83.457 | 10.64 | 0 | 9a4818c77 |  | lefford | 40 |
