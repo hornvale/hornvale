@@ -542,6 +542,7 @@ impl Underground {
 /// of the distribution. A calibration knob, not a physical constant;
 /// nothing in this campaign measures where it should sit more precisely.
 /// type-audit: bare-ok(ratio)
+/// plumb: universal(doc states explicitly: a calibration knob, not a physical constant)
 const INHABITANT_FIT_THRESHOLD: f64 = 0.05;
 
 /// One species' fit at one chamber, `[0, 1]` — a blend of

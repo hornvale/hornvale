@@ -9,12 +9,15 @@ use hornvale_kernel::{Geosphere, NearestVertexIndex, VertexMap};
 
 /// Raster image width in pixels; equirectangular, so height is `MAP_WIDTH / 2`.
 /// type-audit: bare-ok(render-internal)
+/// plumb: pending(wave-1)
 pub const MAP_WIDTH: u32 = 256;
 /// ASCII map width in characters.
 /// type-audit: bare-ok(render-internal)
+/// plumb: pending(wave-1)
 pub const ASCII_WIDTH: u32 = 72;
 /// ASCII map height in characters.
 /// type-audit: bare-ok(render-internal)
+/// plumb: pending(wave-1)
 pub const ASCII_HEIGHT: u32 = 24;
 
 /// Raw RGB pixels of the equirectangular biome map (row-major, top row

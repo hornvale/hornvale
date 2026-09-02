@@ -92,8 +92,10 @@ pub struct Level {
 
 /// Level extent before content is carved into it. Task 1 is unscaled by
 /// rung; later tasks may widen this — see `generate_level_extent`.
+/// plumb: pending(wave-1)
 const BASE_LEVEL_W: i32 = 40;
 /// See `BASE_LEVEL_W`.
+/// plumb: pending(wave-1)
 const BASE_LEVEL_H: i32 = 24;
 
 /// The extent a level gets, scaled by how deep its rung sits (deeper rungs
@@ -132,6 +134,7 @@ pub struct LeafStyle {
 /// from (Task 6's `generate_descent` overrides this for every rung after
 /// the first).
 /// type-audit: bare-ok(ratio)
+/// plumb: universal(a documented neutral fallback bias used when no previous rung exists to inherit from)
 pub const NEUTRAL_WORKED_BIAS: f64 = 0.5;
 
 fn choose_leaf_style(

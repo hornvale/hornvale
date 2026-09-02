@@ -21,17 +21,20 @@ use std::collections::BTreeMap;
 /// `census-of-figures` study, 1000 seeds): median 6 figures per sky, 6.4%
 /// zero-figure worlds, 66.5% with at least one figure on the ecliptic.
 /// type-audit: pending(wave-1)
+/// plumb: pending(wave-1)
 pub const FIGURE_SEPARATION_DEG: f64 = 7.0;
 
 /// Magnitude-class floor (inclusive) admitted into figure clustering — the
 /// **reference-observer convention** (spec §4). Census-frozen alongside
 /// [`FIGURE_SEPARATION_DEG`] and [`FIGURE_MIN_MEMBERS`].
 /// type-audit: bare-ok(count)
+/// plumb: pending(wave-1)
 pub const FIGURE_MAGNITUDE_FLOOR: u8 = 4;
 
 /// Minimum cluster size to be recognized as a figure. Census-frozen
 /// alongside [`FIGURE_SEPARATION_DEG`] and [`FIGURE_MAGNITUDE_FLOOR`].
 /// type-audit: bare-ok(count)
+/// plumb: pending(wave-1)
 pub const FIGURE_MIN_MEMBERS: usize = 3;
 
 /// A cluster of bright stars forming a notable sky figure: structural only,

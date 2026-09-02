@@ -4,7 +4,7 @@
 # stops being tribal knowledge re-derived each session. `just` is not a repo
 # dependency; this uses `make`, already present everywhere.
 #
-#   make quick        # cheap half: fmt --check + clippy + type-audit
+#   make quick        # cheap half: fmt --check + clippy + type-audit + plumb
 #   make gate-commit  # THE PRE-COMMIT GATE: lints, tripwires, and the sub-floor test tier
 #                     # (local; ~10-16 s on a clean tree, up to ~470 s after a
 #                     # kernel/-layer edit — cost is the edit's blast radius in
@@ -33,17 +33,17 @@
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: decision-block decision-blocks help quick quick-run gate-commit gate-commit-run style-run subfloor-run gate-stage gate-campaign gate-suite-run gate gate-run gate-fast gate-full ci seam-guard seam-guard-list heavy-remote heavy-status heavy-log lane lane-status lane-log lane-roster lane-wait sluice sluice-stage sluice-census sluice-status sluice-log nextest-check prewarm prewarm-run worktree-take fmt fmt-check clippy type-audit type-audit-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor shapecheck install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run game-check game-check-run atlas-check clients-check-run board board-digest board-post board-redact board-sync
+.PHONY: decision-block decision-blocks help quick quick-run gate-commit gate-commit-run style-run subfloor-run gate-stage gate-campaign gate-suite-run gate gate-run gate-fast gate-full ci seam-guard seam-guard-list heavy-remote heavy-status heavy-log lane lane-status lane-log lane-roster lane-wait sluice sluice-stage sluice-census sluice-status sluice-log nextest-check prewarm prewarm-run worktree-take fmt fmt-check clippy type-audit type-audit-report plumb plumb-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor shapecheck install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run game-check game-check-run atlas-check clients-check-run board board-digest board-post board-redact board-sync
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
 		| sort \
 		| awk 'BEGIN {FS = ":.*?## "} {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
 
-quick: ## Cheap half of the gate (fmt-check + clippy + type-audit + type-audit-report)
+quick: ## Cheap half of the gate (fmt-check + clippy + type-audit + type-audit-report + plumb + plumb-report)
 	@bash scripts/timed.sh quick -- make --no-print-directory quick-run
 
-quick-run: fmt-check clippy type-audit type-audit-report
+quick-run: fmt-check clippy type-audit type-audit-report plumb plumb-report
 
 gate-commit: ## THE COMMIT GATE: lints, tripwires and the sub-floor test tier (local; ~10-16 s clean, up to ~470 s after a kernel/-layer edit — see spec §4.2b)
 	@bash scripts/timed.sh gate-commit -- make --no-print-directory gate-commit-run
@@ -57,7 +57,7 @@ gate-commit-run: style-run subfloor-run
 # gate — a third of the whole budget, paid continuously, for a condition that
 # arises exactly once, at worktree-take's `mv`. Task 1 placed the call in
 # scripts/worktree-take.sh instead, which is where the condition is created.
-style-run: fmt-check clippy type-audit type-audit-report
+style-run: fmt-check clippy type-audit type-audit-report plumb plumb-report
 
 # THE SUB-FLOOR TIER. Selection is EXCLUDE-UNKNOWN: a test absent from the
 # roster is not run here, and enters on the next green chamber `gate` phase
@@ -179,7 +179,7 @@ gate-campaign: ## RETIRED (decision 0139) -- the merge queue gates the merge pro
 # that the old top-level `gate` target used to do itself; this target's own
 # job is unchanged from before The Staff — run the cheap checks, then the
 # nextest+doctest body below (gate-run), unchanged.
-gate-suite-run: fmt-check clippy type-audit type-audit-report nextest-check
+gate-suite-run: fmt-check clippy type-audit type-audit-report plumb plumb-report nextest-check
 	@$(MAKE) --no-print-directory gate-run
 
 # The gate's body, split out so `timed.sh` can wrap it. Until this split,
@@ -509,6 +509,31 @@ type-audit-report: ## Fail if the committed type-audit report is stale (regen cm
 	if ! diff -q "$$tmp" docs/audits/type-audit-report.md >/dev/null 2>&1; then \
 		echo "type-audit-report: docs/audits/type-audit-report.md is stale. Regenerate it with:" >&2; \
 		echo "  cargo run --manifest-path tools/type-audit/Cargo.toml -- report > docs/audits/type-audit-report.md" >&2; \
+		exit 1; \
+	fi
+
+# In the gate for the same reason type-audit is (The Plumb, Task 4, decision
+# ledger #29): default-deny over every authored numeric constant in
+# domains/*/src and windows/*/src, ~3.5s warm on this tree (measured
+# 2026-09-02, debug `cargo run`, 681 constants over 290 files) — costlier than
+# type-audit's own ~1.2s but still a source scan with no workspace build, and
+# the whole point of this campaign is that nothing else runs it: unlike
+# seam-guard (whose cost is a scoped TEST RUN per call site, not a scan, and
+# whose declared-survivor grammar makes an occasional manual run adequate),
+# an untagged constant here is a silent regression the campaign's own
+# motivating bug (FATIGUE_RISE) shipped as. A scanner nothing schedules
+# guards nothing.
+plumb: ## Verify every authored numeric constant carries a plumb: rung (default-deny)
+	cargo run --quiet --manifest-path tools/plumb/Cargo.toml -- check
+
+# Freshness of the committed roster, same shape as type-audit-report above.
+plumb-report: ## Fail if the committed plumb roster is stale (regen cmd in the message)
+	@tmp="$$(mktemp /tmp/hv-plumb-report.XXXXXX)"; \
+	trap 'rm -f "$$tmp"' EXIT; \
+	cargo run --quiet --manifest-path tools/plumb/Cargo.toml -- report > "$$tmp"; \
+	if ! diff -q "$$tmp" docs/audits/plumb-roster.md >/dev/null 2>&1; then \
+		echo "plumb-report: docs/audits/plumb-roster.md is stale. Regenerate it with:" >&2; \
+		echo "  cargo run --manifest-path tools/plumb/Cargo.toml -- report > docs/audits/plumb-roster.md" >&2; \
 		exit 1; \
 	fi
 

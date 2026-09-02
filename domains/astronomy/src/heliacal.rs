@@ -13,6 +13,7 @@ use hornvale_kernel::math;
 
 /// Deterministic sample count for the year-long heliacal scan (model card):
 /// fixed regardless of day length, so the schedule never drifts with pins.
+/// plumb: pending(wave-1)
 const SAMPLES: usize = 400;
 
 /// A star's heliacal rising and setting for the year containing the query

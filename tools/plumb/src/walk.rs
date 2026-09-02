@@ -54,7 +54,34 @@ pub const AUDITED_ROOTS: &[&str] = &["domains", "windows"];
 ///
 /// A path type is matched on its **last** segment, so a qualified
 /// `kernel::TickSpan` is judged exactly as a bare `TickSpan` is.
-pub const NON_QUANTITY_TYPES: &[&str] = &["str", "String", "bool", "char"];
+///
+/// **The nine identifier/marker names below (The Plumb, Task 4, ruling R1)
+/// are excluded for a different reason than the four above them.** `str`,
+/// `String`, `bool` and `char` are non-quantity *shapes* — text and truth
+/// values, which no constant of that type could ever be a quantity. `KindId`,
+/// `ConceptKind`, `Realm`, `Segment`, `Eyes`, `AffectLabel`, `ChannelMask`,
+/// `HabitatRealm` and `Transmission` are quantity-shaped newtypes that
+/// nonetheless **name a thing rather than measure one** — "does `kinds::HEARTH`
+/// vary by species?" is a category error, not an open rung question, the same
+/// way asking whether a string or a boolean "varies by species" would be. A
+/// scalar newtype over a number (`TickSpan`, `Gyr`, `WorldTime`) stays a
+/// quantity and stays on the ladder: it measures something, even though it is
+/// also a newtype, so the identifier/marker exclusion does not extend to it.
+pub const NON_QUANTITY_TYPES: &[&str] = &[
+    "str",
+    "String",
+    "bool",
+    "char",
+    "KindId",
+    "ConceptKind",
+    "Realm",
+    "Segment",
+    "Eyes",
+    "AffectLabel",
+    "ChannelMask",
+    "HabitatRealm",
+    "Transmission",
+];
 
 /// The five primitive names the campaign spec's line grep could match.
 ///
@@ -787,5 +814,47 @@ mod tests {
     #[test]
     fn the_default_roots_are_domains_and_windows() {
         assert_eq!(AUDITED_ROOTS, ["domains", "windows"]);
+    }
+
+    /// **Ruling R1 (The Plumb, Task 4, decision ledger #25-#28)**: exactly
+    /// these nine identifier/marker names are excluded, on top of the four
+    /// non-quantity shapes. They name a thing rather than measure one, so a
+    /// rung question about them is a category error. `Self` and the composite
+    /// bundles (`DriveParams`, `LifeSchedule`, …) are explicitly NOT on this
+    /// list — the shape of an initializer does not decide whether a rung is
+    /// meaningful, and four of the five `Self` constants are `MANIKIN`
+    /// reference vectors that are this campaign's subject, not its noise.
+    ///
+    /// Pinned as a set, not a prefix check, so an accidental tenth addition or
+    /// a silently dropped name both fail this test rather than the population
+    /// count six months later.
+    #[test]
+    fn the_nine_r1_identifier_and_marker_names_are_excluded() {
+        let identifiers_and_markers = [
+            "KindId",
+            "ConceptKind",
+            "Realm",
+            "Segment",
+            "Eyes",
+            "AffectLabel",
+            "ChannelMask",
+            "HabitatRealm",
+            "Transmission",
+        ];
+        for name in identifiers_and_markers {
+            assert!(
+                NON_QUANTITY_TYPES.contains(&name),
+                "{name} must be in NON_QUANTITY_TYPES (ruling R1)"
+            );
+        }
+        assert_eq!(
+            NON_QUANTITY_TYPES.len(),
+            4 + identifiers_and_markers.len(),
+            "NON_QUANTITY_TYPES must be exactly the 4 non-quantity shapes plus \
+             the 9 R1 identifiers/markers — no more, no fewer"
+        );
+        // `Self` is a shape, not a name on this list, and stays a quantity:
+        // ruling R1 keeps it and the composite bundles on the ladder.
+        assert!(!NON_QUANTITY_TYPES.contains(&"Self"));
     }
 }

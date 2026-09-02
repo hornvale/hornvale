@@ -241,6 +241,7 @@ const ROCK_WORDS: [&str; 5] = ["regolith", "cover", "basement", "roots", "undern
 /// How many cave systems the per-system transect walks in full. Three: enough
 /// that the section shows a cave system rather than an anecdote, few enough
 /// that the artifact stays reviewable by eye at 20 rows apiece.
+/// plumb: pending(wave-1)
 const TRANSECT_SYSTEMS: usize = 3;
 
 /// The glyph for a floor that exists — read from the shipped answer, and

@@ -9,12 +9,15 @@ use hornvale_kernel::{Geosphere, NearestVertexIndex, Vertex};
 
 /// Raster width, pixels (equirectangular → height is half).
 /// type-audit: bare-ok(render-internal)
+/// plumb: pending(wave-1)
 pub const MAP_WIDTH: u32 = 256;
 /// ASCII map width, characters.
 /// type-audit: bare-ok(render-internal)
+/// plumb: pending(wave-1)
 pub const ASCII_WIDTH: u32 = 72;
 /// ASCII map height, characters.
 /// type-audit: bare-ok(render-internal)
+/// plumb: pending(wave-1)
 pub const ASCII_HEIGHT: u32 = 24;
 
 /// RGB triple for a vertex's stratum (ice → white, refugium → green,

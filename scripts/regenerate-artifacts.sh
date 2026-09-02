@@ -954,6 +954,10 @@ spawn run -p hornvale -- proto goblinoid > book/src/reference/proto-goblinoid-ge
 spawn run -p hornvale -- proto dwarf > book/src/reference/proto-dwarf-generated.md
 spawn run -p hornvale -- proto elf > book/src/reference/proto-elf-generated.md
 spawn run --manifest-path tools/type-audit/Cargo.toml -- report > docs/audits/type-audit-report.md
+# The plumb coverage report (The Plumb, Task 4): every authored numeric
+# constant's rung, the same shape as the type-audit report above and drawn
+# from the same tag grammar. Regenerates cheaply — a source scan, no build.
+spawn run --manifest-path tools/plumb/Cargo.toml -- report > docs/audits/plumb-roster.md
 # The seam-guard roster. STATIC by design — registrations, declarations and
 # call sites, never verdicts (those cost a scoped test run per site, so an
 # artifact carrying them could not be regenerated cheaply). Its job is to put

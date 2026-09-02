@@ -6,16 +6,23 @@ use crate::{LifeSchedule, ThermalStrategy, is_ametabolic};
 use hornvale_kernel::{Mass, Years, math};
 
 // Exponents (discovered; spec §4).
+/// plumb: universal(Kleiber's law exponent, 1932 — a universal biological scaling law, not authored per-species)
 const P_METABOLIC: f64 = 0.75; // Kleiber 1932
+/// plumb: universal(the paired universal metabolic-time scaling exponent)
 const P_TIME: f64 = 0.25; // metabolic-time scaling
 
 // Calibration anchor: 40 kg Endotherm → 60 yr lifespan, 12 yr maturity.
+/// plumb: universal(the fixed reference point the allometric curve is calibrated through, not itself a species value)
 const ANCHOR_MASS_KG: f64 = 40.0;
+/// plumb: universal(the fixed reference point the allometric curve is calibrated through, paired with ANCHOR_MASS_KG)
 const ANCHOR_LIFESPAN_YR: f64 = 60.0;
+/// plumb: universal(the fixed reference point the allometric curve is calibrated through, paired with ANCHOR_MASS_KG)
 const ANCHOR_MATURITY_YR: f64 = 12.0;
 
 // Metabolic normalization (W·kg^-0.75).
+/// plumb: per-species(a class-uniform metabolic normalization constant for every endotherm species — module doc says "per-class coefficients"; per-species is finer than per-class)
 const B0_ENDOTHERM: f64 = 3.4;
+/// plumb: per-species(a class-uniform metabolic coefficient for every ectotherm species — same per-class-not-per-species gap as B0_ENDOTHERM)
 const ECTOTHERM_METABOLIC_FRACTION: f64 = 1.0 / 8.0;
 
 /// The largest value the **class** component (`pace_multiplier`) returns —
@@ -30,6 +37,7 @@ const ECTOTHERM_METABOLIC_FRACTION: f64 = 1.0 / 8.0;
 /// which is what the original instruction was protecting against. A future
 /// *class* needing a larger multiplier is still the case where this constant
 /// must move (The Long Age, spec §3.5).
+/// plumb: universal(a shared saturation ceiling every kind's own class multiplier saturates against — doc: raising it rescales every kind at once)
 const MAX_PACE_MULTIPLIER: f64 = 1.5;
 
 /// Single per-class pace multiplier: shifts lifespan, maturity, and tempo
@@ -100,6 +108,7 @@ pub fn reproductive_tempo(mass: Mass, class: ThermalStrategy, schedule: LifeSche
 
 /// Fraction of the post-maturity reproductive span at which generation length
 /// falls (spec §5). Documented constant.
+/// plumb: universal(a fixed fraction in the universal generation-length formula, spec section 5 — not itself a species value)
 const GENERATION_FRACTION: f64 = 0.3;
 
 /// A species' derived life-history profile (spec §5). Computed on demand from

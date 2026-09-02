@@ -183,6 +183,7 @@ impl MindVector {
     /// no kind is obliged to sit here, and a kind that does, does so by
     /// authorship. See `SocietyVector::MANIKIN` for the full account.
     /// type-audit: bare-ok(ratio)
+    /// plumb: universal(the model's own neutral reference vector — explicitly not a species' value per its own doc: no kind is obliged to sit here)
     pub const MANIKIN: Self = Self {
         threat_response: 0.5,
         deliberation_latency: 0.5,
@@ -239,6 +240,7 @@ impl SocietyVector {
     /// `StatusBasis` have no middle, so `Hierarchic` and `Rank` are a
     /// designated **default** rather than a neutral value.
     /// type-audit: bare-ok(ratio)
+    /// plumb: universal(the model's own reference figure — explicitly not a species, per its extensive doc: a body that is nobody)
     pub const MANIKIN: Self = Self {
         sociality: Sociality::Hierarchic,
         status_basis: StatusBasis::Rank,
@@ -268,6 +270,7 @@ impl PerceptionVector {
     /// As with `SocietyVector::MANIKIN`, `activity` is a default rather than a
     /// neutral value — a schedule has no midpoint.
     /// type-audit: bare-ok(ratio)
+    /// plumb: universal(the model's own neutral reference vector, same as SocietyVector::MANIKIN)
     pub const MANIKIN: Self = Self {
         activity: ActivityCycle::Diurnal,
         night_vision: 0.5,
@@ -313,6 +316,7 @@ pub struct Dispersion {
 /// (`gloom`/`shadow`/`starlit`, `pack_depths`' other output), so this is not
 /// a claim about Draconic's color/dark vocabulary as a whole (spec: The Vigil).
 /// type-audit: bare-ok(ratio)
+/// plumb: universal(deliberately clade-uniform by design — doc: per-dragon divergence would fragment the shared frozen Draconic tongue)
 pub const DRACONIC_NIGHT_VISION: f64 = 0.9;
 
 /// A species' condition-tolerance profile: one response curve per v1
@@ -2422,6 +2426,7 @@ pub enum LifeSchedule {
 
 impl LifeSchedule {
     /// The default every kind carries unless authored otherwise.
+    /// plumb: universal(a documented default every kind carries unless it authors otherwise — not itself a magnitude to vary)
     pub const ALLOMETRIC: LifeSchedule = LifeSchedule::Allometric;
 
     /// A paced schedule, or `None` if `factor` is not finite and strictly
@@ -2580,16 +2585,19 @@ impl BiomeAffinity {
 /// the classifier returns for the kind's own authored reading. Maps to a factor
 /// of exactly `1.00` for every kind, whatever its sovereignty floor.
 /// type-audit: bare-ok(ratio)
+/// plumb: universal(doc states explicitly: maps to exactly 1.00 for every kind — a fixed ladder rung by definition)
 pub const AFFINITY_STRONGHOLD: f64 = 1.00;
 
 /// The affinity ladder's second rung, as a **preference** in `[0, 1]`: one band
 /// out in the classifier's lookup table, still recognisably the kind's country.
 /// type-audit: bare-ok(ratio)
+/// plumb: universal(a fixed rung on the shared affinity ladder, applied identically regardless of kind)
 pub const AFFINITY_NEAR: f64 = 0.70;
 
 /// The affinity ladder's third rung, as a **preference** in `[0, 1]`: two bands
 /// out, or the right climate in the wrong form.
 /// type-audit: bare-ok(ratio)
+/// plumb: universal(a fixed rung on the shared affinity ladder, applied identically regardless of kind)
 pub const AFFINITY_MARGINAL: f64 = 0.45;
 
 impl Component for BiomeAffinity {}
@@ -4086,6 +4094,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
 /// in.
 /// type-audit: bare-ok(identifier-text), bare-ok(ratio: return)
 pub fn fatigue_rise_registry() -> ComponentStore<KindId, f64> {
+    /// plumb: pending(wave-1)
     const RATE: f64 = 0.3;
     [
         (KindId("goblin"), RATE),
@@ -5813,20 +5822,25 @@ fn drow_niche() -> EnvironmentNiche {
 /// Drow's preferred void form: standing structure. AUTHORED — see
 /// [`drow_niche`].
 /// type-audit: bare-ok(ratio)
+/// plumb: per-species(already authored specifically for the drow kind — the correct per-species axis, encoded by name rather than a formal table entry)
 const DROW_PHYSIOGNOMY: f64 = 0.6;
 /// Drow's preferred energy base: a working one. AUTHORED — see [`drow_niche`].
 /// type-audit: bare-ok(ratio)
+/// plumb: per-species(already authored specifically for the drow kind, encoded by name rather than a formal per-species table entry)
 const DROW_ENERGY: f64 = 0.5;
 /// Drow's preferred moisture: fracture-borne seepage. AUTHORED — see
 /// [`drow_niche`].
 /// type-audit: bare-ok(ratio)
+/// plumb: per-species(already authored specifically for the drow kind, encoded by name rather than a formal per-species table entry)
 const DROW_WATER: f64 = 0.4;
 /// Drow's accepted substrate class: bare rock. A class index, never a
 /// magnitude. AUTHORED — see [`drow_niche`].
 /// type-audit: bare-ok(index)
+/// plumb: per-species(already authored specifically for the drow kind, encoded by name rather than a formal per-species table entry)
 const DROW_SUBSTRATE: f64 = 0.6;
 /// Drow's preferred light level: aphotic. AUTHORED — see [`drow_niche`].
 /// type-audit: bare-ok(ratio)
+/// plumb: per-species(already authored specifically for the drow kind, encoded by name rather than a formal per-species table entry)
 const DROW_LIGHT: f64 = 0.0;
 
 #[cfg(test)]

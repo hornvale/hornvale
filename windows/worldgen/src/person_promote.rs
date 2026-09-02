@@ -20,6 +20,7 @@ use crate::{language_of_wc, morph_options};
 /// cast is therefore the sum over peoples of `min(MEMORY_DEPTH, occupations)`,
 /// which grows when the species roster grows and needs no retuning.
 /// type-audit: bare-ok(count)
+/// plumb: pending(wave-1)
 pub const MEMORY_DEPTH: usize = 20;
 
 /// One remembered founder: an identity plus where it came from.

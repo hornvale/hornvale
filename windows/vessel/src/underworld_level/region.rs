@@ -13,12 +13,14 @@ use crate::lattice::Rect;
 /// further splitting. Chosen larger than `lattice::allocate::MIN_CHAMBER_SPAN`
 /// (2) because a leaf here must hold generated dungeon content, not just be
 /// walkable.
+/// plumb: universal(a fixed geometry bound for splittable dungeon regions)
 pub(super) const MIN_REGION_SPAN: i32 = 8;
 
 /// Hard ceiling on composite-region nesting depth (spec §4.2) — past this,
 /// nested regions read as visual noise rather than distinct places sharing
 /// a level. Matches the deepest case in this campaign's own worked example
 /// (cave / mine / outpost).
+/// plumb: universal(a fixed nesting-depth cap matched to the campaign's own worked example)
 pub(super) const MAX_COMPOSITE_DEPTH: u32 = 2;
 
 /// A node in the partition tree.

@@ -15,6 +15,7 @@ use hornvale_kernel::{Facet, Seed};
 /// point of law 1 is that deep addresses are SPARSE, and an unbounded count
 /// would make "every deep address is a place" true by accident.
 /// type-audit: bare-ok(count)
+/// plumb: universal(a v1 structural bound, not a physical or biological quantity)
 pub const MAX_CHAMBERS: usize = 4;
 
 // The collision scan in `structure_at` varies only the LAST base-4 digit

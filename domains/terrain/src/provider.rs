@@ -28,17 +28,20 @@ pub struct GeneratedTerrain {
 /// witnessed the pre-human deep (`[0,1]`, `GeneratedTerrain::crust_age_at`'s
 /// scale).
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 const ANCIENT_CRUST_AGE: f64 = 0.8;
 
 /// Spatial frequency for the pre-human scar presence noise. Distinct from
 /// The Lode's cave (5.0) and deposit (7.0) frequencies sampled off the same
 /// seed, so the three point processes decorrelate on the sphere.
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 const PREHUMAN_SCAR_FREQ: f64 = 11.0;
 
 /// fBm octaves for the pre-human scar presence noise (matches The Lode's
 /// caves/deposits).
 /// type-audit: bare-ok(count)
+/// plumb: pending(wave-1)
 const PREHUMAN_SCAR_OCTAVES: u32 = 4;
 
 /// Presence threshold for the pre-human scar noise test: `sphere_fbm01`
@@ -47,6 +50,7 @@ const PREHUMAN_SCAR_OCTAVES: u32 = 4;
 /// population it gates within — at seed 42 it selects 1 of ~1900
 /// ancient-crust vertices.
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 const PREHUMAN_SCAR_THRESHOLD: f64 = 0.30;
 
 /// Promote a pointwise `Aquifer` reading to `Spring`: `hydrogeology`

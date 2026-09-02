@@ -148,6 +148,7 @@ pub struct DriveParams {
 /// spans a few days. (The old `sated` felt-state threshold is retired — since
 /// The Temperament, `Session::needs` renders the affect read, spec §7, not a
 /// bare thirst scalar.)
+/// plumb: per-species(one authored thirst/foraging drive rate for every species — the same shape FATIGUE_RISE was before its per-species conversion)
 pub const SUSTENANCE: DriveParams = DriveParams {
     rise: 0.15,
     act: 0.85,
@@ -160,6 +161,7 @@ pub const SUSTENANCE: DriveParams = DriveParams {
 /// reaches water on any normal errand resets `last_drank` long before this, so
 /// only one truly stuck — boxed in, or seeking water that isn't there — ever
 /// despairs. One authored judgment call (spec §8).
+/// plumb: pending(wave-1)
 const HELPLESS_ONSET_DAYS: f64 = 15.0;
 
 /// The helplessness PROBE period, in days: a helpless creature abandons the
@@ -168,6 +170,7 @@ const HELPLESS_ONSET_DAYS: f64 = 15.0;
 /// recovery, remains possible. This is what makes the scar "reverse slowly"
 /// (the `AffectLabel::Helpless` contract) rather than trap the creature
 /// permanently. One authored judgment call.
+/// plumb: pending(wave-1)
 const HELPLESS_PROBE_DAYS: f64 = 5.0;
 
 /// Whether a creature has learned helplessness at `day` — its survival drive
@@ -204,6 +207,7 @@ fn learned_helplessness(last_drank: WorldTime, day: WorldTime) -> bool {
 /// this < act`, so the effective threshold stays positive). The manikin's
 /// neutral midpoint (`time_horizon == 0.5`) thus leads by one day; a myopic species
 /// (`0`) leads by none, exactly the pre-anticipation model.
+/// plumb: universal(the shared anchor scale that the already-per-individual time_horizon multiplies against)
 const ANTICIPATION_HORIZON_DAYS: f64 = 2.0;
 
 /// The day a room's furnishing reads its climate at (The Threshold). Any fixed
@@ -216,11 +220,13 @@ const ANTICIPATION_HORIZON_DAYS: f64 = 2.0;
 /// while climate drift is paleoclimate-scale — so the interior is a pure
 /// function of the room in SPACE, and frozen in TIME at day 0. When eras
 /// become playable this constant is the thing to revisit.
+/// plumb: universal(doc states explicitly: any fixed day serves — a read anchor, not a world or species property)
 pub const FURNISHING_REFERENCE_DAY: WorldTime = WorldTime::GENESIS;
 
 /// Below this mean temperature (°C) a room's people build around a fire.
 /// A first-pass value; changing it is a `room/furnishing/v1` epoch.
 /// type-audit: pending(wave-3)
+/// plumb: universal(a fixed climate threshold for room furnishing, not a species property)
 pub const FURNISHING_COLD_C: f64 = 5.0;
 
 /// A room's per-axis HAZARD field in `[0, 1]` (The Bane) — the raw, creature-
@@ -247,6 +253,7 @@ pub struct Hazards {
 
 impl Hazards {
     /// A safe room — no hazard on any axis (the `Terrain::hazards` default).
+    /// plumb: universal(a zero-accumulator default — no hazard on any axis)
     pub const ZERO: Hazards = Hazards {
         uncanny: 0.0,
         heat: 0.0,
@@ -294,13 +301,16 @@ fn threat_value(niche: &ThreatNiche, hazards: &Hazards) -> f64 {
 /// The temperature-niche optimum (°C) below which a creature weights HEAT fully
 /// and the span over which the weight falls off (The Bane): a cold-adapted
 /// creature (low optimum) dreads heat, a warm one shrugs it off. Authored.
+/// plumb: universal(the fixed reference point a creature's own species niche optimum is measured against, not itself a species value)
 const HEAT_FEAR_REF_C: f64 = 30.0;
 /// The temperature-niche optimum (°C) above which a creature weights COLD fully,
 /// and the reference the weight is measured from — a heat-adapted creature (high
 /// optimum) dreads cold. Authored.
+/// plumb: universal(the fixed reference point a creature's own species niche optimum is measured against)
 const COLD_FEAR_REF_C: f64 = 0.0;
 /// The optimum span (°C) over which the derived HEAT/COLD threat weights slide
 /// from `0` to `1`. Authored.
+/// plumb: universal(the shared slope span of the fear-weighting formula, applied uniformly once species niche optima already differ)
 const THERMAL_FEAR_SPAN_C: f64 = 40.0;
 
 /// Derive a creature's [`ThreatNiche`] from what it already is (The Bane — no
@@ -322,6 +332,7 @@ const THERMAL_FEAR_SPAN_C: f64 = 40.0;
 /// coward boldness) still feels it and would flee dense predator territory the
 /// moment it becomes an agent — dormant-but-correct, exactly as The Bane's exotic
 /// threat niches wait for their creatures. Authored.
+/// plumb: universal(the shared scale multiplier in a formula whose inputs already vary by species boldness/diet)
 const PREDATOR_LATENT_SCALE: f64 = 0.5;
 
 /// The PREDATOR dread also derives from nature — from the creature's DIET niche
@@ -494,6 +505,7 @@ pub trait Terrain {
 /// where it stands and hunger never spuriously drives it to wander. The live
 /// `LocaleTerrain` never uses this (it reads the real NPP); it exists so pure
 /// tests that don't care about food are not perturbed by the hunger drive.
+/// plumb: universal(a fallback default for terrain lacking real NPP data, not a species property)
 const DEFAULT_FORAGE: f64 = 1.0;
 
 /// The Tier-0 coarse solar cycle — a latitude-independent fractional-day sun:
@@ -789,11 +801,13 @@ pub const DRANK: &str = "drank";
 /// Ambient temperature (°C) at or below which no heat coupling applies — an
 /// endotherm's thermoneutral zone, and the reference an ectotherm's realized
 /// rate is measured from (The Kindling, spec §3). One authored judgment call.
+/// plumb: universal(the fixed reference temperature the class-specific heat coupling is measured from)
 const THERMONEUTRAL_C: f64 = 25.0;
 
 /// The temperature span (°C) over which the heat coupling reaches full strength
 /// — one `HEAT_SCALE_C` above thermoneutral applies the class's full
 /// multiplier. Authored.
+/// plumb: universal(the shared span of the heat-coupling formula's ramp)
 const HEAT_SCALE_C: f64 = 20.0;
 
 /// Endotherm heat coupling: the extra dehydration fraction at one
@@ -801,17 +815,20 @@ const HEAT_SCALE_C: f64 = 20.0;
 /// fast at `THERMONEUTRAL_C + HEAT_SCALE_C` (≈45 °C). Heat-only (asymmetric):
 /// an endotherm thermoregulates, so cold does not slow its water need below
 /// base. Authored.
+/// plumb: per-species(one heat-coupling coefficient for every endotherm species — currently class-uniform, not species-tuned)
 const ENDOTHERM_HEAT_K: f64 = 1.0;
 
 /// Ectotherm coupling: the realized rate TRACKS ambient (CAP-1), symmetric
 /// about thermoneutral — `1.5` makes a hot ectotherm dehydrate 2.5× at ≈45 °C
 /// and a cold one torpid. Stronger than the endotherm's, because a
 /// cold-blooded creature's whole metabolism follows the climate. Authored.
+/// plumb: per-species(one heat-coupling coefficient for every ectotherm species — currently class-uniform, not species-tuned)
 const ECTOTHERM_K: f64 = 1.5;
 
 /// The floor on the ectotherm rate multiplier: a torpid (deeply cold)
 /// ectotherm's metabolism slows but never stops — it still needs SOME water.
 /// Authored.
+/// plumb: per-species(a torpor-tolerance floor uniform across every ectotherm species — plausibly a per-species trait)
 const ECTOTHERM_FLOOR: f64 = 0.2;
 
 /// The per-day thirst (dehydration) RATE at ambient temperature `temp` (°C) for
@@ -1779,6 +1796,7 @@ impl Drive for Thirst {
 /// genuinely uncomfortable one (urgency past this) does. An authored Stage-1
 /// placeholder; Stage 2's arbitration contextualizes it against the other
 /// drives (soft-Maslow ceilings).
+/// plumb: universal(an arbitration-threshold placeholder for the drive-priority system, not a species trait)
 const THERMAL_ACT: f64 = 0.5;
 
 /// The soft-Maslow ceiling on the thermal (comfort) drive's urgency
@@ -1787,18 +1805,21 @@ const THERMAL_ACT: f64 = 0.5;
 /// thirst (urgency → `1.0`) ignores any cold. The ordering EMERGES from the
 /// ranges — there is no priority table. Authored; contextualized against
 /// future drives as they land.
+/// plumb: universal(the soft-Maslow ceiling ordering constant for the drive-priority system)
 const THERMAL_CEIL: f64 = 0.6;
 
 /// The commitment-mode hysteresis band: a pursued drive engages at its `act`
 /// but only RELEASES once its urgency falls below `act − h`. Prevents
 /// boundary-dithering at the threshold (a drive flickering active/inactive tick
 /// to tick as urgency hovers at `act`).
+/// plumb: universal(the anti-dithering hysteresis band shared by every drive's arbitration, an engine-mechanic constant)
 const HYSTERESIS_H: f64 = 0.1;
 
 /// The challenger switch margin `δ`: while pursuing one drive, the NPC only
 /// abandons it for a challenger whose best-action utility exceeds the
 /// incumbent's by more than this. Prevents mid-errand flip-flop between two
 /// near-equal drives (the errand is sticky, not twitchy).
+/// plumb: universal(the shared challenger-switch margin for every drive's arbitration, an engine-mechanic constant)
 const SWITCH_MARGIN: f64 = 0.1;
 
 /// Thermal comfort — a FLOW (reactive, state-satisfied) drive, a second
@@ -2215,6 +2236,7 @@ pub const SLEPT: &str = "slept";
 /// The solar-altitude band (degrees around the horizon) a CREPUSCULAR creature
 /// is awake in — dawn and dusk, when the sun is near the horizon (civil
 /// twilight). Diurnal wakes above it, nocturnal below (The Slumber Tier-1).
+/// plumb: per-species(the crepuscular activity window's width, uniform across every crepuscular species)
 const TWILIGHT_DEG: f64 = 6.0;
 
 /// Fatigue REPAID per LOCAL day ASLEEP (The Wicket, Task 7; on the LOCAL day
@@ -2282,6 +2304,7 @@ const TWILIGHT_DEG: f64 = 6.0;
 /// A rate large enough to clear ANY debt in one night would be the old flag
 /// wearing a rate's clothes; this one is not — a half-night repays half the
 /// scale, so a body three days awake still wakes in debt.
+/// plumb: per-species(the recovery half symmetric to the now-per-species RISE rate is still one constant for every species — the doc's own text names this asymmetry)
 const FATIGUE_FALL: f64 = 1.0;
 
 /// Fatigue repaid per LOCAL day spent in a CONSCIOUS rest (The Wicket, Task 8;
@@ -2328,6 +2351,7 @@ const FATIGUE_FALL: f64 = 1.0;
 /// doc asserts it must clear, and the nap fragmentation this task exists to
 /// remove would return with every test still green. The calibration test states
 /// that inequality directly.
+/// plumb: per-species(authored as half of FATIGUE_FALL, so it inherits the same per-species gap: one recovery rate for every species)
 const REST_FALL: f64 = 0.5;
 
 /// The ORDER half of [`REST_FALL`]'s bracket, as a compile-time assertion
@@ -2395,6 +2419,7 @@ const _: () = assert!(
 /// registered, until the final review, with the bound in the OPPOSITE
 /// direction ("a fast-rotating world"), borrowed from the unconverted-fall-term
 /// bug it sat beside.
+/// plumb: per-world(doc's own analysis: a fixed wall-clock span that breaks for slow-rotating worlds — must scale with the world's local day length L; Task 5 converts this)
 const REST_BOUT: TickSpan = TickSpan::from_ticks(WorldTime::TICKS_PER_STD_DAY / 4);
 
 /// The shortest span that counts as SLEEPING rather than dozing:
@@ -2433,6 +2458,7 @@ const REST_BOUT: TickSpan = TickSpan::from_ticks(WorldTime::TICKS_PER_STD_DAY / 
 /// that in-phase instants exist whose cycle is SHORTER than this floor — the
 /// eight cases above, which under the old rule were the defect and under the
 /// new one are the reason the gate is needed.
+/// plumb: per-world(the same wall-clock/local-day-length TickSpan shape as REST_BOUT — a world-scale property)
 const SLEEP_BOUT: TickSpan = TickSpan::from_ticks(WorldTime::TICKS_PER_STD_DAY * 2 / 5);
 
 /// The exclusive upper bound, in TICKS, on a rest span that survives
@@ -2456,17 +2482,21 @@ const SLEEP_BOUT: TickSpan = TickSpan::from_ticks(WorldTime::TICKS_PER_STD_DAY *
 /// function, so nothing in the sim can approach the bound; the guard exists for
 /// [`record_rest`], which is `pub` and takes an arbitrary span from a caller
 /// this crate does not control.
+/// plumb: universal(the quantizer's own precision bound, decision 0033 — fixed by the serialization format for every world)
 const REST_SPAN_EXACT_LIMIT: i64 = 100_000_000;
 /// The fatigue seek threshold: at/above this, the creature seeks rest. Mirrors
 /// thirst's `act`.
+/// plumb: universal(a dimensionless arbitration threshold on normalized urgency, uniform by design like the other act/ceil thresholds)
 const FATIGUE_ACT: f64 = 0.85;
 /// The soft-Maslow ceiling on fatigue's urgency contribution — below survival
 /// (like thermal comfort), so a creature dying of thirst does not sleep through
 /// it, but a mildly thirsty tired one rests. Authored.
+/// plumb: universal(a dimensionless soft-Maslow ceiling on normalized urgency)
 const FATIGUE_CEIL: f64 = 0.6;
 
 /// The thirst urgency past which the wake-gate is OVERRIDDEN — a creature this
 /// close to dying of thirst WAKES to drink (spec §3). Authored.
+/// plumb: universal(a dimensionless arbitration override threshold on normalized urgency)
 const SURVIVAL_OVERRIDE: f64 = 0.9;
 
 /// Whether a creature of `activity` is awake at `day` — a pure function of its
@@ -2478,6 +2508,7 @@ const SURVIVAL_OVERRIDE: f64 = 0.9;
 /// tick span so the scan walks the lattice itself rather than re-rounding an
 /// accumulating `f64` day at every step. Fine enough to catch a crepuscular
 /// creature's narrow dawn/dusk bands.
+/// plumb: universal(the tick-scan resolution for the wake-transition search, an algorithm-internal quantity)
 const WAKE_SCAN_STEP: TickSpan = TickSpan::from_ticks(WorldTime::TICKS_PER_STD_DAY / 20);
 
 /// A representative AWAKE fraction of the day for `activity` — where the health
@@ -2513,7 +2544,9 @@ pub(crate) fn next_awake_day(
     // The scan's bound and its give-up fallback as EXACT spans: `day + 1.5`
     // and `day + 1.0` were instant-plus-duration all along, and an instant is
     // a tick count now, so the durations are spans rather than float days.
+    /// plumb: universal(the wake-scan loop's own bound, an algorithm-internal quantity)
     const SCAN_LIMIT: TickSpan = TickSpan::from_ticks(WorldTime::TICKS_PER_STD_DAY * 3 / 2);
+    /// plumb: universal(a direct alias of the kernel's own std-day tick constant)
     const ONE_DAY: TickSpan = TickSpan::from_ticks(WorldTime::TICKS_PER_STD_DAY);
     let limit = day + SCAN_LIMIT;
     let mut t = day + WAKE_SCAN_STEP;
@@ -2729,6 +2762,7 @@ impl BoutKind {
 /// again is the plainest reading of "prefer" that a body sleeping in the road
 /// can still live with.
 /// type-audit: bare-ok(ratio)
+/// plumb: universal(a uniform multiplier on every rest/sleep act's own rate, bounded rather than derived — not a species property)
 const AFFORDED_REST_GAIN: f64 = 1.5;
 
 /// The grade is a PREFERENCE, so it must actually prefer. A value at or below
@@ -3279,6 +3313,7 @@ fn creature_fatigue(
 /// (`xorn` included, at an EXPLICIT `0.0`), so this fallback is reserved for
 /// a species the registry has never heard of at all, not for a stated
 /// absence.
+/// plumb: universal(the documented neutral fallback for the per-species registry's own miss case, analogous to a manikin reference default)
 const DEFAULT_FATIGUE_RISE: f64 = 0.3;
 
 /// The authored fatigue-rise roster's shape, mirroring `clock::Biosphere`:
@@ -3437,6 +3472,7 @@ pub const EATEN: &str = "eaten";
 /// thirst it couples to metabolism and room temperature through the SAME
 /// `rise_at`/path-integral machinery (The Kindling, a second consumer), so a
 /// hot endotherm burns — and hungers — faster. Authored.
+/// plumb: per-species(one authored hunger drive rate for every species — the same shape FATIGUE_RISE was before its per-species conversion)
 const HUNGER: DriveParams = DriveParams {
     rise: 0.1,
     act: 0.85,
@@ -3447,6 +3483,7 @@ const HUNGER: DriveParams = DriveParams {
 /// forage toward a richer neighbour. Low, so any ordinarily productive room
 /// (an inhabited settlement's surroundings) feeds; only genuine barrens
 /// (desert/ice, a planted wasteland) starve. Authored.
+/// plumb: universal(a terrain food-value threshold — a property of the room, not the creature)
 const EAT_THRESHOLD: f64 = 0.15;
 
 /// The scale of the prey-presence term in [`food_value`] (The Teeth) — how
@@ -3459,6 +3496,7 @@ const EAT_THRESHOLD: f64 = 0.15;
 /// beast (`ANIMAL_PREY`-dominant) on barren wild land, drawn toward the herds.
 /// Sized so that draw is real without swamping the ordinary productivity term.
 /// Authored; the woken-hunt analog of The Quarry's `PREDATOR_LATENT_SCALE`.
+/// plumb: universal(the shared scale of a formula whose per-species diet weight already varies)
 const PREY_LATENT_SCALE: f64 = 1.0;
 
 /// The food-value of a room FOR a specific creature (The Provender, spec §1):
@@ -3650,12 +3688,14 @@ impl<'a> Drive for Hunger<'a> {
 /// The urgency at/above which a present threat WAKES a sleeping creature (The
 /// Dread) — a hazard this close overrides the wake-gate, like dying of thirst.
 /// Authored, matching thirst's [`SURVIVAL_OVERRIDE`] posture.
+/// plumb: universal(a dimensionless arbitration override threshold on normalized urgency)
 const DANGER_OVERRIDE: f64 = 0.5;
 
 /// The threat seek threshold: at/above this the danger drive engages (flees).
 /// Lower than the sustenance drives' `act` (0.85) — fear is reactive and
 /// prompt, so even a moderate threat is felt and acted on, not endured. One
 /// authored judgment call.
+/// plumb: universal(a dimensionless arbitration threshold on normalized urgency)
 const DANGER_ACT: f64 = 0.3;
 
 /// The LATENT scale on BORROWED alarm (The Alarm) — the fear-contagion twin of
@@ -3668,6 +3708,7 @@ const DANGER_ACT: f64 = 0.3;
 /// reads as a full-strength threat). Byte-identity is STRUCTURAL, not scale-
 /// tuned: the settled peoples never reach primary danger distress, so the field
 /// is empty on seed 42 regardless of scale.
+/// plumb: universal(a shared scale on borrowed-alarm contagion; byte-identity independent of its value per the doc)
 const ALARM_SCALE: f64 = 1.0;
 
 /// Danger — the fifth drive (The Dread), the avoidance twin of hunger: a FLOW
@@ -3722,6 +3763,7 @@ pub struct Danger<'a> {
 /// its flee/stand midpoint, the manikin's neutral value; goblin's authored row
 /// (and every psyche-less beast's fallback) sits here, so this centering keeps
 /// them byte-identical.
+/// plumb: universal(the manikin's own neutral reference boldness — species differences already flow through MindVector.threat_response)
 const BOLDNESS_STEADY: f64 = 0.5;
 
 /// The boldness scaling factor `2·(1 − boldness)` — `×2` at coward `0`, `×1`
@@ -3982,17 +4024,20 @@ fn flee_step(
 /// Belonging) — a creature this many mesh-hops from its people (while home is
 /// still REACHABLE) feels maximal isolation. Authored, modest so a creature that
 /// strays a little from home already feels the homeward pull.
+/// plumb: per-species(the loneliness saturation distance, uniform across every species' own territorial range)
 const LONELY_SCALE_HOPS: f64 = 20.0;
 
 /// The loneliness seek threshold: at/above this the social drive engages (heads
 /// home). Modest, like thermal's — a creature a little way from home feels the
 /// pull but a comfortable range around home is untroubled. Authored.
+/// plumb: universal(a dimensionless arbitration threshold on normalized urgency)
 const SOCIAL_ACT: f64 = 0.5;
 
 /// The soft-Maslow ceiling on the social (affiliation) drive's urgency
 /// contribution — COMFORT-tier (below survival, like thermal/fatigue), so a
 /// thirsty/hungry/frightened creature attends to survival first and drifts home
 /// only once those are met. Authored.
+/// plumb: universal(a dimensionless soft-Maslow ceiling on normalized urgency)
 const SOCIAL_CEIL: f64 = 0.6;
 
 /// The loneliness a creature feels given the A* plan home: the plan's hop-length
@@ -5179,6 +5224,7 @@ pub fn alarm_field_memo(
 /// pathological distance genuinely gives up (`Intent::Hold`) rather than
 /// paying for a global search — the one search-budget judgment call
 /// (spec §8).
+/// plumb: universal(the GOAP search's node-expansion budget, an algorithm/engine constant)
 const PLAN_BUDGET: usize = 1_000;
 
 /// Catch-up's own step cap (The Threshold task 7, spec §5.3): the most
@@ -5203,12 +5249,14 @@ const PLAN_BUDGET: usize = 1_000;
 /// occurred. A creature far heavier than reference pays a longer hop and so
 /// reaches the cap sooner, which is the action clock's intent, not a
 /// regression: a bear crosses a room more slowly than a person does.
+/// plumb: universal(reuses PLAN_BUDGET's own value for a short local-journey replay cap, an algorithm constant)
 const CATCH_UP_STEP_CAP: usize = PLAN_BUDGET;
 
 /// The per-NPC step cap on `DriveMovements::step`'s inner loop — the
 /// strict-progress guard's backstop: even if a decision loop somehow failed
 /// to advance `day` on every iteration, this bounds total work per tick
 /// (termination guarantee, The Foresight T3 review).
+/// plumb: universal(a termination-guarantee backstop on the per-tick decision loop, an algorithm safety bound)
 const MAX_STEPS: usize = 10_000;
 
 /// [`warmth_at`]'s node-expansion budget for a REAL derived interior (The
@@ -5223,6 +5271,7 @@ const MAX_STEPS: usize = 10_000;
 /// layer has already proven safe rather than inventing a new one. At 8×
 /// headroom over the worst-case hop count, no reachable hearth can ever be
 /// silently missed for want of budget.
+/// plumb: universal(a routing-depth budget over a fixed 9-anchor interior graph, an algorithm constant)
 const INTERIOR_WARMTH_BUDGET: usize = 64;
 
 /// The room `pos` is in, derived (`interior_of`), paired with the anchor a
@@ -7320,6 +7369,7 @@ fn default_diet_niche() -> ResourceVector {
 /// registry (defensive — `species` always resolves to at least the `goblin`
 /// default, which IS registered). A wide, mild, low-devotion band so the
 /// thermal drive of an unknown species stays quiescent rather than flailing.
+/// plumb: universal(the documented defensive fallback for a species missing from the biosphere registry, not itself a species value)
 const DEFAULT_TEMPERATURE_NICHE: ConditionResponse = ConditionResponse {
     optimum: 15.0,
     width: 25.0,

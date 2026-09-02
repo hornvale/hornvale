@@ -15,6 +15,7 @@ use hornvale_scene::{Mark, Sight, SurroundsScene, surrounds_scene_colored_in, su
 /// The chart's sense radius, in BFS rings. A constant this slice; the seam
 /// for a per-species radius is `Body::perception` (EXP-3), untouched here.
 /// type-audit: bare-ok(count)
+/// plumb: per-species(doc states explicitly: the seam for a per-species radius is Body::perception EXP-3, untouched here)
 pub const PURVIEW_RADIUS: u32 = 4;
 
 /// The salience of an NPC standing on a cell — above every settlement mark
@@ -23,6 +24,7 @@ pub const PURVIEW_RADIUS: u32 = 4;
 /// this relationship as a test rather than a coincidence of two constants
 /// living in different crates).
 /// type-audit: bare-ok(index)
+/// plumb: universal(a fixed salience-ordering constant relative to settlement marks, pinned by a cross-crate ordering test)
 pub(crate) const AGENT_SALIENCE: u32 = 5;
 
 /// What a creature's mark calls itself, on the walk-band chart and — since The

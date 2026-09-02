@@ -96,21 +96,25 @@ fn approach_ease(graph: &ConnectionGraph, vertex: Vertex) -> f64 {
 /// Symmetric with `DEF_MAX` about 1.0, which is what lets the centred form
 /// put the median approach at exactly 1.0 (spec §2.3).
 /// type-audit: bare-ok(ratio: DEF_MIN)
+/// plumb: pending(wave-1)
 const DEF_MIN: f64 = 0.75;
 /// AUTHORED prior: the defensibility an infinitely dear approach tends to.
 /// type-audit: bare-ok(ratio: DEF_MAX)
+/// plumb: pending(wave-1)
 const DEF_MAX: f64 = 1.25;
 /// CALIBRATED (Task 2d): the pooled median `cost_exponent` over 756,510
 /// ordered pairs across seeds 1..=30, measured before any behavioural readout
 /// existed and frozen thereafter (spec §4.4). Centring here is what makes the
 /// MEDIAN approach in the world map to exactly 1.0. A save-format constant.
 /// type-audit: bare-ok(ratio: DEF_CENTER)
+/// plumb: pending(wave-1)
 const DEF_CENTER: f64 = 6.256709;
 /// AUTHORED: how many log-cost units the transition spans. A SHAPE parameter,
 /// not a scale of the quantity — the quantity's scale is `DEF_CENTER` — so
 /// this is authored at 1.0 rather than fitted. At this value the land
 /// population grades across 0.376, five times spec §4.4's trigger threshold.
 /// type-audit: bare-ok(ratio: DEF_SCALE)
+/// plumb: pending(wave-1)
 const DEF_SCALE: f64 = 1.0;
 
 /// How well `to` is defended against an approach from `from`: a strictly
@@ -201,27 +205,33 @@ pub fn weakest_point_defensibility(graph: &ConnectionGraph, vertex: Vertex) -> f
 
 /// Per-capita resource need. Pressure is `population * NEED / eff_capacity`;
 /// kept an explicit constant so the pressure formula reads as the algorithm.
+/// plumb: pending(wave-1)
 const NEED: f64 = 1.0;
 /// Base per-epoch growth rate, damped logistically by `(1 - pressure)` so a
 /// community asymptotes at its vertex's effective capacity. Crowding is a growth
 /// term only: it no longer starts fights (The Tumult), it merely decides how
 /// big a community gets and, past `COLLAPSE_PRESSURE`, whether it starves.
+/// plumb: pending(wave-1)
 const GROWTH_RATE: f64 = 0.2;
 /// Fraction of a community's population that survives an orderly migration to
 /// a new vertex (the rest is lost on the journey).
+/// plumb: pending(wave-1)
 const MIGRATE_SURVIVAL: f64 = 0.9;
 /// How much stronger a raider must be than its target to attack (the dominance
 /// margin). A save-format constant: changing it re-fights every world's
 /// history.
+/// plumb: pending(wave-1)
 const RAID_MARGIN: f64 = 1.5;
 /// Fraction of population destroyed outright in a raid — applied to the raider
 /// AND the loser alike, because spec §4.3's war is lossy in the *combined*
 /// population: value leaves the system rather than being transferred. This is
 /// the primary dissipation, and it is what makes a serial raider grind itself
 /// down instead of snowballing.
+/// plumb: pending(wave-1)
 const WAR_LOSS: f64 = 0.3;
 /// Population below which a broken, displaced remnant dies out rather than
 /// cascading further — the avalanche cutoff, and the second dissipation.
+/// plumb: pending(wave-1)
 const VIABLE_MIN: f64 = 2.0;
 /// How much more a HELD vertex is worth than an empty vertex of equal effective
 /// capacity, to a people looking for a home (spec §4.1): pioneering unknown
@@ -231,6 +241,7 @@ const VIABLE_MIN: f64 = 2.0;
 /// branching ratio a measurable quantity rather than a structurally-zero one.
 /// A named starting value, not a fitted one. A save-format constant: changing
 /// it re-fights every world's history.
+/// plumb: pending(wave-1)
 const SETTLED_PREMIUM: f64 = 0.25;
 /// Pressure at or above which a community has NO SPOILS: it already eats
 /// everything its own land yields, so there is no surplus for a conqueror to
@@ -240,6 +251,7 @@ const SETTLED_PREMIUM: f64 = 0.25;
 /// positive, i.e. where the file's own model says the land no longer feeds
 /// the people on it. Well below `COLLAPSE_PRESSURE`: a community can be
 /// worthless to a raider long before it starves out altogether.
+/// plumb: pending(wave-1)
 const NO_SPOILS_PRESSURE: f64 = 1.0;
 /// Drawn `threat_response` (flee 0 ↔ stand 1) at or above which a **community**
 /// takes the initiative at all — spec §4.2a's durable inhibition.
@@ -285,6 +297,7 @@ const NO_SPOILS_PRESSURE: f64 = 1.0;
 /// now happens per settlement.
 ///
 /// A save-format constant: changing it re-fights every world's history.
+/// plumb: pending(wave-1)
 const RAID_DISPOSITION_MIN: f64 = 0.6;
 /// Pressure at or above which a community starves out (Famine). `pub` so the
 /// demography calibration (`windows/lab/tests/gathering_calibration.rs`) can
@@ -296,10 +309,13 @@ const RAID_DISPOSITION_MIN: f64 = 0.6;
 /// authority on what the inequality does and does not establish (it is a
 /// runaway detector, not a per-community bound); do not restate it here.
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 pub const COLLAPSE_PRESSURE: f64 = 2.0;
 /// Pressure below which a comfortable community may throw off a daughter.
+/// plumb: pending(wave-1)
 const DAUGHTER_MAX_PRESSURE: f64 = 0.7;
 /// Per-epoch probability a comfortable community founds a daughter.
+/// plumb: pending(wave-1)
 const DAUGHTER_PROB: f64 = 0.06;
 /// Prospectivity at or above which ground is worth *working* — the floor a
 /// candidate site must clear before an expansion onto it can be a mine (The
@@ -327,6 +343,7 @@ const DAUGHTER_PROB: f64 = 0.06;
 /// at or above `0.24` and at or above `0.30` differ by 0.00 / 0.08 / 0.00
 /// percentage points, because almost nothing lives between them.
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 pub const ORE_CUT: f64 = 0.24;
 /// How many rings outward from its parent a working may be founded — the
 /// **supply bound** (The Winze, spec amendment E). A working is not sited by
@@ -394,6 +411,7 @@ pub const ORE_CUT: f64 = 0.24;
 /// [`crate::streams::SETTLEMENT_WORKING`] keeps its key and its epoch — a ring
 /// scan changes which vertex is *chosen*, never how the draw is *derived*.
 /// type-audit: bare-ok(count)
+/// plumb: pending(wave-1)
 pub const WORKING_REACH: u32 = 3;
 /// Metres of working **one person at the Neolithic horizon** drives in one
 /// epoch (The Winze, spec §4.2). A working's advance each epoch is
@@ -446,6 +464,7 @@ pub const WORKING_REACH: u32 = 3;
 /// distribution with a median of two epochs *should* have, and it is Task 5's
 /// to reckon with rather than this constant's to remove.
 /// type-audit: bare-ok(diagnostic-value)
+/// plumb: pending(wave-1)
 const DELVE_M_PER_PERSON_EPOCH: f64 = 0.5;
 /// The mean distance, in metres of working advanced, that a delving cuts
 /// before it breaks through into something and ends (The Winze, spec §4.3).
@@ -505,13 +524,16 @@ const DELVE_M_PER_PERSON_EPOCH: f64 = 0.5;
 /// a rate to land a convenient count would launder a tuned constant through a
 /// sample-size argument.
 /// type-audit: bare-ok(diagnostic-value)
+/// plumb: pending(wave-1)
 const BREACH_FREE_PATH_M: f64 = 3000.0;
 /// How much a unit of stored wealth is worth as raiding strength, relative to
 /// a head of population. Walls, retainers and granaries are strength the local
 /// land does not have to feed.
+/// plumb: pending(wave-1)
 const STORE_WEIGHT: f64 = 0.5;
 /// The fraction of a community's stores that survives each epoch — a hoard is
 /// not immortal.
+/// plumb: pending(wave-1)
 const STORE_DECAY: f64 = 0.95;
 
 /// The sub-year grain at which a community's granary integrates (The Granary
@@ -523,6 +545,7 @@ const STORE_DECAY: f64 = 0.95;
 /// const names both grains. Not itself a save-format constant: it changes
 /// intra-year timing only, and the annual totals it redistributes are pinned
 /// by test (`a_growth_year_nets_zero_on_the_granary`).
+/// plumb: pending(wave-1)
 const PHASES_PER_YEAR: usize = 12;
 /// The share of a subordinate vertex's effective capacity a patron demands per
 /// epoch. The dominant taxes what it can SEE — the land, never the granary
@@ -543,6 +566,7 @@ const PHASES_PER_YEAR: usize = 12;
 /// adaptive loop to move it. Not fitted to any measured outcome; the coupling
 /// itself is pinned by
 /// `the_assessment_can_actually_bind_against_the_logistic_ceiling`.
+/// plumb: pending(wave-1)
 const ASSESS_RATE: f64 = 0.025;
 /// The ceiling on an assessment, as a multiple of the subordinate vertex's
 /// effective capacity: no patron may demand more than the land could ever
@@ -550,6 +574,7 @@ const ASSESS_RATE: f64 = 0.025;
 /// relation forms — `ASSESS_RATE` is well under it — but it is the bound the
 /// deferred adaptive-demand loop (§4.3) raises an assessment against, so the
 /// clamp is written where the assessment is set rather than bolted on later.
+/// plumb: pending(wave-1)
 const ASSESS_MAX: f64 = 0.5;
 /// How fast a patron corrects its demand toward its subordinate's health — a
 /// vassal that grew can bear more, one that shrank is being over-milked (spec
@@ -566,6 +591,7 @@ const ASSESS_MAX: f64 = 0.5;
 /// a non-growing oscillation inside the clamp, which is the demonstration; this
 /// comment is only its signpost. A save-format constant: changing it re-fights
 /// every world's history.
+/// plumb: pending(wave-1)
 const ADAPT_RATE: f64 = 0.2;
 /// The population a vassal may be bled down TOWARD but never through (spec
 /// §4.2b). A greedy patron shrinks its vassal — that is what closes the secular
@@ -581,12 +607,14 @@ const ADAPT_RATE: f64 = 0.2;
 /// only when war, famine or climate hurt the vassal, never because the patron
 /// over-extracted. A save-format constant: changing it re-fights every world's
 /// history.
+/// plumb: pending(wave-1)
 const FARM_FLOOR: f64 = VIABLE_MIN;
 /// The most a maximally insular people withholds from its patron: the share of
 /// its surplus a people with `in_group_radius == 0.0` keeps out of sight (spec
 /// §4.2's concealment term). A maximally expansive people (`1.0`) conceals
 /// nothing. A save-format constant: changing it re-fights every world's
 /// history.
+/// plumb: pending(wave-1)
 const CONCEAL_MAX: f64 = 0.5;
 /// The horizon a patron whose people carries no authored `time_horizon` is
 /// read at — the middle of the axis (spec §4.3a), never its bottom.
@@ -602,6 +630,7 @@ const CONCEAL_MAX: f64 = 0.5;
 /// midpoint, which is also where two of the four authored settling peoples
 /// (goblin, hobgoblin) already sit, so a bake handed no psyche data behaves
 /// like a median patron rather than like the cruellest one.
+/// plumb: pending(wave-1)
 const NEUTRAL_HORIZON: f64 = 0.5;
 /// How many OTHER vassals a patron must hold for its effective horizon to fall
 /// to half its authored one — spec §4.3c's portfolio effect, expressed as the
@@ -646,6 +675,7 @@ const NEUTRAL_HORIZON: f64 = 0.5;
 /// biggest holder becomes about as short-sighted as a genuinely short-sighted
 /// people, never more so than any of them. A save-format constant: changing it
 /// re-fights every world's history.
+/// plumb: pending(wave-1)
 const PORTFOLIO_HALVING: f64 = 3.0;
 /// The share of itself a vassal hands over in ONE epoch above which it stops
 /// paying and **leaves** — spec §4.3d's flight, the first of the two answers
@@ -676,6 +706,7 @@ const PORTFOLIO_HALVING: f64 = 3.0;
 /// cost, and not fitted to any measured outcome — the cascade histogram was
 /// not consulted in picking it. A save-format constant: changing it re-fights
 /// every world's history.
+/// plumb: pending(wave-1)
 const FLIGHT_BURDEN: f64 = GROWTH_RATE;
 
 /// The lower edge of the band where a fresh relation can pay for itself, as a
@@ -720,14 +751,19 @@ fn crash_basin_fraction() -> f64 {
 /// genesis seeding draws proto-sites from. Kept well above the total genesis
 /// community count so every people finds its own vacant sites rather than
 /// being starved by peoples seeded before it.
+/// plumb: pending(wave-1)
 const GENESIS_TOP_VERTICES: usize = 64;
 /// Fewest / most proto-sites a single people seeds (drawn per people).
+/// plumb: pending(wave-1)
 const GENESIS_SITES_MIN: u32 = 2;
 /// Most proto-sites a single people seeds (inclusive upper bound of the draw).
+/// plumb: pending(wave-1)
 const GENESIS_SITES_MAX: u32 = 4;
 /// Starting population of a genesis proto-community.
+/// plumb: pending(wave-1)
 const GENESIS_POP: f64 = 10.0;
 /// Starting population of a daughter community.
+/// plumb: pending(wave-1)
 const DAUGHTER_POP: f64 = 8.0;
 /// How strongly river proximity sharpens site selection (Task 5b). Genesis
 /// candidate ranking and daughter founding — the two paths that OPEN new
@@ -748,16 +784,19 @@ const DAUGHTER_POP: f64 = 8.0;
 /// the near-river fraction because capacity carries most of the signal, so
 /// this stays deliberately small. A save-format constant: changing it
 /// re-places every world.
+/// plumb: pending(wave-1)
 const RIVER_SITE_WEIGHT: f64 = 2.0;
 /// Hard cap on a single relaxation cascade's BFS depth (displacement chain
 /// length) — a safety bound against a pathological unbounded chain, not a
 /// physical parameter. [`Bake::relocate`] reads it: a roll-downhill that
 /// reaches this depth drops its last remnant rather than recursing further.
 /// type-audit: bare-ok(count)
+/// plumb: pending(wave-1)
 pub const CASCADE_DEPTH_CAP: u32 = 256;
 /// Number of log2 bins in [`BakeCensus::cascade_hist`]: bin `i` counts
 /// cascades whose size falls in `[2^i, 2^(i+1))`, covering sizes 1, 2, 3-4,
 /// 5-8, … up to 2^11+.
+/// plumb: pending(wave-1)
 const CASCADE_BINS: usize = 12;
 
 /// A handle to a community *inside the bake*, and nowhere else.

@@ -164,6 +164,7 @@ fn harness_registry() -> ConceptRegistry {
 
 /// A comfortable temperature niche (wide tolerance) — used where the scenario
 /// exercises thirst alone and thermal must stay quiet.
+/// plumb: pending(wave-1)
 const MILD_NICHE: ConditionResponse = ConditionResponse {
     optimum: 15.0,
     width: 10.0,
@@ -172,6 +173,7 @@ const MILD_NICHE: ConditionResponse = ConditionResponse {
 
 /// A narrow-tolerance niche for the thermally-stricken creature: a small band
 /// around a cool optimum, so a hot planted room reads far past tolerance.
+/// plumb: pending(wave-1)
 const COOL_NICHE: ConditionResponse = ConditionResponse {
     optimum: 15.0,
     width: 5.0,
@@ -181,12 +183,14 @@ const COOL_NICHE: ConditionResponse = ConditionResponse {
 /// A blistering planted room temperature (°C) — far past `COOL_NICHE`'s
 /// tolerance, so thermal urgency pins to its ceiling and the room is
 /// unlivable.
+/// plumb: pending(wave-1)
 const BLISTERING_C: f64 = 60.0;
 
 /// A heat-adapted niche: comfortable across a wide band up to ~65 °C, so a hot
 /// waste registers NO thermal discomfort — isolating The Kindling's *thirst*
 /// coupling (adaptation sets comfort, not evaporation: a heat-adapted creature
 /// still dehydrates faster in heat).
+/// plumb: pending(wave-1)
 const HEAT_TOLERANT_NICHE: ConditionResponse = ConditionResponse {
     optimum: 45.0,
     width: 20.0,
@@ -196,6 +200,7 @@ const HEAT_TOLERANT_NICHE: ConditionResponse = ConditionResponse {
 /// A hot-but-livable waste temperature (°C) — inside `HEAT_TOLERANT_NICHE` (so
 /// thermal stays quiet) yet well above thermoneutral, so an endotherm's thirst
 /// couples (roughly double rate).
+/// plumb: pending(wave-1)
 const HOT_WASTE_C: f64 = 45.0;
 
 /// The day a passing heat wave breaks — chosen so the spike is unmistakable
@@ -203,10 +208,12 @@ const HOT_WASTE_C: f64 = 45.0;
 /// signature is spike-recover (transient, resilient), distinct from the
 /// stranded creature's chronic persist. The creature is boxed in from day 1, so
 /// this bounds the run just under `CHRONIC_TICKS`.
+/// plumb: pending(wave-1)
 const WAVE_BREAKS_DAY: f64 = 6.0;
 
 /// The comfortable temperature (°C) a planted room reads once the wave has
 /// broken — inside `COOL_NICHE`'s band, so thermal urgency falls to `0`.
+/// plumb: pending(wave-1)
 const AFTER_WAVE_C: f64 = 15.0;
 
 /// Build a creature with the scenario-relevant fields set and the incidental

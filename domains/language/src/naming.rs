@@ -331,6 +331,7 @@ impl NameCorpus<'_> {
 /// culture's names is the stipulated line between a word that happens to
 /// recur and one doing generic duty; it is a calibration dial, not a
 /// derived quantity, and the Lab's name-length metrics are what move it.
+/// plumb: pending(wave-1)
 const WEAR_FLOOR: f64 = 0.25;
 
 /// A generated name in its three views: `roman` is what commits as the
@@ -353,6 +354,7 @@ pub struct GeneratedName {
 
 /// The chance (per attempt) that a drawn epithet root is reduplicated
 /// (one of its syllables doubled) before any honorific prefix is applied.
+/// plumb: pending(wave-1)
 const REDUPLICATION_CHANCE: f64 = 0.5;
 
 /// One syllable: segments already picked from the phonology's inventory,
@@ -1515,10 +1517,12 @@ fn conforms(segments: &[Segment], ph: &Phonology, attested: &[Vec<Segment>]) -> 
 /// [`DELETION_COST`]: insertion is the primary repair, deletion the
 /// second resort. Both constants are part of the permanent repair formula
 /// (changing either reseeds every repaired name in every saved world).
+/// plumb: pending(wave-1)
 const EPENTHESIS_COST: u32 = 1;
 
 /// Deletion cost per dropped segment in [`repair_phonotactics`] — the
 /// second resort, for a segment no template can host in its position.
+/// plumb: pending(wave-1)
 const DELETION_COST: u32 = 2;
 
 /// One step of a reconstructed repair plan: either this input segment is

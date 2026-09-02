@@ -14,12 +14,14 @@ use hornvale_kernel::math;
 /// `angular_diameter_rel` (declared approximation: the two units differ
 /// by under 1%). Moved here from `provider.rs` (Eclipse Seasons).
 /// type-audit: pending(wave-1)
+/// plumb: pending(wave-1)
 pub const ANGULAR_UNIT_DEG: f64 = 0.53;
 /// How far (degrees of lunar ecliptic latitude) past the discs' own touch
 /// an eclipse still falls somewhere on the world — the parallax allowance.
 /// Calibrated so a Luna–Sol pair at 5.14° inclination eclipses at ~19% of
 /// new moons (Earth's ~2.4 solar eclipses a year).
 /// type-audit: pending(wave-1)
+/// plumb: pending(wave-1)
 pub const ECLIPSE_PARALLAX_DEG: f64 = 1.0;
 /// The anchor's shadow threshold at the moon, as a fraction of the solar
 /// threshold (declared approximation, Luna–Sol-calibrated to ~1.5 umbral
@@ -28,6 +30,7 @@ pub const ECLIPSE_PARALLAX_DEG: f64 = 1.0;
 /// anywhere-on-the-world parallax allowance the lunar case doesn't need —
 /// the shadow is one shadow for every observer.
 /// type-audit: pending(wave-1)
+/// plumb: pending(wave-1)
 pub const LUNAR_SHADOW_FACTOR: f64 = 0.64;
 
 /// The node threshold (degrees of lunar ecliptic latitude) inside which a
@@ -255,6 +258,7 @@ fn syzygy_families() -> Vec<(f64, EclipseBody)> {
 /// approximation, model card: real totality bands are ~1° of latitude;
 /// ours is slightly generous so a band is findable at room scale).
 /// type-audit: pending(wave-1)
+/// plumb: pending(wave-1)
 pub const TRACK_HALF_WIDTH_DEG: f64 = 2.0;
 
 /// The moon's ecliptic longitude at `t`, degrees in [0, 360): the sun's

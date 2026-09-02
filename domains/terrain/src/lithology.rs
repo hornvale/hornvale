@@ -106,6 +106,7 @@ pub struct MaterialBuffer {
 }
 
 /// Metamorphic grade rises within this many graph hops of a boundary.
+/// plumb: pending(wave-1)
 const OROGEN_REACH: u32 = 4;
 
 /// Drainage (flow-accumulation, upstream land-vertex count) above which a land
@@ -116,6 +117,7 @@ const OROGEN_REACH: u32 = 4;
 /// nowhere near a round number like 1000. `20.0` sits just above p90 and
 /// selects roughly the top 4-5% of land vertices by accumulation: genuinely
 /// high-flow valley bottoms, not merely-damp lowland.
+/// plumb: pending(wave-1)
 const ALLUVIUM_DRAINAGE_MIN: f64 = 20.0;
 
 /// Carve-deposited sediment thickness (metres) above which a land vertex
@@ -124,6 +126,7 @@ const ALLUVIUM_DRAINAGE_MIN: f64 = 20.0;
 /// alluvium is alluvial even when its flow accumulation alone would not
 /// clear [`ALLUVIUM_DRAINAGE_MIN`] — a floodplain a river no longer
 /// actively occupies still reads as its deposit.
+/// plumb: pending(wave-1)
 const ALLUVIUM_SEDIMENT_MIN_M: f64 = 2.0;
 
 /// Regolith depth (metres) above which waterlogged lowland accumulation
@@ -133,12 +136,14 @@ const ALLUVIUM_SEDIMENT_MIN_M: f64 = 2.0;
 /// coarse gravel). A 4-seed survey at `Geosphere::new(6)` found roughly
 /// 0.6% of clastic-eligible land vertices clear both this and the grain gate —
 /// present but appropriately rare for a biogenic, waterlogged-basin rock.
+/// plumb: pending(wave-1)
 const COAL_SOIL_DEPTH_MIN: f64 = 1.25;
 
 /// Grain ceiling paired with [`COAL_SOIL_DEPTH_MIN`]: excludes the coarse
 /// (near-`Conglomerate`) tail of the clastic range from `Coal`, keeping the
 /// two rocks' inputs (a slow, fine-sediment sink vs. relief-proximal debris)
 /// distinct even though both draw from the same `grain <= 0.6` band.
+/// plumb: pending(wave-1)
 const COAL_GRAIN_MAX: f64 = 0.55;
 
 /// The fine rock taxonomy (spec §4), a projection over the buffer.
@@ -376,6 +381,7 @@ pub fn hydrogeology(buf: &MaterialBuffer, ocean: bool) -> Hydro {
 /// `0.4` sits just above the class floor and inside its normal range — most
 /// carbonate vertices clear it. Unchanged by F5; this constant only gained a
 /// name and its calibration record.
+/// plumb: pending(wave-1)
 const KARST_MIN_POROSITY: f64 = 0.4;
 
 /// Porosity below which any rock (carbonate or clastic) reads as
@@ -385,6 +391,7 @@ const KARST_MIN_POROSITY: f64 = 0.4;
 /// 0.175, 0.250, 0.325) — `0.15` falls between the two lowest bands, so it
 /// selects roughly the bottom fifth to two-fifths of clastic vertices
 /// (`0.025`, and about half of `0.100`) as `Aquitard`. Unchanged by F5.
+/// plumb: pending(wave-1)
 const AQUITARD_MAX_POROSITY: f64 = 0.15;
 
 /// Porosity above which non-carbonate (clastic) rock reads as `Aquifer` —
@@ -415,6 +422,7 @@ const AQUITARD_MAX_POROSITY: f64 = 0.15;
 /// but non-dominant feature, with the promoted `Spring` contact (see
 /// [`Hydro::Spring`]) at 3.69%, forming lines along aquifer margins — what
 /// a spring line geologically is.
+/// plumb: pending(wave-1)
 const CLASTIC_AQUIFER_MIN_POROSITY: f64 = 0.46;
 
 /// How much loose, uncemented coarse grain contributes to `porosity` (in
@@ -428,6 +436,7 @@ const CLASTIC_AQUIFER_MIN_POROSITY: f64 = 0.46;
 /// widest band (`0.078`), so [`CLASTIC_AQUIFER_MIN_POROSITY`] has the most
 /// room before a terrain change flips it to select everything or nothing —
 /// a retune of this value is a retune, not a cleanup (decision 0057).
+/// plumb: pending(wave-1)
 const GRAIN_POROSITY_GAIN: f64 = 0.40;
 
 /// Drainage scale for [`cave_proneness`]'s wetting term. Formerly shared
@@ -441,6 +450,7 @@ const GRAIN_POROSITY_GAIN: f64 = 0.40;
 /// `GeneratedTerrain::hydro_at`, entirely independent of this constant.
 /// This constant's sole remaining consumer is the wetting term below;
 /// value unchanged, only the name and the surviving justification.
+/// plumb: pending(wave-1)
 const CAVE_WETNESS_DRAINAGE_SCALE: f64 = 500.0;
 
 /// Void-proneness (caves/sinkholes), `[0,1]` (spec §3, negation "solid → void").

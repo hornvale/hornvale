@@ -13,8 +13,10 @@ use serde::Serialize;
 use std::collections::BTreeMap;
 
 /// Target strangeness mass: at most this fraction of land vertices host an exotic.
+/// plumb: pending(wave-1)
 const BUDGET_FRACTION: f64 = 0.01;
 /// Minimum spacing between placed sites, in integer vertex-graph hops.
+/// plumb: pending(wave-1)
 const REPULSION_HOPS: u32 = 3;
 
 /// A placed exotic site — a derived, findable record (never stored in the save).
@@ -53,6 +55,7 @@ struct Candidate {
 /// not; the transform saturates, so no per-world maximum is needed and no vertex
 /// can dominate by draining a continent.
 /// type-audit: bare-ok(count)
+/// plumb: pending(wave-1)
 const DRAINAGE_SCALE: f64 = 8.0;
 
 /// A saturating map from an unbounded non-negative count into `[0, 1)`.

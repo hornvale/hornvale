@@ -45,6 +45,7 @@ pub fn wetness_is_grounded(expr: BiomeExpr) -> bool {
 /// so a tenth cannot carry a room from the middle of one clause band into a
 /// neighbouring one: the draw **varies** a room, it does not **decide** it.
 /// Fixed before R-7 was measured, and unmoved after.
+/// plumb: pending(wave-1)
 const LOCAL_VARIATION: f64 = 0.1;
 
 /// The wetness a room's ground is grounded at, before local variation: a

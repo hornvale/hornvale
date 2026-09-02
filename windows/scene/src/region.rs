@@ -21,9 +21,11 @@ use serde::Serialize;
 /// bound is a generous superset). Beyond the vertex floor a tile is honest but
 /// carries no detail the coarser tile lacked.
 /// type-audit: bare-ok(count)
+/// plumb: pending(wave-1)
 pub const MAX_REGION_LEVEL: u32 = 24;
 /// Largest legal `samples` (quads per edge); the node grid is `(N+1)²`.
 /// type-audit: bare-ok(count)
+/// plumb: pending(wave-1)
 pub const MAX_REGION_SAMPLES: u32 = 256;
 
 /// A face parameter: `-1 + 2·(index + offset)/2^level`, a dyadic rational in

@@ -63,6 +63,7 @@ use hornvale_terrain::{
 /// quantity, and it can only widen, never relocate an existing address,
 /// because `branch` numbers positions in the lattice, not generated chambers.
 /// type-audit: bare-ok(count)
+/// plumb: pending(wave-1)
 pub const BRANCHES_PER_SYSTEM: u8 = 4;
 
 /// The lattice's **level ceiling**: how many levels one *branch* — the
@@ -92,6 +93,7 @@ pub const BRANCHES_PER_SYSTEM: u8 = 4;
 /// refused, and relocates none, because [`chamber_key`] spells `level` as a
 /// place and not as a fraction of a count.
 /// type-audit: bare-ok(count)
+/// plumb: pending(wave-1)
 pub const LEVELS_PER_BRANCH_CEILING: u8 = 20;
 
 /// An address in the chamber lattice — a **place**, never a construction

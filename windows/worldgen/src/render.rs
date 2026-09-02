@@ -19,6 +19,7 @@ use hornvale_kernel::{NearestVertexIndex, VertexMap, World};
 /// cleanly, and keeping it coarse keeps [`residue_pixels`]'s per-pixel color
 /// lookup cheap regardless of how expensive computing a vertex's palimpsest is.
 /// type-audit: bare-ok(render-internal)
+/// plumb: pending(wave-1)
 pub const MAP_WIDTH: u32 = 256;
 
 /// Muted base color for a vertex with no residue at all: a flat slate,

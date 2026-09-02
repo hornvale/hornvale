@@ -266,6 +266,7 @@ pub enum Provenance {
 /// waterfall-eligible: a knickpoint needs a real watercourse, not a
 /// trickle. Spec §5's chosen threshold.
 /// type-audit: bare-ok(count)
+/// plumb: pending(wave-1)
 pub const WATERFALL_MIN_DRAINAGE: f64 = 80.0;
 
 /// Minimum induration drop, in induration units `[0,1]`, from a candidate
@@ -273,6 +274,7 @@ pub const WATERFALL_MIN_DRAINAGE: f64 = 80.0;
 /// soft plunge pool that makes the step a knickpoint rather than an
 /// ordinary slope. Spec §5's chosen threshold.
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 pub const WATERFALL_INDURATION_STEP: f64 = 0.35;
 
 /// Waterfall (knickpoint) detection (spec §5, "derived point observations"):
@@ -319,6 +321,7 @@ pub fn find_waterfalls(
 /// Number of a world's largest rivers the A→B→C escalation diagnostic
 /// (spec §8) scores: the top mouths by pre-carve drainage flux.
 /// type-audit: bare-ok(count)
+/// plumb: pending(wave-1)
 pub const REROUTE_TOP_RIVERS: usize = 20;
 
 /// The A→B→C escalation diagnostic (spec §8, preregistered so "see if it

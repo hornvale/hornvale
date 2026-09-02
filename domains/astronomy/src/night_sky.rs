@@ -50,6 +50,7 @@ pub struct NightSky {
 
 /// How many degrees from a celestial pole a star must be to serve as a pole star.
 /// type-audit: pending(wave-1)
+/// plumb: pending(wave-1)
 pub const POLE_STAR_MAX_SEPARATION_DEG: f64 = 10.0;
 
 /// The unified derived view (spec §2): everything a placed observer's night

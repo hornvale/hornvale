@@ -92,6 +92,7 @@ impl Transverse {
 /// width-per-unit-discharge fall off as a river grows, which is what keeps a
 /// mainstem from being a hundred times its headwaters' width.
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 pub const CHANNEL_WIDTH_EXPONENT: f64 = 0.5;
 
 /// The `a` of `w = a·Q^b`, as a fraction of the local vertex spacing.
@@ -116,11 +117,13 @@ pub const CHANNEL_WIDTH_EXPONENT: f64 = 0.5;
 /// headwater-to-mainstem range; widening the range by moving `a` is not
 /// possible — it scales every channel equally.
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 pub const CHANNEL_WIDTH_COEFF: f64 = 8.5e-4;
 
 /// The `k` of the bank border `w/2 + k·w`: the wetted margin either side of
 /// the water is half a channel width.
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 pub const BANK_WIDTH_RATIO: f64 = 0.5;
 
 /// Floodplain half-width, as a multiple of channel width, at zero
@@ -128,12 +131,14 @@ pub const BANK_WIDTH_RATIO: f64 = 0.5;
 /// channel widths across; 20 sits inside that range and keeps the widest
 /// valley a fifth of a vertex rather than a whole one.
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 pub const FLOODPLAIN_MAX_RATIO: f64 = 20.0;
 
 /// Terrace width beyond `V/2`, as a fraction of `V/2`. The terrace is the
 /// abandoned valley floor, so it is keyed to the valley rather than to the
 /// channel: a gorge gets a narrow terrace and a broad valley a wide one.
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 pub const TERRACE_WIDTH_RATIO: f64 = 0.5;
 
 /// The local gradient at and above which a reach is a **gorge**: fully
@@ -157,6 +162,7 @@ pub const TERRACE_WIDTH_RATIO: f64 = 0.5;
 /// normalizing on the median would make gorges of over half the world's
 /// rivers.
 /// type-audit: pending(wave-2)
+/// plumb: pending(wave-1)
 pub const GORGE_SLOPE: f64 = 40_000.0;
 
 /// Meander noise spatial frequency on the unit sphere. The value-noise
@@ -164,16 +170,19 @@ pub const GORGE_SLOPE: f64 = 40_000.0;
 /// ~0.04 rad — a couple of canonical vertices, which is the scale a mainstem
 /// wanders on.
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 pub const MEANDER_FREQUENCY: f64 = 24.0;
 
 /// Octaves in the meander field.
 /// type-audit: bare-ok(count)
+/// plumb: pending(wave-1)
 pub const MEANDER_OCTAVES: u32 = 4;
 
 /// Peak meander displacement as a fraction of the local vertex spacing, at
 /// full confinement-free (flat) gradient. A quarter keeps a wandering
 /// channel inside the pair of vertices the vertex joins.
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 pub const MEANDER_AMPLITUDE_RATIO: f64 = 0.25;
 
 /// Half the channel width for a reach carrying `drainage`, in radians, given
@@ -482,6 +491,7 @@ pub struct ChannelNetwork {
 /// and negligible against the grid's own bucket size (~2e-2 rad): it cannot
 /// change which buckets are visited except within a nanoradian of an edge, and
 /// there it errs toward visiting more.
+/// plumb: pending(wave-1)
 const CAP_PAD: f64 = 1.0e-9;
 
 /// The smallest radius a candidate search starts from, radians.
@@ -492,6 +502,7 @@ const CAP_PAD: f64 = 1.0e-9;
 /// would never grow at all — so the opening radius has a floor. It is far below
 /// any real network's vertex spacing, so it never widens an ordinary first
 /// gather.
+/// plumb: pending(wave-1)
 const MIN_SEARCH_RADIUS: f64 = 1.0e-6;
 
 /// A spherical bucket grid over one network's **vertices**, plus the longest

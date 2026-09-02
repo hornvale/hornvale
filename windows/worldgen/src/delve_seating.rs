@@ -71,6 +71,7 @@ use crate::chamber::{
 /// model of how much labour a working depth costs to dewater against how much
 /// it yields, which is a mining-economy campaign this one is not.
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 pub const UNDERWORLD_WORKS_COST: f64 = 0.5;
 
 /// The depth class one habitation band names, in the vocabulary the underworld

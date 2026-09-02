@@ -16,8 +16,10 @@ use hornvale_kernel::Temperature;
 pub struct GeothermalGradient(f64);
 
 /// Coolest continental-shield gradient (K/km).
+/// plumb: pending(wave-1)
 const CRATONIC_GRADIENT_K_PER_KM: f64 = 15.0;
 /// Hottest young/thin-crust gradient (K/km).
+/// plumb: pending(wave-1)
 const OCEANIC_GRADIENT_K_PER_KM: f64 = 30.0;
 
 impl GeothermalGradient {
@@ -136,8 +138,10 @@ pub fn depth_to_basement(soil_depth_m: f64, sediment_m: f64) -> f64 {
 }
 
 /// Minimum cover (m) below which thin cover on old rock reads as a gap.
+/// plumb: pending(wave-1)
 const UNCONFORMITY_COVER_M: f64 = 200.0;
 /// Minimum normalized basement age for a thin-cover gap to count.
+/// plumb: pending(wave-1)
 const UNCONFORMITY_AGE: f64 = 0.6;
 
 /// A nonconformity: thin cover directly on ancient basement.

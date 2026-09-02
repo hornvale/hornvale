@@ -10,12 +10,16 @@ use crate::units::{IceVolume, SeaLevelChange};
 use hornvale_kernel::TempAnomaly;
 
 /// Index below which ice grows.
+/// plumb: pending(wave-1)
 const GROWTH_THRESHOLD: f64 = -0.5;
 /// Index above which ice melts.
+/// plumb: pending(wave-1)
 const MELT_THRESHOLD: f64 = 0.5;
 /// Slow growth rate, volume-fraction per thousand years.
+/// plumb: pending(wave-1)
 const GROWTH_PER_KYR: f64 = 0.05;
 /// Fast melt rate, volume-fraction per thousand years.
+/// plumb: pending(wave-1)
 const MELT_PER_KYR: f64 = 0.20;
 /// Full-ice global cooling, °C. Calibrated together with the composition
 /// root's absolute snowline threshold (`FREEZE_C` in
@@ -24,10 +28,13 @@ const MELT_PER_KYR: f64 = 0.20;
 /// realistic Last Glacial Maximum extent — see that crate's
 /// `climate_at_era`.
 /// type-audit: pending(wave-2)
+/// plumb: pending(wave-1)
 pub const ALBEDO_GAIN_C: f64 = 42.0;
 /// Full-ice eustatic sea-level fall, metres.
+/// plumb: pending(wave-1)
 const EUSTATIC_M: f64 = 120.0;
 /// Standard days per thousand years.
+/// plumb: pending(wave-1)
 const DAYS_PER_KYR: f64 = 1_000.0 * 365.25;
 
 /// Global cooling offset (≤ 0) from an ice-volume fraction, as a
