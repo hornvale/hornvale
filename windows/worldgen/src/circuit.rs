@@ -255,7 +255,12 @@ pub struct DescentPlan {
     /// Per realm, in `realms` order: which pattern was drawn and whether it
     /// was applied or why it was skipped (spec §3.1).
     pub patterns: Vec<crate::brattice::Outcome>,
-    /// Realms whose drawn pattern was skipped for any reason; one per skip.
+    /// Realms that ended with no pattern stamped: those whose drawn row was
+    /// refused for a [`crate::brattice::Skip`] reason, AND those for which no
+    /// row was admissible at all (the draw is still made and discarded, so
+    /// the draw count stays data-independent). One per realm, so
+    /// `patterns.len() - skipped_patterns` is the number of realms carrying a
+    /// stamped pattern.
     pub skipped_patterns: u32,
 }
 

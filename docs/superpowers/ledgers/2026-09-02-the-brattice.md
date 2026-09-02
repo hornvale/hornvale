@@ -656,3 +656,62 @@ not open questions · Capture: spec §3.2 (Side, rows, amendments paragraph),
 to a count Nathan approved). Deferred minor: `Skip::NoRoom` and
 `Skip::Unsolvable` are 0 across the sample, so their rollback paths run only
 by construction — a hand-built plan that forces each would cover them.
+
+## Task 1 - fix round 3 (review: one Important, three minors) - COMPLETE
+
+`cargo test -p hornvale-worldgen brattice` -> 11 passed, 0 failed.
+`cargo test -p hornvale-worldgen circuit` -> 17 passed, 0 failed. Clippy clean,
+type-audit rc=0, `lexicon_guard` + `claim_shape` 8/8.
+
+**Important #1 - the recorded REASON for removing `the-landing-hall` was false;
+the decision stands, the argument is replaced.** The four sites said "a
+cross-floor `path_b` is laid with at least 3 edges, so both paths cannot be
+short". That does not follow: `length_class(2, 3)` is `ShortShort` under the
+frozen rule (`2 > 4` false, `3 > 3` false, `2 >= 3` false), and a 3-edge
+cross-floor `path_b` is constructible because `try_cycle` calls `free_path(..,
+min_interior: 0)`. The true argument is geometric and now sits at all four
+sites (module doc, `CYCLE_PATTERNS` doc, the count assertion's message, and
+here): `try_cycle` lands the two lower nodes on the SAME grid squares as the
+realm's endpoints, so `path_b` is two distance-free stairs around a walk from
+`cu` to `ce` on level `l+1` while `path_a` is a walk between those same squares
+on level `l`; every passage joins grid-adjacent squares and a grid is
+bipartite, so both lengths are congruent to the endpoints' Manhattan distance
+mod 2. `ShortShort` needs `|len_a - len_b| <= 1` and not both `>= 3`; equal
+parity turns the first into `len_a == len_b`, so it needs `len_a == len_b <= 2`,
+while `cu != ce` forces `len_b >= 3`. Contradiction.
+
+**The parity step is load-bearing and is mine, not the review's.** The review
+gave the geometric foundation with a case analysis over `len_a in {1, 2, 3}` -
+the creation-time range. Since Ruling A the stored class is recomputed AFTER
+`try_extend` splices (`path_a` reaches 16 edges), so a creation-time case
+analysis would prove the lemma only for a class the plan no longer stores -
+the same category of error the review was correcting. Parity closes it: a
+spliced detour is itself a walk between the two squares it replaces, so it
+moves each length by an even amount and the congruence survives.
+
+**Witnessed, not asserted.** New test `no_cross_floor_realm_is_short_short`
+(`claim: invariant(seed: 0..100)`, 100 seeds x 3 kinds x 3 characters x 2
+vertices) checks directly that no realm whose `path_b` leaves the anchor level
+carries `ShortShort`. It passes; had it failed, the lemma would be wrong and
+the row would have to come back, and its message says so.
+
+**Ruling F (minor #2) - `Skip::Inadmissible` removed** - it was never
+constructed: `stamp` pushes `Outcome::Inadmissible` for an empty admissible
+set and never reaches `try_apply`. `Outcome::Inadmissible` is kept - **cost if
+wrong:** a reader would keep counting a bucket that can never fill.
+`DescentPlan::skipped_patterns`' doc is corrected to say it counts realms with
+no admissible row as well as refused ones, so `patterns.len() -
+skipped_patterns` is exactly the number of realms carrying a stamped pattern.
+
+**Ruling G (minor #3) - `try_apply`'s gate loop now also refuses an edge THIS
+row already resolved to** (`stamps.iter().any(...)`), matching the hazard and
+persistence loops - **why:** two `GateSpec`s of one row can name one edge (on a
+two-node path the near and far edges are the same edge), and the later would
+have silently overwritten the earlier instead of refusing `Claimed` - **cost if
+wrong:** a lost gate with no skip recorded, invisible in every readout.
+
+**Ruling H (minor #4) - `worked()` is an exhaustive `match`** over the
+`Character` roster instead of `matches!(.., DrowTier)`, following
+`character::bands_of`'s convention - **why:** a sixth character must fail to
+compile here rather than inherit "unworked" from a wildcard and quietly lose
+its doors.

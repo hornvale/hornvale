@@ -15,7 +15,10 @@
 //! The inventory is **nine** rows, not the ten the spec froze at G3: the
 //! tenth, `the-landing-hall`, named a combination (`ShortShort` x cross-floor)
 //! that the growth grammar cannot produce, and spec §3.2 forbids a row nothing
-//! selects. `no_row_is_dead_data` holds every surviving row to that standard.
+//! selects. The reason is GEOMETRIC, not a length count — see
+//! [`CYCLE_PATTERNS`] for the lemma, and `no_cross_floor_realm_is_short_short`
+//! for its witness. `no_row_is_dead_data` holds every surviving row to spec
+//! §3.2's standard.
 
 use crate::character::Character;
 use crate::circuit::{DescentPlan, EdgeKind, LengthClass, NodeId, Realm};
@@ -96,8 +99,6 @@ pub struct KeyFor(pub usize);
 /// Why a drawn pattern was not applied (spec §3.2 step 3–4).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Skip {
-    /// No row admitted this realm's class, span, rock and work.
-    Inadmissible,
     /// An edge or node the row wanted already carries a gate or key.
     Claimed,
     /// A side has no interior node where the key wants one.
@@ -231,11 +232,44 @@ use LengthClass::{LongLong, LongShort, ShortLong, ShortShort};
 /// The inventory, frozen at G3 (spec §3.2). **Nine rows; the count is
 /// asserted.** The tenth, `the-landing-hall` (`ShortShort` x
 /// [`Span::CrossFloor`]), was removed in execution because that combination is
-/// empty by construction — a cross-floor `path_b` is laid with at least 3 edges,
-/// so a realm that crosses a floor can never have both paths short — and spec
-/// §3.2 forbids a row nothing selects ("a pattern nothing selects is dead
-/// data, not inventory"). [`ShortShort`] survives on `patrol-path`, which is
-/// same-floor. Every surviving row is pinned live by `no_row_is_dead_data`.
+/// empty by construction, and spec §3.2 forbids a row nothing selects ("a
+/// pattern nothing selects is dead data, not inventory"). [`ShortShort`]
+/// survives on `patrol-path`, which is same-floor.
+///
+/// **The lemma, stated exactly, because the obvious version of it is false.**
+/// It is NOT "a cross-floor `path_b` has at least 3 edges, so both paths
+/// cannot be short": `length_class(2, 3)` is `ShortShort` under the frozen
+/// rule (`2 > 4` false, `3 > 3` false, `2 >= 3` false), and a 3-edge
+/// cross-floor `path_b` is constructible — `try_cycle` calls `free_path(..,
+/// min_interior: 0)`, so grid-adjacent landings give an empty interior. The
+/// real argument is geometric, in two steps:
+///
+/// 1. **Both paths run between the same two grid squares.** `try_cycle`'s
+///    cross-floor branch lands `lu` and `le` on the SAME squares as `u` and
+///    `end` (`cu`, `ce`), so `path_b` is two stairs — which move no distance —
+///    around a walk on level `ℓ+1` from `cu` to `ce`, while `path_a` is a walk
+///    on level `ℓ` between those same squares. Every passage joins
+///    grid-ADJACENT squares, so both are unit-step walks on one grid between
+///    one pair of endpoints.
+/// 2. **Therefore the two lengths share a parity.** A grid is bipartite, so
+///    every walk between a fixed pair of squares has length congruent to their
+///    Manhattan distance mod 2: `len_a ≡ len_b - 2 ≡ len_b (mod 2)`.
+///    `ShortShort` requires `|len_a - len_b| <= 1`, which with equal parity
+///    forces `len_a == len_b`; it also requires NOT both `>= 3`, hence
+///    `len_a == len_b <= 2`. But `cu != ce` is a precondition of the
+///    cross-floor branch, so the level-`ℓ+1` walk has at least one edge and
+///    `len_b >= 3`. Contradiction.
+///
+/// Step 2 is what makes the lemma survive `recompute_classes`: `try_extend`
+/// splices detours into realm paths after creation (`path_a` reaches 16 edges
+/// against a creation ceiling of 3), and a detour is itself a unit-step walk
+/// between the two squares it replaces, so it changes each length by an even
+/// amount and preserves the parity the argument turns on. A creation-time case
+/// analysis over `len_a in {1, 2, 3}` would prove the lemma only for the class
+/// the plan no longer stores.
+///
+/// Witnessed by `no_cross_floor_realm_is_short_short`; every surviving row is
+/// pinned live by `no_row_is_dead_data`.
 pub const CYCLE_PATTERNS: &[CyclePattern] = &[
     CyclePattern {
         name: "two-alternative-paths",
@@ -431,8 +465,15 @@ fn interior_at(path: &[NodeId], near: NodeId, slot: Slot) -> Option<NodeId> {
     })
 }
 
+/// Does this character's presence imply a MAKER — someone who could hang a
+/// door? Exhaustive over the roster on purpose (the crate's convention, as in
+/// `character::bands_of`): a sixth variant must fail to compile here rather
+/// than inherit "unworked" from a wildcard and quietly lose its doors.
 fn worked(character: Character) -> bool {
-    matches!(character, Character::DrowTier)
+    match character {
+        Character::DrowTier => true,
+        Character::WildCave | Character::FungalGardens => false,
+    }
 }
 
 /// Spec §3.3: is this row's every requirement realizable in this rock and
@@ -508,7 +549,13 @@ fn try_apply(plan: &mut DescentPlan, realm: &Realm, pick: usize) -> Result<(), S
     for g in row.gates {
         let (a, b) = edge_at(path_of(realm, g.side, class), near, g.slot);
         let ix = plan.edge_index(a, b).expect("a realm path edge exists");
-        if plan.edges[ix].gate.is_some() {
+        // Both halves matter, as they do in the hazard and persistence loops
+        // below: the first refuses an edge an EARLIER realm gated, the second
+        // an edge THIS row already resolved to. Two `GateSpec`s of one row can
+        // name one edge (a two-node path's near and far edges are the same
+        // edge), and without the second check the later one would silently
+        // overwrite the earlier rather than refusing.
+        if plan.edges[ix].gate.is_some() || stamps.iter().any(|(s, _)| *s == ix) {
             return Err(Skip::Claimed);
         }
         let req = match g.way {
@@ -811,7 +858,7 @@ mod tests {
         assert_eq!(
             CYCLE_PATTERNS.len(),
             9,
-            "spec §3.2 froze ten at G3; `the-landing-hall` was removed in execution because ShortShort x CrossFloor is empty by construction"
+            "spec §3.2 froze ten at G3; `the-landing-hall` was removed in execution because ShortShort x CrossFloor is empty by construction — both paths run between the same two grid squares, so their lengths share a parity and cannot differ by exactly the one edge ShortShort needs (see CYCLE_PATTERNS)"
         );
         let mut names: Vec<&str> = CYCLE_PATTERNS.iter().map(|p| p.name).collect();
         names.sort_unstable();
@@ -864,6 +911,55 @@ mod tests {
                     "{}: Side::Descending is only meaningful on a cross-floor realm",
                     p.name
                 );
+            }
+        }
+    }
+
+    /// claim: invariant(seed: 0..100) — no cross-floor realm is `ShortShort`.
+    /// This is the WITNESS for the lemma behind removing `the-landing-hall`
+    /// (see [`CYCLE_PATTERNS`]), and it is a witness rather than a
+    /// restatement because the obvious reason — "a cross-floor `path_b` has
+    /// at least 3 edges, so both paths cannot be short" — is FALSE:
+    /// `length_class(2, 3)` is `ShortShort`, and a 3-edge cross-floor
+    /// `path_b` is constructible.
+    ///
+    /// The true argument is geometric. `try_cycle` lands the two lower nodes
+    /// on the SAME grid squares as the realm's endpoints, so `path_b` is two
+    /// distance-free stairs around a walk from `cu` to `ce` on level `ℓ+1`,
+    /// while `path_a` is a walk between those same squares on level `ℓ`.
+    /// Every passage joins grid-adjacent squares and a grid is bipartite, so
+    /// both lengths are congruent to the endpoints' Manhattan distance mod 2
+    /// — and `try_extend`'s detours, being walks between the squares they
+    /// replace, preserve that. `ShortShort` needs `|len_a - len_b| <= 1` and
+    /// not both `>= 3`; equal parity turns the first into `len_a == len_b`,
+    /// so it needs `len_a == len_b <= 2`, while `cu != ce` forces
+    /// `len_b >= 3`.
+    ///
+    /// If this ever reds, the lemma is wrong and `the-landing-hall` must come
+    /// back — it would mean the row named a real combination after all.
+    #[test]
+    fn no_cross_floor_realm_is_short_short() {
+        for seed in 0..100u64 {
+            for kind in [CaveKind::LavaTube, CaveKind::Fracture, CaveKind::Karst] {
+                for ch in [
+                    Character::WildCave,
+                    Character::FungalGardens,
+                    Character::DrowTier,
+                ] {
+                    for vertex in [1u32, 5] {
+                        let p = plan(seed, vertex, kind, ch);
+                        for (i, r) in p.realms.iter().enumerate() {
+                            let cross =
+                                r.path_b.iter().any(|&n| p.nodes[n].level != r.anchor_level);
+                            assert!(
+                                !(cross && r.class == LengthClass::ShortShort),
+                                "seed {seed} vertex {vertex} {kind:?} {ch:?} realm {i}: a cross-floor ShortShort realm exists (lens {}, {}) — the lemma is wrong and `the-landing-hall` must come back",
+                                r.path_a.len() - 1,
+                                r.path_b.len() - 1
+                            );
+                        }
+                    }
+                }
             }
         }
     }
