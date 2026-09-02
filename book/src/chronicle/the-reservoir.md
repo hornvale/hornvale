@@ -207,8 +207,9 @@ true.
 It did not make a world build faster — the 80.8%-of-a-build
 `climate+settlements` stage is untouched and is a real, separate optimisation
 target. It did not push more tests down `build_world_to`'s existing depth
-ladder — that lever is MAP-25, already shipped, and reopening it here would
-blur two efforts. It did not serialize the derived terrain and climate
+ladder — that lever is the build-depth ladder shipped by
+[Lab Performance](./lab-performance.md), and reopening it here would blur two
+efforts. It did not serialize the derived terrain and climate
 objects, which would widen the payoff for artifact-needing tests from ~4x
 toward the ~200x a bare fact read gets, and is its own save-format-adjacent
 campaign. And it authored no second or third fixture, leaving 83 call sites

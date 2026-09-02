@@ -17,8 +17,10 @@
 //! **What the fixture cannot carry:** `GeneratedTerrain` and
 //! `GeneratedClimate` are `Clone` but deliberately not `Serialize`
 //! ("Recomputed on demand, never serialized"). A caller needing those pays
-//! the sculpt and the fit, so its saving is ~2.7x rather than ~200x, and it
-//! keeps an `artifacts` row on the build-site roster.
+//! the sculpt and the fit on top of the read, so its saving is measured, not
+//! the ~200x above: 4.0x-4.2x for the two artifact-needing modules measured
+//! (decision 0607 has the full spread), and it keeps an `artifacts` row on
+//! the build-site roster.
 
 use hornvale_kernel::World;
 

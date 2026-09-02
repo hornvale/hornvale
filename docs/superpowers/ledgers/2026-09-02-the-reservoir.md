@@ -518,6 +518,97 @@ of the brief's branch table fired. See this task's report for the pasted
 
 ---
 
+#12 [G5] — **The docs-only fast-path is blind to docs regressions that Rust
+tests catch. This campaign made ~12 commits through that hole.**
+
+*What happened.* Task 6's chronicle cited registry ID `MAP-25` from
+`book/src/chronicle/`, which decision 0031 permits only from
+`book/src/frontier/`. `cli/tests/suite/docs_consistency.rs`'s
+`the_book_carries_no_registry_ids_or_process_vocabulary` catches exactly that,
+**is in `docs/timings/subfloor-roster.tsv`**, and therefore runs in
+`gate-commit`. It never fired. Reproduced by hand at rc=101 after the fact.
+
+*Why it never fired.* `scripts/hooks/pre-commit` fast-paths past `gate-commit`
+when no Rust-relevant path is staged — it printed "no Rust-relevant paths
+staged — skipping 'make gate-commit'" on every docs-only commit this campaign
+made, roughly twelve of them. The heuristic reasons about the *staged* paths'
+blast radius, and it is structurally blind to the inverse case: **a Rust test
+whose subject is a non-Rust file.** `docs_consistency` scans `book/src` and
+`docs/`; a change to those is exactly what it exists to check, and exactly what
+the fast-path decides needs no checking.
+
+*This is not a bug in the hook's implementation but in its premise.* The premise
+is "Rust paths staged → Rust checks matter". The counterexample is a Rust check
+whose inputs are prose. Every campaign that lands docs through docs-only commits
+has the same hole, and the hole is invisible because the skip message reads as
+an optimisation.
+
+*Consequence for this campaign, and it is not hypothetical:* the merge queue
+would have reddened on the `gate` phase, after taking the canonical box, for a
+one-sentence prose defect that a local gate held the test for and declined to
+run.
+
+*Decision.* Fix the citation (fix round 2), and **capture the hole as a
+`PROC-*` registry row** rather than changing the hook inside this campaign —
+the hook is shared substrate, the change wants its own measurement of what it
+would cost every commit, and this campaign has no mandate for it. The cheap
+mitigation available to any campaign today is to run
+`cargo test -p hornvale --test suite -- docs_consistency` by hand before a
+docs-only commit that touches `book/src`; it costs ~1.2 s.
+
+*Cost if wrong.* If the hole is narrower than stated, the registry row is
+cheap and gets closed by whoever measures it.
+
+*ideonomy passes / overturns.* n/a — a mechanism finding.
+
+*Capture.* This entry; a `PROC-*` row; the retrospective.
+
+---
+
+#13 [G5] — **I asserted a defect-distribution streak without checking it, and
+it nearly landed as a retrospective headline.**
+
+*What happened.* Task 6's dispatch told the implementer "**THIS CAMPAIGN IS THE
+NINTH** in a row with that distribution", sourced from The Winze's
+retrospective calling itself the eighth. The implementer wrote it as the
+retrospective's opening heading. Task 6's reviewer checked what landed in
+between and found it false.
+
+*The counterexample.* `docs/retrospectives/the-chattel.md:92` ("Defects by
+origin") tabulates **43 controller prose** against **≈68 implementer code**, on
+a 14-task campaign that landed between The Winze and this one. Chattel's own
+prose says "Four campaigns running have reported the same distribution" — not
+eight. So the streak was already broken before I incremented it, and the number
+I incremented from was itself describing a shorter run than I assumed.
+
+*The shape.* I incremented a count from a prior document without checking the
+interval. No instrument was involved this time — ledger #11 was at least a
+broken measurement; this was arithmetic on hearsay. It is the plainest instance
+in the campaign of the thing the campaign kept finding.
+
+*And Chattel supplies the deeper correction, which is the part worth keeping.*
+Its warning: "Read the denominators before the ratio" — its controller count
+was *complete* (every brief verified pre-dispatch, so defects enumerated
+exhaustively) while its implementer count was a *floor* (three tasks' reviews
+never triaged). The two sides are never measured the same way, in any campaign,
+including this one. **So "zero implementer-code defects" here is a statement
+about what six reviews FOUND, not about what exists** — and stating it as a
+property of the code rather than of the reviewing would be a category error
+dressed as a compliment.
+
+*Decision.* The retrospective states what is true of this campaign, drops the
+streak entirely, and carries Chattel's denominator warning. No replacement
+count.
+
+*Cost if wrong.* None; a weaker claim cannot be falsified by the next campaign
+the way a streak can.
+
+*ideonomy passes / overturns.* n/a — a factual correction.
+
+*Capture.* This entry; the retrospective's opening rewritten in fix round 2.
+
+---
+
 ## Parked findings
 
 ### P1 — `scene_surrounds_colour_cli.rs` uses a fixed temp path and flakes

@@ -2,13 +2,36 @@
 
 **Merged:** 2026-09-02
 
-## A ninth campaign in a row with this distribution
+## Every defect this campaign found was in controlling-session text
 
-Every defect this campaign found was in controlling-session text — the spec,
-the plan, or a dispatch — and none was in an implementer's code. This is the
-ninth consecutive campaign for which that sentence is true, and the count has
-stopped being the interesting part; what varies from campaign to campaign is
-the *shape* of the defect, not whether the code was clean.
+Every review this campaign ran (Tasks 1 through 5) found defects only in
+the spec, the plan, or a dispatch — none in an implementer's code. That is a
+true statement about what this campaign's reviews found, and this record
+stops there rather than turning it into a streak.
+
+**An earlier draft of this section claimed a ninth consecutive campaign with
+this distribution, incrementing The Winze's stated "eighth" by one without
+checking what landed in between.** The Chattel merged between The Winze and
+this campaign, and its own retrospective (`docs/retrospectives/the-chattel.md`,
+"Defects by origin") tabulates 43 controller-prose defects against
+**approximately 68 implementer-code defects** — the opposite distribution,
+not a continuation of it. Chattel's own text says "Four campaigns running have
+reported the same distribution," not eight. The false claim would have gone
+into a permanent record as a headline had it not been checked, which is the
+same shape of error this campaign spent six tasks catching in other people's
+prose — including, this time, the controlling session's own.
+
+**Chattel's own methodological warning sharpens this record rather than
+undercutting it, and is worth repeating here.** Chattel's controller count was
+*complete* — every brief was verified pre-dispatch, so its defects were
+enumerated exhaustively — while its implementer count was a *floor*, because
+three tasks' reviews were never triaged into the ledger. "Read the
+denominators before the ratio": the two sides of any such count are rarely
+measured the same way, in any campaign, including this one. This campaign's
+"every defect found was in controller text" is a statement about what six
+reviews *found*, not a claim that implementer code in general produces no
+defects, or that this campaign's own reviews were exhaustive in the way
+Chattel's pre-dispatch brief check was. No streak is asserted.
 
 | # | defect, in controlling-session text | what killed it |
 | --- | --- | --- |
@@ -140,6 +163,8 @@ table is an instance of a diagnosis this book's Confidence Gradient chapter
 has been refining for two months: verify a brief against the tree before
 dispatch, treat a correction as a claim requiring its own check, and prefer a
 decision-log search to a fresh derivation when the shape of the problem looks
-familiar. What is new is only the count — nine campaigns, zero implementer
-defects — which is itself now the more interesting data point than any single
-row in the table.
+familiar. What this campaign adds is not a longer streak — Chattel's own
+count shows the distribution is not uniform across campaigns — but a fresh
+instance of the *cost* of asserting one without checking: a headline claim
+built by incrementing a prior campaign's number, caught only because this
+task's own coordinator went and read the campaign that landed in between.
