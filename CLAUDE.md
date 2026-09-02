@@ -356,6 +356,15 @@ make doctor        # the repo self-map — run this first in a fresh session
 # scripts/test-sluice-census.sh, whose null arm is the load-bearing one because
 # that is the arm that was dead).
 #
+# AND THE PART WORTH CARRYING PAST THIS BUG: scripts/test-sluice.sh HAD a test
+# for the unmoved census the whole time, and it passed. Its stub census wrote no
+# timings row, so in the harness "nothing moved" meant an EMPTY INDEX -- a
+# different branch of the script than the one every real census takes. The
+# fixture did not reproduce production's staging, and a test over the wrong case
+# reads exactly like coverage. When a guard is provably dead in production,
+# check whether its test is exercising the case that actually occurs before
+# concluding nobody wrote one.
+#
 #   make sluice-ack REASON='...'         # adjudicate an out-of-band landing (see below)
 #   make sluice-status                   # what is queued, running, held, landed, reported
 #   make sluice-log [JOB=<id>]           # read a finished chamber job back
