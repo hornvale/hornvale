@@ -580,7 +580,7 @@ hornvale-climate::suite$column::nothing_exists_below_the_floor
 hornvale-climate::suite$column::the_column_agrees_with_biome_expr_at_at_every_vertex
 hornvale-climate::suite$column::water_above_the_floor_is_open_water_at_its_own_depth
 hornvale-climate::suite$facets::the_aperture_is_ordered_from_sealed_to_merged
-hornvale-climate::suite$facets::the_rock_ladder_matches_terrains_band_roster_one_for_one
+hornvale-climate::suite$facets::the_rock_ladder_matches_horizons_roster_one_for_one_in_order
 hornvale-climate::suite$facets::the_underworld_is_a_realm_with_a_rock_column
 hornvale-climate::suite$held_out_marine::the_marine_roster_actually_matches_assigned_names
 hornvale-climate::suite$held_out_marine::the_sea_needs_no_axis_the_land_does_not_use
@@ -853,6 +853,7 @@ hornvale-kernel::hornvale_kernel$band::tests::deeper_and_shallower_are_inverses_
 hornvale-kernel::hornvale_kernel$band::tests::rank_and_from_rank_round_trip_over_habitation_only
 hornvale-kernel::hornvale_kernel$band::tests::rank_rises_with_depth
 hornvale-kernel::hornvale_kernel$band::tests::the_ladder_is_ordered_surface_first_and_habitation_excludes_it
+hornvale-kernel::hornvale_kernel$cave::tests::legend_and_name_agree
 hornvale-kernel::hornvale_kernel$claim::tests::a_frictionless_retelling_carries_content_and_precision_unchanged
 hornvale-kernel::hornvale_kernel$claim::tests::a_frictionless_retelling_never_sharpens_a_coarsened_claim
 hornvale-kernel::hornvale_kernel$claim::tests::a_lossy_retelling_takes_the_coarsened_value_it_is_given
@@ -934,6 +935,7 @@ hornvale-kernel::hornvale_kernel$field::tests::whole_days_and_tick_of_day_agree_
 hornvale-kernel::hornvale_kernel$field::tests::whole_days_and_tick_of_day_floor_rather_than_truncate
 hornvale-kernel::hornvale_kernel$field::tests::world_time_is_ordered_and_equatable_so_it_can_key_a_map
 hornvale-kernel::hornvale_kernel$field::tests::world_time_serializes_as_a_bare_scalar_not_an_object
+hornvale-kernel::hornvale_kernel$genesis::tests::display_spellings_are_preserved
 hornvale-kernel::hornvale_kernel$geosphere::tests::a1_grid_matches_the_full_band_scan_over_a_dense_sweep
 hornvale-kernel::hornvale_kernel$geosphere::tests::adjacency_is_mutual_and_has_the_right_valence
 hornvale-kernel::hornvale_kernel$geosphere::tests::base_icosahedron_has_twelve_unit_vertices
@@ -946,6 +948,7 @@ hornvale-kernel::hornvale_kernel$geosphere::tests::nearest_vertex_index_agrees_w
 hornvale-kernel::hornvale_kernel$geosphere::tests::subdivided_vertices_are_all_unit_length
 hornvale-kernel::hornvale_kernel$geosphere::tests::subdivision_yields_the_icosphere_vertex_counts
 hornvale-kernel::hornvale_kernel$geosphere::tests::vertexmap_covers_every_vertex_and_indexes_by_id
+hornvale-kernel::hornvale_kernel$horizon::tests::the_ladder_is_ordered_shallow_first
 hornvale-kernel::hornvale_kernel$ledger::tests::a_different_parent_or_role_moves_the_path_hash
 hornvale-kernel::hornvale_kernel$ledger::tests::a_facts_day_is_typed_and_round_trips_as_a_bare_integer_tick_count
 hornvale-kernel::hornvale_kernel$ledger::tests::a_root_needs_no_parent_and_no_world_seed
@@ -1015,6 +1018,9 @@ hornvale-kernel::hornvale_kernel$phenomena::tests::observe_breaks_salience_ties_
 hornvale-kernel::hornvale_kernel$phenomena::tests::observe_ignores_observer_position
 hornvale-kernel::hornvale_kernel$phenomena::tests::observe_sorts_by_salience_descending
 hornvale-kernel::hornvale_kernel$phenomena::tests::observe_with_no_sources_is_empty
+hornvale-kernel::hornvale_kernel$phenomena::tests::sentiment_of_ambient_venue_is_ambient_regardless_of_period
+hornvale-kernel::hornvale_kernel$phenomena::tests::sentiment_of_aperiodic_sky_venue_is_eternal
+hornvale-kernel::hornvale_kernel$phenomena::tests::sentiment_of_periodic_sky_venue_is_cyclic
 hornvale-kernel::hornvale_kernel$phenomena::tests::the_identity_lens_still_drops_nothing
 hornvale-kernel::hornvale_kernel$phenomena::tests::visibility_rejects_values_outside_the_unit_interval
 hornvale-kernel::hornvale_kernel$png::tests::adler32_matches_the_known_vector
@@ -1268,7 +1274,9 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::a_world_with_no_flagged_col
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::categorical_and_flag_columns_are_never_evaluable
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_surface_on_the_227_column_census
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::exclusion_reasons_carry_the_exact_documented_wording
+hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_matches_the_same_worlds_entry_in_rank
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_returns_none_for_an_unknown_seed
+hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_is_deterministic
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_orders_most_anomalous_first
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_agrees_with_for_seed_on_a_census_row
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_scores_against_an_uncontaminated_index
@@ -1326,6 +1334,7 @@ hornvale-lab::hornvale_lab$domesday::detect::tests::d8_fires_on_exactly_alchemy_
 hornvale-lab::hornvale_lab$domesday::detect::tests::defensibility_capacity_rank_corr_still_exists_in_the_registry
 hornvale-lab::hornvale_lab$domesday::detect::tests::direct_references_match_measured_crates
 hornvale-lab::hornvale_lab$domesday::detect::tests::domain_crates_are_still_exactly_this_list
+hornvale-lab::hornvale_lab$domesday::detect::tests::findings_are_sorted_by_detector_then_metric
 hornvale-lab::hornvale_lab$domesday::detect::tests::pearson_reads_a_nontrivial_correlation_and_its_sign
 hornvale-lab::hornvale_lab$domesday::detect::tests::pearson_returns_none_for_a_constant_column
 hornvale-lab::hornvale_lab$domesday::detect::tests::the_live_census_reproduces_the_preregistered_findings
@@ -2003,6 +2012,7 @@ hornvale-locale::hornvale_locale$regime::tests::energy_or_kingdom_negation_is_ex
 hornvale-locale::hornvale_locale$regime::tests::magnitude_is_the_max_departure_not_the_sum
 hornvale-locale::hornvale_locale$regime::tests::mundane_has_zero_strangeness
 hornvale-locale::hornvale_locale$regime::tests::substrate_negation_is_extreme_rung
+hornvale-locale::hornvale_locale$regime::tests::substrate_slot_serializes_by_variant_name
 hornvale-locale::hornvale_locale$surface::tests::legend_index_and_name_agree_for_every_variant
 hornvale-locale::hornvale_locale$tests::the_eight_bearings_are_distinct_and_evenly_spaced
 hornvale-locale::suite$water_reading::the_schema_tag_is_still_v2
@@ -3688,7 +3698,6 @@ hornvale::suite$audio_artifacts::committed_audio_is_exactly_the_page_referenced_
 hornvale::suite$build_path_embedding::production_code_embeds_no_new_build_paths
 hornvale::suite$build_path_embedding::the_frozen_list_only_shrinks
 hornvale::suite$build_path_embedding::the_scan_actually_resolves_production_trees
-hornvale::suite$cave_kind_correspondence::every_cave_kind_has_exactly_one_cave_formation
 hornvale::suite$census_duration::a_census_over_the_alarm_threshold_owes_a_profiling_followup
 hornvale::suite$census_duration::the_census_ledger_has_rows_this_test_can_read
 hornvale::suite$census_duration::the_chronologically_latest_row_wins_even_when_it_is_not_last_in_the_file
