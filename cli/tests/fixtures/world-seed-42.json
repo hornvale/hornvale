@@ -771,6 +771,12 @@
         "kind": "Substance",
         "doc": "A stand of northern conifers."
       },
+      "brazier": {
+        "name": "brazier",
+        "domain": "thing",
+        "kind": "Object",
+        "doc": "a metal basin that holds a fire apart from a hearth"
+      },
       "brown": {
         "name": "brown",
         "domain": "language",

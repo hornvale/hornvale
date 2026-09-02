@@ -18,6 +18,7 @@ blue: root Ta /ta/
 blue-giant: gap (unnameable): no culture here has encountered the main sequence
 bone: root Badea /badea/
 boreal-stand: gap (experiential): goblin has no exposure to 'boreal-stand'
+brazier: gap (experiential): goblin has no exposure to 'brazier'
 brown: gap (perceptual): hue rank 5 exceeds depth 4 from night-vision 0.5
 bugbear-kind: root Deetee /deetee/
 burn: gap (experiential): goblin has no exposure to 'burn'
@@ -274,6 +275,7 @@ blue: gap (perceptual): hue rank 4 exceeds depth 3 from night-vision 0.6
 blue-giant: gap (unnameable): no culture here has encountered the main sequence
 bone: root Babea /babea/
 boreal-stand: root Boane /boane/
+brazier: gap (experiential): hobgoblin has no exposure to 'brazier'
 brown: gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.6
 bugbear-kind: root Beetee /beetee/
 burn: gap (experiential): hobgoblin has no exposure to 'burn'
@@ -530,6 +532,7 @@ blue: gap (perceptual): hue rank 4 exceeds depth 3 from night-vision 0.7
 blue-giant: gap (unnameable): no culture here has encountered the main sequence
 bone: root Badoa /badoa/
 boreal-stand: gap (experiential): bugbear has no exposure to 'boreal-stand'
+brazier: gap (experiential): bugbear has no exposure to 'brazier'
 brown: gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.7
 bugbear-kind: root Doodoo /doodoo/
 burn: gap (experiential): bugbear has no exposure to 'burn'
@@ -786,6 +789,7 @@ blue: gap (perceptual): hue rank 4 exceeds depth 2 from night-vision 0.9
 blue-giant: gap (unnameable): no culture here has encountered the main sequence
 bone: root Xaaraa /xaaraa/
 boreal-stand: root Raxaa /raxaa/
+brazier: gap (experiential): kobold has no exposure to 'brazier'
 brown: gap (perceptual): hue rank 5 exceeds depth 2 from night-vision 0.9
 bugbear-kind: root Roxo /roxo/
 burn: root Raraa /raraa/
@@ -1042,6 +1046,7 @@ blue: gap (perceptual): hue rank 4 exceeds depth 3 from night-vision 0.75
 blue-giant: gap (unnameable): no culture here has encountered the main sequence
 bone: root Zngogzho /zŋogʒo/
 boreal-stand: gap (experiential): gnoll has no exposure to 'boreal-stand'
+brazier: gap (experiential): gnoll has no exposure to 'brazier'
 brown: gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.75
 bugbear-kind: root Znoosnov /znoosnov/
 burn: gap (experiential): gnoll has no exposure to 'burn'
@@ -1298,6 +1303,7 @@ blue: root Rea /rea/
 blue-giant: gap (unnameable): no culture here has encountered the main sequence
 bone: root Re /re/
 boreal-stand: gap (experiential): human has no exposure to 'boreal-stand'
+brazier: gap (experiential): human has no exposure to 'brazier'
 brown: root Pea /pea/
 bugbear-kind: root Koreo /koreo/
 burn: gap (experiential): human has no exposure to 'burn'
@@ -1554,6 +1560,7 @@ blue: gap (perceptual): hue rank 4 exceeds depth 3 from night-vision 0.65
 blue-giant: gap (unnameable): no culture here has encountered the main sequence
 bone: root Jagap /jagap/
 boreal-stand: gap (experiential): desert-dwarf has no exposure to 'boreal-stand'
+brazier: gap (experiential): desert-dwarf has no exposure to 'brazier'
 brown: gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.65
 bugbear-kind: root Xaqad /xaqad/
 burn: gap (experiential): desert-dwarf has no exposure to 'burn'
@@ -1810,6 +1817,7 @@ blue: gap (perceptual): hue rank 4 exceeds depth 3 from night-vision 0.7
 blue-giant: gap (unnameable): no culture here has encountered the main sequence
 bone: root Jagab /jagab/
 boreal-stand: gap (experiential): gully-dwarf has no exposure to 'boreal-stand'
+brazier: gap (experiential): gully-dwarf has no exposure to 'brazier'
 brown: gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.7
 bugbear-kind: root Xaqab /xaqab/
 burn: gap (experiential): gully-dwarf has no exposure to 'burn'
@@ -2066,6 +2074,7 @@ blue: gap (perceptual): hue rank 4 exceeds depth 3 from night-vision 0.6
 blue-giant: gap (unnameable): no culture here has encountered the main sequence
 bone: root Jagab /jagab/
 boreal-stand: root Vabat /vabat/
+brazier: gap (experiential): hill-dwarf has no exposure to 'brazier'
 brown: gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.6
 bugbear-kind: root Xaqab /xaqab/
 burn: root Tavam /tavam/

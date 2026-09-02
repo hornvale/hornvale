@@ -110,7 +110,7 @@ that is the difference.
 
 ## Supply
 
-350 registered tokens no situation in this corpus requires.
+351 registered tokens no situation in this corpus requires.
 
 **Demand-side only.** Spec §4 L2.4 asks for tokens no situation requires
 *and no readout consumes*; the second half is not implemented. So this list
@@ -137,6 +137,7 @@ missing half before this list can serve it.
 - `concept:blue-giant` (astronomy)
 - `concept:bone` (language)
 - `concept:boreal-stand` (climate)
+- `concept:brazier` (thing)
 - `concept:brown` (language)
 - `concept:bugbear-kind` (species)
 - `concept:burn` (climate)

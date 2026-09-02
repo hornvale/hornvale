@@ -5489,16 +5489,30 @@ An object is the same thing with a fence in front of it.
 
 `object_registry()` is a `ComponentStore<KindId, ObjectTraits>` — the same
 open, string-keyed shape the species tables have. But the vocabulary a caller
-can actually name is `AnchorKind`, a closed enum built by a macro: thirty-four
-variants, thirty-six exhaustive match sites, seventeen files. `thing_kind_of`
-is the adapter between them, turning a variant into the `KindId` the store
-wanted all along.
+could actually name was `AnchorKind`, a closed enum built by a macro:
+**fifteen variants, three exhaustive match sites, eighteen source files**.
+`thing_kind_of` was the adapter between them, turning a variant into the
+`KindId` the store wanted all along.
 
-So the composition layer exists for objects and is reached only through a
-gate. The consequence is exact and it is why the orange is hard: **a kind the
+> **The three numbers in that paragraph used to read "thirty-four variants,
+> thirty-six exhaustive match sites, seventeen files", and every one of them
+> was wrong on the day this essay was written.** Counted at `208efe4f1`, the
+> essay's own commit: the macro declares **15** variants, not thirty-four;
+> there are **3** exhaustive match sites (`chamber_prose::noun`,
+> `chamber_prose::detail`, `affordance::thing_kind_of`), not thirty-six; and
+> **18** source files mention the type, 22 counting tests, not seventeen. So
+> this is a drafting error rather than drift — the sentence never described any
+> version of the code — and the correction is loud rather than silent because a
+> published measured fact that is wrong produces wrong cost estimates from
+> readers acting in good faith. It did: the fence was advertised at roughly
+> **2.3x** its real size, and the campaign that took it down was scoped against
+> the advertisement.
+
+So the composition layer existed for objects and was reached only through a
+gate. The consequence was exact and it is why the orange is hard: **a kind the
 enum does not name cannot exist**, however open the store behind it is. Not
 because anything about the model forbids it, but because a fence built for
-thirteen furniture anchors is still standing after the world grew fruit.
+thirteen furniture anchors was still standing after the world grew fruit.
 
 ### The nine claims, sorted
 
@@ -5579,6 +5593,41 @@ first two to have anything to vary.
 The orange is a better forcing function than a specification. It is small, it
 is concrete, and every version of it that cannot yet exist says exactly which
 mechanism is missing.
+
+### Addition one has shipped, and what it cost is not what was predicted
+
+[The Wicket](../chronicle/the-wicket.md) (2026-09-01) retired the closedness.
+`AnchorKind`, `anchor_kinds!`, `AnchorKind::ALL` and `thing_kind_of` are
+deleted; the grammar's `Anchor`, `Interior`, `Pattern` and `Attach` are keyed
+on `KindId`; and prose is a component table beside the others rather than two
+exhaustive matches. The compiler's totality guarantee is replaced by six
+default-deny registry checks, each of which states in its own doc comment which
+direction it enforces, because a check asserting *declared ⊆ resolvable* is
+blind to over-admission and still reads as total to the next reader.
+
+The proof is a **brazier**: a standing pan of coals that carries the heat
+property `warm` genuinely enforces, appended to the room grammar beside the
+loom. It reached a real world — a body walks into a loomroom and finds
+something to warm itself at, where before a hearthroom was the only room in any
+world that could offer it — through five data rows and no dispatcher, enum or
+match-arm edit. The method that enforces `warm` had named that exact future
+carrier in its own comment and said such a carrier *"would have needed an edit
+HERE"*; the brazier arrived to find the edit already unnecessary.
+
+**And the campaign's own cost claim was too strong, which is the more useful
+half of the result.** *Adding a kind touches no dispatcher, no enum and no
+match arm* is true of the room grammar's path and false one layer over: a kind
+is also a **concept**, and the concept side kept two closed lists of its own —
+an exhaustive documentation match whose missing arm panics world genesis, and a
+hand-maintained accession cohort. Both were found by running rather than by
+reading. So the fence came down where this essay was pointing and an equivalent
+one is still standing in two other crates, now named and located instead of
+suspected. That is what a forcing function is supposed to produce.
+
+Edges — addition two — also stopped being hypothetical. *What a people tends to
+sleep on* is a `(species, thing)` pair, which is a kind-to-kind edge with a
+named consumer waiting on it, and it is a better one than the orange tree
+because something in the world is already asking the question.
 
 ## Intellectual lineage
 

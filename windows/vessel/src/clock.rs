@@ -188,8 +188,12 @@ pub fn base_cost(action: &Action) -> TickSpan {
         Action::Drink => TickSpan::from_ticks(150),
         // A meal is not — the better part of an hour.
         Action::Eat => TickSpan::from_ticks(3_000),
-        // Lying DOWN is quick; the sleep itself is the jump-to-waking, not this.
-        Action::Rest => TickSpan::from_ticks(150),
+        // Lying DOWN is quick; the bout itself is the act's own span
+        // (`liveness::act_span`), not this. Both recovery acts cost the same to
+        // BEGIN — going under and lying down are the same motion — and they
+        // differ in what the act then does, which is the split The Wicket's
+        // Task 8 made and is not a cost distinction.
+        Action::Rest | Action::Sleep => TickSpan::from_ticks(150),
         // Group A: operator instruments charge nothing by default (spec
         // §3.4) — see the doc above.
         Action::Why
@@ -471,6 +475,7 @@ mod tests {
             }),
             Action::Drink,
             Action::Rest,
+            Action::Sleep,
             Action::Eat,
         ];
         for a in &every {

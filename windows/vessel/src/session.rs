@@ -9,9 +9,9 @@ use crate::controller::{Controller, ImposedController, PlayerController};
 use crate::gate::{BodyState, Verdict, verdict};
 use crate::liveness::{
     AGENT_AT, Affect, AffectLabel, DRANK, DriveKind, DriveMovements, EATEN, HomeNavCache,
-    LocaleTerrain, Mode, Occupancy, PrimaryAfraidMemo, RESTED, SUSTENANCE, Terrain,
-    affect_of_memo_occupied, agent_at_fact, agent_position, built_rooms, derive_npcs,
-    derive_wild_npcs, next_awake_day, rested_fact, species_activity, village_or_fallback,
+    LocaleTerrain, Mode, Occupancy, PrimaryAfraidMemo, RESTED, SLEPT, SUSTENANCE, Terrain,
+    act_span, affect_of_memo_occupied, agent_at_fact, agent_position, built_rooms, derive_npcs,
+    derive_wild_npcs, renders_unconscious, slept_fact, species_activity, village_or_fallback,
 };
 use crate::snapshot::{
     KnownChannel, KnownEntry, Narration, NounEntry, PresentEntry, SESSION_SCHEMA, SelfChannel,
@@ -28,6 +28,7 @@ use hornvale_kernel::{
     WorldTime, tick,
 };
 use hornvale_locale::{Compass, Direction, ExitKind, LocaleContext};
+use hornvale_thing::kinds;
 
 /// How many NPCs a session derives (spec §4: a small authored constant, not
 /// every settlement — the flagship's own leader plus a couple of neighbors).
@@ -185,9 +186,15 @@ const WALKED_PROVENANCE: &str = "walked on (its own errand)";
 /// [`WALKED_PROVENANCE`], naming the retrace rather than the retracer.
 const RETRACED_PROVENANCE: &str = "turned back the way it came";
 
-/// The provenance `sleep` commits its `rested` fact under, in the same
-/// register `liveness.rs` uses for a creature's own Rest ("slept at home
+/// The provenance `sleep` commits its `slept` fact under, in the same
+/// register `liveness.rs` uses for a creature's own Sleep ("slept at home
 /// (fatigue eased)").
+///
+/// **It said `rested` fact / own Rest until the Definition-of-Done sweep, and
+/// the drift was this campaign's own.** The Wicket's Task 8 split
+/// `Action::Sleep` from `Action::Rest` and moved this method onto the `slept`
+/// predicate; the constant's name and value were already right, so nothing
+/// reddened and the sentence beside them kept naming the retired fact.
 const SLEPT_PROVENANCE: &str = "lay down and slept (fatigue eased)";
 
 /// What `sleep` says. It names `!wait` on purpose: an in-character `wait` is
@@ -1037,7 +1044,7 @@ struct Inside {
 /// One furnishing anchor's kind and the spot the fine-layer placement gave
 /// it — named so [`Sighting::furnishings`]'s type does not repeat the same
 /// qualified path at every use site.
-type FurnishingSpot = (crate::interior::AnchorKind, crate::lattice::Cell); // lexicon: AREA-sense chamber-lattice square, never a mesh vertex
+type FurnishingSpot = (hornvale_kernel::KindId, crate::lattice::Cell); // lexicon: AREA-sense chamber-lattice square, never a mesh vertex
 
 /// What the fine layer says about the chamber the possession is standing in:
 /// where each co-located creature has been drawn, and which cells the
@@ -1077,11 +1084,11 @@ struct Sighting {
     /// Two anchor kinds never appear here, and neither is a special case in
     /// the sense `Mark.kind`'s doc warns against — both are excluded by a
     /// GENERIC rule, not by naming the kind:
-    /// - [`crate::interior::AnchorKind::Threshold`] is excluded explicitly
+    /// - [`kinds::THRESHOLD`] is excluded explicitly
     ///   (see [`Session::sighting`]): the plan already draws it as `+`, a
     ///   `Structure`-population glyph, so a mark here would double-encode the
     ///   same doorway the picture already speaks for.
-    /// - [`crate::interior::AnchorKind::Ground`] excludes itself: it has no
+    /// - [`kinds::GROUND`] excludes itself: it has no
     ///   examinable noun (`crate::chamber_prose::noun`'s own doc — "it is the
     ///   chamber's own floor, not a thing standing in it"), for the identical
     ///   reason `Threshold` is excluded by hand — every square of it already
@@ -1294,9 +1301,12 @@ impl<'w> Session<'w> {
             .register_predicate(
                 RESTED,
                 false,
-                "an agent rested (eased its fatigue) on a day",
+                "an agent rested on a day, for this many ticks",
             )
             .expect("RESTED registers identically every session");
+        registry
+            .register_predicate(SLEPT, false, "an agent slept on a day, for this many ticks")
+            .expect("SLEPT registers identically every session");
         registry
             .register_predicate(EATEN, false, "an agent ate (eased its hunger) on a day")
             .expect("EATEN registers identically every session");
@@ -1790,7 +1800,7 @@ impl<'w> Session<'w> {
                     .map(|&(kind, spot)| crate::plan::PlanMark {
                         x: spot.0,
                         y: spot.1,
-                        noun: crate::chamber_prose::noun(kind)
+                        noun: crate::chamber_prose::noun(kind.0)
                             .expect(
                                 "Sighting::furnishings only ever holds a kind chamber_prose::noun \
                                  answers for — sighting()'s own filter guarantees it",
@@ -2619,19 +2629,30 @@ impl<'w> Session<'w> {
     /// this arc adds: the acceptance test needs a body that can stop obeying,
     /// and none of the 26 existing verbs could produce one.
     ///
-    /// **It mints nothing.** It routes to the existing [`Action::Rest`] — so
-    /// it costs what lying down costs, and commits the same `rested` fact a
-    /// creature's own Rest commits — and `rest`/`sleep` are both already
-    /// registered concepts, so no concept, cohort or accession entry moves.
+    /// **It mints nothing.** It routes to [`Action::Sleep`] — so it costs what
+    /// going under costs, and commits the same `slept` fact a creature's own
+    /// Sleep commits — and `sleep` was already a registered concept before the
+    /// variant existed, so no concept, cohort or accession entry moves.
     ///
-    /// **When it wakes** is `liveness::next_awake_day`, the same scan a
-    /// creature's Rest jumps by. That function answers "the next moment this
-    /// species is awake", which is at least one scan step away, so the body is
-    /// genuinely under until the clock advances. It is honest but coarse: a
-    /// body that lies down *during* its own waking phase wakes at the next
-    /// scan step rather than sleeping through to the following night. Naming
-    /// a finer rule would be inventing a second sleep model beside the
-    /// creature layer's, which this task declines to do.
+    /// **It used to route to [`Action::Rest`], and that was the defect Task 8
+    /// fixed.** One act cannot be both conscious and unconscious, so
+    /// unconsciousness lived HERE — this method set `wake_at` itself — and a
+    /// creature performing the very same `Action::Rest` never went under. The
+    /// property is the act's now: this method asks
+    /// [`renders_unconscious`] rather than deciding, so the two routes reach
+    /// the same state by construction rather than by two implementations
+    /// agreeing.
+    ///
+    /// **How long it lasts** is [`act_span`], the one place a bout's length is
+    /// decided, shared verbatim with the creature layer's own walk. For a sleep
+    /// that is the body's own cycle (`next_awake_day`) floored at a full sleep
+    /// bout. The floor is what this doc used to lack: it said the wake was
+    /// "honest but coarse" because a body lying down *during* its waking phase
+    /// woke at the next scan step — seven minutes — and declined to name a
+    /// finer rule on the grounds that doing so would invent a second sleep
+    /// model beside the creature layer's. With two acts there is no second
+    /// model to invent: the floor is a property of sleeping, and both layers
+    /// read it from the same function.
     ///
     /// **An argument is refused, not swallowed** (fix round 1). `sleep 5`
     /// reads as "sleep five days" and cannot be honoured — the body wakes on
@@ -2644,21 +2665,38 @@ impl<'w> Session<'w> {
         if !arg.is_empty() {
             return Turn::Out(SLEEP_ARGUMENT_REFUSAL.to_string());
         }
-        if let Err(e) = self.charge(&Action::Rest, 1.0) {
+        if let Err(e) = self.charge(&Action::Sleep, 1.0) {
             return Turn::Out(e);
         }
-        let fact = rested_fact(self.agent_entity(), self.day, SLEPT_PROVENANCE);
-        self.ledger
-            .commit(fact, &self.registry)
-            .expect("RESTED is registered every session and non-functional");
-        let wake = {
+        // THE SPAN COMES FIRST (The Wicket, Task 7), because the `slept` fact
+        // records how long the body was down and this method already knew:
+        // `wake_at` was computed from the same scan and the fact was committed
+        // without it. Fatigue is a recovery stock, so the span is what a sleep
+        // actually repays.
+        let span = {
             let activity = species_activity(self.world, &self.driven_body().species);
             let terrain = self.terrain_here();
-            next_awake_day(activity, &terrain, &self.position(), self.day)
+            act_span(
+                &Action::Sleep,
+                activity,
+                &terrain,
+                &self.position(),
+                self.day,
+            )
+            .expect("Sleep is one of the two acts act_span answers for")
         };
-        // `next_awake_day` answers with the instant itself now, so the wake
-        // time needs no reconstruction from a float day — and cannot fail.
-        self.wake_at = Some(wake);
+        let fact = slept_fact(self.agent_entity(), self.day, span, SLEPT_PROVENANCE);
+        self.ledger
+            .commit(fact, &self.registry)
+            .expect("SLEPT is registered every session and non-functional");
+        // UNCONSCIOUSNESS IS READ OFF THE ACT, NOT ASSERTED HERE (The Wicket,
+        // Task 8). The `if` is not decoration on an act that always answers
+        // `true`: it is the statement that this method has no opinion of its
+        // own about whether the body goes under, so a future act routed through
+        // here gets the answer its own classification gives.
+        if renders_unconscious(&Action::Sleep) {
+            self.wake_at = Some(self.day + span);
+        }
         Turn::Out(SLEEP_REPLY.to_string())
     }
 
@@ -2680,17 +2718,17 @@ impl<'w> Session<'w> {
     /// every other `Action`'s precondition holds
     /// (`action::precondition_reads_committed_state`). Standing at a hearth
     /// out of doors is impossible in the first place — no
-    /// [`crate::interior::AnchorKind::Hearth`] exists outside a chamber's
+    /// [`kinds::HEARTH`] exists outside a chamber's
     /// `Interior` — so `self.chamber_interior_here()` returning `None` out
     /// of doors doubles as that refusal.
     ///
     /// **Fixed post-review (I1): gates on the OFFER, not on a hardcoded
-    /// `AnchorKind::Hearth` literal.** This method used to compare
-    /// `interior.anchor(a).kind == AnchorKind::Hearth` directly — the exact
+    /// `kinds::HEARTH` literal.** This method used to compare
+    /// `interior.anchor(a).kind == kinds::HEARTH` directly — the exact
     /// per-kind coupling spec §3.2 says a new verb must never need
     /// ("neither edits a dispatcher"), reintroduced by the one verb this
     /// campaign actually adds. A future `RadiatesHeat` carrier (a cauldron
-    /// of coals on `AnchorKind::Vessel`, say) would have needed an edit
+    /// of coals on `kinds::VESSEL`, say) would have needed an edit
     /// HERE as well as an `object_registry` entry — exactly the M×N
     /// dispatcher-edit this campaign exists to abolish. Now this reads
     /// [`crate::affordance::OfferedVerb::Warm`] off whichever anchor is
@@ -2704,15 +2742,16 @@ impl<'w> Session<'w> {
     /// [`Self::examine_chamber`] is: one knowledge gate for every surface
     /// that reads an offer (Nathan's #9 ruling), not two.
     ///
-    /// **The [`crate::affordance::thing_kind_of`] conversion is at this call
-    /// site since Task 9, not inside the query** (spec §3.6, decision 0397).
-    /// It is here because the anchor is here: this method holds an
-    /// [`crate::interior::AnchorKind`] and the query speaks thing-kind, so
-    /// the conversion belongs where the anchor is — the same rule
-    /// `crate::affordance::encloses` already follows. Moving it out of
-    /// `offered_to_observer` is what lets a caller who holds NO anchor kind
-    /// (a cave mouth, addressed by a `Vertex`/`ChamberAddr`) reach the gate
-    /// at all; nothing about warming changes.
+    /// **There is no anchor-kind conversion at this call site any more, and
+    /// there used to be one** (spec §3.6, decision 0397; The Wicket, Task 2).
+    /// Task 9 moved an `AnchorKind` → `KindId` conversion OUT of
+    /// `offered_to_observer` and to this call site, on the rule that the
+    /// conversion belongs where the anchor is; that is what let a caller
+    /// holding no anchor kind (a cave mouth, addressed by a
+    /// `Vertex`/`ChamberAddr`) reach the gate at all. The Wicket made an
+    /// anchor's `kind` a `KindId` outright, so the anchor and the query speak
+    /// one currency and the conversion has nowhere left to sit. Nothing about
+    /// warming changes, and nothing about the gate does.
     ///
     /// **Commits nothing, and mints no `Action` variant.** Warming is not a
     /// GOAP-planned creature act — no successor in `action.rs`'s search
@@ -2732,7 +2771,7 @@ impl<'w> Session<'w> {
         let can_warm = self.chamber_interior_here().is_some_and(|interior| {
             interior.ids().iter().any(|&a| {
                 crate::affordance::offered_to_observer(
-                    crate::affordance::thing_kind_of(interior.anchor(a).kind),
+                    interior.anchor(a).kind,
                     self.driven_body(),
                     &self.knowledge,
                 )
@@ -2878,7 +2917,7 @@ impl<'w> Session<'w> {
     ///    uses, so a word that examines here also opens here or is refused
     ///    with the same sentence.
     /// 4. **The derived offer**, `offered_to_observer(...)`. Not
-    ///    `object_registry` directly and never an `AnchorKind` literal: a new
+    ///    `object_registry` directly and never a kind literal: a new
     ///    thing-kind carrying `Openable` becomes openable with no edit here
     ///    (acceptance 7), and the knowledge gate stands in front of this verb
     ///    exactly as it stands in front of `warm` and `examine`.
@@ -2980,13 +3019,13 @@ impl<'w> Session<'w> {
             return Turn::Out(NOTHING_HERE_OPENS_REFUSAL.to_string());
         };
         let Some(id) = interior.ids().into_iter().find(|&id| {
-            crate::chamber_prose::noun(interior.anchor(id).kind)
+            crate::chamber_prose::noun(interior.anchor(id).kind.0)
                 .is_some_and(|n| n.to_lowercase() == wanted)
         }) else {
             return Turn::Out(format!("You see no {} here.", rest.trim()));
         };
 
-        let thing_kind = crate::affordance::thing_kind_of(interior.anchor(id).kind);
+        let thing_kind = interior.anchor(id).kind;
         let offer =
             crate::affordance::offered_to_observer(thing_kind, self.driven_body(), &self.knowledge);
         let verb = if open {
@@ -2998,7 +3037,7 @@ impl<'w> Session<'w> {
             return Turn::Out(format!(
                 "The {} does not {}.",
                 crate::chamber_prose::without_article(
-                    crate::chamber_prose::noun(interior.anchor(id).kind)
+                    crate::chamber_prose::noun(interior.anchor(id).kind.0)
                         .expect("a noun matched above")
                 ),
                 verb.word()
@@ -3015,7 +3054,7 @@ impl<'w> Session<'w> {
         }
 
         let bare = crate::chamber_prose::without_article(
-            crate::chamber_prose::noun(interior.anchor(id).kind).expect("a noun matched above"),
+            crate::chamber_prose::noun(interior.anchor(id).kind.0).expect("a noun matched above"),
         );
         if self.container_is_open(&room, thing_kind) == open {
             return Turn::Out(format!(
@@ -3082,10 +3121,12 @@ impl<'w> Session<'w> {
     /// method as an [`EntityId`] whose kind is an `instance-of` object — a
     /// runtime string — and the room it was promoted from may be two rooms
     /// behind with its interior no longer composed. So the noun comes from
-    /// [`crate::chamber_prose::noun_for_label`] and never from an
-    /// `AnchorKind`, which nothing here holds.
+    /// [`crate::chamber_prose::noun`], reached by that runtime label. It was
+    /// a separate `noun_for_label` entry point until The Wicket collapsed the
+    /// two — the anchor side and the ledger side now hand the same function
+    /// the same kind of argument.
     ///
-    /// A held thing whose label no anchor kind spells (`cave-mouth`, which
+    /// A held thing whose label no room's grammar composes (`cave-mouth`, which
     /// `passage.rs` mints) is dropped from this list rather than named by its
     /// bare label: nothing can put one in a hand, and inventing prose for the
     /// unreachable case would be prose no test could ever read back.
@@ -3157,7 +3198,7 @@ impl<'w> Session<'w> {
         holder: EntityId,
     ) -> Option<hornvale_kernel::KindId> {
         interior.ids().into_iter().find_map(|id| {
-            let kind = crate::affordance::thing_kind_of(interior.anchor(id).kind);
+            let kind = interior.anchor(id).kind;
             crate::thing::thing_id(room, kind.0, 0)
                 .is_ok_and(|e| e == holder)
                 .then_some(kind)
@@ -3326,15 +3367,15 @@ impl<'w> Session<'w> {
             return Turn::Out(NOTHING_HERE_TO_TAKE_REFUSAL.to_string());
         };
         let Some(id) = interior.ids().into_iter().find(|&id| {
-            crate::chamber_prose::noun(interior.anchor(id).kind)
+            crate::chamber_prose::noun(interior.anchor(id).kind.0)
                 .is_some_and(|n| n.to_lowercase() == wanted)
         }) else {
             return self.take_from_the_ledger(&interior, &room, &wanted, rest.trim());
         };
 
-        let thing_kind = crate::affordance::thing_kind_of(interior.anchor(id).kind);
+        let thing_kind = interior.anchor(id).kind;
         let bare = crate::chamber_prose::without_article(
-            crate::chamber_prose::noun(interior.anchor(id).kind).expect("a noun matched above"),
+            crate::chamber_prose::noun(interior.anchor(id).kind.0).expect("a noun matched above"),
         );
         if !crate::affordance::offered_to_observer(thing_kind, self.driven_body(), &self.knowledge)
             .contains(&crate::affordance::OfferedVerb::Take)
@@ -3360,7 +3401,7 @@ impl<'w> Session<'w> {
         if crate::thing::location_of(&self.ledger, thing, self.day).is_none()
             && let Some(container) = interior.anchor(id).within
         {
-            let container_kind = crate::affordance::thing_kind_of(interior.anchor(container).kind);
+            let container_kind = interior.anchor(container).kind;
             let container_entity = crate::thing::thing_id(&room, container_kind.0, 0)
                 .expect("a chamber facet packs, or the interior could not have composed");
             if !self.holder_admits(container_kind, container_entity) {
@@ -3488,7 +3529,7 @@ impl<'w> Session<'w> {
         let here = crate::thing::lying_in(&self.ledger, room, self.day)
             .expect("a chamber facet packs, or the interior could not have composed");
         let on_the_floor = here.into_iter().find_map(|thing| {
-            let noun = crate::chamber_prose::noun_for_label(self.ledger.kind_of(thing)?)?;
+            let noun = crate::chamber_prose::noun(self.ledger.kind_of(thing)?)?;
             (noun.to_lowercase() == wanted).then_some((thing, noun))
         });
         // The floor first, then the containers standing on it — a thing set
@@ -3554,7 +3595,7 @@ impl<'w> Session<'w> {
         wanted: &str,
     ) -> Option<(EntityId, &'static str, hornvale_kernel::KindId, EntityId)> {
         interior.ids().into_iter().find_map(|id| {
-            let kind = crate::affordance::thing_kind_of(interior.anchor(id).kind);
+            let kind = interior.anchor(id).kind;
             if !crate::affordance::carries(kind, crate::affordance::ObjectProperty::Encloses) {
                 return None;
             }
@@ -3562,7 +3603,7 @@ impl<'w> Session<'w> {
             crate::thing::held_by(&self.ledger, holder, self.day)
                 .into_iter()
                 .find_map(|thing| {
-                    let noun = crate::chamber_prose::noun_for_label(self.ledger.kind_of(thing)?)?;
+                    let noun = crate::chamber_prose::noun(self.ledger.kind_of(thing)?)?;
                     (noun.to_lowercase() == wanted).then_some((thing, noun, kind, holder))
                 })
         })
@@ -3576,8 +3617,8 @@ impl<'w> Session<'w> {
     /// that is the whole difference from [`Self::take`]. A carried thing may
     /// be of a kind this chamber's grammar never composes — it came from a
     /// room two doors back — so there is no anchor here to match a word
-    /// against and [`crate::chamber_prose::noun`] cannot be reached from an
-    /// `AnchorKind` this interior does not hold.
+    /// against, and [`crate::chamber_prose::noun`] cannot be reached from a
+    /// kind this interior does not hold.
     ///
     /// **The order of its refusals is deliberate**: the custody lookup comes
     /// BEFORE the band check, so a player carrying nothing is told so
@@ -3650,15 +3691,15 @@ impl<'w> Session<'w> {
             return Turn::Out(format!("You see no {holder_word} here."));
         };
         let Some(id) = interior.ids().into_iter().find(|&id| {
-            crate::chamber_prose::noun(interior.anchor(id).kind)
+            crate::chamber_prose::noun(interior.anchor(id).kind.0)
                 .is_some_and(|n| n.to_lowercase() == holder_word)
         }) else {
             return Turn::Out(format!("You see no {holder_word} here."));
         };
 
-        let holder_kind = crate::affordance::thing_kind_of(interior.anchor(id).kind);
+        let holder_kind = interior.anchor(id).kind;
         let holder_bare = crate::chamber_prose::without_article(
-            crate::chamber_prose::noun(interior.anchor(id).kind).expect("a noun matched above"),
+            crate::chamber_prose::noun(interior.anchor(id).kind.0).expect("a noun matched above"),
         );
         let bare = crate::chamber_prose::without_article(noun);
         if !crate::affordance::carries(holder_kind, crate::affordance::ObjectProperty::Encloses) {
@@ -4017,9 +4058,21 @@ impl<'w> Session<'w> {
                 "ask" => Turn::Out(self.ask()),
                 // The one verb this arc adds (The Deed, Task 7): the
                 // acceptance test needs a body that can stop obeying, and
-                // none of spec §3.2's 26 could produce one. Routed to the
-                // existing `Action::Rest` machinery — no new concept, no new
-                // cost dial, no new predicate.
+                // none of spec §3.2's 26 could produce one.
+                //
+                // TWO THIRDS OF WHAT THIS COMMENT USED TO SAY WAS UNDONE
+                // TWO LINES BELOW IT (The Wicket, Task 8). It read "Routed
+                // to the existing `Action::Rest` machinery — no new concept,
+                // no new cost dial, no new predicate." Task 8 split the act:
+                // `Session::sleep` charges `Action::Sleep` and commits
+                // `SLEPT`, a predicate this session registers itself
+                // (`register_predicate(SLEPT, …)`), so neither the routing
+                // claim nor "no new predicate" survives. What DOES survive
+                // is both bookends: no new CONCEPT (a sleep is still a
+                // recovery bout, the unconscious twin of a rest, not a
+                // fourth thing), and no new COST DIAL — `clock::cost_of`
+                // prices `Action::Rest | Action::Sleep` at the same 150
+                // ticks in one arm, unchanged by the split.
                 "sleep" => self.sleep(rest),
                 "write" => Turn::Out(self.write(rest)),
                 "consult" => Turn::Out(self.consult()),
@@ -5700,7 +5753,7 @@ impl<'w> Session<'w> {
     ///   explicit carried torch a refinement rather than a new mechanism and
     ///   means nobody is ever stranded in the dark with no inventory to fix it.
     /// - **The hearth**, only where this chamber actually composes an
-    ///   `AnchorKind::Hearth` — the interior graph decides whether there is a
+    ///   `kinds::HEARTH` — the interior graph decides whether there is a
     ///   fire, and [`crate::light::hearth_cell`] decides only where it sits.
     /// - **The doorways.** A declared approximation, and worth stating plainly:
     ///   the lattice records **no exterior door**, because a structure's way out
@@ -5735,7 +5788,7 @@ impl<'w> Session<'w> {
             interior
                 .ids()
                 .iter()
-                .any(|&a| interior.anchor(a).kind == crate::interior::AnchorKind::Hearth)
+                .any(|&a| interior.anchor(a).kind == kinds::HEARTH)
         });
         // Both halves are needed and neither implies the other: the interior
         // graph decides whether there IS a fire, and `hearth_cell` decides only
@@ -6286,10 +6339,10 @@ impl<'w> Session<'w> {
             .into_iter()
             .filter_map(|a| {
                 let kind = chamber.anchor(a).kind;
-                if kind == crate::interior::AnchorKind::Threshold {
+                if kind == kinds::THRESHOLD {
                     return None;
                 }
-                crate::chamber_prose::noun(kind)?;
+                crate::chamber_prose::noun(kind.0)?;
                 let spot = *cells.get(&a)?; // lexicon: AREA-sense chamber-lattice square, never a mesh vertex
                 if !lit.contains(&spot) || held.at(spot).is_some() {
                     return None;
@@ -6329,8 +6382,8 @@ impl<'w> Session<'w> {
         if let Some(interior) = self.chamber_interior_here() {
             for id in interior.ids() {
                 let kind = interior.anchor(id).kind;
-                let thing_kind_here = crate::affordance::thing_kind_of(kind);
-                if crate::chamber_prose::noun(kind).is_some_and(|n| n.to_lowercase() == wanted) {
+                let thing_kind_here = kind;
+                if crate::chamber_prose::noun(kind.0).is_some_and(|n| n.to_lowercase() == wanted) {
                     // The Offer, Task 7 (spec §3.5/§4): routed through the
                     // derived offer query, not the anchor's bare kind, so
                     // the knowledge gate is LIVE CODE with an unreachable
@@ -6350,16 +6403,14 @@ impl<'w> Session<'w> {
                     // the one `Knowledge` state a live session cannot reach
                     // on its own.
                     //
-                    // The Chattel, Task 9 (spec §3.6, decision 0397): the
-                    // `thing_kind_of` conversion is HERE now, not inside
-                    // `offered_to_observer`, which is keyed on `KindId`.
-                    // `kind` is an `AnchorKind` read off this chamber's own
-                    // anchor, so the conversion sits where the anchor is;
-                    // the offer this consults is unchanged, because
-                    // `thing_kind_of` is exactly what the query used to
-                    // apply to the same value one frame in.
+                    // The Chattel, Task 9 (spec §3.6, decision 0397) moved
+                    // an anchor-kind -> `KindId` conversion HERE, out of
+                    // `offered_to_observer`. The Wicket deleted the enum, so
+                    // `kind` is already the `KindId` this chamber's anchor
+                    // carries and the conversion is gone rather than
+                    // relocated; the offer this consults is unchanged.
                     if !crate::affordance::offered_to_observer(
-                        crate::affordance::thing_kind_of(kind),
+                        kind,
                         self.driven_body(),
                         &self.knowledge,
                     )
@@ -6974,7 +7025,7 @@ impl<'w> Session<'w> {
     /// second matcher below (`scene.legend`, this method's own doc's "the
     /// chart's legend") synthesizes `Noun`s from `hornvale_scene::
     /// SurroundsScene` — WALK-band terrain marks (biome regions, sky), never
-    /// a chamber `AnchorKind`. Worse, this method cannot even be reached
+    /// a chamber anchor's kind. Worse, this method cannot even be reached
     /// while the possession is indoors: it calls [`Self::purview`] →
     /// [`Self::purview_through`], whose own `debug_assert!` requires
     /// `self.inside.is_none()`, because the walk-band chart marks every
@@ -9130,7 +9181,7 @@ mod tests {
     /// `warm` line's own word must be [`crate::affordance::OfferedVerb::
     /// Warm`]'s canonical spelling, it must name the SAME carrier
     /// [`crate::affordance::object_registry`] assigns `RadiatesHeat`
-    /// (`chamber_prose::noun(AnchorKind::Hearth)`), and that carrier must
+    /// (`chamber_prose::noun(kinds::HEARTH.0)`), and that carrier must
     /// actually offer `Warm` per the derived query — so a rename in either
     /// place, or a reassignment of the carrier, reddens here rather than
     /// drifting silently, the same discipline
@@ -9148,18 +9199,16 @@ mod tests {
                 .starts_with(crate::affordance::OfferedVerb::Warm.word()),
             "HELP's warm line must open with OfferedVerb::Warm's own word: {warm_line:?}"
         );
-        let hearth_noun = crate::chamber_prose::noun(crate::interior::AnchorKind::Hearth)
-            .expect("Hearth always names a noun");
+        let hearth_noun =
+            crate::chamber_prose::noun(kinds::HEARTH.0).expect("Hearth always names a noun");
         assert!(
             warm_line.contains(hearth_noun),
             "HELP's warm line must name the same carrier object_registry \
              assigns RadiatesHeat to ({hearth_noun:?}): {warm_line:?}"
         );
         assert!(
-            crate::affordance::offered_by(crate::affordance::thing_kind_of(
-                crate::interior::AnchorKind::Hearth,
-            ))
-            .contains(&crate::affordance::OfferedVerb::Warm),
+            crate::affordance::offered_by(kinds::HEARTH)
+                .contains(&crate::affordance::OfferedVerb::Warm),
             "the carrier HELP names must actually offer Warm, or the two \
              texts would agree with each other while disagreeing with the \
              derived query"
@@ -9173,7 +9222,7 @@ mod tests {
     /// VERB actually dispatches and reads only derived interior state.
     ///
     /// A freshly-possessed seed-42 session starts out of doors
-    /// (`self.inside` is `None`), where `AnchorKind::Hearth` cannot exist at
+    /// (`self.inside` is `None`), where `kinds::HEARTH` cannot exist at
     /// all — there is no chamber `Interior` to carry one — so `warm` must
     /// refuse for want of a fire.
     ///
@@ -9528,11 +9577,11 @@ mod tests {
         let alcove = interior
             .ids()
             .into_iter()
-            .find(|&a| crate::chamber_prose::noun(interior.anchor(a).kind) == Some("an alcove"))
+            .find(|&a| crate::chamber_prose::noun(interior.anchor(a).kind.0) == Some("an alcove"))
             .expect(
                 "precondition: seed 13's second chamber is the hearthroom, which draws an alcove",
             );
-        let kind = crate::affordance::thing_kind_of(interior.anchor(alcove).kind);
+        let kind = interior.anchor(alcove).kind;
         assert!(
             crate::affordance::carries(kind, crate::affordance::ObjectProperty::Encloses),
             "precondition: the alcove must ENCLOSE, or this test could not \
@@ -9658,17 +9707,14 @@ mod tests {
     /// ```
     #[test]
     fn a_lockable_thing_opens_only_with_the_key_in_custody() {
-        use crate::affordance::{ObjectProperty, carries, thing_kind_of};
-        let strongbox = thing_kind_of(crate::interior::AnchorKind::Strongbox);
+        use crate::affordance::{ObjectProperty, carries};
+        let strongbox = kinds::STRONGBOX;
         assert!(
             carries(strongbox, ObjectProperty::Lockable),
             "the lock must declare what it requires"
         );
         assert!(
-            !carries(
-                thing_kind_of(crate::interior::AnchorKind::Alcove),
-                ObjectProperty::Lockable
-            ),
+            !carries(kinds::ALCOVE, ObjectProperty::Lockable),
             "a kind with no lock must not declare one, or the gate is universal"
         );
 
@@ -9693,7 +9739,7 @@ mod tests {
             &mut session.ledger,
             &session.registry,
             &elsewhere,
-            thing_kind_of(crate::interior::AnchorKind::Key).0,
+            kinds::KEY.0,
             0,
             day,
         )
@@ -9812,7 +9858,7 @@ mod tests {
     /// quoted above. Confirmed 2026-08-29, unfiltered over the whole crate.
     #[test]
     fn a_key_in_custody_opens_the_strongbox_a_player_walked_to() {
-        use crate::affordance::{ObjectProperty, thing_kind_of};
+        use crate::affordance::ObjectProperty;
         let world = world_at(CHAMBERED_SEED).expect("the chambered seed builds");
         let (mut session, _) =
             Session::start(&world, &PossessOpts::default()).expect("the chambered seed possesses");
@@ -9858,7 +9904,7 @@ mod tests {
             &mut session.ledger,
             &session.registry,
             &elsewhere,
-            thing_kind_of(crate::interior::AnchorKind::Key).0,
+            kinds::KEY.0,
             0,
             day,
         )
@@ -11049,7 +11095,7 @@ mod tests {
             face: 0,
             path: vec![2],
         };
-        let kind = crate::affordance::thing_kind_of(crate::interior::AnchorKind::Strongbox);
+        let kind = kinds::STRONGBOX;
 
         assert!(
             !session.container_is_open(&room, kind),
@@ -11112,21 +11158,21 @@ mod tests {
     /// carries an alcove or a hearth (`interior/pattern.rs`'s `the-alcove`
     /// pattern is gated `roles: &[Role::Hearthroom]`); `enter further in`
     /// steps to `chamber_index` 1, `Role::Hearthroom`, the one role the fire
-    /// pattern's own `Attach::Within(AnchorKind::Alcove)` can ever reach.
+    /// pattern's own `Attach::Within(kinds::ALCOVE)` can ever reach.
     ///
     /// Mutation this must fail against: repoint `Self::warm`'s success gate
-    /// at `AnchorKind::Vessel` instead of `AnchorKind::Hearth` — this
+    /// at `kinds::VESSEL` instead of `kinds::HEARTH` — this
     /// reddens (confirmed below) while `warm_refuses_with_no_hearth_in_reach`
     /// and `warm_is_refused_while_asleep` stay green, matching the final
     /// review's own point: nothing but this test can tell the success path
     /// apart from a refusal.
     ///
-    /// **Not `AnchorKind::Bed`, and this is a real, checked finding, not an
+    /// **Not `kinds::BED`, and this is a real, checked finding, not an
     /// oversight.** The final review's own illustrative mutation repointed
     /// the gate at `Bed` ("warm... succeeds in bedrooms"). Run against seed
     /// 13's real hearthroom, that swap does NOT redden this test —
     /// `the-fireside-bed` (`interior/pattern.rs`) `requires:
-    /// Some(AnchorKind::Hearth)` in the SAME chamber, and `Bed`'s own
+    /// Some(kinds::HEARTH)` in the SAME chamber, and `Bed`'s own
     /// `needs_cold` is the same flag as `Hearth`'s, so every chamber that
     /// ever composes a `Hearth` also composes a `Bed`, and vice versa — the
     /// grammar makes the two anchor kinds perfectly co-located in every real
@@ -11156,7 +11202,7 @@ mod tests {
             interior
                 .ids()
                 .iter()
-                .any(|&a| interior.anchor(a).kind == crate::interior::AnchorKind::Hearth),
+                .any(|&a| interior.anchor(a).kind == kinds::HEARTH),
             "precondition: chamber_index {} (expected the hearthroom) must \
              carry a real Hearth anchor, or this test proves nothing about \
              warm succeeding: {:?}",
@@ -12206,7 +12252,7 @@ mod tests {
                     .ids()
                     .iter()
                     .map(|&id| interior.anchor(id).kind)
-                    .find(|&k| crate::chamber_prose::noun(k) == Some(noun))
+                    .find(|&k| crate::chamber_prose::noun(k.0) == Some(noun))
                     .expect("the noun came from this interior")
             ),
             "the reply must be the AUTHORED detail for the anchor the noun names, \
@@ -12279,9 +12325,9 @@ mod tests {
         let id = interior
             .ids()
             .into_iter()
-            .find(|&id| crate::chamber_prose::noun(interior.anchor(id).kind).is_some())
+            .find(|&id| crate::chamber_prose::noun(interior.anchor(id).kind.0).is_some())
             .expect("a built chamber names at least one anchor");
-        let noun = crate::chamber_prose::noun(interior.anchor(id).kind)
+        let noun = crate::chamber_prose::noun(interior.anchor(id).kind.0)
             .expect("checked Some by the find above");
         (session, interior, id, noun)
     }
@@ -12371,22 +12417,24 @@ mod tests {
         let alcove_id = interior
             .ids()
             .into_iter()
-            .find(|&id| interior.anchor(id).kind == crate::interior::AnchorKind::Alcove)
+            .find(|&id| interior.anchor(id).kind == kinds::ALCOVE)
             .expect(
                 "precondition: seed 13's hearthroom must compose an Alcove, \
                  or this test proves nothing about the within-relation",
             );
         assert!(
             interior.anchor(alcove_id).within.is_none()
-                && interior.ids().into_iter().any(|id| interior.anchor(id).kind
-                    == crate::interior::AnchorKind::Hearth
-                    && interior.anchor(id).within == Some(alcove_id)),
+                && interior
+                    .ids()
+                    .into_iter()
+                    .any(|id| interior.anchor(id).kind == kinds::HEARTH
+                        && interior.anchor(id).within == Some(alcove_id)),
             "precondition: seed 13's alcove must have a real Hearth composed \
-             WITHIN it (the-fire's own Attach::Within(AnchorKind::Alcove)), \
+             WITHIN it (the-fire's own Attach::Within(kinds::ALCOVE)), \
              or the within-relation this test checks does not exist here"
         );
-        let alcove_noun = crate::chamber_prose::noun(crate::interior::AnchorKind::Alcove)
-            .expect("Alcove always names a noun");
+        let alcove_noun =
+            crate::chamber_prose::noun(kinds::ALCOVE.0).expect("Alcove always names a noun");
         let reply = match session.handle(&format!("examine {alcove_noun}")) {
             Turn::Out(t) => t,
             Turn::Released(t) => panic!("examine must not release: {t}"),
@@ -16697,7 +16745,7 @@ mod tests {
                 .chamber_interior_here()
                 .expect("the walk is standing in a chamber");
             for id in interior.ids() {
-                let kind = crate::affordance::thing_kind_of(interior.anchor(id).kind);
+                let kind = interior.anchor(id).kind;
                 let thing = crate::thing::thing_id(&room, kind.0, 0)
                     .expect("a chamber facet packs, or the interior could not have composed");
                 latent.insert(thing, kind.0.to_string());

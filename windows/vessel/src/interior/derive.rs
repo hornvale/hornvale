@@ -79,8 +79,9 @@ pub fn chamber_interior_of(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::interior::anchor::AnchorKind;
+    use hornvale_kernel::KindId;
     use hornvale_kernel::WorldTime;
+    use hornvale_thing::kinds;
 
     /// A `Terrain` that answers only what derivation reads.
     struct Stub {
@@ -121,11 +122,7 @@ mod tests {
                 cold: true,
             },
         );
-        assert!(
-            i.ids()
-                .iter()
-                .any(|&a| i.anchor(a).kind == AnchorKind::Hearth)
-        );
+        assert!(i.ids().iter().any(|&a| i.anchor(a).kind == kinds::HEARTH));
     }
 
     #[test]
@@ -138,15 +135,11 @@ mod tests {
             },
         );
         assert!(!i.ids().is_empty(), "wilderness gets an interior too");
+        assert!(!i.ids().iter().any(|&a| i.anchor(a).kind == kinds::HEARTH));
         assert!(
             !i.ids()
                 .iter()
-                .any(|&a| i.anchor(a).kind == AnchorKind::Hearth)
-        );
-        assert!(
-            !i.ids()
-                .iter()
-                .any(|&a| i.anchor(a).kind == AnchorKind::Threshold)
+                .any(|&a| i.anchor(a).kind == kinds::THRESHOLD)
         );
     }
 
@@ -259,10 +252,10 @@ mod tests {
             "precondition: a raw chamber read is UNBUILT — this is the footgun"
         );
         let i = chamber_interior_of(&chamber_addr(), &terrain, WALK, &brief(true), 1);
-        let kinds: Vec<AnchorKind> = i.ids().iter().map(|&id| i.anchor(id).kind).collect();
+        let anchor_kinds: Vec<KindId> = i.ids().iter().map(|&id| i.anchor(id).kind).collect();
         assert!(
-            kinds.contains(&AnchorKind::Hearth),
-            "a built-cold hearthroom draws a hearth, got {kinds:?}"
+            anchor_kinds.contains(&kinds::HEARTH),
+            "a built-cold hearthroom draws a hearth, got {anchor_kinds:?}"
         );
     }
 
@@ -272,10 +265,10 @@ mod tests {
             built_walk_ids: std::collections::BTreeSet::new(),
         };
         let i = chamber_interior_of(&chamber_addr(), &terrain, WALK, &brief(false), 1);
-        let kinds: Vec<AnchorKind> = i.ids().iter().map(|&id| i.anchor(id).kind).collect();
+        let anchor_kinds: Vec<KindId> = i.ids().iter().map(|&id| i.anchor(id).kind).collect();
         assert!(
-            !kinds.contains(&AnchorKind::Bed),
-            "an unbuilt place has no bed, got {kinds:?}"
+            !anchor_kinds.contains(&kinds::BED),
+            "an unbuilt place has no bed, got {anchor_kinds:?}"
         );
     }
 

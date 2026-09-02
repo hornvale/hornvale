@@ -4703,6 +4703,57 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-01T10:35:14Z | sluice:gate | 527.826 | 15968.628 | 492.984 | 31.19 | 0 | d3f7647f3 |  | lefford | 40 |
 | 2026-09-01T10:44:24Z | sluice:clients | 549.766 | 10005.560 | 115.159 | 18.41 | 0 | 3f2a9a2c8 |  | lefford | 40 |
 | 2026-09-01T10:52:10Z | sluice:heavy | 465.557 | 9756.909 | 187.496 | 21.36 | 0 | f9a50b741 |  | lefford | 40 |
+| 2026-09-01T11:08:36Z | prewarm | 94.038 | 581.796 | 26.194 | 6.47 | 0 | 2d84e1b71 | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T12:46:03Z | rebaseline | 86.888 | 313.361 | 16.057 | 3.79 | 0 | 592d9838f | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T13:13:13Z | rebaseline | 63.615 | 277.132 | 14.273 | 4.58 | 0 | 592d9838f | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T13:14:23Z | gate-commit | 38.233 | 156.158 | 29.496 | 4.86 | 0 | 592d9838f | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T13:15:03Z | gate-commit | 21.691 | 53.136 | 13.664 | 3.08 | 0 | 592d9838f | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T13:40:14Z | gate-commit | 26.528 | 60.393 | 18.002 | 2.96 | 0 | 2757fd6a5 | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T13:41:15Z | rebaseline | 57.554 | 272.835 | 14.508 | 4.99 | 0 | 2757fd6a5 | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T13:43:34Z | gate-commit | 21.440 | 52.830 | 13.639 | 3.10 | 0 | 2757fd6a5 | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T14:17:44Z | gate-commit | 28.066 | 62.060 | 20.195 | 2.93 | 0 | 6e16c2b60 | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T14:18:28Z | gate-commit | 21.581 | 52.986 | 13.714 | 3.09 | 0 | 6e16c2b60 | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T14:38:38Z | gate-commit | 13.043 | 16.695 | 4.465 | 1.62 | 0 | 62fb42ec4 | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T14:42:16Z | gate-commit | 16.953 | 19.146 | 4.405 | 1.39 | 0 | 62fb42ec4 | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T14:43:05Z | gate-commit | 38.839 | 135.826 | 23.553 | 4.10 | 0 | 62fb42ec4 | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T14:43:35Z | gate-commit | 21.700 | 53.001 | 13.788 | 3.08 | 0 | 62fb42ec4 | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T15:01:55Z | rebaseline | 71.459 | 285.072 | 14.705 | 4.20 | 0 | 736f8783b | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T15:12:09Z | gate-commit | 67.548 | 304.469 | 52.311 | 5.28 | 0 | fabc0a7e6 | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T15:14:51Z | rebaseline | 63.944 | 274.612 | 14.497 | 4.52 | 0 | fabc0a7e6 | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T15:16:18Z | gate-commit | 65.904 | 311.802 | 55.405 | 5.57 | 0 | fabc0a7e6 | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T15:18:03Z | gate-commit | 21.775 | 53.303 | 13.531 | 3.07 | 0 | fabc0a7e6 | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T15:20:24Z | gate-commit | 21.675 | 53.010 | 13.847 | 3.08 | 0 | fabc0a7e6 | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T15:41:26Z | gate-commit | 30.029 | 64.106 | 22.730 | 2.89 | 0 | 0f8067d11 | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T15:42:17Z | gate-commit | 21.524 | 52.920 | 13.772 | 3.10 | 0 | 0f8067d11 | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T15:53:17Z | gate-commit | 38.751 | 125.578 | 24.631 | 3.88 | 0 | dc748e8bd | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T15:54:27Z | gate-commit | 21.677 | 53.014 | 13.806 | 3.08 | 0 | dc748e8bd | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T17:10:13Z | rebaseline | 58.850 | 271.678 | 13.455 | 4.85 | 0 | 1d613e361 | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T17:11:49Z | rebaseline | 64.998 | 278.213 | 14.576 | 4.50 | 0 | 1d613e361 | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T17:12:34Z | gate-commit | 36.543 | 97.907 | 26.665 | 3.41 | 0 | 1d613e361 | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T17:25:37Z | gate-commit | 21.783 | 52.987 | 13.866 | 3.07 | 0 | 1d613e361 | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T18:00:32Z | rebaseline | 60.673 | 271.443 | 14.484 | 4.71 | 0 | e4e654955 | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T18:02:06Z | gate-commit | 27.525 | 61.652 | 19.551 | 2.95 | 0 | e4e654955 | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T18:02:54Z | gate-commit | 21.569 | 53.197 | 13.647 | 3.10 | 0 | e4e654955 | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T19:15:58Z | rebaseline | 60.314 | 272.077 | 13.825 | 4.74 | 0 | 6da32a52f | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T19:16:45Z | gate-commit | 29.919 | 61.199 | 44.042 | 3.52 | 0 | 6da32a52f | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T19:17:03Z | gate-commit | 12.895 | 15.269 | 5.731 | 1.63 | 0 | 6da32a52f | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T19:17:23Z | gate-commit | 7.915 | 7.690 | 0.175 | 0.99 | 0 | 6da32a52f | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T19:17:53Z | gate-commit | 18.041 | 19.961 | 5.766 | 1.43 | 0 | 6da32a52f | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T19:18:40Z | gate-commit | 37.844 | 144.903 | 25.084 | 4.49 | 0 | 6da32a52f | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T19:31:44Z | gate-commit | 21.576 | 52.952 | 13.779 | 3.09 | 0 | 6da32a52f | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T20:24:11Z | rebaseline | 61.342 | 268.856 | 14.681 | 4.62 | 0 | 3c131612f | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T20:27:00Z | gate-commit | 63.497 | 201.596 | 72.661 | 4.32 | 0 | 3c131612f | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T20:39:55Z | gate-commit | 22.291 | 53.078 | 13.796 | 3.00 | 0 | 3c131612f | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T21:25:19Z | gate-commit | 31.537 | 65.751 | 27.867 | 2.97 | 0 | fba6750d5 | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T21:30:46Z | gate-commit | 21.875 | 52.887 | 13.674 | 3.04 | 0 | fba6750d5 | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T22:11:25Z | gate-commit | 22.148 | 53.150 | 13.425 | 3.01 | 0 | eb20aea94 | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T22:15:07Z | gate-commit | 40.336 | 126.429 | 31.842 | 3.92 | 0 | eb20aea94 | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T22:49:42Z | rebaseline | 166.473 | 280.835 | 15.411 | 1.78 | 0 | 85c8cf5ac | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T23:02:50Z | gate-commit | 38.391 | 75.820 | 50.145 | 3.28 | 0 | 85c8cf5ac | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T23:05:55Z | gate-commit | 21.766 | 53.178 | 13.941 | 3.08 | 0 | 85c8cf5ac | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T23:53:03Z | rebaseline | 61.379 | 272.803 | 14.286 | 4.68 | 0 | 433bb8e0c | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T23:54:32Z | gate-commit | 22.241 | 53.588 | 13.877 | 3.03 | 0 | 433bb8e0c | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-01T23:55:14Z | gate-commit | 21.880 | 53.434 | 13.964 | 3.08 | 0 | 433bb8e0c | campaign/the-wicket | MacBookPro | 10 |
 | 2026-09-01T15:19:25Z | rebaseline | 154.052 | 337.027 | 23.639 | 2.34 | 0 | 8a3286a03 | campaign/the-pavement | ambrose | 12 |
 | 2026-09-01T15:23:01Z | gate-commit | 205.221 | 286.823 | 54.748 | 1.66 | 0 | 8a3286a03 | campaign/the-pavement | ambrose | 12 |
 | 2026-09-01T15:38:47Z | census | 878.437 | 27753.712 | 301.147 | 31.94 | 0 | ceba5b077 |  | lefford | 40 |
@@ -4723,8 +4774,22 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-01T18:08:32Z | sluice:artifacts | 77.740 | 665.649 | 23.540 | 8.87 | 0 | 8245ac0d8 |  | lefford | 40 |
 | 2026-09-01T18:09:18Z | sluice:outboard | 46.003 | 27.793 | 40.913 | 1.49 | 0 | 4901ca66a |  | lefford | 40 |
 | 2026-09-01T18:18:06Z | sluice:gate | 528.159 | 16223.746 | 470.910 | 31.61 | 0 | 34bcdec9d |  | lefford | 40 |
+| 2026-09-02T00:52:33Z | rebaseline | 101.235 | 316.181 | 15.946 | 3.28 | 0 | 8e2e59c3d | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-02T00:58:58Z | gate-commit | 116.606 | 559.873 | 107.989 | 5.73 | 0 | 8e2e59c3d | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-02T01:05:22Z | gate-commit | 22.760 | 53.673 | 13.746 | 2.96 | 0 | 8e2e59c3d | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-02T01:54:53Z | rebaseline | 110.475 | 274.159 | 12.055 | 2.59 | 0 | 0bc77ea4d | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-02T01:55:58Z | gate-commit | 53.265 | 115.016 | 31.084 | 2.74 | 0 | 0bc77ea4d | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-02T01:57:23Z | gate-commit | 27.473 | 54.149 | 13.820 | 2.47 | 0 | d2fa63f77 | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-02T01:59:29Z | gate-commit | 22.241 | 53.396 | 13.477 | 3.01 | 0 | c017ebeda | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-02T02:21:06Z | gate-commit | 51.907 | 129.949 | 34.312 | 3.16 | 0 | 4198b5b42 | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-02T02:22:04Z | gate-commit | 32.221 | 53.925 | 13.951 | 2.11 | 0 | 4198b5b42 | campaign/the-wicket | MacBookPro | 10 |
 | 2026-09-02T01:38:25Z | sluice:artifacts | 137.149 | 1243.523 | 63.869 | 9.53 | 0 | 74e4ebf52 |  | lefford | 40 |
 | 2026-09-02T01:39:19Z | sluice:outboard | 54.032 | 32.135 | 43.537 | 1.40 | 0 | d5bebe970 |  | lefford | 40 |
 | 2026-09-02T01:48:52Z | sluice:gate | 572.052 | 17213.745 | 574.068 | 31.09 | 0 | c7e722b19 |  | lefford | 40 |
 | 2026-09-02T01:58:44Z | sluice:clients | 592.319 | 10119.347 | 111.023 | 17.27 | 0 | cde46aaf9 |  | lefford | 40 |
 | 2026-09-02T02:06:30Z | sluice:heavy | 465.141 | 9640.624 | 172.688 | 21.10 | 0 | 300f31fad |  | lefford | 40 |
+| 2026-09-02T02:32:14Z | rebaseline | 131.332 | 275.770 | 12.828 | 2.20 | 0 | e19e0e931 | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-02T02:32:40Z | gate-commit | 25.761 | 54.929 | 13.881 | 2.67 | 0 | e19e0e931 | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-02T03:12:11Z | gate-commit | 107.724 | 135.766 | 28.456 | 1.52 | 0 | c3c508336 | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-02T03:14:15Z | gate-commit | 77.417 | 58.780 | 14.904 | 0.95 | 0 | c3c508336 | campaign/the-wicket | MacBookPro | 10 |
+| 2026-09-02T09:15:56Z | gate-commit | 22.097 | 54.022 | 14.100 | 3.08 | 0 | 0d15c168b | campaign/the-wicket | MacBookPro | 10 |
