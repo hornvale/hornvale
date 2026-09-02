@@ -883,6 +883,33 @@ reasoning someone is still using.
 
 ---
 
+#19 [G6] — **Submitted to the merge queue.**
+
+Branch `campaign/the-reservoir`, pushed and submitted against `origin/main`
+`0dccce029` after the absorb. `merge-tree` clean; `gate-commit` rc=0 (1098
+tests); the seed-42 fixture byte-identical across the whole branch; the drift
+check over every declared path rc=0 *after* `make rebaseline`, not merely after
+a clean merge.
+
+*One process note worth keeping.* The first `make sluice` was **refused**, and
+correctly: no `Sluice-Headline:` trailer anywhere in the range. The script's own
+message explains why it refuses rather than inferring one — "inferring it from
+whichever commit happened to be last failed on four of the first four real
+merges" — and a merge subject is permanent, human-read, and used by
+`tools/census/history.sh` as the census epoch label when a merge moves the
+census. My memory of this project names that trailer explicitly and I still
+submitted without it.
+
+The refusal also offered the cheap fix over the destructive one: the trailer may
+sit on **any** commit in the range, so this entry carries it rather than an
+amend-and-force-push of an already-pushed tip. Force-pushes are on this
+project's hard-stop list; a refusal that leaves a non-destructive route open is
+a well-designed refusal.
+
+*ideonomy passes / overturns.* n/a — a submission record.
+
+---
+
 ## Parked findings
 
 ### P1 — `scene_surrounds_colour_cli.rs` uses a fixed temp path and flakes
