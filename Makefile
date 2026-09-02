@@ -513,7 +513,7 @@ type-audit-report: ## Fail if the committed type-audit report is stale (regen cm
 	fi
 
 # In the gate for the same reason type-audit is (The Plumb, Task 4, decision
-# ledger #29): default-deny over every authored numeric constant in
+# ledger #31): default-deny over every authored numeric constant in
 # domains/*/src and windows/*/src. THE PAIR (this target plus plumb-report
 # below) IS WHAT style-run ACTUALLY PAYS, and a fix-round review measurement
 # (confirmed by re-measurement 2026-09-02, `/usr/bin/time -p make <target>`,
