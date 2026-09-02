@@ -291,7 +291,12 @@ fn the_seed_42_walk_commits_the_same_ledger_bytes() {
 /// 6 — so two is the cheapest script that still selects the world the
 /// eight-wait search did, which is why [`EMITTER_SEED`] did not move with it.
 /// `resident_folds.rs`'s `EMITTER_SEARCH_WAITS` is the same number for the same
-/// search and each file fails loudly on its own if the landing seed moves.
+/// search, and each file fails loudly on its own if the landing seed moves —
+/// each pins its own `EMITTER_SEED` and asserts on it. **That was written here
+/// one commit before it was true**: only this file had the guard, and the
+/// sibling merely PRINTED the seed its whole comment block's numbers were
+/// measured on. Task 7a's first fix round added the missing assertion rather
+/// than deleting the claim.
 /// type-audit: bare-ok(count)
 const EMITTER_SCRIPT_WAITS: usize = 2;
 

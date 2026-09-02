@@ -52,8 +52,17 @@
 //!
 //! `rule_one_witness` walks seed 42, whose residents condense onto fresh water
 //! and commit no positional fact, so it was never expensive and its script is
-//! untouched; it appears only for completeness, and [`PAST_DAY_STRIDE`] is now
-//! a named constant it shares with the two sweeps below.
+//! untouched; it appears only for completeness.
+//!
+//! **It does share [`PAST_DAY_STRIDE`] with the two rule-6 sweeps — but only
+//! since Task 7a's first fix round, and this doc claimed it one commit early.**
+//! It still called `.step_by(37)` when the sentence above first said otherwise.
+//! Moving it onto the constant is meaning-preserving and that was checked
+//! rather than assumed: on seed 42 the past-day sweep makes **0 calls at either
+//! stride**, because every body's `agent-at` list is empty, so nothing there
+//! depends on the number at all. Its two asserted floors live on the
+//! PRESENT-instant sweep and are untouched (136 reset lookups over 68 bodies,
+//! 0 with a reset in the future; 5,360 lookups in the session itself).
 //!
 //! **[`the_hazard_folds_integration_does_not_grow_with_the_tick_index`] IS
 //! STILL OVER THE CEILING AND IS LEFT THAT WAY DELIBERATELY.** It is 5.1x
@@ -142,6 +151,26 @@ const SIGHTING_WAITS: usize = 8;
 /// type-audit: bare-ok(count)
 const EMITTER_SEARCH_WAITS: usize = 2;
 
+/// The seed the emitter-bearing world search lands on today.
+///
+/// **This constant did not exist until Task 7a's first fix round, and its
+/// absence made a sentence in `ledger_hash_witness.rs` false.** That file said
+/// the two search sites "each fail loudly on their own if the landing seed
+/// moves"; only that file had the guard. Here the search's result was bound and
+/// PRINTED and nothing checked it — so every measured number in
+/// [`the_hazard_folds_integration_does_not_grow_with_the_tick_index`]'s comment
+/// block (598 segments over 223 replays at turn 2, 806 over 373 at turn 6,
+/// `history_growth` 2.28x, the 702-fact accrual, the 59%-of-ceiling margin) is a
+/// seed-6 measurement that would have gone on describing a different world in
+/// silence.
+///
+/// It is the same number `ledger_hash_witness.rs` pins for the same search, and
+/// deliberately a second copy rather than an import: each test module keeps its
+/// own, exactly as [`WALKING_SEED`] is a fifth copy of 14, so each site refuses
+/// on its own terms if an epoch moves the world under it.
+/// type-audit: bare-ok(index)
+const EMITTER_SEED: u64 = 6;
+
 // ---------------------------------------------------------------------------
 // Step 1: the rule-2 witness.
 // ---------------------------------------------------------------------------
@@ -158,8 +187,10 @@ const EMITTER_SEARCH_WAITS: usize = 2;
 ///
 /// **Re-measured on the shortened script** ([`WITNESS_WAITS`] = 12, down from
 /// 40; 342.433 s to 37.4-43.2 s in a full parallel crate run): 58 entities, 46 `agent-at` facts each, **0
-/// out-of-order pairs** — the same verdict the forty-wait script returned, and
-/// the floor below (at least one `agent-at` fact) is cleared by 2,668.
+/// out-of-order pairs** — the same verdict the forty-wait script returned. The
+/// floor below is `!by_entity.is_empty()`, and it is the ENTITY count that
+/// clears it: 58 subjects, not the 2,668 `agent-at` facts an earlier draft of
+/// this sentence quoted at a floor that never counts them.
 #[test]
 fn rule_two_witness_agent_at_commit_order_versus_day_order() {
     let world = common::build(WALKING_SEED).expect("the walking seed always builds a world");
@@ -814,6 +845,13 @@ fn rule_one_witness_no_read_runs_before_a_reset_of_the_same_entity() {
     // standing ruling is that this path keeps today's UNFILTERED semantics
     // deliberately (see `emitter_arousal`'s doc), so a non-zero here is a
     // recorded fact about the sim, not a stop.
+    //
+    // MEASURED, AND IT IS ZERO: this sweep makes no calls at all on seed 42,
+    // because every body's `agent-at` list is empty there. That is why it can
+    // share [`PAST_DAY_STRIDE`] with the two rule-6 sweeps (12 -> 9 at the
+    // campaign's close) without its meaning moving — the stride indexes an
+    // empty list either way. If a future seed puts facts in that list, the
+    // stride starts to matter here and this paragraph is where to look.
     let past = hornvale_vessel::resident::OwnedFolds::new(ResidentFolds::new());
     {
         let mut afraid = PrimaryAfraidMemo::new();
@@ -824,7 +862,7 @@ fn rule_one_witness_no_read_runs_before_a_reset_of_the_same_entity() {
                 .facts_of(npc.entity, AGENT_AT)
                 .filter_map(|f| f.day)
                 .collect();
-            for day in days.into_iter().step_by(37) {
+            for day in days.into_iter().step_by(PAST_DAY_STRIDE) {
                 let _ = affect_of_memo_occupied(
                     &ledger,
                     npc,
@@ -3280,6 +3318,13 @@ fn the_hazard_folds_integration_does_not_grow_with_the_tick_index() {
             }
             session.resident_alarm_replays() > 0
         },
+    );
+    assert_eq!(
+        seed, EMITTER_SEED,
+        "the search moved off the seed every number in this test's comment block was \
+         measured on. That is a finding about the sim, not a broken test: re-measure the \
+         two samples on the new seed and say in the campaign record what changed about \
+         which worlds replay an emitter's affect at a past visit day"
     );
     let (mut session, _) = Session::start(&world, &PossessOpts::default())
         .expect("the found world always starts a session");
