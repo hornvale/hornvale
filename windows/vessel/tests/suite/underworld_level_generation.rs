@@ -182,37 +182,66 @@ fn standable_cells(level: &Level) -> BTreeSet<Cell> {
         .collect()
 }
 
-/// Flood-fills `standable` from one of its own cells (4-directional
-/// adjacency) and asserts every standable cell was reached. An
+/// Flood-fills across the WHOLE descent — same-level 4-adjacency plus a
+/// paired `StairsDown`/`StairsUp` cell crossing into the neighbouring
+/// rung — and asserts every standable cell of every level is reached. An
 /// integration-level sanity check over a REAL descent, deliberately
-/// duplicating (in miniature) Task 9's own
-/// `every_walkable_cell_is_reachable_from_every_other` invariant sweep
-/// (`windows/vessel/src/underworld_level/mod.rs`) — this file is a different
-/// compilation unit (an integration test, not a lib test), so there is no
-/// clean way to share the helper without exposing new pub test
+/// duplicating (in miniature) `windows/vessel/src/underworld_level/mod.rs`'s
+/// own `every_character_engine_keeps_every_level_connected` — this file is
+/// a different compilation unit (an integration test, not a lib test), so
+/// there is no clean way to share the helper without exposing new pub test
 /// infrastructure just for this.
-fn assert_standable_cells_are_connected(standable: &BTreeSet<Cell>, level_index: usize) {
-    let Some(&start) = standable.iter().next() else {
+///
+/// **Per-level connectivity alone is NOT guaranteed under The Crosscut,**
+/// and asserting it here used to pass only because an earlier revision of
+/// this campaign's stair-repair (`reconnect_region`) carved a bypass
+/// THROUGH a neighbouring region whenever a region's only same-level link
+/// happened to sit under a stair — exactly the spec §3.3 violation
+/// `unlinked_neighbours_keep_their_wall`
+/// (`windows/vessel/src/underworld_level/mod.rs`) now pins. The plan's own
+/// graph connectivity
+/// (`every_node_is_reachable_from_the_entrance`,
+/// `windows/worldgen/src/circuit.rs`) is proven across same-level passages
+/// AND cross-level stairs together, never per level, so a region can
+/// legitimately have no same-level passage at all and be reachable only
+/// by taking its stair to a neighbouring rung and back.
+fn assert_whole_descent_is_connected(levels: &[Level], standables: &[BTreeSet<Cell>]) {
+    let total: usize = standables.iter().map(BTreeSet::len).sum();
+    let Some(&start_cell) = standables[0].iter().next() else {
         return; // nothing to connect; the caller asserts non-emptiness separately
     };
-    let mut seen = BTreeSet::new();
+    let start = (0usize, start_cell);
+    let mut seen: BTreeSet<(usize, Cell)> = BTreeSet::new();
     let mut queue = VecDeque::new();
     seen.insert(start);
     queue.push_back(start);
-    while let Some(Cell(x, y)) = queue.pop_front() {
+    while let Some((lvl, Cell(x, y))) = queue.pop_front() {
         for (dx, dy) in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
-            let next = Cell(x + dx, y + dy);
-            if standable.contains(&next) && seen.insert(next) {
+            let next = (lvl, Cell(x + dx, y + dy));
+            if standables[lvl].contains(&next.1) && seen.insert(next) {
                 queue.push_back(next);
+            }
+        }
+        let kind = levels[lvl].cells.get(Cell(x, y));
+        if kind == Some(LevelCellKind::StairsDown) && lvl + 1 < levels.len() {
+            let below = (lvl + 1, Cell(x, y));
+            if standables[lvl + 1].contains(&below.1) && seen.insert(below) {
+                queue.push_back(below);
+            }
+        }
+        if kind == Some(LevelCellKind::StairsUp) && lvl > 0 {
+            let above = (lvl - 1, Cell(x, y));
+            if standables[lvl - 1].contains(&above.1) && seen.insert(above) {
+                queue.push_back(above);
             }
         }
     }
     assert_eq!(
         seen.len(),
-        standable.len(),
-        "level {level_index}: {} of {} standable cells unreachable from {start:?}",
-        standable.len() - seen.len(),
-        standable.len()
+        total,
+        "{} of {} standable cells unreachable across the whole descent",
+        total - seen.len(),
+        total
     );
 }
 
@@ -294,6 +323,7 @@ fn a_real_descent_is_deterministic_connected_and_renders() {
     );
 
     assert_eq!(a.len(), rungs.len());
+    let mut standables = Vec::with_capacity(a.len());
     for (i, level) in a.iter().enumerate() {
         let dump = render_debug(level);
         assert!(!dump.is_empty(), "level {i}'s debug dump must not be empty");
@@ -302,9 +332,9 @@ fn a_real_descent_is_deterministic_connected_and_renders() {
             !walkable.is_empty(),
             "level {i} must have at least one walkable cell"
         );
-        let standable = standable_cells(level);
-        assert_standable_cells_are_connected(&standable, i);
+        standables.push(standable_cells(level));
     }
+    assert_whole_descent_is_connected(&a, &standables);
 }
 
 #[test]

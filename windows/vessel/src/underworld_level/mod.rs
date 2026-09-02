@@ -242,7 +242,6 @@ pub fn generate_level_with_origin(
             Cell(x, y),
             LevelCellKind::StairsDown,
             rect_of(plan, upper),
-            extent,
             &mut cells,
         );
     }
@@ -251,7 +250,6 @@ pub fn generate_level_with_origin(
             Cell(x, y),
             LevelCellKind::StairsUp,
             rect_of(plan, lower),
-            extent,
             &mut cells,
         );
     }
@@ -264,11 +262,12 @@ pub fn generate_level_with_origin(
         let rect = rect_of(plan, plan.terminus);
         if let Some(c) = first_walkable_cell_in(rect, &cells) {
             cells.set(c, LevelCellKind::StairsDown);
-            // Whole-level scope, for the same reason `place_stair` uses
-            // `extent` rather than `rect`: the terminus's own region may
-            // have had exactly one physical link to the rest of the
-            // level, through the very cell just overwritten.
-            reconnect_region(extent, &mut cells);
+            // Scoped to the terminus's OWN region, never wider: a repair
+            // that reached outside `rect` could bridge into a
+            // grid-adjacent region the plan deliberately left unlinked,
+            // carving straight through the wall spec §3.3 promises stays
+            // solid there.
+            reconnect_region(rect, &mut cells);
         }
     }
     Level {
@@ -315,6 +314,36 @@ fn first_walkable_cell_in(rect: Rect, cells: &CellGrid) -> Option<Cell> {
     walkable_cells_in_rect(rect, cells).into_iter().next()
 }
 
+/// Every `Floor`/`Flooded`/`StairsDown`/`StairsUp` cell inside `rect` —
+/// `reconnect_region`'s OWN notion of "already standable", broader than
+/// `walkable_cells_in_rect`'s Floor/Flooded-only set on purpose: a stair
+/// `place_stair` just carved is itself walkable (`movement_mode` answers
+/// `Walk` for it), so a one-wide corridor with a stair in its middle is
+/// already ONE component, not two either side of a severance. Using the
+/// narrower Floor/Flooded set here would read that stair as a cut and
+/// carve a redundant bypass around a cell that was never actually
+/// blocking anything. The passage-connection code and `place_stair`'s own
+/// walkable-cell join keep using `walkable_cells_in_rect` unchanged — this
+/// predicate is only for deciding whether a region needs repairing.
+fn standable_cells_in_rect(rect: Rect, cells: &CellGrid) -> Vec<Cell> {
+    let mut out = Vec::new();
+    for x in rect.x..(rect.x + rect.w) {
+        for y in rect.y..(rect.y + rect.h) {
+            let cell = Cell(x, y);
+            if matches!(
+                cells.get(cell),
+                Some(LevelCellKind::Floor)
+                    | Some(LevelCellKind::Flooded)
+                    | Some(LevelCellKind::StairsDown)
+                    | Some(LevelCellKind::StairsUp)
+            ) {
+                out.push(cell);
+            }
+        }
+    }
+    out
+}
+
 /// A region always has somewhere to stand: if a carve left `rect` all rock,
 /// open its centre cell. A guarantee, so no downstream step (passages,
 /// stairs, the entrance) can find an empty region.
@@ -332,16 +361,16 @@ fn ensure_standable(rect: Rect, cells: &mut CellGrid) {
 /// never sealed off. A stairway has a foot (spec §3.3).
 ///
 /// **Converting an existing `Floor`/`Flooded` cell can strand the rest of
-/// the level** if that cell was an articulation point — either within its
-/// own region (a Karst seed's carve left a one-cell-wide corridor, and
-/// overwriting its middle cell marooned four cells beyond it) or, more
-/// severely, the region's ONLY passage link to every other region on the
-/// level (a Karst seed's terminus sat on exactly such a cell, severing an
-/// entire fourteen-cell region). `reconnect_region` repairs both, scoped to
-/// the whole level (`extent`) rather than just `region`, after every write —
-/// cheap (one BFS over the level) and a no-op whenever the cell was not a
-/// bridge.
-fn place_stair(at: Cell, kind: LevelCellKind, region: Rect, extent: Rect, cells: &mut CellGrid) {
+/// its own region** if that cell was an articulation point (a Karst seed's
+/// carve left a one-cell-wide corridor, and overwriting its middle cell
+/// marooned four cells beyond it). `reconnect_region` repairs this, scoped
+/// to `region` and `region` ALONE — never `extent` — after every write:
+/// spec §3.3's whole point is that two grid-adjacent regions with no plan
+/// edge keep a solid wall between them, so a repair that reached outside
+/// `region` could bridge exactly the non-adjacency the plan deliberately
+/// left unlinked. Cheap (one BFS over one region) and a no-op whenever the
+/// cell was not a bridge.
+fn place_stair(at: Cell, kind: LevelCellKind, region: Rect, cells: &mut CellGrid) {
     let was_walkable = matches!(
         cells.get(at),
         Some(LevelCellKind::Floor) | Some(LevelCellKind::Flooded)
@@ -353,25 +382,23 @@ fn place_stair(at: Cell, kind: LevelCellKind, region: Rect, extent: Rect, cells:
         }
     }
     cells.set(at, kind);
-    // Scoped to the WHOLE level, not just `region`: `at` may have been the
-    // region's only physical link to the rest of the level (a passage
-    // corridor routes through exactly one of the region's own cells), so a
-    // repair confined to `region` alone would see nothing to fix while the
-    // region sits severed from everything else.
-    reconnect_region(extent, cells);
+    reconnect_region(region, cells);
 }
 
-/// If overwriting one cell split `region`'s own walkable cells into more
-/// than one component, stitch every extra component back to the first by
-/// routing AROUND the blocking cell — `shortest_route_within_rect` walks
-/// the whole region, including rock, and never steps onto an existing
+/// If overwriting one cell split `region`'s own standable cells (Floor,
+/// Flooded, AND any stair already carved — see `standable_cells_in_rect`)
+/// into more than one component, stitch every extra component back to the
+/// first by routing AROUND the blocking cell — `shortest_route_within_rect`
+/// walks `region` alone, including rock, and never steps onto an existing
 /// stair, so it finds a detour even where a straight line between the two
 /// nearest cells would have to cross back over the very cell that caused
-/// the split. A no-op whenever `region` was already one component (the
-/// common case).
+/// the split. Bounded to `region`: a repair that carved outside it could
+/// bridge a grid-adjacent region the plan left deliberately unlinked (spec
+/// §3.3 — no passage edge means no way through, ever). A no-op whenever
+/// `region` was already one component (the common case).
 fn reconnect_region(region: Rect, cells: &mut CellGrid) {
     loop {
-        let remaining = walkable_cells_in_rect(region, cells);
+        let remaining = standable_cells_in_rect(region, cells);
         if remaining.len() < 2 {
             return;
         }
@@ -999,22 +1026,33 @@ mod tests {
     /// and a MARGIN, not a fixed percentage: the percentage is a
     /// calibration this task does not own.
     ///
-    /// **The margin shrank under The Crosscut's realizer, measured rather
-    /// than assumed.** A passage/stair corridor is carved OUTSIDE every
-    /// leaf's own rect, so it never floods regardless of that leaf's
-    /// worked/natural mix — and `cycle_budget` gives `DrowTier` one more
-    /// cycle than `WildCave` (spec §3.2 step 5), so a drow-tier plan grows
-    /// more nodes and proportionally more never-floodable corridor floor.
-    /// That dilutes BOTH means toward zero and narrows the gap between
-    /// them: measured directly against this realizer, a 200-seed sweep gave
-    /// drow=0.039, wild=0.069 (diff 0.030), and the 30-seed sweep this test
-    /// actually runs gives the same diff (0.030). The old 0.05 margin
-    /// predates that dilution and no longer holds; 0.02 stays comfortably
-    /// under the measured 0.030 while still asserting the same direction
-    /// with room for seed-to-seed noise.
+    /// **Restated as a RATIO under The Crosscut's realizer, and the
+    /// mechanism corrected.** `flooded_fraction` divides by every cell of
+    /// the extent, not just the walkable ones — a passage/stair corridor's
+    /// never-flooding floor moves neither numerator nor denominator of
+    /// THAT fraction, so it is not what shrank the old 0.05 absolute
+    /// margin. The real driver: the plan's region rects (their grid pitch
+    /// is `circuit::REGION_SPAN`, with a one-cell wall on every side) cover
+    /// a smaller share of the extent than the old BSP leaves did, so both
+    /// characters' flooded fractions are smaller now, in absolute terms,
+    /// than they were under the retired realizer — an absolute margin
+    /// tuned against the old geometry does not survive a new one that
+    /// simply carves less floor overall. A RATIO does survive it: it
+    /// compares drow's wetness to wild's wetness relative to each other,
+    /// not to a fixed absolute budget of flooded cells, so it is
+    /// insensitive to how much of the extent the realizer carves at all —
+    /// only to whether drow reads reliably drier than wild, which is the
+    /// actual claim. Measured directly against this realizer: a 200-seed
+    /// sweep gave drow=0.039, wild=0.069 (ratio 0.039/0.069 ≈ 0.565), and
+    /// the 30-seed sweep this test actually runs gives the same ratio
+    /// (≈0.565). `0.7` stays comfortably above the measured ≈0.565 while
+    /// still asserting the same direction with room for seed-to-seed
+    /// noise, and needs no future retune if a later campaign changes how
+    /// much of the extent gets carved — only if the RELATIVE dryness
+    /// between characters changes.
     ///
-    /// claim: rate(seed: 0..30) — a mean-flooded-fraction comparison across
-    /// a 30-seed sweep, not a per-seed-without-exception invariant.
+    /// claim: rate(seed: 0..30) — a mean-flooded-fraction RATIO comparison
+    /// across a 30-seed sweep, not a per-seed-without-exception invariant.
     #[test]
     fn a_drow_tier_descent_comes_out_substantially_drier_than_a_wild_cave_one() {
         use hornvale_kernel::Band;
@@ -1088,9 +1126,12 @@ mod tests {
         let drow_mean = drow_total / TRIALS as f64;
         let wild_mean = wild_total / TRIALS as f64;
         assert!(
-            drow_mean < wild_mean - 0.02,
+            drow_mean < 0.7 * wild_mean,
             "a drow-tier descent must come out substantially drier than a \
-             wild-cave one: drow={drow_mean:.3}, wild={wild_mean:.3}"
+             wild-cave one, as a RATIO of the two means (not an absolute \
+             margin — see this test's own doc): drow={drow_mean:.3}, \
+             wild={wild_mean:.3}, ratio={:.3}",
+            drow_mean / wild_mean
         );
     }
 
@@ -1239,6 +1280,117 @@ mod tests {
         assert!(
             paired_stairs_seen > 200,
             "the sweep must exercise multi-stair rungs, not one stair each"
+        );
+    }
+
+    /// claim: invariant(seed: 0..200) — spec §3.3's other half, previously
+    /// unpinned: two grid-adjacent regions with NO `Passage` edge between
+    /// them keep a solid wall — never a way through, not even by accident
+    /// through a stair-placement repair. Restricts the flood-fill to
+    /// exactly the union of the two regions' own rects plus the one-cell
+    /// divider between them (the bounding box of the two rects always
+    /// covers exactly that divider and nothing beyond it, by construction
+    /// of `region_rect`'s even tiling) — never the whole level, where an
+    /// unrelated corridor elsewhere could give a false "connected" reading
+    /// that has nothing to do with this pair. Counts a cell reachable if
+    /// standable (`Floor`/`Flooded`/`StairsDown`/`StairsUp`), matching what
+    /// a body can actually cross. Includes a positive control: the sweep
+    /// must actually see at least one unlinked adjacent pair, or the whole
+    /// test would pass vacuously.
+    #[test]
+    fn unlinked_neighbours_keep_their_wall() {
+        use hornvale_kernel::Band;
+        use hornvale_terrain::CaveKind;
+        use hornvale_worldgen::chamber::ChamberOrigin;
+        use std::collections::{BTreeSet, VecDeque};
+
+        let rungs = [Band::Undercroft, Band::Shallows];
+        let origins = [ChamberOrigin::Found, ChamberOrigin::Found];
+        let depths_m = [20.0, 60.0];
+        let mut unlinked_pairs_seen = 0usize;
+        for s in 0..200u64 {
+            let plan = two_rung_plan(s);
+            let levels = generate_descent(
+                &rungs,
+                CaveKind::Fracture,
+                &origins,
+                &depths_m,
+                500.0,
+                &plan,
+                Seed(s),
+            );
+            for (level_idx, level) in levels.iter().enumerate() {
+                let node_ids = plan.nodes_on(level_idx);
+                let passages: BTreeSet<(usize, usize)> = plan
+                    .passages_on(level_idx)
+                    .into_iter()
+                    .flat_map(|(a, b)| [(a, b), (b, a)])
+                    .collect();
+                for &a in &node_ids {
+                    for &b in &node_ids {
+                        if a >= b {
+                            continue;
+                        }
+                        let ca = plan.nodes[a].cell;
+                        let cb = plan.nodes[b].cell;
+                        let grid_adjacent = (i32::from(ca.col) - i32::from(cb.col)).abs()
+                            + (i32::from(ca.row) - i32::from(cb.row)).abs()
+                            == 1;
+                        if !grid_adjacent || passages.contains(&(a, b)) {
+                            continue;
+                        }
+                        unlinked_pairs_seen += 1;
+                        let ra = rect_of(&plan, a);
+                        let rb = rect_of(&plan, b);
+                        let union_x0 = ra.x.min(rb.x);
+                        let union_y0 = ra.y.min(rb.y);
+                        let union_x1 = (ra.x + ra.w).max(rb.x + rb.w);
+                        let union_y1 = (ra.y + ra.h).max(rb.y + rb.h);
+                        let standable: BTreeSet<Cell> = (union_x0..union_x1)
+                            .flat_map(|x| (union_y0..union_y1).map(move |y| Cell(x, y)))
+                            .filter(|&c| {
+                                matches!(
+                                    level.cells.get(c),
+                                    Some(LevelCellKind::Floor)
+                                        | Some(LevelCellKind::Flooded)
+                                        | Some(LevelCellKind::StairsDown)
+                                        | Some(LevelCellKind::StairsUp)
+                                )
+                            })
+                            .collect();
+                        let starts: Vec<Cell> = standable
+                            .iter()
+                            .copied()
+                            .filter(|c| ra.contains(*c))
+                            .collect();
+                        let mut seen: BTreeSet<Cell> = BTreeSet::new();
+                        let mut queue: VecDeque<Cell> = VecDeque::new();
+                        for &c in &starts {
+                            if seen.insert(c) {
+                                queue.push_back(c);
+                            }
+                        }
+                        while let Some(Cell(x, y)) = queue.pop_front() {
+                            for (dx, dy) in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
+                                let next = Cell(x + dx, y + dy);
+                                if standable.contains(&next) && seen.insert(next) {
+                                    queue.push_back(next);
+                                }
+                            }
+                        }
+                        assert!(
+                            !seen.iter().any(|c| rb.contains(*c)),
+                            "seed {s} level {level_idx}: unlinked grid-adjacent nodes {a}/{b} \
+                             have a walkable route between them — spec §3.3's wall was crossed"
+                        );
+                    }
+                }
+            }
+        }
+        assert!(
+            unlinked_pairs_seen > 0,
+            "the sweep never saw an unlinked grid-adjacent pair — widen the seed \
+             range or rung count so this test is not vacuous"
         );
     }
 
@@ -1523,6 +1675,21 @@ mod tests {
     /// cross-leaf-connectivity property this sweep guards (Task 9) is only
     /// meaningfully tested if at least some generated levels actually have
     /// more than one leaf.
+    ///
+    /// **"Walkable" counts `StairsDown`/`StairsUp` too, since a review of
+    /// this campaign's stair-repair fix (`reconnect_region`, scoped to its
+    /// OWN region only, never the whole level).** A single-rung plan is
+    /// always its own terminus, so `generate_level_with_origin` can place
+    /// a dangling stair even on a bare direct call like this one — and a
+    /// Floor/Flooded-only definition would misread a corridor with a stair
+    /// in its middle as two disconnected halves, when `movement_mode`
+    /// already answers `Walk` for a stair the same as a floor. Widening
+    /// the set to match matters here specifically: before the repair fix
+    /// scoped correctly, a whole-level bypass silently carved a corridor
+    /// THROUGH a neighbouring region to keep this narrower definition
+    /// happy — the very spec §3.3 violation
+    /// `unlinked_neighbours_keep_their_wall` now pins. This is the fix on
+    /// the test side, not a second violation on the code side.
     fn every_walkable_cell_is_reachable_from_every_other() {
         use hornvale_kernel::Band;
         use hornvale_terrain::CaveKind;
@@ -1551,7 +1718,15 @@ mod tests {
                     let walkable: BTreeSet<Cell> = level
                         .cells
                         .iter()
-                        .filter(|(_, k)| matches!(k, LevelCellKind::Floor | LevelCellKind::Flooded))
+                        .filter(|(_, k)| {
+                            matches!(
+                                k,
+                                LevelCellKind::Floor
+                                    | LevelCellKind::Flooded
+                                    | LevelCellKind::StairsDown
+                                    | LevelCellKind::StairsUp
+                            )
+                        })
                         .map(|(c, _)| c)
                         .collect();
                     let Some(&start) = walkable.iter().next() else {
