@@ -338,7 +338,23 @@ make doctor        # the repo self-map — run this first in a fresh session
 # goldens, pushes a `census/<ref>-<stamp>` BRANCH, and prints the `make sluice`
 # line to submit it. CLAUDE.md's standing rule that committing a moved column
 # is a deliberate human act is intact; it is just no longer manual labour.
-# A run that moves nothing pushes no branch and says so — a null is a result.
+# A RUN THAT MOVES NOTHING STILL PUSHES A BRANCH, and this line used to say the
+# opposite. It promised "a run that moves nothing pushes no branch and says so",
+# which was the INTENT and was never once true: the arm implementing it was
+# unreachable for the life of the script, because the general `add -u` that
+# makes the run's own docs/timings.md row durable (The Governor, Task 7) also
+# guarantees the staged set is never empty. Two censuses on 2026-09-02 —
+# the-wicket a73d8ce3c9b4 and the-roll f1b21b58c5cf — each delivered a branch
+# whose entire content was `docs/timings.md | 1 +` while announcing "Goldens
+# delivered". The fix keeps the push and makes the REPORT honest, rather than
+# honouring this sentence: dropping the branch on a null would destroy that
+# run's cost measurement, which is the exact bug Task 7 was written to close.
+# So a null now says NO GOLDENS MOVED, names the branch as carrying the timings
+# row only, and says there is nothing to merge for goldens' sake. A null is
+# still a result; it just costs a branch to keep. The golden count reported
+# EXCLUDES the timings row (`census_golden_count`, pinned by
+# scripts/test-sluice-census.sh, whose null arm is the load-bearing one because
+# that is the arm that was dead).
 #
 #   make sluice-ack REASON='...'         # adjudicate an out-of-band landing (see below)
 #   make sluice-status                   # what is queued, running, held, landed, reported

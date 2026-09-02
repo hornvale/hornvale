@@ -36,6 +36,27 @@
 # a second copy is the drift `cli/tests/lane_sets.rs` exists to fail on.
 set -uo pipefail
 
+# THE STAGED SET ALWAYS CONTAINS THE RUN'S OWN TIMINGS ROW, so "did anything
+# move?" is the wrong question and asking it made the null arm UNREACHABLE for
+# the whole life of this script. `timed.sh` resolves its ledger inside the
+# census worktree, and the general `add -u` below is the only thing that
+# commits that row (The Governor, Task 7 — 27 heavy runs had written rows
+# nothing ever committed). So the row is staged on every run, `diff --cached
+# --quiet` is never true, and every census announced "goldens delivered"
+# including the ones that moved nothing. Observed twice on 2026-09-02:
+# campaign/the-wicket a73d8ce3c9b4 and campaign/the-roll f1b21b58c5cf each
+# delivered a branch whose entire content was `docs/timings.md | 1 +`.
+#
+# The question that was meant is whether anything moved BESIDES that row.
+# HV_CENSUS_LIB=1 sources this file for its functions without running a census,
+# so both arms can be driven against a real git index (test-sluice-census.sh).
+census_golden_count() {
+    git -C "${1:?census_golden_count <worktree>}" diff --cached --name-only 2>/dev/null \
+        | grep -vc '^docs/timings\.md$' || true
+}
+# shellcheck disable=SC2317  # the exit is the fallback when this file is RUN, not sourced
+if [ -n "${HV_CENSUS_LIB:-}" ]; then return 0 2>/dev/null || exit 0; fi
+
 repo_root="${HV_SLUICE_REPO_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 ref="${1:?usage: sluice-census.sh <full-sha> [study.json ...]}"
 shift || true
@@ -85,15 +106,21 @@ git -C "$wt" add -A -- book/src/laboratory/ 2>/dev/null || true
 # and 2026-08-28 wrote a row that nothing ever committed.
 git -C "$wt" add -u 2>/dev/null || true
 
-if git -C "$wt" diff --cached --quiet 2>/dev/null; then
-    echo "sluice-census: NO GOLDENS MOVED — nothing to deliver."
-    echo "sluice-census: that is a result, not a failure: the census agrees with $ref."
+if [ -z "$(git -C "$wt" diff --cached --name-only)" ]; then
+    echo "sluice-census: nothing staged at all — not even a timings row."
+    echo "sluice-census: that is not the ordinary null; the run left no trace to deliver."
     exit 0
 fi
 
 branch="census/$(printf '%.12s' "$ref")-$(date -u +%Y%m%dT%H%M%SZ)"
-moved="$(git -C "$wt" diff --cached --name-only | wc -l)"
-echo "sluice-census: $moved path(s) moved; delivering on $branch"
+n_goldens="$(census_golden_count "$wt")"
+if [ "$n_goldens" -eq 0 ]; then
+    echo "sluice-census: NO GOLDENS MOVED — the census agrees with $ref."
+    echo "sluice-census: delivering the timings row only on $branch"
+    echo "sluice-census: there is nothing to merge for goldens' sake."
+else
+    echo "sluice-census: $n_goldens golden path(s) moved; delivering on $branch"
+fi
 git -C "$wt" diff --cached --stat | sed 's/^/sluice-census:   /'
 
 # HV_CENSUS_DELIVERY=1 tells pre-commit's golden-pins guard to stand down for
@@ -116,7 +143,7 @@ if ! HV_CENSUS_DELIVERY=1 \
    git -C "$wt" -c core.hooksPath="$repo_root/scripts/hooks" \
              -c user.name="$(git -C "$repo_root" config user.name)" \
              -c user.email="$(git -C "$repo_root" config user.email)" \
-    commit -q -m "chore(census): regenerate goldens at ${ref:0:12}
+    commit -q -m "chore(census): $(if [ "$n_goldens" -eq 0 ]; then echo "record the run at"; else echo "regenerate goldens at"; fi) ${ref:0:12}
 
 Authored on $(hostname -s), the canonical host (decision 0063/0079), through
 the queue rather than by hand. NOT pushed to main: census goldens are what the
@@ -125,7 +152,7 @@ other change. Submit this branch as an ordinary merge to gate it.
 
 Census wall time: ${elapsed}s."; then
     echo "sluice-census: COMMIT REFUSED — the census ran and its output is NOT delivered." >&2
-    echo "sluice-census: the $moved moved path(s) are staged in $wt; nothing was pushed." >&2
+    echo "sluice-census: $(git -C "$wt" diff --cached --name-only | wc -l) staged path(s) ($n_goldens golden) remain in $wt; nothing was pushed." >&2
     echo "sluice-census: this is a hook refusal, not a census failure — read the log above." >&2
     exit 4
 fi
@@ -134,6 +161,12 @@ if ! git -C "$wt" push -q origin "HEAD:refs/heads/$branch"; then
     echo "sluice-census: recover it with: git -C $wt push origin HEAD:refs/heads/$branch" >&2
     exit 3
 fi
-echo "sluice-census: DELIVERED on $branch"
+if [ "$n_goldens" -eq 0 ]; then
+    echo "sluice-census: DELIVERED on $branch — TIMINGS ROW ONLY, no goldens moved."
+    echo "sluice-census: the census agrees with $ref. Merging this branch lands the"
+    echo "sluice-census: cost measurement and nothing else; it is not a golden refresh."
+else
+    echo "sluice-census: DELIVERED on $branch — $n_goldens golden path(s) moved."
+fi
 echo "sluice-census: submit it with — make sluice BRANCH=$branch REF=$(git -C "$wt" rev-parse HEAD)"
 exit 0
