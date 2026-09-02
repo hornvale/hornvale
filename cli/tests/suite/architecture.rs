@@ -3,7 +3,7 @@
 //! section describes these rules; this file enforces them.
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 /// The only crates permitted from outside the workspace (decision 0004,
@@ -304,4 +304,141 @@ fn a_new_concept_and_phenomenon_kind_need_no_god_enum_or_domain_edit() {
     assert_eq!(registry.concept(NOVEL_CONCEPT).unwrap().domain, "fixture");
     assert!(registry.phenomenon_kind(NOVEL_KIND).is_some());
     assert!(registry.manifest(NOVEL_CONCEPT).is_some());
+}
+
+/// The repository root: `cli/tests/` lives in the `cli` crate, whose
+/// manifest dir is `<root>/cli`, so the root is its parent.
+fn repo_root() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("cli crate should sit under the repo root")
+        .to_path_buf()
+}
+
+/// Recursively collect the path of every `Cargo.toml` under `dir` that
+/// declares its own `[workspace]` table — i.e. a standalone workspace root,
+/// the shape every excluded `clients/*` manifest takes (root `Cargo.toml`'s
+/// `exclude` list names `clients/vessel/wasm`, `clients/world-wasm`,
+/// `clients/game/core` and `clients/game/bin`, but `clients/game/core` and
+/// `clients/game/bin` are *members* of `clients/game`'s own workspace, not
+/// roots themselves — so this walks the tree looking for the `[workspace]`
+/// header directly rather than trusting the exclude list's shape). Skips
+/// `target`/`.git` the way `client_band_coverage.rs`'s `collect_text` does.
+fn find_workspace_roots(dir: &Path, out: &mut Vec<PathBuf>) {
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return;
+    };
+    let mut paths: Vec<PathBuf> = entries.filter_map(|e| e.ok()).map(|e| e.path()).collect();
+    paths.sort();
+    for path in paths {
+        if path
+            .file_name()
+            .is_some_and(|n| n == "target" || n == ".git")
+        {
+            continue;
+        }
+        if path.is_dir() {
+            find_workspace_roots(&path, out);
+        } else if path.file_name().is_some_and(|n| n == "Cargo.toml")
+            && let Ok(text) = std::fs::read_to_string(&path)
+            && text.lines().any(|line| line.trim() == "[workspace]")
+        {
+            out.push(path);
+        }
+    }
+}
+
+/// Parse a `Cargo.toml`'s TABLE STRUCTURE ONLY — `[section]` headers and the
+/// flat `key = value` pairs directly under them — into
+/// `section -> key -> raw value`. Not a real TOML parser (the dependency
+/// allowlist is `serde`/`serde_json`/`libm`, decision 0004, and pulling in a
+/// toml crate for one architecture test is not worth the exception); this
+/// reads only what the profile blocks this test cares about ever need:
+/// bare `[table]` headers (including a quoted-key table like
+/// `[profile.dev.package."*"]`, whose header text is kept verbatim as the
+/// section name) and `key = value` lines beneath them. Comments (`# …`) and
+/// blank lines are skipped; nested inline tables/arrays are not handled
+/// because no profile block here uses them.
+fn parse_toml_tables(text: &str) -> BTreeMap<String, BTreeMap<String, String>> {
+    let mut sections: BTreeMap<String, BTreeMap<String, String>> = BTreeMap::new();
+    let mut current = String::new();
+    for raw_line in text.lines() {
+        let line = raw_line.split('#').next().unwrap_or("").trim();
+        if line.is_empty() {
+            continue;
+        }
+        if let Some(header) = line.strip_prefix('[').and_then(|l| l.strip_suffix(']')) {
+            current = header.trim().to_string();
+            sections.entry(current.clone()).or_default();
+            continue;
+        }
+        if let Some((key, value)) = line.split_once('=') {
+            sections
+                .entry(current.clone())
+                .or_default()
+                .insert(key.trim().to_string(), value.trim().to_string());
+        }
+    }
+    sections
+}
+
+/// Every excluded `clients/*` workspace declares an optimised dev profile
+/// (The Hone, `TOOL-hot-crate-opt`). The root `[profile.dev]` block at
+/// `Cargo.toml:60-80` (The Whetstone) does not reach an excluded workspace —
+/// profiles are per workspace root, not per repo — so `cargo run
+/// --manifest-path clients/game/bin/Cargo.toml` built the whole simulation
+/// at opt-level 0 until this campaign: measured 2026-09-02, `Driver::start`
+/// 27,522 ms and 300-630 ms per movement turn at opt-level 0, versus 3,756 ms
+/// and 10-80 ms per turn once each client workspace carried its own copy of
+/// the root's profile blocks.
+///
+/// The direction enforced is one-way: every workspace root under `clients/`
+/// must be optimised. This does **not** check `tools/*` (`type-audit`,
+/// `digest`, `seam-guard`, `board`, `earth-mask`), which are dev tools run
+/// once per invocation rather than crates the sim itself is built through
+/// repeatedly — compile time wins there, not runtime, and folding them in
+/// would conflate two different cost tradeoffs under one assertion.
+///
+/// MUTATION THIS MUST FAIL AGAINST: delete the `[profile.dev]` block from
+/// `clients/game/Cargo.toml` -> red. Verified by hand 2026-09-02: reverted
+/// after confirming the failure.
+#[test]
+fn every_client_workspace_declares_an_optimised_dev_profile() {
+    let clients_dir = repo_root().join("clients");
+    let mut workspace_roots = Vec::new();
+    find_workspace_roots(&clients_dir, &mut workspace_roots);
+    assert!(
+        !workspace_roots.is_empty(),
+        "clients/ should contain at least one standalone [workspace] root — did the \
+         directory move?"
+    );
+    for manifest_path in workspace_roots {
+        let text = std::fs::read_to_string(&manifest_path)
+            .unwrap_or_else(|e| panic!("failed to read {}: {e}", manifest_path.display()));
+        let sections = parse_toml_tables(&text);
+
+        let dev_opt_level = sections
+            .get("profile.dev")
+            .and_then(|s| s.get("opt-level"))
+            .and_then(|v| v.parse::<i64>().ok());
+        assert!(
+            dev_opt_level.is_some_and(|v| v >= 2),
+            "{} has no [profile.dev] table with opt-level >= 2 (The Hone) — this \
+             workspace's dev builds run at opt-level 0 by default, and the root \
+             Whetstone profile (Cargo.toml:60-80) does not reach an excluded workspace",
+            manifest_path.display()
+        );
+
+        let star_opt_level = sections
+            .get("profile.dev.package.\"*\"")
+            .and_then(|s| s.get("opt-level"))
+            .and_then(|v| v.parse::<i64>().ok());
+        assert!(
+            star_opt_level.is_some_and(|v| v >= 2),
+            "{} has no [profile.dev.package.\"*\"] table with opt-level >= 2 — \
+             dependencies are not covered by [profile.dev] alone (cargo leaves them at \
+             opt-level 0 in dev even when workspace members are opted)",
+            manifest_path.display()
+        );
+    }
 }

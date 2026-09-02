@@ -11,6 +11,9 @@ use hornvale_kernel::units::TickSpan;
 
 /// Rotation regime of the anchor world.
 /// type-audit: bare-ok(flag: Spinning.retrograde)
+/// placement: deliberate(lossy projection, not a forced duplicate — climate's
+/// copy drops spin direction and carries day_std; the worldgen shim genuinely
+/// converts; see the-hallmark ledger #3) shape(606e60)
 #[derive(Debug, Clone, PartialEq)]
 pub enum Rotation {
     /// Ordinary spin with a solar day of this many kernel ticks.

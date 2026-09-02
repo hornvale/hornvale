@@ -1,0 +1,25 @@
+[package]
+name = "placement-audit"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+publish = false
+
+# Empty table: deliberately outside the main workspace, and it stops cargo's
+# ancestor search unconditionally — required for builds from a worktree under
+# .claude/worktrees/ (same rationale as tools/type-audit's).
+[workspace]
+
+[lib]
+name = "placement_audit"
+path = "src/lib.rs"
+
+[[bin]]
+name = "placement-audit"
+path = "src/main.rs"
+
+[dependencies]
+syn = { version = "2", features = ["full", "visit", "extra-traits"] }
+# span-locations makes Span::start().line return real line numbers when
+# parsing files; without it diagnostics report :0:.
+proc-macro2 = { version = "1", features = ["span-locations"] }

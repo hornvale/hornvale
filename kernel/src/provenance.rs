@@ -8,6 +8,9 @@
 /// How a holder came to hold a claim. Ordered by epistemic strength, and
 /// transmission only ever moves DOWN it (see [`Provenance::on_transmission`]).
 /// type-audit: bare-ok(identifier-text)
+/// placement: deliberate(epistemic fact vs grammatical category — sharing
+/// variant names is a coincidence of English; hearsay design 2026-08-13 §3.2)
+/// shape(49883f)
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Provenance {
     /// The holder was present at the event.

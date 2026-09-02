@@ -339,7 +339,7 @@ fn cmd_scout(args: &[String]) -> Result<(), String> {
     for seed in from..from.saturating_add(max_scan) {
         scanned += 1;
         if let Ok(outcome) = hornvale_astronomy::generate(hornvale_kernel::Seed(seed), &pins) {
-            let system = &outcome.system;
+            let system = &outcome.value;
             let day = match system.anchor.rotation {
                 hornvale_astronomy::Rotation::Spinning { day, .. } => {
                     format!("{:.1}h day", day.as_std_days() * 24.0)
@@ -889,7 +889,7 @@ fn cmd_paleo_map(args: &[String]) -> Result<(), String> {
     let mut doc = format!("# The Deep Time of Seed {}\n\n", world.seed.0);
     doc.push_str(&format!(
         "Glacial maximum at day {:.0}; {:.0}% of the land lay under ice.\n\n",
-        record.glacial_maximum_day,
+        record.glacial_maximum_day.as_std_days(),
         record.max_ice_fraction * 100.0
     ));
     doc.push_str("Legend: `#` ice envelope, `*` refugium, `~` fossil shoreline.\n\n");

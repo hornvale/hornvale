@@ -2,31 +2,7 @@
 //! invalid states are unrepresentable at API boundaries. In-crate formulas
 //! use the pub(crate) inner field; dimensionless ratios stay bare f64.
 
-use std::fmt;
-
-/// Why a quantity constructor refused a value.
-/// type-audit: bare-ok(identifier-text: unit), bare-ok(diagnostic-value: value), bare-ok(identifier-text: reason)
-#[derive(Debug, Clone, PartialEq)]
-pub struct UnitError {
-    /// Human name of the unit ("solar masses").
-    pub unit: &'static str,
-    /// The rejected value.
-    pub value: f64,
-    /// The rule it violates.
-    pub reason: &'static str,
-}
-
-impl fmt::Display for UnitError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{} is not a valid quantity of {}: {}",
-            self.value, self.unit, self.reason
-        )
-    }
-}
-
-impl std::error::Error for UnitError {}
+pub use hornvale_kernel::UnitError;
 
 macro_rules! quantity {
     ($name:ident, $label:literal, positive, $doc:literal) => {

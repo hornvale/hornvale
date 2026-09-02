@@ -2,9 +2,9 @@
 //! biome / substrate / micro-field, assembled to prose. Pools are the
 //! authoring-time artifact (decision 0009); this is the first complete set.
 
-use crate::regime::{EnergySource, Kingdom, MicroField, Negations, Regime, Substrate};
+use crate::regime::{EnergySource, Kingdom, MicroField, Negations, Regime};
 use crate::streams::{LOCALE_SUBSTRATE_DETAIL, LOCALE_VARIETY};
-use hornvale_climate::{BiomeExpr, Formation, Medium, Stratum};
+use hornvale_climate::{BiomeExpr, Formation, GroundKind, Medium, Stratum};
 use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{Facet, Seed};
 
@@ -16,7 +16,7 @@ pub(crate) fn derived_regime(
     seed: Seed,
     addr: &Facet,
     expr: BiomeExpr,
-    substrate: Substrate,
+    substrate: GroundKind,
     micro: MicroField,
 ) -> Regime {
     let negations = Negations {
@@ -262,20 +262,6 @@ pub(crate) fn exotic_clause(n: Negations) -> String {
     parts.join(", ")
 }
 
-/// Base-variety pool per biome (+ substrate for deserts). Real content drawn
-/// from cycle-02 Appendix A; extend as authoring amplifies (decision 0009).
-/// Bridge `locale`'s substrate classes to the domain's ground kinds.
-fn ground_of(substrate: Substrate) -> hornvale_climate::GroundKind {
-    use hornvale_climate::GroundKind;
-    match substrate {
-        Substrate::Ordinary => GroundKind::Ordinary,
-        Substrate::Sand => GroundKind::Sand,
-        Substrate::Evaporite => GroundKind::Evaporite,
-        Substrate::Basaltic => GroundKind::Basaltic,
-        Substrate::Ashen => GroundKind::Ashen,
-    }
-}
-
 /// Draw the variety entry for a room off `LOCALE_VARIETY`.
 ///
 /// The table moved to `domains/climate` in The Toponym, but its order and
@@ -286,9 +272,9 @@ fn draw_variety(
     room: Seed,
     formation: Formation,
     stratum: Stratum,
-    substrate: Substrate,
+    substrate: GroundKind,
 ) -> String {
-    let pool = hornvale_climate::variant_pool(formation, stratum, ground_of(substrate));
+    let pool = hornvale_climate::variant_pool(formation, stratum, substrate);
     if pool.is_empty() {
         return String::new();
     }
@@ -302,13 +288,13 @@ fn draw_variety(
 }
 
 /// Substrate-detail clause pool.
-fn substrate_pool(substrate: Substrate) -> Pool {
+fn substrate_pool(substrate: GroundKind) -> Pool {
     match substrate {
-        Substrate::Ordinary => &[],
-        Substrate::Sand => &[(1.0, "of shifting sand")],
-        Substrate::Evaporite => &[(1.0, "of salt-white crust")],
-        Substrate::Basaltic => &[(1.0, "of black basalt")],
-        Substrate::Ashen => &[(1.0, "of drifted ash")],
+        GroundKind::Ordinary => &[],
+        GroundKind::Sand => &[(1.0, "of shifting sand")],
+        GroundKind::Evaporite => &[(1.0, "of salt-white crust")],
+        GroundKind::Basaltic => &[(1.0, "of black basalt")],
+        GroundKind::Ashen => &[(1.0, "of drifted ash")],
     }
 }
 
@@ -339,7 +325,7 @@ mod tests {
         };
         let (text, noun) = render(
             Negations {
-                substrate: Substrate::Ordinary,
+                substrate: GroundKind::Ordinary,
                 energy: EnergySource::Sunlit,
                 kingdom: Kingdom::PlantAnimal,
                 endemic: false,
@@ -370,14 +356,14 @@ mod tests {
             Seed(42),
             &addr,
             BiomeExpr::for_legacy(Biome::Desert),
-            Substrate::Sand,
+            GroundKind::Sand,
             micro0(),
         );
         let b = derived_regime(
             Seed(42),
             &addr,
             BiomeExpr::for_legacy(Biome::Desert),
-            Substrate::Sand,
+            GroundKind::Sand,
             micro0(),
         );
         assert_eq!(a, b);
@@ -394,7 +380,7 @@ mod tests {
             Seed(42),
             &addr,
             BiomeExpr::for_legacy(Biome::Desert),
-            Substrate::Sand,
+            GroundKind::Sand,
             micro0(),
         );
         assert_eq!(r.negations.energy, EnergySource::Sunlit);
@@ -419,7 +405,7 @@ mod tests {
                 Seed(42),
                 &addr,
                 BiomeExpr::for_legacy(biome),
-                Substrate::Ordinary,
+                GroundKind::Ordinary,
                 micro,
             );
             seen.insert(r.descriptor);
@@ -453,7 +439,7 @@ mod tests {
             path: vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3],
         };
         let n = Negations {
-            substrate: Substrate::Ordinary,
+            substrate: GroundKind::Ordinary,
             energy: EnergySource::Sunlit,
             kingdom: Kingdom::PlantAnimal,
             endemic: false,
@@ -475,7 +461,7 @@ mod tests {
 
     fn mundane_negations() -> Negations {
         Negations {
-            substrate: Substrate::Ordinary,
+            substrate: GroundKind::Ordinary,
             energy: EnergySource::Sunlit,
             kingdom: Kingdom::PlantAnimal,
             endemic: false,
@@ -515,8 +501,7 @@ mod tests {
         // The 79%: every formation must have prose of its own.
         for f in ALL_FORMATIONS {
             for stratum in [Stratum::Surface, Stratum::Epipelagic, Stratum::Hadal] {
-                let pool =
-                    hornvale_climate::variant_pool(*f, stratum, ground_of(Substrate::Ordinary));
+                let pool = hornvale_climate::variant_pool(*f, stratum, GroundKind::Ordinary);
                 assert!(!pool.is_empty(), "{f:?} has no pool");
                 for e in pool {
                     assert!(

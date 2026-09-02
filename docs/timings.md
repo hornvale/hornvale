@@ -4774,6 +4774,38 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-01T18:08:32Z | sluice:artifacts | 77.740 | 665.649 | 23.540 | 8.87 | 0 | 8245ac0d8 |  | lefford | 40 |
 | 2026-09-01T18:09:18Z | sluice:outboard | 46.003 | 27.793 | 40.913 | 1.49 | 0 | 4901ca66a |  | lefford | 40 |
 | 2026-09-01T18:18:06Z | sluice:gate | 528.159 | 16223.746 | 470.910 | 31.61 | 0 | 34bcdec9d |  | lefford | 40 |
+| 2026-09-01T20:41:10Z | prewarm | 178.804 | 616.485 | 41.789 | 3.68 | 0 | 18f63ebfa | campaign/the-hallmark | ambrose | 12 |
+| 2026-09-01T21:19:46Z | gate-commit | 614.165 | 1166.440 | 161.818 | 2.16 | 0 | 5b7a3908a | campaign/the-hallmark | ambrose | 12 |
+| 2026-09-01T22:04:30Z | gate-commit | 352.879 | 695.524 | 97.318 | 2.25 | 0 | cf6acf514 | campaign/the-hallmark | ambrose | 12 |
+| 2026-09-01T22:36:23Z | gate-commit | 542.112 | 955.265 | 118.372 | 1.98 | 0 | 64bac6b8c | campaign/the-hallmark | ambrose | 12 |
+| 2026-09-01T22:49:55Z | gate-commit | 198.844 | 176.637 | 84.604 | 1.31 | 0 | 64bac6b8c | campaign/the-hallmark | ambrose | 12 |
+| 2026-09-01T22:51:35Z | gate-commit | 87.507 | 55.360 | 27.552 | 0.95 | 0 | 64bac6b8c | campaign/the-hallmark | ambrose | 12 |
+| 2026-09-01T23:04:30Z | gate-commit | 194.196 | 142.152 | 107.840 | 1.29 | 0 | c695ba7ce | campaign/the-hallmark | ambrose | 12 |
+| 2026-09-01T23:28:39Z | gate-commit | 255.767 | 324.184 | 102.503 | 1.67 | 0 | 89e85823b | campaign/the-hallmark | ambrose | 12 |
+| 2026-09-01T23:30:40Z | gate-commit | 89.327 | 56.228 | 27.963 | 0.94 | 0 | 89e85823b | campaign/the-hallmark | ambrose | 12 |
+| 2026-09-01T23:53:49Z | gate-commit | 146.421 | 173.512 | 51.114 | 1.53 | 0 | 082823402 | campaign/the-hallmark | ambrose | 12 |
+| 2026-09-02T00:41:04Z | gate-commit | 496.757 | 270.361 | 123.862 | 0.79 | 0 | 980b4338e | campaign/the-hallmark | ambrose | 12 |
+| 2026-09-02T00:53:49Z | gate-commit | 127.774 | 88.923 | 75.062 | 1.28 | 0 | 897448ccc | campaign/the-hallmark | ambrose | 12 |
+| 2026-09-02T00:56:46Z | gate-commit | 88.783 | 56.889 | 27.906 | 0.96 | 0 | 897448ccc | campaign/the-hallmark | ambrose | 12 |
+| 2026-09-02T01:11:22Z | gate-commit | 190.375 | 53.955 | 24.217 | 0.41 | 0 | 3621b9282 | campaign/the-hallmark | ambrose | 12 |
+| 2026-09-02T01:13:36Z | gate-commit | 106.867 | 50.636 | 24.083 | 0.70 | 0 | 3621b9282 | campaign/the-hallmark | ambrose | 12 |
+| 2026-09-02T01:16:08Z | gate-commit | 93.985 | 57.428 | 29.536 | 0.93 | 0 | 3621b9282 | campaign/the-hallmark | ambrose | 12 |
+| 2026-09-02T01:27:36Z | gate-commit | 198.130 | 63.002 | 29.663 | 0.47 | 0 | f75f25be4 | campaign/the-hallmark | ambrose | 12 |
+| 2026-09-02T01:39:26Z | quick | 95.373 | 65.004 | 58.095 | 1.29 | 0 | ac0ea3933 | campaign/the-hallmark | ambrose | 12 |
+| 2026-09-02T01:39:50Z | quick | 20.046 | 14.555 | 0.841 | 0.77 | 0 | ac0ea3933 | campaign/the-hallmark | ambrose | 12 |
+| 2026-09-02T01:47:58Z | gate-commit | 351.332 | 241.576 | 85.428 | 0.93 | 0 | ac0ea3933 | campaign/the-hallmark | ambrose | 12 |
+| 2026-09-02T01:49:52Z | gate-commit | 91.007 | 53.245 | 24.193 | 0.85 | 0 | ac0ea3933 | campaign/the-hallmark | ambrose | 12 |
+| 2026-09-02T01:52:36Z | gate-commit | 128.206 | 65.753 | 31.949 | 0.76 | 0 | ac0ea3933 | campaign/the-hallmark | ambrose | 12 |
+| 2026-09-02T01:54:59Z | quick | 19.926 | 14.255 | 0.902 | 0.76 | 0 | eab196319 | campaign/the-hallmark | ambrose | 12 |
+| 2026-09-02T02:07:22Z | quick | 28.177 | 15.920 | 1.009 | 0.60 | 0 | 6db1a664a | campaign/the-hallmark | ambrose | 12 |
+| 2026-09-02T02:23:10Z | gate-commit | 259.802 | 120.717 | 90.747 | 0.81 | 0 | 6db1a664a | campaign/the-hallmark | ambrose | 12 |
+| 2026-09-02T10:22:52Z | gate-commit | 200.543 | 106.330 | 62.395 | 0.84 | 0 | 430477da3 | campaign/the-hallmark | ambrose | 12 |
+| 2026-09-02T10:46:57Z | quick | 20.195 | 14.350 | 0.870 | 0.75 | 0 | 4a11f087a | campaign/the-hallmark | ambrose | 12 |
+| 2026-09-02T11:09:34Z | gate-commit | 199.824 | 68.081 | 31.536 | 0.50 | 0 | 4a11f087a | campaign/the-hallmark | ambrose | 12 |
+| 2026-09-02T12:03:07Z | gate-commit | 291.883 | 188.733 | 60.677 | 0.85 | 0 | 8c17a1b2c | campaign/the-hallmark | ambrose | 12 |
+| 2026-09-02T12:07:03Z | gate-commit | 98.759 | 59.869 | 29.924 | 0.91 | 0 | 8c17a1b2c | campaign/the-hallmark | ambrose | 12 |
+| 2026-09-02T12:17:35Z | quick | 20.316 | 14.515 | 0.916 | 0.76 | 0 | b12f8ec6c | campaign/the-hallmark | ambrose | 12 |
+| 2026-09-02T12:36:34Z | gate-commit | 274.151 | 142.092 | 104.624 | 0.90 | 0 | b12f8ec6c | campaign/the-hallmark | ambrose | 12 |
 | 2026-09-01T22:50:14Z | prewarm | 226.100 | 1224.208 | 44.186 | 5.61 | 0 | 18f63ebfa | campaign/the-avowal | MacBookPro | 10 |
 | 2026-09-02T01:37:05Z | gate-commit | 33.423 | 89.658 | 15.380 | 3.14 | 0 | f417e8f85 | campaign/the-avowal | MacBookPro | 10 |
 | 2026-09-02T01:38:36Z | gate-commit | 35.806 | 59.079 | 14.206 | 2.05 | 0 | f417e8f85 | campaign/the-avowal | MacBookPro | 10 |
@@ -4900,6 +4932,7 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-02T11:53:36Z | sluice:gate | 634.764 | 18503.368 | 607.670 | 30.11 | 0 | b83f24245 |  | lefford | 40 |
 | 2026-09-02T12:02:50Z | sluice:clients | 553.777 | 10136.063 | 137.114 | 18.55 | 0 | 3347f68ce |  | lefford | 40 |
 | 2026-09-02T12:10:05Z | sluice:heavy | 434.230 | 9618.209 | 168.474 | 22.54 | 0 | f11f7ae64 |  | lefford | 40 |
+| 2026-09-02T12:49:23Z | gate-commit | 456.597 | 875.138 | 140.714 | 2.22 | 0 | d6f83a2a4 | campaign/the-hallmark | ambrose | 12 |
 | 2026-09-02T11:06:09Z | gate-commit | 10.580 | 28.181 | 7.496 | 3.37 | 0 | ae1ad8592 | campaign/the-avowal | MacBookPro | 10 |
 | 2026-09-02T11:06:37Z | rebaseline | 27.618 | 100.032 | 5.902 | 3.84 | 0 | ae1ad8592 | campaign/the-avowal | MacBookPro | 10 |
 | 2026-09-02T11:09:22Z | gate-commit | 96.482 | 567.621 | 50.062 | 6.40 | 0 | ae1ad8592 | campaign/the-avowal | MacBookPro | 10 |
@@ -4914,3 +4947,20 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-02T13:42:07Z | sluice:artifacts | 78.278 | 663.120 | 26.154 | 8.81 | 0 | 682d1e9a7 |  | lefford | 40 |
 | 2026-09-02T13:43:05Z | sluice:outboard | 57.371 | 31.942 | 37.743 | 1.21 | 0 | 06be7999b |  | lefford | 40 |
 | 2026-09-02T13:52:50Z | sluice:gate | 585.155 | 17988.019 | 515.669 | 31.62 | 0 | 2cb56e03e |  | lefford | 40 |
+| 2026-09-02T13:49:02Z | gate-commit | 631.756 | 933.443 | 218.673 | 1.82 | 0 | da6de5874 | campaign/the-hallmark | ambrose | 12 |
+| 2026-09-02T14:07:50Z | gate-commit | 221.712 | 61.627 | 30.028 | 0.41 | 0 | 26bbb01af | campaign/the-hallmark | ambrose | 12 |
+| 2026-09-02T14:16:08Z | sluice:artifacts | 157.773 | 1595.933 | 83.457 | 10.64 | 0 | 9a4818c77 |  | lefford | 40 |
+| 2026-09-02T14:17:14Z | sluice:outboard | 65.054 | 43.959 | 50.932 | 1.46 | 0 | 50f7e9e03 |  | lefford | 40 |
+| 2026-09-02T14:28:18Z | sluice:gate | 663.963 | 19713.617 | 653.942 | 30.68 | 0 | 5eeea051d |  | lefford | 40 |
+| 2026-09-02T14:37:38Z | sluice:clients | 560.043 | 10144.784 | 115.919 | 18.32 | 0 | dd9eece3c |  | lefford | 40 |
+| 2026-09-02T14:45:13Z | sluice:heavy | 454.948 | 9610.597 | 170.308 | 21.50 | 0 | 7fba9a0c7 |  | lefford | 40 |
+| 2026-09-02T14:27:52Z | game-check | 0.365 | 0.282 | 0.048 | 0.90 | 0 | 2c34f9e4c | campaign/the-hone | MacBookPro | 10 |
+| 2026-09-02T14:30:03Z | game-check | 115.602 | 685.885 | 27.831 | 6.17 | 0 | 2c34f9e4c | campaign/the-hone | MacBookPro | 10 |
+| 2026-09-02T14:31:53Z | gate-commit | 62.060 | 332.903 | 26.184 | 5.79 | 0 | 2c34f9e4c | campaign/the-hone | MacBookPro | 10 |
+| 2026-09-02T14:32:37Z | gate-commit | 22.588 | 53.048 | 13.838 | 2.96 | 0 | 2c34f9e4c | campaign/the-hone | MacBookPro | 10 |
+| 2026-09-02T14:33:18Z | gate-commit | 22.775 | 53.328 | 14.238 | 2.97 | 0 | 5f73f9356 | campaign/the-hone | MacBookPro | 10 |
+| 2026-09-02T14:46:52Z | sluice:artifacts | 89.564 | 1600.436 | 73.467 | 18.69 | 0 | 742f70863 |  | lefford | 40 |
+| 2026-09-02T14:47:45Z | sluice:outboard | 52.168 | 31.371 | 43.790 | 1.44 | 0 | 67cd32d8a |  | lefford | 40 |
+| 2026-09-02T14:57:38Z | sluice:gate | 593.316 | 18003.943 | 516.793 | 31.22 | 0 | 02feee1c3 |  | lefford | 40 |
+| 2026-09-02T15:00:09Z | sluice:clients | 150.725 | 2266.844 | 206.028 | 16.41 | 0 | 14722bf02 |  | lefford | 40 |
+| 2026-09-02T15:07:29Z | sluice:heavy | 439.118 | 9637.904 | 156.597 | 22.30 | 0 | 96d96d43e |  | lefford | 40 |

@@ -45,7 +45,7 @@ use hornvale_terrain::{
 struct Rebuilt {
     /// The real, wired `globe::generate` result (post-carve) — what every
     /// world actually is.
-    outcome: GenesisOutcome,
+    outcome: GenesisOutcome<hornvale_terrain::TectonicGlobe>,
     /// Elevation BEFORE the carve (stage 5 of spec §2).
     elevation_pre: VertexMap<ReferenceElevation>,
     /// Sea level resolved against the pre-carve surface (spec §2 stage 5).
@@ -69,7 +69,7 @@ struct Rebuilt {
 fn rebuild(seed: u64, geo: &Geosphere) -> Rebuilt {
     let outcome = generate(Seed(seed), geo, &TerrainPins::default())
         .unwrap_or_else(|e| panic!("seed {seed}: {e}"));
-    let g = &outcome.globe;
+    let g = &outcome.value;
     let terrain_seed = Seed(seed).derive(hornvale_terrain::streams::ROOT);
     let mut notes = Vec::new();
     let ocean_target =
@@ -341,7 +341,7 @@ fn harder_rock_cuts_less() {
     let geo = Geosphere::new(4);
     let seed = 42u64;
     let rebuilt = rebuild(seed, &geo);
-    let g = &rebuilt.outcome.globe;
+    let g = &rebuilt.outcome.value;
     let incision = carve_incision(
         &geo,
         &rebuilt.elevation_pre,
@@ -421,7 +421,7 @@ fn atolls_only_on_warm_submerged_seamounts() {
     let mut total_atolls = 0usize;
     for seed in [1u64, 7, 42, 99] {
         let outcome = generate(Seed(seed), &geo, &TerrainPins::default()).unwrap();
-        let g = &outcome.globe;
+        let g = &outcome.value;
         let index = NearestVertexIndex::new(&geo);
         let ceiling =
             g.sea_level.get() - params.atoll_freeboard_m + params.wedge_freeboard_m + 1e-6;
@@ -489,7 +489,7 @@ fn trim_recaps_hold_after_the_final_solve() {
     for (level, seed) in [(5u32, 42u64), (4, 34)] {
         let geo = Geosphere::new(level);
         let rebuilt = rebuild(seed, &geo);
-        let g = &rebuilt.outcome.globe;
+        let g = &rebuilt.outcome.value;
         let p = CarveParams::default();
         let sea_1 = rebuilt.sea_carved;
         let sea_final = g.sea_level;
@@ -605,7 +605,7 @@ fn generate_level_books_account_for_every_eroded_unit() {
     let geo = Geosphere::new(4);
     for seed in [1u64, 7, 42, 99] {
         let rebuilt = rebuild(seed, &geo);
-        let g = &rebuilt.outcome.globe;
+        let g = &rebuilt.outcome.value;
         let d = &rebuilt.delta;
         let carved = VertexMap::from_fn(&geo, |c| {
             ReferenceElevation::new(rebuilt.elevation_pre.get(c).get() + d.delta_m.get(c))
@@ -668,7 +668,7 @@ fn trails_exist_age_ordered() {
     let geo = Geosphere::new(4);
     for seed in [1u64, 7, 42, 99] {
         let outcome = generate(Seed(seed), &geo, &TerrainPins::default()).unwrap();
-        let seamounts = &outcome.globe.trail_seamounts;
+        let seamounts = &outcome.value.trail_seamounts;
         let chain_len = elevation::TRAIL_STEPS as usize + 1;
         assert!(
             !seamounts.is_empty() && seamounts.len().is_multiple_of(chain_len),
@@ -705,7 +705,7 @@ fn arcs_are_discrete() {
     for seed in 1..=40u64 {
         let outcome = generate(Seed(seed), &geo, &TerrainPins::default())
             .unwrap_or_else(|e| panic!("seed {seed}: {e}"));
-        let g = &outcome.globe;
+        let g = &outcome.value;
         let arc_land: std::collections::BTreeSet<Vertex> = geo
             .vertices()
             .filter(|&c| {
@@ -760,7 +760,7 @@ fn shelf_width_asymmetry() {
     for seed in 1..=40u64 {
         let outcome = generate(Seed(seed), &geo, &TerrainPins::default())
             .unwrap_or_else(|e| panic!("seed {seed}: {e}"));
-        let g = &outcome.globe;
+        let g = &outcome.value;
         for vertex in geo.vertices() {
             if *g.elevation.get(vertex) < g.sea_level {
                 continue;
@@ -853,7 +853,7 @@ fn eustatic_dividend_regression() {
     for seed in [1u64, 7, 42, 99] {
         let outcome = generate(Seed(seed), &geo, &TerrainPins::default())
             .unwrap_or_else(|e| panic!("seed {seed}: {e}"));
-        let g = &outcome.globe;
+        let g = &outcome.value;
         let up = ReferenceElevation::new(g.sea_level.get() + delta).unwrap();
         let down = ReferenceElevation::new(g.sea_level.get() - delta).unwrap();
         let swing = (flooded_fraction(&g.elevation, up) - flooded_fraction(&g.elevation, down))

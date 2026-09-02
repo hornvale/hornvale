@@ -274,6 +274,23 @@ underworld's own rock strata stay uninhabited (`BiomeExpr::biome()` still
 declares a cave formation `unreachable!()`) — this campaign only gives every
 realm the coordinate a future one needs to fill it.
 
+**Two of that type's three fields now name a shared roster rather than a
+private one ([The Hallmark](../chronicle/the-hallmark.md)).** Climate had been
+carrying its own copies of terrain's rock horizons and cave kinds, because a
+domain may not import a sibling domain and climate needs to *name* an
+underground band it does not itself derive. Both rosters moved into the kernel
+under the more-than-one-domain clause of decision 0517, and climate's two
+enums re-express their underground halves in terms of them: a rock stratum
+wraps a kernel horizon, a cave formation wraps a kernel cave kind. Every
+variant kept its own spelling, so no committed fact and no artifact moved —
+and what the mirrors used to cost is gone with them: a translating function in
+the composition root, and a hand-written test whose whole job was to notice if
+the two cave rosters ever drifted apart. What did not move is the division of
+labour: terrain still
+derives which horizon a depth falls in and which cave a reach affords; climate
+still decides what lives there. The kernel holds the roster; each domain keeps
+its own meaning.
+
 **The tier ladder ahead:** *stochastic* weather — day-to-day variation the
 world's pure `world(place, time)` cannot yet express (standing felt weather has
 shipped; the *changing* kind waits on an event model) — ocean currents and cloud
