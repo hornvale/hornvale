@@ -153,6 +153,10 @@ fn an_exotic_site_stands_at_one_facet_and_not_at_its_neighbour() {
 /// The neighbour assertion is the resolution guard, the same one the exotic
 /// test carries: a cave read at the nearest VERTEX rather than the placed facet
 /// would answer yes for every facet within ~55 km.
+///
+/// Existence comes from `GeneratedTerrain::cave_at`, the world's one cave
+/// predicate — the same answer the terrain map's cave glyph draws, so a walker
+/// cannot enter a cave the map denies.
 #[test]
 fn a_placed_cave_is_a_site_and_is_enterable() {
     let world = hornvale_worldgen::build_world(
@@ -168,7 +172,7 @@ fn a_placed_cave_is_a_site_and_is_enterable() {
     let walk = hornvale_locale::walk_depth(&ctx);
     let terrain = LocaleTerrain::new(&ctx);
     let caves = ctx.terrain().cave_site_vertices();
-    assert!(!caves.is_empty(), "seed 42 must warrant at least one cave");
+    assert!(!caves.is_empty(), "seed 42 must hold at least one cave");
     let sites = ctx.strange_sites();
     let placed = site_facet_for(caves[0], SiteReason::Cave, world.seed, geo, walk);
 

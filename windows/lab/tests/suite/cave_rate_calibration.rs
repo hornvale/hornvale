@@ -4,25 +4,25 @@
 //! being remarkable. *A result outside the band is a finding, and the threshold
 //! is re-derived once, in the open.*
 //!
-//! # The readout: H2 IS FALSIFIED, and not by the threshold
+//! # The readout: H2 IS FALSIFIED, and no predicate could have saved it
 //!
-//! Measured here at `hornvale_terrain`'s shipped `CAVE_PRONENESS_THRESHOLD`
-//! (0.12), 2,000 sampled land facets per seed:
+//! Measured over `GeneratedTerrain::cave_at` — the world's ONE cave predicate,
+//! see below — with 2,000 sampled land facets per seed:
 //!
-//! | seed | cave-warranting vertices | caves placed on land | of 2,000 sampled | exact rate |
-//! | ---: | ---: | ---: | ---: | ---: |
-//! | 42  | 1564 | 1528 | 1 | 1.31e-5 |
-//! | 13  |  970 |  857 | 0 | 6.11e-6 |
-//! | 7   | 1638 | 1564 | 0 | 8.21e-6 |
-//! | 1   | 1355 | 1315 | 0 | 9.00e-6 |
-//! | 100 | 2772 | 2735 | 0 | 1.43e-5 |
+//! | seed | vertices holding a cave | placed on land | placed on WATER | of 2,000 sampled | exact rate |
+//! | ---: | ---: | ---: | ---: | ---: | ---: |
+//! | 42  |  874 |  827 |  47 | 0 | 7.102e-6 |
+//! | 13  | 1647 | 1528 | 119 | 0 | 1.089e-5 |
+//! | 7   | 1681 | 1584 |  97 | 0 | 8.310e-6 |
+//! | 1   | 1116 | 1033 |  83 | 0 | 7.069e-6 |
+//! | 100 | 2440 | 2360 |  80 | 0 | 1.233e-5 |
 //!
-//! Pooled sampled rate **0.0001** (one hit in 10,000, against 0.10 expected —
-//! the sample is pure Poisson noise at this scale, which is the point); pooled
-//! **exact** rate **1.0191e-5**, i.e. **0.00102% of land facets**, ~980x under
-//! the band's 1% floor.
+//! Pooled sampled rate **0** (no hit in 10,000, against 100 expected at the
+//! band's floor — the sample cannot resolve a rate this small, which is the
+//! point); pooled **exact** rate **9.3411e-6**, i.e. **0.00093% of land
+//! facets**, ~1,070x under the band's 1% floor.
 //!
-//! # Why no threshold rescues it, which is why the threshold was not retuned
+//! # Why no predicate rescues it, which is why nothing was retuned
 //!
 //! The band is unreachable **by construction**, and the arithmetic needs no
 //! seeds. A site is PLACED — one facet per warranting vertex (Decision 0537,
@@ -30,27 +30,44 @@
 //! world is bounded above by the number of geosphere vertices. The canonical
 //! grid has 40,962 of them; the walk band at depth 13 has `6 * 4^13` =
 //! 402,653,184 facets. **At most one facet in 9,830 can hold a site of any
-//! kind — 0.0102% — even if every vertex on the globe warranted a cave**, which
-//! is 98x under the 1% floor before a single seed is built.
+//! kind — 0.0102% — even if every vertex on the globe held a cave**, which is
+//! 98x under the 1% floor before a single seed is built.
 //!
-//! So the constant is not what missed the band; the *quantity* is. H2 was
-//! frozen while the spec still said a cave was a per-facet derivation from a
-//! field, where a percentage of facets was a coherent target. Section 6's
-//! 2026-09-01 correction made caves placed sites, and a placed point process on
-//! a 41k-vertex lattice cannot express a per-facet percentage at all. Decision
+//! So no constant is what missed the band; the *quantity* is. H2 was frozen
+//! while the spec still said a cave was a per-facet derivation from a field,
+//! where a percentage of facets was a coherent target. Section 6's 2026-09-01
+//! correction made caves placed sites, and a placed point process on a
+//! 41k-vertex lattice cannot express a per-facet percentage at all. Decision
 //! 0016 forbids retuning a constant to rescue a prediction after unblinding;
 //! it would also have been useless here, so [`the_band_is_unreachable_at_any_threshold`]
 //! pins the *structural* fact instead of quietly widening the band. That test
 //! goes red the day the mechanism or the resolution changes enough for the
 //! band to become reachable — which is the day H2 is worth re-litigating.
 //!
-//! # What is asserted here, and why each assertion earns its place
+//! **This file measured a different predicate for one day, and the readout
+//! moved without the finding moving.** Task 4 first shipped a `cave_site_at`
+//! of its own — a `cave_proneness` threshold plus a sea-level freeboard floor
+//! — alongside the `cave_at` that already existed, which is two disagreeing
+//! answers to "is there a cave here": 1,564 / 970 / 1,638 / 1,355 / 2,772
+//! vertices against the table's 874 / 1,647 / 1,681 / 1,116 / 2,440, from
+//! criteria that read neither crust age, nor plate-boundary distance, nor the
+//! noise gate that makes caves cluster. That the numbers above all changed and
+//! the verdict did not is the content of the paragraph before this one: the
+//! band was never about the predicate.
 //!
-//! A sampled rate of 0/2,000 is the same reading a completely broken
-//! mechanism would give, so the sample alone cannot tell "sparse" from "dead".
-//! [`caves_are_actually_placed`] is the discriminator: it asserts the roster
-//! and the placed set are non-empty on every seed, so this file cannot go green
-//! on a world with no caves in it.
+//! # The residual defect the `placed on WATER` column exists to show
+//!
+//! `cave_at` refuses an ocean VERTEX in its first three lines, and 426 of the
+//! 7,758 placed cave facets across these five seeds still land on water.
+//! Replacing the predicate did not fix it and could not: the vertex was never
+//! where the defect was. `site_facet_for` places an address inside a
+//! cube-sphere quad around the vertex — up to ~39 km away — and nothing
+//! re-checks water at the facet it lands on, so a land vertex can hand its
+//! cave to a water facet, where `structure_at` will happily open it. The
+//! invented predicate's freeboard floor, being STRICTER than `is_ocean`,
+//! produced 300 such facets rather than 426; both numbers are the same bug,
+//! measured through two predicates. The fix belongs at the placement seam and
+//! the exotic-site path shares it.
 
 use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{Facet, Geosphere, NearestVertexIndex, Seed, Vertex};
@@ -76,11 +93,18 @@ const SAMPLE: usize = 2_000;
 
 /// One seed's reading.
 struct Reading {
-    /// Vertices `hornvale_terrain::cave_site_at` warrants a cave at.
+    /// Vertices holding a cave, by `GeneratedTerrain::cave_at`.
     roster: usize,
     /// Of those, the ones whose PLACED facet lands on a land facet — the
     /// numerator of a rate whose denominator is land facets.
     placed_on_land: usize,
+    /// Of those, the ones whose PLACED facet lands on WATER, which is the
+    /// registered residual defect and not a rounding error: `cave_at` refuses
+    /// an ocean VERTEX in its first three lines, but `site_facet_for` moves
+    /// the address up to ~39 km, and nothing re-checks water at the facet it
+    /// lands on. Printed so the number is visible in the instrument rather
+    /// than only in a report.
+    placed_on_water: usize,
     /// How many of the [`SAMPLE`] sampled land facets held a cave.
     sampled_with_cave: usize,
     /// Land facets in the world, estimated from the sampler's own accept rate.
@@ -140,6 +164,7 @@ fn read(seed: u64, wc: &WorldComponents) -> Reading {
         .iter()
         .filter(|facet| is_land(facet, geo, index, &terrain))
         .count();
+    let placed_on_water = placed.len() - placed_on_land;
 
     let mut stream = Seed(seed)
         .derive(StreamLabel::dynamic("lab/the-prospect/cave-rate"))
@@ -166,6 +191,7 @@ fn read(seed: u64, wc: &WorldComponents) -> Reading {
     Reading {
         roster: roster.len(),
         placed_on_land,
+        placed_on_water,
         sampled_with_cave,
         land_facets: all_facets * kept as f64 / drawn as f64,
         all_facets,
@@ -210,10 +236,11 @@ fn the_cave_rate_is_measured_over_the_preregistered_population() {
     for seed in SEEDS {
         let r = read(seed, &wc);
         println!(
-            "seed {seed}: roster {} placed-on-land {} sampled-with-cave {}/{SAMPLE} \
-             exact rate {:.3e} ceiling rate {:.3e}",
+            "seed {seed}: roster {} placed-on-land {} placed-on-water {} \
+             sampled-with-cave {}/{SAMPLE} exact rate {:.3e} ceiling rate {:.3e}",
             r.roster,
             r.placed_on_land,
+            r.placed_on_water,
             r.sampled_with_cave,
             r.exact_rate(),
             r.ceiling_rate(),
@@ -231,10 +258,17 @@ fn the_cave_rate_is_measured_over_the_preregistered_population() {
     );
 }
 
-/// **The finding, pinned as an assertion.** No value of
-/// `hornvale_terrain`'s `CAVE_PRONENESS_THRESHOLD` can put the cave rate inside
-/// H2's band, because the placement mechanism emits at most one facet per
-/// geosphere vertex and there are ~9,830 walk facets per vertex.
+/// **The finding, pinned as an assertion.** No cave predicate whatever can put
+/// the cave rate inside H2's band, because the placement mechanism emits at
+/// most one facet per geosphere vertex and there are ~9,830 walk facets per
+/// vertex.
+///
+/// **The name says `threshold` and there is no longer a threshold.** It is
+/// kept deliberately: the fact this test pins is about PLACEMENT, so it did
+/// not move when the predicate behind it was replaced by
+/// `GeneratedTerrain::cave_at` — and that is exactly the property worth
+/// advertising, since a reader who assumes the pin belongs to the predicate
+/// would expect it to need re-deriving and it does not.
 ///
 /// Asserted rather than merely recorded so that the finding is *falsifiable*:
 /// this goes red if the globe level rises, the walk band coarsens, a site gains
@@ -278,11 +312,11 @@ fn caves_are_actually_placed() {
         let r = read(seed, &wc);
         assert!(
             r.roster > 0,
-            "seed {seed} warrants no cave anywhere — the threshold selects nothing"
+            "seed {seed} holds no cave anywhere — `cave_at` places nothing"
         );
         assert!(
             r.placed_on_land > 0,
-            "seed {seed} warrants {} caves and places none of them on land",
+            "seed {seed} holds {} caves and places none of them on land",
             r.roster
         );
     }

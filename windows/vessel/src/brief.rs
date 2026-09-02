@@ -153,13 +153,14 @@ pub(crate) fn containing_vertex(
 /// structure's chambers agree about what building they are in.
 ///
 /// `exotic_sites` is the world's placed exotic regimes
-/// (`hornvale_locale::LocaleContext::strange_sites`) and `cave_sites` is its
-/// cave-warranting vertices (`GeneratedTerrain::cave_site_vertices`). Both are
-/// parameters rather than something derived here because a `LocaleContext` is
-/// expensive and the caller already holds one; the same reason `geo` and
-/// `index` are parameters. `cave_sites` is much the longer roster of the two —
-/// ~1000-2800 vertices against ~100 — so a caller that asks per turn should
-/// hold it rather than re-scan the grid.
+/// (`hornvale_locale::LocaleContext::strange_sites`) and `cave_sites` is the
+/// vertices holding a cave (`GeneratedTerrain::cave_site_vertices`, which is
+/// one pass of `cave_at` over the grid). Both are parameters rather than
+/// something derived here because a `LocaleContext` is expensive and the
+/// caller already holds one; the same reason `geo` and `index` are parameters.
+/// `cave_sites` is much the longer roster of the two — ~870-2,440 vertices
+/// against ~100 — so a caller that asks per turn should hold it rather than
+/// re-scan the grid, which costs ~2.9 ms (`Session` does exactly that).
 ///
 /// **The exotic read runs site→facet, not facet→site, and that direction is
 /// deliberate.** The cheap-looking alternative — resolve `locale`'s containing
