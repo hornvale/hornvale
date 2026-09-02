@@ -42,11 +42,16 @@ use hornvale_kernel::{
 /// Object-kind traits: the label prose uses to name the kind. Thin and
 /// honest (spec §3.5) — no property lives here; see the module doc for why
 /// `portable` was deleted rather than kept beside `ObjectProperty::Portable`.
-/// type-audit: bare-ok(identifier-text: display)
+/// type-audit: bare-ok(identifier-text: display), bare-ok(prose: doc)
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ThingTraits {
     /// The label prose uses to name the kind.
     pub display: &'static str,
+    /// The gloss the concept registry publishes for this kind, or `None`
+    /// where another domain owns the concept — see [`BORROWED`]. A gloss
+    /// authored here for a borrowed kind would be a second, divergent
+    /// definition of prose that domain already owns.
+    pub doc: Option<&'static str>,
 }
 
 /// The authored thing-kind labels. Every label here has a row in
@@ -169,79 +174,131 @@ pub mod kinds {
 /// table, not two.
 pub fn thing_registry() -> ComponentStore<KindId, ThingTraits> {
     [
-        (KindId("alcove"), ThingTraits { display: "alcove" }),
-        (KindId("altar"), ThingTraits { display: "altar" }),
-        (KindId("anvil"), ThingTraits { display: "anvil" }),
-        (KindId("bed"), ThingTraits { display: "bed" }),
-        (KindId("brazier"), ThingTraits { display: "brazier" }),
+        (
+            KindId("alcove"),
+            ThingTraits {
+                display: "alcove",
+                doc: Some("a recessed space set into a wall"),
+            },
+        ),
+        (
+            KindId("altar"),
+            ThingTraits {
+                display: "altar",
+                doc: Some("a raised surface where offerings are made"),
+            },
+        ),
+        (
+            KindId("anvil"),
+            ThingTraits {
+                display: "anvil",
+                doc: Some("a heavy iron block a smith hammers metal against"),
+            },
+        ),
+        (
+            KindId("bed"),
+            ThingTraits {
+                display: "bed",
+                doc: Some("a place made for lying down and sleeping"),
+            },
+        ),
+        (
+            KindId("brazier"),
+            ThingTraits {
+                display: "brazier",
+                doc: Some("a metal basin that holds a fire apart from a hearth"),
+            },
+        ),
         (
             KindId("cave-mouth"),
             ThingTraits {
                 display: "cave mouth",
+                doc: Some("the opening where a cave meets the outside"),
             },
         ),
-        (KindId("ground"), ThingTraits { display: "ground" }),
-        (KindId("hearth"), ThingTraits { display: "hearth" }),
+        (
+            KindId("ground"),
+            ThingTraits {
+                display: "ground",
+                doc: Some("the bare earth underfoot"),
+            },
+        ),
+        (
+            KindId("hearth"),
+            ThingTraits {
+                display: "hearth",
+                // BORROWED (ceded to settlement, decision 0025) — a gloss
+                // here would be a second, divergent definition of a concept
+                // that domain already owns. See `ThingTraits::doc`.
+                doc: None,
+            },
+        ),
         (
             KindId("high-seat"),
             ThingTraits {
                 display: "high seat",
+                doc: Some("the seat of a hall's presiding figure"),
             },
         ),
-        (KindId("key"), ThingTraits { display: "key" }),
-        (KindId("log"), ThingTraits { display: "log" }),
-        (KindId("loom"), ThingTraits { display: "loom" }),
-        (KindId("pool"), ThingTraits { display: "pool" }),
-        (KindId("screen"), ThingTraits { display: "screen" }),
+        (
+            KindId("key"),
+            ThingTraits {
+                display: "key",
+                doc: Some("a small tool shaped to work one particular lock"),
+            },
+        ),
+        (
+            KindId("log"),
+            ThingTraits {
+                display: "log",
+                doc: Some("a length of felled, unworked timber"),
+            },
+        ),
+        (
+            KindId("loom"),
+            ThingTraits {
+                display: "loom",
+                doc: Some("a frame for weaving thread into cloth"),
+            },
+        ),
+        (
+            KindId("pool"),
+            ThingTraits {
+                display: "pool",
+                doc: Some("a small standing body of water"),
+            },
+        ),
+        (
+            KindId("screen"),
+            ThingTraits {
+                display: "screen",
+                doc: Some("a partition set up to divide or shield a space"),
+            },
+        ),
         (
             KindId("strongbox"),
             ThingTraits {
                 display: "strongbox",
+                doc: Some("a locked chest built to keep valuables safe"),
             },
         ),
         (
             KindId("threshold"),
             ThingTraits {
                 display: "threshold",
+                doc: Some("the sill marking where one place ends and another begins"),
             },
         ),
-        (KindId("vessel"), ThingTraits { display: "vessel" }),
+        (
+            KindId("vessel"),
+            ThingTraits {
+                display: "vessel",
+                doc: Some("a container shaped to hold liquid or goods"),
+            },
+        ),
     ]
     .into_iter()
     .collect()
-}
-
-/// A short, honest gloss for each roster label thing itself owns — what a
-/// player would call the kind, not a mechanic. Kept beside [`THING_KINDS`]
-/// rather than folded into [`ThingTraits::display`], which names the kind in
-/// running prose, not what it *is*. Carries no entry for a label in
-/// [`BORROWED`] (`hearth`): that concept is never registered under `thing`,
-/// so a gloss for it here would be dead code asserting thing's reading of a
-/// word it does not own — see [`register_concepts`]'s doc for that reading.
-fn concept_doc(label: &str) -> &'static str {
-    match label {
-        "alcove" => "a recessed space set into a wall",
-        "altar" => "a raised surface where offerings are made",
-        "anvil" => "a heavy iron block a smith hammers metal against",
-        "bed" => "a place made for lying down and sleeping",
-        "brazier" => "a metal basin that holds a fire apart from a hearth",
-        "cave-mouth" => "the opening where a cave meets the outside",
-        "ground" => "the bare earth underfoot",
-        "high-seat" => "the seat of a hall's presiding figure",
-        "key" => "a small tool shaped to work one particular lock",
-        "log" => "a length of felled, unworked timber",
-        "loom" => "a frame for weaving thread into cloth",
-        "pool" => "a small standing body of water",
-        "screen" => "a partition set up to divide or shield a space",
-        "strongbox" => "a locked chest built to keep valuables safe",
-        "threshold" => "the sill marking where one place ends and another begins",
-        "vessel" => "a container shaped to hold liquid or goods",
-        other => unreachable!(
-            "concept_doc has no gloss for thing-kind {other:?} — it is either \
-             missing from THING_KINDS/concept_doc, or it is BORROWED and should \
-             never reach this function"
-        ),
-    }
 }
 
 /// Labels this domain deliberately cedes to an earlier, broader registrant
@@ -299,6 +356,7 @@ fn borrowed_owner(label: &str) -> Option<&'static str> {
 ///   …)` uses.
 /// - neither: `thing` owns the label outright and registers it.
 pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryError> {
+    let traits = thing_registry();
     for label in THING_KINDS {
         match registry.concept(label) {
             // Already registered, and thing is the owner -- either an
@@ -335,12 +393,22 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
                          concept is registered -- delete the stale declaration"
                     );
                 }
+                let doc = traits
+                    .get(&KindId(label))
+                    .and_then(|t| t.doc)
+                    .unwrap_or_else(|| {
+                        unreachable!(
+                            "{label:?} reached thing's own registration with no gloss -- \
+                             it is either missing from THING_KINDS/thing_registry, or it \
+                             is BORROWED and should never reach this branch"
+                        )
+                    });
                 registry.register_manifest(Manifest {
                     concept: ConceptDef {
                         name: label.to_string(),
                         domain: "thing".to_string(),
                         kind: ConceptKind::Object,
-                        doc: concept_doc(label).to_string(),
+                        doc: doc.to_string(),
                     },
                     lexeme: Correspondent::Absent(Void::Gap("no language pack names it yet")),
                     percept: Correspondent::Absent(Void::Gap("not emitted as a phenomenon yet")),
@@ -413,6 +481,43 @@ mod tests {
                 "registry has {:?}, roster does not",
                 id.0
             );
+        }
+    }
+
+    /// Every roster kind carries a non-empty gloss, and the gloss reaches the
+    /// concept registry. This replaces `concept_doc`'s exhaustive match: the
+    /// match could go short by one arm and panic at world genesis, where a
+    /// missing struct field will not compile.
+    ///
+    /// **Direction: rostered ⊆ glossed.** Its converse — that no gloss exists
+    /// for a kind outside the roster — is structural now rather than asserted,
+    /// because a gloss can only exist as a field of a row.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST: give `hearth` a gloss (it is BORROWED,
+    /// so the fourth arm must catch it), and separately set `bed`'s to `Some("")`.
+    #[test]
+    fn every_roster_kind_carries_a_gloss() {
+        let reg = thing_registry();
+        for label in THING_KINDS {
+            let traits = reg
+                .get(&KindId(label))
+                .unwrap_or_else(|| panic!("roster names {label:?}, registry does not"));
+            match (traits.doc, borrowed_owner(label)) {
+                (Some(doc), None) => assert!(
+                    !doc.is_empty(),
+                    "{label:?} has an empty gloss — a registered concept with no \
+                     doc renders as a blank line in the reference page"
+                ),
+                (None, Some(_)) => {}
+                (Some(_), Some(owner)) => panic!(
+                    "{label:?} is BORROWED by {owner:?} and also carries a gloss \
+                     here — that is a second definition of their concept"
+                ),
+                (None, None) => panic!(
+                    "{label:?} is not borrowed and has no gloss — nothing will \
+                     describe it in the concept registry"
+                ),
+            }
         }
     }
 
