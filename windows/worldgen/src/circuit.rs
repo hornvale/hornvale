@@ -1361,18 +1361,52 @@ mod tests {
         assert!(loop_share(&plan(6, 1)) > 0.0);
     }
 
-    /// claim: rate(seed: 0..50) — [`cycle_membership_share`] is always a
-    /// well-formed share, and the frozen hand-built 3-node path (no realm
-    /// touches any node) gives exactly 0.0.
+    /// claim: invariant(seed: 0..50) — [`cycle_membership_share`] is always
+    /// a well-formed share, the frozen hand-built 3-node path (no realm
+    /// touches any node) gives exactly 0.0, and — checked against an
+    /// independent re-derivation over `plan.nodes` rather than merely a
+    /// `[0,1]` bound — every real plan's share matches "count non-entrance
+    /// nodes with `realm.is_some()`, divide by non-entrance node count"
+    /// exactly. A bound alone cannot tell this function apart from one that
+    /// always returns 0.0 (0.0 satisfies `(0.0..=1.0).contains`); the
+    /// re-derivation can, and at least one swept plan has `realms.len() >=
+    /// 1` and a strictly positive share, so the equality is not vacuously
+    /// checked against an all-zero sweep either.
     #[test]
     fn cycle_membership_share_is_a_ratio_and_zero_on_a_bare_path() {
         assert_eq!(cycle_membership_share(&bare_three_node_path()), 0.0);
+        let mut saw_nonzero = false;
         for s in 0..50u64 {
-            let share = cycle_membership_share(&plan(s, 3));
+            let p = plan(s, 3);
+            let share = cycle_membership_share(&p);
             assert!(
                 (0.0..=1.0).contains(&share),
                 "seed {s}: share {share} out of [0,1]"
             );
+            let non_entrance: Vec<&Node> = p
+                .nodes
+                .iter()
+                .enumerate()
+                .filter(|&(i, _)| i != p.entrance)
+                .map(|(_, n)| n)
+                .collect();
+            let expected = if non_entrance.is_empty() {
+                0.0
+            } else {
+                let on_realm = non_entrance.iter().filter(|n| n.realm.is_some()).count();
+                on_realm as f64 / non_entrance.len() as f64
+            };
+            assert_eq!(
+                share, expected,
+                "seed {s}: cycle_membership_share disagrees with the hand-derived count"
+            );
+            if !p.realms.is_empty() && share > 0.0 {
+                saw_nonzero = true;
+            }
         }
+        assert!(
+            saw_nonzero,
+            "no swept plan had realms and a positive share — the equality check above would be vacuous"
+        );
     }
 }

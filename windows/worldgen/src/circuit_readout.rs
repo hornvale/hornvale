@@ -20,6 +20,10 @@ fn habitation_rungs() -> Vec<Band> {
         .collect()
 }
 
+/// The panel's one tie rule, named because every readout line shares it:
+/// sorts ascending with `total_cmp` and takes the **upper** median
+/// (`v[len / 2]`) on an even-length input, deterministically, so the page
+/// never moves on a tie between adjacent runs.
 fn median(v: &mut [f64]) -> Option<f64> {
     if v.is_empty() {
         return None;
