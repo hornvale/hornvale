@@ -382,3 +382,30 @@ copy.
 
 **Ideonomy passes / overturns:** none for this entry; the G1 pass's cycle
 artifact is what the plan's stage carve follows.
+
+---
+
+## Task 1 — complete (`c99d128e5`, review clean, 2 minors deferred)
+
+The counting terrain and the H5 witness, floors only. The witness
+reproduces spec §1's tick-60 column EXACTLY — FRESH 22,302 / WARM 1,089 /
+whole tick 44,694 hazards() calls over 31 committed facts — which is the
+construction-equals-the-bench check the task existed to establish. Two
+minors deferred to the final review: no per-field docs on the test-crate
+structs; `#[allow(dead_code)]` scoped to the whole `BenchShape` struct
+rather than its two not-yet-read fields. No ideonomy pass: a transcription
+task with no ruling in it.
+
+## Task 2 — in review (`a23deff1c`)
+
+Constants minted from two agreeing runs: seed-42 ledger
+`0xabc4731e5cf1ab21` (the same value main printed at The Pawl's close, so
+the walk has not moved since), emitter (seed 6) ledger
+`0xc851e64b010538b2`, emitter hazard `0xa9f17d82c1832854`. Positive control
+`DANGER_ACT` 0.3 → 0.05 via `scripts/mutate.py` moved BOTH emitter hashes
+(shunned 186 → 428, dread 6 → 177, replays 342 → 12,044) and did NOT move
+the seed-42 hash: the flagship's derived residents carry no fear verdict
+that reaches a route, exactly as The Pawl found — so the seed-42 constant
+witnesses the walk's byte-identity and is blind to this campaign's path;
+the emitter constants are the load-bearing pair. Recorded here so no later
+reader takes a green seed-42 witness as evidence about the fear fold.
