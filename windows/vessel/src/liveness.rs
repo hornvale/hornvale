@@ -1236,8 +1236,16 @@ fn build_emitter_scan(
 
     // The scan's own witness: how many scans were built and how many found an
     // emitter. The DENOMINATOR is the point — "no emitter" and "no scan" are
-    // different findings, and the seed-42 ledger hash is blind to this whole
-    // path precisely because every one of its scans is empty.
+    // different findings that one number cannot tell apart, and this scan is
+    // also built for the EMPTY roster the recursion's base case passes, which
+    // can only ever add to the denominator (see `ReadWitness::emitter_scans`).
+    //
+    // Neither number is why the seed-42 ledger hash is blind to the past-day
+    // path: seed 42 builds 70 of these scans in a ten-wait script and 20 of
+    // them DO find an emitter. What it never does is reach `emitter_arousal`
+    // from inside the hazard fold — see `ReadWitness::alarm_replays`, which
+    // counts that and is the number the second byte-identity witness searches
+    // for a world on.
     folds
         .borrow_mut()
         .witness_mut(ledger)
@@ -1299,9 +1307,20 @@ fn emitter_arousal(
 /// of the present terrain calls safe and only a remembered alarm makes
 /// frightening. The Shudder's load-bearing distinction: a felt term reading
 /// `shunned` would drift the canonical world (wild fauna carry a non-empty
-/// static set on seed 42), while `dread` is EMPTY there by construction — no
+/// static set on seed 42), while `dread` is EMPTY there.
+///
+/// **Empty for a narrower reason than this doc used to give**, and the
+/// difference decides which seeds a witness has to search for. It said "no
 /// primary-afraid emitter, so the emitter-free fast path returns before a
-/// single entry is recorded.
+/// single entry is recorded". Measured (The Pawl, Task 5) over
+/// `common::SIGHT_SEEDS` with a ten-wait script: seed 42 builds 70 emitter
+/// scans and 20 of them are NOT empty, so the emitter-free fast path is not
+/// what returns. What is empty on seed 42 is the intersection one gate later:
+/// no room a creature remembers visiting has an emitter standing in its
+/// one-hop halo at that room's latest-visit day, because every remembered
+/// room is either already terrain-frightening (the terrain shortcut takes it
+/// and records STATIC provenance) or outside `alarm_source_rooms` entirely.
+/// Two of the 64 seeds swept do reach it.
 /// type-audit: bare-ok(ratio: dread)
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct HazardMemory {
@@ -1353,10 +1372,19 @@ pub struct HazardMemory {
 /// position at any past day). A room's transient alarm is then the clamped sum
 /// of the arousals of just those emitters whose position on that day lies within
 /// the room's one-hop halo — the SAME quantity `alarm_field` computes, but
-/// evaluated only where an emitter actually stood, so an emitter-free world
-/// (seed 42) pays nothing beyond the terrain fold. `affect_of` (to confirm an
+/// evaluated only where an emitter actually stood. `affect_of` (to confirm an
 /// emitter's Danger drive WINS) runs only for a terrain-afraid member standing
-/// beside the very room being judged — rare.
+/// beside the very room being judged — rare, and measured rare: on 62 of the
+/// 64 seeds in `common::SIGHT_SEEDS` it runs from here ZERO times.
+///
+/// **Zero because of the halo intersection, not because the world has no
+/// emitters** — this paragraph used to say "an emitter-free world (seed 42)
+/// pays nothing beyond the terrain fold", and seed 42 is not emitter-free (70
+/// scans, 20 of them non-empty, on a ten-wait script). It pays nothing
+/// because no room it remembers has an emitter in its halo on the day it
+/// remembers standing there. The distinction is what the second byte-identity
+/// witness had to search for: "has an emitter" is common, "replays an
+/// emitter's affect at a past visit day" is two worlds in sixty-four.
 ///
 /// The planner half of [`hazard_memory`]; the transient half is
 /// [`HazardMemory::dread`].
@@ -1452,13 +1480,9 @@ pub fn hazard_memory_memo(
     // timelines, and the rooms any alarm could reach) is IDENTICAL for every
     // creature's re-derivation at this time over this ledger — build it once and
     // cache it per `t` (see [`PrimaryAfraidMemo`]).
-    if let std::collections::btree_map::Entry::Vacant(slot) = memo.scans.entry(t) {
-        // Built BEFORE the entry is occupied rather than inside
-        // `or_insert_with`: the closure form would hold the store guard for as
-        // long as the map is borrowed, and the whole discipline on this chain
-        // is that a guard lives in the smallest block that needs it.
-        slot.insert(build_emitter_scan(roster, ledger, folds, terrain, t));
-    }
+    memo.scans
+        .entry(t)
+        .or_insert_with(|| build_emitter_scan(roster, ledger, folds, terrain, t));
     // Disjoint field borrows: the scan (read) and the affect memo (write).
     let PrimaryAfraidMemo { afraid, scans } = memo;
     let scan = &scans[&t];

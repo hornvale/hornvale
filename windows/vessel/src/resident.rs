@@ -494,11 +494,33 @@ pub struct ReadWitness {
     /// denominator the count below is out of, and the reason it exists: a
     /// world with no scan and a world whose every scan is empty are different
     /// findings that a single number cannot tell apart.
+    ///
+    /// **What population it counts.** Every scan, over whatever roster the
+    /// caller passed — which includes the EMPTY roster the recursion's base
+    /// case builds (`emitter_arousal` → `affect_of` passes `band = &[]`, and
+    /// the inner `hazard_memory_memo` scans that empty roster). Those are
+    /// necessarily emitter-free, so they inflate this denominator without ever
+    /// being able to move the numerator. A ratio taken from these two fields
+    /// is therefore a floor on "how often a real roster held an emitter", not
+    /// that quantity itself; the number to reason about the hazard path with
+    /// is [`Self::alarm_replays`] below.
     emitter_scans: u64,
     /// How many of those found at least one member that could ever raise an
-    /// alarm. ZERO on every settled world, seed 42 included, which is exactly
-    /// why the seed-42 ledger hash is blind to the hazard chain's past-day
-    /// path and a second byte-identity witness needs an emitter-bearing world.
+    /// alarm — a member whose own terrain threat crosses act somewhere it has
+    /// stood, which is the NECESSARY condition for emission, not the decision.
+    ///
+    /// **It is not zero on a settled world, and an earlier draft of this doc
+    /// said it was.** Measured over `common::SIGHT_SEEDS` with a ten-wait
+    /// script: seed 42 builds 70 scans and 20 of them find an emitter, and 51
+    /// of the 64 seeds have at least one such scan. What makes the seed-42
+    /// ledger hash blind to the hazard chain's past-day path is a different
+    /// and later gate: no room a creature REMEMBERS visiting ever has an
+    /// emitter standing in its one-hop halo at that room's latest-visit day
+    /// (the remembered room is either already terrain-frightening, so the
+    /// terrain shortcut takes it, or outside `alarm_source_rooms` entirely).
+    /// So `emitter_arousal` is never reached from inside the hazard fold —
+    /// see [`Self::alarm_replays`], which counts exactly that and is zero on
+    /// 62 of the 64 seeds.
     emitter_scans_with_emitters: u64,
     /// How many PAST-DAY AFFECT REPLAYS the hazard fold has performed — the
     /// `emitter_arousal` calls made from inside `hazard_memory_memo`'s

@@ -159,18 +159,63 @@ fn emitter_bearing_world() -> (u64, hornvale_kernel::World) {
 /// **Seed 42 is not it, and the reason corrects a claim this campaign carried
 /// through four tasks.** The ledger and several doc comments said seed 42's
 /// "emitter scan is empty". Measured over `common::SIGHT_SEEDS` with the
-/// store's own counters: seed 42 builds 70 emitter scans in a ten-wait script
-/// and **20 of them find an emitter** — the scan is not empty at all. What
-/// seed 42 has none of is a past-day REPLAY: every remembered room is either
-/// already terrain-frightening (the terrain shortcut `continue`s) or outside
-/// `alarm_source_rooms` (the halo pre-filter), so `emitter_arousal` is never
-/// reached from inside the hazard fold. Of the 64 seeds swept, exactly **two**
-/// reach it — 28 with 14 replays and 55 with 20 — which is why this witness
-/// searches instead of assuming.
+/// store's own counters, **on a ten-wait script**: seed 42 builds 70 emitter
+/// scans and **20 of them find an emitter** — the scan is not empty at all.
+/// What seed 42 has none of is a past-day REPLAY: every remembered room is
+/// either already terrain-frightening (the terrain shortcut `continue`s) or
+/// outside `alarm_source_rooms` (the halo pre-filter), so `emitter_arousal` is
+/// never reached from inside the hazard fold. Of the 64 seeds swept, exactly
+/// **two** reach it — seed 28 with 14 replays and seed 55 with 20 — which is
+/// why this witness searches instead of assuming.
+///
+/// **Every replay count in this file carries its script length, because they
+/// differ and a bare number invites the wrong comparison.** The sweep above
+/// ran ten waits; the fixed script this witness hashes runs
+/// [`EMITTER_SCRIPT_WAITS`] (8), and reports **10** replays on seed 28 rather
+/// than that sweep's 14. Both are correct measurements of different scripts.
 const EMITTER_SEED: u64 = 28;
 
 /// The emitter-bearing world's final ledger hash, recorded from two agreeing
 /// runs before being committed.
+///
+/// # POSITIVE CONTROL (recorded, Task 5 fix round 1)
+///
+/// The campaign's first attempt at a control for these two constants was spec
+/// §3 rule 5's wrong-reset mutation (`Sustenance::last_reset` returning the
+/// reset BEFORE the correct one). **It left this test green**, because no
+/// creature on seed 28 drinks twice inside the fixed script, so the mutation
+/// was a no-op for every entity the hazard path reads. A control that cannot
+/// fire proves nothing about the instrument it is meant to validate, so a
+/// second one was taken ON the hazard path itself:
+///
+/// `windows/vessel/src/liveness.rs`, in `hazard_memory_memo`'s transient loop
+/// — the PAST-DAY replay, not `alarm_field_memo`'s present-day emitter probe:
+///
+/// ```text
+///   alarm += emitter_arousal(afraid, ledger, folds, m, day, terrain);
+/// → alarm += emitter_arousal(afraid, ledger, folds, m, day, terrain) * 1.5;
+/// ```
+///
+/// Applied with `scripts/mutate.py`. Under it the same fixed script produced:
+///
+/// ```text
+/// 94 emitter scans, 16 with an emitter, 10 PAST-DAY affect replays inside the hazard fold
+/// ledger 0xeb203415776db502, hazard 0xde28e2f4f828e62d over 7 bodies (61 shunned rooms, 1 dreaded)
+///   dread: entity 9630022852472602626 at Facet { .. } = 0.675 (0x3fe599999999999a)
+///   LEDGER: got 0xeb203415776db502, expected 0x64aeb2f93e38d328
+///   HAZARD: got 0xde28e2f4f828e62d, expected 0x8cf62f13ee7098f5
+/// ```
+///
+/// against the green `ledger 0x64aeb2f93e38d328, hazard 0x8cf62f13ee7098f5
+/// over 7 bodies (59 shunned rooms, 1 dreaded)` with `dread = 0.45
+/// (0x3fdccccccccccccd)`. **Both hashes moved, and neither floor tripped** —
+/// 61 shunned and 1 dreaded, so the red is a moved hash and not a witness
+/// that stopped witnessing. The dread magnitude moved by exactly the mutated
+/// factor (0.45 → 0.675), which is the evidence that the moved HAZARD hash is
+/// the past-day replay's own value rather than a side effect of the changed
+/// route. Restored with `scripts/mutate.py`, REBUILT, and both constants
+/// reconfirmed green before this doc was written (a restored source with a
+/// stale binary is a known trap).
 const EMITTER_LEDGER_HASH: u64 = 0x64ae_b2f9_3e38_d328;
 
 /// The emitter-bearing world's final HAZARD hash — every derived body's
@@ -276,15 +321,27 @@ fn the_emitter_bearing_walk_commits_the_same_ledger_and_hazard_bytes() {
          put there"
     );
 
-    assert_eq!(
-        ledger_hash, EMITTER_LEDGER_HASH,
-        "the emitter-bearing ledger hash changed: got {ledger_hash:#018x}, expected \
-         {EMITTER_LEDGER_HASH:#018x}"
-    );
-    assert_eq!(
-        hazard_hash, EMITTER_HAZARD_HASH,
-        "the emitter-bearing HAZARD hash changed: got {hazard_hash:#018x}, expected \
-         {EMITTER_HAZARD_HASH:#018x} — some creature's remembered-frightening ground or \
-         its dread magnitude moved for the fixed script"
+    // BOTH verdicts are computed before either can panic, and that is not
+    // stylistic. An `assert_eq!` on the ledger followed by one on the hazard
+    // digest reports only the first: this witness's own positive control (see
+    // the module doc) moves BOTH, so the hazard verdict — the half seed 42
+    // cannot give at all — would never have been printed under the very
+    // mutation that was meant to validate it.
+    let mut moved: Vec<String> = Vec::new();
+    if ledger_hash != EMITTER_LEDGER_HASH {
+        moved.push(format!(
+            "LEDGER: got {ledger_hash:#018x}, expected {EMITTER_LEDGER_HASH:#018x}"
+        ));
+    }
+    if hazard_hash != EMITTER_HAZARD_HASH {
+        moved.push(format!(
+            "HAZARD: got {hazard_hash:#018x}, expected {EMITTER_HAZARD_HASH:#018x} — some \
+             creature's remembered-frightening ground or its dread magnitude moved"
+        ));
+    }
+    assert!(
+        moved.is_empty(),
+        "the emitter-bearing witness moved for the fixed script on seed {seed}:\n  {}",
+        moved.join("\n  ")
     );
 }
