@@ -543,3 +543,50 @@ transcribing it.
 The absence test is named for what it asserts —
 `slept_on_fact_records_the_kind_and_carries_no_place` — which is the shape that
 survives a later reader wondering whether the missing `place` was an oversight.
+
+#16 [Task 4] — **The site grade becomes per-species, and the affect-trace
+golden turned out to be blind to it.**
+
+`AFFORDED_REST_GAIN`'s `universal(... not a species property)` verdict is
+gone; `hornvale_species::sleep_grade_registry` is 39 rows carrying **7
+distinct values**, derived from two things the roster already states —
+whether the kind is `ThermalStrategy::Endothermic` (only an endotherm pays a
+conductive-heat bill to the floor) and whether it is `SocialForm::Settled`
+(only a settled kind builds bedding sized to itself) — with a mass demotion
+at a tonne, a marine rung read off `MARINE_FORAGE` dominance, and a floor of
+`1.0` for the ametabolic and the sessile. `1.5` is the CEILING rather than a
+midpoint, which preserves the old constant's own calibration argument intact
+and means no kind in any world gains MORE from a bed than it did before.
+
+**A ruling I made against the brief, and why.** The brief said to mirror
+`rate` — look the species value up at the caller, pass a scalar. I did, and
+clippy refused `fatigue_with_pending` at 8/7 arguments. Rather than take the
+workspace's first `#[allow(clippy::too_many_arguments)]`, both scalars became
+a `SleepTraits { rise, afforded_gain }` struct. That is the shape
+`fatigue_at`'s own doc already reaches for ("exactly as `drive_at`'s callers
+already pass a `DriveParams`"), and it kills a footgun the flat form had:
+`rate` and `afforded_gain` are both bare `f64`, adjacent, and each plausible
+in the other's slot, so a transposition type-checked. Named fields cannot be
+transposed.
+
+**Deferred minor — the two unbuilt rungs got a doc, not a tag.** Spec §4d
+asks for `per-people` and `per-individual` declared as tagged seams. Neither
+has a constant to hang a tag on: both are absences of a NUMBER (a bed and
+bracken are the same value; nothing varies per body at all), and the brief is
+explicit that inventing a constant to carry a tag is worse than a sentence in
+the doc. They are declared in `SiteGrade`'s own doc, which is where a
+campaign that builds either one starts. Consequence to know: they do NOT
+appear in `docs/audits/plumb-roster.md`'s Fidelity findings table, so that
+table is not the place a future reader will find them.
+
+**The finding worth carrying past this task.** `affect-trace-seed-42.txt` did
+not move, despite the table changing the multiplier for four of the six
+species it samples. That null needed a control, and got three: exaggerating
+the peoples' row to `4.00` — GREEN; exaggerating the wild endotherms' row to
+`4.00` — GREEN; changing `SiteGrade::Bare`'s own `1.0` to `2.0` — RED
+(27821 -> 28022 bytes). So the fixture is fully sensitive to the site
+multiplier and *no body in its traced window ever takes an afforded bout*:
+`SupportsRest` is carried only by `the-fireside-bed`, which needs a built,
+cold room, and seed 42's trace is entirely open ground. **A green run of that
+golden is not evidence about anything on the afforded path**, and the module
+doc now says so at the point of use.
