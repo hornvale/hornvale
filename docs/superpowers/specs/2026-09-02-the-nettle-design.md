@@ -1,5 +1,14 @@
 # The Nettle — design
 
+> **COMPLETE — merged as campaign *the-nettle*.** All six tasks landed and
+> reviewed; the whole-branch review returned safe-to-merge with no Critical
+> findings and no residuals. Item 5 was dropped per Nathan's G3 option (d) and
+> is carried as a corrected registry row. Chronicle:
+> `book/src/chronicle/the-nettle.md`. Retrospective:
+> `docs/retrospectives/the-nettle.md`. Rulings: 19 entries in
+> `docs/superpowers/ledgers/2026-09-02-the-nettle.md`.
+
+
 **Campaign:** the-nettle · **Branch:** `campaign/the-nettle` ·
 **Ledger:** `docs/superpowers/ledgers/2026-09-02-the-nettle.md`
 

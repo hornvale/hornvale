@@ -1,5 +1,14 @@
 # The Nettle Implementation Plan
 
+> **COMPLETE — merged as campaign *the-nettle*.** All six tasks landed and
+> reviewed; the whole-branch review returned safe-to-merge with no Critical
+> findings and no residuals. Item 5 was dropped per Nathan's G3 option (d) and
+> is carried as a corrected registry row. Chronicle:
+> `book/src/chronicle/the-nettle.md`. Retrospective:
+> `docs/retrospectives/the-nettle.md`. Rulings: 19 entries in
+> `docs/superpowers/ledgers/2026-09-02-the-nettle.md`.
+
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Fix four bounded annoyances measured during The Reservoir — fixed temp paths in tests, a Bash guard that matches command *text* rather than the command, a process skill routing followups to shared git-ignored scratch, and a pre-commit fast path that skips the very tests a docs-only commit needs — and correct the idea-registry rows that describe them.
