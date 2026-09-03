@@ -36,6 +36,15 @@
 # a second copy is the drift `cli/tests/lane_sets.rs` exists to fail on.
 set -uo pipefail
 
+# Sourced BEFORE the HV_CENSUS_LIB early return below, because
+# census_golden_count calls sluice_path_author and the tests source this file
+# for exactly that function. Placing it after the guard left the classifier
+# unloaded under test — the function errored to 0, and a 0 was what the
+# counter-file assertion expected, so it PASSED VACUOUSLY. The new-file arm
+# caught it; the arm under test would not have.
+# shellcheck source=/dev/null
+HV_PHASES_LIB=1 . "$(dirname "${BASH_SOURCE[0]}")/sluice-phases.sh"
+
 # THE STAGED SET ALWAYS CONTAINS THE RUN'S OWN TIMINGS ROW, so "did anything
 # move?" is the wrong question and asking it made the null arm UNREACHABLE for
 # the whole life of this script. `timed.sh` resolves its ledger inside the
@@ -47,12 +56,35 @@ set -uo pipefail
 # campaign/the-wicket a73d8ce3c9b4 and campaign/the-roll f1b21b58c5cf each
 # delivered a branch whose entire content was `docs/timings.md | 1 +`.
 #
-# The question that was meant is whether anything moved BESIDES that row.
+# THE FIRST FIX WAS RIGHT IN DIRECTION AND WRONG IN DEFINITION, and it took two
+# sightings to say so. It counted every staged path that was not docs/timings.md
+# and called the result "golden path(s)". That mislabelled campaign/the-crosscut
+# 4c69a5d6578d, where the one moved path was docs/generated-path-writes.tsv (a
+# COUNTER of how many files each declared path wrote), and again
+# campaign/the-brattice cccfcdad9f21 — where it mattered, because that candidate
+# ADDED A STREAM LABEL and "goldens moved" is precisely the answer that would
+# have meant the new draw shifted the world. It had not.
+#
+# A CENSUS GOLDEN IS A PATH THE CENSUS AUTHORS, and docs/generated-paths.txt's
+# author column already says which those are: exactly `the-census/` and
+# `census-of-the-meeting/`. Everything else under laboratory/generated is
+# `artifacts` (the schema files), `heavy` (the-history), or `none` (nine frozen
+# one-off studies). Reading the column is both narrower and correct, and it is
+# the same authority scripts/sluice-phases.sh's conflict classifier reads.
 # HV_CENSUS_LIB=1 sources this file for its functions without running a census,
 # so both arms can be driven against a real git index (test-sluice-census.sh).
 census_golden_count() {
-    git -C "${1:?census_golden_count <worktree>}" diff --cached --name-only 2>/dev/null \
-        | grep -vc '^docs/timings\.md$' || true
+    local wt="${1:?census_golden_count <worktree>}"
+    local declared="$wt/docs/generated-paths.txt"
+    [ -f "$declared" ] || declared="$repo_root/docs/generated-paths.txt"
+    local pth n=0
+    while IFS= read -r pth; do
+        [ -n "$pth" ] || continue
+        [ "$(sluice_path_author "$pth" "$declared")" = "census" ] && n=$((n + 1))
+    done <<EOF
+$(git -C "$wt" diff --cached --name-only 2>/dev/null)
+EOF
+    printf '%s' "$n"
 }
 # shellcheck disable=SC2317  # the exit is the fallback when this file is RUN, not sourced
 if [ -n "${HV_CENSUS_LIB:-}" ]; then return 0 2>/dev/null || exit 0; fi
