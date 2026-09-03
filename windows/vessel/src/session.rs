@@ -4088,7 +4088,7 @@ impl<'w> Session<'w> {
             crate::chamber_prose::noun(interior.anchor(id).kind.0)
                 .is_some_and(|n| n.to_lowercase() == wanted)
         }) else {
-            return Turn::Out(format!("You see no {} here.", rest.trim()));
+            return Turn::Out(nothing_here_named(rest.trim()));
         };
 
         let thing_kind = interior.anchor(id).kind;
@@ -4202,13 +4202,26 @@ impl<'w> Session<'w> {
     /// verb able to lift it — the same argument, and the same conclusion, as
     /// the chamber path's own second source.
     ///
-    /// # Promotion is conditional, and the condition is latency
+    /// # Promotion is conditional, and the condition is IDENTITY, not latency
     ///
     /// A key nothing has touched has no `instance-of` fact, so it must be
-    /// promoted before custody can name it; a thing already on the floor was
-    /// promoted by whoever put it there. [`crate::descent_thing::key_here`]
-    /// is the one read that can tell them apart, because it carries the ROLE
-    /// spelling an [`EntityId`] cannot be turned back into.
+    /// promoted before custody can name it; a thing carried down from
+    /// somewhere else was promoted by whoever first picked it up.
+    /// [`crate::descent_thing::key_here`] is the one read that can supply the
+    /// ROLE spelling an [`EntityId`] cannot be turned back into, so the
+    /// condition below is "is this thing the one the plan puts at this node",
+    /// and **not** "has it never been touched".
+    ///
+    /// **The difference is reachable, and this doc said "latency" until fix
+    /// round 1.** Take the node's own key, drop it here, take it again: the
+    /// key still IS `key_here`'s answer, so it is promoted a second time. That
+    /// costs one redundant `instance-of` fact on a later day — `Ledger::commit`
+    /// dedups an identical one within a day, and `Fact` compares its `day` —
+    /// which is precisely the across-days duplication
+    /// [`crate::thing::set_openness`]'s own doc records and calls harmless.
+    /// Gating on latency instead would be strictly worse: it would need a
+    /// second ledger read to decide something the promotion is already
+    /// idempotent about.
     ///
     /// **It charges**, before the write and after every refusal, for
     /// [`Self::take`]'s own representability reason: two custody postings at
@@ -4226,7 +4239,7 @@ impl<'w> Session<'w> {
             .into_iter()
             .find(|(_, n)| n.to_lowercase() == wanted)
         else {
-            return Turn::Out(format!("There is no {typed} here."));
+            return Turn::Out(nothing_here_named(typed));
         };
         let bare = crate::chamber_prose::without_article(noun);
         // The role, and only for the thing that still needs one.
@@ -4332,23 +4345,26 @@ impl<'w> Session<'w> {
         let door_noun = crate::chamber_prose::noun(crate::descent_thing::DOOR)
             .expect("the door kind carries a noun");
         if wanted != door_noun.to_lowercase() {
-            return Turn::Out(format!("You see no {typed} here."));
+            return Turn::Out(nothing_here_named(typed));
         }
         let Some(ug) = self.underground.as_ref() else {
             // Unreachable: the caller guards on `self.underground.is_some()`.
             return Turn::Out("error: nothing here opens: not below".to_string());
         };
-        let Some((dir, _cell, door, holder)) = self.doors_adjacent(ug).into_iter().next() else {
-            return Turn::Out(format!("You see no {typed} here."));
+        let Some((dir, cell, door, holder)) = self.doors_adjacent(ug).into_iter().next() else {
+            return Turn::Out(nothing_here_named(typed));
         };
         let bearing = bearing_word(dir);
         let bare = crate::chamber_prose::without_article(door_noun);
-        let role = {
-            let delta = cell_delta(dir);
-            let cell = crate::lattice::Cell(ug.cell.0 + delta.0, ug.cell.1 + delta.1);
-            crate::descent_thing::door_role_at(ug, cell)
-                .expect("doors_adjacent found a door at this very cell")
-        };
+        // The CELL `doors_adjacent` already resolved, not a second one
+        // recomputed from the bearing: `descent_thing`'s own doc argues that
+        // an id and the role it derives from must not be able to name
+        // different doors, and re-deriving the cell here would have been a
+        // second read of the same `(ug.cell, dir)` pair with the same
+        // arithmetic — agreeing today, and free to stop agreeing the day
+        // `doors_adjacent` grows a filter.
+        let role = crate::descent_thing::door_role_at(ug, cell)
+            .expect("doors_adjacent found a door at this very cell");
         let key = crate::descent_thing::key_id_of_node(ug, holder);
 
         // Locked is a state of the DOOR, read off its own fold, defaulting to
@@ -4844,7 +4860,7 @@ impl<'w> Session<'w> {
                 .map(|(thing, noun, kind, holder)| (thing, noun, Some((kind, holder)))),
         };
         let Some((thing, noun, stowed)) = found else {
-            return Turn::Out(format!("You see no {typed} here."));
+            return Turn::Out(nothing_here_named(typed));
         };
         let bare = crate::chamber_prose::without_article(noun);
         if let Some((holder_kind, holder)) = stowed
@@ -4997,13 +5013,13 @@ impl<'w> Session<'w> {
         let (Some(interior), Some(room)) =
             (self.chamber_interior_here(), self.chamber_facet_here())
         else {
-            return Turn::Out(format!("You see no {holder_word} here."));
+            return Turn::Out(nothing_here_named(holder_word));
         };
         let Some(id) = interior.ids().into_iter().find(|&id| {
             crate::chamber_prose::noun(interior.anchor(id).kind.0)
                 .is_some_and(|n| n.to_lowercase() == holder_word)
         }) else {
-            return Turn::Out(format!("You see no {holder_word} here."));
+            return Turn::Out(nothing_here_named(holder_word));
         };
 
         let holder_kind = interior.anchor(id).kind;
@@ -6578,7 +6594,7 @@ impl<'w> Session<'w> {
         let wanted = noun.trim().to_lowercase();
         match self.underground_nouns().iter().find(|n| n.matches(&wanted)) {
             Some(n) => n.datum.clone(),
-            None => format!("You see no {noun} here."),
+            None => nothing_here_named(noun),
         }
     }
 
@@ -8145,7 +8161,7 @@ impl<'w> Session<'w> {
                     )
                     .contains(&crate::affordance::OfferedVerb::Examine)
                     {
-                        return format!("You see no {noun} here.");
+                        return nothing_here_named(noun);
                     }
                     // The Offer, Task 6 (spec §3.6, amended): what lies
                     // `within` an `Encloses` anchor is read here, not just
@@ -8225,7 +8241,7 @@ impl<'w> Session<'w> {
                 return crate::purview::creature_datum(&npc.label, &npc.species, &nouns);
             }
         }
-        format!("You see no {noun} here.")
+        nothing_here_named(noun)
     }
 
     fn wait(&mut self, arg: &str, how: Perceiving) -> Turn {
@@ -8979,7 +8995,7 @@ impl<'w> Session<'w> {
             .find(|e| crate::focalize::Noun::new(&e.noun, &e.noun, &e.datum).matches(&wanted))
         {
             Some(e) => Turn::Out(e.datum.clone()),
-            None => Turn::Out(format!("You see no {noun} here.")),
+            None => Turn::Out(nothing_here_named(noun)),
         }
     }
 
@@ -10216,6 +10232,34 @@ const LOCKED_WITHOUT_A_KEY_REFUSAL: &str =
 /// refusal that pointed at a specific door would suggest another door might
 /// answer, when what is missing is the key.
 /// type-audit: bare-ok(prose)
+/// The refusal every band gives when a word names nothing that is here —
+/// **the one producer of this sentence, and it used to be nine copies of a
+/// format string.**
+///
+/// `Session::examine_underground`'s own doc already states the rule ("the
+/// refusal is BYTE-IDENTICAL to the outdoor and chamber paths': two wordings
+/// for one question is exactly the drift this campaign exists to remove"),
+/// and The Brattice's Task 5 broke it by inventing `"There is no {typed}
+/// here."` for `take` underground — the same question the chamber's own
+/// `take_from_the_ledger` already answers. Nine copies that happened to agree
+/// could not have caught that, because a tenth is added by writing one, not
+/// by editing one. There is one now, so a divergence is a call-site change a
+/// reviewer can see rather than a new literal nobody diffs against the other
+/// eight.
+///
+/// `typed` is the player's own words, untrimmed of its article — `"a key"`,
+/// not `"key"` — because the reply quotes back what was asked for. Every call
+/// site passes what it was given, which is why the sentence sometimes reads
+/// "You see no a key here."; that wording is pinned by several tests and is
+/// not this function's to change.
+///
+/// (No `type-audit:` tag: the extractor only reads bare-`pub` items, the same
+/// reason [`bearing_letter`] and `chamber_prose::noun` carry none. A tag here
+/// would be a verdict the tool never gave.)
+fn nothing_here_named(typed: &str) -> String {
+    format!("You see no {typed} here.")
+}
+
 const LOCKED_DESCENT_DOOR_REFUSAL: &str =
     "It is locked, and the key that fits it is not in your hand.";
 
@@ -12387,7 +12431,7 @@ mod tests {
     /// reach into a container standing here*, which is what makes `put`
     /// reversible rather than a hole: in `Session::take`'s container arm,
     /// replace `Some(Value::Entity(h)) => h,` with
-    /// `Some(Value::Entity(_)) => return Turn::Out(format!("You see no {} here.", rest.trim())),`
+    /// `Some(Value::Entity(_)) => return Turn::Out(nothing_here_named(rest.trim())),`
     /// — the already-carrying arm above it survives, so the match still
     /// compiles and every other take still works.
     ///
@@ -12672,7 +12716,7 @@ mod tests {
     /// MUTATION THIS MUST FAIL AGAINST — the property is *that the ledger is
     /// consulted when the room's own anchor is elsewhere*: revert either
     /// fall-through in `Session::take`'s ledger branch to
-    /// `return Turn::Out(format!("You see no {} here.", rest.trim()))`. Both
+    /// `return Turn::Out(nothing_here_named(rest.trim()))`. Both
     /// compile; the second (`holder_anchored_here`'s `else`) is the arm this
     /// walk takes. Confirmed 2026-08-30, unfiltered over the whole crate,
     /// the only failure — `868 tests run: 867 passed, 1 failed, 3 skipped`:
@@ -16103,11 +16147,15 @@ mod tests {
     /// instance is doing it badly. A `panic!` naming the widening is the
     /// honest failure, the same shape `find_open_cave_vertex`'s own does.
     ///
+    /// Returns the descent and its places separately, so
+    /// [`a_session_beside_a_door`] can install the very object built here
+    /// rather than rebuild an identical one.
+    ///
     /// claim: structural(vertex: seed 42's open cave mouths, first hit) — a search for a fixture, not a claim over the range
     fn a_worked_descent_with_a_door(
         terrain: &hornvale_terrain::GeneratedTerrain,
         seed: Seed,
-    ) -> DoorFixture {
+    ) -> (crate::underground::Underground, DoorFixture) {
         let pins = hornvale_worldgen::BarrierPins::default();
         for (vertex, cave, is_open) in cave_entrance_states(terrain, seed) {
             if !is_open
@@ -16165,13 +16213,15 @@ mod tests {
                     continue;
                 };
                 ug.cell = stand;
-                return DoorFixture {
+                return (
                     ug,
-                    door_cell,
-                    stand,
-                    bearing,
-                    key_stand,
-                };
+                    DoorFixture {
+                        door_cell,
+                        stand,
+                        bearing,
+                        key_stand,
+                    },
+                );
             }
         }
         panic!(
@@ -16181,41 +16231,44 @@ mod tests {
         )
     }
 
-    /// [`a_worked_descent_with_a_door`]'s result: the descent, the door's own
-    /// threshold cell, a standable cell BESIDE it (which the descent is
-    /// already standing on), the bearing from that cell to the door, and a
-    /// standable cell inside the key's region.
+    /// [`a_worked_descent_with_a_door`]'s PLACES, returned beside the descent
+    /// itself rather than inside it: the door's own threshold cell, a
+    /// standable cell BESIDE it (which the search has already stood the
+    /// possession on), the bearing from that cell to the door, and a standable
+    /// cell inside the key's region.
+    ///
+    /// The descent travels separately because the session takes ownership of
+    /// it — see [`a_session_beside_a_door`].
     struct DoorFixture {
-        ug: crate::underground::Underground,
         door_cell: crate::lattice::Cell,
         stand: crate::lattice::Cell,
         bearing: Compass,
         key_stand: crate::lattice::Cell,
     }
 
-    /// A live session standing beside that door, with the fixture's own facts
+    /// A live session standing beside that door, with the fixture's own places
     /// in hand. Split from the search so a test can move the possession
     /// between the door and the key without rebuilding a descent.
+    ///
+    /// **It INSTALLS the descent the search already built, and it used to
+    /// build a second one** (fix round 1, minor #3). The second call passed
+    /// the same terrain handle, the same vertex, `terrain.cave_at(vertex)` —
+    /// a pure derivation of those two — the same seed and the same
+    /// `Character::DrowTier`, so the two descents were byte-identical and the
+    /// duplication cost a whole `generate_descent_for_character` per test and
+    /// nothing else. Byte-identical is exactly why it was worth removing:
+    /// nothing could ever have observed the second build, so no test would
+    /// have noticed the day one of those five inputs stopped matching.
     fn a_session_beside_a_door(session: &mut Session<'_>, world: &World) -> DoorFixture {
         let terrain = session
             .wctx
             .terrain
             .clone()
             .expect("seed 42 builds terrain");
-        let fixture = a_worked_descent_with_a_door(&terrain, world.seed);
-        session.underground = Some(crate::underground::Underground::enter_with_character(
-            &terrain,
-            fixture.ug.vertex,
-            terrain
-                .cave_at(fixture.ug.vertex)
-                .expect("the fixture's vertex bears a cave"),
-            world.seed,
-            hornvale_worldgen::character::Character::DrowTier,
-        ));
-        let ug = session.underground.as_mut().expect("just set");
-        ug.cell = fixture.stand;
+        let (ug, places) = a_worked_descent_with_a_door(&terrain, world.seed);
+        session.underground = Some(ug);
         session.mark_underground_seen();
-        fixture
+        places
     }
 
     /// THE BRATTICE, spec §3.7, the shut half: a door the plan hangs is

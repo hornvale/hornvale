@@ -1509,3 +1509,78 @@ contract (a descent key's identity making the plan grammar save-relevant),
 which is a second, separate save-format fact of this campaign, but it is a
 committed-artifact movement and belongs beside it at G6 · Capture: this
 entry; the Task 5 section's own record; the G6 digest's leading pair.
+
+## Task 5 — fix round 1 — complete
+
+All four findings fixed. `windows/vessel` 644 lib + 400 suite, 0 failed;
+`hornvale` (the cli enforcement suite) 294 + 102 + 54 + 1, 0 failed; `fmt
+--check` clean, workspace clippy `-D warnings` rc=0, `type-audit check` rc=0,
+`plumb check` 691 consts / 0 undeclared.
+
+**Important #1 (controller Ruling J) — one sentence, one producer.**
+`take_underground` said `"There is no {typed} here."` where the chamber's
+`take_from_the_ledger` says `"You see no {typed} here."` for the same question,
+against `examine_underground`'s own stated rule ("BYTE-IDENTICAL to the outdoor
+and chamber paths': two wordings for one question is exactly the drift this
+campaign exists to remove"). The brief's literal loses to that discipline.
+
+The fix is not a copy of the chamber's format string — that would have made
+**ten** copies of a sentence that already existed as nine. `session.rs` now has
+one producer, `nothing_here_named(typed) -> String`, and **every** site that
+emits this sentence routes through it: `open_or_close` (chamber), `take` (both
+the anchor-noun miss and `take_from_the_ledger`), `put_in`'s two holder arms,
+`examine`, `examine_chamber`'s two arms, `examine_underground`, and the two new
+underground arms. Output is byte-identical at every one, so no test moved. The
+function's doc records why it exists: nine copies that happened to agree could
+not have caught this, because a tenth is added by *writing* one, not by editing
+one.
+
+**Minor #2** — `open_or_close_underground` bound `_cell` from
+`doors_adjacent` and then recomputed the cell from the bearing to feed
+`door_role_at`. It now passes the returned cell through, so the door's id and
+its role derive from one read — the seam `descent_thing.rs`'s own doc argues
+for. The two arithmetic paths agreed today and were free to stop agreeing the
+day `doors_adjacent` grows a filter; the comment says so.
+
+**Minor #3** — `a_session_beside_a_door` called `enter_with_character` a second
+time on a descent `a_worked_descent_with_a_door` had already built. Verified
+identical before removing: same terrain handle, same vertex,
+`terrain.cave_at(vertex)` (a pure derivation of those two), same seed, same
+`Character::DrowTier`. The search now returns `(Underground, DoorFixture)` and
+the session installs the object itself; `DoorFixture` carries only the four
+places. **Byte-identical is exactly why it was worth removing**, and the
+helper's doc says so: nothing could ever have observed the second build, so no
+test would have noticed the day one of those five inputs stopped matching. It
+also halves the descent generation each of the six door tests pays for.
+
+**Minor #4** — `take_underground`'s doc said "the condition is latency". The
+code's condition is IDENTITY: `latent_role` is `Some` whenever the thing IS
+`key_here`'s answer, which stays true after a drop-and-retake. The doc now says
+that, names the reachable sequence (take, drop, take), and states the cost — one
+redundant `instance-of` on a later day, which `Ledger::commit` dedups within a
+day and which is precisely the across-days duplication
+`thing::set_openness`'s own doc records and calls harmless — plus why gating on
+latency instead would be strictly worse (a second ledger read to decide
+something the promotion is already idempotent about).
+
+**Covering tests re-run** (all green): the six door tests
+(`a_shut_door_is_named_by_look_absent_from_the_ways_on_list_and_refused_by_go`,
+`a_descent_door_without_its_key_refuses_in_its_own_words_and_writes_nothing`,
+`the_key_at_its_node_opens_the_door_it_fits_and_closing_does_not_relock_it`,
+`a_thing_dropped_underground_lies_in_the_region_and_is_taken_again`,
+`examine_answers_the_key_and_the_door_underground`,
+`a_lit_door_reaches_the_level_document_as_a_door_mark`), the three in
+`descent_thing`, and `underground_ways_on_agrees_with_the_levels_real_
+neighbours`. Then the whole `hornvale-vessel` crate, because the refusal
+producer touched nine call sites across it, and the whole `hornvale` suite,
+because six of those nine are in verbs its enforcement tests read back.
+
+**No test asserted the retired sentence**, checked by grep before and after —
+which is itself the finding's point: the divergence was invisible to the suite
+and visible only to a reader holding both files.
+
+**One artifact moved.** `docs/audits/lexicon-inventory.tsv`'s `session.rs` row
+FELL 751 -> 748 (the recomputed-cell block deleted three AREA-sense `cell`
+tokens). A number may fall freely; refreshed through
+`HV_LEXICON_REBASELINE=1` rather than by hand, and the lower ceiling is the
+tighter one.
