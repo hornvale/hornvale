@@ -581,3 +581,48 @@ its own manual gate runs, outside its file list. I commit it as bookkeeping.
 
 *Capture.* This entry; the plan's Steps 4, 6 and 7; the retrospective (ninth
 and tenth instances).
+
+---
+
+#15 [G4] — **I wrote a throwaway parser to check the registry, it was wrong,
+and I caught it before drawing a conclusion from it — barely.**
+
+*What happened.* Before dispatching Task 6 I wanted to confirm that every
+currently-over-cap registry row is waived, so that my three new rows would be
+the only ones at risk. I wrote a quick `split(' | ')` parser. It reported **236
+rows over cap, 47 of them unwaived** — including entries named `ID` and
+`------`, and seventeen different rows with *identical* 1803-character Idea
+cells.
+
+*Why it was wrong.* The registry holds several tables and they do not all share
+a column layout, so index `[1]` is not the Idea column everywhere; the parser
+also read table headers and `|---|` separator lines as rows.
+`registry_rows()` in `cli/tests/suite/docs_consistency.rs` is the only parser
+that knows the file's actual shape.
+
+*What saved it.* The impossible values — a header row with a character count,
+and seventeen rows agreeing to the character — were obvious enough to stop me.
+Had the numbers been merely *plausible* I would have acted on them, and the
+likely action was widening or waiving something that needed neither. That is
+the same failure as this campaign's stale premises, one step earlier in the
+chain: not a wrong claim inherited from someone else, but a wrong instrument I
+built and would have trusted.
+
+*And the correct answer was already available.*
+`registry_idea_cells_are_within_budget` had run green minutes earlier, inside
+the very `docs-tests` invocation Task 5 had just wired up. The check I needed
+already existed, was already passing, and I wrote a worse one beside it.
+
+*Ruling.* The plan's Task 6 re-measure step now calls the **real test** rather
+than an ad-hoc parser, and says why. My five authored cell lengths (519, 548,
+572, 578, 582) stand: those were measured on the strings as authored, which is
+sound precisely because it never parses them back out of the table — but the
+test is the arbiter and the implementer runs it.
+
+*Cost if wrong.* None; the real test refuses an over-cap cell by name.
+
+*ideonomy passes / overturns.* 0 / 0 — a caught instrument error.
+
+*Capture.* This entry; the plan's Task 6 header; the retrospective — this is
+the campaign's eleventh instance and the one I would most like remembered,
+because the instrument was mine and the correct instrument was already green.

@@ -1354,19 +1354,23 @@ is now REFUSED, and succeeded before the change."
 > the Where cells link — which is exactly what the cap's own failure message
 > tells you to do ("a row is an index entry, not an essay").
 >
-> Re-measure after writing, before committing:
+> Re-measure after writing, before committing — **with the real test, not an
+> ad-hoc parser.** I wrote a throwaway `split(' | ')` parser to sanity-check
+> the registry and it was wrong: it read table headers and `|---|` separators
+> as rows and reported identical 1803-character "Idea cells" for seventeen
+> different rows. The tables do not all share a column layout, and
+> `registry_rows()` in `cli/tests/suite/docs_consistency.rs` is the only
+> parser that knows that. So:
 >
 > ```bash
-> python3 -c "
-> import re
-> for l in open('book/src/frontier/idea-registry.md'):
->     if l.startswith('| PROC-') or l.startswith('| TOOL-'):
->         c = l.split(' | ')
->         if len(c) > 1 and len(c[1]) > 600:
->             print('OVER CAP:', c[0].lstrip('| ').strip(), len(c[1]))
-> print('measured')
-> "
+> cargo nextest run -p hornvale --test suite -E 'test(docs_consistency)' 2>&1 | tail -6
 > ```
+>
+> `registry_idea_cells_are_within_budget` is the arbiter and names the
+> offending row and its character count on failure. The five cells below were
+> measured directly as authored strings (519, 548, 572, 578, 582), which is
+> sound because it measures the text itself rather than parsing it back out of
+> the table — but the test is what decides.
 
 #### The five measured Idea cells — use verbatim
 
