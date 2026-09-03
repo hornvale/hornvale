@@ -416,7 +416,10 @@ pub struct LevelExtent {
 /// One distinct `(cell kind, visibility)` pair in a level's palette.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct LevelPaletteEntry {
-    /// `"floor"`, `"wall"`, `"flooded"`, `"stairs_down"` or `"stairs_up"`.
+    /// `"floor"`, `"wall"`, `"flooded"`, `"stairs_down"`, `"stairs_up"`,
+    /// `"threshold"`, `"deep"` or `"drop"` — the last three since the sim's
+    /// spec §3.5. Additive: an unrecognised kind draws as rock
+    /// ([`crate::level`]), so this list may grow without breaking a client.
     pub kind: String,
     /// `"here"`, `"lit"` or `"remembered"` — never a colour (spec §4.1).
     pub state: String,

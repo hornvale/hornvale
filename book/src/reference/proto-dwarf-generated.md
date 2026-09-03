@@ -74,6 +74,7 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `desert-elf-kind` | a desert elf | *Tangat | /taŋat/ |
 | `die` | to cease living | *Jasan | /jasan/ |
 | `dire-wolf-kind` | a dire wolf | *Gaxang | /gaxaŋ/ |
+| `door` | a leaf hung in an opening, to be shut against what is beyond | *Badav | /badav/ |
 | `drink` | to swallow liquid | *Nangaj | /naŋaj/ |
 | `drow-kind` | a drow | *Shavaz | /ʃavaz/ |
 | `eager` | positive, high arousal: chasing a satisfiable need | *Zaxav | /zaxav/ |

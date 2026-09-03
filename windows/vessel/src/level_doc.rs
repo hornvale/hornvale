@@ -148,8 +148,14 @@ impl LevelVisibility {
 /// type-audit: bare-ok(identifier-text: kind), bare-ok(identifier-text: state)
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct LevelPaletteEntry {
-    /// `"floor"`, `"wall"`, `"flooded"`, `"stairs_down"` or `"stairs_up"` —
-    /// the `LevelCellKind` discriminant, never a glyph (decision 0022).
+    /// `"floor"`, `"wall"`, `"flooded"`, `"stairs_down"`, `"stairs_up"`,
+    /// `"threshold"`, `"deep"` or `"drop"` — the `LevelCellKind`
+    /// discriminant, never a glyph (decision 0022). The last three arrived
+    /// with The Brattice (spec §3.5) and are ADDITIVE: a client that does
+    /// not know a kind draws it as rock. A door is NOT among them — it
+    /// travels in `marks` as a Thing (§3.7). [`entry_for`] is the one place
+    /// these strings are minted, and `the_three_brattice_kinds_get_their_
+    /// own_wire_strings` pins them.
     pub kind: String,
     /// `"here"`, `"lit"` or `"remembered"` — never a colour (spec §4.1). See
     /// this module's own doc for why the palette interns on this rather than
@@ -355,6 +361,14 @@ fn entry_for(kind: LevelCellKind, state: LevelVisibility) -> LevelPaletteEntry {
         LevelCellKind::Flooded => "flooded",
         LevelCellKind::StairsDown => "stairs_down",
         LevelCellKind::StairsUp => "stairs_up",
+        // The Brattice, spec §3.5. Additive: the palette is a sparse list
+        // of `(kind, state)` pairs and a client that does not know these
+        // three draws them as rock, so an old client shows a wall where a
+        // squeeze is and nothing breaks. A DOOR is not here — it travels in
+        // `marks`, never as a palette kind (§3.7).
+        LevelCellKind::Threshold => "threshold",
+        LevelCellKind::Deep => "deep",
+        LevelCellKind::Drop => "drop",
     };
     LevelPaletteEntry {
         kind: kind.to_string(),
@@ -391,6 +405,7 @@ mod tests {
             cells,
             dof: 0,
             leaf_styles: Vec::new(),
+            thresholds: Vec::new(),
         }
     }
 
@@ -540,6 +555,30 @@ mod tests {
         assert_eq!(
             entry_for(LevelCellKind::StairsUp, LevelVisibility::Here).kind,
             "stairs_up"
+        );
+    }
+
+    /// The three kinds The Brattice added (sim spec §3.5) mint the three
+    /// wire strings the client's `glyph_of` answers to, and nothing else.
+    /// Pinned SIM-SIDE deliberately: the client draws an unrecognised kind
+    /// as rock and says nothing, so a typo here — `"treshold"`, or a kind
+    /// silently renamed — would reach a player as a wall where a squeeze
+    /// is, with the client's own vocabulary test still green because it
+    /// never sees this string. This is the assertion that makes the two
+    /// halves one contract.
+    #[test]
+    fn the_three_brattice_kinds_get_their_own_wire_strings() {
+        assert_eq!(
+            entry_for(LevelCellKind::Threshold, LevelVisibility::Here).kind,
+            "threshold"
+        );
+        assert_eq!(
+            entry_for(LevelCellKind::Deep, LevelVisibility::Lit).kind,
+            "deep"
+        );
+        assert_eq!(
+            entry_for(LevelCellKind::Drop, LevelVisibility::Remembered).kind,
+            "drop"
         );
     }
 

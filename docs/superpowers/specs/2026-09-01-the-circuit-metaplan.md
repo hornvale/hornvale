@@ -140,6 +140,13 @@ hang it on, no residents' reading without gates for the intruder's. Campaigns
 - **Camera-follow** (`MAP-underworld-viewport`). A level with fifteen regions
   will walk `you` off the 40-column plate more often than a level with four;
   that defect is real, pre-existing, and not this program's.
+- **Gates that read the world, not the body** (`MAP-world-conditional-gate`,
+  added at The Brattice's G3). A door that opens at moonrise or a gate the
+  tide shuts is a requirement on the clock; every Brattice requirement reads
+  the traverser alone, which is what keeps solvability a proof over
+  `(node, keys)`. The substrate is the cheapest in the project and the proof
+  is a different one; it is the first extension after this program, not a
+  campaign inside it.
 
 ## 5. Provenance
 

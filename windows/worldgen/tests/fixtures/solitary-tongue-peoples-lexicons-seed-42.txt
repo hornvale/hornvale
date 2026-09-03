@@ -42,6 +42,7 @@ desert-dwarf-kind: root Beneo /beneo/
 desert-elf-kind: root Bonea /bonea/
 die: root No /no/
 dire-wolf-kind: gap (experiential): goblin has no exposure to 'dire-wolf-kind'
+door: gap (experiential): goblin has no exposure to 'door'
 drink: root Teebo /teebo/
 drow-kind: root Benoa /benoa/
 eager: gap (experiential): goblin has no exposure to 'eager'
@@ -299,6 +300,7 @@ desert-dwarf-kind: root Beneo /beneo/
 desert-elf-kind: root Gonea /gonea/
 die: root No /no/
 dire-wolf-kind: gap (experiential): hobgoblin has no exposure to 'dire-wolf-kind'
+door: gap (experiential): hobgoblin has no exposure to 'door'
 drink: root Qeego /qeego/
 drow-kind: root Genoa /genoa/
 eager: gap (experiential): hobgoblin has no exposure to 'eager'
@@ -556,6 +558,7 @@ desert-dwarf-kind: root Bodoo /bodoo/
 desert-elf-kind: root Godoa /godoa/
 die: root Do /do/
 dire-wolf-kind: gap (experiential): bugbear has no exposure to 'dire-wolf-kind'
+door: gap (experiential): bugbear has no exposure to 'door'
 drink: root Qoogo /qoogo/
 drow-kind: root Godoa /godoa/
 eager: root Dodo /dodo/
@@ -813,6 +816,7 @@ desert-dwarf-kind: root Xoraraa /xoraraa/
 desert-elf-kind: root Xoroo /xoroo/
 die: root Xaaxa /xaaxa/
 dire-wolf-kind: gap (experiential): kobold has no exposure to 'dire-wolf-kind'
+door: gap (experiential): kobold has no exposure to 'door'
 drink: root Raxaro /raxaro/
 drow-kind: root Rooroorao /rooroorao/
 eager: gap (experiential): kobold has no exposure to 'eager'
@@ -1070,6 +1074,7 @@ desert-dwarf-kind: root Zhmaaxsmoax /ʒmaaxsmoax/
 desert-elf-kind: root Shngaxqzoox /ʃŋaxqzoox/
 die: root Smoxzmaap /smoxzmaap/
 dire-wolf-kind: gap (experiential): gnoll has no exposure to 'dire-wolf-kind'
+door: gap (experiential): gnoll has no exposure to 'door'
 drink: root Zhmax /ʒmax/
 drow-kind: root Dsoopdshoov /dsoopdʃoov/
 eager: root Zhngopsnaav /ʒŋopsnaav/
@@ -1327,6 +1332,7 @@ desert-dwarf-kind: root Fearee /fearee/
 desert-elf-kind: root Xekva /xekva/
 die: root Rarea /rarea/
 dire-wolf-kind: gap (experiential): human has no exposure to 'dire-wolf-kind'
+door: gap (experiential): human has no exposure to 'door'
 drink: root Reagxaa /reagxaa/
 drow-kind: root Teora /teora/
 eager: gap (experiential): human has no exposure to 'eager'
@@ -1584,6 +1590,7 @@ desert-dwarf-kind: root Dadash /dadaʃ/
 desert-elf-kind: root Dangad /daŋad/
 die: root Jasan /jasan/
 dire-wolf-kind: gap (experiential): desert-dwarf has no exposure to 'dire-wolf-kind'
+door: gap (experiential): desert-dwarf has no exposure to 'door'
 drink: root Nangaj /naŋaj/
 drow-kind: root Shavad /ʃavad/
 eager: gap (experiential): desert-dwarf has no exposure to 'eager'
@@ -1841,6 +1848,7 @@ desert-dwarf-kind: root Batash /bataʃ/
 desert-elf-kind: root Tangat /taŋat/
 die: root Jatan /jatan/
 dire-wolf-kind: gap (experiential): gully-dwarf has no exposure to 'dire-wolf-kind'
+door: gap (experiential): gully-dwarf has no exposure to 'door'
 drink: root Nangaj /naŋaj/
 drow-kind: root Shaban /ʃaban/
 eager: root Naxab /naxab/
@@ -2098,6 +2106,7 @@ desert-dwarf-kind: root Batash /bataʃ/
 desert-elf-kind: root Tangat /taŋat/
 die: root Jasam /jasam/
 dire-wolf-kind: gap (experiential): hill-dwarf has no exposure to 'dire-wolf-kind'
+door: gap (experiential): hill-dwarf has no exposure to 'door'
 drink: root Mangaj /maŋaj/
 drow-kind: root Shavas /ʃavas/
 eager: gap (experiential): hill-dwarf has no exposure to 'eager'

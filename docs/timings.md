@@ -5046,6 +5046,21 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-02T17:50:42Z | sluice:gate | 589.315 | 18006.477 | 511.381 | 31.42 | 0 | 41843b04c |  | lefford | 40 |
 | 2026-09-02T17:52:27Z | sluice:clients | 104.848 | 1797.284 | 184.339 | 18.90 | 0 | 09562f9cc |  | lefford | 40 |
 | 2026-09-02T17:59:57Z | sluice:heavy | 448.857 | 9631.777 | 166.735 | 21.83 | 0 | 587137e4c |  | lefford | 40 |
+| 2026-09-02T20:59:24Z | gate-commit | 39.932 | 16.048 | 1.384 | 0.44 | 0 | 96c1035bc | campaign/the-brattice | ambrose | 12 |
+| 2026-09-02T21:05:56Z | gate-commit | 356.848 | 804.494 | 92.150 | 2.51 | 0 | 96c1035bc | campaign/the-brattice | ambrose | 12 |
+| 2026-09-02T21:08:18Z | gate-commit | 113.123 | 60.626 | 30.335 | 0.80 | 0 | 96c1035bc | campaign/the-brattice | ambrose | 12 |
+| 2026-09-02T21:15:11Z | gate-commit | 273.266 | 145.945 | 72.904 | 0.80 | 0 | 96c1035bc | campaign/the-brattice | ambrose | 12 |
+| 2026-09-02T21:23:47Z | gate-commit | 352.190 | 210.412 | 77.011 | 0.82 | 0 | 96c1035bc | campaign/the-brattice | ambrose | 12 |
+| 2026-09-02T21:46:17Z | gate-commit | 224.746 | 150.547 | 60.737 | 0.94 | 0 | 32b95e004 | campaign/the-brattice | ambrose | 12 |
+| 2026-09-02T21:51:11Z | gate-commit | 239.014 | 169.297 | 76.699 | 1.03 | 0 | 32b95e004 | campaign/the-brattice | ambrose | 12 |
+| 2026-09-02T22:11:48Z | gate-commit | 224.210 | 299.475 | 78.801 | 1.69 | 0 | 7bcbd9eeb | campaign/the-brattice | ambrose | 12 |
+| 2026-09-02T23:10:01Z | rebaseline | 546.066 | 313.278 | 29.289 | 0.63 | 0 | 7a2241d11 | campaign/the-brattice | ambrose | 12 |
+| 2026-09-02T23:15:18Z | gate-commit | 178.894 | 94.079 | 62.661 | 0.88 | 0 | 7a2241d11 | campaign/the-brattice | ambrose | 12 |
+| 2026-09-02T23:17:48Z | gate-commit | 112.231 | 59.732 | 29.617 | 0.80 | 0 | 7a2241d11 | campaign/the-brattice | ambrose | 12 |
+| 2026-09-02T23:22:52Z | gate-commit | 226.926 | 138.507 | 76.499 | 0.95 | 0 | 7a2241d11 | campaign/the-brattice | ambrose | 12 |
+| 2026-09-02T23:59:52Z | rebaseline | 216.320 | 360.732 | 25.245 | 1.78 | 0 | 31bb7cd6b | campaign/the-brattice | ambrose | 12 |
+| 2026-09-03T00:02:38Z | gate-commit | 137.538 | 92.037 | 64.562 | 1.14 | 0 | 31bb7cd6b | campaign/the-brattice | ambrose | 12 |
+| 2026-09-03T00:07:32Z | gate-commit | 152.748 | 103.765 | 73.333 | 1.16 | 0 | 31bb7cd6b | campaign/the-brattice | ambrose | 12 |
 | 2026-09-02T17:35:32Z | gate-commit | 130.962 | 563.781 | 46.183 | 4.66 | 0 | bc04b3ca5 | campaign/the-pawl | MacBookPro | 10 |
 | 2026-09-02T17:37:55Z | rebaseline | 136.124 | 285.986 | 14.480 | 2.21 | 0 | 1107dfb7b | campaign/the-pawl | MacBookPro | 10 |
 | 2026-09-02T17:39:42Z | gate-commit | 25.863 | 57.063 | 13.990 | 2.75 | 0 | 1107dfb7b | campaign/the-pawl | MacBookPro | 10 |
@@ -5121,6 +5136,20 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-02T23:59:13Z | sluice:gate | 638.653 | 18090.249 | 581.332 | 29.24 | 0 | d7a12adab |  | lefford | 40 |
 | 2026-09-03T00:01:18Z | sluice:clients | 124.394 | 2103.896 | 161.256 | 18.21 | 0 | 9d882a9be |  | lefford | 40 |
 | 2026-09-03T00:08:53Z | sluice:heavy | 454.755 | 9562.608 | 161.574 | 21.38 | 0 | 99bfd0cea |  | lefford | 40 |
+| 2026-09-03T00:14:20Z | rebaseline | 179.427 | 334.162 | 13.583 | 1.94 | 0 | 87ad551bc | campaign/the-brattice | ambrose | 12 |
+| 2026-09-03T00:17:02Z | gate-commit | 141.044 | 479.680 | 59.541 | 3.82 | 0 | 87ad551bc | campaign/the-brattice | ambrose | 12 |
+| 2026-09-03T02:04:35Z | rebaseline | 440.591 | 419.733 | 33.994 | 1.03 | 0 | 9ddc9b026 | campaign/the-brattice | ambrose | 12 |
+| 2026-09-03T02:10:12Z | gate-commit | 207.206 | 260.339 | 48.648 | 1.49 | 0 | 9ddc9b026 | campaign/the-brattice | ambrose | 12 |
+| 2026-09-03T02:13:37Z | gate-commit | 147.709 | 73.007 | 36.513 | 0.74 | 0 | 9ddc9b026 | campaign/the-brattice | ambrose | 12 |
+| 2026-09-03T02:49:10Z | rebaseline | 248.365 | 357.126 | 25.016 | 1.54 | 0 | 18ebef43c | campaign/the-brattice | ambrose | 12 |
+| 2026-09-03T02:52:13Z | gate-commit | 130.045 | 61.356 | 33.796 | 0.73 | 0 | 18ebef43c | campaign/the-brattice | ambrose | 12 |
+| 2026-09-03T02:54:17Z | gate-commit | 94.940 | 63.607 | 30.610 | 0.99 | 0 | 18ebef43c | campaign/the-brattice | ambrose | 12 |
+| 2026-09-03T03:18:59Z | rebaseline | 132.098 | 317.709 | 12.182 | 2.50 | 0 | bf124e477 | campaign/the-brattice | ambrose | 12 |
+| 2026-09-03T03:26:42Z | gate-commit | 146.654 | 326.621 | 60.048 | 2.64 | 0 | bf124e477 | campaign/the-brattice | ambrose | 12 |
+| 2026-09-03T03:42:53Z | gate-commit | 90.429 | 43.920 | 20.815 | 0.72 | 0 | 29ae4d630 | campaign/the-brattice | ambrose | 12 |
+| 2026-09-03T03:43:50Z | gate-commit | 50.895 | 38.531 | 12.077 | 0.99 | 0 | 29ae4d630 | campaign/the-brattice | ambrose | 12 |
+| 2026-09-03T03:44:57Z | gate-commit | 60.430 | 45.765 | 15.506 | 1.01 | 0 | 29ae4d630 | campaign/the-brattice | ambrose | 12 |
+| 2026-09-03T03:46:12Z | gate-commit | 59.930 | 45.343 | 15.404 | 1.01 | 0 | 29ae4d630 | campaign/the-brattice | ambrose | 12 |
 | 2026-09-03T00:39:56Z | rebaseline | 52.028 | 288.966 | 14.611 | 5.83 | 0 | c2b3e8e62 | campaign/the-plumb | MacBookPro | 10 |
 | 2026-09-03T00:40:56Z | gate-commit | 33.824 | 65.684 | 14.827 | 2.38 | 0 | c5b93907f | campaign/the-plumb | MacBookPro | 10 |
 | 2026-09-03T00:44:54Z | sluice:artifacts | 162.386 | 2201.705 | 104.876 | 14.20 | 0 | 18e90e7f0 |  | lefford | 40 |
@@ -5138,6 +5167,23 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-03T01:48:41Z | sluice:gate | 642.155 | 18311.691 | 517.119 | 29.32 | 0 | 396ac85a3 |  | lefford | 40 |
 | 2026-09-03T01:50:46Z | sluice:clients | 123.913 | 1995.406 | 195.072 | 17.68 | 0 | 6bc858edb |  | lefford | 40 |
 | 2026-09-03T01:58:22Z | sluice:heavy | 456.589 | 9622.092 | 153.360 | 21.41 | 0 | 57d27e510 |  | lefford | 40 |
+| 2026-09-03T03:55:27Z | rebaseline | 124.444 | 309.575 | 11.311 | 2.58 | 0 | 86362e3c3 | campaign/the-brattice | ambrose | 12 |
+| 2026-09-03T03:59:16Z | rebaseline | 107.458 | 298.:00 | 10.463 | 2.87 | 0 | 86362e3c3 | campaign/the-brattice | ambrose | 12 |
+| 2026-09-03T04:02:39Z | gate-commit | 186.716 | 520.176 | 93.376 | 3.29 | 0 | 86362e3c3 | campaign/the-brattice | ambrose | 12 |
+| 2026-09-03T04:39:40Z | rebaseline | 113.112 | 300.994 | 10.969 | 2.76 | 0 | 6780d59f4 | campaign/the-brattice | ambrose | 12 |
+| 2026-09-03T04:56:29Z | gate-commit | 114.925 | 109.707 | 28.968 | 1.21 | 0 | 6780d59f4 | campaign/the-brattice | ambrose | 12 |
+| 2026-09-03T05:16:32Z | gate-commit | 122.466 | 114.788 | 31.810 | 1.20 | 0 | fa9faca14 | campaign/the-brattice | ambrose | 12 |
+| 2026-09-03T05:58:24Z | gate-commit | 118.419 | 63.795 | 36.456 | 0.85 | 0 | 26c5c95cd | campaign/the-brattice | ambrose | 12 |
+| 2026-09-03T06:01:32Z | gate-commit | 87.213 | 63.413 | 29.466 | 1.06 | 0 | bf3c8cde3 | campaign/the-brattice | ambrose | 12 |
+| 2026-09-03T06:02:59Z | gate-commit | 68.044 | 51.191 | 15.216 | 0.98 | 0 | f58646e5d | campaign/the-brattice | ambrose | 12 |
+| 2026-09-03T06:17:55Z | gate-commit | 107.754 | 57.743 | 23.810 | 0.76 | 0 | d2171c39a | campaign/the-brattice | ambrose | 12 |
+| 2026-09-03T06:36:42Z | rebaseline | 106.159 | 297.258 | 10.604 | 2.90 | 0 | 64f83bb49 | campaign/the-brattice | ambrose | 12 |
+| 2026-09-03T07:17:59Z | rebaseline | 24.249 | 93.254 | 7.605 | 4.16 | 0 | 412567460 | campaign/the-brattice | ambrose | 12 |
+| 2026-09-03T07:20:05Z | rebaseline | 104.608 | 297.987 | 10.192 | 2.95 | 0 | 412567460 | campaign/the-brattice | ambrose | 12 |
+| 2026-09-03T07:24:08Z | gate-commit | 132.944 | 72.882 | 58.495 | 0.99 | 0 | 412567460 | campaign/the-brattice | ambrose | 12 |
+| 2026-09-03T07:26:39Z | gate-commit | 67.072 | 51.820 | 16.236 | 1.01 | 0 | 412567460 | campaign/the-brattice | ambrose | 12 |
+| 2026-09-03T07:28:03Z | gate-commit | 67.072 | 51.780 | 16.113 | 1.01 | 0 | 412567460 | campaign/the-brattice | ambrose | 12 |
+| 2026-09-03T07:47:31Z | census | 973.508 | 28111.386 | 324.126 | 29.21 | 0 | cccfcdad9 |  | lefford | 40 |
 | 2026-09-03T07:54:23Z | gate-commit | 179.129 | 2880.638 | 236.564 | 17.40 | 0 | a712371dc | main | lefford | 40 |
 | 2026-09-03T07:57:52Z | sluice:artifacts | 158.303 | 1825.045 | 82.538 | 12.05 | 0 | d3a688dea |  | lefford | 40 |
 | 2026-09-03T07:58:52Z | sluice:outboard | 58.729 | 34.119 | 46.605 | 1.37 | 0 | b3065a395 |  | lefford | 40 |
@@ -5162,3 +5208,10 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-03T11:56:57Z | gate-commit | 223.706 | 85.909 | 40.017 | 0.56 | 0 | 1aa5fa74f | campaign/the-nettle | ambrose | 12 |
 | 2026-09-03T12:07:58Z | gate-commit | 257.142 | 90.672 | 40.641 | 0.51 | 0 | a65156db1 | campaign/the-nettle | ambrose | 12 |
 | 2026-09-03T12:38:50Z | gate-commit | 151.948 | 73.980 | 34.728 | 0.72 | 0 | aff14a2ec | campaign/the-nettle | ambrose | 12 |
+| 2026-09-03T10:11:40Z | rebaseline | 1047.945 | 454.665 | 38.894 | 0.47 | 0 | 8a5c56189 | campaign/the-brattice | ambrose | 12 |
+| 2026-09-03T11:03:21Z | gate-commit | 666.832 | 690.741 | 150.163 | 1.26 | 0 | 8a5c56189 | campaign/the-brattice | ambrose | 12 |
+| 2026-09-03T11:08:20Z | sluice:artifacts | 239.892 | 1955.135 | 83.256 | 8.50 | 0 | f40b32ff1 |  | lefford | 40 |
+| 2026-09-03T11:09:31Z | sluice:outboard | 71.169 | 40.484 | 56.880 | 1.37 | 0 | aa5dfb2a1 |  | lefford | 40 |
+| 2026-09-03T11:20:47Z | sluice:gate | 675.159 | 19982.775 | 591.374 | 30.47 | 0 | 07675d88b |  | lefford | 40 |
+| 2026-09-03T11:22:57Z | sluice:clients | 129.817 | 2044.825 | 206.323 | 17.34 | 0 | 9da2b52cc |  | lefford | 40 |
+| 2026-09-03T11:30:27Z | sluice:heavy | 449.616 | 9616.174 | 164.136 | 21.75 | 0 | a1d17c9dc |  | lefford | 40 |
