@@ -836,3 +836,111 @@ fixtures/` and `book/` are untouched, confirmed by `git status`.
 **Stage gate submission:** `git push -u origin campaign/the-brattice` then
 `make sluice-stage BRANCH=campaign/the-brattice REF=<full-sha>` - see the
 task report for the queue row and `sluice-status` output.
+
+## Task 2 - fix round 1 - complete
+
+Review approved with three Important findings, one carrying a controller
+ruling that touches Task 1's pass. All three fixed, covering tests
+re-run, the page regenerated, committed.
+
+**Ruling F (Important #1, the real one): the round trip is now proved, not
+just the forward reach.** `solvable(plan, DEFAULT_BODY)` only ever checked
+FORWARD reachability (terminus and every key from the entrance), so
+`try_apply` could commit a stamp that leaves the default body able to get
+down but with no way back - a chute (down free, up needs `Fly`) into a
+cross-floor realm whose upper path a nested child realm later blocks with
+a sump is a trap, not a puzzle, and the old guard never saw it. Fixed in
+`windows/worldgen/src/brattice.rs::try_apply`: after the existing
+`solvable(plan, DEFAULT_BODY)` check and before returning `Ok`, ALSO
+require `gated_round_trip(plan, DEFAULT_BODY).is_some()`; on failure,
+unstamp everything exactly as the existing branch does and return
+`Err(Skip::Unsolvable)`. `Skip::Unsolvable`'s doc and `try_apply`'s own doc
+both now say "the terminus, a key, OR return to the entrance." The guard
+test `every_plan_is_solvable_for_a_body_holding_nothing` (200 seeds x 3
+kinds x 3 characters) now also asserts `gated_round_trip(&p,
+DEFAULT_BODY).is_some()` on every committed plan - green, confirming the
+new check never regresses a plan that used to build cleanly; it only ever
+catches a stamp the OLD code would have committed and now rolls back
+instead.
+
+**Consequence, measured, not merely reasoned about:** re-running the panel
+after the fix moves seed 42 only - `skips: ... unsolvable 1 -> 2` and
+`gates: ... chutes 3224 -> 3223` (`ShortLong CrossFloor the-chute: 3091 ->
+3090`) - one chute placement that used to strand the body is now correctly
+rolled back and recorded as `Unsolvable` instead of `Applied`. Seeds 7 and
+1234 are byte-identical to the pre-fix page; `gated_descents` (866 for seed
+42) and the detour-cost median (1.2143) are unchanged, meaning the caught
+trap's descent still carries at least one other realized requirement.
+`detour_cost`'s and `return_differs`'s docs now name both former `None`
+causes and state that, since this ruling, only "no realized requirement"
+remains reachable from a committed plan in practice - the round trip is
+now an invariant, not a possibility those functions have to guard against
+at read time. Added `debug_assert_eq!(costs.len(), gated_descents, ...)`
+in `render_circuit_panel` right where the detour-cost median is computed,
+so the denominator can never silently understate again; it did not fire
+against any of the three seeds.
+
+**Important #2 - `gate_yield`'s own test no longer recomputes the
+function's arithmetic.** `gate_yield_is_a_ratio_and_none_without_an_
+admissible_realm` now overwrites a cloned plan's `patterns` with a
+hand-built vector (`[Applied, Skipped(Claimed), Inadmissible, Applied,
+Skipped(NoRoom)]`) and asserts `gate_yield(&hand) == Some(2.0 / 4.0)`
+directly, plus `[Inadmissible, Inadmissible]` and `[]` both asserting
+`None`. The `(0.0..=1.0)` range check on a real plan is kept as a
+sanity check on live data.
+
+**Important #3 - a positive-case test for `return_differs`/`shortest_path`
+now exists.** New hand-built fixture `chute_only_descent()` (five nodes,
+following `circuit.rs`'s `bare_three_node_path()` idiom): the only way down
+is a chute, the only way back is the long way around a plain stair. Two
+new tests: `return_differs_when_the_only_way_down_is_a_chute` asserts
+`realized_requirements == (0, 0, 1)`, `return_differs == Some(true)`, and
+`gated_round_trip == Some(6) > ungated_round_trip == 4`;
+`return_differs_is_none_on_the_chute_plan_with_its_gate_removed` asserts
+the same plan with the chute's gate stripped reads `realized_requirements
+== (0, 0, 0)`, `detour_cost == None`, `return_differs == None`.
+
+**Minor - `shortest_path` vs. `bfs`.** A doc line on `shortest_path` now
+states why it is a second BFS rather than a reuse of `bfs`: `bfs` records
+only a distance per `(node, keys)` state, which is all `solvable` and
+`gated_round_trip` ever needed, while `shortest_path` additionally needs a
+predecessor per state to reconstruct the actual path.
+
+**Ruling: lexicon guard (unplanned, caught at the first commit attempt) -
+the hand-built fixture's `GridCell` literals grew `windows/worldgen/src/
+brattice.rs`'s cell-token count from 0 (not in the inventory) to 12, all
+legitimate lattice-square (area) uses - why: `Node.cell` is typed
+`GridCell`, and the fixture needs five nodes each on a real grid position,
+so the type cannot be avoided. Cost if wrong: raising the ceiling instead
+of waiving would have let a future genuine vertex-sense `cell` slip in
+unnoticed in this file. Fixed by waiving each of the six carrying lines
+(`// lexicon: area` / `// lexicon: GridCell is a lattice square, an area`,
+matching `circuit.rs`'s existing precedent for the same type) and
+rewording the doc comment's one prose use ("share a grid cell" ->
+"share a grid position") rather than waiving prose. `brattice.rs` stays
+out of the inventory at 0 counted tokens.
+
+**Test evidence:** `cargo test -p hornvale-worldgen --lib brattice::` 16
+passed (was 14; +2 new); `--lib circuit_readout` 1 passed; the full crate
+suite 494 lib / 3 / 348 integration / 0 doctests, all green (110 ignored,
+6 ignored, as before); `cargo test -p hornvale --test suite -- lexicon_guard`
+4 passed; `cargo fmt --check` clean; `cargo clippy -p hornvale-worldgen
+--all-targets -- -D warnings` clean; `type-audit -- check` rc=0.
+
+**`make rebaseline`**: rc=0, wall 216.320s. Diff: only `docs/audits/
+underworld-circuit-seed-panel.md` (seed 42's three lines above) and
+`docs/timings.md`/generated-path-writes bookkeeping. **The four Crosscut
+numbers and the three descent counts (874 / 1,681 / 1,266) did NOT move
+this round** on any seed - verified line by line against the pre-fix page,
+matching the branch table's expectation that nothing here touches the
+graph. No STOP triggered. `clients/game/core/tests/fixtures/` and `book/`
+untouched.
+
+**Commits:** `3eaf2d579` fix(worldgen): the round trip is now proved, not
+just the forward reach (Ruling F); `3ee0747c1` chore(timings): record the
+Task 2 fix round 1 gate-commit runs. `gate-commit` on `3eaf2d579`: rc=0,
+wall 152.748s, 1061/1061 sub-floor tests passed (the first attempt, before
+the lexicon fix, was rc=2, correctly refused by
+`lexicon_guard::no_vertex_sense_cell_comes_back`).
+
+**Not resubmitting the stage gate this round** - the controller does.
