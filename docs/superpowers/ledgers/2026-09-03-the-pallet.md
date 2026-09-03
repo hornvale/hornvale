@@ -465,3 +465,63 @@ Verify the CALLER, never the signature. A positive control on the error path —
 make the error happen and confirm something says so — is the same discipline
 `an-empty-diff-needs-a-positive-control` names for null results, pointed at a
 branch instead of at a diff.
+
+#13 [G5] — **RULING: `SLEPT_ON` carries `place: None`. My spec asked for
+something the codebase cannot express, and the workaround would have spent a
+save-format contract on a redundant field.**
+
+Spec §4c and Task 3's brief both said `place: Some(room)`. **Rooms have no
+`EntityId` here** — they are `Facet`s encoded as `Value::Text(room_key(...))`,
+and every `place: Some(...)` in the workspace is a settlement, community or
+person entity. `Fact.place` is documented as *"the entity where this fact was
+observed"*; a room is not one. The implementer, having no legal way to satisfy
+the spec, reached for `thing_id(room, kind, 0)` and flagged it honestly.
+
+That is 0069-legal — `thing_role`'s own doc says it encodes *"the ROOM and the
+KIND, never the anchor index"* and the ordinal is a literal `0` — so nothing
+unconstitutional happened. It is still the wrong answer, for three reasons in
+increasing weight:
+
+1. **The room is already recoverable by the mechanism the code already uses.**
+   `rest_timeline` reads a bout's site off the `AGENT_AT` timeline by day
+   (`liveness.rs:3367` says so). A `SLEPT_ON` fact joins the same way. The
+   field adds nothing a reader cannot already get.
+2. `thing_id(...)` is an **opaque hash** — the room is not recoverable *from
+   it* — and it re-encodes the kind that is already the object.
+3. Decisive: `thing_role`'s spelling is a **declared save-format contract**
+   ("A change is an epoch, not an edit"). Using it here spends that contract on
+   a field carrying nothing recoverable, and binds any future real
+   place-encoding to an epoch.
+
+Free to fix today because no world carries these facts yet. The reasoning goes
+in the const's own doc, not only here — the next reader will ask why a locative
+fact has no place, and the ledger is not where they will look.
+
+#14 [G5] — **A missed registration site, and it is the case the implementer's
+own rule could not decide. Worth recording because the rule is good and its
+boundary is exact.**
+
+The implementer chose sites by *"does this scenario actually commit
+`SLEPT_ON`"* — sound, and it correctly caught a harness my static grep missed
+(`hearth_population_calibration`, which plants built-and-cold rooms that
+deterministically compose a fireside bed). The review then found a fourth:
+`windows/lab/src/health.rs:307` `simulate_world`, which builds its own registry,
+comments that it is *"same as `Session::start`"*, and registers five predicates
+without `SLEPT_ON`.
+
+**The rule is correct for fixed fixtures and cannot decide this one.**
+`simulate_world` takes `world: &World` — its answer is *a function of the
+world*, not a static fact about the call site. No amount of reading it settles
+the question; only quantifying over worlds does.
+
+It does not fire today (`the-fireside-bed` is the only `SupportsRest` carrier
+and needs `built && cold`, which seed 42's sampled rooms do not supply) — **but
+this campaign armed it**, because before Task 3 there was no `SLEPT_ON` to
+omit. And the failure would be invisible: with the registration removed and the
+error arms intact, the two affected tests pass in 0.019 s and 0.050 s against a
+committed 0.053 s and 0.144 s. A ~3x ratio on a 50-millisecond test is not
+something anyone notices.
+
+Compounding #12: this is the same silent-truncation trap, in the one site a
+static rule could not classify — which is why the fix for #12 is a registration
+here rather than a promise about loudness.
