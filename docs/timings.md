@@ -5200,3 +5200,4 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-03T10:11:40Z | rebaseline | 1047.945 | 454.665 | 38.894 | 0.47 | 0 | 8a5c56189 | campaign/the-brattice | ambrose | 12 |
 | 2026-09-03T11:03:21Z | gate-commit | 666.832 | 690.741 | 150.163 | 1.26 | 0 | 8a5c56189 | campaign/the-brattice | ambrose | 12 |
 | 2026-09-03T11:08:20Z | sluice:artifacts | 239.892 | 1955.135 | 83.256 | 8.50 | 0 | f40b32ff1 |  | lefford | 40 |
+| 2026-09-03T11:09:31Z | sluice:outboard | 71.169 | 40.484 | 56.880 | 1.37 | 0 | aa5dfb2a1 |  | lefford | 40 |
