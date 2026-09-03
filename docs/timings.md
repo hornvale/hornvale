@@ -5161,3 +5161,4 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-03T11:52:52Z | gate-commit | 217.883 | 88.114 | 38.535 | 0.58 | 0 | 1aa5fa74f | campaign/the-nettle | ambrose | 12 |
 | 2026-09-03T11:56:57Z | gate-commit | 223.706 | 85.909 | 40.017 | 0.56 | 0 | 1aa5fa74f | campaign/the-nettle | ambrose | 12 |
 | 2026-09-03T12:07:58Z | gate-commit | 257.142 | 90.672 | 40.641 | 0.51 | 0 | a65156db1 | campaign/the-nettle | ambrose | 12 |
+| 2026-09-03T12:38:50Z | gate-commit | 151.948 | 73.980 | 34.728 | 0.72 | 0 | aff14a2ec | campaign/the-nettle | ambrose | 12 |

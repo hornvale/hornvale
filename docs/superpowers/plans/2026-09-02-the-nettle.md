@@ -1171,13 +1171,19 @@ Expected: `the_book_carries_no_registry_ids_or_process_vocabulary` FAILS, naming
 
 **If the test passes here, STOP.** Either the probe sentence does not trip it (adjust the probe — read the test's own matcher to see what it looks for) or the test does not do what §4 claims. Do not proceed to change the hook on an unproven premise.
 
-Then reset:
+Then clean up — **surgically, and never with `git reset --hard`:**
 
 ```bash
-git reset --hard HEAD~1
-git checkout campaign/the-nettle
-git branch -D nettle-probe-throwaway
+git checkout campaign/the-nettle          # the probe commit stays orphaned on the throwaway branch
+git branch -D nettle-probe-throwaway      # and dies with it
 ```
+
+No reset is needed here: the probe was *committed* on the throwaway branch, so
+switching back restores the original file content. **`git reset --hard` would
+discard every uncommitted change in the worktree, including your own Step 3
+Makefile edit** — Step 8 does not commit until the end, so that edit is still
+uncommitted when this step runs. An earlier draft said `reset --hard` and it
+ate exactly that edit for the first implementer who ran it.
 
 - [ ] **Step 5: Invert the fast path in `scripts/hooks/pre-commit`**
 
@@ -1247,15 +1253,39 @@ Branch table:
 - commit succeeded → the inversion is not reaching the failing test. Check the derived filter actually includes `the_book_carries_no_registry_ids_or_process_vocabulary`: `cargo nextest list -p hornvale --test suite -E '<filter>' | grep book_carries`.
 - commit refused for a *different* reason (one of the three unconditional guards above the fast path) → not a valid control. Re-probe with a file none of those guards touch.
 
-Then reset:
+Then clean up — **surgically. Touch the probe file by name and nothing else:**
 
 ```bash
-git checkout -- . 2>/dev/null; git reset --hard HEAD
+git restore --staged --worktree -- "$BOOKFILE"
 git checkout campaign/the-nettle
 git branch -D nettle-probe-throwaway
 ```
 
+Here the probe was refused, so the file is staged and modified rather than
+committed — hence the `restore`. Restricting it to `"$BOOKFILE"` is the whole
+point: `git checkout -- .` or `git reset --hard` would take your uncommitted
+Step 3 and Step 5 edits with it.
+
 - [ ] **Step 7: Confirm the clean case still passes and the three guards still run unconditionally**
+
+**Actually commit an ordinary prose change and confirm it SUCCEEDS.** An
+earlier draft of this step named the clean case in its heading and then only
+grepped the hook — the first implementer supplied the missing control
+unprompted, and it belongs here. A hook that refuses the defect *and* refuses
+everything else is not a working gate, and nothing else in this task would
+have caught that:
+
+```bash
+git checkout -b nettle-clean-throwaway
+printf '\nAn ordinary sentence with no registry citation.\n' >> "$(ls book/src/chronicle/*.md | head -1)"
+git add -A && git commit -m "probe: an ordinary docs-only commit" 2>&1 | tail -6
+git log --oneline -1
+git checkout campaign/the-nettle && git branch -D nettle-clean-throwaway
+```
+
+Expected: the commit **succeeds**, and the hook prints that it ran the
+prose-subject tests rather than skipping them.
+
 
 The three guards above the fast path must remain unconditional — `.superpowers/` scratch is markdown and `golden-pins.sql` is SQL, so hanging the whole hook on "is Rust staged" is what disabled them once before.
 

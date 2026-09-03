@@ -532,3 +532,52 @@ seconds on every docs-only commit, and the filter is one line in the Makefile.
 
 *Capture.* This entry; the plan's Step 1 and its Makefile target, both now
 carrying the measured filter verbatim; the registry row's figures.
+
+---
+
+#14 [G5] — **Two more plan defects, both found by Task 5's implementer running
+the plan rather than reading it. One destroyed its own work.**
+
+*Defect A — the cleanup commands were destructive to the implementer's
+uncommitted work.* Steps 4 and 6 said `git reset --hard`. But Step 8 is the
+only step that commits, so the Step 3 Makefile edit is **still uncommitted**
+when Step 4's cleanup runs — and `reset --hard` discards it along with the
+probe. It ate exactly that edit; the implementer redid it and finished Step 6
+with a surgical `git restore --staged --worktree -- "$BOOKFILE"` instead of
+following the plan. Both steps now say that, with the reason.
+
+The shape is worth naming: I wrote a cleanup that was correct about the thing
+it was cleaning and blind to everything else in the same worktree. A
+`reset --hard` in a plan step is only safe if that step is the only writer,
+and no step in a plan with a single terminal commit ever is.
+
+*Defect B — Step 7's heading claimed a control its body did not run.* The
+heading says "Confirm the clean case still passes"; the body only grepped the
+hook and ran the linters. **A hook that refuses the defect and also refuses
+everything else is not a working gate**, and nothing else in the task would
+have caught it. The implementer added the missing control unprompted — an
+ordinary prose commit, confirmed to succeed — and it is now in the plan as a
+real step with commands.
+
+*Why B is the more interesting one.* Every other verification gap this
+campaign found was a check that ran and could not see the defect. This one is a
+heading that asserted coverage the step never had: the plan *claimed* the
+control, so a reader auditing the plan for controls would have ticked it off.
+That is a documentation-shaped instance of the same failure, and the campaign's
+own §6 ("every item carries a discrimination test") would have read as
+satisfied.
+
+*Rulings.* Both plan defects fixed. Neither changes Task 5's committed code,
+which is correct: the target carries the `nextest-check` prerequisite I ruled
+in, the fast path is inverted at `scripts/hooks/pre-commit:369-376`, and both
+probes plus the added clean-case control discriminated.
+
+*Cost if wrong.* None to shipped behaviour; both are plan-text corrections.
+
+*Deferred minor.* The implementer left an unstaged `docs/timings.md` row from
+its own manual gate runs, outside its file list. I commit it as bookkeeping.
+
+*ideonomy passes / overturns.* 0 / 0 — two reported defects with one fix each.
+
+*Capture.* This entry; the plan's Steps 4, 6 and 7; the retrospective (ninth
+and tenth instances).
