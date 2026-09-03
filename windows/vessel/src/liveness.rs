@@ -3328,12 +3328,20 @@ pub struct RestSites<'a> {
 /// built and WARM (26.16 °C, no bed), seed 13's is built and cold (−61.21 °C,
 /// a bed), which is why the seed-42 book galleries do not move on a grade
 /// change and a seed-13 walk does.
+///
+/// **Delegates to [`crate::sleep_site::select_sleep_site`] rather than
+/// re-scanning anchors itself (The Pallet, Task 2).** That function is the
+/// single definition of "which anchor in this room offers Sleep to this
+/// body" — the same single-definition discipline
+/// [`crate::interior::Interior::walkable_neighbors`] documents for "one
+/// walkable hop." `room_affords_rest` only ever needed the boolean half of
+/// that question (`.any(..)`), and `select_sleep_site(..).is_some()` is that
+/// same boolean read off the SAME scan, so this delegation changes no
+/// behaviour: both ask "does at least one anchor offer Sleep to this body,"
+/// they just no longer risk drifting into two different answers to it.
 fn room_affords_rest(room: &Facet, body: &Body, terrain: &dyn Terrain) -> bool {
     let interior = interior_of(room, terrain);
-    interior.ids().iter().any(|&a| {
-        crate::affordance::offered_to(interior.anchor(a).kind, body)
-            .contains(&crate::affordance::OfferedVerb::Sleep)
-    })
+    crate::sleep_site::select_sleep_site(&interior, body).is_some()
 }
 
 /// Where `entity` stood over time, as `(day, room)` pairs in commit order —

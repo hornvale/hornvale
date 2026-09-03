@@ -32,6 +32,7 @@ pub mod resident;
 pub mod residents;
 pub mod roll;
 mod session;
+mod sleep_site;
 pub mod snapshot;
 pub mod stance;
 pub mod streams;
