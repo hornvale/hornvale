@@ -5026,7 +5026,13 @@ that performs the same operations more slowly. **The unwatched dimension is
 smaller, not closed.** The Rack's own residue — seventy kilobytes of JSON and
 one eight-millisecond shadowcast — is exactly the shape no counter bounds, and
 it is why this campaign's own wall-clock prediction was falsified while its
-counted one landed exactly.
+counted one landed exactly. *(Corrected 2026-09-03 by The Terrier: the eight
+milliseconds were never the shadowcast, which costs 0.012 ms at radius four.
+They were the brief re-surveying the whole world's occupation register on
+every call, two to five times per indoor turn — a step the counter could not
+see because nothing counted it, which is the point this paragraph makes and
+the reason the number was filed under the wrong noun. The register is now
+built once; the chamber snapshot reads 0.5 ms.)*
 
 ### The fifth look at cost found a repetition, not a quadratic (2026-09-03)
 

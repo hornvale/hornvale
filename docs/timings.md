@@ -5215,6 +5215,14 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-03T11:20:47Z | sluice:gate | 675.159 | 19982.775 | 591.374 | 30.47 | 0 | 07675d88b |  | lefford | 40 |
 | 2026-09-03T11:22:57Z | sluice:clients | 129.817 | 2044.825 | 206.323 | 17.34 | 0 | 9da2b52cc |  | lefford | 40 |
 | 2026-09-03T11:30:27Z | sluice:heavy | 449.616 | 9616.174 | 164.136 | 21.75 | 0 | a1d17c9dc |  | lefford | 40 |
+| 2026-09-03T12:01:59Z | prewarm | 180.732 | 1108.606 | 49.915 | 6.41 | 0 | aeabc4549 | campaign/the-terrier | MacBookPro | 10 |
+| 2026-09-03T12:12:45Z | gate-commit | 128.534 | 226.018 | 44.512 | 2.10 | 0 | aeabc4549 | campaign/the-terrier | MacBookPro | 10 |
+| 2026-09-03T12:22:31Z | gate-commit | 60.448 | 87.568 | 28.676 | 1.92 | 0 | 2cabb2c1d | campaign/the-terrier | MacBookPro | 10 |
+| 2026-09-03T12:38:07Z | gate-commit | 62.271 | 88.722 | 29.875 | 1.90 | 0 | 21fc480d4 | campaign/the-terrier | MacBookPro | 10 |
+| 2026-09-03T12:57:46Z | gate-commit | 44.836 | 74.266 | 25.723 | 2.23 | 0 | e16dc8371 | campaign/the-terrier | MacBookPro | 10 |
+| 2026-09-03T13:00:45Z | gate-commit | 63.099 | 89.052 | 27.614 | 1.85 | 0 | e16dc8371 | campaign/the-terrier | MacBookPro | 10 |
+| 2026-09-03T13:26:51Z | rebaseline | 241.557 | 379.087 | 14.885 | 1.63 | 0 | 16e1e4de9 | campaign/the-terrier | MacBookPro | 10 |
+| 2026-09-03T18:17:47Z | gate-commit | 36.936 | 68.068 | 15.672 | 2.27 | 0 | 8b4f7f490 | campaign/the-terrier | MacBookPro | 10 |
 | 2026-09-03T13:12:49Z | gate-commit | 174.025 | 2331.159 | 222.880 | 14.68 | 0 | d9749623b | main | lefford | 40 |
 | 2026-09-03T13:17:06Z | sluice:artifacts | 217.473 | 1356.588 | 53.742 | 6.49 | 0 | 59e0b1bbf |  | lefford | 40 |
 | 2026-09-03T13:18:11Z | sluice:outboard | 64.197 | 38.078 | 48.062 | 1.34 | 0 | 2e4b53e35 |  | lefford | 40 |
@@ -5228,3 +5236,8 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-03T15:18:07Z | sluice:gate | 610.342 | 18641.435 | 497.645 | 31.36 | 0 | 2397a415c |  | lefford | 40 |
 | 2026-09-03T15:19:52Z | sluice:clients | 105.519 | 1825.176 | 169.609 | 18.90 | 0 | d55bc6d27 |  | lefford | 40 |
 | 2026-09-03T15:27:23Z | sluice:heavy | 450.551 | 9633.445 | 154.769 | 21.72 | 0 | e6551520c |  | lefford | 40 |
+| 2026-09-03T18:26:34Z | rebaseline | 171.508 | 374.519 | 14.982 | 2.27 | 0 | 63f08555a | campaign/the-terrier | MacBookPro | 10 |
+| 2026-09-03T18:28:44Z | gate-commit | 71.663 | 81.357 | 20.631 | 1.42 | 0 | 63f08555a | campaign/the-terrier | MacBookPro | 10 |
+| 2026-09-03T19:16:50Z | gate-commit | 38.198 | 72.439 | 19.525 | 2.41 | 0 | b9eca4849 | campaign/the-terrier | MacBookPro | 10 |
+| 2026-09-03T19:27:55Z | rebaseline | 130.148 | 360.179 | 15.467 | 2.89 | 0 | 4322e3b80 | campaign/the-terrier | MacBookPro | 10 |
+| 2026-09-03T19:29:01Z | gate-commit | 38.546 | 68.332 | 15.939 | 2.19 | 0 | 4322e3b80 | campaign/the-terrier | MacBookPro | 10 |

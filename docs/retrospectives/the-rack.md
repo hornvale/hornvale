@@ -179,7 +179,10 @@ to be told to print it.
 - **The chamber shadowcast** (~8 ms, the largest single item left). New
   registry row, with the cheap lever named: extend the memo's sharing to `map`
   and a chamber `go`, which needs `chamber_plan` to want the sighting it
-  already has.
+  already has. **Corrected by The Terrier:** the ~8 ms was `brief_of`
+  re-surveying the world's occupation register per call, not the shadowcast
+  (0.012 ms); the cheap lever named here would have saved one of two brief
+  calls per snapshot and left the other.
 - **`RENDER-felt-phrase-buckets-a-crowd`** — a design question for Nathan, not
   a defect, and explicitly not a Rack finding once the control was checked.
 - **Invalidation dispatched from the commit** (Penstock §5.7) stays out of
