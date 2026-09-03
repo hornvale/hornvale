@@ -352,13 +352,23 @@ const INDOOR_CORNER_REFUSAL: &str =
 /// band address, with `describe_chamber_here` reporting the wrong room from then
 /// on.
 ///
-/// **Not reachable from a live session today, and the guard is still right.**
-/// `crate::structure::structure_at` returns `None` unless `brief.built`, so
-/// `embed_with` always picks `allocate`, whose rect partition leaves floors two
-/// apart across a wall line — a diagonal touch is geometrically impossible there
-/// (probed: 0 of 2400 allocate lattices, against 532 of 2400 grown). So `grow` is
-/// test-only as things stand. It is the method that will be used, which is why
-/// this guard is written now rather than when it first goes live.
+/// **IT WENT LIVE IN THIS CAMPAIGN, and this paragraph said it could not.**
+/// It read: *"Not reachable from a live session today … `structure_at` returns
+/// `None` unless `brief.built`, so `embed_with` always picks `allocate`, whose
+/// rect partition leaves floors two apart across a wall line — a diagonal touch
+/// is geometrically impossible there (probed: 0 of 2400 allocate lattices,
+/// against 532 of 2400 grown). So `grow` is test-only as things stand."*
+///
+/// The measurement is intact and is what now matters: **0 of 2400 allocate
+/// lattices can present this configuration and 532 of 2400 grown ones — 22% —
+/// can.** What changed is which of those two a live session reaches. Decision
+/// 0536 hung the enterability gate on `Brief.site`, so a cave or an exotic site
+/// (unbuilt, but a site) derives a structure and `embed_with` sends it to
+/// `grow`; H3 (`windows/lab/tests/suite/site_density.rs`) measures ~980-2,615
+/// such facets per world. A settlement still allocates and still cannot reach
+/// this. So the guard is no longer written ahead of its need — it is load-bearing
+/// now, on every cave and exotic interior, and it is the reason a diagonal step
+/// there cannot leave `Inside::at` naming the room it left.
 ///
 /// # Refused rather than treated as a crossing — and NOT for the reason first given
 ///

@@ -185,10 +185,29 @@ pub fn is_faithful(
 ///
 /// **On the rectilinear corpus it is slack**, and that is a fact about
 /// rectangles: a chamber `allocate` produces is convex, so no five distinct
-/// floor cells cut it and the property holds however the anchors land. Since
-/// `structure_at` returns `None` unless `brief.built`, production reaches only
-/// this corpus today — the grown one is the hostile geometry held in reserve,
-/// not a live path.
+/// floor cells cut it and the property holds however the anchors land.
+///
+/// **PRODUCTION REACHES BOTH CORPORA. Until The Prospect it reached only this
+/// one, and this paragraph still said so.** It read: *"Since `structure_at`
+/// returns `None` unless `brief.built`, production reaches only this corpus
+/// today — the grown one is the hostile geometry held in reserve, not a live
+/// path."* Decision 0536 hung the enterability gate on `Brief.site` instead
+/// (`structure.rs`: `brief.site.as_ref()?;`), so `structure_at` now answers
+/// for a cave or an exotic site — neither of which was ever built — and
+/// `lattice::embed_with` sends every `!built` brief to `grow`. H3
+/// (`windows/lab/tests/suite/site_density.rs`) measures ~1,550-2,675 placed
+/// sites per world of which ~980-2,615 are non-settlement (seed 42: 103
+/// exotic + 874 cave), and every one of those grows.
+///
+/// So the grown corpus is the LIVE path for all of them, and the relaxation
+/// below fires on ~2% of it (5 of the 256 cases in the table above; 20 of the
+/// 1,024 [`the_grown_corpus_is_where_the_filter_binds`] sweeps). That is a
+/// stated relaxation now firing in production, not in reserve. It is not a
+/// coverage gap — the grown corpus is swept by that test to an exact ratchet,
+/// and `structure_at` reads the brief ONLY as a gate
+/// (`structure::tests::the_structure_drawn_is_the_same_whatever_kind_of_site_gates_it`),
+/// so the structures it sweeps are distributed exactly as production's are.
+/// What it is is a behaviour a reader should know can be observed.
 ///
 /// # When no cell is admissible: a STATED relaxation, and it FIRES
 ///
@@ -376,13 +395,21 @@ mod tests {
     /// The brief that selects the GROWN embedding, passed to `embed_with` and
     /// to NOTHING else.
     ///
-    /// A structure exists only where `brief.built` (`structure_at` returns
-    /// `None` otherwise), so this brief cannot derive a structure or an
-    /// interior — and `chamber_interior_of` would debug-assert against it,
-    /// since the terrain here reports built. It selects a METHOD, which is
-    /// exactly how `lattice/mod.rs`, `render.rs` and `classify.rs` already use
-    /// it: the grown lattice is the hostile geometry, reachable as a fixture
-    /// and not reachable in production.
+    /// This brief cannot derive a structure or an interior — it carries no
+    /// site, and `structure_at` returns `None` without one (decision 0536) —
+    /// and `chamber_interior_of` would debug-assert against it, since the
+    /// terrain here reports built. It selects a METHOD, which is exactly how
+    /// `lattice/mod.rs`, `render.rs` and `classify.rs` already use it.
+    ///
+    /// **The reason is `site: None`, NOT `built: false`, and this doc had it
+    /// the old way.** It read: *"A structure exists only where `brief.built`
+    /// … the grown lattice is the hostile geometry, reachable as a fixture and
+    /// not reachable in production."* Both halves are now wrong. The gate is
+    /// the site, and a production cave brief is exactly `built: false` with
+    /// `site: Some(Cave)` — which derives a structure and grows it. So the
+    /// grown lattice IS reachable in production; what makes THIS brief a
+    /// method selector rather than a production stand-in is that it withholds
+    /// the site as well, which no real facet does.
     fn wild() -> Brief {
         Brief::from_parts(None, None, None, None, 0, false, true, None)
     }
@@ -463,10 +490,14 @@ mod tests {
     /// does. Measured: this test also passes with the scan's faithfulness
     /// filter removed, because an `allocate` chamber is a rectangle and no
     /// five distinct floor cells cut a rectangle. It is a real property of the
-    /// result and it is checked here — it is the corpus production actually
-    /// reaches — but the claim that the SCAN earns it lives in
-    /// [`the_grown_corpus_is_where_the_filter_binds`], where removing the
-    /// filter doubles the failures.
+    /// result and it is checked here — but the claim that the SCAN earns it
+    /// lives in [`the_grown_corpus_is_where_the_filter_binds`], where removing
+    /// the filter doubles the failures.
+    ///
+    /// **This used to add "it is the corpus production actually reaches", and
+    /// since decision 0536 that is false.** Production reaches this corpus at
+    /// a SETTLEMENT and the grown one at every cave and exotic site — see the
+    /// module doc. Both are live; neither is the corpus.
     /// claim: invariant(forall-seed) — over 1..=MAX_CHAMBERS x 0..64
     #[test]
     fn every_placement_is_faithful() {
@@ -579,12 +610,24 @@ mod tests {
     /// corpus containing it the campaign's keystone property was a claim about
     /// rectangles.
     ///
-    /// **Unreachable in production, and that is why it is a fixture.**
-    /// `structure_at` returns `None` unless `brief.built` (`structure.rs`),
-    /// and `brief_of` truncates to the walk band before asking `is_built`, so
+    /// **REACHED IN PRODUCTION SINCE DECISION 0536, and this doc said the
+    /// opposite.** It read: *"Unreachable in production, and that is why it is
+    /// a fixture. `structure_at` returns `None` unless `brief.built` … so
     /// `Session::lattice_of` always dispatches to `allocate`. This is the
     /// hostile case held in reserve against the day a wild place gets
-    /// chambers — not a live defect.
+    /// chambers."* That day arrived in this campaign: the gate is the SITE, a
+    /// cave and an exotic site are unbuilt sites, and `embed_with` sends every
+    /// `!built` brief to `grow`. H3 measures ~980-2,615 such facets per world.
+    ///
+    /// So this is no longer a reserve fixture — it is **the** anchor-placement
+    /// guarantee for every cave and exotic interior in the world, and the
+    /// ceiling it pins is a live rate rather than a hypothetical one. Nothing
+    /// about the sweep needed to change for that to be true, because
+    /// `structure_at` reads the brief only as a gate and draws the structure
+    /// from the locale and the seed alone
+    /// (`structure::tests::the_structure_drawn_is_the_same_whatever_kind_of_site_gates_it`
+    /// pins exactly that, so the corpus cannot drift away from production
+    /// silently).
     ///
     /// **What it asserts is a CEILING, not universality**, because the honest
     /// answer is that some blobs cannot be embedded faithfully at all: five of
