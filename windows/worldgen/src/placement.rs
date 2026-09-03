@@ -91,7 +91,7 @@ impl SiteReason {
 /// ~5 km neighbourhood of its vertex and leave the ~120 km lattice legible in a
 /// plot of them, which is the regularity the draw exists to destroy.
 /// type-audit: bare-ok(count)
-/// plumb: universal(a lattice-addressing offset, not a property of any world or species -- the depth of the placement quad below the grid cell that holds the vertex, identical at every globe level because it is a ratio of levels rather than a distance; moving it relocates every placed site and reds this module's byte golden)
+/// plumb: universal(a lattice-addressing offset, not a property of any world or species -- the depth of the placement quad below the grid-level quad that holds the vertex, identical at every globe level because it is a ratio of levels rather than a distance; moving it relocates every placed site and reds this module's byte golden)
 const PLACEMENT_DEPTH_BELOW_GRID: u32 = 2;
 
 /// The one place a placement key is spelled: the frozen wire word for a

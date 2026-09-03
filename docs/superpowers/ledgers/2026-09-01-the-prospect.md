@@ -1149,3 +1149,64 @@ any single-line pattern.
 
 **Cost if wrong.** Nothing: the renumber is mechanical and verified by the
 citation gate, which is default-deny.
+
+---
+
+## Close, round 2 — the stage gate reddened on `lexicon_guard`
+
+The close submission (`req-f5c333f4e446`, stage, 2026-09-03T18:04Z) came back
+CHAMBER RED rc=11 after 500 s. One failure, and it is this campaign's own:
+
+```
+FAIL hornvale::suite lexicon_guard::no_vertex_sense_cell_comes_back
+Grew (1):
+  windows/worldgen/src/placement.rs: not in the inventory, 1 now
+```
+
+`placement.rs` is a file this campaign creates, so it has no inventory row and
+may carry no `cell`-bearing token at all. It carried exactly one, in the
+`plumb: universal(...)` rationale on `PLACEMENT_DEPTH_BELOW_GRID`: "the depth
+of the placement quad below the grid **cell** that holds the vertex". The
+module's three other occurrences are already waived — they are the frozen wire
+spelling `cell/<vertex>/<reason>` (decision 0246).
+
+**Why it survived every earlier check.** `lexicon_guard` is not in the
+sub-floor roster, so `gate-commit` compiles it and never runs it; this was the
+campaign's first stage gate, and a stage gate is the first thing that runs it.
+Nothing about the branch tip was newly wrong — the token had been there since
+the file was written.
+
+**Ruling — reword, do not waive.** Two routes were available and the guard
+documents both. Rewrote the phrase to "the grid-level **quad** that holds the
+vertex", which is the module's own vocabulary eleven lines above ("a sixteenth
+of a grid-level quad in area", "a site anywhere in a grid-level quad") and the
+Lexicon of Place's fixed word for the patch.
+
+*Alternatives discarded.* (a) `// lexicon: <reason>` waiver — the reason is
+never re-checked once written (the guard's stated blindness #3), and it would
+have parked a permanent waiver in the one module whose subject is the mesh
+vocabulary. (b) `HV_LEXICON_REBASELINE=1` — that is the route the guard says
+needs a human's agreed reason, and it would have frozen a vertex-adjacent
+misuse into the inventory. Removing the word is the guard's stated direction of
+travel; both alternatives add a row and keep it.
+
+*The mesh sense is the point.* `circuit.rs` says "grid cell" 124 times and is
+correct to: the chamber lattice really is squares. `placement.rs` is the
+geosphere mesh, where the point is a `Vertex` and the patch is a `Facet` — so
+borrowing the lattice word here is exactly the convergent-emergence pressure
+the guard exists to hold.
+
+*ideonomy passes / overturns:* 1 / 0 — the pass enriched rather than reversed:
+it surfaced that the `plumb:` tag text is parsed and might move
+`docs/audits/plumb-roster.md`, which was then checked rather than predicted
+(`plumb check`: 694 consts swept, 0 undeclared, 0 malformed; the roster did not
+move), and that no other campaign-authored prose carries the phrase (grepped
+the spec, plan and chronicle: none).
+
+*Capture:* this entry. No registry row — the guard already documents both
+routes; nothing here generalises past the fix.
+
+**Absorption.** Took main's 45 further commits (`5d56c69c8`) in the same round,
+clean auto-merge, no conflicts. `make rebaseline` afterwards moved one
+generated file — `docs/generated-path-writes.tsv`, `book/src/gallery/` 45 -> 46
+writers, which is main's own gallery writer arriving, not ours.
