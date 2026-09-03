@@ -8,6 +8,9 @@
 //! - **degree** — the maximum node degree, and how many nodes reach 3. The
 //!   heart (Alexander 129) is a hub; a level whose every node has degree ≤ 2
 //!   is a path or a ring and has no heart to name.
+//! - **the heart** — the graph median under the plan's own metric (paths
+//!   through stairs, summed over the level's nodes, the arrival excluded),
+//!   and how many within-level components a level has.
 //! - **degeneracy** — whether the hub is the level's arrival node (the
 //!   shallowest by `depth`) or its sanctum (the deepest), which would make
 //!   "heart" a second name for a node that already has one.
@@ -52,6 +55,7 @@ struct Tally {
     median_degree: BTreeMap<usize, usize>,
     median_position: BTreeMap<u16, usize>,
     median_ties: BTreeMap<usize, usize>,
+    components: BTreeMap<usize, usize>,
     hub_is_sanctum: usize,
     arrival_is_sanctum: usize,
     sanctum_has_key: usize,
@@ -118,37 +122,70 @@ fn tally(plan: &DescentPlan, t: &mut Tally) {
         // GRAVITY of the spaces the group occupies. On a graph that is the
         // median — the node minimizing the sum of hop distances to every
         // other node on the level. Ties: higher degree, lower depth, lower id.
+        // Through the WHOLE plan, stairs included: a level's within-level
+        // passage graph can be disconnected (its islands joined only through
+        // the level above), and a within-level sum would let a small island
+        // win trivially. Summed over this level's nodes only.
         let dist_sum = |n: NodeId| -> usize {
             let mut seen: BTreeMap<NodeId, usize> = BTreeMap::new();
-            let mut frontier = vec![n];
+            let mut frontier = std::collections::VecDeque::from([n]);
             seen.insert(n, 0);
-            while let Some(cur) = frontier.pop() {
+            while let Some(cur) = frontier.pop_front() {
                 let d = seen[&cur];
                 for m in plan.neighbours(cur) {
-                    if plan.nodes[m].level as usize != level || seen.contains_key(&m) {
+                    if seen.contains_key(&m) {
                         continue;
                     }
                     seen.insert(m, d + 1);
-                    frontier.insert(0, m);
+                    frontier.push_back(m);
                 }
             }
-            seen.values().sum()
+            nodes.iter().map(|m| seen[m]).sum()
         };
+        // Within-level components, for the report.
+        let components = {
+            let mut unseen: std::collections::BTreeSet<NodeId> = nodes.iter().copied().collect();
+            let mut count = 0usize;
+            while let Some(&start) = unseen.iter().next() {
+                count += 1;
+                let mut stack = vec![start];
+                unseen.remove(&start);
+                while let Some(cur) = stack.pop() {
+                    for m in plan.neighbours(cur) {
+                        if plan.nodes[m].level as usize == level && unseen.remove(&m) {
+                            stack.push(m);
+                        }
+                    }
+                }
+            }
+            count
+        };
+        *t.components.entry(components).or_default() += 1;
         let sums: BTreeMap<NodeId, usize> = nodes.iter().map(|&n| (n, dist_sum(n))).collect();
-        let best = sums.values().copied().min().expect("non-empty");
-        let ties = sums.values().filter(|&&v| v == best).count();
+        // The Entry is excluded from the heart's candidates by rule (Alexander
+        // 112: there is always a transition between the outside and the heart).
+        let best = sums
+            .iter()
+            .filter(|(n, _)| **n != arrival)
+            .map(|(_, v)| *v)
+            .min()
+            .unwrap_or(0);
+        let ties = sums
+            .iter()
+            .filter(|(n, v)| **n != arrival && **v == best)
+            .count();
         *t.median_ties.entry(ties).or_default() += 1;
         let median = nodes
             .iter()
             .copied()
-            .filter(|n| sums[n] == best)
+            .filter(|n| *n != arrival && sums[n] == best)
             .max_by(|&a, &b| {
                 degree(a)
                     .cmp(&degree(b))
                     .then_with(|| depth(b).cmp(&depth(a)))
                     .then_with(|| b.cmp(&a))
             })
-            .expect("non-empty");
+            .unwrap_or(arrival);
         if median == arrival {
             t.median_is_arrival += 1;
         }
@@ -261,6 +298,7 @@ fn support_of_the_attributes_the_inhabited_reading_derives_from() {
                 t.median_degree,
                 t.median_ties
             );
+            println!("  components per lvl   {:?}", t.components);
             println!(
                 "  median depth decile  {:?}  (0 = arrival, 10 = sanctum)",
                 t.median_position
