@@ -5164,3 +5164,8 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-03T11:20:43Z | gate-commit | 260.110 | 57.694 | 18.501 | 0.29 | 0 | 14ddd00a8 | campaign/the-hachure | ambrose | 12 |
 | 2026-09-03T11:52:45Z | game-check | 254.020 | 647.792 | 34.190 | 2.68 | 0 | b56b4d9cd | campaign/the-hachure | ambrose | 12 |
 | 2026-09-03T11:59:42Z | gate-commit | 333.359 | 89.259 | 40.202 | 0.39 | 0 | b56b4d9cd | campaign/the-hachure | ambrose | 12 |
+| 2026-09-03T13:23:23Z | game-check | 3.831 | 1.950 | 0.714 | 0.70 | 0 | 514ac3163 | campaign/the-hachure | ambrose | 12 |
+| 2026-09-03T13:28:10Z | game-check | 241.235 | 490.971 | 34.021 | 2.18 | 0 | 514ac3163 | campaign/the-hachure | ambrose | 12 |
+| 2026-09-03T13:41:45Z | game-check | 552.007 | 626.545 | 38.566 | 1.20 | 0 | 514ac3163 | campaign/the-hachure | ambrose | 12 |
+| 2026-09-03T13:44:59Z | gate-commit | 129.645 | 68.993 | 31.780 | 0.78 | 0 | 514ac3163 | campaign/the-hachure | ambrose | 12 |
+| 2026-09-03T13:47:30Z | gate-commit | 134.762 | 72.870 | 34.802 | 0.80 | 0 | 514ac3163 | campaign/the-hachure | ambrose | 12 |

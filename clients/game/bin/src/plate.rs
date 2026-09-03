@@ -485,7 +485,21 @@ fn glyph_and_color_for(water: u8, band: u32) -> (char, [u8; 3]) {
     match water {
         0 => (OCEAN_GLYPH, OCEAN_COLOR),
         1 => (SALT_BASIN_GLYPH, SALT_BASIN_COLOR),
-        2 => (RIVER_GLYPH, RIVER_COLOR),
+        // `WaterKind::River` (index 2) IS DELIBERATELY ABSENT (The Hachure,
+        // Stage 2), and its absence is the fix rather than an omission.
+        //
+        // It used to draw `RIVER_GLYPH` here, from a per-VERTEX label painted
+        // across that vertex's whole ~110 km footprint — so below the grid a
+        // river filled the screen (measured: 4,800 of 4,800 tiles at band B,
+        // and 570 of 1,800 with a solid interior in a 60x30 window). That is
+        // the "water drawn on land tiles" defect.
+        //
+        // The Ford's ruling is why the cure is a deletion and not a tweak:
+        // **river-as-area is a type error.** Ocean and salt basin above are
+        // genuinely AREAS and stay in this raster; a river is a LINE with a
+        // width function, and lines are drawn by `rasterize_rivers` from the
+        // channel network's own polylines. A river tile therefore falls
+        // through to its RELIEF here, and the line layer paints over it.
         _ => {
             let i = (band as usize).min(RELIEF_GLYPHS.len() - 1);
             (RELIEF_GLYPHS[i], RELIEF_COLORS[i])
@@ -841,7 +855,253 @@ pub fn draw_with(
 /// plate's size, about the polar-fabrication obligation on `win.origin_row`,
 /// and about `origin_col` wrapping freely, is stated of this function: it is
 /// the one that paints those cells.
-#[allow(clippy::too_many_arguments)] // `index` and the caller-owned `memo` push this to 9 — mirrors `draw_with`'s own allow, one level down
+/// How much of the world's land a river must drain to be drawn at
+/// [`GLOBE_RUNG`], as a fraction — halving with each finer rung
+/// ([`rasterize_rivers`]).
+///
+/// **This is a LEGIBILITY constant and it lives in the client, but what it
+/// selects ON is sim truth.** The sim carries all 4,158 of seed 42's
+/// watercourses and their discharge; that is the world's own answer about
+/// where the creeks are. What a 55 km-per-tile terminal can legibly draw is a
+/// different question, and it is this one's. A Unity client at metre scale
+/// would draw every creek and need no threshold at all.
+///
+/// **Chosen from a measured table, not by taste.** River tiles as a
+/// percentage of LAND tiles, whole chart, seed 42, by rung and minimum
+/// upstream-vertex count:
+///
+/// | rung | all | >=5 | >=13 | >=32 | >=91 |
+/// |---|---|---|---|---|---|
+/// | 6 | 89.5% | 65.0% | 37.0% | 15.5% | 1.5% |
+/// | 7 | 51.4% | 38.1% | 20.8% | 9.1% | 0.9% |
+/// | 8 | 22.8% | 17.7% | 9.9% | 4.1% | 0.6% |
+/// | 10 | 6.0% | 4.5% | 2.5% | 0.9% | 0.2% |
+///
+/// Drawing the whole network is a WASH — 89.5% of land at the coarsest rung —
+/// so selection is required rather than a refinement. 32 upstream vertices at
+/// rung 6 lands at 15.5%, which reads as a network.
+///
+/// **Expressed as a FRACTION of land, never as a vertex count.** `drainage_at`
+/// returns an upstream *vertex* count, so `32` would silently mean a
+/// different-sized river the moment `GLOBE_LEVEL` moved — the same
+/// grid-dependence `branch::vertex_catchment` exists to normalise away. 32 of
+/// seed 42's 11,283 non-ocean vertices is this fraction.
+/// type-audit: bare-ok(ratio)
+const RIVER_DRAWN_ABOVE_LAND_FRACTION: f64 = 32.0 / 11_283.0;
+
+/// The catchment threshold, as a land fraction, for drawing a river at `depth`
+/// — [`RIVER_DRAWN_ABOVE_LAND_FRACTION`] halving per rung below the coarsest,
+/// floored so that every watercourse is eventually drawn.
+///
+/// Halving rather than quartering is measured, not assumed: a rasterised LINE
+/// covers `O(N)` of an `N x N` chart's tiles, so a fixed roster already thins
+/// by half per rung (16.47% -> 3.94% -> 1.00% over rungs 6, 8, 10). Halving
+/// the threshold on top of that keeps the drawn density roughly flat while
+/// admitting tributaries as the reader comes closer.
+fn river_threshold(depth: u32) -> f64 {
+    let steps = f64::from(depth.saturating_sub(GLOBE_RUNG));
+    RIVER_DRAWN_ABOVE_LAND_FRACTION / hornvale_kernel::math::powf(2.0, steps)
+}
+
+/// Paint the channel network's own polylines onto `dst` as LINES (The
+/// Hachure, Stage 2) — the half of the water vocabulary
+/// [`glyph_and_color_for`] deliberately no longer carries.
+///
+/// **Rasterised, never sampled, and that distinction is the whole design.** A
+/// per-tile query ("is a channel within half a tile of this tile's centre?")
+/// was built and measured: it produced river SCATTER, because
+/// `ChannelNetwork::nearest_line` returns the nearest line of ANY size, so
+/// along a trunk the nearest line flips to a small tributary and back and the
+/// trunk breaks into dashes. No per-tile sample can guarantee connectivity —
+/// it is a property of the line, not of any point on it. Walking the polyline
+/// gives it by construction.
+///
+/// **Cost.** The whole planet's network is 11,202 segments, against 20,000
+/// nearest-line queries for a single 200x100 plate under the sampled design.
+/// This also scales the right way: sampling costs screen AREA and is flat at
+/// every rung, while rasterising costs river length IN VIEW and so gets
+/// cheaper as the reader zooms in.
+///
+/// **It rides the tile cache rather than composing per redraw.** The channel
+/// network is fixed at genesis and selection is a pure function of the rung,
+/// so a river has exactly the terrain layer's cache key and its
+/// never-invalidated lifetime (decision 0289). Drawing it inside
+/// [`draw_terrain_layer`] makes it free on redraw instead of merely cheap.
+fn rasterize_rivers(
+    dst: &mut Grid,
+    terrain: &GeneratedTerrain,
+    geo: &Geosphere,
+    f: &Frame,
+    win: &Window,
+    colour_allowed: bool,
+) {
+    let net = terrain.channels();
+    let (virtual_w, virtual_h) = virtual_dims(win.depth);
+    // The land denominator the threshold is a fraction OF. Counted here rather
+    // than taken as a constant so the threshold survives a mesh change.
+    let land = geo
+        .vertices()
+        .filter(|&v| !terrain.is_ocean(v))
+        .count()
+        .max(1) as f64;
+    let threshold = river_threshold(win.depth) * land;
+    let (w, h) = (i64::from(dst.width()), i64::from(dst.height()));
+
+    for (line, polyline) in net.polylines.iter().enumerate() {
+        // SELECTION: the line's own magnitude, as its largest upstream count.
+        let magnitude = net
+            .run_vertices
+            .get(line)
+            .map(|vs| {
+                vs.iter()
+                    .map(|&v| terrain.drainage_at(v))
+                    .fold(0.0f64, f64::max)
+            })
+            .unwrap_or(0.0);
+        if magnitude < threshold {
+            continue;
+        }
+
+        for pair in polyline.points.windows(2) {
+            let Some(a) = plate_position(f, win, virtual_w, virtual_h, pair[0]) else {
+                continue;
+            };
+            let Some(b) = plate_position(f, win, virtual_w, virtual_h, pair[1]) else {
+                continue;
+            };
+            // THE SEAM, ANCHORED ON THE WINDOW AND NOT ON THE FIRST
+            // ENDPOINT — and the difference is a bug the tile cache's own
+            // byte-identity test caught.
+            //
+            // `plate_position` wraps a column into `[0, virtual_w)` relative
+            // to the window's origin, so a point just LEFT of the window
+            // reads as nearly a whole chart to its right. Anchoring the
+            // segment on its first endpoint then dragged the second one
+            // across the planet: a segment entering a 32-wide tile from the
+            // left had `a` at 244 and `b` at 11, which read as a 233-column
+            // straddle, pushed `b` to 267, and the whole segment was rejected
+            // as off-tile. A full-plate draw at origin 0 never wraps, so it
+            // kept the river and the composed one lost it — cached `~`
+            // against uncached `\"` at rung 6.
+            //
+            // So bring each endpoint to its representative NEAREST THE
+            // WINDOW's own middle first, then close the segment on that.
+            let ax = near_window(a.0, virtual_w, w);
+            let bx0 = near_window(b.0, virtual_w, w);
+            let half = i64::from(virtual_w) / 2;
+            let mut bx = bx0;
+            if bx - ax > half {
+                bx -= i64::from(virtual_w);
+            } else if ax - bx > half {
+                bx += i64::from(virtual_w);
+            }
+            draw_segment(dst, (ax, a.1), (bx, b.1), w, h, colour_allowed);
+        }
+    }
+}
+
+/// A wrapped plate column brought to the representative nearest the plate's
+/// own middle — the fix for [`rasterize_rivers`]'s seam bug.
+///
+/// [`plate_position`] returns a column in `[0, virtual_w)`, which is the right
+/// answer for a point INSIDE the window and a misleading one for a point just
+/// outside it to the left: that reads as `virtual_w - k` rather than `-k`. On a
+/// full-width plate the distinction never arises; on a 32-wide cache tile it
+/// decides whether a segment is drawn at all.
+///
+/// Each loop runs at most once — the input is already reduced mod
+/// `virtual_w` — and both are expressed as loops rather than as one signed
+/// remainder so the intent survives a reader who has to check the boundary.
+fn near_window(dcol: i64, virtual_w: u32, plate_w: i64) -> i64 {
+    let vw = i64::from(virtual_w);
+    let half = vw / 2;
+    let mid = plate_w / 2;
+    let mut d = dcol;
+    while d - mid > half {
+        d -= vw;
+    }
+    while mid - d > half {
+        d += vw;
+    }
+    d
+}
+
+/// A point on the unit sphere, in PLATE coordinates (column, row), or `None`
+/// above the projection's polar clamp — where
+/// [`mercator::project`] has no chart row to offer and inventing one would
+/// fabricate ground (spec section 6's refusal).
+fn plate_position(
+    f: &Frame,
+    win: &Window,
+    virtual_w: u32,
+    virtual_h: u32,
+    p: [f64; 3],
+) -> Option<(i64, i64)> {
+    let lat = hornvale_kernel::math::asin(p[2].clamp(-1.0, 1.0)).to_degrees();
+    let lon = hornvale_kernel::math::atan2(p[1], p[0]).to_degrees();
+    let (row, col) = mercator::project(f, lat, lon, virtual_w, virtual_h)?;
+    let dcol = (i64::from(col) - i64::from(win.origin_col)).rem_euclid(i64::from(virtual_w));
+    Some((dcol, i64::from(row) - i64::from(win.origin_row)))
+}
+
+/// One segment, by integer DDA — deterministic by construction: no float
+/// comparison decides a tile, and the step count follows from the longer axis.
+///
+/// Clipped by SKIPPING out-of-bounds writes rather than by a parametric clip.
+/// The bound that makes that affordable is the early reject above it: a
+/// segment whose bounding box misses the plate is never stepped at all.
+fn draw_segment(
+    dst: &mut Grid,
+    a: (i64, i64),
+    b: (i64, i64),
+    w: i64,
+    h: i64,
+    colour_allowed: bool,
+) {
+    // EARLY REJECT: neither end near the plate, and the box between them
+    // missing it entirely. Without this a rung-13 segment spanning thousands
+    // of tiles would be stepped in full to draw none of them.
+    let (lo_x, hi_x) = (a.0.min(b.0), a.0.max(b.0));
+    let (lo_y, hi_y) = (a.1.min(b.1), a.1.max(b.1));
+    if hi_x < 0 || lo_x >= w || hi_y < 0 || lo_y >= h {
+        return;
+    }
+
+    let (dx, dy) = ((b.0 - a.0).abs(), (b.1 - a.1).abs());
+    let steps = dx.max(dy).max(1);
+    for i in 0..=steps {
+        // Integer interpolation: the numerator is the exact step index, so two
+        // runs cannot disagree about which tile a step lands on.
+        let x = a.0 + (b.0 - a.0) * i / steps;
+        let y = a.1 + (b.1 - a.1) * i / steps;
+        if x < 0 || y < 0 || x >= w || y >= h {
+            continue;
+        }
+        dst.set(
+            x as u16,
+            y as u16,
+            // The struct below is `hornvale_game_core`'s own frozen name for
+            // a chart SQUARE — an area, not a vertex — so it is counted in
+            // `docs/audits/lexicon-inventory.tsv` rather than waived on its
+            // own line. A per-line waiver cannot work here: `cargo fmt`
+            // moves a trailing comment onto the following line, and the
+            // waiver then silently stops applying. This comment avoids
+            // spelling the word for the same reason — the tokenizer counts
+            // comments too.
+            Cell {
+                glyph: Some(RIVER_GLYPH),
+                weight: Weight::Normal,
+                ink: Ink::resolve(Some(RIVER_COLOR), colour_allowed),
+                // Terrain, not chart: a river is the world's own fixed
+                // geometry, the same channel the relief underneath it came off.
+                source: Source::World,
+            },
+        );
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+// `index` and the caller-owned `memo` push this to 9 — mirrors `draw_with`'s own allow, one level down
 pub(crate) fn draw_terrain_layer(
     terrain: &GeneratedTerrain,
     geo: &Geosphere,
@@ -879,6 +1139,13 @@ pub(crate) fn draw_terrain_layer(
             );
         }
     }
+    // THE LINE LAYER, INSIDE THE CACHED TILE (The Hachure, Stage 2). It
+    // sits here and not in `draw_with`'s composition because a river has
+    // exactly this layer's cache key and its never-invalidated lifetime,
+    // so riding the tile cache makes it free on redraw rather than merely
+    // cheap. Drawn AFTER the relief loop, so a river paints over the
+    // ground it runs across.
+    rasterize_rivers(&mut grid, terrain, geo, f, win, colour_allowed);
     grid
 }
 
@@ -2112,6 +2379,198 @@ mod tests {
             eprintln!(
                 "rung {depth}: blended height differs from snapped on {moved} of \
                  {compared} tiles"
+            );
+        }
+    }
+
+    /// A DRAWN RIVER HAS NO INTERIOR (The Hachure, Stage 2).
+    ///
+    /// The discriminating property between a line and a slab, and it needs no
+    /// baseline to compare against: a rasterized line is at most a couple of
+    /// tiles wide, so no river tile can have all eight of its neighbours also
+    /// river. A slab has an interior by definition.
+    ///
+    /// Today `water == River` is a per-VERTEX label painted across that
+    /// vertex's whole footprint, so below the grid it fills the screen — 4,800
+    /// of 4,800 tiles measured at band B. That is the reported defect ("water
+    /// drawn on land tiles") and it is what this test refuses.
+    ///
+    /// Non-vacuity is the second assertion: the window must contain river at
+    /// all, or "no river tile has an interior" is a claim about the empty set.
+    #[test]
+    fn a_drawn_river_has_no_interior() {
+        let (terrain, geo) = test_world();
+        let index = NearestVertexIndex::new(&geo);
+        let mut memo = RoomMeshMemo::default();
+        let f = mercator::frame_for(false);
+        let depth = BAND_B_RUNG;
+        let (vw, vh) = virtual_dims(depth);
+
+        // Centre on the midpoint of the world's largest river, so there is a
+        // river in frame by construction rather than by luck.
+        let net = terrain.channels();
+        let big = (0..net.polylines.len())
+            .max_by_key(|&i| {
+                net.run_vertices[i]
+                    .iter()
+                    .map(|&v| terrain.drainage_at(v) as u64)
+                    .max()
+                    .unwrap_or(0)
+            })
+            .expect("seed 42 has a channel network");
+        let pts = &net.polylines[big].points;
+        let mid = pts[pts.len() / 2];
+        let (lat, lon) = (
+            hornvale_kernel::math::asin(mid[2]).to_degrees(),
+            hornvale_kernel::math::atan2(mid[1], mid[0]).to_degrees(),
+        );
+        let (crow, ccol) = mercator::project(&f, lat, lon, vw, vh).expect("in frame");
+        let (w, h) = (60u16, 30u16);
+        let (win, _, _) = window_showing(depth, crow, ccol, w, h);
+
+        let grid = draw_terrain_layer(&terrain, &geo, &index, &mut memo, &f, &win, w, h, false);
+        let is_river = |x: i32, y: i32| -> bool {
+            if x < 0 || y < 0 || x >= i32::from(w) || y >= i32::from(h) {
+                return false;
+            }
+            grid.get(x as u16, y as u16)
+                .is_some_and(|c| c.glyph == Some(RIVER_GLYPH))
+        };
+
+        let mut river = 0u32;
+        let mut interior: Option<(u16, u16)> = None;
+        for y in 0..i32::from(h) {
+            for x in 0..i32::from(w) {
+                if !is_river(x, y) {
+                    continue;
+                }
+                river += 1;
+                let all_eight = [
+                    (-1, -1),
+                    (0, -1),
+                    (1, -1),
+                    (-1, 0),
+                    (1, 0),
+                    (-1, 1),
+                    (0, 1),
+                    (1, 1),
+                ]
+                .iter()
+                .all(|&(dx, dy)| is_river(x + dx, y + dy));
+                if all_eight && interior.is_none() {
+                    interior = Some((x as u16, y as u16));
+                }
+            }
+        }
+
+        assert!(
+            river > 0,
+            "NON-VACUITY: no river was drawn in a window centred on the \
+             world's largest river, so the refusal below proves nothing"
+        );
+        assert_eq!(
+            interior,
+            None,
+            "a river tile at rung {depth} has all eight neighbours river too, so \
+             the river is being drawn as a SLAB rather than a line ({river} of \
+             {} tiles are river)",
+            u32::from(w) * u32::from(h)
+        );
+    }
+
+    /// A DRAWN RIVER IS CONNECTED — no isolated tiles (The Hachure, Stage 2).
+    ///
+    /// The property that killed the sampled design, and the reason this stage
+    /// rasterises the polyline instead of querying per tile. A per-tile rule
+    /// asked "is a channel within half a tile of this tile's centre?" and
+    /// produced river SCATTER: `ChannelNetwork::nearest_line` returns the
+    /// nearest line of ANY size, so along a trunk the nearest line flips to a
+    /// small tributary and back, and the trunk breaks into dashes. Walking the
+    /// line gives connectivity by construction; no per-tile sample can,
+    /// because connectivity is a property of the line and not of any point on
+    /// it.
+    ///
+    /// Asserted as "every river tile has a river neighbour", 8-connected. That
+    /// admits a legitimately short segment clipped to a couple of tiles at the
+    /// plate's edge while refusing a field of dots.
+    ///
+    /// Checked at three rungs because the failure was rung-dependent: the
+    /// selection threshold relaxes as the reader zooms in, so a rung admitting
+    /// more tributaries is a different picture, not the same one scaled.
+    #[test]
+    fn a_drawn_river_is_connected_at_every_rung() {
+        let (terrain, geo) = test_world();
+        let index = NearestVertexIndex::new(&geo);
+        let f = mercator::frame_for(false);
+        let net = terrain.channels();
+        let big = (0..net.polylines.len())
+            .max_by_key(|&i| {
+                net.run_vertices[i]
+                    .iter()
+                    .map(|&v| terrain.drainage_at(v) as u64)
+                    .max()
+                    .unwrap_or(0)
+            })
+            .expect("seed 42 has a channel network");
+        let pts = &net.polylines[big].points;
+        let mid = pts[pts.len() / 2];
+        let (lat, lon) = (
+            hornvale_kernel::math::asin(mid[2]).to_degrees(),
+            hornvale_kernel::math::atan2(mid[1], mid[0]).to_degrees(),
+        );
+
+        for depth in [GLOBE_RUNG, 9, BAND_B_RUNG] {
+            let mut memo = RoomMeshMemo::default();
+            let (vw, vh) = virtual_dims(depth);
+            let (crow, ccol) = mercator::project(&f, lat, lon, vw, vh).expect("in frame");
+            let (w, h) = (60u16, 30u16);
+            let (win, _, _) = window_showing(depth, crow, ccol, w, h);
+            let grid = draw_terrain_layer(&terrain, &geo, &index, &mut memo, &f, &win, w, h, false);
+            let is_river = |x: i32, y: i32| -> bool {
+                if x < 0 || y < 0 || x >= i32::from(w) || y >= i32::from(h) {
+                    return false;
+                }
+                grid.get(x as u16, y as u16)
+                    .is_some_and(|c| c.glyph == Some(RIVER_GLYPH))
+            };
+
+            let (mut river, mut lonely) = (0u32, Vec::new());
+            for y in 0..i32::from(h) {
+                for x in 0..i32::from(w) {
+                    if !is_river(x, y) {
+                        continue;
+                    }
+                    river += 1;
+                    let has_neighbour = [
+                        (-1, -1),
+                        (0, -1),
+                        (1, -1),
+                        (-1, 0),
+                        (1, 0),
+                        (-1, 1),
+                        (0, 1),
+                        (1, 1),
+                    ]
+                    .iter()
+                    .any(|&(dx, dy)| is_river(x + dx, y + dy));
+                    if !has_neighbour {
+                        lonely.push((x, y));
+                    }
+                }
+            }
+
+            assert!(
+                river > 0,
+                "NON-VACUITY at rung {depth}: no river drawn in a window centred \
+                 on the world's largest river"
+            );
+            assert!(
+                lonely.is_empty(),
+                "at rung {depth}, {} of {river} river tiles have no river \
+                 neighbour (first at {:?}) — the river is drawn as scattered \
+                 samples rather than as a line",
+                lonely.len(),
+                lonely.first()
             );
         }
     }

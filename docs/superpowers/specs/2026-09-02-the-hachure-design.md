@@ -220,6 +220,27 @@ width (metres), and at rung 6 a chart tile is ~110 km, so almost no tile
 centre lands inside a channel. The second fails because half a rung-6 tile
 is ~55 km and most land is within 55 km of *some* channel.
 
+**AS BUILT (2026-09-03): the per-tile rule below is FALSIFIED and rivers are
+RASTERISED instead.** A segment-versus-tile test still samples a field per
+tile, and `ChannelNetwork::nearest_line` returns the nearest line of any size,
+so along a trunk the nearest line flips to a tributary and back and the trunk
+breaks into dashes — measured. The general statement: **connectivity is a
+property of the line, not of any point on it**, so no per-tile query can
+guarantee it however refined. Walking the polyline gives it by construction,
+costs 11,202 segments for the whole planet against 20,000 nearest-line queries
+for one plate, and rides the terrain layer's own cache key (decision 0289) so
+it is free on redraw. Selection is by catchment as a fraction of land, halving
+per rung — a client legibility cutoff on what is sim truth
+(`MAP-stream-order-is-sim-truth`). Ledger #20-#24.
+
+**Also corrected: the `+1383%` below was not a falsification.** Today's rule
+draws ~0.98% of tiles at EVERY rung, dead flat, and a rasterised line must
+cover `O(N)` of an `N x N` chart — so the flatness is the signature of the
+area-carried defect, and conserving against it was the error.
+
+The superseded reasoning, kept because it is what the two measurements were
+taken against:
+
 **The rule is a segment-versus-tile-footprint intersection**, not a radius
 test: a tile is a river tile if any channel segment crosses its footprint,
 with the discharge-derived width taking over once tiles are narrower than the

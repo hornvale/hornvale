@@ -413,3 +413,92 @@ measurement named.
 `tests-whose-input-collapses-to-one-value`: a fifth instance, with a new
 cause — the observable was downstream of a quantizer coarse enough to erase
 the signal.
+
+---
+
+## Stage 2 — implementation (2026-09-03)
+
+#20 [G2] — **The spec's own Stage 2 rule is FALSIFIED: no per-tile sample can
+draw a river.**
+· Spec §4.2 called for "a segment-versus-tile-footprint intersection". Built
+and measured: it produces river SCATTER. `ChannelNetwork::nearest_line`
+returns the nearest line of ANY size, so along a trunk the nearest line flips
+to a small tributary and back and the trunk breaks into dashes — the same
+failure the lab's transect docs already record ("a different river became the
+nearest and truncated it").
+· The general statement, which is the part worth keeping: **connectivity is a
+property of the line, not of any point on it**, so no per-tile query can
+guarantee it however the query is refined.
+· Decision: rasterise the polylines. Walking the line gives connectivity by
+construction.
+· ideonomy passes: 0 (forced by measurement).
+
+#21 [Q] — **Three candidate rules measured before one was chosen, and the
+second's "failure" was my own error.**
+· `Transverse::Channel` at the tile centre: 154 → 6 river tiles at rung 6
+(−96.1%). Correct answer to "is this POINT in the channel", wrong question.
+· Within half a tile of any channel: 154 → 2,284 (+1383%) — **reported as a
+falsification and it was not.** Today's rule draws ~0.98% of tiles at EVERY
+rung (0.98/0.99/0.99/0.96 at rungs 6/8/10/13), dead flat; a rasterised LINE
+must cover `O(N)` of an `N x N` chart, so the fraction has to halve per rung,
+which the half-tile rule does exactly (16.47/3.94/1.00/0.14). **The flatness
+is the signature of the area-carried defect** — The Ford's type error — so I
+was conserving against the bug.
+· Selection by discharge: required, not a refinement. Drawing the whole
+network is 89.5% of LAND tiles at rung 6. Measured table in
+`RIVER_DRAWN_ABOVE_LAND_FRACTION`'s doc.
+· ideonomy passes: 0 (a measurement sequence).
+
+#22 [G2] — **Where the selection threshold lives — Nathan corrected me, and
+the half I had wrong matters more.**
+· I claimed the threshold "belongs in the client, not the sim". Nathan: there
+is a One True Vision of where the creeks are.
+· Both are true of different things. **Which watercourses exist and how big
+each is: sim.** **Which of them a given view draws: client**, because it is a
+rendering budget — one client at seven rungs needs seven cutoffs, and a Unity
+client at metre scale needs none.
+· The half I had wrong: if the sim hands over 4,158 UNRANKED lines, every
+consumer invents its own ranking and they disagree about what a creek *is*.
+The sim owes a NAMED magnitude ladder (Strahler order); the client owes only a
+cutoff on it. Filed as `MAP-stream-order-is-sim-truth` for a SOON/NEXT
+campaign, at Nathan's request.
+· A defect in my sketch independent of the boundary: "32 upstream cells" is a
+raw VERTEX count, so it silently means a different-sized river the moment
+`GLOBE_LEVEL` moves — the grid-dependence `branch::vertex_catchment` exists to
+normalise away. Now expressed as a fraction of land.
+· ideonomy passes: 0 (Nathan's ruling, adopted with one narrowing).
+
+#23 [G2] — **Rivers ride the tile cache rather than composing per redraw —
+Nathan's steer, and it is also the correct layering.**
+· I had framed "no new cache" as a virtue. Nathan: lean into the cache for
+tight redraws.
+· He is right, and the resolution is better than a new cache: the channel
+network is fixed at genesis and selection is a pure function of the rung, so a
+river has EXACTLY the terrain layer's cache key and its never-invalidated
+lifetime (decision 0289). Rasterising inside `draw_terrain_layer` makes it
+free on redraw rather than merely cheap, and adds no key to invalidate.
+· Cost, measured: 11,202 segments for the whole planet's network against
+20,000 nearest-line queries for ONE 200x100 plate under the sampled design.
+Sampling costs screen AREA and is flat at every rung; rasterising costs river
+length IN VIEW and so gets cheaper as the reader zooms in.
+· ideonomy passes: 0.
+
+#24 [G5] — **A wrap bug my own two tests could not see, caught by the tile
+cache's byte-identity invariant.**
+· `plate_position` wraps a column into `[0, virtual_w)` relative to the
+window's origin, so a point just LEFT of the window reads as nearly a whole
+chart to its right. Anchoring the seam correction on the segment's FIRST
+endpoint then dragged the second across the planet: a segment entering a
+32-wide tile from the left had `a` at 244 and `b` at 11, read as a 233-column
+straddle, pushed `b` to 267, and was rejected as off-tile.
+· **Why my tests were blind to it**: both draw a full-width plate at origin 0,
+where the wrap never arises. `tiles::composing_matches_the_uncached_draw_at_
+every_shipped_rung` compares a composed plate against an uncached one and
+reported cached `~` against uncached `"` at rung 6, (43, 10).
+· Fix: `near_window` brings each endpoint to the representative nearest the
+plate's middle before the segment is closed.
+· **Lesson for the retrospective**: an existing invariant test found a defect
+in new code that the new code's own purpose-built tests structurally could
+not, because they shared a blind spot (full-width windows). Worth pairing with
+`reduced-fixtures-delete-defect-preconditions`.
+· ideonomy passes: 0.
