@@ -18,8 +18,8 @@ use hornvale_locale::LocaleContext;
 use hornvale_vessel::body::Body;
 use hornvale_vessel::liveness::{
     AGENT_AT, Affect, AffectLabel, DRANK, DriveKind, DriveMovements, EATEN, HomeNavCache,
-    LocaleTerrain, PrimaryAfraidMemo, RESTED, SLEPT, SUSTENANCE, Terrain, affect_of_memo_occupied,
-    agent_position, built_rooms, derive_npcs, waking_offset,
+    LocaleTerrain, PrimaryAfraidMemo, RESTED, SLEPT, SLEPT_ON, SUSTENANCE, Terrain,
+    affect_of_memo_occupied, agent_position, built_rooms, derive_npcs, waking_offset,
 };
 use std::collections::BTreeMap;
 
@@ -331,6 +331,22 @@ pub fn simulate_world(world: &World) -> Vec<AffectTrace> {
     );
     let _ =
         registry.register_predicate(SLEPT, false, "an agent slept on a day, for this many ticks");
+    // The Pallet, Task 3 fix round 1 (F1): this path threads a REAL `World`
+    // through `LocaleTerrain::is_built` (`run_simulation_with_locale`'s own
+    // `Some(&built)` argument below), so whether a sleeping body ever finds
+    // a built-and-cold room is a function of the WORLD, not a fixed fact
+    // about this fixture -- the one case the harness-registration rule
+    // ("does this scenario actually commit `SLEPT_ON`") cannot decide
+    // statically. It does not fire on seed 42 today (no sampled room is
+    // both built and cold), but the predicate must be registered so a world
+    // where it DOES fire does not truncate silently, exactly the failure
+    // mode `hearth_population_calibration.rs`'s planted registry already
+    // hit once this campaign.
+    let _ = registry.register_predicate(
+        SLEPT_ON,
+        false,
+        "the kind of anchor an agent slept on, within the room it slept in",
+    );
     let _ = registry.register_predicate(EATEN, false, "an agent ate on a day");
     let home = match hornvale_settlement::all_settlements(world).first() {
         Some(v) => v.id,

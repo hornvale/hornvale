@@ -3420,7 +3420,9 @@ impl<'w> Session<'w> {
         // `sleep` and a creature's own act commit the same `slept` fact above
         // and must commit the same `slept-on` one under the same rule — within
         // this room only, never a search beyond it. Bare ground commits
-        // nothing.
+        // nothing. `place` is `None` (fix round 1, F2) — see `SLEPT_ON`'s own
+        // doc; `room` is still needed here to derive the interior, even
+        // though `slept_on_fact` no longer takes it.
         let room = self.position();
         let terrain = self.terrain_here();
         let room_interior = crate::interior::interior_of(&room, &terrain);
@@ -3429,7 +3431,6 @@ impl<'w> Session<'w> {
         {
             let site_fact = slept_on_fact(
                 self.agent_entity(),
-                &room,
                 room_interior.anchor(anchor).kind,
                 self.day,
                 SLEPT_PROVENANCE,

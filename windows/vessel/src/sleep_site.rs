@@ -4,14 +4,19 @@
 //! *whether* any anchor in a room offers [`crate::affordance::OfferedVerb::
 //! Sleep`]; this asks *which one* a body would actually use.
 //!
-//! **This module is not wired to anything yet.** Nothing calls
-//! [`select_sleep_site`] this task — it exists so Task 3 has a `KindId` to
-//! commit as a new `SLEPT_ON` fact at commit time. It is deliberately never
-//! consulted by the recovery fold itself: that fold re-derives from
-//! committed facts, and decision 0069 forbids committing an anchor's
-//! identity, so a per-anchor grade is out of reach for a fold and stays
-//! that way (`liveness::room_affords_rest`'s own doc carries the same
-//! warning in capitals — read it before touching either function).
+//! **This module is wired to three callers now, and none of them is the
+//! recovery fold** (fix round 1, F3 — this paragraph was stale, written
+//! before Task 3 landed and never updated). `liveness::room_affords_rest`
+//! delegates to it for the room-level boolean (Task 2); `liveness::
+//! advance_one`'s own `Action::Sleep` arm and `Session::sleep` both call it
+//! at COMMIT time, to learn the `KindId` a new `SLEPT_ON` fact records
+//! (Task 3). What is still true, and is the load-bearing half of this
+//! paragraph: it is deliberately never consulted by the recovery FOLD
+//! itself. That fold re-derives from committed facts, and decision 0069
+//! forbids committing an anchor's identity, so a per-anchor grade is out of
+//! reach for a fold and stays that way (`liveness::room_affords_rest`'s own
+//! doc carries the same warning in capitals — read it before touching
+//! either function).
 
 use crate::affordance::{OfferedVerb, offered_to};
 use crate::body::Body;

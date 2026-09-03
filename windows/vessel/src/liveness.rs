@@ -2532,6 +2532,30 @@ pub const SLEPT: &str = "slept";
 /// in the room offered [`crate::affordance::OfferedVerb::Sleep`] — commits
 /// no `slept-on` fact at all. Absence is the record for the road (spec §4c):
 /// the road is the world's normal case, not an omission to backfill.
+///
+/// **`place` is `None` — a deliberate ruling, not an omission** (fix round
+/// 1, F2). The spec originally asked for a room-granular `place`, but a room
+/// in this codebase has no `EntityId`: it is a `Facet`, and every other
+/// committed `place: Some(...)` names a settlement, community or person
+/// entity — `Fact.place`'s own doc is "the entity where this fact was
+/// observed", and a room is not one. The room is not lost by leaving this
+/// `None`: [`rest_timeline`] already reads a bout's SITE off the
+/// [`AGENT_AT`] timeline by day rather than off the bout fact itself (The
+/// Wicket, Task 10 — see that function's own doc), and a `SLEPT_ON` fact
+/// joins the same way — so the field would carry nothing a reader cannot
+/// already recover.
+/// Filling it with a derived id (`crate::thing::thing_id`, tried in this
+/// task's first pass) would have spent [`crate::thing::thing_role`]'s
+/// declared save-format contract on a value that re-encodes the KIND already
+/// in the object and cannot be inverted back to a room at all — a real
+/// contract, paid for nothing recoverable.
+///
+/// **Nothing reads this predicate yet, and that is deliberate, not
+/// accidental** (fix round 1, F3). Grading a body's outcome on WHICH kind it
+/// found — rather than merely recording that it found one — is the
+/// `per-people` rung this campaign's spec declares and defers; wiring it
+/// into `SiteGrade` or the recovery fold is later-campaign work. A fact
+/// written and never (yet) read is correct here.
 /// type-audit: bare-ok(identifier-text)
 pub const SLEPT_ON: &str = "slept-on";
 
@@ -5926,25 +5950,24 @@ pub(crate) fn slept_fact(
     bout_fact(SLEPT, entity, day, span, provenance)
 }
 
-/// A committed `slept-on` fact: `entity` slept on an anchor of `kind`, within
-/// `room`, on `day` — [`Action::Sleep`]'s SITE (The Pallet, Task 3), the
-/// durable half of [`crate::sleep_site::select_sleep_site`]'s answer.
+/// A committed `slept-on` fact: `entity` slept on an anchor of `kind` on
+/// `day` — [`Action::Sleep`]'s SITE (The Pallet, Task 3), the durable half of
+/// [`crate::sleep_site::select_sleep_site`]'s answer.
 ///
 /// **There is no arm for bare ground.** A caller that got `None` back from
 /// `select_sleep_site` does not call this at all — see [`SLEPT_ON`]'s own
 /// doc for why absence, not a fabricated "ground" kind, is the record.
 ///
-/// **`place` is room-granular, never an anchor's** (decision 0069).
-/// [`crate::thing::thing_id`] derives it purely from `(room, kind)` at
-/// ordinal 0 — the same pure, mint-free derivation every other `thing` in
-/// this crate resolves through, so two same-kind anchors in one room
-/// (Task 2's own tie-break case) resolve to the SAME place. That collapse is
-/// the constitution working as intended, not a loss: nothing this side of an
-/// `AnchorId` may say WHICH bed, only that a bed-kind site was used in this
-/// room.
+/// **`place` is always `None`, and the room is not thereby lost** (fix
+/// round 1, F2) — see [`SLEPT_ON`]'s own doc for the full reasoning (no
+/// `EntityId` for a room exists to put there, and [`rest_timeline`] already
+/// recovers a bout's site off the [`AGENT_AT`] timeline by day, so a room
+/// argument here would be accepted and then discarded). Not a parameter of
+/// this function at all, deliberately: a signature that took `room: &Facet`
+/// and never read it would be exactly the kind of "specified with no
+/// possible caller" a reader would rightly distrust.
 pub(crate) fn slept_on_fact(
     entity: EntityId,
-    room: &Facet,
     kind: KindId,
     day: WorldTime,
     provenance: &str,
@@ -5953,10 +5976,7 @@ pub(crate) fn slept_on_fact(
         subject: entity,
         predicate: SLEPT_ON.to_string(),
         object: Value::Text(kind.0.to_string()),
-        place: Some(
-            crate::thing::thing_id(room, kind.0, 0)
-                .expect("a scheduled room is always within MAX_DEPTH"),
-        ),
+        place: None,
         day: Some(day),
         provenance: provenance.to_string(),
     }
@@ -7373,7 +7393,6 @@ impl<'a> DriveMovements<'a> {
                 {
                     out.push(slept_on_fact(
                         npc.entity,
-                        &st.pos,
                         st.interior.anchor(anchor).kind,
                         st.day,
                         "slept through its off-phase (fatigue eased)",
@@ -17527,17 +17546,16 @@ mod tests {
     /// brief asks for, pinned at the level the fact builder itself owns
     /// rather than the walk that calls it (below).
     #[test]
-    fn slept_on_fact_records_the_kind_and_a_room_granular_place() {
+    fn slept_on_fact_records_the_kind_and_carries_no_place() {
         use crate::interior::Interior;
         use hornvale_thing::kinds;
 
         let mut interior = Interior::new();
         let bed = interior.push(kinds::BED, None);
-        let room = raddr(1.0);
         let entity = npc_id(1);
         let day = WorldTime::from_std_days(3.0).expect("a day value is finite");
 
-        let fact = slept_on_fact(entity, &room, interior.anchor(bed).kind, day, "test");
+        let fact = slept_on_fact(entity, interior.anchor(bed).kind, day, "test");
 
         assert_eq!(fact.subject, entity);
         assert_eq!(fact.predicate, SLEPT_ON);
@@ -17547,12 +17565,12 @@ mod tests {
             "the object carries the KIND's own registered spelling"
         );
         assert_eq!(fact.day, Some(day));
-        // `place` is room-granular (decision 0069): a PURE derivation from
-        // `(room, kind)`, not from `bed`'s own `AnchorId` — so it is stable
-        // across two calls and carries no anchor identity at all.
-        let expected_place = crate::thing::thing_id(&room, "bed", 0)
-            .expect("a scheduled room is always within MAX_DEPTH");
-        assert_eq!(fact.place, Some(expected_place));
+        // `place` is `None` (fix round 1, F2): no `EntityId` exists for a
+        // room in this codebase, and the room is not thereby lost --
+        // `rest_timeline` already recovers a bout's site off the `AGENT_AT`
+        // timeline by day, which this fact joins the same way. See
+        // `SLEPT_ON`'s own doc for the full reasoning.
+        assert_eq!(fact.place, None);
 
         // It commits cleanly once registered, exactly as SLEPT does.
         let mut ledger = Ledger::default();
@@ -17621,8 +17639,8 @@ mod tests {
     /// reachable from this same `(true, true)` composition by
     /// `a_cold_creature_crosses_the_room_to_the_fire`'s own "real
     /// composition" half) commits `SLEPT_ON` for the sleeping body, with the
-    /// KIND `select_sleep_site` found and the SAME room-granular `place`
-    /// `slept_on_fact`'s own unit test predicts.
+    /// KIND `select_sleep_site` found, with a `None` place -- see
+    /// `SLEPT_ON`'s own doc for why (fix round 1, F2).
     #[test]
     fn the_walk_records_the_site_the_body_slept_on() {
         struct BuiltColdTerrain;
@@ -17688,9 +17706,8 @@ mod tests {
             "a body that finds a bed records exactly one site: {facts:?}"
         );
         assert_eq!(site[0].object, Value::Text("bed".to_string()));
-        let expected_place = crate::thing::thing_id(&home, "bed", 0)
-            .expect("a scheduled room is always within MAX_DEPTH");
-        assert_eq!(site[0].place, Some(expected_place));
+        // `place` is `None` (fix round 1, F2) -- see `SLEPT_ON`'s own doc.
+        assert_eq!(site[0].place, None);
         assert_eq!(
             site[0].day, slept[0].day,
             "the site is dated the same instant the body went down"

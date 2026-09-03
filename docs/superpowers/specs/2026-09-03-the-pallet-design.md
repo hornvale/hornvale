@@ -63,6 +63,20 @@ not a fallback.
 anchor offering `OfferedVerb::Sleep`, or `None`. `None` is `SiteGrade::Bare`
 and is the road.
 
+**Forward note, added at Task 3 fix round 1 (F4).** The tie-break among
+several offering anchors is documented at the function itself as "ascending
+`AnchorId` … a placeholder, not a preference" — true when it was written,
+because nothing observable depended on WHICH offering anchor won a tie. Task
+3 changed that without changing the tie-break: `select_sleep_site`'s answer
+now determines a committed fact's object (`SLEPT_ON`'s `KindId`), so once a
+second `SupportsRest` kind exists (`liveness.rs`'s own `room_affords_rest`
+doc names the anticipated case — "`bed` is the only `SupportsRest` carrier
+today, and a future one (a fur, bracken) must need only its registry row"),
+the placeholder tie-break silently becomes the rule that decides which KIND a
+world commits whenever a room offers both. Unobservable today because there
+is exactly one carrier; the next campaign that adds a second one should read
+this before assuming the tie-break is still inert.
+
 ### 4b. The choice MUST be able to be wrong
 
 Nathan: *"a creature sleeping in an unsafe or unrestful place would be a useful
@@ -87,13 +101,22 @@ so no save-format contract moves and no world file changes meaning.
 Registered by the session, exactly as `SLEPT` and `RESTED` are — not at
 genesis.
 
-Two consequences fall out without further work, and they are the argument for
-recording a kind rather than a number:
+One consequence falls out without further work, and it is part of the
+argument for recording a kind rather than a number:
 
 - `windows/historiography` is domain-agnostic by construction — it replays any
   entity's facts against the registry's predicate docs. Narrative is free.
-- `windows/lab/src/health.rs` already reads `SLEPT`; the distress read gains
-  the site with no new plumbing.
+
+**Corrected at Task 3 fix round 1 (F4): the second claimed consequence was
+wrong, and this paragraph used to assert it as fact.** It read
+"`windows/lab/src/health.rs` already reads `SLEPT`; the distress read gains
+the site with no new plumbing" — true of `SLEPT` alone, but `health.rs` does
+not read `SLEPT_ON` and gains nothing from its existence automatically. A
+consumer that wants the site has to be built; nothing in this campaign builds
+one (see `SLEPT_ON`'s own doc in `liveness.rs`: nothing reads the predicate
+yet, deliberately, per-people grading being later-campaign work). Stated here
+because a spec overstating a consumer is exactly how a later campaign
+concludes work is already done when it is not.
 
 ### 4d. The grade becomes `per-species` — the first rung
 
