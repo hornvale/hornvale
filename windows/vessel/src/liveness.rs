@@ -628,6 +628,10 @@ pub struct LocaleTerrain<'a> {
     /// here is not merely undesired but borrow-checker-infeasible without
     /// restructuring `arbitrate` — see the-waymark Task 3's report).
     cache: Option<&'a hornvale_kernel::RoomMeshMemo>,
+    /// The session-owned room memo (The Detent, spec §2.1), if the caller
+    /// has one: `hazards` reads and fills it. `None` is byte-identical to
+    /// `Some` — the memo holds exactly the values the field blend returns.
+    ground: Option<&'a crate::ground::OwnedGround>,
 }
 impl<'a> LocaleTerrain<'a> {
     /// Build the adapter over `ctx` with the fractional-day (Tier-0) sun and no
@@ -641,6 +645,7 @@ impl<'a> LocaleTerrain<'a> {
             prey: None,
             built: None,
             cache: None,
+            ground: None,
         }
     }
     /// Build with the world's `calendar` (if any), so `solar_altitude` (and thus
@@ -659,6 +664,7 @@ impl<'a> LocaleTerrain<'a> {
             prey: None,
             built: None,
             cache: None,
+            ground: None,
         }
     }
     /// Build with the world's `calendar` AND its predator-pressure field (The
@@ -699,7 +705,15 @@ impl<'a> LocaleTerrain<'a> {
             prey,
             built,
             cache,
+            ground: None,
         }
+    }
+    /// [`Self::with_fields`] plus the session's room memo (The Detent).
+    /// Additive: every existing construction site is unchanged and reads
+    /// the field unmemoised.
+    pub fn with_ground(mut self, ground: &'a crate::ground::OwnedGround) -> Self {
+        self.ground = Some(ground);
+        self
     }
 }
 impl<'a> Terrain for LocaleTerrain<'a> {
@@ -751,25 +765,34 @@ impl<'a> Terrain for LocaleTerrain<'a> {
             .unwrap_or(0.0)
     }
     fn hazards(&self, room: &Facet) -> Hazards {
-        // The real climate's per-axis hazard field (The Bane: the uncanny plus
-        // graded heat/cold); an undescribable/above-grid room reads all-zero
-        // (safe) — the never-feared fallback, the dual of `forage_value`'s 0.
-        let (uncanny, heat, cold) = self
-            .ctx
-            .hazards_at_cached(room, self.cache)
-            .unwrap_or((0.0, 0.0, 0.0));
-        // The PREDATOR axis (The Quarry): the injected carnivore-pressure field,
-        // corner-blended per room; `0` where no field is injected or the room is
-        // above the grid.
-        let predator = self
-            .predator
-            .and_then(|field| self.ctx.blend_at_cached(room, field, self.cache))
-            .unwrap_or(0.0);
-        Hazards {
-            uncanny,
-            heat,
-            cold,
-            predator,
+        let compute = || {
+            // The real climate's per-axis hazard field (The Bane: the uncanny
+            // plus graded heat/cold); an undescribable/above-grid room reads
+            // all-zero (safe) — the never-feared fallback, the dual of
+            // `forage_value`'s 0.
+            let (uncanny, heat, cold) = self
+                .ctx
+                .hazards_at_cached(room, self.cache)
+                .unwrap_or((0.0, 0.0, 0.0));
+            // The PREDATOR axis (The Quarry): the injected carnivore-pressure
+            // field, corner-blended per room; `0` where no field is injected
+            // or the room is above the grid.
+            let predator = self
+                .predator
+                .and_then(|field| self.ctx.blend_at_cached(room, field, self.cache))
+                .unwrap_or(0.0);
+            Hazards {
+                uncanny,
+                heat,
+                cold,
+                predator,
+            }
+        };
+        match self.ground {
+            // One guard, dropped before anything else runs: `compute` never
+            // re-enters this memo, so the borrow cannot nest.
+            Some(ground) => ground.borrow_mut().hazards_or_insert_with(room, compute),
+            None => compute(),
         }
     }
     fn prey_value(&self, room: &Facet) -> f64 {
@@ -1212,6 +1235,18 @@ struct EmitterScan {
     alarm_source_rooms: std::collections::BTreeSet<Facet>,
 }
 
+/// Insert `p` and its one-hop neighbourhood into the alarm-source halo — the
+/// rooms an alarm raised at `p` could reach. Lifted out of
+/// [`build_emitter_scan`]'s pass 2, where it was a closure, because the
+/// verdict index now hands the halo its rooms from a borrow of the store and a
+/// closure capturing the set would collide with that borrow.
+fn note_halo(set: &mut std::collections::BTreeSet<Facet>, p: &Facet) {
+    set.insert(p.clone());
+    for n in p.neighbors() {
+        set.insert(n);
+    }
+}
+
 /// Scan `roster` for the members ever on terrain frightening to them (the only
 /// possible alarm emitters), building each one's day-sorted position timeline
 /// (day ≤ `t`) and the union of rooms their alarms could reach. Pure over
@@ -1224,12 +1259,23 @@ struct EmitterScan {
 /// term spec §1 names as this fold's second cost. It now takes two reads off
 /// the caller's resident store (The Pawl, spec §2.4):
 ///
-/// - **which rooms a member has stood in** comes from
+/// - **which rooms a member has stood in** came from
 ///   [`crate::resident::LatestVisit::rooms_at`], which is O(distinct rooms
 ///   visited) rather than O(history). The `ever`/halo test only ever asked
 ///   *whether* a member had stood somewhere frightening and *where*, and both
 ///   are set questions: the old loop walked every sighting and inserted into a
 ///   `BTreeSet`, so re-visits contributed nothing after the first.
+///
+///   **SINCE THE DETENT IT COMES FROM
+///   [`crate::resident::FrighteningGround`] INSTEAD**, and the difference is
+///   the campaign: `rooms_at` gave the DOMAIN and the predicate was then
+///   re-applied to all of it on every call, so the cost was O(distinct rooms)
+///   per member per tick forever. The index judges each room ONCE, advancing
+///   from [`crate::resident::Trail`] by a consumed-prefix cursor, and answers
+///   the same question as a `partition_point` prefix — so the per-tick cost
+///   is O(rooms newly sighted). `rooms_at` is unchanged and still the
+///   statement of what the domain IS; it is simply no longer this function's
+///   read.
 /// - **an emitter's position timeline** comes from
 ///   [`crate::resident::Trail`], sliced to its `day <= t` prefix by binary
 ///   search, and is copied only for the members that turn out to be emitters
@@ -1262,59 +1308,90 @@ fn build_emitter_scan(
     terrain: &dyn Terrain,
     t: WorldTime,
 ) -> EmitterScan {
-    // Pass 1: the rooms each member has stood in by `t`, off the store. The
-    // guard is taken once for the whole pass and dropped before the predicate
-    // runs — not because `terrain` could re-enter the store (it cannot), but
-    // because keeping every borrow to the smallest block that needs it is what
-    // makes the recursion further down this chain safe by construction rather
-    // than by inspection.
-    let visited: Vec<Vec<Facet>> = {
-        let mut store = folds.borrow_mut();
-        let (visits, _) = store.latest_visit_and_trail(ledger);
-        roster
-            .iter()
-            .map(|m| visits.rooms_at(m.entity, t))
-            .collect()
-    };
-
-    // Pass 2: apply the frightening predicate, which needs terrain and each
-    // member's own threat niche — the half no fold can hold.
+    // Pass 1+2, over the VERDICT INDEX (The Detent, spec §2.3). The two
+    // passes are one now: each member's rooms first visited since its last
+    // read are judged ONCE, through the caller's terrain (which carries the
+    // room memo), and the held verdicts answer both `ever` and the halo. The
+    // per-tick work is therefore the rooms newly sighted, not every room every
+    // member has ever stood in.
+    //
+    // **`frightening_at(m, t)` is exactly the old pass's frightening subset.**
+    // The old pass judged `LatestVisit::rooms_at(m, t)` — the rooms whose
+    // FIRST visit is at or before `t` — and `FrighteningGround` orders its
+    // held frightening rooms by first visit, so its `<= t` prefix is that
+    // same domain's frightening half. Same set; the halo is a `BTreeSet`, so
+    // the order they are inserted in cannot show.
+    //
+    // **`home` is judged at every call, as it always was**, and deliberately
+    // is not held in the index: the index is a fold over SIGHTINGS, and a
+    // home is not one. Through the room memo it is one lookup.
+    //
+    // **The store guard is held across the predicate**, which is the one place
+    // this differs from the old pass's "drop before computing" shape. It is
+    // safe for a reason, not by inspection: `judge` reads only `terrain` and
+    // the member, and the room memo has its own `RefCell` (lexicon: a std
+    // interior-mutability type, not a place — `ground.rs` carries the same
+    // waiver on the same type) rather than sharing the store's.
+    // Nothing on this path re-enters the store — that is the emitter loop
+    // further down (`emitter_arousal` -> `affect_of`), which runs outside any
+    // guard, exactly as before.
     let mut alarm_source_rooms: std::collections::BTreeSet<Facet> =
         std::collections::BTreeSet::new();
     let mut is_emitter: Vec<bool> = Vec::with_capacity(roster.len());
-    for (m, rooms) in roster.iter().zip(&visited) {
-        let mettle = mettle_factor(m.boldness);
-        let frightening =
-            |room: &Facet| threat_field(room, &m.threat_niche, terrain) * mettle >= DANGER_ACT;
-        let mut ever = false;
-        let mut note_halo = |p: &Facet| {
-            alarm_source_rooms.insert(p.clone());
-            for n in p.neighbors() {
-                alarm_source_rooms.insert(n);
+    {
+        let mut store = folds.borrow_mut();
+        let (_, trail, ground, witness) = store.latest_visit_trail_and_ground(ledger);
+        for m in roster {
+            // ONE predicate for both callers (spec §2.3): the old scan asked
+            // `threat_field × mettle >= DANGER_ACT` and the emitter-free read
+            // asked `feels_frightening(threat, 0.0, boldness)`, which is that
+            // product CLAMPED to `[0, 1]` against the same threshold. The two
+            // agree at every input — a product above `1.0` clamps to `1.0`,
+            // still above `DANGER_ACT` (0.3), and the product is never
+            // negative — so one index can serve both. That is asserted over a
+            // sweep, not argued: see
+            // `liveness_tests/emitter_scan.rs`'s
+            // `the_scan_predicate_and_the_read_predicate_agree_over_the_whole_range`.
+            let mut frightening = |room: &Facet| {
+                feels_frightening(
+                    threat_field(room, &m.threat_niche, terrain),
+                    0.0,
+                    m.boldness,
+                )
+            };
+            witness.note_ground_judged(ground.advance(
+                m.entity,
+                trail.of(m.entity),
+                &mut frightening,
+            ));
+            let mut ever = frightening(&m.home);
+            if ever {
+                note_halo(&mut alarm_source_rooms, &m.home);
             }
-        };
-        if frightening(&m.home) {
-            ever = true;
-            note_halo(&m.home);
-        }
-        for p in rooms {
-            if frightening(p) {
+            for (_, p) in ground.frightening_at(m.entity, t) {
                 ever = true;
-                note_halo(p);
+                note_halo(&mut alarm_source_rooms, p);
             }
+            is_emitter.push(ever);
         }
-        is_emitter.push(ever);
     }
 
     // Pass 3: copy the timelines of the members that are actually emitters.
+    // Spec §3 rule 4's own witness is taken HERE, at the exact copy the rule
+    // is about (`[..upto].to_vec()`), not inferred from the roster size: a
+    // member's copied prefix can be shorter than its whole trail once a scan
+    // has run before, and rule 4's branch turns on whether that copy GROWS
+    // with history, which only a count taken at the copy itself can show.
     let mut emitters: Vec<(Body, Vec<(WorldTime, Facet)>)> = Vec::new();
     {
         let mut store = folds.borrow_mut();
-        let trail = store.trail(ledger);
+        let (trail, _sustenance_memo, witness) = store.trail_and_witness(ledger);
         for (m, ever) in roster.iter().zip(&is_emitter) {
             if *ever {
                 let upto = trail.prefix_len(m.entity, t);
-                emitters.push((m.clone(), trail.of(m.entity)[..upto].to_vec()));
+                let copied = trail.of(m.entity)[..upto].to_vec();
+                witness.note_emitter_timeline_copied(upto as u64);
+                emitters.push((m.clone(), copied));
             }
         }
     }
@@ -1484,24 +1561,6 @@ pub fn believed_hazard(
     hazard_memory(ledger, folds, npc, t, terrain, roster).shunned
 }
 
-/// [`believed_hazard`] sharing a caller-owned [`PrimaryAfraidMemo`] across the
-/// many re-derivations of a single tick (the whole cost win — see the type doc).
-///
-/// The planner half of [`hazard_memory_memo`]; the transient half is
-/// [`HazardMemory::dread`].
-#[allow(clippy::too_many_arguments)]
-pub fn believed_hazard_memo(
-    ledger: &Ledger,
-    folds: &OwnedFolds,
-    npc: &Body,
-    t: WorldTime,
-    terrain: &dyn Terrain,
-    roster: &[Body],
-    memo: &mut PrimaryAfraidMemo,
-) -> std::collections::BTreeSet<Facet> {
-    hazard_memory_memo(ledger, folds, npc, t, terrain, roster, memo).shunned
-}
-
 /// [`hazard_memory_memo`] with a throwaway memo — a lone read gains nothing
 /// from caching (the hot sim paths thread a shared one).
 pub fn hazard_memory(
@@ -1530,18 +1589,22 @@ pub fn hazard_memory_memo(
     roster: &[Body],
     memo: &mut PrimaryAfraidMemo,
 ) -> HazardMemory {
-    // MOST-RECENT VISIT PER ROOM (day ≤ t), off the resident store: the room is
-    // judged at its LATEST visit, so a later safe visit clears an earlier
-    // phantom (the staleness rule). This used to walk EVERY `agent-at` fact the
-    // creature had ever committed, on every call, to build a map bounded by the
-    // rooms it has stood in — the O(history)-per-tick term spec §1 names as this
-    // fold's first cost. `LatestVisit` holds the same visits indexed by room, so
-    // the read is one `partition_point` per room (spec §2.4).
+    // THE WITNESS, AND NOTHING ELSE. Spec §3 rule 6's witness is taken FIRST,
+    // before any early return, so that every call is counted: the emitter-free
+    // fast path below returns early, and a counter placed after it would
+    // silently measure only the worlds that have an emitter. It asks whether
+    // `t` lies before this entity's last committed sighting, which is the
+    // trail's last entry at O(1) — no per-room map is needed to answer it.
     //
-    // Spec §3 rule 6's witness is taken in the same guard, and FIRST, so that
-    // every call is counted: the emitter-free fast path below returns early, and
-    // a counter placed after it would silently measure only the worlds that have
-    // an emitter.
+    // THE PER-ROOM `latest` MAP IS BUILT BELOW, IN THE EMITTER PATH, AND THAT
+    // PLACEMENT IS THE POINT (The Detent, Task 9c, ledger #7/#8). Spec §2.3
+    // specified the emitter-free read as a PREFIX read over the verdict index;
+    // the map is O(distinct rooms visited), which on a wandering probe is
+    // O(history), so building it here — above the early return — left the
+    // history term on the very path the design had made prefix-bounded. It was
+    // measured at 72–76% of the fold's fitted history slope `k` and moved
+    // below the return; the witness call it used to share a guard with never
+    // needed it.
     //
     // ONE guard, and it is DROPPED before anything below runs. This function
     // recurses — `frightened_at` -> `alarm_at` -> `alarm_field` ->
@@ -1550,16 +1613,20 @@ pub fn hazard_memory_memo(
     // it is a runtime panic rather than a latent one. The shape every read site
     // on this chain uses is the same: borrow, copy out what is needed, drop,
     // then compute.
-    let latest: std::collections::BTreeMap<Facet, WorldTime> = {
+    {
         let mut store = folds.borrow_mut();
-        let (visits, trail, witness) = store.latest_visit_and_witness(ledger);
+        // Only the trail and the witness, through the accessor that hands out
+        // exactly those (the sustenance memo rides along on it and is not this
+        // read's business). `latest_visit_and_witness` used to serve here and
+        // is gone: after the move above, its `&LatestVisit` was discarded at
+        // its only call site, which is the whole of what it was for.
+        let (trail, _sustenance_memo, witness) = store.trail_and_witness(ledger);
         witness.note_hazard(
             npc.entity,
             t,
             trail.of(npc.entity).last().map(|(day, _)| *day),
         );
-        visits.latest_at(npc.entity, t)
-    };
+    }
 
     // The emitter scan (which members could ever raise an alarm, their position
     // timelines, and the rooms any alarm could reach) is IDENTICAL for every
@@ -1589,20 +1656,71 @@ pub fn hazard_memory_memo(
 
     let mut mem = HazardMemory::default();
     if scan.emitters.is_empty() {
-        // The emitter-free common case (every settled world): no transient alarm
-        // is possible, so the verdict is The Haunt's terrain-only `frightened_at`
-        // (the one source of truth for the formula). Terrain is time-invariant,
-        // so the most-recent-visit rule collapses to any-visit — byte-identical.
-        // It is also why `dread` is empty on every settled world: this returns
-        // BEFORE any dread is ever recorded, so byte-identity costs not one
-        // instruction.
-        for (room, day) in latest {
-            if frightened_at(&room, npc, terrain, day, &[], ledger, folds) {
-                mem.shunned.insert(room);
-            }
+        // The emitter-free common case (every settled world), over the VERDICT
+        // INDEX (The Detent, spec §2.3). No transient alarm is possible here,
+        // so the verdict is The Haunt's terrain-only one: `frightened_at` over
+        // an EMPTY roster short-circuits `alarm_at` to `0.0`, leaving
+        // `feels_frightening(threat_field(room), 0.0, boldness)` — a function
+        // of `(room, threat_niche, boldness, terrain)` and of nothing else,
+        // the DAY included. That is what makes the index legitimate here: the
+        // verdict it holds is the whole verdict.
+        //
+        // With terrain time-invariant, "some visit at or before `t` was
+        // frightening" is "the room's FIRST visit is at or before `t` and the
+        // room is frightening", which is exactly the index's prefix at `t`.
+        // The old loop walked `latest` — the most-recent visit per room with
+        // day <= t — whose room set is `rooms_at(npc, t)`, the same domain.
+        // Same set, same order (a `BTreeSet` sorts on insert), same verdict
+        // per room. It is also still why `dread` is empty on every settled
+        // world: this returns BEFORE any dread is recorded.
+        //
+        // The guard is held across the predicate for `build_emitter_scan`'s
+        // reason, stated there: `judge` reads terrain and the creature, never
+        // the store. The recursion that forbids a held guard is the EMITTER
+        // loop below, which is outside every guard, unchanged.
+        let mut store = folds.borrow_mut();
+        let (_, trail, ground, witness) = store.latest_visit_trail_and_ground(ledger);
+        let mut frightening = |room: &Facet| {
+            feels_frightening(
+                threat_field(room, &npc.threat_niche, terrain),
+                0.0,
+                npc.boldness,
+            )
+        };
+        witness.note_ground_judged(ground.advance(
+            npc.entity,
+            trail.of(npc.entity),
+            &mut frightening,
+        ));
+        for (_, room) in ground.frightening_at(npc.entity, t) {
+            mem.shunned.insert(room.clone());
         }
         return mem;
     }
+    // MOST-RECENT VISIT PER ROOM (day ≤ t), off the resident store: the room is
+    // judged at its LATEST visit, so a later safe visit clears an earlier
+    // phantom (the staleness rule). This used to walk EVERY `agent-at` fact the
+    // creature had ever committed, on every call, to build a map bounded by the
+    // rooms it has stood in — the O(history)-per-tick term spec §1 names as this
+    // fold's first cost. `LatestVisit` holds the same visits indexed by room, so
+    // the read is one `partition_point` per room (spec §2.4).
+    //
+    // THIS MAP SERVES THE EMITTER PATH ALONE, and since Task 9c it is built
+    // only on that path. The emitter-free early return above reads the verdict
+    // index instead, which needs no per-room latest visit: with an empty roster
+    // the alarm term is `0.0` at every day, so the most-recent-visit rule has
+    // nothing to discriminate and collapses to any-visit. The fold below is
+    // unchanged — same map, same order, same arithmetic; only the point at
+    // which it is built moved.
+    //
+    // Its own guard, taken here and DROPPED at the end of this block, for the
+    // recursion reason stated above: the emitter loop that follows re-enters
+    // this store through `emitter_arousal`.
+    let latest: std::collections::BTreeMap<Facet, WorldTime> = {
+        let mut store = folds.borrow_mut();
+        store.latest_visit(ledger).latest_at(npc.entity, t)
+    };
+
     for (room, day) in latest {
         let terrain_threat = threat_field(&room, &npc.threat_niche, terrain);
         // THE TERRAIN SHORTCUT (free win): if TERRAIN alone already frightens the
@@ -4228,6 +4346,11 @@ fn threat_field(room: &Facet, niche: &ThreatNiche, terrain: &dyn Terrain) -> f64
 /// internal `affect_of` passes an EMPTY band, which threads through
 /// `believed_hazard` → `frightened_at` → here as an empty roster, so the field
 /// build sees a terrain-only replay and never re-enters the transient path.
+///
+/// **Production-dead since The Detent**, for [`frightened_at`]'s reason and
+/// with it: this function's only caller was that one, and `#[cfg(test)]`
+/// follows it down.
+#[cfg(test)]
 fn alarm_at(
     room: &Facet,
     day: WorldTime,
@@ -4255,7 +4378,23 @@ fn alarm_at(
 /// recovered long after the alarm itself has died. An EMPTY `roster` collapses
 /// this to The Haunt's terrain-only verdict (the recursion base case / the
 /// seed-42 path, where no primary-afraid emitter ever raises an alarm).
+///
+/// # PRODUCTION-DEAD SINCE THE DETENT, AND GATED RATHER THAN LEFT UN-GATED
+///
+/// The hazard fold's emitter-free path used to call this once per remembered
+/// room; it now reads the verdict index, which holds the SAME verdict
+/// (`feels_frightening(threat_field, 0.0, boldness)` — this function's own
+/// empty-roster case, since [`alarm_at`] short-circuits an empty roster to
+/// `0.0`) instead of re-deriving it. The emitter path never called this: it
+/// composes `feels_frightening` with its own re-derived alarm directly. So the
+/// only remaining callers are TESTS — including
+/// `liveness_tests/emitter_scan.rs`'s `emitter_free_oracle`, which is exactly
+/// the copy of the old loop that pins the index against it. `#[cfg(test)]` for
+/// `last_fact_day_at_or_before`'s reason, stated there: a production-dead
+/// function that still compiles into the library reads as a live path to the
+/// next person.
 #[allow(clippy::too_many_arguments)]
+#[cfg(test)]
 fn frightened_at(
     room: &Facet,
     npc: &Body,
@@ -8340,6 +8479,14 @@ impl Occupancy {
     }
 }
 
+/// The fear path's FOLD-equals-SCAN oracles (The Detent, spec §5). Its own
+/// FILE rather than another `mod tests` block here, which is the achievable
+/// half of `TOOL-emitter-scan-tests-out-of-liveness` — see the module doc for
+/// why the other half (moving it to `tests/suite/`) is not.
+#[cfg(test)]
+#[path = "liveness_tests/emitter_scan.rs"]
+mod emitter_scan_tests;
+
 #[cfg(test)]
 mod tests {
     // Test fixture (decision 0092): calls the sculpt/fit derivation entry
@@ -8363,7 +8510,7 @@ mod tests {
     /// instead, because there the point is the cost rather than the value.
     /// It is a helper rather than the expression written out dozens of times
     /// because that would be dozens of places to change.
-    fn test_folds() -> crate::resident::OwnedFolds {
+    pub(super) fn test_folds() -> crate::resident::OwnedFolds {
         crate::resident::OwnedFolds::new(crate::resident::ResidentFolds::new())
     }
 
@@ -8451,7 +8598,7 @@ mod tests {
     }
 
     /// Commit an `agent-at` fact placing `entity` at `room` on `day`.
-    fn commit_agent_at(
+    pub(super) fn commit_agent_at(
         ledger: &mut Ledger,
         reg: &ConceptRegistry,
         entity: EntityId,
@@ -8477,7 +8624,7 @@ mod tests {
     }
 
     /// A registry with just `AGENT_AT` registered, for the belief-fold tests.
-    fn agent_at_reg() -> ConceptRegistry {
+    pub(super) fn agent_at_reg() -> ConceptRegistry {
         let mut reg = ConceptRegistry::default();
         reg.register_predicate(AGENT_AT, false, "pos").unwrap();
         reg
@@ -8877,7 +9024,7 @@ mod tests {
     /// A steady mortal NPC for the believed_hazard folds — the default mortal
     /// threat niche weights UNCANNY `1`, so a planted UNCANNY hazard reads as
     /// felt threat directly, and steady boldness (`0.5`) leaves it unscaled.
-    fn haunt_npc(entity: EntityId, home: Facet) -> Body {
+    pub(super) fn haunt_npc(entity: EntityId, home: Facet) -> Body {
         Body {
             entity,
             village: None,
@@ -9388,220 +9535,6 @@ mod tests {
                 "the mild room never frightens on day {day}"
             );
         }
-    }
-
-    /// The old scan's emitter list: each ever-terrain-afraid member with its
-    /// day-sorted `f64` timeline, exactly as `EmitterScan` held it before this
-    /// campaign. Named only because the tuple is too wide to spell inline.
-    type OracleEmitters = Vec<(Body, Vec<(f64, Facet)>)>;
-
-    /// A VERBATIM COPY of the OLD `build_emitter_scan` body — the SCAN half of
-    /// the emitter scan's equivalence, before it read the resident store.
-    ///
-    /// Copied rather than called, the same rule every other oracle in this
-    /// campaign follows (spec §5, and the pre-flight ruling in the campaign
-    /// ledger): the production body is gone, so this is the only statement of
-    /// the old one left, and an oracle sharing code with the thing under test
-    /// cannot falsify it.
-    fn emitter_scan_oracle(
-        roster: &[Body],
-        ledger: &Ledger,
-        terrain: &dyn Terrain,
-        t: WorldTime,
-    ) -> (OracleEmitters, std::collections::BTreeSet<Facet>) {
-        let mut emitters: Vec<(Body, Vec<(f64, Facet)>)> = Vec::new();
-        let mut alarm_source_rooms: std::collections::BTreeSet<Facet> =
-            std::collections::BTreeSet::new();
-        for m in roster {
-            let mettle = mettle_factor(m.boldness);
-            let frightening =
-                |room: &Facet| threat_field(room, &m.threat_niche, terrain) * mettle >= DANGER_ACT;
-            let mut timeline: Vec<(f64, Facet)> = ledger
-                .facts_of(m.entity, AGENT_AT)
-                .filter_map(|f| {
-                    let d = f.day.filter(|d| *d <= t)?.as_std_days();
-                    match &f.object {
-                        Value::Text(s) => Some((d, room_from_text(s))),
-                        _ => None,
-                    }
-                })
-                .collect();
-            timeline.sort_by(|a, b| a.0.total_cmp(&b.0));
-            let mut ever = false;
-            let mut note_halo = |p: &Facet| {
-                alarm_source_rooms.insert(p.clone());
-                for n in p.neighbors() {
-                    alarm_source_rooms.insert(n);
-                }
-            };
-            if frightening(&m.home) {
-                ever = true;
-                note_halo(&m.home);
-            }
-            for (_, p) in &timeline {
-                if frightening(p) {
-                    ever = true;
-                    note_halo(p);
-                }
-            }
-            if ever {
-                emitters.push((m.clone(), timeline));
-            }
-        }
-        (emitters, alarm_source_rooms)
-    }
-
-    /// The OLD `position_at`, copied for the same reason — it reads an `f64`
-    /// timeline where the production one now reads `Trail`'s ticks.
-    fn position_at_oracle(m: &Body, timeline: &[(f64, Facet)], day: f64) -> Facet {
-        let idx = timeline.partition_point(|(d, _)| *d <= day);
-        if idx == 0 {
-            m.home.clone()
-        } else {
-            timeline[idx - 1].1.clone()
-        }
-    }
-
-    /// A roster ledger with THREE members, walking rooms of both kinds, with
-    /// strictly increasing days per member — the shape a real walk commits
-    /// (`clock::cost_of` floors at one tick, so a walker's sightings never
-    /// share an instant; measured in
-    /// `windows/vessel/tests/suite/resident_folds.rs`'s
-    /// `the_walk_never_commits_two_sightings_of_one_entity_at_one_instant`).
-    ///
-    /// Returns the roster, the ledger and the terrain. The middle member never
-    /// stands anywhere frightening, so the `ever` test is exercised in BOTH
-    /// directions — an oracle and a production scan that both returned every
-    /// member would agree vacuously.
-    fn emitter_scan_fixture() -> (Vec<Body>, Ledger, PlantedTerrain) {
-        let reg = agent_at_reg();
-        let mut ledger = Ledger::default();
-        let (d_room, hazard, x) = phantom_triple();
-        let terrain = PlantedTerrain::hazard(std::iter::empty(), [(hazard.clone(), 0.8)]);
-
-        // A: walks onto the hazard and off again, revisiting one room.
-        let a_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
-        let a = haunt_npc(a_e, x.clone());
-        commit_agent_at(&mut ledger, &reg, a_e, &d_room, 0.5);
-        commit_agent_at(&mut ledger, &reg, a_e, &hazard, 1.5);
-        commit_agent_at(&mut ledger, &reg, a_e, &d_room, 2.5);
-        commit_agent_at(&mut ledger, &reg, a_e, &x, 7.5);
-
-        // B: never leaves safe ground, and its home is safe — never an emitter.
-        // NOT `d_room`: `threat_field` is the maximum over a room AND its
-        // neighbours, and `d_room` is one hop from the hazard, so standing
-        // there frightens. (That is what makes `d_room` an alarm SOURCE for A
-        // above; putting B there made every member of the fixture an emitter
-        // and the equivalence below vacuous.)
-        let far = raddr(-1.0);
-        let b_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
-        let b = haunt_npc(b_e, x.clone());
-        commit_agent_at(&mut ledger, &reg, b_e, &x, 0.5);
-        commit_agent_at(&mut ledger, &reg, b_e, &far, 3.5);
-        commit_agent_at(&mut ledger, &reg, b_e, &x, 5.5);
-
-        // C: never committed a sighting at all, but LIVES on the hazard — the
-        // `frightening(&m.home)` arm, which the timeline loop cannot reach.
-        let c_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
-        let c = haunt_npc(c_e, hazard.clone());
-
-        (vec![a, b, c], ledger, terrain)
-    }
-
-    #[test]
-    fn the_emitter_scan_fixture_separates_emitters_from_non_emitters() {
-        // The anti-vacuity guard: if every member (or none) were an emitter,
-        // the equivalence below would hold for a scan that ignored terrain.
-        let (roster, ledger, terrain) = emitter_scan_fixture();
-        let t = WorldTime::from_std_days(10.0).expect("a day value is finite");
-        let (emitters, rooms) = emitter_scan_oracle(&roster, &ledger, &terrain, t);
-        assert_eq!(
-            emitters.len(),
-            2,
-            "the fixture must hold both emitters and non-emitters: {} of {} members emit",
-            emitters.len(),
-            roster.len()
-        );
-        assert!(
-            !rooms.is_empty(),
-            "the fixture must produce a non-empty alarm halo, or the set comparison below \
-             compares two empty sets"
-        );
-    }
-
-    #[test]
-    fn the_emitter_scan_read_off_the_store_equals_the_old_ledger_scan() {
-        let (roster, ledger, terrain) = emitter_scan_fixture();
-        // Every instant the fixture can distinguish, and the ones either side.
-        let mut instants: Vec<WorldTime> = Vec::new();
-        for f in ledger.iter() {
-            if let Some(d) = f.day {
-                for delta in [-1_i64, 0, 1] {
-                    instants.push(WorldTime::from_ticks(d.ticks() + delta));
-                }
-            }
-        }
-        instants.push(WorldTime::GENESIS);
-        instants.push(WorldTime::from_std_days(100.0).expect("a day value is finite"));
-        instants.sort();
-        instants.dedup();
-
-        let mut compared = 0_u64;
-        let mut non_empty_scans = 0_u64;
-        for t in &instants {
-            let folds = test_folds();
-            let got = build_emitter_scan(&roster, &ledger, &folds, &terrain, *t);
-            let (want_emitters, want_rooms) = emitter_scan_oracle(&roster, &ledger, &terrain, *t);
-
-            assert_eq!(
-                got.alarm_source_rooms, want_rooms,
-                "the alarm halo at {t:?} must equal the old ledger scan's"
-            );
-            assert_eq!(
-                got.emitters
-                    .iter()
-                    .map(|(m, _)| m.entity)
-                    .collect::<Vec<_>>(),
-                want_emitters
-                    .iter()
-                    .map(|(m, _)| m.entity)
-                    .collect::<Vec<_>>(),
-                "the emitter roster at {t:?} must equal the old ledger scan's, in order"
-            );
-            if !got.emitters.is_empty() {
-                non_empty_scans += 1;
-            }
-
-            // And `position_at` must answer identically at every instant, for
-            // every emitter — the read the timeline exists for.
-            for ((m, new_tl), (om, old_tl)) in got.emitters.iter().zip(want_emitters.iter()) {
-                assert_eq!(m.entity, om.entity);
-                for q in &instants {
-                    let idx = new_tl.partition_point(|(d, _)| *d <= *q);
-                    let new_pos = if idx == 0 {
-                        m.home.clone()
-                    } else {
-                        new_tl[idx - 1].1.clone()
-                    };
-                    let old_pos = position_at_oracle(om, old_tl, q.as_std_days());
-                    assert_eq!(
-                        new_pos, old_pos,
-                        "the emitter {:?}'s position at {q:?} (scan built at {t:?}) must \
-                         equal the old timeline's",
-                        m.entity
-                    );
-                    compared += 1;
-                }
-            }
-        }
-        assert!(
-            non_empty_scans > 0,
-            "no instant produced an emitter, so no `position_at` answer was compared"
-        );
-        assert!(
-            compared >= 100,
-            "the sweep must make a real number of position comparisons: {compared}"
-        );
     }
 
     /// Spec §3 rule 5, executed: a creature's DREAD of a room depends on an
@@ -11905,7 +11838,7 @@ mod tests {
         assert_eq!(decide(&away_not_thirsty, &home, &p, 0), Intent::Hold);
     }
 
-    fn raddr(seed: f64) -> Facet {
+    pub(super) fn raddr(seed: f64) -> Facet {
         Facet::containing([seed, 0.0, 0.0], 6)
     }
 
@@ -13684,7 +13617,7 @@ mod tests {
     /// SET of fresh-water rooms (the-surmise T5 re-wire: water is no longer
     /// an elevation threshold — `Terrain::is_fresh_water` is authoritative).
     #[derive(Default)]
-    struct PlantedTerrain {
+    pub(super) struct PlantedTerrain {
         elevations: std::collections::BTreeMap<Facet, f64>,
         fresh: std::collections::BTreeSet<Facet>,
         /// Planted per-room temperatures (°C) for the thermal-drive tests;
@@ -13747,7 +13680,7 @@ mod tests {
         /// to prove routing). Rooms without an entry read `Hazards::ZERO` (safe).
         /// A mortal threat niche weights UNCANNY `1`, so a scalar `s` reads as
         /// felt threat `s` — the pre-Bane danger tests stay byte-identical.
-        fn hazard(
+        pub(super) fn hazard(
             fresh: impl IntoIterator<Item = Facet>,
             threat: impl IntoIterator<Item = (Facet, f64)>,
         ) -> Self {
@@ -13927,7 +13860,7 @@ mod tests {
     /// a hazard beside `d`, so an emitter standing at `d` is primary-afraid;
     /// `x` is a room beside `d` (inside the emitter's one-hop alarm halo) that
     /// is neither `e` nor adjacent to it, so its own terrain frightens nobody.
-    fn phantom_triple() -> (Facet, Facet, Facet) {
+    pub(super) fn phantom_triple() -> (Facet, Facet, Facet) {
         let d = raddr(1.0);
         let ns = d.neighbors();
         let hazard = ns[0].clone();

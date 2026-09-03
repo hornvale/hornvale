@@ -304,3 +304,6 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0618](0618-a-descent-key-makes-the-plan-a-save-format-contract.md) | A descent key's identity is a plan position, so the plan grammar is a save-format contract | Accepted |
 | [0619](0619-the-drop-is-a-stairway-with-its-up-half-omitted.md) | The drop is a stairway with its up half omitted, and `Fly` is its key | Accepted |
 | [0620](0620-the-cycle-pattern-inventory-is-a-frozen-corpus.md) | The cycle-pattern inventory is a frozen corpus of nine rows, and solvability for a body holding nothing is the invariant | Accepted |
+| [0626](0626-a-terrain-verdict-is-held-for-the-session-keyed-by-room.md) | A terrain verdict is held for the session, keyed by room, with its terrain's identity supplied by ownership | Accepted |
+| [0627](0627-the-emitter-scan-advances-through-a-read-side-verdict-index.md) | The emitter scan advances over new sightings through a read-side verdict index, and is still not a tenant | Accepted |
+| [0628](0628-a-registry-rows-mechanism-is-a-count-not-a-reading.md) | A registry row's mechanism is a count, not a reading | Accepted |

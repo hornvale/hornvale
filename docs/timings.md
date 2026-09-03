@@ -5069,6 +5069,22 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-02T18:31:05Z | sluice:gate | 651.654 | 19767.212 | 577.014 | 31.22 | 0 | f3f932d58 |  | lefford | 40 |
 | 2026-09-02T18:33:10Z | sluice:clients | 124.648 | 2010.378 | 192.966 | 17.68 | 0 | ac3c8af1e |  | lefford | 40 |
 | 2026-09-02T18:40:48Z | sluice:heavy | 457.893 | 9776.031 | 169.251 | 21.72 | 0 | e96dfba9d |  | lefford | 40 |
+| 2026-09-02T19:36:17Z | gate-commit | 150.247 | 883.367 | 65.112 | 6.31 | 0 | 58ccb3f8e | campaign/the-detent | MacBookPro | 10 |
+| 2026-09-02T19:44:53Z | gate-commit | 33.615 | 67.025 | 23.561 | 2.69 | 0 | 81b753941 | campaign/the-detent | MacBookPro | 10 |
+| 2026-09-02T19:49:09Z | gate-commit | 26.277 | 57.958 | 14.730 | 2.77 | 0 | 860ffedeb | campaign/the-detent | MacBookPro | 10 |
+| 2026-09-02T19:57:53Z | gate-commit | 40.040 | 107.031 | 23.182 | 3.25 | 0 | 289cd3477 | campaign/the-detent | MacBookPro | 10 |
+| 2026-09-02T20:06:01Z | gate-commit | 26.197 | 57.747 | 14.641 | 2.76 | 0 | 06660be93 | campaign/the-detent | MacBookPro | 10 |
+| 2026-09-02T20:24:52Z | gate-commit | 59.539 | 260.428 | 27.261 | 4.83 | 0 | 60c2021a8 | campaign/the-detent | MacBookPro | 10 |
+| 2026-09-02T20:34:50Z | gate-commit | 26.537 | 58.412 | 14.714 | 2.76 | 0 | 66c5bc5b6 | campaign/the-detent | MacBookPro | 10 |
+| 2026-09-02T20:43:32Z | gate-commit | 60.522 | 278.642 | 27.844 | 5.06 | 0 | 062811a20 | campaign/the-detent | MacBookPro | 10 |
+| 2026-09-02T20:48:09Z | gate-commit | 32.005 | 66.432 | 22.364 | 2.77 | 0 | 21c7672e4 | campaign/the-detent | MacBookPro | 10 |
+| 2026-09-02T21:32:52Z | gate-commit | 41.003 | 131.509 | 18.640 | 3.66 | 0 | b90d56b56 | campaign/the-detent | MacBookPro | 10 |
+| 2026-09-02T21:33:49Z | gate-commit | 35.414 | 59.682 | 13.474 | 2.07 | 0 | b90d56b56 | campaign/the-detent | MacBookPro | 10 |
+| 2026-09-02T21:36:15Z | gate-commit | 79.904 | 201.400 | 30.104 | 2.90 | 0 | b90d56b56 | campaign/the-detent | MacBookPro | 10 |
+| 2026-09-02T22:01:25Z | gate-commit | 32.338 | 65.165 | 19.984 | 2.63 | 0 | 2acc50da4 | campaign/the-detent | MacBookPro | 10 |
+| 2026-09-02T22:19:19Z | gate-commit | 90.539 | 92.180 | 24.696 | 1.29 | 0 | a7efdbe04 | campaign/the-detent | MacBookPro | 10 |
+| 2026-09-02T22:52:50Z | gate-commit | 62.155 | 254.756 | 47.777 | 4.87 | 0 | ac77519df | campaign/the-detent | MacBookPro | 10 |
+| 2026-09-02T22:53:35Z | gate-commit | 26.390 | 57.694 | 14.556 | 2.74 | 0 | ac77519df | campaign/the-detent | MacBookPro | 10 |
 | 2026-09-02T19:07:48Z | rebaseline | 114.611 | 325.862 | 16.733 | 2.99 | 0 | 23acb7a25 | campaign/the-rack | MacBookPro | 10 |
 | 2026-09-02T19:17:33Z | game-check | 99.535 | 627.296 | 26.519 | 6.57 | 0 | 23acb7a25 | campaign/the-rack | MacBookPro | 10 |
 | 2026-09-02T19:19:39Z | gate-commit | 60.441 | 247.995 | 31.424 | 4.62 | 0 | 23acb7a25 | campaign/the-rack | MacBookPro | 10 |
@@ -5103,6 +5119,9 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-02T22:20:19Z | sluice:gate | 636.635 | 18508.987 | 559.437 | 29.95 | 0 | 1d041732d |  | lefford | 40 |
 | 2026-09-02T22:22:25Z | sluice:clients | 125.079 | 2022.396 | 203.990 | 17.80 | 0 | 4589f0976 |  | lefford | 40 |
 | 2026-09-02T22:29:59Z | sluice:heavy | 453.518 | 9629.811 | 152.507 | 21.57 | 0 | 4aed580fe |  | lefford | 40 |
+| 2026-09-02T23:13:06Z | gate-commit | 96.203 | 277.324 | 44.442 | 3.34 | 0 | 11d214d80 | campaign/the-detent | MacBookPro | 10 |
+| 2026-09-03T00:57:49Z | gate-commit | 26.954 | 60.092 | 14.633 | 2.77 | 0 | 5bf12d8ef | campaign/the-detent | MacBookPro | 10 |
+| 2026-09-03T01:18:53Z | gate-commit | 31.244 | 65.083 | 21.321 | 2.77 | 0 | 3f181159c | campaign/the-detent | MacBookPro | 10 |
 | 2026-09-02T22:57:56Z | sluice:artifacts | 76.463 | 694.011 | 24.882 | 9.40 | 0 | 20e5d70c2 |  | lefford | 40 |
 | 2026-09-02T22:58:54Z | sluice:outboard | 57.759 | 34.363 | 45.619 | 1.38 | 0 | de6d0e9d5 |  | lefford | 40 |
 | 2026-09-02T23:08:32Z | sluice:gate | 578.194 | 17321.365 | 456.167 | 30.75 | 0 | c6f34f598 |  | lefford | 40 |
@@ -5162,3 +5181,20 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-03T07:26:39Z | gate-commit | 67.072 | 51.820 | 16.236 | 1.01 | 0 | 412567460 | campaign/the-brattice | ambrose | 12 |
 | 2026-09-03T07:28:03Z | gate-commit | 67.072 | 51.780 | 16.113 | 1.01 | 0 | 412567460 | campaign/the-brattice | ambrose | 12 |
 | 2026-09-03T07:47:31Z | census | 973.508 | 28111.386 | 324.126 | 29.21 | 0 | cccfcdad9 |  | lefford | 40 |
+| 2026-09-03T07:54:23Z | gate-commit | 179.129 | 2880.638 | 236.564 | 17.40 | 0 | a712371dc | main | lefford | 40 |
+| 2026-09-03T07:57:52Z | sluice:artifacts | 158.303 | 1825.045 | 82.538 | 12.05 | 0 | d3a688dea |  | lefford | 40 |
+| 2026-09-03T07:58:52Z | sluice:outboard | 58.729 | 34.119 | 46.605 | 1.37 | 0 | b3065a395 |  | lefford | 40 |
+| 2026-09-03T08:09:55Z | sluice:gate | 663.331 | 19087.994 | 577.331 | 29.65 | 0 | 5b332706b |  | lefford | 40 |
+| 2026-09-03T08:12:07Z | sluice:clients | 131.455 | 2053.208 | 173.771 | 16.94 | 0 | 78cf59b2d |  | lefford | 40 |
+| 2026-09-03T08:19:24Z | sluice:heavy | 437.002 | 9643.982 | 157.916 | 22.43 | 0 | 40bb3a557 |  | lefford | 40 |
+| 2026-09-03T02:51:44Z | rebaseline | 85.490 | 288.330 | 14.744 | 3.55 | 0 | 1c2f8a4a0 | campaign/the-detent | MacBookPro | 10 |
+| 2026-09-03T02:55:14Z | gate-commit | 101.502 | 559.371 | 45.789 | 5.96 | 0 | 1c2f8a4a0 | campaign/the-detent | MacBookPro | 10 |
+| 2026-09-03T03:06:59Z | gate-commit | 52.672 | 173.274 | 27.417 | 3.81 | 0 | 6169d31ee | campaign/the-detent | MacBookPro | 10 |
+| 2026-09-03T03:09:56Z | gate-commit | 33.964 | 65.790 | 14.517 | 2.36 | 0 | 3e0549234 | campaign/the-detent | MacBookPro | 10 |
+| 2026-09-03T03:40:41Z | gate-commit | 32.816 | 64.797 | 14.516 | 2.42 | 0 | 4d83db4b3 | campaign/the-detent | MacBookPro | 10 |
+| 2026-09-03T09:20:35Z | sluice:artifacts | 160.482 | 1600.517 | 85.844 | 10.51 | 0 | d655b53b2 |  | lefford | 40 |
+| 2026-09-03T09:21:44Z | sluice:outboard | 67.987 | 39.675 | 53.761 | 1.37 | 0 | e4b8080cd |  | lefford | 40 |
+| 2026-09-03T09:32:38Z | sluice:gate | 654.242 | 18829.210 | 583.941 | 29.67 | 0 | 7f318b35c |  | lefford | 40 |
+| 2026-09-03T09:34:46Z | sluice:clients | 127.477 | 2059.247 | 201.623 | 17.74 | 0 | bbea7d34f |  | lefford | 40 |
+| 2026-09-03T09:42:18Z | sluice:heavy | 451.605 | 9705.995 | 149.448 | 21.82 | 0 | ac1177783 |  | lefford | 40 |
+| 2026-09-03T10:11:40Z | rebaseline | 1047.945 | 454.665 | 38.894 | 0.47 | 0 | 8a5c56189 | campaign/the-brattice | ambrose | 12 |

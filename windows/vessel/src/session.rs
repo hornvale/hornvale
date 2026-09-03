@@ -1034,6 +1034,12 @@ pub struct Session<'w> {
     /// [`crate::liveness::hazard_memory_memo`] together with the emitter
     /// chain behind the fear path.
     folds: crate::resident::OwnedFolds,
+    /// The session-lived room memo (The Detent, spec §2.1): what the terrain
+    /// determines about a room, held for the session and read by every
+    /// `LocaleTerrain` this session builds. World-derived, never serialized,
+    /// discardable at any instant. One per `(LocaleContext, predator field)`,
+    /// which this session owns both of.
+    ground: crate::ground::OwnedGround,
     /// Every drive this body's own arbitration wanted and did not pursue,
     /// counted across the WHOLE possession (The Reticence, Task 2) — unlike
     /// the roster's `felt` column, whose `suppressed` is a per-decision read
@@ -1863,6 +1869,12 @@ impl<'w> Session<'w> {
         // rebuild The Pawl exists to remove (its spec §2.2 refuses exactly that
         // on the read path). Moved into the session's `folds` field unchanged.
         let folds = crate::resident::OwnedFolds::new(crate::resident::ResidentFolds::new());
+        // The Detent's session-lived room memo, built HERE for the same reason
+        // `folds` is: the `felt` seeding below reads terrain, and it should
+        // read it through the memo the session will go on holding rather than
+        // through a throwaway. Moved into the session's `ground` field
+        // unchanged.
+        let ground = crate::ground::OwnedGround::new(crate::ground::GroundHazards::new());
         {
             let seed_terrain = LocaleTerrain::with_fields(
                 ctx,
@@ -1871,7 +1883,8 @@ impl<'w> Session<'w> {
                 prey.as_ref(),
                 Some(&built),
                 Some(&mesh_memo),
-            );
+            )
+            .with_ground(&ground);
             let mut afraid_memo = PrimaryAfraidMemo::new();
             let mut seed_mesh_memo = hornvale_kernel::RoomMeshMemo::new();
             // The band is the whole derived roster — computed against
@@ -1925,6 +1938,7 @@ impl<'w> Session<'w> {
             mesh_memo,
             home_nav_cache: HomeNavCache::new(),
             folds,
+            ground,
             driven_overrides: std::collections::BTreeMap::new(),
             settlement_rooms,
             herd_rooms,
@@ -2202,7 +2216,8 @@ impl<'w> Session<'w> {
             // holds (free — no mutation), the same posture `terrain_here`
             // takes.
             Some(&self.mesh_memo),
-        );
+        )
+        .with_ground(&self.ground);
         // The band the pushes are about to produce: the roster as it stands,
         // plus everyone arriving in this batch. An owned vector rather than a
         // borrow of `self.roster.bodies()`, because the arrivals are not in
@@ -3065,7 +3080,8 @@ impl<'w> Session<'w> {
             self.prey.as_ref(),
             Some(&self.built),
             Some(&self.mesh_memo),
-        );
+        )
+        .with_ground(&self.ground);
         let mut memo = PrimaryAfraidMemo::new();
         // `bodies` is the ROSTER's `body` column now (The Rack, spec §3.1), not
         // a `Vec<Body>` field — the accessor answers exactly what the field did.
@@ -3107,6 +3123,31 @@ impl<'w> Session<'w> {
     /// type-audit: bare-ok(count: return)
     pub fn resident_alarm_replays(&self) -> u64 {
         self.folds.borrow().witness().alarm_replays()
+    }
+
+    /// Rooms the session's room memo holds.
+    /// type-audit: bare-ok(count: return)
+    pub fn resident_ground_len(&self) -> usize {
+        self.ground.borrow().len()
+    }
+
+    /// Room-memo reads served without a field sample, ever.
+    /// type-audit: bare-ok(count: return)
+    pub fn resident_ground_hits(&self) -> u64 {
+        self.ground.borrow().hits()
+    }
+
+    /// Room-memo reads that sampled the field, ever.
+    /// type-audit: bare-ok(count: return)
+    pub fn resident_ground_misses(&self) -> u64 {
+        self.ground.borrow().misses()
+    }
+
+    /// Every entity's judged-room count summed, held by the session's
+    /// frightening-verdict index — M1's second entry count (spec §4).
+    /// type-audit: bare-ok(count: return)
+    pub fn resident_ground_judged_entries(&self) -> usize {
+        self.folds.borrow().frightening_ground().entries()
     }
 
     /// How many unfiltered reset lookups this session has made — the
@@ -7154,6 +7195,12 @@ impl<'w> Session<'w> {
             // holds (free — no mutation), same posture as `snapshot`.
             Some(&self.mesh_memo),
         )
+        .with_ground(&self.ground)
+    }
+
+    /// The terrain this session reads, for tests that need the same one.
+    pub fn terrain_for_tests(&self) -> LocaleTerrain<'_> {
+        self.terrain_here()
     }
 
     /// The brief for wherever the possession currently stands.
@@ -8352,7 +8399,8 @@ impl<'w> Session<'w> {
             self.prey.as_ref(),
             Some(&self.built),
             Some(&mesh_snapshot),
-        );
+        )
+        .with_ground(&self.ground);
         let sys = DriveMovements {
             // `DriveMovements.npcs: Vec<Body>` is a widely-shared field
             // (28+ construction sites across `windows/vessel`/`windows/lab`),
@@ -20701,7 +20749,8 @@ mod tests {
             session.prey.as_ref(),
             Some(&session.built),
             Some(&session.mesh_memo),
-        );
+        )
+        .with_ground(&session.ground);
         let sys = DriveMovements {
             npcs: on_roll_others(
                 session.roster.bodies(),
@@ -20853,7 +20902,8 @@ mod tests {
             session.prey.as_ref(),
             Some(&session.built),
             Some(&session.mesh_memo),
-        );
+        )
+        .with_ground(&session.ground);
         let sys = DriveMovements {
             npcs: Vec::new(),
             from,

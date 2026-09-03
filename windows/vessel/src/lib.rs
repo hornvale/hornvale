@@ -19,6 +19,7 @@ pub mod eyes;
 pub mod fabric;
 mod focalize;
 pub mod gate;
+pub mod ground;
 pub mod interior;
 mod knowledge;
 pub mod lattice;

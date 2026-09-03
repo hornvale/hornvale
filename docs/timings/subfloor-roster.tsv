@@ -1277,6 +1277,7 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::exclusion_reasons_carry_the
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_matches_the_same_worlds_entry_in_rank
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_returns_none_for_an_unknown_seed
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::partitioning_columns_are_all_covered_by_d2_or_d4
+hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_is_deterministic
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_orders_most_anomalous_first
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_agrees_with_for_seed_on_a_census_row
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_scores_against_an_uncontaminated_index
@@ -1334,7 +1335,6 @@ hornvale-lab::hornvale_lab$domesday::detect::tests::d8_fires_on_exactly_alchemy_
 hornvale-lab::hornvale_lab$domesday::detect::tests::defensibility_capacity_rank_corr_still_exists_in_the_registry
 hornvale-lab::hornvale_lab$domesday::detect::tests::direct_references_match_measured_crates
 hornvale-lab::hornvale_lab$domesday::detect::tests::domain_crates_are_still_exactly_this_list
-hornvale-lab::hornvale_lab$domesday::detect::tests::findings_are_sorted_by_detector_then_metric
 hornvale-lab::hornvale_lab$domesday::detect::tests::pearson_reads_a_nontrivial_correlation_and_its_sign
 hornvale-lab::hornvale_lab$domesday::detect::tests::pearson_returns_none_for_a_constant_column
 hornvale-lab::hornvale_lab$domesday::detect::tests::the_live_census_reproduces_the_preregistered_findings
@@ -1345,7 +1345,6 @@ hornvale-lab::hornvale_lab$domesday::render::tests::a_detector_that_fired_nothin
 hornvale-lab::hornvale_lab$domesday::render::tests::a_domain_page_carries_the_generated_header_and_only_computed_numbers
 hornvale-lab::hornvale_lab$domesday::render::tests::a_domain_with_no_metrics_renders_the_no_metrics_notice_verbatim
 hornvale-lab::hornvale_lab$domesday::render::tests::a_flag_metric_always_renders_both_true_and_false_rows
-hornvale-lab::hornvale_lab$domesday::render::tests::a_metric_that_trips_two_detectors_is_grouped_under_one_heading_not_two
 hornvale-lab::hornvale_lab$domesday::render::tests::a_novel_detector_name_reaches_the_rendered_index
 hornvale-lab::hornvale_lab$domesday::render::tests::a_removed_parenthetical_directly_before_a_period_does_not_leave_a_dangling_space
 hornvale-lab::hornvale_lab$domesday::render::tests::an_ellipsis_survives_the_space_dot_space_cleanup_untouched
@@ -2599,6 +2598,8 @@ hornvale-vessel::hornvale_vessel$focalize::tests::a_noun_defaults_to_unknown_and
 hornvale-vessel::hornvale_vessel$focalize::tests::a_noun_resolves_by_its_whole_name_and_by_each_significant_word
 hornvale-vessel::hornvale_vessel$focalize::tests::significant_words_skip_stopwords_and_short_words
 hornvale-vessel::hornvale_vessel$focalize::tests::the_nameable_part_can_differ_from_the_display_name
+hornvale-vessel::hornvale_vessel$ground::tests::a_miss_computes_and_a_hit_does_not
+hornvale-vessel::hornvale_vessel$ground::tests::evicting_everything_recomputes_the_same_value
 hornvale-vessel::hornvale_vessel$interior::anchor::tests::adjacency_reads_ec_and_non_adjacency_reads_dc
 hornvale-vessel::hornvale_vessel$interior::anchor::tests::connectivity_is_detected_in_both_directions
 hornvale-vessel::hornvale_vessel$interior::anchor::tests::containment_reads_ntpp_and_its_converse
@@ -2737,6 +2738,10 @@ hornvale-vessel::hornvale_vessel$light::tests::the_hearth_cell_is_a_pure_functio
 hornvale-vessel::hornvale_vessel$light::tests::the_hearth_cell_is_pinned_for_the_two_chamber_house
 hornvale-vessel::hornvale_vessel$light::tests::the_light_field_is_a_pure_function
 hornvale-vessel::hornvale_vessel$light::tests::two_sources_are_strictly_brighter_than_either_alone
+hornvale-vessel::hornvale_vessel$liveness::emitter_scan_tests::a_verdict_index_belongs_to_one_terrain_and_a_second_field_reads_the_first_ones_verdict
+hornvale-vessel::hornvale_vessel$liveness::emitter_scan_tests::the_emitter_scan_fixture_separates_emitters_from_non_emitters
+hornvale-vessel::hornvale_vessel$liveness::emitter_scan_tests::the_emitter_scan_read_off_the_store_equals_the_old_ledger_scan
+hornvale-vessel::hornvale_vessel$liveness::emitter_scan_tests::the_scan_predicate_and_the_read_predicate_agree_over_the_whole_range
 hornvale-vessel::hornvale_vessel$liveness::tests::a_bouts_length_is_a_property_of_the_act_not_of_the_next_scan_step
 hornvale-vessel::hornvale_vessel$liveness::tests::a_carnivore_forages_toward_prey_a_herbivore_does_not
 hornvale-vessel::hornvale_vessel$liveness::tests::a_cold_creature_crosses_the_room_to_the_fire
@@ -2872,8 +2877,6 @@ hornvale-vessel::hornvale_vessel$liveness::tests::shared_belief_is_order_indepen
 hornvale-vessel::hornvale_vessel$liveness::tests::social_proposal_and_serviceability_are_the_home_step
 hornvale-vessel::hornvale_vessel$liveness::tests::soft_maslow_severe_cold_beats_mild_thirst_but_dying_of_thirst_beats_any_cold
 hornvale-vessel::hornvale_vessel$liveness::tests::the_agent_at_predicate_spelling_is_a_permanent_on_disk_key
-hornvale-vessel::hornvale_vessel$liveness::tests::the_emitter_scan_fixture_separates_emitters_from_non_emitters
-hornvale-vessel::hornvale_vessel$liveness::tests::the_emitter_scan_read_off_the_store_equals_the_old_ledger_scan
 hornvale-vessel::hornvale_vessel$liveness::tests::the_fatigue_drive_beds_down_in_place_wherever_the_creature_is
 hornvale-vessel::hornvale_vessel$liveness::tests::the_herd_bolts_borrowed_alarm_makes_a_calm_creature_flee_then_settle
 hornvale-vessel::hornvale_vessel$liveness::tests::the_hoisted_walk_emits_exactly_what_the_loop_emitted
@@ -2919,6 +2922,10 @@ hornvale-vessel::hornvale_vessel$plan::tests::the_projection_is_deterministic
 hornvale-vessel::hornvale_vessel$plan::tests::the_standing_cell_is_carried_verbatim
 hornvale-vessel::hornvale_vessel$plan::tests::two_walls_at_different_light_levels_get_different_palette_entries
 hornvale-vessel::hornvale_vessel$purview::tests::agent_salience_outranks_every_settlement_salience
+hornvale-vessel::hornvale_vessel$resident::tests::a_later_advance_over_a_longer_trail_only_judges_the_new_rooms
+hornvale-vessel::hornvale_vessel$resident::tests::advance_judges_each_room_once_and_holds_the_verdict
+hornvale-vessel::hornvale_vessel$resident::tests::discarding_the_index_and_rebuilding_gives_the_same_prefixes
+hornvale-vessel::hornvale_vessel$resident::tests::the_frightening_day_held_is_the_rooms_first_visit_not_a_later_one
 hornvale-vessel::hornvale_vessel$roster::tests::a_short_mask_is_refused
 hornvale-vessel::hornvale_vessel$roster::tests::a_slot_never_moves
 hornvale-vessel::hornvale_vessel$roster::tests::a_write_moves_one_slot_only
