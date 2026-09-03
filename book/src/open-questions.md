@@ -5151,3 +5151,47 @@ re-decide it.**
 
 Unscored deliberately, and the reason is this chapter's own: the claim that
 re-derivation catches what re-reading does not is itself of the second kind.
+
+### A criterion downstream of a quantizer (2026-09-03)
+
+[The Hachure](./chronicle/the-hachure.md) moves **no bet in the maps above**.
+It is a rendering campaign: it changes what the game client draws and changes
+nothing about what the world is. It belongs in this chapter for the same reason
+the section above it does — it produced one more instance of the wall this
+chapter keeps rebuilding, and the instance has a cause the previous ones do not.
+
+The sections above describe criteria whose *inputs could not contain the
+defect*: a branch table whose cases each had at most one quoted phrase, a red
+result produced by an arm other than the one under test. This campaign's is a
+third shape. **Four successive test drafts passed against unfixed code, and
+every one of them was measuring a quantizer rather than the thing being
+refined.** Each asserted about the rendered relief band. The band's rungs are
+hundreds of metres wide; within one ~110 km terrain sample a real height ramp
+almost never crosses one. So the refinement under test was enormous — distinct
+heights on a plate went from 1–4 to 612–3,860 — and exactly zero of it reached
+the observable every draft had chosen.
+
+Not one of the four inputs was unreasonable, and no amount of widening the
+cases would have helped, because the defect is not in the inputs at all. It is
+one layer downstream, in the function mapping the measured quantity to the
+observable. **A criterion can be blind because of what it looks at, and not
+only because of what it is shown.**
+
+The repair was to measure first and let the measurement name the observable,
+rather than to write a better assertion. That ordering is the part worth
+carrying, and it is the same ordering the sections above arrive at from
+different directions: an instrument's authority comes from having been made to
+fail on the real signal, and a criterion nobody has watched respond to the
+signal is a description of an intention.
+
+A second, smaller instance from the same campaign points the same way from the
+opposite side. A wrap defect survived both tests written for the feature that
+contained it, and was caught by an unrelated invariant — a cache's
+byte-identity check — because both new tests drew a full-width window at origin
+zero, where the defect cannot occur. **Tests written alongside a feature
+inherit the author's model of it, gaps included.** Invariants written for
+something else are, structurally, the cheapest independence available.
+
+Unscored, and for this chapter's own stated reason: the claim is about the
+whole rather than about a location, and nothing in its filing records the state
+it was observed against.

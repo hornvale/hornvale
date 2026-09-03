@@ -257,6 +257,16 @@ picture is not a baseline to conserve.
 
 ### Stage 3 — one coherent detail field, many consumers
 
+> **DEFERRED, 2026-09-03 (Nathan's ruling; ledger #25).** This stage was
+> not built. Stages 0-2 shipped and the campaign closed without it, so
+> everything below is the design as it stood at the deferral, kept because
+> the successor campaign inherits it: `MAP-coherent-detail-field` in the
+> idea registry. The one part that was ratified anyway is the
+> one-field-per-dimension rule, which is now decision 0678 — recorded
+> because it is Nathan's ruling rather than this design's choice.
+> Section 5's epoch was NOT taken: `LOCALE_MICRO` and its four-axis draw
+> order are unchanged on main.
+
 Below the mesh's ~110 km floor, detail comes from a **position-sampled
 coherent noise field**, and the same field is read by both the map and the
 room prose.
@@ -367,7 +377,14 @@ raster is disconnected.
 resolution-invariant quantity, unlike raster area. Cross-checked against the
 census's `channel-land-fraction` at the matched rung.
 
-**H4 (Stage 3).** The coherent field's lag-1 spatial autocorrelation over
+**H4 (Stage 3) — NOT MEASURED. Stage 3 was deferred (2026-09-03), so this
+hypothesis is neither upheld nor falsified; it is unrun.** The baseline
+figure below WAS taken and stands, and the successor campaign inherits
+both it and this criterion unchanged. Recording it as unrun rather than
+silently dropping it is the point: a preregistered hypothesis whose stage
+never ran must not later read as one that passed.
+
+The coherent field's lag-1 spatial autocorrelation over
 adjacent rooms exceeds 0.5 on every axis. Today's measured baseline is
 **−0.0109 east–west and +0.0477 north–south** — statistically
 indistinguishable from white noise, which is why the existing per-room detail
@@ -379,7 +396,7 @@ of the committed census. **This is the criterion that discharges the
 assuming it** — 0124 records that exact assumption passing two local
 hypotheses while being false.
 
-**H5 (Stage 3, prose).** `micro.relief` and the map's height perturbation
+**H5 (Stage 3, prose) — NOT MEASURED**, for the same reason as H4. `micro.relief` and the map's height perturbation
 agree in sign at every sampled room — one hollow, not two.
 
 A falsified prediction is a finding, not a failure. In particular, if H4's
@@ -402,6 +419,19 @@ dropped; the constant is not retuned after unblinding to rescue it.
 
 ## 8. Decisions needing ratification
 
+> **RESOLVED, 2026-09-03. Three of the five became records; two did not.**
+> Item 1 became [decision 0676](../../decisions/0676-a-view-may-interpolate-between-its-samples-but-still-may-not-invent-below-them.md),
+> **narrowed**: it licenses interpolation bounded by the convex hull of a
+> reading's own samples, and explicitly does NOT license Stage 3's
+> invention, which was deferred out from under it. Item 2 became
+> [decision 0677](../../decisions/0677-a-line-carried-feature-conserves-its-length-not-its-rasterized-area.md)
+> as written. Item 3 became
+> [decision 0678](../../decisions/0678-one-noise-field-per-discrete-dimension-each-with-its-own-stream-label.md),
+> written even though nothing implements it yet. Item 4 (the epoch) was
+> NOT written — there is nothing to ratify once Stage 3 is deferred.
+> Item 5 was reported and half-fixed: see the note under it. The list
+> below is the request as it was made, unedited.
+
 1. **Amend decision 0196's "may never invent detail below it".** Stages 1
    and 3 both render below the datum's resolution — Stage 1 by interpolation
    (already sanctioned for continuous fields by 0121, which post-dates and
@@ -419,3 +449,18 @@ dropped; the constant is not retuned after unblinding to rescue it.
    and the band-B depth disagreement between 0287/the lexicon (12) and
    `plate.rs` (13). Neither is this campaign's to decide, but both are this
    campaign's to report.
+
+   **Reported and repaired where repair was legal (2026-09-03).** The
+   triangular-facet drift was worse than "triangular": the lexicon claimed
+   facets and vertices are *duals*, and they are not — vertices are the
+   icosphere's (`kernel/src/geosphere.rs:26`, `10 · 4^L + 2`) and facets are
+   the cube-sphere's quads with **four** corners
+   (`kernel/src/room.rs:728`), two incommensurate lattices. Fixed in
+   `book/src/reference/lexicon-of-place.md`, which also now reads depth 13.
+   The band-B figure: `walk_depth` is `globe_level + 7`, so band B is 13 and
+   the ladder is **eight** rungs, not 0287's seven. 0287 was correct when
+   ratified (2026-08-27); The Pavement moved the walk band one rung finer on
+   2026-09-01. Decisions are append-only, so 0287 keeps its numbers and the
+   lexicon states the disagreement beside its citation of it. Neither figure
+   is tabulated in code — both are derived — which is why the drift was
+   invisible to every scan.

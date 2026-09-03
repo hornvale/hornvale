@@ -502,3 +502,63 @@ in new code that the new code's own purpose-built tests structurally could
 not, because they shared a blind spot (full-width windows). Worth pairing with
 `reduced-fixtures-delete-defect-preconditions`.
 · ideonomy passes: 0.
+
+---
+
+## Campaign close (2026-09-03)
+
+#25 [Q] — **Nathan's ruling: land Stages 0–2 now; Stage 3 becomes its own
+campaign.**
+· Question put to him at resume, with the epoch's blast radius measured
+rather than quoted: Stage 3's `LOCALE_MICRO` epoch was spec §8.4's one
+explicit sign-off item, and §8.4 is the only thing standing between this
+branch and a merge.
+· Decision: **land Stages 0–2, defer Stage 3.** The map fix the report asked
+for is built and green; the epoch rides with a later campaign.
+· The measurement that framed the choice, taken before the question was
+asked rather than inferred: `micro.wetness` reaches four vessel fixtures,
+two scene fixtures, three game-core fixtures, the gallery and the room
+prose — but **no census metric reads `micro` at all** (`grep -n micro
+windows/lab/src/metrics.rs` returns one comment about microseconds and
+nothing else). So the epoch would not have moved a census golden or forced a
+refresh. It is cheaper than the spec implied, and Nathan deferred it anyway,
+which is the right shape: the reason to defer was never cost.
+· Alternatives discarded: building Stage 3 with the epoch (Nathan's call
+against); building the map-side noise field WITHOUT the epoch — rejected on
+the merits as well as by the ruling, because it forfeits #7's whole point
+and would leave the map's hollow and the prose's hollow as two unrelated
+inventions, the exact contradiction Stage 3 exists to prevent.
+· ideonomy passes: 0 — this was a carve-out question put to Nathan, not a
+decision taken under autopilot. Recorded as given.
+· Capture: decisions 0676 / 0677 / 0678 written; `MAP-coherent-detail-field`
+filed as the successor campaign's row; spec §4.4, §6 (H4/H5) and §8 amended
+to say Stage 3 is deferred rather than pending.
+
+#26 [G2] — **Which of the five §8 items became records, and why two did
+not.**
+· **0676** (amend 0196's "may never invent detail below it"): written, and
+NARROWED from what the spec asked for. The spec wanted one amendment
+licensing both interpolation (Stage 1) and invention (Stage 3). With Stage 3
+deferred, licensing invention would ratify a capability nothing implements
+and nobody has reviewed — so 0676 licenses interpolation only, bounded by
+the convex hull of the reading's own samples, and says in terms that the
+second sentence does not license Stage 3. The deferred campaign owes its own
+record.
+· **0677** (a line-carried feature conserves length, not rasterized area):
+written as specified. Stage 2 shipped; the rule is backed by measurement.
+· **0678** (one noise field per discrete dimension): written as specified
+even though nothing implements it, because it is Nathan's ruling rather than
+a campaign's choice — leaving it unrecorded would make the successor
+campaign rediscover or relitigate it. Its consequences section states
+plainly that `micro_field` still violates it and that the fix is an epoch
+this campaign did not take.
+· **§8.4** (the `LOCALE_MICRO` epoch): NOT written. Deferred with Stage 3;
+there is nothing to ratify.
+· **§8.5** (documentation drift): not a decision — reported, and the half
+that is unambiguously stale is fixed in this campaign. See #27.
+· ideonomy passes: 1 / overturns: 1 — the pass on "write all five as
+specified" surfaced that 0676 as drafted would have ratified Stage 3's
+invention clause on the strength of a spec section whose subject Nathan had
+just deferred. Ratifying a capability out from under its own deferral is the
+`a-clause-vacuously-satisfied` shape pointed the other way: a live clause
+with no implementation to constrain it.
