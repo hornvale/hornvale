@@ -1699,3 +1699,17 @@ for here. Raised through `HV_LEXICON_REBASELINE=1`; nothing else in the
 inventory moved.
 
 `cli/tests/fixtures/heavy-roster.txt` gains one line for the sanctioned sweep.
+
+#14 [G5, controller ruling during Task 6] — Where does the §3.8 sweep run? ·
+**Ruling K: in the heavy tier** — the 400-seed × 3-kind × 3-character ×
+4-vertex solvability-and-round-trip sweep (14,400 plans) measured 64.69 s on
+the Mac, over the commit gate's budget by a factor the sub-floor roster would
+never admit, and a sweep nobody runs is not a guard; the heavy tier runs on
+every merge (decision 0426), which is the cadence a 14,400-plan invariant
+wants · Discarded: `#[ignore]` with a cost reason and no tier (never runs);
+shrinking the sweep to fit the commit gate (the spec's shape is the point —
+the Crosscut's "by construction" claim fell to exactly this sweep) · Cost:
+the heavy roster reads 65, and CLAUDE.md's "the roster is 64" prose (decision
+0426's amendment) is corrected in Task 7; +64.7 s on a merge, probably under
+the tier's existing pole · Ideonomy: none — a placement ruling with one
+sensible home · Capture: this entry; Task 7's CLAUDE.md sweep.
