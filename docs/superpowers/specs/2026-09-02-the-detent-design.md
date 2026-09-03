@@ -492,3 +492,496 @@ Rule 2 may need a fourth; the block has room.
   layout before placing it (there is no `common/` directory there).
 - **A null census is owed at close**, as every byte-identical campaign
   owes; `make sluice-census` is ordinary queued work (decision 0514).
+
+## 11. What shipped, measured
+
+Every number below is a fresh run on the development Mac, `--release`, taken
+2026-09-02 between 19:26 and 20:52 local (23:26–00:52 UTC), paired and
+interleaved against a merge-base control (§11.1). **§4 is not edited.** Every
+number cites the file under `.superpowers/sdd/2026-09-02-the-detent/readout/`
+it was read from. A criterion that fails is reported as NOT MET with its
+margin, and nothing is averaged across a failure.
+
+### 11.0 The quiet-box rule, and how it was applied
+
+§4's rule, applied exactly: all three load averages recorded immediately
+before and immediately after each run, and a run set aside if the **1-minute**
+average is above 10 at either end. In addition — and going beyond what §4
+asks — the 1-minute average was sampled **every 30 s during** each run and the
+samples are appended to that run's own file, so a spike that landed and
+decayed between the two endpoint readings cannot hide.
+
+The box was not quiet on demand. Two other campaigns were resident on it for
+the first hour: `campaign/the-rack` ran a debug test binary at 833% CPU
+(measured 19:31, `ps aux`), and `campaign/the-plumb` ran ~8 parallel
+`hornvale_lab` debug test processes at ~86% each (measured 19:58). The
+15-minute average was above 30 when the session began. Runs were fired only
+when a poller saw **no other worktree's `target/` process running, no `cargo`
+process, and a 1-minute average below 6** — a stricter gate than §4's 10, so
+that a spike arriving mid-run had headroom before it breached the rule.
+
+**Two of twelve `session_length_scaling` runs were set aside**, both control
+runs, both to another campaign's suite starting mid-run. **One `agent_scaling`
+pair of four was set aside**, likewise a control side. Every run taken is
+listed below with its loads, including the discarded ones.
+
+| run | bench | tree | start (UTC) | load before (1/5/15) | load after | peak 1-min in run | verdict |
+|---|---|---|---|---|---|---|---|
+| B1 | `session_length_scaling` | control | 23:26:26 | 4.12 / 21.06 / 30.35 | **46.61** / 23.21 / 27.26 | — | **SET ASIDE** |
+| B2 | `session_length_scaling` | control | 23:49:39 | 6.23 / 23.62 / 28.82 | **52.11** / 52.57 / 41.01 | — | **SET ASIDE** |
+| B3 | `session_length_scaling` | control | 00:07:12 | 5.63 / 29.53 / 36.45 | 3.65 / 13.66 / 27.23 | 5.63 | valid |
+| P1 | `session_length_scaling` | campaign | 00:12:20 | 3.68 / 13.49 / 27.09 | 2.82 / 9.78 / 23.74 | 3.68 | valid |
+| B4 | `session_length_scaling` | control | 00:14:33 | 3.47 / 9.80 / 23.67 | 2.59 / 5.54 / 17.88 | 3.58 | valid |
+| P2 | `session_length_scaling` | campaign | 00:19:34 | 2.59 / 5.54 / 17.88 | 2.54 / 4.52 / 15.78 | 2.80 | valid |
+| B5 | `session_length_scaling` | control | 00:21:44 | 2.54 / 4.52 / 15.78 | 2.67 / 3.43 / 12.22 | 3.07 | valid |
+| P3 | `session_length_scaling` | campaign | 00:25:41 | 2.67 / 3.43 / 12.22 | 2.40 / 3.14 / 10.90 | 3.61 | valid |
+| B6 | `session_length_scaling` | control | 00:27:51 | 2.53 / 3.16 / 10.86 | 2.37 / 2.76 / 8.56 | 3.11 | valid |
+| P4 | `session_length_scaling` | campaign | 00:32:00 | 2.37 / 2.76 / 8.56 | 2.21 / 2.59 / 7.73 | 2.49 | valid |
+| BA1 | `agent_scaling` | control | 00:34:11 | 3.66 / 2.90 / 7.77 | 3.67 / 3.10 / 7.52 | 4.40 | valid |
+| A1 | `agent_scaling` | campaign | 00:35:36 | 3.67 / 3.10 / 7.52 | 3.34 / 3.08 / 7.23 | 3.67 | valid |
+| BA2 | `agent_scaling` | control | 00:36:43 | 3.34 / 3.08 / 7.23 | 2.86 / 2.96 / 6.90 | 3.34 | valid |
+| A2 | `agent_scaling` | campaign | 00:37:47 | 2.86 / 2.96 / 6.90 | 3.29 / 3.10 / 6.71 | 3.75 | valid |
+| BA3 | `agent_scaling` | control | 00:38:50 | 3.29 / 3.10 / 6.71 | **16.00** / 6.47 / 7.64 | 9.87 | **SET ASIDE** |
+| A3 | `agent_scaling` | campaign | 00:43:16 | 5.13 / 6.19 / 7.29 | 3.53 / 5.57 / 6.99 | 5.13 | valid, **pair set aside** |
+| BA4 | `agent_scaling` | control | 00:44:23 | 3.41 / 5.51 / 6.96 | 3.45 / 5.14 / 6.73 | 3.45 | valid |
+| A4 | `agent_scaling` | campaign | 00:45:27 | 3.45 / 5.14 / 6.73 | 2.68 / 4.63 / 6.43 | 3.45 | valid |
+| F-B | `fold_depth_sweep` | control | 00:46:06 | 2.68 / 4.63 / 6.43 | 2.68 / 4.63 / 6.43 | 2.68 | valid |
+| F-P | `fold_depth_sweep` | campaign | 00:46:08 | 2.68 / 4.63 / 6.43 | 2.68 / 4.63 / 6.43 | 2.68 | valid |
+| R1–R3 | `detent_rule2_probe` | campaign | 00:46:09–00:47 | 2.19–2.68 (1-min) | 2.31–2.65 | ≤ 2.68 | valid, **pre-M1 build** |
+| R4–R6 | `detent_rule2_probe` | campaign | 00:50–00:52 | 2.19–3.00 (1-min) | 2.37–3.16 | ≤ 3.00 | valid |
+
+A3 is a legitimate run by the rule and is reported, but its *pair* (BA3) is
+not, so it contributes nothing to the paired figure in §11.5. R1–R3 ran the
+probe before its M1 count line was added (§11.4); their timings are valid and
+are reported beside R4–R6's, which are the ones quoted.
+
+Files: `sls-{control,campaign}-N.txt`, `as-{control,campaign}-N.txt`,
+`fds-{control,campaign}-1.txt`, `r2-campaign-N.txt`. The control's runs are
+numbered 1–6 and the campaign's 1–4; B1/B2 are control runs 1 and 2, B3–B6 are
+control runs 3–6.
+
+### 11.1 The control, and the byte-identity witness
+
+The control is a detached checkout of this campaign's merge base,
+**`0dccce0292eb613c98aea6d9f731dcd2945e78a6`**, at
+`…/scratchpad/detent-control`. It carries **no room memo** — `grep -c
+with_ground windows/vessel/examples/session_length_scaling.rs` prints **0**
+there — and its three benches carry the identical constants:
+
+```
+control  : 199:const AGENTS: usize = 50;  204:const TICKS: usize = 200;
+           214:const FOLD_REPS: u32 = 200;  227:const BAND: usize = 20;
+campaign : 199:const AGENTS: usize = 50;  204:const TICKS: usize = 200;
+           214:const FOLD_REPS: u32 = 200;  227:const BAND: usize = 20;
+```
+
+Both trees built `--release`; the campaign tree at `5bf12d8ef` (its parent
+`1ea0998d0` is the last commit touching code — `5bf12d8ef` is the ledger
+document alone).
+
+**The workload did not move between the trees.** The deterministic columns are
+identical across all ten `session_length_scaling` runs and both trees —
+checked by hashing the extracted columns, not by eye:
+
+- `session_length_scaling`, all 10 runs (4 campaign, 6 control), the
+  (`facts`, `searches`, `folded/a`, `drank/t`, `ledger_len`) tuple for every
+  one of the 10 bands: **one md5, `3e583245b6264b33d9c71c2278f47839`, on every
+  one of the ten files.** Band 1 reads `facts 2436 · searches 1658 · folded/a
+  32.2 · ledger_len 24214`; band 10 reads `1320 · 523 · 124.4 · 35832`.
+  `drank/t` is `0.0000` at every band on every run — the probe agent commits
+  ZERO `drank` facts across 200 ticks, so the single-reset regime is its
+  production regime, unchanged from The Pawl.
+- `agent_scaling`, all 8 runs (4 campaign, 4 control), the (`facts/a/tick`,
+  `search/a/tick`, `bytes/agent`, `total_bytes`, `facts`, `searches`) tuple for
+  all four rungs: **one md5, `ea5f65bffc699eef572cab601dfeb8d1`, on every one
+  of the eight files.** The largest rung reads `facts 9233 · searches 6543 ·
+  total_bytes 4377119` on both trees.
+
+That is what makes the pairing legitimate, and it is the readout's own small
+witness for H3. It also discharges the specific worry the readout was warned
+about: the control's merge base predates The Reservoir, which the campaign tree
+has absorbed, and if The Reservoir had moved a walk the deterministic columns
+would have disagreed across the trees. They do not, on any of the 18 runs.
+
+*(These band figures differ from The Pawl §12.5's — `facts 2800 · searches 1825
+· folded/a 35.5 · ledger_len 24485` — because the world moved between that
+campaign's merge base and this one. The check is agreement across THIS
+campaign's two trees, and that holds exactly.)*
+
+### 11.2 `session_length_scaling` — the decisive H4 column (`hazard_memory_memo`)
+
+50 agents, 200 ticks, bands of 20, seed 42, probe agent fixed at the
+max-`agent-at` roster member, history 101 → 260 (2.57×) across the warm bands.
+Read from `sls-{control,campaign}-N.txt`.
+
+**Control at `0dccce029` (pre-campaign, same box, same session, interleaved).**
+
+| run | k (µs/call/fact) | r² | elasticity | C (µs/call) | final-band µs/call |
+|---|---|---|---|---|---|
+| B1 — **SET ASIDE** | 444.45893 | 0.815 | 1.18 | −10 403.818 (negative) | 130 213.28 |
+| B2 — **SET ASIDE** | 658.32771 | **0.491** | 1.19 | −16 485.373 (negative) | 107 964.21 |
+| B3 | 338.47176 | 0.998 | **0.91** | **+5 244.125** | 91 546.59 |
+| B4 | 344.82265 | 0.996 | **0.93** | **+4 215.829** | 91 866.62 |
+| B5 | 345.11400 | 0.997 | **0.93** | **+3 954.747** | 92 157.46 |
+| B6 | 346.51982 | 0.998 | **0.94** | **+3 725.546** | 92 945.29 |
+
+**Campaign branch (`5bf12d8ef`).**
+
+| run | k (µs/call/fact) | r² | elasticity | C (µs/call) | final-band µs/call |
+|---|---|---|---|---|---|
+| P1 | 0.17311 | 0.958 | **0.25** | **+87.027** | 132.09 |
+| P2 | 0.16660 | 0.928 | **0.24** | **+89.509** | 132.60 |
+| P3 | 0.16979 | 0.965 | **0.23** | **+93.573** | 139.06 |
+| P4 | 0.19362 | 0.967 | **0.27** | **+85.609** | 137.54 |
+
+**Medians over the valid runs: elasticity 0.93 before, 0.245 after. `k` 344.968
+→ 0.17145, a factor of 2 012. `C` +4 085.288 → +88.268 µs/call, positive on both
+sides. Final-band cost 92 012.04 → 135.07 µs/call — 92.012 ms/call before,
+0.13507 ms/call after, a factor of 681.2.**
+
+**The `r² ≥ 0.5` filter, stated rather than applied silently.** §4 counts only
+runs whose fit clears r² 0.5. On this column the filter excludes **nothing among
+the valid runs**: every campaign run sits at 0.928–0.967 and every valid control
+run at 0.996–0.998. It does bite on one *set-aside* run — B2's 0.491, the only
+reading below the floor anywhere in this table — and that run was already
+excluded by the load rule, which is a small corroboration that the two filters
+are pointing at the same noise. The verdict does not depend on how the boundary
+is read:
+
+| reading of the filter | qualifying campaign runs | median elasticity | median final-band µs/call |
+|---|---|---|---|
+| as printed, r² ≥ 0.5 | P1–P4 | **0.245** | **135.07** |
+| strict, dropping P2 at the lowest r² (0.928) | P1, P3, P4 | **0.25** | **137.54** |
+| ignore the filter, all four | P1–P4 | **0.245** | **135.07** |
+
+The elasticity is above 0.20 under all three readings and the final-band cost is
+two-and-a-half orders of magnitude down under all three. §11.4 states both
+verdicts.
+
+### 11.3 `session_length_scaling` — the whole tick, and attribution
+
+| | k (ms/tick/fact) | r² | C (ms/tick) | history share at band 10 | band-2 ms/tick* | band-10 ms/tick* |
+|---|---|---|---|---|---|---|
+| control B1 — **SET ASIDE** | 4.32299 | 0.584 | +153.147 | 77.8% | 341.42 | 890.23 |
+| control B2 — **SET ASIDE** | 14.06364 | 0.798 | −390.741 (negative) | — | 364.64 | 1 496.04 |
+| control B3 | 3.53061 | 0.995 | +202.101 | 68.5% | 338.33 | 632.34 |
+| control B4 | 3.51587 | 0.985 | +202.999 | 68.3% | 332.68 | 630.31 |
+| control B5 | 3.55267 | 0.989 | +199.380 | 68.9% | 332.61 | 630.93 |
+| control B6 | 3.58660 | 0.994 | +197.251 | 69.3% | 336.18 | 636.96 |
+| campaign P1 | 2.30338 | 0.983 | +179.385 | 61.5% | 266.70 | 455.75 |
+| campaign P2 | 2.32288 | 0.990 | +186.110 | 60.8% | 270.86 | 470.72 |
+| campaign P3 | 2.31068 | 0.990 | +196.985 | 59.3% | 285.94 | 480.84 |
+| campaign P4 | 2.28648 | 0.986 | +183.533 | 60.8% | 267.16 | 457.44 |
+
+**Medians over valid runs: `k` 3.54164 → 2.30703 (−34.9%). `C` 200.7405 →
+184.8215 (−15.919 ms/tick, i.e. it FELL — see §11.5). Share 68.70% → 60.80%
+(−7.9 points). Band-10 ms/tick\* 631.63 → 464.08 (−26.5%). Band-2 ms/tick\*
+334.43 → 269.01 (−19.6%).**
+
+Final-band µs/call by fold, medians of the valid runs a side:
+
+| fold | control (pre) | campaign (post) | ratio | pre elasticity | post elasticity |
+|---|---|---|---|---|---|
+| `drive_at` | 2.62 | 2.62 | 1.00× | 0.01 | 0.01 |
+| `hunger_at` | 2.49 | 2.47 | 1.01× | −0.01 | 0.01 |
+| `fatigue_at` | 60.38 | 62.44 | 0.97× | 0.29 | 0.30 |
+| `believed_water` | 8 503.18 | 8 699.80 | 0.98× | 0.96 | 0.96 |
+| `shared_believed_water` | 8 611.68 | 8 824.49 | 0.98× | 0.95 | 0.98 |
+| **`hazard_memory_memo`** | **92 012.04** | **135.07** | **681.22×** | **0.93** | **0.24** |
+
+One fold collapsed and nothing else did. That is the signature of the room memo
+and the verdict index and of nothing else: the two Sustenance reads and the two
+KnownWater tenants are within 3% of the control in both directions, which is
+measurement noise on this bench, and their elasticities are unchanged to two
+decimals.
+
+**The attribution flipped.** The six folds' final-band costs sum to 109 192.40
+µs/call before and 17 726.89 µs/call after. `hazard_memory_memo` was **84.27%**
+of that sum and is now **0.762%**. The two KnownWater tenants
+(`believed_water`, `shared_believed_water`) are now **98.86%** of it. The
+campaign's own quarry is gone and the next one is named by the same table.
+
+### 11.4 The verdicts, against §4
+
+Every criterion separately. Where §4 names both a frozen figure and a same-box
+control, both are given and the comparison §4 actually asked for is named.
+
+| criterion | §4 threshold | measured | control (same box) | verdict |
+|---|---|---|---|---|
+| **H4 (a)** `hazard_memory_memo` median elasticity, runs with r² ≥ 0.5 | **< 0.20**, from 1.06–1.21 | **0.245** (0.245 / 0.25 / 0.245 under the three readings of the filter, §11.2) | 0.93 | **NOT MET** — over by **0.045**, under every reading |
+| **H4 (b)** `hazard_memory_memo` final-band cost, ≥ 10× down | **≥ 10×**, from the **frozen 73–97 ms/call** | **0.13507 ms/call** → **540.5×** against the frozen 73 ms and **718.1×** against the frozen 97 ms | 92.012 ms/call → **681.2×** | **MET** — against the frozen figure (which is what §4's clause asks for) *and* against the same-box control, by 54–72× more than required either way |
+| **H2 (c)** whole-tick history share at band 10 | **< 20%**, from 70–80% | **60.80%** | 68.70% | **NOT MET** — over by **40.8 points** |
+| **H2 (a)** `drive_at` median elasticity (no-regression, not a criterion) | < 0.20 | **0.01** | 0.005 | no regression |
+| **H2 (b)** `C` identifiable and positive on `drive_at` (no-regression) | positive | **+2.395 / +2.529 / +2.557 / +2.532**, positive on all four | positive on all four | no regression |
+| **H3** no world-state artifact moves | — | held by construction (§5) + the campaign-time ledger-hash witnesses; the readout adds the byte-identity witness of §11.1, which holds across all 18 runs and both trees | — | **held, not re-measured** |
+| **H5** repeat read takes 0 field samples; whole tick ≤ 4 469 | 0, and ≤ 4 469 from 44 694 | **0 warm `hazards()` calls, 0 warm field samples, 0 second-fresh samples**; whole tick 60 makes **3 168** `hazards()` calls and **0** field samples | pre-fix 22 302 / 44 694 (§4, taken on the merge base at Task 1) | **MET** — 3 168 is **14.1×** down, not 10× |
+| **H6** scan work per tick is O(new sightings) | judged/tick grows strictly slower than distinct rooms | judged **141 → 94** (0.6667×) against distinct rooms **1 430 → 2 307** (1.6133×), **margin 2.4199×** | — | **MET** |
+| **M1** bytes held, three shapes, no threshold | — | below | — | **recorded** |
+
+Two criteria are met, two are not, and one no-threshold measurement is recorded.
+Nothing is averaged across a failure.
+
+**Why the two that failed still fail, as attribution rather than excuse.** Both
+are *shares*, and both are now dominated by folds this campaign does not touch.
+H4 (a) asks the memo's own cost to stop tracking history; it fell from
+elasticity 0.93 to 0.24, but 0.24 is not 0.20, and the residual is the fear
+path's remaining per-tick work — the walk's `Danger::urgency` sampling that
+Task 6 measured at 2 268 of tick 60's 3 168 `hazards()` calls (71.6%), which the
+memo answers cheaply but still answers once per candidate room per step.
+H2 (c) asks the *whole tick's* history term to fall below a fifth; the tick's
+remaining history term now belongs almost entirely to the two KnownWater
+tenants, which are 98.86% of the six-fold sum (§11.3) and which this campaign
+does not touch at all. A memo over the terrain cannot move a share the
+KnownWater folds dominate. H4 (b) — the clause §4 itself called the weaker of
+the two — is met by more than fifty times its own margin.
+
+**H5's raw witness lines** (`h5-h6-witness.txt`, the `h5_witness` filter run
+`--nocapture` against `hornvale-vessel`'s suite on the campaign tree):
+
+```
+--- H5 witness: seed 42, 50 agents, tick 60 ---
+probe: FRESH memo 450 hazards() calls, WARM memo 0, scans +1 (with emitters +0),
+       alarm replays +0, shunned 0, first-fresh samples 0, warm samples 0,
+       second-fresh samples 0
+whole tick 60: 3168 hazards() calls, 31 facts committed; roster distinct rooms 2307
+ground memo: 11149 misses, 257546 hits, 11149 rooms held
+whole tick 60: 0 field samples against 3168 hazards() calls
+H5 attribution of tick 60's 3168 hazards() calls: (a) alarm_field_memo over the
+  roster 450, (b) one fresh-memo hazard read 450, (a)+(b) = 900,
+  walk remainder (c-a-b) = 2268
+H6: judged/tick profile [0, 16, 0, 14, 0, 21, 73, 155, 146, 145, 139, 147, 141,
+  149, 141, 143, 87, 2, 0, 2, 0, 95, 0, 0, 0, 2, 94, 2, 5, 2, 0, 94, 0, 2, 0, 2,
+  96, 2, 0, 0, 0, 99, 0, 2, 0, 0, 98, 0, 0, 0, 0, 97, 0, 0, 0, 0, 94, 0, 0, 0]
+H6: tick 60 judged 0 rooms; the last tick that judged anything is tick 57 (94 rooms).
+  Comparison: tick 15 -> tick 57: judged 141 -> 94; distinct rooms 1430 -> 2307
+H6: judged growth 0.6667x against distinct-room growth 1.6133x (margin 2.4199x)
+test the_detent::h5_witness_the_hazard_reads_terrain_samples_on_the_bench_shape ... ok
+```
+
+The memo's own shape is printed beside the zero deltas deliberately (11 149
+misses, 257 546 hits, 11 149 rooms held), because an *unthreaded* terrain would
+produce the same zeroes vacuously. It is also a cross-check on the bench: 11 149
+rooms held at 60 ticks is exactly `sls`'s band-3 `ground_len` (ticks 40–59), on
+a different instrument.
+
+**M1, the bytes and counts the two structures hold, on all three shapes.** Byte
+figures are the structures' own `held_bytes` estimates, not an allocator
+measurement, and are identical across all four campaign `sls` runs.
+
+| shape | instrument | room memo entries | room memo bytes | index entries | index bytes |
+|---|---|---|---|---|---|
+| seed 42, 50 agents, 200 ticks (band 10) | `session_length_scaling` (`sls-campaign-*.txt`) | **18 902** | **1 455 454** (~1.455 MB) | **4 665** | **214 590** (~215 KB) |
+| seed 42, 50 agents, 60 ticks | H5 witness (`h5-h6-witness.txt`) | **11 149** | not exposed | not printed | not exposed |
+| seed 6, possession, 4 waits, 127 bodies | `detent_rule2_probe` (`r2-campaign-{4,5,6}.txt`) | **83** | not exposed | **355** | not exposed |
+
+The bench's own per-entry ratios at band 10 are 77.0 bytes/room and 46.0
+bytes/index-entry; applying them to the possession shape's 83 and 355 gives
+~6.4 KB and ~16.3 KB, but the estimate is dominated by `room.path.len()`, which
+differs per shape, so it is stated as an extrapolation and not as a measurement.
+`Session` owns both structures privately and exposes counts but no byte
+accessor; widening the production surface to give a readout a third byte figure
+was declined.
+
+**Band-by-band M1 growth** (`sls-campaign-1.txt`, identical on all four runs):
+
+```
+ band ground_len ground_bytes index_entries  index_bytes
+    1       7748       596596          1521        69966
+    2       9551       735427          1917        88182
+    3      11149       858473          2307       106122
+    4      12624       972048          2671       122866
+    5      14051      1081927          3022       139012
+    6      15424      1187648          3376       155296
+    7      16474      1268498          3725       171350
+    8      17390      1339030          4071       187266
+    9      18244      1404788          4393       202078
+   10      18902      1455454          4665       214590
+```
+
+Both structures grow monotonically and nothing in this campaign evicts either.
+The band-over-band increments are falling (1 803 → 658 rooms per band), which is
+the roster running out of new rooms rather than any bound in the mechanism.
+**This is the figure Penstock stage 4 (the lifecycle) enters on**, and it is
+stated as that, not as a criterion.
+
+### 11.5 The falsifier, and the level
+
+Both are stated before the campaign's favourable results elsewhere, because both
+are the ones that could have gone against it.
+
+**The falsifier does not fire, and this time it cannot.** §4's falsifier is "`k`
+falls but `C` rises by more than the `k` saving at realistic session lengths".
+From the whole-tick affine fits (§11.3 medians):
+
+```
+pre:  ms/tick = 200.7405 + 3.54164 h
+post: ms/tick = 184.8215 + 2.30703 h
+```
+
+**`C` did not rise. It fell by 15.919 ms/tick, while `k` fell by 1.23461
+ms/tick per fact.** The nominal crossover is `h = −15.919 / 1.23461 = −12.9` —
+negative, meaning the two lines cross at a history no session can have, and the
+post-campaign line is below the pre-campaign line at **every** `h ≥ 0`. The
+Pawl's second readout put the crossover at `h ≈ 25.9`, just below the sampled
+range; this campaign removes it from the positive axis entirely.
+
+| session length | h | pre | post | verdict |
+|---|---|---|---|---|
+| 20 ticks | ≈ 32.2 | 314.78 ms/tick | 259.11 ms/tick | post **17.7%** faster |
+| 50 ticks | ≈ 52.6 | 387.03 ms/tick | 306.17 ms/tick | post **20.9%** faster |
+| 200 ticks | 124.4 | 641.32 ms/tick | 471.82 ms/tick | post **26.4%** faster |
+
+The independent check is the shallowest band actually measured: band-2
+`ms/tick*` is 334.43 before and 269.01 after — post **19.6%** faster, agreeing
+with the fit's 20.9% at the comparable `h`.
+
+**The level — reported, not predicted.** `agent_scaling`, ms/tick over 20 ticks,
+paired and interleaved (`as-{control,campaign}-N.txt`).
+
+| run | tree | start (UTC) | load before | load after | 10 | 50 | 100 | **200** |
+|---|---|---|---|---|---|---|---|---|
+| BA1 | control | 00:34:11 | 3.66 / 2.90 / 7.77 | 3.67 / 3.10 / 7.52 | 57.492 | 375.801 | 671.474 | **1 569.310** |
+| A1 | campaign | 00:35:36 | 3.67 / 3.10 / 7.52 | 3.34 / 3.08 / 7.23 | 52.198 | 344.283 | 596.552 | **1 420.929** |
+| BA2 | control | 00:36:43 | 3.34 / 3.08 / 7.23 | 2.86 / 2.96 / 6.90 | 57.997 | 377.139 | 649.747 | **1 566.497** |
+| A2 | campaign | 00:37:47 | 2.86 / 2.96 / 6.90 | 3.29 / 3.10 / 6.71 | 51.691 | 342.166 | 593.317 | **1 492.925** |
+| BA3 — **SET ASIDE** | control | 00:38:50 | 3.29 / 3.10 / 6.71 | **16.00** / 6.47 / 7.64 | 59.078 | 396.955 | 688.917 | 2 060.362 |
+| A3 — pair set aside | campaign | 00:43:16 | 5.13 / 6.19 / 7.29 | 3.53 / 5.57 / 6.99 | 52.115 | 343.636 | 592.166 | 1 421.534 |
+| BA4 | control | 00:44:23 | 3.41 / 5.51 / 6.96 | 3.45 / 5.14 / 6.73 | 58.196 | 376.631 | 650.083 | **1 559.718** |
+| A4 | campaign | 00:45:27 | 3.45 / 5.14 / 6.73 | 2.68 / 4.63 / 6.43 | 52.234 | 344.014 | 594.854 | **1 426.377** |
+
+**At 200 agents, the three valid pairs: 1 569.310 → 1 420.929 (−9.46%),
+1 566.497 → 1 492.925 (−4.70%), 1 559.718 → 1 426.377 (−8.55%). Median
+−8.55%.** By medians rather than pairs, 1 566.497 → 1 423.956 = −9.10%. The
+level moved by roughly 9% in the campaign's favour, at every rung:
+
+| rung | control median | campaign median | delta |
+|---|---|---|---|
+| 10 | 57.997 | 52.157 | **−10.07%** |
+| 50 | 376.631 | 343.825 | **−8.71%** |
+| 100 | 650.083 | 594.086 | **−8.61%** |
+| 200 | 1 566.497 | 1 423.956 | **−9.10%** |
+
+The fitted log-log slope is 1.08 on the control and 1.09 on the campaign branch
+— unchanged. The campaign lowered the level without changing the shape of the
+agent-count scaling, which is the expected signature of a per-agent read getting
+cheaper.
+
+**The one place two instruments disagree, stated plainly.** The affine fits
+*predict* post 17.7% faster at `h ≈ 32.2`; `agent_scaling` *measures* 8.6–10.1%
+across its rungs — a factor of about two, where The Pawl's equivalent
+cross-check agreed to within half a point. The two benches are not measuring the
+same object and the difference is structural, not noise: `agent_scaling` drives
+`step_with_occupancy` directly with a caller-owned `HomeNavCache` and
+`RoomMeshMemo` that persist across ticks, while `session_length_scaling`'s
+whole-tick column is `Session::wait`'s full turn, which evaluates the walk a
+second time through `hornvale_kernel::tick` on a throwaway cache. The fold the
+campaign removed is paid twice in the second and once in the first, so a
+prediction from the second overstates the first by about the ratio observed.
+This is a caveat on the cross-check, not on either measurement: both instruments
+move the same direction, on every rung and every band, on a quiet box, with
+byte-identical workloads.
+
+### 11.6 `fold_depth_sweep` — the no-regression control
+
+**This bench sweeps `drive_at` only and cannot see this campaign's fold**, and
+is run as the no-regression control on the Sustenance reads, which is what §4
+says it is. One run each tree, back to back inside the same quiet window (both
+at 2.68 / 4.63 / 6.43 before and after). µs/call, median of 6
+alternating-direction passes (`fds-{control,campaign}-1.txt`).
+
+| depth | PERIODIC control | PERIODIC campaign | SINGLE-RESET control | SINGLE-RESET campaign |
+|---|---|---|---|---|
+| 10 | 0.108 | 0.107 | 0.106 | 0.105 |
+| 32 | 0.154 | 0.155 | 0.157 | 0.158 |
+| 100 | 0.242 | 0.250 | 0.286 | 0.293 |
+| 320 | 0.534 | 0.525 | 0.557 | 0.567 |
+| 1 000 | 1.354 | 1.382 | 1.541 | 1.608 |
+| 3 200 | 4.450 | 4.526 | 5.096 | 4.979 |
+| 10 000 | 14.307 | 14.294 | 15.106 | 15.109 |
+
+| | control | campaign |
+|---|---|---|
+| PERIODIC `k` (µs/call/fact) | 0.00142 (r² 1.000) | 0.00142 (r² 1.000) |
+| PERIODIC raw elasticity, top third | 1.025 | 1.009 |
+| SINGLE-RESET `k` | 0.00150 (r² 1.000) | 0.00150 (r² 1.000) |
+| SINGLE-RESET raw elasticity, top third | 0.954 | 0.974 |
+
+**No regression.** Every depth in both regimes agrees within 5%, the two `k`
+values are identical to five decimals, and the single-reset column still sits on
+top of the periodic one — the shape The Pawl's accumulator left behind,
+untouched here.
+
+### 11.7 Rule 2's number
+
+Spec §3 rule 2 asks for the affect replay's *share of the hazard read*, which is
+a time; the committed witness
+(`rule_two_witness_the_affect_replay_share_of_the_hazard_read`) counts, because
+`Instant` is banned in this project's tests. So the timing lives in a new
+`--release` example, `windows/vessel/examples/detent_rule2_probe.rs`, over the
+identical shape — seed 6, `PossessOpts::default()`, four `wait`s, then
+whole-roster `Session::hazard_memories()` calls. It is a readout instrument and
+never a gate, the standing of `turn_cost.rs` and `agent_scaling.rs`. It needs no
+`world-build-sites.tsv` row: that roster scans `src/` and `tests/` only and
+`examples/` is invisible to it by construction (`cli/tests/suite/
+world_build_sites.rs`).
+
+**The two instruments agree exactly on the counts** — the probe reprints
+`2.6220` replays and `180.7953` warm memo lookups per body read, the same
+figures Task 8's witness printed — which is what licenses reading the probe's
+timings as belonging to the same measurement.
+
+Medians over R4–R6 (`r2-campaign-{4,5,6}.txt`), 127 bodies:
+
+| read | µs per body read | range over three runs | replays/read | memo lookups/read |
+|---|---|---|---|---|
+| **cold** (first whole-roster read) | **784.695** | 779.206 – 788.498 | 2.6220 | 186.6772 |
+| **warm 1** | **784.941** | 783.548 – 786.745 | 2.6220 | 180.7953 |
+| **warm 2** | **782.017** | 777.169 – 786.877 | 2.6220 | 180.7953 |
+
+R1–R3, on the pre-M1 build, read cold 784.944 / 797.010 / 807.980 and warm
+764.981–855.910 — the same figures within noise.
+
+**"Cold" is not a cold session, and saying so is the point.** The four `wait`s
+have already filled the room memo for every room the walk touched, so the first
+whole-roster read differs from the second only by the 747 extra memo lookups it
+takes (186.6772 − 180.7953 = 5.88 per body) filling in the remainder. The
+measured difference between cold and warm is **0.25 µs per read on 785**, i.e.
+nothing: **after four waits the memo is already warm, and a first whole-roster
+read costs what a repeat read costs.** That is itself a result about the memo.
+
+Totals over the run: `alarm replays 1620`, `ground hits 332745`, `ground misses
+83` — 4 000 : 1 hits to misses, on 83 distinct rooms held. **The controller
+decides rule 2's branch from these numbers; this task does not.**
+
+### 11.8 What the readout hands forward
+
+- **The largest remaining fold is `shared_believed_water`, then
+  `believed_water`**, read straight off §11.3's table: 8 824.49 and 8 699.80
+  µs/call at the final band against `hazard_memory_memo`'s 135.07. Together they
+  are **98.86%** of the six folds' cost and their elasticities are 0.98 and 0.96
+  — history-proportional, untouched by this campaign, and now the whole of the
+  tick's remaining history term. They are why H2 (c) fails at 60.80% and they
+  are the next quarry, exactly as `hazard_memory_memo` was this campaign's after
+  The Pawl's readout named it.
+- **The remaining terrain questions per tick are the walk's own, not the fear
+  path's.** Tick 60 makes 3 168 `hazards()` calls, of which the alarm field
+  takes 450 and one fresh-memo hazard read takes 450; the remaining **2 268
+  (71.6%)** are `Danger::urgency`'s per-step sampling in `advance_one`'s decide
+  loop — once per candidate room per step, which Task 6 measured and which this
+  campaign deliberately does not touch. They now cost a memo lookup each rather
+  than a field blend, which is why the tick's field samples are **0**, but they
+  are still 2 268 questions asked.
+- **Nothing evicts either structure**, and §11.4's table is the figure Penstock
+  stage 4 enters on: 18 902 rooms / ~1.455 MB and 4 665 index entries / ~215 KB
+  at 200 ticks on the 50-agent shape, growing monotonically with decelerating
+  increments.
+- **Two things the numbers say that the criteria did not ask.** First, the
+  falsifier's intercept moved the *right* way for the first time in this program
+  — The Pawl's `C` rose by 45.1 ms/tick and had to be defended against a
+  crossover; this campaign's fell by 15.9, so there is no crossover to defend.
+  Second, the two set-aside control runs are a small positive control on the
+  quiet-box rule itself: B1 and B2 report elasticity 1.18 and 1.19 and r² 0.815
+  and 0.491 against the four valid runs' 0.91–0.94 and 0.996–0.998, so the load
+  rule and the r² floor flagged the same two runs independently. A rule that
+  never excluded anything would have told us nothing about whether it was
+  working.
