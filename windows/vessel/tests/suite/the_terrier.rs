@@ -3,7 +3,7 @@
 //!
 //! `brief::brief_of` used to call `hornvale_worldgen::occupations_by_vertex`
 //! — a reconstruction of EVERY committed occupation from the ledger — on
-//! every call, and a chamber turn called it two to five times, at 8.7-28.8
+//! every call, and a chamber turn called it two to five times, at 8.7-26
 //! ms each. That was the whole of what The Rack priced as "one shadowcast".
 //! The map now lives on `WorldContext`, built once.
 //!
@@ -30,10 +30,19 @@ use std::path::{Path, PathBuf};
 
 /// The three ways `windows/worldgen` hands back the world's occupations.
 /// All three rescan `world.ledger` in full (`history_emit.rs:514-535, 573-584`).
+///
+/// Matched as BARE tokens, with no trailing `(` — a call-shaped match
+/// (`occupations_by_vertex(`) is defeated by a renaming `use`
+/// (`use hornvale_worldgen::occupations_by_vertex as regroup;`), which names
+/// the function without ever writing `occupations_by_vertex(` again. Comments
+/// are already blanked before this scan runs (`production_code`), so
+/// widening the match to the bare identifier costs no new false-positive
+/// surface — the only remaining false-positive path would be prose inside a
+/// STRING literal, which does not occur in this crate today.
 const WHOLE_WORLD_READERS: [&str; 3] = [
-    "occupations_by_vertex(",
-    "occupations_at(",
-    "occupation_records(",
+    "occupations_by_vertex",
+    "occupations_at",
+    "occupation_records",
 ];
 
 /// Every `.rs` file under `windows/vessel/src`, recursively, sorted so a
@@ -90,18 +99,28 @@ fn production_sources() -> Vec<PathBuf> {
 /// that silently discarded real production code in three of this crate's own
 /// files:
 /// - `liveness.rs`: the first `#[cfg(test)]` gates `fn alarm_at` at line
-///   4353, while the real `mod tests` sits at line 8490 — everything between,
-///   ~4,100 lines, including `species_activity` (line 8295), went unscanned.
+///   4353, while the boundary this scan actually cuts at is line 8486 — the
+///   `#[cfg(test)] #[path = "liveness_tests/emitter_scan.rs"] mod
+///   emitter_scan_tests;` sequence, an EARLIER module declaration that also
+///   matches the attribute-then-`mod` shape — five lines before the real
+///   `mod tests` block, which opens at line 8491 (only a doc comment and
+///   attributes sit between the two). Either way, everything before line
+///   8486, ~4,100 lines, including `species_activity` (line 8295), went
+///   unscanned under the earlier first-attribute-split draft.
 /// - `roster.rs`: the first gates `pub(crate) fn driven_body_mut` at line
-///   237, while `mod tests` sits at line 446 — `on_roll_others` (line 437)
+///   237, while `mod tests` sits at line 447 — `on_roll_others` (line 437)
 ///   went unscanned.
 /// - `session.rs`: the first occurrence of the literal token `#[cfg(test)]`
 ///   is inside a DOC COMMENT at line 10439 (`session.rs`'s own note about
-///   `COMPASS_SQUARE`). That one was harmless only by luck — the real module
-///   follows at line 10594 with nothing whole-world-reading between them —
-///   and only becomes safe in general once comments are blanked before the
-///   module search runs, rather than the attribute being matched as a raw
-///   substring of the file.
+///   `COMPASS_SQUARE`). That line was already safe under this scan, not by
+///   luck: the boundary search below matches a trimmed line EQUAL to
+///   `"#[cfg(test)]"`, and a doc-comment line (`/// ... #[cfg(test)] ...`) is
+///   never equal to that — the exact-line match is what makes it safe, not
+///   the comment-blanking. Blanking serves a different job, the offender
+///   scan that follows: it lets a doc comment NAME the forbidden functions
+///   (`brief.rs`'s rewritten cost note does) without being read as a call,
+///   and it preserves every later line's real file number by replacing a
+///   comment line with an empty one rather than removing it.
 fn production_code(src: &str) -> String {
     let lines: Vec<&str> = src.lines().collect();
     let mut end = lines.len();
@@ -169,24 +188,25 @@ fn block_body_after<'a>(src: &'a str, needle: &str) -> Option<&'a str> {
 /// exercises the positive control's assertion (`build.contains("occupations_by_vertex(")`), not the
 /// offender-scan assertion this doc sits beside; see the fix round that
 /// caught the mismatch). Observed red, against the FINISHED (post-hoist)
-/// tree with this mutation applied — and re-taken in fix round 2 after
-/// `production_code` stopped stripping comments (which shifted line
-/// numbers) and started blanking them (which preserves them): the cited
-/// `src/session.rs:7232` below is now the REAL file line of the inserted
-/// statement, confirmed independently with `grep -n _re_survey
-/// windows/vessel/src/session.rs`:
+/// tree with this mutation applied — and re-taken in fix round 3 after
+/// `WHOLE_WORLD_READERS` widened from a call-shaped match to a bare-token
+/// one (to catch a renaming `use`, see the constant's own doc): the cited
+/// `windows/vessel/tests/suite/the_terrier.rs` line below and
+/// `src/session.rs:7232` are the REAL file lines of, respectively, the
+/// failing assertion and the inserted statement, both confirmed by pasting
+/// what this run actually printed rather than an earlier round's:
 /// ```text
 /// running 4 tests
 /// test the_terrier::the_block_extractor_matches_nested_braces ... ok
-/// test the_terrier::the_production_span_reaches_the_test_module_not_the_first_attribute ... ok
 /// test the_terrier::the_register_scanner_catches_a_per_call_read ... ok
+/// test the_terrier::the_production_span_reaches_the_test_module_not_the_first_attribute ... ok
 /// test the_terrier::no_session_path_re_surveys_the_occupation_register ... FAILED
 ///
 /// failures:
 ///
 /// ---- the_terrier::no_session_path_re_surveys_the_occupation_register stdout ----
 ///
-/// thread 'the_terrier::no_session_path_re_surveys_the_occupation_register' (190997382) panicked at windows/vessel/tests/suite/the_terrier.rs:272:5:
+/// thread 'the_terrier::no_session_path_re_surveys_the_occupation_register' (192274091) panicked at windows/vessel/tests/suite/the_terrier.rs:308:5:
 /// a session path re-surveys the world's occupation register; the map is built once on WorldContext and read from there (The Terrier, spec §3.1):
 /// src/session.rs:7232: let _re_survey = hornvale_worldgen::occupations_by_vertex(self.world);
 /// note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
@@ -309,6 +329,17 @@ fn the_register_scanner_catches_a_per_call_read() {
         production_code(prose_only).is_empty(),
         "a comment line must be dropped before the scan, or the rewritten \
          cost note would trip it"
+    );
+    // A call-shaped match (with the trailing `(`) is defeated by a renaming
+    // `use`, which names the function without ever writing a call — the
+    // aliased name calls through `regroup(`, never `occupations_by_vertex(`.
+    let aliased_import = "use hornvale_worldgen::occupations_by_vertex as regroup;";
+    assert!(
+        WHOLE_WORLD_READERS
+            .iter()
+            .any(|r| aliased_import.contains(r)),
+        "positive control: an aliasing `use` line must also match, or a \
+         renamed import would evade the offender scan"
     );
 }
 

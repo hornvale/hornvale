@@ -18,8 +18,8 @@
 //!
 //! **The reading that redirected the campaign.** Before this fix, scratch
 //! `Instant` prints inside `derive_sighting`, `chamber_plan`,
-//! `describe_chamber_here`, `enter` and `brief_here`, on this same
-//! sequence, release profile, seed 42's flagship, MacBookPro,
+//! `describe_chamber_here`, `enter`, `brief_here` and `brief_of`, on this
+//! same sequence, release profile, seed 42's flagship, MacBookPro,
 //! **CONTENDED** (`uptime` load averages `28.07 25.58 22.66` on the first
 //! run and `51.01 34.28 26.41` on the second — every figure below is an
 //! upper bound, and the *split* is the finding, not the absolute):
@@ -102,6 +102,17 @@
 //! | `enter` handle | 33.747 ms | **0.175-0.178 ms** | ≤ 3 ms | MET |
 //! | chamber `look` handle | 16.540/16.125 ms | **0.095-0.114 ms** | ≤ 1 ms | MET |
 //! | `Session::start` | 845 ms | **868 ms (+23 ms)** | ≤ +30 ms over 845 | MET |
+//!
+//! The `Session::start` row's "before" is the AFTER-Rack block's own reading
+//! (`uptime` load averages 14.10/17.75/21.58, CONTENDED), while this block's
+//! "after" (868 ms) is read quiet — so before and after are not the same
+//! box load, and **+23 ms is a lower bound on the growth**, not a measured
+//! delta. The real answer P4's decision rule was watching for does not need
+//! a matched pair to settle: the register has exactly one builder —
+//! `occupations_by_vertex` appears in production code only inside
+//! `WorldContext::build`, which `windows/vessel/tests/suite/the_terrier.rs`'s
+//! structural scan enforces — so the cost this row is trying to bound is
+//! paid once per world, never per session or per turn, regardless of load.
 //!
 //! Outdoor rows are the control: walk-band `snapshot()+json` reads
 //! 4.055-4.978 ms here against the AFTER-Rack block's ~4.1-4.9 ms and the

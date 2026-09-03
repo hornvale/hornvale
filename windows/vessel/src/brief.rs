@@ -149,7 +149,7 @@ pub(crate) fn containing_vertex(
 /// every call, under a `NOTE ON COST` that said "if a profile shows it
 /// mattering, hoist the map to the caller … do NOT memoize inside this
 /// function, because a hidden cache in a derivation path is how derived
-/// state stops being derived." The profile showed 8.7-28.8 ms per call and
+/// state stops being derived." The profile showed 8.7-26 ms per call and
 /// two to five calls per indoor turn — the whole of what The Rack had
 /// attributed to a 0.012 ms shadowcast. The note's prescription is what
 /// shipped, and its prohibition still stands: there is no cache here, only

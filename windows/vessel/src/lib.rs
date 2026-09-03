@@ -48,10 +48,14 @@ pub mod underworld_level;
 mod vantage;
 pub use agent::{most_populous_settlement, walk_depth};
 pub use brief::{Brief, brief_of};
+// `brief_of`'s occupation-register parameter is keyed on `OccupationRecord`
+// (`hornvale_history::record`); re-exported so a caller can name the
+// parameter type without a direct dependency on `hornvale-history`.
 pub use chamber_prose::describe_chamber;
 pub use controller::{Controller, DefaultController, ImposedController, PlayerController};
 pub use depth::{CHAMBER_DEPTH_OFFSET, chamber_depth, truncate_to_walk};
 pub use focalize::*;
+pub use hornvale_history::record::OccupationRecord;
 pub use knowledge::*;
 pub use lattice::{Cell, CellKind, Lattice, Plan, Rect, allocate, embed_with, extent_for, render};
 pub use level_doc::{

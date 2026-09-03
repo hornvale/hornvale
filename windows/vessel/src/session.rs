@@ -709,7 +709,7 @@ pub struct WorldContext<'w> {
     /// sessions derive (`brief::brief_of`). A pure function of the immutable
     /// `World`, which is what makes it world-scoped like everything else on
     /// this type. Before this field, `brief_of` rebuilt the whole map on every
-    /// call — 8.7-28.8 ms — and a chamber turn called it two to five times;
+    /// call — 8.7-26 ms — and a chamber turn called it two to five times;
     /// that was the entire cost The Rack's chronicle attributed to "one
     /// shadowcast" (0.012 ms).
     ///
