@@ -375,3 +375,30 @@ carried seven assertion strings with literal multi-space runs — a non-raw
 Python heredoc had eaten the Rust `\`-continuations, collapsing three-line
 messages onto one line with the continuation indentation surviving as spaces.
 Compiles, formats, passes; only reading the string shows it. Fixed in round 2.
+
+#11 [G5] — **Task 2 complete, approved with zero findings at every severity.
+The one worth recording is the implementer's own honesty about a partly
+vacuous red.**
+
+It reported: *"2 of 3 cases failed as expected, the 'no offer' case trivially
+passed"* — its red-first stub returned `None` unconditionally, so the test
+asserting `None` was satisfied for the wrong reason. Writing that down rather
+than reporting "red-first confirmed, 3 tests" is what let the review ask the
+sharper question, which is not *was the red-phase honest* but **is the case
+non-vacuous against the SHIPPED code**. It is: mutating the real function to
+`.find(|_a| true)` reddens it (`left: Some(AnchorId(0)), right: None`).
+
+Two distinct properties, and only the second matters for coverage. A vacuous
+red-phase is a process smell; a vacuous test is a defect. They are easy to
+conflate and this task had the first without the second.
+
+Also verified rather than assumed: the `room_affords_rest` delegation is a true
+no-op — `Interior::ids()` is `(0..len).map(AnchorId)` with no sort, so `.any()`
+and `.find().is_some()` scan the same sequence with the same predicate and the
+same short-circuit point. In a deterministic simulation a refactor that
+preserves the answer while changing evaluation order is still a change, so this
+needed checking rather than reasoning.
+
+The tie-break test asserts `Some(first_bed)` **and** carries a precondition
+`assert!(first_bed < second_bed)` so the fixture fails loudly if ever
+reordered — a self-guarding fixture, better than the brief asked for.
