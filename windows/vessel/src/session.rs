@@ -8465,44 +8465,24 @@ impl<'w> Session<'w> {
         // always was — there is no controller state to carry between ticks
         // for either.
         //
-        // **What actually keeps the LEDGER clean either way is the next
-        // line, not which controller answered (fix round 3, N4, reconfirmed
-        // by this task): `_driven_facts` is discarded UNCONDITIONALLY,
-        // regardless of what `step_one_with_controller` returns.** An
-        // earlier version of this comment claimed this was "the commits on
-        // `Do`, nothing on `Hold` argument spec §5.2 makes" — checked
-        // directly (fix round 2) and that claim is false: forcing the
-        // intent to `Do` here still leaves the ledger untouched, because the
-        // facts never reach the ledger either way. The player's verbs (`go`,
-        // `drink`, …) are what the body DOES; this walk only ever supplies
-        // what the host WANTS (`Session::driven_mode`, which reads the driven
-        // slot's `felt` column) — spec §5.2 is being corrected at Task 8 to
-        // say so.
-        //
-        // **The ledger is inert to this swap; the driven slot's `felt` is NOT
-        // (The Coercion, Task 4 fix round, checked directly rather than
-        // assumed).** Its three parts — mode, affect, suppressed ranks; three
-        // separate `Session` fields until The Rack collapsed them into one
-        // `Felt` at the driven slot — are read back from
-        // `st.mode`/`st.affect`/`st.suppressed` on the LAST
-        // `advance_one` iteration of this call, and while each iteration
-        // sets them from that iteration's OWN `resolution` — before
-        // `controller.intend` is even invoked, so intent cannot change what
-        // a single iteration reports — a multi-iteration `wait` (`from` to
-        // `to` spans more than one decision point) lets an ACTING
-        // controller's intent move `st.pos` between iterations, which
-        // changes what the NEXT iteration's `resolution` is a resolution
-        // OF. `Hold` never moves `st.pos` (`HoldStep` only ever advances
-        // `st.day`), so under `PlayerController` every iteration re-judges
-        // the same frozen position and this was never observable; under
-        // `ImposedController` the body can walk to water and drink mid-wait,
-        // which can leave it in a calmer felt state than a position-frozen
-        // walk would have reported. See
-        // `driven_felt_state_can_move_under_an_imposed_controller_during_wait`
-        // for a direct, seed-42 demonstration — this is a real behavioural
-        // consequence for `!ask`'s narration while possessed, not merely an
-        // internal bookkeeping detail, even though no committed fact ever
-        // differs.
+        // **The walk's facts are committed below, unconditionally on the
+        // controller (The Minute, spec §3.1) — see the commit loop after
+        // the population's own, a few dozen lines down.** Free, the walk is
+        // asked through a fresh `PlayerController`, whose intent is always
+        // `Hold`, and `Hold` emits nothing, so the loop is a no-op for
+        // every free session. Possessed, the `ImposedController` genuinely
+        // acts and what it did now reaches the ledger — the drink it took,
+        // the room it reached — through the same constructors a creature's
+        // walk uses. The felt-state observation The Coercion made (a
+        // multi-iteration `wait` lets an ACTING controller move `st.pos`
+        // between iterations, changing what a later iteration's
+        // `resolution` is a resolution OF, so a possessed body can reach a
+        // calmer felt state than a position-frozen walk would have
+        // reported — see
+        // `driven_felt_state_can_move_under_an_imposed_controller_during_wait`)
+        // still holds; it is now one of two consequences of the swap
+        // rather than the only one, the other being the ledger fact this
+        // task committed.
         //
         // Cloned out of the roster first: `driven_body()` borrows all of
         // `self`, which cannot coexist with the `&mut self.mesh_memo`/`&mut
@@ -8515,7 +8495,7 @@ impl<'w> Session<'w> {
         } else {
             &mut player_controller
         };
-        let (_driven_facts, driven_written) = sys.step_one_with_controller(
+        let (driven_facts, driven_written) = sys.step_one_with_controller(
             &self.ledger,
             &driven_npc,
             &mut self.mesh_memo,
@@ -8570,6 +8550,32 @@ impl<'w> Session<'w> {
                 Err(e) => return Turn::Out(format!("Time falters: {e}")),
             }
         }
+        // THE MINUTE (spec §3.1): the driven body's own walk is committed,
+        // UNCONDITIONALLY on the controller. Free, the walk was asked through
+        // a `PlayerController` with nothing queued, whose intent is `Hold`,
+        // and a Holding walk emits nothing — pinned by
+        // `a_free_walk_emits_nothing_and_ends_in_the_column` — so this loop
+        // is a no-op for every free session and every committed fixture.
+        // Held, the `ImposedController` acts, and what it did now reaches the
+        // ledger through the same constructors a creature's walk uses
+        // (decision 0168): the drink it took, the room it reached.
+        //
+        // AFTER the population's facts and BEFORE the First Mark's
+        // `turned-hostile` loop, every tick — a determinism contract from the
+        // day it landed (spec §3.1), not a preference. Same failure shape as
+        // the loop above: an error leaves the facts before it in place and
+        // ends the turn.
+        //
+        // Before this campaign the binding was `_driven_facts` and this loop
+        // did not exist; the walk's drinks were discarded and a held body's
+        // ledger thirst grew monotonically while its felt state read
+        // `Content` (spec §1, measured).
+        for fact in driven_facts {
+            match self.ledger.commit(fact, &self.registry) {
+                Ok(true) | Ok(false) => {}
+                Err(e) => return Turn::Out(format!("Time falters: {e}")),
+            }
+        }
         self.occupancy = occupancy;
         // THE TICK WRITES THE RACK (The Rack, Task 3, spec §3.4). Both walks
         // above reported a `Written` per body they advanced; this is the one
@@ -8598,31 +8604,23 @@ impl<'w> Session<'w> {
                 .expect("the tick walked a body this session's roster never appended");
             self.roster.write(slot, w.position, w.felt);
         }
-        // The driven body's own walk — ITS FELT STATE ONLY, never its
-        // position (Task 3 fix round 1). It is not in `written` above:
-        // `step_one_with_controller` is a separate, band-of-one walk and
+        // The driven body's own walk — position AND felt, through `write`,
+        // because its facts were committed a few lines above (The Minute,
+        // spec §3.2). `driven_written.position` is the walk's own `st.pos`,
+        // and every move that advanced it emitted an `agent-at` the loop
+        // just committed, so the column and `agent_position(&ledger)` agree
+        // by construction — `the_rack.rs::a_possessed_sessions_columns_are_
+        // the_ledgers_too` holds them to it. Not in `written` above:
         // `on_roll_others` excludes the driven slot by construction, so this
-        // is the only writer of that slot's `felt`.
+        // is that slot's only writer on a tick.
         //
-        // **`driven_written.position` IS NOT A VIEW OF ANYTHING, and writing
-        // it broke the campaign's headline invariant.** `_driven_facts` is
-        // discarded unconditionally a few dozen lines above — deliberately,
-        // and see that site's own comment — so nothing this walk did reaches
-        // the ledger. Free, that is invisible: the walk is asked through a
-        // `PlayerController` that always Holds and `Hold` never moves
-        // `st.pos`, so the walk's room and the ledger's coincide. Possessed,
-        // an `ImposedController` genuinely acts, and the walk ends in a room
-        // the ledger never recorded — measured at seed 7 under `!wait 5`,
-        // where the column named `path[…, 3, 1, 3, 3]` and the ledger's own
-        // fold named `path[…, 1, 2, 3, 0]`.
-        //
-        // The driven slot's position moves through `Roster::place`, from
-        // `Session::commit_agent_at` — the single writer of this body's
-        // `agent-at` facts — so the column follows the ledger by construction
-        // rather than by a second fold that could drift from it.
-        // `a_possessed_sessions_columns_are_the_ledgers_too` holds this.
+        // Before this campaign this was `resolve` (felt only), because the
+        // position was a view of a walk the ledger never heard about; The
+        // Rack found that writing it broke VIEW ≡ SCAN at seed 7. Now the
+        // ledger has heard, and the felt-only write would be the lie.
         let driven_slot = self.roster.driven();
-        self.roster.resolve(driven_slot, driven_written.felt);
+        self.roster
+            .write(driven_slot, driven_written.position, driven_written.felt);
         // The First Mark, one-hop forward integration: after the NPC
         // drive tick settles, any co-located-or-not NPC whose
         // grievance has crossed the hostility threshold commits its
@@ -20246,12 +20244,13 @@ mod tests {
     /// was called first, is how this isolates the controller swap from
     /// every other source of variation.
     ///
-    /// **The ledger stays untouched by this test's own construction**: `!wait`
-    /// (`Session::wait`) discards the driven body's own facts unconditionally
-    /// regardless of which controller answered (see that call site's own
-    /// doc), so this test asserts only on the felt-state trio, never on
-    /// `committed_fact_count()` — a ledger assertion here would be asserting
-    /// something this swap was never claimed to change.
+    /// **The ledger moves too, since The Minute:** measured 2026-09-03, the
+    /// held session's ledger carries two facts the free one lacks —
+    /// `possessed-by` (committed by `!possess` itself, before either `!wait`
+    /// runs) and `slept` (the held walk's first tick at seed 42, now
+    /// minuted). Asserted below; the doc originally predicted a one-fact
+    /// difference (the sleep alone), which undercounted `possessed-by` —
+    /// corrected to the measured two.
     #[test]
     fn driven_felt_state_can_move_under_an_imposed_controller_during_wait() {
         let world = seam_world();
@@ -20290,6 +20289,13 @@ mod tests {
             free.driven_affect(),
             held.driven_affect(),
             "the felt-state trio ask() draws from moves with the swap too"
+        );
+        assert_eq!(
+            held.committed_fact_count_for(held.agent_entity()),
+            free.committed_fact_count_for(free.agent_entity()) + 2,
+            "seed 42's held body carries two more facts than the free one: \
+             `possessed-by` (from `!possess` itself) and `slept` (from the \
+             first wait, now minuted); the free body, Holding, commits neither"
         );
     }
 

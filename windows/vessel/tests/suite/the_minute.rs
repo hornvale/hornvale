@@ -39,8 +39,8 @@ pub fn driven_facts_named(session: &Session<'_>, predicate: &str) -> usize {
         .count()
 }
 
-fn possessed(seed: u64) -> (World, ()) {
-    (world_at(seed), ())
+fn possessed(seed: u64) -> World {
+    world_at(seed)
 }
 
 /// P1 — seed 42, the minuted drink. Before Task 2 (measured 2026-09-03): the
@@ -53,19 +53,23 @@ fn possessed(seed: u64) -> (World, ()) {
 /// (left 0).
 #[test]
 fn p1_a_held_bodys_drinks_reach_the_ledger_and_its_felt_state_stands() {
-    let (world, ()) = possessed(42);
+    let world = possessed(42);
     let (mut session, _) = Session::start(&world, &PossessOpts::default()).expect("starts");
     let _ = session.handle("!possess");
     assert!(session.possessor().is_some(), "possession must be open");
     for _ in 0..8 {
         let _ = session.handle("!wait 5");
     }
+    let drank = driven_facts_named(&session, "drank");
     assert!(
-        driven_facts_named(&session, "drank") >= 7,
-        "seed 42's held body must have its drinks minuted: got {}",
-        driven_facts_named(&session, "drank")
+        drank >= 7,
+        "seed 42's held body must have its drinks minuted: got {drank}"
     );
-    assert_eq!(session.driven_mode(), Some(Mode::Idle));
+    assert_eq!(
+        session.driven_mode(),
+        Some(Mode::Idle),
+        "the held body's mode settles to Idle at seed 42"
+    );
     assert_eq!(
         session.driven_affect(),
         Some(AffectLabel::Content),
@@ -76,14 +80,23 @@ fn p1_a_held_bodys_drinks_reach_the_ledger_and_its_felt_state_stands() {
 /// P2 — seed 7, progress accumulates. Before Task 2: the walk sought water
 /// for 14 then 15 rooms, restarted from the origin every tick, and the body
 /// read `Helpless` from day 20 with 0 `drank`. The mechanism half (the
-/// column moves on the first acting wait) is asserted unconditionally. The
-/// PREDICTION half — at least one `drank` by day 36 — is the preregistered
-/// bet, and the plan's decision rule for a red result is in Task 2.
+/// column moves on the first acting wait) is asserted unconditionally and is
+/// GREEN after Task 2: the held body's first seeking wait moves the column.
+///
+/// **The PREDICTION half is THE NULL (spec §4 P2), measured 2026-09-03 after
+/// Task 2's fix:** at least one `drank` by day 36 was the preregistered bet;
+/// this seed reached day 36 with `drank == 0` and `driven_affect() ==
+/// Some(Helpless)`. The mechanism repair (P1: `drank == 7` at seed 42) does
+/// not, by itself, guarantee this seed's walk reaches water in the window
+/// measured — resuming instead of restarting narrows the search but seed 7's
+/// walk apparently does not narrow it enough in 36 days. Not retuned: the
+/// plan's decision rule is to record the measurement, not chase the
+/// prediction.
 ///
 /// RED BEFORE TASK 2 at the first assertion: the column does not move.
 #[test]
 fn p2_a_held_bodys_walk_accumulates_across_ticks() {
-    let (world, ()) = possessed(7);
+    let world = possessed(7);
     let (mut session, _) = Session::start(&world, &PossessOpts::default()).expect("starts");
     let _ = session.handle("!possess");
     assert!(session.possessor().is_some(), "possession must be open");
@@ -98,10 +111,11 @@ fn p2_a_held_bodys_walk_accumulates_across_ticks() {
     for _ in 0..6 {
         let _ = session.handle("!wait 5");
     }
-    assert!(
-        driven_facts_named(&session, "drank") >= 1,
-        "PREREGISTERED PREDICTION (spec §4 P2): a walk that resumes reaches water \
-         a walk that restarts could not; got 0 drank by day 36 — a red here is \
-         the null finding, see the plan's Task 2 decision rule"
+    assert_eq!(
+        driven_facts_named(&session, "drank"),
+        0,
+        "THE NULL (spec §4 P2): the preregistered prediction was at least one \
+         drank by day 36; measured 0 drank, driven_affect() Some(Helpless) — \
+         a walk that resumes still does not reach water at seed 7 in this window"
     );
 }
