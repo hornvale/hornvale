@@ -5127,3 +5127,55 @@ about a slope — and it was corrected in a ruling written before the change was
 made and after the comparison under both readings had been recorded. Nothing in
 the standing gate would have caught a quieter version of either ordering, and
 nothing here claims otherwise.
+
+### Re-deriving catches what re-reading cannot, fourteen times over (2026-09-03)
+
+Four sections above hold that the wall this chapter keeps rebuilding is **an
+instrument that reports a verdict it cannot support**, and that the only thing
+separating a check which fires from one which does not is making it fail on
+command. [The Nettle](./chronicle/the-nettle.md) is not a world measurement and
+stakes no bet in the lists above. It belongs here because it ran that wall
+fourteen times in one body of work and can say something about the *shape* of
+the failure rather than another instance of it.
+
+**Fourteen claims failed checking; every one was caught by somebody
+re-deriving it, and not one by somebody re-reading it.** Half were written by
+whoever was coordinating the work. The material was ordinary — inherited
+notes, its own prose, its own plans, and two of its own repairs — which is the
+point: no instance required carelessness, and re-reading was performed on all
+of them.
+
+The strongest instance is a check that was green and blind at once. A rule for
+stripping quoted text ran as two passes, single quotes then double, so any two
+apostrophes on a line paired regardless of the phrases they sat inside — and a
+forbidden command sandwiched between two harmless remarks vanished, returning
+approval. **Every test case for that rule had at most one quoted phrase per
+line, and the fault needs two.** The cases were reasonable, the coverage read
+as broad, and the criterion as written would have reported support forever.
+That is the same structure as the branch table three sections above: not a
+criterion that was wrong, but a criterion whose *inputs could not contain the
+defect*.
+
+A second instance sharpens the point about red results. A guard built with two
+arms — one for a new violation, one for a stale exemption — was probed, went
+red, and was recorded as discriminating. The red came from the first arm; the
+probe could not reach the second, because a single mutation makes both
+conditions true at once and the earlier assertion fires. **The second arm was
+correct and unexercised, and the run that "proved" it never touched it.** A red
+is evidence about the assertion that produced it and about nothing else.
+
+**What the campaign adds beyond another instance is a decomposition.** A claim
+about a *particular thing* — this path, this call site, this value — has its
+truth in a location, and goes stale only when someone edits that location,
+which is the same event as the staling. A claim about *the whole* — nothing
+pins this, no test covers that — is falsified by an edit anywhere, by people
+who are not looking at it and do not know they have done it. Both are filed
+identically, with a confidence marking fixed at writing. The two inherited
+records that were false were both of the second kind; the one that held was of
+the first. Three cases prove nothing, but the mechanism is structural rather
+than statistical: **the second kind has a half-life and nothing in the filing
+records it, or the state it was observed against, or the command that would
+re-decide it.**
+
+Unscored deliberately, and the reason is this chapter's own: the claim that
+re-derivation catches what re-reading does not is itself of the second kind.

@@ -16,8 +16,7 @@ fn run(args: &[&str]) -> (String, String, bool) {
 #[test]
 fn locale_json_is_deterministic_for_a_coordinate() {
     // Build a seed-42 world to a temp path.
-    let dir = std::env::temp_dir();
-    let world = dir.join("hv-locale-test.json");
+    let world = std::env::temp_dir().join(format!("hv-locale-test-{}.json", std::process::id()));
     let (_o, e, ok) = run(&["new", "--seed", "42", "--out", world.to_str().unwrap()]);
     assert!(ok, "new failed: {e}");
     let w = world.to_str().unwrap();
@@ -31,8 +30,7 @@ fn locale_json_is_deterministic_for_a_coordinate() {
 
 #[test]
 fn locale_requires_a_target() {
-    let dir = std::env::temp_dir();
-    let world = dir.join("hv-locale-test2.json");
+    let world = std::env::temp_dir().join(format!("hv-locale-test2-{}.json", std::process::id()));
     let _ = run(&["new", "--seed", "42", "--out", world.to_str().unwrap()]);
     let (_o, _e, ok) = run(&["locale", "--world", world.to_str().unwrap()]);
     assert!(!ok, "missing --at/--room must fail");

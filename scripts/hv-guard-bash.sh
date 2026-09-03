@@ -58,13 +58,86 @@ deny() {
     exit 0
 }
 
+# ---------------------------------------------------------------- projection
+#
+# The rules below must see the command being EXECUTED, not every string that
+# appears in the command's text. Six observed false refusals came from that
+# confusion: a heredoc body that is prose *about* the gate, and a `grep`
+# searching *for* a flag, were both refused as though they were the thing they
+# mentioned. The guard's own header says why that is the fatal direction — a
+# guard that blocks legitimate work gets overridden into uselessness — whereas
+# a missed detection is the failure mode it already accepts by design ("any
+# internal error allows the command").
+#
+# Two strips, in this order:
+#
+#   1. HEREDOC BODIES. A heredoc body is data on some program's stdin; this
+#      shell never executes it. The opener LINE is kept, because `cat > f
+#      <<EOF` really does run `cat`.
+#   2. QUOTED LITERALS. A quoted span is an argument, not a command.
+#
+# ACCEPTED HOLE, recorded so it is not rediscovered as a defect: `bash -c
+# "cargo nextest run --workspace"` and `bash <<EOF … EOF` become invisible.
+# Both are real and both are rare, and this is the direction the guard is
+# built to fail in.
+#
+# Herestrings (`<<<`) are NOT heredocs and must not trigger the skip: after
+# `<<` the next character is `<`, which matches neither the optional quote nor
+# the delimiter's leading `[A-Za-z_]`, so the opener pattern cannot match one.
+project() {
+    local text="$1" out="" line trimmed delim="" in_body=0
+
+    while IFS= read -r line; do
+        if [[ "$in_body" -eq 1 ]]; then
+            trimmed="${line#"${line%%[![:space:]]*}"}"
+            trimmed="${trimmed%"${trimmed##*[![:space:]]}"}"
+            if [[ "$trimmed" == "$delim" ]]; then
+                in_body=0
+            fi
+            continue
+        fi
+        if [[ "$line" =~ \<\<-?[[:space:]]*[\'\"]?([A-Za-z_][A-Za-z0-9_]*)[\'\"]? ]]; then
+            delim="${BASH_REMATCH[1]}"
+            in_body=1
+        fi
+        out+="$line"$'\n'
+    done <<<"$text"
+
+    # Strip quoted spans in ONE alternating pass, so the quote that opens
+    # FIRST wins. Two sequential passes are wrong, and the difference is not
+    # subtle: stripping `'...'` before `"..."` treats any two apostrophes on a
+    # line as a pair, with no idea they may sit inside unrelated double-quoted
+    # strings. Measured against the two-pass version:
+    #
+    #   RAW:  echo "I don't think" && cargo nextest run --workspace \
+    #                             && cargo nextest run --workspace \
+    #                             && echo "you can't stop it"
+    #   OUT:  echo
+    #
+    # Both real runs vanished between the apostrophes in "don't" and "can't",
+    # and the guard returned `allow` -- a silent false NEGATIVE on exactly what
+    # Rule 1 exists to catch, triggered by ordinary English contractions.
+    # `sed -E` with an alternation takes the LEFTMOST match, so a `"` before a
+    # `'` consumes its own span and scanning resumes after it.
+    #
+    # Line-oriented, which is sufficient: heredocs -- the only multi-line
+    # quoting this guard has ever seen in practice -- are gone by now.
+    # RESIDUAL LIMIT, accepted: a backslash-escaped quote inside a same-type
+    # quoted span ends the span early. Strictly better than the two-pass form,
+    # and the guard fails open.
+    printf '%s' "$out" | sed -E "s/'[^']*'|\"[^\"]*\"/ /g"
+}
+
 # ---------------------------------------------------------------- the rules
 #
 # Takes the command text, prints a refusal reason and returns 1 if it should be
 # denied, or returns 0 for allowed. Factored out of stdin handling so the
 # self-test drives exactly the code the hook drives.
 verdict() {
-    local cmd="$1"
+    # Every rule below reasons about the command being executed, so it reads
+    # the projection, never the raw text. See `project()` above.
+    local cmd
+    cmd="$(project "$1")"
 
     # Rule 0 — the explicit escape hatch, checked first so it beats everything.
     # A human (or the controller, with authorization) can always override by
@@ -188,6 +261,37 @@ self_test() {
     # Rule 5 — bypass.
     check deny 'git commit --no-verify -m x'
     check allow 'git commit -m "ordinary"'
+
+    # The PROJECTION — the rules must see the command executed, not every
+    # string in the command text. Six false refusals on legitimate work came
+    # from that confusion (The Nettle). Both directions, because a narrowing
+    # that only ever allows has deleted the rule rather than narrowed it.
+    check allow 'cat > /tmp/n.md <<EOF
+The gate no longer runs cargo nextest run --workspace.
+EOF'
+    check allow 'grep -rn "no-verify" .claude/'
+    check allow 'cat > /tmp/n.md <<EOF
+CLAUDE.md forbids --no-verify.
+EOF'
+    check allow 'cat > /tmp/n.md <<EOF
+First cargo nextest run --workspace, then cargo nextest run --workspace.
+EOF'
+    # The load-bearing control: a REAL command after a heredoc must still be
+    # seen. If heredoc stripping ever swallows the rest of the input, this is
+    # the case that catches it.
+    check deny 'cat > /tmp/n.md <<EOF
+prose
+EOF
+cargo nextest run --workspace'
+    # A herestring is not a heredoc and must not start a body skip.
+    # shellcheck disable=SC2016  # single-quoted on purpose: this is literal
+    # command text fed to verdict(), never expanded by this shell
+    check deny 'grep -q cargo <<<"$x"; cargo nextest run --workspace'
+    # TWO quote-pairs on ONE line -- the case none of the above exercises. An
+    # apostrophe inside a double-quoted string must not pair with a later one:
+    # under the two-pass strip this returned `allow`, the whole command eaten
+    # between the two apostrophes. This is the regression test for that.
+    check deny 'echo "I don'"'"'t think" && cargo nextest run --workspace'
 
     # The reason TEXT must survive, not just the verdict. The first version of
     # this file emitted its advice in printf's FORMAT position, so `%H` and `%gs`

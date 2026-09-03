@@ -92,11 +92,35 @@ else
     else
         bad "the collision check did NOT fire against a ref that carries $num"
     fi
-    outn="$(cd "$root" && HV_VET_REFS="origin/main" bash scripts/sluice-vet.sh "$br" "$cand" 2>&1)"
-    if [ "$(printf "%s" "$outn" | grep -c COLLISION)" -eq 0 ]; then
-        ok "NEGATIVE CONTROL: a ref without the number stays silent"
+    # THE NEGATIVE CONTROL NEEDS A REF THAT GENUINELY LACKS THE NUMBER, and
+    # origin/main is not reliably that ref. `git diff origin/main...<branch>` is
+    # against the MERGE BASE, so a decision stays in that diff after its campaign
+    # LANDS — at which point main carries it, the check fires correctly, and this
+    # assertion calls the correct behaviour a failure.
+    #
+    # It passed when written because nothing it picked had landed yet. Fifteen
+    # campaigns landed the same night and it went red in the chamber, holding
+    # campaign/the-terrier for a defect that was entirely mine. The test had
+    # encoded "a minted decision is not on main", which is true only until that
+    # campaign merges.
+    #
+    # So: build a ref that provably lacks the number instead of assuming one
+    # does. An orphan commit carrying no decisions at all cannot collide with
+    # anything, and its emptiness is a property of how it was made rather than
+    # of what has landed today.
+    empty_ref="refs/remotes/origin/campaign/zz-vet-empty"
+    empty_sha="$(cd "$root" && git commit-tree "$(git hash-object -t tree /dev/null)" -m 'empty probe' 2>/dev/null)"
+    if [ -z "$empty_sha" ]; then
+        ok "SKIP: could not mint an empty probe commit for the negative control"
     else
-        bad "the collision check fired against a ref that does not carry the number"
+        (cd "$root" && git update-ref "$empty_ref" "$empty_sha" 2>/dev/null)
+        outn="$(cd "$root" && HV_VET_REFS="origin/campaign/zz-vet-empty" bash scripts/sluice-vet.sh "$br" "$cand" 2>&1)"
+        if [ "$(printf "%s" "$outn" | grep -c COLLISION)" -eq 0 ]; then
+            ok "NEGATIVE CONTROL: a ref carrying no decisions at all stays silent"
+        else
+            bad "the collision check fired against a ref that carries no decisions"
+        fi
+        (cd "$root" && git update-ref -d "$empty_ref" 2>/dev/null)
     fi
     outs="$(cd "$root" && HV_VET_REFS="$cand" bash scripts/sluice-vet.sh "$br" "$cand" 2>&1)"
     if [ "$(printf "%s" "$outs" | grep -c COLLISION)" -eq 0 ]; then
