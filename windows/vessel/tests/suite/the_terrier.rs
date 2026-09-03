@@ -206,7 +206,7 @@ fn block_body_after<'a>(src: &'a str, needle: &str) -> Option<&'a str> {
 ///
 /// ---- the_terrier::no_session_path_re_surveys_the_occupation_register stdout ----
 ///
-/// thread 'the_terrier::no_session_path_re_surveys_the_occupation_register' (192274091) panicked at windows/vessel/tests/suite/the_terrier.rs:308:5:
+/// thread 'the_terrier::no_session_path_re_surveys_the_occupation_register' (192274091) panicked at windows/vessel/tests/suite/the_terrier.rs:309:5:
 /// a session path re-surveys the world's occupation register; the map is built once on WorldContext and read from there (The Terrier, spec §3.1):
 /// src/session.rs:7232: let _re_survey = hornvale_worldgen::occupations_by_vertex(self.world);
 /// note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace

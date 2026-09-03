@@ -114,6 +114,16 @@ opened to close. Outdoor rows, the control, read 9.27–13.07 ms — the
 JSON-and-spatial-channel floor [The Rack](./the-rack.md) measured, unmoved
 beyond noise.
 
+**The census moved nothing, and this time the null has a control.** Queued
+at close as ordinary work and run on the canonical box in 986 seconds, the
+census agreed with the branch on every column; its delivery branch carries
+only the run's own timings row. A null with no control is not a result. The
+control here is the drift check over every generated path, run on the same
+code after the absorb of `main`: it moved nothing either, while the type
+audit, the digest and the session goldens all had the opportunity to. The
+register changes what a turn *costs*, not what a world *is*, and both
+instruments say so.
+
 ## The ratchet, and its direction
 
 A source scan in `windows/vessel` (decision 0636) asserts that production

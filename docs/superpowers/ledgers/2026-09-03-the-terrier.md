@@ -359,3 +359,51 @@ Each item names the reason it was not attempted here.
   (`TOOL-a-text-scan-guard-splits-on-prose-about-its-needle`, minted by The
   Plumb), whose Where cell now also points at `the_terrier.rs`'s
   `production_code` as the correct shape to copy.
+
+## Close (2026-09-03) — the G6 digest
+
+**Every entry made after the G3 stop, in order, for Nathan's review:**
+
+1. **#6 [G4]** — plan self-review; two plan-text defects fixed before
+   dispatch (`std::collections` path; `world_at` returns `Option`).
+2. **Task 1** — two rulings against the plan's own text: the evidence
+   clause asked for the wrong red (positive control, not the offender
+   scan); the ratchet under-scanned three files by splitting at the first
+   `#[cfg(test)]` (~4,100 lines of `liveness.rs` never looked at). Both
+   fixed and witnessed.
+3. **Task 2** — the prescribed `go n`/12-step script was a null at both
+   seeds; per-seed bearings calibrated and documented (42: east, 18 steps;
+   7: west, 7 steps — its flagship STARTS on an unoccupied vertex).
+4. **The stage gate held twice by things outside this campaign** —
+   `campaign/the-prospect` minting 0540 inside The Pawl's block (surfaced
+   through the vet harness's negative control; posted to the board, since
+   renumbered); then a registry row duplicated by a clean auto-merge of
+   The Nettle (kept `main`'s; new rows go at the END of a table).
+5. **Task 4 before Task 3** — the box sat at load 122; five hours later it
+   read 2.0 and every preregistered line was met quiet.
+6. **Task 4** — keep the full chronicle the implementer wrote (verified)
+   and have Task 5 extend it; SUMMARY order fixed inline.
+7. **Task 5** — an eighth attribution site, spelled out in words in the
+   Confidence Gradient's cost narrative, corrected in place.
+8. **Final review (merge-ready pending prose)** — 13 findings, one wave;
+   the unsourced `28.8` restated as the committed `8.7–26 ms`; the scan
+   now matches bare tokens so an import alias cannot evade it;
+   `OccupationRecord` re-exported. Residual after the re-review: one
+   pasted line cite off by one (308 → 309), fixed inline by the controller
+   at close; no second wave.
+9. **Census** — `req-b9eca484909f`, 986 s, NO GOLDENS MOVED; control is
+   P5's clean drift diff on the same code.
+
+**Save-format / epoch / determinism entries:** none. The hoist consumes no
+stream draw and no committed artifact moved (P5 clean twice; census null
+with control).
+
+**Deferred minors and where each landed:** all seven are rows in
+`docs/retrospectives/the-terrier.md`'s deferred-minors table with an
+outcome each; (b) and (g) were fixed in the final wave, (a) (c) (d) (e)
+(f) ride with the reason the final reviewer gave.
+
+**Follow-ups:** the `## Follow-ups` section above, promoted into the
+retrospective.
+
+**Worktree:** left in the pool, clean and unlocked (The Sexton).
