@@ -1497,3 +1497,15 @@ since only `Portable` kinds can be carried and every rostered kind is prosed.
 region covers — a divider between two regions. The brief did not anticipate the
 case. Refusing beats posting a `located-in` whose place no fold can read back,
 which is the exact silent loss that constant exists to prevent one band up.
+
+#13 [G5, controller note during Task 5 — leads the G6 digest] — Registering
+the `door` thing-kind appended concept-registry accession epoch 19 and moved
+the seed-42 world golden and the proto-root tables · **Accepted as the
+shape every new thing-kind produces (The Chattel's kinds did the same);
+additive, read line by line by the implementer and to be re-read by the task
+review** · Why: a thing-kind is a concept the registry names, and the
+registry's accession log is append-only by design — this is not the spec §5
+contract (a descent key's identity making the plan grammar save-relevant),
+which is a second, separate save-format fact of this campaign, but it is a
+committed-artifact movement and belongs beside it at G6 · Capture: this
+entry; the Task 5 section's own record; the G6 digest's leading pair.
