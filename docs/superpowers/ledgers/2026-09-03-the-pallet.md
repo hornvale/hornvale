@@ -94,3 +94,43 @@ bed"); (c) an anchor-identity record — unconstitutional under 0069.
 
 Capture: Campaign C and D dependencies are recorded here rather than as new
 registry rows, since `MAP-one-kind-model` already carries both additions.
+
+#4 [G2] — **The Wicket built more of this than the brief assumed, and checking
+before designing halved the campaign.** Grepped the sleep path before writing a
+line of spec, on the standing lesson from The Plumb's instance 28 (a task whose
+deliverable already existed and had for thirteen days). Found already shipped:
+`OfferedVerb::Sleep` gated on `ObjectProperty::SupportsRest`
+(`affordance.rs:403,528`), `SiteGrade { Bare, Afforded }` with `gain()`
+(`liveness.rs:3139`), `AFFORDED_REST_GAIN = 1.5` multiplying `BoutKind::fall`
+with a compile-time `> 1.0` bracket, and the `SLEPT`/`RESTED` predicates.
+
+So The Pallet does **not** build a grade. Three things are genuinely missing —
+the CHOICE (today `SiteGrade` is a room-level boolean at `liveness.rs:3247`, so
+no body ever picks an anchor and "where did it sleep" has no answer even in
+memory), the RECORD, and the per-species RUNG — plus Group A. Five tasks, not
+nine. No ideonomy pass: this is a fact about the tree, not a design choice.
+
+#5 [G2] — **`AFFORDED_REST_GAIN`'s existing `plumb` tag is wrong, and wrong in
+the shape decision 0586 was written to name.** It reads
+`universal(a uniform multiplier on every rest/sleep act's own rate, bounded
+rather than derived — not a species property)`. "Bounded rather than derived"
+is a **provenance** claim (where the number came from) and "not a species
+property" is a **negation** — the two tells 0586 records for a reason that
+answers a neighbouring question. A xorn gains nothing from a bed; the quantity
+is `per-species`, and this campaign flips it.
+
+Worth stating because the tag was authored by The Wicket *before* The Plumb
+existed to name the failure, and it is the first case of the ladder catching a
+verdict rather than an untagged constant. No ideonomy pass — an error identified
+against a ratified decision's own stated criterion.
+
+#6 [G2] — **Group A's success condition is DELETING a test, and that needs
+saying out loud.** The Plumb shipped
+`a_rest_still_outlasts_the_sleep_scans_give_up_fallback_at_the_100_hour_legal_extreme`
+as a RUNNING test asserting the current wrong ordering — an inverse assertion
+chosen over an `#[ignore]`d one precisely so that fixing the defect would go
+red. Converting `SCAN_LIMIT` and `ONE_DAY` will redden it, and the correct
+response is to delete it, which its own doc instructs. A future implementer
+meeting an unexplained red is the exact reader this needs to reach, so it is in
+the spec (§4e) rather than only here. No ideonomy pass — a consequence read off
+a committed test's own doc.
