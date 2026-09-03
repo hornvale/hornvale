@@ -596,3 +596,71 @@ implementer was mid-task; the merge had already auto-committed, so nothing
 was clobbered, but the rule — no controller commits while a subagent works
 in the same tree — was broken. **Stage 3 closes here**; the stage gate is
 `req-1ea0998d039c`.
+
+## Stage 3 gate — green (`req-1ea0998d039c`, all stage phases rc=0 in 973 s)
+
+## Task 9a — the first readout (`736eaf1e3`, spec §11)
+
+Measured on a quiet box against a merge-base control (`0dccce029`, no
+memo), interleaved, three control runs set aside for other campaigns'
+suites starting mid-run. **H4 (b) MET by a wide margin:** the hazard fold's
+final-band cost 92.012 → 0.13507 ms/call, **681× against the same-box
+control and 540–718× against the frozen 73–97 ms**, where The Pawl had
+1.57× and, against the frozen figure, nothing. **H4 (a) NOT MET by 0.045:**
+elasticity 0.245 against < 0.20 (0.245/0.25/0.245 under the three readings
+of the r² filter; control 0.93). **H2 (c) NOT MET:** 60.8% against 20%
+(control 68.7%). H2 (a)/(b) hold; H3 held and re-witnessed (one md5 per
+bench across all 18 runs of both trees); H5 and H6 met by the committed
+witnesses. The falsifier cannot fire: `C` FELL by 15.9 ms/tick alongside
+`k`, crossover at h = −12.9. The level: **−8.55%** median paired at 200
+agents, −8.6 to −10.1% at every rung, slope unchanged. M1: 18,902 rooms /
+1.46 MB and 4,665 index entries / 215 KB at band 10. Rule 2's instrument
+(`examples/detent_rule2_probe.rs`): 785 µs per hazard read on the seed-6
+possession shape, cold ≈ warm, 2.62 replays per read.
+
+## #7 [G5] — one post-unblinding change, and the protocol for it
+
+**Question.** H4 (a) fails by 0.045. Is the residual history term a property
+of the design, or of the implementation?
+
+**What the code says, before any measurement.** `hazard_memory_memo`
+builds the per-room `latest` map (`LatestVisit::latest_at`, O(distinct
+rooms visited)) for EVERY call, under the witness-first guard, and only then
+takes the emitter-free early return over the index prefix. Spec §2.3 said
+the emitter-free read "becomes a prefix read" and that `latest` is "still
+needed for the EMITTER path". The plan's Task 6 text (my own) told the
+implementer to "leave the `latest` block where it is and only replace the
+loop inside the early return", to preserve the witness-first ordering — so
+the O(rooms) map survives on the path the design specified as O(prefix),
+and for the wanderer the probe follows, rooms ∝ history. That is the same
+shape The Pawl's §12.0 named: the implementation falsified against its own
+design, in plan text I wrote.
+
+**Decision.** Exactly one post-unblinding change is permitted, under The
+Pawl's rule: verify the mechanism by MEASUREMENT before touching it; if
+confirmed, complete the design (the witness-first call needs only the
+entity's last trail day, which `trail.of(entity).last()` already supplies;
+`latest_at` moves below the emitter-free return so only the emitter path
+pays for it); prove byte-identity (FOLD-equals-SCAN, the hash constants,
+H5); then a §12 second readout, interleaved against the same control, with
+§11 left standing and the change disclosed as mechanism-completing — no
+threshold, constant or criterion moves. If the measurement does NOT confirm
+the mechanism, no change is made and H4 (a) is handed forward as a finding.
+
+**Why (precedent).** The Pawl §12.0 and decision 0016: a mechanism the
+design specified and the implementation omitted may be completed after
+unblinding provided the first readout stands unedited and the second is
+declared not blind. Cost if wrong: an hour of quiet box and a §12 that
+reads 0.245 again — which would itself be the finding that the residual is
+elsewhere.
+
+**Rule 2's branch, ruled now:** the share is NOT resolved by the count
+instrument (785 µs per read with 2.62 replays per read is a whole-read cost,
+not a replay share), so the reset-partition affect memo stays UNBUILT and
+the registry row carries the number and the open question. **Rule 4's
+branch:** keep the copy (zero entries at every measured tick, mechanism
+stated).
+
+**Ideonomy passes / overturns: 1 / 0** — a substitution pass over "where
+the O(rooms) work could hide" (the map, the witness, the scan, the set
+clone) named the map first and the measurement is what decides.
