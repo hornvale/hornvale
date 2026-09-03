@@ -649,10 +649,19 @@ is the finding that aims the next campaign.
 
 - [ ] **Step 3: Write decisions 0536, 0537, 0538**
 
-0536 sites replace `built`; 0537 sites are re-sited by a seeded draw (epoch);
-0538 `Extent` is modelled and Point-only. Index each in
-`docs/decisions/README.md` — **look the filenames up, do not guess them from
-titles** (five guessed links were wrong in the last campaign).
+0536 sites replace `built`; 0537 sites are re-sited by a seeded draw
+(**NOT an epoch** — this line said "(epoch)" and was wrong; Task 5 measured
+both pin-isolation suites green and `rebaseline-goldens` a no-op, per
+`domains/CLAUDE.md`'s "new label = safe"); 0538 `Extent` is modelled and
+Point-only. Index each in `docs/decisions/README.md` — **look the filenames up,
+do not guess them from titles** (five guessed links were wrong in the last
+campaign).
+
+**Plan defect, found at Task 9 dispatch:** Step 1's test calls
+`measure_site_density(&[..], 2_000)`, which exists nowhere in the tree —
+`site_density.rs` is new and no earlier task creates the helper. The
+implementer writes the measurement itself; the signature above is a sketch of
+the *shape*, not an interface to consume.
 
 - [ ] **Step 4: Chronicle and retrospective**
 

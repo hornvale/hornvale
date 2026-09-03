@@ -285,4 +285,7 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0583](0583-the-witness-limits-list-is-open-not-closed.md) | The witness limits list is open, not closed (supersedes 0582) | Accepted |
 | [0584](0584-kinship-direction-and-the-parent-of-generation-cut.md) | Kinship direction and the `parent-of` generation cut (supersedes 0578) | Accepted |
 | [0585](0585-act-chronology-completes-too-and-the-method-is-act-handle.md) | `bundle:act-chronology` completes too, and the method is `Act::handle` (supersedes 0580) | Accepted |
+| [0536](0536-the-enterability-gate-is-a-site-not-built.md) | The enterability gate is a `Site`, and `built` narrows to one kind of it | Accepted |
+| [0537](0537-a-placed-site-is-re-sited-to-a-facet-by-a-seeded-draw.md) | A placed site is re-sited from its vertex to one facet by a seeded draw | Accepted |
+| [0538](0538-a-site-carries-an-extent-and-this-campaign-emits-point.md) | A `Site` carries an `Extent`, and this campaign only ever emits `Point` | Accepted |
 | [0539](0539-a-sites-tier-is-placed-or-derived.md) | A site's tier is `placed` or `derived`, and standing is a separate axis | Accepted |
