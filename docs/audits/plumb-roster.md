@@ -13,7 +13,7 @@ of it has been judged; it does not guess a rung for anything.
 |------|-------|
 | Roots | `domains`, `windows` |
 | Default roots | `domains`, `windows` |
-| Files parsed | 302 |
+| Files parsed | 303 |
 | Constant types judged | every type except the non-quantities below |
 | Declared non-quantities | `str`, `String`, `bool`, `char`, `KindId`, `ConceptKind`, `Realm`, `Segment`, `Eyes`, `AffectLabel`, `ChannelMask`, `HabitatRealm`, `Transmission`, plus containers (generic, array, tuple, reference) and markers |
 | Directories pruned | `tests`, `examples`, `benches`, `target` |
@@ -27,20 +27,20 @@ naming them explicitly (`plumb report kernel cli`).
 
 | Bucket | Count |
 |--------|------:|
-| Quantity consts judged (the denominator) | 690 |
-| … file-level | 658 |
+| Quantity consts judged (the denominator) | 691 |
+| … file-level | 659 |
 | … associated (impl/trait) | 9 |
 | … inside a fn body | 23 |
 | Excluded: test-only (`#[cfg(test)]` / `#[test]`) | 166 |
-| Excluded: declared non-quantity type | 492 |
-| **Every `const` the walk touched** | **1348** |
+| Excluded: declared non-quantity type | 496 |
+| **Every `const` the walk touched** | **1353** |
 
 The campaign's spec measured **610** with a line grep over these same
 two roots. That grep could see only column 0 and only the five names
 `f64`, `i64`, `u64`, `u32`, `usize`, so the figure comparable to it is neither the denominator above
-nor the whole `file-level` row — it is **627**: file-level
+nor the whole `file-level` row — it is **628**: file-level
 constants of those five types. The `file-level` row itself is
-**658**, and the denominator is **690**; the difference is
+**659**, and the denominator is **691**; the difference is
 what a line scanner restricted to five primitives cannot see. The two
 figures do not have to agree, and this table is printed so that a
 reader can see exactly where they do not.
@@ -71,7 +71,7 @@ rather than a quantity belongs in `NON_QUANTITY_TYPES`.
 | `f64` | 500 |
 | `i32` | 7 |
 | `i64` | 2 |
-| `u32` | 74 |
+| `u32` | 75 |
 | `u64` | 16 |
 | `u8` | 8 |
 | `usize` | 54 |
@@ -98,7 +98,7 @@ bare count would hide a quantity someone had wrongly denied.
 | `&[PronounRow]` | 1 |
 | `&[Role]` | 2 |
 | `&[VerbRow]` | 1 |
-| `&str` | 250 |
+| `&str` | 253 |
 | `()` | 5 |
 | `(…)` | 10 |
 | `AffectLabel` | 1 |
@@ -106,7 +106,7 @@ bare count would hide a quantity someone had wrongly denied.
 | `ConceptKind` | 5 |
 | `Eyes` | 1 |
 | `HabitatRealm` | 1 |
-| `KindId` | 17 |
+| `KindId` | 18 |
 | `Realm` | 3 |
 | `Segment` | 3 |
 | `StreamLabel<…>` | 37 |
@@ -157,12 +157,12 @@ bare count would hide a quantity someone had wrongly denied.
 | per-people | 1 |
 | per-species | 19 |
 | per-world | 5 |
-| universal | 82 |
+| universal | 83 |
 | **undeclared** | **0** |
 | **malformed tag** | **0** |
-| _total_ | 690 |
+| _total_ | 691 |
 
-Declared: **690 of 690**. Undeclared is backlog; a malformed
+Declared: **691 of 691**. Undeclared is backlog; a malformed
 tag is a defect.
 
 ## Fidelity findings
@@ -201,15 +201,15 @@ counts are already the Coverage table above. 27 finding(s).
 | `windows/vessel/src/liveness.rs:3890` | `HUNGER` | per-species | a creature's own metabolism sets how fast hunger accrues -- currently one authored rate for every species, the same shape FATIGUE_RISE was before its per-species conversion |
 | `windows/vessel/src/liveness.rs:4456` | `LONELY_SCALE_HOPS` | per-species | a creature's own territorial range and wander tolerance sets how many hops from home feel isolating -- currently one distance for every species |
 | `windows/vessel/src/purview.rs:19` | `PURVIEW_RADIUS` | per-species | a creature's own senses set its purview radius -- doc states explicitly: the seam for a per-species radius is Body::perception EXP-3, untouched here |
-| `windows/vessel/src/session.rs:483` | `GRIEVANCE_GAIN` | per-individual | how readily one NPC's grievance accumulates from a slight is a personality trait -- currently one gain for every NPC, not derived from Lineage |
-| `windows/vessel/src/session.rs:493` | `HOSTILITY_THRESHOLD` | per-individual | how many net provokes it takes before one NPC turns hostile is a personality trait -- currently one threshold for every NPC, not derived from Lineage |
+| `windows/vessel/src/session.rs:501` | `GRIEVANCE_GAIN` | per-individual | how readily one NPC's grievance accumulates from a slight is a personality trait -- currently one gain for every NPC, not derived from Lineage |
+| `windows/vessel/src/session.rs:511` | `HOSTILITY_THRESHOLD` | per-individual | how many net provokes it takes before one NPC turns hostile is a personality trait -- currently one threshold for every NPC, not derived from Lineage |
 
 ## The contested middle
 
-327 of the 690 constants sit in a file mentioning one of
-the kind-adjacency markers above, across 129 of the 302 files parsed —
+328 of the 691 constants sit in a file mentioning one of
+the kind-adjacency markers above, across 130 of the 303 files parsed —
 the creature-modelling middle where a rung is genuinely arguable, and
-where `FATIGUE_RISE` lived. 327 of them are declared.
+where `FATIGUE_RISE` lived. 328 of them are declared.
 
 **This is a reading aid, not a gate.** The markers are substrings, and
 `Body` is shared with astronomy's celestial bodies, so the set is loose
@@ -236,5 +236,5 @@ in the inclusive direction on purpose.
 | settlement | 4 | 0 | 0 | 4 |
 | species | 26 | 0 | 0 | 26 |
 | terrain | 152 | 0 | 0 | 152 |
-| vessel | 97 | 0 | 0 | 97 |
+| vessel | 98 | 0 | 0 | 98 |
 | worldgen | 132 | 0 | 0 | 132 |

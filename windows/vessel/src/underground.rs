@@ -316,7 +316,10 @@ impl Underground {
     /// here — and the character is
     /// [`hornvale_worldgen::character::Character::WildCave`], matching
     /// [`crate::underworld_level::generate_descent`]'s own hardcoded
-    /// value.
+    /// value. **That last input is the only one a caller can vary**, through
+    /// [`Underground::enter_with_character`], which this function is a
+    /// one-line wrapper over — see its doc for why the seam exists and what
+    /// hardcoding `WildCave` costs a test.
     ///
     /// Both `terrain` and `cave` come from the same terrain handle the
     /// caller (`Session::delve_at`) already resolved: no second,
@@ -334,6 +337,43 @@ impl Underground {
         vertex: hornvale_kernel::Vertex,
         cave: hornvale_terrain::Cave,
         seed: Seed,
+    ) -> Underground {
+        Underground::enter_with_character(
+            terrain,
+            vertex,
+            cave,
+            seed,
+            hornvale_worldgen::character::Character::WildCave,
+        )
+    }
+
+    /// [`Underground::enter`] with the descent's CHARACTER lifted out — the
+    /// one input production hardcodes and a test cannot otherwise vary (The
+    /// Brattice, Task 5).
+    ///
+    /// **A test seam, and the seam is named rather than left implicit.** The
+    /// shipped path constructs no `ChamberOverrides` and always builds a
+    /// [`hornvale_worldgen::character::Character::WildCave`] descent, so no
+    /// walked descent anywhere in production carries a worked place's extra
+    /// cycle (`circuit::cycle_budget`'s `worked` term) and therefore, in
+    /// practice, no door: the patterns that stamp a `Needs(Key(_))` gate need
+    /// a realm to stamp it on. That is a property of what the composition root
+    /// asks for today, not of the walk, and §3.7's verbs must be exercised
+    /// against a descent that actually hangs one. So this twin exists, `enter`
+    /// calls it with `WildCave`, and there is exactly ONE body — the
+    /// alternative (a second constructor that agrees) is the duplicated-pair
+    /// shape [`crate::thing::promote_role`]'s own doc records as having been a
+    /// live seam once already.
+    ///
+    /// Everything else — the recipe, the entrance-region placement rule, the
+    /// panic, the empty fog — is [`Underground::enter`]'s, whose doc is the
+    /// one to read.
+    pub(crate) fn enter_with_character(
+        terrain: &hornvale_terrain::GeneratedTerrain,
+        vertex: hornvale_kernel::Vertex,
+        cave: hornvale_terrain::Cave,
+        seed: Seed,
+        character: hornvale_worldgen::character::Character,
     ) -> Underground {
         let rungs = habitation_rungs();
         let gradient = terrain.geothermal_gradient_at(vertex);
@@ -355,20 +395,15 @@ impl Underground {
             })
             .collect();
         let origins = vec![hornvale_worldgen::chamber::ChamberOrigin::Found; rungs.len()];
-        let plan = hornvale_worldgen::circuit::plan_descent(
-            seed,
-            vertex,
-            &rungs,
-            cave.kind,
-            hornvale_worldgen::character::Character::WildCave,
-        );
+        let plan =
+            hornvale_worldgen::circuit::plan_descent(seed, vertex, &rungs, cave.kind, character);
         let descent = generate_descent_for_character(
             &rungs,
             cave.kind,
             &origins,
             &depths_m,
             water_table_m,
-            hornvale_worldgen::character::Character::WildCave,
+            character,
             &plan,
             seed,
         );

@@ -925,6 +925,12 @@
         "kind": "Living",
         "doc": "a dire wolf"
       },
+      "door": {
+        "name": "door",
+        "domain": "thing",
+        "kind": "Object",
+        "doc": "a leaf hung in an opening, to be shut against what is beyond"
+      },
       "drink": {
         "name": "drink",
         "domain": "language",

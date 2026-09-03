@@ -1329,3 +1329,171 @@ doors); leaving the doc asserting the old contract (the review's Important #1)
 the requirement; the implementer's own Ruling H (the footing word as a
 `(phrase, label)` pair, because a second caller uses it as a typeable noun) is
 recorded in the Task 4 section and judged sound by the review.
+
+## Task 5 — complete
+
+**What it built.** A door and a key underground: an identity, a state, five
+verbs and a mark.
+
+- `domains/thing`: `"door"` joins `THING_KINDS` (alphabetically, after
+  `"cave-mouth"`), with `kinds::DOOR`, an `EVERY_HANDLE` row, a
+  `thing_registry` row (`display: "door"`, gloss "a leaf hung in an opening,
+  to be shut against what is beyond") and its place in the frozen roster.
+- `windows/vessel`: a `chamber_prose` row ("a door" / "A leaf of banded wood
+  in the opening, hung to be shut.") and an `object_registry` row carrying
+  `AffordsPassage`, `Openable`, `Lockable` — the cave mouth's properties plus
+  the strongbox's lock, and deliberately NOT `Portable`.
+- `windows/vessel/src/descent_thing.rs` (new): the plan-position identities,
+  the folds over them, and the module doc that states §5's cost where the
+  spellings are.
+- `windows/vessel/src/thing.rs`: `located_in_place_fact`, `lying_at_place`
+  (with `lying_in` now a thin wrapper over it), `set_lockedness_role` (with
+  `set_lockedness` now a thin wrapper over it, and its "there should be no
+  `_role` variant" paragraph corrected rather than deleted).
+- `windows/vessel/src/underground.rs`: `enter_with_character`, the named test
+  seam, with `enter` calling it — one body, not two that agree.
+- `windows/vessel/src/session.rs`: the `door_open` oracle, the actor-aware
+  ways-on report, `look`'s two new sentences, `examine`'s two new nouns, an
+  underground arm in `take` / `drop` / `open` / `close`, and the door mark.
+
+**The exact role strings** (save-format contracts from the first world saved
+holding a descent key — spec §5):
+
+```
+region  descent/<vertex>/<level>/<col>.<row>
+key     thing@descent/<vertex>/<level>/<col>.<row>/key
+door    thing@descent/<vertex>/<level>/<col>.<row>-<col>.<row>/door   (lesser cell first)
+```
+
+Ordinal 0 for both. Each is written out as a LITERAL in
+`roles_are_pure_functions_of_the_plan_position_and_order_the_door_cells`, so a
+spelling change cannot be rebaselined — the discipline `thing_role`'s and
+`cave_mouth_role`'s own pins already hold for their namespaces.
+
+**The custody fact's shape, stated once, as shipped.** `take a key`
+underground commits
+
+```
+subject:    derive_entity_id(Lineage { parent: None, role: "thing@descent/<v>/<l>/<c>.<r>/key", ordinal: 0 })
+predicate:  located-in
+object:     Value::Entity(<the driven body>)
+day:        the session's WorldTime
+```
+
+preceded, only when the key is still latent, by the `instance-of` fact
+`promote_role` commits for the same subject. `drop` posts the same predicate
+with `Value::Text("descent/<v>/<l>/<c>.<r>")` — the REGION, never the cell.
+That is the whole of §5: the subject is a function of the plan, so a change to
+`underworld/plan/v1`'s draws or to `underworld/gate/v1/pattern`'s selection is
+an epoch from here on.
+
+**Ruling I closed (ledger #12).** `underground_ways_from_cell` no longer asks
+`movement_mode`; it asks `Underground::peek` with the driven body's own
+`Traverser`, the SAME call `step_underground` makes with the SAME door oracle
+(`Session::door_is_open`, the `openness` fold at the session's day). So `look`
+cannot name a bearing `go` refuses, by construction rather than by two
+predicates agreeing. The corner rule keeps its geometric oracle, untouched, for
+the reason `peek`'s own comment gives. Both docs (the method's and the oracle's
+call site) were rewritten from "held deliberately for one task" to what they
+now do. Cost, stated in the doc: a shut door is invisible in the ways-on
+sentence — a player learns of it from `look`'s door clause and the chart's `+`.
+
+**Test evidence.**
+
+- `windows/vessel` lib 644 + suite 400, 0 failed. New: six session tests on the
+  DrowTier fixture (`a_shut_door_is_named_by_look_absent_from_the_ways_on_list_
+  and_refused_by_go`, `a_descent_door_without_its_key_refuses_in_its_own_words_
+  and_writes_nothing`, `the_key_at_its_node_opens_the_door_it_fits_and_closing_
+  does_not_relock_it`, `a_thing_dropped_underground_lies_in_the_region_and_is_
+  taken_again`, `examine_answers_the_key_and_the_door_underground`,
+  `a_lit_door_reaches_the_level_document_as_a_door_mark`) plus three in
+  `descent_thing`.
+- `underground_ways_on_agrees_with_the_levels_real_neighbours` was rewritten to
+  compute its expectation with the ACTOR-AWARE predicate (independently of the
+  code under test) and gained a positive half: a `Deep` cell is installed beside
+  the cell stood on, and the bearing must leave the sentence AND be refused by
+  `go` with the water refusal. Left geometric it would have kept passing while
+  measuring nothing — the vacuous-agreement shape its own doc already warns
+  about once.
+- Whole workspace: `nextest run --workspace` 5183 passed / 0 failed (521.3 s);
+  the workspace doctests rc=0; `fmt --check`, workspace clippy `-D warnings`,
+  `type-audit check`, `placement-audit check` and `plumb check` (691 consts,
+  0 undeclared) all rc=0.
+
+**The fixture, and why it needed a production seam.** `Underground::enter`
+hardcodes `Character::WildCave`, which gets no `worked` term in
+`circuit::cycle_budget`. Measured while writing this: seed 42's first two open,
+unbarred cave mouths hang **zero** doors as `WildCave` and **eight** across five
+rungs as `DrowTier`. So §3.7's verbs are unreachable through the production
+constructor. `enter_with_character` is the twin; `enter` calls it; there is one
+body. The fixture searches seed 42's open, unbarred cave mouths in scan order
+for a rung-0 gated threshold with a standable neighbour AND a rung-0 key node
+with a standable cell in its region, and panics naming the widening if none is
+found. First hit: **`Vertex(342)`**, rung 0, three doored thresholds
+(`Cell(21,7)`, `Cell(25,12)`, `Cell(34,12)`).
+
+**Stale prose corrected while the file was open.** `Session::take`'s doc named
+`interior::pattern`'s `the-key-on-the-ledge`, a pattern that does not exist and
+never did; the shipped one is `the-key-by-the-loom` in `Role::Loomroom`. The
+correction is loud rather than silent because the fifty lines around it are a
+measured defect report, and one unverifiable line inside a measured report reads
+as measured too.
+
+**The cost nobody had costed: a thing kind is not five data rows.** Adding
+`"door"` to `THING_KINDS` makes `domains/thing::register_concepts` register a
+CONCEPT (decision 0025's check-then-map rule), which cascades:
+`hornvale_language::EPOCH_COHORTS` needs a new cohort (epoch 19, `&["door"]`,
+appended — never seated in epoch 16 beside the other object kinds, which would
+re-sort every concept that already has a proto-root assignment); the seed-42
+world JSON golden moves because the registry is serialized into `World`; the
+proto-root tables and the solitary-tongue lexicon gain a row each; and the
+concept manifest, concept registry, dictionary, trope-coverage and trope-matrix
+artifacts all move. Every one of those diffs is purely ADDITIVE — one line
+inserted, one count incremented, nothing re-sorted — which is the accession
+discipline working exactly as its module doc promises. Epoch 18's own comment
+had already stated this cost for `brazier`; epoch 19's restates it, because one
+instance reads as a one-off and two read as a rule. Accepted via
+`make rebaseline-goldens` and `make rebaseline`, both diffs reviewed line by
+line before commit; `docs/audits/lexicon-inventory.tsv` raised for
+`session.rs` (654 -> 751) and `descent_thing.rs` (new, 65), every token the
+AREA sense (a level's grid square).
+
+**Ruling J** — *the door mark's salience is 2, MORE salient than an agent's 5,
+which is the opposite ordering `FURNISHING_SALIENCE` (30) takes* — Why: a
+furnishing is scenery a creature stands in front of; a door is structure, and a
+level chart that dropped it because something stood in the doorway would be a
+picture of a passage that is not there. Nothing observable turns on it today —
+`clients/game/core/src/level.rs` draws marks in list order with no salience
+comparison, so the ordering is exercised only by `level_of`'s `(salience, noun)`
+sort, which decides wire BYTE order and not which glyph wins — Cost if wrong: a
+future client that picks between two marks on one cell would hide a creature
+standing in a doorway; the repair is one constant and the doc says so.
+
+**Ruling K** — *`examine door` takes `chamber_prose::detail`'s ONE authored line
+for the kind and APPENDS the state ("It is shut, and locked." / "It stands
+open."), rather than the brief's three hand-written datums* — Why: the totality
+gate (`tests/suite/kind_totality.rs`, G-b/G-c) exists to make exactly one
+authored line per kind reachable and checked; a second sentence written at the
+call site is the drift that gate refuses, and the STATE is genuinely not a
+property of the kind — Discarded: three literal datums (drifts from the
+registry), state-only datums (loses the authored line) — Cost if wrong: the
+door's examine reply is two sentences where one was specified; a wording change
+is a one-line edit in either place.
+
+**Ruling L** — *`chamber_prose::detail_of_label` is a new label-keyed accessor
+returning `Option`, beside the `KindId`-keyed `detail` that panics* — Why: a
+thing read back off a committed `instance-of` fact is a `&str` borrowed from the
+ledger and `KindId` holds `&'static str`, so such a label cannot become a
+`KindId` at all; `noun` already carries this exact asymmetry for the same
+reason. `Option` rather than a panic because a ledger label is a runtime string
+no roster guarantees, where a `KindId` is from the authored roster and a missing
+line there is the quiet failure `detail`'s own doc argues about — Cost if wrong:
+a dropped thing whose kind has no prose is silently omitted from `look` and
+`examine` rather than panicking; today no such kind can reach a descent floor,
+since only `Portable` kinds can be carried and every rostered kind is prosed.
+
+**Deviation, named.** `drop` underground refuses with
+`NOWHERE_TO_SET_DOWN_REFUSAL` when the possession stands on a cell no plan
+region covers — a divider between two regions. The brief did not anticipate the
+case. Refusing beats posting a `located-in` whose place no fold can read back,
+which is the exact silent loss that constant exists to prevent one band up.
