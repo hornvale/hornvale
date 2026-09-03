@@ -149,7 +149,9 @@ pub fn run_simulation(
         // calls read the identical frozen `ledger`, so this changes nothing
         // about how the world evolves — only what the affect sample below
         // gets to see.
-        let (_facts, occupancy) =
+        // The third element is the roster write-back `Session::wait` needs
+        // (The Rack, Task 3); this sampler owns no roster, so it is dropped.
+        let (_facts, occupancy, _written) =
             sys.step_with_occupancy(&ledger, &mut mesh_memo, &mut home_nav_cache);
         // The kernel tick applies the drive-movement facts; the same headless
         // step `Session::wait` runs, minus the player. This path goes through
@@ -238,6 +240,12 @@ pub fn run_simulation_with_locale(
     // owns it.
     let folds =
         hornvale_vessel::resident::OwnedFolds::new(hornvale_vessel::resident::ResidentFolds::new());
+    // The session-lived room memo (The Detent, spec §2.1), owned at exactly
+    // the scope `folds` is — one per run, so every tick's fresh
+    // `LocaleTerrain` (below) reads and fills the SAME memo rather than
+    // starting cold each tick.
+    let ground =
+        hornvale_vessel::ground::OwnedGround::new(hornvale_vessel::ground::GroundHazards::new());
     let geo = ctx.climate().geosphere();
     let index = ctx.nearest_index();
     for _ in 0..ticks {
@@ -261,7 +269,8 @@ pub fn run_simulation_with_locale(
         // `neighbors` threading) — see `Session::wait`'s identical comment.
         let mesh_snapshot = mesh_memo.clone();
         let terrain =
-            LocaleTerrain::with_fields(ctx, calendar, predator, prey, built, Some(&mesh_snapshot));
+            LocaleTerrain::with_fields(ctx, calendar, predator, prey, built, Some(&mesh_snapshot))
+                .with_ground(&ground);
         let sys = DriveMovements {
             npcs: npcs.to_vec(),
             from: WorldTime::from_std_days(day).expect("a day value is finite"),
@@ -271,7 +280,9 @@ pub fn run_simulation_with_locale(
             terrain: &terrain,
             folds: &folds,
         };
-        let (_facts, occupancy) =
+        // The third element is the roster write-back `Session::wait` needs
+        // (The Rack, Task 3); this sampler owns no roster, so it is dropped.
+        let (_facts, occupancy, _written) =
             sys.step_with_occupancy(&ledger, &mut mesh_memo, &mut home_nav_cache);
         ledger = match tick(&ledger, &[&sys], &["drive-movements"], registry) {
             Ok(next) => next,

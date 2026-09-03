@@ -438,67 +438,87 @@ fn why_recounts_an_npcs_dated_history_after_it_drinks() {
     );
 }
 
+/// `needs` renders a co-located NPC's felt state as diegetic prose, never a
+/// number, and that prose tracks the creature over the drive cycle rather
+/// than standing still.
+///
+/// **THE PHRASE IS THE TICK'S OWN RESOLUTION NOW (The Rack, Task 4, spec
+/// §3.4), not a re-read.** Until this campaign, `needs` re-derived every
+/// present creature's `Affect` from the ledger on every call — a stateless
+/// *re-imagining* of the body without its own history, adopted because the
+/// tick's answer was dropped before anyone could read it. It now reports
+/// what that creature's own last resolution concluded: the arbitration that
+/// actually moved it, with its alarm field, its mode hysteresis and its own
+/// belief, at the walk's own instant. Between ticks a creature does not
+/// re-feel. So the wordings below moved, and they moved for that reason
+/// rather than because any drive changed.
+///
+/// **Re-derived, and SCOPED TO THE COMPANION, which the older version was
+/// not.** It asserted `later.contains("eats its fill")` against the whole
+/// 67-line reply, so any body in the room could have satisfied it. Under the
+/// tick's own resolution every one of the flagship's 67 present bodies reads
+/// the same phrase after a `wait 9` (`felt_phrase` buckets an `Affect` into
+/// prose, and they all land in one bucket), so an unscoped `contains` would
+/// now be satisfied by a creature this test is not about. Both readings are
+/// taken from the companion's own line.
+///
+/// The measured pair, day 0.5 then after `wait 9`, on `bodies()[1]`
+/// (`Dvoashngashngo`): *"settles down to rest"* → *"grows restless"*. As the
+/// older comment already warned, the SPECIFIC readings are a fact about
+/// which creature is placed and are re-measured whenever that changes; only
+/// the "differs across the drive cycle" shape is the claim.
+///
+/// MUTATION THIS MUST FAIL AGAINST: make `Session::felt_of` return the
+/// DRIVEN slot's felt (`&self.roster.felts()[self.roster.driven().0]`)
+/// instead of the body's own. Run and observed: `after the tick the NPC
+/// reports its own resolution: The Dvoashngashngo settles down to rest.` —
+/// the possession's own resolution, reported under the companion's name.
 #[test]
 fn needs_reports_a_colocated_npcs_felt_state_and_it_differs_across_the_drive_cycle() {
-    // THE FELT-STATE READ (the-wanting T4): `needs` renders a co-located
-    // NPC's drive as diegetic prose, never a number, and that prose must
-    // actually track the drive over time — not a static line. Every
-    // derived NPC starts away from its resource with drive 0 at world day
-    // 0, rising at SUSTENANCE's 0.15/day (act 0.85, sated 0.15).
-    //
     // The Hand, Task 3: the possessed body's own settlement no longer
-    // guarantees a co-located NPC (see docs/retrospectives/the-hand.md) -- `bodies()[1]`
-    // is placed explicitly through the test seam, `place_creature_at_me`.
+    // guarantees a co-located NPC (see docs/retrospectives/the-hand.md) --
+    // `bodies()[1]` is placed explicitly through the test seam,
+    // `place_creature_at_me`. It is redundant at The Roll's roster (a
+    // resident of the settlement you stand in is co-located by construction)
+    // and kept because the test's claim is about a CO-LOCATED creature, and
+    // asking for the placement keeps that premise stated rather than
+    // incidental.
     let w = world();
     let (mut session, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
     let companion = session.bodies()[1].entity;
+    let label = session.bodies()[1].label.clone();
     session.place_creature_at_me(companion);
 
     let out_text = |t: Turn| match t {
         Turn::Out(s) => s,
         Turn::Released(_) => panic!("needs never releases"),
     };
+    // The companion's OWN line out of the reply — see the doc above on why
+    // the whole reply will not do.
+    let line_for = |reply: &str, label: &str| -> String {
+        reply
+            .lines()
+            .find(|line| line.contains(label))
+            .unwrap_or_else(|| panic!("the placed companion must be named in: {reply}"))
+            .to_string()
+    };
 
-    // Day 0.5 (PossessOpts::default, before any wait), measured against
-    // `bodies()[1]`: its drive state at day 0.5 reads "settles down to rest",
-    // not any of the content/hunger/thirst readings a different companion has
-    // read here across earlier campaigns' re-measurements — the specific
-    // reading is a fact about WHICH creature is placed, never the claim; only
-    // the "changes over the drive cycle" shape below is.
-    //
-    // **RE-MEASURED at The Roll, Task 7, and the reason is the roster rather
-    // than the drive.** `bodies()[1]` used to be another settlement's single
-    // NPC, which read "seems content"; it is now the flagship's own resident
-    // ordinal 1, whose fatigue at day 0.5 wins its arbitration. The reading
-    // moved because a different creature is being asked, exactly as this
-    // comment's own caveat anticipated. `place_creature_at_me` above is now
-    // redundant — a resident of the settlement you are standing in is
-    // co-located by construction — and is kept because the test's claim is
-    // about a CO-LOCATED creature's felt state, and asking for the placement
-    // explicitly keeps that premise stated rather than incidental.
-    let early = out_text(session.handle("needs"));
+    let early_reply = out_text(session.handle("needs"));
+    assert!(
+        !early_reply.contains("No one else is here"),
+        "the placed companion must be co-located at the start: {early_reply}"
+    );
+    let early = line_for(&early_reply, &label);
     assert!(
         early.contains("settles down to rest"),
         "the co-located NPC reads as tired at day 0.5: {early}"
     );
-    assert!(
-        !early.contains("No one else is here"),
-        "the placed companion must be co-located at the start: {early}"
-    );
 
-    // The Hand, Task 3 re-measure: with `bodies()[1]` placed as the
-    // companion instead of the pre-Hand flagship twin, one `wait 9` moves it
-    // to "eats its fill" — hunger winning the drive competition, the same
-    // KIND of reading earlier re-measurements (The Tense, 2026-08-05) used
-    // for the prior companion, just re-derived for this one rather than
-    // assumed to carry over. Re-measure again with `probe_needs`-style
-    // sweep (build a session, place `bodies()[1]`, print `needs` per wait)
-    // if this drifts, the same way those did.
     session.handle("wait 9");
-    let later = out_text(session.handle("needs"));
+    let later = line_for(&out_text(session.handle("needs")), &label);
     assert!(
-        later.contains("eats its fill"),
-        "a hungry NPC eats its fill, not resting: {later}"
+        later.contains("grows restless"),
+        "after the tick the NPC reports its own resolution: {later}"
     );
 
     // THE MUTATION-VERIFIED ASSERTION: the felt state DIFFERS across the

@@ -4984,3 +4984,118 @@ readouts rather than only the second — the first stands unedited, and the
 second is explicitly not blind. Nothing in the standing gate would have caught
 a quieter version of that ordering, and nothing here claims otherwise; it was
 disclosed because the campaign chose to disclose it.
+
+### The gate the fourth look said did not exist now exists (2026-09-02)
+
+The section above, written days earlier, states the standing position on cost
+plainly: "there is still no cost gate on the simulation — no ceiling, no slope
+check, nothing that runs per commit," and the two instruments that exist are
+the ones the two campaigns that needed them built. [The Rack](./chronicle/the-rack.md)
+moves that, and the way it moves it is the part worth re-scoring rather than
+the fact that it did.
+
+**The instrument that existed was not merely blunt; it was not running.**
+`session_cost.rs` bounds a pooled wall-clock median, and its own doc already
+conceded that twenty of the fifty samples that median is drawn from exceed the
+ceiling individually while the gate passes. That is the bluntness anyone would
+have predicted. What nobody had checked is that its millisecond assertions are
+gated to a host the test no longer runs on — they fire only on the Mac, and
+the tier that runs them moved to the canonical Linux box. Measured at close, on
+one quiet box in one profile: **the test passed at main's tip at 81.490 ms
+against a 9 ms ceiling.** [The Roll](./chronicle/the-roll.md) had moved that
+control roughly twenty-one-fold and every gate stayed green, not because the
+threshold was generous but because no threshold was being evaluated.
+
+**A gate's blind zone can be structural rather than statistical, and only one
+of those is visible in its own documentation.** This file's standing floor is
+that a check is only worth what it can be made to fail on; the companion the
+fourth look added is that a criterion is only worth the range its instrument
+samples. This is a third: a check is only worth the *configurations it
+actually runs in*, and the one place that is never written down is the
+intersection of a test's host guard with the tier's host policy — two
+correct-looking facts in two files that nothing compares.
+
+**What replaces it changes the shape of the bet, modestly and legibly.**
+Per-turn work is now a **count** — folds, plan searches, ledger position folds,
+shadowcasts, bodies scanned — asserted per verb class. A count is identical on
+every machine, so it belongs in the commit gate and cannot flap; it went red on
+the pre-change tree at exactly the preregistered numbers and green after. That
+is the first per-commit cost gate this project has had, and it is deliberately
+narrow: it covers the turn path of one window, and it cannot see a regression
+that performs the same operations more slowly. **The unwatched dimension is
+smaller, not closed.** The Rack's own residue — seventy kilobytes of JSON and
+one eight-millisecond shadowcast — is exactly the shape no counter bounds, and
+it is why this campaign's own wall-clock prediction was falsified while its
+counted one landed exactly.
+
+### The fifth look at cost found a repetition, not a quadratic (2026-09-03)
+
+Four sections above record that cost in this project is scored "when a campaign
+chooses to look", that the first two looks each found an unpredicted quadratic,
+that a third found a distribution and a fourth closed a loop, and that the same
+campaign that closed it left one fold failing three criteria at ninety-three
+milliseconds a call. This is the fifth look, and it is at that fold.
+
+**What it found was not a quadratic. It was a repetition.**
+[The Detent](./chronicle/the-detent.md) counted the fold rather than reading it
+and found that the whole of its cost was *static terrain, re-sampled every
+tick*: fifty agents walking one tick asked the world about 44,694 rooms — about
+eleven thousand of them distinct — in order to commit thirty-one facts, and the
+ground had not moved between any two of those questions. Holding the verdict
+for the session and letting the scan advance over new sightings took the fold
+from 93.841 milliseconds per call to 0.096 — 975-fold against a same-box
+control, 758 to 1,008-fold against the frozen figure — and its sensitivity to
+history from 0.91 to 0.04. The whole tick's level fell about nine per cent.
+
+**What that does to the accounting is again smaller than the numbers, and again
+that is the point.** The first per-commit cost gate now exists — the section
+above records it — and it is a **count** over one window's turn path. It cannot
+see this fold: none of the reads this campaign made a thousand times cheaper is
+among the operations it counts, and a count is by construction blind to a
+regression that performs the same operations more slowly. So the fifth look
+succeeding does not change the base rate of an unwatched dimension either. It
+narrows the unwatched region by one fold and leaves the shape of the bet where
+the fourth look left it: **cost is still scored when a campaign chooses to
+look.**
+
+**The sharper finding is not about cost at all. It is about evidence.** The
+mechanism this campaign was expected to build had been named in a committed
+record by the campaign immediately before it, in prose that called itself
+"legible from the code rather than merely suspected." A count on the criterion's
+own instrument found that mechanism reached **zero times**, at every depth, on
+two seeds. The proposed fix would have moved the criterion by nothing.
+
+That is the **second consecutive campaign** whose named mechanism was wrong
+until someone counted it, and both were written by people who had just spent a
+campaign inside the code they were describing. This chapter's standing floor is
+that a check is only worth what it can be made to fail on; the fourth look added
+that a criterion is only worth the range its instrument samples, and The Rack
+added that a check is only worth the configurations it actually runs in. This is
+a fourth, and it is about the *reasoning* rather than the instruments: **reading
+code produces a hypothesis about a mechanism, never evidence for one.** A count
+is cheap — this one took under a minute — and the only thing that makes its
+answer usable is a denominator, because a zero and an unwired instrument produce
+identical output.
+
+**A criterion can fail at the finish line by succeeding.** The frozen criterion
+for this fold counts only runs whose fit clears a goodness-of-fit floor. On the
+control column it admitted four of four; on the campaign column it admitted
+**none of four** — because the slope is now 0.023 against an intercept of 90.6,
+so there is no slope left for a line to explain and a fit to a flat scatter has
+a poor fit by construction. The filter did its job correctly twice in the same
+campaign, catching exactly the two contended runs the load rule caught
+independently. Applied to a criterion that has succeeded, it empties the sample
+and leaves the frozen statistic undefined. The readout reports it that way
+rather than resolving it silently in either direction, and hands forward the
+observation that a criterion about a *slope* wants an effect-size floor rather
+than a fit floor.
+
+One further note for this chapter's own honesty, in the same terms the fourth
+look used. This campaign also made exactly one change to production code after
+seeing its first readout, and reports both readouts rather than only the second:
+the first stands unedited, and the second is explicitly not blind. Its
+verification clause was itself wrong — it tested a level to decide a question
+about a slope — and it was corrected in a ruling written before the change was
+made and after the comparison under both readings had been recorded. Nothing in
+the standing gate would have caught a quieter version of either ordering, and
+nothing here claims otherwise.
