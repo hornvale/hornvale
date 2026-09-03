@@ -225,7 +225,8 @@ pub(crate) fn things_lying_here(
     ledger: &Ledger,
     day: WorldTime,
 ) -> Vec<EntityId> {
-    match node_here(ug, ug.cell) {
+    let standing = node_here(ug, ug.cell); // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+    match standing {
         Some(node) => things_lying_at_node(ug, node, ledger, day),
         None => Vec::new(),
     }
@@ -234,7 +235,7 @@ pub(crate) fn things_lying_here(
 /// Every thing whose `located-in` fact names `node`'s region, plus that
 /// node's latent key if it has one and nothing has moved it (The Plat: the
 /// hoarder's hoard is this, asked of the Sanctum). [`things_lying_here`] is
-/// this function applied to whatever node the standing cell resolves to —
+/// this function applied to whatever node the standing cell resolves to —  // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
 /// see its own doc for the two-source, one-list shape and why the latent
 /// key needs its own arm.
 pub(crate) fn things_lying_at_node(
@@ -244,7 +245,7 @@ pub(crate) fn things_lying_at_node(
     day: WorldTime,
 ) -> Vec<EntityId> {
     let n = ug.plan.nodes[node];
-    let place = region_key(ug.vertex, n.level as usize, n.cell);
+    let place = region_key(ug.vertex, n.level as usize, n.cell); // lexicon: `Node.cell` is a grid square — an area, not a mesh vertex
     let mut out: std::collections::BTreeSet<EntityId> =
         crate::thing::lying_at_place(ledger, &place, day)
             .into_iter()

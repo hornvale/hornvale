@@ -12,13 +12,13 @@ use hornvale_worldgen::plat::Role;
 use crate::underground::Underground;
 
 /// The sentence for the region the possession stands in, in a `Made` rung.
-/// `None` in a wild rung, and `None` on a divider cell (a `Threshold`
+/// `None` in a wild rung, and `None` on a divider cell (a `Threshold`  // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
 /// belongs to no region — the same rule `drop` applies).
 pub(crate) fn place_sentence(ug: &Underground) -> Option<String> {
     if ug.origins[ug.rung] != ChamberOrigin::Made {
         return None;
     }
-    let node = crate::descent_thing::node_here(ug, ug.cell)?;
+    let node = crate::descent_thing::node_here(ug, ug.cell)?; // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
     let role = ug.reading.roles[node];
     let tenancy = ug.tenancy[ug.rung];
     let mut out = role_sentence(role, tenancy).to_string();
@@ -62,7 +62,7 @@ pub(crate) fn place_nouns(ug: &Underground) -> Vec<crate::focalize::Noun> {
     let Some(sentence) = place_sentence(ug) else {
         return Vec::new();
     };
-    let node = crate::descent_thing::node_here(ug, ug.cell).expect("a sentence implies a node");
+    let node = crate::descent_thing::node_here(ug, ug.cell).expect("a sentence implies a node"); // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
     let word = match ug.reading.roles[node] {
         Role::Entry => "entry",
         Role::Heart => "hall",
@@ -82,7 +82,7 @@ pub(crate) fn place_nouns(ug: &Underground) -> Vec<crate::focalize::Noun> {
 mod tests {
     use super::*;
 
-    /// Eight cells of the table, each a distinct sentence; the past tense
+    /// Eight cells of the table, each a distinct sentence; the past tense  // lexicon: a table cell — the area sense, unrelated to mesh geometry
     /// never names the place as present.
     #[test]
     fn the_table_has_eight_distinct_sentences_and_the_past_tense_is_past() {
