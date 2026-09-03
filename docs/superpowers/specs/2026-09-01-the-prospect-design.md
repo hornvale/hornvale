@@ -106,9 +106,17 @@ Rules:
 1. A facet with no site says **nothing**. Silence is honest and it makes the
    density gap visible rather than papered over. Expect most facets to be
    silent after this campaign; that is the input to the follow-on study.
-2. At most **two** sites are named, ranked by salience (§6). The rest are
-   enterable but unannounced — the fiction is a world that does not inventory
-   itself.
+2. **CORRECTED 2026-09-02: exactly one, not two.** This read "at most **two**
+   sites are named, ranked by salience (§6)", and two was never built.
+   `Brief.site` is an `Option<Site>` — the type carries one — resolved by
+   `max_by_key(Site::salience)`, and `site_clause` renders one sentence. Naming
+   two would need a `Vec` and a conjunction in the prose, neither of which
+   exists.
+
+   The number was wrong and the *rationale* was right, which is why this is a
+   correction rather than a defect: "the fiction is a world that does not
+   inventory itself" argues for one more strongly than for two. The rest are
+   enterable but unannounced.
 3. The clause names the site's **kind and name**, never its contents.
 
 ## 5. Surfacing, on the map
