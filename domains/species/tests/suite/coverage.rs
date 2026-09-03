@@ -590,6 +590,99 @@ fn every_biosphere_kind_carries_a_fatigue_rise_row() {
     }
 }
 
+/// The Pallet, Task 4: [`hornvale_species::sleep_grade_registry`] must be a
+/// TOTAL map over `biosphere_registry`'s roster, for exactly the reason
+/// [`every_biosphere_kind_carries_a_fatigue_rise_row`] above states for its
+/// own table — the consumer
+/// \(`windows/vessel::liveness::sleep_grade_for`\) falls back to a documented
+/// neutral on a miss, so a kind left off this table is invisible to every
+/// reader except this ratchet, and reads as an authoring choice rather than
+/// as the omission it is.
+#[test]
+fn every_biosphere_kind_carries_a_sleep_grade_row() {
+    let grade = hornvale_species::sleep_grade_registry();
+    for (k, _) in hornvale_species::biosphere_registry().iter() {
+        assert!(
+            grade.contains(k),
+            "biosphere kind {k:?} has no sleep-grade row"
+        );
+    }
+}
+
+/// The sleep grade is a **preference**, so every row must be a bonus or
+/// nothing — never a penalty. A value below `1.0` would make an afforded
+/// room repay LESS than the open road, inverting the framing
+/// `windows/vessel::liveness::SiteGrade`'s own doc records as rejected; a
+/// value above the ceiling would break the calibration argument the old
+/// `AFFORDED_REST_GAIN = 1.5` constant carried, which bounds how much a site
+/// may ever be worth before a bed stops being a preference and becomes a
+/// necessity.
+#[test]
+fn every_sleep_grade_is_a_bonus_bounded_by_the_authored_ceiling() {
+    for (k, g) in hornvale_species::sleep_grade_registry().iter() {
+        assert!(
+            (1.0..=1.5).contains(g),
+            "{k:?}'s sleep grade {g} is outside [1.0, 1.5]: below 1.0 an \
+             afforded room would repay less than bare ground, and above 1.5 \
+             the site stops being a preference"
+        );
+    }
+}
+
+/// THE TABLE MUST ACTUALLY DIFFERENTIATE — the assertion this campaign
+/// exists to be held to.
+///
+/// The Wicket built the per-species mechanism for `fatigue_rise_registry`
+/// and filled 39 rows with two distinct values, which the plumb audit
+/// reported as an outstanding defect: a per-species *mechanism* carrying no
+/// per-species *difference*. This test refuses that shape here. The bound is
+/// deliberately well below the authored count \(seven\) rather than equal to
+/// it, so re-authoring a single row is not a gate failure while collapsing
+/// the ladder is.
+///
+/// The two endpoints are named because they are the two the ladder's own
+/// argument turns on: `xorn` is ametabolic and can collect nothing, and
+/// `human` is the body the ceiling was calibrated for.
+///
+/// MUTATION THIS MUST FAIL AGAINST — two, both run against
+/// `domains/species/src/lib.rs`:
+///
+/// 1. **the ladder collapses**: `NO_GAIN`, `ALREADY_BUOYED`,
+///    `TOO_LARGE_TO_FIT` and `CONTACT_ONLY` all set to `1.30`, leaving three
+///    distinct values. Red: `the sleep-grade table carries only 3 distinct
+///    value\(s\)`.
+/// 2. **the floor is not a floor**: `const NO_GAIN: f64 = 1.50`. Red at the
+///    `xorn` assertion: `left: 1.5  right: 1.0`.
+#[test]
+fn the_sleep_grade_table_carries_a_real_ladder_not_one_repeated_number() {
+    use hornvale_kernel::KindId;
+    let grade = hornvale_species::sleep_grade_registry();
+    let mut seen: Vec<u64> = grade.iter().map(|(_, g)| g.to_bits()).collect();
+    seen.sort_unstable();
+    seen.dedup();
+    assert!(
+        seen.len() >= 5,
+        "the sleep-grade table carries only {} distinct value(s) — a \
+         per-species table with no per-species difference is the defect The \
+         Wicket shipped for the fatigue-rise rate, not a success",
+        seen.len()
+    );
+    let xorn = grade.get(&KindId("xorn")).copied().expect("xorn has a row");
+    let human = grade
+        .get(&KindId("human"))
+        .copied()
+        .expect("human has a row");
+    assert_eq!(
+        xorn, 1.0,
+        "an ametabolic kind must sit at the floor — a bed gives a xorn nothing"
+    );
+    assert!(
+        human > xorn,
+        "a human must gain strictly more from a bed than a creature of stone: \
+         human={human}, xorn={xorn}"
+    );
+}
+
 #[test]
 fn dispersion_is_a_ratio_on_every_axis() {
     for (k, d) in hornvale_species::dispersion_registry().iter() {

@@ -179,9 +179,9 @@ use hornvale_species::ThermalStrategy;
 // writing the probes below. Named directly rather than routed around.
 use hornvale_vessel::body::Body;
 use hornvale_vessel::liveness::{
-    DriveMovements, HomeNavCache, LocaleTerrain, PrimaryAfraidMemo, RestSites, SUSTENANCE, Terrain,
-    believed_water, derive_npcs, drive_at, fatigue_at, hazard_memory_memo, hunger_at,
-    shared_believed_water,
+    DriveMovements, HomeNavCache, LocaleTerrain, PrimaryAfraidMemo, RestSites, SUSTENANCE,
+    SleepTraits, Terrain, believed_water, derive_npcs, drive_at, fatigue_at, hazard_memory_memo,
+    hunger_at, shared_believed_water,
 };
 use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
 // The measurement harness times each tick for a diagnostic (never sim logic,
@@ -400,12 +400,24 @@ fn probe_fatigue_us(ledger: &Ledger, npc: &Body, t: WorldTime, terrain: &dyn Ter
         .get_by_label("human")
         .copied()
         .unwrap_or(0.3);
+    // The site grade, resolved from its own registry for the same reason
+    // (The Pallet, Task 4): `liveness::creature_fatigue` reads a SECOND
+    // species table beside the rate one, and a hard-coded literal here would
+    // measure a production path that no longer exists.
+    let gain = hornvale_species::sleep_grade_registry()
+        .get_by_label("human")
+        .copied()
+        .unwrap_or(1.5);
+    let traits = SleepTraits {
+        rise: rate,
+        afforded_gain: gain,
+    };
     for _ in 0..FOLD_REPS {
         sink += fatigue_at(
             ledger,
             npc.entity,
             t,
-            rate,
+            traits,
             None,
             Some(&RestSites { terrain, body: npc }),
         );

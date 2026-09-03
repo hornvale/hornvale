@@ -5102,3 +5102,9 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-03T21:56:32Z | gate-commit | 26.328 | 25.527 | 1.220 | 1.02 | 0 | f5e399a9e | campaign/the-pallet | MacBookPro | 10 |
 | 2026-09-03T21:57:29Z | gate-commit | 37.301 | 68.593 | 17.110 | 2.30 | 0 | f5e399a9e | campaign/the-pallet | MacBookPro | 10 |
 | 2026-09-03T22:06:23Z | gate-commit | 33.295 | 64.750 | 14.590 | 2.38 | 0 | f5e399a9e | campaign/the-pallet | MacBookPro | 10 |
+| 2026-09-03T22:29:00Z | gate-commit | 14.464 | 17.044 | 10.175 | 1.88 | 0 | 8641cd482 | campaign/the-pallet | MacBookPro | 10 |
+| 2026-09-03T22:32:51Z | gate-commit | 13.917 | 20.837 | 4.004 | 1.78 | 0 | 8641cd482 | campaign/the-pallet | MacBookPro | 10 |
+| 2026-09-03T22:33:26Z | gate-commit | 18.341 | 21.667 | 3.944 | 1.40 | 0 | 8641cd482 | campaign/the-pallet | MacBookPro | 10 |
+| 2026-09-03T22:35:38Z | gate-commit | 105.811 | 270.486 | 41.985 | 2.95 | 0 | 8641cd482 | campaign/the-pallet | MacBookPro | 10 |
+| 2026-09-03T22:47:54Z | rebaseline | 73.173 | 287.584 | 15.407 | 4.14 | 0 | 8641cd482 | campaign/the-pallet | MacBookPro | 10 |
+| 2026-09-03T22:59:05Z | gate-commit | 56.467 | 119.100 | 51.916 | 3.03 | 0 | 8641cd482 | campaign/the-pallet | MacBookPro | 10 |

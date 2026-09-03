@@ -3216,6 +3216,25 @@ impl BoutKind {
 /// ([`BoutKind::fall`]), so a bed improves a conscious rest and a sleep alike
 /// rather than being a third act.
 ///
+/// **THIS IS NO LONGER A CONSTANT** (The Pallet, Task 4). The gain is a
+/// per-species table, `hornvale_species::sleep_grade_registry`, reached here
+/// through [`sleep_grade_for`]; what survives at this name is the NEUTRAL
+/// value a species that table has never heard of falls back to, which is
+/// human's row — the same shape [`DEFAULT_FATIGUE_RISE`] takes for the
+/// sleep-debt rate beside it, and for the same reason (a `Body.species` typo
+/// reaches this path exactly as easily as a genuinely unauthored kind, so it
+/// must not read as a semantically extreme value).
+///
+/// **Why the old `universal` verdict was wrong, recorded rather than
+/// quietly replaced.** The tag read `universal(a uniform multiplier on every
+/// rest/sleep act's own rate, bounded rather than derived — not a species
+/// property)`. "Bounded rather than derived" answers where the number came
+/// from; "not a species property" is a negation. Decision 0586 names both as
+/// the tells of a reason answering a neighbouring question, and the fact
+/// itself settles it: a `xorn` is ametabolic stone and gains nothing at all
+/// from a bed. See `hornvale_species::sleep_grade_registry`'s own doc for
+/// the ladder and every row's derivation.
+///
 /// **Bare ground is the baseline, and the bed is the bonus — not the other
 /// way round.** The inverse framing (a bed is normal, bare ground a penalty)
 /// was rejected on two grounds. It would be RESTRICTIVE where this campaign's
@@ -3224,7 +3243,9 @@ impl BoutKind {
 /// [`FATIGUE_FALL`]'s own authored calibration, which is stated for a normal
 /// night and would then describe a night nobody without furniture ever has.
 /// With `1.0` as the floor, every room that affords nothing keeps exactly the
-/// rates Tasks 7-9 authored, and the grade can only ever help.
+/// rates Tasks 7-9 authored, and the grade can only ever help. The table
+/// keeps that floor: `1.0` is its lowest row, meaning *no bonus*, never a
+/// penalty.
 ///
 /// **Why `1.5` and not `2.0` or `1.05`.** There is no restorable stock to
 /// calibrate against yet (spec §6b builds no health and no mana), so this is
@@ -3235,20 +3256,32 @@ impl BoutKind {
 /// night on a bed repays as much as two nights on the ground, which makes the
 /// bed a necessity rather than the *preference* the ruling asks for. Half
 /// again is the plainest reading of "prefer" that a body sleeping in the road
-/// can still live with.
+/// can still live with. **That argument bounds the MOST a site may be
+/// worth**, which is why the table treats this value as its CEILING and
+/// descends from it: the peoples keep this number byte for byte, and no kind
+/// in any world gains more from a bed than it did before the table existed.
 /// type-audit: bare-ok(ratio)
-/// plumb: universal(a uniform multiplier on every rest/sleep act's own rate, bounded rather than derived — not a species property)
-const AFFORDED_REST_GAIN: f64 = 1.5;
+/// plumb: universal(the documented neutral fallback for the per-species sleep-grade registry's own miss case, human's own row, analogous to a manikin reference default)
+const DEFAULT_SLEEP_GRADE: f64 = 1.5;
 
 /// The grade is a PREFERENCE, so it must actually prefer. A value at or below
 /// `1.0` would make [`SiteGrade::Afforded`] a synonym for
 /// [`SiteGrade::Bare`] — the whole task reduced to a no-op — and this refuses
 /// it at COMPILE time rather than at test time, the same shape the
 /// `REST_FALL < FATIGUE_FALL` bracket took in Task 8.
+///
+/// **It binds the FALLBACK, not every row** (The Pallet, Task 4). An
+/// individual row may legitimately sit AT `1.0` — `xorn`'s does, because an
+/// ametabolic body gains nothing — so the table's own bound is `[1.0, 1.5]`
+/// and is asserted in `hornvale_species`'s coverage suite, where the rows
+/// live. What must stay strictly above `1.0` is the value a body reads when
+/// nothing more specific is known about it: a miss that silently graded
+/// every unrecognised species as gaining nothing would be the same inversion
+/// `DEFAULT_FATIGUE_RISE`'s doc records rejecting.
 const _: () = assert!(
-    AFFORDED_REST_GAIN > 1.0,
-    "a rest-affording room must repay strictly more than bare ground, or the \
-     grade is a no-op wearing a constant's clothes"
+    DEFAULT_SLEEP_GRADE > 1.0,
+    "the neutral sleep grade must repay strictly more than bare ground, or \
+     the grade is a no-op wearing a constant's clothes"
 );
 
 /// What the room a bout was taken in offered the body that took it (The
@@ -3256,12 +3289,30 @@ const _: () = assert!(
 ///
 /// Two-valued today because the question the offer answers is two-valued:
 /// either some anchor in the room offered [`crate::affordance::
-/// OfferedVerb::Sleep`] to this body, or none did. The two halves §6a leaves
-/// unbuilt — *what a people tends to sleep on* (a `(species, thing)` edge)
-/// and *this one likes a sleeping bag* (a `Lineage`-derived per-instance
-/// value) — would both refine this into a graded scalar, which is why it is a
-/// named type with a `gain()` rather than a bare `bool` threaded through the
-/// fold.
+/// OfferedVerb::Sleep`] to this body, or none did.
+///
+/// **THE TWO RUNGS THIS TYPE STILL DOES NOT CARRY, DECLARED HERE BECAUSE
+/// THERE IS NOWHERE ELSE TO DECLARE THEM** (The Pallet, Task 4, spec §4d).
+/// The SPECIES rung shipped — how much an afforded site helps a body is now
+/// `hornvale_species::sleep_grade_registry`, one row per kind. Two remain,
+/// and both are absences of a NUMBER rather than wrong numbers, so neither
+/// has a constant to hang a `plumb:` tag on and neither appears in the
+/// committed roster's Fidelity findings table:
+///
+/// - **`per-people`** — *which thing a people tends to sleep on*. This enum
+///   collapses every afforded anchor to one value, so a bed and a heap of
+///   bracken are indistinguishable to the fold. Making them distinct is a
+///   `species x thing` matrix and needs the kind-to-kind edges the object
+///   registry does not have; there is no authored scalar standing in for it
+///   today, only this two-valued type.
+/// - **`per-individual`** — *this one likes a sleeping bag*. An idiosyncratic
+///   preference varying below the species, which
+///   `hornvale_kernel::Lineage` would derive and never store. Nothing here
+///   varies per body at all, so again there is no number to tag.
+///
+/// Both would refine this into a graded scalar, which is why it is a named
+/// type with a `gain()` rather than a bare `bool` threaded through the fold.
+/// A campaign that builds either one starts here.
 ///
 /// Carried through the timeline as an `Ord` TAG beside [`BoutKind`], for the
 /// same reason that one is: the sort stays an integer sort with no `total_cmp`
@@ -3273,8 +3324,8 @@ enum SiteGrade {
     /// unmodified.
     Bare,
     /// Some anchor in the room offered [`crate::affordance::OfferedVerb::
-    /// Sleep`] to this body. Repays [`AFFORDED_REST_GAIN`] times the act's
-    /// rate.
+    /// Sleep`] to this body. Repays the sleeping body's own species-resolved
+    /// gain (`hornvale_species::sleep_grade_registry`) times the act's rate.
     Afforded,
 }
 
@@ -3282,13 +3333,60 @@ impl SiteGrade {
     /// The multiplier this grade applies to the bout's own repayment rate —
     /// the ONE mapping from site to gain, read only by
     /// [`fatigue_from_rests`].
-    /// type-audit: bare-ok(ratio: return)
-    fn gain(self) -> f64 {
+    ///
+    /// **`afforded` is the SLEEPER's species-resolved gain, passed in, not
+    /// looked up here** (The Pallet, Task 4). This type stays a plain `Ord`
+    /// tag carried through the timeline beside [`BoutKind`] — the sort stays
+    /// an integer sort — and the species number arrives the same way the
+    /// sleep-debt `rate` already does: resolved once at [`creature_fatigue`],
+    /// then passed down as a scalar. Making the tag itself species-aware
+    /// would put a `KindId` in the sort key for no gain.
+    ///
+    /// [`SiteGrade::Bare`] ignores `afforded` entirely and answers `1.0`,
+    /// which is why an UNGRADED read (`sites: None`, every bout `Bare`) folds
+    /// bit for bit what it folded before this parameter existed, whatever
+    /// gain its caller happens to pass.
+    /// type-audit: bare-ok(ratio: afforded), bare-ok(ratio: return)
+    fn gain(self, afforded: f64) -> f64 {
         match self {
             SiteGrade::Bare => 1.0,
-            SiteGrade::Afforded => AFFORDED_REST_GAIN,
+            SiteGrade::Afforded => afforded,
         }
     }
+}
+
+/// The sleeping body's two SPECIES-resolved numbers, which the fatigue fold
+/// reads and holds none of (The Wicket, Task 9; The Pallet, Task 4 added the
+/// second and made it a struct).
+///
+/// **Why a struct and not two `f64` parameters.** They were two, briefly, and
+/// the shape is bad in exactly one way that matters: `rate` and
+/// `afforded_gain` are both bare `f64`, adjacent, and each is plausible in
+/// the other's position, so a transposition type-checks. A named field per
+/// number removes the whole class. It is also the shape this module already
+/// reaches for — [`fatigue_at`]'s own doc says its callers pass what the fold
+/// needs "exactly as `drive_at`'s callers already pass a [`DriveParams`]" —
+/// and it keeps [`fatigue_with_pending`] under `clippy::too_many_arguments`
+/// without the workspace's first `#[allow]` for it.
+///
+/// Both fields are looked up ONCE, at [`creature_fatigue`], which is the
+/// single door the read and the mover both reach fatigue through; a caller
+/// with no species data of its own (every fixture in
+/// `tests/suite/fatigue_stock.rs`) states whatever it needs the fold to see.
+/// type-audit: bare-ok(ratio: rise), bare-ok(ratio: afforded_gain)
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct SleepTraits {
+    /// Sleep debt accrued per LOCAL day awake — `hornvale_species::
+    /// fatigue_rise_registry`'s row for this body's kind, via
+    /// [`fatigue_rise_for`].
+    pub rise: f64,
+    /// The multiplier a bout repays at when the room it was taken in
+    /// afforded somewhere to lie down — `hornvale_species::
+    /// sleep_grade_registry`'s row for this body's kind, via
+    /// [`sleep_grade_for`]. Read only by [`SiteGrade::gain`], and only for a
+    /// bout graded [`SiteGrade::Afforded`]; `1.0` means *no bonus*, never
+    /// *no recovery*.
+    pub afforded_gain: f64,
 }
 
 /// The world-side inputs the rest-site grade needs: the terrain the bout
@@ -3563,10 +3661,17 @@ fn to_local_days(span: TickSpan, day: Option<TickSpan>) -> f64 {
 /// a conscious rest (The Wicket, Task 8) — clamped into `[0, 1]` at every
 /// segment boundary so it can neither run past exhaustion nor bank credit
 /// below zero. `rests` must be sorted by start instant ([`rest_timeline`] is
-/// the only producer). `rate` is the caller's species-resolved sleep-debt
-/// rate ([`fatigue_rise_for`], reading `hornvale_species::
-/// fatigue_rise_registry`); `day` is the world's local day length
+/// the only producer). `traits` is the caller's [`SleepTraits`] — the
+/// sleeping body's species-resolved sleep-debt rate ([`fatigue_rise_for`])
+/// and its species-resolved site-grade multiplier ([`sleep_grade_for`], read
+/// only by [`SiteGrade::gain`] and only for a bout graded
+/// [`SiteGrade::Afforded`]); `day` is the world's local day length
 /// (`Terrain::day_ticks`), `None` on a tidally locked world.
+///
+/// **The site grade reaches this fold the way the rate already did** (The
+/// Pallet, Task 4): looked up at the caller, passed in as a number. No
+/// `Body` and no `KindId` is threaded in here, and [`SiteGrade`] stays the
+/// `Ord` tag it was, so the timeline sort stays an integer sort.
 ///
 /// **Why the read and the mover must be ONE function, not two agreeing ones.**
 /// They were once two, and they diverged: the mover subtracted two INSTANTS and
@@ -3615,7 +3720,7 @@ fn to_local_days(span: TickSpan, day: Option<TickSpan>) -> f64 {
 fn fatigue_from_rests(
     rests: &[(WorldTime, TickSpan, BoutKind, SiteGrade)],
     t: WorldTime,
-    rate: f64,
+    traits: SleepTraits,
     day: Option<TickSpan>,
 ) -> f64 {
     let mut fatigue = 0.0_f64;
@@ -3633,7 +3738,7 @@ fn fatigue_from_rests(
         // cheap to survive) accrues nothing here and recovers only its
         // uncovered tail below.
         if start > cursor {
-            fatigue = (fatigue + rate * to_local_days(start - cursor, day)).min(1.0);
+            fatigue = (fatigue + traits.rise * to_local_days(start - cursor, day)).min(1.0);
             cursor = start;
         }
         // Asleep, over the part of the rest that is both uncovered and already
@@ -3647,9 +3752,14 @@ fn fatigue_from_rests(
             // Scaled by what the ROOM offered the body that lay down in it
             // (The Wicket, Task 10) — `1.0` on bare ground, so a body that
             // never reaches furniture folds exactly the arithmetic Task 8
-            // shipped.
-            fatigue =
-                (fatigue - kind.fall() * site.gain() * to_local_days(woke - cursor, day)).max(0.0);
+            // shipped. `afforded_gain` is the SLEEPER's own species row (The
+            // Pallet, Task 4): a xorn's is `1.0`, so an ametabolic body folds
+            // the bare arithmetic even on a bed.
+            fatigue = (fatigue
+                - kind.fall()
+                    * site.gain(traits.afforded_gain)
+                    * to_local_days(woke - cursor, day))
+            .max(0.0);
         }
         if end > cursor {
             cursor = end;
@@ -3657,7 +3767,7 @@ fn fatigue_from_rests(
     }
     // Awake since the last rest ended (or since genesis, if there was none).
     if t > cursor {
-        fatigue = (fatigue + rate * to_local_days(t - cursor, day)).min(1.0);
+        fatigue = (fatigue + traits.rise * to_local_days(t - cursor, day)).min(1.0);
     }
     fatigue
 }
@@ -3675,29 +3785,42 @@ fn fatigue_from_rests(
 /// lying down once. That is the property the act split (rest vs sleep) needs in
 /// order to mean anything.
 ///
-/// `rate` and `day` (The Wicket, Task 9) are the caller's own species-resolved
-/// sleep-debt rate and the world's local day length — this function holds no
-/// species/world state of its own, so a caller with none to give (every test
-/// in `tests/suite/fatigue_stock.rs`) passes whatever it needs the fold to
-/// see, exactly as `drive_at`'s callers already pass a `DriveParams`.
+/// `traits` and `day` (The Wicket, Task 9; The Pallet, Task 4 made the first
+/// a struct) are the caller's own species-resolved [`SleepTraits`] and the
+/// world's local day length — this function holds no species/world state of
+/// its own, so a caller with none to give (every test in
+/// `tests/suite/fatigue_stock.rs`) passes whatever it needs the fold to see,
+/// exactly as `drive_at`'s callers already pass a `DriveParams`.
 /// `sites` (The Wicket, Task 10) is the same shape one step further: the
 /// terrain and body the SITE of each bout is graded against, `None` for a
 /// caller with no world behind it — see [`RestSites`] and [`rest_timeline`].
+///
+/// **How much the site grade is WORTH is per-species too** (The Pallet, Task
+/// 4). [`SleepTraits::afforded_gain`] is the sleeping body's own row in
+/// `hornvale_species::sleep_grade_registry`: a settled people gets the
+/// authored ceiling, a fully marine kind almost nothing, and an ametabolic
+/// one exactly `1.0` — the bare-ground multiplier, so a xorn on a bed folds
+/// the road's arithmetic.
 ///
 /// **A rest taken where the room affords one repays more** (spec §6a's object
 /// grade, Nathan's ruling). The grade is per-BOUT and derived from the ledger's
 /// own `agent-at` timeline, so it is permanent: a body that slept on a bed and
 /// then walked into the road keeps what the bed repaid.
-/// type-audit: bare-ok(ratio: return), bare-ok(ratio: rate)
+/// type-audit: bare-ok(ratio: return)
 pub fn fatigue_at(
     ledger: &Ledger,
     entity: EntityId,
     t: WorldTime,
-    rate: f64,
+    traits: SleepTraits,
     day: Option<TickSpan>,
     sites: Option<&RestSites<'_>>,
 ) -> f64 {
-    fatigue_from_rests(&rest_timeline(ledger, &[], entity, t, sites), t, rate, day)
+    fatigue_from_rests(
+        &rest_timeline(ledger, &[], entity, t, sites),
+        t,
+        traits,
+        day,
+    )
 }
 
 /// [`fatigue_at`], plus rests emitted THIS tick and not yet committed — the
@@ -3718,14 +3841,14 @@ fn fatigue_with_pending(
     pending: &[Fact],
     entity: EntityId,
     t: WorldTime,
-    rate: f64,
+    traits: SleepTraits,
     day: Option<TickSpan>,
     sites: Option<&RestSites<'_>>,
 ) -> f64 {
     fatigue_from_rests(
         &rest_timeline(ledger, pending, entity, t, sites),
         t,
-        rate,
+        traits,
         day,
     )
 }
@@ -3778,10 +3901,16 @@ fn creature_fatigue(
         pending,
         npc.entity,
         day,
-        fatigue_rise_for(
-            &npc.species,
-            Some(&hornvale_species::fatigue_rise_registry()),
-        ),
+        SleepTraits {
+            rise: fatigue_rise_for(
+                &npc.species,
+                Some(&hornvale_species::fatigue_rise_registry()),
+            ),
+            afforded_gain: sleep_grade_for(
+                &npc.species,
+                Some(&hornvale_species::sleep_grade_registry()),
+            ),
+        },
         terrain.day_ticks(),
         Some(&RestSites { terrain, body: npc }),
     )
@@ -3836,6 +3965,37 @@ fn fatigue_rise_for(species: &str, registry: Option<&FatigueRiseTable>) -> f64 {
         .and_then(|r| r.get_by_label(species))
         .copied()
         .unwrap_or(DEFAULT_FATIGUE_RISE)
+}
+
+/// The authored sleep-grade roster's shape (The Pallet, Task 4) — the same
+/// "type alias for a caller-owned registry" shape [`FatigueRiseTable`] above
+/// already uses, and structurally identical to it because the two tables are
+/// the same kind of object: a `KindId`-keyed `f64` component the caller
+/// builds and lends.
+type SleepGradeTable = hornvale_kernel::component::ComponentStore<hornvale_kernel::KindId, f64>;
+
+/// The species' site-grade GAIN — how much more an afforded room repays a
+/// body of this kind — read from a caller-supplied
+/// `hornvale_species::sleep_grade_registry()` (The Pallet, Task 4).
+///
+/// **The exact twin of [`fatigue_rise_for`], deliberately.** Same borrowed-
+/// store shape, same miss semantics, same single production caller
+/// ([`creature_fatigue`], which builds both registries once so the read and
+/// the mover cannot resolve them differently). A lookup miss — `registry`
+/// absent, or the species not in it — answers [`DEFAULT_SLEEP_GRADE`],
+/// human's own row; `sleep_grade_registry` is a TOTAL map over every
+/// biosphere kind, so that fallback is reserved for a species the table has
+/// never heard of at all, which in practice means a `Body.species` typo. It
+/// is emphatically NOT `1.0`: grading an unrecognised species as gaining
+/// nothing from a bed is the same inversion `DEFAULT_FATIGUE_RISE`'s own doc
+/// records rejecting for the rate beside it, because a typo and a stated
+/// absence must not read the same.
+/// type-audit: bare-ok(identifier-text: species), bare-ok(ratio: return)
+fn sleep_grade_for(species: &str, registry: Option<&SleepGradeTable>) -> f64 {
+    registry
+        .and_then(|r| r.get_by_label(species))
+        .copied()
+        .unwrap_or(DEFAULT_SLEEP_GRADE)
 }
 
 /// The rest (fatigue) drive, Drive #3 (The Slumber). A STOCK drive like thirst:
@@ -8407,6 +8567,15 @@ mod tests {
     /// to exactly `TickSpan::as_std_days` and the fixtures' predictions stay
     /// bit-for-bit what they were before this task.
     const FATIGUE_RISE: f64 = 0.3;
+
+    /// The site-grade companion to [`FATIGUE_RISE`] above (The Pallet, Task
+    /// 4), mirroring human's row in `hornvale_species::
+    /// sleep_grade_registry` — the same `1.5` the module-level
+    /// `AFFORDED_REST_GAIN` carried for every kind before that table existed.
+    /// Every call it is passed to also passes `sites: None`, so every bout
+    /// reads [`SiteGrade::Bare`] and this value is never consulted; the
+    /// fixtures' predictions are bit-for-bit what they were before Task 4.
+    const SITE_GAIN: f64 = 1.5;
 
     /// Test-only helper: fits the coexistence stack once and reads the `k`
     /// densest wild concentrations — the prelude `derive_wild_npcs` used to
@@ -16655,6 +16824,50 @@ mod tests {
         );
     }
 
+    /// The species half of the site grade RESOLVES, and its miss case is the
+    /// neutral one (The Pallet, Task 4).
+    ///
+    /// [`sleep_grade_for`] is private, so nothing outside this module can
+    /// state either half. Three claims:
+    ///
+    /// 1. a real species reads its own authored row, not the fallback —
+    ///    `xorn`'s `1.0` and `human`'s `1.5` are both reachable through this
+    ///    function, and they differ, which is the whole point of the table;
+    /// 2. a species the registry has never heard of answers
+    ///    [`DEFAULT_SLEEP_GRADE`], which is human's row — NOT the floor. A
+    ///    `Body.species` typo must not silently grade a body as gaining
+    ///    nothing from a bed, the same inversion `DEFAULT_FATIGUE_RISE`'s own
+    ///    doc records rejecting for the rate beside it;
+    /// 3. an ABSENT registry answers the same fallback, so a caller with no
+    ///    species data at all and a caller with a typo read alike.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST: `unwrap_or(1.0)` in
+    /// [`sleep_grade_for`] — the plausible wrong fallback, and the one that
+    /// would make an unrecognised species read as ametabolic. Red at (2).
+    #[test]
+    fn the_sleep_grade_resolves_per_species_and_misses_to_the_neutral_row() {
+        let reg = hornvale_species::sleep_grade_registry();
+        let xorn = sleep_grade_for("xorn", Some(&reg));
+        let human = sleep_grade_for("human", Some(&reg));
+        assert_eq!(xorn, 1.0, "a creature of stone gains nothing from a bed");
+        assert!(
+            human > xorn,
+            "the table must actually differentiate through this function: \
+             human={human}, xorn={xorn}"
+        );
+        assert_eq!(
+            sleep_grade_for("no-such-species", Some(&reg)),
+            DEFAULT_SLEEP_GRADE,
+            "a species this table has never heard of — a `Body.species` typo \
+             — must read the NEUTRAL fallback, never the floor"
+        );
+        assert_eq!(
+            sleep_grade_for("human", None),
+            DEFAULT_SLEEP_GRADE,
+            "an absent registry must read the same fallback a miss does"
+        );
+    }
+
     /// THE READ AND THE MOVER COMPUTE FATIGUE WITH ONE ARITHMETIC SHAPE — P5.
     ///
     /// `fatigue_at` (the read, behind `affect_of`) and `decide_step` (the
@@ -16764,7 +16977,18 @@ mod tests {
                  span={span_ticks} gave {mover}"
                 );
                 assert_eq!(
-                    fatigue_at(&ledger, e, t, FATIGUE_RISE, None, None).to_bits(),
+                    fatigue_at(
+                        &ledger,
+                        e,
+                        t,
+                        SleepTraits {
+                            rise: FATIGUE_RISE,
+                            afforded_gain: SITE_GAIN
+                        },
+                        None,
+                        None
+                    )
+                    .to_bits(),
                     mover.to_bits(),
                     "the fatigue read must be BIT-identical to the segment \
                  arithmetic for a {act} bout at t={t_ticks} ticks, \
@@ -16793,7 +17017,10 @@ mod tests {
                         std::slice::from_ref(&pending),
                         e2,
                         t,
-                        FATIGUE_RISE,
+                        SleepTraits {
+                            rise: FATIGUE_RISE,
+                            afforded_gain: SITE_GAIN,
+                        },
                         None,
                         None,
                     )
@@ -17279,7 +17506,18 @@ mod tests {
         let at = |d: f64| WorldTime::from_std_days(d).expect("a day value is finite");
         // Before any rest: a pure ramp from genesis, exactly as it always was.
         assert!(
-            (fatigue_at(&ledger, e, at(0.5), FATIGUE_RISE, None, None) - FATIGUE_RISE * 0.5).abs()
+            (fatigue_at(
+                &ledger,
+                e,
+                at(0.5),
+                SleepTraits {
+                    rise: FATIGUE_RISE,
+                    afforded_gain: SITE_GAIN
+                },
+                None,
+                None
+            ) - FATIGUE_RISE * 0.5)
+                .abs()
                 < 1e-9
         );
         // A HALF-DAY sleep beginning at day 2 — a creature's normal night.
@@ -17290,15 +17528,35 @@ mod tests {
         // AT the moment it lies down, the debt is what two days awake built.
         // The old model read 0 here; that was the flag.
         assert!(
-            (fatigue_at(&ledger, e, at(2.0), FATIGUE_RISE, None, None) - FATIGUE_RISE * 2.0).abs()
+            (fatigue_at(
+                &ledger,
+                e,
+                at(2.0),
+                SleepTraits {
+                    rise: FATIGUE_RISE,
+                    afforded_gain: SITE_GAIN
+                },
+                None,
+                None
+            ) - FATIGUE_RISE * 2.0)
+                .abs()
                 < 1e-9,
             "lying down is not itself rest: the debt at the instant sleep \
              begins is still two days' worth"
         );
         // Mid-sleep, a quarter of a day in: half the night's repayment.
         assert!(
-            (fatigue_at(&ledger, e, at(2.25), FATIGUE_RISE, None, None)
-                - (FATIGUE_RISE * 2.0 - FATIGUE_FALL * 0.25))
+            (fatigue_at(
+                &ledger,
+                e,
+                at(2.25),
+                SleepTraits {
+                    rise: FATIGUE_RISE,
+                    afforded_gain: SITE_GAIN
+                },
+                None,
+                None
+            ) - (FATIGUE_RISE * 2.0 - FATIGUE_FALL * 0.25))
                 .abs()
                 < 1e-9,
             "a query mid-rest credits only the sleep the body has had by then"
@@ -17307,8 +17565,17 @@ mod tests {
         // day more.
         let after_night = FATIGUE_RISE * 2.0 - FATIGUE_FALL * 0.5;
         assert!(
-            (fatigue_at(&ledger, e, at(3.0), FATIGUE_RISE, None, None)
-                - (after_night + FATIGUE_RISE * 0.5))
+            (fatigue_at(
+                &ledger,
+                e,
+                at(3.0),
+                SleepTraits {
+                    rise: FATIGUE_RISE,
+                    afforded_gain: SITE_GAIN
+                },
+                None,
+                None
+            ) - (after_night + FATIGUE_RISE * 0.5))
                 .abs()
                 < 1e-9,
             "the old model read exactly FATIGUE_RISE here, on the premise that \
@@ -17316,7 +17583,17 @@ mod tests {
         );
         // The ceiling still holds however long a body stays up.
         assert_eq!(
-            fatigue_at(&ledger, e, at(100.0), FATIGUE_RISE, None, None),
+            fatigue_at(
+                &ledger,
+                e,
+                at(100.0),
+                SleepTraits {
+                    rise: FATIGUE_RISE,
+                    afforded_gain: SITE_GAIN
+                },
+                None,
+                None
+            ),
             1.0
         );
 
@@ -17330,15 +17607,43 @@ mod tests {
             .commit(rested_fact(w, td(2.0), night, "t"), &reg)
             .unwrap();
         assert!(
-            (fatigue_at(&ledger, w, at(2.5), FATIGUE_RISE, None, None)
-                - (FATIGUE_RISE * 2.0 - REST_FALL * 0.5))
+            (fatigue_at(
+                &ledger,
+                w,
+                at(2.5),
+                SleepTraits {
+                    rise: FATIGUE_RISE,
+                    afforded_gain: SITE_GAIN
+                },
+                None,
+                None
+            ) - (FATIGUE_RISE * 2.0 - REST_FALL * 0.5))
                 .abs()
                 < 1e-9,
             "a conscious rest repays REST_FALL per day down, not FATIGUE_FALL"
         );
         assert!(
-            fatigue_at(&ledger, w, at(2.5), FATIGUE_RISE, None, None)
-                > fatigue_at(&ledger, e, at(2.5), FATIGUE_RISE, None, None),
+            fatigue_at(
+                &ledger,
+                w,
+                at(2.5),
+                SleepTraits {
+                    rise: FATIGUE_RISE,
+                    afforded_gain: SITE_GAIN
+                },
+                None,
+                None
+            ) > fatigue_at(
+                &ledger,
+                e,
+                at(2.5),
+                SleepTraits {
+                    rise: FATIGUE_RISE,
+                    afforded_gain: SITE_GAIN
+                },
+                None,
+                None
+            ),
             "the body that only RESTED must still owe strictly more than the \
              body that SLEPT the identical span from the identical instant"
         );
@@ -17403,7 +17708,17 @@ mod tests {
         // a genuinely saturated body rather than a merely tired one.
         let mut day = WorldTime::from_std_days(4.0).expect("a day value is finite");
         assert_eq!(
-            fatigue_at(&ledger, e, day, FATIGUE_RISE, None, None),
+            fatigue_at(
+                &ledger,
+                e,
+                day,
+                SleepTraits {
+                    rise: FATIGUE_RISE,
+                    afforded_gain: SITE_GAIN
+                },
+                None,
+                None
+            ),
             1.0,
             "the fixture must start saturated or it measures a shorter recovery \
              than it claims"
@@ -17418,7 +17733,17 @@ mod tests {
             // pinning the wrong constant under the right name.
             ledger.commit(slept_fact(e, day, night, "t"), &reg).unwrap();
             let woke = day + night;
-            let f = fatigue_at(&ledger, e, woke, FATIGUE_RISE, None, None);
+            let f = fatigue_at(
+                &ledger,
+                e,
+                woke,
+                SleepTraits {
+                    rise: FATIGUE_RISE,
+                    afforded_gain: SITE_GAIN,
+                },
+                None,
+                None,
+            );
             woke_at.push(f);
             if f < 1e-9 && rested_on.is_none() {
                 rested_on = Some(n);
