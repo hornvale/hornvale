@@ -191,17 +191,23 @@ Spec coverage, placeholder scan and type consistency are recorded at the
 foot of the plan. Two corrections came out of writing it (#6, #7); no
 section of the spec is without a task.
 
-## Followups (promoted to the retrospective at close)
+## Followups (promoted at close — each now has a home)
 
 - The driven walk's within-room `Occupancy` is built and dropped inside
   `step_one_with_controller`; the population's is not. Pre-existing; not
-  a committed fact (0069).
-- `controller.rs`'s `PlayerController` doc says "today's verb loop — `go`,
+  a committed fact (0069). **Home:** the retrospective's Followups section
+  and the chronicle's closing section; spec §3.5 names it out of scope.
+- `controller.rs`'s `PlayerController` doc said "today's verb loop — `go`,
   `drink`, … — still commits directly"; there is no `drink` verb
-  (`IN_CHARACTER_VERBS`, `session.rs:185`). Corrected in this campaign's
+  (`IN_CHARACTER_VERBS`, `session.rs:185`). The doc was corrected in Task 5's
   freshness sweep; the gap itself is `PLAY-free-body-cannot-drink`.
+  **Home:** that registry row, whose Where cell now links the chronicle.
 - A free seed-42 body reads `Pursuing(Thirst)` from its second wait and
-  has no way to drink. Same row.
+  has no way to drink. Same row. **Home:** as above; the chronicle's "what
+  stays open" states it and names the commit path a queued verb would use.
+- A frames-aware creature walk (the §3.3 fidelity cut). **Home:** decision
+  0657 and registry row `PLAY-held-body-off-the-band-holds`, whose Where
+  cell now links the chronicle.
 
 ## Task 1 — complete (commits 46f6ccec2..358f72801)
 
@@ -295,3 +301,96 @@ been red first — the same information, one queue slot later.
 stationary for the population (67 stirred), so the assertion pins the
 suffix `The will that holds you rests.` rather than the whole line, and
 the test's doc says which branch it covers. No ideonomy pass; a sweep.
+
+## Task 6 — complete
+
+The close: three decision records, the chronicle, the freshness sweep, the
+registry, the retrospective, and this section. No ideonomy pass — nothing was
+DECIDED here that the spec had not already; this task writes down what the
+campaign found.
+
+**Characterising the null, before writing a word about it.** The chronicle
+had to say WHY seed 7's held body still commits 0 `drank`, measured rather
+than guessed, so a throwaway in-module probe (deleted; `git diff --stat`
+confirms `session.rs` untouched at commit) ran the eight-wait script at three
+configurations and read the trail per tick.
+
+Held, seed 7 — cumulative `agent-at` on the ledger, and the hop distance from
+the body's current room to the nearest fresh-water room by breadth-first
+search:
+
+```
+  start  moved=—      agent-at=0   Idle/Content              water > 120 hops
+  wait#0 moved=false  agent-at=0   Idle/Content              water > 120 hops
+  wait#1 moved=true   agent-at=29  Pursuing(Thirst)/Searching  > 120 hops
+  wait#2 moved=true   agent-at=60  Pursuing(Thirst)/Searching  > 120 hops
+  wait#3 moved=true   agent-at=65  Pursuing(Thirst)/Helpless   > 120 hops
+  wait#4 moved=true   agent-at=70  Pursuing(Thirst)/Helpless   > 120 hops
+  wait#5 moved=true   agent-at=74  Pursuing(Thirst)/Helpless   > 120 hops
+  wait#6 moved=true   agent-at=78  Pursuing(Thirst)/Helpless   > 120 hops
+  wait#7 moved=true   agent-at=82  Pursuing(Thirst)/Helpless   > 120 hops
+```
+
+Held, seed 42 (the positive): the body never moves, water is in its own room
+(0 hops), and `drank` climbs 1 per tick from wait#1 to 7 at wait#7, felt state
+`Idle`/`Content` throughout. Free, seed 7 (the control): never moves,
+`agent-at=0` and `drank=0` on every tick.
+
+A second probe answered the mechanism question directly:
+
+```
+  seed 7  home=…[3,0,3,1,3,2,2,1,1,1,2,3,0]  resource == home = TRUE
+          nearest fresh water: NONE within 120 hops, 59,049 rooms searched
+  seed 42 home=…[2,3,3,1,0,0,1,2,0,2,3,3,1]  resource == home = TRUE
+          nearest fresh water: 0 hops (the home room itself)
+```
+
+**So the null is not the repair and not helplessness — it is that there is no
+water.** `Body.resource` is resolved once at derivation as
+`nearest_water(home, terrain, PLAN_BUDGET).unwrap_or(home)`, and at seed 7 it
+falls back to the home room, which `liveness.rs`'s own test already documents
+as "a real, legitimate outcome, not a derivation failure". The seeking the
+repair made real is genuine exploration with no destination: 29 rooms on the
+first seeking wait, 31 more on the second, then helplessness at day ~20 cuts
+it to 4–5 a tick. The body is now helpless thirty-odd rooms from home instead
+of helpless in it, and the ledger says so.
+
+**What remains unexplained, and is stated as such in the chronicle.** The free
+control reads `Searching` at every one of the eight FIVE-day waits, while the
+same free body sampled every THREE days reads `Helpless` at most of them.
+`learned_helplessness` lifts for one day in every `HELPLESS_PROBE_DAYS = 5`, so
+a five-day cadence samples one phase of that cycle every time — the
+cadence-dependence is measured; the exact phase each cadence lands on was not
+derived, and nothing in the campaign depends on it.
+
+**Written at close.** Decisions 0656 (a held body's walk commits what it does),
+0657 (off the walk band a held body holds), 0658 (the wait line minutes the
+held body's acts), plus three rows on `docs/decisions/README.md`.
+`book/src/chronicle/the-minute.md` with both of spec §1's tables, the trail
+above, P1's seven drinks, the null and its cause, the off-band cut, and what
+stays open; listed in `book/src/SUMMARY.md` after The Nettle. Freshness sweep
+with dated in-place corrections: `the-coercion.md` (the "ledger-inert" and
+"discarded either way" sentences), `the-rack.md` (the VIEW≡SCAN paragraph and
+the parked finding, now marked closed), `the-hand.md` (three claims resting on
+the discard), and `book/src/open-questions.md`, which the task did not name and
+which grepping the CLAIM turned up carrying two more present-tense statements
+of the discard. `windows/vessel/tests/suite/overrides.rs`'s file doc named a
+`driven_suppressed` accessor that The Rack removed; corrected to
+`suppressed_drives`.
+
+**The Confidence Gradient moves no bet.** Grepped
+`book/src/open-questions.md` for possession: the nearest scored entry is the
+lazy-derivation bet, whose supporting claim was already corrected by The Deed
+on exactly this axis (a possessed body's in-character acts are persistent
+world state) and whose own text records that the bet does not move for it.
+The Minute extends that same already-corrected boundary from verbs to the
+walk; committing on *action* is still not committing on *observation*, and
+promotion-on-touch is exactly as unbuilt as it was. No re-score.
+
+**Registry.** `PLAY-imposed-controller-diverges-felt-state` keeps status
+`elaborated`; its Idea cell is narrowed so "ledger-inert" reads as the defect
+The Minute repaired rather than a property of possession, while the
+visible-in-testimony half survives verbatim (584 chars, under the 600 cap, no
+waiver added). All three rows' Where cells gain the chronicle link; the two new
+rows stay `raw`.
+

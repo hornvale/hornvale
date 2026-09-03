@@ -177,6 +177,17 @@ differs between the two, because that walk's facts are discarded either way —
 but the body's own felt state, the read `!ask` narrates from, is not
 discarded, and it has already moved.
 
+**Corrected 2026-09-03, by [The Minute](./the-minute.md).** Two sentences
+above describe the discard as a property of possession, and it was a defect:
+the walk's facts were dropped at that one call site for *every* body, because
+the controller that had always been asked there answers *hold* and a holding
+walk emits nothing. A held body's walk now commits what it does, so wiring the
+controller stack in is **not** ledger-inert, and the walk's facts are no longer
+discarded either way. Read the two sentences as true of the code as it stood
+that day. What survives untouched is the headline below — the ledger cannot
+tell whose will was driving — because that was always a claim about
+provenance, never about whether the walk was recorded.
+
 So the honest headline has two halves, and neither may stand alone.
 **Possession is invisible in the ledger** — the committed trail a pursuer
 could later read carries no trace of whose will was driving, exactly as

@@ -307,3 +307,6 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0626](0626-a-terrain-verdict-is-held-for-the-session-keyed-by-room.md) | A terrain verdict is held for the session, keyed by room, with its terrain's identity supplied by ownership | Accepted |
 | [0627](0627-the-emitter-scan-advances-through-a-read-side-verdict-index.md) | The emitter scan advances over new sightings through a read-side verdict index, and is still not a tenant | Accepted |
 | [0628](0628-a-registry-rows-mechanism-is-a-count-not-a-reading.md) | A registry row's mechanism is a count, not a reading | Accepted |
+| [0656](0656-a-held-bodys-walk-commits-what-it-does.md) | A held body's walk commits what it does | Accepted |
+| [0657](0657-off-the-walk-band-a-held-body-holds.md) | Off the walk band a held body holds | Accepted |
+| [0658](0658-the-wait-line-minutes-the-held-bodys-acts.md) | The wait line minutes the held body's acts | Accepted |

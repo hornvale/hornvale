@@ -449,6 +449,7 @@
 - [The Brattice](./chronicle/the-brattice.md)
 - [The Detent](./chronicle/the-detent.md)
 - [The Nettle](./chronicle/the-nettle.md)
+- [The Minute](./chronicle/the-minute.md)
 
 # Appendix: The Frontier
 
