@@ -245,3 +245,13 @@ added beside the corrected count. Review: one Important (a "three waits"
 message left stale by the nine-wait extension), fixed in round 1;
 re-review clean. No ideonomy pass for either ruling; both are
 measurement corrections.
+
+## Task 3 — complete (commits 28f562469..03348c633)
+
+Off the walk band a held body holds; a walk-committed sleep that outlasts
+the tick sets `wake_at`. The off-band mutation (dropping the frame test)
+was non-vacuous at seed 14 within one `!wait 5`: five committed facts
+against four. Review approved; one deferred minor on a comment's wording
+(the merge keeps the later wake, which `Session::sleep` has no occasion to
+do), to be reworded in Task 5's sweep. No ideonomy pass; nothing was
+decided here that the spec had not already.
