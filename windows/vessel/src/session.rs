@@ -8490,7 +8490,25 @@ impl<'w> Session<'w> {
         let driven_npc = self.driven_body().clone();
         let mut player_controller = PlayerController::new();
         let mut imposed_controller = ImposedController::new();
-        let driven_controller: &mut dyn Controller = if self.possessor().is_some() {
+        // OFF THE WALK BAND A HELD BODY HOLDS (The Minute, spec §3.3).
+        // `inside`, `submerged` and `underground` are session-only frames:
+        // the body's ledger position stays at the walk band throughout a
+        // descent, and `out`/`surface`/`climb` return the player to the room
+        // the frame was entered from. The creature walk has no model of a
+        // lattice, a chamber index or a stratum, so a mesh move it committed
+        // while a frame is open would strand the frame — the frame naming a
+        // house the body no longer stands at. So while a frame is open the
+        // held body's walk is asked through the Holding `PlayerController`:
+        // arbitration still runs and the felt state is still written (the
+        // co-present host, decision 0226), but nothing commits. The cost —
+        // a held body indoors does not drink on its own — is a fidelity cut
+        // recorded on `PLAY-held-body-off-the-band-holds`, and it is honest
+        // where the old discard was not: the felt state agrees with the
+        // ledger.
+        let off_the_band =
+            self.inside.is_some() || self.submerged.is_some() || self.underground.is_some();
+        let driven_controller: &mut dyn Controller = if self.possessor().is_some() && !off_the_band
+        {
             &mut imposed_controller
         } else {
             &mut player_controller
@@ -8570,11 +8588,31 @@ impl<'w> Session<'w> {
         // did not exist; the walk's drinks were discarded and a held body's
         // ledger thirst grew monotonically while its felt state read
         // `Content` (spec §1, measured).
+        //
+        // Computed BEFORE the loop below, which consumes `driven_facts` by
+        // value (The Minute, spec §3.5): `wake_after` scans the very facts
+        // this walk is about to commit for a `slept` that outlasts this
+        // tick, the same rule `Session::sleep` applies to the verb's own
+        // span. `body_state` reads `Session::wake_at`, not the ledger, so a
+        // walk-committed sleep that never sets it would leave the body
+        // awake at the gate while its ledger says asleep.
+        let woke = if renders_unconscious(&Action::Sleep) {
+            wake_after(&driven_facts, self.day)
+        } else {
+            None
+        };
         for fact in driven_facts {
             match self.ledger.commit(fact, &self.registry) {
                 Ok(true) | Ok(false) => {}
                 Err(e) => return Turn::Out(format!("Time falters: {e}")),
             }
+        }
+        if let Some(wake) = woke {
+            // The same rule `Session::sleep` applies to the verb's own span.
+            self.wake_at = Some(match self.wake_at {
+                Some(current) if current > wake => current,
+                _ => wake,
+            });
         }
         self.occupancy = occupancy;
         // THE TICK WRITES THE RACK (The Rack, Task 3, spec §3.4). Both walks
@@ -9742,6 +9780,33 @@ impl<'w> Session<'w> {
             Err(e) => Turn::Out(format!("error: {e}")),
         }
     }
+}
+
+/// When a tick's committed facts leave the body asleep past `now`: the
+/// latest end of any `slept` fact among them that ends after `now`, else
+/// `None` (The Minute, spec §3.5).
+///
+/// `body_state` reads `Session::wake_at`, a field the `sleep` VERB sets
+/// from the span it committed — it does not fold `slept` facts. A held
+/// body's walk commits its own `slept` (decision 0168: the sleep is the
+/// body's whoever chose it), and the walk may sleep past the tick's end
+/// (`advance_one` advances `st.day` by the span and stops when it passes
+/// `to`), so the field must follow the same rule the verb applies or a
+/// released body would be awake at the gate while its ledger says asleep.
+/// Pure over the facts, so the verb and the tick cannot disagree.
+fn wake_after(facts: &[Fact], now: WorldTime) -> Option<WorldTime> {
+    facts
+        .iter()
+        .filter(|f| f.predicate == SLEPT)
+        .filter_map(|f| {
+            let Value::Number(ticks) = f.object else {
+                return None;
+            };
+            let start = f.day?;
+            Some(start + TickSpan::from_ticks(ticks as i64))
+        })
+        .filter(|end| *end > now)
+        .max()
 }
 
 /// The arousal above which a still-Content (sub-act) creature reads as restless
@@ -21047,5 +21112,88 @@ mod tests {
                 );
             }
         }
+    }
+
+    fn slept_at(day: i64, span_ticks: i64) -> Fact {
+        Fact {
+            subject: EntityId(std::num::NonZeroU64::new(7).unwrap()),
+            predicate: SLEPT.to_string(),
+            object: Value::Number(span_ticks as f64),
+            place: None,
+            day: Some(WorldTime::from_ticks(day)),
+            provenance: "test".to_string(),
+        }
+    }
+
+    /// The Minute, spec §3.5: a walk-committed sleep that ends AFTER the
+    /// tick's end leaves the body asleep, exactly as the `sleep` verb's
+    /// own `wake_at` does — `body_state` reads the field, not the ledger.
+    #[test]
+    fn a_walk_sleep_that_outlasts_the_tick_sets_the_wake() {
+        let now = WorldTime::from_ticks(1_000_000);
+        let ends_later = slept_at(900_000, 250_000); // wakes at 1_150_000
+        assert_eq!(
+            wake_after(&[ends_later], now),
+            Some(WorldTime::from_ticks(1_150_000))
+        );
+    }
+
+    #[test]
+    fn a_walk_sleep_already_over_sets_no_wake() {
+        let now = WorldTime::from_ticks(1_000_000);
+        let over = slept_at(500_000, 100_000); // woke at 600_000
+        assert_eq!(wake_after(&[over], now), None);
+    }
+
+    #[test]
+    fn a_rest_is_not_a_sleep_for_the_wake() {
+        let now = WorldTime::from_ticks(1_000_000);
+        let mut rest = slept_at(900_000, 250_000);
+        rest.predicate = RESTED.to_string();
+        assert_eq!(wake_after(&[rest], now), None);
+    }
+
+    #[test]
+    fn the_latest_outlasting_sleep_wins() {
+        let now = WorldTime::from_ticks(1_000_000);
+        let a = slept_at(900_000, 150_000); // 1_050_000
+        let b = slept_at(950_000, 300_000); // 1_250_000
+        assert_eq!(
+            wake_after(&[a, b], now),
+            Some(WorldTime::from_ticks(1_250_000))
+        );
+    }
+
+    /// The Minute, spec §3.3 / §4 P5: a held body INDOORS commits nothing
+    /// during `wait` and its frame survives. The positive control is
+    /// `the_minute.rs::p1_…`, which holds the same body's outdoor walk to
+    /// committing on the very same mechanism; this is its opposite arm.
+    ///
+    /// `enter` FIRST — it is in-character and would refuse once held.
+    #[test]
+    fn a_held_body_indoors_holds_and_keeps_its_frame() {
+        let world = world_at(14).expect("seed 14 builds");
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let _ = session.handle("enter");
+        assert!(session.inside.is_some(), "the premise: the body is indoors");
+        let _ = session.handle("!possess");
+        assert!(session.possessor().is_some(), "possession must be open");
+        let before = session.committed_fact_count_for(session.agent_entity());
+        let column = session.position();
+        let _ = session.handle("!wait 5");
+        assert_eq!(
+            session.committed_fact_count_for(session.agent_entity()),
+            before,
+            "off the walk band the held walk Holds and commits nothing"
+        );
+        assert!(session.inside.is_some(), "the frame survives the wait");
+        assert_eq!(session.position(), column, "and the column did not move");
+        assert!(
+            session
+                .roster
+                .resolved_felt(session.roster.driven())
+                .is_some(),
+            "arbitration still ran: the felt state was written (co-present, 0226)"
+        );
     }
 }
