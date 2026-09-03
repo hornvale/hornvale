@@ -264,7 +264,9 @@ decided here that the spec had not already.
 
 ## Task 4 — complete (commits 072b30def..29c18f5f3)
 
-The wait line minutes the held body's acts. The three lines P7 pinned:
+The wait line minutes the held body's acts. The three lines P7 MEASURED (its
+assertions pin narrower things: a substring of the first, a suffix of the
+second, and the absence of the minute phrase from the third):
 seed 7's first seeking wait, `Time passes. The will that holds you walks
 this body elsewhere.`; seed 42's second wait, `Time passes. You sense
 movement nearby (201 stirred). The will that holds you drinks and rests.`;
@@ -315,20 +317,21 @@ than guessed, so a throwaway in-module probe (deleted; `git diff --stat`
 confirms `session.rs` untouched at commit) ran the eight-wait script at three
 configurations and read the trail per tick.
 
-Held, seed 7 — cumulative `agent-at` on the ledger, and the hop distance from
-the body's current room to the nearest fresh-water room by breadth-first
-search:
+Held, seed 7 — cumulative `agent-at` on the ledger, and a breadth-first hop
+search **from the room the body is standing in on that tick**, run to a
+**forty-hop ceiling** (probe 1's ceiling; the deeper 120-hop search below is a
+separate measurement, taken from the home room only):
 
 ```
-  start  moved=—      agent-at=0   Idle/Content              water > 120 hops
-  wait#0 moved=false  agent-at=0   Idle/Content              water > 120 hops
-  wait#1 moved=true   agent-at=29  Pursuing(Thirst)/Searching  > 120 hops
-  wait#2 moved=true   agent-at=60  Pursuing(Thirst)/Searching  > 120 hops
-  wait#3 moved=true   agent-at=65  Pursuing(Thirst)/Helpless   > 120 hops
-  wait#4 moved=true   agent-at=70  Pursuing(Thirst)/Helpless   > 120 hops
-  wait#5 moved=true   agent-at=74  Pursuing(Thirst)/Helpless   > 120 hops
-  wait#6 moved=true   agent-at=78  Pursuing(Thirst)/Helpless   > 120 hops
-  wait#7 moved=true   agent-at=82  Pursuing(Thirst)/Helpless   > 120 hops
+  start  moved=—      agent-at=0   Idle/Content                water > 40 hops
+  wait#0 moved=false  agent-at=0   Idle/Content                water > 40 hops
+  wait#1 moved=true   agent-at=29  Pursuing(Thirst)/Searching  water > 40 hops
+  wait#2 moved=true   agent-at=60  Pursuing(Thirst)/Searching  water > 40 hops
+  wait#3 moved=true   agent-at=65  Pursuing(Thirst)/Helpless   water > 40 hops
+  wait#4 moved=true   agent-at=70  Pursuing(Thirst)/Helpless   water > 40 hops
+  wait#5 moved=true   agent-at=74  Pursuing(Thirst)/Helpless   water > 40 hops
+  wait#6 moved=true   agent-at=78  Pursuing(Thirst)/Helpless   water > 40 hops
+  wait#7 moved=true   agent-at=82  Pursuing(Thirst)/Helpless   water > 40 hops
 ```
 
 Held, seed 42 (the positive): the body never moves, water is in its own room
@@ -336,13 +339,16 @@ Held, seed 42 (the positive): the body never moves, water is in its own room
 `Idle`/`Content` throughout. Free, seed 7 (the control): never moves,
 `agent-at=0` and `drank=0` on every tick.
 
-A second probe answered the mechanism question directly:
+A second probe answered the mechanism question directly. Its search runs
+**from the home room only**, to a 120-hop ceiling — this is the sole source of
+the 120-hop / 59,049-room figure, and it says nothing about the rooms the body
+later walked to beyond the 40 hops probe 1 measured:
 
 ```
   seed 7  home=…[3,0,3,1,3,2,2,1,1,1,2,3,0]  resource == home = TRUE
-          nearest fresh water: NONE within 120 hops, 59,049 rooms searched
+          nearest fresh water FROM HOME: NONE within 120 hops, 59,049 rooms searched
   seed 42 home=…[2,3,3,1,0,0,1,2,0,2,3,3,1]  resource == home = TRUE
-          nearest fresh water: 0 hops (the home room itself)
+          nearest fresh water FROM HOME: 0 hops (the home room itself)
 ```
 
 **So the null is not the repair and not helplessness — it is that there is no
@@ -351,8 +357,8 @@ water.** `Body.resource` is resolved once at derivation as
 falls back to the home room, which `liveness.rs`'s own test already documents
 as "a real, legitimate outcome, not a derivation failure". The seeking the
 repair made real is genuine exploration with no destination: 29 rooms on the
-first seeking wait, 31 more on the second, then helplessness at day ~20 cuts
-it to 4–5 a tick. The body is now helpless thirty-odd rooms from home instead
+first seeking wait, 31 more on the second, then the first `Helpless` reading at
+day 20.5 and per-tick deltas of 5, 5, 4, 4, 4 thereafter. The body is now helpless thirty-odd rooms from home instead
 of helpless in it, and the ledger says so.
 
 **What remains unexplained, and is stated as such in the chronicle.** The free
@@ -386,6 +392,23 @@ world state) and whose own text records that the bet does not move for it.
 The Minute extends that same already-corrected boundary from verbs to the
 walk; committing on *action* is still not committing on *observation*, and
 promotion-on-touch is exactly as unbuilt as it was. No re-score.
+
+**Two findings routed here rather than lost with the scratch.**
+
+- *`narrate_motion`'s `None` arm inside the room-change branch is unreachable
+  by construction* (Task 4's report, flagged for the controller and never
+  homed). A room change can only arise from a walk-committed `agent-at`, and
+  `minutes_of` always turns one of those into `Minute::Moved`, so the minute
+  line is never `None` when the driven position moved. It is a defensive
+  fallback written exactly as the plan specified, not a bug. **Parked as a
+  deferred simplification for the final review to triage** — deleting it means
+  proving the invariant rather than assuming it.
+- *Deriving `wake_at` from the ledger for BOTH the verb and the walk, so
+  `Session::body_state` becomes a pure fold* (ledger #6's discarded
+  alternative). Set aside as a bigger change to a field the verb already owns;
+  it is the shape to reach for if anyone wants the gate's `Asleep` row to stop
+  being a session field. **Named as a followup** here and in the
+  retrospective's Followups list.
 
 **Registry.** `PLAY-imposed-controller-diverges-felt-state` keeps status
 `elaborated`; its Idea cell is narrowed so "ledger-inert" reads as the defect

@@ -35,8 +35,8 @@ Decision 0168 puts an act's effect with the **body**, not the driver, and
 0226 makes the host **co-present**, not in control of the arbitration — so
 the walk is the body's own resolution, not a choice the player made. What the
 player did was hold the body while it happened, and that is what the line
-says. The exact wording is the implementer's within that constraint; the
-three lines this campaign pinned are
+says. The exact wording is the implementer's within that constraint. Three
+lines were **measured**:
 
 ```
 Time passes. The will that holds you walks this body elsewhere.
@@ -46,6 +46,11 @@ Time passes. You sense movement nearby (201 stirred).
 
 — seed 7's first seeking wait, seed 42's second wait, and a **free** body's
 line at the same tick, byte-identical to what it read before this campaign.
+What the assertions actually **pin** is narrower than those three strings: a
+substring of the first (`walks this body elsewhere`, plus the absence of a
+stirred count), a suffix of the second, and the *absence* of the minute
+phrase from the free body's. The full lines are the measurement; the
+substrings are the guard.
 
 ## Consequences
 

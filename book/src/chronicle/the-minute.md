@@ -58,11 +58,11 @@ unconditional. Then a controller that **acts** was swapped in underneath it.
 
 ## The walk commits what it does
 
-The repair is four lines and one deletion. The walk's facts are committed to
-the session's ledger through the same loop the population's facts use, in a
-fixed order — the population first, then the held body, then the rest of the
-tick — and the held body's column is then written from the walk's own ending
-room, position and felt state together.
+The repair is a commit loop, a wake merge, one changed write and one deletion.
+The walk's facts are committed to the session's ledger through the same loop
+the population's facts use, in a fixed order — the population first, then the
+held body, then the rest of the tick — and the held body's column is then
+written from the walk's own ending room, position and felt state together.
 
 **Unconditionally, not "when possessed."** The natural patch asks whether
 anyone is holding the body. It produces the same bytes today and it is the
@@ -158,17 +158,19 @@ The mechanism half is green: the column moves on the first seeking wait, and
 goes on moving. Measured tick by tick after the repair, cumulative:
 
 ```
-seed 7, held, eight waits of five days
-  wait#  moved  agent-at on the ledger  felt                      hops to water
-  start      —                       0  —                         > 120
-  0      false                       0  Idle / Content            > 120
-  1      true                       29  Pursuing(Thirst) / Searching   > 120
-  2      true                       60  Pursuing(Thirst) / Searching   > 120
-  3      true                       65  Pursuing(Thirst) / Helpless    > 120
-  4      true                       70  Pursuing(Thirst) / Helpless    > 120
-  5      true                       74  Pursuing(Thirst) / Helpless    > 120
-  6      true                       78  Pursuing(Thirst) / Helpless    > 120
-  7      true                       82  Pursuing(Thirst) / Helpless    > 120
+seed 7, held, eight waits of five days.  The last column is a hop search from
+the room the body is standing in on that tick, run to a forty-hop ceiling.
+
+  wait#  moved  agent-at on the ledger  felt                           hops to water
+  start      —                       0  —                              > 40
+  0      false                       0  Idle / Content                 > 40
+  1      true                       29  Pursuing(Thirst) / Searching   > 40
+  2      true                       60  Pursuing(Thirst) / Searching   > 40
+  3      true                       65  Pursuing(Thirst) / Helpless    > 40
+  4      true                       70  Pursuing(Thirst) / Helpless    > 40
+  5      true                       74  Pursuing(Thirst) / Helpless    > 40
+  6      true                       78  Pursuing(Thirst) / Helpless    > 40
+  7      true                       82  Pursuing(Thirst) / Helpless    > 40
 ```
 
 Twenty-nine rooms on the first seeking wait, thirty-one more on the second —
@@ -176,16 +178,25 @@ that is a real journey, and it is the journey the discard used to erase every
 tick. And still **zero drinks by day forty**.
 
 The reason is not the repair, and it is not helplessness either. It is that
-there is no water. A breadth-first search out from the body's home room, and
-out from every room it reached, found **no fresh water within a hundred and
-twenty hops, across 59,049 rooms searched**. The body's own resource anchor —
-the room its thirst is pointed at, resolved once when the body is derived —
-falls back to *its own home room*, which is the documented answer when the
-search that resolves it comes up empty within its budget. The body is thirsty
-in a place where the thing it is thirsty for does not exist, and the search it
-performs is genuine exploration rather than a walk toward a known destination.
-Helplessness then arrives on schedule, fifteen days after a drink that never
-happened, and cuts the exploration from thirty rooms a tick to four.
+there is no water. Two searches, and it is worth keeping them apart. From every
+room the body actually stood in, tick by tick, there is no fresh water within
+**forty hops** — that is the column above. From the body's **home room**, run
+much deeper, there is none within **a hundred and twenty hops, across 59,049
+rooms searched**. The second is the one that says how far the drought reaches;
+the first only says the body never walked out of it.
+
+The body's own resource anchor — the room its thirst is pointed at, resolved
+once when the body is derived — falls back to *its own home room*, which is the
+documented answer when the search that resolves it comes up empty within its
+budget. So the body is thirsty in a place where the thing it is thirsty for
+does not exist, and what it performs is genuine exploration rather than a walk
+toward a known destination.
+
+Helplessness arrives on top of that. The body first reads *Helpless* at day
+20.5 of this script, having covered sixty rooms before it did, and from there
+the exploration falls to four or five rooms a tick — the measured deltas after
+the second wait are 5, 5, 4, 4 and 4. It is a consequence of the drought, not
+its cause.
 
 So the honest report is: **the repair made the seeking real and the seeking
 still fails**, because at this seed the settlement stands more than a hundred
@@ -201,6 +212,15 @@ every five, a deliberate flicker of renewed effort so the state can reverse. A
 five-day cadence therefore samples the same phase of that cycle every time. The
 cadence-dependence is measured; exactly which phase each cadence lands on is
 not, and nothing in this campaign depends on it.
+
+A second unexplained number sits beside it. Before the repair the walk emitted
+fourteen rooms of seeking on the first such tick and fifteen on the second;
+after it, the committed trail grows by twenty-nine and then thirty-one — about
+double, on the same seed and the same script. A resumed walk covering more
+ground than a restarting one is the expected direction, and the *factor* is
+not something this campaign measured a cause for. The two runs also differ in
+what the ledger held going in, since the first tick's sleep is now committed
+and the folds that read it move with it. Recorded as measured, not explained.
 
 ## What stays open
 

@@ -158,6 +158,13 @@ was carried past the merge.
   derived creatures the same frames a player has. Home:
   `book/src/frontier/idea-registry.md`, row
   `PLAY-held-body-off-the-band-holds`, and decision 0657.
+- **`wake_at` could be derived from the ledger for both the verb and the
+  walk**, which would make the gate's `Asleep` row a pure fold rather than a
+  read of a session field. Discarded during planning as a bigger change to a
+  field the `sleep` verb already owns; this campaign instead set the field
+  from the walk by the verb's own keep-the-later rule. Home: the campaign
+  ledger's entry #6, which records it as the discarded alternative, and
+  decision 0656's closing consequence.
 - **A free body cannot drink.** There is no `drink` verb; the in-character
   roster is shaped around going and sleeping, so a free body's thirst is
   monotone by construction. The commit path this campaign built is the one a
