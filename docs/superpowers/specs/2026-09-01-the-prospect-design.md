@@ -261,8 +261,8 @@ and nobody has it today. Recording it is the success criterion, whatever it is.
 
 | risk | mitigation |
 | --- | --- |
-| The epoch moves every world | Deliberate and Nathan-approved; worlds regenerate from seed. Byte-identity tests will move and must be re-baselined **as a stated act**, not quietly. |
-| `site_at` is called per-facet per-render and could be hot | Measure before optimising. `is_built` is already on that path, so the shape is not new. |
+| ~~The epoch moves every world~~ — **this risk does not exist; see §7.** A new stream label consumes no draws from any existing stream, so nothing that exists re-derives. Measured: both pin-isolation suites green, `rebaseline-goldens` a no-op. | Void. Nothing to mitigate. |
+| ~~`site_at`~~ is called per-facet per-render and could be hot — **no `site_at` shipped**; the site rides on `Brief`, which was already resolved per facet | Measure before optimising. `is_built` was already on that path, so the shape is not new. |
 | The rename touches many call sites | It is mechanical and the compiler finds them all — `is_built` survives, so no behaviour is silently reinterpreted. |
 | H3 comes back at 2% and the vision looks far off | That is the point of measuring it. A low number aims the next campaign at generation rather than rendering. |
 
@@ -273,4 +273,4 @@ and nobody has it today. Recording it is the success criterion, whatever it is.
 3. A cave and an exotic site are each reachable in play, named in prose, and
    drawn on the map.
 4. H1 holds; H2 and H3 are measured and recorded whatever they say.
-5. `main` stays green, and the epoch's artifact churn is declared, not absorbed.
+5. `main` stays green. ~~and the epoch's artifact churn is declared, not absorbed~~ — **there is no epoch and there was no churn**; the drift check over `docs/generated-paths.txt` came back clean.

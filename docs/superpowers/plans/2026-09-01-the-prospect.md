@@ -4,7 +4,7 @@
 
 **Goal:** Make the walk band say what is here, let the player walk into it, and widen what counts as a place from "somebody built it" to "there is something here."
 
-**Architecture:** `built: bool` — currently the gate every enterable place hangs off — is replaced by `site: Option<Site>`, carrying a kind (Settlement / Cave / Exotic), an optional name, and an `Extent` that is modelled now and only ever `Point` in this campaign. Settlements keep working unchanged; caves derive from the continuous `cave_proneness` field with no seeded draw; exotic sites are re-sited from their level-6 vertex to a specific facet by a new seeded draw, which is an epoch. Prose and map both surface sites.
+**Architecture:** `built: bool` — currently the gate every enterable place hangs off — is replaced by `site: Option<Site>`, carrying a kind (Settlement / Cave / Exotic), an optional name, and an `Extent` that is modelled now and only ever `Point` in this campaign. Settlements keep working unchanged; caves and exotic sites are both **placed** — re-sited from their level-6 vertex to a specific facet by a new seeded draw, which mints **no epoch** (a new label consumes no existing draws). Two claims in this sentence were wrong as first written: caves need the draw, and the draw is not an epoch. Prose and map both surface sites.
 
 **Tech Stack:** Rust 2024, no crates beyond `serde`/`serde_json`/`libm`. `windows/vessel`, `windows/locale`, `domains/terrain`, `clients/game/bin`.
 
@@ -38,7 +38,7 @@ H1 says *surfacing* changes nothing enterable. **Tasks 4 and 5 deliberately DO c
 | `windows/vessel/src/session.rs` | the `enter` refusal message; chamber identity |
 | `windows/locale/src/lib.rs` | the prose clause naming sites |
 | `domains/terrain/src/features.rs` | `cave_site_at` — the derived cave predicate |
-| `windows/worldgen/src/streams.rs` | the new `SITE_PLACEMENT` label (epoch) |
+| `windows/worldgen/src/streams.rs` | the new `SITE_PLACEMENT` label (**not** an epoch — a new label is safe) |
 | `clients/game/bin/src/plate.rs` | a site roster beside the settlement roster |
 
 ---
@@ -413,7 +413,7 @@ git commit -m "feat(terrain): a cave mouth is a site, derived from proneness wit
 
 ---
 
-### Task 5: Exotic sites are re-sited to a facet (the epoch)
+### Task 5: Exotic sites are re-sited to a facet (NOT an epoch — see below)
 
 **Files:**
 - Modify: `windows/worldgen/src/streams.rs` (new label)
@@ -424,7 +424,7 @@ git commit -m "feat(terrain): a cave mouth is a site, derived from proneness wit
 - Consumes: `LocaleContext::strange_sites() -> Vec<StrangeSite>` (`budget.rs:23`; `StrangeSite.vertex: u32`).
 - Produces: `site_facet_for(vertex: u32, seed: Seed, walk_depth: u32) -> Facet`.
 
-**This mints an epoch.** Every world's exotic-site placement moves.
+**CORRECTED: this mints no epoch.** This line read "**This mints an epoch.** Every world's exotic-site placement moves." A new stream label consumes no draws from any existing stream, and site placement is new behaviour with no prior placement to move. Measured: astronomy 20/20, terrain 20/20, `rebaseline-goldens` a no-op.
 
 - [ ] **Step 1: Declare the label**
 
@@ -482,9 +482,21 @@ never do.
 
 - [ ] **Step 6: Regenerate, declare, commit**
 
-Run `make rebaseline` and `make rebaseline-goldens`. Artifacts WILL move — this
-is the epoch. State in the commit which moved and why. Do not absorb the churn
-silently.
+Run `make rebaseline` and `make rebaseline-goldens`. **CORRECTED: no artifact
+moved.** This step read "Artifacts WILL move — this is the epoch", which is an
+imperative with a prediction inside it, and the prediction was wrong: there is
+no epoch, `rebaseline-goldens` was a no-op, and the drift check over
+`docs/generated-paths.txt` came back clean.
+
+The branch table the prediction should have been, per the campaign-autopilot
+rule that a decision rule beats a forecast:
+
+- **`book/src/gallery/` or a byte golden moved** → STOP. That is an epoch event
+  and nothing here was supposed to cause one.
+- **only `docs/audits/` or `docs/digest/` moved** → expected on any
+  pub-boundary or decision-log change; regenerate and commit in the same commit.
+- **nothing moved** → what actually happened. Say so; do not go looking for
+  churn to declare.
 
 ```bash
 cargo fmt

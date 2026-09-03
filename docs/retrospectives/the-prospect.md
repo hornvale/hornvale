@@ -4,11 +4,19 @@
 
 ## The headline: the controller produced most of the defects, in four shapes
 
-Twenty-six controller-side errors are recorded across this campaign's ledger
-and review rounds. Implementers and reviewers produced comparatively few, and
-the ones they did produce were caught by the machinery designed to catch them.
-The controller's were not, because **nothing reviews the controller** — a spec,
-a plan, a dispatch brief and a ruling all travel downstream as authority, and an
+**Twenty-one** controller-side errors are enumerated below, in four shapes of
+five, five, six and five. Others are recorded in *Do differently next time* and
+*Estimate deltas* without being numbered here.
+
+An earlier draft of this sentence said twenty-six and did not add up against
+its own list. That is the defect this retrospective is about, committed in the
+sentence introducing it, and caught by the whole-branch review rather than by
+its author — so the count is now the sum of the shapes and nothing else.
+
+Implementers and reviewers produced comparatively few, and the ones they did
+produce were caught by the machinery designed to catch them. The controller's
+were not, because **nothing reviews the controller** — a spec, a plan, a
+dispatch brief and a ruling all travel downstream as authority, and an
 implementer reading a defective brief implements the defect faithfully.
 
 They fall into four shapes, and separating them matters because each is found by

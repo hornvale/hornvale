@@ -42,7 +42,7 @@ what shipped.** `Brief` already resolves per-facet and already carried `built`,
 so the site rides on the brief instead, and no new resolution path was
 introduced. The record describes the code, not the proposal.
 
-## The use of `built` that deliberately survives
+## The two uses of `built` that deliberately survive
 
 `lattice::embed_with` still reads `brief.built`, and a reviewer reading this
 decision without the code would "fix" it:
@@ -59,6 +59,14 @@ This is the decision's whole point stated in the negative. `built` was
 overloaded to mean two things — *is there anything here* and *was it
 constructed* — and the fix separates them rather than renaming one. The gate
 moves to `site`; the constructed/natural question keeps `built`, correctly.
+
+**There is a SECOND survivor, and this record said there was one.**
+`chamber_prose.rs:451` reads `let place = if brief.built { "room" } else
+{ "hollow" };` — a settlement's interior is a *room*, a cave's is a *hollow*.
+That is the same constructed-or-natural question and `built` is again the right
+predicate, but the paragraph written to shield the first survivor from a
+well-meaning rewrite left this one unshielded. Rewriting it to consult the site
+would describe every cave as a room.
 
 ## Consequences
 

@@ -44,8 +44,10 @@ $$
 $$
 
 At most one facet in 9,830 can hold a placed feature of a given kind, even if
-every vertex on the globe held one. Three kinds raises the ceiling threefold and
-no further. This arithmetic is what the campaign's two preregistered rate
+every vertex on the globe held one. Admitting more kinds raises the ceiling in
+proportion and no further — the measured ceiling admits a cave and an exotic
+site at every vertex plus the settlements a world actually founds, which is
+**2.01x** the single-kind figure rather than threefold. This arithmetic is what the campaign's two preregistered rate
 hypotheses ran into, and neither survived contact with it.
 
 ## H2 was falsified by a factor of a thousand, and no constant could have saved it
@@ -90,12 +92,19 @@ success criterion.
 
 Pooled: **1.1875 × 10⁻⁵ — one enterable site per ~84,200 land facets.**
 
-Against a target of roughly one per facet, that is **four to five orders of
-magnitude short**. And the decisive figure is not the shortfall but the
-**headroom**: shipped worlds sit at **5.8%** of what the placement mechanism can
-possibly deliver. Setting every predicate to *always* — every vertex on the
-globe bearing a cave and an exotic site and a settlement — buys about **17×**,
-and leaves the world still ~4,900× short of the promise.
+A walk facet at depth 13 is 1.126 km on a side, so a square mile is **2.04
+facets** and the stated aim is one site per two of them. The shortfall is
+therefore **~41,200x — 4.6 orders of magnitude.** (An earlier draft of this
+paragraph said ~84,200x, having read the *rate* as though the aim were one site
+per facet. The rate is right; the conversion was missing. The stale "~1.7 km"
+in `windows/vessel`'s own depth documentation, a pre-cube-sphere figure, is
+where that error came from.)
+
+And the decisive figure is not the shortfall but the **headroom**: shipped
+worlds sit at **5.8%** of what the placement mechanism can possibly deliver.
+Saturating it — a cave and an exotic site at every vertex on the globe, atop the
+settlements a world actually founds — buys about **17x**, and leaves the world
+still ~2,400x short of the promise.
 
 So the answer to *"is this a rendering problem or a generation problem?"* is
 neither. It is the **shape of the model**. Density cannot be bought by tuning
@@ -111,9 +120,12 @@ The enterability gate stopped being a boolean named `built`. That word means
 canopy, which grew — so widening it would have placed a falsehood in the
 predicate every enterable place hangs from. The gate became a **site**, and
 `built` narrowed to what it always honestly meant: one property of a
-settlement. One use of it survives deliberately, choosing between rectilinear
-rooms and a grown interior, because *constructed or natural* is exactly the
-question it can answer.
+settlement. **Two** uses of it survive deliberately, both because *constructed
+or natural* is exactly the question `built` can answer: one chooses between
+rectilinear rooms and a grown interior, and the other picks the noun a place is
+described by — a settlement's interior is a *room*, a cave's is a *hollow*.
+Rewriting either to consult the site instead would generate every cave as a
+rectilinear building, and describe it as a room.
 
 A site also gained an **address**. Its existence is answered per vertex, but a
 vertex spans 110–132 km, and reading *is there a cave near me* off that lattice
@@ -171,8 +183,19 @@ so its drawn-ness and its name are coupled in a way a site's are not.
 
 ## Corrections this campaign made to itself
 
-Three claims in its own design document were wrong, and the record says so
+Four claims in its own design document were wrong, and the record says so
 where a later reader will meet them rather than in a footnote.
+
+Caves were specified as needing **no seeded draw**, on the reasoning that the
+proneness function is pure and therefore answerable anywhere. The function is
+pure; its *inputs* are vertex-bound, so proneness exists only at 110-132 km
+spacing and thresholding the nearest vertex would have made every facet for
+tens of kilometres a cave. The precise form of the error is worth keeping: a
+function was checked for purity and its answer inferred to be available
+everywhere, without checking where its inputs live. A second correction
+followed the first — the invented threshold was deleted outright once it
+emerged that the world already had a cave model, better on four axes, which
+nobody had looked for.
 
 The re-siting draw was specified as minting an **epoch** — a deliberate break
 in which every existing world regenerates differently. It mints none. The

@@ -22,10 +22,18 @@ Prospect ships and wrong for what the model is for.
 
 ```rust
 pub enum Extent {
-    Point,                   // one facet — all this campaign emits
-    Region { /* reserved */ },
+    Point,                   // one facet — the only variant that exists
 }
 ```
+
+**CORRECTED 2026-09-03.** This block previously showed a second variant,
+`Region { /* reserved */ }`, which **was never implemented**. The shipped enum
+has exactly one variant. Two doc links in this record pointed at
+`Extent::Region` and `cargo doc` reported both as broken — a ratified decision
+declaring a type the code does not have. The *decision* stands unchanged: a
+site carries an `Extent`, and widening it later is a new variant rather than a
+new parameter threaded through call sites. What was wrong was describing that
+future variant as though it already existed.
 
 ## The original justification was withdrawn, and the conclusion survived it
 
@@ -45,9 +53,19 @@ else was already being paid for.
 
 ## Consequences
 
-**A multi-facet site is a fill-in, not a migration.** Every consumer already
-matches on `Extent`, so `Region` is a new arm rather than a new parameter
-threaded through call sites.
+**A multi-facet site will be a fill-in rather than a migration** — but the
+claim as first written was false and is worth correcting rather than softening.
+It read: *"Every consumer already matches on `Extent`, so `Region` is a new arm
+rather than a new parameter."* There are **no** consumers: `Extent::` appears
+nowhere outside `site.rs`. The field is carried and read by nothing.
+
+So the benefit is real but *prospective*, not banked. What the campaign
+actually bought is that `Extent` sits in the struct every consumer already
+receives, so a future variant needs no signature change anywhere — which is a
+weaker and true claim. Decision 0539 cites this record as precedent for
+modelling `Tier::Derived` early; that citation should be read against this
+corrected version, where the precedent is "the field is in place", not "the
+match arms are in place".
 
 **One variant is deliberately unconstructed.** `Region` is uninhabited until a
 campaign builds it, and the reserved body is deliberately empty: naming its
