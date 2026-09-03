@@ -269,3 +269,29 @@ Task 5 (a paraphrase of 0168/0226 to tighten; one narration branch — a
 stationary body with minutes under zero population movement — with no
 end-to-end assertion; helper placement). No ideonomy pass; the wording was
 the plan's and the review found it true to §3.4.
+
+## Task 5 — complete (commits 9ac029b73..633ec6cb0, one fix round)
+
+The doc sweep, the commit gate, the absorption of main (45 commits, a
+clean auto-merge, so `make gate-commit` was re-run by hand — a clean merge
+fires no hook), the post-merge regeneration (only `docs/timings.md`
+moved), and the stage gate: `req-0a985e944cb8-20260903T190153Z`,
+`reported`, four phases green in 1057 s, main untouched.
+
+**The sweep missed a sentence ten lines from one it fixed.** The false
+claim "the same rule `Session::sleep` applies" stood in two comments; the
+brief named one site and the implementer fixed that site. The review found
+the twin by grepping the CLAIM. A sweep brief should name the sentence to
+grep for, never the line to edit. The other Important: a rewritten doc
+asserted the wait line reads the felt-state trio; it reads the walk's
+committed facts. Both fixed in round 1; re-review clean.
+
+**Ruling: no second stage gate for the fix-round commit.** It is prose
+only, on top of a green stage gate, and the merge gates the final SHA
+anyway. What it costs if wrong: a red merge where a stage gate would have
+been red first — the same information, one queue slot later.
+
+**Measured for P7's stationary branch:** seed 42's first held wait is not
+stationary for the population (67 stirred), so the assertion pins the
+suffix `The will that holds you rests.` rather than the whole line, and
+the test's doc says which branch it covers. No ideonomy pass; a sweep.
