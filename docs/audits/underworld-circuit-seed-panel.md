@@ -36,10 +36,10 @@ cross-floor: 839/874 descents = 0.9600 (frozen floor 0.25) -> PASSED
 semilattice overlap: median 0.3030 (report only)
 
 gate yield: median 1.0000 (frozen floor 0.70; FROM realms with an admissible drawn row TO rows applied in full) -> PASSED
-  skips: inadmissible 0 claimed 198 no-room 0 unsolvable 1 (report only)
+  skips: inadmissible 0 claimed 198 no-room 0 unsolvable 2 (report only)
 detour cost: median 1.2143 over 866 gated descents (frozen floor 1.10; default body's round trip gated / ungated) -> PASSED
 solvable for a body holding nothing: 874 of 874 descents (a guard; a miss is a red test, not a number)
-gates: doors 0 sumps 3169 chutes 3224; worked descents with a door 872 of 874 (the production walk reaches none yet, spec §1)
+gates: doors 0 sumps 3169 chutes 3223; worked descents with a door 872 of 874 (the production walk reaches none yet, spec §1)
 return differs from outbound: 159 of 866 gated descents (report only; follows from a chute by construction)
 patterns by class and span (report only):
   LongLong CrossFloor the-chute: 96
@@ -49,7 +49,7 @@ patterns by class and span (report only):
   LongShort CrossFloor the-chute: 37
   LongShort SameFloor dangerous-route: 68
   LongShort SameFloor hidden-shortcut: 66
-  ShortLong CrossFloor the-chute: 3091
+  ShortLong CrossFloor the-chute: 3090
   ShortLong SameFloor blocked-retreat: 3302
   ShortLong SameFloor the-sump: 3169
   ShortShort SameFloor patrol-path: 805

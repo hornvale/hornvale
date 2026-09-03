@@ -291,7 +291,17 @@ pub fn render_circuit_panel(seed: Seed, terrain: &GeneratedTerrain) -> String {
     ));
 
     // The Brattice §4.2 detour cost (frozen floor 1.10), round trip, descents
-    // with >=1 realized requirement.
+    // with >=1 realized requirement. Since Ruling F (Task 2 fix round 1),
+    // `try_apply` refuses any stamp that would leave the default body's
+    // round trip unreachable, so every gated descent has a measured cost —
+    // the population feeding the median must equal the gated-descent count
+    // exactly, and a mismatch here would mean the denominator silently
+    // understates again.
+    debug_assert_eq!(
+        costs.len(),
+        gated_descents,
+        "every gated descent must carry a detour cost after Ruling F"
+    );
     let dc = median(&mut costs);
     out.push_str(&format!(
         "detour cost: median {} over {gated_descents} gated descents (frozen floor 1.10; default body's round trip gated / ungated) -> {}\n",

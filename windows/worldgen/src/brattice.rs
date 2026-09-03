@@ -103,7 +103,12 @@ pub enum Skip {
     Claimed,
     /// A side has no interior node where the key wants one.
     NoRoom,
-    /// The default body could no longer reach the terminus or a key.
+    /// The default body could no longer reach the terminus, a key, OR
+    /// return to the entrance (Ruling F, Task 2 fix round 1): a gate placed
+    /// forward-reachable can still strand the body on the far side — a
+    /// chute (down free, up needs `Fly`) into a cross-floor realm whose
+    /// upper path a nested child realm blocks with a sump is a trap, not a
+    /// puzzle, and `solvable`'s forward-only check never sees it.
     Unsolvable,
 }
 
@@ -534,6 +539,10 @@ pub(crate) fn stamp(
     debug_assert_eq!(plan.patterns.len(), plan.realms.len());
 }
 
+/// Tentatively stamps `row` onto `realm`, then checks it is safe to keep:
+/// the default body must still reach the terminus, every key, AND get back
+/// to the entrance (Ruling F) — a stamp that strands the body past a gate
+/// it cannot reverse is rolled back exactly like an unreachable terminus.
 fn try_apply(plan: &mut DescentPlan, realm: &Realm, pick: usize) -> Result<(), Skip> {
     let row = &CYCLE_PATTERNS[pick];
     let class = realm.class;
@@ -643,7 +652,8 @@ fn try_apply(plan: &mut DescentPlan, realm: &Realm, pick: usize) -> Result<(), S
         plan.nodes[n].key = Some(KeyFor(lock_ix));
     }
     let reach = solvable(plan, DEFAULT_BODY);
-    if reach.terminus.is_none() || reach.keys.iter().any(|k| k.is_none()) {
+    let round_trip_ok = gated_round_trip(plan, DEFAULT_BODY).is_some();
+    if reach.terminus.is_none() || reach.keys.iter().any(|k| k.is_none()) || !round_trip_ok {
         for (ix, _) in &stamps {
             plan.edges[*ix].gate = None;
         }
@@ -871,9 +881,15 @@ pub fn realized_requirements(plan: &DescentPlan) -> (usize, usize, usize) {
 }
 
 /// Spec §4.2: the default body's gated round trip over its ungated one,
-/// over descents holding at least one realized requirement. `None` when the
-/// plan realizes no requirement at all — a round trip through an entirely
-/// open graph has nothing to measure.
+/// over descents holding at least one realized requirement. Two things can
+/// make this `None`: (1) the plan realizes no requirement at all — a round
+/// trip through an entirely open graph has nothing to measure — or (2) the
+/// round trip is unreachable even though a requirement exists. Since Ruling
+/// F (Task 2 fix round 1), `try_apply` refuses to commit any stamp that
+/// would make `gated_round_trip(plan, DEFAULT_BODY)` return `None`, so (2)
+/// cannot arise from a committed plan in practice: only (1) remains
+/// reachable, and that is now effectively an invariant rather than a
+/// possibility this function has to guard against at read time.
 /// type-audit: bare-ok(ratio: return)
 pub fn detour_cost(plan: &DescentPlan) -> Option<f64> {
     let (doors, sumps, chutes) = realized_requirements(plan);
@@ -921,6 +937,13 @@ type PathInfo = BTreeMap<PathState, (u32, Option<PathState>)>;
 /// nondecreasing distance, and among equal-distance arrivals at `target` the
 /// smallest key bitset wins (ascending scan, replace only on strictly
 /// smaller distance).
+///
+/// Deliberately a second BFS rather than a reuse of [`bfs`]: `bfs` records
+/// only a distance per `(node, keys)` state, which is all `solvable` and
+/// `gated_round_trip` ever needed, while this function additionally needs a
+/// predecessor per state to reconstruct the actual path — a shape change to
+/// `bfs`'s return type would ripple into every existing caller for the sake
+/// of the one new one.
 fn shortest_path(
     plan: &DescentPlan,
     start: NodeId,
@@ -988,9 +1011,13 @@ fn shortest_path(
 /// Spec §4.4, Dormans' "unknown return path": whether the default body's
 /// shortest outbound path (entrance → terminus) and shortest return path
 /// (terminus → entrance, holding whatever the outbound trip gained) differ
-/// as edge sets. `None` when [`realized_requirements`] is all zero — with no
-/// gate on the graph there is nothing for the two directions to disagree
-/// about.
+/// as edge sets. Two things can make this `None`: (1)
+/// [`realized_requirements`] is all zero — with no gate on the graph there
+/// is nothing for the two directions to disagree about — or (2) the return
+/// leg is unreachable even though a requirement exists. Since Ruling F
+/// (Task 2 fix round 1), `try_apply` refuses to commit any stamp that would
+/// strand the default body past its own gate, so (2) cannot arise from a
+/// committed plan in practice: only (1) remains reachable.
 /// type-audit: bare-ok(flag: return)
 pub fn return_differs(plan: &DescentPlan) -> Option<bool> {
     let (doors, sumps, chutes) = realized_requirements(plan);
@@ -1204,6 +1231,10 @@ mod tests {
                         r.keys.iter().all(|k| k.is_some()),
                         "seed {seed} {kind:?} {ch:?}: a key is unreachable"
                     );
+                    assert!(
+                        gated_round_trip(&p, DEFAULT_BODY).is_some(),
+                        "seed {seed} {kind:?} {ch:?}: the default body cannot get back to the entrance (Ruling F)"
+                    );
                     let all = solvable(&p, resident(&p));
                     assert!(
                         all.reached.iter().all(|&x| x),
@@ -1353,24 +1384,35 @@ mod tests {
         if let Some(y) = gate_yield(&p) {
             assert!((0.0..=1.0).contains(&y));
         }
-        let applied = p
-            .patterns
-            .iter()
-            .filter(|o| matches!(o, Outcome::Applied { .. }))
-            .count();
-        let skipped = p
-            .patterns
-            .iter()
-            .filter(|o| matches!(o, Outcome::Skipped { .. }))
-            .count();
-        if applied + skipped == 0 {
-            assert!(gate_yield(&p).is_none());
-        } else {
-            assert_eq!(
-                gate_yield(&p),
-                Some(applied as f64 / (applied + skipped) as f64)
-            );
-        }
+
+        // A hand-built `patterns` vector, independent of the function's own
+        // arithmetic (Important #2, Task 2 fix round 1): 2 Applied out of 4
+        // non-Inadmissible draws, one Inadmissible excluded from both sides.
+        let mut hand = p.clone();
+        hand.patterns = vec![
+            Outcome::Applied { pattern: 0 },
+            Outcome::Skipped {
+                pattern: 1,
+                why: Skip::Claimed,
+            },
+            Outcome::Inadmissible,
+            Outcome::Applied { pattern: 0 },
+            Outcome::Skipped {
+                pattern: 4,
+                why: Skip::NoRoom,
+            },
+        ];
+        assert_eq!(gate_yield(&hand), Some(2.0 / 4.0));
+
+        hand.patterns = vec![Outcome::Inadmissible, Outcome::Inadmissible];
+        assert_eq!(
+            gate_yield(&hand),
+            None,
+            "every draw Inadmissible: no admissible realm at all"
+        );
+
+        hand.patterns = vec![];
+        assert_eq!(gate_yield(&hand), None, "no realms at all");
     }
 
     /// claim: invariant(seed: 0..30) — every seed is checked against the
@@ -1413,5 +1455,148 @@ mod tests {
             None,
             "no realized requirement, no reading"
         );
+    }
+
+    /// A hand-built five-node plan (Important #3, Task 2 fix round 1),
+    /// following `circuit.rs`'s `bare_three_node_path()` idiom. Five nodes,
+    /// in id order: `e` (0, level 0), `u` (1, level 0), `l` (2, level 1),
+    /// `m` (3, level 1), `v` (4, level 0). `u` and `l` share a grid position (a
+    /// stair between them); so do `m` and `v`. The only way down from `u`
+    /// is the chute (`u` to `l`, down free, up needs `Fly`); the only way
+    /// back up from that side is blocked without `Fly`, so the return must
+    /// take the long way around: `l` to `m` (plain passage), `m` to `v`
+    /// (plain stair, no gate), `v` to `u` (plain passage). Terminus is `l`,
+    /// two hops down via the chute and four hops back around —
+    /// deliberately unequal, so the shortest-path tie-break never has to
+    /// choose between them.
+    fn chute_only_descent() -> DescentPlan {
+        use crate::circuit::{Edge, GridCell, Node}; // lexicon: GridCell is a lattice square, an area
+        DescentPlan {
+            rungs: vec![Band::Undercroft, Band::Undercroft],
+            nodes: vec![
+                Node {
+                    level: 0,
+                    cell: GridCell { col: 0, row: 0 }, // lexicon: area
+                    depth: 0,
+                    realm: None,
+                    key: None,
+                },
+                Node {
+                    level: 0,
+                    cell: GridCell { col: 1, row: 0 }, // lexicon: area
+                    depth: 1,
+                    realm: None,
+                    key: None,
+                },
+                Node {
+                    level: 1,
+                    cell: GridCell { col: 1, row: 0 }, // lexicon: area
+                    depth: 2,
+                    realm: None,
+                    key: None,
+                },
+                Node {
+                    level: 1,
+                    cell: GridCell { col: 2, row: 0 }, // lexicon: area
+                    depth: 3,
+                    realm: None,
+                    key: None,
+                },
+                Node {
+                    level: 0,
+                    cell: GridCell { col: 2, row: 0 }, // lexicon: area
+                    depth: 2,
+                    realm: None,
+                    key: None,
+                },
+            ],
+            edges: vec![
+                // e(0) -- u(1): plain passage.
+                Edge {
+                    a: 0,
+                    b: 1,
+                    kind: EdgeKind::Passage,
+                    gate: None,
+                },
+                // u(1, upper) -- l(2, lower): the chute. Down free, up needs Fly.
+                Edge {
+                    a: 1,
+                    b: 2,
+                    kind: EdgeKind::Stair { x: 1, y: 0 },
+                    gate: Some(Gate {
+                        toward_b: Way::Open,
+                        toward_a: Way::Needs(Requirement::Mode(Capability::Fly)),
+                        hazard: None,
+                        persistence: Persistence::Permanent,
+                        pattern: 0,
+                    }),
+                },
+                // l(2) -- m(3): plain passage.
+                Edge {
+                    a: 2,
+                    b: 3,
+                    kind: EdgeKind::Passage,
+                    gate: None,
+                },
+                // v(4, upper) -- m(3, lower): plain stair, no gate.
+                Edge {
+                    a: 4,
+                    b: 3,
+                    kind: EdgeKind::Stair { x: 2, y: 0 },
+                    gate: None,
+                },
+                // v(4) -- u(1): plain passage, closing the level-0 loop.
+                Edge {
+                    a: 4,
+                    b: 1,
+                    kind: EdgeKind::Passage,
+                    gate: None,
+                },
+            ],
+            entrance: 0,
+            terminus: 2,
+            realms: vec![],
+            dof: 0,
+            extensions: 0,
+            fallback_realms: 0,
+            failed_draws: 0,
+            patterns: vec![],
+            skipped_patterns: 0,
+        }
+    }
+
+    /// claim: structural — the positive case Important #3 asked for: a
+    /// descent where the only way down is a chute has a return path that
+    /// differs from its outbound, and a gated round trip strictly longer
+    /// than the ungated one.
+    #[test]
+    fn return_differs_when_the_only_way_down_is_a_chute() {
+        let p = chute_only_descent();
+        assert_eq!(
+            realized_requirements(&p),
+            (0, 0, 1),
+            "exactly one chute, no doors or sumps"
+        );
+        assert_eq!(return_differs(&p), Some(true));
+        let gated = gated_round_trip(&p, DEFAULT_BODY);
+        let ungated = ungated_round_trip(&p);
+        assert_eq!(gated, Some(6), "down 2 via the chute, back 4 the long way");
+        assert_eq!(ungated, 4, "2 * depth(terminus) on the ungated graph");
+        assert!(
+            gated.unwrap() > ungated,
+            "the chute's one-way cost must show up in the round trip"
+        );
+    }
+
+    /// claim: structural — remove the chute's gate and the same plan has no
+    /// realized requirement, so `return_differs` reads `None` rather than a
+    /// vacuous `Some(false)`.
+    #[test]
+    fn return_differs_is_none_on_the_chute_plan_with_its_gate_removed() {
+        let mut p = chute_only_descent();
+        p.edges[1].gate = None;
+        assert_eq!(realized_requirements(&p), (0, 0, 0));
+        assert_eq!(detour_cost(&p), None);
+        assert_eq!(return_differs(&p), None);
     }
 }
