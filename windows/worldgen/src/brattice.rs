@@ -1356,10 +1356,11 @@ mod tests {
     /// who meets every requirement, reaches every node — so gates cost the
     /// resident nothing.
     ///
-    /// **Cost, and where it therefore lives.** 64.7 s on the campaign Mac
+    /// **Cost, and where it therefore lives.** 123.32 s on the campaign Mac
     /// (`cargo test -p hornvale-worldgen --lib ... -- --ignored`, one run,
-    /// 2026-09-02) against the 9.9 s its 1,800-plan sibling costs — 8x the
-    /// plans, 6.5x the wall. That is well past what the commit gate may
+    /// 2026-09-03, with the Made arm included — 19,200 plans total) against
+    /// the 9.9 s its 1,800-plan sibling costs — 10.7x the plans, 12.5x the
+    /// wall. That is well past what the commit gate may
     /// carry, so it takes the `heavy:` tag: deferred from `gate-commit`,
     /// run by the merge (decision 0426), rostered by name in
     /// `cli/tests/fixtures/heavy-roster.txt` so the addition is a visible

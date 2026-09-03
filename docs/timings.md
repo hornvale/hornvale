@@ -5213,3 +5213,4 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-03T16:23:40Z | gate-commit | 159.896 | 64.448 | 27.808 | 0.58 | 0 | c731ef7e1 | campaign/the-plat | ambrose | 12 |
 | 2026-09-03T16:26:04Z | gate-commit | 103.890 | 65.883 | 28.662 | 0.91 | 0 | c731ef7e1 | campaign/the-plat | ambrose | 12 |
 | 2026-09-03T16:32:27Z | gate-commit | 262.903 | 132.367 | 101.981 | 0.89 | 0 | c731ef7e1 | campaign/the-plat | ambrose | 12 |
+| 2026-09-03T16:35:17Z | gate-commit | 125.805 | 79.487 | 39.682 | 0.95 | 0 | c731ef7e1 | campaign/the-plat | ambrose | 12 |
