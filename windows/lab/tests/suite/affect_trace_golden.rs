@@ -103,6 +103,34 @@
 //! the same local day its accrual and repayment already did, for every
 //! creature whose Fatigue drive is ever live.
 //!
+//! **Regenerated again by The Pallet, Task 1** (`SLEEP_BOUT`/`SCAN_LIMIT`/
+//! `ONE_DAY`/`WAKE_SCAN_STEP` — the sleep-side siblings The Plumb's Task 5
+//! left on the STANDARD day when it converted `REST_BOUT` to the world's own
+//! LOCAL day — now convert onto the same axis, via `next_awake_day`'s and
+//! `act_span`'s own `ticks_per_local_day` reads). Adjudicated, not merely
+//! accepted, because this move crosses labels: **129 of 410 lines moved**, 9
+//! in label (Content -> Eager x6, Eager -> Content x2, Searching -> Eager
+//! x1), 11 object changes, 1 valence change, 118 arousal-only lines, max
+//! arousal delta 0.39175797. **None of the 9 transitions touch `Lost`** —
+//! zero land in it, zero leave it — unlike Task 9's and The Plumb's own
+//! moves above, both of which concentrated in or near `Lost`; this move sits
+//! entirely among the drive-arbitration labels (`Content`/`Eager`/
+//! `Searching`), which is consistent with its mechanism sitting on the
+//! WAKE/SLEEP boundary rather than the fatigue accrual/repayment rate this
+//! fixture's earlier moves touched. Re-run after the accept: the coverage
+//! floor below still holds (six labels — `Content`, `Eager`, `Frustrated`,
+//! `Helpless`, `Lost`, `Searching` — and six species — `bugbear`,
+//! `carrion-crawler`, `hobgoblin`, `otyugh`, `rust-monster`, `xorn` — sampled,
+//! unchanged from before the move), and the full `hornvale-lab`
+//! health-calibration suite (`health_calibration.rs`, 19 tests, the one
+//! `heavy`-tagged seed sweep excluded) passes unchanged. The mechanism: seed
+//! 42's real rotation period is not exactly one standard day, so a sleep's
+//! own floor and the wake-scan's own step/bound/give-up fallback —
+//! previously fixed standard-day spans regardless of the world they were
+//! taken on — now scale with the same local day the rest side, the fatigue
+//! accrual, and the fatigue repayment already did, for every creature whose
+//! Fatigue drive is ever live.
+//!
 //! ## Why a change to ONE species' niche drifts EVERY creature's trace
 //!
 //! Recorded because it is not obvious and it has now cost one investigation
