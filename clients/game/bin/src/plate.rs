@@ -626,10 +626,11 @@ fn glyph_and_color_for(water: u8, band: u32) -> (char, [u8; 3]) {
     }
 }
 
-/// The glyph for a DISCOVERED MINOR settlement (Task 5, §A3's "point
-/// sites"; Task 7 splits the old single `SETTLEMENT_GLYPH` in two).
-/// Never drawn undiscovered — see [`draw_feature_layer`]'s own doc for why
-/// "not yet drawn" is the only state an undiscovered site is ever in.
+/// The glyph for a MINOR settlement (Task 5, §A3's "point sites"; Task 7
+/// splits the old single `SETTLEMENT_GLYPH` in two). Drawn whether or not
+/// the settlement has been discovered (The Prospect, Gate A ungating) — see
+/// [`draw_feature_layer`]'s own doc; only the settlement's own PROPER NAME
+/// stays gated, and that gate lives entirely outside this layer.
 ///
 /// **Nathan's own glyph assignment (2026-08-30, `progress.md`'s "Nathan's
 /// glyph assignments"), not a Task 6 leftover.** The old `#` collided with
@@ -648,21 +649,24 @@ fn glyph_and_color_for(water: u8, band: u32) -> (char, [u8; 3]) {
 /// here never compete with a creature mark for the same cell, and Nathan's
 /// assignment stands unmodified.
 pub(crate) const SETTLEMENT_MINOR_GLYPH: char = 'o';
-/// The glyph for a DISCOVERED MAJOR settlement — the top
+/// The glyph for a MAJOR settlement — the top
 /// [`MAJOR_SETTLEMENT_QUANTILE`] of settlements ranked by population among
-/// those actually IN FRAME (discovered and on-screen; see
+/// those actually IN FRAME (on-screen; discovery plays no part in the
+/// ranking since The Prospect's Gate A ungating — see
 /// [`draw_feature_layer`]'s own doc for the ranking). See
 /// [`SETTLEMENT_MINOR_GLYPH`] for the rest of the reasoning; this is the
 /// same identity claim (a settlement), one size tier up.
 pub(crate) const SETTLEMENT_MAJOR_GLYPH: char = 'O';
-/// The glyph for a DISCOVERED cave mouth. Moved here from `o` (Task 7,
+/// The glyph for a cave mouth, drawn whether or not it has been discovered
+/// (see [`SETTLEMENT_MINOR_GLYPH`]'s doc). Moved here from `o` (Task 7,
 /// Nathan's glyph assignments) once `o`/`O` were claimed by settlements —
 /// see [`SETTLEMENT_MINOR_GLYPH`]'s doc for why the two moves are one
 /// commit, not two.
 pub(crate) const CAVE_GLYPH: char = '*';
-/// The glyph for a DISCOVERED placed exotic site — a fungal canopy, a
-/// mineral-crystal flat, a place whose biota is found nowhere else (The
-/// Prospect, Task 8).
+/// The glyph for a placed exotic site — a fungal canopy, a mineral-crystal
+/// flat, a place whose biota is found nowhere else (The Prospect, Task 8).
+/// Drawn whether or not it has been discovered, like every other placed
+/// [`SiteKind`] (see [`SETTLEMENT_MINOR_GLYPH`]'s doc).
 ///
 /// **The map had no mark for one at all before this**, so seed 42's 103
 /// exotic sites were generated, named in prose, enterable since Task 5, and
@@ -702,23 +706,26 @@ pub const VOLCANO_GLYPH: char = '!';
 /// third point marker read as noise rather than invitation.
 pub const WATERFALL_GLYPH: char = '|';
 
-/// The colour claim for a discovered settlement — a warm tint distinct from
-/// both terrain colours, so a settlement reads as a different SUBSTANCE
-/// (§A5: colour carries substance, never the epistemic channel — an
-/// undiscovered site simply is not drawn at all, so there is no
-/// discovered/undiscovered pair of colours to confuse with one another).
-/// Shared by [`SETTLEMENT_MINOR_GLYPH`] and [`SETTLEMENT_MAJOR_GLYPH`]:
-/// colour carries the SUBSTANCE ("a settlement"), and size is the glyph's
-/// own job, so a second colour for the major tier would say two different
-/// things stand there.
+/// The colour claim for a settlement — a warm tint distinct from both
+/// terrain colours, so a settlement reads as a different SUBSTANCE (§A5:
+/// colour carries substance, never the epistemic channel). Drawn in this
+/// colour whether or not the settlement has been discovered (The Prospect,
+/// Gate A ungating) — so there is only one state, not a discovered/
+/// undiscovered pair, and nothing here to confuse with one another. Shared
+/// by [`SETTLEMENT_MINOR_GLYPH`] and [`SETTLEMENT_MAJOR_GLYPH`]: colour
+/// carries the SUBSTANCE ("a settlement"), and size is the glyph's own job,
+/// so a second colour for the major tier would say two different things
+/// stand there.
 const SETTLEMENT_COLOR: [u8; 3] = [220, 180, 60];
-/// The colour claim for a discovered cave mouth. See [`SETTLEMENT_COLOR`].
+/// The colour claim for a cave mouth, drawn whether or not it has been
+/// discovered. See [`SETTLEMENT_COLOR`].
 const CAVE_COLOR: [u8; 3] = [130, 120, 110];
-/// The colour claim for a discovered exotic site — a cool violet, the one
-/// hue no relief band, water class or other point-site mark occupies, so a
-/// strangeness reads as its own substance rather than as an oddly tinted
-/// anything else. Colour carries substance and MAY FAIL (§A5), which is why
-/// [`EXOTIC_GLYPH`] is a distinct character too and not a re-tinted `*`.
+/// The colour claim for an exotic site, drawn whether or not it has been
+/// discovered — a cool violet, the one hue no relief band, water class or
+/// other point-site mark occupies, so a strangeness reads as its own
+/// substance rather than as an oddly tinted anything else. Colour carries
+/// substance and MAY FAIL (§A5), which is why [`EXOTIC_GLYPH`] is a distinct
+/// character too and not a re-tinted `*`.
 const EXOTIC_COLOR: [u8; 3] = [170, 110, 220];
 /// The colour claim for a discovered volcano — a hot, saturated tint
 /// distinct from every relief band and from [`SETTLEMENT_COLOR`]/
@@ -922,15 +929,19 @@ pub(crate) fn colour_allowed() -> bool {
 /// not take a `Discovered` at all, so no cache keyed on it can depend on
 /// one.
 ///
-/// **Task 5: point sites are gated in [`draw_feature_layer`], not filtered
+/// **Task 5: point sites are chosen in [`draw_feature_layer`], not filtered
 /// afterward** — spec Amendment 1 §A7's "nothing is drawn and then hidden"
-/// refusal: `settlements`/`discovered` are consulted before a glyph is ever
-/// chosen, and an undiscovered site's glyph is simply never chosen — there
-/// is no suppression pass over an already-painted grid, because a site
-/// never drawn cannot leak. A discovered site's glyph OVERRIDES the terrain
-/// glyph at its own cell (§A3: a point site "is not in the terrain render
-/// at all," unlike a terrain-borne landmark, which draws regardless of
-/// discovery).
+/// refusal, restated after The Prospect's Gate A ungating: a cave, exotic
+/// site or settlement's glyph is chosen from its own [`MapSite`] roster
+/// entry alone, with no `discovered` check in front of it at all — there is
+/// no suppression pass over an already-painted grid, because there is
+/// nothing left to suppress. A volcano is the one glyph still chosen this
+/// way (`settlements`/`discovered` consulted before it is ever painted, an
+/// undiscovered volcano's glyph simply never chosen — see
+/// [`draw_feature_layer`]'s own doc for why it alone keeps the gate). Every
+/// site glyph OVERRIDES the terrain glyph at its own cell (§A3: a point
+/// site "is not in the terrain render at all," unlike a terrain-borne
+/// landmark, which draws regardless of discovery).
 #[allow(clippy::too_many_arguments)] // `index` (fix round 1: build-once-pass-in, per Nathan's ruling) pushed this to 8; Task 5's `settlements`/`discovered` push it to 10; Task 7's `volcanoes`/`waterfalls` push it to 12 — mirroring `hornvale_game_core::render_with`'s own allow
 pub fn draw_with(
     terrain: &GeneratedTerrain,
@@ -1100,9 +1111,29 @@ fn project_onto_screen(
     Some((drow, dcol))
 }
 
-/// LAYER TWO: every DISCOVERED point site, drawn onto `dst` by PROJECTING
+/// LAYER TWO: every placed point site, drawn onto `dst` by PROJECTING
 /// it, rather than by asking each screen cell whether its area-majority
 /// representative happens to be one.
+///
+/// **A cave, an exotic site or a settlement draws WHETHER OR NOT it has
+/// been discovered (The Prospect, Gate A ungating — Nathan's ruling:
+/// "show placed sites on the world map... just don't show their labels").**
+/// Before this, this layer drew nothing until the possession had entered the
+/// site, which is precisely why seed 42's map — 874 caves, 103 exotic sites,
+/// 389 settlement vertices — read as ~1% coverage of undifferentiated forest
+/// no matter how much of the world had actually been explored: the KIND a
+/// site is (its glyph) is drawn like any other terrain fact now, ground
+/// truth the same way a relief band or a river channel already is. What
+/// still gates on discovery is the site's own PROPER NAME, and that gate is
+/// a wholly separate surface this layer never touches: the cursor readout
+/// (`windows/worldgen::resolve_chain_at`, reached through
+/// `Driver::resolve_world_view`/`resolve_walk_band`) and the walk-band/
+/// chamber prose (`Session::describe_here`/`describe_chamber_here`) both
+/// name a site only once the possession has actually stood there, exactly as
+/// before — this layer carries no name at all, only a glyph and a colour, so
+/// there is nothing here for a name to leak through. A volcano is the ONE
+/// exception: see this function's own doc on the draw-precedence loop below
+/// for why it alone stays gated.
 ///
 /// **Why the direction matters.** The sampled scheme drew a site only when
 /// its exact vertex won the majority vote for some character. Measured on seed
@@ -1142,9 +1173,14 @@ fn project_onto_screen(
 /// bound of another become plausible. Deriving the bound removes the
 /// disagreement rather than asserting its absence.
 ///
-/// **Undiscovered sites are never drawn**, so §A7's "nothing is drawn and
-/// then hidden" still holds by construction — an undiscovered site is not
-/// suppressed here, it is never reached.
+/// **§A7's "nothing is drawn and then hidden" still holds by construction,
+/// restated for the ungated world.** Before The Prospect's Gate A change,
+/// this was "an undiscovered site is never drawn"; now a cave, exotic site
+/// or settlement is drawn regardless of discovery, so the property §A7 pins
+/// is narrower but not gone — it is what still stops a VOLCANO'S glyph from
+/// ever being painted and then cleared: an undiscovered volcano is not
+/// suppressed here, it is never reached (see the draw-precedence note
+/// below for why a volcano alone keeps this gate).
 ///
 /// **Draw precedence, low to high (a later kind wins a shared cell), and
 /// where it comes from (Task 7 pre-dispatch ruling AA):**
@@ -1168,25 +1204,32 @@ fn project_onto_screen(
 /// so this order is a documented tie-break for the case, not a
 /// load-bearing gameplay rule.
 ///
-/// **Volcanoes are discovery-gated; a waterfall is not, and that split is
-/// deliberate, not an oversight.** A volcano is an EXTENT feature in
-/// `hornvale_terrain::landscape` — `FeatureClass::Volcano`, already
-/// wrapped as [`crate::discovery::FeatureId::Extent`] — so the SAME
+/// **Volcanoes are discovery-gated; nothing else this layer draws is, and
+/// that split is deliberate, not an oversight.** A volcano is an EXTENT
+/// feature in `hornvale_terrain::landscape` — `FeatureClass::Volcano`,
+/// already wrapped as [`crate::discovery::FeatureId::Extent`] — so the SAME
 /// discovery mechanism that already fires when a possession walks onto
 /// any vertex of any landscape feature's extent
 /// (`Driver::update_discovery`'s `for id in self.index.at(vertex)` loop,
 /// already shipped, untouched by this task) already records a volcano the
 /// instant its slopes are walked. This layer only had to start reading
-/// that existing fact to draw it. A waterfall is a bare `Vertex`
-/// `GeneratedTerrain` reports (`waterfalls()`) — the landscape feature
-/// system does not carry an identity for it, and the task's own interface
-/// note forbids minting a new feature enum to give it one. Rather than
-/// invent that identity, it draws as GROUND TRUTH, unconditionally — the
-/// same epistemic status the relief and water ladders already have (a
-/// river or a mountain range is never gated on "has this been
-/// discovered", so a knickpoint on that same channel is not either). This
-/// is a judgement call flagged for review, not a claim that the design
-/// space has only one right answer here.
+/// that existing fact to draw it, and nothing about The Prospect's Gate A
+/// ungating touches that mechanism: a volcano's KIND (that a peak stands
+/// here) is exactly the fact `Driver::update_discovery` already ties to
+/// entering its extent, so ungating it would mean drawing an edifice the
+/// terrain has no other way of saying is there at all — unlike a cave,
+/// exotic site or settlement, each of which has its own independent
+/// [`MapSite`] roster entry regardless of discovery. A waterfall is a bare
+/// `Vertex` `GeneratedTerrain` reports (`waterfalls()`) — the landscape
+/// feature system does not carry an identity for it, and the task's own
+/// interface note forbids minting a new feature enum to give it one. Rather
+/// than invent that identity, it draws as GROUND TRUTH, unconditionally —
+/// the same epistemic status the relief and water ladders already have (a
+/// river or a mountain range is never gated on "has this been discovered",
+/// so a knickpoint on that same channel is not either), and, since The
+/// Prospect, the same status a cave, exotic site or settlement's KIND now
+/// has too. This is a judgement call flagged for review, not a claim that
+/// the design space has only one right answer here.
 ///
 /// **`pub` rather than `pub(crate)` for the same reason
 /// [`terrain_at_tile`] is** (Task 3): `examples/rung_bench.rs` is a separate
@@ -1211,16 +1254,19 @@ pub fn draw_feature_layer(
 
     // Task 7: which settlements draw MAJOR ([`SETTLEMENT_MAJOR_GLYPH`])
     // rather than minor. The ranking is VIEWPORT-RELATIVE — only
-    // settlements that would actually be drawn HERE (discovered AND
-    // on-screen) enter the comparison set — so a town can flip between
-    // the two glyphs as the reader pans. Known and accepted (task brief):
-    // "what is notable here" changes with what "here" is. Computed once,
-    // before any glyph is chosen, so drawing itself never influences the
-    // ranking it depends on.
+    // settlements that would actually be drawn HERE (on-screen) enter the
+    // comparison set — so a town can flip between the two glyphs as the
+    // reader pans. Known and accepted (task brief): "what is notable here"
+    // changes with what "here" is. Computed once, before any glyph is
+    // chosen, so drawing itself never influences the ranking it depends on.
+    //
+    // **No longer filtered on `discovered` (The Prospect, Gate A ungating).**
+    // A settlement now draws whether or not it has been discovered — see
+    // this function's own doc — so "would actually be drawn HERE" no longer
+    // has a discovery clause either; the only question left is on-screen.
     let mut in_frame: Vec<(Vertex, u64)> = sites
         .iter()
         .filter(|site| site.kind == SiteKind::Settlement)
-        .filter(|site| discovered.contains(site.feature_id()))
         .filter(|site| project_onto_screen(f, win, width, height, site.coord(geo)).is_some())
         .map(|site| (site.vertex, site.population))
         .collect();
@@ -1235,9 +1281,15 @@ pub fn draw_feature_layer(
         .map(|&(vertex, _)| vertex)
         .collect();
 
-    // `gate`: `None` draws unconditionally (ground truth — waterfalls);
-    // `Some(id)` draws only when `discovered` already carries `id` (a
-    // point site or an extent feature — caves, settlements, volcanoes).
+    // `gate`: `None` draws unconditionally — ground truth (waterfalls), and,
+    // since The Prospect's Gate A ungating, every placed [`SiteKind`] too
+    // (a cave, an exotic site, a settlement — see this function's own doc);
+    // `Some(id)` draws only when `discovered` already carries `id`. The only
+    // caller left passing `Some` is the volcano loop below: a volcano is
+    // also individuated as a `FeatureClass::Volcano` extent feature, so it
+    // stays gated on the SAME discovery fact `Driver::update_discovery`
+    // already records for any landscape feature, independent of this
+    // ungating.
     let place =
         |at: GeoCoord, gate: Option<FeatureId>, glyph: char, color: [u8; 3], grid: &mut Grid| {
             if let Some(id) = gate
@@ -1302,7 +1354,14 @@ pub fn draw_feature_layer(
                 SETTLEMENT_COLOR,
             ),
         };
-        place(site.coord(geo), Some(site.feature_id()), glyph, color, dst);
+        // `None`, not `Some(site.feature_id())` (The Prospect, Gate A
+        // ungating): a placed site's KIND is drawn whether or not it has
+        // been discovered — see this function's own doc. `feature_id()` is
+        // still what `Driver::update_discovery`/`sites_standing_in` record
+        // discovery AGAINST (Gate B, the cursor readout and the walk-band
+        // prose's own naming, both untouched by this change); it is simply
+        // no longer what gates the glyph.
+        place(site.coord(geo), None, glyph, color, dst);
     }
 }
 
@@ -3111,12 +3170,16 @@ mod tests {
         assert_eq!(got.ocean, terrain.is_ocean(got.vertex));
     }
 
-    // -- Task 5: point sites, gated inside `draw_with` --------------------
+    // -- Task 5 / The Prospect Gate A: point sites in `draw_with` ---------
 
-    /// **`draw_with` never draws an undiscovered point site, and always
-    /// draws a discovered one** — the real test the discovery gate exists
-    /// for (spec Amendment 1 §A3/§A7, "nothing is drawn and then hidden"):
-    /// the gate lives inside the paint loop, not a filter pass afterward.
+    /// **`draw_with` draws a placed point site's glyph WHETHER OR NOT it has
+    /// been discovered** (The Prospect, Gate A ungating — Nathan's ruling:
+    /// "show placed sites on the world map... just don't show their
+    /// labels"). This test used to be `draw_with_gates_a_point_site_on_
+    /// discovery` and asserted the opposite (an undiscovered cave was never
+    /// drawn); it is rewritten in place rather than left beside a new test,
+    /// because the old assertion is now the defect this campaign exists to
+    /// fix, and a green suite must not keep pinning it under its old name.
     /// Uses a real cave vertex (real terrain, not a fixture), PROJECTED to
     /// its own chart tile and then shown by moving the window there.
     ///
@@ -3126,7 +3189,7 @@ mod tests {
     /// tile a site falls in is a property of the rung, so the site's
     /// position is computed, not hunted for, and the plate is 32x16.
     #[test]
-    fn draw_with_gates_a_point_site_on_discovery() {
+    fn draw_with_draws_a_point_site_whether_or_not_it_is_discovered() {
         let (terrain, geo) = test_world();
         let index = NearestVertexIndex::new(&geo);
         let f = crate::mercator::frame_for(false);
@@ -3161,10 +3224,10 @@ mod tests {
             &[],
             &undiscovered,
         );
-        assert_ne!(
+        assert_eq!(
             g_before.get(col, row).unwrap().glyph,
             Some(CAVE_GLYPH),
-            "an undiscovered cave must never be drawn"
+            "an undiscovered cave must still be drawn (Gate A ungating)"
         );
 
         let mut discovered = Discovered::default();
@@ -3186,7 +3249,87 @@ mod tests {
         assert_eq!(
             g_after.get(col, row).unwrap().glyph,
             Some(CAVE_GLYPH),
-            "a discovered cave must be drawn at its own resolved screen position"
+            "a discovered cave must still be drawn at its own resolved screen position"
+        );
+        assert_eq!(
+            g_before.to_plain_text(),
+            g_after.to_plain_text(),
+            "the discovery must move nothing at all in this glyph's drawing: Gate A does \
+             not consult `discovered` for a cave"
+        );
+    }
+
+    /// **The one point-site kind Gate A left untouched: a volcano still
+    /// gates on discovery.** Companion to the test above, so the ungating
+    /// and its one deliberate exception are pinned side by side rather than
+    /// one of them going unwatched. See [`draw_feature_layer`]'s own doc for
+    /// why a volcano alone keeps the gate (it has no [`MapSite`] roster
+    /// entry of its own — its only address is the landscape extent feature
+    /// `Driver::update_discovery` already tracks).
+    #[test]
+    fn draw_with_still_gates_a_volcano_on_discovery() {
+        let (terrain, geo) = test_world();
+        let index = NearestVertexIndex::new(&geo);
+        let f = crate::mercator::frame_for(false);
+        let features = hornvale_worldgen::gazetteer_features(Seed(42), &geo, &terrain);
+        let volcano_vertex = features
+            .iter()
+            .find(|feat| feat.id.class == FeatureClass::Volcano)
+            .map(|feat| feat.anchor)
+            .expect("seed 42 must have a volcano to test with");
+        let volcanoes: BTreeSet<Vertex> = std::iter::once(volcano_vertex).collect();
+        let (w, h) = (32u16, 16u16);
+        let (virtual_w, virtual_h) = virtual_dims(GLOBE_RUNG);
+        let vg = geo.coord(volcano_vertex);
+        let (vrow, vcol) =
+            crate::mercator::project(&f, vg.latitude, vg.longitude, virtual_w, virtual_h)
+                .expect("the volcano vertex is inside the projection's clamp");
+        let (win, col, row) = window_showing(GLOBE_RUNG, vrow, vcol, w, h);
+
+        let undiscovered = Discovered::default();
+        let g_before = draw_with(
+            &terrain,
+            &geo,
+            &index,
+            &f,
+            &win,
+            w,
+            h,
+            false,
+            &[],
+            &volcanoes,
+            &[],
+            &undiscovered,
+        );
+        assert_ne!(
+            g_before.get(col, row).unwrap().glyph,
+            Some(VOLCANO_GLYPH),
+            "an undiscovered volcano must still never be drawn — Gate A does not reach it"
+        );
+
+        let mut discovered = Discovered::default();
+        discovered.record(FeatureId::Extent(hornvale_terrain::landscape::FeatureId {
+            class: FeatureClass::Volcano,
+            vertex: volcano_vertex,
+        }));
+        let g_after = draw_with(
+            &terrain,
+            &geo,
+            &index,
+            &f,
+            &win,
+            w,
+            h,
+            false,
+            &[],
+            &volcanoes,
+            &[],
+            &discovered,
+        );
+        assert_eq!(
+            g_after.get(col, row).unwrap().glyph,
+            Some(VOLCANO_GLYPH),
+            "a discovered volcano must still be drawn at its own resolved screen position"
         );
     }
 
@@ -3299,14 +3442,20 @@ mod tests {
         );
     }
 
-    /// **Nothing is drawn and then hidden** (spec Amendment 1 §A7): the
-    /// undiscovered site's glyph is never chosen, so an undiscovered
-    /// roster leaves the terrain layer's grid untouched — not painted and
-    /// then cleared. All THREE [`SiteKind`]s are exercised, because each
-    /// takes a different `crate::discovery::FeatureId` arm and a gate wired
-    /// to one of them would pass a single-kind test.
+    /// **The feature layer draws every placed site, whether or not it has
+    /// been discovered** (The Prospect, Gate A ungating). This test used to
+    /// be `the_feature_layer_draws_only_discovered_sites` and asserted the
+    /// opposite (an undiscovered roster left the grid untouched); it is
+    /// rewritten in place for the same reason
+    /// `draw_with_draws_a_point_site_whether_or_not_it_is_discovered` is —
+    /// the old assertion is the defect this campaign fixes. All THREE
+    /// [`SiteKind`]s are exercised, because each takes a different
+    /// `crate::discovery::FeatureId` arm and an ungating wired to one of
+    /// them would pass a single-kind test — exactly the shape The Prospect's
+    /// own Task 8 found (`Exotic` had no arm at all, that time for the
+    /// opposite defect).
     #[test]
-    fn the_feature_layer_draws_only_discovered_sites() {
+    fn the_feature_layer_draws_every_site_whether_or_not_it_is_discovered() {
         let (terrain, geo) = test_world();
         let index = NearestVertexIndex::new(&geo);
         let f = mercator::frame_for(false);
@@ -3317,15 +3466,14 @@ mod tests {
         let settlement_roster = vec![settlement(site, 1)];
         let mut memo = RoomMeshMemo::default();
         let bare = draw_terrain_layer(&terrain, &geo, &index, &mut memo, &f, &win, w, h, false);
-        let bare_text = bare.to_plain_text();
 
-        // ALL THREE KINDS, one loop. The three take different
-        // `crate::discovery::FeatureId` arms (`MapSite::feature_id`), and a
-        // gate wired to one of them would pass a single-kind test — which is
-        // exactly the state The Prospect's Task 8 found: `Exotic` had no arm
-        // at all. Each iteration proves the identical property: an
-        // undiscovered site is never drawn, and a discovered one is drawn at
-        // its own resolved cell.
+        // ALL THREE KINDS, one loop. Each iteration proves the identical
+        // property: an UNdiscovered site is drawn at its own resolved cell,
+        // and discovering it afterward changes NOTHING about that drawing —
+        // the strongest form of "Gate A does not consult `discovered`" this
+        // module can state, short of the type-level argument (`None`, not
+        // `Some(id)`, at the call site — see `draw_feature_layer`'s own
+        // doc).
         //
         // The settlement's expected glyph is the MAJOR one because the sole
         // in-frame settlement is trivially its own top 10%
@@ -3337,9 +3485,9 @@ mod tests {
             (&settlement_roster, SETTLEMENT_MAJOR_GLYPH),
         ];
         for (roster, glyph) in cases {
-            let mut g = bare.clone();
+            let mut undiscovered_grid = bare.clone();
             draw_feature_layer(
-                &mut g,
+                &mut undiscovered_grid,
                 &geo,
                 &f,
                 &win,
@@ -3350,15 +3498,16 @@ mod tests {
                 &Discovered::default(),
             );
             assert_eq!(
-                g.to_plain_text(),
-                bare_text,
-                "an UNdiscovered {glyph:?} site was drawn"
+                undiscovered_grid.get(x, y).unwrap().glyph,
+                Some(glyph),
+                "an UNdiscovered {glyph:?} site was not drawn"
             );
 
             let mut discovered = Discovered::default();
             discovered.record(roster[0].feature_id());
+            let mut discovered_grid = bare.clone();
             draw_feature_layer(
-                &mut g,
+                &mut discovered_grid,
                 &geo,
                 &f,
                 &win,
@@ -3369,9 +3518,15 @@ mod tests {
                 &discovered,
             );
             assert_eq!(
-                g.get(x, y).unwrap().glyph,
+                discovered_grid.get(x, y).unwrap().glyph,
                 Some(glyph),
                 "a DISCOVERED {glyph:?} site was not drawn"
+            );
+            assert_eq!(
+                undiscovered_grid.to_plain_text(),
+                discovered_grid.to_plain_text(),
+                "discovering a {glyph:?} site changed the drawn plate — Gate A must not \
+                 consult `discovered` for a placed site's own glyph"
             );
         }
     }
