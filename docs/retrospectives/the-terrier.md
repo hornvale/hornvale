@@ -21,14 +21,14 @@ distinguishes "the shadowcast costs 8 ms" from "the thing this derivation
 is for costs 8 ms and eleven other steps ride along for free." Both readings
 fit the same two numbers equally well, and only one of them is checkable
 without more measurement — which is exactly why it went unchecked for five
-weeks and travelled through four committed documents.
+weeks and travelled through eight sites in six files.
 
 **The check that would have caught it costs less than the mistake did.**
 `SIGHT_RADIUS` is 4, so the shadowcast visits at most 81 cells; a plausible
 per-cell cost of even a few microseconds bounds the whole operation to
 fractions of a millisecond by arithmetic alone, before a single `Instant` is
 placed. Ten scratch timing prints — inside `derive_sighting`, `chamber_plan`,
-`describe_chamber_here`, `enter`, and `brief_of` — took perhaps ten minutes
+`describe_chamber_here`, `enter`, `brief_here`, and `brief_of` — took perhaps ten minutes
 and found the real cost sitting in `brief::brief_of`, which was
 reconstructing the world's *entire* occupation register from the ledger on
 every call, two to five times a turn. That function's own doc had prescribed
@@ -111,6 +111,19 @@ file's own, and add both a per-file coverage control and a synthetic-shape
 regression test — leaves two small, still-live loose ends, in the deferred
 minors table below.
 
+**This exact failure class already had a registry row before this campaign
+opened one on it.** `TOOL-a-text-scan-guard-splits-on-prose-about-its-needle`
+(The Plumb) records the same shape — a guard locating its production/test
+boundary by `src.find("#[cfg(test)]")`, landing on a comment that merely
+mentions the attribute — in a different `windows/vessel` guard. Two sites in
+this crate still carry the broken form and are not fixed here:
+`liveness.rs:16531` (`production_reaches_fatigue_through_exactly_one_door`)
+and `underground.rs:1256`. The registry row's Where cell now also points at
+this campaign's `production_code` (`the_terrier.rs`) as the shape that
+closes it, and the two sites are carried forward as a follow-up in the
+ledger rather than fixed here — both are pre-existing guards outside this
+campaign's own scope.
+
 ## The stage gate was held twice by things outside this campaign
 
 Task 2's submission to the stage gate found `outboard`'s `test-sluice-vet.sh`
@@ -157,10 +170,12 @@ depended on Task 3's numbers existing yet.
 | carried | outcome |
 | --- | --- |
 | Task 1 → close: the boundary detector takes the FIRST `#[cfg(test)]`+`mod` sequence, and `liveness.rs` has two adjacent ones (lines 8486 and 8490) | Checked at close: nothing but test-module declarations sits between the two — the earlier sequence gates `mod emitter_scan_tests`, a `#[path]`-included test file, and the five lines between it and the real `mod tests` are a doc comment and attributes. Picking the first costs nothing here; a file where real production code sat between two such sequences would still be a live risk, unaddressed by this campaign. |
-| Task 1 → close: the scan's own doc comment cites line 8490 for `liveness.rs`'s `mod tests` | Confirmed still present and still off by one at close: 8490 is the `#[cfg(test)]` attribute; `mod tests` itself is 8491. Harmless to the check's behaviour (the split point is correct either way), cosmetic to a reader who goes looking. Not fixed here — flagged rather than touched, since editing a shipped test's doc comment outside its own task was judged not worth reopening the file for one digit. |
+| Task 1 → close: the scan's own doc comment cites line 8490 for `liveness.rs`'s `mod tests` | Confirmed still present and still off by one at close: 8490 is the `#[cfg(test)]` attribute; `mod tests` itself is 8491. Harmless to the check's behaviour (the split point is correct either way), cosmetic to a reader who goes looking. Not fixed here — flagged rather than touched, since editing a shipped test's doc comment outside its own task was judged not worth reopening the file for one digit. *(Fixed in the final-review pass, which also corrects a claim this row itself never made explicit: the boundary the scan actually cuts at is line 8486 — an earlier `#[cfg(test)] #[path = …] mod emitter_scan_tests;` declaration — not 8490 or 8491, which are five lines later and separated from it by only a doc comment and attributes.)* |
 | Task 2 → close: the walk script's step bound (20) carries only two steps of margin over the seed-42 reading it was calibrated to (18) | Accepted as calibrated, not tightened: the bound exists to catch a script that never reaches both states at all, and 2 steps of margin on a script that is re-derived from the fixture (not authored blind) is adequate for that job. A future seed-42 fixture change that moves the flagship would need this bound re-measured, not merely re-passed. |
 | Task 3 → close: the client bench's outdoor range is compared against The Rack's AFTER block without stating that one was quiet and the other contended | Left as found in the bench file's prose; recorded here rather than edited, because the two ranges (9.27–13.07 ms here, 9.97–14.10 ms there) already agree within noise regardless of load, so the omission does not change the reading — only its rigor. A reader comparing the two numbers closely should know which was which. |
 | Task 4 → close: both idea-registry rows had to be trimmed to the 600-character cap (890→599, 763→592) | Reviewed at trim time: nothing load-bearing dropped except the phrase "two to five times per indoor turn", which survives in both the chronicle and decision 0636, so the registry row's compression cost no information the project actually needed from that row. |
+| Final review: slug-style registry IDs (`[[PROC-a-two-point-difference-names-a-step-not-a-cost]]`, `TOOL-...`) appear throughout this campaign's own chronicle and retrospective, and `docs_consistency`'s uniqueness/reference checks (decision `0026-slugs-not-numbers`) only police *numbered* IDs, not slugs | Rides: this is an existing, project-wide gap in the check's coverage, not opened by this campaign and not closed by it — a stale or mistyped slug reference would not be caught mechanically today. Not scoped to The Terrier, so not fixed here. |
+| Final review: the retrospective and `docs/retrospectives/README.md` both said "travelled through four committed documents" in their process headline while the chronicle and README's own enumeration said "seven committed places" for the same underlying fact, and a later correction (`book/src/open-questions.md`) had already added an eighth site neither count carried | Reconciled in the final-review pass: all three now read "eight sites in six files," matching the corrected enumeration (two idea-registry rows, two Rack-chronicle sentences, one Rack-retrospective bullet, two bench headers, one open-questions passage). |
 
 ## Follow-ups, with reasons
 

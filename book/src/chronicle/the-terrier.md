@@ -19,7 +19,7 @@ It was the whole derivation, not one step of it, and the step it was named
 after was not the expensive one.
 
 Ten scratch `Instant` prints inside `derive_sighting`, `chamber_plan`,
-`describe_chamber_here`, `enter` and `brief_of`, taken on the same release
+`describe_chamber_here`, `enter`, `brief_here` and `brief_of`, taken on the same release
 build, the same seed-42 flagship, and a visibly contended box (`uptime` load
 averages 28.07/25.58/22.66 on the first run, 51.01/34.28/26.41 on the second
 — every figure below is an upper bound, and the *split* between them is the
@@ -143,8 +143,12 @@ split "production" from "test" code at the first `#[cfg(test)]` attribute
 in a file — which, in two files, gates a test-only *helper* sitting in the
 middle of otherwise-production code, not the test module itself:
 `liveness.rs`'s first `#[cfg(test)]` sits at line 4353 while its real test
-module begins at 8491, so roughly 4,100 production lines — `species_activity`
-among them — were never looked at; `roster.rs` had the identical shape from
+module begins at 8491 — the boundary this scan actually cuts at is line
+8486, five lines earlier, where an EARLIER `#[cfg(test)] #[path = …] mod
+emitter_scan_tests;` declaration matches the same attribute-then-`mod`
+shape; only a doc comment and attributes sit between the two — so roughly
+4,100 production lines — `species_activity` among them — were never looked
+at; `roster.rs` had the identical shape from
 line 237 to 446. A guard that reads green over code it never scanned is
 exactly the failure class it exists to close. The fix splits at the test
 *module* instead (an attribute followed, across attribute lines, by
@@ -156,14 +160,18 @@ than assumed.
 ## What the correction touched, and why in place
 
 The wrong attribution — "the 8 ms is one shadowcast" — had travelled into
-seven places before this campaign measured it, and each is corrected loudly
+eight places before this campaign measured it, and each is corrected loudly
 and dated, in place, rather than by quiet edit: the two idea-registry rows it
 named (`TOOL-chamber-snapshot-prices-a-shadowcast`, body rewritten and
 shipped; `TOOL-tick-profile-2026-08`'s last sentence), two sentences in [The
 Rack's chronicle](./the-rack.md) ("The numbers" and "Honest limits"), one
 bullet in [The Rack's retrospective](../../../docs/retrospectives/the-rack.md),
-and the interpretation half of a Measured block in each of this project's
-two `move_cost.rs` benches — the numbers in every one of the seven stand
+the interpretation half of a Measured block in each of this project's two
+`move_cost.rs` benches, and one passage in [the open-questions
+ledger](../open-questions.md) — that eighth site evaded this campaign's own
+digit-form grep for the number, because it spelled the reading out in words
+("one eight-millisecond shadowcast") rather than writing it in digits, and
+is corrected there already — the numbers in every one of the eight stand
 unedited; only the noun attached to them does not. The reason is the one
 this project's own guidance gives for a loud correction over a quiet one: a
 record that outlives its subject does not sit inert, it produces wrong
@@ -181,7 +189,10 @@ chamber turn still makes two; the campaign leaves the count exactly as
 found and only removes what each one cost, from single-digit milliseconds
 to single-digit microseconds. The register is built once for every
 `WorldContext`, which is once per world, at a measured cost of +23 ms
-against an 845 ms `Session::start` — paid whether or not any session built
+against an 845 ms `Session::start` — a lower bound, since the 845 ms
+"before" is contended and the 868 ms "after" is quiet, and the real answer
+is that the register has exactly one builder, so the cost is paid once per
+world regardless of load — paid whether or not any session built
 from that context ever calls `brief_of` at all. And a possession that
 outlived the `World` it was built against would need the register rebuilt
 from a fresh ledger; nothing in this codebase does that today, so the case

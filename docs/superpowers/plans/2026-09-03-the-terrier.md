@@ -171,7 +171,7 @@ Create `windows/vessel/tests/suite/the_terrier.rs`:
 //!
 //! `brief::brief_of` used to call `hornvale_worldgen::occupations_by_vertex`
 //! — a reconstruction of EVERY committed occupation from the ledger — on
-//! every call, and a chamber turn called it two to five times, at 8.7-28.8
+//! every call, and a chamber turn called it two to five times, at 8.7-26
 //! ms each. That was the whole of what The Rack priced as "one shadowcast".
 //! The map now lives on `WorldContext`, built once.
 //!
@@ -406,7 +406,7 @@ Add the field after `report` in `pub struct WorldContext<'w>` (`:706`):
     /// sessions derive (`brief::brief_of`). A pure function of the immutable
     /// `World`, which is what makes it world-scoped like everything else on
     /// this type. Before this field, `brief_of` rebuilt the whole map on every
-    /// call — 8.7-28.8 ms — and a chamber turn called it two to five times;
+    /// call — 8.7-26 ms — and a chamber turn called it two to five times;
     /// that was the entire cost The Rack's chronicle attributed to "one
     /// shadowcast" (0.012 ms).
     ///
@@ -489,7 +489,7 @@ Replace `brief_of` (`:135-173`) with:
 /// every call, under a `NOTE ON COST` that said "if a profile shows it
 /// mattering, hoist the map to the caller … do NOT memoize inside this
 /// function, because a hidden cache in a derivation path is how derived
-/// state stops being derived." The profile showed 8.7-28.8 ms per call and
+/// state stops being derived." The profile showed 8.7-26 ms per call and
 /// two to five calls per indoor turn — the whole of what The Rack had
 /// attributed to a 0.012 ms shadowcast. The note's prescription is what
 /// shipped, and its prohibition still stands: there is no cache here, only
@@ -809,7 +809,7 @@ Rewrite the body of `TOOL-chamber-snapshot-prices-a-shadowcast` (`:774`)
 — the ID is permanent and stays — to:
 
 ```text
-| TOOL-chamber-snapshot-prices-a-shadowcast | **CORRECTED BY THE TERRIER (2026-09-03): the ~8 ms was never the shadowcast.** This row was minted by The Rack from the difference between a chamber snapshot after `look` (8.4 ms, sighting memo hit) and after `map`/`go` (16.3-16.8 ms, memo miss), and named the step the derivation is named for. Decomposed: the shadowcast at `SIGHT_RADIUS` 4 is **0.011-0.013 ms**; `anchor_cells` under 0.1 ms; the whole 8.7-28.8 ms per call was `brief::brief_of` rebuilding `occupations_by_vertex(world)` — the world's entire occupation register — on EVERY call, two to five times per indoor turn (`enter` five). Its own `NOTE ON COST` had prescribed the hoist since 2026-07-27. Shipped: the register lives on `WorldContext`, built once; `brief_of` takes it; a source ratchet forbids a whole-world occupation read on any session path. The lesson is [[PROC-a-two-point-difference-names-a-step-not-a-cost]] | shipped | high (measured) | [The Terrier chronicle](../chronicle/the-terrier.md); [The Terrier spec](https://github.com/hornvale/hornvale/blob/main/docs/superpowers/specs/2026-09-03-the-terrier-design.md) §1; decision 0636 |
+| TOOL-chamber-snapshot-prices-a-shadowcast | **CORRECTED BY THE TERRIER (2026-09-03): the ~8 ms was never the shadowcast.** This row was minted by The Rack from the difference between a chamber snapshot after `look` (8.4 ms, sighting memo hit) and after `map`/`go` (16.3-16.8 ms, memo miss), and named the step the derivation is named for. Decomposed: the shadowcast at `SIGHT_RADIUS` 4 is **0.011-0.013 ms**; `anchor_cells` under 0.1 ms; the whole 8.7-26 ms per call was `brief::brief_of` rebuilding `occupations_by_vertex(world)` — the world's entire occupation register — on EVERY call, two to five times per indoor turn (`enter` five). Its own `NOTE ON COST` had prescribed the hoist since 2026-07-27. Shipped: the register lives on `WorldContext`, built once; `brief_of` takes it; a source ratchet forbids a whole-world occupation read on any session path. The lesson is [[PROC-a-two-point-difference-names-a-step-not-a-cost]] | shipped | high (measured) | [The Terrier chronicle](../chronicle/the-terrier.md); [The Terrier spec](https://github.com/hornvale/hornvale/blob/main/docs/superpowers/specs/2026-09-03-the-terrier-design.md) §1; decision 0636 |
 ```
 
 In `TOOL-tick-profile-2026-08` (`:771`) replace the final clause "and a
@@ -867,7 +867,7 @@ in the house shape (`0598`'s sections: title line, `**Status:** Accepted
 `## Context`, `## The decision`, `## Consequences`, `## See also`):
 
 - Context: `brief_of` rebuilt `occupations_by_vertex(world)` per call;
-  measured 8.7–28.8 ms contended, 2–5 calls per indoor turn; the cost note
+  measured 8.7–26 ms contended, 2–5 calls per indoor turn; the cost note
   from `4569d883d`; `WorldContext` (The Quire) is where terrain, climate,
   the locale context and the demography report already live for the same
   reason.

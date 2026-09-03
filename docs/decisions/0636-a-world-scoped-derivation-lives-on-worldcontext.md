@@ -20,9 +20,9 @@ occupation committed to the ledger, grouped by vertex, from
 `find(IS_OCCUPATION)` plus a `value_of` read and parse per record. Before
 this decision, `brief::brief_of` called it fresh on every invocation.
 Measured (`windows/vessel/examples/move_cost.rs`, release, seed 42,
-contended — `uptime` load averages 28–51): **8.7–28.8 ms per call**, and a
-chamber turn calls `brief_here` two to five times (`enter` five, once each
-in `handle` and `snapshot`). The function's own doc had carried a `NOTE ON
+contended — `uptime` load averages 28–51): **8.7–26 ms per call**, and a
+chamber turn calls `brief_here` two to five times (`enter` four in `handle`
+and one more in `snapshot`). The function's own doc had carried a `NOTE ON
 COST` since `4569d883d` (2026-07-27) prescribing exactly this hoist — "the
 session can hold it for the possession's life" — and explicitly forbidding a
 memo inside the function ("a hidden cache in a derivation path is how

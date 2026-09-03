@@ -30,7 +30,9 @@ shadowcast is **0.011–0.013 ms** (`SIGHT_RADIUS` is 4, so it visits at most
 which reconstructs **every occupation in the world** (452 vertices' worth)
 from the ledger on **every call**, at 8.7–28.8 ms per call under load
 28–51, and a chamber turn makes two to five of them (`enter` 4 in `handle`
-+ 1 in `snapshot`; chamber `look` 2 + 1; chamber `map`/`go` 0 + 2). The
++ 1 in `snapshot`; chamber `look` 2 + 1; chamber `map`/`go` 0 + 2). *(28.8 ms
+was a run-1 scratch reading that never entered the committed table; the
+committed range is 8.7–26 ms and every other site now says so.)* The
 function's own doc has carried a `NOTE ON COST` prescribing the fix since
 2026-07-27 (`4569d883d`, the brief's founding commit): "hoist the map to
 the caller (the session can hold it for the possession's life) — do NOT
@@ -346,3 +348,14 @@ Each item names the reason it was not attempted here.
   when the collision occurred. A fixed, synthetic pair of decision numbers
   would distinguish a harness failure from a real collision without
   depending on which campaigns are live on `origin` at submission time.
+- **Two more sites still split "production" from "test" code at the first
+  `#[cfg(test)]` in the file** — the exact failure class this campaign's own
+  ratchet was found to have (see the retrospective's ratchet section):
+  `windows/vessel/src/liveness.rs:16531`
+  (`production_reaches_fatigue_through_exactly_one_door`, `src.find("#[cfg(test)]")`)
+  and `windows/vessel/src/underground.rs:1256`
+  (`here.split("#[cfg(test)]")`). Not fixed here: both are pre-existing guards
+  outside The Terrier's own scope, and the class already has a registry row
+  (`TOOL-a-text-scan-guard-splits-on-prose-about-its-needle`, minted by The
+  Plumb), whose Where cell now also points at `the_terrier.rs`'s
+  `production_code` as the correct shape to copy.
