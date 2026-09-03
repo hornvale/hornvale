@@ -297,3 +297,5 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0596](0596-a-creature-feels-what-its-own-last-resolution-felt.md) | A creature feels what its own last resolution felt | Accepted |
 | [0597](0597-the-roster-is-a-struct-of-arrays-with-one-append.md) | The roster is a struct of arrays with one append | Accepted |
 | [0598](0598-per-turn-work-is-a-counted-budget-in-the-commit-gate.md) | Per-turn work is a counted budget in the commit gate | Accepted |
+| [0606](0606-a-world-build-is-a-named-site.md) | A world build is a named site on a bidirectional roster | Accepted |
+| [0607](0607-the-seed-42-fixture-is-an-input.md) | The seed-42 world fixture is an input as well as an assertion | Accepted |

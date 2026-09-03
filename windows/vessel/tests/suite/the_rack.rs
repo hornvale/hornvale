@@ -16,16 +16,27 @@
 
 use hornvale_vessel::{PossessOpts, PossessTarget, Session, WorldContext};
 
-/// Seed 42, the world every session below is started over.
+/// Seed 42, the world every session below is started over — read from the
+/// committed fixture (decision 0607), not rebuilt.
 fn world() -> hornvale_kernel::World {
+    hornvale_worldgen::seed_42_world()
+}
+
+/// Any seed's world under default pins: seed 42 from the committed fixture,
+/// any other seed built in full (seed 7 is the moving-population witness this
+/// module needs and has no fixture — the roster row for this file names it).
+fn world_at(seed: u64) -> hornvale_kernel::World {
+    if seed == 42 {
+        return world();
+    }
     hornvale_worldgen::build_world(
-        hornvale_kernel::Seed(42),
+        hornvale_kernel::Seed(seed),
         &Default::default(),
         hornvale_worldgen::SkyChoice::Generated,
         &Default::default(),
         &Default::default(),
     )
-    .expect("seed 42 builds")
+    .expect("the seed builds")
 }
 
 /// At turn 0 every slot's `position` column holds the body's own `home` — the
@@ -246,14 +257,7 @@ fn every_slots_position_is_the_ledgers() {
 /// every verb, and report whether the driven body and any other body actually
 /// left home — the two vacuity questions the caller asserts on.
 fn walk_a_script(seed: u64) -> (bool, bool) {
-    let world = hornvale_worldgen::build_world(
-        hornvale_kernel::Seed(seed),
-        &Default::default(),
-        hornvale_worldgen::SkyChoice::Generated,
-        &Default::default(),
-        &Default::default(),
-    )
-    .expect("the seed builds");
+    let world = world_at(seed);
     let (mut session, _) = Session::start(&world, &PossessOpts::default()).expect("starts");
     // The invariant must already hold before anything moves, or a later
     // agreement could be an accident of nothing having happened.
@@ -315,14 +319,7 @@ fn walk_a_script(seed: u64) -> (bool, bool) {
 ///  right: Facet { face: 1, path: [3, 0, 3, 1, 3, 2, 2, 1, 1, 1, 2, 3, 0] }`
 #[test]
 fn a_possessed_sessions_columns_are_the_ledgers_too() {
-    let world = hornvale_worldgen::build_world(
-        hornvale_kernel::Seed(7),
-        &Default::default(),
-        hornvale_worldgen::SkyChoice::Generated,
-        &Default::default(),
-        &Default::default(),
-    )
-    .expect("seed 7 builds");
+    let world = world_at(7);
     let (mut session, _) = Session::start(&world, &PossessOpts::default()).expect("starts");
     let _ = session.handle("!possess");
     assert!(
@@ -525,14 +522,7 @@ fn the_driven_slot_carries_what_the_side_fields_did() {
 /// difference.
 #[test]
 fn the_chart_marks_a_creature_where_it_now_stands_not_where_it_lives() {
-    let world = hornvale_worldgen::build_world(
-        hornvale_kernel::Seed(7),
-        &Default::default(),
-        hornvale_worldgen::SkyChoice::Generated,
-        &Default::default(),
-        &Default::default(),
-    )
-    .expect("seed 7 builds");
+    let world = world_at(7);
     let (mut session, _) = Session::start(&world, &PossessOpts::default()).expect("starts");
     // Seed 7's residents leave home within thirty days — the same fact
     // `every_slots_position_is_the_ledgers` relies on, and the reason this

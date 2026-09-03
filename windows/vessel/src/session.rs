@@ -9876,15 +9876,12 @@ mod tests {
     use hornvale_terrain::TerrainPins;
     use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
 
+    /// Seed 42's world under default pins, read from the committed fixture
+    /// rather than rebuilt (decision 0607). This helper's 85 callers each run
+    /// in their own nextest process, so building here cost ~3.0 s per test;
+    /// the read costs ~15 ms.
     fn seam_world() -> World {
-        build_world(
-            Seed(42),
-            &SkyPins::default(),
-            SkyChoice::Generated,
-            &TerrainPins::default(),
-            &SettlementPins::default(),
-        )
-        .expect("seed 42 builds")
+        hornvale_worldgen::seed_42_world()
     }
 
     /// The seed whose flagship dwelling draws the four-chamber shape the

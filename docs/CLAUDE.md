@@ -85,5 +85,16 @@ deliberately and say why, exactly as with any other invariant.)
 - **Decisions are append-only.** Never edit a ratified decision's substance;
   supersede it with a new record. See
   [`decisions/README.md`](decisions/README.md).
+  **The boundary is `main`** (The Reservoir, 2026-09-02, ledger #16): a record
+  that has not yet merged may be corrected in place, because the rule exists to
+  protect a history someone could have relied on and nothing off `main` has one.
+  Once it lands, it is immutable — including a correction of something that was
+  false the day it was written. Two tests of the boundary, both worth keeping in
+  mind: (a) it applies to *substance*, so an unmerged record whose claim is
+  simply wrong is repaired, not superseded; and (b) it does **not** license
+  editing another campaign's unmerged record — only the campaign that authored
+  a record may correct it before merge, or you are rewriting someone else's
+  reasoning while they are still using it. State in the commit that the edit is
+  a pre-merge correction and what was false.
 - **The spec governs.** Where any doc here disagrees with the long-term-plan
   spec or the Constitution, the spec wins; fix the lesser doc.
