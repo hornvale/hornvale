@@ -1428,4 +1428,12 @@ Beyond the six tasks, `closing-a-campaign` governs the close. This campaign addi
 - **Never `--no-verify`.** If fmt or clippy fails, that is the finding.
 - **Write rulings, deferred minors and followups to `docs/superpowers/ledgers/2026-09-02-the-nettle.md` as they occur** — not to `progress.md`, which is exactly what Task 4 exists to fix. Practising the defect this campaign is repairing would be a poor look and a real loss.
 - **Task 1 changes a hook that gates your own shell.** After committing it, the guard behaves differently for the rest of the campaign — that is intended, and Steps 5–7 are what establish it is correct.
+- **Write commit messages with `git commit -F <file>`, not a heredoc or a
+  multi-line `-m "..."`.** Two implementers in a row hit a shell quoting
+  failure on the message: one had a backtick pair silently
+  command-substituted away, corrupting a sentence, and caught it only on
+  review. The remaining tasks' `-m` blocks contain no backticks (checked), so
+  they are not booby-trapped — but the message text below each is what to
+  *write*, not necessarily how to *deliver* it. Put it in a file and pass
+  `-F`. This is the plan's shape at fault, not the agents'.
 - **If a task's Step 1 premise check fails, STOP and report.** Four of this campaign's five items arrived with a premise that did not survive contact; assume yours may be the fifth.
