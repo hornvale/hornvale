@@ -5015,3 +5015,10 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-02T23:28:05Z | game-check | 165.438 | 616.386 | 31.914 | 3.92 | 0 | 77fee44dd | campaign/the-prospect | ambrose | 12 |
 | 2026-09-02T23:29:46Z | gate-commit | 95.840 | 65.524 | 33.690 | 1.04 | 0 | 77fee44dd | campaign/the-prospect | ambrose | 12 |
 | 2026-09-02T23:31:42Z | gate-commit | 96.989 | 65.343 | 33.935 | 1.02 | 0 | 77fee44dd | campaign/the-prospect | ambrose | 12 |
+| 2026-09-03T00:59:21Z | gate-commit | 209.224 | 76.213 | 37.781 | 0.54 | 0 | 78c1a8941 | campaign/the-prospect | ambrose | 12 |
+| 2026-09-03T01:03:28Z | gate-commit | 231.702 | 73.528 | 36.693 | 0.48 | 0 | 78c1a8941 | campaign/the-prospect | ambrose | 12 |
+| 2026-09-03T01:39:03Z | game-check | 0.739 | 0.283 | 0.137 | 0.57 | 0 | b6985762c | campaign/the-prospect | ambrose | 12 |
+| 2026-09-03T01:46:57Z | game-check | 461.340 | 635.367 | 44.023 | 1.47 | 0 | b6985762c | campaign/the-prospect | ambrose | 12 |
+| 2026-09-03T01:52:11Z | gate-commit | 278.050 | 67.099 | 32.617 | 0.36 | 0 | b6985762c | campaign/the-prospect | ambrose | 12 |
+| 2026-09-03T01:58:21Z | gate-commit | 227.399 | 76.187 | 37.349 | 0.50 | 0 | b6985762c | campaign/the-prospect | ambrose | 12 |
+| 2026-09-03T02:04:28Z | gate-commit | 226.363 | 71.348 | 36.634 | 0.48 | 0 | b6985762c | campaign/the-prospect | ambrose | 12 |
