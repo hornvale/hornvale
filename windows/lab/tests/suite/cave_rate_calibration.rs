@@ -218,7 +218,14 @@ fn read(seed: u64, wc: &WorldComponents) -> Reading {
 /// `brief::containing_vertex` uses — the maximum-weight corner of the facet's
 /// bilinear blend, tie-broken by ascending `Vertex`. Integer weights, so no
 /// float comparison enters the answer.
-fn is_land(
+///
+/// `pub(crate)` since H3 (`site_density.rs`), which measures the same
+/// denominator — land facets — over a wider numerator. Shared rather than
+/// re-derived: two copies of "is this facet land" is precisely the
+/// two-disagreeing-answers shape this campaign has already found and fixed
+/// twice, and here it would silently move H3's denominator away from H2's,
+/// making the two readouts incomparable with nothing red.
+pub(crate) fn is_land(
     facet: &Facet,
     geo: &Geosphere,
     index: &NearestVertexIndex,

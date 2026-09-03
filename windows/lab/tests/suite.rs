@@ -66,6 +66,8 @@ mod reticence_calibration;
 mod roster_parity;
 #[path = "suite/rung_selection.rs"]
 mod rung_selection;
+#[path = "suite/site_density.rs"]
+mod site_density;
 #[path = "suite/terminator_acceptance.rs"]
 mod terminator_acceptance;
 #[path = "suite/the_dial.rs"]
