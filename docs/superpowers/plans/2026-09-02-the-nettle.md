@@ -1116,7 +1116,17 @@ Report the derived set as a table of `file → the prose paths it reads`, and cl
 - reads a mix of prose and Rust sources → **in the set** (a docs-only commit can still move its verdict)
 - reads no prose input → **out**, and say which grep hit put it on the candidate list, so the next reader knows it was considered
 
-**STOP and report if** the derived set exceeds ~40 tests, or its warm wall exceeds ~10 s. The cheap shape has stopped being cheap and the scope call returns to Nathan.
+**STOP and report if** the derived set's warm wall exceeds ~10 s. The cheap shape has stopped being cheap and the scope call returns to Nathan.
+
+**The test COUNT is not a stop condition, and an earlier draft wrongly made it one (~40 tests).** It is a bad proxy: this suite's cost is dominated by building the `hornvale` suite binary plus two slow byte-identity tests, not by how many tests the filter names. Measured — the set below is **60 tests in 5.664 s warm**, where `docs_consistency` alone (28 tests) is 2.443 s. Adding 32 tests cost 3.2 seconds. Judge the wall; ignore the count.
+
+**THE FILTER IS ALREADY DERIVED AND MEASURED — use it verbatim.** Task 5's first implementer did the derivation, correctly hit the count-based stop condition, and reported rather than guessing. Its work stands: it traced what every `#[test]` in the 24 grep-matched files actually *opens*, and rejected six files whose matches were comment, fixture, or assert-message text only (`attest.rs`, `claim_shape.rs`, `heavy_tier.rs`, `branches_identity.rs`, `scene_context_discipline.rs`, `world_build_sites.rs`). The module-level filter, measured at 5.664 s warm, 60 passed, 0 failed:
+
+```
+test(docs_consistency) or test(generated_paths) or test(census_duration) or test(repose_byte_identity) or test(audio_artifacts) or test(lexicon_guard) or test(subfloor_roster_coverage) or test(architecture)
+```
+
+`repose_byte_identity` is the costliest member (3.9 s + 4.4 s, run in parallel) and is deliberately kept: a docs-only commit **can** stage a committed artifact under `book/src/` — a regenerated gallery PNG, say — and that is precisely the "Rust test whose subject is a non-Rust file" class this task exists to cover.
 
 - [ ] **Step 2: Measure the derived set's warm wall**
 
@@ -1134,7 +1144,7 @@ Place it next to the other check targets, following the file's `##`-comment conv
 
 ```makefile
 docs-tests: ## The prose-subject tests -- run by pre-commit when only docs are staged
-	@cargo nextest run -p hornvale --test suite -E '<the derived filter from Step 1>'
+	@cargo nextest run -p hornvale --test suite -E 'test(docs_consistency) or test(generated_paths) or test(census_duration) or test(repose_byte_identity) or test(audio_artifacts) or test(lexicon_guard) or test(subfloor_roster_coverage) or test(architecture)'
 ```
 
 - [ ] **Step 4: Write the failing positive control BEFORE changing the hook**

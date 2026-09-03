@@ -476,3 +476,59 @@ committed plan and the scratch file is deleted.
 
 *Capture.* This entry; the plan's Task 6 header and its five inlined cells;
 the retrospective (seventh and eighth instances, both mine).
+
+---
+
+#13 [G5] — **Ruling: Task 5's stop condition fired on the wrong half. The
+count was a bad proxy; the wall is fine. Proceed with the full derived set.**
+
+*What happened.* Task 5's implementer derived the prose-subject test set by
+tracing what every `#[test]` in the 24 grep-matched files actually *opens*,
+found 49 tests on the strictest reading, hit the brief's "~40 tests" stop
+condition, and **stopped at Step 1 without touching a file** — exactly as
+instructed, reporting four scoping options and picking none. That is the stop
+condition working, and the work it produced stands.
+
+*The ruling, and why it is not simply "raise the limit".* The brief named two
+stop conditions, ~40 tests and ~10 s warm. **The count is a proxy for the
+cost, and it is a bad one here**: this suite's wall is dominated by building
+the `hornvale` suite binary plus two slow byte-identity tests, not by how many
+tests a filter names. Measured just now on the module-level filter:
+
+```
+docs_consistency alone   28 tests   2.443 s
+the full derived set     60 tests   5.664 s   (60 passed, 0 failed)
+```
+
+**Adding 32 tests cost 3.2 seconds.** The real criterion — cost — is satisfied
+with room to spare, so the principled set wins over the narrow one. The plan's
+Step 1 now says the wall is the stop condition and the count is not, and says
+why.
+
+*The set kept, and one deliberate inclusion.*
+`docs_consistency`, `generated_paths`, `census_duration`,
+`repose_byte_identity`, `audio_artifacts`, `lexicon_guard`,
+`subfloor_roster_coverage`, `architecture`. Six grep-matched files were
+**rejected** because their matches are comment, fixture or assert-message text
+and they open no prose file at all — `attest.rs`, `claim_shape.rs`,
+`heavy_tier.rs`, `branches_identity.rs`, `scene_context_discipline.rs`,
+`world_build_sites.rs`. `repose_byte_identity` is the costliest member (3.9 s
+and 4.4 s, in parallel) and is kept on purpose: a docs-only commit **can**
+stage a committed artifact under `book/src/` — a regenerated gallery PNG — and
+that is exactly the "Rust test whose subject is a non-Rust file" class this
+task exists to cover.
+
+*Option 1 (`docs_consistency` alone) rejected*, though it was the cheapest and
+matched the one observed defect. The criterion the plan states is "a test whose
+verdict a docs-only commit can move", and narrowing to the single instance we
+happened to observe would rebuild the original defect one size smaller — a
+predicate that is right about the case in front of it and blind to its
+siblings.
+
+*Cost if wrong.* Bounded and visible: an over-costly hook shows up as
+seconds on every docs-only commit, and the filter is one line in the Makefile.
+
+*ideonomy passes / overturns.* 0 / 0 — a measurement settled it.
+
+*Capture.* This entry; the plan's Step 1 and its Makefile target, both now
+carrying the measured filter verbatim; the registry row's figures.
