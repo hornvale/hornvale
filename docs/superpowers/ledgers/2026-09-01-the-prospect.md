@@ -982,3 +982,43 @@ sentence, and the fix is one backtick.
 **Capture.** The self-scanning fixture hazard is real and now documented in the
 test: a fixture that spells a bad cite literally trips the file-level scan on
 itself. Both bad-cite fixtures evade it the same way, and the comment says so.
+
+---
+
+## Ruling #41 [G5] — the discovery reversal gets a decision record, not just doc comments
+
+**Finding (review of `b6985762c..12c6adb8b`, item 4).** Nathan's ruling that a
+placed site's glyph draws ungated survived only in Rust doc comments. Spec §5
+still listed the discovery gate under "existing behaviour that must survive" —
+the exact opposite of what shipped — and the ledger ran to #40 with no entry.
+
+**Decision.** Correct spec §5 with a `CORRECTED` block quoting Nathan directly,
+and file **decision 0540**. A reversal of stated existing behaviour is a
+decision, not an implementation detail: the next reader consulting the spec
+would have read the pre-reversal rule as binding and "fixed" the code back.
+
+**Cost if wrong.** A decision record for something that turns out to be a
+one-campaign experiment. Cheap — supersede it.
+
+## Ruling #42 [G5] — the volcano stays gated, and the stated reason was wrong
+
+**Finding (review item 8).** The volcano remains discovery-gated, and the
+rationale recorded for it — "the terrain has no other way of saying it is
+there" — argues for *un*gating under 0540's own intent. The reviewer correctly
+called it a non-sequitur and asked for a ruling. The de-facto rule had become
+"drawn-ness follows internal representation," which describes the code rather
+than justifying it.
+
+**Ruling.** Keep the volcano gated; replace the rationale with the structural
+one. A volcano is a **landscape extent whose `FeatureId` flows through
+`resolve_chain_at`**, so its drawn-ness and its readout are coupled; ungating
+it would move a feature that reaches Gate B, which 0540 deliberately does not
+touch. A placed site is absent from the feature index entirely and has no such
+coupling.
+
+Recorded in 0540 as an explicit non-goal, with the reason it is structural
+rather than incidental — so a later campaign ungating landscape extents does it
+on purpose, with its own decision.
+
+**Cost if wrong.** Volcanoes stay invisible until discovered, which is the
+status quo, and biome monotony is broken up by sites rather than by both.

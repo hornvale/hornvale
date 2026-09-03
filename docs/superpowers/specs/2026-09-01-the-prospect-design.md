@@ -125,8 +125,15 @@ Rules:
 and exotic sites are invisible at every zoom. It gains a **site** roster,
 of which settlements are one kind.
 
-Existing behaviour that must survive: the discovery gate (an undiscovered site
-is not drawn at all), and the by-rank major/minor split for settlements.
+**CORRECTED 2026-09-02 — Nathan reversed the discovery gate for placed
+sites.** This read: "Existing behaviour that must survive: the discovery gate
+(an undiscovered site is not drawn at all)". It no longer must survive, and
+saying it does is the opposite of the shipped rule — see decision 0540.
+
+A placed site's GLYPH is drawn whether or not it is discovered; its PROPER NAME
+is still withheld until discovery. Nathan's framing: *"show the kind glyph and
+withhold the name. We can say it's a cave, a village, etc, just don't give its
+name."* The by-rank major/minor split for settlements does survive, unchanged.
 Non-settlement sites draw at a single weight in this campaign; ranking them
 against population is out of scope.
 

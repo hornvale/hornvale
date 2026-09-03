@@ -289,3 +289,4 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0537](0537-a-placed-site-is-re-sited-to-a-facet-by-a-seeded-draw.md) | A placed site is re-sited from its vertex to one facet by a seeded draw | Accepted |
 | [0538](0538-a-site-carries-an-extent-and-this-campaign-emits-point.md) | A `Site` carries an `Extent`, and this campaign only ever emits `Point` | Accepted |
 | [0539](0539-a-sites-tier-is-placed-or-derived.md) | A site's tier is `placed` or `derived`, and standing is a separate axis | Accepted |
+| [0540](0540-a-placed-sites-glyph-is-drawn-ungated-its-name-is-not.md) | A placed site's glyph is drawn ungated; its name is still withheld | Accepted |
