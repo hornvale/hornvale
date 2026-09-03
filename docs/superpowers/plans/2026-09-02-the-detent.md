@@ -58,7 +58,7 @@
 - Consumes: `hornvale_vessel::liveness::{Terrain, Hazards, derive_npcs, hazard_memory_memo, DriveMovements, LocaleTerrain, PrimaryAfraidMemo, HomeNavCache, SUSTENANCE, AGENT_AT, DRANK, RESTED, SLEPT, EATEN}`, `hornvale_vessel::resident::{OwnedFolds, ResidentFolds}`, `hornvale_locale::LocaleContext`, `hornvale_worldgen::{build_world, SkyChoice, SettlementPins}`, `common::build`.
 - Produces: `common::CountingTerrain<'a>` (wraps `&'a dyn Terrain`; `hazards_calls()`, `water_calls()`, `temperature_calls()`, `elevation_calls()`, `reset()`); `the_detent::BenchShape` and `the_detent::bench_shape(seed, ticks, agents) -> BenchShape` — the exact `session_length_scaling` construction, reusable by every later task; `the_detent::probe_index(&BenchShape) -> usize` (the roster member with the most `agent-at` facts).
 
-- [ ] **Step 1: Add `CountingTerrain` to `tests/common/mod.rs`**
+- [x] **Step 1: Add `CountingTerrain` to `tests/common/mod.rs`**
 
 Append (after `world_that_draws_a_creature`). The counters are `std::cell::Cell<u64>` in PRIVATE fields with the lexicon waiver on each line; the accessors expose `u64`.
 
@@ -151,7 +151,7 @@ impl Terrain for CountingTerrain<'_> {
 
 Add the imports `common/mod.rs` lacks (`Facet`, `WorldTime`, `Terrain`, `Hazards`); read its existing `use` block first. If `Terrain` gains a method between now and then, the compiler names it — delegate it.
 
-- [ ] **Step 2: Write `the_detent.rs` with the bench-shape builder and the first witness**
+- [x] **Step 2: Write `the_detent.rs` with the bench-shape builder and the first witness**
 
 The builder is `session_length_scaling.rs`'s `run()` construction, verbatim in substance (read `windows/vessel/examples/session_length_scaling.rs:1090-1210` first and copy its predicate registration, `derive_npcs`, store, day arithmetic and per-tick `DriveMovements` exactly — the point of the witness is to be the bench's shape).
 
@@ -344,12 +344,12 @@ fn h5_witness_the_hazard_reads_terrain_samples_on_the_bench_shape() {
 }
 ```
 
-- [ ] **Step 3: Run it and record the numbers**
+- [x] **Step 3: Run it and record the numbers**
 
 Run: `cd .claude/worktrees/the-detent && cargo test -p hornvale-vessel --test suite -- the_detent --nocapture 2>&1 | tee /tmp/detent-t1.txt`
 Expected: PASS, printing FRESH ≈ 22,302 and whole-tick ≈ 44,694 (the spec's spike numbers, ±0 — the construction is deterministic; a different number means the construction differs from the bench and the task stops to find out why). Paste the two printed lines into the task report.
 
-- [ ] **Step 4: fmt, clippy, gate, commit**
+- [x] **Step 4: fmt, clippy, gate, commit**
 
 ```bash
 cargo fmt && cargo clippy -p hornvale-vessel --all-targets -- -D warnings
@@ -373,9 +373,9 @@ EOF
 - Consumes: `crate::ledger_hash_witness::{fnv1a, run_fixed_script, run_emitter_witness, EmitterRun, EMITTER_SEED}`, `hornvale_vessel::session::{Session, PossessOpts}`.
 - Produces: three `pub(crate) const` values in `the_detent.rs` — `DETENT_SEED_42_LEDGER: u64`, `DETENT_EMITTER_LEDGER: u64`, `DETENT_EMITTER_HAZARD: u64` — and two tests that assert them. Task 9 retires them (decision 0541).
 
-- [ ] **Step 1: Widen the four helpers to `pub(crate)`** in `ledger_hash_witness.rs`. Do not touch their bodies or the file's doc.
+- [x] **Step 1: Widen the four helpers to `pub(crate)`** in `ledger_hash_witness.rs`. Do not touch their bodies or the file's doc.
 
-- [ ] **Step 2: Append the constants and two tests to `the_detent.rs`**, with the constants set to `0` for the first run:
+- [x] **Step 2: Append the constants and two tests to `the_detent.rs`**, with the constants set to `0` for the first run:
 
 ```rust
 use crate::ledger_hash_witness::{EMITTER_SEED, fnv1a, run_emitter_witness, run_fixed_script};
@@ -415,11 +415,11 @@ fn the_detent_emitter_walk_matches_the_campaign_time_constants() {
 }
 ```
 
-- [ ] **Step 3: Run both, twice, and mint the constants.** Run: `cargo test -p hornvale-vessel --test suite -- the_detent_ --nocapture 2>&1 | tee /tmp/detent-t2a.txt`. Expected: both FAIL against `0`, printing the hashes. Run again; the printed hashes must be identical (determinism). Paste the three values into the constants. Run a third time: PASS.
+- [x] **Step 3: Run both, twice, and mint the constants.** Run: `cargo test -p hornvale-vessel --test suite -- the_detent_ --nocapture 2>&1 | tee /tmp/detent-t2a.txt`. Expected: both FAIL against `0`, printing the hashes. Run again; the printed hashes must be identical (determinism). Paste the three values into the constants. Run a third time: PASS.
 
-- [ ] **Step 4: The positive control.** Choose a mutation in the fear path that still type-checks and that you EXPECT to move a creature's route — do not take one from this plan; read `feels_frightening`, `threat_field`, `DANGER_ACT` in `liveness.rs` and pick one. Apply it with `python3 scripts/mutate.py` (it refuses unless the target text is found exactly once), rebuild, run both tests: at least one hash must MOVE. If neither moves, the mutation did not reach a route on either script — pick another; a control that cannot fail is not a control. Restore with `git checkout -- windows/vessel/src/liveness.rs`, rebuild, re-run: PASS. Record in the report: the mutation, the moved value(s), and the restored green.
+- [x] **Step 4: The positive control.** Choose a mutation in the fear path that still type-checks and that you EXPECT to move a creature's route — do not take one from this plan; read `feels_frightening`, `threat_field`, `DANGER_ACT` in `liveness.rs` and pick one. Apply it with `python3 scripts/mutate.py` (it refuses unless the target text is found exactly once), rebuild, run both tests: at least one hash must MOVE. If neither moves, the mutation did not reach a route on either script — pick another; a control that cannot fail is not a control. Restore with `git checkout -- windows/vessel/src/liveness.rs`, rebuild, re-run: PASS. Record in the report: the mutation, the moved value(s), and the restored green.
 
-- [ ] **Step 5: fmt, clippy, gate, commit**
+- [x] **Step 5: fmt, clippy, gate, commit**
 
 ```bash
 git add windows/vessel/tests/suite/ledger_hash_witness.rs windows/vessel/tests/suite/the_detent.rs
@@ -464,7 +464,7 @@ impl<'a> LocaleTerrain<'a> {
 }
 ```
 
-- [ ] **Step 1: Write the failing unit tests in `ground.rs`** (a `#[cfg(test)] mod tests` at the bottom):
+- [x] **Step 1: Write the failing unit tests in `ground.rs`** (a `#[cfg(test)] mod tests` at the bottom):
 
 ```rust
 #[cfg(test)]
@@ -499,9 +499,9 @@ mod tests {
 
 Check `Facet`'s constructor name in `kernel/src/room.rs` before using `Facet::new`; the tests in `resident_folds.rs` build rooms with a `room(face, path)` helper — copy its shape.
 
-- [ ] **Step 2: Run to see them fail** (`cargo test -p hornvale-vessel ground::` — FAIL: module missing).
+- [x] **Step 2: Run to see them fail** (`cargo test -p hornvale-vessel ground::` — FAIL: module missing).
 
-- [ ] **Step 3: Implement `ground.rs`**
+- [x] **Step 3: Implement `ground.rs`**
 
 ```rust
 //! The room memo (The Detent, spec §2.1): what the TERRAIN determines about a
@@ -581,7 +581,7 @@ pub type OwnedGround = std::cell::RefCell<GroundHazards>; // lexicon: std::cell:
 
 Check whether `Derived::get` on a miss increments `misses` (read `kernel/src/derived.rs:110-130`); if it does, `misses()` already counts field samples and nothing more is needed. If it does not, count them in `hazards_or_insert_with` yourself.
 
-- [ ] **Step 4: Thread it through `LocaleTerrain`** in `liveness.rs`:
+- [x] **Step 4: Thread it through `LocaleTerrain`** in `liveness.rs`:
 
 Add the field after `cache`:
 ```rust
@@ -624,7 +624,7 @@ Rewrite `hazards` so the blend is a closure and the memo, if present, owns the c
 ```
 Keep the two existing comments on the blend (the-Bane and the-Quarry lines) inside the closure.
 
-- [ ] **Step 5: The two-terrain test** in `tests/suite/the_detent.rs` (spec rule 3). It must fail against a SHARED memo first: write it so the assertion is about the memo's ownership, and check the failing shape by temporarily sharing one memo across both terrains before writing the passing form.
+- [x] **Step 5: The two-terrain test** in `tests/suite/the_detent.rs` (spec rule 3). It must fail against a SHARED memo first: write it so the assertion is about the memo's ownership, and check the failing shape by temporarily sharing one memo across both terrains before writing the passing form.
 
 ```rust
 #[test]
@@ -669,9 +669,9 @@ fn a_room_memo_belongs_to_one_predator_field_and_a_second_field_gets_its_own() {
 
 `Session::terrain_for_tests` does not exist: add it in Task 4's session edits as a `pub fn terrain_for_tests(&self) -> LocaleTerrain<'_>` that returns exactly what `terrain_here` returns (read `session.rs:6215`), with a doc saying it is the test seam for the terrain a session reads. Until Task 4 lands, this test does not compile — so write it in Task 4, not here. (Kept in this task's text so the reader sees what Step 4's builder is for.)
 
-- [ ] **Step 6: Chaos eviction on the memo**, in `the_detent.rs` (compiles now — needs no session): at every read of the H5 bench shape's probe, `evict_all` between reads and assert the `HazardMemory` is unchanged. Write it as the bench-shape helper's twin: run `bench_shape(42, 20, 10)` (a cheap shape), build a `GroundHazards`, and for each of 30 reads alternate `evict_all()` on and off; compare every `HazardMemory` to the first. Assert the memo's `misses()` grew across evictions (denominator: eviction happened) and that `len()` after the last un-evicted read equals the number of distinct rooms and neighbours the probe's read touched (print it).
+- [x] **Step 6: Chaos eviction on the memo**, in `the_detent.rs` (compiles now — needs no session): at every read of the H5 bench shape's probe, `evict_all` between reads and assert the `HazardMemory` is unchanged. Write it as the bench-shape helper's twin: run `bench_shape(42, 20, 10)` (a cheap shape), build a `GroundHazards`, and for each of 30 reads alternate `evict_all()` on and off; compare every `HazardMemory` to the first. Assert the memo's `misses()` grew across evictions (denominator: eviction happened) and that `len()` after the last un-evicted read equals the number of distinct rooms and neighbours the probe's read touched (print it).
 
-- [ ] **Step 7: fmt, clippy, type-audit report, gate, commit**
+- [x] **Step 7: fmt, clippy, type-audit report, gate, commit**
 
 ```bash
 cargo fmt && cargo clippy -p hornvale-vessel --all-targets -- -D warnings
@@ -700,7 +700,7 @@ EOF
 - Produces on `Session`: `pub fn terrain_for_tests(&self) -> LocaleTerrain<'_>`, `pub fn resident_ground_len(&self) -> usize`, `pub fn resident_ground_hits(&self) -> u64`, `pub fn resident_ground_misses(&self) -> u64` (each with a `type-audit:` tag).
 - Bench and lab: one `OwnedGround` per run, in scope with `folds`.
 
-- [ ] **Step 1: Write the red assertion first.** In `the_detent.rs`'s H5 witness, `probe_counts` builds its terrain with `LocaleTerrain::with_fields(...)`; change `bench_shape` to own `pub ground: OwnedGround` (created beside `folds`) and to build every tick's terrain with `.with_ground(&shape.ground)`; make `probe_counts` build its terrain with `.with_ground(&shape.ground)` too, and record `misses` before and after each read. Add to the witness:
+- [x] **Step 1: Write the red assertion first.** In `the_detent.rs`'s H5 witness, `probe_counts` builds its terrain with `LocaleTerrain::with_fields(...)`; change `bench_shape` to own `pub ground: OwnedGround` (created beside `folds`) and to build every tick's terrain with `.with_ground(&shape.ground)`; make `probe_counts` build its terrain with `.with_ground(&shape.ground)` too, and record `misses` before and after each read. Add to the witness:
 
 ```rust
     // H5, first clause (spec §4): field samples. A second fresh-memo read
@@ -710,7 +710,7 @@ EOF
 ```
 where `ProbeCounts` gains `warm_samples: u64` and `second_fresh_samples: u64` (misses deltas), and `probe_counts` makes a THIRD call with another fresh `PrimaryAfraidMemo` to measure the second one. Run: the two new assertions FAIL on this tree? No — with the memo threaded in `bench_shape` they pass immediately, so the RED must be taken BEFORE threading: run the witness once with `bench_shape` still building terrains WITHOUT `.with_ground` (misses read from a memo nothing fills → the assertion cannot see samples). So instead the red is taken on `hazards_calls()`: before threading, record and print `fresh_hazards` (22,302) and `warm_hazards` (1,089) — those ARE the field samples on a tree with no memo. Write both assertions, run once with threading, and put in the report the pre-threading counts from Task 1's output as the red. This is the one place the plan accepts Task 1's printed numbers as the red rather than a failing assertion, because the assertion's subject (memo misses) does not exist on the pre-fix tree.
 
-- [ ] **Step 2: The whole-tick assertion**, red on the pre-memo count, green after: in `bench_shape`, record per tick `ground.borrow().misses()` deltas as `samples_per_tick` beside `hazards_per_tick`. Add:
+- [x] **Step 2: The whole-tick assertion**, red on the pre-memo count, green after: in `bench_shape`, record per tick `ground.borrow().misses()` deltas as `samples_per_tick` beside `hazards_per_tick`. Add:
 
 ```rust
     let last_samples = *shape.samples_per_tick.last().expect("ticks ran");
@@ -719,7 +719,7 @@ where `ProbeCounts` gains `warm_samples: u64` and `second_fresh_samples: u64` (m
     assert!(last_samples <= 4_469, "H5: at most 4,469 field samples in tick 60 (from 44,694)");
 ```
 
-- [ ] **Step 3: Session.** Add the field (doc it beside `folds`, same reasoning: session-lived, interior mutability for `&self` readers, discardable):
+- [x] **Step 3: Session.** Add the field (doc it beside `folds`, same reasoning: session-lived, interior mutability for `&self` readers, discardable):
 ```rust
     /// The session-lived room memo (The Detent, spec §2.1): what the terrain
     /// determines about a room, held for the session and read by every
@@ -743,13 +743,13 @@ Initialise in `start`: `ground: crate::ground::OwnedGround::new(crate::ground::G
     pub fn resident_ground_misses(&self) -> u64 { self.ground.borrow().misses() }
 ```
 
-- [ ] **Step 4: The lab and the benches.** `health.rs` `run_simulation`: create `let ground = hornvale_vessel::ground::OwnedGround::new(hornvale_vessel::ground::GroundHazards::new());` beside its `folds`/`mesh_memo`, and append `.with_ground(&ground)` to its `with_fields` call (line ~260). `session_length_scaling.rs`: same beside `folds` (line ~1139); append `.with_ground(&ground)` to the per-tick terrain (~1181), `probe_terrain` (~1240) and `fatigue_terrain` (~1264). `agent_scaling.rs`: same in `run_rung` beside `folds` (~393), append to the terrain at ~418. **Do not change the hazard probe's fresh-memo-per-call shape** — H4's comparability depends on it.
+- [x] **Step 4: The lab and the benches.** `health.rs` `run_simulation`: create `let ground = hornvale_vessel::ground::OwnedGround::new(hornvale_vessel::ground::GroundHazards::new());` beside its `folds`/`mesh_memo`, and append `.with_ground(&ground)` to its `with_fields` call (line ~260). `session_length_scaling.rs`: same beside `folds` (line ~1139); append `.with_ground(&ground)` to the per-tick terrain (~1181), `probe_terrain` (~1240) and `fatigue_terrain` (~1264). `agent_scaling.rs`: same in `run_rung` beside `folds` (~393), append to the terrain at ~418. **Do not change the hazard probe's fresh-memo-per-call shape** — H4's comparability depends on it.
 
-- [ ] **Step 5: The two-terrain test from Task 3 Step 5** now compiles: add it to `the_detent.rs`, run it, and record whether the "refused shape" clause actually observes aliasing (it must; if `s2.hazards(&probe)` equals `bare`, the memo is not being read — stop).
+- [x] **Step 5: The two-terrain test from Task 3 Step 5** now compiles: add it to `the_detent.rs`, run it, and record whether the "refused shape" clause actually observes aliasing (it must; if `s2.hazards(&probe)` equals `bare`, the memo is not being read — stop).
 
-- [ ] **Step 6: Run everything that touches these files**: `cargo test -p hornvale-vessel --test suite -- the_detent resident_folds ledger_hash_witness --nocapture`, `cargo test -p hornvale-lab`. The two hash constants must still pass (byte-identity). Then `make gate-commit`.
+- [x] **Step 6: Run everything that touches these files**: `cargo test -p hornvale-vessel --test suite -- the_detent resident_folds ledger_hash_witness --nocapture`, `cargo test -p hornvale-lab`. The two hash constants must still pass (byte-identity). Then `make gate-commit`.
 
-- [ ] **Step 7: Regenerate the type-audit report, commit**
+- [x] **Step 7: Regenerate the type-audit report, commit**
 
 ```bash
 cargo run --manifest-path tools/type-audit/Cargo.toml -- report > docs/audits/type-audit-report.md
@@ -800,7 +800,7 @@ impl ResidentFolds {
 }
 ```
 
-- [ ] **Step 1: Failing unit tests** (in `resident.rs`'s test module; build trails by hand as `Vec<(WorldTime, Facet)>` — see how `resident_folds.rs`'s `hand_built_upto` makes rooms and instants, and copy its `room()` helper shape):
+- [x] **Step 1: Failing unit tests** (in `resident.rs`'s test module; build trails by hand as `Vec<(WorldTime, Facet)>` — see how `resident_folds.rs`'s `hand_built_upto` makes rooms and instants, and copy its `room()` helper shape):
 
 ```rust
     #[test]
@@ -853,9 +853,9 @@ impl ResidentFolds {
 ```
 Check `Facet`'s accessor for its path (`path()` or similar) in `kernel/src/room.rs` and adjust the judge; the point is a verdict that varies by room.
 
-- [ ] **Step 2: Run to see them fail.** `cargo test -p hornvale-vessel resident::` — FAIL: type missing.
+- [x] **Step 2: Run to see them fail.** `cargo test -p hornvale-vessel resident::` — FAIL: type missing.
 
-- [ ] **Step 3: Implement**, after `SustenanceMemo`:
+- [x] **Step 3: Implement**, after `SustenanceMemo`:
 
 ```rust
 /// One entity's held verdicts about the ground it has stood on (The Detent,
@@ -956,7 +956,7 @@ Also a read-only `pub fn frightening_ground(&self) -> &FrighteningGround` for M1
 
 **The trail-order claim in `advance` is load-bearing**: `Trail` is ascending by `(day, room)`, so the first occurrence of a room in trail order IS its earliest day. Assert it in a unit test with a trail whose rooms interleave (room A day 1, room B day 2, room A day 3) — `frightening_at` must carry A at day 1, not 3.
 
-- [ ] **Step 4: Run, fmt, clippy, type-audit report, gate, commit.**
+- [x] **Step 4: Run, fmt, clippy, type-audit report, gate, commit.**
 
 ```bash
 git add windows/vessel/src/resident.rs docs/audits/type-audit-report.md
@@ -980,11 +980,11 @@ EOF
 - Consumes: `FrighteningGround::{advance, frightening_at}`, `ResidentFolds::latest_visit_trail_and_ground`, `threat_field`, `mettle_factor`, `DANGER_ACT`, `feels_frightening`.
 - Produces: the same `EmitterScan` and `HazardMemory` values as before, byte for byte — the oracle in `emitter_scan.rs` is the proof.
 
-- [ ] **Step 1: Preserve the oracle FIRST.** Before touching either function, copy the CURRENT bodies of `build_emitter_scan`'s pass 1+2 and of `hazard_memory_memo`'s emitter-free loop into `liveness_tests/emitter_scan.rs` as `fn scan_oracle(roster, ledger, folds, terrain, t) -> (Vec<bool> /* is_emitter */, BTreeSet<Facet> /* alarm_source_rooms */)` and `fn emitter_free_oracle(latest: &BTreeMap<Facet, WorldTime>, npc, terrain) -> BTreeSet<Facet>`, verbatim except for the witness calls. The module is in-crate (`super::*` sees `threat_field`, `mettle_factor`, `DANGER_ACT`, `feels_frightening`, `EmitterScan`), which is why it lives under `src/` and not `tests/suite/` — `pub(crate)` is invisible to an integration test crate, so the registry row's "move the tests to `tests/suite/resident_folds.rs`" cannot be done as written; this is the correction (ledger it).
+- [x] **Step 1: Preserve the oracle FIRST.** Before touching either function, copy the CURRENT bodies of `build_emitter_scan`'s pass 1+2 and of `hazard_memory_memo`'s emitter-free loop into `liveness_tests/emitter_scan.rs` as `fn scan_oracle(roster, ledger, folds, terrain, t) -> (Vec<bool> /* is_emitter */, BTreeSet<Facet> /* alarm_source_rooms */)` and `fn emitter_free_oracle(latest: &BTreeMap<Facet, WorldTime>, npc, terrain) -> BTreeSet<Facet>`, verbatim except for the witness calls. The module is in-crate (`super::*` sees `threat_field`, `mettle_factor`, `DANGER_ACT`, `feels_frightening`, `EmitterScan`), which is why it lives under `src/` and not `tests/suite/` — `pub(crate)` is invisible to an integration test crate, so the registry row's "move the tests to `tests/suite/resident_folds.rs`" cannot be done as written; this is the correction (ledger it).
 
-- [ ] **Step 2: Write the failing FOLD-equals-SCAN test** in `emitter_scan.rs`: on the H5 bench shape at ticks 5, 10, 15 (build a small in-crate copy of `bench_shape` — 10 agents, 15 ticks, no counting), for every roster member and for `t` = the tick's instant AND `t` = an instant one day earlier (the lab's past-instant shape), assert `build_emitter_scan(...)`'s `emitters` entity list and `alarm_source_rooms` equal the oracle's, and `hazard_memory_memo(...)`'s `shunned`/`dread` equal the oracle's on the emitter-free path. Floors: at least one member is an emitter on some tick OR the test also runs on `EMITTER_SEED`'s derived roster (it must — seed 42's derived roster has no emitter; seed 6's has one); at least one room judged frightening somewhere (print counts). This test passes TODAY (the oracle is today's code) — that is expected; it goes red only if Step 3 breaks equality, which is its job.
+- [x] **Step 2: Write the failing FOLD-equals-SCAN test** in `emitter_scan.rs`: on the H5 bench shape at ticks 5, 10, 15 (build a small in-crate copy of `bench_shape` — 10 agents, 15 ticks, no counting), for every roster member and for `t` = the tick's instant AND `t` = an instant one day earlier (the lab's past-instant shape), assert `build_emitter_scan(...)`'s `emitters` entity list and `alarm_source_rooms` equal the oracle's, and `hazard_memory_memo(...)`'s `shunned`/`dread` equal the oracle's on the emitter-free path. Floors: at least one member is an emitter on some tick OR the test also runs on `EMITTER_SEED`'s derived roster (it must — seed 42's derived roster has no emitter; seed 6's has one); at least one room judged frightening somewhere (print counts). This test passes TODAY (the oracle is today's code) — that is expected; it goes red only if Step 3 breaks equality, which is its job.
 
-- [ ] **Step 3: Rewrite `build_emitter_scan`** pass 1+2 over the index:
+- [x] **Step 3: Rewrite `build_emitter_scan`** pass 1+2 over the index:
 
 ```rust
     // Pass 1+2, over the verdict index (The Detent, spec §2.3): each
@@ -1018,7 +1018,7 @@ with `fn note_halo(set: &mut BTreeSet<Facet>, p: &Facet)` inserting `p` and `p.n
 
 `ReadWitness` gains `note_ground_judged(&mut self, n: u64)` and `ground_judged(&self) -> u64` (type-audit `bare-ok(count)`), the H6 instrument.
 
-- [ ] **Step 4: Rewrite the emitter-free path** of `hazard_memory_memo`:
+- [x] **Step 4: Rewrite the emitter-free path** of `hazard_memory_memo`:
 
 ```rust
     if scan.emitters.is_empty() {
@@ -1044,7 +1044,7 @@ with `fn note_halo(set: &mut BTreeSet<Facet>, p: &Facet)` inserting `p` and `p.n
 
 The `latest` map is still needed for the EMITTER path (untouched), so keep its computation but move it below the emitter-free early return only if the witness's `note_hazard` is still recorded FIRST for every call — read the existing comment ("Spec §3 rule 6's witness is taken in the same guard, and FIRST"); keep that ordering: witness first, then the early return, then `latest` for the emitter path.
 
-- [ ] **Step 5: Run the oracle test** (`cargo test -p hornvale-vessel emitter_scan_tests`) — PASS means equality held; then run the H5 witness and the two hash constants; then add H5's second reading and H6 to the witness:
+- [x] **Step 5: Run the oracle test** (`cargo test -p hornvale-vessel emitter_scan_tests`) — PASS means equality held; then run the H5 witness and the two hash constants; then add H5's second reading and H6 to the witness:
 
 ```rust
     // H5, second reading (Stage 3): not just field samples — the CALLS are
@@ -1064,7 +1064,7 @@ The `latest` map is still needed for the EMITTER path (untouched), so keep its c
 ```
 `bench_shape` records `judged_per_tick` (delta of `witness.ground_judged()`) and `distinct_rooms_per_tick` (sum of `visits.of(e).len()` per tick). Run: green. Record the red: check out the Task 5 commit's `liveness.rs` (`git stash` is shared across worktrees — do NOT use it; use `git show <task-5-sha>:windows/vessel/src/liveness.rs > /tmp/pre.rs` and swap it in by copy, run the witness, restore by `git checkout -- windows/vessel/src/liveness.rs`, and REBUILD before trusting the next green — a restored source with a stale binary is a known trap). Paste the red output in the report.
 
-- [ ] **Step 6: fmt, clippy, gate, commit**
+- [x] **Step 6: fmt, clippy, gate, commit**
 
 ```bash
 git add windows/vessel/src/liveness.rs windows/vessel/src/liveness_tests/emitter_scan.rs windows/vessel/src/resident.rs windows/vessel/tests/suite/the_detent.rs docs/audits/type-audit-report.md
@@ -1083,9 +1083,9 @@ EOF
 - Modify: `windows/vessel/src/liveness.rs` — delete `believed_hazard_memo` (~1476-1490) and every mention of it in doc comments (`grep -n believed_hazard_memo windows/vessel/src/*.rs windows/vessel/tests/suite/*.rs`); move the existing in-file `EmitterScan` equivalence tests (find them: `grep -n 'fn .*emitter_scan\|EmitterScan' windows/vessel/src/liveness.rs` inside `#[cfg(test)] mod tests`) into `liveness_tests/emitter_scan.rs`.
 - Modify: `docs/audits/type-audit-report.md` (regenerate — a `pub fn` was deleted)
 
-- [ ] **Step 1:** Delete `believed_hazard_memo`; build; fix any doc link (`[`believed_hazard_memo`]`) the compiler or `cargo doc` flags — replace with `hazard_memory_memo(...).shunned`.
-- [ ] **Step 2:** Move the tests; each moved test keeps its name exactly (the subfloor roster selects by name). Run `cargo test -p hornvale-vessel emitter_scan_tests` and `cargo test -p hornvale-vessel liveness::tests` — the moved tests run from the new module, and `liveness.rs`'s line count drops (record before/after with `wc -l`).
-- [ ] **Step 3:** fmt, clippy, type-audit report, gate, commit:
+- [x] **Step 1:** Delete `believed_hazard_memo`; build; fix any doc link (`[`believed_hazard_memo`]`) the compiler or `cargo doc` flags — replace with `hazard_memory_memo(...).shunned`.
+- [x] **Step 2:** Move the tests; each moved test keeps its name exactly (the subfloor roster selects by name). Run `cargo test -p hornvale-vessel emitter_scan_tests` and `cargo test -p hornvale-vessel liveness::tests` — the moved tests run from the new module, and `liveness.rs`'s line count drops (record before/after with `wc -l`).
+- [x] **Step 3:** fmt, clippy, type-audit report, gate, commit:
 
 ```bash
 git commit -F- <<'EOF'
@@ -1106,15 +1106,15 @@ EOF
 - Modify: `windows/vessel/tests/suite/the_detent.rs` (append three witnesses)
 - Modify: `windows/vessel/examples/session_length_scaling.rs` — M1 columns per band: `ground_len`, `ground_bytes`, `index_entries`, `index_bytes`
 
-- [ ] **Step 1: Rule 2, the affect replay on the seed-6 possession shape.** A witness that starts a session on `EMITTER_SEED`, runs `run_emitter_script`, and prints per tick: `resident_alarm_replays()` delta, `resident_ground_misses()` delta, `resident_ground_hits()` delta, and the hazards() calls made INSIDE replays — count those by reading `resident_ground_hits()+misses()` before and after `session.hazard_memories()` while the replay counter moves. Assert `replays > 0` (denominator — this is the shape that reaches it). Print the share: calls attributable to replays over all calls in the hazard read. No threshold: the number goes in the ledger and decides rule 2's branch.
+- [x] **Step 1: Rule 2, the affect replay on the seed-6 possession shape.** A witness that starts a session on `EMITTER_SEED`, runs `run_emitter_script`, and prints per tick: `resident_alarm_replays()` delta, `resident_ground_misses()` delta, `resident_ground_hits()` delta, and the hazards() calls made INSIDE replays — count those by reading `resident_ground_hits()+misses()` before and after `session.hazard_memories()` while the replay counter moves. Assert `replays > 0` (denominator — this is the shape that reaches it). Print the share: calls attributable to replays over all calls in the hazard read. No threshold: the number goes in the ledger and decides rule 2's branch.
 
-- [ ] **Step 2: Rule 4, the timeline copy on seed 6's 50-agent roster.** In `build_emitter_scan` pass 3, after `trail.of(m.entity)[..upto].to_vec()`, record `witness.note_emitter_timeline_copied(upto as u64)`. Witness: `bench_shape(EMITTER_SEED, 60, 50)` and print entries copied per tick at ticks 15/30/60 and the roster's trail sum; assert `with_emitters > 0` (denominator). No threshold; the branch is decided in the ledger (spec rule 4: under 1% of the tick's allocation or flat with history → keep the copy).
+- [x] **Step 2: Rule 4, the timeline copy on seed 6's 50-agent roster.** In `build_emitter_scan` pass 3, after `trail.of(m.entity)[..upto].to_vec()`, record `witness.note_emitter_timeline_copied(upto as u64)`. Witness: `bench_shape(EMITTER_SEED, 60, 50)` and print entries copied per tick at ticks 15/30/60 and the roster's trail sum; assert `with_emitters > 0` (denominator). No threshold; the branch is decided in the ledger (spec rule 4: under 1% of the tick's allocation or flat with history → keep the copy).
 
-- [ ] **Step 3: Rule 5, past-instant reads on the lab shape.** Extend `resident_folds.rs`'s existing rule-6 witness's shape-2 block (the `run_simulation` shape, `affect_of_memo_occupied` at a waking instant) — do NOT rename that test; write a NEW test in `the_detent.rs` that runs the same construction for 10 ticks with `WorldTime::from_std_days((day - 1.0) + waking_offset)` instants exactly as `health.rs:169-186` does, and asserts `resident_hazards_in_the_past() > 0` (the index's prefix machinery has a production caller) and that every `hazard_memory_memo` result at a past instant equals the same call served by a FRESH store (discard-and-rebuild at a past instant). Print the count.
+- [x] **Step 3: Rule 5, past-instant reads on the lab shape.** Extend `resident_folds.rs`'s existing rule-6 witness's shape-2 block (the `run_simulation` shape, `affect_of_memo_occupied` at a waking instant) — do NOT rename that test; write a NEW test in `the_detent.rs` that runs the same construction for 10 ticks with `WorldTime::from_std_days((day - 1.0) + waking_offset)` instants exactly as `health.rs:169-186` does, and asserts `resident_hazards_in_the_past() > 0` (the index's prefix machinery has a production caller) and that every `hazard_memory_memo` result at a past instant equals the same call served by a FRESH store (discard-and-rebuild at a past instant). Print the count.
 
-- [ ] **Step 4: M1.** Add to `session_length_scaling.rs`'s `Band` struct and its printed table: `ground_len` (`ground.borrow().len()`), `ground_bytes` (`ground_len × (size_of::<Facet>() + size_of::<Hazards>())` — state the formula in the column doc; it is an estimate of held data, not an allocator measurement), `index_entries` (`folds.borrow().frightening_ground().entries()`), `index_bytes` (`entries × (size_of::<Facet>() + size_of::<bool>() + size_of::<(WorldTime, Facet)>())`, same caveat). Run the bench once in `--release` on any box to confirm the columns print (M1 is a count; the timing columns are Task 9's).
+- [x] **Step 4: M1.** Add to `session_length_scaling.rs`'s `Band` struct and its printed table: `ground_len` (`ground.borrow().len()`), `ground_bytes` (`ground_len × (size_of::<Facet>() + size_of::<Hazards>())` — state the formula in the column doc; it is an estimate of held data, not an allocator measurement), `index_entries` (`folds.borrow().frightening_ground().entries()`), `index_bytes` (`entries × (size_of::<Facet>() + size_of::<bool>() + size_of::<(WorldTime, Facet)>())`, same caveat). Run the bench once in `--release` on any box to confirm the columns print (M1 is a count; the timing columns are Task 9's).
 
-- [ ] **Step 5:** fmt, clippy, type-audit report, gate, commit:
+- [x] **Step 5:** fmt, clippy, type-audit report, gate, commit:
 
 ```bash
 git commit -F- <<'EOF'
@@ -1136,11 +1136,11 @@ EOF
 - Modify: `book/src/frontier/idea-registry.md` (the corrected row gains the readout's numbers; `TOOL-emitter-scan-tests-out-of-liveness` and `TOOL-believed-hazard-memo-is-dead` flip to `shipped` with a Where cell naming this campaign and the `#[path]` correction)
 - Create: `docs/decisions/0626-*.md`, `0627-*.md`, `0628-*.md` (spec §8), `book/src/chronicle/the-detent.md`, `docs/retrospectives/the-detent.md`; the `book/src/SUMMARY.md` chronicle entry and `docs/retrospectives/README.md` index line; `book/src/open-questions.md` re-score.
 
-- [ ] **Step 1: The control.** A detached worktree of the campaign's merge base (`git merge-base origin/main campaign/the-detent`) with the three examples' constants verified identical (`AGENTS = 50`, `TICKS = 200`, `FOLD_REPS = 200`, `BAND = 20`) and NO `ground` (grep confirms). Build both trees `--release`.
-- [ ] **Step 2: The runs**, interleaved control/campaign, on a quiet box (1-minute load ≤ 10 before and after or the run is set aside and listed): `session_length_scaling` ≥ 3 valid runs a side; `agent_scaling` ≥ 2 paired runs; `fold_depth_sweep` once a side. Record every run with its loads in §11, including the discarded.
-- [ ] **Step 3: §11**, in The Pawl's §12 layout: the quiet-box rule as applied; the decisive H4 column with `k`, r², elasticity, `C`, final-band µs/call per run and side; the whole tick and attribution; the verdict table against §4 (H4 a/b — both against the frozen 73–97 ms and the same-box control, named; H2 c; H3; H5; H6; the falsifier with the crossover); the level from `agent_scaling`; `fold_depth_sweep` as the no-regression control; M1's bytes on all three shapes; rules 2 and 4's branches as decided from Task 8's numbers.
-- [ ] **Step 4: Retire the constants** (decision 0541) and re-run the witness file.
-- [ ] **Step 5: The close artifacts** — invoke the `closing-a-campaign` skill and follow it: decisions 0626–0628 (0629 if rule 2 fired), chronicle, retrospective, registry flips, Confidence Gradient re-score, followups, the null census (`make sluice-census`), then the G6 package and `make sluice`.
+- [x] **Step 1: The control.** A detached worktree of the campaign's merge base (`git merge-base origin/main campaign/the-detent`) with the three examples' constants verified identical (`AGENTS = 50`, `TICKS = 200`, `FOLD_REPS = 200`, `BAND = 20`) and NO `ground` (grep confirms). Build both trees `--release`.
+- [x] **Step 2: The runs**, interleaved control/campaign, on a quiet box (1-minute load ≤ 10 before and after or the run is set aside and listed): `session_length_scaling` ≥ 3 valid runs a side; `agent_scaling` ≥ 2 paired runs; `fold_depth_sweep` once a side. Record every run with its loads in §11, including the discarded.
+- [x] **Step 3: §11**, in The Pawl's §12 layout: the quiet-box rule as applied; the decisive H4 column with `k`, r², elasticity, `C`, final-band µs/call per run and side; the whole tick and attribution; the verdict table against §4 (H4 a/b — both against the frozen 73–97 ms and the same-box control, named; H2 c; H3; H5; H6; the falsifier with the crossover); the level from `agent_scaling`; `fold_depth_sweep` as the no-regression control; M1's bytes on all three shapes; rules 2 and 4's branches as decided from Task 8's numbers.
+- [x] **Step 4: Retire the constants** (decision 0541) and re-run the witness file.
+- [x] **Step 5: The close artifacts** — invoke the `closing-a-campaign` skill and follow it: decisions 0626–0628 (0629 if rule 2 fired), chronicle, retrospective, registry flips, Confidence Gradient re-score, followups, the null census (`make sluice-census`), then the G6 package and `make sluice`.
 
 ---
 
@@ -1153,3 +1153,32 @@ EOF
 **Type consistency.** `OwnedGround` = `RefCell<GroundHazards>` throughout; `with_ground(self, &'a OwnedGround)`; `hazards_or_insert_with(&mut self, &Facet, impl FnOnce() -> Hazards) -> Hazards`; `FrighteningGround::{advance, frightening_at, verdict, judged, entries}`; `ResidentFolds::latest_visit_trail_and_ground` returns `(&LatestVisit, &Trail, &mut FrighteningGround, &mut ReadWitness)` in Tasks 5 and 6 alike; `ReadWitness::{note_ground_judged, ground_judged, note_emitter_timeline_copied, emitter_timeline_copied}`; `Session::{terrain_for_tests, resident_ground_len, resident_ground_hits, resident_ground_misses, resident_ground_judged_entries, resident_emitter_timeline_copied}`.
 
 **One correction made while reviewing.** Task 4 Step 1's red-then-green cannot use a failing assertion, because the assertion's subject (memo misses) does not exist before the memo does; the plan says so and takes Task 1's printed count as the red for that clause only. Task 6's red IS a failing assertion (calls), taken by swapping in the pre-Task-6 `liveness.rs` by copy, never by `git stash`.
+
+---
+
+## Closing note (2026-09-03)
+
+Every task shipped and every stage gate ran green. Both readouts are in the
+spec (§11, §12) and the campaign's status is §13.
+
+**Four defects in this plan's own text were caught and corrected by the
+implementers who executed it**, and a fifth was not caught until the readout —
+which is the ordering worth recording, because the four that were caught were
+all checkable claims about the tree and the fifth was an instruction:
+
+1. **"Leave the `latest` block where it is"** (Task 6). It left an
+   O(distinct-rooms) map above an early return this plan's own spec had
+   specified as prefix-bounded. Not caught by anyone; it cost the campaign a
+   whole readout and the campaign's single post-unblinding change.
+2. **"Six `with_fields` sites"** (Task 4). There are five; the implementer ran
+   the grep and reported the count.
+3. **"Two `LocaleTerrain` construction sites"** (Task 3). There are three; the
+   compiler found `with_calendar` with a missing-field error.
+4. **`health.rs`'s `run_simulation`** (Task 4). The wrong twin —
+   `run_simulation` builds no terrain at all; `run_simulation_with_locale` is
+   the one that rebuilds per tick.
+5. **`Facet::new(face, &[])`** (Task 3). No such constructor; the plan's own
+   read-before-write instruction is what caught it.
+
+The full list, with the two more this campaign's close task added, is in
+[the retrospective](../../retrospectives/the-detent.md).

@@ -1470,3 +1470,30 @@ accumulator left behind, untouched here.
   final-band 94.62 µs/call) sit inside the four valid runs' spread — the load
   rule cost this readout a data point it did not need, which is the right
   direction for a rule to err.
+
+## 13. Status
+
+**Closed 2026-09-03.** Both readouts stand as measured — §11 unedited, §12 a
+pure append — and §4 is byte-for-byte what it was when frozen on 2026-08-24.
+Three criteria met and one not: H4 (a) **0.04** against < 0.20 (with §4's own
+`r² ≥ 0.5` filter reported inapplicable rather than applied silently, §12.2),
+H4 (b) **758–1,008x** against ≥ 10x, H5 and H6 met by committed witnesses, H3
+held and re-witnessed by a byte-identical deterministic-column md5 across two
+trees and two code states, and M1 recorded at 18,902 rooms / ~1.455 MB and
+4,665 index entries / ~215 KB; **H2 (c) NOT MET at 59.95%** against < 20%, and
+§12.4 computes rather than argues why. The falsifier cannot fire (the crossover
+sits at `h = −20.6`, off the positive axis) and the level moved **−9.27%** at
+200 agents over four valid pairs. Decisions 0626–0628 are ratified; the
+campaign-time hash constants of decision 0541 retired at close, leaving the two
+witnesses constant-free with every floor kept and checked on both runs.
+
+**What the campaign leaves owed**, each carried on an idea-registry row and
+listed in [the retrospective](../../retrospectives/the-detent.md): the
+KnownWater path search per known water room (99.08% of the six timed folds, and
+the reason H2 (c) fails); the danger drive's per-step terrain sampling (2,268
+of a tick's 3,168 remaining terrain questions); an effect-size floor for an
+H4-shaped criterion; The Plumb's blind spot for a `#[cfg(test)]` carried on a
+`#[path]`-included module; the reset-partition affect memo, unbuilt, with its
+measured number and a TIMED 10% trigger; a second shape for rule 4's emitter
+trail copy, which was measured only in its cheapest case; and the latest-visit
+map's placement below the emitter-free early return, guarded by prose alone.
