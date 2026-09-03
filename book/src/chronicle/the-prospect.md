@@ -109,9 +109,21 @@ still ~2,400x short of the promise.
 So the answer to *"is this a rendering problem or a generation problem?"* is
 neither. It is the **shape of the model**. Density cannot be bought by tuning
 thresholds on a lattice with 41,000 points, because 41,000 things cannot fill
-402 million places. That conclusion is now pinned by an assertion that reddens
-the day the globe level, the walk band, the tier set or a site's extent changes,
-so the finding cannot quietly rot into folklore.
+402 million places. That conclusion is pinned by an assertion, so it
+cannot quietly rot into folklore — but the pin covers less than this paragraph
+first claimed, and the difference is worth stating rather than smoothing.
+
+It reddens if the walk band's grain moves relative to the globe, and if a new
+site extent or a new site kind appears. It does **not** notice a change to the
+globe level alone, because the walk band is defined seven levels below it and
+the ratio is therefore scale-invariant — a dependency the first draft asserted
+and the code never had. Nor can it notice the arrival of a derived tier: the
+measurement collects three concrete rosters, and a derived producer would be a
+fourth thing nothing obliges it to call, so derived sites would not enter the
+union and neither rate would move. That day has to be caught by a different
+guard, and the honest statement is that this one will not catch it. A broad
+false guarantee is worse than a narrow true one, because only the false one
+stops people looking.
 
 ## What the campaign shipped, and the vocabulary it settled
 
