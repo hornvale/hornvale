@@ -256,3 +256,41 @@ then, against local vessel-crate greens of 412 and 658 tests. Second
 finding for the register: a negative control whose fixture is a live
 branch cannot distinguish a harness bug from a real collision — the vet
 test needs a synthetic probe.
+
+### Tasks 3 and 4 — complete (2026-09-03)
+
+**Task 4 first, Task 3 second — a reorder ruled at dispatch.** The box sat
+at load average 122 when Task 3 came up, which would have made a ≤ 3 ms
+line meaningless; Task 4 is prose, a decision record and a rebaseline and
+needs no number, so it ran first. Five hours later the box read 2.0 and
+`campaign/the-prospect` no longer minted 0540, so Task 3 and the stage-gate
+resubmission (`req-8b4f7f49065e`, at `8b4f7f490`) went out together. Cost
+if wrong: none observed; both readings were taken quiet (all three
+averages ≤ 2.67).
+
+**Task 3 (commits `d0487e1a1..35b3ba981`): every preregistered line met.**
+Chamber `snapshot()+json` after `map`/`go` 16.3–16.8 → **0.457–0.525 ms**
+(P2 ≤ 3); `enter` handle 33.7 → **0.175–0.178 ms** (P2 ≤ 3); chamber
+`look` handle 16.5 → **0.095–0.114 ms** (P2 ≤ 1); `Session::start` 845 →
+868 ms, **+23 ms** (P4 ≤ +30); outdoor rows 4.06–4.98 ms, the control,
+unmoved. Client, default profile: every indoor movement turn 18.7–47.4 →
+**0.61–0.82 ms** (P3 ≤ 15, the line the campaign was opened on); outdoor
+9.27–13.07 ms, unmoved beyond noise. The reviewer re-derived every min,
+max, rounding and delta from the pasted output. Deferred minor: the
+client block compares a quiet outdoor range against The Rack's contended
+one without saying so.
+
+**Task 4 (commit `8b4f7f490`, fix `d73429896`): the corrections landed;
+two rulings.** Both registry rows had to be trimmed to the 600-character
+Idea cap (890→599, 763→592) and the reviewer confirmed nothing load-bearing
+dropped except "two to five times per indoor turn", which the chronicle and
+decision 0636 carry — deferred minor. The implementer wrote the chronicle
+in full where the brief said "stub now, real one in Task 5", and put it
+after The Rack in `SUMMARY.md` where three newer chronicles follow. Ruling
+on the first: **keep it** — every number and mechanism in it was verified
+against source and spec by the reviewer, and deleting verified prose to
+honour a sequencing note buys nothing; Task 5 extends it (numbers table,
+ratchet direction, honest limits) instead of creating it. The second was a
+one-line move the controller made inline under the dispatch skill's
+trivial-exact-content carve-out, re-reviewed. `make rebaseline` moved only
+`docs/digest/decisions-in-force.md`, as P5's rule allows.
