@@ -449,6 +449,7 @@
 - [The Brattice](./chronicle/the-brattice.md)
 - [The Detent](./chronicle/the-detent.md)
 - [The Terrier](./chronicle/the-terrier.md)
+- [The Nettle](./chronicle/the-nettle.md)
 
 # Appendix: The Frontier
 

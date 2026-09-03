@@ -5157,6 +5157,9 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-03T00:57:09Z | sluice:gate | 669.773 | 19382.777 | 610.137 | 29.85 | 0 | 2d4f90b2b |  | lefford | 40 |
 | 2026-09-03T00:59:15Z | sluice:clients | 125.887 | 2094.198 | 195.011 | 18.18 | 0 | 52b563df7 |  | lefford | 40 |
 | 2026-09-03T01:07:16Z | sluice:heavy | 480.322 | 9554.727 | 160.148 | 20.23 | 0 | 85c3b9c74 |  | lefford | 40 |
+| 2026-09-03T10:07:29Z | prewarm | 942.388 | 1519.404 | 156.535 | 1.78 | 0 | 3571336a5 | campaign/the-nettle | ambrose | 12 |
+| 2026-09-03T10:12:46Z | gate-commit | 933.130 | 188.248 | 113.289 | 0.32 | 0 | 3571336a5 | campaign/the-nettle | ambrose | 12 |
+| 2026-09-03T10:49:30Z | gate-commit | 384.434 | 89.093 | 38.806 | 0.33 | 0 | b11b7c9c2 | campaign/the-nettle | ambrose | 12 |
 | 2026-09-03T01:26:22Z | rebaseline | 223.754 | 339.511 | 18.624 | 1.60 | 0 | 57f2b1651 | campaign/the-rack | MacBookPro | 10 |
 | 2026-09-03T01:33:08Z | gate-commit | 132.805 | 699.018 | 79.460 | 5.86 | 0 | 57f2b1651 | campaign/the-rack | MacBookPro | 10 |
 | 2026-09-03T01:36:53Z | sluice:artifacts | 136.139 | 1385.452 | 59.357 | 10.61 | 0 | 9b19aaf67 |  | lefford | 40 |
@@ -5197,6 +5200,14 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-03T09:32:38Z | sluice:gate | 654.242 | 18829.210 | 583.941 | 29.67 | 0 | 7f318b35c |  | lefford | 40 |
 | 2026-09-03T09:34:46Z | sluice:clients | 127.477 | 2059.247 | 201.623 | 17.74 | 0 | bbea7d34f |  | lefford | 40 |
 | 2026-09-03T09:42:18Z | sluice:heavy | 451.605 | 9705.995 | 149.448 | 21.82 | 0 | ac1177783 |  | lefford | 40 |
+| 2026-09-03T11:20:38Z | gate-commit | 920.038 | 1142.968 | 219.426 | 1.48 | 0 | 123cb5087 | campaign/the-nettle | ambrose | 12 |
+| 2026-09-03T11:22:59Z | gate-commit | 88.455 | 52.499 | 16.655 | 0.78 | 0 | 123cb5087 | campaign/the-nettle | ambrose | 12 |
+| 2026-09-03T11:39:17Z | gate-commit | 284.491 | 86.780 | 28.292 | 0.40 | 0 | 1aa5fa74f | campaign/the-nettle | ambrose | 12 |
+| 2026-09-03T11:48:55Z | gate-commit | 230.402 | 39.166 | 13.091 | 0.23 | 0 | 1aa5fa74f | campaign/the-nettle | ambrose | 12 |
+| 2026-09-03T11:52:52Z | gate-commit | 217.883 | 88.114 | 38.535 | 0.58 | 0 | 1aa5fa74f | campaign/the-nettle | ambrose | 12 |
+| 2026-09-03T11:56:57Z | gate-commit | 223.706 | 85.909 | 40.017 | 0.56 | 0 | 1aa5fa74f | campaign/the-nettle | ambrose | 12 |
+| 2026-09-03T12:07:58Z | gate-commit | 257.142 | 90.672 | 40.641 | 0.51 | 0 | a65156db1 | campaign/the-nettle | ambrose | 12 |
+| 2026-09-03T12:38:50Z | gate-commit | 151.948 | 73.980 | 34.728 | 0.72 | 0 | aff14a2ec | campaign/the-nettle | ambrose | 12 |
 | 2026-09-03T10:11:40Z | rebaseline | 1047.945 | 454.665 | 38.894 | 0.47 | 0 | 8a5c56189 | campaign/the-brattice | ambrose | 12 |
 | 2026-09-03T11:03:21Z | gate-commit | 666.832 | 690.741 | 150.163 | 1.26 | 0 | 8a5c56189 | campaign/the-brattice | ambrose | 12 |
 | 2026-09-03T11:08:20Z | sluice:artifacts | 239.892 | 1955.135 | 83.256 | 8.50 | 0 | f40b32ff1 |  | lefford | 40 |
@@ -5212,3 +5223,16 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-03T13:00:45Z | gate-commit | 63.099 | 89.052 | 27.614 | 1.85 | 0 | e16dc8371 | campaign/the-terrier | MacBookPro | 10 |
 | 2026-09-03T13:26:51Z | rebaseline | 241.557 | 379.087 | 14.885 | 1.63 | 0 | 16e1e4de9 | campaign/the-terrier | MacBookPro | 10 |
 | 2026-09-03T18:17:47Z | gate-commit | 36.936 | 68.068 | 15.672 | 2.27 | 0 | 8b4f7f490 | campaign/the-terrier | MacBookPro | 10 |
+| 2026-09-03T13:12:49Z | gate-commit | 174.025 | 2331.159 | 222.880 | 14.68 | 0 | d9749623b | main | lefford | 40 |
+| 2026-09-03T13:17:06Z | sluice:artifacts | 217.473 | 1356.588 | 53.742 | 6.49 | 0 | 59e0b1bbf |  | lefford | 40 |
+| 2026-09-03T13:18:11Z | sluice:outboard | 64.197 | 38.078 | 48.062 | 1.34 | 0 | 2e4b53e35 |  | lefford | 40 |
+| 2026-09-03T13:28:22Z | sluice:gate | 611.138 | 18611.959 | 501.885 | 31.28 | 0 | 1159941fa |  | lefford | 40 |
+| 2026-09-03T13:30:13Z | sluice:clients | 110.767 | 1866.678 | 193.514 | 18.60 | 0 | 9d8174236 |  | lefford | 40 |
+| 2026-09-03T13:37:52Z | sluice:heavy | 458.182 | 9694.995 | 167.839 | 21.53 | 0 | d7736536c |  | lefford | 40 |
+| 2026-09-03T13:38:53Z | gate-commit | 997.563 | 925.189 | 196.835 | 1.12 | 0 | b565e7e3e | campaign/the-nettle | ambrose | 12 |
+| 2026-09-03T15:00:57Z | gate-commit | 290.109 | 81.809 | 41.984 | 0.43 | 0 | e9bc17221 | campaign/the-nettle | ambrose | 12 |
+| 2026-09-03T15:06:47Z | sluice:artifacts | 182.692 | 964.675 | 38.298 | 5.49 | 0 | ead15261f |  | lefford | 40 |
+| 2026-09-03T15:07:56Z | sluice:outboard | 68.066 | 44.708 | 53.508 | 1.44 | 0 | 83716c88b |  | lefford | 40 |
+| 2026-09-03T15:18:07Z | sluice:gate | 610.342 | 18641.435 | 497.645 | 31.36 | 0 | 2397a415c |  | lefford | 40 |
+| 2026-09-03T15:19:52Z | sluice:clients | 105.519 | 1825.176 | 169.609 | 18.90 | 0 | d55bc6d27 |  | lefford | 40 |
+| 2026-09-03T15:27:23Z | sluice:heavy | 450.551 | 9633.445 | 154.769 | 21.72 | 0 | e6551520c |  | lefford | 40 |
