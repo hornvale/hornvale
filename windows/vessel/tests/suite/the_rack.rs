@@ -325,7 +325,7 @@ fn walk_a_script(seed: u64) -> (bool, bool) {
 ///   left: Facet { face: 1, path: [3, 0, 3, 1, 3, 2, 2, 1, 1, 3, 1, 3, 3] }
 ///  right: Facet { face: 1, path: [3, 0, 3, 1, 3, 2, 2, 1, 1, 1, 2, 3, 0] }`
 ///
-/// The Minute extended the script to the eight-wait shape its P2 measures,
+/// The Minute extended the script to the nine-wait shape its P2 measures,
 /// so the column is checked after every accumulating step of the walk, not
 /// just three.
 #[test]

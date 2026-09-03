@@ -121,8 +121,13 @@ fn p2_a_held_bodys_walk_accumulates_across_ticks() {
 }
 
 /// P7 — the line. Seed 7's first seeking wait names the move and does not
-/// count the body among the stirred; seed 42's second wait names the drink;
-/// a free body's line carries no minutes.
+/// count the body among the stirred; seed 42's FIRST wait names its
+/// stationary, resting minute (measured: at seed 42 the population itself
+/// DOES stir on that tick, so the line reads "Time passes. You sense
+/// movement…" rather than the alternate "Time passes; the world keeps its
+/// shape…" — either wording still ends in the held body's own "The will
+/// that holds you rests.", which is the branch this half of P7 pins); seed
+/// 42's second wait names the drink; a free body's line carries no minutes.
 #[test]
 fn p7_the_wait_line_minutes_the_held_bodys_acts() {
     let world = possessed(7);
@@ -144,7 +149,18 @@ fn p7_the_wait_line_minutes_the_held_bodys_acts() {
     let world = possessed(42);
     let (mut session, _) = Session::start(&world, &PossessOpts::default()).expect("starts");
     let _ = session.handle("!possess");
-    let _ = session.handle("!wait 5");
+    let hornvale_vessel::Turn::Out(first_line) = session.handle("!wait 5") else {
+        panic!("wait narrates")
+    };
+    assert!(
+        first_line.ends_with("The will that holds you rests."),
+        "seed 42's first wait must still name a Holding driven walk, however \
+         the population's own comings and goings are worded that tick \
+         (measured: the population DOES stir here, so the line begins \
+         \"Time passes. You sense movement\" rather than the stationary \
+         \"the world keeps its shape\" — either way the minute suffix is the \
+         thing this assertion pins): {first_line:?}"
+    );
     let hornvale_vessel::Turn::Out(line) = session.handle("!wait 5") else {
         panic!("wait narrates")
     };

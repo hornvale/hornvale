@@ -8620,7 +8620,9 @@ impl<'w> Session<'w> {
             }
         }
         if let Some(wake) = woke {
-            // The same rule `Session::sleep` applies to the verb's own span.
+            // Keep the LATER wake: a body already due up later from an
+            // earlier sleep (the verb's own, or a prior tick's) must not be
+            // woken early by this walk's own shorter one.
             self.wake_at = Some(match self.wake_at {
                 Some(current) if current > wake => current,
                 _ => wake,
@@ -8787,8 +8789,10 @@ impl<'w> Session<'w> {
         // the body has since left, so comparing it against `here` would
         // narrate everyone in the old room as gone and everyone in the new
         // one as arrived. `!look` answers for the new room. The act is
-        // attributed to the possessor's will — under decision 0168 it is the
-        // body's act and under 0226 the choice was not the player's. A free
+        // attributed to the possessor's will — decision 0168 puts an act's
+        // effect with the BODY, not the driver, and decision 0226 makes the
+        // host co-present, so the walk is the body's own arbitration, not a
+        // choice the player made. A free
         // body has no minutes (its walk Holds), so its line is byte-identical
         // to the line before this campaign.
         let here_now = &self.roster.positions()[self.roster.driven().0];
@@ -21068,11 +21072,13 @@ mod tests {
     /// Seed 7, because seed 42's flagship never leaves its room (measured: 0
     /// `agent-at` across 500 days) and the whole point is a walk that moves.
     ///
-    /// RED BEFORE TASK 2 (observed while writing it): fails earlier than the
-    /// draft predicted — at `every fact the driven walk emitted must have
-    /// been appended` (`left == right` failed: left 0, right 5), because
-    /// `wait` still discards `_driven_facts` unconditionally and none of the
-    /// walk's five facts reach the ledger at all.
+    /// RED BEFORE TASK 2 (observed while writing it, and recording that RED
+    /// run — this is not a description of the current code): fails earlier
+    /// than the draft predicted — at `every fact the driven walk emitted
+    /// must have been appended` (`left == right` failed: left 0, right 5),
+    /// because `wait`, before Task 2, still discarded `_driven_facts`
+    /// unconditionally and none of the walk's five facts reached the ledger
+    /// at all.
     #[test]
     fn a_possessed_walk_ends_where_the_ledger_recorded() {
         let world = build_world(
