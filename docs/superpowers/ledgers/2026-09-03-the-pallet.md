@@ -402,3 +402,66 @@ needed checking rather than reasoning.
 The tie-break test asserts `Some(first_bed)` **and** carries a precondition
 `assert!(first_bed < second_bed)` so the fixture fails loudly if ever
 reordered — a self-guarding fixture, better than the brief asked for.
+
+#12 [G5] — **The implementer DISPROVED a claim I put in its own brief, and
+found a pre-existing defect doing it. My correction was more confident than the
+thing it corrected and wrong in a different way.**
+
+Verifying Task 3's brief, I found the plan's Step 4 framing poor ("several
+harnesses … missing one is the likely defect") and replaced it with a measured
+distribution plus this reassurance:
+
+> **The failure mode to actually watch for is the opposite of the plan's:** an
+> unregistered predicate is not silent. `Ledger::commit` rejects it with
+> `LedgerError::UnknownPredicate`, so a scenario that commits `SLEPT_ON`
+> without registering it **fails loudly at the point of commit**. That makes
+> this enumeration self-checking.
+
+**That is false.** `Ledger::commit` does return an error — I read the signature
+correctly — but **an error path is only as loud as its callers**, and two are
+deaf. `windows/lab/src/health.rs:162` and `:278`, both `run_simulation`
+variants:
+
+```rust
+ledger = match tick(&ledger, &[&sys], &["drive-movements"], registry) {
+    Ok(next) => next,
+    Err(_) => break,
+};
+```
+
+Any commit error silently truncates the run. The implementer found it by
+turning both arms into `panic!()` and re-running — a positive control on the
+**error path**, which is not a move I had thought to ask for — and discovered
+**two tests in `hearth_population_calibration.rs` passing on simulations that
+had stopped at day 1** with `UnknownPredicate { predicate: "slept-on" }`
+swallowed. A test asserting on a one-day simulation it believes ran to term is
+measuring almost nothing, and it is green.
+
+**Three things worth separating.**
+
+1. **My error was in kind, not degree.** I verified `Ledger::commit`'s
+   *signature* and inferred *behaviour at a distance*. A `Result` says an error
+   is **available**, never that anyone reads it. The check I skipped costs one
+   grep: `Err(_) =>` appears **16** times under `windows/` and `domains/`, and
+   `Err(_) => break` in two files.
+2. **A correction is unaudited text** — my own standing memory, applied to
+   plan prose and not to the correction I wrote over it. The corrected claim
+   was *more* confident than the original ("self-checking") and carried no
+   command-and-output pair, which the autopilot skill requires by name for
+   exactly this class of sentence.
+3. **The silent truncation is pre-existing and outlives this campaign.** It is
+   not Task 3's defect. But it means any future predicate addition can repeat
+   the trap, and that two calibration tests have been weaker than they read for
+   as long as those arms have existed.
+
+Capture: an idea-registry row at Task 5 for the `Err(_) => break` truncation,
+naming both sites and the two affected tests. Not fixed here — changing an
+error policy in the lab's simulation loop is its own campaign with its own
+question (fail fast, or record and continue with the truncation surfaced in the
+result?), and this campaign has no business choosing it at a task boundary.
+
+**The reusable form:** *an error is loud only if its callers propagate it.*
+Verify the CALLER, never the signature. A positive control on the error path —
+make the error happen and confirm something says so — is the same discipline
+`an-empty-diff-needs-a-positive-control` names for null results, pointed at a
+branch instead of at a diff.
