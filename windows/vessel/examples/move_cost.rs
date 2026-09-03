@@ -27,8 +27,8 @@
 //! ```text
 //! step inside derive_sighting                       per call
 //!   chamber_interior_here  (= one brief_here)     8.7 – 12.6 ms
-//!   anchor_cells                                  0.086 – 0.091 ms
-//!   shadowcast (SIGHT_RADIUS = 4, ≤ 81 cells)     0.011 – 0.013 ms
+//!   anchor_cells                                  0.086 – 0.091 ms // lexicon: anchor_cells is the function name; it places AREA-sense lattice squares, never a mesh vertex
+//!   shadowcast (SIGHT_RADIUS = 4, ≤ 81 squares)     0.011 – 0.013 ms
 //!   occupancy seat + interior_of                  0.005 – 0.006 ms
 //!   placement loop + furnishings                  0.009 – 0.013 ms
 //!
