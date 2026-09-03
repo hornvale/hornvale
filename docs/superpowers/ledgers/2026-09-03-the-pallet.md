@@ -525,3 +525,21 @@ something anyone notices.
 Compounding #12: this is the same silent-truncation trap, in the one site a
 static rule could not classify — which is why the fix for #12 is a registration
 here rather than a promise about loudness.
+
+#15 [G5] — **Task 3 complete after one fix round.** All four items addressed;
+controller-verified the two that mattered rather than reading them: `place:
+None` is live in `slept_on_fact` (`liveness.rs:5979`) with the `room` parameter
+**dropped entirely** rather than kept and discarded, and `simulate_world` now
+registers the predicate.
+
+The const's doc came back better than my ruling. I gave three reasons; it adds
+a fourth and sharper one — the derived id *"cannot be inverted back to a room
+at all"*. My argument was that `thing_id` buys nothing a reader cannot already
+get; the stronger form is that it buys nothing a reader can get **from it**,
+which is why it is not merely redundant but inert. Worth noting that the
+implementer improved a controller ruling in its own doc rather than
+transcribing it.
+
+The absence test is named for what it asserts —
+`slept_on_fact_records_the_kind_and_carries_no_place` — which is the shape that
+survives a later reader wondering whether the missing `place` was an oversight.
