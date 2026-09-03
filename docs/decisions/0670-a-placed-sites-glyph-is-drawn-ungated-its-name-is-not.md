@@ -1,11 +1,11 @@
-# 0540. A placed site's glyph is drawn ungated; its name is still withheld
+# 0670. A placed site's glyph is drawn ungated; its name is still withheld
 
 **Status:** Accepted (2026-09-02) · **Decider:** Nathan (direct ruling) ·
 **Relates:**
 [0022](0022-sim-emits-data-clients-render.md),
-[0536](0536-the-enterability-gate-is-a-site-not-built.md),
-[0537](0537-a-placed-site-is-re-sited-to-a-facet-by-a-seeded-draw.md),
-[0539](0539-a-sites-tier-is-placed-or-derived.md)
+[0666](0666-the-enterability-gate-is-a-site-not-built.md),
+[0667](0667-a-placed-site-is-re-sited-to-a-facet-by-a-seeded-draw.md),
+[0669](0669-a-sites-tier-is-placed-or-derived.md)
 
 In the context of The Prospect making caves and exotic sites enterable, and of
 a world map showing endless undifferentiated biome, we decided that **a placed

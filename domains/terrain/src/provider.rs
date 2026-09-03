@@ -382,7 +382,7 @@ impl GeneratedTerrain {
     /// addresses — rather than "which site does my vertex hold?", which would
     /// silently lose any site whose address landed across a mesh boundary (see
     /// `hornvale_worldgen::site_facet_for`, which decides WHERE). Decision
-    /// 0537.
+    /// 0667.
     ///
     /// **There is deliberately no second cave predicate, and there was one for
     /// a day.** The Prospect's Task 4 first shipped a `cave_site_at` of its

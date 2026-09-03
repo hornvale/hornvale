@@ -350,7 +350,7 @@ hornvale_kernel::stream_labels! {
     /// project has already measured that failure once, so reproducing it for
     /// sites would be adopting it knowingly. A site therefore gets a real
     /// address — and an address the coarse fields cannot derive has to be
-    /// drawn. Decision 0537.
+    /// drawn. Decision 0667.
     ///
     /// **It serves caves as well as exotic sites, and that is why the label is
     /// `site/` and not `exotic/`.** The campaign's spec claimed a cave needed

@@ -34,7 +34,7 @@
 //! # What "a site of any kind" means here
 //!
 //! Exactly what makes `hornvale_vessel::brief::Brief::site` `Some` — the
-//! enterability gate (decision 0536) — so H3 is literally "how often is there
+//! enterability gate (decision 0666) — so H3 is literally "how often is there
 //! something to walk into". `brief_of` assembles three candidates and takes
 //! the most salient, and this file reconstructs the same three sets over the
 //! whole globe rather than one facet at a time:
@@ -86,7 +86,7 @@
 //!
 //! It is bounded in advance and the arithmetic needs no seeds. Every site this
 //! campaign emits is PLACED — at most one facet per warranting vertex
-//! (decision 0537) — so the whole placed set is bounded by 2 * 40,962 geosphere
+//! (decision 0667) — so the whole placed set is bounded by 2 * 40,962 geosphere
 //! vertices (a cave roster and an exotic roster) plus one facet per settlement,
 //! against `6 * 4^13` = 402,653,184 walk facets. The measured ceiling is
 //! `2.04e-4`: **under 0.021% of the walk band can hold a site of any kind even
@@ -115,7 +115,7 @@
 //!
 //! The shortfall is the placement MECHANISM's resolution and not any constant,
 //! and no threshold, predicate or budget moves it:
-//! `hornvale_vessel::site::Tier::Derived` — modelled, unused, decision 0539 —
+//! `hornvale_vessel::site::Tier::Derived` — modelled, unused, decision 0669 —
 //! is the axis that can. H3's job was to size the gap, and the gap is ~4.6
 //! orders of magnitude.
 
@@ -480,7 +480,7 @@ fn every_kind_of_site_is_actually_placed() {
 /// - **`Extent` is now a real trigger**, via [`facets_per_site`]. It was not
 ///   before: `Extent` appeared nowhere in the arithmetic, and the old doc's
 ///   parenthetical ("`Extent` reserves exactly that") pointed at a `Region`
-///   variant that **does not exist** — decision 0538 was corrected on
+///   variant that **does not exist** — decision 0668 was corrected on
 ///   2026-09-03 for declaring it.
 /// - **A derived tier is NOT a trigger, and this test cannot become one.**
 ///   [`read`] collects three concrete rosters — `built_rooms`,
@@ -488,7 +488,7 @@ fn every_kind_of_site_is_actually_placed() {
 ///   fourth function that nothing here is obliged to call, so derived sites
 ///   would not enter the union at all and neither rate would move. The honest
 ///   guard is elsewhere and is a fact about the tree rather than about a world:
-///   `Site::derived` has no production caller (decision 0539,
+///   `Site::derived` has no production caller (decision 0669,
 ///   `book/src/open-questions.md`), and the day one appears, H3 must be
 ///   re-measured rather than re-asserted. **This test will not tell you that
 ///   day has come.** Saying so is the correction; a broad false guarantee is

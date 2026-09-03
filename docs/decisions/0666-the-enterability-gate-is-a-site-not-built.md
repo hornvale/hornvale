@@ -1,12 +1,12 @@
-# 0536. The enterability gate is a `Site`, and `built` narrows to one kind of it
+# 0666. The enterability gate is a `Site`, and `built` narrows to one kind of it
 
 **Status:** Accepted (2026-09-02) · **Decider:** Nathan (autopilot) ·
 **Relates:**
 [0022](0022-sim-emits-data-clients-render.md),
 [0025](0025-one-concept-name-one-owner.md),
-[0537](0537-a-placed-site-is-re-sited-to-a-facet-by-a-seeded-draw.md),
-[0538](0538-a-site-carries-an-extent-and-this-campaign-emits-point.md),
-[0539](0539-a-sites-tier-is-placed-or-derived.md)
+[0667](0667-a-placed-site-is-re-sited-to-a-facet-by-a-seeded-draw.md),
+[0668](0668-a-site-carries-an-extent-and-this-campaign-emits-point.md),
+[0669](0669-a-sites-tier-is-placed-or-derived.md)
 
 In the context of The Prospect making caves and exotic sites enterable, and
 faced with a gate named `built` that every enterable place hung off, we decided

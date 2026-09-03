@@ -2767,7 +2767,7 @@ impl Driver {
     ///
     /// **Separate from [`Self::update_discovery`] so a test can supply the
     /// one input it cannot walk to.** A placed site occupies about one facet
-    /// in 9,830 (decision 0539's ceiling), so no sequence of `go` commands
+    /// in 9,830 (decision 0669's ceiling), so no sequence of `go` commands
     /// reaches one inside a test, and a feature nothing can exercise is a
     /// feature nothing has checked — this campaign's own progress ledger
     /// records three tests that turned out vacuous for exactly that shape of
@@ -2826,7 +2826,7 @@ impl Driver {
     /// off the world's ledger (`hornvale_kernel::NAME`), independent of
     /// anything `MapSite`/`Driver` exposes to a real caller.
     ///
-    /// **This is the oracle Decision 0540's own test needs, and it must
+    /// **This is the oracle Decision 0670's own test needs, and it must
     /// stay a test-only backdoor, not a new production path.** `MapSite`
     /// carries no name field at all — that absence is the type-level half
     /// of the leak-proof argument (`draw_feature_layer` writes only a
@@ -4998,7 +4998,7 @@ mod portolan_tests {
 
             // The absence check restated after discovery: Gate B has no
             // mechanism that could reveal a placed site's name at all
-            // (Decision 0540's own table — the cursor readout's "name
+            // (Decision 0670's own table — the cursor readout's "name
             // withheld" row carries no discovered/undiscovered split), so
             // this must hold in both states, not just the one a reader
             // might expect to be interesting.

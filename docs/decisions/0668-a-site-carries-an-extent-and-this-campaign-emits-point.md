@@ -1,11 +1,11 @@
-# 0538. A `Site` carries an `Extent`, and this campaign only ever emits `Point`
+# 0668. A `Site` carries an `Extent`, and this campaign only ever emits `Point`
 
 **Status:** Accepted (2026-09-02) · **Decider:** Nathan (autopilot) ·
 **Relates:**
 [0039](0039-epochs-replace-tiers-refine.md),
-[0536](0536-the-enterability-gate-is-a-site-not-built.md),
-[0537](0537-a-placed-site-is-re-sited-to-a-facet-by-a-seeded-draw.md),
-[0539](0539-a-sites-tier-is-placed-or-derived.md)
+[0666](0666-the-enterability-gate-is-a-site-not-built.md),
+[0667](0667-a-placed-site-is-re-sited-to-a-facet-by-a-seeded-draw.md),
+[0669](0669-a-sites-tier-is-placed-or-derived.md)
 
 In the context of sites becoming a first-class thing consumers read, and of
 Nathan's observation that exotic sites are not uniform in scale, we decided
@@ -40,7 +40,7 @@ future variant as though it already existed.
 The spec argued: *"since §7 mints an epoch anyway, carving the shape out now is
 free."*
 
-Decision 0537 establishes that §7 mints **no** epoch, so that argument is void.
+Decision 0667 establishes that §7 mints **no** epoch, so that argument is void.
 It is recorded here rather than quietly dropped, because a conclusion that
 outlives its stated reason is exactly the kind of thing a later reader treats
 as still-justified.
@@ -62,7 +62,7 @@ nowhere outside `site.rs`. The field is carried and read by nothing.
 So the benefit is real but *prospective*, not banked. What the campaign
 actually bought is that `Extent` sits in the struct every consumer already
 receives, so a future variant needs no signature change anywhere — which is a
-weaker and true claim. Decision 0539 cites this record as precedent for
+weaker and true claim. Decision 0669 cites this record as precedent for
 modelling `Tier::Derived` early; that citation should be read against this
 corrected version, where the precedent is "the field is in place", not "the
 match arms are in place".
@@ -79,10 +79,10 @@ variant rather than a new parameter.** Naming a region's fields now would guess
 at a geometry nobody has designed, so nothing is reserved in the type — the
 posture is *don't model it yet*, not *model it empty*.
 
-**This is NOT the same posture 0539 takes toward `Tier::Derived`, and the
+**This is NOT the same posture 0669 takes toward `Tier::Derived`, and the
 comparison was wrong in a way worth keeping.** `Tier::Derived` genuinely exists
 as an inhabited variant that `Site::derived` constructs. `Extent::Region` never
-existed at all. So 0539's precedent for modelling early is the **tier**, which
+existed at all. So 0669's precedent for modelling early is the **tier**, which
 did it, and not this record, which described doing it without doing it.
 
 **A test asserting "a new site is a point" is vacuous while `Extent` has one

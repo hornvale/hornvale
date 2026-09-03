@@ -3575,7 +3575,7 @@ point process on a 41,000-point lattice cannot express one.
 What that bounds is the class of answer. Density at facet resolution has to come
 from **derived** features — a pure function of seed and position, unbounded,
 stored nowhere, outside the ledger and therefore outside world history — which
-decision 0539 names but no campaign has yet built. The checkable form of the bet
+decision 0669 names but no campaign has yet built. The checkable form of the bet
 is whether a derived surface can be dense *and* legible at once: whether noise
 interacting with macro features produces places that feel found rather than
 extruded, and whether a player can tell the difference. That is gradeable by the

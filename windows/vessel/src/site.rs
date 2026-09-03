@@ -4,7 +4,7 @@
 //! `built` meant "a structure stands here" (`brief.rs`), which is true of a
 //! settlement and false of a cave (dissolved by water) or an exotic site
 //! (grown) — so widening `built` would have put a lie in the predicate.
-//! Decision 0536.
+//! Decision 0666.
 
 /// What kind of place a site is.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -29,7 +29,7 @@ pub enum SiteKind {
 /// **Only [`Extent::Point`] is emitted by The Prospect.** The enum exists
 /// because exotic sites are not uniform in scale — a cursed land is miles
 /// across with components inside it — and modelling extent later would be a
-/// migration of every consumer rather than a fill-in. Decision 0538.
+/// migration of every consumer rather than a fill-in. Decision 0668.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Extent {
     /// One facet.
@@ -38,7 +38,7 @@ pub enum Extent {
 
 /// Which of the two ways a site came to exist, and what that costs.
 ///
-/// Decision 0539 measured a ceiling nobody had computed: 40,962 level-6
+/// Decision 0669 measured a ceiling nobody had computed: 40,962 level-6
 /// vertices cannot populate 402,653,184 walk facets (a placed site at
 /// every facet would need one placed per 9,830 — 0.0102% coverage). So a
 /// per-facet surface must eventually come from noise interacting with macro
@@ -55,7 +55,7 @@ pub enum Extent {
 /// These docs used to say "this is `Extent::Region`'s situation again", four
 /// times over, and `Extent::Region` **does not exist** — the enum has one
 /// variant and always did on this branch. `cargo doc` reported the two
-/// intra-doc links as broken, and decision 0538 was corrected on 2026-09-03
+/// intra-doc links as broken, and decision 0668 was corrected on 2026-09-03
 /// for declaring the variant in its own Decision block. The two postures are
 /// therefore NOT the same: `Tier` really does carry an unused variant, so a
 /// later campaign fills in an arm; `Extent` carries only the FIELD, so a later
@@ -81,7 +81,7 @@ pub enum Tier {
     /// placed one, but it cannot shape world history: nothing records its
     /// fate, so no later system can read what became of it. (A derived site
     /// a player *enters* may later be promoted into the record — decision
-    /// 0539 deliberately leaves that mutable state unnamed; it is a
+    /// 0669 deliberately leaves that mutable state unnamed; it is a
     /// separate axis from this one, not a third `Tier` variant.)
     ///
     /// **Modelled and unused** — no constructor in this campaign builds a
@@ -103,7 +103,7 @@ pub struct Site {
     /// How much ground it covers. Always [`Extent::Point`] in this campaign.
     pub extent: Extent,
     /// Whether this site was placed from a vertex or derived from noise.
-    /// Always [`Tier::Placed`] in this campaign — decision 0539. Orthogonal
+    /// Always [`Tier::Placed`] in this campaign — decision 0669. Orthogonal
     /// to [`Site::salience`]: a derived cave and a placed cave are equally
     /// salient *as caves*, because salience ranks what gets NAMED in prose
     /// and tier is never presentation.
@@ -124,7 +124,7 @@ impl Site {
     /// conscious choice instead: `placed` and `derived` read the same
     /// weight at a call site, so picking one is a decision rather than a
     /// habit. This holds at one call site or a hundred, so none is counted
-    /// here. See [`Site::derived`], decision 0539.
+    /// here. See [`Site::derived`], decision 0669.
     /// type-audit: bare-ok(identifier-text: name)
     pub fn placed(kind: SiteKind, name: Option<String>) -> Self {
         Self {
@@ -143,7 +143,7 @@ impl Site {
     /// against an already-widened constructor pair rather than a migration of
     /// every `Site` consumer. (This said "exactly as `Extent::Region` is";
     /// that variant does not exist — see [`Tier`]'s own doc.)
-    /// Decision 0539.
+    /// Decision 0669.
     /// type-audit: bare-ok(identifier-text: name)
     pub fn derived(kind: SiteKind, name: Option<String>) -> Self {
         Self {
@@ -193,7 +193,7 @@ mod tests {
 
     /// Tier is orthogonal to salience: a derived and a placed site of the
     /// same kind rank identically, because salience ranks `SiteKind` alone
-    /// (decision 0539 — tier must never leak into presentation).
+    /// (decision 0669 — tier must never leak into presentation).
     #[test]
     fn salience_ignores_tier() {
         let placed_cave = Site::placed(SiteKind::Cave, None);
@@ -233,7 +233,7 @@ mod tests {
     }
 
     /// `Site::placed` sets [`Tier::Placed`] — the only tier this campaign
-    /// emits (decision 0539).
+    /// emits (decision 0669).
     #[test]
     fn placed_sets_tier_placed() {
         assert_eq!(Site::placed(SiteKind::Cave, None).tier, Tier::Placed);
@@ -241,7 +241,7 @@ mod tests {
 
     /// `Site::derived` sets [`Tier::Derived`]. **Declared forward guard, not
     /// a discriminating test today**: no production call site in The
-    /// Prospect calls `Site::derived` at all (decision 0539 — modelled and
+    /// Prospect calls `Site::derived` at all (decision 0669 — modelled and
     /// unused), so this only pins the
     /// constructor's own behaviour against a future edit that collapses
     /// both constructors to the same tier, the same role

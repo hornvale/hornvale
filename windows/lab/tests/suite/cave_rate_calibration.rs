@@ -25,7 +25,7 @@
 //! # Why no predicate rescues it, which is why nothing was retuned
 //!
 //! The band is unreachable **by construction**, and the arithmetic needs no
-//! seeds. A site is PLACED — one facet per warranting vertex (Decision 0537,
+//! seeds. A site is PLACED — one facet per warranting vertex (Decision 0667,
 //! `hornvale_worldgen::site_facet_for`) — so the number of cave facets in a
 //! world is bounded above by the number of geosphere vertices. The canonical
 //! grid has 40,962 of them; the walk band at depth 13 has `6 * 4^13` =

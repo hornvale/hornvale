@@ -1215,7 +1215,7 @@ fn project_onto_screen(
 /// instant its slopes are walked. This layer only had to start reading
 /// that existing fact to draw it.
 ///
-/// **Why a volcano alone stays gated — Decision 0540, correcting this
+/// **Why a volcano alone stays gated — Decision 0670, correcting this
 /// paragraph's own earlier rationale.** An earlier version of this comment
 /// argued ungating a volcano "would mean drawing an edifice the terrain has
 /// no other way of saying is there at all" — a non-sequitur review caught:
@@ -1226,7 +1226,7 @@ fn project_onto_screen(
 /// through `windows/worldgen::resolve_chain_at` (Gate B, the cursor
 /// readout), coupling its drawn-ness to its readout — ungating it would
 /// reach a discovery mechanism that predates this campaign and that
-/// Decision 0540 deliberately does not touch. A cave, exotic site or
+/// Decision 0670 deliberately does not touch. A cave, exotic site or
 /// settlement has no such coupling: each has its own independent
 /// [`MapSite`] roster entry, absent from the feature index entirely, so
 /// ungating its glyph cannot move what the cursor readout says. A waterfall

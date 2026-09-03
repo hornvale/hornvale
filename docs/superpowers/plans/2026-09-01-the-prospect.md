@@ -95,7 +95,7 @@ Expected: FAIL — `site` module does not exist.
 //! `built` meant "a structure stands here" (`brief.rs`), which is true of a
 //! settlement and false of a cave (dissolved by water) or an exotic site
 //! (grown) — so widening `built` would have put a lie in the predicate.
-//! Decision 0536.
+//! Decision 0666.
 
 /// What kind of place a site is.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -113,7 +113,7 @@ pub enum SiteKind {
 /// **Only [`Extent::Point`] is emitted by The Prospect.** The enum exists
 /// because exotic sites are not uniform in scale — a cursed land is miles
 /// across with components inside it — and modelling extent later would be a
-/// migration of every consumer rather than a fill-in. Decision 0538.
+/// migration of every consumer rather than a fill-in. Decision 0668.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Extent {
     /// One facet.
@@ -205,7 +205,7 @@ Add to `Brief` after `built`:
 
 ```rust
     /// The site here, if any — the gate every enterable place hangs off since
-    /// decision 0536. For a settlement this mirrors [`Self::built`]; caves and
+    /// decision 0666. For a settlement this mirrors [`Self::built`]; caves and
     /// exotic sites arrive in Tasks 4 and 5.
     pub site: Option<Site>,
 ```
@@ -277,7 +277,7 @@ is testing the old string. This failure proves the test is wired to the code.
 In `structure_at`, replace the `brief.built` check with:
 
 ```rust
-    // Decision 0536: the gate is the SITE, not `built`. `built` still means
+    // Decision 0666: the gate is the SITE, not `built`. `built` still means
     // "a structure stands here" and is one property of a settlement; a cave
     // and an exotic site are enterable and were never built.
     brief.site.as_ref()?;
@@ -289,7 +289,7 @@ In `session.rs:5166`, replace the message:
             return Turn::Out("There is nothing here to enter.".to_string());
 ```
 
-The old wording named `built`, which after 0536 is no longer the reason.
+The old wording named `built`, which after 0666 is no longer the reason.
 
 - [ ] **Step 4: Run it and watch it pass**
 
@@ -365,7 +365,7 @@ In `domains/terrain/src/features.rs`:
 /// **Derived, never drawn.** [`crate::lithology::cave_proneness`] is a pure
 /// function of the material buffer and drainage, so this needs no roster and
 /// no seed label — a cave has the same answer at any resolution the fields can
-/// be sampled at. Decision 0537 covers the exotic sites, which are NOT derived
+/// be sampled at. Decision 0667 covers the exotic sites, which are NOT derived
 /// this way and do need a draw.
 ///
 /// The elevation floor keeps mouths out of the sea: a cave under water is not
@@ -439,7 +439,7 @@ In `windows/worldgen/src/streams.rs`, inside the existing `stream_labels!`:
     /// read as river because it inherited one distant point's verdict. Asking
     /// "is a site near me" off that mesh reproduces the defect exactly. So the
     /// site gets a real address, and an address nobody derived has to be drawn.
-    /// Decision 0537.
+    /// Decision 0667.
     SITE_PLACEMENT => "site/placement/v1",
 ```
 
@@ -635,7 +635,7 @@ git commit -m "feat(game): the map draws every site, not only settlements"
 **Files:**
 - Test: `windows/lab/tests/suite/site_density.rs` (new)
 - Create: `book/src/chronicle/the-prospect.md`, `docs/retrospectives/the-prospect.md`
-- Modify: `book/src/SUMMARY.md`, `docs/decisions/` (0536-0538), `docs/decisions/README.md`
+- Modify: `book/src/SUMMARY.md`, `docs/decisions/` (0666-0668), `docs/decisions/README.md`
 
 - [ ] **Step 1: Measure H3**
 
@@ -659,12 +659,12 @@ Run: `cargo nextest run -p hornvale-lab -E 'test(site_density)' --no-capture`
 Put the measured value in the chronicle. Do not editorialise it — a low number
 is the finding that aims the next campaign.
 
-- [ ] **Step 3: Write decisions 0536, 0537, 0538**
+- [ ] **Step 3: Write decisions 0666, 0667, 0668**
 
-0536 sites replace `built`; 0537 sites are re-sited by a seeded draw
+0666 sites replace `built`; 0667 sites are re-sited by a seeded draw
 (**NOT an epoch** — this line said "(epoch)" and was wrong; Task 5 measured
 both pin-isolation suites green and `rebaseline-goldens` a no-op, per
-`domains/CLAUDE.md`'s "new label = safe"); 0538 `Extent` is modelled and
+`domains/CLAUDE.md`'s "new label = safe"); 0668 `Extent` is modelled and
 Point-only. Index each in `docs/decisions/README.md` — **look the filenames up,
 do not guess them from titles** (five guessed links were wrong in the last
 campaign).

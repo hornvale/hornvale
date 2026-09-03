@@ -362,7 +362,7 @@ const INDOOR_CORNER_REFUSAL: &str =
 /// The measurement is intact and is what now matters: **0 of 2400 allocate
 /// lattices can present this configuration and 532 of 2400 grown ones — 22% —
 /// can.** What changed is which of those two a live session reaches. Decision
-/// 0536 hung the enterability gate on `Brief.site`, so a cave or an exotic site
+/// 0666 hung the enterability gate on `Brief.site`, so a cave or an exotic site
 /// (unbuilt, but a site) derives a structure and `embed_with` sends it to
 /// `grow`; H3 (`windows/lab/tests/suite/site_density.rs`) measures ~980-2,615
 /// such facets per world. A settlement still allocates and still cannot reach
@@ -5588,7 +5588,7 @@ impl<'w> Session<'w> {
         ))
     }
 
-    /// The walk-band clause naming a facet's site (spec §4, Decision 0536):
+    /// The walk-band clause naming a facet's site (spec §4, Decision 0666):
     /// **kind and name only, never contents** — a facet is not a manifest of
     /// what stands on it.
     ///

@@ -58,7 +58,7 @@ pub struct Brief {
     /// Whether warmth matters here — `Terrain::is_cold` at the WALK band.
     pub cold: bool,
     /// The site here, if any — the gate every enterable place hangs off.
-    /// Decision 0536. For a settlement this mirrors [`Self::built`]; an exotic
+    /// Decision 0666. For a settlement this mirrors [`Self::built`]; an exotic
     /// site and a cave are each the placed address
     /// `hornvale_worldgen::site_facet_for` gives them, under their own
     /// `hornvale_worldgen::SiteReason` so that a vertex warranting both does

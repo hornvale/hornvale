@@ -1,12 +1,12 @@
-# 0537. A placed site is re-sited from its vertex to one facet by a seeded draw
+# 0667. A placed site is re-sited from its vertex to one facet by a seeded draw
 
 **Status:** Accepted (2026-09-02) · **Decider:** Nathan (autopilot) ·
 **Relates:**
 [0039](0039-epochs-replace-tiers-refine.md),
 [0102](0102-one-per-cell-was-an-index-artifact.md),
 [0141](0141-compass-navigation-is-an-overlay.md),
-[0536](0536-the-enterability-gate-is-a-site-not-built.md),
-[0539](0539-a-sites-tier-is-placed-or-derived.md)
+[0666](0666-the-enterability-gate-is-a-site-not-built.md),
+[0669](0669-a-sites-tier-is-placed-or-derived.md)
 
 In the context of caves and exotic sites existing only at level-6 vertices
 (110–132 km apart) while the walk band addresses 1.126 km facets, we decided

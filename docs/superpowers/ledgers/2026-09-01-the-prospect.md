@@ -2,7 +2,7 @@
 
 Campaign: `campaign/the-prospect` · Spec:
 `docs/superpowers/specs/2026-09-01-the-prospect-design.md` · Decision block:
-0536–0545.
+0666–0675.
 
 Created at spec time rather than mid-campaign, which is the lesson The Pavement
 learned the expensive way (its 44 rulings sat in git-ignored scratch until a
@@ -191,7 +191,7 @@ means and exactly the distinction a cave needs. Swapping it to
 `site.is_some()` would have generated every cave as a rectilinear building —
 a serious defect, and an easy one to introduce while doing a mechanical rename.
 
-**This vindicates decision 0536's shape.** Keeping `built` as a property of a
+**This vindicates decision 0666's shape.** Keeping `built` as a property of a
 settlement rather than deleting it looked like conservatism when the rename was
 proposed. It turns out to be load-bearing at precisely the site where a cave
 must diverge from a village, and the campaign gets that divergence for free
@@ -228,8 +228,8 @@ naming: before asking for a failing test, check that a failure is reachable.
 ### #12 [G5] — we are citing decisions in the one form the gate cannot see
 
 Task 3 hit `decision_cites_in_sources_resolve` refusing a lowercase
-"decision 0536" (correctly — 0536 does not exist until Task 9), and worked
-around it by using the capitalized "Decision 0536." form, citing Task 2's
+"decision 0666" (correctly — 0666 does not exist until Task 9), and worked
+around it by using the capitalized "Decision 0666." form, citing Task 2's
 precedent.
 
 That is the form the checker is BLIND to (76 capitalized cites unchecked against
@@ -237,7 +237,7 @@ That is the form the checker is BLIND to (76 capitalized cites unchecked against
 the shape the gate cannot inspect.
 
 **Decision:** accept for now — the alternative is writing decision records before
-the decisions are settled — but Task 9 owes two things: write 0536/0537/0538,
+the decisions are settled — but Task 9 owes two things: write 0666/0667/0668,
 and MANUALLY verify every "Decision NNNN" this campaign added resolves, because
 the gate cannot do it. Relying on a blind spot is precisely the shape this
 project keeps finding, and leaving it unverified would be adopting it.
@@ -452,7 +452,7 @@ leads with the ceiling rather than the sample.
 
 **This is why `Extent` was worth carving out.** A region-extent site is the only
 shape in the current design that can cover ground without one anchor per facet.
-Decision 0538 looked like cheap insurance when Nathan raised it; it is now the
+Decision 0668 looked like cheap insurance when Nathan raised it; it is now the
 identified route to the campaign's stated promise.
 
 **Cost if wrong:** none — the measurement still happens; only its reading
@@ -473,7 +473,7 @@ that mattered. Sea level in these worlds is **-1328 to -2032 m**, not 0. My
 7 and 1 **zero caves in the entire world**. I assumed a sea level the project
 does not have.
 
-### #22 [Q, ideonomy] — decision 0539: the tier is `placed`/`derived`, and my naming argument was overturned
+### #22 [Q, ideonomy] — decision 0669: the tier is `placed`/`derived`, and my naming argument was overturned
 
 Nathan asked for an ideonomy pass on the naming rather than accepting my
 suggestion. 2 passes, **1 overturn — of my premise, not my answer**, which is
@@ -507,7 +507,7 @@ invites the exact confusion the inversion found.
 
 ### #23 [G5] — I guessed decision filenames from titles for the THIRD time
 
-0539's first draft cited two records by filenames I inferred from their titles;
+0669's first draft cited two records by filenames I inferred from their titles;
 both were wrong (`0038-the-canonical-grid-bears-identity` is really
 `0038-identity-computes-on-the-canonical-grid`, and `0102-a-stream-keys-on-a-
 lattice-position` is really `0102-one-per-cell-was-an-index-artifact`). Five
@@ -937,11 +937,11 @@ My 19.7 km / 42.5 km figures reproduced exactly: mean 0.003086059 rad, max
 ## Ruling #40 [G5] — the citation sweep is mechanized, not performed by hand
 
 **Question.** Ruling #12 left a debt: the campaign had been citing decisions in
-the capitalized form `Decision 0536.` specifically because the lowercase form
-would red `decision_cites_in_sources_resolve` while 0536-0538 did not yet
+the capitalized form `Decision 0666.` specifically because the lowercase form
+would red `decision_cites_in_sources_resolve` while 0666-0668 did not yet
 exist. Task 9 owed a manual sweep converting them back.
 
-**Decision.** Write 0536/0537/0538, then make the *gate* case-insensitive and
+**Decision.** Write 0666/0667/0668, then make the *gate* case-insensitive and
 delete the sweep instead of performing it.
 
 **Why.** Measured before deciding, rather than assuming the debt was
@@ -949,7 +949,7 @@ campaign-local:
 
 ```
 capitalized decision cites in scanned dirs   ~120
-of those, naming a record that does not exist   3   (0536, 0537, 0538 — ours)
+of those, naming a record that does not exist   3   (0666, 0667, 0668 — ours)
 ```
 
 So the check had never seen a capitalized cite in the life of the repository,
@@ -962,11 +962,11 @@ the proof it is reachable, since we used it deliberately.
 
 **Verification, not reasoning.** `to_ascii_lowercase` is length-preserving, so
 offsets still index the original text (`to_lowercase` would not be — noted in
-the code). Mutation-checked by removing 0538 and confirming the red names a
+the code). Mutation-checked by removing 0668 and confirming the red names a
 capitalized cite in shipped code:
 
 ```
-windows/vessel/src/site.rs:32: cite `decision 0538` — no docs/decisions/0538-*.md record
+windows/vessel/src/site.rs:32: cite `decision 0668` — no docs/decisions/0668-*.md record
 ```
 
 That is the arm that was dead. Restored; 29/29 green.
@@ -993,7 +993,7 @@ still listed the discovery gate under "existing behaviour that must survive" —
 the exact opposite of what shipped — and the ledger ran to #40 with no entry.
 
 **Decision.** Correct spec §5 with a `CORRECTED` block quoting Nathan directly,
-and file **decision 0540**. A reversal of stated existing behaviour is a
+and file **decision 0670**. A reversal of stated existing behaviour is a
 decision, not an implementation detail: the next reader consulting the spec
 would have read the pre-reversal rule as binding and "fixed" the code back.
 
@@ -1004,7 +1004,7 @@ one-campaign experiment. Cheap — supersede it.
 
 **Finding (review item 8).** The volcano remains discovery-gated, and the
 rationale recorded for it — "the terrain has no other way of saying it is
-there" — argues for *un*gating under 0540's own intent. The reviewer correctly
+there" — argues for *un*gating under 0670's own intent. The reviewer correctly
 called it a non-sequitur and asked for a ruling. The de-facto rule had become
 "drawn-ness follows internal representation," which describes the code rather
 than justifying it.
@@ -1012,11 +1012,11 @@ than justifying it.
 **Ruling.** Keep the volcano gated; replace the rationale with the structural
 one. A volcano is a **landscape extent whose `FeatureId` flows through
 `resolve_chain_at`**, so its drawn-ness and its readout are coupled; ungating
-it would move a feature that reaches Gate B, which 0540 deliberately does not
+it would move a feature that reaches Gate B, which 0670 deliberately does not
 touch. A placed site is absent from the feature index entirely and has no such
 coupling.
 
-Recorded in 0540 as an explicit non-goal, with the reason it is structural
+Recorded in 0670 as an explicit non-goal, with the reason it is structural
 rather than incidental — so a later campaign ungating landscape extents does it
 on purpose, with its own decision.
 
@@ -1066,9 +1066,9 @@ decision, and every one of those documents is correct about its own moment.
 and lands 1.5x high. That is the status quo and is now at least documented at
 `depth.rs`, the place a `windows/vessel` reader actually looks.
 
-## Ruling #44 [fix round] — 0538's Consequences still declare the variant its own correction removed
+## Ruling #44 [fix round] — 0668's Consequences still declare the variant its own correction removed
 
-**Finding.** 0538 was corrected on 2026-09-03 (commit `6166028c7`) to state
+**Finding.** 0668 was corrected on 2026-09-03 (commit `6166028c7`) to state
 that `Extent` has exactly one variant and that `Region` "was never
 implemented". Its **Consequences** section still reads: *"One variant is
 deliberately unconstructed. `Region` is uninhabited until a campaign builds
@@ -1084,6 +1084,68 @@ acquires two voices. The code-side residue *was* mine and is fixed: five
 `Extent::Region` references in `windows/vessel/src/site.rs`, two of them
 intra-doc links `cargo doc` reported as broken, now report zero.
 
-**Cost if wrong.** A reader of 0538 who skips the correction block and reaches
+**Cost if wrong.** A reader of 0668 who skips the correction block and reaches
 Consequences goes looking for a variant that is not there — the same failure
 F2 was raised for, one section further down.
+
+---
+
+## Ruling #45 [G5] — the campaign held NO decision block, and minted five inside another's
+
+**Found at the merge gate**, by reading a board notice about a *different*
+campaign's collision and checking our own rather than assuming.
+
+`make decision-blocks` reads the allocator on the canonical box. It says:
+
+```
+2026-09-01T23:27:05Z  the-pawl   0536-0545
+2026-09-01T23:47:01Z  the-roll   0546-0555
+```
+
+**The Prospect held no reservation at all.** Its spec *declared* "Decision
+block: 0536-0545" and nothing ever reserved it. `the-pawl` has since minted
+0536-0541 and **they are on `main`.**
+
+So five of this campaign's records collided head-on with five landed ones —
+same numbers, different slugs, therefore **no merge conflict**. Both sets would
+have landed and `docs/digest/` would have rendered two 0536s. Decision 0139
+records two campaigns minting 0134 exactly this way.
+
+**Why nothing caught it.** Three checks all passed:
+
+- `decision_blocks_do_not_overlap_across_campaigns` compares *spec
+  declarations* to each other. Ours declared 0536-0545 and no other spec in
+  *our tree* did.
+- `decision_cites_in_sources_resolve` resolves cites against
+  `docs/decisions/` **in this worktree**, which is ~200 commits behind main
+  and simply does not contain the-pawl's records.
+- The merge-queue mouth runs `git merge-tree`, which sees no conflict because
+  the filenames differ.
+
+The allocator is the only authority and it lives on another host. **A
+declaration in a spec is not a reservation**, and every mechanical check in
+the tree is blind to the difference.
+
+**Ruling.** Reserved `0666-0675` and renumbered 0536-0540 -> 0666-0670: 163
+references across 31 files, records renamed with `git mv`.
+
+**Two traps the renumber hit, both worth carrying forward.**
+
+1. **A word-boundary regex over 4-digit numbers corrupts DATA.** The first pass
+   rewrote `book/src/gallery/scene-tiles-seed-42.json`, two census `rows.csv`
+   files, `docs/timings.md`, and a porosity percentile in
+   `underworld_lithology_probe.rs` (`p25=0.0540` became `p25=0.0670`). CSV and
+   JSON values are word-bounded too. Caught by reviewing the per-file change
+   counts before committing, reverted with `git checkout --`. **Exclude data
+   files by extension and read the file list before trusting the sweep.**
+2. **Ranges get half-rewritten.** `0536-0545` became `0666-0545` in three
+   documents, because only the first half was in the map. Grep
+   `066[0-9][–-]05[0-9]{2}` after any renumber.
+
+And the board's own warning held: the bare number must be grepped as well as
+the slug. `domains/terrain/src/provider.rs:384` carries `Decision\n/// 0537.`
+— a cite **wrapped across two lines**, invisible to a slug-only sweep and to
+any single-line pattern.
+
+**Cost if wrong.** Nothing: the renumber is mechanical and verified by the
+citation gate, which is default-deny.

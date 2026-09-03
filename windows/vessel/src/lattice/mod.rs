@@ -396,7 +396,7 @@ pub struct Lattice {
 /// adding a third method cannot move where an existing one puts things.
 pub fn embed_with(structure: &Structure, brief: &Brief, extent: Rect, seed: Seed) -> Lattice {
     // Deliberately still `brief.built`, not `brief.site.is_some()` (The
-    // Prospect, Decision 0536). This is a GENERATOR DISPATCH, not the
+    // Prospect, Decision 0666). This is a GENERATOR DISPATCH, not the
     // enterability gate: it asks "constructed or natural" to choose between
     // rectilinear rooms and a grown blob, which is exactly what `built` means.
     // A cave has a site but was never built, and must still `grow`; reading

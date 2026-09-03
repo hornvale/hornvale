@@ -4,8 +4,8 @@
 
 ## The headline: the controller produced most of the defects, in four shapes
 
-**Twenty-one** controller-side errors are enumerated below, in four shapes of
-five, five, six and five. Others are recorded in *Do differently next time* and
+**Twenty-two** controller-side errors are enumerated below, in four shapes of
+five, five, six and six. Others are recorded in *Do differently next time* and
 *Estimate deltas* without being numbered here.
 
 An earlier draft of this sentence said twenty-six and did not add up against
@@ -107,7 +107,7 @@ output, written into a durable document without running anything.
 Every one of these would have been settled by one command. Three were settled
 by one command — after they had been committed.
 
-### Shape 4 — known rules skipped under momentum (5 instances)
+### Shape 4 — known rules skipped under momentum (6 instances)
 
 These are the least interesting and the most damning, because in every case the
 rule was written down, the controller had read it, and skipped it anyway.
@@ -130,6 +130,23 @@ rule was written down, the controller had read it, and skipped it anyway.
 Instance 2 and instance 5 are the same hazard wearing different hats. The
 dispatching skill forbids two implementers; nothing forbids *the controller*
 from being the second writer, and it should.
+
+6. **Minted five decisions inside another campaign's reserved block**, holding
+   no reservation of its own. The spec *declared* 0536-0545; the allocator had
+   given that range to `the-pawl`, which minted 0536-0541 and landed them on
+   `main`. Same numbers, different slugs, so a merge raises **no conflict** —
+   the mechanism decision 0139 records two campaigns hitting with 0134. Caught
+   at the merge gate only because a board notice about someone *else's*
+   collision prompted a check of our own. Renumbered to 0666-0670 (ruling #45).
+
+**This one is the worst of the four shapes combined**, and it is shape 1 at
+root: three checks were consulted and all three answered a neighbouring
+question. `decision_blocks_do_not_overlap_across_campaigns` compares specs to
+each other, not to the allocator. `decision_cites_in_sources_resolve` resolves
+against *this worktree's* `docs/decisions/`, ~200 commits behind main. The
+queue's mouth runs `git merge-tree`, which cannot see a collision when the
+slugs differ. **The allocator is the only authority, it lives on another host,
+and a declaration in a spec is not a reservation.**
 
 ## The gap the gate ladder does not cover, found by a reviewer
 
@@ -176,7 +193,7 @@ failing generator empties the target. Filed as a followup.
 | tasks | 9 | 9, plus two unplanned rounds (glyph/ungate, and its fix round) |
 | epochs | 1 | **0** — the spec's central cost claim was wrong |
 | preregistered hypotheses upheld | 2 of 3 predicted | **1 of 3** (H1 held; H2 falsified; H3 had no prediction) |
-| decisions | 0536–0545 reserved | 0536, 0537, 0538, 0539, 0540 filed |
+| decisions | 0666–0675 reserved | 0666, 0667, 0668, 0669, 0670 filed |
 | task briefs written | 9 | 6 — tasks 6, 7 and 8 were dispatched at brief files that did not exist |
 
 ## Spec vs. reality
@@ -204,10 +221,17 @@ document.
 4. **A mutation proof must vary something the fixture can resolve.** Two-valued
    fixtures cannot demonstrate a three-way ordering; name the discriminating
    pair in the instruction, and verify the *corrected* instruction too.
-5. **Write the brief file before dispatching against it.** Three dispatches
+5. **Reserve the decision block from the allocator, and re-check it at the
+   merge gate.** `make decision-blocks` is the only authority; a block written
+   into a spec is a wish. Re-check at close, because main moves: ours went from
+   0516 to 0628 while this branch lived.
+6. **Never renumber with a bare word-boundary regex.** Exclude data files by
+   extension, grep for half-rewritten ranges afterwards, and grep the bare
+   number as well as the slug — one cite was wrapped across two lines.
+7. **Write the brief file before dispatching against it.** Three dispatches
    cited briefs that did not exist; the implementers coped, which is why it went
    unnoticed for three tasks.
-6. **Look for the existing model before specifying a new predicate.** The
+8. **Look for the existing model before specifying a new predicate.** The
    invented cave threshold cost a task and a correction; `cave_at` was already
    there and better on four axes.
 
@@ -219,5 +243,5 @@ document.
 | an artifact written via `>` is truncated by its own generator's failure | followup filed; `regenerate-artifacts.sh` deliberately untouched |
 | settlement names reach the walk-band legend ungated (pre-existing, unrelated to this diff) | followup filed by the whole-branch reviewer |
 | `Site::salience` has no live case — no facet on any seed holds two kinds | recorded in the chronicle and in H3's module doc; it becomes live with the derived tier |
-| `docs/decisions/README.md` was missing ~52 records | out of scope; 0536–0540 indexed correctly |
+| `docs/decisions/README.md` was missing ~52 records | out of scope; 0666–0670 indexed correctly |
 | the decision-citation gate was case-*sensitive*, so ~120 capitalized cites had never been checked | **fixed** — folding case cost zero cleanup once the three missing records existed |

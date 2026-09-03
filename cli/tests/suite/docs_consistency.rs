@@ -1362,9 +1362,15 @@ fn cite_errors_in_is_case_insensitive() {
     // ...and a capitalized cite of a MISSING record is an error. This is the
     // arm that was dead: before the fold, every one of these returned empty.
     for bad in [
-        "// Decision 0537 makes this safe.\n",
-        "// Decisions 0537 and 0538 apply.\n",
-        "// per ADR 0537\n",
+        // All three are WRAPPED, for the same reason the slug fixture below is:
+        // the source bytes read `Decision\n` with no trailing space, so the
+        // file-level scan cannot match them against this very file, while the
+        // line-joiner still makes each a real cite at runtime. Unwrapped, these
+        // reddened `decision_cites_in_sources_resolve` on themselves — 9997 and
+        // 9998 are deliberately numbers no record will ever hold.
+        "// Decision\n// 9997 makes this safe.\n",
+        "// Decisions\n// 9997 and 9998 apply.\n",
+        "// per ADR\n// 9997\n",
         // Wrapped so this fixture does not trip the file-level scan on
         // itself: the source bytes read `Decision\n`, with no trailing
         // space, so the keyword cannot match until the line-joiner runs.

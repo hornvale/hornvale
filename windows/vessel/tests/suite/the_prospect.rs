@@ -142,7 +142,7 @@ fn an_exotic_site_stands_at_one_facet_and_not_at_its_neighbour() {
 
 /// **Task 4's production wiring, end to end.** A facet a cave was placed at
 /// carries `SiteKind::Cave` in its brief, and `structure_at` — the enterability
-/// gate Decision 0536 moved onto `site` — returns a structure there.
+/// gate Decision 0666 moved onto `site` — returns a structure there.
 ///
 /// Both halves are load-bearing and the first alone would not have caught the
 /// defect that matters. `brief_of` could set the site correctly while nothing
@@ -198,7 +198,7 @@ fn a_placed_cave_is_a_site_and_is_enterable() {
     );
     assert!(
         structure_at(&placed, &here, world.seed, walk).is_some(),
-        "a cave is enterable — Decision 0536 hangs the gate on the site"
+        "a cave is enterable — Decision 0666 hangs the gate on the site"
     );
 
     let next: Facet = placed.neighbors()[0].clone();

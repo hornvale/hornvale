@@ -74,7 +74,7 @@ pub fn structure_at(
         walk_depth,
         "structure_at takes a WALK-band locale"
     );
-    // Decision 0536: the gate is the SITE, not `built`. `built` still means
+    // Decision 0666: the gate is the SITE, not `built`. `built` still means
     // "a structure stands here" and is one property of a settlement; a cave
     // and an exotic site are enterable and were never built.
     brief.site.as_ref()?;
@@ -153,7 +153,7 @@ mod tests {
 
     /// A brief carrying a cave: UNBUILT, but a site. This is the shape a real
     /// cave or exotic facet presents (`brief_of` builds exactly it), and it is
-    /// the case that distinguishes the post-0536 gate from the one it replaced.
+    /// the case that distinguishes the post-0666 gate from the one it replaced.
     fn cave_brief() -> Brief {
         Brief::from_parts(
             None,
@@ -167,7 +167,7 @@ mod tests {
         )
     }
 
-    /// **The gate is the SITE, not `built`** (decision 0536), and a test that
+    /// **The gate is the SITE, not `built`** (decision 0666), and a test that
     /// varies both together cannot say which one it reads.
     ///
     /// This was `an_unbuilt_locale_has_no_structure` and it passed a brief
@@ -187,7 +187,7 @@ mod tests {
         // The discriminating case: unbuilt, and enterable anyway.
         assert!(
             structure_at(&locale(), &cave_brief(), Seed(42), WALK).is_some(),
-            "a cave is unbuilt and IS a site — decision 0536 hangs the gate on \
+            "a cave is unbuilt and IS a site — decision 0666 hangs the gate on \
              `Brief.site`, so this must derive a structure"
         );
     }

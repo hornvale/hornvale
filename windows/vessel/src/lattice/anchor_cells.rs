@@ -191,7 +191,7 @@ pub fn is_faithful(
 /// one, and this paragraph still said so.** It read: *"Since `structure_at`
 /// returns `None` unless `brief.built`, production reaches only this corpus
 /// today — the grown one is the hostile geometry held in reserve, not a live
-/// path."* Decision 0536 hung the enterability gate on `Brief.site` instead
+/// path."* Decision 0666 hung the enterability gate on `Brief.site` instead
 /// (`structure.rs`: `brief.site.as_ref()?;`), so `structure_at` now answers
 /// for a cave or an exotic site — neither of which was ever built — and
 /// `lattice::embed_with` sends every `!built` brief to `grow`. H3
@@ -396,7 +396,7 @@ mod tests {
     /// to NOTHING else.
     ///
     /// This brief cannot derive a structure or an interior — it carries no
-    /// site, and `structure_at` returns `None` without one (decision 0536) —
+    /// site, and `structure_at` returns `None` without one (decision 0666) —
     /// and `chamber_interior_of` would debug-assert against it, since the
     /// terrain here reports built. It selects a METHOD, which is exactly how
     /// `lattice/mod.rs`, `render.rs` and `classify.rs` already use it.
@@ -495,7 +495,7 @@ mod tests {
     /// the filter doubles the failures.
     ///
     /// **This used to add "it is the corpus production actually reaches", and
-    /// since decision 0536 that is false.** Production reaches this corpus at
+    /// since decision 0666 that is false.** Production reaches this corpus at
     /// a SETTLEMENT and the grown one at every cave and exotic site — see the
     /// module doc. Both are live; neither is the corpus.
     /// claim: invariant(forall-seed) — over 1..=MAX_CHAMBERS x 0..64
@@ -610,7 +610,7 @@ mod tests {
     /// corpus containing it the campaign's keystone property was a claim about
     /// rectangles.
     ///
-    /// **REACHED IN PRODUCTION SINCE DECISION 0536, and this doc said the
+    /// **REACHED IN PRODUCTION SINCE DECISION 0666, and this doc said the
     /// opposite.** It read: *"Unreachable in production, and that is why it is
     /// a fixture. `structure_at` returns `None` unless `brief.built` … so
     /// `Session::lattice_of` always dispatches to `allocate`. This is the

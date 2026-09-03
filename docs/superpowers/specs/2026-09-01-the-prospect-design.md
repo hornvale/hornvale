@@ -1,6 +1,6 @@
 # The Prospect — design
 
-**Decision block:** 0536–0545 · **Drafted:** 2026-09-01 ·
+**Decision block:** 0666–0675 · **Drafted:** 2026-09-01 ·
 **Decider:** Nathan (autopilot) · **Campaign:** `campaign/the-prospect`
 
 A *prospect* is both the view of what lies ahead and a place worth
@@ -66,7 +66,7 @@ place." That is true of the FUNCTION and false of its DATA.
 fungal canopy (grown). Widening `built` would put a lie in the predicate every
 enterable place hangs off.
 
-**Decision 0536 (proposed): the gate becomes a `Site`, and `built` becomes a
+**Decision 0666 (proposed): the gate becomes a `Site`, and `built` becomes a
 property of one kind of site.**
 
 ```rust
@@ -128,7 +128,7 @@ of which settlements are one kind.
 **CORRECTED 2026-09-02 — Nathan reversed the discovery gate for placed
 sites.** This read: "Existing behaviour that must survive: the discovery gate
 (an undiscovered site is not drawn at all)". It no longer must survive, and
-saying it does is the opposite of the shipped rule — see decision 0540.
+saying it does is the opposite of the shipped rule — see decision 0670.
 
 A placed site's GLYPH is drawn whether or not it is discovered; its PROPER NAME
 is still withheld until discovery. Nathan's framing: *"show the kind glyph and
@@ -186,7 +186,7 @@ produced the all-river defect. Reading "is there a site near me" off that mesh
 would reproduce it exactly: every facet for tens of kilometres would claim the
 same cave.
 
-**Decision 0537 (proposed): a site is re-sited to a specific facet by a seeded
+**Decision 0667 (proposed): a site is re-sited to a specific facet by a seeded
 draw from its originating vertex.**
 
 **CORRECTED 2026-09-01, after Task 5 measured it: this is NOT an epoch.** This
@@ -202,7 +202,7 @@ The campaign therefore costs no epoch at all. Everything below about a site
 having a real address rather than being "somewhere within 120 km" stands
 unchanged; only the price was overstated.
 
-**Decision 0538 (proposed): `Site` carries an `Extent`, and this campaign only
+**Decision 0668 (proposed): `Site` carries an `Extent`, and this campaign only
 ever emits `Extent::Point`.**
 
 ```rust

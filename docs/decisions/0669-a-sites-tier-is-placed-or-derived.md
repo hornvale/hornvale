@@ -1,4 +1,4 @@
-# 0539. A site's tier is `placed` or `derived`, and standing is a separate axis
+# 0669. A site's tier is `placed` or `derived`, and standing is a separate axis
 
 **Status:** Accepted (2026-09-02) · **Decider:** Nathan (ideonomy, 2 passes,
 1 overturn) · **Relates:**
@@ -46,7 +46,7 @@ world's evolution.
 
 `Site` carries `Tier::{Placed, Derived}`. Everything The Prospect builds is
 `Placed`; `Derived` is modelled now for the same reason `Extent::Region` is
-(decision 0538) — so the surface tier is a fill-in rather than a migration of
+(decision 0668) — so the surface tier is a fill-in rather than a migration of
 every consumer.
 
 ## Why not name the criterion instead — the overturn
