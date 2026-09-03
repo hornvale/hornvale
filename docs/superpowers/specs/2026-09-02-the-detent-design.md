@@ -985,3 +985,488 @@ decides rule 2's branch from these numbers; this task does not.**
   rule and the r² floor flagged the same two runs independently. A rule that
   never excluded anything would have told us nothing about whether it was
   working.
+
+## 12. The second readout, after the prefix read
+
+Every number below is a fresh run on the development Mac, `--release`, taken
+2026-09-02 between 21:20 and 22:17 local (2026-09-03 01:20–02:17 UTC), paired
+and interleaved against the **same** merge-base control §11.1 introduced,
+unchanged and un-rebuilt. **§4 is not edited and §11 is not rewritten**; both
+readouts are reported, and §11 stands exactly as it was measured. Every number
+cites the file under `.superpowers/sdd/2026-09-02-the-detent/readout2/` it was
+read from. A criterion that fails is reported as NOT MET with its margin, and
+nothing is averaged across a failure.
+
+### 12.0 Exactly one post-unblinding change was made, and what kind of change it was
+
+Between §11 and §12 the campaign made **one** change to production code:
+**`932409875`**, "the emitter-free read no longer builds the latest-visit map".
+It is 42 insertions and 23 deletions in one function, `hazard_memory_memo`
+(`windows/vessel/src/liveness.rs`), and no other file.
+
+**It is mechanism-completing, not constant-tuning, and the distinction is
+checkable rather than rhetorical.** §2.3 specified the emitter-free read as a
+PREFIX read over the verdict index. Task 6 shipped the prefix read but left
+`visits.latest_at(npc.entity, t)` — an O(distinct rooms visited) `BTreeMap`
+build — **above** the emitter-free early return, sharing a guard with the rule-6
+witness, because the plan's own Task 6 text said to "leave the `latest` block
+where it is". On the wandering probe this bench fixes, distinct rooms ARE
+history (measured: the map holds exactly 121 entries at tick 60 and 260 at tick
+200, equal to the probe's `agent-at` count at each depth), so the path the
+design had made prefix-bounded still carried an O(history) term. The change
+moves that map below the early return, into the emitter path, under its own
+guard dropped before the emitter loop re-enters the store. The witness call
+keeps its place and its ordering — it is taken FIRST, before any early return,
+and needs only `trail.of(entity).last()`, which it already had.
+
+**Ruling #7 (ledger, 2026-09-02) permitted it in advance, conditionally:**
+
+> Exactly one post-unblinding change is permitted, under The Pawl's rule:
+> verify the mechanism by MEASUREMENT before touching it; if confirmed,
+> complete the design […]; prove byte-identity […]; then a §12 second readout,
+> interleaved against the same control, with §11 left standing and the change
+> disclosed as mechanism-completing — no threshold, constant or criterion
+> moves. If the measurement does NOT confirm the mechanism, no change is made
+> and H4 (a) is handed forward as a finding.
+
+**The verification was run first, and its first attempt REFUSED the change.**
+#7's verification clause required `latest_at` to be "≥ 50% of the fresh read's
+cost at band 10"; the measurement (two quiet runs,
+`step1-9c/step1-run{1,2}.txt`) put it at **24.00% and 24.46%**, and the task
+stopped without touching the code. **Ruling #8 then corrected the clause, not
+the number:**
+
+> H4 (a) is a criterion about the SLOPE, and the clause tested the LEVEL […]
+> Re-read #7's verification as share of the history term, which is the quantity
+> the criterion is about; the hypothesis is confirmed at 72–76% […]. No
+> threshold, constant or criterion moves; §11 stands.
+
+The measured decomposition #8 acted on, from the same two runs: `latest_at`
+costs 14.020/14.000 µs/call at tick 60 and 31.887/33.144 at tick 200, growing
+**2.27×/2.37×** over a 2.149× history growth, which is **71.97%/75.80% of the
+fresh read's history-driven growth** — of the fitted `k` that H4 (a) measures —
+while being only 24% of a total that §11.2 had already fitted as
+intercept-dominated (`C` = +88.268 µs/call). Three cross-checks against §11.2
+were taken before the change: the implied `k` (0.1786/0.1817 µs/fact against
+§11.2's fitted 0.17145), the remainder (~101 µs against `C` +88.268), and the
+fresh read itself (132.878/135.487 against §11.2's median 135.07).
+
+**No threshold, no constant and no criterion moved.** §4 is byte-for-byte what
+it was when frozen on 2026-08-24; §11 is unedited; the campaign-time constants
+(`ledger_hash_witness`'s two and `the_detent`'s two walk constants) hold
+unchanged, which is what §12.5 re-witnesses. What #8 changed is **which
+quantity a verification clause compares**, and it changed it in a ruling written
+before the change was made and after the comparison under both readings was
+recorded — which is the difference between correcting an instrument and tuning
+to a result.
+
+**The honest cost of this ordering: the second readout is not blind.** §11's
+verdicts were taken without knowing what the fix would be; §12's were taken
+knowing exactly what had been repaired and where to look. That is why §11 is
+reported in full rather than superseded, and why the falsifier and the level —
+the two results that could have gone against the campaign — are stated in §12.6
+before §12.7 and §12.8.
+
+### 12.1 The quiet-box rule, and how it was applied
+
+§4's rule, applied exactly as §11.0 applied it: all three load averages recorded
+immediately before and immediately after each run, and a run set aside if the
+**1-minute** average is above 10 at either end. As in §11, the 1-minute average
+was also sampled **every 30 s during** each run and appended to that run's own
+file, so a spike that landed and decayed between the two endpoint readings
+cannot hide; the peak-in-run column below is the maximum of those samples.
+
+The box was contested again, by the same campaign. `campaign/the-rack` was
+running a debug test binary at **886.8% CPU** (`ps aux`, 21:28 local) and drove
+the 1-minute average to 90.5. The first `session_length_scaling` control run was
+destroyed by it and is set aside; the session then polled — no worktree
+`target/` process and a 1-minute average below 6 — until the window opened at
+01:35:33Z, and a `claim` was posted to the board (`e43cd3e21094…`). Two idle
+processes were resident throughout and are named rather than omitted: a
+`target/release/hornvale-game --seed 42` at 0.0% CPU and a shell watcher at 0.0%
+CPU, neither of which is a load.
+
+| run | bench | tree | start (UTC) | load before (1/5/15) | load after | peak 1-min in run | verdict |
+|---|---|---|---|---|---|---|---|
+| B1 | `session_length_scaling` | control | 01:20:08 | 4.04 / 6.62 / 5.99 | **88.74** / 55.71 / 28.84 | 91.58 | **SET ASIDE** |
+| B2 | `session_length_scaling` | control | 01:35:45 | 4.34 / 29.71 / 29.37 | 3.39 / 13.86 / 22.19 | 4.34 | valid |
+| P1 | `session_length_scaling` | campaign | 01:40:21 | 3.39 / 13.86 / 22.19 | 4.58 / 10.56 / 19.67 | 4.86 | valid |
+| B3 | `session_length_scaling` | control | 01:42:36 | 4.45 / 10.43 / 19.57 | 2.72 / 6.00 / 14.98 | 4.77 | valid |
+| P2 | `session_length_scaling` | campaign | 01:47:14 | 2.72 / 6.00 / 14.98 | 2.69 / 4.94 / 13.37 | 3.02 | valid |
+| B4 | `session_length_scaling` | control | 01:49:21 | 2.56 / 4.87 / 13.30 | 2.99 / 3.72 / 10.42 | 3.61 | valid |
+| P3 | `session_length_scaling` | campaign | 01:53:55 | 2.99 / 3.72 / 10.42 | 2.30 / 3.16 / 9.31 | 2.99 | valid |
+| B5 | `session_length_scaling` | control | 01:56:04 | 2.16 / 3.11 / 9.22 | **10.27** / 5.53 / 8.40 | 11.71 | **SET ASIDE** |
+| P4 | `session_length_scaling` | campaign | 02:00:51 | **10.27** / 5.53 / 8.40 | 4.07 / 4.66 / 7.65 | 10.27 | **SET ASIDE** |
+| B6 | `session_length_scaling` | control | 02:03:07 | 3.75 / 4.57 / 7.59 | 3.05 / 3.50 / 6.25 | 3.75 | valid |
+| P5 | `session_length_scaling` | campaign | 02:07:40 | 3.05 / 3.50 / 6.25 | 3.37 / 3.44 / 5.85 | 3.40 | valid |
+| BA1 | `agent_scaling` | control | 02:09:47 | 3.18 / 3.40 / 5.83 | 2.88 / 3.25 / 5.60 | 3.18 | valid |
+| A1 | `agent_scaling` | campaign | 02:10:47 | 2.88 / 3.25 / 5.60 | 2.30 / 3.02 / 5.37 | 2.88 | valid |
+| BA2 | `agent_scaling` | control | 02:11:42 | 2.30 / 3.02 / 5.37 | 3.59 / 3.33 / 5.33 | 3.59 | valid |
+| A2 | `agent_scaling` | campaign | 02:12:43 | 3.59 / 3.33 / 5.33 | 3.20 / 3.26 / 5.17 | 3.59 | valid |
+| BA3 | `agent_scaling` | control | 02:13:38 | 3.20 / 3.26 / 5.17 | 3.27 / 3.24 / 5.04 | 3.20 | valid |
+| A3 | `agent_scaling` | campaign | 02:14:38 | 3.27 / 3.24 / 5.04 | 2.66 / 3.08 / 4.86 | 3.27 | valid |
+| BA4 | `agent_scaling` | control | 02:15:39 | 2.60 / 3.06 / 4.84 | 2.88 / 3.05 / 4.72 | 2.88 | valid |
+| A4 | `agent_scaling` | campaign | 02:16:39 | 2.88 / 3.05 / 4.72 | 3.10 / 3.09 / 4.63 | 3.07 | valid |
+| F-B | `fold_depth_sweep` | control | 02:17:34 | 3.10 / 3.09 / 4.63 | 3.10 / 3.09 / 4.63 | 3.10 | valid |
+| F-P | `fold_depth_sweep` | campaign | 02:17:35 | 3.10 / 3.09 / 4.63 | 2.93 / 3.06 / 4.61 | 3.10 | valid |
+
+**Three of eleven `session_length_scaling` runs are set aside; all four
+`agent_scaling` pairs are valid**, which is one more valid pair than §11 had.
+B5's spike arrived in its last 60 s (samples 3.74 → 7.87 → 11.71 across
+01:59:34–02:00:34) and P4 inherited it as its *before* reading; both are set
+aside by the endpoint rule even though P4's own *after* reading was 4.07. P4 is
+reported in §12.2 anyway, because its readings agree with the four valid
+campaign runs and a discarded run that agrees is worth showing.
+
+Files: `sls-{control,campaign}-N.txt`, `as-{control,campaign}-N.txt`,
+`fds-{control,campaign}-1.txt`, `h5-h6-witness.txt`.
+
+### 12.2 `session_length_scaling` — the decisive H4 column (`hazard_memory_memo`)
+
+50 agents, 200 ticks, bands of 20, seed 42, probe agent fixed at the
+max-`agent-at` roster member, history 101 → 260 (2.57×) across the warm bands —
+the identical construction §11.2 read. Read from `sls-{control,campaign}-N.txt`.
+
+**Control at `0dccce029` (pre-campaign, same box, same session, interleaved,
+the same binaries §11 used).**
+
+| run | k (µs/call/fact) | r² | elasticity | C (µs/call) | final-band µs/call |
+|---|---|---|---|---|---|
+| B1 — **SET ASIDE** | 1 231.33635 | 0.554 | 3.51 | −117 048.776 (negative) | 184 527.86 |
+| B2 | 333.68503 | 0.995 | **0.90** | **+5 733.995** | 89 958.05 |
+| B3 | 348.41856 | 0.999 | **0.91** | **+5 144.485** | 94 402.78 |
+| B4 | 344.34523 | 0.999 | **0.91** | **+5 348.347** | 94 326.17 |
+| B5 — **SET ASIDE** | 378.25561 | 0.972 | 0.98 | +938.685 | 94 400.97 |
+| B6 | 346.19079 | 0.998 | **0.92** | **+4 739.927** | 93 355.71 |
+
+**Campaign branch (`932409875`).**
+
+| run | k (µs/call/fact) | r² | elasticity | C (µs/call) | final-band µs/call |
+|---|---|---|---|---|---|
+| P1 | 0.01442 | 0.122 | **0.03** | **+92.258** | 93.89 |
+| P2 | 0.02068 | 0.295 | **0.04** | **+91.323** | 97.65 |
+| P3 | 0.02501 | 0.467 | **0.04** | **+89.957** | 97.23 |
+| P4 — **SET ASIDE** | −0.00151 | 0.003 | −0.00 | +95.282 | 94.62 |
+| P5 | 0.02513 | 0.390 | **0.04** | **+89.561** | 95.32 |
+
+**Medians over the valid runs: elasticity 0.91 before, 0.04 after. `k`
+345.26801 → 0.02285, a factor of 15 113. `C` +5 246.416 → +90.640 µs/call,
+positive on both sides. Final-band cost 93 840.94 → 96.275 µs/call — 93.841
+ms/call before, 0.096275 ms/call after, a factor of 974.7.**
+
+Against §11's own medians on the same instrument: elasticity 0.245 → **0.04**,
+`k` 0.17145 → **0.02285** (7.5× further down), final-band 135.07 → **96.275
+µs/call** (a further 1.40×). The 38.8 µs/call that left the final band is the
+map: §12.0's isolated timing measured it at 31.9–33.1 µs/call at that depth, and
+the balance is the map's allocation and iteration inside the larger function.
+
+**The `r² ≥ 0.5` filter, stated rather than applied silently — and this time it
+bites, in the direction nobody wrote it for.** §4 counts only runs whose fit
+clears r² 0.5. On the control column it admits 4 of 4 valid runs at 0.995–0.999.
+**On the campaign column it admits 0 of 4**, because the campaign runs read
+0.122, 0.295, 0.467 and 0.390. That is not noise: `k` is now 0.023 µs/call/fact
+against a `C` of 90.6 µs/call, so there is no slope left for a line to explain,
+and a fit to a flat scatter has a low r² *by construction*. The filter was
+frozen when this fold read 1.06–1.21 and its job was to exclude a contended run
+whose fit had fallen apart — which is exactly what it did to B1 (0.554 with an
+elasticity of 3.51, already excluded by the load rule) and to §11's B2 (0.491).
+Applied to a criterion that has succeeded, it empties the sample.
+
+| reading of the filter | qualifying campaign runs | median elasticity | median final-band µs/call |
+|---|---|---|---|
+| as printed, r² ≥ 0.5 | **none of the four** | **undefined** | **undefined** |
+| the best-fitting run alone (P3, r² 0.467) | P3 | **0.04** | **97.23** |
+| ignore the filter, all four valid | P1, P2, P3, P5 | **0.04** | **96.275** |
+| ignore the filter, including set-aside P4 | P1–P5 | **0.04** | **95.32** |
+
+**The verdict does not depend on where the boundary is drawn; it depends only on
+whether the boundary admits anything at all.** Every threshold that admits at
+least one campaign run yields a median of 0.03–0.04, far under §4's 0.20; the
+printed threshold admits none and leaves §4's own statistic undefined. §12.4
+states the verdict with that caveat attached rather than resolving it silently
+in either direction.
+
+**One reading independent of the fit**, for a reader who declines to trust an
+r²-0.12 line at all: the final-band cost fell to **96.275 µs/call from a
+same-box control of 93 840.94**, and the whole of the remaining figure is within
+6 µs of the intercept `C` measured on the *same* runs (90.640). A cost that
+equals its own floor has no history term left to have an elasticity about.
+
+**A cross-check on §12.0's decomposition, which predicted this number before it
+was measured.** Step 1's two-point estimate said the read with the map removed
+would sit at elasticity **0.08–0.09**; §12 measures **0.04**. The prediction was
+an over-estimate in the same direction and by about the same factor as its
+estimator's known bias — the two-point form read §11's own column at 0.270 where
+the ten-band fit read 0.245 — and both figures are under §4's 0.20. The
+mechanism was predicted, the size was predicted to within a factor of two, and
+the sign was exact.
+
+### 12.3 `session_length_scaling` — the whole tick, and attribution
+
+| | k (ms/tick/fact) | r² | C (ms/tick) | history share at band 10 | band-2 ms/tick* | band-10 ms/tick* |
+|---|---|---|---|---|---|---|
+| control B2 | 3.44200 | 0.993 | +211.989 | 66.9% | 341.31 | 633.25 |
+| control B3 | 3.06545 | 0.986 | +260.884 | 59.4% | 412.34 | 643.51 |
+| control B4 | 3.50813 | 0.994 | +210.109 | 67.5% | 344.61 | 640.39 |
+| control B6 | 3.53977 | 0.993 | +204.629 | 68.3% | 338.05 | 635.94 |
+| campaign P1 | 2.26297 | 0.974 | +190.527 | 59.6% | 265.82 | 463.60 |
+| campaign P2 | 2.29188 | 0.990 | +182.504 | 61.0% | 267.93 | 466.36 |
+| campaign P3 | 2.23360 | 0.987 | +188.401 | 59.6% | 270.75 | 460.54 |
+| campaign P5 | 2.24324 | 0.987 | +183.405 | 60.3% | 267.34 | 457.32 |
+
+**Medians over valid runs: `k` 3.47506 → 2.25311 (−35.2%). `C` 211.0490 →
+185.9030 (−25.146 ms/tick, i.e. it FELL — see §12.6). Share 67.20% → 59.95%
+(−7.25 points). Band-10 ms/tick\* 638.16 → 462.07 (−27.6%). Band-2 ms/tick\*
+342.96 → 267.63 (−22.0%).** B3's band-2 reading of 412.34 is the one outlier in
+this column (the others cluster at 338–345); it is a valid run by the rule and is
+left in the median rather than trimmed, which is why the control's band-2 median
+sits at 342.96 rather than at B3's value.
+
+Final-band µs/call by fold, medians of the valid runs a side:
+
+| fold | control (pre) | campaign (post) | ratio | pre elasticity | post elasticity |
+|---|---|---|---|---|---|
+| `drive_at` | 2.66 | 2.54 | 1.04× | 0.01 | 0.04 |
+| `hunger_at` | 2.52 | 2.45 | 1.03× | 0.02 | 0.04 |
+| `fatigue_at` | 61.67 | 61.44 | 1.00× | 0.27 | 0.30 |
+| `believed_water` | 8 630.06 | 8 663.95 | 1.00× | 0.95 | 0.96 |
+| `shared_believed_water` | 8 765.10 | 8 836.63 | 0.99× | 0.94 | 0.97 |
+| **`hazard_memory_memo`** | **93 840.94** | **96.275** | **974.72×** | **0.91** | **0.04** |
+
+One fold collapsed and nothing else did, exactly as in §11.3: the two Sustenance
+reads and the two KnownWater tenants are within 4% of the control in both
+directions, which is measurement noise on this bench, and their elasticities are
+unchanged to two decimals.
+
+**The attribution, one step further than §11.3 took it.** The six folds'
+final-band costs sum to 111 302.96 µs/call before and 17 663.28 µs/call after.
+`hazard_memory_memo` was **84.31%** of that sum and is now **0.545%** (§11:
+84.27% → 0.762%). The two KnownWater tenants (`believed_water`,
+`shared_believed_water`) are now **99.08%** of it (§11: 98.86%). The campaign's
+quarry is not merely gone; it is now the fourth-cheapest of the six, behind
+`fatigue_at`.
+
+### 12.4 The verdicts, against §4 — side by side with §11
+
+Every criterion separately, against the same frozen §4. Where §4 names both a
+frozen figure and a same-box control, both are given and the comparison §4
+actually asked for is named. **§11's column is reproduced from §11.4 unedited.**
+
+| criterion | §4 threshold | §11 measured | **§12 measured** | §12 control (same box) | §12 verdict |
+|---|---|---|---|---|---|
+| **H4 (a)** `hazard_memory_memo` median elasticity, runs with r² ≥ 0.5 | **< 0.20**, from 1.06–1.21 | 0.245 — **NOT MET** by 0.045 | **0.04** (no single run above 0.04; 0.03/0.04/0.04/0.04) | 0.91 | **MET on the quantity, by 0.16** — with the filter reported inapplicable: it admits **0 of 4** campaign runs (r² 0.122–0.467) because there is no slope left to fit, and 4 of 4 control runs (0.995–0.999). Every threshold admitting ≥ 1 campaign run gives 0.03–0.04; the printed one gives an undefined median (§12.2) |
+| **H4 (b)** `hazard_memory_memo` final-band cost, ≥ 10× down | **≥ 10×**, from the **frozen 73–97 ms/call** | 0.13507 ms/call → 540.5× / 718.1× frozen; 681.2× control — **MET** | **0.096275 ms/call** → **758.2×** against the frozen 73 ms and **1 007.5×** against the frozen 97 ms | 93.841 ms/call → **974.7×** | **MET** — against the frozen figure (which is what §4's clause asks for) *and* against the same-box control, by 75–100× more than required either way |
+| **H2 (c)** whole-tick history share at band 10 | **< 20%**, from 70–80% | 60.80% — **NOT MET** by 40.8 pts | **59.95%** | 67.20% | **NOT MET** — over by **39.95 points** |
+| **H2 (a)** `drive_at` median elasticity (no-regression, not a criterion) | < 0.20 | 0.01 | **0.04** | 0.01 | no regression |
+| **H2 (b)** `C` identifiable and positive on `drive_at` (no-regression) | positive | positive ×4 | **+2.411 / +2.365 / +2.364 / +2.303**, positive on all four | positive on all four | no regression |
+| **H3** no world-state artifact moves | — | held by construction + hash witnesses + §11.1's byte-identity | **held, and re-witnessed**: the deterministic-column md5 on both benches is **identical to §11's own md5**, across all 19 runs of this readout and both trees (§12.5) | — | **held** |
+| **H5** repeat read takes 0 field samples; whole tick ≤ 4 469 | 0, and ≤ 4 469 from 44 694 | 0 warm samples; tick 60 = 3 168 calls, 0 field samples — **MET** | **byte-identical witness output to §11's**: 0 warm calls, 0 warm samples, 0 second-fresh samples; tick 60 = **3 168** calls, **0** field samples | pre-fix 22 302 / 44 694 | **MET** — 14.1× down |
+| **H6** scan work per tick is O(new sightings) | judged/tick grows strictly slower than distinct rooms | judged 141 → 94 vs rooms 1 430 → 2 307, margin 2.4199× — **MET** | **byte-identical**: judged **141 → 94** (0.6667×) vs rooms **1 430 → 2 307** (1.6133×), **margin 2.4199×** | — | **MET** |
+| **M1** bytes held, three shapes, no threshold | — | 18 902 / 1 455 454 and 4 665 / 214 590 at band 10 | **identical, byte for byte, on all four valid campaign runs**: 18 902 rooms / 1 455 454 B and 4 665 index entries / 214 590 B at band 10 | — | **recorded, unchanged** |
+
+**Three criteria met and one not, where §11 had two and two.** The criterion that
+moved is H4 (a), and it moved from 0.245 to 0.04 — through §4's threshold, not to
+it. H4 (b), already met by fifty times its margin in §11, is now met by
+seventy-five to a hundred times. H2 (c) is unchanged in substance: 60.80% →
+59.95%, still three times its threshold.
+
+**Why H2 (c) still fails, as attribution rather than excuse — and why it is now
+provably not this fold's fault.** H2 (c) asks the *whole tick's* history term to
+fall below a fifth. The tick's remaining history term belongs almost entirely to
+the two KnownWater tenants, which are **99.08%** of the six-fold sum (§12.3) and
+which this campaign does not touch at all. `hazard_memory_memo` is now 0.545% of
+that sum: even removing it *entirely* — cost zero, not merely history-free —
+would move the whole-tick share by a fraction of a point. §11.4 could argue
+this; §12 can compute it, because the fold whose share was in question is now
+smaller than the noise between the two Sustenance reads.
+
+### 12.5 The byte-identity witness, re-taken
+
+**The workload did not move — not between the trees, and not between the two
+readouts.** The deterministic columns were hashed rather than eyeballed, by the
+same extraction §11.1 used, and the extraction was validated as a positive
+control by re-running it over §11's own 18 files and reproducing §11.1's two
+published md5s exactly before it was pointed at this readout's files.
+
+- `session_length_scaling`, **all 11 runs of this readout** (5 campaign, 6
+  control, set-aside runs included), the (`facts`, `searches`, `folded/a`,
+  `drank/t`, `ledger_len`) tuple for every one of the 10 bands: **one md5,
+  `3e583245b6264b33d9c71c2278f47839`, on every one of the eleven files — and it
+  is the same md5 §11.1 published.**
+- `agent_scaling`, all 8 runs (4 campaign, 4 control), the (`facts/a/tick`,
+  `search/a/tick`, `bytes/agent`, `total_bytes`, `facts`, `searches`) tuple for
+  all four rungs: **one md5, `ea5f65bffc699eef572cab601dfeb8d1`, on every one of
+  the eight files — again the same md5 §11.1 published.**
+
+Because §11's md5s were taken on a tree WITHOUT the change and §12's on a tree
+WITH it, and both equal the same value, the change is byte-identical on the
+workload these benches drive. That is the readout's own witness for H3, and it is
+stronger than §11.1's: §11.1 established agreement across two trees at one
+moment, §12.5 establishes it across two trees and two code states.
+
+Three more witnesses, taken before the readout and reported here because they are
+what licence the pairing:
+
+- **The campaign-time constants hold unchanged.** The `the_detent`,
+  `resident_folds` and `ledger_hash_witness` filters over `hornvale-vessel`'s
+  suite ran **53 tests, 53 passed, 0 failed**, including
+  `ledger_hash_witness::the_seed_42_walk_commits_the_same_ledger_bytes`,
+  `ledger_hash_witness::the_emitter_bearing_walk_commits_the_same_ledger_and_hazard_bytes`,
+  `the_detent::the_detent_seed_42_walk_matches_the_campaign_time_constant` and
+  `the_detent::the_detent_emitter_walk_matches_the_campaign_time_constants`. Not
+  one constant was touched; the standing instruction was to stop and report if
+  one moved.
+- **The FOLD-equals-SCAN oracles hold**: `liveness::emitter_scan_tests`, 5
+  passed, including `the_indexed_scan_and_read_equal_the_pre_index_oracles`. The
+  wider `liveness::tests` (171) and `hornvale-lab` (126) are green.
+- **H5 and H6's witness output is byte-identical to §11.4's**, line for line,
+  including `ground memo: 11149 misses, 257546 hits, 11149 rooms held` and the
+  60-entry `judged/tick` profile (`h5-h6-witness.txt`). A change that had altered
+  what the fold reads would have moved one of those 60 integers.
+
+### 12.6 The falsifier, and the level
+
+Both are stated before §12.7 and §12.8, because both are the ones that could have
+gone against the campaign.
+
+**The falsifier does not fire, and its margin widened.** §4's falsifier is "`k`
+falls but `C` rises by more than the `k` saving at realistic session lengths".
+From the whole-tick affine fits (§12.3 medians):
+
+```
+pre:  ms/tick = 211.0490 + 3.47506 h
+post: ms/tick = 185.9030 + 2.25311 h
+```
+
+**`C` did not rise. It fell by 25.146 ms/tick, while `k` fell by 1.22196 ms/tick
+per fact.** The nominal crossover is `h = −25.146 / 1.22196 = −20.6` — negative,
+so the two lines cross at a history no session can have and the post-campaign
+line is below the pre-campaign line at **every** `h ≥ 0`. §11 put that crossover
+at −12.9 and The Pawl's second readout put it at +25.9; the margin has moved
+further from the positive axis, not toward it.
+
+| session length | h | pre | post | verdict |
+|---|---|---|---|---|
+| 20 ticks | ≈ 32.2 | 322.95 ms/tick | 258.45 ms/tick | post **20.0%** faster |
+| 50 ticks | ≈ 52.6 | 393.84 ms/tick | 304.42 ms/tick | post **22.7%** faster |
+| 200 ticks | 124.4 | 643.35 ms/tick | 466.19 ms/tick | post **27.5%** faster |
+
+The independent check is the shallowest band actually measured: band-2
+`ms/tick*` is 342.96 before and 267.63 after — post **22.0%** faster, agreeing
+with the fit's 22.7% at the comparable `h`.
+
+**The level — reported, not predicted.** `agent_scaling`, ms/tick over 20 ticks,
+paired and interleaved (`as-{control,campaign}-N.txt`). **All four pairs are
+valid this time**, where §11 lost one to a spike.
+
+| run | tree | start (UTC) | load before | load after | 10 | 50 | 100 | **200** |
+|---|---|---|---|---|---|---|---|---|
+| BA1 | control | 02:09:47 | 3.18 / 3.40 / 5.83 | 2.88 / 3.25 / 5.60 | 57.346 | 377.063 | 646.656 | **1 562.223** |
+| A1 | campaign | 02:10:47 | 2.88 / 3.25 / 5.60 | 2.30 / 3.02 / 5.37 | 52.319 | 340.992 | 589.498 | **1 420.072** |
+| BA2 | control | 02:11:42 | 2.30 / 3.02 / 5.37 | 3.59 / 3.33 / 5.33 | 64.600 | 377.375 | 650.306 | **1 565.142** |
+| A2 | campaign | 02:12:43 | 3.59 / 3.33 / 5.33 | 3.20 / 3.26 / 5.17 | 51.094 | 340.013 | 587.369 | **1 417.535** |
+| BA3 | control | 02:13:38 | 3.20 / 3.26 / 5.17 | 3.27 / 3.24 / 5.04 | 57.377 | 376.148 | 648.984 | **1 555.861** |
+| A3 | campaign | 02:14:38 | 3.27 / 3.24 / 5.04 | 2.66 / 3.08 / 4.86 | 51.335 | 351.205 | 586.002 | **1 418.577** |
+| BA4 | control | 02:15:39 | 2.60 / 3.06 / 4.84 | 2.88 / 3.05 / 4.72 | 57.486 | 373.906 | 649.546 | **1 573.806** |
+| A4 | campaign | 02:16:39 | 2.88 / 3.05 / 4.72 | 3.10 / 3.09 / 4.63 | 52.027 | 339.304 | 587.004 | **1 413.170** |
+
+**At 200 agents, the four valid pairs: −9.10%, −9.43%, −8.82%, −10.21%. Median
+−9.27%** (§11: −8.55% over three pairs). By medians rather than pairs, 1 563.682
+→ 1 418.056 = −9.31%. Every rung moved:
+
+| rung | control median | campaign median | §12 delta | §11 delta |
+|---|---|---|---|---|
+| 10 | 57.431 | 51.681 | **−10.01%** | −10.07% |
+| 50 | 376.606 | 340.502 | **−9.59%** | −8.71% |
+| 100 | 649.265 | 587.187 | **−9.56%** | −8.61% |
+| 200 | 1 563.682 | 1 418.056 | **−9.31%** | −9.10% |
+
+The fitted log-log slope is 1.09 on both trees (BA2 alone reads 1.05, and its
+rung-10 figure of 64.600 is the one outlier in this table against three control
+readings of 57.35–57.49; both are left in). The campaign lowered the level
+without changing the shape of the agent-count scaling — the same signature §11
+reported, at the same size.
+
+**The two instruments still disagree by about 2×, and the second readout does
+not resolve it.** The affine fits predict post 20.0% faster at `h ≈ 32.2`;
+`agent_scaling` measures 9.3–10.0% across its rungs. §11.5's explanation stands
+unchanged and unverified: `agent_scaling` drives `step_with_occupancy` directly
+with a persistent `HomeNavCache` and `RoomMeshMemo`, while
+`session_length_scaling`'s whole-tick column is `Session::wait`'s full turn,
+which evaluates the walk a second time through `hornvale_kernel::tick` on a
+throwaway cache, so the removed fold is paid twice in one instrument and once in
+the other. **That the ratio reproduced at the same size on an independent session
+is new information and is worth recording**: it makes a structural explanation
+more likely than a noise one, and it makes the cheap test §11.5 proposed (a
+counter on `hazards()` calls per tick under each driver) worth running for
+whoever picks up the KnownWater folds.
+
+### 12.7 `fold_depth_sweep` — the no-regression control
+
+**This bench sweeps `drive_at` only and cannot see this campaign's fold**, and is
+run as the no-regression control on the Sustenance reads, which is what §4 says
+it is. One run each tree, back to back inside the same quiet window (both at
+3.10 / 3.09 / 4.63 before). µs/call, median of 6 alternating-direction passes
+(`fds-{control,campaign}-1.txt`).
+
+| depth | PERIODIC control | PERIODIC campaign | Δ | SINGLE-RESET control | SINGLE-RESET campaign | Δ |
+|---|---|---|---|---|---|---|
+| 10 | 0.107 | 0.107 | 0.0% | 0.103 | 0.105 | +1.9% |
+| 32 | 0.157 | 0.158 | +0.6% | 0.153 | 0.157 | +2.6% |
+| 100 | 0.254 | 0.249 | −2.0% | 0.280 | 0.285 | +1.8% |
+| 320 | 0.525 | 0.520 | −1.0% | 0.557 | 0.572 | +2.7% |
+| 1 000 | 1.404 | 1.373 | −2.2% | 1.528 | 1.463 | −4.3% |
+| 3 200 | 4.504 | 4.455 | −1.1% | 4.562 | 4.801 | +5.2% |
+| 10 000 | 15.024 | 15.035 | +0.1% | 14.637 | 14.981 | +2.4% |
+
+| | control | campaign |
+|---|---|---|
+| PERIODIC `k` (µs/call/fact) | 0.00149 (r² 0.999) | 0.00149 (r² 0.999) |
+| PERIODIC raw elasticity, top third | 1.057 | 1.068 |
+| SINGLE-RESET `k` | 0.00145 (r² 1.000) | 0.00149 (r² 1.000) |
+| SINGLE-RESET raw elasticity, top third | 1.023 | 0.999 |
+
+**No regression.** Every depth in both regimes agrees within 5.2%, the PERIODIC
+`k` values are identical to five decimals, and the two SINGLE-RESET `k` values
+differ by 2.8% — inside this bench's own run-to-run spread, and in the direction
+of the control reading low (§11 measured 0.00150 on both trees). The
+single-reset column still sits on top of the periodic one, the shape The Pawl's
+accumulator left behind, untouched here.
+
+### 12.8 What the second readout hands forward
+
+- **H4 (a) is met on the quantity and its instrument's filter is not.** The
+  elasticity is 0.04 against a threshold of 0.20 and a control of 0.91, and no
+  reading of the data puts a single run above 0.04 — but §4's `r² ≥ 0.5` clause
+  admits none of those runs, because a fold with no slope cannot produce a
+  well-fitting line. **A goodness-of-fit filter on a criterion whose success
+  destroys the fit is a filter that fails at the finish line**, and this is the
+  second clause in two days to name the wrong quantity for the same criterion
+  (ledger #8 was the first). The campaign hands both forward: the verdict, and
+  the observation that an H4-shaped criterion wants an effect-size floor rather
+  than an r² floor.
+- **The largest remaining fold is `shared_believed_water`, then
+  `believed_water`**, read straight off §12.3: 8 836.63 and 8 663.95 µs/call at
+  the final band against `hazard_memory_memo`'s 96.275. Together they are
+  **99.08%** of the six folds' cost and their elasticities are 0.97 and 0.96 —
+  history-proportional, untouched, and now essentially the *whole* of the tick's
+  remaining history term. They are why H2 (c) reads 59.95% and they are the next
+  quarry.
+- **The remaining terrain questions per tick are still the walk's, unchanged.**
+  The H5 witness is byte-identical to §11's: tick 60 makes 3 168 `hazards()`
+  calls, of which 2 268 (71.6%) are `Danger::urgency`'s per-step sampling in
+  `advance_one`'s decide loop. This change touched none of them, which is the
+  point — it moved a map, not a question.
+- **M1 is unchanged and is still the figure Penstock stage 4 enters on**: 18 902
+  rooms / ~1.455 MB and 4 665 index entries / ~215 KB at 200 ticks on the
+  50-agent shape. The change moved no allocation into or out of either
+  structure, which the identical M1 table on all four runs demonstrates.
+- **Two things the numbers say that the criteria did not ask.** First, the
+  falsifier's intercept moved the right way *again* and further: `C` fell 25.1
+  ms/tick here against 15.9 in §11 and a *rise* of 45.1 in The Pawl, so the
+  crossover has now walked from +25.9 to −12.9 to −20.6 across three readouts.
+  Second, a discarded run agreed with the kept ones: P4 was set aside for a load
+  spike it inherited from B5's tail, and its readings (elasticity −0.00,
+  final-band 94.62 µs/call) sit inside the four valid runs' spread — the load
+  rule cost this readout a data point it did not need, which is the right
+  direction for a rule to err.
