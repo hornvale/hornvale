@@ -1270,6 +1270,49 @@ mod tests {
         )
     }
 
+    /// FNV-1a over the plan's `Debug` text — a fixture-free digest, so the
+    /// pin below needs no file and no rebaseline path.
+    fn fnv1a(bytes: &[u8]) -> u64 {
+        let mut h: u64 = 0xcbf2_9ce4_8422_2325;
+        for &b in bytes {
+            h ^= b as u64;
+            h = h.wrapping_mul(0x0000_0100_0000_01b3);
+        }
+        h
+    }
+
+    /// claim: invariant(kind: [LavaTube, Fracture, Karst], character:
+    /// [WildCave, FungalGardens, DrowTier], vertex: [1, 7, 42, 1000], seed:
+    /// 0..25) — THE PLAT's regression pin (spec §3.3): the plan for every
+    /// input reachable before The Plat is byte-identical after it. Taken at
+    /// `d9749623b`'s grammar, before `plan_descent_with_origins` existed.
+    /// If this test reddens, a wild plan changed: STOP and read the spec's
+    /// §5 branch table before touching the number.
+    #[test]
+    fn the_all_found_plan_grammar_is_pinned() {
+        let rungs = habitation_rungs();
+        let mut text = String::new();
+        for seed in 0..25u64 {
+            for kind in [CaveKind::LavaTube, CaveKind::Fracture, CaveKind::Karst] {
+                for ch in [
+                    Character::WildCave,
+                    Character::FungalGardens,
+                    Character::DrowTier,
+                ] {
+                    for vertex in [1u32, 7, 42, 1000] {
+                        let p = plan_descent(Seed(seed), Vertex(vertex), &rungs, kind, ch);
+                        text.push_str(&format!("{p:?}\n"));
+                    }
+                }
+            }
+        }
+        let digest = fnv1a(text.as_bytes());
+        assert_eq!(
+            digest, 0x9684f7669a211894u64,
+            "the all-Found plan grammar moved: digest {digest:#018x} (900 plans)"
+        );
+    }
+
     /// claim: invariant(seed: 0..100) — Spec §3.4 (1): every edge joins
     /// grid-adjacent cells on one level or the same cell on adjacent
     /// levels — planar and embedded by construction.
