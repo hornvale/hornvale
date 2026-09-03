@@ -189,3 +189,38 @@ anchor the spec cites was re-verified after the merge.
 pass is #1's.
 
 **Capture:** `docs/superpowers/plans/2026-09-03-the-terrier.md`.
+
+## Execution
+
+### Task 1 — complete (2026-09-03, commits `319134e3f..57219df62`, two fix rounds)
+
+The hoist itself landed as written: `WorldContext.occupations`, `brief_of`
+takes the register, `World` gone from `brief.rs`, the type-audit report did
+not drift, gate green. Two rulings, both against the plan's own text:
+
+- **The plan's evidence clause asked for the wrong red.** Task 1 said
+  "paste the red you saw against the pre-hoist tree", and the red seen was
+  the positive control (`build` did not yet name the register) — a red from
+  the wrong assertion, proving the test can fail and nothing about whether
+  the offender scan catches a per-call read. The reviewer flagged it as
+  plan-mandated; ruling: witness the offender scan by mutating
+  `brief_here` on the finished tree. Observed: the scan names
+  `src/session.rs:7232`. Cost if wrong: none now; the pre-hoist red is kept
+  as a separately labelled second observation.
+- **The ratchet under-scanned three files, found by the controller between
+  rounds.** `production_code` split at the first `#[cfg(test)]` in a file,
+  which gates test-only HELPERS mid-production: `liveness.rs`'s first is at
+  4353 and its module at 8490, so ~4,100 production lines (including
+  `species_activity`) were never scanned; `roster.rs` likewise from 237 to
+  446. A guard that reads green over code it never looked at is the exact
+  class it was built to close. Ruling: split at the test MODULE (an attribute
+  followed, across attribute lines, by `mod `), blank comment lines instead
+  of dropping them so cited lines are the file's own, add per-file coverage
+  controls and a synthetic-shape test. Same lesson as memory's
+  *a check that can never fire*: the scan's reach had to be witnessed, not
+  assumed.
+
+Deferred minors (for the final review): the boundary detector takes the
+FIRST module-declaring sequence and `liveness.rs` has two adjacent ones; a
+doc cite of 8490 where the `mod` line is 8491. No ideonomy pass was run for
+either ruling; both are corrections of a claim against the code.
