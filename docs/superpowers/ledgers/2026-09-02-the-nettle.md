@@ -219,3 +219,42 @@ digest, the capture manifest, and the spec path.
 
 *Capture.* This entry; the plan's task list; §5's recommendation is now the
 campaign's position.
+
+---
+
+#8 [G4] — **Plan self-review found two defects in Task 3, one of which would
+have made Task 2 report a false success.**
+
+*Defect A — the scanner could not see the fix Task 2 was going to make.* The
+classifier cuts the joined expression at the first `;`, and three of the four
+`cli/` sites are shaped `let dir = temp_dir();` on one line with the join on
+the next. Task 2's first draft put the uniquifier on the *second* statement,
+which the scanner cannot reach — so Task 2's Step 6 verification ("expect 2
+sites remaining") would have reported **5**, and an implementer trusting the
+step would have concluded the classifier was broken rather than the fix. Task 2
+now collapses each pair into one statement (verified: `dir` has no other use at
+any of the four sites), and Task 2's Step 6 carries a branch for it.
+
+*Defect B — the ratchet's roster was keyed by line number.* Any edit above a
+declared site would shift its line and raise a stale-entry failure on an
+unrelated change, which is exactly how a three-valued ratchet gets trained
+away — the failure mode the three-valued shape exists to prevent, reintroduced
+by the key. Re-keyed on the joined expression itself, which moves only when the
+site does.
+
+*Also corrected:* the scanner missed `clients/` entirely. Measured before
+adding it — 4 files use `temp_dir()` there, **0 fixed** — so including it
+changes no count today and covers a future site.
+
+*The shape, and it is this campaign's own again.* Both defects were in
+**verification steps**, not implementation: an expected-count and a roster key.
+Neither reads as an assertion. Defect A is the sharper one, because a wrong
+expected count does not merely fail — it fails in a way that accuses the
+correct tool.
+
+*Cost if wrong.* Low; both are caught by Task 2 Step 6 and Task 3 Steps 5-6,
+which now discriminate in both directions.
+
+*ideonomy passes / overturns.* 0 / 0 — a verification finding.
+
+*Capture.* This entry; the retrospective's defect tally.
