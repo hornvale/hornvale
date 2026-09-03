@@ -5354,6 +5354,7 @@ fn raid_attribution(records: &[OccupationRecord]) -> RaidAttribution {
 /// Minimum raid-caused endings a world must carry before either Granary
 /// column reports (T8): below five stamps the circular concentration is noise
 /// rather than signal, so the world reads Absent instead.
+/// plumb: pending(wave-1)
 const RAID_FLOOR: usize = 5;
 
 /// One raid-caused ending's sub-year stamp, folded off a record list: the
@@ -5396,6 +5397,7 @@ fn raid_stamps(
 /// `windows/worldgen/tests/diachronic.rs`): day 36,525, the hundredth year.
 /// A crisis is a statement about a culture at a time, so the census must fix
 /// the time or the column means nothing.
+/// plumb: pending(wave-1)
 const DIACHRONIC_EPOCH_DAYS: f64 = 36_525.0;
 
 /// This world's toponymic-domain concepts, derived from its own registry
@@ -7772,10 +7774,12 @@ type TerrainGate = fn(&hornvale_terrain::GeneratedTerrain, Vertex) -> bool;
 /// worldgen's own `MARSH_MIN_DRAINAGE` is private, and see the module note
 /// above for why restating is the intended relationship rather than a
 /// workaround.
+/// plumb: pending(wave-1)
 const LAB_MARSH_MIN_DRAINAGE: f64 = 5.0;
 
 /// The small-landmass ceiling `island` sits under. Restated for the same
 /// reason as [`LAB_MARSH_MIN_DRAINAGE`].
+/// plumb: pending(wave-1)
 const LAB_ISLAND_VERTEX_CAP: usize = 200;
 
 /// Whether `vertex` is a river channel: its water kind is exactly `River`.
@@ -7886,12 +7890,14 @@ fn lab_is_island_vertex(terrain: &hornvale_terrain::GeneratedTerrain, vertex: Ve
 // the SHIPPED `transverse_at` predicate by stepping across it, and
 // `the_analytic_channel_area_matches_the_sampled_one` asserts the two agree.
 // A re-derivation that has drifted from the predicate fails there.
+/// plumb: pending(wave-1)
 const LAB_FORD_TRANSECT_STEPS: usize = 48;
 
 /// At most this many vertices are transected for
 /// `channel-band-monotonicity`, so a large world does not cost more than a
 /// small one. The stride is derived from it, never the count truncated —
 /// taking the first N vertices would sample only the lowest-`Vertex` rivers.
+/// plumb: pending(wave-1)
 const LAB_FORD_MAX_TRANSECTS: usize = 256;
 
 fn lab_dot(a: [f64; 3], b: [f64; 3]) -> f64 {

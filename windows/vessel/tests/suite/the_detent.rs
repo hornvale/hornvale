@@ -122,7 +122,9 @@ pub fn bench_shape(seed: u64, ticks: usize, agents: usize) -> BenchShape {
         let samples_before = ground.borrow().misses();
         let judged_before = folds.borrow().witness().ground_judged();
         let copied_before = folds.borrow().witness().emitter_timeline_copied();
-        let (facts, _occupancy) =
+        // The third element is the roster write-back `Session::wait` needs
+        // (The Rack, Task 3); this sampler owns no roster, so it is dropped.
+        let (facts, _occupancy, _written) =
             sys.step_with_occupancy(&ledger, &mut mesh_memo, &mut home_nav_cache);
         facts_per_tick.push(facts.len());
         for fact in facts {
@@ -560,7 +562,12 @@ use hornvale_vessel::{PossessOpts, Session};
 /// `the_detent_seed_42_walk_matches_the_campaign_time_constant` is therefore
 /// NOT evidence the fear path is unchanged — `DETENT_EMITTER_LEDGER` and
 /// `DETENT_EMITTER_HAZARD` are the load-bearing pair for that claim.
-pub(crate) const DETENT_SEED_42_LEDGER: u64 = 0xabc4_731e_5cf1_ab21;
+///
+/// `DETENT_SEED_42_LEDGER` was re-recorded at the close absorption of
+/// `a712371dc` (The Rack moved the seed-42 walk); main's own value, taken on
+/// a checkout carrying none of this campaign's code, BEFORE the merge. The
+/// emitter pair did not move and is unchanged.
+pub(crate) const DETENT_SEED_42_LEDGER: u64 = 0x36eb_5f31_17e8_2539;
 pub(crate) const DETENT_EMITTER_LEDGER: u64 = 0xc851_e64b_0105_38b2;
 pub(crate) const DETENT_EMITTER_HAZARD: u64 = 0xa9f1_7d82_c183_2854;
 

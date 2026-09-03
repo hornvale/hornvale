@@ -26,19 +26,23 @@ use std::collections::BTreeMap;
 /// Days simulated per world — long enough to span several full drive cycles
 /// (thirst rises over ~5–6 days and resets on a drink), so a chronic block is
 /// distinguishable from a normal seek.
+/// plumb: pending(wave-1)
 const HEALTH_TICKS: usize = 40;
 
 /// Creatures derived per world (a representative sample, not the whole roster —
 /// the session's own small constant, spec §4).
+/// plumb: pending(wave-1)
 const HEALTH_NPCS: usize = 6;
 
 /// Wild beast agents derived per world (The Wilding) — the fauna's contribution
 /// to the population-health sample.
+/// plumb: pending(wave-1)
 const HEALTH_WILD: usize = 4;
 
 /// Consecutive distress ticks that count as CHRONIC (persistently stuck, the
 /// learned-helplessness / bug-alarm signal, spec §8) rather than a transient
 /// spike a healthy mind recovers from.
+/// plumb: pending(wave-1)
 const CHRONIC_TICKS: usize = 8;
 
 /// One creature's affect over the simulated span, tagged with its species.
@@ -145,7 +149,9 @@ pub fn run_simulation(
         // calls read the identical frozen `ledger`, so this changes nothing
         // about how the world evolves — only what the affect sample below
         // gets to see.
-        let (_facts, occupancy) =
+        // The third element is the roster write-back `Session::wait` needs
+        // (The Rack, Task 3); this sampler owns no roster, so it is dropped.
+        let (_facts, occupancy, _written) =
             sys.step_with_occupancy(&ledger, &mut mesh_memo, &mut home_nav_cache);
         // The kernel tick applies the drive-movement facts; the same headless
         // step `Session::wait` runs, minus the player. This path goes through
@@ -274,7 +280,9 @@ pub fn run_simulation_with_locale(
             terrain: &terrain,
             folds: &folds,
         };
-        let (_facts, occupancy) =
+        // The third element is the roster write-back `Session::wait` needs
+        // (The Rack, Task 3); this sampler owns no roster, so it is dropped.
+        let (_facts, occupancy, _written) =
             sys.step_with_occupancy(&ledger, &mut mesh_memo, &mut home_nav_cache);
         ledger = match tick(&ledger, &[&sys], &["drive-movements"], registry) {
             Ok(next) => next,

@@ -501,6 +501,7 @@ impl DriveKey {
 /// unobservable — a partition is a pure function of `(ledger prefix,
 /// temperature field, home)` and is rebuilt on demand — so this bounds memory
 /// without bounding correctness; it costs a rebuild, never an answer.
+/// plumb: pending(wave-1)
 const MEMO_PARTITIONS_PER_DRIVE: usize = 2;
 
 /// One boundary of a memoised integral: a distinct sighting instant, the
@@ -1560,8 +1561,14 @@ impl ResidentFolds {
     }
 
     /// The room-indexed visit lists, current with `ledger` — the plain
-    /// accessor, for a reader not taking the rule-6 witness (the property
-    /// tests, and the alarm scan, which asks only for rooms).
+    /// accessor, for a reader not taking the rule-6 witness. Since The
+    /// Detent's Task 9c (`932409875`) that is exactly ONE reader:
+    /// `hazard_memory_memo`'s EMITTER path, which builds the per-room latest
+    /// visit only once an emitter is in range. The emitter-free path reads
+    /// the verdict index instead and calls this not at all. The property
+    /// tests this doc used to name do not call it either: they fold their own
+    /// [`Folded<LatestVisit>`] against a scan oracle, and the tests that want
+    /// a live store's visits take [`Self::latest_visit_and_trail`].
     pub fn latest_visit(&mut self, ledger: &Ledger) -> &LatestVisit {
         self.advance(ledger);
         self.latest_visit.state()
@@ -1575,24 +1582,6 @@ impl ResidentFolds {
     pub fn latest_visit_and_trail(&mut self, ledger: &Ledger) -> (&LatestVisit, &Trail) {
         self.advance(ledger);
         (self.latest_visit.state(), self.trail.state())
-    }
-
-    /// The room-indexed visit lists, the trail and the read witness together,
-    /// from ONE guard — `hazard_memory_memo`'s own read. [`Trail`] rides along
-    /// for [`Self::known_water_and_trail`]'s reason: the rule-6 witness asks
-    /// whether `t` lies before this entity's last committed sighting, which is
-    /// the trail's last entry at O(1), and a second `borrow_mut` to ask it
-    /// would panic.
-    pub fn latest_visit_and_witness(
-        &mut self,
-        ledger: &Ledger,
-    ) -> (&LatestVisit, &Trail, &mut ReadWitness) {
-        self.advance(ledger);
-        (
-            self.latest_visit.state(),
-            self.trail.state(),
-            &mut self.witness,
-        )
     }
 
     /// The visit lists, the trail, the verdict index and the witness — the

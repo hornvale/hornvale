@@ -78,6 +78,31 @@
 //! measured in standard days — now scales with the same local day its
 //! accrual does, for every creature whose Fatigue drive is ever live.
 //!
+//! **Regenerated again by The Plumb, Task 5** (`REST_BOUT` -- a conscious
+//! rest's length -- converts from a flat quarter of the STANDARD day to a
+//! quarter of the world's own LOCAL day, the same axis Task 9 and fix round 1
+//! above already converted the fatigue RISE/FALL rate terms onto).
+//! Adjudicated, not merely accepted, because this move crosses labels again:
+//! **89 of 410 lines moved**, 22 in label (Frustrated -> Lost x16, Eager ->
+//! Content x5, Content -> Eager x1), 6 object changes, 0 valence changes, 67
+//! arousal-only lines, max arousal delta 0.35920095. 16 of the 22 label
+//! transitions land IN `Lost` (0 leave it) -- nearly 9x fix round 1's line
+//! count and, unlike either precedent above, a move concentrated almost
+//! entirely in one direction rather than spread across several labels, which
+//! is exactly the shape Task 9's own note warns moves `health.rs`'s distress
+//! classification and its by-cause attribution. Re-run after the accept: the
+//! coverage floor below still holds (both `Lost` and `Frustrated` remain
+//! reachable -- six labels and six species sampled, same as before the
+//! move), and the full `hornvale-lab` health-calibration suite
+//! (`health_calibration.rs`, 19 tests, the one `heavy`-tagged seed sweep
+//! excluded) passes unchanged. The mechanism is the SAME chain Task 9's own
+//! move documents, entered at the bout's LENGTH rather than its repayment
+//! rate: seed 42's local day (87,988 ticks, 0.87988 std days) is not one
+//! standard day, so a rest's span -- previously a flat quarter of the
+//! standard day regardless of the world it was taken on -- now scales with
+//! the same local day its accrual and repayment already did, for every
+//! creature whose Fatigue drive is ever live.
+//!
 //! ## Why a change to ONE species' niche drifts EVERY creature's trace
 //!
 //! Recorded because it is not obvious and it has now cost one investigation

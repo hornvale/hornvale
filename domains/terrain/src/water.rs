@@ -68,6 +68,7 @@ impl WaterKind {
 /// every river. 15.0 keeps rivers the minority landform (~6.7% of seed-42's
 /// land) while giving that sweep a comfortable margin of hits.
 /// type-audit: bare-ok(count)
+/// plumb: pending(wave-1)
 pub const RIVER_MIN_DRAINAGE: f64 = 15.0;
 
 /// Classify one vertex from the bits the globe already derives. Pure and total;
@@ -96,6 +97,7 @@ pub fn classify(
 /// Confluence) so carrying capacity spikes ADJACENT to rivers — settlements
 /// condense a short walk from fresh water, not necessarily on it.
 /// type-audit: bare-ok(count)
+/// plumb: pending(wave-1)
 pub const RIVER_REACH: u32 = 3;
 
 /// Per-vertex proximity to fresh flowing water, in `[0, 1]`: `1.0` on a

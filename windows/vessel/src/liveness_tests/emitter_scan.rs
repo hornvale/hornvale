@@ -363,10 +363,12 @@ struct HauntedTerrain<'a> {
 /// `threat_field` takes the maximum over a room AND its neighbours, so a
 /// denser rule would make every roster member an emitter and the
 /// non-emitter half of the comparison vacuous.
+/// plumb: universal(a synthetic probe fixture's own overlay rule, deliberately world- and species-independent so both verdicts appear on any shape — no world reads it and nothing about it varies)
 const HAUNT_MODULUS: u64 = 29;
 
 /// The UNCANNY magnitude a haunted room carries — well above `DANGER_ACT`
 /// (0.3) at steady boldness, so the verdict is not sitting on the threshold.
+/// plumb: universal(the same synthetic probe fixture's planted magnitude, chosen to clear DANGER_ACT by a wide margin — not a world value, so it varies along no axis a world has)
 const HAUNT_UNCANNY: f64 = 0.8;
 
 impl Terrain for HauntedTerrain<'_> {
@@ -529,7 +531,9 @@ fn run_scan_shape(
                 terrain: &terrain,
                 folds: &folds,
             };
-            let (facts, _occupancy) =
+            // The third element is the roster write-back `Session::wait` needs
+            // (The Rack, Task 3); this sampler owns no roster, so it is dropped.
+            let (facts, _occupancy, _written) =
                 sys.step_with_occupancy(&ledger, &mut mesh_memo, &mut home_nav_cache);
             for fact in facts {
                 ledger

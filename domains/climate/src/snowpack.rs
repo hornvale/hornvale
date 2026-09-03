@@ -19,6 +19,7 @@ pub struct Snowpack {
 
 /// A temperate default: 3 mm w.e. per degree-day, within the 2–5 range
 /// ordinary degree-day snowmelt models use.
+/// plumb: pending(wave-1)
 pub const DEFAULT_SNOWPACK: Snowpack = Snowpack {
     melt_per_degree_day_mm: 3.0,
 };

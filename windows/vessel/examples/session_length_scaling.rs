@@ -1244,7 +1244,7 @@ fn run(
         // must not fold a per-tick harness clone into the answer.
         #[allow(clippy::disallowed_types)] // benchmark harness
         let t0 = Instant::now();
-        let (facts, _occupancy) =
+        let (facts, _occupancy, _written) =
             sys.step_with_occupancy(&ledger, &mut mesh_memo, &mut home_nav_cache);
         for fact in facts {
             ledger

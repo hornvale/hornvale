@@ -110,11 +110,13 @@ fn mix_str(state: u64, s: &str) -> u64 {
 /// itself — the output of at least one prior [`mix`] call — to land on one
 /// of these two specific constants, rather than needing only a small
 /// `EntityId` to equal a small literal.
+/// plumb: pending(wave-1)
 const PATIENT_SOME_TAG: u64 = 0xA5A5_A5A5_A5A5_A5A5;
 /// Folded in when an act has no patient. Distinct from
 /// [`PATIENT_SOME_TAG`], and folded as the *only* step for the `None` arm
 /// (the `Some` arm folds this tag's sibling and then the id — two steps),
 /// so the two arms differ in step count as well as in tag value.
+/// plumb: pending(wave-1)
 const PATIENT_NONE_TAG: u64 = 0x5A5A_5A5A_5A5A_5A5A;
 
 /// One act: `actor` did `deed`, to `patient` if the deed has one, on `day`.

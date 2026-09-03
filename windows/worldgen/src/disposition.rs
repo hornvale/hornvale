@@ -56,6 +56,7 @@ use hornvale_species::{Dispersion, MindVector};
 /// constant; `the_unit_halfwidth_is_the_square_root_of_three` below pins that
 /// it *is* `sqrt(3.0)` (IEEE-exact, so portable).
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 const UNIT_SD_HALFWIDTH: f64 = 1.732_050_807_568_877_2;
 
 /// The dispersion of a people that has no authored row: a point, not a
@@ -63,6 +64,7 @@ const UNIT_SD_HALFWIDTH: f64 = 1.732_050_807_568_877_2;
 /// 2's `every_kind_with_a_mind_carries_a_dispersion` keeps this unreachable
 /// for the shipped roster; it exists so a caller holding a partial store
 /// degrades to the authored location rather than to `None`.
+/// plumb: pending(wave-1)
 const NO_SPREAD: Dispersion = Dispersion {
     mind: 0.0,
     society: 0.0,

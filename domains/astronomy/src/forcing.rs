@@ -14,12 +14,15 @@ use hornvale_kernel::math;
 
 /// Obliquity oscillation period, standard days (~41 kyr).
 /// type-audit: pending(wave-1)
+/// plumb: pending(wave-1)
 pub const P_OBLIQUITY: f64 = 41_000.0 * 365.25;
 /// Eccentricity oscillation period, standard days (~100 kyr).
 /// type-audit: pending(wave-1)
+/// plumb: pending(wave-1)
 pub const P_ECCENTRICITY: f64 = 100_000.0 * 365.25;
 /// Axial-precession period, standard days (~21 kyr).
 /// type-audit: pending(wave-1)
+/// plumb: pending(wave-1)
 pub const P_PRECESSION: f64 = 21_000.0 * 365.25;
 
 /// The deep-time forcing of one world: means, amplitudes, and phases for the

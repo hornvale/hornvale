@@ -143,6 +143,7 @@ pub fn tree_line_m(latitude_deg: f64) -> f64 {
 /// branch. They answer different questions at different thresholds, and both
 /// moved a large share of the population in this campaign (worlds below
 /// −20 °C mean land temperature: 305 → 67; below −10 °C: 529 → 278).
+/// plumb: pending(wave-1)
 const ICE_C: f64 = -20.0;
 
 impl Biome {
@@ -383,6 +384,7 @@ pub fn classify_land(
 }
 
 /// Frozen-surface threshold (°C).
+/// plumb: pending(wave-1)
 const SEA_ICE_C: f64 = -2.0;
 
 /// Classify a marine vertex by depth, surface temperature, seafloor feature,

@@ -107,6 +107,7 @@ pub fn baseline_path(repo_root: &Path, host: &str) -> PathBuf {
 /// from per-test alarm eligibility. CHOSEN from this measurement, not
 /// derived — same status as `PER_TEST_MULTIPLE`/`SUITE_TOLERANCE` (spec A1).
 /// type-audit: bare-ok(diagnostic-value)
+/// plumb: pending(wave-1)
 pub const BASELINE_FLOOR_SECS: f64 = 1.0;
 
 /// Reserved test id for the folded aggregate row. Cannot collide with a real
@@ -259,16 +260,19 @@ pub fn parse_baseline(text: &str) -> Result<Vec<TestDuration>, String> {
 /// single-digit milliseconds. CHOSEN, not derived (spec A1) — revisit against
 /// the baseline's own spread once several runs exist.
 /// type-audit: bare-ok(diagnostic-value)
+/// plumb: pending(wave-1)
 pub const PER_TEST_FLOOR_SECS: f64 = 5.0;
 
 /// A test must exceed this multiple of its baseline to alarm.
 /// CHOSEN, not derived (spec A1).
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 pub const PER_TEST_MULTIPLE: f64 = 2.0;
 
 /// Fractional growth of the whole suite's total that alarms.
 /// CHOSEN, not derived (spec A1).
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 pub const SUITE_TOLERANCE: f64 = 0.25;
 
 /// A stored duration is kept unchanged unless the new measurement differs
@@ -281,6 +285,7 @@ pub const SUITE_TOLERANCE: f64 = 0.25;
 /// together left 6 changed rows, vs 2405 with neither. CHOSEN from this
 /// measurement, not derived (spec A1).
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 pub const BASELINE_DEADBAND: f64 = 0.20;
 
 /// One duration that moved beyond tolerance.

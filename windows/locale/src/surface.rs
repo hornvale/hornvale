@@ -196,11 +196,13 @@ fn tier3(axis: f64) -> f64 {
 /// sunlit face (`aspect` tier `+1`) sheds snow faster than a shaded one
 /// (tier `-1`) — bounded small so this perturbs the climate-set snow
 /// regime, it does not decide whether a vertex has snow at all.
+/// plumb: pending(wave-1)
 const ASPECT_SNOW_SWING: f64 = 0.2;
 
 /// How far the chlorophyll share of the vegetation total moves per openness
 /// tier. A closed canopy (tier `-1`) reads greener; an open one (tier `+1`)
 /// shows more litter and understory.
+/// plumb: pending(wave-1)
 const OPENNESS_CANOPY_SWING: f64 = 0.3;
 
 /// How far the silt share of the bare-ground total moves per wetness tier,
@@ -208,6 +210,7 @@ const OPENNESS_CANOPY_SWING: f64 = 0.3;
 /// hydrology on bare ground under open air (The Rill), so this one gets the
 /// same three-tier treatment as the two address-noise axes above rather
 /// than a wider, continuous swing.
+/// plumb: pending(wave-1)
 const WETNESS_TIER_DELTA: f64 = 0.2;
 
 /// The cover components at `vertex` on `at`, modulated by this room's own
@@ -256,7 +259,9 @@ fn cover_components(
     // recorded snow_fraction — ground frost / rime rather than bare frozen
     // dirt — topped up toward SNOW_CEILING by how snow-heavy the climate
     // expects this vertex to be.
+    /// plumb: pending(wave-1)
     const SNOW_FLOOR: f64 = 0.25;
+    /// plumb: pending(wave-1)
     const SNOW_CEILING: f64 = 0.85;
     let snow_weight = if frozen {
         (SNOW_FLOOR + (SNOW_CEILING - SNOW_FLOOR) * annual_snow) * aspect_factor

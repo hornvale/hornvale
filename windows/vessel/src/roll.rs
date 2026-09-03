@@ -29,10 +29,12 @@ use crate::body::Body;
 /// How many walk-band hops out "within call" reaches. A BUDGET, not a world
 /// fact (spec §3.2).
 /// type-audit: bare-ok(count)
+/// plumb: pending(wave-1)
 pub const ROLL_HOPS: u32 = 2;
 
 /// The most bodies a tick advances. A BUDGET, not a world fact (spec §3.2).
 /// type-audit: bare-ok(count)
+/// plumb: pending(wave-1)
 pub const ROLL_BUDGET: usize = 128;
 
 /// Every room within `hops` of `centre`, with its BFS depth — `centre` itself

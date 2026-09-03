@@ -1345,6 +1345,7 @@ hornvale-lab::hornvale_lab$domesday::render::tests::a_detector_that_fired_nothin
 hornvale-lab::hornvale_lab$domesday::render::tests::a_domain_page_carries_the_generated_header_and_only_computed_numbers
 hornvale-lab::hornvale_lab$domesday::render::tests::a_domain_with_no_metrics_renders_the_no_metrics_notice_verbatim
 hornvale-lab::hornvale_lab$domesday::render::tests::a_flag_metric_always_renders_both_true_and_false_rows
+hornvale-lab::hornvale_lab$domesday::render::tests::a_metric_that_trips_two_detectors_is_grouped_under_one_heading_not_two
 hornvale-lab::hornvale_lab$domesday::render::tests::a_novel_detector_name_reaches_the_rendered_index
 hornvale-lab::hornvale_lab$domesday::render::tests::a_removed_parenthetical_directly_before_a_period_does_not_leave_a_dangling_space
 hornvale-lab::hornvale_lab$domesday::render::tests::an_ellipsis_survives_the_space_dot_space_cleanup_untouched
@@ -2500,6 +2501,7 @@ hornvale-terrain::suite$tectonic_properties::the_column_is_a_pure_projection_unp
 hornvale-terrain::suite$tectonic_properties::the_column_is_deterministic
 hornvale-thing::hornvale_thing$tests::declared_owner_mismatch_panics_with_its_own_message
 hornvale-thing::hornvale_thing$tests::every_named_handle_is_a_roster_row
+hornvale-thing::hornvale_thing$tests::every_roster_kind_carries_a_gloss
 hornvale-thing::hornvale_thing$tests::every_roster_kind_registers_as_a_concept
 hornvale-thing::hornvale_thing$tests::hearth_maps_to_an_existing_owner_instead_of_conflicting
 hornvale-thing::hornvale_thing$tests::registering_twice_is_idempotent
@@ -2754,6 +2756,8 @@ hornvale-vessel::hornvale_vessel$liveness::tests::a_lonely_creature_yields_to_th
 hornvale-vessel::hornvale_vessel$liveness::tests::a_negative_rest_span_is_refused
 hornvale-vessel::hornvale_vessel$liveness::tests::a_rest_bout_repays_more_than_the_hysteresis_band_it_must_clear
 hornvale-vessel::hornvale_vessel$liveness::tests::a_rest_span_past_the_exact_range_is_refused
+hornvale-vessel::hornvale_vessel$liveness::tests::a_rest_still_outlasts_the_sleep_scans_give_up_fallback_at_the_100_hour_legal_extreme
+hornvale-vessel::hornvale_vessel$liveness::tests::a_rest_taken_on_a_100_hour_world_repays_more_than_the_hysteresis_band_it_must_clear
 hornvale-vessel::hornvale_vessel$liveness::tests::a_saturated_body_recovers_over_three_or_four_ordinary_nights
 hornvale-vessel::hornvale_vessel$liveness::tests::a_sleeps_length_is_the_cycles_in_phase_and_the_floors_out_of_phase
 hornvale-vessel::hornvale_vessel$liveness::tests::a_thirsty_agent_plans_to_water_and_the_tick_walks_it
@@ -2915,6 +2919,11 @@ hornvale-vessel::hornvale_vessel$plan::tests::the_projection_is_deterministic
 hornvale-vessel::hornvale_vessel$plan::tests::the_standing_cell_is_carried_verbatim
 hornvale-vessel::hornvale_vessel$plan::tests::two_walls_at_different_light_levels_get_different_palette_entries
 hornvale-vessel::hornvale_vessel$purview::tests::agent_salience_outranks_every_settlement_salience
+hornvale-vessel::hornvale_vessel$roster::tests::a_short_mask_is_refused
+hornvale-vessel::hornvale_vessel$roster::tests::a_slot_never_moves
+hornvale-vessel::hornvale_vessel$roster::tests::a_write_moves_one_slot_only
+hornvale-vessel::hornvale_vessel$roster::tests::every_column_shares_one_length
+hornvale-vessel::hornvale_vessel$roster::tests::the_driven_slot_is_the_one_dropped
 hornvale-vessel::hornvale_vessel$session::tests::a_costly_truth_names_its_residue_and_an_empty_one_reads_as_ordinary
 hornvale-vessel::hornvale_vessel$session::tests::a_deliberate_lie_carries_the_claim_and_never_the_truth
 hornvale-vessel::hornvale_vessel$session::tests::advanced_by_checks_the_increment_and_the_sum_separately
@@ -3393,7 +3402,6 @@ hornvale-worldgen::hornvale_worldgen$person_promote::tests::selection_takes_the_
 hornvale-worldgen::hornvale_worldgen$render::tests::every_kind_valence_pair_has_a_distinct_palette_color
 hornvale-worldgen::hornvale_worldgen$render::tests::most_dread_picks_the_highest_dread_layer_breaking_ties_first
 hornvale-worldgen::hornvale_worldgen$render::tests::venerated_and_forgotten_read_distinctly_within_a_kind
-hornvale-worldgen::hornvale_worldgen$resolve::tests::a_covered_vertex_resolves_to_the_most_specific_features_name
 hornvale-worldgen::hornvale_worldgen$resolve::tests::an_empty_index_resolves_to_none
 hornvale-worldgen::hornvale_worldgen$resolve::tests::an_undiscovered_inner_link_does_not_borrow_the_outer_links_name
 hornvale-worldgen::hornvale_worldgen$resolve::tests::an_undiscovered_outer_link_keeps_its_class_but_loses_its_name

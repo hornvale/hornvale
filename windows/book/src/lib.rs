@@ -650,7 +650,9 @@ fn chorus_sections_from(
 /// any culture could have witnessed a darkening) and the hundredth year —
 /// `36_525.0` standard days. The committed artifact always renders exactly
 /// these two, regardless of the CLI's `--at` lens ([`reckoning_at`]).
+/// plumb: pending(wave-1)
 const RECKONING_EPOCH_1_DAY: f64 = 0.0;
+/// plumb: pending(wave-1)
 const RECKONING_EPOCH_2_DAY: f64 = 36_525.0;
 const RECKONING_EPOCH_1_HEADING: &str = "In the first days";
 const RECKONING_EPOCH_2_HEADING: &str = "In the hundredth year";

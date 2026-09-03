@@ -26,6 +26,7 @@ use hornvale_kernel::{Seed, math};
 /// it on the wrong side. The slack is one-directional (it can only add
 /// pairs, never drop one that would have passed at the bare factor).
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 pub const SEAM_SLACK: f64 = 0.02;
 
 /// Amplitude of the fracture-noise term blended into `seam_side`: the
@@ -36,14 +37,17 @@ pub const SEAM_SLACK: f64 = 0.02;
 /// with its own amplitude (`CRENULATION_AMP`), added in Task 10's tuning
 /// season.
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 pub const FRACTURE_AMP: f64 = 0.35;
 
 /// Base spatial frequency of the seam's fracture noise.
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 pub const FRACTURE_FREQ: f64 = 6.0;
 
 /// fBm octaves for the fracture noise (matches `crust::LOBE_OCTAVES`'s
 /// shape; kept private — not a knob Task 10 exposes yet).
+/// plumb: pending(wave-1)
 const FRACTURE_OCTAVES: u32 = 4;
 
 /// Amplitude of the vertex-scale crenulation octave blended into `seam_side`
@@ -70,6 +74,7 @@ const FRACTURE_OCTAVES: u32 = 4;
 /// therefore the §7 band-supersession conversation at close, not an amplitude
 /// chase (which the high-frequency-texture anti-pattern would be anyway).
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 pub const CRENULATION_AMP: f64 = FRACTURE_AMP * 0.5;
 
 /// Base spatial frequency of the crenulation octave — eight times the
@@ -78,11 +83,13 @@ pub const CRENULATION_AMP: f64 = FRACTURE_AMP * 0.5;
 /// than the multi-vertex fracture wobble. A first-probe frequency (Task 10);
 /// tunable alongside `CRENULATION_AMP`.
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 pub const CRENULATION_FREQ: f64 = 48.0;
 
 /// fBm octaves for the crenulation noise: one — a single high-frequency
 /// octave ("one higher-frequency octave on the existing seam curve", spec
 /// §5). Kept private, matching `FRACTURE_OCTAVES`.
+/// plumb: pending(wave-1)
 const CRENULATION_OCTAVES: u32 = 1;
 
 /// Lower bound of the drawn spreading-rate range, rad-per-unit-age. A
@@ -90,10 +97,12 @@ const CRENULATION_OCTAVES: u32 = 1;
 /// it exists so downstream prose ("the rift widened slowly/quickly") has
 /// a seeded number to read.
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 pub const SPREAD_MIN: f64 = 0.3;
 
 /// Upper bound of the drawn spreading-rate range.
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 pub const SPREAD_MAX: f64 = 1.2;
 
 /// A rift seam between two cratons that touch (or nearly touch) at the
@@ -307,6 +316,7 @@ pub fn rotate(pole: [f64; 3], angle: f64, p: [f64; 3]) -> [f64; 3] {
 /// the taper sets only how fast the clip leaves 0.5, never where it sits on
 /// the shared curve.
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 pub const CLIP_TAPER: f64 = 0.16;
 
 /// Smoothstep on `x` clamped to `[0, 1]`: `3x² - 2x³`. A plain cubic
@@ -365,6 +375,7 @@ pub(crate) fn seam_indices_for(rift: &RiftHistory, craton_id: u32) -> Vec<usize>
 /// negligible against the ~0.255 threshold it pads — makes the skip bound
 /// safe even against every accumulated rounding in the side expression's
 /// own combination arithmetic.
+/// plumb: pending(wave-1)
 const NOISE_ESCAPE_MARGIN: f64 = 1e-9;
 
 /// The plain-envelope difference (toward self) at or above which a seam's
@@ -380,6 +391,7 @@ const NOISE_ESCAPE_MARGIN: f64 = 1e-9;
 /// exact), while a min-fold with an exactly-1.0 contribution is the
 /// identity. Threshold: `CLIP_TAPER + (FRACTURE_AMP + CRENULATION_AMP) *
 /// (0.5 + NOISE_ESCAPE_MARGIN)` ~ 0.343.
+/// plumb: pending(wave-1)
 const SATURATION_SKIP_ENV_DIFF: f64 =
     CLIP_TAPER + (FRACTURE_AMP + CRENULATION_AMP) * (0.5 + NOISE_ESCAPE_MARGIN);
 

@@ -653,33 +653,40 @@ impl GeneratedClimate {
 
 /// The comfortable temperate midpoint, °C: roughly Earth's global mean
 /// annual surface temperature. Felt heat/cold is the deviation from here.
+/// plumb: pending(wave-1)
 const TEMPERATE_BASELINE_C: f64 = 14.0;
 /// EMISSION threshold, °C: a vertex whose annual mean deviates by at least this
 /// from [`TEMPERATE_BASELINE_C`] emits a felt heat/cold standing condition.
 /// Narrow, so mild climes (e.g. an 18 °C settlement, 4 °C off) ARE felt.
+/// plumb: pending(wave-1)
 const TEMP_EMIT_MARGIN_C: f64 = 2.0;
 /// Felt-temperature salience per °C of deviation beyond the emission margin, a
 /// gentle slope (G3): crossing the 0.25 pantheon FLOOR (deification) needs a
 /// genuinely brutal ~±15 °C from baseline — `0.019 × (15 − 2) = 0.247`, which
 /// `round2`s to 0.25 (mean ≥ ~29 °C or ≤ ~−1 °C). A mild 4 °C deviation is
 /// felt at only `round2(0.019 × 2) = 0.04` — well sub-floor.
+/// plumb: pending(wave-1)
 const TEMP_SALIENCE_PER_C: f64 = 0.019;
 /// Below this annual-mean temperature, precipitation on a wet vertex falls as
 /// snow rather than rain (water's freezing point).
+/// plumb: pending(wave-1)
 const FREEZING_C: f64 = 0.0;
 /// EMISSION threshold for moisture: a vertex at or above this ("moderately wet",
 /// not only near-saturated) emits a felt rain/snow standing condition. Below
 /// it, no precipitation phenomenon (dryness is deferred). Narrow, so the world
 /// is felt broadly.
+/// plumb: pending(wave-1)
 const WET_EMIT_THRESHOLD: f64 = 0.5;
 /// Precipitation salience per unit of moisture beyond the emission threshold, a
 /// gentle slope: crossing the 0.25 FLOOR needs genuinely extreme wetness —
 /// `0.5 × (1.0 − 0.5) = 0.25`, so only a near-saturated vertex (moisture ≈ 1.0)
 /// deifies. A moderately-wet 0.75 vertex is felt at only
 /// `round2(0.5 × 0.25) = 0.13` — sub-floor.
+/// plumb: pending(wave-1)
 const MOISTURE_SALIENCE_PER_UNIT: f64 = 0.5;
 /// Ceiling on any standing climate phenomenon's salience: felt weather never
 /// outranks the sky's headline bodies.
+/// plumb: pending(wave-1)
 const MAX_CLIMATE_SALIENCE: f64 = 0.9;
 
 /// Round to two decimals — the salience precision every phenomena source

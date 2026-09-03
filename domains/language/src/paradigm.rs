@@ -119,16 +119,19 @@ const PERSON_DEPTH_WEIGHTS: [f64; 3] = [15.0, 15.0, 70.0];
 
 /// The percentage chance (out of 100) the Number affix binds as a suffix
 /// rather than a prefix.
+/// plumb: pending(wave-1)
 const NUMBER_POSITION_SUFFIX_CHANCE: u32 = 70;
 
 /// The percentage chance (out of 100) the Tense affix binds as a suffix
 /// rather than a prefix.
+/// plumb: pending(wave-1)
 const TENSE_POSITION_SUFFIX_CHANCE: u32 = 65;
 
 /// The percentage chance (out of 100) the Polarity affix binds as a suffix
 /// rather than a prefix — below 50, unlike Number (70) and Tense (65),
 /// because the negative morpheme's cross-linguistically dominant position
 /// is BEFORE the verb it negates, not after it.
+/// plumb: pending(wave-1)
 const POLARITY_POSITION_SUFFIX_CHANCE: u32 = 40;
 
 /// The percentage chance (out of 100) the Person affix binds as a suffix
@@ -160,6 +163,7 @@ const POLARITY_POSITION_SUFFIX_CHANCE: u32 = 40;
 /// superlative the cited source never makes and that 45 (milder than
 /// Polarity's 40) does not itself support; the claim is tempered to what
 /// the source and the number actually agree on.
+/// plumb: pending(wave-1)
 const PERSON_POSITION_SUFFIX_CHANCE: u32 = 45;
 
 /// The `weighted_index` bucket order both depth axes share: 0 = `None`,

@@ -41,6 +41,7 @@ use hornvale_topology::{ConnectionGraph, EdgeKind};
 /// traveler actually reach," not "what vertices happen to share a mesh
 /// boundary."
 /// type-audit: bare-ok(ratio: threshold)
+/// plumb: pending(wave-1)
 const ISOLATION_THRESHOLD: f64 = 1e-6;
 
 /// The smallest region size this module reports as a real stretch of
@@ -56,6 +57,7 @@ const ISOLATION_THRESHOLD: f64 = 1e-6;
 /// itself is untouched, and a site's own region (however small) is always
 /// named regardless of this floor -- see [`isolation_paragraph`].
 /// type-audit: bare-ok(count: floor)
+/// plumb: pending(wave-1)
 const MIN_NOTABLE_REGION_SIZE: usize = 2;
 
 /// Render a site's transport connections and regional isolation as prose:
@@ -265,6 +267,7 @@ pub fn render_overview(graph: &ConnectionGraph) -> String {
 /// biggest so a world with many small pockets doesn't turn this into a
 /// number dump; the caller already reports the total count.
 fn join_sizes(sizes: &[usize]) -> String {
+    /// plumb: pending(wave-1)
     const CAP: usize = 5;
     let shown: Vec<String> = sizes.iter().take(CAP).map(|n| n.to_string()).collect();
     let joined = crate::history::join_prose(&shown);

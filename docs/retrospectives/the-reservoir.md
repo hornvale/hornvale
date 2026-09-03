@@ -290,3 +290,37 @@ vantage*, not more diligence at the same one. Six task reviews each read a
 correct diff correctly; the defect lived in the relation between one task's
 edit and five other tasks' callers, and only a whole-branch reading — and, in
 the end, a clock — could see it.
+
+## Deferred minors, and the discipline miss the close found
+
+Six minors were deferred across the six tasks. **Four of them existed only in
+`.superpowers/sdd/<campaign>/progress.md`, which is git-ignored and dies when
+the worktree is recycled** — found by `closing-a-campaign` step 2A's walk, which
+greps that file rather than trusting the closer's memory of the campaign. They
+are backfilled into the committed ledger as entry #20 with the outcomes below.
+
+| deferred minor | outcome |
+|---|---|
+| Task 1's report kept the disproven "expected drift" account of the roster total | accepted as-is — the report is scratch; its committed half (decision 0606's baseline) was corrected in fix round 1 |
+| `docs/timings.md` gained 3 `gate-commit` rows across 2 commits, keyed to the pre-commit `HEAD` | accepted as-is, pre-existing — `ci-record` runs inside `pre-commit`, before the commit object exists |
+| `manifest-dir-uses.txt`'s count of 2 for `fixture.rs` includes a doc-comment mention | accepted as-is, deliberately (ledger #9) — the over-count is the guard's documented textual tolerance and errs safe |
+| `world-build-sites.tsv`'s "sort-order violation" | **closed as a non-issue** — `LC_ALL=C sort` yields zero differing lines; it appeared only under locale-aware collation, and the roster is read into a `BTreeMap`. It never existed in any committed document |
+| Task 3's commit message says 110 call sites where the brief said 108 | accepted as-is — commit messages are immutable, and the frozen figure (ledger #11) is 239 |
+| duplicate ledger entry `#12` | fixed, `584fff560` |
+
+**The miss is worth more than the minors.** The Cartulary moved the decision
+ledger out of `.superpowers/sdd/` precisely because that tree dies, and this
+campaign reintroduced the same loss by writing rulings into the durable ledger
+and deferred minors into the scratch one — in the same sittings, hours apart,
+without noticing the two files have different lifetimes. The plugin's
+`progress.md` is where task state legitimately belongs, so writing there is not
+wrong in general; it was wrong for *this*. Nothing in the workflow makes that
+distinction visible at the moment of writing, which is why the backstop is a
+closer's grep and not an author's care.
+
+The same walk found a second omission of the same shape: ledger #13's Capture
+line promised a `PROC-*` registry row for the campaign's most reusable finding —
+that `pre-commit`'s docs-only fast-path is blind to a Rust test whose subject is
+prose — and no row had been written. It exists now as
+`PROC-docs-only-commits-skip-a-gate-that-checks-docs`. A Capture line is a
+promise, and nothing checks that promises are kept except this walk.

@@ -1365,6 +1365,7 @@ fn ecliptic_longitude_to_ra_deg(lam_deg: f64, obliquity_deg: f64) -> f64 {
 /// place-less tier of the shared twilight concept: placed consumers read
 /// [`Calendar::sky_band`] (the altitude-based [`crate::calendar::SkyBand`]
 /// thresholds); this margin serves only the position-blind prose path.
+/// plumb: pending(wave-1)
 const TWILIGHT_MARGIN: f64 = 0.05;
 
 /// The quality of a star's daylight from its spectral class (SKY-17):
@@ -1533,12 +1534,15 @@ pub struct GeneratedSky {
 
 /// Visibility at or above which a moon still shows a discernible face. Below
 /// it the moon is present but featureless.
+/// plumb: pending(wave-1)
 const MOON_PHASE_VISIBILITY: f64 = 0.6;
 /// Visibility at or above which a moon is discernible at all. Moons are the
 /// brightest things in a night sky and go last.
+/// plumb: pending(wave-1)
 const MOON_VISIBILITY: f64 = 0.25;
 /// Visibility at or above which the fixed neighbour stars are discernible.
 /// They are the faintest things in the sky and go first.
+/// plumb: pending(wave-1)
 const STAR_VISIBILITY: f64 = 0.75;
 
 impl GeneratedSky {

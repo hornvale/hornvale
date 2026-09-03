@@ -151,6 +151,7 @@ fn diet_predation_distance(a: &PeopleTraits, b: &PeopleTraits) -> f64 {
     /// prey's. AUTHORED modeling constant, not a per-pair preference — it
     /// is added or subtracted identically for every predation edge in the
     /// roster.
+    /// plumb: pending(wave-1)
     const PREDATION_SHIFT: f64 = 0.15;
 
     let base = 1.0 - a.niche.overlap(&b.niche);
