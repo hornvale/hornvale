@@ -202,3 +202,46 @@ section of the spec is without a task.
   freshness sweep; the gap itself is `PLAY-free-body-cannot-drink`.
 - A free seed-42 body reads `Pursuing(Thirst)` from its second wait and
   has no way to drink. Same row.
+
+## Task 1 — complete (commits 46f6ccec2..358f72801)
+
+The red witnesses and the free-path control. Two repo ratchets the brief
+did not name fired on the commit gate and were satisfied mechanically: a
+seed-looping test needs a `claim:` tag (`cli/tests/suite/claim_shape.rs`,
+decision 0093), and every `build_world` call site is rostered in
+`cli/tests/fixtures/world-build-sites.tsv` (decision 0606). Review approved
+with one plan-mandated Important — a message-less assertion in the plan's
+own P1 code — ruled trivial and carried into Task 2's dispatch. No ideonomy
+pass; a hygiene ruling.
+
+## Task 2 — complete (commits 358f72801..2953a2d53, one fix round)
+
+The fix. `Session::wait` commits the driven walk's facts after the
+population's loop; the driven slot goes through `Roster::write`;
+`Roster::resolve` is deleted. `make rebaseline` moved nothing under
+`docs/generated-paths.txt` — not even `docs/audits/`, since `resolve`'s
+signature carried no tagged primitive.
+
+**P1 held: 7 `drank` facts on the held body by day 40 at seed 42, felt
+state `Idle`/`Content` throughout.**
+
+**P2 is THE NULL, and it is the campaign's finding.** At seed 7 the column
+moves on the first seeking wait (the mechanism half, green), and the body
+still commits 0 `drank` by day 36 and reads `Helpless`. A walk that resumes
+from where it stopped did NOT reach water that a restarting walk could not;
+whatever keeps seed 7's held body from water is not the discard. Recorded
+as an `assert_eq!` on the measured count, not retuned. Ruling: the
+chronicle characterises it (per-tick trail, nearest-water distance) at
+close rather than this task guessing — what it costs if wrong: a chronicle
+paragraph, not code.
+
+**A literal the plan got wrong, corrected by measurement:** the plan
+predicted the held session's ledger would carry ONE more fact than the
+free one after the first wait (the walk's `slept`). Measured: two, because
+`!possess` itself commits a `possessed-by` fact with the body as subject.
+The review then asked for the narrower assertion the plan had meant —
+exactly one `slept` for the held body, zero for the free — and it was
+added beside the corrected count. Review: one Important (a "three waits"
+message left stale by the nine-wait extension), fixed in round 1;
+re-review clean. No ideonomy pass for either ruling; both are
+measurement corrections.
