@@ -264,15 +264,18 @@ decided here that the spec had not already.
 
 ## Task 4 — complete (commits 072b30def..29c18f5f3)
 
-The wait line minutes the held body's acts. The three lines P7 MEASURED (its
-assertions pin narrower things: a substring of the first, a suffix of the
-second, and the absence of the minute phrase from the third):
+The wait line minutes the held body's acts. The three lines P7 MEASURED:
 seed 7's first seeking wait, `Time passes. The will that holds you walks
 this body elsewhere.`; seed 42's second wait, `Time passes. You sense
 movement nearby (201 stirred). The will that holds you drinks and rests.`;
 the free body's, `Time passes. You sense movement nearby (201 stirred).` —
 byte-identical to before the campaign, and `make rebaseline` moved no
-gallery transcript or fixture. Review approved; three minors folded into
+gallery transcript or fixture. **What P7 HOLDS is four assertions over four
+lines, not three** (`the_minute.rs:132-181`): a substring plus a
+no-stirred/no-arrival negative on seed 7's line; a `drinks` substring on the
+quoted seed-42 second wait; a `The will that holds you rests.` SUFFIX on seed
+42's FIRST wait, a fourth line none of the three quoted above; and an absence
+on the free body's. Review approved; three minors folded into
 Task 5 (a paraphrase of 0168/0226 to tighten; one narration branch — a
 stationary body with minutes under zero population movement — with no
 end-to-end assertion; helper placement). No ideonomy pass; the wording was

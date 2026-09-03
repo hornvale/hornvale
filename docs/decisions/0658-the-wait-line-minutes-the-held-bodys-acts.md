@@ -44,13 +44,19 @@ Time passes. You sense movement nearby (201 stirred). The will that holds you dr
 Time passes. You sense movement nearby (201 stirred).
 ```
 
-— seed 7's first seeking wait, seed 42's second wait, and a **free** body's
-line at the same tick, byte-identical to what it read before this campaign.
-What the assertions actually **pin** is narrower than those three strings: a
-substring of the first (`walks this body elsewhere`, plus the absence of a
-stirred count), a suffix of the second, and the *absence* of the minute
-phrase from the free body's. The full lines are the measurement; the
-substrings are the guard.
+— seed 7's first seeking wait, seed 42's **second** wait, and a **free**
+body's line at the same tick, byte-identical to what it read before this
+campaign.
+
+What the tests **hold** is narrower, and it is four assertions over four
+lines, not three. On seed 7's first seeking wait: a substring
+(`walks this body elsewhere`) and a negative — the line carries no stirred
+count and no arrival or departure text. On the quoted seed-42 second wait: a
+substring (`drinks`). On seed 42's **first** wait, a line the block above does
+not quote: a suffix (`The will that holds you rests.`), because the population
+itself stirs on that tick, so only the minute suffix is stable. And on the
+free body's: an absence (`The will that holds you` does not occur). The
+quoted lines are the measurement; those four assertions are the guard.
 
 ## Consequences
 
