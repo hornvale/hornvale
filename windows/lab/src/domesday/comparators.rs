@@ -286,7 +286,7 @@ mod tests {
 
     #[test]
     fn an_expectation_with_an_unknown_direction_is_rejected() {
-        let dir = std::env::temp_dir().join("armature-dir-test");
+        let dir = std::env::temp_dir().join(format!("armature-dir-test-{}", std::process::id()));
         std::fs::create_dir_all(&dir).expect("tmp");
         let p = dir.join("expectations.json");
         std::fs::write(
@@ -307,7 +307,7 @@ mod tests {
 
     #[test]
     fn declared_none_requires_direction_none() {
-        let dir = std::env::temp_dir().join("armature-none-test");
+        let dir = std::env::temp_dir().join(format!("armature-none-test-{}", std::process::id()));
         std::fs::create_dir_all(&dir).expect("tmp");
         let p = dir.join("expectations.json");
         std::fs::write(
@@ -325,7 +325,7 @@ mod tests {
 
     #[test]
     fn a_well_formed_signed_expectation_loads() {
-        let dir = std::env::temp_dir().join("armature-ok-test");
+        let dir = std::env::temp_dir().join(format!("armature-ok-test-{}", std::process::id()));
         std::fs::create_dir_all(&dir).expect("tmp");
         let p = dir.join("expectations.json");
         std::fs::write(

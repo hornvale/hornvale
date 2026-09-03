@@ -16,8 +16,8 @@ fn run(args: &[&str]) -> (String, String, bool) {
 #[test]
 fn scene_moons_emits_the_schema() {
     // Build a seed-42 world (default sky is `generated`, which has moons).
-    let dir = std::env::temp_dir();
-    let world = dir.join("hv-scene-moons-test.json");
+    let world =
+        std::env::temp_dir().join(format!("hv-scene-moons-test-{}.json", std::process::id()));
     let (_o, e, ok) = run(&["new", "--seed", "42", "--out", world.to_str().unwrap()]);
     assert!(ok, "new failed: {e}");
     let w = world.to_str().unwrap();

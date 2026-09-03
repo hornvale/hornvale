@@ -96,6 +96,8 @@ mod star_class_is_a_concept;
 mod subfloor_roster_coverage;
 #[path = "suite/system_coverage.rs"]
 mod system_coverage;
+#[path = "suite/temp_path_ratchet.rs"]
+mod temp_path_ratchet;
 #[path = "suite/test_binary_ratchet.rs"]
 mod test_binary_ratchet;
 #[path = "suite/the_unnameable.rs"]
