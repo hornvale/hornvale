@@ -235,10 +235,21 @@ If any pre-existing case fails, the projection broke a rule — return to Step 5
 
 ```bash
 shellcheck scripts/hv-guard-bash.sh
-bash scripts/check-bash32.sh scripts/hv-guard-bash.sh
+bash scripts/check-bash32.sh
 ```
 
-Expected: both clean. `${line#"${line%%[![:space:]]*}"}` is POSIX parameter expansion and is bash 3.2-safe; `[[ =~ ]]` with `BASH_REMATCH` is already used elsewhere in this file.
+Expected: both clean. **`check-bash32.sh` takes no file arguments** — it discovers its own file set from `git ls-files scripts`, so pass it nothing. (Consequence worth knowing: a script not yet `git add`-ed is invisible to it.)
+
+**The constructs this task introduces are bash-3.2-safe, verified rather than assumed** — `BASH_REMATCH` and `[[ =~ ]]` appear nowhere else in `scripts/`, so there was no precedent to lean on. Tested directly against `/bin/bash` 3.2.57, which is what `check-bash32.sh` shells out to:
+
+| construct | verdict |
+|---|---|
+| `${l#"${l%%[![:space:]]*}"}` whitespace trim | OK |
+| `[[ =~ ]]` + `${BASH_REMATCH[1]}` on the heredoc opener | OK — extracted `EOF` |
+| `out+="$line"$'\n'` string append | OK |
+| the same regex against a **herestring** (`<<<"$v"`) | correctly does NOT match |
+
+The last row is the one that matters for correctness, not just portability: it confirms `<<<` cannot start a body skip.
 
 - [ ] **Step 9: Commit**
 
