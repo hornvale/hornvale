@@ -121,12 +121,16 @@ mod the_handle;
 mod the_lintel;
 #[path = "suite/the_purview.rs"]
 mod the_purview;
+#[path = "suite/the_rack.rs"]
+mod the_rack;
 #[path = "suite/the_roll.rs"]
 mod the_roll;
 #[path = "suite/thing.rs"]
 mod thing;
 #[path = "suite/tick_commit_budget.rs"]
 mod tick_commit_budget;
+#[path = "suite/turn_budget.rs"]
+mod turn_budget;
 #[path = "suite/underworld_level_generation.rs"]
 mod underworld_level_generation;
 #[path = "suite/walker_battery.rs"]

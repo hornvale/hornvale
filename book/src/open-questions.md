@@ -4984,3 +4984,46 @@ readouts rather than only the second — the first stands unedited, and the
 second is explicitly not blind. Nothing in the standing gate would have caught
 a quieter version of that ordering, and nothing here claims otherwise; it was
 disclosed because the campaign chose to disclose it.
+
+### The gate the fourth look said did not exist now exists (2026-09-02)
+
+The section above, written days earlier, states the standing position on cost
+plainly: "there is still no cost gate on the simulation — no ceiling, no slope
+check, nothing that runs per commit," and the two instruments that exist are
+the ones the two campaigns that needed them built. [The Rack](./chronicle/the-rack.md)
+moves that, and the way it moves it is the part worth re-scoring rather than
+the fact that it did.
+
+**The instrument that existed was not merely blunt; it was not running.**
+`session_cost.rs` bounds a pooled wall-clock median, and its own doc already
+conceded that twenty of the fifty samples that median is drawn from exceed the
+ceiling individually while the gate passes. That is the bluntness anyone would
+have predicted. What nobody had checked is that its millisecond assertions are
+gated to a host the test no longer runs on — they fire only on the Mac, and
+the tier that runs them moved to the canonical Linux box. Measured at close, on
+one quiet box in one profile: **the test passed at main's tip at 81.490 ms
+against a 9 ms ceiling.** [The Roll](./chronicle/the-roll.md) had moved that
+control roughly twenty-one-fold and every gate stayed green, not because the
+threshold was generous but because no threshold was being evaluated.
+
+**A gate's blind zone can be structural rather than statistical, and only one
+of those is visible in its own documentation.** This file's standing floor is
+that a check is only worth what it can be made to fail on; the companion the
+fourth look added is that a criterion is only worth the range its instrument
+samples. This is a third: a check is only worth the *configurations it
+actually runs in*, and the one place that is never written down is the
+intersection of a test's host guard with the tier's host policy — two
+correct-looking facts in two files that nothing compares.
+
+**What replaces it changes the shape of the bet, modestly and legibly.**
+Per-turn work is now a **count** — folds, plan searches, ledger position folds,
+shadowcasts, bodies scanned — asserted per verb class. A count is identical on
+every machine, so it belongs in the commit gate and cannot flap; it went red on
+the pre-change tree at exactly the preregistered numbers and green after. That
+is the first per-commit cost gate this project has had, and it is deliberately
+narrow: it covers the turn path of one window, and it cannot see a regression
+that performs the same operations more slowly. **The unwatched dimension is
+smaller, not closed.** The Rack's own residue — seventy kilobytes of JSON and
+one eight-millisecond shadowcast — is exactly the shape no counter bounds, and
+it is why this campaign's own wall-clock prediction was falsified while its
+counted one landed exactly.
