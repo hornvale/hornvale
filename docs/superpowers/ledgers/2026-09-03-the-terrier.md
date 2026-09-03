@@ -294,3 +294,19 @@ ratchet direction, honest limits) instead of creating it. The second was a
 one-line move the controller made inline under the dispatch skill's
 trivial-exact-content carve-out, re-reviewed. `make rebaseline` moved only
 `docs/digest/decisions-in-force.md`, as P5's rule allows.
+
+### The absorb before close (2026-09-03, `63f08555a` + `78013ce66`)
+
+The stage gate at `8b4f7f490` went red in its `gate` phase on
+`registry_ids_are_unique`: `main` had moved 45 commits (The Nettle), which
+rewrote two PROC rows in the registry, and this branch had inserted its new
+PROC row directly beside them, so the auto-merge kept both versions of each
+neighbour. The fourth recorded instance of a hand-edited table merging
+clean and wrong (The Rack's retrospective counted three). Resolved by
+keeping `main`'s rows; the rebaseline on the merge product moved nothing.
+The absorb also brought a stricter pre-commit — docs-only commits now run
+the prose-subject tests — which caught a bare `anchor_cells` token in
+Task 3's bench header that the lexicon guard counts; waived on the line as
+the function's own name. Cost if wrong: none; both are review-visible
+text. Lesson for the register: put a new registry row at the END of its
+table, not beside a row another campaign may be rewriting.
