@@ -110,12 +110,13 @@
 //! **P6 (spec §4: every movement turn ≤ 15 ms) MISSED on this reading.**
 //! Outdoor turns (**9.97-14.10 ms**) clear it; every indoor turn does not —
 //! `enter` 47.377 ms, the two post-`enter` `look`s 29.163/29.450 ms, and
-//! `map`/`go n/e/s/w` inside the chamber 18.7-20.0 ms. That is the same
-//! shadowcast cost `windows/vessel/examples/move_cost.rs`'s own AFTER-Rack
-//! block already measured (8.4-16.8 ms per indoor `snapshot()+json` there,
-//! release profile) surfacing again here on top of `handle`, on a slower
-//! dev-profile build, under a contended box — three reasons a MISS here is
-//! not a surprise. **Not tuned**: the task this block closes is measure and
+//! `map`/`go n/e/s/w` inside the chamber 18.7-20.0 ms.
+//! That was NOT a shadowcast cost, and this sentence used to say it was:
+//! The Terrier (2026-09-03) decomposed the derivation and found the
+//! shadowcast at 0.012 ms and the whole item in `brief_of` rebuilding the
+//! world's occupation register per call — see the AFTER-Terrier block
+//! below and `windows/vessel/examples/move_cost.rs`.
+//! **Not tuned**: the task this block closes is measure and
 //! report, not chase the ceiling.
 //!
 //! **The outdoor range, stated once with its rule** (The Rack, final review —
@@ -133,6 +134,51 @@
 //! 29.163/29.450 ms, chamber `map`/`go *` 43.3-51.0 ms -> 18.7-20.0 ms) —
 //! the win is real, it is just short of the P6 line under today's
 //! contention.
+//!
+//! ### AFTER The Terrier, default (`dev`) profile — P6
+//!
+//! 2026-09-03, MacBookPro, `8b4f7f49065eb69852a9e2cded0d88e50b352a75`. **quiet**
+//! (`uptime` before: `load averages: 2.67 2.18 2.11`, after: `2.48 2.15
+//! 2.10` — all three under The Repose's quiet-box threshold of 4), taken on
+//! the default profile a player launches. This file is INFORMATIVE and
+//! gates nothing.
+//!
+//! ```text
+//! game driver: profile DEBUG; Driver::start 3691 ms
+//!     look     9.274 ms
+//!      map    13.069 ms
+//!     go n     9.766 ms
+//!     go n     9.457 ms
+//!     back     9.777 ms
+//!     back    10.053 ms
+//!    needs     9.733 ms
+//!    enter     0.822 ms
+//!     look     0.654 ms
+//!      map     0.636 ms
+//!     go n     0.610 ms
+//!     go e     0.618 ms
+//!     go s     0.611 ms
+//!     go w     0.611 ms
+//!     look     0.621 ms
+//!      out     9.699 ms
+//!     go n     9.809 ms
+//!     back     9.421 ms
+//! ```
+//!
+//! **P6 (spec §4 P3: every indoor movement turn ≤ 15 ms) MET on this
+//! reading, for every indoor row:** `enter` 0.822 ms, the two post-`enter`
+//! `look`s 0.654/0.621 ms, and `map`/`go n/e/s/w` inside the chamber
+//! 0.610-0.636 ms — all MET, none within an order of magnitude of the
+//! budget. Against the AFTER-Rack block above: `enter` 47.377 -> 0.822 ms,
+//! chamber `look` 29.163/29.450 -> 0.654/0.621 ms, chamber `map`/`go *`
+//! 18.7-20.0 -> 0.610-0.636 ms.
+//!
+//! **The outdoor range, stated once with its rule:** min and max over
+//! EVERY outdoor row in the block above, `needs` included, rounded
+//! half-up to two decimals — **9.27-13.07 ms** (`look` 9.274 -> 9.27,
+//! `map` 13.069 -> 13.07). Against the AFTER-Rack block's 9.97-14.10 ms:
+//! the control, unmoved beyond noise — this is the JSON-and-spatial-channel
+//! floor The Rack measured, and The Terrier does not touch it.
 
 use hornvale_game::driver::Driver;
 use hornvale_vessel::PossessTarget;
