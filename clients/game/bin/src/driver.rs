@@ -4976,16 +4976,16 @@ mod portolan_tests {
             if let Some(name) = d.settlement_name_for_test(site.vertex) {
                 assert!(
                     !name.is_empty(),
-                    "sanity: the settlement's own committed name must not be empty,                      or the absence check below is vacuous"
+                    "sanity: the settlement's own committed name must not be empty, or the absence check below is vacuous"
                 );
                 let text = before.clone().unwrap_or_default();
                 assert!(
                     !text.contains(&name),
-                    "the {kind:?}'s own proper name {name:?} is reachable through the                      cursor readout while undiscovered: {text:?}"
+                    "the {kind:?}'s own proper name {name:?} is reachable through the cursor readout while undiscovered: {text:?}"
                 );
             } else if kind == SiteKind::Settlement {
                 panic!(
-                    "sanity: a centred, real settlement site must resolve to a real                      committed name, or the absence check above never ran"
+                    "sanity: a centred, real settlement site must resolve to a real committed name, or the absence check above never ran"
                 );
             }
 
@@ -5006,7 +5006,7 @@ mod portolan_tests {
                 let text = after.clone().unwrap_or_default();
                 assert!(
                     !text.contains(&name),
-                    "the {kind:?}'s own proper name {name:?} is reachable through the                      cursor readout after discovery: {text:?}"
+                    "the {kind:?}'s own proper name {name:?} is reachable through the cursor readout after discovery: {text:?}"
                 );
             }
 
@@ -5015,7 +5015,7 @@ mod portolan_tests {
             // promises — that is the absence check above.
             assert_eq!(
                 before, after,
-                "discovering the {kind:?} changed the cursor readout at its own screen                  position — a name (or a fact derived from one) leaked through Gate B"
+                "discovering the {kind:?} changed the cursor readout at its own screen position — a name (or a fact derived from one) leaked through Gate B"
             );
 
             // STRONGER STILL, and the check that actually falsifies the
@@ -5042,7 +5042,7 @@ mod portolan_tests {
             d.sites = with_site;
             assert_eq!(
                 baseline, before,
-                "the cursor readout changed depending on whether the {kind:?} was even                  in the roster — Gate B must be structurally blind to `self.sites`,                  not merely to its discovery state"
+                "the cursor readout changed depending on whether the {kind:?} was even in the roster — Gate B must be structurally blind to `self.sites`, not merely to its discovery state"
             );
 
             // The glyph itself is unmoved too, for the same reason
