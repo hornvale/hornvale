@@ -17841,7 +17841,7 @@ mod tests {
         let day = WorldTime::from_std_days(3.0).expect("a day value is finite");
         assert!(
             !is_awake(ActivityCycle::Diurnal, &terrain, &home, day),
-            "fixture precondition: the permanent-night override must actually              read as off-phase, or this measures the awake (floored) branch              instead of the scan's own give-up fallback"
+            "fixture precondition: the permanent-night override must actually read as off-phase, or this measures the awake (floored) branch instead of the scan's own give-up fallback"
         );
         let rest = act_span(&Action::Rest, ActivityCycle::Diurnal, &terrain, &home, day)
             .expect("Rest always has a span");
@@ -17856,16 +17856,16 @@ mod tests {
         assert_eq!(
             sleep,
             TickSpan::from_ticks(local_day_ticks),
-            "the off-phase, permanent-night sleep span must equal the              converted give-up fallback (`local_day`) exactly, or this              fixture is not exercising `next_awake_day`'s exhausted-scan              branch at all: measured sleep {sleep:?} against local day              {local_day_ticks} (the retired `L = 1` anchor is {ONE_DAY:?})"
+            "the off-phase, permanent-night sleep span must equal the converted give-up fallback (`local_day`) exactly, or this fixture is not exercising `next_awake_day`'s exhausted-scan branch at all: measured sleep {sleep:?} against local day {local_day_ticks} (the retired `L = 1` anchor is {ONE_DAY:?})"
         );
         println!(
-            "measured at the 100-hour legal extreme (permanent night):              rest={rest:?} ({:.6} std days), sleep={sleep:?} ({:.6} std days),              ONE_DAY anchor={ONE_DAY:?}",
+            "measured at the 100-hour legal extreme (permanent night): rest={rest:?} ({:.6} std days), sleep={sleep:?} ({:.6} std days), ONE_DAY anchor={ONE_DAY:?}",
             rest.as_std_days(),
             sleep.as_std_days()
         );
         assert!(
             rest < sleep,
-            "Nathan's ruling: a rest must stay shorter than a sleep, or the              shorter act would be the more restorative one and the ruling              inverts. At the 100-hour legal extreme, permanent-night              scenario, this now holds because the give-up fallback scales              with the local day the same way the rest span already does:              measured rest {rest:?} ({:.6} std days) against sleep {sleep:?}              ({:.6} std days) — the deleted falsifier pinned the inverse of              exactly this inequality",
+            "Nathan's ruling: a rest must stay shorter than a sleep, or the shorter act would be the more restorative one and the ruling inverts. At the 100-hour legal extreme, permanent-night scenario, this now holds because the give-up fallback scales with the local day the same way the rest span already does: measured rest {rest:?} ({:.6} std days) against sleep {sleep:?} ({:.6} std days) — the deleted falsifier pinned the inverse of exactly this inequality",
             rest.as_std_days(),
             sleep.as_std_days()
         );
@@ -17916,7 +17916,7 @@ mod tests {
         let midnight = WorldTime::from_std_days(3.0).expect("a day value is finite");
         assert!(
             !is_awake(ActivityCycle::Diurnal, &terrain, &home, midnight),
-            "fixture precondition: genesis midnight must be off-phase for a              diurnal body"
+            "fixture precondition: genesis midnight must be off-phase for a diurnal body"
         );
         let local_day_ticks = ticks_per_local_day(terrain.day_ticks());
         let converted_bound = local_day_ticks * 3 / 2;
@@ -17924,7 +17924,7 @@ mod tests {
         assert_eq!(
             got,
             TickSpan::from_ticks(local_day_ticks),
-            "at this fast-rotating world the converted scan bound              (`local_day * 3 / 2` = {converted_bound} ticks) must give up              rather than find a wake — a converted `scan_limit` this small              is exactly the case the retired `SCAN_LIMIT` anchor ({SCAN_LIMIT:?})              cannot express: measured next_awake_day returned {got:?}"
+            "at this fast-rotating world the converted scan bound (`local_day * 3 / 2` = {converted_bound} ticks) must give up rather than find a wake — a converted `scan_limit` this small is exactly the case the retired `SCAN_LIMIT` anchor ({SCAN_LIMIT:?}) cannot express: measured next_awake_day returned {got:?}"
         );
         // Re-derive the IDENTICAL scan, bounded by the retired `SCAN_LIMIT`
         // anchor instead of the converted bound, to prove a wake really is
@@ -17945,11 +17945,100 @@ mod tests {
         }
         assert!(
             t < SCAN_LIMIT.ticks(),
-            "the retired anchor's own window ({SCAN_LIMIT:?}) must contain a              real wake, or this fixture proves nothing about SCAN_LIMIT              specifically — no wake found before {t}"
+            "the retired anchor's own window ({SCAN_LIMIT:?}) must contain a real wake, or this fixture proves nothing about SCAN_LIMIT specifically — no wake found before {t}"
         );
         assert!(
             t >= converted_bound,
-            "and that wake must sit PAST the converted bound, or the two              bounds agree here and the fixture does not discriminate them:              found at {t}, converted bound {converted_bound}"
+            "and that wake must sit PAST the converted bound, or the two \
+             bounds agree here and the fixture does not discriminate them: \
+             found at {t}, converted bound {converted_bound}"
+        );
+    }
+
+    /// **`WAKE_SCAN_STEP`, WITNESSED (The Pallet, Task 1 fix round 2) — A
+    /// PROPERTY, NOT JUST A CHANGE DETECTOR.** The byte-golden
+    /// (`affect_trace_golden.rs`) reddens if ANYTHING about seed 42's trace
+    /// moves; it cannot say the step's own GRANULARITY is what moved it.
+    /// The step is the scan's RESOLUTION, so its value can only be observed
+    /// where the retired anchor's 5,000-tick grid and the converted, finer
+    /// grid at a small `L` BRACKET an actual wake transition — the retired
+    /// grid straddles it and samples nowhere inside, the finer grid lands
+    /// inside it.
+    ///
+    /// **Why a diurnal body cannot show this** (and why the fixtures above
+    /// never needed to). Diurnal's wake window is HALF the day (`alt > 0`,
+    /// frac 0.25-0.75, ~50,000 ticks) — wider than either grid's own
+    /// spacing, so both land inside it easily; nothing brackets. A
+    /// CREPUSCULAR body's wake window is narrow: `is_awake` is true only
+    /// within [`TWILIGHT_DEG`] (6°) of the horizon, a band roughly 2,124
+    /// ticks wide around dawn and dusk — narrower than the retired
+    /// 5,000-tick step, which is exactly the historical concern
+    /// `WAKE_SCAN_STEP`'s own doc records ("not obviously fine enough to
+    /// resolve a dawn or dusk band").
+    ///
+    /// **Measured** at a fast-rotating world (`L = 4` standard hours, so the
+    /// converted step is `local_day / 20 ≈ 833` ticks and the converted
+    /// scan bound is `local_day * 3 / 2 ≈ 25,000` ticks), starting at tick
+    /// 8,855, off-phase: the retired 5,000-tick grid samples four times
+    /// inside that SAME 25,000-tick bound (5,000 / 10,000 / 15,000 / 20,000
+    /// ticks past `day`) and lands in the dawn band on NONE of them — it
+    /// gives up. The converted, finer grid lands inside the same band.
+    /// MUTATION THIS MUST FAIL AGAINST: revert `next_awake_day`'s
+    /// `wake_scan_step` local to the bare `WAKE_SCAN_STEP` constant.
+    #[test]
+    fn a_crepuscular_wake_band_is_bracketed_by_the_retired_steps_grid() {
+        let home = raddr(1.0);
+        let local_day = TickSpan::from_std_days(4.0 / 24.0).expect("4 standard hours is finite");
+        let terrain = SlowWorldTerrain {
+            inner: PlantedTerrain::thermal([(home.clone(), 20.0)]),
+            local_day,
+            permanent_night: false,
+        };
+        let day = WorldTime::from_ticks(8_855);
+        assert!(
+            !is_awake(ActivityCycle::Crepuscular, &terrain, &home, day),
+            "fixture precondition: the start instant must be off-phase, or \
+             the scan finds a wake trivially at the first step"
+        );
+        let local_day_ticks = ticks_per_local_day(terrain.day_ticks());
+        let bound = local_day_ticks * 3 / 2;
+        // Re-derive the identical scan, bounded by the SAME converted
+        // bound, stepping by the RETIRED anchor's grid instead of the
+        // converted step — isolating the one local this test claims to
+        // witness, the same technique the `SCAN_LIMIT` test above uses.
+        let mut retired_step_found = None;
+        let mut t = WAKE_SCAN_STEP.ticks();
+        while t < bound {
+            if is_awake(
+                ActivityCycle::Crepuscular,
+                &terrain,
+                &home,
+                day + TickSpan::from_ticks(t),
+            ) {
+                retired_step_found = Some(t);
+                break;
+            }
+            t += WAKE_SCAN_STEP.ticks();
+        }
+        assert_eq!(
+            retired_step_found, None,
+            "the retired 5,000-tick grid must MISS the dawn band entirely \
+             inside the converted bound ({bound} ticks), or this fixture \
+             does not bracket the transition it claims to: found \
+             {retired_step_found:?}"
+        );
+        let got = next_awake_day(ActivityCycle::Crepuscular, &terrain, &home, day) - day;
+        assert_ne!(
+            got,
+            TickSpan::from_ticks(local_day_ticks),
+            "the real (converted-step) scan must actually FIND the dawn \
+             band inside the same bound the retired grid misses entirely, \
+             not merely give up with a different fallback: got {got:?}"
+        );
+        assert!(
+            is_awake(ActivityCycle::Crepuscular, &terrain, &home, day + got),
+            "the found instant must really be awake, or this witnesses \
+             nothing about resolution: {got:?}"
         );
     }
 

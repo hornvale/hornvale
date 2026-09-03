@@ -285,3 +285,52 @@ constant (`5,000`) as if it still governed there.
 the registry-row shape checks), `make rebaseline` (only `plumb-roster.md`
 moved — line numbers, no behavior change), byte-goldens by name
 (`HV_TEST_OK=1 -p hornvale-lab -p hornvale-vessel -p hornvale`: 1964/1964).
+
+#10 [G5] — **Task 1 fix round 2: closed. `WAKE_SCAN_STEP` witnessed.**
+
+The step is the scan's own RESOLUTION, so it can only matter where the
+retired 5,000-tick grid and the converted, finer grid at a small `L`
+bracket an actual wake transition. A diurnal wake window is half the day —
+wider than either grid's spacing, so nothing brackets it. A CREPUSCULAR
+window is narrow (`TWILIGHT_DEG` = 6°, roughly 2,124 ticks wide around dawn
+and dusk) — narrower than the retired step, exactly the historical concern
+`WAKE_SCAN_STEP`'s own doc already recorded.
+
+Added `a_crepuscular_wake_band_is_bracketed_by_the_retired_steps_grid`: at
+`L = 4` standard hours starting tick 8,855 (off-phase), the retired
+5,000-tick grid samples four times inside the SAME converted bound
+(~25,000 ticks) and lands in the dawn band on none of them; the converted
+grid finds it. Re-mutated all four conversions, vessel-only, to check for
+cross-reaction the way `SCAN_LIMIT`'s test cross-reacted with `ONE_DAY`'s
+in fix round 1:
+
+| mutation | vessel |
+|---|---|
+| `sleep_bout` → `SLEEP_BOUT` | 1011 passed, **1 failed** (unchanged) |
+| `wake_scan_step` → `WAKE_SCAN_STEP` | 1011 passed, **1 failed** (new, clean) |
+| `scan_limit` → `SCAN_LIMIT` | 1011 passed, **1 failed** (unchanged, clean) |
+| `one_day` → `ONE_DAY` | 1010 passed, **2 failed** (unchanged pair from fix round 1) |
+
+The new test does not cross-react with any of the other three — it never
+calls `act_span` or reads `SLEEP_BOUT`, and its own independent bound
+(`local_day_ticks * 3 / 2`, computed in the test) is unaffected by a
+`scan_limit`/`one_day` mutation inside `next_awake_day` because it never
+reaches the give-up branch on real code.
+
+Also fixed in passing: seven assertion strings from fix round 1's two new
+tests had literal multi-space runs where a single space belonged — a
+non-raw Python heredoc ate the Rust `\`-continuation (the exact trap this
+project's own memory already names), collapsing three-line messages onto
+one line with the continuation lines' leading indentation surviving as
+extra spaces. Cosmetic only (compiled, ran, passed throughout), fixed by
+collapsing to single spaces and re-running `cargo fmt`; this round's own
+edits used escaped backslashes in the Python source to avoid repeating it.
+
+`cargo fmt`, `make gate-commit` (rc=0), no tag or const moved so the roster
+was not regenerated (confirmed by diffing a fresh `plumb report` against
+the committed one). Byte-goldens by name (`-p hornvale-lab -p
+hornvale-vessel -p hornvale`): 1965/1965.
+
+All four sleep-side conversions now have a dedicated vessel-level property
+witness; the byte-golden remains as a secondary change detector, not the
+sole coverage for any of them.
