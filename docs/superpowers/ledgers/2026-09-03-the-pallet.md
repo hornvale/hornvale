@@ -653,3 +653,58 @@ outcome.
 
 Both belong in the retrospective as findings for the owner, not as defects
 this campaign converted.
+
+#18 [G5] — **Task 4 complete. Two behaviours from the fix round are worth more
+than the fixes.**
+
+**It re-ran a control I handed it rather than transcribing it.** I gave the
+reviewer's whole-table result — all seven rungs to 4.00, fixture byte-identical
+— and asked for it to be folded into the module doc. It re-ran the mutation
+instead, and said why: *"I'd published it as measured evidence in a durable
+artifact, so inheriting it unverified wasn't acceptable."*
+
+That is the correct instinct and it is the campaign's own subject applied
+one level up. A measurement I relay is, to the implementer, an unaudited claim
+— exactly what `a-correction-is-unaudited-text` says about my corrections, and
+what #12 caught me doing when I read a signature and inferred behaviour. A
+number becomes evidence in a committed artifact under the name of whoever
+publishes it, not whoever first ran it.
+
+**It left the false premise visible rather than quietly swapping it.** I1's
+"the workspace's first `#[allow]`" claim was wrong (75 workspace-wide, 16 in
+the file being edited). The fix could have silently read "a seventeenth"; it
+records that the earlier wording was wrong, *"since a durable ledger's value is
+to a campaign that cannot re-derive it."* Same reasoning this project uses for
+superseding rather than editing a decision record.
+
+**And it recounted M1 from the live table rather than from arithmetic on its
+own prose** — `awk` the registry, `grep -vc MADE_FOR_THE_BODY` — noting that
+arithmetic-on-own-prose is exactly how the 24/25 error was produced in the
+first place. A count re-derived by the method that generated the error
+reproduces the error.
+
+#19 [G5] — **Two Task 4 observations carried to the retrospective, neither
+actionable, both real.**
+
+**The seven-rung derivation rule lives in prose; nothing ties a row to the
+traits it cites.** The reviewer demonstrated it by raising `owlbear`'s mass to
+1500 kg: it keeps `INSULATION_ONLY` where the stated rule says
+`TOO_LARGE_TO_FIT`, and the only objection comes from an unrelated life-history
+golden. The coverage ratchet enforces **presence**, never correctness. This is
+exactly `fatigue_rise_registry`'s shape, which the brief instructed the
+implementer to follow, so it is not a deviation — but the failure mode is real:
+a kind added to the roster, or a `mass`/`social_form` edit, leaves a stale row
+and the ratchet forces *a* value without forcing the *right* one.
+
+Sharpest detail: the tonne threshold is inclusive and lands on
+`giant-crocodile`'s **exact** mass, 1000.0. One edit to that number flips a row
+and nothing objects.
+
+**`DEFAULT_SLEEP_GRADE` is documented as "human's row" and nothing pins the
+equality.** The tests assert the miss reads the default, and separately that
+`human > xorn` — never that `human == DEFAULT_SLEEP_GRADE`. Re-authoring
+`MADE_FOR_THE_BODY` silently falsifies the doc. Pre-existing pattern:
+`DEFAULT_FATIGUE_RISE` carries the identical unpinned claim.
+
+Both belong in the retrospective as observations about *derived-vs-authored
+tables* generally, not as defects of this task.
