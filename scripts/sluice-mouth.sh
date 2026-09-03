@@ -66,6 +66,12 @@ if [ -z "${HV_SLUICE_ALLOW_UNPUSHED:-}" ]; then
     fi
 fi
 
+# The shared conflict classifier, so the mouth, the chamber and `make absorb`
+# cannot disagree about which conflicts are bookkeeping. One implementation,
+# three callers — the rule decision 0079 applies to the host check.
+# shellcheck source=/dev/null
+HV_PHASES_LIB=1 . "$(dirname "${BASH_SOURCE[0]}")/sluice-phases.sh"
+
 base="${HV_SLUICE_BASE:-origin/main}"
 
 # Resolve and verify the base ref BEFORE either git call that depends on it
@@ -146,6 +152,28 @@ if ! out="$(env -u GIT_DIR -u GIT_INDEX_FILE git merge-tree --write-tree --name-
         | awk 'length($0) == 40 && /^[0-9a-f]+$/ { seen = 1; next } seen && /^$/ { exit } seen { print }')"
     if [ -n "$conflicts" ]; then
         printf '%s\n' "$conflicts" | sed 's/^/  conflict: /' >&2
+        # A CONFLICT ONLY IN REGENERATED ARTIFACTS IS NOT A REASON TO TURN A
+        # CANDIDATE AWAY. Six were bounced in one session over
+        # `docs/audits/type-audit-report.md`, three of them over that file and
+        # NOTHING else (the-hallmark 0e21ed0c6843, the-rack d5bee7a1e3de,
+        # the-brattice 91e40b0669ba), each arriving with complete, green work.
+        #
+        # The chamber runs `artifacts` FIRST on every candidate and commits tracked
+        # drift after every phase, so for an `artifacts`-authored path the merge's
+        # answer is overwritten before anything is gated. Decision 0166 does not
+        # reach this: it retired a merge DRIVER, which git invokes BEFORE the merge
+        # product exists, and its own "Alternatives considered" names regeneration
+        # once the tree IS the product as "the one worth pursuing".
+        #
+        # THIS MUST AGREE WITH `sluice-run.sh`, which resolves the same set. An
+        # admit the chamber then refused would kill the candidate at the merge step
+        # having already taken the box — the composition failure the shared function
+        # and test-sluice.sh's agreement case exist to prevent.
+        if sluice_is_regenerated_only "$conflicts" "$(env -u GIT_DIR git rev-parse --show-toplevel 2>/dev/null || echo .)"; then
+            n="$(printf '%s\n' "$conflicts" | grep -c .)"
+            echo "sluice-mouth: ADMIT $branch $sha — all $n conflict(s) are artifacts-authored; the chamber resolves them by regeneration."
+            exit 0
+        fi
     else
         echo "  (no tree OID in merge-tree output; raw follows)" >&2
         printf '%s\n' "$out" | sed 's/^/  | /' >&2
