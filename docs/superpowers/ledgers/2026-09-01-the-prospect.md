@@ -931,3 +931,54 @@ actually asked about. That is his call to make and it is now surfaced.
 
 My 19.7 km / 42.5 km figures reproduced exactly: mean 0.003086059 rad, max
 0.006671012 rad at R=6371.
+
+---
+
+## Ruling #40 [G5] — the citation sweep is mechanized, not performed by hand
+
+**Question.** Ruling #12 left a debt: the campaign had been citing decisions in
+the capitalized form `Decision 0536.` specifically because the lowercase form
+would red `decision_cites_in_sources_resolve` while 0536-0538 did not yet
+exist. Task 9 owed a manual sweep converting them back.
+
+**Decision.** Write 0536/0537/0538, then make the *gate* case-insensitive and
+delete the sweep instead of performing it.
+
+**Why.** Measured before deciding, rather than assuming the debt was
+campaign-local:
+
+```
+capitalized decision cites in scanned dirs   ~120
+of those, naming a record that does not exist   3   (0536, 0537, 0538 — ours)
+```
+
+So the check had never seen a capitalized cite in the life of the repository,
+and sentence-initial capitals are the *dominant* idiom in this codebase's
+prose — the blind spot was most of the corpus, not an edge case. Every one of
+the ~120 except this campaign's three already resolved, so folding case costs
+zero cleanup once the three records exist. A hand sweep would have converted
+four cites and left the hole open for the next campaign to fall into; ours is
+the proof it is reachable, since we used it deliberately.
+
+**Verification, not reasoning.** `to_ascii_lowercase` is length-preserving, so
+offsets still index the original text (`to_lowercase` would not be — noted in
+the code). Mutation-checked by removing 0538 and confirming the red names a
+capitalized cite in shipped code:
+
+```
+windows/vessel/src/site.rs:32: cite `decision 0538` — no docs/decisions/0538-*.md record
+```
+
+That is the arm that was dead. Restored; 29/29 green.
+
+**Also, per the "name the direction a check enforces" rule**, the doc comment
+now states what it is blind to: it cannot tell you a decision *should* have
+been cited and was not, and it does not scan `docs/` or `book/` at all.
+
+**Cost if wrong.** A false positive on prose containing "decision <word>" would
+red the gate; the token must match a record slug, so the risk is a cite-shaped
+sentence, and the fix is one backtick.
+
+**Capture.** The self-scanning fixture hazard is real and now documented in the
+test: a fixture that spells a bad cite literally trips the file-level scan on
+itself. Both bad-cite fixtures evade it the same way, and the comment says so.
