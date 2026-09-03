@@ -765,3 +765,28 @@ Plumb's default-deny constant lint refused the oracle test's two haunted-
 overlay constants, now tagged (one-line tags only; a wrapped tag parses as
 malformed). `latest_visit_and_witness` deleted for `trail_and_witness`;
 `latest_visit`'s doc names its one caller. Gate 1,123 sub-floor tests.
+
+## Close absorption — complete (`bd4d58c7b`, review clean; one Medium and one Low routed)
+
+The Medium: The Plumb's constant lint walks files and cannot see a
+`#[cfg(test)]` on a `mod` declared with `#[path]` in another file, so the
+oracle's two haunted-overlay constants carry a `plumb: universal(...)` tag
+that misstates their axis and moves `docs/audits/plumb-roster.md`'s counts
+by two. Recorded as a registry row and a board technique post rather than
+reworked here — the fix is Plumb-side. The Low: `resident_emitter_timeline_
+copied` had no caller; deleted at the close.
+
+## Task 9b-2 — the close artifacts (`3e0549234`..`f9dc48b6f`)
+
+Decisions 0626–0628; the chronicle (`book/src/chronicle/the-detent.md`,
+SUMMARY appended at the chapter's end, which is where The Reservoir's line
+went — the brief said "above The Pawl" and was wrong); the retrospective
+with every deferred minor's outcome; the registry (four rows flipped or
+rewritten, four opened: KnownWater's plan-per-water-room at 99% of the six
+folds, the walk's per-step Danger sampling at 72% of the remaining terrain
+questions, an effect-size floor for a shape criterion, The Plumb's `#[path]`
+blind spot); the Gradient's fifth look — which says a cost gate EXISTS now
+(The Rack's `turn_budget.rs`), correcting the brief's "still no cost gate";
+spec §13; the constants retired per 0541 with their history kept in the
+witness file's doc. Two brief instructions overridden on evidence and both
+recorded. The null census is queued (`req-f9dc48b6fe29`) on the final SHA.
