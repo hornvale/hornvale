@@ -91,7 +91,7 @@ fn p1_a_held_bodys_drinks_reach_the_ledger_and_its_felt_state_stands() {
 ///
 /// **The window the tree pins is NARROWER than the one preregistered, and
 /// deliberately.** The preregistration framed the null at day 40; the
-/// assertion below measures day 36 — the eighth `!wait 5` after the opening
+/// assertion below measures day 36 — the seventh `!wait 5` after the opening
 /// `!wait 1` — because that is where this script's loop ends. The day-40
 /// zero was observed too, in the campaign close's probe log, and is not
 /// asserted here. So the tripwire in the tree and the preregistered window

@@ -92,18 +92,19 @@ found it was four over four: the round-1 correction had attached seed 42's
 line the decision quoted nowhere.
 
 The detail worth keeping is where the counterexample was sitting. In every
-committed version of that file the `ends_with` assertion is at line 156,
-**inside** the range the correction cited. So this was not a citation that
-pointed away from the disconfirming line; it was one that pointed straight at
-it. A range citation carries the form of verification whether or not anyone
+committed version of that file the `ends_with` assertion is at line 156. The
+only record of the range the correction cited is the figure `140-178`
+carried into the final fix wave's brief — and if that was the range, it
+**contained** line 156: a citation that pointed straight at the
+disconfirming line, not away from it. A range citation carries the form of verification whether or not anyone
 read the range, and nothing downstream can tell the two apart — which is the
 same defect as a sweep that names the site instead of the claim, one level
 smaller: the reader is handed a place instead of a proposition, and a place
 cannot object.
 
 (The exact range round 1 cited is not recoverable — it lived in the review
-conversation, and `140-178`, the figure carried into this fix wave's brief,
-appears nowhere in the tree. The reconstruction above is from `cb2046458`'s
+conversation; `140-178` reached the tree only as the brief's figure, quoted
+by the campaign ledger. The reconstruction above is from `cb2046458`'s
 own commit message and the file's history. That the citation cannot now be
 re-checked is not a side note; it is the failure restated.)
 
