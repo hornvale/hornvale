@@ -134,3 +134,44 @@ response is to delete it, which its own doc instructs. A future implementer
 meeting an unexplained red is the exact reader this needs to reach, so it is in
 the spec (§4e) rather than only here. No ideonomy pass — a consequence read off
 a committed test's own doc.
+
+#7 [G4] — **Plan self-review and the SDD pre-flight scan, with the table the
+scan is supposed to produce rather than a verdict.**
+
+**Task-pair rows** (every pair sharing a file or an interface):
+
+| pair | shared | what one produces vs what the other consumes | finding |
+|---|---|---|---|
+| T1 × T3 | `liveness.rs` | T1 edits `next_awake_day`'s bounds and two file-level spans; T3 adds a predicate beside `SLEPT` | disjoint regions — clean |
+| T1 × T4 | `liveness.rs` | T1 the sleep-span constants; T4 `AFFORDED_REST_GAIN` and `SiteGrade::gain` | disjoint — clean |
+| T3 × T4 | `liveness.rs` | T3 a fact builder; T4 a gain lookup | disjoint — clean |
+| T2 × T3 | `select_sleep_site` | T2 produces it, T3 consumes its `AnchorId` to read `Anchor::kind` | real dependency; ordering T2→T3 is correct |
+| T2 × T4 | — | T4 needs only afforded-vs-bare, which `SiteGrade` already derives room-level | **no dependency** — T4 could run before T2; ordering is by risk, not need |
+
+**Per-task self-consistency rows:** T1's tests-vs-code agree (it deletes one
+assertion and adds another over the same four constants); T2's three test cases
+cover the function's whole return domain; T3's absence-test matches its own
+"bare ground commits nothing" rule; T4's ratchet matches the table it guards;
+T5 is procedural.
+
+**Two gaps found, both fixed inline rather than left for an implementer:**
+
+1. **The table's KEY was never stated, and both readings are plausible.**
+   `sleep_grade_registry() -> ComponentStore<KindId, f64>` — keyed by the
+   sleeper's species, or by the site's kind? The spec says "how well this body
+   recovers on it", which reads either way. **It is the sleeper's species.**
+   The site stays binary (afforded / bare) exactly as `SiteGrade` already is,
+   which is what keeps this a one-dimensional table. The `(species, thing)`
+   matrix — *is a bed better than bracken for a dwarf* — is the `per-people`
+   rung and needs Campaign C's kind-to-kind edges. An implementer who read it
+   the other way would have built Campaign C early and badly, and it would have
+   looked like progress. This is the defect class this project keeps recording:
+   a spec sentence that two readings satisfy.
+
+2. **Spec §4d requires the unbuilt rungs be DECLARED as tagged seams, and no
+   step did it.** Added as Task 4 Step 5, with an escape hatch: if there is no
+   constant to hang a tag on, say so rather than inventing one to carry it.
+
+No ideonomy pass on either — the first is a disambiguation against a
+constraint that already exists (Campaign C's scope), the second a coverage
+miss against the spec's own text.

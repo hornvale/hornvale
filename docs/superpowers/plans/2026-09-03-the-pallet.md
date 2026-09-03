@@ -159,6 +159,7 @@ A new registered predicate moves the concept registry and its generated referenc
 **Interfaces:**
 - Consumes: nothing new.
 - Produces: `pub fn sleep_grade_registry() -> ComponentStore<KindId, f64>`, following `fatigue_rise_registry`'s shape exactly (`domains/species/src/lib.rs:4118`) — read it first.
+- **The key is the SLEEPER'S SPECIES, not the site's kind.** The table answers *"how much does an afforded site help a body of this species?"* — a xorn's row is the floor because a xorn gains nothing from a bed. It does **not** answer *"how good is a bed versus bracken"*: that is a `(species, thing)` matrix, it is the `per-people` rung, and it needs the kind-to-kind edges Campaign C builds. Keeping the site binary (afforded / bare, as `SiteGrade` already is) is what makes this task a one-dimensional table rather than Campaign C's work done early and badly.
 
 - [ ] **Step 1: Fix the wrong verdict, and understand why it was wrong**
 
@@ -182,7 +183,21 @@ Values are a **fidelity judgement**: reason from each kind's existing modelled t
 
 `gain()` currently returns `1.0` or the constant. It needs the body's kind. Follow the existing call path rather than threading a new parameter through unrelated frames; if that requires a signature change, make it and say which frames moved.
 
-- [ ] **Step 5: gate, artifacts, byte-goldens by name, commit**
+- [ ] **Step 5: Declare the two rungs this campaign does NOT build**
+
+Spec §4d requires the remaining rungs be *declared, tagged seams* rather than
+TODO comments — that is the mechanism decision 0586 exists to provide. Tag the
+site-kind dimension `per-people` (which thing a people tends to sleep on, needing
+Campaign C's kind-to-kind edges) and the idiosyncratic preference
+`per-individual` (needing Campaign D's `Lineage`-derived values), each with a
+reason naming the axis. They then appear in the committed roster's Fidelity
+findings table, which is where a future campaign will find them.
+
+If there is no constant to hang a tag on, say so in your report rather than
+inventing one — a tag on a constant that exists only to carry it is worse than
+a sentence in the function's doc.
+
+- [ ] **Step 6: gate, artifacts, byte-goldens by name, commit**
 
 Differentiated recovery rates change behaviour on every world. Expect goldens; same branch table as Task 1 Step 6, and the same adjudication requirement for `affect-trace-seed-42.txt`.
 
