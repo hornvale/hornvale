@@ -1246,6 +1246,91 @@ mod tests {
         }
     }
 
+    /// claim: sanctioned-sweep(kind: [LavaTube, Fracture, Karst], character:
+    /// [WildCave, FungalGardens, DrowTier], vertex: [1, 7, 42, 1000], seed:
+    /// 0..400) — spec §3.8's own shape, at full size: 14,400 plans.
+    ///
+    /// **The same two properties
+    /// [`every_plan_is_solvable_for_a_body_holding_nothing`] asserts, over
+    /// 8x the surface** (The Brattice, Task 6). That test is the cheap
+    /// everyday one — 1,800 plans at one vertex, seconds, in the commit
+    /// gate's reach — and it stays exactly as it is; this is the sanctioned
+    /// sweep §3.8 actually names, extending the Crosscut's own frozen slice
+    /// (`circuit::tests::dof_counts_every_draw`'s kinds, vertices and seed
+    /// range, which is why those three are copied rather than chosen) by the
+    /// character axis the gate pass reads.
+    ///
+    /// **Why the vertex axis is the one that had to grow.** The cheap test
+    /// pins vertex 3 alone, and the vertex is a seed-derivation input the
+    /// pattern draw reads (`the_plan_and_its_gates_are_deterministic_and_read_the_vertex`
+    /// asserts two vertices draw different patterns), so a solvability
+    /// failure that only some vertices reach would be invisible to it. Four
+    /// vertices x 400 seeds is what §3.8 asks for and what this runs.
+    ///
+    /// Four assertions per plan, all of them §3.8's:
+    /// the terminus is reachable for a body holding nothing; every key is;
+    /// that body can get back to the entrance (Ruling F); and the resident,
+    /// who meets every requirement, reaches every node — so gates cost the
+    /// resident nothing.
+    ///
+    /// **Cost, and where it therefore lives.** 64.7 s on the campaign Mac
+    /// (`cargo test -p hornvale-worldgen --lib ... -- --ignored`, one run,
+    /// 2026-09-02) against the 9.9 s its 1,800-plan sibling costs — 8x the
+    /// plans, 6.5x the wall. That is well past what the commit gate may
+    /// carry, so it takes the `heavy:` tag: deferred from `gate-commit`,
+    /// run by the merge (decision 0426), rostered by name in
+    /// `cli/tests/fixtures/heavy-roster.txt` so the addition is a visible
+    /// diff rather than a tag nobody sees.
+    ///
+    /// The reason string is `heavy_tier.rs`'s CANONICAL one, verbatim,
+    /// because that guard holds every `heavy:` reason to it character for
+    /// character. Its words ("live-worldgen battery") fit this sweep only
+    /// loosely — nothing here builds a world, or even a level; it is
+    /// `plan_descent` and the two reachability folds over its output — but
+    /// the tier is a COST class, not a subject class, and inventing a
+    /// second wording to be more accurate about the subject would break the
+    /// one property that makes the class greppable. The cost is stated
+    /// here, where a reader of the test is, rather than in the string,
+    /// which `the_canonical_heavy_reason_states_no_duration` forbids from
+    /// carrying a measurement at all.
+    #[test]
+    #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+    fn every_plan_is_solvable_across_the_sanctioned_sweep() {
+        for seed in 0..400u64 {
+            for kind in [CaveKind::LavaTube, CaveKind::Fracture, CaveKind::Karst] {
+                for ch in [
+                    Character::WildCave,
+                    Character::FungalGardens,
+                    Character::DrowTier,
+                ] {
+                    for vertex in [1u32, 7, 42, 1000] {
+                        let p = plan(seed, vertex, kind, ch);
+                        let r = solvable(&p, DEFAULT_BODY);
+                        assert!(
+                            r.terminus.is_some(),
+                            "seed {seed} vertex {vertex} {kind:?} {ch:?}: terminus unreachable"
+                        );
+                        assert!(
+                            r.keys.iter().all(|k| k.is_some()),
+                            "seed {seed} vertex {vertex} {kind:?} {ch:?}: a key is unreachable"
+                        );
+                        assert!(
+                            gated_round_trip(&p, DEFAULT_BODY).is_some(),
+                            "seed {seed} vertex {vertex} {kind:?} {ch:?}: the default body \
+                             cannot get back to the entrance (Ruling F)"
+                        );
+                        let all = solvable(&p, resident(&p));
+                        assert!(
+                            all.reached.iter().all(|&x| x),
+                            "seed {seed} vertex {vertex} {kind:?} {ch:?}: the resident cannot \
+                             reach every node"
+                        );
+                    }
+                }
+            }
+        }
+    }
+
     /// claim: invariant(seed: 0..200) — a node holds at most one key and an
     /// edge at most one gate; every gate lies on an existing edge and every
     /// key at an existing node (spec §3.8).

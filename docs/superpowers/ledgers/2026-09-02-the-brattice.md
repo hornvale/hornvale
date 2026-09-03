@@ -1584,3 +1584,118 @@ FELL 751 -> 748 (the recomputed-cell block deleted three AREA-sense `cell`
 tokens). A number may fall freely; refreshed through
 `HV_LEXICON_REBASELINE=1` rather than by hand, and the lower ceiling is the
 tighter one.
+
+## Task 6 — complete
+
+The three acceptance walks of spec §7.1–7.3 exist as session tests driving the
+verbs, and §3.8's sanctioned sweep exists at the size §3.8 names.
+
+**Walk 1 — `the_brattice_walk_one_a_locked_door_sends_the_walk_the_long_way_round_to_its_key`**
+(`windows/vessel/src/session.rs`, `mod tests`). Fixture:
+`a_worked_descent_with_a_door` (DrowTier, seed 42), which this task
+**widened** — see the ruling below — so it now resolves to `Vertex(1365)`,
+rung 0: entrance `Cell(3, 17)`, door `Cell(19, 16)`, the standable cell beside
+it `Cell(19, 17)` (bearing `N` to the door), the key's own standable cell
+`Cell(26, 10)`. The walk: mouth → the door on foot; `go` refused with
+`UNDERGROUND_LOCKED_DOOR_REFUSAL`; `open` refused with
+`LOCKED_DESCENT_DOOR_REFUSAL` (a different sentence for a different
+precondition); the long side to the key, `go` by `go`, on a route asserted not
+to contain the door cell; `look` names the key; `take`; `carrying`; the long
+side back; `open`; `is_locked == Some(false)`, `is_open == Some(true)`; through
+the doorway and back out of it; still open.
+
+**Walk 2 — `the_brattice_walk_two_a_chute_is_taken_down_and_the_loop_closed_by_the_far_stairway`**.
+Fixture: `a_session_in_a_wild_descent_with_a_chute_and_a_sump`, a new
+deterministic search that resolves to `Vertex(342)` (WildCave, seed 42, five
+rungs): entrance `Cell(3, 8)`, chute lip `Cell(21, 12)` (`Drop` on rung 0 over
+`Floor` on rung 1), the realm's far stairway `Cell(38, 10)`. The walk: mouth →
+the lip on foot; the footing sentence names the chute; `down` →
+"You let yourself down the chute.", rung 1, same coordinate; `up` →
+`NO_WAY_UP_REFUSAL`; the lower path to the far stairway; `up` → rung 0 at
+`Cell(38, 10)`; the upper path back to the lip. Every move a `go`/`down`/`up`.
+
+**Walk 3 — `the_brattice_walk_three_a_shark_crosses_the_sump_and_a_dragon_climbs_the_chute`**.
+Same fixture, same vertex. Sump: shore `Cell(30, 12)`, bearing `E`, eight
+`Deep` cells, far shore `Cell(39, 12)`; at least one cell of that run is a
+passage's recorded crossing whose gate is `Needs(Mode(Swim))`, asserted in the
+search, so it is the plan's own sump and not merely water. The walk: mouth →
+the near shore; the ways-on sentence omits the bearing and `go` refuses with
+`UNDERGROUND_DEEP_WATER_REFUSAL`; a body whose species is not in the locomotion
+registry (`"no-such-species"`) is refused identically — the negative half
+decision 0398's "a walk, not a registry row" needs; `"reef-shark"` crosses,
+narrated "You swim east." on every wet cell and "You step east." only on the
+far shore; then dry-shod to the lip, `down` the chute, `up` refused to the
+walker AND to the unregistered species, and `"red-dragon"` → "You fly up the
+chute." back onto the lip's coordinate.
+
+**What each walk subsumes, and why nothing was deleted.** Walk 1 subsumes the
+locomotion of Task 5's
+`the_key_at_its_node_opens_the_door_it_fits_and_closing_does_not_relock_it`,
+which asserts the same lock and sentences but TELEPORTS between door and key;
+that test is kept because it additionally pins decision 0399's no-relock clause
+on `close`, which walk 1 does not exercise. Walks 2 and 3 subsume Task 4's
+`the_chute_and_the_sump_read_the_body_that_walks_them`, which asserts the same
+chute and sump sentences over cells it INSTALLS by hand; kept as the cheap unit
+over the verbs, where the walks are the acceptance over the plan's own gates.
+Walk 2 also generalises the Crosscut's
+`a_cross_floor_cycle_is_walked_down_along_and_back_up_another_stair` — same
+loop, same two legs, but descending by a chute and starting from the entrance
+rather than from a placement on the stair head. All three older tests still
+pass unmodified.
+
+**The sweep.** `every_plan_is_solvable_across_the_sanctioned_sweep`
+(`windows/worldgen/src/brattice.rs`): 3 kinds × 3 characters × 4 vertices
+(`[1, 7, 42, 1000]`, the Crosscut's own frozen slice) × 400 seeds = **14,400
+plans**, asserting §3.8's terminus, keys, Ruling F round trip and resident
+reach. Measured **64.69 s** on the campaign Mac against the **9.88 s** its
+1,800-plan everyday sibling costs — 8x the plans, 6.5x the wall. Past what the
+commit gate may carry, so it takes the `heavy:` tag with `heavy_tier.rs`'s
+CANONICAL reason verbatim and a line in `cli/tests/fixtures/heavy-roster.txt`
+(roster 64 → 65). Task 1's 200-seed
+`every_plan_is_solvable_for_a_body_holding_nothing` is untouched and stays in
+the cheap tier.
+
+### Ruling — the door fixture had to be widened, and it moved
+
+`a_worked_descent_with_a_door` required four things; §7.1's "walks the long
+side" needs two more, and the fixture it had did not have them.
+`Vertex(342)` — the mouth the first four selected — hangs **three** doors on
+rung 0, and every route from that descent's door to its key crosses one of the
+other two. That is solvable in the plan's own product graph (fetch one key to
+reach the next, which §3.4 allows) but it is not the single-door errand §7.1
+describes, and a walk written against it fails mid-route on a `go` the session
+correctly refuses.
+
+So the search now also requires (5) a route from the door's own cell to the
+key's that crosses **no** door at all, and (6) both of those cells reachable on
+foot from the descent's entrance, so no walk here starts in a pocket a player
+could not have walked to. The fixture consequently moved to `Vertex(1365)`.
+21 of the first 60 candidate mouths satisfy the stronger set, so this is a
+selection and not a rarity. **The six existing door tests moved with it and all
+six pass unmodified**, which is the evidence that they were fixture-generic and
+not fitted to `Vertex(342)`.
+
+The mechanism is one helper, not a second predicate: `standable_route` now
+excludes every doored threshold (a `Threshold` is `Walk` to `movement_mode`
+whether or not a door hangs in it, so a mode-only route would thread the very
+door the walk goes round), and `foot_flood` — the BFS split out of it — answers
+the reachability half for the fixture searches. One flood serves both, so a
+search cannot admit a cell the route refuses.
+
+### Deferred minor closed while `session.rs` was open
+
+Task 5's re-review observation: the doc paragraph for
+`LOCKED_DESCENT_DOOR_REFUSAL` (including its `/// type-audit: bare-ok(prose)`
+tag) was contiguous with `nothing_here_named`'s, so the merged block documented
+the function and the const had none. The paragraph now sits on the const,
+`nothing_here_named` keeps its own, and each item's doc is its own.
+
+### Artifacts moved
+
+`docs/audits/lexicon-inventory.tsv`'s `session.rs` row rises **748 → 816**: the
+three walks and their two helpers add 68 AREA-sense `cell` tokens (`Cell(x, y)`
+lattice squares in an underworld level), which is the sense the word is correct
+for here. Raised through `HV_LEXICON_REBASELINE=1`; nothing else in the
+inventory moved.
+
+`cli/tests/fixtures/heavy-roster.txt` gains one line for the sanctioned sweep.

@@ -10216,22 +10216,6 @@ const NOWHERE_TO_SET_DOWN_REFUSAL: &str =
 const LOCKED_WITHOUT_A_KEY_REFUSAL: &str =
     "It is locked, and you are carrying nothing that would open it.";
 
-/// [`LOCKED_WITHOUT_A_KEY_REFUSAL`]'s underground twin (The Brattice, Task 5,
-/// spec §3.7) — and the two sentences differ because the two LOCKS do.
-///
-/// The chamber's refusal says "carrying nothing that would open it", which is
-/// the honest report of a precondition that reads
-/// [`crate::affordance::ObjectProperty::Portable`] and would therefore accept
-/// any portable thing whatever. A descent door's precondition names ONE
-/// entity — the key derived from the plan node its gate points at — so this
-/// sentence says "the key that fits it", which is true of this lock and would
-/// be a lie about the strongbox's. Wording them identically would have hidden
-/// the difference the whole §3.7 binding exists to make.
-///
-/// It does not name the bearing, unlike the success replies beside it: a
-/// refusal that pointed at a specific door would suggest another door might
-/// answer, when what is missing is the key.
-/// type-audit: bare-ok(prose)
 /// The refusal every band gives when a word names nothing that is here —
 /// **the one producer of this sentence, and it used to be nine copies of a
 /// format string.**
@@ -10260,6 +10244,22 @@ fn nothing_here_named(typed: &str) -> String {
     format!("You see no {typed} here.")
 }
 
+/// [`LOCKED_WITHOUT_A_KEY_REFUSAL`]'s underground twin (The Brattice, Task 5,
+/// spec §3.7) — and the two sentences differ because the two LOCKS do.
+///
+/// The chamber's refusal says "carrying nothing that would open it", which is
+/// the honest report of a precondition that reads
+/// [`crate::affordance::ObjectProperty::Portable`] and would therefore accept
+/// any portable thing whatever. A descent door's precondition names ONE
+/// entity — the key derived from the plan node its gate points at — so this
+/// sentence says "the key that fits it", which is true of this lock and would
+/// be a lie about the strongbox's. Wording them identically would have hidden
+/// the difference the whole §3.7 binding exists to make.
+///
+/// It does not name the bearing, unlike the success replies beside it: a
+/// refusal that pointed at a specific door would suggest another door might
+/// answer, when what is missing is the key.
+/// type-audit: bare-ok(prose)
 const LOCKED_DESCENT_DOOR_REFUSAL: &str =
     "It is locked, and the key that fits it is not in your hand.";
 
@@ -16139,9 +16139,27 @@ mod tests {
     /// # What it searches, and what that search does NOT claim
     ///
     /// Seed 42's open, unbarred cave mouths in scan order, first hit,
-    /// requiring all four things this module's tests need together: a rung-0
+    /// requiring all six things this module's tests need together: a rung-0
     /// threshold the plan gated, a standable cell beside it, the gate's key
-    /// node also on rung 0, and a standable cell inside THAT node's region.
+    /// node also on rung 0, a standable cell inside THAT node's region,
+    /// **a route from the door's own cell to the key's that crosses no door
+    /// at all**, and **both of those cells reachable on foot from the
+    /// descent's entrance**.
+    ///
+    /// **The last two are The Brattice's Task 6, and they moved the
+    /// fixture** off the vertex the first four found (the door tests above
+    /// ran on `Vertex(342)` before this task and run on a later mouth now).
+    /// They are what makes spec §7.1's "walks the long side" a walk rather
+    /// than a phrase: seed 42's `Vertex(342)` hangs THREE doors on rung 0,
+    /// and every route from that descent's door to its key crossed one of
+    /// the other two — solvable in the plan's own product graph (fetch one
+    /// key to reach the next, which §3.4 allows), but not a single-door
+    /// errand, and so not the walk §7.1 describes. Requiring the long side
+    /// to be door-free states the fixture the acceptance needs instead of
+    /// discovering mid-walk that this one is not it. Measured while
+    /// widening: 21 of the first 60 candidate mouths satisfy the stronger
+    /// set, so it is a selection, not a rarity.
+    ///
     /// It asserts nothing about how common such a descent is — that is the
     /// census's job, and decision 0093 is explicit that a sweep to FIND an
     /// instance is doing it badly. A `panic!` naming the widening is the
@@ -16212,10 +16230,28 @@ mod tests {
                 else {
                     continue;
                 };
+                // THE LONG SIDE MUST EXIST, AND IT MUST BE DOOR-FREE
+                // (Task 6). `foot_flood` excludes every doored threshold,
+                // so this is exactly the question a body holding nothing
+                // asks: can I reach the key without opening anything?
+                let entrance = ug.cell;
+                let from_stand = foot_flood(&ug, stand);
+                if !from_stand.contains_key(&key_stand) {
+                    continue;
+                }
+                // And neither end may sit in a pocket the descent's own
+                // mouth cannot reach: a walk that starts nowhere a player
+                // could have walked to is a placement wearing a walk's
+                // clothes.
+                let from_entrance = foot_flood(&ug, entrance);
+                if !(from_entrance.contains_key(&stand) && from_entrance.contains_key(&key_stand)) {
+                    continue;
+                }
                 ug.cell = stand;
                 return (
                     ug,
                     DoorFixture {
+                        entrance,
                         door_cell,
                         stand,
                         bearing,
@@ -16232,14 +16268,15 @@ mod tests {
     }
 
     /// [`a_worked_descent_with_a_door`]'s PLACES, returned beside the descent
-    /// itself rather than inside it: the door's own threshold cell, a
-    /// standable cell BESIDE it (which the search has already stood the
-    /// possession on), the bearing from that cell to the door, and a standable
-    /// cell inside the key's region.
+    /// itself rather than inside it: the descent's own entrance cell, the
+    /// door's threshold cell, a standable cell BESIDE it (which the search
+    /// has already stood the possession on), the bearing from that cell to
+    /// the door, and a standable cell inside the key's region.
     ///
     /// The descent travels separately because the session takes ownership of
     /// it — see [`a_session_beside_a_door`].
     struct DoorFixture {
+        entrance: crate::lattice::Cell,
         door_cell: crate::lattice::Cell,
         stand: crate::lattice::Cell,
         bearing: Compass,
@@ -16867,41 +16904,46 @@ mod tests {
         );
     }
 
-    /// A breadth-first route over the CURRENT rung's standable cells, from
-    /// `from` to `to`, in the fixed neighbour order N, E, S, W — the cells a
-    /// body can actually cross, endpoints included. Used by the cross-floor
-    /// walk below for both of its legs: the level-1 traverse between the two
-    /// stairways, and rung 0's own return route back along the other side of
-    /// the cycle.
-    fn standable_route(
+    /// The parent map of a breadth-first flood over the CURRENT rung's
+    /// standable cells, from `from`, in the fixed neighbour order N, E, S,
+    /// W. Split out of [`standable_route`] (The Brattice, Task 6) because
+    /// the acceptance walks' fixture searches ask the REACHABILITY question
+    /// — "can a body on foot get from the entrance to this cell at all?" —
+    /// which `standable_route` can only answer by asserting, and a search
+    /// wants a `bool` where a walk wants a panic.
+    ///
+    /// One flood answers both, so the two can never disagree about what a
+    /// body on foot may cross — which is the whole hazard of writing the
+    /// predicate twice: a search that admitted a cell the route refuses
+    /// would hand a walk a fixture it cannot walk, and blame the step.
+    fn foot_flood(
         ug: &crate::underground::Underground,
         from: crate::lattice::Cell,
-        to: crate::lattice::Cell,
-    ) -> Vec<crate::lattice::Cell> {
+    ) -> std::collections::BTreeMap<crate::lattice::Cell, crate::lattice::Cell> {
         let level = ug.level();
         // A WALKING body's own set (The Brattice, spec §3.5): the
         // `movement_mode` seam rather than a kind list, minus `Swim` —
         // `Deep` is passable, but not to the bodies these walks possess, and
         // routing one through a sump would build a route the walk refuses.
+        // A doored threshold is excluded for the same reason one rung out:
+        // see [`standable_route`]'s own doc.
         let passable = |c: crate::lattice::Cell| {
-            matches!(
-                level
-                    .cells
-                    .get(c)
-                    .and_then(crate::underworld_level::movement_mode),
-                Some(
-                    crate::underworld_level::MovementMode::Walk
-                        | crate::underworld_level::MovementMode::Wade
+            !ug.has_door(c)
+                && matches!(
+                    level
+                        .cells
+                        .get(c)
+                        .and_then(crate::underworld_level::movement_mode),
+                    Some(
+                        crate::underworld_level::MovementMode::Walk
+                            | crate::underworld_level::MovementMode::Wade
+                    )
                 )
-            )
         };
         let mut prev = std::collections::BTreeMap::new();
         let mut q = std::collections::VecDeque::from([from]);
         prev.insert(from, from);
         while let Some(c) = q.pop_front() {
-            if c == to {
-                break;
-            }
             for (dx, dy) in [(0, -1), (1, 0), (0, 1), (-1, 0)] {
                 let n = crate::lattice::Cell(c.0 + dx, c.1 + dy);
                 if passable(n) && !prev.contains_key(&n) {
@@ -16910,6 +16952,40 @@ mod tests {
                 }
             }
         }
+        prev
+    }
+
+    /// A breadth-first route over the CURRENT rung's standable cells, from
+    /// `from` to `to`, in the fixed neighbour order N, E, S, W — the cells a
+    /// body can actually cross, endpoints included. Used by the cross-floor
+    /// walk below for both of its legs: the level-1 traverse between the two
+    /// stairways, and rung 0's own return route back along the other side of
+    /// the cycle, and by all three of The Brattice's acceptance walks.
+    ///
+    /// **It routes AROUND every doored threshold (The Brattice, Task 6),
+    /// and that is what makes §7.1's "walks the long side" a real walk
+    /// rather than a phrase.** A `Threshold` is `Walk` to
+    /// `movement_mode` whether or not a door hangs in it, so a route
+    /// computed on the mode alone would happily thread the very door the
+    /// walk is supposed to go round, and [`walk_route`] would then fail on
+    /// a `go` the session refuses — a route the caller cannot walk, blamed
+    /// on the wrong step. Excluding the doored cells here answers the
+    /// question the caller is actually asking ("how does a body get from
+    /// here to there without opening anything?") and leaves the door itself
+    /// to be crossed by a deliberate, single `go` once it has been opened.
+    ///
+    /// It reads [`crate::underground::Underground::has_door`] — is a door
+    /// HUNG here — rather than the openness fold, so the exclusion does not
+    /// depend on a ledger this helper has no handle on. The cost is that a
+    /// route will still go the long way round a door the possession has
+    /// already opened; no walk here wants one, and a helper that quietly
+    /// changed its answer as the ledger moved would be the worse trade.
+    fn standable_route(
+        ug: &crate::underground::Underground,
+        from: crate::lattice::Cell,
+        to: crate::lattice::Cell,
+    ) -> Vec<crate::lattice::Cell> {
+        let prev = foot_flood(ug, from);
         assert!(
             prev.contains_key(&to),
             "this rung must connect {from:?} to {to:?}"
@@ -17263,6 +17339,623 @@ mod tests {
             walked,
             "no open cave on seed 42 offered a level-0 cross-floor realm — widen the search before weakening this test"
         );
+    }
+
+    /// The bearing that undoes `c` — the reverse of a compass step, derived
+    /// from [`cell_delta`] rather than written as a second table, so it
+    /// cannot drift from the deltas the walk actually takes.
+    fn reverse_bearing(c: Compass) -> Compass {
+        let (dx, dy) = cell_delta(c);
+        COMPASS_ROSE
+            .iter()
+            .copied()
+            .find(|d| cell_delta(*d) == (-dx, -dy))
+            .expect("COMPASS_ROSE is closed under negation")
+    }
+
+    /// THE BRATTICE, spec §7.1 — **the first acceptance walk, and the one
+    /// the campaign is named for.** A partition hung across a working makes
+    /// the air go the long way round; this is a body doing the same thing,
+    /// entirely through the session's own verbs.
+    ///
+    /// Refused at the shut door by `go`; refused again by `open` for want of
+    /// the key, in the LOCK's own words rather than the passage's; then the
+    /// long side — `go` after `go` along a route that never touches a door
+    /// — to the node the plan put the key at; `look`; `take`; `carrying`;
+    /// the long side back; `open`; through; and back through, the door still
+    /// open behind it.
+    ///
+    /// **What this subsumes.** Task 5's
+    /// `the_key_at_its_node_opens_the_door_it_fits_and_closing_does_not_relock_it`
+    /// asserts the same lock and the same sentences, but it TELEPORTS
+    /// between the door and the key (`ug.cell = f.key_stand`), because what
+    /// it was proving was the lock, not the loop. That is exactly the half
+    /// §7.1 adds and the half a teleport cannot show: that the plan leaves a
+    /// body a way round the partition, in cells, on foot. Both are kept —
+    /// the older test additionally pins decision 0399's no-relock clause on
+    /// `close`, which this walk does not exercise.
+    ///
+    /// The fixture is [`a_worked_descent_with_a_door`]'s, unchanged, so this
+    /// walk adds no second search: seed 42's first open, unbarred cave mouth
+    /// with a rung-0 door and a rung-0 key.
+    ///
+    /// claim: structural(vertex: seed 42's open cave mouths, first hit) — the fixture's own search, not a claim over the range
+    #[test]
+    fn the_brattice_walk_one_a_locked_door_sends_the_walk_the_long_way_round_to_its_key() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let f = a_session_beside_a_door(&mut session, &world);
+        let letter = bearing_letter(f.bearing);
+        let door = {
+            let ug = session.underground.as_ref().expect("below");
+            crate::descent_thing::door_at(ug, f.door_cell)
+                .expect("the fixture hangs a door")
+                .0
+        };
+
+        // 0. From the mouth to the door, on foot — the fixture guarantees
+        // the route exists, so the walk starts where a player's would.
+        session.underground.as_mut().expect("below").cell = f.entrance;
+        let approach = standable_route(
+            session.underground.as_ref().expect("below"),
+            f.entrance,
+            f.stand,
+        );
+        walk_route(&mut session, &approach);
+
+        // 1. THE PARTITION. `go` is refused by the passage's own sentence…
+        assert_eq!(
+            say(&mut session, &format!("go {letter}")),
+            crate::underground::UNDERGROUND_LOCKED_DOOR_REFUSAL
+        );
+        // …and `open` by the LOCK's, which is a different sentence because
+        // it is a different precondition (see [`LOCKED_DESCENT_DOOR_REFUSAL`]).
+        assert_eq!(
+            say(&mut session, "open a door"),
+            LOCKED_DESCENT_DOOR_REFUSAL
+        );
+        assert_eq!(
+            session.underground.as_ref().expect("below").cell,
+            f.stand,
+            "two refusals and the possession has not moved"
+        );
+
+        // 2. THE LONG SIDE, walked. `standable_route` routes around every
+        // doored threshold, so this is the way the plan leaves open to a
+        // body holding nothing — the solvability §3.8 asserts, taken.
+        let out = standable_route(
+            session.underground.as_ref().expect("below"),
+            f.stand,
+            f.key_stand,
+        );
+        assert!(
+            out.len() > 1,
+            "the key's node is a walk away, not the cell already stood on"
+        );
+        assert!(
+            !out.contains(&f.door_cell),
+            "the long side must not run through the very door it goes round: {out:?}"
+        );
+        walk_route(&mut session, &out);
+
+        // 3. The key is here, and it comes in hand.
+        let seen = say(&mut session, "look");
+        assert!(
+            seen.contains("Lying here: a key."),
+            "the plan's key lies at the node the plan named: {seen:?}"
+        );
+        assert_eq!(say(&mut session, "take a key"), "You take the key.");
+        assert_eq!(say(&mut session, "carrying"), "You are carrying a key.");
+
+        // 4. THE LONG SIDE BACK, walked the same way.
+        let home = standable_route(
+            session.underground.as_ref().expect("below"),
+            f.key_stand,
+            f.stand,
+        );
+        walk_route(&mut session, &home);
+        assert_eq!(
+            session.underground.as_ref().expect("below").cell,
+            f.stand,
+            "the return leg arrives back at the threshold it was refused at"
+        );
+
+        // 5. The lock turns, and the report agrees with the walk.
+        assert_eq!(
+            say(&mut session, "open a door"),
+            format!("You open the door to the {}.", bearing_word(f.bearing))
+        );
+        assert_eq!(
+            crate::thing::is_locked(&session.ledger, door, session.day),
+            Some(false),
+            "the key turned"
+        );
+        assert_eq!(
+            crate::thing::is_open(&session.ledger, door, session.day),
+            Some(true),
+            "and the door stands open"
+        );
+        let seen = say(&mut session, "look");
+        assert!(
+            ways_on_of(&seen).contains(&letter),
+            "an open door is a way on: {seen:?}"
+        );
+
+        // 6. Through, and back through. The door is still open behind it —
+        // crossing a door is not closing it, which is the clause a walk can
+        // assert and a single `go` cannot.
+        assert_eq!(
+            say(&mut session, &format!("go {letter}")),
+            format!("You step {}.", bearing_word(f.bearing))
+        );
+        assert_eq!(
+            session.underground.as_ref().expect("below").cell,
+            f.door_cell,
+            "the possession stands in the doorway"
+        );
+        let back = reverse_bearing(f.bearing);
+        assert_eq!(
+            say(&mut session, &format!("go {}", bearing_letter(back))),
+            format!("You step {}.", bearing_word(back))
+        );
+        assert_eq!(
+            session.underground.as_ref().expect("below").cell,
+            f.stand,
+            "and back out of it"
+        );
+        assert_eq!(
+            crate::thing::is_open(&session.ledger, door, session.day),
+            Some(true),
+            "the door is still open on the way back (nothing shuts it but `close`)"
+        );
+    }
+
+    /// [`a_session_in_a_wild_descent_with_a_chute_and_a_sump`]'s PLACES,
+    /// returned beside the session the way [`DoorFixture`] is: the entrance
+    /// cell the descent starts on, the chute's lip and the realm's other
+    /// stairway (both on rung 0), and one straight sump crossing — the dry
+    /// cell to swim from, the bearing to swim in, and the dry cell on the
+    /// far shore.
+    struct WildFixture {
+        entrance: crate::lattice::Cell,
+        lip: crate::lattice::Cell,
+        far_stair: crate::lattice::Cell,
+        shore: crate::lattice::Cell,
+        across: Compass,
+        far_shore: crate::lattice::Cell,
+    }
+
+    /// A live session in a WILD descent that carries both of §7.2's and
+    /// §7.3's terrain: a chute on a cross-floor realm, and a sump a body can
+    /// stand at the edge of (The Brattice, Task 6).
+    ///
+    /// # Why one fixture and not two
+    ///
+    /// Spec §7.3 says "the same fixtures" as §7.2, and seed 42 obliges: the
+    /// first open, unbarred cave mouth satisfying the chute condition also
+    /// carries a rung-0 sump. Searching once for both keeps the two walks on
+    /// one world, which is what makes §7.3's swimmer and §7.2's walker the
+    /// same possession in the same cave rather than two demonstrations that
+    /// happen to agree.
+    ///
+    /// # What it requires, all four together
+    ///
+    /// 1. A level-0 realm crossing to level 1 (the Crosscut's own shape),
+    ///    whose `path_b` descends by a CHUTE — a `Stair` edge gated
+    ///    `Needs(Mode(Fly))` upward — and climbs back by an ordinary
+    ///    stairway, so `up` at the far end is a walker's to take.
+    /// 2. A straight run of `Deep` on rung 0 with dry footing at both ends,
+    ///    at least one cell of which is a passage's recorded crossing whose
+    ///    gate is `Needs(Mode(Swim))` — the plan's own sump, not merely
+    ///    water.
+    /// 3. Every one of those places reachable ON FOOT from the entrance, so
+    ///    the walks are walks and not placements.
+    ///
+    /// # What the search does NOT claim
+    ///
+    /// Nothing about how common such a descent is — that is the census's
+    /// job, and decision 0093 is explicit that a sweep to FIND an instance
+    /// is doing it badly. The plan-side rates are pinned in
+    /// `hornvale_worldgen::brattice`'s own `rate` sweeps. A `panic!` naming
+    /// the widening is the honest failure here, the shape
+    /// [`a_worked_descent_with_a_door`] already uses.
+    ///
+    /// claim: structural(vertex: seed 42's open cave mouths, first hit) — a search for a fixture, not a claim over the range
+    fn a_session_in_a_wild_descent_with_a_chute_and_a_sump(
+        session: &mut Session<'_>,
+        world: &World,
+    ) -> WildFixture {
+        use hornvale_worldgen::brattice::{Capability, Requirement, Way};
+        use hornvale_worldgen::circuit::EdgeKind;
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let pins = hornvale_worldgen::BarrierPins::default();
+        let candidates: Vec<_> = cave_entrance_states(&terrain, world.seed)
+            .filter(|(vertex, _, is_open)| {
+                *is_open
+                    && seeded_entrance_barrier(world.seed, *vertex, &pins)
+                        == hornvale_worldgen::BarrierState::Open
+            })
+            .map(|(v, c, _)| (v, c))
+            .collect();
+        for (vertex, cave) in candidates {
+            session.delve_at(vertex, cave);
+            let found = {
+                let ug = session.underground.as_ref().expect("descended");
+                // A stair edge's own cell, asked for the PAIR rather than
+                // for one endpoint: a node with two stairways would
+                // otherwise answer with whichever came first.
+                let stair_between = |a: usize, b: usize| {
+                    ug.plan.edges.iter().find_map(|e| match e.kind {
+                        EdgeKind::Stair { x, y }
+                            if (e.a == a && e.b == b) || (e.a == b && e.b == a) =>
+                        {
+                            Some(crate::lattice::Cell(x, y))
+                        }
+                        _ => None,
+                    })
+                };
+                // `toward_a` is the requirement for entering the edge's own
+                // `a`, and a stair edge's `a` is its UPPER end by
+                // construction (`DescentPlan::stairs_from` filters on
+                // `nodes[e.a].level` and labels the pair `(upper, lower)`).
+                // So on a stair this reads the UP direction, which is the
+                // half a chute gates — the same convention
+                // `Underground::has_door` and
+                // `brattice::tests::a_chute_is_free_down_and_needs_flight_up_and_sits_on_a_stair`
+                // both read.
+                let needs = |a: usize, b: usize, want: Capability| {
+                    ug.plan.gate_between(a, b).is_some_and(|(_, g)| {
+                        matches!(&g.toward_a, Way::Needs(Requirement::Mode(c)) if *c == want)
+                    })
+                };
+                let chute = ug.plan.realms.iter().find_map(|r| {
+                    if r.anchor_level != 0
+                        || r.path_b.len() < 3
+                        || !r.path_b.iter().any(|&n| ug.plan.nodes[n].level == 1)
+                    {
+                        return None;
+                    }
+                    let (u, lu) = (r.path_b[0], r.path_b[1]);
+                    let (end, le) = (
+                        *r.path_b.last().expect("checked non-empty"),
+                        r.path_b[r.path_b.len() - 2],
+                    );
+                    // Down by the chute, back up by a stairway a walker may
+                    // take: a realm gated at BOTH ends would leave §7.2's
+                    // loop unclosable on foot.
+                    if !needs(u, lu, Capability::Fly) || needs(end, le, Capability::Fly) {
+                        return None;
+                    }
+                    Some((stair_between(u, lu)?, stair_between(end, le)?))
+                });
+                // A straight sump crossing on rung 0: dry, one or more
+                // `Deep`, dry — along +x or +y, so one bearing carries the
+                // whole swim.
+                let dry = |c: crate::lattice::Cell| {
+                    matches!(
+                        ug.descent[0].cells.get(c),
+                        Some(
+                            crate::underworld_level::LevelCellKind::Floor
+                                | crate::underworld_level::LevelCellKind::Flooded
+                        )
+                    )
+                };
+                let deep = |c: crate::lattice::Cell| {
+                    ug.descent[0].cells.get(c) == Some(crate::underworld_level::LevelCellKind::Deep)
+                };
+                let sump = ug.descent[0]
+                    .cells
+                    .iter()
+                    .filter(|(_, k)| *k == crate::underworld_level::LevelCellKind::Deep)
+                    .map(|(c, _)| c)
+                    .find_map(|d| {
+                        [(Compass::E, 1, 0), (Compass::S, 0, 1)]
+                            .into_iter()
+                            .find_map(|(bearing, dx, dy)| {
+                                let shore = crate::lattice::Cell(d.0 - dx, d.1 - dy);
+                                if !dry(shore) {
+                                    return None;
+                                }
+                                let mut far = d;
+                                let mut run = Vec::new();
+                                while deep(far) {
+                                    run.push(far);
+                                    far = crate::lattice::Cell(far.0 + dx, far.1 + dy);
+                                }
+                                // The plan's own sump, not merely water: one
+                                // of these cells is a passage's recorded
+                                // crossing and its gate asks for `Swim`.
+                                let gated = run.iter().any(|c| {
+                                    ug.threshold_edge(*c)
+                                        .is_some_and(|(a, b)| needs(a, b, Capability::Swim))
+                                });
+                                (dry(far) && gated).then_some((shore, bearing, far))
+                            })
+                    });
+                let entrance = ug.cell;
+                match (chute, sump) {
+                    (Some((lip, far_stair)), Some((shore, across, far_shore))) => {
+                        // Every place a walk starts from or ends at must be
+                        // reachable ON FOOT from the entrance, or the walk
+                        // would have to be a placement.
+                        let reach = foot_flood(ug, entrance);
+                        (reach.contains_key(&lip)
+                            && reach.contains_key(&far_stair)
+                            && reach.contains_key(&shore)
+                            && reach.contains_key(&far_shore))
+                        .then_some(WildFixture {
+                            entrance,
+                            lip,
+                            far_stair,
+                            shore,
+                            across,
+                            far_shore,
+                        })
+                    }
+                    _ => None,
+                }
+            };
+            if let Some(f) = found {
+                return f;
+            }
+            session.underground = None;
+        }
+        panic!(
+            "no open, unbarred cave mouth of seed 42 offers a wild descent with BOTH a \
+             cross-floor chute and a rung-0 sump, all of it on foot from the entrance — \
+             widen the search (more seeds, more rungs) before weakening any walk that \
+             reads this fixture"
+        )
+    }
+
+    /// THE BRATTICE, spec §7.2 — the second acceptance walk. A chute is a
+    /// one-way gate for a walker, and the plan owes that walker a way home;
+    /// this walks the whole loop and never reads it off the graph.
+    ///
+    /// Entrance → the lip, on foot; `down` the chute (its own sentence, not
+    /// the stairway's) onto the same coordinate one rung below; `up` refused
+    /// there, in the lip's own words; the lower path to the realm's far
+    /// stairway; `up`; and the upper path back to the lip it fell from.
+    ///
+    /// **What this subsumes.** Task 4's
+    /// `the_chute_and_the_sump_read_the_body_that_walks_them` asserts the
+    /// same three chute sentences, but on cells it INSTALLS by hand into a
+    /// descent that grew none — deliberately, because what it was proving
+    /// was the session's side. This walk takes a chute the plan actually
+    /// gated and the realizer actually carved, and closes the loop around
+    /// it, which is the half hand-set cells cannot show. Both are kept: the
+    /// older test is the cheap unit over the verbs, this is the acceptance.
+    /// It also generalises the Crosscut's
+    /// `a_cross_floor_cycle_is_walked_down_along_and_back_up_another_stair`
+    /// — same loop, same two legs, but descending by a chute rather than a
+    /// stairway, and starting from the entrance rather than from a placement
+    /// on the stair head.
+    ///
+    /// claim: structural(vertex: seed 42's open cave mouths, first hit) — the fixture's own search, not a claim over the range
+    #[test]
+    fn the_brattice_walk_two_a_chute_is_taken_down_and_the_loop_closed_by_the_far_stairway() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let f = a_session_in_a_wild_descent_with_a_chute_and_a_sump(&mut session, &world);
+
+        // 1. Entrance to the lip, on foot.
+        let out = standable_route(
+            session.underground.as_ref().expect("below"),
+            f.entrance,
+            f.lip,
+        );
+        assert!(out.len() > 1, "the lip is a walk from the entrance");
+        walk_route(&mut session, &out);
+        let seen = say(&mut session, "look");
+        assert!(
+            seen.contains("The rock here is the lip of a chute."),
+            "the footing names the chute before it is taken: {seen:?}"
+        );
+
+        // 2. Down it — the chute's sentence, not the stairway's.
+        let out = say(&mut session, "down");
+        assert!(
+            out.starts_with("You let yourself down the chute."),
+            "a chute is not a stairway: {out:?}"
+        );
+        {
+            let ug = session.underground.as_ref().expect("below");
+            assert_eq!(ug.rung, 1, "one rung down");
+            assert_eq!(ug.cell, f.lip, "and on the same coordinate");
+        }
+
+        // 3. And no way back up it, for this body.
+        assert_eq!(
+            say(&mut session, "up"),
+            crate::underground::NO_WAY_UP_REFUSAL
+        );
+        assert_eq!(
+            session.underground.as_ref().expect("below").rung,
+            1,
+            "a refused `up` moves nobody"
+        );
+
+        // 4. The lower path to the realm's far stairway, and up it.
+        let lower = standable_route(
+            session.underground.as_ref().expect("below"),
+            f.lip,
+            f.far_stair,
+        );
+        assert!(
+            lower.len() > 1,
+            "the far stairway is a walk from the chute's landing"
+        );
+        walk_route(&mut session, &lower);
+        let _ = say(&mut session, "up");
+        {
+            let ug = session.underground.as_ref().expect("below");
+            assert_eq!(ug.rung, 0, "back on the upper floor");
+            assert_eq!(ug.cell, f.far_stair, "by the OTHER stairway");
+        }
+
+        // 5. The upper path back to the lip: the loop closed by the verbs.
+        let upper = standable_route(
+            session.underground.as_ref().expect("below"),
+            f.far_stair,
+            f.lip,
+        );
+        assert!(upper.len() > 1, "the two ends are distinct cells");
+        walk_route(&mut session, &upper);
+        {
+            let ug = session.underground.as_ref().expect("below");
+            assert_eq!(ug.cell, f.lip, "the return leg arrives at the lip");
+            assert_eq!(ug.rung, 0, "and never leaves the upper floor");
+        }
+    }
+
+    /// THE BRATTICE, spec §7.3 — the third acceptance walk. A gate the plan
+    /// hangs is not a wall: it is a question about the body at the
+    /// threshold, and two bodies get two answers to the same `go`.
+    ///
+    /// On the fixture's own generated sump: a body that walks is refused by
+    /// WATER (and the ways-on sentence agrees, so the report and the verb
+    /// cannot disagree by one turn); a body whose species is not in the
+    /// locomotion registry at all is refused the same way, which is the
+    /// negative half decision 0398's "a walk, not a registry row" needs; and
+    /// a `reef-shark` crosses the whole run, narrated `swim` on every wet
+    /// cell and `step` only on the far shore. Then the chute, the same way:
+    /// refused to the walker and to the unregistered species, taken by a
+    /// `red-dragon`.
+    ///
+    /// **What this subsumes.** Task 4's
+    /// `the_chute_and_the_sump_read_the_body_that_walks_them` is the same
+    /// four readings over HAND-SET cells; this is the same four over the
+    /// plan's own gates, walked to on foot, with the unregistered-species
+    /// half added. Both are kept, for the reason given on
+    /// [`the_brattice_walk_two_a_chute_is_taken_down_and_the_loop_closed_by_the_far_stairway`].
+    ///
+    /// The species is swapped, not the locomotion, because there is no
+    /// locomotion to swap: `Body::locomotion` reads the species registry, so
+    /// `reef-shark` and `red-dragon` are how a test asks for a swimmer and a
+    /// flier, and `no-such-species` is how it asks for neither.
+    ///
+    /// claim: structural(vertex: seed 42's open cave mouths, first hit) — the fixture's own search, not a claim over the range
+    #[test]
+    fn the_brattice_walk_three_a_shark_crosses_the_sump_and_a_dragon_climbs_the_chute() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let f = a_session_in_a_wild_descent_with_a_chute_and_a_sump(&mut session, &world);
+        let letter = bearing_letter(f.across);
+
+        // 1. Entrance to the near shore, on foot.
+        let out = standable_route(
+            session.underground.as_ref().expect("below"),
+            f.entrance,
+            f.shore,
+        );
+        walk_route(&mut session, &out);
+
+        // 2. THE WALKER IS REFUSED BY WATER, and the report says so first.
+        let seen = say(&mut session, "look");
+        assert!(
+            !ways_on_of(&seen).contains(&letter),
+            "a sump this body cannot cross is not a way on: {seen:?}"
+        );
+        assert_eq!(
+            say(&mut session, &format!("go {letter}")),
+            crate::underground::UNDERGROUND_DEEP_WATER_REFUSAL
+        );
+
+        // 3. So is a body whose species the registry has never heard of —
+        // the default is walk-and-wade, not permission.
+        session.roster.driven_body_mut().species = "no-such-species".to_string();
+        assert_eq!(
+            say(&mut session, &format!("go {letter}")),
+            crate::underground::UNDERGROUND_DEEP_WATER_REFUSAL,
+            "an unregistered species swims no better than a human"
+        );
+        assert_eq!(
+            session.underground.as_ref().expect("below").cell,
+            f.shore,
+            "two refusals and the possession is still on the near shore"
+        );
+
+        // 4. THE SWIMMER CROSSES. Every wet cell is narrated `swim`; only
+        // the far shore is a `step`, which is the arm spec §3.6 exists to
+        // keep from being swallowed by the walk default.
+        session.roster.driven_body_mut().species = "reef-shark".to_string();
+        let (dx, dy) = cell_delta(f.across);
+        let mut wet = 0;
+        loop {
+            let here = session.underground.as_ref().expect("below").cell;
+            let next = crate::lattice::Cell(here.0 + dx, here.1 + dy);
+            let want_swim = session
+                .underground
+                .as_ref()
+                .expect("below")
+                .level()
+                .cells
+                .get(next)
+                == Some(crate::underworld_level::LevelCellKind::Deep);
+            let verb = if want_swim { "swim" } else { "step" };
+            assert_eq!(
+                say(&mut session, &format!("go {letter}")),
+                format!("You {verb} {}.", bearing_word(f.across))
+            );
+            assert_eq!(session.underground.as_ref().expect("below").cell, next);
+            if !want_swim {
+                break;
+            }
+            wet += 1;
+        }
+        assert!(wet > 0, "the crossing must actually enter the water");
+        assert_eq!(
+            session.underground.as_ref().expect("below").cell,
+            f.far_shore,
+            "and come out on the far shore the fixture named"
+        );
+
+        // 5. THE FLIER. Walk (dry-shod again) to the lip, take the chute
+        // down, and ask the same `up` of three bodies.
+        session.roster.driven_body_mut().species = "human".to_string();
+        let out = standable_route(
+            session.underground.as_ref().expect("below"),
+            f.far_shore,
+            f.lip,
+        );
+        walk_route(&mut session, &out);
+        let out = say(&mut session, "down");
+        assert!(
+            out.starts_with("You let yourself down the chute."),
+            "a chute is not a stairway: {out:?}"
+        );
+        assert_eq!(
+            say(&mut session, "up"),
+            crate::underground::NO_WAY_UP_REFUSAL,
+            "a walker is told about the lip overhead"
+        );
+        session.roster.driven_body_mut().species = "no-such-species".to_string();
+        assert_eq!(
+            say(&mut session, "up"),
+            crate::underground::NO_WAY_UP_REFUSAL,
+            "and so is a species the registry has never heard of"
+        );
+        assert_eq!(
+            session.underground.as_ref().expect("below").rung,
+            1,
+            "two refusals and the possession is still below"
+        );
+
+        session.roster.driven_body_mut().species = "red-dragon".to_string();
+        let out = say(&mut session, "up");
+        assert!(
+            out.starts_with("You fly up the chute."),
+            "the flight up a chute gets its own sentence: {out:?}"
+        );
+        {
+            let ug = session.underground.as_ref().expect("below");
+            assert_eq!(ug.rung, 0, "the flier takes the lip");
+            assert_eq!(ug.cell, f.lip, "and lands on the coordinate it fell from");
+        }
     }
 
     /// The direction is checked against the CURRENT cell, not merely
