@@ -351,8 +351,8 @@ fn a_possessed_sessions_columns_are_the_ledgers_too() {
     // own walk moves nothing the ledger records.)
     assert!(
         session.driven_mode().is_some(),
-        "the driven body's own walk must have resolved something across three \
-         waits, or nothing here exercised the driven writer"
+        "the driven body's own walk must have resolved something across the \
+         nine-wait script, or nothing here exercised the driven writer"
     );
 }
 

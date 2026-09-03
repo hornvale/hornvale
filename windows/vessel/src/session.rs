@@ -20297,6 +20297,18 @@ mod tests {
              `possessed-by` (from `!possess` itself) and `slept` (from the \
              first wait, now minuted); the free body, Holding, commits neither"
         );
+        // The `+ 2` above is a compound of `possessed-by` and `slept`; this
+        // isolates the walk's own contribution from possession's.
+        assert_eq!(
+            held.ledger.facts_of(held.agent_entity(), SLEPT).count(),
+            1,
+            "the held body's own first-wait walk minutes exactly one `slept`"
+        );
+        assert_eq!(
+            free.ledger.facts_of(free.agent_entity(), SLEPT).count(),
+            0,
+            "the free body, Holding, never reaches a `slept` resolution"
+        );
     }
 
     /// The Coercion, spec §7 H2 — "the death terminator is unreachable": no
