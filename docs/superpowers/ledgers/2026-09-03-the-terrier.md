@@ -310,3 +310,39 @@ Task 3's bench header that the lexicon guard counts; waived on the line as
 the function's own name. Cost if wrong: none; both are review-visible
 text. Lesson for the register: put a new registry row at the END of its
 table, not beside a row another campaign may be rewriting.
+
+## Follow-ups
+
+This campaign's follow-up register; there is no scratch one (The Cartulary).
+Each item names the reason it was not attempted here.
+
+- **The 2–5 `brief_here` calls per turn stay un-deduplicated.** Threading one
+  `Brief` through `enter`'s four call sites (and the two others a chamber
+  turn runs) would remove the last redundancy this campaign found. Not
+  attempted: after the hoist a call costs `is_cold` (3 µs, cached) plus a
+  map lookup, and the arithmetic bound from Task 3's own readings —
+  `enter`'s handle fell from 55.4 ms (four calls, contended) to 0.175–0.178
+  ms (the same four calls, quiet) against roughly 0.1 ms of non-brief work
+  in the same handle (The Rack's decomposition) — puts the marginal cost of
+  one hoisted call at a few microseconds, not zero, but no scratch
+  instrumentation isolated it further. Threading is complexity with no
+  measurable return at this size; re-check the bound before re-litigating
+  the decision.
+- **`chamber_interior_here`'s seventeen callers are unaudited.** It is
+  `Session::brief_here`'s single largest fan-in and the site any future
+  dedup or caching change would have to reason about first. Not attempted:
+  every one of the seventeen now pays microseconds, not milliseconds, so
+  there is no cost pressure to audit the fan-in itself.
+- **`CLIENT-cache-demography-report`'s 480 ms of client startup is the next
+  largest item in the same `build` block this campaign shortened.** Out of
+  scope by spec §3.6: a different cost, in a different subsystem, sharing no
+  mechanism with the occupation-register hoist.
+- **`test-sluice-vet.sh`'s negative control needs a synthetic probe.** Its
+  fixture is the first campaign branch on `origin` that mints a decision —
+  a live branch that collided with another campaign's reserved block during
+  Task 2 for reasons unrelated to this campaign, and read as a harness
+  failure rather than a real result. Not attempted here because the fix
+  belongs to the vet harness, not to a campaign it happened to be evaluating
+  when the collision occurred. A fixed, synthetic pair of decision numbers
+  would distinguish a harness failure from a real collision without
+  depending on which campaigns are live on `origin` at submission time.

@@ -83,3 +83,106 @@ shadowcast — would have shipped a real, green, and almost entirely useless
 for the rule this generalizes to, and [the frontier's idea
 registry](../frontier/idea-registry.md) — corrected here rather than
 replaced — for the number that misled and the one that replaced it.
+
+## The numbers
+
+Read on a quiet MacBookPro at `8b4f7f49065eb69852a9e2cded0d88e50b352a75`,
+`uptime` load averages `2.12 2.06 2.07` before and `2.67 2.18 2.11` after —
+all three under the project's quiet-box threshold of 4, so none of these
+readings is an upper bound the way the decomposition above was:
+
+| line | budget | before | after | verdict |
+| --- | ---: | ---: | ---: | --- |
+| chamber `snapshot()+json` after `map`/`go n/e/s/w` | ≤ 3 ms | 16.3–16.8 ms | **0.457–0.525 ms** | MET |
+| `enter` handle | ≤ 3 ms | 33.747 ms | **0.175–0.178 ms** | MET |
+| chamber `look` handle | ≤ 1 ms | 16.540 / 16.125 ms | **0.095–0.114 ms** | MET |
+| `Session::start` | ≤ +30 ms | 845 ms | **868 ms (+23 ms)** | MET |
+
+Outdoor rows are the control: 4.06–4.98 ms, against the same ~4.1–4.9 ms
+they read before this campaign — unmoved, within noise, because nothing in
+the walk band ever called `brief_of` at all. Every chamber row now reads
+within a tenth of a millisecond of its post-`look` sibling, which is the
+shape predicted once the brief was understood to be the residue rather than
+the shadowcast.
+
+The client feels the same fix at the scale a player actually launches:
+`clients/game/bin/examples/move_cost.rs`, default (debug) profile, quiet
+(`uptime` `2.67 2.18 2.11` before, `2.48 2.15 2.10` after). Every indoor
+movement turn — `enter`, chamber `look`, `map`, `go n/e/s/w` — went
+**18.7–47.4 ms to 0.61–0.82 ms**, against the 15 ms budget this campaign was
+opened to close. Outdoor rows, the control, read 9.27–13.07 ms — the
+JSON-and-spatial-channel floor [The Rack](./the-rack.md) measured, unmoved
+beyond noise.
+
+## The ratchet, and its direction
+
+A source scan in `windows/vessel` (decision 0636) asserts that production
+code under `windows/vessel/src` names `occupations_by_vertex`,
+`occupations_at` or `occupation_records` nowhere but inside the body of
+`WorldContext::build`. It was witnessed red twice before it shipped green:
+once against the pre-hoist tree, where `brief.rs` names the call directly,
+and once more by mutating the finished tree's `brief_here` to reintroduce
+the call — where the scan caught it at `session.rs:7232`, the observation
+the plan's own evidence clause had originally asked for the wrong red
+instead of.
+
+**What the scan forbids, and what it cannot show.** It forbids a
+whole-world occupation read anywhere on a session path, present tense,
+forever. It does not prove the hoisted map is *complete* or *current* — that
+a vertex absent from `wctx.occupations` really carries no occupation, or
+that one present really is still live. That is a different property, and a
+different instrument proves it: for every vertex, and for every locale a
+script visits at seed 42 and at seed 7, `brief_of` read over the hoisted
+map is asserted equal to `brief_of` read over a freshly built one — asserted
+non-vacuously, so at least one visited locale carries a living occupation
+and at least one carries none, and a hoist that silently dropped the map or
+returned a stale "alive" would fail one side or the other.
+
+**The scan's own reach had to be witnessed, not assumed.** Its first draft
+split "production" from "test" code at the first `#[cfg(test)]` attribute
+in a file — which, in two files, gates a test-only *helper* sitting in the
+middle of otherwise-production code, not the test module itself:
+`liveness.rs`'s first `#[cfg(test)]` sits at line 4353 while its real test
+module begins at 8491, so roughly 4,100 production lines — `species_activity`
+among them — were never looked at; `roster.rs` had the identical shape from
+line 237 to 446. A guard that reads green over code it never scanned is
+exactly the failure class it exists to close. The fix splits at the test
+*module* instead (an attribute followed, across attribute lines, by
+`mod `), blanks comment lines rather than dropping them so a cited line
+number stays the file's own, and adds a per-file coverage control plus a
+synthetic-shape test so the boundary detector's own reach is asserted rather
+than assumed.
+
+## What the correction touched, and why in place
+
+The wrong attribution — "the 8 ms is one shadowcast" — had travelled into
+seven places before this campaign measured it, and each is corrected loudly
+and dated, in place, rather than by quiet edit: the two idea-registry rows it
+named (`TOOL-chamber-snapshot-prices-a-shadowcast`, body rewritten and
+shipped; `TOOL-tick-profile-2026-08`'s last sentence), two sentences in [The
+Rack's chronicle](./the-rack.md) ("The numbers" and "Honest limits"), one
+bullet in [The Rack's retrospective](../../../docs/retrospectives/the-rack.md),
+and the interpretation half of a Measured block in each of this project's
+two `move_cost.rs` benches — the numbers in every one of the seven stand
+unedited; only the noun attached to them does not. The reason is the one
+this project's own guidance gives for a loud correction over a quiet one: a
+record that outlives its subject does not sit inert, it produces wrong
+answers from readers who trust it in good faith — which is exactly how this
+record was produced in the first place.
+
+## Honest limits
+
+The walk-band's 4.2 ms JSON-and-spatial-channel floor is untouched; nothing
+in this campaign is a fold, and there was no fold left to remove here.
+`session_cost.rs`'s Mac-keyed wall-clock ceilings are untouched — they were
+already upper bounds and stay valid under every one of these readings.
+`enter` still makes four separate brief derivations in `handle` and a
+chamber turn still makes two; the campaign leaves the count exactly as
+found and only removes what each one cost, from single-digit milliseconds
+to single-digit microseconds. The register is built once for every
+`WorldContext`, which is once per world, at a measured cost of +23 ms
+against an 845 ms `Session::start` — paid whether or not any session built
+from that context ever calls `brief_of` at all. And a possession that
+outlived the `World` it was built against would need the register rebuilt
+from a fresh ledger; nothing in this codebase does that today, so the case
+is untested rather than handled.
