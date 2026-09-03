@@ -560,12 +560,22 @@ pub fn seating_for(
 ///
 /// **What closing it actually needs**, so the next campaign can price it: a
 /// descent verb walking [`crate::chamber::passages_from`]; chamber state that
-/// tracks an *address* rather than one `Chamber`; prose that distinguishes a cut
-/// hall from a found void; and a home for the overrides themselves — either
-/// derived per column off the committed ledger (`occupations_at` + [`seat_at`],
-/// ~30 lines, cheap enough for one verb) or committed as dig facts, which
-/// [`ChamberOverrides`]'s own doc defers. That is a `windows/vessel` campaign,
-/// not a capacity task.
+/// tracks an *address* rather than one `Chamber`; and prose that
+/// distinguishes a cut hall from a found void. The fourth thing this
+/// paragraph used to list as missing — a home for the overrides themselves,
+/// derived per column off the committed ledger — now exists: [`column_origins`]
+/// reads exactly that, per column, and [`ledger_overrides`] folds it into the
+/// [`ChamberOverrides`] shape [`crate::chamber::chamber_at`] reads, pinned to
+/// agree with this function (`underworld_capacity_probe`).
+/// `windows/vessel`'s `Session::delve_at` has been the production caller of
+/// [`column_origins`] since The Plat — but for a DIFFERENT purpose than this
+/// paragraph priced: it derives the walked descent's own per-rung
+/// [`ChamberOrigin`]/[`Tenancy`]
+/// (`hornvale_worldgen::circuit::plan_descent_with_origins`), not this
+/// module's `Chamber`/`ChamberOverrides` lattice — `delve_at`'s own
+/// `chamber_at` call, the one this doc's disclosure is about, still receives
+/// an empty override map. The remaining three needs above are still a
+/// `windows/vessel` campaign, not a capacity task.
 pub fn made_chambers(
     seed: hornvale_kernel::Seed,
     terrain: &GeneratedTerrain,

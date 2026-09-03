@@ -5846,11 +5846,23 @@ impl<'w> Session<'w> {
                 // descent and places the possession on the entrance rung's
                 // first standable cell, from the SAME terrain handle and
                 // vertex the sealed-check above already resolved.
+                //
+                // The Plat: the per-rung origins and tenancy come off the
+                // committed ledger (`column_origins`), never hardcoded —
+                // ~156 ms on a JSON-loaded world such as the test fixture,
+                // paid once per delve, and cheap on a Full-built one.
+                let origins = hornvale_worldgen::delve_seating::column_origins(
+                    self.world,
+                    terrain,
+                    vertex,
+                    &crate::underground::habitation_rungs(),
+                );
                 self.underground = Some(crate::underground::Underground::enter(
                     terrain,
                     vertex,
                     cave,
                     self.world.seed,
+                    &origins,
                 ));
                 // Fix round 1: every ARRIVAL marks, not just a lateral step
                 // (spec §3.5, amended in commit f6051a9c3) — the entrance
@@ -6422,6 +6434,31 @@ impl<'w> Session<'w> {
             .collect()
     }
 
+    /// The things lying in the Sanctum's region — the hoarder's hoard (spec
+    /// §3.5) — as `(thing, noun)`, the shape [`Self::underground_floor_nouns`]
+    /// returns.
+    fn hoard_nouns(&self, ug: &crate::underground::Underground) -> Vec<(EntityId, &'static str)> {
+        let Some(&sanctum) = hornvale_worldgen::plat::role_nodes(
+            &ug.plan,
+            &ug.reading,
+            ug.rung,
+            hornvale_worldgen::plat::Role::Sanctum,
+        )
+        .first() else {
+            return Vec::new();
+        };
+        crate::descent_thing::things_lying_at_node(ug, sanctum, &self.ledger, self.day)
+            .into_iter()
+            .filter_map(|thing| {
+                let label = self
+                    .ledger
+                    .kind_of(thing)
+                    .unwrap_or(crate::descent_thing::KEY);
+                Some((thing, crate::chamber_prose::noun(label)?))
+            })
+            .collect()
+    }
+
     fn describe_underground_here(&self) -> String {
         let ug = self
             .underground
@@ -6443,6 +6480,12 @@ impl<'w> Session<'w> {
             // already uses, and it reads the same for one thing or four,
             // which a "{noun} lies here" sentence does not.
             out.push_str(&format!(" Lying here: {listed}."));
+        }
+        // The Plat (spec §3.4): the place, in a rung a people cut. Appended,
+        // so a wild descent reads byte for byte as it did.
+        if let Some(place) = crate::plat_prose::place_sentence(ug) {
+            out.push(' ');
+            out.push_str(&place);
         }
         for (dir, _, door, _) in self.doors_adjacent(ug) {
             out.push_str(&format!(
@@ -6570,13 +6613,13 @@ impl<'w> Session<'w> {
             ),
         ];
         if let Some((kind, source, _cell)) = self.underground_resident(ug) {
+            let hoard_words = self.hoard_nouns(ug);
+            let hoard: Vec<&str> = hoard_words.iter().map(|(_, n)| *n).collect();
+            let datum =
+                crate::underground::inhabitant_datum(kind, source, ug.tenancy[ug.rung], &hoard);
             nouns.push(
-                crate::focalize::Noun::new(
-                    kind.0,
-                    kind.0,
-                    &crate::underground::inhabitant_datum(kind, source),
-                )
-                .with_kind(crate::focalize::NounKind::Creature),
+                crate::focalize::Noun::new(kind.0, kind.0, &datum)
+                    .with_kind(crate::focalize::NounKind::Creature),
             );
         }
         // The Brattice, Task 5 (spec §3.7): every noun `look` names down here
@@ -6597,6 +6640,10 @@ impl<'w> Session<'w> {
             };
             nouns.push(crate::focalize::Noun::new(noun, noun, detail));
         }
+        // The Plat (spec §3.4): the place's own nouns — entry/hall/chamber
+        // and a landing's stair — each answering `examine` with the same
+        // sentence `look` appends.
+        nouns.extend(crate::plat_prose::place_nouns(ug));
         // A door takes the authored line PLUS its state, because the state is
         // the whole question a player examines a door to answer and it is not
         // a property of the kind. Only the first door by bearing order gets a
@@ -7627,7 +7674,7 @@ impl<'w> Session<'w> {
         let climate = self.wctx.climate.as_ref()?;
         let (kind, source) = crate::underground::chamber_resident(ug, terrain, climate)?;
         let level = ug.level();
-        let cell = crate::underground::resident_cell(level)?;
+        let cell = crate::underground::resident_cell(ug)?;
         let lit = crate::lattice::shadowcast_with(
             |c| {
                 level
@@ -7691,12 +7738,19 @@ impl<'w> Session<'w> {
         // catalog (`Self::underground_nouns`) cannot independently drift on
         // which cell counts as lit.
         if let Some((kind, source, cell)) = self.underground_resident(ug) {
+            let hoard_words = self.hoard_nouns(ug);
+            let hoard: Vec<&str> = hoard_words.iter().map(|(_, n)| *n).collect();
             marks.push(crate::plan::PlanMark {
                 x: cell.0,
                 y: cell.1,
                 noun: kind.0.to_string(),
                 kind: crate::purview::AGENT_MARK_KIND.to_string(),
-                datum: crate::underground::inhabitant_datum(kind, source),
+                datum: crate::underground::inhabitant_datum(
+                    kind,
+                    source,
+                    ug.tenancy[ug.rung],
+                    &hoard,
+                ),
                 salience: crate::purview::AGENT_SALIENCE,
             });
         }
@@ -16041,7 +16095,13 @@ mod tests {
             .clone()
             .expect("seed 42 builds terrain");
         let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
-        let mut ug = crate::underground::Underground::enter(&terrain, vertex, cave, world.seed);
+        let mut ug = crate::underground::Underground::enter(
+            &terrain,
+            vertex,
+            cave,
+            world.seed,
+            &crate::underground::wild_origins(crate::underground::habitation_rungs().len()),
+        );
         let level = ug.level().clone();
         let mut rock_adjacent = None;
         'search: for (cell, kind) in level.cells.iter() {
@@ -16109,7 +16169,13 @@ mod tests {
             .clone()
             .expect("seed 42 builds terrain");
         let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
-        let mut ug = crate::underground::Underground::enter(&terrain, vertex, cave, world.seed);
+        let mut ug = crate::underground::Underground::enter(
+            &terrain,
+            vertex,
+            cave,
+            world.seed,
+            &crate::underground::wild_origins(crate::underground::habitation_rungs().len()),
+        );
         let level = ug.level().clone();
         let floor_cell = level
             .cells
@@ -16236,6 +16302,7 @@ mod tests {
                 cave,
                 seed,
                 hornvale_worldgen::character::Character::DrowTier,
+                &crate::underground::wild_origins(crate::underground::habitation_rungs().len()),
             );
             // Rung 0 only: `Underground::has_door` and `threshold_edge` both
             // read `self.level()`, so asking about another rung's cells here
@@ -16718,7 +16785,13 @@ mod tests {
             .clone()
             .expect("seed 42 builds terrain");
         let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
-        let ug = crate::underground::Underground::enter(&terrain, vertex, cave, world.seed);
+        let ug = crate::underground::Underground::enter(
+            &terrain,
+            vertex,
+            cave,
+            world.seed,
+            &crate::underground::wild_origins(crate::underground::habitation_rungs().len()),
+        );
         let level = ug.level().clone();
 
         let mut mixed = None;
@@ -18846,7 +18919,7 @@ mod tests {
         };
         let resident_cell = {
             let ug = session.underground.as_ref().expect("descended");
-            crate::underground::resident_cell(ug.level())
+            crate::underground::resident_cell(ug)
                 .expect("Task 9's connectivity invariant guarantees a standable cell")
         };
         let reach = session.sight_reach();
@@ -18964,7 +19037,7 @@ mod tests {
         };
         let resident_cell = {
             let ug = session.underground.as_ref().expect("descended");
-            crate::underground::resident_cell(ug.level())
+            crate::underground::resident_cell(ug)
                 .expect("Task 9's connectivity invariant guarantees a standable cell")
         };
 
@@ -19036,7 +19109,7 @@ mod tests {
         };
         let resident_cell = {
             let ug = session.underground.as_ref().expect("descended");
-            crate::underground::resident_cell(ug.level())
+            crate::underground::resident_cell(ug)
                 .expect("Task 9's connectivity invariant guarantees a standable cell")
         };
         let reach = session.sight_reach();

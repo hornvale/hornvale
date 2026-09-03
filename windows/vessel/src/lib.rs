@@ -29,6 +29,7 @@ pub mod light;
 pub mod liveness;
 pub mod passage;
 pub mod plan;
+mod plat_prose;
 mod purview;
 pub mod resident;
 pub mod residents;
