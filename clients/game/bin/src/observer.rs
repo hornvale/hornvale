@@ -1,6 +1,75 @@
-//! The terminal as an observer (spec §4.2). RED STATE: implementation not
-//! yet written; this file exists only to confirm the tests fail to compile
-//! before Step 3.
+//! The terminal as an observer (spec §4.2).
+//!
+//! `NO_COLOR`, a 16-colour terminal and a truecolor one are not three
+//! special cases — they are three observers over one pipeline, exactly as
+//! `windows/vessel/src/eyes.rs` resolves an observer per creature. Decision
+//! 0389 says nothing a reader must trust may live only in colour; here the
+//! glyph carries elevation, so `None` is a legal render and never an error.
+
+use hornvale_kernel::color::{Observer, Signal, standard_observer};
+
+/// What this terminal can display.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ColorDepth {
+    /// 24-bit colour.
+    TrueColor,
+    /// The 256-colour cube.
+    Palette256,
+    /// The eight base ANSI colours (2 levels per channel = 2^3 = 8). Named
+    /// for the ANSI 16-colour palette this terminal class supports, but the
+    /// bright variants are unused — the quantization only reaches the base
+    /// eight.
+    Palette16,
+    /// No colour at all (`NO_COLOR`, or a dumb terminal).
+    None,
+}
+
+/// The observer this terminal is, and the quantization it owns.
+pub struct TerminalObserver {
+    depth: ColorDepth,
+    observer: Observer,
+}
+
+impl TerminalObserver {
+    /// Build the observer for a given display depth.
+    pub fn new(depth: ColorDepth) -> Self {
+        Self {
+            depth,
+            observer: standard_observer(),
+        }
+    }
+
+    /// The depth this observer was built for.
+    pub fn depth(&self) -> ColorDepth {
+        self.depth
+    }
+
+    /// Collapse a signal to what this terminal can show. `None` means this
+    /// terminal shows no colour; the caller still emits the glyph.
+    pub fn render(&self, signal: &Signal) -> Option<[u8; 3]> {
+        let full = self.observer.to_srgb(signal)?;
+        match self.depth {
+            ColorDepth::None => None,
+            ColorDepth::TrueColor => Some(full),
+            ColorDepth::Palette256 => Some(quantize_channels(full, 6)),
+            ColorDepth::Palette16 => Some(quantize_channels(full, 2)),
+        }
+    }
+}
+
+/// Snap each channel to `levels` evenly spaced values. `levels` is the count
+/// per channel, so 2 gives 8 combinations and 6 gives 216 — the classic
+/// 6x6x6 cube.
+fn quantize_channels(rgb: [u8; 3], levels: u32) -> [u8; 3] {
+    let n = levels.max(2) - 1;
+    let mut out = [0u8; 3];
+    for (i, c) in rgb.iter().enumerate() {
+        let step = f64::from(*c) / 255.0 * f64::from(n);
+        let snapped = step.round() / f64::from(n) * 255.0;
+        out[i] = snapped as u8;
+    }
+    out
+}
 
 #[cfg(test)]
 mod tests {
@@ -52,6 +121,10 @@ mod tests {
             "16-colour observer emitted {} distinct triples",
             seen.len()
         );
-        assert!(seen.len() > 1, "it must still discriminate; got {}", seen.len());
+        assert!(
+            seen.len() > 1,
+            "it must still discriminate; got {}",
+            seen.len()
+        );
     }
 }
