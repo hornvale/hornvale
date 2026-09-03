@@ -15,6 +15,7 @@
 //! (`cycle_budget`); the `[1, 5]` clip is the one authored constant and is
 //! Dormans' (spec §3.2 step 5).
 
+use crate::chamber::ChamberOrigin;
 use crate::character::Character;
 use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{Band, Seed, Stream, Vertex};
@@ -354,19 +355,22 @@ impl DescentPlan {
 /// Target cycles per level: DERIVED from the rock (karst dissolves many
 /// routes, a lava tube is one conduit, a fracture system sits between) and
 /// from workmanship (a worked place must ventilate, so it loops), clipped
-/// to Dormans' `[MIN_CYCLES_PER_LEVEL, MAX_CYCLES_PER_LEVEL]`. `ChamberOrigin::Made`
-/// joins the `worked` term when The Plat gives it a production writer.
+/// to Dormans' `[MIN_CYCLES_PER_LEVEL, MAX_CYCLES_PER_LEVEL]`. Workmanship
+/// is `worked(character) || origin == Made`, per level (decision 0568's
+/// "a drow tier or a made chamber adds one", the `Made` half live since The
+/// Plat).
 /// type-audit: bare-ok(count: return)
-pub fn cycle_budget(kind: CaveKind, character: Character) -> u8 {
+pub fn cycle_budget(kind: CaveKind, character: Character, origin: ChamberOrigin) -> u8 {
     let base: u8 = match kind {
         CaveKind::LavaTube => 1,
         CaveKind::Fracture => 2,
         CaveKind::Karst => 3,
     };
-    let worked: u8 = match character {
-        Character::DrowTier => 1,
-        Character::WildCave | Character::FungalGardens => 0,
+    let by_character = match character {
+        Character::DrowTier => true,
+        Character::WildCave | Character::FungalGardens => false,
     };
+    let worked: u8 = u8::from(by_character || origin == ChamberOrigin::Made);
     (base + worked).clamp(MIN_CYCLES_PER_LEVEL, MAX_CYCLES_PER_LEVEL)
 }
 
@@ -749,8 +753,10 @@ impl Builder {
     }
 }
 
-/// Grow the plan for one descent (spec §3.2). `rungs` is the walked list,
-/// shallowest first (`hornvale_terrain::rungs()` minus `Surface`).
+/// [`plan_descent_with_origins`] with every level `Found` — the plan every
+/// caller derived before The Plat, byte for byte. Kept as the common entry
+/// point so the one production caller that has origins
+/// (`windows/vessel`'s `Underground::enter`) is the one that passes them.
 pub fn plan_descent(
     seed: Seed,
     vertex: Vertex,
@@ -758,7 +764,26 @@ pub fn plan_descent(
     kind: CaveKind,
     character: Character,
 ) -> DescentPlan {
+    let origins = vec![ChamberOrigin::Found; rungs.len()];
+    plan_descent_with_origins(seed, vertex, rungs, kind, character, &origins)
+}
+
+/// Grow the plan for one descent (spec §3.2). `rungs` is the walked list,
+/// shallowest first (`hornvale_terrain::rungs()` minus `Surface`); `origins`
+/// is parallel to it, one [`ChamberOrigin`] per level (The Plat, spec §3.3).
+/// A `Made` level counts as worked for its cycle budget and for the
+/// Brattice's door admissibility; an all-`Found` call is byte-identical to
+/// the pre-Plat grammar (`the_all_found_plan_grammar_is_pinned`).
+pub fn plan_descent_with_origins(
+    seed: Seed,
+    vertex: Vertex,
+    rungs: &[Band],
+    kind: CaveKind,
+    character: Character,
+    origins: &[ChamberOrigin],
+) -> DescentPlan {
     assert!(!rungs.is_empty(), "a descent has at least one rung");
+    assert_eq!(rungs.len(), origins.len(), "one origin per rung");
     let mut spine = leg(seed, crate::streams::UNDERWORLD_PLAN_SPINE, vertex);
     let mut cycle = leg(seed, crate::streams::UNDERWORLD_PLAN_CYCLE, vertex);
     let mut extend = leg(seed, crate::streams::UNDERWORLD_PLAN_EXTEND, vertex);
@@ -811,8 +836,8 @@ pub fn plan_descent(
     }
 
     // 2. Cycles and extensions, level by level, to a derived budget.
-    let budget = cycle_budget(kind, character) as usize;
     for level in 0..rungs.len() as u8 {
+        let budget = cycle_budget(kind, character, origins[level as usize]) as usize;
         let mut attempts = 0;
         while anchored_realms(&b.plan, level as usize) < budget && attempts < 80 {
             attempts += 1;
@@ -873,7 +898,14 @@ pub fn plan_descent(
     // 5. Gates (The Brattice): one pattern draw per realm, after growth so
     // `extend` can no longer orphan an edge attribute.
     let mut pattern_leg = leg(seed, crate::streams::UNDERWORLD_GATE_PATTERN, vertex);
-    crate::brattice::stamp(&mut b.plan, kind, character, &mut pattern_leg, &mut dof);
+    crate::brattice::stamp(
+        &mut b.plan,
+        kind,
+        character,
+        origins,
+        &mut pattern_leg,
+        &mut dof,
+    );
     b.plan.dof = dof;
     b.plan
 }
@@ -1630,19 +1662,48 @@ mod tests {
     #[test]
     fn budget_is_derived_from_rock_and_workmanship() {
         assert!(
-            cycle_budget(CaveKind::LavaTube, Character::WildCave)
-                < cycle_budget(CaveKind::Fracture, Character::WildCave)
+            cycle_budget(
+                CaveKind::LavaTube,
+                Character::WildCave,
+                ChamberOrigin::Found
+            ) < cycle_budget(
+                CaveKind::Fracture,
+                Character::WildCave,
+                ChamberOrigin::Found
+            )
         );
         assert!(
-            cycle_budget(CaveKind::Fracture, Character::WildCave)
-                < cycle_budget(CaveKind::Karst, Character::WildCave)
+            cycle_budget(
+                CaveKind::Fracture,
+                Character::WildCave,
+                ChamberOrigin::Found
+            ) < cycle_budget(CaveKind::Karst, Character::WildCave, ChamberOrigin::Found)
         );
         assert!(
-            cycle_budget(CaveKind::Karst, Character::DrowTier)
-                > cycle_budget(CaveKind::Karst, Character::WildCave)
+            cycle_budget(CaveKind::Karst, Character::DrowTier, ChamberOrigin::Found)
+                > cycle_budget(CaveKind::Karst, Character::WildCave, ChamberOrigin::Found)
         );
-        assert!(cycle_budget(CaveKind::Karst, Character::DrowTier) <= MAX_CYCLES_PER_LEVEL);
-        assert!(cycle_budget(CaveKind::LavaTube, Character::WildCave) >= MIN_CYCLES_PER_LEVEL);
+        assert!(
+            cycle_budget(CaveKind::Karst, Character::DrowTier, ChamberOrigin::Found)
+                <= MAX_CYCLES_PER_LEVEL
+        );
+        assert!(
+            cycle_budget(
+                CaveKind::LavaTube,
+                Character::WildCave,
+                ChamberOrigin::Found
+            ) >= MIN_CYCLES_PER_LEVEL
+        );
+        // The Plat: Made adds exactly what DrowTier adds, and both together
+        // add it once (the clip, not a double count).
+        assert_eq!(
+            cycle_budget(CaveKind::Karst, Character::WildCave, ChamberOrigin::Made),
+            cycle_budget(CaveKind::Karst, Character::DrowTier, ChamberOrigin::Found)
+        );
+        assert_eq!(
+            cycle_budget(CaveKind::Karst, Character::DrowTier, ChamberOrigin::Made),
+            cycle_budget(CaveKind::Karst, Character::DrowTier, ChamberOrigin::Found)
+        );
     }
 
     #[test]

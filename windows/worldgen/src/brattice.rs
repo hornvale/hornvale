@@ -20,6 +20,7 @@
 //! for its witness. `no_row_is_dead_data` holds every surviving row to spec
 //! §3.2's standard.
 
+use crate::chamber::ChamberOrigin;
 use crate::character::Character;
 use crate::circuit::{DescentPlan, EdgeKind, LengthClass, NodeId, Realm};
 use hornvale_kernel::Stream;
@@ -470,23 +471,34 @@ fn interior_at(path: &[NodeId], near: NodeId, slot: Slot) -> Option<NodeId> {
     })
 }
 
-/// Does this character's presence imply a MAKER — someone who could hang a
-/// door? Exhaustive over the roster on purpose (the crate's convention, as in
-/// `character::bands_of`): a sixth variant must fail to compile here rather
-/// than inherit "unworked" from a wildcard and quietly lose its doors.
-fn worked(character: Character) -> bool {
-    match character {
+/// Does this level have a MAKER — someone who could hang a door? A worked
+/// character (a drow tier) or a `Made` origin (a people cut this rung: The
+/// Plat, spec §3.3). Exhaustive over both rosters on purpose (the crate's
+/// convention, as in `character::bands_of`): a fourth character or a third
+/// origin must fail to compile here rather than inherit "unworked" from a
+/// wildcard and quietly lose its doors.
+fn worked(character: Character, origin: ChamberOrigin) -> bool {
+    let by_character = match character {
         Character::DrowTier => true,
         Character::WildCave | Character::FungalGardens => false,
-    }
+    };
+    let by_origin = match origin {
+        ChamberOrigin::Made => true,
+        ChamberOrigin::Found => false,
+    };
+    by_character || by_origin
 }
 
 /// Spec §3.3: is this row's every requirement realizable in this rock and
-/// work?
+/// work? `origin` is the realm's anchor level's — a door needs a maker where
+/// the door is, and every key row's gate sits on the anchor level (the one
+/// cross-floor key row, `key-downstairs-lock-upstairs`, gates the upper
+/// level, which is the anchor).
 fn admissible(
     row: &CyclePattern,
     kind: CaveKind,
     character: Character,
+    origin: ChamberOrigin,
     class: LengthClass,
     span: Span,
 ) -> bool {
@@ -497,7 +509,7 @@ fn admissible(
         return false;
     }
     row.gates.iter().all(|g| match g.way {
-        WaySpec::Symmetric(ReqKind::Key) => worked(character),
+        WaySpec::Symmetric(ReqKind::Key) => worked(character, origin),
         WaySpec::Symmetric(ReqKind::Natural) => !matches!(kind, CaveKind::LavaTube),
         WaySpec::DownFreeUpNeeds(ReqKind::Natural) => true,
         // No row says this; refuse rather than invent.
@@ -511,14 +523,25 @@ pub(crate) fn stamp(
     plan: &mut DescentPlan,
     kind: CaveKind,
     character: Character,
+    origins: &[ChamberOrigin],
     pattern_leg: &mut Stream,
     dof: &mut u32,
 ) {
     let realms = plan.realms.clone();
     for realm in realms.iter() {
         let span = span_of(plan, realm);
+        let origin = origins[realm.anchor_level as usize];
         let rows: Vec<usize> = (0..CYCLE_PATTERNS.len())
-            .filter(|&i| admissible(&CYCLE_PATTERNS[i], kind, character, realm.class, span))
+            .filter(|&i| {
+                admissible(
+                    &CYCLE_PATTERNS[i],
+                    kind,
+                    character,
+                    origin,
+                    realm.class,
+                    span,
+                )
+            })
             .collect();
         let r = pattern_leg.next_f64();
         *dof += 1;
@@ -1059,6 +1082,65 @@ mod tests {
         )
     }
 
+    fn plan_made_at(seed: u64, vertex: u32, kind: CaveKind, made_rung: usize) -> DescentPlan {
+        let rungs = habitation_rungs();
+        let mut origins = vec![crate::chamber::ChamberOrigin::Found; rungs.len()];
+        origins[made_rung] = crate::chamber::ChamberOrigin::Made;
+        crate::circuit::plan_descent_with_origins(
+            Seed(seed),
+            Vertex(vertex),
+            &rungs,
+            kind,
+            Character::WildCave,
+            &origins,
+        )
+    }
+
+    /// claim: rate(seed: 0..200) — a WILD-character descent whose second rung
+    /// is `Made` hangs a door on THAT rung eventually (spec §3.3), and never
+    /// on any other rung: the maker is where the cut is. The share is the
+    /// spec's §4.2 prediction (>= 0.5 per Made rung); asserted here only as
+    /// a positive control and an exclusion, never as the number.
+    #[test]
+    fn a_made_rung_under_a_wild_character_hangs_a_door_there_and_nowhere_else() {
+        let mut with_door = 0usize;
+        for seed in 0..200u64 {
+            let p = plan_made_at(seed, 2, CaveKind::Karst, 1);
+            let mut door_on_made = false;
+            for e in &p.edges {
+                let Some(g) = &e.gate else { continue };
+                let is_key = matches!(g.toward_a, Way::Needs(Requirement::Key(_)))
+                    || matches!(g.toward_b, Way::Needs(Requirement::Key(_)));
+                if !is_key {
+                    continue;
+                }
+                let level = p.nodes[e.a].level.max(p.nodes[e.b].level) as usize;
+                assert_eq!(level, 1, "seed {seed}: a door on an unworked rung");
+                door_on_made = true;
+            }
+            if door_on_made {
+                with_door += 1;
+            }
+        }
+        assert!(
+            with_door > 0,
+            "positive control: some Made rung hangs a door"
+        );
+    }
+
+    /// claim: invariant(seed: 0..50) — the same seeds, all-Found: no door
+    /// anywhere (the Brattice's own
+    /// `a_worked_karst_descent_eventually_carries_a_door_and_a_wild_one_never_does`
+    /// says so for the character half; this is the origin half).
+    #[test]
+    fn an_all_found_wild_descent_hangs_no_door() {
+        for seed in 0..50u64 {
+            let p = plan(seed, 2, CaveKind::Karst, Character::WildCave);
+            let (doors, _, _) = realized_requirements(&p);
+            assert_eq!(doors, 0, "seed {seed}");
+        }
+    }
+
     #[test]
     fn the_inventory_is_frozen_at_nine_rows() {
         assert_eq!(
@@ -1248,7 +1330,8 @@ mod tests {
 
     /// claim: sanctioned-sweep(kind: [LavaTube, Fracture, Karst], character:
     /// [WildCave, FungalGardens, DrowTier], vertex: [1, 7, 42, 1000], seed:
-    /// 0..400) — spec §3.8's own shape, at full size: 14,400 plans.
+    /// 0..400, origins: [all-Found, rung-1-Made (WildCave)]) — spec §3.8's
+    /// own shape, at full size: 14,400 + 4,800 plans.
     ///
     /// **The same two properties
     /// [`every_plan_is_solvable_for_a_body_holding_nothing`] asserts, over
@@ -1326,6 +1409,36 @@ mod tests {
                              reach every node"
                         );
                     }
+                }
+            }
+        }
+        // The Plat: the Made population — a wild character with rung 1 cut —
+        // is a plan shape no saved world has seen and the invariant must hold
+        // on it too. 3 kinds × 4 vertices × 400 seeds = 4,800 plans.
+        for seed in 0..400u64 {
+            for kind in [CaveKind::LavaTube, CaveKind::Fracture, CaveKind::Karst] {
+                for vertex in [1u32, 7, 42, 1000] {
+                    let p = plan_made_at(seed, vertex, kind, 1);
+                    let r = solvable(&p, DEFAULT_BODY);
+                    assert!(
+                        r.terminus.is_some(),
+                        "Made rung 1: seed {seed} vertex {vertex} {kind:?}: terminus unreachable"
+                    );
+                    assert!(
+                        r.keys.iter().all(|k| k.is_some()),
+                        "Made rung 1: seed {seed} vertex {vertex} {kind:?}: a key is unreachable"
+                    );
+                    assert!(
+                        gated_round_trip(&p, DEFAULT_BODY).is_some(),
+                        "Made rung 1: seed {seed} vertex {vertex} {kind:?}: the default body \
+                         cannot get back to the entrance (Ruling F)"
+                    );
+                    let all = solvable(&p, resident(&p));
+                    assert!(
+                        all.reached.iter().all(|&x| x),
+                        "Made rung 1: seed {seed} vertex {vertex} {kind:?}: the resident cannot \
+                         reach every node"
+                    );
                 }
             }
         }
