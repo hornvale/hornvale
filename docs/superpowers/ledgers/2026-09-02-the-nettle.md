@@ -59,7 +59,11 @@ shelf-stable; item 1) with a **judgment** (a property of the whole repo's state
 the gap; items 3 and 5). Both stale items were judgments; the durable one was an
 observation. Re-instantiated in food-safety and avalanche-forecasting, both of
 which refuse to store a dated observation and an expiring forecast the same way.
-Measured support: **0 of 900 `raw` registry rows carry an observed-at SHA.**
+Measured support: **the registry has no observed-at column at all** — its five
+columns are ID, Idea, Status, Conf, Where — across **1,026** `raw` rows.
+(The figure first written here was "0 of 900", from a `grep -c '| raw |'`
+that counted only exactly-`raw` status cells and missed the `raw*` and
+`raw (…)` forms `normalize_status` folds in. Corrected in ledger #17.)
 
 *Cost if wrong.* If a premise I re-derived is itself wrong, the affected task
 reddens at its own verification step; each task below carries a command that
@@ -672,3 +676,69 @@ rejected text being available to copy.
 
 *Capture.* This entry; the plan's Task 6 steps; the retrospective — twelfth
 instance, and the one that best states the general rule.
+
+---
+
+#17 [G5] — **My fix for "the document holds its own refutation" left two
+instances behind, and its commit message claimed the class was closed.**
+
+*Found by.* Task 6's reviewer, when I asked it to hunt for siblings of the
+defect ledger #16 records — the one instruction in that dispatch that was
+speculative rather than targeted.
+
+*What it found.* `66aa4b88b` removed three over-cap drafts from Task 6's Steps
+3, 5 and 6, and its message said "delete the superseded rows". It missed two:
+
+| step | superseded text left in place | measured |
+|---|---|---|
+| Step 2 | the rejected `REFUTED …` draft for the refuted row | 613 chars vs a 600 cap |
+| Step 4 | a clause which, spliced onto the row's existing base as Step 4 literally directs, yields ~943 chars | ~943 vs 600 |
+
+Both verified by reading the ranges the reviewer cited. Both now replaced with
+pointers, and Step 4's pointer additionally states the thing its prose hid:
+**the row is a full replacement, not an append** — which is why splicing
+reached 943 characters in the first place.
+
+*Why it happened, precisely.* My removal script matched only fenced blocks
+containing a **full table row** (`| PROC-…`). Steps 2 and 4 hold *cell prose*,
+not whole rows, so the pattern could not see them. I even had a diagnostic
+print for the prose case — it reported `prose replacement blocks: 0` — and I
+read that zero as "none exist" rather than "my pattern found none". **The
+same misreading as ledger #11 and the same class as ledger #15**: a check I
+wrote, returning a number I wanted, believed without asking whether it could
+have returned anything else.
+
+*And the commit message is the worse half.* It asserted the class was closed.
+A future reader auditing whether this defect had been handled would have found
+a commit saying yes, over a plan where two instances remained. That is exactly
+the "healthy-looking artifact" failure this campaign keeps finding, authored by
+the fix for it.
+
+*Second finding, Minor in the review and material in fact: the "0 of 900"
+figure was wrong, and it shipped into a permanent artifact.* The reviewer
+measured 1024 `raw` rows against my 900. I replicated `parse_registry` and
+`normalize_status` faithfully and got **1026** — two independent
+implementations agreeing within two rows, against a figure 12% low. My
+original measurement was `grep -c '| raw |'`, which counts only cells that are
+*exactly* `raw` and misses the `raw*` and `raw (…)` forms `normalize_status`
+folds in.
+
+**The claim is now stated structurally instead, because that is both true and
+stronger:** the registry's five columns are ID, Idea, Status, Conf, Where —
+**there is no observed-at column at all.** No count can decay out from under
+that. Corrected in the registry row (599 chars, re-measured), the spec, the
+plan, and ledger #2 where the bad figure originated.
+
+*The recursion is worth stating plainly:* a row asserting that inherited
+numbers decay silently shipped carrying an inherited number that had decayed
+silently. It was caught by a reviewer re-deriving it, which is the only thing
+that ever catches this.
+
+*Cost if wrong.* Low. The structural claim is checkable by reading one header
+row.
+
+*ideonomy passes / overturns.* 0 / 0 — two reported defects, verified.
+
+*Capture.* This entry; the plan's Steps 2 and 4; the registry row; the spec;
+ledger #2. Retrospective: thirteenth and fourteenth instances, both mine, and
+#17 is the one to lead with.

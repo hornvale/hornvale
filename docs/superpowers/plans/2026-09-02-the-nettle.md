@@ -1401,7 +1401,7 @@ is now REFUSED, and succeeded before the change."
 **`PROC-a-parked-finding-carries-no-use-by-date`** (582 chars)
 
 ```
-**A parked finding's content decays while its stated confidence does not.** An *observation* asserts a property of a file's bytes — re-derivable by one command, stale only if that file is edited. A *judgment* asserts a property of the repo's whole state ("nothing does X") and decays silently when any campaign closes the gap. The Nettle re-derived five findings from The Reservoir: the observation was durable; **both judgments were false**, one fixed three days earlier, one false when written — both still marked `high`. Measured: **0 of 900 `raw` rows carry an observed-at SHA**
+**A parked finding's content decays while its stated confidence does not.** An *observation* asserts a property of a file's bytes — re-derivable by one command, stale only if that file is edited. A *judgment* asserts a property of the repo's whole state ("nothing does X") and decays silently when any campaign closes the gap. The Nettle re-derived five findings from The Reservoir: the observation was durable; **both judgments were false**, one fixed three days earlier, one false when written — both still marked `high`. Measured: across 1,026 `raw` rows there is **no observed-at column at all**
 ```
 
 
@@ -1432,17 +1432,12 @@ Its claim was false when written — the skill was corrected at `3b9a026aa` on 2
 
 Change its **status** cell to `refuted (The Nettle)` and rewrite its **idea** cell to lead with the correction:
 
-```
-**REFUTED — already fixed before this row was written.** `campaign-autopilot`
-was corrected at `3b9a026aa` (2026-08-30, The Cartulary): SKILL.md line 190
-names `docs/superpowers/ledgers/YYYY-MM-DD-<slug>.md`, and a grep across
-`.claude/skills/` and the vendored superpowers tree finds no reference to
-`.superpowers/sdd/decision-ledger.md` in any loaded skill. The Reservoir's own
-worktree carried the corrected text. The LIVE defect was three lines up —
-followups routed to `.superpowers/sdd/followups.md`, flat and shared and
-promoted-at-close — carried now by
-`PROC-autopilot-routed-followups-to-shared-scratch`
-```
+> **The replacement text is NOT here.** An over-budget draft of it lived in
+> this block (613 characters against a 600-character cap) and has been removed
+> rather than left to read as authoritative. Take
+> `PROC-autopilot-names-the-superseded-ledger-path`'s new Idea cell
+> **verbatim** (519 characters) from this task's *five measured Idea cells*
+> section above.
 
 Keep the **Where** cell's existing pointers and append the fixing commit.
 
@@ -1461,15 +1456,14 @@ A new five-column row:
 
 Its `~1 s` is the test-execution time, not the wall — correct it rather than leaving a figure that would mislead the next reader the way this campaign's own inherited figures did. Set status to `shipped` and rewrite the mitigation clause to:
 
-```
-**Shipped (The Nettle):** the fast path is inverted, not deleted — a docs-only
-commit runs the prose-subject tests instead of nothing, and still skips fmt /
-clippy / type-audit, which a markdown edit genuinely cannot move. **The `~1 s`
-in this row's first draft was the wrong mode**: measured 2026-09-02, ~2.4 s
-with the suite binary warm and **~234.6 s cold**, because the wall is the
-build, not the 2.1 s of execution — and the cold case is campaign close, when
-the tree is coldest
-```
+> **The replacement text is NOT here, and this row is a FULL replacement, not
+> an append.** Splicing the clause that used to sit in this block onto the
+> row's existing base yields ~943 characters against a 600-character cap — the
+> over-budget figure this task's preamble names. It has been removed rather
+> than left to read as authoritative. Take
+> `PROC-docs-only-commits-skip-a-gate-that-checks-docs`'s Idea cell
+> **verbatim** (578 characters, replacing the cell entirely) from this task's
+> *five measured Idea cells* section above.
 
 - [ ] **Step 5: Add the corrected item-5 row, `TOOL-derived-terrain-bytes-are-pinned-only-through-projections`**
 
@@ -1530,7 +1524,7 @@ drift-checked seed-42 PNGs already pin the derived terrain, so the residue is
 'pinned only through projections', not 'not pinned'. Deferred per G3 option d.
 
 Adds PROC-a-parked-finding-carries-no-use-by-date, the campaign's
-cross-cutting finding: 0 of 900 raw rows carry the SHA they were observed at,
+cross-cutting finding: the registry has no observed-at column at all,
 and the two findings that went stale were both the state-of-the-repo kind."
 ```
 

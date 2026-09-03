@@ -30,7 +30,7 @@ finding that asserts a property of a *file's bytes* stays true until someone
 edits that file, while one that asserts a property of the *repo's whole state*
 ("nothing does X") decays silently the moment any campaign closes the gap —
 and nothing distinguishes the two at the moment of filing. Measured support:
-**0 of 900 `raw` idea-registry rows carry the SHA they were observed at.**
+**the registry's five columns are ID, Idea, Status, Conf and Where — there is no observed-at column at all, across 1,026 `raw` rows.**
 This campaign fixes its five items and captures that as one registry row plus
 a retrospective lesson. Building a parking-discipline mechanism is out of
 scope (§7).
