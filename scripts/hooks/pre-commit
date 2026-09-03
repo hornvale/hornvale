@@ -342,8 +342,37 @@ fi
 # staged" (as the root hook's early `exit 0` did) would have disabled both
 # guards on precisely the commits that trip them.
 rust_relevant='\.rs$|(^|/)Cargo\.(toml|lock)$|(^|/)clippy\.toml$|(^|/)rustfmt\.toml$|(^|/)rust-toolchain\.toml$|(^|/)\.cargo/|(^|/)tools/type-audit/|(^|/)tools/placement-audit/|(^|/)docs/audits/type-audit-report\.md$|(^|/)docs/audits/placement-audit-roster\.md$'
+# THE FAST PATH IS NOW AN INVERSION, NOT A SKIP (The Nettle).
+#
+# The old premise was "Rust paths staged -> Rust checks matter". The
+# counterexample is a Rust test whose SUBJECT IS PROSE:
+# `docs_consistency` scans `book/src` and `docs/`, is in the sub-floor
+# roster, and so runs in `gate-commit` — and a docs-only commit is exactly
+# what it exists to check and exactly what this predicate decided needed no
+# checking. One campaign made ~12 docs-only commits through the hole, each
+# printing a skip message that reads as an optimisation, and a one-sentence
+# prose defect went to the merge queue to be found on the canonical box
+# after it had taken the shared serial claim.
+#
+# So a docs-only commit now runs the PROSE-SUBJECT tests instead of nothing.
+# It does NOT run `make gate-commit`: fmt, clippy and the type audit cannot
+# be moved by a markdown edit, and that half of the old reasoning was right.
+#
+# COST, measured 2026-09-02 (The Nettle, spec §4): ~2.4 s with the suite
+# binary warm; ~234.6 s when it is cold, because the wall is the BUILD, not
+# the 2.1 s of test execution. The cold case is not rare — a chronicle or
+# retrospective commit right after absorbing main is exactly when the tree
+# is cold. It is paid deliberately: a campaign's docs commits cluster after
+# one absorption, so the cost is the cold build once plus ~2.4 s each
+# thereafter, against a merge phase reddening at ~1129-1595 s on the box
+# everything else is queued behind.
 if ! git diff --cached --name-only --diff-filter=ACMR | grep -qE "$rust_relevant"; then
-    echo "pre-commit: no Rust-relevant paths staged — skipping 'make gate-commit'." >&2
+    echo "pre-commit: no Rust-relevant paths staged — running the prose-subject tests instead of 'make gate-commit'." >&2
+    if ! make docs-tests; then
+        echo "pre-commit: 'make docs-tests' failed — a staged docs change breaks a test whose subject is prose." >&2
+        echo "pre-commit: this is the check the merge queue would otherwise find on the canonical box." >&2
+        exit 1
+    fi
     exit 0
 fi
 
