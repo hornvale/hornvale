@@ -236,3 +236,52 @@ already fixed once elsewhere.
 Ruling: keep the idiom, fix the coverage, file the blind spot as a `TOOL-*`
 row rather than fixing the tool — auditing every integer literal in a function
 body has an obvious false-positive problem and is its own campaign.
+
+#9 [G5] — **Task 1 fix round 1: closed.** All five items from #8 addressed.
+
+I1: added `a_rest_is_shorter_than_a_sleep_through_the_give_up_fallback_at_the_
+100_hour_legal_extreme` (same fixture as the deleted falsifier —
+`permanent_night: true` — but asserting the CORRECT ordering, not its
+inverse) and `a_fast_rotating_world_gives_up_a_search_the_retired_bound_
+would_have_finished` for `SCAN_LIMIT` (a small-`L` world where the converted
+search bound gives up on a wake the retired anchor's own window would have
+found — the property named in #8: the bound only matters where the two
+disagree about whether a wake exists at all). Re-mutated all four,
+vessel-only (the discriminating suite for three of the four rows):
+
+| mutation | vessel |
+|---|---|
+| `sleep_bout` → `SLEEP_BOUT` | 1010 passed, **1 failed** (unchanged test) |
+| `wake_scan_step` → `WAKE_SCAN_STEP` | 1011 passed (still lab-only; unchanged, not asked for) |
+| `scan_limit` → `SCAN_LIMIT` | 1010 passed, **1 failed** (new) |
+| `one_day` → `ONE_DAY` | 1009 passed, **2 failed** (new give-up test, and the new `SCAN_LIMIT` test cross-reacts) |
+
+`SCAN_LIMIT` ended up WITNESSED, not declared unwitnessable — the small-`L`
+property in #8 was constructible and the mutation table above proves it.
+
+F2: `SCAN_LIMIT`/`ONE_DAY` promoted from `next_awake_day`'s body to file
+level, alongside `REST_BOUT`/`SLEEP_BOUT`/`WAKE_SCAN_STEP` (same idiom, same
+`#[allow(dead_code)]` shape) — both are now read by the two new tests, so
+neither is decoration any more, and neither needed deleting.
+
+F3: filed `TOOL-plumb-walk-blind-to-let-bindings` (`book/src/frontier/
+idea-registry.md`), citing `tools/plumb/src/walk.rs:461-511` and this entry
+and #8 by ledger reference. Tool itself untouched, per instruction.
+
+F4: `wake_scan_step` floored at `.max(1)` with the invariant stated inline —
+`local_day / 20` is `0` for `day_ticks()` in `1..=19`, unreachable through
+today's genesis bound but no longer resting on an invariant declared in
+`domains/astronomy`.
+
+F5: three doc fixes — the `Action::Sleep` bullet in `act_span`'s own doc now
+names `SLEEP_BOUT` as the `L = 1` anchor (parallel to the `Action::Rest`
+bullet above it); the two present-tense "`WAKE_SCAN_STEP`, 72 minutes"
+mentions (`REST_BOUT`'s and `SLEEP_BOUT`'s docs) now say it is the `L = 1`
+value; the awake-at-noon test's own doc now gives the fixture's real
+wake-scan rate (`local_day / 20 = 20,833` ticks) instead of citing the
+constant (`5,000`) as if it still governed there.
+
+`cargo fmt`, `make gate-commit` (rc=0), `docs_consistency` (28/28, including
+the registry-row shape checks), `make rebaseline` (only `plumb-roster.md`
+moved — line numbers, no behavior change), byte-goldens by name
+(`HV_TEST_OK=1 -p hornvale-lab -p hornvale-vessel -p hornvale`: 1964/1964).

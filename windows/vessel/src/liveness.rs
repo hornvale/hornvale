@@ -2665,7 +2665,8 @@ const _: () = assert!(
 /// Task 7 made fatigue a stock and every rest took its length from
 /// `next_awake_day`, which answers "the next moment this species is awake". For
 /// a body lying down while it is ALREADY awake that is the next scan step —
-/// [`WAKE_SCAN_STEP`], 72 minutes — so an exhausted creature dozed repeatedly
+/// [`WAKE_SCAN_STEP`]'s `L = 1` value, 72 minutes (now a fraction of the
+/// local day; see its own doc) — so an exhausted creature dozed repeatedly
 /// through its own afternoon: 44 of the 68 `rested` facts in the hoisted-walk
 /// golden were one scan step long. A doze that short repays
 /// `REST_FALL * 0.05`, which cannot clear the drive that proposed it, so the
@@ -2730,7 +2731,8 @@ const REST_BOUT: TickSpan = TickSpan::from_ticks(WorldTime::TICKS_PER_STD_DAY / 
 /// the wake-gate has always used). That answer is authoritative in the
 /// off-phase — the cycle knows where dawn is — and useless while the body is
 /// awake, where the same scan means "the next moment you are awake" and usually
-/// returns a single [`WAKE_SCAN_STEP`], 72 minutes. The floor supplies a
+/// returns a single wake-scan step — [`WAKE_SCAN_STEP`]'s `L = 1` value, 72
+/// minutes, now a fraction of the local day (see its own doc). The floor supplies a
 /// length for that second case and **only** that case, which is what makes a
 /// sleep's length a property of the act rather than of the scan lattice.
 ///
@@ -2856,6 +2858,34 @@ const SURVIVAL_OVERRIDE: f64 = 0.9;
 #[allow(dead_code)]
 const WAKE_SCAN_STEP: TickSpan = TickSpan::from_ticks(WorldTime::TICKS_PER_STD_DAY / 20);
 
+/// The scan loop's own search bound at `L = 1` (a standard-length local
+/// day) — [`next_awake_day`] now computes the real bound generally as
+/// three halves of the world's own local day; this is the retired anchor
+/// that formula reduces to on a standard-length world and on any terrain
+/// reporting no calendar of its own (The Pallet, Task 1).
+///
+/// **A world whose local day is far from one standard day can DISAGREE with
+/// this anchor about whether a wake exists inside the search window at
+/// all**, which is the only way this bound is ever observable — it is a
+/// LIMIT, not a floor or a fallback, so its value only matters at the
+/// boundary of "found" vs "gave up".
+/// `a_fast_rotating_world_gives_up_a_search_the_retired_bound_would_have_finished`
+/// constructs exactly that boundary and witnesses it.
+/// plumb: per-world(the scan loop's search bound is a fraction of the local day, not of the standard one)
+#[allow(dead_code)]
+const SCAN_LIMIT: TickSpan = TickSpan::from_ticks(WorldTime::TICKS_PER_STD_DAY * 3 / 2);
+
+/// The wake-scan's give-up fallback at `L = 1` — [`next_awake_day`] now
+/// answers "no waking found" with the world's own local day generally; this
+/// is the retired anchor that reduces to on a standard-length world and on
+/// any terrain reporting no calendar of its own (The Pallet, Task 1).
+/// `a_rest_is_shorter_than_a_sleep_through_the_give_up_fallback_at_the_100_
+/// hour_legal_extreme` witnesses the converted value directly, at a world
+/// where it and this anchor disagree.
+/// plumb: per-world(the give-up fallback span is the local day, not the standard one)
+#[allow(dead_code)]
+const ONE_DAY: TickSpan = TickSpan::from_ticks(WorldTime::TICKS_PER_STD_DAY);
+
 /// A representative AWAKE fraction of the day for `activity` — where the health
 /// metric samples a creature's felt state (The Slumber). Sampling at midnight
 /// (`frac 0`) would find a diurnal creature asleep and miss its waking distress;
@@ -2907,20 +2937,22 @@ pub(crate) fn next_awake_day(
     // now scales with `L` the same way the rest side already did, so the two
     // stay on the same axis at every legal world.
     //
-    // `SCAN_LIMIT` and `ONE_DAY` (below) are the retired `L = 1` anchors this
-    // computation reduces to on a standard-length world and on any terrain
-    // reporting no calendar of its own — no test references them by name, so
-    // unlike `REST_BOUT`/`SLEEP_BOUT`/`WAKE_SCAN_STEP` they exist only to
-    // keep that anchor value legible beside the runtime formula, and nothing
-    // in this crate reads them any more.
-    /// plumb: per-world(the scan loop's search bound is a fraction of the local day, not of the standard one)
-    #[allow(dead_code)]
-    const SCAN_LIMIT: TickSpan = TickSpan::from_ticks(WorldTime::TICKS_PER_STD_DAY * 3 / 2);
-    /// plumb: per-world(the give-up fallback span is the local day, not the standard one)
-    #[allow(dead_code)]
-    const ONE_DAY: TickSpan = TickSpan::from_ticks(WorldTime::TICKS_PER_STD_DAY);
+    // `SCAN_LIMIT` and `ONE_DAY` (file-level, above `next_awake_day`) are the
+    // retired `L = 1` anchors this computation reduces to on a
+    // standard-length world and on any terrain reporting no calendar of its
+    // own — the same idiom `REST_BOUT`/`SLEEP_BOUT`/`WAKE_SCAN_STEP` use.
     let local_day = ticks_per_local_day(terrain.day_ticks());
-    let wake_scan_step = TickSpan::from_ticks(local_day / 20);
+    // `.max(1)`: `local_day / 20` is `0` for any `day_ticks()` in `1..=19`,
+    // which passes `ticks_per_local_day`'s own `> 0` filter, and a `0` step
+    // never advances `t` — the loop below would spin forever. Unreachable
+    // through genesis TODAY (`RotationPin::PeriodHours` is bounded 4-100 std
+    // hours, so the floor here is ~16,666 ticks; `anchor.rs` draws 16-40 h
+    // unpinned), but that bound lives in `domains/astronomy`, a different
+    // crate, and the OLD fixed 5,000-tick step made a zero step
+    // STRUCTURALLY impossible rather than merely outside today's legal
+    // range. The floor restores that structural guarantee rather than
+    // resting it on an invariant declared elsewhere.
+    let wake_scan_step = TickSpan::from_ticks((local_day / 20).max(1));
     let scan_limit = TickSpan::from_ticks(local_day * 3 / 2);
     let one_day = TickSpan::from_ticks(local_day);
     let limit = day + scan_limit;
@@ -2997,8 +3029,10 @@ pub fn renders_unconscious(action: &Action) -> bool {
 ///   clock argument — which is exactly why it cannot collapse to a scan step
 ///   (The Plumb, Task 5).
 /// - [`Action::Sleep`] runs until the body's own cycle wakes it
-///   ([`next_awake_day`]), floored at [`SLEEP_BOUT`]. The cycle decides on the
-///   ordinary path; the floor decides when the body goes under off-cycle.
+///   ([`next_awake_day`]), floored at two fifths of the world's own LOCAL day
+///   ([`SLEEP_BOUT`] is the `L = 1` value this reduces to, The Pallet, Task
+///   1). The cycle decides on the ordinary path; the floor decides when the
+///   body goes under off-cycle.
 ///
 /// Exhaustive by variant, no wildcard arm — a new action must be classified
 /// here rather than silently becoming a zero-length rest.
@@ -17712,10 +17746,14 @@ mod tests {
     /// is exactly what a mutation reverting `act_span`'s `Action::Sleep` arm
     /// back to the bare `SLEEP_BOUT` constant demonstrates: at this
     /// fixture's `L = 100 / 24` std days the AWAKE branch's `cycle` is one
-    /// `WAKE_SCAN_STEP` (the body is caught wide awake at noon, so the scan
-    /// returns its own next step immediately — the same fact
-    /// `a_bouts_length_is_a_property_of_the_act_not_of_the_next_scan_step`
-    /// establishes at `L = 1`), well under either the converted or the
+    /// wake-scan step at THIS world's own converted rate — `local_day / 20 =
+    /// 416,667 / 20 = 20,833` ticks, not the file-level `WAKE_SCAN_STEP`
+    /// constant (5,000 ticks, the `L = 1` value) — because the body is
+    /// caught wide awake at noon, so the scan returns its own next step
+    /// immediately; the sibling fact at `L = 1`, where the two rates
+    /// coincide, is
+    /// `a_bouts_length_is_a_property_of_the_act_not_of_the_next_scan_step`.
+    /// Either way `cycle` is well under either the converted or the
     /// reverted floor, so the floor decides the sleep span either way:
     /// converted, `sleep = L * 2 / 5 ≈ 166,667` ticks, comfortably above
     /// `rest = L / 4 ≈ 104,167`; reverted, `sleep = SLEEP_BOUT = 40,000`
@@ -17767,6 +17805,151 @@ mod tests {
              against sleep {sleep:?} ({:.6} std days)",
             rest.as_std_days(),
             sleep.as_std_days()
+        );
+    }
+
+    /// **THE GIVE-UP FALLBACK, WITNESSED (The Pallet, Task 1 fix round 1) —
+    /// THE ARM THE DELETED FALSIFIER ACTUALLY PINNED.** The review found
+    /// that the test above and the deleted
+    /// `a_rest_still_outlasts_the_sleep_scans_give_up_fallback_at_the_100_
+    /// hour_legal_extreme` exercise DIFFERENT arms of `act_span`'s
+    /// `Action::Sleep` match: the deleted test used `permanent_night: true`,
+    /// forcing the loop to exhaust its search and fall back to `ONE_DAY`
+    /// (converted, `one_day`) — the constant the original inversion was
+    /// actually measured on — while the replacement above forces the AWAKE
+    /// branch's `SLEEP_BOUT` floor instead. Both are real witnesses; this
+    /// restores the one that went missing.
+    ///
+    /// Same fixture as the deleted test (`L = 100 / 24` std days,
+    /// `permanent_night: true`, so `is_awake` never fires and `next_awake_day`
+    /// always exhausts its scan), but the CORRECT ordering rather than its
+    /// inverse: a rest must stay shorter than a sleep, and now it does, even
+    /// through the give-up branch. MUTATION THIS MUST FAIL AGAINST: revert
+    /// `next_awake_day`'s `one_day` local to the bare `ONE_DAY` anchor —
+    /// measured failing with `rest = TickSpan(104166)` against `sleep =
+    /// TickSpan(100000)`, the exact inversion the deleted test pinned.
+    #[test]
+    fn a_rest_is_shorter_than_a_sleep_through_the_give_up_fallback_at_the_100_hour_legal_extreme() {
+        let home = raddr(1.0);
+        let local_day =
+            TickSpan::from_std_days(100.0 / 24.0).expect("100 standard hours is finite");
+        let terrain = SlowWorldTerrain {
+            inner: PlantedTerrain::thermal([(home.clone(), 20.0)]),
+            local_day,
+            permanent_night: true,
+        };
+        let day = WorldTime::from_std_days(3.0).expect("a day value is finite");
+        assert!(
+            !is_awake(ActivityCycle::Diurnal, &terrain, &home, day),
+            "fixture precondition: the permanent-night override must actually              read as off-phase, or this measures the awake (floored) branch              instead of the scan's own give-up fallback"
+        );
+        let rest = act_span(&Action::Rest, ActivityCycle::Diurnal, &terrain, &home, day)
+            .expect("Rest always has a span");
+        let sleep = act_span(&Action::Sleep, ActivityCycle::Diurnal, &terrain, &home, day)
+            .expect("Sleep always has a span");
+        // The converted give-up fallback IS the world's own local day, and
+        // it is what the sleep side actually returns here — a direct
+        // reference to `ONE_DAY` (the retired `L = 1` anchor, above) shows
+        // by how much: at `L = 1` the two would coincide, and here they
+        // diverge by exactly the conversion this task made.
+        let local_day_ticks = ticks_per_local_day(terrain.day_ticks());
+        assert_eq!(
+            sleep,
+            TickSpan::from_ticks(local_day_ticks),
+            "the off-phase, permanent-night sleep span must equal the              converted give-up fallback (`local_day`) exactly, or this              fixture is not exercising `next_awake_day`'s exhausted-scan              branch at all: measured sleep {sleep:?} against local day              {local_day_ticks} (the retired `L = 1` anchor is {ONE_DAY:?})"
+        );
+        println!(
+            "measured at the 100-hour legal extreme (permanent night):              rest={rest:?} ({:.6} std days), sleep={sleep:?} ({:.6} std days),              ONE_DAY anchor={ONE_DAY:?}",
+            rest.as_std_days(),
+            sleep.as_std_days()
+        );
+        assert!(
+            rest < sleep,
+            "Nathan's ruling: a rest must stay shorter than a sleep, or the              shorter act would be the more restorative one and the ruling              inverts. At the 100-hour legal extreme, permanent-night              scenario, this now holds because the give-up fallback scales              with the local day the same way the rest span already does:              measured rest {rest:?} ({:.6} std days) against sleep {sleep:?}              ({:.6} std days) — the deleted falsifier pinned the inverse of              exactly this inequality",
+            rest.as_std_days(),
+            sleep.as_std_days()
+        );
+    }
+
+    /// **`SCAN_LIMIT`, WITNESSED (The Pallet, Task 1 fix round 1).** The two
+    /// tests above witness a FLOOR (`SLEEP_BOUT`) and a FALLBACK (`ONE_DAY`)
+    /// — values the function returns directly. `SCAN_LIMIT` is neither: it
+    /// is the loop's own search BOUND, so its specific value can only be
+    /// observed at the boundary between "a real wake exists inside the
+    /// window" and "the scan gives up" — which needs the converted bound
+    /// and the retired anchor to DISAGREE about that boundary, not merely
+    /// about a returned number.
+    ///
+    /// **A large `L` (the 100-hour fixtures above) cannot show this**: the
+    /// converted bound (`local_day * 3 / 2`) only grows past the anchor's
+    /// fixed 150,000 ticks, so it can never give up where the anchor would
+    /// have found a wake — the two bounds never disagree in that direction.
+    /// A SMALL `L` is what discriminates: at the legal minimum
+    /// (`RotationPin::PeriodHours(4.0)`), the converted bound is `local_day *
+    /// 3 / 2 ≈ 25,000` ticks, well inside a single standard day — while the
+    /// planted terrain's own wake SIGNAL still cycles on the fixed standard
+    /// day regardless of the terrain's `day_ticks()` (`fractional_day_sun`
+    /// reads `WorldTime::tick_of_day()` directly). So a body starting deep
+    /// in its off-phase can have its real next dawn sit PAST the converted
+    /// bound but comfortably inside the retired anchor's 150,000-tick
+    /// window — exactly the disagreement this bound can express.
+    ///
+    /// **Measured** at genesis midnight (`day` at a whole standard-day
+    /// boundary, `L = 4` standard hours): `next_awake_day` gives up (returns
+    /// exactly the converted fallback, `local_day`), but re-running the
+    /// IDENTICAL scan bounded by the retired `SCAN_LIMIT` anchor instead
+    /// finds a real wake at 25,823 ticks — inside `SCAN_LIMIT`'s window,
+    /// outside the converted bound's. MUTATION THIS MUST FAIL AGAINST:
+    /// revert `next_awake_day`'s `scan_limit` local to the bare `SCAN_LIMIT`
+    /// constant — the function would then find and return that 25,823-tick
+    /// wake instead of giving up, and the first assertion below (that it
+    /// gives up) would fail.
+    #[test]
+    fn a_fast_rotating_world_gives_up_a_search_the_retired_bound_would_have_finished() {
+        let home = raddr(1.0);
+        let local_day = TickSpan::from_std_days(4.0 / 24.0).expect("4 standard hours is finite");
+        let terrain = SlowWorldTerrain {
+            inner: PlantedTerrain::thermal([(home.clone(), 20.0)]),
+            local_day,
+            permanent_night: false,
+        };
+        let midnight = WorldTime::from_std_days(3.0).expect("a day value is finite");
+        assert!(
+            !is_awake(ActivityCycle::Diurnal, &terrain, &home, midnight),
+            "fixture precondition: genesis midnight must be off-phase for a              diurnal body"
+        );
+        let local_day_ticks = ticks_per_local_day(terrain.day_ticks());
+        let converted_bound = local_day_ticks * 3 / 2;
+        let got = next_awake_day(ActivityCycle::Diurnal, &terrain, &home, midnight) - midnight;
+        assert_eq!(
+            got,
+            TickSpan::from_ticks(local_day_ticks),
+            "at this fast-rotating world the converted scan bound              (`local_day * 3 / 2` = {converted_bound} ticks) must give up              rather than find a wake — a converted `scan_limit` this small              is exactly the case the retired `SCAN_LIMIT` anchor ({SCAN_LIMIT:?})              cannot express: measured next_awake_day returned {got:?}"
+        );
+        // Re-derive the IDENTICAL scan, bounded by the retired `SCAN_LIMIT`
+        // anchor instead of the converted bound, to prove a wake really is
+        // there for the anchor to find — without needing to literally
+        // mutate the function under test.
+        let step = (local_day_ticks / 20).max(1);
+        let mut t = step;
+        while t < SCAN_LIMIT.ticks() {
+            if is_awake(
+                ActivityCycle::Diurnal,
+                &terrain,
+                &home,
+                midnight + TickSpan::from_ticks(t),
+            ) {
+                break;
+            }
+            t += step;
+        }
+        assert!(
+            t < SCAN_LIMIT.ticks(),
+            "the retired anchor's own window ({SCAN_LIMIT:?}) must contain a              real wake, or this fixture proves nothing about SCAN_LIMIT              specifically — no wake found before {t}"
+        );
+        assert!(
+            t >= converted_bound,
+            "and that wake must sit PAST the converted bound, or the two              bounds agree here and the fixture does not discriminate them:              found at {t}, converted bound {converted_bound}"
         );
     }
 

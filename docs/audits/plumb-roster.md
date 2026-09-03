@@ -28,9 +28,9 @@ naming them explicitly (`plumb report kernel cli`).
 | Bucket | Count |
 |--------|------:|
 | Quantity consts judged (the denominator) | 686 |
-| … file-level | 656 |
+| … file-level | 658 |
 | … associated (impl/trait) | 9 |
-| … inside a fn body | 21 |
+| … inside a fn body | 19 |
 | Excluded: test-only (`#[cfg(test)]` / `#[test]`) | 166 |
 | Excluded: declared non-quantity type | 488 |
 | **Every `const` the walk touched** | **1340** |
@@ -40,7 +40,7 @@ two roots. That grep could see only column 0 and only the five names
 `f64`, `i64`, `u64`, `u32`, `usize`, so the figure comparable to it is neither the denominator above
 nor the whole `file-level` row — it is **627**: file-level
 constants of those five types. The `file-level` row itself is
-**656**, and the denominator is **686**; the difference is
+**658**, and the denominator is **686**; the difference is
 what a line scanner restricted to five primitives cannot see. The two
 figures do not have to agree, and this table is printed so that a
 reader can see exactly where they do not.
@@ -190,13 +190,13 @@ counts are already the Coverage table above. 27 finding(s).
 | `windows/vessel/src/liveness.rs:2523` | `TWILIGHT_DEG` | per-species | how wide a solar-altitude band a crepuscular species is active in is a property of that species' own activity biology -- currently one width for every crepuscular species |
 | `windows/vessel/src/liveness.rs:2591` | `FATIGUE_FALL` | per-species | a creature's own physiology should set how fast rest repays fatigue debt, symmetric to the now-per-species RISE rate -- currently one recovery rate for every species; the doc's own text names this asymmetry |
 | `windows/vessel/src/liveness.rs:2638` | `REST_FALL` | per-species | a creature's own physiology should set how fast a conscious rest repays fatigue, half of FATIGUE_FALL's own rate -- currently one recovery rate for every species |
-| `windows/vessel/src/liveness.rs:2723` | `REST_BOUT` | per-world | a rest's length is a fraction of the local day, not of the standard one |
-| `windows/vessel/src/liveness.rs:2774` | `SLEEP_BOUT` | per-world | a sleep's floor is a fraction of the local day, not of the standard one |
-| `windows/vessel/src/liveness.rs:2857` | `WAKE_SCAN_STEP` | per-world | the wake-scan step is a fixed fraction of the local day, not of the standard one |
-| `windows/vessel/src/liveness.rs:2918` | `SCAN_LIMIT` | per-world | the scan loop's search bound is a fraction of the local day, not of the standard one |
-| `windows/vessel/src/liveness.rs:2921` | `ONE_DAY` | per-world | the give-up fallback span is the local day, not the standard one |
-| `windows/vessel/src/liveness.rs:3878` | `HUNGER` | per-species | a creature's own metabolism sets how fast hunger accrues -- currently one authored rate for every species, the same shape FATIGUE_RISE was before its per-species conversion |
-| `windows/vessel/src/liveness.rs:4444` | `LONELY_SCALE_HOPS` | per-species | a creature's own territorial range and wander tolerance sets how many hops from home feel isolating -- currently one distance for every species |
+| `windows/vessel/src/liveness.rs:2724` | `REST_BOUT` | per-world | a rest's length is a fraction of the local day, not of the standard one |
+| `windows/vessel/src/liveness.rs:2776` | `SLEEP_BOUT` | per-world | a sleep's floor is a fraction of the local day, not of the standard one |
+| `windows/vessel/src/liveness.rs:2859` | `WAKE_SCAN_STEP` | per-world | the wake-scan step is a fixed fraction of the local day, not of the standard one |
+| `windows/vessel/src/liveness.rs:2876` | `SCAN_LIMIT` | per-world | the scan loop's search bound is a fraction of the local day, not of the standard one |
+| `windows/vessel/src/liveness.rs:2887` | `ONE_DAY` | per-world | the give-up fallback span is the local day, not the standard one |
+| `windows/vessel/src/liveness.rs:3912` | `HUNGER` | per-species | a creature's own metabolism sets how fast hunger accrues -- currently one authored rate for every species, the same shape FATIGUE_RISE was before its per-species conversion |
+| `windows/vessel/src/liveness.rs:4478` | `LONELY_SCALE_HOPS` | per-species | a creature's own territorial range and wander tolerance sets how many hops from home feel isolating -- currently one distance for every species |
 | `windows/vessel/src/purview.rs:19` | `PURVIEW_RADIUS` | per-species | a creature's own senses set its purview radius -- doc states explicitly: the seam for a per-species radius is Body::perception EXP-3, untouched here |
 | `windows/vessel/src/session.rs:481` | `GRIEVANCE_GAIN` | per-individual | how readily one NPC's grievance accumulates from a slight is a personality trait -- currently one gain for every NPC, not derived from Lineage |
 | `windows/vessel/src/session.rs:491` | `HOSTILITY_THRESHOLD` | per-individual | how many net provokes it takes before one NPC turns hostile is a personality trait -- currently one threshold for every NPC, not derived from Lineage |
