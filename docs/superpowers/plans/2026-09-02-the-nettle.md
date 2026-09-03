@@ -1290,6 +1290,77 @@ is now REFUSED, and succeeded before the change."
 
 ### Task 6: The registry sweep — five rows, one commit
 
+> **THE FIVE IDEA CELLS ARE PRE-MEASURED AND LIVE IN THEIR OWN FILE.**
+> `docs_consistency::registry_idea_cells_are_within_budget` caps an Idea cell
+> at **600 characters**, and
+> `cli/tests/fixtures/registry-length-waivers.txt` is **append-never**, so a
+> long row cannot be waived — it is simply red, with no escape.
+>
+> Every one of the five cells this task needs was over the cap in this plan's
+> first draft: 659, 1097 and 968 characters for the three new rows, a 613-char
+> replacement for the refuted row, and an appended clause that would have taken
+> an existing 552-char cell to roughly 935. **Task 6 would have been red on
+> arrival, five times over.**
+>
+> Compacted and measured versions — 519, 548, 572, 578 and 582 characters — are
+> **inlined below, in this committed plan**, and are to be used verbatim for
+> every Idea cell. (They were first written to a file under
+> `.superpowers/sdd/`, which is git-ignored scratch that dies with the
+> worktree — a committed plan pointing into it would be a dangling reference
+> the moment the worktree recycles. That is the same lifetime defect Task 4
+> fixes in `campaign-autopilot`, nearly repeated here.)
+>
+> The full argument each row compresses lives in the spec and the ledger, which
+> the Where cells link — which is exactly what the cap's own failure message
+> tells you to do ("a row is an index entry, not an essay").
+>
+> Re-measure after writing, before committing:
+>
+> ```bash
+> python3 -c "
+> import re
+> for l in open('book/src/frontier/idea-registry.md'):
+>     if l.startswith('| PROC-') or l.startswith('| TOOL-'):
+>         c = l.split(' | ')
+>         if len(c) > 1 and len(c[1]) > 600:
+>             print('OVER CAP:', c[0].lstrip('| ').strip(), len(c[1]))
+> print('measured')
+> "
+> ```
+
+#### The five measured Idea cells — use verbatim
+
+**`PROC-autopilot-names-the-superseded-ledger-path`** (519 chars)
+
+```
+**REFUTED — the defect was already fixed before this row was written.** `campaign-autopilot` was corrected at `3b9a026aa` (2026-08-30, The Cartulary): `SKILL.md:190` names `docs/superpowers/ledgers/<date>-<slug>.md`, and no loaded skill references `.superpowers/sdd/decision-ledger.md`. The Reservoir's own worktree carried the corrected text. The LIVE defect was three lines up — followups routed to a flat, shared, promoted-at-close scratch path — and is carried by `PROC-autopilot-routed-followups-to-shared-scratch`
+```
+
+**`PROC-autopilot-routed-followups-to-shared-scratch`** (548 chars)
+
+```
+**`campaign-autopilot` sent actionable followups to `.superpowers/sdd/followups.md`** — flat and *shared* (decision 0493's shape: one path in every worktree, so two campaigns editing it merge to one side silently) and *promoted at close*, the practice that failed five recorded times before The Cartulary replaced it for rulings. The mechanism behind four deferred minors living only in git-ignored scratch. **Shipped (The Nettle):** followups go to the committed per-campaign ledger as they occur, plus a table naming why the two open files differ
+```
+
+**`TOOL-derived-terrain-bytes-are-pinned-only-through-projections`** (572 chars)
+
+```
+**Corrects a parked finding that overstated its gap.** The Reservoir's P2 said "nothing pins the derived artifacts' bytes"; false — 10 drift-checked seed-42 PNGs in `book/src/gallery/` render from worlds built through `GeneratedTerrain`/`GeneratedClimate`, and the census pins ~203 metrics. The real residue is narrow: those PNGs pin *projections*, quantized to 8-bit colour, so a change below that quantum or in an unrendered field slips. Deferred, G3 option d: `Serialize` argues against the code's own design and is save-format-adjacent; a field-value digest is cheaper
+```
+
+**`PROC-docs-only-commits-skip-a-gate-that-checks-docs`** (578 chars)
+
+```
+**`pre-commit` fast-paths past `gate-commit` when no Rust path is staged, and is blind to a Rust test whose subject is prose.** `docs_consistency` scans `book/src` and `docs/`, is in the sub-floor roster, and never ran across ~12 docs-only commits in one campaign — so a `MAP-25` citation in a chronicle went to the merge queue to be found on the canonical box. **Shipped (The Nettle):** the fast path is inverted, not deleted — a docs-only commit runs the prose-subject tests. **Measured ~2.4 s warm, ~234.6 s cold**; this row's original "~1 s" was test execution, not the wall
+```
+
+**`PROC-a-parked-finding-carries-no-use-by-date`** (582 chars)
+
+```
+**A parked finding's content decays while its stated confidence does not.** An *observation* asserts a property of a file's bytes — re-derivable by one command, stale only if that file is edited. A *judgment* asserts a property of the repo's whole state ("nothing does X") and decays silently when any campaign closes the gap. The Nettle re-derived five findings from The Reservoir: the observation was durable; **both judgments were false**, one fixed three days earlier, one false when written — both still marked `high`. Measured: **0 of 900 `raw` rows carry an observed-at SHA**
+```
+
+
 Every idea-registry edit in this campaign lands here, in one task, so `docs_consistency` gates them once and row IDs cannot collide with each other.
 
 `book/src/frontier/idea-registry.md` is guarded by roughly a dozen tests in `cli/tests/suite/docs_consistency.rs`: rows must have five columns, IDs must be unique and parseable, statuses must use the closed vocabulary, every row needs a pointer, `refuted` rows must cite what refuted them, and idea cells are length-budgeted. **Read the existing rows' formatting before writing new ones** — an escaped pipe is not a column separator, and there is a test for that.

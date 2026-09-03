@@ -422,3 +422,57 @@ plan's own commit examples are the shape at fault, not the agents.
 
 *Capture.* This entry; the plan text; the retrospective (this is the campaign's
 sixth instance, and the second I authored myself).
+
+---
+
+#12 [G4] — **Task 6 would have been red on arrival five times over: every one
+of its five registry Idea cells exceeded a 600-character cap that cannot be
+waived.**
+
+*Found by.* Task 6's step-1 verification, run one task ahead while Task 5 was
+in flight — the dispatching skill's timing rule earning itself. I measured the
+planned cells instead of reading them.
+
+*The measurements.*
+
+| cell | planned | cap |
+|---|---|---|
+| `PROC-autopilot-routed-followups-to-shared-scratch` (new) | 659 | 600 |
+| `TOOL-derived-terrain-bytes-are-pinned-only-through-projections` (new) | 1097 | 600 |
+| `PROC-a-parked-finding-carries-no-use-by-date` (new) | 968 | 600 |
+| `PROC-autopilot-names-the-superseded-ledger-path` (replacement) | 613 | 600 |
+| `PROC-docs-only-commits-skip-a-gate-that-checks-docs` (append) | ~935 | 600 |
+
+*Why there is no escape hatch.*
+`docs_consistency::registry_idea_cells_are_within_budget` caps a cell at
+`REGISTRY_IDEA_CAP = 600` chars, and `the_waiver_list_only_shrinks` makes
+`cli/tests/fixtures/registry-length-waivers.txt` **append-never**. So a long
+row is simply red. The cap's own failure message states the remedy — "a row is
+an index entry, not an essay — compact it (the prose is redundant with the
+chronicle the Where cell links)" — and that is exactly right here: the full
+argument for each row already lives in the spec and this ledger, both linked
+from the Where cells.
+
+*Ruling.* All five cells rewritten and **measured**, not estimated — 519, 548,
+572, 578, 582. Two of my first rewrites still failed, by 7 and 1 characters,
+which is the whole argument for measuring: a 601-character cell is
+indistinguishable from a 599-character one by eye. The plan now carries the
+five approved cells verbatim, with a re-measure command to run before
+committing.
+
+*And a second defect, caught while fixing the first.* I first wrote the
+measured cells to a file under `.superpowers/sdd/` and had the committed plan
+point at it. That is **git-ignored scratch that dies with the worktree** — a
+committed document referencing it becomes a dangling pointer the moment the
+worktree recycles. It is the same lifetime defect Task 4 fixes in
+`campaign-autopilot`, and I nearly shipped it into the plan for Task 6 while
+Task 4's fix for it sat two commits back. The cells are now inlined in the
+committed plan and the scratch file is deleted.
+
+*Cost if wrong.* Low, and self-announcing: an over-cap cell reddens
+`docs_consistency` immediately, naming the row and its character count.
+
+*ideonomy passes / overturns.* 0 / 0 — a measurement.
+
+*Capture.* This entry; the plan's Task 6 header and its five inlined cells;
+the retrospective (seventh and eighth instances, both mine).
