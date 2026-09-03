@@ -1450,9 +1450,12 @@ Keep the **Where** cell's existing pointers and append the fixing commit.
 
 A new five-column row:
 
-```
-| PROC-autopilot-routed-followups-to-shared-scratch | **`campaign-autopilot`'s Capture discipline sent actionable followups to `.superpowers/sdd/followups.md`** — flat and *shared* (decision 0493's exact shape: every campaign's copy at one path, so two editing it merge to one side silently) and *promoted at close*, the practice that failed five recorded times before The Cartulary replaced it for rulings. The mechanism behind The Reservoir's ledger #20, where four deferred minors lived only in git-ignored scratch. **Shipped (The Nettle):** followups go to the committed per-campaign ledger as they occur, plus a table naming why the two open files differ — which nothing made visible at the moment of writing | shipped | high (measured, one instance) | [The Nettle spec §3](https://github.com/hornvale/hornvale/blob/main/docs/superpowers/specs/2026-09-02-the-nettle-design.md); `.claude/skills/campaign-autopilot/SKILL.md` |
-```
+> **The row text is NOT here.** An over-budget first draft of it
+> lived in this block (659 characters against a 600-character cap) and
+> has been removed rather than left to read as authoritative. Take
+> `PROC-autopilot-routed-followups-to-shared-scratch`'s Idea cell **verbatim** from this task's
+> *five measured Idea cells* section above.
+
 
 - [ ] **Step 4: Update `PROC-docs-only-commits-skip-a-gate-that-checks-docs` to shipped, with the real figures**
 
@@ -1472,17 +1475,23 @@ the tree is coldest
 
 This replaces The Reservoir's parked finding P2, whose premise was false. **State the corrected premise first**, because the wrong version is what the next reader would otherwise inherit:
 
-```
-| TOOL-derived-terrain-bytes-are-pinned-only-through-projections | **Correcting a parked finding that overstated its gap.** The Reservoir's P2 said "nothing pins the derived artifacts' bytes"; that is false — 10 regenerated, drift-checked seed-42 PNGs in `book/src/gallery/` render from worlds built through `GeneratedTerrain`/`GeneratedClimate`, and the census pins ~203 further metrics. (Three of the 13 tracked PNGs are not evidence: `star-chart` is astronomy, and `first-light` and `lithology` have no writer in `regenerate-artifacts.sh`.) The REAL residue is narrow: those PNGs pin *projections* — elevation through a renderer to 8-bit colour — so a change below the colour quantum, or in a field no map renders, slips. Deferred deliberately (The Nettle, G3 option d): deriving `Serialize` argues against the code's own design (`GeneratedClimate`'s doc says "Recomputed on demand, never serialized", and it holds an `Fbm` and two derive-once indices — caches, not state) and is save-format-adjacent, so it needs its own decision. If the residue is closed, a digest of the field values is the cheap option — full precision, no `Serialize`, no multi-MB artifact | raw | med (residue is narrow) | [The Nettle spec §5](https://github.com/hornvale/hornvale/blob/main/docs/superpowers/specs/2026-09-02-the-nettle-design.md); `domains/terrain/src/provider.rs`; `domains/climate/src/provider.rs` |
-```
+> **The row text is NOT here.** An over-budget first draft of it
+> lived in this block (1097 characters against a 600-character cap) and
+> has been removed rather than left to read as authoritative. Take
+> `TOOL-derived-terrain-bytes-are-pinned-only-through-projections`'s Idea cell **verbatim** from this task's
+> *five measured Idea cells* section above.
+
 
 - [ ] **Step 6: Add the decay-asymmetry row, `PROC-a-parked-finding-carries-no-use-by-date`**
 
 The campaign's cross-cutting finding, captured rather than built (spec §7):
 
-```
-| PROC-a-parked-finding-carries-no-use-by-date | **A parked finding's content decays while its stated confidence does not, and nothing distinguishes the two kinds at filing time.** An *observation* asserts a property of a file's bytes — re-derivable by one command, stale only if someone edits that file. A *judgment* asserts a property of the repo's whole state ("nothing does X") and decays **silently** the moment any campaign closes the gap, with no edit to the file it named. The Nettle re-derived five findings handed over by The Reservoir: the one observation was durable, and **both judgments were already false** — one fixed three days earlier by an unrelated campaign, one false when written. Both still carried `high` confidence. Measured: **0 of 900 `raw` registry rows carry the SHA they were observed at**, and none carries the command that would re-decide it. Candidate remedy, deliberately not built here: a parked finding declares its kind, the SHA it was observed at, and its one re-deciding command | raw | high (measured, 2 of 5 instances) | [The Nettle spec §0](https://github.com/hornvale/hornvale/blob/main/docs/superpowers/specs/2026-09-02-the-nettle-design.md); [The Nettle ledger #2](https://github.com/hornvale/hornvale/blob/main/docs/superpowers/ledgers/2026-09-02-the-nettle.md) |
-```
+> **The row text is NOT here.** An over-budget first draft of it
+> lived in this block (968 characters against a 600-character cap) and
+> has been removed rather than left to read as authoritative. Take
+> `PROC-a-parked-finding-carries-no-use-by-date`'s Idea cell **verbatim** from this task's
+> *five measured Idea cells* section above.
+
 
 - [ ] **Step 7: Run the registry's guards**
 

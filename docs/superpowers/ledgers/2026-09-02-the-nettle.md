@@ -626,3 +626,49 @@ test is the arbiter and the implementer runs it.
 *Capture.* This entry; the plan's Task 6 header; the retrospective — this is
 the campaign's eleventh instance and the one I would most like remembered,
 because the instrument was mine and the correct instrument was already green.
+
+---
+
+#16 [G5] — **The plan carried both the rejected and the approved text for
+Task 6's rows, and only the implementer's judgment kept the rejected one out
+of the registry.**
+
+*What happened.* Ledger #12 replaced Task 6's five Idea cells with compacted,
+measured versions and inlined them in a *five measured Idea cells* section at
+the top of the task. **It did not remove the over-budget originals from the
+numbered steps.** So Steps 3, 5 and 6 still carried fenced full-row blocks at
+659, 1097 and 968 characters — against a hard 600-character cap — presented in
+exactly the form a step's code block usually means "type this".
+
+The implementer noticed the duplication, measured both versions, matched the
+long ones against the reject figures my own header quoted, and used the
+verbatim section. It then re-measured every cell as an authored string before
+placing it. That is the correct call, made by the party with the least context
+about why two versions existed.
+
+*Why this is the campaign's sharpest instance of its own subject.* Every
+earlier instance was a check that could not see a defect. This one is a
+document that contained its own refutation and its own correction side by
+side, with the refuted half in the more authoritative-looking position. A
+reader following the numbered steps in order — the ordinary way to execute a
+plan — would have taken the rejected text and been red on the cap, with the
+approved text sitting fifty lines above. **Deleting a superseded claim is part
+of superseding it**; leaving it beside the correction converts a fixed defect
+into a coin flip.
+
+*Ruling.* All three over-cap blocks removed from the steps and replaced with a
+pointer to the measured section, each naming the character count of what it
+used to contain — so the record of what was rejected survives without the
+rejected text being available to copy.
+
+*Verified after the fact, with the real test rather than my own parser
+(ledger #15):* `registry_idea_cells_are_within_budget`,
+`every_refuted_row_cites_its_evidence`, `no_new_numbered_registry_ids` and
+`registry_rows_have_five_columns` all pass on the committed registry.
+
+*Cost if wrong.* None to what shipped; Task 6's commit used the correct text.
+
+*ideonomy passes / overturns.* 0 / 0 — a reported plan defect with one fix.
+
+*Capture.* This entry; the plan's Task 6 steps; the retrospective — twelfth
+instance, and the one that best states the general rule.
