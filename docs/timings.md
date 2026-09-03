@@ -5239,3 +5239,5 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-03T18:26:34Z | rebaseline | 171.508 | 374.519 | 14.982 | 2.27 | 0 | 63f08555a | campaign/the-terrier | MacBookPro | 10 |
 | 2026-09-03T18:28:44Z | gate-commit | 71.663 | 81.357 | 20.631 | 1.42 | 0 | 63f08555a | campaign/the-terrier | MacBookPro | 10 |
 | 2026-09-03T19:16:50Z | gate-commit | 38.198 | 72.439 | 19.525 | 2.41 | 0 | b9eca4849 | campaign/the-terrier | MacBookPro | 10 |
+| 2026-09-03T19:27:55Z | rebaseline | 130.148 | 360.179 | 15.467 | 2.89 | 0 | 4322e3b80 | campaign/the-terrier | MacBookPro | 10 |
+| 2026-09-03T19:29:01Z | gate-commit | 38.546 | 68.332 | 15.939 | 2.19 | 0 | 4322e3b80 | campaign/the-terrier | MacBookPro | 10 |
