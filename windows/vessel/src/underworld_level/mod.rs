@@ -278,6 +278,20 @@ pub fn generate_level_with_origin(
                 .copied()
                 .filter(|c| cells.get(*c) == Some(LevelCellKind::Wall))
                 .collect();
+            // PLAIN `connect_cells`, not the way-preserving one: a later
+            // passage's L may pave an EARLIER passage's `Threshold` or a
+            // stretch of its `Deep` run, and that is the chosen behaviour
+            // here rather than an oversight. A passage's job is to leave
+            // walkers connected, and paving only ever makes a cell MORE
+            // passable; preserving instead would let one edge's gate stand
+            // in the middle of another edge's corridor, which is a
+            // requirement no plan stamped. What it must not do is destroy a
+            // gate outright, and that is not asserted by this loop but
+            // WITNESSED: the realization witness counts `Threshold` against
+            // non-sump passages and `Deep` against sumps in both
+            // directions, so an edge whose crossing was paved away goes red
+            // there. A stair FOOT's connector is the opposite case and
+            // takes the opposite rule — see `is_placed_way_for_a_foot`.
             connect_cells(pa, pb, &mut cells);
             // The crossing: the one L cell in neither rect. `region_rect`
             // keeps a one-cell dividing wall on every side, and an L between
@@ -679,9 +693,11 @@ fn nearest_pair(a: &[Cell], b: &[Cell]) -> Option<(Cell, Cell)> {
 /// places The Brattice writes (spec §3.5) — and so must never be paved over
 /// by a corridor carve or a repair, nor routed through by one.
 ///
-/// Three call sites share this one predicate deliberately
-/// ([`connect_cells_preserving_ways`], [`reconnect_region`],
-/// [`shortest_route_within_rect`]): they were two lists and a third that
+/// The two REPAIR sites share this one predicate deliberately
+/// ([`reconnect_region`], [`shortest_route_within_rect`]); the stair-foot
+/// connector takes the sibling predicate [`is_placed_way_for_a_foot`],
+/// which drops `Deep` for the reason Ruling G gives there. They were two
+/// lists and a third that
 /// had no list at all, and the missing one was a live defect — a stair's
 /// own connector L, carved to give a LATER stair its foot, paved straight
 /// over an EARLIER stair on the same region, leaving an orphan `StairsUp`
@@ -711,10 +727,40 @@ fn is_placed_way(kind: Option<LevelCellKind>) -> bool {
     )
 }
 
-/// [`connect_cells`], but leaving every [`is_placed_way`] cell as it is.
+/// [`is_placed_way`], minus `Deep` — the predicate a STAIR FOOT's connector
+/// uses (**Ruling G**).
+///
+/// A foot connector's whole job is to give a stair, a chute lip or a chute
+/// landing a walkable join to its own region. Preserving `Deep` here would
+/// leave a swim in the middle of that join: the stair would stand behind a
+/// `Swim` requirement **the plan never stamped**, and both connectivity
+/// sweeps would miss it, because both were widened to
+/// `movement_mode(..).is_some()` — which `Deep` satisfies. So the foot
+/// connector PAVES through deep water.
+///
+/// The sump survives that paving, which is why the ruling is safe: a foot
+/// connector runs between two cells of ONE region's rect and therefore
+/// never reaches the divider, so the sump's CROSSING cell — the one that
+/// makes the gate a gate — is out of its reach. Only the run's
+/// inside-the-region tail is shortened. The two repair sites keep
+/// [`is_placed_way`] and still never overwrite `Deep`: they are not making
+/// a foot, they are re-stitching a region, and there a sump's run is
+/// scenery to route around rather than an obstacle in the way of a
+/// stairway.
+///
+/// Witnessed, not asserted: the realization witness's walker arm BFSes from
+/// every stair, lip and landing over `Walk`/`Wade` cells alone, confined to
+/// the cell's own region, and requires it to reach ordinary footing.
+fn is_placed_way_for_a_foot(kind: Option<LevelCellKind>) -> bool {
+    is_placed_way(kind) && kind != Some(LevelCellKind::Deep)
+}
+
+/// [`connect_cells`], but leaving every [`is_placed_way_for_a_foot`] cell
+/// as it is — see that predicate for why `Deep` is the one placed way a
+/// stair foot's connector is allowed to pave (Ruling G).
 fn connect_cells_preserving_ways(a: Cell, b: Cell, cells: &mut CellGrid) {
     for c in l_corridor(a, b) {
-        if !is_placed_way(cells.get(c)) {
+        if !is_placed_way_for_a_foot(cells.get(c)) {
             cells.set(c, LevelCellKind::Floor);
         }
     }
@@ -1605,10 +1651,12 @@ mod tests {
         use hornvale_terrain::CaveKind;
         use hornvale_worldgen::brattice::{Capability, Requirement, Way};
         use hornvale_worldgen::chamber::ChamberOrigin;
+        use std::collections::{BTreeSet, VecDeque};
 
         let rungs = habitation_ladder();
         let origins = vec![ChamberOrigin::Found; rungs.len()];
         let depths_m = vec![10.0; rungs.len()];
+        let mut feet_walked = 0usize;
         let mut sumps_seen = 0usize;
         let mut chutes_seen = 0usize;
         let mut passages_seen = 0usize;
@@ -1709,12 +1757,17 @@ mod tests {
                                 "seed {seed} {kind:?}/{ch:?} level {l}: chute lip at \
                                  ({x}, {y}) is {here:?}"
                             );
+                            // `Floor | Flooded` exactly: the landing is
+                            // written `Floor` by `place_stair` AFTER the
+                            // passage loop has stamped every crossing, so a
+                            // `Threshold` landing is not merely rare, it is
+                            // unreachable — and admitting a kind the code
+                            // cannot produce is an assertion that cannot
+                            // fail for a case that cannot happen.
                             assert!(
                                 matches!(
                                     below,
-                                    Some(LevelCellKind::Floor)
-                                        | Some(LevelCellKind::Flooded)
-                                        | Some(LevelCellKind::Threshold)
+                                    Some(LevelCellKind::Floor) | Some(LevelCellKind::Flooded)
                                 ),
                                 "seed {seed} {kind:?}/{ch:?} level {l}: a chute lands \
                                  on {below:?}"
@@ -1748,10 +1801,108 @@ mod tests {
                         drops, chutes,
                         "seed {seed} {kind:?}/{ch:?} level {l}: a Drop nobody asked for"
                     );
+                    // (d) NO UNSTAMPED SWIM (Ruling G's cheap half): a level
+                    // none of whose passages is a sump has no `Deep` cell at
+                    // all. Deep water is a gate the plan stamps; a `Deep`
+                    // cell on a level with no sump is a swim requirement
+                    // nobody asked for, and unlike (b) this arm costs one
+                    // pass over the grid.
+                    if plan.passages_on(l).iter().all(|(a, b)| !is_sump(*a, *b)) {
+                        let deeps = level
+                            .cells
+                            .iter()
+                            .filter(|(_, k)| *k == LevelCellKind::Deep)
+                            .count();
+                        assert_eq!(
+                            deeps, 0,
+                            "seed {seed} {kind:?}/{ch:?} level {l}: {deeps} Deep cells on a \
+                             level with no sump"
+                        );
+                    }
+                    // (e) THE WALKER ARM (Ruling G): every way a body meets
+                    // vertically — a stair head, a stair foot, a chute's lip,
+                    // a chute's landing — is reachable ON FOOT from ordinary
+                    // footing of its own region. `Walk`/`Wade` only, never
+                    // `Swim`: both connectivity sweeps ask
+                    // `movement_mode(..).is_some()`, which `Deep` satisfies,
+                    // so a stair standing behind deep water would be
+                    // "connected" to both of them and unreachable to every
+                    // body the plan gave the capability to. Confined to the
+                    // cell's own region rect, because that is the scope
+                    // `place_stair`'s own foot connector and repair work in.
+                    let regions: Vec<Rect> = (0..plan.nodes.len())
+                        .filter(|n| plan.nodes[*n].level as usize == l)
+                        .map(|n| rect_of(&plan, n))
+                        .collect();
+                    let mut feet: Vec<Cell> = level
+                        .cells
+                        .iter()
+                        .filter(|(_, k)| {
+                            matches!(
+                                k,
+                                LevelCellKind::StairsDown
+                                    | LevelCellKind::StairsUp
+                                    | LevelCellKind::Drop
+                            )
+                        })
+                        .map(|(c, _)| c)
+                        .collect();
+                    for (upper, lower, x, y) in plan.stairs_into(l) {
+                        if is_chute(upper, lower) {
+                            feet.push(Cell(x, y));
+                        }
+                    }
+                    for foot in feet {
+                        let Some(&rect) = regions.iter().find(|r| r.contains(foot)) else {
+                            continue; // the terminus stair sits in its own region; if no
+                            // region on this level claims the cell there is no
+                            // rect to confine a walk to.
+                        };
+                        let on_foot = |c: Cell| {
+                            rect.contains(c)
+                                && matches!(
+                                    level.cells.get(c).and_then(movement_mode),
+                                    Some(MovementMode::Walk) | Some(MovementMode::Wade)
+                                )
+                        };
+                        let mut seen = BTreeSet::new();
+                        let mut queue = VecDeque::new();
+                        seen.insert(foot);
+                        queue.push_back(foot);
+                        let mut found_footing = false;
+                        while let Some(Cell(x, y)) = queue.pop_front() {
+                            if matches!(
+                                level.cells.get(Cell(x, y)),
+                                Some(LevelCellKind::Floor) | Some(LevelCellKind::Flooded)
+                            ) {
+                                found_footing = true;
+                                break;
+                            }
+                            for (dx, dy) in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
+                                let next = Cell(x + dx, y + dy);
+                                if on_foot(next) && seen.insert(next) {
+                                    queue.push_back(next);
+                                }
+                            }
+                        }
+                        assert!(
+                            found_footing,
+                            "seed {seed} {kind:?}/{ch:?} level {l}: the way at {foot:?} \
+                             ({:?}) reaches no Floor/Flooded cell of its own region \
+                             {rect:?} without swimming",
+                            level.cells.get(foot)
+                        );
+                        feet_walked += 1;
+                    }
                 }
             }
         }
         assert!(passages_seen > 0, "the sweep saw no passage at all");
+        assert!(
+            feet_walked > 0,
+            "the sweep walked away from no stair, lip or landing — the walker arm \
+             passed vacuously"
+        );
         assert!(
             sumps_seen > 0,
             "the sweep observed no sump — every Deep branch above passed vacuously"

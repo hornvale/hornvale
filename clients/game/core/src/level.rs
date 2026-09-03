@@ -97,8 +97,9 @@
 //! doc: `plan.rs` redraws a mark's own terrain glyph because chamber
 //! marks have no glyph to spare — every character in that band's four-glyph
 //! vocabulary (`#`/`.`/`+`/`@`) is already claimed by a `CellKind` or by
-//! `you`. This band's ten-glyph terrain vocabulary (five kinds, each with a
-//! seen/remembered twin) never claims `&`, so a resident draws as `&`
+//! `you`. This band's sixteen-glyph terrain vocabulary (eight kinds, each
+//! with a seen/remembered twin — the table above) never claims `&`, so a
+//! resident draws as `&`
 //! outright — the same glyph `clients/game/bin/src/plate.rs::AGENT_GLYPH`
 //! and `windows/scene/src/surrounds_ascii.rs::terrain_glyph` already use for
 //! an `"agent"`-kind mark elsewhere in this project, reused rather than

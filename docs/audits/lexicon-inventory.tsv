@@ -106,7 +106,7 @@ windows/vessel/src/lattice/occupancy.rs	55
 windows/vessel/src/lattice/render.rs	55
 windows/vessel/src/lattice/sight.rs	104
 windows/vessel/src/lens.rs	5
-windows/vessel/src/level_doc.rs	130
+windows/vessel/src/level_doc.rs	133
 windows/vessel/src/lib.rs	4
 windows/vessel/src/light.rs	150
 windows/vessel/src/liveness.rs	12
@@ -115,10 +115,10 @@ windows/vessel/src/purview.rs	39
 windows/vessel/src/session.rs	620
 windows/vessel/src/snapshot.rs	3
 windows/vessel/src/streams.rs	6
-windows/vessel/src/underground.rs	154
+windows/vessel/src/underground.rs	156
 windows/vessel/src/underworld_level/carve.rs	143
 windows/vessel/src/underworld_level/dense.rs	58
-windows/vessel/src/underworld_level/mod.rs	387
+windows/vessel/src/underworld_level/mod.rs	416
 windows/vessel/src/underworld_level/region.rs	1
 windows/vessel/tests/common/mod.rs	2
 windows/vessel/tests/suite/corner_rule.rs	79

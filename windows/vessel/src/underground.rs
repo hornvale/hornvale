@@ -476,7 +476,12 @@ impl Underground {
     ///
     /// **The direction is read off the CURRENT cell's own kind, never a
     /// parameter**: a `StairsDown` cell means descend, a `StairsUp` cell
-    /// means ascend, anything else refuses. A caller that wants a SPECIFIC
+    /// means ascend, a `Drop` cell — a chute's lip (The Brattice, spec
+    /// §3.5) — means descend too, and anything else refuses. A chute is
+    /// ONE-WAY here: its landing one rung down is ordinary standable floor
+    /// and carries no `StairsUp`, so the cell beneath a `Drop` falls into
+    /// "anything else" and ascending from it refuses. A caller that wants a
+    /// SPECIFIC
     /// direction (the `down`/`up` verbs, `session.rs`) checks the current
     /// cell's kind against the one it wants BEFORE ever calling this — this
     /// method alone cannot refuse "wrong direction", only "no direction at
@@ -491,9 +496,11 @@ impl Underground {
     /// one `StairsDown` with no twin is the deepest rung's terminus, which
     /// still refuses with `STAIRS_LEAD_NOWHERE_REFUSAL`.
     ///
-    /// Refuses when the current cell is not a stairs cell at all
-    /// ([`NOT_ON_STAIRS_REFUSAL`]), or when the current cell is the
-    /// descent's own deepest rung's terminus `StairsDown`
+    /// Refuses when the current cell is not a stairs cell (or a `Drop`) at
+    /// all ([`NOT_ON_STAIRS_REFUSAL`]), or when the current cell is the
+    /// descent's own deepest rung's terminus `StairsDown` — or a `Drop`
+    /// over no standable landing, which cannot happen while the realization
+    /// witness is green but is refused rather than assumed away
     /// ([`STAIRS_LEAD_NOWHERE_REFUSAL`]).
     pub(crate) fn peek_stairs(&self) -> Result<(usize, Cell), &'static str> {
         match self.descent[self.rung].cells.get(self.cell) {

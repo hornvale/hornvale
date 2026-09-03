@@ -1043,3 +1043,89 @@ hornvale-game-core tests, including the new
 `a_door_mark_draws_a_doorway_and_every_other_mark_draws_the_mark_glyph` and
 the widened `glyph_of_matches_the_shipped_vocabulary`, whose collision check
 now covers all nineteen glyphs in the band).
+
+## Task 3 - fix round 1 - complete
+
+Seven items from the task review; all seven addressed, none open.
+
+**Ruling: G — the STAIR-FOOT connector paves through `Deep` while the two
+repair sites still never overwrite it — because a foot connector runs inside
+one region's rect and so cannot reach the divider, which means the sump's
+crossing cell (the thing that makes the gate a gate) is out of its reach and
+only the run's inside-the-region tail is shortened; without it a stair whose
+connector L crossed a sump's run stood behind a `Swim` requirement THE PLAN
+NEVER STAMPED — cost if wrong: a sump's run is one or two cells shorter on
+the levels where a stairway crosses it, and a body that could swim loses a
+stretch of water it might have swum.**
+
+Implemented as a sibling predicate, `is_placed_way_for_a_foot` =
+`is_placed_way` minus `Deep`, used by `connect_cells_preserving_ways` (the
+foot connector's only caller is `place_stair`). `reconnect_region` and
+`shortest_route_within_rect` keep `is_placed_way` unchanged: they are
+re-stitching a region, not making a foot, and there a sump's run is scenery
+to route around.
+
+**The defect was real and the new arm catches it — red first, then green.**
+With `is_placed_way_for_a_foot` temporarily defined as plain
+`is_placed_way`, the witness fails:
+
+```
+seed 13 Karst/DrowTier level 0: the way at Cell(30, 14) (Some(StairsDown))
+reaches no Floor/Flooded cell of its own region Rect { x: 26, y: 8, w: 8, h: 8 }
+without swimming
+```
+
+With the ruling in place it passes (22.13 s). That is the walker arm the
+review asked for, proven live rather than assumed.
+
+**The witness gained two arms** (spec §3.5, both inside the existing 200-seed
+x 3-engine-pair sweep):
+
+- **(d) the `Deep` count arm** (review Important #2): a level none of whose
+  passages is a sump has zero `Deep` cells. One pass over the grid, and it is
+  the cheap statement of "no unstamped swim".
+- **(e) the walker arm** (Ruling G): for every `StairsDown`, `StairsUp`,
+  `Drop` and chute landing, a BFS over `Walk`/`Wade` cells ONLY — never
+  `Swim` — confined to that cell's own region rect, must reach a
+  `Floor`/`Flooded` cell. `Swim` is excluded deliberately: both connectivity
+  sweeps ask `movement_mode(..).is_some()`, which `Deep` satisfies, so a
+  stair behind deep water reads as connected to both of them. A positive
+  control (`feet_walked > 0`) fails the test if the arm never walks.
+
+**Important #3 - three stale wire-vocabulary docs**, all updated to the
+eight kinds / sixteen glyphs: `LevelPaletteEntry::kind` in
+`windows/vessel/src/level_doc.rs` (which now also names `entry_for` as the
+one place the strings are minted and the test that pins them),
+`LevelPaletteEntry::kind` in `clients/game/core/src/schema.rs`, and
+`clients/game/core/src/level.rs`'s module doc, which said "ten-glyph ...
+five kinds" eight lines under a table listing eight.
+
+**Important #4 - the sim-side wire-string test.**
+`the_three_brattice_kinds_get_their_own_wire_strings` (`level_doc.rs`, beside
+`stairs_up_gets_its_own_kind_string`) pins `"threshold"`, `"deep"`, `"drop"`.
+Its doc says why the sim side is where this belongs: the client draws an
+unrecognised kind as rock and says nothing, so a typo would ship as a wall
+where a squeeze is with the client's own vocabulary test still green.
+
+**Minor #5** - `peek_stairs`'s contract paragraph now states the `Drop` case
+(descend), states that a chute is ONE-WAY there because the landing carries
+no `StairsUp`, and its refusal paragraph names the `Drop`-over-no-landing
+case. **Minor #9** - the witness's chute-landing assertion is tightened to
+`Floor | Flooded`; `Threshold` was dead, since the landing is written after
+the passage loop. **Minor #10** - the passage loop's plain `connect_cells`
+now carries a comment saying that a later passage's L may pave an earlier
+one's `Threshold` or `Deep`, that this is chosen (paving only makes a cell
+more passable; preserving would let one edge's gate stand in another edge's
+corridor), and that the witness's count arms are what forbid destroying a
+gate outright.
+
+**Gates.** Vessel: **621 + 388 passed, 0 failed** (131.1 s + 332.0 s) - one
+more lib test than the round before, the new wire-string test. Scoped runs:
+`--lib underworld_level` 24/24 (8.17 s), `--lib level_doc` 15/15,
+`--test suite -- underworld_level_generation` 3/3 (22.66 s). `fmt --check`
+clean; workspace clippy `-D warnings` rc=0; `type-audit -- check` rc=0;
+`make clients-check-run` rc=0 (102 core tests). `make rebaseline` rc=0 in
+248.365 s: **no fixture moved** (the first arm of the branch table again, for
+the reason proved last round - no committed fixture holds an underworld level
+document) and this time not even the type-audit report, since no pub boundary
+changed. Only the `docs/timings.md` row.
