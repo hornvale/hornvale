@@ -32,6 +32,10 @@ fn relief_glyph(band: u32) -> char {
 }
 
 /// Today's answer for one tile.
+// A diagnostic that mirrors `plate::terrain_at_tile`'s own parameter list
+// so the two can be read side by side; bundling them into a struct here
+// would make the comparison harder, not easier.
+#[allow(clippy::too_many_arguments)]
 fn shipped(
     terrain: &GeneratedTerrain,
     geo: &Geosphere,
@@ -54,6 +58,10 @@ fn shipped(
 }
 
 /// The candidate: blended relief (ordinal) + flow-graph water (partition).
+// A diagnostic that mirrors `plate::terrain_at_tile`'s own parameter list
+// so the two can be read side by side; bundling them into a struct here
+// would make the comparison harder, not easier.
+#[allow(clippy::too_many_arguments)]
 fn candidate(
     terrain: &GeneratedTerrain,
     geo: &Geosphere,
@@ -105,10 +113,10 @@ fn candidate(
     // coarse answer is reproduced; at band B the channel dominates and the
     // river is drawn at its true width.
     let (transverse, d) = terrain.transverse_at(pos);
-    let tile_half_rad =
-        (std::f64::consts::PI / (2.0 * hornvale_kernel::math::powf(2.0, f64::from(win.depth))))
-            * lat.to_radians().cos().abs().max(1e-6)
-            / 2.0;
+    let tile_half_rad = (std::f64::consts::PI
+        / (2.0 * hornvale_kernel::math::powf(2.0, f64::from(win.depth))))
+        * hornvale_kernel::math::cos(lat.to_radians()).abs().max(1e-6)
+        / 2.0;
     if matches!(transverse, Transverse::Channel) || d.abs() <= tile_half_rad {
         return '"';
     }
@@ -135,8 +143,8 @@ fn main() {
     }
     let river = river.expect("seed 42 has rivers");
     let p = geo.position(river);
-    let lat = p[2].asin().to_degrees();
-    let lon = p[1].atan2(p[0]).to_degrees();
+    let lat = hornvale_kernel::math::asin(p[2]).to_degrees();
+    let lon = hornvale_kernel::math::atan2(p[1], p[0]).to_degrees();
 
     // ---- CONSERVATION: whole-chart areas at the MATCHED rung ----
     {
@@ -166,8 +174,13 @@ fn main() {
                 n += 1;
             }
         }
-        println!("=== CONSERVATION at the matched rung {rung} ({n} samples over the whole chart) ===");
-        println!("{:>8}  {:>10}  {:>10}  {:>8}", "glyph", "today", "candidate", "delta");
+        println!(
+            "=== CONSERVATION at the matched rung {rung} ({n} samples over the whole chart) ==="
+        );
+        println!(
+            "{:>8}  {:>10}  {:>10}  {:>8}",
+            "glyph", "today", "candidate", "delta"
+        );
         let mut keys: Vec<char> = a.keys().chain(b.keys()).copied().collect();
         keys.sort();
         keys.dedup();

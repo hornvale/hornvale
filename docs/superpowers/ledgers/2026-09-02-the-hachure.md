@@ -239,3 +239,84 @@ not grep it for "rung" or "zoom" before calling a ratified design a
 regression. **Registry-first is already the documented habit
 (`docs/CLAUDE.md`); decisions-first belongs beside it.** The near-miss cost
 nothing only because a vocabulary lint happened to sit in the way.
+
+---
+
+## Stage 0 — implementation (2026-09-03)
+
+#12 [G5] — **Stage 0 needed a second change to be shippable: the observer
+marker.**
+· What happened: moving the entry rung off band B removed the `@` from the
+opening view, because `compose_perception_layer` returned early unless
+`at_walk_band_rung()`. Caught by a test written for it, after ten unrelated
+tests went red on the rung change — **none of those ten would have caught
+it**, because every one of them asserts about band B.
+· Why it is not scope creep: **decision 0293's own Context is this exact
+defect.** It records the claim "the perception overlay already paints the
+observer and marks into the plate, so `@` and creatures survive" being
+asserted *without checking the other rungs*, and the resulting view having
+"no `@`… the picture and the prose described different places". Landing
+Stage 0 without the marker would have re-created a documented, ratified-
+against defect.
+· Decision: off band B the overlay paints the OBSERVER ALONE.
+`draw_perception_layer` is already rung-agnostic, so the change is one
+`retain(|p| p.here)`.
+· Alternatives discarded: relaxing the gate wholesale (would paint MARKS on a
+merged tile — the placement claim a coarse rung cannot resolve); leaving the
+gap and reporting it (knowingly shipping 0293's defect).
+· ideonomy passes: 0 (the split follows from an existing ratified decision).
+· Capture: two tests — `the_map_shows_the_observer_at_the_rung_it_opens_at`,
+`off_band_b_the_overlay_paints_the_observer_and_no_marks`.
+
+#13 [G5] — **Overturned a task-level refusal:
+`a_coarse_rung_draws_no_perception_overlay`.**
+· That test asserted a coarse rung draws NOTHING, reasoning that "every one
+of [the 31 facets] collapses onto the observer's single tile and an overlay
+drawn there would claim to place facets it had merged".
+· Decision: keep the reasoning in full, narrow the conclusion to the MARKS.
+The reasoning was only ever about placement claims; "you are in this tile" is
+true at every rung. Renamed
+`a_coarse_rung_draws_the_observer_and_no_marks`, and given a non-vacuity arm
+(the band must carry marks for "no marks" to mean anything).
+· Why this is not the mistake of #11: I checked first. `docs/decisions/`
+carries 0290 (which crate draws the layer), 0292 (centre on arrival, anchor
+on gesture) and 0293 (a rung belongs to the consultation) — **none gates the
+overlay by rung**, and the test's own doc says "Task 7 owns what a coarse rung
+shows", i.e. a task choice. A ratified decision would have stopped this.
+· ideonomy passes: 0 (a scope narrowing against stated reasoning).
+
+#14 [G5] — **A guard that Stage 0 made VACUOUS, retargeted rather than
+deleted.** `leaving_the_map_at_a_coarse_rung_returns_the_walker_to_their_own_band`
+discriminated "the walker got their band back" by `Source::Chart` being
+ABSENT at a coarse rung and PRESENT after the exit. #12 makes it present on
+both sides.
+· Counting does not rescue it either, and this is worth recording because it
+looks like it should: seed 42's flagship band carries a mark on the
+observer's own facet and nowhere else, and `here` outranks a mark on the same
+box, so band B and a coarse rung both paint exactly one `@`.
+· Decision: discriminate on the rung PLUS the observer being on the plate.
+The old comment rejected asserting the rung alone because a fix could "reset
+the rung and leave the window in the arctic corner" — which is exactly what
+the picture half rules out, so the conjunction is **strictly stronger** than
+what it replaces.
+· ideonomy passes: 0.
+
+#15 [G5] — **A pre-existing `apply_zoom` defect that Stage 0 exposed, and
+which Stage 0 does NOT fix.**
+· Symptom: climbing seven rungs with `Action::Zoom(1)` does not keep the
+observer under the cursor. Measured: the strip at band B after a zoom climb
+reads "an unnamed sea" instead of the observer's own landmass, and in another
+test the observer landed at row 8347 against a window origin of 7819 on a
+52-row plate.
+· Cause: zoom is cursor-anchored (decision 0292, "anchor on gesture") and each
+rung doubles the chart, so sub-tile rounding compounds — 2^7 = 128x by band B.
+· **Not caused by this stage**: `apply_zoom` is untouched. Nothing had ever
+zoomed seven consecutive rungs before, because `enter_map` landed on band B
+directly, so no test could see it.
+· Decision: leave it. Fixing zoom anchoring is not Stage 0's job and would be
+an unreviewed behaviour change to a ratified gesture. The two test helpers set
+the rung directly instead, and say why in their docs.
+· Capture: **needs an idea-registry row** — carried as a Stage 0 follow-up
+rather than filed silently, because it is a real defect a reader can hit
+(zoom in six times from the map and your position drifts off screen).
+· ideonomy passes: 0 (a finding, not a decision).

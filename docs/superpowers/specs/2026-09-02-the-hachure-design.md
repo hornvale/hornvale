@@ -171,6 +171,21 @@ also move. It is the same `window.depth` field, and §7 keeps "what the walk
 view should be" out of scope, so the conservative choice is to move only the
 map's entry rung and leave the walker at band B.
 
+**AS BUILT (2026-09-03), Stage 0 is two changes, not one.** Moving the entry
+rung removed the `@` from the opening view, because
+`compose_perception_layer` returned early unless `at_walk_band_rung()` — which
+is decision 0293's own documented defect ("no `@`… the picture and the prose
+described different places"). So off band B the overlay now paints the
+OBSERVER ALONE: a mark on a merged tile claims a placement a coarse rung
+cannot resolve, while "you are in this tile" is true at every rung. See
+ledger #12-#14.
+
+**And Stage 0 exposed a defect it deliberately does not fix**: zoom is
+cursor-anchored (0292) and each rung doubles the chart, so climbing seven
+rungs compounds sub-tile rounding by 128x and loses the observer. Nothing had
+ever zoomed seven consecutive rungs, because `enter_map` used to land on band
+B directly. Ledger #15; needs a registry row.
+
 ### Stage 1 — blend elevation at the tile's own facet depth
 
 Replace the nearest-corner snap with the bilinear blend `windows/locale`

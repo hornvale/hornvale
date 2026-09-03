@@ -1546,6 +1546,27 @@ impl Driver {
         // the CURSOR, carrying you further off. The only route left was `+`
         // to the ladder's ceiling and THEN `map`.
         //
+        // THE ARRIVAL RUNG, BEFORE THE CENTRING (The Hachure, Stage 0).
+        // Order matters: `centre_on_the_observer` resolves against
+        // `window.depth`'s own chart, so setting the rung afterwards would
+        // centre on the old rung's chart and leave the window somewhere
+        // arbitrary on the new one — the same arctic-corner state
+        // `leave_the_map` calls "not shippable", arrived at from the other
+        // side.
+        //
+        // **Why the map does not inherit the walker's rung.** `Driver::start`
+        // leaves `window.depth` at `BAND_B_RUNG`, which is where the WALKER
+        // belongs — but band B is seven rungs finer than the terrain grid and
+        // `terrain_at_tile` resolves every rung through the grid-level
+        // ancestor, so a consultation opened there draws ONE vertex's reading
+        // across the whole screen (measured: 1 distinct vertex on a 120x40
+        // plate, seed 42). A map that shows one flat reading is not a map.
+        //
+        // This is an ENTRY rung, not a clamp: the whole ladder stays
+        // reachable by zooming, `virtual_dims` is untouched, and a tile is
+        // still a facet at its rung's depth (decision 0287). `leave_the_map`
+        // restores band B for the walker.
+        self.window.depth = plate::map_entry_rung(self.geo.depth());
         // Entering the map is an ARRIVAL, and arrival is what centres
         // (the rule this task settled is "centre on arrival, anchor on
         // gesture"). Nothing about that rule was ever specific to a rung;
@@ -2413,18 +2434,35 @@ impl Driver {
     /// overlay would claim to place facets it had merged — and off the walk
     /// band because there is no packet to draw.
     fn compose_perception_layer(&self, dst: &mut hornvale_game_core::Grid) {
-        if !self.at_walk_band_rung() {
-            return;
-        }
         let Some(scene) = self.walk_band_scene() else {
             return;
         };
+        let mut perceived = perceived_facets(&scene);
+        // OFF BAND B, THE OBSERVER ALONE (The Hachure, Stage 0).
+        //
+        // This gate used to be an early `return` on `!at_walk_band_rung()`,
+        // and Stage 0 turned that into a defect the moment the map stopped
+        // opening on band B: the opening view had no `@` on it, which is the
+        // exact state `enter_map`'s own comment calls unshippable ("the
+        // reader cannot even see which direction home is").
+        //
+        // The split is by WHAT each half claims, not by how many boxes land.
+        // At the entry rung one tile spans tens of kilometres, so the whole
+        // 31-facet band collapses onto one tile; painting the band's MARKS
+        // there would assert positions the rung cannot resolve, while
+        // painting the OBSERVER asserts only "you are in this tile", which is
+        // true at every rung. `draw_perception_layer` is already
+        // rung-agnostic — it reads `virtual_dims(win.depth)` — so the filter
+        // is the whole change.
+        if !self.at_walk_band_rung() {
+            perceived.retain(|p| p.here);
+        }
         plate::draw_perception_layer(
             dst,
             &self.frame,
             &self.window,
             plate::colour_allowed(),
-            &perceived_facets(&scene),
+            &perceived,
         );
     }
 
@@ -2826,6 +2864,45 @@ mod portolan_tests {
     /// future reader. The two assertions below stay as the real check: the
     /// bound only decides when to stop pressing, never whether the walk
     /// arrived.
+    /// Enter the map and climb the ladder all the way IN, to
+    /// [`BAND_B_RUNG`] — the walk band's own rung.
+    ///
+    /// **New at The Hachure's Stage 0, and it exists because `enter_map` no
+    /// longer lands there.** The map now opens at
+    /// [`plate::map_entry_rung`] — the coarsest rung the mesh can fill —
+    /// because band B is seven rungs finer than the grid and a plate there
+    /// draws one vertex's reading everywhere. Ten tests in this module were
+    /// written when `enter_map` *was* the way to band B, and they are about
+    /// band-B behaviour: the observer's own facet, the sight caption, the
+    /// perception overlay's full sight cone, the ladder's ceiling. So they
+    /// now have to say they mean band B, which is what this helper is.
+    ///
+    /// **It sets the rung rather than ZOOMING to it, and the first draft of
+    /// this helper zoomed.** Zoom is anchored on the CURSOR (decision 0292,
+    /// "centre on arrival, anchor on gesture"), so seven zoom-ins multiply
+    /// the chart by 128 and amplify any sub-tile cursor offset until the
+    /// observer leaves the window entirely — three tests failed exactly that
+    /// way, one of them reporting the observer at row 8347 against a window
+    /// origin of 7819 on a 52-row plate.
+    ///
+    /// These tests are about what band B DRAWS, not about how a reader gets
+    /// there, and what they were written against is the pre-Stage-0
+    /// `enter_map`: band B, centred on the observer. So this reproduces that
+    /// arrival directly and makes no claim about the zoom path — which
+    /// `zoom_in_climbs_to_band_b_and_saturates_there` and
+    /// `zooming_out_of_band_b_lands_where_the_reader_was_looking` own.
+    fn enter_band_b(d: &mut Driver) {
+        d.enter_map();
+        d.window.depth = BAND_B_RUNG;
+        d.centre_on_the_observer();
+        d.refresh_strip();
+        assert_eq!(
+            d.window.depth, BAND_B_RUNG,
+            "the helper must land on the walk band's rung"
+        );
+        assert!(d.at_walk_band_rung(), "band B is the walk band's own rung");
+    }
+
     fn enter_world_view(d: &mut Driver) {
         d.enter_map();
         for _ in 0..(BAND_B_RUNG - GLOBE_RUNG) {
@@ -3135,7 +3212,7 @@ mod portolan_tests {
     #[test]
     fn zoom_out_from_band_b_steps_one_rung_into_the_world_view() {
         let mut d = test_driver();
-        d.enter_map();
+        enter_band_b(&mut d);
         assert_eq!(
             d.window.depth, BAND_B_RUNG,
             "the session opens on band B, the ladder's finest rung"
@@ -3181,6 +3258,152 @@ mod portolan_tests {
         d.apply(Action::Zoom(1));
         assert_eq!(d.window.depth, GLOBE_RUNG + 1);
         assert!(!d.at_walk_band_rung());
+    }
+
+    /// Entering the map must not open on the WALK BAND's own rung (The
+    /// Hachure, Stage 0).
+    ///
+    /// Band B is seven rungs finer than the terrain mesh, and
+    /// [`plate::terrain_at_tile`] resolves every rung through the grid-level
+    /// ancestor, so a plate there shows ONE vertex's reading across the whole
+    /// screen — measured at 1 distinct vertex on a 120x40 plate, seed 42.
+    /// A consultation that opens on a single flat reading is not a map.
+    ///
+    /// This is the narrow half of Stage 0 and is deliberately an `assert_ne`:
+    /// which rung the map *should* open at is
+    /// [`the_map_opens_at_the_coarsest_rung_the_mesh_can_fill`]'s claim, and
+    /// keeping the two apart means a future change to the entry rung breaks
+    /// the specific test rather than this one.
+    #[test]
+    fn entering_the_map_does_not_open_at_the_walk_band_rung() {
+        let mut d = test_driver();
+        d.enter_map();
+        assert_ne!(
+            d.window.depth, BAND_B_RUNG,
+            "the map must not open on the walk band's rung: the mesh cannot \
+             fill it, so the plate draws one vertex's reading everywhere"
+        );
+    }
+
+    /// The entry rung is the COARSEST one the mesh can fill (The Hachure,
+    /// Stage 0) — asserted as the two-sided property rather than against the
+    /// literal `7`, so the claim survives `GLOBE_LEVEL` moving.
+    ///
+    /// The two clauses are what make it the *coarsest such* rung and not
+    /// merely *a* sufficient one: at the entry rung the chart is at least as
+    /// fine as the mesh, and one rung coarser it is not. A single clause would
+    /// pass on band B, which is the state this stage exists to leave.
+    #[test]
+    fn the_map_opens_at_the_coarsest_rung_the_mesh_can_fill() {
+        let mut d = test_driver();
+        d.enter_map();
+        let entry = d.window.depth;
+        let want = plate::mesh_samples_around_a_great_circle(d.geo.depth());
+
+        assert!(
+            plate::virtual_dims(entry).0 >= want,
+            "rung {entry}'s chart is {} tiles, under the mesh's {want} samples \
+             around a great circle — the map would undersample its own data",
+            plate::virtual_dims(entry).0
+        );
+        assert!(
+            entry > GLOBE_RUNG && plate::virtual_dims(entry - 1).0 < want,
+            "rung {} already covers the mesh's {want} samples, so {entry} is \
+             not the coarsest rung that does",
+            entry - 1
+        );
+    }
+
+    /// The map must show WHERE YOU ARE at the rung it opens at (The Hachure,
+    /// Stage 0).
+    ///
+    /// **This test exists because Stage 0 created the defect it guards.**
+    /// [`Driver::compose_perception_layer`] returned early unless
+    /// `at_walk_band_rung()`, so moving the entry rung off band B silently
+    /// removed the observer marker from the opening view —
+    /// [`Driver::enter_map`]'s own comment already names that state ("no
+    /// marker is drawn and the reader cannot even see which direction home
+    /// is") as the thing a previous fix round existed to prevent. Ten
+    /// existing tests went red on the rung change; none of them would have
+    /// caught this, because they all assert about band B.
+    ///
+    /// Asserted on the drawn plate rather than on the gate, because the gate
+    /// is the implementation: what matters is that `@` is on the screen.
+    #[test]
+    fn the_map_shows_the_observer_at_the_rung_it_opens_at() {
+        let mut d = test_driver();
+        d.resize(120, 40);
+        d.enter_map();
+        assert_ne!(
+            d.window.depth, BAND_B_RUNG,
+            "sanity: this test is about the overlay OFF band B"
+        );
+        let plate = d.world_plate_for_redraw(120, 40).expect("a plate");
+        let observers = (0..plate.height())
+            .flat_map(|y| (0..plate.width()).map(move |x| (x, y)))
+            .filter(|&(x, y)| plate.get(x, y).is_some_and(|c| c.glyph == Some('@')))
+            .count();
+        assert_eq!(
+            observers, 1,
+            "the map must paint the observer exactly once at its entry rung — \
+             a consultation that cannot show where you stand is the state \
+             `enter_map`'s own comment calls unshippable"
+        );
+    }
+
+    /// Off band B the overlay paints the OBSERVER ALONE — the sight cone is a
+    /// walk-band claim and does not survive coarsening.
+    ///
+    /// At the entry rung one tile spans tens of kilometres, so the whole
+    /// 31-facet band collapses onto a single tile. Painting the band's marks
+    /// there would claim mark positions the rung cannot resolve; painting the
+    /// observer says only "you are in this tile", which is true at every
+    /// rung. So the split is by WHAT the claim is, not by how many boxes land.
+    #[test]
+    fn off_band_b_the_overlay_paints_the_observer_and_no_marks() {
+        let mut d = test_driver();
+        d.resize(120, 40);
+        d.enter_map();
+        let plate = d.world_plate_for_redraw(120, 40).expect("a plate");
+        let chart_glyphs: Vec<char> = (0..plate.height())
+            .flat_map(|y| (0..plate.width()).map(move |x| (x, y)))
+            .filter_map(|(x, y)| {
+                plate.get(x, y).and_then(|c| {
+                    (c.source == hornvale_game_core::Source::Chart)
+                        .then_some(c.glyph)
+                        .flatten()
+                })
+            })
+            .collect();
+        assert_eq!(
+            chart_glyphs,
+            vec!['@'],
+            "off band B the overlay's whole output must be the observer"
+        );
+    }
+
+    /// Leaving the map still hands the walker back band B — the entry rung is
+    /// the CONSULTATION's, never the walker's.
+    ///
+    /// `leave_the_map` is the owner of that restore (`self.window.depth =
+    /// BAND_B_RUNG` plus a re-centre), and Stage 0 changes the arrival rung
+    /// without touching the departure. Pinned because the two now differ:
+    /// before this stage they were the same number, so nothing could tell
+    /// whether the restore was doing anything.
+    #[test]
+    fn leaving_the_map_returns_the_walker_to_band_b() {
+        let mut d = test_driver();
+        d.enter_map();
+        assert_ne!(
+            d.window.depth, BAND_B_RUNG,
+            "sanity: the map opened coarser"
+        );
+        d.apply(Action::ToggleFocus);
+        assert_eq!(
+            d.window.depth, BAND_B_RUNG,
+            "leaving the map must return the walker to the band they stand in"
+        );
+        assert!(d.at_walk_band_rung());
     }
 
     /// **Retargeted by The Quadrat's Task 2.** This used to be
@@ -3314,7 +3537,7 @@ mod portolan_tests {
     #[test]
     fn zoom_plus_on_the_walk_band_alone_is_a_no_op() {
         let mut d = test_driver();
-        d.enter_map();
+        enter_band_b(&mut d);
         assert!(d.at_walk_band_rung());
         let before_window = d.window;
         d.apply(Action::Zoom(1));
@@ -3344,7 +3567,7 @@ mod portolan_tests {
     fn zoom_plus_at_the_ladders_ceiling_keeps_the_players_scroll() {
         let mut d = test_driver();
         d.resize(210, 56);
-        d.enter_map();
+        enter_band_b(&mut d);
         assert!(d.at_walk_band_rung(), "sanity: the ladder's ceiling");
         let centred = d.window;
 
@@ -3665,7 +3888,7 @@ mod portolan_tests {
     #[test]
     fn recentre_rolls_the_projection_at_band_b_too() {
         let mut d = test_driver();
-        d.enter_map();
+        enter_band_b(&mut d);
         assert!(d.at_walk_band_rung());
         let before = *d.frame();
         assert_eq!(
@@ -4792,7 +5015,7 @@ mod portolan_tests {
     fn band_b_still_shows_the_observer_over_its_own_terrain() {
         let mut d = test_driver();
         d.resize(120, 40);
-        d.enter_map();
+        enter_band_b(&mut d);
         assert!(
             d.at_walk_band_rung(),
             "sanity: the session opens on band B, which is where this test means to stand"
@@ -4836,7 +5059,7 @@ mod portolan_tests {
     fn the_overlay_leaves_ordinary_ground_to_the_raster() {
         let mut d = test_driver();
         d.resize(120, 40);
-        d.enter_map();
+        enter_band_b(&mut d);
         let scene = d.walk_band_scene().expect("the walk band");
         let facets = &scene.cells; // lexicon: `SurroundsCell` is the wire's own frozen name for a FACET — an area, not a vertex
         let drawable = facets
@@ -4922,27 +5145,60 @@ mod portolan_tests {
         );
     }
 
-    /// A COARSE rung gets no perception overlay, and that is a refusal
-    /// rather than an omission: the packet's 31 facets are all finer than
-    /// one coarse tile, so every one of them collapses onto the observer's
-    /// single tile and an overlay drawn there would claim to place facets it
-    /// had merged. Task 7 owns what a coarse rung shows.
+    /// A COARSE rung draws the OBSERVER and no marks — the coarsest rung's
+    /// half of the same split
+    /// [`off_band_b_the_overlay_paints_the_observer_and_no_marks`] asserts at
+    /// the entry rung.
+    ///
+    /// # THIS TEST'S CLAIM WAS NARROWED BY THE HACHURE, STAGE 0
+    ///
+    /// It asserted that a coarse rung draws **nothing**, on this reasoning:
+    /// "the packet's 31 facets are all finer than one coarse tile, so every
+    /// one of them collapses onto the observer's single tile and an overlay
+    /// drawn there would claim to place facets it had merged."
+    ///
+    /// **That reasoning is kept in full and it only ever covered the MARKS.**
+    /// A mark drawn on a merged tile does claim a placement the rung cannot
+    /// resolve. The OBSERVER does not: "you are in this tile" is true at
+    /// every rung, and it is the one claim that survives coarsening. Drawing
+    /// nothing was the right conclusion while the map only ever opened on
+    /// band B; once it opens coarser (`plate::map_entry_rung`) it becomes
+    /// decision 0293's own documented defect — a view with no `@`, where
+    /// "the picture and the prose described different places".
+    ///
+    /// So the refusal is now scoped to what it was always arguing about, and
+    /// the non-vacuity below is what keeps it a real refusal: the band must
+    /// carry marks for "no marks were drawn" to mean anything.
     #[test]
-    fn a_coarse_rung_draws_no_perception_overlay() {
+    fn a_coarse_rung_draws_the_observer_and_no_marks() {
         let mut d = test_driver();
         d.resize(120, 40);
         enter_world_view(&mut d);
         assert!(!d.at_walk_band_rung(), "sanity: a coarse rung");
+        // NON-VACUITY: the band must carry marks, or "no marks were drawn"
+        // is a claim about the empty set.
+        let scene = d.walk_band_scene().expect("the walk band");
+        let marked = scene.cells.iter().filter(|c| !c.marks.is_empty()).count(); // lexicon: `SurroundsCell` is the wire's own frozen name for a FACET — an area, not a vertex
+        assert!(
+            marked > 0,
+            "this band carries no marks, so the refusal below proves nothing"
+        );
         let plate = d.world_plate_for_redraw(120, 40).expect("a plate");
-        let overlay = (0..plate.height())
+        let overlay: Vec<char> = (0..plate.height())
             .flat_map(|y| (0..plate.width()).map(move |x| (x, y)))
-            .filter(|&(x, y)| {
-                plate
-                    .get(x, y)
-                    .is_some_and(|c| c.source == hornvale_game_core::Source::Chart)
+            .filter_map(|(x, y)| {
+                plate.get(x, y).and_then(|c| {
+                    (c.source == hornvale_game_core::Source::Chart)
+                        .then_some(c.glyph)
+                        .flatten()
+                })
             })
-            .count();
-        assert_eq!(overlay, 0, "a coarse rung must draw no perception glyphs");
+            .collect();
+        assert_eq!(
+            overlay,
+            vec!['@'],
+            "a coarse rung must draw the observer and nothing else"
+        );
     }
 
     /// **THE CHAMBER BAND'S PICTURE — fix round 1's F5, and the test whose
@@ -5046,7 +5302,7 @@ mod portolan_tests {
     #[test]
     fn band_b_keeps_the_sight_caption_and_a_coarse_rung_does_not() {
         let mut d = test_driver();
-        d.enter_map();
+        enter_band_b(&mut d);
         let band_b = d.strip_text().map(str::to_string).expect("a strip");
         assert!(
             band_b.contains("seen through"),
@@ -5195,7 +5451,7 @@ mod portolan_tests {
     fn at_the_charts_polar_edge_the_cursor_moves_because_the_window_cannot() {
         let mut d = test_driver();
         d.resize(210, 56);
-        d.enter_map();
+        enter_band_b(&mut d);
         for _ in 0..4 {
             d.apply(Action::Zoom(-1));
         }
@@ -5505,7 +5761,7 @@ mod portolan_tests {
     fn zooming_out_of_band_b_lands_where_the_reader_was_looking() {
         let mut d = test_driver();
         d.resize(210, 56);
-        d.enter_map();
+        enter_band_b(&mut d);
         assert!(d.at_walk_band_rung(), "sanity: the map opens on band B");
         d.apply(Action::Zoom(-1));
         assert_eq!(d.window.depth, BAND_B_RUNG - 1);

@@ -246,6 +246,84 @@ pub const GLOBE_RUNG: u32 = 6;
 /// The tangent warp redistributes facets WITHIN a face and does not change how
 /// many of them a face has, so the count is exact even though the individual
 /// facet arcs are not equal.
+/// The central angle one edge of the subdivided ICOSAHEDRON subtends at the
+/// centre of its circumsphere, at `grid_level` — `acos(1/sqrt(5)) / 2^level`,
+/// 0.01729920 rad at level 6.
+///
+/// # THIS IS THE NUMBER FIX ROUND 1 DELETED, AND DELETING IT FROM ITS OLD HOME WAS RIGHT
+///
+/// [`base_facet_arc_rad`] used to return `acos(1/sqrt(5))` and its caller
+/// justified the halving with "the facet count is `20 << (2 * depth)`". Both
+/// premises died with the base mesh (decision 0506) and the chart's width is a
+/// property of the CUBE, so the icosahedral figure had no business deciding how
+/// many TILES a rung carries. That correction stands and this function does not
+/// reopen it.
+///
+/// **What the correction lost is that the icosahedral figure still decides
+/// something — just not that.** `Geosphere` is a subdivided ICOSAHEDRON
+/// (`kernel/src/geosphere.rs`, `10·4^L + 2` vertices — 40,962 at level 6), and
+/// terrain is sampled on its VERTICES. So the mesh's own sample spacing is an
+/// icosahedral property while the chart's tile count is a cube one, and the two
+/// lattices are incommensurate: at level 6 the mesh carries ~363 samples around
+/// a great circle where rung 6's chart carries 256 tiles.
+///
+/// Conflating the two is what the old code did in one direction, and a reader
+/// who takes fix round 1 to mean "the icosahedron is gone" makes the same
+/// mistake in the other. Two lattices, two functions, each named for the one it
+/// measures.
+///
+/// `sqrt` stays intrinsic and `acos` routes through
+/// [`hornvale_kernel::math`] — `kernel/CLAUDE.md`'s own split.
+fn mesh_edge_arc_rad(grid_level: u32) -> f64 {
+    hornvale_kernel::math::acos(1.0 / 5.0_f64.sqrt())
+        / hornvale_kernel::math::powf(2.0, f64::from(grid_level))
+}
+
+/// How many TERRAIN SAMPLES the mesh carries around a great circle at
+/// `grid_level` — the data's own resolution, against which a rung's tile count
+/// is either enough or not.
+///
+/// The partner of [`tiles_around_a_great_circle`], deliberately the same shape
+/// from the other lattice's base angle: `TAU` divided by
+/// [`mesh_edge_arc_rad`]. 363 at level 6.
+/// type-audit: bare-ok(count: grid_level), bare-ok(count: return)
+pub fn mesh_samples_around_a_great_circle(grid_level: u32) -> u32 {
+    ((std::f64::consts::TAU / mesh_edge_arc_rad(grid_level)).round() as u32).max(1)
+}
+
+/// The rung a map CONSULTATION opens at: the coarsest rung whose chart is at
+/// least as fine as the mesh it draws (The Hachure, Stage 0).
+///
+/// **Why the map needs an entry rung at all.** `Driver::start` leaves
+/// `window.depth` at [`BAND_B_RUNG`] — the walk band's own rung, which is where
+/// the WALKER belongs — and `enter_map` used to inherit it. Band B is seven
+/// rungs finer than the grid and [`terrain_at_tile`] resolves every rung
+/// through the grid-level ancestor, so a consultation opened there shows one
+/// vertex's reading across the whole screen: measured at **1** distinct terrain
+/// vertex on a 120x40 plate, seed 42.
+///
+/// **This invents nothing and re-tunes nothing.** Decision 0196 lets a view
+/// render coarser than the world but never finer, and decision 0287 makes that
+/// structural by holding that a tile IS a facet at the rung's depth. Both are
+/// untouched here: [`virtual_dims`] is unchanged, the ladder is unchanged, and
+/// every rung on it remains reachable by zooming. Only the rung a consultation
+/// *starts* at moves.
+///
+/// **Derived, never tabulated.** A literal `7` becomes a tuned number the first
+/// time `GLOBE_LEVEL` moves — the same argument
+/// [`tiles_around_a_great_circle`] makes for computing its own ladder. The
+/// answer is the smallest `d` with `tiles_around_a_great_circle(d) >=
+/// mesh_samples_around_a_great_circle(grid_level)`, clamped into the shipped
+/// ladder so a pathological grid level cannot return a rung the client has no
+/// picture for.
+/// type-audit: bare-ok(count: grid_level), bare-ok(count: return)
+pub fn map_entry_rung(grid_level: u32) -> u32 {
+    let want = mesh_samples_around_a_great_circle(grid_level);
+    (GLOBE_RUNG..=BAND_B_RUNG)
+        .find(|&d| tiles_around_a_great_circle(d) >= want)
+        .unwrap_or(BAND_B_RUNG)
+}
+
 fn base_facet_arc_rad() -> f64 {
     std::f64::consts::FRAC_PI_2
 }
