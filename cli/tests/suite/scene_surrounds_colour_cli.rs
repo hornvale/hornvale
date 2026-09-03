@@ -39,8 +39,10 @@ const DAY: f64 = 0.32;
 
 #[test]
 fn colour_lens_declares_the_altitude_the_light_was_actually_built_from() {
-    let dir = std::env::temp_dir();
-    let world_path = dir.join("hv-scene-surrounds-colour-test.json");
+    let world_path = std::env::temp_dir().join(format!(
+        "hv-scene-surrounds-colour-test-{}.json",
+        std::process::id()
+    ));
     let (_o, e, ok) = run(&["new", "--seed", "42", "--out", world_path.to_str().unwrap()]);
     assert!(ok, "new failed: {e}");
     let w = world_path.to_str().unwrap();
