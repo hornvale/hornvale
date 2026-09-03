@@ -8,8 +8,12 @@ two absorptions of `main`, no task exceeding three fix rounds.
 ## A test over the function is not a test over the data
 
 The campaign's first blocked task found that four of the ten frozen inventory
-rows could never be drawn, because one of the four length classes did not occur
-in any plan — zero of 4,412 realms measured. The cause was the predecessor's:
+rows could never be drawn. Three of them died of one cause — one of the four
+length classes did not occur in any plan, zero of 4,412 realms measured — and a
+fourth for a different reason entirely (the class it wants is genuinely empty by
+a parity argument; the next section). That distinction is why the repair below
+revived three rows and not four, and conflating the two makes the repair look
+more complete than it was. The three-row cause was the predecessor's:
 the class was computed when a realm was created, where one of its paths has at
 most three edges, and the grammar then went on splicing chains into both paths.
 The stored class described a graph that no longer existed. Nothing had read it,

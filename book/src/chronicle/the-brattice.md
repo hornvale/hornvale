@@ -75,8 +75,10 @@ created, and then went on splicing chains into both of its paths. The exported
 class described a graph that no longer existed: at creation a realm's first
 path holds at most three edges, and after growth it reaches sixteen. One of the
 four classes, *long-short*, was therefore unreachable — zero of four thousand
-four hundred and twelve realms measured — and four rows of the pattern
-inventory selected on it were dead data nobody could have noticed by reading.
+four hundred and twelve realms measured — and the three rows of the pattern
+inventory that select on it were dead data nobody could have noticed by
+reading. A fourth row was dead for an unrelated reason, which is the next
+section; recomputing the class revived three of the four, not all of them.
 
 Nothing had read the class before, so nothing was wrong; the defect existed
 only from the moment something wanted to use it. Recomputing the class after
@@ -151,9 +153,12 @@ pattern, each citing its source, its length is asserted by a test, and changing
 it is a deliberate act. Ten rows were frozen at the design review. Nine
 shipped.
 
-The row that went is `the-landing-hall`, which wanted a realm whose two paths
-are both short and which crosses a floor. It drew zero times. The first reason
-given for that was wrong, and the review said so: "a cross-floor lower path has
+The row that went is `the-landing-hall`, and it is the fourth dead row from the
+section above — dead for a *different* reason, which is why the recompute
+revived three rows and not four. The other three wanted a class the stale
+attribute hid; this one wants a class that does not exist at all. It asked for a
+realm whose two paths are both short and which crosses a floor, and it drew zero
+times. The first reason given for that was wrong, and the review said so: "a cross-floor lower path has
 at least three edges, so both paths cannot be short" does not follow, because a
 two-edge path against a three-edge one classifies as short-short under the
 frozen rule.
@@ -246,7 +251,7 @@ the frozen wording points at. A door needs a maker, so a door row is
 inadmissible in a wild cave; the panel's own descents are wild caves because
 the production walk hardcodes one for every cave a player enters. On worked
 descents the doors are there — **872 of 874** worked descents carry at least
-one — and the plan carries them for every worked descent in the world. Nobody
+one — and the plan carries them in worked descents throughout the world. Nobody
 can walk to one yet. Giving the walk a worked place to stand in is the next
 campaign's first job, and this is the program's own ordering rather than an
 oversight: it is flagged on the page, in the design, and here.
@@ -335,8 +340,8 @@ them is the cheapest and most valuable thing the project could build next,
 because the sky is already deterministic and the proof would have to become
 "reachable at some hour."
 
-And no player reaches a door. The plan hangs them in every worked descent in
-the world; the walk enters every cave as a wild one. That gap closes when the
+And no player reaches a door. The plan hangs them in 872 of the panel's 874
+worked descents; the walk enters every cave as a wild one. That gap closes when the
 walk learns to read what a place was made by, which is a campaign and not a
 paragraph.
 

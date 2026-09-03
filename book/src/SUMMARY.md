@@ -438,7 +438,6 @@
 - [The Pavement](./chronicle/the-pavement.md)
 - [The Tableau](./chronicle/the-tableau.md)
 - [The Crosscut](./chronicle/the-crosscut.md)
-- [The Brattice](./chronicle/the-brattice.md)
 - [The Avowal](./chronicle/the-avowal.md)
 - [The Wicket](./chronicle/the-wicket.md)
 - [The Roll](./chronicle/the-roll.md)
@@ -447,6 +446,7 @@
 - [The Pawl](./chronicle/the-pawl.md)
 - [The Rack](./chronicle/the-rack.md)
 - [The Plumb](./chronicle/the-plumb.md)
+- [The Brattice](./chronicle/the-brattice.md)
 
 # Appendix: The Frontier
 

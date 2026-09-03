@@ -1902,3 +1902,67 @@ crossing is `Deep` — one cell has one kind. Corrected in both files (commit
 amended). Noted here because it is precisely the shape the retrospective's own
 "a doc comment asserting a contract the change altered" section describes, found
 by re-reading the ledger's amendments against the prose rather than by any check.
+
+## Task 7 — fix round 1 — complete
+
+Six findings, all addressed; none open. The review also resolved a question this
+task had flagged rather than a defect it introduced.
+
+**Important #1 — three rows died of the stale class, not four; the fourth died
+of the parity argument, and conflating them makes the repair read as more
+complete than it was.** `LongShort` is selected by `hidden-shortcut`,
+`dangerous-route` and `the-chute`; `the-landing-hall` wanted
+`ShortShort × CrossFloor`, which is empty for a wholly different reason. That is
+exactly why recomputing the class after growth revived **nine of ten and not
+ten** — a number the chronicle already stated two sections later while its own
+earlier paragraph implied the recompute should have revived all four. Fixed at
+three sites: the chronicle's recompute paragraph now says three rows and names
+the fourth as the next section's business; the landing-hall section now opens by
+saying it *is* that fourth row and that its cause is different (the other three
+wanted a class the stale attribute hid; this one wants a class that does not
+exist); and `docs/retrospectives/the-brattice.md`'s opening paragraph gains the
+same split, with the "conflating the two makes the repair look more complete"
+sentence stated outright, since a retrospective's job is the distinction.
+
+**Important #2 — "a sixth character" is wrong; `Character` has three variants
+and `worked()` matches three, so it is a FOURTH character that must fail to
+compile.** Corrected in decision 0617's consequence bullet. The number was
+carried over from a different roster and nothing would have caught it: the
+sentence is about a variant that does not exist yet, so no test can disagree
+with it.
+
+**Important #3 / controller Ruling L — `book/src/SUMMARY.md` is chronological by
+landing, and the concern this task raised was the correct reading.** The
+reviewer checked first-parent add times and found even The Portolan's two parts
+are not grouped, so there is no program-grouping precedent to follow. The
+Brattice's line moved from after the Crosscut's to the **end of the chronicle
+list, after The Plumb**. The task-7 report's concern (2) is thereby closed as
+answered rather than accepted.
+
+**Minor #4 — two sites overstated the door count.** "the plan carries them for
+every worked descent in the world" and "the plan hangs them in every worked
+descent" are both false against 872 of 874: two worked descents on the panel's
+first seed carry none. Now "in worked descents throughout the world" and "in 872
+of the panel's 874 worked descents" respectively — the second states the figure
+at the site rather than leaving it three sections away.
+
+**Minor #5 — `docs/decisions/README.md`'s 0620 row punctuated the title
+differently from the record's own H1** (`; solvability` against `, and
+solvability`). Made identical. Nothing checks this pair, which is the same
+unenforced-index concern the task report already raises.
+
+**Minor #6 — the inserted CLAUDE.md sentence overran the block's ~76-column
+wrap** (one line at 90). The run from "the wall moved down" through
+"`seam-guard`" is reflowed at 76; no word changed except the already-committed
+insertion, and `git diff` shows six lines replacing six.
+
+**#7 left as deliberate**, per the review: two details lost when
+`MAP-underworld-traversal-grammar` and `MAP-restricted-passage` were compacted
+to stay inside the 600-char Idea budget. The budget is a hard gate and the
+waiver list is append-never, so a row that must grow must also shrink.
+
+**Checks re-run.** `cargo test -p hornvale --test suite -- docs_consistency`
+28 passed / 0 failed; `-- decision` 10 passed / 0 failed; `mdbook build book`
+rc=0 (13 pre-existing warnings); the generated-path drift check clean. No
+artifact moved this round — every edit is prose in a non-generated file, so
+`make rebaseline` was not re-run.

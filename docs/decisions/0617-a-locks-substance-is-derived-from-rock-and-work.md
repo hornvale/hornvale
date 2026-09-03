@@ -68,7 +68,7 @@ draw the pass makes is which pattern a realm gets.
   can walk to one until a campaign gives the walk a worked place to stand in.
   This is disclosed on the committed page rather than smoothed over.
 - **`worked()` is an exhaustive match over the character roster**, not a
-  `matches!` against one variant, so a sixth character fails to compile here
+  `matches!` against one variant, so a fourth character fails to compile here
   rather than inheriting "unworked" from a wildcard and quietly losing its
   doors.
 - A same-floor one-way passage has no natural substance and is therefore not

@@ -303,4 +303,4 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0617](0617-a-locks-substance-is-derived-from-rock-and-work.md) | A lock's substance is derived from rock and work; the pattern chooses where, never what | Accepted |
 | [0618](0618-a-descent-key-makes-the-plan-a-save-format-contract.md) | A descent key's identity is a plan position, so the plan grammar is a save-format contract | Accepted |
 | [0619](0619-the-drop-is-a-stairway-with-its-up-half-omitted.md) | The drop is a stairway with its up half omitted, and `Fly` is its key | Accepted |
-| [0620](0620-the-cycle-pattern-inventory-is-a-frozen-corpus.md) | The cycle-pattern inventory is a frozen corpus of nine rows; solvability for a body holding nothing is the invariant | Accepted |
+| [0620](0620-the-cycle-pattern-inventory-is-a-frozen-corpus.md) | The cycle-pattern inventory is a frozen corpus of nine rows, and solvability for a body holding nothing is the invariant | Accepted |
