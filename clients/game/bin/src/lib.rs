@@ -20,6 +20,7 @@ pub mod mercator;
 // NOT `mercator::Frame` — see that module's doc for the distinction.
 pub mod overture;
 pub mod plate;
+pub mod rate;
 pub mod state_dir;
 pub mod term;
 pub mod tiles;
