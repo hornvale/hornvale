@@ -296,6 +296,22 @@ pub struct ProbeCounts {
     pub alarm_field_hazards: u64,
 }
 
+/// Runs the probe's three [`hazard_memory_memo`] reads and asserts they
+/// agree. **This function has exactly one caller
+/// (`h5_witness_the_hazard_reads_terrain_samples_on_the_bench_shape`), always
+/// on `bench_shape(H5_SEED, ..)` — seed [`H5_SEED`] (42) with `predator:
+/// None`, the shape the campaign measured at 0 frightening pairs.** So
+/// `first`/`second`/`third` below all have an EMPTY `shunned` set, and the
+/// two `assert_eq!`s pin determinism of an empty `HazardMemory`, not
+/// byte-identity of a populated one — see the assertion after them, which
+/// states that as a denominator rather than leaving it implicit, and points
+/// at `windows/vessel/src/liveness_tests/emitter_scan.rs`'s
+/// `the_indexed_scan_and_read_equal_the_pre_index_oracles` for the
+/// non-empty-set proof (a haunted overlay, 497 frightening pairs, 120
+/// emitter-free reads compared). This function's OWN load-bearing floor is
+/// unaffected: H5's field-sample and hazards()-call counts
+/// (`warm_samples`/`second_fresh_samples`/`warm_hazards` and friends), which
+/// the caller asserts on, do not depend on `shunned` being non-empty.
 pub fn probe_counts(shape: &BenchShape) -> ProbeCounts {
     let pi = probe_index(shape);
     let npc = &shape.npcs[pi];
@@ -346,7 +362,10 @@ pub fn probe_counts(shape: &BenchShape) -> ProbeCounts {
     );
     assert_eq!(
         first, second,
-        "two reads of one instant over one ledger must agree"
+        "two reads of one instant over one ledger must agree — on this shape (seed {H5_SEED}, \
+         predator: None) both sides' `shunned` is empty by measurement, so this pins \
+         determinism of an EMPTY result; see this function's doc comment for where the \
+         non-empty case is proven"
     );
     let warm_hazards = terrain.hazards_calls();
     let samples_after_second = shape.ground.borrow().misses();
@@ -369,9 +388,19 @@ pub fn probe_counts(shape: &BenchShape) -> ProbeCounts {
     );
     assert_eq!(
         first, third,
-        "a third read of the same instant, with a fresh PrimaryAfraidMemo, must agree too"
+        "a third read of the same instant, with a fresh PrimaryAfraidMemo, must agree too — on \
+         this shape both sides' `shunned` is empty by measurement, so this too pins determinism \
+         of an EMPTY result rather than proving byte-identity of a populated one"
     );
     let samples_after_third = shape.ground.borrow().misses();
+    assert!(
+        first.shunned.is_empty(),
+        "this shape (seed {H5_SEED}, predator: None) is emitter-free by measurement — 0 \
+         frightening pairs — so the two equalities above compare empty against empty; if it \
+         ever gains a shunned room, they become real byte-identity evidence here and the \
+         emitter_scan oracle is no longer the only proof of it — update this function's doc \
+         comment"
+    );
 
     // COMPONENT ATTRIBUTION (Task 6 fix round 1): the tick's other fear-path
     // caller, measured on the same terrain and the same instant as the probe
@@ -736,7 +765,23 @@ fn the_detent_emitter_walk_is_deterministic() {
 /// answer is unchanged. 30 reads of [`hazard_memory_memo`] on the bench
 /// shape's probe, `evict_all` alternated on and off, each read taking a FRESH
 /// `PrimaryAfraidMemo` (production's own per-tick shape) but the SAME
-/// `GroundHazards` — every result must equal the first, byte for byte.
+/// `GroundHazards` — every result must equal the first.
+///
+/// **What "equal" proves on THIS shape, stated rather than left to imply
+/// more than it does.** `bench_shape` here is seed [`H5_SEED`] (42) with
+/// `predator: None`, which the campaign measured at 0 frightening pairs: so
+/// every one of these 30 `HazardMemory` results has an EMPTY `shunned` set,
+/// and the equality above pins determinism of an empty result across chaos
+/// eviction, not byte-identity of a populated one. This test's actual
+/// load-bearing floor is its OTHER two checks: `a_miss_grew_on_eviction`
+/// (an eviction must force at least one real recompute, so the 30 reads are
+/// not vacuously cheap) and the `expected_rooms` equality below (the memo's
+/// resident room count against a sample set computed independently of
+/// `GroundHazards`, from `build_emitter_scan`'s own pass). The non-vacuous
+/// byte-identity proof over a NON-empty `HazardMemory` lives in
+/// `windows/vessel/src/liveness_tests/emitter_scan.rs`'s
+/// `the_indexed_scan_and_read_equal_the_pre_index_oracles` (a haunted
+/// overlay, 497 frightening pairs, 120 emitter-free reads compared).
 #[test]
 fn ground_memo_survives_chaos_eviction() {
     let shape = bench_shape(H5_SEED, 20, 10);
@@ -782,6 +827,17 @@ fn ground_memo_survives_chaos_eviction() {
     assert!(
         a_miss_grew_on_eviction,
         "an eviction must force at least one recompute, or this test denominates nothing"
+    );
+    assert!(
+        first
+            .as_ref()
+            .expect("30 reads ran, so first was set")
+            .shunned
+            .is_empty(),
+        "this shape (seed {H5_SEED}, predator: None) is emitter-free by measurement — 0 \
+         frightening pairs — so the 30-way equality above compares empty against empty; if it \
+         ever gains a shunned room, that equality becomes real byte-identity evidence here and \
+         the emitter_scan oracle is no longer the only proof of it — update the doc comment above"
     );
 
     // The index is fully advanced before the comparator below is stated,
@@ -1046,6 +1102,22 @@ pub const RULE_FIVE_TICKS: usize = 10;
 /// populated it) or FRESH (rebuilt from scratch at that past instant): the
 /// index's prefix machinery must not depend on which sightings after the
 /// read instant happen to already be folded in.
+///
+/// **What the equality proves here, stated exactly.** [`RULE_FIVE_SEED`] is
+/// 42 with `predator: None` (`bench_shape`'s default), the shape the
+/// campaign measured at 0 frightening pairs — so `warm.shunned` and
+/// `fresh.shunned` are both empty on every one of these
+/// [`RULE_FIVE_AGENTS`] comparisons, and the equality pins determinism of an
+/// EMPTY `HazardMemory` across a discarded-and-rebuilt store, not
+/// byte-identity of a populated one. This test's own load-bearing floor is
+/// its OTHER assertion: `hazards_in_the_past` must actually grow
+/// (`after - before > 0`), i.e. at least one of these reads really lands
+/// before a committed sighting, which is the denominator the prefix
+/// machinery needs to be exercised at all. The non-vacuous byte-identity
+/// proof over a NON-empty `HazardMemory` lives in
+/// `windows/vessel/src/liveness_tests/emitter_scan.rs`'s
+/// `the_indexed_scan_and_read_equal_the_pre_index_oracles` (a haunted
+/// overlay, 497 frightening pairs, 120 emitter-free reads compared).
 #[test]
 fn rule_five_witness_past_instant_reads_on_the_lab_shape() {
     let shape = bench_shape(RULE_FIVE_SEED, RULE_FIVE_TICKS, RULE_FIVE_AGENTS);
@@ -1084,7 +1156,11 @@ fn rule_five_witness_past_instant_reads_on_the_lab_shape() {
 
         // The discard check: the same `hazard_memory_memo` call, served by
         // the WARM store above against a FRESH one rebuilt from scratch at
-        // this same past instant, must agree byte for byte.
+        // this same past instant, must agree. On this shape (seed
+        // RULE_FIVE_SEED = 42, predator: None) both sides' `shunned` is
+        // empty by measurement, so this pins determinism of an EMPTY
+        // result — see this test's own doc comment above for where the
+        // non-empty case is proven.
         let mut warm_memo = PrimaryAfraidMemo::new();
         let warm = hazard_memory_memo(
             &shape.ledger,
@@ -1110,7 +1186,18 @@ fn rule_five_witness_past_instant_reads_on_the_lab_shape() {
             warm, fresh,
             "entity {:?} at past instant {past_t:?}: a warm store and a store discarded and \
              rebuilt from scratch at this instant must agree, or the verdict index depends on \
-             sightings after the instant being read",
+             sightings after the instant being read — on this shape both sides' `shunned` is \
+             empty by measurement, so this pins determinism of an EMPTY result rather than \
+             proving byte-identity of a populated one",
+            npc.entity
+        );
+        assert!(
+            warm.shunned.is_empty(),
+            "entity {:?}: this shape (seed {RULE_FIVE_SEED}, predator: None) is emitter-free by \
+             measurement — 0 frightening pairs — so the equality above compares empty against \
+             empty; if it ever gains a shunned room, it becomes real byte-identity evidence \
+             here and the emitter_scan oracle is no longer the only proof of it — update this \
+             test's doc comment",
             npc.entity
         );
         compared += 1;
