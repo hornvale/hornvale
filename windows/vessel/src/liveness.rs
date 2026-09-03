@@ -3367,7 +3367,18 @@ impl SiteGrade {
 /// reaches for — [`fatigue_at`]'s own doc says its callers pass what the fold
 /// needs "exactly as `drive_at`'s callers already pass a [`DriveParams`]" —
 /// and it keeps [`fatigue_with_pending`] under `clippy::too_many_arguments`
-/// without the workspace's first `#[allow]` for it.
+/// without adding a SEVENTEENTH `#[allow]` for that lint to this file.
+///
+/// **That last clause said "the workspace's first `#[allow]`" and was simply
+/// false** — fix round 1, Important 1. Measured at the time of the
+/// correction: 75 in the workspace, **16 in this file**. The ruling is
+/// unchanged, because it never rested on that premise: the `DriveParams`
+/// precedent above is real and sits in this same module, and the
+/// transposition footgun is real. But a reason is a tripwire a later reader
+/// checks, and a false one teaches this workspace forbids something it does
+/// 75 times. The honest form of the argument is that the lint is already
+/// suppressed often enough here that a further suppression buys nothing a
+/// name would not buy better.
 ///
 /// Both fields are looked up ONCE, at [`creature_fatigue`], which is the
 /// single door the read and the mover both reach fatigue through; a caller

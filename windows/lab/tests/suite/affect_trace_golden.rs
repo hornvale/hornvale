@@ -135,22 +135,33 @@
 //! assumed.** That task replaced the universal `AFFORDED_REST_GAIN = 1.5`
 //! with a seven-valued per-species table
 //! (`hornvale_species::sleep_grade_registry`), which changes the recovery
-//! multiplier for **24 of the roster's 39 kinds** — including four of the six
+//! multiplier for **25 of the roster's 39 kinds** — 14 sit unchanged at the
+//! peoples' ceiling and every other row moves DOWN — including four of the six
 //! species this very fixture samples (`carrion-crawler` and `otyugh` 1.5 ->
 //! 1.35, `rust-monster` 1.5 -> 1.20, `xorn` 1.5 -> 1.00). The fixture did not
 //! move by a byte. Given that shape, "no diff" needed a positive control
-//! rather than an announcement, and three were run:
+//! rather than an announcement, and four were run:
 //!
 //! ```text
 //!   MADE_FOR_THE_BODY 1.50 -> 4.00   (the peoples' row)      GREEN
 //!   INSULATION_ONLY   1.35 -> 4.00   (the wild endotherms)   GREEN
-//!   SiteGrade::Bare   1.0  -> 2.0    (the bare-ground arm)   RED, 27821 -> 28022 bytes
+//!   ALL SEVEN rungs        -> 4.00   (the whole table)       GREEN
+//!   SiteGrade::Bare   1.0  -> 2.0    (the bare-ground arm)   RED, 28022 -> 27821 bytes
 //! ```
 //!
+//! The byte figures read committed -> mutant, in that order: the committed
+//! fixture is 28,022 bytes and the mutant produced 27,821. `assert_golden`
+//! prints them as `(expected vs actual)`, and this line said `27821 -> 28022`
+//! until fix round 1 — which parses as "the golden grew", the opposite of
+//! what happened. The whole-table control is the reviewer's, and it is the
+//! strongest of the four: it moves every rung this task authored at once and
+//! the fixture is still byte-identical, while a mutation one line away in the
+//! same `match` reddens hard.
+//!
 //! **So this fixture is structurally BLIND to the per-species sleep-grade
-//! table, and that is the finding, not the null.** The third mutation proves
+//! table, and that is the finding, not the null.** The LAST mutation proves
 //! the trace is fully sensitive to the site multiplier the fold applies — it
-//! reddens hard on the `Bare` arm — and the first two prove no body in the
+//! reddens hard on the `Bare` arm — and the first three prove no body in the
 //! traced window ever takes an `Afforded` bout at all, at any gain. The
 //! mechanism is `room_affords_rest`: `SupportsRest` is carried today only by
 //! `the-fireside-bed`, which the locale vocabulary composes only in a BUILT,

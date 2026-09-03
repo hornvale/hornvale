@@ -560,14 +560,38 @@ and means no kind in any world gains MORE from a bed than it did before.
 
 **A ruling I made against the brief, and why.** The brief said to mirror
 `rate` — look the species value up at the caller, pass a scalar. I did, and
-clippy refused `fatigue_with_pending` at 8/7 arguments. Rather than take the
-workspace's first `#[allow(clippy::too_many_arguments)]`, both scalars became
-a `SleepTraits { rise, afforded_gain }` struct. That is the shape
-`fatigue_at`'s own doc already reaches for ("exactly as `drive_at`'s callers
-already pass a `DriveParams`"), and it kills a footgun the flat form had:
-`rate` and `afforded_gain` are both bare `f64`, adjacent, and each plausible
-in the other's slot, so a transposition type-checked. Named fields cannot be
-transposed.
+clippy refused `fatigue_with_pending` at 8/7 arguments. Rather than add a
+SEVENTEENTH `#[allow(clippy::too_many_arguments)]` to `liveness.rs`, both
+scalars became a `SleepTraits { rise, afforded_gain }` struct. That is the
+shape `fatigue_at`'s own doc already reaches for ("exactly as `drive_at`'s
+callers already pass a `DriveParams`"), and it kills a footgun the flat form
+had: `rate` and `afforded_gain` are both bare `f64`, adjacent, and each
+plausible in the other's slot, so a transposition type-checked. Named fields
+cannot be transposed.
+
+**CORRECTION, fix round 1 (Important 1): the sentence above originally read
+"Rather than take the workspace's FIRST `#[allow(clippy::too_many_arguments)]`",
+and that was false.** Measured on review:
+
+```
+$ grep -rn "#\[allow(clippy::too_many_arguments)\]" --include=*.rs kernel domains windows cli | wc -l
+      75
+$ grep -c "allow(clippy::too_many_arguments)" windows/vessel/src/liveness.rs
+      16
+```
+
+75 in the workspace and **16 in the very file I was editing**. The ruling
+survives untouched, because it never rested on that premise — the reviewer
+re-verified both of its real grounds independently, and `DriveParams`
+(`liveness.rs:142`) is a structurally identical precedent in the same module.
+What failed is the *justification*, and it failed in the way this campaign has
+now seen twice: I grepped for the string across the whole tree, read a head of
+output dominated by `clients/`, and reported a COUNT I had never taken. A
+mechanism read off the code is a hypothesis until it is counted, and a count is
+one `wc -l` away. Left visible rather than silently rewritten because a durable
+ledger's job is to be trusted by a campaign that cannot re-derive it: a reader
+who took that clause at face value would have learned this workspace forbids
+something it does 75 times.
 
 **Deferred minor — the two unbuilt rungs got a doc, not a tag.** Spec §4d
 asks for `per-people` and `per-individual` declared as tagged seams. Neither
@@ -580,13 +604,52 @@ appear in `docs/audits/plumb-roster.md`'s Fidelity findings table, so that
 table is not the place a future reader will find them.
 
 **The finding worth carrying past this task.** `affect-trace-seed-42.txt` did
-not move, despite the table changing the multiplier for four of the six
-species it samples. That null needed a control, and got three: exaggerating
-the peoples' row to `4.00` — GREEN; exaggerating the wild endotherms' row to
-`4.00` — GREEN; changing `SiteGrade::Bare`'s own `1.0` to `2.0` — RED
-(27821 -> 28022 bytes). So the fixture is fully sensitive to the site
-multiplier and *no body in its traced window ever takes an afforded bout*:
-`SupportsRest` is carried only by `the-fireside-bed`, which needs a built,
-cold room, and seed 42's trace is entirely open ground. **A green run of that
-golden is not evidence about anything on the afforded path**, and the module
-doc now says so at the point of use.
+not move, despite the table changing the multiplier for **25 of 39 kinds** —
+14 sit unchanged at the peoples' ceiling and every other row moves DOWN —
+including four of the six species the fixture samples. That null needed a
+control, and got four: exaggerating the peoples' row to `4.00` — GREEN;
+exaggerating the wild endotherms' row to `4.00` — GREEN; setting **all seven
+rungs** to `4.00` at once — GREEN; changing `SiteGrade::Bare`'s own `1.0` to
+`2.0` — RED (committed 28,022 bytes, mutant 27,821). So the fixture is fully
+sensitive to the site multiplier and *no body in its traced window ever takes
+an afforded bout*: `SupportsRest` is carried only by `the-fireside-bed`,
+which needs a built, cold room, and seed 42's trace is entirely open ground.
+**A green run of that golden is not evidence about anything on the afforded
+path**, and the module doc now says so at the point of use.
+
+**Fix round 1 corrected two published numbers in that paragraph, and both
+were mine.** The count read "four of the six species" against a roster figure
+of **24** where the true figure is **25** — an off-by-one I produced by
+arithmetic on my own prose instead of counting the live table, which is one
+`awk | grep -vc` away and is what I did on review. And the RED control's
+bytes read `27821 -> 28022`, which parses as "the golden grew" when the
+opposite happened: `assert_golden` prints `(expected vs actual)`, so the
+committed fixture is 28,022 and the mutant produced 27,821. Both sat in the
+module doc that is this task's most-cited artifact, beside four prior
+adjudications a future campaign will pattern-match against — a reversed pair
+there does not merely mislead, it teaches the wrong reading convention for
+every adjudication above it. The whole-table control is the reviewer's; I
+re-ran it rather than transcribing it, and it reproduces GREEN.
+
+#17 [Task 4, fix round 1] — **Two reviewer observations recorded for the
+retrospective. Neither was asked to be fixed and neither was.**
+
+**The seven-rung derivation rule lives in prose; nothing ties a row to the
+traits it cites.** The reviewer demonstrated it by raising `owlbear`'s mass
+to 1500 kg: it keeps `INSULATION_ONLY` where the stated rule says
+`TOO_LARGE_TO_FIT`, and only an unrelated life-history golden objects. This
+is exactly `fatigue_rise_registry`'s shape, which the brief instructed this
+task to follow, so it is not a deviation — but it is the honest cost of an
+authored table, and it is worth knowing that **the tonne threshold lands on
+`giant-crocodile`'s exact mass, 1000.0**, so that row is one edit from
+flipping rungs with nothing to object. A test that re-derives each row from
+its traits would close it, at the price of encoding the rule twice.
+
+**`DEFAULT_SLEEP_GRADE` is documented as "human's row" and nothing pins the
+equality.** Same unpinned claim `DEFAULT_FATIGUE_RISE` already carries beside
+it — so this is a shared, pre-existing shape rather than something this task
+introduced, and closing it for one without the other would be the worse
+outcome.
+
+Both belong in the retrospective as findings for the owner, not as defects
+this campaign converted.
