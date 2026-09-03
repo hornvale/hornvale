@@ -771,6 +771,171 @@ impl SustenanceMemo {
     }
 }
 
+/// One entity's held verdicts about the ground it has stood on (The Detent,
+/// spec §2.2).
+#[derive(Debug, Default)]
+struct GroundEntry {
+    /// Trail entries already judged; the cursor.
+    consumed: usize,
+    /// Rooms judged frightening, ascending by FIRST visit, one entry per room.
+    frightening: Vec<(WorldTime, Facet)>,
+    /// Every room judged, with its verdict.
+    judged: BTreeMap<Facet, bool>,
+}
+
+/// A read-side index of the frightening verdict per `(entity, room)` — the
+/// answer `threat_field(room, niche) × mettle ≥ DANGER_ACT` gives, which over
+/// a fixed terrain is a constant per pair. Advanced from the entity's
+/// [`Trail`] by a consumed-prefix cursor (the [`MemoPartition`] shape); the
+/// predicate is the CALLER's, applied at read, so `LedgerFold::absorb` still
+/// sees only facts (The Pawl's `Alarm`-is-not-a-tenant ruling, kept). A
+/// pure function of `(ledger prefix, terrain)`; discardable at any instant.
+///
+/// `frightening` is ordered by first visit so that "the frightening rooms
+/// at a past `t`" is a `partition_point` prefix — the lab's waking-instant
+/// reads need exactly that (spec §2.2).
+///
+/// # ONE INDEX PER `(LocaleContext, predator field)` — the same rule the room
+/// # memo states, and it is this type's only correctness precondition
+///
+/// A held verdict is the answer ONE hazard field gave. The predicate is
+/// `feels_frightening(threat_field(room, niche, terrain), 0.0, boldness)`,
+/// and `threat_field` reads `Terrain::hazards` over the room and its
+/// neighbours — so the verdict is a function of the ROOM, the creature, and
+/// the terrain's hazard field. The first two are keyed; **the third is
+/// supplied by ownership**, exactly as [`crate::ground::GroundHazards`]
+/// supplies it and for the same reason. The store that holds this index
+/// belongs to one session and one world; its owner builds every terrain the
+/// index is advanced through over one `LocaleContext` and one predator field,
+/// which do not change after `Session::start`.
+///
+/// It is NOT one `Terrain` VALUE per store — production builds many
+/// (`Session` at five sites, the lab one per tick) — for the reason
+/// [`SustenanceMemo`]'s doc gives in full for the temperature field: two
+/// `LocaleTerrain` values over the same context and the same field are
+/// interchangeable here however their mesh or room memos differ, because both
+/// are faithful caches of a pure function rather than parameters of it.
+///
+/// **A caller that must read under a DIFFERENT hazard field builds a new
+/// store.** Discarding this index is unobservable at any instant (it is a
+/// pure function of `(ledger prefix, terrain)` and rebuilds on demand), so
+/// that is always available and always cheap. Advancing one index under two
+/// disagreeing fields is the one thing that makes it wrong, and the failure
+/// is SILENT and byte-visible: the second field's read returns the first
+/// field's verdict, no room is re-judged, and nothing anywhere objects.
+/// `liveness_tests/emitter_scan.rs`'s
+/// `a_verdict_index_belongs_to_one_terrain_and_a_second_field_reads_the_first_ones_verdict`
+/// demonstrates that aliasing rather than asserting it cannot happen — the
+/// same shape as the room memo's own two-terrain test in
+/// `tests/suite/the_detent.rs`.
+#[derive(Debug, Default)]
+pub struct FrighteningGround {
+    /// Every entity's held verdicts, keyed by entity.
+    by_entity: BTreeMap<EntityId, GroundEntry>,
+}
+
+impl FrighteningGround {
+    /// Judge the sightings after the cursor, hold the verdicts, move the
+    /// cursor to the trail's end. `judge` is asked ONCE per new room.
+    /// type-audit: bare-ok(count: return)
+    pub fn advance(
+        &mut self,
+        entity: EntityId,
+        trail: &[(WorldTime, Facet)],
+        judge: &mut dyn FnMut(&Facet) -> bool,
+    ) -> u64 {
+        let entry = self.by_entity.entry(entity).or_default();
+        let mut judged = 0_u64;
+        // The trail is append-only within a store (a `LedgerFold` only ever
+        // absorbs) and `consumed` is set only to `trail.len()`, so the cursor
+        // can never exceed the trail it indexes; a store discarded is
+        // discarded WHOLE, so this index and the trail it indexes are always
+        // rebuilt together. A violated invariant panics loudly on the slice
+        // below in release rather than being silently clamped.
+        debug_assert!(
+            entry.consumed <= trail.len(),
+            "the trail is append-only and the cursor is only ever set to its length, \
+             so a cursor past the trail's end means this index outlived the trail it indexes"
+        );
+        for (day, room) in &trail[entry.consumed..] {
+            if entry.judged.contains_key(room) {
+                continue;
+            }
+            let verdict = judge(room);
+            entry.judged.insert(room.clone(), verdict);
+            judged += 1;
+            if verdict {
+                // The trail is ascending by (day, room), so this is the
+                // room's first visit and the list stays ascending by first
+                // visit without a sort.
+                entry.frightening.push((*day, room.clone()));
+            }
+        }
+        entry.consumed = trail.len();
+        judged
+    }
+
+    /// The frightening rooms first visited at or before `t`, ascending by
+    /// first visit.
+    pub fn frightening_at(&self, entity: EntityId, t: WorldTime) -> &[(WorldTime, Facet)] {
+        match self.by_entity.get(&entity) {
+            Some(e) => {
+                let n = e.frightening.partition_point(|(d, _)| *d <= t);
+                &e.frightening[..n]
+            }
+            None => &[],
+        }
+    }
+
+    /// The verdict already held for `room`, if any.
+    /// type-audit: bare-ok(flag: return)
+    pub fn verdict(&self, entity: EntityId, room: &Facet) -> Option<bool> {
+        self.by_entity
+            .get(&entity)
+            .and_then(|e| e.judged.get(room).copied())
+    }
+
+    /// Rooms judged for `entity`, both verdicts.
+    /// type-audit: bare-ok(count: return)
+    pub fn judged(&self, entity: EntityId) -> usize {
+        self.by_entity.get(&entity).map_or(0, |e| e.judged.len())
+    }
+
+    /// Every entity's judged-room count summed — M1's entry count.
+    /// type-audit: bare-ok(count: return)
+    pub fn entries(&self) -> usize {
+        self.by_entity.values().map(|e| e.judged.len()).sum()
+    }
+
+    /// An estimate of the bytes this index holds, over every entity: every
+    /// JUDGED room's key size (`size_of::<Facet>()` plus its `path`'s heap
+    /// length) plus one `size_of::<bool>()` verdict, PLUS every FRIGHTENING
+    /// entry's `size_of::<(WorldTime, Facet)>()` plus its own room's `path`
+    /// heap length (The Detent, spec §4 M1) — the two collections
+    /// [`GroundEntry`] actually holds, summed the same way
+    /// [`crate::ground::GroundHazards::held_bytes`] sums its own key set. An
+    /// ESTIMATE of held data, not an allocator measurement: it counts
+    /// neither `BTreeMap`/`Vec` overhead nor any allocator slack.
+    /// type-audit: bare-ok(count: return)
+    pub fn held_bytes(&self) -> usize {
+        let judged: usize = self
+            .by_entity
+            .values()
+            .flat_map(|e| e.judged.keys())
+            .map(|room| {
+                std::mem::size_of::<Facet>() + room.path.len() + std::mem::size_of::<bool>()
+            })
+            .sum();
+        let frightening: usize = self
+            .by_entity
+            .values()
+            .flat_map(|e| e.frightening.iter())
+            .map(|(_, room)| std::mem::size_of::<(WorldTime, Facet)>() + room.path.len())
+            .sum();
+        judged + frightening
+    }
+}
+
 /// What the store's reads have cost and what they have seen — the counters two
 /// of this campaign's decision rules are asserted through.
 ///
@@ -812,12 +977,12 @@ pub struct ReadWitness {
     first_belief_in_the_past: Option<(EntityId, WorldTime, WorldTime)>,
     /// How many HAZARD-MEMORY lookups have been made — `hazard_memory_memo`
     /// calls, and nothing else. Its own denominator, kept separate from the
-    /// belief pair because the two functions do NOT share a caller set: four
-    /// of `hazard_memory_memo`'s five callers make no paired belief read at
-    /// all (`believed_hazard`/`believed_hazard_memo`/`hazard_memory` are their
-    /// own public entry points, and the two walk-path calls precede the
-    /// `WalkState::begin` that reads belief), so counting one and inferring
-    /// the other is an inference dressed as a measurement.
+    /// belief pair because the two functions do NOT share a caller set: three
+    /// of `hazard_memory_memo`'s four callers make no paired belief read at
+    /// all (`believed_hazard`/`hazard_memory` are their own public entry
+    /// points, and the two walk-path calls precede the `WalkState::begin`
+    /// that reads belief), so counting one and inferring the other is an
+    /// inference dressed as a measurement.
     hazard_lookups: u64,
     /// How many of those ran at an instant STRICTLY BEFORE a committed
     /// sighting of the same entity — spec §3 rule 6's quantity for the
@@ -866,6 +1031,22 @@ pub struct ReadWitness {
     /// emitter probe too, which seed 42 makes 320 of and which is not this
     /// path at all.
     alarm_replays: u64,
+    /// How many ROOMS the frightening-verdict index has judged, ever — the
+    /// `judge` calls [`FrighteningGround::advance`] actually made, summed over
+    /// every advance on this store.
+    ///
+    /// It is H6's instrument (spec §4): the campaign's claim is that the
+    /// scan's per-tick work is O(NEW sightings), and "new" is exactly what
+    /// this counts — a room already judged is skipped inside `advance` and
+    /// adds nothing here. A count of `advance` CALLS would not say it (the
+    /// number of calls is the roster size either way), and a count of
+    /// `hazards()` calls would fold in the room memo's own hit rate, which is
+    /// a different mechanism measured by a different number.
+    ground_judged: u64,
+    /// How many `(WorldTime, Facet)` entries `build_emitter_scan`'s pass 3
+    /// has copied out of the trail, ever — spec §3 rule 4's own numerator,
+    /// taken at the exact `[..upto].to_vec()` the rule is about.
+    emitter_timeline_copied: u64,
     /// Per entity, how many TERRAIN TEMPERATURE samples its sustenance reads
     /// have taken, ever.
     ///
@@ -1042,6 +1223,21 @@ impl ReadWitness {
         self.alarm_replays += 1;
     }
 
+    /// Record that the frightening-verdict index judged `n` new rooms — the
+    /// return of one [`FrighteningGround::advance`]. See the field doc for why
+    /// the quantity is judged ROOMS rather than advance calls.
+    /// type-audit: bare-ok(count: n)
+    pub fn note_ground_judged(&mut self, n: u64) {
+        self.ground_judged += n;
+    }
+
+    /// Record that `build_emitter_scan`'s pass 3 copied `entries` sightings
+    /// out of one emitter's trail — spec §3 rule 4's own instrument.
+    /// type-audit: bare-ok(count: entries)
+    pub fn note_emitter_timeline_copied(&mut self, entries: u64) {
+        self.emitter_timeline_copied += entries;
+    }
+
     /// How many emitter scans have been built — the DENOMINATOR
     /// [`Self::emitter_scans_with_emitters`] is a count out of.
     /// type-audit: bare-ok(count: return)
@@ -1062,6 +1258,20 @@ impl ReadWitness {
     /// type-audit: bare-ok(count: return)
     pub fn alarm_replays(&self) -> u64 {
         self.alarm_replays
+    }
+
+    /// How many rooms the frightening-verdict index has judged, ever — H6's
+    /// numerator (see the field doc).
+    /// type-audit: bare-ok(count: return)
+    pub fn ground_judged(&self) -> u64 {
+        self.ground_judged
+    }
+
+    /// How many `(WorldTime, Facet)` entries the emitter scan's pass 3 has
+    /// copied out of a trail, ever — spec §3 rule 4's own numerator.
+    /// type-audit: bare-ok(count: return)
+    pub fn emitter_timeline_copied(&self) -> u64 {
+        self.emitter_timeline_copied
     }
 
     /// How many hazard-memory lookups have been made — the DENOMINATOR
@@ -1230,6 +1440,12 @@ pub struct ResidentFolds {
     /// because it is a function of the temperature field and `home` as well as
     /// the ledger; see [`SustenanceMemo`].
     sustenance_memo: SustenanceMemo,
+    /// The per-entity frightening-verdict index — not a tenant either, and
+    /// for the same reason: the judge is the caller's threat-field query, not
+    /// a function of the ledger alone. It does not join [`Self::advance`]; it
+    /// advances at read through its own consumed-prefix cursor, like
+    /// [`Self::sustenance_memo`]. See [`FrighteningGround`].
+    frightening_ground: FrighteningGround,
     /// What the reads above have cost and seen — not a tenant, and not folded
     /// state; see [`ReadWitness`].
     witness: ReadWitness,
@@ -1345,8 +1561,14 @@ impl ResidentFolds {
     }
 
     /// The room-indexed visit lists, current with `ledger` — the plain
-    /// accessor, for a reader not taking the rule-6 witness (the property
-    /// tests, and the alarm scan, which asks only for rooms).
+    /// accessor, for a reader not taking the rule-6 witness. Since The
+    /// Detent's Task 9c (`932409875`) that is exactly ONE reader:
+    /// `hazard_memory_memo`'s EMITTER path, which builds the per-room latest
+    /// visit only once an emitter is in range. The emitter-free path reads
+    /// the verdict index instead and calls this not at all. The property
+    /// tests this doc used to name do not call it either: they fold their own
+    /// [`Folded<LatestVisit>`] against a scan oracle, and the tests that want
+    /// a live store's visits take [`Self::latest_visit_and_trail`].
     pub fn latest_visit(&mut self, ledger: &Ledger) -> &LatestVisit {
         self.advance(ledger);
         self.latest_visit.state()
@@ -1362,22 +1584,29 @@ impl ResidentFolds {
         (self.latest_visit.state(), self.trail.state())
     }
 
-    /// The room-indexed visit lists, the trail and the read witness together,
-    /// from ONE guard — `hazard_memory_memo`'s own read. [`Trail`] rides along
-    /// for [`Self::known_water_and_trail`]'s reason: the rule-6 witness asks
-    /// whether `t` lies before this entity's last committed sighting, which is
-    /// the trail's last entry at O(1), and a second `borrow_mut` to ask it
-    /// would panic.
-    pub fn latest_visit_and_witness(
+    /// The visit lists, the trail, the verdict index and the witness — the
+    /// hazard path's read (The Detent).
+    pub fn latest_visit_trail_and_ground(
         &mut self,
         ledger: &Ledger,
-    ) -> (&LatestVisit, &Trail, &mut ReadWitness) {
+    ) -> (
+        &LatestVisit,
+        &Trail,
+        &mut FrighteningGround,
+        &mut ReadWitness,
+    ) {
         self.advance(ledger);
         (
             self.latest_visit.state(),
             self.trail.state(),
+            &mut self.frightening_ground,
             &mut self.witness,
         )
+    }
+
+    /// The frightening-verdict index alone, read-only.
+    pub fn frightening_ground(&self) -> &FrighteningGround {
+        &self.frightening_ground
     }
 
     /// The read witness alone, mutably — for the two hazard-path counters that
@@ -1429,5 +1658,117 @@ impl ResidentFolds {
              visit lists must stand at the same position"
         );
         position
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A room address, spelled the way a committed `agent-at` spells one —
+    /// copied from `windows/vessel/tests/suite/resident_folds.rs`'s `room()`.
+    fn room(face: u8, path: &[u8]) -> Facet {
+        Facet {
+            face,
+            path: path.to_vec(),
+        }
+    }
+
+    #[test]
+    fn advance_judges_each_room_once_and_holds_the_verdict() {
+        let e = EntityId::new(7).expect("id");
+        let t = |d: i64| WorldTime::from_ticks(d * WorldTime::TICKS_PER_STD_DAY);
+        let trail = vec![
+            (t(1), room(0, &[1])),
+            (t(2), room(0, &[2])),
+            (t(3), room(0, &[1])),
+        ];
+        let mut g = FrighteningGround::default();
+        let mut asked = Vec::new();
+        let judged = g.advance(e, &trail, &mut |r| {
+            asked.push(r.clone());
+            *r == room(0, &[2])
+        });
+        assert_eq!(judged, 2, "two distinct rooms, the revisit is not re-asked");
+        assert_eq!(asked.len(), 2);
+        assert_eq!(
+            g.advance(e, &trail, &mut |_| panic!("nothing new to judge")),
+            0
+        );
+        assert_eq!(g.frightening_at(e, t(3)), &[(t(2), room(0, &[2]))]);
+        assert_eq!(
+            g.frightening_at(e, t(1)),
+            &[] as &[(WorldTime, Facet)],
+            "at t(1) the frightening room was not yet first-visited"
+        );
+        assert_eq!(g.verdict(e, &room(0, &[1])), Some(false));
+        assert_eq!(g.verdict(e, &room(0, &[9])), None);
+        assert_eq!((g.judged(e), g.entries()), (2, 2));
+    }
+
+    #[test]
+    fn a_later_advance_over_a_longer_trail_only_judges_the_new_rooms() {
+        let e = EntityId::new(8).expect("id");
+        let t = |d: i64| WorldTime::from_ticks(d * WorldTime::TICKS_PER_STD_DAY);
+        let mut trail = vec![(t(1), room(0, &[1]))];
+        let mut g = FrighteningGround::default();
+        g.advance(e, &trail, &mut |_| true);
+        trail.push((t(2), room(0, &[1])));
+        trail.push((t(3), room(0, &[5])));
+        let judged = g.advance(e, &trail, &mut |r| *r == room(0, &[5]));
+        assert_eq!(judged, 1);
+        assert_eq!(g.frightening_at(e, t(3)).len(), 2);
+    }
+
+    #[test]
+    fn discarding_the_index_and_rebuilding_gives_the_same_prefixes() {
+        let e = EntityId::new(9).expect("id");
+        let t = |d: i64| WorldTime::from_ticks(d * WorldTime::TICKS_PER_STD_DAY);
+        let trail: Vec<(WorldTime, Facet)> = (1..=12)
+            .map(|i| (t(i), room(0, &[(i % 5) as u8])))
+            .collect();
+        let judge = |r: &Facet| r.path.last().copied().unwrap_or(0) % 2 == 1;
+        let mut whole = FrighteningGround::default();
+        whole.advance(e, &trail, &mut {
+            let j = judge;
+            move |r| j(r)
+        });
+        for cut in 1..=12 {
+            let mut fresh = FrighteningGround::default();
+            fresh.advance(e, &trail[..cut], &mut {
+                let j = judge;
+                move |r| j(r)
+            });
+            fresh.advance(e, &trail, &mut {
+                let j = judge;
+                move |r| j(r)
+            });
+            assert_eq!(
+                fresh.frightening_at(e, t(12)),
+                whole.frightening_at(e, t(12)),
+                "cut at {cut}"
+            );
+        }
+    }
+
+    /// The trail-order claim in `advance` is load-bearing: `Trail` is
+    /// ascending by `(day, room)`, so the first occurrence of a room in trail
+    /// order IS its earliest day. Room A is visited at day 1 and again at day
+    /// 3, interleaved with room B at day 2 — `frightening_at` must carry A at
+    /// day 1, not 3.
+    #[test]
+    fn the_frightening_day_held_is_the_rooms_first_visit_not_a_later_one() {
+        let e = EntityId::new(10).expect("id");
+        let t = |d: i64| WorldTime::from_ticks(d * WorldTime::TICKS_PER_STD_DAY);
+        let a = room(0, &[1]);
+        let b = room(0, &[2]);
+        let trail = vec![(t(1), a.clone()), (t(2), b.clone()), (t(3), a.clone())];
+        let mut g = FrighteningGround::default();
+        g.advance(e, &trail, &mut |_| true);
+        assert_eq!(
+            g.frightening_at(e, t(3)),
+            &[(t(1), a.clone()), (t(2), b.clone())],
+            "A's held day must be its FIRST visit (day 1), not the later revisit (day 3)"
+        );
     }
 }

@@ -20,7 +20,17 @@ An inversion pass killed it. The world already has an omniscient affect read:
 `needs` reports every co-located creature's felt state *through the same
 arbitration that drives it*. A host that reports its arbitration accurately is
 that oracle wearing a pronoun — the player learns, by a second route, exactly
-what she already knew. The gap is therefore not a refinement layered onto
+what she already knew.
+
+*Amended 2026-09-02 by [The Rack](./the-rack.md): the argument stands and its
+mechanism has changed. `needs` no longer re-runs an arbitration on each
+creature's behalf — it reads back the resolution that creature's own last tick
+reached, stored in the roster's felt column (decision 0596). The stateless
+read this chapter compares testimony against was itself a re-imagining,
+adopted here only because the tick's real value was dropped before anyone
+could read it, and it is no longer the session's read. The oracle is if
+anything more of an oracle now: it reports the very number that moved the
+creature.* The gap is therefore not a refinement layered onto
 working machinery. It is the entire reason to prefer testimony over the oracle,
 and a version without it has not shipped a smaller thing; it has shipped the
 thing that was already there (decision 0256).
