@@ -740,3 +740,28 @@ merge itself conflicts in `session.rs` (The Rack rewrote it: seven
 `with_fields` sites now, a triple return from `step_with_occupancy`) and in
 the type-audit aggregate; both are resolved by hand and regeneration
 respectively, in a task of their own, after 9c's review.
+
+## Task 9c — complete (review clean; three doc minors deferred, two fixed in the absorption)
+
+Byte-identity of the one post-unblinding change held at every point the
+reviewer checked (witness-first argument unchanged; the emitter-free arm
+never read the map; the map's guard drops before the emitter loop; the
+scan-entry ordering unchanged; no arithmetic moved). §12 is a pure append
+(485/0); §4 and §11 byte-untouched; the deterministic-column md5s were
+reproduced independently from the raw files and equal §11's.
+
+## Close boundary — main `a712371dc` absorbed (`bd4d58c7b`) — in review
+
+`session.rs` hand-resolved: The Rack's file verbatim, this campaign's 63
+lines re-applied (seven `with_fields` sites, seven `with_ground`; the
+stateless seed's terrain takes a local memo moved into the struct literal,
+as The Rack does with `folds`). The seed-42 constant re-recorded to MAIN's
+`0x36eb5f3117e82539` and reproduced on the merged tree; the emitter pair
+unchanged. **Two things the merge did that nobody predicted:** a CLEAN
+auto-merge duplicated the `UNI-ecs-is-the-adaptive-cache` registry row
+(both campaigns edited its Where cell; `docs_consistency` caught it — the
+"a clean merge can duplicate a registry row" lesson, again), and The
+Plumb's default-deny constant lint refused the oracle test's two haunted-
+overlay constants, now tagged (one-line tags only; a wrapped tag parses as
+malformed). `latest_visit_and_witness` deleted for `trail_and_witness`;
+`latest_visit`'s doc names its one caller. Gate 1,123 sub-floor tests.
