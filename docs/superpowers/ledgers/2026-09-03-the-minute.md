@@ -255,3 +255,17 @@ against four. Review approved; one deferred minor on a comment's wording
 (the merge keeps the later wake, which `Session::sleep` has no occasion to
 do), to be reworded in Task 5's sweep. No ideonomy pass; nothing was
 decided here that the spec had not already.
+
+## Task 4 — complete (commits 072b30def..29c18f5f3)
+
+The wait line minutes the held body's acts. The three lines P7 pinned:
+seed 7's first seeking wait, `Time passes. The will that holds you walks
+this body elsewhere.`; seed 42's second wait, `Time passes. You sense
+movement nearby (201 stirred). The will that holds you drinks and rests.`;
+the free body's, `Time passes. You sense movement nearby (201 stirred).` —
+byte-identical to before the campaign, and `make rebaseline` moved no
+gallery transcript or fixture. Review approved; three minors folded into
+Task 5 (a paraphrase of 0168/0226 to tighten; one narration branch — a
+stationary body with minutes under zero population movement — with no
+end-to-end assertion; helper placement). No ideonomy pass; the wording was
+the plan's and the review found it true to §3.4.
