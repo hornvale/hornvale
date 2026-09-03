@@ -158,11 +158,14 @@ make doctor        # the repo self-map — run this first in a fresh session
 # 2026-08-28). `heavy` is back on `scripts/sluice-run.sh`'s MERGE list, last,
 # after The Governor cut the tier 3.52x (1551.631 s -> 440.269 s nextest wall,
 # 118 -> 64 tests, 10 -> 0 failures on lefford, measured at `e76ea0497`). The
-# roster is 64: that campaign's final review restored
+# roster is 65: that campaign's final review restored
 # `occupancy_readout_is_current` to `heavy:` (decision 0086's third amendment),
-# and a re-measure against the full 64-test roster confirmed the restoration
+# and a re-measure against the then-full 64-test roster confirmed the restoration
 # cost nothing — the restored test slotted under the tier's existing pole and
-# the wall moved down, not up. A merge goes from ~1129.5 s to ~1595.3 s
+# the wall moved down, not up. The 65th is The Brattice's sanctioned
+# solvability sweep (14,400 plans, 64.69 s on the Mac), which took the tag under
+# the same argument decision 0426 makes: a 65 s invariant belongs at merge
+# cadence, and a sweep nobody runs is not a guard. A merge goes from ~1129.5 s to ~1595.3 s
 # (+41%) — the mean of the four 2026-08-28 four-phase merges plus ~465.8 s, both
 # derived in decision 0426 and not restated in a second form here; a
 # prose-only candidate still pays none of it. `seam-guard`

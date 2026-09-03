@@ -1778,3 +1778,127 @@ fmt`, clippy `--workspace --all-targets -D warnings`, and the lexicon guard.
 comments and assertion messages, and the count came back at the same 816 the
 walks' own commit set. Checked with a `HV_LEXICON_REBASELINE=1` run producing
 an empty diff, not assumed from the shape of the change.
+
+## Task 7 — complete
+
+The documentation close. No code changed; every artifact movement below is a
+regeneration, not an authoring.
+
+**Written.**
+
+- `book/src/chronicle/the-brattice.md` (new) — the four-part gate and why the
+  pass runs last; the substance table; the drop as a stair minus its up half;
+  the door-is-not-a-cell ruling and the false door it leaves admissible; the
+  nine-row inventory with the parity argument that removed the tenth; the round
+  trip (ruling F); the four readouts with their frozen verdicts and what each
+  measures from and to; the save-format contract and the accession-epoch
+  movement beside it; the corrections to two merged chronicles; what is
+  deliberately absent.
+- `book/src/SUMMARY.md` — one line, `- [The Brattice](./chronicle/the-brattice.md)`,
+  directly after the Crosscut's (now line 441), keeping The Circuit's two
+  campaigns adjacent.
+- `docs/decisions/0616-a-gate-is-a-requirement-on-a-way.md` — the four parts kept
+  apart; a door is an object at a threshold, never a cell kind; no `Shut` way.
+- `docs/decisions/0617-a-locks-substance-is-derived-from-rock-and-work.md` — the
+  substance table; the pattern chooses where, never what; filtering before the
+  draw keeps the draw count data-independent.
+- `docs/decisions/0618-a-descent-key-makes-the-plan-a-save-format-contract.md` —
+  quotes the custody fact AS SHIPPED (role, subject, predicate, object, day, read
+  off `descent_thing.rs` and `thing.rs::located_in_holder_fact`), names the epoch
+  a grammar change would be (`underworld/plan/v2`, `underworld/gate/v2`), and
+  records ruling C as the last free grammar change.
+- `docs/decisions/0619-the-drop-is-a-stairway-with-its-up-half-omitted.md` —
+  0567's closing Consequence made real; `Side::Descending`; valve vs asymmetric
+  is one gate seen by two bodies.
+- `docs/decisions/0620-the-cycle-pattern-inventory-is-a-frozen-corpus.md` —
+  states the count **NINE**, the freeze rule, the landing-hall parity argument,
+  and solvability-as-round-trip as the invariant every placement preserves.
+- `docs/decisions/README.md` — five index rows appended after 0607.
+- `docs/retrospectives/the-brattice.md` (new) — process lessons only: the test
+  over the function rather than the data; the false "empty by construction"
+  lemma and why the review's own repair was not taken; the half-invariant the
+  design's own words contradicted; the plan-mandated tautologies (three); the
+  doc-comment-invalidated-in-its-own-diff shape found by every task's review;
+  the two G3 ideonomy passes and what each changed; the harness crash and the
+  inherited diff; the two absorptions; the lexicon ceiling; a follow-up table
+  with each item's outcome; every deferred minor with its cost, split into
+  closed-inside-the-campaign and still-open.
+- `CLAUDE.md` — the heavy-roster prose corrected from **64 to 65** with one
+  sentence naming the 65th (the §3.8 sanctioned sweep, 14,400 plans / 64.69 s,
+  ruling K) and the argument it took the tag under (decision 0426's cadence).
+  Nothing else in the file changed.
+
+**Registry flips by ID** (`book/src/frontier/idea-registry.md`). Every touched
+Idea cell was **compacted while being extended** so all six stay inside the
+600-char budget (`registry_idea_cells_are_within_budget`); the waiver list is
+append-never and was not touched.
+
+- `MAP-drop-is-a-cross-floor-valve` — `raw` → **`shipped`**; Where now leads with
+  the chronicle and decision 0619.
+- `MAP-underworld-traversal-grammar` — stays `spec'd` (The Plat holds the
+  resident half); gains "The Brattice shipped the gate half (2026-09-03)"; Where
+  gains both Circuit chronicles.
+- `MAP-walk-ignores-the-lattice` — gains ledger #3's promised sentence: doors and
+  keys vary per vertex where rock does not, and `enter`'s hardcoded `WildCave`
+  means no player reaches a door.
+- `MAP-descent-carves-are-per-world` — gains the mirror sentence: gates ride the
+  plan, so doors, sumps and chutes vary per vertex too.
+- `PLAY-key-placement-stands-in-for-a-resident` — gains the DESCENT-key case: the
+  plan places it and binds it structurally, so no resident is missing behind it.
+- `MAP-restricted-passage` — the Idea cell and the deferred list in the Where
+  cell both note that the underworld now has locked doors, on a descent's own
+  gated thresholds, though a cave MOUTH still has none.
+
+The seven rows this campaign added (`MAP-true-valve`, `MAP-secret-door-rendering`,
+`MAP-collapsing-gate`, `MAP-knowledge-key`, `MAP-doors-occlude`,
+`MAP-world-conditional-gate`, `MAP-false-door`) and
+`PLAY-strongbox-lock-wants-an-unlocks-property` stay `raw`; their Where cells
+were re-checked and resolve.
+
+**Book freshness sweep.** `grep` over `book/src` for `MovementMode`,
+`LevelCellKind`, `Flooded`, `stairs pair` and `stairway` found exactly two
+non-chronicle hits, both fine: the idea-registry row above and the generated
+stream manifest. Two merged chronicles overstate and **were deliberately not
+edited** — the boundary is `main` (`docs/CLAUDE.md`): `the-chattel.md:82`
+("`lock` and `unlock` beside them" — neither verb exists) and
+`the-gallery.md:50,169` (swimming and flight "designed and not implemented").
+Both corrections are stated in the Brattice chronicle's own "Two earlier
+chronicles overstate" section instead.
+
+**Confidence Gradient — no bet moved.** `grep -n -i
+"underworld\|cave\|descent\|lock\|traversal" book/src/open-questions.md` returns
+89 lines, every one of them inside the settlement-seating bet (can the world
+place a *people* underground), whose standing precondition is the underworld
+being declared as places. Gates are not places. Recorded rather than assumed,
+per decision 0030.
+
+**`make rebaseline`** rc=0, wall 106.159 s. `git diff --stat`:
+
+```
+ CLAUDE.md                          |  9 ++++++---
+ book/src/SUMMARY.md                |  1 +
+ book/src/frontier/idea-registry.md | 12 ++++++------
+ docs/decisions/README.md           |  5 +++++
+ docs/digest/decisions-in-force.md  |  5 +++++
+ docs/timings.md                    |  1 +
+```
+
+Only the digest's decision index moved as a *generated* artifact — five lines,
+one per new record. `docs/digest/intent-vs-reality.md`, the type-audit report,
+the client fixtures, the audit pages and `book/src/domesday/` are all
+byte-identical, which is what a documentation-only close should produce.
+
+**Checks.** `cargo test -p hornvale --test suite -- docs_consistency` 28 passed
+/ 0 failed; `-- decision` 10 passed / 0 failed (uniqueness, title-vs-filename,
+block non-overlap, and the system-coverage decision stamps); `mdbook build book`
+succeeds (the warnings are pre-existing, in `reference/stream-manifest.md` and
+the registry's angle-bracket placeholders).
+
+**Task 7 self-review — one correction before hand-off.** The chronicle and
+decision 0616 both said "`Threshold` is stamped at EVERY passage's crossing".
+That is ledger #9 (ii)'s execution amendment overstated: every passage records a
+crossing, and that cell is a `Threshold` UNLESS the passage is a sump, whose
+crossing is `Deep` — one cell has one kind. Corrected in both files (commit
+amended). Noted here because it is precisely the shape the retrospective's own
+"a doc comment asserting a contract the change altered" section describes, found
+by re-reading the ledger's amendments against the prose rather than by any check.

@@ -299,3 +299,8 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0598](0598-per-turn-work-is-a-counted-budget-in-the-commit-gate.md) | Per-turn work is a counted budget in the commit gate | Accepted |
 | [0606](0606-a-world-build-is-a-named-site.md) | A world build is a named site on a bidirectional roster | Accepted |
 | [0607](0607-the-seed-42-fixture-is-an-input.md) | The seed-42 world fixture is an input as well as an assertion | Accepted |
+| [0616](0616-a-gate-is-a-requirement-on-a-way.md) | A gate is a requirement on a way, realized as four parts kept apart | Accepted |
+| [0617](0617-a-locks-substance-is-derived-from-rock-and-work.md) | A lock's substance is derived from rock and work; the pattern chooses where, never what | Accepted |
+| [0618](0618-a-descent-key-makes-the-plan-a-save-format-contract.md) | A descent key's identity is a plan position, so the plan grammar is a save-format contract | Accepted |
+| [0619](0619-the-drop-is-a-stairway-with-its-up-half-omitted.md) | The drop is a stairway with its up half omitted, and `Fly` is its key | Accepted |
+| [0620](0620-the-cycle-pattern-inventory-is-a-frozen-corpus.md) | The cycle-pattern inventory is a frozen corpus of nine rows; solvability for a body holding nothing is the invariant | Accepted |
