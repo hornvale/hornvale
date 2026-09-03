@@ -1,5 +1,86 @@
 //! The Detent's witnesses (spec §4 H5/H6, §3 rules 2/4/5, M1). Counts, not
 //! clocks: every number here is deterministic on every box.
+//!
+//! # THE CAMPAIGN-TIME CONSTANTS RETIRED AT THE CLOSE (2026-09-03)
+//!
+//! Decision 0541 mints a hash constant for the duration of a migration and
+//! retires it at the campaign's close, because a constant here equals "the
+//! whole walk's behaviour on one seed" and therefore reddens on ANY behaviour
+//! change by ANY campaign — a tax on work that has nothing to do with these
+//! folds, and an unwinnable race against a queue that gates main+branch rather
+//! than a branch tip. This campaign minted three, used them through five
+//! absorptions, and retires them here.
+//!
+//! **What replaces them, and what that costs.** The two witnesses below now run
+//! their fixed script TWICE, on two fresh sessions of one seed, and require the
+//! two runs to agree — the constant-free shape `ledger_hash_witness.rs` already
+//! carries, in the same file this campaign's scripts are borrowed from. Every
+//! floor the constants rode on is kept and is checked on BOTH runs: the emitter
+//! witness still requires `replays > 0` and `shunned > 0`, and the seed-42
+//! witness still runs through [`run_fixed_script`], which refuses to return
+//! unless at least two of seed 42's bodies committed new facts over its sixty
+//! ticks. Both hashes are PRINTED on every run, so a future migration has the
+//! numbers without this file gating on them.
+//!
+//! Said plainly: **a constant-free witness guarantees DETERMINISM (two fresh
+//! sessions on one seed produce the same bytes) plus its FLOORS (the path was
+//! entered and the digest is not a list of empty sets). It cannot detect a
+//! BEHAVIOUR CHANGE at all** — a fold that moved every creature's route would
+//! move both runs together and be witnessed by neither. That is what the
+//! constants were for, and it is what retiring them gives up.
+//!
+//! # THE DATED RECORD (constants, control, and two main-first re-measurements)
+//!
+//! Everything from here to the end of this doc is history, recorded between
+//! 2026-09-02 and 2026-09-03. Its numbers were correct when taken and nothing
+//! re-checks them; read them as a dated record, never as a current claim.
+//!
+//! THE THREE CONSTANTS, as they stood at the close:
+//!
+//! ```text
+//! DETENT_SEED_42_LEDGER    0x36eb_5f31_17e8_2539   (main's value at a712371dc)
+//! DETENT_EMITTER_LEDGER    0xc851_e64b_0105_38b2
+//! DETENT_EMITTER_HAZARD    0xa9f1_7d82_c183_2854
+//! ```
+//!
+//! They were minted at Task 2 from the merge base `0dccce029`, each from two
+//! agreeing runs. The seed-42 value at minting was `0xabc4731e5cf1ab21` — the
+//! same value main printed at The Pawl's close, so the walk had not moved
+//! between the two campaigns.
+//!
+//! THE POSITIVE CONTROL (Task 2): `DANGER_ACT` moved from 0.3 to 0.05 with
+//! `scripts/mutate.py` — the verdict predicate this campaign's whole design
+//! turns on. Under it the emitter script's counts moved (shunned 186 → 428,
+//! dread 6 → 177, replays 342 → 12,044) and **both emitter hashes moved**.
+//! **`DETENT_SEED_42_LEDGER` did NOT move**, and that is the load-bearing half
+//! of this record: **seed 42's derived residents carry no fear verdict that
+//! ever reaches a route**, for the reason `ledger_hash_witness.rs`'s own "Seed
+//! 42 is not it" note gives in full. So a green seed-42 witness was never
+//! evidence about the fear path — it witnessed the walk's byte-identity, and
+//! the emitter pair was the load-bearing pair for the path this campaign
+//! rewrote. Anyone reading this record for a future migration of these folds
+//! should mint the emitter pair first and treat a seed-42 constant as a
+//! blast-radius check, not a fold check.
+//!
+//! THE TWO MAIN-FIRST RE-MEASUREMENTS (decision 0541's own discipline: take
+//! main's numbers on a checkout carrying none of the campaign's code, BEFORE
+//! the merge, so the merged tree is required to reproduce a number the campaign
+//! did not produce):
+//!
+//! ```text
+//! witness              campaign constant     main @4b82e544d     main @a712371dc
+//! seed-42 ledger       0xabc4731e5cf1ab21    0xabc4731e5cf1ab21  0x36eb5f3117e82539
+//! emitter ledger       0xc851e64b010538b2    0xc851e64b010538b2  0xc851e64b010538b2
+//! emitter hazard       0xa9f17d82c1832854    0xa9f17d82c1832854  0xa9f17d82c1832854
+//! ```
+//!
+//! At `4b82e544d` (The Reservoir) all three were equal, so the constants stood
+//! unchanged and the merged tree reproduced them. At `a712371dc` (The Rack,
+//! The Plumb, The Reservoir's close-out) the seed-42 value MOVED — The Rack
+//! rewrote how a tick reaches the roster — and the constant was re-recorded to
+//! main's `0x36eb5f3117e82539` before the merge; the emitter pair did not move,
+//! which is itself a statement that The Rack did not touch the fear path. The
+//! merged tree reproduced all three.
 
 use crate::common;
 use hornvale_kernel::{Ledger, RoomMeshMemo, WorldTime};
@@ -545,60 +626,108 @@ fn h5_witness_the_hazard_reads_terrain_samples_on_the_bench_shape() {
 use crate::ledger_hash_witness::{EMITTER_SEED, fnv1a, run_emitter_witness, run_fixed_script};
 use hornvale_vessel::{PossessOpts, Session};
 
-/// CAMPAIGN-TIME constants (decision 0541): minted at Task 2 from the merge
-/// base, re-recorded MAIN-FIRST after every absorption, retired at close.
-/// They equal "the whole walk's behaviour on one seed" and redden on ANY
-/// behaviour change by any campaign; that is their job for exactly as long
-/// as this campaign's pre-fix code exists to diverge from.
+/// One fresh session on `world`, the seed-42 fixed script, and the hash of
+/// what it committed.
 ///
-/// **`DETENT_SEED_42_LEDGER` is BLIND to the fear path.** It witnesses the
-/// walk's byte-identity, not the fear fold: seed 42's residents carry no
-/// fear verdict that ever reaches a route, for the reason
-/// `ledger_hash_witness.rs`'s own "Seed 42 is not it" note (around lines
-/// 359-368) already gives in full — do not restate the mechanism here, read
-/// it there. This campaign's own control (Task 2's report) confirms it
-/// empirically: moving `DANGER_ACT` from 0.3 to 0.05 moved both emitter
-/// hashes and left this one unchanged. A green
-/// `the_detent_seed_42_walk_matches_the_campaign_time_constant` is therefore
-/// NOT evidence the fear path is unchanged — `DETENT_EMITTER_LEDGER` and
-/// `DETENT_EMITTER_HAZARD` are the load-bearing pair for that claim.
-///
-/// `DETENT_SEED_42_LEDGER` was re-recorded at the close absorption of
-/// `a712371dc` (The Rack moved the seed-42 walk); main's own value, taken on
-/// a checkout carrying none of this campaign's code, BEFORE the merge. The
-/// emitter pair did not move and is unchanged.
-pub(crate) const DETENT_SEED_42_LEDGER: u64 = 0x36eb_5f31_17e8_2539;
-pub(crate) const DETENT_EMITTER_LEDGER: u64 = 0xc851_e64b_0105_38b2;
-pub(crate) const DETENT_EMITTER_HAZARD: u64 = 0xa9f1_7d82_c183_2854;
-
-#[test]
-fn the_detent_seed_42_walk_matches_the_campaign_time_constant() {
-    let world = common::build(42).expect("seed 42 builds");
-    let (mut session, _) = Session::start(&world, &PossessOpts::default()).expect("seed 42 starts");
+/// A FRESH session each time is the whole point of calling this twice: two
+/// hashes taken off one session would agree because they are the same string.
+/// [`run_fixed_script`] carries the non-vacuity floor (at least two of seed
+/// 42's bodies must commit new facts over its sixty ticks), so it is checked
+/// on both runs by construction rather than by a second assertion here.
+fn seed_42_ledger_hash_of_a_fresh_walk(world: &hornvale_kernel::World) -> u64 {
+    let (mut session, _) = Session::start(world, &PossessOpts::default()).expect("seed 42 starts");
     run_fixed_script(&mut session);
-    let hash = fnv1a(session.session_ledger_json().as_bytes());
-    println!("the-detent seed-42 ledger hash: {hash:#018x}");
+    fnv1a(session.session_ledger_json().as_bytes())
+}
+
+/// The seed-42 walk is deterministic: two fresh sessions running one fixed
+/// script commit the same ledger bytes.
+///
+/// **There is no committed constant here any more, and its absence is the
+/// campaign's ruling rather than an omission** — see the module doc's
+/// "# THE CAMPAIGN-TIME CONSTANTS RETIRED AT THE CLOSE", which also records
+/// the value this witness held (`0x36eb_5f31_17e8_2539`, main's at
+/// `a712371dc`) and why the seed-42 half of the pair was blind to the fear
+/// path this campaign rewrote. The hash is printed on every run so a future
+/// migration has the number without this file asserting on it.
+#[test]
+fn the_detent_seed_42_walk_is_deterministic() {
+    let world = common::build(42).expect("seed 42 builds");
+
+    let first = seed_42_ledger_hash_of_a_fresh_walk(&world);
+    let second = seed_42_ledger_hash_of_a_fresh_walk(&world);
+    println!("--- the-detent seed-42 walk ---");
+    println!("ledger hash {first:#018x} (second fresh session: {second:#018x})");
+
     assert_eq!(
-        hash, DETENT_SEED_42_LEDGER,
-        "the seed-42 walk moved — a fold changed a creature's route (this witness is BLIND to the fear path; see the doc comment above and DETENT_EMITTER_LEDGER/DETENT_EMITTER_HAZARD)"
+        first, second,
+        "two fresh seed-42 sessions running the same fixed script committed DIFFERENT \
+         ledger bytes ({first:#018x} against {second:#018x}) — the walk is not \
+         deterministic, which is a constitutional failure and not a moved golden"
     );
 }
 
+/// The emitter-bearing walk is deterministic on both halves — the committed
+/// ledger AND the derived hazard digest — with every floor the retired
+/// constants rode on checked on BOTH runs.
+///
+/// The floors are what keep two agreeing hashes from being two hashes of the
+/// same empty digest: the past-day affect replay must be entered
+/// (`replays > 0`), and the digest must have something in it
+/// (`shunned > 0`). See the module doc for the retired constants
+/// (`0xc851_e64b_0105_38b2` / `0xa9f1_7d82_c183_2854`, unmoved across both
+/// main-first re-measurements) and for the `DANGER_ACT` control that showed
+/// this pair — and not the seed-42 witness — to be the load-bearing one for
+/// the fear path.
 #[test]
-fn the_detent_emitter_walk_matches_the_campaign_time_constants() {
+fn the_detent_emitter_walk_is_deterministic() {
     let world = common::build(EMITTER_SEED).expect("the emitter seed builds");
-    let run = run_emitter_witness(&world);
-    println!(
-        "the-detent emitter: ledger {:#018x} hazard {:#018x} over {} bodies, {} shunned, {} dread, {} replays",
-        run.ledger_hash, run.hazard_hash, run.bodies, run.shunned, run.dread, run.replays
-    );
+
+    let first = run_emitter_witness(&world);
+    let second = run_emitter_witness(&world);
+
+    for (label, run) in [("run 1", &first), ("run 2", &second)] {
+        println!(
+            "the-detent emitter {label}: ledger {:#018x} hazard {:#018x} over {} bodies, \
+             {} shunned, {} dread, {} replays",
+            run.ledger_hash, run.hazard_hash, run.bodies, run.shunned, run.dread, run.replays
+        );
+        assert!(
+            run.replays > 0,
+            "{label} must reach the past-day affect replay on this world, or both hashes \
+             witness the terrain-only path seed 42 already covers"
+        );
+        assert!(
+            run.shunned > 0,
+            "{label}'s hazard digest must be non-empty, or its hash is the hash of a list \
+             of empty sets and would not move for any change to this path"
+        );
+    }
+
+    // Both verdicts computed before either can panic: the retired constants'
+    // own positive control (`DANGER_ACT` 0.3 -> 0.05) moved BOTH hashes, so a
+    // ledger assertion that panicked first would never have printed the hazard
+    // verdict — the half the seed-42 witness cannot give at all.
+    let mut moved: Vec<String> = Vec::new();
+    if first.ledger_hash != second.ledger_hash {
+        moved.push(format!(
+            "LEDGER: run 1 {:#018x}, run 2 {:#018x}",
+            first.ledger_hash, second.ledger_hash
+        ));
+    }
+    if first.hazard_hash != second.hazard_hash {
+        moved.push(format!(
+            "HAZARD: run 1 {:#018x}, run 2 {:#018x} — two fresh sessions on one seed \
+             derived different remembered-frightening ground or different dread magnitudes",
+            first.hazard_hash, second.hazard_hash
+        ));
+    }
     assert!(
-        run.replays > 0,
-        "the emitter seed must reach the past-day affect replay or this constant witnesses the terrain-only path"
+        moved.is_empty(),
+        "two fresh sessions on seed {EMITTER_SEED} running the same fixed script \
+         disagreed, so the walk is not deterministic:\n  {}",
+        moved.join("\n  ")
     );
-    assert!(run.shunned > 0, "the hazard digest must be non-empty");
-    assert_eq!(run.ledger_hash, DETENT_EMITTER_LEDGER);
-    assert_eq!(run.hazard_hash, DETENT_EMITTER_HAZARD);
 }
 
 /// Chaos eviction on the room memo (The Detent, spec §2.1's own remedy for the
