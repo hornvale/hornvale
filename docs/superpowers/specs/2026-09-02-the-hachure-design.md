@@ -315,10 +315,29 @@ the same `virtual_dims` and the same `terrain_at_tile` run at a different
 rung. This is the one stage with no conservation arm, and the reason is that
 it changes no field.
 
-**H2 (Stage 1).** Bilinear blending strictly increases distinct rendered
-bands per plate at rungs 6–11.
-*Conservation*: ocean fraction within 1% of today (measured: −0.2%); no land
-tile moves more than one relief band relative to the nearest-corner answer.
+**H2 (Stage 1) — FALSIFIED BELOW THE GRID, upheld at 6–11.** As
+preregistered: bilinear blending strictly increases distinct rendered bands
+per plate at rungs 6–11. **Measured 2026-09-03: true at rungs 6–11 (rung 11:
+`^` 461 → 1212, a gradient replacing a block edge) and FALSE below the grid**
+— at band B a 120×40 plate draws 1–2 distinct bands both snapped and blended,
+over eight inland locations, because the relief ladder's rungs are hundreds
+of metres wide and a ramp inside one ~110 km sample rarely crosses one. The
+blend moves the HEIGHT on nearly every such tile (612–3,860 distinct values
+against 1–4 snapped) and the band on none. Recorded as a null rather than
+rescued by retuning `relief_band`, whose floors are load-bearing for a
+shipped wire field. Ledger #16; the follow-on direction is a colour ramp
+within a band, per `CLIENT-map-is-invitation-not-data-dump`.
+*Conservation* — **RESTATED, because the preregistered form was the wrong
+bound and failed.** It said "no land tile moves more than one relief band
+relative to the nearest-corner answer", quoting decision 0121's phrase; that
+is not a blend-versus-snap bound, and it measured a 2-band move at
+`GLOBE_RUNG`, where a tile IS its facet and the blend is the plain mean of
+four corners. The provable bound, and the one conservation needs: **a blended
+reading lies inside the convex hull of its own samples**, so `band(blend)` is
+bracketed by the least and greatest band of the tile's own corners. Holds at
+both ends of the ladder, measured. Ocean fraction is conserved by
+construction rather than by tolerance: `water` and `ocean` still partition on
+the dominant vertex and this stage does not touch them. Ledger #17.
 
 **H3 (Stage 2).** Segment-intersection river rendering produces a
 **connected** channel network at every rung 6–13, where today's rung-6

@@ -1455,7 +1455,13 @@ pub(crate) fn perception_tile(
 /// one The Portolan's fix round 1, Finding 2 bought with a 49-point vote —
 /// the strip must never name a land feature on a character drawn `~` — and
 /// it survives the vote's removal.
-#[derive(Debug, Clone, PartialEq, Eq)]
+// `Eq` is deliberately absent since The Hachure's Stage 1 added
+// `height_asl`: a float-backed reading has no total equality, and deriving
+// one would be a lie about a quantity read off a blend. Nothing consumes
+// `TileTerrain` through a `BTreeSet`/`BTreeMap` — the struct is produced by
+// `terrain_at_tile` and read field-by-field — so `PartialEq` is the whole
+// requirement.
+#[derive(Debug, Clone, PartialEq)]
 pub struct TileTerrain {
     /// Whether the tile is painted ocean. RETAINED alongside
     /// [`Self::water`] rather than derived from it at every call site — the
@@ -1483,6 +1489,20 @@ pub struct TileTerrain {
     /// carried at its own width rather than cast to match [`Self::water`].
     /// type-audit: bare-ok(index)
     pub band: u32,
+    /// The tile's own height above sea level — the CONTINUOUS reading
+    /// [`Self::band`] is a lossy quantization of.
+    ///
+    /// **Why this is carried and not left to the band.** Measured on a
+    /// 120x40 plate at [`BAND_B_RUNG`] over eight inland locations, seed 42:
+    /// the plate addresses 1-4 distinct grid vertices and draws 1-2 distinct
+    /// relief bands, while this field takes **612 to 3,860 distinct values**.
+    /// The relief ladder's rungs are hundreds of metres wide
+    /// (`hornvale_scene::relief_band`: 0, 300, 1000, 2500 m), so within one
+    /// ~110 km sample a real height ramp almost never crosses one. A
+    /// consumer that wants sub-sample relief — a colour ramp inside a band,
+    /// a contour, a slope — has to read this; the band cannot tell it apart
+    /// from flat ground.
+    pub height_asl: hornvale_kernel::SeaLevelHeight,
     /// [`Self::vertex`]'s water class — `terrain.water_kind_at(vertex)
     /// .index()` against `hornvale_terrain::WaterKind::LEGEND`, the
     /// canonical pair `region.rs` itself uses (no second classifier is
@@ -1613,13 +1633,48 @@ pub fn terrain_at_tile(
         }
     }
 
-    let band = hornvale_scene::relief_band(terrain.elevation_at(vertex).above(terrain.sea_level()));
+    // THE HEIGHT IS READ BETWEEN THE SAMPLES, NOT SNAPPED TO ONE (The
+    // Hachure, Stage 1) — the same integer-weighted bilinear blend
+    // `windows/locale` already uses for its continuous fields
+    // (`describe_with_weights`), at the TILE's own facet depth rather than at
+    // the grid-level ancestor.
+    //
+    // **Legal because elevation is ORDINAL** (decision 0121): an ordinal
+    // field may band a blend, since a blend moves such a value at most one
+    // band and conserves the distribution's shape. The NOMINAL fields below
+    // — `water`, `ocean` — still partition on `vertex`, which is the same
+    // ruling's other half and the reason the −29%-fresh-water revert it
+    // records cannot recur here.
+    //
+    // **The weights are exact integers** (`Facet::corner_weights`), so this
+    // adds no transcendental and no platform-libm exposure, and full
+    // precision is correct in a compute path (decision 0033 quantizes at
+    // emit only).
+    //
+    // `corner_weights` returns `None` only for a facet ABOVE the grid, which
+    // `virtual_dims` deliberately still honours; there the snapped reading is
+    // the only one available and is the right answer, since the tile is
+    // coarser than the sample.
+    let height_asl = match facet.corner_weights(geo, index) {
+        Some(weights) => {
+            let denom: u64 = weights.iter().map(|&(_, w)| w).sum();
+            let blended: f64 = weights
+                .iter()
+                .map(|&(c, w)| w as f64 * terrain.elevation_at(c).get())
+                .sum::<f64>()
+                / denom as f64;
+            hornvale_kernel::SeaLevelHeight::from_metres(blended - terrain.sea_level().get())
+        }
+        None => terrain.elevation_at(vertex).above(terrain.sea_level()),
+    };
+    let band = hornvale_scene::relief_band(height_asl);
     let water = terrain.water_kind_at(vertex).index();
 
     TileTerrain {
         ocean: terrain.is_ocean(vertex),
         facet,
         vertex,
+        height_asl,
         band,
         water,
     }
@@ -1834,6 +1889,231 @@ mod tests {
             ((col + vw - origin_col) % vw) as u16,
             (row - origin_row) as u16,
         )
+    }
+
+    /// BELOW THE GRID THE PLATE CARRIES A CONTINUOUS HEIGHT, not one
+    /// snapped reading repeated (The Hachure, Stage 1).
+    ///
+    /// # WHAT THIS ASSERTS, AND WHY NOT THE OBVIOUS THING
+    ///
+    /// It asserts on [`TileTerrain::height_asl`], not on
+    /// [`TileTerrain::band`], and the reason is a measurement rather than a
+    /// preference. On a 120x40 plate at [`BAND_B_RUNG`] over eight inland
+    /// locations, seed 42:
+    ///
+    /// | | snapped | blended |
+    /// |---|---|---|
+    /// | distinct grid vertices | 1-4 | — |
+    /// | distinct relief bands | 1-2 | **1-2** |
+    /// | distinct heights | 1-4 | **612-3,860** |
+    ///
+    /// **Blending buys no extra BANDS at this rung**, because the relief
+    /// ladder's rungs are hundreds of metres wide and a real height ramp
+    /// inside one ~110 km sample rarely crosses one. Four earlier drafts of
+    /// this test asserted about bands in four different ways and every one
+    /// PASSED against the unsnapped code — the last of them because a single
+    /// icosphere vertex can dominate a whole cube facet, the two lattices
+    /// being incommensurate. The height is where the refinement is
+    /// observable, so the height is what is pinned.
+    ///
+    /// The ceiling `<= 8` on distinct vertices is the non-vacuity arm: it
+    /// states that this window genuinely spans well under a sample, so
+    /// "hundreds of distinct heights" is a claim about interpolation and not
+    /// about a window that happens to cover a lot of ground.
+    #[test]
+    fn a_plate_below_the_grid_carries_a_continuous_height() {
+        let (terrain, geo) = test_world();
+        let index = NearestVertexIndex::new(&geo);
+        let mut memo = RoomMeshMemo::default();
+        let f = mercator::frame_for(false);
+        let depth = BAND_B_RUNG;
+        let (vw, vh) = virtual_dims(depth);
+
+        // Inland dry land: a coastline would vary for the wrong reason.
+        let land =
+            geo.vertices()
+                .find(|&v| {
+                    terrain.water_kind_at(v) == hornvale_terrain::WaterKind::DryLand
+                        && geo.neighbors(v).iter().all(|&n| {
+                            terrain.water_kind_at(n) == hornvale_terrain::WaterKind::DryLand
+                        })
+                })
+                .expect("seed 42 has inland dry land");
+        let p = geo.position(land);
+        let (lat, lon) = (
+            hornvale_kernel::math::asin(p[2]).to_degrees(),
+            hornvale_kernel::math::atan2(p[1], p[0]).to_degrees(),
+        );
+        let (crow, ccol) = mercator::project(&f, lat, lon, vw, vh).expect("in frame");
+        let (w, h) = (120u16, 40u16);
+        let (win, _, _) = window_showing(depth, crow, ccol, w, h);
+
+        let mut vertices: BTreeSet<Vertex> = BTreeSet::new();
+        let mut heights: BTreeSet<i64> = BTreeSet::new();
+        for row in 0..u32::from(h) {
+            for col in 0..u32::from(w) {
+                let t = terrain_at_tile(
+                    &terrain, &geo, &index, &mut memo, &f, &win, vw, vh, row, col,
+                );
+                vertices.insert(t.vertex);
+                // Decimetres: finer than any relief band, coarser than the
+                // float noise a blend's last bits carry.
+                heights.insert((t.height_asl.get() * 10.0).round() as i64);
+            }
+        }
+
+        assert!(
+            vertices.len() <= 8,
+            "NON-VACUITY: this window spans {} grid vertices, so it is not \
+             testing sub-sample interpolation at all",
+            vertices.len()
+        );
+        assert!(
+            heights.len() >= 100,
+            "a {w}x{h} plate at rung {depth} carries only {} distinct heights \
+             across {} grid vertex/vertices — the height is being snapped to \
+             the nearest sample and repeated, not read between samples",
+            heights.len(),
+            vertices.len()
+        );
+    }
+
+    /// CONSERVATION: every blended reading lies inside the convex hull of
+    /// its own samples, and no nominal field moves at all (The Hachure,
+    /// Stage 1).
+    ///
+    /// **Decision 0124 is why this exists**, and it earned its keep on the
+    /// first run. 0124 records a refinement whose two local hypotheses both
+    /// PASSED while the mechanism was illegal, because the violated property
+    /// was global and no local hypothesis asks about one.
+    ///
+    /// # THE FIRST FORM OF THIS TEST ASSERTED THE WRONG BOUND, AND FAILED
+    ///
+    /// It asserted decision 0121's own phrasing — "a blend moves a value at
+    /// most one band" — as a bound on `blend` against `snap`, and measured a
+    /// move of **2** at row 60, col 9. That is not a defect in the blend; it
+    /// is the wrong reading of 0121. At [`GLOBE_RUNG`] a tile IS its facet, so
+    /// [`Facet::corner_weights`] is the exact four-way tie and the blend is
+    /// the plain mean of four corners. A mean of four values can sit two
+    /// bands from the NEAREST of them whenever those four span three bands —
+    /// over mountains, they do.
+    ///
+    /// **0121's ruling is untouched**: ordinal fields may band a blend,
+    /// nominal fields must partition. What does not survive is using its
+    /// one-band phrase as a blend-versus-snap bound, because the two are not
+    /// the comparison it was describing.
+    ///
+    /// The bound that IS provable, and is the one conservation actually
+    /// needs: interpolation never leaves the convex hull of its inputs, and
+    /// [`hornvale_scene::relief_band`] is monotone in height, so
+    /// `band(blend)` lies between the least and greatest band of the tile's
+    /// own corner samples. That is "coarse constrains fine" stated exactly —
+    /// a refined reading can never assert relief its own samples do not
+    /// bracket.
+    #[test]
+    fn every_blended_reading_stays_inside_its_own_samples() {
+        let (terrain, geo) = test_world();
+        let index = NearestVertexIndex::new(&geo);
+        let mut memo = RoomMeshMemo::default();
+        let f = mercator::frame_for(false);
+
+        // Both ends of the ladder: the coarsest rung, where a tile IS a facet
+        // and the stencil is the four-way tie, and band B, where the weights
+        // are lopsided. The two exercise different arithmetic.
+        for depth in [GLOBE_RUNG, BAND_B_RUNG] {
+            let (vw, vh) = virtual_dims(depth);
+            let win = Window {
+                depth,
+                origin_col: vw / 3,
+                origin_row: vh / 3,
+            };
+            let (mut compared, mut moved) = (0u32, 0u32);
+            for row in (0..60).step_by(3) {
+                for col in (0..60).step_by(3) {
+                    let t = terrain_at_tile(
+                        &terrain, &geo, &index, &mut memo, &f, &win, vw, vh, row, col,
+                    );
+                    let facet = Facet::containing(
+                        {
+                            let (lat, lon) = mercator::unproject(
+                                &f,
+                                win.origin_row + row,
+                                win.origin_col + col,
+                                vw,
+                                vh,
+                            );
+                            hornvale_kernel::math::unit_sphere_from_lat_lon(lat, lon)
+                        },
+                        depth,
+                    );
+                    let Some(weights) = facet.corner_weights(&geo, &index) else {
+                        continue;
+                    };
+                    let bands: Vec<u32> = weights
+                        .iter()
+                        .map(|&(c, _)| {
+                            hornvale_scene::relief_band(
+                                terrain.elevation_at(c).above(terrain.sea_level()),
+                            )
+                        })
+                        .collect();
+                    let (lo, hi) = (
+                        bands.iter().copied().min().expect("four corners"),
+                        bands.iter().copied().max().expect("four corners"),
+                    );
+                    assert!(
+                        t.band >= lo && t.band <= hi,
+                        "rung {depth}, row {row}, col {col}: the blended band {} is \
+                         outside its own samples' range {lo}..={hi} — a refined \
+                         reading has asserted relief its samples do not bracket",
+                        t.band
+                    );
+
+                    // The NOMINAL half of 0121, which this stage does not touch.
+                    // Asserted anyway: re-deriving either of these from the
+                    // blend is a one-line edit away, and is the -29%-fresh-water
+                    // revert 0121 records.
+                    assert_eq!(
+                        t.water,
+                        terrain.water_kind_at(t.vertex).index(),
+                        "rung {depth}, row {row}, col {col}: water is no longer the \
+                         dominant vertex's own"
+                    );
+                    assert_eq!(
+                        t.ocean,
+                        terrain.is_ocean(t.vertex),
+                        "rung {depth}, row {row}, col {col}: the ocean flag is no \
+                         longer the dominant vertex's own"
+                    );
+
+                    // NON-VACUITY is counted on the HEIGHT, not the band, and
+                    // the first form of this arm counted the band and failed at
+                    // rung 13 with 0 of 400 moved. That is the stage's own
+                    // measured finding: below the grid the blend changes the
+                    // height on nearly every tile and the BAND on none, because
+                    // the relief ladder's rungs are hundreds of metres wide. A
+                    // band-counting arm is therefore vacuous at exactly the rung
+                    // this stage was written for.
+                    let snapped_h = terrain.elevation_at(t.vertex).above(terrain.sea_level());
+                    if (t.height_asl.get() - snapped_h.get()).abs() > 0.1 {
+                        moved += 1;
+                    }
+                    compared += 1;
+                }
+            }
+            // NON-VACUITY: the blend must actually differ from the snap
+            // somewhere at this rung, or the hull bound is a claim about a
+            // no-op.
+            assert!(
+                moved > 0,
+                "at rung {depth} the blend matched the snapped HEIGHT on all \
+                 {compared} sampled tiles, so the bound above proves nothing"
+            );
+            eprintln!(
+                "rung {depth}: blended height differs from snapped on {moved} of \
+                 {compared} tiles"
+            );
+        }
     }
 
     #[test]

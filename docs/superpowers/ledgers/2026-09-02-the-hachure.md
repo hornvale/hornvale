@@ -320,3 +320,96 @@ the rung directly instead, and say why in their docs.
 rather than filed silently, because it is a real defect a reader can hit
 (zoom in six times from the map and your position drifts off screen).
 · ideonomy passes: 0 (a finding, not a decision).
+
+---
+
+## Stage 1 — implementation (2026-09-03)
+
+#16 [G5] — **STAGE 1'S HEADLINE PREDICTION IS FALSIFIED. Blending buys no
+extra relief BANDS below the grid.**
+· Preregistered (spec §6, H2): "bilinear blending strictly increases distinct
+rendered bands per plate at rungs 6-11."
+· Measured, 120x40 plate at BAND_B_RUNG, eight inland locations, seed 42:
+
+| | snapped | blended |
+|---|---|---|
+| distinct grid vertices | 1-4 | — |
+| distinct relief bands | 1-2 | **1-2** |
+| distinct heights | 1-4 | **612-3,860** |
+
+· Cause: `hornvale_scene::relief_band`'s rungs are hundreds of metres wide
+(0, 300, 1000, 2500 m). Within one ~110 km sample a real height ramp almost
+never crosses one, so the quantizer discards the refinement.
+· **What survives.** The gain at rungs 6-11 is real and was measured earlier
+in the campaign (rung 11: `^` 461 -> 1212, a gradient replacing a block
+edge), because a plate there spans several samples and the blend smooths
+BETWEEN them. What is false is the claim about below-grid rungs, which is
+where the reported defect lives.
+· Decision: ship Stage 1 for what it does, and record the null rather than
+retuning `relief_band`'s floors to rescue the prediction. Those floors are
+load-bearing for a shipped wire field (`scene/surrounds/v2`) and
+`windows/scene/src/surrounds.rs` says so in terms: "Do not retune the floors
+below to make a picture look better."
+· **What it points at instead**: the height field is present and rich, and
+the band is what throws it away. That is
+`CLIENT-map-is-invitation-not-data-dump`'s own brief — "less about specific
+glyphs, more about what colour can hint" — i.e. a colour ramp WITHIN a band,
+reading `TileTerrain::height_asl`. Carried as a Stage 1 follow-up, not
+built here.
+· ideonomy passes: 0 (a measurement outcome, not a choice between options).
+· Capture: spec §6 needs H2 marked falsified; the colour-ramp direction needs
+a registry row.
+
+#17 [G5] — **Decision 0121's "a blend moves a value at most one band" is not
+a blend-versus-snap bound, and asserting it as one failed.**
+· What happened: the conservation test's first form asserted exactly 0121's
+phrase against the snapped reading and measured a move of **2** bands at row
+60, col 9.
+· Why: at `GLOBE_RUNG` a tile IS its facet, so `Facet::corner_weights` is the
+exact four-way tie and the blend is the plain mean of four corners. A mean of
+four values sits more than one band from the NEAREST of them whenever the
+four span three bands — over mountains, they do.
+· **0121's ruling is untouched** and is not relitigated: ordinal fields may
+band a blend, nominal fields must partition. What does not survive is reading
+its one-band phrase as a bound on blend-vs-snap, because that is not the
+comparison it describes.
+· Decision: assert the bound that is provable and is what conservation
+actually needs — **a blended reading lies inside the convex hull of its own
+samples**. Interpolation never leaves the hull of its inputs and `relief_band`
+is monotone in height, so `band(blend)` is bracketed by the least and
+greatest band of the tile's own corners. That is "coarse constrains fine"
+stated exactly: a refined reading can never assert relief its samples do not
+bracket. Holds at both ends of the ladder, measured.
+· The nominal half is asserted too, though this stage does not touch it:
+re-deriving `water` or `ocean` from the blend is a one-line edit away and is
+precisely the -29%-fresh-water revert 0121 records.
+· ideonomy passes: 0.
+· Capture: `every_blended_reading_stays_inside_its_own_samples`; spec §6's H2
+conservation arm should be restated in hull terms.
+
+#18 [G5] — **`TileTerrain` lost its `Eq` derive, deliberately.** `height_asl`
+is float-backed and has no total equality; deriving one would be a lie about a
+quantity read off a blend. Nothing consumes the struct through a
+`BTreeSet`/`BTreeMap` — it is produced by `terrain_at_tile` and read
+field-by-field — so `PartialEq` is the whole requirement.
+· ideonomy passes: 0.
+
+#19 [PROC] — **Four test drafts passed against unfixed code before one
+discriminated, and the reason is worth carrying.** Each asserted about the
+relief BAND: (1) "adjacent tiles differ by at most one band" — a constant
+window satisfies it, largest jump 0; (2) the same over a facet whose corners
+span two bands — the span was between DIAGONAL corners and a midline crossing
+swaps ADJACENT ones; (3) the same over a facet with an adjacent pair spanning
+bands 2..=4 — the window still drew one band, because **one icosphere vertex
+can dominate a whole cube facet**, the two lattices being incommensurate; (4)
+"a plate shows more than one band" — true already at some locations, since
+flatness is location-dependent (1-4 vertices per plate).
+· The lesson is not "write better tests". It is that **the band is a lossy
+quantization of the thing being refined**, so every band-shaped assertion was
+measuring the quantizer rather than the refinement. The fix was to stop
+guessing and MEASURE first (#16), then assert on the observable the
+measurement named.
+· For the retrospective, alongside
+`tests-whose-input-collapses-to-one-value`: a fifth instance, with a new
+cause — the observable was downstream of a quantizer coarse enough to erase
+the signal.
