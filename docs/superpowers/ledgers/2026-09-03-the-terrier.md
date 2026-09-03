@@ -224,3 +224,35 @@ Deferred minors (for the final review): the boundary detector takes the
 FIRST module-declaring sequence and `liveness.rs` has two adjacent ones; a
 doc cite of 8490 where the `mod` line is 8491. No ideonomy pass was run for
 either ruling; both are corrections of a claim against the code.
+
+### Task 2 — complete (2026-09-03, commits `a3248e0a3..f1112d39e`)
+
+P6 landed as an in-module test at seeds 42 and 7, red under the prescribed
+mutation (an empty register reds the identity assertion before the walk
+runs), green restored. **The plan's script was a null on both fixtures**,
+and the implementer measured rather than obeyed: seed 42 never leaves its
+flagship's vertex walking north in 24 steps (it does at step 18 walking
+east), and seed 7's flagship *starts* on a vertex with no occupation record
+at all (a living one is seven steps west). Ruling at review: the per-seed
+bearings and a bound of 20 are a calibration to the real fixture, not a
+weakening — both non-vacuity directions and the per-step equality are
+intact, and the calibration is written in the test's doc so it can be
+reproduced. That is the fourth plan-prescribed script in two campaigns to
+be a null at seed 42; memory's *never prescribe a probe from outside the
+code* holds, and the plan's own decision rule ("if the guard fires, change
+the bearing and record which") is what made it cost minutes rather than a
+round.
+
+**The Stage 1 gate is held, and not by this campaign.** `outboard`'s
+`test-sluice-vet.sh` picks the first campaign branch on `origin` that mints a
+decision as its collision probe; that branch is `campaign/the-prospect`,
+which mints `0540` inside The Pawl's reserved block 0536–0545 while `main`
+already carries The Pawl's `0540`. The test's "negative control" therefore
+fires a true collision and reads as a harness failure. Posted to the board
+(technique `66f8a5348`). Ruling: Task 3 is readings and prose and proceeds;
+`make sluice-stage` is resubmitted once The Prospect renumbers, and before
+Task 4. Cost if wrong: Stage 1's full-workspace suite is unverified until
+then, against local vessel-crate greens of 412 and 658 tests. Second
+finding for the register: a negative control whose fixture is a live
+branch cannot distinguish a harness bug from a real collision — the vet
+test needs a synthetic probe.
