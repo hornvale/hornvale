@@ -1572,26 +1572,22 @@ pub fn hazard_memory_memo(
     roster: &[Body],
     memo: &mut PrimaryAfraidMemo,
 ) -> HazardMemory {
-    // MOST-RECENT VISIT PER ROOM (day ≤ t), off the resident store: the room is
-    // judged at its LATEST visit, so a later safe visit clears an earlier
-    // phantom (the staleness rule). This used to walk EVERY `agent-at` fact the
-    // creature had ever committed, on every call, to build a map bounded by the
-    // rooms it has stood in — the O(history)-per-tick term spec §1 names as this
-    // fold's first cost. `LatestVisit` holds the same visits indexed by room, so
-    // the read is one `partition_point` per room (spec §2.4).
+    // THE WITNESS, AND NOTHING ELSE. Spec §3 rule 6's witness is taken FIRST,
+    // before any early return, so that every call is counted: the emitter-free
+    // fast path below returns early, and a counter placed after it would
+    // silently measure only the worlds that have an emitter. It asks whether
+    // `t` lies before this entity's last committed sighting, which is the
+    // trail's last entry at O(1) — no per-room map is needed to answer it.
     //
-    // SINCE THE DETENT THIS MAP SERVES THE EMITTER PATH ALONE. The
-    // emitter-free early return below reads the verdict index instead, which
-    // needs no per-room latest visit: with an empty roster the alarm term is
-    // `0.0` at every day, so the most-recent-visit rule has nothing to
-    // discriminate and collapses to any-visit. The map is still built before
-    // that return — see the witness paragraph immediately below, which is why
-    // — and the emitter path below still folds over it unchanged.
-    //
-    // Spec §3 rule 6's witness is taken in the same guard, and FIRST, so that
-    // every call is counted: the emitter-free fast path below returns early, and
-    // a counter placed after it would silently measure only the worlds that have
-    // an emitter.
+    // THE PER-ROOM `latest` MAP IS BUILT BELOW, IN THE EMITTER PATH, AND THAT
+    // PLACEMENT IS THE POINT (The Detent, Task 9c, ledger #7/#8). Spec §2.3
+    // specified the emitter-free read as a PREFIX read over the verdict index;
+    // the map is O(distinct rooms visited), which on a wandering probe is
+    // O(history), so building it here — above the early return — left the
+    // history term on the very path the design had made prefix-bounded. It was
+    // measured at 72–76% of the fold's fitted history slope `k` and moved
+    // below the return; the witness call it used to share a guard with never
+    // needed it.
     //
     // ONE guard, and it is DROPPED before anything below runs. This function
     // recurses — `frightened_at` -> `alarm_at` -> `alarm_field` ->
@@ -1600,16 +1596,15 @@ pub fn hazard_memory_memo(
     // it is a runtime panic rather than a latent one. The shape every read site
     // on this chain uses is the same: borrow, copy out what is needed, drop,
     // then compute.
-    let latest: std::collections::BTreeMap<Facet, WorldTime> = {
+    {
         let mut store = folds.borrow_mut();
-        let (visits, trail, witness) = store.latest_visit_and_witness(ledger);
+        let (_, trail, witness) = store.latest_visit_and_witness(ledger);
         witness.note_hazard(
             npc.entity,
             t,
             trail.of(npc.entity).last().map(|(day, _)| *day),
         );
-        visits.latest_at(npc.entity, t)
-    };
+    }
 
     // The emitter scan (which members could ever raise an alarm, their position
     // timelines, and the rooms any alarm could reach) is IDENTICAL for every
@@ -1680,6 +1675,30 @@ pub fn hazard_memory_memo(
         }
         return mem;
     }
+    // MOST-RECENT VISIT PER ROOM (day ≤ t), off the resident store: the room is
+    // judged at its LATEST visit, so a later safe visit clears an earlier
+    // phantom (the staleness rule). This used to walk EVERY `agent-at` fact the
+    // creature had ever committed, on every call, to build a map bounded by the
+    // rooms it has stood in — the O(history)-per-tick term spec §1 names as this
+    // fold's first cost. `LatestVisit` holds the same visits indexed by room, so
+    // the read is one `partition_point` per room (spec §2.4).
+    //
+    // THIS MAP SERVES THE EMITTER PATH ALONE, and since Task 9c it is built
+    // only on that path. The emitter-free early return above reads the verdict
+    // index instead, which needs no per-room latest visit: with an empty roster
+    // the alarm term is `0.0` at every day, so the most-recent-visit rule has
+    // nothing to discriminate and collapses to any-visit. The fold below is
+    // unchanged — same map, same order, same arithmetic; only the point at
+    // which it is built moved.
+    //
+    // Its own guard, taken here and DROPPED at the end of this block, for the
+    // recursion reason stated above: the emitter loop that follows re-enters
+    // this store through `emitter_arousal`.
+    let latest: std::collections::BTreeMap<Facet, WorldTime> = {
+        let mut store = folds.borrow_mut();
+        store.latest_visit(ledger).latest_at(npc.entity, t)
+    };
+
     for (room, day) in latest {
         let terrain_threat = threat_field(&room, &npc.threat_niche, terrain);
         // THE TERRAIN SHORTCUT (free win): if TERRAIN alone already frightens the
