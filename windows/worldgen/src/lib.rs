@@ -104,6 +104,7 @@ pub mod history_emit;
 pub mod knownness;
 pub mod observer;
 pub mod person_promote;
+pub mod plat;
 pub mod render;
 pub mod residents;
 pub mod resolve;

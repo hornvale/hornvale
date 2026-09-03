@@ -5206,3 +5206,6 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-03T11:30:27Z | sluice:heavy | 449.616 | 9616.174 | 164.136 | 21.75 | 0 | a1d17c9dc |  | lefford | 40 |
 | 2026-09-03T12:06:12Z | prewarm | 767.200 | 1622.418 | 127.438 | 2.28 | 0 | d9749623b | campaign/the-plat | ambrose | 12 |
 | 2026-09-03T12:19:02Z | gate-commit | 266.355 | 243.431 | 90.855 | 1.26 | 0 | d9749623b | campaign/the-plat | ambrose | 12 |
+| 2026-09-03T12:27:55Z | gate-commit | 209.539 | 142.174 | 42.594 | 0.88 | 0 | 5b70e4930 | campaign/the-plat | ambrose | 12 |
+| 2026-09-03T13:07:34Z | gate-commit | 311.002 | 141.618 | 99.260 | 0.77 | 0 | 9569c4584 | campaign/the-plat | ambrose | 12 |
+| 2026-09-03T13:24:03Z | gate-commit | 90.009 | 68.693 | 27.114 | 1.06 | 0 | 2fc84c064 | campaign/the-plat | ambrose | 12 |
