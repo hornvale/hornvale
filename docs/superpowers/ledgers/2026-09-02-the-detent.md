@@ -790,3 +790,24 @@ blind spot); the Gradient's fifth look — which says a cost gate EXISTS now
 spec §13; the constants retired per 0541 with their history kept in the
 witness file's doc. Two brief instructions overridden on evidence and both
 recorded. The null census is queued (`req-f9dc48b6fe29`) on the final SHA.
+
+## Final whole-branch review — MERGE-READY once the headline trailer is on the range
+
+Byte-identity holds branch-wide, site by site, including the absorption's
+re-application. "What did not survive": nothing structural — spec §2.2's
+`BTreeSet` shipped as a `BTreeMap<Facet, bool>` (the plan's choice, needed
+by `verdict()`), §2.4's remedy shipped by `#[path]` (ledger #6), §5's
+"every position and every third" shipped as three probe ticks × two seeds,
+and §10's "there is no `common/`" was wrong (there is one; `CountingTerrain`
+lives in it). Three doc sentences in the suite witnesses claimed byte-
+identity over comparisons that are empty-vs-empty on the seed-42 bench
+shape; fixed in one wave (`a4761bbe6`, re-review PASS) by saying what each
+equality proves, naming each test's real floor, pointing at the oracle test
+that carries the non-empty proof, and asserting the emptiness as a stated
+denominator. All eleven deferred items triaged MAY STAY. **Parked, with a
+ruling:** `FrighteningGround::verdict` is `pub` with test-only callers — it
+stays, load-bearing for the aliasing demonstration and matching The Pawl's
+accepted `Sustenance::resets()` precedent; cost if wrong, one unused pub
+fn. The two moved tests' stale roster paths self-heal at the merge's roster
+rewrite; until then `gate-commit` runs none of this campaign's witnesses,
+and the stage gates ran all of them.
