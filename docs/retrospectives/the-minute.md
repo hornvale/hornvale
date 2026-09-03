@@ -83,6 +83,30 @@ book's three chronicles were named in the task, and grepping the claim across
 `book/src/` turned up two further present-tense statements of the discard in
 the confidence chapter that nothing had listed.
 
+The same shape appeared a third time, at a smaller scale and inside the fix
+rounds' own prose. Task 6's round-1 correction of decision 0658 discharged
+itself by citing a line range in `the_minute.rs` as the verification of the
+claim that P7 holds "three assertions over three lines". Round 2 (`cb2046458`)
+found it was four over four: the round-1 correction had attached seed 42's
+`ends_with` suffix assertion to the wrong quoted line, and there was a fourth
+line the decision quoted nowhere.
+
+The detail worth keeping is where the counterexample was sitting. In every
+committed version of that file the `ends_with` assertion is at line 156,
+**inside** the range the correction cited. So this was not a citation that
+pointed away from the disconfirming line; it was one that pointed straight at
+it. A range citation carries the form of verification whether or not anyone
+read the range, and nothing downstream can tell the two apart — which is the
+same defect as a sweep that names the site instead of the claim, one level
+smaller: the reader is handed a place instead of a proposition, and a place
+cannot object.
+
+(The exact range round 1 cited is not recoverable — it lived in the review
+conversation, and `140-178`, the figure carried into this fix wave's brief,
+appears nowhere in the tree. The reconstruction above is from `cb2046458`'s
+own commit message and the file's history. That the citation cannot now be
+re-checked is not a side note; it is the failure restated.)
+
 ## Preregister the mechanism and the prediction as two things
 
 The campaign's headline is a null, and the reason it is a *useful* null is
@@ -124,8 +148,13 @@ is exposed to every command-shaped guard in the tree.
 
 ## Deferred minors, and where each landed
 
-Every minor raised in review during this campaign was fixed inside it; none
-was carried past the merge.
+Every minor raised in review during this campaign was fixed inside it. Two
+findings were *parked* rather than fixed, both recorded in the campaign
+ledger rather than lost: `narrate_motion`'s `None` arm inside the room-change
+branch, unreachable by construction and kept as a defensive sentence with the
+invariant now written beside it; and deriving `wake_at` from the ledger for
+both the verb and the walk, so `Session::body_state` becomes a pure fold —
+carried past the merge as a followup, not a defect.
 
 - **A message-less assertion** in the plan's own witness code (Task 1 review)
   — ruled trivial and fixed in Task 2's commit.

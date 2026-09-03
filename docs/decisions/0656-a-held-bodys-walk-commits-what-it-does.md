@@ -1,6 +1,9 @@
 # 0656. A held body's walk commits what it does
 
-**Status:** Accepted (2026-09-03) · **Decider:** Nathan · **Relates:**
+**Status:** Accepted (2026-09-03) · **Decider:** Nathan · **Amends:**
+[0226](0226-a-possessed-host-is-co-present-not-displaced.md) (two consequence
+bullets — the discard, and the untestability it implied; see that record's
+2026-09-03 amendment, which leaves its ruling standing) · **Relates:**
 [0168](0168-the-effect-of-an-act-belongs-to-the-body-not-the-driver.md);
 [0226](0226-a-possessed-host-is-co-present-not-displaced.md);
 [0228](0228-a-controller-is-a-parameter-of-the-tick.md);

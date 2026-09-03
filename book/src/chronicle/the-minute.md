@@ -13,8 +13,8 @@ one call site that runs that walk bound its facts to a name beginning with an
 underscore and dropped them, and the comment beside it said so plainly:
 *discarded unconditionally, regardless of what the walk returns.*
 
-Measured before anything was built, at two seeds, with the same script — hold
-the body, then wait five days eight times. On each tick the probe re-ran the
+Measured 2026-09-03, before anything was built, at two seeds, with the same
+script — hold the body, then wait five days eight times. On each tick the probe re-ran the
 same solo walk against the pre-wait ledger to see what had been thrown away,
 then read the ledger and the body's felt state:
 
@@ -155,7 +155,8 @@ stopped would reach water a walk that restarts cannot. Half of it held and
 half of it did not, and the half that did not is the campaign's finding.
 
 The mechanism half is green: the column moves on the first seeking wait, and
-goes on moving. Measured tick by tick after the repair, cumulative:
+goes on moving. Measured 2026-09-03 tick by tick after the repair,
+cumulative:
 
 ```
 seed 7, held, eight waits of five days.  The last column is a hop search from
@@ -199,8 +200,8 @@ the second wait are 5, 5, 4, 4 and 4. It is a consequence of the drought, not
 its cause.
 
 So the honest report is: **the repair made the seeking real and the seeking
-still fails**, because at this seed the settlement stands more than a hundred
-and twenty rooms from the nearest river. The body is now helpless thirty-odd
+still fails**, because at this seed no fresh water lies within a hundred
+and twenty rooms of the settlement. The body is now helpless thirty-odd
 rooms from home instead of helpless in it, and the ledger says so.
 
 One thing the same measurement turned up and did not explain. The control — the

@@ -39,10 +39,6 @@ pub fn driven_facts_named(session: &Session<'_>, predicate: &str) -> usize {
         .count()
 }
 
-fn possessed(seed: u64) -> World {
-    world_at(seed)
-}
-
 /// P1 — seed 42, the minuted drink. Before Task 2 (measured 2026-09-03): the
 /// walk emitted 29 facts in 40 days, `drank` on every tick from the second,
 /// and 0 reached the ledger while the felt state read `Content`. After: the
@@ -53,7 +49,7 @@ fn possessed(seed: u64) -> World {
 /// (left 0).
 #[test]
 fn p1_a_held_bodys_drinks_reach_the_ledger_and_its_felt_state_stands() {
-    let world = possessed(42);
+    let world = world_at(42);
     let (mut session, _) = Session::start(&world, &PossessOpts::default()).expect("starts");
     let _ = session.handle("!possess");
     assert!(session.possessor().is_some(), "possession must be open");
@@ -93,10 +89,18 @@ fn p1_a_held_bodys_drinks_reach_the_ledger_and_its_felt_state_stands() {
 /// plan's decision rule is to record the measurement, not chase the
 /// prediction.
 ///
+/// **The window the tree pins is NARROWER than the one preregistered, and
+/// deliberately.** The preregistration framed the null at day 40; the
+/// assertion below measures day 36 — the eighth `!wait 5` after the opening
+/// `!wait 1` — because that is where this script's loop ends. The day-40
+/// zero was observed too, in the campaign close's probe log, and is not
+/// asserted here. So the tripwire in the tree and the preregistered window
+/// are different quantities; both read zero.
+///
 /// RED BEFORE TASK 2 at the first assertion: the column does not move.
 #[test]
 fn p2_a_held_bodys_walk_accumulates_across_ticks() {
-    let world = possessed(7);
+    let world = world_at(7);
     let (mut session, _) = Session::start(&world, &PossessOpts::default()).expect("starts");
     let _ = session.handle("!possess");
     assert!(session.possessor().is_some(), "possession must be open");
@@ -130,7 +134,7 @@ fn p2_a_held_bodys_walk_accumulates_across_ticks() {
 /// 42's second wait names the drink; a free body's line carries no minutes.
 #[test]
 fn p7_the_wait_line_minutes_the_held_bodys_acts() {
-    let world = possessed(7);
+    let world = world_at(7);
     let (mut session, _) = Session::start(&world, &PossessOpts::default()).expect("starts");
     let _ = session.handle("!possess");
     let _ = session.handle("!wait 1");
@@ -146,7 +150,7 @@ fn p7_the_wait_line_minutes_the_held_bodys_acts() {
         "a room change suppresses the arrival/departure comparison: {line:?}"
     );
 
-    let world = possessed(42);
+    let world = world_at(42);
     let (mut session, _) = Session::start(&world, &PossessOpts::default()).expect("starts");
     let _ = session.handle("!possess");
     let hornvale_vessel::Turn::Out(first_line) = session.handle("!wait 5") else {

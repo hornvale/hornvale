@@ -8624,10 +8624,7 @@ impl<'w> Session<'w> {
             // Keep the LATER wake: a body already due up later from an
             // earlier sleep (the verb's own, or a prior tick's) must not be
             // woken early by this walk's own shorter one.
-            self.wake_at = Some(match self.wake_at {
-                Some(current) if current > wake => current,
-                _ => wake,
-            });
+            self.wake_at = Some(later_wake(self.wake_at, wake));
         }
         self.occupancy = occupancy;
         // THE TICK WRITES THE RACK (The Rack, Task 3, spec §3.4). Both walks
@@ -8801,6 +8798,14 @@ impl<'w> Session<'w> {
         if here_now != driven_before {
             return match minute_line {
                 Some(line) => format!("Time passes. {line}"),
+                // UNREACHABLE BY CONSTRUCTION, kept as a sentence rather
+                // than a panic (final review): a room change means the
+                // walk's ending room differs from the column, the column
+                // equals the ledger's own fold at tick start, so the
+                // difference implies a committed `agent-at` — and
+                // `minutes_of` turns any `agent-at` into `Minute::Moved`, so
+                // `minute_line` is always `Some` here. A benign sentence
+                // beats a panic on a turn path if that ever stops holding.
                 None => {
                     "Time passes. The will that holds you walks this body elsewhere.".to_string()
                 }
@@ -9854,6 +9859,21 @@ fn wake_after(facts: &[Fact], now: WorldTime) -> Option<WorldTime> {
         })
         .filter(|end| *end > now)
         .max()
+}
+
+/// The wake a tick leaves behind: the later of the wake already set and the
+/// one this tick's driven walk earned, so a body already due up later — from
+/// the `sleep` verb's own span, or from an earlier tick's walk — is never
+/// woken early by a shorter sleep this tick (The Minute, spec §3.5).
+///
+/// Pure, and split out of [`Session::wait`]'s merge so the rule can be
+/// stated once and tested directly; nothing in a shipped seed sleeps across
+/// a tick boundary on demand, so the merge itself has no end-to-end witness.
+fn later_wake(current: Option<WorldTime>, candidate: WorldTime) -> WorldTime {
+    match current {
+        Some(current) if current > candidate => current,
+        _ => candidate,
+    }
 }
 
 /// One thing the driven body's own walk did this tick, for the wait line
@@ -21301,10 +21321,48 @@ mod tests {
         );
     }
 
+    /// The Minute, spec §3.5: with no wake set, the walk's own is taken.
+    #[test]
+    fn a_walks_wake_is_taken_when_none_is_set() {
+        let candidate = WorldTime::from_ticks(1_150_000);
+        assert_eq!(later_wake(None, candidate), candidate);
+    }
+
+    /// The Minute, spec §3.5: a wake already set EARLIER than the walk's own
+    /// gives way to the walk's — the body sleeps on.
+    #[test]
+    fn an_earlier_wake_gives_way_to_the_walks_own() {
+        let candidate = WorldTime::from_ticks(1_150_000);
+        let current = WorldTime::from_ticks(1_050_000);
+        assert_eq!(later_wake(Some(current), candidate), candidate);
+    }
+
+    /// The Minute, spec §3.5: the load-bearing arm. A wake already set LATER
+    /// than the walk's own is kept, so a body due up later is never woken
+    /// early by this tick's shorter sleep.
+    #[test]
+    fn a_later_wake_already_set_is_kept() {
+        let candidate = WorldTime::from_ticks(1_150_000);
+        let current = WorldTime::from_ticks(1_250_000);
+        assert_eq!(later_wake(Some(current), candidate), current);
+    }
+
+    /// The Minute, spec §3.5: equal wakes agree, so the comparison's
+    /// strictness is not observable at the boundary.
+    #[test]
+    fn an_equal_wake_agrees_with_the_walks_own() {
+        let candidate = WorldTime::from_ticks(1_150_000);
+        assert_eq!(later_wake(Some(candidate), candidate), candidate);
+    }
+
     /// The Minute, spec §3.3 / §4 P5: a held body INDOORS commits nothing
-    /// during `wait` and its frame survives. The positive control is
-    /// `the_minute.rs::p1_…`, which holds the same body's outdoor walk to
-    /// committing on the very same mechanism; this is its opposite arm.
+    /// during `wait` and its frame survives. Its own positive control is the
+    /// recorded mutation (decision 0657): dropping `&& !off_the_band` from
+    /// the condition makes THIS test fail — the same seed-14 body commits
+    /// five facts within one `!wait 5` instead of four — so the assertion is
+    /// not vacuous. `the_minute.rs::p1_…` shows the same mechanism at
+    /// another seed (42), and is not this test's control: it is a different
+    /// body in a different world.
     ///
     /// `enter` FIRST — it is in-character and would refuse once held.
     #[test]

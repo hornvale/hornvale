@@ -313,17 +313,29 @@ fn walk_a_script(seed: u64) -> (bool, bool) {
 /// `every_slots_position_is_the_ledgers`), and a possessed body that never
 /// walks cannot exhibit this.
 ///
-/// MUTATION THIS MUST FAIL AGAINST — and this one is not hypothetical, it is
-/// the code as it stood before this fix round: write the driven slot's
-/// position from the solo walk (`self.roster.write(driven_slot,
-/// driven_written.position, driven_written.felt);` in place of the
-/// felt-only `resolve` method this fix round predates — `resolve` is gone
-/// now (The Minute, spec §3.2 deleted it), because the driven walk's facts
-/// are committed and `write` is honest for every slot). Run and observed:
+/// MUTATION THIS MUST FAIL AGAINST — sever the OTHER half of the agreement.
+/// Leave `self.roster.write(driven_slot, driven_written.position,
+/// driven_written.felt)` in place and neutralise the body of the driven
+/// commit loop in `Session::wait` (`for fact in driven_facts { let _ = fact;
+/// }` in place of the `self.ledger.commit(fact, &self.registry)` match), so
+/// the column is written from the walk while the ledger never hears about
+/// it. Run and observed (2026-09-03, seed 7):
 /// `assertion `left == right` failed: after "!wait 5", slot 0 (Zhaqbwawshow) —
 /// the column and the ledger's own fold disagree
 ///   left: Facet { face: 1, path: [3, 0, 3, 1, 3, 2, 2, 1, 1, 3, 1, 3, 3] }
 ///  right: Facet { face: 1, path: [3, 0, 3, 1, 3, 2, 2, 1, 1, 1, 2, 3, 0] }`
+///
+/// THE MUTATION THIS CLAUSE USED TO NAME IS NOW THE SHIPPED CODE, and it is
+/// kept only as history. It was: write the driven slot's position from the
+/// solo walk (`self.roster.write(driven_slot, driven_written.position,
+/// driven_written.felt);`) in place of the felt-only `resolve` method that
+/// preceded it. That run reddened with the identical assertion quoted above,
+/// which is not a coincidence — both mutations break the same agreement from
+/// opposite ends, one by writing a column the ledger cannot support and the
+/// other by withholding the facts that support it. `resolve` is gone now
+/// (The Minute, spec §3.2 deleted it), because the walk's facts ARE
+/// committed and `write` is honest for every slot; naming the shipped line
+/// as the mutation would leave this test with no live one at all.
 ///
 /// The Minute extended the script to the nine-wait shape its P2 measures,
 /// so the column is checked after every accumulating step of the walk, not
