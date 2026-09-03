@@ -299,3 +299,6 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0598](0598-per-turn-work-is-a-counted-budget-in-the-commit-gate.md) | Per-turn work is a counted budget in the commit gate | Accepted |
 | [0606](0606-a-world-build-is-a-named-site.md) | A world build is a named site on a bidirectional roster | Accepted |
 | [0607](0607-the-seed-42-fixture-is-an-input.md) | The seed-42 world fixture is an input as well as an assertion | Accepted |
+| [0626](0626-a-terrain-verdict-is-held-for-the-session-keyed-by-room.md) | A terrain verdict is held for the session, keyed by room, with its terrain's identity supplied by ownership | Accepted |
+| [0627](0627-the-emitter-scan-advances-through-a-read-side-verdict-index.md) | The emitter scan advances over new sightings through a read-side verdict index, and is still not a tenant | Accepted |
+| [0628](0628-a-registry-rows-mechanism-is-a-count-not-a-reading.md) | A registry row's mechanism is a count, not a reading | Accepted |
