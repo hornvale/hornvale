@@ -125,3 +125,31 @@ nothing, because it is Nathan's ruling rather than the campaign's choice, and
 an unrecorded ruling gets rediscovered or relitigated. The test is not "did we
 build it" — it is "whose call was this, and would its absence cost the next
 campaign the same conversation."
+
+## Deferred minors — where each one landed
+
+The closing walk asks for a named committed location per deferred item, not
+"it's in the ledger." All four were routed to registry rows during the
+campaign rather than at close, which is the intended cadence:
+
+| ledger entry | the minor | landed at |
+|---|---|---|
+| #15 | zoom is cursor-anchored and drifts the observer off screen over several rungs; Stage 0 exposed it and deliberately does not fix it | `CLIENT-zoom-drift-loses-the-observer` |
+| #16 | the height refinement is real and the band ladder throws it away; the answer is colour within a band, not a finer ladder | `CLIENT-colour-carries-sub-band-relief` |
+| #22 | the sim owes a named magnitude ladder (Strahler order) so consumers stop inventing their own | `MAP-stream-order-is-sim-truth` |
+| #25 | Stage 3 itself, with the epoch it needs and the measurement that it costs no census golden | `MAP-coherent-detail-field` |
+
+## A note on what the close could not read
+
+This campaign's scratch (`.superpowers/sdd/`) did not survive the session
+boundary — the branch was resumed into a fresh worktree, so the closing walk's
+step 2A found no directory at all. **Nothing was lost**, and that is The
+Cartulary's design working exactly as intended: every ruling, falsified
+prediction, measured table and deferred minor above was read back out of the
+*committed* ledger at `docs/superpowers/ledgers/2026-09-02-the-hachure.md`,
+which a fresh worktree carries because git does.
+
+Worth stating plainly because this is the first close in this campaign's
+records where the pre-Cartulary practice would simply have failed: promotion at
+close cannot promote from a directory that no longer exists, and the failure
+would have been silent — an empty `ls` reads identically to a clean sweep.
