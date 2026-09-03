@@ -42,7 +42,7 @@
 //!
 //! ## The glyph twins
 //!
-//! Five kinds, each with a "seen" glyph (`here` or `lit`) and a
+//! Eight kinds, each with a "seen" glyph (`here` or `lit`) and a
 //! "remembered" twin:
 //!
 //! | kind | seen | remembered |
@@ -52,6 +52,19 @@
 //! | flooded | `~` | `-` |
 //! | stairs down | `>` | `)` |
 //! | stairs up | `<` | `(` |
+//! | threshold | `'` | `` ` `` |
+//! | deep | `=` | `_` |
+//! | drop | `v` | `u` |
+//!
+//! The last three arrived with The Brattice (sim spec §3.5). A **threshold**
+//! is a squeeze, not a doorway — `'` is a gap in the wall's own stroke, and
+//! the `+` of a built doorway belongs to the door, which is a MARK and not a
+//! kind (below). **Deep** water is `=`, one stroke more than `flooded`'s
+//! rippled `~`: too deep to wade. A **drop** is `v`, the lip of a chute
+//! pointing the one way it goes. Their remembered twins follow the same
+//! softening rule as the rest — a squeeze's upright tick leans over into a
+//! backtick, deep water's two strokes settle to the lower one, and the
+//! chute's sharp `v` rounds into a `u`.
 //!
 //! `.`→`,` matches the walk band's own convention exactly (the systems
 //! audit's `faded()` example). The rest follow the same idea — a
@@ -84,14 +97,23 @@
 //! doc: `plan.rs` redraws a mark's own terrain glyph because chamber
 //! marks have no glyph to spare — every character in that band's four-glyph
 //! vocabulary (`#`/`.`/`+`/`@`) is already claimed by a `CellKind` or by
-//! `you`. This band's ten-glyph terrain vocabulary (five kinds, each with a
-//! seen/remembered twin) never claims `&`, so a resident draws as `&`
+//! `you`. This band's sixteen-glyph terrain vocabulary (eight kinds, each
+//! with a seen/remembered twin — the table above) never claims `&`, so a
+//! resident draws as `&`
 //! outright — the same glyph `clients/game/bin/src/plate.rs::AGENT_GLYPH`
 //! and `windows/scene/src/surrounds_ascii.rs::terrain_glyph` already use for
 //! an `"agent"`-kind mark elsewhere in this project, reused rather than
 //! invented. Drawing the terrain glyph instead here would leave the
 //! headline fact of this campaign — a creature the possession can now see —
 //! literally invisible in the one place a player looks: the picture.
+//!
+//! **A door is a mark with its own glyph.** The sim carries a door as a
+//! `PlanMark` whose `kind` is `"door"` (sim spec §3.7 — a door is a Thing, so
+//! it is never a palette kind), and this pass draws that one kind as
+//! [`DOOR_GLYPH`] `+` rather than [`MARK_GLYPH`] `&`. `+` is the chamber
+//! band's own doorway glyph (`crate::plan`), reused rather than invented: a
+//! built door reads the same in both bands, while the `'` of a bare squeeze
+//! stays visibly a different thing. Every other mark kind still draws `&`.
 //!
 //! A mark is drawn only when its own `(x, y)` lands inside `into`'s bounds
 //! ([`grid_pos`] returns `None` and the draw is skipped, matching the cells
@@ -134,6 +156,34 @@ const STAIRS_DOWN_GLYPH: char = '>';
 /// The remembered twin of [`STAIRS_DOWN_GLYPH`] — the sharp chevron rounds
 /// into a parenthesis.
 const STAIRS_DOWN_REMEMBERED_GLYPH: char = ')';
+
+/// The glyph a `"door"`-kind mark draws, in place of [`MARK_GLYPH`] — the
+/// chamber band's own doorway glyph (`crate::plan`), reused so a built door
+/// reads the same in both bands. A door is a Thing on the wire (sim spec
+/// §3.7), never a palette kind, so it is the marks pass that carries it.
+const DOOR_GLYPH: char = '+';
+
+/// The mark `kind` string [`DOOR_GLYPH`] answers to.
+const DOOR_MARK_KIND: &str = "door";
+
+/// The "seen" glyph for the one cell where a passage breaches the wall
+/// between two regions — a SQUEEZE, not a doorway (sim spec §3.5).
+const THRESHOLD_GLYPH: char = '\'';
+/// The remembered twin of [`THRESHOLD_GLYPH`] — the upright tick leans over.
+const THRESHOLD_REMEMBERED_GLYPH: char = '`';
+
+/// The "seen" glyph for water too deep to wade — one stroke more than
+/// [`FLOODED_GLYPH`]'s rippled surface.
+const DEEP_GLYPH: char = '=';
+/// The remembered twin of [`DEEP_GLYPH`] — the two strokes settle to the
+/// lower one.
+const DEEP_REMEMBERED_GLYPH: char = '_';
+
+/// The "seen" glyph for a chute's lip, pointing the one way it goes.
+const DROP_GLYPH: char = 'v';
+/// The remembered twin of [`DROP_GLYPH`] — the sharp `v` rounds, the same
+/// softening [`STAIRS_DOWN_REMEMBERED_GLYPH`] uses.
+const DROP_REMEMBERED_GLYPH: char = 'u';
 
 /// The "seen" glyph for a connection up toward the rung above.
 const STAIRS_UP_GLYPH: char = '<';
@@ -179,6 +229,27 @@ fn glyph_of(kind: &str, state: &str) -> char {
                 STAIRS_UP_GLYPH
             }
         }
+        "threshold" => {
+            if remembered {
+                THRESHOLD_REMEMBERED_GLYPH
+            } else {
+                THRESHOLD_GLYPH
+            }
+        }
+        "deep" => {
+            if remembered {
+                DEEP_REMEMBERED_GLYPH
+            } else {
+                DEEP_GLYPH
+            }
+        }
+        "drop" => {
+            if remembered {
+                DROP_REMEMBERED_GLYPH
+            } else {
+                DROP_GLYPH
+            }
+        }
         // "wall", and anything this client does not recognise: the sim's
         // own `lattice/render.rs::glyph` treats an unmapped cell the same
         // way — solid rock, never a hole.
@@ -214,9 +285,10 @@ fn grid_pos(
 
 /// Draw `level` into `into`, anchored so the level's own `(extent.x,
 /// extent.y)` lands at `origin`. Three passes, in order: every seen cell by
-/// its palette glyph, then `you` as `@`, then marks as `&` — see the module
-/// doc's "Marks draw their own glyph" section for why this band's marks
-/// pass draws a dedicated glyph where [`crate::plan::draw`]'s cannot.
+/// its palette glyph, then `you` as `@`, then marks as `&` (a `"door"` mark
+/// as `+`) — see the module doc's "Marks draw their own glyph" section for
+/// why this band's marks pass draws a dedicated glyph where
+/// [`crate::plan::draw`]'s cannot.
 pub fn draw(level: &Level, into: &mut crate::Grid, origin: (u16, u16)) {
     for cell in &level.cells {
         let Some(entry) = level.palette.get(cell.ix as usize) else {
@@ -248,16 +320,19 @@ pub fn draw(level: &Level, into: &mut crate::Grid, origin: (u16, u16)) {
 }
 
 /// One mark's contribution to the marks pass: draw [`MARK_GLYPH`] at the
-/// mark's own cell. See the module doc for why this band draws a dedicated
-/// glyph rather than redrawing the terrain beneath, as
+/// mark's own cell — or [`DOOR_GLYPH`] for a `"door"`-kind mark, which is
+/// how a door reaches this band at all (sim spec §3.7: a door is a Thing,
+/// never a palette kind). See the module doc for why this band draws a
+/// dedicated glyph rather than redrawing the terrain beneath, as
 /// [`crate::plan::draw_mark`] does for the chamber band.
 fn draw_mark(level: &Level, m: &PlanMark, origin: (u16, u16), into: &mut crate::Grid) {
+    let glyph = if m.kind == DOOR_MARK_KIND {
+        DOOR_GLYPH
+    } else {
+        MARK_GLYPH
+    };
     if let Some((gx, gy)) = grid_pos(level, m.x, m.y, origin, into) {
-        into.set(
-            gx,
-            gy,
-            Cell::glyph(MARK_GLYPH, Weight::Normal, Source::Level),
-        );
+        into.set(gx, gy, Cell::glyph(glyph, Weight::Normal, Source::Level));
     }
 }
 
@@ -364,6 +439,84 @@ mod tests {
             glyph_of("stairs_up", "remembered"),
             STAIRS_UP_REMEMBERED_GLYPH
         );
+        assert_eq!(glyph_of("threshold", "lit"), THRESHOLD_GLYPH);
+        assert_eq!(
+            glyph_of("threshold", "remembered"),
+            THRESHOLD_REMEMBERED_GLYPH
+        );
+        assert_eq!(glyph_of("deep", "lit"), DEEP_GLYPH);
+        assert_eq!(glyph_of("deep", "remembered"), DEEP_REMEMBERED_GLYPH);
+        assert_eq!(glyph_of("drop", "lit"), DROP_GLYPH);
+        assert_eq!(glyph_of("drop", "remembered"), DROP_REMEMBERED_GLYPH);
+        // Every glyph in the vocabulary is distinct: a twin that collided
+        // with another kind's would carry the epistemic state and lose the
+        // kind, which is the one thing this table exists to keep apart.
+        let vocabulary = [
+            FLOOR_GLYPH,
+            FLOOR_REMEMBERED_GLYPH,
+            WALL_GLYPH,
+            WALL_REMEMBERED_GLYPH,
+            FLOODED_GLYPH,
+            FLOODED_REMEMBERED_GLYPH,
+            STAIRS_DOWN_GLYPH,
+            STAIRS_DOWN_REMEMBERED_GLYPH,
+            STAIRS_UP_GLYPH,
+            STAIRS_UP_REMEMBERED_GLYPH,
+            THRESHOLD_GLYPH,
+            THRESHOLD_REMEMBERED_GLYPH,
+            DEEP_GLYPH,
+            DEEP_REMEMBERED_GLYPH,
+            DROP_GLYPH,
+            DROP_REMEMBERED_GLYPH,
+            YOU_GLYPH,
+            MARK_GLYPH,
+            DOOR_GLYPH,
+        ];
+        let mut sorted = vocabulary;
+        sorted.sort_unstable();
+        let mut deduped = sorted.to_vec();
+        deduped.dedup();
+        assert_eq!(
+            deduped.len(),
+            vocabulary.len(),
+            "two glyphs in this band's vocabulary collide: {sorted:?}"
+        );
+    }
+
+    /// A door reaches this band as a MARK, never a palette kind (sim spec
+    /// §3.7), and it draws `+` — the chamber band's own doorway glyph —
+    /// while every other mark kind keeps `&`. The producer exists now
+    /// (`Session::underground_level` in `windows/vessel/src/session.rs`,
+    /// pinned there by
+    /// `a_lit_door_reaches_the_level_document_as_a_door_mark`), but this
+    /// unit test still constructs a `"door"` mark directly rather than
+    /// driving a session: the client crate cannot build one, only decode
+    /// the document a session emits.
+    #[test]
+    fn a_door_mark_draws_a_doorway_and_every_other_mark_draws_the_mark_glyph() {
+        let mut level = small_level();
+        level.marks = vec![
+            PlanMark {
+                x: 0,
+                y: 1,
+                noun: "door".to_string(),
+                kind: "door".to_string(),
+                datum: "A heavy door.".to_string(),
+                salience: 0,
+            },
+            PlanMark {
+                x: 1,
+                y: 0,
+                noun: "rust monster".to_string(),
+                kind: "agent".to_string(),
+                datum: "It clicks.".to_string(),
+                salience: 1,
+            },
+        ];
+        let mut g = crate::Grid::new(5, 5);
+        draw(&level, &mut g, (0, 0));
+        assert_eq!(g.get(0, 1).unwrap().glyph, Some(DOOR_GLYPH));
+        assert_eq!(g.get(1, 0).unwrap().glyph, Some(MARK_GLYPH));
     }
 
     #[test]

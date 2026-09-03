@@ -2541,6 +2541,70 @@ pub fn habitat_realm_registry() -> ComponentStore<KindId, HabitatRealm> {
     .collect()
 }
 
+/// How a kind moves besides walking (The Brattice, spec §3.6): the
+/// capability keys `Swim` and `Fly` — the two requirements a plan-side gate
+/// can ask a body to satisfy. Sparse like [`habitat_realm_registry`] — one
+/// consumer (the walk's actor-aware seam, `windows/vessel`) and rows only for
+/// kinds that are not plain walkers, so absence means [`WALKER`] rather than
+/// "unknown".
+///
+/// Decision 0576: a `KindId`-keyed build-state capability lives in the
+/// component layer, never in the ledger — nothing here is ever committed or
+/// saved.
+/// type-audit: bare-ok(flag: swim), bare-ok(flag: fly)
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Locomotion {
+    /// Crosses deep water.
+    pub swim: bool,
+    /// Climbs a chute.
+    pub fly: bool,
+}
+
+impl Component for Locomotion {}
+
+/// Walk and wade only — what every kind absent from [`locomotion_registry`]
+/// carries, stated as a value the way [`HabitatRealm::SURFACE`] is rather
+/// than re-derived at each call site.
+/// plumb: universal(the model's own neutral default -- every kind absent from the store walks and wades; no species' value)
+pub const WALKER: Locomotion = Locomotion {
+    swim: false,
+    fly: false,
+};
+
+/// The sparse locomotion store. The aquatic kinds swim; the dragons fly.
+///
+/// Sparse rather than a [`BiosphereTraits`] field for the same
+/// consumer-count reason [`habitat_realm_registry`] gives: one consumer
+/// holding a store, not a row, and nine rows against a roster of many. No
+/// kind is authored with both modes today; the struct admits one because a
+/// requirement is asked one capability at a time and a future kind that both
+/// swims and flies needs no new type.
+pub fn locomotion_registry() -> ComponentStore<KindId, Locomotion> {
+    /// plumb: universal(a capability vector, not a quantity a species tunes -- the same SWIM row is shared by every aquatic kind)
+    const SWIM: Locomotion = Locomotion {
+        swim: true,
+        fly: false,
+    };
+    /// plumb: universal(a capability vector, not a quantity a species tunes -- the same FLY row is shared by every flying kind)
+    const FLY: Locomotion = Locomotion {
+        swim: false,
+        fly: true,
+    };
+    [
+        (KindId("reef-shark"), SWIM),
+        (KindId("killer-whale"), SWIM),
+        (KindId("giant-octopus"), SWIM),
+        (KindId("giant-squid"), SWIM),
+        (KindId("giant-crocodile"), SWIM),
+        (KindId("sea-elf"), SWIM),
+        (KindId("black-dragon"), FLY),
+        (KindId("red-dragon"), FLY),
+        (KindId("white-dragon"), FLY),
+    ]
+    .into_iter()
+    .collect()
+}
+
 /// A kind's declared affinity across biomes (The Range). `domains/climate`
 /// owns the richer `Biome` enum; this is deliberately NOT keyed by it — a
 /// domain crate may not depend on a sibling domain. The store is keyed by
@@ -5870,6 +5934,58 @@ mod tests {
     use super::*;
     use hornvale_kernel::test_lineage;
     use hornvale_kernel::{Fact, Seed};
+
+    /// The locomotion store is SPARSE (The Brattice, spec §3.6): a plain
+    /// walker has no row at all and reads [`WALKER`] by absence, exactly
+    /// the way a surface kind reads [`HabitatRealm::Surface`] by absence
+    /// from [`habitat_realm_registry`]. Both modes are non-empty, and every
+    /// row names a kind that actually exists — a locomotion for a kind
+    /// [`biosphere_registry`] has never heard of is a typo, not a
+    /// capability.
+    #[test]
+    fn the_locomotion_store_is_sparse_and_non_empty_in_both_modes() {
+        let reg = locomotion_registry();
+        assert!(
+            reg.get(&KindId("human")).is_none(),
+            "a walker has no row: absence IS the default"
+        );
+        assert_eq!(reg.get(&KindId("reef-shark")).map(|l| l.swim), Some(true));
+        assert_eq!(reg.get(&KindId("red-dragon")).map(|l| l.fly), Some(true));
+
+        let swimmers = reg.iter().filter(|(_, l)| l.swim).count();
+        let fliers = reg.iter().filter(|(_, l)| l.fly).count();
+        assert!(swimmers > 0, "at least one kind must swim");
+        assert!(fliers > 0, "at least one kind must fly");
+
+        let bio = biosphere_registry();
+        for (kind, _) in reg.iter() {
+            assert!(
+                bio.get(kind).is_some(),
+                "a locomotion row for a kind no biosphere row names is a \
+                 typo, not a capability: {kind:?}"
+            );
+        }
+    }
+
+    /// [`WALKER`] is what ABSENCE means, resolved the way a consumer
+    /// resolves it (`get(..).unwrap_or(WALKER)`) rather than asserted on
+    /// the constant alone — which would be a tautology the compiler could
+    /// fold away, and which clippy rightly refuses.
+    #[test]
+    fn the_walker_default_neither_swims_nor_flies() {
+        let resolved = locomotion_registry()
+            .get(&KindId("human"))
+            .copied()
+            .unwrap_or(WALKER);
+        assert_eq!(resolved, WALKER);
+        assert_eq!(
+            resolved,
+            Locomotion {
+                swim: false,
+                fly: false
+            }
+        );
+    }
 
     /// The predicate reads the THERMAL axis alone, because no caller holds
     /// the other one (spec §4.3, corrected after Task 4). What makes that

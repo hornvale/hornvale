@@ -200,6 +200,7 @@
 | `desert-elf-kind` | species | living | a desert elf |
 | `die` | language | act | to cease living |
 | `dire-wolf-kind` | species | living | a dire wolf |
+| `door` | thing | object | a leaf hung in an opening, to be shut against what is beyond |
 | `drink` | language | act | to swallow liquid |
 | `drow-kind` | species | living | a drow |
 | `eager` | language | affect | positive, high arousal: chasing a satisfiable need |

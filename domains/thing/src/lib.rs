@@ -72,6 +72,7 @@ pub const THING_KINDS: &[&str] = &[
     "bed",
     "brazier",
     "cave-mouth",
+    "door",
     "ground",
     "hearth",
     "high-seat",
@@ -114,6 +115,9 @@ pub mod kinds {
     pub const BRAZIER: KindId = KindId("brazier");
     /// The mouth of a cave — a `Vertex`/`ChamberAddr`, never an anchor.
     pub const CAVE_MOUTH: KindId = KindId("cave-mouth");
+    /// A door hung in a threshold underground; shut and locked until its key
+    /// turns (The Brattice).
+    pub const DOOR: KindId = KindId("door");
     /// The room's open middle: the floor itself, not a thing standing on it.
     pub const GROUND: KindId = KindId("ground");
     /// A fire.
@@ -153,6 +157,7 @@ pub mod kinds {
         ("BED", BED),
         ("BRAZIER", BRAZIER),
         ("CAVE_MOUTH", CAVE_MOUTH),
+        ("DOOR", DOOR),
         ("GROUND", GROUND),
         ("HEARTH", HEARTH),
         ("HIGH_SEAT", HIGH_SEAT),
@@ -214,6 +219,13 @@ pub fn thing_registry() -> ComponentStore<KindId, ThingTraits> {
             ThingTraits {
                 display: "cave mouth",
                 doc: Some("the opening where a cave meets the outside"),
+            },
+        ),
+        (
+            KindId("door"),
+            ThingTraits {
+                display: "door",
+                doc: Some("a leaf hung in an opening, to be shut against what is beyond"),
             },
         ),
         (
@@ -872,6 +884,7 @@ mod tests {
             "bed",
             "brazier",
             "cave-mouth",
+            "door",
             "ground",
             "hearth",
             "high-seat",

@@ -229,6 +229,16 @@ impl Roster {
         &self.bodies[self.driven.0]
     }
 
+    /// The driven body, mutably — a TEST seam only. The Brattice's walk tests
+    /// re-species the driven body to lend it a locomotion (spec §7.3: a
+    /// shark swims a sump, a dragon flies a chute); nothing in production
+    /// mutates a body after derivation, and the absence of a non-test
+    /// mutator is deliberate.
+    #[cfg(test)]
+    pub(crate) fn driven_body_mut(&mut self) -> &mut Body {
+        &mut self.bodies[self.driven.0]
+    }
+
     /// Replace the roll's mask.
     ///
     /// # Panics

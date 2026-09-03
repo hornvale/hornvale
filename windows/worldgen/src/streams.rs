@@ -226,6 +226,10 @@ hornvale_kernel::stream_labels! {
     UNDERWORLD_PLAN_EXTEND = "underworld/plan/v1/extend" => "which passage a series extension lengthens";
     /// The Crosscut: which shared coordinate a stairway's two ends land on.
     UNDERWORLD_PLAN_STAIR = "underworld/plan/v1/stair" => "the coordinate a stairway shares between two floors";
+    /// The Brattice: which cycle pattern a realm draws from the frozen
+    /// inventory. One draw per realm, made even when zero or one row is
+    /// admissible, so the draw count is data-independent (spec §3.2 step 2).
+    UNDERWORLD_GATE_PATTERN = "underworld/gate/v1/pattern" => "which cycle pattern a realm draws from the frozen inventory";
     /// How many of the lattice's four branch columns one cave system
     /// realizes (The Stope, Task 3; amendment C.1) — the drawn realization
     /// half of the lattice-ceiling/drawn-realization split, with
