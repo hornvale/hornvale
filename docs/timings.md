@@ -5169,3 +5169,4 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-03T13:41:45Z | game-check | 552.007 | 626.545 | 38.566 | 1.20 | 0 | 514ac3163 | campaign/the-hachure | ambrose | 12 |
 | 2026-09-03T13:44:59Z | gate-commit | 129.645 | 68.993 | 31.780 | 0.78 | 0 | 514ac3163 | campaign/the-hachure | ambrose | 12 |
 | 2026-09-03T13:47:30Z | gate-commit | 134.762 | 72.870 | 34.802 | 0.80 | 0 | 514ac3163 | campaign/the-hachure | ambrose | 12 |
+| 2026-09-03T13:51:47Z | gate-commit | 147.421 | 87.260 | 41.231 | 0.87 | 0 | 514ac3163 | campaign/the-hachure | ambrose | 12 |
