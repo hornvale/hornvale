@@ -15,6 +15,7 @@ use crate::controller::{Controller, DefaultController, PlayerController};
 use crate::interior::{
     AnchorId, Interior, SeamKind, interior_of, landing, route_within, seam_kind, warmth_at,
 };
+use crate::resident::{DriveKey, OwnedFolds, ReadWitness, SustenanceMemo, Trail};
 use hornvale_kernel::units::TickSpan;
 use hornvale_kernel::{
     ANIMAL_PREY, ComponentStore, ConditionResponse, EntityId, Facet, FacetId, Fact, KindId, Ledger,
@@ -113,7 +114,7 @@ fn room_to_text(r: &Facet) -> String {
 /// [`crate::thing::room_key`]. Panics on a
 /// malformed committed value — a corrupted save is a bug, not a runtime case
 /// to route around.
-fn room_from_text(s: &str) -> Facet {
+pub(crate) fn room_from_text(s: &str) -> Facet {
     let id: u64 = s
         .parse()
         .unwrap_or_else(|_| panic!("agent-at text '{s}' is not a decimal FacetId"));
@@ -842,81 +843,198 @@ fn rise_at(temp: f64, class: ThermalStrategy, p: &DriveParams) -> f64 {
     }
 }
 
-/// The committed `agent-at` sightings of `entity` at or before day `upto`, as
-/// `(arrival_day, room)` sorted ascending — the occupancy timeline the thirst
-/// integral reads.
-fn agent_sightings(ledger: &Ledger, entity: EntityId, upto: f64) -> Vec<(f64, Facet)> {
-    let mut v: Vec<(f64, Facet)> = ledger
-        .facts_of(entity, AGENT_AT)
-        .filter_map(|f| {
-            let d = f.day?.as_std_days();
-            if d > upto {
-                return None;
-            }
-            match &f.object {
-                Value::Text(s) => Some((d, room_from_text(s))),
-                _ => None,
-            }
-        })
-        .collect();
-    v.sort_by(|a, b| a.0.total_cmp(&b.0).then_with(|| a.1.cmp(&b.1)));
-    v
-}
-
-/// The thirst drive as a PATH INTEGRAL of the dehydration rate over the
-/// creature's occupancy since its last drink (The Kindling, spec §3/§4): for
-/// each segment during which it stood at one room, `rise_at(temp(room,
-/// segment_start), class) × segment_length`, summed and clamped `[0, 1]`.
-/// Position at any day is the latest sighting arriving at or before it, else
-/// `home`; temperature is sampled once per segment at its start (so a held room
-/// couples at a fixed rate — the Hold-jump stays closed-form). DRIVE == FOLD:
-/// pure over the committed occupancy + terrain, so the tick (which folds
-/// `frozen + out`) and `affect_of` (which folds the final ledger) compute it
-/// identically. `sightings` must be ascending and ≤ `t`.
+/// The sustenance path integral at `t`, read off the resident store — thirst
+/// when `p` is [`SUSTENANCE`] and the reset is a `drank`, hunger when `p` is
+/// [`HUNGER`] and the reset is an `eaten`.
+///
+/// **This is `integrate_thirst(agent_sightings(..), ..)` with the two scans
+/// replaced by binary searches, and nothing else.** Both of those functions
+/// are gone (The Pawl, spec §2.4: the hub is deleted, not cached); their
+/// bodies survive VERBATIM as the oracle in
+/// `windows/vessel/tests/suite/resident_folds.rs`, which pins this function
+/// against them bit-for-bit. The arithmetic below is deliberately identical to
+/// what they computed, term for term and in the same order:
+///
+/// - segment boundaries are `last_reset`, then every DISTINCT sighting instant
+///   strictly inside `(last_reset, t)`, then `t` — the same list
+///   `integrate_thirst` built and then `dedup`ed, which is why the distinct-day
+///   iteration below needs no separate dedup pass;
+/// - the position governing the segment that STARTS at `s` is the latest
+///   sighting at or before `s` — which for the first segment is EARLIER than
+///   the reset, and which at a tie (several sightings on one day) is the last
+///   of them in `(day, room)` order, exactly what a reverse scan of the sorted
+///   timeline finds;
+/// - temperature is sampled once per segment, at the segment's START, and the
+///   crossing to `f64` standard days happens at the same place it always did
+///   (see `decide_step`'s own comment: the edge of a continuous integral);
+/// - the clamp is applied once, at the end, to the accumulated total.
+///
+/// **`last_reset` is a parameter rather than a lookup**, and that is not an
+/// accident of shape. The tick's own walk carries a LOCAL reset instant that
+/// it updates as it emits `drank`/`eaten` facts (`WalkState::last_drank`), so
+/// mid-tick the authoritative reset is one the committed ledger does not know
+/// about yet. Deriving the reset here from the store would silently drop that
+/// and change what a creature feels for the rest of the tick it drank in.
+/// [`crate::resident::Sustenance`] answers WHEN the reset was for the callers
+/// that read it from the ledger; this function only integrates.
+///
+/// `overlay` is this tick's own emitted `agent-at` sightings for `entity`,
+/// folded VIRTUALLY on top of the resident trail: never absorbed, because the
+/// tick's facts are not committed yet, and merged rather than concatenated
+/// because `decide_step` sorts the combined timeline by `(day, room)` before
+/// integrating it. It is sorted here rather than trusted, so a caller that
+/// builds it in emission order gets the same answer as one that does not.
+/// Pass `&[]` for a read over the committed history alone.
+/// type-audit: bare-ok(ratio: return)
 #[allow(clippy::too_many_arguments)]
-fn integrate_thirst(
-    sightings: &[(f64, Facet)],
+pub fn sustenance_at(
+    trail: &Trail,
+    entity: EntityId,
     home: &Facet,
-    last_drank: f64,
-    t: f64,
+    last_reset: WorldTime,
+    overlay: &[(WorldTime, Facet)],
+    t: WorldTime,
     terrain: &dyn Terrain,
     class: ThermalStrategy,
     p: &DriveParams,
+    memo: &mut SustenanceMemo,
+    witness: &mut ReadWitness,
 ) -> f64 {
-    if t <= last_drank {
+    if t <= last_reset {
+        // `integrate_thirst`'s own short-circuit. Compared on the tick lattice
+        // rather than in standard days: `WorldTime::as_std_days` is strictly
+        // increasing at every reachable magnitude, so the two orderings agree,
+        // and comparing instants as instants keeps the float crossing at the
+        // integral's edge where the rest of this function puts it.
+        witness.note_segments(entity, 0);
         return 0.0;
     }
-    // Segment boundaries: last_drank, each sighting arrival strictly inside
-    // (last_drank, t), then t.
-    let mut bounds: Vec<f64> = vec![last_drank];
-    for (d, _) in sightings {
-        if *d > last_drank && *d < t {
-            bounds.push(*d);
+    let sightings = trail.of(entity);
+    let mut extra: Vec<(WorldTime, Facet)> = overlay.to_vec();
+    extra.sort_by(|a, b| a.0.cmp(&b.0).then_with(|| a.1.cmp(&b.1)));
+
+    // The governing position for a segment starting at `s`: the latest
+    // sighting at or before `s` across BOTH sequences, else `home`. Each half
+    // is the last element of its own `day <= s` prefix (a binary search), and
+    // the merged timeline's last such element is whichever of the two is
+    // greater in `(day, room)` order — which is what a reverse scan of the
+    // merged vector returned.
+    fn governing<'a>(
+        sightings: &'a [(WorldTime, Facet)],
+        overlay: &'a [(WorldTime, Facet)],
+        home: &'a Facet,
+        s: WorldTime,
+    ) -> &'a Facet {
+        let a = sightings[..sightings.partition_point(|(d, _)| *d <= s)].last();
+        let b = overlay[..overlay.partition_point(|(d, _)| *d <= s)].last();
+        match (a, b) {
+            (Some(a), Some(b)) => {
+                if (b.0, &b.1) > (a.0, &a.1) {
+                    &b.1
+                } else {
+                    &a.1
+                }
+            }
+            (Some(a), None) => &a.1,
+            (None, Some(b)) => &b.1,
+            (None, None) => home,
         }
     }
-    bounds.push(t);
-    bounds.dedup();
-    let mut total = 0.0_f64;
-    for w in bounds.windows(2) {
-        let (s, e) = (w[0], w[1]);
-        // Position governing the segment starting at `s`: the latest sighting
-        // arriving at or before `s`, else home.
-        let pos = sightings
-            .iter()
-            .rev()
-            .find(|(d, _)| *d <= s)
-            .map(|(_, r)| r)
-            .unwrap_or(home);
-        let rate = rise_at(
+
+    // The rate for a window: sampled ONCE, at the window's start, from the
+    // position governing it. Held as one closure because the accumulator and
+    // the tail loop below must perform the identical arithmetic — a second
+    // spelling of it is exactly how a bit-identity claim rots.
+    let rate_of = |pos: &Facet, s: f64| {
+        rise_at(
             terrain.temperature(
                 pos,
                 WorldTime::from_std_days(s).expect("a day value is finite"),
             ),
             class,
             p,
-        );
-        total += rate * (e - s);
+        )
+    };
+
+    // THE ACCUMULATOR (spec §2.4, built by Task 5b). The memo carries the
+    // integral from `last_reset` forward, checkpointed at every distinct
+    // sighting instant, so this read resumes from the last checkpoint it may
+    // use instead of re-summing the whole interval. `cut` is the earliest
+    // instant the overlay carries: a memoised window is disqualified if the
+    // overlay could split it or change the position governing it, and both are
+    // excluded by resuming at or before `cut` (see `SustenanceMemo`).
+    let drive = DriveKey::new(class, p.rise);
+    let cut = extra.first().map(|(d, _)| *d);
+    let (resume, base, advanced) = {
+        let mut rate = rate_of;
+        memo.resume(
+            entity, drive, last_reset, sightings, home, cut, t, &mut rate,
+        )
+    };
+
+    // The interior boundaries: the DISTINCT instants strictly inside
+    // `(resume, t)`, ascending, merged across the two sequences. The slices
+    // are found by binary search, so the walk is O(sightings the accumulator
+    // has not already folded) rather than O(history).
+    let inner = |seq: &[(WorldTime, Facet)]| -> (usize, usize) {
+        (
+            seq.partition_point(|(d, _)| *d <= resume),
+            seq.partition_point(|(d, _)| *d < t),
+        )
+    };
+    let (ts, te) = inner(sightings);
+    let (os, oe) = inner(&extra);
+    let mut bounds: Vec<WorldTime> = Vec::with_capacity((te - ts) + (oe - os) + 2);
+    bounds.push(resume);
+    let (mut i, mut j) = (ts, os);
+    while i < te || j < oe {
+        let next = if j >= oe {
+            let d = sightings[i].0;
+            i += 1;
+            d
+        } else if i >= te {
+            let d = extra[j].0;
+            j += 1;
+            d
+        } else if sightings[i].0 <= extra[j].0 {
+            let d = sightings[i].0;
+            i += 1;
+            d
+        } else {
+            let d = extra[j].0;
+            j += 1;
+            d
+        };
+        if bounds.last() != Some(&next) {
+            bounds.push(next);
+        }
     }
+    bounds.push(t);
+
+    // Resuming from the accumulator's own running total — never from a
+    // difference of two of them, which would be arithmetically equal and not
+    // bit-identical (see `SustenanceMemo`).
+    let mut total = base;
+    for w in bounds.windows(2) {
+        let (s, e) = (w[0].as_std_days(), w[1].as_std_days());
+        let pos = governing(sightings, &extra, home, w[0]);
+        total += rate_of(pos, s) * (e - s);
+    }
+    // One terrain sample per window, taken at the window's start — the
+    // quantity the cost witness bounds, counted where it is spent rather than
+    // inferred from the segment count beside it. Both halves count: the
+    // windows the accumulator folded on this read, and the tail this one
+    // summed itself.
+    let integrated = advanced + (bounds.len() - 1) as u64;
+    witness.note_sustenance_read(
+        entity,
+        drive,
+        last_reset,
+        sightings.len(),
+        extra.len(),
+        integrated,
+        integrated,
+    );
     total.clamp(0.0, 1.0)
 }
 
@@ -924,10 +1042,20 @@ fn integrate_thirst(
 /// Kindling) over `entity`'s committed occupancy since its last drink, at its
 /// thermal-strategy `class`. Reduces to the old flat `rise × elapsed` at a
 /// thermoneutral (or unreadable) climate. DRIVE == FOLD — over `drank` (the
-/// reset) and `agent-at` (the occupancy).
+/// reset) and `agent-at` (the occupancy), both now read off the caller-owned
+/// resident store (The Pawl) rather than re-scanned per call.
+///
+/// The reset lookup is UNFILTERED — the latest `drank` in the whole committed
+/// history, not the latest at or before `t` — because that is what this
+/// function has always computed, and spec §3 rule 1 makes changing it a
+/// deliberate act rather than a side effect of the migration. Every read here
+/// records what that lookup answered, so the rule's witness is taken on the
+/// real path rather than re-derived beside it.
 /// type-audit: bare-ok(ratio: return)
+#[allow(clippy::too_many_arguments)]
 pub fn drive_at(
     ledger: &Ledger,
+    folds: &OwnedFolds,
     entity: EntityId,
     home: &Facet,
     t: WorldTime,
@@ -935,19 +1063,29 @@ pub fn drive_at(
     terrain: &dyn Terrain,
     class: ThermalStrategy,
 ) -> f64 {
-    let last_drank = ledger
-        .facts_of(entity, DRANK)
-        .filter_map(|f| f.day)
-        .fold(0.0_f64, |acc, d| acc.max(d.as_std_days()));
-    let sightings = agent_sightings(ledger, entity, t.as_std_days());
-    integrate_thirst(
-        &sightings,
+    let mut store = folds.borrow_mut();
+    let (trail, resets, memo, witness) = store.trail_and_thirst(ledger);
+    let last_reset = resets.last_reset(entity);
+    witness.note_reset(entity, t, last_reset);
+    // `max(GENESIS)` reproduces the `fold(0.0, f64::max)` this replaced,
+    // byte for byte: that fold floored a pre-genesis reset at genesis, and
+    // fixing THAT is a behaviour change (decision 0126) deliberately out of
+    // this migration's scope — see `last_fact_day_at_or_before`'s doc.
+    let last_reset = last_reset
+        .unwrap_or(WorldTime::GENESIS)
+        .max(WorldTime::GENESIS);
+    sustenance_at(
+        trail,
+        entity,
         home,
-        last_drank,
-        t.as_std_days(),
+        last_reset,
+        &[],
+        t,
         terrain,
         class,
         p,
+        memo,
+        witness,
     )
 }
 
@@ -957,24 +1095,42 @@ pub fn drive_at(
 /// by ascending `Facet`), else `None` (ignorant). BELIEF == FOLD-OVER-PERCEIVED:
 /// no stored belief — it re-derives from facts already committed (the matrix
 /// verdict; UNI-20). Nearness anchors to home (nearest-to-current is a followup).
+///
+/// The candidate set comes off the caller-owned resident store (The Pawl):
+/// [`crate::resident::KnownWater`] holds each entity's DISTINCT visited rooms
+/// with the first instant each was seen, so this read is O(distinct rooms)
+/// where it was O(history). Nothing else moves — the `day <= t` admission, the
+/// `is_water` intersection, the home-anchored `plan_to_room` ranking and the
+/// `(hops, Facet)` tie-break are the same ones this function has always
+/// applied, in the same order over the same ascending-`Facet` candidates.
+///
+/// The store guard is DROPPED before the ranking: `plan_to_room` is a budgeted
+/// A* over terrain and touches no fold, so holding the borrow across it would
+/// buy nothing and would make any future fold read inside the planner a
+/// runtime panic rather than a compile error.
 /// type-audit: bare-ok(count: budget)
 pub fn believed_water(
     ledger: &Ledger,
+    folds: &OwnedFolds,
     npc: &Body,
     t: WorldTime,
     terrain: &dyn Terrain,
     budget: usize,
 ) -> Option<Facet> {
-    let mut seen: std::collections::BTreeSet<Facet> = std::collections::BTreeSet::new();
-    for f in ledger.facts_of(npc.entity, AGENT_AT) {
-        let sighted = f.day.map(|d| d <= t).unwrap_or(false);
-        if sighted && let Value::Text(s) = &f.object {
-            let room = room_from_text(s);
-            if is_water(&room, terrain) {
-                seen.insert(room);
-            }
-        }
-    }
+    let seen: Vec<Facet> = {
+        let mut store = folds.borrow_mut();
+        let (known, trail, witness) = store.known_water_and_trail(ledger);
+        // Spec §3 rule 6's witness, taken where the read actually happens: is
+        // this instant behind a sighting the store has already absorbed? See
+        // `ReadWitness::note_belief` for what the count means now that the
+        // rule has fired and the tenant carries a first-visit instant.
+        witness.note_belief(
+            npc.entity,
+            t,
+            trail.of(npc.entity).last().map(|(day, _)| *day),
+        );
+        known.water_at(npc.entity, t, terrain)
+    };
     seen.into_iter()
         .filter_map(|r| {
             plan_to_room(&npc.home, &r, budget, &std::collections::BTreeSet::new())
@@ -1034,7 +1190,7 @@ impl PrimaryAfraidMemo {
 /// alarms could reach. Shared across every creature's re-derivation at one time.
 struct EmitterScan {
     /// The ever-terrain-afraid members and their day-sorted position timelines.
-    emitters: Vec<(Body, Vec<(f64, Facet)>)>,
+    emitters: Vec<(Body, Vec<(WorldTime, Facet)>)>,
     /// Every room within one hop of some emitter's frightening position.
     alarm_source_rooms: std::collections::BTreeSet<Facet>,
 }
@@ -1043,32 +1199,76 @@ struct EmitterScan {
 /// possible alarm emitters), building each one's day-sorted position timeline
 /// (day ≤ `t`) and the union of rooms their alarms could reach. Pure over
 /// `(roster, ledger, terrain, t)`; cached per `t` in [`PrimaryAfraidMemo`].
+///
+/// # This is spec §2.4's `Alarm`, and it reads the store rather than the ledger
+///
+/// It used to rebuild every roster member's whole sorted timeline from
+/// `ledger.facts_of` on every call — O(roster × history), the O(agents²)-shaped
+/// term spec §1 names as this fold's second cost. It now takes two reads off
+/// the caller's resident store (The Pawl, spec §2.4):
+///
+/// - **which rooms a member has stood in** comes from
+///   [`crate::resident::LatestVisit::rooms_at`], which is O(distinct rooms
+///   visited) rather than O(history). The `ever`/halo test only ever asked
+///   *whether* a member had stood somewhere frightening and *where*, and both
+///   are set questions: the old loop walked every sighting and inserted into a
+///   `BTreeSet`, so re-visits contributed nothing after the first.
+/// - **an emitter's position timeline** comes from
+///   [`crate::resident::Trail`], sliced to its `day <= t` prefix by binary
+///   search, and is copied only for the members that turn out to be emitters
+///   — rare, and the reason the copy is affordable at all.
+///
+/// **The tenant holds the visits and the READ applies the predicate**, exactly
+/// as [`crate::resident::KnownWater`] does for `is_water`: `frightening` needs
+/// terrain and the member's own threat niche, neither of which is a ledger
+/// fact, so none of what this function accumulates could live inside a
+/// `LedgerFold`. The result is memoised per `t` in [`PrimaryAfraidMemo`],
+/// unchanged.
+///
+/// **One ordering caveat, stated because it is the only place the store's
+/// order and the ledger's could part.** The old timeline was sorted by day
+/// alone, stably, so sightings sharing a day kept COMMIT order; `Trail` sorts
+/// by `(day, room)`, so they are in room order there. `position_at` reads the
+/// LAST entry with `day <= q`, so the two disagree exactly when one entity has
+/// two sightings on the SAME instant in DIFFERENT rooms. In production they
+/// cannot: `WalkState` advances `st.day` by `clock::cost_of`, which floors at
+/// one tick, before every emitted `agent-at`, so a walker's sightings are
+/// strictly increasing in day. That is a structural argument, and it is
+/// measured too — see `the_walk_never_commits_two_sightings_of_one_entity_at_
+/// one_instant` and `a_same_day_pair_committed_in_descending_room_order_is_
+/// where_the_two_orders_part` in
+/// `windows/vessel/tests/suite/resident_folds.rs`, which pin both halves.
 fn build_emitter_scan(
     roster: &[Body],
     ledger: &Ledger,
+    folds: &OwnedFolds,
     terrain: &dyn Terrain,
     t: WorldTime,
 ) -> EmitterScan {
-    let mut emitters: Vec<(Body, Vec<(f64, Facet)>)> = Vec::new();
+    // Pass 1: the rooms each member has stood in by `t`, off the store. The
+    // guard is taken once for the whole pass and dropped before the predicate
+    // runs — not because `terrain` could re-enter the store (it cannot), but
+    // because keeping every borrow to the smallest block that needs it is what
+    // makes the recursion further down this chain safe by construction rather
+    // than by inspection.
+    let visited: Vec<Vec<Facet>> = {
+        let mut store = folds.borrow_mut();
+        let (visits, _) = store.latest_visit_and_trail(ledger);
+        roster
+            .iter()
+            .map(|m| visits.rooms_at(m.entity, t))
+            .collect()
+    };
+
+    // Pass 2: apply the frightening predicate, which needs terrain and each
+    // member's own threat niche — the half no fold can hold.
     let mut alarm_source_rooms: std::collections::BTreeSet<Facet> =
         std::collections::BTreeSet::new();
-    for m in roster {
+    let mut is_emitter: Vec<bool> = Vec::with_capacity(roster.len());
+    for (m, rooms) in roster.iter().zip(&visited) {
         let mettle = mettle_factor(m.boldness);
         let frightening =
             |room: &Facet| threat_field(room, &m.threat_niche, terrain) * mettle >= DANGER_ACT;
-        let mut timeline: Vec<(f64, Facet)> = ledger
-            .facts_of(m.entity, AGENT_AT)
-            .filter_map(|f| {
-                let d = f.day.filter(|d| *d <= t)?.as_std_days();
-                match &f.object {
-                    Value::Text(s) => Some((d, room_from_text(s))),
-                    _ => None,
-                }
-            })
-            .collect();
-        // Sort by day (stable: equal days keep commit order, matching
-        // `agent_position`'s last-committed-≤-day read on the monotonic timeline).
-        timeline.sort_by(|a, b| a.0.total_cmp(&b.0));
         let mut ever = false;
         let mut note_halo = |p: &Facet| {
             alarm_source_rooms.insert(p.clone());
@@ -1080,16 +1280,45 @@ fn build_emitter_scan(
             ever = true;
             note_halo(&m.home);
         }
-        for (_, p) in &timeline {
+        for p in rooms {
             if frightening(p) {
                 ever = true;
                 note_halo(p);
             }
         }
-        if ever {
-            emitters.push((m.clone(), timeline));
+        is_emitter.push(ever);
+    }
+
+    // Pass 3: copy the timelines of the members that are actually emitters.
+    let mut emitters: Vec<(Body, Vec<(WorldTime, Facet)>)> = Vec::new();
+    {
+        let mut store = folds.borrow_mut();
+        let trail = store.trail(ledger);
+        for (m, ever) in roster.iter().zip(&is_emitter) {
+            if *ever {
+                let upto = trail.prefix_len(m.entity, t);
+                emitters.push((m.clone(), trail.of(m.entity)[..upto].to_vec()));
+            }
         }
     }
+
+    // The scan's own witness: how many scans were built and how many found an
+    // emitter. The DENOMINATOR is the point — "no emitter" and "no scan" are
+    // different findings that one number cannot tell apart, and this scan is
+    // also built for the EMPTY roster the recursion's base case passes, which
+    // can only ever add to the denominator (see `ReadWitness::emitter_scans`).
+    //
+    // Neither number is why the seed-42 ledger hash is blind to the past-day
+    // path: seed 42 builds 70 of these scans in a ten-wait script and 20 of
+    // them DO find an emitter. What it never does is reach `emitter_arousal`
+    // from inside the hazard fold — see `ReadWitness::alarm_replays`, which
+    // counts that and is the number the second byte-identity witness searches
+    // for a world on.
+    folds
+        .borrow_mut()
+        .witness_mut(ledger)
+        .note_emitter_scan(emitters.len());
+
     EmitterScan {
         emitters,
         alarm_source_rooms,
@@ -1103,9 +1332,25 @@ fn build_emitter_scan(
 /// alarm-free `affect_of` that `alarm_field` and the re-derivation share. The
 /// inner `affect_of` reads an EMPTY band, so its own `believed_hazard` is
 /// emitter-free and never re-enters this path (the recursion break).
+///
+/// **`folds` is the caller's resident store, and threading it here is what
+/// took the throwaway store off this path (The Pawl, spec §2.4).** The
+/// `affect_of` below is a PAST-DAY read — `day` is the instant being replayed,
+/// not the present — so it reaches `drive_at`, `hunger_at`, `believed_water`
+/// and `hazard_memory_memo` at an instant behind the ledger's end. Every one
+/// of those serves that read off this store, and the reset lookup the two
+/// sustenance drives make is the UNFILTERED one they have always made: the
+/// latest `drank`/`eaten` in the whole committed history, with no bound on
+/// `day`, so a drink in the replayed day's own future still zeroes the
+/// integral. That is today's behaviour, preserved deliberately rather than
+/// inherited — see `drive_at`'s doc and spec §3 rule 1. Decision 0237's
+/// filtered rule is the physically sensible one and is a followup, not this
+/// migration's business: changing it would move a past-day reading on every
+/// emitter-bearing world, which is what the census asserts against.
 fn emitter_arousal(
     afraid: &mut std::collections::BTreeMap<(EntityId, WorldTime), f64>,
     frozen: &Ledger,
+    folds: &OwnedFolds,
     npc: &Body,
     day: WorldTime,
     terrain: &dyn Terrain,
@@ -1114,7 +1359,7 @@ fn emitter_arousal(
     if let Some(&v) = afraid.get(&key) {
         return v;
     }
-    let affect = affect_of(frozen, npc, &[], day, terrain);
+    let affect = affect_of(frozen, folds, npc, &[], day, terrain);
     let v = if affect.object == Some(DriveKind::Danger) && affect.arousal >= DANGER_ACT {
         affect.arousal
     } else {
@@ -1130,9 +1375,20 @@ fn emitter_arousal(
 /// of the present terrain calls safe and only a remembered alarm makes
 /// frightening. The Shudder's load-bearing distinction: a felt term reading
 /// `shunned` would drift the canonical world (wild fauna carry a non-empty
-/// static set on seed 42), while `dread` is EMPTY there by construction — no
+/// static set on seed 42), while `dread` is EMPTY there.
+///
+/// **Empty for a narrower reason than this doc used to give**, and the
+/// difference decides which seeds a witness has to search for. It said "no
 /// primary-afraid emitter, so the emitter-free fast path returns before a
-/// single entry is recorded.
+/// single entry is recorded". Measured (The Pawl, Task 5) over
+/// `common::SIGHT_SEEDS` with a ten-wait script: seed 42 builds 70 emitter
+/// scans and 20 of them are NOT empty, so the emitter-free fast path is not
+/// what returns. What is empty on seed 42 is the intersection one gate later:
+/// no room a creature remembers visiting has an emitter standing in its
+/// one-hop halo at that room's latest-visit day, because every remembered
+/// room is either already terrain-frightening (the terrain shortcut takes it
+/// and records STATIC provenance) or outside `alarm_source_rooms` entirely.
+/// Two of the 64 seeds swept do reach it.
 /// type-audit: bare-ok(ratio: dread)
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct HazardMemory {
@@ -1184,21 +1440,31 @@ pub struct HazardMemory {
 /// position at any past day). A room's transient alarm is then the clamped sum
 /// of the arousals of just those emitters whose position on that day lies within
 /// the room's one-hop halo — the SAME quantity `alarm_field` computes, but
-/// evaluated only where an emitter actually stood, so an emitter-free world
-/// (seed 42) pays nothing beyond the terrain fold. `affect_of` (to confirm an
+/// evaluated only where an emitter actually stood. `affect_of` (to confirm an
 /// emitter's Danger drive WINS) runs only for a terrain-afraid member standing
-/// beside the very room being judged — rare.
+/// beside the very room being judged — rare, and measured rare: on 62 of the
+/// 64 seeds in `common::SIGHT_SEEDS` it runs from here ZERO times.
+///
+/// **Zero because of the halo intersection, not because the world has no
+/// emitters** — this paragraph used to say "an emitter-free world (seed 42)
+/// pays nothing beyond the terrain fold", and seed 42 is not emitter-free (70
+/// scans, 20 of them non-empty, on a ten-wait script). It pays nothing
+/// because no room it remembers has an emitter in its halo on the day it
+/// remembers standing there. The distinction is what the second byte-identity
+/// witness had to search for: "has an emitter" is common, "replays an
+/// emitter's affect at a past visit day" is two worlds in sixty-four.
 ///
 /// The planner half of [`hazard_memory`]; the transient half is
 /// [`HazardMemory::dread`].
 pub fn believed_hazard(
     ledger: &Ledger,
+    folds: &OwnedFolds,
     npc: &Body,
     t: WorldTime,
     terrain: &dyn Terrain,
     roster: &[Body],
 ) -> std::collections::BTreeSet<Facet> {
-    hazard_memory(ledger, npc, t, terrain, roster).shunned
+    hazard_memory(ledger, folds, npc, t, terrain, roster).shunned
 }
 
 /// [`believed_hazard`] sharing a caller-owned [`PrimaryAfraidMemo`] across the
@@ -1206,59 +1472,77 @@ pub fn believed_hazard(
 ///
 /// The planner half of [`hazard_memory_memo`]; the transient half is
 /// [`HazardMemory::dread`].
+#[allow(clippy::too_many_arguments)]
 pub fn believed_hazard_memo(
     ledger: &Ledger,
+    folds: &OwnedFolds,
     npc: &Body,
     t: WorldTime,
     terrain: &dyn Terrain,
     roster: &[Body],
     memo: &mut PrimaryAfraidMemo,
 ) -> std::collections::BTreeSet<Facet> {
-    hazard_memory_memo(ledger, npc, t, terrain, roster, memo).shunned
+    hazard_memory_memo(ledger, folds, npc, t, terrain, roster, memo).shunned
 }
 
 /// [`hazard_memory_memo`] with a throwaway memo — a lone read gains nothing
 /// from caching (the hot sim paths thread a shared one).
 pub fn hazard_memory(
     ledger: &Ledger,
+    folds: &OwnedFolds,
     npc: &Body,
     t: WorldTime,
     terrain: &dyn Terrain,
     roster: &[Body],
 ) -> HazardMemory {
     let mut memo = PrimaryAfraidMemo::new();
-    hazard_memory_memo(ledger, npc, t, terrain, roster, &mut memo)
+    hazard_memory_memo(ledger, folds, npc, t, terrain, roster, &mut memo)
 }
 
 /// The ONE hazard fold (see [`believed_hazard`] for the belief, the staleness
 /// rule and the cost argument), returning BOTH provenances as a
 /// [`HazardMemory`] and sharing a caller-owned [`PrimaryAfraidMemo`] across the
 /// many re-derivations of a single tick.
+#[allow(clippy::too_many_arguments)]
 pub fn hazard_memory_memo(
     ledger: &Ledger,
+    folds: &OwnedFolds,
     npc: &Body,
     t: WorldTime,
     terrain: &dyn Terrain,
     roster: &[Body],
     memo: &mut PrimaryAfraidMemo,
 ) -> HazardMemory {
-    // Most-recent visit per room (day ≤ t): the room is judged at its LATEST
-    // visit, so a later safe visit clears an earlier phantom (the staleness rule).
-    let mut latest: std::collections::BTreeMap<Facet, f64> = std::collections::BTreeMap::new();
-    for f in ledger.facts_of(npc.entity, AGENT_AT) {
-        if let Some(fday) = f.day.filter(|d| *d <= t).map(WorldTime::as_std_days)
-            && let Value::Text(s) = &f.object
-        {
-            latest
-                .entry(room_from_text(s))
-                .and_modify(|d| {
-                    if fday > *d {
-                        *d = fday;
-                    }
-                })
-                .or_insert(fday);
-        }
-    }
+    // MOST-RECENT VISIT PER ROOM (day ≤ t), off the resident store: the room is
+    // judged at its LATEST visit, so a later safe visit clears an earlier
+    // phantom (the staleness rule). This used to walk EVERY `agent-at` fact the
+    // creature had ever committed, on every call, to build a map bounded by the
+    // rooms it has stood in — the O(history)-per-tick term spec §1 names as this
+    // fold's first cost. `LatestVisit` holds the same visits indexed by room, so
+    // the read is one `partition_point` per room (spec §2.4).
+    //
+    // Spec §3 rule 6's witness is taken in the same guard, and FIRST, so that
+    // every call is counted: the emitter-free fast path below returns early, and
+    // a counter placed after it would silently measure only the worlds that have
+    // an emitter.
+    //
+    // ONE guard, and it is DROPPED before anything below runs. This function
+    // recurses — `frightened_at` -> `alarm_at` -> `alarm_field` ->
+    // `emitter_arousal` -> `affect_of` -> back here — and since stage 2 that
+    // path reads THIS store rather than a throwaway one, so a guard held across
+    // it is a runtime panic rather than a latent one. The shape every read site
+    // on this chain uses is the same: borrow, copy out what is needed, drop,
+    // then compute.
+    let latest: std::collections::BTreeMap<Facet, WorldTime> = {
+        let mut store = folds.borrow_mut();
+        let (visits, trail, witness) = store.latest_visit_and_witness(ledger);
+        witness.note_hazard(
+            npc.entity,
+            t,
+            trail.of(npc.entity).last().map(|(day, _)| *day),
+        );
+        visits.latest_at(npc.entity, t)
+    };
 
     // The emitter scan (which members could ever raise an alarm, their position
     // timelines, and the rooms any alarm could reach) is IDENTICAL for every
@@ -1266,15 +1550,18 @@ pub fn hazard_memory_memo(
     // cache it per `t` (see [`PrimaryAfraidMemo`]).
     memo.scans
         .entry(t)
-        .or_insert_with(|| build_emitter_scan(roster, ledger, terrain, t));
+        .or_insert_with(|| build_emitter_scan(roster, ledger, folds, terrain, t));
     // Disjoint field borrows: the scan (read) and the affect memo (write).
     let PrimaryAfraidMemo { afraid, scans } = memo;
     let scan = &scans[&t];
 
     // The emitter's committed position AT `day`: the latest entry with day ≤ it,
     // else its home (the pre-history fallback) — `agent_position` over the
-    // precomputed timeline.
-    let position_at = |m: &Body, timeline: &[(f64, Facet)], day: f64| -> Facet {
+    // precomputed timeline. The timeline is `Trail`'s own slice now, so the
+    // comparison is an exact tick comparison where it used to be an `f64` day
+    // comparison; `WorldTime::as_std_days` is strictly increasing at every
+    // reachable magnitude, so the `partition_point` lands in the same place.
+    let position_at = |m: &Body, timeline: &[(WorldTime, Facet)], day: WorldTime| -> Facet {
         let idx = timeline.partition_point(|(d, _)| *d <= day);
         if idx == 0 {
             m.home.clone()
@@ -1293,14 +1580,7 @@ pub fn hazard_memory_memo(
         // BEFORE any dread is ever recorded, so byte-identity costs not one
         // instruction.
         for (room, day) in latest {
-            if frightened_at(
-                &room,
-                npc,
-                terrain,
-                WorldTime::from_std_days(day).expect("a day value is finite"),
-                &[],
-                ledger,
-            ) {
+            if frightened_at(&room, npc, terrain, day, &[], ledger, folds) {
                 mem.shunned.insert(room);
             }
         }
@@ -1344,13 +1624,13 @@ pub fn hazard_memory_memo(
                 // Confirm the emitter's Danger drive WINS (primary-afraid) via the
                 // memoized, alarm-free `affect_of` — the same read `alarm_field`
                 // performs, cached per `(emitter, day)` over this fixed ledger.
-                alarm += emitter_arousal(
-                    afraid,
-                    ledger,
-                    m,
-                    WorldTime::from_std_days(day).expect("a day value is finite"),
-                    terrain,
-                );
+                // Spec §3 rule 5's denominator, recorded HERE rather than
+                // inside `emitter_arousal`: this is the PAST-DAY replay (the
+                // room's remembered visit instant), and the same function's
+                // other caller — `alarm_field_memo`'s present-day emitter
+                // probe — is not that path at all.
+                folds.borrow_mut().witness_mut(ledger).note_alarm_replay();
+                alarm += emitter_arousal(afraid, ledger, folds, m, day, terrain);
             }
         }
         // Hoisted so the value RECORDED as dread is byte-for-byte the value that
@@ -1380,15 +1660,17 @@ pub fn hazard_memory_memo(
 /// could never admit. Order-independent by construction (`BTreeSet` union +
 /// deterministic `min`); no RNG. BELIEF == FOLD (UNI-20): stores nothing.
 /// type-audit: bare-ok(count: budget)
+#[allow(clippy::too_many_arguments)]
 pub fn shared_believed_water(
     frozen: &Ledger,
+    folds: &OwnedFolds,
     npc: &Body,
     band: &[Body],
     t: WorldTime,
     terrain: &dyn Terrain,
     budget: usize,
 ) -> Option<Facet> {
-    let own = believed_water(frozen, npc, t, terrain, budget);
+    let own = believed_water(frozen, folds, npc, t, terrain, budget);
     let here = agent_position(frozen, npc, t);
     let mut pool: std::collections::BTreeSet<Facet> = std::collections::BTreeSet::new();
     let mut has_peer = false;
@@ -1396,7 +1678,7 @@ pub fn shared_believed_water(
     for other in band {
         if other.entity != npc.entity && agent_position(frozen, other, t) == here {
             has_peer = true;
-            if let Some(w) = believed_water(frozen, other, t, terrain, budget) {
+            if let Some(w) = believed_water(frozen, folds, other, t, terrain, budget) {
                 pool.insert(w);
             }
         }
@@ -3536,29 +3818,40 @@ fn forage_step(
 /// last meal, at its thermal-strategy `class` — the structural twin of thirst's
 /// [`drive_at`], folding `eaten` (the reset) and `agent-at` (the occupancy)
 /// with the `HUNGER` params. HUNGER == FOLD, so the tick and `affect_of`
-/// compute it identically.
+/// compute it identically. Both folds are read off the caller-owned resident
+/// store (The Pawl), and the reset lookup is UNFILTERED for exactly
+/// [`drive_at`]'s reason — see there, including the rule-1 witness.
 /// type-audit: bare-ok(ratio: return)
+#[allow(clippy::too_many_arguments)]
 pub fn hunger_at(
     ledger: &Ledger,
+    folds: &OwnedFolds,
     entity: EntityId,
     home: &Facet,
     t: WorldTime,
     terrain: &dyn Terrain,
     class: ThermalStrategy,
 ) -> f64 {
-    let last_ate = ledger
-        .facts_of(entity, EATEN)
-        .filter_map(|f| f.day)
-        .fold(0.0_f64, |acc, d| acc.max(d.as_std_days()));
-    let sightings = agent_sightings(ledger, entity, t.as_std_days());
-    integrate_thirst(
-        &sightings,
+    let mut store = folds.borrow_mut();
+    let (trail, resets, memo, witness) = store.trail_and_hunger(ledger);
+    let last_reset = resets.last_reset(entity);
+    witness.note_reset(entity, t, last_reset);
+    // The GENESIS floor, for `drive_at`'s reason — see there.
+    let last_reset = last_reset
+        .unwrap_or(WorldTime::GENESIS)
+        .max(WorldTime::GENESIS);
+    sustenance_at(
+        trail,
+        entity,
         home,
-        last_ate,
-        t.as_std_days(),
+        last_reset,
+        &[],
+        t,
         terrain,
         class,
         &HUNGER,
+        memo,
+        witness,
     )
 }
 
@@ -3768,11 +4061,12 @@ fn alarm_at(
     roster: &[Body],
     terrain: &dyn Terrain,
     frozen: &Ledger,
+    folds: &OwnedFolds,
 ) -> f64 {
     if roster.is_empty() {
         return 0.0;
     }
-    alarm_field(frozen, roster, terrain, day)
+    alarm_field(frozen, folds, roster, terrain, day)
         .get(room)
         .copied()
         .unwrap_or(0.0)
@@ -3788,6 +4082,7 @@ fn alarm_at(
 /// recovered long after the alarm itself has died. An EMPTY `roster` collapses
 /// this to The Haunt's terrain-only verdict (the recursion base case / the
 /// seed-42 path, where no primary-afraid emitter ever raises an alarm).
+#[allow(clippy::too_many_arguments)]
 fn frightened_at(
     room: &Facet,
     npc: &Body,
@@ -3795,10 +4090,11 @@ fn frightened_at(
     day: WorldTime,
     roster: &[Body],
     frozen: &Ledger,
+    folds: &OwnedFolds,
 ) -> bool {
     feels_frightening(
         threat_field(room, &npc.threat_niche, terrain),
-        alarm_at(room, day, roster, terrain, frozen),
+        alarm_at(room, day, roster, terrain, frozen, folds),
         npc.boldness,
     )
 }
@@ -4782,6 +5078,7 @@ pub fn arbitrate(
 /// acted on, not a poorer solo one.
 pub fn affect_of(
     frozen: &Ledger,
+    folds: &OwnedFolds,
     npc: &Body,
     band: &[Body],
     day: WorldTime,
@@ -4789,7 +5086,16 @@ pub fn affect_of(
 ) -> Affect {
     let mut memo = PrimaryAfraidMemo::new();
     let mut mesh_memo = RoomMeshMemo::new();
-    affect_of_memo(frozen, npc, band, day, terrain, &mut memo, &mut mesh_memo)
+    affect_of_memo(
+        frozen,
+        folds,
+        npc,
+        band,
+        day,
+        terrain,
+        &mut memo,
+        &mut mesh_memo,
+    )
 }
 
 /// [`affect_of`] sharing a caller-owned [`PrimaryAfraidMemo`] — for the lab's
@@ -4808,8 +5114,18 @@ pub fn affect_of(
 /// own kernel-fixed signature — a caller that DOES have a session-lived
 /// scope to share (`run_simulation`) calls [`affect_of_memo_occupied`]
 /// directly instead, precisely as it already does for `mesh_memo`.
+///
+/// **`folds` is NOT one of those throwaways, and used to be** (The Pawl,
+/// stage 2). This function built its own `OwnedFolds` per call — an advance
+/// over the WHOLE ledger every time, which on the hazard path
+/// (`hazard_memory_memo` → `emitter_arousal` → here, once per emitter per
+/// remembered day) was strictly worse than the per-call scans the store
+/// replaced. The store is now the caller's, threaded the whole way down the
+/// hazard chain, and no production path builds a throwaway one.
+#[allow(clippy::too_many_arguments)]
 pub fn affect_of_memo(
     frozen: &Ledger,
+    folds: &OwnedFolds,
     npc: &Body,
     band: &[Body],
     day: WorldTime,
@@ -4828,6 +5144,7 @@ pub fn affect_of_memo(
         None,
         mesh_memo,
         &mut home_nav_cache,
+        folds,
     )
 }
 
@@ -4896,6 +5213,7 @@ pub fn affect_of_memo_occupied(
     occupancy: Option<&Occupancy>,
     mesh_memo: &mut RoomMeshMemo,
     home_nav_cache: &mut HomeNavCache,
+    folds: &OwnedFolds,
 ) -> Affect {
     let pos = agent_position(frozen, npc, day);
     // BEHAVIOUR-PRESERVING, AND THE NEGATIVE CASE IS DELIBERATELY NOT HANDLED.
@@ -4910,13 +5228,20 @@ pub fn affect_of_memo_occupied(
     // fixing it means returning `Option` and making each caller name its
     // default, the way `last_fact_day_at_or_before` now does, which is a
     // BEHAVIOUR change and is deliberately out of this retype's scope.
-    let last_drank = frozen
-        .facts_of(npc.entity, DRANK)
-        .filter_map(|f| f.day)
-        .fold(WorldTime::GENESIS, WorldTime::max);
-    let believed = shared_believed_water(frozen, npc, band, day, terrain, PLAN_BUDGET);
+    //
+    // Read off the resident store (The Pawl): `Sustenance::last_reset` is the
+    // same UNFILTERED maximum, and `.max(GENESIS)` reproduces the fold's
+    // genesis floor byte for byte.
+    let last_drank = folds
+        .borrow_mut()
+        .sustenance_thirst(frozen)
+        .last_reset(npc.entity)
+        .unwrap_or(WorldTime::GENESIS)
+        .max(WorldTime::GENESIS);
+    let believed = shared_believed_water(frozen, folds, npc, band, day, terrain, PLAN_BUDGET);
     let drive = drive_at(
         frozen,
+        folds,
         npc.entity,
         &npc.home,
         day,
@@ -4938,7 +5263,7 @@ pub fn affect_of_memo_occupied(
     // frightened creature ⇒ byte-identical). The roster is this call's `band`;
     // `alarm_field` invokes `affect_of` with `band = &[]`, so its replay reads
     // a terrain-only memory and the transient re-derivation never recurses.
-    let memory = hazard_memory_memo(frozen, npc, day, terrain, band, memo);
+    let memory = hazard_memory_memo(frozen, folds, npc, day, terrain, band, memo);
     let view = Perceived {
         position: pos,
         drive,
@@ -4981,6 +5306,7 @@ pub fn affect_of_memo_occupied(
     let hunger = Hunger {
         urgency: hunger_at(
             frozen,
+            folds,
             npc.entity,
             &npc.home,
             day,
@@ -5106,12 +5432,13 @@ pub fn affect_of_memo_occupied(
 /// type-audit: bare-ok(ratio: return)
 pub fn alarm_field(
     frozen: &Ledger,
+    folds: &OwnedFolds,
     npcs: &[Body],
     terrain: &dyn Terrain,
     day: WorldTime,
 ) -> std::collections::BTreeMap<Facet, f64> {
     let mut memo = PrimaryAfraidMemo::new();
-    alarm_field_memo(frozen, npcs, terrain, day, &mut memo)
+    alarm_field_memo(frozen, folds, npcs, terrain, day, &mut memo)
 }
 
 /// [`alarm_field`] sharing a caller-owned [`PrimaryAfraidMemo`] so its
@@ -5120,6 +5447,7 @@ pub fn alarm_field(
 /// type-audit: bare-ok(ratio: return)
 pub fn alarm_field_memo(
     frozen: &Ledger,
+    folds: &OwnedFolds,
     npcs: &[Body],
     terrain: &dyn Terrain,
     day: WorldTime,
@@ -5155,7 +5483,7 @@ pub fn alarm_field_memo(
         // reproduces `affect_of`'s pre-Tidings (bandless) behaviour exactly.
         // `magnitude` is the emitter's Danger arousal, or `0.0` when it is not
         // primary-afraid (no emission).
-        let magnitude = emitter_arousal(&mut memo.afraid, frozen, npc, day, terrain);
+        let magnitude = emitter_arousal(&mut memo.afraid, frozen, folds, npc, day, terrain);
         if magnitude <= 0.0 {
             continue;
         }
@@ -5439,6 +5767,31 @@ pub struct DriveMovements<'a> {
     pub day_ticks: Option<TickSpan>,
     /// The elevation field belief and exploration read.
     pub terrain: &'a dyn Terrain,
+    /// The caller-owned resident fold store (The Pawl, spec §2.1) — the
+    /// session's, or a bench's, or a test's.
+    ///
+    /// **It is a field rather than a `step_with_occupancy` parameter, and
+    /// that is the whole point.** `TickSystem::step`'s signature is fixed by
+    /// the kernel's scheduler and cannot carry one, so a store reached only
+    /// through a parameter would be a throwaway on that path — and
+    /// `Session::wait` evaluates this very walk TWICE (once through
+    /// `step_with_occupancy` for the occupancy read, once through
+    /// `hornvale_kernel::tick` for the facts it commits). Holding the store on
+    /// the struct is what lets the second evaluation share the first's, which
+    /// is exactly what `Folded::advance_to`'s position-idempotence makes safe:
+    /// the second read absorbs nothing.
+    ///
+    /// Interior mutability, because the store is advanced on READ and several
+    /// of this walk's readers hold only `&self` (spec §2.2). It holds nothing
+    /// the ledger does not already determine, so it is never serialized and
+    /// discarding it at any instant is unobservable.
+    ///
+    /// **The thirst and hunger path integrals read it** (The Pawl, Task 3):
+    /// `decide_step` folds the resident trail plus this tick's own emitted
+    /// `agent-at` facts as a read-side overlay, and `WalkState::begin` and
+    /// `catch_up` take their `drank`/`eaten` reset instants from it. The
+    /// belief, hazard and alarm folds are stage 2's work and still scan.
+    pub folds: &'a crate::resident::OwnedFolds,
 }
 
 /// The day `npc` entered the room it occupies as of `t` — the day of the
@@ -5547,9 +5900,11 @@ fn hold_step(
 /// the caller's entire history — a discharge fact landing chronologically
 /// AFTER `day` but before the fold's own evaluation instant would otherwise
 /// suppress every competing drive for days that precede it. Catch-up meets
-/// this obligation via [`last_fact_day_at_or_before`], recomputed every
-/// iteration of its replay loop; that discipline lives in the caller, not
-/// here.
+/// this obligation via [`Sustenance::last_reset_at_or_before`], recomputed
+/// every iteration of its replay loop; that discipline lives in the caller,
+/// not here. (It was `last_fact_day_at_or_before` until The Pawl absorbed
+/// main: the resident store answers the same filtered question by binary
+/// search over a sorted list instead of a per-day scan, filter for filter.)
 ///
 /// Mutates `believed` exactly once, at the top, for the same reason the live
 /// walk always has: standing in water updates belief before the view built
@@ -5590,6 +5945,7 @@ fn decide_step(
     out: &[Fact],
     mesh_memo: &mut RoomMeshMemo,
     home_nav_cache: &mut HomeNavCache,
+    folds: &OwnedFolds,
 ) -> (Resolution, f64) {
     // Standing in water forms/updates belief (nearest-to-home wins) — the
     // live walk's own first step of every iteration.
@@ -5602,54 +5958,68 @@ fn decide_step(
     // HERE, at the integrals' own edge, rather than the walk carrying a float
     // clock upstream to suit them. Lossless below ~2.47e8 years (decision
     // 0186). Everything above and below this block compares ticks exactly.
-    let day_days = day.as_std_days();
-    let last_drank_days = last_drank.as_std_days();
-    let last_ate_days = last_ate.as_std_days();
-    // AND THE CROSSING STOPS HERE, ON PURPOSE. `agent_sightings`' `upto` and
-    // its returned `(day, room)` timeline, and `integrate_thirst`'s
-    // `sightings`/`last_drank`/`t`, are all genuinely INSTANTS and are all
-    // deliberately left as `f64` standard days. Retyping them would push the
-    // crossing INWARD, past the integral's own edge, so the integral would
-    // cross back out to `f64` per segment to multiply a rate by a span — more
-    // crossings than the one that belongs here, and the opposite of the seam
-    // principle. The edge of a continuous integral is where an instant stops
-    // being a lattice point and starts being a limit of integration.
-    // The temperature-coupled thirst integral, re-derived over the committed
-    // history (`frozen`) PLUS this tick's own emitted moves (`out`) — see the
-    // live walk's own doc for why both are folded together.
-    let mut sightings = agent_sightings(frozen, npc.entity, day_days);
-    for f in out {
-        if f.subject == npc.entity
-            && f.predicate == AGENT_AT
-            && let Value::Text(s) = &f.object
-            && let Some(d) = f.day
+    // AND THE CROSSING STOPS THERE, ON PURPOSE — it now lives inside
+    // [`sustenance_at`], which is the integral's own edge and therefore where
+    // it belongs. This block used to build an `f64`-dayed sightings vector for
+    // `agent_sightings`/`integrate_thirst`; both are gone, and the instants
+    // below stay instants right up to the multiplication of a rate by a span.
+    // The edge of a continuous integral is where an instant stops being a
+    // lattice point and starts being a limit of integration.
+    //
+    // The temperature-coupled thirst and hunger integrals, re-derived over the
+    // committed history (`frozen`, held resident in the store) PLUS this
+    // tick's own emitted moves (`out`, folded virtually as the overlay) — see
+    // the live walk's own doc for why both are folded together.
+    //
+    // The reset instants are the walk's OWN locals, not a store lookup: the
+    // walk updates them as it emits `drank`/`eaten` facts, which `frozen`
+    // cannot yet know about (see `sustenance_at`'s doc).
+    let overlay: Vec<(WorldTime, Facet)> = out
+        .iter()
+        .filter_map(|f| {
+            if f.subject != npc.entity || f.predicate != AGENT_AT {
+                return None;
+            }
+            let Value::Text(s) = &f.object else {
+                return None;
+            };
             // An exact tick comparison — the emitted fact's day and `day` are
             // both instants, so this no longer round-trips either through
             // `f64` merely to order them.
-            && d <= day
-        {
-            sightings.push((d.as_std_days(), room_from_text(s)));
-        }
-    }
-    sightings.sort_by(|a, b| a.0.total_cmp(&b.0).then_with(|| a.1.cmp(&b.1)));
-    let drive = integrate_thirst(
-        &sightings,
-        &npc.home,
-        last_drank_days,
-        day_days,
-        terrain,
-        npc.thermal_strategy,
-        params,
-    );
-    let hunger_urgency = integrate_thirst(
-        &sightings,
-        &npc.home,
-        last_ate_days,
-        day_days,
-        terrain,
-        npc.thermal_strategy,
-        &HUNGER,
-    );
+            f.day.filter(|d| *d <= day).map(|d| (d, room_from_text(s)))
+        })
+        .collect();
+    let (drive, hunger_urgency) = {
+        let mut store = folds.borrow_mut();
+        let (trail, memo, witness) = store.trail_and_witness(frozen);
+        let drive = sustenance_at(
+            trail,
+            npc.entity,
+            &npc.home,
+            last_drank,
+            &overlay,
+            day,
+            terrain,
+            npc.thermal_strategy,
+            params,
+            memo,
+            witness,
+        );
+        let hunger_urgency = sustenance_at(
+            trail,
+            npc.entity,
+            &npc.home,
+            last_ate,
+            &overlay,
+            day,
+            terrain,
+            npc.thermal_strategy,
+            &HUNGER,
+            memo,
+            witness,
+        );
+        (drive, hunger_urgency)
+    };
     let explore_step = lowest_unvisited_neighbor_memo(pos, visited, terrain, mesh_memo);
     // THE MOVER'S FATIGUE, AND IT IS NO LONGER A SECOND COPY OF THE READ'S (The
     // Wicket, Task 7). This line used to restate `fatigue_at`'s arithmetic —
@@ -5772,6 +6142,23 @@ fn decide_step(
 /// apart — nor was `0.0` ever a safe identity for a SIGNED instant (decision
 /// 0126 makes negative days legal). Each caller now names the default it
 /// wants, at the call site, where the choice is visible.
+///
+/// **IT HAS NO PRODUCTION CALLER, AND THAT IS THE POINT** (The Pawl, at the
+/// absorption of main). It had exactly two — `catch_up`'s `last_drank` and
+/// `last_ate` — and both now read `Sustenance::last_reset_at_or_before` off
+/// the resident store instead. A third, `last_rested`, was deleted by The
+/// Wicket when fatigue became a stock. So it survives as the SCAN half of
+/// this campaign's FOLD ≡ SCAN discipline: the verbatim body the store's
+/// filtered lookup is checked against, in
+/// `windows/vessel/tests/suite/resident_folds.rs`'s
+/// `the_reset_lookups_equal_a_direct_scan_of_the_ledger` (which writes the
+/// same filter out longhand rather than calling this, since it lives in
+/// another crate's test binary) and directly in this module's own
+/// `catch_up_replay_sees_thirst_before_a_drank_fact_inside_the_window`. It is
+/// `#[cfg(test)]` rather than deleted for that second caller's sake, and
+/// rather than left un-gated because a production-dead function that still
+/// compiles into the library reads as a live path to the next person.
+#[cfg(test)]
 fn last_fact_day_at_or_before(
     ledger: &Ledger,
     predicate: &str,
@@ -5851,6 +6238,7 @@ fn catch_up(
     // statement that the two lattices have merged.
     mesh_memo: &mut RoomMeshMemo,
     home_nav_cache: &mut HomeNavCache,
+    folds: &OwnedFolds,
     controller: &mut dyn Controller,
 ) -> Mode {
     let mut day = entry_day;
@@ -5879,10 +6267,26 @@ fn catch_up(
         // has never drunk has been accruing thirst since the world began.
         // Naming it at the call site is what keeps "no fact" and "a fact at
         // genesis" distinguishable everywhere else.
-        let last_drank = last_fact_day_at_or_before(frozen, DRANK, npc.entity, day)
-            .unwrap_or(WorldTime::GENESIS);
-        let last_ate = last_fact_day_at_or_before(frozen, EATEN, npc.entity, day)
-            .unwrap_or(WorldTime::GENESIS);
+        //
+        // The two sustenance resets come off the resident store (The Pawl);
+        // `last_reset_at_or_before` IS `last_fact_day_at_or_before` for
+        // `drank`/`eaten`, filter for filter, over a resident sorted list
+        // instead of a per-call scan. A THIRD read stood here until The
+        // Wicket — `rested` — and it is gone rather than migrated: fatigue is
+        // a stock integrated along the creature's own timeline now, so
+        // `decide_step` no longer takes a last-rested instant at all.
+        let (last_drank, last_ate) = {
+            let mut store = folds.borrow_mut();
+            let drank = store
+                .sustenance_thirst(frozen)
+                .last_reset_at_or_before(npc.entity, day)
+                .unwrap_or(WorldTime::GENESIS);
+            let ate = store
+                .sustenance_hunger(frozen)
+                .last_reset_at_or_before(npc.entity, day)
+                .unwrap_or(WorldTime::GENESIS);
+            (drank, ate)
+        };
         let (resolution, drive) = decide_step(
             day,
             pos,
@@ -5902,6 +6306,7 @@ fn catch_up(
             out,
             mesh_memo,
             home_nav_cache,
+            folds,
         );
         mode = resolution.mode;
         // THE CONTROLLER SEAM, extended to catch-up (The Hand, Task 5 fix
@@ -6049,6 +6454,7 @@ impl<'a> DriveMovements<'a> {
         // drive below then reads it at each creature's room.
         let alarm = alarm_field_memo(
             frozen,
+            self.folds,
             &self.npcs,
             self.terrain,
             self.from,
@@ -6097,7 +6503,8 @@ impl<'a> DriveMovements<'a> {
         let to_ticks = local_ticks_of(self.to);
         let from_ticks = local_ticks_of(self.from);
         for npc in &self.npcs {
-            let mut st = WalkState::begin(frozen, npc, &self.npcs, self.from, self.terrain);
+            let mut st =
+                WalkState::begin(frozen, npc, &self.npcs, self.from, self.terrain, self.folds);
             // THE THRESHOLD's crossing: arrive at the landing anchor of the
             // interior `WalkState::begin` just derived — the entry point for a
             // creature crossing INTO the room from the coarse (room-graph)
@@ -6119,6 +6526,7 @@ impl<'a> DriveMovements<'a> {
             // identical (no primary-afraid emitter on the settled worlds).
             let memory = hazard_memory_memo(
                 frozen,
+                self.folds,
                 npc,
                 self.from,
                 self.terrain,
@@ -6167,6 +6575,7 @@ impl<'a> DriveMovements<'a> {
                 CATCH_UP_STEP_CAP,
                 mesh_memo,
                 home_nav_cache,
+                self.folds,
                 // Every body here is GOAP-driven (the driven body's own
                 // catch-up runs separately — see `step_one_with_controller`),
                 // so a fresh, stateless pass-through changes nothing.
@@ -6279,6 +6688,13 @@ impl<'a> TickSystem for DriveMovements<'a> {
         // `throwaway_nav` (Task 4) carries the identical carve-out: this path
         // pays a fresh `plan_to_room` per creature per pop, exactly what
         // EVERY call paid before this task.
+        //
+        // THE RESIDENT FOLD STORE IS THE EXCEPTION, and it is why it lives on
+        // the struct rather than beside these two (The Pawl, spec §2.1):
+        // `self.folds` is the CALLER's store on this path as much as on the
+        // direct one, so the tick's two evaluations of the same walk share it.
+        // A throwaway here would put an O(history) rebuild back on exactly the
+        // path the store exists to take it off.
         let mut throwaway = RoomMeshMemo::new();
         let mut throwaway_nav = HomeNavCache::new();
         self.step_with_occupancy(frozen, &mut throwaway, &mut throwaway_nav)
@@ -6352,6 +6768,7 @@ impl WalkState {
         band: &[Body],
         from: WorldTime,
         terrain: &dyn Terrain,
+        folds: &OwnedFolds,
     ) -> WalkState {
         let pos = agent_position(frozen, npc, from);
         // The interval start, carried as the instant it already is — the walk
@@ -6371,28 +6788,42 @@ impl WalkState {
         // returning `Option` and making each caller name its default (as
         // `last_fact_day_at_or_before` now does), which is a behaviour change
         // and is deliberately out of this retype's scope.
-        let last_drank = frozen
-            .facts_of(npc.entity, DRANK)
-            .filter_map(|f| f.day)
-            .fold(WorldTime::GENESIS, WorldTime::max);
-        // NO `last_rested` TWIN (The Wicket, Task 7). Fatigue is a recovery
-        // stock now, folded over the whole `rested` timeline rather than
-        // carried as a single instant, so the walk holds no incremental copy
-        // of it: `fatigue_with_pending` folds `frozen` plus this tick's own
-        // emitted rests at every step. The field this comment replaces was
-        // the second of the two definitions that once disagreed by an ULP.
-        // Likewise the last meal day (The Provender): hunger is a path
-        // integral since it, reset when an `eaten` fact is emitted.
-        let last_ate = frozen
-            .facts_of(npc.entity, EATEN)
-            .filter_map(|f| f.day)
-            .fold(WorldTime::GENESIS, WorldTime::max);
+        //
+        // The two sustenance resets come off the resident store (The Pawl).
+        // `Sustenance::last_reset` is the same UNFILTERED maximum the fold
+        // this replaces took, and `.max(GENESIS)` reproduces that fold's
+        // genesis floor exactly — see `drive_at` for why the floor is kept
+        // rather than fixed here.
+        //
+        // NO `last_rested` TWIN (The Wicket, Task 7; re-applied over The
+        // Pawl's store at the absorption). Fatigue is a recovery stock now,
+        // folded over the whole `rested` timeline rather than carried as a
+        // single instant, so the walk holds no incremental copy of it:
+        // `fatigue_with_pending` folds `frozen` plus this tick's own emitted
+        // rests at every step. The field that comment replaces was the second
+        // of the two definitions that once disagreed by an ULP — and it is
+        // also the read The Pawl would otherwise have had to decide whether to
+        // migrate, so the two campaigns agree by subtraction.
+        let (last_drank, last_ate) = {
+            let mut store = folds.borrow_mut();
+            let drank = store
+                .sustenance_thirst(frozen)
+                .last_reset(npc.entity)
+                .unwrap_or(WorldTime::GENESIS)
+                .max(WorldTime::GENESIS);
+            let ate = store
+                .sustenance_hunger(frozen)
+                .last_reset(npc.entity)
+                .unwrap_or(WorldTime::GENESIS)
+                .max(WorldTime::GENESIS);
+            (drank, ate)
+        };
         // Belief and exploration state, evolved locally across the walk (the
         // fold includes this tick's own emitted moves). Seed belief from the
         // pre-tick history; grow it whenever the agent stands in water.
         // The Tidings: seed from the BAND's pooled belief (co-located
         // members share what they know), not the creature's alone.
-        let believed = shared_believed_water(frozen, npc, band, from, terrain, PLAN_BUDGET);
+        let believed = shared_believed_water(frozen, folds, npc, band, from, terrain, PLAN_BUDGET);
         let mut visited: std::collections::BTreeSet<Facet> = std::collections::BTreeSet::new();
         visited.insert(pos.clone());
         let steps = 0usize;
@@ -6509,6 +6940,7 @@ impl<'a> DriveMovements<'a> {
             &*out,
             mesh_memo,
             home_nav_cache,
+            self.folds,
         );
         st.mode = resolution.mode;
         // The felt state this same resolution carries (The Confidant, Task 2):
@@ -6803,16 +7235,24 @@ impl<'a> DriveMovements<'a> {
         let band = [body.clone()];
         let mut occupancy = Occupancy::default();
         let mut afraid_memo = PrimaryAfraidMemo::new();
-        let alarm = alarm_field_memo(frozen, &band, self.terrain, self.from, &mut afraid_memo);
+        let alarm = alarm_field_memo(
+            frozen,
+            self.folds,
+            &band,
+            self.terrain,
+            self.from,
+            &mut afraid_memo,
+        );
         let memory = hazard_memory_memo(
             frozen,
+            self.folds,
             body,
             self.from,
             self.terrain,
             &band,
             &mut afraid_memo,
         );
-        let mut st = WalkState::begin(frozen, body, &band, self.from, self.terrain);
+        let mut st = WalkState::begin(frozen, body, &band, self.from, self.terrain, self.folds);
         occupancy.arrive(
             body.entity,
             &st.pos,
@@ -6874,6 +7314,7 @@ impl<'a> DriveMovements<'a> {
             CATCH_UP_STEP_CAP,
             mesh_memo,
             home_nav_cache,
+            self.folds,
             &mut PlayerController::new(),
         );
         while self.advance_one(
@@ -7638,6 +8079,23 @@ mod tests {
     use crate::action::{is_movement, precondition_reads_committed_state};
     use hornvale_kernel::{ConceptRegistry, Seed, test_lineage};
 
+    /// A fixture-owned resident fold store — for a `DriveMovements` literal,
+    /// and for the reads this module's own tests drive directly.
+    ///
+    /// A THROWAWAY PER FIXTURE IS RIGHT HERE AND NOWHERE ELSE, and the reason
+    /// changed with The Pawl's Task 3: the store is read now, so a fresh one
+    /// is no longer merely a required field but a real (empty) fold that the
+    /// first read advances over the whole ledger. That is exactly what these
+    /// tests want — they assert what a read RETURNS, and advance-on-read makes
+    /// a fresh store's answer identical to a warm one's. Production, both
+    /// benches and the lab's headless sim own ONE store for a whole run
+    /// instead, because there the point is the cost rather than the value.
+    /// It is a helper rather than the expression written out dozens of times
+    /// because that would be dozens of places to change.
+    fn test_folds() -> crate::resident::OwnedFolds {
+        crate::resident::OwnedFolds::new(crate::resident::ResidentFolds::new())
+    }
+
     /// The fatigue-stock fixtures below predict `fatigue_at`'s exact bit
     /// pattern against the OLD single-constant arithmetic (The Wicket, Task
     /// 9 moved the production rate into `hornvale_species::
@@ -7836,6 +8294,7 @@ mod tests {
         assert_eq!(
             believed_water(
                 &ledger,
+                &test_folds(),
                 &npc,
                 WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
@@ -7848,6 +8307,7 @@ mod tests {
         assert_eq!(
             believed_water(
                 &ledger,
+                &test_folds(),
                 &npc,
                 WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
@@ -7889,6 +8349,7 @@ mod tests {
         assert_eq!(
             believed_water(
                 &ledger,
+                &test_folds(),
                 &npc,
                 WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
@@ -7938,6 +8399,7 @@ mod tests {
         assert_eq!(
             believed_water(
                 &ledger,
+                &test_folds(),
                 &npc,
                 WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
@@ -7949,6 +8411,7 @@ mod tests {
         assert_eq!(
             believed_water(
                 &ledger,
+                &test_folds(),
                 &npc,
                 WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
@@ -7991,6 +8454,7 @@ mod tests {
         assert_eq!(
             believed_water(
                 &ledger,
+                &test_folds(),
                 &npc,
                 WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
@@ -8035,6 +8499,7 @@ mod tests {
         assert_eq!(
             believed_water(
                 &ledger,
+                &test_folds(),
                 &npc,
                 WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
@@ -8046,6 +8511,7 @@ mod tests {
         commit_agent_at(&mut ledger, &reg, e, &water, 3.0);
         let a = believed_water(
             &ledger,
+            &test_folds(),
             &npc,
             WorldTime::from_std_days(5.0).expect("a day value is finite"),
             &t,
@@ -8056,6 +8522,7 @@ mod tests {
         assert_eq!(
             believed_water(
                 &reloaded,
+                &test_folds(),
                 &npc,
                 WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
@@ -8109,6 +8576,7 @@ mod tests {
         commit_agent_at(&mut ledger, &reg, e, &smaller, 3.0);
         let got = believed_water(
             &ledger,
+            &test_folds(),
             &npc,
             WorldTime::from_std_days(5.0).expect("a day value is finite"),
             &t,
@@ -8124,6 +8592,7 @@ mod tests {
         assert_eq!(
             believed_water(
                 &reloaded,
+                &test_folds(),
                 &npc,
                 WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
@@ -8205,6 +8674,7 @@ mod tests {
         assert!(
             believed_hazard(
                 &ledger,
+                &test_folds(),
                 &npc,
                 WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
@@ -8235,6 +8705,7 @@ mod tests {
         commit_agent_at(&mut ledger, &reg, e, &scary, 2.0); // frightened here
         let got = believed_hazard(
             &ledger,
+            &test_folds(),
             &npc,
             WorldTime::from_std_days(5.0).expect("a day value is finite"),
             &t,
@@ -8265,6 +8736,7 @@ mod tests {
         commit_agent_at(&mut ledger, &reg, e, &scary, 4.0); // still frightened
         let got = believed_hazard(
             &ledger,
+            &test_folds(),
             &npc,
             WorldTime::from_std_days(5.0).expect("a day value is finite"),
             &t,
@@ -8308,13 +8780,13 @@ mod tests {
         let roster = [b.clone()];
         // A's most-recent visit to X was safe → the phantom is cleared.
         assert!(
-            !believed_hazard(&ledger, &a, now, &terrain, &roster).contains(&x),
+            !believed_hazard(&ledger, &test_folds(), &a, now, &terrain, &roster).contains(&x),
             "a safe revisit clears the disproven phantom"
         );
         // C never revisited → the phantom persists (re-derived from B's PAST
         // room — requires the day-aware position lookup).
         assert!(
-            believed_hazard(&ledger, &c, now, &terrain, &roster).contains(&x),
+            believed_hazard(&ledger, &test_folds(), &c, now, &terrain, &roster).contains(&x),
             "without a corrective revisit, the phantom is still shunned"
         );
     }
@@ -8346,6 +8818,7 @@ mod tests {
 
         let mem = hazard_memory(
             &ledger,
+            &test_folds(),
             &a,
             WorldTime::from_std_days(10.0).expect("a day value is finite"),
             &terrain,
@@ -8391,6 +8864,7 @@ mod tests {
 
         let mem = hazard_memory(
             &ledger,
+            &test_folds(),
             &a,
             WorldTime::from_std_days(10.0).expect("a day value is finite"),
             &terrain,
@@ -8428,8 +8902,8 @@ mod tests {
         let now = WorldTime::from_std_days(10.0).expect("a day value is finite");
         let roster = [b];
         assert_eq!(
-            believed_hazard(&ledger, &a, now, &terrain, &roster),
-            hazard_memory(&ledger, &a, now, &terrain, &roster).shunned
+            believed_hazard(&ledger, &test_folds(), &a, now, &terrain, &roster),
+            hazard_memory(&ledger, &test_folds(), &a, now, &terrain, &roster).shunned
         );
     }
 
@@ -8472,14 +8946,14 @@ mod tests {
         // state reports the fear rather than a louder thirst.
         let now = WorldTime::from_std_days(0.6).expect("a day value is finite");
         let band = [a.clone(), b.clone(), c.clone()];
-        let felt = affect_of(&ledger, &a, &band, now, &terrain);
+        let felt = affect_of(&ledger, &test_folds(), &a, &band, now, &terrain);
         assert_eq!(
             felt.object,
             Some(DriveKind::Danger),
             "the rememberer is afraid on now-safe ground: {felt:?}"
         );
         assert!(felt.arousal >= DANGER_ACT, "and the fear is felt: {felt:?}");
-        let control = affect_of(&ledger, &c, &band, now, &terrain);
+        let control = affect_of(&ledger, &test_folds(), &c, &band, now, &terrain);
         assert_ne!(
             control.object,
             Some(DriveKind::Danger),
@@ -8512,12 +8986,19 @@ mod tests {
         // so an empty field at X is the contagion block, not an empty memory.
         let now = WorldTime::from_std_days(0.6).expect("a day value is finite");
         assert!(
-            hazard_memory(&ledger, &a, now, &terrain, &[a.clone(), b.clone()])
-                .dread
-                .contains_key(&x),
+            hazard_memory(
+                &ledger,
+                &test_folds(),
+                &a,
+                now,
+                &terrain,
+                &[a.clone(), b.clone()]
+            )
+            .dread
+            .contains_key(&x),
             "fixture check: the shudderer must actually dread X"
         );
-        let field = alarm_field(&ledger, &[a, b], &terrain, now);
+        let field = alarm_field(&ledger, &test_folds(), &[a, b], &terrain, now);
         assert!(
             !field.contains_key(&x),
             "remembered dread is felt, never broadcast: {field:?}"
@@ -8546,10 +9027,13 @@ mod tests {
         let now = WorldTime::from_std_days(1.0).expect("a day value is finite");
 
         // Alone, `lost` is ignorant.
-        assert_eq!(believed_water(&ledger, &lost, now, &t, 10_000), None);
+        assert_eq!(
+            believed_water(&ledger, &test_folds(), &lost, now, &t, 10_000),
+            None
+        );
         // Co-located with `knower`, it learns the water.
         assert_eq!(
-            shared_believed_water(&ledger, &lost, &band, now, &t, 10_000),
+            shared_believed_water(&ledger, &test_folds(), &lost, &band, now, &t, 10_000),
             Some(water.clone())
         );
     }
@@ -8578,7 +9062,15 @@ mod tests {
             };
             let drive_afraid = drive.urgency(&view_at(room.clone())) >= DANGER_ACT;
             assert_eq!(
-                frightened_at(room, &npc, &t, WorldTime::GENESIS, &[], &ledger),
+                frightened_at(
+                    room,
+                    &npc,
+                    &t,
+                    WorldTime::GENESIS,
+                    &[],
+                    &ledger,
+                    &test_folds(),
+                ),
                 drive_afraid,
                 "frightened_at agrees with the Danger drive at {room:?}"
             );
@@ -8607,7 +9099,8 @@ mod tests {
                     &t,
                     WorldTime::from_std_days(day).expect("a day value is finite"),
                     &[],
-                    &ledger
+                    &ledger,
+                    &test_folds()
                 ),
                 "the scary room frightens terrain-only on day {day}"
             );
@@ -8618,11 +9111,460 @@ mod tests {
                     &t,
                     WorldTime::from_std_days(day).expect("a day value is finite"),
                     &[],
-                    &ledger
+                    &ledger,
+                    &test_folds()
                 ),
                 "the mild room never frightens on day {day}"
             );
         }
+    }
+
+    /// The old scan's emitter list: each ever-terrain-afraid member with its
+    /// day-sorted `f64` timeline, exactly as `EmitterScan` held it before this
+    /// campaign. Named only because the tuple is too wide to spell inline.
+    type OracleEmitters = Vec<(Body, Vec<(f64, Facet)>)>;
+
+    /// A VERBATIM COPY of the OLD `build_emitter_scan` body — the SCAN half of
+    /// the emitter scan's equivalence, before it read the resident store.
+    ///
+    /// Copied rather than called, the same rule every other oracle in this
+    /// campaign follows (spec §5, and the pre-flight ruling in the campaign
+    /// ledger): the production body is gone, so this is the only statement of
+    /// the old one left, and an oracle sharing code with the thing under test
+    /// cannot falsify it.
+    fn emitter_scan_oracle(
+        roster: &[Body],
+        ledger: &Ledger,
+        terrain: &dyn Terrain,
+        t: WorldTime,
+    ) -> (OracleEmitters, std::collections::BTreeSet<Facet>) {
+        let mut emitters: Vec<(Body, Vec<(f64, Facet)>)> = Vec::new();
+        let mut alarm_source_rooms: std::collections::BTreeSet<Facet> =
+            std::collections::BTreeSet::new();
+        for m in roster {
+            let mettle = mettle_factor(m.boldness);
+            let frightening =
+                |room: &Facet| threat_field(room, &m.threat_niche, terrain) * mettle >= DANGER_ACT;
+            let mut timeline: Vec<(f64, Facet)> = ledger
+                .facts_of(m.entity, AGENT_AT)
+                .filter_map(|f| {
+                    let d = f.day.filter(|d| *d <= t)?.as_std_days();
+                    match &f.object {
+                        Value::Text(s) => Some((d, room_from_text(s))),
+                        _ => None,
+                    }
+                })
+                .collect();
+            timeline.sort_by(|a, b| a.0.total_cmp(&b.0));
+            let mut ever = false;
+            let mut note_halo = |p: &Facet| {
+                alarm_source_rooms.insert(p.clone());
+                for n in p.neighbors() {
+                    alarm_source_rooms.insert(n);
+                }
+            };
+            if frightening(&m.home) {
+                ever = true;
+                note_halo(&m.home);
+            }
+            for (_, p) in &timeline {
+                if frightening(p) {
+                    ever = true;
+                    note_halo(p);
+                }
+            }
+            if ever {
+                emitters.push((m.clone(), timeline));
+            }
+        }
+        (emitters, alarm_source_rooms)
+    }
+
+    /// The OLD `position_at`, copied for the same reason — it reads an `f64`
+    /// timeline where the production one now reads `Trail`'s ticks.
+    fn position_at_oracle(m: &Body, timeline: &[(f64, Facet)], day: f64) -> Facet {
+        let idx = timeline.partition_point(|(d, _)| *d <= day);
+        if idx == 0 {
+            m.home.clone()
+        } else {
+            timeline[idx - 1].1.clone()
+        }
+    }
+
+    /// A roster ledger with THREE members, walking rooms of both kinds, with
+    /// strictly increasing days per member — the shape a real walk commits
+    /// (`clock::cost_of` floors at one tick, so a walker's sightings never
+    /// share an instant; measured in
+    /// `windows/vessel/tests/suite/resident_folds.rs`'s
+    /// `the_walk_never_commits_two_sightings_of_one_entity_at_one_instant`).
+    ///
+    /// Returns the roster, the ledger and the terrain. The middle member never
+    /// stands anywhere frightening, so the `ever` test is exercised in BOTH
+    /// directions — an oracle and a production scan that both returned every
+    /// member would agree vacuously.
+    fn emitter_scan_fixture() -> (Vec<Body>, Ledger, PlantedTerrain) {
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let (d_room, hazard, x) = phantom_triple();
+        let terrain = PlantedTerrain::hazard(std::iter::empty(), [(hazard.clone(), 0.8)]);
+
+        // A: walks onto the hazard and off again, revisiting one room.
+        let a_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
+        let a = haunt_npc(a_e, x.clone());
+        commit_agent_at(&mut ledger, &reg, a_e, &d_room, 0.5);
+        commit_agent_at(&mut ledger, &reg, a_e, &hazard, 1.5);
+        commit_agent_at(&mut ledger, &reg, a_e, &d_room, 2.5);
+        commit_agent_at(&mut ledger, &reg, a_e, &x, 7.5);
+
+        // B: never leaves safe ground, and its home is safe — never an emitter.
+        // NOT `d_room`: `threat_field` is the maximum over a room AND its
+        // neighbours, and `d_room` is one hop from the hazard, so standing
+        // there frightens. (That is what makes `d_room` an alarm SOURCE for A
+        // above; putting B there made every member of the fixture an emitter
+        // and the equivalence below vacuous.)
+        let far = raddr(-1.0);
+        let b_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
+        let b = haunt_npc(b_e, x.clone());
+        commit_agent_at(&mut ledger, &reg, b_e, &x, 0.5);
+        commit_agent_at(&mut ledger, &reg, b_e, &far, 3.5);
+        commit_agent_at(&mut ledger, &reg, b_e, &x, 5.5);
+
+        // C: never committed a sighting at all, but LIVES on the hazard — the
+        // `frightening(&m.home)` arm, which the timeline loop cannot reach.
+        let c_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
+        let c = haunt_npc(c_e, hazard.clone());
+
+        (vec![a, b, c], ledger, terrain)
+    }
+
+    #[test]
+    fn the_emitter_scan_fixture_separates_emitters_from_non_emitters() {
+        // The anti-vacuity guard: if every member (or none) were an emitter,
+        // the equivalence below would hold for a scan that ignored terrain.
+        let (roster, ledger, terrain) = emitter_scan_fixture();
+        let t = WorldTime::from_std_days(10.0).expect("a day value is finite");
+        let (emitters, rooms) = emitter_scan_oracle(&roster, &ledger, &terrain, t);
+        assert_eq!(
+            emitters.len(),
+            2,
+            "the fixture must hold both emitters and non-emitters: {} of {} members emit",
+            emitters.len(),
+            roster.len()
+        );
+        assert!(
+            !rooms.is_empty(),
+            "the fixture must produce a non-empty alarm halo, or the set comparison below \
+             compares two empty sets"
+        );
+    }
+
+    #[test]
+    fn the_emitter_scan_read_off_the_store_equals_the_old_ledger_scan() {
+        let (roster, ledger, terrain) = emitter_scan_fixture();
+        // Every instant the fixture can distinguish, and the ones either side.
+        let mut instants: Vec<WorldTime> = Vec::new();
+        for f in ledger.iter() {
+            if let Some(d) = f.day {
+                for delta in [-1_i64, 0, 1] {
+                    instants.push(WorldTime::from_ticks(d.ticks() + delta));
+                }
+            }
+        }
+        instants.push(WorldTime::GENESIS);
+        instants.push(WorldTime::from_std_days(100.0).expect("a day value is finite"));
+        instants.sort();
+        instants.dedup();
+
+        let mut compared = 0_u64;
+        let mut non_empty_scans = 0_u64;
+        for t in &instants {
+            let folds = test_folds();
+            let got = build_emitter_scan(&roster, &ledger, &folds, &terrain, *t);
+            let (want_emitters, want_rooms) = emitter_scan_oracle(&roster, &ledger, &terrain, *t);
+
+            assert_eq!(
+                got.alarm_source_rooms, want_rooms,
+                "the alarm halo at {t:?} must equal the old ledger scan's"
+            );
+            assert_eq!(
+                got.emitters
+                    .iter()
+                    .map(|(m, _)| m.entity)
+                    .collect::<Vec<_>>(),
+                want_emitters
+                    .iter()
+                    .map(|(m, _)| m.entity)
+                    .collect::<Vec<_>>(),
+                "the emitter roster at {t:?} must equal the old ledger scan's, in order"
+            );
+            if !got.emitters.is_empty() {
+                non_empty_scans += 1;
+            }
+
+            // And `position_at` must answer identically at every instant, for
+            // every emitter — the read the timeline exists for.
+            for ((m, new_tl), (om, old_tl)) in got.emitters.iter().zip(want_emitters.iter()) {
+                assert_eq!(m.entity, om.entity);
+                for q in &instants {
+                    let idx = new_tl.partition_point(|(d, _)| *d <= *q);
+                    let new_pos = if idx == 0 {
+                        m.home.clone()
+                    } else {
+                        new_tl[idx - 1].1.clone()
+                    };
+                    let old_pos = position_at_oracle(om, old_tl, q.as_std_days());
+                    assert_eq!(
+                        new_pos, old_pos,
+                        "the emitter {:?}'s position at {q:?} (scan built at {t:?}) must \
+                         equal the old timeline's",
+                        m.entity
+                    );
+                    compared += 1;
+                }
+            }
+        }
+        assert!(
+            non_empty_scans > 0,
+            "no instant produced an emitter, so no `position_at` answer was compared"
+        );
+        assert!(
+            compared >= 100,
+            "the sweep must make a real number of position comparisons: {compared}"
+        );
+    }
+
+    /// Spec §3 rule 5, executed: a creature's DREAD of a room depends on an
+    /// emitter's thirst at a past day, and that thirst depends on WHICH reset
+    /// the read resumes from.
+    ///
+    /// # Why this test had to be written rather than found
+    ///
+    /// Rule 5 says to mutate the past-day read to resume from the WRONG reset
+    /// — the one before the correct one — and confirm a hazard test reddens; a
+    /// green under that mutation means the campaign has not proven what it
+    /// claims. The mutation was applied to `Sustenance::last_reset` (return
+    /// `resets[len - 2]` when there is one, else the last) and the whole
+    /// vessel suite run under it. **Two tests reddened and neither was about
+    /// hazard**: the seed-42 ledger hash, and the reset-lookup scan
+    /// equivalence. The emitter-bearing hazard witness stayed GREEN, because
+    /// no creature on that world drinks twice inside the script — so the
+    /// mutation was a no-op for every entity the hazard path reads.
+    ///
+    /// So this is rule 5's own fixture, built to the shape the rule names. It
+    /// was written under the mutation, watched to FAIL ("A must shun x on the
+    /// strength of the remembered alarm: shunned {}"), and only then was the
+    /// mutation restored and the test watched to pass — that order is the
+    /// point, because a test written against a restored tree can pass for
+    /// reasons that have nothing to do with the path it claims to cover.
+    ///
+    /// # The construction
+    ///
+    /// B is an emitter: it stands at `d_room`, one hop from a hazard, so its
+    /// own terrain threat crosses act. A is a coward whose home is `x` — safe
+    /// ground inside B's one-hop alarm halo — and A stood there on the same
+    /// day. Whether A REMEMBERS `x` as frightening therefore turns on whether
+    /// B's Danger drive WON on that day, which is `emitter_arousal`'s
+    /// `affect_of(B, day)` — a past-day read.
+    ///
+    /// B drank TWICE: once at genesis, once AFTER the remembered day. Today's
+    /// unfiltered reset lookup takes the LATER drink, which lies in the read's
+    /// own future, so the thirst integral short-circuits to zero and Danger
+    /// wins. Resuming from the EARLIER drink instead integrates a hundred days
+    /// of thirst, Thirst wins the arbitration, B emits nothing, and A's dread
+    /// disappears. The two readings differ in the only place a player could
+    /// ever see: what ground a creature is afraid of.
+    ///
+    /// That the CORRECT answer here is the unfiltered one is this campaign's
+    /// deliberate choice, not an accident — see `emitter_arousal`'s doc and
+    /// spec §3 rule 1. This test pins the behaviour as it is; a future campaign
+    /// that adopts decision 0237's filtered rule will move this constant and
+    /// should say so.
+    #[test]
+    fn a_cowards_dread_depends_on_which_reset_the_emitters_past_day_thirst_resumes_from() {
+        let mut reg = agent_at_reg();
+        reg.register_predicate(DRANK, false, "drank").unwrap();
+        reg.register_predicate(EATEN, false, "eaten").unwrap();
+        reg.register_predicate(RESTED, false, "rested").unwrap();
+        let mut ledger = Ledger::default();
+        let (d_room, hazard, x) = phantom_triple();
+        let terrain = PlantedTerrain::hazard(std::iter::empty(), [(hazard.clone(), 0.8)]);
+
+        // The remembered day, and the two drinks that straddle it.
+        // The remembered day is at MIDDAY, not on a day boundary, and that is
+        // load-bearing rather than cosmetic. A `Diurnal` creature's
+        // arbitration is wake-cycle dependent: probed across days 0.5..2.0
+        // this same emitter reads `Danger` at 0.5 and 1.5 and `Fatigue` at
+        // 0.8, 0.9, 1.0 and 2.0, with `fatigue_at` flat at ZERO throughout —
+        // so the winner oscillates with the sun, not with the fatigue fold.
+        // The first draft of this fixture used day 100.0 and measured a
+        // creature that was asleep.
+        let remembered = 100.5_f64;
+        let early_drink = 0.0_f64;
+        let late_drink = 150.0_f64;
+        let read_at = td(200.0);
+
+        // B, the emitter: at `d_room` on the remembered day, far away after.
+        let b_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
+        let b = haunt_npc(b_e, d_room.clone());
+        commit_agent_at(&mut ledger, &reg, b_e, &d_room, remembered);
+        commit_agent_at(&mut ledger, &reg, b_e, &raddr(-1.0), 180.0);
+        ledger
+            .commit(drank_fact(b_e, td(early_drink), "test"), &reg)
+            .unwrap();
+        ledger
+            .commit(drank_fact(b_e, td(late_drink), "test"), &reg)
+            .unwrap();
+        // ONE meal, after the remembered day. Hunger is the other stock drive
+        // and it integrates from GENESIS when a creature has never eaten — so
+        // without this it saturates at 1.0 by day 100 and WINS the arbitration
+        // outright, hiding the thirst effect this test is about behind a
+        // starving emitter. One `eaten` (not two) keeps the rule-5 mutation
+        // isolated to thirst: with a single reset in the list, "the one before
+        // the correct one" does not exist and the hunger read is unmoved.
+        ledger
+            .commit(eaten_fact(b_e, td(late_drink), "test"), &reg)
+            .unwrap();
+        // And one SLEEP, for the same reason: an unslept emitter saturates its
+        // fatigue stock from GENESIS, reads `Eager`/Fatigue at arousal 1.0 on
+        // day 100 and never gets as far as its Danger drive. (Measured, not
+        // assumed: the first draft of this fixture printed exactly that.)
+        //
+        // **IT MOVED FROM AFTER THE REMEMBERED DAY TO BEFORE IT, AT THE
+        // ABSORPTION OF MAIN, AND THAT IS THE WICKET'S SEMANTIC RATHER THAN A
+        // WEAKENED FIXTURE.** It used to be a bare `rested` fact at
+        // `late_drink` (day 150) — twenty days into the read's own FUTURE —
+        // and it worked because fatigue was "time since the unfiltered maximum
+        // `rested` day", so a rest that had not happened yet still zeroed the
+        // debt. The Wicket made fatigue a stock and `rest_timeline` filters
+        // bouts to `<= t`, so a bout at 150 is now correctly invisible to a
+        // read at 100.5. A body has to have ACTUALLY SLEPT before the day it
+        // is read at, which is what this fact now says: two days down ending
+        // at day 100.0, repaying a saturated stock in full at
+        // `FATIGUE_FALL = 1.0` per day, leaving half a day's accrual by the
+        // remembered instant. The thirst straddle this test is about — the two
+        // drinks either side of `remembered` — is untouched.
+        reg.register_predicate(SLEPT, false, "slept").unwrap();
+        ledger
+            .commit(
+                slept_fact(
+                    b_e,
+                    td(98.0),
+                    TickSpan::from_std_days(2.0).expect("2.0 is a finite span"),
+                    "test",
+                ),
+                &reg,
+            )
+            .unwrap();
+
+        // A, the coward rememberer, stood at `x` on the remembered day.
+        let a_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
+        let mut a = haunt_npc(a_e, x.clone());
+        a.boldness = 0.0;
+        commit_agent_at(&mut ledger, &reg, a_e, &x, remembered);
+
+        let roster = [b.clone(), a.clone()];
+
+        // GUARD 1: the fixture really does straddle. Two resets, one on each
+        // side of the remembered day — without this the mutation rule 5 asks
+        // for is a no-op and a green under it would mean nothing, which is
+        // exactly what happened on the emitter-bearing world.
+        let resets: Vec<f64> = ledger
+            .facts_of(b_e, DRANK)
+            .filter_map(|f| f.day.map(|d| d.as_std_days()))
+            .collect();
+        assert_eq!(
+            resets.len(),
+            2,
+            "the emitter must have TWO committed resets, or resuming from 'the one before \
+             the correct one' cannot differ from resuming from the correct one: {resets:?}"
+        );
+        assert!(
+            resets[0] < remembered && resets[1] > remembered,
+            "the emitter's two resets must straddle the remembered day {remembered}: \
+             {resets:?}"
+        );
+
+        // GUARD 2: `x` is terrain-safe, so any dread there is the phantom's.
+        assert!(
+            !frightened_at(
+                &x,
+                &a,
+                &terrain,
+                td(remembered),
+                &[],
+                &ledger,
+                &test_folds()
+            ),
+            "x must be terrain-safe, or the dread below is ordinary present danger"
+        );
+
+        // The claim: A dreads `x`, at the magnitude B's Danger drive emitted.
+        let folds = test_folds();
+        let mem = hazard_memory(&ledger, &folds, &a, read_at, &terrain, &roster);
+        assert!(
+            folds.borrow().witness().alarm_replays() > 0,
+            "the read must have entered the PAST-DAY affect replay, or this test is not \
+             about the path rule 5 names at all"
+        );
+        assert!(
+            mem.shunned.contains(&x),
+            "A must shun x on the strength of the remembered alarm: shunned {:?}",
+            mem.shunned
+        );
+        let magnitude = mem
+            .dread
+            .get(&x)
+            .copied()
+            .expect("x is dreaded, not merely shunned — the phantom's own provenance");
+        assert!(
+            magnitude > 0.0,
+            "the remembered alarm's magnitude must be positive: {magnitude}"
+        );
+
+        // And the mechanism, stated as an assertion rather than as prose: with
+        // the LATER drink governing (today's unfiltered lookup) B's thirst at
+        // the remembered day is zero, and with the EARLIER one it is not. That
+        // is the whole difference the mutation exercises.
+        let store = test_folds();
+        let thirst_unfiltered = drive_at(
+            &ledger,
+            &store,
+            b_e,
+            &b.home,
+            td(remembered),
+            &SUSTENANCE,
+            &terrain,
+            b.thermal_strategy,
+        );
+        assert_eq!(
+            thirst_unfiltered, 0.0,
+            "today's unfiltered lookup takes the LATER drink, which lies after the \
+             remembered day, so the integral short-circuits to zero"
+        );
+        let witness = &mut ReadWitness::default();
+        let thirst_from_the_earlier_drink = {
+            let mut s = store.borrow_mut();
+            let (trail, _, memo, _) = s.trail_and_thirst(&ledger);
+            sustenance_at(
+                trail,
+                b_e,
+                &b.home,
+                td(early_drink),
+                &[],
+                td(remembered),
+                &terrain,
+                b.thermal_strategy,
+                &SUSTENANCE,
+                memo,
+                witness,
+            )
+        };
+        assert!(
+            thirst_from_the_earlier_drink > 0.9,
+            "resuming from the EARLIER drink integrates a hundred days of thirst, which is \
+             what makes B lose its Danger arbitration under the rule-5 mutation: \
+             {thirst_from_the_earlier_drink}"
+        );
     }
 
     #[test]
@@ -8652,12 +9594,20 @@ mod tests {
         let day = WorldTime::from_std_days(0.5).expect("a day value is finite");
         // X read terrain-only (empty roster) is safe.
         assert!(
-            !frightened_at(&x, &a, &terrain, day, &[], &ledger),
+            !frightened_at(&x, &a, &terrain, day, &[], &ledger, &test_folds()),
             "X read terrain-only is safe"
         );
         // With the roster, the re-derived PAST alarm at X frightens the coward.
         assert!(
-            frightened_at(&x, &a, &terrain, day, std::slice::from_ref(&b), &ledger),
+            frightened_at(
+                &x,
+                &a,
+                &terrain,
+                day,
+                std::slice::from_ref(&b),
+                &ledger,
+                &test_folds(),
+            ),
             "the re-derived alarm at (X, day) frightens the coward rememberer"
         );
     }
@@ -8689,7 +9639,8 @@ mod tests {
                 &terrain,
                 WorldTime::from_std_days(0.5).expect("a day value is finite"),
                 std::slice::from_ref(&b),
-                &ledger
+                &ledger,
+                &test_folds()
             ),
             "guard: X is alarmed while B stands beside it"
         );
@@ -8701,7 +9652,8 @@ mod tests {
                 &terrain,
                 WorldTime::from_std_days(9.5).expect("a day value is finite"),
                 std::slice::from_ref(&b),
-                &ledger
+                &ledger,
+                &test_folds()
             ),
             "after B leaves, X carries no re-derived alarm"
         );
@@ -8726,11 +9678,11 @@ mod tests {
         let now = WorldTime::from_std_days(1.0).expect("a day value is finite");
         let ab = [knower.clone(), lost.clone()];
         let ba = [lost.clone(), knower.clone()];
-        let result = shared_believed_water(&ledger, &lost, &ab, now, &t, 10_000);
+        let result = shared_believed_water(&ledger, &test_folds(), &lost, &ab, now, &t, 10_000);
         assert_eq!(result, Some(water));
         assert_eq!(
             result,
-            shared_believed_water(&ledger, &lost, &ba, now, &t, 10_000),
+            shared_believed_water(&ledger, &test_folds(), &lost, &ba, now, &t, 10_000),
             "permuting the band must not change the pooled belief"
         );
     }
@@ -8750,17 +9702,18 @@ mod tests {
         commit_agent_at(&mut ledger, &reg, knower_e, &water, 0.0);
         commit_agent_at(&mut ledger, &reg, knower_e, &here, 1.0);
         let now = WorldTime::from_std_days(1.0).expect("a day value is finite");
-        let solo = believed_water(&ledger, &knower, now, &t, 10_000);
+        let solo = believed_water(&ledger, &test_folds(), &knower, now, &t, 10_000);
         assert_eq!(solo, Some(water));
 
         assert_eq!(
-            shared_believed_water(&ledger, &knower, &[], now, &t, 10_000),
+            shared_believed_water(&ledger, &test_folds(), &knower, &[], now, &t, 10_000),
             solo,
             "an empty band changes nothing"
         );
         assert_eq!(
             shared_believed_water(
                 &ledger,
+                &test_folds(),
                 &knower,
                 std::slice::from_ref(&knower),
                 now,
@@ -8798,12 +9751,12 @@ mod tests {
 
         // sanity: knower does know water when consulted directly...
         assert_eq!(
-            believed_water(&ledger, &knower, now, &t, 10_000),
+            believed_water(&ledger, &test_folds(), &knower, now, &t, 10_000),
             Some(water)
         );
         // ...but lost gains nothing, since knower is in a different room.
         assert_eq!(
-            shared_believed_water(&ledger, &lost, &band, now, &t, 10_000),
+            shared_believed_water(&ledger, &test_folds(), &lost, &band, now, &t, 10_000),
             None
         );
     }
@@ -8848,6 +9801,7 @@ mod tests {
         commit_agent_at(&mut ledger, &reg, knower_e, &here, 1.0);
         commit_agent_at(&mut ledger, &reg, lost_e, &here, 1.0);
 
+        let folds = test_folds();
         let sys = DriveMovements {
             npcs: vec![knower, lost],
             from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
@@ -8857,6 +9811,7 @@ mod tests {
             // base rate (spec §4.1).
             day_ticks: None,
             terrain: &t,
+            folds: &folds,
         };
         // The subject prints as its ROLE in this fixture, not as its raw id.
         // The golden's claim is about which creature emitted what, in what
@@ -9316,6 +10271,7 @@ mod tests {
         let moves = |mass_kg: f64| {
             let mut npc = base.clone();
             npc.mass_kg = mass_kg;
+            let folds = test_folds();
             let sys = DriveMovements {
                 npcs: vec![npc],
                 from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
@@ -9323,6 +10279,7 @@ mod tests {
                 params: SUSTENANCE,
                 day_ticks: None,
                 terrain: &terrain,
+                folds: &folds,
             };
             sys.step(&ledger)
                 .iter()
@@ -9355,6 +10312,7 @@ mod tests {
         // time, so it lands strictly later, by exactly its cost.
         let (ledger, terrain, npc) = charged_walk_fixture();
         let mass = npc.mass_kg;
+        let folds = test_folds();
         let sys = DriveMovements {
             npcs: vec![npc],
             from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
@@ -9362,6 +10320,7 @@ mod tests {
             params: SUSTENANCE,
             day_ticks: None,
             terrain: &terrain,
+            folds: &folds,
         };
         let facts = sys.step(&ledger);
         let drank_day = facts
@@ -9448,6 +10407,7 @@ mod tests {
         // input-derived, reversing the vector would show it immediately.
         let (ledger, terrain, npcs) = interleaving_fixture(&[4.375, 70.0, 1_120.0]);
         let run = |npcs: Vec<Body>| {
+            let folds = test_folds();
             let sys = DriveMovements {
                 npcs,
                 from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
@@ -9455,6 +10415,7 @@ mod tests {
                 params: SUSTENANCE,
                 day_ticks: None,
                 terrain: &terrain,
+                folds: &folds,
             };
             sys.step(&ledger)
                 .iter()
@@ -9498,6 +10459,7 @@ mod tests {
         let (ledger, terrain, npcs) = interleaving_fixture(&[4.375, 70.0, 1_120.0]);
         let from = WorldTime::from_std_days(1.0).expect("a day value is finite");
         let to = WorldTime::from_std_days(20.0).expect("a day value is finite");
+        let folds = test_folds();
         let sys = DriveMovements {
             npcs,
             from,
@@ -9505,6 +10467,7 @@ mod tests {
             params: SUSTENANCE,
             day_ticks: None,
             terrain: &terrain,
+            folds: &folds,
         };
         let facts = sys.step(&ledger);
         assert!(
@@ -9540,6 +10503,7 @@ mod tests {
         // tolerance. The fixture must not depend on which creature is lighter.
         for masses in [[4.375_f64, 70.0], [70.0, 4.375]] {
             let (ledger, terrain, npcs) = interleaving_fixture(&masses);
+            let folds = test_folds();
             let sys = DriveMovements {
                 npcs,
                 from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
@@ -9547,6 +10511,7 @@ mod tests {
                 params: SUSTENANCE,
                 day_ticks: None,
                 terrain: &terrain,
+                folds: &folds,
             };
             let facts = sys.step(&ledger);
             let seq: Vec<EntityId> = facts
@@ -9634,6 +10599,7 @@ mod tests {
                 .iter()
                 .map(|n| (n.entity, (n.mass_kg * 1000.0).round() as u64))
                 .collect();
+            let folds = test_folds();
             let sys = DriveMovements {
                 npcs,
                 from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
@@ -9641,6 +10607,7 @@ mod tests {
                 params: SUSTENANCE,
                 day_ticks: None,
                 terrain: &terrain,
+                folds: &folds,
             };
             let mut rows: Vec<(u64, String, i64, String, String)> = sys
                 .step(&ledger)
@@ -9737,6 +10704,7 @@ mod tests {
 
         let day1_from = WorldTime::from_std_days(1.0).expect("a day value is finite");
         let day1_to = WorldTime::from_std_days(2.0).expect("a day value is finite");
+        let folds = test_folds();
         let sys1 = DriveMovements {
             npcs: npcs.clone(),
             from: day1_from,
@@ -9744,6 +10712,7 @@ mod tests {
             params: SUSTENANCE,
             day_ticks: None,
             terrain: &terrain,
+            folds: &folds,
         };
         let (facts1, _occ1) =
             sys1.step_with_occupancy(&ledger, &mut mesh_memo, &mut home_nav_cache);
@@ -9761,6 +10730,7 @@ mod tests {
         // this property depends on.
         let day2_from = day1_to;
         let day2_to = WorldTime::from_std_days(3.0).expect("a day value is finite");
+        let folds = test_folds();
         let sys2 = DriveMovements {
             npcs: npcs.clone(),
             from: day2_from,
@@ -9768,6 +10738,7 @@ mod tests {
             params: SUSTENANCE,
             day_ticks: None,
             terrain: &terrain,
+            folds: &folds,
         };
         let (facts2, _occ2) =
             sys2.step_with_occupancy(&ledger2, &mut mesh_memo, &mut home_nav_cache);
@@ -9844,6 +10815,7 @@ mod tests {
         // lost has only ever been at `here`.
         commit_agent_at(&mut ledger, &reg, lost_e, &here, 1.0);
 
+        let folds = test_folds();
         let sys = DriveMovements {
             npcs: vec![knower.clone(), lost.clone()],
             from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
@@ -9853,6 +10825,7 @@ mod tests {
             // base rate (spec §4.1).
             day_ticks: None,
             terrain: &t,
+            folds: &folds,
         };
         let next =
             hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).expect("tick");
@@ -10146,6 +11119,7 @@ mod tests {
             label: "measure".into(),
         };
         let ledger = Ledger::default();
+        let folds = test_folds();
         let sys = DriveMovements {
             npcs: vec![npc.clone()],
             from: WorldTime::GENESIS,
@@ -10157,6 +11131,7 @@ mod tests {
             // base rate (spec §4.1).
             day_ticks: None,
             terrain: &terrain,
+            folds: &folds,
         };
         let next =
             hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &world_reg).unwrap();
@@ -10320,6 +11295,7 @@ mod tests {
         assert!(
             (drive_at(
                 &ledger,
+                &test_folds(),
                 e,
                 &home,
                 WorldTime::from_std_days(2.0).expect("a day value is finite"),
@@ -10347,6 +11323,7 @@ mod tests {
         assert!(
             (drive_at(
                 &ledger,
+                &test_folds(),
                 e,
                 &home,
                 WorldTime::from_std_days(6.0).expect("a day value is finite"),
@@ -10389,6 +11366,7 @@ mod tests {
         assert_eq!(
             drive_at(
                 &ledger,
+                &test_folds(),
                 e,
                 &home,
                 WorldTime::from_std_days(1_000.0).expect("a day value is finite"),
@@ -10464,16 +11442,41 @@ mod tests {
         let home = raddr(1.0);
         let hot = PlantedTerrain::thermal([(home.clone(), 45.0)]); // 2× rate (endotherm)
         let temperate = PlantedTerrain::thermal([(home.clone(), 20.0)]); // < thermoneutral → base
-        let d_hot = integrate_thirst(&[], &home, 0.0, 3.0, &hot, ThermalStrategy::Endothermic, &p);
-        let d_temp = integrate_thirst(
-            &[],
-            &home,
-            0.0,
-            3.0,
-            &temperate,
-            ThermalStrategy::Endothermic,
-            &p,
-        );
+        // Read through `sustenance_at` over an EMPTY trail and an empty
+        // overlay: no sighting, so the whole span is one segment governed by
+        // `home`, which is what the `&[]` sightings argument meant when this
+        // test called `integrate_thirst` directly (that function is gone —
+        // The Pawl; its body survives verbatim as the oracle in
+        // `tests/suite/resident_folds.rs`).
+        let empty = crate::resident::Trail::default();
+        let e = EntityId::new(1).expect("1 is non-zero");
+        let mut witness = crate::resident::ReadWitness::default();
+        // A FRESH accumulator per call, because this test deliberately reads
+        // the same history through TWO temperature fields and the memo is a
+        // function of the temperature field as well as the ledger (see
+        // `SustenanceMemo`: the invariant production satisfies is one
+        // `LocaleContext` per store, and these two `PlantedTerrain`s are two
+        // different fields, not two views of one). Nothing would differ today
+        // — an empty trail memoises no window at all — and relying on that
+        // would be relying on the fixture rather than on the rule.
+        let at = |terrain: &dyn Terrain, witness: &mut crate::resident::ReadWitness| {
+            let mut memo = crate::resident::SustenanceMemo::default();
+            sustenance_at(
+                &empty,
+                e,
+                &home,
+                WorldTime::GENESIS,
+                &[],
+                td(3.0),
+                terrain,
+                ThermalStrategy::Endothermic,
+                &p,
+                &mut memo,
+                witness,
+            )
+        };
+        let d_hot = at(&hot, &mut witness);
+        let d_temp = at(&temperate, &mut witness);
         assert!(
             d_hot > d_temp,
             "the desert dehydrates faster: {d_hot} vs {d_temp}"
@@ -10518,6 +11521,7 @@ mod tests {
         let t = WorldTime::from_std_days(12.3).expect("a day value is finite");
         let a = drive_at(
             &ledger,
+            &test_folds(),
             e,
             &home,
             t,
@@ -10527,6 +11531,7 @@ mod tests {
         );
         let b = drive_at(
             &ledger,
+            &test_folds(),
             e,
             &home,
             t,
@@ -10540,6 +11545,7 @@ mod tests {
         assert_eq!(
             drive_at(
                 &reloaded,
+                &test_folds(),
                 e,
                 &home,
                 t,
@@ -10756,6 +11762,7 @@ mod tests {
             fresh: [water.clone()].into_iter().collect(),
             ..Default::default()
         };
+        let folds = test_folds();
         let sys = DriveMovements {
             npcs: vec![npc.clone()],
             from: WorldTime::GENESIS,
@@ -10765,6 +11772,7 @@ mod tests {
             // base rate (spec §4.1).
             day_ticks: None,
             terrain: &t,
+            folds: &folds,
         };
         let next =
             hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &world_reg).unwrap();
@@ -10839,6 +11847,7 @@ mod tests {
             fresh: [water.clone()].into_iter().collect(),
             ..Default::default()
         };
+        let folds = test_folds();
         let sys = DriveMovements {
             npcs: vec![npc.clone()],
             from: WorldTime::GENESIS,
@@ -10846,6 +11855,7 @@ mod tests {
             params: SUSTENANCE,
             day_ticks: None,
             terrain: &t,
+            folds: &folds,
         };
 
         let (default_facts, _mode, _affect, _suppressed) = sys.step_one_with_controller(
@@ -10917,6 +11927,7 @@ mod tests {
     #[test]
     fn h3_the_act_trail_under_an_imposed_controller_is_byte_identical_to_the_default_controller() {
         let (ledger, terrain, npc) = charged_walk_fixture();
+        let folds = test_folds();
         let sys = DriveMovements {
             npcs: vec![npc.clone()],
             from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
@@ -10924,6 +11935,7 @@ mod tests {
             params: SUSTENANCE,
             day_ticks: None,
             terrain: &terrain,
+            folds: &folds,
         };
 
         let (default_facts, default_mode, default_affect, default_suppressed) = sys
@@ -11068,6 +12080,7 @@ mod tests {
         // `drinking_and_eating_now_cost_time`, which asserts all three
         // predicates appear on this exact fixture).
         let (ledger_a, terrain_a, npc_a) = charged_walk_fixture();
+        let folds = test_folds();
         let sys_a = DriveMovements {
             npcs: vec![npc_a.clone()],
             from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
@@ -11075,6 +12088,7 @@ mod tests {
             params: SUSTENANCE,
             day_ticks: None,
             terrain: &terrain_a,
+            folds: &folds,
         };
         let (default_facts_a, ..) = sys_a.step_one_with_controller(
             &ledger_a,
@@ -11124,6 +12138,7 @@ mod tests {
             fresh: [water_b.clone()].into_iter().collect(),
             ..Default::default()
         };
+        let folds = test_folds();
         let sys_b = DriveMovements {
             npcs: vec![npc_b.clone()],
             from: WorldTime::GENESIS,
@@ -11131,6 +12146,7 @@ mod tests {
             params: SUSTENANCE,
             day_ticks: None,
             terrain: &t_b,
+            folds: &folds,
         };
         let (default_facts_b, ..) = sys_b.step_one_with_controller(
             &ledger_b,
@@ -11228,6 +12244,7 @@ mod tests {
             label: "herder".into(),
         };
         let t = PlantedTerrain::default();
+        let folds = test_folds();
         let sys = DriveMovements {
             npcs: vec![npc.clone()],
             from: WorldTime::from_std_days(3.0).expect("a day value is finite"),
@@ -11239,6 +12256,7 @@ mod tests {
             params: SUSTENANCE,
             day_ticks: None,
             terrain: &t,
+            folds: &folds,
         };
         let mut player = PlayerController::new();
         player.queue(Action::Drink);
@@ -11346,6 +12364,7 @@ mod tests {
             fresh: [water.clone()].into_iter().collect(),
             ..Default::default()
         };
+        let folds = test_folds();
         let sys = DriveMovements {
             npcs: vec![npc],
             from: WorldTime::GENESIS,
@@ -11355,6 +12374,7 @@ mod tests {
             // base rate (spec §4.1).
             day_ticks: None,
             terrain: &t,
+            folds: &folds,
         };
         world.ledger = hornvale_kernel::tick(
             &world.ledger,
@@ -11425,6 +12445,7 @@ mod tests {
         // A long wait: the MAX_STEPS cap (not the wait) must be what bounds
         // this — if it weren't a real backstop, work would scale with the
         // wait instead.
+        let folds = test_folds();
         let sys = DriveMovements {
             npcs: vec![npc],
             from: WorldTime::GENESIS,
@@ -11434,6 +12455,7 @@ mod tests {
             // base rate (spec §4.1).
             day_ticks: None,
             terrain: &t,
+            folds: &folds,
         };
         let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
         // Never drinks (no water exists); the walk is bounded by MAX_STEPS —
@@ -11521,6 +12543,7 @@ mod tests {
         // spin forever (this test's own short harness timeout is additional
         // proof it didn't hang; the assertion below is the load-bearing
         // one).
+        let folds = test_folds();
         let sys = DriveMovements {
             npcs: vec![npc],
             from: WorldTime::GENESIS,
@@ -11530,6 +12553,7 @@ mod tests {
             // base rate (spec §4.1).
             day_ticks: None,
             terrain: &t,
+            folds: &folds,
         };
         let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
         // The load-bearing proof is that the call above RETURNED at all — with
@@ -11589,6 +12613,7 @@ mod tests {
             label: "herder".into(),
         };
         let t = PlantedTerrain::fresh_only([resource.clone()]);
+        let folds = test_folds();
         let sys = DriveMovements {
             npcs: vec![npc],
             from: WorldTime::GENESIS,
@@ -11598,6 +12623,7 @@ mod tests {
             // base rate (spec §4.1).
             day_ticks: None,
             terrain: &t,
+            folds: &folds,
         };
         let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
         let first = next.find(AGENT_AT).find(|f| f.subject == e).unwrap();
@@ -11873,6 +12899,7 @@ mod tests {
                 commit_agent_at(&mut ledger, &reg, e, &x, 0.15); // frightened here → remembers X
             }
             commit_agent_at(&mut ledger, &reg, e, &start, 0.2); // now at start
+            let folds = test_folds();
             let sys = DriveMovements {
                 npcs: vec![npc_at(e)],
                 from: WorldTime::from_std_days(1.0).expect("a day value is finite"), // after the seeded history
@@ -11882,6 +12909,7 @@ mod tests {
                 // base rate (spec §4.1).
                 day_ticks: None,
                 terrain: &terrain,
+                folds: &folds,
             };
             let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
             (next, e)
@@ -11913,6 +12941,7 @@ mod tests {
             let n = npc_at(fe);
             let hz = believed_hazard(
                 &fl,
+                &test_folds(),
                 &n,
                 WorldTime::from_std_days(1.0).expect("a day value is finite"),
                 &terrain,
@@ -12039,7 +13068,8 @@ mod tests {
                     &terrain,
                     WorldTime::from_std_days(1.0).expect("a day value is finite"),
                     &[],
-                    &empty_ledger
+                    &empty_ledger,
+                    &test_folds()
                 ),
                 "path room {room:?} must be terrain-safe (no static hazard)"
             );
@@ -12062,6 +13092,7 @@ mod tests {
             assert!(
                 believed_hazard(
                     &fl,
+                    &test_folds(),
                     &an,
                     WorldTime::from_std_days(1.0).expect("a day value is finite"),
                     &terrain,
@@ -12072,6 +13103,7 @@ mod tests {
             );
             let hz = believed_hazard(
                 &fl,
+                &test_folds(),
                 &an,
                 WorldTime::from_std_days(1.0).expect("a day value is finite"),
                 &terrain,
@@ -12116,6 +13148,7 @@ mod tests {
                 commit_agent_at(&mut ledger, &reg, b, &far, 0.40);
                 npcs.push(emitter_npc(b));
             }
+            let folds = test_folds();
             let sys = DriveMovements {
                 npcs,
                 from: WorldTime::from_std_days(from_day).expect("a day value is finite"),
@@ -12125,6 +13158,7 @@ mod tests {
                 // base rate (spec §4.1).
                 day_ticks: None,
                 terrain: &terrain,
+                folds: &folds,
             };
             let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
             (next, a, from_day)
@@ -12266,7 +13300,7 @@ mod tests {
         let band = [a.clone(), b.clone()];
 
         // (1) FELT.
-        let felt = affect_of(&ledger, &a, &band, now, &terrain);
+        let felt = affect_of(&ledger, &test_folds(), &a, &band, now, &terrain);
         assert_eq!(
             felt.object,
             Some(DriveKind::Danger),
@@ -12286,7 +13320,7 @@ mod tests {
             ),
             "dread with an outlet is wariness, not distress: {felt:?}"
         );
-        let memory = hazard_memory(&ledger, &a, now, &terrain, &band);
+        let memory = hazard_memory(&ledger, &test_folds(), &a, now, &terrain, &band);
         assert!(
             memory.dread.contains_key(&x),
             "fixture check: X really is a phantom, not a Haunt: {:?}",
@@ -12311,6 +13345,7 @@ mod tests {
         // homeward walk carries it back onto the ground it feared, with no emitter
         // anywhere near: the most-recent verdict at X is SAFE, and the phantom
         // leaves BOTH halves of the memory.
+        let folds = test_folds();
         let sys = DriveMovements {
             npcs: band.to_vec(),
             from: now,
@@ -12320,6 +13355,7 @@ mod tests {
             // base rate (spec §4.1).
             day_ticks: None,
             terrain: &terrain,
+            folds: &folds,
         };
         let next =
             hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).expect("tick");
@@ -12352,6 +13388,7 @@ mod tests {
         );
         let after = hazard_memory(
             &next,
+            &test_folds(),
             &a,
             WorldTime::from_std_days(now.as_std_days() + 1.0).expect("a day value is finite"),
             &terrain,
@@ -12855,6 +13892,7 @@ mod tests {
         let t = PlantedTerrain::forage(std::iter::empty());
         let before = hunger_at(
             &ledger,
+            &test_folds(),
             e,
             &home,
             WorldTime::from_std_days(5.0).expect("a day value is finite"),
@@ -12866,6 +13904,7 @@ mod tests {
         ledger.commit(eaten_fact(e, td(5.0), "ate"), &reg).unwrap();
         let after = hunger_at(
             &ledger,
+            &test_folds(),
             e,
             &home,
             WorldTime::from_std_days(5.0).expect("a day value is finite"),
@@ -12931,8 +13970,24 @@ mod tests {
         let mut ledger = Ledger::default(); // no eaten, no sightings → held at home
         let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let day = WorldTime::from_std_days(3.0).expect("a day value is finite");
-        let hot_h = hunger_at(&ledger, e, &home, day, &hot, ThermalStrategy::Endothermic);
-        let mild_h = hunger_at(&ledger, e, &home, day, &mild, ThermalStrategy::Endothermic);
+        let hot_h = hunger_at(
+            &ledger,
+            &test_folds(),
+            e,
+            &home,
+            day,
+            &hot,
+            ThermalStrategy::Endothermic,
+        );
+        let mild_h = hunger_at(
+            &ledger,
+            &test_folds(),
+            e,
+            &home,
+            day,
+            &mild,
+            ThermalStrategy::Endothermic,
+        );
         assert!(
             hot_h.total_cmp(&mild_h).is_gt(),
             "heat hastens hunger for an endotherm"
@@ -13383,6 +14438,7 @@ mod tests {
         let terrain = PlantedTerrain::default(); // no hazard anywhere
         let field = alarm_field(
             &ledger,
+            &test_folds(),
             &[npc_a, npc_b],
             &terrain,
             WorldTime::from_std_days(0.5).expect("a day value is finite"),
@@ -13408,6 +14464,7 @@ mod tests {
         let terrain = PlantedTerrain::hazard(std::iter::empty(), [(room.clone(), 0.8)]);
         let field = alarm_field(
             &ledger,
+            &test_folds(),
             &[npc],
             &terrain,
             WorldTime::from_std_days(0.5).expect("a day value is finite"),
@@ -13443,6 +14500,7 @@ mod tests {
         // The field over BOTH creatures.
         let both = alarm_field(
             &ledger,
+            &test_folds(),
             &[a.clone(), b.clone()],
             &terrain,
             WorldTime::from_std_days(0.5).expect("a day value is finite"),
@@ -13450,6 +14508,7 @@ mod tests {
         // The field over A ALONE — the reference: B must add nothing.
         let a_only = alarm_field(
             &ledger,
+            &test_folds(),
             &[a],
             &terrain,
             WorldTime::from_std_days(0.5).expect("a day value is finite"),
@@ -13614,6 +14673,7 @@ mod tests {
 
         // TICK 1 — the daytime window (both awake). The alarm field haloes A's
         // neighbourhood (B's room included), so B bolts.
+        let folds = test_folds();
         let sys1 = DriveMovements {
             npcs: vec![a.clone(), b.clone()],
             from: WorldTime::from_std_days(t0).expect("a day value is finite"),
@@ -13623,6 +14683,7 @@ mod tests {
             // base rate (spec §4.1).
             day_ticks: None,
             terrain: &terrain,
+            folds: &folds,
         };
         let after1 = hornvale_kernel::tick(&ledger, &[&sys1], &["drive-movements"], &reg).unwrap();
 
@@ -13663,6 +14724,7 @@ mod tests {
         // the halo. The alarm no longer reaches B, so it settles: no new move.
         // TERMINATION (spec §3): the wave dies not because the source vanished
         // (A still screams) but because B escaped the one-hop halo.
+        let folds = test_folds();
         let sys2 = DriveMovements {
             npcs: vec![a.clone(), b.clone()],
             from: WorldTime::from_std_days(t1).expect("a day value is finite"),
@@ -13672,6 +14734,7 @@ mod tests {
             // base rate (spec §4.1).
             day_ticks: None,
             terrain: &terrain,
+            folds: &folds,
         };
         let after2 = hornvale_kernel::tick(&after1, &[&sys2], &["drive-movements"], &reg).unwrap();
         let b_moves_2 = after2
@@ -13691,6 +14754,7 @@ mod tests {
         let mut control = Ledger::default();
         let cb = build_b(&mut control);
         let cb_entity = cb.entity;
+        let folds = test_folds();
         let csys = DriveMovements {
             npcs: vec![cb.clone()],
             from: WorldTime::from_std_days(t0).expect("a day value is finite"),
@@ -13700,6 +14764,7 @@ mod tests {
             // base rate (spec §4.1).
             day_ticks: None,
             terrain: &terrain,
+            folds: &folds,
         };
         let cafter = hornvale_kernel::tick(&control, &[&csys], &["drive-movements"], &reg).unwrap();
         let c_fear = cafter
@@ -14049,6 +15114,7 @@ mod tests {
         };
         let a = affect_of(
             &ledger,
+            &test_folds(),
             &base,
             &[],
             WorldTime::from_std_days(0.5).expect("a day value is finite"),
@@ -14169,6 +15235,7 @@ mod tests {
             };
             // from > both seed days so the frozen ledger holds no future facts and the
             // agent starts at home, not yet thirsty.
+            let folds = test_folds();
             let sys = DriveMovements {
                 npcs: vec![npc],
                 from: WorldTime::from_std_days(1.0).expect("a day value is finite"),
@@ -14178,6 +15245,7 @@ mod tests {
                 // base rate (spec §4.1).
                 day_ticks: None,
                 terrain: &terrain,
+                folds: &folds,
             };
             let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
             // the rooms it drank at (its believed destinations)
@@ -14262,6 +15330,7 @@ mod tests {
             mass_kg: crate::clock::REFERENCE_MASS_KG,
             label: "h".into(),
         };
+        let folds = test_folds();
         let sys = DriveMovements {
             npcs: vec![npc.clone()],
             from: WorldTime::GENESIS,
@@ -14271,6 +15340,7 @@ mod tests {
             // base rate (spec §4.1).
             day_ticks: None,
             terrain: &terrain,
+            folds: &folds,
         };
         let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
         // It drank at least twice (multiple cycles) and reached the water room.
@@ -14283,6 +15353,7 @@ mod tests {
         assert_eq!(
             believed_water(
                 &next,
+                &test_folds(),
                 &npc,
                 WorldTime::from_std_days(40.0).expect("a day value is finite"),
                 &terrain,
@@ -15670,6 +16741,7 @@ mod tests {
         // Day 100: a metabolizer would be long parched and roasting.
         let a = affect_of(
             &ledger,
+            &test_folds(),
             &base,
             &[],
             WorldTime::from_std_days(100.0).expect("a day value is finite"),
@@ -15686,6 +16758,7 @@ mod tests {
         };
         let b = affect_of(
             &ledger,
+            &test_folds(),
             &meta,
             &[],
             WorldTime::from_std_days(100.0).expect("a day value is finite"),
@@ -15736,6 +16809,7 @@ mod tests {
         };
         let a = affect_of(
             &ledger,
+            &test_folds(),
             &base,
             &[],
             WorldTime::from_std_days(0.5).expect("a day value is finite"),
@@ -15748,6 +16822,7 @@ mod tests {
         };
         let b = affect_of(
             &ledger,
+            &test_folds(),
             &meta,
             &[],
             WorldTime::from_std_days(0.5).expect("a day value is finite"),
@@ -16100,6 +17175,7 @@ mod tests {
             "the fixture must actually catch the creature asleep"
         );
         ledger.commit(place_agent(e, &home, night), &reg).unwrap();
+        let folds = test_folds();
         let sys = DriveMovements {
             npcs: vec![npc],
             from: night,
@@ -16110,6 +17186,7 @@ mod tests {
             params: SUSTENANCE,
             day_ticks: None,
             terrain: &terrain,
+            folds: &folds,
         };
         let (facts, _occ) =
             sys.step_with_occupancy(&ledger, &mut RoomMeshMemo::new(), &mut HomeNavCache::new());
@@ -16661,8 +17738,15 @@ mod tests {
         // never distinguish them).
         let now = WorldTime::from_std_days(10.0).expect("a day value is finite");
 
-        let alone = affect_of(&ledger, &lost, &[], now, &t);
-        let in_band = affect_of(&ledger, &lost, &[knower.clone(), lost.clone()], now, &t);
+        let alone = affect_of(&ledger, &test_folds(), &lost, &[], now, &t);
+        let in_band = affect_of(
+            &ledger,
+            &test_folds(),
+            &lost,
+            &[knower.clone(), lost.clone()],
+            now,
+            &t,
+        );
 
         assert_eq!(
             alone.label,
@@ -16880,8 +17964,8 @@ mod tests {
         let hearth_terrain = FurnishingStub { built: true };
         let wild_terrain = FurnishingStub { built: false };
 
-        let hearth_affect = affect_of(&ledger, &npc, &[], day, &hearth_terrain);
-        let wild_affect = affect_of(&ledger, &npc, &[], day, &wild_terrain);
+        let hearth_affect = affect_of(&ledger, &test_folds(), &npc, &[], day, &hearth_terrain);
+        let wild_affect = affect_of(&ledger, &test_folds(), &npc, &[], day, &wild_terrain);
 
         assert!(
             wild_affect.arousal > 0.0,
@@ -17257,6 +18341,7 @@ mod tests {
         };
         let mut ledger = Ledger::default();
         let e1 = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
+        let folds = test_folds();
         let sys = DriveMovements {
             npcs: vec![build_npc(e1)],
             // Start mid-morning (`waking_offset(Diurnal)`), not midnight: The
@@ -17267,6 +18352,7 @@ mod tests {
             params: SUSTENANCE,
             day_ticks: None,
             terrain: &hearth_terrain,
+            folds: &folds,
         };
         let (_facts, occ) =
             sys.step_with_occupancy(&ledger, &mut RoomMeshMemo::new(), &mut HomeNavCache::new());
@@ -17304,6 +18390,7 @@ mod tests {
         };
         let mut ledger2 = Ledger::default();
         let e2 = ledger2.mint_entity(test_lineage(ledger2.entity_count() as u16));
+        let folds = test_folds();
         let sys2 = DriveMovements {
             npcs: vec![build_npc(e2)],
             // Start mid-morning (`waking_offset(Diurnal)`), not midnight: The
@@ -17314,6 +18401,7 @@ mod tests {
             params: SUSTENANCE,
             day_ticks: None,
             terrain: &wild_terrain,
+            folds: &folds,
         };
         let (_facts2, occ2) =
             sys2.step_with_occupancy(&ledger2, &mut RoomMeshMemo::new(), &mut HomeNavCache::new());
@@ -17713,6 +18801,7 @@ mod tests {
             "this fixture's one-day gap is sized against human's 0.3              sleep-debt rate never crossing FATIGUE_ACT (0.85) in that day;              a re-tuned rate invalidates the isolation this test claims"
         );
         let now = WorldTime::from_std_days(entry_day + 1.0).expect("a day value is finite");
+        let folds = test_folds();
         let sys = DriveMovements {
             npcs: vec![npc],
             from: now,
@@ -17720,6 +18809,7 @@ mod tests {
             params: SUSTENANCE,
             day_ticks: None,
             terrain: &terrain,
+            folds: &folds,
         };
         let (facts, occ) =
             sys.step_with_occupancy(&ledger, &mut RoomMeshMemo::new(), &mut HomeNavCache::new());
@@ -17755,7 +18845,8 @@ mod tests {
         // day is wrong whenever that fold's own maximum lands INSIDE the
         // replay window — a day chronologically BEFORE the drink would
         // wrongly read as already-discharged, because
-        // `integrate_thirst`'s `t <= last_drank` short-circuit sees a
+        // `sustenance_at`'s `t <= last_reset` short-circuit (inherited
+        // verbatim from `integrate_thirst`, which it replaced) sees a
         // `last_drank` from the future. `last_fact_day_at_or_before` fixes
         // this by filtering to `<= day` at each iteration; this test pins
         // both the correct answer AND the exact wrong one the naive
@@ -17818,6 +18909,7 @@ mod tests {
             &[],
             &mut RoomMeshMemo::new(),
             &mut HomeNavCache::new(),
+            &test_folds(),
         );
         assert!(
             correct_thirst > 0.0,
@@ -17856,10 +18948,11 @@ mod tests {
             &[],
             &mut RoomMeshMemo::new(),
             &mut HomeNavCache::new(),
+            &test_folds(),
         );
         assert_eq!(
             buggy_thirst, 0.0,
-            "pinning the wrong answer: `integrate_thirst`'s `t <= last_drank` \
+            "pinning the wrong answer: the integral's `t <= last_reset` \
              short-circuit reads the future drink as already-discharged and \
              zeroes out thirst that should have accrued"
         );
@@ -17924,6 +19017,7 @@ mod tests {
             CATCH_UP_STEP_CAP,
             &mut RoomMeshMemo::new(),
             &mut HomeNavCache::new(),
+            &test_folds(),
             &mut DefaultController,
         );
         let after = ledger.len();
@@ -17970,6 +19064,7 @@ mod tests {
         // generous for the 3-hop journey, short of Fatigue's own act
         // threshold.
         let now = WorldTime::from_std_days(entry_day + 1.0).expect("a day value is finite");
+        let folds = test_folds();
         let forward = DriveMovements {
             npcs: vec![
                 cold_thermal_npc(a, home.clone(), niche),
@@ -17980,6 +19075,7 @@ mod tests {
             params: SUSTENANCE,
             day_ticks: None,
             terrain: &terrain,
+            folds: &folds,
         };
         let (_f1, occ_forward) = forward.step_with_occupancy(
             &ledger,
@@ -17987,6 +19083,7 @@ mod tests {
             &mut HomeNavCache::new(),
         );
 
+        let folds = test_folds();
         let reversed = DriveMovements {
             npcs: vec![
                 cold_thermal_npc(b, home.clone(), niche),
@@ -17997,6 +19094,7 @@ mod tests {
             params: SUSTENANCE,
             day_ticks: None,
             terrain: &terrain,
+            folds: &folds,
         };
         let (_f2, occ_reversed) = reversed.step_with_occupancy(
             &ledger,
@@ -18124,6 +19222,7 @@ mod tests {
                 CAP,
                 &mut RoomMeshMemo::new(),
                 &mut HomeNavCache::new(),
+                &test_folds(),
                 &mut DefaultController,
             );
             occ.at(npc.entity)

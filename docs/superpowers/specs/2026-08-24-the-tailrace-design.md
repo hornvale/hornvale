@@ -858,6 +858,8 @@ metaplan's own discipline.
 | 4 | Belief and hazard | `believed_water` (× peers), `hazard_memory_memo`, `build_emitter_scan` | stage 1's attribution says these carry a material share of `k` | **nothing — The Escapement landed 2026-08-25**; read §4's attribution before entering |
 | 5 | The readout | re-run the instrument; H2/H3; state what 7b and 7c may now assume | stages 3–4 | stages 3–4 |
 
+**2026-09-02: stages 3–5 are complete, shipped by The Pawl** (`docs/superpowers/specs/2026-09-01-the-pawl-design.md`, chronicle `book/src/chronicle/the-pawl.md`). The folds migrated onto one session-owned resident store rather than six private accumulators; `agent_sightings` is deleted; H2 (a) and (b) are met on the second readout, H2 (c) and both H4 clauses are not, and the remaining cost is `hazard_memory_memo` at 84% of the six probes' total. This annotation is dated rather than a rewrite: the table above records what was known on 2026-08-24.
+
 Stage 4 is the one that may not be entered, and that is deliberate: if the
 attribution says the three drives carry `k` and belief/hazard do not, migrating
 them is unmotivated memory for no measured gain — the same judgement §6.5 made
