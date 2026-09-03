@@ -65,7 +65,7 @@ mod tests {
 
     #[test]
     fn assert_then_query_round_trips_through_the_store_file() {
-        let dir = std::env::temp_dir().join("digest-mcp-test");
+        let dir = std::env::temp_dir().join(format!("digest-mcp-test-{}", std::process::id()));
         std::fs::create_dir_all(&dir).expect("tmp");
         let path = dir.join("facts.jsonl");
         let _ = std::fs::remove_file(&path);
@@ -87,7 +87,7 @@ mod tests {
 
     #[test]
     fn the_store_is_plain_text_editable_without_the_tool() {
-        let dir = std::env::temp_dir().join("digest-mcp-test2");
+        let dir = std::env::temp_dir().join(format!("digest-mcp-test2-{}", std::process::id()));
         std::fs::create_dir_all(&dir).expect("tmp");
         let path = dir.join("facts.jsonl");
         std::fs::write(
@@ -102,7 +102,8 @@ mod tests {
 
     #[test]
     fn a_missing_store_file_is_a_legitimate_empty_ledger() {
-        let dir = std::env::temp_dir().join("digest-mcp-test-notfound");
+        let dir =
+            std::env::temp_dir().join(format!("digest-mcp-test-notfound-{}", std::process::id()));
         std::fs::create_dir_all(&dir).expect("tmp");
         let path = dir.join("facts.jsonl");
         let _ = std::fs::remove_file(&path);
@@ -113,7 +114,8 @@ mod tests {
 
     #[test]
     fn a_zero_subject_is_rejected_not_panicked() {
-        let dir = std::env::temp_dir().join("digest-mcp-test-zero-subject");
+        let dir = std::env::temp_dir()
+            .join(format!("digest-mcp-test-zero-subject-{}", std::process::id()));
         std::fs::create_dir_all(&dir).expect("tmp");
         let path = dir.join("facts.jsonl");
         let _ = std::fs::remove_file(&path);
@@ -135,7 +137,8 @@ mod tests {
     fn an_unreadable_store_is_never_truncated_by_a_failed_assert() {
         use std::os::unix::fs::PermissionsExt;
 
-        let dir = std::env::temp_dir().join("digest-mcp-test-unreadable");
+        let dir = std::env::temp_dir()
+            .join(format!("digest-mcp-test-unreadable-{}", std::process::id()));
         std::fs::create_dir_all(&dir).expect("tmp");
         let path = dir.join("facts.jsonl");
         let original = "{\"subject\":1,\"predicate\":\"decision-status\",\"object\":{\"Text\":\"accepted\"},\

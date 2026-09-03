@@ -28,8 +28,9 @@
 //! the day a population-gated pattern is written, and unlike the seven absent
 //! `Option`s this one has a live wire behind it.
 
-use hornvale_history::record::{Function, Notability, TechHorizon};
-use hornvale_kernel::{Facet, Geosphere, KindId, NearestVertexIndex, Vertex, World};
+use hornvale_history::record::{Function, Notability, OccupationRecord, TechHorizon};
+use hornvale_kernel::{Facet, Geosphere, KindId, NearestVertexIndex, Vertex};
+use std::collections::BTreeMap;
 
 /// What macro history says about a place, reduced to the axes micro generation
 /// indexes. A COORDINATE in a small orthogonal space — never a label drawn from
@@ -138,9 +139,24 @@ pub(crate) fn containing_vertex(
 /// Derive the brief for `place`. Every read is taken at the walk band, so a
 /// chamber and its locale yield the same brief — which is what makes a
 /// structure's chambers agree about what building they are in.
+///
+/// `occupations` is the world's occupation register,
+/// `hornvale_worldgen::occupations_by_vertex(world)`, built ONCE by the
+/// caller (`WorldContext::build`) and handed in. **History of this
+/// parameter, kept because the note it replaces was right for five weeks
+/// before anyone measured it:** from `4569d883d` (2026-07-27) to The Terrier
+/// (2026-09-03) this function took `&World` and rebuilt the whole map on
+/// every call, under a `NOTE ON COST` that said "if a profile shows it
+/// mattering, hoist the map to the caller … do NOT memoize inside this
+/// function, because a hidden cache in a derivation path is how derived
+/// state stops being derived." The profile showed 8.7-26 ms per call and
+/// two to five calls per indoor turn — the whole of what The Rack had
+/// attributed to a 0.012 ms shadowcast. The note's prescription is what
+/// shipped, and its prohibition still stands: there is no cache here, only
+/// a parameter.
 /// type-audit: bare-ok(count: walk_depth)
 pub fn brief_of(
-    world: &World,
+    occupations: &BTreeMap<Vertex, Vec<OccupationRecord>>,
     geo: &Geosphere,
     index: &NearestVertexIndex,
     place: &Facet,
@@ -151,16 +167,8 @@ pub fn brief_of(
     let built = terrain.is_built(&locale);
     let cold = terrain.is_cold(&locale);
     let alive = containing_vertex(&locale, geo, index)
-        .and_then(|vertex| {
-            // NOTE ON COST: this derives the whole per-vertex occupation map on
-            // every call. Correct but wasteful, and `brief_of` will be called
-            // per descent. If a profile shows it mattering, hoist the map to
-            // the caller (the session can hold it for the possession's life) —
-            // do NOT memoize inside this function, because a hidden cache in a
-            // derivation path is how derived state stops being derived.
-            hornvale_worldgen::occupations_by_vertex(world).remove(&vertex)
-        })
-        .and_then(|occs| occs.into_iter().find(|o| o.core.ended.is_none()));
+        .and_then(|vertex| occupations.get(&vertex))
+        .and_then(|occs| occs.iter().find(|o| o.core.ended.is_none()));
     match alive {
         Some(o) => Brief::from_parts(
             Some(o.core.function),

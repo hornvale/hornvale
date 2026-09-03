@@ -1276,7 +1276,6 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::exclusion_reasons_carry_the_exact_documented_wording
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_matches_the_same_worlds_entry_in_rank
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_returns_none_for_an_unknown_seed
-hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_is_deterministic
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_orders_most_anomalous_first
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_agrees_with_for_seed_on_a_census_row
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_scores_against_an_uncontaminated_index
@@ -1345,7 +1344,6 @@ hornvale-lab::hornvale_lab$domesday::render::tests::a_detector_that_fired_nothin
 hornvale-lab::hornvale_lab$domesday::render::tests::a_domain_page_carries_the_generated_header_and_only_computed_numbers
 hornvale-lab::hornvale_lab$domesday::render::tests::a_domain_with_no_metrics_renders_the_no_metrics_notice_verbatim
 hornvale-lab::hornvale_lab$domesday::render::tests::a_flag_metric_always_renders_both_true_and_false_rows
-hornvale-lab::hornvale_lab$domesday::render::tests::a_metric_that_trips_two_detectors_is_grouped_under_one_heading_not_two
 hornvale-lab::hornvale_lab$domesday::render::tests::a_novel_detector_name_reaches_the_rendered_index
 hornvale-lab::hornvale_lab$domesday::render::tests::a_removed_parenthetical_directly_before_a_period_does_not_leave_a_dangling_space
 hornvale-lab::hornvale_lab$domesday::render::tests::an_ellipsis_survives_the_space_dot_space_cleanup_untouched
@@ -3181,6 +3179,10 @@ hornvale-vessel::suite$the_blocking::a_locale_composition_is_untouched_by_the_ro
 hornvale-vessel::suite$the_blocking::a_role_admits_a_different_composition_not_a_bigger_one
 hornvale-vessel::suite$the_blocking::the_role_table_reads_a_different_room_for_every_role
 hornvale-vessel::suite$the_first_mark::the_two_grievance_npc_copies_agree
+hornvale-vessel::suite$the_terrier::no_session_path_re_surveys_the_occupation_register
+hornvale-vessel::suite$the_terrier::the_block_extractor_matches_nested_braces
+hornvale-vessel::suite$the_terrier::the_production_span_reaches_the_test_module_not_the_first_attribute
+hornvale-vessel::suite$the_terrier::the_register_scanner_catches_a_per_call_read
 hornvale-vessel::suite$thing::a_holder_holds_what_was_last_put_in_it_and_nothing_it_has_given_up
 hornvale-vessel::suite$thing::a_room_offers_again_what_was_brought_back
 hornvale-vessel::suite$thing::a_room_stops_offering_what_was_carried_out_of_it
@@ -3871,6 +3873,7 @@ hornvale::suite$lane_sets::every_rostered_set_is_well_formed
 hornvale::suite$lane_sets::the_commit_gate_is_local_and_everything_else_is_the_lane
 hornvale::suite$lane_sets::the_phase_lists_and_the_roster_rungs_agree_both_ways
 hornvale::suite$lexicon_guard::a_waiver_needs_a_reason
+hornvale::suite$lexicon_guard::no_vertex_sense_cell_comes_back
 hornvale::suite$lexicon_guard::the_inventory_is_sorted_and_not_empty
 hornvale::suite$lexicon_guard::the_tokenizer_counts_affixed_bare_and_shouting_forms
 hornvale::suite$no_entity_id_values_in_prose::derived_prose_never_reads_an_entity_id_for_its_value
@@ -3962,6 +3965,8 @@ hornvale::suite$system_coverage::the_surplus_read_excludes_a_subsystem_the_corpu
 hornvale::suite$system_coverage::the_surplus_read_names_subsystems_no_chapter_cites
 hornvale::suite$system_coverage::the_wolverson_corpus_has_no_anchor_findings
 hornvale::suite$system_coverage::the_wolverson_corpus_is_frozen_at_its_declared_size
+hornvale::suite$temp_path_ratchet::a_reasonless_roster_entry_is_a_parse_error
+hornvale::suite$temp_path_ratchet::no_new_fixed_temp_path_appears
 hornvale::suite$test_binary_ratchet::no_new_top_level_test_binary_appears
 hornvale::suite$the_unnameable::the_unnameable_set_is_not_empty
 hornvale::suite$timings_alarm::tests::a_live_claim_means_the_box_is_contended_and_enforcement_is_not_appropriate

@@ -179,11 +179,33 @@ route everything raised — including promising ideonomy discards:
 
 - Speculative directions → idea-registry rows
   (`book/src/frontier/idea-registry.md`).
-- Actionable followups → the campaign followup register
-  (`.superpowers/sdd/followups.md` in the worktree; promoted into the
-  campaign retrospective's follow-up section at close).
+- Actionable followups → the campaign's committed decision ledger
+  (`docs/superpowers/ledgers/YYYY-MM-DD-<slug>.md`), written **as they
+  occur**, in a `## Follow-ups` section.
 - Process lessons → retro / memory.
 - Rejected branches → ledger, with the reason.
+
+**Which file, and why it is not a matter of taste.** Two files are open in
+every campaign session and they have different *lifetimes*:
+
+| goes here | what for | lifetime |
+|---|---|---|
+| the plugin's `.superpowers/sdd/<campaign>/progress.md` | task state, fix rounds, resume-after-compaction material | **scratch** — git-ignored, per-worktree, swept when the worktree is recycled |
+| `docs/superpowers/ledgers/YYYY-MM-DD-<slug>.md` | rulings, `Q` answers, deferred minors, parked findings, followups | **committed**, per-campaign, survives everything |
+
+Writing task state to `progress.md` is correct. Writing anything in the
+second row there is a silent loss, and it is not a hypothetical: The
+Reservoir wrote four deferred minors into `progress.md` while writing
+rulings into the committed ledger *in the same sitting*, because the two
+files were both open and neither one announces which it is. A closer's
+step-2A walk is the backstop and it worked; the improvement worth wanting is
+that it should not have had to.
+
+**Never `.superpowers/sdd/followups.md`.** It is flat and *shared* — every
+campaign's copy sat at that identical path, so two campaigns editing it
+merged to one side silently (decision 0493) — and it was promoted at close,
+the practice that failed five recorded times before The Cartulary replaced
+it with writing to the committed ledger as rulings happen.
 
 ## The decision ledger
 

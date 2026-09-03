@@ -448,6 +448,8 @@
 - [The Plumb](./chronicle/the-plumb.md)
 - [The Brattice](./chronicle/the-brattice.md)
 - [The Detent](./chronicle/the-detent.md)
+- [The Nettle](./chronicle/the-nettle.md)
+- [The Terrier](./chronicle/the-terrier.md)
 
 # Appendix: The Frontier
 

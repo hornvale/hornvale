@@ -127,6 +127,8 @@ mod the_purview;
 mod the_rack;
 #[path = "suite/the_roll.rs"]
 mod the_roll;
+#[path = "suite/the_terrier.rs"]
+mod the_terrier;
 #[path = "suite/thing.rs"]
 mod thing;
 #[path = "suite/tick_commit_budget.rs"]
