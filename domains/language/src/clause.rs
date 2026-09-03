@@ -298,6 +298,7 @@ pub(crate) fn subject_embed_depth(subject: &Subject) -> usize {
 /// inside one, so it carries no depth cap of its own; see that type's own
 /// doc for why the two operators diverge on this axis.
 /// type-audit: bare-ok(count)
+/// plumb: pending(wave-1)
 pub const CLAUSE_EMBED_MAX_DEPTH: usize = 1;
 
 /// One role binding on a clause: a **registered predicate** bound to an

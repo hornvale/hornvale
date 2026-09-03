@@ -1683,18 +1683,21 @@ pub fn noun_class_from(
 /// (`account.rs`), reused verbatim rather than re-authored. Solar events
 /// carry no such gate — a darkened day-sky needs no night eyes, so every
 /// placed culture witnesses every solar event unconditionally.
+/// plumb: pending(wave-1)
 const LUNAR_WITNESS_THRESHOLD: f64 = 0.6;
 
 /// Preregistered (plan Global Constraints / spec §3.2): total witnessed
 /// events (any recurrence class) an organized cult needs to climb from
 /// `Counted` to [`LadderRung::Numbered`]. Folk-only cultures (no
 /// `doctrine_from`) never cross this rung regardless of count.
+/// plumb: pending(wave-1)
 const K_COUNT: usize = 3;
 
 /// Preregistered: witnessed events of ONE recurrence class (`(moon
 /// index, EclipseBody)` — the floor's honest class, no saros-search
 /// dependency) an organized cult needs to climb to
 /// [`LadderRung::Predictive`].
+/// plumb: pending(wave-1)
 const K_PREDICT: usize = 8;
 
 /// How far past `at` [`ladder_from`] scans for the taught prediction: one
@@ -1704,17 +1707,20 @@ const K_PREDICT: usize = 8;
 /// inside this horizon the culture is still `Predictive` (the record
 /// stands) but the taught day is `None` — the next event is beyond the
 /// priesthood's teaching horizon, an honest arm.
+/// plumb: pending(wave-1)
 const PREDICTION_HORIZON_STD_DAYS: f64 = 10_000.0;
 
 /// How close a naive prediction must land to its own fit's mean interval
 /// to count as a hit (spec "Hit or miss, and a tolerance") -- 5%, the
 /// same numeric convention as `hornvale_astronomy::resonance::
 /// RATIO_TOLERANCE` without reusing that unrelated constant.
+/// plumb: pending(wave-1)
 const PREDICTION_TOLERANCE_FRACTION: f64 = 0.05;
 
 /// How many consecutive retrospective misses constitute a live crisis
 /// (spec "Crisis, not anomaly") -- a single miss is silently absorbed;
 /// only a run counts.
+/// plumb: pending(wave-1)
 const CRISIS_MISS_RUN: usize = 2;
 
 /// One culture's witnessed eclipse record by day `at` (C8 §3.1) — pure,

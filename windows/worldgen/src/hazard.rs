@@ -145,6 +145,7 @@ pub struct Recurrence {
 /// quiet end firmly outside any culture's living memory, which is the
 /// property Task 7's knownness half-life will lean on: the field's quiet
 /// end must be forgettable, or there is nothing to forget.
+/// plumb: pending(wave-1)
 const SEISMIC_QUIET_YEARS: f64 = 20_000.0;
 
 /// Mean interval between seismic events on the most active ground there is
@@ -156,6 +157,7 @@ const SEISMIC_QUIET_YEARS: f64 = 20_000.0;
 /// the short end of that, and deliberately *not* shorter: an interval below
 /// a human generation would make the hazard ordinary weather rather than
 /// the thing a people remembers and mis-remembers.
+/// plumb: pending(wave-1)
 const SEISMIC_ACTIVE_YEARS: f64 = 30.0;
 
 /// Mean interval between eruptions at a quiet edifice (`unrest` = 0).
@@ -165,6 +167,7 @@ const SEISMIC_ACTIVE_YEARS: f64 = 30.0;
 /// remembered as a mountain and not as a volcano. This is the case spec §1
 /// is named for: Vesuvius in AD 79 "was not a known hazard; it was a
 /// fertile hill with towns on its flanks".
+/// plumb: pending(wave-1)
 const VOLCANIC_QUIET_YEARS: f64 = 5_000.0;
 
 /// Mean interval between eruptions at a vigorously active edifice
@@ -175,6 +178,7 @@ const VOLCANIC_QUIET_YEARS: f64 = 5_000.0;
 /// dusting it — is the rarer, larger event. Two centuries is the interval
 /// at which a people can plausibly hold the memory of the last one and
 /// still be living on the flank.
+/// plumb: pending(wave-1)
 const VOLCANIC_ACTIVE_YEARS: f64 = 200.0;
 
 /// Interpolate a recurrence interval between its quiet and active ends,
@@ -290,6 +294,7 @@ pub struct HazardEvent {
 /// number, so if the two ever disagree it is the draw that is wrong, never
 /// this constant.
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 pub const B_VALUE: f64 = 1.0;
 
 /// The catalogue's lower magnitude cutoff — the smallest event the field
@@ -305,6 +310,7 @@ pub const B_VALUE: f64 = 1.0;
 /// cutoff would not be wrong physically, but it would silently redefine every
 /// interval constant in this module.
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 pub const M_MIN: f64 = 5.0;
 
 /// The largest earthquake the law can produce.
@@ -317,6 +323,7 @@ pub const M_MIN: f64 = 5.0;
 /// would have created and which would have made the biggest earthquake also
 /// the most common one above M 9.
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 pub const M_MAX: f64 = 9.5;
 
 /// The smallest eruption the field counts.
@@ -327,6 +334,7 @@ pub const M_MAX: f64 = 9.5;
 /// [`Recurrence::volcanic`]'s interval was authored for "the eruption worth
 /// narrating — the one that ends a settlement rather than dusting it".
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 pub const VEI_MIN: f64 = 2.0;
 
 /// The largest eruption the law can produce.
@@ -335,6 +343,7 @@ pub const VEI_MIN: f64 = 2.0;
 /// supervolcanic class (Toba, the Yellowstone eruptions) and nothing above it
 /// has a name. Truncated, not clamped, for the same reason [`M_MAX`] is.
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 pub const VEI_MAX: f64 = 8.0;
 
 /// The eruption law's decade-decay, the VEI analogue of [`B_VALUE`].
@@ -343,6 +352,7 @@ pub const VEI_MAX: f64 = 8.0;
 /// each step up the VEI scale is roughly five times rarer than the one below.
 /// Not fitted: `repose_laws.rs` checks the draw against this number.
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 pub const VEI_B: f64 = 0.7;
 
 /// The length of one block of the event lattice, in years.
@@ -357,10 +367,12 @@ pub const VEI_B: f64 = 0.7;
 /// spans (so longer blocks are cheaper for long windows), while a block's
 /// expected count is `BLOCK_YEARS / recurrence`, at most 33 on the busiest
 /// authored ground, and the count draw is linear in that.
+/// plumb: pending(wave-1)
 const BLOCK_YEARS: f64 = 1_000.0;
 
 /// [`BLOCK_YEARS`] in standard days — the lattice's actual pitch, since world
 /// time is days.
+/// plumb: pending(wave-1)
 const BLOCK_DAYS: f64 = BLOCK_YEARS * Years::DAYS_PER_YEAR;
 
 /// The pitch of the event lattice: the span of world time one block of draws
@@ -424,6 +436,7 @@ fn event_stream(seed: Seed, vertex: Vertex, kind: HazardEventKind, block: i64) -
 /// very close to 1, and this stops that spinning. At the authored constants
 /// the busiest possible block has mean 33.3, so the cap sits ~30 standard
 /// deviations out and cannot round off a real draw.
+/// plumb: pending(wave-1)
 const MAX_EVENTS_PER_BLOCK: u32 = 10_000;
 
 /// How many events fall in one block: the Poisson quantile at `u`, by CDF

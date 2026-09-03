@@ -939,6 +939,7 @@ pub fn sundered_landmasses(world: &World) -> Vec<Landmass> {
 /// 0; dilation is what turns "distinct vertices" into the meaningful "distinct
 /// regions" the diversity payoff is really about.
 /// type-audit: bare-ok(count)
+/// plumb: pending(wave-1)
 pub const TERRITORY_DILATION_RINGS: u32 = 1;
 
 /// Mean pairwise Jaccard overlap of the four [`GOBLINOIDS`]' raw territory

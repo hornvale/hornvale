@@ -10,6 +10,7 @@ use hornvale_kernel::{Geosphere, Vertex, VertexMap, math};
 /// Fixed Ekman deflection angle: 45°, applied about the local outward
 /// normal, signed by hemisphere (right in the north, left in the south).
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 const DEFLECT_RAD: f64 = std::f64::consts::FRAC_PI_4;
 
 /// Cross product a × b.

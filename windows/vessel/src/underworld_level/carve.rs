@@ -59,7 +59,9 @@ pub(super) fn carve(
     }
 }
 
+/// plumb: pending(wave-1)
 const CA_FILL_PROB: f64 = 0.45;
+/// plumb: pending(wave-1)
 const CA_ITERATIONS: u32 = 4;
 
 fn carve_cellular_cave(rect: Rect, stream: &mut Stream, cells: &mut CellGrid) -> u32 {
@@ -163,7 +165,9 @@ fn neighbor_alive_count(alive: &BTreeMap<Cell, bool>, x: i32, y: i32) -> u32 {
     n
 }
 
+/// plumb: pending(wave-1)
 const TUNNEL_STEPS: u32 = 30;
+/// plumb: pending(wave-1)
 const TUNNEL_MAX_RUN: u64 = 3;
 
 fn carve_tunneler(rect: Rect, stream: &mut Stream, cells: &mut CellGrid) -> u32 {

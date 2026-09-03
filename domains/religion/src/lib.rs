@@ -48,8 +48,10 @@ pub const DEITY_EPITHET_IPA: &str = "deity-epithet-ipa";
 pub const SENTIMENT: &str = "sentiment";
 
 /// Salience a phenomenon must reach to seat a deity in the pantheon.
+/// plumb: pending(wave-1)
 const PANTHEON_FLOOR: f64 = 0.25;
 /// Social strata at or above which the pantheon is ranked (a high god presides).
+/// plumb: pending(wave-1)
 const RANKED_STRATA: usize = 4;
 
 /// Every seed-derivation label this crate uses, with docs. Empty: religion

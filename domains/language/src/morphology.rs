@@ -212,6 +212,7 @@ const NOUN_CLASS_DEPTH_WEIGHTS: [f64; 3] = [55.0, 15.0, 30.0];
 
 /// Preregistered class-marker position: the percentage chance (out of 100)
 /// the marker binds as a suffix rather than a prefix.
+/// plumb: pending(wave-1)
 const CLASS_POSITION_SUFFIX_CHANCE: u32 = 60;
 
 /// The `weighted_index` bucket order every depth axis shares: 0 = `None`,

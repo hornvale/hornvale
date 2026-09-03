@@ -136,6 +136,7 @@ use hornvale_kernel::Band;
 /// tells us the class is *occupied* (24.5 / 43.2 / 42.3% of cave-bearing vertices
 /// on seeds 42 / 7 / 1234); it did not choose the number.
 /// type-audit: bare-ok(diagnostic-value)
+/// plumb: pending(wave-1)
 pub const HABITABLE_CEILING_K: f64 = 50.0;
 
 /// The ΔT at which [`Band::Shallows`] begins.
@@ -150,6 +151,7 @@ pub const HABITABLE_CEILING_K: f64 = 50.0;
 /// measured valley (0.0 / 0.0 / 0.2% of caves within ±0.5 K). It separates a
 /// shallow cluster from the bulk, which is what §4.1 guessed it would.
 /// type-audit: bare-ok(diagnostic-value)
+/// plumb: pending(wave-1)
 const SHALLOWS_TOP_K: f64 = 2.0;
 
 /// The ΔT at which [`Band::Deeps`] begins.
@@ -190,6 +192,7 @@ const SHALLOWS_TOP_K: f64 = 2.0;
 /// minimum class 4.8% → 5.0%. The rung names, arity and ordering are
 /// unchanged, so `chamber/v2`'s key spellings do not move with it.
 /// type-audit: bare-ok(diagnostic-value)
+/// plumb: pending(wave-1)
 const DEEPS_TOP_K: f64 = 8.0;
 
 /// The ΔT at which [`Band::Underdeep`] begins.
@@ -207,6 +210,7 @@ const DEEPS_TOP_K: f64 = 8.0;
 /// of the discipline. `[18, 22)` is the nearest empty valley if a later
 /// campaign has a reason to revisit it.
 /// type-audit: bare-ok(diagnostic-value)
+/// plumb: pending(wave-1)
 const UNDERDEEP_TOP_K: f64 = 25.0;
 
 /// The habitation rungs, shallowest first, each paired with the ΔT (K above

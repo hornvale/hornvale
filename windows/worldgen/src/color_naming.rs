@@ -53,6 +53,7 @@ const ACHROMATIC: [&str; 2] = ["dark", "light"];
 /// hue names at all — treat it as a threshold with a stated derivation, and
 /// re-derive it rather than nudging it if the exemplars ever move.
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 const ACHROMATIC_THRESHOLD: f64 = 0.04;
 
 /// Chromaticity: the signal normalized to unit sum, which strips brightness

@@ -46,6 +46,7 @@ const RATIO_CANDIDATES: &[(u32, u32)] = &[
 /// deviation) to count as a match. 5%: tight enough that "close to 2:1"
 /// means genuinely close, loose enough that real drawn periods (never
 /// exactly integer multiples) can still match.
+/// plumb: pending(wave-1)
 const RATIO_TOLERANCE: f64 = 0.05;
 
 /// The nearest candidate to `ratio` (always `ratio >= 1.0`) and its

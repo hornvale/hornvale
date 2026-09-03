@@ -310,7 +310,7 @@ The Vngoashngovngo grows restless.
 The Kvoshngovnga grows restless.
 The Vngavngoshnga grows restless.
 > wait 1
-Time passes. You sense movement nearby (245 stirred).
+Time passes. You sense movement nearby (246 stirred).
 > look
 [room 3733133217, day 7]
 Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: Night. The sky is a low grey rain-deck.
@@ -336,7 +336,7 @@ The Bvotvoshngo grows restless.
 The Vngodva grows restless.
 The Gvoavngashnga grows restless.
 The Kvovngashnga grows restless.
-The Shngashngovngo grows restless.
+The Shngashngovngo seems content.
 The Shngoovngo grows restless.
 The Tvoadvovnga grows restless.
 The Shngoshngobva grows restless.
@@ -387,7 +387,7 @@ The Vngavngoshnga grows restless.
 > !why hobgoblin
 No one here answers to 'hobgoblin' (see 'npcs').
 > wait 90
-Time passes. You sense movement nearby (3823 stirred).
+Time passes. You sense movement nearby (3891 stirred).
 > look
 [room 3733133217, day 97]
 Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
@@ -401,7 +401,7 @@ The Shngoqvo seems content.
 The Vngaobvo seems content.
 The Vngaavnga grows restless.
 The Kvoavnga 8 seems content.
-The Vngootvo grows restless.
+The Vngootvo settles down to rest.
 The Vngaoshngoshngo seems content.
 The Vngovngoqvo seems content.
 The Vngoaqvashngo seems content.
@@ -438,7 +438,7 @@ The Kvoashngadvo seems content.
 The Vngaovngovngo seems content.
 The Vngovngoshnga seems content.
 The Shngaashnga 45 seems content.
-The Gvokvavnga grows restless.
+The Gvokvavnga settles down to rest.
 The Qvavngovnga seems content.
 The Vngavngavnga seems content.
 The Vngobva grows restless.
@@ -455,7 +455,7 @@ The Vngakva settles down to rest.
 The Qvavngodvo seems content.
 The Shngoshngoqvo seems content.
 The Dvashngo grows restless.
-The Shngoobvovngo grows restless.
+The Shngoobvovngo settles down to rest.
 The Shngoavnga seems content.
 The Dvoaqvokva seems content.
 The Vngoashngovngo seems content.

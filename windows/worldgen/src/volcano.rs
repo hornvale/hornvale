@@ -102,6 +102,7 @@ pub enum EruptionStyle {
 /// the Pompeii shape to stand against. Not fitted to anything — no test
 /// asserts this value, and the style tests assert *both variants occur* and
 /// that the draw is stable, never a frequency.
+/// plumb: pending(wave-1)
 const ARC_EXPLOSIVE_SHARE: f64 = 0.75;
 
 /// A volcano: one edifice, identified, with how often it acts and how.

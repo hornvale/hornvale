@@ -14,6 +14,7 @@ use hornvale_kernel::{Seed, math, noise};
 /// consumers: `CrustKm::new`'s validation and `thickness_at`'s terrane
 /// saturation cap (stacked terrane kernels must never push a validated
 /// construction past this ceiling into a panic).
+/// plumb: pending(wave-1)
 const CRUST_KM_MAX: f64 = 100.0;
 
 /// Continental crust thickness in kilometers.
@@ -42,11 +43,14 @@ impl CrustKm {
 /// iteration 3': lowered from 6.0 so lobes are fewer and larger — smaller,
 /// higher-frequency lobes were pinching craton margins into detached rim
 /// fragments).
+/// plumb: pending(wave-1)
 const LOBE_FREQ: f64 = 4.0;
 /// fBm octaves for the lobing noise.
+/// plumb: pending(wave-1)
 const LOBE_OCTAVES: u32 = 4;
 /// Lobe amplitude: the rim radius varies in [1 - AMP, 1 + AMP] x radius,
 /// i.e. [0.5, 1.5] x radius_rad at this value.
+/// plumb: pending(wave-1)
 const LOBE_AMP: f64 = 0.5;
 
 /// Contrast gain compensating the three-slice averaging in
@@ -74,6 +78,7 @@ const LOBE_AMP: f64 = 0.5;
 /// map needs a higher gain than the clamp's 6.0 because it saturates
 /// only asymptotically where the clamp cut off exactly; see the Task 9
 /// iteration-2 report for the full sweep table.
+/// plumb: pending(wave-1)
 const REBALANCE_GAIN: f64 = 15.0;
 
 /// Precomputed seam-free spherical fBm: derives the three slice seeds and
@@ -162,9 +167,11 @@ pub(crate) fn lobed_envelope(seed: Seed, center: [f64; 3], p: [f64; 3], radius_r
 
 /// Thin oceanic floor thickness, km.
 /// type-audit: pending(wave-2)
+/// plumb: pending(wave-1)
 pub const OCEANIC_KM: f64 = 7.0;
 /// Crust at or above this thickness is continental, km.
 /// type-audit: pending(wave-2)
+/// plumb: pending(wave-1)
 pub const CONTINENTAL_THRESHOLD_KM: f64 = 20.0;
 /// Drawn craton peak thickness range, km. Minimum must clear
 /// `elevation::ISOSTASY_REF_KM` (30 km) — otherwise an "old" craton
@@ -172,8 +179,10 @@ pub const CONTINENTAL_THRESHOLD_KM: f64 = 20.0;
 /// surfaces regardless of footprint area (Task 8's diagnosed finding, fixed
 /// here in Task 9). At 33 km an old craton crests
 /// `ISOSTASY_M_PER_KM * (33 - 30)` = ~540 m — comfortably above sea level.
+/// plumb: pending(wave-1)
 const PEAK_MIN_KM: f64 = 33.0;
 /// Upper end of the drawn peak range, km.
+/// plumb: pending(wave-1)
 const PEAK_MAX_KM: f64 = 45.0;
 
 /// A craton: a drawn nucleus of continental crust (Crust spec §2).
@@ -211,15 +220,18 @@ pub struct Terrane {
 
 /// Terrane count lower bound (global knob, spec §5).
 /// type-audit: bare-ok(count)
+/// plumb: pending(wave-1)
 pub const TERRANE_COUNT_MIN: u32 = 2;
 /// Terrane count upper bound.
 /// type-audit: bare-ok(count)
+/// plumb: pending(wave-1)
 pub const TERRANE_COUNT_MAX: u32 = 6;
 /// Terrane angular half-length range, radians (~6°–14°).
 /// type-audit: pending(wave-2)
 pub const TERRANE_HALF_LEN_RAD: (f64, f64) = (0.10, 0.24);
 /// Width is this fraction of length (elongation).
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 pub const TERRANE_ASPECT: f64 = 0.35;
 /// Peak added thickness range, km.
 /// type-audit: waiver(crust-km-convention)
@@ -243,6 +255,7 @@ pub(crate) fn tangent_basis(p: [f64; 3]) -> ([f64; 3], [f64; 3]) {
 /// Fixed-size scan used by `find_margin_point`: not a stream draw, so
 /// the terrane draw count and order stay independent of the craton
 /// field's noise (pin isolation).
+/// plumb: pending(wave-1)
 const MARGIN_SEARCH_SAMPLES: u32 = 200;
 
 /// Search outward from `host.center` along tangent direction `dir` (a
@@ -339,6 +352,7 @@ pub fn draw_terranes(
 /// Fixed microcontinent candidate draw count (survivors are <= this — the
 /// away-from-majors filter below can only shrink the set, never grow it).
 /// type-audit: bare-ok(count)
+/// plumb: pending(wave-1)
 pub const MICRO_COUNT_MAX: u32 = 4;
 /// Microcontinent radius range, radians (~1.5°–3°: Madagascar-scale at L6,
 /// below the continent-count metric's 0.5%-of-land floor).
@@ -632,6 +646,7 @@ pub fn continental_supply(cratons: &[Craton]) -> f64 {
 /// saturates by ~0.8; beyond that, added radius lands on ground another craton
 /// already covers. See `docs/audits/land-elevation-attribution.md` §5 Route 3
 /// for the standing case, and decision 0134 for the evidence and the ceiling.
+/// plumb: pending(wave-1)
 pub(crate) const CRATON_RADIUS_MAX_RAD: f64 = 0.8;
 
 /// Solve for the radius scale that makes the craton set deliver `target_sr`
@@ -746,6 +761,7 @@ fn draw_cratons_unrepelled(
 /// 2's implicit 1.0x): pairs are pushed toward 1.2x their combined radii
 /// rather than exact rim tangency, leaving a moat of open ocean the lobed
 /// rims' overlapping skirts are less likely to bridge back together.
+/// plumb: pending(wave-1)
 pub(crate) const REPEL_SEPARATION_FACTOR: f64 = 1.2;
 
 /// One deterministic repulsion pass over craton centers (Task 9
@@ -809,6 +825,7 @@ pub(crate) const REPEL_SEPARATION_FACTOR: f64 = 1.2;
 fn repel_cratons(cratons: &mut [Craton]) {
     /// Bound on the within-craton settle sweeps: convergence is typically
     /// 2-3 sweeps; the cap only guarantees termination.
+    /// plumb: pending(wave-1)
     const REPEL_SWEEPS: u32 = 16;
     let mut floor = min_pairwise_separation(cratons);
     for i in 1..cratons.len() {
@@ -860,6 +877,7 @@ fn min_pairwise_separation(cratons: &[Craton]) -> f64 {
 /// *centers* reach exact tangency. Tuned only if the Task-6 pinned-world
 /// suture test demands it.
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 pub const CONTACT_FACTOR: f64 = 0.85;
 
 /// Bisection iteration count for `pull_to_contact`: 64 fixed iterations
@@ -872,6 +890,7 @@ pub const CONTACT_FACTOR: f64 = 0.85;
 /// (decision 0134) — which is how the *other* branch's failure was shown
 /// to be structural rather than a precision shortfall. The overlapped
 /// branch no longer bisects anything: see `settle_against_a_host`.
+/// plumb: pending(wave-1)
 const ASSEMBLY_BISECTION_ITERS: u32 = 64;
 
 /// Angular separation between two unit-sphere points, radians.
@@ -943,6 +962,7 @@ fn pull_to_contact(
 /// candidates `contact · π/360 ≈ 0.012` rad apart at the widest contact
 /// separation in play — finer than the canonical globe's vertex spacing, so
 /// a nearer-but-unsampled tangency could not move a vertex.
+/// plumb: pending(wave-1)
 const ASSEMBLY_AZIMUTH_SAMPLES: u32 = 720;
 
 /// A unit vector tangent to the sphere at `at`, pointing toward `toward`.

@@ -58,6 +58,7 @@ const CONSULT_FALLBACK: &str = "The Book holds more for the initiated.";
 /// light model arrives there is exactly one place to replace, and so no second
 /// caller can quietly disagree with the first.
 /// type-audit: bare-ok(count)
+/// plumb: universal(derived from the chamber lattice's own geometry — a rendering stand-in, not a body property)
 const SIGHT_RADIUS: i32 = crate::lattice::CHAMBER_SIDE / 2;
 
 /// What a furnishing anchor's mark calls itself on the chamber-band plan —
@@ -78,6 +79,7 @@ const FURNISHING_MARK_KIND: &str = "furnishing";
 /// `held`, so this ordering is never exercised by a real collision on the
 /// chamber plan — it is chosen anyway, for the day that exclusion changes.
 /// type-audit: bare-ok(index)
+/// plumb: universal(a fixed salience-ordering constant for furnishing marks, not tied to any world or species)
 const FURNISHING_SALIENCE: u32 = 30;
 
 /// Spec §3.2's group D — session control, which is *not an act* and therefore
@@ -477,6 +479,7 @@ pub const DISPOSITION_SHIFT: &str = "disposition-shift";
 /// direct social, not an ambient drive tip). A game-design coefficient, not
 /// a tuned physical constant.
 /// type-audit: bare-ok(ratio)
+/// plumb: per-individual(how readily one NPC's grievance accumulates from a slight is a personality trait -- currently one gain for every NPC, not derived from Lineage)
 pub const GRIEVANCE_GAIN: f64 = 1.0;
 
 /// Net grievance at which a neutral NPC turns hostile toward the player —
@@ -486,6 +489,7 @@ pub const GRIEVANCE_GAIN: f64 = 1.0;
 /// homeostatic drive layer (`liveness.rs`), and there is no seed-42
 /// calibration behind it.
 /// type-audit: bare-ok(ratio)
+/// plumb: per-individual(how many net provokes it takes before one NPC turns hostile is a personality trait -- currently one threshold for every NPC, not derived from Lineage)
 pub const HOSTILITY_THRESHOLD: f64 = 3.0;
 
 /// The one-hop forward integration (The First Mark): an NPC whose grievance
@@ -540,6 +544,7 @@ pub const POSSESSION_ENDED: &str = "possession-ended";
 /// knob for how much of a crowd `look` spells out, not a physical or
 /// derived constant.
 /// type-audit: bare-ok(count)
+/// plumb: pending(wave-1)
 pub const N_NAMED: usize = 4;
 
 /// Who currently holds `body`, if anyone (The Coercion).
@@ -9096,6 +9101,7 @@ impl<'w> Session<'w> {
 
 /// The arousal above which a still-Content (sub-act) creature reads as restless
 /// rather than calm — the rising edge of a need felt before it is acted on.
+/// plumb: pending(wave-1)
 const RESTLESS_AROUSAL: f64 = 0.4;
 
 /// Render a creature's `Affect` as a felt-state phrase (spec §7): the

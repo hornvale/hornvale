@@ -100,13 +100,17 @@ pub fn weather_conductance_factor(wetness: f64, snow_mm: f64, frozen: bool) -> f
 }
 
 /// Saturated unfrozen ground costs this share of an edge's conductance.
+/// plumb: pending(wave-1)
 const MUD_PENALTY: f64 = 0.6;
 /// Freezing returns most of the mud penalty -- hard ground travels well.
+/// plumb: pending(wave-1)
 const FROZEN_RELIEF: f64 = 0.15;
 /// Lying snow at or above this depth (mm water equivalent) costs the full
 /// snow penalty.
+/// plumb: pending(wave-1)
 const SNOW_IMPEDING_MM: f64 = 300.0;
 /// A fully snowed-in edge costs this share of its conductance.
+/// plumb: pending(wave-1)
 const SNOW_PENALTY: f64 = 0.7;
 
 /// Derive the world's [`ConnectionGraph`] from real geography: bare mesh

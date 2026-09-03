@@ -26,6 +26,7 @@ use std::collections::BTreeMap;
 /// The smallest a chamber's INTERIOR may be on either axis. Below 2 there is no
 /// standing room worth the name once the fabric around it is counted.
 /// type-audit: bare-ok(count)
+/// plumb: universal(a fixed geometry bound on a chamber's interior size)
 pub const MIN_CHAMBER_SPAN: i32 = 2;
 
 /// Embed `structure` in `extent`.

@@ -273,6 +273,7 @@ impl CascadeRegime {
     /// rules. This is the pre-existing `CASCADE_LEN_RANGE` constant it
     /// replaces, preserved exactly so [`draw_cascade`]'s default stays
     /// byte-identical.
+    /// plumb: pending(wave-1)
     pub const SETTLED: CascadeRegime = CascadeRegime { min: 2, max: 4 };
 
     /// The wear regime: the short cascade a high-frequency toponymic
@@ -281,6 +282,7 @@ impl CascadeRegime {
     /// One to two rules, against [`CascadeRegime::SETTLED`]'s two to four —
     /// wear is a grinding-down of a name element that is said constantly,
     /// not a millennium of divergence.
+    /// plumb: pending(wave-1)
     pub const WEAR: CascadeRegime = CascadeRegime { min: 1, max: 2 };
 
     /// Construct a regime from an inclusive `(min, max)` rule-count range.
@@ -643,6 +645,7 @@ fn is_minimal_pair(a: &[Segment], b: &[Segment]) -> bool {
 /// lengthened by one syllable — the open-addressing "table resize" that keeps
 /// assignment terminating even in a phonology whose base space is smaller
 /// than the concept universe.
+/// plumb: pending(wave-1)
 const PROBE_BUDGET: u32 = 8;
 
 /// Draw one candidate proto-root for `concept` at probe index `probe`. Probe

@@ -26,19 +26,23 @@ use std::collections::BTreeMap;
 /// Days simulated per world — long enough to span several full drive cycles
 /// (thirst rises over ~5–6 days and resets on a drink), so a chronic block is
 /// distinguishable from a normal seek.
+/// plumb: pending(wave-1)
 const HEALTH_TICKS: usize = 40;
 
 /// Creatures derived per world (a representative sample, not the whole roster —
 /// the session's own small constant, spec §4).
+/// plumb: pending(wave-1)
 const HEALTH_NPCS: usize = 6;
 
 /// Wild beast agents derived per world (The Wilding) — the fauna's contribution
 /// to the population-health sample.
+/// plumb: pending(wave-1)
 const HEALTH_WILD: usize = 4;
 
 /// Consecutive distress ticks that count as CHRONIC (persistently stuck, the
 /// learned-helplessness / bug-alarm signal, spec §8) rather than a transient
 /// spike a healthy mind recovers from.
+/// plumb: pending(wave-1)
 const CHRONIC_TICKS: usize = 8;
 
 /// One creature's affect over the simulated span, tagged with its species.

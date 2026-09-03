@@ -123,6 +123,7 @@ pub struct Knownness {
 /// fitted to anything — no measurement in this campaign moves it, and
 /// `the_half_life_rides_the_holders_generation_length` pins the arithmetic so
 /// changing it is a deliberate act.
+/// plumb: pending(wave-1)
 const MEMORY_GENERATIONS: f64 = 2.0;
 
 /// How many half-lives the fold looks back before it declares the memory
@@ -153,6 +154,7 @@ const MEMORY_GENERATIONS: f64 = 2.0;
 /// physically cannot be large would be an unauthored constant guarding a
 /// caller error. What is claimed is narrower than "structural": **the horizon
 /// cannot be forgotten, only mis-supplied.**
+/// plumb: pending(wave-1)
 const MEMORY_HORIZON_HALF_LIVES: f64 = 10.0;
 
 /// The generation length assumed for a holder whose own cannot be derived.
@@ -177,6 +179,7 @@ const MEMORY_HORIZON_HALF_LIVES: f64 = 10.0;
 /// rejected: it makes the sink unreachable and asserts that constructs are
 /// permanently right about their mountain, a claim this campaign has no basis
 /// for.
+/// plumb: pending(wave-1)
 const FALLBACK_GENERATION_YEARS: f64 = 26.4;
 
 /// How long it takes a holder to forget half of what it knew.

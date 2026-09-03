@@ -24,13 +24,16 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 /// A region's span in cells, either axis — the Adit's `MIN_REGION_SPAN`,
 /// now the grid pitch. The grid is `w / REGION_SPAN` by `h / REGION_SPAN`.
 /// type-audit: bare-ok(count: REGION_SPAN)
+/// plumb: pending(wave-1)
 pub const REGION_SPAN: i32 = 8;
 /// Dormans' clutter ceiling ("two to five cycles give each level a distinct
 /// and recognizable shape"). The one authored constant in the grammar.
 /// type-audit: bare-ok(count: MAX_CYCLES_PER_LEVEL)
+/// plumb: pending(wave-1)
 pub const MAX_CYCLES_PER_LEVEL: u8 = 5;
 /// The floor of the same clip: every level gets at least one loop.
 /// type-audit: bare-ok(count: MIN_CYCLES_PER_LEVEL)
+/// plumb: pending(wave-1)
 pub const MIN_CYCLES_PER_LEVEL: u8 = 1;
 
 /// Level width before rank scaling. Since The Crosscut, Task 3,
@@ -38,8 +41,10 @@ pub const MIN_CYCLES_PER_LEVEL: u8 = 1;
 /// DELEGATES to [`level_extent_wh`] rather than carrying its own copy of
 /// this constant, so there is exactly one authored value left to agree
 /// with.
+/// plumb: pending(wave-1)
 const BASE_LEVEL_W: i32 = 40;
 /// See `BASE_LEVEL_W`.
+/// plumb: pending(wave-1)
 const BASE_LEVEL_H: i32 = 24;
 
 /// The extent a level of `rung` gets, `(w, h)` in cells: deeper rungs get

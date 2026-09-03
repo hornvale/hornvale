@@ -40,10 +40,13 @@ pub fn daylight(star: &Star) -> Illuminant {
 /// type-audit: pending(wave-1: sun_elevation_deg)
 pub fn at_elevation(base: &Illuminant, sun_elevation_deg: f64) -> Illuminant {
     /// Optical-depth scale at the reference wavelength.
+    /// plumb: pending(wave-1)
     const K: f64 = 0.10;
     /// Reference wavelength, nanometres — roughly the middle of the grid.
+    /// plumb: pending(wave-1)
     const REFERENCE_NM: f64 = 550.0;
     /// Air-mass ceiling, standing in for the horizon limit.
+    /// plumb: pending(wave-1)
     const MAX_AIRMASS: f64 = 38.0;
 
     let sin_elevation = math::sin(sun_elevation_deg.clamp(-90.0, 90.0).to_radians());

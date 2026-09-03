@@ -38,6 +38,7 @@ pub struct Star {
 /// metaphysical question (UNI-2) that the project deliberately leaves open, as
 /// a side effect of a generator constant. 15 Gyr bounds the draw without
 /// dating the universe.
+/// plumb: pending(wave-1)
 pub const T_MAX: Gyr = Gyr(15.0);
 
 /// t_MS = 10 Gyr · M^-2.5, on the raw mass value. The single definition both
@@ -198,6 +199,7 @@ pub fn insolation_rel(star: &Star, anchor: &crate::anchor::Anchor) -> f64 {
 
 /// Standard days per gigayear — the timescale secular brightening lives on.
 /// type-audit: pending(wave-1)
+/// plumb: pending(wave-1)
 pub const GYR_DAYS: f64 = 1.0e9 * 365.25;
 
 /// Fractional main-sequence brightening per gigayear: b = 0.10 · M^2.5

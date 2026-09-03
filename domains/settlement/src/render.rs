@@ -10,15 +10,19 @@
 
 /// ASCII overlay width in characters.
 /// type-audit: bare-ok(render-internal)
+/// plumb: pending(wave-1)
 pub const ASCII_WIDTH: usize = 72;
 /// ASCII overlay height in characters.
 /// type-audit: bare-ok(render-internal)
+/// plumb: pending(wave-1)
 pub const ASCII_HEIGHT: usize = 24;
 /// Raster overlay width in pixels; matches `hornvale_climate::render::MAP_WIDTH`.
 /// type-audit: bare-ok(render-internal)
+/// plumb: pending(wave-1)
 pub const MAP_WIDTH: usize = 256;
 /// Raster overlay height in pixels; `MAP_WIDTH / 2`.
 /// type-audit: bare-ok(render-internal)
+/// plumb: pending(wave-1)
 pub const MAP_HEIGHT: usize = 128;
 
 /// Equirectangular pixel coordinates for a (latitude, longitude) pair,

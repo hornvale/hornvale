@@ -20,6 +20,7 @@ use hornvale_kernel::{Geosphere, ReferenceElevation, TempAnomaly, Temperature, V
 ///
 /// kind: **physics** (decision 0106). Cited: ICAO/US Standard Atmosphere
 /// 1976, troposphere lapse rate.
+/// plumb: pending(wave-1)
 const LAPSE_C_PER_M: f64 = 6.5 / 1000.0;
 
 /// The carbonate–silicate thermostat's **residual** fraction, `k`: how much
@@ -106,6 +107,7 @@ const LAPSE_C_PER_M: f64 = 6.5 / 1000.0;
 ///
 /// See also [`crate::provider::ClimateInputs::greenhouse_forcing_k`], the
 /// ADDITIVE residual this thermostat's own spread draws around.
+/// plumb: pending(wave-1)
 const THERMOSTAT_RESIDUAL_FRACTION: f64 = 0.3;
 
 /// The thermostat's anchor temperature, kelvin: the `Spinning`-regime
@@ -122,6 +124,7 @@ const THERMOSTAT_RESIDUAL_FRACTION: f64 = 0.3;
 /// `S = 1` — it is the "+14 °C" anchor, not the "+8.6 °C land mean" anchor
 /// (that figure falls out of this constant plus the post-craton-rescale
 /// hypsometry's land-only lapse cooling, not a second free parameter).
+/// plumb: pending(wave-1)
 const THERMOSTAT_ANCHOR_K: f64 = 287.15;
 
 /// The latitude profile's value at the equator (`sin(lat) = 0`), °C offset
@@ -139,6 +142,7 @@ const THERMOSTAT_ANCHOR_K: f64 = 287.15;
 /// temperature (flat, warm tropics; a steep high-latitude fall-off that a
 /// pure `sin²` cannot reproduce — spec §3.2 names this explicitly, which is
 /// why [`LAT_TERM_SIN4_COEFF_C`] exists at all).
+/// plumb: pending(wave-1)
 const LAT_TERM_EQUATOR_C: f64 = 12.0;
 
 /// The `sin²(lat)` coefficient of the latitude profile — see
@@ -147,6 +151,7 @@ const LAT_TERM_EQUATOR_C: f64 = 12.0;
 ///
 /// kind: **earth-biosphere** (decision 0106), same citation and derivation
 /// as [`LAT_TERM_EQUATOR_C`].
+/// plumb: pending(wave-1)
 const LAT_TERM_SIN2_COEFF_C: f64 = -13.5;
 
 /// The `sin⁴(lat)` coefficient of the latitude profile: the extra
@@ -156,6 +161,7 @@ const LAT_TERM_SIN2_COEFF_C: f64 = -13.5;
 ///
 /// kind: **earth-biosphere** (decision 0106), same citation and derivation
 /// as [`LAT_TERM_EQUATOR_C`].
+/// plumb: pending(wave-1)
 const LAT_TERM_SIN4_COEFF_C: f64 = -37.5;
 
 /// Continentality: `1.0` fully inland, dropping toward `0.2` as a vertex gains

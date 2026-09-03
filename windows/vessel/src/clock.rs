@@ -41,6 +41,7 @@ use hornvale_species::BiosphereTraits;
 /// all (spec §3.2). An Earth-like world therefore has `10_000` ticks per
 /// `MoveTo`, the historical `MOVE_DURATION` of `0.1` days.
 /// type-audit: bare-ok(count)
+/// plumb: universal(re-exports the kernel's own tick-lattice constant, per the doc)
 pub const BASE_TICKS_PER_STD_DAY: i64 = WorldTime::TICKS_PER_STD_DAY;
 
 /// How many ticks make one LOCAL day.
@@ -68,6 +69,7 @@ pub fn ticks_per_local_day(day: Option<TickSpan>) -> i64 {
 /// The mass at which `tempo` is exactly `1.0` — a human-scale creature.
 /// Authored.
 /// type-audit: bare-ok(ratio)
+/// plumb: universal(the fixed reference mass every species' own mass is measured against — an anchor, not a species value)
 pub const REFERENCE_MASS_KG: f64 = 70.0;
 
 /// The authored biosphere roster's shape, as `liveness.rs` already holds it:
@@ -101,6 +103,7 @@ pub fn mass_for_species(species: &str, biosphere: Option<&Biosphere>) -> f64 {
 /// lifespan): roughly the quarter power of mass. Authored, and the same
 /// allometry the species domain invokes for basal rate.
 /// type-audit: bare-ok(ratio)
+/// plumb: universal(the shared allometric scaling exponent, already used identically by domains/species)
 pub const TIME_EXPONENT: f64 = 0.25;
 
 /// The mass band `tempo` clamps to, so a missing or absurd trait cannot produce
@@ -110,10 +113,12 @@ const MASS_BAND_KG: (f64, f64) = (0.001, 100_000.0);
 
 /// The climb, in metres, that doubles a move's cost. Authored.
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 const CLIMB_SCALE_M: f64 = 500.0;
 
 /// The ceiling on [`climb_factor`], so a cliff cannot stall a walk outright.
 /// type-audit: bare-ok(ratio)
+/// plumb: universal(a search-safety ceiling so a cliff cannot stall a walk outright, not a body property)
 const MAX_CLIMB_FACTOR: f64 = 4.0;
 
 // `days_of` is DELETED (The Foliot). It converted a scheduler tick count into
@@ -283,6 +288,7 @@ pub fn climb_factor(from_elev_m: f64, to_elev_m: f64) -> f64 {
 /// `windows/vessel`. Everything above is still this constant's justification;
 /// only its storage moved, and every caller's path is unchanged.
 /// type-audit: bare-ok(ratio)
+/// plumb: universal(re-exports hornvale_locale's own root 2 diagonal/edge ratio, derived not tuned)
 pub const DIAGONAL_STEP_FACTOR: f64 = hornvale_locale::DIAGONAL_STEP_FACTOR;
 
 /// The geometry multiplier for one walk-band step: [`DIAGONAL_STEP_FACTOR`]

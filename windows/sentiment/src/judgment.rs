@@ -56,15 +56,18 @@ use crate::{Axis, PeopleTraits, axis_distance, weight_vector};
 /// Warmth's starting point before any axis pushes it down: maximum warmth,
 /// so a target differing on nothing at all is read as maximally warm (see
 /// the module doc's believability floor).
+/// plumb: pending(wave-1)
 const WARMTH_BASELINE: f64 = 1.0;
 
 /// Competence's starting point before any axis pushes it up or down: chosen
 /// so that an identical-traits target (every push zero) sits exactly on the
 /// high side of [`CLASSIFICATION_THRESHOLD`] (see the module doc).
+/// plumb: pending(wave-1)
 const COMPETENCE_BASELINE: f64 = 0.5;
 
 /// The threshold separating "high" from "low" on both warmth and
 /// competence; `>=` counts as high on both.
+/// plumb: pending(wave-1)
 const CLASSIFICATION_THRESHOLD: f64 = 0.5;
 
 /// One axis's signed push onto `(warmth, competence)`, per the module doc's

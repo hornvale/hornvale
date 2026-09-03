@@ -202,26 +202,34 @@ fn underdeep_delta_t_range() -> (f64, f64) {
 
 /// Silica centre for [`EnergySource::Serpentinization`] — deep ultramafic
 /// (peridotite), the low end of the felsic index.
+/// plumb: pending(wave-1)
 const SERPENTINIZATION_SILICA_CENTER: f64 = 0.05;
 /// Half-width of the serpentinization silica band.
+/// plumb: pending(wave-1)
 const SERPENTINIZATION_SILICA_HALF_WIDTH: f64 = 0.35;
 /// Silica centre for [`EnergySource::IronReduction`] — mafic (basalt/gabbro),
 /// the low-mid felsic index.
+/// plumb: pending(wave-1)
 const IRON_REDUCTION_SILICA_CENTER: f64 = 0.45;
 /// Half-width of the iron-reduction silica band.
+/// plumb: pending(wave-1)
 const IRON_REDUCTION_SILICA_HALF_WIDTH: f64 = 0.35;
 /// Moisture at which [`EnergySource::IronReduction`]'s water gate saturates:
 /// a thin film is sufficient electron-transfer medium, so this saturates
 /// quickly rather than tracking water quantity.
+/// plumb: pending(wave-1)
 const IRON_REDUCTION_MOISTURE_SATURATE: f64 = 0.25;
 /// Silica centre for [`EnergySource::Radiolysis`] — granite, the high end of
 /// the felsic index, where radioactive K/U/Th are concentrated.
+/// plumb: pending(wave-1)
 const RADIOLYSIS_SILICA_CENTER: f64 = 0.9;
 /// Half-width of the radiolysis silica band.
+/// plumb: pending(wave-1)
 const RADIOLYSIS_SILICA_HALF_WIDTH: f64 = 0.35;
 /// Moisture at which [`EnergySource::Radiolysis`]'s water gate saturates:
 /// radiolysis splits porewater molecule by molecule, so even trace bound
 /// water suffices — the gentlest, fastest-saturating gate of the six.
+/// plumb: pending(wave-1)
 const RADIOLYSIS_MOISTURE_SATURATE: f64 = 0.1;
 
 /// Moisture at which [`EnergySource::SulphideOxidation`]'s water gate
@@ -229,17 +237,20 @@ const RADIOLYSIS_MOISTURE_SATURATE: f64 = 0.1;
 /// sulphide below, which needs an actually-connected, flowing fluid pathway
 /// rather than a static film — the firmest threshold among the
 /// non-stoichiometric gates.
+/// plumb: pending(wave-1)
 const SULPHIDE_OXIDATION_MOISTURE_SATURATE: f64 = 0.4;
 
 /// Moisture at which [`EnergySource::Geothermal`]'s water gate saturates:
 /// this axis measures energy available to *life*, and a bone-dry hot
 /// fracture has thermal potential but nothing here to exploit it, so even
 /// the gradient itself needs some water present.
+/// plumb: pending(wave-1)
 const GEOTHERMAL_MOISTURE_SATURATE: f64 = 0.2;
 
 /// Depth (m) at which [`EnergySource::DetritalImport`] falls to half its
 /// surface value — the shallow reach of gravity/water-borne surface material
 /// before it thins out with distance from the entrance.
+/// plumb: pending(wave-1)
 const DETRITAL_IMPORT_DEPTH_REACH_M: f64 = 200.0;
 /// Drainage at which [`EnergySource::DetritalImport`]'s drainage term
 /// reaches half its asymptotic value. Anchored at the terrain crate's own
@@ -249,6 +260,7 @@ const DETRITAL_IMPORT_DEPTH_REACH_M: f64 = 200.0;
 /// p50=3, p90=12, p95=18, p99=47, max 338), so a genuinely high-flow vertex
 /// reads near the ENERGY axis's `E_RICH`/`E_TEEMING` levels and a middling
 /// one reads near `E_FED` — see the module doc.
+/// plumb: pending(wave-1)
 const DETRITAL_IMPORT_DRAINAGE_REACH: f64 = 12.0;
 
 /// A named subterranean energy source a chamber can draw on (spec

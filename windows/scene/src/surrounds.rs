@@ -18,6 +18,7 @@ pub const SURROUNDS_SCHEMA: &str = "scene/surrounds/v2";
 /// neighbourhood holds `1 + 3k(k+1)/2` cells, so 8 is 109 cells — past
 /// what a coarse chart can say anything useful with.
 /// type-audit: bare-ok(count)
+/// plumb: pending(wave-1)
 pub const MAX_SURROUNDS_RADIUS: u32 = 8;
 
 /// The relief catalog, in stable ascending order. Band boundaries are

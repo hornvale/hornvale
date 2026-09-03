@@ -10,9 +10,11 @@ use hornvale_kernel::{Geosphere, NearestVertexIndex, VertexMap};
 
 /// ASCII map width, characters.
 /// type-audit: bare-ok(render-internal)
+/// plumb: pending(wave-1)
 pub const DENSITY_WIDTH: u32 = 72;
 /// ASCII map height, characters.
 /// type-audit: bare-ok(render-internal)
+/// plumb: pending(wave-1)
 pub const DENSITY_HEIGHT: u32 = 24;
 
 /// Glyph ramp, sparsest to densest.

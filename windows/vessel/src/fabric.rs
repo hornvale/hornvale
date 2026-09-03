@@ -93,6 +93,7 @@ pub struct FabricContext {
 /// it: [`Fabric::Stone`]'s reflectance, which is what H1 measures, ignores
 /// every flag on [`FabricContext`].
 /// type-audit: bare-ok(ratio)
+/// plumb: universal(a fixed terrain-depth threshold for digging a wall out of the ground, not a body or species property)
 pub const DEEP_SOIL_MIN_M: f64 = 1.0;
 
 impl FabricContext {

@@ -9,26 +9,32 @@ use hornvale_kernel::TempAnomaly;
 use hornvale_kernel::math;
 
 /// One full rotation in radians-of-phase (`std::f64::consts::TAU`).
+/// plumb: pending(wave-1)
 const TAU: f64 = std::f64::consts::TAU;
 
 /// Half the diurnal range at fully-dry, fully-humid air (°C); scaled down by
 /// moisture, continentality, and up by elevation to give `A_climate`.
+/// plumb: pending(wave-1)
 const BASE_DTR_HALF_C: f64 = 15.0;
 
 /// The floor on dryness at full moisture (a saturated vertex still swings a
 /// little — water never damps the range to exactly zero).
+/// plumb: pending(wave-1)
 const DRY_FLOOR: f64 = 0.15;
 
 /// Fractional gain in swing per meter of elevation above sea level (thin,
 /// dry mountain air amplifies the diurnal range).
+/// plumb: pending(wave-1)
 const ELEV_GAIN_PER_M: f64 = 3.0e-5;
 
 /// Thermal-inertia time constant (in rotations): how much of a rotation's
 /// length it takes the ground to fully express the day's swing.
+/// plumb: pending(wave-1)
 const TAU_THERMAL: f64 = 0.5;
 
 /// The fraction of the day (0..1) at which the waveform peaks — afternoon,
 /// after solar noon, reflecting thermal lag.
+/// plumb: pending(wave-1)
 const PEAK_FRAC: f64 = 0.60;
 
 /// The per-vertex diurnal half-range `A_climate` in °C (always `>= 0`):
