@@ -13,6 +13,7 @@ pub mod chamber_prose;
 pub mod clock;
 pub mod controller;
 pub mod depth;
+mod descent_thing;
 pub mod doctrine;
 pub mod eyes;
 pub mod fabric;

@@ -446,6 +446,7 @@
 - [The Pawl](./chronicle/the-pawl.md)
 - [The Rack](./chronicle/the-rack.md)
 - [The Plumb](./chronicle/the-plumb.md)
+- [The Brattice](./chronicle/the-brattice.md)
 - [The Detent](./chronicle/the-detent.md)
 
 # Appendix: The Frontier

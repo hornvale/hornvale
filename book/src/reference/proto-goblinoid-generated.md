@@ -75,6 +75,7 @@ The shared ancestral language bugbear, goblin, and hobgoblin all descend from (s
 | `desert-elf-kind` | a desert elf | *Gonea | /gonea/ |
 | `die` | to cease living | *No | /no/ |
 | `dire-wolf-kind` | a dire wolf | *Qaa | /qaa/ |
+| `door` | a leaf hung in an opening, to be shut against what is beyond | *Nagoa | /nagoa/ |
 | `drink` | to swallow liquid | *Qeego | /qeego/ |
 | `drow-kind` | a drow | *Genoa | /genoa/ |
 | `eager` | positive, high arousal: chasing a satisfiable need | *Nene | /nene/ |

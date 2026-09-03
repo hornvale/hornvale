@@ -433,6 +433,24 @@ pub fn located_in_room_fact(
     Ok(located_fact(thing, Value::Text(room_key(room)?), day))
 }
 
+/// The fact committed when `thing` comes to rest at a PLACE that is not a
+/// room — the descent region a possession stands in, today (The Brattice,
+/// spec §3.7), spelled by `crate::descent_thing::region_key`.
+///
+/// **`pub(crate)`, and it takes the place already spelled**, on exactly
+/// [`crate::thing::id_for_role`]'s terms: [`room_key`] is this module's
+/// monopoly on spelling a ROOM, and a descent region is not a [`Facet`], so
+/// the caller that owns the other namespace owns its spelling too. What stays
+/// here is the ENVELOPE — [`located_fact`] — so a place-keyed posting and a
+/// room-keyed one cannot drift into two shapes of one predicate.
+///
+/// A `Value::Text` object, exactly like a room's: [`lying_at_place`] is the
+/// fold that reads it back, and [`room_of`] treats an unresolvable text place
+/// the way it treats any room key it cannot pack — see its own doc.
+pub(crate) fn located_in_place_fact(thing: EntityId, place: &str, day: WorldTime) -> Fact {
+    located_fact(thing, Value::Text(place.to_string()), day)
+}
+
 /// The fact committed when `thing` comes to rest in `holder` — a chest, and
 /// since Task 12 a body — on `day`. The holder rides as a [`Value::Entity`],
 /// which is what [`room_of`] follows transitively.
@@ -549,11 +567,17 @@ pub(crate) fn set_openness_role(
 /// unlocked, on `day` — [`set_openness`]'s sibling, promoting first for the
 /// same reason and carrying the same across-days caveat.
 ///
-/// **There is no `_role` variant and there should not be one until something
-/// needs it.** [`set_openness_role`] exists because a passage's address is a
-/// `ChamberAddr` rather than a [`Facet`]; no passage has a lock, and inventing
-/// the seam before its caller would be a second entry point nothing keeps
-/// honest.
+/// **There IS a `_role` variant now, and this paragraph used to say there
+/// should not be one.** It read: *"[`set_openness_role`] exists because a
+/// passage's address is a `ChamberAddr` rather than a [`Facet`]; no passage
+/// has a lock, and inventing the seam before its caller would be a second
+/// entry point nothing keeps honest."* The reasoning stands and its premise
+/// lapsed: The Brattice hangs a DOOR in an underground threshold (spec §3.7),
+/// which is a passage with a lock, addressed by a descent plan position that
+/// no [`Facet`] can spell. [`set_lockedness_role`] is that caller's entry
+/// point, minted with the caller rather than before it, and this function is
+/// now a thin wrapper over it for the reason [`set_openness`] is one over
+/// [`set_openness_role`].
 ///
 /// **`Ledger::commit` dedups an identical fact, so a caller that writes the
 /// same value twice on one day writes once** — which is why
@@ -571,7 +595,42 @@ pub fn set_lockedness(
     locked: bool,
     day: WorldTime,
 ) -> Result<EntityId, ThingError> {
-    let id = promote(ledger, registry, facet, kind, ordinal, day)?;
+    set_lockedness_role(
+        ledger,
+        registry,
+        &thing_role(facet, kind)?,
+        kind,
+        ordinal,
+        locked,
+        day,
+    )
+}
+
+/// [`set_lockedness`] for a thing whose role leg is already spelled —
+/// [`set_openness_role`]'s exact mirror, reached by
+/// `Session::open_or_close`'s underground arm, whose address is a descent
+/// plan position rather than a [`Facet`] (The Brattice, spec §3.7).
+///
+/// **The paragraph in [`set_lockedness`]'s doc saying there should be no
+/// `_role` variant "until something needs it" is now spent, and this is the
+/// thing that needed it.** A descent door is `Lockable`, its identity comes
+/// from `crate::descent_thing::door_role`, and no [`Facet`] can spell it —
+/// the same argument [`set_openness_role`] was minted under for a cave
+/// mouth's `ChamberAddr`. The two must stay ONE function rather than two
+/// that agree, for the reason [`promote_role`]'s doc gives: a second copy
+/// could promote against an id it derived itself and nothing in either
+/// caller's tests would see it.
+/// type-audit: bare-ok(identifier-text: role), bare-ok(identifier-text: kind), bare-ok(count: ordinal), bare-ok(flag: locked)
+pub(crate) fn set_lockedness_role(
+    ledger: &mut Ledger,
+    registry: &ConceptRegistry,
+    role: &str,
+    kind: &str,
+    ordinal: u16,
+    locked: bool,
+    day: WorldTime,
+) -> Result<EntityId, ThingError> {
+    let id = promote_role(ledger, registry, role, kind, ordinal, day)?;
     ledger.commit(lockedness_fact(id, locked, day), registry)?;
     Ok(id)
 }
@@ -798,17 +857,36 @@ pub fn lying_in(
     room: &Facet,
     day: WorldTime,
 ) -> Result<Vec<EntityId>, FacetError> {
-    let here = Value::Text(room_key(room)?);
+    Ok(lying_at_place(ledger, &room_key(room)?, day))
+}
+
+/// [`lying_in`] for a place whose key is already spelled — the whole of that
+/// fold with the room-keyed half factored out, so a descent region (The
+/// Brattice, spec §3.7) can ask the same question a chamber does.
+///
+/// **One fold, two namespaces, exactly as [`id_for_role`] is one derivation
+/// for two role spellings.** A second copy would be a second reading of
+/// [`LOCATED_IN`]'s `Value::Text` arm — the same drift `thing_lineage`'s own
+/// doc records as having been live once already — and the two could disagree
+/// about the re-ask through [`location_of`] that keeps a superseded posting
+/// from answering.
+///
+/// `pub(crate)`: the only spellers of a non-room place key live in this
+/// crate, and a `pub` version would invite a caller to invent one, which is
+/// the encoding gap [`located_in_place_fact`]'s own privacy closes from the
+/// writing side.
+pub(crate) fn lying_at_place(ledger: &Ledger, place: &str, day: WorldTime) -> Vec<EntityId> {
+    let here = Value::Text(place.to_string());
     let candidates: std::collections::BTreeSet<EntityId> = ledger
         .query_by_object(&here)
         .filter(|fact| fact.predicate == LOCATED_IN)
         .filter(|fact| fact.day.is_some_and(|d| d <= day))
         .map(|fact| fact.subject)
         .collect();
-    Ok(candidates
+    candidates
         .into_iter()
         .filter(|&thing| location_of(ledger, thing, day).as_ref() == Some(&here))
-        .collect())
+        .collect()
 }
 
 /// Whether `thing` was open as of `day`, or `None` if no [`OPENNESS`] fact

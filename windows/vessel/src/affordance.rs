@@ -299,6 +299,19 @@ pub fn object_registry() -> ComponentStore<KindId, ObjectTraits> {
             KindId("cave-mouth"),
             traits(&[ObjectProperty::AffordsPassage, ObjectProperty::Openable]),
         ),
+        // The Brattice, spec §3.7: the cave mouth's properties plus the
+        // strongbox's lock — a passage a body walks through, with a lid and a
+        // lock on it. Not `Portable`, deliberately: a door is hung, and
+        // `the_lock_wants_a_property_and_exactly_one_kind_supplies_it`
+        // (`session.rs`) is the test that would redden if it were.
+        (
+            KindId("door"),
+            traits(&[
+                ObjectProperty::AffordsPassage,
+                ObjectProperty::Openable,
+                ObjectProperty::Lockable,
+            ]),
+        ),
     ]
     .into_iter()
     .collect()
@@ -854,6 +867,10 @@ mod tests {
             (KindId("cave-mouth"), ObjectProperty::Openable),
             (KindId("cave-mouth"), ObjectProperty::AffordsPassage),
             (kinds::STRONGBOX, ObjectProperty::Lockable),
+            // The Brattice, spec §3.7's own table.
+            (kinds::DOOR, ObjectProperty::AffordsPassage),
+            (kinds::DOOR, ObjectProperty::Openable),
+            (kinds::DOOR, ObjectProperty::Lockable),
         ];
         for (kind, prop) in certain {
             let traits = reg

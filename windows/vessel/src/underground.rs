@@ -66,6 +66,34 @@ const NOT_ON_STAIRS_REFUSAL: &str = "There is no stairway underfoot to take.";
 const STAIRS_LEAD_NOWHERE_REFUSAL: &str =
     "The stairs continue down into unbroken dark, but nothing has delved that far yet.";
 
+/// The physical reason deep water refuses a body that cannot swim (The
+/// Brattice, spec §3.6).
+///
+/// **`pub(crate)`, unlike the refusals above it**, so `session.rs`'s own
+/// walk test can pin the exact sentence a player reads rather than a
+/// substring of it — the older constants are asserted on by
+/// `contains`/`to_lowercase` probes, which cannot tell "names water" from
+/// "names water AND says who is refused". Distinct from [`UNDERGROUND_ROCK_REFUSAL`] on
+/// purpose: rock is not water, and a refusal that said "solid rock" of a
+/// sump would teach a player the wrong thing about a cell they can see is
+/// wet. Names the body's own limit as well as the cell's, because that is
+/// what makes the same cell passable to somebody else.
+pub(crate) const UNDERGROUND_DEEP_WATER_REFUSAL: &str =
+    "The water here is over your head, and you cannot swim.";
+
+/// The physical reason a shut, locked door refuses a step through the
+/// threshold it hangs in (The Brattice, spec §3.6/§3.7). Names the DOOR, not
+/// the threshold: the opening in the wall is real and stays real, which is
+/// why the corner rule keeps treating it as an opening even while this
+/// refusal stands.
+pub(crate) const UNDERGROUND_LOCKED_DOOR_REFUSAL: &str = "A door bars the way, and it is locked.";
+
+/// The physical reason a body that cannot fly is refused the way back up a
+/// chute (The Brattice, spec §3.6). A chute is one-way for a walker: `down`
+/// costs nothing and `up` is not a matter of finding the stairs, because
+/// there are none — the lip is simply out of reach overhead.
+pub(crate) const NO_WAY_UP_REFUSAL: &str = "The chute's lip is out of reach above you.";
+
 /// Every habitation rung the delve ladder names, [`Band::Surface`]
 /// excluded — the same filter
 /// `windows/vessel/tests/suite/underworld_level_generation.rs`'s
@@ -231,13 +259,34 @@ pub(crate) struct Underground {
     /// Crosscut). FRAME-tier like everything else here; kept so stairs can
     /// be paired and tests can read the structure a walk should exhibit.
     ///
-    /// **Unread outside tests, the same shape [`Underground::seed`] already
-    /// carries.** `peek_stairs` pairs stairs by coordinate alone and needs
-    /// no plan lookup at all — `session.rs`'s own
-    /// `a_cross_floor_cycle_is_walked_down_along_and_back_up_another_stair`
-    /// is this field's only production-code reader today.
-    #[allow(dead_code)]
+    /// **Read in production since The Brattice, Task 4.**
+    /// [`Underground::has_door`] asks it whether the gate on the edge a
+    /// [`LevelCellKind::Threshold`] crosses is a `Needs(Key(_))` one — the
+    /// one fact about a threshold the realized cells cannot carry, since
+    /// every passage's crossing is the same cell kind whether the plan gated
+    /// it or not. `peek_stairs` still pairs stairs by coordinate alone and
+    /// asks the plan nothing.
     pub(crate) plan: hornvale_worldgen::circuit::DescentPlan,
+}
+
+/// Who is trying to move (The Brattice, spec §3.6): the body's own
+/// locomotion, and — for a threshold — whether a door anchored there stands
+/// open.
+///
+/// **The door oracle is a closure, not a ledger read, because this module
+/// holds no ledger.** `Session::step_underground` builds one that folds the
+/// door's own openness facts (§3.7); this module's tests build one that
+/// answers a fixed `true` or `false`. Either way the geometry stays here and
+/// the world-state stays there, the same division
+/// [`Underground::peek`] already keeps between the corner rule and the verb
+/// that narrates it.
+pub(crate) struct Traverser<'a> {
+    /// The body's modes besides walking.
+    pub locomotion: hornvale_species::Locomotion,
+    /// Whether a door anchored at this cell stands open. Asked ONLY for a
+    /// threshold the plan actually gated ([`Underground::has_door`]), never
+    /// for an ordinary opening.
+    pub door_open: &'a dyn Fn(Cell) -> bool,
 }
 
 impl Underground {
@@ -267,7 +316,10 @@ impl Underground {
     /// here — and the character is
     /// [`hornvale_worldgen::character::Character::WildCave`], matching
     /// [`crate::underworld_level::generate_descent`]'s own hardcoded
-    /// value.
+    /// value. **That last input is the only one a caller can vary**, through
+    /// [`Underground::enter_with_character`], which this function is a
+    /// one-line wrapper over — see its doc for why the seam exists and what
+    /// hardcoding `WildCave` costs a test.
     ///
     /// Both `terrain` and `cave` come from the same terrain handle the
     /// caller (`Session::delve_at`) already resolved: no second,
@@ -285,6 +337,43 @@ impl Underground {
         vertex: hornvale_kernel::Vertex,
         cave: hornvale_terrain::Cave,
         seed: Seed,
+    ) -> Underground {
+        Underground::enter_with_character(
+            terrain,
+            vertex,
+            cave,
+            seed,
+            hornvale_worldgen::character::Character::WildCave,
+        )
+    }
+
+    /// [`Underground::enter`] with the descent's CHARACTER lifted out — the
+    /// one input production hardcodes and a test cannot otherwise vary (The
+    /// Brattice, Task 5).
+    ///
+    /// **A test seam, and the seam is named rather than left implicit.** The
+    /// shipped path constructs no `ChamberOverrides` and always builds a
+    /// [`hornvale_worldgen::character::Character::WildCave`] descent, so no
+    /// walked descent anywhere in production carries a worked place's extra
+    /// cycle (`circuit::cycle_budget`'s `worked` term) and therefore, in
+    /// practice, no door: the patterns that stamp a `Needs(Key(_))` gate need
+    /// a realm to stamp it on. That is a property of what the composition root
+    /// asks for today, not of the walk, and §3.7's verbs must be exercised
+    /// against a descent that actually hangs one. So this twin exists, `enter`
+    /// calls it with `WildCave`, and there is exactly ONE body — the
+    /// alternative (a second constructor that agrees) is the duplicated-pair
+    /// shape [`crate::thing::promote_role`]'s own doc records as having been a
+    /// live seam once already.
+    ///
+    /// Everything else — the recipe, the entrance-region placement rule, the
+    /// panic, the empty fog — is [`Underground::enter`]'s, whose doc is the
+    /// one to read.
+    pub(crate) fn enter_with_character(
+        terrain: &hornvale_terrain::GeneratedTerrain,
+        vertex: hornvale_kernel::Vertex,
+        cave: hornvale_terrain::Cave,
+        seed: Seed,
+        character: hornvale_worldgen::character::Character,
     ) -> Underground {
         let rungs = habitation_rungs();
         let gradient = terrain.geothermal_gradient_at(vertex);
@@ -306,20 +395,15 @@ impl Underground {
             })
             .collect();
         let origins = vec![hornvale_worldgen::chamber::ChamberOrigin::Found; rungs.len()];
-        let plan = hornvale_worldgen::circuit::plan_descent(
-            seed,
-            vertex,
-            &rungs,
-            cave.kind,
-            hornvale_worldgen::character::Character::WildCave,
-        );
+        let plan =
+            hornvale_worldgen::circuit::plan_descent(seed, vertex, &rungs, cave.kind, character);
         let descent = generate_descent_for_character(
             &rungs,
             cave.kind,
             &origins,
             &depths_m,
             water_table_m,
-            hornvale_worldgen::character::Character::WildCave,
+            character,
             &plan,
             seed,
         );
@@ -426,13 +510,21 @@ impl Underground {
     /// possession move on a refused clock besides. `Session::
     /// step_underground` is the one caller: it calls this, charges, and
     /// only then calls [`Underground::commit_step`].
-    pub(crate) fn peek(&self, dir: Compass) -> Result<Cell, &'static str> {
+    pub(crate) fn peek(&self, dir: Compass, who: &Traverser) -> Result<Cell, &'static str> {
         let delta = crate::session::cell_delta(dir);
         // This band's passability oracle, given to the shared corner rule: a cell
-        // is open when `movement_mode` has an answer for its kind, which is the
-        // same question step 2 below asks about the destination — never a
-        // comparison against `LevelCellKind::Wall`, so both survive the day a new
+        // is open when `movement_mode` has an answer for its kind — never a
+        // comparison against `LevelCellKind::Wall`, so it survives the day a new
         // impassable kind arrives.
+        //
+        // **The corner rule keeps asking `movement_mode` ALONE** (The
+        // Brattice, spec §3.6), where step 2 below now asks the
+        // actor-aware `admits`: a threshold is an opening in the wall
+        // whether or not a door in it is shut, and deep water is a hole in
+        // the rock whether or not this body can swim it, so a diagonal past
+        // either is not a two-walled corner. Widening this oracle to
+        // `admits` would refuse a diagonal for a reason the geometry does
+        // not have.
         let open = |c: Cell| {
             self.descent[self.rung]
                 .cells
@@ -444,10 +536,93 @@ impl Underground {
             return Err(UNDERGROUND_CORNER_REFUSAL);
         }
         let target = Cell(self.cell.0 + delta.0, self.cell.1 + delta.1);
-        if !open(target) {
-            return Err(UNDERGROUND_ROCK_REFUSAL);
-        }
+        self.admits(target, who)?;
         Ok(target)
+    }
+
+    /// The `(a, b)` plan edge whose crossing cell this is, if any (The
+    /// Brattice, spec §3.5/§3.6) — a lookup into the level's own
+    /// [`Level::thresholds`], which the realizer wrote one entry per
+    /// passage into. `None` for every cell that is not a passage's
+    /// crossing.
+    pub(crate) fn threshold_edge(&self, cell: Cell) -> Option<(usize, usize)> {
+        self.level()
+            .thresholds
+            .iter()
+            .find(|t| t.2 == cell)
+            .map(|t| (t.0, t.1))
+    }
+
+    /// Does the plan hang a DOOR at this threshold — that is, did a pattern
+    /// gate the edge it crosses with a `Needs(Key(_))` requirement (The
+    /// Brattice, spec §3.6/§3.7)?
+    ///
+    /// **The cells cannot answer this and never will.** Every passage's
+    /// crossing is a `Threshold` whether the plan gated it or not (spec
+    /// §3.5: "EVERY passage has one, gated or not"), so the door is a fact
+    /// about the plan's edge, read here rather than baked into a second
+    /// cell kind — which is what keeps a door a Thing anchored in an
+    /// opening rather than a variety of rock.
+    ///
+    /// Reads `toward_a` alone. A `Needs(Key(_))` gate is stamped
+    /// symmetrically on a passage (`WaySpec::Symmetric`; only a stair takes
+    /// the asymmetric `DownFreeUpNeeds` row), so a door in a passage is the
+    /// same door from either side, and asking one way is asking both.
+    /// type-audit: bare-ok(flag: return)
+    pub(crate) fn has_door(&self, cell: Cell) -> bool {
+        self.threshold_edge(cell)
+            .and_then(|(a, b)| self.plan.gate_between(a, b))
+            .is_some_and(|(_, g)| {
+                matches!(
+                    g.toward_a,
+                    hornvale_worldgen::brattice::Way::Needs(
+                        hornvale_worldgen::brattice::Requirement::Key(_)
+                    )
+                )
+            })
+    }
+
+    /// May `who` stand on `cell`? The actor-aware half of the walk (The
+    /// Brattice, spec §3.6) — the seam BESIDE
+    /// [`crate::underworld_level::movement_mode`], not a widening of it:
+    /// the mode says how a cell wants to be crossed, this says whether this
+    /// body can meet that demand.
+    ///
+    /// Three refusals, each naming its own physical reason rather than
+    /// falling back on rock:
+    ///
+    /// - `Swim` (deep water) against a body that cannot swim.
+    /// - A threshold whose plan edge hangs a door the oracle says is shut.
+    /// - `Fly`, which no cell kind answers today — see the arm's own note.
+    fn admits(&self, cell: Cell, who: &Traverser) -> Result<(), &'static str> {
+        let kind = self
+            .level()
+            .cells
+            .get(cell)
+            .ok_or(UNDERGROUND_ROCK_REFUSAL)?;
+        match crate::underworld_level::movement_mode(kind) {
+            None => Err(UNDERGROUND_ROCK_REFUSAL),
+            Some(crate::underworld_level::MovementMode::Swim) if !who.locomotion.swim => {
+                Err(UNDERGROUND_DEEP_WATER_REFUSAL)
+            }
+            // Unreachable by construction: `movement_mode` returns `Fly`
+            // for no kind, because flight is a way to take an EDGE (up a
+            // chute — [`Underground::peek_stairs`]) and not a property of a
+            // cell. Stated rather than silently folded into the catch-all
+            // below, which would admit a flight-only cell to every walker
+            // the day one is minted.
+            Some(crate::underworld_level::MovementMode::Fly) => {
+                unreachable!("no LevelCellKind answers Fly: flight takes an edge, not a cell")
+            }
+            Some(_)
+                if kind == LevelCellKind::Threshold
+                    && self.has_door(cell)
+                    && !(who.door_open)(cell) =>
+            {
+                Err(UNDERGROUND_LOCKED_DOOR_REFUSAL)
+            }
+            Some(_) => Ok(()),
+        }
     }
 
     /// Commit a step already validated by [`Underground::peek`]: moves the
@@ -476,11 +651,32 @@ impl Underground {
     ///
     /// **The direction is read off the CURRENT cell's own kind, never a
     /// parameter**: a `StairsDown` cell means descend, a `StairsUp` cell
-    /// means ascend, anything else refuses. A caller that wants a SPECIFIC
-    /// direction (the `down`/`up` verbs, `session.rs`) checks the current
-    /// cell's kind against the one it wants BEFORE ever calling this — this
-    /// method alone cannot refuse "wrong direction", only "no direction at
-    /// all" or "no destination for the direction there is".
+    /// means ascend, a `Drop` cell — a chute's lip (The Brattice, spec
+    /// §3.5) — means descend too, and anything else refuses. A caller that
+    /// wants a SPECIFIC direction (the `down`/`up` verbs, `session.rs`)
+    /// checks the current cell's kind against the one it wants BEFORE ever
+    /// calling this — this method alone cannot refuse "wrong direction",
+    /// only "no direction at all" or "no destination for the direction
+    /// there is".
+    ///
+    /// **A chute is one-way for a WALKER, not one-way outright, and this
+    /// paragraph said the latter until Task 4.** Task 3 wrote "the cell
+    /// beneath a `Drop` falls into 'anything else' and ascending from it
+    /// refuses", which was exactly true of the code it described and is now
+    /// wrong in the case the whole asymmetry exists for: the cell beneath a
+    /// chute has its own arm, and `loc.fly` decides it. A body that flies
+    /// takes the lip it fell from; a body that does not is refused with
+    /// [`NO_WAY_UP_REFUSAL`], which names the lip overhead rather than
+    /// pretending there is no way at all. The landing itself is unchanged —
+    /// ordinary standable floor carrying no `StairsUp` — so nothing about
+    /// the realized cells distinguishes it; the fact that a chute is
+    /// overhead is read from the rung ABOVE.
+    ///
+    /// `loc` is the only reason this method knows who is asking. It is the
+    /// vertical twin of [`Underground::peek`]'s [`Traverser`] and
+    /// deliberately narrower: no door hangs in a chute, so there is no
+    /// oracle to thread and a bare [`hornvale_species::Locomotion`] is the
+    /// whole question.
     ///
     /// **Stairs pair by COORDINATE (The Crosscut, spec §3.3).** A
     /// stairway's two ends share one cell: descending from `StairsDown` at
@@ -491,11 +687,17 @@ impl Underground {
     /// one `StairsDown` with no twin is the deepest rung's terminus, which
     /// still refuses with `STAIRS_LEAD_NOWHERE_REFUSAL`.
     ///
-    /// Refuses when the current cell is not a stairs cell at all
-    /// ([`NOT_ON_STAIRS_REFUSAL`]), or when the current cell is the
-    /// descent's own deepest rung's terminus `StairsDown`
-    /// ([`STAIRS_LEAD_NOWHERE_REFUSAL`]).
-    pub(crate) fn peek_stairs(&self) -> Result<(usize, Cell), &'static str> {
+    /// Refuses when the current cell is neither a stairs cell nor a `Drop`
+    /// nor a cell with a chute overhead ([`NOT_ON_STAIRS_REFUSAL`]); when
+    /// the current cell is the descent's own deepest rung's terminus
+    /// `StairsDown` — or a `Drop` over no standable landing, which cannot
+    /// happen while the realization witness is green but is refused rather
+    /// than assumed away ([`STAIRS_LEAD_NOWHERE_REFUSAL`]); and when a body
+    /// that cannot fly stands beneath a chute ([`NO_WAY_UP_REFUSAL`]).
+    pub(crate) fn peek_stairs(
+        &self,
+        loc: hornvale_species::Locomotion,
+    ) -> Result<(usize, Cell), &'static str> {
         match self.descent[self.rung].cells.get(self.cell) {
             Some(LevelCellKind::StairsDown) => {
                 let next = self.rung + 1;
@@ -518,6 +720,66 @@ impl Underground {
                 );
                 Ok((next, self.cell))
             }
+            // A chute (The Brattice, spec §3.5/§3.6): `down` on a `Drop`
+            // lands on the same coordinate one rung below, by the same
+            // coordinate pairing every stairway uses. Free for everyone —
+            // falling asks nothing of a body. What differs from a stairway
+            // is that the landing is an ordinary standable cell rather than
+            // a `StairsUp`, so nothing about the LANDING says a chute is
+            // overhead; the arm below reads that off the rung above instead.
+            //
+            // Task 3 wrote this arm and said here that `up` from beneath a
+            // chute "simply finds no `StairsUp` and refuses". True of the
+            // code then, and Task 4 completed it: the refusal is now
+            // capability-aware, and a body that flies comes back up.
+            Some(LevelCellKind::Drop) => {
+                let next = self.rung + 1;
+                let landing = if next < self.descent.len() {
+                    self.descent[next].cells.get(self.cell)
+                } else {
+                    None
+                };
+                let mode = landing.and_then(crate::underworld_level::movement_mode);
+                match mode {
+                    None => return Err(STAIRS_LEAD_NOWHERE_REFUSAL),
+                    // Final review, Minor #8: `mode` alone answered whether
+                    // ANY body may stand there, not whether THIS one may —
+                    // `Some(mode)` accepted a `Deep` landing for a
+                    // non-swimmer just as readily as a `Walk`/`Wade` one.
+                    // Unreachable today (the realizer writes `Floor` under a
+                    // chute and the pairing witness pins it), made
+                    // actor-aware anyway, on the same rule `admits` already
+                    // applies to a horizontal step: `Walk`/`Wade` are open
+                    // to everyone, `Swim` only to a body that can.
+                    Some(crate::underworld_level::MovementMode::Swim) if !loc.swim => {
+                        return Err(UNDERGROUND_DEEP_WATER_REFUSAL);
+                    }
+                    Some(_) => {}
+                }
+                Ok((next, self.cell))
+            }
+            // Beneath a chute (The Brattice, Task 4, completing the arm
+            // above): the cell one rung UP is a `Drop`, so there IS a way
+            // up here — it is simply out of a walker's reach. This is the
+            // one place `Fly` decides anything, and it decides an EDGE
+            // rather than a cell, which is why
+            // `crate::underworld_level::movement_mode` still answers `Fly`
+            // for nothing.
+            //
+            // Ordered AFTER the three kind-driven arms and before the
+            // catch-all, so a `StairsUp` or `StairsDown` cell that happens
+            // to sit under a chute keeps its own meaning: standing on a
+            // stairway means taking the stairway.
+            Some(_)
+                if self.rung > 0
+                    && self.descent[self.rung - 1].cells.get(self.cell)
+                        == Some(LevelCellKind::Drop) =>
+            {
+                if !loc.fly {
+                    return Err(NO_WAY_UP_REFUSAL);
+                }
+                Ok((self.rung - 1, self.cell))
+            }
             _ => Err(NOT_ON_STAIRS_REFUSAL),
         }
     }
@@ -536,8 +798,8 @@ impl Underground {
     /// (`Session::take_stairs`, `session.rs`) to call only after peeking and
     /// charging first — the same division
     /// [`Underground::peek`]/[`Underground::commit_step`] already draw.
-    pub(crate) fn take_stairs(&mut self) -> Option<Band> {
-        let (next, landing) = self.peek_stairs().ok()?;
+    pub(crate) fn take_stairs(&mut self, loc: hornvale_species::Locomotion) -> Option<Band> {
+        let (next, landing) = self.peek_stairs(loc).ok()?;
         self.rung = next;
         self.cell = landing;
         Some(habitation_rungs()[self.rung])
@@ -1112,6 +1374,7 @@ mod tests {
             cells,
             dof: 0,
             leaf_styles: Vec::new(),
+            thresholds: Vec::new(),
         };
         assert_eq!(resident_cell(&level), Some(Cell(2, 1)));
     }
@@ -1133,6 +1396,7 @@ mod tests {
             cells,
             dof: 0,
             leaf_styles: Vec::new(),
+            thresholds: Vec::new(),
         };
         assert_eq!(resident_cell(&level), None);
     }
@@ -1156,6 +1420,267 @@ mod tests {
         assert_ne!(
             a, b,
             "a different dominant source must read differently: {a:?} vs {b:?}"
+        );
+    }
+
+    // --- Task 4: the walk (The Brattice, spec §3.6) --------------------
+
+    /// One hand-built level over a 5x3 extent: solid rock everywhere except
+    /// the cells `open` names, each set to the kind given. The walk tests
+    /// below need a level whose ONE interesting cell is the one under test,
+    /// which no generated descent can promise — the generator places
+    /// thresholds, sumps and chutes where its plan puts them.
+    fn hand_level(open: &[(Cell, LevelCellKind)], thresholds: Vec<(usize, usize, Cell)>) -> Level {
+        let extent = Rect {
+            x: 0,
+            y: 0,
+            w: 5,
+            h: 3,
+        };
+        let mut cells = crate::underworld_level::CellGrid::new(extent, LevelCellKind::Wall);
+        for &(c, kind) in open {
+            cells.set(c, kind);
+        }
+        Level {
+            extent,
+            cells,
+            dof: 0,
+            leaf_styles: Vec::new(),
+            thresholds,
+        }
+    }
+
+    /// A two-node, one-edge plan on one level, carrying `gate` on its single
+    /// edge — the smallest object [`Underground::has_door`] can read a door
+    /// out of.
+    fn hand_plan(
+        gate: Option<hornvale_worldgen::brattice::Gate>,
+    ) -> hornvale_worldgen::circuit::DescentPlan {
+        use hornvale_worldgen::circuit::{DescentPlan, Edge, EdgeKind, GridCell, Node};
+        let node = |col, row| Node {
+            level: 0,
+            cell: GridCell { col, row },
+            depth: 0,
+            realm: None,
+            key: None,
+        };
+        DescentPlan {
+            rungs: vec![Band::Undercroft],
+            nodes: vec![node(0, 0), node(1, 0)],
+            edges: vec![Edge {
+                a: 0,
+                b: 1,
+                kind: EdgeKind::Passage,
+                gate,
+            }],
+            entrance: 0,
+            terminus: 1,
+            realms: vec![],
+            dof: 0,
+            extensions: 0,
+            fallback_realms: 0,
+            failed_draws: 0,
+            patterns: vec![],
+            skipped_patterns: 0,
+        }
+    }
+
+    /// An `Underground` standing on `cell` of `descent[0]`, with `plan`.
+    /// Built field by field rather than through [`Underground::enter`],
+    /// which would generate a whole real descent and place the possession
+    /// wherever the generator liked.
+    fn hand_underground(
+        descent: Vec<Level>,
+        cell: Cell,
+        plan: hornvale_worldgen::circuit::DescentPlan,
+    ) -> Underground {
+        let seen = descent.iter().map(|l| SeenBits::new(l.extent)).collect();
+        let depths_m = vec![0.0; descent.len()];
+        Underground {
+            descent,
+            rung: 0,
+            cell,
+            vertex: Vertex(0),
+            seed: Seed(42),
+            seen,
+            depths_m,
+            plan,
+        }
+    }
+
+    /// Deep water is the mode, not a wall (spec §3.6): a body that cannot
+    /// swim is refused with the deep-water reason — never
+    /// [`UNDERGROUND_ROCK_REFUSAL`], which would say the wrong physical
+    /// thing — and a body that can swim simply crosses. The SAME cell, the
+    /// same bearing, the same level: the only thing that moves is who is
+    /// asking, which is what makes this an actor-aware seam rather than a
+    /// second cell table.
+    #[test]
+    fn deep_water_refuses_a_walker_and_admits_a_swimmer() {
+        let level = hand_level(
+            &[
+                (Cell(1, 1), LevelCellKind::Floor),
+                (Cell(2, 1), LevelCellKind::Deep),
+            ],
+            Vec::new(),
+        );
+        let ug = hand_underground(vec![level], Cell(1, 1), hand_plan(None));
+        let shut = |_: Cell| false;
+
+        let walker = Traverser {
+            locomotion: hornvale_species::WALKER,
+            door_open: &shut,
+        };
+        assert_eq!(
+            ug.peek(Compass::E, &walker),
+            Err(UNDERGROUND_DEEP_WATER_REFUSAL),
+            "a walker is refused deep water by its own reason, not by rock"
+        );
+
+        let swimmer = Traverser {
+            locomotion: hornvale_species::Locomotion {
+                swim: true,
+                fly: false,
+            },
+            door_open: &shut,
+        };
+        assert_eq!(
+            ug.peek(Compass::E, &swimmer),
+            Ok(Cell(2, 1)),
+            "a swimmer crosses the same cell the walker was refused"
+        );
+    }
+
+    /// A threshold is an opening; a DOOR is a thing hung in one. A
+    /// threshold the plan gated with a key refuses while the session's own
+    /// oracle says the door is shut, admits when it says open, and a
+    /// threshold the plan gated with nothing at all admits regardless of
+    /// what the oracle would have said — the oracle is never even asked.
+    #[test]
+    fn a_threshold_with_a_shut_door_refuses_and_an_open_one_admits() {
+        use hornvale_worldgen::brattice::{Gate, Persistence, Requirement, Way};
+        let gate = Gate {
+            toward_b: Way::Needs(Requirement::Key(1)),
+            toward_a: Way::Needs(Requirement::Key(1)),
+            hazard: None,
+            persistence: Persistence::Permanent,
+            pattern: 0,
+        };
+        let doorway = Cell(2, 1);
+        let level = || {
+            hand_level(
+                &[
+                    (Cell(1, 1), LevelCellKind::Floor),
+                    (doorway, LevelCellKind::Threshold),
+                ],
+                vec![(0, 1, doorway)],
+            )
+        };
+
+        let shut = |_: Cell| false;
+        let open = |_: Cell| true;
+
+        let gated = hand_underground(vec![level()], Cell(1, 1), hand_plan(Some(gate)));
+        assert!(gated.has_door(doorway), "a Key gate hangs a door");
+        assert_eq!(
+            gated.peek(
+                Compass::E,
+                &Traverser {
+                    locomotion: hornvale_species::WALKER,
+                    door_open: &shut,
+                }
+            ),
+            Err(UNDERGROUND_LOCKED_DOOR_REFUSAL)
+        );
+        assert_eq!(
+            gated.peek(
+                Compass::E,
+                &Traverser {
+                    locomotion: hornvale_species::WALKER,
+                    door_open: &open,
+                }
+            ),
+            Ok(doorway)
+        );
+
+        let ungated = hand_underground(vec![level()], Cell(1, 1), hand_plan(None));
+        assert!(
+            !ungated.has_door(doorway),
+            "a threshold the plan left open hangs no door"
+        );
+        assert_eq!(
+            ungated.peek(
+                Compass::E,
+                &Traverser {
+                    locomotion: hornvale_species::WALKER,
+                    door_open: &shut,
+                }
+            ),
+            Ok(doorway),
+            "an ungated threshold admits everyone, whatever the oracle says"
+        );
+    }
+
+    /// The chute's asymmetry, at the seam that decides it (spec §3.6): down
+    /// is free for anybody, up is refused unless the body flies. The
+    /// landing is the same coordinate one rung below, by the same pairing
+    /// every stairway uses.
+    #[test]
+    fn a_drop_goes_down_and_only_a_flier_comes_back_up() {
+        let lip = Cell(1, 1);
+        let upper = hand_level(&[(lip, LevelCellKind::Drop)], Vec::new());
+        let lower = hand_level(&[(lip, LevelCellKind::Floor)], Vec::new());
+        let mut ug = hand_underground(vec![upper, lower], lip, hand_plan(None));
+
+        assert_eq!(
+            ug.peek_stairs(hornvale_species::WALKER),
+            Ok((1, lip)),
+            "down a chute is free for anybody"
+        );
+
+        ug.rung = 1;
+        assert_eq!(
+            ug.peek_stairs(hornvale_species::WALKER),
+            Err(NO_WAY_UP_REFUSAL),
+            "beneath a chute, a walker has no way back up"
+        );
+        assert_eq!(
+            ug.peek_stairs(hornvale_species::Locomotion {
+                swim: false,
+                fly: true,
+            }),
+            Ok((0, lip)),
+            "a flier takes the lip it fell from"
+        );
+    }
+
+    /// Final review, Minor #8: a chute's landing is admissible to `loc` the
+    /// same way a horizontal step is — `Walk`/`Wade` for anybody, `Swim`
+    /// only for a body that can. Unreachable in a generated descent today
+    /// (the realizer writes `Floor` under every chute and
+    /// `stairs_pair_by_coordinate_across_adjacent_rungs` pins it), but
+    /// `peek_stairs` must not silently drop a non-swimmer into deep water
+    /// the day that stops being true.
+    #[test]
+    fn a_chute_over_deep_water_refuses_a_non_swimmer_and_admits_a_swimmer() {
+        let lip = Cell(1, 1);
+        let upper = hand_level(&[(lip, LevelCellKind::Drop)], Vec::new());
+        let lower = hand_level(&[(lip, LevelCellKind::Deep)], Vec::new());
+        let ug = hand_underground(vec![upper, lower], lip, hand_plan(None));
+
+        assert_eq!(
+            ug.peek_stairs(hornvale_species::WALKER),
+            Err(UNDERGROUND_DEEP_WATER_REFUSAL),
+            "a non-swimmer looking down a chute into deep water is refused, \
+             not dropped into it"
+        );
+        assert_eq!(
+            ug.peek_stairs(hornvale_species::Locomotion {
+                swim: true,
+                fly: false,
+            }),
+            Ok((1, lip)),
+            "a swimmer takes the chute into the water below"
         );
     }
 }

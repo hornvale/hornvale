@@ -132,6 +132,12 @@ fn render_debug(level: &Level) -> String {
                 Some(LevelCellKind::Flooded) => '~',
                 Some(LevelCellKind::StairsDown) => '>',
                 Some(LevelCellKind::StairsUp) => '<',
+                // The Brattice, spec §3.5. Same three glyphs the session's
+                // own `map` verb picks, so a dump read beside one is not
+                // two vocabularies.
+                Some(LevelCellKind::Threshold) => '\'',
+                Some(LevelCellKind::Deep) => '=',
+                Some(LevelCellKind::Drop) => 'v',
             };
             out.push(glyph);
         }
@@ -165,19 +171,19 @@ fn walkable_cells(level: &Level) -> BTreeSet<Cell> {
 /// exactly this way when this test was written: a `Floor`-only BFS over a
 /// real descent found 176/277 cells unreachable, entirely explained by a
 /// stairs cell sitting on the level's one connecting corridor.
+///
+/// **Since The Brattice the set IS the `movement_mode` seam**, not a kind
+/// list: a `Threshold` sits in the middle of every passage's corridor and a
+/// `Deep` run replaces a sump's, so a kind list would have reported exactly
+/// the false disconnection this doc already warns about, one campaign later
+/// and for a new reason. `Deep` is included because it is passable — to a
+/// swimmer; this is the resident's view of the level, which is what a
+/// connectivity claim about a level is for.
 fn standable_cells(level: &Level) -> BTreeSet<Cell> {
     level
         .cells
         .iter()
-        .filter(|(_, k)| {
-            matches!(
-                k,
-                LevelCellKind::Floor
-                    | LevelCellKind::Flooded
-                    | LevelCellKind::StairsDown
-                    | LevelCellKind::StairsUp
-            )
-        })
+        .filter(|(_, k)| hornvale_vessel::underworld_level::movement_mode(*k).is_some())
         .map(|(c, _)| c)
         .collect()
 }
@@ -233,6 +239,15 @@ fn assert_whole_descent_is_connected(levels: &[Level], standables: &[BTreeSet<Ce
             let above = (lvl - 1, Cell(x, y));
             if standables[lvl - 1].contains(&above.1) && seen.insert(above) {
                 queue.push_back(above);
+            }
+        }
+        // A chute's lip crosses DOWN only (The Brattice, spec §3.5) — `up`
+        // from beneath it needs `Fly`, and this descent is walked from rung
+        // 0 downward, so the one-way edge is the one the search needs.
+        if kind == Some(LevelCellKind::Drop) && lvl + 1 < levels.len() {
+            let below = (lvl + 1, Cell(x, y));
+            if standables[lvl + 1].contains(&below.1) && seen.insert(below) {
+                queue.push_back(below);
             }
         }
     }

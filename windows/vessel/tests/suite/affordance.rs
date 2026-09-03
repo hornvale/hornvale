@@ -1696,7 +1696,7 @@ fn no_hardcoded_anchor_kind_gates_warm() {
 #[test]
 fn the_re_key_preserves_every_anchor_kinds_offer() {
     use OfferedVerb::{Close, Drink, Drop, Enter, Examine, Open, Put, Sleep, Take, Warm};
-    let expected: [(KindId, &[OfferedVerb]); 17] = [
+    let expected: [(KindId, &[OfferedVerb]); 18] = [
         // Encloses gates no OfferedVerb (it is read by `examine`'s prose,
         // not by the offer query), so an enclosing kind offers Examine and
         // nothing more.
@@ -1718,6 +1718,14 @@ fn the_re_key_preserves_every_anchor_kinds_offer() {
         // writable, which is the addressing half of decision 0397 arriving
         // at a place that could not previously hold it.
         (kinds::CAVE_MOUTH, &[Enter, Examine, Open, Close]),
+        // THE DOOR'S ROW IS NEW (The Brattice, Task 5, spec §3.7), and it is
+        // the cave mouth's row exactly — which is the point. `Lockable` gates
+        // nothing in this query, for the reason the strongbox's row states: a
+        // lock is a precondition on the ACT, read against the body's custody,
+        // and this query holds one object and no body. So a door offers what
+        // any openable passage offers, and the lock shows up only in
+        // `Session::open_or_close`'s underground arm.
+        (kinds::DOOR, &[Enter, Examine, Open, Close]),
         (kinds::GROUND, &[Examine]),
         (kinds::HEARTH, &[Examine, Warm]),
         (kinds::HIGH_SEAT, &[Examine]),
