@@ -101,6 +101,16 @@ so the snapshot pays for its own. **The difference, about 8 ms, is one
 shadowcast** — the largest single item left in a chamber snapshot, and a
 better argument for sharing it than anything available before measuring.
 
+**Corrected by [The Terrier](./the-terrier.md), 2026-09-03: the 8 ms was
+not the shadowcast.** The difference above is one sighting *derivation*,
+and this chronicle named it after the step the derivation is named for.
+Decomposed, the cast at radius four is 0.012 ms; the eight milliseconds
+were the brief — `brief_of` rebuilding the world's whole occupation
+register from the ledger on every call, twice per chamber snapshot — under
+a cost note in its own source that had prescribed the hoist since July.
+The number was right. The noun attached to it was a guess, and it became a
+campaign brief.
+
 ## The gate that passed at nine times its ceiling
 
 This campaign's second deliverable was a regression watch, and building it
@@ -242,7 +252,8 @@ crowd is a live design question, not a finding of this campaign.
 **The sighting is still derived once per turn.** Sharing it within a turn was
 the cheap half; the chamber's ~8 ms shadowcast is still paid by any turn that
 needs one and did not already have it, and that is the largest single item
-left.
+left. *(Corrected 2026-09-03: the item was the brief's occupation register,
+not the cast — see above and The Terrier.)*
 
 **The JSON is what remains.** Seventy kilobytes a turn, serialized on every
 one. The folds are gone and this is what the budget now hits.
