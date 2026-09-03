@@ -852,22 +852,50 @@ Expected: back to 2 passed.
 
 - [ ] **Step 6: Prove the ratchet discriminates — the stale direction**
 
+**Mutating an existing roster entry does NOT test this arm, and an earlier
+draft of this step wrongly said it did.** Editing a declared key makes both
+differences non-empty at once — the real site becomes *added* (it is no longer
+declared) and the edited line becomes *stale* — and `added` is asserted first,
+so the test reddens under the added heading and the stale assertion never
+executes. The stale arm would have gone unobserved while looking tested.
+
+So probe it by **adding a bogus entry and leaving both real ones intact**.
+Then `found - frozen` is empty (nothing added) and `frozen - found` holds
+exactly the bogus key, which is the only way to reach the second assertion:
+
 ```bash
 python3 -c "
 p='cli/tests/fixtures/fixed-temp-paths.txt'
 s=open(p).read()
-old='scratch_name(witness.seed)'
-assert old in s, 'TARGET NOT FOUND -- do not proceed on a no-op mutation'
-open(p,'w').write(s.replace(old,'scratch_name(NOT_A_REAL_ARG)'))
-print('mutated')
+sentinel='cli/tests/suite/repertory_corpus.rs::scratch_name(witness.seed)'
+assert sentinel in s, 'TARGET NOT FOUND -- do not proceed on a no-op mutation'
+open(p,'a').write('windows/lab/src/nonexistent.rs::\"hv-nettle-stale-probe\"\tstale-direction probe, deleted in the next step\n')
+print('appended a bogus entry; both real entries untouched')
 "
 cargo nextest run -p hornvale --test suite -E 'test(temp_path_ratchet)' 2>&1 | tail -20
 git checkout -- cli/tests/fixtures/fixed-temp-paths.txt
+cargo nextest run -p hornvale --test suite -E 'test(temp_path_ratchet)' 2>&1 | tail -4
 ```
 
-Expected: FAILS naming the `NOT_A_REAL_ARG` entry as stale, then green again after the revert.
+Expected: `no_new_fixed_temp_path_appears` FAILS **under the stale heading**,
+naming `windows/lab/src/nonexistent.rs::"hv-nettle-stale-probe"` — then green
+again after the revert.
 
-The `assert old in s` is load-bearing: a substitution that matches nothing produces a green run that looks exactly like a robust implementation.
+The `assert sentinel in s` is load-bearing in a different way here than in a
+substitution: it proves the file you appended to is the roster you think it is,
+so an append into the wrong file cannot pass as a probe.
+
+**Branch table:**
+
+- fails under the **stale** heading, naming the bogus key → **both arms are now
+  proven; continue.**
+- fails under the **added** heading → the append perturbed the found set, which
+  should be impossible for a path that does not exist. Read the failure; do not
+  proceed.
+- does not fail at all → `declared()` is not parsing the appended line (check
+  the tab separator) or `stale` is computed against the wrong set. This is the
+  arm that would otherwise never be exercised, so a silent pass here is the
+  worst outcome available.
 
 - [ ] **Step 7: Commit**
 

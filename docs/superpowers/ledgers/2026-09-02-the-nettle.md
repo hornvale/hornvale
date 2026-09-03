@@ -319,3 +319,58 @@ writing this entry.
 *ideonomy passes / overturns.* 0 / 0 — a verified defect with one correct fix.
 
 *Capture.* This entry; the plan text; the retrospective's defect tally.
+
+---
+
+#10 [G5] — **Ruling: Task 3's stale arm was never observed RED. My Step 6
+probe could not reach it, and reported success from the wrong assertion.**
+
+*What the implementer found and reported honestly.* Step 6 told it to mutate
+an existing roster entry and expect a failure under the **stale** heading. The
+ratchet did redden — but under the **added** heading. The implementer flagged
+the discrepancy rather than accepting the red as proof.
+
+*Why the probe could not work.* Editing a declared key makes both set
+differences non-empty at once: the real site becomes *added* (it is no longer
+declared) and the edited line becomes *stale*. `added` is asserted at
+`cli/tests/suite/temp_path_ratchet.rs:213` and `stale` at `:233`, so the first
+assertion fires and **the second never executes**. Verified by reading the
+committed file, not inferred from the report.
+
+*Consequence, which is the part that matters.* The added arm was proven twice
+(Step 5, and Step 6 by accident); the stale arm was proven **zero** times. And
+the stale arm is not decoration — it is the entire reason the roster "cannot
+rot", the property the module doc advertises. A ratchet whose stale half is
+unexercised is exactly the shape this campaign keeps finding: a check sitting
+in a healthy-looking suite, never having been shown to fire.
+
+*Ruling.* Step 6 is replaced with a probe that can only reach the stale arm:
+**append a bogus entry and leave both real ones intact**, so `found - frozen`
+is empty and `frozen - found` holds exactly the bogus key. Plan text corrected,
+with a branch table naming the silent-pass case as the worst available outcome.
+Sent back to the implementer before review, because this is a correctness
+concern about the verification rather than an observation.
+
+*The other four findings, adjudicated.* (1) The scanner **self-matched its own
+source file** — `temp_path_ratchet.rs` necessarily contains the literal
+`temp_dir()` in its own code, and my plan never considered it; the implementer
+excluded its own filename, mirroring `test_binary_ratchet.rs`'s exclusion of
+its own `suite.rs`. Correct, and it is a fifth instance of the campaign's
+subject: my checker was untested against itself. (2) A **different** ratchet,
+`claim_shape.rs`, flagged the plan's `.map(|s| ...)` closures as seed-shaped;
+renamed to `entry`, no behaviour change — a repo guard catching my plan text,
+which is the system working. (4) A pre-existing flake,
+`census_claim::tests::a_stale_claim_is_taken_over_rather_than_waited_on`,
+timing-sensitive under load, 3/3 in isolation — **deferred minor**, and
+thematically a cousin of this campaign's own subject. (5) A backtick pair in a
+commit-message heredoc was command-substituted away and corrupted one
+sentence; fixed by `--amend -F <file>` before anything was shared, diff
+untouched — an operational note worth keeping.
+
+*Cost if wrong.* Low. If the new probe also cannot reach the stale arm, its
+branch table says to stop rather than accept a pass.
+
+*ideonomy passes / overturns.* 0 / 0 — a verified gap with one correct probe.
+
+*Capture.* This entry; the plan text; the retrospective (fifth and sixth
+instances); the deferred-minor list for the census_claim flake.
