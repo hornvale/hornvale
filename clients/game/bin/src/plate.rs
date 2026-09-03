@@ -62,10 +62,12 @@
 
 use hornvale_game_core::{Cell, Grid, Ink, Source, Weight};
 use hornvale_kernel::{
-    Facet, FacetId, Geosphere, NearestVertexIndex, RoomMeshMemo, Value, Vertex, World,
+    Facet, FacetId, GeoCoord, Geosphere, NearestVertexIndex, RoomMeshMemo, Value, Vertex, World,
 };
 use hornvale_terrain::GeneratedTerrain;
 use hornvale_terrain::landscape::{FeatureClass, FeatureId as LandscapeFeatureId};
+use hornvale_vessel::site::{Site, SiteKind};
+use hornvale_worldgen::{SiteReason, site_facet_for};
 use std::collections::{BTreeMap, BTreeSet};
 
 use crate::discovery::{Discovered, FeatureId};
@@ -91,18 +93,24 @@ use crate::mercator::{self, Frame};
 /// ledger-reading idiom drift silently — the skip-on-missing rule above is
 /// exactly the kind of thing one side would later "fix" without the other —
 /// so this is the one copy both callers share. Lives in `plate.rs` because
-/// this is where the roster is CONSUMED ([`draw_with`]'s own `settlements`
-/// parameter), matching [`draw_feature_layer`]'s existing convention of
-/// taking a resolved roster rather than a ledger to read.
+/// this is where the roster is consumed, matching [`draw_feature_layer`]'s
+/// existing convention of taking a resolved roster rather than a ledger to
+/// read.
 ///
 /// **Widened from `BTreeSet<Vertex>` to `BTreeMap<Vertex, u64>` (The
 /// Legend, Task 7)**, keyed the same way, valued by
 /// `hornvale_settlement::POPULATION` — the size
 /// [`draw_feature_layer`]'s own viewport-relative major/minor split ranks
-/// by. Both callers draw through [`draw_with`], whose own `settlements`
-/// parameter widened the same way at the same time, so there is no
-/// caller left that only ever wanted membership; a bare vertex set is
-/// still one `.keys()` away for a reader that does.
+/// by; a bare vertex set is still one `.keys()` away for a reader that
+/// wants one.
+///
+/// **It is no longer a `draw_with` parameter, and has ONE caller** (The
+/// Prospect, Task 8): [`sites_of`], which turns this map into the
+/// settlement half of a roster over every [`SiteKind`]. The two callers
+/// this function was extracted to serve — `driver.rs` and
+/// `crate::overture::atlas` — now both reach it through that builder, so
+/// the "one copy both callers share" argument above holds a level up rather
+/// than lapsing.
 pub fn settlements_of(
     world: &World,
     geo: &Geosphere,
@@ -141,6 +149,209 @@ pub fn settlements_of(
                 .or_insert(population);
             map
         })
+}
+
+/// One point site the world map draws — what kind of place it is, which
+/// discovery identity gates it, and where it stands.
+///
+/// # Why the map needed a SITE and not a second settlement roster
+///
+/// The Prospect's premise (spec §5) is that a world holds 874 caves and 103
+/// exotic sites and shows a reader none of them. Half of that was true of
+/// this module: it drew settlements and caves from two unrelated rosters and
+/// had no notion of an exotic site at all, so the whole placed-exotic tier —
+/// generated, named in prose, enterable since Task 5 — was undrawable at
+/// every rung. One roster over [`SiteKind`], of which a settlement is one
+/// KIND, is what makes adding the third kind a value rather than a
+/// parameter: [`draw_feature_layer`] lost a parameter when this landed.
+///
+/// # `SiteKind` is `hornvale_vessel`'s, not a client-side twin
+///
+/// The three kinds are exactly `hornvale_vessel::site::SiteKind`'s, and the
+/// draw precedence is exactly `hornvale_vessel::site::Site::salience`'s (see
+/// [`MapSite::salience`]). Minting a client-side enum with the same three
+/// variants would have been a second statement of both — the
+/// two-sources-of-truth shape this campaign has now found four times, and
+/// the one `windows/vessel`'s own `brief_of` call site went out of its way
+/// to collapse ("Two statements, one authority").
+///
+/// `population` is `count` by decision 0028's own definition — an honest
+/// cardinality, the number of people in the settlement — not `index`: it is
+/// ranked BY `MAJOR_SETTLEMENT_QUANTILE`, but a value that is sorted is
+/// not thereby a position. Every other field is already a type that carries
+/// its own meaning. (`clients/` sits outside the workspace and outside
+/// `tools/type-audit`'s scan, so this tag is voluntary rather than gated —
+/// as [`BAND_B_RUNG`]'s and [`terrain_at_tile`]'s already are in this file.)
+/// type-audit: bare-ok(count: population)
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MapSite {
+    /// What kind of place stands here.
+    pub kind: SiteKind,
+    /// The canonical-grid vertex that WARRANTS this site — its identity, and
+    /// the key its [`crate::discovery::FeatureId`] is built from. Not where
+    /// it stands, for a placed kind: see [`MapSite::placed`].
+    pub vertex: Vertex,
+    /// The facet a PLACED site stands on
+    /// ([`hornvale_worldgen::site_facet_for`]), or `None` for a settlement.
+    ///
+    /// **The split is real, not a convenience.** A cave or an exotic site is
+    /// warranted by a per-vertex field and then ADDRESSED by a seeded draw
+    /// inside a placement quad — up to ~40 walk-facet edges from its own
+    /// vertex, measured on seed 42 — so its vertex is not a place a reader
+    /// could go. A settlement carries its own committed
+    /// `latitude`/`longitude` and is keyed to the vertex those resolve
+    /// nearest to ([`settlements_of`]); `site_facet_for` is not its
+    /// authority and must not be asked, exactly as
+    /// `hornvale_worldgen::placement`'s own `SiteReason` refuses to carry a
+    /// settlement variant.
+    pub placed: Option<Facet>,
+    /// The settlement's own committed population, which
+    /// `MAJOR_SETTLEMENT_QUANTILE`'s viewport-relative ranking reads.
+    /// Zero for every other kind, which never enters that ranking — this
+    /// campaign draws a non-settlement site at a single weight and ranking a
+    /// cave against a population is out of its scope.
+    pub population: u64,
+}
+
+impl MapSite {
+    /// The discovery identity this site is gated on — the same value
+    /// `Driver::update_discovery` records, taken from the same roster entry
+    /// the glyph is drawn from, so a site that has been discovered is
+    /// drawable by construction.
+    pub fn feature_id(&self) -> FeatureId {
+        match self.kind {
+            SiteKind::Settlement => FeatureId::Settlement(self.vertex),
+            SiteKind::Cave => FeatureId::Cave(self.vertex),
+            SiteKind::Exotic => FeatureId::Exotic(self.vertex),
+        }
+    }
+
+    /// Where this site stands, as a geographic coordinate — the placed
+    /// facet's own centroid where it has one, the warranting vertex's
+    /// coordinate otherwise.
+    ///
+    /// **This is the map's half of "every readout agrees on the placed
+    /// facet"** (The Prospect, Task 8). The cave glyph used to be projected
+    /// from the warranting VERTEX while `hornvale_vessel`'s `brief_of` would
+    /// only let a walker enter the placed facet, so the mark on the chart
+    /// and the room the cave is in were a mean 18.8 and up to 40.8
+    /// walk-facet edges apart on seed 42. There is exactly one route from a
+    /// site to a position here, and it runs through [`MapSite::placed`],
+    /// which `sites_of` filled from `site_facet_for` — the authority
+    /// `hornvale_locale::LocaleContext::strange_site_rows` now reads too.
+    pub fn coord(&self, geo: &Geosphere) -> GeoCoord {
+        match &self.placed {
+            Some(facet) => facet.coord(),
+            None => geo.coord(self.vertex),
+        }
+    }
+
+    /// Draw precedence: higher wins where two sites project onto the same
+    /// character.
+    ///
+    /// **`hornvale_vessel::site::Site::salience` IS the ordering** — this
+    /// asks that function rather than restating cave < exotic < settlement,
+    /// so the map and the walk-band prose cannot come to disagree about
+    /// which of two co-located sites is the notable one. The `Site` built
+    /// here is a throwaway carrying only the kind, which is all `salience`
+    /// reads (its own doc: "Ranked over `SiteKind` alone"). `SiteKind`'s
+    /// derived `Ord` states the same order independently and is
+    /// deliberately NOT used — the same restraint `brief_of`'s own call
+    /// site records.
+    ///
+    /// `index`, not `count`: the return is an ordinal position in the
+    /// presentation-salience ordering over [`SiteKind`] and is a cardinality
+    /// of nothing — the reading `hornvale_vessel::site::Site::salience`'s own
+    /// tag carries, after this campaign's Task 1 review corrected it there.
+    /// type-audit: bare-ok(index: return)
+    pub fn salience(&self) -> u8 {
+        Site::placed(self.kind, None).salience()
+    }
+}
+
+/// Every point site the world map may draw, in DRAW ORDER: ascending
+/// [`MapSite::salience`], ties broken by ascending [`Vertex`], so a later
+/// entry legitimately overwrites an earlier one's mark.
+///
+/// `caves` is `hornvale_terrain::GeneratedTerrain::cave_site_vertices` (the
+/// one authority on where a cave exists, after Task 4's correction deleted
+/// the second one) and `exotics` is the vertices of
+/// `hornvale_locale::LocaleContext::strange_sites`. Both arrive as vertex
+/// rosters rather than being scanned here for the reason
+/// [`draw_feature_layer`] takes a roster at all: this module is handed
+/// resolved rosters, never a world to search.
+///
+/// `walk_depth` is the world's own walk band (`hornvale_vessel::walk_depth`),
+/// which `site_facet_for` needs to address a facet at the resolution a walker
+/// stands on. A caller with no placed sites to place — the overture atlas,
+/// which draws settlements only — may pass any depth, because the value is
+/// consumed once per placed site and there are none.
+/// type-audit: bare-ok(count: walk_depth)
+pub fn sites_of(
+    world: &World,
+    geo: &Geosphere,
+    nearest: &NearestVertexIndex,
+    caves: &[Vertex],
+    exotics: &[Vertex],
+    walk_depth: u32,
+) -> Vec<MapSite> {
+    let mut sites: Vec<MapSite> = settlements_of(world, geo, nearest)
+        .into_iter()
+        .map(|(vertex, population)| MapSite {
+            kind: SiteKind::Settlement,
+            vertex,
+            placed: None,
+            population,
+        })
+        .collect();
+    let placed = |kind: SiteKind, reason: SiteReason, roster: &[Vertex]| -> Vec<MapSite> {
+        roster
+            .iter()
+            .map(|&vertex| MapSite {
+                kind,
+                vertex,
+                placed: Some(site_facet_for(vertex, reason, world.seed, geo, walk_depth)),
+                population: 0,
+            })
+            .collect()
+    };
+    sites.extend(placed(SiteKind::Cave, SiteReason::Cave, caves));
+    sites.extend(placed(SiteKind::Exotic, SiteReason::Exotic, exotics));
+    // `salience` is a `u8` ordinal, so this is exact — no float, no
+    // `total_cmp` — and the `Vertex` tie-break makes the order total, which
+    // is what keeps one plate byte-identical to the next for one world.
+    sites.sort_by_key(|site| (site.salience(), site.vertex));
+    sites
+}
+
+/// Every site in `sites` standing in the walk-band room `here` — the
+/// discovery identities a possession earns by being in that room.
+///
+/// **The match is on the placed FACET and the answer is the roster's own
+/// [`MapSite::feature_id`]** (The Prospect, Task 8). A settlement is never
+/// returned: it carries no [`MapSite::placed`] address, which is the
+/// structural form of §A4b's rule that a point site is discovered by
+/// encounter — a settlement's encounter is `enter` succeeding, read off the
+/// wire's own band tag, and lives in `Driver::update_discovery`.
+///
+/// Answering from the roster rather than from a vertex resolution is what
+/// makes a discovered site DRAWABLE by construction: the identity recorded
+/// is the identity [`draw_feature_layer`] gates on, taken from the same
+/// entry, so the two cannot disagree even where
+/// [`hornvale_worldgen::site_facet_for`]'s address resolves nearest to a
+/// neighbouring vertex (which it is expressly permitted to do).
+///
+/// A `Vec` because one facet may legitimately hold two kinds — a cave and an
+/// exotic site warranted at the same vertex draw from two independent
+/// placement streams and can collide (one chance in 1024 per pair, by
+/// `hornvale_worldgen`'s own arithmetic). Both are then discovered; only the
+/// more salient one draws.
+pub fn sites_standing_in(sites: &[MapSite], here: &Facet) -> Vec<FeatureId> {
+    sites
+        .iter()
+        .filter(|site| site.placed.as_ref() == Some(here))
+        .map(MapSite::feature_id)
+        .collect()
 }
 
 /// A view onto the world plate: which mesh RUNG the virtual chart is drawn
@@ -246,6 +457,84 @@ pub const GLOBE_RUNG: u32 = 6;
 /// The tangent warp redistributes facets WITHIN a face and does not change how
 /// many of them a face has, so the count is exact even though the individual
 /// facet arcs are not equal.
+/// The central angle one edge of the subdivided ICOSAHEDRON subtends at the
+/// centre of its circumsphere, at `grid_level` — `acos(1/sqrt(5)) / 2^level`,
+/// 0.01729920 rad at level 6.
+///
+/// # THIS IS THE NUMBER FIX ROUND 1 DELETED, AND DELETING IT FROM ITS OLD HOME WAS RIGHT
+///
+/// [`base_facet_arc_rad`] used to return `acos(1/sqrt(5))` and its caller
+/// justified the halving with "the facet count is `20 << (2 * depth)`". Both
+/// premises died with the base mesh (decision 0506) and the chart's width is a
+/// property of the CUBE, so the icosahedral figure had no business deciding how
+/// many TILES a rung carries. That correction stands and this function does not
+/// reopen it.
+///
+/// **What the correction lost is that the icosahedral figure still decides
+/// something — just not that.** `Geosphere` is a subdivided ICOSAHEDRON
+/// (`kernel/src/geosphere.rs`, `10·4^L + 2` vertices — 40,962 at level 6), and
+/// terrain is sampled on its VERTICES. So the mesh's own sample spacing is an
+/// icosahedral property while the chart's tile count is a cube one, and the two
+/// lattices are incommensurate: at level 6 the mesh carries ~363 samples around
+/// a great circle where rung 6's chart carries 256 tiles.
+///
+/// Conflating the two is what the old code did in one direction, and a reader
+/// who takes fix round 1 to mean "the icosahedron is gone" makes the same
+/// mistake in the other. Two lattices, two functions, each named for the one it
+/// measures.
+///
+/// `sqrt` stays intrinsic and `acos` routes through
+/// [`hornvale_kernel::math`] — `kernel/CLAUDE.md`'s own split.
+fn mesh_edge_arc_rad(grid_level: u32) -> f64 {
+    hornvale_kernel::math::acos(1.0 / 5.0_f64.sqrt())
+        / hornvale_kernel::math::powf(2.0, f64::from(grid_level))
+}
+
+/// How many TERRAIN SAMPLES the mesh carries around a great circle at
+/// `grid_level` — the data's own resolution, against which a rung's tile count
+/// is either enough or not.
+///
+/// The partner of [`tiles_around_a_great_circle`], deliberately the same shape
+/// from the other lattice's base angle: `TAU` divided by
+/// [`mesh_edge_arc_rad`]. 363 at level 6.
+/// type-audit: bare-ok(count: grid_level), bare-ok(count: return)
+pub fn mesh_samples_around_a_great_circle(grid_level: u32) -> u32 {
+    ((std::f64::consts::TAU / mesh_edge_arc_rad(grid_level)).round() as u32).max(1)
+}
+
+/// The rung a map CONSULTATION opens at: the coarsest rung whose chart is at
+/// least as fine as the mesh it draws (The Hachure, Stage 0).
+///
+/// **Why the map needs an entry rung at all.** `Driver::start` leaves
+/// `window.depth` at [`BAND_B_RUNG`] — the walk band's own rung, which is where
+/// the WALKER belongs — and `enter_map` used to inherit it. Band B is seven
+/// rungs finer than the grid and [`terrain_at_tile`] resolves every rung
+/// through the grid-level ancestor, so a consultation opened there shows one
+/// vertex's reading across the whole screen: measured at **1** distinct terrain
+/// vertex on a 120x40 plate, seed 42.
+///
+/// **This invents nothing and re-tunes nothing.** Decision 0196 lets a view
+/// render coarser than the world but never finer, and decision 0287 makes that
+/// structural by holding that a tile IS a facet at the rung's depth. Both are
+/// untouched here: [`virtual_dims`] is unchanged, the ladder is unchanged, and
+/// every rung on it remains reachable by zooming. Only the rung a consultation
+/// *starts* at moves.
+///
+/// **Derived, never tabulated.** A literal `7` becomes a tuned number the first
+/// time `GLOBE_LEVEL` moves — the same argument
+/// [`tiles_around_a_great_circle`] makes for computing its own ladder. The
+/// answer is the smallest `d` with `tiles_around_a_great_circle(d) >=
+/// mesh_samples_around_a_great_circle(grid_level)`, clamped into the shipped
+/// ladder so a pathological grid level cannot return a rung the client has no
+/// picture for.
+/// type-audit: bare-ok(count: grid_level), bare-ok(count: return)
+pub fn map_entry_rung(grid_level: u32) -> u32 {
+    let want = mesh_samples_around_a_great_circle(grid_level);
+    (GLOBE_RUNG..=BAND_B_RUNG)
+        .find(|&d| tiles_around_a_great_circle(d) >= want)
+        .unwrap_or(BAND_B_RUNG)
+}
+
 fn base_facet_arc_rad() -> f64 {
     std::f64::consts::FRAC_PI_2
 }
@@ -407,7 +696,21 @@ fn glyph_and_color_for(water: u8, band: u32) -> (char, [u8; 3]) {
     match water {
         0 => (OCEAN_GLYPH, OCEAN_COLOR),
         1 => (SALT_BASIN_GLYPH, SALT_BASIN_COLOR),
-        2 => (RIVER_GLYPH, RIVER_COLOR),
+        // `WaterKind::River` (index 2) IS DELIBERATELY ABSENT (The Hachure,
+        // Stage 2), and its absence is the fix rather than an omission.
+        //
+        // It used to draw `RIVER_GLYPH` here, from a per-VERTEX label painted
+        // across that vertex's whole ~110 km footprint — so below the grid a
+        // river filled the screen (measured: 4,800 of 4,800 tiles at band B,
+        // and 570 of 1,800 with a solid interior in a 60x30 window). That is
+        // the "water drawn on land tiles" defect.
+        //
+        // The Ford's ruling is why the cure is a deletion and not a tweak:
+        // **river-as-area is a type error.** Ocean and salt basin above are
+        // genuinely AREAS and stay in this raster; a river is a LINE with a
+        // width function, and lines are drawn by `rasterize_rivers` from the
+        // channel network's own polylines. A river tile therefore falls
+        // through to its RELIEF here, and the line layer paints over it.
         _ => {
             let i = (band as usize).min(RELIEF_GLYPHS.len() - 1);
             (RELIEF_GLYPHS[i], RELIEF_COLORS[i])
@@ -415,10 +718,11 @@ fn glyph_and_color_for(water: u8, band: u32) -> (char, [u8; 3]) {
     }
 }
 
-/// The glyph for a DISCOVERED MINOR settlement (Task 5, §A3's "point
-/// sites"; Task 7 splits the old single `SETTLEMENT_GLYPH` in two).
-/// Never drawn undiscovered — see [`draw_feature_layer`]'s own doc for why
-/// "not yet drawn" is the only state an undiscovered site is ever in.
+/// The glyph for a MINOR settlement (Task 5, §A3's "point sites"; Task 7
+/// splits the old single `SETTLEMENT_GLYPH` in two). Drawn whether or not
+/// the settlement has been discovered (The Prospect, Gate A ungating) — see
+/// [`draw_feature_layer`]'s own doc; only the settlement's own PROPER NAME
+/// stays gated, and that gate lives entirely outside this layer.
 ///
 /// **Nathan's own glyph assignment (2026-08-30, `progress.md`'s "Nathan's
 /// glyph assignments"), not a Task 6 leftover.** The old `#` collided with
@@ -437,18 +741,36 @@ fn glyph_and_color_for(water: u8, band: u32) -> (char, [u8; 3]) {
 /// here never compete with a creature mark for the same cell, and Nathan's
 /// assignment stands unmodified.
 pub(crate) const SETTLEMENT_MINOR_GLYPH: char = 'o';
-/// The glyph for a DISCOVERED MAJOR settlement — the top
+/// The glyph for a MAJOR settlement — the top
 /// [`MAJOR_SETTLEMENT_QUANTILE`] of settlements ranked by population among
-/// those actually IN FRAME (discovered and on-screen; see
+/// those actually IN FRAME (on-screen; discovery plays no part in the
+/// ranking since The Prospect's Gate A ungating — see
 /// [`draw_feature_layer`]'s own doc for the ranking). See
 /// [`SETTLEMENT_MINOR_GLYPH`] for the rest of the reasoning; this is the
 /// same identity claim (a settlement), one size tier up.
 pub(crate) const SETTLEMENT_MAJOR_GLYPH: char = 'O';
-/// The glyph for a DISCOVERED cave mouth. Moved here from `o` (Task 7,
+/// The glyph for a cave mouth, drawn whether or not it has been discovered
+/// (see [`SETTLEMENT_MINOR_GLYPH`]'s doc). Moved here from `o` (Task 7,
 /// Nathan's glyph assignments) once `o`/`O` were claimed by settlements —
 /// see [`SETTLEMENT_MINOR_GLYPH`]'s doc for why the two moves are one
 /// commit, not two.
 pub(crate) const CAVE_GLYPH: char = '*';
+/// The glyph for a placed exotic site — a fungal canopy, a mineral-crystal
+/// flat, a place whose biota is found nowhere else (The Prospect, Task 8).
+/// Drawn whether or not it has been discovered, like every other placed
+/// [`SiteKind`] (see [`SETTLEMENT_MINOR_GLYPH`]'s doc).
+///
+/// **The map had no mark for one at all before this**, so seed 42's 103
+/// exotic sites were generated, named in prose, enterable since Task 5, and
+/// undrawable at every rung. The pick's reasoning — why `$` rather than a
+/// letter or an ordinal mark — lives on this glyph's row in
+/// `hornvale_game_core::register::REGISTER`, the one table that has an
+/// opinion about glyph allocation, rather than being restated here.
+///
+/// `pub`, like [`VOLCANO_GLYPH`] and for the same reason:
+/// `bin/tests/plate_vocabulary.rs` is a separate crate to `rustc` and pins
+/// the mark against a real render.
+pub const EXOTIC_GLYPH: char = '$';
 /// The glyph for a DISCOVERED volcano (Task 7): the map's own edifice
 /// marker, gated on [`crate::discovery::FeatureId::Extent`] exactly like
 /// any other landscape feature — see [`draw_feature_layer`]'s own doc on
@@ -476,18 +798,27 @@ pub const VOLCANO_GLYPH: char = '!';
 /// third point marker read as noise rather than invitation.
 pub const WATERFALL_GLYPH: char = '|';
 
-/// The colour claim for a discovered settlement — a warm tint distinct from
-/// both terrain colours, so a settlement reads as a different SUBSTANCE
-/// (§A5: colour carries substance, never the epistemic channel — an
-/// undiscovered site simply is not drawn at all, so there is no
-/// discovered/undiscovered pair of colours to confuse with one another).
-/// Shared by [`SETTLEMENT_MINOR_GLYPH`] and [`SETTLEMENT_MAJOR_GLYPH`]:
-/// colour carries the SUBSTANCE ("a settlement"), and size is the glyph's
-/// own job, so a second colour for the major tier would say two different
-/// things stand there.
+/// The colour claim for a settlement — a warm tint distinct from both
+/// terrain colours, so a settlement reads as a different SUBSTANCE (§A5:
+/// colour carries substance, never the epistemic channel). Drawn in this
+/// colour whether or not the settlement has been discovered (The Prospect,
+/// Gate A ungating) — so there is only one state, not a discovered/
+/// undiscovered pair, and nothing here to confuse with one another. Shared
+/// by [`SETTLEMENT_MINOR_GLYPH`] and [`SETTLEMENT_MAJOR_GLYPH`]: colour
+/// carries the SUBSTANCE ("a settlement"), and size is the glyph's own job,
+/// so a second colour for the major tier would say two different things
+/// stand there.
 const SETTLEMENT_COLOR: [u8; 3] = [220, 180, 60];
-/// The colour claim for a discovered cave mouth. See [`SETTLEMENT_COLOR`].
+/// The colour claim for a cave mouth, drawn whether or not it has been
+/// discovered. See [`SETTLEMENT_COLOR`].
 const CAVE_COLOR: [u8; 3] = [130, 120, 110];
+/// The colour claim for an exotic site, drawn whether or not it has been
+/// discovered — a cool violet, the one hue no relief band, water class or
+/// other point-site mark occupies, so a strangeness reads as its own
+/// substance rather than as an oddly tinted anything else. Colour carries
+/// substance and MAY FAIL (§A5), which is why [`EXOTIC_GLYPH`] is a distinct
+/// character too and not a re-tinted `*`.
+const EXOTIC_COLOR: [u8; 3] = [170, 110, 220];
 /// The colour claim for a discovered volcano — a hot, saturated tint
 /// distinct from every relief band and from [`SETTLEMENT_COLOR`]/
 /// [`CAVE_COLOR`], so an edifice reads as its own substance rather than an
@@ -562,8 +893,7 @@ pub fn draw(
     win: &Window,
     w: u16,
     h: u16,
-    settlements: &BTreeMap<Vertex, u64>,
-    caves: &BTreeSet<Vertex>,
+    sites: &[MapSite],
     volcanoes: &BTreeSet<Vertex>,
     waterfalls: &[Vertex],
     discovered: &Discovered,
@@ -577,8 +907,7 @@ pub fn draw(
         w,
         h,
         colour_allowed(),
-        settlements,
-        caves,
+        sites,
         volcanoes,
         waterfalls,
         discovered,
@@ -692,15 +1021,19 @@ pub(crate) fn colour_allowed() -> bool {
 /// not take a `Discovered` at all, so no cache keyed on it can depend on
 /// one.
 ///
-/// **Task 5: point sites are gated in [`draw_feature_layer`], not filtered
+/// **Task 5: point sites are chosen in [`draw_feature_layer`], not filtered
 /// afterward** — spec Amendment 1 §A7's "nothing is drawn and then hidden"
-/// refusal: `settlements`/`discovered` are consulted before a glyph is ever
-/// chosen, and an undiscovered site's glyph is simply never chosen — there
-/// is no suppression pass over an already-painted grid, because a site
-/// never drawn cannot leak. A discovered site's glyph OVERRIDES the terrain
-/// glyph at its own cell (§A3: a point site "is not in the terrain render
-/// at all," unlike a terrain-borne landmark, which draws regardless of
-/// discovery).
+/// refusal, restated after The Prospect's Gate A ungating: a cave, exotic
+/// site or settlement's glyph is chosen from its own [`MapSite`] roster
+/// entry alone, with no `discovered` check in front of it at all — there is
+/// no suppression pass over an already-painted grid, because there is
+/// nothing left to suppress. A volcano is the one glyph still chosen this
+/// way (`settlements`/`discovered` consulted before it is ever painted, an
+/// undiscovered volcano's glyph simply never chosen — see
+/// [`draw_feature_layer`]'s own doc for why it alone keeps the gate). Every
+/// site glyph OVERRIDES the terrain glyph at its own cell (§A3: a point
+/// site "is not in the terrain render at all," unlike a terrain-borne
+/// landmark, which draws regardless of discovery).
 #[allow(clippy::too_many_arguments)] // `index` (fix round 1: build-once-pass-in, per Nathan's ruling) pushed this to 8; Task 5's `settlements`/`discovered` push it to 10; Task 7's `volcanoes`/`waterfalls` push it to 12 — mirroring `hornvale_game_core::render_with`'s own allow
 pub fn draw_with(
     terrain: &GeneratedTerrain,
@@ -711,8 +1044,7 @@ pub fn draw_with(
     w: u16,
     h: u16,
     colour_allowed: bool,
-    settlements: &BTreeMap<Vertex, u64>,
-    caves: &BTreeSet<Vertex>,
+    sites: &[MapSite],
     volcanoes: &BTreeSet<Vertex>,
     waterfalls: &[Vertex],
     discovered: &Discovered,
@@ -727,8 +1059,7 @@ pub fn draw_with(
         f,
         win,
         colour_allowed,
-        settlements,
-        caves,
+        sites,
         volcanoes,
         waterfalls,
         discovered,
@@ -763,7 +1094,253 @@ pub fn draw_with(
 /// plate's size, about the polar-fabrication obligation on `win.origin_row`,
 /// and about `origin_col` wrapping freely, is stated of this function: it is
 /// the one that paints those cells.
-#[allow(clippy::too_many_arguments)] // `index` and the caller-owned `memo` push this to 9 — mirrors `draw_with`'s own allow, one level down
+/// How much of the world's land a river must drain to be drawn at
+/// [`GLOBE_RUNG`], as a fraction — halving with each finer rung
+/// ([`rasterize_rivers`]).
+///
+/// **This is a LEGIBILITY constant and it lives in the client, but what it
+/// selects ON is sim truth.** The sim carries all 4,158 of seed 42's
+/// watercourses and their discharge; that is the world's own answer about
+/// where the creeks are. What a 55 km-per-tile terminal can legibly draw is a
+/// different question, and it is this one's. A Unity client at metre scale
+/// would draw every creek and need no threshold at all.
+///
+/// **Chosen from a measured table, not by taste.** River tiles as a
+/// percentage of LAND tiles, whole chart, seed 42, by rung and minimum
+/// upstream-vertex count:
+///
+/// | rung | all | >=5 | >=13 | >=32 | >=91 |
+/// |---|---|---|---|---|---|
+/// | 6 | 89.5% | 65.0% | 37.0% | 15.5% | 1.5% |
+/// | 7 | 51.4% | 38.1% | 20.8% | 9.1% | 0.9% |
+/// | 8 | 22.8% | 17.7% | 9.9% | 4.1% | 0.6% |
+/// | 10 | 6.0% | 4.5% | 2.5% | 0.9% | 0.2% |
+///
+/// Drawing the whole network is a WASH — 89.5% of land at the coarsest rung —
+/// so selection is required rather than a refinement. 32 upstream vertices at
+/// rung 6 lands at 15.5%, which reads as a network.
+///
+/// **Expressed as a FRACTION of land, never as a vertex count.** `drainage_at`
+/// returns an upstream *vertex* count, so `32` would silently mean a
+/// different-sized river the moment `GLOBE_LEVEL` moved — the same
+/// grid-dependence `branch::vertex_catchment` exists to normalise away. 32 of
+/// seed 42's 11,283 non-ocean vertices is this fraction.
+/// type-audit: bare-ok(ratio)
+const RIVER_DRAWN_ABOVE_LAND_FRACTION: f64 = 32.0 / 11_283.0;
+
+/// The catchment threshold, as a land fraction, for drawing a river at `depth`
+/// — [`RIVER_DRAWN_ABOVE_LAND_FRACTION`] halving per rung below the coarsest,
+/// floored so that every watercourse is eventually drawn.
+///
+/// Halving rather than quartering is measured, not assumed: a rasterised LINE
+/// covers `O(N)` of an `N x N` chart's tiles, so a fixed roster already thins
+/// by half per rung (16.47% -> 3.94% -> 1.00% over rungs 6, 8, 10). Halving
+/// the threshold on top of that keeps the drawn density roughly flat while
+/// admitting tributaries as the reader comes closer.
+fn river_threshold(depth: u32) -> f64 {
+    let steps = f64::from(depth.saturating_sub(GLOBE_RUNG));
+    RIVER_DRAWN_ABOVE_LAND_FRACTION / hornvale_kernel::math::powf(2.0, steps)
+}
+
+/// Paint the channel network's own polylines onto `dst` as LINES (The
+/// Hachure, Stage 2) — the half of the water vocabulary
+/// [`glyph_and_color_for`] deliberately no longer carries.
+///
+/// **Rasterised, never sampled, and that distinction is the whole design.** A
+/// per-tile query ("is a channel within half a tile of this tile's centre?")
+/// was built and measured: it produced river SCATTER, because
+/// `ChannelNetwork::nearest_line` returns the nearest line of ANY size, so
+/// along a trunk the nearest line flips to a small tributary and back and the
+/// trunk breaks into dashes. No per-tile sample can guarantee connectivity —
+/// it is a property of the line, not of any point on it. Walking the polyline
+/// gives it by construction.
+///
+/// **Cost.** The whole planet's network is 11,202 segments, against 20,000
+/// nearest-line queries for a single 200x100 plate under the sampled design.
+/// This also scales the right way: sampling costs screen AREA and is flat at
+/// every rung, while rasterising costs river length IN VIEW and so gets
+/// cheaper as the reader zooms in.
+///
+/// **It rides the tile cache rather than composing per redraw.** The channel
+/// network is fixed at genesis and selection is a pure function of the rung,
+/// so a river has exactly the terrain layer's cache key and its
+/// never-invalidated lifetime (decision 0289). Drawing it inside
+/// [`draw_terrain_layer`] makes it free on redraw instead of merely cheap.
+fn rasterize_rivers(
+    dst: &mut Grid,
+    terrain: &GeneratedTerrain,
+    geo: &Geosphere,
+    f: &Frame,
+    win: &Window,
+    colour_allowed: bool,
+) {
+    let net = terrain.channels();
+    let (virtual_w, virtual_h) = virtual_dims(win.depth);
+    // The land denominator the threshold is a fraction OF. Counted here rather
+    // than taken as a constant so the threshold survives a mesh change.
+    let land = geo
+        .vertices()
+        .filter(|&v| !terrain.is_ocean(v))
+        .count()
+        .max(1) as f64;
+    let threshold = river_threshold(win.depth) * land;
+    let (w, h) = (i64::from(dst.width()), i64::from(dst.height()));
+
+    for (line, polyline) in net.polylines.iter().enumerate() {
+        // SELECTION: the line's own magnitude, as its largest upstream count.
+        let magnitude = net
+            .run_vertices
+            .get(line)
+            .map(|vs| {
+                vs.iter()
+                    .map(|&v| terrain.drainage_at(v))
+                    .fold(0.0f64, f64::max)
+            })
+            .unwrap_or(0.0);
+        if magnitude < threshold {
+            continue;
+        }
+
+        for pair in polyline.points.windows(2) {
+            let Some(a) = plate_position(f, win, virtual_w, virtual_h, pair[0]) else {
+                continue;
+            };
+            let Some(b) = plate_position(f, win, virtual_w, virtual_h, pair[1]) else {
+                continue;
+            };
+            // THE SEAM, ANCHORED ON THE WINDOW AND NOT ON THE FIRST
+            // ENDPOINT — and the difference is a bug the tile cache's own
+            // byte-identity test caught.
+            //
+            // `plate_position` wraps a column into `[0, virtual_w)` relative
+            // to the window's origin, so a point just LEFT of the window
+            // reads as nearly a whole chart to its right. Anchoring the
+            // segment on its first endpoint then dragged the second one
+            // across the planet: a segment entering a 32-wide tile from the
+            // left had `a` at 244 and `b` at 11, which read as a 233-column
+            // straddle, pushed `b` to 267, and the whole segment was rejected
+            // as off-tile. A full-plate draw at origin 0 never wraps, so it
+            // kept the river and the composed one lost it — cached `~`
+            // against uncached `\"` at rung 6.
+            //
+            // So bring each endpoint to its representative NEAREST THE
+            // WINDOW's own middle first, then close the segment on that.
+            let ax = near_window(a.0, virtual_w, w);
+            let bx0 = near_window(b.0, virtual_w, w);
+            let half = i64::from(virtual_w) / 2;
+            let mut bx = bx0;
+            if bx - ax > half {
+                bx -= i64::from(virtual_w);
+            } else if ax - bx > half {
+                bx += i64::from(virtual_w);
+            }
+            draw_segment(dst, (ax, a.1), (bx, b.1), w, h, colour_allowed);
+        }
+    }
+}
+
+/// A wrapped plate column brought to the representative nearest the plate's
+/// own middle — the fix for [`rasterize_rivers`]'s seam bug.
+///
+/// [`plate_position`] returns a column in `[0, virtual_w)`, which is the right
+/// answer for a point INSIDE the window and a misleading one for a point just
+/// outside it to the left: that reads as `virtual_w - k` rather than `-k`. On a
+/// full-width plate the distinction never arises; on a 32-wide cache tile it
+/// decides whether a segment is drawn at all.
+///
+/// Each loop runs at most once — the input is already reduced mod
+/// `virtual_w` — and both are expressed as loops rather than as one signed
+/// remainder so the intent survives a reader who has to check the boundary.
+fn near_window(dcol: i64, virtual_w: u32, plate_w: i64) -> i64 {
+    let vw = i64::from(virtual_w);
+    let half = vw / 2;
+    let mid = plate_w / 2;
+    let mut d = dcol;
+    while d - mid > half {
+        d -= vw;
+    }
+    while mid - d > half {
+        d += vw;
+    }
+    d
+}
+
+/// A point on the unit sphere, in PLATE coordinates (column, row), or `None`
+/// above the projection's polar clamp — where
+/// [`mercator::project`] has no chart row to offer and inventing one would
+/// fabricate ground (spec section 6's refusal).
+fn plate_position(
+    f: &Frame,
+    win: &Window,
+    virtual_w: u32,
+    virtual_h: u32,
+    p: [f64; 3],
+) -> Option<(i64, i64)> {
+    let lat = hornvale_kernel::math::asin(p[2].clamp(-1.0, 1.0)).to_degrees();
+    let lon = hornvale_kernel::math::atan2(p[1], p[0]).to_degrees();
+    let (row, col) = mercator::project(f, lat, lon, virtual_w, virtual_h)?;
+    let dcol = (i64::from(col) - i64::from(win.origin_col)).rem_euclid(i64::from(virtual_w));
+    Some((dcol, i64::from(row) - i64::from(win.origin_row)))
+}
+
+/// One segment, by integer DDA — deterministic by construction: no float
+/// comparison decides a tile, and the step count follows from the longer axis.
+///
+/// Clipped by SKIPPING out-of-bounds writes rather than by a parametric clip.
+/// The bound that makes that affordable is the early reject above it: a
+/// segment whose bounding box misses the plate is never stepped at all.
+fn draw_segment(
+    dst: &mut Grid,
+    a: (i64, i64),
+    b: (i64, i64),
+    w: i64,
+    h: i64,
+    colour_allowed: bool,
+) {
+    // EARLY REJECT: neither end near the plate, and the box between them
+    // missing it entirely. Without this a rung-13 segment spanning thousands
+    // of tiles would be stepped in full to draw none of them.
+    let (lo_x, hi_x) = (a.0.min(b.0), a.0.max(b.0));
+    let (lo_y, hi_y) = (a.1.min(b.1), a.1.max(b.1));
+    if hi_x < 0 || lo_x >= w || hi_y < 0 || lo_y >= h {
+        return;
+    }
+
+    let (dx, dy) = ((b.0 - a.0).abs(), (b.1 - a.1).abs());
+    let steps = dx.max(dy).max(1);
+    for i in 0..=steps {
+        // Integer interpolation: the numerator is the exact step index, so two
+        // runs cannot disagree about which tile a step lands on.
+        let x = a.0 + (b.0 - a.0) * i / steps;
+        let y = a.1 + (b.1 - a.1) * i / steps;
+        if x < 0 || y < 0 || x >= w || y >= h {
+            continue;
+        }
+        dst.set(
+            x as u16,
+            y as u16,
+            // The struct below is `hornvale_game_core`'s own frozen name for
+            // a chart SQUARE — an area, not a vertex — so it is counted in
+            // `docs/audits/lexicon-inventory.tsv` rather than waived on its
+            // own line. A per-line waiver cannot work here: `cargo fmt`
+            // moves a trailing comment onto the following line, and the
+            // waiver then silently stops applying. This comment avoids
+            // spelling the word for the same reason — the tokenizer counts
+            // comments too.
+            Cell {
+                glyph: Some(RIVER_GLYPH),
+                weight: Weight::Normal,
+                ink: Ink::resolve(Some(RIVER_COLOR), colour_allowed),
+                // Terrain, not chart: a river is the world's own fixed
+                // geometry, the same channel the relief underneath it came off.
+                source: Source::World,
+            },
+        );
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+// `index` and the caller-owned `memo` push this to 9 — mirrors `draw_with`'s own allow, one level down
 pub(crate) fn draw_terrain_layer(
     terrain: &GeneratedTerrain,
     geo: &Geosphere,
@@ -801,6 +1378,13 @@ pub(crate) fn draw_terrain_layer(
             );
         }
     }
+    // THE LINE LAYER, INSIDE THE CACHED TILE (The Hachure, Stage 2). It
+    // sits here and not in `draw_with`'s composition because a river has
+    // exactly this layer's cache key and its never-invalidated lifetime,
+    // so riding the tile cache makes it free on redraw rather than merely
+    // cheap. Drawn AFTER the relief loop, so a river paints over the
+    // ground it runs across.
+    rasterize_rivers(&mut grid, terrain, geo, f, win, colour_allowed);
     grid
 }
 
@@ -834,28 +1418,35 @@ fn tile_on_screen(
     Some((drow, dcol))
 }
 
-/// Where `vertex` lands on a `width`x`height` `dst`, or `None` if the
-/// projection puts it above the polar clamp or [`tile_on_screen`] puts it
+/// Where the coordinate `g` lands on a `width`x`height` `dst`, or `None` if
+/// the projection puts it above the polar clamp or [`tile_on_screen`] puts it
 /// off the window (above/left) or off the drawn plate (right/bottom).
 ///
 /// **Factored out at Task 7, not written twice.** [`draw_feature_layer`]'s
 /// own `place` closure needs this to decide where to paint; its
 /// viewport-relative settlement ranking (see that function's own doc) needs
 /// the SAME answer BEFORE any glyph is chosen, to know which settlements
-/// are even candidates for the comparison. Two copies of "is this vertex
+/// are even candidates for the comparison. Two copies of "is this thing
 /// on screen, and where" is exactly the shape Task 6's fix round 1 already
 /// paid down once for [`tile_on_screen`] itself (see that function's own
 /// doc on the mutation it cost).
+///
+/// **It took a bare [`Vertex`] until The Prospect's Task 8** and resolved it
+/// through `Geosphere::coord` itself. That made the vertex the only place a
+/// mark could be drawn, which is precisely the defect that task closed: a
+/// PLACED site (a cave, an exotic site) stands on a facet up to ~40
+/// walk-facet edges from its warranting vertex, so the position has to be
+/// the caller's — [`MapSite::coord`] — and this function's job is only the
+/// projection. A vertex-borne mark (a volcano's anchor, a waterfall) passes
+/// `geo.coord(vertex)` at the call site and reads exactly as it did.
 fn project_onto_screen(
-    geo: &Geosphere,
     f: &Frame,
     win: &Window,
     width: u32,
     height: u32,
-    vertex: Vertex,
+    g: GeoCoord,
 ) -> Option<(u32, u32)> {
     let (virtual_w, virtual_h) = virtual_dims(win.depth);
-    let g = geo.coord(vertex);
     let (plate_row, plate_col) =
         mercator::project(f, g.latitude, g.longitude, virtual_w, virtual_h)?;
     let (drow, dcol) = tile_on_screen(win, virtual_w, plate_row, plate_col)?;
@@ -865,9 +1456,29 @@ fn project_onto_screen(
     Some((drow, dcol))
 }
 
-/// LAYER TWO: every DISCOVERED point site, drawn onto `dst` by PROJECTING
+/// LAYER TWO: every placed point site, drawn onto `dst` by PROJECTING
 /// it, rather than by asking each screen cell whether its area-majority
 /// representative happens to be one.
+///
+/// **A cave, an exotic site or a settlement draws WHETHER OR NOT it has
+/// been discovered (The Prospect, Gate A ungating — Nathan's ruling:
+/// "show placed sites on the world map... just don't show their labels").**
+/// Before this, this layer drew nothing until the possession had entered the
+/// site, which is precisely why seed 42's map — 874 caves, 103 exotic sites,
+/// 389 settlement vertices — read as ~1% coverage of undifferentiated forest
+/// no matter how much of the world had actually been explored: the KIND a
+/// site is (its glyph) is drawn like any other terrain fact now, ground
+/// truth the same way a relief band or a river channel already is. What
+/// still gates on discovery is the site's own PROPER NAME, and that gate is
+/// a wholly separate surface this layer never touches: the cursor readout
+/// (`windows/worldgen::resolve_chain_at`, reached through
+/// `Driver::resolve_world_view`/`resolve_walk_band`) and the walk-band/
+/// chamber prose (`Session::describe_here`/`describe_chamber_here`) both
+/// name a site only once the possession has actually stood there, exactly as
+/// before — this layer carries no name at all, only a glyph and a colour, so
+/// there is nothing here for a name to leak through. A volcano is the ONE
+/// exception: see this function's own doc on the draw-precedence loop below
+/// for why it alone stays gated.
 ///
 /// **Why the direction matters.** The sampled scheme drew a site only when
 /// its exact vertex won the majority vote for some character. Measured on seed
@@ -907,9 +1518,14 @@ fn project_onto_screen(
 /// bound of another become plausible. Deriving the bound removes the
 /// disagreement rather than asserting its absence.
 ///
-/// **Undiscovered sites are never drawn**, so §A7's "nothing is drawn and
-/// then hidden" still holds by construction — an undiscovered site is not
-/// suppressed here, it is never reached.
+/// **§A7's "nothing is drawn and then hidden" still holds by construction,
+/// restated for the ungated world.** Before The Prospect's Gate A change,
+/// this was "an undiscovered site is never drawn"; now a cave, exotic site
+/// or settlement is drawn regardless of discovery, so the property §A7 pins
+/// is narrower but not gone — it is what still stops a VOLCANO'S glyph from
+/// ever being painted and then cleared: an undiscovered volcano is not
+/// suppressed here, it is never reached (see the draw-precedence note
+/// below for why a volcano alone keeps this gate).
 ///
 /// **Draw precedence, low to high (a later kind wins a shared cell), and
 /// where it comes from (Task 7 pre-dispatch ruling AA):**
@@ -933,25 +1549,41 @@ fn project_onto_screen(
 /// so this order is a documented tie-break for the case, not a
 /// load-bearing gameplay rule.
 ///
-/// **Volcanoes are discovery-gated; a waterfall is not, and that split is
-/// deliberate, not an oversight.** A volcano is an EXTENT feature in
-/// `hornvale_terrain::landscape` — `FeatureClass::Volcano`, already
-/// wrapped as [`crate::discovery::FeatureId::Extent`] — so the SAME
+/// **Volcanoes are discovery-gated; nothing else this layer draws is, and
+/// that split is deliberate, not an oversight.** A volcano is an EXTENT
+/// feature in `hornvale_terrain::landscape` — `FeatureClass::Volcano`,
+/// already wrapped as [`crate::discovery::FeatureId::Extent`] — so the SAME
 /// discovery mechanism that already fires when a possession walks onto
 /// any vertex of any landscape feature's extent
 /// (`Driver::update_discovery`'s `for id in self.index.at(vertex)` loop,
 /// already shipped, untouched by this task) already records a volcano the
 /// instant its slopes are walked. This layer only had to start reading
-/// that existing fact to draw it. A waterfall is a bare `Vertex`
-/// `GeneratedTerrain` reports (`waterfalls()`) — the landscape feature
-/// system does not carry an identity for it, and the task's own interface
-/// note forbids minting a new feature enum to give it one. Rather than
-/// invent that identity, it draws as GROUND TRUTH, unconditionally — the
-/// same epistemic status the relief and water ladders already have (a
-/// river or a mountain range is never gated on "has this been
-/// discovered", so a knickpoint on that same channel is not either). This
-/// is a judgement call flagged for review, not a claim that the design
-/// space has only one right answer here.
+/// that existing fact to draw it.
+///
+/// **Why a volcano alone stays gated — Decision 0670, correcting this
+/// paragraph's own earlier rationale.** An earlier version of this comment
+/// argued ungating a volcano "would mean drawing an edifice the terrain has
+/// no other way of saying is there at all" — a non-sequitur review caught:
+/// under The Prospect's own intent (break up an undifferentiated map), that
+/// argument supports UNgating a volcano, not keeping it gated, since it is
+/// the single most map-breaking-up feature this layer draws. The real
+/// reason is structural, not epistemic: a volcano's `FeatureId` flows
+/// through `windows/worldgen::resolve_chain_at` (Gate B, the cursor
+/// readout), coupling its drawn-ness to its readout — ungating it would
+/// reach a discovery mechanism that predates this campaign and that
+/// Decision 0670 deliberately does not touch. A cave, exotic site or
+/// settlement has no such coupling: each has its own independent
+/// [`MapSite`] roster entry, absent from the feature index entirely, so
+/// ungating its glyph cannot move what the cursor readout says. A waterfall
+/// is a bare `Vertex` `GeneratedTerrain` reports (`waterfalls()`) — the
+/// landscape feature system does not carry an identity for it, and the
+/// task's own interface note forbids minting a new feature enum to give it
+/// one. Rather than invent that identity, it draws as GROUND TRUTH,
+/// unconditionally — the same epistemic status the relief and water
+/// ladders already have (a river or a mountain range is never gated on
+/// "has this been discovered", so a knickpoint on that same channel is not
+/// either), and, since The Prospect, the same status a cave, exotic site or
+/// settlement's KIND now has too.
 ///
 /// **`pub` rather than `pub(crate)` for the same reason
 /// [`terrain_at_tile`] is** (Task 3): `examples/rung_bench.rs` is a separate
@@ -966,8 +1598,7 @@ pub fn draw_feature_layer(
     f: &Frame,
     win: &Window,
     colour_allowed: bool,
-    settlements: &BTreeMap<Vertex, u64>,
-    caves: &BTreeSet<Vertex>,
+    sites: &[MapSite],
     volcanoes: &BTreeSet<Vertex>,
     waterfalls: &[Vertex],
     discovered: &Discovered,
@@ -977,17 +1608,21 @@ pub fn draw_feature_layer(
 
     // Task 7: which settlements draw MAJOR ([`SETTLEMENT_MAJOR_GLYPH`])
     // rather than minor. The ranking is VIEWPORT-RELATIVE — only
-    // settlements that would actually be drawn HERE (discovered AND
-    // on-screen) enter the comparison set — so a town can flip between
-    // the two glyphs as the reader pans. Known and accepted (task brief):
-    // "what is notable here" changes with what "here" is. Computed once,
-    // before any glyph is chosen, so drawing itself never influences the
-    // ranking it depends on.
-    let mut in_frame: Vec<(Vertex, u64)> = settlements
+    // settlements that would actually be drawn HERE (on-screen) enter the
+    // comparison set — so a town can flip between the two glyphs as the
+    // reader pans. Known and accepted (task brief): "what is notable here"
+    // changes with what "here" is. Computed once, before any glyph is
+    // chosen, so drawing itself never influences the ranking it depends on.
+    //
+    // **No longer filtered on `discovered` (The Prospect, Gate A ungating).**
+    // A settlement now draws whether or not it has been discovered — see
+    // this function's own doc — so "would actually be drawn HERE" no longer
+    // has a discovery clause either; the only question left is on-screen.
+    let mut in_frame: Vec<(Vertex, u64)> = sites
         .iter()
-        .filter(|&(&vertex, _)| discovered.contains(FeatureId::Settlement(vertex)))
-        .filter(|&(&vertex, _)| project_onto_screen(geo, f, win, width, height, vertex).is_some())
-        .map(|(&vertex, &population)| (vertex, population))
+        .filter(|site| site.kind == SiteKind::Settlement)
+        .filter(|site| project_onto_screen(f, win, width, height, site.coord(geo)).is_some())
+        .map(|site| (site.vertex, site.population))
         .collect();
     // Population descending, ties broken by vertex ascending — total and
     // deterministic (no `total_cmp` needed: population is an integer
@@ -1000,17 +1635,23 @@ pub fn draw_feature_layer(
         .map(|&(vertex, _)| vertex)
         .collect();
 
-    // `gate`: `None` draws unconditionally (ground truth — waterfalls);
-    // `Some(id)` draws only when `discovered` already carries `id` (a
-    // point site or an extent feature — caves, settlements, volcanoes).
+    // `gate`: `None` draws unconditionally — ground truth (waterfalls), and,
+    // since The Prospect's Gate A ungating, every placed [`SiteKind`] too
+    // (a cave, an exotic site, a settlement — see this function's own doc);
+    // `Some(id)` draws only when `discovered` already carries `id`. The only
+    // caller left passing `Some` is the volcano loop below: a volcano is
+    // also individuated as a `FeatureClass::Volcano` extent feature, so it
+    // stays gated on the SAME discovery fact `Driver::update_discovery`
+    // already records for any landscape feature, independent of this
+    // ungating.
     let place =
-        |vertex: Vertex, gate: Option<FeatureId>, glyph: char, color: [u8; 3], grid: &mut Grid| {
+        |at: GeoCoord, gate: Option<FeatureId>, glyph: char, color: [u8; 3], grid: &mut Grid| {
             if let Some(id) = gate
                 && !discovered.contains(id)
             {
                 return;
             }
-            let Some((drow, dcol)) = project_onto_screen(geo, f, win, width, height, vertex) else {
+            let Some((drow, dcol)) = project_onto_screen(f, win, width, height, at) else {
                 return;
             };
             grid.set(
@@ -1026,37 +1667,55 @@ pub fn draw_feature_layer(
         };
 
     for &vertex in waterfalls {
-        place(vertex, None, WATERFALL_GLYPH, WATERFALL_COLOR, dst);
+        place(
+            geo.coord(vertex),
+            None,
+            WATERFALL_GLYPH,
+            WATERFALL_COLOR,
+            dst,
+        );
     }
     for &vertex in volcanoes {
         let id = FeatureId::Extent(LandscapeFeatureId {
             class: FeatureClass::Volcano,
             vertex,
         });
-        place(vertex, Some(id), VOLCANO_GLYPH, VOLCANO_COLOR, dst);
-    }
-    for &vertex in caves {
         place(
-            vertex,
-            Some(FeatureId::Cave(vertex)),
-            CAVE_GLYPH,
-            CAVE_COLOR,
+            geo.coord(vertex),
+            Some(id),
+            VOLCANO_GLYPH,
+            VOLCANO_COLOR,
             dst,
         );
     }
-    for &vertex in settlements.keys() {
-        let glyph = if major.contains(&vertex) {
-            SETTLEMENT_MAJOR_GLYPH
-        } else {
-            SETTLEMENT_MINOR_GLYPH
+    // `sites` arrives in ascending `MapSite::salience` order (`sites_of`), so
+    // this single loop reproduces the cave-then-settlement precedence the
+    // two loops it replaces stated by their own sequence, and slots the new
+    // exotic kind between them — without this module holding a second
+    // statement of an order `hornvale_vessel::site::Site::salience` already
+    // owns. A roster assembled by hand in another order draws in THAT
+    // order; `sites_of` is the sanctioned builder.
+    for site in sites {
+        let (glyph, color) = match site.kind {
+            SiteKind::Cave => (CAVE_GLYPH, CAVE_COLOR),
+            SiteKind::Exotic => (EXOTIC_GLYPH, EXOTIC_COLOR),
+            SiteKind::Settlement => (
+                if major.contains(&site.vertex) {
+                    SETTLEMENT_MAJOR_GLYPH
+                } else {
+                    SETTLEMENT_MINOR_GLYPH
+                },
+                SETTLEMENT_COLOR,
+            ),
         };
-        place(
-            vertex,
-            Some(FeatureId::Settlement(vertex)),
-            glyph,
-            SETTLEMENT_COLOR,
-            dst,
-        );
+        // `None`, not `Some(site.feature_id())` (The Prospect, Gate A
+        // ungating): a placed site's KIND is drawn whether or not it has
+        // been discovered — see this function's own doc. `feature_id()` is
+        // still what `Driver::update_discovery`/`sites_standing_in` record
+        // discovery AGAINST (Gate B, the cursor readout and the walk-band
+        // prose's own naming, both untouched by this change); it is simply
+        // no longer what gates the glyph.
+        place(site.coord(geo), None, glyph, color, dst);
     }
 }
 
@@ -1377,7 +2036,13 @@ pub(crate) fn perception_tile(
 /// one The Portolan's fix round 1, Finding 2 bought with a 49-point vote —
 /// the strip must never name a land feature on a character drawn `~` — and
 /// it survives the vote's removal.
-#[derive(Debug, Clone, PartialEq, Eq)]
+// `Eq` is deliberately absent since The Hachure's Stage 1 added
+// `height_asl`: a float-backed reading has no total equality, and deriving
+// one would be a lie about a quantity read off a blend. Nothing consumes
+// `TileTerrain` through a `BTreeSet`/`BTreeMap` — the struct is produced by
+// `terrain_at_tile` and read field-by-field — so `PartialEq` is the whole
+// requirement.
+#[derive(Debug, Clone, PartialEq)]
 pub struct TileTerrain {
     /// Whether the tile is painted ocean. RETAINED alongside
     /// [`Self::water`] rather than derived from it at every call site — the
@@ -1405,6 +2070,20 @@ pub struct TileTerrain {
     /// carried at its own width rather than cast to match [`Self::water`].
     /// type-audit: bare-ok(index)
     pub band: u32,
+    /// The tile's own height above sea level — the CONTINUOUS reading
+    /// [`Self::band`] is a lossy quantization of.
+    ///
+    /// **Why this is carried and not left to the band.** Measured on a
+    /// 120x40 plate at [`BAND_B_RUNG`] over eight inland locations, seed 42:
+    /// the plate addresses 1-4 distinct grid vertices and draws 1-2 distinct
+    /// relief bands, while this field takes **612 to 3,860 distinct values**.
+    /// The relief ladder's rungs are hundreds of metres wide
+    /// (`hornvale_scene::relief_band`: 0, 300, 1000, 2500 m), so within one
+    /// ~110 km sample a real height ramp almost never crosses one. A
+    /// consumer that wants sub-sample relief — a colour ramp inside a band,
+    /// a contour, a slope — has to read this; the band cannot tell it apart
+    /// from flat ground.
+    pub height_asl: hornvale_kernel::SeaLevelHeight,
     /// [`Self::vertex`]'s water class — `terrain.water_kind_at(vertex)
     /// .index()` against `hornvale_terrain::WaterKind::LEGEND`, the
     /// canonical pair `region.rs` itself uses (no second classifier is
@@ -1535,13 +2214,48 @@ pub fn terrain_at_tile(
         }
     }
 
-    let band = hornvale_scene::relief_band(terrain.elevation_at(vertex).above(terrain.sea_level()));
+    // THE HEIGHT IS READ BETWEEN THE SAMPLES, NOT SNAPPED TO ONE (The
+    // Hachure, Stage 1) — the same integer-weighted bilinear blend
+    // `windows/locale` already uses for its continuous fields
+    // (`describe_with_weights`), at the TILE's own facet depth rather than at
+    // the grid-level ancestor.
+    //
+    // **Legal because elevation is ORDINAL** (decision 0121): an ordinal
+    // field may band a blend, since a blend moves such a value at most one
+    // band and conserves the distribution's shape. The NOMINAL fields below
+    // — `water`, `ocean` — still partition on `vertex`, which is the same
+    // ruling's other half and the reason the −29%-fresh-water revert it
+    // records cannot recur here.
+    //
+    // **The weights are exact integers** (`Facet::corner_weights`), so this
+    // adds no transcendental and no platform-libm exposure, and full
+    // precision is correct in a compute path (decision 0033 quantizes at
+    // emit only).
+    //
+    // `corner_weights` returns `None` only for a facet ABOVE the grid, which
+    // `virtual_dims` deliberately still honours; there the snapped reading is
+    // the only one available and is the right answer, since the tile is
+    // coarser than the sample.
+    let height_asl = match facet.corner_weights(geo, index) {
+        Some(weights) => {
+            let denom: u64 = weights.iter().map(|&(_, w)| w).sum();
+            let blended: f64 = weights
+                .iter()
+                .map(|&(c, w)| w as f64 * terrain.elevation_at(c).get())
+                .sum::<f64>()
+                / denom as f64;
+            hornvale_kernel::SeaLevelHeight::from_metres(blended - terrain.sea_level().get())
+        }
+        None => terrain.elevation_at(vertex).above(terrain.sea_level()),
+    };
+    let band = hornvale_scene::relief_band(height_asl);
     let water = terrain.water_kind_at(vertex).index();
 
     TileTerrain {
         ocean: terrain.is_ocean(vertex),
         facet,
         vertex,
+        height_asl,
         band,
         water,
     }
@@ -1552,6 +2266,36 @@ mod tests {
     use super::*;
     use hornvale_kernel::Seed;
     use hornvale_terrain::TerrainPins;
+
+    /// A settlement roster entry at `vertex`. Settlements carry no placed
+    /// facet ([`MapSite::placed`]'s own doc), so this is the whole entry.
+    fn settlement(vertex: Vertex, population: u64) -> MapSite {
+        MapSite {
+            kind: SiteKind::Settlement,
+            vertex,
+            placed: None,
+            population,
+        }
+    }
+
+    /// A roster entry of `kind` drawn AT `vertex` — `placed: None`, so
+    /// [`MapSite::coord`] falls back to the vertex's own coordinate.
+    ///
+    /// **This is not a lie about the world, it is a hand-built roster.** A
+    /// test that centres a window on a vertex and asserts a glyph lands
+    /// there is checking the DRAW, not the placement; giving it a real
+    /// `site_facet_for` address would move the mark up to ~40 walk-facet
+    /// edges away and make the test about two mechanisms at once. The tests
+    /// that are about the placement go through [`sites_of`] instead, and
+    /// they are the ones that assert on `placed`.
+    fn site_at_vertex(kind: SiteKind, vertex: Vertex) -> MapSite {
+        MapSite {
+            kind,
+            vertex,
+            placed: None,
+            population: 0,
+        }
+    }
 
     /// The bound clause 1 of [`mesh_addressing_agrees_with_the_spatial_search`]
     /// asserts: how many grid spacings farther from a tile's own centre the
@@ -1758,6 +2502,613 @@ mod tests {
         )
     }
 
+    // -- The Prospect, Task 8: the roster is over SITES ------------------
+
+    /// **The map draws a placed site where it STANDS, not where it is
+    /// warranted.** This is the map's half of the campaign's "every readout
+    /// agrees on the placed facet" — the prose half is
+    /// `hornvale_locale`'s `strange_site_rows`, and
+    /// `windows/locale/tests/suite/site_address_agreement.rs` holds it.
+    ///
+    /// Two draws, one roster entry:
+    ///
+    /// - a window centred on the site's PLACED facet draws the glyph in its
+    ///   own centre character;
+    /// - a window centred on the site's WARRANTING VERTEX does not.
+    ///
+    /// The second arm is the one that discriminates: it is exactly what the
+    /// old code drew, so a revert reddens it while the first arm goes green
+    /// for the wrong reason. Verified by mutation, not by inspection — see
+    /// this campaign's Task 8 report.
+    #[test]
+    fn a_placed_site_draws_at_its_facet_and_not_at_its_vertex() {
+        let (terrain, geo) = test_world();
+        let index = NearestVertexIndex::new(&geo);
+        let f = mercator::frame_for(false);
+        let (w, h) = (32u16, 16u16);
+        let (vw, vh) = virtual_dims(BAND_B_RUNG);
+
+        // The first cave whose two candidate positions land on DIFFERENT
+        // chart tiles and are both inside the polar clamp. They differ for
+        // every site on seed 42 at this rung (a mean 18.8 walk-facet edges
+        // apart), but the search is written as a search rather than asserted
+        // of the first vertex, because "the two projections differ" is the
+        // premise this whole test rests on and a silent coincidence would
+        // make it vacuous.
+        let found = terrain.cave_site_vertices().into_iter().find_map(|vertex| {
+            let placed = site_facet_for(vertex, SiteReason::Cave, Seed(42), &geo, BAND_B_RUNG);
+            let pc = placed.coord();
+            let vc = geo.coord(vertex);
+            let at_placed = crate::mercator::project(&f, pc.latitude, pc.longitude, vw, vh)?;
+            let at_vertex = crate::mercator::project(&f, vc.latitude, vc.longitude, vw, vh)?;
+            (at_placed != at_vertex).then_some((vertex, placed, at_placed, at_vertex))
+        });
+        let (vertex, placed, (prow, pcol), (vrow, vcol)) =
+            found.expect("seed 42 must hold a cave whose placed facet is a different chart tile");
+
+        let sites = vec![MapSite {
+            kind: SiteKind::Cave,
+            vertex,
+            placed: Some(placed),
+            population: 0,
+        }];
+        let mut discovered = Discovered::default();
+        discovered.record(sites[0].feature_id());
+
+        let (win_placed, px, py) = window_showing(BAND_B_RUNG, prow, pcol, w, h);
+        let on_placed = draw_with(
+            &terrain,
+            &geo,
+            &index,
+            &f,
+            &win_placed,
+            w,
+            h,
+            false,
+            &sites,
+            &BTreeSet::new(),
+            &[],
+            &discovered,
+        );
+        assert_eq!(
+            on_placed.get(px, py).and_then(|c| c.glyph),
+            Some(CAVE_GLYPH),
+            "the cave was not drawn on the facet it stands on"
+        );
+
+        let (win_vertex, vx, vy) = window_showing(BAND_B_RUNG, vrow, vcol, w, h);
+        let on_vertex = draw_with(
+            &terrain,
+            &geo,
+            &index,
+            &f,
+            &win_vertex,
+            w,
+            h,
+            false,
+            &sites,
+            &BTreeSet::new(),
+            &[],
+            &discovered,
+        );
+        assert_ne!(
+            on_vertex.get(vx, vy).and_then(|c| c.glyph),
+            Some(CAVE_GLYPH),
+            "the cave was drawn on its warranting vertex — the ~19 km lie this \
+             task exists to remove"
+        );
+    }
+
+    /// **A room holding a placed site yields that site's identity; the
+    /// site's own VERTEX yields nothing.** [`sites_standing_in`] is the rule
+    /// `Driver::discover_placed_sites_at` records from, so the second arm is
+    /// the structural form of §A4b's refusal to infer knowledge from sharing
+    /// a 110-132 km vertex — the facet the vertex itself sits in is not the
+    /// facet the site stands on, and only the latter is an encounter.
+    #[test]
+    fn standing_in_a_placed_sites_room_finds_it_and_its_vertexs_room_does_not() {
+        let (terrain, geo) = test_world();
+        let vertex = terrain
+            .cave_site_vertices()
+            .into_iter()
+            .next()
+            .expect("seed 42 holds caves");
+        let placed = site_facet_for(vertex, SiteReason::Cave, Seed(42), &geo, BAND_B_RUNG);
+        let vertexs_own_room = Facet::containing(geo.position(vertex), BAND_B_RUNG);
+        assert_ne!(
+            placed, vertexs_own_room,
+            "guard: the draw must have moved the site off its vertex, or the \
+             second assertion below cannot discriminate"
+        );
+
+        let sites = vec![
+            MapSite {
+                kind: SiteKind::Cave,
+                vertex,
+                placed: Some(placed.clone()),
+                population: 0,
+            },
+            // A settlement at the same vertex, which must never be returned:
+            // it carries no placed address at all.
+            settlement(vertex, 1),
+        ];
+
+        assert_eq!(
+            sites_standing_in(&sites, &placed),
+            vec![FeatureId::Cave(vertex)],
+            "standing in the site's own room must find exactly it"
+        );
+        assert!(
+            sites_standing_in(&sites, &vertexs_own_room).is_empty(),
+            "sharing a vertex with a site must disclose nothing"
+        );
+    }
+
+    /// **[`sites_of`] hands back one roster over every kind, in ascending
+    /// [`MapSite::salience`], and only a PLACED kind carries a facet.**
+    ///
+    /// The order is what [`draw_feature_layer`]'s single loop relies on for
+    /// precedence, and `salience` is `hornvale_vessel`'s — so this pins the
+    /// contract between the builder and the drawer without restating the
+    /// ordering itself.
+    ///
+    /// `World::new` carries no ledger, so there are no settlements here and
+    /// the settlement arm is covered by `driver.rs`'s own roster test
+    /// against a real seed-42 world.
+    #[test]
+    fn sites_of_orders_by_salience_and_places_only_placed_kinds() {
+        let (terrain, geo) = test_world();
+        let index = NearestVertexIndex::new(&geo);
+        let world = World::new(Seed(42));
+        let caves = terrain.cave_site_vertices();
+        // Stand-in exotic vertices: the real roster comes from
+        // `hornvale_locale`'s budget, which this module never sees, and the
+        // property under test is the roster's SHAPE, not which vertices
+        // warrant a site.
+        let exotics = [Vertex(307), Vertex(668), Vertex(730)];
+        let sites = sites_of(&world, &geo, &index, &caves, &exotics, BAND_B_RUNG);
+
+        assert_eq!(
+            sites.len(),
+            caves.len() + exotics.len(),
+            "the roster must hold every site it was handed and nothing else"
+        );
+        assert!(
+            sites.windows(2).all(|p| p[0].salience() <= p[1].salience()),
+            "the roster must arrive in ascending salience — draw precedence \
+             depends on it"
+        );
+        for site in &sites {
+            assert!(
+                site.placed.is_some(),
+                "a placed kind ({:?}) must carry the facet it stands on",
+                site.kind
+            );
+            assert_ne!(
+                site.coord(&geo),
+                geo.coord(site.vertex),
+                "a placed site's drawn position must not be its vertex's"
+            );
+        }
+    }
+
+    /// BELOW THE GRID THE PLATE CARRIES A CONTINUOUS HEIGHT, not one
+    /// snapped reading repeated (The Hachure, Stage 1).
+    ///
+    /// # WHAT THIS ASSERTS, AND WHY NOT THE OBVIOUS THING
+    ///
+    /// It asserts on [`TileTerrain::height_asl`], not on
+    /// [`TileTerrain::band`], and the reason is a measurement rather than a
+    /// preference. On a 120x40 plate at [`BAND_B_RUNG`] over eight inland
+    /// locations, seed 42:
+    ///
+    /// | | snapped | blended |
+    /// |---|---|---|
+    /// | distinct grid vertices | 1-4 | — |
+    /// | distinct relief bands | 1-2 | **1-2** |
+    /// | distinct heights | 1-4 | **612-3,860** |
+    ///
+    /// **Blending buys no extra BANDS at this rung**, because the relief
+    /// ladder's rungs are hundreds of metres wide and a real height ramp
+    /// inside one ~110 km sample rarely crosses one. Four earlier drafts of
+    /// this test asserted about bands in four different ways and every one
+    /// PASSED against the unsnapped code — the last of them because a single
+    /// icosphere vertex can dominate a whole cube facet, the two lattices
+    /// being incommensurate. The height is where the refinement is
+    /// observable, so the height is what is pinned.
+    ///
+    /// The ceiling `<= 8` on distinct vertices is the non-vacuity arm: it
+    /// states that this window genuinely spans well under a sample, so
+    /// "hundreds of distinct heights" is a claim about interpolation and not
+    /// about a window that happens to cover a lot of ground.
+    #[test]
+    fn a_plate_below_the_grid_carries_a_continuous_height() {
+        let (terrain, geo) = test_world();
+        let index = NearestVertexIndex::new(&geo);
+        let mut memo = RoomMeshMemo::default();
+        let f = mercator::frame_for(false);
+        let depth = BAND_B_RUNG;
+        let (vw, vh) = virtual_dims(depth);
+
+        // Inland dry land: a coastline would vary for the wrong reason.
+        let land =
+            geo.vertices()
+                .find(|&v| {
+                    terrain.water_kind_at(v) == hornvale_terrain::WaterKind::DryLand
+                        && geo.neighbors(v).iter().all(|&n| {
+                            terrain.water_kind_at(n) == hornvale_terrain::WaterKind::DryLand
+                        })
+                })
+                .expect("seed 42 has inland dry land");
+        let p = geo.position(land);
+        let (lat, lon) = (
+            hornvale_kernel::math::asin(p[2]).to_degrees(),
+            hornvale_kernel::math::atan2(p[1], p[0]).to_degrees(),
+        );
+        let (crow, ccol) = mercator::project(&f, lat, lon, vw, vh).expect("in frame");
+        let (w, h) = (120u16, 40u16);
+        let (win, _, _) = window_showing(depth, crow, ccol, w, h);
+
+        let mut vertices: BTreeSet<Vertex> = BTreeSet::new();
+        let mut heights: BTreeSet<i64> = BTreeSet::new();
+        for row in 0..u32::from(h) {
+            for col in 0..u32::from(w) {
+                let t = terrain_at_tile(
+                    &terrain, &geo, &index, &mut memo, &f, &win, vw, vh, row, col,
+                );
+                vertices.insert(t.vertex);
+                // Decimetres: finer than any relief band, coarser than the
+                // float noise a blend's last bits carry.
+                heights.insert((t.height_asl.get() * 10.0).round() as i64);
+            }
+        }
+
+        assert!(
+            vertices.len() <= 8,
+            "NON-VACUITY: this window spans {} grid vertices, so it is not \
+             testing sub-sample interpolation at all",
+            vertices.len()
+        );
+        assert!(
+            heights.len() >= 100,
+            "a {w}x{h} plate at rung {depth} carries only {} distinct heights \
+             across {} grid vertex/vertices — the height is being snapped to \
+             the nearest sample and repeated, not read between samples",
+            heights.len(),
+            vertices.len()
+        );
+    }
+
+    /// CONSERVATION: every blended reading lies inside the convex hull of
+    /// its own samples, and no nominal field moves at all (The Hachure,
+    /// Stage 1).
+    ///
+    /// **Decision 0124 is why this exists**, and it earned its keep on the
+    /// first run. 0124 records a refinement whose two local hypotheses both
+    /// PASSED while the mechanism was illegal, because the violated property
+    /// was global and no local hypothesis asks about one.
+    ///
+    /// # THE FIRST FORM OF THIS TEST ASSERTED THE WRONG BOUND, AND FAILED
+    ///
+    /// It asserted decision 0121's own phrasing — "a blend moves a value at
+    /// most one band" — as a bound on `blend` against `snap`, and measured a
+    /// move of **2** at row 60, col 9. That is not a defect in the blend; it
+    /// is the wrong reading of 0121. At [`GLOBE_RUNG`] a tile IS its facet, so
+    /// [`Facet::corner_weights`] is the exact four-way tie and the blend is
+    /// the plain mean of four corners. A mean of four values can sit two
+    /// bands from the NEAREST of them whenever those four span three bands —
+    /// over mountains, they do.
+    ///
+    /// **0121's ruling is untouched**: ordinal fields may band a blend,
+    /// nominal fields must partition. What does not survive is using its
+    /// one-band phrase as a blend-versus-snap bound, because the two are not
+    /// the comparison it was describing.
+    ///
+    /// The bound that IS provable, and is the one conservation actually
+    /// needs: interpolation never leaves the convex hull of its inputs, and
+    /// [`hornvale_scene::relief_band`] is monotone in height, so
+    /// `band(blend)` lies between the least and greatest band of the tile's
+    /// own corner samples. That is "coarse constrains fine" stated exactly —
+    /// a refined reading can never assert relief its own samples do not
+    /// bracket.
+    #[test]
+    fn every_blended_reading_stays_inside_its_own_samples() {
+        let (terrain, geo) = test_world();
+        let index = NearestVertexIndex::new(&geo);
+        let mut memo = RoomMeshMemo::default();
+        let f = mercator::frame_for(false);
+
+        // Both ends of the ladder: the coarsest rung, where a tile IS a facet
+        // and the stencil is the four-way tie, and band B, where the weights
+        // are lopsided. The two exercise different arithmetic.
+        for depth in [GLOBE_RUNG, BAND_B_RUNG] {
+            let (vw, vh) = virtual_dims(depth);
+            let win = Window {
+                depth,
+                origin_col: vw / 3,
+                origin_row: vh / 3,
+            };
+            let (mut compared, mut moved) = (0u32, 0u32);
+            for row in (0..60).step_by(3) {
+                for col in (0..60).step_by(3) {
+                    let t = terrain_at_tile(
+                        &terrain, &geo, &index, &mut memo, &f, &win, vw, vh, row, col,
+                    );
+                    let facet = Facet::containing(
+                        {
+                            let (lat, lon) = mercator::unproject(
+                                &f,
+                                win.origin_row + row,
+                                win.origin_col + col,
+                                vw,
+                                vh,
+                            );
+                            hornvale_kernel::math::unit_sphere_from_lat_lon(lat, lon)
+                        },
+                        depth,
+                    );
+                    let Some(weights) = facet.corner_weights(&geo, &index) else {
+                        continue;
+                    };
+                    let bands: Vec<u32> = weights
+                        .iter()
+                        .map(|&(c, _)| {
+                            hornvale_scene::relief_band(
+                                terrain.elevation_at(c).above(terrain.sea_level()),
+                            )
+                        })
+                        .collect();
+                    let (lo, hi) = (
+                        bands.iter().copied().min().expect("four corners"),
+                        bands.iter().copied().max().expect("four corners"),
+                    );
+                    assert!(
+                        t.band >= lo && t.band <= hi,
+                        "rung {depth}, row {row}, col {col}: the blended band {} is \
+                         outside its own samples' range {lo}..={hi} — a refined \
+                         reading has asserted relief its samples do not bracket",
+                        t.band
+                    );
+
+                    // The NOMINAL half of 0121, which this stage does not touch.
+                    // Asserted anyway: re-deriving either of these from the
+                    // blend is a one-line edit away, and is the -29%-fresh-water
+                    // revert 0121 records.
+                    assert_eq!(
+                        t.water,
+                        terrain.water_kind_at(t.vertex).index(),
+                        "rung {depth}, row {row}, col {col}: water is no longer the \
+                         dominant vertex's own"
+                    );
+                    assert_eq!(
+                        t.ocean,
+                        terrain.is_ocean(t.vertex),
+                        "rung {depth}, row {row}, col {col}: the ocean flag is no \
+                         longer the dominant vertex's own"
+                    );
+
+                    // NON-VACUITY is counted on the HEIGHT, not the band, and
+                    // the first form of this arm counted the band and failed at
+                    // rung 13 with 0 of 400 moved. That is the stage's own
+                    // measured finding: below the grid the blend changes the
+                    // height on nearly every tile and the BAND on none, because
+                    // the relief ladder's rungs are hundreds of metres wide. A
+                    // band-counting arm is therefore vacuous at exactly the rung
+                    // this stage was written for.
+                    let snapped_h = terrain.elevation_at(t.vertex).above(terrain.sea_level());
+                    if (t.height_asl.get() - snapped_h.get()).abs() > 0.1 {
+                        moved += 1;
+                    }
+                    compared += 1;
+                }
+            }
+            // NON-VACUITY: the blend must actually differ from the snap
+            // somewhere at this rung, or the hull bound is a claim about a
+            // no-op.
+            assert!(
+                moved > 0,
+                "at rung {depth} the blend matched the snapped HEIGHT on all \
+                 {compared} sampled tiles, so the bound above proves nothing"
+            );
+            eprintln!(
+                "rung {depth}: blended height differs from snapped on {moved} of \
+                 {compared} tiles"
+            );
+        }
+    }
+
+    /// A DRAWN RIVER HAS NO INTERIOR (The Hachure, Stage 2).
+    ///
+    /// The discriminating property between a line and a slab, and it needs no
+    /// baseline to compare against: a rasterized line is at most a couple of
+    /// tiles wide, so no river tile can have all eight of its neighbours also
+    /// river. A slab has an interior by definition.
+    ///
+    /// Today `water == River` is a per-VERTEX label painted across that
+    /// vertex's whole footprint, so below the grid it fills the screen — 4,800
+    /// of 4,800 tiles measured at band B. That is the reported defect ("water
+    /// drawn on land tiles") and it is what this test refuses.
+    ///
+    /// Non-vacuity is the second assertion: the window must contain river at
+    /// all, or "no river tile has an interior" is a claim about the empty set.
+    #[test]
+    fn a_drawn_river_has_no_interior() {
+        let (terrain, geo) = test_world();
+        let index = NearestVertexIndex::new(&geo);
+        let mut memo = RoomMeshMemo::default();
+        let f = mercator::frame_for(false);
+        let depth = BAND_B_RUNG;
+        let (vw, vh) = virtual_dims(depth);
+
+        // Centre on the midpoint of the world's largest river, so there is a
+        // river in frame by construction rather than by luck.
+        let net = terrain.channels();
+        let big = (0..net.polylines.len())
+            .max_by_key(|&i| {
+                net.run_vertices[i]
+                    .iter()
+                    .map(|&v| terrain.drainage_at(v) as u64)
+                    .max()
+                    .unwrap_or(0)
+            })
+            .expect("seed 42 has a channel network");
+        let pts = &net.polylines[big].points;
+        let mid = pts[pts.len() / 2];
+        let (lat, lon) = (
+            hornvale_kernel::math::asin(mid[2]).to_degrees(),
+            hornvale_kernel::math::atan2(mid[1], mid[0]).to_degrees(),
+        );
+        let (crow, ccol) = mercator::project(&f, lat, lon, vw, vh).expect("in frame");
+        let (w, h) = (60u16, 30u16);
+        let (win, _, _) = window_showing(depth, crow, ccol, w, h);
+
+        let grid = draw_terrain_layer(&terrain, &geo, &index, &mut memo, &f, &win, w, h, false);
+        let is_river = |x: i32, y: i32| -> bool {
+            if x < 0 || y < 0 || x >= i32::from(w) || y >= i32::from(h) {
+                return false;
+            }
+            grid.get(x as u16, y as u16)
+                .is_some_and(|c| c.glyph == Some(RIVER_GLYPH))
+        };
+
+        let mut river = 0u32;
+        let mut interior: Option<(u16, u16)> = None;
+        for y in 0..i32::from(h) {
+            for x in 0..i32::from(w) {
+                if !is_river(x, y) {
+                    continue;
+                }
+                river += 1;
+                let all_eight = [
+                    (-1, -1),
+                    (0, -1),
+                    (1, -1),
+                    (-1, 0),
+                    (1, 0),
+                    (-1, 1),
+                    (0, 1),
+                    (1, 1),
+                ]
+                .iter()
+                .all(|&(dx, dy)| is_river(x + dx, y + dy));
+                if all_eight && interior.is_none() {
+                    interior = Some((x as u16, y as u16));
+                }
+            }
+        }
+
+        assert!(
+            river > 0,
+            "NON-VACUITY: no river was drawn in a window centred on the \
+             world's largest river, so the refusal below proves nothing"
+        );
+        assert_eq!(
+            interior,
+            None,
+            "a river tile at rung {depth} has all eight neighbours river too, so \
+             the river is being drawn as a SLAB rather than a line ({river} of \
+             {} tiles are river)",
+            u32::from(w) * u32::from(h)
+        );
+    }
+
+    /// A DRAWN RIVER IS CONNECTED — no isolated tiles (The Hachure, Stage 2).
+    ///
+    /// The property that killed the sampled design, and the reason this stage
+    /// rasterises the polyline instead of querying per tile. A per-tile rule
+    /// asked "is a channel within half a tile of this tile's centre?" and
+    /// produced river SCATTER: `ChannelNetwork::nearest_line` returns the
+    /// nearest line of ANY size, so along a trunk the nearest line flips to a
+    /// small tributary and back, and the trunk breaks into dashes. Walking the
+    /// line gives connectivity by construction; no per-tile sample can,
+    /// because connectivity is a property of the line and not of any point on
+    /// it.
+    ///
+    /// Asserted as "every river tile has a river neighbour", 8-connected. That
+    /// admits a legitimately short segment clipped to a couple of tiles at the
+    /// plate's edge while refusing a field of dots.
+    ///
+    /// Checked at three rungs because the failure was rung-dependent: the
+    /// selection threshold relaxes as the reader zooms in, so a rung admitting
+    /// more tributaries is a different picture, not the same one scaled.
+    #[test]
+    fn a_drawn_river_is_connected_at_every_rung() {
+        let (terrain, geo) = test_world();
+        let index = NearestVertexIndex::new(&geo);
+        let f = mercator::frame_for(false);
+        let net = terrain.channels();
+        let big = (0..net.polylines.len())
+            .max_by_key(|&i| {
+                net.run_vertices[i]
+                    .iter()
+                    .map(|&v| terrain.drainage_at(v) as u64)
+                    .max()
+                    .unwrap_or(0)
+            })
+            .expect("seed 42 has a channel network");
+        let pts = &net.polylines[big].points;
+        let mid = pts[pts.len() / 2];
+        let (lat, lon) = (
+            hornvale_kernel::math::asin(mid[2]).to_degrees(),
+            hornvale_kernel::math::atan2(mid[1], mid[0]).to_degrees(),
+        );
+
+        for depth in [GLOBE_RUNG, 9, BAND_B_RUNG] {
+            let mut memo = RoomMeshMemo::default();
+            let (vw, vh) = virtual_dims(depth);
+            let (crow, ccol) = mercator::project(&f, lat, lon, vw, vh).expect("in frame");
+            let (w, h) = (60u16, 30u16);
+            let (win, _, _) = window_showing(depth, crow, ccol, w, h);
+            let grid = draw_terrain_layer(&terrain, &geo, &index, &mut memo, &f, &win, w, h, false);
+            let is_river = |x: i32, y: i32| -> bool {
+                if x < 0 || y < 0 || x >= i32::from(w) || y >= i32::from(h) {
+                    return false;
+                }
+                grid.get(x as u16, y as u16)
+                    .is_some_and(|c| c.glyph == Some(RIVER_GLYPH))
+            };
+
+            let (mut river, mut lonely) = (0u32, Vec::new());
+            for y in 0..i32::from(h) {
+                for x in 0..i32::from(w) {
+                    if !is_river(x, y) {
+                        continue;
+                    }
+                    river += 1;
+                    let has_neighbour = [
+                        (-1, -1),
+                        (0, -1),
+                        (1, -1),
+                        (-1, 0),
+                        (1, 0),
+                        (-1, 1),
+                        (0, 1),
+                        (1, 1),
+                    ]
+                    .iter()
+                    .any(|&(dx, dy)| is_river(x + dx, y + dy));
+                    if !has_neighbour {
+                        lonely.push((x, y));
+                    }
+                }
+            }
+
+            assert!(
+                river > 0,
+                "NON-VACUITY at rung {depth}: no river drawn in a window centred \
+                 on the world's largest river"
+            );
+            assert!(
+                lonely.is_empty(),
+                "at rung {depth}, {} of {river} river tiles have no river \
+                 neighbour (first at {:?}) — the river is drawn as scattered \
+                 samples rather than as a line",
+                lonely.len(),
+                lonely.first()
+            );
+        }
+    }
+
     #[test]
     fn virtual_dims_come_from_the_mesh_not_the_plate() {
         // The virtual chart's size is a property of the RUNG alone. Two callers
@@ -1913,8 +3264,7 @@ mod tests {
             32,
             8,
             false,
-            &BTreeMap::new(),
-            &BTreeSet::new(),
+            &[],
             &BTreeSet::new(),
             &[],
             &Discovered::default(),
@@ -1928,8 +3278,7 @@ mod tests {
             8,
             8,
             false,
-            &BTreeMap::new(),
-            &BTreeSet::new(),
+            &[],
             &BTreeSet::new(),
             &[],
             &Discovered::default(),
@@ -1994,8 +3343,13 @@ mod tests {
         let (row, col) = crate::mercator::project(&f, g.latitude, g.longitude, vw, vh).unwrap();
         let (win, sx, sy) = window_showing(GLOBE_RUNG, row, col, w, h);
 
-        let both_caves: BTreeSet<Vertex> = std::iter::once(shared).collect();
-        let both_settlements: BTreeMap<Vertex, u64> = std::iter::once((shared, 1)).collect();
+        // One roster holding both kinds at the same vertex, in `sites_of`'s
+        // own ascending-salience order — which is what makes the settlement
+        // the later write and therefore the winner.
+        let both_sites = vec![
+            site_at_vertex(SiteKind::Cave, shared),
+            settlement(shared, 1),
+        ];
         let mut discovered = Discovered::default();
         discovered.record(FeatureId::Settlement(shared));
         discovered.record(FeatureId::Cave(shared));
@@ -2009,8 +3363,7 @@ mod tests {
             w,
             h,
             false,
-            &both_settlements,
-            &both_caves,
+            &both_sites,
             &BTreeSet::new(),
             &[],
             &discovered,
@@ -2052,16 +3405,24 @@ mod tests {
             origin_row: 0,
         };
 
-        // Every cave vertex, and the chart tile each projects into.
-        let caves: BTreeSet<Vertex> = (0..geo.vertex_count())
-            .map(|i| Vertex(i as u32))
-            .filter(|&c| terrain.cave_at(c).is_some())
+        // Every cave vertex, and the chart tile each projects into. Drawn at
+        // the VERTEX (`site_at_vertex`) rather than at its placed facet:
+        // this test's subject is that projection reaches a vertex the old
+        // area-majority sampling could not, so the vertex is the thing under
+        // test.
+        let cave_vertices: Vec<Vertex> = terrain.cave_site_vertices();
+        assert!(
+            !cave_vertices.is_empty(),
+            "seed 42 must have caves to test with"
+        );
+        let caves: Vec<MapSite> = cave_vertices
+            .iter()
+            .map(|&v| site_at_vertex(SiteKind::Cave, v))
             .collect();
-        assert!(!caves.is_empty(), "seed 42 must have caves to test with");
 
         // A cave that is NOT its own chart tile's representative: exactly
         // the case the old scheme dropped.
-        let orphan = caves.iter().copied().find_map(|c| {
+        let orphan = cave_vertices.iter().copied().find_map(|c| {
             let g = geo.coord(c);
             let (row, col) = crate::mercator::project(&f, g.latitude, g.longitude, vw, vh)?;
             let rep = terrain_at_tile(
@@ -2093,7 +3454,6 @@ mod tests {
             w,
             h,
             false,
-            &BTreeMap::new(),
             &caves,
             &BTreeSet::new(),
             &[],
@@ -2120,7 +3480,6 @@ mod tests {
             origin_col: 0,
             origin_row: 0,
         };
-        let empty_settlements = BTreeMap::new();
         let empty_discovered = Discovered::default();
         let g = draw(
             &terrain,
@@ -2130,8 +3489,7 @@ mod tests {
             &win,
             40,
             20,
-            &empty_settlements,
-            &BTreeSet::new(), // no caves: this test's subject is terrain/colour
+            &[], // no sites at all: this test's subject is terrain/colour
             &BTreeSet::new(),
             &[],
             &empty_discovered,
@@ -2160,7 +3518,6 @@ mod tests {
             origin_row: 0,
         };
 
-        let empty_settlements = BTreeMap::new();
         let empty_discovered = Discovered::default();
         let lit = draw_with(
             &terrain,
@@ -2171,8 +3528,7 @@ mod tests {
             40,
             20,
             true,
-            &empty_settlements,
-            &BTreeSet::new(), // no caves: this test's subject is terrain/colour
+            &[], // no sites at all: this test's subject is terrain/colour
             &BTreeSet::new(),
             &[],
             &empty_discovered,
@@ -2186,8 +3542,7 @@ mod tests {
             40,
             20,
             false,
-            &empty_settlements,
-            &BTreeSet::new(), // no caves: this test's subject is terrain/colour
+            &[], // no sites at all: this test's subject is terrain/colour
             &BTreeSet::new(),
             &[],
             &empty_discovered,
@@ -2641,12 +3996,16 @@ mod tests {
         assert_eq!(got.ocean, terrain.is_ocean(got.vertex));
     }
 
-    // -- Task 5: point sites, gated inside `draw_with` --------------------
+    // -- Task 5 / The Prospect Gate A: point sites in `draw_with` ---------
 
-    /// **`draw_with` never draws an undiscovered point site, and always
-    /// draws a discovered one** — the real test the discovery gate exists
-    /// for (spec Amendment 1 §A3/§A7, "nothing is drawn and then hidden"):
-    /// the gate lives inside the paint loop, not a filter pass afterward.
+    /// **`draw_with` draws a placed point site's glyph WHETHER OR NOT it has
+    /// been discovered** (The Prospect, Gate A ungating — Nathan's ruling:
+    /// "show placed sites on the world map... just don't show their
+    /// labels"). This test used to be `draw_with_gates_a_point_site_on_
+    /// discovery` and asserted the opposite (an undiscovered cave was never
+    /// drawn); it is rewritten in place rather than left beside a new test,
+    /// because the old assertion is now the defect this campaign exists to
+    /// fix, and a green suite must not keep pinning it under its old name.
     /// Uses a real cave vertex (real terrain, not a fixture), PROJECTED to
     /// its own chart tile and then shown by moving the window there.
     ///
@@ -2656,7 +4015,7 @@ mod tests {
     /// tile a site falls in is a property of the rung, so the site's
     /// position is computed, not hunted for, and the plate is 32x16.
     #[test]
-    fn draw_with_gates_a_point_site_on_discovery() {
+    fn draw_with_draws_a_point_site_whether_or_not_it_is_discovered() {
         let (terrain, geo) = test_world();
         let index = NearestVertexIndex::new(&geo);
         let f = crate::mercator::frame_for(false);
@@ -2664,11 +4023,10 @@ mod tests {
             .vertices()
             .find(|&c| terrain.cave_at(c).is_some())
             .expect("seed 42 at GLOBE_LEVEL has at least one cave vertex");
-        let settlements = BTreeMap::new();
-        // The cave roster this test's subject must be IN — sites are
+        // The site roster this test's subject must be IN — sites are
         // PROJECTED from the roster now, not sampled for, so an empty
         // roster would make this test vacuous rather than failing.
-        let caves: BTreeSet<Vertex> = std::iter::once(cave_vertex).collect();
+        let caves = vec![site_at_vertex(SiteKind::Cave, cave_vertex)];
         let (w, h) = (32u16, 16u16);
         let (virtual_w, virtual_h) = virtual_dims(GLOBE_RUNG);
         let cg = geo.coord(cave_vertex);
@@ -2687,16 +4045,15 @@ mod tests {
             w,
             h,
             false,
-            &settlements,
             &caves,
             &BTreeSet::new(),
             &[],
             &undiscovered,
         );
-        assert_ne!(
+        assert_eq!(
             g_before.get(col, row).unwrap().glyph,
             Some(CAVE_GLYPH),
-            "an undiscovered cave must never be drawn"
+            "an undiscovered cave must still be drawn (Gate A ungating)"
         );
 
         let mut discovered = Discovered::default();
@@ -2710,7 +4067,6 @@ mod tests {
             w,
             h,
             false,
-            &settlements,
             &caves,
             &BTreeSet::new(),
             &[],
@@ -2719,7 +4075,87 @@ mod tests {
         assert_eq!(
             g_after.get(col, row).unwrap().glyph,
             Some(CAVE_GLYPH),
-            "a discovered cave must be drawn at its own resolved screen position"
+            "a discovered cave must still be drawn at its own resolved screen position"
+        );
+        assert_eq!(
+            g_before.to_plain_text(),
+            g_after.to_plain_text(),
+            "the discovery must move nothing at all in this glyph's drawing: Gate A does \
+             not consult `discovered` for a cave"
+        );
+    }
+
+    /// **The one point-site kind Gate A left untouched: a volcano still
+    /// gates on discovery.** Companion to the test above, so the ungating
+    /// and its one deliberate exception are pinned side by side rather than
+    /// one of them going unwatched. See [`draw_feature_layer`]'s own doc for
+    /// why a volcano alone keeps the gate (it has no [`MapSite`] roster
+    /// entry of its own — its only address is the landscape extent feature
+    /// `Driver::update_discovery` already tracks).
+    #[test]
+    fn draw_with_still_gates_a_volcano_on_discovery() {
+        let (terrain, geo) = test_world();
+        let index = NearestVertexIndex::new(&geo);
+        let f = crate::mercator::frame_for(false);
+        let features = hornvale_worldgen::gazetteer_features(Seed(42), &geo, &terrain);
+        let volcano_vertex = features
+            .iter()
+            .find(|feat| feat.id.class == FeatureClass::Volcano)
+            .map(|feat| feat.anchor)
+            .expect("seed 42 must have a volcano to test with");
+        let volcanoes: BTreeSet<Vertex> = std::iter::once(volcano_vertex).collect();
+        let (w, h) = (32u16, 16u16);
+        let (virtual_w, virtual_h) = virtual_dims(GLOBE_RUNG);
+        let vg = geo.coord(volcano_vertex);
+        let (vrow, vcol) =
+            crate::mercator::project(&f, vg.latitude, vg.longitude, virtual_w, virtual_h)
+                .expect("the volcano vertex is inside the projection's clamp");
+        let (win, col, row) = window_showing(GLOBE_RUNG, vrow, vcol, w, h);
+
+        let undiscovered = Discovered::default();
+        let g_before = draw_with(
+            &terrain,
+            &geo,
+            &index,
+            &f,
+            &win,
+            w,
+            h,
+            false,
+            &[],
+            &volcanoes,
+            &[],
+            &undiscovered,
+        );
+        assert_ne!(
+            g_before.get(col, row).unwrap().glyph,
+            Some(VOLCANO_GLYPH),
+            "an undiscovered volcano must still never be drawn — Gate A does not reach it"
+        );
+
+        let mut discovered = Discovered::default();
+        discovered.record(FeatureId::Extent(hornvale_terrain::landscape::FeatureId {
+            class: FeatureClass::Volcano,
+            vertex: volcano_vertex,
+        }));
+        let g_after = draw_with(
+            &terrain,
+            &geo,
+            &index,
+            &f,
+            &win,
+            w,
+            h,
+            false,
+            &[],
+            &volcanoes,
+            &[],
+            &discovered,
+        );
+        assert_eq!(
+            g_after.get(col, row).unwrap().glyph,
+            Some(VOLCANO_GLYPH),
+            "a discovered volcano must still be drawn at its own resolved screen position"
         );
     }
 
@@ -2735,12 +4171,12 @@ mod tests {
     /// own inputs can find: `GeneratedTerrain::cave_at` answers from the
     /// terrain alone, while the settlement roster is built from the
     /// world's LEDGER by `driver.rs` and never reaches here. The roster
-    /// parameters are the caller's either way — `draw_feature_layer` takes
-    /// a `BTreeSet<Vertex>` for caves and a `BTreeMap<Vertex, u64>` for
-    /// settlements (Task 7 widens the latter to carry population), and
-    /// asks the terrain nothing — so the same vertex exercises the
-    /// settlement path when it is handed to that roster instead, with an
-    /// arbitrary population.
+    /// parameter is the caller's either way — `draw_feature_layer` takes one
+    /// `&[MapSite]` roster over every [`SiteKind`] (The Prospect, Task 8;
+    /// before it, a `BTreeSet` of caves beside a `BTreeMap` of settlements)
+    /// and asks the terrain nothing — so the same vertex exercises the
+    /// settlement path when its roster entry is built with that kind
+    /// instead, with an arbitrary population.
     fn a_point_site(
         terrain: &GeneratedTerrain,
         geo: &Geosphere,
@@ -2782,7 +4218,7 @@ mod tests {
         let f = mercator::frame_for(false);
         let (w, h) = (32u16, 16u16);
         let (site, win, x, y) = a_point_site(&terrain, &geo, &f, GLOBE_RUNG, w, h);
-        let caves: BTreeSet<Vertex> = std::iter::once(site).collect();
+        let caves = vec![site_at_vertex(SiteKind::Cave, site)];
         let mut discovered = Discovered::default();
         discovered.record(FeatureId::Cave(site));
 
@@ -2799,7 +4235,6 @@ mod tests {
             &f,
             &win,
             false,
-            &BTreeMap::new(),
             &caves,
             &BTreeSet::new(),
             &[],
@@ -2833,115 +4268,132 @@ mod tests {
         );
     }
 
-    /// **Nothing is drawn and then hidden** (spec Amendment 1 §A7): the
-    /// undiscovered site's glyph is never chosen, so an undiscovered
-    /// roster leaves the terrain layer's grid untouched — not painted and
-    /// then cleared. Both rosters are exercised, because the two take
-    /// different `FeatureId` arms and a gate wired to one of them would
-    /// pass a single-roster test.
+    /// **The feature layer draws every placed site, whether or not it has
+    /// been discovered** (The Prospect, Gate A ungating). This test used to
+    /// be `the_feature_layer_draws_only_discovered_sites` and asserted the
+    /// opposite (an undiscovered roster left the grid untouched); it is
+    /// rewritten in place for the same reason
+    /// `draw_with_draws_a_point_site_whether_or_not_it_is_discovered` is —
+    /// the old assertion is the defect this campaign fixes. All THREE
+    /// [`SiteKind`]s are exercised, because each takes a different
+    /// `crate::discovery::FeatureId` arm and an ungating wired to one of
+    /// them would pass a single-kind test — exactly the shape The Prospect's
+    /// own Task 8 found (`Exotic` had no arm at all, that time for the
+    /// opposite defect).
     #[test]
-    fn the_feature_layer_draws_only_discovered_sites() {
+    fn the_feature_layer_draws_every_site_whether_or_not_it_is_discovered() {
         let (terrain, geo) = test_world();
         let index = NearestVertexIndex::new(&geo);
         let f = mercator::frame_for(false);
         let (w, h) = (32u16, 16u16);
         let (site, win, x, y) = a_point_site(&terrain, &geo, &f, GLOBE_RUNG, w, h);
-        let cave_roster: BTreeSet<Vertex> = std::iter::once(site).collect();
-        let settlement_roster: BTreeMap<Vertex, u64> = std::iter::once((site, 1)).collect();
-        let empty_caves = BTreeSet::new();
-        let empty_settlements = BTreeMap::new();
+        let cave_roster = vec![site_at_vertex(SiteKind::Cave, site)];
+        let exotic_roster = vec![site_at_vertex(SiteKind::Exotic, site)];
+        let settlement_roster = vec![settlement(site, 1)];
         let mut memo = RoomMeshMemo::default();
         let bare = draw_terrain_layer(&terrain, &geo, &index, &mut memo, &f, &win, w, h, false);
         let bare_text = bare.to_plain_text();
 
-        // The cave and settlement cases take DIFFERENT roster types since
-        // Task 7 widened settlements to carry population, so they are two
-        // blocks rather than one homogeneous loop over both — each still
-        // proves the identical property: an undiscovered site is never
-        // drawn, and a discovered one is drawn at its own resolved cell.
-        {
-            let mut g = bare.clone();
+        // Every screen position at which TWO grids disagree — restores the
+        // whole-plate half of what the old `the_feature_layer_draws_only_
+        // discovered_sites` asserted with `assert_eq!(g.to_plain_text(),
+        // bare_text)` (review fix round 1, finding 2(1)). That comparison
+        // proved two things at once: this site is (or, now, is not) drawn,
+        // AND the feature layer touches nothing else on the grid. The
+        // rewrite that flipped the first half dropped the second — a bug
+        // painting a spurious glyph elsewhere would pass the position-only
+        // check below and this closure is what still catches it.
+        let diff_positions = |a: &Grid, b: &Grid| -> Vec<(u16, u16)> {
+            let mut out = Vec::new();
+            for dy in 0..h {
+                for dx in 0..w {
+                    if a.get(dx, dy).and_then(|c| c.glyph) != b.get(dx, dy).and_then(|c| c.glyph) {
+                        out.push((dx, dy));
+                    }
+                }
+            }
+            out
+        };
+
+        // ALL THREE KINDS, one loop. Each iteration proves the identical
+        // property: an UNdiscovered site is drawn at its own resolved cell
+        // and NOWHERE ELSE, and discovering it afterward changes NOTHING
+        // about that drawing — the strongest form of "Gate A does not
+        // consult `discovered`" this module can state, short of the
+        // type-level argument (`None`, not `Some(id)`, at the call site —
+        // see `draw_feature_layer`'s own doc).
+        //
+        // The settlement's expected glyph is the MAJOR one because the sole
+        // in-frame settlement is trivially its own top 10%
+        // (ceil(0.1 * 1) == 1) — see
+        // `a_settlement_outranks_a_cave_on_the_same_cell`'s own note.
+        let cases: [(&[MapSite], char); 3] = [
+            (&cave_roster, CAVE_GLYPH),
+            (&exotic_roster, EXOTIC_GLYPH),
+            (&settlement_roster, SETTLEMENT_MAJOR_GLYPH),
+        ];
+        for (roster, glyph) in cases {
+            let mut undiscovered_grid = bare.clone();
             draw_feature_layer(
-                &mut g,
+                &mut undiscovered_grid,
                 &geo,
                 &f,
                 &win,
                 false,
-                &empty_settlements,
-                &cave_roster,
+                roster,
                 &BTreeSet::new(),
                 &[],
                 &Discovered::default(),
             );
             assert_eq!(
-                g.to_plain_text(),
+                undiscovered_grid.get(x, y).unwrap().glyph,
+                Some(glyph),
+                "an UNdiscovered {glyph:?} site was not drawn"
+            );
+            assert_eq!(
+                diff_positions(&bare, &undiscovered_grid),
+                vec![(x, y)],
+                "an UNdiscovered {glyph:?} site's roster changed the plate somewhere \
+                 other than its own resolved position — the feature layer must touch \
+                 exactly one position here, got: {:?}",
+                undiscovered_grid.to_plain_text()
+            );
+            assert_ne!(
+                undiscovered_grid.to_plain_text(),
                 bare_text,
-                "an UNdiscovered cave was drawn"
+                "sanity: the diff above found a change, so the two texts must differ"
             );
 
             let mut discovered = Discovered::default();
-            discovered.record(FeatureId::Cave(site));
+            discovered.record(roster[0].feature_id());
+            let mut discovered_grid = bare.clone();
             draw_feature_layer(
-                &mut g,
+                &mut discovered_grid,
                 &geo,
                 &f,
                 &win,
                 false,
-                &empty_settlements,
-                &cave_roster,
+                roster,
                 &BTreeSet::new(),
                 &[],
                 &discovered,
             );
             assert_eq!(
-                g.get(x, y).unwrap().glyph,
-                Some(CAVE_GLYPH),
-                "a DISCOVERED cave was not drawn"
-            );
-        }
-
-        {
-            let mut g = bare.clone();
-            draw_feature_layer(
-                &mut g,
-                &geo,
-                &f,
-                &win,
-                false,
-                &settlement_roster,
-                &empty_caves,
-                &BTreeSet::new(),
-                &[],
-                &Discovered::default(),
+                discovered_grid.get(x, y).unwrap().glyph,
+                Some(glyph),
+                "a DISCOVERED {glyph:?} site was not drawn"
             );
             assert_eq!(
-                g.to_plain_text(),
-                bare_text,
-                "an UNdiscovered settlement was drawn"
-            );
-
-            let mut discovered = Discovered::default();
-            discovered.record(FeatureId::Settlement(site));
-            draw_feature_layer(
-                &mut g,
-                &geo,
-                &f,
-                &win,
-                false,
-                &settlement_roster,
-                &empty_caves,
-                &BTreeSet::new(),
-                &[],
-                &discovered,
+                diff_positions(&bare, &discovered_grid),
+                vec![(x, y)],
+                "a DISCOVERED {glyph:?} site's roster changed the plate somewhere other \
+                 than its own resolved position"
             );
             assert_eq!(
-                g.get(x, y).unwrap().glyph,
-                // The sole in-frame settlement is trivially its own top
-                // 10% (ceil(0.1 * 1) == 1) — see
-                // `a_settlement_outranks_a_cave_on_the_same_cell`'s own
-                // note on why a one-settlement roster always draws MAJOR.
-                Some(SETTLEMENT_MAJOR_GLYPH),
-                "a DISCOVERED settlement was not drawn"
+                undiscovered_grid.to_plain_text(),
+                discovered_grid.to_plain_text(),
+                "discovering a {glyph:?} site changed the drawn plate — Gate A must not \
+                 consult `discovered` for a placed site's own glyph"
             );
         }
     }
@@ -2957,8 +4409,7 @@ mod tests {
         let f = mercator::frame_for(false);
         let (w, h) = (32u16, 16u16);
         let (site, win, _, _) = a_point_site(&terrain, &geo, &f, GLOBE_RUNG, w, h);
-        let caves: BTreeSet<Vertex> = std::iter::once(site).collect();
-        let settlements = BTreeMap::new();
+        let caves = vec![site_at_vertex(SiteKind::Cave, site)];
         let mut discovered = Discovered::default();
         discovered.record(FeatureId::Cave(site));
 
@@ -2971,7 +4422,6 @@ mod tests {
             w,
             h,
             false,
-            &settlements,
             &caves,
             &BTreeSet::new(),
             &[],
@@ -2990,7 +4440,6 @@ mod tests {
             &f,
             &win,
             false,
-            &settlements,
             &caves,
             &BTreeSet::new(),
             &[],
@@ -3180,5 +4629,50 @@ mod tests {
             AGENT_GLYPH,
             "an unknown kind must still get a glyph, never be skipped"
         );
+    }
+
+    /// **Every glyph constant this module draws with resolves to the
+    /// REGISTER's own idea of what population it belongs to — not merely
+    /// to SOME row** (review fix round 1, item 7). Closes the followup
+    /// `.superpowers/sdd/followups.md` records: `bin/tests/plate_vocabulary
+    /// ::every_drawn_glyph_is_claimed_by_the_register` only asks
+    /// `binding_of(g).is_some()`, which the `&` row added alongside
+    /// [`AGENT_GLYPH`] made WEAKER for this specific glyph — a future
+    /// `EXOTIC_GLYPH = '&'` would satisfy "is claimed by the register" as
+    /// an AGENT and pass that check while meaning the wrong thing entirely.
+    /// This asks the stronger question directly, inside the same crate that
+    /// owns the constants (most of them are `pub(crate)` or fully private —
+    /// [`AGENT_GLYPH`] is not `pub` at all — so this could not live in
+    /// `bin/tests/` regardless of scope).
+    ///
+    /// Most of the site-glyph list matters only for INTERNAL consistency
+    /// today (nothing currently draws two of them as the same character),
+    /// but the exotic/agent PAIR is exactly the one this campaign's own
+    /// fix-round history proves is not a hypothetical: `EXOTIC_GLYPH`
+    /// really was mutated to `&` once, on this branch, and every other test
+    /// in both crates stayed green.
+    #[test]
+    fn every_bin_glyph_constant_resolves_to_its_intended_population() {
+        use hornvale_game_core::register::{Population, binding_of};
+
+        let cases: [(char, Population); 7] = [
+            (CAVE_GLYPH, Population::PointSite),
+            (EXOTIC_GLYPH, Population::PointSite),
+            (SETTLEMENT_MINOR_GLYPH, Population::PointSite),
+            (SETTLEMENT_MAJOR_GLYPH, Population::PointSite),
+            (VOLCANO_GLYPH, Population::PointSite),
+            (WATERFALL_GLYPH, Population::PointSite),
+            (AGENT_GLYPH, Population::Agent),
+        ];
+        for (glyph, want) in cases {
+            let got = binding_of(glyph).map(|b| b.population);
+            assert_eq!(
+                got,
+                Some(want),
+                "{glyph:?} resolves to {got:?} in the register, not the intended {want:?} — \
+                 either this constant drifted onto a glyph the register assigns elsewhere, \
+                 or the register's own row for it is missing or wrong"
+            );
+        }
     }
 }

@@ -42,13 +42,13 @@
 //! same warning `repossess_cost.rs` carries). Check `uptime` first — a
 //! contended box makes any number here meaningless.
 
-use hornvale_game::discovery::{Discovered, FeatureId};
+use hornvale_game::discovery::Discovered;
 use hornvale_game::mercator;
 use hornvale_game::plate::{self, Window};
 use hornvale_game::tiles::{TILE_EDGE, TileCache};
 use hornvale_kernel::{Geosphere, NearestVertexIndex, Seed};
 use hornvale_terrain::{GeneratedTerrain, TerrainPins};
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 
 /// Runs per measured quantity, unless `--runs` says otherwise — matches
 /// `repossess_cost.rs`'s five.
@@ -151,7 +151,7 @@ fn main() {
     };
 
     let empty: BTreeSet<hornvale_kernel::Vertex> = BTreeSet::new();
-    let empty_settlements: BTreeMap<hornvale_kernel::Vertex, u64> = BTreeMap::new();
+    let no_sites: Vec<plate::MapSite> = Vec::new();
     let undiscovered = hornvale_game::discovery::Discovered::default();
 
     let mut draws = Vec::new();
@@ -167,8 +167,7 @@ fn main() {
             w,
             h,
             false,
-            &empty_settlements,
-            &empty,
+            &no_sites,
             &empty,
             &[],
             &undiscovered,
@@ -198,8 +197,7 @@ fn main() {
             w,
             h,
             false,
-            &empty_settlements,
-            &empty,
+            &no_sites,
             &empty,
             &[],
             &undiscovered,
@@ -285,14 +283,26 @@ fn main() {
     // not build (nothing else here reads one), so the roster measured is the
     // cave half — the LARGER half by construction, since it is a scan of the
     // mesh rather than a read of a few hundred committed facts.
-    let caves: BTreeSet<hornvale_kernel::Vertex> = (0..geo.vertex_count())
-        .map(|i| hornvale_kernel::Vertex(i as u32))
-        .filter(|&c| terrain.cave_at(c).is_some())
+    let caves: Vec<plate::MapSite> = terrain
+        .cave_site_vertices()
+        .into_iter()
+        .map(|vertex| plate::MapSite {
+            kind: hornvale_vessel::site::SiteKind::Cave,
+            vertex,
+            // The harness prices the ROSTER SCAN and the projection, and a
+            // `None` here keeps the position read to one `Geosphere::coord`
+            // lookup instead of a `Facet::centroid` — measuring the loop
+            // this layer actually runs per site without also measuring
+            // `site_facet_for`, which runs once per site at `Driver::start`
+            // and never per frame.
+            placed: None,
+            population: 0,
+        })
         .collect();
     let all_found: Discovered = {
         let mut d = Discovered::default();
-        for &c in &caves {
-            d.record(FeatureId::Cave(c));
+        for c in &caves {
+            d.record(c.feature_id());
         }
         d
     };
@@ -311,7 +321,6 @@ fn main() {
             &f,
             &aligned,
             false,
-            &empty_settlements,
             &caves,
             &empty,
             &[],
@@ -326,7 +335,6 @@ fn main() {
             &f,
             &aligned,
             false,
-            &empty_settlements,
             &caves,
             &empty,
             &[],

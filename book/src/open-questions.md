@@ -3671,6 +3671,34 @@ against a zero-forcing null control whose present must be indistinguishable
 from its own genesis. It is a bet at the top of the checkability gradient, and,
 like the two before it, it is allowed to fail.
 
+**A second horizon is now quantified rather than merely felt.** *The Prospect*
+(2026-09-03) measured the density of the inhabited surface for the first time:
+across five seeds, **one enterable site per ~84,200 land facets**. A facet at
+depth 13 is 1.126 km on a side, so a square mile is 2.04 of them and the aim of
+something worth finding in every square mile is **~41,200x away — 4.6 orders of
+magnitude.** No bet in the map above moved, because no bet covered this;
+what the measurement adds is a **ceiling**, and the ceiling is what makes it a
+horizon rather than a defect.
+
+Placed features are born on the 40,962-vertex geosphere and addressed onto the
+402,653,184-facet walk band, so **at most one facet in 9,830 can hold a placed
+feature of a given kind**, before a seed is built. Worlds today sit at 5.8% of
+that ceiling; saturating it buys about 17x and leaves the surface ~2,400x
+short. So the shortfall is not a tuning question at any
+threshold, and the campaign's own falsified hypothesis is the evidence — H2
+predicted a per-facet cave *percentage* and missed by ~1,070× because a placed
+point process on a 41,000-point lattice cannot express one.
+
+What that bounds is the class of answer. Density at facet resolution has to come
+from **derived** features — a pure function of seed and position, unbounded,
+stored nowhere, outside the ledger and therefore outside world history — which
+decision 0669 names but no campaign has yet built. The checkable form of the bet
+is whether a derived surface can be dense *and* legible at once: whether noise
+interacting with macro features produces places that feel found rather than
+extruded, and whether a player can tell the difference. That is gradeable by the
+world against itself — the same shape as the bets above — and it is allowed to
+fail.
+
 **A partial rescore, now that population has a field to vary.** The
 carrying-capacity field promoted above (see the high-confidence tier) is an
 *equilibrium* snapshot — `population = f(carrying capacity)` in closed
@@ -5157,3 +5185,47 @@ re-decide it.**
 
 Unscored deliberately, and the reason is this chapter's own: the claim that
 re-derivation catches what re-reading does not is itself of the second kind.
+
+### A criterion downstream of a quantizer (2026-09-03)
+
+[The Hachure](./chronicle/the-hachure.md) moves **no bet in the maps above**.
+It is a rendering campaign: it changes what the game client draws and changes
+nothing about what the world is. It belongs in this chapter for the same reason
+the section above it does — it produced one more instance of the wall this
+chapter keeps rebuilding, and the instance has a cause the previous ones do not.
+
+The sections above describe criteria whose *inputs could not contain the
+defect*: a branch table whose cases each had at most one quoted phrase, a red
+result produced by an arm other than the one under test. This campaign's is a
+third shape. **Four successive test drafts passed against unfixed code, and
+every one of them was measuring a quantizer rather than the thing being
+refined.** Each asserted about the rendered relief band. The band's rungs are
+hundreds of metres wide; within one ~110 km terrain sample a real height ramp
+almost never crosses one. So the refinement under test was enormous — distinct
+heights on a plate went from 1–4 to 612–3,860 — and exactly zero of it reached
+the observable every draft had chosen.
+
+Not one of the four inputs was unreasonable, and no amount of widening the
+cases would have helped, because the defect is not in the inputs at all. It is
+one layer downstream, in the function mapping the measured quantity to the
+observable. **A criterion can be blind because of what it looks at, and not
+only because of what it is shown.**
+
+The repair was to measure first and let the measurement name the observable,
+rather than to write a better assertion. That ordering is the part worth
+carrying, and it is the same ordering the sections above arrive at from
+different directions: an instrument's authority comes from having been made to
+fail on the real signal, and a criterion nobody has watched respond to the
+signal is a description of an intention.
+
+A second, smaller instance from the same campaign points the same way from the
+opposite side. A wrap defect survived both tests written for the feature that
+contained it, and was caught by an unrelated invariant — a cache's
+byte-identity check — because both new tests drew a full-width window at origin
+zero, where the defect cannot occur. **Tests written alongside a feature
+inherit the author's model of it, gaps included.** Invariants written for
+something else are, structurally, the cheapest independence available.
+
+Unscored, and for this chapter's own stated reason: the claim is about the
+whole rather than about a location, and nothing in its filing records the state
+it was observed against.

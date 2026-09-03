@@ -16,10 +16,17 @@ answer could be stated at all.** [The Quadrat](../chronicle/the-quadrat.md)
 settled the walking band and the consulted map: every zoom rung the game
 client draws *is* a uniform square grid, and a **rung is a facet depth**
 ([decision 0287](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0287-a-zoom-rung-is-a-mesh-depth.md))
-— band B is depth 12, coarsening to globe level 6. A tile is a facet; the
-terrain it shows is read from that facet's corner *vertices*. Both halves of
-the duality below are load-bearing in that one sentence, which is what the
-stalled conversation could not say. The half still open is the chamber band,
+— band B is depth 13, coarsening to globe level 6. (0287's own text says
+depth 12 and seven rungs. That was true when it was ratified and is not now:
+The Pavement moved the walk band one rung finer when the lattice became a
+quad grid, so `walk_depth` is `globe_level + 7` and the ladder runs 6 through
+13 — eight rungs. Decisions are append-only, so the record keeps its
+numbers; its *rule* — a rung is a facet depth — is what binds, and that is
+untouched. Neither figure is tabulated in code: both are derived, which is
+why the drift was invisible.) A tile is a facet; the
+terrain it shows is read from that facet's corner *vertices*. Both words
+below are load-bearing in that one sentence, and they name different
+lattices, which is what the stalled conversation could not say. The half still open is the chamber band,
 which is a square 4-neighbour lattice of its own and is not a facet depth at
 all.
 
@@ -32,12 +39,28 @@ the mistake this vocabulary exists to prevent.
 | word | what it is | what you do with it |
 |---|---|---|
 | **Vertex** | a **point** — one vertex of the subdivided icosahedron | sample a field at it: elevation, temperature, moisture, biome |
-| **Facet** | a **patch** — one triangular face, at a refinement depth | occupy it; stand in it; walk from it to a neighbour |
+| **Facet** | a **patch** — one quad of the cube-sphere, at a refinement depth | occupy it; stand in it; walk from it to a neighbour |
 
-They are duals. A facet's corners are three vertices; a vertex is shared by
-the facets that meet at it. Neither is more fundamental — a field is a
-function on points, and a place is a region you can be inside, and the world
-needs both.
+Neither is more fundamental — a field is a function on points, and a place is
+a region you can be inside, and the world needs both.
+
+**But they are not duals, and this page said for some months that they
+were.** The two live on *different lattices*. Vertices are the icosphere's:
+a subdivided icosahedron, `10 · 4^L + 2` of them, 40,962 at the canonical
+level 6. Facets are the cube-sphere's, a quad grid whose width doubles per
+refinement depth. The Pavement moved the base mesh to that quad lattice and
+this table kept describing the triangles it replaced — a facet's corners are
+**four** vertices now, read through `Facet::corner_weights`, not three
+barycentric ones.
+
+The two lattices are also **incommensurate**, which is the part that bites.
+At globe level the chart is 256 tiles around a great circle against 363
+vertices, so a tile boundary is not a vertex boundary and one vertex can
+dominate a whole facet. That is not a defect to be filed down: a facet is
+where you *are* and a vertex is where the world was *measured*, and there is
+no reason those should coincide. It is the reason a tile must read its
+terrain by blending its own four corners rather than snapping to a nearest
+sample ([decision 0676](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0676-a-view-may-interpolate-between-its-samples-but-still-may-not-invent-below-them.md)).
 
 The names say which is which, which is the entire point. Before this
 vocabulary the two were `CellId` and `RoomAddr`, and neither word carried the
@@ -114,8 +137,8 @@ it needs its own word.
 A **Chamber** is a room-scale interior a structure put there. Note what it is
 not: an address at chamber depth is a chamber only because something built one
 there. Below the walk band an address is **identity, not shape** — its
-triangle geometry means nothing and connectivity comes from the structure's
-own graph.
+geometry means nothing and connectivity comes from the structure's own
+graph.
 
 ## "Level" means four things; two of them survive
 

@@ -376,6 +376,39 @@ impl GeneratedTerrain {
         crate::lithology::cave_proneness(&self.material_at(id), self.drainage_at(id))
     }
 
+    /// The vertices holding a cave, ascending — the roster a cave SITE is
+    /// placed from.
+    ///
+    /// [`Self::cave_at`] is the whole of the WHETHER question; this is one
+    /// pass of it over the grid, hoisted here because every consumer needs the
+    /// SET rather than a single vertex's answer. A site consumer asks "is my
+    /// facet one of the placed facets?" — a membership test over placed
+    /// addresses — rather than "which site does my vertex hold?", which would
+    /// silently lose any site whose address landed across a mesh boundary (see
+    /// `hornvale_worldgen::site_facet_for`, which decides WHERE). Decision
+    /// 0667.
+    ///
+    /// **There is deliberately no second cave predicate, and there was one for
+    /// a day.** The Prospect's Task 4 first shipped a `cave_site_at` of its
+    /// own — a `cave_proneness` threshold plus a sea-level freeboard floor —
+    /// which left two disagreeing answers to "is there a cave here" in the
+    /// tree: 1,528 warranted vertices against `cave_at`'s 874 on seed 42, by
+    /// cruder criteria that read neither crust age, nor distance to the
+    /// nearest plate boundary, nor the noise gate that makes caves cluster
+    /// coherently instead of speckling. A walker could have entered a cave the
+    /// world's own geology says is not there while the terrain map drew none.
+    /// Existence is `cave_at`'s question alone.
+    ///
+    /// Derived, never stored: one pass over the grid and no facts, ~2.9 ms
+    /// for all 40,962 vertices on seed 42. A caller that asks per turn should
+    /// hold the result, not re-scan.
+    pub fn cave_site_vertices(&self) -> Vec<Vertex> {
+        self.geosphere
+            .vertices()
+            .filter(|&v| self.cave_at(v).is_some())
+            .collect()
+    }
+
     /// The cave at a vertex, if the fluid-flow point process places one.
     ///
     /// Kind is selected BEFORE existence is tested (`features::cave_process`),

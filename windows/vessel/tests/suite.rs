@@ -121,6 +121,8 @@ mod the_first_mark;
 mod the_handle;
 #[path = "suite/the_lintel.rs"]
 mod the_lintel;
+#[path = "suite/the_prospect.rs"]
+mod the_prospect;
 #[path = "suite/the_purview.rs"]
 mod the_purview;
 #[path = "suite/the_rack.rs"]

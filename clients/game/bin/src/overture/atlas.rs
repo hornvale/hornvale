@@ -153,13 +153,13 @@
 //! against seed 42's real `Full`-depth settlement roster, before relying on
 //! the argument alone — see the task report.)
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 
 use hornvale_game_core::Grid;
 use hornvale_kernel::{Geosphere, NearestVertexIndex, Vertex, World};
 use hornvale_worldgen::{BuildDepth, RungArtifacts};
 
-use crate::discovery::{Discovered, FeatureId};
+use crate::discovery::Discovered;
 use crate::mercator;
 use crate::overture::view::View;
 use crate::plate::{self, Window};
@@ -189,19 +189,24 @@ fn fit_depth(w: u16, h: u16) -> u32 {
     depth
 }
 
-/// Every entry of `settlements`, marked discovered — see the module doc's
+/// Every entry of `sites`, marked discovered — see the module doc's
 /// "The discovery decision" section for why the overture atlas shows every
 /// placed settlement rather than gating on session discovery, which has not
 /// started yet.
 ///
-/// Takes the roster's KEYS only (`plate::settlements_of` widened to
-/// `BTreeMap<Vertex, u64>` at The Legend's Task 7, valued by population for
-/// [`plate::draw_feature_layer`]'s own major/minor split) — discovery has no
-/// use for the value, only for which vertices are placed at all.
-fn discovered_of(settlements: &BTreeMap<Vertex, u64>) -> Discovered {
+/// Takes each entry's own [`plate::MapSite::feature_id`] (The Prospect,
+/// Task 8; before it, the roster's `BTreeMap<Vertex, u64>` KEYS) rather than
+/// building `FeatureId::Settlement` here. That is not a tidy-up: this view's
+/// roster is settlements-only *by what it passes to* `plate::sites_of`, and
+/// minting the identity here as well would put a second assumption about
+/// WHICH kind is present in a function that cannot see the roster's
+/// construction. Reading the id off the entry keeps this correct if the view
+/// ever admits a second kind, and keeps it honest about the one it admits
+/// today.
+fn discovered_of(sites: &[plate::MapSite]) -> Discovered {
     let mut discovered = Discovered::default();
-    for &vertex in settlements.keys() {
-        discovered.record(FeatureId::Settlement(vertex));
+    for site in sites {
+        discovered.record(site.feature_id());
     }
     discovered
 }
@@ -295,14 +300,23 @@ impl View for AtlasView {
             origin_row: 0,
         };
 
-        let settlements = plate::settlements_of(world, geo, nearest);
-        let discovered = discovered_of(&settlements);
-        // No caves, volcanoes or waterfalls — see the module doc's "Caves:
-        // skipped, deliberately" section, which is the same genre-convention
-        // argument for all three: a printed atlas draws coastlines,
-        // mountains and towns, never the mesh-projected extras a possessed
-        // agent's own map layers in as they are encountered.
-        let caves = BTreeSet::new();
+        // SETTLEMENTS ONLY — see the module doc's "Caves, volcanoes and
+        // waterfalls: skipped, deliberately" section, which is the same
+        // genre-convention argument for every non-settlement kind: a printed
+        // atlas draws coastlines, mountains and towns, never the
+        // mesh-projected extras a possessed agent's own map layers in as
+        // they are encountered. The Prospect's Task 8 adds a third site
+        // kind (the placed exotic site) and this view withholds it under the
+        // identical argument, by passing empty PLACED rosters rather than by
+        // any filter downstream.
+        //
+        // The walk depth handed to `sites_of` is therefore never consumed:
+        // it addresses placed sites, and there are none. `plate::BAND_B_RUNG`
+        // is passed as the honest "the canonical globe's walk band" value
+        // rather than an invented sentinel, and `sites_of`'s own doc records
+        // that a caller in this position may pass any depth.
+        let sites = plate::sites_of(world, geo, nearest, &[], &[], plate::BAND_B_RUNG);
+        let discovered = discovered_of(&sites);
         let volcanoes = BTreeSet::new();
         let waterfalls: Vec<Vertex> = Vec::new();
 
@@ -315,8 +329,7 @@ impl View for AtlasView {
             w,
             h,
             plate::colour_allowed(),
-            &settlements,
-            &caves,
+            &sites,
             &volcanoes,
             &waterfalls,
             &discovered,

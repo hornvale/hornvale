@@ -16,7 +16,7 @@ use hornvale_game_core::register::binding_of;
 use hornvale_kernel::{Geosphere, NearestVertexIndex, RoomMeshMemo, Seed, Vertex};
 use hornvale_terrain::landscape::FeatureClass;
 use hornvale_terrain::{GeneratedTerrain, TerrainPins};
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 
 /// Seed 42's terrain, built the same way `plate.rs`'s own private
 /// `test_world()` does — no shared helper crosses the integration-test
@@ -62,7 +62,7 @@ fn seed_42_window(
     (terrain, geo, index, f, win, w)
 }
 
-/// The terrain layer only (no settlements/caves/discovery — this file's
+/// The terrain layer only (no sites and no discovery — this file's
 /// subject is the raster, not the point-site overlay), colour off.
 fn seed_42_terrain_layer() -> Grid {
     let (terrain, geo, index, f, win, w) = seed_42_window(24);
@@ -75,8 +75,7 @@ fn seed_42_terrain_layer() -> Grid {
         w,
         24,
         false,
-        &BTreeMap::new(),
-        &BTreeSet::new(),
+        &[],
         &BTreeSet::new(),
         &[],
         &Default::default(),
@@ -247,8 +246,7 @@ fn seed_42_draws_at_least_one_of_each_landform_it_actually_has() {
                     w,
                     h,
                     false,
-                    &BTreeMap::new(),
-                    &BTreeSet::new(),
+                    &[],
                     &volcanoes,
                     &[],
                     &discovered,
@@ -280,8 +278,7 @@ fn seed_42_draws_at_least_one_of_each_landform_it_actually_has() {
                     w,
                     h,
                     false,
-                    &BTreeMap::new(),
-                    &BTreeSet::new(),
+                    &[],
                     &BTreeSet::new(),
                     &waterfalls,
                     &Discovered::default(),

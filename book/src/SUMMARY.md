@@ -442,6 +442,7 @@
 - [The Wicket](./chronicle/the-wicket.md)
 - [The Roll](./chronicle/the-roll.md)
 - [The Hallmark](./chronicle/the-hallmark.md)
+- [The Prospect](./chronicle/the-prospect.md)
 - [The Reservoir](./chronicle/the-reservoir.md)
 - [The Pawl](./chronicle/the-pawl.md)
 - [The Rack](./chronicle/the-rack.md)
@@ -450,6 +451,7 @@
 - [The Detent](./chronicle/the-detent.md)
 - [The Nettle](./chronicle/the-nettle.md)
 - [The Terrier](./chronicle/the-terrier.md)
+- [The Hachure](./chronicle/the-hachure.md)
 
 # Appendix: The Frontier
 
