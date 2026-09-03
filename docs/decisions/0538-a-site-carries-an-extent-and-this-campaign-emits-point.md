@@ -67,10 +67,23 @@ modelling `Tier::Derived` early; that citation should be read against this
 corrected version, where the precedent is "the field is in place", not "the
 match arms are in place".
 
-**One variant is deliberately unconstructed.** `Region` is uninhabited until a
-campaign builds it, and the reserved body is deliberately empty: naming its
-fields now would guess at a geometry nobody has designed. This is the same
-posture 0539 takes toward `Tier::Derived`.
+**There is no second variant, and this paragraph declared one.** It read: *"One
+variant is deliberately unconstructed. `Region` is uninhabited until a campaign
+builds it, and the reserved body is deliberately empty."* The correction above
+removed `Region` from the enum block, and this paragraph was left behind
+asserting it — so a same-day-corrected record still spoke with two voices, which
+is exactly how a reader ends up trusting the wrong half.
+
+What is true: **`Extent` has one variant, `Point`, and a widening is a new
+variant rather than a new parameter.** Naming a region's fields now would guess
+at a geometry nobody has designed, so nothing is reserved in the type — the
+posture is *don't model it yet*, not *model it empty*.
+
+**This is NOT the same posture 0539 takes toward `Tier::Derived`, and the
+comparison was wrong in a way worth keeping.** `Tier::Derived` genuinely exists
+as an inhabited variant that `Site::derived` constructs. `Extent::Region` never
+existed at all. So 0539's precedent for modelling early is the **tier**, which
+did it, and not this record, which described doing it without doing it.
 
 **A test asserting "a new site is a point" is vacuous while `Extent` has one
 inhabited variant**, and one was written and removed for that reason. What
