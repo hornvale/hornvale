@@ -3554,6 +3554,33 @@ against a zero-forcing null control whose present must be indistinguishable
 from its own genesis. It is a bet at the top of the checkability gradient, and,
 like the two before it, it is allowed to fail.
 
+**A second horizon is now quantified rather than merely felt.** *The Prospect*
+(2026-09-03) measured the density of the inhabited surface for the first time:
+across five seeds, **one enterable site per ~84,200 land facets** — four to five
+orders of magnitude below the project's stated aim of something worth finding in
+every square mile. No bet in the map above moved, because no bet covered this;
+what the measurement adds is a **ceiling**, and the ceiling is what makes it a
+horizon rather than a defect.
+
+Placed features are born on the 40,962-vertex geosphere and addressed onto the
+402,653,184-facet walk band, so **at most one facet in 9,830 can hold a placed
+feature of a given kind**, before a seed is built. Worlds today sit at 5.8% of
+that ceiling; raising every predicate to *always* buys about 17× and leaves the
+surface ~4,900× short. So the shortfall is not a tuning question at any
+threshold, and the campaign's own falsified hypothesis is the evidence — H2
+predicted a per-facet cave *percentage* and missed by ~1,070× because a placed
+point process on a 41,000-point lattice cannot express one.
+
+What that bounds is the class of answer. Density at facet resolution has to come
+from **derived** features — a pure function of seed and position, unbounded,
+stored nowhere, outside the ledger and therefore outside world history — which
+decision 0539 names but no campaign has yet built. The checkable form of the bet
+is whether a derived surface can be dense *and* legible at once: whether noise
+interacting with macro features produces places that feel found rather than
+extruded, and whether a player can tell the difference. That is gradeable by the
+world against itself — the same shape as the bets above — and it is allowed to
+fail.
+
 **A partial rescore, now that population has a field to vary.** The
 carrying-capacity field promoted above (see the high-confidence tier) is an
 *equilibrium* snapshot — `population = f(carrying capacity)` in closed
