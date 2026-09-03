@@ -459,3 +459,17 @@ review.
 GitHub blob URLs**, per `book/src/frontier/CLAUDE.md`'s link discipline;
 the 21 other rows carrying relative `docs/` links are pre-existing and not
 this campaign's to sweep — recorded here so the next sweep knows the count.
+
+**Residuals after the fix wave's re-review (commit 1843ce7cb).** Three
+prose nits the re-review found in the wave itself — "the eighth `!wait 5`"
+for a seven-wait loop; a retrospective sentence asserting the counterexample
+sat *inside* a range the same paragraph calls unrecoverable; and a
+parenthetical ("`140-178` appears nowhere in the tree") that this ledger's
+own previous commit had falsified by quoting the figure. Ruling: fixed
+inline by the controller with the reviewer's exact wording rather than a
+second wave (the process forbids one, and each is a one-line exact edit
+whose review already happened in the finding). What it costs if wrong: a
+sentence. Everything else the re-review listed is addressed; the two
+observations it left (0226's amendment restates an unrun mutation that
+`controller_swap.rs` also states conditionally; a 92-column line in the
+chronicle) are accepted as they stand.
