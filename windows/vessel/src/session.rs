@@ -14903,6 +14903,107 @@ mod tests {
         }
     }
 
+    /// claim: invariant(forall-seed) — two pinned seeds (42, 7), not a sweep;
+    /// see spec §5's `invariant(forall-seed)` shape.
+    ///
+    /// The Terrier, spec §4 P6: the brief read off the hoisted register equals
+    /// the brief read off a FRESH `occupations_by_vertex(world)` at every
+    /// locale a script visits — VIEW ≡ SCAN for the one world-scoped read that
+    /// used to be done per call.
+    ///
+    /// Non-vacuity is asserted in both directions: the script must visit at
+    /// least one locale with a living occupation and at least one without, so
+    /// a hoist that dropped the map reds on the first and one that returned a
+    /// stale "alive" reds on the second. Seed 42 for the fixture; seed 7 as a
+    /// second world whose vertices are not seed 42's.
+    ///
+    /// **The bearing is per-seed, and the bound is 20, not the prescribed
+    /// 12 — both measured, not assumed, with a scratch probe walking every
+    /// cardinal and ordinal bearing up to 80 steps and printing the brief at
+    /// each stop (deleted after use; not left in the tree).** `go n` never
+    /// left seed 42's flagship vertex within 25 steps, nor did `go s` or
+    /// `go w`; only `go e` did, flipping `alive` to `false` at step 18 — so
+    /// the 12-step guard the brief prescribed is tighter than this fixture's
+    /// geometry, not a bug in the walk. Seed 7 is the opposite shape: the
+    /// flagship's own starting vertex carries **no occupation record at
+    /// all** (250 of the world's 272 occupied vertices are alive, and the
+    /// start vertex is not one of the 272), so `saw_none` is true at step 0
+    /// and the walk needs to find a living one instead — `go w` does, at
+    /// step 7; `go e`, `go n`, `go s`, `go ne`, `go nw`, `go se` did not
+    /// within 80 steps. Bound 20 covers both measured minima (18 and 7) with
+    /// margin, and the loop still fails loudly rather than silently if a
+    /// future fixture regeneration moves either number past it.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST: in `WorldContext::build`, replace
+    /// `hornvale_worldgen::occupations_by_vertex(world)` with
+    /// `std::collections::BTreeMap::new()` (applied and restored with
+    /// `scripts/mutate.py`). Observed red: the very FIRST assertion —
+    /// `session.wctx.occupations, fresh` — fails at seed 42, before the walk
+    /// loop ever runs: `left: {}` (the mutated, empty map) vs `right:
+    /// {Vertex(14): [OccupationRecord { … }], …}` (the fresh scan, non-empty).
+    /// An empty register makes every brief's `function` field `None`, so no
+    /// mutation could reach the loop's `saw_alive` branch at all — the
+    /// register-identity assertion is what catches it, exactly as predicted.
+    #[test]
+    fn the_hoisted_brief_is_the_fresh_brief_at_every_visited_locale() {
+        for seed in [42u64, 7] {
+            // `seam_world()` is the committed seed-42 fixture (decision 0607);
+            // the module's own `world_at` builds any other seed and returns
+            // an `Option` (`session.rs:10634`).
+            let world = if seed == 42 {
+                seam_world()
+            } else {
+                world_at(seed).expect("seed 7 builds under default pins")
+            };
+            // Measured per-seed (see doc above): seed 42's flagship starts
+            // alive and only `go e` leaves the alive vertex within a bounded
+            // walk; seed 7's flagship starts on unoccupied ground and only
+            // `go w` reaches a living one.
+            let bearing = if seed == 42 { "go e" } else { "go w" };
+            let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+            let fresh = hornvale_worldgen::occupations_by_vertex(&world);
+            assert_eq!(
+                session.wctx.occupations, fresh,
+                "seed {seed}: the hoisted register is not the fresh one"
+            );
+            let mut saw_alive = false;
+            let mut saw_none = false;
+            let mut steps = 0;
+            loop {
+                let hoisted = session.brief_here();
+                let terrain = session.terrain_here();
+                let scanned = crate::brief::brief_of(
+                    &fresh,
+                    session.wctx.ctx.climate().geosphere(),
+                    session.wctx.ctx.nearest_index(),
+                    &session.position(),
+                    &terrain,
+                    session.walk_depth(),
+                );
+                assert_eq!(
+                    hoisted, scanned,
+                    "seed {seed}, step {steps}: the hoisted brief disagrees with the scan"
+                );
+                if hoisted.function.is_some() {
+                    saw_alive = true;
+                } else {
+                    saw_none = true;
+                }
+                if saw_alive && saw_none {
+                    break;
+                }
+                assert!(
+                    steps < 20,
+                    "seed {seed}: twenty steps of {bearing:?} never visited both a living \
+                     and an unoccupied locale (alive={saw_alive}, none={saw_none}); pick \
+                     another bearing"
+                );
+                let _ = session.handle(bearing);
+                steps += 1;
+            }
+        }
+    }
+
     #[test]
     fn the_marks_answer_is_the_sessions_own_self_description() {
         // §6's parity contract over the one legend noun whose answer is not a
