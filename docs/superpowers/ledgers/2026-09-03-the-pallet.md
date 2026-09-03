@@ -334,3 +334,44 @@ hornvale-vessel -p hornvale`): 1965/1965.
 All four sleep-side conversions now have a dedicated vessel-level property
 witness; the byte-golden remains as a secondary change detector, not the
 sole coverage for any of them.
+
+#10 [G5] — **Task 1 complete after two fix rounds. All four conversions now
+carry a clean single property witness, and the last one found the property the
+original defect statement had been pointing at all along.**
+
+Final mutation table, each row a separate mutation against a 1012-test baseline:
+
+| mutation | witness |
+|---|---|
+| `sleep_bout` → `SLEEP_BOUT` | `a_rest_is_shorter_than_a_sleep_at_the_100_hour_legal_extreme` |
+| `wake_scan_step` → `WAKE_SCAN_STEP` | `a_crepuscular_wake_band_is_bracketed_by_the_retired_steps_grid` |
+| `scan_limit` → `SCAN_LIMIT` | `a_fast_rotating_world_gives_up_a_search_the_retired_bound_would_have_finished` |
+| `one_day` → `ONE_DAY` | the give-up-fallback test, plus one cross-reaction |
+
+**Controller-verified the load-bearing row independently** rather than reading
+it: `scripts/mutate.py` applied the `wake_scan_step` mutation, the crepuscular
+test reddened alone, `cp` restored, green confirmed, tree clean.
+
+**The property is the good part.** The step is the scan's own *resolution*, so
+it can only matter where the retired 5,000-tick grid and the converted finer
+grid **bracket an actual wake transition**. A diurnal window is half the day —
+too wide for either grid to miss. A **crepuscular** window is `TWILIGHT_DEG`
+= 6°, about 2,124 ticks, which is *narrower than the retired step*. That is
+verbatim the concern `WAKE_SCAN_STEP`'s own doc had been asserting since long
+before this campaign ("fine enough to catch a crepuscular creature's narrow
+dawn/dusk bands") and which The Plumb's finding quoted as the defect. The
+witness and the original complaint turn out to be the same sentence.
+
+**This is the third time on one task that naming a PROPERTY beat prescribing a
+CONSTRUCTION.** I gave only "the two step sizes must bracket a transition" and
+the implementer found the crepuscular band; earlier I gave "the two bounds must
+disagree about whether the scan finds anything" and it found the fast-world
+give-up. A plan author does not know which fixture discriminates; the
+implementer does, after reading. Recording it because the rule has now paid
+three times in a row and is cheap to state in a brief.
+
+**One self-inflicted defect worth carrying:** fix round 1's two new tests
+carried seven assertion strings with literal multi-space runs — a non-raw
+Python heredoc had eaten the Rust `\`-continuations, collapsing three-line
+messages onto one line with the continuation indentation surviving as spaces.
+Compiles, formats, passes; only reading the string shows it. Fixed in round 2.
