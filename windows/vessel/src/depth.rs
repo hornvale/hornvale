@@ -9,10 +9,34 @@
 //! a function of a [`Facet`]'s path length, which is depth.
 //!
 //! The band notation (Rose Window metaplan §1b.3) is still what the depths
-//! MEAN: the walk band is the ~1.7 km locale a body commits to, the chamber
-//! band is the ~3.3 m place inside a structure. An address below the walk band
+//! MEAN: the walk band is the locale a body commits to, the chamber band is
+//! the human-scale place inside a structure. An address below the walk band
 //! is IDENTITY, NOT SHAPE (§1b.3 law 3) — its triangle geometry means nothing,
 //! and connectivity comes from the structure's own graph.
+//!
+//! **THE SIZES ARE NOT STATED HERE ANY MORE, AND THAT IS THE FIX.** This doc
+//! said "the ~1.7 km locale" and "the ~3.3 m place", and both are
+//! PRE-CUBE-SPHERE figures — an icosphere depth-12 triangle edge and its nine
+//! halvings, from decision 0082, written when the walk band was six levels
+//! below the canonical grid. The Pavement moved the walk band to
+//! `globe_level + 7` on a cube-sphere, where **depth 13 is 1.126 km per
+//! side** and nine halvings is **~2.2 m**, not 3.3. The owner of that number
+//! is `hornvale_locale::walk_depth`, whose own doc derives it; ask it rather
+//! than trusting a figure restated here, which is the discipline The Pavement
+//! adopted after finding sixteen restatements of the walk offset, two of them
+//! a whole band stale.
+//!
+//! It is worth knowing that the stale figure did damage before it was caught:
+//! H3, this project's site-density baseline
+//! (`windows/lab/tests/suite/site_density.rs`), published its headline gap
+//! **2x too large** because 1.7 km makes one facet ~2.89 km2 — very nearly a
+//! square mile — so "a site per facet" and "a site per square mile" looked
+//! like the same target. At 1.126 km a square mile is 2.04 facets.
+//!
+//! **The figure survives elsewhere and this file cannot fix that**: decision
+//! 0082 (ratified, so it needs superseding rather than editing), decision
+//! 0101's band table, `docs/design/room-scale/p2-subdivision-design.md` and
+//! several plans all still say ~1.7 km / ~3.3 m. Filed, not fixed here.
 //!
 //! There is deliberately no `band_of(addr)` classifier: the question a session
 //! actually asks is "am I inside a structure?", which is session state
@@ -21,10 +45,17 @@
 
 use hornvale_kernel::Facet;
 
-/// How many refinements below the walk band a chamber sits. Nine halvings of a
-/// ~1.7 km locale edge is ≈3.3 m — a human-scale room. Declared as a constant
-/// because it is a shape of the world, not a tuning knob: changing it changes
-/// which addresses are chambers.
+/// How many refinements below the walk band a chamber sits.
+///
+/// Nine halvings of the walk-band edge — 1.126 km at depth 13, per
+/// `hornvale_locale::walk_depth` — is **~2.2 m**, a human-scale room. This
+/// doc said "nine halvings of a ~1.7 km locale edge is ≈3.3 m"; the offset is
+/// right and both figures were the pre-cube-sphere ones (see this module's
+/// doc). The constant's justification is unchanged by the correction — 2.2 m
+/// is still a room a person stands in — which is exactly why nobody noticed.
+///
+/// Declared as a constant because it is a shape of the world, not a tuning
+/// knob: changing it changes which addresses are chambers.
 /// type-audit: bare-ok(count)
 pub const CHAMBER_DEPTH_OFFSET: u32 = 9;
 
