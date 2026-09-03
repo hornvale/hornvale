@@ -169,3 +169,23 @@ embedding ~0.1 ms, prose 0.003 ms. Nothing else in `enter` is a millisecond.
 **Ideonomy passes / overturns:** shares #1's pass (the scope prompt); 0.
 
 **Capture:** spec §1, §4 P2.
+
+## Plan (post-G3)
+
+### #6 [G4] — plan self-review against the approved spec
+
+**Decision:** proceed. Spec §3.1/§3.2/§3.3 → Task 1; §4 P6 → Task 2;
+§3.4 (bench halves) and §3.5, P2–P4 → Task 3; §3.4 (registry, chronicle,
+retro), §5's rows and decision 0636, P5 → Task 4; DoD's chronicle,
+retrospective, census, merge → Task 5. Two plan-text defects found by
+verifying the brief against the code before commit: `session.rs` has no
+top-level `use std::collections`, so the new field's type is written in
+full; the in-module `world_at(seed)` returns `Option<World>` and seed 42's
+fixture is `seam_world()`, so Task 2's test now branches on the seed. Main
+absorbed at `2e85f2d72` (62 commits, The Brattice) before Task 1; every
+anchor the spec cites was re-verified after the merge.
+
+**Ideonomy passes / overturns:** none run for the plan itself; the design
+pass is #1's.
+
+**Capture:** `docs/superpowers/plans/2026-09-03-the-terrier.md`.
