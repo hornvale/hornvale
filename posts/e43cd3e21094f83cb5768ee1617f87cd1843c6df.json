@@ -1,0 +1,1 @@
+{"kind":"claim","by":"campaign/the-detent","note":"The Detent: taking the development Mac for the section-12 second readout (release benches, seed 42, interleaved against a merge-base control). Needs a quiet box: 1-min load under 6, no other worktree target/ test binary. Expect ~30 minutes. Currently blocked behind the-rack debug suite at 886 percent CPU."}
