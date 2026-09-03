@@ -19,7 +19,11 @@
 //! So nothing in the tree measures the third axis: **FIVE production folds in
 //! `liveness.rs` walk an agent's committed `agent-at` TRAIL on every
 //! evaluation** — `agent_sightings`/`integrate_thirst` via `drive_at` (the
-//! thirst path integral), `hunger_at` (the same trail, `HUNGER` params),
+//! thirst path integral; BOTH of those functions are deleted as of The Pawl's
+//! Task 3, which is what this bench now measures the effect of — `drive_at`
+//! reads a resident trail by binary search, and the two bodies survive only
+//! as the oracle in `windows/vessel/tests/suite/resident_folds.rs`),
+//! `hunger_at` (the same trail, `HUNGER` params),
 //! `believed_water` (the water belief), `hazard_memory_memo`
 //! (latest-visit-per-facet) and `build_emitter_scan` (alarm halos). A sixth,
 //! `shared_believed_water`, walks it once per co-located peer. `fatigue_at`
@@ -53,6 +57,47 @@
 //! probe is graded now (see its own doc for why its terrain deliberately
 //! differs from the sim's), so the column measures the production shape and the
 //! claim is true rather than intended.
+//!
+//! **RE-MEASURED, as the paragraph above asks (The Pawl, at the absorption of
+//! `2c34f9e4c`).** One run, seed 42, 50 agents, 200 ticks, on a box at load
+//! 1.97/4.17/7.39 before and 2.85/3.40/6.15 after:
+//!
+//! ```text
+//!   fatigue_at   k = 0.09651 us/call per fact   r^2 = 0.964
+//!                elasticity 0.31 over history 101.0 -> 260.0 (2.57x)
+//!                C = 34.795 us/call floor; history term 41.9% of the last band
+//!                final band 60.88 us/call
+//! ```
+//!
+//! **The finding is that it IS a trail-walker and is NOT history-proportional,
+//! and both halves matter.** The `r^2` of 0.964 says the relationship is real
+//! and clean — the "no stable elasticity sign" sentence above genuinely does
+//! not describe this fold any more, and the fold went from the cheapest of the
+//! six to 60.88 us/call against `drive_at`'s 2.53, a 24x gap. But 0.31 is well
+//! under proportional, which is what Task 10's own two bounds predict: the
+//! trail is walked ONCE per fold as an ordered merge against the bout list, not
+//! once per bout, and the four `room_affords_rest` calls behind it are memoised
+//! on `(is_built, is_cold)` rather than on the room.
+//!
+//! **So `position_timeline` is deliberately NOT migrated onto the resident
+//! store's `Trail`, and this paragraph is the record of that choice rather than
+//! an omission.** The Pawl's standing rule for the migration was an elasticity
+//! above 0.5 with an `r^2` of at least 0.5; this reading meets the second
+//! condition and fails the first, and a fold at 0.31 does not need a
+//! permutation index to stop it growing with history. The number to re-measure
+//! against is 0.31, and the condition to re-measure on is the bout list growing
+//! faster than the trail — a species that rests often, or a script long enough
+//! that a body's bouts outnumber its postings.
+//!
+//! For contrast in the same run: `drive_at` reads 0.02 elasticity at
+//! `r^2 = 0.062` (the campaign's own result — a floor, not a slope), while
+//! `believed_water`, `shared_believed_water` and `hazard_memory_memo` still
+//! read 0.96/0.96/0.93. Those three are bounded by DISTINCT ROOMS VISITED
+//! rather than by history, and this probe agent is a wanderer whose distinct
+//! rooms grow with its postings, so a near-unity elasticity here is the two
+//! quantities coinciding on this agent and not evidence that the bound is
+//! absent. Reading it as the latter would be the same error the `fatigue_us`
+//! column's own history records.
 //!
 //! ## Why there are TWO instruments, and why neither may be deleted
 //!
@@ -253,8 +298,19 @@ fn calibrate() -> f64 {
 ///
 /// The `t` passed is the band's current day, so the fold walks every posting
 /// the agent has, exactly as the live tick's own call does.
+///
+/// **`folds` is the RUN's store, not a fresh one per reading, and that is the
+/// production shape** (The Pawl). The store is advanced on read and never
+/// invalidated, so the run's own ticks have already brought it current before
+/// this probe is called; the `FOLD_REPS` back-to-back calls are therefore WARM
+/// reads, each absorbing nothing, which is exactly what the live tick's
+/// repeated reads over one frozen ledger are. Handing this a fresh store per
+/// reading would time an O(ledger) advance instead — a number about the
+/// harness, not about the read.
+#[allow(clippy::too_many_arguments)]
 fn probe_fold_us(
     ledger: &Ledger,
+    folds: &hornvale_vessel::resident::OwnedFolds,
     entity: EntityId,
     home: &Facet,
     t: WorldTime,
@@ -265,7 +321,7 @@ fn probe_fold_us(
     let t0 = Instant::now();
     let mut sink = 0.0_f64;
     for _ in 0..FOLD_REPS {
-        sink += drive_at(ledger, entity, home, t, &SUSTENANCE, terrain, class);
+        sink += drive_at(ledger, folds, entity, home, t, &SUSTENANCE, terrain, class);
     }
     let us = t0.elapsed().as_secs_f64() * 1e6 / FOLD_REPS as f64;
     // Consume `sink` so the calls cannot be optimized away.
@@ -280,9 +336,12 @@ fn probe_fold_us(
 /// and the `HUNGER` params instead of `SUSTENANCE`. Same reasoning: nothing
 /// inside the timed span scales with anything but the length of history
 /// walked, and `&dyn Terrain` blocks the devirtualization that would let the
-/// optimizer hoist the identical-argument calls out of the loop.
+/// optimizer hoist the identical-argument calls out of the loop. `folds` is
+/// the RUN's store and the reads are warm — see [`probe_fold_us`].
+#[allow(clippy::too_many_arguments)]
 fn probe_hunger_us(
     ledger: &Ledger,
+    folds: &hornvale_vessel::resident::OwnedFolds,
     entity: EntityId,
     home: &Facet,
     t: WorldTime,
@@ -293,7 +352,7 @@ fn probe_hunger_us(
     let t0 = Instant::now();
     let mut sink = 0.0_f64;
     for _ in 0..FOLD_REPS {
-        sink += hunger_at(ledger, entity, home, t, terrain, class);
+        sink += hunger_at(ledger, folds, entity, home, t, terrain, class);
     }
     let us = t0.elapsed().as_secs_f64() * 1e6 / FOLD_REPS as f64;
     // Consume `sink` so the calls cannot be optimized away.
@@ -364,6 +423,7 @@ fn probe_fatigue_us(ledger: &Ledger, npc: &Body, t: WorldTime, terrain: &dyn Ter
 /// history intersected with water-truth.
 fn probe_believed_water_us(
     ledger: &Ledger,
+    folds: &hornvale_vessel::resident::OwnedFolds,
     npc: &Body,
     t: WorldTime,
     terrain: &dyn Terrain,
@@ -373,7 +433,7 @@ fn probe_believed_water_us(
     let t0 = Instant::now();
     let mut some_count: u64 = 0;
     for _ in 0..FOLD_REPS {
-        if believed_water(ledger, npc, t, terrain, budget).is_some() {
+        if believed_water(ledger, folds, npc, t, terrain, budget).is_some() {
             some_count += 1;
         }
     }
@@ -394,8 +454,10 @@ fn probe_believed_water_us(
 /// `FOLD_REPS` back-to-back calls. Threaded the full `band` slice deliberately
 /// — that is what `step_with_occupancy` passes in production, so this is
 /// production cost, not a cheaper single-agent proxy.
+#[allow(clippy::too_many_arguments)]
 fn probe_shared_believed_water_us(
     ledger: &Ledger,
+    folds: &hornvale_vessel::resident::OwnedFolds,
     npc: &Body,
     band: &[Body],
     t: WorldTime,
@@ -406,7 +468,7 @@ fn probe_shared_believed_water_us(
     let t0 = Instant::now();
     let mut some_count: u64 = 0;
     for _ in 0..FOLD_REPS {
-        if shared_believed_water(ledger, npc, band, t, terrain, budget).is_some() {
+        if shared_believed_water(ledger, folds, npc, band, t, terrain, budget).is_some() {
             some_count += 1;
         }
     }
@@ -430,8 +492,10 @@ fn probe_shared_believed_water_us(
 /// the first from cache, so the loop would measure the memo's hit rate, not
 /// the fold — and it would read as this fold being nearly free, which is
 /// the wrong conclusion for the right-looking reason.
+#[allow(clippy::too_many_arguments)]
 fn probe_hazard_memory_memo_us(
     ledger: &Ledger,
+    folds: &hornvale_vessel::resident::OwnedFolds,
     npc: &Body,
     band: &[Body],
     t: WorldTime,
@@ -442,7 +506,7 @@ fn probe_hazard_memory_memo_us(
     let mut sink: u64 = 0;
     for _ in 0..FOLD_REPS {
         let mut memo = PrimaryAfraidMemo::new();
-        let mem = hazard_memory_memo(ledger, npc, t, terrain, band, &mut memo);
+        let mem = hazard_memory_memo(ledger, folds, npc, t, terrain, band, &mut memo);
         sink += (mem.shunned.len() + mem.dread.len()) as u64;
     }
     let us = t0.elapsed().as_secs_f64() * 1e6 / FOLD_REPS as f64;
@@ -562,8 +626,12 @@ struct Band {
     ledger_len: usize,
     ledger_bytes: usize,
     /// **The actual independent variable.** `Ledger::facts_of` is indexed on
-    /// `(subject, predicate)`, so a fold like `agent_sightings` walks only
-    /// THIS agent's own `agent-at` facts -- never the whole ledger. Genesis
+    /// `(subject, predicate)`, so a fold like `believed_water` walks only
+    /// THIS agent's own `agent-at` facts -- never the whole ledger. (The
+    /// example here used to be `agent_sightings`, which The Pawl deleted; the
+    /// thirst and hunger reads are bounded differently now -- by the resident
+    /// trail, and by the interval since the reset -- but the other four folds
+    /// still walk the per-agent history exactly as this column describes.) Genesis
     /// commits ~12,500 facts before the walk starts, so `ledger_len` moves
     /// only ~1.5x across this run while the per-agent history the folds
     /// actually traverse moves ~6x. Fitting against `ledger_len` therefore
@@ -634,6 +702,27 @@ struct Band {
     drank_roster_max: usize,
     /// How many roster members have drunk zero times as of this band.
     drank_roster_zero_count: usize,
+
+    // ---- Task 8: M1 (spec §4) -- the bytes the room memo and the
+    // per-creature verdict index hold at this band's end. No threshold: this
+    // is the figure stage 4 (the lifecycle) enters on, not a criterion, and
+    // nothing in this campaign evicts either structure. ----
+    /// Rooms the room memo holds at this band's end
+    /// (`GroundHazards::len()`).
+    ground_len: usize,
+    /// An estimate of the room memo's held bytes at this band's end
+    /// (`GroundHazards::held_bytes()`) -- every held room's key size
+    /// (`size_of::<Facet>()` plus its `path` heap length) summed, plus one
+    /// `size_of::<Hazards>()` per held room. An ESTIMATE of held data, not
+    /// an allocator measurement, the same caveat `ledger_bytes` states.
+    ground_bytes: usize,
+    /// Every entity's judged-room count summed, held by the frightening-
+    /// verdict index at this band's end (`FrighteningGround::entries()`).
+    index_entries: usize,
+    /// An estimate of the verdict index's held bytes at this band's end
+    /// (`FrighteningGround::held_bytes()`) -- same estimate caveat as
+    /// `ground_bytes`.
+    index_bytes: usize,
 }
 
 fn main() {
@@ -698,6 +787,26 @@ fn main() {
             b.folded_len,
             b.probe_drank_per_tick,
             b.ledger_len
+        );
+    }
+
+    // Task 8: M1 (spec §4) -- a SECOND, small table so the main one's
+    // existing columns stay untouched. No threshold: nothing evicts either
+    // structure in this campaign, so these are the figures stage 4 (the
+    // lifecycle) enters on, not a criterion.
+    println!();
+    println!(
+        "{:>5} {:>10} {:>12} {:>13} {:>12}",
+        "band", "ground_len", "ground_bytes", "index_entries", "index_bytes"
+    );
+    println!(
+        "  (M1, spec §4: the room memo's and the per-creature verdict index's held entries \
+         and an ESTIMATE of their held bytes -- not an allocator measurement.)"
+    );
+    for b in &bands {
+        println!(
+            "{:>5} {:>10} {:>12} {:>13} {:>12}",
+            b.index, b.ground_len, b.ground_bytes, b.index_entries, b.index_bytes
         );
     }
 
@@ -1061,6 +1170,19 @@ fn run(
     let npcs = derive_npcs(world, ctx, &mut ledger, AGENTS, home_settlement);
     let mut mesh_memo = RoomMeshMemo::new();
     let mut home_nav_cache = HomeNavCache::new();
+    // The resident fold store (The Pawl, spec §2.1), owned at exactly the
+    // scope `home_nav_cache` is — one per run, never per tick — because a
+    // store rebuilt each tick would be the O(history) walk it exists to
+    // remove. Interior mutability because it is advanced on read (spec §2.2).
+    // The thirst and hunger reads below, and the tick's own walk, all read
+    // THIS store — the one production owns, at the scope production owns it.
+    let folds =
+        hornvale_vessel::resident::OwnedFolds::new(hornvale_vessel::resident::ResidentFolds::new());
+    // The session-lived room memo (The Detent, spec §2.1), owned at exactly
+    // the scope `folds` is — one per run, so every tick's terrain reads and
+    // fills the SAME memo rather than starting cold each tick.
+    let ground =
+        hornvale_vessel::ground::OwnedGround::new(hornvale_vessel::ground::GroundHazards::new());
     let mut day = WorldTime::from_std_days(0.5).expect("0.5 is a finite day count");
 
     // NO SINGLE PROBE AGENT. An earlier draft reported one agent's own
@@ -1102,7 +1224,8 @@ fn run(
         // it replaces was only accidentally exact for whole-day steps.
         day = WorldTime::from_ticks(day.ticks() + WorldTime::TICKS_PER_STD_DAY);
         let mesh_snapshot = mesh_memo.clone();
-        let terrain = LocaleTerrain::with_fields(ctx, None, None, None, None, Some(&mesh_snapshot));
+        let terrain = LocaleTerrain::with_fields(ctx, None, None, None, None, Some(&mesh_snapshot))
+            .with_ground(&ground);
         let sys = DriveMovements {
             npcs: npcs.clone(),
             from,
@@ -1110,6 +1233,7 @@ fn run(
             params: SUSTENANCE,
             day_ticks,
             terrain: &terrain,
+            folds: &folds,
         };
         // Timed span: the drive evaluation AND the commits it produces, the
         // same pair `agent_scaling.rs` times as one. The `npcs.clone()` and
@@ -1120,7 +1244,7 @@ fn run(
         // must not fold a per-tick harness clone into the answer.
         #[allow(clippy::disallowed_types)] // benchmark harness
         let t0 = Instant::now();
-        let (facts, _occupancy) =
+        let (facts, _occupancy, _written) =
             sys.step_with_occupancy(&ledger, &mut mesh_memo, &mut home_nav_cache);
         for fact in facts {
             ledger
@@ -1160,10 +1284,26 @@ fn run(
                 .count();
             let mesh_for_probe = mesh_memo.clone();
             let probe_terrain =
-                LocaleTerrain::with_fields(ctx, None, None, None, None, Some(&mesh_for_probe));
-            let fold_us = probe_fold_us(&ledger, p_entity, &p_home, day, &probe_terrain, p_class);
-            let hunger_us =
-                probe_hunger_us(&ledger, p_entity, &p_home, day, &probe_terrain, p_class);
+                LocaleTerrain::with_fields(ctx, None, None, None, None, Some(&mesh_for_probe))
+                    .with_ground(&ground);
+            let fold_us = probe_fold_us(
+                &ledger,
+                &folds,
+                p_entity,
+                &p_home,
+                day,
+                &probe_terrain,
+                p_class,
+            );
+            let hunger_us = probe_hunger_us(
+                &ledger,
+                &folds,
+                p_entity,
+                &p_home,
+                day,
+                &probe_terrain,
+                p_class,
+            );
             // The fatigue probe's OWN terrain: identical to `probe_terrain`
             // except that it carries the world's real built-room set, so the
             // graded fold composes something other than wilderness. Kept
@@ -1176,12 +1316,14 @@ fn run(
                 None,
                 Some(&built_set),
                 Some(&mesh_for_probe),
-            );
+            )
+            .with_ground(&ground);
             let fatigue_us = probe_fatigue_us(&ledger, npc, day, &fatigue_terrain);
             let believed_water_us =
-                probe_believed_water_us(&ledger, npc, day, &probe_terrain, PROBE_BUDGET);
+                probe_believed_water_us(&ledger, &folds, npc, day, &probe_terrain, PROBE_BUDGET);
             let shared_believed_water_us = probe_shared_believed_water_us(
                 &ledger,
+                &folds,
                 npc,
                 &npcs,
                 day,
@@ -1189,7 +1331,7 @@ fn run(
                 PROBE_BUDGET,
             );
             let hazard_memory_memo_us =
-                probe_hazard_memory_memo_us(&ledger, npc, &npcs, day, &probe_terrain);
+                probe_hazard_memory_memo_us(&ledger, &folds, npc, &npcs, day, &probe_terrain);
             let calib_ms = calibrate();
             let searches_after = home_nav_cache.searches();
             let ticks_elapsed = (tick + 1) as f64;
@@ -1227,6 +1369,10 @@ fn run(
                 drank_roster_median,
                 drank_roster_max,
                 drank_roster_zero_count,
+                ground_len: ground.borrow().len(),
+                ground_bytes: ground.borrow().held_bytes(),
+                index_entries: folds.borrow().frightening_ground().entries(),
+                index_bytes: folds.borrow().frightening_ground().held_bytes(),
             });
             band_facts_before = facts_after;
             band_searches_before = searches_after;

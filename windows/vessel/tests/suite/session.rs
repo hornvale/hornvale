@@ -6,15 +6,10 @@ use hornvale_terrain::TerrainPins;
 use hornvale_vessel::{PossessOpts, Session, Turn, run};
 use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
 
+/// Seed 42's world under default pins, read from the committed fixture rather
+/// than rebuilt (decision 0607) — byte-identical to the build this replaced.
 fn seam_world() -> World {
-    build_world(
-        Seed(42),
-        &SkyPins::default(),
-        SkyChoice::Generated,
-        &TerrainPins::default(),
-        &SettlementPins::default(),
-    )
-    .expect("seed 42 builds")
+    hornvale_worldgen::seed_42_world()
 }
 
 fn opts() -> PossessOpts {

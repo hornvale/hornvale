@@ -18,6 +18,7 @@ pub const SURROUNDS_SCHEMA: &str = "scene/surrounds/v2";
 /// neighbourhood holds `1 + 3k(k+1)/2` cells, so 8 is 109 cells — past
 /// what a coarse chart can say anything useful with.
 /// type-audit: bare-ok(count)
+/// plumb: pending(wave-1)
 pub const MAX_SURROUNDS_RADIUS: u32 = 8;
 
 /// The relief catalog, in stable ascending order. Band boundaries are
@@ -926,15 +927,11 @@ mod tests {
     use hornvale_kernel::{Seed, WorldTime};
     use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
 
+    /// Seed 42's world under default pins, read from the committed fixture
+    /// rather than rebuilt (decision 0607). `observer` below still derives a
+    /// locale context from it, so this saves the build and not the sculpt.
     fn world() -> hornvale_kernel::World {
-        build_world(
-            Seed(42),
-            &hornvale_astronomy::SkyPins::default(),
-            SkyChoice::Generated,
-            &hornvale_terrain::TerrainPins::default(),
-            &SettlementPins::default(),
-        )
-        .expect("seed 42 builds")
+        hornvale_worldgen::seed_42_world()
     }
 
     fn observer(w: &hornvale_kernel::World) -> Facet {

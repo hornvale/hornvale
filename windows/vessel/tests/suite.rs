@@ -63,6 +63,8 @@ mod lantern_light;
 mod lantern_night;
 #[path = "suite/lantern_seam.rs"]
 mod lantern_seam;
+#[path = "suite/ledger_hash_witness.rs"]
+mod ledger_hash_witness;
 #[path = "suite/ledger_query_equivalence.rs"]
 mod ledger_query_equivalence;
 #[path = "suite/liveness_genesis.rs"]
@@ -91,6 +93,8 @@ mod possess_target;
 mod possession_facts;
 #[path = "suite/possession_moves.rs"]
 mod possession_moves;
+#[path = "suite/resident_folds.rs"]
+mod resident_folds;
 #[path = "suite/session.rs"]
 mod session;
 #[path = "suite/session_snapshot.rs"]
@@ -109,6 +113,8 @@ mod tableau;
 mod testimony;
 #[path = "suite/the_blocking.rs"]
 mod the_blocking;
+#[path = "suite/the_detent.rs"]
+mod the_detent;
 #[path = "suite/the_first_mark.rs"]
 mod the_first_mark;
 #[path = "suite/the_handle.rs"]
@@ -119,12 +125,16 @@ mod the_lintel;
 mod the_prospect;
 #[path = "suite/the_purview.rs"]
 mod the_purview;
+#[path = "suite/the_rack.rs"]
+mod the_rack;
 #[path = "suite/the_roll.rs"]
 mod the_roll;
 #[path = "suite/thing.rs"]
 mod thing;
 #[path = "suite/tick_commit_budget.rs"]
 mod tick_commit_budget;
+#[path = "suite/turn_budget.rs"]
+mod turn_budget;
 #[path = "suite/underworld_level_generation.rs"]
 mod underworld_level_generation;
 #[path = "suite/walker_battery.rs"]

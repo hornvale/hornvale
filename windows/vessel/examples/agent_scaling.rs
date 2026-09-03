@@ -380,6 +380,22 @@ fn run_rung(
 
     let mut mesh_memo = RoomMeshMemo::new();
     let mut home_nav_cache = HomeNavCache::new();
+    // The resident fold store (The Pawl, spec §2.1), owned at exactly the
+    // scope `home_nav_cache` is — one per run, never per tick — because a
+    // store rebuilt each tick would be the O(history) walk it exists to
+    // remove. Interior mutability because it is advanced on read (spec §2.2).
+    // The migrated reads all go through it: `drive_at`, `hunger_at`,
+    // `decide_step`, `believed_water` and `hazard_memory_memo` with the
+    // emitter chain behind it, reached through `step_with_occupancy` and
+    // `snapshot`. This driver threads it so the store it exercises is the one
+    // production owns.
+    let folds =
+        hornvale_vessel::resident::OwnedFolds::new(hornvale_vessel::resident::ResidentFolds::new());
+    // The session-lived room memo (The Detent, spec §2.1), owned at exactly
+    // the scope `folds` is — one per run, so every tick's terrain reads and
+    // fills the SAME memo rather than starting cold each tick.
+    let ground =
+        hornvale_vessel::ground::OwnedGround::new(hornvale_vessel::ground::GroundHazards::new());
     let mut day = WorldTime::from_std_days(0.5).expect("0.5 is finite");
 
     let facts_before = ledger.len();
@@ -404,7 +420,8 @@ fn run_rung(
         // This only accumulates across ticks, so tick 0 is cold and the
         // measured benefit is a LOWER bound on what the cache is worth.
         let mesh_snapshot = mesh_memo.clone();
-        let terrain = LocaleTerrain::with_fields(ctx, None, None, None, None, Some(&mesh_snapshot));
+        let terrain = LocaleTerrain::with_fields(ctx, None, None, None, None, Some(&mesh_snapshot))
+            .with_ground(&ground);
         let sys = DriveMovements {
             npcs: npcs.clone(),
             from,
@@ -412,8 +429,9 @@ fn run_rung(
             params: SUSTENANCE,
             day_ticks,
             terrain: &terrain,
+            folds: &folds,
         };
-        let (facts, _occupancy) =
+        let (facts, _occupancy, _written) =
             sys.step_with_occupancy(&ledger, &mut mesh_memo, &mut home_nav_cache);
         for fact in facts {
             ledger

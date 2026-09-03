@@ -125,6 +125,7 @@ run "sluice vet"      bash scripts/test-sluice-vet.sh
 # test-pre-push.sh, the seam-guard suite). The arm it guards was UNREACHABLE
 # for the life of sluice-census.sh precisely because nothing exercised it.
 run "sluice census"   bash scripts/test-sluice-census.sh
+run "absorb"          bash scripts/test-absorb.sh
 # The post-merge hook's own suite, added the same way pre-push's was:
 # nothing exercised this hook, so its own author (Task 3, The Attestation)
 # shipped a Critical that made it silent on every merge, for all ten

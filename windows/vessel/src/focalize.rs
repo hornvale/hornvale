@@ -34,6 +34,7 @@ const STOPWORDS: [&str; 14] = [
 /// A short **display name** is unaffected: `display` always enters `words`
 /// verbatim, so the `sky` entry resolves as `sky` despite being three letters.
 /// The floor governs what is split OUT of a phrase, never the phrase itself.
+/// plumb: universal(a text-derivation floor for handle phrases, a language-processing constant)
 const MIN_WORD: usize = 4;
 
 /// The coarse kind a completion-capable client may filter on. Closed set;

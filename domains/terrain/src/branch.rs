@@ -148,6 +148,7 @@ use hornvale_kernel::{Facet, Geosphere, NearestVertexIndex, Seed, Vertex, math};
 /// different question: not *is this a channel* but *is this catchment still
 /// worth dividing*.
 /// type-audit: pending(wave-1)
+/// plumb: pending(wave-1)
 pub const RILL_MIN_CATCHMENT: f64 = 4.0 * std::f64::consts::PI / 335_544_320.0;
 
 /// A vertex's whole catchment as an integer share — the unit the partition
@@ -155,19 +156,23 @@ pub const RILL_MIN_CATCHMENT: f64 = 4.0 * std::f64::consts::PI / 335_544_320.0;
 /// representable as an `f64` and the area a share renders to is one rounding
 /// from the share rather than an accumulation of them.
 /// type-audit: bare-ok(count)
+/// plumb: pending(wave-1)
 pub const RILL_WHOLE: u64 = 1 << 50;
 
 /// The smallest share a cut may leave to either part. A geometric bound, not a
 /// tuned one: without it a uniform cut draws slivers, and a catchment shaped
 /// like a sliver is not a catchment. Fixed before any measurement.
+/// plumb: pending(wave-1)
 const CUT_FLOOR: f64 = 0.25;
 
 /// The cut's fixed-point precision, in bits: fine enough that the drawn
 /// fraction is not visibly quantized, coarse enough that a `u64` share times a
 /// cut fits a `u128` with room to spare.
+/// plumb: pending(wave-1)
 const CUT_BITS: u32 = 32;
 
 /// `2^CUT_BITS`, as the divisor the cut is expressed over.
+/// plumb: pending(wave-1)
 const CUT_SCALE: u64 = 1 << CUT_BITS;
 
 /// Hard bound on partition depth, so a defect in the stopping rule fails
@@ -175,6 +180,7 @@ const CUT_SCALE: u64 = 1 << CUT_BITS;
 /// `1 − CUT_FLOOR` of its parent, so `0.75^d · vertex area < RILL_MIN_CATCHMENT`
 /// forces `d ≤ 32` at the canonical level, and the depth is asserted below the
 /// bound in `tests/rill_properties.rs`.
+/// plumb: pending(wave-1)
 const MAX_PARTITION_DEPTH: u32 = 40;
 
 /// One tributary: a great-circle segment from its head to the point where it
@@ -640,6 +646,7 @@ fn root(stretch: Chain, unit: f64) -> Node {
 /// it could have meant was true. Held by `branch.rs`'s own bounded probe, in
 /// nodes.
 /// type-audit: bare-ok(count)
+/// plumb: pending(wave-1)
 pub const RILLS_PER_VERTEX_MAX: usize = 1 << 15;
 
 /// Every branch of `vertex`'s catchment, in partition order.

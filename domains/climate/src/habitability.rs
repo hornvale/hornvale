@@ -6,10 +6,13 @@
 use hornvale_kernel::{Geosphere, ReferenceElevation, Temperature, VertexMap};
 
 /// Coldest tolerable annual-mean temperature (°C).
+/// plumb: pending(wave-1)
 const HABITABLE_MIN_C: f64 = -5.0;
 /// Hottest tolerable annual-mean temperature (°C).
+/// plumb: pending(wave-1)
 const HABITABLE_MAX_C: f64 = 35.0;
 /// Aridity floor: below this moisture there is no reliable liquid water.
+/// plumb: pending(wave-1)
 const HABITABLE_MIN_MOISTURE: f64 = 0.2;
 
 /// Whether a vertex could host a vale-like settlement.

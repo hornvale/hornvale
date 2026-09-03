@@ -94,3 +94,24 @@ pub struct Body {
     /// name and population when present; the creature layer does not.
     pub village: Option<hornvale_settlement::VillageInfo>,
 }
+
+impl Body {
+    /// How this body moves besides walking (The Brattice, spec §3.6): read
+    /// from [`hornvale_species::locomotion_registry`] by species label; a
+    /// kind with no row walks and wades ([`hornvale_species::WALKER`]).
+    ///
+    /// **An accessor rather than a stored field**, unlike every other
+    /// species datum on this struct. `thermal_strategy`, `niche` and the
+    /// rest are threaded at derivation because a caller holds a `Body` and
+    /// not the registries; a locomotion is a pure function of `species`
+    /// alone, and a field would touch the ~43 `Body { .. }` literal sites
+    /// across seven files for no information the label does not already
+    /// carry. The reading is ledgered (#9 (i)) rather than left as a silent
+    /// deviation from the pattern beside it.
+    pub fn locomotion(&self) -> hornvale_species::Locomotion {
+        hornvale_species::locomotion_registry()
+            .get_by_label(&self.species)
+            .copied()
+            .unwrap_or(hornvale_species::WALKER)
+    }
+}

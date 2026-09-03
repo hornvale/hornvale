@@ -101,65 +101,89 @@ use std::sync::OnceLock;
 // PHYSIOGNOMY — void form and its encrustation, bare rock to closed habitat.
 // AUTHORED; the same six levels `axes.rs` uses.
 /// Smooth, unencrusted wall; nothing stands between rock and open space.
+/// plumb: pending(wave-1)
 const P_SMOOTH: f64 = 0.0;
 /// A film or crust on rock — biofilm, mineral rind, a scoured shaft.
+/// plumb: pending(wave-1)
 const P_CRUST: f64 = 0.2;
 /// A broken, blocky or mat-covered floor: structure underfoot only.
+/// plumb: pending(wave-1)
 const P_BROKEN: f64 = 0.4;
 /// Standing structure — speleothem stands, gypsum curtains, fungal thickets.
+/// plumb: pending(wave-1)
 const P_STANDS: f64 = 0.6;
 /// A decorated gallery: columns and curtains, the richest form karst reaches.
+/// plumb: pending(wave-1)
 const P_GALLERY: f64 = 0.8;
 
 // ENERGY — available energy for primary production. AUTHORED; the same five
 // levels `axes.rs` uses (0, 0.25, 0.5, 0.75, 1.0).
 /// No import from above and no exploitable chemical gradient.
+/// plumb: pending(wave-1)
 const E_INERT: f64 = 0.0;
 /// Seepage-borne traces only.
+/// plumb: pending(wave-1)
 const E_LEAN: f64 = 0.25;
 /// A working base — a stream's organic load, or a modest chemical one.
+/// plumb: pending(wave-1)
 const E_FED: f64 = 0.5;
 /// A strong base: direct detrital delivery, or sulphide oxidation at depth.
+/// plumb: pending(wave-1)
 const E_RICH: f64 = 0.75;
 /// The richest the underworld reaches — a whole channel's load at one point,
 /// or full chemolithotrophy on a hot gradient.
+/// plumb: pending(wave-1)
 const E_TEEMING: f64 = 1.0;
 
 // WATER — AUTHORED; the same six levels `axes.rs` uses.
 /// Dry: no carbonate, negligible porosity, no drainage overhead.
+/// plumb: pending(wave-1)
 const W_NONE: f64 = 0.0;
 /// Free-draining; water passes and does not stay.
+/// plumb: pending(wave-1)
 const W_ARID: f64 = 0.2;
 /// Fracture-borne seepage.
+/// plumb: pending(wave-1)
 const W_SEMI: f64 = 0.4;
 /// Persistent seepage or condensation; damp walls.
+/// plumb: pending(wave-1)
 const W_MESIC: f64 = 0.6;
 /// An active watercourse, still vadose.
+/// plumb: pending(wave-1)
 const W_WET: f64 = 0.8;
 /// Below the water table: phreatic, flooded, or brine.
+/// plumb: pending(wave-1)
 const W_SAT: f64 = 1.0;
 
 // SUBSTRATE — NOMINAL. AUTHORED; the same six classes `axes.rs` uses, with
 // the same meanings. The index names a class and is never a magnitude.
 /// Clastic fill — washed-in mud and silt.
+/// plumb: pending(wave-1)
 const S_SOIL: f64 = 0.0;
 /// Loose granular ground — scoria grit, alluvial sand.
+/// plumb: pending(wave-1)
 const S_SAND: f64 = 0.2;
 /// Evaporite — halite and replacement gypsum.
+/// plumb: pending(wave-1)
 const S_EVAPORITE: f64 = 0.4;
 /// Bare rock, of whatever `RockClass`.
+/// plumb: pending(wave-1)
 const S_ROCK: f64 = 0.6;
 /// Ice — a cold-trap floor.
+/// plumb: pending(wave-1)
 const S_ICE: f64 = 0.8;
 /// Organic ground — buried carbon, coal measures, accumulated detritus.
+/// plumb: pending(wave-1)
 const S_ORGANIC: f64 = 1.0;
 
 // LIGHT — AUTHORED; two of the six levels `axes.rs` uses, and spec §5's H5
 // predicted no more than two before this corpus existed.
 /// Aphotic. Every community below the surface-breaching rung.
+/// plumb: pending(wave-1)
 const L_DARK: f64 = 0.0;
 /// The twilight of a rung that breaks the surface — a mouth, a shaft, a
 /// skylight, a slot.
+/// plumb: pending(wave-1)
 const L_DIM: f64 = 0.2;
 
 /// One underworld community and the vector assigned to it.

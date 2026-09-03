@@ -24,26 +24,31 @@ use hornvale_kernel::math;
 use hornvale_kernel::units::Years;
 
 /// One Julian year in standard days (the kernel's canonical year).
+/// plumb: pending(wave-1)
 const DAYS_PER_YEAR: f64 = Years::DAYS_PER_YEAR;
 
 /// The ceiling on any authored amplitude; every table entry is in
 /// `[0, AMPLITUDE_MAX]`.
 /// type-audit: bare-ok(ratio: AMPLITUDE_MAX)
+/// plumb: pending(wave-1)
 pub const AMPLITUDE_MAX: f64 = 1.0;
 
 /// The fraction of a year after a hemisphere's summer solstice at which the
 /// curve peaks — harvest, roughly 6 weeks past peak sun, when stores ripen.
 /// The solstice as an annual phase (see the module doc): the northern
 /// summer / southern winter turning point.
+/// plumb: pending(wave-1)
 const SOLSTICE_PHASE: f64 = 0.25;
 
 /// The fraction of a year after a hemisphere's summer solstice at which the
 /// curve peaks — harvest, roughly 6 weeks past peak sun, when stores ripen.
 /// This puts the peak at phase 0.35 in the north and 0.85 in the south.
+/// plumb: pending(wave-1)
 const PEAK_AFTER_SOLSTICE: f64 = 0.10;
 
 /// Half the year the curve spends above zero (the growing half); the other
 /// half — winter through early spring — is exactly zero (living off stores).
+/// plumb: pending(wave-1)
 const GROWING_HALF: f64 = 0.5;
 
 /// A validating latitude in degrees, `-90 ..= 90`.

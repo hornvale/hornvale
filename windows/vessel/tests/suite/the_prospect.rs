@@ -18,14 +18,7 @@ use hornvale_worldgen::{SiteReason, site_facet_for};
 /// gate. This one goes red if `enter` stops descending at all.
 #[test]
 fn the_flagship_is_still_enterable_after_the_gate_swap() {
-    let world = hornvale_worldgen::build_world(
-        Seed(42),
-        &Default::default(),
-        hornvale_worldgen::SkyChoice::Generated,
-        &Default::default(),
-        &Default::default(),
-    )
-    .expect("seed 42 builds");
+    let world = hornvale_worldgen::seed_42_world();
     let (mut s, _) = Session::start(&world, &PossessOpts::default()).expect("seed 42 possesses");
     let reply = match s.handle("enter") {
         Turn::Out(t) => t,
@@ -73,14 +66,7 @@ fn a_sites_facet_is_stable_and_vertex_distinct() {
 /// would pass under it.
 #[test]
 fn an_exotic_site_stands_at_one_facet_and_not_at_its_neighbour() {
-    let world = hornvale_worldgen::build_world(
-        Seed(42),
-        &Default::default(),
-        hornvale_worldgen::SkyChoice::Generated,
-        &Default::default(),
-        &Default::default(),
-    )
-    .expect("seed 42 builds");
+    let world = hornvale_worldgen::seed_42_world();
     let ctx = LocaleContext::build(&world).expect("seed 42 builds a locale context");
     let sites = ctx.strange_sites();
     assert!(
@@ -159,14 +145,7 @@ fn an_exotic_site_stands_at_one_facet_and_not_at_its_neighbour() {
 /// cannot enter a cave the map denies.
 #[test]
 fn a_placed_cave_is_a_site_and_is_enterable() {
-    let world = hornvale_worldgen::build_world(
-        Seed(42),
-        &Default::default(),
-        hornvale_worldgen::SkyChoice::Generated,
-        &Default::default(),
-        &Default::default(),
-    )
-    .expect("seed 42 builds");
+    let world = hornvale_worldgen::seed_42_world();
     let ctx = LocaleContext::build(&world).expect("seed 42 builds a locale context");
     let geo = ctx.climate().geosphere();
     let walk = hornvale_locale::walk_depth(&ctx);
@@ -252,14 +231,7 @@ fn a_placed_cave_is_a_site_and_is_enterable() {
 /// `brief_of` reports.
 #[test]
 fn salience_decides_the_winner_when_a_facet_holds_two_sites() {
-    let world = hornvale_worldgen::build_world(
-        Seed(42),
-        &Default::default(),
-        hornvale_worldgen::SkyChoice::Generated,
-        &Default::default(),
-        &Default::default(),
-    )
-    .expect("seed 42 builds");
+    let world = hornvale_worldgen::seed_42_world();
     let ctx = LocaleContext::build(&world).expect("seed 42 builds a locale context");
     let geo = ctx.climate().geosphere();
     let walk = hornvale_locale::walk_depth(&ctx);
@@ -337,14 +309,7 @@ fn salience_decides_the_winner_when_a_facet_holds_two_sites() {
 /// plays no part here.
 #[test]
 fn salience_decides_the_winner_at_an_exotic_cave_collision() {
-    let world = hornvale_worldgen::build_world(
-        Seed(42),
-        &Default::default(),
-        hornvale_worldgen::SkyChoice::Generated,
-        &Default::default(),
-        &Default::default(),
-    )
-    .expect("seed 42 builds");
+    let world = hornvale_worldgen::seed_42_world();
     let ctx = LocaleContext::build(&world).expect("seed 42 builds a locale context");
     let geo = ctx.climate().geosphere();
     let walk = hornvale_locale::walk_depth(&ctx);
@@ -475,14 +440,7 @@ fn entering_a_named_site_names_the_place_and_not_the_possession() {
 /// from anything but the site itself would surface here.
 #[test]
 fn a_cave_site_carries_no_name() {
-    let world = hornvale_worldgen::build_world(
-        Seed(42),
-        &Default::default(),
-        hornvale_worldgen::SkyChoice::Generated,
-        &Default::default(),
-        &Default::default(),
-    )
-    .expect("seed 42 builds");
+    let world = hornvale_worldgen::seed_42_world();
     let ctx = LocaleContext::build(&world).expect("seed 42 builds a locale context");
     let geo = ctx.climate().geosphere();
     let walk = hornvale_locale::walk_depth(&ctx);

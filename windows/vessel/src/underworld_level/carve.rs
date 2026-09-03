@@ -4,6 +4,14 @@
 //! sharing the technique and varying its parameters is the same move
 //! `lattice::allocate`/`lattice::grow` make with `extent_for` (DRY over a
 //! false four-way split).
+//!
+//! **No label here is dead data.** All four [`Algorithm`] variants are
+//! constructed by real production code: `choose_leaf_style` (The Gallery,
+//! Task 4) selects among them from `CaveKind` and `ChamberOrigin`. This
+//! note used to lead [`Algorithm`]'s own rustdoc, where a reader met an
+//! obituary for a retired partition label where they expected a type (The
+//! Crosscut's deferred minor); it is a fact about the module, so it lives
+//! here.
 
 use std::collections::BTreeMap;
 
@@ -15,10 +23,6 @@ use crate::underworld_level::LevelCellKind;
 use crate::underworld_level::region::cut;
 
 /// Which content generator fills a leaf.
-///
-/// All four variants are constructed by real production code:
-/// `choose_leaf_style` (Task 4) selects among them from `CaveKind` and
-/// `ChamberOrigin`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Algorithm {
     /// Karst-biased: an organic cavern via cellular automata.
@@ -59,7 +63,9 @@ pub(super) fn carve(
     }
 }
 
+/// plumb: pending(wave-1)
 const CA_FILL_PROB: f64 = 0.45;
+/// plumb: pending(wave-1)
 const CA_ITERATIONS: u32 = 4;
 
 fn carve_cellular_cave(rect: Rect, stream: &mut Stream, cells: &mut CellGrid) -> u32 {
@@ -163,7 +169,9 @@ fn neighbor_alive_count(alive: &BTreeMap<Cell, bool>, x: i32, y: i32) -> u32 {
     n
 }
 
+/// plumb: pending(wave-1)
 const TUNNEL_STEPS: u32 = 30;
+/// plumb: pending(wave-1)
 const TUNNEL_MAX_RUN: u64 = 3;
 
 fn carve_tunneler(rect: Rect, stream: &mut Stream, cells: &mut CellGrid) -> u32 {

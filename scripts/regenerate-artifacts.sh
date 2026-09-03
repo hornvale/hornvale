@@ -860,6 +860,51 @@ gen_underworld_lattice() {
     printf '```\n'
 }
 
+# The page carries EIGHT readouts from TWO specs, not four from one: the
+# Crosscut's committed witness (its spec §4) — loop share, density ordering,
+# cross-floor cycles, semilattice overlap — plus the Brattice's own four
+# (its spec §4.1-4.4) — gate yield, detour cost, solvability, report-only
+# gate counts — over every cave-bearing, non-ocean vertex of the same
+# standing seed panel. Each quartet's verdict words are frozen by its own
+# spec (final review, Important #3).
+#
+# Framing lines are hand-authored (the redirect replaces the whole file body,
+# so re-emit them here); the fenced blocks are the `circuit` verb's exact,
+# drift-checked output.
+gen_underworld_circuit() {
+    printf '# The Circuits of Seeds 42, 7 and 1234\n\n'
+    printf 'What this page witnesses: for each seed'"'"'s every cave-bearing,\n'
+    printf 'non-ocean vertex, a descent plan is grown (spec §3) and eight\n'
+    printf 'preregistered readouts from two specs are measured against it, then\n'
+    printf 'reduced to a panel median: the Crosscut'"'"'s four (its spec §4 -- loop\n'
+    printf 'share, density ordering, cross-floor cycles, semilattice overlap) and\n'
+    printf 'the Brattice'"'"'s four (its spec §4.1-4.4 -- gate yield, detour cost,\n'
+    printf 'solvability, report-only gate counts). A descent plan is never stored --\n'
+    # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
+    printf 'it is a pure function of `(seed, vertex, rungs, kind, character)`, so\n'
+    printf 'this page is a witness, not a record: every number here is re-derived\n'
+    printf 'from the seed on each regeneration.\n\n'
+    printf 'The verdict words PASSED / FALSIFIED are frozen by each readout'"'"'s own\n'
+    printf 'spec, decided before this code existed, and nothing here is tuned to\n'
+    printf 'reach one -- a FALSIFIED verdict is a finding the campaign publishes,\n'
+    printf 'not a bug to fix by moving the threshold. A comparison that cannot be\n'
+    printf 'made for a seed (no cave of some kind exists there) prints NOT\n'
+    printf 'MEASURABLE rather than a vacuous PASSED.\n\n'
+    printf 'The Crosscut'"'"'s four numbers moved once in this campaign, when The\n'
+    # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
+    printf 'Brattice took the Crosscut'"'"'s own deferred `try_extend` fix (ledger #10,\n'
+    printf 'ruling C); the attribution is by revert -- with that one change\n'
+    printf 'reverted the panel is byte-identical to the pre-Brattice baseline. The\n'
+    printf 'gate pass and class recompute alone leave them byte-identical.\n\n'
+    printf '```text\n'
+    run -p hornvale -- circuit --seed 42
+    printf '\n'
+    run -p hornvale -- circuit --seed 7
+    printf '\n'
+    run -p hornvale -- circuit --seed 1234
+    printf '```\n'
+}
+
 # The atlas bundle. Without this line book/src/gallery/ is in the drift-check
 # list but atlas.js is never rebuilt, so `git diff --exit-code` compares the
 # committed file against itself and reports clean forever (The Staff, Task
@@ -954,6 +999,10 @@ spawn run -p hornvale -- proto goblinoid > book/src/reference/proto-goblinoid-ge
 spawn run -p hornvale -- proto dwarf > book/src/reference/proto-dwarf-generated.md
 spawn run -p hornvale -- proto elf > book/src/reference/proto-elf-generated.md
 spawn run --manifest-path tools/type-audit/Cargo.toml -- report > docs/audits/type-audit-report.md
+# The plumb coverage report (The Plumb, Task 4): every authored numeric
+# constant's rung, the same shape as the type-audit report above and drawn
+# from the same tag grammar. Regenerates cheaply — a source scan, no build.
+spawn run --manifest-path tools/plumb/Cargo.toml -- report > docs/audits/plumb-roster.md
 # The seam-guard roster. STATIC by design — registrations, declarations and
 # call sites, never verdicts (those cost a scoped test run per site, so an
 # artifact carrying them could not be regenerated cheaply). Its job is to put
@@ -984,6 +1033,7 @@ spawn run -p hornvale -- lab reticence > docs/audits/the-reticence-report.md
 spawn run --manifest-path tools/digest/Cargo.toml -- render delta \
   > docs/digest/intent-vs-reality.md
 spawn gen_underworld_lattice > docs/audits/underworld-lattice-seed-panel.md
+spawn gen_underworld_circuit > docs/audits/underworld-circuit-seed-panel.md
 spawn build_atlas
 
 # Group B: readers of $w42/$wsky/$wlocked.

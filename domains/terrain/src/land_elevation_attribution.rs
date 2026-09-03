@@ -98,6 +98,7 @@ use hornvale_kernel::{Geosphere, Seed};
 
 /// The canonical globe level ([`crate::GLOBE_LEVEL`]), so the probe measures
 /// the same surface the census does rather than a cheaper proxy.
+/// plumb: pending(wave-1)
 const LEVEL: u32 = crate::GLOBE_LEVEL;
 
 /// World seeds the probe sweeps. Contiguous from 0 so it samples the head of
@@ -105,6 +106,7 @@ const LEVEL: u32 = crate::GLOBE_LEVEL;
 /// `{from: 0, count: 1000}`), and `hornvale_terrain::generate` takes the world
 /// seed directly — `worldgen` passes `world.seed` through unchanged — so these
 /// are literally the census's own first worlds.
+/// plumb: pending(wave-1)
 const SEED_COUNT: u64 = 12;
 
 /// The seven additive components of `elevation − sea_level` on a land vertex.

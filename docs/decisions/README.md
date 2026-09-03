@@ -268,6 +268,12 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0514](0514-a-census-refresh-needs-no-authorization.md) | A census refresh needs no per-run authorization (retires the AWS-spend carve-out outright) | Accepted |
 | [0515](0515-a-diagonal-step-reaches-root-two-as-well-as-costing-it.md) | A diagonal step REACHES √2, as well as costing it (The Pavement; the index row was omitted at landing) | Accepted |
 | [0516](0516-a-reachable-lock-implies-a-reachable-key-is-left-empirical.md) | "A reachable lock implies a reachable key" is left empirical, deliberately — wait for the residents | Accepted |
+| [0536](0536-the-resident-fold-store-is-session-owned-and-never-serialized.md) | The resident fold store is session-owned and never serialized | Accepted |
+| [0537](0537-a-reader-never-observes-a-fold-behind-its-ledger.md) | A reader never observes a fold behind its ledger — the seam is at read | Accepted |
+| [0538](0538-the-trail-is-a-resident-index-not-a-cached-hub.md) | The trail is a resident index, not a cached hub | Accepted |
+| [0539](0539-a-past-instant-read-resumes-from-the-reset-checkpoint.md) | A past-instant read resumes from the reset checkpoint, over a per-reset prefix accumulator | Accepted |
+| [0540](0540-the-past-day-affect-path-preserves-the-unfiltered-reset.md) | The past-day affect path preserves the unfiltered reset, knowingly | Accepted |
+| [0541](0541-a-campaign-time-hash-constant-witness-retires-at-close.md) | A campaign-time hash-constant witness retires at close | Accepted |
 | [0546](0546-the-roll-is-a-pure-function-of-the-observers-room-and-it-is-diegetic.md) | The roll is a pure function of the observer's room, and it is diegetic | Accepted |
 | [0547](0547-a-resident-is-a-living-person-derived-on-demand-and-never-generated.md) | A resident is a living person, derived on demand and never generated | Accepted |
 | [0548](0548-individual-deviation-is-the-kinds-dispersion-drawn-per-resident.md) | Individual deviation is the kind's dispersion, drawn per resident | Accepted |
@@ -275,6 +281,9 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0556](0556-totality-by-registry-replaces-totality-by-compiler.md) | Totality by registry replaces totality by compiler, and every check names its direction | Accepted |
 | [0557](0557-a-handle-is-a-convenience-where-a-variant-was-a-requirement.md) | A handle is a convenience where a variant was a requirement | Accepted |
 | [0558](0558-sleep-is-never-gated-the-place-grades-it.md) | Sleep is never gated — the place grades it | Accepted |
+| [0566](0566-a-place-is-a-graph-before-it-is-a-map.md) | A place is a graph before it is a map, and the grammar is series-parallel | Accepted |
+| [0567](0567-stairs-pair-by-coordinate.md) | Stairs pair by coordinate: a stairway's two ends share a cell | Accepted |
+| [0568](0568-cycle-density-is-derived-not-authored.md) | Cycle density is derived from rock and workmanship, never authored | Accepted |
 | [0576](0576-the-capability-provision-table.md) | The capability provision table spans all three homes; ledger wired first | Accepted |
 | [0577](0577-the-realization-witness.md) | The realization witness | Superseded by 0581 |
 | [0578](0578-kinship-a-genesis-fact.md) | Kinship as a genesis fact | Superseded by 0584 |
@@ -285,6 +294,19 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0583](0583-the-witness-limits-list-is-open-not-closed.md) | The witness limits list is open, not closed (supersedes 0582) | Accepted |
 | [0584](0584-kinship-direction-and-the-parent-of-generation-cut.md) | Kinship direction and the `parent-of` generation cut (supersedes 0578) | Accepted |
 | [0585](0585-act-chronology-completes-too-and-the-method-is-act-handle.md) | `bundle:act-chronology` completes too, and the method is `Act::handle` (supersedes 0580) | Accepted |
+| [0596](0596-a-creature-feels-what-its-own-last-resolution-felt.md) | A creature feels what its own last resolution felt | Accepted |
+| [0597](0597-the-roster-is-a-struct-of-arrays-with-one-append.md) | The roster is a struct of arrays with one append | Accepted |
+| [0598](0598-per-turn-work-is-a-counted-budget-in-the-commit-gate.md) | Per-turn work is a counted budget in the commit gate | Accepted |
+| [0606](0606-a-world-build-is-a-named-site.md) | A world build is a named site on a bidirectional roster | Accepted |
+| [0607](0607-the-seed-42-fixture-is-an-input.md) | The seed-42 world fixture is an input as well as an assertion | Accepted |
+| [0616](0616-a-gate-is-a-requirement-on-a-way.md) | A gate is a requirement on a way, realized as four parts kept apart | Accepted |
+| [0617](0617-a-locks-substance-is-derived-from-rock-and-work.md) | A lock's substance is derived from rock and work; the pattern chooses where, never what | Accepted |
+| [0618](0618-a-descent-key-makes-the-plan-a-save-format-contract.md) | A descent key's identity is a plan position, so the plan grammar is a save-format contract | Accepted |
+| [0619](0619-the-drop-is-a-stairway-with-its-up-half-omitted.md) | The drop is a stairway with its up half omitted, and `Fly` is its key | Accepted |
+| [0620](0620-the-cycle-pattern-inventory-is-a-frozen-corpus.md) | The cycle-pattern inventory is a frozen corpus of nine rows, and solvability for a body holding nothing is the invariant | Accepted |
+| [0626](0626-a-terrain-verdict-is-held-for-the-session-keyed-by-room.md) | A terrain verdict is held for the session, keyed by room, with its terrain's identity supplied by ownership | Accepted |
+| [0627](0627-the-emitter-scan-advances-through-a-read-side-verdict-index.md) | The emitter scan advances over new sightings through a read-side verdict index, and is still not a tenant | Accepted |
+| [0628](0628-a-registry-rows-mechanism-is-a-count-not-a-reading.md) | A registry row's mechanism is a count, not a reading | Accepted |
 | [0666](0666-the-enterability-gate-is-a-site-not-built.md) | The enterability gate is a `Site`, and `built` narrows to one kind of it | Accepted |
 | [0667](0667-a-placed-site-is-re-sited-to-a-facet-by-a-seeded-draw.md) | A placed site is re-sited from its vertex to one facet by a seeded draw | Accepted |
 | [0668](0668-a-site-carries-an-extent-and-this-campaign-emits-point.md) | A `Site` carries an `Extent`, and this campaign only ever emits `Point` | Accepted |

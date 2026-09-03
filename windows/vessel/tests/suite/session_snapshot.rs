@@ -38,14 +38,7 @@ use crate::common;
 const OCCUPIED_SEED: u64 = 0;
 
 fn world() -> World {
-    hornvale_worldgen::build_world(
-        Seed(42),
-        &Default::default(),
-        hornvale_worldgen::SkyChoice::Generated,
-        &Default::default(),
-        &Default::default(),
-    )
-    .expect("seed 42 builds")
+    hornvale_worldgen::seed_42_world()
 }
 
 /// The same script the committed transcript walks, up to its first `go`.

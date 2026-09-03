@@ -20,6 +20,7 @@ use crate::sign::Sign;
 
 /// Tolerance for the mass-balance comparison. Fixed and tiny; the arithmetic
 /// is a sum of authored constants, so this absorbs representation error only.
+/// plumb: pending(wave-1)
 const BALANCE_EPSILON: f64 = 1e-9;
 
 /// An authored operation a practitioner can perform.

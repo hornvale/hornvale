@@ -57,6 +57,7 @@ use hornvale_kernel::Facet;
 /// Declared as a constant because it is a shape of the world, not a tuning
 /// knob: changing it changes which addresses are chambers.
 /// type-audit: bare-ok(count)
+/// plumb: universal(doc states explicitly: a shape of the world's addressing scheme, not a tuning knob)
 pub const CHAMBER_DEPTH_OFFSET: u32 = 9;
 
 /// The address depth chambers live at, given the world's walk depth.

@@ -66,17 +66,21 @@ use crate::{Axis, PeopleTraits};
 
 /// How strongly full insularity (`in_group_radius = 0`) up-weights every
 /// axis over full cosmopolitanism (`in_group_radius = 1`).
+/// plumb: pending(wave-1)
 const INSULARITY_GAIN: f64 = 1.0;
 
 /// How strongly full threat-standing (`threat_response = 1`) up-weights the
 /// two threat axes (`SizeThreat`, `DietPredation`) over full flight
 /// (`threat_response = 0`).
+/// plumb: pending(wave-1)
 const THREAT_GAIN: f64 = 1.0;
 
 /// How much a `Hierarchic` sociality adds to the Sociality axis's weight.
+/// plumb: pending(wave-1)
 const HIERARCHIC_GAIN: f64 = 0.5;
 
 /// How much a `Rank` status basis adds to the Sociality axis's weight.
+/// plumb: pending(wave-1)
 const RANK_GAIN: f64 = 0.5;
 
 /// A people's derived per-axis weights — its "prejudice personality." A

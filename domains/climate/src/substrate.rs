@@ -100,6 +100,7 @@ pub struct SpinUp {
 /// floating-point reassociation noise (many orders of magnitude smaller) and
 /// any realistic near-zero forcing, while still being far below any real
 /// day's precipitation in millimetres.
+/// plumb: pending(wave-1)
 const GLACIER_SAFETY_MARGIN: f64 = CONVERGENCE_TOLERANCE * 1000.0;
 
 /// Whether `year` is certainly a permanent-accumulator case for `substrate`:
@@ -340,6 +341,7 @@ impl SubstrateField {
 }
 
 /// Year-over-year movement below this counts as a fixed point.
+/// plumb: pending(wave-1)
 const CONVERGENCE_TOLERANCE: f64 = 1e-6;
 
 #[cfg(test)]

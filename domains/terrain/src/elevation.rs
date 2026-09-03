@@ -40,9 +40,11 @@ use hornvale_kernel::{
 
 /// Airy isostasy: meters of elevation per kilometer of crust thickness.
 /// type-audit: pending(wave-2)
+/// plumb: pending(wave-1)
 pub const ISOSTASY_M_PER_KM: f64 = 180.0;
 /// Crust thickness that floats exactly at zero elevation, km.
 /// type-audit: pending(wave-2)
+/// plumb: pending(wave-1)
 pub const ISOSTASY_REF_KM: f64 = 30.0;
 
 /// Isostatic base elevation for a crust thickness, meters: linear in
@@ -57,9 +59,11 @@ pub(crate) fn isostatic_m(thickness_km: f64) -> f64 {
 /// sea-level percentile is exact; at 40,962 vertices (the canonical level-6
 /// grid) the total spread is ~0.04 m — physically invisible, a declared
 /// approximation.
+/// plumb: pending(wave-1)
 const VERTEX_EPSILON_M: f64 = 1e-6;
 /// Maximum possible closing speed (two rate-1.0 plates head-on); boundary
 /// magnitudes are normalized against it.
+/// plumb: pending(wave-1)
 const MAX_CLOSING_SPEED: f64 = 2.0;
 
 /// Signed peak amplitude (meters, at full closing speed, before the
@@ -93,24 +97,30 @@ fn boundary_amplitude_m(kind: BoundaryKind, continental: bool, arc_side: bool) -
 
 /// Foreland-basin trough depth, m (Sculpting spec §3: belt anatomy).
 /// type-audit: pending(wave-2)
+/// plumb: pending(wave-1)
 pub const FORELAND_DEPTH_M: f64 = -350.0;
 /// Foreland trough band, in boundary graph hops (continental side).
 /// type-audit: bare-ok(count)
 pub const FORELAND_HOPS: (u32, u32) = (3, 6);
 /// Trench trough depth, m, at the subducting-side boundary vertex.
 /// type-audit: pending(wave-2)
+/// plumb: pending(wave-1)
 pub const TRENCH_DEPTH_M: f64 = -2800.0;
 /// Trench half-width, hops.
 /// type-audit: bare-ok(count)
+/// plumb: pending(wave-1)
 pub const TRENCH_HOPS: u32 = 1;
 /// Arc edifice spacing wavelength (in gate-noise cycles per radian).
 /// type-audit: pending(wave-2)
+/// plumb: pending(wave-1)
 pub const ARC_SPACING: f64 = 9.0;
 /// Fraction of the arc that is edifice (gate above this is "on").
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 pub const ARC_DUTY: f64 = 0.45;
 
 /// Collision-belt crest decay length, vertices: the sharp core.
+/// plumb: pending(wave-1)
 const CREST_DECAY_VERTICES: f64 = 1.0;
 /// Foothills amplitude, as a fraction of the belt's peak amplitude. Kept
 /// small (not the more "visually broad" fraction a first sketch might
@@ -119,23 +129,31 @@ const CREST_DECAY_VERTICES: f64 = 1.0;
 /// the time the foreland band starts; otherwise a strong belt's foothills
 /// alone swamp the trough and it never goes negative. See the Task 3
 /// report for the numeric sweep that picked this value.
+/// plumb: pending(wave-1)
 const FOOTHILLS_FRACTION: f64 = 0.1;
 /// Foothills decay length, vertices: broader than the crest's apron.
+/// plumb: pending(wave-1)
 const FOOTHILLS_DECAY_VERTICES: f64 = 4.0;
 /// Island-arc volcanic-edifice decay length, vertices. Also the reach of
 /// [`edifice_present`]: one e-folding out, the cone; beyond it, the apron.
+/// plumb: pending(wave-1)
 pub(crate) const ARC_EDIFICE_DECAY_VERTICES: f64 = 1.5;
 /// Trench-notch decay length, vertices: the sharp seaward deep.
+/// plumb: pending(wave-1)
 const TRENCH_DECAY_VERTICES: f64 = 1.0;
 /// Decay length beyond the trench notch, vertices.
+/// plumb: pending(wave-1)
 const FAR_FIELD_DECAY_VERTICES: f64 = 3.0;
 /// Residual amplitude fraction beyond the trench notch.
+/// plumb: pending(wave-1)
 const FAR_FIELD_FRACTION: f64 = 0.2;
 /// Octaves for the along-strike arc-gate noise.
+/// plumb: pending(wave-1)
 const ARC_GATE_OCTAVES: u32 = 4;
 
 /// fBm relief peak amplitude, meters (spec §3).
 /// type-audit: pending(wave-2)
+/// plumb: pending(wave-1)
 pub const RELIEF_AMPLITUDE_M: f64 = 240.0;
 /// Relief noise base spatial frequency, cycles per radian: features
 /// ~1/8 rad, spanning ~7 vertices at the canonical level-6 grid's mean vertex
@@ -145,8 +163,10 @@ pub const RELIEF_AMPLITUDE_M: f64 = 240.0;
 /// averages away, contributing nothing to coastline shape). At 8.0 the
 /// octave is resolved (like `LOBE_FREQ` = 4 / `ARC_SPACING` = 9), giving
 /// coherent capes and bays where relief crosses sea level.
+/// plumb: pending(wave-1)
 const RELIEF_FREQUENCY: f64 = 8.0;
 /// Octaves for the fBm relief noise.
+/// plumb: pending(wave-1)
 const RELIEF_OCTAVES: u32 = 4;
 
 /// Relief amplitude scale: hard rock (induration→1) carries full relief,
@@ -353,6 +373,7 @@ struct Hotspot {
 
 /// Angular half-width of a hotspot dome, radians (~3°: one to two vertices at
 /// level 5).
+/// plumb: pending(wave-1)
 const HOTSPOT_SIGMA_RAD: f64 = 0.05;
 
 /// Gaussian dome contribution at a unit-sphere position, meters (Sculpting
@@ -402,12 +423,15 @@ pub struct TrailSeamount {
 
 /// Maximum angular length of a hotspot trail, radians (~20°).
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 pub const TRAIL_LENGTH_RAD: f64 = 0.35;
 /// Number of trail steps upstream of the live hotspot dome.
 /// type-audit: bare-ok(count)
+/// plumb: pending(wave-1)
 pub const TRAIL_STEPS: u32 = 6;
 /// Per-step strength decay multiplier along a trail.
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 pub const TRAIL_DECAY: f64 = 0.55;
 
 /// Derive trail chains from the existing hotspot draws (no new draws):
@@ -794,6 +818,7 @@ pub fn resolve_ocean_fraction(
 /// widened rather than narrowed, so 0.5 still sits in empty space and is
 /// now a less marginal choice than when it was picked.
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 pub const SUPPLY_SHORTFALL_FACTOR: f64 = 0.5;
 
 /// Land granted to a supply-limited world, as a multiple of its
@@ -811,6 +836,7 @@ pub const SUPPLY_SHORTFALL_FACTOR: f64 = 0.5;
 /// break, untuned; the test floor is land-normalized instead
 /// (decision 0053).
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 pub const SHELF_BREAK_LAND_FACTOR: f64 = 1.0;
 
 /// Soften the ocean-fraction target when the crust cannot honor it
@@ -895,6 +921,7 @@ fn intensity(kind: BoundaryKind) -> f64 {
 }
 
 /// Distance decay length for unrest, in vertices.
+/// plumb: pending(wave-1)
 const UNREST_DECAY_VERTICES: f64 = 2.0;
 
 /// The unrest field, per vertex in [0, 1]: boundary intensity × normalized

@@ -40,7 +40,17 @@ g init -q 2>/dev/null
 g config user.name "census test" 2>/dev/null
 g config user.email "census@test" 2>/dev/null
 mkdir -p "$tmp/docs" "$tmp/book/src/laboratory/generated/the-census"
+# The author column is the authority the count now reads. `the-census/` is
+# census-authored; the two bookkeeping files are not, and BOTH have fooled the
+# old "anything but timings.md" rule on real runs.
+cat > "$tmp/docs/generated-paths.txt" <<'DECL'
+# path	author
+book/src/laboratory/generated/the-census/	census
+book/src/laboratory/generated/the-census/schema.json	artifacts
+docs/generated-path-writes.tsv	artifacts
+DECL
 printf 'baseline\n' > "$tmp/docs/timings.md"
+printf 'path\t1\t1\n' > "$tmp/docs/generated-path-writes.tsv"
 printf 'seed,value\n1,1\n' > "$tmp/book/src/laboratory/generated/the-census/rows.csv"
 g add -A 2>/dev/null
 g commit -q -m baseline 2>/dev/null
@@ -76,13 +86,52 @@ else
 fi
 
 # --- ARM 3: a NEW golden file, not merely a modified one. ------------------
-printf 'x\n' > "$tmp/book/src/laboratory/generated/the-census/schema.json"
+# A NEW file under the census-authored directory. NOT schema.json: that is
+# declared `artifacts` (regenerate-artifacts.sh rewrites it unconditionally),
+# so under the corrected semantics it is deliberately not a census golden —
+# an expectation of 2 here was wrong about the rule, not about the code.
+printf 'extra\n' > "$tmp/book/src/laboratory/generated/the-census/extra.csv"
 g add -A -- book/src/laboratory/ 2>/dev/null
 n="$(count_via_lib)"
 if [ "$n" -eq 2 ]; then
-    ok "NEW-FILE ARM: an added golden is counted, not just a modified one"
+    ok "NEW-FILE ARM: an ADDED census golden is counted, not just a modified one"
 else
     bad "NEW-FILE ARM: counted $n, want 2"
+fi
+# And the artifacts-authored schema beside it must NOT count.
+printf 'x\n' > "$tmp/book/src/laboratory/generated/the-census/schema.json"
+g add -A -- book/src/laboratory/ 2>/dev/null
+if [ "$(count_via_lib)" -eq 2 ]; then
+    ok "SCHEMA: an artifacts-authored file under a census directory is not a golden"
+else
+    bad "the artifacts-authored schema.json counted as a census golden"
+fi
+
+# --- ARM 3b: THE COUNTER FILE IS NOT A GOLDEN -------------------------------
+# The case that fooled the first fix TWICE on real runs — the-crosscut
+# 4c69a5d6578d and the-brattice cccfcdad9f21. docs/generated-path-writes.tsv is
+# `artifacts`-authored bookkeeping; a census that moves only it has moved NO
+# golden, and saying otherwise told a campaign its new stream label had shifted
+# the world when it had not.
+# Reset the WORKING TREE too, not just the index: `git reset` alone leaves the
+# earlier arms' modified goldens in place, and `add -u` then re-stages them, so
+# this arm counted their movement as its own. It reported 1 golden for a case
+# whose entire point is that it must report 0.
+g reset -q --hard 2>/dev/null
+g clean -qfd 2>/dev/null
+printf 'path\t2\t2\n' > "$tmp/docs/generated-path-writes.tsv"
+printf 'baseline\nrow\n'  > "$tmp/docs/timings.md"
+g add -u 2>/dev/null
+n="$(count_via_lib)"
+if [ "$n" -eq 0 ]; then
+    ok "COUNTER FILE: generated-path-writes.tsv + timings row counts 0 goldens"
+else
+    bad "the counter file counted as $n golden(s) — the mislabel that fooled two campaigns"
+fi
+if [ -n "$(g diff --cached --name-only)" ]; then
+    ok "and that 0 is non-vacuous: two paths really are staged"
+else
+    bad "nothing was staged; the counter-file case proved nothing"
 fi
 
 # --- ARM 4: an empty index is 0, and is a DIFFERENT case from the null. ----

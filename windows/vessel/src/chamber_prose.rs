@@ -102,6 +102,13 @@ pub fn chamber_prose_registry() -> ComponentStore<KindId, ChamberProse> {
             },
         ),
         (
+            KindId("door"),
+            ChamberProse {
+                noun: Some("a door"),
+                detail: "A leaf of banded wood in the opening, hung to be shut.",
+            },
+        ),
+        (
             KindId("ground"),
             ChamberProse {
                 noun: None,
@@ -194,6 +201,25 @@ pub(crate) fn noun(kind: &str) -> Option<&'static str> {
     chamber_prose_registry()
         .get_by_label(kind)
         .and_then(|p| p.noun)
+}
+
+/// [`detail`] keyed on a runtime LABEL rather than a [`KindId`] — [`noun`]'s
+/// asymmetry, arriving for the same reason and for the same caller.
+///
+/// A thing read back off a committed `instance-of` fact is a `&str` borrowed
+/// from the ledger, and [`hornvale_kernel::KindId`] holds a `&'static str`, so
+/// such a label cannot be turned into one at all. The Brattice's underground
+/// `examine` (`session.rs`) resolves a dropped thing's kind exactly that way.
+///
+/// `Option`, where [`detail`] panics: a label off the ledger is a runtime
+/// string that no roster guarantees, so there is nothing here for a totality
+/// gate to make unreachable. The panic in [`detail`] stays, because a
+/// [`KindId`] IS from the authored roster and a missing line there is the
+/// quiet failure that function's own doc argues about.
+pub(crate) fn detail_of_label(kind: &str) -> Option<&'static str> {
+    chamber_prose_registry()
+        .get_by_label(kind)
+        .map(|p| p.detail)
 }
 
 /// A list of nouns as one prose fragment — "a key", or "a key and a loaf", or
@@ -732,8 +758,9 @@ mod tests {
             assert!(!d.trim().is_empty(), "{label:?}: an empty detail");
         }
         // `ground` and `cave-mouth` have no noun and every other roster kind
-        // does, so seventeen kinds must yield fifteen nouns (The Wicket's Task
-        // 5 appended `brazier`, which has a noun, moving this from 14). This
+        // does, so eighteen kinds must yield sixteen nouns (The Wicket's Task
+        // 5 appended `brazier`, moving this from 14 to 15; The Brattice's Task
+        // 5 appended `door`, moving it to 16 — both have a noun). This
         // used to catch
         // an APPENDED enum variant on the run that first compiled it (that is
         // how The Chattel's `Key` was caught, going red at 13 against 14). It
@@ -745,7 +772,7 @@ mod tests {
                 .iter()
                 .filter(|&&label| noun(label).is_some())
                 .count(),
-            15,
+            16,
             "the roster has drifted from `noun`'s own table"
         );
     }

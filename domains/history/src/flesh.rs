@@ -66,6 +66,7 @@ pub fn persona_of(handle: RoleHandle, seed: Seed) -> Persona {
 
 /// A discriminant mixed into every founder handle, so that a future second
 /// role at the same occupation cannot collide with the founder.
+/// plumb: pending(wave-1)
 const FOUNDER_ROLE: u64 = 0x466F_756E_6465_7200;
 
 /// A founder's **discrimination handle**: the identity of their founding
@@ -282,6 +283,7 @@ pub fn founder_handle(
 /// food, ash, a child's doll — has rotted back into the soil. Only a young
 /// ruin still holds them; this is the same threshold the engine has always
 /// called the "young ruin" age.
+/// plumb: pending(wave-1)
 const PERISHABLE_MAX_AGE: f64 = 250.0;
 
 /// The age (standard years) past which even a *durable* find — fired clay,
@@ -291,6 +293,7 @@ const PERISHABLE_MAX_AGE: f64 = 250.0;
 /// ruins actually reach, so *every* ruin the deep-history bake produces —
 /// including the real world's ancient climate-abandoned hamlets — still
 /// yields a legible archaeological impression rather than bare ground.
+/// plumb: pending(wave-1)
 const DURABLE_TRACE_AGE: f64 = 12_000.0;
 
 /// How long a physical remnant survives in the ground before it weathers
@@ -423,6 +426,7 @@ pub enum Departure {
 /// different consequence. One number, one meaning — re-typing `150` in the vessel
 /// would have let the two drift.
 /// type-audit: bare-ok(count)
+/// plumb: pending(wave-1)
 pub const HAMLET_POPULATION_CEILING: u32 = 150;
 
 /// The small, deterministic set of physical remnants an occupation leaves
@@ -595,7 +599,9 @@ pub enum Structure {
 /// this function derives its own [`streams::STRUCTURES`] sub-label from it
 /// for the dwelling-count variance.
 pub fn structures_of(occ: &OccupationRecord, seed: Seed) -> Vec<Structure> {
+    /// plumb: pending(wave-1)
     const LONGHOUSE_POPULATION_FLOOR: u32 = 200;
+    /// plumb: pending(wave-1)
     const DWELLING_POPULATION_STEP: u32 = 50;
 
     let mut structures = Vec::new();

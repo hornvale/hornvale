@@ -596,6 +596,7 @@ pub enum SkyBand {
 /// How far below the horizon the sun still lights the sky, degrees
 /// (model card; the classical astronomical-twilight midpoint).
 /// type-audit: pending(wave-1)
+/// plumb: pending(wave-1)
 pub const TWILIGHT_DEPTH_DEG: f64 = 12.0;
 
 /// A world's cycles, derived once from its star system.

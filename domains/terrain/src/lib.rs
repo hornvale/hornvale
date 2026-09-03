@@ -89,6 +89,7 @@ use hornvale_kernel::{
 /// is built against the mesh its level selected and must only ever be
 /// queried with it.
 /// type-audit: bare-ok(count)
+/// plumb: pending(wave-1)
 pub const GLOBE_LEVEL: u32 = 6;
 
 /// Predicate marking an entity as a traversable place.

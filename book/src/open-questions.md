@@ -1073,6 +1073,106 @@ had ever claimed `Stageable` under the old membership-only reading, so the
 new gate retrofitted no false claims — which will not be true of the next
 corpus that adds a witness after its own number has already moved.
 
+**[The Reservoir](./chronicle/the-reservoir.md) (2026-09-02) supplies the
+clause's own worked example, on a claim this chapter has repeatedly named as
+its hardest shape — a helper that silently still does the expensive thing
+looking identical, in a green suite, to one that does not.** Migrating
+`worldgen::generated(seed)` to read the fixture only on its seed-42 arm left
+every other arm building exactly as before; a suite run proves nothing about
+which arm a passing test actually took. So `FIXTURE` was edited to a
+nonexistent filename and the target test run again, and it panicked naming
+the missing path *from inside the seed-42 branch* — the only way that panic
+fires is if the branch under test is the one reading the fixture, which a
+build-path panic could not produce. **The positive control was then run
+twice, independently**: the implementer's report carries the transcript, and
+the reviewer reproduced it from a fresh copy-and-mutate rather than trusting
+the pasted output, matching it byte for byte modulo the thread id. Two
+independent firings of the same control is a stronger claim than the clause
+has asked for anywhere else in this chapter.
+
+**And then the same campaign supplied the control's own boundary, which is
+worth more to this chapter than the success is.** The instrument was correct,
+run twice, and pointed at *one* test. Two other seed-42 callers of the same
+migrated helper existed to compare **two independent builds** of the world,
+and routing seed 42 to the fixture left them comparing two reads of one file:
+green, correctly named, and asserting nothing about a build. The control that
+would have exposed both immediately — break `FIXTURE`, watch which branch
+panics — was already built and simply was not aimed at them. What caught them
+was a **clock**: the pair ran in 0.06 s for what should have been four ~3.0-
+second builds, noticed only from a whole-branch vantage no per-task review
+had. So the lesson is not "build the positive control"; the campaign did that,
+well. It is that **a positive control proves a branch is reached at the site
+you aim it, and choosing the sites is a separate act with its own failure
+mode** — here, migrating at a helper's body and never enumerating the 43
+callers whose behaviour changed. When a suite gives no signal either way, the
+remaining instrument is cost: a test that got 50x faster and asserts the same
+thing did not get faster.
+
+**And the same campaign is a fresh instance of the standing diagnosis, from
+the controller's own hand, with a sting the earlier instances lack: the
+"correction" made the number worse.** Re-deriving call-site counts with
+`grep -o '<helper>()' | wc -l` counts *substrings*, not calls —
+`seam_world()` also matches inside `played_world()`, `_world()`-suffixed
+names throughout the file — so the instrument inflated exactly the two files
+carrying such identifiers while looking, at every intermediate total, exactly
+as plausible as a real correction would. A reviewer's independent recount
+with a word-boundary regex is what caught it, and the honest arithmetic
+reads worse than doing nothing: the broken grep's aggregate (244) landed
+*further* from the measured truth (239) than the plan's original, uncorrected
+figure (240) already was. **Two further, smaller instances from the same
+hand make it three, not two.** One read `tail`'s exit status out of
+`make type-audit-report | tail; echo $?` and reported the pipeline green on
+that basis — the status a shell pipe returns by default is its last
+command's, never the one that actually does the work being checked. The
+other was a path-existence check run against bare basenames rather than
+repo-relative paths, testing each against the repository root and reporting
+five legitimate prose references as `MISSING` — a false negative in the
+alarming direction, caught before it reached a permanent record only because
+the same session re-checked with the correct paths.
+
+**Score: the bet does not move, and the campaign is worth citing for exactly
+opposite reasons on its several halves.** The positive control, run twice by
+two people, is this chapter's practice working as intended — proof that a
+branch is reached, not merely proof that a suite stays green — and its
+un-aimed siblings, found by a timing, are the reminder that the practice is
+per-site. The broken `grep` is
+the practice's target, not its exception: an "observing tool answering a
+neighbouring question" is a shape this chapter's own reader has named before
+committing it, in the same campaign, while warning three implementers about
+it in their own dispatches. A correction is not evidence of correctness; it
+is a second claim, checkable exactly like the first, and this one shipped
+unchecked until someone else's count disagreed.
+
+**[The Plumb](./chronicle/the-plumb.md) (2026-09-02) states the floor's
+converse, which this passage has approached from one side for eight
+campaigns and never turned around.** Every clause above concerns a check
+that *fires* and proves less than it claims. This is the other half: **a
+check's SILENCE is a claim about the check's REACH, not about the tree.**
+The campaign changed a duration that varies with a world's rotation period,
+which moves output on every world whose day is not exactly one standard day
+— seed 42's is 87,988 ticks — and a committed byte-golden moved by 89 of
+about 410 lines, 22 affect labels, sixteen of them into the class that feeds
+the distress read. Two instruments were consulted and both reported nothing.
+Both were correct. `make rebaseline` does not write byte-goldens, so the
+`docs/generated-paths.txt` diff cannot see one; and `gate-commit` never ran
+the test, because the sub-floor roster carries 386 entries for that crate
+and none for this one — the same crate-level coverage rule this chapter
+already recorded one layer up, arriving again on a different test. **Two
+checks agreeing is worth nothing when they share a blind spot**, and a
+ruling was priced against their agreement.
+
+**The score does not move, and the practice gains its inverse clause.**
+Everything above says *make it fail on command*; that presumes you know
+which check should have failed. Before reading a silence as evidence,
+confirm the thing that would have moved is inside what the instrument can
+see — which is not a property of the check's predicate, its anchor, or its
+pairing, but of its **population**. Two memory entries in this project
+already stated the two halves separately and neither fired, because the
+campaign had done the right thing one step earlier: it asked for the check
+to be *run* rather than predicted, got an honest report, and never asked
+whether the instrument could speak. Running the right command is not the
+same as running a command that can answer.
+
 ## What the world can already check itself on (high confidence)
 
 **The kernel substrate.** Hash-based seeding, coherent noise, append-only
@@ -3540,6 +3640,23 @@ its honest size.
    annotations said it was waiting on. It moves when a human plays and says it
    moved, and for the first time there is nothing structural in the way of
    playing.
+   **Corrected by [The Plumb](./chronicle/the-plumb.md) (2026-09-02), on The
+   Wicket's traversal annotation above, and the correction is a limit rather
+   than a gain.** That annotation says the fatigue stock is paid down *"on the
+   planet's own day rather than a nominal one"*. Half of it was. The RATE was
+   converted to the planetary day; the SPAN — how long a rest lasts — stayed a
+   fixed quarter of the nominal standard day, and the two are multiplied
+   together. The calibration the rest exists to satisfy — one bout must carry a
+   body clear of the band the drive re-engages inside — therefore held only on
+   worlds turning faster than about thirty hours; past that a rest repaid 0.03
+   against a floor of 0.1, and a body that lay down got straight back up. That
+   is the fragmentation The Wicket removed with a span, restored by a
+   denominator, on a legally pinnable world. It is converted now. **The score
+   does not move**, and the reason is this chapter's own axis: nothing graded
+   the world on it. Every test read the two constants at their nominal values,
+   so a mechanism correct at one rotation period and wrong across most of the
+   legal range was green everywhere, and what found it was an audit asking each
+   constant what it varies along — not any measurement of the act.
 
 ## The standing horizon
 
@@ -4840,3 +4957,173 @@ the three did not exist when the arm was designed. This chapter's own warning
 about ablations applies with the sign reversed: an ablation on a channel almost
 nobody reads is a null with no power, and an ablation that misses a channel
 entirely is a null with a hole in it.
+
+### The fourth look at cost found the quadratic and removed it (2026-09-02)
+
+Two sections above record that cost in this project is scored "when a campaign
+chooses to look", that on the first two occasions each look found an
+unpredicted quadratic, and that a third found a distribution instead. This is
+the fourth, and it is the first one that closes a loop rather than opening one:
+[The Pawl](./chronicle/the-pawl.md) migrated the creature-drive reads off the
+raw position history and onto a session-owned store of advancing accumulators,
+and measured the thirst and hunger reads two hundred and thirty times cheaper,
+the whole tick a quarter cheaper at two hundred ticks, and the level about four
+per cent lower.
+
+**What that does to the accounting is smaller than the numbers suggest, and
+saying so is the point of re-scoring rather than celebrating.** Three things
+are worth carrying forward.
+
+**First, the quadratic that was found is gone and the shape that found it is
+not.** There is still no cost gate on the simulation — no ceiling, no slope
+check, nothing that runs per commit — and the two instruments that exist are
+still the ones the two campaigns that needed them built. A fourth look
+succeeding does not change the base rate of an unwatched dimension; it changes
+one number in it.
+
+**Second, and sharper: the campaign's frozen success criteria could not see
+its own result, and both instruments were working correctly.** Five of six
+preregistered criteria came back not met on the first readout, while a
+synthetic sweep over a thousandfold range of history reported that the order of
+the computation had changed — a ninety-nine-fold saving at ten thousand facts.
+The reconciliation is arithmetic: at the depth an ordinary session reaches, the
+predicted saving was smaller than the ecological instrument's own run-to-run
+spread on the very column being measured, and the criterion had asked that
+instrument to resolve it. **A criterion written against an ecological bench
+cannot see a change of order that the ecological range does not reach.** This
+chapter's standing floor is that a check is only worth what it can be made to
+fail on; the companion is that a *criterion* is only worth the range its
+instrument samples, and neither of those is visible in the criterion's own
+wording.
+
+**Third, the failure that remained is more interesting than the one that was
+fixed, and it was invisible until the fix landed.** Three criteria still fail
+after the campaign, all of them on one fold — the fear memory, which costs 93
+milliseconds per call at the deepest band measured and is 84% of the six timed
+reads' total, against the repaired thirst and hunger pair's combined
+five-thousandths of a per cent. Before the repair, that dominance was hidden
+inside a total that two folds shared. **Removing the largest known cost is what
+makes the next one legible**, which argues for iterating the measurement rather
+than treating a single readout as a verdict on a subsystem.
+
+One further note for this chapter's own honesty. The campaign made exactly one
+change to production code after seeing its first readout, and reports both
+readouts rather than only the second — the first stands unedited, and the
+second is explicitly not blind. Nothing in the standing gate would have caught
+a quieter version of that ordering, and nothing here claims otherwise; it was
+disclosed because the campaign chose to disclose it.
+
+### The gate the fourth look said did not exist now exists (2026-09-02)
+
+The section above, written days earlier, states the standing position on cost
+plainly: "there is still no cost gate on the simulation — no ceiling, no slope
+check, nothing that runs per commit," and the two instruments that exist are
+the ones the two campaigns that needed them built. [The Rack](./chronicle/the-rack.md)
+moves that, and the way it moves it is the part worth re-scoring rather than
+the fact that it did.
+
+**The instrument that existed was not merely blunt; it was not running.**
+`session_cost.rs` bounds a pooled wall-clock median, and its own doc already
+conceded that twenty of the fifty samples that median is drawn from exceed the
+ceiling individually while the gate passes. That is the bluntness anyone would
+have predicted. What nobody had checked is that its millisecond assertions are
+gated to a host the test no longer runs on — they fire only on the Mac, and
+the tier that runs them moved to the canonical Linux box. Measured at close, on
+one quiet box in one profile: **the test passed at main's tip at 81.490 ms
+against a 9 ms ceiling.** [The Roll](./chronicle/the-roll.md) had moved that
+control roughly twenty-one-fold and every gate stayed green, not because the
+threshold was generous but because no threshold was being evaluated.
+
+**A gate's blind zone can be structural rather than statistical, and only one
+of those is visible in its own documentation.** This file's standing floor is
+that a check is only worth what it can be made to fail on; the companion the
+fourth look added is that a criterion is only worth the range its instrument
+samples. This is a third: a check is only worth the *configurations it
+actually runs in*, and the one place that is never written down is the
+intersection of a test's host guard with the tier's host policy — two
+correct-looking facts in two files that nothing compares.
+
+**What replaces it changes the shape of the bet, modestly and legibly.**
+Per-turn work is now a **count** — folds, plan searches, ledger position folds,
+shadowcasts, bodies scanned — asserted per verb class. A count is identical on
+every machine, so it belongs in the commit gate and cannot flap; it went red on
+the pre-change tree at exactly the preregistered numbers and green after. That
+is the first per-commit cost gate this project has had, and it is deliberately
+narrow: it covers the turn path of one window, and it cannot see a regression
+that performs the same operations more slowly. **The unwatched dimension is
+smaller, not closed.** The Rack's own residue — seventy kilobytes of JSON and
+one eight-millisecond shadowcast — is exactly the shape no counter bounds, and
+it is why this campaign's own wall-clock prediction was falsified while its
+counted one landed exactly.
+
+### The fifth look at cost found a repetition, not a quadratic (2026-09-03)
+
+Four sections above record that cost in this project is scored "when a campaign
+chooses to look", that the first two looks each found an unpredicted quadratic,
+that a third found a distribution and a fourth closed a loop, and that the same
+campaign that closed it left one fold failing three criteria at ninety-three
+milliseconds a call. This is the fifth look, and it is at that fold.
+
+**What it found was not a quadratic. It was a repetition.**
+[The Detent](./chronicle/the-detent.md) counted the fold rather than reading it
+and found that the whole of its cost was *static terrain, re-sampled every
+tick*: fifty agents walking one tick asked the world about 44,694 rooms — about
+eleven thousand of them distinct — in order to commit thirty-one facts, and the
+ground had not moved between any two of those questions. Holding the verdict
+for the session and letting the scan advance over new sightings took the fold
+from 93.841 milliseconds per call to 0.096 — 975-fold against a same-box
+control, 758 to 1,008-fold against the frozen figure — and its sensitivity to
+history from 0.91 to 0.04. The whole tick's level fell about nine per cent.
+
+**What that does to the accounting is again smaller than the numbers, and again
+that is the point.** The first per-commit cost gate now exists — the section
+above records it — and it is a **count** over one window's turn path. It cannot
+see this fold: none of the reads this campaign made a thousand times cheaper is
+among the operations it counts, and a count is by construction blind to a
+regression that performs the same operations more slowly. So the fifth look
+succeeding does not change the base rate of an unwatched dimension either. It
+narrows the unwatched region by one fold and leaves the shape of the bet where
+the fourth look left it: **cost is still scored when a campaign chooses to
+look.**
+
+**The sharper finding is not about cost at all. It is about evidence.** The
+mechanism this campaign was expected to build had been named in a committed
+record by the campaign immediately before it, in prose that called itself
+"legible from the code rather than merely suspected." A count on the criterion's
+own instrument found that mechanism reached **zero times**, at every depth, on
+two seeds. The proposed fix would have moved the criterion by nothing.
+
+That is the **second consecutive campaign** whose named mechanism was wrong
+until someone counted it, and both were written by people who had just spent a
+campaign inside the code they were describing. This chapter's standing floor is
+that a check is only worth what it can be made to fail on; the fourth look added
+that a criterion is only worth the range its instrument samples, and The Rack
+added that a check is only worth the configurations it actually runs in. This is
+a fourth, and it is about the *reasoning* rather than the instruments: **reading
+code produces a hypothesis about a mechanism, never evidence for one.** A count
+is cheap — this one took under a minute — and the only thing that makes its
+answer usable is a denominator, because a zero and an unwired instrument produce
+identical output.
+
+**A criterion can fail at the finish line by succeeding.** The frozen criterion
+for this fold counts only runs whose fit clears a goodness-of-fit floor. On the
+control column it admitted four of four; on the campaign column it admitted
+**none of four** — because the slope is now 0.023 against an intercept of 90.6,
+so there is no slope left for a line to explain and a fit to a flat scatter has
+a poor fit by construction. The filter did its job correctly twice in the same
+campaign, catching exactly the two contended runs the load rule caught
+independently. Applied to a criterion that has succeeded, it empties the sample
+and leaves the frozen statistic undefined. The readout reports it that way
+rather than resolving it silently in either direction, and hands forward the
+observation that a criterion about a *slope* wants an effect-size floor rather
+than a fit floor.
+
+One further note for this chapter's own honesty, in the same terms the fourth
+look used. This campaign also made exactly one change to production code after
+seeing its first readout, and reports both readouts rather than only the second:
+the first stands unedited, and the second is explicitly not blind. Its
+verification clause was itself wrong — it tested a level to decide a question
+about a slope — and it was corrected in a ruling written before the change was
+made and after the comparison under both readings had been recorded. Nothing in
+the standing gate would have caught a quieter version of either ordering, and
+nothing here claims otherwise.

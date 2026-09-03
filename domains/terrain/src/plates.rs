@@ -73,8 +73,10 @@ pub(crate) fn unit_vector(stream: &mut Stream) -> [f64; 3] {
 }
 
 /// Drawn plate-count range (spec §4: ~8–40).
+/// plumb: pending(wave-1)
 const PLATE_COUNT_MIN: u32 = 8;
 /// Upper end of the drawn plate-count range.
+/// plumb: pending(wave-1)
 const PLATE_COUNT_MAX: u32 = 40;
 
 /// Generate the plate list: count, seed positions, Euler-pole motions,
@@ -118,6 +120,7 @@ pub fn generate_plates(
     /// softened this from 0.95 (range [1, 20]): the after-census's
     /// plate-size-gini median overshot its 0.45-0.75 band at 0.767, so the
     /// tail's giants are trimmed while the heavy-tail shape is kept.
+    /// plumb: pending(wave-1)
     const WEIGHT_TAIL: f64 = 0.92;
     let mut weight_stream = terrain_seed.derive(streams::PLATE_WEIGHTS).stream();
     let weights: Vec<f64> = (0..count)
@@ -141,6 +144,7 @@ pub fn generate_plates(
 
 /// Edge-noise amplitude, radians (~3.4 degrees: boundaries wander a vertex
 /// or two without tearing plates apart).
+/// plumb: pending(wave-1)
 const EDGE_AMP: f64 = 0.06;
 
 /// Assign each vertex to a plate by weighted, edge-noised angular distance:

@@ -22,10 +22,12 @@ use std::collections::{BTreeMap, BTreeSet};
 /// Minimum prey/predator mass ratio admitted by [`predation`]'s window:
 /// prey lighter than this fraction of the predator's mass is treated as
 /// beneath notice rather than a real prey item.
+/// plumb: pending(wave-1)
 const MIN_PREY_RATIO: f64 = 0.001;
 /// Maximum prey/predator mass ratio admitted by [`predation`]'s window:
 /// prey heavier than this fraction of the predator's mass is treated as
 /// too large for the predator to subdue.
+/// plumb: pending(wave-1)
 const MAX_PREY_RATIO: f64 = 0.5;
 
 /// Derive pairwise competition weights (`w_ij`) from each species' resource

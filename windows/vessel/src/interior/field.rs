@@ -46,10 +46,12 @@ use hornvale_thing::kinds;
 /// (low) end of that range. Full derivation:
 /// `.superpowers/sdd/task-5d-report.md`.
 /// type-audit: pending(wave-3)
+/// plumb: universal(a physically-derived hearth heat-output figure, Q/UA energy balance — a world-object property, not a species one)
 pub const HEARTH_WARMTH: f64 = 15.0;
 
 /// The multiplier per graph step away from an emitter.
 /// type-audit: bare-ok(ratio)
+/// plumb: universal(the physical decay-per-graph-step multiplier for heat propagation)
 pub const WARMTH_DECAY: f64 = 0.5;
 
 /// The warmth at `at`: the sum over every hearth of its emission decayed by the

@@ -519,7 +519,7 @@ missing 1 bundles, so no single row makes anything stageable on its own.
 
 ## Supply
 
-357 served tokens no situation in this corpus requires.
+358 served tokens no situation in this corpus requires.
 
 **Demand-side only.** Spec §4 L2.4 asks for tokens no situation requires
 *and no readout consumes*; the second half is not implemented. So this list
@@ -568,6 +568,7 @@ missing half before this list can serve it.
 - `concept:desert-dwarf-kind` (species)
 - `concept:desert-elf-kind` (species)
 - `concept:dire-wolf-kind` (species)
+- `concept:door` (thing)
 - `concept:drink` (language)
 - `concept:drow-kind` (species)
 - `concept:eager` (language)

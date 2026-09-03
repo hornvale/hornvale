@@ -378,6 +378,7 @@ fn reservable(
 /// carver with a width, not a direction-picking rotation — and it is a design
 /// change with its own epoch, not a widening of this one.
 fn rotated(draw: u64) -> [(i32, i32); 4] {
+    /// plumb: universal(the lattice's own orthogonal-neighbour count, geometric)
     const ORTHOGONAL: usize = 4;
     let start = (draw % ORTHOGONAL as u64) as usize;
     [0, 1, 2, 3].map(|k| HEADINGS[(start + k) % ORTHOGONAL])

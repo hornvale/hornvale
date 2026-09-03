@@ -99,10 +99,11 @@ hornvale_kernel::stream_labels! {
     /// rename.
     ROOM_LAYOUT_ANCHORS = "room/layout/v1/anchors"
         => "where a chamber's anchors land in its cells";
-    /// Stream label for the underworld level generator's partition-tree
-    /// split-or-leaf decisions (The Adit).
-    UNDERWORLD_LEVEL_PARTITION = "underworld/level/v1/partition"
-        => "split-or-leaf decisions in a generated underworld level";
+    /// `underworld/level/v1/partition` is RETIRED OUTRIGHT (The Crosscut):
+    /// the partition tree it drew is gone, nothing derives from it, and a
+    /// leg nothing reads must not sit in the manifest — the same treatment
+    /// `chamber/branch-root/v1` got in The Drift. Never reused.
+    ///
     /// Stream label for the cellular-automata cave content generator
     /// (Karst-biased leaves).
     UNDERWORLD_LEVEL_CELLULAR = "underworld/level/v1/cellular"

@@ -302,6 +302,7 @@ pub fn diagonal_is_blocked(from: Cell, d: (i32, i32), open: impl Fn(Cell) -> boo
 /// `the_largest_extent_leaves_the_render_room_to_draw` here, from the extent, and
 /// `render::tests::the_widest_plan_fits_a_terminal` from the drawn picture.
 /// type-audit: bare-ok(count)
+/// plumb: universal(derived against two checked bounds — MIN_CHAMBER_SPAN and terminal width — a lattice geometry constant)
 pub const CHAMBER_SIDE: i32 = 8;
 
 /// How big `structure`'s plan is: **as big as the rooms it must hold, plus the

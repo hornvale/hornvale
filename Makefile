@@ -33,17 +33,17 @@
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: decision-block decision-blocks help quick quick-run gate-commit gate-commit-run style-run subfloor-run gate-stage gate-campaign gate-suite-run gate gate-run gate-fast gate-full ci seam-guard seam-guard-list heavy-remote heavy-status heavy-log lane lane-status lane-log lane-roster lane-wait sluice sluice-stage sluice-census sluice-status sluice-log nextest-check prewarm prewarm-run worktree-take fmt fmt-check clippy type-audit type-audit-report placement-audit placement-audit-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor shapecheck install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run game-check game-check-run atlas-check clients-check-run board board-digest board-post board-redact board-sync
+.PHONY: absorb decision-block decision-blocks help quick quick-run gate-commit gate-commit-run style-run subfloor-run gate-stage gate-campaign gate-suite-run gate gate-run gate-fast gate-full ci seam-guard seam-guard-list heavy-remote heavy-status heavy-log lane lane-status lane-log lane-roster lane-wait sluice sluice-stage sluice-census sluice-status sluice-log nextest-check prewarm prewarm-run worktree-take fmt fmt-check clippy type-audit type-audit-report placement-audit placement-audit-report plumb plumb-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor shapecheck install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run game-check game-check-run atlas-check clients-check-run board board-digest board-post board-redact board-sync
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
 		| sort \
 		| awk 'BEGIN {FS = ":.*?## "} {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
 
-quick: ## Cheap half of the gate (fmt-check + clippy + type-audit + type-audit-report + placement-audit + placement-audit-report)
+quick: ## Cheap half of the gate (fmt-check + clippy + type-audit + type-audit-report + placement-audit + placement-audit-report + plumb + plumb-report)
 	@bash scripts/timed.sh quick -- make --no-print-directory quick-run
 
-quick-run: fmt-check clippy type-audit type-audit-report placement-audit placement-audit-report
+quick-run: fmt-check clippy type-audit type-audit-report placement-audit placement-audit-report plumb plumb-report
 
 gate-commit: ## THE COMMIT GATE: lints, tripwires and the sub-floor test tier (local; ~10-16 s clean, up to ~470 s after a kernel/-layer edit — see spec §4.2b)
 	@bash scripts/timed.sh gate-commit -- make --no-print-directory gate-commit-run
@@ -57,7 +57,7 @@ gate-commit-run: style-run subfloor-run
 # gate — a third of the whole budget, paid continuously, for a condition that
 # arises exactly once, at worktree-take's `mv`. Task 1 placed the call in
 # scripts/worktree-take.sh instead, which is where the condition is created.
-style-run: fmt-check clippy type-audit type-audit-report placement-audit placement-audit-report
+style-run: fmt-check clippy type-audit type-audit-report placement-audit placement-audit-report plumb plumb-report
 
 # THE SUB-FLOOR TIER. Selection is EXCLUDE-UNKNOWN: a test absent from the
 # roster is not run here, and enters on the next green chamber `gate` phase
@@ -179,7 +179,7 @@ gate-campaign: ## RETIRED (decision 0139) -- the merge queue gates the merge pro
 # that the old top-level `gate` target used to do itself; this target's own
 # job is unchanged from before The Staff — run the cheap checks, then the
 # nextest+doctest body below (gate-run), unchanged.
-gate-suite-run: fmt-check clippy type-audit type-audit-report nextest-check
+gate-suite-run: fmt-check clippy type-audit type-audit-report plumb plumb-report nextest-check
 	@$(MAKE) --no-print-directory gate-run
 
 # The gate's body, split out so `timed.sh` can wrap it. Until this split,
@@ -534,6 +534,43 @@ placement-audit-report: ## Fail if the committed placement roster is stale (rege
 # sessions, outside the cargo workspace like type-audit and the digest above
 # (so `make gate` never builds it — its own tests run under
 # `cargo test --manifest-path tools/board/Cargo.toml`).
+# In the gate for the same reason type-audit is (The Plumb, Task 4, decision
+# ledger #31): default-deny over every authored numeric constant in
+# domains/*/src and windows/*/src. THE PAIR (this target plus plumb-report
+# below) IS WHAT style-run ACTUALLY PAYS, and a fix-round review measurement
+# (confirmed by re-measurement 2026-09-02, `/usr/bin/time -p make <target>`,
+# warm tree, 681 constants over 290 files) corrected an earlier draft of this
+# comment that quoted a single-target 3.5s number against type-audit's
+# single-target ~1.2s — both wrong for this crate and not the comparison that
+# matters. The real pair costs: `make plumb` + `make plumb-report` ~7.1s
+# (7.09/7.06/7.11s across three runs) against `make type-audit` +
+# `make type-audit-report` ~10.9s (10.88/10.90/11.0s) — plumb is roughly
+# TWO-THIRDS the incumbent's cost, not costlier than it. Still a source scan
+# with no workspace build, and the whole point of this campaign is that
+# nothing else runs it: unlike seam-guard (whose cost is a scoped TEST RUN
+# per call site, not a scan, and whose declared-survivor grammar makes an
+# occasional manual run adequate), an untagged constant here is a silent
+# regression the campaign's own motivating bug (FATIGUE_RISE) shipped as. A
+# scanner nothing schedules guards nothing.
+plumb: ## Verify every authored numeric constant carries a plumb: rung (default-deny)
+	cargo run --quiet --manifest-path tools/plumb/Cargo.toml -- check
+
+# Freshness of the committed roster, same shape as type-audit-report above.
+plumb-report: ## Fail if the committed plumb roster is stale (regen cmd in the message)
+	@tmp="$$(mktemp /tmp/hv-plumb-report.XXXXXX)"; \
+	trap 'rm -f "$$tmp"' EXIT; \
+	cargo run --quiet --manifest-path tools/plumb/Cargo.toml -- report > "$$tmp"; \
+	if ! diff -q "$$tmp" docs/audits/plumb-roster.md >/dev/null 2>&1; then \
+		echo "plumb-report: docs/audits/plumb-roster.md is stale. Regenerate it with:" >&2; \
+		echo "  cargo run --manifest-path tools/plumb/Cargo.toml -- report > docs/audits/plumb-roster.md" >&2; \
+		exit 1; \
+	fi
+
+# The Cairn (tools/board): a git-native message board for parallel agent
+# sessions, outside the cargo workspace like type-audit and the digest above
+# (so `make gate` never builds it — its own tests run under
+# `cargo test --manifest-path tools/board/Cargo.toml`).
+
 board: ## The Cairn: read the board (full, unfiltered)
 	@cargo run --quiet --manifest-path tools/board/Cargo.toml -- read
 
@@ -585,6 +622,9 @@ nextest-check: ## Fail with an install hint if cargo-nextest is missing
 		echo "cargo-nextest not found — install it (decision 0040):"; \
 		echo "  cargo install cargo-nextest   # or: brew install cargo-nextest"; \
 		exit 1; }
+
+absorb: ## Absorb main into this campaign branch, regenerating artifacts it cannot merge
+	@bash scripts/absorb.sh
 
 prewarm: ## Warm a fresh worktree's caches (start in the background right after `git worktree add`)
 	@bash scripts/timed.sh prewarm -- make --no-print-directory prewarm-run

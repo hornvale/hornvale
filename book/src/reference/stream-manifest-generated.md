@@ -207,7 +207,6 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `room/layout/v1/rectilinear` | where the rectilinear method places chambers |
 | `room/layout/v1/grown` | where the growing method places chambers |
 | `room/layout/v1/anchors` | where a chamber's anchors land in its cells |
-| `underworld/level/v1/partition` | split-or-leaf decisions in a generated underworld level |
 | `underworld/level/v1/cellular` | cellular-automata cave carving within a leaf |
 | `underworld/level/v1/tunneler` | drunkard's-walk tunnel carving within a leaf |
 | `underworld/level/v1/rooms` | partitioned-rooms carving within a leaf |
@@ -232,6 +231,11 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `chamber/run-floors/v2` | how many levels one run realizes, keyed on (vertex, branch, band) |
 | `chamber/branch-character/v2` | which character one branch carries, keyed on (vertex, branch, band) |
 | `chamber/branch-barrier/v2` | the barrier thinness of one branch, keyed on (vertex, branch, band) |
+| `underworld/plan/v1/spine` | entrance and per-level stair cells of a descent's spine |
+| `underworld/plan/v1/cycle` | cycle attachment, segment length and same- or cross-floor choice |
+| `underworld/plan/v1/extend` | which passage a series extension lengthens |
+| `underworld/plan/v1/stair` | the coordinate a stairway shares between two floors |
+| `underworld/gate/v1/pattern` | which cycle pattern a realm draws from the frozen inventory |
 | `chamber/branch-count/v2` | how many branches one cave system realizes, keyed on (vertex, band) |
 | `chamber/entrance-count/v2` | how large one cave system's FREE aperture set is, keyed on vertex (the shipped count is this raised to the top band's branch width) |
 | `chamber/entrance-mouth/v2` | which top-band branch one aperture opens on, keyed on (vertex, aperture, role) |

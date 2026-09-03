@@ -533,6 +533,7 @@ pub fn walk_depth(ctx: &LocaleContext) -> u32 {
 /// splitting it into two tunable constants would be two numbers nothing
 /// measures instead of one.
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 pub const DIAGONAL_STEP_FACTOR: f64 = std::f64::consts::SQRT_2;
 
 /// Whether `b` is a **corner**-adjacent neighbour of `a` rather than an
@@ -1579,27 +1580,33 @@ impl LocaleContext {
 /// (The Bane) — graded from here down to [`LETHAL_COLD_C`]. Above the coldest
 /// species niche, so ordinary cold is thermal discomfort (thermal's job), not
 /// dread.
+/// plumb: pending(wave-1)
 const COLD_DANGER_C: f64 = -20.0;
 
 /// The annual-mean temperature (°C) at/above which a vertex's HEAT becomes a hazard
 /// (The Bane) — graded from here up to [`LETHAL_HEAT_C`].
+/// plumb: pending(wave-1)
 const HOT_DANGER_C: f64 = 40.0;
 
 /// The coldest annual-mean temperature (°C) any creature survives — a lethal
 /// frozen waste, where COLD hazard saturates to `1` (The Bane).
+/// plumb: pending(wave-1)
 const LETHAL_COLD_C: f64 = -40.0;
 
 /// The hottest annual-mean temperature (°C) any creature survives — a lethal
 /// molten waste, where HEAT hazard saturates to `1`.
+/// plumb: pending(wave-1)
 const LETHAL_HEAT_C: f64 = 60.0;
 
 /// The optimum temperature (°C) of the Miami NPP proxy's triangular
 /// temperature response — mirrors demography's carrying-capacity model (a
 /// sibling consumer of the same proxy; see [`LocaleContext::productivity_at`]).
+/// plumb: pending(wave-1)
 const NPP_TEMP_OPTIMUM_C: f64 = 20.0;
 
 /// The temperature tolerance (°C) either side of [`NPP_TEMP_OPTIMUM_C`] over
 /// which the triangular temperature response falls to zero.
+/// plumb: pending(wave-1)
 const NPP_TEMP_TOLERANCE_C: f64 = 30.0;
 
 /// The Miami-model net-primary-productivity proxy in `[0, 1]`: the Liebig
@@ -1963,6 +1970,7 @@ pub fn heading_rose(from: &Facet) -> Vec<Option<Facet>> {
 
 /// The number of compass words, hence the width of [`heading_rose`]'s
 /// assignment problem and the bound on a room's lateral arity.
+/// plumb: pending(wave-1)
 const ROSE_WORDS: usize = 8;
 
 /// One partial assignment, and the key [`rose_assignment`] minimises.
@@ -1983,6 +1991,7 @@ struct RoseKey {
 
 impl RoseKey {
     /// The empty assignment.
+    /// plumb: pending(wave-1)
     const EMPTY: Self = Self {
         errs: [0.0; ROSE_WORDS],
         words: [0; ROSE_WORDS],

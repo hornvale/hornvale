@@ -14,12 +14,14 @@ use hornvale_kernel::math;
 // ecology). Chosen 1.25 as a middle ground: measurably super-linear (100 kg
 // ratio → 314× range at this exponent), leaving room for variation with
 // habitat type (plains vs forest, pursuit vs ambush).
+/// plumb: pending(wave-1)
 const EXPONENT: f64 = 1.25;
 
 // AUTHORED prior (not swept/calibrated against any census): scale constant
 // chosen so a mid-body (e.g. 40 kg, goblin-sized) lands near 1 vertex/
 // individual (the transition between high-density small species and
 // low-density large ones). Formula: 1 / (40^EXPONENT) ≈ 0.01.
+/// plumb: pending(wave-1)
 const A: f64 = 0.01;
 
 /// Home range in vertices per individual (Kleiber super-linear allometry in mass).
