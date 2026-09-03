@@ -2516,6 +2516,25 @@ pub const RESTED: &str = "rested";
 /// type-audit: bare-ok(identifier-text)
 pub const SLEPT: &str = "slept";
 
+/// A game-layer predicate: the KIND of anchor the agent slept on, within the
+/// room it already slept in (The Pallet, Task 3) — the durable half of
+/// [`crate::sleep_site::select_sleep_site`]'s within-room answer. Registered
+/// by the session, NOT at genesis, exactly as [`SLEPT`] is.
+///
+/// **A second predicate, additive to [`SLEPT`], never a replacement.**
+/// [`SLEPT`]'s own object (the span) is untouched by this campaign. Decision
+/// 0069 forbids ever committing an anchor's own identity into a saved
+/// world — only a [`hornvale_kernel::KindId`], a registered concept, may
+/// travel — so this predicate carries exactly that: which KIND of thing a
+/// body found in the room, never which specific one.
+///
+/// **Not every sleep gets one.** A body that slept on bare ground — nothing
+/// in the room offered [`crate::affordance::OfferedVerb::Sleep`] — commits
+/// no `slept-on` fact at all. Absence is the record for the road (spec §4c):
+/// the road is the world's normal case, not an omission to backfill.
+/// type-audit: bare-ok(identifier-text)
+pub const SLEPT_ON: &str = "slept-on";
+
 /// The solar-altitude band (degrees around the horizon) a CREPUSCULAR creature
 /// is awake in — dawn and dusk, when the sun is near the horizon (civil
 /// twilight). Diurnal wakes above it, nocturnal below (The Slumber Tier-1).
@@ -5907,6 +5926,42 @@ pub(crate) fn slept_fact(
     bout_fact(SLEPT, entity, day, span, provenance)
 }
 
+/// A committed `slept-on` fact: `entity` slept on an anchor of `kind`, within
+/// `room`, on `day` — [`Action::Sleep`]'s SITE (The Pallet, Task 3), the
+/// durable half of [`crate::sleep_site::select_sleep_site`]'s answer.
+///
+/// **There is no arm for bare ground.** A caller that got `None` back from
+/// `select_sleep_site` does not call this at all — see [`SLEPT_ON`]'s own
+/// doc for why absence, not a fabricated "ground" kind, is the record.
+///
+/// **`place` is room-granular, never an anchor's** (decision 0069).
+/// [`crate::thing::thing_id`] derives it purely from `(room, kind)` at
+/// ordinal 0 — the same pure, mint-free derivation every other `thing` in
+/// this crate resolves through, so two same-kind anchors in one room
+/// (Task 2's own tie-break case) resolve to the SAME place. That collapse is
+/// the constitution working as intended, not a loss: nothing this side of an
+/// `AnchorId` may say WHICH bed, only that a bed-kind site was used in this
+/// room.
+pub(crate) fn slept_on_fact(
+    entity: EntityId,
+    room: &Facet,
+    kind: KindId,
+    day: WorldTime,
+    provenance: &str,
+) -> Fact {
+    Fact {
+        subject: entity,
+        predicate: SLEPT_ON.to_string(),
+        object: Value::Text(kind.0.to_string()),
+        place: Some(
+            crate::thing::thing_id(room, kind.0, 0)
+                .expect("a scheduled room is always within MAX_DEPTH"),
+        ),
+        day: Some(day),
+        provenance: provenance.to_string(),
+    }
+}
+
 /// The one constructor behind [`rested_fact`] and [`slept_fact`]: a recovery
 /// bout under `predicate`, carrying its span as an exact tick count.
 fn bout_fact(
@@ -7308,6 +7363,22 @@ impl<'a> DriveMovements<'a> {
                     ),
                 };
                 out.push(fact);
+                // The site half (The Pallet, Task 3). Only `Sleep` goes
+                // unconscious somewhere in particular — `Rest` never routes
+                // through the affordance choice `select_sleep_site` answers —
+                // so only this arm asks. Bare ground (`None`) commits nothing,
+                // exactly as `slept_on_fact`'s own doc requires.
+                if matches!(action, Action::Sleep)
+                    && let Some(anchor) = crate::sleep_site::select_sleep_site(&st.interior, npc)
+                {
+                    out.push(slept_on_fact(
+                        npc.entity,
+                        &st.pos,
+                        st.interior.anchor(anchor).kind,
+                        st.day,
+                        "slept through its off-phase (fatigue eased)",
+                    ));
+                }
                 st.day = st.day + span;
                 if st.day > self.to {
                     return false;
@@ -17446,6 +17517,183 @@ mod tests {
             rests[0].object,
             Value::Number(expected.ticks() as f64),
             "the sleep's recorded span must be the very jump the walk makes"
+        );
+    }
+
+    /// The `slept_on_fact` builder directly (The Pallet, Task 3, Step 1): a
+    /// body that slept on a `kinds::BED` commits `SLEPT_ON`, object
+    /// `Value::Text("bed")`, `place` a room-granular `EntityId`, dated
+    /// exactly the day it went down. This is the failing test the task's
+    /// brief asks for, pinned at the level the fact builder itself owns
+    /// rather than the walk that calls it (below).
+    #[test]
+    fn slept_on_fact_records_the_kind_and_a_room_granular_place() {
+        use crate::interior::Interior;
+        use hornvale_thing::kinds;
+
+        let mut interior = Interior::new();
+        let bed = interior.push(kinds::BED, None);
+        let room = raddr(1.0);
+        let entity = npc_id(1);
+        let day = WorldTime::from_std_days(3.0).expect("a day value is finite");
+
+        let fact = slept_on_fact(entity, &room, interior.anchor(bed).kind, day, "test");
+
+        assert_eq!(fact.subject, entity);
+        assert_eq!(fact.predicate, SLEPT_ON);
+        assert_eq!(
+            fact.object,
+            Value::Text("bed".to_string()),
+            "the object carries the KIND's own registered spelling"
+        );
+        assert_eq!(fact.day, Some(day));
+        // `place` is room-granular (decision 0069): a PURE derivation from
+        // `(room, kind)`, not from `bed`'s own `AnchorId` — so it is stable
+        // across two calls and carries no anchor identity at all.
+        let expected_place = crate::thing::thing_id(&room, "bed", 0)
+            .expect("a scheduled room is always within MAX_DEPTH");
+        assert_eq!(fact.place, Some(expected_place));
+
+        // It commits cleanly once registered, exactly as SLEPT does.
+        let mut ledger = Ledger::default();
+        let mut reg = ConceptRegistry::default();
+        reg.register_predicate(SLEPT_ON, false, "test")
+            .expect("a fresh registry accepts a first registration");
+        ledger
+            .commit(fact, &reg)
+            .expect("a well-formed SLEPT_ON fact commits");
+    }
+
+    /// The absence half (spec §4c, Step 1): a body that slept on bare
+    /// ground commits `SLEPT` but no `SLEPT_ON` at all. `PlantedTerrain`'s
+    /// `is_built` defaults to `false` (`Terrain::is_built`'s own doc), so
+    /// `interior_of` composes no bed for this fixture — the same walk
+    /// `the_walk_records_how_long_a_creature_actually_slept` exercises,
+    /// re-read for the site predicate rather than the span.
+    #[test]
+    fn the_walk_records_no_site_on_bare_ground() {
+        let home = raddr(1.0);
+        let terrain = PlantedTerrain::thermal([(home.clone(), 20.0)]);
+        let niche = ConditionResponse {
+            optimum: 20.0,
+            width: 50.0,
+            devotion: 0.5,
+        };
+        let npc = cold_thermal_npc(npc_id(1), home.clone(), niche);
+        let mut reg = ConceptRegistry::default();
+        reg.register_predicate(AGENT_AT, true, "agent-at").unwrap();
+        let mut ledger = Ledger::default();
+        let e = npc.entity;
+        let night = WorldTime::from_std_days(3.0).expect("a day value is finite");
+        assert!(
+            !is_awake(ActivityCycle::Diurnal, &terrain, &home, night),
+            "the fixture must actually catch the creature asleep"
+        );
+        ledger.commit(place_agent(e, &home, night), &reg).unwrap();
+        let folds = test_folds();
+        let sys = DriveMovements {
+            npcs: vec![npc],
+            from: night,
+            to: night + TickSpan::from_ticks(WorldTime::TICKS_PER_STD_DAY / 10),
+            params: SUSTENANCE,
+            day_ticks: None,
+            terrain: &terrain,
+            folds: &folds,
+        };
+        let (facts, _occ) =
+            sys.step_with_occupancy(&ledger, &mut RoomMeshMemo::new(), &mut HomeNavCache::new());
+        assert!(
+            facts.iter().any(|f| f.subject == e && f.predicate == SLEPT),
+            "the body must still sleep, bare ground or not: {facts:?}"
+        );
+        assert!(
+            !facts
+                .iter()
+                .any(|f| f.subject == e && f.predicate == SLEPT_ON),
+            "bare ground commits no slept-on fact — absence is the record: {facts:?}"
+        );
+    }
+
+    /// The positive half (spec §4c, Step 1): a room whose composed interior
+    /// includes a fireside bed (`built: true, cold: true` deterministically
+    /// draws `the-ground`, `the-alcove`, `the-fire` and `the-fireside-bed` —
+    /// `INVENTORY`'s own admission rules in `interior/pattern.rs`, proved
+    /// reachable from this same `(true, true)` composition by
+    /// `a_cold_creature_crosses_the_room_to_the_fire`'s own "real
+    /// composition" half) commits `SLEPT_ON` for the sleeping body, with the
+    /// KIND `select_sleep_site` found and the SAME room-granular `place`
+    /// `slept_on_fact`'s own unit test predicts.
+    #[test]
+    fn the_walk_records_the_site_the_body_slept_on() {
+        struct BuiltColdTerrain;
+        impl Terrain for BuiltColdTerrain {
+            fn elevation(&self, _r: &Facet) -> f64 {
+                0.0
+            }
+            fn is_fresh_water(&self, _r: &Facet) -> bool {
+                false
+            }
+            fn temperature(&self, _r: &Facet, _d: WorldTime) -> f64 {
+                // Below `FURNISHING_COLD_C` (5.0), so `is_cold`'s default
+                // reads true — the same margin `FurnishingStub` above uses.
+                4.5
+            }
+            fn is_built(&self, _r: &Facet) -> bool {
+                true
+            }
+        }
+
+        let home = raddr(1.0);
+        let terrain = BuiltColdTerrain;
+        let niche = ConditionResponse {
+            optimum: 20.0,
+            width: 50.0,
+            devotion: 0.5,
+        };
+        let npc = cold_thermal_npc(npc_id(1), home.clone(), niche);
+        let mut reg = ConceptRegistry::default();
+        reg.register_predicate(AGENT_AT, true, "agent-at").unwrap();
+        let mut ledger = Ledger::default();
+        let e = npc.entity;
+        let night = WorldTime::from_std_days(3.0).expect("a day value is finite");
+        assert!(
+            !is_awake(ActivityCycle::Diurnal, &terrain, &home, night),
+            "the fixture must actually catch the creature asleep"
+        );
+        ledger.commit(place_agent(e, &home, night), &reg).unwrap();
+        let folds = test_folds();
+        let sys = DriveMovements {
+            npcs: vec![npc],
+            from: night,
+            to: night + TickSpan::from_ticks(WorldTime::TICKS_PER_STD_DAY / 10),
+            params: SUSTENANCE,
+            day_ticks: None,
+            terrain: &terrain,
+            folds: &folds,
+        };
+        let (facts, _occ) =
+            sys.step_with_occupancy(&ledger, &mut RoomMeshMemo::new(), &mut HomeNavCache::new());
+        let slept: Vec<&Fact> = facts
+            .iter()
+            .filter(|f| f.subject == e && f.predicate == SLEPT)
+            .collect();
+        assert_eq!(slept.len(), 1, "one sleep, in one tick: {facts:?}");
+        let site: Vec<&Fact> = facts
+            .iter()
+            .filter(|f| f.subject == e && f.predicate == SLEPT_ON)
+            .collect();
+        assert_eq!(
+            site.len(),
+            1,
+            "a body that finds a bed records exactly one site: {facts:?}"
+        );
+        assert_eq!(site[0].object, Value::Text("bed".to_string()));
+        let expected_place = crate::thing::thing_id(&home, "bed", 0)
+            .expect("a scheduled room is always within MAX_DEPTH");
+        assert_eq!(site[0].place, Some(expected_place));
+        assert_eq!(
+            site[0].day, slept[0].day,
+            "the site is dated the same instant the body went down"
         );
     }
 

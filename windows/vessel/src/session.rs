@@ -9,9 +9,10 @@ use crate::controller::{Controller, ImposedController, PlayerController};
 use crate::gate::{BodyState, Verdict, verdict};
 use crate::liveness::{
     AGENT_AT, Affect, AffectLabel, DRANK, DriveKind, DriveMovements, EATEN, HomeNavCache,
-    LocaleTerrain, Mode, Occupancy, PrimaryAfraidMemo, RESTED, SLEPT, SUSTENANCE, Terrain,
-    act_span, affect_of_memo_occupied, agent_at_fact, agent_position, built_rooms, derive_npcs,
-    derive_wild_herds, renders_unconscious, slept_fact, species_activity, village_or_fallback,
+    LocaleTerrain, Mode, Occupancy, PrimaryAfraidMemo, RESTED, SLEPT, SLEPT_ON, SUSTENANCE,
+    Terrain, act_span, affect_of_memo_occupied, agent_at_fact, agent_position, built_rooms,
+    derive_npcs, derive_wild_herds, renders_unconscious, slept_fact, slept_on_fact,
+    species_activity, village_or_fallback,
 };
 use crate::residents::derive_residents;
 use crate::roll::{ROLL_BUDGET, ROLL_HOPS, RollKeyStatic, roll_of, rooms_within};
@@ -1466,6 +1467,18 @@ impl<'w> Session<'w> {
         registry
             .register_predicate(SLEPT, false, "an agent slept on a day, for this many ticks")
             .expect("SLEPT registers identically every session");
+        // The site half (The Pallet, Task 3): which KIND of anchor a sleep
+        // landed on, in the room `SLEPT` above already dates. Registered on
+        // the same terms — by the session, not at genesis — for the same
+        // reason: `slept-on` did not exist before this campaign, so no
+        // committed world can already disagree with this definition.
+        registry
+            .register_predicate(
+                SLEPT_ON,
+                false,
+                "the kind of anchor an agent slept on, within the room it slept in",
+            )
+            .expect("SLEPT_ON registers identically every session");
         registry
             .register_predicate(EATEN, false, "an agent ate (eased its hunger) on a day")
             .expect("EATEN registers identically every session");
@@ -3402,6 +3415,29 @@ impl<'w> Session<'w> {
         self.ledger
             .commit(fact, &self.registry)
             .expect("SLEPT is registered every session and non-functional");
+        // THE SITE HALF (The Pallet, Task 3). Mirrors `liveness.rs`'s own
+        // `Action::Sleep` arm in `advance_one` exactly, because a player's
+        // `sleep` and a creature's own act commit the same `slept` fact above
+        // and must commit the same `slept-on` one under the same rule — within
+        // this room only, never a search beyond it. Bare ground commits
+        // nothing.
+        let room = self.position();
+        let terrain = self.terrain_here();
+        let room_interior = crate::interior::interior_of(&room, &terrain);
+        if let Some(anchor) =
+            crate::sleep_site::select_sleep_site(&room_interior, self.driven_body())
+        {
+            let site_fact = slept_on_fact(
+                self.agent_entity(),
+                &room,
+                room_interior.anchor(anchor).kind,
+                self.day,
+                SLEPT_PROVENANCE,
+            );
+            self.ledger
+                .commit(site_fact, &self.registry)
+                .expect("SLEPT_ON is registered every session and non-functional");
+        }
         // UNCONSCIOUSNESS IS READ OFF THE ACT, NOT ASSERTED HERE (The Wicket,
         // Task 8). The `if` is not decoration on an act that always answers
         // `true`: it is the statement that this method has no opinion of its
