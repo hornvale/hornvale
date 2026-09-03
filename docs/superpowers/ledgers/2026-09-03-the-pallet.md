@@ -175,3 +175,64 @@ T5 is procedural.
 No ideonomy pass on either — the first is a disambiguation against a
 constraint that already exists (Campaign C's scope), the second a coverage
 miss against the spec's own text.
+
+#8 [G5] — **Task 1 review: my headline was right and the reviewer found the
+better finding underneath it. A REPLACEMENT TEST CAN COVER A DIFFERENT THING
+THAN THE TEST IT REPLACED, and everything stays green.**
+
+My finding — that converting a `const` into a `let` removes the quantity from
+`plumb`'s reach — was confirmed and proved rather than argued.
+`tools/plumb/src/walk.rs:461-511` overrides only `visit_item_const` /
+`visit_impl_item_const` / `visit_trait_item_const`; there is no `visit_local`
+and no `visit_expr_lit`. Two probes settle it: an untagged const in
+`next_awake_day`'s body is caught (`687 swept, 1 undeclared`, rc=1); the
+identical number as a `let` vanishes (`686 swept, 0 undeclared`, rc=0). So
+`20`, `3 / 2` and `2 / 5` — the numbers that now govern rest and sleep spans —
+are unreachable by the audit, while `plumb report`'s own header claims *"Every
+authored constant should declare which axis it varies along."*
+
+**But the sharper finding is I1, and I did not see it.** The reviewer mutated
+each of the four conversions separately:
+
+| mutation | vessel | lab |
+|---|---|---|
+| `sleep_bout` → `SLEEP_BOUT` | **1 failed** | — |
+| `wake_scan_step` → `WAKE_SCAN_STEP` | 1009 passed | 1 failed (byte-golden only) |
+| `scan_limit` → `SCAN_LIMIT` | 1009 passed | 503 passed |
+| `one_day` → `ONE_DAY` | 1009 passed | 503 passed |
+
+**The deleted test used `permanent_night: true`, forcing the give-up-fallback
+branch — `ONE_DAY`, the constant the inversion was actually measured on. The
+replacement uses `permanent_night: false` plus awake-at-noon, forcing the
+`SLEEP_BOUT` floor branch instead.** Both are good tests. They witness
+different things, and the one that went away is not the one that came back. The
+arm The Plumb deliberately ratcheted is now unpinned, and the whole suite is
+green.
+
+**The generalizable form, which is new to this project's record:** deleting a
+test and adding a test in the same task reads as *replacement*, and nothing
+checks that the new one exercises the same code path. A test's identity is its
+**branch**, not its subject or its name — both tests here are "about" the
+rest/sleep ordering at the 100-hour extreme, and they take different arms of
+the same `match`. The check is not "did we add a test" but "mutate what the old
+test pinned and confirm something still reddens."
+
+Two contributing causes worth keeping: almost every fixture uses
+`PlantedTerrain::thermal`, which reports no day, so `ticks_per_local_day`
+returns the base rate and const ≡ runtime formula — which is why three of four
+mutations are invisible; and a byte-golden catching `WAKE_SCAN_STEP` is a
+**change detector, not a property witness**, so it should not be counted as
+coverage.
+
+Also found, all routed to fix round 1: `SCAN_LIMIT` and `ONE_DAY` are read by
+nothing, making them constants whose sole function is to hold a tag (the
+`REST_BOUT` idiom is real precedent, but its three siblings are all still read
+by tests — delete one and something stops compiling); a latent non-termination
+(`local_day / 20` is `0` for `day_ticks()` in `1..=19`, which the old fixed
+step made structurally impossible and the conversion makes only situationally
+impossible); and three stale doc claims of the class the implementer had
+already fixed once elsewhere.
+
+Ruling: keep the idiom, fix the coverage, file the blind spot as a `TOOL-*`
+row rather than fixing the tool — auditing every integer literal in a function
+body has an obvious false-positive problem and is its own campaign.
