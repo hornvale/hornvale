@@ -72,18 +72,48 @@ one-directionality costs nothing to guarantee.
 ## Why `placed`/`derived` specifically
 
 The project already owns both words for exactly this distinction. `hornvale
-locale --strange` prints *"103 **placed** exotic sites"*; `derived` appears in
-377 source files as this codebase's word for computed-not-stored. The pair adds
+locale --strange` prints *"103 **placed** exotic sites"*; `derived` is this
+codebase's word for computed-not-stored, in **409** Rust files. The pair adds
 no new vocabulary.
 
 Two alternatives were disqualified on collision rather than taste:
 
-- **`chronicled`** — `windows/chronicle` is the derived-history engine, 58
-  files. Two chronicle-ish concepts in one system reads fine for a month.
+- **`chronicled`** — `windows/chronicle` is the derived-history engine. Two
+  chronicle-ish concepts in one system reads fine for a month.
 - **`attested`** — partly spoken for by The Attestation campaign.
 
-`uncharted` is genuinely free (0 occurrences) and is kept in reserve for the
+`uncharted` carries no meaning in the codebase and is kept in reserve for the
 standing axis.
+
+**CORRECTED 2026-09-03.** Three figures in this section reproduced under no
+command, and the commands are given below so the next reader can check rather
+than trust. The arguments are unaffected — every one of them turns on whether
+a word is already spoken for, not on how loudly — which is precisely why
+nobody checked.
+
+```
+$ git grep -l derived -- '*.rs' | wc -l          # 409  (record said 377)
+$ git ls-files windows/chronicle | wc -l         #  12  (record said 58)
+$ git ls-files windows/chronicle | grep -c '\.rs$' #  11
+$ git grep -i uncharted | wc -l                  #   7  (record said 0)
+```
+
+As measured 2026-09-03 at the tip of `campaign/the-prospect`; these are counts
+of a moving tree, so they are a claim with a date rather than a constant.
+
+- **`derived` was 377, is 409** (425 case-insensitively). The claim was
+  "appears in 377 source files"; it under-counted, which makes the argument
+  *stronger*, not weaker.
+- **`windows/chronicle` was called 58 files and is 12**, 11 of them `.rs`. 58
+  is not a stale count of that directory — it never held 58 files — so the
+  number appears to have come from somewhere else entirely. The collision it
+  was offered as evidence for is real regardless: the crate exists and is the
+  derived-history engine, which is the whole of the argument.
+- **`uncharted` was called "genuinely free (0 occurrences)" and greps 7.** All
+  seven are inside THIS record and the campaign ledger written about it, so
+  the claim was true of the codebase at the moment it was made and was
+  falsified by being written down. Scoped to "carries no meaning in the
+  codebase" above, which is what was meant and stays true.
 
 ## Consequences
 

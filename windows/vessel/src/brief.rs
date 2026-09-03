@@ -190,10 +190,23 @@ pub fn brief_of(
     let cold = terrain.is_cold(&locale);
     //
     // NOTE ON COST: like the occupation map below, this re-derives every placed
-    // site's address on every call — the budget caps placement at 1% of land
-    // vertices, so a miss walks the whole list. Same remedy if a profile ever
-    // shows it: hoist the placed set to the caller (`Session` already holds
-    // `built` exactly that way), never a cache inside a derivation.
+    // site's address on every call, and a miss walks the whole list.
+    //
+    // THE LIST IS 5-15x LONGER THAN THIS NOTE USED TO SAY. It read "the budget
+    // caps placement at 1% of land vertices, so a miss walks the whole list".
+    // `BUDGET_FRACTION = 0.01` (`windows/locale/src/budget.rs`) binds EXOTIC
+    // sites only — ~100-180 of them. Caves are uncapped: H3
+    // (`windows/lab/tests/suite/site_density.rs`) measures 874/1,647/1,681/
+    // 1,116/2,440 cave vertices on seeds 42/13/7/1/100, i.e. 7-13% of land
+    // vertices, and `cave_sites` is the parameter this function scans. The
+    // doc above already says cave_sites is "much the longer roster of the two
+    // — ~870-2,440 vertices against ~100"; this note contradicted it two
+    // paragraphs later by pricing the whole scan at the exotic budget.
+    //
+    // `brief_of` runs on every `look` and every `enter` (`session.rs`), so the
+    // per-turn cost is real. Same remedy if a profile ever shows it: hoist the
+    // placed set to the caller (`Session` already holds `built` exactly that
+    // way), never a cache inside a derivation.
     let placed_at = |vertex: Vertex, reason: SiteReason| {
         site_facet_for(vertex, reason, world.seed, geo, walk_depth) == locale
     };

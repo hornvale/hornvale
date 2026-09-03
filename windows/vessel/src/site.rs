@@ -46,10 +46,21 @@ pub enum Extent {
 /// genuinely different costs and guarantees — this type names that split
 /// rather than blurring it into one `Site`.
 ///
-/// **This is `Extent::Region`'s situation again.** Everything The Prospect
-/// builds is [`Tier::Placed`]; [`Tier::Derived`] is modelled now, unused,
-/// so the surface tier a later campaign builds is a fill-in against an
+/// **This goes further than [`Extent`] does, and the difference is worth
+/// naming rather than eliding.** Everything The Prospect builds is
+/// [`Tier::Placed`]; [`Tier::Derived`] is modelled now, unused, so the
+/// surface tier a later campaign builds is a fill-in against an
 /// already-widened type rather than a migration of every `Site` consumer.
+///
+/// These docs used to say "this is `Extent::Region`'s situation again", four
+/// times over, and `Extent::Region` **does not exist** — the enum has one
+/// variant and always did on this branch. `cargo doc` reported the two
+/// intra-doc links as broken, and decision 0538 was corrected on 2026-09-03
+/// for declaring the variant in its own Decision block. The two postures are
+/// therefore NOT the same: `Tier` really does carry an unused variant, so a
+/// later campaign fills in an arm; `Extent` carries only the FIELD, so a later
+/// campaign adds the variant first. Both avoid a signature change at every
+/// consumer, which was the point; only one of them has the arm.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Tier {
     /// Generated from a level-6 vertex by a seeded draw. Bounded — roughly
@@ -73,10 +84,11 @@ pub enum Tier {
     /// 0539 deliberately leaves that mutable state unnamed; it is a
     /// separate axis from this one, not a third `Tier` variant.)
     ///
-    /// **Modelled and unused, exactly as [`Extent::Region`] is** — no
-    /// constructor in this campaign builds a `Derived` site. Kept as a
-    /// declared forward guard (see the `tests` module below) rather than a
-    /// silently-vacuous one.
+    /// **Modelled and unused** — no constructor in this campaign builds a
+    /// `Derived` site. Kept as a declared forward guard (see the `tests`
+    /// module below) rather than a silently-vacuous one. (This said "exactly
+    /// as `Extent::Region` is"; that variant does not exist — see [`Tier`]'s
+    /// own doc.)
     Derived,
 }
 
@@ -126,10 +138,11 @@ impl Site {
     /// A derived point site of the given kind — computed from noise at
     /// facet resolution, recorded nowhere.
     ///
-    /// **Modelled and unused, exactly as [`Extent::Region`] is.** No call
-    /// site in The Prospect calls this; it exists so the surface tier a
-    /// later campaign builds is a fill-in against an already-widened
-    /// constructor pair rather than a migration of every `Site` consumer.
+    /// **Modelled and unused.** No call site in The Prospect calls this; it
+    /// exists so the surface tier a later campaign builds is a fill-in
+    /// against an already-widened constructor pair rather than a migration of
+    /// every `Site` consumer. (This said "exactly as `Extent::Region` is";
+    /// that variant does not exist — see [`Tier`]'s own doc.)
     /// Decision 0539.
     /// type-audit: bare-ok(identifier-text: name)
     pub fn derived(kind: SiteKind, name: Option<String>) -> Self {
@@ -203,10 +216,17 @@ mod tests {
     }
 
     /// This campaign emits `Point` only (spec §7). **Currently vacuous**:
-    /// `Extent` has exactly one variant, so any `Site::placed` that compiles
-    /// necessarily sets it. Kept anyway as a FORWARD guard — it exists to
-    /// catch a future `Site::placed` that defaults to a `Region` variant
-    /// once one lands, not to discriminate today.
+    /// [`Extent`] has exactly one variant, so any `Site::placed` that
+    /// compiles necessarily sets it. Kept anyway as a FORWARD guard — it
+    /// exists to catch a future `Site::placed` that defaults to a
+    /// multi-facet variant once one is added, not to discriminate today.
+    ///
+    /// The variant is not merely unbuilt, it is **absent**: nothing named
+    /// `Region` is in the enum, and H3's
+    /// `windows/lab/tests/suite/site_density.rs::facets_per_site` is where
+    /// adding one first bites — its exhaustive match feeds the site-density
+    /// ceiling, so a multi-facet extent cannot land without re-deriving that
+    /// baseline.
     #[test]
     fn a_placed_site_is_a_point() {
         assert_eq!(Site::placed(SiteKind::Cave, None).extent, Extent::Point);
@@ -222,7 +242,7 @@ mod tests {
     /// `Site::derived` sets [`Tier::Derived`]. **Declared forward guard, not
     /// a discriminating test today**: no production call site in The
     /// Prospect calls `Site::derived` at all (decision 0539 — modelled and
-    /// unused, exactly as [`Extent::Region`] is), so this only pins the
+    /// unused), so this only pins the
     /// constructor's own behaviour against a future edit that collapses
     /// both constructors to the same tier, the same role
     /// `a_placed_site_is_a_point` plays for `Extent`.
