@@ -31,15 +31,29 @@ pub enum LevelCellKind {
     StairsDown,
     /// A connection up toward the rung above (spec §4.6).
     StairsUp,
+    /// The one cell where a passage breaches the wall between two regions
+    /// (The Brattice, spec §3.5) — EVERY passage has one, gated or not. In
+    /// a cave it is a squeeze; in a building it would be a doorway. A
+    /// *place*, never an object: a door is a Thing anchored here, so a
+    /// `Threshold` is passable unless a shut door stands in it (§3.7).
+    Threshold,
+    /// Standing water too deep to wade, on a passage's RUN — the corridor
+    /// cells a sump's carve turned from rock into water (The Brattice, spec
+    /// §3.5). `Flooded`'s sibling one step down: you swim it.
+    Deep,
+    /// The lip of a chute — the vertical threshold (The Brattice, spec
+    /// §3.5). You may stand at the edge, so it walks; `down` takes it, and
+    /// `up` from the cell beneath it needs `Fly`.
+    Drop,
 }
 
 /// How a body may move through one cell (The Gallery, Task 4; spec §3.2
-/// part 3) — movement is a MODE, not a boolean. `Swim` and `Fly` are
-/// reserved: a sequel's capability model (amphibious, or a carried/worn
-/// item) is what will make them reachable, and nothing returns them yet.
-/// The same seam shape spec §3.4 names for reach ("one named function
-/// answers 'how', rather than a constant or a boolean re-derived at every
-/// call site").
+/// part 3) — movement is a MODE, not a boolean. `Swim` is REACHED since The
+/// Brattice: [`LevelCellKind::Deep`] answers it (spec §3.5). `Fly` is still
+/// reserved — flight is a way to take an EDGE (up a chute), not a property
+/// of a cell, so nothing here returns it. The same seam shape spec §3.4
+/// names for reach ("one named function answers 'how', rather than a
+/// constant or a boolean re-derived at every call site").
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum MovementMode {
     /// Ordinary footing — dry floor, or a rung connection.
@@ -47,8 +61,8 @@ pub enum MovementMode {
     /// Standing water, crossable on foot (spec §3.2 part 1: wet cells are
     /// walkable, you wade).
     Wade,
-    /// Reserved for a sequel: swimming as a travel mode.
-    #[allow(dead_code)]
+    /// Deep water: crossable only by a body that can swim (The Brattice,
+    /// spec §3.5 — the mode [`LevelCellKind::Deep`] answers).
     Swim,
     /// Reserved for a sequel: flight as a travel mode.
     #[allow(dead_code)]
@@ -63,10 +77,13 @@ pub enum MovementMode {
 /// against the predicate survives it).
 pub fn movement_mode(kind: LevelCellKind) -> Option<MovementMode> {
     match kind {
-        LevelCellKind::Floor | LevelCellKind::StairsDown | LevelCellKind::StairsUp => {
-            Some(MovementMode::Walk)
-        }
+        LevelCellKind::Floor
+        | LevelCellKind::StairsDown
+        | LevelCellKind::StairsUp
+        | LevelCellKind::Threshold
+        | LevelCellKind::Drop => Some(MovementMode::Walk),
         LevelCellKind::Flooded => Some(MovementMode::Wade),
+        LevelCellKind::Deep => Some(MovementMode::Swim),
         LevelCellKind::Wall => None,
     }
 }
@@ -74,7 +91,7 @@ pub fn movement_mode(kind: LevelCellKind) -> Option<MovementMode> {
 /// A generated underworld level: one rung of one cave system, under one
 /// surface cell. Never serialized — re-derive it from the same inputs
 /// rather than storing it (decision 0069).
-/// type-audit: bare-ok(count: dof)
+/// type-audit: bare-ok(count: dof), bare-ok(index: thresholds)
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Level {
     /// The level's bounds.
@@ -88,6 +105,12 @@ pub struct Level {
     /// Every leaf's chosen style, in generation order — Task 6 threads the
     /// realized worked-fraction from one rung's level into the next's bias.
     pub leaf_styles: Vec<LeafStyle>,
+    /// Every passage's crossing cell — `(node a, node b, the divider cell)`
+    /// — the underworld's `Lattice::doorways` (The Brattice, spec §3.5).
+    /// One entry per `Passage` edge on this level, in `passages_on` order,
+    /// gated or not: a door Thing is anchored at one of these, and a sump's
+    /// crossing is `Deep` rather than `Threshold`.
+    pub thresholds: Vec<(usize, usize, Cell)>,
 }
 
 /// The extent a level gets, scaled by rung (deeper rungs get more room).
@@ -232,30 +255,92 @@ pub fn generate_level_with_origin(
     // Passages: one L-corridor between the nearest walkable pair of each
     // connected region pair. Two grid-adjacent regions with NO plan edge
     // keep their wall — the non-adjacency the partition tree could never say.
+    // Each one also realizes its gate's PLACE (The Brattice, spec §3.5): the
+    // single L cell lying on the divider between the two rects becomes a
+    // `Threshold`, or — if the plan stamped a sump on this edge — the whole
+    // stretch of the L that was rock a moment ago becomes `Deep`.
+    let mut thresholds = Vec::new();
     for (a, b) in plan.passages_on(level) {
-        let ca = walkable_cells_in_rect(rect_of(plan, a), &cells);
-        let cb = walkable_cells_in_rect(rect_of(plan, b), &cells);
+        let ra = rect_of(plan, a);
+        let rb = rect_of(plan, b);
+        let ca = walkable_cells_in_rect(ra, &cells);
+        let cb = walkable_cells_in_rect(rb, &cells);
         if let Some((pa, pb)) = nearest_pair(&ca, &cb) {
+            let l_cells = l_corridor(pa, pb);
+            // The corridor PROPER: what the carve is about to turn from
+            // rock into a way through. Never the two walkable endpoints
+            // inside the regions, and never any floor the L happens to run
+            // along — so a `Deep` cell was rock a moment earlier and no
+            // walker's connectivity WITHIN a region changes, only the way
+            // between the two.
+            let rock_before: Vec<Cell> = l_cells
+                .iter()
+                .copied()
+                .filter(|c| cells.get(*c) == Some(LevelCellKind::Wall))
+                .collect();
             connect_cells(pa, pb, &mut cells);
+            // The crossing: the one L cell in neither rect. `region_rect`
+            // keeps a one-cell dividing wall on every side, and an L between
+            // two grid-adjacent regions crosses that line exactly once —
+            // asserted here rather than assumed (spec §3.5).
+            let crossing: Vec<Cell> = l_cells
+                .iter()
+                .copied()
+                .filter(|c| !ra.contains(*c) && !rb.contains(*c))
+                .collect();
+            debug_assert_eq!(
+                crossing.len(),
+                1,
+                "an L between grid-adjacent regions crosses the divider once: \
+                 {a}-{b} crossed at {crossing:?}"
+            );
+            if let Some(&cross) = crossing.first() {
+                if is_sump(plan, a, b) {
+                    // One cell has one kind, so the crossing is DEEP here
+                    // rather than a threshold — a drowned squeeze. The
+                    // execution amendment to spec §3.5 recorded in the
+                    // realization witness's own doc.
+                    for c in rock_before {
+                        cells.set(c, LevelCellKind::Deep);
+                    }
+                } else {
+                    cells.set(cross, LevelCellKind::Threshold);
+                }
+                thresholds.push((a, b, cross));
+            }
         }
     }
     // Stairs: the plan's shared coordinate, made standable and joined to its
-    // region if the carve left it in rock.
-    for (upper, _lower, x, y) in plan.stairs_from(level) {
-        place_stair(
-            Cell(x, y),
-            LevelCellKind::StairsDown,
-            rect_of(plan, upper),
-            &mut cells,
-        );
+    // region if the carve left it in rock. A chute (spec §3.5) writes a
+    // `Drop` lip up here and NO `StairsUp` below — its landing is made
+    // standable `Floor` and its region reconnected exactly as a stair foot
+    // is, which is the whole of the asymmetry.
+    for (upper, lower, x, y) in plan.stairs_from(level) {
+        let kind = if is_chute(plan, upper, lower) {
+            LevelCellKind::Drop
+        } else {
+            LevelCellKind::StairsDown
+        };
+        place_stair(Cell(x, y), kind, rect_of(plan, upper), &mut cells);
     }
-    for (_upper, lower, x, y) in plan.stairs_into(level) {
-        place_stair(
-            Cell(x, y),
-            LevelCellKind::StairsUp,
-            rect_of(plan, lower),
-            &mut cells,
-        );
+    let mut landings: Vec<Cell> = Vec::new();
+    for (upper, lower, x, y) in plan.stairs_into(level) {
+        if is_chute(plan, upper, lower) {
+            place_stair(
+                Cell(x, y),
+                LevelCellKind::Floor,
+                rect_of(plan, lower),
+                &mut cells,
+            );
+            landings.push(Cell(x, y));
+        } else {
+            place_stair(
+                Cell(x, y),
+                LevelCellKind::StairsUp,
+                rect_of(plan, lower),
+                &mut cells,
+            );
+        }
     }
     // The deepest level's terminus keeps today's dangling stairs down, so
     // `STAIRS_LEAD_NOWHERE_REFUSAL` keeps its one firing case (spec §3.1).
@@ -264,7 +349,34 @@ pub fn generate_level_with_origin(
     // place through it.
     if level + 1 == plan.rungs.len() {
         let rect = rect_of(plan, plan.terminus);
-        if let Some(c) = first_walkable_cell_in(rect, &cells) {
+        // Never consume a chute's landing: the witness (spec §3.5) requires
+        // a `Drop` to sit over a standable NON-stair cell, and a landing
+        // that is also this region's first walkable cell would otherwise be
+        // overwritten with the dangling terminus stair.
+        let free = walkable_cells_in_rect(rect, &cells)
+            .into_iter()
+            .find(|c| !landings.contains(c));
+        let choice = free.or_else(|| first_walkable_cell_in(rect, &cells));
+        // Both `debug_assert`s NAME A CAUSE rather than leaving a silent
+        // skip to be traced back here — The Crosscut's own deferred minor,
+        // taken now that this write is being touched. The first is that
+        // minor exactly (the region's footing is entirely stair landings,
+        // so `first_walkable_cell_in` finds nothing and the terminus
+        // stairway is dropped); the second is The Brattice's new sibling of
+        // it (the only footing left is a chute's landing, which this write
+        // is about to overwrite).
+        debug_assert!(
+            choice.is_some() || standable_cells_in_rect(rect, &cells).is_empty(),
+            "the terminus stairway is being skipped: region {rect:?} has standable \
+             cells but no Floor/Flooded one — its only footing is already a stair \
+             landing"
+        );
+        debug_assert!(
+            free.is_some() || walkable_cells_in_rect(rect, &cells).is_empty(),
+            "the terminus region {rect:?} has no walkable cell that is not a chute \
+             landing; the terminus stair is about to overwrite one"
+        );
+        if let Some(c) = choice {
             cells.set(c, LevelCellKind::StairsDown);
             // Scoped to the terminus's OWN region, never wider: a repair
             // that reached outside `rect` could bridge into a
@@ -279,7 +391,45 @@ pub fn generate_level_with_origin(
         cells,
         dof,
         leaf_styles,
+        thresholds,
     }
+}
+
+/// Whether the plan stamped a sump on the edge between `a` and `b` — a
+/// passage whose way demands `Swim` (The Brattice, spec §3.5). Reads
+/// `toward_a`, the canonical field: a sump needs the mode in both
+/// directions, and for a `Stair` `toward_a` is the way UP.
+fn is_sump(
+    plan: &hornvale_worldgen::circuit::DescentPlan,
+    a: hornvale_worldgen::circuit::NodeId,
+    b: hornvale_worldgen::circuit::NodeId,
+) -> bool {
+    matches!(
+        plan.gate_between(a, b).map(|(_, g)| g.toward_a),
+        Some(hornvale_worldgen::brattice::Way::Needs(
+            hornvale_worldgen::brattice::Requirement::Mode(
+                hornvale_worldgen::brattice::Capability::Swim
+            )
+        ))
+    )
+}
+
+/// Whether the plan stamped a chute on the stairway between `upper` and
+/// `lower` — a way down that is free and a way back up that demands `Fly`
+/// (The Brattice, spec §3.5).
+fn is_chute(
+    plan: &hornvale_worldgen::circuit::DescentPlan,
+    upper: hornvale_worldgen::circuit::NodeId,
+    lower: hornvale_worldgen::circuit::NodeId,
+) -> bool {
+    matches!(
+        plan.gate_between(upper, lower).map(|(_, g)| g.toward_a),
+        Some(hornvale_worldgen::brattice::Way::Needs(
+            hornvale_worldgen::brattice::Requirement::Mode(
+                hornvale_worldgen::brattice::Capability::Fly
+            )
+        ))
+    )
 }
 
 /// The plan's region rectangle as the lattice's `Rect`.
@@ -318,7 +468,8 @@ fn first_walkable_cell_in(rect: Rect, cells: &CellGrid) -> Option<Cell> {
     walkable_cells_in_rect(rect, cells).into_iter().next()
 }
 
-/// Every `Floor`/`Flooded`/`StairsDown`/`StairsUp` cell inside `rect` —
+/// Every `Floor`/`Flooded`/`StairsDown`/`StairsUp`/`Threshold`/`Drop` cell
+/// inside `rect` — footing, in the repair's own sense —
 /// `reconnect_region`'s OWN notion of "already standable", broader than
 /// `walkable_cells_in_rect`'s Floor/Flooded-only set on purpose: a stair
 /// `place_stair` just carved is itself walkable (`movement_mode` answers
@@ -326,7 +477,10 @@ fn first_walkable_cell_in(rect: Rect, cells: &CellGrid) -> Option<Cell> {
 /// already ONE component, not two either side of a severance. Using the
 /// narrower Floor/Flooded set here would read that stair as a cut and
 /// carve a redundant bypass around a cell that was never actually
-/// blocking anything. The passage-connection code and `place_stair`'s own
+/// blocking anything. The Brattice adds `Threshold` and `Drop` for the same
+/// reason (spec §3.5): both walk, so neither is a severance. `Deep` is
+/// deliberately NOT here — it swims, and a repair must not treat deep water
+/// as footing. The passage-connection code and `place_stair`'s own
 /// walkable-cell join keep using `walkable_cells_in_rect` unchanged — this
 /// predicate is only for deciding whether a region needs repairing.
 fn standable_cells_in_rect(rect: Rect, cells: &CellGrid) -> Vec<Cell> {
@@ -340,6 +494,8 @@ fn standable_cells_in_rect(rect: Rect, cells: &CellGrid) -> Vec<Cell> {
                     | Some(LevelCellKind::Flooded)
                     | Some(LevelCellKind::StairsDown)
                     | Some(LevelCellKind::StairsUp)
+                    | Some(LevelCellKind::Threshold)
+                    | Some(LevelCellKind::Drop)
             ) {
                 out.push(cell);
             }
@@ -364,6 +520,15 @@ fn ensure_standable(rect: Rect, cells: &mut CellGrid) {
 /// join it to the nearest walkable cell of its own region so a landing is
 /// never sealed off. A stairway has a foot (spec §3.3).
 ///
+/// **The connector never paves over a way already placed** — see
+/// [`is_placed_way`] for the defect that rule closes.
+///
+/// **`kind` is not required to be a stair.** The Brattice writes a chute's
+/// lip through here as [`LevelCellKind::Drop`] and its landing as
+/// [`LevelCellKind::Floor`] (spec §3.5) — the join and the repair below are
+/// what this function is FOR, and both are exactly as wanted for a chute;
+/// nothing in the body ever looked at which variant it was handed.
+///
 /// **Converting an existing `Floor`/`Flooded` cell can strand the rest of
 /// its own region** if that cell was an articulation point (a Karst seed's
 /// carve left a one-cell-wide corridor, and overwriting its middle cell
@@ -382,7 +547,7 @@ fn place_stair(at: Cell, kind: LevelCellKind, region: Rect, cells: &mut CellGrid
     if !was_walkable {
         let walkable = walkable_cells_in_rect(region, cells);
         if let Some((_, target)) = nearest_pair(&[at], &walkable) {
-            connect_cells(at, target, cells);
+            connect_cells_preserving_ways(at, target, cells);
         }
     }
     cells.set(at, kind);
@@ -436,10 +601,7 @@ fn reconnect_region(region: Rect, cells: &mut CellGrid) {
         match shortest_route_within_rect(region, cells, &seen, &targets) {
             Some(path) => {
                 for c in path {
-                    if !matches!(
-                        cells.get(c),
-                        Some(LevelCellKind::StairsDown) | Some(LevelCellKind::StairsUp)
-                    ) {
+                    if !is_placed_way(cells.get(c)) {
                         cells.set(c, LevelCellKind::Floor);
                     }
                 }
@@ -482,10 +644,10 @@ fn shortest_route_within_rect(
             if !region.contains(next) {
                 continue;
             }
-            if matches!(
-                cells.get(next),
-                Some(LevelCellKind::StairsDown) | Some(LevelCellKind::StairsUp)
-            ) {
+            // Never route THROUGH a gate's own place: a repair that carved
+            // around a door would defeat it, exactly as a repair that carved
+            // through a wall defeated spec §3.3 (The Brattice, spec §3.5).
+            if is_placed_way(cells.get(next)) {
                 continue;
             }
             if seen.insert(next) {
@@ -513,17 +675,76 @@ fn nearest_pair(a: &[Cell], b: &[Cell]) -> Option<(Cell, Cell)> {
     best.map(|(pa, pb, _)| (pa, pb))
 }
 
+/// Whether a cell is a WAY ALREADY PLACED — a stair, or one of the gate
+/// places The Brattice writes (spec §3.5) — and so must never be paved over
+/// by a corridor carve or a repair, nor routed through by one.
+///
+/// Three call sites share this one predicate deliberately
+/// ([`connect_cells_preserving_ways`], [`reconnect_region`],
+/// [`shortest_route_within_rect`]): they were two lists and a third that
+/// had no list at all, and the missing one was a live defect — a stair's
+/// own connector L, carved to give a LATER stair its foot, paved straight
+/// over an EARLIER stair on the same region, leaving an orphan `StairsUp`
+/// on the rung below with nothing above it.
+///
+/// **Measured at the commit before this one**, not inferred: a probe over
+/// Karst/`DrowTier`, vertex 1, seeds `0..200` found **23 broken stairways**,
+/// the first being seed 10, level 1, where the stairway `36 -> 40` at
+/// `(2, 2)` had been paved back to `Floor` while its `StairsUp` stood on
+/// the rung below. It went unobserved because
+/// `stairs_pair_by_coordinate_across_adjacent_rungs` sweeps
+/// `Fracture`/`WildCave` alone; the realization witness sweeps three
+/// `(kind, character)` pairs and its stair half is what pins this now.
+/// `circuit.rs::stair_coordinate`
+/// already forbids two stairways SHARING a coordinate; nothing forbade one
+/// stairway's corridor from crossing another's cell. Preserving it costs
+/// nothing: every kind named here is itself passable, so the corridor still
+/// arrives.
+fn is_placed_way(kind: Option<LevelCellKind>) -> bool {
+    matches!(
+        kind,
+        Some(LevelCellKind::StairsDown)
+            | Some(LevelCellKind::StairsUp)
+            | Some(LevelCellKind::Threshold)
+            | Some(LevelCellKind::Deep)
+            | Some(LevelCellKind::Drop)
+    )
+}
+
+/// [`connect_cells`], but leaving every [`is_placed_way`] cell as it is.
+fn connect_cells_preserving_ways(a: Cell, b: Cell, cells: &mut CellGrid) {
+    for c in l_corridor(a, b) {
+        if !is_placed_way(cells.get(c)) {
+            cells.set(c, LevelCellKind::Floor);
+        }
+    }
+}
+
 /// Carve a straight L-shaped `Floor` corridor between two arbitrary
 /// cells — the same shape `carve::connect_centers` already uses for
 /// within-leaf room connections, generalized to take endpoints directly
 /// rather than deriving them from room rects.
 fn connect_cells(a: Cell, b: Cell, cells: &mut CellGrid) {
+    for c in l_corridor(a, b) {
+        cells.set(c, LevelCellKind::Floor);
+    }
+}
+
+/// The cells [`connect_cells`] writes, in the order it writes them —
+/// extracted so a caller that needs to know WHICH cells an L touches (The
+/// Brattice's threshold and sump placement, spec §3.5) cannot disagree with
+/// the carve itself. The horizontal leg first, then the vertical: the
+/// corner `(b.0, a.1)` appears in both, exactly as the two loops always
+/// overwrote it, so the set of cells and the resulting grid are unchanged.
+fn l_corridor(a: Cell, b: Cell) -> Vec<Cell> {
+    let mut out = Vec::new();
     for x in a.0.min(b.0)..=a.0.max(b.0) {
-        cells.set(Cell(x, a.1), LevelCellKind::Floor);
+        out.push(Cell(x, a.1));
     }
     for y in a.1.min(b.1)..=a.1.max(b.1) {
-        cells.set(Cell(b.0, y), LevelCellKind::Floor);
+        out.push(Cell(b.0, y));
     }
+    out
 }
 
 /// Generate a level over `extent` for one rung of a single-rung
@@ -803,8 +1024,20 @@ mod tests {
     /// pinned kind by kind: `Wall` is the one impassable kind, `Flooded`
     /// wades rather than refuses (part 1's own rule), and both `Floor` and
     /// a rung connection walk.
+    ///
+    /// **The Brattice's three kinds are pinned here too** (spec §3.5): a
+    /// `Threshold` and a `Drop` are ordinary footing — a squeeze is an
+    /// opening in a wall and a chute's lip is a cell you may stand on — and
+    /// `Deep` is the one kind that answers `Swim`, which is what makes The
+    /// Gallery's reserved variant reachable at last.
     #[test]
     fn movement_mode_answers_one_mode_per_passable_kind() {
+        assert_eq!(
+            movement_mode(LevelCellKind::Threshold),
+            Some(MovementMode::Walk)
+        );
+        assert_eq!(movement_mode(LevelCellKind::Drop), Some(MovementMode::Walk));
+        assert_eq!(movement_mode(LevelCellKind::Deep), Some(MovementMode::Swim));
         assert_eq!(
             movement_mode(LevelCellKind::Floor),
             Some(MovementMode::Walk)
@@ -1253,6 +1486,11 @@ mod tests {
     /// `stairs_down_and_stairs_up_never_share_a_cell`, whose "exactly one"
     /// the plan deliberately breaks.
     ///
+    /// **Amended by The Brattice (spec §3.5), not replaced**: a chute writes
+    /// `Drop` on rung `i` and NO `StairsUp` on rung `i+1`, so the pairing
+    /// above is about the stairs that remain; every `Drop` is additionally
+    /// checked to sit over a standable non-stair cell.
+    ///
     /// **Swept over the FULL habitation ladder since the final review**, not
     /// a two-rung stub: a stair-coordinate collision requires a middle rung
     /// (a node that is the upper end of one stairway and the lower end of
@@ -1305,6 +1543,24 @@ mod tests {
                 );
                 assert!(!downs.is_empty(), "seed {s}: no stairway off rung {i}");
                 paired_stairs_seen += downs.len();
+                // The Brattice, spec §3.5: a chute's lip pairs with a
+                // standable NON-stair cell one rung down — never a
+                // `StairsUp`, which is the whole asymmetry (`down` takes a
+                // chute; `up` from beneath it needs `Fly`).
+                for d in cells_of(&levels[i], LevelCellKind::Drop) {
+                    let below = levels[i + 1].cells.get(d);
+                    assert!(
+                        matches!(below, Some(k) if movement_mode(k).is_some()),
+                        "seed {s}: a Drop on rung {i} at {d:?} has {below:?} beneath it"
+                    );
+                    assert!(
+                        !matches!(
+                            below,
+                            Some(LevelCellKind::StairsUp) | Some(LevelCellKind::StairsDown)
+                        ),
+                        "seed {s}: a Drop on rung {i} at {d:?} sits over a stair"
+                    );
+                }
             }
             let last = levels.len() - 1;
             let downs_last = cells_of(&levels[last], LevelCellKind::StairsDown);
@@ -1317,6 +1573,192 @@ mod tests {
         assert!(
             paired_stairs_seen > 200,
             "the sweep must exercise multi-stair rungs, not one stair each"
+        );
+    }
+
+    /// claim: invariant(seed: 0..200 x 3 (kind, character) pairs) — THE
+    /// BRATTICE's realization witness (spec §3.5). For every plan: every
+    /// `Passage` edge realizes exactly ONE crossing cell on the divider
+    /// between its two regions, recorded in [`Level::thresholds`]; that cell
+    /// is a `Threshold`, or a `Deep` when the edge is a sump; the count of
+    /// `Threshold` cells on a level equals the count of its non-sump
+    /// passages, so nothing of the kind exists that no edge asked for; every
+    /// `Needs(Mode(Fly))` stair is a `Drop` above a standable non-stair
+    /// cell; every other stair still pairs `StairsDown` with `StairsUp`; and
+    /// the count of `Drop` cells equals the count of chutes. Both
+    /// directions, which is the point: the walk reads the realization and
+    /// never the plan (spec §3.6), so a solvability proof about the plan is
+    /// a proof about the walked level only while this test is green.
+    ///
+    /// **A sump's crossing cell is `Deep`, not `Threshold`** — an execution
+    /// amendment to spec §3.5, whose prose read "every passage has one
+    /// `Threshold`". One cell has one kind, and the crossing of a sump whose
+    /// L-corridor is a single cell would otherwise realize no `Deep` at all.
+    /// `Level::thresholds` still records a crossing for EVERY passage, sump
+    /// or not, because that is the place a door Thing anchors (§3.7).
+    ///
+    /// Positive controls: the sweep must actually observe at least one sump
+    /// and one chute, or every gate-conditional branch above would pass
+    /// vacuously against a plan that stamped nothing.
+    #[test]
+    fn the_realization_witnesses_exactly_what_the_plan_stamped() {
+        use hornvale_terrain::CaveKind;
+        use hornvale_worldgen::brattice::{Capability, Requirement, Way};
+        use hornvale_worldgen::chamber::ChamberOrigin;
+
+        let rungs = habitation_ladder();
+        let origins = vec![ChamberOrigin::Found; rungs.len()];
+        let depths_m = vec![10.0; rungs.len()];
+        let mut sumps_seen = 0usize;
+        let mut chutes_seen = 0usize;
+        let mut passages_seen = 0usize;
+        for seed in 0..200u64 {
+            for (kind, ch) in [
+                (CaveKind::Karst, Character::DrowTier),
+                (CaveKind::Fracture, Character::WildCave),
+                (CaveKind::LavaTube, Character::WildCave),
+            ] {
+                let plan = hornvale_worldgen::circuit::plan_descent(
+                    Seed(seed),
+                    hornvale_kernel::Vertex(1),
+                    &rungs,
+                    kind,
+                    ch,
+                );
+                let levels = generate_descent_for_character(
+                    &rungs,
+                    kind,
+                    &origins,
+                    &depths_m,
+                    1000.0,
+                    ch,
+                    &plan,
+                    Seed(seed),
+                );
+                let is_sump = |a: usize, b: usize| {
+                    matches!(
+                        plan.gate_between(a, b).map(|(_, g)| g.toward_a),
+                        Some(Way::Needs(Requirement::Mode(Capability::Swim)))
+                    )
+                };
+                let is_chute = |a: usize, b: usize| {
+                    matches!(
+                        plan.gate_between(a, b).map(|(_, g)| g.toward_a),
+                        Some(Way::Needs(Requirement::Mode(Capability::Fly)))
+                    )
+                };
+                for (l, level) in levels.iter().enumerate() {
+                    // (a) every passage realizes exactly one crossing cell,
+                    // of the kind its gate asks for.
+                    for (a, b) in plan.passages_on(l) {
+                        passages_seen += 1;
+                        let crossings: Vec<Cell> = level
+                            .thresholds
+                            .iter()
+                            .filter(|(x, y, _)| (*x == a && *y == b) || (*x == b && *y == a))
+                            .map(|t| t.2)
+                            .collect();
+                        assert_eq!(
+                            crossings.len(),
+                            1,
+                            "seed {seed} {kind:?}/{ch:?} level {l} edge {a}-{b}: \
+                             {} crossings recorded",
+                            crossings.len()
+                        );
+                        let want = if is_sump(a, b) {
+                            sumps_seen += 1;
+                            LevelCellKind::Deep
+                        } else {
+                            LevelCellKind::Threshold
+                        };
+                        assert_eq!(
+                            level.cells.get(crossings[0]),
+                            Some(want),
+                            "seed {seed} {kind:?}/{ch:?} level {l} edge {a}-{b}: \
+                             the crossing at {:?} is not {want:?}",
+                            crossings[0]
+                        );
+                    }
+                    // (b) no Threshold exists that no passage asked for, and
+                    // none is missing.
+                    let non_sump = plan
+                        .passages_on(l)
+                        .iter()
+                        .filter(|(a, b)| !is_sump(*a, *b))
+                        .count();
+                    let thresholds = level
+                        .cells
+                        .iter()
+                        .filter(|(_, k)| *k == LevelCellKind::Threshold)
+                        .count();
+                    assert_eq!(
+                        thresholds, non_sump,
+                        "seed {seed} {kind:?}/{ch:?} level {l}: a Threshold nobody \
+                         asked for, or one missing"
+                    );
+                    // (c) a chute is a Drop over a standable non-stair cell;
+                    // every other stairway still pairs.
+                    for (upper, lower, x, y) in plan.stairs_from(l) {
+                        let here = level.cells.get(Cell(x, y));
+                        let below = levels[l + 1].cells.get(Cell(x, y));
+                        if is_chute(upper, lower) {
+                            chutes_seen += 1;
+                            assert_eq!(
+                                here,
+                                Some(LevelCellKind::Drop),
+                                "seed {seed} {kind:?}/{ch:?} level {l}: chute lip at \
+                                 ({x}, {y}) is {here:?}"
+                            );
+                            assert!(
+                                matches!(
+                                    below,
+                                    Some(LevelCellKind::Floor)
+                                        | Some(LevelCellKind::Flooded)
+                                        | Some(LevelCellKind::Threshold)
+                                ),
+                                "seed {seed} {kind:?}/{ch:?} level {l}: a chute lands \
+                                 on {below:?}"
+                            );
+                        } else {
+                            assert_eq!(
+                                here,
+                                Some(LevelCellKind::StairsDown),
+                                "seed {seed} {kind:?}/{ch:?} level {l}: stair head at \
+                                 ({x}, {y}) is {here:?}"
+                            );
+                            assert_eq!(
+                                below,
+                                Some(LevelCellKind::StairsUp),
+                                "seed {seed} {kind:?}/{ch:?} level {l}: stair foot at \
+                                 ({x}, {y}) is {below:?}"
+                            );
+                        }
+                    }
+                    let drops = level
+                        .cells
+                        .iter()
+                        .filter(|(_, k)| *k == LevelCellKind::Drop)
+                        .count();
+                    let chutes = plan
+                        .stairs_from(l)
+                        .iter()
+                        .filter(|(u, lo, _, _)| is_chute(*u, *lo))
+                        .count();
+                    assert_eq!(
+                        drops, chutes,
+                        "seed {seed} {kind:?}/{ch:?} level {l}: a Drop nobody asked for"
+                    );
+                }
+            }
+        }
+        assert!(passages_seen > 0, "the sweep saw no passage at all");
+        assert!(
+            sumps_seen > 0,
+            "the sweep observed no sump — every Deep branch above passed vacuously"
+        );
+        assert!(
+            chutes_seen > 0,
+            "the sweep observed no chute — every Drop branch above passed vacuously"
         );
     }
 
@@ -1581,6 +2023,13 @@ mod tests {
     /// adjacent_rungs` pins that pairing), so the search graph matches the
     /// plan's own. Positive control counts multi-node levels so the
     /// cross-region connector is actually exercised.
+    ///
+    /// **The standable predicate is the `movement_mode` seam since The
+    /// Brattice**, not a list of kinds: `Threshold` and `Drop` walk, `Deep`
+    /// swims, and this sweep asks the resident's question — is every cell a
+    /// body could occupy reachable — rather than re-deriving a kind list
+    /// that a new variant silently falsifies. The `Drop` down-edge joins the
+    /// stair edges below for the same reason (spec §3.5).
     #[test]
     fn every_character_engine_keeps_every_level_connected() {
         use hornvale_kernel::Band;
@@ -1626,15 +2075,7 @@ mod tests {
                             let standable: BTreeSet<Cell> = level
                                 .cells
                                 .iter()
-                                .filter(|(_, k)| {
-                                    matches!(
-                                        k,
-                                        LevelCellKind::Floor
-                                            | LevelCellKind::Flooded
-                                            | LevelCellKind::StairsDown
-                                            | LevelCellKind::StairsUp
-                                    )
-                                })
+                                .filter(|(_, k)| movement_mode(*k).is_some())
                                 .map(|(c, _)| c)
                                 .collect();
                             assert!(
@@ -1671,6 +2112,16 @@ mod tests {
                             let above = (lvl - 1, Cell(x, y));
                             if standables[lvl - 1].contains(&above.1) && seen.insert(above) {
                                 queue.push_back(above);
+                            }
+                        }
+                        // A chute is one-way for a body that cannot fly, and
+                        // the descent is walked downward from rung 0, so the
+                        // lip's DOWN edge is the one this sweep needs (The
+                        // Brattice, spec §3.5).
+                        if kind == Some(LevelCellKind::Drop) && lvl + 1 < levels.len() {
+                            let below = (lvl + 1, Cell(x, y));
+                            if standables[lvl + 1].contains(&below.1) && seen.insert(below) {
+                                queue.push_back(below);
                             }
                         }
                     }
@@ -1727,6 +2178,15 @@ mod tests {
     /// happy — the very spec §3.3 violation
     /// `unlinked_neighbours_keep_their_wall` now pins. This is the fix on
     /// the test side, not a second violation on the code side.
+    ///
+    /// **Since The Brattice the predicate IS the seam** — `movement_mode(k)
+    /// .is_some()` rather than a list of kinds. This is the RESIDENT's view,
+    /// deliberately: `Deep` is passable (to a swimmer), `Threshold` and
+    /// `Drop` walk, and a rule written against the predicate survives the
+    /// next kind exactly as `movement_mode`'s own doc argues. A rule written
+    /// against the variant list would have gone red the day a squeeze landed
+    /// in the middle of every corridor, saying "disconnected" about a level
+    /// nothing had disconnected.
     fn every_walkable_cell_is_reachable_from_every_other() {
         use hornvale_kernel::Band;
         use hornvale_terrain::CaveKind;
@@ -1755,15 +2215,7 @@ mod tests {
                     let walkable: BTreeSet<Cell> = level
                         .cells
                         .iter()
-                        .filter(|(_, k)| {
-                            matches!(
-                                k,
-                                LevelCellKind::Floor
-                                    | LevelCellKind::Flooded
-                                    | LevelCellKind::StairsDown
-                                    | LevelCellKind::StairsUp
-                            )
-                        })
+                        .filter(|(_, k)| movement_mode(*k).is_some())
                         .map(|(c, _)| c)
                         .collect();
                     let Some(&start) = walkable.iter().next() else {

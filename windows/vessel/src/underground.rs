@@ -518,6 +518,28 @@ impl Underground {
                 );
                 Ok((next, self.cell))
             }
+            // A chute (The Brattice, spec §3.5/§3.6): `down` on a `Drop`
+            // lands on the same coordinate one rung below, by the same
+            // coordinate pairing every stairway uses. What differs is that
+            // the landing is an ordinary standable cell rather than a
+            // `StairsUp` — so there is nothing to climb back, and `up` from
+            // beneath a chute simply finds no `StairsUp` and refuses. The
+            // capability-aware half of that refusal (a body that CAN fly)
+            // is Task 4's; this arm is the down half, which is free for
+            // everyone and which the walk would otherwise refuse outright
+            // the moment a chute was realized.
+            Some(LevelCellKind::Drop) => {
+                let next = self.rung + 1;
+                let landing = if next < self.descent.len() {
+                    self.descent[next].cells.get(self.cell)
+                } else {
+                    None
+                };
+                if landing.is_none_or(|k| crate::underworld_level::movement_mode(k).is_none()) {
+                    return Err(STAIRS_LEAD_NOWHERE_REFUSAL);
+                }
+                Ok((next, self.cell))
+            }
             _ => Err(NOT_ON_STAIRS_REFUSAL),
         }
     }
@@ -1111,6 +1133,7 @@ mod tests {
             cells,
             dof: 0,
             leaf_styles: Vec::new(),
+            thresholds: Vec::new(),
         };
         assert_eq!(resident_cell(&level), Some(Cell(2, 1)));
     }
@@ -1132,6 +1155,7 @@ mod tests {
             cells,
             dof: 0,
             leaf_styles: Vec::new(),
+            thresholds: Vec::new(),
         };
         assert_eq!(resident_cell(&level), None);
     }

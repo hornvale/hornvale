@@ -944,3 +944,102 @@ the lexicon fix, was rc=2, correctly refused by
 `lexicon_guard::no_vertex_sense_cell_comes_back`).
 
 **Not resubmitting the stage gate this round** - the controller does.
+
+## Task 3 - complete
+
+**What was built.** The plan's gates became places in the rock.
+`LevelCellKind` gained `Threshold`, `Deep` and `Drop` (spec 3.5 wording, each
+a place or a substrate, never an object); `movement_mode` answers `Walk` for
+a threshold and a drop and `Swim` for deep water, which is the first thing
+in the tree to reach The Gallery's reserved `Swim` variant. `Level` gained
+`thresholds: Vec<(usize, usize, Cell)>` - the underworld's
+`Lattice::doorways`, one entry per `Passage` edge, sump or not, because that
+is where a door Thing will anchor in Task 5. `generate_level_with_origin`
+stamps the crossing cell of every passage, turns a sump's whole
+rock-before-the-carve L into `Deep`, writes a chute's lip as `Drop` and its
+landing as standable `Floor` with no `StairsUp` beneath. The wire
+(`vessel/level/v1`) gained the three palette kinds; the session's `map` verb
+gained the three glyphs; the client gained the six glyph constants, their
+twins, and a `"door"`-kind mark drawn as `+` before anything emits one.
+
+**A prior attempt was interrupted mid-edit and most of it survived.** The
+crash left seven modified files and no commit. Read hunk by hunk against the
+brief: every hunk was KEPT. CHANGED: one clippy fix
+(`!landing.is_some_and(..)` -> `landing.is_none_or(..)`, `underground.rs`),
+and `is_placed_way`'s rustdoc, which asserted a specific pre-existing defect
+on the strength of a single anecdote - see the measurement below. DROPPED:
+nothing. The draft never ran a full suite, a lint pass, the client gate or a
+rebaseline; all of those are this attempt's.
+
+**The witness sweep.** `the_realization_witnesses_exactly_what_the_plan_
+stamped` runs 200 seeds x 3 (cave kind, character) pairs = 600 plans and
+every level of each, asserting in both directions: one recorded crossing per
+passage, of the kind the gate asks for; the `Threshold` count equals the
+non-sump passage count; a chute is a `Drop` over a standable non-stair cell
+and every other stairway still pairs `StairsDown`/`StairsUp`; the `Drop`
+count equals the chute count. Three positive controls fail the test if the
+sweep observes no passage, no sump or no chute. 18.3 s.
+
+**A pre-existing defect the witness exposed, measured before it was fixed.**
+`place_stair`'s connector L paved over ways already placed. At HEAD
+(`9ddc9b026`), a probe over Karst/`DrowTier`, vertex 1, seeds 0..200 found
+**23 broken stairways** - the first seed 10, level 1, where the stairway
+`36 -> 40` at `(2, 2)` stood as `Floor` with an orphan `StairsUp` beneath it
+on rung 2. It went unobserved because
+`stairs_pair_by_coordinate_across_adjacent_rungs` sweeps `Fracture`/
+`WildCave` alone. Fixed by one shared predicate, `is_placed_way`, behind the
+three call sites that each had their own list or none
+(`connect_cells_preserving_ways`, `reconnect_region`,
+`shortest_route_within_rect`); the witness's stair half now pins it across
+three engine pairs. The probe was temporary and is not committed.
+
+**Ruling: a sump's crossing cell is `Deep`, not `Threshold`** - an execution
+amendment to spec 3.5's "every passage has one `Threshold`" - because one
+cell has one kind, and a one-cell corridor's sump would otherwise realize no
+`Deep` at all. `Level.thresholds` still records a crossing for every
+passage. Cost if wrong: a door Thing anchored at a sump's crossing stands in
+water, and the count assertion (b) would need restating.
+
+**Ruling: the chute's DOWN half of the walk lands here, not in Task 4** -
+`underground.rs::descend` gained a `Drop` arm and `session.rs::take_stairs`
+accepts a `Drop` for `down`. Not scope creep by choice: measured. With those
+two hunks reverted, `session::tests::a_cross_floor_cycle_is_walked_down_
+along_and_back_up_another_stair` fails (rung 0, expected 1) because seed 42's
+cross-floor realm now carries a chute, so `down` refused. Spec 3.5 says
+`down` takes a chute and that it is free for everyone. Cost if wrong: Task
+4's brief writes these same two arms (its steps 4 and 5) and must reconcile
+rather than add - the locomotion parameter, the `Fly` up-half,
+`NO_WAY_UP_REFUSAL` and `underground_footing_word` are all still Task 4's,
+untouched here.
+
+**Deferred minors taken** (both from The Crosscut): the terminus write now
+carries two `debug_assert!`s naming the cause of a skipped terminus stairway
+(one is the deferred minor exactly, the other its Brattice sibling - the only
+footing left being a chute's landing, which the terminus write now avoids
+consuming); the `CELLULAR` obituary rustdoc moved off `Algorithm` to
+`carve.rs`'s module doc. `unlinked_neighbours_keep_their_wall` passes
+UNMODIFIED. `every_walkable_cell_is_reachable_from_every_other` compared a
+kind list, so it was widened to `movement_mode(..).is_some()` - the
+resident's view - and its doc says so; the same widening landed in
+`every_character_engine_keeps_every_level_connected`, the suite's
+`standable_cells`, and the session's test-side route helper (minus `Swim`
+there, since those walks possess walking bodies).
+
+**Fixture branch: the FIRST arm - no fixture differs.** Verified rather than
+assumed: no committed session fixture holds an underworld `level` document
+at all (`session-seed-42-turn-0`, `-chamber` and `session-seed-14-carrying`
+carry a chamber-band `plan` whose palette's `threshold` is the building
+lattice's own `CellKind::Threshold`, unrelated). Spec 3.5 predicted the
+middle arm conditionally, "if a snapshot holds an underworld level"; none
+does. `make rebaseline` rc=0 in 440.591 s moved exactly two files:
+`docs/audits/type-audit-report.md` (bare-ok(index) 243 -> 244, vessel 480 ->
+481: the one new tag on `Level.thresholds`) and the `docs/timings.md` row.
+No STOP triggered.
+
+**Gates.** The vessel crate's own suite: 620 + 388 passed, 0 failed
+(361 s + 526 s). `fmt --check` clean; workspace clippy with `-D warnings`
+rc=0; `type-audit -- check` rc=0; `make clients-check-run` rc=0 (102
+hornvale-game-core tests, including the new
+`a_door_mark_draws_a_doorway_and_every_other_mark_draws_the_mark_glyph` and
+the widened `glyph_of_matches_the_shipped_vocabulary`, whose collision check
+now covers all nineteen glyphs in the band).

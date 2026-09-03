@@ -355,6 +355,14 @@ fn entry_for(kind: LevelCellKind, state: LevelVisibility) -> LevelPaletteEntry {
         LevelCellKind::Flooded => "flooded",
         LevelCellKind::StairsDown => "stairs_down",
         LevelCellKind::StairsUp => "stairs_up",
+        // The Brattice, spec §3.5. Additive: the palette is a sparse list
+        // of `(kind, state)` pairs and a client that does not know these
+        // three draws them as rock, so an old client shows a wall where a
+        // squeeze is and nothing breaks. A DOOR is not here — it travels in
+        // `marks`, never as a palette kind (§3.7).
+        LevelCellKind::Threshold => "threshold",
+        LevelCellKind::Deep => "deep",
+        LevelCellKind::Drop => "drop",
     };
     LevelPaletteEntry {
         kind: kind.to_string(),
@@ -391,6 +399,7 @@ mod tests {
             cells,
             dof: 0,
             leaf_styles: Vec::new(),
+            thresholds: Vec::new(),
         }
     }
 

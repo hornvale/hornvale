@@ -5405,12 +5405,21 @@ impl<'w> Session<'w> {
         let Some(ug) = self.underground.as_ref() else {
             return Turn::Out("You are not underground; there are no stairs to take.".to_string());
         };
-        let wanted_kind = if want_down {
-            crate::underworld_level::LevelCellKind::StairsDown
+        // A chute's lip is a way DOWN (The Brattice, spec §3.5/§3.6): `down`
+        // takes it exactly as it takes a stairway. There is no matching way
+        // up — the cell beneath a `Drop` is ordinary floor — so `up` still
+        // wants a `StairsUp` and nothing else, and refuses there.
+        let here = ug.level().cells.get(ug.cell);
+        let on_a_way = if want_down {
+            matches!(
+                here,
+                Some(crate::underworld_level::LevelCellKind::StairsDown)
+                    | Some(crate::underworld_level::LevelCellKind::Drop)
+            )
         } else {
-            crate::underworld_level::LevelCellKind::StairsUp
+            here == Some(crate::underworld_level::LevelCellKind::StairsUp)
         };
-        if ug.level().cells.get(ug.cell) != Some(wanted_kind) {
+        if !on_a_way {
             return Turn::Out(if want_down {
                 "There is no stairway down from here.".to_string()
             } else {
@@ -8904,6 +8913,13 @@ fn level_kind_glyph(kind: &str) -> char {
         "flooded" => '~',
         "stairs_down" => '>',
         "stairs_up" => '<',
+        // The Brattice, spec §3.5: a squeeze, deep water, a chute's lip.
+        // This mapping is `map`'s own and binds nothing on the wire; the
+        // remembered twins are the client's business, not this verb's —
+        // `level_kind_glyph` is handed a kind alone and never a visibility.
+        "threshold" => '\'',
+        "deep" => '=',
+        "drop" => 'v',
         _ => '?',
     }
 }
@@ -15142,16 +15158,20 @@ mod tests {
         from: crate::lattice::Cell,
         to: crate::lattice::Cell,
     ) -> Vec<crate::lattice::Cell> {
-        use crate::underworld_level::LevelCellKind;
         let level = ug.level();
+        // A WALKING body's own set (The Brattice, spec §3.5): the
+        // `movement_mode` seam rather than a kind list, minus `Swim` —
+        // `Deep` is passable, but not to the bodies these walks possess, and
+        // routing one through a sump would build a route the walk refuses.
         let passable = |c: crate::lattice::Cell| {
             matches!(
-                level.cells.get(c),
+                level
+                    .cells
+                    .get(c)
+                    .and_then(crate::underworld_level::movement_mode),
                 Some(
-                    LevelCellKind::Floor
-                        | LevelCellKind::Flooded
-                        | LevelCellKind::StairsUp
-                        | LevelCellKind::StairsDown
+                    crate::underworld_level::MovementMode::Walk
+                        | crate::underworld_level::MovementMode::Wade
                 )
             )
         };
