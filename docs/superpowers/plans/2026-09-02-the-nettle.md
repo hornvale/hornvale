@@ -147,10 +147,29 @@ project() {
         out+="$line"$'\n'
     done <<<"$text"
 
-    # Strip quoted spans. Line-oriented, which is sufficient: heredocs — the
-    # only multi-line quoting this guard has ever seen in practice — are gone
-    # by now.
-    printf '%s' "$out" | sed "s/'[^']*'/ /g; s/\"[^\"]*\"/ /g"
+    # Strip quoted spans in ONE alternating pass, so the quote that opens
+    # FIRST wins. Two sequential passes are wrong, and the difference is not
+    # subtle: stripping `'...'` before `"..."` treats any two apostrophes on a
+    # line as a pair, with no idea they may sit inside unrelated double-quoted
+    # strings. Measured against the two-pass version:
+    #
+    #   RAW:  echo "I don't think" && cargo nextest run --workspace \
+    #                             && cargo nextest run --workspace \
+    #                             && echo "you can't stop it"
+    #   OUT:  echo
+    #
+    # Both real runs vanished between the apostrophes in "don't" and "can't",
+    # and the guard returned `allow` -- a silent false NEGATIVE on exactly what
+    # Rule 1 exists to catch, triggered by ordinary English contractions.
+    # `sed -E` with an alternation takes the LEFTMOST match, so a `"` before a
+    # `'` consumes its own span and scanning resumes after it.
+    #
+    # Line-oriented, which is sufficient: heredocs -- the only multi-line
+    # quoting this guard has ever seen in practice -- are gone by now.
+    # RESIDUAL LIMIT, accepted: a backslash-escaped quote inside a same-type
+    # quoted span ends the span early. Strictly better than the two-pass form,
+    # and the guard fails open.
+    printf '%s' "$out" | sed -E "s/'[^']*'|\"[^\"]*\"/ /g"
 }
 ```
 
@@ -222,6 +241,11 @@ EOF
 cargo nextest run --workspace'
     # A herestring is not a heredoc and must not start a body skip.
     check deny 'grep -q cargo <<<"$x"; cargo nextest run --workspace'
+    # TWO quote-pairs on ONE line -- the case none of the above exercises. An
+    # apostrophe inside a double-quoted string must not pair with a later one:
+    # under the two-pass strip this returned `allow`, the whole command eaten
+    # between the two apostrophes. This is the regression test for that.
+    check deny 'echo "I don'"'"'t think" && cargo nextest run --workspace'
 ```
 
 - [ ] **Step 7: Run the script's self-test**

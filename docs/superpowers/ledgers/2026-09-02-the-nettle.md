@@ -258,3 +258,64 @@ which now discriminate in both directions.
 *ideonomy passes / overturns.* 0 / 0 — a verification finding.
 
 *Capture.* This entry; the retrospective's defect tally.
+
+---
+
+#9 [G5] — **Ruling: Task 1's review found a Critical false NEGATIVE in code my
+own brief mandated. The finding wins; the brief was wrong.**
+
+*The finding.* The projection's quote strip was two sequential `sed`
+expressions — single-quoted spans, then double-quoted spans. Sequential is
+wrong, because the first pass treats **any two apostrophes on a line as a
+pair**, with no knowledge that they may sit inside unrelated double-quoted
+strings. Reproduced independently by me against the committed code:
+
+```
+RAW:        echo "I don't think" && <run> --workspace && <run> --workspace
+                                 && echo "you can't stop it"
+PROJECTED:  echo
+VERDICT:    allow
+```
+
+Both real whole-workspace runs vanished into the span between the apostrophes
+in "don't" and "can't". The guard returned `allow` on exactly what Rule 1
+exists to catch, silently — no error, no malformed output, just a wrong
+verdict. **Ordinary English contractions trigger it**, which is common in
+precisely the `echo`'d prose and heredoc-adjacent text this task exists to
+make safe to write.
+
+*Why the task's own verification missed it.* Every case in the brief's probe
+table and every case in the self-test has **at most one quote-pair per line**.
+The bug needs two. So Step 5's branch table passed honestly and the guard was
+still broken — the same shape as this campaign's other findings: the check ran,
+was green, and could not see the defect because nothing in its input had the
+defect's precondition. This is the third instance in this campaign and the
+first in *executed* code rather than prose.
+
+*Ruling.* **The finding wins.** The brief's two-pass `sed` is a defect, not a
+design choice; the spec's §2 requires only that quoted literals be stripped,
+and the spec is the binding authority. Fixed to a single alternating pass —
+`sed -E "s/'[^']*'|\"[^\"]*\"/ /g"` — which takes the LEFTMOST match, so a `"`
+opening before a `'` consumes its own span and scanning resumes after it.
+Verified before ruling: the same input now projects to
+`echo   && <run> --workspace && <run> --workspace && echo`, preserving both
+runs. The plan text is corrected, plus a regression case with two quote-pairs
+on one line — the case that was missing.
+
+*Residual limit, accepted and now documented in the code:* a
+backslash-escaped quote inside a same-type span ends that span early. Strictly
+better than the two-pass form, and the guard fails open.
+
+*Cost if wrong.* Low. If the alternation has its own blind spot, it is a
+false negative in a guard that is advisory and fails open by design — never a
+refusal of legitimate work, which is the direction that kills the guard.
+
+*Operational fact worth keeping.* The `PreToolUse` hook resolves the script
+from `CLAUDE_PROJECT_DIR` — the **main checkout** — so a fix to this guard on
+a campaign branch does not take effect for the session making it until it
+lands on `main`. I hit the old two-mention false positive twice more while
+writing this entry.
+
+*ideonomy passes / overturns.* 0 / 0 — a verified defect with one correct fix.
+
+*Capture.* This entry; the plan text; the retrospective's defect tally.
