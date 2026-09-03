@@ -1620,13 +1620,12 @@ Same fixture, same vertex. Sump: shore `Cell(30, 12)`, bearing `E`, eight
 passage's recorded crossing whose gate is `Needs(Mode(Swim))`, asserted in the
 search, so it is the plan's own sump and not merely water. The walk: mouth →
 the near shore; the ways-on sentence omits the bearing and `go` refuses with
-`UNDERGROUND_DEEP_WATER_REFUSAL`; a body whose species is not in the locomotion
-registry (`"no-such-species"`) is refused identically — the negative half
-decision 0398's "a walk, not a registry row" needs; `"reef-shark"` crosses,
-narrated "You swim east." on every wet cell and "You step east." only on the
-far shore; then dry-shod to the lip, `down` the chute, `up` refused to the
-walker AND to the unregistered species, and `"red-dragon"` → "You fly up the
-chute." back onto the lip's coordinate.
+`UNDERGROUND_DEEP_WATER_REFUSAL`; `"reef-shark"` crosses, narrated "You swim
+east." on every wet cell and "You step east." only on the far shore; then
+dry-shod to the lip, `down` the chute, `up` refused to the walker, and
+`"red-dragon"` → "You fly up the chute." back onto the lip's coordinate. Each
+gate additionally repeats its refusal against `"no-such-species"` — which is
+DELIBERATELY the same case, not a second one; see fix round 1 below.
 
 **What each walk subsumes, and why nothing was deleted.** Walk 1 subsumes the
 locomotion of Task 5's
@@ -1713,3 +1712,69 @@ the heavy roster reads 65, and CLAUDE.md's "the roster is 64" prose (decision
 0426's amendment) is corrected in Task 7; +64.7 s on a merge, probably under
 the tier's existing pole · Ideonomy: none — a placement ruling with one
 sensible home · Capture: this entry; Task 7's CLAUDE.md sweep.
+
+## Task 6 — fix round 1
+
+**Important — the "unregistered species" halves of walk 3 were the walker case
+wearing a second label, and the doc and the ledger both said otherwise.**
+`Body::locomotion` is
+`locomotion_registry().get_by_label(&self.species).copied().unwrap_or(WALKER)`,
+and `locomotion_registry()` holds exactly nine rows — six swimmers
+(reef-shark, killer-whale, giant-octopus, giant-squid, giant-crocodile,
+sea-elf) and three dragons. `"human"` is not among them. So `"human"` and
+`"no-such-species"` both resolve through the same `unwrap_or` to the same
+`WALKER`, and the two assertions at each gate pin one behaviour, not two.
+
+What actually establishes decision 0398's "a walk, not a registry row" is the
+POSITIVE half at each gate: the shark crossing water the default body was
+refused at, the dragon taking a lip the default body could not. Those are the
+readings a registry row alone could not produce.
+
+The remedy is relabelling, not deletion. Both labels stay, with the redundancy
+stated at each site and in the test's doc: `"human"` is the default body's own
+species and is what a player would be; `"no-such-species"` is the one that
+still pins the fail-closed default the day some campaign gives `human` a
+locomotion row and the first assertion quietly starts exercising the FOUND-row
+path instead. Each assertion's message is now named for what it pins — `"a
+species absent from the locomotion store fails closed onto WALKER"` — where
+one previously read `"an unregistered species swims no better than a human"`,
+a sentence that is true and that describes a comparison the test does not
+make.
+
+**The ledger sentence, before:**
+
+> ...`go` refuses with `UNDERGROUND_DEEP_WATER_REFUSAL`; a body whose species
+> is not in the locomotion registry (`"no-such-species"`) is refused
+> identically — the negative half decision 0398's "a walk, not a registry row"
+> needs; `"reef-shark"` crosses... then dry-shod to the lip, `down` the chute,
+> `up` refused to the walker AND to the unregistered species, and
+> `"red-dragon"` → ...
+
+**and after:**
+
+> ...`go` refuses with `UNDERGROUND_DEEP_WATER_REFUSAL`; `"reef-shark"`
+> crosses... then dry-shod to the lip, `down` the chute, `up` refused to the
+> walker, and `"red-dragon"` → ... Each gate additionally repeats its refusal
+> against `"no-such-species"` — which is DELIBERATELY the same case, not a
+> second one; see fix round 1 below.
+
+**Minor 1** — walk 1's doc called the fixture "unchanged" in the very commit
+that widened it from four conditions to six and moved it off `Vertex(342)`.
+The sentence now says what was meant — this walk adds no second search, it
+reuses the fixture the six door tests already stand on — and points at
+`a_worked_descent_with_a_door`'s own doc for the widening and the move.
+
+**Minor 2** — walk 2's `up` at the far stairway was `let _ = say(..)`, the one
+verb in three walks whose reply was discarded. It now asserts
+`"You take the stairs up."` (`Session::take_stairs`'s own producer, with
+`starts_with` because that path appends the arrival's `look` block). This is
+the assertion that makes the loop's two halves distinguishable: `down` three
+steps earlier reads as a chute and `up` here must read as stairs, and a
+discarded reply could not tell them apart.
+
+**Covering tests re-run** (all green): the three walks by name, plus `cargo
+fmt`, clippy `--workspace --all-targets -D warnings`, and the lexicon guard.
+`docs/audits/lexicon-inventory.tsv` did NOT move: this round's edits are
+comments and assertion messages, and the count came back at the same 816 the
+walks' own commit set. Checked with a `HV_LEXICON_REBASELINE=1` run producing
+an empty diff, not assumed from the shape of the change.

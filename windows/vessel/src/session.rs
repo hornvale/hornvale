@@ -17375,9 +17375,13 @@ mod tests {
     /// the older test additionally pins decision 0399's no-relock clause on
     /// `close`, which this walk does not exercise.
     ///
-    /// The fixture is [`a_worked_descent_with_a_door`]'s, unchanged, so this
-    /// walk adds no second search: seed 42's first open, unbarred cave mouth
-    /// with a rung-0 door and a rung-0 key.
+    /// **This walk adds no second search**: it stands on
+    /// [`a_worked_descent_with_a_door`], the fixture the six door tests
+    /// above already use. That fixture is not unchanged — this same task
+    /// widened it from four conditions to six and moved it off
+    /// `Vertex(342)` as a result; its own doc carries the measurement and
+    /// the reason. What is meant here is only that the walk reuses it
+    /// rather than growing a search of its own.
     ///
     /// claim: structural(vertex: seed 42's open cave mouths, first hit) — the fixture's own search, not a claim over the range
     #[test]
@@ -17790,7 +17794,17 @@ mod tests {
             "the far stairway is a walk from the chute's landing"
         );
         walk_route(&mut session, &lower);
-        let _ = say(&mut session, "up");
+        // The ordinary stairway's own sentence — not the chute's. Asserting
+        // it is what makes the loop's two halves distinguishable: `up` here
+        // must read as stairs taken, where `down` three steps ago read as a
+        // chute, and a discarded reply could not tell the two apart.
+        // `starts_with`, because `take_stairs` appends the arrival's `look`
+        // block to every vertical move that succeeds.
+        let out = say(&mut session, "up");
+        assert!(
+            out.starts_with("You take the stairs up."),
+            "the far end is a stairway, and says so: {out:?}"
+        );
         {
             let ug = session.underground.as_ref().expect("below");
             assert_eq!(ug.rung, 0, "back on the upper floor");
@@ -17818,25 +17832,44 @@ mod tests {
     ///
     /// On the fixture's own generated sump: a body that walks is refused by
     /// WATER (and the ways-on sentence agrees, so the report and the verb
-    /// cannot disagree by one turn); a body whose species is not in the
-    /// locomotion registry at all is refused the same way, which is the
-    /// negative half decision 0398's "a walk, not a registry row" needs; and
-    /// a `reef-shark` crosses the whole run, narrated `swim` on every wet
-    /// cell and `step` only on the far shore. Then the chute, the same way:
-    /// refused to the walker and to the unregistered species, taken by a
-    /// `red-dragon`.
+    /// cannot disagree by one turn), and a `reef-shark` crosses the whole
+    /// run, narrated `swim` on every wet cell and `step` only on the far
+    /// shore. Then the chute, the same way: refused to the walker, taken by
+    /// a `red-dragon`.
+    ///
+    /// **THE POSITIVE HALVES ARE THE COVERAGE, and this doc claimed
+    /// otherwise until fix round 1.** It said a species "not in the
+    /// locomotion registry at all" was refused "the same way, which is the
+    /// negative half decision 0398's 'a walk, not a registry row' needs" —
+    /// presenting the `"no-such-species"` assertions as coverage distinct
+    /// from the `"human"` ones. They are not. `Body::locomotion` is
+    /// `locomotion_registry().get_by_label(..).unwrap_or(WALKER)`, and
+    /// `"human"` is not one of that store's nine rows (six swimmers, three
+    /// dragons), so BOTH labels resolve through the same `unwrap_or` to the
+    /// same `WALKER`: the two assertions per gate pin one behaviour. What
+    /// actually establishes decision 0398's distinction is the pair that
+    /// CROSSES — the shark through water the default body was refused at,
+    /// the dragon up a lip the default body could not take — because those
+    /// are the readings a registry row alone could not produce.
+    ///
+    /// Both labels are kept anyway, deliberately and with the redundancy
+    /// stated at each site: `"human"` is the default body's own species and
+    /// is what a player would be, while `"no-such-species"` is the one that
+    /// still pins the fail-closed default the day some campaign gives
+    /// `human` a locomotion row and the first assertion quietly starts
+    /// exercising the FOUND-row path instead.
     ///
     /// **What this subsumes.** Task 4's
     /// `the_chute_and_the_sump_read_the_body_that_walks_them` is the same
     /// four readings over HAND-SET cells; this is the same four over the
-    /// plan's own gates, walked to on foot, with the unregistered-species
-    /// half added. Both are kept, for the reason given on
+    /// plan's own gates, walked to on foot. Both are kept, for the reason
+    /// given on
     /// [`the_brattice_walk_two_a_chute_is_taken_down_and_the_loop_closed_by_the_far_stairway`].
     ///
     /// The species is swapped, not the locomotion, because there is no
     /// locomotion to swap: `Body::locomotion` reads the species registry, so
     /// `reef-shark` and `red-dragon` are how a test asks for a swimmer and a
-    /// flier, and `no-such-species` is how it asks for neither.
+    /// flier.
     ///
     /// claim: structural(vertex: seed 42's open cave mouths, first hit) — the fixture's own search, not a claim over the range
     #[test]
@@ -17865,13 +17898,19 @@ mod tests {
             crate::underground::UNDERGROUND_DEEP_WATER_REFUSAL
         );
 
-        // 3. So is a body whose species the registry has never heard of —
-        // the default is walk-and-wade, not permission.
+        // 3. DELIBERATELY THE SAME CASE AS 2, not a second one. `"human"`
+        // is absent from the nine-row locomotion store just as
+        // `"no-such-species"` is, so both reach `WALKER` through
+        // `Body::locomotion`'s `unwrap_or` and this pins the fail-closed
+        // default a second time. It is kept because it is the assertion
+        // that KEEPS pinning that default if `human` is ever given a row —
+        // see this test's own doc for why neither is the coverage that
+        // establishes decision 0398's distinction.
         session.roster.driven_body_mut().species = "no-such-species".to_string();
         assert_eq!(
             say(&mut session, &format!("go {letter}")),
             crate::underground::UNDERGROUND_DEEP_WATER_REFUSAL,
-            "an unregistered species swims no better than a human"
+            "a species absent from the locomotion store fails closed onto WALKER"
         );
         assert_eq!(
             session.underground.as_ref().expect("below").cell,
@@ -17915,7 +17954,8 @@ mod tests {
         );
 
         // 5. THE FLIER. Walk (dry-shod again) to the lip, take the chute
-        // down, and ask the same `up` of three bodies.
+        // down, and ask the same `up` of three bodies — two of which are
+        // the same case, as at the sump above and for the same reason.
         session.roster.driven_body_mut().species = "human".to_string();
         let out = standable_route(
             session.underground.as_ref().expect("below"),
@@ -17933,11 +17973,13 @@ mod tests {
             crate::underground::NO_WAY_UP_REFUSAL,
             "a walker is told about the lip overhead"
         );
+        // The same deliberate repetition as at the sump, for the same
+        // reason: `"human"` and `"no-such-species"` are one case today.
         session.roster.driven_body_mut().species = "no-such-species".to_string();
         assert_eq!(
             say(&mut session, "up"),
             crate::underground::NO_WAY_UP_REFUSAL,
-            "and so is a species the registry has never heard of"
+            "a species absent from the locomotion store fails closed onto WALKER"
         );
         assert_eq!(
             session.underground.as_ref().expect("below").rung,
