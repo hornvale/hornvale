@@ -1022,3 +1022,68 @@ on purpose, with its own decision.
 
 **Cost if wrong.** Volcanoes stay invisible until discovered, which is the
 status quo, and biome monotony is broken up by sites rather than by both.
+
+## Ruling #43 [fix round] — the ~1.7 km walk facet is stale repo-wide, and only `depth.rs` is fixed here
+
+**Finding (review F4).** H3 published its headline gap **2x too large** because
+it took the walk-facet size from `windows/vessel/src/depth.rs`'s "~1.7 km".
+That is a pre-cube-sphere icosphere depth-12 figure. The authority is
+`hornvale_locale::walk_depth`, whose own doc gives depth 13 as **1.126 km per
+side**; a square mile is therefore 2.04 facets and the target is ~0.489 sites
+per facet, not 1. The gap is ~41,200x (4.61 orders), not ~84,200x (4.93).
+
+**The figure is not confined to the file the review named.** Grepping
+`1.7 km` / `3.3 m`:
+
+- `docs/decisions/0082-locale-chamber-place.md:17,22,30` — "Six halvings of
+  ~110 km is **~1.7 km**", and the derived "~3.3 m" chamber. **Ratified**, so
+  it needs superseding, not editing.
+- `docs/decisions/0101-geometry-and-society-are-separate-vocabularies.md:92` —
+  the band table's `chamber L21 ~3.3 m`.
+- `docs/design/room-scale/p2-subdivision-design.md:125` — the subdivision
+  table's `12  ~1.7 km  ~1.5 km²`.
+- `docs/superpowers/plans/2026-07-27-the-lintel.md` — eight occurrences.
+- `docs/retrospectives/the-ford-stage-2.md:178`, `the-purview.md:22`.
+
+**Ruling.** Fix `depth.rs` only, and fix it by **deleting the number rather
+than replacing it** — it now points at `hornvale_locale::walk_depth` as the
+owner, which is the discipline The Pavement adopted after finding sixteen
+restatements of the walk offset, two of them a whole band stale. Correcting
+`depth.rs` alone to a *new number* would have made it a third value
+disagreeing with two ratified decisions; pointing at the owner cannot.
+
+`CHAMBER_DEPTH_OFFSET`'s doc is corrected in place: nine halvings of 1.126 km
+is **~2.2 m**, not ~3.3. The offset itself is unchanged and its justification
+survives the correction — 2.2 m is still a room a person stands in — which is
+precisely why nobody noticed for two campaigns.
+
+**Parked, not fixed:** a superseding record for 0082 that restates the band
+sizes on cube-sphere geometry, and a sweep of 0101, the design doc, the plans
+and the two retrospectives. Not a fix round's work: it amends a ratified
+decision, and every one of those documents is correct about its own moment.
+
+**Cost if wrong.** A reader of 0082 keeps computing chamber scale from 1.7 km
+and lands 1.5x high. That is the status quo and is now at least documented at
+`depth.rs`, the place a `windows/vessel` reader actually looks.
+
+## Ruling #44 [fix round] — 0538's Consequences still declare the variant its own correction removed
+
+**Finding.** 0538 was corrected on 2026-09-03 (commit `6166028c7`) to state
+that `Extent` has exactly one variant and that `Region` "was never
+implemented". Its **Consequences** section still reads: *"One variant is
+deliberately unconstructed. `Region` is uninhabited until a campaign builds
+it, and the reserved body is deliberately empty."* That contradicts the
+`CORRECTED` block above it in the same record — an uninhabited variant and an
+absent one are different claims, and the empty "reserved body" does not exist.
+
+**Ruling.** Left alone, and reported rather than edited. The record half of
+F2 was explicitly the controller's this round, the paragraph may be a
+deliberate statement of intent for the future variant, and a second hand
+editing a ratified decision the same day it was corrected is how a record
+acquires two voices. The code-side residue *was* mine and is fixed: five
+`Extent::Region` references in `windows/vessel/src/site.rs`, two of them
+intra-doc links `cargo doc` reported as broken, now report zero.
+
+**Cost if wrong.** A reader of 0538 who skips the correction block and reaches
+Consequences goes looking for a variant that is not there — the same failure
+F2 was raised for, one section further down.
