@@ -190,3 +190,32 @@ choice.
 
 *Capture.* This entry; the retrospective (this is a second instance of the
 campaign's central finding, produced by the campaign about it).
+
+---
+
+#7 [G3] — **Spec approved by Nathan, unmodified. Item 5 takes option (d).**
+
+*What was presented.* Four flagged items (F1 item 5's false premise and its
+four options; F2 the two stale premises and their shared shape; F3 item 4's
+96x cost correction; F4 item 3 shrinking and moving), the six-entry ledger
+digest, the capture manifest, and the spec path.
+
+*Decision.* "LGTM" — no vetoes, no revisions. So:
+
+- **Item 5 = option (d)**: dropped from this campaign's build. The deliverable
+  is a corrected `TOOL-*` row stating the *real* residue (the committed PNGs
+  pin projections, not state, so a change below the colour quantum or in an
+  unrendered field slips) rather than P2's overstated "nothing pins the bytes".
+  Deriving `Serialize` (a) is not attempted here and would need its own
+  decision; (c), the digest, is recorded in the row as the cheap option if the
+  residue is ever closed.
+- **F3's cost call stands**: item 4 pays ~234.6 s once per absorption cycle
+  plus ~2.4 s per subsequent docs-only commit.
+- Items 1-4 proceed as specced.
+
+*Alternatives discarded.* None — nothing was vetoed.
+
+*ideonomy passes / overturns.* n/a — a ratification, not a decision of mine.
+
+*Capture.* This entry; the plan's task list; §5's recommendation is now the
+campaign's position.
