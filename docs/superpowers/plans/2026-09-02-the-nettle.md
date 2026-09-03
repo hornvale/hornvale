@@ -1001,12 +1001,32 @@ it with writing to the committed ledger as rulings happen.
 
 - [ ] **Step 4: Verify no reference to the shared path survives in any skill**
 
+**A bare grep for the path cannot work here, and an earlier draft of this step
+used one.** Step 3's own text contains the string — inside a
+`**Never `.superpowers/sdd/followups.md`.**` admonition — so a grep for the
+path matches the prohibition and reports the defect as still present. That is
+the very confusion Task 1 fixed in the Bash guard (matching text rather than
+use), reproduced in this plan's own verification step.
+
+Assert the *shape* instead: the path occurs exactly once, and that occurrence
+is the admonition.
+
 ```bash
-grep -rn "sdd/followups.md" .claude/skills/ && echo "STILL PRESENT -- fix it" || echo "clean"
-grep -rn "followup" .claude/skills/campaign-autopilot/SKILL.md
+python3 -c "
+import re
+t = open('.claude/skills/campaign-autopilot/SKILL.md').read()
+hits = [l for l in t.split('\n') if 'sdd/followups.md' in l]
+assert len(hits) == 1, 'expected exactly 1 mention, got %d: %r' % (len(hits), hits)
+assert hits[0].lstrip().startswith('**Never'), 'the one mention is not the admonition: %r' % hits[0]
+routing = [l for l in t.split('\n') if 'Actionable followups' in l]
+assert len(routing) == 1 and 'committed decision ledger' in routing[0] + t.split(routing[0])[1][:200], \
+    'the routing bullet does not point at the committed ledger'
+print('clean: 1 mention, and it is the prohibition; routing points at the ledger')
+"
 ```
 
-Expected: `clean`, and the remaining `followup` hits all point at the committed ledger.
+Expected: the `clean:` line. A failure names which of the three conditions
+broke, rather than leaving you to interpret a grep hit.
 
 - [ ] **Step 5: Check the sibling skill agrees**
 

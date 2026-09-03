@@ -374,3 +374,51 @@ branch table says to stop rather than accept a pass.
 
 *Capture.* This entry; the plan text; the retrospective (fifth and sixth
 instances); the deferred-minor list for the census_claim flake.
+
+---
+
+#11 [G5] — **My verification step for Task 4 had Task 1's exact defect: a grep
+that matched text without distinguishing a use from a prohibition.**
+
+*What happened.* Task 4's Step 4 verified the fix by grepping every loaded
+skill for `sdd/followups.md` and expecting no hits. But Step 3's *own*
+replacement text contains that string, deliberately, inside a
+`**Never `.superpowers/sdd/followups.md`.**` admonition. So the grep matched
+the prohibition and printed `STILL PRESENT -- fix it` on a correct fix. The
+implementer reported it as a false positive rather than editing the reviewed
+wording to make a check pass — the right call, and the one that preserved the
+finding.
+
+*Verified myself.* Exactly one mention survives, at `SKILL.md:204`, and it is
+the admonition; the routing bullet at `:182-184` points at
+`docs/superpowers/ledgers/YYYY-MM-DD-<slug>.md`. The fix is correct and the
+check was wrong.
+
+*Why this is worth an entry rather than a shrug.* It is the **same defect
+class Task 1 exists to fix**, committed by me, in the verification step of a
+later task in the same campaign. Task 1 narrowed a guard that refused commands
+for *mentioning* a forbidden thing; three tasks later I wrote a check that
+failed a document for *mentioning* a forbidden path. Neither is a careless
+slip — both come from the same cheap move of testing for a string when the
+property you care about is how the string is used.
+
+*Ruling.* Step 4's check is replaced with one that asserts the **shape**: the
+path occurs exactly once, that occurrence is the admonition, and the routing
+bullet names the committed ledger. Each condition fails with its own message,
+so a future failure says which invariant broke instead of handing back a grep
+hit to interpret. No change to Task 4's committed edit, which was right.
+
+*Cost if wrong.* None to the shipped change; this corrects a check, not code.
+
+*The implementer's other three notes, adjudicated.* Step 5's branch resolved
+to "nothing to change" in `closing-a-campaign` — confirmed, no edit made. No
+`docs/timings.md` row appeared, because the docs-only path appends none — the
+mechanism working as this campaign's Task 5 describes it. And it used
+`git commit -F <file>` after a heredoc quoting error, which is exactly the
+operational note Task 3 produced; two implementers hit the same thing, so the
+plan's own commit examples are the shape at fault, not the agents.
+
+*ideonomy passes / overturns.* 0 / 0 — a verification defect with one fix.
+
+*Capture.* This entry; the plan text; the retrospective (this is the campaign's
+sixth instance, and the second I authored myself).
