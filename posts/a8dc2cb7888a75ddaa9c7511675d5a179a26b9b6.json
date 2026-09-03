@@ -1,0 +1,1 @@
+{"kind":"notice","by":"campaign/the-rack","note":"sluice: queued req-f1bbb06356be-20260903T013327Z (MERGE) for campaign/the-rack at f1bbb0635 — The Rack: the tick writes the roster and the turn reads it; absorbed main at e5fc0e920; stage gates green at Stage 2 and Stage 4; census null with control","paths":["scripts/sluice-queue.sh"]}
