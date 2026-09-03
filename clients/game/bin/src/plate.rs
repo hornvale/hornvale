@@ -1213,23 +1213,32 @@ fn project_onto_screen(
 /// (`Driver::update_discovery`'s `for id in self.index.at(vertex)` loop,
 /// already shipped, untouched by this task) already records a volcano the
 /// instant its slopes are walked. This layer only had to start reading
-/// that existing fact to draw it, and nothing about The Prospect's Gate A
-/// ungating touches that mechanism: a volcano's KIND (that a peak stands
-/// here) is exactly the fact `Driver::update_discovery` already ties to
-/// entering its extent, so ungating it would mean drawing an edifice the
-/// terrain has no other way of saying is there at all — unlike a cave,
-/// exotic site or settlement, each of which has its own independent
-/// [`MapSite`] roster entry regardless of discovery. A waterfall is a bare
-/// `Vertex` `GeneratedTerrain` reports (`waterfalls()`) — the landscape
-/// feature system does not carry an identity for it, and the task's own
-/// interface note forbids minting a new feature enum to give it one. Rather
-/// than invent that identity, it draws as GROUND TRUTH, unconditionally —
-/// the same epistemic status the relief and water ladders already have (a
-/// river or a mountain range is never gated on "has this been discovered",
-/// so a knickpoint on that same channel is not either), and, since The
-/// Prospect, the same status a cave, exotic site or settlement's KIND now
-/// has too. This is a judgement call flagged for review, not a claim that
-/// the design space has only one right answer here.
+/// that existing fact to draw it.
+///
+/// **Why a volcano alone stays gated — Decision 0540, correcting this
+/// paragraph's own earlier rationale.** An earlier version of this comment
+/// argued ungating a volcano "would mean drawing an edifice the terrain has
+/// no other way of saying is there at all" — a non-sequitur review caught:
+/// under The Prospect's own intent (break up an undifferentiated map), that
+/// argument supports UNgating a volcano, not keeping it gated, since it is
+/// the single most map-breaking-up feature this layer draws. The real
+/// reason is structural, not epistemic: a volcano's `FeatureId` flows
+/// through `windows/worldgen::resolve_chain_at` (Gate B, the cursor
+/// readout), coupling its drawn-ness to its readout — ungating it would
+/// reach a discovery mechanism that predates this campaign and that
+/// Decision 0540 deliberately does not touch. A cave, exotic site or
+/// settlement has no such coupling: each has its own independent
+/// [`MapSite`] roster entry, absent from the feature index entirely, so
+/// ungating its glyph cannot move what the cursor readout says. A waterfall
+/// is a bare `Vertex` `GeneratedTerrain` reports (`waterfalls()`) — the
+/// landscape feature system does not carry an identity for it, and the
+/// task's own interface note forbids minting a new feature enum to give it
+/// one. Rather than invent that identity, it draws as GROUND TRUTH,
+/// unconditionally — the same epistemic status the relief and water
+/// ladders already have (a river or a mountain range is never gated on
+/// "has this been discovered", so a knickpoint on that same channel is not
+/// either), and, since The Prospect, the same status a cave, exotic site or
+/// settlement's KIND now has too.
 ///
 /// **`pub` rather than `pub(crate)` for the same reason
 /// [`terrain_at_tile`] is** (Task 3): `examples/rung_bench.rs` is a separate
@@ -3466,14 +3475,36 @@ mod tests {
         let settlement_roster = vec![settlement(site, 1)];
         let mut memo = RoomMeshMemo::default();
         let bare = draw_terrain_layer(&terrain, &geo, &index, &mut memo, &f, &win, w, h, false);
+        let bare_text = bare.to_plain_text();
+
+        // Every screen position at which TWO grids disagree — restores the
+        // whole-plate half of what the old `the_feature_layer_draws_only_
+        // discovered_sites` asserted with `assert_eq!(g.to_plain_text(),
+        // bare_text)` (review fix round 1, finding 2(1)). That comparison
+        // proved two things at once: this site is (or, now, is not) drawn,
+        // AND the feature layer touches nothing else on the grid. The
+        // rewrite that flipped the first half dropped the second — a bug
+        // painting a spurious glyph elsewhere would pass the position-only
+        // check below and this closure is what still catches it.
+        let diff_positions = |a: &Grid, b: &Grid| -> Vec<(u16, u16)> {
+            let mut out = Vec::new();
+            for dy in 0..h {
+                for dx in 0..w {
+                    if a.get(dx, dy).and_then(|c| c.glyph) != b.get(dx, dy).and_then(|c| c.glyph) {
+                        out.push((dx, dy));
+                    }
+                }
+            }
+            out
+        };
 
         // ALL THREE KINDS, one loop. Each iteration proves the identical
-        // property: an UNdiscovered site is drawn at its own resolved cell,
-        // and discovering it afterward changes NOTHING about that drawing —
-        // the strongest form of "Gate A does not consult `discovered`" this
-        // module can state, short of the type-level argument (`None`, not
-        // `Some(id)`, at the call site — see `draw_feature_layer`'s own
-        // doc).
+        // property: an UNdiscovered site is drawn at its own resolved cell
+        // and NOWHERE ELSE, and discovering it afterward changes NOTHING
+        // about that drawing — the strongest form of "Gate A does not
+        // consult `discovered`" this module can state, short of the
+        // type-level argument (`None`, not `Some(id)`, at the call site —
+        // see `draw_feature_layer`'s own doc).
         //
         // The settlement's expected glyph is the MAJOR one because the sole
         // in-frame settlement is trivially its own top 10%
@@ -3502,6 +3533,19 @@ mod tests {
                 Some(glyph),
                 "an UNdiscovered {glyph:?} site was not drawn"
             );
+            assert_eq!(
+                diff_positions(&bare, &undiscovered_grid),
+                vec![(x, y)],
+                "an UNdiscovered {glyph:?} site's roster changed the plate somewhere \
+                 other than its own resolved position — the feature layer must touch \
+                 exactly one position here, got: {:?}",
+                undiscovered_grid.to_plain_text()
+            );
+            assert_ne!(
+                undiscovered_grid.to_plain_text(),
+                bare_text,
+                "sanity: the diff above found a change, so the two texts must differ"
+            );
 
             let mut discovered = Discovered::default();
             discovered.record(roster[0].feature_id());
@@ -3521,6 +3565,12 @@ mod tests {
                 discovered_grid.get(x, y).unwrap().glyph,
                 Some(glyph),
                 "a DISCOVERED {glyph:?} site was not drawn"
+            );
+            assert_eq!(
+                diff_positions(&bare, &discovered_grid),
+                vec![(x, y)],
+                "a DISCOVERED {glyph:?} site's roster changed the plate somewhere other \
+                 than its own resolved position"
             );
             assert_eq!(
                 undiscovered_grid.to_plain_text(),
@@ -3762,5 +3812,50 @@ mod tests {
             AGENT_GLYPH,
             "an unknown kind must still get a glyph, never be skipped"
         );
+    }
+
+    /// **Every glyph constant this module draws with resolves to the
+    /// REGISTER's own idea of what population it belongs to — not merely
+    /// to SOME row** (review fix round 1, item 7). Closes the followup
+    /// `.superpowers/sdd/followups.md` records: `bin/tests/plate_vocabulary
+    /// ::every_drawn_glyph_is_claimed_by_the_register` only asks
+    /// `binding_of(g).is_some()`, which the `&` row added alongside
+    /// [`AGENT_GLYPH`] made WEAKER for this specific glyph — a future
+    /// `EXOTIC_GLYPH = '&'` would satisfy "is claimed by the register" as
+    /// an AGENT and pass that check while meaning the wrong thing entirely.
+    /// This asks the stronger question directly, inside the same crate that
+    /// owns the constants (most of them are `pub(crate)` or fully private —
+    /// [`AGENT_GLYPH`] is not `pub` at all — so this could not live in
+    /// `bin/tests/` regardless of scope).
+    ///
+    /// Most of the site-glyph list matters only for INTERNAL consistency
+    /// today (nothing currently draws two of them as the same character),
+    /// but the exotic/agent PAIR is exactly the one this campaign's own
+    /// fix-round history proves is not a hypothetical: `EXOTIC_GLYPH`
+    /// really was mutated to `&` once, on this branch, and every other test
+    /// in both crates stayed green.
+    #[test]
+    fn every_bin_glyph_constant_resolves_to_its_intended_population() {
+        use hornvale_game_core::register::{Population, binding_of};
+
+        let cases: [(char, Population); 7] = [
+            (CAVE_GLYPH, Population::PointSite),
+            (EXOTIC_GLYPH, Population::PointSite),
+            (SETTLEMENT_MINOR_GLYPH, Population::PointSite),
+            (SETTLEMENT_MAJOR_GLYPH, Population::PointSite),
+            (VOLCANO_GLYPH, Population::PointSite),
+            (WATERFALL_GLYPH, Population::PointSite),
+            (AGENT_GLYPH, Population::Agent),
+        ];
+        for (glyph, want) in cases {
+            let got = binding_of(glyph).map(|b| b.population);
+            assert_eq!(
+                got,
+                Some(want),
+                "{glyph:?} resolves to {got:?} in the register, not the intended {want:?} — \
+                 either this constant drifted onto a glyph the register assigns elsewhere, \
+                 or the register's own row for it is missing or wrong"
+            );
+        }
     }
 }

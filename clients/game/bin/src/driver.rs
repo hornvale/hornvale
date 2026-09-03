@@ -2821,6 +2821,63 @@ impl Driver {
         &mut self.discovered
     }
 
+    /// TEST-ONLY: the committed proper name of the settlement whose own
+    /// (latitude, longitude) resolves nearest to `vertex` — read directly
+    /// off the world's ledger (`hornvale_kernel::NAME`), independent of
+    /// anything `MapSite`/`Driver` exposes to a real caller.
+    ///
+    /// **This is the oracle Decision 0540's own test needs, and it must
+    /// stay a test-only backdoor, not a new production path.** `MapSite`
+    /// carries no name field at all — that absence is the type-level half
+    /// of the leak-proof argument (`draw_feature_layer` writes only a
+    /// `char` and an RGB triple) — so a test asserting a name is ABSENT
+    /// from the cursor readout needs an independent route to the real name
+    /// to compare against, or the assertion has nothing to check for. This
+    /// reads the SAME facts `plate::settlements_of` does
+    /// (`IS_SETTLEMENT`/`LATITUDE`/`LONGITUDE`), plus the one it does not
+    /// need for drawing: `hornvale_kernel::NAME`, committed once per
+    /// settlement at genesis (`domains/settlement/src/genesis.rs`).
+    ///
+    /// `None` if no settlement resolves to `vertex`, or the ledger holds no
+    /// name for it — a test using this should treat either as "nothing to
+    /// assert the absence of" rather than a hard failure, since the caller
+    /// is expected to have already confirmed `vertex` is a real settlement
+    /// vertex some other way.
+    #[cfg(test)]
+    fn settlement_name_for_test(&self, vertex: hornvale_kernel::Vertex) -> Option<String> {
+        // SAFETY: identical reborrow to `Driver::start`'s own
+        // `unsafe { &*world }` — `self.world` is a live `Box::into_raw`
+        // pointer for the whole of `Driver`'s lifetime, reclaimed exactly
+        // once in `Drop`, which cannot run while `&self` is held.
+        let world: &World = unsafe { &*self.world };
+        world
+            .ledger
+            .find(hornvale_settlement::IS_SETTLEMENT)
+            .find_map(|fact| {
+                let lat = match world
+                    .ledger
+                    .value_of(fact.subject, hornvale_settlement::LATITUDE)
+                {
+                    Some(hornvale_kernel::Value::Number(n)) => *n,
+                    _ => return None,
+                };
+                let lon = match world
+                    .ledger
+                    .value_of(fact.subject, hornvale_settlement::LONGITUDE)
+                {
+                    Some(hornvale_kernel::Value::Number(n)) => *n,
+                    _ => return None,
+                };
+                if self.nearest.nearest(&self.geo, lat, lon) != vertex {
+                    return None;
+                }
+                world
+                    .ledger
+                    .text_of(fact.subject, hornvale_kernel::NAME)
+                    .map(str::to_string)
+            })
+    }
+
     /// Every feature the possession has discovered this session (spec
     /// Amendment 1 §A4b). See the `discovery` module's own doc.
     pub fn discovered(&self) -> &Discovered {
@@ -2968,10 +3025,28 @@ mod portolan_tests {
                 .expect("a placed kind carries its facet");
 
             let before = d.world_plate(w, h);
+            // A whole-plate `contains` here is near-vacuous for a cave
+            // specifically (review fix round 1, item 6): seed 42 has 874 of
+            // them, and this window (104x56, the client's own real floor)
+            // is wide enough that more than one can be in frame, so this
+            // proves only "some cave, somewhere on screen, is drawn" — not
+            // that THIS site is. Pinpointing this site's own exact screen
+            // position would mean duplicating `plate.rs`'s own private
+            // projection math here (a different module, no `pub` seam for
+            // it); the message is downgraded to say only what this check
+            // actually proves, per the coordinator's own offered
+            // alternative, rather than implying a precision it does not
+            // have. `plate.rs`'s own tests (`draw_with_draws_a_point_site_
+            // whether_or_not_it_is_discovered`, `the_feature_layer_draws_
+            // every_site_whether_or_not_it_is_discovered`) are what pin the
+            // exact-position property, inside the module that can compute
+            // the position without duplicating it.
             assert!(
                 before.to_plain_text().contains(glyph),
-                "a {kind:?} must already be drawn before it has been discovered \
-                 (Gate A ungating)"
+                "no {kind:?} glyph is drawn anywhere on the visible plate before \
+                 discovery — Gate A ungating is not reaching this kind at all \
+                 (this does not confirm THIS specific site drew; see this test's \
+                 own doc for where that IS pinned)"
             );
             assert!(
                 !d.discovered().contains(site.feature_id()),
@@ -4093,10 +4168,23 @@ mod portolan_tests {
     /// position: `resolved_ocean` reads the vertex's true class,
     /// `drawn_ocean` reads a glyph that was never claiming to be a terrain
     /// glyph, and the two disagreeing there is not the Finding 2 defect
-    /// this test exists to catch. Measured on seed 42's default floor
-    /// plate: 12 of 800 tiles are such a site, all previously undiscovered
-    /// (and, since Gate A, therefore now drawn) — the fix's own guarantee
-    /// is unchanged and still asserted exactly on every tile that remains.
+    /// this test exists to catch.
+    ///
+    /// **Measured on seed 42's default floor plate: 118 of 800 tiles are
+    /// excluded — 14.75% of the plate, not the "12 of 800" an earlier
+    /// version of this doc claimed.** That number was a review-caught
+    /// mistake, not a rounding difference: 12 is the count of excluded
+    /// tiles whose vertex ALSO happens to resolve to ocean — i.e. the
+    /// subset that would actually have disagreed and reddened the test —
+    /// mismeasured as the exclusion's own size. The other 106 excluded
+    /// tiles draw a site glyph over non-ocean terrain and would have agreed
+    /// anyway; excluding them changes no verdict TODAY, but they are still
+    /// genuinely outside what this test can vouch for, which is why
+    /// `EXCLUDED_TILES` below is a pinned count and not merely a printed
+    /// one — a regression that grew the excluded set (say, a bug drawing
+    /// site glyphs far more broadly than the roster warrants) would
+    /// otherwise silently shrink the guarantee while `agree == total` kept
+    /// reporting a perfect, and decreasingly meaningful, ratio.
     #[test]
     fn f5_the_resolved_vertex_always_matches_the_drawn_glyph_after_the_fix() {
         let mut d = test_driver();
@@ -4172,6 +4260,21 @@ mod portolan_tests {
              returns a representative of the PAINTED class, so the resolved vertex can \
              never disagree with the glyph drawn from that same read — a non-1.0 ratio \
              here means the fix itself is broken"
+        );
+        // PINNED, not merely printed (review fix round 1): an unasserted
+        // `excluded` can grow without bound and this test would keep
+        // reporting a perfect ratio over a shrinking, decreasingly
+        // meaningful `total`. 118 is this test's own doc's measured figure
+        // for seed 42's default floor plate at the coarsest zoom — a
+        // golden that moves on a terrain epoch, a site-roster change
+        // (caves/exotic/settlements) or a site-glyph vocabulary change,
+        // every one of which is a change somebody should look at, same as
+        // `the_site_roster_carries_every_kind_and_only_placed_kinds_carry_
+        // a_facet`'s own three golden counts.
+        assert_eq!(
+            excluded, 118,
+            "the point-site/landform exclusion moved — update this test's own doc \
+             (and re-measure, do not just paste the new number) if this is expected"
         );
     }
 
@@ -4860,6 +4963,32 @@ mod portolan_tests {
             d.cursor = hornvale_game_core::Cursor { x, y };
             let before = d.resolve_world_view();
 
+            // ABSENCE, not just invariance (review fix round 1: the
+            // original version of this test asserted only `before ==
+            // after`, which a NAME THAT LEAKS IN BOTH STATES also
+            // satisfies — proved by mutation, see this test's own doc).
+            // A settlement is the only `SiteKind` with a real committed
+            // name (`windows/vessel/src/brief.rs` passes `None` for both
+            // a cave and an exotic site), so this only fires for it;
+            // `settlement_name_for_test` returns `None` for the other two
+            // kinds' vertices and the check is skipped rather than
+            // vacuously passing on an absent name.
+            if let Some(name) = d.settlement_name_for_test(site.vertex) {
+                assert!(
+                    !name.is_empty(),
+                    "sanity: the settlement's own committed name must not be empty,                      or the absence check below is vacuous"
+                );
+                let text = before.clone().unwrap_or_default();
+                assert!(
+                    !text.contains(&name),
+                    "the {kind:?}'s own proper name {name:?} is reachable through the                      cursor readout while undiscovered: {text:?}"
+                );
+            } else if kind == SiteKind::Settlement {
+                panic!(
+                    "sanity: a centred, real settlement site must resolve to a real                      committed name, or the absence check above never ran"
+                );
+            }
+
             d.discovered_mut_for_test().record(site.feature_id());
             assert!(
                 d.discovered().contains(site.feature_id()),
@@ -4867,10 +4996,53 @@ mod portolan_tests {
             );
             let after = d.resolve_world_view();
 
+            // The absence check restated after discovery: Gate B has no
+            // mechanism that could reveal a placed site's name at all
+            // (Decision 0540's own table — the cursor readout's "name
+            // withheld" row carries no discovered/undiscovered split), so
+            // this must hold in both states, not just the one a reader
+            // might expect to be interesting.
+            if let Some(name) = d.settlement_name_for_test(site.vertex) {
+                let text = after.clone().unwrap_or_default();
+                assert!(
+                    !text.contains(&name),
+                    "the {kind:?}'s own proper name {name:?} is reachable through the                      cursor readout after discovery: {text:?}"
+                );
+            }
+
+            // Kept as a cheap regression guard (per review): a fine
+            // property on its own, just not the one this test's name
+            // promises — that is the absence check above.
             assert_eq!(
                 before, after,
-                "discovering the {kind:?} changed the cursor readout at its own screen \
-                 position — a name (or a fact derived from one) leaked through Gate B"
+                "discovering the {kind:?} changed the cursor readout at its own screen                  position — a name (or a fact derived from one) leaked through Gate B"
+            );
+
+            // STRONGER STILL, and the check that actually falsifies the
+            // review's own reproduction. The name-absence check above can
+            // only catch a leak of the REAL name; the review's own mutation
+            // injects an unconditional but FABRICATED string
+            // (`format!("Kxarrabeth-{:?}", site.kind)`) keyed on
+            // `self.sites.iter().find(|s| s.vertex == vertex_id)` — content
+            // that contains no real name at all, so neither the absence
+            // check nor the before/after equality above can see it (an
+            // unconditional fabrication is trivially invariant too). What
+            // DOES falsify it: the readout must be unaffected by whether
+            // this site is in the roster AT ALL, which is the actual
+            // structural property `resolve_world_view`/`resolve_walk_band`
+            // are supposed to have (see this test's own doc on why —
+            // `self.index` never reads `self.sites`). Removing the site
+            // from `self.sites` and re-resolving must reproduce `before`
+            // exactly; if a mutation reads `self.sites` for anything, this
+            // is what catches it regardless of what it injects.
+            let mut without_site = d.sites.clone();
+            without_site.retain(|s| s.feature_id() != site.feature_id());
+            let with_site = std::mem::replace(&mut d.sites, without_site);
+            let baseline = d.resolve_world_view();
+            d.sites = with_site;
+            assert_eq!(
+                baseline, before,
+                "the cursor readout changed depending on whether the {kind:?} was even                  in the roster — Gate B must be structurally blind to `self.sites`,                  not merely to its discovery state"
             );
 
             // The glyph itself is unmoved too, for the same reason
