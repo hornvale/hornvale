@@ -1966,3 +1966,17 @@ waiver list is append-never, so a row that must grow must also shrink.
 rc=0 (13 pre-existing warnings); the generated-path drift check clean. No
 artifact moved this round — every edit is prose in a non-generated file, so
 `make rebaseline` was not re-run.
+
+#15 [G5, two controller rulings recorded together at the close of Task 7] ·
+**Ruling J (Task 5):** the underground `take`'s refusal uses the chamber's
+sentence ("You see no {typed} here.") — the plan text said "There is no key
+here." and lost to the file's own stated discipline (one question, one
+sentence); the implementer went further and gave the sentence one producer,
+`nothing_here_named`, for the eleven sites that had each carried the format
+string · **Ruling L (Task 7):** `book/src/SUMMARY.md`'s chronicle list is
+chronological by landing, so The Brattice's line goes at the END, after The
+Plumb; the controller's "after the Crosscut" instruction was wrong and is
+withdrawn (the review read first-parent add times and found even The
+Portolan's two parts ungrouped) · Cost if wrong: none for either — a string,
+and a line's position · Ideonomy: none — a wording rule and a list rule ·
+Capture: this entry; the Task 5 and Task 7 sections carry the fixes.
