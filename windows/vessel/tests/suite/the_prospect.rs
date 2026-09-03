@@ -87,13 +87,17 @@ fn an_exotic_site_stands_at_one_facet_and_not_at_its_neighbour() {
         walk,
     );
 
+    // The Terrier hoisted the occupation register out of `brief_of`; a test
+    // builds it the same way `WorldContext::build` does.
+    let occupations = hornvale_worldgen::occupations_by_vertex(&world);
     let here = brief_of(
-        &world,
+        &occupations,
         geo,
         ctx.nearest_index(),
         &placed,
         &terrain,
         walk,
+        world.seed,
         &sites,
         &caves,
     );
@@ -110,12 +114,13 @@ fn an_exotic_site_stands_at_one_facet_and_not_at_its_neighbour() {
 
     let next: Facet = placed.neighbors()[0].clone();
     let there = brief_of(
-        &world,
+        &occupations,
         geo,
         ctx.nearest_index(),
         &next,
         &terrain,
         walk,
+        world.seed,
         &sites,
         &caves,
     );
@@ -155,13 +160,17 @@ fn a_placed_cave_is_a_site_and_is_enterable() {
     let sites = ctx.strange_sites();
     let placed = site_facet_for(caves[0], SiteReason::Cave, world.seed, geo, walk);
 
+    // The Terrier hoisted the occupation register out of `brief_of`; a test
+    // builds it the same way `WorldContext::build` does.
+    let occupations = hornvale_worldgen::occupations_by_vertex(&world);
     let here = brief_of(
-        &world,
+        &occupations,
         geo,
         ctx.nearest_index(),
         &placed,
         &terrain,
         walk,
+        world.seed,
         &sites,
         &caves,
     );
@@ -182,12 +191,13 @@ fn a_placed_cave_is_a_site_and_is_enterable() {
 
     let next: Facet = placed.neighbors()[0].clone();
     let there = brief_of(
-        &world,
+        &occupations,
         geo,
         ctx.nearest_index(),
         &next,
         &terrain,
         walk,
+        world.seed,
         &sites,
         &caves,
     );
@@ -251,13 +261,17 @@ fn salience_decides_the_winner_when_a_facet_holds_two_sites() {
     );
     let terrain = LocaleTerrain::with_fields(&ctx, None, None, None, Some(&built_set), None);
 
+    // The Terrier hoisted the occupation register out of `brief_of`; a test
+    // builds it the same way `WorldContext::build` does.
+    let occupations = hornvale_worldgen::occupations_by_vertex(&world);
     let here = brief_of(
-        &world,
+        &occupations,
         geo,
         ctx.nearest_index(),
         &placed,
         &terrain,
         walk,
+        world.seed,
         &sites,
         &caves,
     );
@@ -334,13 +348,17 @@ fn salience_decides_the_winner_at_an_exotic_cave_collision() {
     let caves = [Vertex(vertex)];
     let terrain = LocaleTerrain::new(&ctx);
 
+    // The Terrier hoisted the occupation register out of `brief_of`; a test
+    // builds it the same way `WorldContext::build` does.
+    let occupations = hornvale_worldgen::occupations_by_vertex(&world);
     let here = brief_of(
-        &world,
+        &occupations,
         geo,
         ctx.nearest_index(),
         &placed,
         &terrain,
         walk,
+        world.seed,
         &exotic_sites,
         &caves,
     );
@@ -450,13 +468,17 @@ fn a_cave_site_carries_no_name() {
     let placed = site_facet_for(caves[0], SiteReason::Cave, world.seed, geo, walk);
     let terrain = LocaleTerrain::new(&ctx);
 
+    // The Terrier hoisted the occupation register out of `brief_of`; a test
+    // builds it the same way `WorldContext::build` does.
+    let occupations = hornvale_worldgen::occupations_by_vertex(&world);
     let here = brief_of(
-        &world,
+        &occupations,
         geo,
         ctx.nearest_index(),
         &placed,
         &terrain,
         walk,
+        world.seed,
         &sites,
         &caves,
     );
@@ -502,13 +524,17 @@ fn a_settlement_sites_name_is_keyed_to_the_room() {
     );
     let terrain = LocaleTerrain::with_fields(&ctx, None, None, None, Some(&rooms), None);
 
+    // The Terrier hoisted the occupation register out of `brief_of`; a test
+    // builds it the same way `WorldContext::build` does.
+    let occupations = hornvale_worldgen::occupations_by_vertex(&world);
     let here = brief_of(
-        &world,
+        &occupations,
         geo,
         ctx.nearest_index(),
         &plain,
         &terrain,
         walk,
+        world.seed,
         &sites,
         &caves,
     );

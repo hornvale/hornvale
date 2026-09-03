@@ -29,10 +29,11 @@
 //! `Option`s this one has a live wire behind it.
 
 use crate::site::{Site, SiteKind};
-use hornvale_history::record::{Function, Notability, TechHorizon};
-use hornvale_kernel::{Facet, Geosphere, KindId, NearestVertexIndex, Vertex, World};
+use hornvale_history::record::{Function, Notability, OccupationRecord, TechHorizon};
+use hornvale_kernel::{Facet, Geosphere, KindId, NearestVertexIndex, Seed, Vertex};
 use hornvale_locale::StrangeSite;
 use hornvale_worldgen::{SiteReason, site_facet_for};
+use std::collections::BTreeMap;
 
 /// What macro history says about a place, reduced to the axes micro generation
 /// indexes. A COORDINATE in a small orthogonal space — never a label drawn from
@@ -173,15 +174,37 @@ pub(crate) fn containing_vertex(
 /// unreachable at every facet, forever, with nothing red. The membership test
 /// below has no such edge, and it is the shape `Terrain::is_built` already uses
 /// for settlement territory.
+///
+/// `seed` is the world's seed, the one thing `site_facet_for` needs from a
+/// `World` and the only reason this function ever held one. It is a parameter
+/// for exactly the reason the paragraph below gives for `occupations`: the
+/// caller has it, and a derivation path should not reach for a whole world to
+/// read one field off it.
+///
+/// `occupations` is the world's occupation register,
+/// `hornvale_worldgen::occupations_by_vertex(world)`, built ONCE by the
+/// caller (`WorldContext::build`) and handed in. **History of this
+/// parameter, kept because the note it replaces was right for five weeks
+/// before anyone measured it:** from `4569d883d` (2026-07-27) to The Terrier
+/// (2026-09-03) this function took `&World` and rebuilt the whole map on
+/// every call, under a `NOTE ON COST` that said "if a profile shows it
+/// mattering, hoist the map to the caller … do NOT memoize inside this
+/// function, because a hidden cache in a derivation path is how derived
+/// state stops being derived." The profile showed 8.7-26 ms per call and
+/// two to five calls per indoor turn — the whole of what The Rack had
+/// attributed to a 0.012 ms shadowcast. The note's prescription is what
+/// shipped, and its prohibition still stands: there is no cache here, only
+/// a parameter.
 /// type-audit: bare-ok(count: walk_depth)
-#[allow(clippy::too_many_arguments)] // `cave_sites` (Task 4, The Prospect) pushed this to 8; every parameter is a value the CALLER already holds and must not re-derive — bundling them into a struct would add a public type whose only content is "the four things `Session` keeps" and whose only reader is this function
+#[allow(clippy::too_many_arguments)] // `cave_sites` (Task 4, The Prospect) pushed this to 8, and absorbing The Terrier's `occupations` hoist to 9; every parameter is a value the CALLER already holds and must not re-derive — bundling them into a struct would add a public type whose only content is "the four things `Session` keeps" and whose only reader is this function
 pub fn brief_of(
-    world: &World,
+    occupations: &BTreeMap<Vertex, Vec<OccupationRecord>>,
     geo: &Geosphere,
     index: &NearestVertexIndex,
     place: &Facet,
     terrain: &dyn crate::liveness::Terrain,
     walk_depth: u32,
+    seed: Seed,
     exotic_sites: &[StrangeSite],
     cave_sites: &[Vertex],
 ) -> Brief {
@@ -208,7 +231,7 @@ pub fn brief_of(
     // placed set to the caller (`Session` already holds `built` exactly that
     // way), never a cache inside a derivation.
     let placed_at = |vertex: Vertex, reason: SiteReason| {
-        site_facet_for(vertex, reason, world.seed, geo, walk_depth) == locale
+        site_facet_for(vertex, reason, seed, geo, walk_depth) == locale
     };
     // Where a facet holds more than one candidate, `Site::salience` — and
     // ONLY `Site::salience` — decides which one wins (spec §6). This used to
@@ -263,16 +286,8 @@ pub fn brief_of(
     ];
     let site = candidates.into_iter().flatten().max_by_key(Site::salience);
     let alive = containing_vertex(&locale, geo, index)
-        .and_then(|vertex| {
-            // NOTE ON COST: this derives the whole per-vertex occupation map on
-            // every call. Correct but wasteful, and `brief_of` will be called
-            // per descent. If a profile shows it mattering, hoist the map to
-            // the caller (the session can hold it for the possession's life) —
-            // do NOT memoize inside this function, because a hidden cache in a
-            // derivation path is how derived state stops being derived.
-            hornvale_worldgen::occupations_by_vertex(world).remove(&vertex)
-        })
-        .and_then(|occs| occs.into_iter().find(|o| o.core.ended.is_none()));
+        .and_then(|vertex| occupations.get(&vertex))
+        .and_then(|occs| occs.iter().find(|o| o.core.ended.is_none()));
     match alive {
         Some(o) => Brief::from_parts(
             Some(o.core.function),

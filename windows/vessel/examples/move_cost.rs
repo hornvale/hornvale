@@ -8,6 +8,120 @@
 //! (and once WITHOUT `--release`, because `cargo run -p hornvale -- possess`
 //! is a debug build and that is what a player at the CLI actually feels).
 //!
+//! ## Measured — AFTER The Terrier (2026-09-03)
+//!
+//! 2026-09-03, MacBookPro, `8b4f7f49065eb69852a9e2cded0d88e50b352a75`,
+//! `--release`, seed 42. **quiet** (`uptime` before: `load averages: 2.12
+//! 2.06 2.07`, after: `2.67 2.18 2.11` — all three under The Repose's
+//! quiet-box threshold of 4), so this reading is not an upper bound the
+//! way the CONTENDED blocks below are.
+//!
+//! **The reading that redirected the campaign.** Before this fix, scratch
+//! `Instant` prints inside `derive_sighting`, `chamber_plan`,
+//! `describe_chamber_here`, `enter`, `brief_here` and `brief_of`, on this
+//! same sequence, release profile, seed 42's flagship, MacBookPro,
+//! **CONTENDED** (`uptime` load averages `28.07 25.58 22.66` on the first
+//! run and `51.01 34.28 26.41` on the second — every figure below is an
+//! upper bound, and the *split* is the finding, not the absolute):
+//!
+//! ```text
+//! step inside derive_sighting                       per call
+//!   chamber_interior_here  (= one brief_here)     8.7 – 12.6 ms
+//!   anchor_cells                                  0.086 – 0.091 ms // lexicon: anchor_cells is the function name; it places AREA-sense lattice squares, never a mesh vertex
+//!   shadowcast (SIGHT_RADIUS = 4, ≤ 81 squares)     0.011 – 0.013 ms
+//!   occupancy seat + interior_of                  0.005 – 0.006 ms
+//!   placement loop + furnishings                  0.009 – 0.013 ms
+//!
+//! step inside chamber_plan
+//!   fabric_here                                   0.003 – 0.004 ms
+//!   chamber_sources        (= one brief_here)     8.8 – 17.6 ms
+//!   light_field                                   0.060 – 0.896 ms
+//!   plan_of (+ ambient)                            0.119 – 1.023 ms
+//!
+//! inside brief_of                     n = 42 calls in the run
+//!   is_built                                      mean 0.000 ms
+//!   is_cold                                       mean 0.003 ms
+//!   containing_vertex                             mean 0.003 ms
+//!   occupations_by_vertex (452 vertices)          mean 11.421 ms, max 26.048 ms
+//! ```
+//!
+//! That split is why this campaign hoisted `occupations_by_vertex(world)`
+//! onto `WorldContext::build`, once per world, instead of touching the
+//! shadowcast the brief and The Rack both named — the shadowcast was never
+//! the cost. `brief::brief_of` reads a register now; it reconstructs
+//! nothing.
+//!
+//! ```text
+//! move_cost: seed 42, profile release; build_world 2372 ms
+//! Session::start 868 ms
+//! --- fresh session: bodies 68 on roll 68 facts 21932
+//!                   look handle     0.229 ms  snapshot     4.978 ms    69252 B
+//!                    map handle     4.020 ms  snapshot     4.172 ms    70454 B
+//!                   go n handle     0.505 ms  snapshot     4.055 ms    64685 B
+//!                   go n handle     0.462 ms  snapshot     4.073 ms    66601 B
+//!                   back handle     0.403 ms  snapshot     4.080 ms    66927 B
+//!                   back handle     0.375 ms  snapshot     4.371 ms    73645 B
+//! examine Dvoashngashngo handle     3.901 ms  snapshot     4.283 ms    73285 B
+//!                  needs handle     0.023 ms  snapshot     4.179 ms    75849 B
+//!                  enter handle     0.175 ms  snapshot     0.415 ms    25172 B
+//!                   look handle     0.114 ms  snapshot     0.381 ms    25173 B
+//!                    map handle     0.019 ms  snapshot     0.466 ms    25476 B
+//!                   go n handle     0.005 ms  snapshot     0.466 ms    24944 B
+//!                   go e handle     0.004 ms  snapshot     0.474 ms    25089 B
+//!                   go s handle     0.004 ms  snapshot     0.458 ms    25232 B
+//!                   go w handle     0.003 ms  snapshot     0.457 ms    25035 B
+//!                   look handle     0.105 ms  snapshot     0.367 ms    25171 B
+//!                    out handle     0.220 ms  snapshot     4.116 ms    73649 B
+//! 20 waits 1812 ms
+//! --- after 20 waits: bodies 68 on roll 68 facts 23487
+//!                   look handle     0.226 ms  snapshot     4.649 ms    73250 B
+//!                    map handle     4.081 ms  snapshot     4.671 ms    74485 B
+//!                   go n handle     0.493 ms  snapshot     4.333 ms    66931 B
+//!                   go n handle     0.471 ms  snapshot     4.286 ms    66856 B
+//!                   back handle     0.396 ms  snapshot     4.327 ms    67011 B
+//!                   back handle     0.361 ms  snapshot     4.331 ms    73146 B
+//! examine Dvoashngashngo handle     3.942 ms  snapshot     4.112 ms    72764 B
+//!                  needs handle     0.022 ms  snapshot     4.297 ms    74926 B
+//!                  enter handle     0.178 ms  snapshot     0.479 ms    24848 B
+//!                   look handle     0.110 ms  snapshot     0.426 ms    24848 B
+//!                    map handle     0.021 ms  snapshot     0.525 ms    25156 B
+//!                   go n handle     0.005 ms  snapshot     0.508 ms    24620 B
+//!                   go e handle     0.004 ms  snapshot     0.505 ms    24769 B
+//!                   go s handle     0.003 ms  snapshot     0.497 ms    24919 B
+//!                   go w handle     0.003 ms  snapshot     0.494 ms    24716 B
+//!                   look handle     0.095 ms  snapshot     0.412 ms    24848 B
+//!                    out handle     0.212 ms  snapshot     4.428 ms    73082 B
+//! ```
+//!
+//! **Verdict, against spec §4 P2 and P4 — the basis is The Rack's AFTER
+//! block below:**
+//!
+//! | reading | before (AFTER-Rack) | after (AFTER-Terrier) | budget | verdict |
+//! | --- | ---: | ---: | ---: | --- |
+//! | chamber `snapshot()+json` after `map`/`go n/e/s/w` | 16.3-16.8 ms | **0.457-0.525 ms** | ≤ 3 ms | MET |
+//! | `enter` handle | 33.747 ms | **0.175-0.178 ms** | ≤ 3 ms | MET |
+//! | chamber `look` handle | 16.540/16.125 ms | **0.095-0.114 ms** | ≤ 1 ms | MET |
+//! | `Session::start` | 845 ms | **868 ms (+23 ms)** | ≤ +30 ms over 845 | MET |
+//!
+//! The `Session::start` row's "before" is the AFTER-Rack block's own reading
+//! (`uptime` load averages 14.10/17.75/21.58, CONTENDED), while this block's
+//! "after" (868 ms) is read quiet — so before and after are not the same
+//! box load, and **+23 ms is a lower bound on the growth**, not a measured
+//! delta. The real answer P4's decision rule was watching for does not need
+//! a matched pair to settle: the register has exactly one builder —
+//! `occupations_by_vertex` appears in production code only inside
+//! `WorldContext::build`, which `windows/vessel/tests/suite/the_terrier.rs`'s
+//! structural scan enforces — so the cost this row is trying to bound is
+//! paid once per world, never per session or per turn, regardless of load.
+//!
+//! Outdoor rows are the control: walk-band `snapshot()+json` reads
+//! 4.055-4.978 ms here against the AFTER-Rack block's ~4.1-4.9 ms and the
+//! purview-fix block's 4.2-5.0 ms, and outdoor handle times likewise
+//! (`needs` 0.022-0.023 ms against 0.022 ms there) — unmoved, within
+//! noise. Every chamber row now reads within a tenth of a millisecond of
+//! its post-`look` sibling, the shape §4 P2 predicted once the brief was
+//! the residue rather than the shadowcast.
+//!
 //! ## Measured — AFTER the purview fix (The Rack, final review, 2026-09-02)
 //!
 //! The final review found that a walk-band `snapshot` still folded
@@ -107,13 +221,19 @@
 //! ~70 KB of JSON, which spec §4 already said it expected to be inside the
 //! budget and which this measurement says is not.
 //!
-//! **The chamber band shows what a shadowcast costs, because the memo makes
-//! it visible.** 8.4 ms after `enter`/`look`, 16.3-16.8 ms after `map` or a
-//! chamber `go` — same chamber, same turn shape. `look` derives a
-//! `Session::sighting` for its presence line and the snapshot on that turn
-//! reuses it (The Rack, Task 4); `map` and `go n` derive none, so the
-//! snapshot pays for its own. The difference, ~8 ms, is one shadowcast, and
-//! it is the largest single item left in a chamber snapshot.
+//! **The chamber band shows what a BRIEF costs, because the memo makes it
+//! visible — and this paragraph used to say "one shadowcast".** 8.4 ms
+//! after `enter`/`look`, 16.3-16.8 ms after `map` or a chamber `go` — same
+//! chamber, same turn shape. `look` derives a `Session::sighting` for its
+//! presence line and the snapshot on that turn reuses it (The Rack, Task 4);
+//! `map` and `go n` derive none, so the snapshot pays for its own. The
+//! difference, ~8 ms, was the sighting DERIVATION, and The Rack named it
+//! after the step it is named for. Decomposed by The Terrier (2026-09-03):
+//! the shadowcast at `SIGHT_RADIUS` 4 is 0.011-0.013 ms; the 8 ms was
+//! `brief::brief_of` rebuilding `occupations_by_vertex(world)` — the whole
+//! world's occupation register — on every call, once inside the sighting
+//! and once more inside `chamber_sources`. See the AFTER-Terrier block
+//! above for what a chamber snapshot costs with the register hoisted.
 //!
 //! ```text
 //! move_cost: seed 42, profile release; build_world 2422 ms
