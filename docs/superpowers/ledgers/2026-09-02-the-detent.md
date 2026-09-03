@@ -664,3 +664,39 @@ stated).
 **Ideonomy passes / overturns: 1 / 0** — a substitution pass over "where
 the O(rooms) work could hide" (the map, the witness, the scan, the set
 clone) named the map first and the measurement is what decides.
+
+## #8 [G5] — #7's verification clause named the wrong denominator
+
+**What was measured (Task 9c, Step 1, two quiet runs).** On the bench's
+shape, a fresh-memo hazard read costs 108/110 µs at tick 60 and 133/135 µs
+at tick 200; `latest_at` alone costs 14.0 µs and 31.9/33.1 µs at the same
+depths (map size 121 and 260 — exactly the probe's history, the wanderer
+premise confirmed). Share of the TOTAL: 13% and 24%. Share of the
+history-driven GROWTH — the fitted `k` that H4 (a) measures — **72–76%**:
+`latest_at` grows 2.3× over a 2.15× history growth while the rest of the
+read is the ~88 µs intercept §11.2 already fitted. Two-point elasticity of
+the read 0.270; of the read with the map removed **0.08–0.09**, against
+§4's 0.20. Cross-checks agree with §11.2 to within a few percent (implied
+`k` 0.18 vs fitted 0.171; remainder ~101 µs vs `C` +88).
+
+**The implementer stopped, correctly, because #7's first clause said "≥ 50%
+of the fresh read's cost" and 24% is not 50%.** The clause was wrong, not
+the stop: H4 (a) is a criterion about the SLOPE, and the clause tested the
+LEVEL — the exact "name the denominator" failure this project's memory
+already records. #7's second clause ("grows with depth") holds emphatically.
+
+**Decision.** Re-read #7's verification as share of the history term, which
+is the quantity the criterion is about; the hypothesis is confirmed at
+72–76%, and Steps 2–4 proceed under #7's other terms unchanged: complete
+§2.3's prefix read, prove byte-identity, take §12 interleaved against the
+same control, disclose. No threshold, constant or criterion moves; §11
+stands. **Alternatives discarded:** accepting the 50% clause as written
+(it measured a level to decide a slope question); lowering the threshold
+to fit the number (that is the metric-chasing the freeze forbids — the
+change here is to WHICH quantity is compared, and the comparison is
+recorded before the change is made). **Cost if wrong:** a §12 that reads
+0.245 again, which is itself the finding.
+
+**Ideonomy passes / overturns: 1 / 1** — the pass was the implementer's
+own tension report, which overturned the clause; recorded as such rather
+than dressed up as mine.
