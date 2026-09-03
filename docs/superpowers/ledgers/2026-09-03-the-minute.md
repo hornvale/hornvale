@@ -1,8 +1,8 @@
 # The Minute — decision ledger
 
 Campaign: `campaign/the-minute` · Spec:
-`docs/superpowers/specs/2026-09-03-the-minute-design.md` · Plan: (written
-after G3) · Decision block: 0656–0665.
+`docs/superpowers/specs/2026-09-03-the-minute-design.md` · Plan:
+`docs/superpowers/plans/2026-09-03-the-minute.md` · Decision block: 0656–0665.
 
 Written on the campaign's own branch as each ruling is made (The Cartulary,
 decision 0486). Entries before the plan exists use the numbered form.
@@ -61,7 +61,7 @@ move while a frame is open strands the frame. What happens?
 
 **Decision:** When possessed AND a frame is open, the solo walk is asked
 through a `PlayerController` (Hold): arbitration runs, the felt state is
-written by `resolve`, no fact commits. Spec §3.3. **Flagged for G3 as a
+written (by `write`, since #7 deleted `resolve`), no fact commits. Spec §3.3. **Flagged for G3 as a
 fidelity cut.**
 
 **Why:** `Session.inside`'s doc: "the possessed agent's own `position`
@@ -140,6 +140,56 @@ question; stated explicitly rather than left blank.
 
 `the-tally` and `the-docket` both exist as worktrees; `the-minute` has no
 branch, worktree, spec or chronicle. Trivial; no pass.
+
+### #6 [G4] — the spec said the gate's `Asleep` row was a fold; it is a field
+
+**Question:** Spec §3.5 claimed a walk-committed `slept` would make the
+gate read `Asleep` "without further work".
+
+**Decision:** False, and corrected in the spec (pre-merge, own record).
+`Session::body_state` matches on `self.wake_at`, which only `Session::sleep`
+sets. The plan adds `wake_after(facts, now) -> Option<WorldTime>` and sets
+the field from the driven commit by the verb's own rule (Task 3).
+
+**Why:** Read `body_state` (`session.rs:3494`) and `sleep` (`:3762`) while
+writing Task 3, rather than the doc comment that described the gate. The
+walk's `slept` fact carries its span as the object (`bout_fact`) and
+`advance_one` lets a sleep run past `to`, so the case is real.
+
+**Alternatives discarded:** derive `wake_at` from the ledger for BOTH the
+verb and the walk (a bigger change to a field the verb already owns; a
+followup if anyone wants `body_state` to be a pure fold).
+
+**Ideonomy passes / overturns:** none run — a correction of a false claim,
+not a design choice; stated explicitly.
+
+**Capture actions:** spec §3.5 amended; retrospective (Task 6) carries the
+lesson: the claim was written from reasoning about a fold and the cure was
+reading the two functions.
+
+### #7 [G4] — `Roster::resolve` goes
+
+**Question:** Spec §3.2 kept `resolve` for the off-band arm's felt-only
+write.
+
+**Decision:** Delete it; `write` is correct for a Holding walk too, since
+its position equals the column. Spec §3.2 amended.
+
+**Why:** Its only caller is the line the campaign replaces
+(`grep -rn "\.resolve(" windows/vessel` → one site in `wait`, one inside
+`write` itself). A second writer that is only ever correct when it agrees
+with the first is a second way to be wrong.
+
+**Ideonomy passes / overturns:** none run — a code-grounded simplification
+found while writing the plan; stated explicitly.
+
+**Capture actions:** spec §3.2; plan Task 2 step 3.
+
+### G4 — plan self-review
+
+Spec coverage, placeholder scan and type consistency are recorded at the
+foot of the plan. Two corrections came out of writing it (#6, #7); no
+section of the spec is without a task.
 
 ## Followups (promoted to the retrospective at close)
 

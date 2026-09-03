@@ -160,11 +160,12 @@ which the driven walk now is. `driven_written.position` is the walk's own
 loop just committed, so the column and `agent_position(&ledger)` agree by
 construction; P3 pins it rather than trusting the sentence.
 
-`Roster::resolve` keeps its job — the write for a body whose arbitration
-resolved something the ledger did not record — but its doc's example ("the
-driven body is that case, and it is not an edge one") is deleted, because
-it is no longer that case. It stays as a method because the off-band rule
-(§3.3) still needs a felt-only write.
+`Roster::resolve` — the felt-only write for a body whose arbitration
+resolved something the ledger did not record — is deleted with its only
+caller. *Amended at plan-writing (ledger #7): an earlier draft kept it for
+the off-band rule (§3.3), but a Holding walk's position equals the column,
+so `write` is correct there too and a second writer would only be a second
+way to be wrong.*
 
 ### 3.3 Off the walk band, a held body holds
 
@@ -226,10 +227,19 @@ Everything downstream of the ledger is now current for a held body without
 further work, because it was always a fold: `Session::needs`' resident
 folds, `learned_helplessness`, the catch-up in `step_one_with_controller`
 (which reconstructs decisions "since the last committed room-entry" and now
-has one), the gate's `Asleep` row after a `slept` the walk committed, and
-the snapshot's `self` entry. One consequence is worth its own assertion: a
-body that fell asleep under the hold is asleep when `!unpossess` releases
-it, and IC verbs refuse for that reason until the span ends.
+has one), and the snapshot's `self` entry.
+
+**One thing is NOT a fold, and an earlier draft of this paragraph said it
+was (corrected at plan-writing, ledger #6).** The gate's `Asleep` row does
+not read `slept` facts: `Session::body_state` reads `Session.wake_at`, a
+session field the `sleep` VERB sets from the span it commits. A held body's
+walk can sleep past the tick's end (`advance_one` advances its clock by the
+span and stops when it passes `to`), so a walk-committed `slept` must set
+the field by the same rule the verb applies, or a released body would be
+awake at the gate while its ledger says asleep. A pure `wake_after(facts,
+now)` does it — the latest end of any `slept` among the tick's driven facts
+that ends after `now` — unit-tested with synthetic facts, since no seed is
+known to sleep across a tick boundary on demand.
 
 Not reached, deliberately: the driven walk's within-room `Occupancy` is
 built and dropped inside `step_one_with_controller` today and still is —
