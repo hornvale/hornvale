@@ -5256,6 +5256,14 @@ impl<'w> Session<'w> {
         // exactly as a shut door should. What Task 5 replaces is this
         // closure's BODY; the seam it is passed through is already the one
         // it will use.
+        //
+        // CONSEQUENCE WORTH SEEING FROM HERE: `look`'s ways-on report stays
+        // geometric this task, so it lists a threshold this closure will
+        // refuse (and a sump a non-swimmer cannot cross). Held deliberately
+        // — an actor-aware report while this closure answers `false`
+        // everywhere would hide every plan-gated threshold in the descent.
+        // Task 5 closes both halves together; see
+        // `Self::underground_ways_from_cell`'s own doc.
         let shut = |_: crate::lattice::Cell| false;
         let who = crate::underground::Traverser {
             locomotion: self.driven_body().locomotion(),
@@ -5309,8 +5317,12 @@ impl<'w> Session<'w> {
                     // having "stepped" across it.
                     crate::underworld_level::MovementMode::Swim => "swim",
                     // No cell kind answers `Fly` (flight takes an edge, not
-                    // a cell), so this arm is the walk-and-wade default and
-                    // nothing else.
+                    // a cell), so this arm is the walk default and nothing
+                    // else. `Underground::admits` writes the same
+                    // impossibility as `unreachable!` and this one does not,
+                    // deliberately: a narration that says "step" for a mode
+                    // nobody can be in is harmless, where an ADMISSION that
+                    // silently let an unknown mode through would not be.
                     crate::underworld_level::MovementMode::Walk
                     | crate::underworld_level::MovementMode::Fly => "step",
                 };
@@ -5446,7 +5458,18 @@ impl<'w> Session<'w> {
         let by_chute = if want_down {
             here == Some(crate::underworld_level::LevelCellKind::Drop)
         } else {
-            chute_above && here != Some(crate::underworld_level::LevelCellKind::StairsUp)
+            // Mirrors `peek_stairs`'s arm ORDER rather than trusting the
+            // realizer never to put one of these under a chute: every
+            // kind-driven arm there wins over the chute-overhead arm, so a
+            // cell that is itself a stairway or a lip narrates as what it
+            // is, whatever sits above it.
+            chute_above
+                && !matches!(
+                    here,
+                    Some(crate::underworld_level::LevelCellKind::StairsUp)
+                        | Some(crate::underworld_level::LevelCellKind::StairsDown)
+                        | Some(crate::underworld_level::LevelCellKind::Drop)
+                )
         };
         let on_a_way = if want_down {
             matches!(
@@ -5602,9 +5625,17 @@ impl<'w> Session<'w> {
     /// that chamber is now consulted only to gate whether the cave mouth
     /// leads anywhere at all (`delve_at`'s sealed check), and a descent's
     /// rungs are not stratum-addressed the way that single entrance bucket
-    /// was. `underground_footing_word` reports the one thing the real
+    /// was. [`underground_footing_words`] reports the one thing the real
     /// generated level actually says about the cell the possession stands
-    /// on: whether it is dry or `Flooded`.
+    /// on: its footing.
+    ///
+    /// **Five kinds, not two** (The Brattice, Task 4). This paragraph read
+    /// "whether it is dry or `Flooded`" while the realizer had already begun
+    /// placing three more, all of which fell through to "dry". `Deep`,
+    /// `Threshold` and `Drop` each have their own phrase now; anything else
+    /// is still dry. This method takes the PHRASE half of the pair — the
+    /// half that completes "The rock here is ___." — and
+    /// [`Session::underground_nouns`] takes the typeable label beside it.
     fn describe_underground_here(&self) -> String {
         let ug = self
             .underground
@@ -5633,6 +5664,31 @@ impl<'w> Session<'w> {
     /// walk the level, which made the fixed sentence a one-turn observable
     /// contradiction the moment it landed (`look` says the only way on is
     /// out, `go n` immediately proves that false).
+    ///
+    /// **THE REPORT IS GEOMETRIC, AND SINCE THE BRATTICE THAT IS
+    /// OBSERVABLE.** The paragraph above, and the comment inside the loop,
+    /// both argued that the sentence "must report what `go` can do" — the
+    /// fix for a `look`/`go` disagreement, and now itself an over-claim in
+    /// the other direction. What this reports is what the ROCK OFFERS: a
+    /// neighbour is a way on when
+    /// [`crate::underworld_level::movement_mode`] has any answer for it,
+    /// the same oracle the corner rule asks and NOT
+    /// [`crate::underground::Underground::admits`]. Two cases where `go`
+    /// then refuses (The Brattice, spec §3.6):
+    ///
+    /// - a sump (`Deep`) beside a body that cannot swim, and
+    /// - a `Threshold` whose plan gate hangs a door that stands shut.
+    ///
+    /// Both are things a player can SEE — water is visible, and a door is a
+    /// door — so listing them and refusing on the attempt is defensible
+    /// where the fixed `"Ways on: out."` was not. It is nonetheless a
+    /// divergence, held deliberately for exactly one task: the door oracle
+    /// answers `false` everywhere until Task 5 folds the ledger (spec
+    /// §3.7), so making this report actor-aware NOW would hide every
+    /// plan-gated threshold in the descent behind a report that looked
+    /// authoritative. **Task 5 makes the report actor-aware** (controller
+    /// Ruling I); until then the loop below stays geometric on purpose,
+    /// not by omission.
     fn underground_ways_from_cell(&self) -> String {
         let Some(ug) = self.underground.as_ref() else {
             return String::new();
@@ -5643,8 +5699,12 @@ impl<'w> Session<'w> {
         }
         // All eight, corner rule applied — the same argument this method's own doc
         // makes above about the fixed `"Ways on: out."` it replaced: the sentence
-        // must report what `go` can do, and `go` walks diagonals now (spec section
-        // 3.1). A bearing the corner rule refuses is not a way on.
+        // reports the ways the ROCK offers, and `go` walks diagonals now (spec
+        // section 3.1). A bearing the corner rule refuses is not a way on.
+        //
+        // `movement_mode(..).is_some()`, never `Underground::admits` — this is
+        // the geometric oracle, and deliberately so until Task 5: a sump or a
+        // shut door is listed here and refused by `go`. See the doc above.
         let closed = |c: crate::lattice::Cell| {
             ug.level()
                 .cells
@@ -15310,7 +15370,9 @@ mod tests {
     /// pairwise distinct: a phrase that reads well but says the same thing
     /// as another is the failure a lookup-table test cannot see. The
     /// `examine` label is checked in the same pass, because it is the half
-    /// a player types and it may not carry the article the sentence needs.
+    /// a player types and it may not carry the article the sentence needs —
+    /// and it is deduped SEPARATELY from the phrases, since two kinds could
+    /// read as different sentences and still collapse to one noun.
     #[test]
     fn each_live_footing_kind_reads_as_its_own_sentence() {
         use crate::underworld_level::LevelCellKind as K;
@@ -15325,7 +15387,8 @@ mod tests {
         session.delve_at(vertex, cave);
         let here = session.underground.as_ref().expect("descended").cell;
 
-        let mut said: Vec<String> = Vec::new();
+        let mut phrases: Vec<String> = Vec::new();
+        let mut labels: Vec<String> = Vec::new();
         for (kind, phrase, label) in [
             (K::Floor, "dry", "dry"),
             (K::Flooded, "flooded", "flooded"),
@@ -15346,16 +15409,22 @@ mod tests {
                 nouns.iter().any(|n| n.matches(label)),
                 "{kind:?}'s footing must be examinable as {label:?}"
             );
-            said.push(phrase.to_string());
+            phrases.push(phrase.to_string());
+            labels.push(label.to_string());
         }
-        let mut sorted = said.clone();
-        sorted.sort();
-        sorted.dedup();
-        assert_eq!(
-            sorted.len(),
-            said.len(),
-            "every live kind must read differently: {said:?}"
-        );
+        // Both halves, deduped SEPARATELY: two kinds can read as different
+        // sentences and still collapse to one typeable noun, which would
+        // make one of them unexaminable while the prose looked fine.
+        for (what, seen) in [("phrase", &phrases), ("label", &labels)] {
+            let mut sorted = seen.clone();
+            sorted.sort();
+            sorted.dedup();
+            assert_eq!(
+                sorted.len(),
+                seen.len(),
+                "every live kind must have its own {what}: {seen:?}"
+            );
+        }
     }
 
     /// THE BRATTICE, spec §3.6, through the session's own verbs: the same

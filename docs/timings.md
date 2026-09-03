@@ -5066,3 +5066,6 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-03T02:54:17Z | gate-commit | 94.940 | 63.607 | 30.610 | 0.99 | 0 | 18ebef43c | campaign/the-brattice | ambrose | 12 |
 | 2026-09-03T03:18:59Z | rebaseline | 132.098 | 317.709 | 12.182 | 2.50 | 0 | bf124e477 | campaign/the-brattice | ambrose | 12 |
 | 2026-09-03T03:26:42Z | gate-commit | 146.654 | 326.621 | 60.048 | 2.64 | 0 | bf124e477 | campaign/the-brattice | ambrose | 12 |
+| 2026-09-03T03:42:53Z | gate-commit | 90.429 | 43.920 | 20.815 | 0.72 | 0 | 29ae4d630 | campaign/the-brattice | ambrose | 12 |
+| 2026-09-03T03:43:50Z | gate-commit | 50.895 | 38.531 | 12.077 | 0.99 | 0 | 29ae4d630 | campaign/the-brattice | ambrose | 12 |
+| 2026-09-03T03:44:57Z | gate-commit | 60.430 | 45.765 | 15.506 | 1.01 | 0 | 29ae4d630 | campaign/the-brattice | ambrose | 12 |

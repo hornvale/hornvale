@@ -576,9 +576,9 @@ impl Underground {
             // cell. Stated rather than silently folded into the catch-all
             // below, which would admit a flight-only cell to every walker
             // the day one is minted.
-            Some(crate::underworld_level::MovementMode::Fly) => unreachable!(
-                "no LevelCellKind answers Fly: flight takes an edge, not a cell                  (The Brattice, spec §3.6)"
-            ),
+            Some(crate::underworld_level::MovementMode::Fly) => {
+                unreachable!("no LevelCellKind answers Fly: flight takes an edge, not a cell")
+            }
             Some(_)
                 if kind == LevelCellKind::Threshold
                     && self.has_door(cell)

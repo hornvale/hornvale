@@ -1255,3 +1255,61 @@ properly.
 the AREA sense (an underworld level's grid square), which is what the
 inventory records; the guard reddened and the ceilings were raised by hand
 rather than by `HV_LEXICON_REBASELINE`, which would have rewritten every row.
+
+## Task 4 - fix round 1 - complete
+
+Two Important findings, four minors and one named deviation, all doc-or-shape;
+no behaviour changed except MINOR #3, which widened a guard the realizer never
+exercises.
+
+**Important #1 - the ways-on report's doc asserted a contract Task 4 broke.**
+`underground_ways_from_cell`'s doc and its in-loop comment both said the
+sentence "must report what `go` can do" — The Gallery's own fix for a
+`look`/`go` disagreement, and an over-claim in the other direction the moment a
+sump or a shut door existed. **Controller Ruling I: the BEHAVIOUR stays
+geometric this task and Task 5 makes the report actor-aware.** Making it
+actor-aware now would hide every plan-gated threshold in the descent, because
+the door oracle answers `false` everywhere until §3.7's fold lands. So the doc
+was qualified rather than the code changed: it reports what the ROCK OFFERS,
+the two divergent cases are named (a sump beside a non-swimmer, a shut door),
+the loop comment says `movement_mode` and never `admits` and why, and the same
+note sits at the `door_open: &shut` closure so a reader arriving at either site
+sees the other.
+
+**Important #2** - `describe_underground_here`'s doc named the renamed
+`underground_footing_word` and said the footing is "dry or `Flooded`". It now
+names `underground_footing_words`, says five kinds, and says which half of the
+pair this caller takes.
+
+**Minor #3** - `by_chute`'s `up` arm excluded only `StairsUp`; it now excludes
+`StairsUp | StairsDown | Drop`, with a comment saying it mirrors `peek_stairs`'s
+arm ORDER rather than trusting the realizer never to place one of those under a
+chute. The two now agree structurally, not by coincidence — which is the
+concern Task 4's own self-review raised about itself.
+
+**Minor #4** - the `unreachable!` message in `admits` carried ~18 stray spaces,
+`cargo fmt` having joined a line continuation inside the string literal. One
+clean sentence now; the spec citation moved out of the panic text into the
+comment above it, where it was already stated.
+
+**Minor #6** - `each_live_footing_kind_reads_as_its_own_sentence` deduped
+phrases only. It now collects and dedups the typeable LABELS in the same pass,
+so two kinds reading as different sentences while collapsing to one noun -
+which would make one of them unexaminable while the prose looked fine - fails.
+
+**Deviation, named** - the session's `MovementMode` narration folds `Fly` into
+the `"step"` default while `admits` writes the same impossibility as
+`unreachable!`. Kept, with a comment saying why: a narration that says "step"
+for a mode nobody can be in is harmless; an ADMISSION that silently let an
+unknown mode through is not.
+
+**Gates.** `hornvale-vessel` 626 lib (65.0 s) + 388 suite (145.8 s), 0 failed —
+including `underground::tests` (13/13), `each_live_footing_kind_reads_as_its_
+own_sentence`, `the_chute_and_the_sump_read_the_body_that_walks_them` and
+`underground_ways_on_agrees_with_the_levels_real_neighbours`, which computes its
+expectation with the geometric oracle and is therefore the test that would have
+reddened had the behaviour moved. `fmt --check` clean; workspace clippy
+`-D warnings` rc=0. `gate-commit` rc=0 (60.430 s, 1432 + 1387 +
+1116 subfloor tests) after the lexicon ceiling for `session.rs` moved 648 ->
+652: the four new tokens are the fix round's own comments, all the AREA sense
+(a level's grid square), the same reason the round before raised it.
