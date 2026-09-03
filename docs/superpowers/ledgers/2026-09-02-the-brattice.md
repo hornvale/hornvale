@@ -1313,3 +1313,19 @@ reddened had the behaviour moved. `fmt --check` clean; workspace clippy
 1116 subfloor tests) after the lexicon ceiling for `session.rs` moved 648 ->
 652: the four new tokens are the fix round's own comments, all the AREA sense
 (a level's grid square), the same reason the round before raised it.
+
+#12 [G5, controller ruling during Task 4] — `look` lists what `go` refuses ·
+**Ruling I: the ways-on report stays geometric through Task 4 and becomes
+actor-aware in Task 5, when the door oracle reads the ledger fold** · Why:
+Task 4's `door_open` oracle answers `false` everywhere until §3.7 lands, so an
+actor-aware report today would hide every plan-gated threshold rather than
+show a shut door; The Gallery's own fix-round finding was the mirror image
+("look says the only way on is out, go n proves that false"), so the
+disagreement is a known shape with a known cost, carried one task rather than
+papered over — the doc at `underground_ways_from_cell` and at the oracle's
+call site now say so · Discarded: making the report actor-aware now (hides
+doors); leaving the doc asserting the old contract (the review's Important #1)
+· Ideonomy: none — a sequencing ruling · Capture: Task 5's dispatch carries
+the requirement; the implementer's own Ruling H (the footing word as a
+`(phrase, label)` pair, because a second caller uses it as a typeable noun) is
+recorded in the Task 4 section and judged sound by the review.
