@@ -813,3 +813,60 @@ its fix is one filter predicate.
 
 *Capture.* This entry; one fix wave; the retrospective — the seam is the
 headline finding for the process half.
+
+---
+
+#19 [G5] — **The fix for "a cost figure that understates its command" shipped
+three figures that understated the measurements taken to produce them. Fourth
+instance of one pattern; the last one is mine.**
+
+*What happened.* Finding 2 of the final review was that `2.443 s` — measured on
+a 28-test filter — was quoted as the cost of the shipped 60-test one. The fix
+wave replaced it with a range in three documents. Every one of the three was
+below the evidence:
+
+| document | shipped | observed max |
+|---|---|---|
+| the registry row | 5.7–**17** s | 23.972 s |
+| spec §4 | 5.7–**20.2** s | 23.972 s |
+| the hook comment | 5.7–**20.2** s | 23.972 s |
+
+The full set of measurements of the wide filter, across three parties on one
+box: **5.664, 7.468, 10.249, 11.41, 16.015, 17.212, 20.194, 23.972**.
+
+*Two distinct errors, and mine is the worse one.* The `17` is **mine**: I
+pre-supplied that cell as verbatim text, capped at 600 characters, from the
+figures I had at the time — and then handed it over with an instruction not to
+alter it, which converted my stale number into one the implementer was
+forbidden to correct. It flagged the inconsistency in its report rather than
+silently diverging, which is the only reason this was caught. The `20.2` is
+the fix wave's, written while its own maximum was 23.972 s in the same
+session — a number rounded from recollection rather than read off the run.
+
+*The pattern, stated once.* This is the fourth time in this campaign that a
+figure was written from memory of a measurement instead of the measurement:
+the inherited `~1 s`, the `900` raw rows, the `2.443 s` attributed to the wrong
+command, and now three ranges. **Every instance was caught by someone
+re-deriving it, never by anyone re-reading it.** That is the campaign's finding
+about itself, and it now has four data points inside the campaign's own
+documents.
+
+*Ruling.* All three set to **5.7–24.0 s**, the observed maximum, with the
+ceiling described as the highest run seen rather than a bound. The registry
+cell stays at 581 characters — `17` and `24` are the same width, which is why
+the capped cell could absorb the correction at all.
+
+*And the lesson about the mechanism, not the numbers:* handing a subagent
+verbatim text it may not alter makes my errors unfixable by the party best
+placed to notice them. The cap made that necessary here; the mitigation is
+that the implementer was told to report a mismatch rather than resolve it, and
+it did.
+
+*Cost if wrong.* None to behaviour. If a future run exceeds 24 s the figure is
+low again — which is why it now says "highest observed", not "up to".
+
+*ideonomy passes / overturns.* 0 / 0 — a measurement corrected against its own
+evidence.
+
+*Capture.* This entry; the three documents; the retrospective, where this is
+the fourth and final instance of the campaign's central pattern.

@@ -279,7 +279,7 @@ shipped `docs-tests` target runs eight predicates, 60 tests (62 once
 `temp_path_ratchet` was added in the same fix wave), and warm re-measurements
 of that wider filter came in at **5.664 s, 10.249 s, 16.0 s, 17.2 s** (mine
 and the reviewer's, same box, different load) and 20.2 s (`real`, this fix
-wave) — a **5.7–20.2 s** warm range. The pole is `repose_byte_identity`'s
+wave) — a **5.7–24.0 s** warm range. The pole is `repose_byte_identity`'s
 three worldgen probes (seed-42 almanac/world-json/scene, each several seconds
 on their own), which are inherently that costly and not primarily a symptom
 of box contention. The cold build figure (234.6 s) is unaffected: `nextest`
@@ -289,7 +289,7 @@ tests from it, so build cost does not vary with the filter.
 ### Why it is still worth paying
 
 A campaign's docs-only commits cluster after one absorption, so the realistic
-cost is the cold build **once** plus ~5.7–20.2 s each thereafter: roughly
+cost is the cold build **once** plus ~5.7–24.0 s each thereafter: roughly
 `234 + 11 × 5.7 ≈ 297 s` to `234 + 11 × 20.2 ≈ 456 s` per absorption cycle
 for a twelve-commit campaign. The alternative is a merge phase reddening on
 the canonical box after taking the serial claim, on a run that costs

@@ -363,7 +363,7 @@ rust_relevant='\.rs$|(^|/)Cargo\.(toml|lock)$|(^|/)clippy\.toml$|(^|/)rustfmt\.t
 # narrower 28-test `test(docs_consistency)` filter, not the shipped
 # eight-predicate, 60/62-test `docs-tests` filter. Warm re-measurements of
 # the shipped filter: 5.664 s, 10.249 s, 16.0 s, 17.2 s and 20.2 s — a
-# 5.7-20.2 s range, the pole being `repose_byte_identity`'s three worldgen
+# 5.7-24.0 s range, the pole being `repose_byte_identity`'s three worldgen
 # byte-identity probes (seconds-scale on their own), not primarily box
 # contention. Cold is still ~234.6 s, because the wall there is the BUILD of
 # the `suite` binary, which nextest compiles in full regardless of which
@@ -371,7 +371,7 @@ rust_relevant='\.rs$|(^|/)Cargo\.(toml|lock)$|(^|/)clippy\.toml$|(^|/)rustfmt\.t
 # filter. The cold case is not rare — a chronicle or retrospective commit
 # right after absorbing main is exactly when the tree is cold. It is paid
 # deliberately: a campaign's docs commits cluster after one absorption, so
-# the cost is the cold build once plus ~5.7-20.2 s each thereafter, against
+# the cost is the cold build once plus ~5.7-24.0 s each thereafter, against
 # a merge phase reddening at ~1129-1595 s on the box everything else is
 # queued behind.
 if ! git diff --cached --name-only --diff-filter=ACMR | grep -qE "$rust_relevant"; then
