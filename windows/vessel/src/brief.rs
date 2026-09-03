@@ -28,8 +28,11 @@
 //! the day a population-gated pattern is written, and unlike the seven absent
 //! `Option`s this one has a live wire behind it.
 
+use crate::site::{Site, SiteKind};
 use hornvale_history::record::{Function, Notability, OccupationRecord, TechHorizon};
-use hornvale_kernel::{Facet, Geosphere, KindId, NearestVertexIndex, Vertex};
+use hornvale_kernel::{Facet, Geosphere, KindId, NearestVertexIndex, Seed, Vertex};
+use hornvale_locale::StrangeSite;
+use hornvale_worldgen::{SiteReason, site_facet_for};
 use std::collections::BTreeMap;
 
 /// What macro history says about a place, reduced to the axes micro generation
@@ -55,12 +58,20 @@ pub struct Brief {
     pub built: bool,
     /// Whether warmth matters here — `Terrain::is_cold` at the WALK band.
     pub cold: bool,
+    /// The site here, if any — the gate every enterable place hangs off.
+    /// Decision 0666. For a settlement this mirrors [`Self::built`]; an exotic
+    /// site and a cave are each the placed address
+    /// `hornvale_worldgen::site_facet_for` gives them, under their own
+    /// `hornvale_worldgen::SiteReason` so that a vertex warranting both does
+    /// not put them at one facet.
+    pub site: Option<Site>,
 }
 
 impl Brief {
     /// Assemble a brief from already-resolved parts. Exists so the type can be
     /// unit-tested without a world; `brief_of` is the production path.
     /// type-audit: bare-ok(flag: built), bare-ok(flag: cold), bare-ok(count: peak_population)
+    #[allow(clippy::too_many_arguments)] // `site` (Task 2, The Prospect) pushed this to 8; the parameters ARE `Brief`'s fields, and the whole point of this constructor is to assemble them without a world to derive `site` from
     pub fn from_parts(
         function: Option<Function>,
         tech: Option<TechHorizon>,
@@ -69,6 +80,7 @@ impl Brief {
         peak_population: u32,
         built: bool,
         cold: bool,
+        site: Option<Site>,
     ) -> Self {
         Self {
             function,
@@ -78,6 +90,7 @@ impl Brief {
             peak_population,
             built,
             cold,
+            site,
         }
     }
 
@@ -140,6 +153,34 @@ pub(crate) fn containing_vertex(
 /// chamber and its locale yield the same brief — which is what makes a
 /// structure's chambers agree about what building they are in.
 ///
+/// `exotic_sites` is the world's placed exotic regimes
+/// (`hornvale_locale::LocaleContext::strange_sites`) and `cave_sites` is the
+/// vertices holding a cave (`GeneratedTerrain::cave_site_vertices`, which is
+/// one pass of `cave_at` over the grid). Both are parameters rather than
+/// something derived here because a `LocaleContext` is expensive and the
+/// caller already holds one; the same reason `geo` and `index` are parameters.
+/// `cave_sites` is much the longer roster of the two — ~870-2,440 vertices
+/// against ~100 — so a caller that asks per turn should hold it rather than
+/// re-scan the grid, which costs ~2.9 ms (`Session` does exactly that).
+///
+/// **The exotic read runs site→facet, not facet→site, and that direction is
+/// deliberate.** The cheap-looking alternative — resolve `locale`'s containing
+/// vertex, then ask whether that vertex holds a site — is O(1) but silently
+/// wrong at the edges: `hornvale_worldgen::site_facet_for` places an address
+/// inside a cube-sphere quad around the vertex, and the cube-sphere quad mesh
+/// and the icosphere vertex mesh have been unrelated since The Pavement, so an
+/// address may land where [`containing_vertex`] answers with a NEIGHBOUR. Under
+/// that direction such a site would exist in the world's own listing and be
+/// unreachable at every facet, forever, with nothing red. The membership test
+/// below has no such edge, and it is the shape `Terrain::is_built` already uses
+/// for settlement territory.
+///
+/// `seed` is the world's seed, the one thing `site_facet_for` needs from a
+/// `World` and the only reason this function ever held one. It is a parameter
+/// for exactly the reason the paragraph below gives for `occupations`: the
+/// caller has it, and a derivation path should not reach for a whole world to
+/// read one field off it.
+///
 /// `occupations` is the world's occupation register,
 /// `hornvale_worldgen::occupations_by_vertex(world)`, built ONCE by the
 /// caller (`WorldContext::build`) and handed in. **History of this
@@ -155,6 +196,7 @@ pub(crate) fn containing_vertex(
 /// shipped, and its prohibition still stands: there is no cache here, only
 /// a parameter.
 /// type-audit: bare-ok(count: walk_depth)
+#[allow(clippy::too_many_arguments)] // `cave_sites` (Task 4, The Prospect) pushed this to 8, and absorbing The Terrier's `occupations` hoist to 9; every parameter is a value the CALLER already holds and must not re-derive — bundling them into a struct would add a public type whose only content is "the four things `Session` keeps" and whose only reader is this function
 pub fn brief_of(
     occupations: &BTreeMap<Vertex, Vec<OccupationRecord>>,
     geo: &Geosphere,
@@ -162,10 +204,87 @@ pub fn brief_of(
     place: &Facet,
     terrain: &dyn crate::liveness::Terrain,
     walk_depth: u32,
+    seed: Seed,
+    exotic_sites: &[StrangeSite],
+    cave_sites: &[Vertex],
 ) -> Brief {
     let locale = crate::depth::truncate_to_walk(place, walk_depth);
     let built = terrain.is_built(&locale);
     let cold = terrain.is_cold(&locale);
+    //
+    // NOTE ON COST: like the occupation map below, this re-derives every placed
+    // site's address on every call, and a miss walks the whole list.
+    //
+    // THE LIST IS 5-15x LONGER THAN THIS NOTE USED TO SAY. It read "the budget
+    // caps placement at 1% of land vertices, so a miss walks the whole list".
+    // `BUDGET_FRACTION = 0.01` (`windows/locale/src/budget.rs`) binds EXOTIC
+    // sites only — ~100-180 of them. Caves are uncapped: H3
+    // (`windows/lab/tests/suite/site_density.rs`) measures 874/1,647/1,681/
+    // 1,116/2,440 cave vertices on seeds 42/13/7/1/100, i.e. 7-13% of land
+    // vertices, and `cave_sites` is the parameter this function scans. The
+    // doc above already says cave_sites is "much the longer roster of the two
+    // — ~870-2,440 vertices against ~100"; this note contradicted it two
+    // paragraphs later by pricing the whole scan at the exotic budget.
+    //
+    // `brief_of` runs on every `look` and every `enter` (`session.rs`), so the
+    // per-turn cost is real. Same remedy if a profile ever shows it: hoist the
+    // placed set to the caller (`Session` already holds `built` exactly that
+    // way), never a cache inside a derivation.
+    let placed_at = |vertex: Vertex, reason: SiteReason| {
+        site_facet_for(vertex, reason, seed, geo, walk_depth) == locale
+    };
+    // Where a facet holds more than one candidate, `Site::salience` — and
+    // ONLY `Site::salience` — decides which one wins (spec §6). This used to
+    // be an if/else chain (settlement, then exotic, then cave) that stated
+    // the same order `Site::salience` states, independently: change one and
+    // the other silently keeps the old order, the same two-sources-of-truth
+    // shape the two cave predicates this campaign found and fixed earlier
+    // were. Assembling every candidate the facet could hold and taking the
+    // maximum BY `Site::salience` makes that function load-bearing rather
+    // than aspirational, and reduces this call site to consulting exactly
+    // one AUTHORITY for the order. It is not the only STATEMENT of it —
+    // `SiteKind`'s own `derive(Ord)` (`site.rs`) declares
+    // `Cave < Exotic < Settlement`, identical to this ranking, and nothing
+    // enforces that the two agree if either changes. Two statements, one
+    // authority: this call site reads only `Site::salience`, never the
+    // derived `Ord`.
+    // `salience` returns `u8`, so the comparison is exact — no float, no
+    // `total_cmp` — and no tie is reachable today: each kind contributes at
+    // most one candidate here, and every kind's own salience is distinct.
+    //
+    // NOTE ON COST: this array's three elements are evaluated unconditionally,
+    // where the if/else chain it replaced short-circuited — a BUILT facet used
+    // to stop at the settlement arm and never touch the `exotic_sites` or
+    // `cave_sites` scans, and now runs both `.any(…)` scans regardless. Measured
+    // at or under noise (~0.2-0.3 s over 300 turns, interleaved release
+    // binaries) and judged not worth fixing at this campaign's scale; recorded
+    // here so the next reader does not re-derive it.
+    let candidates = [
+        // THE NAME COMES FROM THE PLACE, NOT FROM THE POSSESSION (Task 7).
+        // `Terrain::settlement_name` reads the injected settlement-territory
+        // map, keyed by ROOM — the same entry `is_built` just tested — so the
+        // name belongs to the facet. The tempting alternative,
+        // `liveness::village_or_fallback`, resolves the possessed BODY's own
+        // home village: identical at the flagship, because a possession
+        // starts in its own village, and a one-turn observable falsehood
+        // anywhere else. A cave and an exotic site take `None`: neither has a
+        // name and neither may borrow one.
+        built.then(|| {
+            Site::placed(
+                SiteKind::Settlement,
+                terrain.settlement_name(&locale).map(str::to_string),
+            )
+        }),
+        exotic_sites
+            .iter()
+            .any(|site| placed_at(Vertex(site.vertex), SiteReason::Exotic))
+            .then(|| Site::placed(SiteKind::Exotic, None)),
+        cave_sites
+            .iter()
+            .any(|&vertex| placed_at(vertex, SiteReason::Cave))
+            .then(|| Site::placed(SiteKind::Cave, None)),
+    ];
+    let site = candidates.into_iter().flatten().max_by_key(Site::salience);
     let alive = containing_vertex(&locale, geo, index)
         .and_then(|vertex| occupations.get(&vertex))
         .and_then(|occs| occs.iter().find(|o| o.core.ended.is_none()));
@@ -178,8 +297,9 @@ pub fn brief_of(
             o.core.peak_population,
             built,
             cold,
+            site,
         ),
-        None => Brief::from_parts(None, None, None, None, 0, built, cold),
+        None => Brief::from_parts(None, None, None, None, 0, built, cold, site),
     }
 }
 
@@ -198,6 +318,7 @@ mod tests {
             900,
             true,
             true,
+            None,
         );
         assert_eq!(b.function, Some(Function::Trade));
         assert_eq!(b.tech, Some(TechHorizon::Classical));
@@ -208,7 +329,7 @@ mod tests {
 
     #[test]
     fn from_parts_with_no_occupation_axes_still_carries_climate() {
-        let b = Brief::from_parts(None, None, None, None, 0, false, true);
+        let b = Brief::from_parts(None, None, None, None, 0, false, true, None);
         assert!(!b.built);
         assert!(
             b.cold,
@@ -230,6 +351,7 @@ mod tests {
             0,
             true,
             false,
+            None,
         );
         let b = Brief::from_parts(
             Some(Function::Fort),
@@ -239,7 +361,28 @@ mod tests {
             0,
             true,
             false,
+            None,
         );
         assert_ne!(a, b);
+    }
+
+    /// H1's anchor at this task: a brief with `built` true carries a Settlement
+    /// site, and one without carries none. The two agree exactly, so swapping
+    /// the gate in Task 3 cannot change enterability.
+    ///
+    /// `from_parts` no longer derives `site` from `built` itself — it has no
+    /// world to ask about a cave or an exotic site, so a self-derivation here
+    /// would be a half-right answer masquerading as authoritative. The caller
+    /// computes it, exactly as `brief_of` does in production.
+    #[test]
+    fn a_built_brief_carries_a_settlement_site_and_an_unbuilt_one_carries_none() {
+        let built_site = Some(Site::placed(SiteKind::Settlement, None));
+        let built = Brief::from_parts(None, None, None, None, 0, true, false, built_site);
+        let wild = Brief::from_parts(None, None, None, None, 0, false, false, None);
+        assert_eq!(
+            built.site.as_ref().map(|site| site.kind),
+            Some(SiteKind::Settlement)
+        );
+        assert_eq!(wild.site, None);
     }
 }

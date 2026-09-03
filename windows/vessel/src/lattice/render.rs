@@ -167,6 +167,7 @@ mod tests {
     use super::*;
     use crate::brief::Brief;
     use crate::lattice::{embed_with, extent_for};
+    use crate::site::{Site, SiteKind};
     use crate::structure::structure_at;
     use hornvale_kernel::{Facet, Seed};
     use hornvale_thing::kinds;
@@ -182,11 +183,20 @@ mod tests {
     }
 
     fn built() -> Brief {
-        Brief::from_parts(None, None, None, None, 0, true, true)
+        Brief::from_parts(
+            None,
+            None,
+            None,
+            None,
+            0,
+            true,
+            true,
+            Some(Site::placed(SiteKind::Settlement, None)),
+        )
     }
 
     fn wild() -> Brief {
-        Brief::from_parts(None, None, None, None, 0, false, true)
+        Brief::from_parts(None, None, None, None, 0, false, true, None)
     }
 
     /// Every (structure, lattice) pair the render is checked over: both methods,

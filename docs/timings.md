@@ -4723,6 +4723,32 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-01T18:08:32Z | sluice:artifacts | 77.740 | 665.649 | 23.540 | 8.87 | 0 | 8245ac0d8 |  | lefford | 40 |
 | 2026-09-01T18:09:18Z | sluice:outboard | 46.003 | 27.793 | 40.913 | 1.49 | 0 | 4901ca66a |  | lefford | 40 |
 | 2026-09-01T18:18:06Z | sluice:gate | 528.159 | 16223.746 | 470.910 | 31.61 | 0 | 34bcdec9d |  | lefford | 40 |
+| 2026-09-01T20:25:47Z | gate-commit | 24.774 | 56.368 | 9.965 | 2.68 | 0 | b2a6f2a3a | campaign/the-prospect | ambrose | 12 |
+| 2026-09-01T20:27:27Z | gate-commit | 18.763 | 15.040 | 1.925 | 0.90 | 0 | b2a6f2a3a | campaign/the-prospect | ambrose | 12 |
+| 2026-09-01T20:33:50Z | gate-commit | 359.971 | 1106.459 | 102.487 | 3.36 | 0 | b2a6f2a3a | campaign/the-prospect | ambrose | 12 |
+| 2026-09-01T21:10:16Z | gate-commit | 117.950 | 60.046 | 32.031 | 0.78 | 0 | 2abe88b77 | campaign/the-prospect | ambrose | 12 |
+| 2026-09-01T21:25:00Z | gate-commit | 124.011 | 66.426 | 35.648 | 0.82 | 0 | 2abe88b77 | campaign/the-prospect | ambrose | 12 |
+| 2026-09-01T21:50:48Z | gate-commit | 158.116 | 65.273 | 33.097 | 0.62 | 0 | 58b0e2977 | campaign/the-prospect | ambrose | 12 |
+| 2026-09-01T21:53:09Z | gate-commit | 121.616 | 57.727 | 25.983 | 0.69 | 0 | 58b0e2977 | campaign/the-prospect | ambrose | 12 |
+| 2026-09-01T21:57:09Z | gate-commit | 165.705 | 83.788 | 44.653 | 0.78 | 0 | 58b0e2977 | campaign/the-prospect | ambrose | 12 |
+| 2026-09-01T22:25:15Z | gate-commit | 156.018 | 74.861 | 39.639 | 0.73 | 0 | 33ebcc266 | campaign/the-prospect | ambrose | 12 |
+| 2026-09-02T00:46:31Z | rebaseline | 161.718 | 283.400 | 19.006 | 1.87 | 0 | 06062485d | campaign/the-prospect | ambrose | 12 |
+| 2026-09-02T00:48:01Z | rebaseline | 44.621 | 100.872 | 11.227 | 2.51 | 0 | 06062485d | campaign/the-prospect | ambrose | 12 |
+| 2026-09-02T00:49:36Z | rebaseline | 79.792 | 273.068 | 16.710 | 3.63 | 0 | 06062485d | campaign/the-prospect | ambrose | 12 |
+| 2026-09-02T01:11:24Z | gate-commit | 213.462 | 153.304 | 47.232 | 0.94 | 0 | 06062485d | campaign/the-prospect | ambrose | 12 |
+| 2026-09-02T01:42:06Z | gate-commit | 137.412 | 65.234 | 41.738 | 0.78 | 0 | 5bce1e753 | campaign/the-prospect | ambrose | 12 |
+| 2026-09-02T01:44:13Z | gate-commit | 113.508 | 55.795 | 28.740 | 0.74 | 0 | 5bce1e753 | campaign/the-prospect | ambrose | 12 |
+| 2026-09-02T01:48:49Z | gate-commit | 173.156 | 93.889 | 59.332 | 0.88 | 0 | 5bce1e753 | campaign/the-prospect | ambrose | 12 |
+| 2026-09-02T02:26:30Z | rebaseline | 66.251 | 254.477 | 11.142 | 4.01 | 0 | 7759077d0 | campaign/the-prospect | ambrose | 12 |
+| 2026-09-02T02:27:39Z | rebaseline | 44.392 | 231.766 | 9.468 | 5.43 | 0 | 7759077d0 | campaign/the-prospect | ambrose | 12 |
+| 2026-09-02T02:30:09Z | gate-commit | 75.397 | 56.426 | 23.172 | 1.06 | 0 | 7759077d0 | campaign/the-prospect | ambrose | 12 |
+| 2026-09-02T02:32:49Z | gate-commit | 61.431 | 44.685 | 16.982 | 1.00 | 0 | 7759077d0 | campaign/the-prospect | ambrose | 12 |
+| 2026-09-02T11:09:20Z | gate-commit | 33.498 | 24.940 | 3.448 | 0.85 | 0 | f57630b61 | campaign/the-prospect | ambrose | 12 |
+| 2026-09-02T11:11:43Z | gate-commit | 118.064 | 70.003 | 35.719 | 0.90 | 0 | f57630b61 | campaign/the-prospect | ambrose | 12 |
+| 2026-09-02T11:21:18Z | gate-commit | 124.829 | 71.130 | 41.128 | 0.90 | 0 | 67180739f | campaign/the-prospect | ambrose | 12 |
+| 2026-09-02T12:01:42Z | rebaseline | 296.291 | 278.880 | 23.130 | 1.02 | 0 | 499b9ab44 | campaign/the-prospect | ambrose | 12 |
+| 2026-09-02T12:05:39Z | gate-commit | 189.604 | 210.566 | 70.935 | 1.48 | 0 | 499b9ab44 | campaign/the-prospect | ambrose | 12 |
+| 2026-09-02T13:48:39Z | gate-commit | 239.660 | 72.238 | 32.147 | 0.44 | 0 | bd6ebe9c5 | campaign/the-prospect | ambrose | 12 |
 | 2026-09-01T23:30:31Z | prewarm | 206.270 | 1250.398 | 47.975 | 6.29 | 0 | 6ccb2cd70 | campaign/the-pawl | MacBookPro | 10 |
 | 2026-09-02T00:18:58Z | gate-commit | 29.989 | 87.280 | 21.385 | 3.62 | 0 | e548fda5c | campaign/the-pawl | MacBookPro | 10 |
 | 2026-09-02T00:39:09Z | gate-commit | 37.714 | 140.196 | 17.955 | 4.19 | 0 | 9ea858b03 | campaign/the-pawl | MacBookPro | 10 |
@@ -4954,6 +4980,63 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-02T14:57:38Z | sluice:gate | 593.316 | 18003.943 | 516.793 | 31.22 | 0 | 02feee1c3 |  | lefford | 40 |
 | 2026-09-02T15:00:09Z | sluice:clients | 150.725 | 2266.844 | 206.028 | 16.41 | 0 | 14722bf02 |  | lefford | 40 |
 | 2026-09-02T15:07:29Z | sluice:heavy | 439.118 | 9637.904 | 156.597 | 22.30 | 0 | 96d96d43e |  | lefford | 40 |
+| 2026-09-02T15:54:39Z | gate-commit | 938.865 | 1199.765 | 158.023 | 1.45 | 0 | 88b1916f6 | campaign/the-prospect | ambrose | 12 |
+| 2026-09-02T16:22:35Z | rebaseline | 318.410 | 293.050 | 26.699 | 1.00 | 0 | 576284a55 | campaign/the-prospect | ambrose | 12 |
+| 2026-09-02T16:54:56Z | gate-commit | 131.300 | 60.576 | 30.859 | 0.70 | 0 | 576284a55 | campaign/the-prospect | ambrose | 12 |
+| 2026-09-02T16:57:41Z | gate-commit | 140.482 | 91.331 | 53.438 | 1.03 | 0 | 576284a55 | campaign/the-prospect | ambrose | 12 |
+| 2026-09-02T17:12:15Z | gate-commit | 162.076 | 86.610 | 46.376 | 0.82 | 0 | 576284a55 | campaign/the-prospect | ambrose | 12 |
+| 2026-09-02T17:15:03Z | gate-commit | 129.932 | 71.817 | 37.117 | 0.84 | 0 | 576284a55 | campaign/the-prospect | ambrose | 12 |
+| 2026-09-02T18:45:22Z | quick | 54.568 | 19.563 | 7.725 | 0.50 | 0 | ef78b068c | campaign/the-prospect | ambrose | 12 |
+| 2026-09-02T18:46:30Z | quick | 42.308 | 30.041 | 6.967 | 0.87 | 0 | ef78b068c | campaign/the-prospect | ambrose | 12 |
+| 2026-09-02T18:52:35Z | rebaseline | 359.151 | 345.145 | 35.833 | 1.06 | 0 | ef78b068c | campaign/the-prospect | ambrose | 12 |
+| 2026-09-02T19:19:02Z | gate-commit | 128.629 | 66.597 | 35.928 | 0.80 | 0 | 7d3c1ed91 | campaign/the-prospect | ambrose | 12 |
+| 2026-09-02T19:20:59Z | gate-commit | 95.991 | 66.281 | 34.873 | 1.05 | 0 | 7d3c1ed91 | campaign/the-prospect | ambrose | 12 |
+| 2026-09-02T21:27:50Z | gate-commit | 134.810 | 70.338 | 40.943 | 0.83 | 0 | adbfabc3e | campaign/the-prospect | ambrose | 12 |
+| 2026-09-02T21:32:53Z | gate-commit | 198.200 | 76.611 | 39.890 | 0.59 | 0 | adbfabc3e | campaign/the-prospect | ambrose | 12 |
+| 2026-09-02T22:24:34Z | game-check | 236.487 | 694.913 | 47.221 | 3.14 | 0 | 77fee44dd | campaign/the-prospect | ambrose | 12 |
+| 2026-09-02T22:28:19Z | gate-commit | 172.302 | 224.041 | 59.325 | 1.64 | 0 | 77fee44dd | campaign/the-prospect | ambrose | 12 |
+| 2026-09-02T22:31:21Z | gate-commit | 121.245 | 62.670 | 32.529 | 0.79 | 0 | 77fee44dd | campaign/the-prospect | ambrose | 12 |
+| 2026-09-02T22:34:39Z | gate-commit | 141.549 | 74.725 | 37.851 | 0.80 | 0 | 77fee44dd | campaign/the-prospect | ambrose | 12 |
+| 2026-09-02T23:10:06Z | rebaseline | 84.987 | 112.241 | 15.698 | 1.51 | 0 | 77fee44dd | campaign/the-prospect | ambrose | 12 |
+| 2026-09-02T23:15:22Z | rebaseline | 149.298 | 297.844 | 26.163 | 2.17 | 0 | 77fee44dd | campaign/the-prospect | ambrose | 12 |
+| 2026-09-02T23:16:03Z | game-check | 6.378 | 4.476 | 4.553 | 1.42 | 0 | 77fee44dd | campaign/the-prospect | ambrose | 12 |
+| 2026-09-02T23:20:27Z | game-check | 245.499 | 653.605 | 40.855 | 2.83 | 0 | 77fee44dd | campaign/the-prospect | ambrose | 12 |
+| 2026-09-02T23:23:36Z | gate-commit | 177.781 | 68.274 | 35.093 | 0.58 | 0 | 77fee44dd | campaign/the-prospect | ambrose | 12 |
+| 2026-09-02T23:28:05Z | game-check | 165.438 | 616.386 | 31.914 | 3.92 | 0 | 77fee44dd | campaign/the-prospect | ambrose | 12 |
+| 2026-09-02T23:29:46Z | gate-commit | 95.840 | 65.524 | 33.690 | 1.04 | 0 | 77fee44dd | campaign/the-prospect | ambrose | 12 |
+| 2026-09-02T23:31:42Z | gate-commit | 96.989 | 65.343 | 33.935 | 1.02 | 0 | 77fee44dd | campaign/the-prospect | ambrose | 12 |
+| 2026-09-03T00:59:21Z | gate-commit | 209.224 | 76.213 | 37.781 | 0.54 | 0 | 78c1a8941 | campaign/the-prospect | ambrose | 12 |
+| 2026-09-03T01:03:28Z | gate-commit | 231.702 | 73.528 | 36.693 | 0.48 | 0 | 78c1a8941 | campaign/the-prospect | ambrose | 12 |
+| 2026-09-03T01:46:57Z | game-check | 461.340 | 635.367 | 44.023 | 1.47 | 0 | b6985762c | campaign/the-prospect | ambrose | 12 |
+| 2026-09-03T01:52:11Z | gate-commit | 278.050 | 67.099 | 32.617 | 0.36 | 0 | b6985762c | campaign/the-prospect | ambrose | 12 |
+| 2026-09-03T01:58:21Z | gate-commit | 227.399 | 76.187 | 37.349 | 0.50 | 0 | b6985762c | campaign/the-prospect | ambrose | 12 |
+| 2026-09-03T02:04:28Z | gate-commit | 226.363 | 71.348 | 36.634 | 0.48 | 0 | b6985762c | campaign/the-prospect | ambrose | 12 |
+| 2026-09-03T02:47:57Z | rebaseline | 111.644 | 280.133 | 21.710 | 2.70 | 0 | 61ab21bf1 | campaign/the-prospect | ambrose | 12 |
+| 2026-09-03T03:06:51Z | game-check | 73.702 | 532.280 | 10.013 | 7.36 | 0 | 61ab21bf1 | campaign/the-prospect | ambrose | 12 |
+| 2026-09-03T03:08:33Z | gate-commit | 90.317 | 47.288 | 21.246 | 0.76 | 0 | 61ab21bf1 | campaign/the-prospect | ambrose | 12 |
+| 2026-09-03T03:10:22Z | gate-commit | 56.144 | 45.123 | 15.553 | 1.08 | 0 | 61ab21bf1 | campaign/the-prospect | ambrose | 12 |
+| 2026-09-03T03:13:42Z | gate-commit | 73.423 | 57.214 | 26.249 | 1.14 | 0 | 61ab21bf1 | campaign/the-prospect | ambrose | 12 |
+| 2026-09-03T03:15:28Z | gate-commit | 74.627 | 61.113 | 25.666 | 1.16 | 0 | afce0f67b | campaign/the-prospect | ambrose | 12 |
+| 2026-09-03T03:29:50Z | gate-commit | 82.848 | 45.252 | 16.225 | 0.74 | 0 | 64b4df1c9 | campaign/the-prospect | ambrose | 12 |
+| 2026-09-03T03:39:11Z | gate-commit | 93.539 | 56.521 | 25.777 | 0.88 | 0 | 894e5bc65 | campaign/the-prospect | ambrose | 12 |
+| 2026-09-03T03:41:18Z | gate-commit | 67.487 | 51.017 | 16.445 | 1.00 | 0 | 894e5bc65 | campaign/the-prospect | ambrose | 12 |
+| 2026-09-03T10:27:12Z | rebaseline | 203.965 | 288.557 | 23.584 | 1.53 | 0 | 8c1effdaa | campaign/the-prospect | ambrose | 12 |
+| 2026-09-03T10:33:25Z | gate-commit | 256.098 | 76.779 | 38.669 | 0.45 | 0 | 58633735c | campaign/the-prospect | ambrose | 12 |
+| 2026-09-03T10:45:05Z | rebaseline | 290.862 | 291.479 | 23.646 | 1.08 | 0 | 58633735c | campaign/the-prospect | ambrose | 12 |
+| 2026-09-03T11:09:50Z | gate-commit | 207.141 | 191.370 | 56.075 | 1.19 | 0 | 6166028c7 | campaign/the-prospect | ambrose | 12 |
+| 2026-09-03T11:16:34Z | gate-commit | 296.221 | 91.067 | 42.974 | 0.45 | 0 | 6166028c7 | campaign/the-prospect | ambrose | 12 |
+| 2026-09-03T11:20:20Z | gate-commit | 219.565 | 41.554 | 13.483 | 0.25 | 0 | 6166028c7 | campaign/the-prospect | ambrose | 12 |
+| 2026-09-03T11:22:30Z | gate-commit | 97.498 | 82.215 | 28.433 | 1.13 | 0 | 6166028c7 | campaign/the-prospect | ambrose | 12 |
+| 2026-09-03T11:23:59Z | gate-commit | 58.640 | 44.648 | 15.412 | 1.02 | 0 | 6166028c7 | campaign/the-prospect | ambrose | 12 |
+| 2026-09-03T11:35:28Z | gate-commit | 143.590 | 149.436 | 63.224 | 1.48 | 0 | 5113ffd15 | campaign/the-prospect | ambrose | 12 |
+| 2026-09-03T11:39:36Z | gate-commit | 220.573 | 68.214 | 35.626 | 0.47 | 0 | 5113ffd15 | campaign/the-prospect | ambrose | 12 |
+| 2026-09-03T11:41:43Z | gate-commit | 106.063 | 66.384 | 34.093 | 0.95 | 0 | dcc2fd7b6 | campaign/the-prospect | ambrose | 12 |
+| 2026-09-03T11:44:06Z | gate-commit | 125.588 | 65.801 | 34.851 | 0.80 | 0 | d710a8a9c | campaign/the-prospect | ambrose | 12 |
+| 2026-09-03T12:03:14Z | gate-commit | 429.141 | 213.311 | 64.096 | 0.65 | 0 | 0ad92be9f | campaign/the-prospect | ambrose | 12 |
+| 2026-09-03T12:03:49Z | rebaseline | 13.342 | 1.946 | 0.373 | 0.17 | 0 | 0ad92be9f | campaign/the-prospect | ambrose | 12 |
+| 2026-09-03T12:08:28Z | rebaseline | 265.818 | 297.767 | 26.553 | 1.22 | 0 | 0ad92be9f | campaign/the-prospect | ambrose | 12 |
+| 2026-09-03T12:25:58Z | gate-commit | 191.888 | 121.366 | 85.533 | 1.08 | 0 | 348c503a4 | campaign/the-prospect | ambrose | 12 |
+| 2026-09-03T12:28:59Z | gate-commit | 147.009 | 70.663 | 36.006 | 0.73 | 0 | 348c503a4 | campaign/the-prospect | ambrose | 12 |
 | 2026-09-02T15:50:05Z | gate-commit | 144.756 | 827.823 | 53.843 | 6.09 | 0 | 0c8d9234d | campaign/the-rack | MacBookPro | 10 |
 | 2026-09-02T15:59:20Z | gate-commit | 41.486 | 60.450 | 15.606 | 1.83 | 0 | 5fb18fb9b | campaign/the-rack | MacBookPro | 10 |
 | 2026-09-02T16:22:56Z | gate-commit | 44.399 | 186.130 | 22.181 | 4.69 | 0 | 45a31d432 | campaign/the-rack | MacBookPro | 10 |
@@ -5234,6 +5317,9 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-03T11:20:47Z | sluice:gate | 675.159 | 19982.775 | 591.374 | 30.47 | 0 | 07675d88b |  | lefford | 40 |
 | 2026-09-03T11:22:57Z | sluice:clients | 129.817 | 2044.825 | 206.323 | 17.34 | 0 | 9da2b52cc |  | lefford | 40 |
 | 2026-09-03T11:30:27Z | sluice:heavy | 449.616 | 9616.174 | 164.136 | 21.75 | 0 | a1d17c9dc |  | lefford | 40 |
+| 2026-09-03T13:22:05Z | gate-commit | 109.830 | 100.269 | 36.637 | 1.25 | 0 | 32240ba07 | campaign/the-prospect | ambrose | 12 |
+| 2026-09-03T13:25:24Z | gate-commit | 108.409 | 59.465 | 22.310 | 0.75 | 0 | 32240ba07 | campaign/the-prospect | ambrose | 12 |
+| 2026-09-03T13:41:41Z | gate-commit | 903.974 | 663.602 | 112.707 | 0.86 | 0 | 32240ba07 | campaign/the-prospect | ambrose | 12 |
 | 2026-09-03T12:01:59Z | prewarm | 180.732 | 1108.606 | 49.915 | 6.41 | 0 | aeabc4549 | campaign/the-terrier | MacBookPro | 10 |
 | 2026-09-03T12:12:45Z | gate-commit | 128.534 | 226.018 | 44.512 | 2.10 | 0 | aeabc4549 | campaign/the-terrier | MacBookPro | 10 |
 | 2026-09-03T12:22:31Z | gate-commit | 60.448 | 87.568 | 28.676 | 1.92 | 0 | 2cabb2c1d | campaign/the-terrier | MacBookPro | 10 |
@@ -5255,6 +5341,8 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-03T15:18:07Z | sluice:gate | 610.342 | 18641.435 | 497.645 | 31.36 | 0 | 2397a415c |  | lefford | 40 |
 | 2026-09-03T15:19:52Z | sluice:clients | 105.519 | 1825.176 | 169.609 | 18.90 | 0 | d55bc6d27 |  | lefford | 40 |
 | 2026-09-03T15:27:23Z | sluice:heavy | 450.551 | 9633.445 | 154.769 | 21.72 | 0 | e6551520c |  | lefford | 40 |
+| 2026-09-03T19:34:36Z | rebaseline | 161.969 | 365.005 | 16.112 | 2.35 | 0 | 7929881dd | campaign/the-prospect | MacBookPro | 10 |
+| 2026-09-03T19:40:14Z | gate-commit | 283.104 | 993.871 | 87.600 | 3.82 | 0 | 7929881dd | campaign/the-prospect | MacBookPro | 10 |
 | 2026-09-03T18:26:34Z | rebaseline | 171.508 | 374.519 | 14.982 | 2.27 | 0 | 63f08555a | campaign/the-terrier | MacBookPro | 10 |
 | 2026-09-03T18:28:44Z | gate-commit | 71.663 | 81.357 | 20.631 | 1.42 | 0 | 63f08555a | campaign/the-terrier | MacBookPro | 10 |
 | 2026-09-03T19:16:50Z | gate-commit | 38.198 | 72.439 | 19.525 | 2.41 | 0 | b9eca4849 | campaign/the-terrier | MacBookPro | 10 |
@@ -5265,6 +5353,8 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-03T20:20:50Z | sluice:gate | 665.832 | 19880.966 | 585.557 | 30.74 | 0 | bf15dae6d |  | lefford | 40 |
 | 2026-09-03T20:23:00Z | sluice:clients | 129.175 | 2083.924 | 197.330 | 17.66 | 0 | b4e796678 |  | lefford | 40 |
 | 2026-09-03T20:30:26Z | sluice:heavy | 446.479 | 9606.716 | 159.622 | 21.87 | 0 | 16e166fea |  | lefford | 40 |
+| 2026-09-03T20:46:55Z | rebaseline | 190.458 | 406.430 | 19.338 | 2.24 | 0 | fe5e83950 | campaign/the-prospect | MacBookPro | 10 |
+| 2026-09-03T20:48:06Z | gate-commit | 48.827 | 117.281 | 25.309 | 2.92 | 0 | fe5e83950 | campaign/the-prospect | MacBookPro | 10 |
 | 2026-09-03T19:36:12Z | prewarm | 44.196 | 213.010 | 9.451 | 5.03 | 0 | ead6741da | campaign/the-hachure | MacBookPro | 10 |
 | 2026-09-03T19:41:39Z | rebaseline | 337.003 | 430.824 | 21.267 | 1.34 | 0 | ead6741da | campaign/the-hachure | MacBookPro | 10 |
 | 2026-09-03T19:44:25Z | gate-commit | 143.402 | 916.286 | 49.730 | 6.74 | 0 | 3c04c9962 | campaign/the-hachure | MacBookPro | 10 |
@@ -5277,3 +5367,6 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-03T20:58:22Z | sluice:gate | 602.072 | 18524.689 | 474.567 | 31.56 | 0 | 142e89994 |  | lefford | 40 |
 | 2026-09-03T21:00:22Z | sluice:clients | 119.688 | 1965.124 | 196.517 | 18.06 | 0 | 9bc879389 |  | lefford | 40 |
 | 2026-09-03T21:08:03Z | sluice:heavy | 460.490 | 9654.666 | 169.100 | 21.33 | 0 | 5f8471d39 |  | lefford | 40 |
+| 2026-09-03T21:16:25Z | game-check | 347.538 | 759.484 | 25.881 | 2.26 | 0 | bdf1a729a | campaign/the-prospect | MacBookPro | 10 |
+| 2026-09-03T21:21:30Z | rebaseline | 300.166 | 375.753 | 15.694 | 1.30 | 0 | bdf1a729a | campaign/the-prospect | MacBookPro | 10 |
+| 2026-09-03T21:22:47Z | gate-commit | 67.602 | 73.973 | 17.360 | 1.35 | 0 | bdf1a729a | campaign/the-prospect | MacBookPro | 10 |

@@ -16,6 +16,7 @@ use crate::liveness::{
 use crate::residents::derive_residents;
 use crate::roll::{ROLL_BUDGET, ROLL_HOPS, RollKeyStatic, roll_of, rooms_within};
 use crate::roster::{Roster, Slot, on_roll_others, other_bodies};
+use crate::site::{Site, SiteKind};
 use crate::snapshot::{
     KnownChannel, KnownEntry, Narration, NounEntry, PresentEntry, SESSION_SCHEMA, SelfChannel,
     SensedChannel, SessionSnapshot, SocialEntry, SpatialChannel,
@@ -373,13 +374,23 @@ const INDOOR_CORNER_REFUSAL: &str =
 /// band address, with `describe_chamber_here` reporting the wrong room from then
 /// on.
 ///
-/// **Not reachable from a live session today, and the guard is still right.**
-/// `crate::structure::structure_at` returns `None` unless `brief.built`, so
-/// `embed_with` always picks `allocate`, whose rect partition leaves floors two
-/// apart across a wall line — a diagonal touch is geometrically impossible there
-/// (probed: 0 of 2400 allocate lattices, against 532 of 2400 grown). So `grow` is
-/// test-only as things stand. It is the method that will be used, which is why
-/// this guard is written now rather than when it first goes live.
+/// **IT WENT LIVE IN THIS CAMPAIGN, and this paragraph said it could not.**
+/// It read: *"Not reachable from a live session today … `structure_at` returns
+/// `None` unless `brief.built`, so `embed_with` always picks `allocate`, whose
+/// rect partition leaves floors two apart across a wall line — a diagonal touch
+/// is geometrically impossible there (probed: 0 of 2400 allocate lattices,
+/// against 532 of 2400 grown). So `grow` is test-only as things stand."*
+///
+/// The measurement is intact and is what now matters: **0 of 2400 allocate
+/// lattices can present this configuration and 532 of 2400 grown ones — 22% —
+/// can.** What changed is which of those two a live session reaches. Decision
+/// 0666 hung the enterability gate on `Brief.site`, so a cave or an exotic site
+/// (unbuilt, but a site) derives a structure and `embed_with` sends it to
+/// `grow`; H3 (`windows/lab/tests/suite/site_density.rs`) measures ~980-2,615
+/// such facets per world. A settlement still allocates and still cannot reach
+/// this. So the guard is no longer written ahead of its need — it is load-bearing
+/// now, on every cave and exotic interior, and it is the reason a diagonal step
+/// there cannot leave `Inside::at` naming the room it left.
 ///
 /// # Refused rather than treated as a crossing — and NOT for the reason first given
 ///
@@ -928,7 +939,29 @@ pub struct Session<'w> {
     /// `Session::start` requires `mint_flagship` to resolve a settlement
     /// first, so in practice this always carries at least the possessed
     /// agent's own home room by the time a session exists.
-    built: std::collections::BTreeSet<FacetId>,
+    ///
+    /// A MAP to each such room's settlement NAME since The Prospect (Task 7),
+    /// so `enter` can say which settlement it entered — see
+    /// [`crate::liveness::built_rooms`] for why the name rides on this one
+    /// structure rather than a second one beside it.
+    built: std::collections::BTreeMap<FacetId, String>,
+    /// The vertices holding a cave (The Prospect, Task 4), computed once at
+    /// `start` the same way `built` is.
+    ///
+    /// Held rather than re-derived per turn because
+    /// `GeneratedTerrain::cave_site_vertices` runs `cave_at` over the whole
+    /// canonical grid — 40,962 vertices, each a point process with a noise
+    /// sample — while `LocaleContext::strange_sites`, the roster beside it in
+    /// `brief_here`, is a cheap read over a budget the context already built.
+    /// The two look alike at the call site and are not.
+    ///
+    /// **Measured, so nobody has to guess from that sentence:** the full scan
+    /// is **~2.9 ms** on seed 42 (three runs: 2.89 / 4.35 / 2.92 ms), against
+    /// a `Session::start` the committed baseline puts at ~4.2 s. So holding it
+    /// is the right shape for a per-turn read and not an urgent one — do not
+    /// read the paragraph above as a warning that the scan is expensive in
+    /// absolute terms. It is 0.07% of a start.
+    cave_sites: Vec<hornvale_kernel::Vertex>,
     /// Each NPC's within-room anchor as of the most recent `wait` tick's own
     /// walk (The Threshold whole-branch review, Important 4) — recovered via
     /// [`DriveMovements::step_with_occupancy`] the same way the lab's health
@@ -1849,6 +1882,12 @@ impl<'w> Session<'w> {
         // this. Built once here, the same one-shot-at-start discipline as
         // `calendar`/`predator`/`prey`.
         let built = built_rooms(world, ctx);
+        // The cave roster (The Prospect, Task 4), on the same
+        // one-shot-at-start discipline. `GeneratedTerrain::cave_at` decides
+        // WHETHER there is a cave at a vertex — the one answer in the tree;
+        // `hornvale_worldgen::site_facet_for` decides where, per facet, when
+        // `brief_of` asks.
+        let cave_sites = ctx.terrain().cave_site_vertices();
         // The possessed body's own mass, through the ONE shared derivation
         // (The Tackle): read here, once, exactly as `derive_npcs` reads a
         // creature's. Bound before the struct literal because `bodies` is
@@ -1949,6 +1988,7 @@ impl<'w> Session<'w> {
             predator,
             prey,
             built,
+            cave_sites,
             occupancy: Occupancy::default(),
             wake_at: None,
             body_mass_kg: mass_for_species(&species_for_mass, Some(&biosphere_for_mass)),
@@ -6704,6 +6744,26 @@ impl<'w> Session<'w> {
             vantage,
         )?;
         let f = self.focalizer.render(&v);
+        // The site clause (spec §4, Task 6, The Prospect): a facet holding a
+        // site gains a clause naming it; a facet with none says NOTHING —
+        // silence is honest, and it is what makes the density gap visible
+        // rather than papered over (most facets stay silent after this
+        // task, by design). Reads `brief_here().site`, the SAME predicate
+        // `Self::enter` gates on, so the prose and what `enter` will
+        // actually do can never disagree — H1's own claim ("surfacing does
+        // not change what is enterable") holds by construction rather than
+        // by two independently-written predicates staying in sync.
+        //
+        // NOTE ON COST: this re-derives the whole brief on every `look`, the
+        // same accepted cost `brief_of`'s own doc names for `enter` and
+        // `Self::brief_here`'s cost note — hoist only if a profile shows it
+        // mattering.
+        let site_clause = self
+            .brief_here()
+            .site
+            .as_ref()
+            .map(Self::site_clause)
+            .unwrap_or_default();
         // F1 (The Rhumb, final review): this render doubles as the SUBMERGED
         // vantage's (see the `"look"`/`dive`/`surface` arms above), and while
         // under, `go` and a bare compass token both refuse EVERY lateral
@@ -6762,11 +6822,53 @@ impl<'w> Session<'w> {
             .map(|line| format!("{line}\n"))
             .unwrap_or_default();
         Ok(format!(
-            "[room {}, day {}]\n{}\n{presence}{closing}",
+            "[room {}, day {}]\n{}{site_clause}\n{presence}{closing}",
             v.locale.id,
             self.day.as_std_days(),
             f.prose,
         ))
+    }
+
+    /// The walk-band clause naming a facet's site (spec §4, Decision 0666):
+    /// **kind and name only, never contents** — a facet is not a manifest of
+    /// what stands on it.
+    ///
+    /// At most one `Site` ever reaches here: `Brief::site` is `Option<Site>`,
+    /// already reduced to the single most-salient candidate by `brief_of`'s
+    /// own `Site::salience`-ranked `max_by_key` (spec §6, Ruling 29). The
+    /// spec's own §6 language ("ranks what gets named when a facet holds
+    /// more than one") describes a data shape — several co-located sites at
+    /// one facet — and that shape DOES occur at construction, not only in
+    /// the abstract: `brief_of` assembles up to three `Site` candidates per
+    /// facet (settlement, exotic, cave — `windows/vessel/src/brief.rs`)
+    /// before reducing them to one winner. **This paragraph used to say
+    /// "nothing constructs more than one `Site` per facet today", which is
+    /// false at that construction site.** What is true, and narrower: at
+    /// most one candidate ever SURVIVES the reduction to reach
+    /// `Brief::site`, and therefore to reach `site_clause` here — never that
+    /// only one is ever built.
+    ///
+    /// `Site::name` carries a real value for a settlement as of this task:
+    /// `brief_of` attaches the name the injected settlement-territory map
+    /// keys to the facet's own room (`Terrain::settlement_name`), the same
+    /// lookup `is_built` tests membership in — see
+    /// `entering_a_named_site_names_the_place_and_not_the_possession` and
+    /// `a_settlement_sites_name_is_keyed_to_the_room`
+    /// (`windows/vessel/tests/suite/the_prospect.rs`). A cave and an exotic
+    /// site still carry `None` — neither has a name and neither may borrow
+    /// one (`Site::placed`'s own call sites in `brief.rs`) — so this clause
+    /// reads as generic kind-only prose for those two kinds, and names the
+    /// place itself for a settlement.
+    fn site_clause(site: &Site) -> String {
+        let noun = match site.kind {
+            SiteKind::Settlement => "settlement",
+            SiteKind::Exotic => "site",
+            SiteKind::Cave => "cave",
+        };
+        match &site.name {
+            Some(name) => format!(" You can enter the {noun} of {name}."),
+            None => format!(" You can enter the {noun} here."),
+        }
     }
 
     /// A lateral step at the walk band. Reached only out of doors: `handle`
@@ -6943,7 +7045,7 @@ impl<'w> Session<'w> {
             self.world.seed,
             self.walk_depth(),
         ) else {
-            return Turn::Out("Nothing here is built; there is nothing to enter.".to_string());
+            return Turn::Out("There is nothing here to enter.".to_string());
         };
         let at = structure
             .chambers
@@ -7237,6 +7339,18 @@ impl<'w> Session<'w> {
             &self.position(),
             &terrain,
             self.walk_depth(),
+            self.wctx.world.seed,
+            // Derived from the context the session already holds, not stored
+            // beside `self.built`: the placed-site roster is a pure read over
+            // the budget the `LocaleContext` built once at `start`, so a second
+            // copy in `Session` would be state to keep honest for no gain.
+            &self.wctx.ctx.strange_sites(),
+            // The cave roster is NOT free the same way — it is a whole-grid
+            // scan of `cave_at`, 40,962 vertices, ~2.9 ms measured. Held on
+            // `Session` for the possession's life rather than re-scanned,
+            // which is the remedy `brief_of`'s own cost note prescribes and
+            // the one `built` already uses.
+            &self.cave_sites,
         )
     }
 
@@ -14296,7 +14410,7 @@ mod tests {
             Turn::Released(_) => panic!("enter must not release"),
         };
         assert!(
-            !reply.starts_with("Nothing here is built"),
+            !reply.starts_with("There is nothing here to enter"),
             "the flagship's own locale is built: {reply:?}"
         );
         let total = session
@@ -14351,7 +14465,7 @@ mod tests {
             Turn::Released(_) => panic!("enter must not release"),
         };
         assert!(
-            !shown.starts_with("Nothing here is built"),
+            !shown.starts_with("There is nothing here to enter"),
             "the flagship's own locale is built: {shown:?}"
         );
         // Take a noun the chamber's prose has just named to the player.
@@ -14759,7 +14873,7 @@ mod tests {
             Turn::Released(_) => panic!("enter must not release"),
         };
         assert!(
-            !shown.starts_with("Nothing here is built"),
+            !shown.starts_with("There is nothing here to enter"),
             "the flagship's own locale is built: {shown:?}"
         );
         let structure = session
@@ -14979,6 +15093,13 @@ mod tests {
                     &session.position(),
                     &terrain,
                     session.walk_depth(),
+                    session.wctx.world.seed,
+                    // The SCAN side must read the same rosters the VIEW side
+                    // does, or this assertion compares two different questions
+                    // and passes for the wrong reason. `occupations` is the
+                    // only thing this test re-derives on purpose.
+                    &session.wctx.ctx.strange_sites(),
+                    &session.cave_sites,
                 );
                 assert_eq!(
                     hoisted, scanned,

@@ -35,6 +35,7 @@ pub mod residents;
 pub mod roll;
 pub mod roster;
 mod session;
+pub mod site;
 pub mod snapshot;
 pub mod stance;
 pub mod streams;
