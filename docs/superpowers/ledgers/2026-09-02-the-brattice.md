@@ -1148,3 +1148,110 @@ deferred minors: `peek_stairs`' Drop refusal branch has no unit test; the
 terminus fallback can overwrite a chute landing when a region's only walkable
 cells are landings (debug-asserted and witnessed, silent in release);
 `underground_footing_word` reads `Deep` as "dry" until Task 4 owns the words.
+
+## Task 4 - complete
+
+**What was built.** The walk now reads the body that walks it.
+
+- **`hornvale_species::Locomotion { swim, fly }`**, `WALKER`, and the sparse
+  `locomotion_registry()` — nine rows (six swimmers, three dragons), the exact
+  shape of `habitat_realm_registry`: absence IS the default, and no kind is
+  authored with both modes. `impl Component for Locomotion {}` like its
+  neighbours.
+- **`Body::locomotion()` is an ACCESSOR** (ledger #9 (i)), not a stored field:
+  a pure function of `species`, so the ~43 `Body { .. }` literal sites across
+  seven files are untouched. The deviation from the threaded-at-derivation
+  pattern beside it is stated in the method's own doc.
+- **`Underground::admits(cell, &Traverser)`** — the actor-aware seam BESIDE
+  `movement_mode`, not a widening of it. `peek(dir, who)` calls it where it
+  called `!open(target)`; the corner rule's oracle still asks `movement_mode`
+  alone, because a threshold is an opening and a sump is a hole in the rock
+  whether or not this body can take either.
+- **Three refusals**, each naming its own physical reason:
+  `UNDERGROUND_DEEP_WATER_REFUSAL`, `UNDERGROUND_LOCKED_DOOR_REFUSAL`,
+  `NO_WAY_UP_REFUSAL`. All three `pub(crate)` (the older ones are private) so
+  the session's own walk test can pin the exact sentence rather than a
+  substring probe.
+- **`threshold_edge` / `has_door`** read `Level.thresholds` and
+  `plan.gate_between`, which is what took `#[allow(dead_code)]` off
+  `Underground::plan`. A door is a fact about the plan's EDGE: every passage's
+  crossing is a `Threshold` whether gated or not, so the cells cannot answer
+  it and never will.
+- **The chute's verbs.** `down` on a lip narrates "You let yourself down the
+  chute."; `up` from beneath one narrates "You fly up the chute." for a flier
+  and refuses a walker with the lip overhead. The stairs' sentence is
+  untouched.
+- **The footing words** (Task 3's deferred minor): `Deep`, `Threshold` and
+  `Drop` no longer read as "dry".
+
+**The reconciliation with Task 3's arms.** Task 3 had already landed the DOWN
+half of the chute, because a Crosscut cross-floor walk test needed it. Nothing
+was re-added:
+
+- `peek_stairs` gained `loc: Locomotion` and one new arm — `Some(_) if rung > 0
+  && descent[rung - 1][cell] == Drop` — placed AFTER the three kind-driven arms
+  so a stairway under a chute keeps its own meaning, and BEFORE the catch-all
+  that used to swallow it. Task 3's `Drop` (down) arm is unchanged in behaviour;
+  only its comment moved, because it said `up` "simply finds no `StairsUp` and
+  refuses", which was exactly true then and is now the case Task 4 completes.
+- `peek_stairs`'s contract paragraph carried the same claim in prose ("a chute
+  is ONE-WAY here"). Rewritten to say what is now true: one-way for a WALKER,
+  and the fact that a chute is overhead is read from the rung ABOVE, since the
+  landing itself is indistinguishable floor.
+- `Session::take_stairs` already accepted `down` on a `Drop`. It gained
+  `chute_above`/`by_chute` for the `up` half and the two chute sentences; its
+  "no stairway up from here" refusal still fires only when the cell offers no
+  up at all, so `down` still never means up.
+
+**TDD evidence.** Species: the sparse-store test failed to COMPILE
+(`cannot find function locomotion_registry`, `WALKER not found in this scope`),
+then passed. Walk: the three `underground.rs` tests failed to compile with 18
+errors naming `Traverser`, `has_door`, `admits` and `peek_stairs`'s arity, then
+passed. Session: `the_chute_and_the_sump_read_the_body_that_walks_them` and
+`each_live_footing_kind_reads_as_its_own_sentence` were written against the
+finished seam and are the acceptance, not the drive.
+
+**Gates.** `hornvale-species` 45 lib + 33 suite, 0 failed. `hornvale-vessel`
+626 lib (72.0 s) + 388 suite (146.0 s), 0 failed. `hornvale` (cli) 102 + 54 +
+294, 0 failed. `cargo fmt --check` clean; workspace clippy `-D warnings` rc=0;
+`type-audit -- check` rc=0; `placement-audit -- check` rc=0. `make rebaseline`
+rc=0 in 132.098 s: the only artifact that moved is
+`docs/audits/type-audit-report.md` (+2 `bare-ok(flag)`, species 69 -> 71), which
+is exactly the two new tags — a pub boundary changed this time, unlike Task 3.
+
+**Ruling H [Task 4, in-task]** — The footing word had to serve two callers and
+one of them breaks on a phrase · **The single `underground_footing_word` becomes
+`underground_footing_words`, returning `(phrase, label)`** · Why: the brief's
+three strings ("a narrow squeeze", "the lip of a chute") read correctly in
+`describe_underground_here`'s "The rock here is ___." and are ungrammatical in
+`underground_nouns`, which used the SAME word as the noun a player types and as
+an adjective ("a narrow squeeze rock — the footing of this passage"). One
+function returning both keeps them one decision: a second `match` on the same
+cell kind could drift, and a kind added to one table and forgotten in the other
+would read as dry footing under a typeable name that no longer fits · Discarded:
+single adjectives for all five kinds (dry / flooded / drowned / pinched / sheer
+— grammatical everywhere and typeable, but it throws away the brief's strings
+for a constraint the brief did not know about); leaving the noun caller
+ungrammatical · Cost if wrong: two words per kind instead of one, in one
+function, pinned by `each_live_footing_kind_reads_as_its_own_sentence`, which
+asserts the SENTENCE and the `examine` label and that the five phrases are
+pairwise distinct · Capture: this ledger; the function's own doc.
+
+**Parked finding — the ways-on report is geometric, and now that is
+observable.** `underground_ways_from_cell` lists a neighbour whenever
+`movement_mode(..).is_some()`, the same oracle the corner rule uses. Before
+this task every listed way was walkable by everybody, so the report and the
+walk could not disagree. They can now: `look` lists a sump east, and `go e`
+refuses a walker with deep water. Left as is deliberately — a player can SEE
+water and a door, so a report that hid them would be lying in the other
+direction, and the report is about what the rock offers rather than what this
+body can take. Named here because it is the "prose contradicting behaviour a
+player can observe in one turn" shape the Gallery's own fix round 1 cared
+about, and Task 5 (doors' openness fold) is the natural place to decide it
+properly.
+
+**Deferred minor — `docs/audits/lexicon-inventory.tsv` raised twice.**
+`session.rs` 620 -> 648 and `underground.rs` 156 -> 236. Every new token is
+the AREA sense (an underworld level's grid square), which is what the
+inventory records; the guard reddened and the ceilings were raised by hand
+rather than by `HV_LEXICON_REBASELINE`, which would have rewritten every row.

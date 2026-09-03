@@ -5245,7 +5245,23 @@ impl<'w> Session<'w> {
             // own unreachable guard takes one band over.
             return Turn::Out("error: no cave floor to step across: not below".to_string());
         };
-        let target = match ug.peek(wanted) {
+        // Who is walking (The Brattice, spec §3.6). The locomotion is the
+        // driven body's own, read from its species rather than stored on it
+        // (`Body::locomotion`).
+        //
+        // **The door oracle answers `false` for now, and that is the
+        // correct behaviour rather than a stub.** A door with no openness
+        // fact is shut and locked — the Chattel's own default — so until
+        // §3.7's ledger fold lands (Task 5), a plan-gated threshold refuses
+        // exactly as a shut door should. What Task 5 replaces is this
+        // closure's BODY; the seam it is passed through is already the one
+        // it will use.
+        let shut = |_: crate::lattice::Cell| false;
+        let who = crate::underground::Traverser {
+            locomotion: self.driven_body().locomotion(),
+            door_open: &shut,
+        };
+        let target = match ug.peek(wanted, &who) {
             Err(reason) => return Turn::Out(reason.to_string()),
             Ok(target) => target,
         };
@@ -5287,7 +5303,16 @@ impl<'w> Session<'w> {
                     .expect("a cell just stepped onto is passable");
                 let verb = match mode {
                     crate::underworld_level::MovementMode::Wade => "wade",
-                    _ => "step",
+                    // The Brattice, spec §3.6: `Deep` answers `Swim`, and
+                    // the `_` arm below would have swallowed it silently —
+                    // a body that just crossed a sump would have read as
+                    // having "stepped" across it.
+                    crate::underworld_level::MovementMode::Swim => "swim",
+                    // No cell kind answers `Fly` (flight takes an edge, not
+                    // a cell), so this arm is the walk-and-wade default and
+                    // nothing else.
+                    crate::underworld_level::MovementMode::Walk
+                    | crate::underworld_level::MovementMode::Fly => "step",
                 };
                 Turn::Out(format!("You {verb} {}.", bearing_word(wanted)))
             }
@@ -5405,11 +5430,24 @@ impl<'w> Session<'w> {
         let Some(ug) = self.underground.as_ref() else {
             return Turn::Out("You are not underground; there are no stairs to take.".to_string());
         };
-        // A chute's lip is a way DOWN (The Brattice, spec §3.5/§3.6): `down`
-        // takes it exactly as it takes a stairway. There is no matching way
-        // up — the cell beneath a `Drop` is ordinary floor — so `up` still
-        // wants a `StairsUp` and nothing else, and refuses there.
+        // A chute's lip is a way DOWN (The Brattice, spec §3.5/§3.6):
+        // `down` takes it exactly as it takes a stairway. `up` is the
+        // asymmetric half — the landing beneath a chute is ordinary floor
+        // carrying no `StairsUp`, so what makes it a way up at all is the
+        // `Drop` one rung ABOVE it, and whether a body may take it is
+        // `peek_stairs`'s question (a walker gets `NO_WAY_UP_REFUSAL`, a
+        // flier gets the lip). This method's own job is unchanged: refuse a
+        // direction the cell does not offer AT ALL, so `down` never means
+        // up.
         let here = ug.level().cells.get(ug.cell);
+        let chute_above = ug.rung > 0
+            && ug.descent[ug.rung - 1].cells.get(ug.cell)
+                == Some(crate::underworld_level::LevelCellKind::Drop);
+        let by_chute = if want_down {
+            here == Some(crate::underworld_level::LevelCellKind::Drop)
+        } else {
+            chute_above && here != Some(crate::underworld_level::LevelCellKind::StairsUp)
+        };
         let on_a_way = if want_down {
             matches!(
                 here,
@@ -5417,7 +5455,7 @@ impl<'w> Session<'w> {
                     | Some(crate::underworld_level::LevelCellKind::Drop)
             )
         } else {
-            here == Some(crate::underworld_level::LevelCellKind::StairsUp)
+            here == Some(crate::underworld_level::LevelCellKind::StairsUp) || chute_above
         };
         if !on_a_way {
             return Turn::Out(if want_down {
@@ -5426,7 +5464,12 @@ impl<'w> Session<'w> {
                 "There is no stairway up from here.".to_string()
             });
         }
-        if let Err(reason) = ug.peek_stairs() {
+        let loc = self.driven_body().locomotion();
+        let ug = self
+            .underground
+            .as_ref()
+            .expect("checked Some above; driven_body borrows nothing of it");
+        if let Err(reason) = ug.peek_stairs(loc) {
             return Turn::Out(reason.to_string());
         }
         // The charge runs BEFORE the move lands, the same order
@@ -5439,7 +5482,7 @@ impl<'w> Session<'w> {
             .underground
             .as_mut()
             .expect("checked Some above; charge_within_room never touches underground");
-        ug.take_stairs()
+        ug.take_stairs(loc)
             .expect("peek_stairs just confirmed this succeeds");
         // Fix round 1: the stairs are the second of the three arrival paths
         // that mark fog (spec §3.5, amended in commit f6051a9c3) — a rung
@@ -5447,11 +5490,21 @@ impl<'w> Session<'w> {
         // landing's own surroundings, not just whatever a lateral step
         // happened to add.
         self.mark_underground_seen();
-        let word = if want_down { "down" } else { "up" };
-        Turn::Out(format!(
-            "You take the stairs {word}.\n{}",
-            self.describe_underground_here()
-        ))
+        // The chute gets its own two sentences (The Brattice, spec §3.6:
+        // "a `down` through a chute and an `up` by flight each get a
+        // sentence"); the stairs' sentence is untouched, because a stairway
+        // taken is still a stairway taken.
+        let act = if by_chute {
+            if want_down {
+                "You let yourself down the chute.".to_string()
+            } else {
+                "You fly up the chute.".to_string()
+            }
+        } else {
+            let word = if want_down { "down" } else { "up" };
+            format!("You take the stairs {word}.")
+        };
+        Turn::Out(format!("{act}\n{}", self.describe_underground_here()))
     }
 
     /// Clear the barred passage at the cave mouth here (The Latch, Task 5) —
@@ -5559,7 +5612,7 @@ impl<'w> Session<'w> {
             .expect("guarded by self.underground.is_some() at the call site");
         format!(
             "[underground]\nThe rock here is {}. {}",
-            underground_footing_word(ug),
+            underground_footing_words(ug).0,
             self.underground_ways_from_cell()
         )
     }
@@ -5640,13 +5693,18 @@ impl<'w> Session<'w> {
             .underground
             .as_ref()
             .expect("guarded by self.underground.is_some() at the call site");
-        let footing = underground_footing_word(ug);
+        let (footing, label) = underground_footing_words(ug);
         let mut nouns = vec![
             crate::focalize::Noun::new("the rock", "rock", &format!("The rock here is {footing}.")),
+            // The label, not the phrase, is what a player types — see
+            // `underground_footing_words`'s own doc for why the two parted
+            // company. The datum is a full sentence rather than the old
+            // "{footing} rock" fragment for the same reason: "a narrow
+            // squeeze rock" is not English.
             crate::focalize::Noun::new(
-                footing,
-                footing,
-                &format!("{footing} rock — the footing of this passage."),
+                label,
+                label,
+                &format!("The footing of this passage is {footing}."),
             ),
         ];
         if let Some((kind, source, _cell)) = self.underground_resident(ug) {
@@ -8875,23 +8933,36 @@ fn stratum_word(s: hornvale_climate::Stratum) -> &'static str {
     }
 }
 
-/// The reader-facing word for the footing under the possession's feet
-/// underground (The Gallery, Task 3) — whether `ug`'s current cell is
-/// `Flooded` or dry `Floor`. `describe_underground_here` and
-/// `underground_nouns` share this rather than each reading `ug.level()`
-/// and matching on the cell kind separately.
+/// The reader-facing words for the footing under the possession's feet
+/// underground (The Gallery, Task 3; the three Brattice kinds added in its
+/// Task 4) — `(phrase, label)`.
 ///
-/// Matches on anything other than `Flooded` as dry rather than listing
-/// `Floor` alone: `Underground::enter`'s own invariant guarantees the
-/// possession's cell is `Floor` or `Flooded` at the moment a descent
-/// begins, and a later task's stairs (Task 5) or fog (Task 6) adding a
-/// third live kind at this position should read as dry footing, not panic
-/// a description verb that has nothing to do with either.
+/// - `phrase` completes "The rock here is ___." and "The footing of this
+///   passage is ___.", so it may carry an article.
+/// - `label` is the single word a player TYPES at `examine`, so it may not.
+///
+/// **One function returning both rather than two functions**, because they
+/// are one decision read two ways: a second `match` on the same cell kind
+/// could drift, and a kind added to one table and forgotten in the other
+/// would read as dry footing under a typeable name that no longer fits it.
+/// The pair replaces a single word that served both roles while every live
+/// kind happened to be a bare adjective — which stopped being true the
+/// moment a squeeze and a chute's lip needed naming.
+///
+/// **`Deep`, `Threshold` and `Drop` used to fall through to "dry"**, which
+/// was Task 3's own deferred minor: the realizer had begun placing all
+/// three and this table still described a body standing in a sump as
+/// standing on dry rock. Anything not named here is still dry — the same
+/// tolerance the original had, so a future kind reads as ordinary footing
+/// rather than panicking a description verb.
 /// type-audit: bare-ok(prose: return)
-fn underground_footing_word(ug: &crate::underground::Underground) -> &'static str {
+fn underground_footing_words(ug: &crate::underground::Underground) -> (&'static str, &'static str) {
     match ug.level().cells.get(ug.cell) {
-        Some(crate::underworld_level::LevelCellKind::Flooded) => "flooded",
-        _ => "dry",
+        Some(crate::underworld_level::LevelCellKind::Flooded) => ("flooded", "flooded"),
+        Some(crate::underworld_level::LevelCellKind::Deep) => ("under deep water", "water"),
+        Some(crate::underworld_level::LevelCellKind::Threshold) => ("a narrow squeeze", "squeeze"),
+        Some(crate::underworld_level::LevelCellKind::Drop) => ("the lip of a chute", "chute"),
+        _ => ("dry", "dry"),
     }
 }
 
@@ -14855,7 +14926,12 @@ mod tests {
         let (cell, wanted) =
             rock_adjacent.expect("a generated level has at least one standable cell beside rock");
         ug.cell = cell;
-        match ug.peek(wanted) {
+        let shut = |_: crate::lattice::Cell| false;
+        let who = crate::underground::Traverser {
+            locomotion: hornvale_species::WALKER,
+            door_open: &shut,
+        };
+        match ug.peek(wanted, &who) {
             Err(reason) => {
                 let lower = reason.to_lowercase();
                 assert!(!lower.contains("verb"), "not a parse complaint: {reason}");
@@ -14903,7 +14979,7 @@ mod tests {
             .map(|(c, _)| c)
             .expect("a generated level has at least one standable, non-stairs cell");
         ug.cell = floor_cell;
-        match ug.peek_stairs() {
+        match ug.peek_stairs(hornvale_species::WALKER) {
             Err(reason) => {
                 assert!(
                     reason.to_lowercase().contains("stairway"),
@@ -15223,6 +15299,204 @@ mod tests {
                 "step {dir} refused mid-route"
             );
         }
+    }
+
+    /// The footing sentence names each of the five live cell kinds
+    /// distinctly (The Brattice, Task 4, closing Task 3's deferred minor:
+    /// `Deep`, `Threshold` and `Drop` all read as "dry" until this table
+    /// learned them).
+    ///
+    /// Asserts the SENTENCE, not the table, and asserts the five are
+    /// pairwise distinct: a phrase that reads well but says the same thing
+    /// as another is the failure a lookup-table test cannot see. The
+    /// `examine` label is checked in the same pass, because it is the half
+    /// a player types and it may not carry the article the sentence needs.
+    #[test]
+    fn each_live_footing_kind_reads_as_its_own_sentence() {
+        use crate::underworld_level::LevelCellKind as K;
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+        session.delve_at(vertex, cave);
+        let here = session.underground.as_ref().expect("descended").cell;
+
+        let mut said: Vec<String> = Vec::new();
+        for (kind, phrase, label) in [
+            (K::Floor, "dry", "dry"),
+            (K::Flooded, "flooded", "flooded"),
+            (K::Deep, "under deep water", "water"),
+            (K::Threshold, "a narrow squeeze", "squeeze"),
+            (K::Drop, "the lip of a chute", "chute"),
+        ] {
+            session.underground.as_mut().expect("descended").descent[0]
+                .cells
+                .set(here, kind);
+            let line = session.describe_underground_here();
+            assert!(
+                line.contains(&format!("The rock here is {phrase}.")),
+                "{kind:?} must read as {phrase:?}: {line:?}"
+            );
+            let nouns = session.underground_nouns();
+            assert!(
+                nouns.iter().any(|n| n.matches(label)),
+                "{kind:?}'s footing must be examinable as {label:?}"
+            );
+            said.push(phrase.to_string());
+        }
+        let mut sorted = said.clone();
+        sorted.sort();
+        sorted.dedup();
+        assert_eq!(
+            sorted.len(),
+            said.len(),
+            "every live kind must read differently: {said:?}"
+        );
+    }
+
+    /// THE BRATTICE, spec §3.6, through the session's own verbs: the same
+    /// cell answers differently depending on WHO is standing on it.
+    ///
+    /// Four readings over one descent, in one possession:
+    ///
+    /// 1. `down` on a chute's lip narrates the chute, not the stairs.
+    /// 2. `up` from beneath it refuses a walker with the lip overhead.
+    /// 3. The same `up`, by a body that flies, takes the lip.
+    /// 4. A sump refuses a walker with water and admits a swimmer, who
+    ///    SWIMS rather than steps — the `MovementMode` arm spec §3.6 exists
+    ///    to keep from being swallowed by a `_`.
+    ///
+    /// **The chute and the sump are installed into a REAL generated
+    /// descent** rather than waited for: which seeds realize which gates is
+    /// the realizer's business (Task 3's witness pins it), and a test that
+    /// searched for one would be pinning that placement a second time
+    /// instead of the walk. What is under test here is entirely the
+    /// session's side — the verbs, the refusals and the sentences — so the
+    /// cells are set by hand and everything downstream of them is the
+    /// shipped path.
+    ///
+    /// **The body's species is swapped, not its locomotion**, because there
+    /// is no locomotion to swap: `Body::locomotion` reads the species
+    /// registry, so `reef-shark` and `red-dragon` are how a test asks for a
+    /// swimmer and a flier. That is the accessor's own contract exercised,
+    /// not a way around it.
+    #[test]
+    fn the_chute_and_the_sump_read_the_body_that_walks_them() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+        session.delve_at(vertex, cave);
+
+        let lip = session.underground.as_ref().expect("descended").cell;
+        {
+            let ug = session.underground.as_mut().expect("descended");
+            assert!(ug.descent.len() > 1, "the ladder has more than one rung");
+            ug.descent[0]
+                .cells
+                .set(lip, crate::underworld_level::LevelCellKind::Drop);
+            ug.descent[1]
+                .cells
+                .set(lip, crate::underworld_level::LevelCellKind::Floor);
+        }
+
+        // 1. Down the chute.
+        let out = match session.handle("down") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("down must not release"),
+        };
+        assert!(
+            out.starts_with("You let yourself down the chute."),
+            "a chute is not a stairway: {out:?}"
+        );
+        {
+            let ug = session.underground.as_ref().expect("descended");
+            assert_eq!(ug.rung, 1, "one rung down");
+            assert_eq!(ug.cell, lip, "the same coordinate");
+        }
+
+        // 2. A walker has no way back up.
+        let out = match session.handle("up") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("up must not release"),
+        };
+        assert_eq!(
+            out,
+            crate::underground::NO_WAY_UP_REFUSAL,
+            "a walker beneath a chute is told about the lip, not the stairs"
+        );
+        assert_eq!(
+            session.underground.as_ref().expect("descended").rung,
+            1,
+            "a refused up moves nobody"
+        );
+
+        // 3. A flier takes it.
+        let driven = session.driven;
+        session.bodies[driven].species = "red-dragon".to_string();
+        let out = match session.handle("up") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("up must not release"),
+        };
+        assert!(
+            out.starts_with("You fly up the chute."),
+            "the flight up a chute gets its own sentence: {out:?}"
+        );
+        assert_eq!(session.underground.as_ref().expect("descended").rung, 0);
+
+        // 4. The sump. Install deep water in an orthogonal neighbour of the
+        // lip, on the rung the possession is now standing on.
+        let (wet, wanted) = {
+            let ug = session.underground.as_ref().expect("descended");
+            COMPASS_SQUARE
+                .iter()
+                .copied()
+                .find_map(|dir| {
+                    let d = cell_delta(dir);
+                    let c = crate::lattice::Cell(lip.0 + d.0, lip.1 + d.1);
+                    ug.descent[0].cells.get(c).map(|_| (c, dir))
+                })
+                .expect("the lip has at least one orthogonal neighbour inside the extent")
+        };
+        session.underground.as_mut().expect("descended").descent[0]
+            .cells
+            .set(wet, crate::underworld_level::LevelCellKind::Deep);
+
+        session.bodies[driven].species = "human".to_string();
+        let out = match session.handle(&format!("go {}", bearing_letter(wanted))) {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("go must not release"),
+        };
+        assert_eq!(
+            out,
+            crate::underground::UNDERGROUND_DEEP_WATER_REFUSAL,
+            "a walker is refused deep water by water, not by rock: {out:?}"
+        );
+
+        session.bodies[driven].species = "reef-shark".to_string();
+        let out = match session.handle(&format!("go {}", bearing_letter(wanted))) {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("go must not release"),
+        };
+        assert_eq!(
+            out,
+            format!("You swim {}.", bearing_word(wanted)),
+            "the swimmer SWIMS: the Swim arm must not be swallowed by the \
+             step default"
+        );
+        assert_eq!(
+            session.underground.as_ref().expect("descended").cell,
+            wet,
+            "and actually crosses"
+        );
     }
 
     /// THE CROSSCUT, spec §7 acceptances 1 AND 2, in one walk.
