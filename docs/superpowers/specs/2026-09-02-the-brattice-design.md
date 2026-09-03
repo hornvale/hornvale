@@ -360,6 +360,16 @@ substrate, none an object:
   (`mod.rs:485-490`); `standable_cells_in_rect` counts `Threshold` and `Drop`
   as footing. A repair that carved around a door would defeat it, which is the
   same defect the Crosscut found in a repair that carved through a wall.
+  **Execution amendment (Task 3 review, ruling G):** a stair's FOOT connector
+  — the L that joins a freshly written stair cell to its region's nearest
+  walkable cell — paves through `Deep` but preserves `Threshold`, `Drop` and
+  stairs. Preserving `Deep` there stranded a stair behind water the plan never
+  gated (seed 13, Karst/DrowTier, level 0, measured); paving is safe because a
+  foot connector runs inside one region's rectangle and never reaches the
+  divider, so a sump's crossing cell stays `Deep` and only the run's tail
+  inside the region shortens. The witness gains two arms for it: every stair,
+  chute lip and landing reaches its region's floor by walking or wading alone,
+  and a level with no sump passage holds no `Deep` cell.
 - **`unlinked_neighbours_keep_their_wall` is unchanged.** A gate is placed on
   an edge the plan has; it is never a second way through, and the test that
   flood-fills between unlinked neighbours must stay green without edits.

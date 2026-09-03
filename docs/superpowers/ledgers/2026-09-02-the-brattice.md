@@ -1129,3 +1129,22 @@ clean; workspace clippy `-D warnings` rc=0; `type-audit -- check` rc=0;
 the reason proved last round - no committed fixture holds an underworld level
 document) and this time not even the type-audit report, since no pub boundary
 changed. Only the `docs/timings.md` row.
+
+#11 [G5, controller ruling during Task 3] — A stair foot behind water ·
+**Ruling G: a stair's foot connector paves through `Deep` and preserves
+`Threshold`, `Drop` and stairs; the witness walks to every stair, lip and
+landing without swimming and asserts no `Deep` on a sump-free level** · Why:
+Task 3's `is_placed_way` consolidated three notions of "already a way" and
+included `Deep`, so a stair whose foot connector crossed a sump's run kept a
+`Deep` cell in the L and the stair became walker-unreachable — a Swim
+requirement the plan never stamped, invisible to both connectivity sweeps once
+they read `movement_mode(..).is_some()`; the fix reverted reds the new arm on
+seed 13 Karst/DrowTier level 0 at (30, 14), so the guard is live · Discarded:
+preserving `Deep` and routing the connector around it (a connector confined to
+the region may have no route, and the stair then has no foot at all); making
+the sump's crossing a `Threshold` (rejected at ledger #9 (ii)) · Ideonomy:
+none — a ruling on a measured defect · Capture: spec §3.5 amended; the review's
+deferred minors: `peek_stairs`' Drop refusal branch has no unit test; the
+terminus fallback can overwrite a chute landing when a region's only walkable
+cells are landings (debug-asserted and witnessed, silent in release);
+`underground_footing_word` reads `Deep` as "dry" until Task 4 owns the words.
