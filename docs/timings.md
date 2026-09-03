@@ -5224,3 +5224,4 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-03T13:38:53Z | gate-commit | 997.563 | 925.189 | 196.835 | 1.12 | 0 | b565e7e3e | campaign/the-nettle | ambrose | 12 |
 | 2026-09-03T15:00:57Z | gate-commit | 290.109 | 81.809 | 41.984 | 0.43 | 0 | e9bc17221 | campaign/the-nettle | ambrose | 12 |
 | 2026-09-03T15:06:47Z | sluice:artifacts | 182.692 | 964.675 | 38.298 | 5.49 | 0 | ead15261f |  | lefford | 40 |
+| 2026-09-03T15:07:56Z | sluice:outboard | 68.066 | 44.708 | 53.508 | 1.44 | 0 | 83716c88b |  | lefford | 40 |
