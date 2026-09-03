@@ -1116,6 +1116,23 @@ pub(crate) fn resident_cell(ug: &Underground) -> Option<Cell> {
         .next()
 }
 
+/// The first node on `rung` the plan seats a key at, in ascending node order
+/// — the node a walk must reach before any door on that rung will open.
+///
+/// **A TEST seam** (`#[cfg(test)]`), for [`wild_origins`]'s own reason:
+/// production reaches a key through the region underfoot
+/// ([`crate::descent_thing::key_here`]), never by asking the plan where one
+/// is. A walk that wants to fetch a key on purpose — spec §7.3's hoard —
+/// needs the question the verbs deliberately do not ask.
+#[cfg(test)]
+pub(crate) fn key_node_on(
+    ug: &Underground,
+    rung: usize,
+) -> Option<hornvale_worldgen::circuit::NodeId> {
+    (0..ug.plan.nodes.len())
+        .find(|&n| ug.plan.nodes[n].level as usize == rung && ug.plan.nodes[n].key.is_some())
+}
+
 /// The flavour text a rung's resident mark carries: the SPECIES rather than
 /// a personal label, because this creature has no entity identity to be
 /// consistent with (spec §3.6's own stop condition: this task ships a

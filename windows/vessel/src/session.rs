@@ -16479,6 +16479,413 @@ mod tests {
         }
     }
 
+    /// A place to stand and the bearing that steps from it into the thing
+    /// it stands beside — [`standable_beside`]'s answer, named once so the
+    /// two searches below can state it without spelling the type twice.
+    type Approach = (crate::lattice::Cell, Compass); // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+
+    /// [`Approach`] with the approached threshold in front of it:
+    /// `(the door's own cell, a cell to stand on, the bearing between)`.
+    type DoorApproach = (crate::lattice::Cell, crate::lattice::Cell, Compass); // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+
+    /// A standable cell beside `door`, and the bearing that steps FROM that // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+    /// cell INTO it — one search returning both halves, because the bearing // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+    /// is a by-product of the neighbour and re-deriving it afterwards would
+    /// be a second rule that could disagree with the first.
+    ///
+    /// **The rung is a parameter, and that is the whole difference from the
+    /// inline form this was lifted out of (The Plat, Task 5).**
+    /// [`a_worked_descent_with_a_door`] reads `ug.descent[0]` throughout,
+    /// behind its own comment: `Underground::has_door` and
+    /// `Underground::threshold_edge` both read `self.level()`, so asking
+    /// about another rung's cells there would silently ask about rung 0's. // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+    /// The Plat's acceptance walks stand on a column's **Made** rung, which
+    /// is generally not rung 0 — a helper that inherited the hardcoding
+    /// would answer about the wrong level and fail in a way that reads like
+    /// a real defect rather than a wrong question.
+    ///
+    /// `Floor` only, never `Flooded`: these callers walk bodies that cannot
+    /// swim, so a search that offered a sump would hand a walk a cell the // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+    /// step itself refuses — [`foot_flood`]'s own rule, one function up.
+    fn standable_beside(
+        ug: &crate::underground::Underground,
+        rung: usize,
+        door: crate::lattice::Cell, // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+    ) -> Option<Approach> {
+        COMPASS_ROSE.iter().copied().find_map(|dir| {
+            let d = cell_delta(dir); // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+            let c = crate::lattice::Cell(door.0 - d.0, door.1 - d.1); // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+            ug.descent[rung]
+                .cells // lexicon: a level's `cells` are lattice squares — areas, not mesh vertices
+                .get(c)
+                .is_some_and(|k| matches!(k, crate::underworld_level::LevelCellKind::Floor)) // lexicon: `LevelCellKind` classifies a lattice square — an area
+                .then_some((c, dir))
+        })
+    }
+
+    /// A REALIZED door on `rung` a body could actually be refused by: the
+    /// threshold cell the plan gated, a standable cell beside it, and the // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+    /// bearing from that cell into the door. // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+    ///
+    /// **Asked of the realized level, not of the plan's edges**, and the
+    /// difference is not cosmetic: a `Needs(Key(_))` gate may sit on a
+    /// `Stair` edge, which has no threshold cell on either level at all // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+    /// (`Level::thresholds` holds one entry per `Passage` edge). A column
+    /// selected on the plan alone could therefore hang a door this walk can
+    /// never reach, and the test would read as a defect in the verb.
+    fn doored_threshold_on(
+        ug: &crate::underground::Underground,
+        rung: usize,
+    ) -> Option<DoorApproach> {
+        ug.descent[rung]
+            .thresholds
+            .iter()
+            .map(|t| t.2)
+            .filter(|&c| crate::descent_thing::door_at(ug, c).is_some()) // lexicon: a threshold `Cell` is a lattice square — an area
+            .find_map(|c| standable_beside(ug, rung, c).map(|(stand, bearing)| (c, stand, bearing))) // lexicon: `Cell` values here are lattice squares — areas
+    }
+
+    /// The first open, unbarred, cave-bearing column of seed 42 whose LEDGER
+    /// seats a people at some rung (26 such columns exist —
+    /// `underworld_capacity_probe`), with `want_door` requiring that rung to
+    /// hang a reachable `Needs(Key(_))` door and `want_tenancy` selecting
+    /// the tense. Returns the descent and the index of the seated rung.
+    ///
+    /// **The returned descent is already AT that rung** (`ug.rung == made`),
+    /// which is the one thing a caller must not have to remember: every
+    /// positional read below — `Underground::level`, `has_door`,
+    /// `threshold_edge`, `plat_prose::place_sentence`,
+    /// `underground::resident_cell` — goes through `self.level()`, and a // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+    /// Made rung is generally not rung 0. Its `cell` is still rung 0's // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+    /// entrance, so a caller must [`stand_in`] somewhere on the new rung
+    /// before reading anything positional.
+    ///
+    /// `None`, never a panic, so each caller states its own finding in its
+    /// own words: seed 42 having no such column is a fact about the ledger,
+    /// not a reason to weaken the test that wanted one.
+    ///
+    /// claim: readout(seed: 42) — a scan over one seed's real columns, not a claim about the range
+    fn a_made_column(
+        session: &Session<'_>,
+        world: &World,
+        want_door: bool,
+        want_tenancy: Option<hornvale_worldgen::delve_seating::Tenancy>,
+    ) -> Option<(crate::underground::Underground, usize)> {
+        use hornvale_worldgen::chamber::ChamberOrigin;
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let rungs = crate::underground::habitation_rungs();
+        let pins = hornvale_worldgen::BarrierPins::default();
+        for (vertex, cave, is_open) in cave_entrance_states(&terrain, world.seed) {
+            if !is_open
+                || seeded_entrance_barrier(world.seed, vertex, &pins)
+                    != hornvale_worldgen::BarrierState::Open
+            {
+                continue;
+            }
+            let origins =
+                hornvale_worldgen::delve_seating::column_origins(world, &terrain, vertex, &rungs);
+            // The tenancy is part of WHICH rung is wanted, not a filter
+            // applied after one is chosen: a column whose first Made rung is
+            // Inhabited may still hold an Abandoned one below it.
+            let Some(made) = origins
+                .iter()
+                .position(|o| o.0 == ChamberOrigin::Made && want_tenancy.is_none_or(|t| o.1 == t))
+            else {
+                continue;
+            };
+            let mut ug = crate::underground::Underground::enter(
+                &terrain, vertex, cave, world.seed, &origins,
+            );
+            ug.rung = made;
+            if want_door && doored_threshold_on(&ug, made).is_none() {
+                continue;
+            }
+            return Some((ug, made));
+        }
+        None
+    }
+
+    /// Stand the possession on the first standable cell of `node`'s region — // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+    /// the same rule `Underground::enter` applies at the Entry and
+    /// `underground::resident_cell` applies at the Sanctum, so standing in a // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+    /// Sanctum stands the possession exactly where its resident is.
+    ///
+    /// Reads `ug.level()`, hence `ug.rung`: set the rung first.
+    fn stand_in(ug: &mut crate::underground::Underground, node: usize) {
+        let r = ug.plan.region_of(node);
+        let cell = ug // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+            .level()
+            .cells // lexicon: a level's `cells` are lattice squares — areas, not mesh vertices
+            .iter()
+            .filter(|(c, k)| {
+                matches!(
+                    k,
+                    crate::underworld_level::LevelCellKind::Floor // lexicon: `LevelCellKind` classifies a lattice square — an area
+                        | crate::underworld_level::LevelCellKind::Flooded // lexicon: `LevelCellKind` classifies a lattice square — an area
+                ) && c.0 >= r.x
+                    && c.0 < r.x + r.w
+                    && c.1 >= r.y
+                    && c.1 < r.y + r.h
+            })
+            .map(|(c, _)| c)
+            .next()
+            .expect("every region has a standable cell (the realizer's ensure_standable pass)"); // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+        ug.cell = cell; // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+    }
+
+    /// THE PLAT, spec §7.1: at a real Made column of seed 42, standing on
+    /// the Made rung, `look` reads the Entry sentence in the present tense;
+    /// at the Heart it reads the hall sentence and `examine hall` answers;
+    /// and a gated threshold on that rung refuses `go` with the Brattice's
+    /// locked-door refusal — its verbs reachable from a PRODUCTION descent
+    /// for the first time (`Underground::enter`, not the character seam).
+    #[test]
+    fn a_cut_place_is_walked_and_its_doors_are_real() {
+        use hornvale_worldgen::delve_seating::Tenancy;
+        use hornvale_worldgen::plat::{Role, role_nodes};
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let Some((mut ug, made)) = a_made_column(&session, &world, true, Some(Tenancy::Inhabited))
+        else {
+            panic!(
+                "seed 42 has no open, unbarred column whose Made rung is Inhabited AND hangs a \
+                 reachable Needs(Key) door — a ledger finding to record, not a reason to weaken \
+                 this test"
+            );
+        };
+        // Standing on the Made rung is `a_made_column`'s own doing; the walk
+        // down the stairs is the Gallery's verb and is tested there. What is
+        // under test here is what the rung SAYS.
+        let entry = role_nodes(&ug.plan, &ug.reading, made, Role::Entry)[0];
+        stand_in(&mut ug, entry);
+        session.underground = Some(ug);
+        session.mark_underground_seen();
+
+        let out = match session.handle("look") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("look must not release"),
+        };
+        assert!(out.contains("This is the entry of a cut place"), "{out}");
+        let out = match session.handle("examine entry") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("examine must not release"),
+        };
+        assert!(out.contains("entry of a cut place"), "{out}");
+
+        // The Heart, where the plan has one: `Role::Heart` is `None` on a
+        // rung whose median node is already the Sanctum (spec §3.1).
+        let ug = session.underground.as_mut().expect("below");
+        if let Some(&heart) = role_nodes(&ug.plan, &ug.reading, made, Role::Heart).first() {
+            stand_in(ug, heart);
+            session.mark_underground_seen();
+            let out = match session.handle("look") {
+                Turn::Out(t) => t,
+                Turn::Released(_) => panic!("look must not release"),
+            };
+            assert!(out.contains("This hall is the heart of the place"), "{out}");
+            let out = match session.handle("examine hall") {
+                Turn::Out(t) => t,
+                Turn::Released(_) => panic!("examine must not release"),
+            };
+            assert!(out.contains("heart of the place"), "{out}");
+        }
+
+        // And a locked door on this rung refuses `go` in the Brattice's own
+        // words. `a_made_column` was asked for a column that has one.
+        let ug = session.underground.as_ref().expect("below");
+        let (_, stand, bearing) =
+            doored_threshold_on(ug, made).expect("the column was chosen for a reachable door");
+        session.underground.as_mut().expect("below").cell = stand; // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+        session.mark_underground_seen();
+        let out = match session.handle(&format!("go {}", bearing_letter(bearing))) {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("go must not release"),
+        };
+        assert_eq!(
+            out,
+            crate::underground::UNDERGROUND_LOCKED_DOOR_REFUSAL,
+            "a shut, locked door on a Made rung refuses with the Brattice's refusal"
+        );
+    }
+
+    /// THE PLAT, spec §7.2: the same sentence in the PAST tense at a column
+    /// whose seating has ended. Seed 42's ledger holds 67 occupations over
+    /// 26 columns, so an Abandoned rung may or may not exist among the open,
+    /// unbarred ones; if none does, the walk falls back to the `enter` seam
+    /// with an Abandoned origin and says so on stderr. The ledger derivation
+    /// of `Abandoned` is Task 2's test; the PROSE is this one's, and the
+    /// seam exercises exactly the prose.
+    #[test]
+    fn a_ruin_is_walked_in_the_past_tense() {
+        use hornvale_worldgen::chamber::ChamberOrigin;
+        use hornvale_worldgen::delve_seating::Tenancy;
+        use hornvale_worldgen::plat::{Role, role_nodes};
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let (mut ug, made) = match a_made_column(&session, &world, false, Some(Tenancy::Abandoned))
+        {
+            Some(found) => found,
+            None => {
+                eprintln!(
+                    "seed 42 has no open, unbarred column with an Abandoned Made rung; \
+                     walking the `enter` seam instead"
+                );
+                let terrain = session
+                    .wctx
+                    .terrain
+                    .clone()
+                    .expect("seed 42 builds terrain");
+                let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+                let mut origins =
+                    crate::underground::wild_origins(crate::underground::habitation_rungs().len());
+                origins[0] = (ChamberOrigin::Made, Tenancy::Abandoned);
+                (
+                    crate::underground::Underground::enter(
+                        &terrain, vertex, cave, world.seed, &origins,
+                    ),
+                    0,
+                )
+            }
+        };
+        ug.rung = made;
+        let entry = role_nodes(&ug.plan, &ug.reading, made, Role::Entry)[0];
+        stand_in(&mut ug, entry);
+        session.underground = Some(ug);
+        session.mark_underground_seen();
+        let out = match session.handle("look") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("look must not release"),
+        };
+        assert!(
+            out.contains("This was the entry of a cut place, long empty"),
+            "{out}"
+        );
+    }
+
+    /// THE PLAT, spec §7.3: the rung's derived resident stands in the
+    /// Sanctum's region, and a thing set down there is named in its datum.
+    ///
+    /// **A Made column is preferred over a wild one, and the reason is the
+    /// key.** A wild rung's plan gets no `worked` term in
+    /// `circuit::cycle_budget`, so in practice it seats no `Needs(Key(_))`
+    /// gate and therefore no key — and the descent key is the only thing a
+    /// possession can pick up underground. So the hoard half can only run
+    /// where the ledger seated a people. A wild rung is still walked if no
+    /// Made column feeds a resident, and the hoard half then returns early
+    /// with a printed reason rather than asserting over an absent thing.
+    #[test]
+    fn the_hoarder_sits_in_the_sanctum_on_what_lies_there() {
+        use hornvale_worldgen::plat::{Role, role_nodes};
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let climate = session.wctx.climate.clone().expect("seed 42 fits climate");
+        let n = crate::underground::habitation_rungs().len();
+        let feeds_one = |ug: &crate::underground::Underground| {
+            crate::underground::chamber_resident(ug, &terrain, &climate).is_some()
+                && crate::underground::resident_cell(ug).is_some() // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+        };
+        let mut found = a_made_column(&session, &world, false, None)
+            .map(|(ug, _)| ug)
+            .filter(&feeds_one);
+        if found.is_none() {
+            eprintln!("no Made column of seed 42 feeds a resident on its seated rung; going wild");
+            'outer: for (vertex, cave, is_open) in cave_entrance_states(&terrain, world.seed) {
+                if !is_open {
+                    continue;
+                }
+                let mut ug = crate::underground::Underground::enter(
+                    &terrain,
+                    vertex,
+                    cave,
+                    world.seed,
+                    &crate::underground::wild_origins(n),
+                );
+                for rung in 0..n {
+                    ug.rung = rung;
+                    if feeds_one(&ug) {
+                        found = Some(ug);
+                        break 'outer;
+                    }
+                }
+            }
+        }
+        let mut ug = found.expect(
+            "seed 42 has a rung that feeds a resident (the Gallery's own claim) — its absence is \
+             a finding about the roster or the energy field, not a reason to weaken this test",
+        );
+        let rung = ug.rung;
+        let sanctum = role_nodes(&ug.plan, &ug.reading, rung, Role::Sanctum)[0];
+        let cell = crate::underground::resident_cell(&ug).expect("the scan required one"); // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+        let r = ug.plan.region_of(sanctum);
+        assert!(
+            cell.0 >= r.x && cell.0 < r.x + r.w && cell.1 >= r.y && cell.1 < r.y + r.h, // lexicon: a `Cell`'s coordinates are a lattice square's — an area
+            "the resident's mark must stand inside the Sanctum's own region"
+        );
+
+        // Standing in the Sanctum stands the possession on that very cell,  // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+        // so the shadowcast certainly lights it and `examine` answers.
+        stand_in(&mut ug, sanctum);
+        let kind = crate::underground::chamber_resident(&ug, &terrain, &climate)
+            .expect("the scan required one")
+            .0;
+        session.underground = Some(ug);
+        session.mark_underground_seen();
+        let datum = |session: &mut Session<'_>| match session.handle(&format!("examine {}", kind.0))
+        {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("examine must not release"),
+        };
+        let before = datum(&mut session);
+        assert!(
+            before.contains("moves in the dark here") || before.contains("is kept here"),
+            "{before}"
+        );
+        assert!(
+            !before.contains("sitting on"),
+            "the control: nothing lies in this Sanctum yet, so the datum must not \
+             list a hoard: {before}"
+        );
+
+        // The hoard: the descent key, taken from wherever the plan seated it
+        // and set down here. A rung with no key cannot exercise this half.
+        let Some(key_node) =
+            crate::underground::key_node_on(session.underground.as_ref().expect("below"), rung)
+        else {
+            eprintln!(
+                "rung {rung} seats no key; the hoard half is exercised by \
+                 `descent_thing`'s own unit tests only"
+            );
+            return;
+        };
+        let ug = session.underground.as_mut().expect("below");
+        stand_in(ug, key_node);
+        session.mark_underground_seen();
+        let out = match session.handle("take a key") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("take must not release"),
+        };
+        assert_eq!(out, "You take the key.");
+        let ug = session.underground.as_mut().expect("below");
+        stand_in(ug, sanctum);
+        session.mark_underground_seen();
+        let out = match session.handle("drop a key") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("drop must not release"),
+        };
+        assert_eq!(out, "You set the key down.");
+        let after = datum(&mut session);
+        assert!(after.contains("sitting on: a key"), "{after}");
+    }
+
     /// A WORKED descent that hangs a door, and a standable cell beside it
     /// (The Brattice, Task 5). The fixture every door and key test in this
     /// module stands on, and the one Task 6 reuses.
@@ -16555,12 +16962,6 @@ mod tests {
             // would silently ask about this one's.
             let thresholds: Vec<crate::lattice::Cell> =
                 ug.descent[0].thresholds.iter().map(|t| t.2).collect();
-            let standable = |c: crate::lattice::Cell| {
-                ug.descent[0]
-                    .cells
-                    .get(c)
-                    .is_some_and(|k| matches!(k, crate::underworld_level::LevelCellKind::Floor))
-            };
             for door_cell in thresholds {
                 if !ug.has_door(door_cell) {
                     continue;
@@ -16572,11 +16973,11 @@ mod tests {
                     continue;
                 }
                 // A standable cell beside the door, and the bearing FROM it.
-                let Some((stand, bearing)) = COMPASS_ROSE.iter().copied().find_map(|dir| {
-                    let d = cell_delta(dir);
-                    let c = crate::lattice::Cell(door_cell.0 - d.0, door_cell.1 - d.1);
-                    standable(c).then_some((c, dir))
-                }) else {
+                // Rung 0 explicitly, which is the rung this whole search is
+                // about — see [`standable_beside`] for why the parameter
+                // exists at all.
+                let approach = standable_beside(&ug, 0, door_cell); // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+                let Some((stand, bearing)) = approach else {
                     continue;
                 };
                 // And a standable cell inside the KEY's own region, so `take`
