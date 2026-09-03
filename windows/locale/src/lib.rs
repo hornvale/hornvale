@@ -455,6 +455,20 @@ fn dominant_corner(weights: &[(Vertex, u64); 4]) -> (Vertex, u64) {
     best
 }
 
+/// A room's *continuous* reading at its four corners: the integer-weighted
+/// mean, quantized once at the emit boundary (decision 0033).
+///
+/// Extracted from `describe_with_weights`'s own `blend` closure so
+/// [`LocaleContext::reflectance_at_facet`] can read the SAME moisture the
+/// document emits without a second copy of the arithmetic — a second copy
+/// being how the colour layer and the prose would come to disagree about how
+/// wet a room is.
+fn blend_at_corners(weights: &[(Vertex, u64); 4], value: &dyn Fn(Vertex) -> f64) -> f64 {
+    let denom: u64 = weights.iter().map(|&(_, w)| w).sum();
+    let sum: f64 = weights.iter().map(|&(c, w)| w as f64 * value(c)).sum();
+    quantize(sum / denom as f64)
+}
+
 /// What a step from one room to another does to the water between them.
 ///
 /// **Fordability is a property of a path, never of a place** — a ford is a
@@ -804,6 +818,76 @@ impl LocaleContext {
         Ok(self.reflectance_mixture_at(addr, micro, at)?.integrate())
     }
 
+    /// The ground's spectral curve at a facet, with the [`MicroField`]
+    /// computed internally — the facet-level entry point a *view* needs.
+    ///
+    /// [`Self::reflectance_at`] takes the micro-field from its caller, which
+    /// is right for a caller that already has one (`describe`'s `Locale`
+    /// carries it) and impossible for one that does not: every input to the
+    /// wetness grounding — the climate's moisture field, the channel network,
+    /// the globe, the geosphere, the nearest-vertex index and the rill
+    /// partition seed — is private to this context, so a caller outside this
+    /// crate cannot build an equivalent `MicroField` and passing `None`
+    /// would silently swap moisture-and-river-grounded wetness for address
+    /// noise (`surface.rs` reads `micro.wetness` for the cover mixture's
+    /// `wet_share`).
+    ///
+    /// The surface read, so the biome expression is the vertex's own
+    /// ([`GeneratedClimate::biome_expr_at`]) rather than a stratum's —
+    /// `describe_with_weights`'s `stratum: None` arm, which is the only arm
+    /// a map of the ground has.
+    ///
+    /// `Err(LocaleError::AboveGrid)` for an address coarser than the grid:
+    /// there is no four-corner reading to blend there, and a caller (the
+    /// world map) is expected to fall back rather than treat it as a fault.
+    pub fn reflectance_at_facet(
+        &self,
+        addr: &Facet,
+        at: WorldTime,
+    ) -> Result<hornvale_kernel::color::Reflectance, LocaleError> {
+        let geo = self.climate.geosphere();
+        let weights = addr
+            .corner_weights(geo, &self.index)
+            .ok_or(LocaleError::AboveGrid)?;
+        let best = dominant_corner(&weights);
+        let expr = self.climate.biome_expr_at(best.0);
+        let moisture = blend_at_corners(&weights, &|c| self.climate.moisture_at(c));
+        let grounded = self.grounded_wetness_for(addr, expr, moisture);
+        let micro = crate::micro::micro_field(addr.seed(self.seed), grounded);
+        self.reflectance_at(addr, &micro, at)
+    }
+
+    /// Wetness is a budget and an allocation (The Rill, R-7/R-8): the
+    /// climate supply this room's vertices receive, redistributed by where the
+    /// room sits relative to its own sub-vertex watercourse. Grounded only
+    /// where the axis means ground wetness — at sea the same axis is the
+    /// set of the current, on ice it is snow cover, and in the rock column
+    /// it is seep, and a river's proximity governs none of those.
+    ///
+    /// Extracted verbatim from `describe_with_weights`, which still calls it,
+    /// so [`Self::reflectance_at_facet`] grounds its wetness through the one
+    /// derivation rather than a second copy of it. `moisture` is the caller's
+    /// already-blended, already-quantized four-corner reading
+    /// ([`blend_at_corners`]), never a raw vertex sample.
+    fn grounded_wetness_for(&self, addr: &Facet, expr: BiomeExpr, moisture: f64) -> Option<f64> {
+        crate::micro::wetness_is_grounded(expr).then(|| {
+            let globe = self.terrain.globe();
+            crate::micro::grounded_wetness(
+                moisture,
+                rill_reading(
+                    addr.centroid(),
+                    self.terrain.channels(),
+                    globe,
+                    self.terrain.geosphere(),
+                    &self.index,
+                    // `Drawn`, never `Even`: `Even` is R-5's falsification
+                    // arm and is not a production partition.
+                    &CatchmentCut::Drawn(globe.rill_partition_seed()),
+                ),
+            )
+        })
+    }
+
     /// The surface mixture at `addr` on `at`, un-integrated, so a caller can
     /// reach the components. [`LocaleContext::reflectance_at`] is this,
     /// integrated.
@@ -1055,8 +1139,6 @@ impl LocaleContext {
         id: u64,
         weights: [(Vertex, u64); 4],
     ) -> Result<Locale, LocaleError> {
-        let denom: u64 = weights.iter().map(|&(_, w)| w).sum();
-
         // Categorical biome: max weight, tie-break lowest Vertex. Inherited,
         // never re-quantized (decision 0038).
         let best = dominant_corner(&weights);
@@ -1066,11 +1148,10 @@ impl LocaleContext {
         };
 
         // Continuous fields: integer-weighted mean, full precision, quantize
-        // at emit.
-        let blend = |value: &dyn Fn(Vertex) -> f64| -> f64 {
-            let sum: f64 = weights.iter().map(|&(c, w)| w as f64 * value(c)).sum();
-            quantize(sum / denom as f64)
-        };
+        // at emit. The arithmetic itself is `blend_at_corners`, shared with
+        // `reflectance_at_facet` so the moisture that grounds a wetness
+        // reading there is the SAME number this document emits.
+        let blend = |value: &dyn Fn(Vertex) -> f64| -> f64 { blend_at_corners(&weights, value) };
         let elevation_m = blend(&|c| self.terrain.globe().elevation.get(c).get());
         // `from_metres`, not a subtraction: the left operand is a four-corner
         // BLEND, not any single vertex's reading, so there is no pair of
@@ -1092,28 +1173,7 @@ impl LocaleContext {
             Some(st) => self.expr_at_stratum(best.0, st),
             None => self.climate.biome_expr_at(best.0),
         };
-        // Wetness is a budget and an allocation (The Rill, R-7/R-8): the
-        // climate supply this room's vertices receive, redistributed by where the
-        // room sits relative to its own sub-vertex watercourse. Grounded only
-        // where the axis means ground wetness — at sea the same axis is the
-        // set of the current, on ice it is snow cover, and in the rock column
-        // it is seep, and a river's proximity governs none of those.
-        let grounded = crate::micro::wetness_is_grounded(expr).then(|| {
-            let globe = self.terrain.globe();
-            crate::micro::grounded_wetness(
-                fields.moisture,
-                rill_reading(
-                    addr.centroid(),
-                    self.terrain.channels(),
-                    globe,
-                    self.terrain.geosphere(),
-                    &self.index,
-                    // `Drawn`, never `Even`: `Even` is R-5's falsification
-                    // arm and is not a production partition.
-                    &CatchmentCut::Drawn(globe.rill_partition_seed()),
-                ),
-            )
-        });
+        let grounded = self.grounded_wetness_for(addr, expr, fields.moisture);
         let micro = crate::micro::micro_field(addr.seed(self.seed), grounded);
         let mut regime = crate::grammar::derived_regime(self.seed, addr, expr, substrate, micro);
         if let Some(placed) = self.budget.regime_at(best.0) {

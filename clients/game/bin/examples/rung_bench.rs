@@ -217,7 +217,18 @@ fn main() {
     for row in 0..u32::from(h) {
         for col in 0..u32::from(w) {
             let _ = plate::terrain_at_tile(
-                &terrain, &geo, &index, &mut memo, &f, &win, vw, vh, row, col,
+                &terrain,
+                &geo,
+                &index,
+                &mut memo,
+                &f,
+                &win,
+                vw,
+                vh,
+                row,
+                col,
+                None,
+                hornvale_kernel::WorldTime::GENESIS,
             );
         }
     }

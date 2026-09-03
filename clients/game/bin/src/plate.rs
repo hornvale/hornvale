@@ -63,6 +63,7 @@
 use hornvale_game_core::{Cell, Grid, Ink, Source, Weight};
 use hornvale_kernel::{
     Facet, FacetId, GeoCoord, Geosphere, NearestVertexIndex, RoomMeshMemo, Value, Vertex, World,
+    WorldTime,
 };
 use hornvale_terrain::GeneratedTerrain;
 use hornvale_terrain::landscape::{FeatureClass, FeatureId as LandscapeFeatureId};
@@ -1359,8 +1360,24 @@ pub(crate) fn draw_terrain_layer(
 
     for row in 0..height {
         for col in 0..width {
+            // `None` context, deliberately: this layer still paints from
+            // the elevation ladder (`glyph_and_color_for`), and asking the
+            // locale for a reflectance it would then discard would cost a
+            // four-corner climate read per drawn position for nothing. The
+            // Wash's Task 6 is what threads a real context in here.
             let tile = terrain_at_tile(
-                terrain, geo, index, memo, f, win, virtual_w, virtual_h, row, col,
+                terrain,
+                geo,
+                index,
+                memo,
+                f,
+                win,
+                virtual_w,
+                virtual_h,
+                row,
+                col,
+                None,
+                WorldTime::GENESIS,
             );
             // TERRAIN ONLY. Sites are PROJECTED by `draw_feature_layer` —
             // see its doc for why asking each screen cell "is your
@@ -2070,6 +2087,13 @@ pub struct TileTerrain {
     /// carried at its own width rather than cast to match [`Self::water`].
     /// type-audit: bare-ok(index)
     pub band: u32,
+    /// The ground's own spectral curve at this tile, from
+    /// [`hornvale_locale::LocaleContext::reflectance_at_facet`]. `None`
+    /// where no context was supplied, or where the context cannot resolve
+    /// the address (a facet coarser than the grid); the renderer falls back
+    /// to the elevation ladder rather than panicking, because a map that
+    /// cannot draw one tile must still draw the rest.
+    pub reflectance: Option<hornvale_kernel::color::Reflectance>,
     /// The tile's own height above sea level — the CONTINUOUS reading
     /// [`Self::band`] is a lossy quantization of.
     ///
@@ -2169,6 +2193,8 @@ pub fn terrain_at_tile(
     virtual_h: u32,
     row: u32,
     col: u32,
+    ctx: Option<&hornvale_locale::LocaleContext>,
+    at: WorldTime,
 ) -> TileTerrain {
     let plate_row = win.origin_row + row;
     let plate_col = win.origin_col + col;
@@ -2251,6 +2277,18 @@ pub fn terrain_at_tile(
     let band = hornvale_scene::relief_band(height_asl);
     let water = terrain.water_kind_at(vertex).index();
 
+    // THE GROUND'S OWN SPECTRAL CURVE, asked of the sim rather than inferred
+    // from `band` (The Wash, Task 3). Addressed at `facet` — the WINDOW's
+    // rung, not the grid-level `addr` above — so a rung finer than the grid
+    // gets the genuine four-corner bilinear position of the tile's own
+    // centre rather than one answer per grid quad.
+    //
+    // `.ok()`, never `unwrap`: `reflectance_at_facet` refuses an address
+    // COARSER than the grid (`LocaleError::AboveGrid`), which
+    // `virtual_dims` deliberately still honours, and a map that cannot
+    // colour one tile must still draw the rest.
+    let reflectance = ctx.and_then(|ctx| ctx.reflectance_at_facet(&facet, at).ok());
+
     TileTerrain {
         ocean: terrain.is_ocean(vertex),
         facet,
@@ -2258,6 +2296,7 @@ pub fn terrain_at_tile(
         height_asl,
         band,
         water,
+        reflectance,
     }
 }
 
@@ -2754,7 +2793,18 @@ mod tests {
         for row in 0..u32::from(h) {
             for col in 0..u32::from(w) {
                 let t = terrain_at_tile(
-                    &terrain, &geo, &index, &mut memo, &f, &win, vw, vh, row, col,
+                    &terrain,
+                    &geo,
+                    &index,
+                    &mut memo,
+                    &f,
+                    &win,
+                    vw,
+                    vh,
+                    row,
+                    col,
+                    None,
+                    WorldTime::GENESIS,
                 );
                 vertices.insert(t.vertex);
                 // Decimetres: finer than any relief band, coarser than the
@@ -2832,7 +2882,18 @@ mod tests {
             for row in (0..60).step_by(3) {
                 for col in (0..60).step_by(3) {
                     let t = terrain_at_tile(
-                        &terrain, &geo, &index, &mut memo, &f, &win, vw, vh, row, col,
+                        &terrain,
+                        &geo,
+                        &index,
+                        &mut memo,
+                        &f,
+                        &win,
+                        vw,
+                        vh,
+                        row,
+                        col,
+                        None,
+                        WorldTime::GENESIS,
                     );
                     let facet = Facet::containing(
                         {
@@ -3436,6 +3497,8 @@ mod tests {
                 vh,
                 row,
                 col,
+                None,
+                WorldTime::GENESIS,
             )
             .vertex;
             (rep != c).then_some((c, row, col))
@@ -3681,7 +3744,18 @@ mod tests {
                 let point_vertex = index.nearest(&geo, lat, lon);
                 let pos = hornvale_kernel::math::unit_sphere_from_lat_lon(lat, lon);
                 let tile = terrain_at_tile(
-                    &terrain, &geo, &index, &mut memo, &f, &win, vw, vh, row, col,
+                    &terrain,
+                    &geo,
+                    &index,
+                    &mut memo,
+                    &f,
+                    &win,
+                    vw,
+                    vh,
+                    row,
+                    col,
+                    None,
+                    WorldTime::GENESIS,
                 );
                 total += 1;
                 if tile.vertex == point_vertex {
@@ -3809,7 +3883,18 @@ mod tests {
             for row in 0..4u32 {
                 for col in 0..4u32 {
                     let got = terrain_at_tile(
-                        &terrain, &geo, &index, &mut memo, &f, &win, vw, vh, row, col,
+                        &terrain,
+                        &geo,
+                        &index,
+                        &mut memo,
+                        &f,
+                        &win,
+                        vw,
+                        vh,
+                        row,
+                        col,
+                        None,
+                        WorldTime::GENESIS,
                     );
                     assert_eq!(
                         got.facet.depth(),
@@ -3867,13 +3952,39 @@ mod tests {
         };
         let (vw, vh) = virtual_dims(win.depth);
         // Warm the memo on the tile's own grid-level ancestor first.
-        let _ = terrain_at_tile(&terrain, &geo, &index, &mut memo, &f, &win, vw, vh, 0, 0);
+        let _ = terrain_at_tile(
+            &terrain,
+            &geo,
+            &index,
+            &mut memo,
+            &f,
+            &win,
+            vw,
+            vh,
+            0,
+            0,
+            None,
+            WorldTime::GENESIS,
+        );
         let before = memo.corner_weights_misses();
         assert_eq!(
             before, 1,
             "the first tile of a cold memo costs exactly one miss"
         );
-        let _ = terrain_at_tile(&terrain, &geo, &index, &mut memo, &f, &win, vw, vh, 0, 1);
+        let _ = terrain_at_tile(
+            &terrain,
+            &geo,
+            &index,
+            &mut memo,
+            &f,
+            &win,
+            vw,
+            vh,
+            0,
+            1,
+            None,
+            WorldTime::GENESIS,
+        );
         // BOUNDED, not zero: tiles (0,0) and (0,1) are not guaranteed to
         // share a grid-level ancestor, and a cold ancestor costs exactly one
         // miss. An exact-zero assertion would flake on an ancestor boundary
@@ -3914,7 +4025,18 @@ mod tests {
         for row in 0..h {
             for col in 0..w {
                 let _ = terrain_at_tile(
-                    &terrain, &geo, &index, &mut memo, &f, &win, vw, vh, row, col,
+                    &terrain,
+                    &geo,
+                    &index,
+                    &mut memo,
+                    &f,
+                    &win,
+                    vw,
+                    vh,
+                    row,
+                    col,
+                    None,
+                    WorldTime::GENESIS,
                 );
             }
         }
@@ -3965,7 +4087,20 @@ mod tests {
             origin_row: 0,
         };
         let (vw, vh) = virtual_dims(win.depth);
-        let got = terrain_at_tile(&terrain, &geo, &index, &mut memo, &f, &win, vw, vh, 0, 0);
+        let got = terrain_at_tile(
+            &terrain,
+            &geo,
+            &index,
+            &mut memo,
+            &f,
+            &win,
+            vw,
+            vh,
+            0,
+            0,
+            None,
+            WorldTime::GENESIS,
+        );
 
         assert_eq!(
             memo.corner_weights_geo_level(),

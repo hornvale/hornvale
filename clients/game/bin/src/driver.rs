@@ -2307,6 +2307,10 @@ impl Driver {
             virtual_h,
             u32::from(self.cursor.y),
             u32::from(self.cursor.x),
+            // This reads `.vertex` and nothing else, so a context here would
+            // buy a discarded reflectance per keypress.
+            None,
+            hornvale_kernel::WorldTime::GENESIS,
         )
         .vertex
     }
@@ -4122,6 +4126,8 @@ mod portolan_tests {
                     virtual_h,
                     u32::from(d.cursor.y),
                     u32::from(d.cursor.x),
+                    None,
+                    hornvale_kernel::WorldTime::GENESIS,
                 )
                 .vertex;
                 let (species, ph, morph) = &d.namer;
@@ -4456,6 +4462,8 @@ mod portolan_tests {
                     virtual_h,
                     u32::from(y),
                     u32::from(x),
+                    None,
+                    hornvale_kernel::WorldTime::GENESIS,
                 )
                 .vertex;
                 let resolved_ocean = d.terrain.is_ocean(vertex);

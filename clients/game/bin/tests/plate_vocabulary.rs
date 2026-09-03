@@ -134,7 +134,18 @@ fn the_ocean_land_boundary_still_agrees_with_the_terrain() {
     for row in 0..u32::from(24u16) {
         for col in 0..u32::from(w) {
             let tile = plate::terrain_at_tile(
-                &terrain, &geo, &index, &mut memo, &f, &win, virtual_w, virtual_h, row, col,
+                &terrain,
+                &geo,
+                &index,
+                &mut memo,
+                &f,
+                &win,
+                virtual_w,
+                virtual_h,
+                row,
+                col,
+                None,
+                hornvale_kernel::WorldTime::GENESIS,
             );
             assert_eq!(
                 terrain.is_ocean(tile.vertex),
