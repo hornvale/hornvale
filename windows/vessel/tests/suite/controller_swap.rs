@@ -175,28 +175,36 @@ fn world_at_seed(seed: u64) -> hornvale_kernel::World {
     .expect("world builds")
 }
 
-/// **Relabelled honestly (D2, Task 5 fix round 2's review).** This used to
-/// claim it carried "the mechanical content of spec §5.2's commits-on-`Do`
-/// argument". It does not, and the review's own mutation proves it: forcing
-/// the driven walk's controller to answer `Intent::Do(Action::Rest)`
-/// unconditionally leaves this test GREEN, because `Session::wait` discards
-/// `step_one_with_controller`'s returned facts UNCONDITIONALLY — regardless
-/// of what the walk decided, nothing it computes ever reaches
-/// `self.ledger`. That discard is the coordinator's own ruling, and it is
-/// correct (the player's verbs are what the body DOES; the walk supplies
-/// what the host WANTS — committing both would give the driven body two
-/// competing position sources) — but it means spec §5.2's argument is not
-/// actually testable in THIS design: the invariant this test guards is
-/// structural (a discard) and seed-independent, not a live Hold-vs-Do gate.
-/// Spec §5.2 is being corrected at Task 8; this comment records the
-/// mechanism as it actually is rather than as the spec currently claims.
+/// **Relabelled honestly (D2, Task 5 fix round 2's review), and corrected
+/// again for The Minute (Task 5 fix round 1's review).** This used to claim
+/// it carried "the mechanical content of spec §5.2's commits-on-`Do`
+/// argument". Before The Minute it did not, and the review's own mutation
+/// proved it: forcing the driven walk's controller to answer
+/// `Intent::Do(Action::Rest)` unconditionally left this test GREEN, because
+/// `Session::wait` discarded `step_one_with_controller`'s returned facts
+/// UNCONDITIONALLY back then — regardless of what the walk decided, nothing
+/// it computed ever reached `self.ledger`.
+///
+/// **That discard is gone.** Since The Minute, `Session::wait` commits
+/// whatever the driven walk returns, so this test's guarantee now comes
+/// from a different mechanism: this session never calls `!possess`, so the
+/// driven controller here is always a fresh `PlayerController` with nothing
+/// queued — its intent is unconditionally `Hold`, and a Holding walk emits
+/// no facts to commit in the first place
+/// (`a_free_walk_emits_nothing_and_ends_in_the_column`). The old mutation
+/// (force the controller to answer `Do(Rest)`) would REDDEN this test
+/// today, not leave it green — that fact would now reach the ledger, which
+/// is exactly the double-position-source risk the coordinator's original
+/// ruling was written to avoid. Spec §5.2 was corrected at Task 8; this
+/// comment records the mechanism as it actually is rather than as an
+/// earlier draft of the spec claimed.
 ///
 /// What this test actually guards: a regression where some future change
-/// makes `Session::wait` commit the driven walk's own facts CONDITIONALLY
-/// (e.g. "only when the controller says Hold" becomes "only when it says
-/// Do") would very likely show up here, since real GOAP arbitration over 200
-/// days does eventually want to act. It is a legitimate guard against
-/// reintroducing the double-position-source risk, not a proof of spec §5.2.
+/// makes the FREE path's controller answer anything other than `Hold` (a
+/// GOAP fallback creeping into `PlayerController`, say) would show up here,
+/// since real GOAP arbitration over 200 days does eventually want to act.
+/// It is a legitimate guard against a free body acting for itself, not a
+/// proof of spec §5.2.
 #[test]
 fn the_driven_walks_own_facts_never_reach_the_ledger_while_the_player_says_nothing() {
     let (world, _ctx) = seed_42();
@@ -212,9 +220,10 @@ fn the_driven_walks_own_facts_never_reach_the_ledger_while_the_player_says_nothi
         s.committed_fact_count_for(who),
         before,
         "the driven body's own walk must never reach the ledger while the \
-         player says nothing — Session::wait discards its facts \
-         unconditionally (D2: this is a structural guard, not spec 5.2's \
-         Hold-vs-Do argument)"
+         player says nothing — a free session's driven controller is a \
+         Holding `PlayerController`, and a Holding walk emits nothing to \
+         commit (D2: this is a structural guard on the free path, not \
+         spec 5.2's Hold-vs-Do argument)"
     );
 }
 

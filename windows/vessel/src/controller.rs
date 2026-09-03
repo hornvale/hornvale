@@ -132,10 +132,12 @@ impl Controller for PlayerController {
 /// that walk's facts, so the held body's drinks, meals, rests and moves are
 /// on the record through the same constructors a creature's are (decision
 /// 0168), and the body's own felt-state read
-/// (`Session::driven_mode`/`driven_affect`/`driven_suppressed`, which
-/// `ask`'s narration (an in-character verb) and, while held, the wait line
-/// draw from) is read back from the last decision point of that walk, so an
-/// acting controller can
+/// (`Session::driven_mode`/`driven_affect`/`suppressed_drives`) is read back
+/// from the last decision point of that walk. `ask`'s narration (an
+/// in-character verb) draws from that felt-state read; the wait line,
+/// while held, draws instead from the walk's own committed facts
+/// (`narrate_motion`'s minute clause is built from `minutes_of(&driven_facts)`,
+/// not from the felt column). Either way an acting controller can
 /// leave the body in a different room, and a different felt state, than a
 /// frozen one would have. See
 /// `driven_felt_state_can_move_under_an_imposed_controller_during_wait` in

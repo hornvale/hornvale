@@ -346,9 +346,12 @@ fn a_possessed_sessions_columns_are_the_ledgers_too() {
         check_view_equals_scan(&session, verb);
     }
     // The felt column must have been written, or the driven walk never ran
-    // and this test proves nothing about it. (Position is deliberately NOT
-    // asserted to have moved: the whole point is that the possessed body's
-    // own walk moves nothing the ledger records.)
+    // and this test proves nothing about it. (Position is not asserted to
+    // have moved to any PARTICULAR place — the walk is real GOAP arbitration
+    // and seed-dependent — but `check_view_equals_scan` above already holds
+    // the column to the ledger's own fold after every one of the nine waits,
+    // which is the actual point now that the walk's facts commit: wherever
+    // it moved, the column agrees with the ledger there too.)
     assert!(
         session.driven_mode().is_some(),
         "the driven body's own walk must have resolved something across the \

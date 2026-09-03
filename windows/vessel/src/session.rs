@@ -8600,10 +8600,11 @@ impl<'w> Session<'w> {
         // Computed BEFORE the loop below, which consumes `driven_facts` by
         // value (The Minute, spec §3.5): `wake_after` scans the very facts
         // this walk is about to commit for a `slept` that outlasts this
-        // tick, the same rule `Session::sleep` applies to the verb's own
-        // span. `body_state` reads `Session::wake_at`, not the ledger, so a
-        // walk-committed sleep that never sets it would leave the body
-        // awake at the gate while its ledger says asleep.
+        // tick, feeding the merge below so a later wake from an earlier
+        // sleep is kept rather than overwritten. `body_state` reads
+        // `Session::wake_at`, not the ledger, so a walk-committed sleep that
+        // never sets it would leave the body awake at the gate while its
+        // ledger says asleep.
         let woke = if renders_unconscious(&Action::Sleep) {
             wake_after(&driven_facts, self.day)
         } else {
