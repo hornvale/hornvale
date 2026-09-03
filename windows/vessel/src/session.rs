@@ -20841,35 +20841,27 @@ mod tests {
              writers could disagree about one slot"
         );
     }
-    /// The mechanism behind Task 3 fix round 1, stated directly: under
-    /// possession the driven body's solo walk ENDS IN A ROOM THE LEDGER NEVER
-    /// RECORDED, and the `position` column follows the ledger rather than the
-    /// walk.
+    /// The Minute, spec §3.2: under possession the driven body's solo walk
+    /// ENDS WHERE THE LEDGER RECORDED, because `wait` now commits that walk's
+    /// facts (spec §3.1) and writes the column from the same walk.
     ///
-    /// **Why this needs saying in a test rather than a comment.** `wait`
-    /// discards `_driven_facts` unconditionally — the player's verbs are what
-    /// the body does; that walk only supplies what the host wants. Free, an
-    /// always-Holding `PlayerController` never moves `st.pos`, so the walk's
-    /// room and the ledger's coincide and writing either into the column
-    /// looks correct. Possessed, an `ImposedController` acts, and the two
-    /// diverge. The first assertion below is the NON-VACUITY guard for the
-    /// second: if a future change stopped the possessed walk from moving, the
-    /// column-follows-the-ledger check would pass for a reason that has
-    /// nothing to do with the writer, and this test says so loudly instead.
+    /// This replaces `a_possessed_walk_ends_where_the_ledger_never_recorded`,
+    /// which pinned the defect: it asserted the walk's end differed from the
+    /// ledger's fold. Every assertion here is the inverse of one there, and
+    /// the first is still the NON-VACUITY guard: if the imposed walk stopped
+    /// acting, the agreement below would hold for a reason that has nothing
+    /// to do with the commit.
     ///
-    /// Seed 7, because seed 42's flagship population never leaves its room at
-    /// all (measured: 0 `agent-at` facts across 500 days).
+    /// Seed 7, because seed 42's flagship never leaves its room (measured: 0
+    /// `agent-at` across 500 days) and the whole point is a walk that moves.
     ///
-    /// MUTATION THIS MUST FAIL AGAINST: in `Session::wait`, restore the
-    /// pre-fix write for the driven slot — `self.roster.write(driven_slot,
-    /// driven_written.position, driven_written.felt);` in place of the
-    /// `resolve`. Run and observed:
-    /// `assertion `left == right` failed: the driven slot's column follows
-    /// the LEDGER, not the discarded walk
-    ///   left: Facet { face: 1, path: [3, 0, 3, 1, 3, 2, 2, 1, 1, 3, 1, 3, 3] }
-    ///  right: Facet { face: 1, path: [3, 0, 3, 1, 3, 2, 2, 1, 1, 1, 2, 3, 0] }`
+    /// RED BEFORE TASK 2 (observed while writing it): fails earlier than the
+    /// draft predicted — at `every fact the driven walk emitted must have
+    /// been appended` (`left == right` failed: left 0, right 5), because
+    /// `wait` still discards `_driven_facts` unconditionally and none of the
+    /// walk's five facts reach the ledger at all.
     #[test]
-    fn a_possessed_walk_ends_where_the_ledger_never_recorded() {
+    fn a_possessed_walk_ends_where_the_ledger_recorded() {
         let world = build_world(
             Seed(7),
             &SkyPins::default(),
@@ -20885,15 +20877,13 @@ mod tests {
             "possession must be open, or the walk is asked through \
              PlayerController and cannot move at all"
         );
-        // The same prefix the integration sweep uses: the divergence needs a
-        // body whose thirst has had time to grow, and the driven walk's own
-        // drinks are never recorded, so it grows monotonically with the
-        // session's age.
         let _ = session.handle("!wait 1");
         let frozen = session.ledger.clone();
         let from = session.day;
+        let before = session.committed_fact_count_for(session.agent_entity());
         let _ = session.handle("!wait 5");
         let to = session.day;
+        let after = session.committed_fact_count_for(session.agent_entity());
 
         let terrain = LocaleTerrain::with_fields(
             &session.wctx.ctx,
@@ -20911,8 +20901,6 @@ mod tests {
             params: SUSTENANCE,
             day_ticks: session.day_ticks(),
             terrain: &terrain,
-            // The SESSION's own store, not a throwaway: this test stands in for
-            // `wait`'s own construction (line 7713), which passes exactly this.
             folds: &session.folds,
         };
         let driven_body = session.driven_body().clone();
@@ -20926,27 +20914,33 @@ mod tests {
         let driven = session.roster.driven();
         let scanned = agent_position(&session.ledger, &driven_body, session.day);
 
-        // NON-VACUITY: the imposed walk really did go somewhere, and really
-        // did not tell the ledger about it.
+        // NON-VACUITY: the imposed walk really did act.
         assert!(
             !driven_facts.is_empty(),
-            "the imposed walk must actually act, or there is nothing for the \
-             ledger to have missed"
+            "the imposed walk must actually act, or there is nothing to minute"
         );
         assert_ne!(
-            driven_written.position, scanned,
-            "the imposed walk must END somewhere the ledger does not know \
-             about, or this test's subject does not arise"
+            driven_written.position,
+            agent_position(&frozen, &driven_body, from),
+            "the imposed walk must MOVE, or the position half is untested"
         );
-        // AND THE COLUMN FOLLOWS THE LEDGER.
+        // THE WALK'S FACTS REACHED THE LEDGER — all of them, appended.
+        assert_eq!(
+            after - before,
+            driven_facts.len(),
+            "every fact the driven walk emitted must have been appended"
+        );
+        // THE WALK'S END IS THE LEDGER'S FOLD.
+        assert_eq!(
+            driven_written.position, scanned,
+            "the walk's end must be the ledger's fold"
+        );
+        // AND THE COLUMN IS BOTH.
         assert_eq!(
             session.roster.positions()[driven.0],
             scanned,
-            "the driven slot's column follows the LEDGER, not the discarded \
-             walk"
+            "the driven slot's column follows the ledger, which now knows the walk"
         );
-        // …while its FELT is the walk's own, which is the half that must
-        // still be written.
         assert_eq!(
             session.roster.felts()[driven.0],
             driven_written.felt,
@@ -20956,5 +20950,84 @@ mod tests {
             session.roster.resolved_felt(driven).is_some(),
             "…and the tick flipped the slot's `written` flag doing it"
         );
+    }
+
+    /// The Minute, spec §4 P4's POSITIVE CONTROL, measured before the spec
+    /// was written and pinned here so it cannot silently stop being true: a
+    /// FREE body's solo walk, asked through a `PlayerController` with nothing
+    /// queued, emits NO facts and ends in the column's own room. This is the
+    /// whole reason `wait` may commit the driven walk's facts unconditionally
+    /// (spec §3.1) without moving a byte of any free-session fixture.
+    ///
+    /// Green before and after Task 2. If it ever goes red, the free path is
+    /// no longer inert and every session golden is suspect.
+    ///
+    /// claim: invariant(forall-seed) — checked across seeds 42/7, four
+    /// `!wait 5`s each: a free body's solo walk stays inert on every one.
+    #[test]
+    fn a_free_walk_emits_nothing_and_ends_in_the_column() {
+        for seed in [42u64, 7u64] {
+            let world = if seed == 42 {
+                seam_world()
+            } else {
+                build_world(
+                    Seed(seed),
+                    &SkyPins::default(),
+                    SkyChoice::Generated,
+                    &TerrainPins::default(),
+                    &SettlementPins::default(),
+                )
+                .expect("seed 7 builds")
+            };
+            let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+            assert!(session.possessor().is_none(), "this is the FREE control");
+            for i in 0..4 {
+                let frozen = session.ledger.clone();
+                let from = session.day;
+                let before = session.committed_fact_count_for(session.agent_entity());
+                let _ = session.handle("!wait 5");
+                let to = session.day;
+                let after = session.committed_fact_count_for(session.agent_entity());
+                let terrain = LocaleTerrain::with_fields(
+                    &session.wctx.ctx,
+                    session.calendar.as_ref(),
+                    session.predator.as_ref(),
+                    session.prey.as_ref(),
+                    Some(&session.built),
+                    Some(&session.mesh_memo),
+                )
+                .with_ground(&session.ground);
+                let sys = DriveMovements {
+                    npcs: Vec::new(),
+                    from,
+                    to,
+                    params: SUSTENANCE,
+                    day_ticks: session.day_ticks(),
+                    terrain: &terrain,
+                    folds: &session.folds,
+                };
+                let body = session.driven_body().clone();
+                let (facts, written) = sys.step_one_with_controller(
+                    &frozen,
+                    &body,
+                    &mut hornvale_kernel::RoomMeshMemo::new(),
+                    &mut HomeNavCache::new(),
+                    &mut PlayerController::new(),
+                );
+                assert!(
+                    facts.is_empty(),
+                    "seed {seed} wait#{i}: a Holding walk must emit nothing, got {facts:?}"
+                );
+                assert_eq!(
+                    written.position,
+                    session.position(),
+                    "seed {seed} wait#{i}: a Holding walk ends where the column says"
+                );
+                assert_eq!(
+                    after, before,
+                    "seed {seed} wait#{i}: a free body commits nothing during wait"
+                );
+            }
+        }
     }
 }
