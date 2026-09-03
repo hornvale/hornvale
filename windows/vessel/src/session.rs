@@ -28,7 +28,7 @@ use crate::{
     reader_set,
 };
 use hornvale_kernel::{
-    ConceptRegistry, EntityId, Facet, FacetId, Fact, Ledger, Seed, TickSpan, Value, World,
+    ConceptRegistry, EntityId, Facet, FacetId, Fact, Ledger, Seed, TickSpan, Value, Vertex, World,
     WorldTime,
 };
 use hornvale_locale::{Compass, Direction, ExitKind, LocaleContext};
@@ -703,6 +703,21 @@ pub struct WorldContext<'w> {
     /// pressures and the wild-NPC concentrations. `None` whenever `wc` or the
     /// fit itself fails.
     pub(crate) report: Option<hornvale_worldgen::DemographyReport>,
+    /// The world's occupation register (The Terrier, spec §3.1): every
+    /// committed occupation, grouped by the vertex it stands on, reconstructed
+    /// from `world.ledger` ONCE here and read by every `Brief` this context's
+    /// sessions derive (`brief::brief_of`). A pure function of the immutable
+    /// `World`, which is what makes it world-scoped like everything else on
+    /// this type. Before this field, `brief_of` rebuilt the whole map on every
+    /// call — 8.7-28.8 ms — and a chamber turn called it two to five times;
+    /// that was the entire cost The Rack's chronicle attributed to "one
+    /// shadowcast" (0.012 ms).
+    ///
+    /// Built AFTER the five seeded derivations in [`Self::build`] and
+    /// consuming no stream draw: a ledger read, not a sixth derivation, so it
+    /// cannot move the order the gallery transcripts guard.
+    pub(crate) occupations:
+        std::collections::BTreeMap<Vertex, Vec<hornvale_history::record::OccupationRecord>>,
 }
 
 impl<'w> WorldContext<'w> {
@@ -778,6 +793,12 @@ impl<'w> WorldContext<'w> {
         // second, independent derivation could fail where this one didn't.
         let terrain = Some(terrain);
         let climate = Some(climate);
+        // The occupation register (The Terrier). A READ over the committed
+        // ledger — no `Stream` is touched — placed after the five derivations
+        // above so that the order those transcripts guard is visibly not in
+        // question. ~9-26 ms once per world (contended), against ~3 s for the
+        // block above; it used to be paid on every `brief_of` call.
+        let occupations = hornvale_worldgen::occupations_by_vertex(world);
         Ok(WorldContext {
             world,
             terrain,
@@ -785,6 +806,7 @@ impl<'w> WorldContext<'w> {
             ctx,
             wc,
             report,
+            occupations,
         })
     }
 
@@ -7203,11 +7225,13 @@ impl<'w> Session<'w> {
         self.terrain_here()
     }
 
-    /// The brief for wherever the possession currently stands.
+    /// The brief for wherever the possession currently stands. Reads the
+    /// context's occupation register rather than re-surveying the world
+    /// (The Terrier).
     fn brief_here(&self) -> crate::brief::Brief {
         let terrain = self.terrain_here();
         crate::brief::brief_of(
-            self.world,
+            &self.wctx.occupations,
             self.wctx.ctx.climate().geosphere(),
             self.wctx.ctx.nearest_index(),
             &self.position(),
