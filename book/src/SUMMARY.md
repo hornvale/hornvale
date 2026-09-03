@@ -450,6 +450,7 @@
 - [The Detent](./chronicle/the-detent.md)
 - [The Nettle](./chronicle/the-nettle.md)
 - [The Terrier](./chronicle/the-terrier.md)
+- [The Hachure](./chronicle/the-hachure.md)
 
 # Appendix: The Frontier
 
