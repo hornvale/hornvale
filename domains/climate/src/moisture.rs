@@ -18,34 +18,45 @@ use crate::circulation::{
 use hornvale_kernel::{Geosphere, ReferenceElevation, Vertex, VertexMap, math};
 
 /// Vertices traced upwind when building the moisture-budget path.
+/// plumb: pending(wave-1)
 const BUDGET_STEPS: usize = 48;
 /// Precipitable water added per upwind step over open ocean (dimensionless).
+/// plumb: pending(wave-1)
 const EVAP: f64 = 0.5;
 /// Cap on precipitable water carried along the trace.
+/// plumb: pending(wave-1)
 const W_CAP: f64 = 1.0;
 /// Orographic rainout coefficient, scaled by uplift over `UPLIFT_SCALE_M`.
+/// plumb: pending(wave-1)
 const OROG_K: f64 = 0.07;
 /// Elevation scale (m) normalizing uplift for the orographic sink.
+/// plumb: pending(wave-1)
 const UPLIFT_SCALE_M: f64 = 3000.0;
 /// Convective rainout subtracted once per overland step falling in a rising
 /// (wet) circulation band.
+/// plumb: pending(wave-1)
 const CONVECTIVE: f64 = 0.005;
 /// Fractional decay of precipitable water per overland step (distance
 /// drying: continental interiors dry out even on flat terrain).
+/// plumb: pending(wave-1)
 const DECAY: f64 = 0.006;
 /// Carried-water level, at or above which a vertex counts as fully supplied
 /// (`budget_dryness` floors at `0`). Below this, dryness rises linearly to
 /// `1` at zero carried water.
+/// plumb: pending(wave-1)
 const W_REFERENCE: f64 = 0.95;
 /// Weight of the budget-derived dryness against the banded wetness floor
 /// (mirrors the original single-pass rain shadow's `0.5` — the value large
 /// enough that a vertex with no upwind ocean anywhere (`dryness == 1`) lands at
 /// or below the aridity floor even in the wettest band).
+/// plumb: pending(wave-1)
 const DRY_STRENGTH: f64 = 0.6;
 /// Base wetness for a rising (wet) circulation band — the tuned
 /// habitability floor, unchanged since the original banded model.
+/// plumb: pending(wave-1)
 const WET_BAND_BASE: f64 = 0.6;
 /// Base wetness for a sinking (dry) circulation band.
+/// plumb: pending(wave-1)
 const DRY_BAND_BASE: f64 = 0.25;
 
 /// Ocean-proximity bonus: `+0.3` if the vertex itself is ocean-adjacent (or is

@@ -501,6 +501,7 @@ impl DriveKey {
 /// unobservable — a partition is a pure function of `(ledger prefix,
 /// temperature field, home)` and is rebuilt on demand — so this bounds memory
 /// without bounding correctness; it costs a rebuild, never an answer.
+/// plumb: pending(wave-1)
 const MEMO_PARTITIONS_PER_DRIVE: usize = 2;
 
 /// One boundary of a memoised integral: a distinct sighting instant, the

@@ -121,23 +121,28 @@ pub struct Phonology {
 }
 
 /// Below this labiality, every labial segment is forbidden outright.
+/// plumb: pending(wave-1)
 const LABIALITY_THRESHOLD: f64 = 0.3;
 
 /// Above this voicing, voiced segments are permitted; at or below it every
 /// voiced segment is forbidden.
+/// plumb: pending(wave-1)
 const VOICING_THRESHOLD: f64 = 0.2;
 
 /// The base keep-probability an envelope-permitted consonant starts from
 /// before the loudness penalty and sibilance bonus are applied.
+/// plumb: pending(wave-1)
 const BASE_KEEP: f64 = 0.7;
 
 /// How strongly low `voice_loudness` down-weights high-sonority consonants:
 /// keep-probability falls by `LOUDNESS_PENALTY * sonority * (1 -
 /// voice_loudness)`.
+/// plumb: pending(wave-1)
 const LOUDNESS_PENALTY: f64 = 0.22;
 
 /// How strongly `sibilance` raises the keep-probability of sibilant
 /// consonants specifically.
+/// plumb: pending(wave-1)
 const SIBILANCE_BONUS: f64 = 0.3;
 
 /// Keep-probability is clamped to this floor so no envelope-permitted
@@ -151,11 +156,13 @@ const KEEP_PROBABILITY_RANGE: (f64, f64) = (0.05, 0.98);
 /// nasal) — it must never hand a species a trill, click, or ejective it
 /// didn't independently draw, or the loudness bias in `draw_phonology`
 /// would no longer hold by construction.
+/// plumb: pending(wave-1)
 const MIN_CONSONANTS: usize = 2;
 
 /// The maximum tone-inventory size the phonology epoch draws: `Neutral` plus
 /// the two contrastive level tones `High` and `Low`. `Tone::Mid` is banked (no
 /// rule writes it), so it is never drawn into an inventory.
+/// plumb: pending(wave-1)
 const MAX_TONE_COUNT: usize = 3;
 
 /// The contrastive level tones a tone-capable species may draw, in canonical
@@ -283,6 +290,7 @@ pub fn distinguishable_capacity(ph: &Phonology) -> u64 {
 /// ([`MIN_CONSONANTS`]), and its residual low capacity is the accepted
 /// realistic tail (spec §10 Q3), measured — not repaired — by the Lab's
 /// confusable-vs-free split.
+/// plumb: pending(wave-1)
 const CAPACITY_FLOOR: u64 = 24;
 
 /// Append, for every Neutral vowel quality already in `inventory`, its
@@ -374,6 +382,7 @@ fn vowel_order() -> [Segment; 5] {
 }
 
 /// The index in [`vowel_order`] every vowel-space band is centered on.
+/// plumb: pending(wave-1)
 const VOWEL_CENTER: usize = 2;
 
 /// How many of the 5 canonical vowels a given `vowel_space` admits, always
@@ -524,6 +533,7 @@ fn ensure_minimum_consonants(candidates: &[Segment], inventory: &mut Vec<Segment
 
 /// The minimum number of sonorant consonants (trill or approximant) an
 /// inventory retains when the language's typology asks for one.
+/// plumb: pending(wave-1)
 const MIN_SONORANTS: usize = 1;
 
 /// Top up `inventory` to [`MIN_SONORANTS`] sonorants, drawing only from
@@ -621,6 +631,7 @@ fn order_by_sonority(mut drawn: Vec<Manner>, rising: bool) -> Vec<Manner> {
 /// diphthong. The tier above (triphthongs, long-vowel-plus-glide) is not
 /// modelled. Part of the phonotactics consumption contract — raising it
 /// changes what [`draw_phonotactics`] draws for every species.
+/// plumb: pending(wave-1)
 const MAX_NUCLEUS: usize = 2;
 
 /// Draw the **nucleus template set**: which nucleus sizes a syllable of this

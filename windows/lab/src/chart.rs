@@ -4,15 +4,25 @@ use crate::summary::distribution;
 use crate::{MetricValue, RunResult};
 use hornvale_kernel::math;
 
+/// plumb: pending(wave-1)
 const VIEW_WIDTH: f64 = 640.0;
+/// plumb: pending(wave-1)
 const VIEW_HEIGHT: f64 = 300.0;
+/// plumb: pending(wave-1)
 const MARGIN_LEFT: f64 = 56.0;
+/// plumb: pending(wave-1)
 const MARGIN_RIGHT: f64 = 16.0;
+/// plumb: pending(wave-1)
 const MARGIN_TOP: f64 = 36.0;
+/// plumb: pending(wave-1)
 const MARGIN_BOTTOM: f64 = 64.0;
+/// plumb: pending(wave-1)
 const PLOT_LEFT: f64 = MARGIN_LEFT;
+/// plumb: pending(wave-1)
 const PLOT_RIGHT: f64 = VIEW_WIDTH - MARGIN_RIGHT;
+/// plumb: pending(wave-1)
 const PLOT_TOP: f64 = MARGIN_TOP;
+/// plumb: pending(wave-1)
 const PLOT_BOTTOM: f64 = VIEW_HEIGHT - MARGIN_BOTTOM;
 
 /// Round a value up to a "nice" number: 1, 2, or 5 times a power of 10.

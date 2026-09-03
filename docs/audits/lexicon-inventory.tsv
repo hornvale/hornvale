@@ -112,7 +112,7 @@ windows/vessel/src/light.rs	150
 windows/vessel/src/liveness.rs	12
 windows/vessel/src/plan.rs	150
 windows/vessel/src/purview.rs	39
-windows/vessel/src/session.rs	652
+windows/vessel/src/session.rs	654
 windows/vessel/src/snapshot.rs	3
 windows/vessel/src/streams.rs	6
 windows/vessel/src/underground.rs	236

@@ -679,6 +679,7 @@ pub struct Body {
 }
 
 /// Walk and wade, holding nothing: the intruder (spec §3.4).
+/// plumb: universal(the solver's reference traverser -- walk and wade, holding nothing; the intruder every plan is proved solvable for, not any species)
 pub const DEFAULT_BODY: Body = Body {
     swim: false,
     fly: false,

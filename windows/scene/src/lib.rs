@@ -29,9 +29,11 @@ pub use surrounds_ascii::*;
 pub const TILES_SCHEMA: &str = "scene/tiles/v1";
 /// Smallest legal lattice width.
 /// type-audit: bare-ok(count)
+/// plumb: pending(wave-1)
 pub const MIN_WIDTH: u32 = 16;
 /// Largest legal lattice width.
 /// type-audit: bare-ok(count)
+/// plumb: pending(wave-1)
 pub const MAX_WIDTH: u32 = 1024;
 
 /// Scene construction failed; the reason, loudly (the GenesisError manner).
@@ -969,6 +971,7 @@ pub fn system_json(scene: &SystemScene) -> String {
 pub const MOONS_SCHEMA: &str = "scene/moons/v1";
 
 /// Newtonian gravitational constant, N·m²/kg² (CODATA recommended value).
+/// plumb: pending(wave-1)
 const G_SI: f64 = 6.6743e-11;
 
 /// Surface gravity (m/s²) of a uniform sphere from its radius (km) and bulk
@@ -1010,6 +1013,7 @@ fn albedo_band(is_icy: bool) -> (f64, f64) {
 /// hash-driven range rather than forcing it to read as pristine (a hard
 /// zero), while still making an icy moon visibly less maria-marked than a
 /// rocky one of the same mass in the vast majority of draws.
+/// plumb: pending(wave-1)
 const ICY_MARIA_DAMPING: f64 = 0.3;
 
 /// A subtle near-gray tint, and the four seeded surface descriptors, as a

@@ -399,6 +399,7 @@ pub struct PlanState {
 /// cube corner drops always lands in the diagonal tail, so the prefix survives
 /// the short arity.
 /// type-audit: bare-ok(count)
+/// plumb: universal(the cube lattice's own edge-adjacency count, pinned by a kernel invariant test)
 const EDGE_ADJACENT_NEIGHBOURS: usize = 4;
 
 /// The planner's edge cost for one ORTHOGONAL (edge-adjacent) step: the unit
@@ -438,11 +439,13 @@ const EDGE_ADJACENT_NEIGHBOURS: usize = 4;
 /// order untouched. What changes behaviour is the diagonal's `17`, which is the
 /// intended fix.
 /// type-audit: bare-ok(count)
+/// plumb: universal(the best rational approximation of root 2 at its denominator — derived, not tuned, per the doc's convergent analysis)
 pub(crate) const ORTHOGONAL_STEP: u64 = 12;
 
 /// The planner's edge cost for one DIAGONAL (corner-adjacent) step —
 /// [`ORTHOGONAL_STEP`] times `17/12`, the octile ratio derived there.
 /// type-audit: bare-ok(count)
+/// plumb: universal(paired with ORTHOGONAL_STEP as the same root 2 rational approximation)
 pub(crate) const DIAGONAL_STEP: u64 = 17;
 
 /// The extra `MoveTo` cost the planners charge for stepping INTO a
@@ -503,6 +506,7 @@ pub(crate) const DIAGONAL_STEP: u64 = 17;
 /// quotient (which was never the half in doubt) AND both ball sizes, so this
 /// claim is enforceable rather than merely written down.
 /// type-audit: bare-ok(count)
+/// plumb: universal(a planner budget-tuning constant sized against PLAN_BUDGET, not a body property)
 const REMEMBERED_PENALTY: u64 = 5 * ORTHOGONAL_STEP;
 
 /// The `MoveTo` edge cost of the step from `from`'s neighbour at index

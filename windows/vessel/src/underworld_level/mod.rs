@@ -139,6 +139,7 @@ pub struct LeafStyle {
 /// from (Task 6's `generate_descent` overrides this for every rung after
 /// the first).
 /// type-audit: bare-ok(ratio)
+/// plumb: universal(a documented neutral fallback bias used when no previous rung exists to inherit from)
 pub const NEUTRAL_WORKED_BIAS: f64 = 0.5;
 
 fn choose_leaf_style(

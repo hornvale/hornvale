@@ -41,6 +41,7 @@ pub struct VertexBoundary {
 
 /// Fraction of the relative speed the normal component must exceed to count
 /// as convergent/divergent rather than transform.
+/// plumb: pending(wave-1)
 const TRANSFORM_THRESHOLD: f64 = 0.25;
 
 /// Classify the contact between vertex `a` (on `plate_a`) and its neighbor

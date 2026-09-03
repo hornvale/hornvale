@@ -1334,6 +1334,7 @@ hornvale-lab::hornvale_lab$domesday::detect::tests::d8_fires_on_exactly_alchemy_
 hornvale-lab::hornvale_lab$domesday::detect::tests::defensibility_capacity_rank_corr_still_exists_in_the_registry
 hornvale-lab::hornvale_lab$domesday::detect::tests::direct_references_match_measured_crates
 hornvale-lab::hornvale_lab$domesday::detect::tests::domain_crates_are_still_exactly_this_list
+hornvale-lab::hornvale_lab$domesday::detect::tests::findings_are_sorted_by_detector_then_metric
 hornvale-lab::hornvale_lab$domesday::detect::tests::pearson_reads_a_nontrivial_correlation_and_its_sign
 hornvale-lab::hornvale_lab$domesday::detect::tests::pearson_returns_none_for_a_constant_column
 hornvale-lab::hornvale_lab$domesday::detect::tests::the_live_census_reproduces_the_preregistered_findings
@@ -2500,6 +2501,7 @@ hornvale-terrain::suite$tectonic_properties::the_column_is_a_pure_projection_unp
 hornvale-terrain::suite$tectonic_properties::the_column_is_deterministic
 hornvale-thing::hornvale_thing$tests::declared_owner_mismatch_panics_with_its_own_message
 hornvale-thing::hornvale_thing$tests::every_named_handle_is_a_roster_row
+hornvale-thing::hornvale_thing$tests::every_roster_kind_carries_a_gloss
 hornvale-thing::hornvale_thing$tests::every_roster_kind_registers_as_a_concept
 hornvale-thing::hornvale_thing$tests::hearth_maps_to_an_existing_owner_instead_of_conflicting
 hornvale-thing::hornvale_thing$tests::registering_twice_is_idempotent
@@ -2754,6 +2756,8 @@ hornvale-vessel::hornvale_vessel$liveness::tests::a_lonely_creature_yields_to_th
 hornvale-vessel::hornvale_vessel$liveness::tests::a_negative_rest_span_is_refused
 hornvale-vessel::hornvale_vessel$liveness::tests::a_rest_bout_repays_more_than_the_hysteresis_band_it_must_clear
 hornvale-vessel::hornvale_vessel$liveness::tests::a_rest_span_past_the_exact_range_is_refused
+hornvale-vessel::hornvale_vessel$liveness::tests::a_rest_still_outlasts_the_sleep_scans_give_up_fallback_at_the_100_hour_legal_extreme
+hornvale-vessel::hornvale_vessel$liveness::tests::a_rest_taken_on_a_100_hour_world_repays_more_than_the_hysteresis_band_it_must_clear
 hornvale-vessel::hornvale_vessel$liveness::tests::a_saturated_body_recovers_over_three_or_four_ordinary_nights
 hornvale-vessel::hornvale_vessel$liveness::tests::a_sleeps_length_is_the_cycles_in_phase_and_the_floors_out_of_phase
 hornvale-vessel::hornvale_vessel$liveness::tests::a_thirsty_agent_plans_to_water_and_the_tick_walks_it
@@ -2915,6 +2919,11 @@ hornvale-vessel::hornvale_vessel$plan::tests::the_projection_is_deterministic
 hornvale-vessel::hornvale_vessel$plan::tests::the_standing_cell_is_carried_verbatim
 hornvale-vessel::hornvale_vessel$plan::tests::two_walls_at_different_light_levels_get_different_palette_entries
 hornvale-vessel::hornvale_vessel$purview::tests::agent_salience_outranks_every_settlement_salience
+hornvale-vessel::hornvale_vessel$roster::tests::a_short_mask_is_refused
+hornvale-vessel::hornvale_vessel$roster::tests::a_slot_never_moves
+hornvale-vessel::hornvale_vessel$roster::tests::a_write_moves_one_slot_only
+hornvale-vessel::hornvale_vessel$roster::tests::every_column_shares_one_length
+hornvale-vessel::hornvale_vessel$roster::tests::the_driven_slot_is_the_one_dropped
 hornvale-vessel::hornvale_vessel$session::tests::a_costly_truth_names_its_residue_and_an_empty_one_reads_as_ordinary
 hornvale-vessel::hornvale_vessel$session::tests::a_deliberate_lie_carries_the_claim_and_never_the_truth
 hornvale-vessel::hornvale_vessel$session::tests::advanced_by_checks_the_increment_and_the_sum_separately

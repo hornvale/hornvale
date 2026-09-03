@@ -1143,6 +1143,36 @@ it in their own dispatches. A correction is not evidence of correctness; it
 is a second claim, checkable exactly like the first, and this one shipped
 unchecked until someone else's count disagreed.
 
+**[The Plumb](./chronicle/the-plumb.md) (2026-09-02) states the floor's
+converse, which this passage has approached from one side for eight
+campaigns and never turned around.** Every clause above concerns a check
+that *fires* and proves less than it claims. This is the other half: **a
+check's SILENCE is a claim about the check's REACH, not about the tree.**
+The campaign changed a duration that varies with a world's rotation period,
+which moves output on every world whose day is not exactly one standard day
+— seed 42's is 87,988 ticks — and a committed byte-golden moved by 89 of
+about 410 lines, 22 affect labels, sixteen of them into the class that feeds
+the distress read. Two instruments were consulted and both reported nothing.
+Both were correct. `make rebaseline` does not write byte-goldens, so the
+`docs/generated-paths.txt` diff cannot see one; and `gate-commit` never ran
+the test, because the sub-floor roster carries 386 entries for that crate
+and none for this one — the same crate-level coverage rule this chapter
+already recorded one layer up, arriving again on a different test. **Two
+checks agreeing is worth nothing when they share a blind spot**, and a
+ruling was priced against their agreement.
+
+**The score does not move, and the practice gains its inverse clause.**
+Everything above says *make it fail on command*; that presumes you know
+which check should have failed. Before reading a silence as evidence,
+confirm the thing that would have moved is inside what the instrument can
+see — which is not a property of the check's predicate, its anchor, or its
+pairing, but of its **population**. Two memory entries in this project
+already stated the two halves separately and neither fired, because the
+campaign had done the right thing one step earlier: it asked for the check
+to be *run* rather than predicted, got an honest report, and never asked
+whether the instrument could speak. Running the right command is not the
+same as running a command that can answer.
+
 ## What the world can already check itself on (high confidence)
 
 **The kernel substrate.** Hash-based seeding, coherent noise, append-only
@@ -3610,6 +3640,23 @@ its honest size.
    annotations said it was waiting on. It moves when a human plays and says it
    moved, and for the first time there is nothing structural in the way of
    playing.
+   **Corrected by [The Plumb](./chronicle/the-plumb.md) (2026-09-02), on The
+   Wicket's traversal annotation above, and the correction is a limit rather
+   than a gain.** That annotation says the fatigue stock is paid down *"on the
+   planet's own day rather than a nominal one"*. Half of it was. The RATE was
+   converted to the planetary day; the SPAN — how long a rest lasts — stayed a
+   fixed quarter of the nominal standard day, and the two are multiplied
+   together. The calibration the rest exists to satisfy — one bout must carry a
+   body clear of the band the drive re-engages inside — therefore held only on
+   worlds turning faster than about thirty hours; past that a rest repaid 0.03
+   against a floor of 0.1, and a body that lay down got straight back up. That
+   is the fragmentation The Wicket removed with a span, restored by a
+   denominator, on a legally pinnable world. It is converted now. **The score
+   does not move**, and the reason is this chapter's own axis: nothing graded
+   the world on it. Every test read the two constants at their nominal values,
+   so a mechanism correct at one rotation period and wrong across most of the
+   legal range was green everywhere, and what found it was an audit asking each
+   constant what it varies along — not any measurement of the act.
 
 ## The standing horizon
 
@@ -4937,3 +4984,46 @@ readouts rather than only the second — the first stands unedited, and the
 second is explicitly not blind. Nothing in the standing gate would have caught
 a quieter version of that ordering, and nothing here claims otherwise; it was
 disclosed because the campaign chose to disclose it.
+
+### The gate the fourth look said did not exist now exists (2026-09-02)
+
+The section above, written days earlier, states the standing position on cost
+plainly: "there is still no cost gate on the simulation — no ceiling, no slope
+check, nothing that runs per commit," and the two instruments that exist are
+the ones the two campaigns that needed them built. [The Rack](./chronicle/the-rack.md)
+moves that, and the way it moves it is the part worth re-scoring rather than
+the fact that it did.
+
+**The instrument that existed was not merely blunt; it was not running.**
+`session_cost.rs` bounds a pooled wall-clock median, and its own doc already
+conceded that twenty of the fifty samples that median is drawn from exceed the
+ceiling individually while the gate passes. That is the bluntness anyone would
+have predicted. What nobody had checked is that its millisecond assertions are
+gated to a host the test no longer runs on — they fire only on the Mac, and
+the tier that runs them moved to the canonical Linux box. Measured at close, on
+one quiet box in one profile: **the test passed at main's tip at 81.490 ms
+against a 9 ms ceiling.** [The Roll](./chronicle/the-roll.md) had moved that
+control roughly twenty-one-fold and every gate stayed green, not because the
+threshold was generous but because no threshold was being evaluated.
+
+**A gate's blind zone can be structural rather than statistical, and only one
+of those is visible in its own documentation.** This file's standing floor is
+that a check is only worth what it can be made to fail on; the companion the
+fourth look added is that a criterion is only worth the range its instrument
+samples. This is a third: a check is only worth the *configurations it
+actually runs in*, and the one place that is never written down is the
+intersection of a test's host guard with the tier's host policy — two
+correct-looking facts in two files that nothing compares.
+
+**What replaces it changes the shape of the bet, modestly and legibly.**
+Per-turn work is now a **count** — folds, plan searches, ledger position folds,
+shadowcasts, bodies scanned — asserted per verb class. A count is identical on
+every machine, so it belongs in the commit gate and cannot flap; it went red on
+the pre-change tree at exactly the preregistered numbers and green after. That
+is the first per-commit cost gate this project has had, and it is deliberately
+narrow: it covers the turn path of one window, and it cannot see a regression
+that performs the same operations more slowly. **The unwatched dimension is
+smaller, not closed.** The Rack's own residue — seventy kilobytes of JSON and
+one eight-millisecond shadowcast — is exactly the shape no counter bounds, and
+it is why this campaign's own wall-clock prediction was falsified while its
+counted one landed exactly.

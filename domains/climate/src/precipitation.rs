@@ -31,6 +31,7 @@ pub fn precip_mm_yr(moisture: f64) -> Precipitation {
 /// within `1%` of its asymptote by about `±20 °C`.
 /// type-audit: bare-ok(diagnostic-value: mean_temp_c), bare-ok(ratio: return)
 pub fn snow_fraction(mean_temp_c: f64) -> f64 {
+    /// plumb: pending(wave-1)
     const STEEPNESS: f64 = 0.5;
     1.0 / (1.0 + math::exp(STEEPNESS * mean_temp_c))
 }
@@ -86,16 +87,20 @@ pub fn precip_regime(band: u32, continentality: f64, hemisphere_sign: f64) -> Pr
 
 /// Baseline cloud fraction contributed regardless of uplift or band (a
 /// diagnostic floor: even flat, sinking terrain shows some cloud when moist).
+/// plumb: pending(wave-1)
 const CLOUD_BASE: f64 = 0.3;
 /// Additional contribution when the vertex sits in a rising circulation band
 /// (convective cloud from the same ascent that makes those bands wet).
+/// plumb: pending(wave-1)
 const CLOUD_RISING: f64 = 0.3;
 /// Orographic-uplift coefficient, scaled by `uplift_m / CLOUD_UPLIFT_SCALE_M`
 /// (mirrors the orographic sink `moisture::carried_water` applies to the
 /// moisture budget — the same terrain rise that rains moisture out also
 /// forces the cloud that does the raining).
+/// plumb: pending(wave-1)
 const CLOUD_UPLIFT_K: f64 = 0.6;
 /// Elevation scale (m) normalizing uplift for the cloud-fraction term.
+/// plumb: pending(wave-1)
 const CLOUD_UPLIFT_SCALE_M: f64 = 3000.0;
 
 /// Diagnostic cloud fraction at a vertex, `[0, 1]`: **feeds nothing** (no

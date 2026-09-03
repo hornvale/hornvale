@@ -22,7 +22,9 @@ use std::process::Command;
 #[allow(clippy::disallowed_types)]
 use std::time::{Duration, Instant};
 
+/// plumb: pending(wave-1)
 const POLL_SECS: u64 = 3;
+/// plumb: pending(wave-1)
 const PROGRESS_SECS: u64 = 60;
 
 /// Where the claim lives. Distinct from `/tmp/hv-census.lock`, which the shell
@@ -35,12 +37,14 @@ pub const CLAIM_PATH: &str = "/tmp/hv-census.claim";
 /// derived — revisit against `docs/timings.md` once it carries census rows
 /// (decision 0081, Consequences).
 /// type-audit: bare-ok(count)
+/// plumb: pending(wave-1)
 pub const CLAIM_BUILDS_THRESHOLD: u64 = 200;
 
 /// Default bound on the wait, in seconds (45 minutes). Override with
 /// `HV_CENSUS_WAIT_TIMEOUT`. Must exceed the longest legitimate hold: a full
 /// `HV_CENSUS=1` regen is ~12 min and a queue two deep ~24.
 /// type-audit: bare-ok(count)
+/// plumb: pending(wave-1)
 pub const DEFAULT_TIMEOUT_SECS: u64 = 2700;
 
 /// Env var by which an outer shell announces it already holds the lock, so a

@@ -701,6 +701,7 @@ pub fn biome_class_of_formation(
 /// it. `RIVER_REACH` therefore stays at its T1 value (3 hops; ~55% ambient
 /// land coverage); this constant alone was pulled down from 0.5 to sharpen
 /// the river-vs-moisture contrast without touching the ruler.
+/// plumb: pending(wave-1)
 const MOISTURE_FLOOR_WEIGHT: f64 = 0.2;
 
 /// Condensation threshold: an attractor whose catchment population clears
@@ -734,6 +735,7 @@ const MOISTURE_FLOOR_WEIGHT: f64 = 0.2;
 /// (hoisted from the settlement-genesis stage closure, Task A16a) so
 /// [`demography_report_from`]'s Lab accessor and the genesis path share the
 /// one definition — they must never diverge.
+/// plumb: pending(wave-1)
 const CONDENSATION_THRESHOLD: f64 = 1.7;
 
 /// Settlers a maximal-suitability vertex supports: the scale that turns
@@ -746,6 +748,7 @@ const CONDENSATION_THRESHOLD: f64 = 1.7;
 /// calibration (`windows/lab`) can express the population-conservation
 /// ceiling in the bake's own headcount units (see `COLLAPSE_PRESSURE`).
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 pub const SETTLERS_PER_CAPACITY: f64 = 100.0;
 
 /// The bare per-vertex carrying-capacity inputs, shared across species (spec
@@ -1008,12 +1011,14 @@ pub fn species_carrying_input(
 /// product this stage is building toward. It is the *land* amplitude:
 /// [`detritus_supply_field`] applies it above sea level and 0 below.
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 pub const DETRITUS_AMBIENT: f64 = 0.2;
 
 /// Fraction of primary production that is grazable plant forage. Plant-
 /// forage supply tracks photosynthate spatially, at a reduced amplitude
 /// (not all NPP is grazable — wood, roots, and unpalatable growth are not).
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 const FORAGE_FRACTION: f64 = 0.5;
 
 /// The `PLANT_FORAGE` supply field (BIO-35 Stage 1: The Demesne, task T1): a
@@ -1041,6 +1046,7 @@ pub fn forage_supply_field(
 /// populations, so it cannot feed back on itself. A real bidirectional trophic
 /// coupling is BIO-24's campaign, not this one.
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 const PREY_FRACTION: f64 = 0.1;
 
 /// The `ANIMAL_PREY` supply field (The Vacancy): prey biomass as a
@@ -1084,6 +1090,7 @@ pub fn detritus_supply_field(
 /// [`energy::EnergySource`]'s water gates and multiplies is built to saturate
 /// at — so `1.0` is not a tuned value, it is the input a vent's real
 /// moisture, however finely a future model computed it, could not exceed.
+/// plumb: pending(wave-1)
 const VENT_MOISTURE: f64 = 1.0;
 
 /// Circulation depth (m) supplied to [`energy::EnergySource::Geothermal`] for
@@ -1108,6 +1115,7 @@ const VENT_MOISTURE: f64 = 1.0;
 /// both ranges, not a value taken from a specific source verified here; a
 /// campaign with a sharper citation should replace it, the same way
 /// `EnergySource::Geothermal`'s own reach names itself revisable.
+/// plumb: pending(wave-1)
 const VENT_CIRCULATION_DEPTH_M: f64 = 1500.0;
 
 /// The `MARINE_FORAGE` supply field (The Vacancy): marine primary production
@@ -1298,6 +1306,7 @@ pub fn mineral_supply_field_masked(
 /// pre-repoint contribution magnitude (chosen, not fit — see the emergence
 /// test's doc comment for the measured before/after).
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 const MINERAL_SUPPLY_SCALE: f64 = 1.0;
 
 /// The `MARINE_FORAGE` supply amplitude — the campaign's single marine
@@ -1310,6 +1319,7 @@ const MINERAL_SUPPLY_SCALE: f64 = 1.0;
 /// two comparable, that is a finding to report (spec §11) — not an invitation
 /// to add a second knob.
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 const MARINE_SUPPLY_SCALE: f64 = 1.0;
 
 /// The per-axis resource supply for one niche at one vertex (BIO-35 Stage 1:
@@ -1871,6 +1881,7 @@ pub fn per_species_suitability_masked(
 /// the absolute headcount scale is a Hornvale choice, while stage 1 fixed the
 /// *relative* pattern.
 /// type-audit: bare-ok(count)
+/// plumb: pending(wave-1)
 pub const CAPACITY_V_MAX: f64 = 140.2;
 
 /// Half-saturation supply for [`CAPACITY_V_MAX`]. DERIVED: the median
@@ -1878,6 +1889,7 @@ pub const CAPACITY_V_MAX: f64 = 140.2;
 /// half-saturation constant belongs where the supply it half-saturates actually
 /// sits.
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 pub const CAPACITY_K_M: f64 = 0.03004;
 
 /// Per-species **capacity**, in headcount — the dimensional counterpart of
@@ -2306,6 +2318,7 @@ pub(crate) fn demography_report_with_beta_from(
 /// CARNIVORE for the predator-pressure field (The Quarry) — a prey-dominant
 /// diet. The obligate apexes (dragons, owlbear) sit at `1.0`; a balanced
 /// omnivore at `0.5` is NOT a predator by this threshold. Authored.
+/// plumb: pending(wave-1)
 const CARNIVORE_THRESHOLD: f64 = 0.5;
 
 /// The per-vertex PREDATOR-PRESSURE field (The Quarry) — the ambient risk a quarry
@@ -2652,6 +2665,7 @@ fn greenhouse_forcing_k(sky: &Sky) -> f64 {
 /// still being large enough to decouple temperature from insolation alone
 /// (spec §4.1 criterion 6 — see `the_greenhouse_residual_is_drawn_and_isolated`
 /// in `domains/astronomy/tests/genesis_properties.rs` for the draw itself).
+/// plumb: pending(wave-1)
 const GREENHOUSE_FORCING_WIDTH_K: f64 = 15.0;
 
 /// Reconstruct the tier-1 climate for this world: rebuild the terrain globe
@@ -2738,6 +2752,7 @@ pub fn annual_mean_insolation(
 ) -> f64 {
     let phi = latitude_deg.to_radians();
     let eps = obliquity_deg.to_radians();
+    /// plumb: pending(wave-1)
     const N: u32 = 48;
     let mut sum = 0.0;
     for k in 0..N {
@@ -2904,6 +2919,7 @@ pub fn substrate_field_at(
 /// vadose interpolation below can state that it runs *to saturation*, and so
 /// that the one end of the moisture axis that is a definition cannot be
 /// mistaken for the two below it, which are choices.
+/// plumb: pending(wave-1)
 const PHREATIC_MOISTURE: f64 = 1.0;
 
 /// **AUTHORED.** The moisture a vadose chamber falls to when seepage does not
@@ -2925,6 +2941,7 @@ const PHREATIC_MOISTURE: f64 = 1.0;
 /// not a desert, and pinning the floor at zero would make the driest chamber
 /// in the world indistinguishable from vacuum on an axis that elsewhere means
 /// "how much water is in the air and the ground".
+/// plumb: pending(wave-1)
 const VADOSE_DRY_MOISTURE: f64 = 0.10;
 
 /// **AUTHORED.** The height above the water table, in metres, at which seepage
@@ -2967,6 +2984,7 @@ const VADOSE_DRY_MOISTURE: f64 = 0.10;
 /// physical sentence it amounts to: a chamber a couple of hundred metres above
 /// the water table in ordinary karst reads about half way between saturated
 /// and dry.
+/// plumb: pending(wave-1)
 const SEEPAGE_REACH_M: f64 = 225.0;
 
 /// A chamber's environmental substrate (The Deep Realm, Task 6) — what
@@ -3385,10 +3403,13 @@ pub fn subterranean_substrate_field_per_rung(
 
 /// The deep-time window (1 Myr) and sampling, standard days. These, the era
 /// count, and the ice step order are save-format contracts (metaplan §9).
+/// plumb: pending(wave-1)
 const DEEP_TIME_WINDOW_DAYS: f64 = 1_000_000.0 * 365.25;
 /// Fine ice-integration step, standard days.
+/// plumb: pending(wave-1)
 const ICE_STEP_DAYS: f64 = 2_000.0 * 365.25;
 /// Number of coarse climate re-runs across the deep-time window.
+/// plumb: pending(wave-1)
 const CLIMATE_ERAS: usize = 25;
 
 /// Absolute freezing threshold for the deep-time snowline diagnostic
@@ -3412,6 +3433,7 @@ const CLIMATE_ERAS: usize = 25;
 /// nonzero cold-but-uninhabited gap) so a typical world's glacial maximum
 /// advances ice over roughly a quarter of its land — a realistic Last
 /// Glacial Maximum extent.
+/// plumb: pending(wave-1)
 const FREEZE_C: f64 = -10.0;
 
 /// The era-loop invariants: everything about the world that does not vary
@@ -4000,6 +4022,7 @@ fn biome_lines_from(climate: &GeneratedClimate) -> Vec<String> {
 /// peak for [`diurnal_lines`] — a one-time-per-render search, not the hot
 /// generation path (mirrors the sampling `domains/climate`'s own tests use
 /// to locate the same peak).
+/// plumb: pending(wave-1)
 const DIURNAL_PEAK_SAMPLES: u32 = 200;
 
 /// The diurnal-range headline lines for the almanac's Land section (The
@@ -4252,6 +4275,7 @@ fn rains_lines_from(terrain: &GeneratedTerrain, climate: &GeneratedClimate) -> V
 /// with no rain reads as a contradiction. The regime parenthetical is dropped
 /// below this floor. 50 mm/yr is the conventional hyperarid boundary.
 /// type-audit: bare-ok(threshold: mm/yr)
+/// plumb: pending(wave-1)
 const REGIME_FLOOR_MM: f64 = 50.0;
 
 /// Render one sample site's precipitation readout: annual mm, phase
@@ -4497,9 +4521,11 @@ pub fn commodity_name(commodity: Commodity) -> &'static str {
 /// Land-vertex karst-hydrology share above which "karst country" is a notable
 /// ground feature for the almanac (The Ground, spec §3/§6) — a chosen prose
 /// threshold, not a physical constant.
+/// plumb: pending(wave-1)
 const GROUND_KARST_NOTABLE: f64 = 0.05;
 /// Land-vertex andosol share above which "volcanic soils" is a notable ground
 /// feature for the almanac.
+/// plumb: pending(wave-1)
 const GROUND_ANDOSOL_NOTABLE: f64 = 0.1;
 
 /// The ground's headline lines for the almanac: the dominant rock and soil
@@ -5985,11 +6011,13 @@ fn landmass_size_capped(
 /// [`is_marsh_vertex`]) — a module constant so `exposure_of_impl` and
 /// [`settlement_site_concepts`] read the identical threshold rather than
 /// two literals that could drift apart.
+/// plumb: pending(wave-1)
 const MARSH_MIN_DRAINAGE: f64 = 5.0;
 
 /// The small-landmass ceiling `island` sits under (see [`is_island_vertex`])
 /// — a module constant for the same single-source reason as
 /// [`MARSH_MIN_DRAINAGE`].
+/// plumb: pending(wave-1)
 const ISLAND_VERTEX_CAP: usize = 200;
 
 /// Whether `vertex` is a real river channel: `water_kind_at` is exactly
@@ -6807,6 +6835,7 @@ pub fn family_daughters(
 /// though those were the whole wild-solitary set.
 ///
 /// [`CascadeRegime::new`]: hornvale_language::CascadeRegime::new
+/// plumb: pending(wave-1)
 const LIFESPAN_THRESHOLD_YEARS: f64 = 120.0;
 
 /// The authored drift-rate map (spec — drift = f(SocialForm, lifespan)),
@@ -7049,6 +7078,7 @@ pub fn voice_params(
 /// any β > 1 and the tail stops existing at all. A calibration dial, not a
 /// derived quantity.
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 const QUALIFIED_WEIGHT: f64 = 0.25;
 
 /// A species' raw [`hornvale_language::NameShape`] preferences, before β

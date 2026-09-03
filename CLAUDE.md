@@ -383,6 +383,12 @@ cargo fmt --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo run --manifest-path tools/type-audit/Cargo.toml -- check   # a LINT, not an artifact
 cargo run --quiet --manifest-path tools/placement-audit/Cargo.toml -- check   # shape-twin placement tags, default-deny
+cargo run --quiet --manifest-path tools/plumb/Cargo.toml -- check   # default-deny over every authored numeric constant (The Plumb, Task 4)
+# THREE report-freshness checks ride in this gate alongside the three `check`s
+# above, and none of them is a single raw command, so none is spelled out here:
+# `make type-audit-report`, `make placement-audit-report` and `make plumb-report`
+# each regenerate to a temp file, diff against the committed artifact, and fail
+# on drift. See their Makefile targets.
 cargo nextest run --workspace -E "$(bash scripts/subfloor-roster.sh)"   # the sub-floor tier only
 
 # The stage gate's own suite runs the full thing, unchanged in content from

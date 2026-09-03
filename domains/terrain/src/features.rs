@@ -188,6 +188,7 @@ impl Cave {
 /// Felsic index at or below which rock reads as mafic enough to have flowed
 /// as basalt. Matches the `silica < 0.3` boundary the retired `cave_kind`
 /// used, kept so the taxonomy's meaning does not silently shift.
+/// plumb: pending(wave-1)
 const MAFIC_SILICA_MAX: f64 = 0.3;
 
 /// Exponent on the lava tube's youth term. Survival is a **decay**, not a
@@ -199,6 +200,7 @@ const MAFIC_SILICA_MAX: f64 = 0.3;
 /// millions of years. A linear `1 - crust_age` says the opposite, giving a
 /// mid-age flow half the tube density of a fresh one. Cubic is the mildest
 /// exponent that states the decay rather than a taper.
+/// plumb: pending(wave-1)
 const LAVATUBE_SURVIVAL_EXPONENT: i32 = 3;
 
 /// Lava-tube proneness, `[0,1]`: a drained basaltic flow. Needs mafic rock
@@ -227,15 +229,19 @@ pub fn lavatube_proneness(buf: &MaterialBuffer, crust_age: f64) -> f64 {
 /// where open fractures are. Eight hops, this constant's provisional value
 /// when [`fracture_stress`] was introduced, is ~900 km: a continental interior
 /// credited with fault stress.
+/// plumb: pending(wave-1)
 const FRACTURE_STRESS_REACH: f64 = 1.5;
 
 /// Void survival in an extensional regime — rifts and ridges. The reference
 /// case: see [`fracture_dilation`].
+/// plumb: pending(wave-1)
 const FRACTURE_DILATION_EXTENSIONAL: f64 = 1.0;
 /// Void survival along a transform. See [`fracture_dilation`].
+/// plumb: pending(wave-1)
 const FRACTURE_DILATION_TRANSFORM: f64 = 0.5;
 /// Void survival in a compressional regime — collision, arc, coastal range.
 /// See [`fracture_dilation`].
+/// plumb: pending(wave-1)
 const FRACTURE_DILATION_COMPRESSIONAL: f64 = 0.15;
 
 /// The fraction of a fault zone's fracture porosity that stays **open**, by
@@ -441,6 +447,7 @@ pub fn band_at_depth(column: &crate::strata::StratigraphicColumn, depth_m: f64) 
 /// far-from-boundary vertex never scores below the interior (the `.max` floor).
 /// type-audit: bare-ok(count: hops), bare-ok(ratio: return)
 pub fn belt_weight(hops: Option<u32>) -> f64 {
+    /// plumb: pending(wave-1)
     const INTERIOR_FLOOR: f64 = 0.3;
     match hops {
         Some(h) => (1.0 / (1.0 + h as f64 * 0.1)).max(INTERIOR_FLOOR),
@@ -458,9 +465,11 @@ pub fn presence_prob(field: f64, belt: f64) -> f64 {
 /// rather than inlined at the call site so the calibration in [`uniformize`]
 /// and the field it calibrates against cannot drift apart.
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 pub const CAVE_GATE_FREQ: f64 = 5.0;
 /// Octave count of the cave presence gate's noise field. See [`CAVE_GATE_FREQ`].
 /// type-audit: bare-ok(count)
+/// plumb: pending(wave-1)
 pub const CAVE_GATE_OCTAVES: u32 = 4;
 
 /// Mean of `sphere_fbm01` at [`CAVE_GATE_FREQ`]/[`CAVE_GATE_OCTAVES`],
@@ -469,12 +478,14 @@ pub const CAVE_GATE_OCTAVES: u32 = 4;
 /// the three-slice construction implies; the measured figure is kept so the
 /// provenance of the number is the measurement rather than the derivation.
 /// See [`uniformize`].
+/// plumb: pending(wave-1)
 const GATE_NOISE_MEAN: f64 = 0.5003;
 /// Standard deviation of the same field, measured over the same 655 488
 /// samples: 0.076443. The field is very nearly Gaussian there — skewness
 /// -0.010, excess kurtosis -0.059 — which is what licenses the normal-CDF
 /// warp in [`uniformize`]. Note this is much wider than the 0.058 The
 /// Hollow's plan guessed from land-only bucket data.
+/// plumb: pending(wave-1)
 const GATE_NOISE_SD: f64 = 0.0764;
 
 /// Map an fbm sample onto a uniform `[0,1]` variate, so that comparing it
@@ -509,8 +520,10 @@ const GATE_NOISE_SD: f64 = 0.0764;
 /// type-audit: bare-ok(ratio: noise), bare-ok(ratio: return)
 pub fn uniformize(noise: f64) -> f64 {
     /// Coefficient of the tanh approximation to the normal CDF.
+    /// plumb: pending(wave-1)
     const A: f64 = 0.7988;
     /// Cubic correction term of the same approximation.
+    /// plumb: pending(wave-1)
     const B: f64 = 0.044_17;
     let z = (noise - GATE_NOISE_MEAN) / GATE_NOISE_SD;
     (0.5 * (1.0 + hornvale_kernel::math::tanh(A * z * (1.0 + B * z * z)))).clamp(0.0, 1.0)

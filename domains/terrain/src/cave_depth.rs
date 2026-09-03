@@ -65,6 +65,7 @@ use hornvale_kernel::math;
 /// describes. ISRM grade R1, "very weak rock": crumbles under firm blows of a
 /// geological hammer, peelable by a knife. Poorly consolidated tuff, mudstone
 /// and chalk sit here.
+/// plumb: pending(wave-1)
 const STRENGTH_MIN_MPA: f64 = 1.0;
 
 /// Rock-mass strength (MPa) at `induration = 1`. The ISRM R4/R5 boundary,
@@ -75,6 +76,7 @@ const STRENGTH_MIN_MPA: f64 = 1.0;
 /// fraction of intact strength. Applying a Hoek–Brown rock-mass reduction on
 /// top of this scale would double-count that fraction, so the scale absorbs it
 /// once, here.
+/// plumb: pending(wave-1)
 const STRENGTH_MAX_MPA: f64 = 100.0;
 
 /// Why the strength scale is **logarithmic** in `induration` rather than
@@ -86,11 +88,13 @@ const STRENGTH_MAX_MPA: f64 = 100.0;
 /// weak half of the scale entirely. This constant is that span as a ratio, kept
 /// as a named value so the two endpoints and the interpolation cannot drift
 /// apart.
+/// plumb: pending(wave-1)
 const STRENGTH_SPAN: f64 = STRENGTH_MAX_MPA / STRENGTH_MIN_MPA;
 
 /// Lithostatic stress gradient, MPa per metre of depth: `ρ g` for a mean upper
 /// crustal density of 2700 kg/m³ at 9.81 m/s² = 26.5 kPa/m. The standard
 /// crustal average; not tuned.
+/// plumb: pending(wave-1)
 const LITHOSTATIC_MPA_PER_M: f64 = 0.026_5;
 
 /// Absolute ceiling (m) on any cave's depth budget — a rail, not a target.
@@ -116,6 +120,7 @@ const LITHOSTATIC_MPA_PER_M: f64 = 0.026_5;
 /// wants to partition the budget must read the range from here rather than
 /// duplicate the literal — `hollow_readout`'s restated H2 bins against it.
 /// type-audit: bare-ok(diagnostic-value)
+/// plumb: pending(wave-1)
 pub const CAVE_REACH_CEILING_M: f64 = 3000.0;
 
 /// Ceiling (m) on a lava tube's depth below the surface. A tube is a *primary*
@@ -125,6 +130,7 @@ pub const CAVE_REACH_CEILING_M: f64 = 3000.0;
 /// Terrestrial tubes are a near-surface phenomenon: Kazumura, the longest
 /// mapped, lies within tens of metres of the ground over 65 km. 200 m is the
 /// generous end of spec §4.0's "tens to a few hundred metres" anchor.
+/// plumb: pending(wave-1)
 const LAVATUBE_CEILING_M: f64 = 200.0;
 
 /// Multiplier on a karst system's reach where the column records an
@@ -137,6 +143,7 @@ const LAVATUBE_CEILING_M: f64 = 200.0;
 /// breccia, so only part of the inherited void is recoverable. It carries
 /// forward the `column.unconformity` branch of the retired band-returning
 /// `cave_depth`, which made the same claim with a band instead of a number.
+/// plumb: pending(wave-1)
 const PALEOKARST_GAIN: f64 = 1.6;
 
 /// A first-order **upper bound** (m) on the depth at which lithostatic load

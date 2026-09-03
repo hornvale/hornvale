@@ -444,6 +444,8 @@
 - [The Hallmark](./chronicle/the-hallmark.md)
 - [The Reservoir](./chronicle/the-reservoir.md)
 - [The Pawl](./chronicle/the-pawl.md)
+- [The Rack](./chronicle/the-rack.md)
+- [The Plumb](./chronicle/the-plumb.md)
 
 # Appendix: The Frontier
 

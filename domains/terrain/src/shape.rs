@@ -9,6 +9,7 @@ use hornvale_kernel::{Geosphere, ReferenceElevation, VertexMap, math};
 /// Half-width of the shelf band around sea level, meters (Earth's
 /// continental shelf lies within ~200 m of the sea surface).
 /// type-audit: pending(wave-2)
+/// plumb: pending(wave-1)
 pub const SHELF_BAND_M: f64 = 200.0;
 
 /// Angular distance between two unit vectors, radians.

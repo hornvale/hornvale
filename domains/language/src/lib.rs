@@ -253,6 +253,7 @@ pub mod speech {
         /// middle at all, so `None` is a designated default in the stronger
         /// sense.
         /// type-audit: bare-ok(ratio)
+        /// plumb: pending(wave-1)
         pub const MANIKIN: Self = Self {
             labiality: 0.5,
             vowel_space: 0.5,

@@ -636,6 +636,7 @@ pub fn offered_by(kind: KindId) -> BTreeSet<OfferedVerb> {
 /// Consumed as a ratio, matching `body.rs`'s own stated convention for
 /// `mass_kg` (never raw kilograms).
 /// type-audit: bare-ok(ratio)
+/// plumb: universal(a fixed ratio-ceiling against the universal REFERENCE_MASS_KG anchor — the ratio already generalizes across species mass)
 const BED_MASS_RATIO_CEILING: f64 = 5.0;
 
 /// Whether `body` can actually make use of `property`, given its own

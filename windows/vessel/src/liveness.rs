@@ -10,7 +10,7 @@ use crate::action::{
 };
 use crate::agent::{settlement_position, walk_depth};
 use crate::body::Body;
-use crate::clock::{climb_factor, cost_of, step_factor};
+use crate::clock::{climb_factor, cost_of, step_factor, ticks_per_local_day};
 use crate::controller::{Controller, DefaultController, PlayerController};
 use crate::interior::{
     AnchorId, Interior, SeamKind, interior_of, landing, route_within, seam_kind, warmth_at,
@@ -150,6 +150,7 @@ pub struct DriveParams {
 /// spans a few days. (The old `sated` felt-state threshold is retired — since
 /// The Temperament, `Session::needs` renders the affect read, spec §7, not a
 /// bare thirst scalar.)
+/// plumb: per-species(a creature's own metabolism sets how fast thirst/foraging need accrues -- currently one authored rate for every species, the same shape FATIGUE_RISE was before its per-species conversion)
 pub const SUSTENANCE: DriveParams = DriveParams {
     rise: 0.15,
     act: 0.85,
@@ -162,6 +163,7 @@ pub const SUSTENANCE: DriveParams = DriveParams {
 /// reaches water on any normal errand resets `last_drank` long before this, so
 /// only one truly stuck — boxed in, or seeking water that isn't there — ever
 /// despairs. One authored judgment call (spec §8).
+/// plumb: pending(wave-1)
 const HELPLESS_ONSET_DAYS: f64 = 15.0;
 
 /// The helplessness PROBE period, in days: a helpless creature abandons the
@@ -170,6 +172,7 @@ const HELPLESS_ONSET_DAYS: f64 = 15.0;
 /// recovery, remains possible. This is what makes the scar "reverse slowly"
 /// (the `AffectLabel::Helpless` contract) rather than trap the creature
 /// permanently. One authored judgment call.
+/// plumb: pending(wave-1)
 const HELPLESS_PROBE_DAYS: f64 = 5.0;
 
 /// Whether a creature has learned helplessness at `day` — its survival drive
@@ -206,6 +209,7 @@ fn learned_helplessness(last_drank: WorldTime, day: WorldTime) -> bool {
 /// this < act`, so the effective threshold stays positive). The manikin's
 /// neutral midpoint (`time_horizon == 0.5`) thus leads by one day; a myopic species
 /// (`0`) leads by none, exactly the pre-anticipation model.
+/// plumb: universal(the shared anchor scale that the already-per-individual time_horizon multiplies against)
 const ANTICIPATION_HORIZON_DAYS: f64 = 2.0;
 
 /// The day a room's furnishing reads its climate at (The Threshold). Any fixed
@@ -218,11 +222,13 @@ const ANTICIPATION_HORIZON_DAYS: f64 = 2.0;
 /// while climate drift is paleoclimate-scale — so the interior is a pure
 /// function of the room in SPACE, and frozen in TIME at day 0. When eras
 /// become playable this constant is the thing to revisit.
+/// plumb: universal(doc states explicitly: any fixed day serves — a read anchor, not a world or species property)
 pub const FURNISHING_REFERENCE_DAY: WorldTime = WorldTime::GENESIS;
 
 /// Below this mean temperature (°C) a room's people build around a fire.
 /// A first-pass value; changing it is a `room/furnishing/v1` epoch.
 /// type-audit: pending(wave-3)
+/// plumb: per-people(whether a room's people build around a fire tracks that people's own cold tolerance and culture, not a fixed climate cutoff for every people -- doc: a room's people build around a fire)
 pub const FURNISHING_COLD_C: f64 = 5.0;
 
 /// A room's per-axis HAZARD field in `[0, 1]` (The Bane) — the raw, creature-
@@ -249,6 +255,7 @@ pub struct Hazards {
 
 impl Hazards {
     /// A safe room — no hazard on any axis (the `Terrain::hazards` default).
+    /// plumb: universal(a zero-accumulator default — no hazard on any axis)
     pub const ZERO: Hazards = Hazards {
         uncanny: 0.0,
         heat: 0.0,
@@ -296,13 +303,16 @@ fn threat_value(niche: &ThreatNiche, hazards: &Hazards) -> f64 {
 /// The temperature-niche optimum (°C) below which a creature weights HEAT fully
 /// and the span over which the weight falls off (The Bane): a cold-adapted
 /// creature (low optimum) dreads heat, a warm one shrugs it off. Authored.
+/// plumb: universal(the fixed reference point a creature's own species niche optimum is measured against, not itself a species value)
 const HEAT_FEAR_REF_C: f64 = 30.0;
 /// The temperature-niche optimum (°C) above which a creature weights COLD fully,
 /// and the reference the weight is measured from — a heat-adapted creature (high
 /// optimum) dreads cold. Authored.
+/// plumb: universal(the fixed reference point a creature's own species niche optimum is measured against)
 const COLD_FEAR_REF_C: f64 = 0.0;
 /// The optimum span (°C) over which the derived HEAT/COLD threat weights slide
 /// from `0` to `1`. Authored.
+/// plumb: per-species(how WIDE a creature's comfort band is before fear ramps to full weight is a trait separate from where the band is centered -- a stenotherm and a eurytherm can share an optimum and differ entirely in span)
 const THERMAL_FEAR_SPAN_C: f64 = 40.0;
 
 /// Derive a creature's [`ThreatNiche`] from what it already is (The Bane — no
@@ -324,6 +334,7 @@ const THERMAL_FEAR_SPAN_C: f64 = 40.0;
 /// coward boldness) still feels it and would flee dense predator territory the
 /// moment it becomes an agent — dormant-but-correct, exactly as The Bane's exotic
 /// threat niches wait for their creatures. Authored.
+/// plumb: universal(the shared scale multiplier in a formula whose inputs already vary by species boldness/diet)
 const PREDATOR_LATENT_SCALE: f64 = 0.5;
 
 /// The PREDATOR dread also derives from nature — from the creature's DIET niche
@@ -496,6 +507,7 @@ pub trait Terrain {
 /// where it stands and hunger never spuriously drives it to wander. The live
 /// `LocaleTerrain` never uses this (it reads the real NPP); it exists so pure
 /// tests that don't care about food are not perturbed by the hunger drive.
+/// plumb: universal(a fallback default for terrain lacking real NPP data, not a species property)
 const DEFAULT_FORAGE: f64 = 1.0;
 
 /// The Tier-0 coarse solar cycle — a latitude-independent fractional-day sun:
@@ -791,11 +803,13 @@ pub const DRANK: &str = "drank";
 /// Ambient temperature (°C) at or below which no heat coupling applies — an
 /// endotherm's thermoneutral zone, and the reference an ectotherm's realized
 /// rate is measured from (The Kindling, spec §3). One authored judgment call.
+/// plumb: universal(the fixed reference temperature the class-specific heat coupling is measured from)
 const THERMONEUTRAL_C: f64 = 25.0;
 
 /// The temperature span (°C) over which the heat coupling reaches full strength
 /// — one `HEAT_SCALE_C` above thermoneutral applies the class's full
 /// multiplier. Authored.
+/// plumb: universal(the shared span of the heat-coupling formula's ramp)
 const HEAT_SCALE_C: f64 = 20.0;
 
 /// Endotherm heat coupling: the extra dehydration fraction at one
@@ -803,17 +817,20 @@ const HEAT_SCALE_C: f64 = 20.0;
 /// fast at `THERMONEUTRAL_C + HEAT_SCALE_C` (≈45 °C). Heat-only (asymmetric):
 /// an endotherm thermoregulates, so cold does not slow its water need below
 /// base. Authored.
+/// plumb: per-species(how strongly heat drives extra dehydration is a property of a species' own thermoregulation -- currently one coefficient shared by the whole endotherm class)
 const ENDOTHERM_HEAT_K: f64 = 1.0;
 
 /// Ectotherm coupling: the realized rate TRACKS ambient (CAP-1), symmetric
 /// about thermoneutral — `1.5` makes a hot ectotherm dehydrate 2.5× at ≈45 °C
 /// and a cold one torpid. Stronger than the endotherm's, because a
 /// cold-blooded creature's whole metabolism follows the climate. Authored.
+/// plumb: per-species(how strongly ambient heat drives dehydration tracks a species' own thermal biology -- currently one coefficient shared by the whole ectotherm class)
 const ECTOTHERM_K: f64 = 1.5;
 
 /// The floor on the ectotherm rate multiplier: a torpid (deeply cold)
 /// ectotherm's metabolism slows but never stops — it still needs SOME water.
 /// Authored.
+/// plumb: per-species(a species' own torpor tolerance sets how far its metabolism can slow in the cold -- currently one floor shared by the whole ectotherm class)
 const ECTOTHERM_FLOOR: f64 = 0.2;
 
 /// The per-day thirst (dehydration) RATE at ambient temperature `temp` (°C) for
@@ -1990,6 +2007,72 @@ pub struct Resolution {
     pub suppressed: Vec<DriveKind>,
 }
 
+/// A body's felt state as its own last resolution left it (The Rack, spec
+/// §3.4) — the three fields of a [`Resolution`] that OUTLIVE the tick that
+/// produced them, kept in the roster's `felt` column rather than re-derived
+/// by every reader.
+///
+/// **The ruling behind this — that `felt` is CONTENT rather than a view — is
+/// decision 0596.** The cite was withheld through Tasks 2-5 because the
+/// record did not exist yet and `cli/tests/suite/docs_consistency.rs` refuses
+/// a cite that resolves to nothing, which is the right behaviour and caught
+/// this on its first commit; the record landed at the campaign's close and the
+/// cite is restored here.
+///
+/// **Content, not a view.** A `Felt` is what the body's own arbitration
+/// concluded; between ticks a body does not re-feel, so a reader that finds a
+/// stale-looking value is reading a real fact about a body that has not been
+/// advanced, never a cache miss. That is the whole difference from the
+/// `position` column beside it, which is a VIEW of the ledger and must agree
+/// with `agent_position` at every read.
+///
+/// **Not [`Resolution`] itself**, which also carries the `Intent` the tick
+/// acted on — an instantaneous choice with no meaning after the tick that
+/// made it. `Felt` is the durable residue and nothing more.
+///
+/// Derives `PartialEq` but not `Eq`, because [`Affect`] carries two `f64`s
+/// and does not derive it either.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Felt {
+    /// The felt state the resolution expressed (its point on the circumplex).
+    pub affect: Affect,
+    /// The commitment mode the resolution carried forward (hysteresis).
+    pub mode: Mode,
+    /// The drives the resolution found active and did not pursue.
+    pub suppressed: Vec<DriveKind>,
+}
+
+/// What one body's walk left behind, for the caller that owns the roster to
+/// write back (The Rack, spec §3.4) — the two tick-owned columns and the
+/// entity they belong to.
+///
+/// **Why the walk returns this rather than writing it.** `DriveMovements` is
+/// handed a `Vec<Body>` and a frozen [`Ledger`]; it has never had, and must
+/// not acquire, a reference to the `Session` that owns the roster — the walk
+/// is also driven through [`TickSystem::step`] by the kernel's scheduler and
+/// by `windows/lab`'s health battery, neither of which has a roster at all.
+/// So the walk reports and the session writes, which also keeps the write to
+/// exactly one site (`Session::wait`) rather than one per emission path.
+///
+/// **`entity`, not a slot.** A [`crate::roster::Slot`] is the roster's own
+/// coordinate and this module knows nothing about it. The caller maps back
+/// through `Roster::slot_of`, which is the reverse index that exists for
+/// precisely this.
+///
+/// `position` is the room the walk ENDED at, and it is the same value the
+/// walk's own last `agent-at` fact carries — which is what keeps the
+/// roster's `position` column a true VIEW of the ledger rather than a second
+/// opinion about where a body is.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Written {
+    /// Whose walk this was.
+    pub entity: EntityId,
+    /// The room the walk left the body standing in.
+    pub position: Facet,
+    /// The felt state the walk's last resolution expressed.
+    pub felt: Felt,
+}
+
 /// Thirst — the one authored (sustenance) drive, Drive #1. `urgency` is the
 /// `drive_at` fold surfaced on the view; `proposal` is the existing
 /// belief→`plan_to_water`-first-step / `explore_step` chain. Parameterized by
@@ -2062,6 +2145,7 @@ impl Drive for Thirst {
 /// genuinely uncomfortable one (urgency past this) does. An authored Stage-1
 /// placeholder; Stage 2's arbitration contextualizes it against the other
 /// drives (soft-Maslow ceilings).
+/// plumb: universal(an arbitration-threshold placeholder for the drive-priority system, not a species trait)
 const THERMAL_ACT: f64 = 0.5;
 
 /// The soft-Maslow ceiling on the thermal (comfort) drive's urgency
@@ -2070,18 +2154,21 @@ const THERMAL_ACT: f64 = 0.5;
 /// thirst (urgency → `1.0`) ignores any cold. The ordering EMERGES from the
 /// ranges — there is no priority table. Authored; contextualized against
 /// future drives as they land.
+/// plumb: universal(the soft-Maslow ceiling ordering constant for the drive-priority system)
 const THERMAL_CEIL: f64 = 0.6;
 
 /// The commitment-mode hysteresis band: a pursued drive engages at its `act`
 /// but only RELEASES once its urgency falls below `act − h`. Prevents
 /// boundary-dithering at the threshold (a drive flickering active/inactive tick
 /// to tick as urgency hovers at `act`).
+/// plumb: universal(the anti-dithering hysteresis band shared by every drive's arbitration, an engine-mechanic constant)
 const HYSTERESIS_H: f64 = 0.1;
 
 /// The challenger switch margin `δ`: while pursuing one drive, the NPC only
 /// abandons it for a challenger whose best-action utility exceeds the
 /// incumbent's by more than this. Prevents mid-errand flip-flop between two
 /// near-equal drives (the errand is sticky, not twitchy).
+/// plumb: universal(the shared challenger-switch margin for every drive's arbitration, an engine-mechanic constant)
 const SWITCH_MARGIN: f64 = 0.1;
 
 /// Thermal comfort — a FLOW (reactive, state-satisfied) drive, a second
@@ -2498,6 +2585,7 @@ pub const SLEPT: &str = "slept";
 /// The solar-altitude band (degrees around the horizon) a CREPUSCULAR creature
 /// is awake in — dawn and dusk, when the sun is near the horizon (civil
 /// twilight). Diurnal wakes above it, nocturnal below (The Slumber Tier-1).
+/// plumb: per-species(how wide a solar-altitude band a crepuscular species is active in is a property of that species' own activity biology -- currently one width for every crepuscular species)
 const TWILIGHT_DEG: f64 = 6.0;
 
 /// Fatigue REPAID per LOCAL day ASLEEP (The Wicket, Task 7; on the LOCAL day
@@ -2565,6 +2653,7 @@ const TWILIGHT_DEG: f64 = 6.0;
 /// A rate large enough to clear ANY debt in one night would be the old flag
 /// wearing a rate's clothes; this one is not — a half-night repays half the
 /// scale, so a body three days awake still wakes in debt.
+/// plumb: per-species(a creature's own physiology should set how fast rest repays fatigue debt, symmetric to the now-per-species RISE rate -- currently one recovery rate for every species; the doc's own text names this asymmetry)
 const FATIGUE_FALL: f64 = 1.0;
 
 /// Fatigue repaid per LOCAL day spent in a CONSCIOUS rest (The Wicket, Task 8;
@@ -2611,6 +2700,7 @@ const FATIGUE_FALL: f64 = 1.0;
 /// doc asserts it must clear, and the nap fragmentation this task exists to
 /// remove would return with every test still green. The calibration test states
 /// that inequality directly.
+/// plumb: per-species(a creature's own physiology should set how fast a conscious rest repays fatigue, half of FATIGUE_FALL's own rate -- currently one recovery rate for every species)
 const REST_FALL: f64 = 0.5;
 
 /// The ORDER half of [`REST_FALL`]'s bracket, as a compile-time assertion
@@ -2631,53 +2721,71 @@ const _: () = assert!(
      per day down than a sleep, or the two acts differ only in name"
 );
 
-/// How long a conscious rest lasts: [`Action::Rest`]'s own span, and the first
-/// thing about a rest that is a property of the ACT rather than of the clock
-/// (The Wicket, Task 8).
+/// How long a conscious rest lasts at `L = 1` (a standard-length local day) —
+/// the ANCHOR value [`act_span`]'s `Action::Rest` arm now computes generally
+/// as a quarter of the world's own local day, and the value the fold-level
+/// tests below hold the arithmetic against (The Wicket, Task 8; converted to
+/// local days by The Plumb, Task 5).
 ///
 /// **This constant exists because of a measured pathology, not a preference.**
 /// Task 7 made fatigue a stock and every rest took its length from
 /// `next_awake_day`, which answers "the next moment this species is awake". For
 /// a body lying down while it is ALREADY awake that is the next scan step —
-/// [`WAKE_SCAN_STEP`], 7.2 minutes — so an exhausted creature dozed repeatedly
+/// [`WAKE_SCAN_STEP`], 72 minutes — so an exhausted creature dozed repeatedly
 /// through its own afternoon: 44 of the 68 `rested` facts in the hoisted-walk
 /// golden were one scan step long. A doze that short repays
 /// `REST_FALL * 0.05`, which cannot clear the drive that proposed it, so the
 /// drive proposes again on the next step and the ledger fills with a body
 /// blinking.
 ///
-/// **A quarter of a standard day (~6 hours).** Two constraints pick it. It must
-/// be long enough that one rest carries a body from [`FATIGUE_ACT`] clear of
-/// the hysteresis band the drive re-engages inside (`FATIGUE_ACT -
-/// HYSTERESIS_H` = 0.75, so the repayment must exceed 0.1; a quarter-day at
-/// [`REST_FALL`] repays 0.125). And it must stay clearly under [`SLEEP_BOUT`],
-/// because a rest that outlasts a sleep would make the shorter act the more
-/// restorative one and invert the ruling.
+/// **A quarter of the local day (~6 hours on an Earth-like world).** Two
+/// constraints pick the fraction. It must be long enough that one rest
+/// carries a body from [`FATIGUE_ACT`] clear of the hysteresis band the drive
+/// re-engages inside (`FATIGUE_ACT - HYSTERESIS_H` = 0.75, so the repayment
+/// must exceed 0.1; a quarter-day at [`REST_FALL`] repays 0.125). And it must
+/// stay clearly under [`SLEEP_BOUT`], because a rest that outlasts a sleep
+/// would make the shorter act the more restorative one and invert the ruling.
 ///
-/// **THAT FIRST CONSTRAINT HOLDS ONLY AT `L ≈ 1`, AND THIS DOC DID NOT SAY SO
-/// UNTIL THE FINAL REVIEW.** The span is a fixed WALL-CLOCK quarter of a
-/// STANDARD day, but [`fatigue_from_rests`] converts every bout at the point
-/// of use through `to_local_days` (fix round 1), so with `L` the world's local
-/// day in standard days the repayment is `REST_FALL * 0.25/L` = `0.125/L`, not
-/// a flat 0.125. It clears [`HYSTERESIS_H`] only while `L < 1.25` std days —
-/// **a SLOW-rotating world breaks it**, `--day-hours` above 30, and
-/// `RotationPin::PeriodHours` admits up to 100 h (`L = 4.17`, repaying 0.03,
-/// four times under the floor). Past the bound a rest no longer discharges the
-/// drive that proposed it and the seven-minute nap fragmentation Task 8 exists
-/// to remove comes back, with every test green — because
-/// `a_rest_bout_repays_more_than_the_hysteresis_band_it_must_clear` asserts the
-/// `L = 1` arithmetic (`REST_BOUT.as_std_days() * REST_FALL`) and nothing sweeps
-/// `L`.
+/// **THE FIRST CONSTRAINT USED TO HOLD ONLY AT `L ≈ 1`, AND THIS WAS A NAMED
+/// REGRESSION UNTIL THE PLUMB, TASK 5.** `act_span` used to return this
+/// constant VERBATIM regardless of the terrain, a fixed WALL-CLOCK quarter of
+/// a STANDARD day; [`fatigue_from_rests`] then converts every bout at the
+/// point of use through `to_local_days` (fix round 1), so with `L` the
+/// world's local day in standard days a flat quarter-standard-day rest repaid
+/// `REST_FALL * 0.25/L` = `0.125/L`, not a flat 0.125. That cleared
+/// [`HYSTERESIS_H`] only while `L < 1.25` std days — a SLOW-rotating world
+/// broke it, `--day-hours` above 30, and `RotationPin::PeriodHours` admits up
+/// to 100 h (`L = 4.17`, repaying 0.03, four times under the floor). Past the
+/// bound a rest no longer discharged the drive that proposed it and the
+/// seven-minute nap fragmentation Task 8 exists to remove came back, with
+/// every test green — because
+/// `a_rest_bout_repays_more_than_the_hysteresis_band_it_must_clear` asserts
+/// only the `L = 1` arithmetic (`REST_BOUT.as_std_days() * REST_FALL`) and
+/// nothing swept `L`.
 ///
-/// **The fix is a bout expressed in LOCAL days, not a different number here**,
-/// and it is deliberately left to a later campaign rather than taken in the
-/// commit that converted the rate terms: it changes what a rest IS (a fraction
-/// of the body's own cycle rather than a wall-clock duration), which is a
-/// design question Nathan's per-species ruling did not reach. Recorded as this
-/// campaign's follow-up in [`fatigue_from_rests`]'s own doc — where it was
-/// registered, until the final review, with the bound in the OPPOSITE
-/// direction ("a fast-rotating world"), borrowed from the unconverted-fall-term
-/// bug it sat beside.
+/// **The fix is a bout expressed in LOCAL days, and `act_span` now computes
+/// it that way**: `ticks_per_local_day(terrain.day_ticks()) / 4`, reached
+/// through the `terrain` argument the function already carried. This
+/// constant remains as the `L = 1` anchor — the value that computation
+/// reduces to on a standard-length world and on any world whose terrain
+/// reports no usable day at all (`ticks_per_local_day` falls back on
+/// `day.filter(|d| d.ticks() > 0)`, so a `None`, a zero and a negative day
+/// all take the base rate), which is exactly what makes the existing fold-level tests
+/// below still hold: they compare against THIS constant on terrain that
+/// reports no calendar of its own, and `ticks_per_local_day`'s own "no day to
+/// divide" convention answers the base (standard-day) rate there, byte-
+/// identical to the pre-conversion arithmetic. The discriminating case — a
+/// slow-rotating world, where the two now differ — is
+/// `a_rest_taken_on_a_100_hour_world_repays_more_than_the_hysteresis_band_it_must_clear`.
+/// plumb: per-world(a rest's length is a fraction of the local day, not of the standard one)
+// Only test code reads this now (The Plumb, Task 5) — the L = 1 anchor the
+// fold-level tests compare against — so an ordinary (non-test) build sees it
+// as genuinely unreferenced. (Deliberately not spelling out the cfg
+// attribute itself in this comment: `production_reaches_fatigue_through_
+// exactly_one_door` finds the FIRST literal occurrence of that attribute
+// text in this file to mark where "production" ends for its own text scan,
+// and this constant sits well before the real test module.)
+#[allow(dead_code)]
 const REST_BOUT: TickSpan = TickSpan::from_ticks(WorldTime::TICKS_PER_STD_DAY / 4);
 
 /// The shortest span that counts as SLEEPING rather than dozing:
@@ -2688,7 +2796,7 @@ const REST_BOUT: TickSpan = TickSpan::from_ticks(WorldTime::TICKS_PER_STD_DAY / 
 /// the wake-gate has always used). That answer is authoritative in the
 /// off-phase — the cycle knows where dawn is — and useless while the body is
 /// awake, where the same scan means "the next moment you are awake" and usually
-/// returns a single [`WAKE_SCAN_STEP`], 7.2 minutes. The floor supplies a
+/// returns a single [`WAKE_SCAN_STEP`], 72 minutes. The floor supplies a
 /// length for that second case and **only** that case, which is what makes a
 /// sleep's length a property of the act rather than of the scan lattice.
 ///
@@ -2716,6 +2824,7 @@ const REST_BOUT: TickSpan = TickSpan::from_ticks(WorldTime::TICKS_PER_STD_DAY / 
 /// that in-phase instants exist whose cycle is SHORTER than this floor — the
 /// eight cases above, which under the old rule were the defect and under the
 /// new one are the reason the gate is needed.
+/// plumb: per-world(the same wall-clock/local-day-length TickSpan shape as REST_BOUT — a world-scale property)
 const SLEEP_BOUT: TickSpan = TickSpan::from_ticks(WorldTime::TICKS_PER_STD_DAY * 2 / 5);
 
 /// The exclusive upper bound, in TICKS, on a rest span that survives
@@ -2739,17 +2848,21 @@ const SLEEP_BOUT: TickSpan = TickSpan::from_ticks(WorldTime::TICKS_PER_STD_DAY *
 /// function, so nothing in the sim can approach the bound; the guard exists for
 /// [`record_rest`], which is `pub` and takes an arbitrary span from a caller
 /// this crate does not control.
+/// plumb: universal(the quantizer's own precision bound, decision 0033 — fixed by the serialization format for every world)
 const REST_SPAN_EXACT_LIMIT: i64 = 100_000_000;
 /// The fatigue seek threshold: at/above this, the creature seeks rest. Mirrors
 /// thirst's `act`.
+/// plumb: universal(a dimensionless arbitration threshold on normalized urgency, uniform by design like the other act/ceil thresholds)
 const FATIGUE_ACT: f64 = 0.85;
 /// The soft-Maslow ceiling on fatigue's urgency contribution — below survival
 /// (like thermal comfort), so a creature dying of thirst does not sleep through
 /// it, but a mildly thirsty tired one rests. Authored.
+/// plumb: universal(a dimensionless soft-Maslow ceiling on normalized urgency)
 const FATIGUE_CEIL: f64 = 0.6;
 
 /// The thirst urgency past which the wake-gate is OVERRIDDEN — a creature this
 /// close to dying of thirst WAKES to drink (spec §3). Authored.
+/// plumb: universal(a dimensionless arbitration override threshold on normalized urgency)
 const SURVIVAL_OVERRIDE: f64 = 0.9;
 
 /// Whether a creature of `activity` is awake at `day` — a pure function of its
@@ -2759,8 +2872,26 @@ const SURVIVAL_OVERRIDE: f64 = 0.9;
 /// The resolution at which the tick scans for the next wake transition — one
 /// twentieth of a standard day (the historical `0.05` days), held as an EXACT
 /// tick span so the scan walks the lattice itself rather than re-rounding an
-/// accumulating `f64` day at every step. Fine enough to catch a crepuscular
-/// creature's narrow dawn/dusk bands.
+/// accumulating `f64` day at every step.
+///
+/// **RETAGGED per-world (The Plumb, Task 5 review), and the third of three
+/// constants in this neighbourhood carrying the same defect.** The tag used
+/// to read `universal`, on the same provenance-shaped grounds `SCAN_LIMIT`
+/// and `ONE_DAY` did — "the tick-scan resolution", an algorithm-internal
+/// quantity — rather than stating what the number varies along. What this
+/// step actually samples is [`is_awake`]'s own signal, `solar_altitude`,
+/// whose PERIOD is the world's LOCAL day; the step itself is a fixed
+/// fraction of the STANDARD day. "Fine enough to catch a crepuscular
+/// creature's narrow dawn/dusk bands" is therefore a claim that holds only
+/// near `L = 1` — on a fast-rotating world it degrades directly: at the
+/// legal minimum (`RotationPin::PeriodHours(4.0)`, a 4-standard-hour local
+/// day) this step samples only ~3.3 times per local day (16,666.67 local-day
+/// ticks / 5,000 tick step), which is not obviously "fine enough" to resolve
+/// a dawn or dusk band at all. Not converted this campaign for the same
+/// reason `SCAN_LIMIT`/`ONE_DAY` are not (a fidelity finding, not this
+/// task's work) — see [`REST_BOUT`]'s own doc for the boundary this
+/// campaign DID convert.
+/// plumb: per-world(a fixed-standard-day sample rate over a signal whose real period is the world's own local day — degrades on a fast-rotating world, ~3.3 samples/local-day at the legal 4-standard-hour PeriodHours minimum)
 const WAKE_SCAN_STEP: TickSpan = TickSpan::from_ticks(WorldTime::TICKS_PER_STD_DAY / 20);
 
 /// A representative AWAKE fraction of the day for `activity` — where the health
@@ -2796,7 +2927,21 @@ pub(crate) fn next_awake_day(
     // The scan's bound and its give-up fallback as EXACT spans: `day + 1.5`
     // and `day + 1.0` were instant-plus-duration all along, and an instant is
     // a tick count now, so the durations are spans rather than float days.
+    //
+    // BOTH ARE TAGGED per-world, NOT universal (The Plumb, Task 5 review).
+    // They used to read `universal`, on the grounds that the bound is "the
+    // wake-scan loop's own", an algorithm-internal quantity — a claim about
+    // where the number came from, standing in for a claim about what it
+    // varies along. What each actually caps is a PHYSICAL DURATION (how long
+    // a body may go on searching for a waking moment, and how long it sleeps
+    // when none is found) expressed in STANDARD days rather than the world's
+    // own local day — the same defect [`REST_BOUT`] carried before this
+    // task's conversion, still present here on the sleep side (a fidelity
+    // finding this campaign reports rather than converts; see [`REST_BOUT`]'s
+    // own doc for the measured near-miss at the legal extreme).
+    /// plumb: per-world(caps a physical search duration in STANDARD days rather than the world's own local day — the same axis REST_BOUT was on before its conversion; falsifier: a_rest_still_outlasts_the_sleep_scans_give_up_fallback_at_the_100_hour_legal_extreme)
     const SCAN_LIMIT: TickSpan = TickSpan::from_ticks(WorldTime::TICKS_PER_STD_DAY * 3 / 2);
+    /// plumb: per-world(the give-up fallback's own span, also denominated in a STANDARD day rather than the world's own local day; this is the constant the measured rest/sleep inversion actually names — falsifier: a_rest_still_outlasts_the_sleep_scans_give_up_fallback_at_the_100_hour_legal_extreme)
     const ONE_DAY: TickSpan = TickSpan::from_ticks(WorldTime::TICKS_PER_STD_DAY);
     let limit = day + SCAN_LIMIT;
     let mut t = day + WAKE_SCAN_STEP;
@@ -2866,9 +3011,11 @@ pub fn renders_unconscious(action: &Action) -> bool {
 /// rule anywhere; if one is ever needed for the player, it belongs here as
 /// another arm, not beside the caller.
 ///
-/// - [`Action::Rest`] lasts [`REST_BOUT`] — a flat, act-owned span. It does not
-///   consult the clock at all, which is exactly why it cannot collapse to a
-///   scan step.
+/// - [`Action::Rest`] lasts a quarter of the world's own LOCAL day
+///   ([`REST_BOUT`] is the `L = 1` value this reduces to), an act-owned span
+///   that consults the TERRAIN's day length but never the `day`/`WorldTime`
+///   clock argument — which is exactly why it cannot collapse to a scan step
+///   (The Plumb, Task 5).
 /// - [`Action::Sleep`] runs until the body's own cycle wakes it
 ///   ([`next_awake_day`]), floored at [`SLEEP_BOUT`]. The cycle decides on the
 ///   ordinary path; the floor decides when the body goes under off-cycle.
@@ -2883,7 +3030,20 @@ pub(crate) fn act_span(
     day: WorldTime,
 ) -> Option<TickSpan> {
     match action {
-        Action::Rest => Some(REST_BOUT),
+        // A quarter of the world's own LOCAL day, not of the kernel's fixed
+        // standard day (The Plumb, Task 5) — `REST_BOUT` was a flat span
+        // reached through `terrain` not at all, which is what let a rest
+        // under-repay on any world whose local day runs long
+        // (`RotationPin::PeriodHours` legally reaches 100 std hours; see
+        // `REST_BOUT`'s own doc for the measured bound). `ticks_per_local_day`
+        // is the same "no day to divide" convention `to_local_days` folds the
+        // repayment back through: it falls back to the standard-day rate on
+        // `day.filter(|d| d.ticks() > 0)`, so a terrain reporting NO day at
+        // all AND one reporting a zero or negative day both reduce to exactly
+        // the old flat span.
+        Action::Rest => Some(TickSpan::from_ticks(
+            ticks_per_local_day(terrain.day_ticks()) / 4,
+        )),
         Action::Sleep => {
             // The body's own cycle answers first, and it is AUTHORITATIVE
             // whenever the body is already in its off-phase: it knows when dawn
@@ -3012,6 +3172,7 @@ impl BoutKind {
 /// again is the plainest reading of "prefer" that a body sleeping in the road
 /// can still live with.
 /// type-audit: bare-ok(ratio)
+/// plumb: universal(a uniform multiplier on every rest/sleep act's own rate, bounded rather than derived — not a species property)
 const AFFORDED_REST_GAIN: f64 = 1.5;
 
 /// The grade is a PREFERENCE, so it must actually prefer. A value at or below
@@ -3363,17 +3524,21 @@ fn to_local_days(span: TickSpan, day: Option<TickSpan>) -> f64 {
 /// `--day-hours 4` world could never recover once saturated. Converting
 /// both terms restores the fixed margin between them at every `L` — the
 /// property the pre-Task-9 model had for free because both terms carried
-/// the SAME (kernel) day. [`REST_BOUT`]'s own span stays a fixed 0.25
-/// standard days regardless of `L`, and that residue is the campaign's
-/// registered follow-up. **Its bound runs the OTHER WAY from this
-/// paragraph's, which is why the two are stated separately**: converting
-/// the fall terms fixed the fast-rotating (`small L`) failure described
-/// above, but a fixed wall-clock bout converted at the point of use repays
-/// `REST_FALL * 0.25/L`, which falls BELOW [`HYSTERESIS_H`] for `L > 1.25`
-/// std days — a SLOW-rotating world, `--day-hours` above 30. This note read
-/// "a fast-rotating world" until the final review, borrowing the direction
-/// of the bug beside it. The derivation, and what goes wrong past the
-/// bound, live at [`REST_BOUT`] where the calibration claim itself is.
+/// the SAME (kernel) day. **[`REST_BOUT`]'s own span used to stay a fixed
+/// 0.25 standard days regardless of `L`, and that residue was this
+/// campaign's registered follow-up until The Plumb, Task 5 converted it.**
+/// Its bound ran the OTHER WAY from this paragraph's, which is why the two
+/// were stated separately: converting the fall terms fixed the
+/// fast-rotating (`small L`) failure described above, but a fixed
+/// wall-clock bout converted at the point of use repaid `REST_FALL *
+/// 0.25/L`, which fell BELOW [`HYSTERESIS_H`] for `L > 1.25` std days — a
+/// SLOW-rotating world, `--day-hours` above 30 (this note read "a
+/// fast-rotating world" until the final review, borrowing the direction of
+/// the bug beside it). `act_span`'s `Action::Rest` arm now computes the
+/// bout as a quarter of the LOCAL day, so this term is `L`-invariant the
+/// same way the rise term and the sleep fall term already are. The
+/// derivation, the measured bound, and the discriminating test all live at
+/// [`REST_BOUT`] where the calibration claim itself is.
 fn fatigue_from_rests(
     rests: &[(WorldTime, TickSpan, BoutKind, SiteGrade)],
     t: WorldTime,
@@ -3562,6 +3727,7 @@ fn creature_fatigue(
 /// (`xorn` included, at an EXPLICIT `0.0`), so this fallback is reserved for
 /// a species the registry has never heard of at all, not for a stated
 /// absence.
+/// plumb: universal(the documented neutral fallback for the per-species registry's own miss case, analogous to a manikin reference default)
 const DEFAULT_FATIGUE_RISE: f64 = 0.3;
 
 /// The authored fatigue-rise roster's shape, mirroring `clock::Biosphere`:
@@ -3720,6 +3886,7 @@ pub const EATEN: &str = "eaten";
 /// thirst it couples to metabolism and room temperature through the SAME
 /// `rise_at`/path-integral machinery (The Kindling, a second consumer), so a
 /// hot endotherm burns — and hungers — faster. Authored.
+/// plumb: per-species(a creature's own metabolism sets how fast hunger accrues -- currently one authored rate for every species, the same shape FATIGUE_RISE was before its per-species conversion)
 const HUNGER: DriveParams = DriveParams {
     rise: 0.1,
     act: 0.85,
@@ -3730,6 +3897,7 @@ const HUNGER: DriveParams = DriveParams {
 /// forage toward a richer neighbour. Low, so any ordinarily productive room
 /// (an inhabited settlement's surroundings) feeds; only genuine barrens
 /// (desert/ice, a planted wasteland) starve. Authored.
+/// plumb: universal(a dimensionless threshold on food_value, which is already creature-relative -- the niche dot product bakes in each species' own diet weights, so the shared cutoff needs no separate per-species value)
 const EAT_THRESHOLD: f64 = 0.15;
 
 /// The scale of the prey-presence term in [`food_value`] (The Teeth) — how
@@ -3742,6 +3910,7 @@ const EAT_THRESHOLD: f64 = 0.15;
 /// beast (`ANIMAL_PREY`-dominant) on barren wild land, drawn toward the herds.
 /// Sized so that draw is real without swamping the ordinary productivity term.
 /// Authored; the woken-hunt analog of The Quarry's `PREDATOR_LATENT_SCALE`.
+/// plumb: universal(the shared scale of a formula whose per-species diet weight already varies)
 const PREY_LATENT_SCALE: f64 = 1.0;
 
 /// The food-value of a room FOR a specific creature (The Provender, spec §1):
@@ -3944,12 +4113,14 @@ impl<'a> Drive for Hunger<'a> {
 /// The urgency at/above which a present threat WAKES a sleeping creature (The
 /// Dread) — a hazard this close overrides the wake-gate, like dying of thirst.
 /// Authored, matching thirst's [`SURVIVAL_OVERRIDE`] posture.
+/// plumb: universal(a dimensionless arbitration override threshold on normalized urgency)
 const DANGER_OVERRIDE: f64 = 0.5;
 
 /// The threat seek threshold: at/above this the danger drive engages (flees).
 /// Lower than the sustenance drives' `act` (0.85) — fear is reactive and
 /// prompt, so even a moderate threat is felt and acted on, not endured. One
 /// authored judgment call.
+/// plumb: universal(a dimensionless arbitration threshold on normalized urgency)
 const DANGER_ACT: f64 = 0.3;
 
 /// The LATENT scale on BORROWED alarm (The Alarm) — the fear-contagion twin of
@@ -3962,6 +4133,7 @@ const DANGER_ACT: f64 = 0.3;
 /// reads as a full-strength threat). Byte-identity is STRUCTURAL, not scale-
 /// tuned: the settled peoples never reach primary danger distress, so the field
 /// is empty on seed 42 regardless of scale.
+/// plumb: universal(a shared scale on borrowed-alarm contagion; byte-identity independent of its value per the doc)
 const ALARM_SCALE: f64 = 1.0;
 
 /// Danger — the fifth drive (The Dread), the avoidance twin of hunger: a FLOW
@@ -4016,6 +4188,7 @@ pub struct Danger<'a> {
 /// its flee/stand midpoint, the manikin's neutral value; goblin's authored row
 /// (and every psyche-less beast's fallback) sits here, so this centering keeps
 /// them byte-identical.
+/// plumb: universal(the manikin's own neutral reference boldness — species differences already flow through MindVector.threat_response)
 const BOLDNESS_STEADY: f64 = 0.5;
 
 /// The boldness scaling factor `2·(1 − boldness)` — `×2` at coward `0`, `×1`
@@ -4279,17 +4452,20 @@ fn flee_step(
 /// Belonging) — a creature this many mesh-hops from its people (while home is
 /// still REACHABLE) feels maximal isolation. Authored, modest so a creature that
 /// strays a little from home already feels the homeward pull.
+/// plumb: per-species(a creature's own territorial range and wander tolerance sets how many hops from home feel isolating -- currently one distance for every species)
 const LONELY_SCALE_HOPS: f64 = 20.0;
 
 /// The loneliness seek threshold: at/above this the social drive engages (heads
 /// home). Modest, like thermal's — a creature a little way from home feels the
 /// pull but a comfortable range around home is untroubled. Authored.
+/// plumb: universal(a dimensionless arbitration threshold on normalized urgency)
 const SOCIAL_ACT: f64 = 0.5;
 
 /// The soft-Maslow ceiling on the social (affiliation) drive's urgency
 /// contribution — COMFORT-tier (below survival, like thermal/fatigue), so a
 /// thirsty/hungry/frightened creature attends to survival first and drifts home
 /// only once those are met. Authored.
+/// plumb: universal(a dimensionless soft-Maslow ceiling on normalized urgency)
 const SOCIAL_CEIL: f64 = 0.6;
 
 /// The loneliness a creature feels given the A* plan home: the plan's hop-length
@@ -5071,11 +5247,27 @@ pub fn arbitrate(
 /// from the frozen ledger: the same arbitration a walk step runs, but stateless
 /// (belief and last-drank are folded from history; exploration starts fresh, no
 /// incumbent mode, so no sticky `Helpless` — persistence is the caller's, e.g.
-/// the health metric's continuous loop). The narration seam
-/// (`Session::needs`) reads a creature's `Affect` through this. `band` is the
-/// same cohort the paired `DriveMovements` moves (The Tidings band-consistency
-/// invariant) — a sampled felt state must reflect the belief the creature
-/// acted on, not a poorer solo one.
+/// the health metric's continuous loop). `band` is the same cohort the paired
+/// `DriveMovements` moves (The Tidings band-consistency invariant) — a
+/// sampled felt state must reflect the belief the creature acted on, not a
+/// poorer solo one.
+///
+/// **THIS IS NO LONGER THE SESSION'S READ** (The Rack, Task 4, spec §3.4).
+/// This doc said "the narration seam (`Session::needs`) reads a creature's
+/// `Affect` through this", and that was true of `needs`, of
+/// `sensed.present[*].felt`, and of nothing else — both of them re-derived
+/// every present body's felt state on every call, from a session that had
+/// thrown away the tick's own answer.
+///
+/// A creature now feels what its own last resolution felt: the arbitration
+/// that actually moved it, with its alarm field, its mode hysteresis and its
+/// own belief, written into the roster's `felt` column by the tick and read
+/// back by the turn. This family survives for three callers that genuinely
+/// have no resolution to read — `windows/lab`'s health battery (a continuous
+/// sampling loop over worlds it never ticks through a session), the roster's
+/// own append seeding (a body no tick has walked yet), and tests. It is a
+/// *re-imagining* of a body without its own history, which is exactly right
+/// for those three and was never right for the session.
 pub fn affect_of(
     frozen: &Ledger,
     folds: &OwnedFolds,
@@ -5508,6 +5700,7 @@ pub fn alarm_field_memo(
 /// pathological distance genuinely gives up (`Intent::Hold`) rather than
 /// paying for a global search — the one search-budget judgment call
 /// (spec §8).
+/// plumb: universal(the GOAP search's node-expansion budget, an algorithm/engine constant)
 const PLAN_BUDGET: usize = 1_000;
 
 /// Catch-up's own step cap (The Threshold task 7, spec §5.3): the most
@@ -5532,12 +5725,14 @@ const PLAN_BUDGET: usize = 1_000;
 /// occurred. A creature far heavier than reference pays a longer hop and so
 /// reaches the cap sooner, which is the action clock's intent, not a
 /// regression: a bear crosses a room more slowly than a person does.
+/// plumb: universal(reuses PLAN_BUDGET's own value for a short local-journey replay cap, an algorithm constant)
 const CATCH_UP_STEP_CAP: usize = PLAN_BUDGET;
 
 /// The per-NPC step cap on `DriveMovements::step`'s inner loop — the
 /// strict-progress guard's backstop: even if a decision loop somehow failed
 /// to advance `day` on every iteration, this bounds total work per tick
 /// (termination guarantee, The Foresight T3 review).
+/// plumb: universal(a termination-guarantee backstop on the per-tick decision loop, an algorithm safety bound)
 const MAX_STEPS: usize = 10_000;
 
 /// [`warmth_at`]'s node-expansion budget for a REAL derived interior (The
@@ -5552,6 +5747,7 @@ const MAX_STEPS: usize = 10_000;
 /// layer has already proven safe rather than inventing a new one. At 8×
 /// headroom over the worst-case hop count, no reachable hearth can ever be
 /// silently missed for want of budget.
+/// plumb: universal(a routing-depth budget over a fixed 9-anchor interior graph, an algorithm constant)
 const INTERIOR_WARMTH_BUDGET: usize = 64;
 
 /// The room `pos` is in, derived (`interior_of`), paired with the anchor a
@@ -6427,7 +6623,7 @@ impl<'a> DriveMovements<'a> {
         frozen: &Ledger,
         mesh_memo: &mut RoomMeshMemo,
         home_nav_cache: &mut HomeNavCache,
-    ) -> (Vec<Fact>, Occupancy) {
+    ) -> (Vec<Fact>, Occupancy, Vec<Written>) {
         let mut out: Vec<Fact> = Vec::new();
         // THE THRESHOLD's crossing (task 6): which anchor each creature
         // stands at, tracked across this tick's own walk. Shared across
@@ -6669,7 +6865,36 @@ impl<'a> DriveMovements<'a> {
         // or constructs a `Fact` directly with `day: None` — would not fail
         // loudly here; it would just reorder silently.
         out.sort_by_key(|f| f.day);
-        (out, occupancy)
+        // WHAT EACH WALK LEFT BEHIND (The Rack, spec §3.4). `states` is this
+        // tick's own per-creature scratch, and its three surviving fields —
+        // where the creature ended, what its last resolution felt, and which
+        // drives that resolution discarded — are exactly the roster's two
+        // tick-owned columns. Read here, at the one moment they are all still
+        // in scope, rather than re-derived by the caller: a second derivation
+        // is a second answer, and the whole point of the column is that it is
+        // the tick's own.
+        //
+        // Every creature `self.npcs` named has an entry, whether or not its
+        // walk went anywhere: an entry is inserted for each npc in the setup
+        // loop and nothing ever removes one, so a creature whose walk halted
+        // on its first pop reports its (unchanged) starting position and the
+        // resolution that halted it, which is the honest answer for it.
+        //
+        // `BTreeMap` order, so the vector is a pure function of the frozen
+        // ledger — the same reason the queue is keyed by `(ticks, EntityId)`.
+        let written: Vec<Written> = states
+            .into_iter()
+            .map(|(entity, (_body, st, _memory))| Written {
+                entity,
+                position: st.pos,
+                felt: Felt {
+                    affect: st.affect,
+                    mode: st.mode,
+                    suppressed: st.suppressed,
+                },
+            })
+            .collect();
+        (out, occupancy, written)
     }
 }
 
@@ -7214,16 +7439,26 @@ impl<'a> DriveMovements<'a> {
     /// Returns the facts this body's OWN walk would commit (empty under
     /// [`crate::controller::PlayerController`] with nothing queued — see that
     /// controller's own doc for why nothing here ever double-moves a body the
-    /// player drives through the verb loop), the LAST commitment mode its own
-    /// arbitration reached this call, the [`Affect`] that SAME resolution
-    /// carried (The Confidant, Task 2) — the host's felt state, independent
-    /// of whether the controller let it act on it — and that SAME
-    /// resolution's discarded ranks (The Confidant, Task 5): the drives that
-    /// were active but not pursued, present so a caller can retrieve them
-    /// without a second arbitration. `advance_one`'s loop always runs at
-    /// least once whenever any time has elapsed (see [`WalkState`]'s own
-    /// `affect` field doc), so both always reflect a live decision this call
-    /// made, never `begin`'s placeholders.
+    /// player drives through the verb loop), and the [`Written`] its walk
+    /// left behind: where it ended, and the [`Felt`] its LAST resolution
+    /// expressed — the commitment mode its own arbitration reached this call,
+    /// the [`Affect`] that same resolution carried (The Confidant, Task 2 —
+    /// the host's felt state, independent of whether the controller let it
+    /// act on it), and that same resolution's discarded ranks (The Confidant,
+    /// Task 5: the drives that were active but not pursued, present so a
+    /// caller can retrieve them without a second arbitration).
+    ///
+    /// **One `Written`, the same type [`Self::step_with_occupancy`] returns
+    /// one of per creature** (The Rack, Task 3), so the possessed body's own
+    /// walk and every other body's walk report through one shape and
+    /// `Session::wait` writes them into the roster through one method. The
+    /// three loose fields this used to return were the same three values in
+    /// a tuple only this caller knew how to read.
+    ///
+    /// `advance_one`'s loop always runs at least once whenever any time has
+    /// elapsed (see [`WalkState`]'s own `affect` field doc), so the felt
+    /// state always reflects a live decision this call made, never `begin`'s
+    /// placeholders.
     pub(crate) fn step_one_with_controller(
         &self,
         frozen: &Ledger,
@@ -7231,7 +7466,7 @@ impl<'a> DriveMovements<'a> {
         mesh_memo: &mut RoomMeshMemo,
         home_nav_cache: &mut HomeNavCache,
         controller: &mut dyn Controller,
-    ) -> (Vec<Fact>, Mode, Affect, Vec<DriveKind>) {
+    ) -> (Vec<Fact>, Written) {
         let band = [body.clone()];
         let mut occupancy = Occupancy::default();
         let mut afraid_memo = PrimaryAfraidMemo::new();
@@ -7329,7 +7564,18 @@ impl<'a> DriveMovements<'a> {
             home_nav_cache,
             controller,
         ) {}
-        (out, st.mode, st.affect, st.suppressed)
+        (
+            out,
+            Written {
+                entity: body.entity,
+                position: st.pos,
+                felt: Felt {
+                    affect: st.affect,
+                    mode: st.mode,
+                    suppressed: st.suppressed,
+                },
+            },
+        )
     }
 }
 
@@ -7860,6 +8106,7 @@ fn default_diet_niche() -> ResourceVector {
 /// registry (defensive — `species` always resolves to at least the `goblin`
 /// default, which IS registered). A wide, mild, low-devotion band so the
 /// thermal drive of an unknown species stays quiescent rather than flailing.
+/// plumb: universal(the documented defensive fallback for a species missing from the biosphere registry, not itself a species value)
 const DEFAULT_TEMPERATURE_NICHE: ConditionResponse = ConditionResponse {
     optimum: 15.0,
     width: 25.0,
@@ -7967,10 +8214,30 @@ fn parse_activity(t: &str) -> ActivityCycle {
 /// [`affect_of_memo_occupied`]) verify the anchor it is about to read still
 /// belongs to the room it is about to pair it with, via [`Self::anchor_in`],
 /// before ever handing it to [`crate::interior::warmth_at`].
+///
+/// The second field is a monotone **write counter** (The Rack, Task 4), and
+/// it exists for one reader: `Session::sighting`'s per-turn memo, which must
+/// know whether a within-room re-anchoring has happened since it derived. A
+/// re-anchoring moves nothing else a caller can cheaply observe — not the
+/// day, not the possession's room, not the band — so without it the memo
+/// would hand out a shadowcast that no longer says where anybody stands. It
+/// counts WRITES rather than hashing content deliberately: a re-anchoring
+/// that happens to restore a previous arrangement is still a write, and
+/// re-deriving after one costs a shadowcast where getting it wrong costs a
+/// creature drawn in the wrong square.
 #[derive(Debug, Default)]
-pub struct Occupancy(std::collections::BTreeMap<EntityId, (Facet, AnchorId)>);
+pub struct Occupancy(std::collections::BTreeMap<EntityId, (Facet, AnchorId)>, u64);
 
 impl Occupancy {
+    /// How many times this `Occupancy` has been written — see the struct's
+    /// own doc. Monotone for the life of one value; a caller comparing two
+    /// readings must hold the same `Occupancy`, not two (replacing the value
+    /// wholesale, as `Session::wait` does, resets the count with it).
+    /// type-audit: bare-ok(count: return)
+    pub fn writes(&self) -> u64 {
+        self.1
+    }
+
     /// Where `who` currently stands, or `None` if it has not arrived (or has
     /// since departed). Both ends of a creature's stay in a room are
     /// legitimately "nowhere in particular" — there is no sentinel anchor for
@@ -8011,6 +8278,7 @@ impl Occupancy {
     pub fn arrive(&mut self, who: EntityId, room: &Facet, interior: &Interior, kind: SeamKind) {
         if let Some(at) = landing(interior, kind) {
             self.0.insert(who, (room.clone(), at));
+            self.1 += 1;
         }
     }
 
@@ -8041,6 +8309,7 @@ impl Occupancy {
             return false;
         }
         self.0.insert(who, (room, to));
+        self.1 += 1;
         true
     }
 
@@ -8058,6 +8327,7 @@ impl Occupancy {
     /// stepping through is what the budget was spent trying to avoid.
     pub fn place(&mut self, who: EntityId, room: &Facet, at: AnchorId) {
         self.0.insert(who, (room.clone(), at));
+        self.1 += 1;
     }
 
     /// Forget `who` entirely. This is the bubble collapsing (or a creature
@@ -8066,6 +8336,7 @@ impl Occupancy {
     /// through this type rather than by simply dropping it.
     pub fn depart(&mut self, who: EntityId) {
         self.0.remove(&who);
+        self.1 += 1;
     }
 }
 
@@ -10031,7 +10302,7 @@ mod tests {
         //
         // WHAT THE SPANS BELOW SAY, and it is the whole nap-fragmentation
         // story in one column. There is no `Number(5000.0)` anywhere — one
-        // `WAKE_SCAN_STEP`, 7.2 minutes, which was 44 of Task 7's 68 bouts and
+        // `WAKE_SCAN_STEP`, 72 minutes, which was 44 of Task 7's 68 bouts and
         // is the pathology Task 8 exists to remove. Every `rested` is exactly
         // `REST_BOUT` (25,000), the flat act-owned span. Every `slept` is a
         // real remaining night the body's own cycle timed (10,000 / 15,000 /
@@ -10714,7 +10985,7 @@ mod tests {
             terrain: &terrain,
             folds: &folds,
         };
-        let (facts1, _occ1) =
+        let (facts1, _occ1, _written1) =
             sys1.step_with_occupancy(&ledger, &mut mesh_memo, &mut home_nav_cache);
         assert!(
             !facts1.is_empty(),
@@ -10740,7 +11011,7 @@ mod tests {
             terrain: &terrain,
             folds: &folds,
         };
-        let (facts2, _occ2) =
+        let (facts2, _occ2, _written2) =
             sys2.step_with_occupancy(&ledger2, &mut mesh_memo, &mut home_nav_cache);
         assert!(
             !facts2.is_empty(),
@@ -11858,7 +12129,7 @@ mod tests {
             folds: &folds,
         };
 
-        let (default_facts, _mode, _affect, _suppressed) = sys.step_one_with_controller(
+        let (default_facts, _written) = sys.step_one_with_controller(
             &ledger,
             &npc,
             &mut RoomMeshMemo::new(),
@@ -11871,7 +12142,7 @@ mod tests {
              (which wants water) — it must act: {default_facts:?}"
         );
 
-        let (player_facts, _mode, _affect, _suppressed) = sys.step_one_with_controller(
+        let (player_facts, _written) = sys.step_one_with_controller(
             &ledger,
             &npc,
             &mut RoomMeshMemo::new(),
@@ -11938,22 +12209,20 @@ mod tests {
             folds: &folds,
         };
 
-        let (default_facts, default_mode, default_affect, default_suppressed) = sys
-            .step_one_with_controller(
-                &ledger,
-                &npc,
-                &mut RoomMeshMemo::new(),
-                &mut HomeNavCache::new(),
-                &mut DefaultController,
-            );
-        let (imposed_facts, imposed_mode, imposed_affect, imposed_suppressed) = sys
-            .step_one_with_controller(
-                &ledger,
-                &npc,
-                &mut RoomMeshMemo::new(),
-                &mut HomeNavCache::new(),
-                &mut crate::controller::ImposedController::new(),
-            );
+        let (default_facts, default_written) = sys.step_one_with_controller(
+            &ledger,
+            &npc,
+            &mut RoomMeshMemo::new(),
+            &mut HomeNavCache::new(),
+            &mut DefaultController,
+        );
+        let (imposed_facts, imposed_written) = sys.step_one_with_controller(
+            &ledger,
+            &npc,
+            &mut RoomMeshMemo::new(),
+            &mut HomeNavCache::new(),
+            &mut crate::controller::ImposedController::new(),
+        );
 
         assert!(
             !default_facts.is_empty(),
@@ -11968,16 +12237,20 @@ mod tests {
              in the walk reads which controller is live"
         );
         assert_eq!(
-            default_mode, imposed_mode,
+            default_written.felt.mode, imposed_written.felt.mode,
             "H3: the same last commitment mode either way"
         );
         assert_eq!(
-            default_affect, imposed_affect,
+            default_written.felt.affect, imposed_written.felt.affect,
             "H3: the same last resolution's felt state either way"
         );
         assert_eq!(
-            default_suppressed, imposed_suppressed,
+            default_written.felt.suppressed, imposed_written.felt.suppressed,
             "H3: the same discarded drive ranks either way"
+        );
+        assert_eq!(
+            default_written.position, imposed_written.position,
+            "H3: the same room at the end of the walk either way"
         );
     }
 
@@ -12260,7 +12533,7 @@ mod tests {
         };
         let mut player = PlayerController::new();
         player.queue(Action::Drink);
-        let (facts, _mode, _affect, _suppressed) = sys.step_one_with_controller(
+        let (facts, _written) = sys.step_one_with_controller(
             &ledger,
             &npc,
             &mut RoomMeshMemo::new(),
@@ -17188,7 +17461,7 @@ mod tests {
             terrain: &terrain,
             folds: &folds,
         };
-        let (facts, _occ) =
+        let (facts, _occ, _written) =
             sys.step_with_occupancy(&ledger, &mut RoomMeshMemo::new(), &mut HomeNavCache::new());
         // `slept`, not `rested`: the phase decides the act, and this fixture
         // put the body in its off-phase deliberately. A walk that had gone back
@@ -17241,7 +17514,7 @@ mod tests {
     /// This is the nap-fragmentation fix stated directly, at the one function
     /// that decides it. Task 7 left every bout taking its span from
     /// `next_awake_day`, which for a body lying down while it is ALREADY awake
-    /// answers `WAKE_SCAN_STEP` — 7.2 minutes. The golden and the commit-rate
+    /// answers `WAKE_SCAN_STEP` — 72 minutes. The golden and the commit-rate
     /// battery both notice the consequence, but only in aggregate; this pins
     /// the mechanism, and it pins it at the instant where the two rules
     /// disagree most.
@@ -17250,6 +17523,21 @@ mod tests {
     /// step here.** Without that, the two `assert_eq!`s below would be
     /// satisfied by a world where the floor never binds, and the test would
     /// pass while claiming a crossing it never made.
+    ///
+    /// **WHAT THIS TEST DOES NOT REACH, stated because The Plumb moved the
+    /// boundary out from under it.** Since Task 5 a rest's runtime span is
+    /// `ticks_per_local_day(...) / 4`, which varies with the local day length
+    /// `L`; the `REST_BOUT > WAKE_SCAN_STEP` and `REST_BOUT < SLEEP_BOUT`
+    /// assertions below read the two CONSTANTS, so they pin the `L = 1`
+    /// anchor and nothing else. The limit was measured rather than assumed
+    /// and is benign across the legal range: `RotationPin::PeriodHours`
+    /// admits 4-100 standard hours, the repayment is `L`-invariant at ~0.125
+    /// against the 0.1 hysteresis floor over all of it, and only a world
+    /// between roughly 4.0 and 4.8 hours puts a runtime rest under a single
+    /// `WAKE_SCAN_STEP`. Deliberately left as a doc rather than a new
+    /// assertion (The Plumb, deferred minor M5): the discriminating
+    /// `L`-varying case already has its own test,
+    /// `a_rest_taken_on_a_100_hour_world_repays_more_than_the_hysteresis_band_it_must_clear`.
     #[test]
     fn a_bouts_length_is_a_property_of_the_act_not_of_the_next_scan_step() {
         let home = raddr(1.0);
@@ -17410,6 +17698,188 @@ mod tests {
         // than a sleep of the same span, is
         // `action_module::sleeping_renders_the_body_unconscious_and_restores_
         // strictly_more_than_resting`.
+    }
+
+    /// A terrain identical to [`PlantedTerrain`] except for its LOCAL DAY
+    /// LENGTH, and optionally the sun — the fixture The Plumb's Task 5 needs
+    /// to test [`REST_BOUT`]'s conversion on a slow-rotating world, since
+    /// `PlantedTerrain` itself never overrides `day_ticks` (it reads the "no
+    /// calendar" default, `None`, exactly as production's `LocaleTerrain`
+    /// would for a tidally locked world).
+    struct SlowWorldTerrain {
+        /// Everything but the day length and (optionally) the sun delegates
+        /// here.
+        inner: PlantedTerrain,
+        /// The world's own local day, reported through
+        /// [`Terrain::day_ticks`].
+        local_day: TickSpan,
+        /// When true, [`Terrain::solar_altitude`] reports permanent night for
+        /// every room and instant — the case `next_awake_day`'s own doc
+        /// names ("polar night for a diurnal creature"): no wake is ever
+        /// found, so the scan exhausts its bound and falls back to the
+        /// give-up span with no [`SLEEP_BOUT`] floor in the arithmetic at
+        /// all (the body is off-phase throughout).
+        permanent_night: bool,
+    }
+
+    impl Terrain for SlowWorldTerrain {
+        fn elevation(&self, room: &Facet) -> f64 {
+            self.inner.elevation(room)
+        }
+        fn is_fresh_water(&self, room: &Facet) -> bool {
+            self.inner.is_fresh_water(room)
+        }
+        fn temperature(&self, room: &Facet, day: WorldTime) -> f64 {
+            self.inner.temperature(room, day)
+        }
+        fn day_ticks(&self) -> Option<TickSpan> {
+            Some(self.local_day)
+        }
+        fn solar_altitude(&self, room: &Facet, day: WorldTime) -> Option<f64> {
+            if self.permanent_night {
+                Some(-1.0)
+            } else {
+                self.inner.solar_altitude(room, day)
+            }
+        }
+    }
+
+    /// **THE DISCRIMINATING CASE (The Plumb, Task 5).** [`REST_BOUT`]'s own
+    /// doc names the bound: a rest converted at the point of use through
+    /// `to_local_days` clears [`HYSTERESIS_H`] only while `L < 1.25` std
+    /// days, and `RotationPin::PeriodHours` legally reaches 100 standard
+    /// hours (`L = 4.17`) — nearly 3.5x past that bound. This is the sibling
+    /// of `a_rest_bout_repays_more_than_the_hysteresis_band_it_must_clear` at
+    /// the world that constant's own `L = 1` arithmetic cannot see: it calls
+    /// [`act_span`] itself, on a terrain whose local day is 100 standard
+    /// hours, and folds the result through the SAME `to_local_days` the
+    /// production fold uses — never `REST_BOUT` directly — so a revert of
+    /// the conversion is exactly what this test is built to catch. The
+    /// `L = 1` sibling above stays green either way (its terrain reports no
+    /// calendar, so `ticks_per_local_day` answers the base rate before and
+    /// after the conversion) — which is why only THIS test witnesses the
+    /// mutation.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST: revert `act_span`'s `Action::Rest`
+    /// arm to `Some(REST_BOUT)`. Before the conversion a 100-hour world's
+    /// rest repays `REST_FALL * (REST_BOUT.as_std_days() / L)` ≈ 0.03, four
+    /// times under `HYSTERESIS_H` — see the failing run pasted in this
+    /// task's report.
+    #[test]
+    fn a_rest_taken_on_a_100_hour_world_repays_more_than_the_hysteresis_band_it_must_clear() {
+        let home = raddr(1.0);
+        let local_day =
+            TickSpan::from_std_days(100.0 / 24.0).expect("100 standard hours is finite");
+        let terrain = SlowWorldTerrain {
+            inner: PlantedTerrain::thermal([(home.clone(), 20.0)]),
+            local_day,
+            permanent_night: false,
+        };
+        let noon = WorldTime::from_std_days(3.5).expect("a day value is finite");
+        let span = act_span(&Action::Rest, ActivityCycle::Diurnal, &terrain, &home, noon)
+            .expect("Rest always has a span");
+        let repaid = to_local_days(span, terrain.day_ticks()) * REST_FALL;
+        assert!(
+            repaid > HYSTERESIS_H,
+            "a rest on a 100-standard-hour world (local day {local_day:?}, L = \
+             {:.4} std days) must still clear HYSTERESIS_H ({HYSTERESIS_H}) \
+             after the conversion to a local-day quarter: span {span:?} \
+             repays {repaid}",
+            local_day.as_std_days()
+        );
+    }
+
+    /// **THE SLEEP-SIDE ORDERING DEFECT (The Plumb, Task 5 fix round 1) — A
+    /// KNOWN-WRONG REALITY, PINNED RUNNING, NOT AN IGNORED FALSIFIER.** An
+    /// earlier draft of this test asserted the ORDER Nathan's ruling
+    /// requires (`rest < sleep`) and shipped `#[ignore]`d when that
+    /// assertion turned out false — which the review correctly rejected:
+    /// nothing runs an `#[ignore]`d test in this crate, the `plumb` tool
+    /// does not validate a `falsifier:` citation (it is free text), and a
+    /// LATER campaign converting the sleep side would make the inversion
+    /// below vanish with NOTHING turning red, while two roster rows kept
+    /// citing this test as their proof obligation — the `STALE-DECL` shape
+    /// CLAUDE.md warns about for the seam-guard roster, reached by a
+    /// different mechanism.
+    ///
+    /// So this asserts the INVERSE — the defect exactly as measured, `rest >
+    /// sleep` — which makes it a ratchet instead of a hope: the day someone
+    /// converts `SLEEP_BOUT`/`SCAN_LIMIT`/`ONE_DAY`/`WAKE_SCAN_STEP` (any of
+    /// [`REST_BOUT`]'s three per-world-tagged sleep-side siblings) and the
+    /// inversion goes away, THIS test reddens on the changed inequality
+    /// rather than silently continuing to pass on an assumption nobody is
+    /// checking any more. **The reader who fixes the sleep side deletes this
+    /// test — does not adjust its assertion.** A red run here is the
+    /// intended signal that the deletion is due, not a bug in the fixture.
+    ///
+    /// **Mechanism** (`REST_BOUT`'s conversion makes a rest `L/4` long; the
+    /// [`Action::Sleep`] side is deliberately NOT converted this campaign —
+    /// see [`SCAN_LIMIT`]/[`ONE_DAY`]/[`WAKE_SCAN_STEP`]'s own `per-world`
+    /// tags, all fidelity findings rather than this task's work). At the
+    /// slowest legal world (`RotationPin::PeriodHours(100.0)`, `L = 100/24 =
+    /// 4.1\overline{6}` std days) a converted rest is `L/4 = 100/96 ≈
+    /// 1.0417` std days. [`SlowWorldTerrain`] with `permanent_night: true`
+    /// forces `next_awake_day` to exhaust its scan and fall back to `day +
+    /// ONE_DAY` (exactly 1 std day) with no `SLEEP_BOUT` floor in the
+    /// arithmetic at all (the body is off-phase throughout, so `act_span`'s
+    /// `Sleep` arm takes the bare-cycle branch, never `.max(SLEEP_BOUT)`) —
+    /// the scenario `next_awake_day`'s own doc names ("polar night for a
+    /// diurnal creature"). Comparing against [`SLEEP_BOUT`] itself would be
+    /// the wrong instrument (ledger #36: it is a floor that "usually does
+    /// not bind", a MINIMUM, not the sleep's own typical duration) — this
+    /// isolates the SCAN's own worst case instead.
+    ///
+    /// **Measured** (not predicted — campaign ledger #34's withdrawn ruling
+    /// reasoned about this exact comparison from the wrong end): `rest =
+    /// TickSpan(104166)` (1.041660 std days) against `sleep =
+    /// TickSpan(100000)` (1.000000 std days) — the converted rest is LONGER
+    /// than the sleep-scan's own give-up fallback by 4,166 ticks (~1 hour),
+    /// at exactly the legal extreme.
+    #[test]
+    fn a_rest_still_outlasts_the_sleep_scans_give_up_fallback_at_the_100_hour_legal_extreme() {
+        let home = raddr(1.0);
+        let local_day =
+            TickSpan::from_std_days(100.0 / 24.0).expect("100 standard hours is finite");
+        let terrain = SlowWorldTerrain {
+            inner: PlantedTerrain::thermal([(home.clone(), 20.0)]),
+            local_day,
+            permanent_night: true,
+        };
+        let day = WorldTime::from_std_days(3.0).expect("a day value is finite");
+        assert!(
+            !is_awake(ActivityCycle::Diurnal, &terrain, &home, day),
+            "fixture precondition: the permanent-night override must actually \
+             read as off-phase, or this measures the awake (floored) branch \
+             instead of the scan's own give-up fallback"
+        );
+        let rest = act_span(&Action::Rest, ActivityCycle::Diurnal, &terrain, &home, day)
+            .expect("Rest always has a span");
+        let sleep = act_span(&Action::Sleep, ActivityCycle::Diurnal, &terrain, &home, day)
+            .expect("Sleep always has a span");
+        println!(
+            "measured at the 100-hour legal extreme (permanent night): \
+             rest={rest:?} ({:.6} std days), sleep={sleep:?} ({:.6} std days)",
+            rest.as_std_days(),
+            sleep.as_std_days()
+        );
+        // THE INVERSE OF NATHAN'S RULING, ASSERTED ON PURPOSE. This pins
+        // today's DEFECT, not the design intent: a rest must stay shorter
+        // than a sleep, and at this legal extreme it currently does not. If
+        // this assertion ever fails, the sleep side has been fixed (or
+        // REST_BOUT's own fraction changed) -- delete this test, do not
+        // adjust the inequality to match whatever the new numbers are.
+        assert!(
+            rest > sleep,
+            "this test pins a KNOWN DEFECT (The Plumb, Task 5 fix round 1): \
+             at the 100-hour legal extreme, permanent-night scenario, a \
+             converted rest currently outlasts next_awake_day's own give-up \
+             fallback (ONE_DAY). If `rest > sleep` no longer holds, the \
+             defect this test exists to ratchet is gone -- DELETE this test \
+             rather than flip its assertion: measured rest {rest:?} \
+             ({:.6} std days) against sleep {sleep:?} ({:.6} std days)",
+            rest.as_std_days(),
+            sleep.as_std_days()
+        );
     }
 
     /// A SLEEP'S LENGTH IS THE CYCLE'S IN-PHASE AND THE FLOOR'S OUT-OF-PHASE,
@@ -18354,7 +18824,7 @@ mod tests {
             terrain: &hearth_terrain,
             folds: &folds,
         };
-        let (_facts, occ) =
+        let (_facts, occ, _written) =
             sys.step_with_occupancy(&ledger, &mut RoomMeshMemo::new(), &mut HomeNavCache::new());
         let interior = interior_of(&home, &hearth_terrain);
         let landing_anchor = landing(&interior, seam_kind(true)).expect("a built room lands");
@@ -18403,7 +18873,7 @@ mod tests {
             terrain: &wild_terrain,
             folds: &folds,
         };
-        let (_facts2, occ2) =
+        let (_facts2, occ2, _written) =
             sys2.step_with_occupancy(&ledger2, &mut RoomMeshMemo::new(), &mut HomeNavCache::new());
         let wild_interior = interior_of(&home, &wild_terrain);
         let wild_landing = landing(&wild_interior, seam_kind(false)).expect("wilderness lands too");
@@ -18811,7 +19281,7 @@ mod tests {
             terrain: &terrain,
             folds: &folds,
         };
-        let (facts, occ) =
+        let (facts, occ, _written) =
             sys.step_with_occupancy(&ledger, &mut RoomMeshMemo::new(), &mut HomeNavCache::new());
         assert!(
             facts.is_empty(),
@@ -19077,7 +19547,7 @@ mod tests {
             terrain: &terrain,
             folds: &folds,
         };
-        let (_f1, occ_forward) = forward.step_with_occupancy(
+        let (_f1, occ_forward, _w1) = forward.step_with_occupancy(
             &ledger,
             &mut RoomMeshMemo::new(),
             &mut HomeNavCache::new(),
@@ -19096,7 +19566,7 @@ mod tests {
             terrain: &terrain,
             folds: &folds,
         };
-        let (_f2, occ_reversed) = reversed.step_with_occupancy(
+        let (_f2, occ_reversed, _w2) = reversed.step_with_occupancy(
             &ledger,
             &mut RoomMeshMemo::new(),
             &mut HomeNavCache::new(),

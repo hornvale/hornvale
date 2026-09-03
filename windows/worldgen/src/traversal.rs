@@ -19,6 +19,7 @@ use hornvale_kernel::{Geosphere, ReferenceElevation, VertexMap};
 /// (flat cheap, steep dear, ocean impassable), so a precise real-world
 /// travel-time unit is deferred until a consumer needs one.
 /// type-audit: bare-ok(count)
+/// plumb: pending(wave-1)
 pub const BASE_COST: u64 = 10;
 
 /// Scales a neighbor elevation gap (meters) into the slope term added to
@@ -28,6 +29,7 @@ pub const BASE_COST: u64 = 10;
 /// cost -- steep without being literally impassable (unlike ocean, a road
 /// can still cross a mountain, just slowly).
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 const SLOPE_SCALE: f64 = 1.0;
 
 /// Per-vertex integer land-traversal cost: [`BASE_COST`] plus a slope term (the
