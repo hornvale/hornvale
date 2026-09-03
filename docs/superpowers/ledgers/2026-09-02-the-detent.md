@@ -700,3 +700,43 @@ recorded before the change is made). **Cost if wrong:** a §12 that reads
 **Ideonomy passes / overturns: 1 / 1** — the pass was the implementer's
 own tension report, which overturned the clause; recorded as such rather
 than dressed up as mine.
+
+## Task 9c — the second readout (`932409875`, `6aeb01e52`, spec §12) — in review
+
+Step 1 confirmed the mechanism on the right denominator (#8); the change
+moved `latest_at` off the emitter-free path (spec §2.3 completed);
+byte-identity held (oracles, the three constants unchanged, H5). §12,
+interleaved against the same control on a quiet box: **H4 (a) 0.04 (from
+0.245) — MET by 0.16**; H4 (b) 0.096 ms/call — 758–1,008× against the
+frozen figure, 975× against the control — MET; **H2 (c) 59.95% — NOT MET**
+by 40 points, and the reason is now legible: with the hazard fold at 0.5%
+of the six folds, `believed_water` (KnownWater's A* per water room) is 99%
+of them; H5/H6/M1 byte-identical to §11; the falsifier's crossover moved
+to h = −20.6; the level −9.27% at 200 agents on four valid pairs. One
+finding no criterion asked for: §4's r² ≥ 0.5 filter admits 0 of 4
+campaign runs BECAUSE the criterion succeeded (`k` 0.023 against `C` 90.6
+leaves no slope to fit) — reported under four readings, all 0.03–0.04, and
+handed forward: an H4-shaped criterion wants an effect-size floor, not an
+r² floor.
+
+## Close boundary — main moved again, re-measured MAIN-FIRST (decision 0541)
+
+`origin/main` is at `a712371dc`: The Rack (the tick writes the roster and
+the turn reads it), The Plumb, The Reservoir's close-out, and one
+regenerated-conflict fix landed. A detached checkout of `a712371dc` with
+none of this campaign's code, given `ledger_hash_witness.rs`'s scripts:
+
+```
+witness              campaign constant      main @a712371dc
+seed-42 ledger       0xabc4731e5cf1ab21     0x36eb5f3117e82539   MOVED (The Rack)
+emitter ledger       0xc851e64b010538b2     0xc851e64b010538b2   unchanged
+emitter hazard       0xa9f17d82c1832854     0xa9f17d82c1832854   unchanged
+```
+
+So at absorption the seed-42 constant is re-recorded to MAIN's value —
+taken before the merge, so the merged tree is required to reproduce a
+number this campaign did not produce — and the emitter pair stands. The
+merge itself conflicts in `session.rs` (The Rack rewrote it: seven
+`with_fields` sites now, a triple return from `step_with_occupancy`) and in
+the type-audit aggregate; both are resolved by hand and regeneration
+respectively, in a task of their own, after 9c's review.
