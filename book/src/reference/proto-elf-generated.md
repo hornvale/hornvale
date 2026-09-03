@@ -76,6 +76,7 @@ The shared ancestral language desert-elf, drow, high-elf, sea-elf, snow-elf, and
 | `desert-elf-kind` | a desert elf | *Sreang | /sreaŋ/ |
 | `die` | to cease living | *Gaonggaong | /gaoŋgaoŋ/ |
 | `dire-wolf-kind` | a dire wolf | *Shruung | /ʃruuŋ/ |
+| `door` | a leaf hung in an opening, to be shut against what is beyond | *Ngoangzreng | /ŋoaŋzreŋ/ |
 | `drink` | to swallow liquid | *Shrongngeng | /ʃroŋŋeŋ/ |
 | `drow-kind` | a drow | *Gong | /goŋ/ |
 | `eager` | positive, high arousal: chasing a satisfiable need | *Sraengngong | /sraeŋŋoŋ/ |

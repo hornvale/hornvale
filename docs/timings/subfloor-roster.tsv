@@ -1274,10 +1274,8 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::a_world_with_no_flagged_col
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::categorical_and_flag_columns_are_never_evaluable
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_surface_on_the_227_column_census
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::exclusion_reasons_carry_the_exact_documented_wording
-hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_matches_the_same_worlds_entry_in_rank
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_returns_none_for_an_unknown_seed
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::partitioning_columns_are_all_covered_by_d2_or_d4
-hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_is_deterministic
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_orders_most_anomalous_first
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_agrees_with_for_seed_on_a_census_row
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_scores_against_an_uncontaminated_index
@@ -1345,6 +1343,7 @@ hornvale-lab::hornvale_lab$domesday::render::tests::a_detector_that_fired_nothin
 hornvale-lab::hornvale_lab$domesday::render::tests::a_domain_page_carries_the_generated_header_and_only_computed_numbers
 hornvale-lab::hornvale_lab$domesday::render::tests::a_domain_with_no_metrics_renders_the_no_metrics_notice_verbatim
 hornvale-lab::hornvale_lab$domesday::render::tests::a_flag_metric_always_renders_both_true_and_false_rows
+hornvale-lab::hornvale_lab$domesday::render::tests::a_metric_that_trips_two_detectors_is_grouped_under_one_heading_not_two
 hornvale-lab::hornvale_lab$domesday::render::tests::a_novel_detector_name_reaches_the_rendered_index
 hornvale-lab::hornvale_lab$domesday::render::tests::a_removed_parenthetical_directly_before_a_period_does_not_leave_a_dangling_space
 hornvale-lab::hornvale_lab$domesday::render::tests::an_ellipsis_survives_the_space_dot_space_cleanup_untouched
@@ -2184,8 +2183,10 @@ hornvale-species::hornvale_species$tests::registry_is_ordered_alphabetically_and
 hornvale-species::hornvale_species$tests::society_registry_holds_exactly_the_settled_peoples
 hornvale-species::hornvale_species$tests::split_preserves_biosphere_and_peopled_presence
 hornvale-species::hornvale_species$tests::the_five_peoples_have_distinct_temperature_optima
+hornvale-species::hornvale_species$tests::the_locomotion_store_is_sparse_and_non_empty_in_both_modes
 hornvale-species::hornvale_species$tests::the_manikin_is_neutral_on_scalars_and_default_on_enums
 hornvale-species::hornvale_species$tests::the_society_fallback_is_the_manikin
+hornvale-species::hornvale_species$tests::the_walker_default_neither_swims_nor_flies
 hornvale-species::suite$biome_affinity::a_uniform_affinity_is_flat_across_every_biome
 hornvale-species::suite$biome_affinity::an_unlisted_biome_takes_the_default
 hornvale-species::suite$biome_affinity::the_registry_ships_exactly_the_declared_occupants
@@ -2588,6 +2589,9 @@ hornvale-vessel::hornvale_vessel$depth::tests::an_address_shallower_than_the_wal
 hornvale-vessel::hornvale_vessel$depth::tests::the_chamber_depth_fits_the_packing_cap
 hornvale-vessel::hornvale_vessel$depth::tests::truncation_is_the_identity_at_the_walk_band
 hornvale-vessel::hornvale_vessel$depth::tests::truncation_yields_the_walk_band_ancestor_of_a_chamber
+hornvale-vessel::hornvale_vessel$descent_thing::tests::a_key_a_door_and_a_room_thing_never_share_an_identity
+hornvale-vessel::hornvale_vessel$descent_thing::tests::roles_are_pure_functions_of_the_plan_position_and_order_the_door_cells
+hornvale-vessel::hornvale_vessel$descent_thing::tests::the_door_kind_carries_passage_lid_and_lock
 hornvale-vessel::hornvale_vessel$fabric::tests::a_threshold_has_no_fabric
 hornvale-vessel::hornvale_vessel$fabric::tests::an_authored_curve_is_a_valid_reflectance
 hornvale-vessel::hornvale_vessel$fabric::tests::an_authored_fabric_ignores_the_ground
@@ -2727,6 +2731,7 @@ hornvale-vessel::hornvale_vessel$level_doc::tests::the_projection_is_determinist
 hornvale-vessel::hornvale_vessel$level_doc::tests::the_rung_name_is_hand_mapped_never_debug_text
 hornvale-vessel::hornvale_vessel$level_doc::tests::the_schema_tag_is_carried
 hornvale-vessel::hornvale_vessel$level_doc::tests::the_standing_cell_is_carried_verbatim
+hornvale-vessel::hornvale_vessel$level_doc::tests::the_three_brattice_kinds_get_their_own_wire_strings
 hornvale-vessel::hornvale_vessel$level_doc::tests::the_three_visibility_states_are_distinguishable_without_colour
 hornvale-vessel::hornvale_vessel$light::tests::a_chamber_with_no_wall_of_its_own_has_no_hearth_cell
 hornvale-vessel::hornvale_vessel$light::tests::a_hearth_sits_at_a_wall_of_its_own_chamber
@@ -2986,7 +2991,11 @@ hornvale-vessel::hornvale_vessel$thing::tests::the_location_and_openness_facts_c
 hornvale-vessel::hornvale_vessel$thing::tests::the_location_predicate_spellings_are_permanent_on_disk_keys
 hornvale-vessel::hornvale_vessel$thing::tests::the_thing_role_spelling_is_the_permanent_lineage_key
 hornvale-vessel::hornvale_vessel$underground::tests::a_cell_outside_the_extent_is_never_seen
+hornvale-vessel::hornvale_vessel$underground::tests::a_chute_over_deep_water_refuses_a_non_swimmer_and_admits_a_swimmer
+hornvale-vessel::hornvale_vessel$underground::tests::a_drop_goes_down_and_only_a_flier_comes_back_up
+hornvale-vessel::hornvale_vessel$underground::tests::a_threshold_with_a_shut_door_refuses_and_an_open_one_admits
 hornvale-vessel::hornvale_vessel$underground::tests::a_wider_reach_does_not_change_what_was_already_seen
+hornvale-vessel::hornvale_vessel$underground::tests::deep_water_refuses_a_walker_and_admits_a_swimmer
 hornvale-vessel::hornvale_vessel$underground::tests::habitation_rungs_excludes_surface
 hornvale-vessel::hornvale_vessel$underground::tests::inhabitant_datum_names_the_species_and_the_source
 hornvale-vessel::hornvale_vessel$underground::tests::resident_cell_is_none_when_the_level_has_no_floor
@@ -3184,6 +3193,16 @@ hornvale-worldgen::hornvale_worldgen$alchemy::tests::substrate_of_commodity_matc
 hornvale-worldgen::hornvale_worldgen$alchemy::tests::substrate_of_rock_matches_the_authored_table
 hornvale-worldgen::hornvale_worldgen$alchemy::tests::substrate_of_soil_matches_the_authored_table
 hornvale-worldgen::hornvale_worldgen$alchemy::tests::the_carry_is_pure
+hornvale-worldgen::hornvale_worldgen$brattice::tests::a_chute_is_free_down_and_needs_flight_up_and_sits_on_a_stair
+hornvale-worldgen::hornvale_worldgen$brattice::tests::a_lava_tube_never_carries_a_sump_and_some_descent_carries_a_chute
+hornvale-worldgen::hornvale_worldgen$brattice::tests::a_plan_with_no_gates_has_unit_detour_and_no_return_difference
+hornvale-worldgen::hornvale_worldgen$brattice::tests::every_key_row_places_a_key_and_no_natural_row_does
+hornvale-worldgen::hornvale_worldgen$brattice::tests::gate_yield_is_a_ratio_and_none_without_an_admissible_realm
+hornvale-worldgen::hornvale_worldgen$brattice::tests::length_class_gives_each_path_a_side
+hornvale-worldgen::hornvale_worldgen$brattice::tests::return_differs_is_none_on_the_chute_plan_with_its_gate_removed
+hornvale-worldgen::hornvale_worldgen$brattice::tests::return_differs_when_the_only_way_down_is_a_chute
+hornvale-worldgen::hornvale_worldgen$brattice::tests::the_inventory_is_frozen_at_nine_rows
+hornvale-worldgen::hornvale_worldgen$brattice::tests::the_plan_and_its_gates_are_deterministic_and_read_the_vertex
 hornvale-worldgen::hornvale_worldgen$chamber::tests::a_branch_its_band_does_not_realize_descends_nowhere
 hornvale-worldgen::hornvale_worldgen$chamber::tests::a_drawn_mouth_names_a_branch_its_landing_band_realizes
 hornvale-worldgen::hornvale_worldgen$chamber::tests::a_made_chamber_is_dry_however_deep_the_water_table_is_above_it
@@ -3942,6 +3961,8 @@ hornvale::suite$system_coverage::the_surplus_read_excludes_a_subsystem_the_corpu
 hornvale::suite$system_coverage::the_surplus_read_names_subsystems_no_chapter_cites
 hornvale::suite$system_coverage::the_wolverson_corpus_has_no_anchor_findings
 hornvale::suite$system_coverage::the_wolverson_corpus_is_frozen_at_its_declared_size
+hornvale::suite$temp_path_ratchet::a_reasonless_roster_entry_is_a_parse_error
+hornvale::suite$temp_path_ratchet::no_new_fixed_temp_path_appears
 hornvale::suite$test_binary_ratchet::no_new_top_level_test_binary_appears
 hornvale::suite$the_unnameable::the_unnameable_set_is_not_empty
 hornvale::suite$timings_alarm::tests::a_live_claim_means_the_box_is_contended_and_enforcement_is_not_appropriate

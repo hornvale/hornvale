@@ -162,6 +162,9 @@ pub struct Node {
     /// The innermost cycle holding this node; `None` for a spine node on no
     /// cycle.
     pub realm: Option<RealmId>,
+    /// The key this node holds, for the gate on that edge; `None` almost
+    /// everywhere.
+    pub key: Option<crate::brattice::KeyFor>,
 }
 
 /// How two nodes connect.
@@ -189,6 +192,8 @@ pub struct Edge {
     pub b: NodeId,
     /// Passage or stairway.
     pub kind: EdgeKind,
+    /// A requirement on this edge's ways, if a pattern placed one (spec §3.1).
+    pub gate: Option<crate::brattice::Gate>,
 }
 
 /// Dormans' four cycle classes by relative path length (Fig. 9.8).
@@ -221,7 +226,7 @@ pub struct Realm {
 }
 
 /// The plan for one descent: a series-parallel graph over grid regions.
-/// type-audit: bare-ok(count: dof), bare-ok(count: extensions), bare-ok(count: fallback_realms), bare-ok(count: failed_draws)
+/// type-audit: bare-ok(count: dof), bare-ok(count: extensions), bare-ok(count: fallback_realms), bare-ok(count: failed_draws), bare-ok(count: skipped_patterns)
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DescentPlan {
     /// The rungs, shallowest first; `level ℓ` is `rungs[ℓ]`.
@@ -252,6 +257,16 @@ pub struct DescentPlan {
     /// the failure site rather than reconstructed from the derivation tree
     /// (a failed attempt leaves nothing in the tree to walk).
     pub failed_draws: u32,
+    /// Per realm, in `realms` order: which pattern was drawn and whether it
+    /// was applied or why it was skipped (spec §3.1).
+    pub patterns: Vec<crate::brattice::Outcome>,
+    /// Realms that ended with no pattern stamped: those whose drawn row was
+    /// refused for a [`crate::brattice::Skip`] reason, AND those for which no
+    /// row was admissible at all (the draw is still made and discarded, so
+    /// the draw count stays data-independent). One per realm, so
+    /// `patterns.len() - skipped_patterns` is the number of realms carrying a
+    /// stamped pattern.
+    pub skipped_patterns: u32,
 }
 
 impl DescentPlan {
@@ -320,6 +335,19 @@ impl DescentPlan {
         out.sort_unstable();
         out.dedup();
         out
+    }
+    /// The index of the edge joining `a` and `b` in either order, if any.
+    /// type-audit: bare-ok(index: return)
+    pub fn edge_index(&self, a: NodeId, b: NodeId) -> Option<usize> {
+        self.edges
+            .iter()
+            .position(|e| (e.a == a && e.b == b) || (e.a == b && e.b == a))
+    }
+    /// The gate on the edge joining `a` and `b`, with the edge's index.
+    /// type-audit: bare-ok(index: return)
+    pub fn gate_between(&self, a: NodeId, b: NodeId) -> Option<(usize, &crate::brattice::Gate)> {
+        let ix = self.edge_index(a, b)?;
+        self.edges[ix].gate.as_ref().map(|g| (ix, g))
     }
 }
 
@@ -406,6 +434,50 @@ impl Builder {
             })
     }
 
+    /// Evaluate [`Builder::level_can_cycle`] on `level` as the SERIES move
+    /// `try_extend` is about to make would leave it — the Crosscut's
+    /// deferred minor, taken by The Brattice (Task 1, step 10). The plain
+    /// [`Builder::would_still_cycle`] answers against the PRE-extend passage
+    /// set, which is wrong in both directions: it keeps `u`–`v`, the one
+    /// passage the move removes, and it misses the chain that replaces it.
+    /// So this evaluates the post-extend set exactly — `interior`'s grid
+    /// squares spent, `u`–`v` gone, and `u`–`interior`–`v` in its place.
+    /// Everything this function handles is a lattice square, an AREA whose
+    /// rectangle `region_rect` gives — never a mesh vertex.
+    fn would_still_cycle_after_extend(
+        &mut self,
+        level: u8,
+        u: NodeId,
+        v: NodeId,
+        interior: &[GridCell], // lexicon: a lattice square, an area
+    ) -> bool {
+        for &c in interior {
+            self.used[level as usize].insert(c);
+        }
+        // lexicon: `Node.cell` is a grid square — an area, not a mesh vertex.
+        let (cu, cv) = (self.plan.nodes[u].cell, self.plan.nodes[v].cell); // lexicon: area
+        let mut pairs: Vec<(GridCell, GridCell)> = self // lexicon: area
+            .plan
+            .passages_on(level as usize)
+            .into_iter()
+            .filter(|&(a, b)| !((a == u && b == v) || (a == v && b == u)))
+            .map(|(a, b)| (self.plan.nodes[a].cell, self.plan.nodes[b].cell)) // lexicon: area
+            .collect();
+        let mut chain = vec![cu];
+        chain.extend_from_slice(interior);
+        chain.push(cv);
+        for w in chain.windows(2) {
+            pairs.push((w[0], w[1]));
+        }
+        let can = pairs
+            .iter()
+            .any(|&(ca, cb)| self.free_path(level, ca, cb, 1).is_some());
+        for &c in interior {
+            self.used[level as usize].remove(&c);
+        }
+        can
+    }
+
     /// Evaluate [`Builder::level_can_cycle`] on `level` AS IF `cells` were
     /// already spent there, without actually spending them: tentatively
     /// mark `cells` used, check, then unmark. `cells` must currently be
@@ -429,6 +501,7 @@ impl Builder {
             cell,
             depth: 0,
             realm: None,
+            key: None,
         });
         self.used[level as usize].insert(cell);
         self.index.insert((level, cell), id);
@@ -441,6 +514,7 @@ impl Builder {
             a,
             b,
             kind: EdgeKind::Passage,
+            gate: None,
         });
     }
 
@@ -600,6 +674,7 @@ impl Builder {
             a: upper,
             b: lower,
             kind: EdgeKind::Stair { x, y },
+            gate: None,
         });
     }
 
@@ -702,6 +777,8 @@ pub fn plan_descent(
             extensions: 0,
             fallback_realms: 0,
             failed_draws: 0,
+            patterns: Vec::new(),
+            skipped_patterns: 0,
         },
         used: vec![BTreeSet::new(); rungs.len()],
         index: BTreeMap::new(),
@@ -791,6 +868,12 @@ pub fn plan_descent(
     // 3. Attributes.
     assign_realms(&mut b.plan);
     assign_depth(&mut b.plan);
+    // 4. Classes, from the REALIZED paths (The Brattice, Ruling A).
+    recompute_classes(&mut b.plan);
+    // 5. Gates (The Brattice): one pattern draw per realm, after growth so
+    // `extend` can no longer orphan an edge attribute.
+    let mut pattern_leg = leg(seed, crate::streams::UNDERWORLD_GATE_PATTERN, vertex);
+    crate::brattice::stamp(&mut b.plan, kind, character, &mut pattern_leg, &mut dof);
     b.plan.dof = dof;
     b.plan
 }
@@ -905,7 +988,9 @@ fn try_extend(b: &mut Builder, level: u8, u: NodeId, v: NodeId) -> bool {
     // Capability invariant (Task 2 review, second pass): if this level
     // still has no realm of its own, refuse to spend the detour's cells if
     // doing so would leave it with no feasible same-floor cycle at all.
-    if anchored_realms(&b.plan, level as usize) == 0 && !b.would_still_cycle(level, &interior) {
+    if anchored_realms(&b.plan, level as usize) == 0
+        && !b.would_still_cycle_after_extend(level, u, v, &interior)
+    {
         return false;
     }
     // Every realm path that ran through u-v now runs through the detour.
@@ -933,6 +1018,24 @@ fn try_extend(b: &mut Builder, level: u8, u: NodeId, v: NodeId) -> bool {
         );
     }
     true
+}
+
+/// Re-derive every realm's [`LengthClass`] from its REALIZED paths.
+///
+/// `Realm.class` used to be whatever [`length_class`] returned when the realm
+/// was CREATED, and `try_extend` splices interior chains into existing realm
+/// paths afterwards — so the exported class described a graph that no longer
+/// existed. Measured over 4,412 realms: `path_a` reaches **16** edges against
+/// a creation-time ceiling of **3**, which made the class `LongShort`
+/// (`len_a > len_b + 1`, i.e. `len_a >= 4`) structurally UNREACHABLE. Nothing
+/// read `class` until The Brattice, so the staleness was latent; The Brattice
+/// reads it to select a cycle pattern and four inventory rows were dead data
+/// as a result (Ruling A). [`length_class`]'s rule itself is unchanged, and
+/// none of the four §4 readouts reads `class`, so this moves no readout.
+fn recompute_classes(plan: &mut DescentPlan) {
+    for r in &mut plan.realms {
+        r.class = length_class(r.path_a.len() - 1, r.path_b.len() - 1);
+    }
 }
 
 /// `Node.realm` = the LAST realm (creation order) whose paths hold the node:
@@ -1392,6 +1495,8 @@ mod tests {
     ///       + 4 · drawn realms       op + edge + hops + cross
     ///       + 2 · extensions         op + edge
     ///       + failed_draws           counted where they are spent
+    ///       + realms                 ONE pattern draw per realm (The
+    ///                                Brattice, spec §3.8)
     /// ```
     ///
     /// `drawn realms` excludes the deterministic fallback pass's realms,
@@ -1423,8 +1528,27 @@ mod tests {
                         .iter()
                         .filter(|e| matches!(e.kind, EdgeKind::Stair { .. }))
                         .count() as u32;
+                    // `Edge.a` is the upper node on every `Stair` (final review,
+                    // Minor #4): a chute's `toward_a` direction is UP, so any
+                    // read of a chute's climb direction is silently backwards
+                    // if this ever stops holding. Swept broader here (3 kinds x
+                    // 4 vertices x 400 seeds) than the narrower geometry test.
+                    for e in &p.edges {
+                        if matches!(e.kind, EdgeKind::Stair { .. }) {
+                            assert_eq!(
+                                p.nodes[e.a].level + 1,
+                                p.nodes[e.b].level,
+                                "{kind:?} vertex {vertex} seed {s}: stair {e:?} has Edge.a below Edge.b"
+                            );
+                        }
+                    }
                     let drawn_realms = p.realms.len() as u32 - p.fallback_realms;
-                    let floor = 1 + levels + stairs + 4 * drawn_realms + 2 * p.extensions;
+                    let floor = 1
+                        + levels
+                        + stairs
+                        + 4 * drawn_realms
+                        + 2 * p.extensions
+                        + p.realms.len() as u32;
                     let ceiling = floor + 4 * 80 * levels;
                     assert_eq!(
                         p.dof,
@@ -1487,6 +1611,43 @@ mod tests {
         assert_eq!(length_class(2, 2), LengthClass::ShortShort);
     }
 
+    /// claim: invariant(seed: 0..200) — every realm's `class` is the class of
+    /// its REALIZED paths, not of the paths it was created with. `try_extend`
+    /// splices chains into existing realm paths after the realm is recorded,
+    /// so a class frozen at creation goes stale; `LongShort` was unreachable
+    /// under the frozen reading (a creation-time `path_a` is at most 3 edges
+    /// and `path_b` at least 2, and `LongShort` needs `len_a >= 4`), which is
+    /// asserted here as an actual sighting rather than trusted — an equality
+    /// alone cannot tell this pass apart from one that never runs.
+    #[test]
+    fn realm_class_is_recomputed_from_the_realized_paths() {
+        let rungs = habitation_rungs();
+        let mut saw_long_short = false;
+        for s in 0..200u64 {
+            for kind in [CaveKind::LavaTube, CaveKind::Fracture, CaveKind::Karst] {
+                let p = plan_descent(Seed(s), Vertex(2), &rungs, kind, Character::DrowTier);
+                for (i, r) in p.realms.iter().enumerate() {
+                    let want = length_class(r.path_a.len() - 1, r.path_b.len() - 1);
+                    assert_eq!(
+                        r.class,
+                        want,
+                        "{kind:?} seed {s} realm {i}: class {:?} is stale against realized ({}, {})",
+                        r.class,
+                        r.path_a.len() - 1,
+                        r.path_b.len() - 1
+                    );
+                    if r.class == LengthClass::LongShort {
+                        saw_long_short = true;
+                    }
+                }
+            }
+        }
+        assert!(
+            saw_long_short,
+            "no realm in the sweep is LongShort — the recompute changed nothing and four inventory rows stay dead"
+        );
+    }
+
     /// claim: rate(seed: 0..100) — Spec §4.3's move must be REACHABLE for the
     /// readout to mean anything: somewhere in 100 seeds a realm spans two
     /// floors.
@@ -1511,18 +1672,21 @@ mod tests {
                     cell: GridCell { col: 0, row: 0 },
                     depth: 0,
                     realm: None,
+                    key: None,
                 },
                 Node {
                     level: 0,
                     cell: GridCell { col: 1, row: 0 },
                     depth: 1,
                     realm: None,
+                    key: None,
                 },
                 Node {
                     level: 0,
                     cell: GridCell { col: 2, row: 0 },
                     depth: 2,
                     realm: None,
+                    key: None,
                 },
             ],
             edges: vec![
@@ -1530,11 +1694,13 @@ mod tests {
                     a: 0,
                     b: 1,
                     kind: EdgeKind::Passage,
+                    gate: None,
                 },
                 Edge {
                     a: 1,
                     b: 2,
                     kind: EdgeKind::Passage,
+                    gate: None,
                 },
             ],
             entrance: 0,
@@ -1544,6 +1710,8 @@ mod tests {
             extensions: 0,
             fallback_realms: 0,
             failed_draws: 0,
+            patterns: vec![],
+            skipped_patterns: 0,
         }
     }
 

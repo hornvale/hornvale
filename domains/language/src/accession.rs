@@ -600,6 +600,21 @@ pub const EPOCH_COHORTS: &[&[&str]] = &[
     // accession-register entry and everything `hornvale_language` derives
     // from it — a sixth row, not a sixth edit to an existing one.
     &["brazier"],
+    // Epoch 19 — The Brattice, Task 5: `door`, the second `THING_KINDS` label
+    // to arrive after epoch 16's snapshot and the second single-concept
+    // cohort in a row. Appended rather than seated in epoch 16 beside the
+    // other object kinds, for the reason epoch 18 states at length: placing
+    // it where it belongs by KIND would re-sort every concept that already
+    // has a proto-root assignment.
+    //
+    // The cost epoch 18 names arrives here unchanged and is worth stating a
+    // second time only because the FIRST instance could be read as a
+    // one-off: `domains/thing::register_concepts` registers every
+    // `THING_KINDS` label, so a thing-kind is never five data rows — it is
+    // five rows plus a cohort, plus everything `hornvale_language` derives
+    // from the cohort, plus the committed world bytes that carry the
+    // registry. Two campaigns have now paid it.
+    &["door"],
 ];
 
 /// The accession epoch of `concept`: the index of the cohort listing it, or
