@@ -624,7 +624,7 @@ nextest-check: ## Fail with an install hint if cargo-nextest is missing
 		exit 1; }
 
 docs-tests: nextest-check ## The prose-subject tests -- run by pre-commit when only docs are staged (The Nettle)
-	@cargo nextest run -p hornvale --test suite -E 'test(docs_consistency) or test(generated_paths) or test(census_duration) or test(repose_byte_identity) or test(audio_artifacts) or test(lexicon_guard) or test(subfloor_roster_coverage) or test(architecture)'
+	@cargo nextest run -p hornvale --test suite -E 'test(docs_consistency) or test(generated_paths) or test(census_duration) or test(repose_byte_identity) or test(audio_artifacts) or test(lexicon_guard) or test(subfloor_roster_coverage) or test(architecture) or test(temp_path_ratchet)'
 
 absorb: ## Absorb main into this campaign branch, regenerating artifacts it cannot merge
 	@bash scripts/absorb.sh

@@ -215,8 +215,9 @@ fn no_new_fixed_temp_path_appears() {
         "new fixed temp path(s) — a fixed name under std::env::temp_dir() is \
          shared by every concurrent run of the same test on the box, and one \
          took a fail-fast run down at test 274 of 4869:\n{}\n\nUniquify it the \
-         way its own file already does (a std::process::id() in the name; 50 of \
-         the repo's 66 sites do). If the site genuinely cannot collide — it \
+         way its own file already does — a std::process::id() in the name, \
+         which is the convention nearly every site in the tree uses. If the \
+         site genuinely cannot collide — it \
          never creates the path, or the name is built by a helper this \
          syntactic check cannot see through — append `<path>::<expr>` TAB \
          `<reason>` to cli/tests/fixtures/fixed-temp-paths.txt in the same \

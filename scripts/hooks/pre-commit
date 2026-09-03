@@ -358,16 +358,30 @@ rust_relevant='\.rs$|(^|/)Cargo\.(toml|lock)$|(^|/)clippy\.toml$|(^|/)rustfmt\.t
 # It does NOT run `make gate-commit`: fmt, clippy and the type audit cannot
 # be moved by a markdown edit, and that half of the old reasoning was right.
 #
-# COST, measured 2026-09-02 (The Nettle, spec §4): ~2.4 s with the suite
-# binary warm; ~234.6 s when it is cold, because the wall is the BUILD, not
-# the 2.1 s of test execution. The cold case is not rare — a chronicle or
-# retrospective commit right after absorbing main is exactly when the tree
-# is cold. It is paid deliberately: a campaign's docs commits cluster after
-# one absorption, so the cost is the cold build once plus ~2.4 s each
-# thereafter, against a merge phase reddening at ~1129-1595 s on the box
-# everything else is queued behind.
+# COST, measured 2026-09-02 (The Nettle, spec §4), CORRECTED 2026-09-03 (fix
+# wave): the ~2.4 s warm figure first recorded here was measured on the
+# narrower 28-test `test(docs_consistency)` filter, not the shipped
+# eight-predicate, 60/62-test `docs-tests` filter. Warm re-measurements of
+# the shipped filter: 5.664 s, 10.249 s, 16.0 s, 17.2 s and 20.2 s — a
+# 5.7-20.2 s range, the pole being `repose_byte_identity`'s three worldgen
+# byte-identity probes (seconds-scale on their own), not primarily box
+# contention. Cold is still ~234.6 s, because the wall there is the BUILD of
+# the `suite` binary, which nextest compiles in full regardless of which
+# predicate selects tests from it — build cost does not vary with the
+# filter. The cold case is not rare — a chronicle or retrospective commit
+# right after absorbing main is exactly when the tree is cold. It is paid
+# deliberately: a campaign's docs commits cluster after one absorption, so
+# the cost is the cold build once plus ~5.7-20.2 s each thereafter, against
+# a merge phase reddening at ~1129-1595 s on the box everything else is
+# queued behind.
 if ! git diff --cached --name-only --diff-filter=ACMR | grep -qE "$rust_relevant"; then
     echo "pre-commit: no Rust-relevant paths staged — running the prose-subject tests instead of 'make gate-commit'." >&2
+    # No `env -u GIT_DIR -u GIT_INDEX_FILE ...` scrub here, unlike the board
+    # invocation above — deliberately, not an oversight. `docs-tests` runs
+    # `generated_paths` (four `git ls-files` calls), which must see what is
+    # actually STAGED for this commit; scrubbing GIT_INDEX_FILE would make it
+    # read the worktree index instead, which is wrong for a pre-commit hook
+    # whose subject is the staged tree.
     if ! make docs-tests; then
         echo "pre-commit: 'make docs-tests' failed — a staged docs change breaks a test whose subject is prose." >&2
         echo "pre-commit: this is the check the merge queue would otherwise find on the canonical box." >&2
