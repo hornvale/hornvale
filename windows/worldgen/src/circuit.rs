@@ -1528,6 +1528,20 @@ mod tests {
                         .iter()
                         .filter(|e| matches!(e.kind, EdgeKind::Stair { .. }))
                         .count() as u32;
+                    // `Edge.a` is the upper node on every `Stair` (final review,
+                    // Minor #4): a chute's `toward_a` direction is UP, so any
+                    // read of a chute's climb direction is silently backwards
+                    // if this ever stops holding. Swept broader here (3 kinds x
+                    // 4 vertices x 400 seeds) than the narrower geometry test.
+                    for e in &p.edges {
+                        if matches!(e.kind, EdgeKind::Stair { .. }) {
+                            assert_eq!(
+                                p.nodes[e.a].level + 1,
+                                p.nodes[e.b].level,
+                                "{kind:?} vertex {vertex} seed {s}: stair {e:?} has Edge.a below Edge.b"
+                            );
+                        }
+                    }
                     let drawn_realms = p.realms.len() as u32 - p.fallback_realms;
                     let floor = 1
                         + levels

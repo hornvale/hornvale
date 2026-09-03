@@ -1980,3 +1980,84 @@ withdrawn (the review read first-parent add times and found even The
 Portolan's two parts ungrouped) · Cost if wrong: none for either — a string,
 and a line's position · Ideonomy: none — a wording rule and a list rule ·
 Capture: this entry; the Task 5 and Task 7 sections carry the fixes.
+
+## Final fix wave
+
+The whole-branch final review returned "With fixes" — three Important
+findings (documentation/artifact labelling) and a handful of cheap minors.
+Applied in one commit:
+
+- **Important #1 — stale client comment.** `clients/game/core/src/level.rs`'s
+  test doc said nothing in the sim emits a `"door"` mark yet. False since
+  Task 5: `Session::underground_level` (`windows/vessel/src/session.rs`)
+  pushes one for every lit threshold with a door, pinned by
+  `a_lit_door_reaches_the_level_document_as_a_door_mark`. Rewritten to name
+  the producer and say why the unit test still constructs a mark directly
+  (the client cannot build a session).
+- **Important #2 — two populations in one audit-page sentence.**
+  `windows/worldgen/src/circuit_readout.rs`'s `gates:` line counted
+  `doors`/`sumps`/`chutes` on the panel's WILD plans and
+  `worked descents with a door` on re-derived DrowTier plans, in one
+  sentence that read as one population. Reworded to `gates on the panel's
+  wild descents: … ; re-derived as worked (DrowTier): … descents carry a
+  door …`. Landed via `make rebaseline`
+  (`docs/audits/underworld-circuit-seed-panel.md`); the panel's numbers are
+  unchanged, only that line's wording moved, on all three seeds.
+- **Important #3 + Minor #6 — "four readouts of spec §4" undercounted, and
+  ruling C's attribution was missing from the page's own framing.** The page
+  carries eight readouts from two specs (the Crosscut's four, its spec §4;
+  the Brattice's four, its spec §4.1-4.4), not four from one.
+  `scripts/regenerate-artifacts.sh`'s `gen_underworld_circuit` framing and
+  its function comment, and `render_circuit_panel`'s rustdoc
+  (`windows/worldgen/src/circuit_readout.rs`), now say so, and the framing
+  gained one sentence: the Crosscut's four moved once in this campaign, by
+  the `try_extend` fix (ledger #10, ruling C), attributed by revert — the
+  gate pass alone leaves them byte-identical. Landed via the same
+  `make rebaseline`.
+- **Minor #4 — pinned "`Edge.a` is the upper node on a `Stair`."**
+  `windows/worldgen/src/circuit.rs`'s `dof_counts_every_draw` (the broader
+  sweep — 3 kinds x 4 vertices x 400 seeds) now asserts
+  `plan.nodes[e.a].level + 1 == plan.nodes[e.b].level` for every `Stair`
+  edge, with a comment naming why (a chute's `toward_a` is UP). The
+  narrower `every_edge_is_grid_adjacent_or_a_vertical_stair` already carried
+  the same assertion on one (kind, vertex) pair.
+- **Minor #5 — spec §7.4 amended.** §7 acceptance 4 of
+  `docs/superpowers/specs/2026-09-02-the-brattice-design.md` still read "the
+  Crosscut's four did not move." Appended an execution-amendment clause
+  matching §4's preamble: they moved once, by the `try_extend` fix,
+  attributed by revert.
+- **Minor #8 — `peek_stairs`' `Drop` arm made actor-aware.**
+  `windows/vessel/src/underground.rs`'s chute-landing check accepted any
+  landing `movement_mode` recognized, including `Swim` for a non-swimmer.
+  Unreachable today (the realizer writes `Floor` under every chute and the
+  pairing witness pins it), but now refuses with
+  `UNDERGROUND_DEEP_WATER_REFUSAL` when the landing is `Swim` and the body
+  cannot swim, on the same rule `admits` already applies to a horizontal
+  step. New unit test
+  `a_chute_over_deep_water_refuses_a_non_swimmer_and_admits_a_swimmer`.
+- **Triage — idea-registry row.** Added
+  `MAP-terminus-fallback-eats-a-landing` next to `MAP-false-door`: the
+  deepest rung's dangling `StairsDown` fallback
+  (`windows/vessel/src/underworld_level/mod.rs`) can overwrite a chute
+  landing when a region's only walkable cells are landings — debug-asserted
+  and witnessed, silent in release, never observed, the one deferred minor
+  with a player-visible worst case. Status `raw`, conf `low
+  (debug-asserted, never observed)`.
+- **Cosmetic — CLAUDE.md.** Restored the dropped word "decision" before
+  "0426" in the solvability-sweep paragraph ("under the same argument
+  decision 0426 makes").
+
+**Checks re-run.** `cargo fmt`; workspace clippy (`--all-targets -- -D
+warnings`) clean; type-audit, placement-audit and the plumb check all
+green; the `circuit` name filter on `hornvale-worldgen` (17/17, one
+assertion string in `the_panel_is_deterministic_and_carries_every_verdict`
+updated to match the reworded gates line); the `underground` name filter on
+`hornvale-vessel` (28/28, including the new chute/deep-water test); `make
+rebaseline` regenerated only `docs/audits/underworld-circuit-seed-panel.md`
+(the relabelled gates line and the framing, byte-identical numbers) plus
+its own `docs/timings.md` rows; the `docs_consistency` suite in `cli`
+(28/28 — the new registry row parses, fits the 600-char Idea budget, and
+carries a pointer). `deno` is not installed in this worktree's sandbox, so
+`vessel-check-run`/`atlas-check` could not run their deno half; the
+`game-check-run` half that covers `clients/game/core/src/level.rs` passed
+(25 + 4 + 2 + 1 tests, 2 doctests).

@@ -164,7 +164,7 @@ make doctor        # the repo self-map — run this first in a fresh session
 # cost nothing — the restored test slotted under the tier's existing pole and
 # the wall moved down, not up. The 65th is The Brattice's sanctioned
 # solvability sweep (14,400 plans, 64.69 s on the Mac), which took the tag
-# under the same argument 0426 makes: a 65 s invariant belongs at merge
+# under the same argument decision 0426 makes: a 65 s invariant belongs at merge
 # cadence, and a sweep nobody runs is not a guard. A merge goes from ~1129.5 s
 # to ~1595.3 s (+41%) — the mean of the four 2026-08-28 four-phase merges plus
 # ~465.8 s, both derived in decision 0426 and not restated in a second form

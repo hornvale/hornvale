@@ -116,7 +116,7 @@ windows/vessel/src/purview.rs	39
 windows/vessel/src/session.rs	816
 windows/vessel/src/snapshot.rs	3
 windows/vessel/src/streams.rs	6
-windows/vessel/src/underground.rs	236
+windows/vessel/src/underground.rs	239
 windows/vessel/src/underworld_level/carve.rs	143
 windows/vessel/src/underworld_level/dense.rs	58
 windows/vessel/src/underworld_level/mod.rs	416

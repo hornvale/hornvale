@@ -739,8 +739,22 @@ impl Underground {
                 } else {
                     None
                 };
-                if landing.is_none_or(|k| crate::underworld_level::movement_mode(k).is_none()) {
-                    return Err(STAIRS_LEAD_NOWHERE_REFUSAL);
+                let mode = landing.and_then(crate::underworld_level::movement_mode);
+                match mode {
+                    None => return Err(STAIRS_LEAD_NOWHERE_REFUSAL),
+                    // Final review, Minor #8: `mode` alone answered whether
+                    // ANY body may stand there, not whether THIS one may —
+                    // `Some(mode)` accepted a `Deep` landing for a
+                    // non-swimmer just as readily as a `Walk`/`Wade` one.
+                    // Unreachable today (the realizer writes `Floor` under a
+                    // chute and the pairing witness pins it), made
+                    // actor-aware anyway, on the same rule `admits` already
+                    // applies to a horizontal step: `Walk`/`Wade` are open
+                    // to everyone, `Swim` only to a body that can.
+                    Some(crate::underworld_level::MovementMode::Swim) if !loc.swim => {
+                        return Err(UNDERGROUND_DEEP_WATER_REFUSAL);
+                    }
+                    Some(_) => {}
                 }
                 Ok((next, self.cell))
             }
@@ -1637,6 +1651,36 @@ mod tests {
             }),
             Ok((0, lip)),
             "a flier takes the lip it fell from"
+        );
+    }
+
+    /// Final review, Minor #8: a chute's landing is admissible to `loc` the
+    /// same way a horizontal step is — `Walk`/`Wade` for anybody, `Swim`
+    /// only for a body that can. Unreachable in a generated descent today
+    /// (the realizer writes `Floor` under every chute and
+    /// `stairs_pair_by_coordinate_across_adjacent_rungs` pins it), but
+    /// `peek_stairs` must not silently drop a non-swimmer into deep water
+    /// the day that stops being true.
+    #[test]
+    fn a_chute_over_deep_water_refuses_a_non_swimmer_and_admits_a_swimmer() {
+        let lip = Cell(1, 1);
+        let upper = hand_level(&[(lip, LevelCellKind::Drop)], Vec::new());
+        let lower = hand_level(&[(lip, LevelCellKind::Deep)], Vec::new());
+        let ug = hand_underground(vec![upper, lower], lip, hand_plan(None));
+
+        assert_eq!(
+            ug.peek_stairs(hornvale_species::WALKER),
+            Err(UNDERGROUND_DEEP_WATER_REFUSAL),
+            "a non-swimmer looking down a chute into deep water is refused, \
+             not dropped into it"
+        );
+        assert_eq!(
+            ug.peek_stairs(hornvale_species::Locomotion {
+                swim: true,
+                fly: false,
+            }),
+            Ok((1, lip)),
+            "a swimmer takes the chute into the water below"
         );
     }
 }

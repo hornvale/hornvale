@@ -665,6 +665,11 @@ intimacy reading (The Plat); junctions, vaults, viewport, dressing prose
    row.
 4. **The readouts** of §4.1–4.4 are on the committed audit page with their
    verdicts in the frozen words; the Crosscut's four did not move.
+   **Execution amendment (Task 1, ruling C), matching §4's preamble:** they
+   DID move once, by the Crosscut's own deferred `try_extend` fix taken in
+   this campaign; the attribution is by revert — with that one change
+   reverted the panel is byte-identical to the baseline, and the gate pass
+   plus class recompute alone leave it byte-identical too.
 5. **The existing wall and carve tests pass unmodified**;
    `stairs_pair_by_coordinate_across_adjacent_rungs` is amended as §3.5 says
    and no other stairs assertion is weakened.

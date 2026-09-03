@@ -1,19 +1,28 @@
 # The Circuits of Seeds 42, 7 and 1234
 
 What this page witnesses: for each seed's every cave-bearing,
-non-ocean vertex, a descent plan is grown (spec §3) and the four
-preregistered readouts of spec §4 are measured against it, then
-reduced to a panel median. A descent plan is never stored -- it is a
-pure function of `(seed, vertex, rungs, kind, character)`, so this page
-is a witness, not a record: every number here is re-derived from the
-seed on each regeneration.
+non-ocean vertex, a descent plan is grown (spec §3) and eight
+preregistered readouts from two specs are measured against it, then
+reduced to a panel median: the Crosscut's four (its spec §4 -- loop
+share, density ordering, cross-floor cycles, semilattice overlap) and
+the Brattice's four (its spec §4.1-4.4 -- gate yield, detour cost,
+solvability, report-only gate counts). A descent plan is never stored --
+it is a pure function of `(seed, vertex, rungs, kind, character)`, so
+this page is a witness, not a record: every number here is re-derived
+from the seed on each regeneration.
 
-The verdict words PASSED / FALSIFIED are frozen by spec §4, decided
-before this code existed, and nothing here is tuned to reach one -- a
-FALSIFIED verdict is a finding the campaign publishes, not a bug to fix
-by moving the threshold. A comparison that cannot be made for a seed
-(no cave of some kind exists there) prints NOT MEASURABLE rather than a
-vacuous PASSED.
+The verdict words PASSED / FALSIFIED are frozen by each readout's own
+spec, decided before this code existed, and nothing here is tuned to
+reach one -- a FALSIFIED verdict is a finding the campaign publishes,
+not a bug to fix by moving the threshold. A comparison that cannot be
+made for a seed (no cave of some kind exists there) prints NOT
+MEASURABLE rather than a vacuous PASSED.
+
+The Crosscut's four numbers moved once in this campaign, when The
+Brattice took the Crosscut's own deferred `try_extend` fix (ledger #10,
+ruling C); the attribution is by revert -- with that one change
+reverted the panel is byte-identical to the pre-Brattice baseline. The
+gate pass and class recompute alone leave them byte-identical.
 
 ```text
 seed 42: 874 descents
@@ -39,7 +48,7 @@ gate yield: median 1.0000 (frozen floor 0.70; FROM realms with an admissible dra
   skips: inadmissible 0 claimed 198 no-room 0 unsolvable 2 (report only)
 detour cost: median 1.2143 over 866 gated descents (frozen floor 1.10; default body's round trip gated / ungated) -> PASSED
 solvable for a body holding nothing: 874 of 874 descents (a guard; a miss is a red test, not a number)
-gates: doors 0 sumps 3169 chutes 3223; worked descents with a door 872 of 874 (the production walk reaches none yet, spec §1)
+gates on the panel's wild descents: doors 0 sumps 3169 chutes 3223; re-derived as worked (DrowTier): 872 of 874 descents carry a door (the production walk reaches none yet, spec §1)
 return differs from outbound: 159 of 866 gated descents (report only; follows from a chute by construction)
 patterns by class and span (report only):
   LongLong CrossFloor the-chute: 96
@@ -77,7 +86,7 @@ gate yield: median 1.0000 (frozen floor 0.70; FROM realms with an admissible dra
   skips: inadmissible 0 claimed 390 no-room 0 unsolvable 0 (report only)
 detour cost: median 1.2069 over 1673 gated descents (frozen floor 1.10; default body's round trip gated / ungated) -> PASSED
 solvable for a body holding nothing: 1681 of 1681 descents (a guard; a miss is a red test, not a number)
-gates: doors 0 sumps 5753 chutes 5439; worked descents with a door 1676 of 1681 (the production walk reaches none yet, spec §1)
+gates on the panel's wild descents: doors 0 sumps 5753 chutes 5439; re-derived as worked (DrowTier): 1676 of 1681 descents carry a door (the production walk reaches none yet, spec §1)
 return differs from outbound: 289 of 1673 gated descents (report only; follows from a chute by construction)
 patterns by class and span (report only):
   LongLong CrossFloor the-chute: 191
@@ -115,7 +124,7 @@ gate yield: median 1.0000 (frozen floor 0.70; FROM realms with an admissible dra
   skips: inadmissible 0 claimed 269 no-room 0 unsolvable 0 (report only)
 detour cost: median 1.2000 over 1249 gated descents (frozen floor 1.10; default body's round trip gated / ungated) -> PASSED
 solvable for a body holding nothing: 1266 of 1266 descents (a guard; a miss is a red test, not a number)
-gates: doors 0 sumps 4223 chutes 4123; worked descents with a door 1263 of 1266 (the production walk reaches none yet, spec §1)
+gates on the panel's wild descents: doors 0 sumps 4223 chutes 4123; re-derived as worked (DrowTier): 1263 of 1266 descents carry a door (the production walk reaches none yet, spec §1)
 return differs from outbound: 199 of 1249 gated descents (report only; follows from a chute by construction)
 patterns by class and span (report only):
   LongLong CrossFloor the-chute: 119

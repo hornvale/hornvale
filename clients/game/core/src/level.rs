@@ -485,10 +485,13 @@ mod tests {
 
     /// A door reaches this band as a MARK, never a palette kind (sim spec
     /// §3.7), and it draws `+` — the chamber band's own doorway glyph —
-    /// while every other mark kind keeps `&`. Nothing in the sim emits a
-    /// `"door"` mark yet, so this test constructs one directly: the client
-    /// is taught the glyph before the producer exists, which is the whole
-    /// point of an additive wire.
+    /// while every other mark kind keeps `&`. The producer exists now
+    /// (`Session::underground_level` in `windows/vessel/src/session.rs`,
+    /// pinned there by
+    /// `a_lit_door_reaches_the_level_document_as_a_door_mark`), but this
+    /// unit test still constructs a `"door"` mark directly rather than
+    /// driving a session: the client crate cannot build one, only decode
+    /// the document a session emits.
     #[test]
     fn a_door_mark_draws_a_doorway_and_every_other_mark_draws_the_mark_glyph() {
         let mut level = small_level();

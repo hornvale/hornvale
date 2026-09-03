@@ -59,8 +59,11 @@ fn verdict(m: Option<f64>, floor: f64) -> &'static str {
     }
 }
 
-/// Render the panel for one seed: the four preregistered readouts of spec
-/// §4, over every cave-bearing, non-ocean vertex.
+/// Render the panel for one seed: eight preregistered readouts over every
+/// cave-bearing, non-ocean vertex — the Crosscut's four (its spec §4: loop
+/// share, density ordering, cross-floor cycles, semilattice overlap) and
+/// the Brattice's four (its spec §4.1-4.4: gate yield, detour cost,
+/// solvability, report-only gate counts), each frozen by its own spec.
 ///
 /// **Byte-identical for a given `(seed, terrain)`** — asserted, not merely
 /// observed; see this module's tests. No wall clock, no map iteration
@@ -313,9 +316,14 @@ pub fn render_circuit_panel(seed: Seed, terrain: &GeneratedTerrain) -> String {
         "solvable for a body holding nothing: {solvable_count} of {descents} descents (a guard; a miss is a red test, not a number)\n"
     ));
 
-    // The Brattice §4.4 report only.
+    // The Brattice §4.4 report only. Two different populations, named as
+    // such: the gate triple is counted on the panel's WILD
+    // (`Character::WildCave`) plans, and the worked-with-door share is
+    // counted on the re-derived `DrowTier` plans from the density loop
+    // above — conflating the two in one sentence reads as a single
+    // population when it is not (final review, Important #2).
     out.push_str(&format!(
-        "gates: doors {doors_total} sumps {sumps_total} chutes {chutes_total}; worked descents with a door {worked_with_door} of {worked_descents} (the production walk reaches none yet, spec §1)\n"
+        "gates on the panel's wild descents: doors {doors_total} sumps {sumps_total} chutes {chutes_total}; re-derived as worked (DrowTier): {worked_with_door} of {worked_descents} descents carry a door (the production walk reaches none yet, spec §1)\n"
     ));
     out.push_str(&format!(
         "return differs from outbound: {return_differs_count} of {gated_descents} gated descents (report only; follows from a chute by construction)\n"
@@ -375,7 +383,7 @@ mod tests {
             "gate yield",
             "detour cost",
             "solvable for a body holding nothing",
-            "gates: doors",
+            "gates on the panel's wild descents: doors",
             "return differs from outbound",
             "patterns by class and span",
         ] {
