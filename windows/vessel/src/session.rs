@@ -8334,6 +8334,14 @@ impl<'w> Session<'w> {
             .filter(|&(slot, _)| slot != before_driven)
             .map(|(_, position)| position.clone())
             .collect();
+        // The driven body's OWN position before the tick (The Minute, spec
+        // §3.4) — captured beside `before` for the same reason: the tick's
+        // write-back is about to move it. `narrate_motion` compares this
+        // against the driven slot's position after the tick to decide
+        // whether the body changed rooms, which suppresses the
+        // arrival/departure comparison above (that comparison's own
+        // `before` was copied in the room the body has since left).
+        let driven_before = self.roster.positions()[before_driven].clone();
         // ...and WHO the possession could sense as of that same moment (The
         // Sighting, fix round 4). A departure is narrated about a creature that
         // is, by the time it is narrated, no longer here — so the CURRENT sensed
@@ -8601,6 +8609,10 @@ impl<'w> Session<'w> {
         } else {
             None
         };
+        // The minutes of this walk (The Minute, spec §3.4), computed for the
+        // same reason `woke` is: `driven_facts` is about to be consumed by
+        // value in the loop below.
+        let minutes = minutes_of(&driven_facts);
         for fact in driven_facts {
             match self.ledger.commit(fact, &self.registry) {
                 Ok(true) | Ok(false) => {}
@@ -8707,7 +8719,14 @@ impl<'w> Session<'w> {
         if let Err(e) = self.absorb_here() {
             return Turn::Out(format!("error: {e}"));
         }
-        Turn::Out(self.narrate_motion(moved, &before, &sensed_before, how))
+        Turn::Out(self.narrate_motion(
+            moved,
+            &before,
+            &sensed_before,
+            how,
+            &driven_before,
+            &minutes,
+        ))
     }
 
     /// Narrate what the tick committed: silence if nothing moved, else name
@@ -8759,9 +8778,32 @@ impl<'w> Session<'w> {
         before: &[Facet],
         sensed_before: &std::collections::BTreeSet<EntityId>,
         how: Perceiving,
+        driven_before: &Facet,
+        minutes: &[Minute],
     ) -> String {
+        // THE MINUTE (spec §3.4). The held body's own acts are named before
+        // the population's comings and goings, and a room change SUPPRESSES
+        // the arrival/departure comparison: `before` was copied in the room
+        // the body has since left, so comparing it against `here` would
+        // narrate everyone in the old room as gone and everyone in the new
+        // one as arrived. `!look` answers for the new room. The act is
+        // attributed to the possessor's will — under decision 0168 it is the
+        // body's act and under 0226 the choice was not the player's. A free
+        // body has no minutes (its walk Holds), so its line is byte-identical
+        // to the line before this campaign.
+        let here_now = &self.roster.positions()[self.roster.driven().0];
+        let minute_line = minute_sentence(minutes);
+        if here_now != driven_before {
+            return match minute_line {
+                Some(line) => format!("Time passes. {line}"),
+                None => {
+                    "Time passes. The will that holds you walks this body elsewhere.".to_string()
+                }
+            };
+        }
+        let minute_prefix = minute_line.map(|l| format!(" {l}")).unwrap_or_default();
         if moved == 0 {
-            return "Time passes; the world keeps its shape.".to_string();
+            return format!("Time passes; the world keeps its shape.{minute_prefix}");
         }
         // The arrival half's gate, and it takes `how` for the same reason
         // `sensed_before` (the departure half's) does: an ARRIVAL is judged
@@ -8819,9 +8861,9 @@ impl<'w> Session<'w> {
             parts.push(format!("You notice {} here now.", arrived.join(", ")));
         }
         if parts.is_empty() {
-            format!("Time passes. You sense movement nearby ({moved} stirred).")
+            format!("Time passes. You sense movement nearby ({moved} stirred).{minute_prefix}")
         } else {
-            format!("Time passes. {}", parts.join(" "))
+            format!("Time passes. {}{minute_prefix}", parts.join(" "))
         }
     }
 
@@ -9807,6 +9849,66 @@ fn wake_after(facts: &[Fact], now: WorldTime) -> Option<WorldTime> {
         })
         .filter(|end| *end > now)
         .max()
+}
+
+/// One thing the driven body's own walk did this tick, for the wait line
+/// (The Minute, spec §3.4). `Moved` is `agent-at`; `Rested` covers both
+/// `rested` and `slept`, one clause.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Minute {
+    Moved,
+    Drank,
+    Eaten,
+    Rested,
+}
+
+/// The minutes of the driven walk: one entry per kind present among
+/// `facts`, `Moved` first if present, the rest in the order their kind
+/// first appeared. Pure; unit-tested.
+fn minutes_of(facts: &[Fact]) -> Vec<Minute> {
+    let mut out: Vec<Minute> = Vec::new();
+    let mut moved = false;
+    for fact in facts {
+        let kind = match fact.predicate.as_str() {
+            AGENT_AT => {
+                moved = true;
+                continue;
+            }
+            DRANK => Minute::Drank,
+            EATEN => Minute::Eaten,
+            RESTED | SLEPT => Minute::Rested,
+            _ => continue,
+        };
+        if !out.contains(&kind) {
+            out.push(kind);
+        }
+    }
+    if moved {
+        out.insert(0, Minute::Moved);
+    }
+    out
+}
+
+/// The sentence for a tick's minutes, or `None` when there are none.
+/// "The will that holds you walks this body elsewhere, drinks and rests."
+fn minute_sentence(minutes: &[Minute]) -> Option<String> {
+    if minutes.is_empty() {
+        return None;
+    }
+    let clauses: Vec<&str> = minutes
+        .iter()
+        .map(|m| match m {
+            Minute::Moved => "walks this body elsewhere",
+            Minute::Drank => "drinks",
+            Minute::Eaten => "eats",
+            Minute::Rested => "rests",
+        })
+        .collect();
+    let joined = match clauses.len() {
+        1 => clauses[0].to_string(),
+        n => format!("{} and {}", clauses[..n - 1].join(", "), clauses[n - 1]),
+    };
+    Some(format!("The will that holds you {joined}."))
 }
 
 /// The arousal above which a still-Content (sub-act) creature reads as restless
@@ -19918,7 +20020,14 @@ mod tests {
                 }
             })
             .collect();
-        let narrated = session.narrate_motion(1, &arriving, &nowhere, Perceiving::Body);
+        let narrated = session.narrate_motion(
+            1,
+            &arriving,
+            &nowhere,
+            Perceiving::Body,
+            &session.position(),
+            &[],
+        );
         assert!(
             !narrated.contains(&label),
             "`wait` must not announce the ARRIVAL of a creature sight withheld — \
@@ -19934,7 +20043,14 @@ mod tests {
         // needs both halves pinned, or only one direction of breaking it is
         // visible.
         session.occupancy.place(who, &room, near);
-        let seen_arriving = session.narrate_motion(1, &arriving, &nowhere, Perceiving::Body);
+        let seen_arriving = session.narrate_motion(
+            1,
+            &arriving,
+            &nowhere,
+            Perceiving::Body,
+            &session.position(),
+            &[],
+        );
         assert!(
             seen_arriving.contains(&label),
             "an arrival the player CAN see must still be narrated — without this \
@@ -19958,7 +20074,14 @@ mod tests {
             !session.colocated_npcs().iter().any(|n| n.entity == who),
             "precondition: the creature really left the room"
         );
-        let leaving = session.narrate_motion(1, &was_here, &nowhere, Perceiving::Body);
+        let leaving = session.narrate_motion(
+            1,
+            &was_here,
+            &nowhere,
+            Perceiving::Body,
+            &session.position(),
+            &[],
+        );
         assert!(
             !leaving.contains(&label),
             "`wait` must not announce the DEPARTURE of a creature the player \
@@ -19970,7 +20093,14 @@ mod tests {
         // the sensed-before set, MUST name it — otherwise the two negatives
         // would pass simply because this branch never narrates anything.
         let seen: std::collections::BTreeSet<EntityId> = [who].into_iter().collect();
-        let announced = session.narrate_motion(1, &was_here, &seen, Perceiving::Body);
+        let announced = session.narrate_motion(
+            1,
+            &was_here,
+            &seen,
+            Perceiving::Body,
+            &session.position(),
+            &[],
+        );
         assert!(
             announced.contains(&label),
             "a departure the player COULD see must still be narrated — without \
@@ -21195,5 +21325,36 @@ mod tests {
                 .is_some(),
             "arbitration still ran: the felt state was written (co-present, 0226)"
         );
+    }
+
+    fn fact_named(predicate: &str) -> Fact {
+        Fact {
+            subject: EntityId(std::num::NonZeroU64::new(7).unwrap()),
+            predicate: predicate.to_string(),
+            object: Value::Number(0.0),
+            place: None,
+            day: Some(WorldTime::from_ticks(0)),
+            provenance: "test".to_string(),
+        }
+    }
+
+    /// The Minute, spec §3.4: one clause per predicate present, in first
+    /// appearance order, `rested` and `slept` folded into one; `agent-at`
+    /// is the move, named first regardless of where it appeared.
+    #[test]
+    fn minutes_are_one_per_kind_in_first_appearance_order_with_the_move_first() {
+        let facts = [
+            fact_named(RESTED),
+            fact_named(DRANK),
+            fact_named(AGENT_AT),
+            fact_named(SLEPT),
+            fact_named(DRANK),
+            fact_named(EATEN),
+        ];
+        assert_eq!(
+            minutes_of(&facts),
+            vec![Minute::Moved, Minute::Rested, Minute::Drank, Minute::Eaten]
+        );
+        assert!(minutes_of(&[]).is_empty());
     }
 }

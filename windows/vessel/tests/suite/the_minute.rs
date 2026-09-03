@@ -119,3 +119,47 @@ fn p2_a_held_bodys_walk_accumulates_across_ticks() {
          a walk that resumes still does not reach water at seed 7 in this window"
     );
 }
+
+/// P7 — the line. Seed 7's first seeking wait names the move and does not
+/// count the body among the stirred; seed 42's second wait names the drink;
+/// a free body's line carries no minutes.
+#[test]
+fn p7_the_wait_line_minutes_the_held_bodys_acts() {
+    let world = possessed(7);
+    let (mut session, _) = Session::start(&world, &PossessOpts::default()).expect("starts");
+    let _ = session.handle("!possess");
+    let _ = session.handle("!wait 1");
+    let hornvale_vessel::Turn::Out(line) = session.handle("!wait 5") else {
+        panic!("wait narrates")
+    };
+    assert!(
+        line.contains("walks this body elsewhere"),
+        "seed 7's first seeking wait must name the move: {line:?}"
+    );
+    assert!(
+        !line.contains("stirred") && !line.contains("You watch") && !line.contains("You notice"),
+        "a room change suppresses the arrival/departure comparison: {line:?}"
+    );
+
+    let world = possessed(42);
+    let (mut session, _) = Session::start(&world, &PossessOpts::default()).expect("starts");
+    let _ = session.handle("!possess");
+    let _ = session.handle("!wait 5");
+    let hornvale_vessel::Turn::Out(line) = session.handle("!wait 5") else {
+        panic!("wait narrates")
+    };
+    assert!(
+        line.contains("drinks"),
+        "seed 42's second wait must name the drink: {line:?}"
+    );
+
+    let (mut free, _) = Session::start(&world, &PossessOpts::default()).expect("starts");
+    let _ = free.handle("!wait 5");
+    let hornvale_vessel::Turn::Out(line) = free.handle("!wait 5") else {
+        panic!("wait narrates")
+    };
+    assert!(
+        !line.contains("The will that holds you"),
+        "a free body has no minutes: {line:?}"
+    );
+}
