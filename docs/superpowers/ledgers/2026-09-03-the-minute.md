@@ -420,3 +420,42 @@ visible-in-testimony half survives verbatim (584 chars, under the 600 cap, no
 waiver added). All three rows' Where cells gain the chronicle link; the two new
 rows stay `raw`.
 
+
+## Final whole-branch review and its one fix wave (commits cb2046458..5ee57021e)
+
+The review confirmed the shipped behaviour mechanically — the commit order,
+VIEW ≡ SCAN for the driven slot across nine waits of a body that provably
+moves, and the free path inert: across all 21 branch commits the only
+generated artifact that moved was `docs/digest/decisions-in-force.md`. It
+found four Importants, none in the code's behaviour: a reachability doc in
+`windows/lab` still arguing from the discard (the sweep's grep never left
+`windows/vessel` and `book/src`); The Rack's recorded mutation now naming
+the shipped line; decision 0226 carrying two consequences 0656 overturns
+with no amendment; and the wake merge, new code with no test. All four
+closed in one wave — the lab doc restated from the Holding walk, a live
+mutation run and its red pasted, an amendment appended to 0226 (no bullet
+edited) and 0656 marked as amending it, and a pure `later_wake` with tests
+that redden when the comparison is inverted.
+
+**Triage of the parked items.** The unreachable `None` arm in
+`narrate_motion` stays, with a comment saying why it is unreachable — a
+benign sentence beats a panic on a turn path. `body_state` as a pure fold
+stays a followup. The chronicle's causal claim about seed 7 stays a dated
+measurement; P2's `assert_eq!(drank, 0)` is its tripwire, and nothing
+guards the 120-hop figure itself, which the chronicle now dates.
+
+**A claim of mine the fixer refused.** The wave's brief said round 1 of
+Task 6 had cited `the_minute.rs:140-178`, "a range that starts after the
+`ends_with` assertion". The assertion is at line 156; the range contains
+it. The retrospective's paragraph was rewritten to what the commit history
+establishes — round 1 attached the assertion to the wrong line and missed
+a fourth, while citing a range — and the lesson is sharper for it: a range
+citation carries the form of verification whether or not anyone read the
+range. Ruling: keep the paragraph as the fixer wrote it; what it costs if
+wrong is a retrospective sentence. No ideonomy pass for any of this; a
+review.
+
+**Ruling: this campaign's three registry rows link into `docs/` with
+GitHub blob URLs**, per `book/src/frontier/CLAUDE.md`'s link discipline;
+the 21 other rows carrying relative `docs/` links are pre-existing and not
+this campaign's to sweep — recorded here so the next sweep knows the count.
