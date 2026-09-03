@@ -391,6 +391,11 @@ fn run_rung(
     // production owns.
     let folds =
         hornvale_vessel::resident::OwnedFolds::new(hornvale_vessel::resident::ResidentFolds::new());
+    // The session-lived room memo (The Detent, spec §2.1), owned at exactly
+    // the scope `folds` is — one per run, so every tick's terrain reads and
+    // fills the SAME memo rather than starting cold each tick.
+    let ground =
+        hornvale_vessel::ground::OwnedGround::new(hornvale_vessel::ground::GroundHazards::new());
     let mut day = WorldTime::from_std_days(0.5).expect("0.5 is finite");
 
     let facts_before = ledger.len();
@@ -415,7 +420,8 @@ fn run_rung(
         // This only accumulates across ticks, so tick 0 is cold and the
         // measured benefit is a LOWER bound on what the cache is worth.
         let mesh_snapshot = mesh_memo.clone();
-        let terrain = LocaleTerrain::with_fields(ctx, None, None, None, None, Some(&mesh_snapshot));
+        let terrain = LocaleTerrain::with_fields(ctx, None, None, None, None, Some(&mesh_snapshot))
+            .with_ground(&ground);
         let sys = DriveMovements {
             npcs: npcs.clone(),
             from,
