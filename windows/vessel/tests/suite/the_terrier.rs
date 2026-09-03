@@ -108,31 +108,43 @@ fn block_body_after<'a>(src: &'a str, needle: &str) -> Option<&'a str> {
 /// The forbidden names appear in production code ONLY inside
 /// `WorldContext::build`.
 ///
-/// MUTATION THIS MUST FAIL AGAINST: restore the per-call read —
-/// in `brief.rs`, replace `occupations.get(&vertex)` with
-/// `hornvale_worldgen::occupations_by_vertex(world).get(&vertex)` (adding a
-/// `world: &World` parameter). Observed red, against the pre-hoist tree at
-/// `aeabc4549`:
+/// MUTATION THIS MUST FAIL AGAINST: restore a per-call re-survey on a
+/// session path — in `Session::brief_here` (`session.rs`), add as its FIRST
+/// statement `let _re_survey = hornvale_worldgen::occupations_by_vertex(self.world);`.
+/// This is a one-line, compiling, EXTRA re-survey rather than a reversion of
+/// `brief_of`'s signature, and it is the more honest mutation for THIS test:
+/// this test's own job is the offender scan below, not the positive control
+/// above it (a narrower earlier draft named a `brief.rs` signature reversion
+/// instead — reverting the caller's argument type — but that mutation
+/// exercises the positive control's assertion (`build.contains("occupations_by_vertex(")`), not the
+/// offender-scan assertion this doc sits beside; see the fix round that
+/// caught the mismatch). Observed red, against the FINISHED (post-hoist)
+/// tree with this mutation applied:
 /// ```text
-/// running 3 tests
-/// test the_terrier::the_block_extractor_matches_nested_braces ... ok
-/// test the_terrier::the_register_scanner_catches_a_per_call_read ... ok
+/// running 1 test
 /// test the_terrier::no_session_path_re_surveys_the_occupation_register ... FAILED
 ///
 /// failures:
 ///
 /// ---- the_terrier::no_session_path_re_surveys_the_occupation_register stdout ----
 ///
-/// thread 'the_terrier::no_session_path_re_surveys_the_occupation_register' (190835536) panicked at windows/vessel/tests/suite/the_terrier.rs:157:5:
-/// positive control: WorldContext::build must build the register with occupations_by_vertex
+/// thread 'the_terrier::no_session_path_re_surveys_the_occupation_register' (190948466) panicked at windows/vessel/tests/suite/the_terrier.rs:185:5:
+/// a session path re-surveys the world's occupation register; the map is built once on WorldContext and read from there (The Terrier, spec §3.1):
+/// src/session.rs:3108: let _re_survey = hornvale_worldgen::occupations_by_vertex(self.world);
 /// note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 ///
 ///
 /// failures:
 ///     the_terrier::no_session_path_re_surveys_the_occupation_register
 ///
-/// test result: FAILED. 2 passed; 1 failed; 0 ignored; 0 measured; 412 filtered out; finished in 0.00s
+/// test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 414 filtered out; finished in 0.01s
 /// ```
+/// Also observed against the pre-hoist tree `aeabc4549`, before `build` named
+/// the register (a different question — whether the positive control itself
+/// can fail, not whether the offender scan can): `thread
+/// 'the_terrier::no_session_path_re_surveys_the_occupation_register' panicked
+/// at windows/vessel/tests/suite/the_terrier.rs:157:5: positive control:
+/// WorldContext::build must build the register with occupations_by_vertex`.
 #[test]
 fn no_session_path_re_surveys_the_occupation_register() {
     let session =
