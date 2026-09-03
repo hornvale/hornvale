@@ -12,8 +12,10 @@
 use hornvale_kernel::math;
 
 /// Index sensitivity to obliquity, per degree.
+/// plumb: pending(wave-1)
 const K_OBLIQUITY: f64 = 1.0;
 /// Index sensitivity to climatic precession (e·sin ϖ).
+/// plumb: pending(wave-1)
 const K_PRECESSION: f64 = 40.0;
 
 /// The caloric-summer index at one moment's orbital elements, measured as an

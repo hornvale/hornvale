@@ -17,6 +17,7 @@ pub struct SurfaceWetness {
 
 /// A loam-ish default: 50 mm of retention, drying at 18% per clear warm day
 /// (a ~5-day e-folding time — the τ ≈ days the campaign claims).
+/// plumb: pending(wave-1)
 pub const DEFAULT_WETNESS: SurfaceWetness = SurfaceWetness {
     field_capacity_mm: 50.0,
     dry_rate: 0.18,

@@ -143,6 +143,7 @@ pub struct Feature {
 /// Greenland is ~1.4% of Earth's land and qualifies, Iceland ~0.07% does
 /// not.
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 pub const PROPORTIONAL_SIZE_FLOOR_FRACTION: f64 = 0.005;
 
 /// Minimum a proportional size floor (`PROPORTIONAL_SIZE_FLOOR_FRACTION` ×
@@ -155,6 +156,7 @@ pub const PROPORTIONAL_SIZE_FLOOR_FRACTION: f64 = 0.005;
 /// rules that case out: a component must span at least two vertices to be
 /// more than a single point.
 /// type-audit: bare-ok(count)
+/// plumb: pending(wave-1)
 pub const PROPORTIONAL_SIZE_FLOOR_MIN: usize = 2;
 
 /// Every component of `member` at or above `floor` vertices, as features of

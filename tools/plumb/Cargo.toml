@@ -1,0 +1,33 @@
+[package]
+name = "plumb"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+publish = false
+
+# Empty table: this package is deliberately outside the main workspace, the
+# same way `tools/type-audit` is (decision 0027). An empty [workspace] here —
+# not just the main Cargo.toml's `exclude` — stops cargo's ancestor search at
+# this manifest unconditionally. Without it, a checkout nested under another
+# Cargo workspace (e.g. a worktree under `.claude/worktrees/` inside the main
+# repo tree, which is exactly where this crate was written) makes cargo walk
+# past this package's own workspace root and mistakenly bind to the outer one.
+[workspace]
+
+[lib]
+name = "plumb"
+path = "src/lib.rs"
+
+[[bin]]
+name = "plumb"
+path = "src/main.rs"
+
+[dependencies]
+# This tool PARSES Rust rather than scanning lines, for the same reason
+# type-audit does: a line scanner cannot tell a `const` inside a
+# `#[cfg(test)]` module from a production one, and cannot attach a doc comment
+# to the item it documents. Both distinctions are load-bearing here.
+syn = { version = "2", features = ["full", "visit", "extra-traits"] }
+# `span-locations` makes `Span::start().line` return real line numbers when
+# parsing files (outside a proc-macro); without it, diagnostics report `:0:`.
+proc-macro2 = { version = "1", features = ["span-locations"] }

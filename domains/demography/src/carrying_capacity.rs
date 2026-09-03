@@ -61,8 +61,11 @@ pub struct CarryingInput {
 /// multiplicative factor, and any change is absorbed downstream by
 /// `SETTLERS_PER_CAPACITY` — so its value is unobservable and needs no source,
 /// only this note, so nobody later "calibrates" an unmeasurable quantity.
+/// plumb: pending(wave-1)
 const BASE: f64 = 1.0;
+/// plumb: pending(wave-1)
 const FRESHWATER_BONUS: f64 = 0.5;
+/// plumb: pending(wave-1)
 const COAST_BONUS: f64 = 0.2;
 
 /// Lieth's Miami-model temperature term, normalised to its 3000 g/m²/yr

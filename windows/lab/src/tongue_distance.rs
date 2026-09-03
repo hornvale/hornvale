@@ -11,6 +11,7 @@ use std::collections::BTreeMap;
 /// for language identification and is fixed rather than drawn: this is a
 /// measuring instrument, and a tunable width would let a disappointing
 /// baseline be rescued by retuning it.
+/// plumb: pending(wave-1)
 const NGRAM: usize = 3;
 
 /// The relative frequency of each character trigram across `words`, with

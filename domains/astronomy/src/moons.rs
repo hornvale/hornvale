@@ -83,18 +83,23 @@ pub fn hill_radius_mm(star: &Star, anchor: &Anchor) -> f64 {
     anchor.orbit.0 * math::powf(anchor.mass.0 * 3.003e-6 / (3.0 * star.mass.0), 1.0 / 3.0) * 1.496e5
 }
 
+/// plumb: pending(wave-1)
 const ATTEMPTS_PER_MOON: u32 = 128;
+/// plumb: pending(wave-1)
 const TIDE_CAP: f64 = 8.0;
 
 /// A giant-impact moon's bulk density, g/cm³ — **derived, not drawn**:
 /// re-accreted mantle debris carries no iron core, which is exactly why Luna
 /// is 3.34 against Earth's 5.51.
+/// plumb: pending(wave-1)
 const IMPACT_DENSITY_G_CM3: f64 = 3.34;
 /// A captured rocky body's bulk density, g/cm³ — a different reservoir than
 /// the anchor's own mantle.
+/// plumb: pending(wave-1)
 const CAPTURE_ROCKY_DENSITY_G_CM3: f64 = 3.0;
 /// A captured icy body's bulk density, g/cm³ — the reason a captured moon can
 /// be markedly larger than an impact child of the same mass.
+/// plumb: pending(wave-1)
 const CAPTURE_ICY_DENSITY_G_CM3: f64 = 1.6;
 
 /// Bulk density, g/cm³, below which a moon's composition reads as icy
@@ -106,6 +111,7 @@ const CAPTURE_ICY_DENSITY_G_CM3: f64 = 1.6;
 /// refinement of `CAPTURE_ROCKY_DENSITY_G_CM3` toward real captured
 /// rubble-pile densities (Phobos 1.88, Deimos 1.47 g/cm³) is edited in the
 /// same file as this threshold, not three crates away from it.
+/// plumb: pending(wave-1)
 const ICY_DENSITY_THRESHOLD_G_CM3: f64 = 2.0;
 
 // Belt and braces on top of colocation: if a future edit to any reservoir
@@ -373,6 +379,7 @@ pub fn generate_moons(
 /// the whole point of knowing the formation mechanism (The Reckoning).
 /// type-audit: pending(wave-1)
 pub fn radius_km(moon: &Moon) -> f64 {
+    /// plumb: pending(wave-1)
     const LUNAR_MASS_KG: f64 = 7.342e22;
     let m_kg = moon.mass.0 * LUNAR_MASS_KG;
     let rho_kg_m3 = moon.density.0 * 1000.0;

@@ -34,12 +34,14 @@ use std::collections::BTreeMap;
 // rather than re-tuning this constant from scratch. A save-format constant
 // from here on.
 /// type-audit: bare-ok(ratio: BETA)
+/// plumb: pending(wave-1)
 pub const BETA: f64 = 2.0;
 /// AUTHORED prior (task A14): the viability floor below which a share is
 /// reported as absence rather than ecological noise. Not swept or fit
 /// against any calibration target — an authored order-of-magnitude choice,
 /// frozen alongside β as a save-format constant.
 /// type-audit: bare-ok(count: FLOOR)
+/// plumb: pending(wave-1)
 pub const FLOOR: f64 = 1e-6;
 
 /// The single-vertex overlap-weighted coexistence share for every species in
@@ -184,12 +186,14 @@ fn vertex_share_indexed(
 // roughly 5-20%; this campaign has no calibration data yet, so the constant
 // is a deliberately conservative single authored guess, not a fit). Re-pin
 // with a provenance-updated comment once a calibration study exists.
+/// plumb: pending(wave-1)
 const PREY_SUPPORT_COEFF: f64 = 0.2;
 
 // AUTHORED prior (task A9, 2026-07-14): the top-down shadow multiplier never
 // drops below this floor, so an apex predator suppresses its prey without
 // ever driving it to true zero (extinction is a settlement-scale event this
 // vertex-local coupling must not cause on its own).
+/// plumb: pending(wave-1)
 const SHADOW_FLOOR: f64 = 0.1;
 
 /// Bidirectional trophic coupling over one vertex's per-species density
@@ -340,6 +344,7 @@ pub fn emigration_pressure(
 // endpoints), but well short of `couple_trophic`'s hard-clamped
 // `SHADOW_FLOOR` so ordinary prey never collapses from this coupling alone.
 // Re-pin with a provenance-updated comment once a calibration study exists.
+/// plumb: pending(wave-1)
 const SHADOW: f64 = 0.3;
 
 /// The assembled per-vertex density stack for every species over a `Geosphere`:

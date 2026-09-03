@@ -174,6 +174,7 @@ const ARABIKA_VADOSE_M: f64 = 2200.0;
 /// `the_calibration_coordinate_still_matches_the_model` fails if the measured
 /// ceiling has moved away from this value, and says to re-solve.
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 pub const ARABIKA_POROSITY: f64 = 0.819;
 
 /// The drainage coordinate the vadose datum is instantiated at. A massif's
@@ -198,6 +199,7 @@ const ARABIKA_DRAINAGE: f64 = 1.0;
 /// which delve rungs can ever be dry. It cannot decide H3 — that is
 /// [`RECHARGE_RISE_M`]'s *ratio* to this, not either magnitude — and
 /// `the_par_ratio_and_not_the_magnitudes_decides_who_drowns` holds that.
+/// plumb: pending(wave-1)
 const DRAWDOWN_SCALE_M: f64 = 2482.9;
 
 /// Metres the table rises at full upslope inflow — **solved from the river par
@@ -218,6 +220,7 @@ const DRAWDOWN_SCALE_M: f64 = 2482.9;
 /// added for room: how deep a massif can drain and how far inflow can lift a
 /// table are different physical quantities, and the collapse only ever looked
 /// elegant because one constant was doing two jobs.
+/// plumb: pending(wave-1)
 const RECHARGE_RISE_M: f64 = 411.7;
 
 /// Ratio between the transmissivity of the most and least porous rock the
@@ -244,6 +247,7 @@ const RECHARGE_RISE_M: f64 = 411.7;
 /// land rather than the caved subset and stop at 0.65. That is a real
 /// aquitard-to-aquifer contrast without pretending to a precision the input
 /// does not have.
+/// plumb: pending(wave-1)
 const TRANSMISSIVITY_SPAN: f64 = 100.0;
 
 /// Height above base level (m) at which base-level control on vadose thickness
@@ -291,6 +295,7 @@ const TRANSMISSIVITY_SPAN: f64 = 100.0;
 /// it is the same defect class this module has now produced three times. The
 /// conclusion is untouched: 1.2581 fails the floor just as 1.32 would.
 /// `c9dfee34`'s commit message carries the wrong figure and stays as history.)
+/// plumb: pending(wave-1)
 const RELIEF_HALF_M: f64 = 8848.0;
 
 /// The scale (m) over which the relief term is smoothed through sea level.
@@ -335,6 +340,7 @@ const RELIEF_HALF_M: f64 = 8848.0;
 /// re-running `the_water_table_is_not_degenerate`, because the smoothing scale
 /// sits inside a private helper and exposing it would widen the API for a
 /// sweep. Stated so no reader mistakes it for a probe output.
+/// plumb: pending(wave-1)
 const RELIEF_SOFT_M: f64 = 50.0;
 
 /// Flow accumulation at which the recharge term reaches half its maximum.
@@ -346,6 +352,7 @@ const RELIEF_SOFT_M: f64 = 50.0;
 /// the right half-saturation point for "the table is close to the surface".
 /// Reading the existing constant rather than restating 15.0 means the two
 /// cannot drift apart.
+/// plumb: pending(wave-1)
 const DRAINAGE_HALF: f64 = RIVER_MIN_DRAINAGE;
 
 /// How much drier this world's underworld is than Earth's. **Shipped at 1.0 —
@@ -420,6 +427,7 @@ const DRAINAGE_HALF: f64 = RIVER_MIN_DRAINAGE;
 /// column** (267/877/665 and 214/727/536). The deep is reached by making, not
 /// by finding — which is the reading clause 2 states, arrived at here from the
 /// other direction.
+/// plumb: pending(wave-1)
 const UNDERWORLD_DRYNESS_GAIN: f64 = 1.0;
 
 /// `ln(1 + e^x)`, evaluated in the stable branch for each sign so a large

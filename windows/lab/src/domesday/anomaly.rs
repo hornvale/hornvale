@@ -70,6 +70,7 @@ use std::collections::BTreeMap;
 /// claim** — the same precedent as D1's 0.80 share bar and D3's 5 % IQR
 /// bar: frozen at authoring time, never retuned after seeing a result.
 /// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
 pub const TAIL_DEPTH_BAR: f64 = 0.01;
 
 /// Frozen selection bar (spec §3.4): the number of a world's
@@ -79,6 +80,7 @@ pub const TAIL_DEPTH_BAR: f64 = 0.01;
 /// bounds how many of its closest-to-extreme columns [`WorldAnomaly::flags`]
 /// carries.
 /// type-audit: bare-ok(count)
+/// plumb: pending(wave-1)
 pub const REPORT_SIZE: usize = 10;
 
 /// Frozen selection bar (spec §3.4): how many worlds the committed artifact
@@ -86,6 +88,7 @@ pub const REPORT_SIZE: usize = 10;
 /// claim** — [`rank`] itself returns every world; only the renderer applies
 /// this.
 /// type-audit: bare-ok(count)
+/// plumb: pending(wave-1)
 pub const TOP_WORLDS: usize = 25;
 
 /// One census column flagged in a world's report: how extreme its value is

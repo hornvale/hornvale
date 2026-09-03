@@ -121,6 +121,7 @@ pub struct Vestige {
 /// calibration question this task did not preregister, and moving it would
 /// move the gallery almanacs, the residue lens and four census columns; it is
 /// reported rather than tuned.
+/// plumb: pending(wave-1)
 const WARNING_EFOLD_YEARS: f64 = 300.0;
 
 /// Derive a people-made vestige from one occupation, as of `now` — a bake

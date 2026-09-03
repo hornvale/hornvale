@@ -12,9 +12,11 @@ use hornvale_kernel::math;
 
 /// ASCII chart width in characters.
 /// type-audit: bare-ok(render-internal)
+/// plumb: pending(wave-1)
 pub const ASCII_WIDTH: usize = 72;
 /// ASCII chart height in characters.
 /// type-audit: bare-ok(render-internal)
+/// plumb: pending(wave-1)
 pub const ASCII_HEIGHT: usize = 24;
 
 /// One synodic cycle as a 16-column glyph strip: `o` new, `)` waxing,
@@ -121,9 +123,11 @@ pub fn moon_lines(moons: &[Moon], calendar: &Calendar) -> Vec<String> {
 
 /// Raster chart width in pixels.
 /// type-audit: bare-ok(render-internal)
+/// plumb: pending(wave-1)
 pub const MAP_WIDTH: u32 = 256;
 /// Raster chart height in pixels.
 /// type-audit: bare-ok(render-internal)
+/// plumb: pending(wave-1)
 pub const MAP_HEIGHT: u32 = 128;
 
 /// Near-black sky field (spec §4).
@@ -133,6 +137,7 @@ const RING: [u8; 3] = [60, 72, 100];
 /// Index-digit label color.
 const LABEL: [u8; 3] = [180, 195, 220];
 /// Disc radius in pixels.
+/// plumb: pending(wave-1)
 const DISC_RADIUS: f64 = 56.0;
 /// North-hemisphere disc center (x, y).
 const NORTH_CENTER: (f64, f64) = (64.0, 64.0);

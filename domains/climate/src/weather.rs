@@ -49,14 +49,18 @@ pub enum CloudType {
 
 /// How much drifting-Fbm swing the propensity is modulated by — the fast
 /// weather's amplitude over the slow climatological center.
+/// plumb: pending(wave-1)
 const PHASE_AMPLITUDE: f64 = 0.55;
 /// Octaves of the weather Fbm (a little texture, not fine detail).
+/// plumb: pending(wave-1)
 const WEATHER_OCTAVES: u32 = 3;
 /// Degrees of longitude the weather pattern drifts per standard day (weather
 /// systems track roughly west-to-east); small so day-to-day is smooth.
+/// plumb: pending(wave-1)
 const DRIFT_DEG_PER_DAY: f64 = 6.0;
 /// Spatial scale (degrees per Fbm unit) — larger vertices of weather read as
 /// coherent systems rather than per-vertex noise.
+/// plumb: pending(wave-1)
 const SPATIAL_SCALE_DEG: f64 = 40.0;
 
 /// The climatological storm *propensity* of a vertex, `[0,1]` — the slow prior the

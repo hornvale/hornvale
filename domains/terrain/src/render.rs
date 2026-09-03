@@ -17,23 +17,30 @@ use hornvale_kernel::{Geosphere, NearestVertexIndex, Seed, math, noise};
 /// `MAP_WIDTH / 2`. 1024×512; pixel ≈ 0.35°, fine enough to show the
 /// refined coastline.
 /// type-audit: bare-ok(render-internal)
+/// plumb: pending(wave-1)
 pub const MAP_WIDTH: u32 = 1024;
 /// ASCII map width in characters.
 /// type-audit: bare-ok(render-internal)
+/// plumb: pending(wave-1)
 pub const ASCII_WIDTH: u32 = 72;
 /// ASCII map height in characters (2:1 world on ~2:1-tall glyphs).
 /// type-audit: bare-ok(render-internal)
+/// plumb: pending(wave-1)
 pub const ASCII_HEIGHT: u32 = 24;
 
 /// Peak coastal displacement, meters. Bounds |refined − interpolated|.
+/// plumb: pending(wave-1)
 const COAST_AMP_M: f64 = 150.0;
 /// Gaussian envelope width, meters: displacement fades as the interpolated
 /// elevation leaves sea level and is exactly zero beyond three widths.
+/// plumb: pending(wave-1)
 const COAST_ENVELOPE_M: f64 = 300.0;
 /// Base spatial frequency of the coastline noise over unit-sphere
 /// coordinates (features ~1/24 rad ≈ 2.4° at the base octave).
+/// plumb: pending(wave-1)
 const COAST_FREQ: f64 = 24.0;
 /// fBm octaves for the coastline noise (base 2.4° down to ~0.15°).
+/// plumb: pending(wave-1)
 const COAST_OCTAVES: u32 = 5;
 
 /// Unit vector for a latitude/longitude in degrees (inverse of the
@@ -248,6 +255,7 @@ pub fn lithology_png(geo: &Geosphere, globe: &TectonicGlobe) -> Vec<u8> {
 /// scaling to the extremes would wash out the ordinary case, so this caps
 /// at the percentile range instead; the rare vertex beyond it simply
 /// saturates to the palette's most intense red/blue.
+/// plumb: pending(wave-1)
 const SEDIMENT_LENS_SCALE_M: f64 = 300.0;
 
 /// Diverging color for a signed carve delta, meters: white at zero,
@@ -299,6 +307,7 @@ pub fn sediment_png(geo: &Geosphere, globe: &TectonicGlobe) -> Vec<u8> {
 
 /// Saturation depth (m) for the column lens: pale (exposed shield) → dark
 /// (deep sedimentary archive).
+/// plumb: pending(wave-1)
 const COLUMN_LENS_SCALE_M: f64 = 3000.0;
 
 /// Depth-to-basement colour: pale where bedrock is near the surface, deepening

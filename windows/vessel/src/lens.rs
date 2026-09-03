@@ -76,6 +76,7 @@ use hornvale_kernel::math;
 /// stone (107 and up) so the material distinctions the model produces travel
 /// through the unity-slope segment untouched.
 /// type-audit: bare-ok(render-internal)
+/// plumb: universal(a render-internal tone-curve constant, chosen against the chamber's own measured dark band)
 pub const SHADOW_KNEE: u8 = 96;
 
 /// How far the curve lifts everything above [`SHADOW_KNEE`], in `u8` steps.
@@ -86,6 +87,7 @@ pub const SHADOW_KNEE: u8 = 96;
 /// ceiling at 231 — 14 steps of margin over the brightest real stone measured,
 /// and 95 over the brightest chamber floor.
 /// type-audit: bare-ok(render-internal)
+/// plumb: universal(a render-internal tone-curve constant, bounded against the model's own measured brightest output)
 pub const HIGHLIGHT_LIFT: u8 = 24;
 
 /// The exponent of the shadow segment.
@@ -98,6 +100,7 @@ pub const HIGHLIGHT_LIFT: u8 = 24;
 /// `lantern_lens.rs::the_two_segments_of_the_curve_meet_with_matching_slope`
 /// for the guard that keeps the three constants consistent.
 /// type-audit: bare-ok(ratio)
+/// plumb: universal(derived, not tuned, from SHADOW_KNEE and HIGHLIGHT_LIFT per the doc)
 pub const SHADOW_GAMMA: f64 = 0.8;
 
 /// The highest input value whose successor the lens can still be relied on to
@@ -111,6 +114,7 @@ pub const SHADOW_GAMMA: f64 = 0.8;
 /// bright enough to push past it would need this constant re-derived, not the
 /// guard relaxed.
 /// type-audit: bare-ok(render-internal)
+/// plumb: universal(a render-internal headroom bound above the model's own measured brightest output)
 pub const SEPARATION_CEILING: u8 = 255 - HIGHLIGHT_LIFT;
 
 /// A presentation filter over the colour the model emitted.

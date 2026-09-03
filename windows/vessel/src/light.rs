@@ -50,12 +50,14 @@ use std::collections::BTreeMap;
 /// possession is assumed to be carrying one, so an explicit torch becomes a
 /// refinement rather than a new mechanism.
 /// type-audit: bare-ok(ratio)
+/// plumb: universal(the fixed colour temperature of the possession's implicit carried flame — a world-object property)
 pub const TORCH_KELVIN: f64 = 1900.0;
 
 /// The colour temperature of a hearth fire — a bed of embers under flame,
 /// cooler and redder than a torch, which is what makes a hearth-lit wall and
 /// a doorway-lit wall different colours in the same room.
 /// type-audit: bare-ok(ratio)
+/// plumb: universal(the fixed colour temperature of a hearth fire — a world-object property, not a species one)
 pub const HEARTH_KELVIN: f64 = 1200.0;
 
 /// How much of the sky's daylight reaches even where no source does (The
@@ -65,6 +67,7 @@ pub const HEARTH_KELVIN: f64 = 1200.0;
 /// (`[64, 50, 13]` at distance 4 of the ×4 torch). `0.05` was already too
 /// close (`[49, 48, 41]`); `0.01` read as near-black next to the glyph.
 /// type-audit: bare-ok(ratio)
+/// plumb: universal(a fixed rendering constant, calibrated empirically against seed 42's own chamber fabric)
 pub const SKYGLOW_SCALE: f64 = 0.02;
 
 /// Something that emits light, at a cell.
@@ -105,6 +108,7 @@ fn chebyshev(a: Cell, b: Cell) -> f64 {
 ///
 /// **Authored at 1, and not a free parameter.** See [`attenuate`].
 /// type-audit: bare-ok(ratio)
+/// plumb: universal(the light-falloff physics constant applied to every source uniformly)
 pub const ATTENUATION: f64 = 1.0;
 
 /// A source's emitted spectrum scaled by `k`, band-wise. Vessel-local on

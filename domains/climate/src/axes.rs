@@ -58,42 +58,71 @@ use hornvale_kernel::{
 use std::sync::OnceLock;
 
 // PHYSIOGNOMY — vegetation structure, bare to closed.
+/// plumb: pending(wave-1)
 const BARE: f64 = 0.0;
+/// plumb: pending(wave-1)
 const CRUST: f64 = 0.2;
+/// plumb: pending(wave-1)
 const HERB: f64 = 0.4;
+/// plumb: pending(wave-1)
 const SHRUB: f64 = 0.6;
+/// plumb: pending(wave-1)
 const OPEN_WOOD: f64 = 0.8;
+/// plumb: pending(wave-1)
 const CLOSED: f64 = 1.0;
 
 // ENERGY — five levels over `classify_land`'s temperature bands.
+/// plumb: pending(wave-1)
 const FROZEN: f64 = 0.0;
+/// plumb: pending(wave-1)
 const COLD: f64 = 0.25;
+/// plumb: pending(wave-1)
 const COOL: f64 = 0.5;
+/// plumb: pending(wave-1)
 const WARM: f64 = 0.75;
+/// plumb: pending(wave-1)
 const HOT: f64 = 1.0;
 
 // WATER — six levels over `classify_land`'s moisture cuts.
+/// plumb: pending(wave-1)
 const W_NONE: f64 = 0.0;
+/// plumb: pending(wave-1)
 const W_ARID: f64 = 0.2;
+/// plumb: pending(wave-1)
 const W_SEMI: f64 = 0.4;
+/// plumb: pending(wave-1)
 const W_MESIC: f64 = 0.6;
+/// plumb: pending(wave-1)
 const W_WET: f64 = 0.8;
+/// plumb: pending(wave-1)
 const W_SAT: f64 = 1.0;
 
 // SUBSTRATE — NOMINAL. The index names a class; it is not ordered.
+/// plumb: pending(wave-1)
 const S_SOIL: f64 = 0.0;
+/// plumb: pending(wave-1)
 const S_SAND: f64 = 0.2;
+/// plumb: pending(wave-1)
 const S_EVAPORITE: f64 = 0.4;
+/// plumb: pending(wave-1)
 const S_ROCK: f64 = 0.6;
+/// plumb: pending(wave-1)
 const S_ICE: f64 = 0.8;
+/// plumb: pending(wave-1)
 const S_ORGANIC: f64 = 1.0;
 
 // LIGHT — six levels. In the sea this is the depth rung, not a separate axis.
+/// plumb: pending(wave-1)
 const L_DARK: f64 = 0.0;
+/// plumb: pending(wave-1)
 const L_DIM: f64 = 0.2;
+/// plumb: pending(wave-1)
 const L_SHADED: f64 = 0.4;
+/// plumb: pending(wave-1)
 const L_DAPPLED: f64 = 0.6;
+/// plumb: pending(wave-1)
 const L_OPEN: f64 = 0.8;
+/// plumb: pending(wave-1)
 const L_GLARE: f64 = 1.0;
 
 /// The ten names that resist assignment: phases, not states. Frozen as a
