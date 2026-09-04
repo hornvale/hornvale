@@ -117,12 +117,15 @@ about a real past event — the one thing a derived feature structurally cannot
 be (§2).
 
 **4.3 Extent, not point.** A settlement's territory is a set of vertices, and a
-ruin inherits that. Decision 0668 gives `Site` an `Extent` whose only emitted
-value today is `Point`. **Decision rule, not a prediction:** if a ruin's
-territory is recoverable from the occupation record, emit `Extent::Region` and
-the reader reports proximity as well as coincidence; if it is not recoverable
-without new worldgen state, emit `Point` and record that the region case is
-deferred, with the reason.
+ruin inherits that. **`Extent::Region` DOES NOT EXIST** — the enum has exactly
+one variant, `Point`, and `site.rs` carries four separate doc corrections saying
+so because four drafts asserted otherwise. An earlier draft of this section was
+the fifth. **Decision rule, not a prediction:** if a ruin's territory is
+recoverable from `OccupationRecord` alone, *add* the variant (an enum widening
+the compiler enumerates — the one real match, `site_density.rs:237`, is
+exhaustive with no `_` arm) and emit it; if it is not recoverable without new
+worldgen state, emit `Point`, write the reason beside the existing corrections,
+and file a registry row for the region case.
 
 **4.4 Exotic-site variety is measured, not assumed fixed.** Seed 42's 103 placed
 exotic sites carry five descriptions, 68 of them identical ("under a fungal
@@ -290,8 +293,14 @@ negative control and must score near zero; if it does not, the instrument is
 measuring something other than legibility and the finding is about the
 instrument.
 
-**H4 — no goose chases.** Every rumor names a region, and the region is never
-empty. An invariant, not a tuning target.
+**H4 — no goose chases. DEFERRED WITH ITS PRODUCER, and this spec no longer
+preregisters it.** The invariant is "every rumor names a region, and the region
+is never empty". This campaign builds **no rumor producer** — §5.5 names rumors
+as an existing *seam* (`knowledge.rs`'s heard entries), not as a deliverable —
+so a test of H4 would pass by having no rumors to check, which is exactly the
+vacuous-guard shape this repo has shipped five times. H4 and the producer are
+deferred together and carry a registry row. Restoring H4 is the first task of
+whichever campaign builds the producer.
 
 A falsified prediction is a finding. No constant is retuned to rescue one after
 unblinding without saying so in the chronicle.
