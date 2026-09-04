@@ -3,6 +3,10 @@
 **Campaign B** of the `MAP-one-kind-model` arc (The Wicket was A). Folds in
 The Plumb's **Group A** per Nathan's triage of 2026-09-03.
 
+**Decision block:** 0696–0705 (reserved on lefford; used at close: 0696, 0697,
+0698) · **Ledger:** `docs/superpowers/ledgers/2026-09-03-the-pallet.md` ·
+**Status:** merged — all five tasks complete.
+
 ## 1. What already exists, because it changes the scope
 
 The Wicket built more of this than the campaign brief assumed, and checking

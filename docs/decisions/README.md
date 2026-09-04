@@ -312,3 +312,6 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0668](0668-a-site-carries-an-extent-and-this-campaign-emits-point.md) | A `Site` carries an `Extent`, and this campaign only ever emits `Point` | Accepted |
 | [0669](0669-a-sites-tier-is-placed-or-derived.md) | A site's tier is `placed` or `derived`, and standing is a separate axis | Accepted |
 | [0670](0670-a-placed-sites-glyph-is-drawn-ungated-its-name-is-not.md) | A placed site's glyph is drawn ungated; its name is still withheld | Accepted |
+| [0696](0696-the-sleep-path-is-denominated-in-the-local-day.md) | The sleep path is denominated in the local day, closing 0587's inversion | Accepted |
+| [0697](0697-what-an-afforded-site-is-worth-is-a-property-of-the-sleeper.md) | What an afforded site is worth is a property of the sleeper's species | Accepted |
+| [0698](0698-a-kind-is-committable-where-an-anchor-identity-is-not.md) | A kind is committable where an anchor identity is not | Accepted |

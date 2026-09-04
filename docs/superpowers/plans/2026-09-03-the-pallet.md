@@ -8,6 +8,8 @@
 
 **Tech Stack:** Rust 2024, std-only plus `serde`/`serde_json`/`libm`. No new dependencies.
 
+**Status:** COMPLETE — all five tasks landed and merged 2026-09-03. Decisions minted from the reserved block 0696-0705: 0696, 0697, 0698. Ledger: `docs/superpowers/ledgers/2026-09-03-the-pallet.md`.
+
 **Spec:** `docs/superpowers/specs/2026-09-03-the-pallet-design.md` — read it; this plan argues from it and does not restate §3's constitutional reasoning.
 
 ## Global Constraints
