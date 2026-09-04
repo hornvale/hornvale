@@ -5588,3 +5588,13 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-04T18:20:09Z | gate-commit | 64.245 | 165.166 | 25.002 | 2.96 | 0 | 4b4c246b5 | campaign/the-kerf | MacBookPro | 10 |
 | 2026-09-04T20:46:30Z | gate-commit | 37.610 | 61.562 | 16.769 | 2.08 | 0 | 4b4c246b5 | campaign/the-kerf | MacBookPro | 10 |
 | 2026-09-04T20:46:36Z | gate-commit | 41.180 | 61.807 | 16.374 | 1.90 | 0 | fd2046a09 | campaign/the-kerf | MacBookPro | 10 |
+| 2026-09-04T15:11:08Z | sluice:artifacts | 275.983 | 1293.150 | 45.936 | 4.85 | 0 | 732eb9e84 |  | lefford | 40 |
+| 2026-09-04T15:12:04Z | sluice:outboard | 55.951 | 30.793 | 35.851 | 1.19 | 0 | 2b7da7f31 |  | lefford | 40 |
+| 2026-09-04T15:24:46Z | sluice:gate | 761.311 | 20082.897 | 559.223 | 27.11 | 0 | 65435c3c1 |  | lefford | 40 |
+| 2026-09-04T15:27:13Z | sluice:clients | 147.093 | 2239.701 | 202.879 | 16.61 | 0 | ce694f17b |  | lefford | 40 |
+| 2026-09-04T15:34:58Z | sluice:heavy | 464.065 | 9922.923 | 155.449 | 21.72 | 0 | 10baa2333 |  | lefford | 40 |
+| 2026-09-04T15:38:50Z | sluice:artifacts | 226.786 | 951.513 | 28.583 | 4.32 | 0 | d4dde7fc9 |  | lefford | 40 |
+| 2026-09-04T15:39:50Z | sluice:outboard | 58.834 | 34.570 | 46.477 | 1.38 | 0 | 11c88572c |  | lefford | 40 |
+| 2026-09-04T15:51:54Z | sluice:gate | 724.108 | 19598.915 | 483.523 | 27.73 | 0 | fd9bb74ee |  | lefford | 40 |
+| 2026-09-04T15:54:14Z | sluice:clients | 140.027 | 2075.643 | 196.796 | 16.23 | 0 | 78fae757a |  | lefford | 40 |
+| 2026-09-04T16:01:51Z | sluice:heavy | 456.032 | 9816.380 | 160.497 | 21.88 | 0 | 558b0e189 |  | lefford | 40 |
