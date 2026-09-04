@@ -314,17 +314,54 @@ after seeing one (decision 0016's forbidden shape is the reverse ordering).
 
 **Why:** the eligibility gate makes `occurrence ⇒ land` hold with certainty
 for every kind, uniformly. That shared gate is itself a macro correlation,
-and on a WHOLE-SPHERE population it contributes mutual information the
-erratic did not earn by tracking any real cause — it earns it for free, from
-the same land/ocean split every kind now shares. Measured (Task 7 fix round
-1 review): **≈0.0197 bits of MI for the erratic against ≈0.0186 bits for
-spring** on the whole-sphere population — the negative control OUTSCORES the
-sign case on the gate component alone, which would falsify H3's preregistered
-ordering for a reason that has nothing to do with legibility.
+and on a WHOLE-SPHERE population it contributes mutual information no kind
+earned by tracking any real cause — every kind earns it for free, from the
+same land/ocean split R1 gave all four.
+
+**The gate-component estimator, stated precisely (fix round 2, closing a gap
+the original amendment left — this is a DIAGNOSTIC illustrating the confound,
+not H3's own headline statistic, which stays "macro state × feature set" per
+H3's own opening paragraph above).** Two BINARY random variables per kind,
+over the WHOLE-SPHERE population (every seed-42 walk-depth facet, all 40,962
+geosphere vertices, `Facet::containing(geo.position(v), geo.depth() + 7)`):
+`X` = facet is land-eligible (`blend_corner_weights(weights, pack.land) >=
+0.5`); `Y` = the kind's `occurs` fired at that facet. `I(X;Y)` is the
+standard discrete mutual information in bits,
+`Σ p(x,y) log₂(p(x,y) / (p(x)p(y)))` over the four joint cells. This is
+DIFFERENT from H3's own variable pair (macro state × feature set) by
+design — it isolates the ONE component (the eligibility gate alone) that a
+whole-sphere population would fold into H3's real statistic, so it is
+measured on its own to show the confound exists, not substituted for H3's
+actual metric.
+
+Measured (Task 7 fix round 2, this tree, seed 42, `n=40,962`,
+`n_land=11,218`): **every kind's `n_land_and_occurs` equals its own
+`n_occurs` exactly** (R1's guarantee, reproduced numerically, not merely
+asserted) — spring `403=403`, overhang `843=843`, thicket `1,517=1,517`,
+erratic `428=428`. The gate-component MI, all four kinds, ranked:
+
+| kind | gate-component MI (bits) |
+| --- | --- |
+| thicket | 0.07198 |
+| overhang | 0.03929 |
+| erratic | 0.01974 |
+| spring | **0.01857** |
+
+**The sign case places LAST** — a stronger argument for restricting the
+population than the two-kind (erratic vs. spring) comparison the original
+amendment recorded: on a whole-sphere population, the confound would not
+merely let the negative control outscore the sign case (erratic `0.0197` >
+spring `0.0186`, the original finding), it would rank spring — H3's own
+"diagnostic of what is underfoot" flagship — LAST of all four kinds on the
+gate component alone, for a reason that has nothing to do with legibility.
 
 The fix: **compute H3's mutual information over the land-eligible population
-only**, so the gate is held constant (every facet in the population is
-already known to be land) rather than measured as if it were signal. The
+only**, so the gate is held constant rather than measured as if it were
+signal. **The remedy is zero by construction, not merely small: restricted
+to land-eligible facets, `X` (land-eligibility) is a CONSTANT (`true` for
+every member of the population, by the restriction itself), and mutual
+information between any variable and a constant is algebraically `0` — not
+an approximation, not a re-measurement that happens to read near zero.** The
 preregistered ordering (`spring > thicket > overhang > erratic`) and the
 erratic's near-zero requirement are otherwise unchanged — only the population
 the statistic is computed over is amended, and it is amended here, in the

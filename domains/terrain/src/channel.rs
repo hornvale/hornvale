@@ -161,6 +161,20 @@ pub const TERRACE_WIDTH_RATIO: f64 = 0.5;
 /// into confinement ∈ [0.7, 1.0] and the law would be a near no-op;
 /// normalizing on the median would make gorges of over half the world's
 /// rivers.
+///
+/// **Second consumer, a different population (The Weft, Task 7, I2/N-coupling
+/// note): `windows/worldgen/src/weft/kinds.rs`'s `OVERHANG_SLOPE_SATURATION`
+/// reuses this constant directly** (`= hornvale_terrain::GORGE_SLOPE`) as
+/// overhang/hollow's own slope-saturation scale — measured against seed 42's
+/// LAND `|slope|` distribution (11,283 land vertices), where this value lands
+/// near p90 (`tanh(p90/GORGE_SLOPE) ≈ 0.78`), not p95 as it is here (the
+/// distributions are related but not identical: this one is RIVER-vertex
+/// gradient, that one is land-wide gradient magnitude). The reuse is
+/// deliberate, not a coincidence worth re-deriving away — both readings want
+/// the same "terrain reads as maximally rugged" ceiling — but it means a
+/// future retune of this constant for channel-confinement reasons alone
+/// silently moves overhang/hollow's macro-state recipe too. Check that
+/// consumer before changing this value.
 /// type-audit: pending(wave-2)
 /// plumb: pending(wave-1)
 pub const GORGE_SLOPE: f64 = 40_000.0;

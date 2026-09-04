@@ -36,7 +36,7 @@
 //!    | kind | real r | mutant r |
 //!    | --- | --- | --- |
 //!    | spring | 0.99821 | 0.20919 |
-//!    | overhang | 0.98317 | 0.08907 |
+//!    | overhang | 0.98238 | 0.08907 |
 //!    | thicket | 0.99994 | 0.89048 |
 //!    | erratic | 0.86795 | **-0.02545** |
 //!
@@ -148,20 +148,29 @@ fn land_eligible_walks(kind: WeftKind) -> Vec<Walk> {
 /// [`land_eligible_walks`]'s full 78-walk, 4,680-facet, 4,602-delta pool
 /// (fix round 1, M2/M3), never a single walk or a shared floor.
 ///
-/// **Measured (seed 42, this pool, current post-R1 mechanism):**
+/// **Measured (seed 42, this pool, current post-R1 mechanism) — re-measured
+/// in fix round 2 (N2): the overhang row below was stale.** It was measured
+/// against `OVERHANG_SLOPE_SATURATION = 8_000.0` and never re-run after the
+/// SAME commit (fix round 1) changed the constant to
+/// `hornvale_terrain::GORGE_SLOPE` (`40_000.0`, I2) — a real recipe change
+/// (a gentler `tanh` saturation lowers overhang's typical macro-state
+/// contribution), so its own calibration table drifted under it unnoticed.
+/// Corrected here; spring/thicket/erratic were re-checked and are unchanged:
 ///
 /// | kind | max delta | pooled spread | total occurs |
 /// | --- | --- | --- | --- |
 /// | spring | 0.00576 | 0.11429 (`[0.00089, 0.11518]`) | 125 / 4,680 |
-/// | overhang | 0.02984 | 0.16394 (`[0.01533, 0.17927]`) | 400 / 4,680 |
-/// | thicket | 0.00764 | 0.39419 (`[0.00054, 0.39473]`) | 924 / 4,680 |
-/// | erratic | 0.04920 | 0.07593 (`[0.00203, 0.07796]`) | 233 / 4,680 |
+/// | overhang | 0.02982 | 0.13333 (`[0.00560, 0.13893]`) | 275 / 4,680 |
+/// | thicket | 0.00764 | 0.39418 (`[0.00054, 0.39473]`) | 924 / 4,680 |
+/// | erratic | 0.04920 | 0.07594 (`[0.00203, 0.07796]`) | 233 / 4,680 |
 ///
 /// `max_allowed_delta` below leaves real headroom over its own kind's
 /// measured max while staying well under that kind's own address-hashed
 /// mutant max (measured the same way, see this file's module doc): spring
 /// `0.010` (1.7x real / 5.4x under mutant `0.0535`), overhang `0.045` (1.5x
-/// real / 2.2x under mutant `0.1009`), thicket `0.015` (2.0x real / 4.6x
+/// real / 2.2x under mutant `0.1009` — the mutant max is unaffected by the
+/// slope-constant fix, since it comes from the fully decorrelated noise
+/// term, not the macro-state recipe), thicket `0.015` (2.0x real / 4.6x
 /// under mutant `0.0690`). **Erratic's `0.060` (1.2x real / only 1.3x under
 /// mutant `0.0760`) is deliberately a weak, secondary check** — see this
 /// file's module doc: erratic's real discrimination comes from
@@ -174,6 +183,9 @@ fn land_eligible_walks(kind: WeftKind) -> Vec<Walk> {
 /// measured real values above (never above — a floor above the real
 /// measurement would fail on real data by construction): spring `0.05`/`50`,
 /// overhang `0.08`/`150`, thicket `0.20`/`400`, erratic `0.04`/`100`.
+/// **Overhang's floors still hold against the corrected row** (`0.08` is
+/// 1.67x under the corrected `0.13333`; `150` is 1.83x under the corrected
+/// `275`) — nothing broke, the committed TABLE was false, not the bounds.
 const KIND_BOUNDS: [(WeftKind, f64, f64, usize); 4] = [
     (WeftKind::Spring, 0.010, 0.05, 50),
     (WeftKind::Overhang, 0.045, 0.08, 150),
@@ -188,8 +200,10 @@ const KIND_BOUNDS: [(WeftKind, f64, f64, usize); 4] = [
 /// (4,602 pairs each). See this file's own module doc for the real-vs-mutant
 /// table these thresholds sit between; each threshold below leaves
 /// comparable margin on both sides of its own kind's pair (spring: real
-/// `0.998` / mutant `0.209`, threshold `0.6`; overhang: real `0.983` /
-/// mutant `0.089`, threshold `0.5`; thicket: real `0.99994` / mutant
+/// `0.998` / mutant `0.209`, threshold `0.6`; overhang: real `0.982`
+/// (re-measured, fix round 2, N2 — the shipped `0.983` was measured against
+/// the pre-I2 slope constant and never re-run) / mutant `0.089`, threshold
+/// `0.5`; thicket: real `0.99994` / mutant
 /// `0.890`, threshold `0.95` — the tightest margin of the four, because
 /// thicket's own high contextuality (`0.85`) means even fully decorrelated
 /// noise is only 15% of the mixed signal, so the mutant's correlation stays
@@ -360,6 +374,43 @@ fn the_walk_is_not_degenerate() {
     }
 }
 
+/// The eligibility regression (Task 7, controller ruling R1) — the
+/// deliverable that number is, not the code: Task 5's review measured **59%
+/// of all spring occurrences landing on facets with `spring_macro_state ==
+/// 0.0`** (654 of 1109, over every seed-42 walk-depth facet across all
+/// 40,962 vertices — a per-kind mathematical population, "zero-macro", not
+/// "ocean" or "off-land"; see [`land_eligible_walks`]'s module-doc-adjacent
+/// discussion of the three populations, and fix round 1's M1 correction for
+/// why the distinction matters). On THAT population, at that time, the
+/// three nearly coincided: the review separately measured zero-macro
+/// restricted to land at only 60 facets (0.58% of land), so the 27,645-facet
+/// zero-macro population (67.5% of the sphere) was overwhelmingly ocean.
+///
+/// This test reproduces the identical measurement — same population, same
+/// definition of "causeless" (recomputed from `blend_corner_weights` over
+/// `pack.carbonate`/`pack.drainage`, mirroring spring/seep's own
+/// `pub(crate)` recipe exactly, rather than reading it directly, the same
+/// posture Task 5's re-review probe used) — against the CURRENT (post-fix)
+/// mechanism, and ALSO checks the geographic claim directly
+/// (`off_land_occurs_n`, `land < 0.5`) rather than only the mathematical
+/// proxy, so a regression that reopens the ocean case wholesale fails on
+/// the literal claim, not just a correlated statistic.
+///
+/// **Measured here (fix round 2, re-confirmed): `occurs_n=403`,
+/// `causeless_occurs_n=0`, `off_land_occurs_n=0`** (seed 42, full grid) —
+/// down from 654 of 1109 (58.97%) causeless before R1. `off_land_occurs_n`
+/// is asserted `== 0` exactly (R1's literal requirement: spring must never
+/// occur off land, full stop). `causeless_share` is asserted `<= 5%` rather
+/// than `== 0` on purpose: the bound leaves headroom for a legitimately
+/// LAND-based zero-macro occurrence (bare rock with no drainage still has a
+/// nonzero prevalence floor via `(1 - contextuality) * noise`; Task 5's
+/// review measured that land-only zero-macro slice at 0.58% of land,
+/// contributing ~1 of the original 654) — a real, physically sensible case
+/// the eligibility gate must NOT suppress, since R1 only forbids OCEAN
+/// occurrences, not rare land ones with no drainage/carbonate signal. `5%`
+/// sits two orders of magnitude above the measured `0%` and one order above
+/// what a fully reopened ocean case would produce (58.97%), so it is a real
+/// regression bound, not a rubber stamp.
 #[test]
 fn spring_never_occurs_off_land() {
     let world = hornvale_worldgen::seed_42_world();
