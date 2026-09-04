@@ -9003,6 +9003,23 @@ struct WeftGridPool {
 /// — see [`weft_morans_i`]'s own doc for why that switch was made before
 /// any reading was interpreted.
 fn weft_grid_pool(view: &ClimateView) -> WeftGridPool {
+    weft_grid_pool_with_prepared_prevalence(view, hornvale_worldgen::prevalence_with_weights)
+}
+
+/// The grid pool's prepared-prevalence seam. Keeping the evaluator injectable
+/// here lets the regression test count the four per-kind evaluations that must
+/// consume each facet's single prepared `weights` value, without instrumenting
+/// [`hornvale_kernel::Facet::corner_weights`] in production.
+fn weft_grid_pool_with_prepared_prevalence(
+    view: &ClimateView,
+    mut prepared_prevalence: impl FnMut(
+        hornvale_worldgen::WeftKind,
+        &hornvale_kernel::Facet,
+        [(Vertex, u64); 4],
+        &hornvale_worldgen::FieldPack,
+        Seed,
+    ) -> f64,
+) -> WeftGridPool {
     let terrain = view.terrain();
     let geo = terrain.geosphere();
     let ctx = view.weft_ctx();
@@ -9027,7 +9044,7 @@ fn weft_grid_pool(view: &ClimateView) -> WeftGridPool {
         let mut per_kind = [(0.0, 0.0, false); 4];
         for (slot, kind) in hornvale_worldgen::WeftKind::ALL.into_iter().enumerate() {
             let macro_state = kind.macro_state(weights, pack);
-            let p = hornvale_worldgen::prevalence_with_weights(kind, &facet, weights, pack, seed);
+            let p = prepared_prevalence(kind, &facet, weights, pack, seed);
             let occ = hornvale_worldgen::occurs(kind, &facet, seed, p);
             per_kind[slot] = (macro_state, p, occ);
         }
@@ -10752,6 +10769,29 @@ mod tests {
             ineligible_checked > 0 && eligible_checked > 0,
             "the sample carried no facets of one class or the other — this test exercised \
              nothing: ineligible={ineligible_checked} eligible={eligible_checked}"
+        );
+    }
+
+    /// Regression direction: replacing the `prepared_prevalence(...)` call in
+    /// the real grid-pool loop with public `prevalence(...)` leaves every
+    /// metric bit unchanged but makes this count zero. Four calls per facet
+    /// proves all four kinds consume the one `weights` value prepared before
+    /// the loop, rather than silently performing four more geometry lookups.
+    #[test]
+    fn weft_grid_uses_prepared_prevalence_four_times_per_facet() {
+        let view = ClimateView::build(Seed(42), &SkyPins::default()).expect("seed 42 builds");
+        let mut prepared_evaluations = 0usize;
+
+        let pool =
+            weft_grid_pool_with_prepared_prevalence(&view, |kind, facet, weights, pack, seed| {
+                prepared_evaluations += 1;
+                hornvale_worldgen::prevalence_with_weights(kind, facet, weights, pack, seed)
+            });
+
+        let expected = pool.readings.len() * hornvale_worldgen::WeftKind::ALL.len();
+        assert_eq!(
+            prepared_evaluations, expected,
+            "the grid path must evaluate four kinds through the prepared-weight seam for every facet"
         );
     }
 
