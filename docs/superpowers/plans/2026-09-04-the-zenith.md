@@ -129,6 +129,7 @@ no gate can see. Task 6 fixes it by hand.
 - Modify: `book/src/gallery/the-meeting-seed-42.md:39`
 - Modify: `book/src/chronicle/campaign-y2-0.md:134`
 - Delete: `book/src/gallery/almanac-seed-42-sky.md`
+- Modify: `cli/tests/suite/repose_byte_identity.rs:79-96, 156` (ruling R5 — the one test that pins the artifact this task changes)
 
 **Interfaces:**
 - Consumes: nothing.
@@ -248,6 +249,41 @@ the book builds with no broken-link warnings.
 **A near-empty diff on `almanac-seed-42.md` means the flag was not actually
 dropped** — the regeneration rebuilt the same tier-0 world. Go back to Step 2.
 
+- [ ] **Step 6b: Swap the one test that pins the artifact you just changed**
+
+`cli/tests/suite/repose_byte_identity.rs::seed_42_almanac_is_unmoved_by_the_repose`
+builds a **constant-sky** world and asserts it renders byte-identically to
+`book/src/gallery/almanac-seed-42.md`. You just changed that artifact to the
+generated-sky world, so the test is now false and `make gate-commit` will
+refuse the commit (ruling R5).
+
+**An artifact change and the test that pins that artifact must land in the
+same commit.** There is no ordering of two commits that keeps the tree green,
+so this one `.rs` edit belongs here even though the other 22 constant-sky
+sites belong to Task 2.
+
+The fix needs no new code. `constant_sun_world()` has exactly **one** caller
+(line 156), and `generated_sky_world()` already exists directly beneath it
+doing what is now wanted:
+
+1. Delete `constant_sun_world()` (lines 79-96, including its doc comment).
+2. In `seed_42_almanac_is_unmoved_by_the_repose`, change
+   `let world = constant_sun_world();` to `let world = generated_sky_world();`.
+3. Update `generated_sky_world()`'s doc comment, which currently says it is
+   the world "both `cli/tests/fixtures/world-seed-42.json` and
+   `book/src/gallery/scene-tiles-seed-42.json` are taken from" — the almanac
+   is now a third.
+
+This site builds rather than reading `fixture::seed_42_world()` deliberately:
+it asserts about the build path itself, so substituting the committed fixture
+would compare the fixture against itself (Task 2's kind-B rule 1).
+
+Run:
+```bash
+cargo test -p hornvale --test suite -- repose_byte_identity 2>&1 | tail -20
+```
+Expected: all green, including `seed_42_almanac_is_unmoved_by_the_repose`.
+
 - [ ] **Step 7: Commit**
 
 ```bash
@@ -278,7 +314,6 @@ exists throughout; every hunk is a deliberate decision.
 **Files:**
 - Modify: `cli/src/repl.rs:512-520, 557-565, 708-712, 742-, 781-789, 862-870`
 - Modify: `cli/src/main.rs:2778-2790`
-- Modify: `cli/tests/suite/repose_byte_identity.rs:79-96, 156`
 - Modify: `cli/tests/suite/exit_criterion.rs:78-102`
 - Modify: `windows/worldgen/src/lib.rs:12094-12100, 12529-12535, 13114-13136, 13423-13432, 13465-13471, 13853-, 14385-14393`
 - Modify: `windows/worldgen/tests/suite/pin_enumeration.rs:45-70`
@@ -303,7 +338,10 @@ Run:
 grep -rn "SkyChoice::Constant" --include=*.rs . | grep -v '^./target' | tee /tmp/zenith-23.txt
 wc -l /tmp/zenith-23.txt
 ```
-Expected: **23** lines. If the count differs, `main` moved under this branch
+Expected: **22** lines, not 23 — Task 1 already took
+`cli/tests/suite/repose_byte_identity.rs` under ruling R5, because the test
+there pins the artifact Task 1 changed and the two could not land in separate
+commits without a red gate in between. If the count is anything else, `main` moved under this branch
 — absorb first (`make sluice-stage`) and re-run.
 
 - [ ] **Step 2: Classify each of the 23 by reading it — do not guess from the filename**
@@ -325,8 +363,6 @@ this list is a starting point, not an instruction):
 
 | test | why it is kind A |
 | --- | --- |
-| `astronomy::the_sky_never_changes` | asserts `"zenith"` in `ConstantSun`'s own output |
-| `astronomy::phenomena_are_constant_and_maximally_salient` | asserts `ConstantSun`'s phenomena directly |
 | `worldgen::constant_choice_yields_constant_sky_and_unchanged_almanac_context` | asserts the choice yields the tier |
 | `worldgen::absent_sky_provider_fact_falls_back_to_constant` | asserts the fallback Task 4 deletes |
 | `worldgen::constant_world_has_no_calendar_or_night_sky_or_notes` | asserts the tier's absences |
@@ -339,6 +375,13 @@ this list is a starting point, not an instruction):
 | `repl::sky_reports_the_constant_sun` | asserts `"zenith"` |
 | `repl::calendar_on_constant_world_says_no_generated_sky` | asserts the tier's absence |
 | `exit_criterion::repl_answers_sky_village_and_belief` | campaign 1b's exit criterion; asserts `"zenith"` |
+
+**Two `ConstantSun` tests are deliberately NOT yours.**
+`astronomy::the_sky_never_changes` and
+`astronomy::phenomena_are_constant_and_maximally_salient`
+(`domains/astronomy/src/lib.rs:568, 578`) are kind A, but they live inside
+the `impl ConstantSun` block that Task 4 deletes and cannot outlive it.
+Task 4 removes them with the type (ruling R4). Leave them alone here.
 
 **`worldgen::observation_time_is_zero_for_constant_and_locked_skies` is
 NEITHER — it is Trap 1.** It loses *half* its subject. Keep the test, drop
@@ -396,7 +439,16 @@ the test measures rather than fixing it.
 - [ ] **Step 5: Halve the pin enumeration**
 
 `windows/worldgen/tests/suite/pin_enumeration.rs` — remove `SkyChoice` from
-the enumerated product:
+the enumerated product.
+
+**The product has FOUR factors, not three** — `sky_choices` (2) ×
+`rotation_choices` (2) × `neighbor_choices` (6) × `supercontinent_choices`
+(2) = 48. An earlier draft of this plan and spec §4.3 both wrote it as
+"`SkyChoice × Rotation × Neighbor`", which omits `supercontinent_choices`
+and does not multiply to 48. The totals were right and the factor lists were
+wrong. After the removal: 2 × 6 × 2 = **24**, all generated-sky.
+
+Remove:
 
 ```rust
 fn sky_choices() -> [SkyChoice; 2] {
@@ -404,7 +456,7 @@ fn sky_choices() -> [SkyChoice; 2] {
 }
 ```
 becomes nothing; delete the function and drop its loop level, so the product
-is `Rotation × Neighbor` = 24.
+is `Rotation × Neighbor × Supercontinent` = 2 × 6 × 2 = 24.
 
 Its module doc at lines 50-56 makes a claim **about the half being deleted**:
 

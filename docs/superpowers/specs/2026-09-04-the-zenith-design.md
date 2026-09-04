@@ -280,8 +280,10 @@ unreachable, untested code that reads as a guard. The rule is unconditional:
 how it got one cheaply. §4.4 gives its decision rule.
 
 **Kind C — an enumerated axis.** `pin_enumeration` enumerates
-`SkyChoice × Rotation × Neighbor` = 48 combinations, of which 24 are
-constant. After the retirement it enumerates 24, all generated. Its module
+`SkyChoice × Rotation × Neighbor × Supercontinent` = 2 × 2 × 6 × 2 = 48
+combinations, of which 24 are constant. (An earlier draft of this sentence
+listed three factors and still said 48 — the total was right and the factor
+list was wrong.) After the retirement it enumerates 24, all generated. Its module
 doc's own claim — *"Half the product (`SkyChoice::Constant`, 24 combinations)
 is refusal-free by construction"* — describes the half being deleted and must
 be rewritten, not merely renumbered. Cost is expected to fall or hold (24

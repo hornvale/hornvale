@@ -340,6 +340,37 @@ campaign noticed.
 lists, not from an expansion.
 · Capture: plan's "Three traps" preamble; retrospective (Task 8 Step 5).
 
+#12 [G5] — **A file-overlap conflict scan cannot see an artifact-to-test
+coupling, and this one blocked Task 1 at its own commit gate.**
+· **What happened.** Task 1 changes `book/src/gallery/almanac-seed-42.md`
+from the tier-0 world to the generated one. `cli/tests/suite/
+repose_byte_identity.rs::seed_42_almanac_is_unmoved_by_the_repose` builds a
+constant-sky world and asserts it renders byte-identically to that file. The
+test is false the instant the artifact lands, so `make gate-commit` refused
+Task 1's commit. The implementer diagnosed it correctly and stopped rather
+than reaching for `--no-verify`.
+· **Why the pre-flight scan missed it.** The scan enumerated task pairs that
+share a **file** or an interface. Task 1 owns the artifact; Task 2 owned the
+test; they are different files in different crates. **The coupling is
+artifact-to-test, and a file-overlap scan is structurally blind to it** — no
+amount of diligence on that scan would have found this, because the thing it
+compares is the wrong thing.
+· **The general rule, which is the part worth keeping:** *an artifact change
+and the test that pins that artifact must land in the same commit.* There is
+no ordering of two commits that keeps the tree green in between, because the
+commit gate runs on both. Any campaign that moves a committed artifact should
+ask, before splitting tasks, which tests assert byte-identity against it —
+`grep` for the artifact's **path**, not for the code that writes it.
+· **Ruling R5:** the one test edit moves from Task 2 into Task 1. Task 2's
+population drops 23 → 22. The fix needed no new code: `constant_sun_world()`
+had exactly one caller and `generated_sky_world()` already existed beside it,
+so it is a deletion plus a one-word swap.
+· **Cost if wrong:** one `.rs` edit lands in the artifact commit rather than
+the test commit — visible in the diff and trivially movable.
+· ideonomy passes: 0 — a defect found by execution, with one correct fix.
+· Capture: plan Task 1 Step 6b; SDD ledger; retrospective (this is the
+campaign's best process finding so far).
+
 ## Follow-ups
 
 - **Point the census at a pin axis for the first time.** Adding
