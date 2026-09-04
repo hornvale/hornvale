@@ -69,6 +69,14 @@ hornvale-species = { path = "../../../domains/species" }
 # above it. Measured cost in the task report: `make game-check` before vs.
 # after.
 hornvale = { path = "../../../cli" }
+# The Wash (Task 3): `plate::terrain_at_tile` asks a `LocaleContext` for the
+# ground's own spectral curve, so this crate now NAMES `hornvale_locale::
+# LocaleContext` where before it only reached one through `hornvale-vessel`
+# (which does not re-export the type). Already in the build graph as a
+# dependency of `hornvale-vessel` and of `hornvale` above; this is an in-repo
+# path dependency, not a new external crate, the same shape as every
+# dependency above it. Decision 0004's allowlist does not bind `clients/`.
+hornvale-locale = { path = "../../../windows/locale" }
 crossterm = "0.29"
 # CONCERN, flagged per the task brief: a third new dependency beyond
 # crossterm. Added only after review found that an external SIGINT/SIGTERM/

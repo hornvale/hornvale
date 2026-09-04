@@ -79,6 +79,7 @@ fn seed_42_terrain_layer() -> Grid {
         &BTreeSet::new(),
         &[],
         &Default::default(),
+        &mut hornvale_game::plate::PlateLight::flat(false).unlit(),
     )
 }
 
@@ -134,7 +135,20 @@ fn the_ocean_land_boundary_still_agrees_with_the_terrain() {
     for row in 0..u32::from(24u16) {
         for col in 0..u32::from(w) {
             let tile = plate::terrain_at_tile(
-                &terrain, &geo, &index, &mut memo, &f, &win, virtual_w, virtual_h, row, col,
+                &terrain,
+                &geo,
+                &index,
+                &mut memo,
+                &f,
+                &win,
+                virtual_w,
+                virtual_h,
+                row,
+                col,
+                None,
+                hornvale_kernel::WorldTime::GENESIS,
+                0,
+                None,
             );
             assert_eq!(
                 terrain.is_ocean(tile.vertex),
@@ -250,6 +264,7 @@ fn seed_42_draws_at_least_one_of_each_landform_it_actually_has() {
                     &volcanoes,
                     &[],
                     &discovered,
+                    &mut hornvale_game::plate::PlateLight::flat(false).unlit(),
                 )
             });
         assert!(
@@ -282,6 +297,7 @@ fn seed_42_draws_at_least_one_of_each_landform_it_actually_has() {
                     &BTreeSet::new(),
                     &waterfalls,
                     &Discovered::default(),
+                    &mut hornvale_game::plate::PlateLight::flat(false).unlit(),
                 )
             },
         );

@@ -48,7 +48,22 @@ fn shipped(
     row: u32,
     col: u32,
 ) -> char {
-    let t = plate::terrain_at_tile(terrain, geo, index, memo, f, win, vw, vh, row, col);
+    let t = plate::terrain_at_tile(
+        terrain,
+        geo,
+        index,
+        memo,
+        f,
+        win,
+        vw,
+        vh,
+        row,
+        col,
+        None,
+        hornvale_kernel::WorldTime::GENESIS,
+        0,
+        None,
+    );
     match t.water {
         0 => '~',
         1 => '=',
