@@ -437,4 +437,16 @@ hornvale_kernel::stream_labels! {
     /// Position-keyed, additive, a NEW label — see [`WEFT_SPRING`]'s own
     /// doc for the three properties this restates.
     WEFT_THICKET = "derived/thicket/v1" => "occurrence of a derived thicket at a walk facet, keyed on position";
+    /// The derived erratic/scatter surface's noise root (Task 7; spec
+    /// §5.6): the **negative control** — deliberately LOW contextuality
+    /// (near-zero, mostly free noise, uncorrelated with any macro cause),
+    /// short correlation length. Exists so Task 9's legibility metric can be
+    /// shown to *discriminate*: if springs and erratics score alike, the
+    /// metric measures nothing. See
+    /// `crate::weft::kinds::WeftKind::contextuality`'s own doc for why this
+    /// kind's contextuality must never be raised to tie it to macro state.
+    ///
+    /// Position-keyed, additive, a NEW label — see [`WEFT_SPRING`]'s own
+    /// doc for the three properties this restates.
+    WEFT_ERRATIC = "derived/erratic/v1" => "occurrence of a derived erratic at a walk facet, keyed on position";
 }

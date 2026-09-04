@@ -246,6 +246,7 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `derived/spring/v1` | occurrence of a derived spring at a walk facet, keyed on position |
 | `derived/overhang/v1` | occurrence of a derived overhang at a walk facet, keyed on position |
 | `derived/thicket/v1` | occurrence of a derived thicket at a walk facet, keyed on position |
+| `derived/erratic/v1` | occurrence of a derived erratic at a walk facet, keyed on position |
 
 ### hornvale-kernel (internal)
 

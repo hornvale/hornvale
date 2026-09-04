@@ -3,21 +3,24 @@
 //! 1, F3) per spec §7's H2 requirement that coherence be "paired with an
 //! anti-vacuity companion … so a degenerate world cannot score perfectly" —
 //! the same shape The Ford pairs `channel-band-monotonicity` with
-//! `channel-transect-dry-reach`. Task 7 adds the eligibility regression
-//! `spring_never_occurs_off_land` (controller ruling R1) and, with it, the
-//! remaining three kinds (each growing `KIND_BOUNDS` below by one commit).
+//! `channel-transect-dry-reach`. Task 7 extends both to the three new kinds,
+//! and adds the eligibility regression `spring_never_occurs_off_land` (R1).
 //!
 //! **The fixed walk moved from vertex 0 to vertex 14 (Task 7).** Task 7's
 //! eligibility gate (R1 — see `weft::kinds`'s own module doc) makes
 //! ineligible ground a hard `prevalence == 0.0` cliff, a REAL geographic
 //! discontinuity (a coastline), not decorrelated noise. Vertex 0's own
-//! 200-step walk crosses one; conflating that cliff with the continuous-
-//! noise-smoothness property this file tests would either mask a real
-//! address-hashing regression (bound raised to swallow the cliff) or
-//! false-positive on every run (bound left tight). Vertex 14's own 200-step
-//! walk stays land-eligible throughout. The eligibility cliff itself is
-//! exercised directly by `spring_never_occurs_off_land` below, over the
-//! WHOLE grid rather than one walk.
+//! 200-step walk crosses one at step 122 (measured while writing this task):
+//! a single delta of `0.357` for thicket/brake at that step alone, dwarfing
+//! every other step's smooth noise-driven movement. Conflating that cliff
+//! with the continuous-noise-smoothness property this file tests would
+//! either mask a real address-hashing regression (bound raised to swallow
+//! the cliff) or false-positive on every run (bound left tight). Vertex 14's
+//! own 200-step walk stays land-eligible throughout (probed the same way —
+//! searched `0..300`, several dozen qualify), so it isolates the property
+//! this file is actually about. The eligibility cliff itself is exercised
+//! directly by `spring_never_occurs_off_land` below, over the WHOLE grid
+//! rather than one walk.
 //!
 //! Test fixture (decision 0092): calls the sculpt derivation entry point
 //! (`terrain_of`) directly to build its own world state, once per test — the
@@ -74,14 +77,15 @@ fn walk_kind(kind: WeftKind, steps: usize) -> Vec<(f64, bool)> {
 
 /// Per-kind `(kind, max_allowed_delta, min_prevalence_spread,
 /// min_occurs_over_200)` — measured over [`WALK_START`]'s own 200-step walk,
-/// current mechanism, and asserted here at thresholds with margin over the
-/// measured value. Spring/seep: measured max delta `0.00385`, spread
-/// `0.04664`, occurs `10`/200 — bound `0.02` sits ~5.2x over the measured
-/// max. Overhang/hollow: measured max delta `0.01552`, spread `0.09544`,
-/// occurs `30`/200 — bound `0.05` sits ~3.2x over the measured max.
-/// Thicket/brake: measured max delta `0.00220`, spread `0.05398`, occurs
-/// `81`/200 — bound `0.01` sits ~4.5x over the measured max. Grows by one
-/// row per kind Task 7 adds.
+/// current (post-R1) mechanism, and asserted here at thresholds with margin
+/// over the measured value (spring/seep's `0.02` bound sits ~5.2x over its
+/// own measured `0.00385` on this walk).
+///
+/// Measured maxima (seed 42, this walk): spring `0.00385`, overhang
+/// `0.01552`, thicket `0.00220`, erratic `0.03405`. Spreads: spring
+/// `0.04664`, overhang `0.09544`, thicket `0.05398`, erratic `0.07158`.
+/// Occurrence counts over 200 steps: spring `10`, overhang `30`, thicket
+/// `81`, erratic `9`.
 ///
 /// **Not re-derived per kind against an address-hashed mutant (scope
 /// decision, Task 7 — see the task-7 report).** Task 5's own mutation
@@ -89,21 +93,23 @@ fn walk_kind(kind: WeftKind, steps: usize) -> Vec<(f64, bool)> {
 /// `SPRING_CONTEXTUALITY = 0.85`) exercises the identical mechanism every
 /// kind shares — `SphereFbm` sampling plus `uniformize`, differing only in
 /// which `FieldPack` scalars feed the macro-state recipe — so the same
-/// discrimination is expected to hold for the others; re-running the full
-/// mutation sweep per kind was judged out of scope for this task and is
+/// discrimination is expected to hold for the other three; re-running the
+/// full mutation sweep per kind was judged out of scope for this task and is
 /// named rather than silently skipped.
-const KIND_BOUNDS: [(WeftKind, f64, f64, usize); 3] = [
+const KIND_BOUNDS: [(WeftKind, f64, f64, usize); 4] = [
     (WeftKind::Spring, 0.02, 0.01, 1),
     (WeftKind::Overhang, 0.05, 0.01, 1),
     (WeftKind::Thicket, 0.01, 0.01, 1),
+    (WeftKind::Erratic, 0.07, 0.01, 1),
 ];
 
 /// Adjacent facets mostly agree, because prevalence is position-continuous —
 /// checked for every kind in [`KIND_BOUNDS`].
 ///
-/// **Why this discriminates an address-hashed implementation, measured, not
-/// assumed.** During Task 5, `prevalence`'s noise sample was temporarily
-/// mutated in place — `facet.centroid()` swapped for
+/// **Why this discriminates an address-hashed implementation, measured for
+/// spring/seep, not assumed for the other three — see [`KIND_BOUNDS`]'s own
+/// doc.** During Task 5, `prevalence`'s noise sample was temporarily mutated
+/// in place — `facet.centroid()` swapped for
 /// `facet.seed(seed).stream().next_f64()`, everything else untouched — and
 /// this exact shape of test re-run against it.
 ///

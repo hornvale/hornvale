@@ -1,19 +1,14 @@
 //! A derived-feature kind, as data — spec §5.7: "a kind is three things and
 //! nothing else — a component bundle, a prevalence recipe, and the three
-//! scalars." This file carries the recipe and the scalars for every kind
-//! built so far. The component bundle for the one enterable-adjacent kind
-//! (overhang/hollow's shelter-and-fire affordance) is **not** wired here:
-//! `ObjectProperty`/`object_registry` live in `windows/vessel`, which
-//! depends on `hornvale-worldgen` (not the reverse — the same layering
-//! [`super`]'s module doc states for `LocaleContext`), so this crate cannot
-//! reference that vocabulary at all. [`WeftKind::Overhang`]'s own doc states
-//! the affordance claim in prose; wiring an `overhang` row into
-//! `windows/vessel`'s `object_registry` is a later task's work.
-//!
-//! **`WeftKind::Spring`, `WeftKind::Overhang` and `WeftKind::Thicket` exist
-//! so far.** Spec §5.7's whole point is that kind N+1 is an append: Task 7
-//! adds erratic/scatter (the negative control) as a new match arm alongside
-//! these, never by editing them.
+//! scalars." This file carries the recipe and the scalars for all four
+//! kinds spec §5.6 names. The component bundle for the one enterable-
+//! adjacent kind (overhang/hollow's shelter-and-fire affordance) is **not**
+//! wired here: `ObjectProperty`/`object_registry` live in `windows/vessel`,
+//! which depends on `hornvale-worldgen` (not the reverse — the same
+//! layering [`super`]'s module doc states for `LocaleContext`), so this
+//! crate cannot reference that vocabulary at all. [`WeftKind::Overhang`]'s
+//! own doc states the affordance claim in prose; wiring an `overhang` row
+//! into `windows/vessel`'s `object_registry` is a later task's work.
 //!
 //! **Eligibility is a per-kind gate, tested before any noise is drawn (Task
 //! 7, controller ruling R1).** Task 5's review measured that 59% of all
@@ -61,6 +56,15 @@ pub enum WeftKind {
     /// structurally cannot smooth it; this kind reads the two continuous
     /// causes underneath instead).
     Thicket,
+    /// Erratic / scatter — spec §5.6's **negative control**: deliberately
+    /// LOW contextuality (near-zero — mostly free noise, position-
+    /// continuous but uncorrelated with any macro cause), short correlation
+    /// length. Not enterable. Exists so Task 9's legibility metric can be
+    /// shown to *discriminate*: if springs and erratics score alike, the
+    /// metric measures nothing. See [`Self::contextuality`]'s doc for why
+    /// this kind must never be "improved" by tying it to a real macro
+    /// cause.
+    Erratic,
 }
 
 impl WeftKind {
@@ -69,7 +73,12 @@ impl WeftKind {
     /// place a new kind must be added for the residency window to pick it up.
     /// Task 7 grows this by appending, never editing an existing entry (spec
     /// §5.7: "kind N+1 is an append").
-    pub const ALL: [WeftKind; 3] = [WeftKind::Spring, WeftKind::Overhang, WeftKind::Thicket];
+    pub const ALL: [WeftKind; 4] = [
+        WeftKind::Spring,
+        WeftKind::Overhang,
+        WeftKind::Thicket,
+        WeftKind::Erratic,
+    ];
 
     /// This kind's seed-derivation root leg (a save-format contract; see
     /// `windows/worldgen/src/streams.rs`). [`super::prevalence`] and
@@ -79,6 +88,7 @@ impl WeftKind {
             WeftKind::Spring => streams::WEFT_SPRING,
             WeftKind::Overhang => streams::WEFT_OVERHANG,
             WeftKind::Thicket => streams::WEFT_THICKET,
+            WeftKind::Erratic => streams::WEFT_ERRATIC,
         }
     }
 
@@ -89,6 +99,7 @@ impl WeftKind {
             WeftKind::Spring => SPRING_ABUNDANCE,
             WeftKind::Overhang => OVERHANG_ABUNDANCE,
             WeftKind::Thicket => THICKET_ABUNDANCE,
+            WeftKind::Erratic => ERRATIC_ABUNDANCE,
         }
     }
 
@@ -102,15 +113,16 @@ impl WeftKind {
             WeftKind::Spring => SPRING_CORRELATION_LENGTH_FACETS,
             WeftKind::Overhang => OVERHANG_CORRELATION_LENGTH_FACETS,
             WeftKind::Thicket => THICKET_CORRELATION_LENGTH_FACETS,
+            WeftKind::Erratic => ERRATIC_CORRELATION_LENGTH_FACETS,
         }
     }
 
     /// The macro-state/free-noise mixing weight: `1.0` reads as entirely
     /// macro-state-driven ("wallpaper" in the sense of a smooth, place-
     /// grounded texture), `0.0` as entirely free noise — position-continuous
-    /// but uncorrelated with any macro cause. Erratic/scatter (Task 7) sits
-    /// near the `0.0` end, matching its own §5.6 description ("low — mostly
-    /// free noise").
+    /// but uncorrelated with any macro cause. Erratic/scatter sits near the
+    /// `0.0` end, matching its own §5.6 description ("low — mostly free
+    /// noise").
     ///
     /// **"Speckle" is reserved for a different, banned state and does not
     /// belong on this axis.** Spec §5.2's own three-state paragraph is
@@ -131,11 +143,20 @@ impl WeftKind {
     /// (`docs/superpowers/specs/2026-09-03-the-weft-design.md` §5.2) in fix
     /// round 1; this doc states the corrected direction rather than quoting
     /// the sentence that was wrong.
+    ///
+    /// **`WeftKind::Erratic`'s own value must never be raised to tie it to
+    /// macro state (Task 7, controller ruling R5).** The negative control's
+    /// whole purpose is a prevalence surface uncorrelated with any macro
+    /// cause; a later "improvement" that reads a real `FieldPack` scalar for
+    /// it would make Task 9's H3 legibility metric unable to discriminate a
+    /// real cause from none — which is precisely what the erratic exists to
+    /// let that metric prove it can do.
     pub(crate) fn contextuality(self) -> f64 {
         match self {
             WeftKind::Spring => SPRING_CONTEXTUALITY,
             WeftKind::Overhang => OVERHANG_CONTEXTUALITY,
             WeftKind::Thicket => THICKET_CONTEXTUALITY,
+            WeftKind::Erratic => ERRATIC_CONTEXTUALITY,
         }
     }
 
@@ -159,6 +180,7 @@ impl WeftKind {
                 let moisture = blend_corner_weights(weights, &pack.moisture);
                 thicket_macro_state(temperature, moisture)
             }
+            WeftKind::Erratic => erratic_macro_state(),
         }
     }
 
@@ -167,10 +189,13 @@ impl WeftKind {
     /// macro-state cause or drawing any noise (Task 7, R1; see this file's
     /// own module doc). Per-kind, not a single free-standing test, so a
     /// future kind may diverge (spec §5.7: kind N+1 is an append) even
-    /// though every kind today shares [`land_eligible`]'s ground test.
+    /// though every kind today shares [`land_eligible`]'s ground test — none
+    /// of the four is sensible mid-ocean (a water-source diagnostic, a rock
+    /// overhang, standing vegetation, and a deposited boulder all want dry
+    /// ground under them).
     pub(crate) fn eligible(self, weights: [(Vertex, u64); 4], pack: &FieldPack) -> bool {
         match self {
-            WeftKind::Spring | WeftKind::Overhang | WeftKind::Thicket => {
+            WeftKind::Spring | WeftKind::Overhang | WeftKind::Thicket | WeftKind::Erratic => {
                 land_eligible(weights, pack)
             }
         }
@@ -215,7 +240,7 @@ const SPRING_CORRELATION_LENGTH_FACETS: f64 = 40.0;
 /// drainage × elevation"). A spring is diagnostic of what is underfoot, so
 /// its prevalence must actually track macro state rather than merely being
 /// textured near it — the opposite end from erratic/scatter's negative
-/// control (Task 7).
+/// control.
 ///
 /// **`0.85`, restored here after a wrong-headed detour to `0.7` (fix round
 /// 1, F2).** The first pass of this task lowered this constant to `0.7`
@@ -377,4 +402,57 @@ fn thicket_macro_state(temperature_c: f64, moisture: f64) -> f64 {
         - (temperature_c - THICKET_TEMP_OPTIMUM_C).abs() / THICKET_TEMP_TOLERANCE_C)
         .clamp(0.0, 1.0);
     temp_response.min(moisture.clamp(0.0, 1.0))
+}
+
+/// Abundance ceiling for erratic/scatter (spec §5.2). The lowest of the
+/// four — a glacially-deposited boulder or a wind-scoured outcrop is meant
+/// to read as a rare, isolated find, not texture — and independently
+/// dialable (spec §5.2).
+/// plumb: universal(an authored design ceiling on erratic/scatter frequency, fixed across every world and not derived from any seed or pin)
+const ERRATIC_ABUNDANCE: f64 = 0.08;
+
+/// Erratic/scatter's correlation length, in facets (spec §5.2, §5.6:
+/// "short"). The shortest of the four: a negative control with a long
+/// correlation length would read as a smooth region of "sometimes an
+/// erratic", which is a texture, not the isolated, spatially-continuous-
+/// but-uncorrelated scatter spec §5.6 asks for.
+/// plumb: universal(an authored texture-vs-landmark design choice fixed across every world; spec section 5.6 names erratic/scatter's correlation length "short" and this is the chosen magnitude)
+const ERRATIC_CORRELATION_LENGTH_FACETS: f64 = 5.0;
+
+/// Erratic/scatter's contextuality — deliberately near-zero (spec §5.2,
+/// §5.6: "low — mostly free noise"; Task 7, controller ruling R5). Under
+/// the corrected §5.2 mapping (`0` = free noise, `1` = wallpaper), a small
+/// but nonzero value keeps this kind exercising the same general mixing
+/// recipe every other kind uses (spec §5.7: a kind is its recipe plus its
+/// three scalars, never a special-cased fifth thing) while contributing
+/// almost nothing: [`erratic_macro_state`] returns a spatially uninformative
+/// constant, so even this kind's own tiny macro-state weight carries no
+/// real signal — see that function's own doc. **Must never be raised to tie
+/// this kind to macro state** — see [`WeftKind::contextuality`]'s doc for
+/// why.
+/// plumb: universal(an authored design choice fixing erratic/scatter as the negative control, near-zero macro tracking, identical across every world)
+const ERRATIC_CONTEXTUALITY: f64 = 0.05;
+
+/// Erratic/scatter's constant "macro state" — deliberately **not** a real
+/// `FieldPack` scalar (Task 7, controller ruling R5). The negative control's
+/// whole purpose is a prevalence surface uncorrelated with any macro cause,
+/// so this returns the identical value at every facet regardless of the
+/// ground beneath it. A constant carries no spatial information, so even
+/// multiplied against [`ERRATIC_CONTEXTUALITY`]'s own small weight it
+/// contributes no signal-bearing texture — only the free-noise term does.
+///
+/// **Never change this to read a real [`FieldPack`] field.** Doing so ties
+/// the negative control to macro state, which is the exact "improvement"
+/// Task 9's H3 legibility-discrimination check depends on this kind never
+/// receiving: if erratic/scatter starts tracking a real cause, it stops
+/// being a control and the metric loses the one designed case that proves
+/// it can tell a real signal from none.
+/// plumb: universal(a fixed, deliberately uninformative constant standing in for "no macro cause" — the negative control's whole point, identical across every world)
+const ERRATIC_MACRO_BASELINE: f64 = 0.5;
+
+/// Erratic/scatter's macro-state recipe: [`ERRATIC_MACRO_BASELINE`],
+/// unconditionally. See that constant's own doc for why this is correct and
+/// must stay this way.
+fn erratic_macro_state() -> f64 {
+    ERRATIC_MACRO_BASELINE
 }
