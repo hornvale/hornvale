@@ -402,13 +402,13 @@ impl NearestVertexIndex {
         self.scan_at(geo, target, latitude, longitude, cos_lat)
     }
 
-    /// The vertex nearest a unit-sphere position, by maximum dot product. A
-    /// position read from [`Geosphere::position`] resolves to that same vertex,
-    /// as pinned across every live mesh level by the all-levels regression
-    /// below. This is not an exact-self-dot argument: normalized `f64` vectors
-    /// need not have a self-dot bit-equal to `1.0`. A cube-sphere room corner
-    /// generally is *not* an icosphere vertex and still needs the nearest
-    /// search; see [`crate::Facet::corners`]'s mesh-boundary contract.
+    /// The vertex nearest a unit-sphere position, by maximum dot product. At
+    /// levels 2–6, a position read from [`Geosphere::position`] resolves to that
+    /// same vertex, as pinned by the dense regression below. This is not an
+    /// exact-self-dot argument: normalized `f64` vectors need not have a
+    /// self-dot bit-equal to `1.0`. A cube-sphere room corner generally is *not*
+    /// an icosphere vertex and still needs the nearest search; see
+    /// [`crate::Facet::corners`]'s mesh-boundary contract.
     /// type-audit: pending(wave-1)
     pub fn nearest_to_position(&self, geo: &Geosphere, pos: [f64; 3]) -> Vertex {
         let latitude = math::asin(pos[2]).to_degrees();
@@ -521,8 +521,9 @@ mod tests {
 
     #[test]
     fn a1_grid_matches_the_full_band_scan_over_a_dense_sweep() {
-        // Every level the mesh is built at (2–6 across renders, room, scene,
-        // the climate provider, and the census). The equality assertion IS the
+        // This dense regression covers levels 2–6 used by the default
+        // production paths. A terrain pin may request level 7, which this test
+        // deliberately does not claim to cover. The equality assertion IS the
         // coverage proof: an under-covering window would return a different
         // vertex than the band scan and fail here. Level 2 is the coarse case
         // where the covering radius is largest and the window saturates.
