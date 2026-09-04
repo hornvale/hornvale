@@ -102,9 +102,9 @@ The brief called this the campaign's sharpest structural question. Under a
 derived edge it dissolves: **no crate ever names both rosters.**
 
 ```
-  domains/species     substrate_response_for(KindId) -> ConditionResponse
-                        derived from habitat_realm_registry
-                        names SPECIES keys only
+  domains/species     substrate_response(HabitatRealm) -> ConditionResponse
+                        total by construction; names NO keys at all
+                        habitat_realm_registry does the species lookup
                         sleep_grade_registry            [SHIPPED, unchanged]
 
   domains/thing       (unchanged -- see 4.1)
@@ -166,7 +166,7 @@ registrations — that is what a new kind costs and it is unrelated to this rule
             | Natural(hardness)  hardness in [0,1]; 0 = yielding, 1 = rock
 
   fit(species, substrate) = 1.0                                  if Made
-                          = substrate_response_for(species)
+                          = substrate_response(realm_of(species))
                                 .eval(hardness, FIT_FLOOR)       if Natural
 
   FIT_FLOOR is ConditionResponse::eval's `floor` argument: the suitability
@@ -216,7 +216,7 @@ charge that species twice.
 
 ### 5.3 The two substrate curves
 
-`substrate_response_for` is a function over `habitat_realm_registry`, not a new
+`substrate_response` is a function over `HabitatRealm`, not a new
 39-row table — the same discipline `sleep_grade_registry` follows in reading
 its rows off `biosphere_registry` rather than inventing biology. Two authored
 `ConditionResponse` curves, each `per-species` with a stated biological source:
