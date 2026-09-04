@@ -275,10 +275,10 @@ predicate), so the only gates a locale-band pattern has are `built` and
 `needs_cold`. **An ungated addition is therefore universal**, and three
 ungated additions would make `SiteGrade::Bare` unreachable in every room in
 every world — deleting *"a creature must be able to pass out in the road"*
-outright. The four cells the two gates produce are the whole design space, and
+outright. The four quadrants the two gates produce are the whole design space, and
 the set below fills three of them and deliberately leaves the fourth bare:
 
-| cell | composes | grade |
+| quadrant | composes | grade |
 |---|---|---|
 | built + cold | `bed` (Made) + `rushes` (soft) + `ledge` (hard) | a three-way choice, and the reversal |
 | built + warm | `ledge` | a dwelling has somewhere to lie down |
@@ -293,9 +293,23 @@ the set below fills three of them and deliberately leaves the fourth bare:
 
 `is_cold` is a pure temperature read against `FURNISHING_COLD_C` at a frozen
 reference day (`liveness.rs`), applied to any room built or not — so
-`wild + cold` is a real cell, not an empty one. **Its share is unmeasured**:
-the census carries `cold-built-room-share` and has no wild equivalent, so P3
-must measure it before `the-bracken` is believed reachable.
+`wild + cold` is a real quadrant, not an empty one — and **it is now measured**,
+which it was not when this section was written. Task 1's baseline
+(`docs/audits/the-tenon-rest-site-baseline.md`, 24 seeds) counts distinct walked
+rooms per quadrant:
+
+```
+  built=false cold=false   1627 rooms      affords rest: no
+  built=false cold=true     407 rooms      affords rest: no
+  built=true  cold=false    129 rooms      affords rest: no
+  built=true  cold=true      34 rooms      affords rest: YES
+```
+
+**All four quadrants are non-empty**, so every branch of Task 7 Step 1's table
+resolves to *proceed*. The shape also prices the change: rest-affording rooms
+go from **34 of 2,197 (1.5%)** to **570 (26%)**, and the bare quadrant keeps
+**1,627 rooms — 74% of everywhere a body walks**. P5 is satisfied by the
+largest quadrant in the world, not by a residue.
 
 Discarded: **adding a new gate field to `Pattern`.** It would buy a finer
 distribution and `needs_populous`'s history is the argument against — that
