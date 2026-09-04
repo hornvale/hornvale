@@ -1274,7 +1274,10 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::a_world_with_no_flagged_col
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::categorical_and_flag_columns_are_never_evaluable
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_surface_on_the_227_column_census
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::exclusion_reasons_carry_the_exact_documented_wording
+hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_matches_the_same_worlds_entry_in_rank
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_returns_none_for_an_unknown_seed
+hornvale-lab::hornvale_lab$domesday::anomaly::tests::partitioning_columns_are_all_covered_by_d2_or_d4
+hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_is_deterministic
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_orders_most_anomalous_first
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_agrees_with_for_seed_on_a_census_row
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_scores_against_an_uncontaminated_index
@@ -2930,6 +2933,7 @@ hornvale-vessel::hornvale_vessel$plan::tests::the_palette_holds_no_entry_the_bui
 hornvale-vessel::hornvale_vessel$plan::tests::the_projection_is_deterministic
 hornvale-vessel::hornvale_vessel$plan::tests::the_standing_cell_is_carried_verbatim
 hornvale-vessel::hornvale_vessel$plan::tests::two_walls_at_different_light_levels_get_different_palette_entries
+hornvale-vessel::hornvale_vessel$plat_prose::tests::the_table_has_eight_distinct_sentences_and_the_past_tense_is_past
 hornvale-vessel::hornvale_vessel$purview::tests::agent_salience_outranks_every_settlement_salience
 hornvale-vessel::hornvale_vessel$resident::tests::a_later_advance_over_a_longer_trail_only_judges_the_new_rooms
 hornvale-vessel::hornvale_vessel$resident::tests::advance_judges_each_room_once_and_holds_the_verdict
@@ -3008,9 +3012,7 @@ hornvale-vessel::hornvale_vessel$underground::tests::a_threshold_with_a_shut_doo
 hornvale-vessel::hornvale_vessel$underground::tests::a_wider_reach_does_not_change_what_was_already_seen
 hornvale-vessel::hornvale_vessel$underground::tests::deep_water_refuses_a_walker_and_admits_a_swimmer
 hornvale-vessel::hornvale_vessel$underground::tests::habitation_rungs_excludes_surface
-hornvale-vessel::hornvale_vessel$underground::tests::inhabitant_datum_names_the_species_and_the_source
-hornvale-vessel::hornvale_vessel$underground::tests::resident_cell_is_none_when_the_level_has_no_floor
-hornvale-vessel::hornvale_vessel$underground::tests::resident_cell_is_the_levels_own_last_standable_cell
+hornvale-vessel::hornvale_vessel$underground::tests::inhabitant_datum_names_the_species_the_source_the_hoard_and_the_keeping
 hornvale-vessel::hornvale_vessel$underground::tests::rung_band_names_the_top_of_the_ladder
 hornvale-vessel::hornvale_vessel$underground::tests::saw_reports_exactly_what_was_marked
 hornvale-vessel::hornvale_vessel$underground::tests::the_reach_seam_is_the_only_source_of_the_radius
@@ -3212,6 +3214,7 @@ hornvale-worldgen::hornvale_worldgen$alchemy::tests::the_carry_is_pure
 hornvale-worldgen::hornvale_worldgen$brattice::tests::a_chute_is_free_down_and_needs_flight_up_and_sits_on_a_stair
 hornvale-worldgen::hornvale_worldgen$brattice::tests::a_lava_tube_never_carries_a_sump_and_some_descent_carries_a_chute
 hornvale-worldgen::hornvale_worldgen$brattice::tests::a_plan_with_no_gates_has_unit_detour_and_no_return_difference
+hornvale-worldgen::hornvale_worldgen$brattice::tests::an_all_found_wild_descent_hangs_no_door
 hornvale-worldgen::hornvale_worldgen$brattice::tests::every_key_row_places_a_key_and_no_natural_row_does
 hornvale-worldgen::hornvale_worldgen$brattice::tests::gate_yield_is_a_ratio_and_none_without_an_admissible_realm
 hornvale-worldgen::hornvale_worldgen$brattice::tests::length_class_gives_each_path_a_side
@@ -3447,6 +3450,8 @@ hornvale-worldgen::hornvale_worldgen$placement::tests::a_placement_stays_inside_
 hornvale-worldgen::hornvale_worldgen$placement::tests::a_walk_depth_at_the_quad_leaves_nothing_to_draw
 hornvale-worldgen::hornvale_worldgen$placement::tests::the_placement_key_spelling_is_pinned
 hornvale-worldgen::hornvale_worldgen$placement::tests::the_seed_42_placement_is_byte_pinned
+hornvale-worldgen::hornvale_worldgen$plat::tests::the_drawn_level_reads_as_drawn
+hornvale-worldgen::hornvale_worldgen$plat::tests::the_reading_is_pure
 hornvale-worldgen::hornvale_worldgen$render::tests::every_kind_valence_pair_has_a_distinct_palette_color
 hornvale-worldgen::hornvale_worldgen$render::tests::most_dread_picks_the_highest_dread_layer_breaking_ties_first
 hornvale-worldgen::hornvale_worldgen$render::tests::venerated_and_forgotten_read_distinctly_within_a_kind
