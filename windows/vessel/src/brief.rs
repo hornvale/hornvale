@@ -3,25 +3,26 @@
 //! this land*; micro answers *what is standing here*; the brief is the seam.
 //!
 //! It is derived, never stored — which is why it does NOT carry every field a
-//! future consumer might want. §1b.4's metaplan argued for carrying all of
-//! them from the start "so that adding a consumer never changes the seam",
-//! but that argument only bites for types that PERSIST. Nothing here is
-//! serialized, so a campaign that needs a reserved field adds just that
-//! field, with no save-format consequence and no epoch. Shipping all seven
-//! of the metaplan's reserved fields as `Option`s at genesis — `cause`,
-//! `ended_by`, `founded`/`ended`, `tongue`, `deity`, `peak_population`,
-//! `stratigraphy` — would have been dead weight that reads as evidence of
-//! intent, so v1 shipped none of them.
+//! future consumer might want. §1b.4's metaplan reserved a set of fields —
+//! `cause`, `ended_by`, `founded`, `ended`, `tongue`, `deity`,
+//! `peak_population`, `stratigraphy` — and argued for carrying all of them
+//! from the start, "so that adding a consumer never changes the seam". That
+//! argument only bites for types that PERSIST, and nothing here is
+//! serialized: a campaign that needs a reserved field adds just that field,
+//! with no save-format consequence and no epoch. Shipping every reserved
+//! field as an `Option` at genesis, before any consumer existed, would have
+//! been dead weight that reads as evidence of intent, so v1 shipped none of
+//! them.
 //!
-//! **This paragraph used to say the ruin signature was absent on purpose,
-//! two paragraphs above the field that now carries it — stale the moment
-//! this commit landed, and worth saying loudly rather than quietly fixing.**
-//! The ruin signature was three of those seven — `cause`, `ended_by`, and
-//! `ended` — and The Weft is the campaign that needed `cause`: see
-//! [`Brief::ruin`], which folds all three into one [`RuinSignature`] rather
-//! than three loose `Option`s. `founded` and the district vocabulary
-//! (`tongue`, `deity`, `stratigraphy`) are still absent, still on purpose,
-//! for the same reason.
+//! **This header used to say the ruin signature was absent on purpose. The
+//! Weft made that false, so this paragraph replaces the claim instead of
+//! correcting it a second time.** `cause`, `ended_by` (as
+//! [`RuinSignature::by_hand`]) and `ended` are carried now, folded into one
+//! [`Brief::ruin`] rather than kept as loose separate fields. `peak_population`
+//! is also carried, as a bare `u32` rather than an `Option` — see below.
+//! `founded`, `tongue`, `deity` and `stratigraphy` remain genuinely absent,
+//! for the same reason: nothing here is serialized, so nothing forces them
+//! in before a consumer needs them.
 //!
 //! THREE fields are read as of decision 0398: `built`, in `structure_at`'s
 //! existence predicate and in `describe_chamber`'s room/hollow word; and
@@ -30,19 +31,15 @@
 //! (`chamber_interior_of` cross-checks it against the terrain), and `tech` and
 //! `people` are carried and not read at all.
 //!
-//! `peak_population` was the FOURTH, added here when the `store` role's
-//! strongbox became its first reader — "exactly the one field, no epoch this
-//! doc licenses", as this paragraph used to say. Decision 0398 relaxed that
-//! gate, so the field is now read only by [`Brief::is_populous`], whose value
-//! still reaches `pattern::selection_for` on every chamber derivation and
-//! currently selects nothing. It is kept for the same reason the doc above
-//! gives for keeping the seam thin: removing it would be a second edit to undo
-//! the day a population-gated pattern is written, and unlike the fields still
-//! absent from this struct — `founded`, `tongue`, `deity`, `stratigraphy` —
-//! this one has a live wire behind it. (This sentence used to say "the seven
-//! absent `Option`s"; The Weft's [`Brief::ruin`] moved three of the seven —
-//! `cause`, `ended_by`, `ended` — out of the absent set, so "seven" is no
-//! longer the count of what is actually still missing here.)
+//! `peak_population` was added here when the `store` role's strongbox became
+//! its first reader. Decision 0398 relaxed that gate, so the field is now
+//! read only by [`Brief::is_populous`], whose value still reaches
+//! `pattern::selection_for` on every chamber derivation and currently
+//! selects nothing. It is kept for the same reason the doc above gives for
+//! keeping the seam thin: removing it would be a second edit to undo the day
+//! a population-gated pattern is written, and unlike the fields still absent
+//! from this struct — `founded`, `tongue`, `deity`, `stratigraphy` — this
+//! one has a live wire behind it.
 
 use crate::site::{Site, SiteKind};
 use hornvale_history::record::{
@@ -109,8 +106,9 @@ pub struct Brief {
     /// serialized, so a campaign that needs a reserved field adds just that
     /// field, with no save-format consequence and no epoch. The Weft is the
     /// campaign that needed `cause`, and picked up `ended_by` and `ended`
-    /// alongside it — all three describe the one dead occupation, so they
-    /// belong in one [`RuinSignature`] rather than three loose `Option`s.
+    /// alongside it, since `cause`, `ended_by` and `ended` each describe the
+    /// one dead occupation and belong together in one [`RuinSignature`]
+    /// rather than as separate loose fields.
     pub ruin: Option<RuinSignature>,
 }
 
