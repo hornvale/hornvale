@@ -142,3 +142,13 @@ sentence — but it neither resolved nor re-scored any bet in that chapter.
 No `IMPLEMENTATION_PLAN.md` existed to retire. The campaign plan and spec are
 marked implemented pending merge; merge status remains the queue's fact, not a
 claim made by this close commit.
+
+### Post-close addendum (2026-09-04): a registered fact can be a fixture epoch
+
+After close review, the `sky-provider` concept description was corrected from
+the retired constant-or-generated choice to the sole generated provider. The
+concept reference and seed-42 world JSON each changed at that one embedded
+documentation field. This was a reviewed, causal artifact epoch: the
+designated `lens_purity` writer regenerated it, then both that ordinary guard
+and Repose's independent byte-identity reader passed. It is not evidence of an
+unexamined Repose C0 leak; no world fact, pin, or serialization behavior moved.

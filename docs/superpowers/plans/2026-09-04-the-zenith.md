@@ -2,7 +2,9 @@
 
 > **Status: IMPLEMENTED (2026-09-04), pending close review and merge.** All
 > eight tasks are locally committed or represented by the close commit this
-> plan accompanies; canonical queue status remains external to this marker.
+> plan accompanies. A post-close, deliberate seed-42 fixture epoch refreshed
+> the registered `sky-provider` description only; canonical queue status
+> remains external to this marker.
 >
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 

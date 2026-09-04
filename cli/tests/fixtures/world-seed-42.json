@@ -490,7 +490,7 @@
       "sky-provider": {
         "name": "sky-provider",
         "functional": true,
-        "doc": "which astronomy provider this world uses (constant or generated)"
+        "doc": "the generated astronomy provider this world uses"
       },
       "species-activity-cycle": {
         "name": "species-activity-cycle",

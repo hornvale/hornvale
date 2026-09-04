@@ -504,6 +504,24 @@ review must inspect the call rather than accept compilation alone.
 answer.
 · Capture: Task 8 plan correction; Task 8 report and retrospective.
 
+#17 [G5] — **Correcting the registered sky-provider description is a deliberate
+fixture epoch, not a Repose C0 leak.**
+· **What moved:** the source registry now says "the generated astronomy
+provider this world uses" rather than describing the retired constant or
+generated choice. Its generated reference page and the seed-42 world JSON
+therefore changed at that one registry-doc field; no ledger fact, pin, or
+serialization ordering changed.
+· **Decision:** accept that three-file causal chain in one close commit. The
+sanctioned `REBASELINE=1 cargo test -p hornvale --test suite -- lens_purity`
+writer regenerated the fixture, then normal `lens_purity` and the independent
+Repose byte-identity probe both passed.
+· **Why:** the fixture embeds registered concept documentation, so a truthful
+fact-registration correction necessarily changes its bytes. Calling it an
+unexamined Repose C0 leak would collapse a reviewed source fact and an
+unexplained world-identity change into one category; the diff demonstrates the
+former only.
+· Capture: this ledger entry and the dated retrospective postscript.
+
 ## Follow-ups
 
 - **Point the census at a pin axis for the first time.** Adding
