@@ -3,8 +3,9 @@
 **Status:** Accepted (2026-09-04) · **Decider:** Nathan ·
 **Campaign:** The Housemark · **Relates:**
 [0069](0069-fine-position-is-never-serialized.md) (interiors remain derived),
-[0084](0084-an-epoch-is-declared-only-when-a-derivation-moved.md) (epoch
-granularity), [0618](0618-a-descent-key-makes-the-plan-a-save-format-contract.md)
+[0084](0084-an-epoch-is-declared-only-when-a-derivation-moved.md) (epochs are
+owed only when a committed derivation moves),
+[0618](0618-a-descent-key-makes-the-plan-a-save-format-contract.md)
 (the preceding object accession)
 
 The Housemark consumes no randomness, adds no stream, writes no fact, and does

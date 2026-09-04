@@ -205,6 +205,18 @@ corrected the fixture account to distinguish narration from spatial data.
 Focused regressions, the semantic screen-gate mutation, and the final review
 were green.
 
+### Task 5 — complete after one fix round
+
+Review found that the purportedly complete artifact classification omitted the
+campaign's world-build guard golden and two generated audit reports. The fix
+round added their paths, producers, exact movements, and source causes below,
+while preserving the distinction between `artifacts`-authored reports and a
+deliberately maintained test roster. It also corrected 0750's description of
+0084 from epoch granularity to the committed-derivation-moved rule. A direct
+decision-digest render remained byte-identical, documentation tests passed
+63/63, and `make gate-commit` passed all 4,014 subfloor tests plus its lint and
+audit checks.
+
 ## H3 result
 
 The final ignored foreground readout over seeds `[42, 13, 7, 1, 100]` reported:
@@ -228,8 +240,9 @@ proving the classifier observes the cultural gate rather than prose.
 
 The documented non-census commands were run against the integrated branch:
 `make rebaseline` exited 0 and `make rebaseline-goldens` passed all 46 scoped
-golden tests. The complete observed movement is admitted by accession epoch 20
-and the chamber-rendering arm of design §7:
+golden tests. The complete observed artifact and guard movement is attributable
+to accession epoch 20, the chamber-rendering arm of design §7, and the required
+audit/guard maintenance:
 
 - `cli/tests/fixtures/world-seed-42.json` gained only the additive six-line
   `bench` concept object; `windows/worldgen/tests/fixtures/proto-goblinoid-root-table-seed-42.txt`
@@ -245,10 +258,28 @@ and the chamber-rendering arm of design §7:
   seed-14 carrying fixture changed only the rendered chamber marks: one screen
   became one bench plus one guest-water vessel; its chamber grid and every
   non-mark value are unchanged.
+- `docs/audits/type-audit-report.md` is an `artifacts`-authored generated
+  report. It records the three new tagged vessel primitives: the
+  `UnclassifiedRadius(f64)` diagnostic value, `WorldContext::built_rooms`'s
+  identifier-text return, and `settlement_room_collision_count`'s count return
+  (`diagnostic-value`, `identifier-text`, and `count` each `+1`; vessel total
+  `534 -> 537`). `docs/audits/plumb-roster.md` is likewise an
+  `artifacts`-authored generated report: the new `housemark.rs` raises parsed
+  and kind-adjacent files `311 -> 312` and `133 -> 134`; the `BENCH: KindId`
+  declaration raises excluded non-quantities and all constants touched
+  `498 -> 499` and `1366 -> 1367` (`KindId` `18 -> 19`); and Task 4's added
+  `BTreeMap` import shifts sixteen existing `liveness.rs` finding locations by
+  one line without changing their findings or classifications.
+- `cli/tests/fixtures/world-build-sites.tsv` is not an `artifacts`-authored
+  projection. It is the world-build guard's deliberately updated byte golden:
+  `windows/vessel/tests/suite/housemark_readout.rs` adds one sanctioned
+  `identity:1` site because H3 must build non-fixture world identities for
+  seeds `[42, 13, 7, 1, 100]` rather than read only the default seed-42 fixture.
 - `docs/digest/decisions-in-force.md` gained the five accepted records after
   the final-state regeneration. `docs/timings.md` absorbed the inherited
-  post-Task-4 gate row and records both Task-5 rebaseline runs. No ledger fact,
-  census file, lab golden, stream roster, or unrelated world datum moved.
+  post-Task-4 gate row and records both Task-5 rebaseline runs, the original
+  Task-5 gate, and the fix round's gate instrumentation. No ledger fact, census
+  file, lab golden, stream roster, or unrelated world datum moved.
 
 ## Binding records
 
