@@ -62,8 +62,8 @@
 
 use hornvale_game_core::{Cell, Grid, Ink, Source, Weight};
 use hornvale_kernel::{
-    Facet, FacetId, GeoCoord, Geosphere, NearestVertexIndex, RoomMeshMemo, Value, Vertex, World,
-    WorldTime,
+    ComponentStore, Facet, FacetId, GeoCoord, Geosphere, NearestVertexIndex, RoomMeshMemo, Value,
+    Vertex, World, WorldTime,
 };
 use hornvale_terrain::GeneratedTerrain;
 use hornvale_terrain::landscape::{FeatureClass, FeatureId as LandscapeFeatureId};
@@ -1364,7 +1364,9 @@ pub(crate) fn draw_terrain_layer(
             // the elevation ladder (`glyph_and_color_for`), and asking the
             // locale for a reflectance it would then discard would cost a
             // four-corner climate read per drawn position for nothing. The
-            // Wash's Task 6 is what threads a real context in here.
+            // Wash's Task 6 is what threads a real context in here — and,
+            // with it, a real season and a real cache. `season: 0` and
+            // `reflectance_cache: None` are inert while `ctx` stays `None`.
             let tile = terrain_at_tile(
                 terrain,
                 geo,
@@ -1378,6 +1380,8 @@ pub(crate) fn draw_terrain_layer(
                 col,
                 None,
                 WorldTime::GENESIS,
+                0,
+                None,
             );
             // TERRAIN ONLY. Sites are PROJECTED by `draw_feature_layer` —
             // see its doc for why asking each screen cell "is your
@@ -2118,6 +2122,45 @@ pub struct TileTerrain {
     pub water: u8,
 }
 
+/// How many buckets a year is split into for [`ReflectanceKey`]'s season
+/// column (The Wash, Task 4). Four is the coarsest split that separates
+/// midwinter from midsummer, which is what the campaign's H2 asserts; it is
+/// a rendering choice about how finely to key the cache, not a world fact
+/// (contrast [`hornvale_astronomy::Calendar::season_phase`], which reports a
+/// continuous `[0, 1)` phase with no notion of "buckets" at all).
+/// type-audit: bare-ok(count)
+pub const SEASON_BUCKETS: u32 = 4;
+
+/// The cache bucket for a year phase in `[0, 1)` (The Wash, Task 4). Ties at
+/// a bucket boundary round down; `phase` is wrapped with `rem_euclid` first
+/// so a phase supplied slightly outside `[0, 1)` (a boundary float) still
+/// lands in range rather than panicking on the cast.
+/// type-audit: bare-ok(ratio: phase), bare-ok(count: return)
+pub fn season_bucket(phase: f64) -> u32 {
+    let p = phase.rem_euclid(1.0);
+    ((p * f64::from(SEASON_BUCKETS)) as u32).min(SEASON_BUCKETS - 1)
+}
+
+/// The key a cached reflectance hangs on: the facet it belongs to and the
+/// season bucket it was computed for (The Wash, Task 4).
+///
+/// **Reflectance is seasonal-rate** (the rate spine's own invariant, Task
+/// 1; spec §4.3) — the cover mixture [`hornvale_locale::LocaleContext::
+/// reflectance_at_facet`] integrates varies with the season (snow,
+/// chlorophyll). The plate's TERRAIN layer cache
+/// ([`crate::tiles::TileCache`]) is never invalidated across a session, so a
+/// key that ignored season would bake in whichever season first drew a
+/// facet and never update — correct on the first frame, silently frozen
+/// after. Keying on `(Facet, season)` instead means a season change mints a
+/// new entry rather than serving a stale one.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct ReflectanceKey {
+    /// The facet this reflectance describes.
+    pub facet: Facet,
+    /// The season bucket ([`season_bucket`]) it was computed in.
+    pub season: u32,
+}
+
 /// ONE chart tile's terrain, by direct mesh addressing (The Quadrat, Task
 /// 3) — SHARED by [`draw_with`] (which paints the class as a glyph) and
 /// `bin`'s world-view resolver (which names a feature at the vertex).
@@ -2195,6 +2238,10 @@ pub fn terrain_at_tile(
     col: u32,
     ctx: Option<&hornvale_locale::LocaleContext>,
     at: WorldTime,
+    season: u32,
+    reflectance_cache: Option<
+        &mut ComponentStore<ReflectanceKey, hornvale_kernel::color::Reflectance>,
+    >,
 ) -> TileTerrain {
     let plate_row = win.origin_row + row;
     let plate_col = win.origin_col + col;
@@ -2295,8 +2342,39 @@ pub fn terrain_at_tile(
     // falls through to a fresh `corner_weights` — the same answer either
     // way, pinned by `hornvale-locale`'s own
     // `every_cached_reader_bit_equals_its_recomputing_sibling_with_a_partial_prefill`.
-    let reflectance =
-        ctx.and_then(|ctx| ctx.reflectance_at_facet_cached(&facet, at, Some(memo)).ok());
+    //
+    // THE (Facet, season) CACHE, CONSULTED FIRST (The Wash, Task 4). This is
+    // a SECOND, coarser cache above the one paragraph up: the memo skips a
+    // repeated nearest-vertex SEARCH, this skips the whole climate-read /
+    // rill-read / lithology-mixture / cover-integration composition behind
+    // `reflectance_at_facet_cached` for a `(facet, season)` this draw has
+    // already answered. A hit returns the SAME value a fresh computation
+    // would — caching a deterministic function changes nothing about its
+    // output, only how often it is paid for — so no test may observe a
+    // difference between the two paths, only a difference in how many times
+    // the expensive one ran.
+    let reflectance = match reflectance_cache {
+        Some(cache) => {
+            let key = ReflectanceKey {
+                facet: facet.clone(),
+                season,
+            };
+            match cache.get(&key) {
+                Some(r) => Some(*r),
+                None => {
+                    let r = ctx.and_then(|ctx| {
+                        ctx.reflectance_at_facet_cached(&facet, at, Some(memo)).ok()
+                    });
+                    if let Some(r) = r {
+                        cache.insert(key, r);
+                    }
+                    r
+                }
+            }
+        }
+        // No cache supplied: exactly the pre-Task-4 behaviour, always fresh.
+        None => ctx.and_then(|ctx| ctx.reflectance_at_facet_cached(&facet, at, Some(memo)).ok()),
+    };
 
     TileTerrain {
         ocean: terrain.is_ocean(vertex),
@@ -2814,6 +2892,8 @@ mod tests {
                     col,
                     None,
                     WorldTime::GENESIS,
+                    0,
+                    None,
                 );
                 vertices.insert(t.vertex);
                 // Decimetres: finer than any relief band, coarser than the
@@ -2903,6 +2983,8 @@ mod tests {
                         col,
                         None,
                         WorldTime::GENESIS,
+                        0,
+                        None,
                     );
                     let facet = Facet::containing(
                         {
@@ -3508,6 +3590,8 @@ mod tests {
                 col,
                 None,
                 WorldTime::GENESIS,
+                0,
+                None,
             )
             .vertex;
             (rep != c).then_some((c, row, col))
@@ -3765,6 +3849,8 @@ mod tests {
                     col,
                     None,
                     WorldTime::GENESIS,
+                    0,
+                    None,
                 );
                 total += 1;
                 if tile.vertex == point_vertex {
@@ -3904,6 +3990,8 @@ mod tests {
                         col,
                         None,
                         WorldTime::GENESIS,
+                        0,
+                        None,
                     );
                     assert_eq!(
                         got.facet.depth(),
@@ -3974,6 +4062,8 @@ mod tests {
             0,
             None,
             WorldTime::GENESIS,
+            0,
+            None,
         );
         let before = memo.corner_weights_misses();
         assert_eq!(
@@ -3993,6 +4083,8 @@ mod tests {
             1,
             None,
             WorldTime::GENESIS,
+            0,
+            None,
         );
         // BOUNDED, not zero: tiles (0,0) and (0,1) are not guaranteed to
         // share a grid-level ancestor, and a cold ancestor costs exactly one
@@ -4046,6 +4138,8 @@ mod tests {
                     col,
                     None,
                     WorldTime::GENESIS,
+                    0,
+                    None,
                 );
             }
         }
@@ -4109,6 +4203,8 @@ mod tests {
             0,
             None,
             WorldTime::GENESIS,
+            0,
+            None,
         );
 
         assert_eq!(

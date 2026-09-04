@@ -61,6 +61,8 @@ fn shipped(
         col,
         None,
         hornvale_kernel::WorldTime::GENESIS,
+        0,
+        None,
     );
     match t.water {
         0 => '~',

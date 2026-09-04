@@ -229,6 +229,8 @@ fn main() {
                 col,
                 None,
                 hornvale_kernel::WorldTime::GENESIS,
+                0,
+                None,
             );
         }
     }

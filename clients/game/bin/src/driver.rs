@@ -484,6 +484,44 @@ pub struct Driver {
     /// prompt is a MODE, not a picker — the client still sends text
     /// unconditionally, and the sim answers unknown nouns in its own prose.
     noun_prompt: Option<NounPrompt>,
+    /// The world's derived [`hornvale_astronomy::Calendar`], if it has one —
+    /// `None` for a tier-0 `ConstantSun` world, which has no generated star
+    /// system and therefore no cycles (`Sky::calendar`'s own doc). Read
+    /// once here via [`hornvale_worldgen::sky_of`], the same "derive once,
+    /// never per-frame" discipline `terrain`/`geo`/`nearest` already
+    /// follow above: `sky_of` regenerates the sky deterministically from
+    /// the world's own committed seed and pins (the same reconstruction
+    /// idiom `terrain_of` uses for `Self::terrain`), so paying it once at
+    /// `start` and reading a plain field from then on is strictly cheaper
+    /// than re-deriving it wherever a season is needed.
+    calendar: Option<hornvale_astronomy::Calendar>,
+    /// The plate's `(Facet, season)` reflectance cache (The Wash, Task 4):
+    /// the store [`plate::terrain_at_tile`] consults and fills wherever a
+    /// real [`hornvale_locale::LocaleContext`] is threaded through it.
+    /// Reflectance is seasonal-rate (the rate spine's own invariant, Task
+    /// 1), so the key already carries the season a tile was drawn in — a
+    /// season change mints a new entry rather than serving a stale one,
+    /// which is what makes it safe to sit above the plate's own
+    /// never-invalidated TERRAIN layer cache ([`Self::tiles`]'s own doc).
+    ///
+    /// **Genuinely consulted today, but never yet populated.** [`Self::
+    /// world_view_vertex`] threads this field through
+    /// [`plate::terrain_at_tile`] on every keypress, so `cache.get` really
+    /// runs — but it still passes `ctx: None` (see that call site's own
+    /// comment; Task 6 flips it), and a cache miss with no context to ask
+    /// resolves to `None` without inserting (`terrain_at_tile`'s own match
+    /// arm), so this stays empty for the whole session regardless. [`plate::
+    /// draw_terrain_layer`] does not reach it at all — that caller stays on
+    /// a fresh throwaway store, the same "cheap enough to pay per call, not
+    /// worth cross-call state" argument its own comment gives, because
+    /// nothing there needs a value remembered ACROSS calls the way a
+    /// revisited cursor position does. See
+    /// `driver::portolan_tests::the_reflectance_cache_starts_and_stays_
+    /// empty_while_ctx_is_none` for what is covered meanwhile.
+    reflectance_cache: hornvale_kernel::component::ComponentStore<
+        plate::ReflectanceKey,
+        hornvale_kernel::color::Reflectance,
+    >,
 }
 
 /// What [`Driver::noun_prompt`] saves for `Esc` to restore.
@@ -648,6 +686,36 @@ fn caption(base: String, sight: Option<&hornvale_game_core::schema::Sight>) -> S
     }
 }
 
+/// The `(Facet, season)` cache's season component for `at`, resolved
+/// against `calendar` (The Wash, Task 4) — the glue between
+/// [`Driver::calendar`] and [`plate::season_bucket`].
+///
+/// **Two `None`s fold to the same bucket 0, and both are legitimate
+/// worlds, not errors.** `calendar` itself is `None` for a tier-0
+/// `ConstantSun` world (no generated star system, no cycles). A `Some`
+/// calendar can still report `Calendar::season_phase(..) == None` — its own
+/// documented contract, for zero obliquity AND zero eccentricity — which is
+/// the same "no seasons to render" case reached a different way. Neither is
+/// a silent `unwrap_or(0)` standing in for a default this comment is the
+/// only record of: both branches are named here because "no calendar" and
+/// "a calendar with nothing to report" are the two ways a world can
+/// honestly have no seasons.
+fn season_bucket_for(
+    calendar: Option<&hornvale_astronomy::Calendar>,
+    at: hornvale_kernel::WorldTime,
+) -> u32 {
+    let Some(calendar) = calendar else {
+        return 0;
+    };
+    let Ok(instant) = hornvale_astronomy::StdInstant::new(at.as_std_days()) else {
+        return 0;
+    };
+    calendar
+        .season_phase(instant)
+        .map(plate::season_bucket)
+        .unwrap_or(0)
+}
+
 impl Driver {
     /// Build a fresh world for `seed` (default sky/terrain/settlement pins,
     /// generated sky — the same defaults `clients/vessel/wasm`'s `hv_start`
@@ -741,6 +809,27 @@ impl Driver {
         let features = gazetteer_features(world_ref.seed, &geo, &terrain);
         let index = VertexFeatureIndex::build(&features);
         let nearest = NearestVertexIndex::new(&geo);
+
+        // The Wash, Task 4: the world's own calendar, read once here (the
+        // same "derive once, never per-frame" idiom `terrain`/`geo`/
+        // `nearest` above already follow) via the same `sky_of`
+        // reconstruction idiom `terrain_of` uses for `terrain` — never a
+        // second, drifting genesis. A build failure here is folded to
+        // `None` rather than propagated: a world whose sky cannot be
+        // reconstructed still has a terrain and a session (both already
+        // built above), and a plate that cannot resolve a season is
+        // exactly the "no calendar" case below, not a harder failure.
+        //
+        // `Sky::calendar()` is `None` for a tier-0 `ConstantSun` world —
+        // provider tiers coexist, and a world with no generated star
+        // system genuinely has no seasons to render. That is a modelled
+        // case, not an error: `season_bucket_for` below folds it (and the
+        // sibling case where a generated sky's own `season_phase` reports
+        // `None`, for zero obliquity and zero eccentricity) to bucket 0
+        // rather than panicking or guessing.
+        let calendar = hornvale_worldgen::sky_of(world_ref)
+            .ok()
+            .and_then(|sky| sky.calendar().cloned());
 
         // The Portolan part II, Task 5: the point-site roster — every
         // terrain vertex a live settlement's own committed `(latitude,
@@ -905,6 +994,8 @@ impl Driver {
             noun_prompt: None,
             on_walk_band: true,
             walk_scene: None,
+            calendar,
+            reflectance_cache: hornvale_kernel::component::ComponentStore::new(),
         };
         driver.refresh();
         Ok(driver)
@@ -2077,7 +2168,7 @@ impl Driver {
     /// a screen position to a `Vertex`) is resolved against the
     /// terrain-feature index — [`UNNAMED_TERRAIN`] if that chain comes up
     /// empty at any step.
-    fn resolve(&self) -> String {
+    fn resolve(&mut self) -> String {
         let Ok(snap) = hornvale_game_core::Snapshot::parse(&self.cached) else {
             return NOTHING_HERE_YET.to_string();
         };
@@ -2294,7 +2385,16 @@ impl Driver {
     /// exactly ONE tile per keypress: a session-lived memo would save at
     /// most the three `nearest_to_position` scans of a repeated cursor
     /// position, against holding cross-call state for a pure function.
-    fn world_view_vertex(&self) -> hornvale_kernel::Vertex {
+    ///
+    /// **`&mut self` since The Wash, Task 4**, purely to reach
+    /// [`Self::reflectance_cache`] by `&mut` — this still reads only
+    /// `.vertex` off the result (the comment inside names why `ctx` stays
+    /// `None`), so the cache the mutable borrow reaches stays empty; the
+    /// borrow itself is what keeps the field genuinely exercised rather
+    /// than merely typed. `resolve_world_view`/`resolve`, its only callers,
+    /// took the same signature change; their own only caller
+    /// ([`Self::refresh_strip`]) already held `&mut self`.
+    fn world_view_vertex(&mut self) -> hornvale_kernel::Vertex {
         let (virtual_w, virtual_h) = plate::virtual_dims(self.window.depth);
         plate::terrain_at_tile(
             &self.terrain,
@@ -2311,6 +2411,24 @@ impl Driver {
             // buy a discarded reflectance per keypress.
             None,
             hornvale_kernel::WorldTime::GENESIS,
+            // Real season resolution (The Wash, Task 4) against the real,
+            // session-lived cache — `self.reflectance_cache`, not a
+            // throwaway, since a season a cursor has already visited is
+            // worth remembering the same way `self.nearest`/`self.geo`
+            // already are. Both are genuinely CONSULTED here even though
+            // `ctx` stays `None` (a cache miss with no context to ask
+            // resolves to `None` and inserts nothing — see
+            // `terrain_at_tile`'s own match arm), which is what lets this
+            // call site exercise the real field instead of a stand-in for
+            // it. `RoomMeshMemo` above stays local/throwaway on its own
+            // documented argument (a session-lived one would save at most
+            // three scans of a repeated cursor position); that argument
+            // does not carry over here, because a repeated CURSOR position
+            // recomputes the memo for free but a repeated (facet, season)
+            // this cache has already seen is a real save once Task 6 makes
+            // `ctx` real.
+            season_bucket_for(self.calendar.as_ref(), hornvale_kernel::WorldTime::GENESIS),
+            Some(&mut self.reflectance_cache),
         )
         .vertex
     }
@@ -2319,7 +2437,7 @@ impl Driver {
     /// the FULL containment chain there (Task 4, Step 1) — every feature at
     /// the resolved vertex, most specific first, each with its class named in
     /// prose (design spec §5).
-    fn resolve_world_view(&self) -> Option<String> {
+    fn resolve_world_view(&mut self) -> Option<String> {
         let vertex_id = self.world_view_vertex();
         let (species, ph, morph) = &self.namer;
         resolve_chain_at(
@@ -2966,6 +3084,48 @@ mod portolan_tests {
     /// acceptance test in `tests/driver.rs` uses.
     fn test_driver() -> Driver {
         Driver::start(42, PossessTarget::Flagship).expect("seed 42 generates")
+    }
+
+    /// The Wash, Task 4: `Driver::reflectance_cache` exists, is correctly
+    /// typed (`ComponentStore<plate::ReflectanceKey, Reflectance>` — see the
+    /// field's own doc), starts empty, and STAYS empty across a real
+    /// `world_view_vertex` resolution — the one shipped call site that
+    /// genuinely borrows and consults it (`resolve_world_view` reaches it by
+    /// resolving the cursor's current position). It stays empty because that
+    /// call site still passes `ctx: None` (Task 6 flips that), so a cache
+    /// miss there resolves to `None` and inserts nothing — this is the
+    /// behavioural half of that claim, not just the field's shape. Whether
+    /// the field can be POPULATED (a real `ctx`, a real hit-then-skip) is
+    /// covered directly against `plate::terrain_at_tile` by `wash.rs`'s own
+    /// `a_redraw_in_the_same_season_adds_no_cache_entries`, not here.
+    #[test]
+    fn the_reflectance_cache_starts_and_stays_empty_while_ctx_is_none() {
+        let mut d = test_driver();
+        assert_eq!(
+            d.reflectance_cache.len(),
+            0,
+            "a fresh driver must start with no cached reflectance"
+        );
+        let _ = d.resolve_world_view();
+        assert_eq!(
+            d.reflectance_cache.len(),
+            0,
+            "a resolution with ctx: None must consult the cache without ever filling it"
+        );
+    }
+
+    /// The Wash, Task 4: the two `None` cases `season_bucket_for` folds to
+    /// bucket 0 are BOTH legitimate worlds, not errors — see the function's
+    /// own doc. This exercises the case with no calendar to consult at all
+    /// (a bare `None`, the tier-0 `ConstantSun` shape) directly, without
+    /// needing to construct one.
+    #[test]
+    fn a_starless_world_resolves_season_bucket_zero() {
+        assert_eq!(
+            season_bucket_for(None, hornvale_kernel::WorldTime::GENESIS),
+            0,
+            "no calendar to consult must resolve to bucket 0, not panic or guess"
+        );
     }
 
     /// **The roster the map draws from holds all three site kinds, and the
@@ -4128,6 +4288,8 @@ mod portolan_tests {
                     u32::from(d.cursor.x),
                     None,
                     hornvale_kernel::WorldTime::GENESIS,
+                    0,
+                    None,
                 )
                 .vertex;
                 let (species, ph, morph) = &d.namer;
@@ -4464,6 +4626,8 @@ mod portolan_tests {
                     u32::from(x),
                     None,
                     hornvale_kernel::WorldTime::GENESIS,
+                    0,
+                    None,
                 )
                 .vertex;
                 let resolved_ocean = d.terrain.is_ocean(vertex);

@@ -146,6 +146,8 @@ fn the_ocean_land_boundary_still_agrees_with_the_terrain() {
                 col,
                 None,
                 hornvale_kernel::WorldTime::GENESIS,
+                0,
+                None,
             );
             assert_eq!(
                 terrain.is_ocean(tile.vertex),
