@@ -2,14 +2,26 @@
 //! address and the seed (Rose Window metaplan §1b.4). Macro answers *who holds
 //! this land*; micro answers *what is standing here*; the brief is the seam.
 //!
-//! It is derived, never stored — which is why it does NOT carry the fields no
-//! consumer reads yet. The ruin signature (`cause`, `ended_by`, ages) and the
-//! district vocabulary are absent on purpose: the metaplan argued for carrying
-//! them from the start "so that adding a consumer never changes the seam", but
-//! that argument only bites for types that PERSIST. Nothing here is serialized,
-//! so the campaign that first needs `cause` adds one field, with no save-format
-//! consequence and no epoch. Seven unread `Option`s would be dead weight that
-//! reads as evidence of intent.
+//! It is derived, never stored — which is why it does NOT carry every field a
+//! future consumer might want. §1b.4's metaplan argued for carrying all of
+//! them from the start "so that adding a consumer never changes the seam",
+//! but that argument only bites for types that PERSIST. Nothing here is
+//! serialized, so a campaign that needs a reserved field adds just that
+//! field, with no save-format consequence and no epoch. Shipping all seven
+//! of the metaplan's reserved fields as `Option`s at genesis — `cause`,
+//! `ended_by`, `founded`/`ended`, `tongue`, `deity`, `peak_population`,
+//! `stratigraphy` — would have been dead weight that reads as evidence of
+//! intent, so v1 shipped none of them.
+//!
+//! **This paragraph used to say the ruin signature was absent on purpose,
+//! two paragraphs above the field that now carries it — stale the moment
+//! this commit landed, and worth saying loudly rather than quietly fixing.**
+//! The ruin signature was three of those seven — `cause`, `ended_by`, and
+//! `ended` — and The Weft is the campaign that needed `cause`: see
+//! [`Brief::ruin`], which folds all three into one [`RuinSignature`] rather
+//! than three loose `Option`s. `founded` and the district vocabulary
+//! (`tongue`, `deity`, `stratigraphy`) are still absent, still on purpose,
+//! for the same reason.
 //!
 //! THREE fields are read as of decision 0398: `built`, in `structure_at`'s
 //! existence predicate and in `describe_chamber`'s room/hollow word; and
@@ -25,8 +37,12 @@
 //! still reaches `pattern::selection_for` on every chamber derivation and
 //! currently selects nothing. It is kept for the same reason the doc above
 //! gives for keeping the seam thin: removing it would be a second edit to undo
-//! the day a population-gated pattern is written, and unlike the seven absent
-//! `Option`s this one has a live wire behind it.
+//! the day a population-gated pattern is written, and unlike the fields still
+//! absent from this struct — `founded`, `tongue`, `deity`, `stratigraphy` —
+//! this one has a live wire behind it. (This sentence used to say "the seven
+//! absent `Option`s"; The Weft's [`Brief::ruin`] moved three of the seven —
+//! `cause`, `ended_by`, `ended` — out of the absent set, so "seven" is no
+//! longer the count of what is actually still missing here.)
 
 use crate::site::{Site, SiteKind};
 use hornvale_history::record::{
@@ -89,11 +105,12 @@ pub struct Brief {
     /// settlement and on empty ground.
     ///
     /// **Why this is here now and was not before.** This module's own header
-    /// says the brief "does NOT carry the fields no consumer reads yet. The
-    /// ruin signature (`cause`, `ended_by`, ages) … [is] absent on purpose",
-    /// because nothing here is serialized, so the campaign that first needs
-    /// `cause` adds one field with no save-format consequence and no epoch.
-    /// The Weft is that campaign.
+    /// states the general rule this field follows: nothing here is
+    /// serialized, so a campaign that needs a reserved field adds just that
+    /// field, with no save-format consequence and no epoch. The Weft is the
+    /// campaign that needed `cause`, and picked up `ended_by` and `ended`
+    /// alongside it — all three describe the one dead occupation, so they
+    /// belong in one [`RuinSignature`] rather than three loose `Option`s.
     pub ruin: Option<RuinSignature>,
 }
 
