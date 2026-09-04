@@ -947,6 +947,18 @@ Claude-Session: https://claude.ai/code/session_01QKhCP8Pr8wWuqejxeKEAGs"
 
 ### Task 5: Collapse the Option-ness, and delete the guards it justified
 
+> **Controller correction after Task 4 (R12):** deleting the `Sky` enum in
+> Task 4 necessarily removed every `Sky::Constant` / `Sky::Generated` match
+> arm at the same time; those arms could not compile in a one-provider
+> wrapper. Therefore the `stellar_inputs`, `greenhouse_forcing_k`, lab
+> `WorldView`, book `true_event_count`, `genesis_notes`, and
+> `almanac_context` enum-arm removals listed below are already complete and
+> are verification targets, not edits for Task 5. Task 5 owns what Task 4
+> deliberately preserved under R2: making `calendar()` / `system()`
+> non-`Option`, deleting their remaining absence guards, and correcting all
+> surviving tier prose. Re-derive the sites from the post-Task-4 tree; do not
+> recreate an enum-shaped edit merely to match stale line-by-line wording.
+
 **Files:**
 - Modify: `windows/worldgen/src/lib.rs:334-350, 564-598, 2605-2655, 3646, 3902, 5192, 8691, 10007, 10273`
 - Modify: `windows/lab/src/metrics.rs:78-90, 180-190`
@@ -1368,4 +1380,3 @@ re-gate, and submit
 A census refresh is ordinary queued work (decision 0514) and needs no
 authorization; this campaign moves no census golden, so submit one only if
 `make lab-diff STUDY=the-census` shows movement.
-

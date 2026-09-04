@@ -371,6 +371,69 @@ the test commit — visible in the diff and trivially movable.
 · Capture: plan Task 1 Step 6b; SDD ledger; retrospective (this is the
 campaign's best process finding so far).
 
+#13 [G5] — **Task 4's implementation is behaviorally accepted, but its
+editing-process breach is not erased by a green tree.**
+· **What happened:** after using compiler diagnostics to enumerate the
+call-site migration, the implementer used exact-token Perl substitutions for
+the repeated `SkyChoice::Generated` argument and import removals. Task 4
+explicitly prohibited scripted or regex rewrites because ten nonstandard
+sites made a plausible partial rewrite dangerous. The task reviewer therefore
+failed strict spec compliance even though it found no semantic corruption and
+the workspace check, focused tests, clients, commit gate, and pre-commit hook
+all passed.
+· **Decision:** accept the resulting implementation after the review's three
+stale-comment findings are fixed and re-reviewed; record the process breach as
+a campaign finding rather than reverting and recreating the same 240-file
+tree manually. Reverting cannot restore the forbidden process — it would only
+manufacture an observationally identical diff at high cost — while accepting
+without a ruling would teach that an explicit safety constraint becomes
+optional when the output happens to be green.
+· **Alternatives discarded:** (1) reject and manually replay every repeated
+deletion: no added evidence, same final bytes, and the original breach remains
+historical fact; (2) accept silently because gates passed: confuses output
+validation with process compliance; (3) abandon the campaign: disproportionate
+to a reversible, exhaustively compiled migration with no observed corruption.
+· **Purpose/symmetry state machine:** the task moved from constrained-editing
+to breached-but-unverified, then to breached-and-behaviorally-verified. It
+cannot transition back to never-breached; the available accept state is
+verified-plus-recorded, not fictional compliance. The asymmetric fact is
+load-bearing: gates can validate the product but cannot retroactively validate
+the method.
+· **Cost if wrong:** an exact-token rewrite may have made a semantically wrong
+deletion that compilation and the scoped review both missed; the whole-branch
+review and later stage/merge gates remain independent backstops.
+· ideonomy passes: 1 (tree-finding rendered as a purpose/symmetry state
+machine) / overturns 0; it clarified that replay cannot reach a compliant
+historical state, so evidence plus durable disclosure is the only honest
+forward transition.
+· Capture: this ledger entry; Task 4 report disclosure; Task 8 retrospective.
+
+#14 [G5] — **Task 5 narrows to the Option boundary Task 4 deliberately left;
+enum-arm cleanup already happened at the only compilable boundary.**
+· **Question:** Task 5's table still assigns several `Sky::Constant` /
+`Sky::Generated` match-arm deletions to itself, but Task 4 replaced the enum
+with a one-provider wrapper and necessarily removed those arms. Should Task 5
+recreate equivalent intermediate structure, or treat those rows as completed
+preconditions?
+· **Decision:** treat the enum-arm rows as completed verification targets.
+Task 5 owns the remaining intentional seam: make `calendar()` and `system()`
+non-`Option`, delete only guards produced by that Option, retain
+`Calendar::day_length()`'s tidal-locking Option, and clean the surviving tier
+prose. This preserves R2's actual task boundary rather than the stale file-line
+allocation around it.
+· **Why:** an enum's match arms have zero longevity after the enum is deleted;
+the Option seam was intentionally kept for one more task and is the durable
+boundary Task 5 exists to collapse. Recreating dead enum-shaped code would be
+work for the plan's wording rather than the design.
+· **Alternatives discarded:** restore an enum for one commit (compilable but
+contrary to Task 4 and decision 0736); duplicate already-complete edits in the
+Task 5 report (false authorship); silently ignore the stale table (leaves the
+next implementer to rediscover the mismatch).
+· ideonomy passes: 1 (organon-construction as a longevity/intentionality
+spectrum) / overturns 0; it separated short-lived forced enum cleanup from the
+intentionally preserved Option seam.
+· Capture: plan Task 5 controller-correction note; SDD progress ledger.
+
 ## Follow-ups
 
 - **Point the census at a pin axis for the first time.** Adding
