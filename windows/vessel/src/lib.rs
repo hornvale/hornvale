@@ -20,6 +20,7 @@ pub mod fabric;
 mod focalize;
 pub mod gate;
 pub mod ground;
+pub mod housemark;
 pub mod interior;
 mod knowledge;
 pub mod lattice;

@@ -2,13 +2,13 @@
 **Goal**: Add the vessel-owned cultural reading and prove all authored society rows occupy the intended six cells.
 **Success Criteria**: Boundary/gap errors are explicit; the live registry satisfies H1.
 **Tests**: Focused `housemark` unit tests and registry census.
-**Status**: In Progress
+**Status**: Complete
 
 ## Stage 2: Cultural pattern admission
 **Goal**: Extend the one pattern inventory with housemark gates and the four diagnostic threshold relations.
 **Success Criteria**: The six-cell cross-product satisfies H2/H4; locale selection is unchanged.
 **Tests**: Pattern selection, composition, duplicate-kind, and mutation-sensitive assertions.
-**Status**: Not Started
+**Status**: In Progress
 
 ## Stage 3: Brief and production wiring
 **Goal**: Derive a housemark once from the living occupation and carry it to chamber composition.

@@ -5562,3 +5562,8 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-04T13:03:26Z | sluice:gate | 1131.412 | 20483.234 | 518.346 | 18.56 | 0 | be5727ad4 |  | lefford | 40 |
 | 2026-09-04T13:05:43Z | sluice:clients | 137.573 | 2064.855 | 194.313 | 16.42 | 0 | f443193c7 |  | lefford | 40 |
 | 2026-09-04T13:13:17Z | sluice:heavy | 453.283 | 9676.511 | 159.914 | 21.70 | 0 | 49eb197f8 |  | lefford | 40 |
+| 2026-09-04T16:25:36Z | gate-commit | 23.883 | 58.590 | 5.141 | 2.67 | 0 | 5827a76ab | campaign/the-housemark | MacBookPro | 10 |
+| 2026-09-04T16:26:36Z | gate-commit | 21.325 | 21.440 | 1.454 | 1.07 | 0 | 5827a76ab | campaign/the-housemark | MacBookPro | 10 |
+| 2026-09-04T16:27:49Z | gate-commit | 49.555 | 28.203 | 0.846 | 0.59 | 0 | 5827a76ab | campaign/the-housemark | MacBookPro | 10 |
+| 2026-09-04T16:32:00Z | gate-commit | 229.006 | 786.202 | 44.677 | 3.63 | 0 | 5827a76ab | campaign/the-housemark | MacBookPro | 10 |
+| 2026-09-04T16:33:18Z | gate-commit | 38.963 | 73.331 | 22.525 | 2.46 | 0 | 5827a76ab | campaign/the-housemark | MacBookPro | 10 |
