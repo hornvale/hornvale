@@ -176,14 +176,9 @@ fn high_ground_is_brighter_in_the_cold_half_of_the_year() {
     // Matches `windows/scene/examples/illumination_probe.rs`'s `genesis()`
     // exactly — the construction Task 1's numbers above were measured
     // against. `World::new(Seed(42))` (used by the other test in this file)
-    // is NOT equivalent: with no sky-provider fact committed, `sky_of` today
-    // falls back to a constant sun, which carries no seasonal swing at all
-    // (`temperature_at` would be day-invariant), so it cannot reproduce
-    // Task 1's day-dependent readings. THE ZENITH: that fallback is on its
-    // way out — `sky_of` will error instead — which does not change what this
-    // test needs, an explicitly built generated sky, but does mean the
-    // bare-world construction it warns against will stop building at all
-    // rather than building the wrong thing.
+    // is NOT equivalent: it has no committed sky-provider fact, so `sky_of`
+    // errors. This test needs an explicitly built generated sky to reproduce
+    // Task 1's day-dependent readings.
     let world = build_world(
         Seed(42),
         &Default::default(),

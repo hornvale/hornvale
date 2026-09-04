@@ -217,7 +217,7 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
     registry.register_predicate(
         facts::SKY_PROVIDER,
         true,
-        "which astronomy provider this world uses (constant or generated)",
+        "the generated astronomy provider this world uses",
     )?;
     registry.register_predicate(
         facts::SCENARIO_PIN,

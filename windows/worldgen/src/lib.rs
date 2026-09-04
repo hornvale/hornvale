@@ -308,14 +308,14 @@ impl Sky {
     pub fn generated(&self) -> &GeneratedSky {
         &self.0
     }
-    /// The sky at a moment, rendered, from whichever provider this is.
+    /// The generated sky at a moment, rendered.
     pub fn sky_at(&self, time: WorldTime) -> SkyReport {
         self.sky_at_visibility(time, Visibility::CLEAR)
     }
 
-    /// The sky at a moment through a view of the given [`Visibility`], from
-    /// whichever provider this is. Each provider decides for itself what
-    /// survives a dimmed sky; neither learns what dimmed it.
+    /// The generated sky at a moment through a view of the given
+    /// [`Visibility`]. The sky decides what survives a dimmed view; it does
+    /// not learn what dimmed it.
     pub fn sky_at_visibility(&self, time: WorldTime, vis: Visibility) -> SkyReport {
         self.0.sky_at_visibility(time, vis)
     }
@@ -9454,7 +9454,7 @@ pub fn culture_lines(world: &World, flagship: &hornvale_settlement::VillageInfo)
     ]
 }
 
-/// The sky at `time`, from whichever astronomy provider this world uses.
+/// The generated sky at `time` for this world.
 /// The single construction site for the provider (Constitution §2.4 tiers).
 ///
 /// Appends a weather clause (The Firmament, spec Weather Program C4): the
