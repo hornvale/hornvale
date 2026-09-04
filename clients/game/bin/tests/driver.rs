@@ -186,6 +186,32 @@ fn map_focus_at_the_walk_band_resolves_a_real_name() {
 /// chart has no cell in at all (`cell_at` returns `None`, screen offset
 /// `(15, 10)`, five columns west of centre `(20, 10)`) — a different,
 /// real, honestly-reported outcome from the observer's own box.
+/// Enter the map and climb to [`hornvale_game::plate::BAND_B_RUNG`] — the
+/// walk band's own rung.
+///
+/// **New at The Hachure's Stage 0.** `submit_line(.., "map")` used to land on
+/// band B; the map now opens at `plate::map_entry_rung`, the coarsest rung the
+/// terrain mesh can fill, because band B is seven rungs finer than the grid and
+/// a plate there draws one vertex's reading everywhere. Tests below that are
+/// about BAND-B behaviour — the sight caption, resize re-centring — now have to
+/// say so, and this is them saying it through the public gestures a reader
+/// actually has.
+///
+/// Bounded rather than a `while`, the same reason the in-module helpers are:
+/// an unbounded climb would hang the suite if `apply_zoom`'s zoom-in arm
+/// regressed to a no-op.
+fn enter_band_b(driver: &mut Driver) {
+    submit_line(driver, "map");
+    for _ in 0..(hornvale_game::plate::BAND_B_RUNG - hornvale_game::plate::GLOBE_RUNG) {
+        driver.apply(Action::Zoom(1));
+    }
+    assert_eq!(
+        driver.window().depth,
+        hornvale_game::plate::BAND_B_RUNG,
+        "the helper must land on the walk band's rung"
+    );
+}
+
 #[test]
 fn moving_the_cursor_off_the_observers_box_changes_the_strip() {
     // The strip carries the sight-disclosure caption only when colour is
@@ -196,8 +222,8 @@ fn moving_the_cursor_off_the_observers_box_changes_the_strip() {
         let mut driver = Driver::start(42, hornvale_vessel::PossessTarget::Flagship).unwrap();
         submit_line(&mut driver, "map");
         let at_observer = driver.strip_text().map(str::to_string);
-        // The strip now carries the sight-disclosure caption after the name
-        // (Task 5): the name first, then the honesty line.
+        // The strip carries a disclosure after the name (Task 5): the name
+        // first, then the honesty line.
         let at_observer_text = at_observer
             .as_deref()
             .expect("the strip always reports once the map is focused");
@@ -205,8 +231,22 @@ fn moving_the_cursor_off_the_observers_box_changes_the_strip() {
             at_observer_text.starts_with("Vngashngatva"),
             "the observer's own box must resolve to seed 42's real landmass name, got {at_observer_text:?}"
         );
+        // **THE HONESTY LINE THIS READS IS THE RESOLUTION ONE, NOT THE SIGHT
+        // ONE (The Hachure, Stage 0).** It used to assert `"bugbear"` — the
+        // sight caption — which `band_b_keeps_the_sight_caption_and_a_coarse_
+        // rung_does_not` documents as band-B-only, and which this test got for
+        // free while `map` landed on band B. The map now opens at
+        // `plate::map_entry_rung`, so the sight caption is legitimately
+        // absent here and the resolution disclosure (decision 0123) is what
+        // rides along instead.
+        //
+        // The claim under test is unchanged — "a disclosure rides along with
+        // the name" — and the sight caption's own band-B/coarse split keeps
+        // its dedicated test, so nothing is uncovered by reading this one
+        // instead. Asserted on the phrase rather than a character count,
+        // because the count moves with the rung.
         assert!(
-            at_observer_text.contains("bugbear"),
+            at_observer_text.contains("to one terrain reading"),
             "the disclosure rides along: {at_observer_text:?}"
         );
 
@@ -304,7 +344,7 @@ fn moving_the_cursor_off_the_observers_box_changes_the_strip() {
 #[test]
 fn resize_re_centres_band_b_on_the_observer_at_the_new_plate_height() {
     let mut driver = Driver::start(42, hornvale_vessel::PossessTarget::Flagship).unwrap();
-    submit_line(&mut driver, "map");
+    enter_band_b(&mut driver);
 
     // The observer's own marker, and where it sits, at two terminal heights.
     let marker_row = |driver: &mut Driver, w: u16, h: u16| -> (u16, u16) {
@@ -631,22 +671,37 @@ fn leaving_the_map_at_a_coarse_rung_returns_the_walker_to_their_own_band() {
 
         submit_line(&mut driver, "map");
         assert_eq!(driver.focus(), Focus::Map);
+        let entry_rung = driver.window().depth;
         driver.apply(Action::Zoom(-1));
 
         // VACUOUS GUARD: the zoom must actually have coarsened the ladder,
         // or the exit below proves nothing at all.
-        let coarse = driver
-            .world_plate_for_redraw(w, h)
-            .expect("band B still draws a plate at a coarse rung");
-        let coarse_sources: BTreeSet<Source> = (0..spread::content_height(h))
-            .flat_map(|y| (0..coarse.width()).map(move |x| (x, y)))
-            .filter_map(|(x, y)| coarse.get(x, y).filter(|c| !c.is_blank()).map(|c| c.source))
-            .collect();
+        //
+        // **RETARGETED BY THE HACHURE, STAGE 0, AND THE OLD FORM IS NOW
+        // UNAVAILABLE RATHER THAN MERELY WEAKER.** This guard used to assert
+        // `Source::Chart` was ABSENT at the coarse rung, and the assertion
+        // after the exit that it was PRESENT — the pair discriminating "the
+        // walker got their own band back". Stage 0 draws the observer at
+        // every rung (`compose_perception_layer`), because a map that opens
+        // coarser must still show where you stand, so `Chart` is present on
+        // both sides and the pair cannot discriminate any more.
+        //
+        // Nor does COUNTING discriminate: seed 42's flagship band carries a
+        // mark on the observer's own facet and nowhere else, and `here`
+        // outranks a mark on the same box, so band B and a coarse rung both
+        // paint exactly one `@`.
+        //
+        // So the discriminator is the rung PLUS the picture. The old comment
+        // rejected asserting the rung because a fix could "reset the rung and
+        // leave the window in the arctic corner of a 23,245-wide chart" — but
+        // that is precisely what the observer being ON the plate rules out,
+        // so the conjunction is strictly stronger than the source set it
+        // replaces, not a concession.
         assert!(
-            !coarse_sources.contains(&Source::Chart),
-            "VACUOUS GUARD: a coarse rung must draw no perception overlay, or \
-             the assertion after the exit cannot discriminate; got \
-             {coarse_sources:?}"
+            driver.window().depth < entry_rung,
+            "VACUOUS GUARD: the zoom must actually have coarsened the ladder, \
+             still at rung {}",
+            driver.window().depth
         );
 
         match door {
@@ -676,6 +731,19 @@ fn leaving_the_map_at_a_coarse_rung_returns_the_walker_to_their_own_band() {
             "after leaving the map by the {door} door the plate carries no \
              perception overlay — the player is not on their own picture; got \
              {sources:?}"
+        );
+        assert_eq!(
+            driver.window().depth,
+            hornvale_game::plate::BAND_B_RUNG,
+            "the {door} door must hand the walker back their own band"
+        );
+        let observed = (0..spread::content_height(h))
+            .flat_map(|y| (0..plate.width()).map(move |x| (x, y)))
+            .any(|(x, y)| plate.get(x, y).is_some_and(|c| c.glyph == Some('@')));
+        assert!(
+            observed,
+            "the {door} door reset the rung but left the window somewhere the \
+             observer is not — the other half of the same defect"
         );
         assert!(
             plate.to_plain_text().contains('@'),

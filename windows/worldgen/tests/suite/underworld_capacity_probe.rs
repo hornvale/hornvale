@@ -189,12 +189,13 @@ fn where_underworld_communities_found_and_what_they_cut() {
             &TerrainPins::default(),
             &SettlementPins::default(),
             &wc,
-            BuildDepth::Terrain,
+            BuildDepth::Full,
         )
         .expect("probe seed builds");
         let terrain = artifacts
             .terrain
-            .expect("terrain is Some at BuildDepth::Terrain");
+            .expect("terrain is Some at BuildDepth::Full");
+        let world = &artifacts.world;
         let geo = terrain.geosphere();
         let sea = terrain.sea_level().get();
 
@@ -256,6 +257,16 @@ fn where_underworld_communities_found_and_what_they_cut() {
 
         // The `Made` writer, run over the real history.
         let overrides = made_chambers(seed, &terrain, &history, &seating);
+        // The Plat (spec §3.2): the ledger-side writer agrees with the
+        // bake-side one exactly — one writer at two grains, not two writers.
+        // The Full build's ledger carries the history `history_for` bakes
+        // (the same function, the same inputs), which is what makes the two
+        // maps comparable at all.
+        let from_ledger = hornvale_worldgen::delve_seating::ledger_overrides(world, &terrain);
+        assert_eq!(
+            from_ledger, overrides,
+            "seed {seed_value}: ledger_overrides and made_chambers disagree"
+        );
         let made = overrides
             .values()
             .filter(|o| **o == ChamberOrigin::Made)

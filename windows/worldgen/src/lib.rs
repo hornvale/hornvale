@@ -104,6 +104,9 @@ pub mod history_emit;
 pub mod knownness;
 pub mod observer;
 pub mod person_promote;
+pub mod placement;
+pub mod plat;
+pub mod plat_readout;
 pub mod render;
 pub mod residents;
 pub mod resolve;
@@ -161,6 +164,7 @@ pub use hornvale_climate::GeneratedClimate;
 /// new dependency edge — the layering graph is unchanged.
 pub use hornvale_demography::DemographyReport;
 pub use knownness::{Knownness, knownness, memory_half_life};
+pub use placement::{SiteReason, site_facet_for};
 pub use resolve::{ChainLink, format_chain, resolve_at, resolve_chain_at};
 pub use settlement_pins::SettlementPins;
 pub use traversal::{BASE_COST, traversal_cost, traversal_cost_at};

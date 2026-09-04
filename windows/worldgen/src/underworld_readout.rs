@@ -126,16 +126,24 @@
 //!   `a_junction_past_the_ladder_is_empty` in
 //!   `windows/worldgen/tests/suite/junctions.rs` asks it deliberately;
 //!   nothing else does.
-//! - **`ChamberOrigin::Made`.** The `origin` field *is* read and tallied
-//!   ([`Tallies::by_origin`]), so [`crate::chamber::resolve_origin`] is wired
-//!   end to end — but the override source this hands `chamber_at` is
-//!   [`crate::chamber::ChamberOverrides::new`], an empty map, so `made` is 0
-//!   **by construction** and will stay 0 however good Task 4's writer is.
-//!   `crate::delve_seating::made_chambers` is the writer, and it needs a
-//!   `History` and a seating map — both far above `BuildDepth::Terrain`, which
-//!   is why this cheap readout cannot call it. **Task 4's job is to hand this
-//!   function a real override source**; until it does, a `made` of 0 means
-//!   "nobody asked", not "nothing was made".
+//! - **`ChamberOrigin::Made` is a real count now (The Plat, spec §3.6).**
+//!   The override source is no longer inlined here: [`render_underworld`]
+//!   takes a [`crate::chamber::ChamberOverrides`] and the caller supplies it.
+//!   The production caller is `hornvale underworld`, which builds to
+//!   `BuildDepth::Full` — not `Terrain`, as it did before this campaign —
+//!   precisely so it can call [`crate::delve_seating::ledger_overrides`],
+//!   which reads the committed ledger's occupations per column. So a `made`
+//!   of 0 on this page now means *nothing was made*, not "nobody asked".
+//!   This bullet used to record the opposite, and record it as permanent
+//!   ("will stay 0 however good Task 4's writer is"); it was true of the
+//!   empty map and never of the function.
+//!
+//!   **A caller may still hand in an empty map, and most of the tests below
+//!   do.** A test about the lattice — band histograms, run lengths, junction
+//!   shapes — is not a test about origins, and passing
+//!   `ChamberOverrides::new()` says so explicitly rather than smuggling a
+//!   ledger read into a terrain-only fixture. Those tests report `made 0`
+//!   and mean "no override was offered".
 //! - **"Vertical connection" no longer belongs on this list, and its absence
 //!   here is itself the fact worth recording.** This bullet used to claim
 //!   `passages_from` does not treat `level` as an adjacency axis, so
@@ -590,7 +598,11 @@ fn largest_component(
 /// describes carried the trailing clause. Both compiled, and both satisfied
 /// `#![warn(missing_docs)]`, which is exactly why nothing caught it.
 /// type-audit: bare-ok(prose: return)
-pub fn render_underworld(seed: Seed, terrain: &GeneratedTerrain) -> String {
+pub fn render_underworld(
+    seed: Seed,
+    terrain: &GeneratedTerrain,
+    overrides: &crate::chamber::ChamberOverrides,
+) -> String {
     let mut out = String::new();
     let mut tallies = Tallies {
         systems: 0,
@@ -610,11 +622,6 @@ pub fn render_underworld(seed: Seed, terrain: &GeneratedTerrain) -> String {
     };
     // The first `TRANSECT_SYSTEMS` cave systems in vertex order, walked in full.
     let mut transect: Vec<(hornvale_kernel::Vertex, String, Vec<RunRow>)> = Vec::new();
-    // THE OVERRIDE SOURCE, named rather than inlined: this is the one line
-    // Task 4 replaces to put `ChamberOrigin::Made` into the artifact. Empty
-    // today, so `by_origin[1]` is 0 by construction — see the module doc.
-    let overrides = crate::chamber::ChamberOverrides::new();
-
     for vertex in terrain.geosphere().vertices() {
         let Some(cave) = terrain.cave_at(vertex) else {
             continue;
@@ -673,7 +680,7 @@ pub fn render_underworld(seed: Seed, terrain: &GeneratedTerrain) -> String {
                         band,
                         level,
                     };
-                    match chamber_at(seed, &cave, gradient, &column, addr, &overrides) {
+                    match chamber_at(seed, &cave, gradient, &column, addr, overrides) {
                         // The EXISTS arm is first, so no refusal glyph
                         // computed from `drawn` can mask a chamber the
                         // shipped path admitted past it.
@@ -748,7 +755,7 @@ pub fn render_underworld(seed: Seed, terrain: &GeneratedTerrain) -> String {
                 band,
                 level: mouth.floor,
             };
-            if chamber_at(seed, &cave, gradient, &column, entry, &overrides).is_some() {
+            if chamber_at(seed, &cave, gradient, &column, entry, overrides).is_some() {
                 tallies.open_entrances += 1;
                 // Only an OPEN mouth seeds the walk: a shut door contributes
                 // nothing to what a player can reach, and seeding it anyway
@@ -906,8 +913,16 @@ mod tests {
     #[test]
     fn the_readout_is_byte_identical_across_two_builds_of_one_seed() {
         let seed = Seed(42);
-        let first = render_underworld(seed, &terrain_for(seed));
-        let second = render_underworld(seed, &terrain_for(seed));
+        let first = render_underworld(
+            seed,
+            &terrain_for(seed),
+            &crate::chamber::ChamberOverrides::new(),
+        );
+        let second = render_underworld(
+            seed,
+            &terrain_for(seed),
+            &crate::chamber::ChamberOverrides::new(),
+        );
         assert_eq!(
             first, second,
             "two independent builds of seed 42 rendered different underworld \
@@ -927,7 +942,11 @@ mod tests {
     #[test]
     fn the_readout_witnesses_a_populated_underworld() {
         let seed = Seed(42);
-        let text = render_underworld(seed, &terrain_for(seed));
+        let text = render_underworld(
+            seed,
+            &terrain_for(seed),
+            &crate::chamber::ChamberOverrides::new(),
+        );
 
         let systems: usize = text
             .lines()
@@ -981,7 +1000,11 @@ mod tests {
     #[test]
     fn the_transect_walks_the_lattice_ceiling_rather_than_the_drawn_count() {
         let seed = Seed(42);
-        let text = render_underworld(seed, &terrain_for(seed));
+        let text = render_underworld(
+            seed,
+            &terrain_for(seed),
+            &crate::chamber::ChamberOverrides::new(),
+        );
         let rows = glyph_rows(&text);
         assert!(!rows.is_empty(), "the transect rendered no row at all");
 
@@ -1013,7 +1036,11 @@ mod tests {
     #[test]
     fn no_chamber_exists_past_its_runs_drawn_length() {
         let seed = Seed(42);
-        let text = render_underworld(seed, &terrain_for(seed));
+        let text = render_underworld(
+            seed,
+            &terrain_for(seed),
+            &crate::chamber::ChamberOverrides::new(),
+        );
         let past: usize = text
             .lines()
             .find_map(|l| l.trim().strip_prefix("past run length").map(str::trim))
@@ -1038,7 +1065,11 @@ mod tests {
     #[test]
     fn some_transect_row_carries_the_past_run_glyph() {
         let seed = Seed(42);
-        let text = render_underworld(seed, &terrain_for(seed));
+        let text = render_underworld(
+            seed,
+            &terrain_for(seed),
+            &crate::chamber::ChamberOverrides::new(),
+        );
         let rows = glyph_rows(&text);
         assert!(!rows.is_empty(), "the transect rendered no row at all");
         assert!(
@@ -1058,7 +1089,11 @@ mod tests {
     #[test]
     fn some_transect_row_carries_the_past_branch_glyph() {
         let seed = Seed(42);
-        let text = render_underworld(seed, &terrain_for(seed));
+        let text = render_underworld(
+            seed,
+            &terrain_for(seed),
+            &crate::chamber::ChamberOverrides::new(),
+        );
         let rows = glyph_rows(&text);
         assert!(!rows.is_empty(), "the transect rendered no row at all");
         assert!(
@@ -1078,7 +1113,11 @@ mod tests {
     #[test]
     fn no_chamber_exists_past_its_systems_drawn_branches() {
         let seed = Seed(42);
-        let text = render_underworld(seed, &terrain_for(seed));
+        let text = render_underworld(
+            seed,
+            &terrain_for(seed),
+            &crate::chamber::ChamberOverrides::new(),
+        );
         let past: usize = text
             .lines()
             .find_map(|l| l.trim().strip_prefix("past branch cnt").map(str::trim))
@@ -1158,7 +1197,11 @@ mod tests {
     #[test]
     fn reachability_is_reported_and_equals_existence() {
         let seed = Seed(42);
-        let text = render_underworld(seed, &terrain_for(seed));
+        let text = render_underworld(
+            seed,
+            &terrain_for(seed),
+            &crate::chamber::ChamberOverrides::new(),
+        );
         let reachable: usize = text
             .lines()
             .find_map(|l| l.trim().strip_prefix("reachable").map(str::trim))
@@ -1208,7 +1251,11 @@ mod tests {
     #[test]
     fn the_witness_walks_drawn_entrances_and_sees_a_plural_one() {
         let seed = Seed(42);
-        let text = render_underworld(seed, &terrain_for(seed));
+        let text = render_underworld(
+            seed,
+            &terrain_for(seed),
+            &crate::chamber::ChamberOverrides::new(),
+        );
         let line = text
             .lines()
             .find(|l| l.trim().starts_with("entrances"))
@@ -1264,7 +1311,11 @@ mod tests {
     #[test]
     fn every_chamber_is_counted_under_exactly_one_origin() {
         let seed = Seed(42);
-        let text = render_underworld(seed, &terrain_for(seed));
+        let text = render_underworld(
+            seed,
+            &terrain_for(seed),
+            &crate::chamber::ChamberOverrides::new(),
+        );
         let origin_line = text
             .lines()
             .find_map(|l| l.trim().strip_prefix("by origin").map(str::trim))

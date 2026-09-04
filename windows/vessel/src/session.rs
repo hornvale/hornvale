@@ -9,13 +9,15 @@ use crate::controller::{Controller, ImposedController, PlayerController};
 use crate::gate::{BodyState, Verdict, verdict};
 use crate::liveness::{
     AGENT_AT, Affect, AffectLabel, DRANK, DriveKind, DriveMovements, EATEN, Felt, HomeNavCache,
-    LocaleTerrain, Mode, Occupancy, PrimaryAfraidMemo, RESTED, SLEPT, SUSTENANCE, Terrain,
-    act_span, affect_of_memo, agent_at_fact, agent_position, built_rooms, derive_npcs,
-    derive_wild_herds, renders_unconscious, slept_fact, species_activity, village_or_fallback,
+    LocaleTerrain, Mode, Occupancy, PrimaryAfraidMemo, RESTED, SLEPT, SLEPT_ON, SUSTENANCE,
+    Terrain, act_span, affect_of_memo, agent_at_fact, agent_position, built_rooms, derive_npcs,
+    derive_wild_herds, renders_unconscious, slept_fact, slept_on_fact, species_activity,
+    village_or_fallback,
 };
 use crate::residents::derive_residents;
 use crate::roll::{ROLL_BUDGET, ROLL_HOPS, RollKeyStatic, roll_of, rooms_within};
 use crate::roster::{Roster, Slot, on_roll_others, other_bodies};
+use crate::site::{Site, SiteKind};
 use crate::snapshot::{
     KnownChannel, KnownEntry, Narration, NounEntry, PresentEntry, SESSION_SCHEMA, SelfChannel,
     SensedChannel, SessionSnapshot, SocialEntry, SpatialChannel,
@@ -373,13 +375,23 @@ const INDOOR_CORNER_REFUSAL: &str =
 /// band address, with `describe_chamber_here` reporting the wrong room from then
 /// on.
 ///
-/// **Not reachable from a live session today, and the guard is still right.**
-/// `crate::structure::structure_at` returns `None` unless `brief.built`, so
-/// `embed_with` always picks `allocate`, whose rect partition leaves floors two
-/// apart across a wall line — a diagonal touch is geometrically impossible there
-/// (probed: 0 of 2400 allocate lattices, against 532 of 2400 grown). So `grow` is
-/// test-only as things stand. It is the method that will be used, which is why
-/// this guard is written now rather than when it first goes live.
+/// **IT WENT LIVE IN THIS CAMPAIGN, and this paragraph said it could not.**
+/// It read: *"Not reachable from a live session today … `structure_at` returns
+/// `None` unless `brief.built`, so `embed_with` always picks `allocate`, whose
+/// rect partition leaves floors two apart across a wall line — a diagonal touch
+/// is geometrically impossible there (probed: 0 of 2400 allocate lattices,
+/// against 532 of 2400 grown). So `grow` is test-only as things stand."*
+///
+/// The measurement is intact and is what now matters: **0 of 2400 allocate
+/// lattices can present this configuration and 532 of 2400 grown ones — 22% —
+/// can.** What changed is which of those two a live session reaches. Decision
+/// 0666 hung the enterability gate on `Brief.site`, so a cave or an exotic site
+/// (unbuilt, but a site) derives a structure and `embed_with` sends it to
+/// `grow`; H3 (`windows/lab/tests/suite/site_density.rs`) measures ~980-2,615
+/// such facets per world. A settlement still allocates and still cannot reach
+/// this. So the guard is no longer written ahead of its need — it is load-bearing
+/// now, on every cave and exotic interior, and it is the reason a diagonal step
+/// there cannot leave `Inside::at` naming the room it left.
 ///
 /// # Refused rather than treated as a crossing — and NOT for the reason first given
 ///
@@ -928,7 +940,29 @@ pub struct Session<'w> {
     /// `Session::start` requires `mint_flagship` to resolve a settlement
     /// first, so in practice this always carries at least the possessed
     /// agent's own home room by the time a session exists.
-    built: std::collections::BTreeSet<FacetId>,
+    ///
+    /// A MAP to each such room's settlement NAME since The Prospect (Task 7),
+    /// so `enter` can say which settlement it entered — see
+    /// [`crate::liveness::built_rooms`] for why the name rides on this one
+    /// structure rather than a second one beside it.
+    built: std::collections::BTreeMap<FacetId, String>,
+    /// The vertices holding a cave (The Prospect, Task 4), computed once at
+    /// `start` the same way `built` is.
+    ///
+    /// Held rather than re-derived per turn because
+    /// `GeneratedTerrain::cave_site_vertices` runs `cave_at` over the whole
+    /// canonical grid — 40,962 vertices, each a point process with a noise
+    /// sample — while `LocaleContext::strange_sites`, the roster beside it in
+    /// `brief_here`, is a cheap read over a budget the context already built.
+    /// The two look alike at the call site and are not.
+    ///
+    /// **Measured, so nobody has to guess from that sentence:** the full scan
+    /// is **~2.9 ms** on seed 42 (three runs: 2.89 / 4.35 / 2.92 ms), against
+    /// a `Session::start` the committed baseline puts at ~4.2 s. So holding it
+    /// is the right shape for a per-turn read and not an urgent one — do not
+    /// read the paragraph above as a warning that the scan is expensive in
+    /// absolute terms. It is 0.07% of a start.
+    cave_sites: Vec<hornvale_kernel::Vertex>,
     /// Each NPC's within-room anchor as of the most recent `wait` tick's own
     /// walk (The Threshold whole-branch review, Important 4) — recovered via
     /// [`DriveMovements::step_with_occupancy`] the same way the lab's health
@@ -1540,6 +1574,18 @@ impl<'w> Session<'w> {
         registry
             .register_predicate(SLEPT, false, "an agent slept on a day, for this many ticks")
             .expect("SLEPT registers identically every session");
+        // The site half (The Pallet, Task 3): which KIND of anchor a sleep
+        // landed on, in the room `SLEPT` above already dates. Registered on
+        // the same terms — by the session, not at genesis — for the same
+        // reason: `slept-on` did not exist before this campaign, so no
+        // committed world can already disagree with this definition.
+        registry
+            .register_predicate(
+                SLEPT_ON,
+                false,
+                "the kind of anchor an agent slept on, within the room it slept in",
+            )
+            .expect("SLEPT_ON registers identically every session");
         registry
             .register_predicate(EATEN, false, "an agent ate (eased its hunger) on a day")
             .expect("EATEN registers identically every session");
@@ -1849,6 +1895,12 @@ impl<'w> Session<'w> {
         // this. Built once here, the same one-shot-at-start discipline as
         // `calendar`/`predator`/`prey`.
         let built = built_rooms(world, ctx);
+        // The cave roster (The Prospect, Task 4), on the same
+        // one-shot-at-start discipline. `GeneratedTerrain::cave_at` decides
+        // WHETHER there is a cave at a vertex — the one answer in the tree;
+        // `hornvale_worldgen::site_facet_for` decides where, per facet, when
+        // `brief_of` asks.
+        let cave_sites = ctx.terrain().cave_site_vertices();
         // The possessed body's own mass, through the ONE shared derivation
         // (The Tackle): read here, once, exactly as `derive_npcs` reads a
         // creature's. Bound before the struct literal because `bodies` is
@@ -1949,6 +2001,7 @@ impl<'w> Session<'w> {
             predator,
             prey,
             built,
+            cave_sites,
             occupancy: Occupancy::default(),
             wake_at: None,
             body_mass_kg: mass_for_species(&species_for_mass, Some(&biosphere_for_mass)),
@@ -3811,6 +3864,30 @@ impl<'w> Session<'w> {
         self.ledger
             .commit(fact, &self.registry)
             .expect("SLEPT is registered every session and non-functional");
+        // THE SITE HALF (The Pallet, Task 3). Mirrors `liveness.rs`'s own
+        // `Action::Sleep` arm in `advance_one` exactly, because a player's
+        // `sleep` and a creature's own act commit the same `slept` fact above
+        // and must commit the same `slept-on` one under the same rule — within
+        // this room only, never a search beyond it. Bare ground commits
+        // nothing. `place` is `None` (fix round 1, F2) — see `SLEPT_ON`'s own
+        // doc; `room` is still needed here to derive the interior, even
+        // though `slept_on_fact` no longer takes it.
+        let room = self.position();
+        let terrain = self.terrain_here();
+        let room_interior = crate::interior::interior_of(&room, &terrain);
+        if let Some(anchor) =
+            crate::sleep_site::select_sleep_site(&room_interior, self.driven_body())
+        {
+            let site_fact = slept_on_fact(
+                self.agent_entity(),
+                room_interior.anchor(anchor).kind,
+                self.day,
+                SLEPT_PROVENANCE,
+            );
+            self.ledger
+                .commit(site_fact, &self.registry)
+                .expect("SLEPT_ON is registered every session and non-functional");
+        }
         // UNCONSCIOUSNESS IS READ OFF THE ACT, NOT ASSERTED HERE (The Wicket,
         // Task 8). The `if` is not decoration on an act that always answers
         // `true`: it is the statement that this method has no opinion of its
@@ -5868,11 +5945,23 @@ impl<'w> Session<'w> {
                 // descent and places the possession on the entrance rung's
                 // first standable cell, from the SAME terrain handle and
                 // vertex the sealed-check above already resolved.
+                //
+                // The Plat: the per-rung origins and tenancy come off the
+                // committed ledger (`column_origins`), never hardcoded —
+                // ~156 ms on a JSON-loaded world such as the test fixture,
+                // paid once per delve, and cheap on a Full-built one.
+                let origins = hornvale_worldgen::delve_seating::column_origins(
+                    self.world,
+                    terrain,
+                    vertex,
+                    &crate::underground::habitation_rungs(),
+                );
                 self.underground = Some(crate::underground::Underground::enter(
                     terrain,
                     vertex,
                     cave,
                     self.world.seed,
+                    &origins,
                 ));
                 // Fix round 1: every ARRIVAL marks, not just a lateral step
                 // (spec §3.5, amended in commit f6051a9c3) — the entrance
@@ -6444,6 +6533,31 @@ impl<'w> Session<'w> {
             .collect()
     }
 
+    /// The things lying in the Sanctum's region — the hoarder's hoard (spec
+    /// §3.5) — as `(thing, noun)`, the shape [`Self::underground_floor_nouns`]
+    /// returns.
+    fn hoard_nouns(&self, ug: &crate::underground::Underground) -> Vec<(EntityId, &'static str)> {
+        let Some(&sanctum) = hornvale_worldgen::plat::role_nodes(
+            &ug.plan,
+            &ug.reading,
+            ug.rung,
+            hornvale_worldgen::plat::Role::Sanctum,
+        )
+        .first() else {
+            return Vec::new();
+        };
+        crate::descent_thing::things_lying_at_node(ug, sanctum, &self.ledger, self.day)
+            .into_iter()
+            .filter_map(|thing| {
+                let label = self
+                    .ledger
+                    .kind_of(thing)
+                    .unwrap_or(crate::descent_thing::KEY);
+                Some((thing, crate::chamber_prose::noun(label)?))
+            })
+            .collect()
+    }
+
     fn describe_underground_here(&self) -> String {
         let ug = self
             .underground
@@ -6465,6 +6579,12 @@ impl<'w> Session<'w> {
             // already uses, and it reads the same for one thing or four,
             // which a "{noun} lies here" sentence does not.
             out.push_str(&format!(" Lying here: {listed}."));
+        }
+        // The Plat (spec §3.4): the place, in a rung a people cut. Appended,
+        // so a wild descent reads byte for byte as it did.
+        if let Some(place) = crate::plat_prose::place_sentence(ug) {
+            out.push(' ');
+            out.push_str(&place);
         }
         for (dir, _, door, _) in self.doors_adjacent(ug) {
             out.push_str(&format!(
@@ -6592,13 +6712,13 @@ impl<'w> Session<'w> {
             ),
         ];
         if let Some((kind, source, _cell)) = self.underground_resident(ug) {
+            let hoard_words = self.hoard_nouns(ug);
+            let hoard: Vec<&str> = hoard_words.iter().map(|(_, n)| *n).collect();
+            let datum =
+                crate::underground::inhabitant_datum(kind, source, ug.tenancy[ug.rung], &hoard);
             nouns.push(
-                crate::focalize::Noun::new(
-                    kind.0,
-                    kind.0,
-                    &crate::underground::inhabitant_datum(kind, source),
-                )
-                .with_kind(crate::focalize::NounKind::Creature),
+                crate::focalize::Noun::new(kind.0, kind.0, &datum)
+                    .with_kind(crate::focalize::NounKind::Creature),
             );
         }
         // The Brattice, Task 5 (spec §3.7): every noun `look` names down here
@@ -6619,6 +6739,10 @@ impl<'w> Session<'w> {
             };
             nouns.push(crate::focalize::Noun::new(noun, noun, detail));
         }
+        // The Plat (spec §3.4): the place's own nouns — entry/hall/chamber
+        // and a landing's stair — each answering `examine` with the same
+        // sentence `look` appends.
+        nouns.extend(crate::plat_prose::place_nouns(ug));
         // A door takes the authored line PLUS its state, because the state is
         // the whole question a player examines a door to answer and it is not
         // a property of the kind. Only the first door by bearing order gets a
@@ -6704,6 +6828,26 @@ impl<'w> Session<'w> {
             vantage,
         )?;
         let f = self.focalizer.render(&v);
+        // The site clause (spec §4, Task 6, The Prospect): a facet holding a
+        // site gains a clause naming it; a facet with none says NOTHING —
+        // silence is honest, and it is what makes the density gap visible
+        // rather than papered over (most facets stay silent after this
+        // task, by design). Reads `brief_here().site`, the SAME predicate
+        // `Self::enter` gates on, so the prose and what `enter` will
+        // actually do can never disagree — H1's own claim ("surfacing does
+        // not change what is enterable") holds by construction rather than
+        // by two independently-written predicates staying in sync.
+        //
+        // NOTE ON COST: this re-derives the whole brief on every `look`, the
+        // same accepted cost `brief_of`'s own doc names for `enter` and
+        // `Self::brief_here`'s cost note — hoist only if a profile shows it
+        // mattering.
+        let site_clause = self
+            .brief_here()
+            .site
+            .as_ref()
+            .map(Self::site_clause)
+            .unwrap_or_default();
         // F1 (The Rhumb, final review): this render doubles as the SUBMERGED
         // vantage's (see the `"look"`/`dive`/`surface` arms above), and while
         // under, `go` and a bare compass token both refuse EVERY lateral
@@ -6762,11 +6906,53 @@ impl<'w> Session<'w> {
             .map(|line| format!("{line}\n"))
             .unwrap_or_default();
         Ok(format!(
-            "[room {}, day {}]\n{}\n{presence}{closing}",
+            "[room {}, day {}]\n{}{site_clause}\n{presence}{closing}",
             v.locale.id,
             self.day.as_std_days(),
             f.prose,
         ))
+    }
+
+    /// The walk-band clause naming a facet's site (spec §4, Decision 0666):
+    /// **kind and name only, never contents** — a facet is not a manifest of
+    /// what stands on it.
+    ///
+    /// At most one `Site` ever reaches here: `Brief::site` is `Option<Site>`,
+    /// already reduced to the single most-salient candidate by `brief_of`'s
+    /// own `Site::salience`-ranked `max_by_key` (spec §6, Ruling 29). The
+    /// spec's own §6 language ("ranks what gets named when a facet holds
+    /// more than one") describes a data shape — several co-located sites at
+    /// one facet — and that shape DOES occur at construction, not only in
+    /// the abstract: `brief_of` assembles up to three `Site` candidates per
+    /// facet (settlement, exotic, cave — `windows/vessel/src/brief.rs`)
+    /// before reducing them to one winner. **This paragraph used to say
+    /// "nothing constructs more than one `Site` per facet today", which is
+    /// false at that construction site.** What is true, and narrower: at
+    /// most one candidate ever SURVIVES the reduction to reach
+    /// `Brief::site`, and therefore to reach `site_clause` here — never that
+    /// only one is ever built.
+    ///
+    /// `Site::name` carries a real value for a settlement as of this task:
+    /// `brief_of` attaches the name the injected settlement-territory map
+    /// keys to the facet's own room (`Terrain::settlement_name`), the same
+    /// lookup `is_built` tests membership in — see
+    /// `entering_a_named_site_names_the_place_and_not_the_possession` and
+    /// `a_settlement_sites_name_is_keyed_to_the_room`
+    /// (`windows/vessel/tests/suite/the_prospect.rs`). A cave and an exotic
+    /// site still carry `None` — neither has a name and neither may borrow
+    /// one (`Site::placed`'s own call sites in `brief.rs`) — so this clause
+    /// reads as generic kind-only prose for those two kinds, and names the
+    /// place itself for a settlement.
+    fn site_clause(site: &Site) -> String {
+        let noun = match site.kind {
+            SiteKind::Settlement => "settlement",
+            SiteKind::Exotic => "site",
+            SiteKind::Cave => "cave",
+        };
+        match &site.name {
+            Some(name) => format!(" You can enter the {noun} of {name}."),
+            None => format!(" You can enter the {noun} here."),
+        }
     }
 
     /// A lateral step at the walk band. Reached only out of doors: `handle`
@@ -6943,7 +7129,7 @@ impl<'w> Session<'w> {
             self.world.seed,
             self.walk_depth(),
         ) else {
-            return Turn::Out("Nothing here is built; there is nothing to enter.".to_string());
+            return Turn::Out("There is nothing here to enter.".to_string());
         };
         let at = structure
             .chambers
@@ -7237,6 +7423,18 @@ impl<'w> Session<'w> {
             &self.position(),
             &terrain,
             self.walk_depth(),
+            self.wctx.world.seed,
+            // Derived from the context the session already holds, not stored
+            // beside `self.built`: the placed-site roster is a pure read over
+            // the budget the `LocaleContext` built once at `start`, so a second
+            // copy in `Session` would be state to keep honest for no gain.
+            &self.wctx.ctx.strange_sites(),
+            // The cave roster is NOT free the same way — it is a whole-grid
+            // scan of `cave_at`, 40,962 vertices, ~2.9 ms measured. Held on
+            // `Session` for the possession's life rather than re-scanned,
+            // which is the remedy `brief_of`'s own cost note prescribes and
+            // the one `built` already uses.
+            &self.cave_sites,
         )
     }
 
@@ -7651,7 +7849,7 @@ impl<'w> Session<'w> {
         let climate = self.wctx.climate.as_ref()?;
         let (kind, source) = crate::underground::chamber_resident(ug, terrain, climate)?;
         let level = ug.level();
-        let cell = crate::underground::resident_cell(level)?;
+        let cell = crate::underground::resident_cell(ug)?;
         let lit = crate::lattice::shadowcast_with(
             |c| {
                 level
@@ -7715,12 +7913,19 @@ impl<'w> Session<'w> {
         // catalog (`Self::underground_nouns`) cannot independently drift on
         // which cell counts as lit.
         if let Some((kind, source, cell)) = self.underground_resident(ug) {
+            let hoard_words = self.hoard_nouns(ug);
+            let hoard: Vec<&str> = hoard_words.iter().map(|(_, n)| *n).collect();
             marks.push(crate::plan::PlanMark {
                 x: cell.0,
                 y: cell.1,
                 noun: kind.0.to_string(),
                 kind: crate::purview::AGENT_MARK_KIND.to_string(),
-                datum: crate::underground::inhabitant_datum(kind, source),
+                datum: crate::underground::inhabitant_datum(
+                    kind,
+                    source,
+                    ug.tenancy[ug.rung],
+                    &hoard,
+                ),
                 salience: crate::purview::AGENT_SALIENCE,
             });
         }
@@ -14486,7 +14691,7 @@ mod tests {
             Turn::Released(_) => panic!("enter must not release"),
         };
         assert!(
-            !reply.starts_with("Nothing here is built"),
+            !reply.starts_with("There is nothing here to enter"),
             "the flagship's own locale is built: {reply:?}"
         );
         let total = session
@@ -14541,7 +14746,7 @@ mod tests {
             Turn::Released(_) => panic!("enter must not release"),
         };
         assert!(
-            !shown.starts_with("Nothing here is built"),
+            !shown.starts_with("There is nothing here to enter"),
             "the flagship's own locale is built: {shown:?}"
         );
         // Take a noun the chamber's prose has just named to the player.
@@ -14949,7 +15154,7 @@ mod tests {
             Turn::Released(_) => panic!("enter must not release"),
         };
         assert!(
-            !shown.starts_with("Nothing here is built"),
+            !shown.starts_with("There is nothing here to enter"),
             "the flagship's own locale is built: {shown:?}"
         );
         let structure = session
@@ -15169,6 +15374,13 @@ mod tests {
                     &session.position(),
                     &terrain,
                     session.walk_depth(),
+                    session.wctx.world.seed,
+                    // The SCAN side must read the same rosters the VIEW side
+                    // does, or this assertion compares two different questions
+                    // and passes for the wrong reason. `occupations` is the
+                    // only thing this test re-derives on purpose.
+                    &session.wctx.ctx.strange_sites(),
+                    &session.cave_sites,
                 );
                 assert_eq!(
                     hoisted, scanned,
@@ -16356,7 +16568,13 @@ mod tests {
             .clone()
             .expect("seed 42 builds terrain");
         let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
-        let mut ug = crate::underground::Underground::enter(&terrain, vertex, cave, world.seed);
+        let mut ug = crate::underground::Underground::enter(
+            &terrain,
+            vertex,
+            cave,
+            world.seed,
+            &crate::underground::wild_origins(crate::underground::habitation_rungs().len()),
+        );
         let level = ug.level().clone();
         let mut rock_adjacent = None;
         'search: for (cell, kind) in level.cells.iter() {
@@ -16424,7 +16642,13 @@ mod tests {
             .clone()
             .expect("seed 42 builds terrain");
         let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
-        let mut ug = crate::underground::Underground::enter(&terrain, vertex, cave, world.seed);
+        let mut ug = crate::underground::Underground::enter(
+            &terrain,
+            vertex,
+            cave,
+            world.seed,
+            &crate::underground::wild_origins(crate::underground::habitation_rungs().len()),
+        );
         let level = ug.level().clone();
         let floor_cell = level
             .cells
@@ -16480,6 +16704,413 @@ mod tests {
                 "{line}: the retired underground lateral refusal must never print: {out}"
             );
         }
+    }
+
+    /// A place to stand and the bearing that steps from it into the thing
+    /// it stands beside — [`standable_beside`]'s answer, named once so the
+    /// two searches below can state it without spelling the type twice.
+    type Approach = (crate::lattice::Cell, Compass); // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+
+    /// [`Approach`] with the approached threshold in front of it:
+    /// `(the door's own cell, a cell to stand on, the bearing between)`.
+    type DoorApproach = (crate::lattice::Cell, crate::lattice::Cell, Compass); // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+
+    /// A standable cell beside `door`, and the bearing that steps FROM that // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+    /// cell INTO it — one search returning both halves, because the bearing // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+    /// is a by-product of the neighbour and re-deriving it afterwards would
+    /// be a second rule that could disagree with the first.
+    ///
+    /// **The rung is a parameter, and that is the whole difference from the
+    /// inline form this was lifted out of (The Plat, Task 5).**
+    /// [`a_worked_descent_with_a_door`] reads `ug.descent[0]` throughout,
+    /// behind its own comment: `Underground::has_door` and
+    /// `Underground::threshold_edge` both read `self.level()`, so asking
+    /// about another rung's cells there would silently ask about rung 0's. // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+    /// The Plat's acceptance walks stand on a column's **Made** rung, which
+    /// is generally not rung 0 — a helper that inherited the hardcoding
+    /// would answer about the wrong level and fail in a way that reads like
+    /// a real defect rather than a wrong question.
+    ///
+    /// `Floor` only, never `Flooded`: these callers walk bodies that cannot
+    /// swim, so a search that offered a sump would hand a walk a cell the // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+    /// step itself refuses — [`foot_flood`]'s own rule, one function up.
+    fn standable_beside(
+        ug: &crate::underground::Underground,
+        rung: usize,
+        door: crate::lattice::Cell, // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+    ) -> Option<Approach> {
+        COMPASS_ROSE.iter().copied().find_map(|dir| {
+            let d = cell_delta(dir); // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+            let c = crate::lattice::Cell(door.0 - d.0, door.1 - d.1); // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+            ug.descent[rung]
+                .cells // lexicon: a level's `cells` are lattice squares — areas, not mesh vertices
+                .get(c)
+                .is_some_and(|k| matches!(k, crate::underworld_level::LevelCellKind::Floor)) // lexicon: `LevelCellKind` classifies a lattice square — an area
+                .then_some((c, dir))
+        })
+    }
+
+    /// A REALIZED door on `rung` a body could actually be refused by: the
+    /// threshold cell the plan gated, a standable cell beside it, and the // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+    /// bearing from that cell into the door. // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+    ///
+    /// **Asked of the realized level, not of the plan's edges**, and the
+    /// difference is not cosmetic: a `Needs(Key(_))` gate may sit on a
+    /// `Stair` edge, which has no threshold cell on either level at all // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+    /// (`Level::thresholds` holds one entry per `Passage` edge). A column
+    /// selected on the plan alone could therefore hang a door this walk can
+    /// never reach, and the test would read as a defect in the verb.
+    fn doored_threshold_on(
+        ug: &crate::underground::Underground,
+        rung: usize,
+    ) -> Option<DoorApproach> {
+        ug.descent[rung]
+            .thresholds
+            .iter()
+            .map(|t| t.2)
+            .filter(|&c| crate::descent_thing::door_at(ug, c).is_some()) // lexicon: a threshold `Cell` is a lattice square — an area
+            .find_map(|c| standable_beside(ug, rung, c).map(|(stand, bearing)| (c, stand, bearing))) // lexicon: `Cell` values here are lattice squares — areas
+    }
+
+    /// The first open, unbarred, cave-bearing column of seed 42 whose LEDGER
+    /// seats a people at some rung (26 such columns exist —
+    /// `underworld_capacity_probe`), with `want_door` requiring that rung to
+    /// hang a reachable `Needs(Key(_))` door and `want_tenancy` selecting
+    /// the tense. Returns the descent and the index of the seated rung.
+    ///
+    /// **The returned descent is already AT that rung** (`ug.rung == made`),
+    /// which is the one thing a caller must not have to remember: every
+    /// positional read below — `Underground::level`, `has_door`,
+    /// `threshold_edge`, `plat_prose::place_sentence`,
+    /// `underground::resident_cell` — goes through `self.level()`, and a // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+    /// Made rung is generally not rung 0. Its `cell` is still rung 0's // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+    /// entrance, so a caller must [`stand_in`] somewhere on the new rung
+    /// before reading anything positional.
+    ///
+    /// `None`, never a panic, so each caller states its own finding in its
+    /// own words: seed 42 having no such column is a fact about the ledger,
+    /// not a reason to weaken the test that wanted one.
+    ///
+    /// claim: readout(seed: 42) — a scan over one seed's real columns, not a claim about the range
+    fn a_made_column(
+        session: &Session<'_>,
+        world: &World,
+        want_door: bool,
+        want_tenancy: Option<hornvale_worldgen::delve_seating::Tenancy>,
+    ) -> Option<(crate::underground::Underground, usize)> {
+        use hornvale_worldgen::chamber::ChamberOrigin;
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let rungs = crate::underground::habitation_rungs();
+        let pins = hornvale_worldgen::BarrierPins::default();
+        for (vertex, cave, is_open) in cave_entrance_states(&terrain, world.seed) {
+            if !is_open
+                || seeded_entrance_barrier(world.seed, vertex, &pins)
+                    != hornvale_worldgen::BarrierState::Open
+            {
+                continue;
+            }
+            let origins =
+                hornvale_worldgen::delve_seating::column_origins(world, &terrain, vertex, &rungs);
+            // The tenancy is part of WHICH rung is wanted, not a filter
+            // applied after one is chosen: a column whose first Made rung is
+            // Inhabited may still hold an Abandoned one below it.
+            let Some(made) = origins
+                .iter()
+                .position(|o| o.0 == ChamberOrigin::Made && want_tenancy.is_none_or(|t| o.1 == t))
+            else {
+                continue;
+            };
+            let mut ug = crate::underground::Underground::enter(
+                &terrain, vertex, cave, world.seed, &origins,
+            );
+            ug.rung = made;
+            if want_door && doored_threshold_on(&ug, made).is_none() {
+                continue;
+            }
+            return Some((ug, made));
+        }
+        None
+    }
+
+    /// Stand the possession on the first standable cell of `node`'s region — // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+    /// the same rule `Underground::enter` applies at the Entry and
+    /// `underground::resident_cell` applies at the Sanctum, so standing in a // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+    /// Sanctum stands the possession exactly where its resident is.
+    ///
+    /// Reads `ug.level()`, hence `ug.rung`: set the rung first.
+    fn stand_in(ug: &mut crate::underground::Underground, node: usize) {
+        let r = ug.plan.region_of(node);
+        let cell = ug // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+            .level()
+            .cells // lexicon: a level's `cells` are lattice squares — areas, not mesh vertices
+            .iter()
+            .filter(|(c, k)| {
+                matches!(
+                    k,
+                    crate::underworld_level::LevelCellKind::Floor // lexicon: `LevelCellKind` classifies a lattice square — an area
+                        | crate::underworld_level::LevelCellKind::Flooded // lexicon: `LevelCellKind` classifies a lattice square — an area
+                ) && c.0 >= r.x
+                    && c.0 < r.x + r.w
+                    && c.1 >= r.y
+                    && c.1 < r.y + r.h
+            })
+            .map(|(c, _)| c)
+            .next()
+            .expect("every region has a standable cell (the realizer's ensure_standable pass)"); // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+        ug.cell = cell; // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+    }
+
+    /// THE PLAT, spec §7.1: at a real Made column of seed 42, standing on
+    /// the Made rung, `look` reads the Entry sentence in the present tense;
+    /// at the Heart it reads the hall sentence and `examine hall` answers;
+    /// and a gated threshold on that rung refuses `go` with the Brattice's
+    /// locked-door refusal — its verbs reachable from a PRODUCTION descent
+    /// for the first time (`Underground::enter`, not the character seam).
+    #[test]
+    fn a_cut_place_is_walked_and_its_doors_are_real() {
+        use hornvale_worldgen::delve_seating::Tenancy;
+        use hornvale_worldgen::plat::{Role, role_nodes};
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let Some((mut ug, made)) = a_made_column(&session, &world, true, Some(Tenancy::Inhabited))
+        else {
+            panic!(
+                "seed 42 has no open, unbarred column whose Made rung is Inhabited AND hangs a \
+                 reachable Needs(Key) door — a ledger finding to record, not a reason to weaken \
+                 this test"
+            );
+        };
+        // Standing on the Made rung is `a_made_column`'s own doing; the walk
+        // down the stairs is the Gallery's verb and is tested there. What is
+        // under test here is what the rung SAYS.
+        let entry = role_nodes(&ug.plan, &ug.reading, made, Role::Entry)[0];
+        stand_in(&mut ug, entry);
+        session.underground = Some(ug);
+        session.mark_underground_seen();
+
+        let out = match session.handle("look") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("look must not release"),
+        };
+        assert!(out.contains("This is the entry of a cut place"), "{out}");
+        let out = match session.handle("examine entry") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("examine must not release"),
+        };
+        assert!(out.contains("entry of a cut place"), "{out}");
+
+        // The Heart, where the plan has one: `Role::Heart` is `None` on a
+        // rung whose median node is already the Sanctum (spec §3.1).
+        let ug = session.underground.as_mut().expect("below");
+        if let Some(&heart) = role_nodes(&ug.plan, &ug.reading, made, Role::Heart).first() {
+            stand_in(ug, heart);
+            session.mark_underground_seen();
+            let out = match session.handle("look") {
+                Turn::Out(t) => t,
+                Turn::Released(_) => panic!("look must not release"),
+            };
+            assert!(out.contains("This hall is the heart of the place"), "{out}");
+            let out = match session.handle("examine hall") {
+                Turn::Out(t) => t,
+                Turn::Released(_) => panic!("examine must not release"),
+            };
+            assert!(out.contains("heart of the place"), "{out}");
+        }
+
+        // And a locked door on this rung refuses `go` in the Brattice's own
+        // words. `a_made_column` was asked for a column that has one.
+        let ug = session.underground.as_ref().expect("below");
+        let (_, stand, bearing) =
+            doored_threshold_on(ug, made).expect("the column was chosen for a reachable door");
+        session.underground.as_mut().expect("below").cell = stand; // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+        session.mark_underground_seen();
+        let out = match session.handle(&format!("go {}", bearing_letter(bearing))) {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("go must not release"),
+        };
+        assert_eq!(
+            out,
+            crate::underground::UNDERGROUND_LOCKED_DOOR_REFUSAL,
+            "a shut, locked door on a Made rung refuses with the Brattice's refusal"
+        );
+    }
+
+    /// THE PLAT, spec §7.2: the same sentence in the PAST tense at a column
+    /// whose seating has ended. Seed 42's ledger holds 67 occupations over
+    /// 26 columns, so an Abandoned rung may or may not exist among the open,
+    /// unbarred ones; if none does, the walk falls back to the `enter` seam
+    /// with an Abandoned origin and says so on stderr. The ledger derivation
+    /// of `Abandoned` is Task 2's test; the PROSE is this one's, and the
+    /// seam exercises exactly the prose.
+    #[test]
+    fn a_ruin_is_walked_in_the_past_tense() {
+        use hornvale_worldgen::chamber::ChamberOrigin;
+        use hornvale_worldgen::delve_seating::Tenancy;
+        use hornvale_worldgen::plat::{Role, role_nodes};
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let (mut ug, made) = match a_made_column(&session, &world, false, Some(Tenancy::Abandoned))
+        {
+            Some(found) => found,
+            None => {
+                eprintln!(
+                    "seed 42 has no open, unbarred column with an Abandoned Made rung; \
+                     walking the `enter` seam instead"
+                );
+                let terrain = session
+                    .wctx
+                    .terrain
+                    .clone()
+                    .expect("seed 42 builds terrain");
+                let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+                let mut origins =
+                    crate::underground::wild_origins(crate::underground::habitation_rungs().len());
+                origins[0] = (ChamberOrigin::Made, Tenancy::Abandoned);
+                (
+                    crate::underground::Underground::enter(
+                        &terrain, vertex, cave, world.seed, &origins,
+                    ),
+                    0,
+                )
+            }
+        };
+        ug.rung = made;
+        let entry = role_nodes(&ug.plan, &ug.reading, made, Role::Entry)[0];
+        stand_in(&mut ug, entry);
+        session.underground = Some(ug);
+        session.mark_underground_seen();
+        let out = match session.handle("look") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("look must not release"),
+        };
+        assert!(
+            out.contains("This was the entry of a cut place, long empty"),
+            "{out}"
+        );
+    }
+
+    /// THE PLAT, spec §7.3: the rung's derived resident stands in the
+    /// Sanctum's region, and a thing set down there is named in its datum.
+    ///
+    /// **A Made column is preferred over a wild one, and the reason is the
+    /// key.** A wild rung's plan gets no `worked` term in
+    /// `circuit::cycle_budget`, so in practice it seats no `Needs(Key(_))`
+    /// gate and therefore no key — and the descent key is the only thing a
+    /// possession can pick up underground. So the hoard half can only run
+    /// where the ledger seated a people. A wild rung is still walked if no
+    /// Made column feeds a resident, and the hoard half then returns early
+    /// with a printed reason rather than asserting over an absent thing.
+    #[test]
+    fn the_hoarder_sits_in_the_sanctum_on_what_lies_there() {
+        use hornvale_worldgen::plat::{Role, role_nodes};
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let climate = session.wctx.climate.clone().expect("seed 42 fits climate");
+        let n = crate::underground::habitation_rungs().len();
+        let feeds_one = |ug: &crate::underground::Underground| {
+            crate::underground::chamber_resident(ug, &terrain, &climate).is_some()
+                && crate::underground::resident_cell(ug).is_some() // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+        };
+        let mut found = a_made_column(&session, &world, false, None)
+            .map(|(ug, _)| ug)
+            .filter(&feeds_one);
+        if found.is_none() {
+            eprintln!("no Made column of seed 42 feeds a resident on its seated rung; going wild");
+            'outer: for (vertex, cave, is_open) in cave_entrance_states(&terrain, world.seed) {
+                if !is_open {
+                    continue;
+                }
+                let mut ug = crate::underground::Underground::enter(
+                    &terrain,
+                    vertex,
+                    cave,
+                    world.seed,
+                    &crate::underground::wild_origins(n),
+                );
+                for rung in 0..n {
+                    ug.rung = rung;
+                    if feeds_one(&ug) {
+                        found = Some(ug);
+                        break 'outer;
+                    }
+                }
+            }
+        }
+        let mut ug = found.expect(
+            "seed 42 has a rung that feeds a resident (the Gallery's own claim) — its absence is \
+             a finding about the roster or the energy field, not a reason to weaken this test",
+        );
+        let rung = ug.rung;
+        let sanctum = role_nodes(&ug.plan, &ug.reading, rung, Role::Sanctum)[0];
+        let cell = crate::underground::resident_cell(&ug).expect("the scan required one"); // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+        let r = ug.plan.region_of(sanctum);
+        assert!(
+            cell.0 >= r.x && cell.0 < r.x + r.w && cell.1 >= r.y && cell.1 < r.y + r.h, // lexicon: a `Cell`'s coordinates are a lattice square's — an area
+            "the resident's mark must stand inside the Sanctum's own region"
+        );
+
+        // Standing in the Sanctum stands the possession on that very cell,  // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+        // so the shadowcast certainly lights it and `examine` answers.
+        stand_in(&mut ug, sanctum);
+        let kind = crate::underground::chamber_resident(&ug, &terrain, &climate)
+            .expect("the scan required one")
+            .0;
+        session.underground = Some(ug);
+        session.mark_underground_seen();
+        let datum = |session: &mut Session<'_>| match session.handle(&format!("examine {}", kind.0))
+        {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("examine must not release"),
+        };
+        let before = datum(&mut session);
+        assert!(
+            before.contains("moves in the dark here") || before.contains("is kept here"),
+            "{before}"
+        );
+        assert!(
+            !before.contains("sitting on"),
+            "the control: nothing lies in this Sanctum yet, so the datum must not \
+             list a hoard: {before}"
+        );
+
+        // The hoard: the descent key, taken from wherever the plan seated it
+        // and set down here. A rung with no key cannot exercise this half.
+        let Some(key_node) =
+            crate::underground::key_node_on(session.underground.as_ref().expect("below"), rung)
+        else {
+            eprintln!(
+                "rung {rung} seats no key; the hoard half is exercised by \
+                 `descent_thing`'s own unit tests only"
+            );
+            return;
+        };
+        let ug = session.underground.as_mut().expect("below");
+        stand_in(ug, key_node);
+        session.mark_underground_seen();
+        let out = match session.handle("take a key") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("take must not release"),
+        };
+        assert_eq!(out, "You take the key.");
+        let ug = session.underground.as_mut().expect("below");
+        stand_in(ug, sanctum);
+        session.mark_underground_seen();
+        let out = match session.handle("drop a key") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("drop must not release"),
+        };
+        assert_eq!(out, "You set the key down.");
+        let after = datum(&mut session);
+        assert!(after.contains("sitting on: a key"), "{after}");
     }
 
     /// A WORKED descent that hangs a door, and a standable cell beside it
@@ -16551,18 +17182,13 @@ mod tests {
                 cave,
                 seed,
                 hornvale_worldgen::character::Character::DrowTier,
+                &crate::underground::wild_origins(crate::underground::habitation_rungs().len()),
             );
             // Rung 0 only: `Underground::has_door` and `threshold_edge` both
             // read `self.level()`, so asking about another rung's cells here
             // would silently ask about this one's.
             let thresholds: Vec<crate::lattice::Cell> =
                 ug.descent[0].thresholds.iter().map(|t| t.2).collect();
-            let standable = |c: crate::lattice::Cell| {
-                ug.descent[0]
-                    .cells
-                    .get(c)
-                    .is_some_and(|k| matches!(k, crate::underworld_level::LevelCellKind::Floor))
-            };
             for door_cell in thresholds {
                 if !ug.has_door(door_cell) {
                     continue;
@@ -16574,11 +17200,11 @@ mod tests {
                     continue;
                 }
                 // A standable cell beside the door, and the bearing FROM it.
-                let Some((stand, bearing)) = COMPASS_ROSE.iter().copied().find_map(|dir| {
-                    let d = cell_delta(dir);
-                    let c = crate::lattice::Cell(door_cell.0 - d.0, door_cell.1 - d.1);
-                    standable(c).then_some((c, dir))
-                }) else {
+                // Rung 0 explicitly, which is the rung this whole search is
+                // about — see [`standable_beside`] for why the parameter
+                // exists at all.
+                let approach = standable_beside(&ug, 0, door_cell); // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+                let Some((stand, bearing)) = approach else {
                     continue;
                 };
                 // And a standable cell inside the KEY's own region, so `take`
@@ -17033,7 +17659,13 @@ mod tests {
             .clone()
             .expect("seed 42 builds terrain");
         let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
-        let ug = crate::underground::Underground::enter(&terrain, vertex, cave, world.seed);
+        let ug = crate::underground::Underground::enter(
+            &terrain,
+            vertex,
+            cave,
+            world.seed,
+            &crate::underground::wild_origins(crate::underground::habitation_rungs().len()),
+        );
         let level = ug.level().clone();
 
         let mut mixed = None;
@@ -19161,7 +19793,7 @@ mod tests {
         };
         let resident_cell = {
             let ug = session.underground.as_ref().expect("descended");
-            crate::underground::resident_cell(ug.level())
+            crate::underground::resident_cell(ug)
                 .expect("Task 9's connectivity invariant guarantees a standable cell")
         };
         let reach = session.sight_reach();
@@ -19279,7 +19911,7 @@ mod tests {
         };
         let resident_cell = {
             let ug = session.underground.as_ref().expect("descended");
-            crate::underground::resident_cell(ug.level())
+            crate::underground::resident_cell(ug)
                 .expect("Task 9's connectivity invariant guarantees a standable cell")
         };
 
@@ -19351,7 +19983,7 @@ mod tests {
         };
         let resident_cell = {
             let ug = session.underground.as_ref().expect("descended");
-            crate::underground::resident_cell(ug.level())
+            crate::underground::resident_cell(ug)
                 .expect("Task 9's connectivity invariant guarantees a standable cell")
         };
         let reach = session.sight_reach();

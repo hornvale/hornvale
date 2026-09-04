@@ -162,8 +162,8 @@ use hornvale_locale::LocaleContext;
 use hornvale_species::{ActivityCycle, ThermalStrategy};
 use hornvale_vessel::body::Body;
 use hornvale_vessel::liveness::{
-    AGENT_AT, DRANK, EATEN, LocaleTerrain, RESTED, SLEPT, Terrain, ThreatNiche, built_rooms,
-    derive_npcs, place_agent,
+    AGENT_AT, DRANK, EATEN, LocaleTerrain, RESTED, SLEPT, SLEPT_ON, Terrain, ThreatNiche,
+    built_rooms, derive_npcs, place_agent,
 };
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -193,7 +193,7 @@ fn cold_built_count(seed: u64) -> (usize, usize) {
     let terrain = LocaleTerrain::new(&ctx);
     let built = built_rooms(&w, &ctx);
     let cold = built
-        .iter()
+        .keys()
         .filter_map(|id| id.unpack().ok())
         .filter(|addr| terrain.is_cold(addr))
         .count();
@@ -449,6 +449,19 @@ fn planted_registry() -> ConceptRegistry {
     );
     let _ =
         registry.register_predicate(SLEPT, false, "an agent slept on a day, for this many ticks");
+    // The Pallet, Task 3: this harness's own planted rooms are BUILT and
+    // COLD (that is the whole A/B), which is exactly what `interior_of`
+    // composes a fireside bed for — `select_sleep_site` finds it, and an
+    // unregistered `slept-on` fails the tick's commit, which
+    // `run_simulation`'s `Err(_) => break` arm turns into a SILENT early
+    // truncation rather than a panic. Measured, not assumed: a temporary
+    // `panic!` in that arm caught `UnknownPredicate { predicate: "slept-on"
+    // }` at day 1 in both tests below that actually walk this population.
+    let _ = registry.register_predicate(
+        SLEPT_ON,
+        false,
+        "the kind of anchor an agent slept on, within the room it slept in",
+    );
     let _ = registry.register_predicate(EATEN, false, "an agent ate on a day");
     registry
 }

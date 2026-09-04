@@ -1177,10 +1177,22 @@ fn cite_errors_in(
     slugs: &BTreeSet<String>,
 ) -> Vec<String> {
     let (text, line_of) = joined_with_line_map(content);
+    // Case-INSENSITIVE, and that is the whole point of this line. The keywords
+    // were matched case-sensitively until The Prospect measured the cost: ~120
+    // capitalized cites ("Decision 0044's remedy...") existed across the
+    // scanned tree and this check had never seen one of them. Sentence-initial
+    // capitals are the dominant idiom in this codebase's prose, so the blind
+    // spot was not an edge case — it was most of the corpus. A campaign then
+    // used the capitalized form *deliberately* to cite three records it had not
+    // written yet, which is the failure mode that proves the gap was reachable.
+    //
+    // `to_ascii_lowercase` is byte-for-byte length-preserving, so the offsets
+    // below still index `text` correctly; `to_lowercase` would not be.
+    let haystack = text.to_ascii_lowercase();
     let mut found = Vec::new();
-    for keyword in ["decision ", "decisions ", "ADR "] {
+    for keyword in ["decision ", "decisions ", "adr "] {
         let mut from = 0;
-        while let Some(pos) = text[from..].find(keyword) {
+        while let Some(pos) = haystack[from..].find(keyword) {
             let at = from + pos;
             let after = &text[at + keyword.len()..];
             let token: String = after
@@ -1188,6 +1200,8 @@ fn cite_errors_in(
                 .chars()
                 .take_while(|c| c.is_ascii_alphanumeric() || *c == '-')
                 .collect();
+            // Slugs are lowercase filenames, so the token folds too.
+            let token = token.to_ascii_lowercase();
             if let Some(err) = cite_error(&token, numbers, slugs) {
                 let line = line_of[at];
                 found.push((
@@ -1205,7 +1219,14 @@ fn cite_errors_in(
 /// Every decision citation in the Rust and shell sources resolves to a
 /// record in `docs/decisions/` — the decision-log half of the knowledge-base
 /// drift linters. Forms: `decision 0014` / `decisions 0002` / `ADR 0016`
-/// (numeric) and `decision <slug>` (hyphenated slug, optionally backticked).
+/// (numeric) and `decision <slug>` (hyphenated slug, optionally backticked),
+/// in any capitalization.
+///
+/// **The direction this enforces:** every cite that appears resolves to a
+/// record. It is blind in the other direction — it cannot tell you a decision
+/// *should* have been cited somewhere and was not, and it does not scan
+/// `docs/` or `book/` at all (only `kernel`, `domains`, `windows`, `cli`,
+/// `tools`, `scripts`). A record with no citation anywhere is invisible here.
 #[test]
 fn decision_cites_in_sources_resolve() {
     let root = repo_root();
@@ -1314,6 +1335,55 @@ fn cite_errors_in_catches_line_wrapped_cites() {
         "line of the keyword: {errors:?}"
     );
     assert!(errors[0].contains("no-such-decision-here"), "{errors:?}");
+}
+
+/// The capitalized form is checked too. It was not, for the life of this
+/// check, and ~120 cites in the tree used it — see `cite_errors_in`.
+#[test]
+fn cite_errors_in_is_case_insensitive() {
+    let numbers: BTreeSet<String> = ["0016".to_string()].into();
+    let slugs: BTreeSet<String> = ["slugs-not-numbers".to_string()].into();
+
+    // A capitalized cite of a real record is silent...
+    for good in [
+        "// Decision 0016 governs the sweep.\n",
+        "// Decisions 0016 and 0016 agree.\n",
+        "// per ADR 0016, preregistered\n",
+        "// per adr 0016, preregistered\n",
+        "// Decision `slugs-not-numbers` settled it.\n",
+    ] {
+        assert_eq!(
+            cite_errors_in(good, "src/lib.rs", &numbers, &slugs),
+            Vec::<String>::new(),
+            "capitalized cite of a real record must stay silent: {good:?}"
+        );
+    }
+
+    // ...and a capitalized cite of a MISSING record is an error. This is the
+    // arm that was dead: before the fold, every one of these returned empty.
+    for bad in [
+        // All three are WRAPPED, for the same reason the slug fixture below is:
+        // the source bytes read `Decision\n` with no trailing space, so the
+        // file-level scan cannot match them against this very file, while the
+        // line-joiner still makes each a real cite at runtime. Unwrapped, these
+        // reddened `decision_cites_in_sources_resolve` on themselves — 9997 and
+        // 9998 are deliberately numbers no record will ever hold.
+        "// Decision\n// 9997 makes this safe.\n",
+        "// Decisions\n// 9997 and 9998 apply.\n",
+        "// per ADR\n// 9997\n",
+        // Wrapped so this fixture does not trip the file-level scan on
+        // itself: the source bytes read `Decision\n`, with no trailing
+        // space, so the keyword cannot match until the line-joiner runs.
+        // Same evasion as `cite_errors_in_catches_line_wrapped_cites`.
+        "// see Decision\n// `no-such-decision-here` for why\n",
+    ] {
+        let errors = cite_errors_in(bad, "src/lib.rs", &numbers, &slugs);
+        assert_eq!(
+            errors.len(),
+            1,
+            "capitalized cite of a missing record must be caught: {bad:?} -> {errors:?}"
+        );
+    }
 }
 
 /// The history gallery page names a cell in hand-authored prose *and* renders

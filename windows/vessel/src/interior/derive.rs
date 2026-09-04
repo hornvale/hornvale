@@ -79,6 +79,7 @@ pub fn chamber_interior_of(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::site::{Site, SiteKind};
     use hornvale_kernel::KindId;
     use hornvale_kernel::WorldTime;
     use hornvale_thing::kinds;
@@ -233,7 +234,8 @@ mod tests {
     /// A brief matching [`WalkKeyedTerrain`]'s reads (which are always cold), so
     /// `chamber_interior_of`'s debug assertions hold.
     fn brief(built: bool) -> crate::brief::Brief {
-        crate::brief::Brief::from_parts(None, None, None, None, 0, built, true)
+        let site = built.then(|| Site::placed(SiteKind::Settlement, None));
+        crate::brief::Brief::from_parts(None, None, None, None, 0, built, true, site)
     }
 
     #[test]

@@ -24,13 +24,29 @@ pub enum Population {
     Structure,
     /// A living thing, drawn as its noun's initial.
     Creature,
-    /// A point site on the world map: a discovered settlement or cave
-    /// mouth, or a landform (Task 7 widens this from "settlement, cave
-    /// mouth" — a volcano or waterfall is the same kind of referent, a
-    /// fixed point worth marking, whether or not it happens to be
-    /// discovery-gated). A river delta was a third landform here briefly
-    /// and was removed in fix round 1 — see [`REGISTER`]'s own doc on the
-    /// `:` collision that forced it out.
+    /// The GENERIC creature mark — every living thing at once, regardless of
+    /// species, drawn where per-species initials are not (the world map's
+    /// perception overlay, and the underground level's own resident marks).
+    /// Deliberately distinct from [`Population::Creature`]: that population
+    /// is a codespace rule (a-z/A-Z, by noun initial) and this is a single
+    /// ordinary row, because a generic mark is not a noun initial and so is
+    /// never covered by the rule that leaves `Creature` unenumerated. See
+    /// [`REGISTER`]'s own row for the history of that gap.
+    Agent,
+    /// A point site on the world map: a settlement, a cave mouth, or a
+    /// landform (Task 7 widens this from "settlement, cave mouth" — a
+    /// volcano or waterfall is the same kind of referent, a fixed point
+    /// worth marking). A river delta was a third landform here briefly and
+    /// was removed in fix round 1 — see [`REGISTER`]'s own doc on the `:`
+    /// collision that forced it out. The Prospect, Task 8 adds the placed
+    /// EXOTIC site, the third of `hornvale_vessel`'s three `SiteKind`s — the
+    /// population's membership rule is unchanged by it. **A settlement or
+    /// cave mouth or exotic site draws whether or not it has been
+    /// discovered** (The Prospect, Gate A ungating): only a volcano stays
+    /// discovery-gated, because it is the one member also individuated as a
+    /// `hornvale_terrain::landscape::FeatureClass` extent, and only its own
+    /// PROPER NAME stays gated (a separate surface, the cursor readout —
+    /// `windows/worldgen::resolve_chain_at` — never this one).
     PointSite,
     /// Interface furniture that is not part of the world.
     Chrome,
@@ -62,10 +78,22 @@ pub struct Binding {
 /// claims a mark; the guard in `tests/register.rs` refuses a second claim on
 /// a character already spoken for.
 ///
-/// `Creature` is NOT enumerated: a creature draws its noun's initial, so its
-/// codespace is `a-z`/`A-Z` by RULE rather than by row. Those letters are
-/// therefore unavailable to every other population, which is exactly the
-/// constraint the rule intends.
+/// `Creature` is NOT enumerated **in the noun-initial direction only**: a
+/// creature drawn by its own noun's initial owns the whole `a`-`z`/`A`-`Z`
+/// codespace BY RULE rather than by row, and those letters are therefore
+/// unavailable to every other population. That is the one thing this
+/// omission says. It does NOT say every mark for a living thing goes
+/// unclaimed — the world map's GENERIC agent mark (`&`, below) draws for
+/// every creature regardless of species (Ruling AG), is not a noun initial,
+/// and is claimed by an ordinary row like any other glyph. The gap this
+/// paragraph used to leave open — a mark that is agent-shaped but not a
+/// letter falls through BOTH the noun-initial rule and the "must be
+/// enumerated" default, because nothing enumerated it and nothing was
+/// enumerating it on purpose — is exactly how `&` went unclaimed here while
+/// live in three call sites (`plate.rs::AGENT_GLYPH`, `level.rs::MARK_GLYPH`,
+/// `windows/scene/src/surrounds_ascii.rs`'s own agent glyph) for long enough
+/// to make a picked-glyph ruling ("`&` is free") confidently wrong (The
+/// Prospect, fix round). The row below closes it.
 pub const REGISTER: &[Binding] = &[
     Binding {
         glyph: '@',
@@ -76,6 +104,20 @@ pub const REGISTER: &[Binding] = &[
         glyph: '>',
         population: Population::Chrome,
         means: "the command prompt",
+    },
+    // The Prospect, fix round: the generic agent mark. Claimed here, not
+    // when `&` was first written (`plate.rs::AGENT_GLYPH`, The Quadrat Task
+    // 6) or reused (`level.rs::MARK_GLYPH`, The Gallery) — both predate this
+    // row. Two client-side call sites plus one sim-side one
+    // (`windows/scene/src/surrounds_ascii.rs`'s own agent glyph) all draw
+    // `&` for the identical fact ("a living thing is here, species
+    // unspecified") and none of them ever registered it, which is what let
+    // a later campaign ask "is `&` free?" and get a wrong yes from this
+    // table alone — see [`Population::Agent`]'s own doc.
+    Binding {
+        glyph: '&',
+        population: Population::Agent,
+        means: "a creature, regardless of species (the generic mark)",
     },
     // The Legend, Task 6: the world map's terrain vocabulary. Water
     // outranks elevation at a given vertex (`plate::glyph_and_color_for`),
@@ -178,6 +220,36 @@ pub const REGISTER: &[Binding] = &[
         population: Population::PointSite,
         means: "cave mouth",
     },
+    // The Prospect, Task 8: the placed EXOTIC site — a fungal canopy, a
+    // mineral-crystal flat, a place whose biota is found nowhere else
+    // (`hornvale_locale`'s strangeness budget, 103 of them on seed 42).
+    // Until that task the world map had no mark for one at all, so the
+    // whole tier was generated and undrawable.
+    //
+    // `$` is a PICKED mark, not a derived one, and it is picked the same way
+    // `!` and `|` were: the register's allocation rule offers ORDER or
+    // IDENTITY, an exotic site has no ordinal to carry, and its noun's
+    // initial (`s`, "site" — `hornvale_vessel`'s own `site_clause`) is in
+    // the `a`-`z`/`A`-`Z` codespace `Population::Creature` owns by rule.
+    // That leaves an evocative choice among unclaimed punctuation, and `$`
+    // is the one mark in it that already reads, by long convention, as
+    // "something here is worth the trip" — which is exactly the invitation
+    // this campaign exists to put on the map. Nathan owns glyph assignments
+    // (Task 7's `o`/`O`/`*` were his); this is a reviewable stand-in, and
+    // moving it costs one line here and one in `plate.rs`.
+    //
+    // `means` is the bare noun phrase every sibling point-site row uses
+    // ("cave mouth", "settlement", "volcano"), and it is the same noun
+    // `hornvale_vessel::site::SiteKind::Exotic` and `hornvale locale
+    // --strange` already give the thing. Its LENGTH is load-bearing in one
+    // place: `bin/examples/specimen_sheet.rs` packs this whole table into a
+    // fixed 80x24 sheet and asserts the height exactly, so a longer phrase
+    // here spills the sheet — see that file's own packing comment.
+    Binding {
+        glyph: '$',
+        population: Population::PointSite,
+        means: "exotic site",
+    },
     Binding {
         glyph: 'o',
         population: Population::PointSite,
@@ -188,11 +260,18 @@ pub const REGISTER: &[Binding] = &[
         population: Population::PointSite,
         means: "major settlement",
     },
-    // Landforms (Task 7): a volcano is discovery-gated like a settlement or
-    // cave; a waterfall draws unconditionally, ground truth like the
-    // relief/water ladders above — see
+    // Landforms (Task 7): a volcano stays discovery-gated (it is also
+    // individuated as a `FeatureClass::Volcano` extent, and that is the
+    // SAME discovery fact `Driver::update_discovery` already records for any
+    // landscape feature); a waterfall draws unconditionally, ground truth
+    // like the relief/water ladders above — see
     // `hornvale_game::plate::draw_feature_layer`'s own doc for why that
-    // split is deliberate. Both are still `PointSite`s here: this table
+    // split is deliberate. **This paragraph used to say "a volcano is
+    // discovery-gated like a settlement or cave" — The Prospect's Gate A
+    // ungating (fix round) made that false: a settlement, cave mouth or
+    // exotic site now draws whether or not it has been discovered, exactly
+    // like a waterfall, and a volcano is now the ONE point-site kind still
+    // gated.** All four are still `PointSite`s here regardless: this table
     // classifies WHAT a glyph refers to, not whether it happens to be
     // gated.
     //

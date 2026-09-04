@@ -628,6 +628,17 @@ mod tests {
                 // (vertex, band, year) key are both save-format
                 // contracts. See `windows/worldgen/src/streams.rs`.
                 "settlement/working v1",
+                // The Prospect, Task 5: where a placed site lands inside its
+                // geosphere vertex's territory. Versioned from birth like the
+                // other entries in this golden, and NOT an epoch for any
+                // existing world — nothing derived from `site/placement/*`
+                // before this campaign, so no world consumed a draw under it
+                // and no existing stream's consumption order moves. What the
+                // row records is that a `Brief` now reports an exotic site at
+                // one facet per placed vertex instead of at none. See
+                // `windows/worldgen/src/streams.rs`'s `SITE_PLACEMENT` doc for
+                // why a draw rather than a threshold on the coarse mesh.
+                "site/placement v1",
                 // The Adit, Task 3: the cellular-automata cave content
                 // generator (Karst-biased leaves). Versioned from birth
                 // like the other entries in this golden. See

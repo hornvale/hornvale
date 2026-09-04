@@ -30,6 +30,8 @@ mod branches_family_calibration;
 mod calibration;
 #[path = "suite/cascade_firing.rs"]
 mod cascade_firing;
+#[path = "suite/cave_rate_calibration.rs"]
+mod cave_rate_calibration;
 #[path = "suite/census_sentinel.rs"]
 mod census_sentinel;
 #[path = "suite/depth_ladder.rs"]
@@ -64,6 +66,8 @@ mod reticence_calibration;
 mod roster_parity;
 #[path = "suite/rung_selection.rs"]
 mod rung_selection;
+#[path = "suite/site_density.rs"]
+mod site_density;
 #[path = "suite/terminator_acceptance.rs"]
 mod terminator_acceptance;
 #[path = "suite/the_dial.rs"]

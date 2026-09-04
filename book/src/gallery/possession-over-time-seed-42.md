@@ -14,12 +14,12 @@ inside a possess session; a freshly built world commits none of this.)*
 
 ```text
 [room 3733133217, day 0]
-Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
+Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast. You can enter the settlement of Doaba.
 Here: Dvoashngashngo, Qvoshngavngo, Shngovngo and Shngoqvo, and 63 others.
 No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > look
 [room 3733133217, day 0]
-Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
+Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast. You can enter the settlement of Doaba.
 Here: Dvoashngashngo, Qvoshngavngo, Shngovngo and Shngoqvo, and 63 others.
 No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > !npcs
@@ -163,7 +163,7 @@ The Vngavngoshnga seems content.
 Time passes; the world keeps its shape.
 > look
 [room 3733133217, day 5]
-Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast.
+Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast. You can enter the settlement of Doaba.
 Here: Dvoashngashngo, Qvoshngavngo, Shngovngo and Shngoqvo, and 63 others.
 No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > needs
@@ -238,7 +238,7 @@ The Vngavngoshnga seems content.
 Time passes. You sense movement nearby (147 stirred).
 > look
 [room 3733133217, day 6]
-Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast.
+Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast. You can enter the settlement of Doaba.
 Here: Dvoashngashngo, Qvoshngavngo, Shngovngo and Shngoqvo, and 63 others.
 No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > needs
@@ -310,10 +310,10 @@ The Vngoashngovngo grows restless.
 The Kvoshngovnga grows restless.
 The Vngavngoshnga grows restless.
 > wait 1
-Time passes. You sense movement nearby (246 stirred).
+Time passes. You sense movement nearby (245 stirred).
 > look
 [room 3733133217, day 7]
-Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: Night. The sky is a low grey rain-deck.
+Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: Night. The sky is a low grey rain-deck. You can enter the settlement of Doaba.
 Here: Dvoashngashngo, Qvoshngavngo, Shngovngo and Shngoqvo, and 63 others.
 No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > needs
@@ -336,7 +336,7 @@ The Bvotvoshngo grows restless.
 The Vngodva grows restless.
 The Gvoavngashnga grows restless.
 The Kvovngashnga grows restless.
-The Shngashngovngo seems content.
+The Shngashngovngo grows restless.
 The Shngoovngo grows restless.
 The Tvoadvovnga grows restless.
 The Shngoshngobva grows restless.
@@ -387,80 +387,80 @@ The Vngavngoshnga grows restless.
 > !why hobgoblin
 No one here answers to 'hobgoblin' (see 'npcs').
 > wait 90
-Time passes. You sense movement nearby (3891 stirred).
+Time passes. You sense movement nearby (3932 stirred).
 > look
 [room 3733133217, day 97]
-Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
+Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast. You can enter the settlement of Doaba.
 Here: Dvoashngashngo, Qvoshngavngo, Shngovngo and Shngoqvo, and 63 others.
 No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > needs
-The Dvoashngashngo seems content.
+The Dvoashngashngo grows restless.
 The Qvoshngavngo settles down to rest.
-The Shngovngo seems content.
-The Shngoqvo seems content.
-The Vngaobvo seems content.
+The Shngovngo grows restless.
+The Shngoqvo grows restless.
+The Vngaobvo grows restless.
 The Vngaavnga grows restless.
-The Kvoavnga 8 seems content.
+The Kvoavnga 8 grows restless.
 The Vngootvo settles down to rest.
-The Vngaoshngoshngo seems content.
-The Vngovngoqvo seems content.
-The Vngoaqvashngo seems content.
-The Kvashnga grows restless.
-The Gvoshngoshnga seems content.
-The Vngokvavngo seems content.
-The Shngaavngo seems content.
-The Bvotvoshngo seems content.
+The Vngaoshngoshngo grows restless.
+The Vngovngoqvo grows restless.
+The Vngoaqvashngo grows restless.
+The Kvashnga seems content.
+The Gvoshngoshnga grows restless.
+The Vngokvavngo grows restless.
+The Shngaavngo grows restless.
+The Bvotvoshngo grows restless.
 The Vngodva grows restless.
-The Gvoavngashnga seems content.
-The Kvovngashnga grows restless.
+The Gvoavngashnga grows restless.
+The Kvovngashnga seems content.
 The Shngashngovngo settles down to rest.
-The Shngoovngo seems content.
-The Tvoadvovnga seems content.
-The Shngoshngobva seems content.
-The Vngoshnga seems content.
-The Bvaavngovngo seems content.
+The Shngoovngo grows restless.
+The Tvoadvovnga grows restless.
+The Shngoshngobva grows restless.
+The Vngoshnga grows restless.
+The Bvaavngovngo grows restless.
 The Gvaqvoshnga grows restless.
-The Vngotvashnga seems content.
-The Shngoashngabva grows restless.
-The Vngoshngoshngo seems content.
-The Shngaqvovnga seems content.
-The Shngoovngo 32 seems content.
-The Vngaoshngoshngo 33 seems content.
-The Dvooshngovnga grows restless.
-The Dvoadvavnga seems content.
-The Gvavngadvo seems content.
-The Vngavngo seems content.
-The Vngoatvovngo seems content.
-The Vngashngovnga seems content.
-The Shngaashnga seems content.
-The Vngashngogva seems content.
-The Kvoashngadvo seems content.
-The Vngaovngovngo seems content.
-The Vngovngoshnga seems content.
-The Shngaashnga 45 seems content.
+The Vngotvashnga grows restless.
+The Shngoashngabva seems content.
+The Vngoshngoshngo grows restless.
+The Shngaqvovnga grows restless.
+The Shngoovngo 32 grows restless.
+The Vngaoshngoshngo 33 grows restless.
+The Dvooshngovnga seems content.
+The Dvoadvavnga grows restless.
+The Gvavngadvo grows restless.
+The Vngavngo grows restless.
+The Vngoatvovngo grows restless.
+The Vngashngovnga grows restless.
+The Shngaashnga grows restless.
+The Vngashngogva grows restless.
+The Kvoashngadvo grows restless.
+The Vngaovngovngo grows restless.
+The Vngovngoshnga grows restless.
+The Shngaashnga 45 grows restless.
 The Gvokvavnga settles down to rest.
-The Qvavngovnga seems content.
-The Vngavngavnga seems content.
-The Vngobva grows restless.
-The Shngaovngoshngo seems content.
-The Gvoavngoqva seems content.
-The Shngoatvo grows restless.
-The Vngashnga seems content.
-The Vngoovngashngo seems content.
-The Qvoogvo grows restless.
-The Vngaavngo grows restless.
-The Vngavngadvo grows restless.
-The Dvoashnga seems content.
+The Qvavngovnga grows restless.
+The Vngavngavnga grows restless.
+The Vngobva seems content.
+The Shngaovngoshngo grows restless.
+The Gvoavngoqva grows restless.
+The Shngoatvo seems content.
+The Vngashnga grows restless.
+The Vngoovngashngo grows restless.
+The Qvoogvo seems content.
+The Vngaavngo seems content.
+The Vngavngadvo seems content.
+The Dvoashnga grows restless.
 The Vngakva settles down to rest.
-The Qvavngodvo seems content.
-The Shngoshngoqvo seems content.
-The Dvashngo grows restless.
+The Qvavngodvo grows restless.
+The Shngoshngoqvo grows restless.
+The Dvashngo seems content.
 The Shngoobvovngo settles down to rest.
-The Shngoavnga seems content.
-The Dvoaqvokva seems content.
-The Vngoashngovngo seems content.
-The Kvoshngovnga seems content.
-The Vngavngoshnga seems content.
+The Shngoavnga grows restless.
+The Dvoaqvokva grows restless.
+The Vngoashngovngo grows restless.
+The Kvoshngovnga grows restless.
+The Vngavngoshnga grows restless.
 > release
 You let go.
 ```

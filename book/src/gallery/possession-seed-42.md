@@ -5,12 +5,12 @@ the same world in your browser — same crates, same bytes.)*
 
 ```text
 [room 3733133217, day 0]
-Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
+Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast. You can enter the settlement of Doaba.
 Here: Dvoashngashngo, Qvoshngavngo, Shngovngo and Shngoqvo, and 63 others.
 No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > look
 [room 3733133217, day 0]
-Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
+Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast. You can enter the settlement of Doaba.
 Here: Dvoashngashngo, Qvoshngavngo, Shngovngo and Shngoqvo, and 63 others.
 No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > map
@@ -36,12 +36,12 @@ Night. The vast moon is a smear of light. The small, distant moon is a smear of 
 A bugbear of Doaba (agent 3286669968037249024), day 0, room 3733133217.
 > enter
 [chamber 978618474718145, day 0.01172]
-A small room, holding a doorway and a screen.
+A small room in Doaba, holding a doorway and a screen.
 Here: Dvoashngashngo, Qvoshngavngo, Shngovngo and Shngoqvo, and 63 others.
 Ways on: out, further in.
 > enter further in
 [chamber 978618475907617, day 0.02344]
-A small room, holding a doorway and an alcove.
+A small room in Doaba, holding a doorway and an alcove.
 Here: Dvoashngashngo, Qvoshngavngo, Shngovngo and Shngoqvo, and 63 others.
 Ways on: out, further in.
 > map
@@ -96,7 +96,7 @@ A recess cut back from the main space, deep enough to sit in.
 Set close and plumb, with no gap in it wide enough to pass.
 > out
 [room 3733133217, day 0.04688]
-Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
+Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast. You can enter the settlement of Doaba.
 Here: Dvoashngashngo, Qvoshngavngo, Shngovngo and Shngoqvo, and 63 others.
 No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > go n
@@ -119,7 +119,7 @@ No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
   legend: Bvaavngovngo, Bvotvoshngo, Doaba, Dvashngo, Dvoadvavnga, Dvoaqvokva, Dvoashnga, Dvoashngashngo, Dvooshngovnga, Gvaqvoshnga, Gvavngadvo, Gvoavngashnga, Gvoavngoqva, Gvokvavnga, Gvoshngoshnga, Kvashnga, Kvoashngadvo, Kvoavnga 8, Kvoshngovnga, Kvovngashnga, Qvavngodvo, Qvavngovnga, Qvoogvo, Qvoshngavngo, Shngaashnga, Shngaashnga 45, Shngaavngo, Shngaovngoshngo, Shngaqvovnga, Shngashngovngo, Shngoashngabva, Shngoatvo, Shngoavnga, Shngoobvovngo, Shngoovngo, Shngoovngo 32, Shngoqvo, Shngoshngobva, Shngoshngoqvo, Shngovngo, Tvoadvovnga, Vngaavnga, Vngaavngo, Vngakva, Vngaobvo, Vngaoshngoshngo, Vngaoshngoshngo 33, Vngaovngovngo, Vngashnga, Vngashngogva, Vngashngovnga, Vngavngadvo, Vngavngavnga, Vngavngo, Vngavngoshnga, Vngoaqvashngo, Vngoashngovngo, Vngoatvovngo, Vngobva, Vngodva, Vngokvavngo, Vngootvo, Vngoovngashngo, Vngoshnga, Vngoshngoshngo, Vngotvashnga, Vngovngoqvo, Vngovngoshnga, buttressed canopy, sun-warmed, damp, tropical seasonal forest
 
 > enter
-Nothing here is built; there is nothing to enter.
+There is nothing here to enter.
 > look
 [room 3733134593, day 0.16425]
 Tropical seasonal forest — a liana tangle, sun-warmed, damp, in a hollow — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
@@ -135,7 +135,7 @@ No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 Tropical seasonal forest — a liana tangle, sun-warmed, damp, in a hollow — in the lands of Doaba. The sky above: The sun, a yellow dwarf (G), stands high in the sky. The light is golden. The days are near their longest. The sky is a flat overcast.
 No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > wait 90
-Time passes. You sense movement nearby (3819 stirred).
+Time passes. You sense movement nearby (3953 stirred).
 > examine sky
 Twilight. The horizon glows gold. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
 > knows

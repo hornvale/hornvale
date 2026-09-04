@@ -307,6 +307,18 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0626](0626-a-terrain-verdict-is-held-for-the-session-keyed-by-room.md) | A terrain verdict is held for the session, keyed by room, with its terrain's identity supplied by ownership | Accepted |
 | [0627](0627-the-emitter-scan-advances-through-a-read-side-verdict-index.md) | The emitter scan advances over new sightings through a read-side verdict index, and is still not a tenant | Accepted |
 | [0628](0628-a-registry-rows-mechanism-is-a-count-not-a-reading.md) | A registry row's mechanism is a count, not a reading | Accepted |
+| [0646](0646-the-inhabited-reading-is-a-function-of-the-plan.md) | The inhabited reading is a function of the plan, drawn by nothing and stamped on nothing | Accepted |
+| [0647](0647-a-made-chamber-is-written-from-the-ledger-at-the-walk.md) | A made chamber is written from the ledger at the walk, never committed as a fact | Accepted |
+| [0648](0648-the-hoarder-sits-at-the-sanctum-on-what-lies-there.md) | The hoarder sits at the sanctum on what lies there, and holds nothing | Accepted |
+| [0649](0649-a-cut-place-outlives-its-people.md) | A cut place outlives its people: `Made` reads the occupation, and tenancy decides the tense | Accepted |
 | [0656](0656-a-held-bodys-walk-commits-what-it-does.md) | A held body's walk commits what it does | Accepted |
 | [0657](0657-off-the-walk-band-a-held-body-holds.md) | Off the walk band a held body holds | Accepted |
 | [0658](0658-the-wait-line-minutes-the-held-bodys-acts.md) | The wait line minutes the held body's acts | Accepted |
+| [0666](0666-the-enterability-gate-is-a-site-not-built.md) | The enterability gate is a `Site`, and `built` narrows to one kind of it | Accepted |
+| [0667](0667-a-placed-site-is-re-sited-to-a-facet-by-a-seeded-draw.md) | A placed site is re-sited from its vertex to one facet by a seeded draw | Accepted |
+| [0668](0668-a-site-carries-an-extent-and-this-campaign-emits-point.md) | A `Site` carries an `Extent`, and this campaign only ever emits `Point` | Accepted |
+| [0669](0669-a-sites-tier-is-placed-or-derived.md) | A site's tier is `placed` or `derived`, and standing is a separate axis | Accepted |
+| [0670](0670-a-placed-sites-glyph-is-drawn-ungated-its-name-is-not.md) | A placed site's glyph is drawn ungated; its name is still withheld | Accepted |
+| [0696](0696-the-sleep-path-is-denominated-in-the-local-day.md) | The sleep path is denominated in the local day, closing 0587's inversion | Accepted |
+| [0697](0697-what-an-afforded-site-is-worth-is-a-property-of-the-sleeper.md) | What an afforded site is worth is a property of the sleeper's species | Accepted |
+| [0698](0698-a-kind-is-committable-where-an-anchor-identity-is-not.md) | A kind is committable where an anchor identity is not | Accepted |

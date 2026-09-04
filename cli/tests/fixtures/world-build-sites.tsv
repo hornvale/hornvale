@@ -76,12 +76,14 @@ windows/hearsay/tests/traced_walk.rs	1	unmigrated:1
 windows/hearsay/tests/undertow_readout.rs	1	unmigrated:1
 windows/lab/src/metrics.rs	2	unmigrated:1 production:1
 windows/lab/tests/suite/affect_trace_golden.rs	1	unmigrated:1
+windows/lab/tests/suite/cave_rate_calibration.rs	1	identity:1
 windows/lab/tests/suite/disposition_calibration.rs	1	unmigrated:1
 windows/lab/tests/suite/gathering_calibration.rs	1	unmigrated:1
 windows/lab/tests/suite/health_calibration.rs	1	unmigrated:1
 windows/lab/tests/suite/hearth_population_calibration.rs	1	unmigrated:1
 windows/lab/tests/suite/reticence_calibration.rs	1	unmigrated:1
 windows/lab/tests/suite/roster_parity.rs	1	unmigrated:1
+windows/lab/tests/suite/site_density.rs	1	identity:1
 windows/lab/tests/suite/terminator_acceptance.rs	2	unmigrated:2
 windows/lab/tests/suite/the_dial.rs	1	unmigrated:1
 windows/lab/tests/suite/the_doctrine.rs	1	unmigrated:1

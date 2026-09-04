@@ -126,9 +126,12 @@ usage:
   hornvale streams                         dump the stream manifest as markdown
   hornvale underworld --seed <N>           dump one seed's chamber lattice as text (the underworld
                                             witness: chamber counts by band and by rock, plus the
-                                            first three cave systems run by run). Builds only to
-                                            BuildDepth::Terrain.
-  hornvale circuit --seed <N>              dump one seed's descent-plan readouts (The Crosscut witness)
+                                            first three cave systems run by run). Builds to
+                                            BuildDepth::Full: the made count reads the committed
+                                            ledger's occupations, per column (The Plat).
+  hornvale circuit --seed <N>              dump one seed's descent-plan readouts (The Crosscut and
+                                            Brattice witness, plus The Plat's Made population --
+                                            which is why this also builds to BuildDepth::Full)
   hornvale phonology                       dump per-species phonology as markdown
   hornvale dictionary [--world <PATH>]     dump per-species dictionary as markdown
   hornvale proto [FAMILY]                  dump a language family's proto inventory/phonotactics/proto-root table
@@ -1323,10 +1326,19 @@ fn cmd_systems_matrix() -> Result<(), String> {
 /// prints to stdout and regenerates nothing, which is the trap
 /// `docs/generated-paths.txt`'s own header records.
 ///
-/// `BuildDepth::Terrain`, the shallowest rung a chamber needs: it wants a
-/// cave's depth budget, its vertex's geothermal gradient and its vertex's
-/// stratigraphic column, and nothing above terrain. Anything deeper would pay
-/// for settlement and language work this reads no field of.
+/// `BuildDepth::Full` since The Plat (spec §3.6). The lattice itself still
+/// wants nothing above terrain — a cave's depth budget, its vertex's
+/// geothermal gradient and its vertex's stratigraphic column — but the
+/// `made` tally does: `delve_seating::ledger_overrides` reads the committed
+/// ledger's occupations per column, and there are no occupations to read
+/// below `Full`. Before this campaign the verb built to `BuildDepth::Terrain`
+/// and handed `render_underworld` an empty override map, so `made` was 0 by
+/// construction; the readout's own module doc records the swap.
+///
+/// **The cost is real and is the campaign's to justify**, not a free
+/// deepening: a full build per seed, plus one `column_origins` scan per
+/// cave-bearing vertex. Spec §9 flags the regeneration-cost change for G3 and
+/// the campaign ledger records the measurement.
 fn cmd_underworld(args: &[String]) -> Result<(), String> {
     let seed: u64 = flag_value(args, "--seed")
         .ok_or("underworld requires --seed <N>")?
@@ -1340,15 +1352,15 @@ fn cmd_underworld(args: &[String]) -> Result<(), String> {
         &hornvale_terrain::TerrainPins::default(),
         &world_builder::SettlementPins::default(),
         &wc,
-        world_builder::BuildDepth::Terrain,
+        world_builder::BuildDepth::Full,
     )
     .map_err(|e| e.to_string())?;
-    let terrain = artifacts
-        .terrain
-        .ok_or("BuildDepth::Terrain must hand back a terrain")?;
+    let world_builder::BuildArtifacts { world, terrain, .. } = artifacts;
+    let terrain = terrain.ok_or("BuildDepth::Full must hand back a terrain")?;
+    let overrides = world_builder::delve_seating::ledger_overrides(&world, &terrain);
     print!(
         "{}",
-        world_builder::underworld_readout::render_underworld(Seed(seed), &terrain)
+        world_builder::underworld_readout::render_underworld(Seed(seed), &terrain, &overrides)
     );
     Ok(())
 }
@@ -1364,8 +1376,11 @@ fn cmd_underworld(args: &[String]) -> Result<(), String> {
 /// prints to stdout and regenerates nothing, which is the trap
 /// `docs/generated-paths.txt`'s own header records.
 ///
-/// `BuildDepth::Terrain`, the shallowest rung a descent plan needs: it wants
-/// a cave's kind and its vertex, and nothing above terrain.
+/// `BuildDepth::Full` since The Plat (spec §3.6). A descent plan still wants
+/// only a cave's kind and its vertex, and the eight readouts above the new
+/// section are byte-identical because of it; the ninth — the Made population
+/// — reads the committed ledger through `plat_readout::render_made_population`,
+/// which cannot exist below `Full`. Same cost note as [`cmd_underworld`].
 fn cmd_circuit(args: &[String]) -> Result<(), String> {
     let seed: u64 = flag_value(args, "--seed")
         .ok_or("circuit requires --seed <N>")?
@@ -1379,15 +1394,18 @@ fn cmd_circuit(args: &[String]) -> Result<(), String> {
         &hornvale_terrain::TerrainPins::default(),
         &world_builder::SettlementPins::default(),
         &wc,
-        world_builder::BuildDepth::Terrain,
+        world_builder::BuildDepth::Full,
     )
     .map_err(|e| e.to_string())?;
-    let terrain = artifacts
-        .terrain
-        .ok_or("BuildDepth::Terrain must hand back a terrain")?;
+    let world_builder::BuildArtifacts { world, terrain, .. } = artifacts;
+    let terrain = terrain.ok_or("BuildDepth::Full must hand back a terrain")?;
     print!(
         "{}",
         world_builder::circuit_readout::render_circuit_panel(Seed(seed), &terrain)
+    );
+    print!(
+        "{}",
+        world_builder::plat_readout::render_made_population(&world, &terrain)
     );
     Ok(())
 }

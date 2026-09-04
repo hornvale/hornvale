@@ -339,16 +339,24 @@ fn main() {
     lines.push(
         "IMPEDANCE LADDER (surrounds_ascii::impedance_glyph): 7 values -> 5 glyphs".to_string(),
     );
-    let mut value_header = format!("{:<14}", "value");
-    for v in 0..=6i64 {
-        value_header += &format!("{v:^9}");
-    }
-    lines.push(value_header);
+    // Fix round (The Prospect): `value` and `glyph` used to be two separate
+    // rows — the value axis, then the glyph each value draws, matched up by
+    // column position. Merged into one `value:[glyph]` row per entry (the
+    // same `glyph:means` idiom the REGISTER legend below already uses),
+    // buying back one line for REGISTER's own growth (see that section's
+    // own comment) without dropping the value-to-glyph correspondence —
+    // if anything this states it more directly than two aligned rows did.
+    // `(colour)` stays its own row: unlike the header/glyph pairing, colour
+    // is a second axis of information (the overload tint on value 6), not a
+    // restatement of the first.
     let mut imp_mono = format!("{:<14}", "glyph");
+    for v in 0..=6i64 {
+        let g = impedance_glyph_for(v);
+        imp_mono += &format!("{:^9}", format!("{v}:[{g}]"));
+    }
     let mut imp_colour = format!("{:<14}", "  (colour)");
     for v in 0..=6i64 {
         let g = impedance_glyph_for(v);
-        imp_mono += &swatch(g, None);
         let rgb = if v == 6 {
             OVERLOAD_FLAG
         } else {
@@ -391,10 +399,17 @@ fn main() {
         collisions.join(", ")
     ));
 
-    lines.push(format!(
-        "REGISTER LEGEND (hornvale_game_core::register::REGISTER, {} rows)",
-        REGISTER.len()
-    ));
+    // THE SEPARATOR IS ONE SPACE, NOT TWO, SINCE THE PROSPECT'S TASK 8, and
+    // that is the line this campaign spent. `REGISTER` grew a 24th row (the
+    // placed exotic site, `$`) and the packed legend went to six lines
+    // against a sheet that asserts exactly `HEIGHT`. Narrowing the
+    // separator repacks the same 24 entries into five WITHOUT shortening a
+    // single `means` string — the alternative was editing another
+    // campaign's wording to buy room, which would have made this sheet's
+    // layout a reason to change the register's own vocabulary. The fourth
+    // line now sits at exactly 80 columns: there is no slack left, and the
+    // 25th row will redden the assertion below, which is what it is for.
+    //
     // Fix round 1: REGISTER grew from 11 rows (this sheet's original
     // budget) to 16 across Tasks 6-7, and one row per line no longer fits
     // the fixed 24-line floor — this is the exact maintenance the HEIGHT
@@ -405,14 +420,22 @@ fn main() {
     // it is built to demonstrate. `population` is dropped from the
     // printed line (it was never load-bearing for a reader matching a
     // glyph to its meaning) to keep entries short enough to pack.
-    let mut register_line = String::new();
+    //
+    // Fix round (The Prospect, review fix round 1): `REGISTER` grew a 25th
+    // row (`&`, the generic agent mark — see `register.rs`'s own doc) and
+    // the sheet was over budget again, this time by two lines. Rather than
+    // spend a whole line on the "REGISTER LEGEND (..., N rows)" header
+    // (the only content it carried beyond the row count, which the packed
+    // body does not otherwise state), it is now the packed body's own
+    // opening text — `register_line` is SEEDED with it instead of starting
+    // empty, so the row count is still stated, on the very first line,
+    // costing zero additional lines. This is the same trade the impedance
+    // section's own comment above makes (a header merged into the row it
+    // headed), not a new technique.
+    let mut register_line = format!("REGISTER ({} rows):", REGISTER.len());
     for b in REGISTER {
         let entry = format!("{}:{}", b.glyph, b.means);
-        let candidate = if register_line.is_empty() {
-            entry.clone()
-        } else {
-            format!("{register_line}  {entry}")
-        };
+        let candidate = format!("{register_line} {entry}");
         if visible_width(&candidate) > WIDTH {
             lines.push(std::mem::take(&mut register_line));
             register_line = entry;
@@ -429,6 +452,7 @@ fn main() {
     );
 
     // ---- The floor is exact, not a minimum: fail loudly if we drifted ---
+
     assert_eq!(
         lines.len(),
         HEIGHT,

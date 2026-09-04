@@ -1724,6 +1724,42 @@ result: **for any one-scalar sweep over a per-kind quantity, ask whether the
 shipped configuration reproduces byte-identically somewhere on the grid; if it
 cannot, the sweep is not interpolating the shipped world.**
 
+*Re-scored by [The Plat](./chronicle/the-plat.md) (2026-09-03), which moves one
+half of the precondition and explicitly does not move the other.* The bet's
+standing precondition — placing a people underground "waits on the underworld
+being declared as **places** — biomes, the way the sea's depth layers already
+are — rather than as a coordinate pushed through a tolerance curve" — was one
+sentence covering two requirements, and only now that half of it has moved is
+the seam between them visible.
+
+**The reading half moved.** The underworld's regions now carry named roles
+derived from the descent plan: an entry, a hall at the graph median, an
+innermost chamber, and a landing where a stair comes down into a node and
+another leaves it. A column also carries a **tenancy** read off the ledger's
+own occupation records — cut and lived in, cut and abandoned, or never cut —
+and that is the first time anything underground has said *who was here* rather
+than *what the rock is*. So there are places down there to declare, and a
+vocabulary that already distinguishes them.
+
+**The biome half did not, and the distance is larger than it looks.** Nothing
+this campaign built is legible to a species tolerance curve. A role is a
+property of a *graph node*, derived per descent from the plan's shape; a biome
+is a property of a *place on the world*, read by the same machinery that reads
+temperature and moisture, and the two are not the same kind of object. A curve
+cannot ask "is this the sanctum" and get a number, and it should not: the
+sanctum of one cave is not comparable to the sanctum of another the way two
+cells of tundra are comparable. What the withdrawal actually needed — a
+subterranean *kind of place*, so that Mountain-dwarf and Duergar can differ by
+stratum — remains exactly as owed as it was after The Sources made the scalars
+vary with depth. The shipped roster is still entirely of the surface.
+
+So the bet is **not resolved and its confidence does not move**. What changes
+is the shape of what is owed: the precondition was one sentence and is now two
+findings, and a future campaign should not read "the underworld has places now"
+as discharging it. The general form is worth keeping past this bet — **a
+precondition stated as one sentence can have halves that move independently,
+and the half that moves first makes the other look closer than it is.**
+
 **The phenomena interface generalizes.** The bet that one salience-ranked
 observation interface could serve religion, perception, and historiography
 without any consumer learning which system produced a phenomenon has held
@@ -3665,6 +3701,28 @@ its honest size.
    so a mechanism correct at one rotation period and wrong across most of the
    legal range was green everywhere, and what found it was an audit asking each
    constant what it varies along — not any measurement of the act.
+   **Annotated by [The Pallet](./chronicle/the-pallet.md) (2026-09-03), on the
+   traversal half again, and it closes the correction above while leaving The
+   Wicket's named ceiling exactly where it was.** The half-conversion is
+   finished: the sleep side is denominated in the world's own day too, so a rest
+   no longer outlasts a sleep at any legally pinnable rotation, and the running
+   test that had been asserting the inversion is gone. On top of that, a body
+   now *chooses* where it sleeps — an anchor within the room it is already in,
+   never travelled to — and the world records the KIND it chose. That is a new
+   kind of legibility rather than a new act: a creature found sleeping in the
+   road is now visible in the ledger instead of inferred from an absence, which
+   is the tuning signal the design was built to preserve, and preserving it is
+   why the chooser is deliberately allowed to choose badly rather than clamped
+   to the best site. **The ceiling is unchanged and now has a route out.** A body
+   that passes out in the street of a cold, built town is still repaid exactly
+   as well as one that found the bed, because the fold re-derives from committed
+   facts and the finest location any fact carries is the room. What changed is
+   that the durable half of the choice is now IN the ledger, so a later campaign
+   that wants the fold to know a bed from a heap of bracken has a fact to read
+   rather than a position it is not allowed to keep. **The score does not move**,
+   and for this chapter's own reason: none of this is a measurement of whether
+   the moment is worth standing in. It is one more act with a consequence, and
+   one more limit whose shape is now stated precisely enough to be attacked.
 
 ## The standing horizon
 
@@ -3678,6 +3736,34 @@ shape as before: a blind-attribution metric over many thousands of worlds,
 against a zero-forcing null control whose present must be indistinguishable
 from its own genesis. It is a bet at the top of the checkability gradient, and,
 like the two before it, it is allowed to fail.
+
+**A second horizon is now quantified rather than merely felt.** *The Prospect*
+(2026-09-03) measured the density of the inhabited surface for the first time:
+across five seeds, **one enterable site per ~84,200 land facets**. A facet at
+depth 13 is 1.126 km on a side, so a square mile is 2.04 of them and the aim of
+something worth finding in every square mile is **~41,200x away — 4.6 orders of
+magnitude.** No bet in the map above moved, because no bet covered this;
+what the measurement adds is a **ceiling**, and the ceiling is what makes it a
+horizon rather than a defect.
+
+Placed features are born on the 40,962-vertex geosphere and addressed onto the
+402,653,184-facet walk band, so **at most one facet in 9,830 can hold a placed
+feature of a given kind**, before a seed is built. Worlds today sit at 5.8% of
+that ceiling; saturating it buys about 17x and leaves the surface ~2,400x
+short. So the shortfall is not a tuning question at any
+threshold, and the campaign's own falsified hypothesis is the evidence — H2
+predicted a per-facet cave *percentage* and missed by ~1,070× because a placed
+point process on a 41,000-point lattice cannot express one.
+
+What that bounds is the class of answer. Density at facet resolution has to come
+from **derived** features — a pure function of seed and position, unbounded,
+stored nowhere, outside the ledger and therefore outside world history — which
+decision 0669 names but no campaign has yet built. The checkable form of the bet
+is whether a derived surface can be dense *and* legible at once: whether noise
+interacting with macro features produces places that feel found rather than
+extruded, and whether a player can tell the difference. That is gradeable by the
+world against itself — the same shape as the bets above — and it is allowed to
+fail.
 
 **A partial rescore, now that population has a field to vary.** The
 carrying-capacity field promoted above (see the high-confidence tier) is an
@@ -5165,3 +5251,47 @@ re-decide it.**
 
 Unscored deliberately, and the reason is this chapter's own: the claim that
 re-derivation catches what re-reading does not is itself of the second kind.
+
+### A criterion downstream of a quantizer (2026-09-03)
+
+[The Hachure](./chronicle/the-hachure.md) moves **no bet in the maps above**.
+It is a rendering campaign: it changes what the game client draws and changes
+nothing about what the world is. It belongs in this chapter for the same reason
+the section above it does — it produced one more instance of the wall this
+chapter keeps rebuilding, and the instance has a cause the previous ones do not.
+
+The sections above describe criteria whose *inputs could not contain the
+defect*: a branch table whose cases each had at most one quoted phrase, a red
+result produced by an arm other than the one under test. This campaign's is a
+third shape. **Four successive test drafts passed against unfixed code, and
+every one of them was measuring a quantizer rather than the thing being
+refined.** Each asserted about the rendered relief band. The band's rungs are
+hundreds of metres wide; within one ~110 km terrain sample a real height ramp
+almost never crosses one. So the refinement under test was enormous — distinct
+heights on a plate went from 1–4 to 612–3,860 — and exactly zero of it reached
+the observable every draft had chosen.
+
+Not one of the four inputs was unreasonable, and no amount of widening the
+cases would have helped, because the defect is not in the inputs at all. It is
+one layer downstream, in the function mapping the measured quantity to the
+observable. **A criterion can be blind because of what it looks at, and not
+only because of what it is shown.**
+
+The repair was to measure first and let the measurement name the observable,
+rather than to write a better assertion. That ordering is the part worth
+carrying, and it is the same ordering the sections above arrive at from
+different directions: an instrument's authority comes from having been made to
+fail on the real signal, and a criterion nobody has watched respond to the
+signal is a description of an intention.
+
+A second, smaller instance from the same campaign points the same way from the
+opposite side. A wrap defect survived both tests written for the feature that
+contained it, and was caught by an unrelated invariant — a cache's
+byte-identity check — because both new tests drew a full-width window at origin
+zero, where the defect cannot occur. **Tests written alongside a feature
+inherit the author's model of it, gaps included.** Invariants written for
+something else are, structurally, the cheapest independence available.
+
+Unscored, and for this chapter's own stated reason: the claim is about the
+whole rather than about a location, and nothing in its filing records the state
+it was observed against.

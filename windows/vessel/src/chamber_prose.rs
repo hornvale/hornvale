@@ -455,16 +455,48 @@ pub(crate) fn chamber_nouns(interior: &Interior) -> Vec<&'static str> {
 /// *hollow*, and that single word is the difference between a dwelling and a
 /// cave mouth. (An unused parameter would be dead weight and a reviewer would
 /// be right to flag it.)
+///
+/// **Since The Prospect (Task 7) it is read for a second thing: the SITE's own
+/// name.** `Brief::site`'s name is `Some` for a settlement and `None` for a
+/// cave or an exotic site, so a named site places `in {name}` into the
+/// opening noun phrase — "A small room in Doaba, holding a doorway and a
+/// screen" — and an unnamed one renders exactly the sentence it always did.
+/// The clause goes in the noun phrase rather than on a line of its own
+/// because the name is a property of the room, not an event in it, and
+/// because that placement holds in all three branches below without needing a
+/// fourth.
+///
+/// **The name is the PLACE's.** It reaches here through `Site::name`, which
+/// `brief_of` fills from `Terrain::settlement_name` — the room-keyed
+/// settlement-territory map. This function is given no body, no session and
+/// no possession, so it *cannot* accidentally name the creature's own home
+/// village instead; that structural inability is the guarantee, not a
+/// convention.
 /// type-audit: bare-ok(prose: return)
 pub fn describe_chamber(interior: &Interior, brief: &Brief) -> String {
     let place = if brief.built { "room" } else { "hollow" };
+    // `in Doaba` where the site has a name, nothing where it has none — an
+    // unnamed site must not be given a borrowed name or an empty clause.
+    let named = brief
+        .site
+        .as_ref()
+        .and_then(|site| site.name.as_deref())
+        .map(|name| format!(" in {name}"))
+        .unwrap_or_default();
     let nouns = chamber_nouns(interior);
     match nouns.len() {
-        0 => format!("A bare {place}, its floor swept and its corners empty."),
-        1 => format!("A small {place}. {} stands here.", capitalize(nouns[0])),
+        0 => format!("A bare {place}{named}, its floor swept and its corners empty."),
+        1 => format!(
+            "A small {place}{named}. {} stands here.",
+            capitalize(nouns[0])
+        ),
         _ => {
             let (last, rest) = nouns.split_last().expect("len >= 2");
-            format!("A small {place}, holding {} and {}.", rest.join(", "), last)
+            format!(
+                "A small {place}{named}, holding {} and {}.",
+                rest.join(", "),
+                last
+            )
         }
     }
 }
@@ -483,9 +515,99 @@ mod tests {
     use super::*;
     use crate::brief::Brief;
     use crate::interior::Interior;
+    use crate::site::{Site, SiteKind};
 
     fn brief() -> Brief {
-        Brief::from_parts(None, None, None, None, 0, true, true)
+        Brief::from_parts(
+            None,
+            None,
+            None,
+            None,
+            0,
+            true,
+            true,
+            Some(Site::placed(SiteKind::Settlement, None)),
+        )
+    }
+
+    /// The same brief, with the settlement site NAMED — the shape `brief_of`
+    /// produces at a real settlement since The Prospect's Task 7.
+    fn named_brief(name: &str) -> Brief {
+        Brief::from_parts(
+            None,
+            None,
+            None,
+            None,
+            0,
+            true,
+            true,
+            Some(Site::placed(SiteKind::Settlement, Some(name.to_string()))),
+        )
+    }
+
+    /// A named site puts its name in the chamber's opening noun phrase, and
+    /// an unnamed one renders the sentence it always did — no borrowed name
+    /// and no empty clause (Task 7).
+    ///
+    /// Both directions in one test on purpose: the positive assertion alone
+    /// would pass an implementation that hard-coded a clause for every
+    /// chamber, and the negative alone would pass one that emitted nothing
+    /// ever. The name is deliberately not "Doaba": this function is handed a
+    /// `Brief` and nothing else, so a real settlement's name here would not
+    /// distinguish "read from `Site::name`" from "read from anywhere at all".
+    #[test]
+    fn a_named_site_is_named_in_its_chambers_prose() {
+        let interior = interior_with(&[KindId("hearth")]);
+
+        let named = describe_chamber(&interior, &named_brief("Nornholm"));
+        assert!(
+            named.contains("in Nornholm"),
+            "a named site must be named in the chamber it holds: {named}"
+        );
+
+        let anonymous = describe_chamber(&interior, &brief());
+        // `!anonymous.contains(" in ")` used to stand here alone. That is a
+        // substring test of ENGLISH, not of the clause `describe_chamber`
+        // builds — it only ever held because no anchor noun in this
+        // fixture's roster contains the two characters " in ", and a future
+        // anchor that does (a "shrine" is fine; a "dining hall" is not)
+        // would fail this assertion for a reason unrelated to the site's
+        // name. Two narrower checks replace it: a SHAPE check that the
+        // sentence has no in-clause at all between the room word and the
+        // period that follows (`describe_chamber`'s own `" in {name}"` vs
+        // `""` branch, `chamber_prose.rs`), and a check that the specific
+        // borrowed name this test would catch does not appear.
+        assert!(
+            anonymous.starts_with("A small room. "),
+            "an unnamed site must leave no in-clause between the room word \
+             and the sentence that follows: {anonymous}"
+        );
+        assert!(
+            !anonymous.contains(" in Nornholm"),
+            "a site with no name must not acquire one: {anonymous}"
+        );
+    }
+
+    /// The name reaches every branch of the noun phrase, not only the one a
+    /// single fixture happens to exercise. `describe_chamber` has three
+    /// arms — no anchors, one, and many — and the clause is placed once for
+    /// all three; a per-arm `format!` is exactly the kind of edit that would
+    /// drop it from the arm nobody tested.
+    #[test]
+    fn every_anchor_count_names_the_site() {
+        let named = named_brief("Nornholm");
+        for kinds in [
+            &[][..],
+            &[KindId("hearth")][..],
+            &[KindId("hearth"), KindId("doorway")][..],
+        ] {
+            let text = describe_chamber(&interior_with(kinds), &named);
+            assert!(
+                text.contains("in Nornholm"),
+                "the site's name must survive the {}-anchor branch: {text}",
+                kinds.len()
+            );
+        }
     }
 
     fn interior_with(anchor_kinds: &[KindId]) -> Interior {
@@ -779,7 +901,7 @@ mod tests {
         // `brief` must be READ, not merely carried: a built place is a room,
         // an unbuilt one is a hollow.
         let i = interior_with(&[kinds::GROUND, kinds::HEARTH]);
-        let wild = Brief::from_parts(None, None, None, None, 0, false, true);
+        let wild = Brief::from_parts(None, None, None, None, 0, false, true, None);
         assert_ne!(describe_chamber(&i, &brief()), describe_chamber(&i, &wild));
         assert!(describe_chamber(&i, &wild).contains("hollow"));
     }

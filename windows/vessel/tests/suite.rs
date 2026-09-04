@@ -123,6 +123,8 @@ mod the_handle;
 mod the_lintel;
 #[path = "suite/the_minute.rs"]
 mod the_minute;
+#[path = "suite/the_prospect.rs"]
+mod the_prospect;
 #[path = "suite/the_purview.rs"]
 mod the_purview;
 #[path = "suite/the_rack.rs"]
