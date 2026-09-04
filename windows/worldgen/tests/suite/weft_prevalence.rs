@@ -155,11 +155,25 @@ fn land_eligible_walks(kind: WeftKind) -> Vec<Walk> {
 /// `hornvale_terrain::GORGE_SLOPE` (`40_000.0`, I2) — a real recipe change
 /// (a gentler `tanh` saturation lowers overhang's typical macro-state
 /// contribution), so its own calibration table drifted under it unnoticed.
-/// Corrected here; spring/thicket/erratic were re-checked and are unchanged:
+///
+/// **The spring pooled-min cell (lexicon: a markdown table cell, an area,
+/// not the mesh sense) was ALSO stale (fix round 3), for a
+/// different reason: a bug in the standalone calibration probe used to
+/// produce this table, not in [`land_eligible_walks`] itself.** That probe
+/// re-implemented the walk loop and updated its running pooled min/max
+/// INSIDE the per-step loop, unconditionally — so a walk later rejected for
+/// leaving land eligibility (`eligible_throughout = false`) still leaked its
+/// partial prevalence series into the pooled bounds before the rejection
+/// was known. `land_eligible_walks` itself has no such bug (it only pushes
+/// a walk's samples into the returned `Vec` once `eligible_throughout &&
+/// walk.len() == WALK_LEN` both hold), so calling it directly — the same
+/// production path [`prevalence_is_continuous_across_adjacent_facets`] and
+/// [`the_walk_is_not_degenerate`] use — gives the correct figure. Verified
+/// against two independent external re-measurements before correcting:
 ///
 /// | kind | max delta | pooled spread | total occurs |
 /// | --- | --- | --- | --- |
-/// | spring | 0.00576 | 0.11429 (`[0.00089, 0.11518]`) | 125 / 4,680 |
+/// | spring | 0.00576 | 0.11268 (`[0.00249, 0.11518]`) | 125 / 4,680 |
 /// | overhang | 0.02982 | 0.13333 (`[0.00560, 0.13893]`) | 275 / 4,680 |
 /// | thicket | 0.00764 | 0.39418 (`[0.00054, 0.39473]`) | 924 / 4,680 |
 /// | erratic | 0.04920 | 0.07594 (`[0.00203, 0.07796]`) | 233 / 4,680 |
@@ -183,9 +197,10 @@ fn land_eligible_walks(kind: WeftKind) -> Vec<Walk> {
 /// measured real values above (never above — a floor above the real
 /// measurement would fail on real data by construction): spring `0.05`/`50`,
 /// overhang `0.08`/`150`, thicket `0.20`/`400`, erratic `0.04`/`100`.
-/// **Overhang's floors still hold against the corrected row** (`0.08` is
-/// 1.67x under the corrected `0.13333`; `150` is 1.83x under the corrected
-/// `275`) — nothing broke, the committed TABLE was false, not the bounds.
+/// **Overhang's and spring's floors both still hold against their corrected
+/// rows** (overhang: `0.08` is 1.67x under `0.13333`, `150` is 1.83x under
+/// `275`; spring: `0.05` is 2.25x under the corrected `0.11268`) — nothing
+/// broke either time; the committed TABLE was false, not the bounds.
 const KIND_BOUNDS: [(WeftKind, f64, f64, usize); 4] = [
     (WeftKind::Spring, 0.010, 0.05, 50),
     (WeftKind::Overhang, 0.045, 0.08, 150),
