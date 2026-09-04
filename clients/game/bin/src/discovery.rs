@@ -113,10 +113,32 @@ pub enum FeatureId {
     /// they share a nearest vertex (in which case they are, for this map's
     /// purposes, the same point).
     Settlement(Vertex),
-    /// A cave mouth, keyed to the terrain vertex it occupies
+    /// A cave mouth, keyed to the terrain vertex that WARRANTS it
     /// (`hornvale_terrain::GeneratedTerrain::cave_at`'s own key — one cave
     /// per vertex, by that function's own contract).
+    ///
+    /// **The key is the warranting vertex, not the facet the mouth stands
+    /// on**, and since The Prospect those are different places: a cave is
+    /// placed inside a quad around its vertex by
+    /// `hornvale_worldgen::site_facet_for`. The vertex is the site's
+    /// IDENTITY (one cave per vertex, by contract) and the facet is its
+    /// ADDRESS; keying on the address would be keying on a value the
+    /// placement draw owns, so an epoch there would silently orphan every
+    /// recorded discovery.
     Cave(Vertex),
+    /// A placed exotic site — strange biota, mineral crystal, a fungal
+    /// canopy — keyed to the canonical-grid vertex
+    /// `hornvale_locale::LocaleContext::strange_sites` warrants it at (The
+    /// Prospect, Task 8).
+    ///
+    /// **A point site, so it is discovered by encounter and never by
+    /// co-location** — the same §A4b rule [`FeatureId::Cave`] and
+    /// [`FeatureId::Settlement`] obey. `Driver::update_discovery` records it
+    /// when the possession stands on the site's own placed FACET, a
+    /// 1.126 km room, never merely within its 110-132 km vertex: standing
+    /// in the mouth of the thing is an encounter, standing somewhere in the
+    /// province is not.
+    Exotic(Vertex),
 }
 
 /// Every feature the possession has DISCOVERED this session (§A4b:

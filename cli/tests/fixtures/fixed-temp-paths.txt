@@ -1,0 +1,15 @@
+# Sites that construct a FIXED name under std::env::temp_dir() and are
+# accepted anyway. Append with a reason in the same commit; the guard checks
+# both directions, so an entry whose site no longer matches is an error too
+# and this list cannot rot.
+#
+# The default is NOT to be here: a fixed temp path is shared by every
+# concurrent run of the same test on the box, and 14 of them were fixed by
+# The Nettle after one took down a fail-fast run at test 274 of 4869.
+#
+# KEYED BY THE JOINED EXPRESSION, NOT BY LINE NUMBER. A roster keyed by line
+# drifts the moment anyone edits above the site, turning every unrelated edit
+# into a stale-entry failure -- which is exactly how a three-valued ratchet
+# gets trained away.
+windows/lab/tests/suite/anomaly_holdout.rs::"hv-gnomon-holdout-path-check"	never creates the path -- asserts it does NOT start with the committed goldens dir; pure path arithmetic
+cli/tests/suite/repertory_corpus.rs::scratch_name(witness.seed)	already uniquified -- scratch_name() embeds std::process::id(); the joined value is a fn call, which this syntactic check cannot see through

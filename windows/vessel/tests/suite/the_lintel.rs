@@ -38,7 +38,7 @@ const COARSE_REFUSAL: &str = "The grain of the world resists";
 fn enter_somewhere_built(session: &mut Session<'_>, limit: usize) -> Option<String> {
     for step in 0..limit {
         let reply = out(session.handle("enter"));
-        if !reply.starts_with("Nothing here is built") {
+        if !reply.starts_with("There is nothing here to enter") {
             return Some(reply);
         }
         // Not built here — step along and try again.
@@ -136,7 +136,7 @@ fn entering_where_nothing_is_built_gives_a_physical_reason() {
     let mut refusal = None;
     for _ in 0..12 {
         let reply = out(session.handle("enter"));
-        if reply.starts_with("Nothing here is built") {
+        if reply.starts_with("There is nothing here to enter") {
             refusal = Some(reply);
             break;
         }
@@ -176,7 +176,7 @@ fn fact_count_before_a_successful_enter(session: &mut Session<'_>, limit: usize)
     for step in 0..limit {
         let before = session.committed_fact_count();
         let reply = out(session.handle("enter"));
-        if !reply.starts_with("Nothing here is built") {
+        if !reply.starts_with("There is nothing here to enter") {
             return Some(before);
         }
         // Not built here — step along and try again.

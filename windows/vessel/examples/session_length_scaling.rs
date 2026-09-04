@@ -714,6 +714,27 @@ struct Band {
     drank_roster_max: usize,
     /// How many roster members have drunk zero times as of this band.
     drank_roster_zero_count: usize,
+
+    // ---- Task 8: M1 (spec §4) -- the bytes the room memo and the
+    // per-creature verdict index hold at this band's end. No threshold: this
+    // is the figure stage 4 (the lifecycle) enters on, not a criterion, and
+    // nothing in this campaign evicts either structure. ----
+    /// Rooms the room memo holds at this band's end
+    /// (`GroundHazards::len()`).
+    ground_len: usize,
+    /// An estimate of the room memo's held bytes at this band's end
+    /// (`GroundHazards::held_bytes()`) -- every held room's key size
+    /// (`size_of::<Facet>()` plus its `path` heap length) summed, plus one
+    /// `size_of::<Hazards>()` per held room. An ESTIMATE of held data, not
+    /// an allocator measurement, the same caveat `ledger_bytes` states.
+    ground_bytes: usize,
+    /// Every entity's judged-room count summed, held by the frightening-
+    /// verdict index at this band's end (`FrighteningGround::entries()`).
+    index_entries: usize,
+    /// An estimate of the verdict index's held bytes at this band's end
+    /// (`FrighteningGround::held_bytes()`) -- same estimate caveat as
+    /// `ground_bytes`.
+    index_bytes: usize,
 }
 
 fn main() {
@@ -778,6 +799,26 @@ fn main() {
             b.folded_len,
             b.probe_drank_per_tick,
             b.ledger_len
+        );
+    }
+
+    // Task 8: M1 (spec §4) -- a SECOND, small table so the main one's
+    // existing columns stay untouched. No threshold: nothing evicts either
+    // structure in this campaign, so these are the figures stage 4 (the
+    // lifecycle) enters on, not a criterion.
+    println!();
+    println!(
+        "{:>5} {:>10} {:>12} {:>13} {:>12}",
+        "band", "ground_len", "ground_bytes", "index_entries", "index_bytes"
+    );
+    println!(
+        "  (M1, spec §4: the room memo's and the per-creature verdict index's held entries \
+         and an ESTIMATE of their held bytes -- not an allocator measurement.)"
+    );
+    for b in &bands {
+        println!(
+            "{:>5} {:>10} {:>12} {:>13} {:>12}",
+            b.index, b.ground_len, b.ground_bytes, b.index_entries, b.index_bytes
         );
     }
 
@@ -1149,6 +1190,11 @@ fn run(
     // THIS store — the one production owns, at the scope production owns it.
     let folds =
         hornvale_vessel::resident::OwnedFolds::new(hornvale_vessel::resident::ResidentFolds::new());
+    // The session-lived room memo (The Detent, spec §2.1), owned at exactly
+    // the scope `folds` is — one per run, so every tick's terrain reads and
+    // fills the SAME memo rather than starting cold each tick.
+    let ground =
+        hornvale_vessel::ground::OwnedGround::new(hornvale_vessel::ground::GroundHazards::new());
     let mut day = WorldTime::from_std_days(0.5).expect("0.5 is a finite day count");
 
     // NO SINGLE PROBE AGENT. An earlier draft reported one agent's own
@@ -1190,7 +1236,8 @@ fn run(
         // it replaces was only accidentally exact for whole-day steps.
         day = WorldTime::from_ticks(day.ticks() + WorldTime::TICKS_PER_STD_DAY);
         let mesh_snapshot = mesh_memo.clone();
-        let terrain = LocaleTerrain::with_fields(ctx, None, None, None, None, Some(&mesh_snapshot));
+        let terrain = LocaleTerrain::with_fields(ctx, None, None, None, None, Some(&mesh_snapshot))
+            .with_ground(&ground);
         let sys = DriveMovements {
             npcs: npcs.clone(),
             from,
@@ -1209,7 +1256,7 @@ fn run(
         // must not fold a per-tick harness clone into the answer.
         #[allow(clippy::disallowed_types)] // benchmark harness
         let t0 = Instant::now();
-        let (facts, _occupancy) =
+        let (facts, _occupancy, _written) =
             sys.step_with_occupancy(&ledger, &mut mesh_memo, &mut home_nav_cache);
         for fact in facts {
             ledger
@@ -1249,7 +1296,8 @@ fn run(
                 .count();
             let mesh_for_probe = mesh_memo.clone();
             let probe_terrain =
-                LocaleTerrain::with_fields(ctx, None, None, None, None, Some(&mesh_for_probe));
+                LocaleTerrain::with_fields(ctx, None, None, None, None, Some(&mesh_for_probe))
+                    .with_ground(&ground);
             let fold_us = probe_fold_us(
                 &ledger,
                 &folds,
@@ -1280,7 +1328,8 @@ fn run(
                 None,
                 Some(&built_set),
                 Some(&mesh_for_probe),
-            );
+            )
+            .with_ground(&ground);
             let fatigue_us = probe_fatigue_us(&ledger, npc, day, &fatigue_terrain);
             let believed_water_us =
                 probe_believed_water_us(&ledger, &folds, npc, day, &probe_terrain, PROBE_BUDGET);
@@ -1332,6 +1381,10 @@ fn run(
                 drank_roster_median,
                 drank_roster_max,
                 drank_roster_zero_count,
+                ground_len: ground.borrow().len(),
+                ground_bytes: ground.borrow().held_bytes(),
+                index_entries: folds.borrow().frightening_ground().entries(),
+                index_bytes: folds.borrow().frightening_ground().held_bytes(),
             });
             band_facts_before = facts_after;
             band_searches_before = searches_after;

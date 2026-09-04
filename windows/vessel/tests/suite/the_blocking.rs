@@ -666,8 +666,20 @@ fn the_role_table_reads_a_different_room_for_every_role() {
     // string. Run with `--nocapture` to read the table.
     use hornvale_vessel::interior::pattern::{EVERY_ROLE, selection_for};
     use hornvale_vessel::interior::{Role, compose};
+    use hornvale_vessel::site::{Site, SiteKind};
     use hornvale_vessel::{Brief, describe_chamber};
-    let brief = |cold: bool| Brief::from_parts(None, None, None, None, 0, true, cold);
+    let brief = |cold: bool| {
+        Brief::from_parts(
+            None,
+            None,
+            None,
+            None,
+            0,
+            true,
+            cold,
+            Some(Site::placed(SiteKind::Settlement, None)),
+        )
+    };
     let mut seen: std::collections::BTreeMap<String, Role> = std::collections::BTreeMap::new();
     for &role in EVERY_ROLE {
         for (cold, populous) in [(false, false), (true, false), (false, true)] {

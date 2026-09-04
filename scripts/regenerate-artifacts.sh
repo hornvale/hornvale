@@ -860,9 +860,13 @@ gen_underworld_lattice() {
     printf '```\n'
 }
 
-# The Crosscut's committed witness (spec §4): the four preregistered readouts
-# — loop share, density ordering, cross-floor cycles, semilattice overlap —
-# over every cave-bearing, non-ocean vertex of the same standing seed panel.
+# The page carries EIGHT readouts from TWO specs, not four from one: the
+# Crosscut's committed witness (its spec §4) — loop share, density ordering,
+# cross-floor cycles, semilattice overlap — plus the Brattice's own four
+# (its spec §4.1-4.4) — gate yield, detour cost, solvability, report-only
+# gate counts — over every cave-bearing, non-ocean vertex of the same
+# standing seed panel. Each quartet's verdict words are frozen by its own
+# spec (final review, Important #3).
 #
 # Framing lines are hand-authored (the redirect replaces the whole file body,
 # so re-emit them here); the fenced blocks are the `circuit` verb's exact,
@@ -870,19 +874,28 @@ gen_underworld_lattice() {
 gen_underworld_circuit() {
     printf '# The Circuits of Seeds 42, 7 and 1234\n\n'
     printf 'What this page witnesses: for each seed'"'"'s every cave-bearing,\n'
-    printf 'non-ocean vertex, a descent plan is grown (spec §3) and the four\n'
-    printf 'preregistered readouts of spec §4 are measured against it, then\n'
-    printf 'reduced to a panel median. A descent plan is never stored -- it is a\n'
+    printf 'non-ocean vertex, a descent plan is grown (spec §3) and eight\n'
+    printf 'preregistered readouts from two specs are measured against it, then\n'
+    printf 'reduced to a panel median: the Crosscut'"'"'s four (its spec §4 -- loop\n'
+    printf 'share, density ordering, cross-floor cycles, semilattice overlap) and\n'
+    printf 'the Brattice'"'"'s four (its spec §4.1-4.4 -- gate yield, detour cost,\n'
+    printf 'solvability, report-only gate counts). A descent plan is never stored --\n'
     # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
-    printf 'pure function of `(seed, vertex, rungs, kind, character)`, so this page\n'
-    printf 'is a witness, not a record: every number here is re-derived from the\n'
-    printf 'seed on each regeneration.\n\n'
-    printf 'The verdict words PASSED / FALSIFIED are frozen by spec §4, decided\n'
-    printf 'before this code existed, and nothing here is tuned to reach one -- a\n'
-    printf 'FALSIFIED verdict is a finding the campaign publishes, not a bug to fix\n'
-    printf 'by moving the threshold. A comparison that cannot be made for a seed\n'
-    printf '(no cave of some kind exists there) prints NOT MEASURABLE rather than a\n'
-    printf 'vacuous PASSED.\n\n'
+    printf 'it is a pure function of `(seed, vertex, rungs, kind, character)`, so\n'
+    printf 'this page is a witness, not a record: every number here is re-derived\n'
+    printf 'from the seed on each regeneration.\n\n'
+    printf 'The verdict words PASSED / FALSIFIED are frozen by each readout'"'"'s own\n'
+    printf 'spec, decided before this code existed, and nothing here is tuned to\n'
+    printf 'reach one -- a FALSIFIED verdict is a finding the campaign publishes,\n'
+    printf 'not a bug to fix by moving the threshold. A comparison that cannot be\n'
+    printf 'made for a seed (no cave of some kind exists there) prints NOT\n'
+    printf 'MEASURABLE rather than a vacuous PASSED.\n\n'
+    printf 'The Crosscut'"'"'s four numbers moved once in this campaign, when The\n'
+    # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
+    printf 'Brattice took the Crosscut'"'"'s own deferred `try_extend` fix (ledger #10,\n'
+    printf 'ruling C); the attribution is by revert -- with that one change\n'
+    printf 'reverted the panel is byte-identical to the pre-Brattice baseline. The\n'
+    printf 'gate pass and class recompute alone leave them byte-identical.\n\n'
     printf '```text\n'
     run -p hornvale -- circuit --seed 42
     printf '\n'

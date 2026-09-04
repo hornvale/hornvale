@@ -5258,7 +5258,7 @@ pub fn registry() -> Vec<Metric> {
                 }
                 let terrain = hornvale_vessel::liveness::LocaleTerrain::new(&ctx);
                 let cold = built
-                    .iter()
+                    .keys()
                     .filter_map(|id| id.unpack().ok())
                     .filter(|addr| hornvale_vessel::liveness::Terrain::is_cold(&terrain, addr))
                     .count();

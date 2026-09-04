@@ -341,10 +341,26 @@ confirmation-gated in the Makefile.
   2026-07-31, since `core.hooksPath` names one directory and the root copy
   still advertised itself in its own header. That directory now holds three
   hooks: `pre-commit`, `post-merge`, and `pre-push` (see below for the
-  latter two). `pre-commit` runs `make quick`, which is skipped when nothing
-  Rust-relevant is staged (`.rs`, `Cargo.*`, `clippy.toml`,
-  `rust-toolchain.toml`, `.cargo/`, `tools/type-audit/`) so docs-only commits
-  are instant; the guards below always run. A **linked worktree may not commit
+  latter two). `pre-commit` runs `make gate-commit` (not `make quick` —
+  that was true when this line was written and the hook has since moved up a
+  rung), gated on a Rust-relevant staged path: `.rs`, `Cargo.*`, the lint and
+  toolchain configs, `.cargo/`, and the two audit tools whose own behaviour
+  changes what the gate says. The exact predicate is the `rust_relevant`
+  regex in the hook; read it there rather than from this list, which has
+  drifted from it once already.
+
+  **A docs-only commit is no longer instant, and that is deliberate (The
+  Nettle).** The old premise was "Rust paths staged -> Rust checks matter";
+  the counterexample is a Rust test whose SUBJECT IS PROSE. `docs_consistency`
+  scans `book/src` and `docs/`, sits in the sub-floor tier, and so never ran
+  on the commits it exists to check — one campaign made ~12 such commits and
+  sent a prose defect to the merge queue to be found on the canonical box
+  after it had taken the shared serial claim. The fast path is now **inverted
+  rather than deleted**: no Rust-relevant path staged runs `make docs-tests`,
+  the prose-subject tests, and still skips fmt/clippy/type-audit, which a
+  markdown edit genuinely cannot move. Measured 5.7-24.0 s warm, the pole
+  being three worldgen byte-identity probes; the guards below always run
+  regardless. A **linked worktree may not commit
   to `main`** — the primary checkout may. The hook also carries the
   **golden-pins.sql tripwire guard**: staging any of `windows/lab/tests/{calibration,
   branches_family_calibration,gathering_calibration}.rs` or

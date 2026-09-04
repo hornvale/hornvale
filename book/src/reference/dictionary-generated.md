@@ -49,6 +49,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `desert-elf-kind` | a desert elf | — | — | — | gap (experiential): black-dragon has no exposure to 'desert-elf-kind' |
 | `die` | to cease living | Dagdag | /dagdag/ | Mangdáng | Mangdáng → no change → Dagdag |
 | `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): black-dragon has no exposure to 'dire-wolf-kind' |
+| `door` | a leaf hung in an opening, to be shut against what is beyond | — | — | — | gap (experiential): black-dragon has no exposure to 'door' |
 | `drink` | to swallow liquid | Daagdad | /daagdad/ | Páángpám | Páángpám → no change → Daagdad |
 | `drow-kind` | a drow | — | — | — | gap (experiential): black-dragon has no exposure to 'drow-kind' |
 | `eager` | positive, high arousal: chasing a satisfiable need | — | — | — | gap (experiential): black-dragon has no exposure to 'eager' |
@@ -307,6 +308,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `desert-elf-kind` | a desert elf | Godoa | /godoa/ | Gonea | Gonea → no change → Godoa |
 | `die` | to cease living | Do | /do/ | No | No → no change → Do |
 | `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): bugbear has no exposure to 'dire-wolf-kind' |
+| `door` | a leaf hung in an opening, to be shut against what is beyond | — | — | — | gap (experiential): bugbear has no exposure to 'door' |
 | `drink` | to swallow liquid | Qoogo | /qoogo/ | Qeego | Qeego → no change → Qoogo |
 | `drow-kind` | a drow | Godoa | /godoa/ | Genoa | Genoa → no change → Godoa |
 | `eager` | positive, high arousal: chasing a satisfiable need | Dodo | /dodo/ | Nene | Nene → no change → Dodo |
@@ -565,6 +567,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `desert-elf-kind` | a desert elf | Dangad | /daŋad/ | Tangat | Tangat → lenition → Dangad |
 | `die` | to cease living | Jasan | /jasan/ | Jasan | Jasan → no change → Jasan |
 | `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): desert-dwarf has no exposure to 'dire-wolf-kind' |
+| `door` | a leaf hung in an opening, to be shut against what is beyond | — | — | — | gap (experiential): desert-dwarf has no exposure to 'door' |
 | `drink` | to swallow liquid | Nangaj | /naŋaj/ | Nangaj | Nangaj → no change → Nangaj |
 | `drow-kind` | a drow | Shavad | /ʃavad/ | Shavaz | Shavaz → no change → Shavad |
 | `eager` | positive, high arousal: chasing a satisfiable need | — | — | — | gap (experiential): desert-dwarf has no exposure to 'eager' |
@@ -823,6 +826,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `desert-elf-kind` | a desert elf | Szeaṅ | /szeaŋ/ | Sreang | Sreang → no change → Szeaṅ |
 | `die` | to cease living | Gaoṅgaoṅ | /gaoŋgaoŋ/ | Gaonggaong | Gaonggaong → no change → Gaoṅgaoṅ |
 | `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): desert-elf has no exposure to 'dire-wolf-kind' |
+| `door` | a leaf hung in an opening, to be shut against what is beyond | — | — | — | gap (experiential): desert-elf has no exposure to 'door' |
 | `drink` | to swallow liquid | Šzoṅṅeṅ | /ʃzoŋŋeŋ/ | Shrongngeng | Shrongngeng → no change → Šzoṅṅeṅ |
 | `drow-kind` | a drow | Goṅ | /goŋ/ | Gong | Gong → no change → Goṅ |
 | `eager` | positive, high arousal: chasing a satisfiable need | — | — | — | gap (experiential): desert-elf has no exposure to 'eager' |
@@ -1081,6 +1085,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `desert-elf-kind` | a desert elf | Roa | /roa/ | Sreang | Sreang → clustersimplify → finalloss → Roa |
 | `die` | to cease living | Gaoggao | /gaoggao/ | Gaonggaong | Gaonggaong → finalloss → Gaoggao |
 | `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): drow has no exposure to 'dire-wolf-kind' |
+| `door` | a leaf hung in an opening, to be shut against what is beyond | — | — | — | gap (experiential): drow has no exposure to 'door' |
 | `drink` | to swallow liquid | Roggo | /roggo/ | Shrongngeng | Shrongngeng → clustersimplify → finalloss → Roggo |
 | `drow-kind` | a drow | Go | /go/ | Gong | Gong → finalloss → Go |
 | `eager` | positive, high arousal: chasing a satisfiable need | — | — | — | gap (experiential): drow has no exposure to 'eager' |
@@ -1339,6 +1344,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `desert-elf-kind` | a desert elf | Shngaxqzoox | /ʃŋaxqzoox/ | Shngaxqzoox | Shngaxqzoox → no change → Shngaxqzoox |
 | `die` | to cease living | Smoxzmaap | /smoxzmaap/ | Smoxzmaaf | Smoxzmaaf → fortition → Smoxzmaap |
 | `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): gnoll has no exposure to 'dire-wolf-kind' |
+| `door` | a leaf hung in an opening, to be shut against what is beyond | — | — | — | gap (experiential): gnoll has no exposure to 'door' |
 | `drink` | to swallow liquid | Zhmax | /ʒmax/ | Zhmax | Zhmax → no change → Zhmax |
 | `drow-kind` | a drow | Dsoopdshoov | /dsoopdʃoov/ | Tsooftshoov | Tsooftshoov → fortition → lenition → Dsoopdshoov |
 | `eager` | positive, high arousal: chasing a satisfiable need | Zhngopsnaav | /ʒŋopsnaav/ | Zhngofsnaav | Zhngofsnaav → fortition → Zhngopsnaav |
@@ -1597,6 +1603,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `desert-elf-kind` | a desert elf | Bonea | /bonea/ | Gonea | Gonea → no change → Bonea |
 | `die` | to cease living | No | /no/ | No | No → no change → No |
 | `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): goblin has no exposure to 'dire-wolf-kind' |
+| `door` | a leaf hung in an opening, to be shut against what is beyond | — | — | — | gap (experiential): goblin has no exposure to 'door' |
 | `drink` | to swallow liquid | Teebo | /teebo/ | Qeego | Qeego → no change → Teebo |
 | `drow-kind` | a drow | Benoa | /benoa/ | Genoa | Genoa → no change → Benoa |
 | `eager` | positive, high arousal: chasing a satisfiable need | — | — | — | gap (experiential): goblin has no exposure to 'eager' |
@@ -1855,6 +1862,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `desert-elf-kind` | a desert elf | Tangat | /taŋat/ | Tangat | Tangat → no change → Tangat |
 | `die` | to cease living | Jatan | /jatan/ | Jasan | Jasan → no change → Jatan |
 | `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): gully-dwarf has no exposure to 'dire-wolf-kind' |
+| `door` | a leaf hung in an opening, to be shut against what is beyond | — | — | — | gap (experiential): gully-dwarf has no exposure to 'door' |
 | `drink` | to swallow liquid | Nangaj | /naŋaj/ | Nangaj | Nangaj → no change → Nangaj |
 | `drow-kind` | a drow | Shaban | /ʃaban/ | Shavaz | Shavaz → no change → Shaban |
 | `eager` | positive, high arousal: chasing a satisfiable need | Naxab | /naxab/ | Zaxav | Zaxav → no change → Naxab |
@@ -2113,6 +2121,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `desert-elf-kind` | a desert elf | Sream | /sream/ | Sreang | Sreang → no change → Sream |
 | `die` | to cease living | Gaomgaom | /gaomgaom/ | Gaonggaong | Gaonggaong → no change → Gaomgaom |
 | `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): high-elf has no exposure to 'dire-wolf-kind' |
+| `door` | a leaf hung in an opening, to be shut against what is beyond | — | — | — | gap (experiential): high-elf has no exposure to 'door' |
 | `drink` | to swallow liquid | Šrommem | /ʃrommem/ | Shrongngeng | Shrongngeng → no change → Šrommem |
 | `drow-kind` | a drow | Gom | /gom/ | Gong | Gong → no change → Gom |
 | `eager` | positive, high arousal: chasing a satisfiable need | — | — | — | gap (experiential): high-elf has no exposure to 'eager' |
@@ -2371,6 +2380,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `desert-elf-kind` | a desert elf | Tangat | /taŋat/ | Tangat | Tangat → no change → Tangat |
 | `die` | to cease living | Jasam | /jasam/ | Jasan | Jasan → no change → Jasam |
 | `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): hill-dwarf has no exposure to 'dire-wolf-kind' |
+| `door` | a leaf hung in an opening, to be shut against what is beyond | — | — | — | gap (experiential): hill-dwarf has no exposure to 'door' |
 | `drink` | to swallow liquid | Mangaj | /maŋaj/ | Nangaj | Nangaj → no change → Mangaj |
 | `drow-kind` | a drow | Shavas | /ʃavas/ | Shavaz | Shavaz → no change → Shavas |
 | `eager` | positive, high arousal: chasing a satisfiable need | — | — | — | gap (experiential): hill-dwarf has no exposure to 'eager' |
@@ -2629,6 +2639,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `desert-elf-kind` | a desert elf | Gonea | /gonea/ | Gonea | Gonea → no change → Gonea |
 | `die` | to cease living | No | /no/ | No | No → no change → No |
 | `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): hobgoblin has no exposure to 'dire-wolf-kind' |
+| `door` | a leaf hung in an opening, to be shut against what is beyond | — | — | — | gap (experiential): hobgoblin has no exposure to 'door' |
 | `drink` | to swallow liquid | Qeego | /qeego/ | Qeego | Qeego → no change → Qeego |
 | `drow-kind` | a drow | Genoa | /genoa/ | Genoa | Genoa → no change → Genoa |
 | `eager` | positive, high arousal: chasing a satisfiable need | — | — | — | gap (experiential): hobgoblin has no exposure to 'eager' |
@@ -2887,6 +2898,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `desert-elf-kind` | a desert elf | Xekva | /xekva/ | Gxekva | Gxekva → clustersimplify → Xekva |
 | `die` | to cease living | Rarea | /rarea/ | Rarea | Rarea → no change → Rarea |
 | `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): human has no exposure to 'dire-wolf-kind' |
+| `door` | a leaf hung in an opening, to be shut against what is beyond | — | — | — | gap (experiential): human has no exposure to 'door' |
 | `drink` | to swallow liquid | Reagxaa | /reagxaa/ | Reagxaa | Reagxaa → no change → Reagxaa |
 | `drow-kind` | a drow | Teora | /teora/ | Teora | Teora → no change → Teora |
 | `eager` | positive, high arousal: chasing a satisfiable need | — | — | — | gap (experiential): human has no exposure to 'eager' |
@@ -3145,6 +3157,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `desert-elf-kind` | a desert elf | Xoroo | /xoroo/ | Xoroo | Xoroo → no change → Xoroo |
 | `die` | to cease living | Xaaxa | /xaaxa/ | Xaaxa | Xaaxa → no change → Xaaxa |
 | `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): kobold has no exposure to 'dire-wolf-kind' |
+| `door` | a leaf hung in an opening, to be shut against what is beyond | — | — | — | gap (experiential): kobold has no exposure to 'door' |
 | `drink` | to swallow liquid | Raxaro | /raxaro/ | Raxaro | Raxaro → no change → Raxaro |
 | `drow-kind` | a drow | Rooroorao | /rooroorao/ | Rooroorao | Rooroorao → no change → Rooroorao |
 | `eager` | positive, high arousal: chasing a satisfiable need | — | — | — | gap (experiential): kobold has no exposure to 'eager' |
@@ -3403,6 +3416,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `desert-elf-kind` | a desert elf | — | — | — | gap (experiential): red-dragon has no exposure to 'desert-elf-kind' |
 | `die` | to cease living | Daddad | /daddad/ | Mangdáng | Mangdáng → no change → Daddad |
 | `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): red-dragon has no exposure to 'dire-wolf-kind' |
+| `door` | a leaf hung in an opening, to be shut against what is beyond | — | — | — | gap (experiential): red-dragon has no exposure to 'door' |
 | `drink` | to swallow liquid | Kaadkad | /kaadkad/ | Páángpám | Páángpám → no change → Kaadkad |
 | `drow-kind` | a drow | — | — | — | gap (experiential): red-dragon has no exposure to 'drow-kind' |
 | `eager` | positive, high arousal: chasing a satisfiable need | — | — | — | gap (experiential): red-dragon has no exposure to 'eager' |
@@ -3661,6 +3675,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `desert-elf-kind` | a desert elf | Srean | /srean/ | Sreang | Sreang → no change → Srean |
 | `die` | to cease living | Baunbaun | /baunbaun/ | Gaonggaong | Gaonggaong → vowelshift → Baunbaun |
 | `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): sea-elf has no exposure to 'dire-wolf-kind' |
+| `door` | a leaf hung in an opening, to be shut against what is beyond | — | — | — | gap (experiential): sea-elf has no exposure to 'door' |
 | `drink` | to swallow liquid | Šrunnen | /ʃrunnen/ | Shrongngeng | Shrongngeng → vowelshift → Šrunnen |
 | `drow-kind` | a drow | Bun | /bun/ | Gong | Gong → vowelshift → Bun |
 | `eager` | positive, high arousal: chasing a satisfiable need | — | — | — | gap (experiential): sea-elf has no exposure to 'eager' |
@@ -3919,6 +3934,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `desert-elf-kind` | a desert elf | Sroaṅ | /sroaŋ/ | Sreang | Sreang → no change → Sroaṅ |
 | `die` | to cease living | Baoṅbaoṅ | /baoŋbaoŋ/ | Gaonggaong | Gaonggaong → no change → Baoṅbaoṅ |
 | `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): snow-elf has no exposure to 'dire-wolf-kind' |
+| `door` | a leaf hung in an opening, to be shut against what is beyond | — | — | — | gap (experiential): snow-elf has no exposure to 'door' |
 | `drink` | to swallow liquid | Šroṅṅoṅ | /ʃroŋŋoŋ/ | Shrongngeng | Shrongngeng → no change → Šroṅṅoṅ |
 | `drow-kind` | a drow | Boṅ | /boŋ/ | Gong | Gong → no change → Boṅ |
 | `eager` | positive, high arousal: chasing a satisfiable need | — | — | — | gap (experiential): snow-elf has no exposure to 'eager' |
@@ -4177,6 +4193,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `desert-elf-kind` | a desert elf | — | — | — | gap (experiential): white-dragon has no exposure to 'desert-elf-kind' |
 | `die` | to cease living | Nangdang | /naŋdaŋ/ | Mangdáng | Mangdáng → no change → Nangdang |
 | `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): white-dragon has no exposure to 'dire-wolf-kind' |
+| `door` | a leaf hung in an opening, to be shut against what is beyond | — | — | — | gap (experiential): white-dragon has no exposure to 'door' |
 | `drink` | to swallow liquid | Kaangkan | /kaaŋkan/ | Páángpám | Páángpám → no change → Kaangkan |
 | `drow-kind` | a drow | — | — | — | gap (experiential): white-dragon has no exposure to 'drow-kind' |
 | `eager` | positive, high arousal: chasing a satisfiable need | — | — | — | gap (experiential): white-dragon has no exposure to 'eager' |
@@ -4435,6 +4452,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `desert-elf-kind` | a desert elf | Sdea | /sdea/ | Sreang | Sreang → finalloss → Sdea |
 | `die` | to cease living | Gauṅgau | /gauŋgau/ | Gaonggaong | Gaonggaong → finalloss → vowelshift → Gauṅgau |
 | `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): wood-elf has no exposure to 'dire-wolf-kind' |
+| `door` | a leaf hung in an opening, to be shut against what is beyond | — | — | — | gap (experiential): wood-elf has no exposure to 'door' |
 | `drink` | to swallow liquid | Sduṅṅe | /sduŋŋe/ | Shrongngeng | Shrongngeng → finalloss → vowelshift → Sduṅṅe |
 | `drow-kind` | a drow | Gu | /gu/ | Gong | Gong → finalloss → vowelshift → Gu |
 | `eager` | positive, high arousal: chasing a satisfiable need | — | — | — | gap (experiential): wood-elf has no exposure to 'eager' |

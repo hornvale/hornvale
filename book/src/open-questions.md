@@ -3671,6 +3671,34 @@ against a zero-forcing null control whose present must be indistinguishable
 from its own genesis. It is a bet at the top of the checkability gradient, and,
 like the two before it, it is allowed to fail.
 
+**A second horizon is now quantified rather than merely felt.** *The Prospect*
+(2026-09-03) measured the density of the inhabited surface for the first time:
+across five seeds, **one enterable site per ~84,200 land facets**. A facet at
+depth 13 is 1.126 km on a side, so a square mile is 2.04 of them and the aim of
+something worth finding in every square mile is **~41,200x away — 4.6 orders of
+magnitude.** No bet in the map above moved, because no bet covered this;
+what the measurement adds is a **ceiling**, and the ceiling is what makes it a
+horizon rather than a defect.
+
+Placed features are born on the 40,962-vertex geosphere and addressed onto the
+402,653,184-facet walk band, so **at most one facet in 9,830 can hold a placed
+feature of a given kind**, before a seed is built. Worlds today sit at 5.8% of
+that ceiling; saturating it buys about 17x and leaves the surface ~2,400x
+short. So the shortfall is not a tuning question at any
+threshold, and the campaign's own falsified hypothesis is the evidence — H2
+predicted a per-facet cave *percentage* and missed by ~1,070× because a placed
+point process on a 41,000-point lattice cannot express one.
+
+What that bounds is the class of answer. Density at facet resolution has to come
+from **derived** features — a pure function of seed and position, unbounded,
+stored nowhere, outside the ledger and therefore outside world history — which
+decision 0669 names but no campaign has yet built. The checkable form of the bet
+is whether a derived surface can be dense *and* legible at once: whether noise
+interacting with macro features produces places that feel found rather than
+extruded, and whether a player can tell the difference. That is gradeable by the
+world against itself — the same shape as the bets above — and it is allowed to
+fail.
+
 **A partial rescore, now that population has a field to vary.** The
 carrying-capacity field promoted above (see the high-confidence tier) is an
 *equilibrium* snapshot — `population = f(carrying capacity)` in closed
@@ -4984,3 +5012,220 @@ readouts rather than only the second — the first stands unedited, and the
 second is explicitly not blind. Nothing in the standing gate would have caught
 a quieter version of that ordering, and nothing here claims otherwise; it was
 disclosed because the campaign chose to disclose it.
+
+### The gate the fourth look said did not exist now exists (2026-09-02)
+
+The section above, written days earlier, states the standing position on cost
+plainly: "there is still no cost gate on the simulation — no ceiling, no slope
+check, nothing that runs per commit," and the two instruments that exist are
+the ones the two campaigns that needed them built. [The Rack](./chronicle/the-rack.md)
+moves that, and the way it moves it is the part worth re-scoring rather than
+the fact that it did.
+
+**The instrument that existed was not merely blunt; it was not running.**
+`session_cost.rs` bounds a pooled wall-clock median, and its own doc already
+conceded that twenty of the fifty samples that median is drawn from exceed the
+ceiling individually while the gate passes. That is the bluntness anyone would
+have predicted. What nobody had checked is that its millisecond assertions are
+gated to a host the test no longer runs on — they fire only on the Mac, and
+the tier that runs them moved to the canonical Linux box. Measured at close, on
+one quiet box in one profile: **the test passed at main's tip at 81.490 ms
+against a 9 ms ceiling.** [The Roll](./chronicle/the-roll.md) had moved that
+control roughly twenty-one-fold and every gate stayed green, not because the
+threshold was generous but because no threshold was being evaluated.
+
+**A gate's blind zone can be structural rather than statistical, and only one
+of those is visible in its own documentation.** This file's standing floor is
+that a check is only worth what it can be made to fail on; the companion the
+fourth look added is that a criterion is only worth the range its instrument
+samples. This is a third: a check is only worth the *configurations it
+actually runs in*, and the one place that is never written down is the
+intersection of a test's host guard with the tier's host policy — two
+correct-looking facts in two files that nothing compares.
+
+**What replaces it changes the shape of the bet, modestly and legibly.**
+Per-turn work is now a **count** — folds, plan searches, ledger position folds,
+shadowcasts, bodies scanned — asserted per verb class. A count is identical on
+every machine, so it belongs in the commit gate and cannot flap; it went red on
+the pre-change tree at exactly the preregistered numbers and green after. That
+is the first per-commit cost gate this project has had, and it is deliberately
+narrow: it covers the turn path of one window, and it cannot see a regression
+that performs the same operations more slowly. **The unwatched dimension is
+smaller, not closed.** The Rack's own residue — seventy kilobytes of JSON and
+one eight-millisecond shadowcast — is exactly the shape no counter bounds, and
+it is why this campaign's own wall-clock prediction was falsified while its
+counted one landed exactly. *(Corrected 2026-09-03 by The Terrier: the eight
+milliseconds were never the shadowcast, which costs 0.012 ms at radius four.
+They were the brief re-surveying the whole world's occupation register on
+every call, two to five times per indoor turn — a step the counter could not
+see because nothing counted it, which is the point this paragraph makes and
+the reason the number was filed under the wrong noun. The register is now
+built once; the chamber snapshot reads 0.5 ms.)*
+
+### The fifth look at cost found a repetition, not a quadratic (2026-09-03)
+
+Four sections above record that cost in this project is scored "when a campaign
+chooses to look", that the first two looks each found an unpredicted quadratic,
+that a third found a distribution and a fourth closed a loop, and that the same
+campaign that closed it left one fold failing three criteria at ninety-three
+milliseconds a call. This is the fifth look, and it is at that fold.
+
+**What it found was not a quadratic. It was a repetition.**
+[The Detent](./chronicle/the-detent.md) counted the fold rather than reading it
+and found that the whole of its cost was *static terrain, re-sampled every
+tick*: fifty agents walking one tick asked the world about 44,694 rooms — about
+eleven thousand of them distinct — in order to commit thirty-one facts, and the
+ground had not moved between any two of those questions. Holding the verdict
+for the session and letting the scan advance over new sightings took the fold
+from 93.841 milliseconds per call to 0.096 — 975-fold against a same-box
+control, 758 to 1,008-fold against the frozen figure — and its sensitivity to
+history from 0.91 to 0.04. The whole tick's level fell about nine per cent.
+
+**What that does to the accounting is again smaller than the numbers, and again
+that is the point.** The first per-commit cost gate now exists — the section
+above records it — and it is a **count** over one window's turn path. It cannot
+see this fold: none of the reads this campaign made a thousand times cheaper is
+among the operations it counts, and a count is by construction blind to a
+regression that performs the same operations more slowly. So the fifth look
+succeeding does not change the base rate of an unwatched dimension either. It
+narrows the unwatched region by one fold and leaves the shape of the bet where
+the fourth look left it: **cost is still scored when a campaign chooses to
+look.**
+
+**The sharper finding is not about cost at all. It is about evidence.** The
+mechanism this campaign was expected to build had been named in a committed
+record by the campaign immediately before it, in prose that called itself
+"legible from the code rather than merely suspected." A count on the criterion's
+own instrument found that mechanism reached **zero times**, at every depth, on
+two seeds. The proposed fix would have moved the criterion by nothing.
+
+That is the **second consecutive campaign** whose named mechanism was wrong
+until someone counted it, and both were written by people who had just spent a
+campaign inside the code they were describing. This chapter's standing floor is
+that a check is only worth what it can be made to fail on; the fourth look added
+that a criterion is only worth the range its instrument samples, and The Rack
+added that a check is only worth the configurations it actually runs in. This is
+a fourth, and it is about the *reasoning* rather than the instruments: **reading
+code produces a hypothesis about a mechanism, never evidence for one.** A count
+is cheap — this one took under a minute — and the only thing that makes its
+answer usable is a denominator, because a zero and an unwired instrument produce
+identical output.
+
+**A criterion can fail at the finish line by succeeding.** The frozen criterion
+for this fold counts only runs whose fit clears a goodness-of-fit floor. On the
+control column it admitted four of four; on the campaign column it admitted
+**none of four** — because the slope is now 0.023 against an intercept of 90.6,
+so there is no slope left for a line to explain and a fit to a flat scatter has
+a poor fit by construction. The filter did its job correctly twice in the same
+campaign, catching exactly the two contended runs the load rule caught
+independently. Applied to a criterion that has succeeded, it empties the sample
+and leaves the frozen statistic undefined. The readout reports it that way
+rather than resolving it silently in either direction, and hands forward the
+observation that a criterion about a *slope* wants an effect-size floor rather
+than a fit floor.
+
+One further note for this chapter's own honesty, in the same terms the fourth
+look used. This campaign also made exactly one change to production code after
+seeing its first readout, and reports both readouts rather than only the second:
+the first stands unedited, and the second is explicitly not blind. Its
+verification clause was itself wrong — it tested a level to decide a question
+about a slope — and it was corrected in a ruling written before the change was
+made and after the comparison under both readings had been recorded. Nothing in
+the standing gate would have caught a quieter version of either ordering, and
+nothing here claims otherwise.
+
+### Re-deriving catches what re-reading cannot, fourteen times over (2026-09-03)
+
+Four sections above hold that the wall this chapter keeps rebuilding is **an
+instrument that reports a verdict it cannot support**, and that the only thing
+separating a check which fires from one which does not is making it fail on
+command. [The Nettle](./chronicle/the-nettle.md) is not a world measurement and
+stakes no bet in the lists above. It belongs here because it ran that wall
+fourteen times in one body of work and can say something about the *shape* of
+the failure rather than another instance of it.
+
+**Fourteen claims failed checking; every one was caught by somebody
+re-deriving it, and not one by somebody re-reading it.** Half were written by
+whoever was coordinating the work. The material was ordinary — inherited
+notes, its own prose, its own plans, and two of its own repairs — which is the
+point: no instance required carelessness, and re-reading was performed on all
+of them.
+
+The strongest instance is a check that was green and blind at once. A rule for
+stripping quoted text ran as two passes, single quotes then double, so any two
+apostrophes on a line paired regardless of the phrases they sat inside — and a
+forbidden command sandwiched between two harmless remarks vanished, returning
+approval. **Every test case for that rule had at most one quoted phrase per
+line, and the fault needs two.** The cases were reasonable, the coverage read
+as broad, and the criterion as written would have reported support forever.
+That is the same structure as the branch table three sections above: not a
+criterion that was wrong, but a criterion whose *inputs could not contain the
+defect*.
+
+A second instance sharpens the point about red results. A guard built with two
+arms — one for a new violation, one for a stale exemption — was probed, went
+red, and was recorded as discriminating. The red came from the first arm; the
+probe could not reach the second, because a single mutation makes both
+conditions true at once and the earlier assertion fires. **The second arm was
+correct and unexercised, and the run that "proved" it never touched it.** A red
+is evidence about the assertion that produced it and about nothing else.
+
+**What the campaign adds beyond another instance is a decomposition.** A claim
+about a *particular thing* — this path, this call site, this value — has its
+truth in a location, and goes stale only when someone edits that location,
+which is the same event as the staling. A claim about *the whole* — nothing
+pins this, no test covers that — is falsified by an edit anywhere, by people
+who are not looking at it and do not know they have done it. Both are filed
+identically, with a confidence marking fixed at writing. The two inherited
+records that were false were both of the second kind; the one that held was of
+the first. Three cases prove nothing, but the mechanism is structural rather
+than statistical: **the second kind has a half-life and nothing in the filing
+records it, or the state it was observed against, or the command that would
+re-decide it.**
+
+Unscored deliberately, and the reason is this chapter's own: the claim that
+re-derivation catches what re-reading does not is itself of the second kind.
+
+### A criterion downstream of a quantizer (2026-09-03)
+
+[The Hachure](./chronicle/the-hachure.md) moves **no bet in the maps above**.
+It is a rendering campaign: it changes what the game client draws and changes
+nothing about what the world is. It belongs in this chapter for the same reason
+the section above it does — it produced one more instance of the wall this
+chapter keeps rebuilding, and the instance has a cause the previous ones do not.
+
+The sections above describe criteria whose *inputs could not contain the
+defect*: a branch table whose cases each had at most one quoted phrase, a red
+result produced by an arm other than the one under test. This campaign's is a
+third shape. **Four successive test drafts passed against unfixed code, and
+every one of them was measuring a quantizer rather than the thing being
+refined.** Each asserted about the rendered relief band. The band's rungs are
+hundreds of metres wide; within one ~110 km terrain sample a real height ramp
+almost never crosses one. So the refinement under test was enormous — distinct
+heights on a plate went from 1–4 to 612–3,860 — and exactly zero of it reached
+the observable every draft had chosen.
+
+Not one of the four inputs was unreasonable, and no amount of widening the
+cases would have helped, because the defect is not in the inputs at all. It is
+one layer downstream, in the function mapping the measured quantity to the
+observable. **A criterion can be blind because of what it looks at, and not
+only because of what it is shown.**
+
+The repair was to measure first and let the measurement name the observable,
+rather than to write a better assertion. That ordering is the part worth
+carrying, and it is the same ordering the sections above arrive at from
+different directions: an instrument's authority comes from having been made to
+fail on the real signal, and a criterion nobody has watched respond to the
+signal is a description of an intention.
+
+A second, smaller instance from the same campaign points the same way from the
+opposite side. A wrap defect survived both tests written for the feature that
+contained it, and was caught by an unrelated invariant — a cache's
+byte-identity check — because both new tests drew a full-width window at origin
+zero, where the defect cannot occur. **Tests written alongside a feature
+inherit the author's model of it, gaps included.** Invariants written for
+something else are, structurally, the cheapest independence available.
+
+Unscored, and for this chapter's own stated reason: the claim is about the
+whole rather than about a location, and nothing in its filing records the state
+it was observed against.

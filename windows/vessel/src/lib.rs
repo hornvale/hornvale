@@ -13,11 +13,13 @@ pub mod chamber_prose;
 pub mod clock;
 pub mod controller;
 pub mod depth;
+mod descent_thing;
 pub mod doctrine;
 pub mod eyes;
 pub mod fabric;
 mod focalize;
 pub mod gate;
+pub mod ground;
 pub mod interior;
 mod knowledge;
 pub mod lattice;
@@ -31,7 +33,9 @@ mod purview;
 pub mod resident;
 pub mod residents;
 pub mod roll;
+pub mod roster;
 mod session;
+pub mod site;
 mod sleep_site;
 pub mod snapshot;
 pub mod stance;
@@ -40,15 +44,20 @@ pub mod structure;
 pub mod tableau;
 pub mod testimony;
 pub mod thing;
+pub mod turn_work;
 mod underground;
 pub mod underworld_level;
 mod vantage;
 pub use agent::{most_populous_settlement, walk_depth};
 pub use brief::{Brief, brief_of};
+// `brief_of`'s occupation-register parameter is keyed on `OccupationRecord`
+// (`hornvale_history::record`); re-exported so a caller can name the
+// parameter type without a direct dependency on `hornvale-history`.
 pub use chamber_prose::describe_chamber;
 pub use controller::{Controller, DefaultController, ImposedController, PlayerController};
 pub use depth::{CHAMBER_DEPTH_OFFSET, chamber_depth, truncate_to_walk};
 pub use focalize::*;
+pub use hornvale_history::record::OccupationRecord;
 pub use knowledge::*;
 pub use lattice::{Cell, CellKind, Lattice, Plan, Rect, allocate, embed_with, extent_for, render};
 pub use level_doc::{

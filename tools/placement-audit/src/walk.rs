@@ -135,7 +135,10 @@ mod tests {
     /// behavior this tool's own fixtures under `tests/fixtures/` rely on.
     #[test]
     fn scan_prunes_tests_dirs_on_sweep_but_trusts_an_explicit_file_root() {
-        let dir = std::env::temp_dir().join("placement_audit_walk_exclusion_test");
+        let dir = std::env::temp_dir().join(format!(
+            "placement_audit_walk_exclusion_test_{}",
+            std::process::id()
+        ));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(dir.join("domains/a/src")).unwrap();
         std::fs::create_dir_all(dir.join("domains/a/tests")).unwrap();

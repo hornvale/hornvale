@@ -108,11 +108,12 @@ fn every_propertied_kind_is_a_roster_row() {
     // population this loop measures.
     //
     // Task 5 added the `brazier` row (`RadiatesHeat`), moving this from 9 to
-    // 10.
+    // 10; The Brattice's Task 5 added the `door` row (`AffordsPassage`,
+    // `Openable`, `Lockable`), moving it from 10 to 11.
     assert_eq!(
         reg.len(),
-        10,
-        "object_registry has {} rows, not 10 — the population this sweep \
+        11,
+        "object_registry has {} rows, not 11 — the population this sweep \
          measures has changed",
         reg.len()
     );

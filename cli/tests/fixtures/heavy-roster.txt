@@ -29,6 +29,7 @@ windows/lab/tests/suite/health_calibration.rs::the_null_control_holds_across_a_s
 windows/lab/tests/suite/terminator_acceptance.rs::locked_worlds_recover_ambient_presiding_belief_after_the_terminator_fix
 windows/locale/src/budget.rs::census_budget_and_spacing_hold_across_seeds
 windows/scene/src/surrounds.rs::no_land_vertex_bands_as_marine_relief_across_seeds
+windows/worldgen/src/brattice.rs::every_plan_is_solvable_across_the_sanctioned_sweep
 windows/worldgen/src/lib.rs::a_vent_is_chemosynthetically_productive_and_not_by_a_literal
 windows/worldgen/src/lib.rs::a_vents_marine_forage_is_flat_again
 windows/worldgen/src/lib.rs::build_world_from_assembled_components_matches_build_world_byte_for_byte

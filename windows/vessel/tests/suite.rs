@@ -113,20 +113,30 @@ mod tableau;
 mod testimony;
 #[path = "suite/the_blocking.rs"]
 mod the_blocking;
+#[path = "suite/the_detent.rs"]
+mod the_detent;
 #[path = "suite/the_first_mark.rs"]
 mod the_first_mark;
 #[path = "suite/the_handle.rs"]
 mod the_handle;
 #[path = "suite/the_lintel.rs"]
 mod the_lintel;
+#[path = "suite/the_prospect.rs"]
+mod the_prospect;
 #[path = "suite/the_purview.rs"]
 mod the_purview;
+#[path = "suite/the_rack.rs"]
+mod the_rack;
 #[path = "suite/the_roll.rs"]
 mod the_roll;
+#[path = "suite/the_terrier.rs"]
+mod the_terrier;
 #[path = "suite/thing.rs"]
 mod thing;
 #[path = "suite/tick_commit_budget.rs"]
 mod tick_commit_budget;
+#[path = "suite/turn_budget.rs"]
+mod turn_budget;
 #[path = "suite/underworld_level_generation.rs"]
 mod underworld_level_generation;
 #[path = "suite/walker_battery.rs"]

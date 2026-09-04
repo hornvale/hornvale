@@ -193,7 +193,7 @@ fn cold_built_count(seed: u64) -> (usize, usize) {
     let terrain = LocaleTerrain::new(&ctx);
     let built = built_rooms(&w, &ctx);
     let cold = built
-        .iter()
+        .keys()
         .filter_map(|id| id.unpack().ok())
         .filter(|addr| terrain.is_cold(addr))
         .count();

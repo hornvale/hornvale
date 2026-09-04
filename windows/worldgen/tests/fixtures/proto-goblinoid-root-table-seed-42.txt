@@ -38,6 +38,7 @@ desert-dwarf-kind: Peneo /peneo/
 desert-elf-kind: Gonea /gonea/
 die: No /no/
 dire-wolf-kind: Qaa /qaa/
+door: Nagoa /nagoa/
 drink: Qeego /qeego/
 drow-kind: Genoa /genoa/
 eager: Nene /nene/

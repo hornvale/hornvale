@@ -396,6 +396,13 @@ pub struct Lattice {
 /// Each method derives its own stream (ledger #7), so the two draw independently:
 /// adding a third method cannot move where an existing one puts things.
 pub fn embed_with(structure: &Structure, brief: &Brief, extent: Rect, seed: Seed) -> Lattice {
+    // Deliberately still `brief.built`, not `brief.site.is_some()` (The
+    // Prospect, Decision 0666). This is a GENERATOR DISPATCH, not the
+    // enterability gate: it asks "constructed or natural" to choose between
+    // rectilinear rooms and a grown blob, which is exactly what `built` means.
+    // A cave has a site but was never built, and must still `grow`; reading
+    // this as the gate and rewriting it to the site would generate every cave
+    // as a rectilinear building.
     if brief.built {
         allocate(structure, extent, seed)
     } else {
@@ -407,6 +414,7 @@ pub fn embed_with(structure: &Structure, brief: &Brief, extent: Rect, seed: Seed
 mod tests {
     use super::*;
     use crate::brief::Brief;
+    use crate::site::{Site, SiteKind};
     use crate::structure::structure_at;
     use hornvale_kernel::{Facet, Seed};
 
@@ -420,11 +428,20 @@ mod tests {
     }
 
     fn built() -> Brief {
-        Brief::from_parts(None, None, None, None, 0, true, true)
+        Brief::from_parts(
+            None,
+            None,
+            None,
+            None,
+            0,
+            true,
+            true,
+            Some(Site::placed(SiteKind::Settlement, None)),
+        )
     }
 
     fn wild() -> Brief {
-        Brief::from_parts(None, None, None, None, 0, false, true)
+        Brief::from_parts(None, None, None, None, 0, false, true, None)
     }
 
     fn embed(seed: u64) -> (crate::structure::Structure, Lattice) {

@@ -52,7 +52,7 @@ pub struct Structure {
     pub links: Vec<(usize, usize)>,
 }
 
-/// The structure at `locale`, or `None` where nothing is built.
+/// The structure at `locale`, or `None` where there is no site to enter.
 ///
 /// The draw is keyed to the locale's own seed under `room/chambers/v1`, so the
 /// same locale in the same world always yields the same structure, and no other
@@ -75,9 +75,10 @@ pub fn structure_at(
         walk_depth,
         "structure_at takes a WALK-band locale"
     );
-    if !brief.built {
-        return None;
-    }
+    // Decision 0666: the gate is the SITE, not `built`. `built` still means
+    // "a structure stands here" and is one property of a settlement; a cave
+    // and an exotic site are enterable and were never built.
+    brief.site.as_ref()?;
     let mut stream = locale.seed(seed).derive(ROOM_CHAMBERS).stream();
     // How many chambers: 1..=MAX_CHAMBERS, one draw.
     let count = 1 + (stream.next_u64() as usize) % MAX_CHAMBERS;
@@ -126,6 +127,7 @@ fn child_path(locale: &Facet, draw: u64, extra: usize) -> Facet {
 mod tests {
     use super::*;
     use crate::brief::Brief;
+    use crate::site::{Site, SiteKind};
     use hornvale_kernel::Seed;
 
     const WALK: u32 = 13;
@@ -138,13 +140,89 @@ mod tests {
     }
 
     fn built_brief() -> Brief {
-        Brief::from_parts(None, None, None, None, 0, true, true)
+        Brief::from_parts(
+            None,
+            None,
+            None,
+            None,
+            0,
+            true,
+            true,
+            Some(Site::placed(SiteKind::Settlement, None)),
+        )
     }
 
+    /// A brief carrying a cave: UNBUILT, but a site. This is the shape a real
+    /// cave or exotic facet presents (`brief_of` builds exactly it), and it is
+    /// the case that distinguishes the post-0666 gate from the one it replaced.
+    fn cave_brief() -> Brief {
+        Brief::from_parts(
+            None,
+            None,
+            None,
+            None,
+            0,
+            false,
+            true,
+            Some(Site::placed(SiteKind::Cave, None)),
+        )
+    }
+
+    /// **The gate is the SITE, not `built`** (decision 0666), and a test that
+    /// varies both together cannot say which one it reads.
+    ///
+    /// This was `an_unbuilt_locale_has_no_structure` and it passed a brief
+    /// with `built: false` AND `site: None` — so it held under the old gate and
+    /// the new one identically, and could not have caught the four doc comments
+    /// this campaign left asserting the old precondition (see
+    /// `lattice::anchor_cells`' module doc). The two cases are separated here:  // lexicon: a MODULE NAME, and the cells it names are chamber floor squares (areas), not mesh vertices
+    /// no site is refused whatever `built` says, and an unbuilt SITE is
+    /// admitted, which is the half that used to be impossible.
     #[test]
-    fn an_unbuilt_locale_has_no_structure() {
-        let wild = Brief::from_parts(None, None, None, None, 0, false, true);
-        assert!(structure_at(&locale(), &wild, Seed(42), WALK).is_none());
+    fn the_site_gates_the_structure_and_built_does_not() {
+        let no_site = Brief::from_parts(None, None, None, None, 0, false, true, None);
+        assert!(
+            structure_at(&locale(), &no_site, Seed(42), WALK).is_none(),
+            "a facet with no site has nothing to enter"
+        );
+        // The discriminating case: unbuilt, and enterable anyway.
+        assert!(
+            structure_at(&locale(), &cave_brief(), Seed(42), WALK).is_some(),
+            "a cave is unbuilt and IS a site — decision 0666 hangs the gate on \
+             `Brief.site`, so this must derive a structure"
+        );
+    }
+
+    /// **The brief is a GATE and never a parameter of the draw.** `structure_at`
+    /// consumes `brief` with `brief.site.as_ref()?;` and then draws everything
+    /// from `locale.seed(seed).derive(ROOM_CHAMBERS)` alone, so a cave's
+    /// structure is distributed exactly as a settlement's is at the same locale.
+    ///
+    /// Pinned because something else rests on it that a reader cannot see from
+    /// here: `lattice::anchor_cells`' grown corpus builds its structures with a  // lexicon: a MODULE NAME, and the cells it names are chamber floor squares (areas), not mesh vertices
+    /// SETTLEMENT brief and then embeds them with the wild one, and its measured
+    /// relaxation ceiling is only a statement about production — the cave and
+    /// exotic interiors that now `grow` — while that substitution is sound. The
+    /// obvious future change breaks it (giving a cave a different chamber count
+    /// from a village is a reasonable thing to want), and without this
+    /// assertion the corpus would go on reporting a plausible ceiling for
+    /// structures production no longer generates, with nothing red.
+    /// claim: invariant(forall-seed) — over 0..64 at one locale; the property is
+    /// that the brief is a gate and never a parameter of the draw, so a single
+    /// disagreeing seed falsifies it.
+    #[test]
+    fn the_structure_drawn_is_the_same_whatever_kind_of_site_gates_it() {
+        for s in 0u64..64 {
+            let settlement = structure_at(&locale(), &built_brief(), Seed(s), WALK)
+                .expect("a settlement is a site");
+            let cave =
+                structure_at(&locale(), &cave_brief(), Seed(s), WALK).expect("a cave is a site");
+            assert_eq!(
+                settlement, cave,
+                "seed {s}: the structure moved with the KIND of site gating it, so the \
+                 grown anchor corpus no longer represents production — see this test's doc"
+            );
+        }
     }
 
     #[test]

@@ -2604,10 +2604,8 @@ fn rule_six_witness_belief_reads_run_at_past_instants() {
 /// and the first draft of this campaign's report did infer it.** That report
 /// argued the two counts must agree "call for call" because
 /// `affect_of_memo_occupied` passes its `day` to both. That is true of ONE of
-/// `hazard_memory_memo`'s five callers. The other four are:
+/// `hazard_memory_memo`'s four callers. The other three are:
 ///
-/// - `believed_hazard_memo` — a public entry point with its own `t`; no
-///   caller anywhere in the tree today.
 /// - `hazard_memory` and `believed_hazard` (which delegates to it) — public
 ///   entry points with their own `t`; every call site in the tree is inside
 ///   `liveness.rs`'s own test module.
