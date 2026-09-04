@@ -662,39 +662,87 @@ fn a_locale_composition_is_untouched_by_the_role_layer() {
 fn threshold_patterns_admit_each_housemark_relation_once() {
     // H2: the threshold chamber is the common grammar surface where a culture's
     // authority and threshold posture become separately observable.  This walks
-    // the complete two-by-three housemark product rather than sampling one row:
+    // the generated two-by-three housemark product rather than sampling one row:
     // an authority relation must follow authority, a posture relation must follow
     // posture, and Plain deliberately contributes neither posture pattern.
+    use hornvale_kernel::KindId;
+    use hornvale_thing::kinds;
     use hornvale_vessel::housemark::{AuthorityMark, Housemark, ThresholdPosture};
     use hornvale_vessel::interior::compose;
-    use hornvale_vessel::interior::pattern::{Role, permits, selection_for};
+    use hornvale_vessel::interior::pattern::{Attach, Pattern, Role, permits, selection_for};
 
-    let marks = [
-        Housemark {
-            authority: AuthorityMark::Command,
-            threshold: ThresholdPosture::Inward,
-        },
-        Housemark {
-            authority: AuthorityMark::Command,
-            threshold: ThresholdPosture::Plain,
-        },
-        Housemark {
-            authority: AuthorityMark::Command,
-            threshold: ThresholdPosture::Outward,
-        },
-        Housemark {
-            authority: AuthorityMark::Common,
-            threshold: ThresholdPosture::Inward,
-        },
-        Housemark {
-            authority: AuthorityMark::Common,
-            threshold: ThresholdPosture::Plain,
-        },
-        Housemark {
-            authority: AuthorityMark::Common,
-            threshold: ThresholdPosture::Outward,
-        },
+    fn assert_beside_relation(
+        selected: &[&Pattern],
+        name: &str,
+        expected_kind: KindId,
+        expected_target: KindId,
+        mark: Housemark,
+    ) {
+        let pattern = selected
+            .iter()
+            .find(|pattern| pattern.name == name)
+            .unwrap_or_else(|| panic!("{mark:?} has no relation {name}"));
+        assert_eq!(
+            pattern.kind, expected_kind,
+            "{mark:?} gives {name} the wrong anchor kind"
+        );
+        match &pattern.attach {
+            Attach::Beside(actual_target) => assert_eq!(
+                *actual_target, expected_target,
+                "{mark:?} attaches {name} beside the wrong anchor"
+            ),
+            Attach::Hub | Attach::Within(_) => {
+                panic!("{mark:?} does not attach {name} beside its required anchor")
+            }
+        }
+        assert_eq!(
+            pattern.requires,
+            Some(expected_target),
+            "{mark:?} gives {name} the wrong prerequisite"
+        );
+    }
+
+    let authorities = [AuthorityMark::Command, AuthorityMark::Common];
+    let postures = [
+        ThresholdPosture::Inward,
+        ThresholdPosture::Plain,
+        ThresholdPosture::Outward,
     ];
+    let marks: Vec<Housemark> = authorities
+        .into_iter()
+        .flat_map(|authority| {
+            postures.into_iter().map(move |threshold| Housemark {
+                authority,
+                threshold,
+            })
+        })
+        .collect();
+    let combinations: std::collections::BTreeSet<_> = marks
+        .iter()
+        .map(|mark| (mark.authority, mark.threshold))
+        .collect();
+    let expected_combinations = std::collections::BTreeSet::from([
+        (AuthorityMark::Command, ThresholdPosture::Inward),
+        (AuthorityMark::Command, ThresholdPosture::Plain),
+        (AuthorityMark::Command, ThresholdPosture::Outward),
+        (AuthorityMark::Common, ThresholdPosture::Inward),
+        (AuthorityMark::Common, ThresholdPosture::Plain),
+        (AuthorityMark::Common, ThresholdPosture::Outward),
+    ]);
+    assert_eq!(
+        marks.len(),
+        6,
+        "the housemark product must emit six combinations"
+    );
+    assert_eq!(
+        combinations.len(),
+        6,
+        "the housemark product must not duplicate a combination"
+    );
+    assert_eq!(
+        combinations, expected_combinations,
+        "the housemark product must cover every combination"
+    );
 
     for mark in marks {
         let selected = selection_for(Role::Threshold, true, false, false, Some(mark));
@@ -708,13 +756,24 @@ fn threshold_patterns_admit_each_housemark_relation_once() {
             "{mark:?} has no threshold: {names:?}"
         );
 
-        let authority_relation = match mark.authority {
-            AuthorityMark::Command => "the-command-seat-at-the-threshold",
-            AuthorityMark::Common => "the-common-bench-by-the-ground",
+        let (authority_relation, authority_kind, authority_target) = match mark.authority {
+            AuthorityMark::Command => (
+                "the-command-seat-at-the-threshold",
+                kinds::HIGH_SEAT,
+                kinds::THRESHOLD,
+            ),
+            AuthorityMark::Common => (
+                "the-common-bench-by-the-ground",
+                kinds::BENCH,
+                kinds::GROUND,
+            ),
         };
-        assert!(
-            names.contains(&authority_relation),
-            "{mark:?} has no matching authority relation {authority_relation}: {names:?}"
+        assert_beside_relation(
+            &selected,
+            authority_relation,
+            authority_kind,
+            authority_target,
+            mark,
         );
         let other_authority_relation = match mark.authority {
             AuthorityMark::Command => "the-common-bench-by-the-ground",
@@ -727,14 +786,21 @@ fn threshold_patterns_admit_each_housemark_relation_once() {
         );
 
         let posture_relation = match mark.threshold {
-            ThresholdPosture::Inward => Some("the-screen"),
+            ThresholdPosture::Inward => Some(("the-screen", kinds::SCREEN, kinds::THRESHOLD)),
             ThresholdPosture::Plain => None,
-            ThresholdPosture::Outward => Some("the-guest-water-at-the-threshold"),
+            ThresholdPosture::Outward => Some((
+                "the-guest-water-at-the-threshold",
+                kinds::VESSEL,
+                kinds::THRESHOLD,
+            )),
         };
-        if let Some(posture_relation) = posture_relation {
-            assert!(
-                names.contains(&posture_relation),
-                "{mark:?} has no matching posture relation {posture_relation}: {names:?}"
+        if let Some((posture_relation, posture_kind, posture_target)) = posture_relation {
+            assert_beside_relation(
+                &selected,
+                posture_relation,
+                posture_kind,
+                posture_target,
+                mark,
             );
             let other_posture_relation = match mark.threshold {
                 ThresholdPosture::Inward => "the-guest-water-at-the-threshold",

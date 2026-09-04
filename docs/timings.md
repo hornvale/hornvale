@@ -5568,3 +5568,12 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-04T16:32:00Z | gate-commit | 229.006 | 786.202 | 44.677 | 3.63 | 0 | 5827a76ab | campaign/the-housemark | MacBookPro | 10 |
 | 2026-09-04T16:33:18Z | gate-commit | 38.963 | 73.331 | 22.525 | 2.46 | 0 | 5827a76ab | campaign/the-housemark | MacBookPro | 10 |
 | 2026-09-04T16:34:38Z | gate-commit | 32.674 | 60.605 | 16.086 | 2.35 | 0 | 5827a76ab | campaign/the-housemark | MacBookPro | 10 |
+| 2026-09-04T16:46:49Z | gate-commit | 45.666 | 49.568 | 3.993 | 1.17 | 0 | 91849b107 | campaign/the-housemark | MacBookPro | 10 |
+| 2026-09-04T16:49:16Z | gate-commit | 108.365 | 271.056 | 25.856 | 2.74 | 0 | 91849b107 | campaign/the-housemark | MacBookPro | 10 |
+| 2026-09-04T16:52:18Z | gate-commit | 90.596 | 122.764 | 19.483 | 1.57 | 0 | 91849b107 | campaign/the-housemark | MacBookPro | 10 |
+| 2026-09-04T16:55:07Z | gate-commit | 111.398 | 102.590 | 33.373 | 1.22 | 0 | 91849b107 | campaign/the-housemark | MacBookPro | 10 |
+| 2026-09-04T16:57:08Z | gate-commit | 57.511 | 64.754 | 15.920 | 1.40 | 0 | 91849b107 | campaign/the-housemark | MacBookPro | 10 |
+| 2026-09-04T16:58:39Z | gate-commit | 62.167 | 63.951 | 15.966 | 1.29 | 0 | 91849b107 | campaign/the-housemark | MacBookPro | 10 |
+| 2026-09-04T16:59:54Z | gate-commit | 39.534 | 63.742 | 17.536 | 2.06 | 0 | 91849b107 | campaign/the-housemark | MacBookPro | 10 |
+| 2026-09-04T17:02:19Z | gate-commit | 33.718 | 61.397 | 16.774 | 2.32 | 0 | 91849b107 | campaign/the-housemark | MacBookPro | 10 |
+| 2026-09-04T17:04:14Z | gate-commit | 54.834 | 68.833 | 16.975 | 1.56 | 0 | 91849b107 | campaign/the-housemark | MacBookPro | 10 |

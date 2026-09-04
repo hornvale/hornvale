@@ -103,8 +103,6 @@ locale output itself may not narrow. · Capture:
 this entry; the committed
 plan; the temporary repository-required `IMPLEMENTATION_PLAN.md` stage tracker.
 
-## Capture manifest
-
 #5 [G5] — **Does Task 2 append four cultural rows or reuse the existing
 screen?** · **Decision: gate the existing screen row as `Threshold(Inward)` at
 the chamber band and append exactly three new rows.** · Why: approved spec §3
@@ -118,6 +116,27 @@ postures would read inward). · ideonomy passes / overturns: **1 prior G4 pass,
 no new pass** — this is correction of the exact inherited-screen implication
 that pass surfaced, not a new question. · Capture: corrected plan before Task 2
 dispatch; this ruling; scratch pre-flight ledger.
+
+#6 [Q] — **Does the new `BENCH` kind take the observed concept-accession
+epoch?** · **Decision: yes; take concept accession epoch 20 and re-pin the
+additive world and language-root artifacts.** · Why: the Task 2 reviewer ran
+the world-golden seam and measured the serialized `ConceptRegistry` growing
+from 5,587,823 to 5,587,963 bytes at the new `bench` entry. Decision 0648 says
+registering a Thing with identity is a concept-accession epoch, and decision
+0618 records `door` paying the same cost as epoch 19. Nathan approved the epoch
+explicitly on 2026-09-04. · Alternatives discarded: reuse an existing kind
+(would erase the common-seat/command-seat distinction the approved design
+needs); leave the world golden stale (turns an observed contract change into a
+permanent red); add or bump a seeded stream (no draw moved, so that would be a
+false hierarchical escalation). · ideonomy passes / overturns: **1 pass, no
+overturns** (negation on reversibility and hierarchicalness; scale). It placed
+the choices from reversible chamber-only reading through additive registry
+accession to derivation-stream replacement; the measured change sits at the
+additive accession point, one level below any stream epoch. · Capture: revised
+spec §7, plan constraints/artifact table, this ledger entry; Task 5 will author
+the binding decision record and re-pin exact observed artifacts.
+
+## Capture manifest
 
 - `book/src/frontier/idea-registry.md` — `SOC-staple-ladder` now points from
   R1 to The Housemark spec; its status remains `elaborated` until implementation.

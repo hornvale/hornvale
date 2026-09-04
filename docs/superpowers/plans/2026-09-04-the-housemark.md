@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- No epoch is intended; any world JSON, ledger fact, census, or lab-golden drift is a stop condition under spec §7.
+- Concept accession epoch 20 is approved for additive `bench` registry/root/world-golden drift; ledger-fact, census, lab-golden, stream, or unrelated world drift remains a stop condition under spec §7.
 - Do not add a stream, consume randomness, serialize `Interior`, or change locale-band `selection(built, cold)` behavior.
 - Keep one `Pattern` inventory, one order-sensitive draw, one composer, and one validator; no cultural side table or post-compose mutation.
 - Append cultural patterns at the end with `at_locale: false`; never insert or reorder existing inventory rows.
@@ -194,7 +194,7 @@
 
 - [ ] **Step 1: Regenerate and classify actual drift**
 
-  Run documented artifact commands, then inspect status/stat. Only chamber transcripts may be re-pinned without epoch. World JSON, ledger fact, census, or lab-golden movement stops the campaign for Nathan's epoch ruling. No movement is acceptable only with green H2/H3.
+  Run documented artifact commands, then inspect status/stat. Re-pin chamber transcripts and additive `bench` concept/root/world-golden drift under accession epoch 20. Ledger-fact, census, lab-golden, stream, or unrelated world movement still stops the campaign. No movement is acceptable only with green H2/H3.
 
 - [ ] **Step 2: Bind decisions and registry**
 

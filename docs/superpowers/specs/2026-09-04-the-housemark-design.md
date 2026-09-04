@@ -1,8 +1,9 @@
 # The Housemark — a dwelling belongs to its people
 
 **Campaign:** The Housemark, The Staple's R1 reading rung.  
-**Status:** design for G3 review.  
-**Epoch:** none intended; the artifact response is measured, not predicted (§7).
+**Status:** approved; implementation in progress.  
+**Epoch:** concept accession epoch 20, approved after the §7 probe showed the
+new `BENCH` kind in serialized world registries.
 
 ## 1. The claim
 
@@ -220,11 +221,13 @@ the feature: a housemark that re-rolls per room cannot be learned.
 
 ## 7. Determinism, epoch, and artifact branch table
 
-The intended implementation changes only chamber derivation. `Interior` remains
-unserialized under decision 0069, no stream is added or consumed, no worldgen
-path changes, and the locale-band selection keeps its current arguments and
-admission behavior. Under decisions 0084 and The Staple's standing rule, that is
-a READING rung and not an epoch.
+The chamber derivation remains unserialized under decision 0069: no stream is
+added or consumed, no worldgen draw changes, and locale-band selection keeps its
+current behavior. The new `BENCH` object kind nevertheless enters the serialized
+`ConceptRegistry`, and the live probe moved the seed-42 world golden from
+5,587,823 to 5,587,963 bytes. Nathan approved that measured cost on 2026-09-04.
+The Housemark therefore takes **concept accession epoch 20**. Like epoch 19's
+`door`, this is additive accession, not a changed derivation or reordered cohort.
 
 That paragraph describes the boundary; it does not predict generated output.
 After the first integrated implementation, run the actual artifact commands and
@@ -233,9 +236,10 @@ classify the observed diff:
 ```text
 observed result                                      response
 ---------------------------------------------------  --------------------------
-only chamber-rendering transcripts move             RE-PIN; no epoch
-world JSON, ledger facts, census or lab goldens move STOP; misclassified rung,
-                                                     bring to Nathan as epoch
+only chamber-rendering transcripts move             RE-PIN under epoch 20
+world JSON gains only the additive bench concept     RE-PIN under epoch 20
+ledger facts, census or lab goldens move             STOP; the approved epoch
+                                                     does not explain them
 no committed artifact moves                          keep only if the tests and
                                                      direct readout prove the
                                                      feature is reachable
