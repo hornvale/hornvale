@@ -183,6 +183,14 @@ stairways — which is the design working, not failing. The guarantee is over th
 whole descent, and the tests that asserted the per-level form were rescoped to
 the scope the plan actually promises.
 
+*How often was left unmeasured here and was measured by
+[The Plat](./the-plat.md), which needed the number to choose a metric:* a floor
+is one connected piece only 23% of the time in karst and 33% in fracture, and
+39% of karst floors are in **three** pieces. Only lava tube, whose levels are
+small, is usually whole — 58% one piece, 38% two. So "you can go around in
+circles" is true of a descent and routinely false of a floor: on most floors
+you cannot reach every room without going up one.
+
 ## Four readouts, frozen before the code
 
 The verdict words were fixed in the design, before any of this existed, and the
@@ -271,7 +279,21 @@ stairway that goes down but not up is the one that turns a loop into a puzzle.
 No residents: the intimacy gradient, the common heart, the hoarder placed by
 ecology and the first made chamber a player can reach are the campaign after
 that, and the depth and realm attributes they will read are computed and
-exported here and read by nothing. No junctions: a cycle that goes down one
+exported here and read by nothing.
+
+*That forward reference is closed. [The Plat](./the-plat.md) (2026-09-03) is
+the campaign after that, and it took all four: `depth` is read as Alexander's
+intimacy gradient — shallowest node the entry, deepest the sanctum, and the
+common heart the graph median of what remains, under the plan's metric rather
+than the level's; `realm` and its parent chain are read as a nesting rank and
+as a readout of whether circulation realms shrink going in. The hoarder moved
+from the last standable cell of the grid to the innermost room of the plan, on
+whatever lies there. And a chamber a people cut is read off the committed
+ledger when the possession walks in, so the first made chamber a player can
+reach is reachable. The sentence above is left standing because it was true
+when it was written, and because it named its own successor exactly.*
+
+No junctions: a cycle that goes down one
 branch, across into another cave system, and up again would be a shortcut
 between two different cycles, which is exactly what a series-parallel grammar
 cannot express — a different grammar or a third composition rule, not a bigger

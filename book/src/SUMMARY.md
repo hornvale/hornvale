@@ -452,6 +452,7 @@
 - [The Nettle](./chronicle/the-nettle.md)
 - [The Terrier](./chronicle/the-terrier.md)
 - [The Hachure](./chronicle/the-hachure.md)
+- [The Plat](./chronicle/the-plat.md)
 
 # Appendix: The Frontier
 
