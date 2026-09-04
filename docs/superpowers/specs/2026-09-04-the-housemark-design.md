@@ -1,6 +1,6 @@
 # The Housemark — a dwelling belongs to its people
 
-**Campaign:** The Housemark, The Staple's R1 reading rung.  
+**Campaign:** The Housemark, The Staple's R1 reading rung.
 **Status:** approved; implementation complete.
 **Epoch:** concept accession epoch 20, approved after the §7 probe showed the
 new `BENCH` kind in serialized world registries.
