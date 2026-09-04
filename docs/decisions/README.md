@@ -307,6 +307,10 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0626](0626-a-terrain-verdict-is-held-for-the-session-keyed-by-room.md) | A terrain verdict is held for the session, keyed by room, with its terrain's identity supplied by ownership | Accepted |
 | [0627](0627-the-emitter-scan-advances-through-a-read-side-verdict-index.md) | The emitter scan advances over new sightings through a read-side verdict index, and is still not a tenant | Accepted |
 | [0628](0628-a-registry-rows-mechanism-is-a-count-not-a-reading.md) | A registry row's mechanism is a count, not a reading | Accepted |
+| [0646](0646-the-inhabited-reading-is-a-function-of-the-plan.md) | The inhabited reading is a function of the plan, drawn by nothing and stamped on nothing | Accepted |
+| [0647](0647-a-made-chamber-is-written-from-the-ledger-at-the-walk.md) | A made chamber is written from the ledger at the walk, never committed as a fact | Accepted |
+| [0648](0648-the-hoarder-sits-at-the-sanctum-on-what-lies-there.md) | The hoarder sits at the sanctum on what lies there, and holds nothing | Accepted |
+| [0649](0649-a-cut-place-outlives-its-people.md) | A cut place outlives its people: `Made` reads the occupation, and tenancy decides the tense | Accepted |
 | [0666](0666-the-enterability-gate-is-a-site-not-built.md) | The enterability gate is a `Site`, and `built` narrows to one kind of it | Accepted |
 | [0667](0667-a-placed-site-is-re-sited-to-a-facet-by-a-seeded-draw.md) | A placed site is re-sited from its vertex to one facet by a seeded draw | Accepted |
 | [0668](0668-a-site-carries-an-extent-and-this-campaign-emits-point.md) | A `Site` carries an `Extent`, and this campaign only ever emits `Point` | Accepted |

@@ -323,7 +323,7 @@ pub fn render_circuit_panel(seed: Seed, terrain: &GeneratedTerrain) -> String {
     // above — conflating the two in one sentence reads as a single
     // population when it is not (final review, Important #2).
     out.push_str(&format!(
-        "gates on the panel's wild descents: doors {doors_total} sumps {sumps_total} chutes {chutes_total}; re-derived as worked (DrowTier): {worked_with_door} of {worked_descents} descents carry a door (the production walk reaches none yet, spec §1)\n"
+        "gates on the panel's wild descents: doors {doors_total} sumps {sumps_total} chutes {chutes_total}; re-derived as worked (DrowTier): {worked_with_door} of {worked_descents} descents carry a door (the production walk reaches a door only where the ledger says a people cut the rung — see the Made population below; The Plat, decision 0647)\n"
     ));
     out.push_str(&format!(
         "return differs from outbound: {return_differs_count} of {gated_descents} gated descents (report only; follows from a chute by construction)\n"

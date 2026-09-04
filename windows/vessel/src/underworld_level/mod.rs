@@ -830,13 +830,13 @@ pub fn generate_level(extent: Rect, seed: Seed) -> Level {
 ///
 /// **Wetness keys on `LeafStyle.worked`, not on `origin`.** The rule is:
 /// wet is common and correct (a worked leaf is drained — cut and kept dry
-/// by whoever built it — a natural leaf is wet), and it applies per LEAF,
-/// not per chamber. `origin`'s own `is_sump` short-circuit
-/// (`hornvale_worldgen::chamber::is_sump` returns `false` for
-/// `ChamberOrigin::Made` unconditionally) never actually reaches a leaf's
-/// dryness under this rule, because the shipped path
-/// (`Underground::enter`) only ever produces `Found` — so this reads
-/// `hornvale_terrain::is_phreatic` directly, the physical half of
+/// by whoever built it — a natural leaf is wet, whoever's chamber it sits
+/// in), and it applies per LEAF, not per chamber. `origin`'s own `is_sump`
+/// short-circuit (`hornvale_worldgen::chamber::is_sump` returns `false` for
+/// `ChamberOrigin::Made` unconditionally) is [`hornvale_worldgen::
+/// delve_seating::seat_at`]'s own question — "will this rung need
+/// works" — not this realizer's, and stays unread here by design: this
+/// reads `hornvale_terrain::is_phreatic` directly, the physical half of
 /// `is_sump`'s own definition, and lets each leaf's own `worked` flag (not
 /// the chamber-wide origin) decide whether IT floods.
 ///

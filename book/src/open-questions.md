@@ -1724,6 +1724,42 @@ result: **for any one-scalar sweep over a per-kind quantity, ask whether the
 shipped configuration reproduces byte-identically somewhere on the grid; if it
 cannot, the sweep is not interpolating the shipped world.**
 
+*Re-scored by [The Plat](./chronicle/the-plat.md) (2026-09-03), which moves one
+half of the precondition and explicitly does not move the other.* The bet's
+standing precondition — placing a people underground "waits on the underworld
+being declared as **places** — biomes, the way the sea's depth layers already
+are — rather than as a coordinate pushed through a tolerance curve" — was one
+sentence covering two requirements, and only now that half of it has moved is
+the seam between them visible.
+
+**The reading half moved.** The underworld's regions now carry named roles
+derived from the descent plan: an entry, a hall at the graph median, an
+innermost chamber, and a landing where a stair comes down into a node and
+another leaves it. A column also carries a **tenancy** read off the ledger's
+own occupation records — cut and lived in, cut and abandoned, or never cut —
+and that is the first time anything underground has said *who was here* rather
+than *what the rock is*. So there are places down there to declare, and a
+vocabulary that already distinguishes them.
+
+**The biome half did not, and the distance is larger than it looks.** Nothing
+this campaign built is legible to a species tolerance curve. A role is a
+property of a *graph node*, derived per descent from the plan's shape; a biome
+is a property of a *place on the world*, read by the same machinery that reads
+temperature and moisture, and the two are not the same kind of object. A curve
+cannot ask "is this the sanctum" and get a number, and it should not: the
+sanctum of one cave is not comparable to the sanctum of another the way two
+cells of tundra are comparable. What the withdrawal actually needed — a
+subterranean *kind of place*, so that Mountain-dwarf and Duergar can differ by
+stratum — remains exactly as owed as it was after The Sources made the scalars
+vary with depth. The shipped roster is still entirely of the surface.
+
+So the bet is **not resolved and its confidence does not move**. What changes
+is the shape of what is owed: the precondition was one sentence and is now two
+findings, and a future campaign should not read "the underworld has places now"
+as discharging it. The general form is worth keeping past this bet — **a
+precondition stated as one sentence can have halves that move independently,
+and the half that moves first makes the other look closer than it is.**
+
 **The phenomena interface generalizes.** The bet that one salience-ranked
 observation interface could serve religion, perception, and historiography
 without any consumer learning which system produced a phenomenon has held

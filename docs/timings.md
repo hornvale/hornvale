@@ -5317,6 +5317,20 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-03T11:20:47Z | sluice:gate | 675.159 | 19982.775 | 591.374 | 30.47 | 0 | 07675d88b |  | lefford | 40 |
 | 2026-09-03T11:22:57Z | sluice:clients | 129.817 | 2044.825 | 206.323 | 17.34 | 0 | 9da2b52cc |  | lefford | 40 |
 | 2026-09-03T11:30:27Z | sluice:heavy | 449.616 | 9616.174 | 164.136 | 21.75 | 0 | a1d17c9dc |  | lefford | 40 |
+| 2026-09-03T12:06:12Z | prewarm | 767.200 | 1622.418 | 127.438 | 2.28 | 0 | d9749623b | campaign/the-plat | ambrose | 12 |
+| 2026-09-03T12:19:02Z | gate-commit | 266.355 | 243.431 | 90.855 | 1.26 | 0 | d9749623b | campaign/the-plat | ambrose | 12 |
+| 2026-09-03T12:27:55Z | gate-commit | 209.539 | 142.174 | 42.594 | 0.88 | 0 | 5b70e4930 | campaign/the-plat | ambrose | 12 |
+| 2026-09-03T13:07:34Z | gate-commit | 311.002 | 141.618 | 99.260 | 0.77 | 0 | 9569c4584 | campaign/the-plat | ambrose | 12 |
+| 2026-09-03T13:24:03Z | gate-commit | 90.009 | 68.693 | 27.114 | 1.06 | 0 | 2fc84c064 | campaign/the-plat | ambrose | 12 |
+| 2026-09-03T13:36:03Z | gate-commit | 649.700 | 338.078 | 88.518 | 0.66 | 0 | 2fc84c064 | campaign/the-plat | ambrose | 12 |
+| 2026-09-03T16:23:40Z | gate-commit | 159.896 | 64.448 | 27.808 | 0.58 | 0 | c731ef7e1 | campaign/the-plat | ambrose | 12 |
+| 2026-09-03T16:26:04Z | gate-commit | 103.890 | 65.883 | 28.662 | 0.91 | 0 | c731ef7e1 | campaign/the-plat | ambrose | 12 |
+| 2026-09-03T16:32:27Z | gate-commit | 262.903 | 132.367 | 101.981 | 0.89 | 0 | c731ef7e1 | campaign/the-plat | ambrose | 12 |
+| 2026-09-03T16:35:17Z | gate-commit | 125.805 | 79.487 | 39.682 | 0.95 | 0 | c731ef7e1 | campaign/the-plat | ambrose | 12 |
+| 2026-09-03T17:09:04Z | gate-commit | 308.042 | 137.339 | 113.149 | 0.81 | 0 | 694e07c08 | campaign/the-plat | ambrose | 12 |
+| 2026-09-03T17:44:50Z | rebaseline | 421.934 | 413.105 | 35.079 | 1.06 | 0 | 17397d2f0 | campaign/the-plat | ambrose | 12 |
+| 2026-09-03T17:48:55Z | rebaseline | 175.267 | 369.352 | 26.406 | 2.26 | 0 | 17397d2f0 | campaign/the-plat | ambrose | 12 |
+| 2026-09-03T17:56:11Z | gate-commit | 285.650 | 324.088 | 86.261 | 1.44 | 0 | 17397d2f0 | campaign/the-plat | ambrose | 12 |
 | 2026-09-03T13:22:05Z | gate-commit | 109.830 | 100.269 | 36.637 | 1.25 | 0 | 32240ba07 | campaign/the-prospect | ambrose | 12 |
 | 2026-09-03T13:25:24Z | gate-commit | 108.409 | 59.465 | 22.310 | 0.75 | 0 | 32240ba07 | campaign/the-prospect | ambrose | 12 |
 | 2026-09-03T13:41:41Z | gate-commit | 903.974 | 663.602 | 112.707 | 0.86 | 0 | 32240ba07 | campaign/the-prospect | ambrose | 12 |
@@ -5353,6 +5367,11 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-03T20:20:50Z | sluice:gate | 665.832 | 19880.966 | 585.557 | 30.74 | 0 | bf15dae6d |  | lefford | 40 |
 | 2026-09-03T20:23:00Z | sluice:clients | 129.175 | 2083.924 | 197.330 | 17.66 | 0 | b4e796678 |  | lefford | 40 |
 | 2026-09-03T20:30:26Z | sluice:heavy | 446.479 | 9606.716 | 159.622 | 21.87 | 0 | 16e166fea |  | lefford | 40 |
+| 2026-09-03T21:06:04Z | rebaseline | 393.998 | 433.002 | 18.371 | 1.15 | 0 | feec3af3f | campaign/the-plat | MacBookPro | 10 |
+| 2026-09-03T21:25:48Z | gate-commit | 216.282 | 637.907 | 69.476 | 3.27 | 0 | feec3af3f | campaign/the-plat | MacBookPro | 10 |
+| 2026-09-03T21:42:14Z | rebaseline | 198.561 | 433.381 | 15.684 | 2.26 | 0 | cac3a4205 | campaign/the-plat | MacBookPro | 10 |
+| 2026-09-03T21:48:02Z | rebaseline | 201.223 | 441.095 | 15.370 | 2.27 | 0 | cac3a4205 | campaign/the-plat | MacBookPro | 10 |
+| 2026-09-03T21:53:55Z | gate-commit | 107.189 | 249.008 | 36.679 | 2.67 | 0 | cac3a4205 | campaign/the-plat | MacBookPro | 10 |
 | 2026-09-03T20:46:55Z | rebaseline | 190.458 | 406.430 | 19.338 | 2.24 | 0 | fe5e83950 | campaign/the-prospect | MacBookPro | 10 |
 | 2026-09-03T20:48:06Z | gate-commit | 48.827 | 117.281 | 25.309 | 2.92 | 0 | fe5e83950 | campaign/the-prospect | MacBookPro | 10 |
 | 2026-09-03T19:36:12Z | prewarm | 44.196 | 213.010 | 9.451 | 5.03 | 0 | ead6741da | campaign/the-hachure | MacBookPro | 10 |
@@ -5375,6 +5394,13 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-03T21:41:00Z | sluice:gate | 680.982 | 20269.383 | 590.362 | 30.63 | 0 | d2c57c9ed |  | lefford | 40 |
 | 2026-09-03T21:43:19Z | sluice:clients | 138.910 | 2250.402 | 205.438 | 17.68 | 0 | 7fb725bd0 |  | lefford | 40 |
 | 2026-09-03T21:51:07Z | sluice:heavy | 466.998 | 9855.322 | 162.974 | 21.45 | 0 | e723f3a52 |  | lefford | 40 |
+| 2026-09-03T22:32:23Z | rebaseline | 187.231 | 468.827 | 18.811 | 2.60 | 0 | 0bcb569fa | campaign/the-plat | MacBookPro | 10 |
+| 2026-09-03T22:35:12Z | gate-commit | 141.617 | 642.688 | 64.837 | 5.00 | 0 | 0bcb569fa | campaign/the-plat | MacBookPro | 10 |
+| 2026-09-03T23:47:40Z | gate-commit | 47.136 | 75.511 | 23.125 | 2.09 | 0 | b24b9695c | campaign/the-plat | MacBookPro | 10 |
+| 2026-09-04T00:09:21Z | rebaseline | 205.808 | 438.185 | 17.145 | 2.21 | 0 | c6cc3c8e3 | campaign/the-plat | MacBookPro | 10 |
+| 2026-09-04T00:11:15Z | gate-commit | 62.928 | 146.339 | 57.002 | 3.23 | 0 | c6cc3c8e3 | campaign/the-plat | MacBookPro | 10 |
+| 2026-09-04T00:33:00Z | census | 1019.092 | 28109.100 | 258.625 | 27.84 | 0 | 9a4eccfcc |  | lefford | 40 |
 | 2026-09-04T00:41:59Z | sluice:artifacts | 214.957 | 1750.095 | 72.605 | 8.48 | 0 | db7422814 |  | lefford | 40 |
 | 2026-09-04T00:42:59Z | sluice:outboard | 58.846 | 34.983 | 47.287 | 1.40 | 0 | 98c4e458f |  | lefford | 40 |
 | 2026-09-04T00:54:07Z | sluice:gate | 667.928 | 20062.888 | 584.956 | 30.91 | 0 | 791d017e9 |  | lefford | 40 |
+| 2026-09-04T01:08:54Z | rebaseline | 190.081 | 428.670 | 16.405 | 2.34 | 0 | 6af7e7a09 | campaign/the-plat | MacBookPro | 10 |

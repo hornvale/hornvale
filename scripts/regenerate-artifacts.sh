@@ -860,13 +860,17 @@ gen_underworld_lattice() {
     printf '```\n'
 }
 
-# The page carries EIGHT readouts from TWO specs, not four from one: the
+# The page carries NINE sections from THREE specs, not four from one: the
 # Crosscut's committed witness (its spec §4) — loop share, density ordering,
 # cross-floor cycles, semilattice overlap — plus the Brattice's own four
 # (its spec §4.1-4.4) — gate yield, detour cost, solvability, report-only
 # gate counts — over every cave-bearing, non-ocean vertex of the same
-# standing seed panel. Each quartet's verdict words are frozen by its own
-# spec (final review, Important #3).
+# standing seed panel, plus The Plat's ninth, the Made population (its spec
+# §4), which carries two of that campaign's three preregistered readouts (the
+# heart decile and the door share; the third, realm shrinkage, is measured
+# over every plan the panel derives and printed in the same block). Each
+# section's verdict words are frozen by its own spec (final review,
+# Important #3).
 #
 # Framing lines are hand-authored (the redirect replaces the whole file body,
 # so re-emit them here); the fenced blocks are the `circuit` verb's exact,
@@ -896,6 +900,12 @@ gen_underworld_circuit() {
     printf 'ruling C); the attribution is by revert -- with that one change\n'
     printf 'reverted the panel is byte-identical to the pre-Brattice baseline. The\n'
     printf 'gate pass and class recompute alone leave them byte-identical.\n\n'
+    printf 'The Plat appends a ninth section per seed, the Made population: the\n'
+    printf 'columns a settled underworld people cut, read off the committed ledger\n'
+    printf '(so this verb builds to Full), the heart decile, doors on Made rungs,\n'
+    printf 'circulation-realm shrinkage over every plan, and report-only counts.\n'
+    printf 'The eight sections above it are byte-identical to the pre-Plat panel:\n'
+    printf 'the reading changes no plan byte and the Made population is new.\n\n'
     printf '```text\n'
     run -p hornvale -- circuit --seed 42
     printf '\n'
