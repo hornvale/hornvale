@@ -284,6 +284,62 @@ the better instrument, or is that a convenient agreement?", and it overturned
 my flagged item rather than confirming it.
 · Capture: spec §2.2 rewritten; follow-up below.
 
+#10 [G4] — **Plan self-review found a spec/plan contradiction, and the SPEC
+was the wrong half.**
+· **The contradiction:** spec §9's DoD said the zero-occurrence check must be
+*"asserted, not eyeballed"*, which reads as a committed source-scan test. The
+plan's Task 8 refused to write one.
+· **Decision: the plan is right; the spec is amended.** Once `ConstantSun`,
+`Sky::Constant` and `SkyChoice` are deleted, nothing can reintroduce them
+without also failing to compile. A committed test asserting they do not
+appear **could never go red** — and this project holds that a check that can
+never fire is worse than an absent one, because it sits in a healthy-looking
+tree reading as coverage. The compiler is the guard; the close-time grep is a
+verification, not a ratchet.
+· **Why it is worth a ledger entry rather than a quiet edit:** the wrong
+instrument here would have looked like *more* rigour, not less. "Assert it,
+do not eyeball it" is normally the right instinct in this repo, and the
+phrase came from applying that instinct without asking what could make the
+assertion fail.
+· ideonomy passes: 1 (negation on "the check exists" — what would have to be
+true for it to fire?) / overturns 1, the spec clause.
+· Capture: spec §9 amended in place with the reasoning; plan Task 8 Step 1
+carries the same note so an implementer does not helpfully add the test back.
+
+#11 [G4] — **Three traps found while writing the plan, none of them in the
+spec, all found by reading the tree rather than reasoning.**
+· **Trap 1 — stacked guards.** `Sky::calendar()`'s `Option` is the tier;
+`Calendar::day_length()`'s `Option` is **tidal locking**, a real regime that
+survives. They sit *adjacent* at three verified sites —
+`windows/worldgen/src/lib.rs:5192` (two `let … else` in a row),
+`windows/vessel/tests/suite/the_detent.rs:153` (two chained `and_then`s), and
+`worldgen::observation_time_is_zero_for_constant_and_locked_skies`, a test
+that loses **half** its subject. An implementer told to "delete the Option
+guards" deletes both halves and silently breaks locked worlds.
+· **Trap 2 — "tier" is overloaded.**
+`windows/scene/examples/tier_comparison_spike.rs` means *rendering
+vocabularies* by tier 0/1/2 (ASCII / ANSI / CP437), not astronomy providers.
+A `grep -r tier` sweep hits it. The plan names it as do-not-touch.
+· **Trap 3 — a false artifact no gate can see, and this is the serious one.**
+`kernel/examples/first_light.rs:152` hardcodes *"Under a golden sun fixed at
+zenith"* into `book/src/gallery/world-seed-42.md`, a committed,
+drift-checked artifact written by `regenerate-artifacts.sh:1002`. The example
+imports **only `hornvale_kernel`** — it cannot reach `ConstantSun` and
+derives nothing from it. So deleting the tier leaves the sentence in place,
+`make rebaseline` reproduces it byte-identically, and the drift check
+compares the file against itself and reports **no drift, forever**. The
+artifact becomes false and every mechanism the project has says it is fine.
+· **The general lesson, which outlives this campaign:** a drift check
+verifies that an artifact still matches its generator. It says nothing about
+whether the generator is still *right*. Hardcoded prose in a generator is
+invisible to it by construction. `book/src/domains/religion.md` carries the
+same sentence and the phrase "waiting for a sky that actually cycles" —
+prose that went stale when Campaign 2b shipped, two months before this
+campaign noticed.
+· ideonomy passes: 0 — these came from reading the tree for the plan's file
+lists, not from an expansion.
+· Capture: plan's "Three traps" preamble; retrospective (Task 8 Step 5).
+
 ## Follow-ups
 
 - **Point the census at a pin axis for the first time.** Adding

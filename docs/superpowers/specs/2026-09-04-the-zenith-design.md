@@ -490,7 +490,14 @@ Beyond the standard close (chronicle entry, retrospective, book freshness
 sweep, decision records):
 
 - Zero occurrences of `ConstantSun`, `Sky::Constant`, or `SkyChoice` in
-  tracked `.rs` files — asserted, not eyeballed.
+  tracked `.rs` files, verified by `grep` at close — **and deliberately NOT
+  by a committed source-scan test.** An earlier draft of this line read
+  "asserted, not eyeballed", which invited exactly the wrong instrument: once
+  the types are deleted, nothing can reintroduce `SkyChoice` without also
+  failing to compile, so such a test could never go red. A check that can
+  never fire is worse than an absent one — it sits in a healthy-looking tree
+  reading as coverage. The compiler is the guard here; the grep is a one-time
+  close verification, not a ratchet.
 - `Sky::calendar()` and `Sky::system()` return non-`Option`.
 - One seed-42 spinning almanac in the gallery; no `-sky` suffixed artifact.
 - The promoted battery is green and its `sanctioned-sweep` tags intact.
