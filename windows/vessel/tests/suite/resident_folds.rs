@@ -3521,3 +3521,852 @@ fn the_hazard_folds_integration_does_not_grow_with_the_tick_index() {
         late.segments
     );
 }
+
+// ---------------------------------------------------------------------------
+// The Kerf, Task 3: FOLD equals SCAN for the belief read, on two real shapes
+// and on a ledger whose sightings arrive backwards.
+//
+// This section is written against TODAY's `KnownWater`, deliberately and
+// before the migration it exists to police. Task 4 moves `water_at` onto
+// `LatestVisit` and deletes `KnownWater`; a test written after that move
+// could only show that the new code agrees with itself, never that the move
+// preserved anything. So every witness below is green on the OLD tenant
+// first, and Task 4 re-points its comparand and re-runs it.
+//
+// The oracle is [`known_water_scan_oracle`], unchanged and shared with The
+// Pawl's fixture tests. It is a VERBATIM copy of the pre-Pawl
+// `believed_water` set-building loop and the only statement of that loop
+// that survives anywhere; nothing regenerates it, so it is not edited here.
+//
+// # THE CONTROLS, RUN BEFORE ANY OF THIS WAS BELIEVED (2026-09-04)
+//
+// A witness that cannot fail is decoration, so both mutations were applied
+// with `scripts/mutate.py` to `KnownWater::absorb` and restored with
+// `git checkout --`, never by retyping. What each one moves:
+//
+// ```text
+// witness                                    control B   control C
+// the_kerf_a_room_committed_backwards...       RED         RED
+// the_kerf_possession_shape ... every 1        RED         green
+// the_kerf_possession_shape ... every 3        RED         green
+// the_kerf_lab_shape ... every 1               RED         green
+// the_kerf_lab_shape ... every 3               RED         green
+// the_kerf.rs's two ledger-hash constants      green*      green
+// ```
+//
+// **Control B** is `if day < *first` -> `if day > *first`: keep the LATEST
+// visit rather than the first. **Control C** empties the min-keeping arm
+// outright (`let _ = (first, day);`), so the FIRST-ARRIVING sighting wins
+// whatever its day.
+//
+// Two things are worth reading off that table, and both were surprises.
+//
+// FIRST, THESE WITNESSES ARE SHARPER THAN THE CAMPAIGN'S HASH CONSTANTS.
+// `*` marks the one measured at Task 1: control B moved NEITHER hash, on
+// four scripts including seed 17 with its 1,194 past-instant belief reads,
+// because a differently-admitted room only reaches a committed fact through
+// the chain past-instant read -> different admitted set -> different chosen
+// room -> different committed route, and that chain never completed. A
+// FOLD-equals-SCAN witness compares the admitted set ITSELF, so it needs no
+// such chain and reddens immediately. A campaign that had only minted hash
+// constants would have shipped control B's behaviour change unseen.
+//
+// SECOND, ONLY THE DESCENDING FIXTURE CATCHES CONTROL C, and that is the
+// exact sense in which Task 1's "the min-keeping branch never fires on a
+// walk" is true. On a real walk a room's sightings ARRIVE in ascending day
+// order, so the first arrival already IS the minimum and "keep the minimum"
+// and "keep the first arrival" are the same function: control C is
+// unobservable on both real shapes, at every one of their 324,535 combined
+// comparisons. Control B is observable there only because it makes the fold
+// keep the LATEST, which ascending arrivals do distinguish. So the real
+// shapes witness the comparison's SENSE and the fixture witnesses the
+// branch's FIRING, and neither substitutes for the other.
+// ---------------------------------------------------------------------------
+
+/// The seed the POSSESSION shape walks.
+///
+/// Not [`WALKING_SEED`], and the difference is the whole reason this seed is
+/// pinned. Seed 14's residents commit 2,668 positional facts and reach **no
+/// water at all**, so `water_at` is empty for every one of them and the
+/// `is_water` filter would pass vacuously — spec §3 rule 3's floor (a)
+/// failing by construction. Seed 17 was found by The Kerf's Task 1 seed
+/// sweep and is the same world `the_kerf.rs` mints its sharper hash constant
+/// on: 67 bodies, 928 `agent-at` facts, 28,601 belief reads of which 1,194
+/// run at an instant strictly before a committed sighting. Each test module
+/// keeps its own copy of a seed constant, as [`WALKING_SEED`] and
+/// [`EMITTER_SEED`] already do here, so every site refuses on its own terms
+/// if an epoch moves the world under it.
+/// type-audit: bare-ok(index)
+const KERF_WATER_SEED: u64 = 17;
+
+/// How many `wait`s the possession shape's script takes — the same twelve
+/// `the_kerf.rs` walks, kept as this module's own constant rather than
+/// shared with [`WITNESS_WAITS`], whose doc binds it to [`WALKING_SEED`].
+/// type-audit: bare-ok(count)
+const KERF_WAITS: usize = 12;
+
+/// The LAB shape: `the_detent::bench_shape`'s seed, ticks and roster size.
+///
+/// **Fifty agents, not ten, and that is a measured requirement rather than a
+/// preference.** `bench_shape(42, 10, 10)` puts **0 of 10** roster members on
+/// water at the final instant, and `bench_shape(42, 20, 20)` puts **0 of 20**
+/// — so both would fail floor (a) while looking like perfectly reasonable
+/// shapes. At fifty agents nine of fifty hold a non-empty belief set, which
+/// is the same 11-of-50 shape The Kerf's Task 2 measured on the bench's own
+/// band 10. Roster SIZE is the lever here, not tick count.
+/// type-audit: bare-ok(index)
+const KERF_LAB_SEED: u64 = 42;
+/// How many ticks the lab shape runs. See [`KERF_LAB_SEED`].
+/// type-audit: bare-ok(count)
+const KERF_LAB_TICKS: usize = 10;
+/// How many agents the lab shape derives. See [`KERF_LAB_SEED`].
+/// type-audit: bare-ok(count)
+const KERF_LAB_AGENTS: usize = 50;
+
+/// A [`Terrain`] whose `is_fresh_water` verdicts over a ledger's sighted
+/// rooms are computed ONCE, up front, and then read from a table.
+///
+/// The sweeps below ask `is_water` about the same rooms tens of thousands of
+/// times — once per admitted sighting, per entity, per instant, per prefix —
+/// and `LocaleTerrain::is_fresh_water` is a field evaluation. The domain is
+/// tiny and known in advance: 83 distinct rooms on the possession shape, 709
+/// on the lab shape, all of them named by an `agent-at` fact in the ledger
+/// being swept. So the table is built from the ledger and the answer is a
+/// pure lookup.
+///
+/// It is a table and not a lazy memo deliberately: no interior mutability,
+/// so the verdicts cannot depend on the order the sweep asks its questions
+/// in. A room the table does not know — which cannot arise from a fold or an
+/// oracle over this ledger, since both only ever see its own sightings —
+/// falls through to the real terrain rather than being answered `false`.
+/// Both sides of every comparison read the same instance, so a wrong verdict
+/// would be wrong identically for the fold and the oracle and could not
+/// manufacture agreement; what it COULD do is make the `is_water` filter
+/// vacuous, which is why [`Self::split`] reports the wet/dry split and the
+/// lab witness asserts on it.
+struct TabulatedWater<'a> {
+    /// The real terrain, for anything the table does not hold.
+    inner: &'a dyn Terrain,
+    /// Every room the ledger sights, and whether it is fresh water.
+    known: std::collections::BTreeMap<Facet, bool>,
+}
+
+impl<'a> TabulatedWater<'a> {
+    /// Tabulate `inner`'s verdict for every room `source` sights.
+    fn new(inner: &'a dyn Terrain, source: &Ledger) -> Self {
+        let mut known: std::collections::BTreeMap<Facet, bool> = std::collections::BTreeMap::new();
+        for f in source.iter() {
+            if f.predicate != AGENT_AT {
+                continue;
+            }
+            if let Value::Text(s) = &f.object {
+                let r = room_from_text_copy(s);
+                known
+                    .entry(r.clone())
+                    .or_insert_with(|| hornvale_vessel::liveness::is_water(&r, inner));
+            }
+        }
+        TabulatedWater { inner, known }
+    }
+
+    /// `(wet, dry)` — the sighted rooms, split by the verdict. The
+    /// `is_water` non-vacuity denominator.
+    fn split(&self) -> (usize, usize) {
+        let wet = self.known.values().filter(|v| **v).count();
+        (wet, self.known.len() - wet)
+    }
+}
+
+impl Terrain for TabulatedWater<'_> {
+    fn elevation(&self, room: &Facet) -> f64 {
+        self.inner.elevation(room)
+    }
+    fn is_fresh_water(&self, room: &Facet) -> bool {
+        match self.known.get(room) {
+            Some(v) => *v,
+            None => self.inner.is_fresh_water(room),
+        }
+    }
+    fn temperature(&self, room: &Facet, day: WorldTime) -> f64 {
+        self.inner.temperature(room, day)
+    }
+}
+
+/// A prefix of a real ledger, rebuilt one fact at a time.
+///
+/// [`known_water_scan_oracle`] takes a `&Ledger` and scans it whole, and
+/// [`ResidentFolds`] advances to whatever ledger it is handed — so comparing
+/// either at a PREFIX needs a `Ledger` that holds exactly that prefix, and
+/// `Ledger` is append-only with no truncation door. The Pawl's fixture gets
+/// one by replaying its own `SCRIPT` ([`hand_built_upto`]); a real session's
+/// ledger has no script, so this replays the ledger itself.
+///
+/// Every predicate is registered NON-functional, which is the only liberty
+/// taken and it is one-directional: dropping the contradiction check can
+/// only admit facts the source already holds, never reject one. The
+/// faithfulness of the replay is asserted rather than argued —
+/// [`Self::push`] refuses unless the fact landed at the position it came
+/// from and compares equal to the original, so a dedup or a rejection is a
+/// panic and not a silently shorter prefix.
+struct PrefixLedger {
+    /// A registry that accepts every predicate the source uses.
+    reg: ConceptRegistry,
+    /// The prefix built so far.
+    out: Ledger,
+}
+
+impl PrefixLedger {
+    /// An empty prefix.
+    fn new() -> Self {
+        PrefixLedger {
+            reg: ConceptRegistry::default(),
+            out: Ledger::default(),
+        }
+    }
+
+    /// Append one fact, registering its predicate on first sight.
+    fn push(&mut self, f: &Fact) {
+        if self.reg.predicate(&f.predicate).is_none() {
+            self.reg
+                .register_predicate(&f.predicate, false, "the-kerf replay")
+                .expect("a fresh predicate name registers");
+        }
+        let at = self.out.len();
+        self.out
+            .commit(f.clone(), &self.reg)
+            .expect("a fact the source ledger already accepted re-commits");
+        assert_eq!(
+            self.out.len(),
+            at + 1,
+            "the replay dropped a fact at position {at}: a prefix shorter than the source \
+             would compare a fold against an oracle over a DIFFERENT ledger"
+        );
+        assert_eq!(
+            self.out.iter().nth(at),
+            Some(f),
+            "the replay changed the fact at position {at}"
+        );
+    }
+}
+
+/// What one sweep of [`kerf_fold_equals_scan`] saw — the floors, counted so
+/// they can be asserted and printed rather than assumed.
+struct KerfSweep {
+    /// The ledger position the sweep started at (the first `agent-at` fact).
+    start: usize,
+    /// How many prefixes it compared at.
+    prefixes: usize,
+    /// Three-way comparisons made (fold, discarded-and-rebuilt fold, oracle).
+    compares: usize,
+    /// Of those, the ones where the oracle returned a NON-EMPTY set — two
+    /// empty sets agreeing is agreement about nothing.
+    non_empty: usize,
+    /// Of those, the ones taken at an instant strictly before that entity's
+    /// last committed sighting — spec §3 rule 3's floor (b).
+    past: usize,
+    /// Entities holding a non-empty `water_at` at the whole ledger's last
+    /// instant — spec §3 rule 3's floor (a).
+    non_empty_at_end: usize,
+    /// The largest such set.
+    max_at_end: usize,
+    /// Entities for whom `is_water` DROPS at least one visited room. Zero
+    /// means the filter admitted everything on this shape; it is printed
+    /// always and asserted only where the shape can meet it.
+    filtered: usize,
+}
+
+/// FOLD equals SCAN over a real ledger, at every prefix, under one chaos
+/// schedule.
+///
+/// Three things are compared at each prefix and each probed instant: the
+/// RESIDENT store (advanced incrementally as the ledger grows, which is what
+/// a session does), a CHAOTIC store thrown away and rebuilt from scratch
+/// every `every` positions, and [`known_water_scan_oracle`]. The first pair
+/// pins that discarding the store is unobservable; the second pins that the
+/// fold answers what a full scan of the ledger answers.
+///
+/// The sweep starts at the ledger's FIRST `agent-at` fact rather than at
+/// position 0. Everything before it is world-genesis material the fold
+/// ignores by predicate, so both stores are empty there and the oracle
+/// returns the empty set — comparing them would add O(world ledger) prefixes
+/// of two empty sets agreeing. The transition into a non-empty answer is
+/// inside the swept range, because the first `agent-at` fact is.
+///
+/// Instants are the entity's OWN committed days, strided by
+/// [`PAST_DAY_STRIDE`] (this file's existing idiom for a past-day sweep),
+/// plus its latest committed day. That is what puts past instants in the
+/// comparison at all, and floor (b) counts them.
+fn kerf_fold_equals_scan(
+    label: &str,
+    source: &Ledger,
+    entities: &[EntityId],
+    terrain: &dyn Terrain,
+    every: usize,
+) -> KerfSweep {
+    let facts: Vec<&Fact> = source.iter().collect();
+    let n = facts.len();
+    let start = facts
+        .iter()
+        .position(|f| f.predicate == AGENT_AT)
+        .unwrap_or_else(|| {
+            panic!("{label}: the ledger holds no agent-at fact, so this sweep would be vacuous")
+        });
+
+    let mut prefix = PrefixLedger::new();
+    for f in facts.iter().take(start) {
+        prefix.push(f);
+    }
+
+    let mut resident = ResidentFolds::new();
+    let mut chaotic = ResidentFolds::new();
+    let mut out = KerfSweep {
+        start,
+        prefixes: 0,
+        compares: 0,
+        non_empty: 0,
+        past: 0,
+        non_empty_at_end: 0,
+        max_at_end: 0,
+        filtered: 0,
+    };
+
+    for p in start..=n {
+        if p > start {
+            prefix.push(facts[p - 1]);
+        }
+        let l = &prefix.out;
+        let _ = resident.known_water(l);
+        if (p - start) % every == 0 {
+            chaotic = ResidentFolds::new();
+        }
+        let _ = chaotic.known_water(l);
+        out.prefixes += 1;
+        assert_eq!(
+            chaotic.position(),
+            resident.position(),
+            "{label}: position diverged at prefix {p} under a discard-every-{every} schedule"
+        );
+        for e in entities {
+            assert_eq!(
+                chaotic.known_water(l).of(*e),
+                resident.known_water(l).of(*e),
+                "{label}: {e:?}'s first-visit map diverged at prefix {p} under a \
+                 discard-every-{every} schedule"
+            );
+            let days: Vec<WorldTime> = l.facts_of(*e, AGENT_AT).filter_map(|f| f.day).collect();
+            let last = days.iter().copied().max();
+            let mut probes: Vec<WorldTime> =
+                days.iter().copied().step_by(PAST_DAY_STRIDE).collect();
+            if let Some(t) = last {
+                probes.push(t);
+            }
+            for t in probes {
+                let scanned: Vec<Facet> = known_water_scan_oracle(l, *e, t, terrain)
+                    .into_iter()
+                    .collect();
+                assert_eq!(
+                    resident.known_water(l).water_at(*e, t, terrain),
+                    scanned,
+                    "{label}: the resident store's water set for {e:?} at {t:?} must equal \
+                     the scan oracle's at prefix {p}"
+                );
+                assert_eq!(
+                    chaotic.known_water(l).water_at(*e, t, terrain),
+                    scanned,
+                    "{label}: the discarded-and-rebuilt store's water set for {e:?} at \
+                     {t:?} must equal the scan oracle's at prefix {p}"
+                );
+                out.compares += 1;
+                if !scanned.is_empty() {
+                    out.non_empty += 1;
+                }
+                if last.is_some_and(|l| t < l) {
+                    out.past += 1;
+                }
+            }
+        }
+    }
+
+    // The floors, taken at the whole ledger's last instant.
+    let l = &prefix.out;
+    let end = l
+        .iter()
+        .filter_map(|f| f.day)
+        .max()
+        .expect("a real ledger carries at least one dated fact");
+    for e in entities {
+        let w = resident.known_water(l).water_at(*e, end, terrain);
+        let visited: std::collections::BTreeSet<Facet> = l
+            .facts_of(*e, AGENT_AT)
+            .filter(|f| f.day.is_some())
+            .map(|f| match &f.object {
+                Value::Text(s) => room_from_text_copy(s),
+                other => panic!("an agent-at object is always text, got {other:?}"),
+            })
+            .collect();
+        if !w.is_empty() {
+            out.non_empty_at_end += 1;
+        }
+        if w.len() < visited.len() {
+            out.filtered += 1;
+        }
+        out.max_at_end = out.max_at_end.max(w.len());
+    }
+
+    println!(
+        "--- {label} (discard every {every}) ---\n\
+         prefixes {} (positions {}..={n}), entities {}, three-way compares {} \
+         ({} over a NON-EMPTY oracle set, {} at a PAST instant)\n\
+         floor (a): {} of {} entities hold a non-empty water_at at the final instant, \
+         largest {}\n\
+         is_water drops at least one visited room for {} of {} entities",
+        out.prefixes,
+        out.start,
+        entities.len(),
+        out.compares,
+        out.non_empty,
+        out.past,
+        out.non_empty_at_end,
+        entities.len(),
+        out.max_at_end,
+        out.filtered,
+        entities.len()
+    );
+
+    assert!(
+        out.non_empty_at_end > 0,
+        "{label}: spec §3 rule 3 floor (a) — at least one entity must hold a NON-EMPTY \
+         water_at at the final instant, or the `is_water` filter is vacuous on this shape \
+         and every equality above compares two empty sets"
+    );
+    assert!(
+        out.past > 0,
+        "{label}: spec §3 rule 3 floor (b) — at least one comparison must run at an instant \
+         strictly before that entity's last committed sighting, or the first-visit prefix \
+         is never exercised"
+    );
+    assert!(
+        out.non_empty > 0,
+        "{label}: at least one comparison must be taken over a NON-EMPTY oracle set"
+    );
+    out
+}
+
+/// The possession shape: a real [`Session`] at [`KERF_WATER_SEED`], driven by
+/// the same twelve-`wait` script `the_kerf.rs` walks, with the terrain the
+/// world's own [`LocaleContext`] gives.
+fn kerf_possession_ledger() -> (hornvale_kernel::World, Ledger, Vec<EntityId>) {
+    let world = common::build(KERF_WATER_SEED).expect("the water-belief seed builds a world");
+    let (mut session, _opening) = Session::start(&world, &PossessOpts::default())
+        .expect("the water-belief seed starts a session");
+    for _ in 0..KERF_WAITS {
+        session.handle("wait");
+    }
+    let ledger: Ledger = serde_json::from_str(&session.session_ledger_json())
+        .expect("the session's own ledger accessor round-trips");
+    // Every entity the walk actually sighted — read off the ledger rather
+    // than chosen, so no convenient body can be picked.
+    let mut subjects: std::collections::BTreeSet<EntityId> = std::collections::BTreeSet::new();
+    for f in ledger.iter() {
+        if f.predicate == AGENT_AT {
+            subjects.insert(f.subject);
+        }
+    }
+    (world, ledger, subjects.into_iter().collect())
+}
+
+/// The possession shape, discarding at every position.
+///
+/// **What it compares, measured:** 1,898 prefixes (ledger positions
+/// 16,033..=17,930), 52 sighted entities, **244,643 three-way comparisons**,
+/// every one of them over a non-empty oracle set and **140,173** of them at
+/// an instant strictly before that entity's last committed sighting. Floor
+/// (a): 52 of 52 entities hold a non-empty `water_at` at the final instant,
+/// the largest 23 rooms. Both of spec §3 rule 3's floors are met with room
+/// to spare, and both are asserted in [`kerf_fold_equals_scan`] rather than
+/// printed and trusted.
+///
+/// **Runtime, two readings with the loads that separate them** (both from
+/// eight-test `nextest` runs of this crate on ten cores; a timing without
+/// its load is not a measurement):
+///
+/// ```text
+/// witness                 run 1     run 2    load run 1              load run 2
+/// possession, every 1     21.743 s  31.210 s 9.93 22.73 37.34 ->     6.97 14.52 28.94 ->
+/// possession, every 3     20.722 s  30.977 s 6.18 18.77 34.46        31.96 22.73 30.21
+/// lab, every 1             9.331 s   7.700 s
+/// lab, every 3             9.730 s  10.032 s
+/// ```
+///
+/// Both readings are inside the campaign's 60 s ceiling for a witness, so
+/// §3 rule 2 says keep the script and record the number; nothing was
+/// shortened. The sweep itself is ~0.5 s of that — the twelve-`wait` session
+/// build is the whole cost, and a six-`wait` script was measured at about a
+/// quarter of it for 1,026 prefixes instead of 1,898, which is the number to
+/// reach for if this ever does need shortening.
+///
+/// **What this shape does NOT witness, measured rather than assumed.** At
+/// seed 17 every room every resident stands in is fresh water: `is_water`
+/// tabulates **83 wet rooms and 0 dry ones**, and drops nothing for
+/// any of the 52 sighted entities. So the filter is exercised in one
+/// direction only here, and the LAB shape is what exercises the other (it
+/// drops a visited room for 25 of its 50). The floor this shape cannot meet
+/// is therefore printed and not asserted, for the reason `the_kerf.rs`'s
+/// seed-11 witness gives about its own missing past-instant floor: asserting
+/// a floor a shape cannot meet is how a witness gets quietly weakened.
+#[test]
+fn the_kerf_possession_shape_fold_equals_scan_discarding_at_every_position() {
+    let (world, ledger, entities) = kerf_possession_ledger();
+    let ctx = hornvale_locale::LocaleContext::build(&world).expect("the locale context builds");
+    let base =
+        hornvale_vessel::liveness::LocaleTerrain::with_fields(&ctx, None, None, None, None, None);
+    let terrain = TabulatedWater::new(&base, &ledger);
+    let sweep = kerf_fold_equals_scan("possession shape", &ledger, &entities, &terrain, 1);
+    let (wet, dry) = terrain.split();
+    println!("possession shape: is_water tabulated {wet} wet and {dry} dry sighted rooms");
+    assert!(
+        sweep.non_empty_at_end >= 2,
+        "the possession shape is pinned as the one where the belief set is broadly \
+         non-empty; {} entities held one",
+        sweep.non_empty_at_end
+    );
+}
+
+/// The possession shape, discarding at every THIRD position. Both schedules
+/// are needed for the reason this file's module doc gives: the every-position
+/// schedule gives no signal on `absorb`'s purity, because a bug confined to
+/// it cancels when the rebuild happens immediately after every single absorb.
+///
+/// Same 1,898 prefixes and 244,643 comparisons as its sibling; 20.722 s and
+/// 30.977 s in the two runs its sibling's doc tabulates.
+#[test]
+fn the_kerf_possession_shape_fold_equals_scan_discarding_at_every_third_position() {
+    let (world, ledger, entities) = kerf_possession_ledger();
+    let ctx = hornvale_locale::LocaleContext::build(&world).expect("the locale context builds");
+    let base =
+        hornvale_vessel::liveness::LocaleTerrain::with_fields(&ctx, None, None, None, None, None);
+    let terrain = TabulatedWater::new(&base, &ledger);
+    let sweep = kerf_fold_equals_scan("possession shape", &ledger, &entities, &terrain, 3);
+    assert!(sweep.non_empty_at_end >= 2);
+}
+
+/// The lab shape, discarding at every position.
+///
+/// The comparison sweeps the WHOLE `derive_npcs` roster, not a probe agent,
+/// and that is a correction the campaign paid for once already. The bench's
+/// own belief probe reads the roster's MAX-HISTORY member, whose belief set
+/// is EMPTY at every band — so a witness written against one convenient body
+/// would very likely have drawn that one and passed vacuously at every
+/// assertion. The Kerf's Task 2 measured the roster instead: 11 of 50 hold a
+/// non-empty set at band 10, the largest 46 rooms.
+///
+/// **What it compares, measured:** 1,166 prefixes (ledger positions
+/// 21,812..=22,977), 50 roster members, **79,892 three-way comparisons**,
+/// 15,833 of them over a non-empty oracle set and **48,167** at an instant
+/// strictly before that entity's last committed sighting. Floor (a): 9 of 50
+/// hold a non-empty `water_at` at the final instant, the largest 4 rooms —
+/// and this is the shape where `is_water` earns its keep: it tabulates
+/// **27 wet rooms and 682 dry ones** and drops a visited room for **25 of
+/// the 50** members. That is the direction the possession shape cannot
+/// witness at all (83 wet, 0 dry), which is why both shapes are here.
+///
+/// **Runtime** 9.331 s and 7.700 s in the two runs tabulated on
+/// [`the_kerf_possession_shape_fold_equals_scan_discarding_at_every_position`].
+#[test]
+fn the_kerf_lab_shape_fold_equals_scan_discarding_at_every_position() {
+    let shape = crate::the_detent::bench_shape(KERF_LAB_SEED, KERF_LAB_TICKS, KERF_LAB_AGENTS);
+    let mesh = shape.mesh_memo.clone();
+    let base = hornvale_vessel::liveness::LocaleTerrain::with_fields(
+        &shape.ctx,
+        None,
+        None,
+        None,
+        None,
+        Some(&mesh),
+    );
+    let terrain = TabulatedWater::new(&base, &shape.ledger);
+    let entities: Vec<EntityId> = shape.npcs.iter().map(|n| n.entity).collect();
+    let sweep = kerf_fold_equals_scan("lab shape", &shape.ledger, &entities, &terrain, 1);
+    let (wet, dry) = terrain.split();
+    println!("lab shape: is_water tabulated {wet} wet and {dry} dry sighted rooms");
+    assert!(
+        wet > 0 && dry > 0,
+        "the lab shape is the one that exercises `is_water` in BOTH directions; it \
+         tabulated {wet} wet and {dry} dry sighted rooms"
+    );
+    assert!(
+        sweep.filtered > 0,
+        "on the lab shape `is_water` must DROP a visited room for at least one entity, or \
+         the filter is admitting everything and only its true branch is witnessed"
+    );
+}
+
+/// The lab shape, discarding at every THIRD position. Same 1,166 prefixes
+/// and 79,892 comparisons as its sibling; 9.730 s and 10.032 s in the two
+/// runs its sibling's doc tabulates.
+#[test]
+fn the_kerf_lab_shape_fold_equals_scan_discarding_at_every_third_position() {
+    let shape = crate::the_detent::bench_shape(KERF_LAB_SEED, KERF_LAB_TICKS, KERF_LAB_AGENTS);
+    let mesh = shape.mesh_memo.clone();
+    let base = hornvale_vessel::liveness::LocaleTerrain::with_fields(
+        &shape.ctx,
+        None,
+        None,
+        None,
+        None,
+        Some(&mesh),
+    );
+    let terrain = TabulatedWater::new(&base, &shape.ledger);
+    let entities: Vec<EntityId> = shape.npcs.iter().map(|n| n.entity).collect();
+    let sweep = kerf_fold_equals_scan("lab shape", &shape.ledger, &entities, &terrain, 3);
+    assert!(sweep.filtered > 0);
+}
+
+// ---------------------------------------------------------------------------
+// The Kerf, Task 3, step 1: the descending-order fixture.
+//
+// THE ONLY INSTRUMENT IN THIS CAMPAIGN THAT REACHES THE MIN-KEEPING BRANCH,
+// AND THE CONTROL TABLE IN THIS SECTION'S SIBLING HEADER IS WHAT ESTABLISHES
+// THAT RATHER THAN AN ARGUMENT. The Kerf's Task 1 proved by panic-mutation
+// that `KnownWater::absorb`'s `if day < *first` arm is NEVER taken on a
+// walk-derived ledger: `DriveMovements` commits at the tick's own day and
+// ticks advance monotonically, so a room's first absorbed sighting already IS
+// its minimum. Emptying that arm outright (control C) is therefore
+// unobservable on both real shapes and on both of the campaign's ledger-hash
+// constants — measured, not reasoned — and RED here.
+//
+// **Do not read that as "no other witness says anything about the direction",
+// which is how an earlier draft of this paragraph put it.** Control B — the
+// same comparison FLIPPED, keeping the latest visit — reddens both real
+// shapes at once, because ascending arrivals distinguish "keep the first"
+// from "keep the last" even when they cannot distinguish "keep the first"
+// from "keep the minimum". The two mutations separate cleanly and the
+// separation is the point: the real shapes hold the comparison's SENSE, and
+// only this fixture holds the branch's FIRING.
+//
+// It is NOT dead code. `liveness::place_agent(entity, room, day)` is a `pub`
+// `agent-at` writer taking an ARBITRARY `WorldTime` with no ordering
+// constraint, and `windows/lab/src/synthetic.rs` authors whole scenario
+// ledgers through it — days chosen by hand, ascending by happenstance rather
+// than by construction, and `windows/lab`'s health calibration reads belief
+// over exactly those ledgers. So the branch governs a case a sibling window
+// can construct today, and this fixture is the only thing that pins it.
+// ---------------------------------------------------------------------------
+
+/// The descending fixture's commit script, as
+/// `(subject index, day ticks, face, path)`.
+///
+/// Each ROOM's own sightings arrive in strictly DESCENDING day order, so for
+/// every one of them the first fact absorbed is NOT its first visit — the
+/// exact condition `KnownWater::absorb`'s min-keeping arm exists for and the
+/// exact condition no walk produces. Three rooms carry three, two and three
+/// sightings; the entities are interleaved so a fold leaking one entity's
+/// facts into another's is caught too; and one DRY room is visited so the
+/// `is_water` filter is not vacuous here either.
+///
+/// The rooms are [`pool_terrain`]'s: `(0, [0])`, `(0, [3])` and `(1, [2])`
+/// are wet, `(0, [1])` is not.
+const KERF_DESCENDING_SCRIPT: &[(usize, i64, u8, &[u8])] = &[
+    (0, 900_000, 0, &[0]),
+    (1, 800_000, 1, &[2]),
+    (0, 700_000, 0, &[3]),
+    (0, 600_000, 0, &[0]),
+    (1, 500_000, 1, &[2]),
+    (0, 400_000, 0, &[3]),
+    (1, 300_000, 1, &[2]),
+    (0, 200_000, 0, &[0]),
+    (0, 100_000, 0, &[1]),
+];
+
+/// The descending fixture, built the way [`hand_built_upto`] builds The
+/// Pawl's: by replaying a script into a fresh ledger with two fixed-lineage
+/// entities.
+fn kerf_descending_fixture() -> (Ledger, EntityId, EntityId) {
+    let mut reg = ConceptRegistry::default();
+    reg.register_predicate(AGENT_AT, false, "pos").unwrap();
+    let mut l = Ledger::default();
+    let ids = [
+        l.mint_entity(test_lineage(0)),
+        l.mint_entity(test_lineage(1)),
+    ];
+    for (who, ticks, face, path) in KERF_DESCENDING_SCRIPT {
+        l.commit(
+            Fact {
+                subject: ids[*who],
+                predicate: AGENT_AT.to_string(),
+                object: Value::Text(room_text(&room(*face, path))),
+                place: None,
+                day: Some(WorldTime::from_ticks(*ticks)),
+                provenance: "t".to_string(),
+            },
+            &reg,
+        )
+        .unwrap();
+    }
+    (l, ids[0], ids[1])
+}
+
+/// Guards the fixture against the edit that would quietly empty it: if
+/// [`KERF_DESCENDING_SCRIPT`] ever drifted into per-room ASCENDING order, the
+/// min-keeping arm would never be taken and the test below would pass on a
+/// fold that simply kept whatever it saw first.
+///
+/// The same argument [`the_hand_built_ledger_is_not_already_in_sorted_order`]
+/// makes for the ordering assertions, made here for the ordering the belief
+/// read depends on: not the ledger's order overall, but each ROOM's own.
+#[test]
+fn the_kerf_descending_fixture_commits_each_room_backwards() {
+    let (l, a, b) = kerf_descending_fixture();
+    let mut rooms_with_several = 0_usize;
+    for e in [a, b] {
+        let mut per_room: std::collections::BTreeMap<Facet, Vec<i64>> =
+            std::collections::BTreeMap::new();
+        for f in l.facts_of(e, AGENT_AT) {
+            let Value::Text(s) = &f.object else {
+                panic!("an agent-at object is always text")
+            };
+            per_room
+                .entry(room_from_text_copy(s))
+                .or_default()
+                .push(f.day.expect("the fixture dates every sighting").ticks());
+        }
+        for (r, days) in &per_room {
+            if days.len() < 2 {
+                continue;
+            }
+            rooms_with_several += 1;
+            assert!(
+                days.windows(2).all(|w| w[1] < w[0]),
+                "{e:?}'s room {r:?} must be committed in strictly DESCENDING day order, or \
+                 the min-keeping branch this fixture exists to reach is never taken: {days:?}"
+            );
+            assert_ne!(
+                days.first(),
+                days.iter().min(),
+                "{e:?}'s room {r:?}: the FIRST committed instant must not already be the \
+                 earliest, or `days.first()` and the minimum agree for free here"
+            );
+        }
+    }
+    assert!(
+        rooms_with_several >= 3,
+        "at least three rooms must carry more than one sighting, or one accidental edit \
+         empties this fixture: got {rooms_with_several}"
+    );
+}
+
+/// A room whose sightings arrive backwards is known from its EARLIEST
+/// instant, not from the first one committed.
+///
+/// This is spec §5 step 2's equivalence, stated as behaviour: `KnownWater`
+/// keeps the minimum, and after Task 4 `LatestVisit`'s ascending list makes
+/// `days.first()` that same minimum. Both directions are asserted — the room
+/// is admitted AT the earliest instant and at every instant after it, and
+/// is NOT admitted one tick before it — and the whole thing is compared
+/// against [`known_water_scan_oracle`] at every instant the script names,
+/// so it is FOLD equals SCAN and not merely a spot check.
+///
+/// **This is the campaign's only RED under control C** (the min-keeping arm
+/// emptied, so the first-arriving sighting wins whatever its day): both real
+/// shapes stay green across 324,535 combined comparisons, and so do both
+/// ledger-hash constants. See this section's header for the full table and
+/// what separates it from control B. Costs 0.007 s.
+#[test]
+fn the_kerf_a_room_committed_backwards_is_known_from_its_earliest_instant() {
+    let (l, a, b) = kerf_descending_fixture();
+    let terrain = pool_terrain();
+    let folded = fold_known_water_one_by_one(&l);
+    let wet = room(0, &[0]);
+
+    // The fold kept the minimum, not the first commit.
+    assert_eq!(
+        folded.state().of(a).get(&wet),
+        Some(&WorldTime::from_ticks(200_000)),
+        "the room's three sightings committed 900_000, 600_000, 200_000; the fold must \
+         hold the EARLIEST"
+    );
+
+    // Admitted at the earliest instant, and not one tick before it.
+    assert!(
+        folded
+            .state()
+            .water_at(a, WorldTime::from_ticks(200_000), &terrain)
+            .contains(&wet),
+        "the room is known AT its earliest instant"
+    );
+    assert!(
+        !folded
+            .state()
+            .water_at(a, WorldTime::from_ticks(199_999), &terrain)
+            .contains(&wet),
+        "the room is NOT known one tick before its earliest instant"
+    );
+
+    // The instant that separates a first-visit fold from a latest-visit one:
+    // strictly after the earliest sighting and strictly before the first one
+    // COMMITTED. A fold keeping `days.last()` — or keeping whatever it saw
+    // first — would report the room unknown here.
+    assert!(
+        folded
+            .state()
+            .water_at(a, WorldTime::from_ticks(300_000), &terrain)
+            .contains(&wet),
+        "at 300_000 the room has been visited (at 200_000) but its FIRST COMMITTED sighting \
+         (900_000) is still in the future; a fold that kept the latest visit, or the first \
+         arrival, would call it unknown here"
+    );
+
+    // FOLD equals SCAN at every instant the script names, plus the two ends,
+    // for both entities and under a discarded-and-rebuilt fold as well.
+    let mut probes: Vec<WorldTime> = KERF_DESCENDING_SCRIPT
+        .iter()
+        .map(|(_, t, _, _)| WorldTime::from_ticks(*t))
+        .collect();
+    probes.push(WorldTime::from_ticks(0));
+    probes.push(WorldTime::from_ticks(9_999_999));
+    let mut rebuilt: Folded<KnownWater> = Folded::new();
+    for (i, f) in l.iter().enumerate() {
+        rebuilt.absorb_at(i as u64, f);
+        rebuilt = Folded::rebuild_upto(&l, rebuilt.position());
+    }
+    let mut non_empty = 0_usize;
+    for e in [a, b] {
+        for t in &probes {
+            let scanned: Vec<Facet> = known_water_scan_oracle(&l, e, *t, &terrain)
+                .into_iter()
+                .collect();
+            if !scanned.is_empty() {
+                non_empty += 1;
+            }
+            assert_eq!(
+                folded.state().water_at(e, *t, &terrain),
+                scanned,
+                "the fold's water set for {e:?} at {t:?} must equal the oracle's"
+            );
+            assert_eq!(
+                rebuilt.state().water_at(e, *t, &terrain),
+                scanned,
+                "the discarded-and-rebuilt fold's water set for {e:?} at {t:?} must equal \
+                 the oracle's"
+            );
+        }
+    }
+    // MEASURED against this fixture: 15 of the 22 comparisons return a
+    // non-empty set. The floor sits under that so a probe lost to a fixture
+    // edit is not a red, and an emptied comparison is.
+    assert!(
+        non_empty >= 10,
+        "at least ten comparisons must be taken over a NON-EMPTY oracle set, or the \
+         equalities above are empty sets agreeing: got {non_empty}"
+    );
+    // And the dry room must really be dropped, here as in The Pawl's fixture.
+    let all: Vec<Facet> = folded.state().of(a).keys().cloned().collect::<Vec<_>>();
+    let admitted = folded
+        .state()
+        .water_at(a, WorldTime::from_ticks(9_999_999), &terrain);
+    assert!(
+        admitted.len() < all.len(),
+        "the `is_water` filter must drop at least one of {a:?}'s visited rooms: visited \
+         {all:?}, admitted {admitted:?}"
+    );
+}
