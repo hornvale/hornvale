@@ -5532,6 +5532,13 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-04T03:56:24Z | sluice:gate | 722.021 | 19571.191 | 484.274 | 27.78 | 0 | 1b64305ba |  | lefford | 40 |
 | 2026-09-04T03:58:21Z | sluice:clients | 116.611 | 2015.365 | 162.070 | 18.67 | 0 | 3312ccda7 |  | lefford | 40 |
 | 2026-09-04T04:06:01Z | sluice:heavy | 459.863 | 9883.831 | 158.903 | 21.84 | 0 | c44165de0 |  | lefford | 40 |
+| 2026-09-04T10:31:32Z | prewarm | 149.633 | 1028.104 | 56.144 | 7.25 | 0 | f20fdbecb | campaign/the-precincts | MacBookPro | 10 |
+| 2026-09-04T11:21:32Z | gate-commit | 175.033 | 894.741 | 144.616 | 5.94 | 0 | f20fdbecb | campaign/the-staple | MacBookPro | 10 |
+| 2026-09-04T11:23:09Z | gate-commit | 40.465 | 62.315 | 13.386 | 1.87 | 0 | f20fdbecb | campaign/the-staple | MacBookPro | 10 |
+| 2026-09-04T11:24:07Z | gate-commit | 37.197 | 69.266 | 15.407 | 2.28 | 0 | f20fdbecb | campaign/the-staple | MacBookPro | 10 |
+| 2026-09-04T11:25:40Z | gate-commit | 35.357 | 67.299 | 14.699 | 2.32 | 0 | f20fdbecb | campaign/the-staple | MacBookPro | 10 |
+| 2026-09-04T11:27:23Z | gate-commit | 34.598 | 67.123 | 14.450 | 2.36 | 0 | 4e954a815 | campaign/the-staple | MacBookPro | 10 |
+| 2026-09-04T11:28:27Z | gate-commit | 34.628 | 67.008 | 14.440 | 2.35 | 0 | 4e954a815 | campaign/the-staple | MacBookPro | 10 |
 | 2026-09-04T10:12:53Z | rebaseline | 207.076 | 460.799 | 18.581 | 2.31 | 0 | 2ce669f38 | campaign/the-wash | MacBookPro | 10 |
 | 2026-09-04T10:14:54Z | gate-commit | 108.689 | 562.647 | 45.705 | 5.60 | 0 | 07214a2e8 | campaign/the-wash | MacBookPro | 10 |
 | 2026-09-04T10:17:14Z | game-check | 139.632 | 711.448 | 29.072 | 5.30 | 0 | 07214a2e8 | campaign/the-wash | MacBookPro | 10 |
@@ -5581,3 +5588,20 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-04T20:57:54Z | gate-commit | 33.103 | 62.352 | 16.423 | 2.38 | 0 | 46b301f53 | campaign/the-zenith | MacBookPro | 10 |
 | 2026-09-04T21:02:53Z | gate-commit | 63.187 | 103.084 | 47.565 | 2.38 | 0 | cc08eb8a3 | campaign/the-zenith | MacBookPro | 10 |
 | 2026-09-04T21:07:56Z | gate-commit | 33.724 | 62.664 | 16.776 | 2.36 | 0 | cc08eb8a3 | campaign/the-zenith | MacBookPro | 10 |
+| 2026-09-04T12:15:44Z | rebaseline | 291.431 | 473.094 | 19.811 | 1.69 | 0 | 97a7e42b3 | campaign/the-staple | MacBookPro | 10 |
+| 2026-09-04T12:25:23Z | gate-commit | 262.127 | 189.958 | 63.016 | 0.97 | 0 | 97a7e42b3 | campaign/the-staple | MacBookPro | 10 |
+| 2026-09-04T12:43:34Z | sluice:artifacts | 223.017 | 943.980 | 29.305 | 4.36 | 0 | 3c22963a4 |  | lefford | 40 |
+| 2026-09-04T12:44:34Z | sluice:outboard | 59.273 | 32.669 | 39.923 | 1.22 | 0 | 743daacff |  | lefford | 40 |
+| 2026-09-04T13:03:26Z | sluice:gate | 1131.412 | 20483.234 | 518.346 | 18.56 | 0 | be5727ad4 |  | lefford | 40 |
+| 2026-09-04T13:05:43Z | sluice:clients | 137.573 | 2064.855 | 194.313 | 16.42 | 0 | f443193c7 |  | lefford | 40 |
+| 2026-09-04T13:13:17Z | sluice:heavy | 453.283 | 9676.511 | 159.914 | 21.70 | 0 | 49eb197f8 |  | lefford | 40 |
+| 2026-09-04T15:11:08Z | sluice:artifacts | 275.983 | 1293.150 | 45.936 | 4.85 | 0 | 732eb9e84 |  | lefford | 40 |
+| 2026-09-04T15:12:04Z | sluice:outboard | 55.951 | 30.793 | 35.851 | 1.19 | 0 | 2b7da7f31 |  | lefford | 40 |
+| 2026-09-04T15:24:46Z | sluice:gate | 761.311 | 20082.897 | 559.223 | 27.11 | 0 | 65435c3c1 |  | lefford | 40 |
+| 2026-09-04T15:27:13Z | sluice:clients | 147.093 | 2239.701 | 202.879 | 16.61 | 0 | ce694f17b |  | lefford | 40 |
+| 2026-09-04T15:34:58Z | sluice:heavy | 464.065 | 9922.923 | 155.449 | 21.72 | 0 | 10baa2333 |  | lefford | 40 |
+| 2026-09-04T15:38:50Z | sluice:artifacts | 226.786 | 951.513 | 28.583 | 4.32 | 0 | d4dde7fc9 |  | lefford | 40 |
+| 2026-09-04T15:39:50Z | sluice:outboard | 58.834 | 34.570 | 46.477 | 1.38 | 0 | 11c88572c |  | lefford | 40 |
+| 2026-09-04T15:51:54Z | sluice:gate | 724.108 | 19598.915 | 483.523 | 27.73 | 0 | fd9bb74ee |  | lefford | 40 |
+| 2026-09-04T15:54:14Z | sluice:clients | 140.027 | 2075.643 | 196.796 | 16.23 | 0 | 78fae757a |  | lefford | 40 |
+| 2026-09-04T16:01:51Z | sluice:heavy | 456.032 | 9816.380 | 160.497 | 21.88 | 0 | 558b0e189 |  | lefford | 40 |

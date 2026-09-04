@@ -382,7 +382,38 @@ if ! git diff --cached --name-only --diff-filter=ACMR | grep -qE "$rust_relevant
     # actually STAGED for this commit; scrubbing GIT_INDEX_FILE would make it
     # read the worktree index instead, which is wrong for a pre-commit hook
     # whose subject is the staged tree.
-    if ! make docs-tests; then
+    # THE YELLOW-CENSUS ALARM CANNOT BE SATISFIED BY A DELIVERY COMMIT, so it is
+    # stood down for that one commit — the same scoped opt-out, set by the same
+    # script, as the golden-pins guard above.
+    #
+    # `a_census_over_the_alarm_threshold_owes_a_profiling_followup` demands a row
+    # in docs/timings/census-yellow-log.tsv keyed to THE RUN'S OWN TIMESTAMP.
+    # That timestamp does not exist until the run finishes, and the delivery
+    # commit is how the run's row reaches the ledger — so the acknowledgement can
+    # never be present in the tree the delivery commit is checked against. Not
+    # awkward: UNSATISFIABLE. Any census over CENSUS_ALARM_SECS could never
+    # deliver at all.
+    #
+    # This went unnoticed until 2026-09-04 because a docs-only commit did not run
+    # the prose-subject tests before The Nettle inverted that fast path. The
+    # inversion is right and caught a real defect the same day; this interaction
+    # is its one casualty. Two censuses blocked in fourteen hours
+    # (campaign/the-plat 1019.1 s, campaign/the-weft 1188.9 s with 70 goldens
+    # stranded) before it was diagnosed.
+    #
+    # THE OBLIGATION IS DEFERRED, NOT DISCHARGED, and that is what keeps this
+    # from degrading the ratchet into a formality — the failure its own header
+    # warns about. The row lands, and the very next ordinary commit runs the
+    # alarm against it and refuses until a human records the finding. The look is
+    # still forced; it simply happens when it is possible to record.
+    docs_tests_exclude=""
+    if [ -n "${HV_CENSUS_DELIVERY:-}" ]; then
+        docs_tests_exclude="a_census_over_the_alarm_threshold_owes_a_profiling_followup"
+        echo "pre-commit: HV_CENSUS_DELIVERY=1 — standing down the yellow-census alarm for this delivery." >&2
+        echo "pre-commit: it is keyed to this run's own timestamp and cannot be satisfied before the row exists." >&2
+        echo "pre-commit: the obligation is DEFERRED, not discharged — the next ordinary commit will demand it." >&2
+    fi
+    if ! HV_DOCS_TESTS_EXCLUDE="$docs_tests_exclude" make docs-tests; then
         echo "pre-commit: 'make docs-tests' failed — a staged docs change breaks a test whose subject is prose." >&2
         echo "pre-commit: this is the check the merge queue would otherwise find on the canonical box." >&2
         exit 1
