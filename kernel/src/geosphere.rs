@@ -402,9 +402,11 @@ impl NearestVertexIndex {
         self.scan_at(geo, target, latitude, longitude, cos_lat)
     }
 
-    /// The vertex nearest a unit-sphere position, by maximum dot product. Because
-    /// a room's ancestor-corner positions are byte-identical to mesh vertices,
-    /// this returns that exact vertex (self-dot = 1.0 wins).
+    /// The vertex nearest a unit-sphere position, by maximum dot product. A
+    /// position read from [`Geosphere::position`] resolves to that exact vertex
+    /// (self-dot = 1.0 wins). A cube-sphere room corner generally is *not* an
+    /// icosphere vertex and still needs the nearest search; see
+    /// [`crate::Facet::corners`]'s mesh-boundary contract.
     /// type-audit: pending(wave-1)
     pub fn nearest_to_position(&self, geo: &Geosphere, pos: [f64; 3]) -> Vertex {
         let latitude = math::asin(pos[2]).to_degrees();
