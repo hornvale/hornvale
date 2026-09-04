@@ -239,3 +239,57 @@ after reading; it does not assign the 23 from outside the code.
 before it accepted a suite-wide cost increase that is in fact avoidable and
 partly reversible).
 · Capture: spec §4 and §5 stage 2.
+
+#9 [Q] — **Nathan: the eternal-noon question is a CENSUS question. The
+spec's "honest cost" section was wrong about the instrument, and the
+correction removes the campaign's only flagged fidelity concern.**
+· **What the G3 package flagged:** the Constitution names tier-0's purpose
+as *"what religion develops under an eternal noon?"*, and this campaign's own
+measurement answers it (16 beliefs vs 145) immediately before deleting the
+ability to ask it. I presented that as a real capability loss and the
+strongest argument against the campaign.
+· **Nathan's correction:** *"the 'what $thing develops on a tidally locked
+planet' is better described using the census."*
+· **Why it settles rather than softens the concern.** Tier-0 can only answer
+with **one stipulated world** — an anecdote, and one about a stipulation
+rather than physics, so its religion is an artifact of the stub. The lab
+answers with a population under a *derived* pin. My own memory carries the
+rule I failed to apply: *one world is an anecdote.*
+· **Verified before agreeing, not after** — the point was to check whether
+the remedy Nathan named actually exists:
+  - `pin_sets` is **live, not vestigial**: `windows/lab/src/study.rs`'s
+    `PinSet` is iterated at `runner.rs:155`, each set built with its pins,
+    emitted as a `pin_set` CSV column (`runner.rs:304`) and rendered per set
+    by `chart.rs:175`. `PinSet::label`'s doc comment gives its example
+    values as `"default"`, `"locked"` — the axis was designed for this.
+  - The metrics exist: `pantheon-size`, `pantheon-verticality`,
+    `belief-kind-*`, and **`pantheon-cyclic-share`**, which is the
+    eternal-noon question stated as a number.
+  - The study exists at scale: `census-of-faiths` runs over **10,000
+    worlds**.
+· **The finding that came out of checking, which neither of us had:** *no
+committed study uses a non-empty pin set.* Every `pin_sets` array across
+`studies/*.study.json` is `[{"label":"default","pins":[]}]`. The census
+sweeps seeds and has **never** swept pins. So the machinery built for this
+exact question has never been pointed at it — which means retiring tier-0
+removes an anecdote nobody consumed, and the better instrument has been
+sitting unused the whole time.
+· Alternatives discarded: folding a `{"label":"locked","pins":
+["rotation=locked"]}` set into `census-of-faiths` as part of this campaign.
+Refused — moving a census study is a measurement decision under decision
+0016's preregistration discipline, and a retirement campaign is the wrong
+place to make one.
+· ideonomy passes: 1 / overturns 1 — the pass was on "is the census really
+the better instrument, or is that a convenient agreement?", and it overturned
+my flagged item rather than confirming it.
+· Capture: spec §2.2 rewritten; follow-up below.
+
+## Follow-ups
+
+- **Point the census at a pin axis for the first time.** Adding
+  `{"label": "locked", "pins": ["rotation=locked"]}` to
+  `census-of-faiths.study.json` would answer the Constitution's eternal-noon
+  question properly — 10,000 worlds, a derived regime,
+  `pantheon-cyclic-share` as the readout. The mechanism is live and unused
+  (#9). Out of scope for The Zenith: it is a measurement decision under 0016,
+  not a retirement task. Worth a registry row at close.

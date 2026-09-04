@@ -98,36 +98,56 @@ it removes the last rung of a ladder that was only ever one rung tall, and
 the coexistence licence 0039 preserved was protecting a stipulation, not a
 fidelity level.
 
-### 2.2 The honest cost, stated because the Constitution names it
+### 2.2 The Constitution's own question is a census question
 
-The Constitution gives tier-0 a purpose beyond cheapness, and it is the
-strongest argument against this campaign:
+The Constitution gives tier-0 a purpose beyond cheapness, and an earlier
+draft of this spec treated it as the strongest argument *against* the
+campaign:
 
 > A trivial provider's sparse answer is itself meaningful input downstream
 > (what religion develops under an eternal noon?).
 
-**That question has a real answer, and this campaign's own measurement is
-it.** The seed-42 world under an eternal noon holds **16 beliefs**; under a
-generated sky it holds **145** (§4.2). The sparse answer *was* meaningful
-input, exactly as the Constitution predicted, and retiring the tier deletes
-the project's ability to pose that question in that form.
+**That draft was wrong about the instrument, and Nathan's correction is the
+one that settles it: this is a census question, not a tier question.** The
+difference is not stylistic. Tier-0 can only ever answer it with **one
+stipulated world** — the seed-42 comparison in §4.2, 16 beliefs against 145.
+That is an anecdote, and it is an anecdote about a *stipulation*: the eternal
+noon is not physics, so whatever religion develops under it is an artifact of
+the stub rather than a finding about worlds.
 
-Three things bound the loss, and none of them is "it does not matter":
+The lab answers the same question with a population under a *derived*
+regime, and every piece of the machinery already exists:
 
-1. **The question survives in a better form.** `--rotation locked` is also a
-   sparse sky — no day, a sun that never sets — but it is *derived from
-   physics* rather than stipulated, so what religion develops under it is a
-   finding about worlds rather than an artifact of a stub. The repo already
-   generates that world and commits its almanac.
-2. **Nothing consumes the answer today.** No study, no census metric, and no
-   book chapter compares the eternal-noon religion against the generated one.
-   The question was posed in the Constitution and never operationalised.
-3. **The measurement is preserved.** §4.2's figures are committed here and in
-   the ledger, so the one comparison the tier ever supported is recorded
-   before its subject is deleted.
+- **The pin-set axis is live, not vestigial.** `windows/lab/src/study.rs`'s
+  `PinSet { label, pins, roster }` is iterated by `runner.rs:155`, which
+  builds each set with its pins and emits a `pin_set` column into the CSV
+  (`runner.rs:304`); `chart.rs` renders per set. `PinSet::label`'s own doc
+  comment gives its example as — exactly — `"default"`, `"locked"`.
+- **The metrics are already registered.** `pantheon-size`,
+  `pantheon-verticality`, `belief-kind-*`, and above all
+  **`pantheon-cyclic-share`** — the share of a pantheon derived from cyclic
+  phenomena, which *is* the eternal-noon question stated as a number.
+- **The study already exists at scale.** `census-of-faiths` runs pantheon
+  size, cult form, verticality and head-deity periodicity over **10,000
+  worlds**.
 
-This is a fidelity-adjacent judgment and therefore **leads the G3 flagged
-section** rather than being resolved under autopilot.
+So the comparison the Constitution asked for is available at 10,000-world
+scale against a real physical pin, and tier-0 was the strictly worse
+instrument for it.
+
+**What is actually true, and is a finding rather than a cost:** *no committed
+study in the repository uses a non-empty pin set.* Every `pin_sets` array in
+`studies/*.study.json` is `[{"label": "default", "pins": []}]`. The census
+sweeps **seeds** and has never once swept **pins**, so the machinery built
+for this question has never been pointed at it. Retiring tier-0 therefore
+removes an anecdote nobody was consuming; it does not remove a capability.
+
+Captured as a follow-up rather than folded in: adding a `{"label": "locked",
+"pins": ["rotation=locked"]}` set to `census-of-faiths` is a one-line change
+that would answer the Constitution's question properly for the first time.
+It is **out of scope here** — it moves a census study, which is a
+measurement decision under decision 0016's preregistration discipline and
+belongs to its own campaign, not to a retirement.
 
 ## 3. Why the keystone fixture is tier-0 — the question The Wash left open
 
