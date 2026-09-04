@@ -1475,10 +1475,10 @@ fn run(
             );
             let hazard_memory_memo_us =
                 probe_hazard_memory_memo_us(&ledger, &folds, npc, &npcs, day, &probe_terrain);
-            // The Kerf, K1: what the three `agent-at` tenants hold at this
+            // The Kerf, K1: what the two surviving `agent-at` tenants hold at this
             // band's end, read off the RUN's own store — which the tick above
-            // has already brought current, so these three statements advance
-            // nothing. Three sequential statements rather than one expression:
+            // has already brought current, so these four statements advance
+            // nothing. Four sequential statements rather than one expression:
             // each `borrow_mut` temporary dies at its own semicolon, so the
             // one-guard rule is satisfied without a combined accessor no
             // production caller wants.

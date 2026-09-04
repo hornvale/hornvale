@@ -419,4 +419,26 @@ question worth settling; an unused reservation is cheaper than a collision.
 
 ## 11. What shipped, measured
 
-*(filled at close)*
+`KnownWater` is gone. `LatestVisit::rooms_at_where` now owns the one
+first-visit membership rule; `rooms_at` supplies an always-true predicate and
+`water_at` supplies `is_water`. The independent fold-equals-scan witnesses
+cover both real shapes and the descending-order writer shape, so the equality
+is not merely an argument from sorted insertion.
+
+The three AFTER release runs were on this Mac and worktree, seed 42, 50 agents,
+200 ticks, bands of 20. K1 was deterministic: Trail = 6,219 entries / 329,607
+bytes and LatestVisit = 6,219 / 259,677 in every run. The absent BEFORE
+KnownWater row — 4,665 / 247,245 — is the exact saving; neither surviving row
+moved. K2 was 60.98, 61.14, and 62.63 ns/fact. Band-10 K3
+`believed_water` / `shared_believed_water` was 10,340.62 / 10,413.11,
+16,513.75 / 8,731.01, and 8,489.31 / 8,848.43 µs/call; the endpoint loads and
+wall times are in the ledger. The K3 probe is deliberately a single
+empty-belief agent, as Task 2 established, so it isolates `water_at` rather
+than representing the whole roster.
+
+Decision 0726 binds the criterion exposed by this cut: a resident index earns
+its state only where it changes a served read's asymptotic class. 0727 is
+unminted: the private shared predicate has no independent repository site and
+does not yet deserve a repository-wide interface rule. The temporary hash
+constants retired under 0541; fresh-run agreement, floors, and independent
+fold-equals-scan witnesses remain.

@@ -1209,7 +1209,8 @@ pub fn believed_water(
         // Spec §3 rule 6's witness, taken where the read actually happens: is
         // this instant behind a sighting the store has already absorbed? See
         // `ReadWitness::note_belief` for what the count means now that the
-        // rule has fired and the tenant carries a first-visit instant.
+        // rule has fired and the visit list's first element supplies the
+        // first-visit instant.
         witness.note_belief(
             npc.entity,
             t,

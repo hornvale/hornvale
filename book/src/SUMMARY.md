@@ -457,6 +457,7 @@
 - [The Wash](./chronicle/the-wash.md)
 - [The Plat](./chronicle/the-plat.md)
 - [The Pallet](./chronicle/the-pallet.md)
+- [The Kerf](./chronicle/the-kerf.md)
 
 # Appendix: The Frontier
 
