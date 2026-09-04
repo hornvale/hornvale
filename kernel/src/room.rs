@@ -525,7 +525,7 @@ impl Facet {
     /// minimum pairwise great-circle separation of [`Facet::corners`]'s four
     /// corners, in their own winding order.
     ///
-    /// **Promoted from `windows/locale`'s private `room_edge` (The Weft,
+    /// **Promoted from `windows/locale`'s `room_edge` (The Weft,
     /// Task 5 fix round 1)**, on the same argument [`blend_corner_weights`]'s
     /// own promotion doc states: a pure `&Facet -> f64` function had drifted
     /// into three character-for-character copies (`windows/locale::room_edge`,

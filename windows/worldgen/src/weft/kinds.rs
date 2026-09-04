@@ -59,19 +59,30 @@ impl WeftKind {
 
     /// The macro-state/free-noise mixing weight: `1.0` reads as entirely
     /// macro-state-driven ("wallpaper" in the sense of a smooth, place-
-    /// grounded texture), `0.0` as entirely free noise ("speckle" —
-    /// spatially incoherent relative to any cause). Erratic/scatter (Task 7)
-    /// sits near the `0.0` end, matching its own §5.6 description ("low —
-    /// mostly free noise").
+    /// grounded texture), `0.0` as entirely free noise — position-continuous
+    /// but uncorrelated with any macro cause. Erratic/scatter (Task 7) sits
+    /// near the `0.0` end, matching its own §5.6 description ("low — mostly
+    /// free noise").
     ///
-    /// **Spec §5.2's literal endpoint labels are inverted relative to this
-    /// implementation, and relative to its own §5.6.** §5.2 reads "0 =
-    /// wallpaper, 1 = speckle" — under that wording, spring's "high"
-    /// contextuality would read as speckle and erratic's "low" would read as
-    /// wallpaper, which inverts the negative control §5.6 describes. Fixed
-    /// in the spec (`docs/superpowers/specs/2026-09-03-the-weft-design.md`
-    /// §5.2) as part of fix round 1; this doc states the corrected direction
-    /// rather than quoting the sentence that was wrong.
+    /// **"Speckle" is reserved for a different, banned state and does not
+    /// belong on this axis.** Spec §5.2's own three-state paragraph is
+    /// explicit: *address-hashed* noise (spatially incoherent between
+    /// adjacent facets, never sampled by anything in this module — see
+    /// [`super`]'s module doc) is the failure H2 forbids outright; low
+    /// contextuality is something else, a field that is still smooth and
+    /// position-continuous but simply uncorrelated with macro state. §5.2's
+    /// table row briefly conflated the two by glossing `0` as "speckle" —
+    /// fixed in the spec (fix round 2) to name the property instead of
+    /// reusing the loaded word.
+    ///
+    /// **Spec §5.2's endpoint labels were also inverted relative to this
+    /// implementation and to §5.6 in an earlier draft** (`0 = wallpaper, 1 =
+    /// speckle`, under which spring's "high" contextuality would have read
+    /// as the banned state and erratic's "low" would have read as
+    /// wallpaper). Fixed in the spec
+    /// (`docs/superpowers/specs/2026-09-03-the-weft-design.md` §5.2) in fix
+    /// round 1; this doc states the corrected direction rather than quoting
+    /// the sentence that was wrong.
     pub(crate) fn contextuality(self) -> f64 {
         match self {
             WeftKind::Spring => SPRING_CONTEXTUALITY,
@@ -126,9 +137,10 @@ const SPRING_CORRELATION_LENGTH_FACETS: f64 = 40.0;
 /// under) — the fix belongs in the test's bound, not in this world constant.
 /// This is decision 0016's forbidden shape mirrored: a world parameter
 /// retuned to rescue a miscalibrated measurement. `0.85` is also the value
-/// spec §5.6's "high" reads most naturally against, and matches spec §5.1's
-/// contextuality-endpoint labels once §5.2's inverted wording is corrected
-/// (see the spec's own fix in this round, and [`Self::contextuality`]'s doc).
+/// spec §5.6's "high" reads most naturally against, and matches spec §5.2's
+/// own contextuality-endpoint labels once their inverted wording is
+/// corrected (see the spec's own fix in fix round 1, and
+/// [`Self::contextuality`]'s doc).
 /// plumb: universal(an authored design choice fixing how strongly spring/seep tracks macro state versus free noise, identical across every world)
 const SPRING_CONTEXTUALITY: f64 = 0.85;
 

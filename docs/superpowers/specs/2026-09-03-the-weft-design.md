@@ -156,7 +156,7 @@ falsification is that "address-hashed noise leaked into a band edge".
 | --- | --- | --- |
 | **abundance** | absolute frequency over eligible facets | tunable "individually and severally" (#1 rider 4) |
 | **correlation length** | how far you walk before the answer changes, **in facets** | texture vs. rhythm vs. landmark |
-| **contextuality** | mixing ratio, macro state against free noise | 1 = wallpaper (macro-grounded texture), 0 = speckle (spatially incoherent relative to any cause); the craft is between |
+| **contextuality** | mixing ratio, macro state against free noise | 1 = wallpaper (macro-grounded texture), 0 = free noise — position-continuous but uncorrelated with any macro cause; the craft is between |
 
 **Three states, not two, and an earlier draft of this spec collapsed them.**
 Address-hashed noise is *spatially incoherent* — adjacent facets uncorrelated,
